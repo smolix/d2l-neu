@@ -123,10 +123,10 @@ that, on average, make our model's predictions
 fit the true prices observed in the data as closely as possible.
 
 
-In disciplines where it is common to focus
+In disciplines that focus
 on datasets with just a few features,
-explicitly expressing models long-form,
-as in :eqref:`eq_price-area`, is common.
+it is common to write models out long-form,
+as in :eqref:`eq_price-area`.
 In machine learning, we usually work
 with high-dimensional datasets,
 where it is more convenient to employ
@@ -371,11 +371,11 @@ Moreover, for many tasks, those hard-to-optimize models
 turn out to be so much better that figuring out how to train them
 ends up paying off.
 
-The key technique for optimizing nearly every deep learning model,
-and which we will call upon throughout this book,
+The key technique for optimizing nearly every deep learning model
 consists of iteratively reducing the error
 by updating the parameters in the direction
-that incrementally lowers the loss function.
+that incrementally lowers the loss function,
+and we will call upon it throughout this book.
 This algorithm is called *gradient descent*.
 
 The most naive application of gradient descent
@@ -390,11 +390,11 @@ the benefit of a full update is limited.
 
 The other extreme is to consider only a single example at a time and to take
 update steps based on one observation at a time.
-The resulting algorithm, *stochastic gradient descent* (SGD)
-can be an effective strategy :cite:`Bottou.2010`, even for large datasets.
+The resulting algorithm is *stochastic gradient descent* (SGD),
+which can be an effective strategy :cite:`Bottou.2010`, even for large datasets.
 Unfortunately, SGD has drawbacks, both computational and statistical.
-One problem arises from the fact that processors are a lot faster
-multiplying and adding numbers than they are
+One problem is that processors are a lot faster
+at multiplying and adding numbers than
 at moving data from main memory to processor cache.
 It is up to an order of magnitude more efficient to
 perform a matrix--vector multiplication
@@ -409,7 +409,7 @@ to more than one observation at a time.
 The solution to both problems is to pick an intermediate strategy:
 rather than taking a full batch or only a single sample at a time,
 we take a *minibatch* of observations :cite:`Li.Zhang.Chen.ea.2014`.
-The specific choice of the size of the said minibatch depends on many factors,
+The specific choice of minibatch size depends on many factors,
 such as the amount of memory, the number of accelerators,
 the choice of layers, and the total dataset size.
 Despite all that, a number between 32 and 256,
@@ -454,20 +454,19 @@ we record the estimated model parameters,
 denoted $\hat{\mathbf{w}}, \hat{b}$.
 Note that even if our function is truly linear and noiseless,
 these parameters will not be the exact minimizers of the loss, nor even deterministic.
-Although the algorithm converges slowly towards the minimizers
+Although the algorithm converges slowly towards the minimizers,
 it typically will not find them exactly in a finite number of steps.
 In fact, this vague statement has a precise form: with a constant learning
 rate, minibatch SGD does not settle on the minimizer at all but hovers in a
 *noise ball* around it, whose squared radius scales like $\eta$ times the
-gradient noise: shrinking the learning rate shrinks the ball, which is why
+gradient noise. Shrinking the learning rate shrinks the ball, which is why
 learning-rate *schedules* matter.
 Why gradient descent converges, at what rate, and how the learning rate and
 its schedule interact with gradient noise are worked out in
 :numref:`sec_mdl-gradient-based-optimization` and
 :numref:`sec_mdl-adaptive-stochastic-methods`.
-Moreover, the minibatches $\mathcal{B}$
-used for updating the parameters are chosen at random.
-This breaks determinism.
+Moreover, we choose the minibatches $\mathcal{B}$
+at random, which breaks determinism.
 
 Linear least squares always has a global minimizer because its loss is a
 convex quadratic bounded below. Full column rank, equivalently an invertible
@@ -733,14 +732,13 @@ It follows that minimizing the mean squared error
 is equivalent to the maximum likelihood estimation
 of a linear model under the assumption of additive Gaussian noise.
 
-### A Menu of Losses
+### Selecting a Loss from a Noise Model
 :label:`subsec_linreg-loss-menu`
 
-The derivation generalizes far beyond the Gaussian case. Stated as a *recipe*:
-**choose a noise model $p(y \mid \mathbf{x})$ that fits how your labels are
-actually generated, then minimize its negative log-likelihood**. Gaussian noise $\Rightarrow$ squared
-error is only the first row of a menu; whenever the Gaussian assumption is
-wrong for your data, the same recipe hands you the right loss:
+The same derivation applies beyond the Gaussian case. Choose a conditional
+model $p(y \mid \mathbf{x})$ that represents the label noise, then minimize
+its negative log-likelihood. Gaussian noise yields squared error; other
+assumptions yield other losses:
 
 | Output type | Noise model | Loss (negative log-likelihood) |
 |:--|:--|:--|
@@ -756,9 +754,9 @@ its loss penalizes it only linearly, exactly the robustness we observed in
 the outlier demonstration above. The figure also marks the *Huber* loss, a
 compromise that is quadratic near zero (like squared error) but linear in the
 tails (like absolute error). Each of these losses is explored in the
-exercises; the recipe also extends to *heteroscedastic* regression, where the
+exercises; the same principle extends to *heteroscedastic* regression, where the
 noise level itself depends on the input and we predict $\sigma(\mathbf{x})$
-alongside the mean. We will lean on this recipe again when we derive the loss
+alongside the mean. We apply this principle again when deriving the loss
 for classification in the next chapter.
 
 ![Matching the loss to the noise model. Left: Gaussian and Laplace densities with equal variance; the log-scale inset shows the Laplace tails carrying far more probability. Right: the per-residual penalties each induces, together with the Huber compromise.](../img/mdl-linreg-loss-menu.svg)
@@ -833,15 +831,15 @@ where it reaches its destination
 (e.g., an actuator such as a muscle)
 or it is fed into another neuron via its dendrites.
 
-Certainly, the high-level idea that many such units
-could be combined, provided they have the correct connectivity and learning algorithm,
-to produce far more interesting and complex behavior
-than any one neuron alone could express
-arises from our study of real biological neural systems.
+Certainly, one high-level idea does come from our study
+of real biological neural systems: that many such units,
+provided they have the correct connectivity and learning algorithm,
+could be combined to produce far more interesting and complex behavior
+than any one neuron alone could express.
 At the same time, most research in deep learning today
 draws inspiration from a much wider source.
-We invoke :citet:`Russell.Norvig.2016`
-who pointed out that although airplanes might have been *inspired* by birds,
+As :citet:`Russell.Norvig.2016` pointed out,
+although airplanes might have been *inspired* by birds,
 ornithology has not been the primary driver
 of aeronautics innovation for some centuries.
 Likewise, inspiration in deep learning these days
@@ -922,7 +920,7 @@ and ultimately, evaluation on previously unseen data.
 ::: {.cover}
 [Dive into Deep Learning · §3.1]{.kicker}
 
-The straight line through the data<br>**and the recipe behind every loss function after it**.
+Predicting numerical values<br>**models · losses · optimization · interpretation**.
 :::
 :::
 
@@ -1055,7 +1053,7 @@ linear models with squared loss.
 
 . . .
 
-**Minibatch SGD**, the iterative recipe reused by every model in this
+**Minibatch SGD**, the iterative method reused by the models in this
 book:
 
 $$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) -
@@ -1191,7 +1189,7 @@ dominated the fit.
 :::
 :::
 
-::: {.slide title="The recipe: match the loss to the noise model"}
+::: {.slide title="Match the loss to the noise model"}
 [Where losses come from · payoff]{.kicker}
 
 ::: {.cols .vc}
@@ -1212,7 +1210,7 @@ only linearly, the robust MAE fit from the outlier demo.
 
 ::: {.d2l-note .rule}
 The weight-decay section adds a *prior* to this likelihood → weight decay;
-the next chapter runs the recipe on categorical noise → softmax.
+the next chapter applies the same likelihood principle to categorical data → softmax.
 :::
 :::
 :::
@@ -1276,16 +1274,16 @@ and computer science as on the brain.
 - **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$, one dot
   product per prediction.
 - **Loss:** mean squared error; convex, one global optimum.
-- **Closed form** = orthogonal projection; **minibatch SGD** = the
-  workhorse, hovering in an $\eta$-sized noise ball.
+- **Closed form** = orthogonal projection; **minibatch SGD** approaches
+  the optimum with fluctuations controlled partly by $\eta$.
 :::
 
 ::: {.col}
 - **Vectorize:** one kernel call, never a Python inner loop.
 - **One bad label:** in twenty, slope $22.88$ vs. $2.02$, the square's
   thin-tailed trust exposed.
-- **The recipe:** squared loss *is* Gaussian maximum likelihood; swap
-  the noise model, get the right loss.
+- **Likelihood interpretation:** squared loss corresponds to Gaussian noise;
+  changing the noise model changes the loss.
 :::
 :::
 :::

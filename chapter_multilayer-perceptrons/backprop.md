@@ -6,13 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Forward Propagation, Backward Propagation, and Computational Graphs
 :label:`sec_backprop`
 
-So far, we have trained our models
-with minibatch stochastic gradient descent.
-However, when we implemented the algorithm,
-we only worried about the calculations involved
-in *forward propagation* through the model.
-When it came time to calculate the gradients,
-we just invoked the backpropagation function provided by the deep learning framework.
+Our implementations use minibatch stochastic gradient descent, with automatic
+differentiation supplying the parameter gradients. To understand the cost and
+behavior of this calculation, we now examine how a network evaluates its
+outputs and propagates derivatives backward.
 
 The automatic calculation of gradients
 simplifies
@@ -22,20 +19,11 @@ even small changes to complicated models required
 recalculating complicated derivatives by hand.
 Surprisingly often, academic papers had to allocate
 numerous pages to deriving update rules.
-While we must continue to rely on automatic differentiation
-so we can focus on the interesting parts,
-you ought to know how these gradients
-are calculated under the hood
-if you want to go beyond a shallow
-understanding of deep learning.
+Automatic differentiation remains the practical implementation, but its
+forward and backward computations determine memory use and numerical behavior.
 
-In this section, we take a deep dive
-into the details of *backward propagation*
-(more commonly called *backpropagation*).
-To convey some insight for both the
-techniques and their implementations,
-we rely on some basic mathematics and computational graphs.
-To start, we focus our exposition on
+This section describes *backward propagation* (backpropagation) using basic
+matrix calculus and computational graphs. We focus on
 a one-hidden-layer MLP
 with weight decay ($\ell_2$ regularization, introduced in :numref:`sec_weight_decay`).
 
@@ -50,11 +38,8 @@ import torch
 of intermediate variables (including outputs)
 for a neural network in order
 from the input layer to the output layer.
-We now work step-by-step through the mechanics
-of a neural network with one hidden layer.
-This may seem tedious but in the eternal words
-of funk virtuoso James Brown,
-you must "pay the cost to be the boss".
+We work through a neural network with one hidden layer, recording the
+intermediate quantities required by the backward pass.
 
 
 For the sake of simplicity, let's assume
@@ -167,9 +152,9 @@ what it computes is made precise as *vector--Jacobian products*
 in :numref:`sec_mdl-matrix-calculus-autodiff`.
 
 Recall that
-the parameters of the simple network with one hidden layer,
+the simple network with one hidden layer,
 whose computational graph is in :numref:`fig_forward`,
-are $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$.
+has parameters $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$.
 The objective of backpropagation is to
 calculate the gradients $\partial J/\partial \mathbf{W}^{(1)}$
 and $\partial J/\partial \mathbf{W}^{(2)}$.
@@ -263,7 +248,7 @@ $$
 ### A Worked Example
 
 Symbols can hide what backpropagation actually *does*, so let us push real
-numbers through a graph. We follow the one rule that produced every equation
+numbers through a graph. We apply the local rule that produced every equation
 above: at each node, multiply the gradient arriving from downstream by the
 node's *local* derivative.
 
@@ -280,11 +265,11 @@ $$\frac{\partial e}{\partial a} = \frac{\partial e}{\partial d}\frac{\partial d}
   \frac{\partial e}{\partial b} = -3,\quad
   \frac{\partial e}{\partial c} = 3.$$
 
-This is the whole algorithm in miniature: *add* nodes broadcast the upstream
+This small graph illustrates the algorithm: *add* nodes broadcast the upstream
 gradient unchanged, *multiply* nodes scale it by the other input. Every backward
-equation in this section is an instance of this one move.
+equation in this section is an instance of this local calculation.
 
-Now run the same machinery on a network of the form above, shrunk to
+We now apply the same calculation to a network of the form above, reduced to
 $d = h = 2$ inputs and hidden units, $q = 1$ output, with ReLU activation
 $\phi(z) = \max(0, z)$ and (for clarity) no regularization, $\lambda = 0$. Take
 
@@ -314,7 +299,7 @@ $$\frac{\partial L}{\partial \mathbf{W}^{(1)}} = \frac{\partial L}{\partial \mat
 :numref:`fig_mdl-mlp-backprop-graph` traces these numbers through the graph,
 forward in black and backward in blue. Notice that the row of
 $\partial L/\partial \mathbf{W}^{(1)}$ feeding the dead unit is entirely zero:
-no gradient means no learning signal, the concrete face of the "dying ReLU" we
+no gradient means no learning signal, a concrete instance of the "dying ReLU" we
 met in :numref:`sec_mlp`. You can confirm every number here in a few lines of
 automatic differentiation (:numref:`sec_autograd`): rebuild the same tensors
 with gradient tracking, run the forward pass, sweep back through the graph, and
@@ -353,11 +338,11 @@ reverse, multiplying the local derivative at each node (our $\textrm{prod}$) to
 accumulate the gradient with respect to every parameter in a *single* pass. This
 output-to-input sweep is *reverse-mode* automatic differentiation, and it is cheap
 exactly when there are many parameters and one scalar loss, the deep learning
-regime. We use it throughout the book and developed its mechanics, including when
-the opposite *forward mode* is preferable, in :numref:`sec_autograd`; the full
-theory, with both modes expressed as Jacobian products and the memory
-trade-offs they imply, is developed in
-:numref:`sec_mdl-matrix-calculus-autodiff`.
+regime. We use it throughout the book, and :numref:`sec_autograd` develops its
+mechanics, including when the opposite *forward mode* is preferable.
+:numref:`sec_mdl-matrix-calculus-autodiff` gives the full theory, expressing
+both modes as Jacobian products and working out the memory trade-offs they
+imply.
 
 ## Training Neural Networks
 
@@ -434,7 +419,7 @@ What `backward()` actually does<br>**the chain rule on a graph · every gradient
 :::
 :::
 
-::: {.slide title="Under the hood of a gradient"}
+::: {.slide title="How a gradient is computed"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -444,7 +429,7 @@ Training so far: a **forward pass** computes the loss, then one call to
 
 - **Forward**: push the input through the net, storing each intermediate value.
 - **Backward**: walk the *same* graph in reverse, accumulating gradients by the **chain rule**.
-- One rule does it all, and it explains why training costs the memory it does.
+- The chain rule explains both the computation and its memory requirements.
 
 ::: {.d2l-note .rule}
 By the end we will have computed **all four gradients
@@ -515,7 +500,7 @@ needs to record to later compute gradients.
 :::
 :::
 
-::: {.slide title="The chain rule is the whole algorithm"}
+::: {.slide title="Backpropagation applies the chain rule"}
 [Backpropagation]{.kicker}
 
 For $\mathsf{Y}=f(\mathsf{X})$ and $\mathsf{Z}=g(\mathsf{Y})$, the chain rule
@@ -553,7 +538,7 @@ $$\frac{\partial J}{\partial \mathbf{W}^{(2)}} = \frac{\partial J}{\partial \mat
 \frac{\partial J}{\partial \mathbf{W}^{(1)}} = \frac{\partial J}{\partial \mathbf{z}}\,\mathbf{x}^\top + \lambda\mathbf{W}^{(1)}.$$
 :::
 
-::: {.slide title="That + is a rule: gradients add at forks"}
+::: {.slide title="Gradients add at graph branches"}
 [Backpropagation]{.kicker}
 
 The "+" in $\partial J/\partial \mathbf{W}^{(2)}$ encodes a general rule:
@@ -574,7 +559,7 @@ engine accumulates for exactly this reason.
 :::
 :::
 
-::: {.slide title="One move, everywhere"}
+::: {.slide title="Local backward rules"}
 [Backpropagation · the trick]{.kicker}
 
 Strip away the symbols and every backward step is the same gesture: at each
@@ -595,7 +580,7 @@ derivative**.
 :::
 :::
 
-Every backward equation in this section is an instance of this one rule.
+Every backward equation in this section applies this local rule.
 :::
 
 ::: {.slide}
@@ -692,7 +677,7 @@ Build the same tensors with `requires_grad`, run the forward pass, call
 ::: {.slide title="Autograd repeats every number" only="pytorch"}
 [Worked Example · verified]{.kicker}
 
-The script prints its verdict on the hand derivation:
+The script compares autograd with the manual derivation:
 
 @!backprop-verify
 
@@ -791,7 +776,7 @@ errors.
 ::: {.col}
 - **Forward propagation** computes and stores intermediates, input to output.
 - **Backpropagation** sweeps the same graph in reverse, accumulating gradients by the chain rule.
-- The whole algorithm is one move: **add** passes the gradient, **multiply** scales it.
+- The local rules are simple: **add** passes the gradient and **multiply** scales it.
 :::
 
 ::: {.col}

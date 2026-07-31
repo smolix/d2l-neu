@@ -1,20 +1,19 @@
 # Learning at Test Time
 :label:`sec_test-time-regression`
 
-The memories of this chapter were built as architectures: an outer-product
-write, a ladder of decays, a delta-rule edit. This section rebuilds them as
-statistics. The claim, made precise by :citet:`Wang.Shi.Fox.2025`, is that
-every one of these layers is solving a *regression problem at test time*:
-as tokens arrive, the layer fits a small regressor to the (key, value)
-pairs it has seen, and it answers each query by evaluating the fit. Under
-this reading an architecture is nothing but three choices, how past pairs
-are weighted, which function class the regressor comes from, and how hard
-the fit is pursued, and the models we have met occupy corners of that
-design cube. Two corners we have not met fall out of the same view: a
-state update whose gate is *derived* rather than designed (Longhorn), and
-a memory that is itself a small neural network adapted inside the forward
-pass (Titans). We end where a regression view must end, with data whose
-distribution drifts, where forgetting becomes a statistical necessity.
+The preceding sections introduced outer-product writes, several forms of
+decay, and delta-rule corrections. These updates can be interpreted as
+solving a *regression problem at test time*
+:cite:`Wang.Shi.Fox.2025`. As tokens arrive, the layer fits a small
+regressor to observed key--value pairs and answers each query by evaluating
+that fit.
+
+This interpretation separates three design choices: how past pairs are
+weighted, the regressor's function class, and the optimization method used
+for the inner fit. It also yields Longhorn, whose gate follows from an
+implicit update, and Titans, whose memory is a small neural network adapted
+during the forward pass. We conclude with drifting data, where emphasizing
+recent observations can reduce tracking error.
 
 *Prerequisites: attention as kernel regression
 (:numref:`sec_attention-pooling`), the matrix-state family and its
@@ -23,7 +22,7 @@ capacity law (:numref:`sec_matrix-state`), the delta rule
 decay (:numref:`chap_optimization`). Every experiment in this section runs
 on a CPU.*
 
-We start small, though, with a thread left hanging in
+We begin with the estimator introduced in
 :numref:`sec_attention-pooling`: a regression estimator with exactly one
 parameter, and the question of how to learn it.
 
@@ -54,8 +53,8 @@ Recall where this book first met attention. In
 Nadaraya--Watson regression :cite:`Nadaraya.1964,Watson.1964`: keys were
 training inputs, values were their labels, and a Gaussian kernel turned
 each query into a weighted average of nearby values,
-:eqref:`eq_nadaraya-watson`. Nothing was learned. The one knob, the kernel
-bandwidth $\sigma$, we swept by hand, and the section closed by asking
+:eqref:`eq_nadaraya-watson`. Nothing was learned. We swept the one knob,
+the kernel bandwidth $\sigma$, by hand, and the section closed by asking
 what would happen if we learned it by gradient descent instead, warning
 that the obvious approach hides a trap. That exercise has waited long
 enough; we answer it now, because the answer, scaled up, is this
@@ -184,7 +183,7 @@ $1$: gradient descent finds, in five steps, a bandwidth in the same region
 the hand sweep picked. That is the answer to the exercise, but the plots
 say it better.
 
-### What Learning Sharpened
+### Effect of the Learned Bandwidth
 
 ```{.python .input #test-time-regression-what-learning-sharpened-1}
 %%tab pytorch
@@ -232,12 +231,12 @@ d2l.show_heatmaps(jnp.stack([attn_fixed.T, attn_learned.T])[None],
 The region of large attention weights becomes sharper once the bandwidth
 is learned: each query concentrates on fewer, closer keys. One scalar,
 five epochs, and the estimator has adapted its notion of similarity to
-the data it serves. Keep the shape of what just happened in view, a
+the data it serves. Keep the shape of what just happened in view: a
 *regression estimator whose fit we tuned by gradient descent on the data
-it will be queried on*, because every memory in this chapter turns out to
-be an instance of it.
+it will be queried on*. Every memory in this chapter turns out to be an
+instance of it.
 
-## One Recipe
+## Components of an Online Regressor
 :label:`subsec_ttr-recipe`
 
 Now the general statement. An autoregressive sequence layer receives, by
@@ -341,8 +340,8 @@ bias.
 *weighted* least-squares problem whose shortcut solution accumulates
 decayed outer products, which is the decay ladder of
 :numref:`sec_matrix-state`, from RetNet's fixed scalar to the
-input-dependent gates of Mamba-2 and GLA. This cashes the promise made
-there, with the same fine print as above: writing
+input-dependent gates of Mamba-2 and GLA. This makes good on the promise
+made there, with the same fine print as above: writing
 $\boldsymbol{\Gamma}_t = \mathrm{diag}(\gamma_1^{(t)}, \ldots,
 \gamma_t^{(t)})$, the decayed state is the weighted cross-moment
 $\mathbf{K}_t^\top \boldsymbol{\Gamma}_t \mathbf{V}_t$ — one half of the
@@ -356,14 +355,14 @@ forced.
 **The delta rule is a solver.** Keep the linear class and uniform
 weights, but instead of solving, take one stochastic-gradient step on the
 newest pair's loss at each token. That step *is* the DeltaNet update; the
-identity, one gradient step on $\tfrac{1}{2}\|\mathbf{S}^\top \mathbf{k}_t
-- \mathbf{v}_t\|^2$ versus the Hebbian write's blind accumulation, was
-the substance of :numref:`sec_deltanet`, so we do not re-derive it here.
+identity was the substance of :numref:`sec_deltanet`, one gradient step
+on $\tfrac{1}{2}\|\mathbf{S}^\top \mathbf{k}_t - \mathbf{v}_t\|^2$ versus
+the Hebbian write's blind accumulation, so we do not re-derive it here.
 In the recipe's terms: DeltaNet differs from linear attention not in what
 it remembers but in *how it fits*, an online solver with a per-token step
-size $\beta_t$ in place of no solver at all. Running the same
-gradient-descent solver for several passes, were the sequence to hold
-still, would converge — from $\mathbf{S} = \mathbf{0}$ and with a small
+size $\beta_t$ in place of no solver at all. Were the sequence to hold
+still, running the same gradient-descent solver for several passes would
+converge — from $\mathbf{S} = \mathbf{0}$ and with a small
 enough step — to the minimum-norm least-squares memory
 :eqref:`eq_ttr-least-squares`.
 
@@ -386,10 +385,10 @@ through the fast weight programmers
 | Titans | weight decay $\alpha_t$ | deep MLP $\mathcal{M}_{\mathbf{W}}$ | SGD with momentum |
 | batch ridge (reference) | uniform | linear in features | exact solve |
 
-One further solver, recursive least squares, maintains the exact solution
-of :eqref:`eq_ttr-least-squares` with a rank-one update per token; it
-costs more state and more arithmetic than any row above, and the first
-exercise places it on the table.
+One further solver maintains the exact solution of
+:eqref:`eq_ttr-least-squares` with a rank-one update per token: recursive
+least squares. It costs more state and more arithmetic than any row
+above, and the first exercise places it on the table.
 
 ### Two Loops: What Learns When
 :label:`subsec_ttr-two-loops`
@@ -433,7 +432,7 @@ state adapted within one.
 ![Two learning loops. Left: during pretraining, the outer parameters $\theta$ — projections, gate networks, the initial state — parameterize every inner update, and the gradient of the pretraining loss reaches them through the whole chain of inner updates. Right: at inference only the inner loop runs; the state adapts online, with no labels and no update to $\theta$.](../img/mdl-modernrnn-inner-outer.svg)
 :label:`fig_ttr-inner-outer`
 
-### The Spectrum, Measured
+### Comparing Inner Solvers
 :label:`subsec_ttr-spectrum`
 
 If the rows of :numref:`tab_ttr-recipe` really are one problem under
@@ -579,9 +578,9 @@ assert float(((f_batch - y_q)**2).mean()) < \
 ```
 
 The spectrum lands as the recipe predicts, and every parametric row is
-now graded on one scale. A single online pass, the budget an actual
-recurrent layer gets, visibly underfits: its test error is several times
-the batch solve's. More passes improve both solver columns
+now graded on one scale. A single online pass visibly underfits, and a
+single pass is the budget an actual recurrent layer gets: its test error
+is several times the batch solve's. More passes improve both solver columns
 monotonically — the shared objective falls toward the batch value, and
 the distance to the batch fit shrinks severalfold from one pass to
 thirty; the asserts pin these orderings rather than the digits, which
@@ -668,7 +667,7 @@ stated; multiplying out and collecting terms gives
 :eqref:`eq_ttr-longhorn-gate`. $\blacksquare$
 
 Look at what emerged. The update has exactly the delta-rule shape of
-:numref:`sec_deltanet`, erase along the key, write the correction, but
+:numref:`sec_deltanet` (erase along the key, write the correction), but
 the functional *form* of its step size $\Delta_t$ was not designed: it
 fell out of the algebra. What remains learned is the coefficient that
 drives it — the model emits $\beta_t$, and $\Delta_t = \beta_t / (1 +
@@ -818,7 +817,7 @@ That gives us a clean instrument for a question the recipe raises: the
 delta rule of the previous section was a *perfect* overwriter, holding
 recall of the latest value near $1$ no matter how often keys were
 rebound; momentum and forgetting change the solver, so do they change
-that? We repeat the overwrite protocol, write $R$ values per key in
+that? We repeat the overwrite protocol: write $R$ values per key in
 shuffled order over orthonormal keys, then query every key for its
 *latest* value.
 
@@ -866,8 +865,8 @@ steps, while $\alpha$ erodes keys that were never touched. This is a
 teaching contrast, not a defect. Momentum smooths the fit across tokens,
 which is the wrong bias when the stream rebinds keys adversarially and a
 useful one when successive tokens carry consistent evidence, precisely
-the regime this section's closing experiment, and one of the exercises,
-return to.
+the regime that this section's closing experiment returns to, as does one
+of the exercises.
 
 ### A Deep Memory via Autograd
 :label:`subsec_ttr-titans-deep`
@@ -880,9 +879,9 @@ solver. An MLP memory is not superposition-bound in the same way, and
 Titans reports that deeper memories keep improving language modeling at
 scale :cite:`Behrouz.Zhong.Mirrokni.2025`. The update
 :eqref:`eq_ttr-titans` does not care what $\mathcal{M}_{\mathbf{W}}$ is;
-only the gradient call changes, and for that we have autograd. The
-functional gradient interfaces, `torch.func.grad` and `jax.grad`, fit the
-task exactly, since the memory's weights are data now, one set per
+only the gradient call changes, and for that we have autograd. Two
+functional gradient interfaces fit the task exactly, `torch.func.grad`
+and `jax.grad`, since the memory's weights are data now, one set per
 sequence, not module state.
 
 We initialize the output layer to zero, so the memory starts *empty*
@@ -996,13 +995,13 @@ richer test-time objectives and solvers, from TTT's mini-batch inner loop
 :cite:`Sun.Li.Dalal.ea.2024` onward; the chapter's Resources section maps
 it, and this book stops at the recipe.
 
-## Regression That Tracks: the Forecasting Connection
+## Tracking Distribution Drift
 :label:`subsec_ttr-tracking`
 
 One question from the recipe is still open. The weights $\gamma_i^{(t)}$
-are the *statistical* knob, and everything measured so far, capacity in
-:numref:`subsec_ms-capacity`, the spectrum above, treated the stream as
-stationary. For a fixed target, a linear model that contains it, and
+are the *statistical* knob, and everything measured so far treated the
+stream as stationary, the capacity of :numref:`subsec_ms-capacity` and
+the spectrum above alike. For a fixed target, a linear model that contains it, and
 constant parameters, uniform weights are then the efficient choice:
 every observation is equally informative about the same quantity. So
 when is decay not merely harmless but
@@ -1070,10 +1069,10 @@ with little drift accumulated, all evidence is good evidence. Then
 uniform least squares goes *stale*: its error climbs steadily and never
 comes back, ending several times the others', because the estimator
 keeps averaging in a world that no longer exists. Note what failed. The solver is exact; the function class
-contains the truth; only the *weights* are wrong. Decayed least squares,
-the same solver with expiring evidence, tracks the drift indefinitely,
-and the implicit step tracks nearly as well with no solve, no matrix,
-and a step size $\Delta_t$ it derived for itself.
+contains the truth; only the *weights* are wrong. Decayed least squares
+is the same solver with expiring evidence, and it tracks the drift
+indefinitely; the implicit step tracks nearly as well with no solve, no
+matrix, and a step size $\Delta_t$ it derived for itself.
 
 This is the forecasting connection, and it is the last piece of the
 chapter's argument. A sequence model predicting a nonstationary stream —
@@ -1091,7 +1090,7 @@ motivates rather than demonstrates. The conclusion that the experiment
 does support is the scoped one: forgetting reduces tracking error under
 drift, at the price of statistical efficiency on stationary stretches.
 
-**What this section's experiments do and do not show.** The bandwidth,
+**Experimental scope.** The bandwidth,
 spectrum, Longhorn, Titans, and drift cells are identity checks and
 mechanism illustrations on synthetic streams: they verify derivations
 (the closed-form implicit step), exhibit solver behavior (underfit
@@ -1119,8 +1118,8 @@ every parametric solver on one shared ridge objective — confirms that
 more solving lands closer to that objective's optimum. Throughout, the
 two-loop distinction of :numref:`subsec_ttr-two-loops` governs what
 "learning at test time" means: the inner state adapts online in every
-forward pass, while the outer parameters, the projections, gate
-networks, and initializations, receive gradients only during
+forward pass, while the outer parameters (the projections, gate
+networks, and initializations) receive gradients only during
 pretraining, flowing through the chain of inner updates. The two new
 models were both *derived*: the *form* of Longhorn's gate $\Delta_t$ is
 the closed-form implicit step of a per-token objective, its coefficient
@@ -1130,10 +1129,10 @@ forward pass with momentum as persisting surprise and weight decay as
 forgetting, a softer overwriter than the delta rule but an expressively
 deeper one. Against a drifting target, exact uniform regression goes
 stale while decayed and implicit solvers track, which is the statistical
-reason forgetting exists. What none of these fixed-size memories can do,
-recall an arbitrary needle from an arbitrarily long haystack, sets up the
-chapter's closing question, how much genuine attention a model must keep,
-in :numref:`sec_hybrids`.
+reason forgetting exists. None of these fixed-size memories can recall an
+arbitrary needle from an arbitrarily long haystack, which sets up the
+chapter's closing question in :numref:`sec_hybrids`: how much genuine
+attention a model must keep.
 
 ## Exercises
 
@@ -1174,8 +1173,8 @@ in :numref:`sec_hybrids`.
    plane. When does past surprise help, and why?
 1. **[short-code]** In the spectrum experiment, the thirty-pass fit's
    distance to the batch solution is small but not zero. Explain the two
-   remaining causes, the fixed step size $\beta$ and the finite number
-   of passes over one fixed ordering of the stream, and check both by
+   remaining causes (the fixed step size $\beta$ and the finite number
+   of passes over one fixed ordering of the stream) and check both by
    shrinking $\beta$ while increasing the passes. Then remove the $L2$
    term from the online steps only and rerun: the distance now stalls at
    a floor that no number of passes removes, because the online and
@@ -1196,7 +1195,7 @@ Learning at test time<br>
 :::
 :::
 
-::: {.slide title="A thread from the attention chapter"}
+::: {.slide title="Kernel Regression Revisited"}
 Nadaraya–Watson regression: attention with a hand-picked kernel; one knob,
 the bandwidth $\sigma$ — swept by hand, never learned.
 
@@ -1219,7 +1218,7 @@ Leave-one-out keys and values, plain gradient descent on the scalar $w$:
   the learned bandwidth lands where the hand sweep pointed.
 :::
 
-::: {.slide title="What learning sharpened"}
+::: {.slide title="Effect of Learned Bandwidth"}
 @!test-time-regression-what-learning-sharpened-2
 
 - The region of large attention weights becomes **sharper** once the
@@ -1229,7 +1228,7 @@ Leave-one-out keys and values, plain gradient descent on the scalar $w$:
   serves. Hold that shape.
 :::
 
-::: {.slide title="One recipe"}
+::: {.slide title="Components of an Online Regressor"}
 Memorize by regression, retrieve by evaluation (Wang, Shi & Fox 2025):
 
 $$m_t = \mathop{\mathrm{argmin}}_{m \in \mathcal{M}} \frac{1}{2} \sum_{i \le t} \gamma_i^{(t)} \big\| \mathbf{v}_i - m(\mathbf{k}_i) \big\|^2, \qquad \mathbf{o}_t = m_t(\mathbf{q}_t)$$
@@ -1241,7 +1240,7 @@ Three choices fix a layer:
 - **solver** — how hard to fit, once per token
 :::
 
-::: {.slide title="The reveal"}
+::: {.slide title="Sequence Layers as Regressors"}
 | model | weights | class | solver |
 |:--|:--|:--|:--|
 | softmax attention | query kernel | nonparametric | exact (Nadaraya–Watson) |
@@ -1270,7 +1269,7 @@ bias).
 - Applies verbatim to DeltaNet, Longhorn, Titans.
 :::
 
-::: {.slide title="The spectrum, measured"}
+::: {.slide title="Comparison of Inner Solvers"}
 One dataset, one feature space, one **shared ridge objective** — five
 solvers:
 
@@ -1353,7 +1352,7 @@ writing superseded values.
   stationary stretches.
 :::
 
-::: {.slide title="Where this leaves the chapter"}
+::: {.slide title="Implications for Sequence Models"}
 - One problem: memorize by weighted regression, retrieve at the query.
 - Softmax attention = Nadaraya–Watson; linear attention = LS with a term
   deleted; decay = the weighted cross-moment of weighted LS; delta = one

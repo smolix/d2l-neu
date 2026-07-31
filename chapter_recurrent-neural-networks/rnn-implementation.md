@@ -1,14 +1,13 @@
 # Implementing RNN Language Models
 :label:`sec_rnn-scratch`
 
-We are now ready to build the RNN language model of :numref:`sec_rnn` end to
-end: first from raw tensor operations, so that every moving part is visible,
-and then again with the recurrent layer that every deep learning framework
-ships. We train both on *The Time Machine*, tokenized into the 1,024-token
+This section implements the RNN language model of :numref:`sec_rnn` first
+with tensor operations and then with a framework recurrent layer. We train
+both versions on *The Time Machine*, tokenized into the 1,024-token
 byte-pair-encoding (BPE) vocabulary of :numref:`sec_text-sequence` and served
 as minibatches of shifted input and target windows by the pipeline of
-:numref:`sec_language-model`. Along the way we meet gradient clipping, the
-standard defense against exploding gradients, and we generate our first text.
+:numref:`sec_language-model`. The training procedure also introduces gradient
+clipping and autoregressive generation.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -139,9 +138,9 @@ The forward computation loops over the outermost axis of `inputs`, whose
 shape is (`num_steps`, `batch_size`, `num_inputs`), applying the recurrence
 :eqref:`rnn_h_with_state` once per time step and collecting the hidden state
 at every step. When no initial state is supplied we start from zeros. The
-explicit Python loop, kept in every tab including JAX, is the deliberately
-readable teaching form; the gated cells of :numref:`chap_modern_rnn` swap the
-JAX loop for `jax.lax.scan`, trading that clarity for acceptable JIT
+explicit Python loop is the deliberately readable teaching form, and we keep
+it in every tab including JAX; the gated cells of :numref:`chap_modern_rnn`
+swap the JAX loop for `jax.lax.scan`, trading that clarity for acceptable JIT
 compilation time.
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-2}
@@ -825,12 +824,14 @@ in and decodes the generated ids on the way out.
 
 ```{.python .input #rnn-implementation-generating-text-2}
 %%tab mxnet, pytorch
-model.predict('the time traveller', 50, data.tokenizer, d2l.try_gpu())
+d2l.print_wrapped(repr(model.predict('the time traveller', 50,
+                                     data.tokenizer, d2l.try_gpu())))
 ```
 
 ```{.python .input #rnn-implementation-generating-text-2}
 %%tab tensorflow, jax
-model.predict('the time traveller', 50, data.tokenizer)
+d2l.print_wrapped(repr(model.predict('the time traveller', 50,
+                                     data.tokenizer)))
 ```
 
 The continuation is locally plausible Wells, but it does not stay
@@ -843,15 +844,16 @@ and lowering the temperature interpolates back toward the greedy behavior.
 ```{.python .input #rnn-implementation-generating-text-3}
 %%tab mxnet, pytorch
 for T in (1.0, 0.5):
-    print(model.predict('the time traveller', 30, data.tokenizer,
-                        d2l.try_gpu(), temperature=T, rng=random.Random(0)))
+    d2l.print_wrapped(model.predict('the time traveller', 30, data.tokenizer,
+                                    d2l.try_gpu(), temperature=T,
+                                    rng=random.Random(0)))
 ```
 
 ```{.python .input #rnn-implementation-generating-text-3}
 %%tab tensorflow, jax
 for T in (1.0, 0.5):
-    print(model.predict('the time traveller', 30, data.tokenizer,
-                        temperature=T, rng=random.Random(0)))
+    d2l.print_wrapped(model.predict('the time traveller', 30, data.tokenizer,
+                                    temperature=T, rng=random.Random(0)))
 ```
 
 Neither knob fixes the underlying problem: repetition, incoherence, and the
@@ -1052,21 +1054,22 @@ trainer.fit(model, data)
 t_concise = time.time() - t0
 ```
 
-The trained model reaches a validation perplexity comparable to the
-from-scratch implementation, and its samples read the same.
+The trained model reaches a validation perplexity in the same range as the
+from-scratch implementation, somewhat higher in some frameworks, and its
+samples read the same.
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab pytorch, mxnet
 ppl_concise = float(model.board.data['val_ppl'][-1].y)
 pred = model.predict('the time traveller', 30, data.tokenizer, d2l.try_gpu())
-print(f'perplexity {ppl_concise:.1f}, {pred!r}')
+d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab tensorflow
 ppl_concise = float(model.board.data['val_ppl'][-1].y)
 pred = model.predict('the time traveller', 30, data.tokenizer)
-print(f'perplexity {ppl_concise:.1f}, {pred!r}')
+d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
@@ -1078,7 +1081,7 @@ for X_val, y_val in data.val_dataloader():
     num_tokens += losses.size
 ppl_concise = math.exp(total_loss / num_tokens)
 pred = model.predict('the time traveller', 30, data.tokenizer)
-print(f'perplexity {ppl_concise:.1f}, {pred!r}')
+d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
 ### Scratch versus Concise, Measured
@@ -1094,7 +1097,7 @@ for name, t, p in [('scratch', t_scratch, ppl_scratch),
 ```
 
 :begin_tab:`pytorch`
-The framework layer wins severalfold. The reason is kernel fusion: our
+The framework layer wins by a wide margin. The reason is kernel fusion: our
 scratch loop launches several small GPU operations per time step from
 Python, and at this model size the per-launch overhead dwarfs the
 arithmetic, while `nn.RNN` executes the whole unrolled recurrence inside one
@@ -1237,7 +1240,7 @@ state forward:
 
 . . .
 
-Sanity check on output shapes:
+Check the output shapes:
 
 @rnn-implementation-the-recurrent-cell-4
 :::
@@ -1353,7 +1356,7 @@ dense layers:
 @rnn-implementation-concise-implementation-2
 :::
 
-::: {.slide title="Sanity check, then train"}
+::: {.slide title="Output shapes and training"}
 Untrained model generates byte soup, but the wiring
 (tokenizer to model and back) is sound:
 
@@ -1373,7 +1376,7 @@ Same trainer, same data:
 ::: {.slide title="Scratch vs. concise, measured"}
 @rnn-implementation-scratch-versus-concise-measured
 
-- PyTorch/MXNet: fused kernel wins severalfold; per-step launch
+- PyTorch/MXNet: fused kernel wins ~2–3×; per-step launch
   overhead dominates at this size.
 - JAX: both versions JIT-compile; the gap is small.
 - TF: `SimpleRNN` has **no** fused GPU kernel; the compiled

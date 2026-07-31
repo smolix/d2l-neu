@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "source": "chapter_deep-reinforcement-learning/actor-critic.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:d0c5a689e5bc5c4243af8b16b506117d0a37185e82e952fd8ac5f79288285876",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "actor-critic-actor-critic-and-the-credit-assignment-dial-1": {
+      "code_fingerprint": "sha256:997220cc8188334417288c3782cea989cd725abee8df23d8b8494b18a697b476",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-actor-critic-and-the-credit-assignment-dial-2": {
+      "code_fingerprint": "sha256:9605257bf13f2509f9084c906a2adbd7017a1c0da20797afe9bace9fc48f74f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-the-td-error": {
+      "code_fingerprint": "sha256:15fd0ffaef42f06936206120612e12e712b1a501822db39dc288f3497787bdfd",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-a2c-by-name-1": {
+      "code_fingerprint": "sha256:a65ff8b01d78938348389daa1de1165b1376425258b6766b8ee35aa02d6d0bd0",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-a2c-by-name-3": {
+      "code_fingerprint": "sha256:b85902f77956b233b171f11079ffee4b653ddeed4b9834475d24a86c6a495c4c",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-a2c-by-name-4": {
+      "code_fingerprint": "sha256:8c8698bdbb7bdf6823a9982ac4f758ae4bee478594a0afadcd19e0f04cd0db42",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-a2c-by-name-5": {
+      "code_fingerprint": "sha256:664f57d43f12c8f6f8e6f03758b8a9c87db88cd5ddb4291db12220baba676353",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-a2c-by-name-6": {
+      "code_fingerprint": "sha256:e5fe14f35cd7b6da14097b57feee4b5f088d16429d7dcc483927523173346fe4",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-a2c-by-name-9": {
+      "code_fingerprint": "sha256:4be8c82e7bee2c0b7913dacf09bb23eed926c252a852e39dd1ef10d687303849",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
+          "bytes": 44301,
+          "sha256": "sha256:9bd78efd51e4f8c10229eb2f0fe2f0a0c8fa852857965dc2401170dd268ec06d"
+        }
+      ]
+    },
+    "actor-critic-a2c-by-name-7": {
+      "code_fingerprint": "sha256:a3c2da1e82513bcc31250da818f48861505ef2d8eef1a4a312416a254c114119",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "REINFORCE + baseline: longest stretch of perfect batches, per seed: [6, 7, 4]\n        actor-critic: longest stretch of perfect batches, per seed: [36, 26, 11]\n"
+        }
+      ]
+    },
+    "actor-critic-a2c-by-name-8": {
+      "code_fingerprint": "sha256:cfe108122beebb85da05e3ac3e52903b78c9522870c2d19c7af345018f1d6887",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "REINFORCE + baseline: median pre-clip gradient norm  0.04, clip binds on   0% of updates\n        actor-critic: median pre-clip gradient norm  0.40, clip binds on  35% of updates\n"
+        }
+      ]
+    },
+    "actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later": {
+      "code_fingerprint": "sha256:3f5442980caa1ec97019e34ffa9a137cb2a0c0a9ed38bd4efc60a7b00ba7f5b1",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "corr(TD error, MC advantage): mean 0.30 over the first ten updates, 0.01 over the last 50\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1.svg",
+          "bytes": 28528,
+          "sha256": "sha256:8dd54f9d63f06b3053c9f5c64a50cea366a3146470726525a87304cc86f579d9"
+        }
+      ]
+    },
+    "actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1": {
+      "code_fingerprint": "sha256:288470e2f9cc10558aa6012c004adf3ea3a0be074bc82ad60001630039345397",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "median variance, MC advantage over TD error: 114x\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
+          "bytes": 29842,
+          "sha256": "sha256:c43ccdc380af8b2e24d8d760851ec4dd003ec78ce6654f40c0a1ec7960ed9234"
+        }
+      ]
+    },
+    "actor-critic-gae-in-one-old-function-1": {
+      "code_fingerprint": "sha256:9fea6619b803df220ca88402bb96a4f50e0fb6f93ab7f6979268d26b4e705cff",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-gae-in-one-old-function-2": {
+      "code_fingerprint": "sha256:8e5b4b7ec0ada727be86fd936875cb006967bf4d0a3f8a065f78be2fa2483825",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda = 0 is the TD error; lambda = 1 is the Monte Carlo advantage\n"
+        }
+      ]
+    },
+    "actor-critic-measuring-the-dial-1": {
+      "code_fingerprint": "sha256:540e31b18b29ac6bca6b39e292783568fe080eaac5f730d5a51999131a9b82e8",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-measuring-the-dial-2": {
+      "code_fingerprint": "sha256:7a7b42a74c412885d38d649e6e4107e653ee5825a5c8d430c24c14bbf7c97a3e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda =  0.0: best 20-update window, median 222.5, seeds [138. 198. 223. 283. 328.]\nlambda =  0.5: best 20-update window, median 203.3, seeds [175. 179. 203. 218. 321.]\nlambda =  0.9: best 20-update window, median 419.5, seeds [387. 400. 420. 454. 486.]\nlambda = 0.95: best 20-update window, median 406.9, seeds [327. 367. 407. 444. 482.]\nlambda =  1.0: best 20-update window, median 449.7, seeds [293. 385. 450. 464. 479.]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
+          "bytes": 46544,
+          "sha256": "sha256:e249a35d3c5b705b928d356d12ac02daa651fde734e72ab785ae712fa893d895"
+        }
+      ]
+    },
+    "actor-critic-measuring-the-dial-3": {
+      "code_fingerprint": "sha256:ca3ed8d762d230ad8f757cdf699e143b1bd587b5d0b0382bf7b228dbf1e5bf68",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-measuring-the-dial-4": {
+      "code_fingerprint": "sha256:8f0a6fa4d667a6e11e067e51df5747422e96d95ffc7bc8ae92b2594713281a96",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda =  0.0: relative bias 1.05, relative variance    0.1, one-draw error    1.2\nlambda =  0.5: relative bias 1.06, relative variance    0.1, one-draw error    1.2\nlambda =  0.9: relative bias 0.95, relative variance    0.2, one-draw error    1.1\nlambda = 0.95: relative bias 0.83, relative variance    0.3, one-draw error    0.9\nlambda =  1.0: relative bias 0.00, relative variance    1.6, one-draw error    1.6\n"
+        }
+      ]
+    },
+    "actor-critic-measuring-the-dial-5": {
+      "code_fingerprint": "sha256:952d14fabd97a519c05851438bb5d303179b60d8e302c2c3a7d786983e5da345",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "REINFORCE + baseline: greedy mean return over 100 episodes: 500\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        actor-critic: greedy mean return over 100 episodes: 500\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,7 +1,15 @@
 # Statistics
 :label:`sec_mdl-statistics`
 
-A trained model is only ever fit to a *finite* sample, so every quantity we read off it (an accuracy, a learned weight, an estimated mean) is a guess computed from random data and would come out differently on a fresh draw. Statistics is the discipline that quantifies that randomness: it tells us how far a guess typically sits from the truth, when an apparent improvement is real rather than noise, and how confident we are entitled to be. This section develops the three ideas a deep-learning practitioner reaches for most often. We define an *estimator* and the two ways it can be wrong, *bias* and *variance*, and prove the decomposition that ties them together; this single identity is behind the U-curve that governs under- and over-fitting in :numref:`sec_generalization_basics`. We then turn to *hypothesis testing*, the framework behind A/B tests and benchmark comparisons, and close with *confidence intervals*, which attach a notion of uncertainty to a point estimate. Throughout we take the true parameter $\theta$ to be a scalar; the vector case is identical with sums of squares replaced by squared norms.
+A model is fitted to a finite random sample, so its accuracy, learned weights,
+and other estimates would change if the data were sampled again. Statistics
+quantifies this variation. This section defines estimators and their bias and
+variance, then derives the bias--variance decomposition used to analyze
+underfitting and overfitting in :numref:`sec_generalization_basics`. Hypothesis
+tests compare an observed difference with sampling variation, while confidence
+intervals report a range of parameter values compatible with an estimate. We
+write the unknown parameter $\theta$ as a scalar; the vector case replaces
+squares by squared norms.
 
 We use the following imports throughout the section, plus plain NumPy as `onp` for the label-shuffling in the permutation test and the resampling in the bootstrap.
 
@@ -181,7 +189,7 @@ samples = onp.random.normal(theta_true, sigma, (num_datasets, n))
 theta_hats = samples.mean(axis=1)  # one sample-mean estimate per dataset
 ```
 
-Now we read the decomposition off the empirical sampling distribution: the MSE of the estimates around the true $\theta$ should match the squared bias plus the variance of the estimates around their own mean, the two sides of :eqref:`eq_mdl-bias-variance`. One detail matters for exactness. The identity is a statement about expectations under a *single* distribution, here the empirical distribution of our $10{,}000$ estimates, whose expectations are plain averages; that dictates the *plug-in* variance that divides by the number of estimates (`ddof=0`, the default in most libraries), not the unbiased $n-1$ variant we meet in the next subsection. With the plug-in choice the proof's algebra goes through verbatim for the empirical averages.
+Now we read the decomposition off the empirical sampling distribution: the MSE of the estimates around the true $\theta$ should match the squared bias plus the variance of the estimates around their own mean, the two sides of :eqref:`eq_mdl-bias-variance`. One detail matters for exactness. The identity is a statement about expectations under a *single* distribution, here the empirical distribution of our $10{,}000$ estimates, whose expectations are plain averages. That forces the *plug-in* variance, which divides by the number of estimates (`ddof=0`, the default in most libraries), rather than the unbiased $n-1$ variant we meet in the next subsection. With the plug-in choice the proof's algebra goes through verbatim for the empirical averages.
 
 ```{.python .input #statistics-verify-decomposition}
 import numpy as onp
@@ -246,7 +254,7 @@ With $n=3$ the biased estimator averages near $\tfrac{n-1}{n}\sigma^2 = \tfrac23
 
 The bias-variance picture asks *how good* a single estimate is. Hypothesis testing asks a different question that dominates experimental practice: given two estimates (a baseline and a new model, a control group and a treatment), is the observed difference *real*, or could it be a fluke of the particular sample? This is the framework behind A/B testing and behind claims that one architecture beats another on a benchmark.
 
-### The Setup: Null, Alternative, and Two Kinds of Error
+### Null and Alternative Hypotheses
 
 A *hypothesis test* weighs evidence against a default claim. The **null hypothesis** $H_0$ is that default, typically "there is no effect" (e.g. the new model is no better than the baseline), and the **alternative** $H_A$ is the effect we hope to detect: sometimes the null's outright negation, but often one-sided or otherwise composite, e.g. "the new model is *better*." The asymmetry is deliberate: we never *prove* $H_0$; we either gather enough evidence to *reject* it in favor of $H_A$, or we fail to, much as a court returns "guilty" or "not guilty" rather than "innocent."
 
@@ -312,7 +320,7 @@ To summarize, a hypothesis test proceeds in five steps:
 4. Compute the test statistic and its $p$-value under $H_0$.
 5. Reject $H_0$ if $p \le \alpha$; otherwise fail to reject.
 
-### A Worked Test: Comparing Two Models
+### Comparing Two Models
 
 Let us walk through the five steps once, on the comparison practitioners face most often: is model B really better than model A, or did it just draw lucky seeds? We simulate per-seed test accuracies for the two models: twenty training runs each, with a true gap of $0.8\%$ buried in seed-to-seed noise of comparable size. Step 1: $H_0$ is that the two models are equally good, i.e. the two accuracy samples come from the same distribution, and $H_A$ is that they differ; step 2: $\alpha=0.05$. The test statistic is the gap between the mean accuracies. Rather than assume a Gaussian null distribution, we use a **permutation test** :cite:`Fisher.1935`, which manufactures the null distribution from the data itself: if $H_0$ holds, the labels "A" and "B" carry no information (the $40$ numbers are *exchangeable*), so shuffling the labels and recomputing the gap, many times over, shows exactly how large a gap arises by pure chance. The two-sided $p$-value is the fraction of shuffles producing a gap at least as extreme as the observed one (counting the observed labeling itself among them, which keeps the estimate valid and never exactly zero).
 
@@ -341,7 +349,7 @@ d2l.plt.xlabel('gap under label shuffling')
 d2l.plt.ylabel('count');
 ```
 
-The observed gap is $0.0073$ (model B looks better by about three quarters of an accuracy point), and only about $2\%$ of label shuffles produce a gap that large, so $p \approx 0.02 \le \alpha = 0.05$ and we reject $H_0$: the improvement is unlikely to be a fluke. The histogram of shuffled gaps makes the verdict visual: they pile up in a bell around zero (no Gaussian assumption put it there; the bell is the *finite-population* central limit theorem for means drawn without replacement from the pooled forty numbers, a relative of the i.i.d. CLT of :numref:`sec_mdl-distributions`), while the observed gap (solid line) sits far out in the right tail, with only a sliver of the null mass beyond the two lines that the two-sided test counts. Note how close the call is, though. A *real* $0.8\%$ improvement, measured over twenty seeds, only just clears the bar, the power discussion above in action; with five seeds (a common budget) the same gap would usually go undetected. The permutation test assumes no Gaussian shape and works for any statistic we care to compute on the two groups; the same resample-and-recompute idea returns in the bootstrap below.
+The observed gap is $0.0073$ (model B looks better by about three quarters of an accuracy point), and only about $2\%$ of label shuffles produce a gap that large, so $p \approx 0.02 \le \alpha = 0.05$ and we reject $H_0$: the improvement is unlikely to be a fluke. The histogram of shuffled gaps makes the verdict visual: they pile up in a bell around zero (no Gaussian assumption put it there; the bell is the *finite-population* central limit theorem for means drawn without replacement from the pooled forty numbers, a relative of the i.i.d. CLT of :numref:`sec_mdl-distributions`), while the observed gap (solid line) sits far out in the right tail, with only a sliver of the null mass beyond the two lines that the two-sided test counts. Note how close the call is, though. A *real* $0.8\%$ improvement measured over twenty seeds only just clears the bar, which is the power discussion above in action; with five seeds (a common budget) the same gap would usually go undetected. The permutation test assumes no Gaussian shape and works for any statistic we care to compute on the two groups; the same resample-and-recompute idea returns in the bootstrap below.
 
 One refinement matters in practice. When the comparison is *paired*, with models A and B trained and evaluated on the *same* seeds, the exchangeable objects are not the $40$ pooled numbers but the per-seed *differences*, and the right test flips the sign of each difference at random: the paired, or sign-flip, permutation test. It respects the pairing and typically gains power.
 
@@ -431,7 +439,7 @@ by drawing fresh datasets from $F$ and recomputing it. The bootstrap's move, the
 
 The spread of these $B$ replicates approximates the sampling distribution of $\hat\theta$, so their standard deviation estimates its standard error, and the $\alpha/2$ and $1-\alpha/2$ empirical percentiles of $\{\hat\theta^*_b\}$ form a *percentile* confidence interval. How many replicates? A few hundred ($B\approx200$) suffice for a standard error, but the percentile interval rests on estimated tail quantiles, so use $B$ of at least $1{,}000$--$2{,}000$; resampling is cheap, and below we simply take $B=10{,}000$. :numref:`fig_mdl-bootstrap` shows the construction: one original sample fans out into many resamples, whose statistics pile up into a histogram standing in for the true (unknowable) sampling distribution, with the central band cut off at those percentiles. Two caveats matter. This resampling distribution is *centered at
 $\hat\theta$, not at $\theta$*; the bootstrap estimates shape and width from
-the one sample we have. It also is not valid for every statistic or sampling
+the one sample we have. It is also not valid for every statistic or sampling
 scheme. Ordinary iid bootstrap theory works well for many smooth statistics,
 but extrema, parameters on a boundary, very small samples, and nonsmooth or
 non-identifiable problems can fail; dependent observations require block,
@@ -598,11 +606,11 @@ bias and variance vanish (the weak law of large numbers is the prototype).
 Cramér–Rao bound is the floor; the MLE reaches it asymptotically.
 :::
 
-::: {.slide title="MSE: one number for both errors"}
+::: {.slide title="Mean squared error combines bias and variance"}
 [Estimators]{.kicker}
 
 $\operatorname{MSE}(\hat\theta_n) = \mathbb E[(\hat\theta_n-\theta)^2]$
-folds both errors into one number.
+combines squared bias and variance.
 
 ::: {.d2l-note .rule}
 **Proposition.**
@@ -905,7 +913,7 @@ statistic, different answer:
 ::: {.cols}
 ::: {.col}
 - Estimators are random; quality = bias, variance, and their sum, MSE = $\operatorname{Bias}^2+\operatorname{Var}$.
-- Consistent when both vanish; the U-curve is under/overfitting as one identity; $n-1$ pays for one degree of freedom.
+- Consistency follows when both vanish; the U-shaped curve describes underfitting and overfitting; $n-1$ corrects for one estimated degree of freedom.
 :::
 
 ::: {.col}

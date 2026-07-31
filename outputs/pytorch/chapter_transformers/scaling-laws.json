@@ -35,18 +35,13 @@
       "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-pytorch/lib/python3.12/site-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.\n  _warn_once(\n"
-        },
-        {
-          "type": "stream",
           "name": "stdout",
           "text": "6ND analytic: 2.324e+11 FLOPs\nprofiler:     2.326e+11 FLOPs (ratio 1.001)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "26 ms per step: 8.8 TFLOP/s achieved\n"
+          "text": "21 ms per step: 11.0 TFLOP/s achieved\n"
         }
       ]
     },
@@ -88,7 +83,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=384, 8 blocks: 14.16M parameters, train 1.03, validation 1.07\n"
+          "text": "d=384, 8 blocks: 14.16M parameters, train 1.03, validation 1.06\n"
         }
       ]
     },
@@ -100,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 33782,
-          "sha256": "sha256:99b56032eb28129e8f3f0626700f0c48e76fb5dfe9996623897af77b56b96506"
+          "bytes": 33780,
+          "sha256": "sha256:6e20200322a52cb5f4c728620a1fefce5b3743bb3b7e9ace12593ecfc41ff5f0"
         }
       ]
     },

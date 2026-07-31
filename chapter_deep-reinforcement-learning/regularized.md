@@ -1,0 +1,460 @@
+# Regularized Policy Optimization
+:label:`sec_regularized`
+
+PPO constrains each policy update relative to the preceding policy. A different objective keeps the policy near a fixed reference by subtracting a KL-divergence penalty from expected reward. This changes the optimum, not only the path taken by the optimizer, and it includes entropy regularization as the special case of a uniform reference.
+
+We first examine why such a reference can be useful when rewards are learned from preferences. A reward model is accurate only where its comparison data provide information, and optimizing it can exploit errors elsewhere. A tabular gridworld makes this failure measurable against the true reward. We then derive the KL-regularized optimum, its soft Bellman backup, and its connections to language-model post-training and maximum-entropy reinforcement learning.
+
+```{.python .input #regularized-regularized-policy-optimization}
+%%tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import numpy as np
+```
+
+```{.python .input #regularized-regularized-policy-optimization}
+%%tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import numpy as np
+```
+
+## Learning Rewards from Preferences
+
+For many tasks, such as evaluating a helpful answer or a safe driving maneuver, an explicit numerical reward is difficult to specify. Pairwise comparisons are often easier to obtain. Preference-based reinforcement learning fits a reward model to these comparisons and then optimizes the learned reward :cite:`Christiano.Leike.Brown.ea.2017`. We represent the comparison model with logistic regression.
+
+### Preferences and the Bradley-Terry Model
+
+The Bradley-Terry model :cite:`Bradley.Terry.1952` posits that each candidate carries a scalar score, here the return of a trajectory, and that a comparison is a noisy readout of the score difference:
+
+$$P(\tau \succ \tau') = \sigma\big( r(\tau) - r(\tau') \big), \qquad \sigma(u) = \frac{1}{1 + e^{-u}}.$$
+:eqlabel:`eq_bradley_terry`
+
+Fitting $r$ by maximum likelihood on labeled pairs is exactly logistic regression on the difference of features. Our laboratory: a $4 \times 4$ gridworld with deterministic moves, an absorbing goal in the far corner worth $+1$, a living cost of $-0.04$ per step, and a hazard lane of two cells in the middle of the map costing $-1.5$ to enter. The agent we improve, $\pi_{\textrm{ref}}$, is competent but hedging: a softmax over the true action values at temperature $0.25$, so it reaches the goal while dithering along the way, and it almost never enters the hazard lane, because it knows better.
+
+```{.python .input #regularized-preferences-and-bradley-terry-1}
+%%tab pytorch, jax
+gamma = 0.95                                   # a 4 x 4 gridworld
+P = np.zeros((16, 4, 16))
+for s, a in np.ndindex(16, 4):
+    x, y = s % 4, s // 4
+    dx, dy = [(-1, 0), (0, 1), (1, 0), (0, -1)][a]   # left, down, right, up
+    P[s, a, min(3, max(0, y + dy)) * 4 + min(3, max(0, x + dx))] = 1.0
+P[15], P[15, :, 15] = 0.0, 1.0                 # the goal absorbs
+bonus = np.full(16, -0.04)                     # every step costs a little
+bonus[[5, 6]], bonus[15] = -1.5, 1.0           # a hazard lane; the goal pays
+r_true = np.einsum('sat,t->sa', P, bonus)      # r*(s, a): the entered bonus
+r_true[15] = 0.0
+mdp = d2l.TabularMDP(P, r_true, gamma)
+Q_true = mdp.backup(d2l.value_iteration(mdp, 200)[-1])
+pi_ref = np.exp(Q_true / 0.25)                 # competent but hedging
+pi_ref /= pi_ref.sum(1, keepdims=True)
+```
+
+Now hide $r^*$ and learn it back from comparisons alone. We collect a thousand trajectories from $\pi_{\textrm{ref}}$, describe each by its discounted visit counts $x(\tau)$, so that the true return is exactly the linear function $x(\tau)^\top r^*$, sample six thousand pairs, label each by :eqref:`eq_bradley_terry`, and fit $\hat{r}$ by logistic regression on feature differences, with a little weight decay, as one always should:
+
+```{.python .input #regularized-preferences-and-bradley-terry-2}
+%%tab pytorch, jax
+rng = np.random.default_rng(0)
+
+def sample_traj(pi, T=40):
+    s, x = 0, np.zeros((16, 4))
+    for t in range(T):
+        a = rng.choice(4, p=pi[s])
+        x[s, a] += gamma ** t                  # discounted visits: R = x . r
+        s = P[s, a].argmax()
+        if s == 15:
+            break
+    return x.ravel()
+
+X = np.stack([sample_traj(pi_ref) for _ in range(1000)])
+R = X @ r_true.ravel()                         # true returns; the fit never sees them
+i, j = rng.integers(0, 1000, (2, 6000))
+y = (rng.random(6000) < 1 / (1 + np.exp(R[j] - R[i]))).astype(float)
+D = X[i] - X[j]
+w = np.zeros(64)
+for _ in range(4000):                          # logistic regression on (D, y)
+    w += 0.5 * (D.T @ (y - 1 / (1 + np.exp(-D @ w))) / len(y) - 0.02 * w)
+r_hat = w.reshape(16, 4)
+core = (X > 0).sum(0).reshape(16, 4) >= 50     # pairs seen in >= 50 episodes
+print(f'never visited: {(X.sum(0) == 0).sum()} pairs; '
+      f'in at least 50 episodes: {core.sum()} pairs')
+print(f'rms fit error on those {core.sum()}: '
+      f'{np.sqrt(((r_hat - r_true)[core] ** 2).mean()):.3f}')
+print(f'entries into the hazard lane: true '
+      f'{np.round(r_true[[1, 4, 2, 5], [1, 2, 1, 2]], 2)}, '
+      f'fitted {np.round(r_hat[[1, 4, 2, 5], [1, 2, 1, 2]], 2)}')
+```
+
+The fit has an rms error of $0.19$ on the forty-six state-action pairs visited by the reference policy. Nine pairs are absent from the data, so their fitted rewards remain at the initialization value of zero. This matters for the hazard lane: entering it has true reward $-1.5$, but the fitted model assigns a value near zero because the reference policy rarely provides comparisons there. In this example, zero initialization and weight decay make unsupported predictions remain near zero. A neural reward model need not behave this way and may extrapolate unpredictably outside the data distribution.
+
+### Identifiability and the Per-Prompt Baseline
+
+A comparison only ever weighs two trajectories from the *same* start state, so :eqref:`eq_bradley_terry` sees score differences and nothing else. Shift the reward by any function of the start state, $r(x, y) \to r(x, y) + f(x)$ in the prompt-response notation used at scale, and every difference, hence the whole likelihood, is unchanged: exercise 5 asks you to write out the two lines. A learned reward is therefore only identified *relative to each prompt*; its absolute level per prompt is pure convention. This is why subtracting a per-prompt baseline is free, twice over. On the reward side it changes nothing the comparisons ever measured. On the policy side, the zero-mean lemma of :numref:`sec_baselines` says that subtracting any function of the state from the weight leaves the policy gradient unbiased. The group mean that GRPO subtracts (:numref:`sec_baselines`) is this pair of facts used at scale: the quantity it removes was never identified, and removing it costs no bias.
+
+### Dense versus Terminal Rewards
+
+Our comparisons scored whole trajectories, so $\hat{r}$ is anchored by end-to-end evidence, and at scale the learned reward is usually *terminal*: one number for the finished response. :numref:`sec_mdp` already priced this trade: terminal rewards are hard to game but sparse, dense rewards are informative but dangerous to author, and the only densification guaranteed not to change the optimum is potential-based shaping :cite:`Ng.Harada.Russell.1999`. The vocabulary used at scale takes two sentences. An outcome reward model (ORM) scores the final result, a process reward model (PRM) scores intermediate steps; a PRM is a learned dense reward, which buys the credit-assignment help of density at the price of authoring, labeling, and guarding many more numbers.
+
+## Optimizing a Proxy Reward
+
+We now do the dangerous thing on purpose: hand $\hat{r}$ to the strongest optimizer we have.
+
+### Reward Hacking and Goodhart's Law
+
+The failure mode has a name older than the field. Goodhart's law: when a measure becomes a target, it ceases to be a good measure. In reinforcement learning it appears as *reward hacking*, a policy scoring highly under the reward you wrote or fitted while defeating the intent behind it, and the catalogue of real examples is long :cite:`Krakovna.Uesato.Mikulik.ea.2020`. It is the shaped-bonus exploit of :numref:`sec_mdp` in one sentence: an optimizer pointed at any *estimated* objective finds the estimate's errors; there the error was authored, here it is statistical, and the optimizer does not care. Planning is the strongest optimizer this book owns, so we plan optimally against $\hat{r}$ with value iteration (:numref:`sec_valueiter`) and grade the result under $r^*$:
+
+```{.python .input #regularized-reward-hacking-and-goodhart}
+%%tab pytorch, jax
+def plan(r):
+    m = d2l.TabularMDP(P, r, gamma)
+    return np.eye(4)[m.backup(d2l.value_iteration(m, 200)[-1]).argmax(1)]
+
+def ret(pi, r):
+    m = d2l.TabularMDP(P, r, gamma)
+    return d2l.policy_evaluation(m, pi, 400)[-1][0]
+
+for name, r in (('true reward  ', r_true), ('fitted reward', r_hat)):
+    pi = plan(r)
+    print(f'plan on {name}: fitted return {ret(pi, r_hat):+.2f}, '
+          f'true return {ret(pi, r_true):+.2f}')
+```
+
+Under the fitted reward, the optimized policy scores $-0.03$, compared with $-0.24$ for the reference policy; only the difference is meaningful because the additive reward constant is unidentified. Under the true reward, however, the scores are $-2.11$ and $+0.59$. The optimized policy enters the hazard lane because its unsupported rewards were estimated near zero. Value iteration has optimized the supplied reward correctly; the failure lies in the reward model outside the reference policy's data distribution. :numref:`sec_offline` encounters the same problem for learned value functions.
+
+### True Return against the KL Budget
+
+Where is $\hat{r}$ trustworthy? Where the data was, and the data came from $\pi_{\textrm{ref}}$. So the informative dial is not *how hard we optimize* but *how far from the reference we let the optimizer move*, and the natural ruler for the gap between two distributions over trajectories is the KL divergence. To trace the trade-off we want, for each exchange rate $\beta$, the policy that best spends divergence on fitted reward: the maximizer of $\sum_t \gamma^t \big( \hat{r}_t - \beta\, D_{\textrm{KL}}( \pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t) ) \big)$. The next section derives this objective for a single decision and proves its optimum in closed form; in an MDP the optimum must also account for every *later* step's reward and penalty, and it does so through a $\beta$-dependent soft action value: replace value iteration's hard-max backup (:numref:`sec_valueiter`) with the reference-weighted soft one,
+
+$$V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}, \qquad Q_\beta(s, a) = \hat{r}(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V_\beta(s'),$$
+
+whose fixed point gives the exactly optimal policy $\pi_\beta(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}$. Take that on credit for one experiment, the way :numref:`sec_valueiter` once asked you to: the backup is a contraction like its hard parent, the loop below solves it per $\beta$, and the printed residual certifies that the sweep plots the solved frontier, not an approximation to it. Large $\beta$ barely tilts, small $\beta$ commits to the argmax, recovering the hacked plan. For each exact $\pi_\beta$ we record its true return, its fitted return, and the KL it spends, the discounted sum of per-state divergences from the reference along its own trajectories:
+
+```{.python .input #regularized-the-measurement-true-return-against-the-kl-budget}
+%%tab pytorch, jax
+def soft_v(r, beta, num_iters=400):
+    """Soft value iteration for the KL-penalized objective: iterate
+    V(s) <- beta log sum_a pi_ref(a|s) exp((r + gamma P V)(s, a) / beta)."""
+    V = np.zeros(16)
+    for _ in range(num_iters):
+        Q = r + gamma * np.einsum('sat,t->sa', P, V)
+        m = Q.max(1)
+        V = m + beta * np.log(
+            (pi_ref * np.exp((Q - m[:, None]) / beta)).sum(1))
+    return V
+
+kls, true_ret, prox_ret, resid = [], [], [], 0.0
+for beta in np.logspace(1, -2.5, 36):
+    V_b = soft_v(r_hat, beta)
+    Q_b = r_hat + gamma * np.einsum('sat,t->sa', P, V_b)
+    m = Q_b.max(1, keepdims=True)
+    pi = pi_ref * np.exp((Q_b - m) / beta)     # the exact optimum: pi_ref
+    pi /= pi.sum(1, keepdims=True)             # tilted by the soft Q_beta
+    back = m[:, 0] + beta * np.log(
+        (pi_ref * np.exp((Q_b - m) / beta)).sum(1))
+    resid = max(resid, np.abs(back - V_b).max())   # Bellman residual
+    kl = (pi * np.log(np.where(pi > 0, pi / pi_ref, 1.0))).sum(1)
+    kl[15] = 0.0                               # no decisions once absorbed
+    rho = np.linalg.solve(np.eye(16) - gamma
+                          * np.einsum('sa,sat->st', pi, P).T, np.eye(16)[0])
+    kls.append(rho @ kl)
+    true_ret.append(ret(pi, r_true))
+    prox_ret.append(ret(pi, r_hat))
+k = int(np.argmax(true_ret))
+print(f'largest soft Bellman residual across the sweep: {resid:.1e}')
+print(f'true return {true_ret[0]:+.2f} at KL 0, peak {true_ret[k]:+.2f} '
+      f'at KL {kls[k]:.1f}, then {true_ret[-1]:+.2f} at KL {kls[-1]:.1f}')
+d2l.plot(kls, [true_ret, prox_ret], 'KL from the reference (nats)', 'return',
+         legend=['true return', 'fitted return'])
+```
+
+Every point in this figure is an optimum of the penalized objective; the Bellman residual is zero to double precision. The fitted return increases throughout the sweep. The true return instead rises from $-0.10$ to $+0.53$ at a divergence just below four nats, and then decreases sharply as the policy concentrates on the hazard lane. Moderate optimization of the imperfect reward model improves the true return, whereas further optimization exploits its unsupported predictions. A similar nonmonotonic relation has been observed when language models are optimized against a learned reward and evaluated by a separate reference measure :cite:`Gao.Schulman.Hilton.2023`. This motivates controlling the divergence from the reference policy directly.
+
+## The Regularized Objective
+
+:numref:`chap_reinforcement_learning` maximized expected reward. The measurement above says that with a learned reward this is the wrong objective: what we want is reward *net of the divergence it spends*. So write that down. For a single decision, a reward $r(a)$ over a finite action set, a reference $\pi_{\textrm{ref}}$, and a coefficient $\beta > 0$:
+
+$$\max_{\pi}\ E_{a \sim \pi}\big[ r(a) \big] - \beta\, D_{\textrm{KL}}\big( \pi \Vert \pi_{\textrm{ref}} \big).$$
+:eqlabel:`eq_kl_objective`
+
+The penalty is not a constraint on a step. It is part of the objective, weighed against reward at exchange rate $\beta$, and it is measured against a policy that never moves.
+
+### The Closed-Form Optimum
+
+**Proposition.** For $\beta > 0$, the objective :eqref:`eq_kl_objective` is maximized by the unique policy
+
+$$\pi^\star(a) = \frac{1}{Z}\, \pi_{\textrm{ref}}(a)\, e^{r(a)/\beta}, \qquad Z = \sum_{a} \pi_{\textrm{ref}}(a)\, e^{r(a)/\beta},$$
+:eqlabel:`eq_kl_optimum`
+
+and the maximal value is $\beta \log Z$.
+
+**Proof.** By construction $r(a) = \beta \log\big( \pi^\star(a) Z / \pi_{\textrm{ref}}(a) \big)$. Substituting into the objective, for any policy $\pi$,
+
+$$E_\pi[r] - \beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \sum_a \pi(a)\, \beta \log \frac{\pi^\star(a)\, Z}{\pi(a)} = \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).$$
+
+Gibbs' inequality, proved in :numref:`chap_mdl-information-theory`, says the remaining divergence is nonnegative and zero exactly when $\pi = \pi^\star$. $\blacksquare$
+
+The optimum is the reference multiplied by an exponential tilt and renormalized, and the achieved value is a log-partition function. :numref:`fig_rl_kl_tilting` draws it. Two boundary clauses complete the statement. The optimum inherits the reference's support: if $\pi_{\textrm{ref}}(a) = 0$, any policy placing mass on $a$ has infinite divergence, so :eqref:`eq_kl_optimum` correctly assigns $a$ zero probability, and no reward, however large, can resurrect an action the reference excludes. And as $\beta \to 0$ the limit is a point mass only when the best action is unique; with ties, it is the reference renormalized over the maximizing set. Verifying the proposition is cheap enough that there is no excuse not to. First solve :eqref:`eq_kl_objective` numerically, by plain exponentiated gradient ascent, multiplicative updates renormalized onto the simplex, with every line visible; the $+1$ in the exact gradient $r - \beta(\log(\pi/\pi_{\textrm{ref}}) + 1)$ is constant across actions and dies in the normalization, so we drop it:
+
+```{.python .input #regularized-the-proposition-1}
+%%tab pytorch, jax
+p_ref = np.array([0.30, 0.10, 0.25, 0.20, 0.15])
+r = np.array([0.0, 0.5, 1.0, 2.0, 3.0])
+
+def solve_kl(r, p, beta, steps=3000, eta=0.3):
+    pi = np.full_like(p, 1 / len(p))
+    for _ in range(steps):                     # exponentiated gradient ascent
+        pi = pi * np.exp(eta * (r - beta * np.log(pi / p)))
+        pi /= pi.sum()
+    return pi
+
+for beta in (5.0, 2.0, 0.5, 0.2):
+    pi = solve_kl(r, p_ref, beta)
+    print(f'beta = {beta:3}: pi_beta = {np.round(pi, 3)}, '
+          f'reward {pi @ r:.2f}, KL {(pi * np.log(pi / p_ref)).sum():.2f}')
+```
+
+Then compare against :eqref:`eq_kl_optimum`, closed form against converged iterate, and the value against $\beta \log Z$:
+
+```{.python .input #regularized-the-proposition-2}
+%%tab pytorch, jax
+def pi_star(r, p, beta):
+    star = p * np.exp((r - r.max()) / beta)    # eq_kl_optimum, stabilized
+    return star / star.sum()
+
+gap = max(np.abs(solve_kl(r, p_ref, b) - pi_star(r, p_ref, b)).max()
+          for b in (5.0, 2.0, 0.5, 0.2))
+pi2 = solve_kl(r, p_ref, 2.0)
+print(f'largest gap to the closed form over the ladder: {gap:.1e}')
+print(f'objective at beta = 2: numerical '
+      f'{pi2 @ r - 2.0 * (pi2 * np.log(pi2 / p_ref)).sum():.6f}, '
+      f'beta log Z = {2.0 * np.log(p_ref @ np.exp(r / 2.0)):.6f}')
+```
+
+The largest disagreement across the whole ladder of $\beta$ is at floating-point resolution, comfortably beyond the $10^{-6}$ we would have settled for, and the achieved objective matches $\beta \log Z$ to six decimals. The proposition is not asymptotic and not approximate; it is the answer.
+
+![The optimum of the penalized objective, drawn as the product it is. Each row multiplies the reference $\pi_{\textrm{ref}} = (0.30,\ 0.10,\ 0.25,\ 0.20,\ 0.15)$ by the tilt $e^{r/\beta}$ for the reward $r = (0,\ 0.5,\ 1,\ 2,\ 3)$ and renormalizes, giving $\pi^\star$; the top row uses $\beta = 2$, the bottom $\beta = 0.2$. The reference is deliberately not monotone in the reward, and its dip at $a_2$ survives into $\pi^\star$ in both rows: $\pi^\star$ is a reweighting of the reference, not a ranking of the reward. The stronger tilt spends more divergence, $D_{\textrm{KL}}(\pi^\star \Vert \pi_{\textrm{ref}}) = 0.15$ in the top row against $1.84$ in the bottom, and the margins annotate the two limits: $\beta \to \infty$ returns the reference, $\beta \to 0$ a point mass on the best action.](../img/mdl-rl-kl-tilting.svg)
+:label:`fig_rl_kl_tilting`
+
+### Four Consequences of the Closed Form
+
+**Without the penalty, the optimum is a point mass.** Send $\beta \to 0$ in :eqref:`eq_kl_optimum` and all mass flows to the highest-reward action, or, under ties, to the reference's distribution over the tied set; that is just the unregularized problem, whose solution was always the argmax. This characterizes the *optimum*, not the dynamics of any particular training run, but it aims every run somewhere: the entropy decay measured in :numref:`sec_ppo` was drift toward a destination built into the objective. Regularized reinforcement learning is what makes remaining a distribution optimal rather than merely transient.
+
+**The coefficient is an interpolation dial.** The two ends of the dial, read off the closed form:
+
+```{.python .input #regularized-four-consequences-1}
+%%tab pytorch, jax
+for beta in (100.0, 0.01):
+    print(f'beta = {beta:6}: pi_star = {np.round(pi_star(r, p_ref, beta), 3)}')
+```
+
+$\beta \to \infty$ reproduces the reference; $\beta \to 0$ is greedy; every policy between is an exact optimum of some exchange rate between reward and divergence.
+
+**A uniform reference is the entropy bonus.** Against a uniform reference, $D_{\textrm{KL}}(\pi \Vert \textrm{uniform}) = \log |\mathcal{A}| - H(\pi)$, so the penalty *is* an entropy bonus up to a constant, and :eqref:`eq_kl_objective` becomes the maximum-entropy objective. The closed form specializes to a softmax of the reward:
+
+```{.python .input #regularized-four-consequences-2}
+%%tab pytorch, jax
+boltzmann = np.exp(r / 0.5) / np.exp(r / 0.5).sum()
+print(np.allclose(pi_star(r, np.full(5, 0.2), 0.5), boltzmann))
+```
+
+That is the shape of :numref:`sec_policygradient`'s softmax policies, and the Boltzmann exploration rule of :numref:`sec_qlearning` was sampling from the optimal solution of an entropy-regularized problem all along, with its temperature playing the role of $\beta$. The sequential version of this consequence is the soft backup, which closes the section.
+
+**The optimum is a posterior.** Read :eqref:`eq_kl_optimum` as Bayes' rule: prior $\pi_{\textrm{ref}}$, likelihood $e^{r/\beta}$, posterior $\pi^\star$, evidence $Z$. This is a change of viewpoint with its own literature, in which reinforcement learning is inference, rewards are log-likelihoods of an optimality event, and regularized policy optimization is variational inference against that posterior :cite:`Levine.2018,Korbak.Perez.Buckley.2022`; everything known about approximate posteriors and the choice of divergence then transfers to policies wholesale.
+
+Sweeping $\beta$ traces the exact frontier of reward against divergence, the curve the gridworld experiment could only approximate through a broken $\hat{r}$:
+
+```{.python .input #regularized-four-consequences-3}
+%%tab pytorch, jax
+front = np.stack([pi_star(r, p_ref, b) for b in np.logspace(1.5, -1.5, 61)])
+kl_f = (front * np.log(front / p_ref)).sum(1)
+print(f'KL 0 pays {p_ref @ r:.2f}; the frontier ends at KL '
+      f'{np.log(1 / p_ref[r.argmax()]):.2f}, reward {r.max():.0f}')
+d2l.plot(kl_f, front @ r, 'KL from the reference (nats)', 'expected reward')
+```
+
+With the true reward on the y axis the frontier is concave and rising (exercise 2): each extra nat buys less reward than the one before. The gridworld's version *turned over* only because its y axis was the true return while its optimizer chased the fitted one. The two rows of :numref:`fig_rl_kl_tilting` are two points on this curve.
+
+### Trust Region versus Penalty
+
+Two ideas in this book wear the same three letters, and they must not be confused.
+
+> **The two KLs.** A **trust region** (:numref:`sec_ppo`) measures KL against the *previous iterate*. It constrains the optimization *path*, protects a local approximation, moves with the policy, and at convergence it binds nothing: it shapes how you get there, never where you end up. A **penalty** (this section) measures KL against a *frozen reference*. It sits inside the objective, changes the *optimum* to :eqref:`eq_kl_optimum`, and never stops binding: it shapes where you end up. PPO-style fine-tuning of language models runs **both at once**, a clipped surrogate against the previous iterate for stability of each update, and a reward penalized by KL to the frozen initial model to anchor the optimum :cite:`ouyang2022training`; conflating the two is the commonest confusion in the literature around these methods.
+
+### The Direction of the KL Divergence
+
+$D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ is the *reverse* divergence in the taxonomy of :numref:`sec_mdl-fwd-vs-rev-kl`, and both properties established there do work here. It is an expectation under $\pi$, so the policy can estimate its own penalty from its own samples; and it is mode-seeking, charging $\pi$ heavily for putting mass where the reference has little while charging nothing for abandoning the reference's modes. A policy optimized under it therefore concentrates inside the reference's support, on the highest-reward behavior the reference already exhibits: this is why post-training *sharpens* a model rather than broadening it. The forward direction $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$ would instead force $\pi$ to cover everything the reference does, a supervised, imitation-flavored pull; the choice of direction is a modeling decision, not a technicality.
+
+## The Soft Backup and Its Consequences
+
+### Maximum-Entropy Reinforcement Learning and the Soft Backup
+
+Everything above was one decision. In an MDP the penalty is charged at every step, $\sum_t \gamma^t \big( r_t - \beta\, D_{\textrm{KL}}( \pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t) ) \big)$, the objective our gridworld sweep optimized, and the proposition applies state by state with an action value in place of $r$, under one precaution the gridworld code already took: the value entering the tilt must itself account for every later step's reward *and* penalty, which makes it the $\beta$-dependent soft value $Q_\beta$ rather than the unregularized $Q^*$; tilting the reference by $Q^*$ is a different, merely heuristic family that is the exact optimum of no exchange rate. Writing the proposition's achieved value $\beta \log Z$ into the Bellman equation of :numref:`sec_valueiter` replaces the hard maximum with a soft one,
+
+$$V(s) = \max_a Q(s, a) \quad \textrm{becomes} \quad V(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q(s, a)/\beta},$$
+
+the backup that `soft_v` iterated to a fixed point, with residual zero to double precision. It replaces the maximum by a log-sum-exp, recovering the ordinary $\max$ as $\beta \to 0$. With a uniform reference, this is *soft value iteration* and the objective is maximum-entropy reinforcement learning. The smooth backup provides an alternative to the hard maximum whose estimation bias was discussed in :numref:`sec_dqn`. Exercise 6 applies this backup to the slippery lake and varies $\beta$ from value iteration toward policy evaluation.
+
+### DDPG, TD3 and SAC
+
+The regularized objective also completes a story this book can now tell entirely in prose, because every part has been built. The continuous-control lineage of off-policy actor-critic methods runs: DDPG :cite:`Lillicrap.Hunt.Pritzel.ea.2016` trains a deterministic actor by the pathwise gradient of :numref:`sec_deeprl` through a learned critic, off-policy from a replay buffer, with target networks; it is sample-efficient, notoriously brittle, and today taught as history. TD3 :cite:`Fujimoto.vanHoof.Meger.2018` diagnoses the brittleness largely as the maximization bias :numref:`sec_qlearning` demonstrated on a table: an actor trained to climb a critic is a maximizer over errors, so TD3 trains *twin* critics and takes their minimum, the bias argument applied twice, plus delayed actor updates and target smoothing. SAC :cite:`Haarnoja.Zhou.Abbeel.ea.2018` replaces the deterministic actor with a stochastic one and maximizes exactly this section's objective with a uniform reference: its "soft" critics implement the soft backup above, its entropy term is our penalty, its actor update is the pathwise gradient again, its twin critics are TD3's repair. Three components you already own. The one mechanism we have not covered is the change-of-variables correction SAC needs because its Gaussian actions are squashed through a $\tanh$ to fit bounded action spaces: squashing changes densities, so a log-determinant term joins the log-probabilities. That correction is one line of calculus per action dimension, and it is the one genuinely new mechanism in :numref:`sec_sac`, which assembles all the parts above into the running algorithm and measures what the assembly buys.
+
+### Connections to Later Sections
+
+Three sections point back here. :numref:`sec_dqn` studies what happens to the hard $\max$ under function approximation, knowing now that it is the $\beta \to 0$ corner. :numref:`sec_offline` faces our hacked planner's problem head-on, learning from a fixed dataset, and reaches for the mirrored tool, a penalty *subtracted* where data is scarce rather than a divergence charged for leaving the data's neighborhood. And :numref:`sec_rl_sequences` takes :eqref:`eq_kl_objective` to the setting it now rules, sequences from a language model, where the reference is the pretrained model, the reward is learned from preferences exactly as in this section, and the closed form :eqref:`eq_kl_optimum` gets read in both directions, from reward to optimal policy and back.
+
+## Summary
+
+Pairwise preferences identify reward differences but not an additive term depending only on the start state. A learned reward is reliable only on regions supported by its comparison data, and optimizing it can exploit errors elsewhere. A KL penalty relative to a fixed reference changes the objective and limits this displacement. Its exact optimum is the reference distribution exponentially tilted by reward, with value $\beta\log Z$. A uniform reference yields entropy regularization, and the corresponding Bellman update replaces a maximum by a log-sum-exp. Unlike a trust region relative to the previous iterate, a fixed-reference penalty changes the final optimum.
+
+**Experimental scope.** The closed-form bandit calculations are exact. The gridworld experiment uses one map, one reference policy, and one seeded preference dataset. For that dataset, fitted return increases after true return begins to decrease, demonstrating overoptimization of the proxy. The location and size of this effect depend on the preference coverage and chosen hazard cost.
+
+## Exercises
+
+1. [conceptual] *Three limits.* Derive $\beta \to 0$, $\beta \to \infty$ and
+   $\pi_{\textrm{ref}}$ uniform from the proposition, and say which one you have
+   already met and where.
+1. [short-code] *The frontier is concave.* Sweep $\beta$ and plot achieved
+   reward against $D_{\textrm{KL}}(\pi_\beta \Vert \pi_{\textrm{ref}})$; verify
+   concavity and explain what the slope at each point is.
+1. [short-code] *Break the reward.* Perturb the fitted $\hat r$ at one
+   rarely-visited state and rerun; how much KL budget does the optimizer need
+   before it finds the error?
+1. [conceptual] *Trust region or penalty.* For each of TRPO, PPO's clip, RLHF's
+   KL term and on-policy distillation, say which of the two it is and what it
+   is measured against.
+1. [conceptual] *Identifiability.* Show $r(x,y) \to r(x,y) + f(x)$ leaves the
+   Bradley-Terry likelihood unchanged, and deduce that a per-prompt baseline
+   costs nothing.
+1. [extended] *The soft backup, transplanted.* The measurement cell's
+   `soft_v` solved the regularized Bellman equations on the hazard grid.
+   Port it to the slippery lake with a uniform reference, plot
+   $V_\beta^\star(s_0)$ against $\beta$, identify the two limits, and check
+   the $\beta \to 0$ end against :numref:`sec_valueiter`'s value iteration.
+
+[Discussions](https://d2l.discourse.group/)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §15.3]{.kicker}
+
+Regularized policy optimization<br>
+**rewards learned from comparisons · an optimizer finds the estimate's errors · penalize distance to a frozen reference · the optimum in closed form**
+:::
+:::
+
+::: {.slide title="Learning a Reward Model"}
+No formula scores a helpful answer; people can *compare*.
+
+$$P(\tau \succ \tau') = \sigma\big( r(\tau) - r(\tau') \big)$$
+
+Bradley-Terry: fitting $r$ is logistic regression on feature
+differences.
+
+. . .
+
+Fit on 1000 trajectories from a competent reference:
+rms error $0.19$ where the data lives, and the hazard lane,
+truly $-1.5$ to enter, is priced at $\approx 0$: the reference
+knew better, so the data is silent. **Silence reads as zero**,
+a property of the zero-initialized linear fit.
+:::
+
+::: {.slide title="Optimizing an Imperfect Reward"}
+Plan *optimally* against the fitted reward; grade under the truth.
+
+@!regularized-reward-hacking-and-goodhart
+
+. . .
+
+The hacked plan wins by its own yardstick and drives straight
+down the hazard lane. Goodhart's law: an optimizer pointed at
+an *estimated* objective finds the estimate's errors.
+:::
+
+::: {.slide title="True Return Against KL Budget"}
+Per $\beta$: solve the *regularized* Bellman equations (soft,
+reference-weighted backup), residual printed; every point is an
+exact optimum.
+
+@!regularized-the-measurement-true-return-against-the-kl-budget
+
+. . .
+
+- fitted return rises throughout; true return reaches
+  $+0.53$ at $\approx 4$ nats and then decreases sharply
+- the same curve at language-model scale:
+  :cite:`Gao.Schulman.Hilton.2023`
+- so control the x axis directly
+:::
+
+::: {.slide title="The Regularized Objective"}
+$$\max_{\pi}\ E_{a \sim \pi}\big[ r(a) \big] - \beta\,
+D_{\textrm{KL}}\big( \pi \Vert \pi_{\textrm{ref}} \big)$$
+
+. . .
+
+**Proposition.**
+$\ \pi^\star(a) = \pi_{\textrm{ref}}(a)\, e^{r(a)/\beta} / Z$,
+with value $\beta \log Z$.
+
+**Proof.** The objective equals
+$\beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star)$;
+apply Gibbs' inequality. $\blacksquare$
+
+Verified numerically: largest gap over a ladder of $\beta$
+is $\approx 10^{-16}$.
+:::
+
+::: {.slide title="The Closed-Form Optimum"}
+![](../img/mdl-rl-kl-tilting.svg){width=98%}
+
+. . .
+
+A *product*, not a ranking: the reference's dip at $a_2$
+survives into $\pi^\star$. Spent divergence: $0.15$ at
+$\beta = 2$, $1.84$ at $\beta = 0.2$.
+:::
+
+::: {.slide title="Four Consequences"}
+- no penalty $\Rightarrow$ a point-mass *optimum* (ties: the
+  reference over the tied set): PPO's entropy decay had a
+  destination built into the objective
+- $\beta$ interpolates: reference $\leftarrow \beta \to \infty$,
+  greedy $\leftarrow \beta \to 0$
+- uniform reference $=$ entropy bonus $=$ max-ent RL;
+  $\pi^\star = \mathrm{softmax}(r/\beta)$: Boltzmann exploration
+  was optimal all along
+- Bayes' rule: prior $\pi_{\textrm{ref}}$, likelihood
+  $e^{r/\beta}$, posterior $\pi^\star$
+  :cite:`Levine.2018,Korbak.Perez.Buckley.2022`
+:::
+
+::: {.slide title="The Two KLs"}
+**Trust region** (the clip): against the *previous iterate*;
+constrains the path; gone at convergence.
+
+**Penalty** (here): against a *frozen reference*; in the
+objective; changes the optimum.
+
+. . .
+
+PPO-RLHF runs **both at once** :cite:`ouyang2022training`.
+
+Direction matters: $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$
+is mode-seeking, so post-training *sharpens*
+(:numref:`sec_mdl-fwd-vs-rev-kl`).
+:::
+
+::: {.slide title="Connections to SAC"}
+$$V(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\,
+e^{Q(s, a)/\beta} \ \xrightarrow{\ \beta \to 0\ } \ \max_a Q(s, a)$$
+
+- soft backup: DQN's $\max$ is the sharp corner of a family
+- DDPG $\to$ TD3 $\to$ SAC: pathwise gradient + twin critics
+  + this section's objective; three parts you already own
+- Ahead: the same objective, with a language model as
+  $\pi_{\textrm{ref}}$
+:::

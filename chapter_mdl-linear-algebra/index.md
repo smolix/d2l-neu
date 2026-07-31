@@ -1,13 +1,13 @@
 # Linear Algebra
 :label:`chap_mdl-linear-algebra`
 
-Linear algebra is the language in which data, parameters, and the operations of
-a network are written. This chapter develops the geometry behind that
-language: vectors, dot products, and the way matrices stretch and rotate
-space, and then the two decompositions that recur throughout deep learning:
-the *eigendecomposition* (behind stability analysis, PCA, and the curvature of
-loss surfaces) and the *singular value decomposition* (behind low-rank
-approximation, conditioning, and parameter-efficient fine-tuning).
+Vectors represent data and parameters, while matrices represent the linear
+maps used throughout a network. We begin with the geometry of vectors, dot
+products, projections, and matrix transformations. We then study two matrix
+decompositions used repeatedly in deep learning. Eigendecompositions support
+stability analysis, PCA, and the analysis of loss curvature; singular value
+decompositions support low-rank approximation, conditioning, and
+parameter-efficient fine-tuning.
 
 ```toc
 :maxdepth: 2
@@ -19,7 +19,8 @@ mdl-svd-low-rank
 
 ## Resources and Further Reading {.unnumbered}
 
-The references below go deeper on the geometry, decompositions, and numerical machinery sketched in this chapter, with an emphasis on the linear algebra that actually shows up in machine and deep learning; most are freely accessible online.
+The references below develop the geometry, decompositions, and numerical
+methods used in this chapter. Most are freely accessible online.
 
 **Books**
 

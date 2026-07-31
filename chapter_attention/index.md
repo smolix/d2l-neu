@@ -1,41 +1,26 @@
 # Attention
 :label:`chap_attention`
 
-A recurrent network reads a sequence the way a clerk with one notepad
-reads a ledger: each entry is folded into the running summary, and by the
-end the summary is all that remains. :numref:`chap_rnn` built models of
-exactly this shape and :numref:`chap_modern_rnn` will confront their
-limit directly: a fixed-size state must eventually discard something,
-and the model cannot know at reading time what it will be asked later.
-Attention removes the constraint by refusing to summarize. It keeps
-every entry, and when a question arrives it *looks the answer up*:
-compare the question against a key describing each entry, convert the
-comparison scores into weights, and return the weighted average of the
-entries' values. The three names — query, key, value — come from
-databases, and the analogy is a useful one, though not exact: a database
-returns the single best match, while attention returns a soft blend of
-all of them. That one change makes lookup differentiable, and a
-differentiable lookup can be *learned*.
+Recurrent networks summarize a variable-length sequence in a fixed-dimensional
+state. This state can become a bottleneck when later predictions require
+specific information from earlier positions. Attention instead retains a
+representation at every position. A query is compared with a key for each
+position, the comparison scores are normalized into weights, and the output is
+a weighted average of the corresponding values. The terms *query*, *key*, and
+*value* emphasize the connection to database lookup, while the weighted average
+makes the operation differentiable.
 
-This chapter is about that mechanism, on its own terms. The reason it
-deserves a chapter is what became of it. Attention entered deep learning
-in 2014 as a patch: machine-translation models were forcing whole
-sentences through a fixed-size vector, and letting the decoder look back
-at the source at every step repaired the bottleneck
-:cite:`Bahdanau.Cho.Bengio.2014`. Three years later the patch swallowed
-the architecture — :citet:`Vaswani.Shazeer.Parmar.ea.2017` discarded the
-recurrence entirely and kept only attention, and the resulting
-*transformer* is the subject of :numref:`chap_transformers`. The
-mechanism then outgrew its birthplace: the models that read and write
-text, classify and generate images, transcribe speech, and predict
-protein structures are, at their core, stacks of the same lookup. Its
-weights are a quantity the field measures, engineers around, and argues
-about; its quadratic cost sets the economics of long-context models; and
-its learned circuits are the best-understood fragments of what large
-models actually compute. A mechanism with that reach is worth
-understanding precisely, before any architecture is wrapped around it.
+Attention was introduced in neural machine translation to let a decoder access
+all source representations rather than a single sentence vector
+:cite:`Bahdanau.Cho.Bengio.2014`. The Transformer later removed recurrence and
+used attention as its primary sequence-mixing operation
+:cite:`Vaswani.Shazeer.Parmar.ea.2017`; that architecture is developed in
+:numref:`chap_transformers`. Attention is now used in models for text, images,
+speech, and biological sequences. This chapter studies the mechanism itself:
+its algebra, positional information, computational cost, and the circuits that
+trained attention layers can implement.
 
-The six sections build it up in order. :numref:`sec_queries-keys-values`
+The six sections proceed as follows. :numref:`sec_queries-keys-values`
 states the lookup abstraction and shows that classical kernel regression
 is attention with hand-picked weights — the case for learning them.
 :numref:`sec_attention-scoring-functions` turns similarity into scores:
@@ -52,16 +37,15 @@ deliberately ignores: order. Attention is permutation-equivariant, so
 position must be injected, and we follow the idea from sinusoidal
 encodings to the rotary embeddings that most current large models adopt by
 default (as of the mid-2020s; ALiBi, NoPE, and hybrid schemes remain in use),
-ending with an experiment on what happens beyond the training
-length — whose outcome is not what the folklore promises.
-:numref:`sec_attention-at-scale` faces the price: computing every
+ending with an experiment on behavior beyond the training length.
+:numref:`sec_attention-at-scale` analyzes the cost: computing every
 query–key pair is quadratic in sequence length, and we measure it, then
-implement the three escapes: computing exact attention without ever
+implements three alternatives: computing exact attention without
 materializing the score matrix, restricting it to a window, and
-linearizing it, which turns attention back into a recurrence and hands
-the story to :numref:`chap_modern_rnn`. :numref:`sec_what-attention-computes`
-closes by asking what trained attention layers actually do, and answers
-with running code: a two-layer attention-only model visibly learns an
+linearizing it, which yields a recurrence related to
+:numref:`chap_modern_rnn`. :numref:`sec_what-attention-computes`
+examines what trained attention layers compute. A two-layer attention-only
+model learns an
 induction circuit — find the previous occurrence of the current token,
 copy what followed it — and that small mechanism is the clearest
 laboratory example of how in-context learning arises.
@@ -70,11 +54,10 @@ Along the way we train one model *architecture*: a character-level,
 attention-only language model a few blocks deep, introduced in
 :numref:`sec_positional-information` and trained afresh on a different
 task in :numref:`sec_what-attention-computes`, with no run longer than
-about a minute. Everything else executes in seconds on data chosen so
-that the phenomenon under study is unmistakable. A word on what this
-chapter is not. It builds no transformer (no feed-forward layers, no
-normalization, no training recipes); that assembly, and the architecture
-zoo around it, is :numref:`chap_transformers`. It says nothing about
+about a minute. The remaining experiments execute in seconds. This chapter
+does not build a complete Transformer with feed-forward layers, normalization,
+and training procedures; those components are introduced in
+:numref:`chap_transformers`. It does not discuss
 optimizers, which have :numref:`chap_optimization` to themselves. And it
 treats the efficient-attention literature with deliberate economy: a
 decade of approximations is summarized in a paragraph, because the
@@ -95,7 +78,7 @@ what-attention-computes
 
 ## Resources and Further Reading {.unnumbered}
 
-The references follow the chapter's arc: intuition for the mechanism,
+The references cover introductions to the mechanism,
 the founding papers, the cost of attention, and the circuits view. All
 are freely accessible online.
 

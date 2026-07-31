@@ -38,23 +38,23 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:76bc571e7b01cdb61839642694e91a7631aad4eca6f88d1c06f98301f02ead07"
+          "sha256": "sha256:a1091de1552a806b753de8290ad4f3db2ffbd0a10e373735c38071748ffd8668"
         }
       ]
     },
     "odes-solvers-stiffness-sweep": {
-      "code_fingerprint": "sha256:d09a682082c9aa0891df256b67973f417441c61ca715f52a1506b960615c6337",
+      "code_fingerprint": "sha256:efa922dc3025f9ed082ae96b149c1d1ecd316e9d1a64c1221785e9c769ee4f57",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward Euler is stable iff h < 2/lambda = 0.04\n       h  |1-h*lam|   forward x(T)  backward x(T)\n   0.100       4.00       1.05e+06       1.65e-08\n   0.050       1.50       3.33e+03       1.31e-11\n   0.038       0.92       1.25e-01       7.73e-13\n   0.025       0.25       8.27e-25       8.18e-15\n   0.010       0.50       7.89e-31       2.46e-18\nexact x(T) = e^{-50} = 1.93e-22\nstiff system, forward Euler with h=0.05: x(T) = [3.32526e+03 3.60000e-01] (the long-dead fast mode explodes)\n"
+          "text": "forward Euler is stable iff h < 2/lambda = 0.04\n       h  |1-h*lam|   forward x(T)  backward x(T)\n   0.100       4.00       1.05e+06       1.65e-08\n   0.050       1.50       3.33e+03       1.31e-11\n   0.038       0.92       1.25e-01       7.73e-13\n   0.025       0.25       8.27e-25       8.18e-15\n   0.010       0.50       7.89e-31       2.46e-18\nexact x(T) = e^{-50} = 1.93e-22\nstiff system, forward Euler with h=0.05 (the long-dead fast mode explodes):\nx(T) = [3.32526e+03 3.60000e-01]\n"
         }
       ]
     },
     "mdl-odes-solvers-gradient-descent-is-a-solver": {
-      "code_fingerprint": "sha256:04ff4da5a7c4d1328fbac3461db6ab4490c92adcda25ef64d2c1b1dba9cb0212",
+      "code_fingerprint": "sha256:0c6d3150a4269403398042838c62395f2be54c5478f39fe8e62a5c21d24b8fa2",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "odes-solvers-neural-ode-train": {
-      "code_fingerprint": "sha256:ce5fe8b66ec4943968df5be0a5b27cb39316adee624d78bc0e0c3b777c494f4c",
+      "code_fingerprint": "sha256:adb893f3a76759426d0b6c6db20cce8f7f5fbbe94019636457872583d05c7e67",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[14:00:22] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[18:54:29] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -101,7 +101,7 @@
       ]
     },
     "odes-solvers-adjoint-check": {
-      "code_fingerprint": "sha256:c2c2ce43e0efc0621892d6610c36d372136424e00950193c3c789d4f20f9bc99",
+      "code_fingerprint": "sha256:fb0a9922169476f5a3378e639008e470e5a2e7efa4143c0c182774f40bb35d72",
       "kind": "text",
       "outputs": [
         {
@@ -112,17 +112,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },
     "odes-solvers-cnf-trace": {
-      "code_fingerprint": "sha256:1bdbe2a5203bf05b35c68e50d9430989311cf9e884735b915aff3444b48a899f",
+      "code_fingerprint": "sha256:28ade1019b2f904405a3b32bc0c47c4239642b26a23b1c785c1a0e87316569db",
       "kind": "text",
       "outputs": [
         {

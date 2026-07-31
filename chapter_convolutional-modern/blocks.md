@@ -6,7 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Blocks, Bottlenecks, and Branches: VGG, NiN, GoogLeNet
 :label:`sec_blocks`
 
-AlexNet gave empirical proof that deep convolutional networks work, but it offered no template for designing the next one: every layer was shaped individually. In the two years that followed, progress came less from new operations than from new ways of *organizing* convolutions, and the three architectures of this section each contributed one organizing idea that every current network still uses. VGG :cite:`Simonyan.Zisserman.2014` made the repeated *block* the unit of design, so that a whole network can be specified by a short list of block parameters. Network in network (NiN) :cite:`Lin.Chen.Yan.2013` mixed channels with $1 \times 1$ convolutions and replaced the parameter-hungry fully connected head with global average pooling. GoogLeNet :cite:`Szegedy.Liu.Jia.ea.2015` ran convolutions of several sizes in parallel inside a *multi-branch* block and, in passing, established the stem-body-head vocabulary in which architectures are still described. The progression mirrors VLSI chip design, where engineers moved from placing transistors to logical elements to logic blocks :cite:`Mead.1980`; carried to its conclusion, the unit of design today is often an entire pretrained network, a *foundation model* :cite:`bommasani2021opportunities`.
+AlexNet demonstrated the effectiveness of deep convolutional networks, but its
+layers were designed individually. The next architectures introduced reusable
+organization. VGG :cite:`Simonyan.Zisserman.2014` made the repeated *block*
+the unit of design. Network in network (NiN) :cite:`Lin.Chen.Yan.2013` mixed
+channels with $1 \times 1$ convolutions and replaced fully connected
+classifiers by global average pooling. GoogLeNet
+:cite:`Szegedy.Liu.Jia.ea.2015` applied several convolution sizes in parallel
+within a multi-branch block and used the stem--body--head organization that
+remains common today.
 
 ```{.python .input #blocks-imports}
 %%tab mxnet
@@ -477,15 +485,16 @@ NiN has dramatically fewer parameters than AlexNet and VGG, primarily
 because it needs no giant fully connected layers. Instead, global average
 pooling replaces an expensive learned reduction with a simple average across
 locations. Under ideal translation equivariance, a translation merely
-permutes those locations, so the global average is invariant. Finite boundaries
-and strided stages make real networks only approximately shift-invariant. Two
+permutes those locations, so the global average is invariant, although finite
+boundaries and strided stages make real networks only approximately
+shift-invariant. Two
 of NiN's choices outlived it: $1 \times 1$ convolution for channel mixing and
 global average pooling as the common classification head.
 
 ## GoogLeNet: Multi-Branch Blocks and the Stem-Body-Head Pattern
 :label:`sec_googlenet`
 
-In 2014, *GoogLeNet* won the ImageNet Challenge :cite:`Szegedy.Liu.Jia.ea.2015`, using a structure that combined the strengths of NiN :cite:`Lin.Chen.Yan.2013`, repeated blocks :cite:`Simonyan.Zisserman.2014`, and a cocktail of convolution kernels. It was arguably also the first network that exhibited a clear distinction among the stem (data ingest), body (data processing), and head (prediction) in a CNN. This design pattern has persisted ever since in the design of deep networks: the *stem* is given by the first two or three convolutions that operate on the image. They extract low-level features from the underlying images. This is followed by a *body* of convolutional blocks. Finally, the *head* maps the features obtained so far to the required classification, segmentation, detection, or tracking problem at hand.
+In 2014, *GoogLeNet* won the ImageNet Challenge :cite:`Szegedy.Liu.Jia.ea.2015`, using a structure that combined the strengths of NiN :cite:`Lin.Chen.Yan.2013`, repeated blocks :cite:`Simonyan.Zisserman.2014`, and a cocktail of convolution kernels. It was arguably also the first network that exhibited a clear distinction among the stem (data ingest), body (data processing), and head (prediction) in a CNN. This design pattern has persisted ever since in the design of deep networks: the *stem* is the first two or three convolutions that operate on the image and extract its low-level features. This is followed by a *body* of convolutional blocks. Finally, the *head* maps the features obtained so far to the required classification, segmentation, detection, or tracking problem at hand.
 
 The key contribution in GoogLeNet was the design of the network body. It solved the problem of selecting convolution kernels in an ingenious way. While other works tried to identify which convolution, ranging from $1 \times 1$ to $11 \times 11$, would be best, it simply *concatenated* multi-branch convolutions. In what follows we introduce a slightly simplified version of GoogLeNet: the original design included a number of tricks for stabilizing training through intermediate loss functions, applied to multiple layers of the network. They are no longer necessary due to the availability of improved training algorithms.
 
@@ -924,7 +933,7 @@ $192 \cdot 16 + 25 \cdot 16 \cdot 32 \approx 16$k, a **10×**
 saving. This trick is in nearly every network since.
 :::
 
-::: {.slide title="The whole network as data"}
+::: {.slide title="Specifying the Network by Block Parameters"}
 Nine Inception blocks in three groups (2, 5, 2), pooling
 between groups. The hand-picked channel allocations are just a
 tuple; assembly is stem + body + head:
@@ -941,7 +950,7 @@ Cheaper than VGG (~7M vs. ~138M parameters) *and* more accurate:
 the start of deliberate cost--accuracy design.
 :::
 
-::: {.slide title="What survived"}
+::: {.slide title="Architectural Contributions"}
 - **Blocks** (VGG): everything is specified block by block.
 - **1×1 convolution** (NiN): the standard channel mixer.
 - **Global average pooling** (NiN): the default head.

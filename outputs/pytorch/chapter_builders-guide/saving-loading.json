@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "UnpicklingError Weights only load failed. This file can still be loaded, to do so you have two options, \u001b[1mdo those steps only if you trust the source of the checkpoint\u001b[0m. \n"
+          "text": "UnpicklingError Weights only load failed. This file can still be loaded, to do so you have two options, do those steps only if you trust the source of the checkpoint. \n"
         }
       ]
     },

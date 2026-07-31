@@ -582,7 +582,8 @@ lr, num_epochs = 0.001, 5
 net.compile(optimizer=keras.optimizers.Adam(lr),
             loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
             metrics=['accuracy'])
-net.fit(train_iter, validation_data=test_iter, epochs=num_epochs)
+net.fit(train_iter, validation_data=test_iter, epochs=num_epochs,
+        verbose=2)
 ```
 
 Below we use the trained model to predict the sentiment for two simple sentences.

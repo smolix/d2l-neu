@@ -1,24 +1,14 @@
 # Geometry and Linear Algebraic Operations
 :label:`sec_mdl-geometry-linear-algebraic-ops`
 
-In :numref:`sec_linear-algebra`, we encountered the basics of linear algebra
-and saw how it could be used to express common operations for transforming our data.
-Linear algebra is one of the pillars
-underlying much of the work that we do in deep learning
-and in machine learning more broadly.
-While :numref:`sec_linear-algebra` contained enough machinery
-to communicate the mechanics of modern deep learning models,
-there is a lot more to the subject.
-In this section, we will go deeper,
-building geometric intuition for vectors, angles, projections,
-hyperplanes, and the way matrices reshape space.
-These pictures are the foundation for the two matrix decompositions
-that run through all of deep learning, which we develop in the
-sections that follow: *eigendecomposition*
-(:numref:`sec_mdl-eigendecompositions`), the tool for analyzing
-stability, PCA, and Hessians; and the *singular value decomposition*
-(:numref:`sec_mdl-svd-low-rank`), the tool behind low-rank
-approximation, conditioning, and LoRA.
+:numref:`sec_linear-algebra` introduced the notation and operations needed to
+express deep learning models. Here we develop their geometric interpretation.
+We study vectors, angles, projections, hyperplanes, and the action of matrices
+on space. This viewpoint prepares two decompositions used in the following
+sections: eigendecomposition (:numref:`sec_mdl-eigendecompositions`) for
+stability, PCA, and Hessian analysis, and singular value decomposition
+(:numref:`sec_mdl-svd-low-rank`) for low-rank approximation, conditioning, and
+LoRA.
 
 ## Vectors and Their Geometry
 
@@ -170,9 +160,8 @@ without change.
 
 There is, however, a subtlety we must not skip. The function $\arccos$ is only
 defined on the interval $[-1, 1]$, so :eqref:`eq_mdl-angle_formula` is
-meaningful *only if* the fraction inside it never escapes that interval. That
-this is guaranteed, in every dimension, is the content of the following
-inequality.
+meaningful *only if* the fraction inside it never escapes that interval. The
+following inequality guarantees exactly that, in every dimension.
 
 **Proposition (Cauchy–Schwarz).** *For any vectors $\mathbf{v}, \mathbf{w}$,*
 
@@ -229,8 +218,8 @@ proposition.
 
 Cauchy–Schwarz also has a one-picture summary, shown in
 :numref:`fig_mdl-la-projection`. It is a way to *remember* the inequality
-rather than a second proof, since the picture reads off the angle $\theta$
-(and with it :eqref:`eq_mdl-dot_geom`) that Cauchy–Schwarz itself makes
+rather than a second proof, since the picture reads off the angle $\theta$ and
+with it :eqref:`eq_mdl-dot_geom`, both of which Cauchy–Schwarz itself makes
 legitimate.
 On the left, the projection of $\mathbf{v}$
 onto $\mathbf{w}$ has signed length $\|\mathbf{v}\|\cos\theta$, and the residual
@@ -908,8 +897,8 @@ d2l.plt.show()
 
 This plot summarizes the key points of hyperplane classifiers. Along the single direction
 $\mathbf{w}$, the two classes form two well-separated humps, and the dashed
-threshold (the value of $\mathbf{w}\cdot\mathbf{x}$ at the midpoint of the
-two means) cuts between them; the tails that spill across it are exactly the
+threshold cuts between them, at the value $\mathbf{w}\cdot\mathbf{x}$ takes at
+the midpoint of the two means; the tails that spill across it are exactly the
 $\approx 8\%$ of images the rule misclassifies. A *learned* linear classifier, such as the softmax
 regression of :numref:`sec_softmax`, improves on this only by moving and
 tilting the same kind of boundary to cut the overlap more cleverly. A deep
@@ -1217,9 +1206,9 @@ dimension exactly $n - k$. $\blacksquare$
 
 Read it as conservation of directions: of the $n$ directions coming in,
 $\dim\ker\mathbf{A}$ are destroyed and $\operatorname{rank}\mathbf{A}$
-survive. $\mathbf{B}$ has $1 + 1 = 2$, one column-space direction
-surviving and one null-space
-direction crushed, exactly as :numref:`fig_mdl-la-null-collapse` shows. The
+survive. For $\mathbf{B}$ the count is $1 + 1 = 2$: one column-space
+direction survives and one null-space direction is crushed, exactly as
+:numref:`fig_mdl-la-null-collapse` shows. The
 singular value decomposition will make this split visible, with orthonormal
 bases attached to both halves, in :numref:`sec_mdl-svd-low-rank`.
 
@@ -1287,15 +1276,15 @@ M_inv.dot(M)
 #### Numerical Issues
 While the matrix inverse is useful in theory, in practice we rarely want to
 *compute* it. To solve the linear system $\mathbf{A}\mathbf{x} = \mathbf{b}$,
-call `linalg.solve(A, b)`, which factorizes $\mathbf{A}$ without ever forming
-its inverse, rather than the tempting but inferior `inv(A) @ b`: just as
+prefer `linalg.solve(A, b)` to the tempting but inferior `inv(A) @ b`: the
+solver factorizes $\mathbf{A}$ without ever forming its inverse, and just as
 division by a small number is numerically unstable, so is inversion of a
 matrix that is close to having low rank. Sparsity raises the stakes further.
 A matrix with a million rows and columns but only $5$ million non-zero entries
 is cheap to store, yet its inverse is typically dense, with on the order of
-$10^{12}$ non-zero entries. The quantity that makes "close to low rank"
-precise, and that measures exactly how much a solve can amplify error, is the
-condition number of :numref:`subsec_mdl-condition-number`.
+$10^{12}$ non-zero entries. The condition number of
+:numref:`subsec_mdl-condition-number` makes "close to low rank" precise, and
+measures exactly how much a solve can amplify error.
 
 ### The Determinant
 The geometric view of linear algebra gives an intuitive way
@@ -1409,10 +1398,10 @@ $n \times n$ matrix:
    parallelepiped then flattens into a lower-dimensional slab of zero volume.)
 3. **Normalized**: $\det \mathbf{I} = 1$. (The unit cube has volume one.)
 
-The granted fact for this subsection, which we use without proof, is that
-there is exactly *one* function of the columns with these three properties;
-it is the determinant (see :cite:`Horn.Johnson.2012` for the construction and
-the uniqueness argument). Uniqueness comes in a sharper form that we will use
+We grant one fact here without proof: exactly *one* function of the columns
+has these three properties, and it is the determinant (see
+:cite:`Horn.Johnson.2012` for the construction and the uniqueness argument).
+Uniqueness comes in a sharper form that we will use
 below: *every* function $f$ of the columns satisfying (1) and (2) is a
 multiple of the determinant, $f = f(\mathbf{I}) \cdot \det$. To see why, set
 $g = f - f(\mathbf{I})\cdot\det$; then $g$ satisfies (1) and (2) with
@@ -1467,8 +1456,8 @@ $$
 $$
 
 recovering the parallelogram area we computed by hand. In general the
-determinant is a signed sum, over all ways of picking one entry from each row
-and each column, of the products of the chosen entries; this is the
+determinant is a signed sum of the products of the chosen entries, taken over
+all ways of picking one entry from each row and each column; this is the
 permutation formula, and (1)+(2)+(3) leave no other possibility.
 
 For hand computation the sum is organized as *cofactor expansion*: expanding
@@ -1578,10 +1567,10 @@ characterization of :numref:`subsec_mdl-determinant-general` supplies the two
 ingredients that generalize: $\det\mathbf{A}$ is the signed factor by which
 $\mathbf{A}$ scales $n$-dimensional volume, and that volume vanishes exactly
 when the columns are linearly dependent; see :cite:`Horn.Johnson.2012` for the
-full argument. The equivalence also proves claims made earlier without proof:
-linear dependence (the columns of $\mathbf{B}$ are redundant), the missing
+full argument. The equivalence also proves claims made earlier without proof.
+The linear dependence of the columns of $\mathbf{B}$, the missing
 $ad - bc \neq 0$ hypothesis under the $2 \times 2$ inverse, and the present
-section's "$\det = 0$ means collapse" all turn out to be three faces of the
+section's "$\det = 0$ means collapse" turn out to be three faces of the
 same fact.
 
 #### Multiplicativity
@@ -1651,7 +1640,7 @@ $$
  = \det(\mathbf{A})\,\det(\mathbf{B}). \qquad \blacksquare
 $$
 
-A corollary is one line long but easy to miss.
+Multiplicativity has the following immediate consequence.
 
 **Corollary.** *For square matrices $\mathbf{A}$ and $\mathbf{B}$ of the same
 size,*
@@ -1744,9 +1733,9 @@ so the second entry of the output reproduces the worked example
 $\mathbf{A}\mathbf{v} = [0, -5]^\top$. Index strings like
 `'ij,jk->ik'` recur throughout deep learning: batched matrix products
 (`'bij,bjk->bik'`), attention scores, and many custom layers are one `einsum`
-call away, and we will reach for the notation whenever a computation is easier
-to state in indices than in matrices, as soon as
-:numref:`sec_mdl-svd-low-rank`, where a one-line `einsum` will rebuild a matrix
+call away. We will reach for the notation whenever a computation is easier
+to state in indices than in matrices, starting in
+:numref:`sec_mdl-svd-low-rank`, where a one-line `einsum` rebuilds a matrix
 from its singular value decomposition.
 
 Index notation also yields one-line proofs. In indices, the trace of a
@@ -1758,8 +1747,8 @@ $$
 $$
 :eqlabel:`eq_mdl-trace-cyclic`
 
-and the middle step costs nothing: matrix entries are numbers, so they
-commute, and only the bookkeeping of the indices matters. Note that
+The middle equality uses the commutativity of scalar matrix entries; only the
+indices change order. Note that
 :eqref:`eq_mdl-trace-cyclic` holds even when $\mathbf{A}\mathbf{B} \neq
 \mathbf{B}\mathbf{A}$, just as with determinants. A corollary is that the
 trace is invariant under a change of basis,
@@ -1779,13 +1768,21 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
 * Dot products define the notion of angle to arbitrarily high-dimensional spaces.
 * Spans, subspaces, and bases organize collections of vectors: a basis assigns every vector of a subspace unique coordinates, and the dimension counts the basis vectors. The column space and null space of a matrix record what it can produce and what it destroys.
 * Projection produces the closest point of a line (or, via the projection matrix $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, of any subspace) and is characterized by an orthogonal residual. This is the geometry of the least-squares problem :eqref:`eq_mdl-least-squares`.
-* Hyperplanes are high-dimensional generalizations of lines and planes.  They can be used to define decision planes that are often used as the last step in a classification task.
+* Hyperplanes generalize lines and planes to higher dimensions and commonly
+  define linear decision boundaries for classification.
 * Matrix multiplication can be geometrically interpreted as uniform distortions of the underlying coordinates: a matrix skews, rotates, and scales, and it treats every part of space the same way. Multiplying two matrices composes the corresponding maps.
 * Orthogonal matrices are the rigid motions: they preserve lengths, angles, and (up to a sign recording reflections) volumes.
-* Linear dependence is a way to tell when a collection of vectors are in a lower dimensional space than we would expect (say you have $3$ vectors living in a $2$-dimensional space). The rank of a matrix is the size of the largest subset of its columns that are linearly independent, and rank--nullity is exact: rank plus the dimension of the null space equals the number of columns.
-* When a matrix's inverse is defined, matrix inversion allows us to find another matrix that undoes the action of the first. Matrix inversion is useful in theory, but requires care in practice owing to numerical instability.
+* Linear dependence indicates that a collection of vectors occupies a
+  lower-dimensional subspace. Matrix rank is the maximum number of linearly
+  independent columns, and rank--nullity states that rank plus nullity equals
+  the number of columns.
+* An invertible matrix has an inverse transformation. Explicit matrix
+  inversion is useful in theory but often avoided in numerical computation.
 * The determinant is the signed volume scaling of a matrix. It is characterized by three properties (multilinear, alternating, $\det\mathbf{I} = 1$), it flips sign under a column swap, and it satisfies $\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{A})\det(\mathbf{B}) = \det(\mathbf{B}\mathbf{A})$. A nonzero determinant is equivalent to invertibility; a zero determinant means the matrix is singular.
-* Tensor contractions and Einstein summation express many of the computations of machine learning in one index pattern, and in index form identities such as $\textrm{tr}(\mathbf{A}\mathbf{B}) = \textrm{tr}(\mathbf{B}\mathbf{A})$ become one-line computations.
+* Tensor contractions and Einstein summation express many machine learning
+  computations through repeated indices. This notation also makes identities
+  such as $\textrm{tr}(\mathbf{A}\mathbf{B}) =
+  \textrm{tr}(\mathbf{B}\mathbf{A})$ concise.
 
 ## Exercises
 1. What is the angle between
@@ -1845,7 +1842,7 @@ The geometry under the algebra<br>**angles, projections, hyperplanes, and how ma
 :::
 :::
 
-::: {.slide title="Why a geometric view"}
+::: {.slide title="Geometric Interpretation of Linear Algebra"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -2115,7 +2112,7 @@ negative on the other. That number is exactly a linear classifier's **margin**.
 :::
 :::
 
-::: {.slide title="A classifier with nothing trained"}
+::: {.slide title="Nearest-Centroid Linear Classifier"}
 [Hyperplanes]{.kicker}
 
 ::: {.cols .vc}
@@ -2130,7 +2127,7 @@ blurry but recognizable. The line between them, $\mathbf{w} = \overline{\mathbf{
 :::
 :::
 
-::: {.slide title="One hyperplane, ~92% correct"}
+::: {.slide title="Accuracy of the Decision Boundary"}
 [Hyperplanes]{.kicker}
 
 Classify each $784$-dimensional image by the side it falls on, with the
@@ -2144,7 +2141,7 @@ Over $2{,}000$ test images, this hand-built rule is right about **92%** of the
 time, and nothing was learned.
 :::
 
-::: {.slide title="The whole picture in one projection"}
+::: {.slide title="Projection onto the Decision Normal"}
 [Hyperplanes]{.kicker}
 
 ::: {.cols .vc}
@@ -2173,7 +2170,7 @@ net learns features that pull the humps apart.
 :::
 :::
 
-::: {.slide title="A matrix moves the whole grid"}
+::: {.slide title="Matrices as Linear Maps"}
 [Linear maps]{.kicker}
 
 ::: {.cols .vc}
@@ -2194,7 +2191,7 @@ two matrices **composes** their maps.
 :::
 :::
 
-::: {.slide title="What a matrix destroys"}
+::: {.slide title="Column Space and Null Space"}
 [Linear maps]{.kicker}
 
 ::: {.cols .vc}
@@ -2280,7 +2277,7 @@ $\det(\mathbf{A}\mathbf{B}) = \det\mathbf{A}\,\det\mathbf{B} =
 :::
 :::
 
-::: {.slide title="One equivalence ties it together"}
+::: {.slide title="Equivalent Conditions for Invertibility"}
 [Linear maps]{.kicker}
 
 ::: {.d2l-note .rule}
@@ -2323,7 +2320,7 @@ matrix–vector call recovers our worked $\mathbf{A}\mathbf{v} = [0, -5]^\top$):
 @-geometry-linear-algebraic-ops-expressing-in-code-2
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Summary"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

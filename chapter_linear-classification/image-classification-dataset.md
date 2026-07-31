@@ -327,7 +327,7 @@ The Image Classification Dataset<br>**Fashion-MNIST**, the dataset we will class
 :::
 :::
 
-::: {.slide title="MNIST is solved; Fashion-MNIST is not"}
+::: {.slide title="Fashion-MNIST distinguishes model capacity"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -356,7 +356,7 @@ Here a linear model caps out near **82%** (the softmax-from-scratch section): he
 :::
 :::
 
-::: {.slide title="Wrap it once, reuse everywhere"}
+::: {.slide title="A reusable Fashion-MNIST data module"}
 [Loading]{.kicker}
 
 A `DataModule` owns this framework's download, transform, and `train`/`val` splits, so every model we build later just asks for batches:
@@ -452,7 +452,7 @@ images plus a matching vector of integer labels.
 :::
 :::
 
-::: {.slide title="Loading is not the bottleneck: measure it" except="mxnet"}
+::: {.slide title="Measuring data-loading throughput" except="mxnet"}
 [Minibatches · timing]{.kicker}
 
 Time one full pass over all 60,000 training images:
@@ -467,7 +467,7 @@ prefetch and raise `num_workers`.
 :::
 :::
 
-::: {.slide title="Loading is not the bottleneck: measure it" only="mxnet"}
+::: {.slide title="Measuring data-loading throughput" only="mxnet"}
 [Minibatches · timing]{.kicker}
 
 Time one full pass over all 60,000 training images:
@@ -492,7 +492,7 @@ prefetch and raise `num_workers`.
 :::
 :::
 
-::: {.slide title="See the data before you model it"}
+::: {.slide title="Inspecting a minibatch"}
 [Visualization]{.kicker}
 
 A `visualize` method tiles one validation batch, each image captioned with its class name. Eyeballing data is a cheap, powerful sanity check:

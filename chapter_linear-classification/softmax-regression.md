@@ -1,13 +1,11 @@
 # Softmax Regression
 :label:`sec_softmax`
 
-In :numref:`sec_linear_regression`, we introduced linear regression,
-working through implementations from scratch in :numref:`sec_linear_scratch`
-and again using high-level APIs of a deep learning framework
-in :numref:`sec_linear_concise` to do the heavy lifting.
+In :numref:`sec_linear_regression`, linear regression produced numerical
+predictions using a linear output and a loss derived from a noise model.
+Classification instead predicts which of several categories applies.
 
-Regression is the hammer we reach for when
-we want to answer *how much?* or *how many?* questions.
+Regression is appropriate for *how much?* or *how many?* questions.
 If you want to predict the number of dollars (price)
 at which a house will be sold,
 or the number of wins a baseball team might have,
@@ -25,13 +23,8 @@ for which least mean squares is not ideal either;
 such time-to-event analysis is the province
 of a specialized subfield called *survival modeling*.
 
-The point here is not to overwhelm you but just
-to let you know that there is a lot more to estimation
-than simply minimizing squared errors.
-And more broadly, there is a lot more to supervised learning than regression.
-In this section, we focus on *classification* problems
-where we put aside *how much?* questions
-and instead focus on *which category?* questions.
+These examples also show why squared error is not a universal objective.
+This section develops *classification* for *which category?* questions.
 
 
 
@@ -406,7 +399,7 @@ l(\mathbf{y}, \hat{\mathbf{y}}) &=  - \sum_{j=1}^q y_j \log \frac{\exp(o_j)}{\su
 $$
 
 using $\sum_j y_j = 1$ in the last step and writing
-$g(\mathbf{o}) = \log \sum_k \exp(o_k)$ for the *log-partition function*. This is the recurring shape of an *exponential-family* negative log-likelihood, one whose log-likelihood is a convex log-partition term minus a linear term in the natural parameters $\mathbf{o}$. The derivative is now immediate, because the softmax *is* the gradient of the log-partition function,
+$g(\mathbf{o}) = \log \sum_k \exp(o_k)$ for the *log-partition function*. This is the recurring shape of an *exponential-family* negative log-likelihood: a convex log-partition term minus a linear term in the natural parameters $\mathbf{o}$. The derivative is now immediate, because the softmax *is* the gradient of the log-partition function,
 
 $$
 \partial_{o_j} g(\mathbf{o}) = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} = \mathrm{softmax}(\mathbf{o})_j,
@@ -460,9 +453,9 @@ value: a model trained to minimize cross-entropy is generally *not*
 calibrated, and a reported confidence of $0.9$ does not mean the prediction
 is right $90\%$ of the time. Modern deep networks tend to be systematically
 overconfident :cite:`Guo.Pleiss.Sun.Weinberger.2017`.
-A simple and effective remedy, *temperature scaling*, divides the logits by a
-single learned $T > 0$ before the softmax, exactly the temperature of the
-Boltzmann distribution in :numref:`fig_mdl-clf-temperature`. Because it
+A simple and effective remedy is *temperature scaling*, which divides the
+logits by a single learned $T > 0$ before the softmax, exactly the temperature
+of the Boltzmann distribution in :numref:`fig_mdl-clf-temperature`. Because it
 scales every logit by the same factor $1/T$ it preserves their order, leaving
 the predicted class (the $\operatorname{argmax}$) and hence the accuracy
 untouched, while sharpening or softening the confidences. Exercise 8 develops
@@ -523,7 +516,7 @@ that can be executed most efficiently on modern GPUs.
 1. The softmax has a familiar two-class special case.
     1. Verify :eqref:`eq_softmax_to_sigmoid`: for $q = 2$ the softmax reduces to the logistic sigmoid of the logit difference, $\hat{y}_1 = \sigma(o_1 - o_2)$, recovering binary logistic regression.
     1. Show that adding a constant to all logits leaves $\hat{\mathbf{y}}$ unchanged. Conclude that softmax regression carries one redundant degree of freedom per example, and that we may fix $o_q \equiv 0$ without loss.
-1. The next two exercises concern coding; see :numref:`sec_mdl-information_theory` for the information-theoretic background. Assume that we have three classes which occur with equal probability, i.e., the probability vector is $(\frac{1}{3}, \frac{1}{3}, \frac{1}{3})$.
+1. The next two exercises concern coding; see :numref:`sec_mdl-information_theory` for the information-theoretic background. Assume that we have three classes which occur with equal probability, i.e., the probability vector is $(1/3, 1/3, 1/3)$.
     1. What is the problem if we try to design a binary code for it?
     1. Can you design a better code? Hint: what happens if we try to encode two independent observations? What if we encode $n$ observations jointly?
 1. When encoding signals transmitted over a physical wire, engineers do not always use binary codes. For instance, [PAM-3](https://en.wikipedia.org/wiki/Ternary_signal) uses three signal levels $\{-1, 0, 1\}$ as opposed to two levels $\{0, 1\}$. How many ternary units do you need to transmit an integer in the range $\{0, \ldots, 7\}$? Why might this be a better idea in terms of electronics?
@@ -678,7 +671,7 @@ $$\operatorname*{argmax}_j \hat{y}_j = \operatorname*{argmax}_j o_j.$$
 So to *predict* a class we never need to compute the softmax; we read off the biggest logit. The softmax matters for the **loss**, not the decision.
 :::
 
-::: {.slide title="Temperature: one dial from argmax to uniform"}
+::: {.slide title="Temperature controls distribution sharpness"}
 [The Softmax · Boltzmann's dial]{.kicker}
 
 Boltzmann weighted energy states by $\exp(-E/kT)$; for us, replace
@@ -693,7 +686,7 @@ confidence does. Hold this dial; it returns at the end of the section.
 :::
 :::
 
-::: {.slide title="The softmax *is* an argmax, plus the right noise"}
+::: {.slide title="Softmax from randomized utility"}
 [The Softmax · origins]{.kicker}
 
 Another route to probabilities: perturb each score and report the winner,
@@ -770,7 +763,8 @@ $$-\log P(\mathbf{Y}\mid\mathbf{X}) = \sum_{i=1}^n l\bigl(\mathbf{y}^{(i)}, \hat
 
 . . .
 
-Minimizing this negative log-likelihood is exactly the recipe we used for squared error, now over discrete categories.
+Minimizing this negative log-likelihood applies the same principle used to
+derive squared error, now for discrete categories.
 :::
 
 ::: {.slide title="The cross-entropy loss"}
@@ -786,7 +780,7 @@ It is $\ge 0$, and $0$ only with certainty on the right class, which finite logi
 :::
 
 ::: {.slide title="The gradient: prediction minus truth"}
-[Loss · the payoff]{.kicker}
+[Loss · gradient]{.kicker}
 
 Substitute the softmax into the loss and it collapses to a log-partition term minus a linear term, $l = g(\mathbf{o}) - \mathbf{y}^\top\mathbf{o}$ with $g(\mathbf{o}) = \log\sum_k \exp(o_k)$. Differentiate:
 

@@ -6,17 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Data Manipulation
 :label:`sec_ndarray`
 
-In order to get anything done, 
-we need some way to store and manipulate data.
-Generally, there are two important things 
-we need to do with data: 
-(i) acquire them; 
-and (ii) process them once they are inside the computer. 
-There is no point in acquiring data 
-without some way to store it, 
-so to start, let's get our hands dirty
-with $n$-dimensional arrays, 
-which we also call *tensors*.
+Deep learning programs store numerical data in $n$-dimensional arrays,
+which we call *tensors*. A tensor may represent a single measurement, a
+feature vector, an image, or a batch of examples. This section introduces the
+operations needed to create, inspect, and manipulate these arrays.
 If you already know the NumPy 
 scientific computing package :cite:`Harris.Millman.Walt.ea.2020`, 
 much of this will look familiar.
@@ -32,8 +25,8 @@ supports automatic differentiation
 Second, it uses GPUs
 to accelerate numerical computation,
 whereas NumPy only runs on CPUs.
-These properties make neural networks
-both easy to code and fast to run.
+These properties support both gradient-based learning and accelerated
+numerical computation.
 (We cover how to place tensors on a GPU and move them between devices
 in :numref:`sec_use_gpu`; until then, every tensor we create lives in
 CPU memory.)
@@ -1284,7 +1277,7 @@ Every *other* axis must already match.
 :::
 :::
 
-::: {.slide title="Comparisons build masks; reductions collapse"}
+::: {.slide title="Comparisons and reductions"}
 [Operations]{.kicker}
 
 ::: {.cols}
@@ -1295,14 +1288,14 @@ Comparisons return a **boolean tensor**.<br>A ready-made mask:
 :::
 
 ::: {.col .narrow}
-Reductions collapse axes<br>no `dim=` gives a scalar:
+Reductions remove axes;<br>no `dim=` gives a scalar:
 
 @ndarray-operations-5
 :::
 :::
 
 ::: {.d2l-note}
-`==, <, >` build masks; `sum, mean, max` collapse axes; add `dim=` to
+`==, <, >` build masks; `sum, mean, max` reduce axes; add `dim=` to
 reduce just one.
 :::
 :::

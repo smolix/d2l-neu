@@ -1,17 +1,14 @@
 # Probability and Statistical Learning
 :label:`chap_mdl-probability-statistics`
 
-Models are probabilistic statements about data. This chapter develops the
-continuous probability the rest of deep learning relies on---densities,
-expectations, and how they transform under a map---catalogues the distributions
-whose negative log-likelihoods are exactly our loss functions, derives
-maximum-likelihood and MAP estimation (and the priors that become regularizers),
-turns the resulting posterior integrals into computations with Monte Carlo and
-variational approximations, builds the statistics needed to tell a real improvement from noise, proves the
-concentration inequalities that make finite samples trustworthy---following them
-to uniform convergence, Rademacher complexity, and double descent---and caps it
-all with naive Bayes: a working classifier, fit by counting and then audited
-with the chapter's own tools.
+Probabilistic models describe how data may vary. This chapter develops the
+continuous probability used throughout deep learning: densities, expectations,
+transformations, and standard distributions. It then derives maximum-likelihood
+and MAP estimation, posterior approximation by Monte Carlo and variational
+methods, and statistical procedures for estimation and testing. Concentration
+inequalities lead to uniform convergence, Rademacher complexity, and a
+discussion of interpolation and double descent. A final naive Bayes example
+combines model fitting, prediction, and statistical evaluation.
 
 ```toc
 :maxdepth: 2
@@ -27,10 +24,9 @@ mdl-naive-bayes
 
 ## Resources and Further Reading {.unnumbered}
 
-A short, opinionated shelf for going deeper into the probability and statistical
-learning that underpins these chapters---random variables and distributions,
+The following references cover random variables and distributions,
 maximum-likelihood and MAP estimation, Bayesian inference, estimators, and
-hypothesis testing. We favor free and official sources.
+hypothesis testing.
 
 **Books**
 

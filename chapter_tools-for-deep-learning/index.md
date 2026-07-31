@@ -1,14 +1,13 @@
 # Tools for Deep Learning
 
-This part is a practical reference for working with the book itself and the
-ecosystem around it. It documents the `d2l` library — the saved functions and
-classes the chapters accumulate — and how to use the notebooks across the four
-supported frameworks. It covers the everyday tooling a reader needs: running the
-code on your own hardware or in the cloud, choosing GPUs and reasoning about
-their memory and throughput, and the mechanics of contributing improvements
-back.
+This part is a practical reference for running and extending the examples in
+this book. It explains how to run the notebooks locally or in the cloud, how to
+choose hardware by estimating memory use and throughput, and how training and
+serving systems use multiple accelerators. It also describes the software
+ecosystem for models and datasets and the process for contributing changes to
+the book.
 
-Where the rest of the book teaches models, this part teaches the workflow:
-environments, hardware, reproducibility, and the conventions that keep a
-multi-framework project maintainable. Treat it as a manual to consult rather than
-a chapter to read linearly.
+The final sections document the `d2l` library, which collects functions and
+classes introduced throughout the book, and the conventions used to maintain
+the notebooks across four deep learning frameworks. The sections are largely
+independent and can be consulted as needed.

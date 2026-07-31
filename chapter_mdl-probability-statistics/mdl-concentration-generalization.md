@@ -1,28 +1,16 @@
 # Concentration and Generalization
 :label:`sec_mdl-concentration-generalization`
 
-Every guarantee this chapter has offered so far decays *polynomially*.
-Chebyshev's inequality :eqref:`eq_mdl-chebyshev` caps the miss probability of a
-sample mean at $\sigma^2/(nt^2)$, a rate of $1/n$, and the tests and
-confidence intervals of :numref:`sec_mdl-statistics` traded that finite-sample
-bound away for Gaussian *approximations* that are only exact in the limit. The
-truth is far better: when the data are bounded, the probability that an
-average strays from its mean decays *exponentially* in $n$, and this section
-proves it. The main book bounded the error of a test-set
-estimate with Hoeffding's inequality (:numref:`chap_classification_generalization`),
-quoting it on faith; here we prove it. The same machinery
-then explains the strange geometry of high dimension teased in
-:numref:`sec_mdl-distributions` (thin shells, near-orthogonal random
-directions) and carries us to
-the question all of it serves: *generalization*. A learner that picks its
-function after seeing the data voids the single-function guarantee, and the
-repair (uniform convergence, first over finite classes and then through
-Rademacher complexity) is the promised mechanics behind the classical
-generalization bounds of :numref:`sec_generalization_deep`. The section closes
-where the classical story visibly breaks and something more interesting
-appears: interpolation and *double descent*, reproduced from scratch in
-twenty-six lines and explained by the very quantity that the Rademacher
-calculation says is the true capacity knob: the norm of the solution.
+Chebyshev's inequality :eqref:`eq_mdl-chebyshev` bounds deviations of a sample
+mean with a probability that decreases as $1/n$. For bounded data, Hoeffding's
+inequality gives exponential decay in $n$. We derive this inequality and use
+related concentration arguments to study norms and angles in high dimensions.
+For learning problems, a bound for one fixed function is insufficient because
+the function is selected after observing the data. Uniform convergence extends
+the guarantee to finite classes and then to infinite classes through
+Rademacher complexity. The section concludes by comparing these classical
+bounds with interpolation and double descent, emphasizing the role of solution
+norms in controlling capacity.
 
 Every computation in this section is a matter of tails, norms, and least
 squares, so the worked cells below use plain NumPy, imported as `onp`, with
@@ -63,7 +51,7 @@ import numpy as onp  # the worked cells compute with plain NumPy
 
 ## From Chebyshev to Chernoff
 
-### Polynomial Tails Are Not Enough
+### Polynomial and Exponential Tail Bounds
 
 Recall the ladder built in :numref:`sec_mdl-random_variables`. Markov's
 inequality :eqref:`eq_mdl-markov` turns a bare mean into a tail bound; feeding
@@ -115,10 +103,8 @@ independent terms: the MGF of a sum factors into a *product* of MGFs (the
 expectation of a product of independent variables is the product of
 expectations), so the exponent in :eqref:`eq_mdl-chernoff` grows linearly in
 $n$, and optimizing $\lambda$ then turns that linear-in-$n$ exponent into the
-exponential decay we are after. Everything below is this one display with a
-good bound on the MGF plugged in. For bounded variables the sharpest generic
-MGF bound is a lemma of Hoeffding; we prove it carefully because it is the
-engine of the whole section.
+desired exponential decay. The remaining task is to supply a bound on the MGF.
+For bounded variables, Hoeffding's lemma provides such a bound.
 
 ### Hoeffding's Lemma and Hoeffding's Inequality
 
@@ -210,8 +196,8 @@ argument to $-Z_i$ bounds the lower tail identically, and the *union bound*
 sum of their probabilities) applied to the two tails supplies the factor $2$.
 $\blacksquare$
 
-This is the inequality of :cite:`Hoeffding.1963`, and it pays the main book's
-debt. :numref:`chap_classification_generalization` used exactly
+This is Hoeffding's inequality :cite:`Hoeffding.1963`.
+:numref:`chap_classification_generalization` used
 :eqref:`eq_mdl-hoeffding` (with losses in $[0,1]$, so $b-a=1$) to certify a
 test-set estimate of the error rate: demanding
 $P(|\epsilon_{\mathcal D}(f)-\epsilon(f)|\ge 0.01)\le 0.05$ and solving
@@ -240,8 +226,8 @@ trade-off is the constant: Hoeffding allows for the most adversarial
 distribution
 on $[a,b]$, so the range $b-a$ stands where the Gaussian interval enjoys the
 estimated $\hat\sigma$, and when the true spread is much smaller than the
-range the interval is correspondingly conservative, slack that Bernstein's
-inequality, below, is designed to recover. Keep
+range the interval is correspondingly conservative. Bernstein's inequality,
+below, is designed to recover that slack. Keep
 :eqref:`eq_mdl-hoeffding-interval` in view; it is the statement we will
 upgrade from one function to entire function classes in the second half of
 the section.
@@ -309,7 +295,7 @@ decay is exponential in $t$, which is the best a bounded-but-skewed sum can
 do. We will lean on exactly this small-deviation sharpness when we prove norm
 concentration below.
 
-### The Tail Race in Code
+### Comparing Tail Bounds Numerically
 
 Claims about rates deserve a measurement. For the fair coin we can compute the
 tail $P(|\hat p - \tfrac12| \ge 0.1)$ *exactly* (a finite binomial
@@ -416,8 +402,8 @@ squares to norms: writing $z=\|\mathbf x\|/\sqrt d\ge 0$, if $|z-1|\ge\varepsilo
 then $|z^2-1|=|z-1|\,(z+1)\ge\varepsilon$, so the norm event implies the
 squared-norm event and inherits its bound.
 
-First, the *fluctuation of $\|\mathbf x\|$ is of constant
-order*: the bound says deviations of $\|\mathbf x\|$ from $\sqrt d$ beyond
+The bound has two readings. First, the *fluctuation of $\|\mathbf x\|$ is of
+constant order*: it says deviations of $\|\mathbf x\|$ from $\sqrt d$ beyond
 $\varepsilon\sqrt d$ are exponentially rare in $d$, and a finer analysis puts
 the standard deviation of $\|\mathbf x\|$ near $1/\sqrt2$ *independently of
 $d$*. A standard Gaussian in $\mathbb{R}^d$ is therefore a **thin shell** of
@@ -557,10 +543,10 @@ means much.
 
 ## From One Estimate to Uniform Convergence
 
-### The Function Chosen After the Data
+### Data-Dependent Function Selection
 
-Return to learning, where a subtlety voids everything proved so far.
-Hoeffding's inequality certifies the empirical risk of **one fixed function**:
+We now apply the result to learning. Hoeffding's inequality certifies the
+empirical risk of **one fixed function**:
 choose $f$, *then* draw the sample $S=\{(\mathbf x_i,y_i)\}_{i=1}^n$, and the
 empirical risk $\hat R(f)=\frac1n\sum_i \ell(f(\mathbf x_i),y_i)$ sits within
 $t$ of the true risk $R(f)=E[\ell(f(\mathbf x),y)]$ except with probability
@@ -590,7 +576,7 @@ happens when it is not, we take up right after the proof.
 
 ### Finite Classes: the Union Bound
 
-For a finite class the repair is one line of probability.
+For a finite class, the union bound supplies a simultaneous guarantee.
 
 **Proposition (finite-class uniform convergence).** *Let $\mathcal F$ be
 finite, let the loss take values in $[0,1]$, and let $S$ be an i.i.d. sample
@@ -610,9 +596,9 @@ $|\mathcal F|$ bad events occurs is at most the sum of their probabilities
 (the union bound again), i.e. $2|\mathcal F|e^{-2nt^2}$. Setting this to
 $\delta$ and solving for $t$ gives the claim. $\blacksquare$
 
-Read the bound the way a practitioner should: $\log|\mathcal F|$ **is the
-price of choice**. Guaranteeing one function puts $\log(2/\delta)$ in the
-numerator; guaranteeing the freedom to pick among $|\mathcal F|$ adds
+The effect of selecting from a class appears as $\log|\mathcal F|$.
+Guaranteeing one function puts $\log(2/\delta)$ in the numerator; allowing a
+choice among $|\mathcal F|$ adds
 $\log|\mathcal F|$: one extra bit of sample information per bit of selection
 freedom. Since the deviation shrinks like the square root, the
 sample size needed grows only *logarithmically* in the class size, which is
@@ -795,7 +781,7 @@ class of the norm-bounded linear model inherits the bound
 $L\,Br/\sqrt n$ and the norm-controls-capacity conclusion survives the
 composition intact.
 
-### Why the Bounds Go Vacuous, and Why the Language Survives
+### Vacuous Bounds and Useful Complexity Measures
 
 Apply this machinery to a modern network
 and the numbers are useless. :cite:`zhang2021understanding` trained standard
@@ -870,7 +856,7 @@ matters is the norm the fit actually uses on the data.
 
 ## Interpolation and Double Descent
 
-### The U-Curve, Revisited
+### Classical U-Shaped Risk Curves
 
 The classical picture of generalization is the U-curve, and this chapter
 derived it in full: the bias--variance decomposition
@@ -945,7 +931,7 @@ algorithm-dependent argument. The experiment below therefore tracks solution
 norm as a diagnostic correlated with test error, not as a complete capacity
 certificate.
 
-### Double Descent in Twenty-Six Lines
+### A Numerical Double-Descent Example
 
 Now the full double-descent curve, from scratch. Forty training points
 from a noisy linear teacher in fifteen dimensions; ReLU random features with
@@ -1287,7 +1273,7 @@ variance where Hoeffding must assume the worst case.
 :::
 :::
 
-::: {.slide title="The tail race: rates always beat constants" layout="tight"}
+::: {.slide title="Numerical comparison of tail bounds" layout="tight"}
 [Measured: the fair coin's exact tail vs. both bounds]{.kicker}
 
 @!mdl-concentration-generalization-the-tail-race-in-code
@@ -1479,7 +1465,7 @@ shows the norm it needed: the smallest linear class containing those fits
 has $Br/\sqrt n \approx 1.41 > 1$. Vacuous, as it must be.
 :::
 
-::: {.slide title="Why the bounds go vacuous, and what survives"}
+::: {.slide title="When uniform-convergence bounds are vacuous"}
 [Limits]{.kicker}
 
 Zhang et al. trained standard architectures to zero training error on
@@ -1619,8 +1605,8 @@ spectrum, the theory is instructive but open.
 :::
 
 ::: {.d2l-note}
-One inequality, compounded: Hoeffding certifies the test set, the union
-bound extends it over a fixed pool of models, and the norm is the
-capacity that generalization actually tracks.
+Hoeffding certifies a fixed test-set estimate, and the union bound extends the
+result to a fixed finite collection of models. For linear classes, the
+resulting capacity measure depends on the norm.
 :::
 :::

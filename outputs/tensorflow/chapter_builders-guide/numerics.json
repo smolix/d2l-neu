@@ -108,14 +108,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: loss 0.711, val acc 0.760, 0.73s\nbf16: loss 0.709, val acc 0.763, 0.77s\n"
+          "text": "fp32: loss 0.712, val acc 0.761, 0.66s\nbf16: loss 0.711, val acc 0.762, 0.75s\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 28525,
-          "sha256": "sha256:535ad728505e460fffd2aa1637861db8edd87d75fb12ce9609a61256a3defadf"
+          "bytes": 28522,
+          "sha256": "sha256:3016a7b37507ae88c1e8d2579e77b2d5726eafe28c451a5c95a5fa150a731d42"
         }
       ]
     },

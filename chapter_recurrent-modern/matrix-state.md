@@ -1,23 +1,18 @@
-# The Matrix State: From Linear Attention to Mamba-2
+# Matrix-State Recurrences and State Space Duality
 :label:`sec_matrix-state`
 
-Two roads have been leading to the same place. At the end of
-:numref:`sec_attention-at-scale`, dropping the softmax turned attention into
-a recurrence: a matrix-valued state updated by an outer-product write at
-every token, trained in parallel, stepped in constant memory at generation
-time. That section closed with a promise, that Mamba-2's *state space
-duality* makes the correspondence between such recurrences and the selective
-state space models of :numref:`sec_mamba` exact. The last two sections built
-the other road: linear recurrences discretized from continuous time, made
-selective, packaged into Mamba. This section is where the roads meet. We
-first take stock of what the matrix state actually is as a memory, and
-measure its capacity; a family of models then appears as one-line variations
-on a single recurrence, differing only in how they *forget*. Unrolling that
-recurrence proves the promised duality: a gated linear recurrence and masked
-attention are the same matrix, computed in two different orders, and a third
-order, chunkwise, is how every model in this family trains at scale. We
-close with the family table that organizes these models, from
-RetNet to Mamba-2 to xLSTM.
+Dropping the softmax in :numref:`sec_attention-at-scale` produced a
+matrix-valued recurrent state updated by outer products. The preceding
+sections derived selective linear recurrences from continuous-time dynamics.
+This section establishes the equivalence between these formulations.
+
+We first analyze the matrix state as a memory and measure its capacity.
+Several models then arise from the same recurrence by choosing different
+forms of decay. Unrolling the recurrence shows that a gated linear recurrence
+and masked attention compute the same matrix in different contraction orders.
+A chunked order combines parallel matrix multiplication within chunks with a
+short recurrence between chunks. The final table compares models from RetNet
+through Mamba-2 and xLSTM.
 
 *Prerequisites: the linear-attention recurrence and its normalizer from
 :numref:`sec_attention-at-scale`; the selective SSM of
@@ -44,7 +39,7 @@ import numpy as np
 import time
 ```
 
-## Two Roads to One Recurrence
+## The Matrix-State Recurrence
 :label:`subsec_ms-two-roads`
 
 Recall the object that fell out of kernelizing attention,
@@ -66,8 +61,8 @@ its key. Linear attention is the case $\mathbf{D}_t = \mathbf{I}$: never
 forget. The minGRU and the selective SSM obeyed the same shape one level
 down, as the elementwise affine recurrence :eqref:`eq_affine_recurrence`
 evaluated by the parallel scan of :numref:`subsec_parallel-scans`; here the
-state is a matrix rather than a vector, but the algebra, affine maps
-composing into affine maps, is identical.
+state is a matrix rather than a vector, but the algebra is identical:
+affine maps composing into affine maps.
 
 Before building on this template, we should record what it keeps
 from :numref:`sec_attention-at-scale` and what it drops. What you verified
@@ -80,11 +75,11 @@ Queries and keys come out of learned projections whose scale training can
 set freely, so the feature map goes; and rather than tracking a normalizer
 state, production layers normalize the *output*, passing $\mathbf{o}_t$
 through an RMSNorm or GroupNorm before the residual add
-:cite:`Yang.Wang.Shen.ea.2024,Dao.Gu.2024`. One member of the family, the
-mLSTM at the end of this section, keeps an explicit normalizer state; when
-we meet it, the pair $(\mathbf{S}, \mathbf{z})$ of :numref:`chap_attention` will be waiting.
+:cite:`Yang.Wang.Shen.ea.2024,Dao.Gu.2024`. The mLSTM at the end of this
+section is the one member of the family that keeps an explicit normalizer
+state; when we meet it, the pair $(\mathbf{S}, \mathbf{z})$ of :numref:`chap_attention` will be waiting.
 
-### What the Memory Costs
+### Memory and Computation Costs
 :label:`subsec_ms-capacity`
 
 A matrix as associative memory is an old idea, and its failure mode is just
@@ -226,7 +221,7 @@ bits, the counting behind the copying lower bound of
 retrieves in practice, which :numref:`sec_hybrids` measures with its
 recall sweep and which none of the first three numbers guarantees.
 
-### The Decay Ladder
+### Forms of Decay
 :label:`subsec_ms-decay-ladder`
 
 If crowding is the failure, forgetting is the first fix: shrink the past
@@ -248,8 +243,8 @@ A *fixed scalar* $\gamma \in (0,1)$ is RetNet's *retention*
 different heads keep different horizons. (If you worked the closing
 exercise of :numref:`sec_attention-at-scale`, you have already built this
 rung and verified that its parallel form weights past values by
-$\gamma^{t-s}$.) An *input-dependent scalar* $a_t$, one number per head
-per token, is the transition of Mamba-2 :cite:`Dao.Gu.2024`: the model
+$\gamma^{t-s}$.) An *input-dependent scalar* $a_t$ is the transition of
+Mamba-2 :cite:`Dao.Gu.2024`, one number per head per token: the model
 reads the token and decides how much of the whole memory survives it, the
 forget gate of :numref:`sec_lstm` acting on a matrix state. And an
 input-dependent *diagonal* $\mathrm{diag}(\boldsymbol{\alpha}_t)$ decays
@@ -320,8 +315,8 @@ as in :numref:`sec_attention-at-scale`. A gated linear recurrence is
 attention whose 0/1 causal mask has been replaced by a *learned, decaying*
 mask. One object, two readings; :citet:`Dao.Gu.2024` named the
 correspondence *state space duality* (SSD), and matrices of $\mathbf{L}$'s
-form, every submatrix below the diagonal having rank one, are called
-1-semiseparable. Keep the equivalence's scope in view: it is an identity
+form are called 1-semiseparable, every submatrix below the diagonal
+having rank one. Keep the equivalence's scope in view: it is an identity
 for this structured family, a scalar-gated (1-semiseparable) mask on
 *linear* attention, not a statement about softmax attention, whose
 exponential kernel is no masked linear read.
@@ -648,15 +643,16 @@ memory column and grow fourfold with every doubling of $T$. The chunked
 schedule takes both prizes at once: with chunks of a few hundred tokens it
 runs within a small factor of the dual's speed (in some runs ahead of it)
 at an order of magnitude less memory, and its constituent operations are
-exactly the dense matmuls the hardware wants to run. The FLOP-optimal chunk size, which an exercise asks you to derive,
-sits near $C \approx d_k$; the measured optimum drifts higher because
+exactly the dense matmuls the hardware wants to run. The FLOP-optimal
+chunk size sits near $C \approx d_k$, as an exercise asks you to derive;
+the measured optimum drifts higher because
 kernel-launch overhead penalizes many small chunks.
 
-### What the Hardware Bought
+### Measured Performance
 :label:`subsec_ms-hardware`
 
-This schedule, not any change in the model class, is the main story of
-Mamba-2 relative to Mamba. Recall from
+This schedule is the main story of Mamba-2 relative to Mamba, not any
+change in the model class. Recall from
 :numref:`sec_attention-at-scale` that an accelerator moves bytes far more
 slowly than it multiplies them; its full arithmetic rate is reserved for
 dense matrix products on tensor cores. Mamba-1's parallel scan is
@@ -732,7 +728,7 @@ Holding both numbers in mind at once is the whole hybrid-design problem of
 :numref:`sec_hybrids`, which prices whole models with exactly
 :eqref:`eq_ms-state-bytes`.
 
-## The Family, So Far
+## Model Family
 :label:`subsec_ms-family`
 
 We can now lay out the family that this section and its two predecessors
@@ -782,8 +778,8 @@ section derived.
 
 The last row deserves its promised closer look, because it answers a
 question :numref:`chap_attention` left open: whatever happened to the normalizer
-$\mathbf{z}$? The mLSTM, the matrix-memory cell of xLSTM
-:cite:`Beck.Poppel.Spanring.ea.2024`, is the LSTM rebuilt on
+$\mathbf{z}$? The mLSTM is the matrix-memory cell of xLSTM
+:cite:`Beck.Poppel.Spanring.ea.2024`, the LSTM rebuilt on
 :eqref:`eq_ms-recurrence`: a forget gate $f_t$ and input gate $i_t$,
 computed from the token, gating a matrix cell state and, alongside it, the
 running normalizer that the rest of the family traded for output
@@ -926,7 +922,7 @@ keeps the LSTM's recurrent memory mixing (and therefore steps
 sequentially, gaining state-tracking power the parallel family lacks), a
 trade we noted in the gate table of :numref:`sec_lstm`.
 
-### The Column Left Open
+### Limitations of Additive Writes
 :label:`subsec_ms-open-column`
 
 Look down the write column of :numref:`tab_ms-family` once more. Seven
@@ -938,9 +934,9 @@ interference :eqref:`eq_ms-retrieval-error` is specific. The fast weight
 programmers saw this in the 1990s and proposed the repair
 :cite:`Schlag.Irie.Schmidhuber.2021`: before writing to key
 $\mathbf{k}_t$, first *read* what the memory already holds there, and
-write only the correction. That single change to the write rule, a memory
-that edits rather than accumulates, is the subject of
-:numref:`sec_deltanet`.
+write only the correction. That single change to the write rule is the
+subject of :numref:`sec_deltanet`: a memory that edits rather than
+accumulates.
 
 ## Summary
 
@@ -951,24 +947,24 @@ capacity law: after $n$ writes with independent isotropic unit keys
 into width $d_k$, the expected squared read error is $(n-1)/d_k$ — and
 measurably worse once keys correlate — so capacity is set by width, not
 by time. The
-decay ladder, fixed scalar (RetNet), input-dependent scalar (Mamba-2),
-input-dependent diagonal (GLA, RWKV-6, and per channel the selective SSM),
-adds forgetting one line at a time. Unrolling the scalar-decay recurrence
+decay ladder adds forgetting one line at a time: fixed scalar (RetNet),
+input-dependent scalar (Mamba-2), input-dependent diagonal (GLA, RWKV-6,
+and per channel the selective SSM). Unrolling the scalar-decay recurrence
 gives $\mathbf{Y} = (\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top)\mathbf{V}$
 with a 1-semiseparable $\mathbf{L}$; at $a_t = 1$ the mask $\mathbf{L}$ is
 literally the causal mask, so masked linear attention and the gated
 recurrence are the same matrix, and the quadratic and recurrent modes are
 two orders of one contraction. That is Mamba-2's state space duality,
-verified here by assertion, and its chunked middle order, attention within
-chunks, a short state recurrence across them, is how the family trains:
-matmul-heavy, linear in sequence length, and the schedule the Mamba-2
+verified here by assertion, and the family trains in the chunked middle
+order: attention within chunks, a short state recurrence across them,
+matmul-heavy and linear in sequence length, the schedule the Mamba-2
 paper credits for growing state sizes an order of magnitude at little
 wall-clock cost. The family table collects the
 members, including the mLSTM, which keeps the normalizer state of :numref:`chap_attention` and
 stabilizes its exponential gates with the online-softmax rescaling. Every
 write rule in the table only adds; editing the memory is next.
 
-What this section's evidence does and does not show: the capacity law
+**Experimental scope.** The capacity law
 is a *proposition* under independent isotropic random keys, confirmed
 by measurement under exactly those assumptions and shown failing under
 correlated keys; it bounds nothing about trained or whitened key
@@ -1034,13 +1030,14 @@ The matrix state<br>
 :::
 :::
 
-::: {.slide title="Two roads to one recurrence"}
+::: {.slide title="The Matrix-State Recurrence"}
 Ch. 10 ended linear attention as a recurrence; ch. 12 built selective SSMs
 from continuous time. Same object:
 
 $$\mathbf{S}_t = \mathbf{D}_t\, \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top, \qquad \mathbf{o}_t = \mathbf{S}_t^\top \mathbf{q}_t$$
 
-- Transition $\mathbf{D}_t$: what survives. Write $\mathbf{k}_t\mathbf{v}_t^\top$: what is filed.
+- The transition $\mathbf{D}_t$ determines retained state; the outer product
+  $\mathbf{k}_t\mathbf{v}_t^\top$ writes new state.
 - Linear attention: $\mathbf{D}_t = \mathbf{I}$ — never forget.
 
 . . .
@@ -1050,7 +1047,7 @@ $\phi$ and the normalizer state $\mathbf{z}$ (output normalization instead).
 One member keeps $\mathbf{z}$ — wait for the mLSTM.
 :::
 
-::: {.slide title="What the memory costs, measured"}
+::: {.slide title="Measured Memory Cost"}
 Store $n$ unit-norm pairs, read key $j$:
 $\mathbf{S}^\top \mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)\,\mathbf{v}_i$
 
@@ -1064,7 +1061,7 @@ $\mathbf{S}^\top \mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\to
   memories.
 :::
 
-::: {.slide title="Forgetting: the decay ladder"}
+::: {.slide title="Forms of Decay"}
 Three one-line fixes for crowding, on the same recurrence:
 
 $$\gamma\,\mathbf{S}_{t-1} \;\to\; a_t\,\mathbf{S}_{t-1} \;\to\; \mathrm{diag}(\boldsymbol{\alpha}_t)\,\mathbf{S}_{t-1}\;\; (+\;\mathbf{k}_t\mathbf{v}_t^\top)$$
@@ -1095,7 +1092,8 @@ Gu 2024).
 
 - Agreement to float rounding; at $a_t = 1$ the dual reduces **exactly** to
   ch. 10's masked linear attention.
-- Ch. 10's promise is now a computation you have run.
+- This computation verifies the recurrent form of masked linear attention
+  introduced in Chapter 10.
 :::
 
 ::: {.slide title="Chunked: mostly matmul, a little scan"}
@@ -1115,7 +1113,7 @@ diagonal, before any exponential):
 @matrix-state-chunked-computation-mostly-matmul-a-little-scan-1
 :::
 
-::: {.slide title="The trade, measured"}
+::: {.slide title="Measured Time--Memory Tradeoff"}
 $C$ interpolates recurrence ($C = 1$) → quadratic dual ($C = T$):
 
 @!matrix-state-chunked-computation-mostly-matmul-a-little-scan-2
@@ -1124,7 +1122,7 @@ $C$ interpolates recurrence ($C = 1$) → quadratic dual ($C = T$):
 - Chunked: matmul speed at an order of magnitude less memory.
 :::
 
-::: {.slide title="What the hardware bought"}
+::: {.slide title="Measured Hardware Performance"}
 - Tensor cores run **matmuls**; Mamba-1's scan is elementwise
   (bandwidth-bound). Mamba-2's scalar transition buys the chunked form.
 - The paper's empirical scaling observation: training several times
@@ -1141,7 +1139,7 @@ The flat line vs. the growing cache — the hybrid-design problem of the
 chapter's last section.
 :::
 
-::: {.slide title="The family, so far"}
+::: {.slide title="Model Family"}
 | model | transition $\mathbf{D}_t$ | write |
 |:--|:--|:--|
 | linear attention | $\mathbf{I}$ | add $\phi(\mathbf{k}_t)\mathbf{v}_t^\top$ |
@@ -1166,7 +1164,7 @@ steps; the fix is online softmax's running max, carried as a state $m_t$.
 @matrix-state-the-one-that-kept-the-normalizer
 :::
 
-::: {.slide title="The column left open"}
+::: {.slide title="Limitations of Additive Writes"}
 - Decay manages crowding; it does not cure it — forgetting is
   indiscriminate, interference is specific.
 - Not one model in the table can **edit** what it wrote about

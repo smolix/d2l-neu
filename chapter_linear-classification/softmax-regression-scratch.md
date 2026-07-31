@@ -6,14 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Softmax Regression Implementation from Scratch
 :label:`sec_softmax_scratch`
 
-Because softmax regression is so fundamental,
-we believe that you ought to know
-how to implement it yourself.
-Here, we limit ourselves to defining the
-softmax-specific aspects of the model
-and reuse the other components
-from our linear regression section,
-including the training loop.
+This section implements the components specific to softmax regression: the
+softmax transformation, cross-entropy loss, parameters, and forward pass. The
+data and training loop reuse the abstractions introduced for linear
+regression, making the differences between regression and classification
+explicit.
 
 ```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab mxnet
@@ -44,8 +41,7 @@ from jax import numpy as jnp
 
 ## The Softmax
 
-Let's begin with the core piece:
-the mapping from scalars to probabilities.
+We begin with the transformation from scores to probabilities.
 Softmax normalizes each *row* of a matrix, so we will need per-row sums;
 recall from :numref:`subsec_lin-alg-reduction` and
 :numref:`subsec_lin-alg-non-reduction` how `axis` selects the dimension
@@ -611,16 +607,16 @@ d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
 ```
 
 The errors are anything but uniform: they form two blocks. Upper-body garments
-(t-shirt, pullover, dress, coat, shirt: columns 0, 2, 3, 4, 6) are traded
-almost exclusively among themselves, with the *shirt* column the most polluted
-of all as it leaks into t-shirt, pullover, and coat; and footwear (sandal,
+(t-shirt, pullover, dress, coat, shirt: columns 0, 2, 3, 4, 6) trade errors
+almost exclusively among themselves, and the *shirt* column is the most
+polluted of all, leaking into t-shirt, pullover, and coat; footwear (sandal,
 sneaker, ankle boot: columns 5, 7, 9) forms a second, smaller cluster.
 Meanwhile trousers and bags are nearly pure diagonal: their overall silhouette
-is unmistakable even to a linear model. This is the summary's claim made
+is unmistakable even to a linear model. This makes the summary's claim
 visible, since to a classifier that can only weigh pixels linearly, two
-garments with the same outline and mass distribution, like a shirt and a
-pullover, are close to indistinguishable, while classes that differ in
-silhouette are easy.
+garments that share an outline and a mass distribution are close to
+indistinguishable, a shirt and a pullover for instance, while classes that
+differ in silhouette are easy.
 
 ## Summary and Discussion
 
@@ -632,11 +628,12 @@ you have seen these five moving parts separately, the one-liner in
 
 **What the training curve tells you.** After 10 epochs with minibatch SGD the
 model converges to roughly 82--83% validation accuracy. That ceiling is the
-limit of linear separability on Fashion-MNIST, not a tuning artifact.
-The ten classes are not linearly separable in pixel space (shirts and pullovers
-look nearly identical to a linear model). The misclassification gallery and the
-confusion matrix at the end of the section make this concrete. Replacing the flat linear layer with
-even a single hidden layer (:numref:`chap_perceptrons`) pushes past it.
+limit of linear separability on Fashion-MNIST rather than a tuning artifact,
+since the ten classes are not linearly separable in pixel space: shirts and
+pullovers look nearly identical to a linear model, as the misclassification
+gallery and the confusion matrix at the end of the section make concrete.
+Replacing the flat linear layer with even a single hidden layer
+(:numref:`chap_perceptrons`) pushes past it.
 
 **Why the clip is only a band-aid.** The clip stops $\log 0$ but leaves the naive
 `softmax` free to overflow for large logits; the real fix (subtracting the row
@@ -689,7 +686,7 @@ Softmax regression **from scratch**<br>The whole classifier, opened up: the soft
 :::
 :::
 
-::: {.slide title="The same recipe, two new pieces"}
+::: {.slide title="Two classification-specific components"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -701,7 +698,7 @@ them to a **distribution over classes**. Two new parts do that:
 2. **Cross-entropy** is the loss that scores a distribution.
 
 ::: {.d2l-note}
-Everything else, the `Module` / `Trainer` scaffold, is **reused** from
+The `Module` / `Trainer` scaffold is **reused** from
 the regression chapter; `Classifier` just adds accuracy reporting.
 :::
 :::
@@ -722,7 +719,7 @@ the regression chapter; `Classifier` just adds accuracy reporting.
 :::
 :::
 
-::: {.slide title="First, a reminder: sums along an axis"}
+::: {.slide title="Sums along an axis"}
 [The Softmax]{.kicker}
 
 ::: {.cols .vc}
@@ -897,7 +894,7 @@ validation accuracy, no extra code:
 @softmax-regression-scratch-training
 :::
 
-::: {.slide title="Predict on a fresh batch"}
+::: {.slide title="Predictions on a validation batch"}
 [Prediction]{.kicker}
 
 Take the argmax of the model's outputs over a fresh validation batch,
@@ -915,7 +912,7 @@ each captioned `true / predicted`:
 @softmax-regression-scratch-prediction-2
 :::
 
-::: {.slide title="82%: a linear ceiling" only="pytorch"}
+::: {.slide title="Validation accuracy of the linear model" only="pytorch"}
 [Prediction]{.kicker}
 
 Sweep the whole validation set and average the per-example correct flags:
@@ -929,7 +926,7 @@ the missing 18% lives.
 :::
 :::
 
-::: {.slide title="82%: a linear ceiling" except="pytorch"}
+::: {.slide title="Validation accuracy of the linear model" except="pytorch"}
 [Prediction]{.kicker}
 
 Sweep the whole validation set and average the per-example correct flags
@@ -942,7 +939,7 @@ artifact. The next slide shows where the missing 18% lives.
 :::
 :::
 
-::: {.slide title="The errors form two blocks, not a blur" only="pytorch"}
+::: {.slide title="The confusion matrix identifies two error groups" only="pytorch"}
 [Prediction · the confusion matrix]{.kicker}
 
 ::: {.cols .vc}
@@ -968,7 +965,7 @@ that can only **weigh pixels linearly**.
 :::
 :::
 
-::: {.slide title="The errors form two blocks, not a blur" except="pytorch"}
+::: {.slide title="The confusion matrix identifies two error groups" except="pytorch"}
 [Prediction · the confusion matrix]{.kicker}
 
 Accumulate a $10\times 10$ count matrix over the validation set (the
@@ -988,7 +985,7 @@ can only **weigh pixels linearly**.
 :::
 
 ::: {.slide title="Why a linear model caps out"}
-[The ceiling]{.kicker}
+[Model capacity]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1023,7 +1020,7 @@ ceiling.
 
 ::: {.col}
 - **Training** reuses the regression `Trainer`; `Classifier` adds
-  accuracy reporting for free.
+  accuracy reporting through the base class.
 - **82--83%** is the linear ceiling on Fashion-MNIST; the confusion matrix
   shows the errors in two blocks (upper-body garments, footwear), exactly
   where silhouette fails.

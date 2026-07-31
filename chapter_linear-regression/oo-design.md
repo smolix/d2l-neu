@@ -669,17 +669,12 @@ class Trainer(d2l.HyperParameters):  #@save
 
 ## Summary
 
-The classes above sketch the object-oriented design
-for our deep learning implementations: how their objects
-store data and interact with each other.
-We will keep enriching implementations of these classes,
-such as via `@add_to_class`,
-in the rest of the book.
-Moreover,
-these fully implemented classes
-are saved in the [D2L library](https://github.com/d2l-ai/d2l-en/tree/master/d2l),
-a *lightweight toolkit* that makes structured modeling for deep learning easy. 
-In particular, it facilitates reusing many components between projects without changing much at all. This modularity keeps implementations concise: you can swap just the optimizer, the model, or the dataset, and it can do the same for your own projects. 
+The `Module`, `DataModule`, and `Trainer` classes separate models, datasets,
+and optimization loops. Later sections extend these classes with
+`@add_to_class`. Their complete implementations are also available in the
+[D2L library](https://github.com/d2l-ai/d2l-en/tree/master/d2l). This modular
+design permits a model, optimizer, or dataset to change without rewriting the
+other components.
 
 
 ## Exercises
@@ -898,13 +893,13 @@ instance is callable: `model(X)` runs `forward`.
 :::
 :::
 
-::: {.slide title="`Module`: the same contract, in NNX" only="jax"}
+::: {.slide title="The `Module` interface in NNX" only="jax"}
 [Base classes]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 An NNX module is an ordinary Python object that **owns its parameters**.
-The contract is the same as everywhere else:
+The interface has the same three responsibilities:
 
 - `forward` / `__call__`: the prediction.
 - **`training_step`**: loss on one batch; the trainer differentiates it
@@ -913,8 +908,8 @@ The contract is the same as everywhere else:
   `nnx.Optimizer`.
 
 ::: {.d2l-note .rule}
-JAX still traces pure functions under the hood — NNX splits the module
-into structure and state at the `jit` boundary, so *we* never have to.
+JAX traces pure functions; NNX separates module structure and state at the
+`jit` boundary.
 :::
 :::
 
@@ -978,7 +973,7 @@ NNX modules own parameters, random-number streams, and mutable collections.
 training and validation modes:
 
 ::: {.d2l-note .rule}
-Same `fit(model, data)` contract; `nnx.jit` follows the model and optimizer
+The same `fit(model, data)` interface applies; `nnx.jit` follows the model and optimizer
 graphs through each compiled step.
 :::
 :::

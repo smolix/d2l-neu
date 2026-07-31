@@ -4,43 +4,157 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b8e65af4ff2f3498f3deb3c0392ae18416af2de04521f771c32d1af05df80695",
+    "d2l_lib_fingerprint": "sha256:cd8931f6f027a8a4544ab6f0f3978173e9d3c1f38c619728259b411ab24ef2a7",
     "max_inline_bytes": 0
   },
   "cells": {
-    "qlearning-implementation-of-q-learning-1": {
-      "code_fingerprint": "sha256:1695372f93a1b166c4e3eb6d532f122be4d15a213f5ae8faccd6d1d427e3859e",
+    "qlearning-temporal-differences-q-learning-and-exploration": {
+      "code_fingerprint": "sha256:f75014e863117b32a5563d437f27d01756d561630e26f20e1deae8b20af0052f",
       "kind": "text",
       "outputs": []
     },
-    "qlearning-implementation-of-q-learning-2": {
-      "code_fingerprint": "sha256:4da0b6723d7593fd2c25d1f06d90c3bd8894b81a23ea48e63742ca2576c1c9b8",
+    "qlearning-the-implementation-1": {
+      "code_fingerprint": "sha256:a4ff11755c4c36c0be89f4cbe6ccf49967e2237212b937f4c8c3522181638c48",
       "kind": "text",
       "outputs": []
     },
-    "qlearning-implementation-of-q-learning-3": {
-      "code_fingerprint": "sha256:4ff83ed7f9d05b5d32093ba4abb34bbb8564ad419822923fe40b11ef2d986db6",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/png",
-          "asset": "qlearning/qlearning-implementation-of-q-learning-3-1.png",
-          "bytes": 87296,
-          "sha256": "sha256:1138bb68a12f58f3ed0c3e7598c30d624acdb0a9648fb178ef513455cd4ba0ac"
-        }
-      ]
+    "qlearning-the-implementation-2": {
+      "code_fingerprint": "sha256:97607007794fd38b0ffd554c8707526d0b662376f142e35640ff6483e25f0b4e",
+      "kind": "text",
+      "outputs": []
     },
-    "qlearning-implementation-of-q-learning-4": {
-      "code_fingerprint": "sha256:05215597be9c266b4595a0d663927cd12876dd7554c824a319e8258856afdf64",
+    "qlearning-the-implementation-3": {
+      "code_fingerprint": "sha256:45f65cf4e455b05daf75201a76872c1ad2e2efb71ed3f63b0c04054dc29b5942",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-the-implementation-4": {
+      "code_fingerprint": "sha256:9c799b875f70d6933028697e484a3be712ba4a769422c5f81e228ab1a4669c47",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-the-implementation-5": {
+      "code_fingerprint": "sha256:e562b38d7b34a5174ff6f0b3fd94a8712e81b2fe4481e7b8634cb8dbd39fcf34",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "qlearning/qlearning-implementation-of-q-learning-4-1.svg",
-          "bytes": 25063,
-          "sha256": "sha256:94eeadec668513cf24f698757e0846a6ab9521bac74c0d21260bd7e3c3eb5dab"
+          "asset": "qlearning/qlearning-the-implementation-5-1.svg",
+          "bytes": 247382,
+          "sha256": "sha256:dd52d209b86e987627217b4659018368300d40b6cfc4bc87b85d7b5b1a510c5d"
+        }
+      ]
+    },
+    "qlearning-reading-the-curve-honestly-1": {
+      "code_fingerprint": "sha256:e229a03d3ebeeb9f7f56599c49e9b9fbff9536ca3e74cacce468ccf263717aaa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max_s |V_Qhat(s) - V*(s)| per seed: [0.019 0.012 0.021 0.008 0.006]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "success rate: learned greedy 71.2% to 74.1% over 5 seeds; pi* 73.6%\npi* forced to explore at epsilon = 0.05: 54.1%\nmedian environment steps: 95569\n"
+        }
+      ]
+    },
+    "qlearning-reading-the-curve-honestly-2": {
+      "code_fingerprint": "sha256:5c57cce89c2adfc9430274e62f96710b356673bcf49609963bcc964e2913d448",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
+          "bytes": 38089,
+          "sha256": "sha256:652ab2ee9040721deeb642efb2de6c7b17774b96ec0e454aebc3caccc4ab171c"
+        }
+      ]
+    },
+    "qlearning-reading-the-curve-honestly-3": {
+      "code_fingerprint": "sha256:84b8bf6a13527784ada079277a69b92cee771ebe1d105af35508f19e71c554d9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "calm ice, 256 episodes, alpha = 0.9: greedy policy succeeds 100%\n"
+        }
+      ]
+    },
+    "qlearning-reading-the-curve-honestly-4": {
+      "code_fingerprint": "sha256:f8f87d0a4bb6752d2acac3085c7eb2a9eb2055993f969855beb2d02df901ec5e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Q*(s0, <) = 0.180\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "alpha = 0.9 (constant): final estimates [0.056 0.221 0.206 0.265 0.236]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "alpha =  1/(1 + 0.1 n): final estimates [0.19  0.186 0.195 0.184 0.18 ]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "alpha =      1/(1 + n): final estimates [0.003 0.024 0.008 0.009 0.002]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
+          "bytes": 706464,
+          "sha256": "sha256:e2a63ef8d1e3c1e85e8af6fb30eebc8c94f7452b35b32e7cb401a6240d5e2759"
+        }
+      ]
+    },
+    "qlearning-a-bandit-is-an-mdp-with-one-state": {
+      "code_fingerprint": "sha256:ce06fcac22b192c56322969fa409e89043673596ae7e8ceea1a49b53b6c77bdb",
+      "kind": "text",
+      "outputs": []
+    },
+    "qlearning-regret-and-the-linear-tax": {
+      "code_fingerprint": "sha256:1e64eb2452264919b3aa6f9751f7019229dacead4b0d01dd7238c6d2565e499f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       greedy: mean regret after 2000 pulls  824.0\nepsilon = 0.1: mean regret after 2000 pulls  116.5\n     annealed: mean regret after 2000 pulls   68.5\n"
+        }
+      ]
+    },
+    "qlearning-optimism-ucb-and-thompson-sampling": {
+      "code_fingerprint": "sha256:5e16fd6c4c480953313e93138bb5f8140af3060671e650984fdd35defc1d0c1d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          UCB: mean regret after 2000 pulls   36.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     Thompson: mean regret after 2000 pulls   31.5\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "qlearning/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
+          "bytes": 535592,
+          "sha256": "sha256:904e1f7d4c4a4a14f61e05677e349fa2f137b33d2115e3dd652297cc94c07570"
         }
       ]
     }

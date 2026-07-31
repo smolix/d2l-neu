@@ -174,7 +174,7 @@ Suppose the corpus contains "the time machine by", which the BPE tokenizer split
 The input sequence is `the`, `time`, `mach`, `ine`, and the target sequence is the same stream shifted forward by one token, `time`, `mach`, `ine`, `by`.
 At every step we run a softmax over the output and compute the cross-entropy against the target token, then average the losses over the sequence.
 Because of the recurrence, the output $\mathbf{O}_3$ is determined by the inputs `the`, `time`, `mach`, so its loss measures how well the model predicts the next token `ine` from that prefix.
-Minimizing perplexity (:numref:`sec_language-model`), the exponentiated average cross-entropy, is exactly this objective.
+Minimizing perplexity is exactly this objective, since perplexity (:numref:`sec_language-model`) is the exponentiated average cross-entropy.
 
 ![An RNN language model trained by teacher forcing over subword (BPE) tokens. The target sequence is the input shifted forward by one token, so each step is trained to predict the next token.](../img/mdl-rnn-lm-shift.svg)
 :label:`fig_rnn_train`

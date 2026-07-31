@@ -259,7 +259,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=1.7644957304000854>,\n <tf.Tensor: shape=(), dtype=bool, numpy=True>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=1.960163950920105>,\n <tf.Tensor: shape=(), dtype=bool, numpy=True>)"
         }
       ]
     },
@@ -320,7 +320,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf.Tensor(6.149077, shape=(), dtype=float32) tf.Tensor(6.149077, shape=(), dtype=float32)\ntf.Tensor(True, shape=(), dtype=bool)\n"
+          "text": "tf.Tensor(4.0812373, shape=(), dtype=float32) tf.Tensor(4.081238, shape=(), dtype=float32)\ntf.Tensor(True, shape=(), dtype=bool)\n"
         }
       ]
     },
@@ -335,22 +335,22 @@
       ]
     },
     "linear-algebra-eigenvalues-1": {
-      "code_fingerprint": "sha256:8c6a5558ed219420dc23cad44fbedd8893838d4b385cd9bd5dc6478ddae791ef",
+      "code_fingerprint": "sha256:d401ec1078d94c164f53a3695ba2b6ab0d793cf7220785c6e241aa824ae15ac5",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3,), dtype=float32, numpy=array([-2.2627726, -0.5984748,  8.861248 ], dtype=float32)>"
+          "text": "array([-2.2627726, -0.5984748,  8.861248 ], dtype=float32)"
         }
       ]
     },
     "linear-algebra-eigenvalues-2": {
-      "code_fingerprint": "sha256:51bec207eceb0ea9bdbbc90f751ce02380208ed98e8cec11ca1f737b9a815ccb",
+      "code_fingerprint": "sha256:826412f5996b5e84021baacc84093408cf57da076ce3eb94d2d1bba398e30af0",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=8.861246109008789>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=8.861247062683105>"
         }
       ]
     }

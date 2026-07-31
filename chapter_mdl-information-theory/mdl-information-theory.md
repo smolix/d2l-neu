@@ -1,19 +1,15 @@
 # Entropy, Cross-Entropy, and KL Divergence
 :label:`sec_mdl-information_theory`
 
-Nearly every model in this book is trained by minimizing a cross-entropy. The
-number your training loop prints is therefore a quantity from *information
-theory*, the field Claude Shannon created in a single paper published in two
-parts in 1948 :cite:`Shannon.1948`, and information theory is what tells you
-what that number *means*: it is a code length. Entropy is the irreducible
-floor, the cost of the data's own randomness; cross-entropy is what your model
-actually pays; and the gap between them, the Kullback--Leibler divergence, is
-the waste you can train away. This section builds those three quantities and
-the one inequality (Gibbs') that relates them, grounds the "extra bits"
-language in an actual coding argument (the Kraft inequality and the Shannon
-code), explains why language models report *perplexity*, and closes with two
-modern training tricks, label smoothing and knowledge distillation, that are
-one-line consequences of the same machinery.
+Cross-entropy is one of the most common training losses in this book. It is
+also a basic quantity in information theory, introduced by Shannon in 1948
+:cite:`Shannon.1948`. Its coding interpretation relates three quantities:
+entropy is the expected code length under the data distribution,
+cross-entropy is the expected length obtained with a model distribution, and
+their difference is the Kullback--Leibler divergence. This section develops
+these quantities and Gibbs' inequality, derives their coding interpretation
+from the Kraft inequality and Shannon codes, and explains perplexity, label
+smoothing, and knowledge distillation in the same framework.
 
 The logarithm base is a pure choice of unit: base $2$ gives *bits*, base $e$
 gives *nats*. **We work in nats throughout**, matching deep-learning practice:
@@ -25,7 +21,7 @@ $1\textrm{ bit} = \ln 2 \approx 0.693$ nats and
 $1\textrm{ nat} = 1/\ln 2 \approx 1.443$ bits. No argmin in this section, and
 no trained model, changes if you switch.
 
-We import everything we need once, up front.
+We use the following imports throughout the section.
 
 ```{.python .input #information-theory-imports}
 #@tab mxnet
@@ -89,7 +85,7 @@ walks through the argument).
 :label:`fig_mdl-self-info-curve`
 
 :numref:`fig_mdl-self-info-curve` plots the curve: decreasing, convex, zero at
-$p = 1$, infinite at $p = 0$. Computing it is one line.
+$p = 1$, infinite at $p = 0$. The computation is immediate.
 
 ```{.python .input #information-theory-self-information}
 import numpy as onp
@@ -138,8 +134,8 @@ matter. Differential entropy is *not* the limit of the discrete entropy, and
 it is *not coordinate-invariant*: under an invertible change of variables
 $y = g(x)$ it shifts by $E[\log|\det \partial g/\partial x|]$, so $h$ can
 even be *negative* (e.g., a narrow Gaussian with $\sigma < 1/\sqrt{2\pi e}$).
-What survives a change of variables is anything built from the *ratio* of two
-densities: both densities pick up the same Jacobian factor, which cancels in
+Quantities built from the *ratio* of two densities are invariant under a change
+of variables: both densities pick up the same Jacobian factor, which cancels in
 $p(x)/q(x)$, so the KL divergence defined below is exactly invariant.
 Cross-entropy sits in between. It contains a single lone logarithm,
 $-E_P[\log q]$, so it inherits the same Jacobian shift as entropy, but that
@@ -174,7 +170,7 @@ outcomes, because the mass is unevenly spread.
 
 ### Entropy Is Maximized by the Uniform Distribution
 
-Two basic properties orient everything that follows. First, for discrete $X$
+Two basic properties characterize discrete entropy. First, for discrete $X$
 every term $-p_i \log p_i$ is non-negative, so $H(X) \geq 0$, with equality
 exactly for a point mass (a constant "random" variable). Second, entropy is
 largest when the distribution hedges maximally:
@@ -245,7 +241,7 @@ distribution $Q$ with p.d.f. or p.m.f. $q(x)$ that we use to approximate $P$,
 $$D_{\textrm{KL}}(P\|Q) = E_{x \sim P} \left[ \log \frac{p(x)}{q(x)} \right].$$
 :eqlabel:`eq_mdl-kl_def`
 
-The term inside the expectation, $\log p(x) - \log q(x)$, is the difference of
+The term inside the expectation is $\log p(x) - \log q(x)$, the difference of
 two surprises: how surprised $Q$ is by the outcome $x$, minus how surprised
 $P$ is. It is positive where $Q$ underestimates ($q(x) < p(x)$: $Q$ is *more*
 surprised than it should be) and negative where $Q$ overestimates. KL averages
@@ -280,9 +276,9 @@ def kl_divergence(p, q):
 ### Gibbs' Inequality
 
 The KL divergence cannot be negative, an observation going back to Gibbs
-:cite:`Gibbs.1902`. Everything else in this section (cross-entropy as a sound
-loss, the optimality of code lengths, the label-smoothing optimum) follows
-from it.
+:cite:`Gibbs.1902`. Together with the cross-entropy decomposition below, this
+result justifies cross-entropy as a loss and supports the later coding and
+label-smoothing results.
 
 **Proposition (Gibbs' inequality).** *For any distributions $P$ and $Q$ on
 the same space,*
@@ -297,12 +293,14 @@ $$
 (:numref:`subsec_mdl-jensen`) to the convex function $-\log$:
 
 $$
+\begin{aligned}
 D_{\textrm{KL}}(P\|Q)
-= E_{x\sim P}\!\left[-\log\frac{q(x)}{p(x)}\right]
-\geq -\log E_{x\sim P}\!\left[\frac{q(x)}{p(x)}\right]
-= -\log \!\!\sum_{x\,:\,p(x)>0}\!\! q(x)
+&= E_{x\sim P}\!\left[-\log\frac{q(x)}{p(x)}\right]
+\geq -\log E_{x\sim P}\!\left[\frac{q(x)}{p(x)}\right] \\
+&= -\log \!\!\sum_{x\,:\,p(x)>0}\!\! q(x)
 = -\log Q(\textrm{supp}\,P)
 \geq 0.
+\end{aligned}
 $$
 
 The expectation runs only over the support of $P$, where the $p(x)$ factors
@@ -456,8 +454,8 @@ plus the relative surprise:
 $$\textrm{CE} (P, Q) = H(P) + D_{\textrm{KL}}(P\|Q).$$
 :eqlabel:`eq_mdl-ce_decomp`
 
-This single identity, combined with Gibbs' inequality, gives the chain that
-explains why cross-entropy is *the* loss to minimize:
+Combined with Gibbs' inequality, this identity explains why minimizing
+cross-entropy recovers the data distribution when the model family contains it:
 
 $$
 \underbrace{D_{\textrm{KL}}(P\|Q) \ge 0}_{\textrm{Gibbs}}
@@ -466,16 +464,14 @@ $$
 \quad \textrm{equality iff } P = Q.
 $$
 
-Entropy $H(P)$ is the irreducible floor; cross-entropy is what you actually
-pay; and the gap $\textrm{CE}(P,Q) - H(P) = D_{\textrm{KL}}(P\|Q)$ is the
-waste. Minimizing cross-entropy in $Q$ therefore drives $Q \to P$ and squeezes
-the waste to zero, which is the same thing as minimizing KL, since $H(P)$
-does not depend on $Q$. (In the coding view below, floor, payment, and waste
-all become exact code lengths.)
+Entropy $H(P)$ does not depend on the model $Q$. Consequently, minimizing
+cross-entropy in $Q$ is equivalent to minimizing
+$D_{\textrm{KL}}(P\|Q)$, with equality at $Q=P$. In the coding view below,
+these terms become expected code lengths.
 :numref:`fig_mdl-code-length-bars` draws the decomposition to scale
 for a four-outcome distribution we will code by hand in that coding view.
 
-![The decomposition :eqref:`eq_mdl-ce_decomp` as code lengths, for the truth $P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$ and a uniform model $Q$. A code matched to the truth pays exactly the entropy floor $H(P) = 1.75$ bits per symbol; a code built for $Q$ pays the cross-entropy $\textrm{CE}(P, Q) = 2.0$ bits, and the stacked increment is the KL divergence $D_{\textrm{KL}}(P\|Q) = 0.25$ bits of pure waste. Minimizing cross-entropy in $Q$ can only shrink the orange block; the blue floor is the data's own randomness.](../img/mdl-it-code-length-bars.svg)
+![The decomposition :eqref:`eq_mdl-ce_decomp` as code lengths, for the data distribution $P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$ and a uniform model $Q$. A code matched to $P$ has expected length $H(P) = 1.75$ bits per symbol. A code based on $Q$ has expected length $\textrm{CE}(P, Q) = 2.0$ bits, and their difference is $D_{\textrm{KL}}(P\|Q) = 0.25$ bits.](../img/mdl-it-code-length-bars.svg)
 :label:`fig_mdl-code-length-bars`
 
 Let's verify the decomposition :eqref:`eq_mdl-ce_decomp` numerically on two
@@ -628,12 +624,9 @@ the *interpretation* of that loss as a code length, which we build next.
 
 ## The Coding View and Perplexity
 
-We have repeatedly promised that entropy is a "floor" and KL the "extra"
-cost. Those words are statements about
-compressing data with binary codes, and the proofs are short enough to give in
-full. Binary codes speak base $2$, so this subsection works in bits; divide by
-$\ln 2$ (i.e., reinterpret every $\log$ below) and every statement holds in
-nats verbatim.
+The coding interpretation makes entropy and KL operational. We now derive it
+for binary codes. This subsection therefore uses bits; dividing by $\ln 2$
+converts each result to nats.
 
 ### Prefix Codes and the Kraft Inequality
 
@@ -642,9 +635,8 @@ $P$ over $k$ outcomes, encoding each outcome $x_i$ as a binary string
 (*codeword*) of length $l_i$. So that the receiver can split the stream back
 into codewords without separators, we require the code to be *prefix-free*: no
 codeword is a prefix of another (like telephone numbers: once a dialed string
-matches a number, no longer number starts the same way). Short codewords are
-precious, and the next proposition :cite:`Kraft.1949` says exactly how
-precious.
+matches a number, no longer number starts the same way). The Kraft inequality
+:cite:`Kraft.1949` characterizes the possible codeword lengths.
 
 **Proposition (Kraft inequality).** *A prefix-free binary code with codeword
 lengths $l_1, \ldots, l_k$ exists if and only if*
@@ -673,11 +665,9 @@ restricting to prefix-free codes costs nothing in code length
 ![A prefix-free binary code as a tree, for lengths $1, 2, 3, 3$: each codeword is a root-to-leaf path (left edge $= 0$, right edge $= 1$), and prefix-freeness says every codeword ends at a leaf: no codeword continues through another. A leaf at depth $\ell$ is the tree view of a dyadic interval of length $2^{-\ell}$ in the proof, and here the Kraft budget is spent exactly: $2^{-1} + 2^{-2} + 2^{-3} + 2^{-3} = 1$.](../img/mdl-it-kraft-tree.svg)
 :label:`fig_mdl-kraft-tree`
 
-:numref:`fig_mdl-kraft-tree` redraws the proof's intervals as a binary
-tree, the picture to keep. The Kraft inequality turns code design into a budget
-problem: each symbol buys "address space" $2^{-l_i}$ out of a total budget of
-$1$, and shorter codewords cost exponentially more. The optimal spend follows
-immediately.
+:numref:`fig_mdl-kraft-tree` redraws the proof's intervals as a binary tree.
+At depth $l_i$, a codeword occupies a fraction $2^{-l_i}$ of the available
+leaves. Thus shorter codewords consume a larger fraction of the code tree.
 
 **Proposition (entropy bounds the code length).** *Every prefix-free binary
 code for $P$ has expected length $E[l] \geq H_2(P)$ (entropy in bits), and
@@ -704,21 +694,20 @@ test ($\sum_i 2^{-l_i} \leq \sum_i p_i = 1$) and a prefix code with these
 lengths exists; and $l_i < \log_2(1/p_i) + 1$ gives
 $E[l] < H_2(P) + 1$. $\blacksquare$
 
-So entropy is, within one bit, *the* price of communicating draws from
-$P$: this is (the source-coding half of) Shannon's theorem, and the
+Thus entropy determines the optimal expected length to within one bit. This is
+the source-coding part of Shannon's theorem, and the
 one-bit slack can be driven to zero by coding long blocks of symbols at once
-:cite:`Cover.Thomas.1999`. Moreover, look at where the KL divergence appeared
-in the proof: if you build your code from the *wrong* distribution $Q$
-(spending $-\log_2 q_i$ bits on symbol $i$, as the Shannon recipe would if it
-believed $Q$), your expected cost on data that is really $P$ is
+:cite:`Cover.Thomas.1999`. The same proof also identifies the role of KL. If a
+code is designed for a distribution $Q$, assigning approximately
+$-\log_2 q_i$ bits to symbol $i$, its expected length on data from $P$ is
 
 $$
 -\sum_i p_i \log_2 q_i = \textrm{CE}_2(P, Q) = H_2(P) + D_{\textrm{KL}}^{(2)}(P\|Q).
 $$
 
-Cross-entropy is the price of coding with the wrong codebook, and the KL
-divergence is *literally the extra bits per symbol* you waste. Every "extra
-nats" claim earlier in the section is this statement, rescaled by $\ln 2$.
+Cross-entropy is therefore the expected length under a code based on $Q$, and
+KL is the excess expected length relative to a code matched to $P$. The same
+statement in nats differs by the factor $\ln 2$.
 
 The bound is tight enough to see in a four-line example. Take
 $P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$, whose
@@ -827,8 +816,8 @@ because encoder and decoder both condition on the already-processed prefix.
 An autoregressive language model therefore supplies the probability model for
 a lossless arithmetic coder. If encoder and decoder share the tokenizer,
 model, and finite-precision probability implementation, the ideal code length
-for a document is its total surprisal plus fewer than two bits. Its token
-cross-entropy times the token count estimates that model code length; a file
+for a document is its total surprisal plus fewer than two bits. The model's
+token cross-entropy times the token count estimates that code length; a file
 format also carries framing and does not include the cost of distributing the
 model. :citet:`Deletang.Ruoss.Duquenne.ea.2023` drive an arithmetic coder with
 an LLM's next-token probabilities and compress text better than gzip. Thus
@@ -913,9 +902,9 @@ print(f'typical strings: 2^{log2_typical:.1f} of all 2^{n}')
 print(f'probability they carry: {prob_k[typical].sum():.4f}')
 ```
 
-A vanishing fraction of the strings — about $2^{nH}$ of the $2^n$, missing
-some $24$ orders of magnitude of the count — soaks up almost all of the
-probability. Indexing just those strings *is* the compressor, and $nH$ bits
+A vanishing fraction of the strings soaks up almost all of the probability:
+about $2^{nH}$ of the $2^n$, missing some $24$ orders of magnitude of the
+count. Indexing just those strings *is* the compressor, and $nH$ bits
 is the length of the index.
 
 ### Lossy Compression and Rate--Distortion
@@ -957,9 +946,9 @@ the trade-off by learning the codec.
 ### Noisy Channels and Capacity
 :label:`subsec_mdl-channel-capacity`
 
-Compression asks how few bits describe a source. Communication asks how many
-bits survive a noisy channel. A memoryless channel is a conditional distribution
-$p(y\mid x)$. Its **capacity** is
+Compression asks how few bits describe a source; communication asks how many
+bits survive a noisy channel. A memoryless channel is a conditional
+distribution $p(y\mid x)$, whose **capacity** is
 
 $$
 C=\max_{p(x)} I(X;Y),
@@ -1081,7 +1070,7 @@ complexity. A highly flexible model may compress the training residuals while
 losing overall because its parameters or structure are expensive to describe.
 This is Occam's razor in operational units rather than a parameter-count slogan.
 
-There is a close Bayesian connection. Choosing
+The connection to Bayes is close: choosing
 $L(h)=-\log P(h)$ and $L(\mathcal D\mid h)=-\log P(\mathcal D\mid h)$ gives the
 MAP objective. A one-part Bayesian code instead uses the marginal likelihood
 $-\log\int P(\mathcal D\mid\theta)P(\theta)\,d\theta$, averaging rather than
@@ -1281,25 +1270,24 @@ $\tfrac{1}{k}\big((\mathbf{z}^{\textrm{stu}} - \bar z^{\textrm{stu}}) -
 (\mathbf{z}^{\textrm{tea}} - \bar z^{\textrm{tea}})\big) = (-0.667, 0.333,
 0.333)$ here, but the convergence is $O(1/T)$ and still visibly incomplete in
 the table: the $T = 10$ row reads $(-0.719, 0.413, 0.306)$, and the first
-component even overshoots its limit on the way. The scale-matching, which is
-what the $T^2$ factor was designed for, holds regardless. As
+component even overshoots its limit on the way. The scale-matching holds
+regardless, and that is what the $T^2$ factor was designed for. As
 $T \to 1$ the loss reduces to the ordinary KL (and, with a one-hot teacher,
 to the ordinary cross-entropy loss), recovering standard training as a special
 case.
 
-### One Principle, Many Losses
+### Relations Among the Objectives
 
-Stepping back: maximum likelihood *is* cross-entropy minimization *is*
-KL-projection of the empirical distribution onto the model family
-(:numref:`subsec_mdl-nll-crossentropy`), and this section has now equipped
-that one principle with its operational meaning (code length and waste), its
-evaluation metric (perplexity), and two of its modern refinements (smoothed
-targets and distilled teachers). The story continues in two directions: KL is
-just one member of a whole family of divergences, each inducing a different
-generative-modeling objective (:numref:`sec_mdl-divergences-distances`), and
-applying KL to a joint distribution versus the product of its marginals yields
-mutual information, the quantity behind contrastive representation learning
-(:numref:`sec_mdl-mutual-information`).
+Maximum likelihood, empirical cross-entropy minimization, and KL projection of
+the empirical distribution onto the model family are equivalent objectives
+(:numref:`subsec_mdl-nll-crossentropy`). Their coding interpretation is an
+expected description length, while perplexity is the corresponding
+exponentiated per-token loss. Label smoothing and distillation replace the
+hard empirical target with different target distributions. The next section
+extends KL to other discrepancies between distributions
+(:numref:`sec_mdl-divergences-distances`); the final section applies KL to a
+joint distribution and the product of its marginals to obtain mutual
+information (:numref:`sec_mdl-mutual-information`).
 
 ## Summary
 
@@ -1517,7 +1505,7 @@ the uniform law, exactly. $\blacksquare$
 :::
 :::
 
-::: {.slide title="KL divergence: the price of the wrong model"}
+::: {.slide title="KL divergence as excess code length"}
 [Relative entropy]{.kicker}
 
 $D_{\mathrm{KL}}(P\|Q) = \mathbb{E}_{x\sim P}\bigl[\log p(x)/q(x)\bigr]$: the
@@ -1582,7 +1570,7 @@ This is exactly the negative log-likelihood.
 :::
 
 ::: {.slide title="The same number the built-in loss prints"}
-[One principle]{.kicker}
+[Core identity]{.kicker}
 
 Hand-rolled cross-entropy equals the built-in loss to the digit:
 
@@ -1645,7 +1633,7 @@ Shannon picks $\ell_i = \lceil\log_2 \tfrac{1}{p_i}\rceil$.
 :::
 
 ::: {.slide title="Shannon's code: KL is the extra bits"}
-[The payoff]{.kicker}
+[Coding interpretation]{.kicker}
 
 The matched code spends $H_2(P) \le \mathbb{E}[\ell] < H_2(P)+1$; the wrong
 code $Q$ overspends by exactly $D_{\mathrm{KL}}$:
@@ -1653,12 +1641,12 @@ code $Q$ overspends by exactly $D_{\mathrm{KL}}$:
 @!information-theory-coding
 
 ::: {.d2l-note .rule}
-$H$ is the floor, $\mathrm{CE}$ is the bill, and $D_{\mathrm{KL}}$ is the
-wasted bits.
+$H$ is the minimum expected code length, cross-entropy is the length obtained
+under $Q$, and $D_{\mathrm{KL}}$ is their difference.
 :::
 :::
 
-::: {.slide title="Arithmetic coding pays the ceiling once"}
+::: {.slide title="Arithmetic Coding and Rounding Overhead"}
 [Beyond symbol codes]{.kicker}
 
 Shannon's $\lceil\log_2(1/p)\rceil$ rounds up to a whole bit on *every*
@@ -1712,7 +1700,7 @@ Base-free: a single bad token ($p=0.05$) costs as much as several good ones.
 
 [Three corollaries of Gibbs]{.dtitle}
 
-[label smoothing, distillation, one principle]{.dsub}
+[label smoothing, distillation, and related objectives]{.dsub}
 :::
 :::
 
@@ -1738,7 +1726,7 @@ the update scale-matched. Autograd confirms the closed form:
 @!information-theory-distillation
 :::
 
-::: {.slide title="One principle, many losses"}
+::: {.slide title="Relations among training objectives"}
 [Synthesis]{.kicker}
 
 ::: {.d2l-note .rule}
@@ -1756,7 +1744,8 @@ Pick the target distribution; Gibbs picks the optimum and guarantees the floor.
 ::: {.cols}
 ::: {.col}
 - Self-information $-\log p$; entropy $H$ averages it and tops out at $\log k$ (uniform).
-- KL $\ge 0$ (Gibbs, one line of Jensen); everything else follows from it.
+- KL $\ge 0$ follows from Jensen's inequality and supports the subsequent
+  results.
 - $\mathrm{CE} = H + \mathrm{KL}$; minimizing it is maximum likelihood.
 :::
 

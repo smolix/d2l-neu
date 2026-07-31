@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/policy-gradient.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:15a297fc5baf2cf2c9a1baa2c2fe01d56d20a8f6249fed6b5f04abf68653d2fe",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "policy-gradient-policy-gradient": {
+      "code_fingerprint": "sha256:d0a170753958e2f8da4ba2a8c91de3d7fa96562ca6122c9ae0b83bbf4d6d6770",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-parameterizing-the-policy": {
+      "code_fingerprint": "sha256:3e513038349735034139c4a4f13ee761d3bb8f59f1f67a4f892a7cce4df35ec2",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-the-score-function": {
+      "code_fingerprint": "sha256:7604e2c27536db076bf8eb3986b5b92cb854fd1f4e49c5e3b4085f0da7e30150",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True\n"
+        }
+      ]
+    },
+    "policy-gradient-an-optimization-problem-over-trajectories-1": {
+      "code_fingerprint": "sha256:60fa142b1679ce90771228d1408d828c1203d691f38a438eecb2abc040f2efb3",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-an-optimization-problem-over-trajectories-2": {
+      "code_fingerprint": "sha256:fe2ea29c194e683284c8acee17d8cdd301c9ba122ce01941b346b0da9eab16c4",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-the-reinforce-estimator-1": {
+      "code_fingerprint": "sha256:48eea357f4069a5654a577283149a257db4951c6d414350a9c8aaf65f1a385e6",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-the-reinforce-estimator-2": {
+      "code_fingerprint": "sha256:ff5c84e8cf4194dd51f3126fc683ddd5cf73360bd6f840666919626085281c28",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
+          "bytes": 46412,
+          "sha256": "sha256:eca4aadff99afb6abaab3b21de8085a6650046c52623e8767500b20b17331c1e"
+        }
+      ]
+    },
+    "policy-gradient-the-reinforce-estimator-3": {
+      "code_fingerprint": "sha256:7460e37e2d08c20c6f492811ac5536de36d7e902f87fc52b4374e653b7bd8322",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
+          "bytes": 15266,
+          "sha256": "sha256:7536a9ffd5cefb635dffd14f9313a7193916ff9f45f56522045876a6bdb1601a"
+        }
+      ]
+    },
+    "policy-gradient-on-policy-fresh-data-after-every-update": {
+      "code_fingerprint": "sha256:c7d02e3b0e033c9cd76318d19068e9f832a81b11b146f963c3afdd85ec51d74a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "update at which the batch mean first reaches 0.7: [24 27 30]\nenvironment steps spent by that update:  [3210 3789 4287]\nenvironment steps spent by the full run: [26058 26582 27472]\n"
+        }
+      ]
+    },
+    "policy-gradient-unbiased-and-how-noisy-1": {
+      "code_fingerprint": "sha256:102856558e1384fb838990fd05862f7f35e4fffb774b5eb66ef8acb9e6733df6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "J(theta) after 16 updates = 0.313, against the ceiling gamma^5 = 0.774\n"
+        }
+      ]
+    },
+    "policy-gradient-unbiased-and-how-noisy-2": {
+      "code_fingerprint": "sha256:1e6cdad90e55a6e09c41cb36946e8dcb4dd70480ea0e1840d0f957e6454a31a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n=  4: zero estimates  3/50, cos(mean, exact) = 0.93, single-estimate relative error = 3.64\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n= 16: zero estimates  0/50, cos(mean, exact) = 0.97, single-estimate relative error = 1.74\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n= 64: zero estimates  0/50, cos(mean, exact) = 1.00, single-estimate relative error = 0.94\n"
+        }
+      ]
+    }
+  }
+}

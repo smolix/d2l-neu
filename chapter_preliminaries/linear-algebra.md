@@ -850,7 +850,9 @@ from $\mathbb{R}^{n}$ to $\mathbb{R}^{m}$
 For example, we can represent rotations
 as multiplications by certain square matrices:
 multiplying by
-$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$
+
+$$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$$
+
 rotates any vector in the plane by the angle $\theta$.
 For $\theta = 90°$ the matrix is simple,
 and we can watch it turn one axis unit vector into the other:
@@ -1285,7 +1287,7 @@ torch.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
 ```{.python .input #linear-algebra-eigenvalues-1}
 %%tab tensorflow
 S = tf.constant([[1.0, 2, 3], [2, 0, 4], [3, 4, 5]])
-tf.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
+tf.linalg.eigvalsh(S).numpy()  # Eigenvalues of a symmetric matrix are real
 ```
 
 ```{.python .input #linear-algebra-eigenvalues-1}
@@ -1358,10 +1360,8 @@ a significant chunk of modern deep learning.
 There is a lot more to it: matrix decompositions, for example,
 reveal low-dimensional structure in real-world datasets
 and power entire subfields of machine learning.
-But the best time to learn more mathematics
-is once you have gotten your hands dirty
-applying machine learning to real data,
-so we wrap up here.
+The later mathematics chapters develop these topics when they become relevant
+to specific learning problems.
 
 If you are eager to learn more linear algebra,
 start with :numref:`chap_mdl-linear-algebra`,

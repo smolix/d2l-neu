@@ -6,54 +6,16 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Generalization
 :label:`sec_generalization_basics`
 
-Consider two college students diligently
-preparing for their final exam.
-Commonly, this preparation will consist
-of practicing and testing their abilities
-by taking exams administered in previous years.
-Nonetheless, doing well on past exams is no guarantee
-that they will excel when it matters.
-For instance, imagine a student, Extraordinary Ellie,
-whose preparation consisted entirely
-of memorizing the answers
-to previous years' exam questions.
-Even if Ellie were endowed
-with an extraordinary memory,
-and thus could perfectly recall the answer
-to any *previously seen* question,
-she might nevertheless freeze
-when faced with a new (*previously unseen*) question.
-By comparison, imagine another student,
-Inductive Irene, with comparably poor
-memorization skills,
-but a knack for picking up patterns.
-Note that if the exam truly consisted of
-recycled questions from a previous year,
-Ellie would handily outperform Irene.
-Even if Irene's inferred patterns
-yielded 90% accurate predictions,
-they could never compete with
-Ellie's 100% recall.
-However, even if the exam consisted
-entirely of fresh questions,
-Irene might maintain her 90% average.
+A model is trained on a finite collection of examples, but it is usually
+deployed on examples it has not seen. A small training error therefore does
+not by itself establish that the model has learned a useful pattern: a model
+may instead have fit details specific to its training set.
 
-As machine learning scientists,
-our goal is to discover *patterns*.
-But how can we be sure that we have
-truly discovered a *general* pattern
-and not simply memorized our data?
-Most of the time, our predictions are only useful
-if our model discovers such a pattern.
-We do not want to predict yesterday's stock prices, but tomorrow's.
-We do not need to recognize
-already diagnosed diseases
-for previously seen patients,
-but rather previously undiagnosed
-ailments in previously unseen patients.
-This problem (how to discover patterns that *generalize*) is
-the fundamental problem of machine learning,
-and arguably of all of statistics.
+The central question is how well the fitted model predicts data drawn from the
+same population but not used for fitting. This distinction matters whenever
+predictions concern future observations, new patients, or other unseen cases.
+It leads to the fundamental statistical problem of *generalization*:
+how to discover patterns that *generalize*.
 We might cast this problem as just one slice
 of a far grander question
 that engulfs all of science:
@@ -94,9 +56,10 @@ than to the underlying distribution is called *overfitting*,
 and techniques for combatting overfitting
 are often called *regularization* methods.
 While it is no substitute for a proper introduction
-to statistical learning theory (:numref:`chap_classification_generalization`
-gives a first, rigorous taste; see also :citet:`Vapnik98,boucheron2005theory`),
+to statistical learning theory,
 we will give you just enough intuition to get going.
+:numref:`chap_classification_generalization` gives a first, rigorous taste;
+see also :citet:`Vapnik98,boucheron2005theory`.
 We will revisit generalization in many chapters
 throughout the book,
 exploring both what is known about
@@ -180,9 +143,9 @@ and thus the training error will in general
 be a biased estimate of the true error
 on the underlying population.
 The central question of generalization
-is then when should we expect our training error
+is then this: when should we expect our training error
 to be close to the population error
-(and thus the generalization error).
+(and thus the generalization error)?
 
 ### Model Complexity
 
@@ -192,8 +155,9 @@ the training and generalization errors tend to be close.
 However, when we work with
 more complex models and/or fewer examples,
 we expect the training error to go down
-but the *generalization gap* (the difference $R - R_\textrm{emp}$
-between the generalization error and the training error) to grow.
+but the *generalization gap* to grow.
+That gap is the difference $R - R_\textrm{emp}$
+between the generalization error and the training error.
 This should not be surprising.
 Imagine a model class so expressive that
 for any dataset of $n$ examples,
@@ -235,8 +199,8 @@ sets drawn by the same process, the classical *bias-variance decomposition*
 makes the trade-off precise: a model too simple to capture the signal makes a systematic error
 (high *bias*, i.e., underfitting), while a model flexible enough to chase the
 noise in a particular training set varies wildly from one dataset to the next
-(high *variance*, i.e., overfitting). Their sum, plus an irreducible noise floor
-$\sigma^2$, is the expected test error, which traces the U-shaped curve of
+(high *variance*, i.e., overfitting). Their sum plus an irreducible noise floor
+$\sigma^2$ is the expected test error, which traces the U-shaped curve of
 :numref:`fig_capacity_vs_error`; we derive the decomposition formally in
 :numref:`sec_mdl-statistics`.
 Often, models with more parameters
@@ -280,10 +244,10 @@ after the fact.
 Error on the holdout data, i.e., validation set,
 is called the *validation error*.
 
-This classical picture, in which more *capacity* (the richness of the model
-class) means more overfitting, is, however,
-*incomplete* for the heavily overparametrized models at the heart of modern deep
-learning. Once a model is large enough to *interpolate* its training data (drive
+The classical picture says that more *capacity* (the richness of the model
+class) means more overfitting. For the heavily overparametrized models at the
+heart of modern deep learning, however, that picture is
+*incomplete*. Once a model is large enough to *interpolate* its training data (drive
 training error to zero), pushing capacity even higher often makes test error
 *fall again* rather than rise: the *double descent* phenomenon
 :cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`. We take up this modern story, and
@@ -481,9 +445,9 @@ The U-curve now *visibly decomposes*. Squared bias dominates for degrees below
 3 and collapses to essentially zero the moment the model class contains the
 truth; variance is tiny at first but grows relentlessly with surplus capacity,
 exploding as the polynomial gains the freedom to chase each draw's noise. Their
-sum (which, up to the irreducible noise floor $\sigma^2 = 0.01$, is the
-expected test error) is lowest exactly where the two failure modes trade off,
-at degree 3. This is a numerical instance of the decomposition proved in
+sum is lowest exactly where the two failure modes trade off, at degree 3, and
+up to the irreducible noise floor $\sigma^2 = 0.01$ that sum is the expected
+test error. This is a numerical instance of the decomposition proved in
 :numref:`sec_mdl-statistics`.
 
 ### Dataset Size
@@ -609,21 +573,15 @@ why these values dominate practice :cite:`Kohavi.1995`.
 
 ## Summary
 
-This section explored some of the  underpinnings
-of generalization in  machine learning.
-Some of these ideas become complicated
-and counterintuitive when we get to deeper models; here, models are capable of overfitting data badly,
-and the relevant notions of complexity
-can be both implicit and counterintuitive
-(e.g., larger architectures with more parameters
-generalizing better).
-We leave you with a few rules of thumb:
+Generalization concerns the difference between performance on the training
+sample and performance on new data from the same distribution. The following
+principles guide model selection in the settings considered here:
 
 1. Use validation sets (or $K$*-fold cross-validation*) for model selection;
 1. More complex models often require more data;
 1. Relevant notions of complexity include both the number of parameters and the range of values that they are allowed to take;
 1. Keeping the learning procedure and data distribution fixed, more data usually improves generalization, but the curve need not be monotone;
-1. This entire talk of generalization is all predicated on the IID assumption. If we relax this assumption, allowing for distributions to shift between the train and testing periods, then we cannot say anything about generalization absent a further (perhaps milder) assumption.
+1. These conclusions assume that training and test data are IID. Distribution shift requires additional assumptions.
 
 
 ## Exercises

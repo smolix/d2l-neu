@@ -6,20 +6,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # GPUs, Devices, and Memory
 :label:`sec_use_gpu`
 
-So far every tensor in this book has lived in main memory and every computation
-has run on the CPU. Training at any interesting scale runs on an accelerator,
-almost always a CUDA GPU, and that changes two things at once. First, every
-tensor and every parameter now has a *home*, a device, and operations only
-combine tensors that live on the same one; placing data well is your job.
-Second, the GPU's memory is small compared with main memory, typically tens of
-gigabytes, and it is the resource you will exhaust first: the daily question of
-a single-GPU builder is not "is my model correct?" but "does it fit?". This
-section covers both skills: naming devices and placing tensors and models on
-them, then measuring what actually fills GPU memory during training, trading
-compute for memory when it does not fit, and keeping the device busy once it
-does. None of the code requires a GPU to run; the helpers we define fall back
-to the CPU, and the memory measurements simply report more interesting numbers
-when a GPU is present.
+Training beyond small examples usually runs on an accelerator, most often a
+CUDA GPU. This introduces two practical constraints. Every tensor and parameter
+has a device, and an operation generally requires its inputs to be on the same
+device. GPU memory is also much smaller than main memory and often limits the
+model or batch size. This section covers device placement, the components of
+training memory, activation checkpointing, and data-transfer patterns that keep
+the accelerator occupied. The examples fall back to the CPU when no GPU is
+available.
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab pytorch
@@ -1163,9 +1157,9 @@ on recomputation.
 Activation checkpointing is not available in MXNet: neither `mxnet.autograd`
 nor Gluon offers a recompute-during-backward transform comparable to
 `torch.utils.checkpoint`, `jax.checkpoint`, or `tf.recompute_grad`, and none
-was added before development stopped. This subsection's code, the
-gradient-equality check and the peak-memory comparison below, therefore
-appears only in the supported tabs. Recomputation can cut activation memory
+was added before development stopped. This subsection's code therefore
+appears only in the supported tabs: the gradient-equality check and the
+peak-memory comparison below. Recomputation can cut activation memory
 at the cost of roughly a third more compute. In
 MXNet the remaining memory knob is the batch size.
 :end_tab:
@@ -1301,7 +1295,7 @@ model almost fits, this
 trade is the difference between training and not training, which is why large
 Transformer training runs use it as a matter of course.
 
-## Don't Break the Pipeline
+## Avoiding Synchronization in the Input Pipeline
 
 :begin_tab:`pytorch`
 The GPU runs ahead of Python. When you write `B = A @ A`, PyTorch does not
@@ -1425,7 +1419,8 @@ is exactly what our `ProgressBoard` from :numref:`sec_oo-design` does when the
 
 :begin_tab:`jax`
 Python returned from the loop in a few milliseconds — far less time than
-the thousand products take; they were still running. Any operation that needs a concrete value on the host forces a
+the 32 matrix products take; they were still running. Any operation that
+needs a concrete value on the host forces a
 *synchronization point*: `.item()`, `np.asarray`, `print`, an `if` on an
 array's value, and `block_until_ready()` itself, whose job is to make the
 synchronization explicit (our timings above depend on it). Each one makes

@@ -697,7 +697,8 @@ fcn_net.compile(
     # transposed convolution, XLA's cuDNN autotuning can take tens of minutes
     # before the first training step and offers no benefit to this example.
     jit_compile=False)
-fcn_net.fit(train_iter, epochs=num_epochs, validation_data=test_iter)
+fcn_net.fit(train_iter, epochs=num_epochs, validation_data=test_iter,
+            verbose=2)
 ```
 
 ## Prediction

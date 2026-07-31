@@ -40,7 +40,14 @@ K(X_*,X) & K(X_*,X_*)
 $$
 
 We can then use standard Gaussian identities to find the conditional distribution from the joint distribution (see, e.g., Bishop Chapter 2), 
-$\mathbf{f}_* | \mathbf{y}, X, X_* \sim \mathcal{N}(m_*,S)$, where $m_* = K(X_*,X)[K(X,X)+\sigma^2I]^{-1}\mathbf{y}$, and $S = K(X_*,X_*) - K(X_*,X)[K(X,X)+\sigma^2I]^{-1}K(X,X_*)$.
+$\mathbf{f}_* | \mathbf{y}, X, X_* \sim \mathcal{N}(m_*,S)$, where
+
+$$
+\begin{aligned}
+m_* &= K(X_*,X)[K(X,X)+\sigma^2I]^{-1}\mathbf{y}, \\
+S &= K(X_*,X_*) - K(X_*,X)[K(X,X)+\sigma^2I]^{-1}K(X,X_*).
+\end{aligned}
+$$
 
 Typically, we do not need to make use of the full predictive covariance matrix $S$, and instead use the diagonal of $S$ for uncertainty about each prediction. Often for this reason we write the predictive distribution for a single test point $x_*$, rather than a collection of test points. 
 

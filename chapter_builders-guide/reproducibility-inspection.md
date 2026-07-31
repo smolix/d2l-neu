@@ -794,9 +794,9 @@ for name, std in stats:
 ```
 
 The residual stream's spread grows block by block, since each block adds
-its body's output on top of the stream, exactly the depth effect that
-motivated the scaled initializations of :numref:`sec_init_param`, measured
-here without touching the model.
+its body's output on top of the stream. That is exactly the depth effect
+that motivated the scaled initializations of :numref:`sec_init_param`,
+measured here without touching the model.
 
 :begin_tab:`pytorch`
 Two rules keep hooks safe. First, *detach before you stash*: the hook above
@@ -1059,8 +1059,8 @@ print(norms['layers'][3]['body']['layers'][0])
 with tf.GradientTape() as tape:
     loss = tf.reduce_mean(net(X) ** 2)
 grads = tape.gradient(loss, net.trainable_variables)
-print({v.path: float(tf.norm(g))  # block 3's first layer
-       for v, g in list(zip(net.trainable_variables, grads))[10:12]})
+for v, g in list(zip(net.trainable_variables, grads))[10:12]:
+    print(v.path, float(tf.norm(g)))  # block 3's first layer
 ```
 
 ## Summary

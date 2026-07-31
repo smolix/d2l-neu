@@ -1,25 +1,17 @@
 # Linear Regression in Neural Networks
 :label:`chap_regression`
 
-Before we worry about making our neural networks deep,
-it will be helpful to implement some shallow ones,
-for which the inputs connect directly to the outputs.
-This will prove important for a few reasons.
-First, rather than getting distracted by complicated architectures,
-we can focus on the basics of neural network training,
-including parametrizing the output layer, handling data,
-specifying a loss function, and training the model.
-Second, this class of shallow networks happens
-to comprise the set of linear models,
-which subsumes many classical methods of statistical prediction,
-including linear and softmax regression.
-Understanding these classical tools matters
-because they are widely used in many contexts
-and we will often need to use them as baselines
-when justifying the use of fancier architectures.
-This chapter will focus narrowly on linear regression
-and the next one will extend our modeling repertoire
-by developing linear neural networks for classification.
+Linear models provide the simplest setting in which to study the complete
+learning procedure: represent a model, define a loss, organize data, optimize
+parameters, and evaluate predictions on unseen examples. They are also useful
+statistical methods in their own right and provide standard baselines for more
+complex models.
+
+This chapter develops linear regression as a one-layer neural network. We
+derive the model and its loss, implement its components from first principles,
+and then replace those components with framework abstractions. The final
+sections introduce generalization and weight decay. The next chapter applies
+the same framework to classification.
 
 ```toc
 :maxdepth: 2
@@ -56,4 +48,3 @@ The references below develop the linear-model family this chapter introduces: th
 
 - [Ridge Regression: Biased Estimation for Nonorthogonal Problems — Hoerl & Kennard (1970), *Technometrics*](https://www.tandfonline.com/doi/abs/10.1080/00401706.1970.10488634) — the origin of $L_2$ regularization, exactly the weight decay introduced in this chapter (paywalled, noted).
 - [Regression Shrinkage and Selection via the Lasso — Tibshirani (1996), *JRSS-B*](https://academic.oup.com/jrsssb/article/58/1/267/7027929) — introduces the $L_1$-penalized counterpart, contrasting sparse selection with ridge's shrinkage (paywalled, noted).
-

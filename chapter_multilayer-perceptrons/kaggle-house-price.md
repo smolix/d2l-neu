@@ -6,14 +6,8 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Predicting House Prices on Kaggle
 :label:`sec_kaggle_house`
 
-Now that we have introduced some basic tools
-for building and training deep networks
-and regularizing them with techniques including
-weight decay and dropout,
-we are ready to put all this knowledge into practice
-by participating in a Kaggle competition.
-The house price prediction competition
-is a great place to start.
+This section applies the chapter's modeling and regularization methods to the
+Kaggle house-price prediction competition.
 The data is fairly generic and does not exhibit exotic structure
 that might require specialized models (as audio or video might).
 This dataset, collected by :citet:`De-Cock.2011`,
@@ -23,11 +17,8 @@ teaching datasets (e.g. Boston Housing) that preceded it, with more
 examples and more features.
 
 
-In this section, we will walk you through details of
-data preprocessing, model design, and hyperparameter selection.
-We hope that through a hands-on approach,
-you will gain some intuitions that will guide you
-in your career as a data scientist.
+The example covers data preprocessing, model design, validation,
+hyperparameter selection, and submission generation.
 
 ```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab mxnet
@@ -95,7 +86,7 @@ you will first need to register for an account
 On the house price prediction competition page, as illustrated
 in :numref:`fig_house_pricing`,
 you can find the dataset (under the "Data" tab),
-submit predictions, and see your ranking,
+submit predictions, and see your ranking.
 The URL is right here:
 
 > https://www.kaggle.com/c/house-prices-advanced-regression-techniques
@@ -175,12 +166,12 @@ as well as the label (SalePrice) from the first four examples.
 print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 ```
 
-We can see that in each example, the first feature is the identifier.
-This lets us identify each record. We drop it here because the competition
+We can see that in each example, the first feature is the identifier, which
+lets us identify each record. We drop it here because the competition
 defines it as a row identifier rather than a measured house attribute.
 Identifiers are not harmless in every dataset: they can encode collection
-order, source, or time, so their semantics should be checked rather than
-discarded by rule.
+order, source, or time, so one should check what they encode rather than
+drop them by rule.
 Furthermore, given a wide variety of data types,
 we will need to preprocess the data before we can start modeling.
 
@@ -197,15 +188,21 @@ $$x \leftarrow \frac{x - \mu}{\sigma},$$
 
 where $\mu$ and $\sigma$ denote the feature's mean and standard deviation.
 By the definition of mean and variance, the rescaled feature has
-$E\!\left[\frac{x-\mu}{\sigma}\right] = 0$ and
-$\mathrm{Var}\!\left[\frac{x-\mu}{\sigma}\right] = 1$,
+
+$$
+E\!\left[\frac{x-\mu}{\sigma}\right] = 0
+\qquad \textrm{and} \qquad
+\mathrm{Var}\!\left[\frac{x-\mu}{\sigma}\right] = 1,
+$$
+
 so every column now lives on the same zero-mean, unit-variance scale.
 We compute $\mu$ and $\sigma$ from the *training* set only and
 apply the very same transformation to the test set. Using statistics that
 include the test data would let information about the test distribution
 seep into our preprocessing, optimistically biasing every evaluation we
-make afterwards. This pitfall, *test-set leakage*, is one of the most
-common ways a model looks better offline than it ever does in deployment.
+make afterwards. This pitfall is called *test-set leakage*, and it is one of
+the most common ways a model looks better offline than it ever does in
+deployment.
 
 Intuitively, we standardize the data for three reasons.
 First, it proves convenient for optimization, putting all coordinates on a
@@ -224,8 +221,8 @@ in the same way that we earlier transformed
 multiclass labels into vectors (see :numref:`subsec_classification-problem`).
 For instance, "MSZoning" assumes the values "RL" and "RM".
 Dropping the "MSZoning" feature,
-two new indicator features
-"MSZoning_RL" and "MSZoning_RM" are created with values being either 0 or 1.
+we create two new indicator features
+"MSZoning_RL" and "MSZoning_RM" whose values are either 0 or 1.
 According to one-hot encoding,
 if the original value of "MSZoning" is "RL",
 then "MSZoning_RL" is 1 and "MSZoning_RM" is 0.
@@ -364,8 +361,8 @@ def k_fold_data(data, k):
     return rets
 ```
 
-The average validation error is returned
-when we train $K$ times in the $K$-fold cross-validation. We pass in a
+We train $K$ times in the $K$-fold cross-validation
+and return the average validation error. We pass in a
 `model_fn` that builds a fresh model for each fold, so the *same*
 cross-validation loop can score a linear baseline or an MLP without change.
 
@@ -439,7 +436,7 @@ But it does set expectations about where neural networks shine
 (images, text, audio, and sequences) and where they currently do not
 (small-to-medium tabular data).
 
-We start with a linear model. It is a fast baseline that
+We start with a linear model, a fast baseline that
 sanity-checks the pipeline. One subtlety is easy to get wrong: a baseline
 is only meaningful if it is *trained competently*. Plain minibatch SGD on
 these standardized features needs more than a handful of passes to converge,
@@ -548,11 +545,11 @@ the mean of the log-predictions is the ensemble
 consistent with the metric
 (in price space it amounts to a geometric mean).
 
-Note what this *fold ensembling* is, though. Each of the $K$
-models saw only $(K-1)/K$ of the training data, and the "average validation
-log mse" we computed above estimates the error of a *single* such model, not
-of the ensemble we are about to submit, whose error the cross-validation
-score does not measure. The canonical alternative is to *refit* one model on
+This *fold ensembling* deserves a closer look, though. Each of the $K$
+models saw only $(K-1)/K$ of the training data, so the "average validation
+log mse" we computed above estimates the error of a *single* such model; it
+does not measure the error of the ensemble we are about to submit.
+The canonical alternative is to *refit* one model on
 all of the training data using the hyperparameters that cross-validation
 selected, so that the submitted model is a fresh draw of exactly the thing we
 scored. Fold ensembling is standard Kaggle practice: it is free (the $K$
@@ -630,9 +627,9 @@ The steps are quite simple:
 
 Real data is messy: a mix of numeric and categorical features, with missing
 values and wildly different scales. The preprocessing pipeline in this
-section (mean imputation, standardization with statistics fit on the training
-set only to avoid test-set leakage, and one-hot encoding of categoricals) is
-a sensible default that applies far beyond this competition. When the target
+section is a sensible default that applies far beyond this competition: mean
+imputation, standardization with statistics fit on the training set only to
+avoid test-set leakage, and one-hot encoding of categoricals. When the target
 spans an order of magnitude, predicting the *logarithm* of the price and
 scoring with root-mean-squared log error converts an asymmetric dollar-scale
 problem into one where a $10\%$ error on a $\$100{,}000$ house and on a
@@ -696,7 +693,7 @@ fine-tuning of pretrained models.
 ::: {.cover}
 [Dive into Deep Learning · §5.7]{.kicker}
 
-Predicting **house prices** on Kaggle<br>An end-to-end pipeline: messy data in, a scored prediction out. **The difference between an underfit baseline and a converged one is nothing but training it properly.**
+Predicting **house prices** on Kaggle<br>Preprocessing, validation, model comparison, and submission.
 :::
 :::
 
@@ -715,13 +712,13 @@ mixed features, predict the sale price of **1459** more.
 
 ::: {.d2l-note}
 Preprocess, match the loss to the metric, cross-validate, submit. That
-recipe outlives any single model.
+procedure applies to many model classes.
 :::
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-Everything here works for **any** model class, not just neural nets.
+The evaluation procedure applies to **any** model class, not only neural networks.
 :::
 :::
 :::
@@ -766,7 +763,7 @@ overfitting the leaderboard.
 The data is generic on purpose: no images, audio, or sequences, just a
 spreadsheet of house attributes and one price column.
 
-That makes it the perfect first capstone, the whole job is the
+This makes it a suitable first case study: the main work is the
 **pipeline** around the model.
 :::
 
@@ -786,7 +783,7 @@ That makes it the perfect first capstone, the whole job is the
 :::
 :::
 
-::: {.slide title="One imports cell, then read the CSVs"}
+::: {.slide title="Imports and CSV input"}
 [Setup]{.kicker}
 
 ::: {.cols .vc}
@@ -856,7 +853,7 @@ test statistics is **leakage** and flatters every later score.
 :::
 :::
 
-::: {.slide title="One method: impute, standardize, one-hot" layout="code"}
+::: {.slide title="Imputation, standardization, and one-hot encoding" layout="code"}
 [Preprocessing]{.kicker}
 
 Fit means, standard deviations, and the categorical vocabulary on the
@@ -979,7 +976,7 @@ A fresh model per fold; average:
 :::
 :::
 
-::: {.slide title="The trap: an underfit baseline flatters everything" only="pytorch"}
+::: {.slide title="An underfit baseline gives a misleading comparison" only="pytorch"}
 [Model selection]{.kicker}
 
 ::: {.cols .vc}
@@ -1036,7 +1033,7 @@ optimizer to attach weight decay.
 :::
 :::
 
-::: {.slide title="The verdict: the MLP edges ahead" only="pytorch"}
+::: {.slide title="Cross-validation comparison" only="pytorch"}
 [Model selection]{.kicker}
 
 Same K-fold loop, learning rate, and epoch budget, only the model changes:
@@ -1048,7 +1045,7 @@ Same K-fold loop, learning rate, and epoch budget, only the model changes:
 :::
 :::
 
-::: {.slide title="The verdict: the MLP edges ahead" except="pytorch"}
+::: {.slide title="Cross-validation comparison" except="pytorch"}
 [Model selection]{.kicker}
 
 The natural next step is a small MLP: one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget, it edges out the competently trained linear baseline: about $0.027$ vs $0.036$.
@@ -1082,7 +1079,7 @@ ensembling*.
 :::
 :::
 
-::: {.slide title="The general competition recipe"}
+::: {.slide title="A general competition workflow"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
@@ -1123,7 +1120,8 @@ images, text, audio. The pipeline is identical.
 - **A baseline counts only if trained competently**: underfit
   vs converged, same model.
 - **Ensemble the folds in log space** (or refit), then submit.
-- The model is a few lines; **everything around it is the lesson**.
+- Model code is short; preprocessing and evaluation determine whether its
+  score is meaningful.
 :::
 :::
 

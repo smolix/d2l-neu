@@ -11,7 +11,44 @@
 % breakable fvextra Verbatim so wide output — generated-text samples, dir() API
 % dumps, profiler tables — wraps instead of running off the page. (Pandoc always
 % puts \end{verbatim} on its own line, which fvextra requires.)
-\DefineVerbatimEnvironment{verbatim}{Verbatim}{breaklines,breakanywhere,fontsize=\small}
+%
+% This MUST be deferred to \AtBeginDocument. This file is injected via
+% `include-in-header`, and Quarto appends its own preamble *after* it — that
+% block loads tcolorbox (for callouts / the Shaded code box), which in turn
+% \RequirePackage{verbatim}. verbatim.sty re-defines the `verbatim` environment
+% unconditionally, silently reverting a definition made here at header time.
+% That is why wide cell output kept overflowing the page edge (text lost, not
+% wrapped) even with this line present: it was being overwritten before
+% \begin{document}. \AtBeginDocument runs after every package, so ours wins.
+\AtBeginDocument{%
+  \DefineVerbatimEnvironment{verbatim}{Verbatim}%
+    {breaklines,breakanywhere,fontsize=\small}%
+  % Let pages end short rather than stretching the glue between code blocks,
+  % output blocks and figures. book.cls leaves \flushbottom in force for
+  % `twoside`, which on code-dense pages inflates every inter-block gap to
+  % centimetres of white space just to square off the bottom margin. Facing
+  % pages may now end at slightly different heights — the accepted trade in
+  % technical books, and far less distracting than the stretch.
+  \raggedbottom
+}
+
+% The book passed 1000 pages, and LaTeX's default page-number slot in the table
+% of contents (\@pnumwidth = 1.55em) fits three digits. Every entry pointing at
+% a four-digit page overflows its box by exactly 4.93pt, which accounted for 653
+% of the build's Overfull \hbox warnings. Widen the slot, and the matching right
+% margin with it (\@tocrmarg must stay about 1em clear of \@pnumwidth or the dot
+% leaders run into the number).
+%
+% NOTE: \makeatletter must sit OUTSIDE any \AtBeginDocument wrapper. TeX fixes
+% catcodes when it *reads* a token list, so a \makeatletter placed inside the
+% braces comes too late: \@pnumwidth would already have been tokenized as \@
+% followed by the letters "pnumwidth", silently redefining \@ instead. These
+% assignments do not need deferring in the first place, since the TOC is
+% typeset later, at \tableofcontents.
+\makeatletter
+\renewcommand{\@pnumwidth}{2.4em}%
+\renewcommand{\@tocrmarg}{3.4em}%
+\makeatother
 
 % Better float placement for figures inside narrow sections.
 \usepackage{float}

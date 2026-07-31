@@ -1,14 +1,10 @@
 # Muon
 :label:`sec_muon`
 
-Every optimizer so far has treated the parameters as one long vector. SGD
-moves that vector against the gradient; Adam rescales each entry; AdamW
-shrinks them all uniformly. Yet the census of :numref:`subsec_tinylm` showed
-that a network is not a homogeneous vector: it is a collection of embedding
-tables, hidden *matrices*, and normalization vectors, with most of the
-parameters in the matrices. This section takes that structure seriously, and
-the reward is one of the most credible recent challengers to the Adam
-family's decade-long hold on large-scale training.
+The preceding optimizers treat parameters as coordinates of a vector. A
+network, however, contains embedding tables, hidden matrices, and
+normalization vectors, with most parameters in matrices. Muon uses this
+matrix structure to define a different preconditioned update.
 
 The organizing idea of this chapter says an optimizer begins with a choice of
 descent direction, and this section makes the choice explicit: the direction
@@ -19,8 +15,8 @@ $\ell_\infty$ norm the answer is the sign of the gradient, and we recover, in
 essence, Adam. Under the *spectral* norm, the natural way to measure a matrix,
 the answer is the gradient with its singular values erased, and we arrive at
 Muon :cite:`Jordan.Jin.Boza.ea.2024`, which since 2024 has gone from a
-speed-run leaderboard to trillion-parameter training runs. We derive it, build
-it in about fifteen lines, race it against AdamW on the testbeds of
+speed-run leaderboard to trillion-parameter training runs. We derive it,
+implement it in about fifteen lines, compare it with AdamW on the testbeds of
 :numref:`sec_adam`, place it in the family of preconditioned methods it
 belongs to, and finish by weighing the evidence.
 
@@ -101,13 +97,13 @@ we should mean by "a step of size $\eta$" is not how much the entries change
 but how much the layer's *behavior* changes, and that is governed by the
 spectral norm: $\|\Delta \mathbf{W} \mathbf{x}\|_2 \leq \|\Delta
 \mathbf{W}\|_2\, \|\mathbf{x}\|_2$, with equality for the worst-case input.
-The spectral norm $\|\Delta \mathbf{W}\|_2$, the largest singular value, is
-the largest factor by which the update can stretch any activation vector
-passing through the layer. Flattening the matrix and using the Euclidean norm
+The spectral norm $\|\Delta \mathbf{W}\|_2$ is the largest singular value,
+and hence the largest factor by which the update can stretch any activation
+vector passing through the layer. Flattening the matrix and using the Euclidean norm
 of the entries (the Frobenius norm) instead adds up energy across all
 $\min(m, n)$ singular directions, so it can call an update "large" even when
 its effect on every activation is small; controlling the spectral norm of
-updates is also exactly the condition under which feature learning survives
+updates is also the condition under which feature learning remains effective
 scaling the network up :cite:`Yang.Simon.Bernstein.2023`, a thread
 :numref:`sec_scaling` picks up.
 
@@ -137,8 +133,8 @@ weights them by singular values that, for real training gradients, are
 dominated by a few large ones. The steepest spectral step keeps the
 directions and *erases the weights*: every direction the gradient identifies
 moves at the same rate. This is per-direction equalization, in whatever basis
-the gradient supplies, where Adam manages only per-coordinate equalization in
-the axis basis it is handed. The reasoning also says where it does *not*
+the gradient supplies, whereas Adam manages only per-coordinate equalization
+in the axis basis it is handed. The reasoning also says where it does *not*
 apply. An embedding table never multiplies a dense activation vector; its
 input is one-hot, each row is looked up in isolation, and the norm the input
 induces is the largest *row* norm rather than the spectral norm — a geometry
@@ -199,7 +195,7 @@ $$
 
 whose slope at the origin is $3.4445$, so a direction hundreds of times
 weaker than the dominant one still reaches order $1$ within five iterations.
-The price of the aggressive slope is that the iteration does not converge to
+The limitation of the aggressive slope is that the iteration does not converge to
 $1$; it oscillates in a band around it. For an optimizer this is a fine
 trade: we need "all directions move at roughly the same rate", not
 machine-precision orthogonality, and the iteration is stable enough to run
@@ -275,11 +271,11 @@ training.)
 ### The Update
 
 Muon assembles three ingredients we now have in hand. Gradients are noisy, so
-we do not orthogonalize the raw gradient: we keep a momentum buffer, the
+we do not orthogonalize the raw gradient. We keep a momentum buffer, the
 leaky average of :numref:`sec_momentum`, with the same $\mu = 0.95$ used by
-its authors, and hand Newton--Schulz the Nesterov blend
-$\mathbf{G}_t + \mu \mathbf{M}_t$ — the gradient plus a look ahead along the
-freshly updated buffer. And the result is
+its authors, and we hand Newton--Schulz the Nesterov blend
+$\mathbf{G}_t + \mu \mathbf{M}_t$: the gradient plus a look ahead along the
+freshly updated buffer. The result is then
 rescaled once per matrix shape:
 
 $$
@@ -306,10 +302,10 @@ distinction matters when transferring across model widths, which is
 :numref:`sec_scaling`'s subject.)
 
 The implementation is short. `reshape` handles the one wrinkle we will need
-later: a convolution kernel is a matrix in disguise — one row per output
-channel in PyTorch's OIHW layout, one column in Flax's HWIO, transposes of
-each other, and orthogonalization commutes with transposition — so
-flattening it lets the same code precondition CNNs. On our tiny
+later: a convolution kernel is a matrix in disguise, so flattening it lets
+the same code precondition CNNs. (It has one row per output channel in
+PyTorch's OIHW layout and one column in Flax's HWIO; the two are transposes
+of each other, and orthogonalization commutes with transposition.) On our tiny
 matrices the fifteen extra multiplications add a visible fraction to the
 step time; at production scale, where the forward and backward passes
 dwarf them, the reported overhead is around one percent of the training
@@ -353,7 +349,7 @@ def scratch_muon(learning_rate, momentum=0.95):
 ### Dividing the Census
 
 Muon is an optimizer for hidden matrices only, so a real training run is a
-*hybrid*: the parameter-group machinery of :numref:`sec_adamw`, with the
+*hybrid*: the parameter-group mechanism of :numref:`sec_adamw`, with the
 census deciding who goes where. Hidden matrices go to Muon; embeddings, the
 output head, and every one-dimensional tensor go to AdamW.
 
@@ -436,7 +432,7 @@ def muon_adamw(lr, exclude=('emb', 'head')):
          'adamw': optax.adamw(lr, weight_decay=0.0)}, labels)
 ```
 
-### The Race on the Language Model
+### Comparison on the Language Model
 
 The protocol is the one from :numref:`sec_adam`: same model, same
 initialization, 2,000 steps at a constant learning rate, a four-point
@@ -532,7 +528,7 @@ hybrid gets there carrying nearly half the optimizer state — but a
 fair-tuning literature discussed at the end of this section measures
 Muon-family gains in tens of percent of data efficiency at small scale,
 an effect two thousand steps can only hint at. The demo is mechanism, not
-benchmark; before drawing conclusions, look at the same race in the JAX tab,
+benchmark; before drawing conclusions, consider the same comparison in the JAX tab,
 where the identical protocol produces a very different margin.
 :end_tab:
 
@@ -541,17 +537,17 @@ Here the tuned hybrid beats tuned AdamW by a wide margin — several tenths of
 a nat, a visibly lower curve throughout. Resist the strong conclusion: the
 PyTorch tab runs the identical protocol and ends with a far smaller edge. The two
 frameworks differ in details as mundane as default layer initialization,
-and races this small are sensitive to all of them. What survives both tabs
+and comparisons this small are sensitive to all of them. Across both tabs,
 is the weaker statement the data supports: the hybrid beat AdamW
 in both single-seed runs — narrowly in PyTorch, by a wide margin here — while carrying
-nearly half the optimizer state. That claims about optimizers
-are this protocol-sensitive is not an embarrassment to hide but the
+nearly half the optimizer state. Claims about optimizers really are this
+protocol-sensitive. That is not an embarrassment to hide but the
 section's recurring lesson, and the fair-tuning studies at the end of the
 section exist precisely because of it. The demo is mechanism, not
 benchmark.
 :end_tab:
 
-### The Same Race on a CNN
+### Comparison on a CNN
 
 :numref:`sec_adam` found that Adam's advantage over SGD, dramatic on the
 language model, nearly vanished on a CNN. It is natural to ask the same
@@ -677,14 +673,14 @@ print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn]:.3f}, '
       f'Muon+AdamW {muon_acc[best_muon_cnn]:.3f}')
 ```
 
-The result rewards reading both scoreboards. On training loss the hybrid
+The two metrics give different conclusions. On training loss the hybrid
 pulls clearly ahead: orthogonalized updates drive this small CNN into its
 memorization regime several times faster. On test accuracy, the number a
 vision practitioner actually cares about, the two land within about a point
 of each other. Optimizing faster and predicting better are different claims,
 and on a small, quickly saturated task the second is the one that resists
 improvement — the same compression of differences that :numref:`sec_adam`
-found between Adam and SGD here. The general lesson survives translation:
+found between Adam and SGD here. The same conclusion applies:
 an optimizer comparison is a statement about a workload and a metric, not a
 universal ranking.
 
@@ -744,7 +740,7 @@ print(f'final loss {final_loss(losses):.3f}')
 
 ## The Preconditioning Family
 
-Muon looks exotic until it is placed on the family tree, where it turns out
+Muon is closely related to other preconditioning methods. It can be viewed
 to be the frugal child of a long line. Every branch answers the question
 posed in :numref:`sec_gd`: gradient descent assumes round level sets, real
 losses have curved ones, and some matrix should reshape the gradient
@@ -752,11 +748,11 @@ accordingly. Adam estimates a *diagonal* such matrix from gradient history.
 The methods below estimate structure per layer, exploiting the same fact
 Muon does: parameters come in matrices.
 
-K-FAC :cite:`Martens.Grosse.2015` is the family's ancestor. It approximates
-each layer's block of the Fisher information matrix, curvature measured
-between the *distributions* the model defines, as a Kronecker product of two
-small matrices, the second moments of the layer's inputs and of its output
-gradients. Preconditioning by a Kronecker product costs two small inverses
+K-FAC :cite:`Martens.Grosse.2015` is the family's ancestor. The Fisher
+information matrix measures curvature between the *distributions* the model
+defines, and K-FAC approximates each layer's block of it as a Kronecker
+product of two small matrices: the second moments of the layer's inputs and
+of its output gradients. Preconditioning by a Kronecker product costs two small inverses
 rather than one enormous one, which made second-order-style updates feasible
 for neural networks and connected them to the natural gradient of
 :citet:`Amari.1998`.
@@ -770,7 +766,7 @@ preconditioning each gradient matrix as $\mathbf{L}_t^{-1/4} \mathbf{G}_t
 external-tuning track of the AlgoPerf benchmark, finishing its workloads
 about 30% faster than the tuned AdamW baseline
 :cite:`Dahl.Schneider.Nado.ea.2023,Kasimbeg.Schneider.Eschenhagen.ea.2025` —
-the strongest protocol-controlled evidence that matrix preconditioning pays.
+strong protocol-controlled evidence for matrix preconditioning.
 SOAP :cite:`Vyas.Morwani.Zhao.ea.2024` refines it further by running Adam
 inside Shampoo's slowly refreshed eigenbasis, cutting the overhead between
 factor recomputations.
@@ -788,25 +784,25 @@ $$
 the orthogonalized gradient again :cite:`Bernstein.Newhouse.2024`. What Muon
 discards is the preconditioner state and the factor inverses; what it keeps
 is the geometry. On the other side of the tree, the same anatomy identifies
-Lion :cite:`Chen.Liang.Huang.ea.2023`, an update found by symbolic program
-search, as the lean member of the *sign* branch: one momentum buffer and a
-sign, steepest descent under $\ell_\infty$ with even less state than Adam.
-You will implement it in the exercises in about six lines. The full ladder,
-from diagonal through Kronecker to spectral, with the derivations, is
-assembled in :numref:`subsec_mdl-preconditioning-ladder`.
+Lion :cite:`Chen.Liang.Huang.ea.2023` as the lean member of the *sign*
+branch: an update found by symbolic program search, one momentum buffer and
+a sign, steepest descent under $\ell_\infty$ with even less state than Adam.
+You will implement it in the exercises in about six lines.
+:numref:`subsec_mdl-preconditioning-ladder` assembles the full ladder with
+the derivations, from diagonal through Kronecker to spectral.
 
-## Muon in the Wild
+## Large-Scale Use of Muon
 
 Muon's rise was unusually public. It debuted in late 2024 not in a paper but
 as a record on the NanoGPT speedrun :cite:`Jordan.2024`, a standing
 competition to train a fixed GPT-2-class model to a fixed validation loss on
 fixed hardware in the least wall-clock time. The speedrun is a small model of
 good evidence culture: one variable changes per record, the diff is public,
-and anyone can rerun it. Its headline number, a baseline of 45 minutes
-driven down to a few minutes in under two years, mixes optimizer,
-architecture, and data-schedule improvements and should not be read as an
-optimizer benchmark; but individual records isolate single changes, and
-Muon's debut cut the then-record by roughly a third.
+and anyone can rerun it. Its headline number mixes optimizer,
+architecture, and data-schedule improvements, so it should not be read as
+an optimizer benchmark: a baseline of 45 minutes came down to a few minutes
+in under two years. Individual records do isolate single changes, though,
+and Muon's debut cut the then-record by roughly a third.
 
 Production adoption followed within months. Moonshot's Moonlight report
 demonstrated Muon at multi-billion-parameter scale, introduced the
@@ -814,12 +810,12 @@ RMS-matching convention of :eqref:`eq_muon-update`, and reported matched
 losses for roughly half the training compute of its AdamW baseline
 :cite:`Liu.Su.Yao.ea.2025`. Kimi K2, a trillion-parameter
 mixture-of-experts model, was pretrained on 15.5 trillion tokens with
-MuonClip, Muon plus a cap on attention logits (QK-clip) to contain the
-instability that surfaced at that scale, and reports zero loss spikes for
+MuonClip: Muon plus a cap on attention logits (QK-clip) to contain the
+instability that surfaced at that scale. It reports zero loss spikes for
 the entire run :cite:`Kimi.Team.2025`. GLM-4.5 likewise trained with Muon
-:cite:`Zeng.Lv.Zheng.ea.2025`. An optimizer in the training runs of multiple frontier
-labs, and in core PyTorch, within two years of its first appearance is a
-pace the field had not seen since Adam itself.
+:cite:`Zeng.Lv.Zheng.ea.2025`. For an optimizer to reach the training runs
+of multiple frontier labs, and core PyTorch, within two years of its first
+appearance is a pace the field had not seen since Adam itself.
 
 Against this, hold the sobering result of the fair-tuning literature.
 :citet:`Wen.Hall.Ma.ea.2025` re-benchmarked eleven optimizers under matched,
@@ -844,19 +840,19 @@ multiples.
 
 ## Summary
 
-Steepest descent is not one algorithm but a family indexed by a norm: the
+Steepest descent defines a family of algorithms indexed by a norm: the
 Euclidean ball yields normalized SGD, the $\ell_\infty$ box yields sign
 descent and its
 smoothed form Adam, and the spectral ball, the right measure for a matrix
 that transforms activations, yields the orthogonalized gradient
 $\mathbf{U}\mathbf{V}^\top$. Muon computes it without an SVD by a tuned
-five-step Newton--Schulz iteration, pure matrix multiplications that run in
-low precision, applies it to each hidden matrix's Nesterov blend
+five-step Newton--Schulz iteration of pure matrix multiplications that run
+in low precision, applies it to each hidden matrix's Nesterov blend
 $\mathbf{G}_t + \mu\,\mathbf{M}_t$ of gradient and momentum buffer, and
 rescales by $0.2\sqrt{\max(m, n)}$ so one learning rate serves both Muon and
 the AdamW that handles embeddings, heads, and vectors. It is Shampoo without
-accumulators, K-FAC's grandchild, and the spectral rung of the
-preconditioning ladder.
+accumulators and occupies the spectral-norm case in this family of
+preconditioners.
 
 On our tiny testbed the hybrid beat tuned AdamW in both
 single-seed runs while carrying nearly half the optimizer state, with a
@@ -896,7 +892,7 @@ and suspicion of round numbers.
    buffer $\mathbf{m}_t$, update $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,
    \mathrm{sign}(\beta_1 \mathbf{m}_{t-1} + (1 - \beta_1)\, \mathbf{g}_t)$
    followed by $\mathbf{m}_t = \beta_2 \mathbf{m}_{t-1} + (1 - \beta_2)\,
-   \mathbf{g}_t$, with $(\beta_1, \beta_2) = (0.9, 0.99)$. Race it against
+   \mathbf{g}_t$, with $(\beta_1, \beta_2) = (0.9, 0.99)$. Compare it with
    AdamW and the hybrid on `TinyLM` at matched four-point tuning (Lion's
    best learning rate is typically several times smaller than AdamW's).
    How much optimizer state does each method carry per parameter?
@@ -917,7 +913,7 @@ The norm decides the direction<br>
 :::
 
 ::: {.slide title="Steepest descent depends on the norm"}
-[The chapter's frame, paid off]{.kicker}
+[Choice of update geometry]{.kicker}
 
 Linearize and ask for the best step of size $\eta$:
 
@@ -932,13 +928,12 @@ Not fully posed until the **ball** is chosen (Bernstein & Newhouse, 2024):
   same distance — the equalization that is Adam's real work (§9.6).
 :::
 
-::: {.slide title="Matrices want the spectral norm"}
+::: {.slide title="The spectral norm for matrix updates"}
 A hidden matrix transforms activations: $\mathbf{y} = \mathbf{W}\mathbf{x}$.
 The size of an update that matters is what it does to activations:
 
 $$\|\Delta\mathbf{W}\mathbf{x}\|_2 \leq \|\Delta\mathbf{W}\|_2\, \|\mathbf{x}\|_2.$$
 
-. . .
 
 Steepest descent under $\|\Delta\mathbf{W}\|_2 \leq \eta$, with
 $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$:
@@ -967,7 +962,7 @@ has slope 3.44 at 0 → five iterations suffice, in `bfloat16`, all matmuls.
 @muon-orthogonalization-by-newton-schulz-1
 :::
 
-::: {.slide title="Watching the spectrum collapse"}
+::: {.slide title="Effect of Newton--Schulz iterations on the spectrum"}
 @!muon-orthogonalization-by-newton-schulz-2
 
 - 0 iterations: an order of magnitude of spread.
@@ -986,7 +981,7 @@ typical RMS, so AdamW-tuned $\eta$ transfers (Moonlight, 2025).
 @muon-the-update
 :::
 
-::: {.slide title="Dividing the census"}
+::: {.slide title="Assigning parameter groups"}
 Hidden matrices → Muon; embeddings, head, vectors → AdamW
 (the param-group pattern of §9.7):
 
@@ -996,7 +991,7 @@ Hidden matrices → Muon; embeddings, head, vectors → AdamW
 - One buffer each vs. AdamW's two: state memory nearly halves.
 :::
 
-::: {.slide title="The race, same protocol as §9.6"}
+::: {.slide title="Muon and AdamW on the language model"}
 Same init, 2,000 steps, constant lr, four-point grid each, weight decay off
 — the only difference is the **direction**:
 
@@ -1005,11 +1000,11 @@ Same init, 2,000 steps, constant lr, four-point grid each, weight decay off
 - The hybrid **beat** AdamW in both single-seed runs — carrying
   ~half the optimizer state.
 - The margin ranged from *modest* (PyTorch) to *substantial* (JAX) under
-  the identical protocol: small races are protocol-sensitive. Mechanism,
-  not benchmark.
+  the identical protocol, which shows that small comparisons are
+  protocol-sensitive.
 :::
 
-::: {.slide title="On a CNN: two scoreboards"}
+::: {.slide title="Training loss and test accuracy on a CNN"}
 @!muon-the-same-race-on-a-cnn-3
 
 - Training loss: the hybrid reaches the memorization regime much faster.
@@ -1019,7 +1014,7 @@ Same init, 2,000 steps, constant lr, four-point grid each, weight decay off
   workload **and metric**.
 :::
 
-::: {.slide title="The family tree"}
+::: {.slide title="Related preconditioning methods"}
 - **K-FAC** (2015): layer-wise Fisher ≈ Kronecker product — two small inverses.
 - **Shampoo** (2018): AdaGrad-style two-sided factors; won AlgoPerf's
   external-tuning track (~30% faster than tuned AdamW).
@@ -1032,19 +1027,18 @@ $$(\mathbf{G}\mathbf{G}^\top)^{-1/4}\mathbf{G}(\mathbf{G}^\top\mathbf{G})^{-1/4}
   (exercise).
 :::
 
-::: {.slide title="Adoption — and the fair-tuning accounting"}
+::: {.slide title="Large-scale results and matched tuning"}
 **In production:** Moonlight (≈½ the compute of its AdamW baseline);
 Kimi K2 — 15.5T tokens with MuonClip, zero loss spikes; GLM-4.5;
 `torch.optim.Muon` in core.
 
-. . .
 
-**Fair tuning deflates headlines** (Wen et al., 2025): matrix methods are
+With matched tuning (Wen et al., 2025), matrix methods are
 genuinely fastest, but ~1.4× at 100M params, → ~1.1× at 1B. Sophia's 2×
 did not replicate — reported by its own authors' group.
 
 ::: {.d2l-note}
-AdamW is still the default. Muon is the one challenger with a clean
-derivation **and** frontier mileage. Gains: tens of percent, not multiples.
+AdamW remains the default. Reported Muon gains are typically tens of percent
+rather than multiples.
 :::
 :::

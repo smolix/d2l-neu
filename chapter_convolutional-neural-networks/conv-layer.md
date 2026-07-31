@@ -6,11 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutions for Images
 :label:`sec_conv_layer`
 
-Now that we understand how convolutional layers work in theory,
-we are ready to see how they work in practice.
-Building on our motivation of convolutional neural networks
-as efficient architectures for exploring structure in image data,
-we stick with images as our running example.
+The preceding section derived convolutional layers from locality and
+translation equivariance. We now define the two-dimensional cross-correlation
+operation, implement it directly, and show how its kernels can be learned from
+image data.
 
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab mxnet
@@ -47,10 +46,10 @@ import tensorflow as tf
 Recall that strictly speaking, convolutional layers
 are a  misnomer, since the operations they express
 are more accurately described as cross-correlations.
-Based on our descriptions of convolutional layers in :numref:`sec_why-conv`,
-in such a layer, an input tensor
-and a kernel tensor are combined
-to produce an output tensor through a cross-correlation operation.
+As described in :numref:`sec_why-conv`,
+such a layer combines an input tensor
+and a kernel tensor
+into an output tensor through a cross-correlation operation.
 
 Let's ignore channels for now and see how this works
 with two-dimensional data and hidden representations.
@@ -83,20 +82,22 @@ and the four elements are derived from
 the two-dimensional cross-correlation operation:
 
 $$
-0\times0+1\times1+3\times2+4\times3=19,\\
-1\times0+2\times1+4\times2+5\times3=25,\\
-3\times0+4\times1+6\times2+7\times3=37,\\
-4\times0+5\times1+7\times2+8\times3=43.
+\begin{aligned}
+0\times0+1\times1+3\times2+4\times3 &= 19,\\
+1\times0+2\times1+4\times2+5\times3 &= 25,\\
+3\times0+4\times1+6\times2+7\times3 &= 37,\\
+4\times0+5\times1+7\times2+8\times3 &= 43.
+\end{aligned}
 $$
 
 Note that along each axis, the output size
 is slightly smaller than the input size.
 Because the kernel has width and height greater than $1$,
 we can only properly compute the cross-correlation
-for locations where the kernel fits wholly within the image,
-the output size is given by the input size $n_\textrm{h} \times n_\textrm{w}$
-minus the size of the convolution kernel $k_\textrm{h} \times k_\textrm{w}$
-via
+for locations where the kernel fits wholly within the image.
+The output size is therefore the input size $n_\textrm{h} \times n_\textrm{w}$
+minus the size of the convolution kernel $k_\textrm{h} \times k_\textrm{w}$,
+that is,
 
 $$(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1).$$
 
@@ -241,9 +242,9 @@ class Conv2D(nnx.Module):
 ```
 
 In
-$h \times w$ convolution
+an $h \times w$ convolution,
 or an $h \times w$ convolution kernel,
-the height and width of the convolution kernel are $h$ and $w$, respectively.
+the height and width of the kernel are $h$ and $w$, respectively.
 We also refer to
 a convolutional layer with an $h \times w$
 convolution kernel simply as an $h \times w$ convolutional layer.
@@ -282,7 +283,11 @@ Next, we construct a kernel `K` with a height of 1 and a width of 2.
 When we perform the cross-correlation operation with the input,
 if the horizontally adjacent elements are the same,
 the output is 0. Otherwise, the output is nonzero.
-Note that this kernel is a special case of a finite difference operator. At location $(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, i.e., it computes the difference between the values of horizontally adjacent pixels. This is a discrete approximation of the first derivative in the horizontal direction (up to a sign). After all, for a function $f(i,j)$ its derivative is $\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j+\epsilon) - f(i,j)}{\epsilon}$, so the kernel output $x_{i,j} - x_{i,j+1}$ approximates $-\partial_j f(i,j)$. Let's see how this works in practice.
+Note that this kernel is a special case of a finite difference operator. At location $(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, i.e., it computes the difference between the values of horizontally adjacent pixels. This is a discrete approximation of the first derivative in the horizontal direction (up to a sign). After all, for a function $f(i,j)$ its derivative is
+
+$$\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j+\epsilon) - f(i,j)}{\epsilon},$$
+
+so the kernel output $x_{i,j} - x_{i,j+1}$ approximates $-\partial_j f(i,j)$. Let's see how this works in practice.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-2}
 K = d2l.tensor([[1.0, -1.0]])
@@ -468,9 +473,9 @@ In order to obtain the output of the strict *convolution* operation, we only nee
 
 Since kernels are learned from data in deep learning,
 the outputs of convolutional layers remain unaffected
-no matter such layers
+whether such layers
 perform
-either the strict convolution operations
+the strict convolution operations
 or the cross-correlation operations.
 
 To illustrate this, suppose that a convolutional layer performs *cross-correlation* and learns the kernel in :numref:`fig_correlation`, which is here denoted as the matrix $\mathbf{K}$.
@@ -482,11 +487,10 @@ flipped both horizontally and vertically.
 That is to say,
 when the convolutional layer
 performs strict *convolution*
-for the input in :numref:`fig_correlation`
-and $\mathbf{K}'$,
-the same output in :numref:`fig_correlation`
-(cross-correlation of the input and $\mathbf{K}$)
-will be obtained.
+on the input in :numref:`fig_correlation`
+with $\mathbf{K}'$,
+it produces the same output as in :numref:`fig_correlation`
+(the cross-correlation of the input and $\mathbf{K}$).
 
 In keeping with standard terminology in deep learning literature,
 we will continue to refer to the cross-correlation operation
@@ -565,7 +569,7 @@ is sometimes called a *feature map*,
 as it can be regarded as
 the learned representations (features)
 in the spatial dimensions (e.g., width and height)
-to the subsequent layer.
+that it passes on to the subsequent layer.
 In CNNs,
 for any element $x$ of some layer,
 its *receptive field* refers to

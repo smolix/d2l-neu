@@ -113,9 +113,9 @@ import platform
 import sys
 
 {
-    "python": sys.executable,
+    "python": sys.executable.replace(os.path.expanduser("~"), "~"),
     "version": platform.python_version(),
-    "working_directory": os.getcwd(),
+    "working_directory": os.path.basename(os.getcwd()),
 }
 ```
 

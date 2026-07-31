@@ -55,11 +55,6 @@
       "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "E0720 20:17:16.713029   44902 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
-        },
-        {
-          "type": "stream",
           "name": "stdout",
           "text": "max update difference, k=1 vs k=2: 1.86e-09\n"
         }
@@ -72,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.79, 0.56 sec/epoch on 1 GPU(s)\n"
+          "text": "test acc 0.79, 0.55 sec/epoch on 1 GPU(s)\n"
         }
       ]
     },
@@ -83,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.81, 1.00 sec/epoch on 2 GPU(s)\n"
+          "text": "test acc 0.80, 0.90 sec/epoch on 2 GPU(s)\n"
         }
       ]
     },
@@ -94,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "psum 6.53 GB/s effective over 82.3 ms\n"
+          "text": "psum 2.71 GB/s effective over 198.2 ms\n"
         }
       ]
     }

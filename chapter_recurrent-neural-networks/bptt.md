@@ -1,22 +1,23 @@
 # Backpropagation Through Time
 :label:`sec_bptt`
 
-Gradient clipping, which you met in :numref:`sec_rnn-scratch`, is what keeps
-the occasional enormous gradient from destabilizing RNN training, and we hinted
-there that these blow-ups come from backpropagating across long sequences.
+Gradient clipping keeps the occasional enormous gradient from destabilizing
+RNN training. You met it in :numref:`sec_rnn-scratch`, where we hinted that
+these blow-ups come from backpropagating across long sequences.
 Before turning to the modern architectures of :numref:`chap_modern_rnn`, let us
 look closely at how backpropagation actually works in a sequence model, so that
 *vanishing* and *exploding* gradients become precise phenomena rather than
 slogans.
 
-Forward propagation in an RNN is straightforward: loop over time steps, reusing
-the same parameters at each one. Backpropagation is where the length of the
-sequence bites. Applying backpropagation to an RNN is called *backpropagation
+Forward propagation in an RNN iterates over time while reusing the same
+parameters. Applying backpropagation to this recurrent computation is called
+*backpropagation
 through time* :cite:`Werbos.1990`: we unroll the computational graph one step at
 a time into an ordinary feedforward network, then apply the chain rule,
 remembering that the same parameters reappear at every step, so their gradients
 are summed over all those occurrences (the weight tying is exactly as in a
-convolutional network). The catch is scale. A text sequence can run to thousands
+convolutional network). Long sequences create both computational and numerical
+problems. A text sequence can run to thousands
 of tokens; the input at step 1 then passes through a thousand matrix products
 before it reaches the output, and another thousand to compute the gradient. This
 is costly in memory and, as we will see, numerically treacherous.
@@ -174,12 +175,12 @@ $$
 
 There it is: the gradient that reaches back $k = T-i$ steps is multiplied by the
 $k$-th power $(\mathbf{W}_\textrm{hh}^\top)^{k}$. A matrix power is governed by
-its eigenvalues. Writing $\rho(\mathbf{W}_\textrm{hh})$ for the spectral radius,
-the largest eigenvalue magnitude, the contribution from $k$ steps back scales
-roughly as $\rho^{k}$: eigen-directions with $|\lambda|<1$ shrink geometrically
-and *vanish*, those with $|\lambda|>1$ grow geometrically and *explode*, and only
-$\rho$ exactly at $1$ sits on the knife-edge. The parameter gradients
-$\partial L/\partial\mathbf{W}_\textrm{hx}$ and
+its eigenvalues. Write $\rho(\mathbf{W}_\textrm{hh})$ for the spectral radius,
+the largest eigenvalue magnitude; the contribution from $k$ steps back then
+scales roughly as $\rho^{k}$: eigen-directions with $|\lambda|<1$ shrink
+geometrically and *vanish*, those with $|\lambda|>1$ grow geometrically and
+*explode*, and only $\rho$ exactly at $1$ sits on the knife-edge. The parameter
+gradients $\partial L/\partial\mathbf{W}_\textrm{hx}$ and
 $\partial L/\partial\mathbf{W}_\textrm{hh}$ are just sums of these hidden-state
 gradients weighted by an input or a previous state, so they inherit the same
 fate.
@@ -276,11 +277,12 @@ for itself and regular truncation remains the default.
 The store-versus-recompute trade-off behind truncation reaches far beyond RNNs.
 Backpropagation of any kind must keep intermediate activations around to reuse on
 the backward pass, and for very deep or very long models that storage becomes the
-binding constraint. *Activation checkpointing*, the technique that lets today's
-largest models fit in memory, is the same idea applied to depth rather than time:
-keep only a sparse set of activations on the forward pass and recompute the rest
-on demand during backpropagation, spending extra compute to shrink the memory
-footprint. We will meet it again in the chapters on large-scale model training.
+binding constraint. *Activation checkpointing* applies the same idea to depth
+rather than time: keep only a sparse set of activations on the forward pass and
+recompute the rest on demand during backpropagation, spending extra compute to
+shrink the memory footprint. It is the technique that lets today's largest
+models fit in memory, and we will meet it again in the chapters on large-scale
+model training.
 
 ## Summary
 
@@ -317,7 +319,7 @@ recurrence one step at a time into a feedforward net where the **same** weights
 reappear at every step, then apply the chain rule and **sum** each weight's
 gradient over all its occurrences (weight tying, as in a CNN).
 
-The catch is length: a thousand-token sequence means a thousand matrix products
+Sequence length determines the cost: a thousand-token sequence requires a thousand matrix products
 forward, and another thousand back.
 :::
 
@@ -348,7 +350,7 @@ A matrix power is ruled by its eigenvalues (spectral radius $\rho$):
 - $\rho = 1$: the knife-edge.
 :::
 
-::: {.slide title="Watch it happen"}
+::: {.slide title="Numerical growth and decay"}
 Operator norm $\|\mathbf{J}^k\|$ of the $k$-step Jacobian product for a symmetric
 recurrence rescaled to spectral radius $\rho$ (log scale):
 
@@ -358,7 +360,7 @@ Three straight lines: decay, flat, blow-up. Over 40 steps the signal is
 amplified more than fortyfold or crushed below two percent.
 :::
 
-::: {.slide title="Fix: arithmetic vs. architecture"}
+::: {.slide title="Clipping and architectural changes"}
 - **Explosion** is easy: rescale it. **Gradient clipping** caps the gradient
   norm before each update.
 - **Vanishing** cannot be rescaled away (scaling up noise only gives bigger

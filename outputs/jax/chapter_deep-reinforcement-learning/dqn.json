@@ -1,0 +1,188 @@
+{
+  "schema": 1,
+  "source": "chapter_deep-reinforcement-learning/dqn.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:f2843e654a0d9bf02ae11b968fe888dbafc946264d7d147bab5c6ac2fc876194",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dqn-deep-q-networks-1": {
+      "code_fingerprint": "sha256:9922f314bc4c85fdcd59fdeb13b6600e9ccd123ded9767afce9b92053ffd6d8e",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-deep-q-networks-2": {
+      "code_fingerprint": "sha256:6aa200919b541e577047b0223ce9fe760e6c682069025200dbe3660ea9cd7319",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-deadly-triad": {
+      "code_fingerprint": "sha256:a2a4cb67f7a26f956a953cd5c50d561573ebe995a13a0c868312610d3c4a913c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sup norm of w after 0, 500, 1000 sweeps: 10, 77, 335\nthe value the weights claim for state 7: 677, true value 0\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dqn/dqn-the-deadly-triad-1.svg",
+          "bytes": 23523,
+          "sha256": "sha256:283777f61be73c2ddc5f6d75b586d485958edf60afa208342615159f55703b41"
+        }
+      ]
+    },
+    "dqn-replay-and-the-off-policy-licence": {
+      "code_fingerprint": "sha256:01420063c164fa3c1014171d95e344468216f17ab15762a88d97f35339f3a642",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-target-network-1": {
+      "code_fingerprint": "sha256:321c21e796ca5cd4cf934f2fe22b9ec7fc30518118a411c778f94e0b552ec282",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-target-network-2": {
+      "code_fingerprint": "sha256:127080ff9257939a0bfa8805bfeb3cde81939f29f7f7cb251edbdc4dfecb7f9a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True\n"
+        }
+      ]
+    },
+    "dqn-the-target-network-3": {
+      "code_fingerprint": "sha256:5d1a7033620e7615ec11a90a382a62982f65c9e394e7f9762b0647529f09bbb4",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-ablation-1": {
+      "code_fingerprint": "sha256:d930b92b061c4966187bbe822068905dfb7ab61f137336f5393b163dccc70072",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-ablation-2": {
+      "code_fingerprint": "sha256:764d4b9532150ce456bb0e4161416fdfc6ca71b1e672f1ee70f674c52433105a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dqn/dqn-the-ablation-2-1.svg",
+          "bytes": 35558,
+          "sha256": "sha256:b0f2f337e11906aae55df9dc473bc6f33ffd8efff27079639006e442a54b49db"
+        }
+      ]
+    },
+    "dqn-the-ablation-3": {
+      "code_fingerprint": "sha256:1be98d0a3e73d2dbb473b04440cb3c1b6e3c4b71c3dc6bd59e0ef92c80f965de",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "               DQN: best 20-episode window per seed [256. 104. 233.]\n                    final window [163.  98. 233.] (spread 136)\n                    fifty episodes earlier [162.  94. 157.]\n no target network: best 20-episode window per seed [27. 25. 26.]\n                    final window [ 9. 10. 10.] (spread 0)\n                    fifty episodes earlier [10. 10. 10.]\n"
+        }
+      ]
+    },
+    "dqn-the-ablation-4": {
+      "code_fingerprint": "sha256:a387f69afccea4c0f9f5464c87bc3a34a0eb33061a01f45706ed961de997f847",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "               DQN, seed 0: greedy return over 100 episodes 220\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "               DQN, seed 1: greedy return over 100 episodes 152\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "               DQN, seed 2: greedy return over 100 episodes 500\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " no target network, seed 0: greedy return over 100 episodes 10\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " no target network, seed 1: greedy return over 100 episodes 9\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " no target network, seed 2: greedy return over 100 episodes 9\n"
+        }
+      ]
+    },
+    "dqn-the-ablation-5": {
+      "code_fingerprint": "sha256:ddea7c754c06f03ddec3e42cd108effde711ef0506ef947c8c7077b3316ddc33",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "continuing-task ceiling: 100; the no-target arm ends at 2e+08, 2e+08, 2e+08\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dqn/dqn-the-ablation-5-1.svg",
+          "bytes": 31119,
+          "sha256": "sha256:15e0fb425d4c4a6dc09f5579768910f98d86f638da93c8d17015687fbe994e59"
+        }
+      ]
+    },
+    "dqn-the-max-bias-measured": {
+      "code_fingerprint": "sha256:00aed0deb9e319c05f13afe7bc5771d85a54aa15e0f2a98bd09b196b919f74a5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single estimator, E[max of the estimates]: 1.031\nselect with one, evaluate with the other: -0.006\n"
+        }
+      ]
+    },
+    "dqn-double-dqn-in-three-lines-1": {
+      "code_fingerprint": "sha256:16f1be730e650f392ff226b71e1056c09f874dc5431158e0eb411fff951b745a",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-double-dqn-in-three-lines-2": {
+      "code_fingerprint": "sha256:8be3966557fea70fddaa5e274ac32d72ad848368882f2d26ce851b330b53f0c6",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-double-dqn-in-three-lines-3": {
+      "code_fingerprint": "sha256:d58a78de9f7720d514294ce967d1492105c207cbcc044b532f912e7b4e133d22",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       DQN: final value estimate at s0, per seed: [100.3 157.   94.4]\nDouble DQN: final value estimate at s0, per seed: [ 97.1 109.2  92.7]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dqn/dqn-double-dqn-in-three-lines-3-1.svg",
+          "bytes": 37013,
+          "sha256": "sha256:2eec86c29210e5fe5d794f1fa3d28e82eb7feb2cba586f608e3203892591c63b"
+        }
+      ]
+    }
+  }
+}

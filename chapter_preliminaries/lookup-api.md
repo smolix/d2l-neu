@@ -6,18 +6,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Documentation
 :label:`sec_lookup_api`
 
-No matter how much of a framework's API we cover here,
-there will always be functions, classes, and arguments
-we never reach, and the libraries keep changing under us.
-So rather than try to memorize the API,
-the durable skill is getting good at *looking things up*:
-finding what exists, reading how it works,
-and confirming that it does what you think.
-This short section lays out a small, repeatable loop for exactly that,
-using tools built into Python and your notebook.
+A framework API contains more functions, classes, and arguments than any
+single text can cover, and it changes across releases. Effective use therefore
+depends on being able to find an operation, inspect its interface, read its
+documentation, and verify its behavior with a small example. This section
+demonstrates that procedure using Python and notebook tools.
 
-The official documentation is always the source of truth;
-bookmark the reference and tutorial pages for the framework you use.
+The official reference and tutorial pages document the supported interface for
+each framework.
 
 :begin_tab:`mxnet`
 For MXNet these are the
@@ -49,11 +45,10 @@ For JAX these are the
 [tutorials](https://jax.readthedocs.io/en/latest/tutorials.html).
 :end_tab:
 
-For most day-to-day questions, though, you do not need to leave your
-notebook. Four moves, repeated until the call behaves, cover almost
-everything.
+Many routine questions can be answered without leaving the notebook. The
+procedure has four steps: discover, inspect, read, and verify.
 
-![Four moves, repeated until the call does what you want: **discover** the names that exist, **inspect** a candidate's signature, **read** the docs or source when you need the *why*, and **verify** with a quick run.](../img/lookup-api-discovery-loop.svg)
+![A four-step procedure for using an unfamiliar API: discover available names, inspect a candidate's signature, read its documentation or source, and verify its behavior with a small example.](../img/lookup-api-discovery-loop.svg)
 :label:`fig_lookup_loop`
 
 The examples below start from the standard import:
@@ -61,21 +56,25 @@ The examples below start from the standard import:
 ```{.python .input #lookup-api-documentation}
 %%tab mxnet
 from mxnet import np
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab pytorch
 import torch
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab tensorflow
 import tensorflow as tf
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab jax
 import jax
+from pprint import pprint
 ```
 
 ## Discovering What Exists: `dir`
@@ -87,23 +86,26 @@ For instance, to see what is on offer for random sampling
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
-print([name for name in dir(np.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(np.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab pytorch
-print([name for name in dir(torch.distributions)
-       if not name.startswith('_')][:20])
+pprint([name for name in dir(torch.distributions)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab tensorflow
-print([name for name in dir(tf.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(tf.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module}
 %%tab jax
-print([name for name in dir(jax.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(jax.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 We can usually ignore names that begin and end with `__`
@@ -253,22 +255,22 @@ and rely on the suggestion once it survives both.
 ::: {.cover}
 [Dive into Deep Learning · §2.7]{.kicker}
 
-APIs change; the skill of looking things up doesn't<br>**discover · inspect · read · verify**.
+Using an unfamiliar API<br>**discover · inspect · read · verify**.
 :::
 :::
 
-::: {.slide title="You cannot memorize an API, so loop instead"}
+::: {.slide title="A procedure for consulting an API"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-No book covers a whole framework, and the libraries keep changing under
-us. The durable skill is a four-move loop, run without leaving the
-notebook, repeated until the call does what you want.
+No book covers an entire framework, and libraries change across releases.
+Four steps answer most routine questions from within a notebook: discover
+available names, inspect the interface, read the documentation, and verify the
+behavior with a small example.
 
 ::: {.d2l-note}
-The official docs remain the source of truth: bookmark your
-framework's reference and tutorial pages.
+Use the official reference and tutorial pages for the supported interface.
 :::
 :::
 

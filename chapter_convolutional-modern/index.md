@@ -1,67 +1,44 @@
 # Modern Convnets
 :label:`chap_modern_cnn`
 
-Now that we understand how to wire up convolutional networks, let's tour
-the architectures that made them the dominant tool of computer vision,
-and the practices that keep them competitive today. First, the honest
-picture. Since roughly 2021, vision transformers have led large-scale
-image classification benchmarks, beginning with
-:citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` and the Swin Transformer
-:cite:`liu2021swin`; we cover them in
-:numref:`chap_transformers`. Convnets remain the workhorse
-wherever latency budgets are tight, training data is scarce, or the
-prediction is dense, as in segmentation
-:cite:`Long.Shelhamer.Darrell.2015` and object detection
-:cite:`Redmon.Farhadi.2018`. When trained with modern recipes at matched
-compute, they still match transformers on image classification
-:cite:`smith2023convnets`. This chapter brings you to that state of the
-art as of 2026.
+This chapter studies the architectures and training practices that established
+convolutional networks in computer vision. Since roughly 2021, vision
+transformers have led many large-scale image classification benchmarks,
+beginning with :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` and the Swin
+Transformer :cite:`liu2021swin`; we cover them in
+:numref:`chap_transformers`. Convnets remain important where latency is
+constrained, training data is limited, or the prediction is dense, as in
+segmentation :cite:`Long.Shelhamer.Darrell.2015` and object detection
+:cite:`Redmon.Farhadi.2018`. With modern training procedures and matched
+compute, they can also match transformers on image classification
+:cite:`smith2023convnets`.
 
-The chapter tells the story in two eras. The first is the architecture
-race of 2012--2015, set off when AlexNet
-:cite:`Krizhevsky.Sutskever.Hinton.2012` won the 2012
-[ImageNet competition](https://www.image-net.org/challenges/LSVRC/) by a
-wide margin (:numref:`sec_alexnet`). The years that followed were about
-*organizing* convolutions: repeated blocks in VGG
-:cite:`Simonyan.Zisserman.2014`, $1 \times 1$ channel mixing and global
-pooling in NiN :cite:`Lin.Chen.Yan.2013`, and multi-branch design in
-GoogLeNet :cite:`Szegedy.Liu.Jia.ea.2015`, all covered in
-:numref:`sec_blocks`. Batch normalization :cite:`Ioffe.Szegedy.2015`
-made deep networks train reliably (:numref:`sec_batch_norm`), and
-residual connections :cite:`He.Zhang.Ren.ea.2016` removed the
-optimization barrier to depth (:numref:`sec_resnet`), with ResNeXt
-:cite:`Xie.Girshick.Dollar.ea.2017` and DenseNet
-:cite:`Huang.Liu.Van-Der-Maaten.ea.2017` as the surviving variations.
-The race produced more than vision models: normalization layers and
-residual connections escaped computer vision entirely and now sit
-inside nearly every deep network, transformers included.
+The first group of sections covers the architectural developments of
+2012--2015. AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012` established
+deep convolutional networks on ImageNet (:numref:`sec_alexnet`). VGG, NiN,
+and GoogLeNet then introduced repeated blocks, $1 \times 1$ channel mixing,
+global pooling, and multi-branch design (:numref:`sec_blocks`). Batch
+normalization :cite:`Ioffe.Szegedy.2015` improved optimization
+(:numref:`sec_batch_norm`), while residual connections
+:cite:`He.Zhang.Ren.ea.2016` made substantially deeper networks practical
+(:numref:`sec_resnet`). Normalization and residual connections subsequently
+became standard components outside computer vision, including in transformers.
 
-The second era, from 2016 to today, is one of maturation. Network
-topology stopped changing quickly and progress moved elsewhere.
-Deployment under latency and memory constraints produced a line of designs
-from depthwise-separable MobileNets :cite:`howard2017mobilenet` to structural
-re-parameterization (:numref:`sec_efficient_cnns`). Training recipes improved
-so much that an unmodified ResNet-50 gains
-over four points of ImageNet accuracy from the recipe alone
-:cite:`wightman2021resnet`; :numref:`sec_training_recipes` teaches the
-modern recipe, without which comparisons between architectures mislead.
-Building on that recipe, ConvNeXt :cite:`liu2022convnet` modernized a
-ResNet step by step, using only ideas from this book, into a network
-that matches a vision transformer of equal cost
-(:numref:`sec_convnext`). Finally,
-network design itself became an empirical science: rather than crafting
-a single network, the RegNet methodology
-:cite:`Radosavovic.Kosaraju.Girshick.ea.2020` explores whole *design
-spaces*, and :numref:`sec_cnn-design` uses it to close the chapter with
-the big picture of where convnets and transformers each stand.
+The later sections separate architectural choices from training and deployment
+constraints. Efficient networks use depthwise convolution and structural
+re-parameterization (:numref:`sec_efficient_cnns`). Modern training procedures
+raise the accuracy of an unchanged ResNet-50 by more than four percentage
+points :cite:`wightman2021resnet` (:numref:`sec_training_recipes`). ConvNeXt
+applies these practices in a controlled modernization of ResNet
+:cite:`liu2022convnet` (:numref:`sec_convnext`). Finally, RegNet studies
+distributions over network designs rather than selecting a single architecture
+:cite:`Radosavovic.Kosaraju.Girshick.ea.2020`
+(:numref:`sec_cnn-design`).
 
-We present the architectures in roughly chronological order, partly to
-convey a sense of the history so that you can form your own intuitions
-about where the field is heading, and partly because each design
-responds to a concrete failure of its predecessors. The networks in
-this chapter are the product of intuition, a few mathematical insights,
-and a lot of trial and error; knowing *why* each idea was introduced is
-the best guide to when to reach for it.
+The sections are arranged roughly chronologically because each design responds
+to a limitation of its predecessors. This also makes it possible to distinguish
+improvements due to architecture from those due to optimization, data
+augmentation, and computational budget.
 
 ```toc
 :maxdepth: 2

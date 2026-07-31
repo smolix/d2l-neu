@@ -9,23 +9,23 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "code_fingerprint": "sha256:283d9ccedb48958f0f29cfec58cab177e7aaefac8413322712ffb65b7c4c2a01",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:96eb144b6fcefd579d6f92778184a0480df88abb98ab84c2e173e1865f60e055",
+      "code_fingerprint": "sha256:5820d87326266bbc0a1cc1109a57fd8e2d275ee94fd74e9d0b058f5ed679fe77",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['Algorithm', 'Generator', 'all_candidate_sampler', 'categorical', 'create_rng_state', 'experimental', 'fixed_unigram_candidate_sampler', 'fold_in', 'gamma', 'get_global_generator', 'learned_unigram_candidate_sampler', 'log_uniform_candidate_sampler', 'normal', 'poisson', 'set_global_generator', 'set_seed', 'shuffle', 'split', 'stateless_binomial', 'stateless_categorical']\n"
+          "text": "['Algorithm', 'Generator', 'all_candidate_sampler', 'categorical',\n 'create_rng_state', 'experimental', 'fixed_unigram_candidate_sampler',\n 'fold_in', 'gamma', 'get_global_generator',\n 'learned_unigram_candidate_sampler', 'log_uniform_candidate_sampler', 'normal',\n 'poisson', 'set_global_generator', 'set_seed', 'shuffle', 'split',\n 'stateless_binomial', 'stateless_categorical']\n"
         }
       ]
     },
     "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:7618b5171b5ec1bec1c1e5500df8e9a8381f1c4593302c00355d8dc9c22c5262",
+      "code_fingerprint": "sha256:5e7388f00dae7b934c1cc0efb2f2aad63546a65eb1e4c06a4e5627f131d2f240",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:ba9034d8768707f0108fede7555d05544ec6277327b123772045489d12578964",
+      "code_fingerprint": "sha256:10d66ec6b85748fd06644571449a4f6eb4833e5e945f9fae6d2ff7d559bbac21",
       "kind": "text",
       "outputs": [
         {

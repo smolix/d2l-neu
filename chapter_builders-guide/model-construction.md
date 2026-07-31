@@ -23,11 +23,10 @@ network is a module whose children are blocks whose children are layers. Most
 models therefore have a tree-shaped module hierarchy, as sketched in
 :numref:`fig_blocks`. Reusing one child at several sites turns that tree into
 an object graph, a case we meet when tying parameters in
-:numref:`sec_parameters`. Almost everything
-this chapter does to a model, listing its parameters
+:numref:`sec_parameters`. Almost everything this chapter does to a model is
+implemented as a walk over that tree: listing its parameters
 (:numref:`sec_parameters`), moving it to a GPU (:numref:`sec_use_gpu`),
-saving it to disk (:numref:`sec_read_write`), is implemented as a walk over
-that tree.
+saving it to disk (:numref:`sec_read_write`).
 
 ![Layers compose into blocks and blocks compose into models, giving the usual tree-shaped module hierarchy.](../img/bg-module-tree.svg)
 :label:`fig_blocks`
@@ -747,7 +746,7 @@ one) and their named parts (embedding, final normalization, output head) as
 attributes.
 :end_tab:
 
-## Forward Is Just Python
+## Dynamic Forward Computation
 
 :begin_tab:`pytorch`
 `forward` is an ordinary Python method. Nothing restricts it to chaining

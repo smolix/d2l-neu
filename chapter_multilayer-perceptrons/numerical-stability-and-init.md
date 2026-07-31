@@ -13,7 +13,7 @@ They are not innocuous.
 The initialization scheme interacts with the choice of activation function
 to determine whether gradients flow at a usable scale,
 or instead *vanish* (so learning stalls) or *explode* (so it diverges),
-and hence how fast, or whether, optimization converges at all.
+and hence how fast optimization converges, or whether it converges at all.
 This section makes the failure modes concrete
 and develops the variance-preserving heuristics
 (Xavier and He initialization) that fix them.
@@ -85,8 +85,8 @@ Jacobians that arise when layer widths differ, these are the right notion of
 A per-layer factor of $\rho$ compounds to $\rho^{\,L-l}$ across the product,
 so factors even modestly different from $1$
 make the overall gradient *very large* or *very small* geometrically fast;
-the growth rate of such a product's singular values is developed
-in :numref:`subsec_mdl-spectral-radius`.
+:numref:`subsec_mdl-spectral-radius` develops the growth rate of such a
+product's singular values.
 
 The risks posed by unstable gradients
 go beyond numerical representation.
@@ -286,10 +286,10 @@ libraries and layer types: some scale with fan-in, while others use a fixed
 range. They are conveniences rather than a portable mathematical guarantee.
 For an experiment whose initialization matters, choose a named initializer
 explicitly and record its parameters.
-Defaults often work well for moderately sized networks.
-They become unreliable, however, as depth grows.
-The variance analysis that follows explains both *why* they work
-and *where* they break, and what to reach for instead.
+Defaults often work well for moderately sized networks,
+but they become unreliable as depth grows.
+The variance analysis that follows explains *why* they work,
+*where* they break, and what to reach for instead.
 
 
 
@@ -394,7 +394,7 @@ First, note what the variance computation above actually consumed. With
 independent zero-mean weights, $E[o_i] = 0$, and
 $E[o_i^2] = n_\textrm{in} \sigma^2 E[x_j^2]$ depends on the inputs only
 through their *second moment* $E[x_j^2]$.
-So the quantity we must track through the nonlinearity is the second moment.
+So we must track the second moment through the nonlinearity.
 Recall that $\textrm{ReLU}(z) = \max(0, z)$ zeroes every negative pre-activation
 and passes every positive one through unchanged.
 If the pre-activations are symmetric about zero, as they are when the weights
@@ -619,7 +619,7 @@ Three ideas made deep training routine:
 
 ::: {.d2l-note .rule}
 Get init wrong and the gradient **dies** or **blows up** before
-learning starts. Keep score: ten sigmoid layers tax the gradient to
+learning starts. In the examples below, ten sigmoid layers reduce the gradient to
 $10^{-6}$; a hundred random matrices explode past $10^{24}$; and one
 closing plot shows $10^{80}$ vs $10^{-15}$ vs *flat* (naive, Xavier,
 He).
@@ -705,7 +705,7 @@ A poorly scaled initialization does *exactly this* to the gradient. No optimizer
 :::
 :::
 
-::: {.slide title="The three crashes you will actually see"}
+::: {.slide title="Three observable failure modes"}
 [Unstable Gradients · in practice]{.kicker}
 
 - **Loss is NaN from step 1** $\to$ exploding *initialization* (weights too large).
@@ -802,7 +802,7 @@ Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as named i
 :::
 
 ::: {.slide title="The demonstration: 10⁸⁰ vs 10⁻¹⁵ vs flat" only="pytorch"}
-[Initialization · payoff]{.kicker}
+[Initialization · result]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
@@ -820,7 +820,7 @@ All three regimes in one plot: push a unit-scale signal through **50 ReLU layers
 :::
 
 ::: {.slide title="The demonstration: 10⁸⁰ vs 10⁻¹⁵ vs flat" except="pytorch"}
-[Initialization · payoff]{.kicker}
+[Initialization · result]{.kicker}
 
 All three regimes in one experiment: push a unit-scale signal through **50 ReLU layers** of width 100 and track the second moment $E[(h^{(l)})^2]$ layer by layer, under three weight scales.
 
@@ -835,7 +835,7 @@ assumptions. Run the sweep yourself in the notebook.
 :::
 :::
 
-::: {.slide title="Init is the floor, not the ceiling"}
+::: {.slide title="Initialization is necessary but not sufficient"}
 [Beyond]{.kicker}
 
 Good init buys a deep net that trains without NaNs. To reach **hundreds** of layers, modern architecture re-normalizes *during* training:

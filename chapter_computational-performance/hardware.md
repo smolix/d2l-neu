@@ -1,27 +1,26 @@
 # Hardware
 :label:`sec_hardware`
 
-The previous section handed us a model with two free parameters: a machine
+The previous section introduced a model with two machine parameters: a machine
 delivers $\min(P, I\beta)$ — peak arithmetic $P$ if you feed it enough work
 per byte, bandwidth $\beta$ times intensity if you cannot. This section
 explains where those two numbers come from, why their ratio — the ridge
 point — has climbed over the long run of hardware generations, and what else about
 the machine (latency, capacity, interconnect, energy) a practitioner needs
 in order to reason about performance before running anything. The aim is
-working knowledge, not a computer architecture course: enough to read a
-profiler, size a model, and predict which fix will pay. For the
+enough working knowledge to read a profiler, size a model, and identify an
+appropriate optimization. For the
 complementary question — *what hardware should I buy* — see the buyer's
 guide in :numref:`sec_hardware_buyers`; this section is about why the
 machine behaves the way it does, whatever machine you have. For a proper
 treatment of computer architecture see :cite:`Hennessy.Patterson.2011`.
 
-One warning before the numbers. Hardware numbers decay: the specific
-gigabytes per second below were verified in mid-2026 and will drift; every
-generation roughly doubles something. What does not decay are the *ratios
-and their trends* — memory is orders of magnitude slower than arithmetic,
+The specific hardware values below were verified in mid-2026 and will
+change with new products. More stable are the ratios and trends: memory is
+orders of magnitude slower than arithmetic,
 every chip boundary costs roughly another order of magnitude, and compute
-grows faster than bandwidth, which grows faster than capacity. Learn the
-ladder shapes; look up the rungs when you need them.
+grows faster than bandwidth, which grows faster than capacity. The numerical
+values should therefore be checked for the hardware in use.
 
 ```{.python .input #hardware}
 %%tab pytorch
@@ -41,7 +40,7 @@ import numpy as np
 import time
 ```
 
-## Where Bytes Live
+## The Memory Hierarchy
 :label:`subsec_hw-bytes`
 
 Every byte your program touches lives somewhere in a hierarchy
@@ -218,12 +217,12 @@ up decimal places, which deep learning mostly tolerates, rather than the
 ability to represent a large activation at all. fp16's 5-bit exponent
 trades range for precision, which is why it needs the loss-scaling
 machinery we will meet in :numref:`sec_memory_precision`, and why bf16
-has become the training default. The sub-byte formats — fp8 in two
-flavors (E4M3 for activations and weights, wider-range E5M2 for
-gradients, in the usual recipe rather than by any rule) and fp4 with just
-sixteen representable values — push the same trade to its limit and lean
-on per-block scaling factors to survive
-:cite:`Micikevicius.Stosic.Burgess.ea.2022`.
+has become the training default. The sub-byte formats push the same trade
+to its limit and lean on per-block scaling factors to survive
+:cite:`Micikevicius.Stosic.Burgess.ea.2022`: fp8 comes in two flavors
+(E4M3 for activations and weights, wider-range E5M2 for gradients, in the
+usual recipe rather than by any rule), and fp4 has just sixteen
+representable values.
 Second, **every halving of storage wins twice**: half the bits means
 double the peak FLOP/s (twice the tile fits in the same silicon) *and*
 half the bytes per operand — the format ladder climbs the roofline along
@@ -267,9 +266,9 @@ One more distinction the table hides: *training* hardware must hold
 activations for the backward pass and accumulate gradients robustly
 (bf16 with fp32 accumulation as the floor — :numref:`sec_memory_precision`),
 while *inference* can run forward-only in the smallest format quality
-allows. That asymmetry, plus capacity — note that memory capacity grew
-the *slowest* of the three curves — shapes the memory anatomy we build in
-:numref:`sec_memory_precision`.
+allows. That asymmetry shapes the memory anatomy we build in
+:numref:`sec_memory_precision`, and so does capacity, which grew the
+*slowest* of the three curves.
 
 ## The CPU's Role
 :label:`subsec_hw-cpu`
@@ -278,10 +277,10 @@ The CPU in a deep learning machine is no longer where the FLOPs happen —
 one RTX 4090 out-multiplies a 64-core CPU by two orders of magnitude —
 but three jobs still live or die on it. First, the CPU is the
 *orchestrator*: every kernel the GPU runs was launched by a CPU thread at
-5–15 µs apiece (:numref:`fig_latency_ladder`) — until the
+5–15 µs apiece (:numref:`fig_latency_ladder`), which is exactly the
+Python-must-stay-ahead story of :numref:`sec_perf_model` — until the
 capture-and-replay of :numref:`sec_compilation` takes the CPU out of that
-loop — which is exactly the
-Python-must-stay-ahead story of :numref:`sec_perf_model`. Second, it runs
+loop. Second, it runs
 the *input pipeline*: decoding JPEGs, tokenizing text, augmenting,
 batching — if those fall behind, the GPU starves no matter how fast it
 is (a dataloader-starved profile is the overhead regime with extra
@@ -348,10 +347,10 @@ bandwidth ladder says this is where performance goes to die. Datacenter
 parts attack the problem with dedicated fabrics: NVLink gives each B200
 1.8 TB/s to its peers — memory-class bandwidth, one rung below HBM — and
 an NVL72 rack wires 72 GPUs into a single 130 TB/s domain. Consumer
-parts get PCIe, and — the fact that shapes the rest of this chapter —
-the current GeForce generations (RTX 40 and 50 series) have *peer-to-peer
-transfers disabled* as market segmentation: two RTX 4090s in one box may
-not even talk PCIe-directly to each other. (It was not always so — the
+parts get PCIe, and the current GeForce generations (RTX 40 and 50
+series) have *peer-to-peer transfers disabled* as market segmentation,
+the fact that shapes the rest of this chapter: two RTX 4090s in one box
+may not even talk PCIe-directly to each other. (It was not always so — the
 RTX 3090 still carried an NVLink bridge; its successors dropped it.)
 
 Our build machine makes the consequence concrete
@@ -361,11 +360,11 @@ another is staged through host DRAM — up one PCIe link, through the
 CPU's memory system, down another. Measured end to end
 (:numref:`sec_multi_gpu` does the measuring), a large GPU-to-GPU copy
 sustains roughly twenty GB/s — PCIe-limited, two orders of magnitude
-below an NVL72's ~1.8 TB/s per GPU — and a collective library like NCCL,
-whose ring/tree chunking assumes a peer-to-peer fabric, extracts even less
-(a couple of GB/s of effective bus bandwidth) on this staged path — not
-because the wire slows down for NCCL, but because its P2P-less fallback
-moves bytes with a latency-bound mechanism by default;
+below an NVL72's ~1.8 TB/s per GPU. A collective library like NCCL
+extracts even less on this staged path (a couple of GB/s of effective bus
+bandwidth), because its ring/tree chunking assumes a peer-to-peer fabric
+and its P2P-less fallback moves bytes with a latency-bound mechanism by
+default; the wire itself does not slow down for NCCL.
 :numref:`sec_multi_gpu` diagnoses this and names the one-line
 workaround, which :numref:`sec_multi_gpu_concise` weighs. Either
 way the staging path, not the link count, sets the ceiling, so the rate
@@ -381,10 +380,10 @@ readers' multi-GPU machines look like ours, not like an NVL72; and a slow
 fabric makes the *accounting* of parallel training vivid — on this box,
 communication costs are impossible to ignore, so the cost model of
 :numref:`sec_multi_gpu` predicts real behavior instead of disappearing
-into NVLink headroom. Why datacenter fabrics exist will not need to be
-asserted; we will have measured it.
+into NVLink headroom. We will not have to assert why datacenter fabrics
+exist; we will have measured it.
 
-## Energy: Why Moving Bytes Is the Budget
+## Energy Cost of Data Movement
 :label:`subsec_hw-energy`
 
 There is a final ladder underneath the other two.
@@ -447,10 +446,10 @@ token; on our 1 TB/s card that caps generation near sixty tokens per
 second *regardless of compute*, while the same card's prefill chews
 through the prompt at tensor-core speed. One model, both ends of
 :numref:`fig_roofline` — and the reason batching multiple generation
-streams (which shares each weight read across streams, multiplying
-intensity by the batch size) is the central trick of inference serving.
-The systems that exploit this — batching schedulers, paged caches,
-speculative decoding — belong to the Language Models part; the
+streams is the central trick of inference serving: batching shares each
+weight read across streams, multiplying intensity by the batch size.
+The systems that exploit this belong to the Language Models part —
+batching schedulers, paged caches, speculative decoding — while the
 *economics* fit in the equation above.
 
 Rules of thumb worth carrying out of this section:
@@ -563,7 +562,7 @@ The highlighted rung — 5–15 µs to launch a kernel — is why the
 overhead regime exists.
 :::
 
-::: {.slide title="Measured, Not Asserted"}
+::: {.slide title="Measured Hardware Characteristics"}
 A big elementwise op *is* a bandwidth meter — bytes known,
 arithmetic negligible:
 
@@ -572,7 +571,7 @@ arithmetic negligible:
 Streaming kernels land within tens of percent of spec.
 :::
 
-::: {.slide title="The Shoreline"}
+::: {.slide title="Compute and I/O Scaling"}
 ![](../img/mdl-perf-shoreline.svg){width=80%}
 
 Long run, per generation: compute ~4×, bandwidth ~2×, capacity

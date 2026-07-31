@@ -14,9 +14,8 @@ working them out by hand can be tedious and error-prone,
 and these issues only grow
 as our models become more complex.
 
-Fortunately all modern deep learning frameworks
-take this work off our plates
-by offering *automatic differentiation*
+Modern deep learning frameworks perform this calculation using
+*automatic differentiation*
 (often shortened to *autograd*). 
 As we pass data through each successive function,
 the framework builds a *computational graph* 
@@ -36,8 +35,8 @@ modern backpropagation, was developed
 by :citet:`Linnainmaa.1970`.
 :numref:`sec_mdl-matrix-calculus-autodiff`
 recounts this history in full.
-Before exploring methods, 
-let's first master the autograd package.
+We begin with the basic automatic-differentiation interface and then examine
+how computational graphs are controlled.
 
 ```{.python .input #autograd-automatic-differentiation}
 %%tab mxnet

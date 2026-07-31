@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:65961c9ee3b7937494b9d5b2847283f94326c48b3fbbd078344babac9683412d",
+    "d2l_lib_fingerprint": "sha256:bbc5bb088572f124ba959274ca0ef1f410805ee6906477fccbb19a482f243b5f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 20634,
-          "sha256": "sha256:db5b6ec64b5edf99999515b24cbb9e5c3fd6ff5854ac0c7d37c9bbe902dbaba2"
+          "bytes": 20814,
+          "sha256": "sha256:8da58902a1d30498b0186ad104285d3bf68d5dd2760352ac4f2ccced3241faaa"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 97.5\n"
+          "text": "validation perplexity 94.6\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.38 bits per byte\n"
+          "text": "2.78 bytes/token, 2.36 bits per byte\n"
         }
       ]
     },
@@ -119,83 +119,84 @@
       "outputs": []
     },
     "rnn-implementation-generating-text-2": {
-      "code_fingerprint": "sha256:942f50664b35adc68b6e01f98f836c6283897e74d2387da0a46074d86db8e56e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "'the time traveller pastesture of the faint and purtening, and I was not seem, and I was not seem, and I was the little people were of the Time Traveller, and I was the little people were of the'"
-        }
-      ]
-    },
-    "rnn-implementation-generating-text-3": {
-      "code_fingerprint": "sha256:c78a849f8d4854e96ba992f37a9a3bcf0ba402d783907d22ca4d471da6095cbb",
+      "code_fingerprint": "sha256:3dc36a5eb94b0091e66d4657d4a5f61e4974aeaa5c23b51db825134b674538a1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time traveller ' kns. It was very utentationsly and dis Thisationsausereadies. Then Filby, and hisib dist\nthe time travellerly premipes, and I could not see I had a long'sion had seen in this faster thannesset\n"
+          "text": "\"the time traveller. I had not a line of the Time Traveller. 'I'm\\nthe\n    simple the Time Traveller. I had not a line of the Time Traveller.\n    'I'm\\nthe simple the Time Traveller. I\"\n"
+        }
+      ]
+    },
+    "rnn-implementation-generating-text-3": {
+      "code_fingerprint": "sha256:3753bcb9bde592184a30a270af9a574b98e18cbce7731356681daff8bda4ad09",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the time travellerred phating of the increes of impachin. Filbyare got\n    tooild of my imagine, in itressves\nthe time travellers. The\nman. I had nothing of the bronze of the daylight, and then I had\ndelside\n"
         }
       ]
     },
     "rnn-implementation-concise-implementation-1": {
-      "code_fingerprint": "sha256:25f06ab73aee21b8c1c82a5f9378899ed15f5d172f348ff105f4d7fa66ea5d4a",
+      "code_fingerprint": "sha256:6bd09ddfd33a67be1bed6fd07832bd720b893e915b271630263781e227bb5db2",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-2": {
-      "code_fingerprint": "sha256:bf7ef22a8f0187bddb7477d9f1f9d9113007cfb324d333fd2c267fd3d4ca7178",
+      "code_fingerprint": "sha256:0e3fcfefc15f1b6ee4025ce0dacb58e857a73dd05cd0dc3dd33ee1386ca6a487",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-3": {
-      "code_fingerprint": "sha256:85e80e9c036d1a26cefed153c1ccac3da7cd624028b0830ffea4b73594cfaf30",
+      "code_fingerprint": "sha256:526c37a3d22b0121284a7acc3e120e5e79001940973f7fb087cbfbd47a1be218",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-4": {
-      "code_fingerprint": "sha256:260947129940708f376897cb1184f37bc13b33be1b02337039f27b8de7013f72",
+      "code_fingerprint": "sha256:9083a7a663a9aaf0c387f841bc66ebd12defef3b6e04e22b9748809a6296aa0b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasaceull�ywardspp doatedyC any so beganhingtain�ars\\x08 could'"
+          "text": "'it has kind could� comeher� d\\x0eill might two�ence cle diff awaylfDileead'"
         }
       ]
     },
     "rnn-implementation-concise-implementation-5": {
-      "code_fingerprint": "sha256:75f78a95fcda794f686435ef055dc646eef2f945301ef2c6e94923f373b6ae43",
+      "code_fingerprint": "sha256:cbf2006d14e67ee55e9faad44260cf6459b58e85090a0250e3c2808a83bbce9f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 19516,
-          "sha256": "sha256:bf81955f7f17b566793fd02f469e7eab2217abe57c7c7d6c1e2b0a92d2a74919"
+          "bytes": 18937,
+          "sha256": "sha256:3fe8a866e56ca44cd155e6397212bf834042689d7427108d827f41eeb2926be9"
         }
       ]
     },
     "rnn-implementation-concise-implementation-6": {
-      "code_fingerprint": "sha256:e8ded11f59ad52d66bd136cead408cf3259eec99ef5a6cdb81ee409e8f9218f9",
+      "code_fingerprint": "sha256:331e12e78a1190edc453569c45349f69842a5f84d9d1766e728c5d1501b7c850",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 109.5, \"the time travellerre I\\nwas decay.\\n\\n'In a breathing of the little people were sensible. I was not a\"\n"
+          "text": "perplexity 104.1, \"the time traveller had\\nafter heard the\\nface,\n    and\\ntoolailed to\\nmonze.\\n\\n'I was\"\n"
         }
       ]
     },
     "rnn-implementation-scratch-versus-concise-measured": {
-      "code_fingerprint": "sha256:8199469f1669316ad35ac702702749d7fa59b8ca769ec6c716665016c2d16d97",
+      "code_fingerprint": "sha256:4eef606677951c0bba31c691e824575bde341ca7d8c150ae8de23ea83da5dbb9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      57.4     97.5\n concise      42.1    109.5\n"
+          "text": "   model  time (s)  val ppl\n scratch      56.0     94.6\n concise      41.6    104.1\n"
         }
       ]
     }

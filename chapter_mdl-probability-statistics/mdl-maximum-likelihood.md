@@ -1,22 +1,16 @@
 # Maximum Likelihood
 :label:`sec_mdl-maximum_likelihood`
 
-Many standard machine-learning losses have a probabilistic interpretation. When
-we minimize a classifier's cross-entropy or a regressor's squared error under a
-Gaussian noise model, we are answering one question: *which parameters make the
-observed data most probable?* That is the **maximum likelihood** principle, the idea
-that turns a probabilistic model into a trainable objective. This section
-states the principle and proves the three equivalences that make it
-operational: likelihood becomes a *negative log-likelihood*, the negative
-log-likelihood *is* the cross-entropy to the data, and the Gaussian case *is*
-mean squared error. It then asks how good the resulting estimates are
-(consistency, asymptotic normality, and the Fisher information) and shows how
-putting a prior back in recovers $L_2$ regularization. The section ends where
-modern generative models begin: when latent variables make the likelihood
-intractable, a lower bound (the ELBO) and the EM algorithm make it tractable
-again. We keep the running coin-flip example throughout because it is small
-enough to solve by hand, which lets us check every claim against the answer we
-already know.
+Many standard machine-learning losses arise from probabilistic models.
+Maximizing the probability of the observed data gives the **maximum likelihood**
+principle. Taking logarithms yields a negative log-likelihood; for common models
+this objective becomes cross-entropy or mean squared error. This section derives
+these relationships and then studies consistency, asymptotic normality, and
+Fisher information. Adding a prior gives MAP estimation and, in the Gaussian
+case, $L_2$ regularization. For latent-variable models, the evidence lower bound
+and expectation--maximization replace a likelihood that is difficult to optimize
+directly. A coin-flip example provides a calculation that can be checked in
+closed form.
 
 ```{.python .input #maximum-likelihood-imports}
 #@tab mxnet
@@ -286,13 +280,13 @@ is why every minibatch loss in the book is an *average* of per-example NLLs:
 the gradient of a sum is the sum of gradients, so we can estimate
 $\nabla\ell$ from a random subset of the data.
 
-## Maximum Likelihood Is Minimizing a Loss
+## Maximum Likelihood and Loss Minimization
 
 We now make precise the claim from the introduction. "Minimize the loss" and "do
 maximum likelihood" are the same instruction in different words. The bridge is
 one rescaling.
 
-### NLL Is the Cross-Entropy to the Data
+### Negative Log-Likelihood as Cross-Entropy
 :label:`subsec_mdl-nll-crossentropy`
 
 Dividing the NLL :eqref:`eq_mdl-nll` by the number of examples turns it into an
@@ -325,11 +319,13 @@ so heads enters the average with weight $\hat p_{\textrm{data}}(\textrm{H}) = 9/
 and tails with weight $4/13$. In general,
 
 $$
+\begin{aligned}
 \frac{1}{n}\,\ell(\boldsymbol{\theta})
-  = -\frac{1}{n}\sum_{i=1}^n \log p_{\boldsymbol{\theta}}(x_i)
-  = -\sum_{x} \frac{n_x}{n}\,\log p_{\boldsymbol{\theta}}(x)
-  = -\sum_{x} \hat p_{\textrm{data}}(x)\,\log p_{\boldsymbol{\theta}}(x)
+  &= -\frac{1}{n}\sum_{i=1}^n \log p_{\boldsymbol{\theta}}(x_i)
+  = -\sum_{x} \frac{n_x}{n}\,\log p_{\boldsymbol{\theta}}(x) \\
+  &= -\sum_{x} \hat p_{\textrm{data}}(x)\,\log p_{\boldsymbol{\theta}}(x)
   = \textrm{CE}\!\left(\hat p_{\textrm{data}},\, p_{\boldsymbol{\theta}}\right),
+\end{aligned}
 $$
 
 which is exactly the cross-entropy named in the proposition. Scaling by the
@@ -411,7 +407,7 @@ exactly as in the discrete case. Maximum likelihood thus operates on continuous
 variables by swapping probabilities for densities and nothing more. The most
 important density to swap in is the Gaussian, which we do next.
 
-### Gaussian NLL Is Mean Squared Error
+### Gaussian Negative Log-Likelihood and Mean Squared Error
 :label:`subsec_mdl-gaussian-mse`
 
 The most-used regression loss falls out of the same principle by choosing a
@@ -469,10 +465,10 @@ Gaussian. Picking a loss *is* picking a noise model.
 
 How good is $\hat{\boldsymbol{\theta}}$? The first
 reassurance is the same KL picture. Drawing genuinely i.i.d. data from a true
-distribution $p_{\boldsymbol{\theta}^\star}$, the average NLL is, by the law of
-large numbers (stated and proved in :numref:`sec_mdl-statistics`), an estimate
-of the *expected* cross-entropy
-$\textrm{CE}(p_{\boldsymbol{\theta}^\star}, p_{\boldsymbol{\theta}})$, and the
+distribution $p_{\boldsymbol{\theta}^\star}$, the average NLL estimates the
+*expected* cross-entropy
+$\textrm{CE}(p_{\boldsymbol{\theta}^\star}, p_{\boldsymbol{\theta}})$ by the law
+of large numbers (stated and proved in :numref:`sec_mdl-statistics`), and the
 decomposition $\textrm{CE} = H + D_{\textrm{KL}}$ shows that this population
 objective is minimized exactly at the truth
 $\boldsymbol{\theta}=\boldsymbol{\theta}^\star$, where the KL term vanishes.
@@ -710,7 +706,7 @@ concrete, and it is why the curvature of a loss surface (its Fisher
 information, or empirically its Hessian) tells us how trustworthy a fitted
 parameter is.
 
-## MAP Estimation: Priors as Regularizers
+## MAP Estimation and Regularization
 :label:`subsec_mdl-map`
 
 We dropped the prior $P(\boldsymbol{\theta})$ by declaring it flat.
@@ -731,7 +727,7 @@ The objective is the familiar data-fit term plus a penalty: the negative
 log-prior. A prior concentrated near small parameters penalizes large ones, which
 is precisely what a regularizer does.
 
-### Gaussian Priors Are Weight Decay
+### Gaussian Priors and Weight Decay
 
 **Proposition (Gaussian prior = $L_2$ / weight decay).** *A Gaussian prior
 $\boldsymbol{\theta}\sim\mathcal{N}(\mathbf 0,\tau^2 \mathbf I)$ contributes the
@@ -843,7 +839,7 @@ Bayes (:numref:`sec_mdl-naive_bayes`) leans on exactly this smoothing to keep
 never-observed feature--class pairs from annihilating its products; the
 pseudo-count accounting built here is what justifies it.
 
-### The Posterior Mode Is Not the Posterior
+### Distinguishing the Posterior Mode from the Posterior
 
 One caution before we move on: MAP is *not* the same as "being Bayesian." MAP
 restores the prior but still reports a single point: the *mode* of the posterior
@@ -890,7 +886,7 @@ p(x;\boldsymbol{\theta}) = \sum_{z} p(z;\boldsymbol{\theta})\, p(x\mid z;\boldsy
 $$
 :eqlabel:`eq_mdl-marginal-lik`
 
-### Why Latent Variables Break the Recipe
+### The Difficulty Introduced by Latent Variables
 
 The canonical example is the **Gaussian mixture model** (GMM): the latent
 $z \in \{1,\ldots,K\}$ picks a component with probability
@@ -934,9 +930,9 @@ $$
 
 The right-hand side is the **evidence lower bound** (**ELBO**). The name comes
 from calling the marginal log-likelihood $\log p(x;\boldsymbol{\theta})$ the
-*evidence*: it plays for the latent $z$ exactly the role the denominator $P(X)$
-played for the parameters in Bayes' rule at the start of this section: the
-marginal probability of what we actually observed. Expanding the fraction splits
+*evidence*: for the latent $z$ it plays exactly the role the denominator $P(X)$
+played for the parameters in Bayes' rule at the start of this section, namely
+the marginal probability of what we actually observed. Expanding the fraction splits
 the bound into two readable pieces,
 
 $$
@@ -999,7 +995,11 @@ alternates the two coordinates :cite:`Dempster.Laird.Rubin.1977`:
   This closes every gap, making the bound *tight*:
   $\sum_i \mathcal{L}(q_i^{(t)}, \boldsymbol{\theta}^{(t)}) = \log p(X;\boldsymbol{\theta}^{(t)})$.
 * **M-step.** Hold the guesses fixed and maximize over the parameters:
-  $\boldsymbol{\theta}^{(t+1)} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \sum_i \mathbb{E}_{q_i^{(t)}}\big[\log p(x_i, z; \boldsymbol{\theta})\big]$
+
+  $$
+  \boldsymbol{\theta}^{(t+1)} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \sum_i \mathbb{E}_{q_i^{(t)}}\big[\log p(x_i, z; \boldsymbol{\theta})\big]
+  $$
+
   (the entropy terms do not involve $\boldsymbol{\theta}$). This is the *easy*,
   complete-data objective, with soft assignments standing in for the oracle's
   labels.
@@ -1098,7 +1098,7 @@ And the two divergences in this section are deliberately mirrored:
 :numref:`sec_mdl-divergences-distances` recasts maximum likelihood itself as
 *forward*-KL minimization, while the ELBO gap :eqref:`eq_mdl-elbo-gap` measures
 the guess against the posterior in the *reverse* orientation,
-$D_{\textrm{KL}}(q\,\|\,p)$, a distinction with real modelling consequences,
+$D_{\textrm{KL}}(q\,\|\,p)$. The distinction has real modelling consequences,
 taken up in detail there.
 
 ## Summary

@@ -930,6 +930,15 @@ class BPETokenizer:
     def to_tokens(self, ids):
         return [self.decode([int(i)]) for i in ids]
 
+import textwrap
+
+def print_wrapped(*args, width=76):
+    """Print like `print`, folding each line to the width of a page.
+
+    Defined in :numref:`sec_text-sequence`"""
+    for line in ' '.join(str(a) for a in args).split('\n'):
+        print(textwrap.fill(line, width, subsequent_indent='    '))
+
 class Vocab:
     """Vocabulary for text.
 
@@ -2076,6 +2085,367 @@ def resnet18(num_classes, in_channels=1):
     net.add_module("fc", nn.Sequential(nn.Flatten(),
                                        nn.Linear(512, num_classes)))
     return net
+
+class TabularMDP:
+    """A finite MDP as dense arrays: P[s, a, s'] and r[s, a].
+
+    Defined in :numref:`sec_mdp`"""
+    def __init__(self, P, r, gamma):
+        self.P, self.r, self.gamma = P, r, gamma
+        self.num_states, self.num_actions = r.shape
+
+    @classmethod
+    def from_gym(cls, env, gamma):
+        """Read the transition table Gymnasium exposes as env.unwrapped.P."""
+        n_s, n_a = env.observation_space.n, env.action_space.n
+        P, r = np.zeros((n_s, n_a, n_s)), np.zeros((n_s, n_a))
+        for s, actions in env.unwrapped.P.items():
+            for a, outcomes in actions.items():
+                for p, s_next, reward, _ in outcomes:
+                    P[s, a, s_next] += p      # several outcomes may share s'
+                    r[s, a] += p * reward     # r(s,a) is the expected reward
+        return cls(P, r, gamma)
+
+    def backup(self, V):
+        """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s')."""
+        return self.r + self.gamma * self.P @ V
+
+def value_iteration(mdp, num_iters):
+    """Sweep V <- max_a backup(V); return the whole history of iterates.
+
+    Defined in :numref:`sec_valueiter`"""
+    V, history = np.zeros(mdp.num_states), []
+    for _ in range(num_iters):
+        V = mdp.backup(V).max(axis=1)
+        history.append(V)
+    return np.array(history)
+
+def policy_evaluation(mdp, pi, num_iters):
+    """Same sweep with the max replaced by an average under pi(a|s).
+
+    Defined in :numref:`sec_valueiter`"""
+    V, history = np.zeros(mdp.num_states), []
+    for _ in range(num_iters):
+        V = (pi * mdp.backup(V)).sum(axis=1)
+        history.append(V)
+    return np.array(history)
+
+def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
+    """Mean discounted return of an acting policy over Monte Carlo episodes.
+
+    `policy(obs, rng) -> action` is the protocol every agent in these two
+
+    Defined in :numref:`sec_valueiter`"""
+    total = 0.0
+    for _ in range(num_episodes):
+        obs, done, discount = env.reset()[0], False, 1.0
+        while not done:
+            obs, reward, terminated, truncated, _ = env.step(policy(obs, rng))
+            done = terminated or truncated
+            total, discount = total + discount * reward, discount * gamma
+    return total / num_episodes
+
+class ActorCritic(nn.Module):
+    """A policy and a value function, each with its own optimizer.
+
+    Defined in :numref:`sec_imitation`"""
+    def __init__(self, policy, value, lr=1e-2):
+        super().__init__()
+        self.policy, self.value = policy, value
+        self.opt_pi = torch.optim.Adam(policy.parameters(), lr=lr)
+        self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
+
+    def forward(self, obs):
+        return torch.softmax(self.policy(obs), dim=-1)
+
+    def log_prob(self, obs, act):
+        """log pi(a|s) for a batch of states and the actions taken there."""
+        return torch.log_softmax(self.policy(obs), dim=-1) \
+                    .gather(-1, act[:, None]).squeeze(-1)
+
+    def V(self, obs):
+        return self.value(obs).squeeze(-1)
+
+    @classmethod
+    def tabular(cls, num_states, num_actions, lr=0.1):
+        """One preference theta_{s,a} per state-action pair: an embedding."""
+        policy, value = (nn.Embedding(num_states, num_actions),
+                         nn.Embedding(num_states, 1))
+        nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
+        return cls(policy, value, lr)
+
+    def act(self, obs, rng):
+        """Sample an action; numpy in, int out, the acting protocol of evaluate.
+
+        Defined in :numref:`sec_imitation`"""
+        with torch.no_grad():
+            probs = torch.softmax(self.policy(torch.as_tensor(obs)), -1).numpy()
+        return int(rng.choice(len(probs), p=probs))
+
+    def act_greedy(self, obs, rng=None):
+        with torch.no_grad():
+            return int(self.policy(torch.as_tensor(obs)).argmax())
+
+    def value_np(self, obs):
+        with torch.no_grad():
+            return self.V(torch.as_tensor(obs)).numpy()
+
+    def log_prob_np(self, obs, act):
+        with torch.no_grad():
+            return self.log_prob(torch.as_tensor(obs),
+                                 torch.as_tensor(act)).numpy()
+
+    @classmethod
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
+        """The same container with the tables replaced by one-hidden-layer nets.
+
+        Defined in :numref:`sec_deeprl`"""
+        def net(out):
+            return nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
+                                 nn.Linear(hidden, out))
+        return cls(net(num_actions), net(1), lr)
+
+def policy_step(ac, batch, advantage):
+    """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
+
+    Defined in :numref:`sec_imitation`"""
+    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
+    adv = torch.as_tensor(advantage)
+    loss = -(adv * ac.log_prob(obs, act)).mean()
+    ac.opt_pi.zero_grad()
+    loss.backward()
+    ac.opt_pi.step()
+    return loss.item()
+
+def linear_schedule(start, end, num_steps):
+    """step -> value, interpolated from start to end, then held at end.
+
+    Defined in :numref:`sec_qlearning`"""
+    return lambda step: end + (start - end) * max(0.0, 1.0 - step / num_steps)
+
+def epsilon_greedy(q, epsilon, rng):
+    """Explore with probability epsilon, else act greedily on the values q.
+
+    Defined in :numref:`sec_qlearning`"""
+    if rng.random() < epsilon:
+        return int(rng.integers(len(q)))
+    # Random tie-breaking is load-bearing: np.argmax would always return
+    # action 0 on a zero-initialized table, and an agent that only ever
+    # proposes *left* on this lake never finds the goal.
+    return int(rng.choice(np.flatnonzero(q == q.max())))
+
+class Batch:
+    """A flat batch of transitions, plus the episode boundaries.
+
+    Defined in :numref:`sec_policygradient`"""
+    def __init__(self, obs, act, rew, next_obs, term, ep_ends):
+        self.obs, self.act, self.rew = obs, act, rew
+        self.next_obs, self.term = next_obs, term
+        self.ep_ends = ep_ends    # one past the last step of each episode
+
+    def __len__(self):
+        return len(self.rew)
+
+    def episodes(self):
+        """Yield one slice per episode."""
+        start = 0
+        for end in self.ep_ends:
+            yield slice(start, end)
+            start = end
+
+    def episode_returns(self, gamma=1.0):
+        """R(tau), the discounted return, one number per episode."""
+        return np.array([(gamma ** np.arange(ep.stop - ep.start)
+                          * self.rew[ep]).sum() for ep in self.episodes()])
+
+    def backward_scan(self, x, factor):
+        """y_t = x_t + factor * y_{t+1}, restarted at every episode boundary.
+
+        Defined in :numref:`sec_baselines`"""
+        y = np.zeros_like(x)
+        for ep in self.episodes():
+            running = 0.0
+            for t in reversed(range(ep.start, ep.stop)):
+                running = x[t] + factor * running
+                y[t] = running
+        return y
+
+    def reward_to_go(self, gamma):
+        """G_t: the discounted return of the rest of its episode, by one scan.
+
+        Defined in :numref:`sec_baselines`"""
+        return self.backward_scan(self.rew, gamma)
+
+    def td_target(self, bootstrap, gamma):
+        """r_t + gamma (1 - terminated) V(s'), by a numpy bootstrap.
+
+        Defined in :numref:`sec_actorcritic`"""
+        return self.rew + gamma * (1 - self.term) * bootstrap(self.next_obs)
+
+    def gae(self, value_fn, gamma, lam):
+        """GAE(gamma, lam): the reward-to-go scan, run on the TD errors.
+
+        Defined in :numref:`sec_actorcritic`"""
+        delta = self.td_target(value_fn, gamma) - value_fn(self.obs)
+        return self.backward_scan(delta, gamma * lam)
+
+def rollout(env, policy, num_episodes, rng):
+    """Collect complete episodes from `policy(obs, rng) -> action` as a
+    Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
+
+
+    Defined in :numref:`sec_policygradient`"""
+    cols, ep_ends = [[] for _ in range(5)], []
+    for _ in range(num_episodes):
+        obs, done = env.reset()[0], False
+        while not done:
+            act = policy(obs, rng)
+            next_obs, reward, terminated, truncated, _ = env.step(act)
+            done = terminated or truncated
+            for col, val in zip(cols, (obs, act, reward, next_obs,
+                                       float(terminated))):
+                col.append(val)
+            obs = next_obs
+        ep_ends.append(len(cols[0]))
+    obs, act, rew, next_obs, term = (np.asarray(c) for c in cols)
+    return Batch(obs, act, rew.astype(np.float32), next_obs,
+                 term.astype(np.float32), np.asarray(ep_ends))
+
+def normalize(x, eps=1e-8):
+    """Center a batch of weights and rescale them to unit spread.
+
+    Defined in :numref:`sec_baselines`"""
+    return (x - x.mean()) / (x.std() + eps)
+
+def run_seeds(train, num_seeds, **kwargs):
+    """Run train(seed, **kwargs), a generator of curve points, per seed.
+
+    Defined in :numref:`sec_baselines`"""
+    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+
+def fit_value(ac, obs, target, num_steps=1):
+    """Regress the value head on a fixed target: eq_value_baseline for nets.
+
+    Defined in :numref:`sec_deeprl`"""
+    obs, target = torch.as_tensor(obs), torch.as_tensor(target)
+    for _ in range(num_steps):
+        loss = ((ac.V(obs) - target) ** 2).mean()
+        ac.opt_v.zero_grad()
+        loss.backward()
+        ac.opt_v.step()
+    return loss.item()
+
+class GaussianHead(nn.Module):
+    """Mean network plus a state-independent learned log standard deviation.
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, obs_dim, act_dim, hidden):
+        super().__init__()
+        self.mean = nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
+                                  nn.Linear(hidden, act_dim))
+        self.log_std = nn.Parameter(torch.zeros(act_dim))
+
+    def forward(self, obs):
+        return self.mean(obs), self.log_std.exp()
+
+class GaussianPolicy(d2l.ActorCritic):
+    """The same interface over a Normal instead of a softmax; nothing that
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2):
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden),
+                         nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
+                                       nn.Linear(hidden, 1)), lr)
+
+    def log_prob(self, obs, act):
+        mean, std = self.policy(obs)
+        return torch.distributions.Normal(mean, std).log_prob(act).sum(-1)
+
+    def act(self, obs, rng):
+        with torch.no_grad():
+            mean, std = self.policy(torch.as_tensor(obs))
+        return mean.numpy() + std.numpy() * rng.standard_normal(
+            mean.shape, dtype=np.float32)
+
+    def act_greedy(self, obs, rng=None):
+        with torch.no_grad():
+            return self.policy(torch.as_tensor(obs))[0].numpy()
+
+def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,
+               entropy_coef=0.01, use_clip=True):
+    """num_epochs clipped-surrogate passes on one frozen batch; returns
+    [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
+
+    Defined in :numref:`sec_ppo`"""
+    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
+    adv, logp_old = torch.as_tensor(adv), torch.as_tensor(logp_old)
+    diag = []
+    for _ in range(num_epochs):
+        logp_all = torch.log_softmax(ac.policy(obs), dim=-1)
+        logp = logp_all.gather(-1, act[:, None]).squeeze(-1)
+        rho = torch.exp(logp - logp_old)
+        surr = rho * adv
+        if use_clip:
+            surr = torch.min(surr,
+                             rho.clamp(1 - epsilon, 1 + epsilon) * adv)
+        entropy = -(logp_all.exp() * logp_all).sum(-1).mean()
+        loss = -surr.mean() - entropy_coef * entropy
+        ac.opt_pi.zero_grad()
+        loss.backward()
+        ac.opt_pi.step()
+        diag.append((((rho - 1).abs() > epsilon).float().mean().item(),
+                     (logp_old - logp).mean().item(), entropy.item()))
+    return np.array(diag)
+
+class ReplayBuffer:
+    """A ring of transitions in preallocated numpy; sample() returns a Batch.
+
+    Defined in :numref:`sec_dqn`"""
+    def __init__(self, capacity, obs_dim):
+        self.obs = np.zeros((capacity, obs_dim), np.float32)
+        self.act = np.zeros(capacity, np.int64)
+        self.rew = np.zeros(capacity, np.float32)
+        self.next_obs = np.zeros((capacity, obs_dim), np.float32)
+        self.term = np.zeros(capacity, np.float32)
+        self.capacity, self.size, self.ptr = capacity, 0, 0
+
+    def add(self, obs, act, rew, next_obs, term):
+        i = self.ptr
+        self.obs[i], self.act[i], self.rew[i] = obs, act, rew
+        self.next_obs[i], self.term[i] = next_obs, term
+        self.ptr, self.size = (i + 1) % self.capacity, min(self.size + 1,
+                                                           self.capacity)
+
+    def __len__(self):
+        return self.size
+
+    def sample(self, batch_size, rng):
+        i = rng.integers(self.size, size=batch_size)
+        return d2l.Batch(self.obs[i], self.act[i], self.rew[i],
+                         self.next_obs[i], self.term[i],
+                         np.array([batch_size]))
+
+def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,
+              shape=(16, 4), seed=0):
+    """Q-learning swept over a fixed dataset, with optional pessimism.
+
+    kappa > 0 subtracts kappa/sqrt(n(s, a)) from every value consulted;
+    an untried pair is distrusted entirely, and no pessimistic value
+    drops below zero, the floor this environment guarantees.
+
+    Defined in :numref:`sec_offline`"""
+    Q, counts = np.zeros(shape), np.zeros(shape)
+    np.add.at(counts, (batch.obs, batch.act), 1)
+    penalty = np.where(counts > 0, kappa / np.sqrt(np.maximum(counts, 1)),
+                       np.inf if kappa > 0 else 0.0)
+    rng = np.random.default_rng(seed)
+    for _ in range(num_sweeps):
+        for i in rng.permutation(len(batch)):
+            s, a, s2 = batch.obs[i], batch.act[i], batch.next_obs[i]
+            v2 = np.maximum(Q[s2] - penalty[s2], 0.0).max()
+            Q[s, a] += alpha * (batch.rew[i] + gamma
+                                * (1 - batch.term[i]) * v2 - Q[s, a])
+    return np.maximum(Q - penalty, 0.0)
 
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.
@@ -3859,280 +4229,69 @@ class CTRDataset(torch.utils.data.Dataset):
 
 import io, os, queue, threading, time
 
-def frozen_lake(seed):
-    # See https://www.gymlibrary.dev/environments/toy_text/frozen_lake/ to learn more about this env
-    # How to process env.P.items is adapted from https://sites.google.com/view/deep-rl-bootcamp/labs
-    import gymnasium as gym
-
-    env = gym.make('FrozenLake-v1', is_slippery=False)
-    env.reset(seed=seed)
-    env.action_space.seed(seed)
-    env_info = {}
-    env_info['desc'] = env.unwrapped.desc  # 2D array specifying what each grid item means
-    env_info['num_states'] = env.observation_space.n  # Number of observations/states or obs/state dim
-    env_info['num_actions'] = env.action_space.n  # Number of actions or action dim
-    # Define indices for (transition probability, nextstate, reward, done) tuple
-    env_info['trans_prob_idx'] = 0  # Index of transition probability entry
-    env_info['nextstate_idx'] = 1  # Index of next state entry
-    env_info['reward_idx'] = 2  # Index of reward entry
-    env_info['done_idx'] = 3  # Index of done entry
-    env_info['mdp'] = {}
-    env_info['env'] = env
-
-    for (s, others) in env.unwrapped.P.items():
-        # others(s) = {a0: [ (p(s'|s,a0), s', reward, done),...], a1:[...], ...}
-
-        for (a, pxrds) in others.items():
-            # pxrds is [(p1,next1,r1,d1),(p2,next2,r2,d2),..].
-            # e.g. [(0.3, 0, 0, False), (0.3, 0, 0, False), (0.3, 4, 1, False)]
-            env_info['mdp'][(s,a)] = pxrds
-
-    return env_info
-
-def make_env(name ='', seed=0):
-    # Input parameters:
-    # name: specifies a gym environment.
-    # For Value iteration, only FrozenLake-v1 is supported.
-    if name == 'FrozenLake-v1':
-        return frozen_lake(seed)
-
-    else:
-        raise ValueError(f"{name} env is not supported in this Notebook")
-
-def show_value_function_progress(env_desc, V, pi):
-    # This function visualizes how value and policy changes over time.
-    # V: [num_iters, num_states]
-    # pi: [num_iters, num_states]
-    # How to visualize value function is adapted (but changed) from: https://sites.google.com/view/deep-rl-bootcamp/labs
-
-    num_iters = V.shape[0]
-    fig, ax  = plt.subplots(figsize=(15, 15))
-
-    for k in range(V.shape[0]):
-        plt.subplot(4, 4, k + 1)
-        plt.imshow(V[k].reshape(4,4), cmap="bone")
-        ax = plt.gca()
-        ax.set_xticks(np.arange(0, 5)-.5, minor=True)
-        ax.set_yticks(np.arange(0, 5)-.5, minor=True)
-        ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
-        ax.tick_params(which="minor", bottom=False, left=False)
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-        # LEFT action: 0, DOWN action: 1
-        # RIGHT action: 2, UP action: 3
-        action2dxdy = {0:(-.25, 0),1: (0, .25),
-                       2:(0.25, 0),3: (0, -.25)}
-
-        for y in range(4):
-            for x in range(4):
-                action = pi[k].reshape(4,4)[y, x]
-                dx, dy = action2dxdy[action]
-
-                if env_desc[y,x].decode() == 'H':
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="y",
-                         size=20, fontweight='bold')
-
-                elif env_desc[y,x].decode() == 'G':
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="w",
-                         size=20, fontweight='bold')
-
-                else:
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="g",
-                         size=15, fontweight='bold')
-
-                # No arrow for cells with G and H labels
-                if env_desc[y,x].decode() != 'G' and env_desc[y,x].decode() != 'H':
-                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2, head_length=0.15)
-
-        ax.set_title("Step = "  + str(k + 1), fontsize=20)
-
-    fig.tight_layout()
-    plt.show()
-
-def show_Q_function_progress(env_desc, V_all, pi_all):
-    # This function visualizes how value and policy changes over time.
-    # V: [num_iters, num_states]
-    # pi: [num_iters, num_states]
-
-    # We want to only shows few values
-    num_iters_all = V_all.shape[0]
-    num_iters = num_iters_all // 10
-
-    vis_indx = np.arange(0, num_iters_all, num_iters).tolist()
-    vis_indx.append(num_iters_all - 1)
-    V = np.zeros((len(vis_indx), V_all.shape[1]))
-    pi = np.zeros((len(vis_indx), V_all.shape[1]))
-
-    for c, i in enumerate(vis_indx):
-        V[c]  = V_all[i]
-        pi[c] = pi_all[i]
-
-    num_iters = V.shape[0]
-    fig, ax = plt.subplots(figsize=(15, 15))
-
-    for k in range(V.shape[0]):
-        plt.subplot(4, 4, k + 1)
-        plt.imshow(V[k].reshape(4,4), cmap="bone")
-        ax = plt.gca()
-        ax.set_xticks(np.arange(0, 5)-.5, minor=True)
-        ax.set_yticks(np.arange(0, 5)-.5, minor=True)
-        ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
-        ax.tick_params(which="minor", bottom=False, left=False)
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-        # LEFT action: 0, DOWN action: 1
-        # RIGHT action: 2, UP action: 3
-        action2dxdy = {0:(-.25, 0),1:(0, .25),
-                       2:(0.25, 0),3:(0, -.25)}
-
-        for y in range(4):
-            for x in range(4):
-                action = pi[k].reshape(4,4)[y, x]
-                dx, dy = action2dxdy[action]
-
-                if env_desc[y,x].decode() == 'H':
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="y",
-                         size=20, fontweight='bold')
-
-                elif env_desc[y,x].decode() == 'G':
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="w",
-                         size=20, fontweight='bold')
-
-                else:
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="g",
-                         size=15, fontweight='bold')
-
-                # No arrow for cells with G and H labels
-                if env_desc[y,x].decode() != 'G' and env_desc[y,x].decode() != 'H':
-                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2, head_length=0.15)
-
-        ax.set_title("Step = "  + str(vis_indx[k] + 1), fontsize=20)
-
-    fig.tight_layout()
-    plt.show()
-
-def show_return_curve(episode_returns, window=25):
-    """Plot a moving average of per-episode returns.
+def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
+                ylim=None):
+    """One panel per call. `curves` maps a label to an array of shape
+    [seed, step] (or [step] for a single seed); plots the seed median and
+    a shaded band between the seed min and max. `smooth`, if greater than
+    1, applies a trailing moving average of that many steps before taking
+    the seed statistics. `reference`, if given, draws a dashed horizontal
 
     Defined in :numref:`sec_utils`"""
     set_figsize((6, 4))
-    moving_avg = np.convolve(np.asarray(episode_returns),
-                             np.ones(window) / window, 'valid')
-    plt.plot(np.arange(window, len(episode_returns) + 1), moving_avg)
-    plt.xlabel('episode')
-    plt.ylabel(f'return (moving average over {window} episodes)')
-
-def show_learning_curves(runs, xlabel, ylabel):
-    """Plot mean learning curves with one-standard-deviation seed bands.
-
-    Defined in :numref:`sec_utils`"""
-    set_figsize((6, 4))
-    for name, r in runs.items():
-        mean, std = r.mean(axis=0), r.std(axis=0)
-        x = np.arange(len(mean))
-        plt.plot(x, mean, label=name)
-        plt.fill_between(x, mean - std, mean + std, alpha=0.2)
+    for name, values in curves.items():
+        values = np.atleast_2d(values)
+        if smooth > 1:
+            kernel = np.ones(smooth) / smooth
+            values = np.stack([np.convolve(v, kernel, 'valid')
+                               for v in values])
+        x = np.arange(values.shape[1])
+        line, = plt.plot(x, np.median(values, axis=0), label=name)
+        if values.shape[0] > 1:
+            plt.fill_between(x, values.min(axis=0), values.max(axis=0),
+                             alpha=0.2, color=line.get_color())
+    if reference is not None:
+        plt.axhline(reference, linestyle='--', color='gray')
+    if ylim is not None:
+        plt.ylim(ylim)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.legend()
 
-def compare_agents(agents, num_seeds, final_window=10):
-    """Train each agent across seeds, print the mean return over the
+def show_grid(desc, values, policy, titles=None):
+    """The gridworld: cell colour = `values`, arrow = `policy`. The grid
+    shape is read from `desc` (e.g. `env_info['desc']`), so it is not tied
+    to any one map size. `values` and `policy` may each be a single frame,
+    shape (num_states,), or a sequence of frames, shape
 
     Defined in :numref:`sec_utils`"""
-    runs = {}
-    for name, fn in agents.items():
-        runs[name] = np.stack([fn(seed) for seed in range(num_seeds)])
-        print(f'{name}: mean return over the last {final_window} updates = '
-              f'{runs[name][:, -final_window:].mean():.0f}')
-    show_learning_curves(runs, 'update', 'average return of the batch')
-
-def show_value_bars(bars, ticks, ylabel, reference=None):
-    """Grouped bar chart; `bars` maps a label to one height per tick.
-
-    Defined in :numref:`sec_utils`"""
-    set_figsize((5, 3.5))
-    x = np.arange(len(ticks))
-    width = 0.7 / len(bars)
-    for i, (name, heights) in enumerate(bars.items()):
-        plt.bar(x + (i - (len(bars) - 1) / 2) * width, heights, width,
-                label=name)
-    if reference is not None:
-        plt.axhline(reference, linestyle='--', color='gray')
-    plt.xticks(x, ticks)
-    plt.ylabel(ylabel)
-    plt.legend()
-
-def compare_return_curves(agents, num_seeds, window=20):
-    """Train each agent across seeds, smooth the per-episode returns
-
-    Defined in :numref:`sec_utils`"""
-    runs = {}
-    for name, fn in agents.items():
-        r = np.stack([np.convolve(fn(seed), np.ones(window) / window,
-                                  'valid') for seed in range(num_seeds)])
-        runs[name] = r
-        print(f'{name}: median best {window}-episode average = '
-              f'{np.median(r.max(axis=1)):.0f}, '
-              f'median final {window}-episode average = '
-              f'{np.median(r[:, -1]):.0f}')
-    show_learning_curves(runs, 'episode',
-                         f'return (moving average over {window} episodes)')
-
-def show_clip_ablation(agents, num_seeds, floor=100):
-    """Train each PPO variant across seeds; report seeds that never
-
-    Defined in :numref:`sec_utils`"""
-    runs = {}
-    for name, fn in agents.items():
-        curves, clip_fracs = [], []
-        for seed in range(num_seeds):
-            curve, clip_frac = fn(seed)
-            curves.append(curve)
-            clip_fracs.append(clip_frac)
-        runs[name] = np.stack(curves)
-        dead = [sd for sd, c in enumerate(curves) if c[-10:].mean() < floor]
-        print(f'{name}: seeds that never recover = {dead}')
-        if max(clip_fracs) > 0:
-            print(f'{name}: fraction of samples clipped = '
-                  f'{np.mean(clip_fracs):.3f}')
-    show_learning_curves(runs, 'update', 'average return of the batch')
-
-def compare_success_curves(curves, window=10, threshold=0.9):
-    """Smooth per-update success rates, print the median number of
-
-    Defined in :numref:`sec_utils`"""
-    runs = {}
-    for name, cs in curves.items():
-        smoothed = [np.convolve(c, np.ones(window) / window, 'valid')
-                    for c in cs]
-        runs[name] = np.stack(smoothed)
-        m = [int(np.argmax(sc >= threshold)) if (sc >= threshold).any()
-             else len(c) for sc, c in zip(smoothed, cs)]
-        print(f'{name}: median updates to reach '
-              f'{int(threshold * 100)}% success = {int(np.median(m))}')
-    show_learning_curves(runs, 'update', 'batch success rate')
-
-def show_value_convergence(values, reference=None, xlabel='iteration',
-                           ylabel='value estimate at the start state',
-                           marker='o'):
-    """Plot a per-update scalar with an optional dashed reference line.
-
-    Defined in :numref:`sec_utils`"""
-    set_figsize((6, 4))
-    plt.plot(np.arange(1, len(values) + 1), values, marker=marker)
-    if reference is not None:
-        plt.axhline(reference, linestyle='--', color='gray')
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
+    h, w = desc.shape
+    values = np.atleast_2d(values).reshape(-1, h, w)
+    policy = np.atleast_2d(policy).reshape(-1, h, w)
+    num_frames = values.shape[0]
+    action2offset = {0: (-.25, 0), 1: (0, .25), 2: (.25, 0), 3: (0, -.25)}
+    fig, axes = plt.subplots(1, num_frames, figsize=(3 * num_frames, 3),
+                             squeeze=False)
+    for k, ax in enumerate(axes[0]):
+        ax.imshow(values[k], cmap='bone')
+        ax.set_xticks(np.arange(-.5, w), minor=True)
+        ax.set_yticks(np.arange(-.5, h), minor=True)
+        ax.grid(which='minor', color='w', linewidth=2)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for y in range(h):
+            for x in range(w):
+                cell = desc[y, x].decode()
+                color = {'H': 'y', 'G': 'w'}.get(cell, 'g')
+                ax.text(x, y, cell, ha='center', va='center', color=color,
+                       fontweight='bold')
+                if cell not in ('H', 'G'):
+                    dx, dy = action2offset[int(policy[k, y, x])]
+                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2,
+                            head_length=0.15)
+        if titles is not None:
+            ax.set_title(titles[k])
+    fig.tight_layout()
 
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a PyTorch data iterator.

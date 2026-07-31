@@ -1,39 +1,36 @@
 # Divergences and Distances Between Distributions
 :label:`sec_mdl-divergences-distances`
 
-Strip away the architecture diagrams and every modern generative model is the
-same optimization problem: *make my model's distribution close to the data's*.
-A language model pushes its next-token distribution toward the corpus; a VAE
-pushes an approximate posterior toward the true one; a GAN pushes generated
-images toward real ones; a diffusion model pushes a learned vector field toward
-the data's score. What distinguishes these model families is the **notion of
-"close"**: that choice silently determines the training objective, the
-gradients it produces, and the characteristic ways it fails.
+Many learning problems compare two probability distributions. A language model
+compares next-token distributions with corpus data; a VAE compares an
+approximate posterior with a target posterior; GANs compare generated and real
+samples; and diffusion models compare score fields. The chosen notion of
+discrepancy determines the training objective, its gradients, and its typical
+failure modes.
 
 In :numref:`sec_mdl-information_theory` we built one such notion, the
 Kullback--Leibler divergence, and saw that minimizing it is maximum likelihood.
-This section builds the rest of the map. There are three great families:
+This section develops three broader families:
 *f-divergences*, which average a convex function of the density ratio $p/q$
 (KL, reverse KL, $\chi^2$, Hellinger, Jensen--Shannon); *integral probability
 metrics*, which measure the largest gap in expectation any test function from a
 chosen class can detect (total variation, MMD, Wasserstein-1); and *optimal
 transport* distances, which measure how far probability mass must move. We
-prove the short, structural results that organize the families: Jensen for
+derive the structural results that organize the families: Jensen for
 non-negativity, Fenchel duality for the adversarial (f-GAN) view, Pinsker's
 inequality tying total variation to KL, and Kantorovich--Rubinstein duality
 with the one-dimensional closed form for Wasserstein. We close with the *score*:
 the gradient $\nabla_{\mathbf{x}} \log p(\mathbf{x})$ of the log-density with
-respect to the data, the object on which all of
-:numref:`sec_mdl-score-matching-diffusion-flow` runs. The capstone is a table
-that reads off, for each modern generative objective, which divergence it
-secretly minimizes.
+respect to the data, which is central to
+:numref:`sec_mdl-score-matching-diffusion-flow`. A final table relates common
+generative objectives to their associated divergences.
 
 As in :numref:`sec_mdl-information_theory`, **every logarithmic quantity is in
 nats** (natural logarithms); bits are a fixed $\ln 2$ rescaling. Not every
 divergence carries units, though: KL, reverse KL, and Jensen--Shannon are in
 nats, but total variation, $\chi^2$, and squared Hellinger contain no logarithm
 and are dimensionless, and transport distances carry the units of the sample
-space itself. After the imports, everything below is plain NumPy and SciPy.
+space itself. The numerical examples use NumPy and SciPy.
 
 ```{.python .input #divergences-distances-imports}
 #@tab mxnet
@@ -67,13 +64,13 @@ import numpy as np
 from scipy import integrate, optimize
 ```
 
-## What Is a Divergence? The f-Divergence Family
+## Divergences and the f-Divergence Family
 :label:`sec_mdl-what-is-a-divergence`
 
 ### Axioms, Metrics, and Three Families
 
-What is the weakest useful notion of "how far apart" two distributions are? A
-**divergence** on a space of distributions is a function $D(P, Q) \geq 0$ with
+A **divergence** provides a minimal notion of separation between
+distributions. It is a function $D(P, Q) \geq 0$ with
 
 $$
 D(P, Q) = 0 \quad \textrm{if and only if} \quad P = Q,
@@ -125,7 +122,7 @@ intersections are where the most useful theorems live.
 ### The f-Divergence Template
 :label:`sec_mdl-f-divergences`
 
-Much of this zoo is one definition. Let
+Many common divergences share one definition. Let
 $f : (0, \infty) \to \mathbb{R}$ be convex with $f(1) = 0$, and let $P$ and
 $Q$ have densities (or p.m.f.s) $p$ and $q$ with $p(x) = 0$ wherever
 $q(x) = 0$. The **f-divergence** with *generator* $f$ is
@@ -174,7 +171,7 @@ for every generator at once: taking $f(u) = u \log u$ recovers
 $E_Q[(p/q)\log(p/q)] = E_P[\log(p/q)] = D_{\textrm{KL}}(P\|Q)$ and the proof
 specializes to the one we gave there.
 
-### A Gallery of Generators
+### Common f-Divergence Generators
 
 Each row of the following table is one choice of $f$; the curves are plotted
 in :numref:`fig_mdl-f-div-generators`.
@@ -199,8 +196,8 @@ asymmetry of KL becomes a *choice of generator* rather than a quirk
 $f(u) = \tfrac{1}{2}|u - 1|$ unwinds to
 $\tfrac{1}{2}\sum_x |p(x) - q(x)|$, half the $\ell_1$ distance between the
 probability vectors; we study it in :numref:`sec_mdl-tv-pinsker`. And the
-**Jensen--Shannon divergence** :cite:`Lin.1991`, whose generator looks
-unguessable, is the natural symmetrization of KL: writing
+**Jensen--Shannon divergence** :cite:`Lin.1991` is the natural symmetrization
+of KL, however unguessable its generator looks: writing
 $M = \tfrac{1}{2}(P + Q)$ for the even mixture,
 
 $$
@@ -238,8 +235,8 @@ At $\alpha=\tfrac12$ it gives twice the squared Hellinger divergence under the
 table's convention. The shorter generator
 $(u^\alpha-1)/(\alpha(\alpha-1))$ defines the same divergence for fixed
 $\alpha$—the two differ only by a multiple of $u-1$—but it does **not** have
-the claimed pointwise limits. Closely related, and the form that appears in
-applications, is the **Rényi divergence** :cite:`Renyi.1961`,
+the claimed pointwise limits. Closely related is the **Rényi divergence**
+:cite:`Renyi.1961`, the form that appears in applications,
 
 $$
 D_\alpha(P\|Q) = \frac{1}{\alpha - 1}
@@ -259,7 +256,7 @@ compositions. For the full atlas of the family (limits, orderings, and the
 fact that $D_\alpha$ is nondecreasing in $\alpha$) see
 :citet:`Van-Erven.Harremoes.2014`.
 
-The whole gallery is six lines of code. We evaluate every divergence on the
+We evaluate each divergence on the
 same pair of categorical distributions used in
 :numref:`sec_mdl-information_theory`, $P = (0.6, 0.3, 0.1)$ and
 $Q = (0.2, 0.5, 0.3)$, in both argument orders.
@@ -543,8 +540,8 @@ $\sqrt{3.72} \approx 1.929$, as the proposition demands: a broad Gaussian
 draped across both modes, with substantial mass in the valley between them
 where $P$ has almost none. The reverse fit lands at $\mu = -1.998$,
 $\sigma = 0.603$: it *is* the dominant component, and the minor mode is
-simply dropped. Its divergence, $0.356$ nats, is essentially
-$\log(1/0.7) \approx 0.357$, the divergence incurred by treating the $70\%$
+simply dropped. Its divergence is $0.356$ nats, essentially
+$\log(1/0.7) \approx 0.357$: the divergence incurred by treating the $70\%$
 component as the whole distribution. And reverse KL is genuinely multimodal
 as an objective: restarting the optimizer near the minor mode converges to a
 *second* local optimum at $\mu = +1.995$ with KL
@@ -554,11 +551,11 @@ variational inference eventually meets.
 
 The generative-modeling translation: maximum-likelihood families
 (autoregressive models, normalizing flows) inherit forward KL's
-mass-covering: they rarely miss a mode but can produce blurry,
+mass-covering, so they rarely miss a mode but can produce blurry,
 over-dispersed samples; adversarial and variational objectives built on
 reverse-type divergences produce sharp samples but can silently drop modes.
-The capstone table in :numref:`sec_mdl-divergence-objective-map` files every
-major objective under exactly this dichotomy.
+The table in :numref:`sec_mdl-divergence-objective-map` summarizes how this
+distinction appears in common objectives.
 
 ## Metrics: Total Variation, MMD, and Optimal Transport
 
@@ -615,8 +612,8 @@ operational meaning. Hand a tester one sample, drawn from $P$ or $Q$ with
 equal probability, and ask which distribution produced it: the best possible
 test (guess $P$ exactly on $A^\star$) succeeds with probability
 $\tfrac{1}{2}\big(1 + \textrm{TV}(P, Q)\big)$, an excess of
-$\textrm{TV}/2$ over coin-flipping, which cryptographers double and call the
-*advantage*, so that under their convention the best achievable advantage is
+$\textrm{TV}/2$ over coin-flipping. Cryptographers double that excess and call
+it the *advantage*, so under their convention the best achievable advantage is
 exactly $\textrm{TV}(P, Q)$.
 
 ![Two densities and the region where they disagree. The total variation distance is half the shaded area, and the event that attains the supremum is the set where the first density exceeds the second: betting on P exactly there is the best possible single-sample test.](../img/mdl-it-tv-area.svg)
@@ -649,10 +646,14 @@ at $a = b$ is non-negative everywhere.
 *Step 2: reduction to two outcomes.* Let $A^\star = \{p > q\}$, and set
 $a = P(A^\star)$, $b = Q(A^\star)$, so that
 $\textrm{TV}(P, Q) = a - b$ by the previous proposition. Merging the outcomes
-inside $A^\star$ and inside its complement can only *decrease* KL: by the
-log-sum inequality (for non-negative numbers,
-$\sum_i a_i \log\frac{a_i}{b_i} \geq \big(\sum_i a_i\big) \log \frac{\sum_i a_i}{\sum_i b_i}$,
-itself one application of Jensen to $t \mapsto t\log t$), applied separately
+inside $A^\star$ and inside its complement can only *decrease* KL, by the
+log-sum inequality: for non-negative numbers,
+
+$$
+\sum_i a_i \log\frac{a_i}{b_i} \geq \big(\sum_i a_i\big) \log \frac{\sum_i a_i}{\sum_i b_i},
+$$
+
+itself one application of Jensen to $t \mapsto t\log t$. Applied separately
 to the terms in $A^\star$ and in its complement,
 
 $$
@@ -662,9 +663,9 @@ $$
 
 which rearranges to :eqref:`eq_mdl-pinsker`. $\blacksquare$
 
-The merging step, that coarsening the outcome space cannot increase an
-f-divergence, holds in full generality, and the proof above already contains
-the general argument.
+The merging step holds in full generality: coarsening the outcome space cannot
+increase an f-divergence, and the proof above already contains the general
+argument.
 
 **Remark (data-processing for f-divergences).** *Passing $P$ and $Q$ through
 any channel $K$ (any deterministic or random map from $x$ to $y$, with
@@ -684,9 +685,9 @@ over $y$ with $(qK)(y) > 0$ finishes, since terms with $(qK)(y) = 0$
 contribute nothing. $\blacksquare$
 
 Merging outcomes is the deterministic special case used above, and the
-data-processing inequality for *mutual information*, which
-:numref:`sec_mdl-mutual-information` states and proves, is the same
-principle in its best-known form. Note also what Pinsker does *not* say: it has no useful converse.
+data-processing inequality for *mutual information* is the same principle in
+its best-known form; :numref:`sec_mdl-mutual-information` states and proves
+it. Note also what Pinsker does *not* say: it has no useful converse.
 TV is bounded by $1$ while KL is unbounded, so the bound goes slack for
 distant pairs (two unit-variance Gaussians $50$ apart have
 $\textrm{TV} \approx 1$ but KL $= 1250$ nats), and small TV does *not* imply
@@ -723,10 +724,10 @@ original argument.
 ### Integral Probability Metrics and MMD
 :label:`sec_mdl-ipm-mmd`
 
-Total variation's definition, a supremum of differences over events,
-generalizes wholesale. Replace indicator functions of events by an arbitrary
-class $\mathcal{F}$ of test functions and you get the **integral probability
-metrics** :cite:`Muller.1997`:
+The definition of total variation takes a supremum of differences over
+events, and it generalizes wholesale. Replace indicator functions of events
+by an arbitrary class $\mathcal{F}$ of test functions and you get the
+**integral probability metrics** :cite:`Muller.1997`:
 
 $$
 \textrm{IPM}_{\mathcal{F}}(P, Q)
@@ -774,11 +775,11 @@ $$
 Within-sample similarity under $P$, plus within-sample similarity under $Q$,
 minus twice the across-sample similarity: if the two samples interleave, the
 three terms cancel; if they form separate clumps, the within terms beat the
-across term. Replacing expectations by sample averages, *excluding* the
-diagonal terms $k(x_i, x_i)$ whose inclusion would bias the within-sample
-terms upward, gives the standard unbiased estimator
-:cite:`Gretton.Borgwardt.Rasch.ea.2012`, computable in a few lines with no
-optimization and no densities. For *characteristic* kernels (the
+across term. Replacing expectations by sample averages gives the standard
+unbiased estimator :cite:`Gretton.Borgwardt.Rasch.ea.2012`, computable in a
+few lines with no optimization and no densities; the estimator *excludes* the
+diagonal terms $k(x_i, x_i)$, whose inclusion would bias the within-sample
+terms upward. For *characteristic* kernels (the
 RBF kernel is one) the embedding $P \mapsto \mu_P$ is injective, so MMD is a
 genuine metric: zero only at equality.
 
@@ -804,9 +805,9 @@ Two samples from the same standard Gaussian give
 $\textrm{MMD}^2 \approx 0.0005$ (noise around zero; the unbiased
 estimator is even allowed to go slightly negative), while shifting one
 sample's mean by half a standard deviation produces $\approx 0.059$, two
-orders of magnitude larger and consistent, up to sampling noise at
-$n = 250$, with the population value $\approx 0.047$ that Exercise 8
-derives in closed form. This
+orders of magnitude larger and, up to sampling noise at $n = 250$, consistent
+with the population value $\approx 0.047$ that Exercise 8 derives in closed
+form. This
 sample-only, optimization-free property is why MMD powers kernel two-sample
 tests and adversary-free generative training (MMD-GANs and generative moment
 matching :cite:`Li.Chang.Cheng.ea.2017,Li.Swersky.Zemel.2015`): the "critic" is the whole RKHS ball
@@ -827,8 +828,8 @@ supplies zero gradient. This is the vanishing-gradient pathology of GAN
 training, and it is a property of the divergence, not of the optimizer
 :cite:`Arjovsky.Chintala.Bottou.2017`.
 
-What survives disjoint supports is geometry: $\delta_{0.01}$ is *near*
-$\delta_0$ because mass need only move $0.01$. The **Wasserstein-1
+Geometry still distinguishes distributions with disjoint supports:
+$\delta_{0.01}$ is near $\delta_0$ because mass need only move $0.01$. The **Wasserstein-1
 distance** (earth-mover's distance) makes this precise. A **coupling**
 $\gamma$ of $P$ and $Q$ is a joint distribution over pairs $(x, y)$ with
 marginals $P$ and $Q$ (a transport plan specifying how much mass travels
@@ -864,21 +865,17 @@ $$
 *where the supremum runs over all 1-Lipschitz functions
 ($|f(x) - f(y)| \leq \|x - y\|$ for all $x, y$).*
 
-We will not prove the general statement (see
-:citet:`Peyre.Cuturi.2019` for a proof and for optimal transport at large),
-but here is why it is plausible, in one economic metaphor that goes back to
-Kantorovich. Interpret $f(x)$ as a *price* paid per unit of mass at location
-$x$. A logistics contractor offers: "rather than moving the mass yourself,
-sell it to me at your sources and buy it back at your destinations; I pocket
-$E_P[f] - E_Q[f]$." You would accept any offer where the price gradient is
-nowhere steeper than the transport cost (the 1-Lipschitz
-condition), because then no parcel's price difference exceeds its shipping
-cost, term by term, under any plan you might have used; this gives weak
-duality ($\textrm{sup} \leq \textrm{inf}$, compare
-:numref:`subsec_mdl-lagrangian-duality`). The content of the theorem is that
-the *best* contractor extracts the *entire* transport cost. So $W_1$ is the
-1-Lipschitz IPM: the test class in :eqref:`eq_mdl-ipm-def` becomes the
-functions with slope at most $1$. The **WGAN** :cite:`Arjovsky.Chintala.Bottou.2017`
+We do not prove the general statement; see :citet:`Peyre.Cuturi.2019`. Weak
+duality is immediate. For any 1-Lipschitz $f$ and any coupling $\pi$ of $P$
+and $Q$,
+$f(x)-f(y)\leq \lVert x-y\rVert$. Taking the expectation under $\pi$ gives
+$E_P[f]-E_Q[f]\leq E_\pi[\lVert x-y\rVert]$. The inequality holds for every
+coupling and every admissible $f$, hence the dual supremum cannot exceed the
+primal infimum (compare :numref:`subsec_mdl-lagrangian-duality`).
+Kantorovich--Rubinstein duality states that equality is attainable under the
+usual conditions. Thus $W_1$ is the 1-Lipschitz IPM: the test class in
+:eqref:`eq_mdl-ipm-def` consists of functions with slope at most $1$. The
+**WGAN** :cite:`Arjovsky.Chintala.Bottou.2017`
 trains exactly this dual: a neural critic plays the role of $f$, constrained
 to be (approximately) 1-Lipschitz, by weight clipping originally, then by
 gradient penalties :cite:`Gulrajani.Ahmed.Arjovsky.ea.2017` (penalizing
@@ -1054,7 +1051,7 @@ posterior probability ("responsibility") that $x$ came from it.
 ![The score field of a two-component Gaussian mixture. Arrows show the gradient of the log-density: near each mode the field is a spring pulling toward that mode's mean, and along the valley between modes the responsibilities hand the point off from one attractor to the other. Density contours are underlaid for reference.](../img/mdl-it-score-field.svg)
 :label:`fig_mdl-score-field`
 
-The property that earns the score its central role is one line long. Suppose
+The score is useful because it does not depend on a normalizing constant. Suppose
 we can only write the density up to a constant,
 $p(\mathbf{x}) = \tilde{p}(\mathbf{x}) / Z$ with
 $Z = \int \tilde{p}$ intractable, the universal situation for energy-based
@@ -1126,8 +1123,8 @@ closed form $0.5$ to six decimals.
 
 One apparent obstacle remains: :eqref:`eq_mdl-fisher-div-def` is an
 expectation involving $\nabla \log p$ of the *data* distribution, which we do
-not know either. The resolution, Hyvärinen's **score matching** identity
-:cite:`Hyvarinen.2005`, is an integration by parts showing that, up to a
+not know either. The resolution is Hyvärinen's **score matching** identity
+:cite:`Hyvarinen.2005`, an integration by parts showing that, up to a
 constant independent of the model,
 
 $$
@@ -1284,8 +1281,8 @@ score.
 ### The Divergence-to-Objective Map
 :label:`sec_mdl-divergence-objective-map`
 
-We can now deliver the payoff promised at the start: a single table that
-reads the modern generative objectives as choices of divergence. Each
+The following table relates modern generative objectives to choices of
+divergence. Each
 row names a training objective, the divergence its loss minimizes (often
 implicitly), where this section treats it, and the behavior the divergence
 makes inevitable.
@@ -1315,11 +1312,10 @@ compares score fields, the normalizer cancels, and the training loss becomes
 a regression onto $\nabla_{\mathbf{x}} \log p$, which is where
 :numref:`sec_mdl-score-matching-diffusion-flow` picks up the story.
 
-The thesis of the table, and of this section: **choose your divergence,
-inherit its failure modes.** Mode-dropping, blurriness, vanishing gradients,
-and training instability are theorems about the objective, visible in the
-geometry of $f$, the direction of the KL, the boundedness of JS, or the
-function class of the IPM, before a single parameter is trained.
+The choice of divergence imposes characteristic behavior. Mode dropping,
+over-dispersion, and vanishing gradients can often be traced to the geometry of
+$f$, the direction of KL, the boundedness of JS, or the function class of an
+IPM before optimization begins.
 
 ## Summary
 
@@ -1480,7 +1476,7 @@ the failure modes. Three families:
 :::
 :::
 
-::: {.slide title="One template, one proof"}
+::: {.slide title="The f-divergence template"}
 [The f-divergence]{.kicker}
 
 $D_f(P\|Q) = \mathbb{E}_{x\sim Q}\bigl[f(p/q)\bigr]$ for convex $f$ with
@@ -1726,7 +1722,7 @@ SVGD.
 :::
 
 ::: {.slide title="One map for every objective"}
-[The capstone]{.kicker}
+[Objective comparison]{.kicker}
 
 ::: {.d2l-note .rule}
 MLE/flows → forward KL · VAE → reverse KL · GAN → JS · f-GAN → any $f$ · WGAN

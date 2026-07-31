@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "source": "chapter_deep-reinforcement-learning/ppo.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:2f066454120d7a35fbb9688bd30dd070a4909e1757fe767af454809d10d03034",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ppo-trust-regions-and-proximal-policy-optimization-1": {
+      "code_fingerprint": "sha256:d0a170753958e2f8da4ba2a8c91de3d7fa96562ca6122c9ae0b83bbf4d6d6770",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-implementation-1": {
+      "code_fingerprint": "sha256:5de023e3c6bba4cc16c5ae9f84a5eb9fd2ae823c34c5aade230c81a8ee97ac5f",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-implementation-2": {
+      "code_fingerprint": "sha256:3843057d89dcc76d20e8d18dbd51a924b73bcce4e5669775c76bae56e7a8d7f4",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-implementation-3": {
+      "code_fingerprint": "sha256:1ecb230e309a1c9d26a9a2c63055d6c70cadac1a6e094effe6d8df6708d25b21",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-implementation-4": {
+      "code_fingerprint": "sha256:f26292f323e9044566088fb7b35bf16361f8630933a61746c083d020e09f6c2e",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-implementation-5": {
+      "code_fingerprint": "sha256:2b7f6ec18697dae885caa2240fa0b1cfc2132f2281e275d47823fcdb6d474487",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-ablation-1": {
+      "code_fingerprint": "sha256:2eefdb6bdd255f7e31fb5c5a7cc28992c1141620e1c552e84320588c4d50c455",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-ablation-2": {
+      "code_fingerprint": "sha256:04859a851df6ef858a3f90e6101592c998eb39cf13fd25d7cc93aa9be0687350",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-ablation-3": {
+      "code_fingerprint": "sha256:dbc2cddeb52d19a915834d009cd5a532a45e7de0e5150750b7ac4e522b0d6c67",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clipped (PPO): 0 of 8 seeds end dead; casualties []\n      no clip: 4 of 8 seeds end dead; casualties [0, 3, 4, 6]\n"
+        }
+      ]
+    },
+    "ppo-the-ablation-4": {
+      "code_fingerprint": "sha256:855fc72cf1adaf09f180f415250e220df943742bf66633db1da12a5b8293a9b8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ppo/ppo-the-ablation-4-1.svg",
+          "bytes": 35047,
+          "sha256": "sha256:cf01b84db450feb17ea27049bd649293017a3e165c14b85eaba80f06f6974c13"
+        }
+      ]
+    },
+    "ppo-the-ablation-5": {
+      "code_fingerprint": "sha256:46d5493f98d558120e3527ee6364344a7afa0f3594bf7f0aac84fa4235f4bb2f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clipped (PPO): ratio checks outside the band: 5.3% across all epochs\n               5.5% at the last epoch of each batch\n      no clip: ratio checks outside the band: 21.6% across all epochs\n               30.0% at the last epoch of each batch\n"
+        }
+      ]
+    },
+    "ppo-how-to-know-your-rl-is-broken-1": {
+      "code_fingerprint": "sha256:37c0af3c4e34c9e0d2b9ef2b9ac4af2e4bbd996343bf059eee43084aca8e2f61",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "entropy: 0.64 over the first five updates, 0.26 over the last five\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
+          "bytes": 36177,
+          "sha256": "sha256:8123cad3635a822bcea38805cb9664f60d318bb2a6024a0c6450e7ae7e5198a4"
+        }
+      ]
+    },
+    "ppo-how-to-know-your-rl-is-broken-2": {
+      "code_fingerprint": "sha256:732fa989a237e70707e28b4dfb0949ea4d21fcf9705b91edfef8c77d910f9028",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-how-to-know-your-rl-is-broken-3": {
+      "code_fingerprint": "sha256:e1f94ac5b5487c42c112a244a2b8fb1ff2483d18592717ce78bfec9e27ffce0c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
+          "bytes": 50404,
+          "sha256": "sha256:ef3f4a77399524b912b5822ba5daef34f746c702a57907af76e45c1644337ea5"
+        }
+      ]
+    },
+    "ppo-how-to-know-your-rl-is-broken-4": {
+      "code_fingerprint": "sha256:04caaf756560b3e65660a2d8a7c1b550abac1b47c34dda57ff7f99e96e1c1f57",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "after 20 epochs the batch is worth 95% (clipped (PPO)) vs 42% (no clip) of its 136 steps\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
+          "bytes": 31588,
+          "sha256": "sha256:f60cf122993857e33d451a9cf0f5bd7faf0f3fcba829d1c8efeb214d260113fe"
+        }
+      ]
+    },
+    "ppo-how-to-know-your-rl-is-broken-5": {
+      "code_fingerprint": "sha256:afa750e7aeca68a7366bae6f96c1c8c83934e7561a405feb590dc0358d417c22",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "greedy mean return over 100 episodes: 500\n"
+        }
+      ]
+    },
+    "ppo-from-a-teaching-loop-to-a-real-one-1": {
+      "code_fingerprint": "sha256:6896dc18d328f3223549c1d4d25bee4d7ba17d97cda891d9be81c85e965f63b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "a fixed (32, 8) rectangle of steps, 0 episode boundaries inside it\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "V at the cut, pricing the unrecorded future: [100. 100. 100. 100. 100. 100. 100. 100.]\n"
+        }
+      ]
+    },
+    "ppo-from-a-teaching-loop-to-a-real-one-2": {
+      "code_fingerprint": "sha256:9c4f5cf0b921985aae29e25b820ff191b2d347b0da255ea73cfa8683e34d5817",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "386 steps spent as 20 full-batch passes or as 52 minibatch steps:\n   full batch: approximate KL from the collecting policy 0.008\n  minibatches: approximate KL from the collecting policy 0.022\n"
+        }
+      ]
+    }
+  }
+}

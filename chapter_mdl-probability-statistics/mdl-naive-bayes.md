@@ -1,7 +1,12 @@
 # Naive Bayes
 :label:`sec_mdl-naive_bayes`
 
-The maximum-likelihood principle of :numref:`sec_mdl-maximum_likelihood` tells us how to *fit* a probabilistic model, and the statistics of :numref:`sec_mdl-statistics` tell us how to *judge* one; here both go to work on a classifier. The **naive Bayes** classifier is among the simplest models that deserve the name "learning": it estimates a probability model by counting, predicts with Bayes' rule, and survives the curse of dimensionality through one visibly wrong assumption. We build it end to end, run it on handwritten digits, and then examine the result with the tools this chapter built: a bootstrap error bar on its accuracy, a look at which digits it actually confuses, and a measurement of how far its confidence can be trusted.
+The **naive Bayes** classifier estimates a probabilistic model from counts and
+predicts with Bayes' rule. Its conditional-independence assumption reduces a
+high-dimensional density estimate to separate estimates for each feature. This
+section derives the classifier, applies it to handwritten digits, and evaluates
+its errors and calibration. A bootstrap interval quantifies uncertainty in its
+accuracy.
 
 ```{.python .input #naive-bayes-imports}
 #@tab mxnet
@@ -56,7 +61,7 @@ $$\hat{y} = \mathop{\mathrm{argmax}}_y \, p(y\mid\mathbf{x}) = \mathop{\mathrm{a
 
 The denominator $p(\mathbf{x})$ is the same for every $y$, so it cannot change which label wins the $\mathrm{argmax}$ and we drop it; in shorthand, $p(y\mid\mathbf{x}) \propto p(\mathbf{x}\mid y)\,p(y)$. (Should we ever want the actual posterior probabilities, normalizing the numerators so they sum to one recovers $p(\mathbf{x})$ for free.)
 
-This is the defining choice of a **generative** classifier: rather than modelling the label given the data, it models how the *data are generated* within each class, $p(\mathbf{x}\mid y)$, together with how often each class occurs, $p(y)$, and lets Bayes' rule turn that into a decision. It is the opposite of the **discriminative** route taken by logistic regression and the softmax classifier of :numref:`sec_softmax`, which fit the posterior $p(y\mid\mathbf{x})$ directly, without requiring a model for the marginal input distribution. The two form the classic generative--discriminative pair. In particular
+This is the defining choice of a **generative** classifier: rather than modelling the label given the data, it models how the *data are generated* within each class, $p(\mathbf{x}\mid y)$, together with how often each class occurs, $p(y)$, and lets Bayes' rule turn that into a decision. It is the opposite of the **discriminative** route taken by logistic regression and the softmax classifier of :numref:`sec_softmax`, which fit the posterior $p(y\mid\mathbf{x})$ directly, without requiring a model for the marginal input distribution. The two form the classic generative--discriminative pair. In certain
 well-specified comparisons, including the models analyzed by
 :citet:`Ng.Jordan.2002`, a generative model can approach its asymptotic error
 with fewer examples while a discriminative model reaches a lower asymptotic
@@ -102,7 +107,7 @@ Substituting the factorized class-conditional :eqref:`eq_mdl-naive_assumption` i
 $$\hat{y} = \mathop{\mathrm{argmax}}_y \; p(y) \prod_{i=1}^d p(x_i\mid y).$$
 :eqlabel:`eq_mdl-naive_bayes`
 
-### Doing It in Log Space
+### Computation in Log Space
 
 Equation :eqref:`eq_mdl-naive_bayes` multiplies $d$ probabilities, each in $[0,1]$. For $d=784$ the product is vanishingly small: on the MNIST model below, single precision underflows $99.1\%$ of all class scores to an exact zero (the prediction cell measures this directly), leaving the $\mathrm{argmax}$ to break ties among zeros; even in double precision the surviving products run from about $10^{-26}$ down to $10^{-323}$, the very bottom of the representable range charted in :numref:`sec_mdl-numerical-stability-conditioning`. This is the practical face of the numerical issue we met in :numref:`sec_mdl-maximum_likelihood`, and the fix is the same: the $\mathrm{argmax}$ is unchanged by the increasing map $\log$, and $\log$ turns the product into a sum. Applied to :eqref:`eq_mdl-naive_bayes` this gives the log-space form
 
@@ -117,7 +122,7 @@ $$\log p(y) + \sum_{i=1}^d \Bigl[ x_i \log p(x_i{=}1\mid y) + (1-x_i)\log p(x_i{
 
 which is **affine in $\mathbf{x}$**, a constant plus a weighted sum of the pixels :cite:`Bishop.2006`. Each class score is therefore $\mathbf{w}_y\cdot\mathbf{x} + b_y$, and the boundary between any two classes, where their scores tie, is a hyperplane. So naive Bayes is a *linear* classifier: it carves the input space with the same decision planes as the softmax classifier of :numref:`sec_softmax` (and the mean-difference rule of :numref:`sec_mdl-geometry-linear-algebraic-ops`); the two models differ only in how they *set* those planes: by counting class-conditional frequencies here, by gradient descent on the posterior there.
 
-## Training Is Counting
+## Parameter Estimation from Counts
 
 Naive Bayes needs two ingredients: the class prior $p(y)$ and, for each class, the per-feature likelihoods $p(x_i\mid y)$. Both are estimated by **maximum likelihood**, and for the categorical and Bernoulli models here the MLE is just an empirical frequency: *training is counting*.
 
@@ -216,9 +221,12 @@ print(f'float32 underflow: {(np.exp(s.astype(np.float32)) == 0).mean():.1%}'
 float((predict(X_test) == Y_test).mean())              # Test accuracy
 ```
 
-Naive Bayes lands around $84\%$ accuracy, far above the $10\%$ of random guessing, from a model that is nothing but ten averaged templates and a counting pass over the data. Modern networks reach error rates below $1\%$, and the gap traces back to the naive assumption: pixels in a real digit are *not* independent given the class, and pretending otherwise ignores everything their joint behavior could reveal. Naive Bayes shows how far a simple probabilistic idea and a single counting pass can take you, and exactly where a wrong independence assumption stops you.
+Naive Bayes reaches about $84\%$ accuracy, compared with $10\%$ for random
+guessing. Its ten averaged templates cannot represent dependence among pixels,
+which limits performance on images. Modern neural classifiers model these
+dependencies and obtain substantially lower error rates.
 
-Images are in fact the *hard* case for the naive assumption, because adjacent pixels are so tightly coupled. Its canonical home is the opposite regime: **bag-of-words text classification**, where each feature records whether a given word appears in a document (the *Bernoulli* event model; the *multinomial* variant counts occurrences instead) :cite:`Manning.Raghavan.Schutze.2008`. There the independence story, while still not literally true, is far closer to holding: the presence of any one word out of a vocabulary of tens of thousands says comparatively little about the presence of most others, where neighboring pixels almost always agree. The same counting-and-argmax recipe therefore makes naive Bayes a strong, famously cheap baseline for topic labelling and spam filtering, which it dominated for decades :cite:`Sahami.Dumais.Heckerman.ea.1998`.
+Images are in fact the *hard* case for the naive assumption, because adjacent pixels are so tightly coupled. Its canonical home is the opposite regime: **bag-of-words text classification**, where each feature records whether a given word appears in a document (the *Bernoulli* event model; the *multinomial* variant counts occurrences instead) :cite:`Manning.Raghavan.Schutze.2008`. There the independence story comes far closer to holding, though it is still not literally true: the presence of any one word out of a vocabulary of tens of thousands says comparatively little about the presence of most others, whereas neighboring pixels almost always agree. The same counting-and-argmax recipe therefore makes naive Bayes a strong, famously cheap baseline for topic labelling and spam filtering, which it dominated for decades :cite:`Sahami.Dumais.Heckerman.ea.1998`.
 
 ### Calibration
 
@@ -236,7 +244,7 @@ print(f'test accuracy = {correct.mean():.4f}, '
       f'bootstrap 95% CI = ({lo:.4f}, {hi:.4f})')
 ```
 
-The error bar spans about $\pm0.7$ accuracy points: the "$84.27\%$" is really "$84.3\%\pm0.7$", and the third decimal is noise. One caution about comparisons: this interval quantifies the uncertainty in *our model's* accuracy, not the gap to a competitor. Deciding whether another model on the same test set is genuinely better calls for a *paired* comparison (bootstrap the accuracy *difference* example by example, or use McNemar's test); because the two models' errors are correlated, a competitor whose accuracy falls inside our interval can still be significantly better. Second, the mistakes. Tallying predictions against truth in a *confusion matrix*, with one row per true digit and one column per predicted digit, turns the flat error rate into structure.
+The error bar spans about $\pm0.7$ accuracy points: the "$84.27\%$" is really "$84.3\%\pm0.7$", and the third decimal is noise. One caution about comparisons: this interval quantifies the uncertainty in *our model's* accuracy, not the gap to a competitor. Deciding whether another model on the same test set is genuinely better calls for a *paired* comparison (bootstrap the accuracy *difference* example by example, or use McNemar's test); because the two models' errors are correlated, a competitor whose accuracy falls inside our interval can still be significantly better. Second, the mistakes. A *confusion matrix* tallies predictions against truth, one row per true digit and one column per predicted digit, and turns the flat error rate into structure.
 
 ```{.python .input #mdl-naive-bayes-calibration-2}
 conf = np.zeros((10, 10), dtype=int)

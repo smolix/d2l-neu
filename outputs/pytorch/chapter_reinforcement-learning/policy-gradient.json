@@ -4,43 +4,112 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:81e84fb4a26b3b8f5e5010f9d1ce3e728f97f097fb6ce7f4b3c32698f8432c29",
+    "d2l_lib_fingerprint": "sha256:22a123fb6e7ae83a3a836e0126f24feedc05d65b14521b7e3b3792b28e52f48b",
     "max_inline_bytes": 0
   },
   "cells": {
-    "policy-gradient-implementation-of-policy-gradient-1": {
-      "code_fingerprint": "sha256:6f5b31ea7af0010dbcdb8bfbaede982f8f21860718df617996847274ad51637d",
+    "policy-gradient-policy-gradient": {
+      "code_fingerprint": "sha256:f9b5df47de6de16848dc63126b26ba183f78ebd40ae34290d3d03bad4878848a",
       "kind": "text",
       "outputs": []
     },
-    "policy-gradient-implementation-of-policy-gradient-2": {
-      "code_fingerprint": "sha256:8163c1f718a7f7ae2da00fcb61d4b480390d86db8a717e5c4e548a9a31cce485",
+    "policy-gradient-parameterizing-the-policy": {
+      "code_fingerprint": "sha256:26a6b9cf5cf320ffa7ce573af84803a40cf3ae4108189629782adf547e2dace8",
       "kind": "text",
       "outputs": []
     },
-    "policy-gradient-implementation-of-policy-gradient-3": {
-      "code_fingerprint": "sha256:75c0ca76e1662f44d9b30412d3d2716e292188152e304b911ee7869f629350f8",
-      "kind": "asset",
+    "policy-gradient-the-score-function": {
+      "code_fingerprint": "sha256:3be343491af16d103735c088d9be5cdd5c2f6d9f5839111165d6441ca2b67b14",
+      "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/png",
-          "asset": "policy-gradient/policy-gradient-implementation-of-policy-gradient-3-1.png",
-          "bytes": 96922,
-          "sha256": "sha256:6386d171ae336cefa6d480e8a0c6ac8f5ddede21f15db7dc7e65c6f07e05042c"
+          "type": "stream",
+          "name": "stdout",
+          "text": "True\n"
         }
       ]
     },
-    "policy-gradient-implementation-of-policy-gradient-4": {
-      "code_fingerprint": "sha256:b4a70b740a3275df1f3f8afaa34d6c12cec65b47e332a90923d31de363cfc985",
+    "policy-gradient-an-optimization-problem-over-trajectories-1": {
+      "code_fingerprint": "sha256:4226cc1b819d830e1e221e80fd9d7e34105bdd043a931b951c7c7a14f0e6ed7d",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-an-optimization-problem-over-trajectories-2": {
+      "code_fingerprint": "sha256:cecb0b0a3e2bc18d6999ca141ca88d507765e183a6ab46494609ab55f2365476",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-the-reinforce-estimator-1": {
+      "code_fingerprint": "sha256:26ef840e74ca264c81700da9da61dd90de8cf2940271c0995a15957e396e7937",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-the-reinforce-estimator-2": {
+      "code_fingerprint": "sha256:7eb1d87e4de5511dcf3f658876a7ac03f4525828290bd13ed6d2598f9abc003f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "policy-gradient/policy-gradient-implementation-of-policy-gradient-4-1.svg",
-          "bytes": 30317,
-          "sha256": "sha256:90de674c3a00107af21b72f1f16413cf955366a3362f824430054e64c008a369"
+          "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
+          "bytes": 46412,
+          "sha256": "sha256:a2717f5a66973a5d677fa0b223664355ede4e4b3a3b06f691bb29fde0ea1414b"
+        }
+      ]
+    },
+    "policy-gradient-the-reinforce-estimator-3": {
+      "code_fingerprint": "sha256:c0538c1e8915951dacfc40af30507eafebc506da7245ed33810e62abb7a98220",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
+          "bytes": 15266,
+          "sha256": "sha256:0fdc06b4e32c80b329c380e94a7dd7203883f21a5bc8ea563d7f6a892c4b4ad3"
+        }
+      ]
+    },
+    "policy-gradient-on-policy-fresh-data-after-every-update": {
+      "code_fingerprint": "sha256:b32f85e7f462054e630ab165eff47c91bc30168c320f4174d052ef5b61d8e594",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "update at which the batch mean first reaches 0.7: [24 27 30]\nenvironment steps spent by that update:  [3210 3789 4287]\nenvironment steps spent by the full run: [26058 26582 27472]\n"
+        }
+      ]
+    },
+    "policy-gradient-unbiased-and-how-noisy-1": {
+      "code_fingerprint": "sha256:26f53525ea468d14f089064a4a64470080157c871a0ad3c9cd5f0077993c718d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "J(theta) after 16 updates = 0.313, against the ceiling gamma^5 = 0.774\n"
+        }
+      ]
+    },
+    "policy-gradient-unbiased-and-how-noisy-2": {
+      "code_fingerprint": "sha256:f6dbfea561e7fa1c0127eca821a6d9e013176977caca4a66528bcd2b7fd7e946",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n=  4: zero estimates  3/50, cos(mean, exact) = 0.93, single-estimate relative error = 3.64\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n= 16: zero estimates  0/50, cos(mean, exact) = 0.97, single-estimate relative error = 1.74\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n= 64: zero estimates  0/50, cos(mean, exact) = 1.00, single-estimate relative error = 0.94\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:730e350b4c92bc4ab5e9162f1f99e675f2ff06a634a76eef8e41335b3086722b",
+    "d2l_lib_fingerprint": "sha256:60405b30ab5b91c86d65d0b4cbf1763f553fec35c2203d1c47491157739db74c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,14 +36,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.14, validation 3.44; best validation 1.49 at step 200\n"
+          "text": "final: train 0.14, validation 3.45; best validation 1.49 at step 200\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 18993,
-          "sha256": "sha256:3bf9f71e4514cb639014c2388e497835dcd36cb90d7407dfbae84be3ed533930"
+          "bytes": 18985,
+          "sha256": "sha256:39c266093aac1d59af342c07744a73902a8be351bc4d9f5b014c76e94820541b"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 2.20/1.81/1.36/1.06\n"
+          "text": "pre_norm=True: loss at step 100/200/400/800: 2.20/1.83/1.38/1.11\n"
         },
         {
           "type": "stream",
@@ -69,28 +69,28 @@
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:a27708b4b8a91e7eefd7c4173a8381cec8f0b5fb4ac0d47312a0b3aa21187957",
+      "code_fingerprint": "sha256:890b326aa8380ddb3a28488395966981f5d727f303b0a01c6d45e0c0fab4015d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'the time traveller put forth his finger towards the lever no he said suddenly lend me your hand and turning to the psychologist he took tha'\n"
+          "text": "T=1.0, top_k=None: 'the time traveller had more than a touch of whim among\n    his elements and we distrusted him things that would have made the frame\n    of a less c'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'the time traveller pushed his plate away and looked round us i suppose i must apologize he said i was simply starving i ve had a most amazi'\n"
+          "text": "T=0.7, top_k=8: 'the time traveller had more than a touch of whim among his\n    elements and we distrusted him things that would have made the frame of\n    a less c'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller then when we had all imitated the actual asory may ejustionted you cannot move about in all of them i shook her off litt'\n"
+          "text": "T=2.0, top_k=None: 'the time traveller had more that exceriesy of the silent\n    man egr and so i never talked of it until experimental verification\n    cried i you ar'\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:40fd2290b35ea5bf46e8d90cc840ad3f3460f28906f1906eeee4c3c1ee6d9be5",
+      "code_fingerprint": "sha256:a6ba58e02d08c4aae189ad8e4c3e49c2bdfdee7cd2ad0625a610d9db4ac18af9",
       "kind": "text",
       "outputs": [
         {
@@ -101,7 +101,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:7ca47cc1de315e73b1ecd76b1db23f76f39c36d0da1e6bdb8a2d249b23e2a35d",
+      "code_fingerprint": "sha256:9219e66508b7becae9207c5eb4d23049b65d2bcc6d5b0355731dd30f1e27cc46",
       "kind": "text",
       "outputs": [
         {
@@ -112,7 +112,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:226936831d74b6068a5ca2e6daf3bbfc3c3e855af847020f5f94fd0cf1301dc4",
+      "code_fingerprint": "sha256:f9872fd53898ede33cad800ac1381ca2573f8fe04736eaa964ee80efc2d463f9",
       "kind": "text",
       "outputs": [
         {
@@ -123,18 +123,18 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:e80ccba05c207647731ca1fcc40a3539510ae927ecd808edd6c3e6e0d7d708be",
+      "code_fingerprint": "sha256:f4e10532afadccdf9e33a0cd823320e686746d400e33cfdf65ef14b17e919f75",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Alan Turing theorized that computers would one day become the most powerful machines on the planet.\n\nThe computer is a machine that\n"
+          "text": "Alan Turing theorized that computers would one day become the most powerful\n    machines on the planet.\n\nThe computer is a machine that\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that you don't know what you're supposed to write. That's not quite right, but it's a good idea.\n\nSo let's dive into the book for a second.\n\n\n"
+          "text": "The secret of a good deep learning textbook is that you don't know what\n    you're supposed to write. That's not quite right, but it's a good idea.\n\nSo let's dive into the book for a second.\n\n\n"
         }
       ]
     }

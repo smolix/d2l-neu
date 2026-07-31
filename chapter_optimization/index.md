@@ -1,19 +1,14 @@
 # Optimization Algorithms
 :label:`chap_optimization`
 
-Every model in this book has been trained by a line we have not yet
-examined. Since fitting our first models in :numref:`chap_regression` we
-have constructed an optimizer — `SGD` at first, `Adam` soon after — handed
-it the parameters and a learning rate, and let the training loop invoke it
-once per minibatch, trusting the loss to fall. It nearly always did. This
-chapter opens that box. Inside is not one idea but three decisions, made
-anew by every algorithm: a *descent direction* — which way counts as
-"down", a question whose answer turns out to depend on which norm measures
-the size of a step; a *step size over time* — how boldly to move, and how
-that boldness should change over a run; and a *way of living with noise* —
-since almost every gradient is estimated from a minibatch rather than
-computed exactly. The twelve sections of this chapter are these three
-decisions unfolded, roughly in the order history made them.
+Every model in this book has used an optimizer to update its parameters once
+per minibatch. This chapter examines the principles behind those updates.
+An optimization algorithm makes three related choices: the descent
+direction, the step size and its variation over time, and the treatment of
+noise in minibatch gradients. The appropriate descent direction depends on
+how the size of an update is measured; the step size must account for
+curvature and training time; and the gradient variance depends on batching
+and averaging.
 
 Two properties of the loss surface make the decisions consequential. The
 first is *curvature*: a deep network's loss rises steeply along some
@@ -22,9 +17,8 @@ step size must serve both — too bold and the steep directions oscillate
 out of control, too timid and the flat directions never arrive. The second
 is *noise*: the exact gradient costs a full pass over the dataset, so
 any method that scales settles for a minibatch estimate whose variance is
-ours to choose. :numref:`sec_optimization-intro` maps this terrain. The
-five sections after it climb the classical ladder, each rung repairing a
-failure of the one below: gradient descent and the ideal of
+ours to choose. :numref:`sec_optimization-intro` introduces these properties.
+The next five sections develop gradient descent and the ideal of
 preconditioning (:numref:`sec_gd`), stochastic gradients and why learning
 rates must decay (:numref:`sec_sgd`), minibatching and what the hardware
 has to say about it (:numref:`sec_minibatch_sgd`), momentum against
@@ -33,9 +27,8 @@ AdaGrad through RMSProp to Adam (:numref:`sec_adam`) — where we also build
 the tiny transformer language model on which the rest of the chapter runs
 its experiments.
 
-The ladder's top rung dates from 2014, and for years textbooks stopped
-there. Practice did not. The second half of the chapter is the layer a
-practitioner actually configures today: decoupled weight decay, the rule
+The second half of the chapter studies choices used in current training:
+decoupled weight decay, the rule
 of what not to decay, and the memory arithmetic of optimizer state
 (:numref:`sec_adamw`); warmup, cosine decay, and the warmup–stable–decay
 schedules of large-model training (:numref:`sec_scheduler`); the
@@ -49,15 +42,13 @@ model and transfer the result to one too expensive to tune
 gradient clipping, weight averaging, and how to sweep
 (:numref:`sec_practice`).
 
-A word on what this chapter is not. It states results, demonstrates
-phenomena, and gives intuition; it does not prove. The descent lemma, the
-condition-number law, momentum's $\sqrt{\kappa}$ acceleration, the
+This chapter states results, demonstrates phenomena, and develops intuition.
+The optimization chapter of the mathematical appendix
+(:numref:`chap_mdl-optimization`) develops the descent lemma,
+the condition-number law, momentum's $\sqrt{\kappa}$ acceleration, the
 Robbins–Monro conditions, Adam's bias correction, and the convex analysis
-underneath all of them live in the optimization chapter of the
-mathematical appendix (:numref:`chap_mdl-optimization`), which is written
-as this chapter's proof volume. Where a section here says "one can show",
-the appendix shows it. The two chapters can be read in either order; the
-experiments here give the theorems something to predict.
+underneath them are developed. The two chapters can be read in either order;
+the experiments here illustrate the behavior described by the theory.
 
 The modern layer is younger than it looks, and parts of it are still
 moving. Decoupled weight decay was published in 2017 and became a
@@ -91,8 +82,8 @@ practice
 
 ## Resources and Further Reading {.unnumbered}
 
-The references below follow the chapter's arc — the convex foundations,
-the classical ladder, the modern layer, and the craft of tuning. All are
+The references below cover convex foundations, classical methods, current
+optimizers, and tuning. All are
 freely accessible online except where noted. The optimization chapter of
 the mathematical appendix (:numref:`chap_mdl-optimization`) keeps its own
 resource list for the theory side — convex-optimization texts and courses
@@ -100,8 +91,8 @@ with proofs — and we do not repeat those entries here.
 
 **Books**
 
-- [Convex Optimization — Boyd & Vandenberghe](https://web.stanford.edu/~boyd/cvxbook/) — free PDF; the standard reference behind the vocabulary this chapter uses informally — conditioning, convergence rates, duality, projections — and the right place to see the analyses that :numref:`sec_gd` and :numref:`sec_sgd` state without proof done properly.
-- [Numerical Optimization — Nocedal & Wright](https://link.springer.com/book/10.1007/978-0-387-40065-5) — the classical machinery in full: line search, trust regions, and the quasi-Newton methods that :numref:`sec_gd` names as the ideal deep learning cannot afford (paywalled, noted; widely held in university libraries).
+- [Convex Optimization — Boyd & Vandenberghe](https://web.stanford.edu/~boyd/cvxbook/) — free PDF; the standard reference behind the vocabulary this chapter uses informally — conditioning, convergence rates, duality, projections — and the right place to see the analyses that :numref:`sec_gd` and :numref:`sec_sgd` state without proof carried out in full.
+- [Numerical Optimization — Nocedal & Wright](https://link.springer.com/book/10.1007/978-0-387-40065-5) — a comprehensive treatment of line search, trust regions, and the quasi-Newton methods discussed in :numref:`sec_gd` (paywalled; widely held in university libraries).
 
 **Courses and video lectures**
 

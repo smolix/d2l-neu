@@ -6,8 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Implementation of Multilayer Perceptrons
 :label:`sec_mlp-implementation`
 
-Multilayer perceptrons (MLPs) are not much more complex to implement than simple linear models. The key conceptual
-difference is that we now concatenate multiple layers.
+An MLP implementation extends a linear classifier by composing affine layers
+with nonlinear activations. We first write this composition explicitly and
+then use the corresponding framework layers.
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab mxnet
@@ -39,7 +40,7 @@ from jax import numpy as jnp
 
 ## Implementation from Scratch
 
-Let's begin again by implementing such a network from scratch.
+We begin with an implementation using tensors and automatic differentiation.
 
 ### Initializing Model Parameters
 
@@ -366,7 +367,7 @@ Implementing a **multilayer perceptron**<br>One hidden layer, two ways to build 
 :::
 :::
 
-::: {.slide title="The whole model on one slide"}
+::: {.slide title="The MLP architecture"}
 [What we are building]{.kicker}
 
 ::: {.cols .vc}
@@ -454,8 +455,7 @@ $784\cdot256 + 256 + 256\cdot10 + 10 = 203{,}530$ learnable numbers.
 ::: {.slide title="ReLU, by hand"}
 [From Scratch]{.kicker}
 
-To see there is no magic, we write the activation ourselves
-rather than calling the built-in. It is just $\max(x, 0)$,
+We write the activation directly as $\max(x, 0)$,
 applied elementwise:
 
 @mlp-implementation-model-1
@@ -590,7 +590,7 @@ this chapter:
 
 ::: {.d2l-note}
 Each question gets its own section, and exercise 2 hands you the
-cliffhanger: add a second hidden layer while keeping
+next question: add a second hidden layer while keeping
 $\sigma = 0.01$, and the deeper net trains *worse*. The numerical-stability
 section explains.
 :::

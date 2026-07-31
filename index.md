@@ -1191,6 +1191,7 @@ chapter_computer-vision/index
 chapter_natural-language-processing-pretraining/index
 chapter_natural-language-processing-applications/index
 chapter_reinforcement-learning/index
+chapter_deep-reinforcement-learning/index
 chapter_gaussian-processes/index
 chapter_hyperparameter-optimization/index
 chapter_generative-adversarial-networks/index

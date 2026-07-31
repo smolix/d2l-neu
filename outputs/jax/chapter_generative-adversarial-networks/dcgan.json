@@ -21,13 +21,7 @@
     "dcgan-the-pokemon-dataset-2": {
       "code_fingerprint": "sha256:f99f263eec47bde41ee5249b5b103cad7f203f8a3f73e967c157e08ed7ca18f9",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-jax/lib/python3.12/site-packages/PIL/Image.py:1137: UserWarning: Palette images with Transparency expressed in bytes should be converted to RGBA images\n  warnings.warn(\n"
-        }
-      ]
+      "outputs": []
     },
     "dcgan-the-pokemon-dataset-3": {
       "code_fingerprint": "sha256:49fadbfae6329c2f1e477e7c4cd2324efe070604d9eb6d0d5c448356009025aa",
@@ -37,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-the-pokemon-dataset-3-1.svg",
-          "bytes": 396620,
-          "sha256": "sha256:cf572f4c96ca779d1c7eb230c740f4378c1d93f30218156811b1217df55edb47"
+          "bytes": 402944,
+          "sha256": "sha256:568029962db8013ba2eaa1c7e29c0c9570c38350a1bc3b2e013d7521191d29f0"
         }
       ]
     },
@@ -91,7 +85,7 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-discriminator-1-1.svg",
           "bytes": 18839,
-          "sha256": "sha256:53efe6961d8772217ab41ea4ffc492a862d573beda804054823d9a4b73769feb"
+          "sha256": "sha256:ab1463ac100fe0676a68f9fcf7175c728e7aba2a1f6f9bfa52a6b35307883775"
         }
       ]
     },
@@ -137,14 +131,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.183, loss_G 3.750, 5845.4 examples/sec\n"
+          "text": "loss_D 0.019, loss_G 4.794, 6308.6 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-training-2-1.svg",
-          "bytes": 254645,
-          "sha256": "sha256:03abd892325c13c4ddce608a7e6c6515d3697c1a3f30c66b3f2d38ca2bcae993"
+          "bytes": 220561,
+          "sha256": "sha256:33d912500e769fce4fecce9df8bf0f2dc301a9cc993e397f01e1519bd800e74d"
         }
       ]
     }

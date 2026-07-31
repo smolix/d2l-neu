@@ -1,13 +1,13 @@
 # Calculus and Automatic Differentiation
 :label:`chap_mdl-calculus`
 
-Training a network means asking, repeatedly, how a scalar loss changes when we
-nudge a parameter. This chapter builds the calculus that answers it: derivatives
-and the local-linear view in one variable, gradients and the chain rule in many,
-the matrix-calculus and automatic-differentiation machinery that makes
-backpropagation cheap, and finally integration---the operation we will need for
-probability (:numref:`chap_mdl-probability-statistics`) and for the differential
-equations of :numref:`chap_mdl-dynamics`.
+Training a network requires derivatives of a scalar loss with respect to its
+parameters. We begin with derivatives and local linear approximation in one
+variable, then introduce gradients and the multivariable chain rule. Matrix
+calculus and automatic differentiation explain how backpropagation computes
+these derivatives efficiently. The final section develops integration for
+continuous probability (:numref:`chap_mdl-probability-statistics`) and the
+differential equations of :numref:`chap_mdl-dynamics`.
 
 ```toc
 :maxdepth: 2
@@ -20,7 +20,8 @@ mdl-integral-calculus
 
 ## Resources and Further Reading {.unnumbered}
 
-If you want to go deeper, the following are the canonical references we recommend, from refreshers on single-variable calculus to the matrix calculus and automatic-differentiation machinery behind backpropagation.
+The following references range from single-variable calculus reviews to matrix
+calculus and automatic differentiation.
 
 **Books**
 

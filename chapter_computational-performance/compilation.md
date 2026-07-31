@@ -1,23 +1,22 @@
 # Compute Graphs and Compilation
 :label:`sec_compilation`
 
-:numref:`sec_perf_model` left a program bleeding. An unfused chain of
+:numref:`sec_perf_model` measured an unfused chain of
 elementwise operations — the kind every activation function and
 normalization layer contains — ran each operation as its own GPU kernel,
-and each kernel paid a full round trip to memory: read the input, compute
+and each kernel made a full round trip to memory: read the input, compute
 one cheap thing, write the output, only for the next kernel to read it
-straight back. The diagnosis was bandwidth-bound, overpaying in bytes by a
-factor of however many operations the chain contains. This section applies
-the fix, in one line, and then explains what the line did.
+again. The program was bandwidth-bound because it transferred every
+intermediate tensor. This section shows how compilation fuses the chain and
+then examines the resulting computation.
 
 The fix is *compilation*: instead of executing the network one operation
 at a time as Python reaches it (*eager* execution), capture the whole
 computation as a graph and hand it to a compiler, which can see across
 operations and rewrite them — fusing that elementwise chain into a single
 kernel that reads once, computes everything, and writes once. Both of our
-frameworks do this; they do it in interestingly different ways, and the
-differences are worth understanding because each has a characteristic
-failure mode you will meet in practice.
+frameworks do this with different capture mechanisms and different failure
+modes.
 
 *Prerequisites: the three regimes and the* `d2l.Benchmark` *timer of*
 :numref:`sec_perf_model`*; the kernel-launch and memory-round-trip costs
@@ -46,7 +45,7 @@ import numpy as np
 import time
 ```
 
-## The Graph Was Always There
+## Computation Graphs
 :label:`subsec_comp-graph`
 
 A neural network *is* a computation graph — you have been building them
@@ -79,7 +78,7 @@ Everyone converged on the same answer — **eager by default, with a
 tracing compiler you turn on** — and the rest of this section is about the
 two leading implementations of that answer.
 
-## Capture: Two Philosophies
+## Graph Capture in PyTorch and JAX
 :label:`subsec_comp-capture`
 
 The frameworks capture the graph in genuinely different ways, and the
@@ -156,7 +155,7 @@ it. The contrast in one line: **`torch.compile` bends around Python and
 you watch for breaks; `jax.jit` demands purity and you watch for
 recompiles.**
 
-## What the Compiler Does: Fusion
+## Operation Fusion
 :label:`subsec_comp-fusion`
 
 Now the payoff. Recall the bleeding elementwise chain from
@@ -217,15 +216,15 @@ restructuring, not just merging — people write the kernel by hand. The
 hand-written FlashAttention kernel of :numref:`sec_attention-at-scale` is
 exactly this: the same "keep intermediates on-chip, never round-trip the
 big matrix" idea, executed by an expert for a pattern the general
-compiler cannot discover. Writing such kernels is its own craft — Triton
-:cite:`Tillet.Kung.Cox.2019` (an important backend of `torch.compile`'s
-Inductor, which also draws on template and library kernels) and Pallas
-let you author them in Python-like syntax — and it
+compiler cannot discover. Writing such kernels is its own craft, and it
 is deliberately out of scope for this book (:numref:`sec_custom_layer`
-drew that fence). The point here is that the compiler gets you most of the
+drew that fence); Triton :cite:`Tillet.Kung.Cox.2019` (an important
+backend of `torch.compile`'s Inductor, which also draws on template and
+library kernels) and Pallas let you author them in Python-like
+syntax. The point here is that the compiler gets you most of the
 fusion win automatically, for free, on the code you already wrote.
 
-## Compiling the Training Step, Measured
+## Measured Training-Step Compilation
 :label:`subsec_comp-wholestep`
 
 Fusing one elementwise chain is a demonstration; the real use is
@@ -369,10 +368,10 @@ CUDA graph and replays the whole thing per call, collapsing a
 hundred-odd launch latencies into one. The catch is that replay is
 *rigid*: a replayed graph is a fixed sequence of kernels on fixed memory
 addresses, so the input shape must not change between calls (change it
-and PyTorch re-captures) — and it is why we time the forward pass under
-`torch.no_grad()`: autograd's saved-for-backward activations are fresh
-allocations on every call, and their changing addresses would force a
-re-capture each time. The JAX tab needs no separate
+and PyTorch re-captures). That rigidity is also why we time the forward
+pass under `torch.no_grad()`: autograd's saved-for-backward activations
+are fresh allocations on every call, and their changing addresses would
+force a re-capture each time. The JAX tab needs no separate
 mechanism and says so: a jitted function is *already* a single dispatched
 executable, so XLA amortizes launch overhead by construction — the
 absence of a "reduce-overhead" knob in JAX is not a missing feature but a
@@ -459,7 +458,7 @@ belongs to deployment rather than training; we note it and move on.
 
 <!-- slides -->
 
-::: {.slide title="The Graph Was Always There"}
+::: {.slide title="Computation Graphs"}
 Autograd already builds a compute graph — to run *backward*.
 
 ![](../img/mdl-perf-compute-graph.svg){width=88%}
@@ -469,7 +468,7 @@ trip each). Capture it, and a compiler can rewrite across
 nodes. That is the whole idea.
 :::
 
-::: {.slide title="Two Capture Philosophies"}
+::: {.slide title="Graph Capture in PyTorch and JAX"}
 ![](../img/mdl-perf-compile-pipelines.svg){width=95%}
 
 `torch.compile`: capture Python bytecode, **graph-break** to
@@ -488,7 +487,7 @@ The print vanishes: tracing sees tensor ops only. Purity is the
 price of having no graph breaks.
 :::
 
-::: {.slide title="Fusion Cures the Bandwidth Chain"}
+::: {.slide title="Fusion Reduces Memory Traffic"}
 The bleeding chain from §13.1, cured in one line:
 
 @compilation-what-the-compiler-does-fusion

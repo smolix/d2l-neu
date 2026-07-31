@@ -6,22 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multilayer Perceptrons
 :label:`sec_mlp`
 
-In :numref:`sec_softmax`, we introduced
-softmax regression,
-implementing the algorithm from scratch
-(:numref:`sec_softmax_scratch`) and using high-level APIs
-(:numref:`sec_softmax_concise`). This allowed us to
-train classifiers capable of recognizing
-10 categories of clothing from low-resolution images.
-Along the way, we learned how to wrangle data,
-coerce our outputs into a valid probability distribution,
-apply an appropriate loss function,
-and minimize it with respect to our model's parameters.
-Now that we have mastered these mechanics
-in the context of simple linear models,
-we can launch our exploration of deep neural networks,
-the comparatively rich class of models
-with which this book is primarily concerned.
+Softmax regression maps its inputs to class scores with a single affine
+transformation. This makes the model easy to optimize but restricts its
+decision boundaries. Multilayer perceptrons add one or more hidden layers and
+nonlinear activation functions, allowing the model to represent nonlinear
+relations while retaining the same data, loss, and optimization procedure.
 
 ```{.python .input #mlp-multilayer-perceptrons}
 %%tab mxnet
@@ -323,13 +312,13 @@ number of hidden units and layers as you go.
 
 How powerful is a deep network? The universal approximation theorem gives a
 sharp answer. It says that even a single-hidden-layer
-network, given enough hidden units and the right weights, can approximate any
-continuous function on a bounded domain to arbitrary accuracy. This was proven
-in several settings: :citet:`Cybenko.1989` did it for sigmoid activations,
+network can approximate any continuous function on a bounded domain to arbitrary
+accuracy, given enough hidden units and the right weights. This was proven
+in several settings: :citet:`Cybenko.1989` did it for sigmoid activations and
 :citet:`micchelli1984interpolation` for radial basis function networks (a single
-hidden layer), and the
-result was soon generalized: :citet:`Hornik.1991` covered every bounded,
-non-constant activation, and :citet:`Leshno.Lin.Pinkus.ea.1993` extended it to
+hidden layer). The result was soon generalized, as :citet:`Hornik.1991` covered
+every bounded, non-constant activation and :citet:`Leshno.Lin.Pinkus.ea.1993`
+extended it to
 any activation that is not a polynomial, a form that also covers the unbounded
 ReLU. The conclusion therefore does not hinge on which of ReLU, sigmoid, or tanh
 we pick.
@@ -357,8 +346,8 @@ the piecewise linear output of the first layer, and composing with a hinge
 *folds the graph*: every existing piece that crosses the new joint is split in
 two. Each added layer can therefore roughly *double* the number of linear
 pieces, so $k$ layers of width $D$ can produce on the order of
-$(D+1)\,2^{k-1}$ pieces, where matching that count with a single hidden layer
-would require exponentially many units. This multiplicative-versus-additive gap
+$(D+1)\,2^{k-1}$ pieces, a count that a single hidden layer could match only
+with exponentially many units. This multiplicative-versus-additive gap
 is the essence of why depth pays. Both claims are easy to check numerically:
 below we evaluate randomly initialized ReLU MLPs on a dense one-dimensional
 grid, detect where the slope changes, and count the linear pieces.
@@ -389,8 +378,8 @@ The later rows show what happened for these seeded random networks: at each
 width, adding a layer increased the average piece count by a factor rather than
 by a fixed amount. This experiment does not establish a maximal count. Random
 weights fold less aggressively than hand-constructed networks used in depth
-separation results :cite:`Telgarsky.2016`; those constructions, rather than the
-sample averages above, establish the expressivity claim.
+separation results :cite:`Telgarsky.2016`, and the expressivity claim rests on
+those constructions rather than on the sample averages above.
 
 It is tempting to read this as "one hidden layer is all you ever need," but the
 theorem is more modest than it sounds, and three caveats matter
@@ -480,7 +469,7 @@ Note that the ReLU function is not differentiable
 when the input takes value precisely equal to 0.
 The libraries used here return a derivative of 0 at the origin, one valid
 subgradient convention. For continuously distributed preactivations the choice
-affects a probability-zero event. Exact zeros do occur in computation, for
+affects a probability-zero event, but exact zeros do occur in computation, for
 example from zero-initialized biases or a preceding ReLU, and in such degenerate
 cases the convention can change whether a unit begins to move.
 We plot the derivative of the ReLU function below.
@@ -860,7 +849,7 @@ bought ourselves a more powerful model.
 :::
 
 ::: {.slide title="But two affine maps collapse into one"}
-[The catch]{.kicker}
+[Composition without nonlinearity]{.kicker}
 
 Substitute $\mathbf{H}$ into the output layer:
 
@@ -925,7 +914,7 @@ then **folds** the two label-1 corners onto the same point
 :::
 :::
 
-::: {.slide title="First receipt: all four corners, exactly right" only="pytorch"}
+::: {.slide title="An MLP represents XOR" only="pytorch"}
 [XOR · verified]{.kicker}
 
 With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
@@ -942,7 +931,7 @@ Playground* (playground.tensorflow.org).
 :::
 :::
 
-::: {.slide title="First receipt: all four corners, exactly right" except="pytorch"}
+::: {.slide title="An MLP represents XOR" except="pytorch"}
 [XOR · verified]{.kicker}
 
 With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
@@ -1000,7 +989,7 @@ Each ReLU unit contributes a **hinge** $a_k\operatorname{ReLU}(x - t_k)$: with $
 ![Three hinges (left) sum to a 4-piece polyline that tracks the smooth target (right); the shaded band is the error.](../img/mdl-mlp-uat-hinges.svg){width=88%}
 :::
 
-::: {.slide title="Second receipt: depth multiplies pieces, width only adds" only="pytorch"}
+::: {.slide title="Depth and the number of linear regions" only="pytorch"}
 [Expressive power · verified]{.kicker}
 
 Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws, widths 2–16):
@@ -1012,7 +1001,7 @@ One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **fo
 :::
 :::
 
-::: {.slide title="Second receipt: depth multiplies pieces, width only adds" except="pytorch"}
+::: {.slide title="Depth and the number of linear regions" except="pytorch"}
 [Expressive power · verified]{.kicker}
 
 Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws):
@@ -1127,7 +1116,7 @@ activation. Today it lives mostly at the **edges** of a net:
 :::
 
 ::: {.slide title="Why sigmoid stalls deep networks"}
-[Activations · the catch]{.kicker}
+[Activation saturation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1179,7 +1168,7 @@ like sigmoid's.
 :::
 :::
 
-::: {.slide title="Activation cheat sheet"}
+::: {.slide title="Comparison of activation functions"}
 [Reference]{.kicker}
 
 | | Range | Saturates? | Typical use |

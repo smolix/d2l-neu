@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
           "bytes": 29157,
-          "sha256": "sha256:d68501e6a7719f513fb4db5494fbd6d3cc74aeabc1f52c4ccc6894d8b64722aa"
+          "sha256": "sha256:5b4f4f7189cd3789528e5aace691a85f54111d0b4779d237434981b1a9833fd9"
         }
       ]
     },
@@ -48,20 +48,15 @@
       "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "[15:24:55] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[15:24:55] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[15:24:55] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n"
-        },
-        {
-          "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0.62\n"
+          "text": "lambda = 0.52\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-mixup-2-1.svg",
-          "bytes": 65335,
-          "sha256": "sha256:c797f41b00187d0df3ee17744b0542f39fd8af55d0e77aa05d35881cbb53a247"
+          "bytes": 65899,
+          "sha256": "sha256:bf2f0553fd1617382566d56720d05f236f70cd1ae09e447b29260f73b0c331f6"
         }
       ]
     },
@@ -72,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fraction of samples with a dropped branch: 0.476\n"
+          "text": "fraction of samples with a dropped branch: 0.533\n"
         }
       ]
     },

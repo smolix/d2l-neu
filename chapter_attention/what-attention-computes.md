@@ -1,27 +1,17 @@
 # What Attention Computes
 :label:`sec_what-attention-computes`
 
-The attention weights of a trained model look readable in a way no
-convolution kernel ever did: row $i$ of the attention map says, in
-probabilities, where token $i$ looked. The first generation of attention
-papers read the maps eagerly, and :numref:`sec_multihead-attention` already
-supplied a reason for caution — a diffuse row may mean "nothing matched"
-rather than "everything mattered". This closing section asks the question
-behind the pictures: not *where* a model attends, but *what* the attending
-computes. For one family of models the question has a remarkably complete
-answer. In transformers stripped to attention alone (no feed-forward
-layers, no normalization), every head factors into two matrices that can be
-read off the checkpoint, information flow between layers can be traced term
-by term, and one particular two-layer circuit, the *induction head*, has
-been reverse-engineered end to end :cite:`Elhage.Nanda.Olsson.ea.2021`. The
-`TinyCharLM` of :numref:`sec_positional-information` is exactly such a
-model. We first develop the vocabulary (the residual stream, the QK and OV
-circuits) and derive what each depth can and cannot express. Then we train
-the model on sequences of repeated random tokens and watch the induction
-circuit assemble itself: abruptly, visibly in the attention maps, and
-checkably in the weights. The mechanism we find is the same one that has
-been implicated in in-context learning in large language models
-:cite:`Olsson.Elhage.Nanda.ea.2022`.
+Attention weights indicate how strongly each query weights each key, but do not
+by themselves determine the effect on the output. This section analyzes both
+the attention pattern and the transformed values. In an attention-only
+Transformer, each head factors into a QK circuit that determines attention
+scores and an OV circuit that transforms the attended representation. These
+matrices can be read directly from a checkpoint, and paths through multiple
+layers can be expanded algebraically. We apply this analysis to the
+`TinyCharLM` of :numref:`sec_positional-information` and identify a two-layer
+*induction-head* circuit on repeated random sequences
+:cite:`Elhage.Nanda.Olsson.ea.2021`. The circuit is related to mechanisms
+observed in larger language models :cite:`Olsson.Elhage.Nanda.ea.2022`.
 
 ```{.python .input #what-attention-computes}
 %%tab pytorch
@@ -43,7 +33,7 @@ import optax
 
 ## The Residual Stream
 
-### Tokens as Vectors in a Shared Workspace
+### Residual Representations Across Layers
 
 Write $\mathbf{e}_{x_i} \in \mathbb{R}^d$ for the embedding of token $x_i$
 and set $\mathbf{h}_i^{(0)} = \mathbf{e}_{x_i}$. Unrolling `TinyCharLM`'s
@@ -57,34 +47,31 @@ $$
 and the tied output head scores the final vector against every embedding,
 $\mathbf{z}_i = \mathbf{E}\, \mathbf{h}_i^{(L)}$. The sequence of vectors
 $\mathbf{h}_i^{(0)}, \ldots, \mathbf{h}_i^{(L)}$ is the *residual stream* of
-position $i$: a $d$-dimensional workspace that begins as the token's
-embedding and ends as the vector the output head reads
-(:numref:`fig_residual-stream`). Nothing along the way overwrites it —
-layers only *add*. Each attention head reads from the streams of earlier
-positions and adds what it read, linearly transformed, into the stream of
-the current position. The stream is therefore a communication channel
-running through depth: whatever a head wants later layers or the output head
-to know, it must write into the stream, and whatever it writes stays there
-for every later reader.
+position $i$. It begins with the token embedding and ends with the vector
+read by the output head (:numref:`fig_residual-stream`). Each layer adds to
+this vector rather than replacing it. An attention head reads the residual
+streams at earlier positions, applies a linear transformation, and adds the
+result to the stream at the current position. Consequently, information
+written by one layer remains available to every later layer and to the
+output head.
 
-![The residual stream. Each position carries a vector from its embedding to its logits; attention heads are the only modules that touch it. A head's QK circuit decides where to read — the attention weights $\alpha_{3j}$ — and its OV circuit decides what the read vector contributes to the destination stream.](../img/mdl-attention-residual-stream.svg)
+![The residual stream. Each position carries a vector from its embedding to the output logits. The QK circuit determines the attention weights $\alpha_{3j}$, and the OV circuit determines the contribution of each attended vector to the destination stream.](../img/mdl-attention-residual-stream.svg)
 :label:`fig_residual-stream`
 
 One structural fact makes this model unusually transparent: once the
 attention patterns $\alpha$ are fixed, the map from embeddings to logits in
 :eqref:`eq_stream-update` is *linear* — a sum of products of weight
 matrices. Expanding the recursion writes the logits as a sum over *paths*
-through the network, each path a readable chain of matrices, which is what
-makes complete mechanistic analysis possible. This is the setting of the
+through the network, each path a readable chain of matrices, and complete
+mechanistic analysis becomes possible. This is the setting of the
 mathematical framework of :citet:`Elhage.Nanda.Olsson.ea.2021`, whose exact
 results hold for attention-only transformers without feed-forward layers or
-normalization, and it is why our specimen was built without them:
-`TinyCharLM` contains embeddings, attention, and nothing else, so everything
-it learns must pass through the mechanism we are studying. (Real
-transformers interleave both; we return to what survives the
-generalization at the end of the section.)
+normalization. We therefore constructed `TinyCharLM` with only embeddings
+and attention, so that each learned computation can be expressed through
+the residual stream. Real transformers also include feed-forward layers and
+normalization; we discuss this distinction at the end of the section.
 
-### Where and What: The QK and OV Circuits
+### QK and OV Circuits
 
 Each head's term in :eqref:`eq_stream-update` splits into two independent
 pieces. The attention weights come from softmax over scores that depend on
@@ -97,21 +84,21 @@ $$
 :eqlabel:`eq_qkov`
 
 The *QK circuit* $\mathbf{W}_{\mathrm{QK}} \in \mathbb{R}^{d \times d}$ is a
-bilinear form on the stream: it decides *where* the head attends, and
-nothing else. The *OV circuit* $\mathbf{W}_{\mathrm{OV}} \in \mathbb{R}^{d
-\times d}$ decides *what* an attended stream contributes to the
-destination, and nothing else. The split matters because the individual
+bilinear form on the stream that determines the attention scores. The *OV
+circuit* $\mathbf{W}_{\mathrm{OV}} \in \mathbb{R}^{d \times d}$ determines
+how an attended representation contributes to the destination. This
+factorization matters because the individual
 projections $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v, \mathbf{W}_o$ are not
 identifiable (replacing $\mathbf{W}_q$ by $\mathbf{R}\mathbf{W}_q$ and
 $\mathbf{W}_k$ by $\mathbf{R}^{-\top}\mathbf{W}_k$ changes nothing the model
-computes), while the two products are what the head actually is. Both are
+computes), while the two products are the head itself. Both are
 $d \times d$ but of rank at most $d_h = d/H$: a head can test and move only a
 $d_h$-dimensional slice of the stream. With $d = 128$ and four heads, each
 head works through a rank-32 bottleneck. In `TinyCharLM` the four
-projections live in two fused layers — `qkv` stacks the query, key, and
-value maps, and `proj` holds the per-head output maps side by side — and
-neither layer carries a bias, so extracting a head's circuits is a matter
-of slicing, and the slices are the head, exactly:
+projections live in two fused layers: `qkv` stacks the query, key, and
+value maps, and `proj` holds the per-head output maps side by side. Neither
+layer carries a bias, so the circuits of each head can be obtained by
+slicing these two matrices:
 
 ```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
 %%tab pytorch
@@ -146,18 +133,19 @@ for name, M in (('W_QK', W_QK), ('W_OV', W_OV)):
           f'rank {jnp.linalg.matrix_rank(M)}')
 ```
 
-Positions enter this picture in exactly one place. RoPE rotates queries and
-keys before they meet, so the score gains a relative-position dial inside
-the QK circuit — $s_{ij}$ acquires the rotation $\mathbf{R}_{j-i}$ of
-:eqref:`eq_rope-goal` — while values pass unrotated: position can influence
-*where* a head looks but never *what* it moves. That separation is one
-reason we train with `pos='rope'` below; the other is continuity, since
-RoPE is :numref:`sec_positional-information`'s headline scheme and the
-default of the models this chapter builds toward.
+RoPE introduces positional information into the QK circuit by rotating
+queries and keys before their inner product. Thus $s_{ij}$ contains the
+relative rotation $\mathbf{R}_{j-i}$ from :eqref:`eq_rope-goal`, whereas
+the values remain unrotated. Position can therefore affect the attention
+scores without directly changing the value transformation. We use
+`pos='rope'` below because it is the principal method studied in
+:numref:`sec_positional-information` and is used by the later models in
+this chapter.
 
 ### Bigrams, Skip-Trigrams, and the Limits of One Layer
 
-The path expansion tells us what depth buys before we run anything. With
+The path expansion shows how the class of representable functions changes
+with depth. With
 *zero* blocks, $\mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i}$: the logits
 are a function of the current token only — a bigram model, and a
 constrained one. Because the output head is tied to the embedding, the
@@ -196,9 +184,9 @@ provides. A head in layer 1 attends to the previous token and writes its
 identity into the stream; a head in layer 2 can then match the query "I am
 $[\mathrm{A}]$" against keys enriched with "I follow $[\mathrm{A}]$", land
 on position $j$, and let its OV circuit copy $x_j = [\mathrm{B}]$ upward
-(:numref:`fig_induction-circuit`). This two-hop circuit — a previous-token
-head composing with a match-and-copy head through the residual stream — is
-the induction head. Note what the argument establishes: two layers *can*
+(:numref:`fig_induction-circuit`). This two-hop circuit is the induction
+head: a previous-token head composing with a match-and-copy head through
+the residual stream. Note what the argument establishes: two layers *can*
 express it, one layer cannot (except through position alone, a loophole we
 will meet shortly). Whether gradient descent actually finds the circuit is
 an empirical question, and the rest of the section answers it by
@@ -209,7 +197,7 @@ experiment.
 
 ## Copying and Induction
 
-### Repetition as a Task
+### A Repeated-Sequence Task
 
 To catch a mechanism in the act, pose a task that only this mechanism
 solves. We train on sequences of *repeated random tokens*: sample a pattern
@@ -335,14 +323,13 @@ def eval_copy(model, Lmin, Lmax, batch_size=256, vocab=64):
     return float(first), float(rep), float(acc)
 ```
 
-### The Positional Shortcut
+### A Fixed-Offset Solution
 
-The most natural version of the task concatenates each pattern with itself:
-pattern length fixed at 32, sequence length 64. Our expressiveness analysis
-said one layer cannot run the two-hop algorithm — so let us falsify
-something by training a one-block model on it. (One equipment choice, whose
-reason will be clear in a moment: this model, alone in the section, gets
-its projection biases back with `bias=True`.)
+We first concatenate each length-32 pattern with itself to obtain a
+64-token sequence. Although the preceding analysis rules out a one-layer
+content-based solution, a one-block model performs well on this fixed-period
+task. For this experiment alone, we enable projection biases with
+`bias=True`; their role becomes clear below.
 
 ```{.python .input #what-attention-computes-the-positional-shortcut-1}
 %%tab pytorch
@@ -365,14 +352,13 @@ print(f'first copy {first:.2f} nats, second copy {rep:.2f} nats, '
       f'second-copy accuracy {acc:.2f}')
 ```
 
-The one-block model matches the second copy essentially perfectly. Did we
-just refute the composition argument? No. We mis-posed the task. When the
-pattern length is always 32, the correct source for every prediction sits
-exactly 31 positions back, and a RoPE head can attend to a fixed relative
-offset without reading content at all
-(:numref:`sec_positional-information`). No matching, no composition — just
-"look back 31". The probe below evaluates the same model on patterns of
-length 24 and measures where its attention mass actually sits:
+The one-block model predicts the second copy almost perfectly, but it does
+not implement the proposed content-based circuit. When the pattern length
+is always 32, the correct source for each prediction lies exactly 31
+positions earlier. A RoPE head can attend to this fixed relative offset
+without comparing token content (:numref:`sec_positional-information`). The
+following probe evaluates the same model on patterns of length 24 and
+measures its attention mass by relative offset:
 
 ```{.python .input #what-attention-computes-the-positional-shortcut-2}
 %%tab pytorch
@@ -399,25 +385,21 @@ print(f'attention mass at offset 23: '
       f'{jnp.diagonal(m, -23, axis1=2, axis2=3).mean():.2f}')
 ```
 
-Accuracy collapses to roughly chance, and the reason is on display: nearly
-all attention mass still sits at offset 31, almost none at the offset the
-new patterns require. The model learned *look back exactly 31 positions* —
-the cheapest circuit that fits fixed-period data, and a circuit that has
-nothing to do with induction. This also explains the equipment choice
-above. A pure-position head needs a query that *ignores content*, and the
-`qkv` bias supplies exactly that: a constant query–key pair whose
+Accuracy falls to roughly chance because nearly all attention mass remains
+at offset 31 rather than moving to the offset required by the new patterns.
+The model has learned a fixed-offset rule rather than induction. The `qkv`
+bias facilitates this solution by providing a constant query--key pair whose
 RoPE-rotated score depends only on the offset, peaking at a fixed
 distance. With biases disabled the shortcut only half-forms (second-copy
 accuracy roughly 0.5–0.7 in our probe runs), which is why this demo
 re-enables them — while every model we *analyze* keeps biases off, so the
-QK/OV algebra above stays exact. This is a lesson about synthetic tasks worth
-stating once and remembering: a benchmark rewards the cheapest shortcut it
-admits, not the mechanism its designer had in mind. The repair is to make
-the shortcut impossible: sample the pattern length uniformly from 16 to 32,
-so no fixed offset works and only content-based matching finds the previous
+QK/OV algebra above stays exact. More generally, a synthetic benchmark may
+admit a simpler solution than the mechanism it was intended to test. We
+therefore sample the pattern length uniformly from 16 to 32. No fixed offset
+then suffices, and prediction requires content-based matching to a previous
 occurrence.
 
-### Two Blocks Learn to Look Things Up
+### A Two-Block Induction Circuit
 
 With variable pattern lengths, we train the two-block model — the smallest
 one our analysis says can express induction — and the one-block model as
@@ -456,11 +438,11 @@ on later copies below half a nat and predicts roughly nine out of ten
 repeated tokens; the one-block model is stuck above three nats and fewer
 than one token in five — better than chance, because copying-style heads
 can at least concentrate probability on tokens present in the context, but
-nowhere near retrieval. Both models sit at chance on the first copy: at
-ln 64, around 4.2 nats, or a little above it, the overshoot being the price
-of betting on repetitions that a fresh random pattern keeps refusing to
-deliver. How the gap opens during training is at
-least as informative as the endpoint:
+nowhere near retrieval. Both models remain near the chance loss of $\ln 64$,
+approximately 4.2 nats, on the first copy. A slightly higher value can arise
+because probability assigned to repetitions is penalized when a newly
+sampled pattern does not repeat. The training curves also show when the
+performance gap develops:
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-2}
 def smooth(vals, k=25):
@@ -475,19 +457,16 @@ d2l.plot(list(range(0, 2000, 25)),
                  'first copy, 2 blocks'], figsize=(5, 3))
 ```
 
-The two-block curve does not descend gradually. It hugs the one-block curve
-for hundreds of steps — while the model learns only what one layer can
-learn — and then drops by a couple of nats within a window of one or two
-hundred steps: a *phase change*, after which the model behaves
-qualitatively differently. The pattern replicates in every run we tried,
-in both frameworks; *when* the drop comes does not: it shifts by hundreds
-of steps between seeds and frameworks, which is why we describe its shape
-and not its schedule. :citet:`Olsson.Elhage.Nanda.ea.2022` observed the
-same cliff, at vastly larger scale, as a bump in the training-loss
-derivative of real language models, and traced it to the same event we can
-now go and verify directly: the abrupt formation of induction heads.
+For several hundred steps, the two-block curve remains close to the
+one-block curve. It then falls by several nats within roughly one or two
+hundred steps, indicating an abrupt change in the learned computation. We
+observed this transition in both frameworks, although its timing varies by
+hundreds of steps across seeds and frameworks. A related feature appears in
+the training-loss derivative of larger language models and has been
+associated with the formation of induction heads
+:cite:`Olsson.Elhage.Nanda.ea.2022`.
 
-### The Heads, Caught in the Act
+### Inspecting the Learned Heads
 
 `TinyCharLM.attention_weights` returns every head's attention map. We feed
 one evaluation sequence with pattern length 24 and look at all eight heads:
@@ -572,19 +551,19 @@ heads do the reverse, with the strongest putting well over half of its mass
 on the single position the algorithm calls for, out of up to 63
 candidates. Which head plays which role varies from seed to seed, and in
 this small model several block-2 heads usually share the induction work
-rather than one doing it alone; the *structure* — previous-token attention
-below, induction attention above, never the other way around — is what
-replicates.
+rather than one doing it alone. The *structure* is what replicates:
+previous-token attention below, induction attention above, never the other
+way around.
 
 ## In-Context Learning as Pattern Completion
 
-### Completing Patterns It Has Never Seen
+### Generalization to Unseen Patterns
 
 Step back and consider what the trained model does at evaluation time.
 Every test sequence is freshly sampled: the pattern it completes, and every
 adjacent pair inside that pattern, has never occurred in training. There is
-no association between tokens for the weights to have stored — what the
-weights store is an *algorithm*, match-and-copy, that binds tokens to their
+no association between tokens for the weights to have stored. What they
+store is an *algorithm*, match-and-copy, that binds tokens to their
 successors at inference time, inside the context window. That is in-context
 learning, in miniature: the model "learns" each new pattern from a single
 exposure, without a gradient step. Plotting accuracy per position for
@@ -617,7 +596,7 @@ successors, a single-token match is ambiguous, and our two-layer circuit
 matches on exactly one preceding token. Disambiguating would require
 matching on a longer prefix: deeper composition, more layers.
 
-### The Circuit Is in the Weights
+### Verifying the Circuit in the Weights
 
 The attention maps show *where* the heads look; the QK/OV factorization
 lets us check *what* they do — from the weights alone, no forward pass. If
@@ -672,42 +651,43 @@ attending to a token is that token itself, where chance would manage one
 row in 64. This check is deliberately partial: it feeds the OV circuit raw
 embeddings, ignoring what block 1 added to the stream, and it says nothing
 about the QK side of the match (the exercises take the analysis further,
-composing block 1's OV circuit into block 2's QK circuit). Partial as it
-is, it closes a loop that attention maps alone cannot: the *where* said
-match, the weights say *copy*, and together they are the induction
-algorithm.
+composing block 1's OV circuit into block 2's QK circuit). Despite this
+limitation, the attention pattern supplies evidence for matching and the OV
+matrix supplies evidence for copying. Together they support the proposed
+induction algorithm.
 
-### Induction Heads in the Wild
+### Induction Heads in Larger Models
 
-None of this would matter much if it stopped at 64 tokens. It does not.
-:citet:`Olsson.Elhage.Nanda.ea.2022` found induction heads in real
+The same type of circuit has also been observed beyond this 64-token model.
+:citet:`Olsson.Elhage.Nanda.ea.2022` found induction heads in
 transformer language models across sizes, using a probe nearly identical to
 our lab: score each head by its attention from the current token to the
 token after that token's previous occurrence, on repeated random sequences.
 Three of their observations map directly onto what we just built. First,
 induction heads form abruptly early in training, and the formation
 coincides with the visible bump in the loss curve, our phase change at
-scale. Second, the same window is when models gain most of their in-context
-learning ability, measured as the gap between loss late and early in the
+scale. Second, models gain most of their in-context learning ability in that
+same window, measured as the gap between loss late and early in the
 context; ablating induction heads after training removes a large part of
 that gap. Third, the heads generalize off-distribution: heads identified on
 repeated random tokens also complete structured patterns, translate
 copied text fragments, and support few-shot-like completion. Prefix
-matching is a general algorithm, not a repetition trick. In large models
-the story cannot be as clean as in ours — feed-forward layers and
-normalization sit between the reads and the writes, the analysis becomes
-approximate, and attribution is contested at the margins — but the
-mechanism you can fully dissect in `TinyCharLM` is recognizably the one
-operating when a chatbot picks up a name, a format, or a made-up word from
-earlier in your conversation and reuses it correctly.
+matching is a general algorithm rather than a mechanism restricted to exact
+repetition. In larger models, feed-forward layers and normalization occur
+between attention operations, so the analysis is approximate and the
+attribution of behavior to individual components is less direct. Even so,
+the circuit identified in `TinyCharLM` provides a small, explicit model of
+how information introduced earlier in a context can affect later
+predictions.
 
 ## What Attention Weights Do and Do Not Tell You
 
-This section closes the chapter, so it should also close a promissory note
-the chapter has been carrying: attention weights *look* interpretable —
-what do they actually license? Our own lab supplies the calibration.
+Attention weights are often inspected as explanations of model behavior.
+Their interpretation, however, requires the transformations applied to the
+attended representations.
 
-Weights answer *where*, never *what*. An attention map fixes the mixture
+An attention map specifies *where* a head attends but not *what* it
+computes. It fixes the mixture
 $\alpha_{ij}$, but the head's effect runs through its OV circuit: a head
 attending sharply to a token might move its identity, some feature of it,
 or, if the OV circuit annihilates the relevant directions, nothing at
@@ -721,49 +701,47 @@ not refute every explanatory use — sharpened rather than settled the
 debate. "The attention weights mean something" is, as an unqualified
 claim, false; qualified versions must say what the weights feed into.
 
-What our identification of the induction head actually rested on is worth
-listing, because the list is the method. A *behavioral* result: second-copy
-loss collapses, and only for models deep enough to express the circuit. A
-*causal* handle: change the input distribution (the period probe) or the
-model (the ablation exercise) and performance moves as the mechanism
-predicts. A *weight-level* check: the OV circuit is a copying matrix. The
-attention stripes were the least of it: they told us where to look, not
-what we had found. In our attention-only model all three checks were cheap
+We identified the induction head using three forms of evidence. The
+*behavioral* evidence is the reduction in second-copy loss for models deep
+enough to express the circuit. The *causal* evidence comes from changing the
+input period or ablating model components and observing the predicted change
+in performance. The *weight-level* evidence is the copying structure of the
+OV circuit. The attention patterns locate candidate heads, but do not by
+themselves establish their computation. In our attention-only model all
+three checks were inexpensive
 because the model is linear once the patterns are fixed. In a real
 transformer, feed-forward layers and normalization break that linearity,
 features are packed into shared directions rather than neat subspaces, and
-each step of the triangulation becomes a research problem — this is the
-active field of mechanistic interpretability, where a handful of circuits,
-induction heads first among them, are understood at the level we reached
-here, while most of what large models do is not. Attention weights are
-evidence, and this section is a template for what turning evidence into
-understanding takes.
+each part of this analysis becomes a research problem within mechanistic
+interpretability. A handful of circuits are understood at this level,
+including induction heads, while many computations in large models remain
+unexplained. Attention weights are therefore one source of evidence among
+behavioral, causal, and weight-level analyses.
 
 ## Summary
 
-An attention-only transformer is best read through its residual stream: each
-position carries a $d$-dimensional vector from embedding to logits, and
-attention heads are the only writers. Every head factors into a QK circuit
+In an attention-only transformer, each position carries a $d$-dimensional
+residual-stream vector from the embedding to the output logits. Every head
+factors into a QK circuit
 $\mathbf{W}_q^\top \mathbf{W}_k$ that decides where to attend and an OV
 circuit $\mathbf{W}_o \mathbf{W}_v$ that decides what the attended stream
-contributes, two rank-$d_h$ matrices readable from the checkpoint. Depth
-buys expressiveness in discrete steps: zero layers store bigram statistics
+contributes. Both rank-$d_h$ matrices can be read from the checkpoint. The
+representable functions change with depth: zero layers store bigram statistics
 in the low-rank Gram form the tied head allows, one layer adds
 skip-trigrams (including copying), and two layers can
 compose a previous-token head with a match-and-copy head into an induction
 head that finds the previous occurrence of the current token and predicts
 what followed it. Trained on repeated random tokens with variable period,
-`TinyCharLM` discovers exactly this circuit — abruptly, in a phase change
-visible in the second-copy loss — while a one-block control cannot, and a
+`TinyCharLM` learns this circuit after an abrupt reduction in second-copy
+loss, while a one-block control cannot. A
 fixed-period version of the task is solved by a positional shortcut
 instead (one that a projection bias, restored for that demo alone, makes
-cheap to express), a reminder that synthetic benchmarks reward the
-cheapest circuit they admit. The trained model completes patterns it has never seen, which
-is in-context learning in miniature, and the mechanism matches the
+cheap to express). This comparison illustrates how synthetic benchmarks can
+admit unintended solutions. The trained model completes patterns it has
+never seen, a small instance of in-context learning, and the mechanism matches the
 induction heads implicated in in-context learning in large language
-models. Attention maps alone license none of these conclusions: the
-identification rested on behavior, causal probes, and weight-level checks
-together.
+models. Establishing this interpretation requires behavioral results, causal
+probes, and weight-level checks in addition to attention maps.
 
 ## Exercises
 
@@ -827,7 +805,7 @@ What attention computes<br>
 :::
 
 ::: {.slide title="The residual stream"}
-[Not where a model attends — what the attending computes]{.kicker}
+[Attention patterns and value transformations]{.kicker}
 
 Each position carries a $d$-dimensional vector from embedding to logits.
 Layers never overwrite it; heads only **add**:
@@ -844,12 +822,12 @@ patterns fixed, embeddings → logits is *linear* — fully analyzable.
 :::
 
 ::: {.slide title="Where and what: the QK and OV circuits"}
-Every head is two matrices you can read off the checkpoint:
+Each head is described by two matrices that can be read from the checkpoint:
 
 $$s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}} \mathbf{h}_j}{\sqrt{d_h}}, \qquad \mathbf{W}_{\mathrm{QK}} = \mathbf{W}_q^\top \mathbf{W}_k, \qquad \mathbf{W}_{\mathrm{OV}} = \mathbf{W}_o \mathbf{W}_v$$
 
-- **QK circuit**: *where* to attend — and nothing else.
-- **OV circuit**: *what* the attended stream contributes — and nothing else.
+- **QK circuit**: determines the attention scores.
+- **OV circuit**: transforms the attended residual stream.
 - Both $d \times d$, rank $\leq d_h$: a head moves a 32-dimensional slice.
 
 @!what-attention-computes-where-and-what-the-qk-and-ov-circuits
@@ -877,22 +855,22 @@ Layer 1 writes each token's predecessor into its stream; layer 2 matches
 gradient descent *finds* this circuit is an empirical question.
 :::
 
-::: {.slide title="A task made of pure repetition"}
+::: {.slide title="A repeated-sequence task"}
 Random patterns, tiled; fresh every batch. No corpus statistics — the only
 way to predict later copies is retrieval from context:
 
 @!what-attention-computes-repetition-as-a-task-1
 :::
 
-::: {.slide title="A one-block model solves it…"}
-Fixed pattern length 32 — and the model our theory says is too shallow gets
-a perfect score (note `bias=True`; the reason is on the next slide):
+::: {.slide title="A fixed-period result"}
+With a fixed pattern length of 32, a one-block model obtains nearly perfect
+accuracy. This experiment uses `bias=True`:
 
 @!what-attention-computes-the-positional-shortcut-1
 :::
 
-::: {.slide title="…for the wrong reason"}
-Probe: same model, patterns of length 24.
+::: {.slide title="The learned fixed-offset rule"}
+We probe the same model with patterns of length 24.
 
 @!what-attention-computes-the-positional-shortcut-2
 
@@ -917,17 +895,17 @@ Pattern length now uniform in 16–32; no fixed offset works.
 - One block: stuck above three nats — copying-style heads only.
 :::
 
-::: {.slide title="The phase change"}
+::: {.slide title="An abrupt transition during training"}
 @!what-attention-computes-two-blocks-learn-to-look-things-up-2
 
-- Hundreds of steps hugging the one-block curve, then a drop of a couple of
-  nats within one or two hundred steps.
+- The curve remains close to the one-block curve for hundreds of steps,
+  then falls by several nats within one or two hundred steps.
 - *When* it happens varies by seed and framework — we describe the shape,
-  not the schedule. Same cliff as the "induction bump" in real LMs
+  not the schedule. A related "induction bump" occurs in larger language models
   (Olsson et al., 2022).
 :::
 
-::: {.slide title="Caught in the act"}
+::: {.slide title="Learned attention patterns"}
 @!what-attention-computes-the-heads-caught-in-the-act-1
 
 Block 1: a sharp line one step below the diagonal — a previous-token head.
@@ -954,7 +932,7 @@ The weights store an *algorithm*, not associations:
 One exposure suffices; the restart itself is unpredictable in principle.
 :::
 
-::: {.slide title="The circuit is in the weights"}
+::: {.slide title="Verifying copying in the weights"}
 If block 2 copies, attending to token $a$ should boost logit $a$:
 $C_{ab} = \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}} \mathbf{e}_a$ should be
 diagonal-dominant — checkable without a forward pass:
@@ -963,8 +941,9 @@ diagonal-dominant — checkable without a forward pass:
 :::
 
 ::: {.slide title="What attention weights do not tell you"}
-- Weights answer **where**, never **what**: the effect runs through OV — a
-  sharp head can move nothing, a diffuse one can compute precisely.
+- Weights specify **where** a head attends, but its effect also depends on
+  the OV circuit. A sharp head can have little effect, while a diffuse head
+  can implement a precise computation.
 - Different weights, same predictions (Jain & Wallace, 2019); the rebuttal
   (Wiegreffe & Pinter, 2019) sharpened, not settled, the debate.
 - Our identification used **behavior** (the loss split), **causal probes**
@@ -978,13 +957,13 @@ induction heads first — are understood at this level. Most are not.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Summary"}
 - Residual stream: embeddings in, logits out, heads only add — this
   section's vocabulary returns when we assemble full transformer blocks.
 - Every head = QK circuit (where) × OV circuit (what), both rank $d_h$.
 - Depth ladder: bigrams → skip-trigrams → induction (needs composition).
-- Trained on repetition, `TinyCharLM` finds the induction circuit in a
-  phase change; a fixed-period task is solved by a positional shortcut
+- Trained on repetition, `TinyCharLM` learns the induction circuit after an
+  abrupt loss reduction; a fixed-period task is solved by a positional shortcut
   instead.
 - Pattern completion over never-seen tokens = in-context learning in
   miniature — the mechanism implicated in LLM in-context learning.

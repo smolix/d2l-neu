@@ -1,25 +1,21 @@
 # Integral Calculus
 :label:`sec_mdl-integral_calculus`
 
-Differentiation answered a local question: how does a function change when we
-nudge its input? Integration answers a global one: how much of something is
-there in total, whether the area under a curve, the volume under a surface, or
-the probability under a density. The two look unrelated, yet the *fundamental
-theorem of calculus* joins them into a single subject: integration is
-differentiation run backwards. That one fact is what makes integrals
-computable at all, and it is the reason a deep-learning reader needs them, since
-every continuous probability is an integral and every expectation is an integral
-average (:numref:`sec_mdl-random_variables`).
+Differentiation describes local change, whereas integration accumulates a
+quantity over an interval or region. Examples include area under a curve,
+volume under a surface, and probability under a density. The *fundamental
+theorem of calculus* relates these operations by expressing integration through
+antiderivatives. Continuous probabilities and expectations therefore require
+integration (:numref:`sec_mdl-random_variables`).
 
-We will not need the full machinery of a calculus course. This section builds
-what an integral *is* (a limit of sums, extended to unbounded domains), the
-fundamental theorem that lets us *compute* integrals together with the
-integration-by-parts and change-of-variables rules it yields, and the
-multiple-integral toolkit (Fubini's theorem and the $n$-dimensional change of
-variables) that powers the Gaussian normalizer and, later, normalizing flows
-(:numref:`sec_mdl-continuous-normalizing-flows`). The last part turns to
-probability: densities, expectations, Monte Carlo estimation, and
-differentiation under the integral sign.
+We define the integral as a limit of sums and extend the definition to
+unbounded domains. We then derive computation rules from the fundamental
+theorem, including integration by parts and change of variables. Multiple
+integrals, Fubini's theorem, and multidimensional change of variables lead to
+the Gaussian normalizer and normalizing flows
+(:numref:`sec_mdl-continuous-normalizing-flows`). The final part covers
+densities, expectations, Monte Carlo estimation, and differentiation under the
+integral sign.
 
 ```{.python .input #integral-imports}
 #@tab mxnet
@@ -147,7 +143,7 @@ accumulating from a base point $c$ at the left edge of the plot.
 :label:`fig_mdl-area-subtract`
 
 So knowing $F$ solves the whole problem. The *fundamental theorem of calculus*
-is the fact that $F$ is determined by a derivative.
+says that a derivative determines $F$.
 
 **Theorem (Fundamental theorem of calculus).** *Let $f$ be continuous and let
 $F(x)=\int_a^x f(y)\,dy$. Then $F$ is differentiable and*
@@ -186,7 +182,7 @@ $\epsilon<0$ the sliver sits to the left of $x$ and the same bounds apply, with
 both sign flips canceling in the quotient). That limit is
 exactly $F'(x)$. $\blacksquare$
 
-The sliver argument is the whole story: the rate at which accumulated area grows
+The argument shows that the rate at which accumulated area grows
 is just the current height of the curve. This *reverses* the problem. Finding
 areas, hard on its own, becomes the search for an **antiderivative**, a function
 whose derivative is $f$, which we can read straight off the derivative table of
@@ -260,8 +256,8 @@ with $\int_{-\infty}^\infty$ defined by splitting at any point and requiring
 *both* one-sided limits to exist on their own (a symmetric combination of the
 two is not enough). The limit may be finite, in which case the integral
 *converges*;
-otherwise, whether the partial integrals grow without bound or merely fail to
-settle, it *diverges*. Whether the tail is "thin enough" is a
+otherwise it *diverges*, whether the partial integrals grow without bound or
+merely fail to settle. Whether the tail is "thin enough" is a
 genuine question. The test case is the power law $x^{-p}$, for which the
 antiderivative gives
 
@@ -275,9 +271,9 @@ exactly $p=1$, where the integrand $x^{-1}$ has antiderivative $\log x$ instead,
 $\int_1^\infty x^{-1}\,dx=\lim_{b\to\infty}\log b=\infty$; the case split above
 already records this divergent value. So $\int_1^\infty x^{-2}\,dx = 1$ while
 $\int_1^\infty x^{-1}\,dx=\infty$: the boundary between convergence and divergence
-sits exactly at $p=1$. This single threshold is what decides whether a
-*heavy-tailed* density, one whose tail decays like a power law rather than
-exponentially, even has a finite
+sits exactly at $p=1$. A *heavy-tailed* density is one whose tail decays like a
+power law rather than exponentially, and this single threshold is what decides
+whether such a density even has a finite
 normalizer or mean, a recurring concern once we reach probability. The cell
 watches a convergent improper integral, $\int_0^\infty e^{-x}\,dx = 1$, through
 two lenses at once: the *exact* partial integrals
@@ -345,14 +341,14 @@ survives is exactly the improper integral computed above. This particular
 value is the mean of the exponential distribution
 (:numref:`sec_mdl-distributions`), and it shows the form in which the trick
 returns throughout probability: expectations $\int g(x)\,p(x)\,dx$ are
-integrals of products, and shifting a derivative from a factor we cannot handle
-onto one we can is often the only move available. The identity returns in
-Hyvärinen's score matching :cite:`Hyvarinen.2005`
+integrals of products, and often the only move available is to shift a
+derivative from a factor we cannot handle onto one we can. The identity returns
+in Hyvärinen's score matching :cite:`Hyvarinen.2005`
 (:numref:`sec_mdl-score-matching-diffusion-flow`), where a single integration
-by parts converts an objective involving the score of the data
-distribution, the gradient $\nabla_{\mathbf{x}} \log p(\mathbf{x})$ of the
-log-density with respect to the *data point*, which no one can evaluate,
-into one that can be estimated from samples.
+by parts converts an objective no one can evaluate into one that can be
+estimated from samples. The ingredient beyond reach there is the score of the
+data distribution, the gradient $\nabla_{\mathbf{x}} \log p(\mathbf{x})$ of the
+log-density with respect to the *data point*.
 
 ### A Note on Signed Area
 
@@ -550,8 +546,8 @@ the one- and two-dimensional pictures side by side.
 
 Equation :eqref:`eq_mdl-change_var_nd` is a statement about *area and volume*: it
 says how the integral of a fixed function transports under a reparametrization of
-the domain. Applied instead to a probability *density*, a function that must keep
-integrating to $1$, the very same Jacobian factor becomes the
+the domain. Apply it instead to a probability *density*, a function that must keep
+integrating to $1$, and the very same Jacobian factor becomes the
 change-of-variables-for-densities rule of :numref:`sec_mdl-random_variables`, whose
 $-\log|\det D\boldsymbol{\phi}|$ correction is the exact mechanism behind
 **normalizing flows** (:numref:`sec_mdl-continuous-normalizing-flows`). We state the
@@ -658,7 +654,7 @@ print('grid integral of e^(-x^2-y^2):', round(val, 6))
 print('exact value pi               :', round(float(onp.pi), 6))
 ```
 
-## Integration Meets Probability
+## Integration in Probability
 
 This is why a deep-learning reader needs integration at all. A continuous
 probability **density** is nothing more than a non-negative function that is
@@ -708,14 +704,14 @@ $$
 :eqlabel:`eq_mdl-monte-carlo`
 
 a stochastic counterpart of the Riemann sum that ignores the geometry of the
-domain. The **law of large numbers** (:numref:`sec_mdl-statistics`) is the
-guarantee that it works: the sample
+domain. The **law of large numbers** (:numref:`sec_mdl-statistics`) guarantees
+that it works: the sample
 average converges to the true expectation. The error scale comes from a
 variance computation: the estimator's standard deviation is
 $\mathrm{sd}(g(X))/\sqrt{n}$, an order-$1/\sqrt{n}$ error whose limiting
-distribution the **central limit theorem** (:numref:`sec_mdl-distributions`)
-supplies. The rate depends only on the sample size $n$, not
-on the dimension. (The fine print: the *constant* in front of
+distribution comes from the **central limit theorem**
+(:numref:`sec_mdl-distributions`). The rate depends only on the sample size
+$n$, not on the dimension. (The fine print: the *constant* in front of
 $1/\sqrt{n}$ is the standard deviation of $g(X)$, and *that* can grow with the
 dimension; what is dimension-free is the exponent, and it is the exponent that
 grids lose.) That dimension-free rate is decisive. A grid laid down to
@@ -810,11 +806,11 @@ $$
 = \int \nabla_{\boldsymbol{\theta}} f(x, \boldsymbol{\theta})\,dx .
 $$
 
-The swap needs a hypothesis. The standard sufficient condition, a consequence
-of the **dominated convergence theorem** that we also state on faith
-:cite:`Folland.1999`, is that, near the current $\boldsymbol{\theta}$, the
-integrands' derivatives are bounded in magnitude by a single integrable
-function of $x$. Many smooth, rapidly decaying densities used in deep learning comply, but the
+The swap needs a hypothesis. The standard sufficient condition is that, near
+the current $\boldsymbol{\theta}$, the integrands' derivatives are bounded in
+magnitude by a single integrable function of $x$; it follows from the
+**dominated convergence theorem**, which we also state on faith
+:cite:`Folland.1999`. Many smooth, rapidly decaying densities used in deep learning comply, but the
 condition must be checked rather than inferred from smoothness alone. Moving
 support and increasingly sharp parameter-dependent spikes are two common ways
 it can fail; failure is not limited to those cases.
@@ -1094,7 +1090,7 @@ $\epsilon \to dx$.
 :::
 :::
 
-::: {.slide title="Watching the limit converge"}
+::: {.slide title="Convergence of Riemann Sums"}
 [The integral]{.kicker}
 
 The definition converges, but slowly. Refine the partition for
@@ -1167,7 +1163,7 @@ finite normalizer or mean at all.
 :::
 :::
 
-::: {.slide title="Two errors, two knobs"}
+::: {.slide title="Truncation and Discretization Error"}
 [The integral]{.kicker}
 
 Watch a convergent improper integral, $\int_0^\infty e^{-x}\,dx=1$,
@@ -1388,7 +1384,7 @@ integrates to $1$, and symmetry sends its mean to $0$.
 @!integral-density
 :::
 
-::: {.slide title="Monte Carlo beats the curse of dimensionality"}
+::: {.slide title="Monte Carlo in High Dimensions"}
 [Probability]{.kicker}
 
 ::: {.cols .vc}
@@ -1434,7 +1430,7 @@ and you get a confidently wrong gradient.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Summary"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

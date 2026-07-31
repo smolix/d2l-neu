@@ -7,9 +7,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_dropout`
 
 
-Let's think briefly about what we
-expect from a good predictive model.
-We want it to perform well on unseen data.
+The purpose of a predictive model is to perform well on unseen data.
 Classical generalization theory
 suggests that to close the gap between
 train and test performance,
@@ -38,9 +36,9 @@ between the requirement that a function be smooth (and thus simple),
 and the requirement that it be resilient
 to perturbations in the input.
 
-Then, :citet:`Srivastava.Hinton.Krizhevsky.ea.2014`
-developed a clever idea for how to apply Bishop's idea
-to the internal layers of a network, too.
+Building on related noise-injection ideas,
+:citet:`Srivastava.Hinton.Krizhevsky.ea.2014` applied random perturbations
+to a network's internal layers.
 Their idea, called *dropout*, involves
 injecting noise while computing
 each internal layer during forward propagation,
@@ -71,8 +69,8 @@ the dropout technique itself has proved enduring,
 and various forms of dropout are implemented
 in most deep learning libraries.
 
-A third perspective, closer to why dropout works, is due to
-:citet:`Srivastava.Hinton.Krizhevsky.ea.2014` themselves.
+:citet:`Srivastava.Hinton.Krizhevsky.ea.2014` themselves offer a third
+perspective, closer to why dropout works.
 A network with $n$ hidden units has $2^n$ possible dropout masks,
 each defining a *thinned* subnetwork that shares its weights
 with all the others.
@@ -86,7 +84,7 @@ single linear layer; in deeper networks the test-time forward pass
 computes something closer to a *geometric* mean
 of the subnetworks' predictions.)
 From this angle dropout is cheap model averaging,
-which motivates why it tends to reduce variance:
+which suggests why it tends to reduce variance:
 ensembles average away the idiosyncrasies of their members.
 The analogy is loose rather than literal, though: the $2^n$
 subnetworks share a single set of weights and are trained jointly,
@@ -128,7 +126,7 @@ By design, the expectation remains unchanged,
 since $E[h'] = p \cdot 0 + (1-p) \cdot \frac{h}{1-p} = h$.
 This is why we divide by $1-p$ and by no other constant:
 it is the unique factor that restores the original expected value.
-This scheme, with the rescaling applied during *training*, is known as
+Applying the rescaling during *training* is known as
 *inverted dropout*, and it is what every modern framework implements. The
 original formulation :cite:`Srivastava.Hinton.Krizhevsky.ea.2014` left
 activations untouched during training and instead multiplied the weights by
@@ -188,8 +186,8 @@ one element of $h_1, \ldots, h_5$.
 
 Typically, we disable dropout at test time,
 running the full network with no masking and no rescaling.
-(One notable exception, keeping dropout *on* at test time to estimate
-prediction uncertainty, is explored in exercise 5.)
+(Exercise 5 explores one notable exception, keeping dropout *on* at test time
+to estimate prediction uncertainty.)
 
 ## Implementation from Scratch
 
@@ -531,14 +529,15 @@ third is the *implicit ensemble*: every training step trains a different thinned
 subnetwork, and evaluating the full network at test time approximates averaging
 the predictions of all $2^n$ of them :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`.
 
-A word on currency. Dropout was transformative for the fully connected vision
-networks of the mid-2010s, but its role has narrowed since. Convolutional
+Dropout was important for fully connected vision networks of the mid-2010s,
+but its role has since narrowed. Convolutional
 networks typically replace it with batch normalization (see
 :numref:`sec_batch_norm`), which supplies similar noise-driven regularization.
-The two also combine poorly: batch normalization's running statistics,
-accumulated while dropout perturbs the activations' variance during training,
-mismatch the variance it sees at evaluation time, so placing dropout before a
-batch-normalization layer tends to hurt :cite:`Li.Chen.Hu.ea.2019`.
+The two also combine poorly. Batch normalization accumulates its running
+statistics while dropout perturbs the activations' variance during training, so
+those statistics mismatch the variance it sees at evaluation time; placing
+dropout before a batch-normalization layer therefore tends to hurt
+:cite:`Li.Chen.Hu.ea.2019`.
 Large transformer-based language models use dropout lightly (rates around 0.0 to
 0.1) or not at all in their core layers, reserving it mostly for final
 classifier heads. It nonetheless remains a cheap, reliable regularizer that
@@ -605,11 +604,11 @@ model from leaning too hard on the training set.
 :::
 :::
 
-::: {.slide title="Dropout: damage the network on purpose"}
+::: {.slide title="Dropout randomly masks hidden activations"}
 [The idea]{.kicker}
 
 Srivastava, Hinton et al. (2014) gave a simple
-recipe:
+definition:
 
 > *Each training step, set each hidden unit to zero
 > independently with probability* $p$, *then rescale the
@@ -738,7 +737,7 @@ Sample a Bernoulli keep-mask from a uniform draw, multiply, then rescale the sur
 @dropout-implementation-from-scratch-1
 :::
 
-::: {.slide title="Sanity check on a 2×8 input" except="tensorflow"}
+::: {.slide title="Dropout on a 2×8 input" except="tensorflow"}
 [From Scratch]{.kicker}
 
 @dropout-implementation-from-scratch-2
@@ -751,7 +750,7 @@ Sample a Bernoulli keep-mask from a uniform draw, multiply, then rescale the sur
 - $p = 1$ → everything dropped (degenerate).
 :::
 
-::: {.slide title="Sanity check on a 2×8 input" only="tensorflow"}
+::: {.slide title="Dropout on a 2×8 input" only="tensorflow"}
 [From Scratch]{.kicker}
 
 @-dropout-implementation-from-scratch-2
@@ -795,8 +794,8 @@ training only.
 @dropout-defining-the-model
 :::
 
-::: {.slide title="The payoff: the train/val gap stays shut"}
-[From Scratch · payoff]{.kicker}
+::: {.slide title="Dropout reduces the training-validation gap"}
+[From scratch · result]{.kicker}
 
 Two 256-unit hidden layers, dropout $0.2$ after the first and $0.5$
 after the second (the gentler-near-the-input convention in action),
@@ -818,7 +817,7 @@ gap a plain 256-256 MLP would open up is held in check.
 :::
 :::
 
-::: {.slide title="Just add a Dropout layer"}
+::: {.slide title="The framework Dropout layer"}
 [Concise]{.kicker}
 
 `nn.Dropout(p)` is a stock layer that also knows the
@@ -838,7 +837,7 @@ masking and rescaling internally:
 :::
 
 ::: {.slide title="Dropout today"}
-[Currency]{.kicker}
+[Current practice]{.kicker}
 
 Dropout was transformative for the dense vision nets of
 the mid-2010s; its role has since narrowed.
@@ -884,7 +883,7 @@ family of stochastic-regularization methods.
 ::: {.d2l-note}
 Exercise 5 flips the switch: keep dropout **on** at test time,
 average 20 passes, and you get uncertainty estimates (MC dropout).
-Next (the Kaggle house-prices section): everything in this chapter,
+Next, the Kaggle house-prices section applies the methods from this chapter,
 deployed on a Kaggle competition.
 :::
 :::

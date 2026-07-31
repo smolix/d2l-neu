@@ -1,21 +1,19 @@
 # Ordinary Differential Equations and Numerical Solvers
 :label:`sec_mdl-odes-solvers`
 
-Every continuous-time generative model, from Neural ODEs and continuous
-normalizing flows to the deterministic samplers of diffusion and flow
-matching, is an **ordinary differential equation that you integrate**. An ODE
-is a *velocity rule*: at every point of space (and time) it tells you which
-way to move and how fast. A solution is the path you trace by always
-following the local arrow; a numerical solver is a recipe for following
-arrows in finite steps; a deep residual network *is* such a recipe, with its
-layers as the steps; and a density transported by the flow changes at a rate
-read off the field's Jacobian. This section builds the mathematics behind
-that picture: what a vector field is, when a trajectory exists and is unique,
-how eigenvalues decide stability, and how numerical solvers trade step size
-for accuracy. The stochastic counterpart of the Euler method
-arrives in :numref:`sec_mdl-euler-maruyama`, the probability-flow ODE that
-turns a diffusion model into a deterministic flow in
-:numref:`sec_mdl-fokker-planck-probability-flow`, and the solvers studied here
+Continuous-time generative models require both a differential equation and a
+method for integrating it. This includes Neural ODEs, continuous normalizing
+flows, and deterministic samplers for diffusion and flow-matching models. An
+ODE specifies a velocity at each point in space and time; its solution is a
+trajectory tangent to that velocity field. A numerical solver approximates
+the trajectory with finite steps. This section develops vector fields,
+existence and uniqueness, linear stability, and the accuracy and stability of
+numerical solvers. It also relates residual networks to Euler discretization
+and derives the density evolution used by continuous normalizing flows. The
+stochastic counterpart of the Euler method
+arrives in :numref:`sec_mdl-euler-maruyama`, and the probability-flow ODE that
+turns a diffusion model into a deterministic flow arrives in
+:numref:`sec_mdl-fokker-planck-probability-flow`. The solvers studied here
 set the step-count/quality tradeoff of every sampler in
 :numref:`sec_mdl-score-matching-diffusion-flow`.
 
@@ -26,8 +24,8 @@ Taylor expansion),
 :numref:`sec_mdl-matrix-calculus-autodiff` (reverse-mode AD as vector--Jacobian
 products), :numref:`sec_mdl-integral_calculus` (the integrals being
 approximated), and :numref:`sec_mdl-random_variables` (the change-of-variables
-formula for densities). The numerical demonstrations are plain NumPy, because
-every solver is a handful of lines, until we *train* a Neural ODE below.
+formula for densities). The numerical demonstrations use NumPy until the
+Neural ODE training example.
 
 ```{.python .input #odes-solvers-imports}
 #@tab mxnet
@@ -341,13 +339,12 @@ $\dot{x} = \lambda_i x$ we already solved, evolving independently of the
 others. Eigenvectors are the directions in which a linear ODE is
 one-dimensional; the $e^{\lambda_i t}$ are its **modes**.
 
-### The Stability Dictionary
+### Stability from Eigenvalues
 
 Each mode $e^{\lambda_i t}$ with $\lambda_i = a_i + i b_i$ has magnitude
 $|e^{\lambda_i t}| = e^{a_i t}$: *the real part sets growth or decay, the
 imaginary part sets rotation*. Reading :eqref:`eq_mdl-ode-matrix-exp-eig`
-mode by mode gives the dictionary every dynamical argument in this chapter
-uses:
+mode by mode gives the following classification:
 
 * $\operatorname{Re}\lambda_i < 0$ for all $i$: every mode decays, and
   $\mathbf{x}(t) \to \mathbf{0}$ from every start: the origin is
@@ -359,7 +356,7 @@ uses:
   $e^{a t}(\cos bt, \sin bt)$ terms: **rotation**, decaying or growing
   with the sign of $a$.
 
-The rotation entry is the eigenvalue--rotation dictionary of
+The rotation case extends the eigenvalue analysis of
 :numref:`subsec_mdl-complex-rotation` run in continuous time. On the invariant
 plane of a conjugate pair $a \pm ib$, the matrix $A$ acts as the block
 $\left(\begin{smallmatrix}a & -b\\ b & \phantom{-}a\end{smallmatrix}\right)$
@@ -372,7 +369,7 @@ $e^{at}$ composed with rotation by $bt$. Where the *iterated* matrix of
 step, the *flow* turns at angular velocity $b$: this is the spiral, and it is
 exactly where the $e^{at}(\cos bt, \sin bt)$ terms above come from.
 
-In two dimensions the dictionary is a portrait gallery
+In two dimensions, these cases correspond to standard phase portraits
 (:numref:`fig_mdl-dyn-phase-portraits`). The saddle deserves a
 note: with real eigenvalues of opposite signs, trajectories approach along the
 stable eigendirection and escape along the unstable one, the generic fate
@@ -418,27 +415,27 @@ $$
 so near the fixed point the dynamics are the linear system
 $\dot{\boldsymbol{\delta}} = J \boldsymbol{\delta}$, and the eigenvalues of
 the *Jacobian at the fixed point* decide local stability by the same
-dictionary. (This is rigorous whenever no eigenvalue sits exactly on the
+classification. (This is rigorous whenever no eigenvalue sits exactly on the
 imaginary axis, by the Hartman--Grobman theorem
 :cite:`Hartman.1960,Grobman.1959`; on the axis, the neglected
-quadratic terms get a vote.) The damped pendulum
-$\ddot{\theta} = -\sin\theta - \gamma\dot{\theta}$, written as a first-order
-system in $(\theta, \dot{\theta})$, has Jacobian eigenvalues with negative
+quadratic terms get a vote.) Write the damped pendulum
+$\ddot{\theta} = -\sin\theta - \gamma\dot{\theta}$ as a first-order
+system in $(\theta, \dot{\theta})$. It has Jacobian eigenvalues with negative
 real part at the hanging rest point $(0, 0)$ (a stable spiral, the
 ring-down of a released pendulum) and a saddle at the inverted balance
 $(\pi, 0)$, which is why you can stand a pencil on its tip only along a
-measure-zero set of initial conditions. The same computation, applied to a
-trained network's dynamics or to the mean of the Ornstein--Uhlenbeck process
+measure-zero set of initial conditions. The same computation is the working
+stability tool of this whole chapter, applied to a trained network's dynamics
+or to the mean of the Ornstein--Uhlenbeck process
 (:numref:`sec_mdl-ornstein-uhlenbeck`, whose deterministic skeleton is exactly
-the contracting mode $\dot{x} = -\theta x$), is the working stability tool of
-this whole chapter.
+the contracting mode $\dot{x} = -\theta x$).
 
 Let us compute all of this. The cell builds $e^{At}$ for the spiral field of
-:numref:`fig_mdl-dyn-ode-field` three independent ways (the
+:numref:`fig_mdl-dyn-ode-field` three independent ways: the
 eigendecomposition formula :eqref:`eq_mdl-ode-matrix-exp-eig`, the truncated
 series :eqref:`eq_mdl-ode-matrix-exp-series`, and the compounding limit
-$(I + tA/n)^n$, forward Euler in disguise and a preview of the next
-section) and checks the stability dictionary's prediction that
+$(I + tA/n)^n$, which is the forward-Euler approximation introduced in the
+next section. It then checks the eigenvalue prediction that
 $\|\mathbf{x}(t)\|$ decays exactly like $e^{-t/2}$ (the rotation part of this
 particular $A$ is norm-preserving).
 
@@ -534,7 +531,7 @@ using $(1 + hL)^n \le e^{nhL} \le e^{LT}$. $\blacksquare$
 The structure of the bound recurs for
 every solver: a *local* error of order $h^{p+1}$ per step becomes a *global*
 error of order $h^p$ after $T/h$ steps, inflated by a stability factor
-$e^{LT}$ that prices how strongly the dynamics can amplify old mistakes. We
+$e^{LT}$ that measures how strongly the dynamics can amplify old mistakes. We
 say Euler is a method of **order** $p = 1$: halve the step, halve the error.
 
 ### Runge--Kutta Methods
@@ -681,9 +678,10 @@ $0 < (1 + h\lambda)^{-1} < 1$ for all $h > 0$. $\blacksquare$
 Past the threshold, forward Euler *amplifies*: each step overshoots the
 origin and lands farther away on the
 other side, an oscillating divergence with growth factor $|1 - h\lambda|$. A
-method that decays on the test equation for every $h > 0$, as backward Euler
-does, is called **A-stable** :cite:`Dahlquist.1963`. (Our $\lambda$ is real,
-but the full picture lives in the complex plane. Write the test equation as
+method that decays on the test equation for every $h > 0$ is called
+**A-stable** :cite:`Dahlquist.1963`, and backward Euler is one. (Our
+$\lambda$ is real, but the full picture lives in the complex plane.
+Write the test equation as
 $\dot{y} = \lambda y$ with complex $\lambda$, so that a decaying, rotating
 mode has $\operatorname{Re}\lambda < 0$; a method's
 **stability region** is the set of $z = h\lambda$ for which its update
@@ -728,27 +726,27 @@ for n in [10, 20, 26, 40, 100]:
 print('exact x(T) = e^{-50} =', f'{np.exp(-lam_f * T):.2e}')
 A_stiff = np.diag([-50.0, -1.0])               # one fast mode, one slow mode
 x_stiff = euler(lambda x: A_stiff @ x, np.array([1.0, 1.0]), T, 20)
-print('stiff system, forward Euler with h=0.05: x(T) =', x_stiff.round(2),
-      '(the long-dead fast mode explodes)')
+print('stiff system, forward Euler with h=0.05 '
+      '(the long-dead fast mode explodes):')
+print('x(T) =', x_stiff.round(2))
 ```
 
 Note what backward Euler's unconditional stability does and does not buy: at
 $h = 0.1$ it returns $1.65 \times 10^{-8}$ where the truth is
 $1.93 \times 10^{-22}$: *stable* (it decays, and further steps decay
 further) but not *accurate*. Stability prevents the explosion; only a small
-step or a higher order makes you right. The practical doctrine, which carries
+step or a higher order makes you right. The practical doctrine carries
 to every learned ODE in :numref:`sec_mdl-score-matching-diffusion-flow`: use
 explicit adaptive solvers by default, and reach for implicit methods when the
 dynamics are stiff. For a nonlinear or learned field, stiff means that the
 Jacobian's eigenvalues along the trajectory are spread over widely different
 scales.
 
-### Gradient Descent Is a Solver
+### Gradient Descent as Euler Discretization
 :label:`sec_mdl-gd-as-solver`
 
-Everything above already governs the oldest dynamical system in deep
-learning: training itself. Descending a loss $L$ by infinitesimal steps is
-the **gradient flow**
+The same numerical analysis applies to optimization. Infinitesimal descent on
+a loss $L$ defines the **gradient flow**
 
 $$
 \dot{\mathbf{x}} = -\nabla L(\mathbf{x}),
@@ -759,8 +757,8 @@ along whose trajectories the loss can only fall:
 $\tfrac{d}{dt} L(\mathbf{x}(t)) = \nabla L^\top \dot{\mathbf{x}} = -\|\nabla L\|^2 \le 0$.
 Gradient descent with learning rate $\eta$ is *forward Euler* on this flow
 ($\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, \nabla L(\mathbf{x}_k)$ is
-:eqref:`eq_mdl-ode-euler-update` with $h = \eta$), so the solver theory of
-this section *is* optimization theory.
+:eqref:`eq_mdl-ode-euler-update` with $h = \eta$). Solver stability therefore
+gives the corresponding stability condition for gradient descent.
 :numref:`sec_mdl-gradient-based-optimization` derived the learning-rate
 ceiling $\eta < 2/\lambda_{\max}(H)$ from the quadratic analysis and ran
 essentially the experiment below; what is new here is the reading. Near a
@@ -768,26 +766,27 @@ minimum with Hessian $H$ the dynamics linearize, mode by eigenmode, onto the
 test equation:
 
 $$
+\begin{aligned}
 \dot{\mathbf{x}} = -\nabla L(\mathbf{x})
-\;\;\xrightarrow{\textrm{linearize}}\;\;
+\;\;&\xrightarrow{\textrm{linearize}}\;\;
 \dot{\boldsymbol{\delta}} = -H\boldsymbol{\delta}
 \;\;\xrightarrow{\textrm{Euler}, \, h = \eta}\;\;
-\boldsymbol{\delta}_{k+1} = (I - \eta H)\,\boldsymbol{\delta}_k
-\;\;\xrightarrow{\textrm{stability}}\;\;
+\boldsymbol{\delta}_{k+1} = (I - \eta H)\,\boldsymbol{\delta}_k \\
+&\xrightarrow{\textrm{stability}}\;\;
 \eta < \frac{2}{\lambda_{\max}(H)} .
+\end{aligned}
 $$
 
 The solver bound $h < 2/\lambda$ *is* the learning-rate ceiling: a diverging
 learning rate is a solver instability, and an ill-conditioned Hessian is a
 *stiff* gradient flow, with the steep, already-converged curvature directions
 setting the stability limit under which the shallow directions must then
-crawl. Momentum, Polyak's heavy-ball update, discretizes the second-order ODE
+crawl. Polyak's heavy-ball momentum discretizes the second-order ODE
 $m\, \ddot{\mathbf{x}} + \gamma\, \dot{\mathbf{x}} = -\nabla L(\mathbf{x})$
 analyzed in :numref:`sec_mdl-gradient-based-optimization`
-:cite:`Polyak.1964`. We rerun that section's experiment, read now as the
-twin of the stiffness sweep, on a
-quadratic with $\lambda_{\max} = 10$: predicted flip at
-$\eta = 2/10 = 0.2$.
+:cite:`Polyak.1964`. We rerun that section's experiment on a quadratic with
+$\lambda_{\max} = 10$ and read it now as the twin of the stiffness sweep:
+predicted flip at $\eta = 2/10 = 0.2$.
 
 ```{.python .input #mdl-odes-solvers-gradient-descent-is-a-solver}
 H = np.diag([10.0, 1.0])                       # curvatures: lambda_max = 10
@@ -800,21 +799,21 @@ for eta in [0.05, 0.15, 0.19, 0.201, 0.21, 0.25]:
     print(f'{eta:8.3f} {abs(1 - eta * H[0, 0]):16.2f} {np.linalg.norm(x):25.2e}')
 ```
 
-The verdict flips exactly at the predicted threshold. At $\eta = 0.19$ the
+The numerical behavior changes at the predicted threshold. At $\eta = 0.19$ the
 fast coordinate contracts by $|1 - 1.9| = 0.9$ per step and a hundred steps
 crush the iterate to $10^{-5}$; at $\eta = 0.201$ the factor is $-1.01$ and
 the same hundred steps have *grown* it, oscillating in sign, past its
 starting point; at $\eta = 0.25$ it has exploded seventeen orders of
 magnitude. Meanwhile the slow direction ($\lambda = 1$) was converging
 at every one of these rates: the divergence is manufactured
-entirely by the loss surface's stiffest mode, its own "fast dead mode."
+entirely by the loss surface's stiffest mode.
 
 ## Neural ODEs and the Adjoint Method
 :label:`sec_mdl-neural-odes`
 
-### Residual Networks Are Euler Steps
+### Residual Blocks as Euler Steps
 
-Now the bridge to deep learning, and it is one line long.
+A residual update has the same algebraic form as a forward-Euler step.
 
 **Proposition (a residual block is an Euler step).** *The residual update
 :cite:`He.Zhang.Ren.ea.2016`*
@@ -1023,9 +1022,9 @@ intermediate state; for an adaptive solver taking thousands of internal
 steps, that is a lot of tape. The **adjoint method** computes the same
 gradients by integrating a *second* ODE backward in time, storing essentially
 nothing. It is the continuous-time limit of backpropagation, and its central
-object, the **adjoint state**
+object is the **adjoint state**
 $\mathbf{a}(t) = \partial L / \partial \mathbf{x}(t)$ ("how would the loss
-change if the trajectory were nudged at time $t$?"), is the continuous
+change if the trajectory were nudged at time $t$?"), the continuous
 analogue of the backprop delta of
 :numref:`sec_mdl-matrix-calculus-autodiff`.
 
@@ -1127,7 +1126,7 @@ unrolled solver, exact for the program you actually ran) versus
 memory-free but only approximately the gradient of anything)
 :cite:`Kidger.2022`; Exercise 7 probes exactly this fault line.
 
-Everything above is checkable on the linear ODE
+The preceding identities can be checked on the linear ODE
 $\dot{\mathbf{x}} = A\mathbf{x}$, where every ingredient has a closed form:
 the trajectory is $e^{At}\mathbf{x}_0$, the adjoint of
 $L = \tfrac12\|\mathbf{x}(T)\|^2$ is
@@ -1202,8 +1201,8 @@ $$
 = \log p_{\textrm{in}}(\mathbf{x}) - \log \left|\det J_{\mathbf{g}}(\mathbf{x})\right| ,
 $$
 
-and a normalizing flow built from $K$ layers pays one log-det-Jacobian per
-layer; the $O(d^3)$ determinant is the reason discrete flows constrain
+and a normalizing flow built from $K$ layers evaluates one log-determinant per
+layer. The $O(d^3)$ determinant is the reason discrete flows constrain
 their layers to triangular or low-rank Jacobians. In continuous time the
 formula *simplifies*: over one infinitesimal step the flow map is
 near-identity, and the determinant of a near-identity matrix is governed by
@@ -1261,17 +1260,17 @@ $$
 $$
 :eqlabel:`eq_mdl-ode-cnf-likelihood`
 
-This is the engine of the **continuous normalizing flow** (CNF): augment the
-state with a running log-density, integrate $(\mathbf{x}, \log p)$ together
-with one ODE solver call, and you have an *exact* likelihood for an
-unconstrained architecture, with no triangular Jacobians required.
+This yields the **continuous normalizing flow** (CNF). Augment the state with
+its log-density and integrate $(\mathbf{x}, \log p)$ together. Under exact
+integration, this gives the likelihood for an unconstrained architecture
+without requiring triangular Jacobians.
 
 ### The Hutchinson Trace Estimator
 
-One cost remains: $\operatorname{tr}(\partial\mathbf{f}/\partial\mathbf{x})$
-naively needs all $d$ diagonal entries of the Jacobian, i.e. $d$ derivative
-passes. The fix is a one-line identity from randomized numerical linear
-algebra :cite:`Hutchinson.1989`.
+Directly computing $\operatorname{tr}(\partial\mathbf{f}/\partial\mathbf{x})$
+requires all $d$ diagonal entries of the Jacobian, or $d$ derivative passes.
+Hutchinson's identity provides an unbiased stochastic estimator
+:cite:`Hutchinson.1989`.
 
 **Proposition (Hutchinson estimator).** *For any matrix
 $M \in \mathbb{R}^{d \times d}$ and any random
@@ -1292,24 +1291,23 @@ $$
 linearity (which lets it commute with the expectation). $\blacksquare$
 
 The point is *what the estimator touches*: $\boldsymbol{\epsilon}^\top J$ is
-a single vector--Jacobian product, one reverse-mode pass through
-$\mathbf{f}$ with cost comparable to one evaluation/backward pass, and no
-full Jacobian is ever materialized
-(:numref:`sec_mdl-matrix-calculus-autodiff`), followed by a dot product.
-An unbiased stochastic log-likelihood at the price of one extra backward
-pass is what makes CNFs scale; this is precisely the FFJORD recipe
+a single vector--Jacobian product followed by a dot product: one reverse-mode
+pass through $\mathbf{f}$ with cost comparable to one evaluation/backward
+pass, and no full Jacobian is ever materialized
+(:numref:`sec_mdl-matrix-calculus-autodiff`).
+The resulting stochastic likelihood estimate requires one additional backward
+pass, as in FFJORD
 :cite:`Grathwohl.Chen.Bettencourt.ea.2018`.
 
-For a *linear* field everything is checkable by hand:
+For a linear field, the result can be checked directly:
 $\dot{\mathbf{x}} = A\mathbf{x}$ has constant Jacobian $A$, so
 :eqref:`eq_mdl-ode-cnf-likelihood` says the log-density along every
 trajectory falls at the constant rate $\operatorname{tr}(A)$:
 $\log p_t(\mathbf{x}(t)) = \log p_0(\mathbf{x}_0) - t \operatorname{tr}(A)$.
-The cell flows standard-normal samples through the spiral field, where the
-time-$t$ density is the Gaussian
-$\mathcal{N}(\mathbf{0},\, e^{At} e^{A^\top t})$, computable in closed form,
-and compares; then it verifies the Hutchinson estimator on a random
-$6 \times 6$ matrix.
+The cell flows standard-normal samples through the spiral field and compares
+the two answers, since the exact time-$t$ density is the Gaussian
+$\mathcal{N}(\mathbf{0},\, e^{At} e^{A^\top t})$, computable in closed form.
+Then it verifies the Hutchinson estimator on a random $6 \times 6$ matrix.
 
 ```{.python .input #odes-solvers-cnf-trace}
 rng = np.random.default_rng(0)
@@ -1355,14 +1353,14 @@ integrated by exactly the solvers of this section.
   ($\dot{x} = x^2$).
 * Linear systems are solved by the **matrix exponential**
   $e^{At} = \sum_k (At)^k / k!\, = V e^{\Lambda t} V^{-1}$: independent modes
-  $e^{\lambda_i t}$ along eigendirections. **Stability dictionary**: real
-  parts decide decay vs. growth, imaginary parts rotation; nonlinear fixed
-  points inherit the verdict from the Jacobian's eigenvalues.
+  $e^{\lambda_i t}$ along eigendirections. Real parts determine decay or
+  growth and imaginary parts determine rotation; nonlinear fixed points are
+  locally classified by the Jacobian's eigenvalues.
 * Explicit solvers march with global error $O(h^p)$: forward **Euler** has
   order $1$ (local $O(h^2)$ errors, $T/h$ of them, times an $e^{LT}$
   stability factor), **RK4** order $4$; both slopes are measurable on a
   log--log plot. **Stiffness**: forward Euler is stable on
-  $\dot{x} = -\lambda x$ only for $h < 2/\lambda$, so a fast dead mode can
+  $\dot{x} = -\lambda x$ only for $h < 2/\lambda$, so a rapidly decaying mode can
   dictate the step; **implicit (backward) Euler** is stable for every $h$, at
   the price of solving an equation per step.
 * **Gradient descent is forward Euler on the gradient flow**
@@ -1470,13 +1468,13 @@ A velocity field and the curves it generates<br>**ODEs, numerical solvers, and N
 :::
 :::
 
-::: {.slide title="Every continuous model is an ODE"}
+::: {.slide title="ODEs in deep learning"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Give a velocity at every point and time; the solution is the curve that
-follows it. This one idea reappears as:
+A velocity field assigns a velocity at every point and time, and its solution
+is tangent to that field. Related constructions include:
 
 - a **ResNet** = an Euler solver,
 - **backprop** = the adjoint ODE,
@@ -1526,7 +1524,7 @@ continuous normalizing flows.
 :::
 :::
 
-::: {.slide title="Picard–Lindelöf: one and only one"}
+::: {.slide title="Existence and uniqueness"}
 [Well-posedness]{.kicker}
 
 If $\mathbf f$ is continuous in $t$ and $L$-**Lipschitz** in $\mathbf x$, the
@@ -1586,7 +1584,7 @@ and the norm decays exactly as the theory predicts:
 @!odes-solvers-matrix-exponential
 :::
 
-::: {.slide title="The stability dictionary"}
+::: {.slide title="Stability from eigenvalues"}
 [Linear systems]{.kicker}
 
 Each mode's size is $|e^{\lambda_i t}| = e^{(\operatorname{Re}\lambda_i)t}$:
@@ -1642,11 +1640,11 @@ $4$, so halving $h$ cuts error by $16$.
 The measured slopes are $1.0$ (Euler) and $4.0$ (RK4), matching theory.
 :::
 
-::: {.slide title="Stiffness: stable or sorry"}
+::: {.slide title="Stiffness and implicit Euler"}
 [Solvers]{.kicker}
 
 On $\dot x=-\lambda x$, forward Euler is stable only for $h < 2/\lambda$; a
-fast dead mode then forces a tiny step. **Backward** Euler is stable for every
+rapidly decaying mode can therefore force a small step. **Backward** Euler is stable for every
 $h$ (A-stable) at the cost of one solve per step:
 
 @odes-solvers-stiffness-sweep
@@ -1693,7 +1691,7 @@ discretizes $m\ddot{\mathbf x}+\gamma\dot{\mathbf x}=-\nabla L$.
 :::
 :::
 
-::: {.slide title="The verdict flips at the predicted threshold"}
+::: {.slide title="The gradient-descent stability threshold"}
 [Training as dynamics]{.kicker}
 
 On a quadratic with $\lambda_{\max}=10$ the predicted flip is $\eta = 0.2$:

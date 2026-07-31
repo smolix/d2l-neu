@@ -1,14 +1,13 @@
 # Dynamics: Differential Equations and Generative Flows
 :label:`chap_mdl-dynamics`
 
-Many of the most powerful generative models are, at heart, differential
-equations. This capstone chapter develops the dynamics needed to read them:
-ordinary differential equations and their solvers (and the neural-ODE view of a
-residual network), stochastic differential equations and the Itô calculus, the
-Fokker--Planck equation and the probability-flow ODE that make diffusion
-reversible, and finally score matching, diffusion, and flow matching, unified
-as different choices of probability path, training objective, and sampler. It
-draws on calculus (:numref:`chap_mdl-calculus`), probability
+Differential equations provide a useful description of several modern
+generative models. This chapter develops the required tools in sequence:
+ordinary differential equations and numerical solvers, stochastic differential
+equations and Itô calculus, the Fokker--Planck equation and probability-flow
+ODE, and finally score matching, diffusion, and flow matching. These methods
+differ in their choice of probability path, training objective, and sampler.
+The presentation draws on calculus (:numref:`chap_mdl-calculus`), probability
 (:numref:`chap_mdl-probability-statistics`), optimization
 (:numref:`chap_mdl-optimization`), and divergences
 (:numref:`chap_mdl-information-theory`).
@@ -24,8 +23,8 @@ mdl-score-matching-diffusion-flow
 
 ## Resources and Further Reading {.unnumbered}
 
-If this chapter sparked an interest in the dynamics behind modern generative
-models, the following are the canonical places to go deeper.
+The following references provide broader treatments of differential equations
+and their applications to generative modeling.
 
 **Books and lecture notes** (ODEs / SDEs)
 

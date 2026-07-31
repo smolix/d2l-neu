@@ -6,21 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Data Preprocessing
 :label:`sec_pandas`
 
-So far we have worked with synthetic data
-that arrived in ready-made tensors.
-In the wild, data shows up as messy files
-in arbitrary formats, and the path from a raw file
-to a model-ready tensor is paved with decisions:
-which values are missing and how to fill them,
-how to turn categories into numbers,
-whether features need rescaling.
-Get these wrong and even a perfect model learns nothing useful.
+So far, our synthetic data has arrived as ready-made tensors. Real tabular
+datasets usually require several preprocessing decisions: how to represent
+missing values, how to encode categories, and whether to rescale numerical
+features. These decisions determine what information the model receives.
+
 The *pandas* [library](https://pandas.pydata.org/) :cite:`McKinney.2010`
-does the heavy lifting; this section is a crash course
-on the routines you will reach for most:
-enough to load, clean, and encode a tabular dataset,
-and to understand *why* each step matters.
-For the full story, see the official
+provides convenient tools for loading, inspecting, cleaning, and encoding
+tabular data. This section applies those tools to a small dataset and then
+converts the result to tensors. For a broader treatment, see the official
 [tutorial](https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html).
 :numref:`fig_pandas_pipeline` previews the steps in this section.
 
@@ -265,11 +259,10 @@ From here on we work with tensors, ready for gradients and GPUs.
 
 ## Discussion
 
-You now know the core steps: inspect a dataset, separate inputs from
-targets, handle missing values, encode categoricals, scale numerics, and
-hand the result to a framework. You will pick up more data-processing
-skills in :numref:`sec_kaggle_house`. This crash course kept things
-deliberately simple; real preprocessing is messier.
+The main preprocessing steps are to inspect the data, separate inputs from
+targets, handle missing values, encode categorical variables, scale numerical
+variables when appropriate, and convert the result to tensors. A larger
+example appears in :numref:`sec_kaggle_house`.
 
 Rather than a single CSV, a dataset may be spread across many files
 pulled from a relational database (customer addresses in one table,

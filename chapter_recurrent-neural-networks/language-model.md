@@ -19,16 +19,15 @@ For example, the probability of a four-word sequence unrolls as
 $$\begin{aligned}&P(\textrm{deep}, \textrm{learning}, \textrm{is}, \textrm{fun}) \\
 =&P(\textrm{deep}) P(\textrm{learning}  \mid  \textrm{deep}) P(\textrm{is}  \mid  \textrm{deep}, \textrm{learning}) P(\textrm{fun}  \mid  \textrm{deep}, \textrm{learning}, \textrm{is}).\end{aligned}$$
 
-Modeling language therefore reduces to one deceptively simple subproblem:
+Modeling language therefore reduces to the conditional prediction problem
 estimate $P(x_t \mid x_1, \ldots, x_{t-1})$, the distribution of the next
-token given everything that came before. Every language model in this book,
-from the count tables below to the largest networks in later chapters, is an
-implementation of exactly this conditional.
+token given everything that came before. Every language model in this book
+implements exactly this conditional, from the count tables below to the
+largest networks in later chapters.
 
-## What a Language Model Buys You
+## Uses of Language Models
 
-Why estimate these probabilities? Three capabilities fall out of the
-definition, each more consequential than the last.
+These probabilities support generation, scoring, and prompted prediction.
 
 **Generation.** Because :eqref:`eq_lm_factorization` writes the joint as a
 chain of conditionals, we can *sample* text one token at a time: draw
@@ -45,18 +44,15 @@ phrase is vastly less probable as English. Speech recognizers, translation
 systems, and spelling correctors have all been built this way: one model
 proposes candidates, a language model scores them.
 
-**Everything expressible as a continuation.** The modern realization is that
-almost any task can be *phrased* as next-token prediction. Continue "The
+**Prompted prediction.** Many tasks can be *phrased* as next-token prediction.
+Continue "The
 novella The Time Machine was written by" and you answer a factual question;
 continue "'Where is the library?' translates into French as" and you
-translate. A single sufficiently good model of $P(x_t \mid x_{<t})$, trained
-on enough text, becomes a universal interface to every task whose input and
-output can be spelled out as tokens. Large language models, to which we
-return in :numref:`sec_large-pretraining-transformers`, are this observation
-pushed to scale, and they are built from exactly the machinery this chapter
-develops.
+translate. Large language models use this formulation to perform many tasks
+from textual prompts. We return to this behavior in
+:numref:`sec_large-pretraining-transformers`.
 
-This section builds language models the simplest way imaginable, by counting
+This section first builds language models from counts
 (:numref:`subsec_markov-models-and-n-grams`); examines the statistics of
 language that doom counting (:numref:`subsec_natural-lang-stat`); develops
 the metrics by which language models are judged
@@ -159,7 +155,7 @@ of the tokens that followed it in training; that is all
 :eqref:`eq_ngram_mle` needs. The `prob` method returns a smoothed
 conditional probability (the constant `alpha` is explained shortly), while
 `sample` extends a prefix by drawing each next token in proportion to the
-raw counts, exactly the generation recipe of :eqref:`eq_lm_factorization`.
+raw counts, following the generation procedure of :eqref:`eq_lm_factorization`.
 Both look only at the most recent $n-1$ tokens of the context they are
 handed.
 
@@ -201,7 +197,8 @@ generate 25 tokens.
 ```{.python .input #language-model-sampling-from-n-gram-models}
 rng = random.Random(0)
 for n, model in models.items():
-    print(f'{n}-gram:', ' '.join(model.sample(['the', 'time'], 25, rng)))
+    d2l.print_wrapped(f'{n}-gram:',
+                      ' '.join(model.sample(['the', 'time'], 25, rng)))
 ```
 
 The progression is unmistakable. The unigram model emits words with the
@@ -220,7 +217,7 @@ single continuation available and simply replays its training data. It has
 memorized rather than generalized. Rerun the cell with other seeds and you
 will find entire sentences of Wells reproduced wholesale.
 
-### The Sparsity Wall
+### Count Sparsity
 
 Memorization is a symptom of a deeper quantitative problem. The number of
 *possible* $n$-grams is $|\mathcal{V}|^n$, exploding exponentially in $n$,
@@ -259,17 +256,17 @@ interpolate across orders and discount frequent events, of which Kneser--Ney
 smoothing became the standard and Bayesian nonparametrics the most elegant
 expression :cite:`Wood.Gasthaus.Archambeau.ea.2011`. But no smoothing scheme
 escapes the underlying predicament: it can only redistribute probability
-mass, not *know* anything about unseen events. That "cat" and "feline"
-should behave alike, that "I want to eat, grandma" is benign while "I want
-to eat grandma" is not, is invisible to a count table, which treats every
-token as an unrelated symbol. Sharing statistical strength across related
+mass, not *know* anything about unseen events. A count table treats every
+token as an unrelated symbol, so it cannot see that "cat" and "feline"
+should behave alike, or that "I want to eat, grandma" is benign while "I
+want to eat grandma" is not. Sharing statistical strength across related
 words and contexts requires learned representations, and that is where
 neural networks enter in :numref:`sec_rnn`.
 
 ## Word Frequency and Zipf's Law
 :label:`subsec_natural-lang-stat`
 
-How quickly does the sparsity wall rise? The answer lies in the frequency
+The rate at which count sparsity grows depends on the frequency
 statistics of natural language, which hold for essentially every corpus in
 every language. We use the `Vocab` class of :numref:`sec_text-sequence`,
 which orders tokens by frequency, and inspect the most common words of *The
@@ -414,13 +411,13 @@ for n, model in models.items():
 
 The result should give you pause: the trigram model, which wrote by far the
 most convincing text, has by far the *worst* held-out perplexity, and even
-the bigram barely improves on the unigram. Both facts are the sparsity wall
+the bigram barely improves on the unigram. Both observations result from count sparsity
 in disguise. When 87% of held-out trigrams are unseen, the trigram model
 spends most of its time on smoothed near-uniform guesses, and no choice of
 $\alpha$ rescues it (the exercises ask you to try). Good-looking samples and
 good generalization are different things, and the gap between them is
-memorization. Closing that gap, achieving low perplexity on *unseen* text,
-is the actual job of a language model, and perplexity will be our chief
+memorization. The actual job of a language model is to close that gap,
+achieving low perplexity on *unseen* text, and perplexity will be our chief
 metric for the neural models of the coming sections.
 
 ### Bits per Byte
@@ -660,7 +657,7 @@ Laplace smoothing keeps unseen events from getting probability zero:
 add $\alpha$ to every count, $\alpha |\mathcal{V}|$ to the denominator.
 :::
 
-::: {.slide title="Sampling: the quality progression"}
+::: {.slide title="Samples from increasing n-gram orders"}
 Word-level count models on *The Time Machine*, same prefix:
 
 @language-model-sampling-from-n-gram-models
@@ -673,7 +670,7 @@ Word-level count models on *The Time Machine*, same prefix:
   replayed verbatim. Memorization, not generalization.
 :::
 
-::: {.slide title="The sparsity wall"}
+::: {.slide title="Count sparsity grows with n"}
 Possible $n$-grams grow as $|\mathcal{V}|^n$; a corpus grows linearly.
 Fraction of held-out $n$-grams never seen in training:
 

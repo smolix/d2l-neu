@@ -1,21 +1,16 @@
 # Random Variables
 :label:`sec_mdl-random_variables`
 
-In :numref:`sec_prob` we worked with *discrete* random variables, those taking
-values in a finite set or the integers, where a probability *mass* sits on each
-outcome and we sum to get probabilities. Deep learning lives mostly in the
-*continuous* world: a pixel intensity, a network weight, a Gaussian noise sample
-all range over a continuum, and there a single outcome carries zero probability.
-The fix is the *density*, met already in :numref:`sec_mdl-integral_calculus`:
-probability becomes *area under a curve*, so the natural operation is no longer
-summation but integration. This section builds the continuous theory we actually
-use: densities and their cumulative functions, the summary statistics (mean,
-variance, standard deviation) that compress a distribution to a few numbers, and
-the joint/marginal/covariance machinery for several correlated variables. At
-every step the discrete sum and the continuous integral are *the same idea* seen
-through :numref:`sec_mdl-integral_calculus`, and almost everything below
-integrates the small identity :eqref:`eq_mdl-pdf_def`: *probability of a tiny
-interval $\approx$ its width times the density there.*
+In :numref:`sec_prob` we considered discrete random variables, whose
+probabilities are obtained by summing probability masses. Pixel intensities,
+network weights, and Gaussian noise are usually modeled as continuous random
+variables, for which individual outcomes have probability zero. A probability
+density assigns probability to intervals through integration. This section
+develops densities and cumulative distribution functions, then introduces the
+mean, variance, and standard deviation. Joint, marginal, and conditional
+distributions extend the same definitions to several variables, together with
+covariance and correlation. The relation in :eqref:`eq_mdl-pdf_def` connects the
+probability of a small interval to its width and local density.
 
 ```{.python .input #random-variables-imports}
 #@tab mxnet
@@ -58,7 +53,7 @@ the cumulative function that turns it back into a genuine probability, and the
 derivative relationship between them, which is the fundamental theorem of
 calculus restated for probabilities.
 
-### The Density Appears: A Thought Experiment
+### From Bin Probabilities to a Density
 
 Throw a dart at a board and ask for the probability it lands *exactly*
 $2\,\textrm{cm}$ from the center. Measure to one digit, with bins for
@@ -165,7 +160,7 @@ The total mass prints as $1.0000$, just as :eqref:`eq_mdl-density` demands
 mass under $10^{-7}$), and the interval integral returns a genuine probability
 in $[0,1]$: the printed $0.7725$ sits within $6\times10^{-4}$ of the exact value
 $0.7731$, the small bias of a left-endpoint Riemann sum at $\epsilon=0.01$. A
-catalogue of named densities (Gaussian, exponential, and the rest) waits in
+catalogue of named densities (Gaussian, exponential, and the rest) follows in
 :numref:`sec_mdl-distributions`; here we stay abstract.
 
 ### The Cumulative Distribution Function
@@ -293,11 +288,11 @@ slice-and-refine argument that produced the normalization
 :eqref:`eq_mdl-density`. The same
 weighting averages any *function* of $X$: $E[g(X)]=\sum_i g(x_i)\,p_i$ in the
 discrete case, while the continuous form $\int g(x)\,p(x)\,dx$ restates the
-second half of :eqref:`eq_mdl-expectation`. The rule is used so routinely
-without comment (we invoke it below every time we average $X^2$ or a
-squared deviation) that it is known as the *law of the unconscious
-statistician*; what is new here is only the name and the discrete form. The
-mean tells us, with some caution, where the variable tends to sit.
+second half of :eqref:`eq_mdl-expectation`. We apply the rule so routinely and
+so silently that it has earned a name: the *law of the unconscious
+statistician*. It is at work below every time we average $X^2$ or a squared
+deviation; what is new here is only the name and the discrete form. The mean
+tells us, with some caution, where the variable tends to sit.
 
 A running example recurs through the whole section. Let $X$ take $a-2$ with
 probability $p$, $a+2$ with probability $p$, and $a$ with probability $1-2p$.
@@ -422,7 +417,7 @@ $\sigma_{aX+b}=|a|\sigma_X$ (the absolute value because $\sqrt{a^2}=|a|$); and f
 independent $X,Y$, $\sigma_{X+Y}=\sqrt{\sigma_X^2+\sigma_Y^2}$. On the running
 example $\sigma_X=2\sqrt{2p}$, back in units of stars.
 
-### What the Standard Deviation Means: Markov and Chebyshev
+### Markov's and Chebyshev's Inequalities
 
 Does $\sigma_X$ have a concrete reading? Yes: it sets the scale over which $X$
 fluctuates, and a pair of inequalities, each with a one-line proof, makes this
@@ -446,8 +441,8 @@ $E[\mathbf{1}_{X\ge a}]=P(X\ge a)$ gives $E[X]\ge a\,P(X\ge a)$. $\blacksquare$
 So at most a tenth of any non-negative population exceeds ten times its
 average: true of incomes, file sizes, and gradient norms alike, with no
 distributional assumption whatsoever. On its own the bound is crude, because it
-knows only the mean. Feeding it the *squared deviation* $(X-\mu_X)^2$, whose
-mean is by definition the variance, sharpens it into the statement we are
+knows only the mean. But feed it the *squared deviation* $(X-\mu_X)^2$, whose
+mean is by definition the variance, and it sharpens into the statement we are
 after, an inequality due to Bienaymé and to Chebyshev :cite:`Chebyshev.1867`.
 
 **Proposition (Chebyshev's inequality).** *For any $X$ with finite variance and
@@ -534,8 +529,8 @@ $\int_0^\infty \frac{x}{\pi(1+x^2)}\,dx=\frac{1}{2\pi}\int_1^\infty
 \frac{du}{u}=+\infty$, and the left tail gives $-\infty$, so the mean is a
 meaningless $\infty-\infty$ whose value depends on how the limits are taken, a
 *stronger* failure than "the mean is infinite." We can watch both integrals
-diverge numerically by extending the integration range and seeing the partial
-sums refuse to settle.
+diverge numerically by extending the integration range and observing that the
+partial sums do not converge.
 
 ```{.python .input #random-variables-cauchy-diverges}
 import numpy as onp
@@ -712,10 +707,12 @@ each slice, take the
 expectation over $Y$, and add and subtract $E\bigl[E[X\mid Y]\bigr]^2=E[X]^2$:
 
 $$
+\begin{aligned}
 E\bigl[\textrm{Var}(X\mid Y)\bigr] + \textrm{Var}\bigl(E[X\mid Y]\bigr)
- = \Bigl(E[X^2] - E\bigl[E[X\mid Y]^2\bigr]\Bigr)
- + \Bigl(E\bigl[E[X\mid Y]^2\bigr] - E[X]^2\Bigr)
- = E[X^2] - E[X]^2,
+ &= \Bigl(E[X^2] - E\bigl[E[X\mid Y]^2\bigr]\Bigr) \\
+ &\qquad + \Bigl(E\bigl[E[X\mid Y]^2\bigr] - E[X]^2\Bigr) \\
+ &= E[X^2] - E[X]^2,
+\end{aligned}
 $$
 
 which is $\textrm{Var}(X)$, using the tower property on $E[X^2]$ and on
@@ -808,9 +805,11 @@ $\mu_X+\mu_Y$ by linearity :eqref:`eq_mdl-exp_linear` and deviation $\bar X+\bar
 Then by :eqref:`eq_mdl-var_def` and linearity,
 
 $$
-\textrm{Var}(X+Y) = E\bigl[(\bar X+\bar Y)^2\bigr]
- = E[\bar X^2] + 2\,E[\bar X\bar Y] + E[\bar Y^2]
- = \textrm{Var}(X) + 2\,\textrm{Cov}(X,Y) + \textrm{Var}(Y),
+\begin{aligned}
+\textrm{Var}(X+Y) &= E\bigl[(\bar X+\bar Y)^2\bigr]
+ = E[\bar X^2] + 2\,E[\bar X\bar Y] + E[\bar Y^2] \\
+ &= \textrm{Var}(X) + 2\,\textrm{Cov}(X,Y) + \textrm{Var}(Y),
+\end{aligned}
 $$
 
 recognizing $E[\bar X\bar Y]=\textrm{Cov}(X,Y)$ from :eqref:`eq_mdl-cov_def`. $\blacksquare$
@@ -874,9 +873,9 @@ $$
 so equality holds. $\blacksquare$
 
 The two extremes thus read off: $\rho=+1$ for a perfect increasing linear
-relationship ($a>0$) and $\rho=-1$ for a perfect decreasing one ($a<0$),
-independent of the scale $|a|$: correlation
-measures direction and tightness of a linear relationship, never its slope.
+relationship ($a>0$) and $\rho=-1$ for a perfect decreasing one ($a<0$), in
+both cases independent of the scale $|a|$. Correlation measures the direction
+and tightness of a linear relationship, never its slope.
 On the running discrete
 example $\sigma_X=1$, $\sigma_Y=2$, so
 $\rho=\frac{4p-2}{2}=2p-1$, sweeping from $-1$ to $+1$ as $p$ does from $0$
@@ -930,16 +929,16 @@ deviations-as-vectors geometry underlies least squares
 
 ### Change of Variables for Densities
 
-One last piece of machinery closes the section. When we push a random variable
+One final result closes the section. When we push a random variable
 through a function $Y=g(X)$, its density is *not*
 simply $p_X\!\big(g^{-1}(y)\big)$: as the map stretches and compresses space the
 density must be re-scaled to keep its total mass at $1$. We already computed
 the re-scaling factor. The integral change-of-variables theorem of
-:numref:`sec_mdl-integral_calculus`, $\int_{\boldsymbol\phi(U)}f(\mathbf
-x)\,d\mathbf x=\int_U f(\boldsymbol\phi(\mathbf x))\,|\det
-D\boldsymbol\phi(\mathbf x)|\,d\mathbf x$ :eqref:`eq_mdl-change_var_nd`, already
-established that a reparametrization scales volume locally by the absolute
-Jacobian determinant. All a density does is read that theorem with $f=p$ and the
+:numref:`sec_mdl-integral_calculus` already established that a reparametrization
+scales volume locally by the absolute Jacobian determinant,
+$\int_{\boldsymbol\phi(U)}f(\mathbf x)\,d\mathbf x=\int_U f(\boldsymbol\phi(\mathbf
+x))\,|\det D\boldsymbol\phi(\mathbf x)|\,d\mathbf x$
+:eqref:`eq_mdl-change_var_nd`. All a density does is read that theorem with $f=p$ and the
 constraint that the total integral stays $1$: *probability mass in equals
 probability mass out*.
 
@@ -972,10 +971,12 @@ $P(Y\in A)=P\bigl(X\in g^{-1}(A)\bigr)=\int_{g^{-1}(A)}p_X(\mathbf x)\,d\mathbf 
 so the integrand on the right is the density of $Y$. Conservation of mass thus reads
 
 $$
-p_Y(\mathbf y) = p_X\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf y)\big|,
-\qquad\text{equivalently}\qquad
-\log p_Y(\mathbf y) = \log p_X(\mathbf x) - \log\big|\det J_{g}(\mathbf x)\big|
+\begin{aligned}
+p_Y(\mathbf y) &= p_X\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf y)\big|, \\
+\text{equivalently}\qquad
+\log p_Y(\mathbf y) &= \log p_X(\mathbf x) - \log\big|\det J_{g}(\mathbf x)\big|
 \quad\text{at }\mathbf x = g^{-1}(\mathbf y).
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-cov_density`
 
@@ -1014,8 +1015,8 @@ d2l.plot(mids, [hist, analytic], 'y', 'p(y)',
 
 The two curves coincide: the mass pushed forward through $e^x$ piles up exactly
 where :eqref:`eq_mdl-cov_density_1d` says it must, including the mode at
-$y=e^{-1}$ that the naive guess $p_X(\log y)$ (which peaks at $y=1$) gets
-wrong. A linear map
+$y=e^{-1}$. The naive guess $p_X(\log y)$ gets that mode wrong, peaking at
+$y=1$ instead. A linear map
 $\mathbf y = A\mathbf x$ illustrates the multivariate rule in one stroke: $J_g=A$ is
 constant, so the density is rescaled uniformly by $1/|\det A|$; stretch space by
 $|\det A|$ and the density thins by the same factor.
@@ -1496,7 +1497,6 @@ moves the true peak to $y=e^{-1}$.
 :::
 
 ::: {.d2l-note}
-Next: the **named distributions**, the specific shapes this machinery
-describes.
+Next: **named distributions**, which instantiate the general definitions above.
 :::
 :::

@@ -6,7 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # The Base Classification Model
 :label:`sec_classification`
 
-Every classification model in this book, from the linear softmax regressor we build next to the deep convolutional networks of later chapters, shares two common needs: a *validation step* that reports both loss and accuracy, and a default optimizer. Rather than re-implementing these in every subclass, we collect them once in a `Classifier` base class that extends the `d2l.Module` scaffold introduced in :numref:`sec_oo-design`. The payoff is the same one that motivated `Module` itself: a new classifier supplies only what is genuinely model-specific (its `forward` pass, and a `loss` if it is not plain cross-entropy), and inherits the training and evaluation machinery for free.
+Classification models require a validation step that reports both loss and
+accuracy, together with an optimizer. We implement these shared operations in
+a `Classifier` base class extending the `d2l.Module` introduced in
+:numref:`sec_oo-design`. A subclass then supplies the model-specific `forward`
+method and, when needed, a loss other than cross-entropy.
 
 ```{.python .input #classification-the-base-classification-model}
 %%tab mxnet
@@ -115,14 +119,14 @@ def configure_optimizers(self):
 
 ## Accuracy
 
-Before we implement the accuracy metric, consider why a classifier needs *two* numbers at all. A single forward pass produces a vector of scores $\mathbf{o}\in\mathbb{R}^q$, one per class, and from there the picture forks into two branches that read the *same* scores for very different purposes (:numref:`fig_mdl-clf-loss-accuracy`). On the training branch we turn the scores into probabilities with the softmax and read off the cross-entropy loss. This loss is a smooth function of the parameters, so gradient descent can minimize it; and it keeps rewarding the model for putting more probability on the correct class even after the decision is already right, nudging a confidence of $0.51$ toward $0.99$. On the evaluation branch we take the $\arg\max$ of the scores to a single hard decision $\hat{y}$, compare it with the label, and count the hit. This is the accuracy: the fraction of correct decisions. It is a common benchmark metric but a *discrete* quantity whose gradient is zero almost everywhere, since a tiny change to the scores almost never flips which entry is largest. Whether accuracy is the right deployment metric depends on the costs of different errors and on how the scores will be used.
+Before we implement the accuracy metric, consider why a classifier needs *two* numbers at all. A single forward pass produces a vector of scores $\mathbf{o}\in\mathbb{R}^q$, one per class, and from there the picture forks into two branches that read the *same* scores for very different purposes (:numref:`fig_mdl-clf-loss-accuracy`). On the training branch we turn the scores into probabilities with the softmax and read off the cross-entropy loss. This loss is a smooth function of the parameters, so gradient descent can minimize it, and it keeps rewarding the model for putting more probability on the correct class even after the decision is already right, nudging a confidence of $0.51$ toward $0.99$. On the evaluation branch we take the $\arg\max$ of the scores to a single hard decision $\hat{y}$, compare it with the label, and count the hit. This is the accuracy: the fraction of correct decisions. It is a common benchmark metric but a *discrete* quantity whose gradient is zero almost everywhere, since a tiny change to the scores almost never flips which entry is largest. Whether accuracy is the right deployment metric depends on the costs of different errors and on how the scores will be used.
 
 So we report both, and for complementary reasons. Two models can reach identical accuracy while one is confidently right and the other barely so, and only the loss can tell them apart, which is why it, not accuracy, is what we optimize. Accuracy in turn measures the hard-decision quality that the loss only stands in for. When the two disagree (accuracy flat while the loss still drops, say) that is diagnostic information about optimization and calibration (how well the predicted probabilities match empirical frequencies), not a bug.
 
 ![From model scores to a training loss and an evaluation accuracy. One forward pass produces the logits $\mathbf{o}$; the top branch softmaxes them into probabilities $\hat{\mathbf{y}}$ and reads off the differentiable cross-entropy loss that drives gradient descent, while the bottom branch takes the $\arg\max$ to a hard decision $\hat{y}$, compares it with the label $y$, and counts it for accuracy. The numbers shown are the exact softmax and cross-entropy of the logits $(1.0, 2.2, 0.3)$ for true class $y=1$.](../img/mdl-clf-loss-accuracy.svg)
 :label:`fig_mdl-clf-loss-accuracy`
 
-Taking the hard decision is what many applications require. Given the predicted probability distribution `y_hat`, we choose the class with the highest predicted probability whenever we must commit to one. Gmail, for instance, must file an email under "Primary", "Social", "Updates", "Forums", or "Spam": it might estimate probabilities internally, but at the end of the day it has to pick a single folder. A prediction that matches the label class `y` is correct, and accuracy is simply the fraction of predictions that are.
+Many applications require exactly this hard decision. Given the predicted probability distribution `y_hat`, we choose the class with the highest predicted probability whenever we must commit to one. Gmail, for instance, must file an email under "Primary", "Social", "Updates", "Forums", or "Spam": it might estimate probabilities internally, but at the end of the day it has to pick a single folder. A prediction that matches the label class `y` is correct, and accuracy is simply the fraction of predictions that are.
 
 Accuracy is computed as follows.
 First, if `y_hat` is a matrix,
@@ -200,7 +204,7 @@ def parameters(self):
 
 ## Beyond Accuracy
 
-Accuracy treats every example, and every kind of mistake, as equally important. Once classes are *imbalanced*, that assumption fails in a way that can make accuracy actively misleading. Consider screening for a disease that affects 1% of the population. A "classifier" that ignores its input and always predicts *healthy* is right 99% of the time, so its accuracy is 0.99, and it is also perfectly useless: it finds not a single sick patient. The counts make this concrete:
+Accuracy treats every example, and every kind of mistake, as equally important. Once classes are *imbalanced*, that assumption fails in a way that can make accuracy actively misleading. Consider screening for a disease that affects 1% of the population. A classifier that ignores its input and always predicts *healthy* is right 99% of the time, so its accuracy is 0.99, but it finds not a single sick patient. The counts make this concrete:
 
 ```{.python .input #classification-beyond-accuracy}
 n, sick = 100_000, 1_000            # 1% of the population carries the disease
@@ -214,13 +218,13 @@ The numbers that expose the failure come from breaking the counts down by what w
 
 $$\textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}, \qquad \textrm{recall} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FN}}.$$
 
-Precision asks: of the examples we *flagged*, how many were real? Recall asks: of the real positives, how many did we *find*? The always-healthy classifier above has recall $0$ (and its precision is undefined, since it never flags anyone), which tells the true story that the 99% accuracy conceals. When a single summary number is needed, the *F1 score*, the harmonic mean $2\,\textrm{PR}/(\textrm{P}+\textrm{R})$ of precision and recall, is the conventional compromise, high only when both are.
+Precision asks: of the examples we *flagged*, how many were real? Recall asks: of the real positives, how many did we *find*? The always-healthy classifier above has recall $0$ (and its precision is undefined, since it never flags anyone), which tells the true story that the 99% accuracy conceals. When a single summary number is needed, the conventional compromise is the *F1 score*, the harmonic mean $2\,\textrm{PR}/(\textrm{P}+\textrm{R})$ of precision and recall, which is high only when both are.
 
 For $q$ classes the same bookkeeping becomes a $q \times q$ *confusion matrix*: entry $(i, j)$ counts the examples of true class $j$ that the model predicted as class $i$, so the diagonal holds the correct decisions and every off-diagonal cell isolates one specific kind of error. The confusion matrix is the classification diagnostic; a single accuracy number is just the normalized trace (the fraction on the diagonal). We will meet it twice more in this chapter: in :numref:`sec_softmax_scratch` we compute one for our trained Fashion-MNIST classifier to see *which* classes it confuses, and in :numref:`sec_environment-and-distribution-shift` the very same matrix becomes the key computational object for correcting label shift.
 
 ## Summary
 
-The `Classifier` class adds two things to `d2l.Module`: an overridden `validation_step` that logs *both* the loss and the accuracy, and a default `configure_optimizers` that returns a minibatch SGD optimizer. Because of this, every classification model in the rest of the book can subclass `Classifier` and supply only its `forward` pass (and a custom `loss`, where the default cross-entropy will not do), inheriting the whole training and evaluation loop. Accuracy itself is the fraction of examples whose predicted class, the $\arg\max$ of the score vector, matches the true label. It is a discrete metric and so cannot serve as a training objective, but it is commonly reported in benchmarks and should be watched alongside the loss when all mistakes have comparable costs. On imbalanced or cost-sensitive problems, accuracy alone can badly mislead; precision, recall, and the confusion matrix break the errors down by kind, and the confusion matrix in particular will return twice more in this chapter.
+The `Classifier` class adds two things to `d2l.Module`: an overridden `validation_step` that logs *both* the loss and the accuracy, and a default `configure_optimizers` that returns a minibatch SGD optimizer. Because of this, every classification model in the rest of the book can subclass `Classifier` and supply only its `forward` pass (and a custom `loss`, where the default cross-entropy will not do), inheriting the whole training and evaluation loop. Accuracy itself is the fraction of examples whose predicted class matches the true label, where the predicted class is the $\arg\max$ of the score vector. It is a discrete metric and so cannot serve as a training objective, but it is commonly reported in benchmarks and should be watched alongside the loss when all mistakes have comparable costs. On imbalanced or cost-sensitive problems, accuracy alone can badly mislead; precision, recall, and the confusion matrix break the errors down by kind, and the confusion matrix in particular will return twice more in this chapter.
 
 
 ## Exercises
@@ -255,7 +259,7 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 ::: {.cover}
 [Dive into Deep Learning · §4.3]{.kicker}
 
-The base **classification** model<br>One forward pass, read two ways: a *loss* to train on, an *accuracy* to report, and what to do when accuracy lies.
+The base **classification** model<br>A shared interface for training loss and evaluation metrics.
 :::
 :::
 
@@ -264,14 +268,14 @@ The base **classification** model<br>One forward pass, read two ways: a *loss* t
 
 ::: {.cols .vc}
 ::: {.col}
-A classifier scores the classes, then the picture **forks**:
+A classifier produces class scores that support two calculations:
 
 - **train** on a smooth **loss** that gradient descent can minimize;
 - **report** a hard **accuracy**, the number benchmarks care about.
 
 ::: {.d2l-note}
 We collect both, once, in a `Classifier` base class so every model
-in the book inherits them for free.
+in the book inherits their implementations.
 :::
 :::
 
@@ -307,8 +311,8 @@ chapter, adding classification defaults.
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-Same payoff as `Module` itself: write the model-specific part once,
-get the training and evaluation machinery for free.
+As with `Module`, the model-specific part is defined once and the shared
+training and evaluation procedures are inherited.
 :::
 :::
 :::
@@ -442,11 +446,11 @@ probabilities match empirical frequencies), **not a bug**.
 
 [Beyond Accuracy]{.dtitle}
 
-[when the headline number lies]{.dsub}
+[when accuracy is insufficient]{.dsub}
 :::
 :::
 
-::: {.slide title="99% accurate, perfectly useless" only="pytorch"}
+::: {.slide title="High accuracy under class imbalance" only="pytorch"}
 [Beyond Accuracy]{.kicker}
 
 Screen for a disease carried by **1%** of the population. A "classifier"
@@ -462,7 +466,7 @@ never does its job.
 :::
 :::
 
-::: {.slide title="99% accurate, perfectly useless" except="pytorch"}
+::: {.slide title="High accuracy under class imbalance" except="pytorch"}
 [Beyond Accuracy]{.kicker}
 
 Screen for a disease carried by **1%** of the population. A "classifier"
@@ -537,7 +541,7 @@ label shift.
 :::
 
 ::: {.col}
-- Under **imbalance** accuracy can lie: always-healthy scores **0.99**
+- Under **imbalance**, accuracy can mislead: always-healthy scores **0.99**
   with recall **0.0**.
 - **Precision / recall** split the failure modes; **F1** compresses them.
 - The **confusion matrix** itemizes all $q^2$ outcomes, computed in the

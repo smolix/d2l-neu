@@ -1,28 +1,15 @@
 # Multilayer Perceptron
 :label:`chap_perceptrons`
 
-In this chapter, we will introduce your first truly *deep* network.
-The simplest deep networks are called *multilayer perceptrons*,
-and they consist of multiple layers of neurons
-each fully connected to those in the layer below
-(from which they receive input)
-and those above (which they, in turn, influence).
-Although automatic differentiation
-significantly simplifies the implementation of deep learning algorithms,
-we will dive deep into how these gradients
-are calculated in deep networks.
-Then we will
-be ready to
-discuss issues relating to numerical stability and parameter initialization
-that are key to successfully training deep networks.
-When we train such high-capacity models we run the risk of overfitting. Thus, we will
-revisit regularization and generalization
-for deep networks.
-Throughout, we aim
-to give you a firm grasp of both the concepts and the practice of using deep networks.
-At the end of this chapter, we apply what we have introduced so far to a real case: house price
-prediction. We punt matters relating to the computational performance, scalability, and efficiency
-of our models to subsequent chapters.
+A multilayer perceptron (MLP) composes fully connected layers with nonlinear
+activation functions. This simple change extends linear models to nonlinear
+functions and provides the first deep networks in the book.
+
+This chapter derives and implements MLPs, explains backpropagation through
+their computational graphs, and studies parameter initialization and numerical
+stability. It then revisits generalization and introduces dropout before
+applying the resulting methods to house-price prediction. Later chapters treat
+computational efficiency and scaling.
 
 ```toc
 :maxdepth: 2
@@ -79,4 +66,3 @@ All are freely accessible online except where noted.
 - [Yes you should understand backprop — Andrej Karpathy](https://karpathy.medium.com/yes-you-should-understand-backprop-e2f06810dcbe) — free; a short argument, with real failure cases (saturated sigmoids, dead ReLUs, exploding clips), for why treating backprop as a leaky abstraction bites practitioners.
 - [Double Descent — MLU-Explain](https://mlu-explain.github.io/double-descent/) — free, interactive; animates the interpolation threshold and second descent, a clear visual companion to the modern-generalization section.
 - [KAN: Kolmogorov–Arnold Networks — Liu et al. (2024)](https://arxiv.org/abs/2404.19756) — free; a recent alternative that places learnable activations on edges rather than fixed activations on nodes, useful context for where the MLP sits among modern parameterizations.
-

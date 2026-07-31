@@ -1,11 +1,10 @@
 # Stochastic Gradient Descent
 :label:`sec_sgd`
 
-Stochastic gradient descent has trained every model in this book so far,
-without our ever justifying it. :numref:`sec_gd` supplied the descent half of
-the story; this section supplies the stochastic half: what replacing the
-gradient by a noisy estimate does to the trajectory, why the learning rate
-must then decay, and how the minibatch size controls the noise.
+Stochastic gradient descent replaces the exact gradient with an estimate
+computed from sampled examples. Building on :numref:`sec_gd`, this section
+examines how the estimate changes the optimization trajectory, why convergence
+requires a decreasing learning rate, and how batch size controls its variance.
 
 ```{.python .input #sgd-stochastic-gradient-descent}
 %%tab pytorch
@@ -38,9 +37,9 @@ with gradient
 
 $$\nabla f(\mathbf{x}) = \frac{1}{n} \sum_{i = 1}^n \nabla f_i(\mathbf{x}).$$
 
-Gradient descent therefore pays $\mathcal{O}(n)$ per update — a full pass
+Gradient descent therefore costs $\mathcal{O}(n)$ per update—a full pass
 over the dataset to move the parameters once. Stochastic gradient descent
-(SGD) refuses to pay it. At each iteration it samples an index
+(SGD) instead samples an index
 $i\in\{1,\ldots, n\}$ uniformly at random and updates using that single
 example's gradient:
 
@@ -287,10 +286,10 @@ d2l.plot(batch_sizes, [var, [var[0] / b for b in batch_sizes]],
 ```
 
 The measured points fall on the $1/b$ reference line across the whole range:
-a factor of 500 in batch size buys a factor of 500 in variance. Note what
+a factor of 500 in batch size reduces the variance by the same factor. Note what
 the log scale conceals. Variance falling like $1/b$ means
 noise *amplitude* falls like $1/\sqrt{b}$, so spending $100\times$ more
-compute per step buys only a $10\times$ quieter gradient. Batch size is thus
+compute per step reduces the noise amplitude by only a factor of $10$. Batch size is thus
 a genuine second dial next to the learning rate, but one with diminishing
 returns. :numref:`sec_minibatch_sgd` takes up how to spend a compute budget
 between the two, and how batching interacts with the hardware that made it
@@ -312,7 +311,7 @@ practice, and the exercises take it up.
 ## Summary
 
 SGD trades exactness for speed: an unbiased $\mathcal{O}(1)$-per-step
-gradient estimate in place of an $\mathcal{O}(n)$ exact one. The price is
+gradient estimate in place of an $\mathcal{O}(n)$ exact one. This introduces
 variance, and this section met both of the dials that control it. A constant
 learning rate leaves the iterates rattling in a noise ball of squared radius
 proportional to $\eta$; decaying learning rates converge, provided the decay
@@ -350,7 +349,7 @@ $$f(\mathbf{x}) = \frac{1}{n} \sum_{i=1}^{n} f_i(\mathbf{x}).$$
 
 A full gradient $\nabla f$ costs $\mathcal{O}(n)$ per step.
 A million-example dataset → a million forward passes per
-parameter update. Untenable.
+parameter update, which is too expensive for frequent updates.
 :::
 
 ::: {.slide title="Stochastic gradient descent"}
@@ -360,7 +359,7 @@ $\mathcal{O}(1)$ per step, unbiased estimator
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x}).$$
 
-The price: noisy gradients. On average the step points the
+The resulting gradients are noisy. On average the step points the
 right way; any single step may point almost anywhere.
 :::
 
@@ -376,7 +375,6 @@ watch how the trajectory differs:
 
 @sgd-stochastic-gradient-updates-1
 
-. . .
 
 @sgd-stochastic-gradient-updates-2
 :::
@@ -389,7 +387,7 @@ so the iterates random-walk around the optimum:
 @sgd-stochastic-gradient-updates-3
 :::
 
-::: {.slide title="The noise ball"}
+::: {.slide title="Stationary variance with a constant learning rate"}
 Model one coordinate: $x_{t+1} = x_t - \eta(\lambda x_t + \xi_t)$,
 noise variance $\sigma^2$. Contraction and noise injection
 balance at
@@ -420,7 +418,7 @@ $\sum_t \eta(t) = \infty$ (can travel anywhere) **and**
 $\sum_t \eta(t)^2 < \infty$ (noise quenched).
 :::
 
-::: {.slide title="Exponential decay: too eager"}
+::: {.slide title="Limitation of exponential decay"}
 $\sum_t \eta(t) < \infty$ — a finite travel budget. The
 iterate stops short of the optimum, out of learning rate:
 
@@ -444,7 +442,7 @@ size 1 to 512:
 @sgd-gradient-variance-and-batch-size
 :::
 
-::: {.slide title="Batch size is a dial with diminishing returns"}
+::: {.slide title="Diminishing variance reduction with batch size"}
 - Variance $\propto 1/b$ → noise *amplitude* $\propto 1/\sqrt{b}$.
 - $100\times$ more compute per step → only $10\times$ quieter
   gradients.

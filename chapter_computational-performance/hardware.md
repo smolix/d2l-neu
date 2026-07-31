@@ -1,27 +1,26 @@
 # Hardware
 :label:`sec_hardware`
 
-The previous section handed us a model with two free parameters: a machine
+The previous section introduced a model with two machine parameters: a machine
 delivers $\min(P, I\beta)$ — peak arithmetic $P$ if you feed it enough work
 per byte, bandwidth $\beta$ times intensity if you cannot. This section
 explains where those two numbers come from, why their ratio — the ridge
 point — has climbed over the long run of hardware generations, and what else about
 the machine (latency, capacity, interconnect, energy) a practitioner needs
 in order to reason about performance before running anything. The aim is
-working knowledge, not a computer architecture course: enough to read a
-profiler, size a model, and predict which fix will pay. For the
+enough working knowledge to read a profiler, size a model, and identify an
+appropriate optimization. For the
 complementary question — *what hardware should I buy* — see the buyer's
 guide in :numref:`sec_hardware_buyers`; this section is about why the
 machine behaves the way it does, whatever machine you have. For a proper
 treatment of computer architecture see :cite:`Hennessy.Patterson.2011`.
 
-One warning before the numbers. Hardware numbers decay: the specific
-gigabytes per second below were verified in mid-2026 and will drift; every
-generation roughly doubles something. What does not decay are the *ratios
-and their trends* — memory is orders of magnitude slower than arithmetic,
+The specific hardware values below were verified in mid-2026 and will
+change with new products. More stable are the ratios and trends: memory is
+orders of magnitude slower than arithmetic,
 every chip boundary costs roughly another order of magnitude, and compute
-grows faster than bandwidth, which grows faster than capacity. Learn the
-ladder shapes; look up the rungs when you need them.
+grows faster than bandwidth, which grows faster than capacity. The numerical
+values should therefore be checked for the hardware in use.
 
 ```{.python .input #hardware}
 %%tab pytorch
@@ -41,7 +40,7 @@ import numpy as np
 import time
 ```
 
-## Where Bytes Live
+## The Memory Hierarchy
 :label:`subsec_hw-bytes`
 
 Every byte your program touches lives somewhere in a hierarchy
@@ -384,7 +383,7 @@ communication costs are impossible to ignore, so the cost model of
 into NVLink headroom. We will not have to assert why datacenter fabrics
 exist; we will have measured it.
 
-## Energy: Why Moving Bytes Is the Budget
+## Energy Cost of Data Movement
 :label:`subsec_hw-energy`
 
 There is a final ladder underneath the other two.
@@ -563,7 +562,7 @@ The highlighted rung — 5–15 µs to launch a kernel — is why the
 overhead regime exists.
 :::
 
-::: {.slide title="Measured, Not Asserted"}
+::: {.slide title="Measured Hardware Characteristics"}
 A big elementwise op *is* a bandwidth meter — bytes known,
 arithmetic negligible:
 
@@ -572,7 +571,7 @@ arithmetic negligible:
 Streaming kernels land within tens of percent of spec.
 :::
 
-::: {.slide title="The Shoreline"}
+::: {.slide title="Compute and I/O Scaling"}
 ![](../img/mdl-perf-shoreline.svg){width=80%}
 
 Long run, per generation: compute ~4×, bandwidth ~2×, capacity

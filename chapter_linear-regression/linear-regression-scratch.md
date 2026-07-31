@@ -6,31 +6,16 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Linear Regression Implementation from Scratch
 :label:`sec_linear_scratch`
 
-We are now ready to work through 
-a fully functioning implementation 
-of linear regression. 
-In this section, 
-we will implement the entire method from scratch,
-including (i) the model; (ii) the loss function;
-(iii) a minibatch stochastic gradient descent optimizer;
-and (iv) the training function 
-that stitches all of these pieces together.
-Finally, we will run our synthetic data generator
-from :numref:`sec_synthetic-regression-data`
-and apply our model
-on the resulting dataset. 
-While modern deep learning frameworks 
-can automate nearly all of this work,
-implementing things from scratch is the only way
-to make sure that you really know what you are doing.
-Moreover, when it is time to customize models,
-defining our own layers or loss functions,
-understanding how things work under the hood will prove handy.
-In this section, we will rely only 
-on tensors and automatic differentiation.
-Later, we will introduce a more concise implementation,
-taking advantage of the bells and whistles of deep learning frameworks 
-while retaining the structure of what follows below.
+This section implements linear regression using only tensors and automatic
+differentiation. The implementation has four components: the linear model, the
+squared loss, minibatch stochastic gradient descent, and the training loop. We
+apply them to the synthetic dataset from
+:numref:`sec_synthetic-regression-data`, where the known parameters allow us to
+check the result directly.
+
+Writing these components explicitly makes their interfaces and interactions
+visible. The next section expresses the same computation using the reusable
+layers, losses, optimizers, and data loaders supplied by each framework.
 
 ```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=2}
 %%tab mxnet
@@ -698,21 +683,11 @@ taken up in :numref:`sec_generalization_deep`.
 
 ## Summary
 
-In this section, we took a significant step 
-towards designing deep learning systems 
-by implementing a fully functional 
-neural network model and training loop.
-In this process, we built a data loader, 
-a model, a loss function, an optimization procedure,
-and a visualization and monitoring tool. 
-We did this by composing a Python object 
-that contains all relevant components for training a model. 
-While this is not yet a professional-grade implementation,
-it is perfectly functional, and code like this 
-could already help you to solve small problems quickly.
-In the coming sections, we will see how to do this
-both *more concisely* (avoiding boilerplate code)
-and *more efficiently* (using our GPUs to their full potential).
+We implemented the data loader, linear model, squared loss, stochastic
+gradient update, and training loop explicitly. Their separation makes the
+training procedure easy to inspect and modify. Framework implementations can
+replace these components with optimized abstractions while retaining the same
+computational structure.
 
 The hand-rolled SGD above is the simplest member of a large family: momentum,
 AdaGrad, RMSProp, and Adam all replace that single update line, and learning-rate
@@ -954,9 +929,9 @@ Optax expresses an optimizer as two pure functions, `init` (empty state) and `up
 ::: {.slide title="One minibatch: four steps, in order"}
 [Training]{.kicker}
 
-Strip away the bookkeeping and every step of training is the same four moves on a minibatch:
+Each minibatch update consists of four steps:
 
-1. **Forward + loss**, with the gradient machinery recording.
+1. **Forward + loss**, while recording the computation for differentiation.
 2. **Clear** the old gradients before the backward pass writes new ones.
 3. **Backward** to fill each parameter's gradient.
 4. **Update** the parameters, *outside* the gradient graph.
@@ -976,7 +951,7 @@ So the run is repeatable, we seed the global RNG before building the model. The 
 @-linear-regression-scratch-training-seed
 :::
 
-::: {.slide title="The loss lands on the noise floor"}
+::: {.slide title="Training loss approaches the noise level"}
 [Training · payoff]{.kicker}
 
 ::: {.cols .vc}
@@ -1033,6 +1008,7 @@ many equally good parameter settings, and we care about accurate
 :::
 
 ::: {.d2l-note}
-Next: the same model in two lines of framework API, then richer losses, optimizers, and regularizers built on this skeleton.
+Next, we express the same model with framework components and then introduce
+additional losses, optimizers, and regularizers.
 :::
 :::

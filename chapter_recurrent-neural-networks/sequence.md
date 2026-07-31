@@ -91,12 +91,11 @@ Before handling targets of any kind, we tackle the most basic version:
 modeling the sequence itself,
 that is, estimating how probable a given sequence is,
 $P(\mathbf{x}_1, \ldots, \mathbf{x}_T)$.
-Almost everything else in the chapter builds on this.
+The later sections build on this probability model.
 
 ## Autoregressive Models
 
-Focus on the workhorse case: at each step we predict the next
-entry from the ones already seen.
+We begin by predicting each entry from the preceding observations.
 Given a numerical series such as a stock index or a temperature reading,
 a forecaster who wants to act on the next step
 cares about the conditional distribution
@@ -117,8 +116,7 @@ The number of conditioning inputs $x_{t-1}, \ldots, x_1$
 grows with $t$, so if we treat the history as a training set,
 every example has a different number of features
 and no fixed-input model applies.
-Two strategies resolve this,
-and they organize not just this section but much of the chapter
+Two strategies produce fixed-size representations of the history
 (:numref:`fig_ar-vs-latent`).
 
 ### Fixed Windows
@@ -152,9 +150,8 @@ so the whole unbounded past is compressed into bounded memory.
 This latent-state picture is exactly the recurrent neural network
 we build in :numref:`sec_rnn`, and, in a linearized form,
 the state space models of :numref:`chap_modern_rnn`.
-The entire arc of the next two chapters answers one question
-the diagram raises: what should the state $h_t$ remember,
-and how should it be updated?
+The next two chapters examine what the state $h_t$ should retain and how it
+should be updated.
 
 ![Two ways to give a sequence model a fixed-size input. (left) Autoregression conditions on a sliding window of the last $\tau$ observations and discards the rest. (right) Latent autoregression carries a recurrent state $h_t$ that summarizes the whole past in fixed size.](../img/mdl-rnn-ar-vs-latent.svg)
 :label:`fig_ar-vs-latent`

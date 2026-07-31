@@ -1,27 +1,18 @@
 # Constrained Optimization and Duality
 :label:`sec_mdl-constrained-optimization-duality`
 
-Constraints and their multipliers are everywhere in deep learning, even when they
-are not written down as such: projected and clipped updates, trust regions, the
-support-vector machine and attention recast as optimization, and the
-regularization-as-constraint equivalence behind weight decay. This is the
-Boyd-style section of the chapter :cite:`Boyd.Vandenberghe.2004`. It teaches you
-to *read* a constrained problem and its dual: to recognize that a multiplier
-is a shadow price, that complementary slackness pins down which constraints are
-active, and that a hard problem sometimes becomes easy when viewed from the dual
-side. We build from Lagrange multipliers for equalities, to the full Lagrangian
-and KKT conditions for inequalities, then make constraints *algorithmic* with
-projections and projected gradient descent, develop Lagrangian duality and the
-strong-duality guarantee, and ground it all in worked examples: the SVM dual
-solved by projected gradient ascent, water-filling solved by bisection, and a
-tiny non-convex problem whose duality gap you can see.
+Constraints appear in projected and clipped updates, trust regions, support
+vector machines, and regularization. This section develops equality and
+inequality constraints, the Karush--Kuhn--Tucker conditions, projected gradient
+descent, Lagrangian duality, and strong duality
+:cite:`Boyd.Vandenberghe.2004`. Worked examples derive the SVM dual, solve a
+water-filling problem by bisection, and exhibit a nonconvex duality gap.
 
-One idea powers everything in this section. At an unconstrained minimum the
-gradient vanishes; at a *constrained* minimum it need not, but there must be
-**no feasible descent direction**: no infinitesimal move that both respects the
-constraints and decreases the objective. Lagrange multipliers, the KKT
-conditions, and the fixed points of projected gradient descent are this one
-sentence translated into equations for three kinds of constraint sets.
+At an unconstrained minimum the gradient vanishes. At a constrained minimum it
+may be nonzero, but no feasible infinitesimal direction can decrease the
+objective. Lagrange multipliers, the KKT conditions, and fixed points of
+projected gradient descent express this condition for different constraint
+sets.
 
 We lean on :numref:`sec_mdl-multivariable_calculus` (gradients, level sets, and
 the tangency teaser we are about to grow), :numref:`sec_mdl-gradient-based-optimization`
@@ -63,7 +54,7 @@ import numpy as np
 ## Equality Constraints and Lagrange Multipliers
 :label:`subsec_mdl-lagrange-multipliers`
 
-### The Geometry: No Feasible Descent
+### Feasible Directions at an Equality-Constrained Minimum
 
 Consider the simplest constrained problem: minimize a smooth
 $f : \mathbb{R}^n \to \mathbb{R}$ over the surface carved out by one smooth
@@ -470,7 +461,7 @@ constraint, stationarity reads $x_i - y_i + \tau - \lambda_i = 0$.
 Complementary slackness splits the coordinates: where $x_i > 0$ we get
 $\lambda_i = 0$ and $x_i = y_i - \tau$; where $x_i = 0$, dual feasibility
 $\lambda_i = \tau - y_i \ge 0$ says exactly that $y_i \le \tau$. Both cases
-compress into one formula,
+combine as
 
 $$
 x_i^\star = \max(y_i - \tau,\, 0),
@@ -762,7 +753,7 @@ $\min\max$ from $\max\min$. It is also the geometry behind
 $\boldsymbol{\lambda}$ simultaneously, converging (for convex problems) to the
 saddle rather than to a minimum.
 
-### Multipliers Are Shadow Prices
+### Sensitivity and Shadow Prices
 
 The last universal fact explains *what the numbers
 $\boldsymbol{\lambda}^\star$ mean*, and it is the reading that economics,
@@ -808,27 +799,26 @@ $p^\star(\mathbf{u})$ and touches it at $\mathbf{u} = \mathbf{0}$, so it is
 the tangent there, and matching gradients gives
 $\nabla p^\star(\mathbf{0}) = -\boldsymbol{\lambda}^\star$. $\blacksquare$
 
-Read $\lambda_i^\star$ as the **price of constraint $i$**: relax it by a unit
-and the achievable optimum improves by about $\lambda_i^\star$. Complementary
-slackness becomes an economic platitude: slack constraints are free
-($\lambda_i = 0$); only binding constraints command a positive price. In the
+The multiplier $\lambda_i^\star$ is the **shadow price of constraint $i$**:
+relaxing the constraint by one unit improves the optimum by approximately
+$\lambda_i^\star$. Complementary slackness sets the multiplier of a slack
+constraint to zero; only binding constraints can have a positive multiplier. In the
 ball projection, $\lambda^\star = \|\mathbf{x}_0\|/r - 1$ prices the radius; in
 the hyperplane example, $-\nu^\star$ priced the offset $b$; and in the
 water-filling problem below, the equality multiplier is *literally* the
 marginal value of transmit power, which we will verify by finite differences.
 
-### Weight Decay Is a Constraint
+### Weight Decay and Norm Constraints
 :label:`subsec_mdl-weight-decay-duality`
 
-The most consequential shadow price in deep learning is one you set every day.
 Weight decay (:numref:`sec_weight_decay`) adds a penalty to the training loss,
 
 $$
 \min_{\mathbf{w}}\; L(\mathbf{w}) + \lambda \|\mathbf{w}\|^2 ,
 $$
 
-and this section's machinery says exactly what that penalty *is*: the
-Lagrangian of a norm **constraint**,
+and the KKT formulation identifies that penalty as the Lagrangian of a norm
+**constraint**,
 
 $$
 \min_{\mathbf{w}}\; L(\mathbf{w}) \quad \textrm{subject to} \quad \|\mathbf{w}\|^2 \le r^2 .
@@ -849,12 +839,12 @@ multiplier $\lambda^\star(r)$ whose penalized problem returns the same point;
 this direction uses KKT necessity, which applies because Slater's condition
 holds for every $r > 0$ ($\mathbf{w} = \mathbf{0}$ is strictly feasible).
 Sweeping $\lambda$ and sweeping $r$ trace the *same* regularization path, just
-parameterized differently, and the shadow-price proposition gives the exchange
-rate: $\lambda^\star = -\partial p^\star / \partial (r^2)$, the marginal loss
-reduction the next unit of squared-norm budget would buy. When the weight
+parameterized differently. The shadow-price proposition gives
+$\lambda^\star = -\partial p^\star / \partial (r^2)$, the marginal reduction in
+loss from an additional unit of squared-norm budget. When the weight
 budget is slack (the unregularized minimizer already satisfies
 $\|\mathbf{w}\| \le r$), complementary slackness prices it at
-$\lambda^\star = 0$: decay that binds nothing costs nothing.
+$\lambda^\star = 0$.
 
 Two caveats. First, for the *non-convex* losses of deep networks the
 correspondence is local and heuristic, not exact: a stationary point of the
@@ -865,8 +855,8 @@ $d^\star$ in the example below can separate the two formulations. Second, the
 same number has a third, statistical reading:
 :numref:`sec_mdl-maximum_likelihood` derives the penalty
 $\lambda\|\mathbf{w}\|^2$ as the log of a Gaussian prior (MAP estimation),
-so one and the same $\lambda$ is simultaneously a Lagrange multiplier, a
-price on model complexity, and a prior belief about scale. The cell below
+Thus $\lambda$ can be interpreted as a Lagrange multiplier, a regularization
+coefficient, or a parameter of a prior distribution. The cell below
 verifies the equivalence numerically on ridge regression
 ($L(\mathbf{w}) = \|A\mathbf{w} - \mathbf{b}\|^2$, convex, so the theorem
 applies in full): for each $\lambda$ it solves the penalized problem in closed
@@ -1119,7 +1109,7 @@ $\mu = 1/w = 0.6977$ matches the finite-difference sensitivity of the optimal
 rate to the budget through six digits. The shadow price is a number you can
 measure by perturbing the constraint.
 
-### A Duality Gap You Can See
+### An Explicit Duality Gap
 
 Weak duality never fails; strong duality can. To watch it fail, take a problem
 small enough to solve by looking at it: on the interval $x \in [0, 1]$,
@@ -1167,7 +1157,7 @@ general situation for deep learning's loss surfaces: duals of non-convex
 training problems still give valid *lower bounds* (and are the engine of
 verification and relaxation methods), but the bound need not be tight.
 
-### Coda: A Map of Problem Classes
+### Convexity and Duality Across Problem Classes
 
 The examples above were all quadratic programs, but they sit inside a standard
 hierarchy of convex problem classes :cite:`Boyd.Vandenberghe.2004`; the class
@@ -1314,7 +1304,7 @@ Reading a constrained problem and its dual<br>**Lagrange multipliers · KKT · p
 :::
 :::
 
-::: {.slide title="One idea, three guises"}
+::: {.slide title="First-order conditions under constraints"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -1328,7 +1318,7 @@ move that both stays feasible and lowers $f$.
 - **Convex** feasible sets make it an algorithm: projected gradient descent.
 
 ::: {.d2l-note}
-Every multiplier is a **price**: what relaxing its constraint is worth.
+An optimal multiplier measures sensitivity to relaxation of its constraint.
 :::
 :::
 
@@ -1604,9 +1594,8 @@ Verified on ridge regression, where the theorem is exact:
 @!constrained-weight-decay
 
 ::: {.d2l-note}
-One number, three readings: **weight decay** (the weight-decay section), a
-norm budget's shadow price, and a Gaussian prior (the maximum-likelihood
-section).
+The same coefficient appears as **weight decay**, the multiplier of a norm
+constraint, and the precision of a Gaussian prior.
 :::
 :::
 

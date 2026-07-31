@@ -6,18 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Numerics: Dtypes and Mixed Precision
 :label:`sec_numerics`
 
-Every tensor carries three attributes: a shape, a device, and a *dtype*, the
-numeric format of its entries. So far we have left the dtype at its default,
-32-bit floating point, and nothing forced us to look at it. That grace period
-is over. Modern accelerators multiply 16-bit matrices several times faster
-than 32-bit ones, in half the memory, and essentially all serious training now
-chooses numeric formats deliberately. This section covers what a builder needs:
-which formats exist, what each one can and cannot represent, how dtypes combine,
-and the standard recipe (*mixed precision*) for training in 16 bits without
-giving up 32-bit accuracy. For the anatomy of a floating-point number (sign,
-exponent, mantissa) see :numref:`sec_mdl-numerical-stability-conditioning`;
-here we ask the practical questions: when does it break, and which switch do
-I flip.
+Every tensor has a shape, a device, and a *dtype*, the numeric format of its
+entries. Modern accelerators can multiply 16-bit matrices faster and store them
+in half the memory of 32-bit matrices, so training systems choose numeric
+formats deliberately. This section compares their range and precision,
+explains dtype conversion and promotion, and develops mixed-precision training,
+which retains 32-bit master parameters while using lower precision for suitable
+operations. The representation of floating-point numbers is treated in
+:numref:`sec_mdl-numerical-stability-conditioning`; here the emphasis is on
+library behavior and practical failure modes.
 
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
@@ -56,7 +53,7 @@ from d2l import mxnet as d2l
 npx.set_np()
 ```
 
-## The Dtype Zoo
+## Floating-Point Formats
 
 Half-precision (`float16`, "fp16") sounds like a free lunch: half the
 bytes of fp32, and the format that accelerator hardware sped up first. Here
@@ -1037,7 +1034,7 @@ bf16 autocast and stop there; reach for fp16 plus `GradScaler` only on older
 accelerators.
 :end_tab:
 
-## When Numerics Bite
+## Numerical Failure Modes
 
 A short field guide for the day training misbehaves.
 
@@ -1274,9 +1271,9 @@ how to get it, is the subject of :numref:`sec_repro`.
 
 ## Summary
 
-A dtype is a contract about range and precision, and the 16-bit formats split
-the difference between them: fp16 keeps precision and forfeits range, bf16
-keeps fp32's range and forfeits precision, which suits deep learning better.
+A dtype determines range and precision. Among the 16-bit formats, fp16 provides
+more precision but less range, whereas bf16 retains the exponent range of fp32
+with fewer significand bits.
 
 :begin_tab:`pytorch`
 Casting a model (`net.bfloat16()`) converts its parameters and is the tool
@@ -1290,10 +1287,9 @@ from underflowing to zero; bf16 does not.
 In flax the storage and compute formats are the two constructor arguments of
 every layer: casting a model for inference means bf16 in both (or one
 `tree.map` over the parameters), while mixed-precision training sets
-`dtype=jnp.bfloat16` and leaves `param_dtype` at fp32, master weights and
-16-bit matrix multiplications with no context manager in sight. Train in
-bf16; fp16 loss scaling is machinery for older hardware that JAX practice
-skips.
+`dtype=jnp.bfloat16` and leaves `param_dtype` at fp32, combining master
+weights with 16-bit matrix multiplications without a context manager. On
+supported hardware, bf16 usually avoids the loss scaling required by fp16.
 :end_tab:
 
 :begin_tab:`tensorflow`

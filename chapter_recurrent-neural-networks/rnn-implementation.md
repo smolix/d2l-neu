@@ -1,14 +1,13 @@
 # Implementing RNN Language Models
 :label:`sec_rnn-scratch`
 
-We are now ready to build the RNN language model of :numref:`sec_rnn` end to
-end: first from raw tensor operations, so that every moving part is visible,
-and then again with the recurrent layer that every deep learning framework
-ships. We train both on *The Time Machine*, tokenized into the 1,024-token
+This section implements the RNN language model of :numref:`sec_rnn` first
+with tensor operations and then with a framework recurrent layer. We train
+both versions on *The Time Machine*, tokenized into the 1,024-token
 byte-pair-encoding (BPE) vocabulary of :numref:`sec_text-sequence` and served
 as minibatches of shifted input and target windows by the pipeline of
-:numref:`sec_language-model`. Along the way we meet gradient clipping, the
-standard defense against exploding gradients, and we generate our first text.
+:numref:`sec_language-model`. The training procedure also introduces gradient
+clipping and autoregressive generation.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -1241,7 +1240,7 @@ state forward:
 
 . . .
 
-Sanity check on output shapes:
+Check the output shapes:
 
 @rnn-implementation-the-recurrent-cell-4
 :::
@@ -1357,7 +1356,7 @@ dense layers:
 @rnn-implementation-concise-implementation-2
 :::
 
-::: {.slide title="Sanity check, then train"}
+::: {.slide title="Output shapes and training"}
 Untrained model generates byte soup, but the wiring
 (tokenizer to model and back) is sound:
 

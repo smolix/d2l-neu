@@ -3,12 +3,16 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Training Recipes Matter
+# Modern Training Recipes for Convnets
 :label:`sec_training_recipes`
 
 Take the ResNet-50 of :numref:`sec_resnet`, change nothing about its architecture, and train it with the methods in use around 2022 instead of those of its 2015 debut. Its ImageNet top-1 accuracy rises from 76.1% to 80.4% :cite:`wightman2021resnet`. That gain, from the *training recipe* alone, exceeds what most new architectures delivered over their predecessors. The "ResNet strikes back" study that produced it trained the unmodified network with three procedures of increasing cost: A3 (100 epochs) reaches 78.1%, A2 (300 epochs) reaches 79.8%, and A1 (600 epochs, the LAMB optimizer, a binary cross-entropy loss, and heavy augmentation) reaches 80.4%.
 
-This has an uncomfortable consequence for reading the literature: a paper from 2016 and a paper from 2022 that both report "ResNet-50" baselines are reporting numbers about four points apart, so accuracy tables that mix eras are not comparable. Some celebrated architecture improvements turned out, on re-examination, to be recipe improvements in disguise. In this section we dissect what changed between 2015 and 2022, implement each ingredient in a few lines, and then run a controlled experiment: the same ResNet-18 trained under both recipes, so you can see the gap with your own eyes rather than take it on faith.
+Consequently, ResNet-50 results obtained with training procedures from different
+periods are not directly comparable. Some gains initially attributed to
+architecture were later reproduced by changes in optimization and data
+augmentation. We examine the main changes between 2015 and 2022, implement
+each component, and compare two training procedures on the same ResNet-18.
 
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab mxnet
@@ -461,7 +465,7 @@ d2l.plot(list(range(100)), [raw, avg], xlabel='step', ylabel='weight',
 
 The choice of $\beta$ sets an averaging horizon of roughly $1/(1-\beta)$ steps. If that horizon is long relative to the schedule's tail, the average lags behind the still-improving weights and EMA *hurts*; matched to the tail, it helps. The exercises ask you to map this trade-off.
 
-## One Network, Two Recipes
+## Controlled Comparison on One Network
 
 Now we put the ingredients together. The network is the ResNet-18 of
 :numref:`sec_resnet`, rebuilt here from the library's `Residual` block. The
@@ -789,7 +793,7 @@ That number carries two lessons beyond the ingredients themselves. Methodologica
 
 <!-- slides -->
 
-::: {.slide title="Recipes matter more than architectures"}
+::: {.slide title="The Effect of the Training Procedure"}
 Take **ResNet-50, unchanged since 2015**, and retrain it with
 2022 methods (Wightman et al., 2021):
 
@@ -869,7 +873,7 @@ cancels the jitter for the price of one parameter copy:
 @training-recipes-averaging-weights@pytorch
 :::
 
-::: {.slide title="The experiment: one network, two recipes"}
+::: {.slide title="Controlled Comparison of Two Procedures"}
 Same ResNet-18, Fashion-MNIST at 96×96, **10k training images**
 (with all 60k images the gap largely closes; scarcity is
 where regularization earns its keep).

@@ -1,18 +1,16 @@
 # Optimization
 :label:`chap_mdl-optimization`
 
-Gradients tell us which way is downhill; optimization is the study of how to
-actually get to the bottom. This chapter explains *why* gradient descent and its
-accelerated, stochastic, and second-order variants work, *what* the adaptive
-per-coordinate methods that actually train today's networks --- AdaGrad, Adam,
-AdamW --- add to them and where their guarantees break, *when* convexity
-guarantees they find the global optimum, *how* constraints and their multipliers
-reshape a problem through Lagrangian duality, and *which* numerical pitfalls turn
-a correct algorithm into a `NaN`. The main book's optimization chapter is the
-reader's practical first encounter: it should explain how to choose, configure,
-and diagnose optimizers in training. This appendix is its mathematical
-companion. It derives representative guarantees and failure modes, but is not
-intended to duplicate the main chapter's workflow-oriented treatment.
+Optimization turns local derivative information into a procedure for choosing
+model parameters. This chapter develops the mathematical foundations of that
+procedure. It begins with gradient descent and its accelerated, stochastic, and
+second-order variants, then studies adaptive coordinatewise methods such as
+AdaGrad, Adam, and AdamW. Convexity supplies global guarantees; constrained
+optimization and duality describe feasible solutions and their multipliers; and
+numerical analysis explains how finite-precision arithmetic can invalidate an
+otherwise correct computation. The main optimization chapter emphasizes how to
+choose and diagnose methods in practice. This appendix derives representative
+guarantees and failure modes that support that treatment.
 
 ```toc
 :maxdepth: 2
@@ -26,9 +24,8 @@ mdl-numerical-stability-conditioning
 
 ## Resources and Further Reading {.unnumbered}
 
-A short, opinionated reading list for going deeper on optimization as it is used
-in machine learning: convexity, gradient and second-order methods, duality, and
-numerics.
+The following references cover convexity, first- and second-order methods,
+duality, and numerical optimization for machine learning.
 
 **Books**
 

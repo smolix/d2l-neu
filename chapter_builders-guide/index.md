@@ -1,23 +1,19 @@
 # Computation
 :label:`chap_computation`
 
-Alongside giant datasets and powerful hardware, great software tools have
-played an indispensable role in the rapid progress of deep learning. Deep
-learning libraries let us recycle standard components while retaining the
-ability to modify anything, and over time their abstractions have grown
-coarser: from individual neurons, to layers, to the multi-layer *blocks* from
-which today's models are assembled.
+Deep learning libraries provide reusable layers and training components while
+allowing models to define their own computation. Their central abstraction is
+the *module*: a unit that can contain parameters, child modules, and a forward
+computation. Modules range from individual layers to the repeated blocks from
+which large models are assembled.
 
-So far we called upon these libraries without asking how they work. We built
-models from layers, initialized and trained them, and treated everything
-between `net(X)` and the loss as machinery. This chapter opens the machinery.
-In 2016 that meant learning to build, initialize, and save a small model
-trained from scratch in 32-bit arithmetic on one device. Those skills remain,
-and this chapter teaches them, but the working assumptions around them have
-changed: a model is now assembled from a configuration object, measured in
-gigabytes, run in reduced precision, checkpointed together with its optimizer
-state, and as often as not initialized from someone else's weights rather than
-from a random number generator.
+This chapter explains the software structure behind the models used so far.
+It covers module construction, initialization, model state, serialization,
+custom layers, reproducibility, numeric formats, and device placement. These
+topics matter at any scale, but modern training makes their interaction
+especially important: models are commonly built from configuration objects,
+run in reduced precision, measured in gigabytes, initialized from pretrained
+weights, and checkpointed together with optimizer state.
 
 Accordingly, we proceed in eight steps. We start with how models are built
 from modules and configs (:numref:`sec_model_construction`), what a model's
@@ -54,7 +50,7 @@ accessible online except where noted.
 
 **Books**
 
-- [Deep Learning with PyTorch — Stevens, Antiga & Viehmann](https://web.archive.org/web/20211012030609/https://pytorch.org/assets/deep-learning/Deep-Learning-with-PyTorch.pdf) — free PDF from the PyTorch team (archived copy; the original pytorch.org link has gone away); Part 1 walks tensors, storage, autograd, and `nn.Module` mechanics at exactly this chapter's level of "open the machinery".
+- [Deep Learning with PyTorch — Stevens, Antiga & Viehmann](https://web.archive.org/web/20211012030609/https://pytorch.org/assets/deep-learning/Deep-Learning-with-PyTorch.pdf) — free PDF from the PyTorch team (archived copy; the original pytorch.org link has gone away); Part 1 covers tensors, storage, autograd, and `nn.Module` at the same level as this chapter.
 - [Machine Learning Systems — Vijay Janapa Reddi](https://mlsysbook.ai/) — free online; the systems view around this chapter: frameworks, data pipelines, training infrastructure, and efficient deployment.
 
 **Courses and video lectures**

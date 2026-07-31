@@ -9,18 +9,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 
 
-So far, we have focused on how to tackle multiclass classification problems
-by training (linear) neural networks with multiple outputs and softmax functions.
-Interpreting our model's outputs as probabilistic predictions,
-we motivated and derived the cross-entropy loss function,
-which calculates the negative log likelihood
-that our model (for a fixed set of parameters)
-assigns to the actual labels.
-And finally, we put these tools into practice
-by fitting our model to the training set.
-However, as always, our goal is to learn *general patterns*,
-as assessed empirically on previously unseen data (the test set).
-High accuracy on the training set means nothing.
+The preceding sections fitted a softmax classifier by minimizing
+cross-entropy on a training set. The purpose of the fitted model is to
+classify new examples, so training accuracy alone is insufficient.
 Whenever each of our inputs is unique
 (and indeed this is true for most high-dimensional datasets),
 we can attain perfect accuracy on the training set
@@ -32,7 +23,7 @@ does not tell us how to classify new examples.
 Absent further guidance, we might have to fall back
 on random guessing whenever we encounter new examples.
 
-A number of burning questions demand immediate attention:
+This raises three questions:
 
 1. How many test examples do we need to give a good estimate of the accuracy of our classifiers on the underlying population?
 1. What happens if we keep evaluating models on the same test repeatedly?
@@ -41,7 +32,7 @@ A number of burning questions demand immediate attention:
 
 
 Whereas :numref:`sec_generalization_basics` introduced
-the basics of overfitting and generalization
+overfitting and generalization
 in the context of linear regression,
 this chapter will go a little deeper,
 introducing some of the foundational ideas
@@ -882,13 +873,13 @@ a constant factor above it, the price of a guarantee at every finite $n$.
 :::
 :::
 
-::: {.slide title="The 3am idea"}
+::: {.slide title="Reusing a test set for model selection"}
 [Test-Set Reuse]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 You evaluate model $f_1$ once, by the book, and report a confidence
-interval. That night you dream up $f_2$, tune it, and it *looks* better.
+interval. You then develop $f_2$, tune it, and observe a better test score.
 
 Now you reach for the final evaluation, and realize: you **no longer have a
 test set**. The data is still on disk, but it is no longer unseen.
@@ -903,7 +894,7 @@ enough times and nothing is held out.
 :::
 :::
 
-::: {.slide title="Two ways reuse betrays you"}
+::: {.slide title="Two consequences of test-set reuse"}
 [Test-Set Reuse]{.kicker}
 
 ::: {.cols}
@@ -921,7 +912,7 @@ the modeler, it is no longer a true test set.
 :::
 :::
 
-::: {.slide title="Nothing learned, score climbs anyway" only="pytorch"}
+::: {.slide title="Selection alone raises the reported score" only="pytorch"}
 [Test-Set Reuse]{.kicker}
 
 ::: {.cols .vc}
@@ -943,7 +934,7 @@ improvement this way.
 :::
 :::
 
-::: {.slide title="Nothing learned, score climbs anyway" except="pytorch"}
+::: {.slide title="Selection alone raises the reported score" except="pytorch"}
 [Test-Set Reuse]{.kicker}
 
 Evaluate $k$ **coin-flip** classifiers (true accuracy exactly $0.5$,
@@ -963,7 +954,7 @@ what scored well before, climbs faster still.
 :::
 :::
 
-::: {.slide title="Treat a test set as a scarce resource"}
+::: {.slide title="Limit access to the test set"}
 [Test-Set Reuse · in practice]{.kicker}
 
 The worst-case theory is bleak, but real life is usually kinder. In
@@ -987,7 +978,7 @@ practice:
 :::
 :::
 
-::: {.slide title="The a-priori dream: uniform convergence"}
+::: {.slide title="Uniform convergence over a model class"}
 [Learning Theory]{.kicker}
 
 ::: {.cols .vc}
@@ -996,7 +987,7 @@ A test set is *post hoc*: it tells you a model generalized, never that it
 *should*. Learning theory wants a guarantee from the **model class**
 $\mathcal{F}$ alone.
 
-The dream is **uniform convergence**: with probability $\ge 1-\delta$,
+Under **uniform convergence**, with probability $\ge 1-\delta$,
 *every* $f\in\mathcal{F}$ has its empirical error close to its true error at
 once. Then minimizing training error is safe.
 :::
@@ -1045,7 +1036,7 @@ the **XOR** labeling of **4**.
 ![All $2^3=8$ labelings of 3 points are linearly separable (left); the XOR labeling of 4 points is not (right). So plane lines shatter 3 points but not 4.](../img/mdl-clf-shattering.svg){width=82%}
 :::
 
-::: {.slide title="VC of linear models: d+1, and neither direction is deep"}
+::: {.slide title="The VC dimension of linear models is d+1"}
 [Learning Theory · the bound]{.kicker}
 
 ::: {.cols .vc}

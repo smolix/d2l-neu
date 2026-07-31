@@ -1,17 +1,14 @@
 # Gradient-Based Optimization
 :label:`sec_mdl-gradient-based-optimization`
 
-Every neural network is moved by some descendant of gradient descent. Before the
-main book hands you the optimizer zoo (momentum, RMSProp, Adam, learning-rate
-schedules), this section explains the foundations underneath all of them: *why* a
-negative-gradient step makes progress, *how fast* it converges, and *what breaks
-it*. One number recurs throughout: the **condition number** $\kappa$, read off
-the Hessian's spectrum. It predicts whether gradient descent glides to
-the minimum or grinds along an ill-conditioned valley. We develop the deterministic
-theory on quadratics (where everything is computable in closed form), then add the
-two ingredients that make it practical at scale, momentum and stochasticity,
-and close with a short look at second-order methods to explain why we *don't* use
-them.
+Gradient descent and its variants underlie most procedures for training neural
+networks. This section begins with the local first-order argument for choosing a
+descent direction and then derives convergence rates under smoothness and
+convexity assumptions. The Hessian spectrum enters through the **condition
+number** $\kappa$, which determines the rate on a quadratic objective. Momentum
+and stochastic gradients extend this analysis to methods used at scale. We
+conclude with Newton and quasi-Newton methods, whose use of curvature improves
+individual steps but increases their computational cost.
 
 We lean on :numref:`sec_mdl-multivariable_calculus` (gradients, directional
 derivatives, the Hessian and the second-order Taylor expansion),
@@ -235,13 +232,11 @@ $$
 and the bracket $\eta(1 - L\eta/2)$ is positive exactly for $\eta < 2/L$ and
 maximized at $\eta = 1/L$. $\blacksquare$
 
-Read the two terms as a ledger: the first-order model promises a gain of
-$\eta\,\|\nabla f\|^2$, and curvature charges a tax of at most
-$\tfrac{L}{2}\eta^2\,\|\nabla f\|^2$. The tax grows *quadratically* in $\eta$
-while the gain grows linearly, so short steps are always profitable and the
-break-even point is $\eta = 2/L$. Everything in this section, and every
-learning-rate discussion in the main book, is some elaboration of this
-ledger.
+The first-order decrease is $\eta\,\|\nabla f\|^2$, while the curvature error is
+at most $\tfrac{L}{2}\eta^2\,\|\nabla f\|^2$. The former grows linearly in
+$\eta$ and the latter quadratically, so sufficiently short steps decrease the
+objective; the limiting value is $\eta = 2/L$. This comparison underlies the
+learning-rate arguments used throughout the book.
 
 ### Guarantees Without Convexity
 
@@ -339,7 +334,7 @@ onward).
 ## The Quadratic Model and the Condition Number
 :label:`subsec_mdl-quadratic-model`
 
-### Why Quadratics Tell the Truth
+### Quadratic Objectives as a Local Model
 
 Near a minimum $\mathbf{x}^\star$, the second-order Taylor expansion of
 :numref:`sec_mdl-multivariable_calculus` says every smooth function *is* a
@@ -382,9 +377,9 @@ c_i^{(k)} = (1 - \eta \lambda_i)^k\, c_i^{(0)}.
 $$
 :eqlabel:`eq_mdl-opt-per-mode`
 
-Gradient descent on a quadratic is $n$ *uncoupled one-dimensional geometric
-recursions*, one per curvature eigenvalue, or as we will say, one per "mode".
-Everything follows from staring at the factors $1 - \eta\lambda_i$:
+Gradient descent on a quadratic is $n$ uncoupled one-dimensional geometric
+recursions, one per curvature eigenvalue, or "mode." The factors
+$1 - \eta\lambda_i$ determine convergence and speed:
 
 * **Convergence** requires $|1 - \eta \lambda_i| < 1$ for every mode, i.e.
   $0 < \eta < 2/\lambda_{\max} = 2/L$. This is the **stability ceiling**: on
@@ -466,7 +461,7 @@ each step size is a "tent" $|1 - \eta\lambda|$ with vertex at $\lambda = 1/\eta$
 the rate is the taller of the tent's two values over the extreme eigenvalues,
 and the best tent is the one whose endpoints are level.
 
-![The optimal-step proof in one picture: the per-mode contraction factors $|1-\eta\lambda|$ form a tent with vertex at $\lambda = 1/\eta$, and the convergence factor $\rho(\eta)$ is the larger of its values at the extreme eigenvalues $\lambda_{\min} = 1$, $\lambda_{\max} = 10$. The greedy $\eta = 0.1$ annihilates the stiff mode but leaves the slow mode contracting at only $0.9$; the optimal $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$ equalizes the two endpoint factors at $(\kappa-1)/(\kappa+1) = 9/11$: lowering either endpoint would raise the other.](../img/mdl-opt-eta-tent.svg)
+![The per-mode contraction factors $|1-\eta\lambda|$ form a tent with vertex at $\lambda = 1/\eta$, and the convergence factor $\rho(\eta)$ is the larger of its values at the extreme eigenvalues $\lambda_{\min} = 1$, $\lambda_{\max} = 10$. The choice $\eta = 0.1$ eliminates the stiff mode but leaves the slow mode contracting at $0.9$; the optimal $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$ equalizes the two endpoint factors at $(\kappa-1)/(\kappa+1) = 9/11$. Lowering either endpoint would raise the other.](../img/mdl-opt-eta-tent.svg)
 :label:`fig_mdl-opt-eta-tent`
 
 When $\kappa = 1$ (a perfectly round bowl) the rate is $0$: one step solves
@@ -650,7 +645,7 @@ $\eta^\star$ achieves :cite:`Nesterov.2018`. Each added hypothesis upgrades
 ## Momentum and Acceleration
 :label:`subsec_mdl-momentum-acceleration`
 
-### Inertia Against the Zig-Zag
+### Momentum on Ill-Conditioned Quadratics
 
 The valley diagnosis suggests its own cure. In the stiff direction, successive
 gradients point in *alternating* directions (the overshoot of
@@ -685,8 +680,8 @@ three regimes on the ill-conditioned valley.
 
 ### The $\sqrt{\kappa}$ Law
 
-How much does inertia buy? On quadratics the answer is exact. Tuning both
-knobs optimally,
+On quadratics, the effect of momentum can be computed exactly. Tuning both
+parameters optimally gives
 
 $$
 \eta^\star = \left(\frac{2}{\sqrt{\lambda_{\max}} + \sqrt{\lambda_{\min}}}\right)^{\!2},
@@ -801,7 +796,7 @@ why some form of it is on by default in every deep learning optimizer
 ## Stochastic Gradients, and Why Not Newton
 :label:`subsec_mdl-stochastic-gradients`
 
-### The Cost of Exactness
+### The Cost of Full Gradients
 
 A training loss is an average over data,
 
@@ -1004,7 +999,7 @@ the stability ceiling in the first hundred steps. Schedules and warmup get
 their full mathematical treatment in
 :numref:`sec_mdl-adaptive-stochastic-methods`.
 
-### Coda: Why Not Newton?
+### Newton's Method and Its Computational Cost
 :label:`subsec_mdl-why-not-newton`
 
 Everything so far treats curvature as an obstacle: it caps the step size,
@@ -1068,7 +1063,7 @@ operations (Exercise 8 asks you to put a year count on this). The objection is
 structural too: away from a minimum the Hessian of a non-convex loss is
 typically *indefinite*, and the Newton step happily walks *toward* saddle
 points unless safeguarded, because it seeks a stationary point of the model,
-any stationary point. What survives at scale is a family of cheaper curvature
+any stationary point. Large-scale methods therefore use cheaper curvature
 surrogates. **L-BFGS** rebuilds a low-rank curvature estimate from recent
 gradient differences with $O(d)$ memory :cite:`Liu.Nocedal.1989`, and the
 adaptive family (AdaGrad :cite:`Duchi.Hazan.Singer.2011`, RMSProp
@@ -1161,7 +1156,7 @@ to $O(md)$. This makes it attractive for deterministic medium-scale problems
 and full-batch fine-tuning, but less natural when fresh minibatch noise makes
 gradient differences unreliable.
 
-### Trust Regions: Make the Model Earn Its Radius
+### Trust Regions and Model Agreement
 :label:`subsec_mdl-trust-region`
 
 Line search first chooses a direction and then decides how far to travel along
@@ -1209,7 +1204,7 @@ beyond explicitly inverting a Hessian.
   $\nabla f^\top \mathbf{d} < 0$; among unit directions the steepest is
   $-\nabla f / \|\nabla f\|$ by Cauchy--Schwarz. Descent directions form a
   half-space; gradient descent's choice is the greedy one, not the only one.
-* $L$-smoothness erects a quadratic ceiling over the graph and yields the
+* $L$-smoothness gives a quadratic upper bound and yields the
   **descent lemma**: progress
   $\eta(1 - L\eta/2)\,\|\nabla f\|^2$ per step, positive for $\eta < 2/L$,
   best guaranteed at $\eta = 1/L$. Telescoping it gives
@@ -1352,7 +1347,7 @@ What moves every neural network<br>**why $-\nabla f$ works, how fast it converge
 :::
 :::
 
-::: {.slide title="The foundations under the optimizer zoo"}
+::: {.slide title="Foundations of gradient-based methods"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -1364,7 +1359,7 @@ have closed-form answers on quadratics:
 - **How fast** does it converge?
 - **What** throttles it?
 
-One number runs through all three: the **condition number**
+Their answers depend on the **condition number**
 $\kappa = \lambda_{\max}/\lambda_{\min}$, read off the Hessian.
 
 ::: {.d2l-note}
@@ -1431,7 +1426,7 @@ $$f(\mathbf{x}_{k+1}) \le f(\mathbf{x}_k) - \eta\big(1 - \tfrac{L\eta}{2}\big)\|
 . . .
 
 ::: {.d2l-note .rule}
-Gain $\eta\|\nabla f\|^2$ grows linearly; the curvature tax
+The first-order decrease $\eta\|\nabla f\|^2$ grows linearly; the curvature error
 $\tfrac{L}{2}\eta^2\|\nabla f\|^2$ grows quadratically. Progress for
 $0<\eta<2/L$, best at $\eta=1/L$.
 :::
@@ -1726,7 +1721,7 @@ $d=10^9$, eight exabytes before the first FLOP. Deep learning keeps the
 :::
 
 ::: {.d2l-note}
-Every learning-rate recipe in the main book is an elaboration of this
-ledger: gain versus curvature tax, signal versus noise.
+Learning-rate analyses compare first-order decrease with curvature error, and
+gradient signal with stochastic noise.
 :::
 :::

@@ -6,18 +6,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Custom Layers and Functions
 :label:`sec_custom_layer`
 
-The library ships over a hundred layers, yet every one of them started life as
-code somebody wrote because the layer they needed did not exist. Sooner or
-later you will be in the same position: a new normalization, an unusual
-residual block, an operation with no gradient. This section shows what to do.
-A custom layer is a subclass of the module class from
-:numref:`sec_model_construction` with a forward method, and if you
-register its state properly you inherit everything a built-in layer gets:
-parameter tracking, serialization, and device movement, with no extra code. We
-build up from a stateless five-liner to RMSNorm, a normalization used by many
-current language models, then to layers with precomputed non-trainable state,
-and finally to the case where the forward computation alone is not enough
-because the gradient itself must be redefined.
+Standard libraries cannot anticipate every normalization, residual block, or
+gradient rule required by a new model. A custom layer extends the module class
+from :numref:`sec_model_construction` with a forward computation. When its
+state is registered correctly, the ordinary module mechanisms provide
+parameter tracking, serialization, and device movement. We begin with a
+stateless layer, then implement RMSNorm, add precomputed non-trainable state,
+and finally define an operation whose backward rule differs from the usual
+derivative.
 
 ```{.python .input #custom-layers-custom-layers-and-functions}
 %%tab pytorch
@@ -339,7 +335,7 @@ X = 100 * np.random.randn(4, 8)
 (norm(X) ** 2).mean(-1)
 ```
 
-### The Composability Guarantee
+### Registration and Module Composition
 
 We write RMSNorm as a module, not as a function with a gain tensor floating
 around beside it, because of what registration buys. A correctly
@@ -1045,10 +1041,10 @@ discusses how to get performance out of the operations you already have.
 :begin_tab:`pytorch`
 A custom layer is a module subclass: `forward` defines the computation,
 `nn.Parameter` registers learnable state, and `register_buffer` registers
-persistent state that no optimizer should touch. Registration is what buys
-composability; a correctly written layer gets parameter tracking, container
-compatibility, serialization, and device movement for free, as we verified on
-RMSNorm axis by axis. When the chain rule itself must be overridden, as in
+persistent state that no optimizer should touch. Registration provides
+parameter tracking, container compatibility, serialization, and device
+movement, as we verified on RMSNorm axis by axis. When the chain rule itself
+must be overridden, as in
 the straight-through estimator, `torch.autograd.Function` lets you supply
 `forward` and `backward` as a pair, invoked through `apply`. Build custom
 implementations to understand them; prefer the native ones in production.
@@ -1058,9 +1054,8 @@ implementations to understand them; prefer the native ones in production.
 A custom layer is a module subclass: `__call__` defines the computation,
 `nnx.Param` registers learnable state, and another `nnx.Variable` subclass
 registers persistent state that the optimizer does not touch. Registration
-is what buys composability; a correctly written layer
-gets parameter tracking, container compatibility, serialization, and device
-movement for free, as we verified on RMSNorm axis by axis. When the chain
+provides parameter tracking, container compatibility, serialization, and
+device movement, as we verified on RMSNorm axis by axis. When the chain
 rule itself must be overridden, as in the straight-through estimator,
 `jax.custom_vjp` attaches a forward and a backward rule to a function, and
 `jax.lax.stop_gradient` covers the identity-surrogate case in a single

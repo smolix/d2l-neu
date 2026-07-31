@@ -1,21 +1,16 @@
 # Random Variables
 :label:`sec_mdl-random_variables`
 
-In :numref:`sec_prob` we worked with *discrete* random variables, those taking
-values in a finite set or the integers, where a probability *mass* sits on each
-outcome and we sum to get probabilities. Deep learning lives mostly in the
-*continuous* world: a pixel intensity, a network weight, a Gaussian noise sample
-all range over a continuum, and there a single outcome carries zero probability.
-The fix is the *density*, met already in :numref:`sec_mdl-integral_calculus`:
-probability becomes *area under a curve*, so the natural operation is no longer
-summation but integration. This section builds the continuous theory we actually
-use: densities and their cumulative functions, the summary statistics (mean,
-variance, standard deviation) that compress a distribution to a few numbers, and
-the joint/marginal/covariance machinery for several correlated variables. At
-every step the discrete sum and the continuous integral are *the same idea* seen
-through :numref:`sec_mdl-integral_calculus`, and almost everything below
-follows from the small identity :eqref:`eq_mdl-pdf_def`: *probability of a tiny
-interval $\approx$ its width times the density there.*
+In :numref:`sec_prob` we considered discrete random variables, whose
+probabilities are obtained by summing probability masses. Pixel intensities,
+network weights, and Gaussian noise are usually modeled as continuous random
+variables, for which individual outcomes have probability zero. A probability
+density assigns probability to intervals through integration. This section
+develops densities and cumulative distribution functions, then introduces the
+mean, variance, and standard deviation. Joint, marginal, and conditional
+distributions extend the same definitions to several variables, together with
+covariance and correlation. The relation in :eqref:`eq_mdl-pdf_def` connects the
+probability of a small interval to its width and local density.
 
 ```{.python .input #random-variables-imports}
 #@tab mxnet
@@ -58,7 +53,7 @@ the cumulative function that turns it back into a genuine probability, and the
 derivative relationship between them, which is the fundamental theorem of
 calculus restated for probabilities.
 
-### The Density Appears: A Thought Experiment
+### From Bin Probabilities to a Density
 
 Throw a dart at a board and ask for the probability it lands *exactly*
 $2\,\textrm{cm}$ from the center. Measure to one digit, with bins for
@@ -422,7 +417,7 @@ $\sigma_{aX+b}=|a|\sigma_X$ (the absolute value because $\sqrt{a^2}=|a|$); and f
 independent $X,Y$, $\sigma_{X+Y}=\sqrt{\sigma_X^2+\sigma_Y^2}$. On the running
 example $\sigma_X=2\sqrt{2p}$, back in units of stars.
 
-### What the Standard Deviation Means: Markov and Chebyshev
+### Markov's and Chebyshev's Inequalities
 
 Does $\sigma_X$ have a concrete reading? Yes: it sets the scale over which $X$
 fluctuates, and a pair of inequalities, each with a one-line proof, makes this
@@ -534,8 +529,8 @@ $\int_0^\infty \frac{x}{\pi(1+x^2)}\,dx=\frac{1}{2\pi}\int_1^\infty
 \frac{du}{u}=+\infty$, and the left tail gives $-\infty$, so the mean is a
 meaningless $\infty-\infty$ whose value depends on how the limits are taken, a
 *stronger* failure than "the mean is infinite." We can watch both integrals
-diverge numerically by extending the integration range and seeing the partial
-sums refuse to settle.
+diverge numerically by extending the integration range and observing that the
+partial sums do not converge.
 
 ```{.python .input #random-variables-cauchy-diverges}
 import numpy as onp
@@ -934,7 +929,7 @@ deviations-as-vectors geometry underlies least squares
 
 ### Change of Variables for Densities
 
-One last piece of machinery closes the section. When we push a random variable
+One final result closes the section. When we push a random variable
 through a function $Y=g(X)$, its density is *not*
 simply $p_X\!\big(g^{-1}(y)\big)$: as the map stretches and compresses space the
 density must be re-scaled to keep its total mass at $1$. We already computed
@@ -1502,7 +1497,6 @@ moves the true peak to $y=e^{-1}$.
 :::
 
 ::: {.d2l-note}
-Next: the **named distributions**, the specific shapes this machinery
-describes.
+Next: **named distributions**, which instantiate the general definitions above.
 :::
 :::

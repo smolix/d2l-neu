@@ -1,18 +1,13 @@
 # The Performance Model
 :label:`sec_perf_model`
 
-Run one matrix multiplication at two sizes on the same GPU and time it
-honestly, and you will find that the hardware delivers wildly different
-fractions of its advertised speed: a small multiplication achieves a
-percent or less of the chip's peak, a large one comes close to the
-specification sheet. Same silicon, same operation, same library — a
-difference of roughly two orders of magnitude in *achieved* arithmetic
-throughput. This section
-exists to explain that plot, and to turn the explanation into a working
-method.
+Run one matrix multiplication at two sizes on the same GPU with correct
+synchronization, and the hardware can deliver very different fractions of
+its advertised speed. A small multiplication may achieve one percent of
+peak throughput, whereas a large one can approach the specification. This
+section explains the difference and develops a method for diagnosing it.
 
-The method has four steps, and the rest of this chapter is the method,
-applied: **measure** what your program actually does; **classify** which of
+The method has four steps: **measure** what the program does; **classify** which of
 three resources binds it — arithmetic, memory bandwidth, or per-operation
 overhead; **fix** the binding constraint with the matching technique; then
 **re-measure**, because the fix moves the bottleneck somewhere else. Every
@@ -163,7 +158,7 @@ sweep below will show that this number is only half the story.
 physically, and why their ratio has climbed, over the long run, from one
 hardware generation to the next.
 
-## Measuring Without Lying
+## Correct GPU Timing
 :label:`subsec_perf-measuring`
 
 Before we can map our GPU against the roofline, we must be able to time it —
@@ -376,7 +371,7 @@ callable must return what it computes — pure functions returning their
 results is JAX's house style anyway, and :numref:`sec_compilation` will
 make that convention load-bearing.
 
-## The Sweep: Mapping Our GPU
+## Throughput across Matrix Sizes
 :label:`subsec_perf-sweep`
 
 Armed with a synchronized timer, we can produce the plot this section
@@ -543,7 +538,7 @@ cure it right now by hand-writing one fused kernel; instead we deliberately
 leave it bleeding. :numref:`sec_compilation` will cure it with one line,
 and explain what the compiler saw.
 
-## The Profiler
+## Profiling Complete Programs
 :label:`subsec_perf-profiler`
 
 Intensity arithmetic classifies a single operation; real training steps mix
@@ -706,7 +701,7 @@ fetched** just to break even. Almost nothing you write naturally
 gets there. Performance work is mostly about bytes.
 :::
 
-::: {.slide title="Timing GPUs: the Trap"}
+::: {.slide title="Correct GPU Timing"}
 Dispatch is asynchronous — Python enqueues, the GPU runs behind.
 
 ![](../img/mdl-perf-async-timeline.svg){width=90%}
@@ -726,13 +721,13 @@ Rule: synchronize once per minibatch at most — and only when the
 host actually needs the value.
 :::
 
-::: {.slide title="A Benchmark That Does Not Lie"}
+::: {.slide title="Synchronized Benchmarking"}
 Warmup (kernel selection, compilation), sync, time, sync:
 
 @performance-model-measuring-without-lying-3
 :::
 
-::: {.slide title="The Sweep: One Kernel, Three Regimes"}
+::: {.slide title="One Kernel across Three Regimes"}
 @performance-model-the-sweep-mapping-our-gpu
 
 . . .

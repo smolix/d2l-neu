@@ -732,14 +732,13 @@ It follows that minimizing the mean squared error
 is equivalent to the maximum likelihood estimation
 of a linear model under the assumption of additive Gaussian noise.
 
-### A Menu of Losses
+### Selecting a Loss from a Noise Model
 :label:`subsec_linreg-loss-menu`
 
-The derivation generalizes far beyond the Gaussian case. Stated as a *recipe*:
-**choose a noise model $p(y \mid \mathbf{x})$ that fits how your labels are
-actually generated, then minimize its negative log-likelihood**. Gaussian noise $\Rightarrow$ squared
-error is only the first row of a menu; whenever the Gaussian assumption is
-wrong for your data, the same recipe hands you the right loss:
+The same derivation applies beyond the Gaussian case. Choose a conditional
+model $p(y \mid \mathbf{x})$ that represents the label noise, then minimize
+its negative log-likelihood. Gaussian noise yields squared error; other
+assumptions yield other losses:
 
 | Output type | Noise model | Loss (negative log-likelihood) |
 |:--|:--|:--|
@@ -755,9 +754,9 @@ its loss penalizes it only linearly, exactly the robustness we observed in
 the outlier demonstration above. The figure also marks the *Huber* loss, a
 compromise that is quadratic near zero (like squared error) but linear in the
 tails (like absolute error). Each of these losses is explored in the
-exercises; the recipe also extends to *heteroscedastic* regression, where the
+exercises; the same principle extends to *heteroscedastic* regression, where the
 noise level itself depends on the input and we predict $\sigma(\mathbf{x})$
-alongside the mean. We will lean on this recipe again when we derive the loss
+alongside the mean. We apply this principle again when deriving the loss
 for classification in the next chapter.
 
 ![Matching the loss to the noise model. Left: Gaussian and Laplace densities with equal variance; the log-scale inset shows the Laplace tails carrying far more probability. Right: the per-residual penalties each induces, together with the Huber compromise.](../img/mdl-linreg-loss-menu.svg)
@@ -921,7 +920,7 @@ and ultimately, evaluation on previously unseen data.
 ::: {.cover}
 [Dive into Deep Learning · §3.1]{.kicker}
 
-The straight line through the data<br>**and the recipe behind every loss function after it**.
+Predicting numerical values<br>**models · losses · optimization · interpretation**.
 :::
 :::
 
@@ -1054,7 +1053,7 @@ linear models with squared loss.
 
 . . .
 
-**Minibatch SGD**, the iterative recipe reused by every model in this
+**Minibatch SGD**, the iterative method reused by the models in this
 book:
 
 $$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) -
@@ -1190,7 +1189,7 @@ dominated the fit.
 :::
 :::
 
-::: {.slide title="The recipe: match the loss to the noise model"}
+::: {.slide title="Match the loss to the noise model"}
 [Where losses come from · payoff]{.kicker}
 
 ::: {.cols .vc}
@@ -1211,7 +1210,7 @@ only linearly, the robust MAE fit from the outlier demo.
 
 ::: {.d2l-note .rule}
 The weight-decay section adds a *prior* to this likelihood → weight decay;
-the next chapter runs the recipe on categorical noise → softmax.
+the next chapter applies the same likelihood principle to categorical data → softmax.
 :::
 :::
 :::
@@ -1275,16 +1274,16 @@ and computer science as on the brain.
 - **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$, one dot
   product per prediction.
 - **Loss:** mean squared error; convex, one global optimum.
-- **Closed form** = orthogonal projection; **minibatch SGD** = the
-  workhorse, hovering in an $\eta$-sized noise ball.
+- **Closed form** = orthogonal projection; **minibatch SGD** approaches
+  the optimum with fluctuations controlled partly by $\eta$.
 :::
 
 ::: {.col}
 - **Vectorize:** one kernel call, never a Python inner loop.
 - **One bad label:** in twenty, slope $22.88$ vs. $2.02$, the square's
   thin-tailed trust exposed.
-- **The recipe:** squared loss *is* Gaussian maximum likelihood; swap
-  the noise model, get the right loss.
+- **Likelihood interpretation:** squared loss corresponds to Gaussian noise;
+  changing the noise model changes the loss.
 :::
 :::
 :::

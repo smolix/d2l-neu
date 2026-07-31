@@ -1,19 +1,11 @@
 # Bayesian Computation
 :label:`sec_mdl-bayesian-computation`
 
-Everything we have trained so far ends the same way: optimization hands us
-one parameter vector, and from then on we act as if it were the truth.
-Maximum likelihood picks the single $\boldsymbol\theta$ that best explains
-the data; MAP (:numref:`sec_mdl-maximum_likelihood`) tempers it with a prior
-but still picks one point. When data are plentiful this is hard to beat. But
-when data are scarce, when predictions feed decisions with asymmetric costs
-— a medical call, a trading position, an autonomous-vehicle brake — or when
-we must say *how sure* we are, a single point is an overstatement. Many
-quite different parameter vectors explain 80 observations about equally
-well, and they disagree about the next prediction. Bayesian prediction requires
-averaging over them, weighted by how plausible each remains after seeing the
-data. That weighting is exactly the posterior, and the average is the
-**posterior predictive**
+Maximum-likelihood and MAP estimation each return a single parameter vector.
+When the data leave substantial parameter uncertainty, different plausible
+vectors can produce different predictions. Bayesian prediction averages these
+predictions with respect to the posterior distribution. The resulting
+**posterior predictive** distribution is
 
 $$
 p(y_\star\mid\mathbf x_\star,\mathcal D)
@@ -22,26 +14,22 @@ p(y_\star\mid\mathbf x_\star,\mathcal D)
 $$
 :eqlabel:`eq_mdl-bayes-predictive`
 
-Here is the catch: outside the conjugate families of
+Outside the conjugate families of
 :numref:`sec_mdl-distributions`, this integral — and the posterior's own
-normalizer — has no closed form. We can *evaluate* the posterior at any
-point, up to an unknown constant, but we cannot *integrate* it. So the whole
-of Bayesian practice hinges on one computational question:
+normalizer — usually has no closed form. We can evaluate the unnormalized
+posterior pointwise, but must approximate its integrals. This leads to the
+computational question:
 
 > **How do you average over a distribution you can only evaluate pointwise,
 > up to a constant?**
 
-**Bayesian computation** is the collection of answers, and this notebook
-develops the four that matter most, each embodying a different idea. Sample
-somewhere easy and *reweight* (importance sampling). *Walk* through
-parameter space so that time spent equals posterior mass (Markov chain Monte
-Carlo). Fit a *Gaussian at the peak* and integrate that instead (the Laplace
-approximation). Turn integration into *optimization* over a family of
-tractable distributions (variational inference). These are not museum
-pieces: variational inference is how VAEs and diffusion models are trained,
-Laplace and its relatives power practical uncertainty estimates for neural
-networks, and MCMC remains the reference answer everything else is checked
-against.
+This section develops four approximations. Importance sampling draws from a
+tractable proposal and reweights the samples. Markov chain Monte Carlo
+constructs a chain whose stationary distribution is the posterior. The Laplace
+approximation fits a Gaussian near a posterior mode. Variational inference
+optimizes a tractable distribution to approximate the posterior. These methods
+are used for posterior prediction, uncertainty estimates, and latent-variable
+models.
 
 One small Bayesian logistic-regression problem runs through the whole
 notebook. Because it has only two parameters, a dense grid supplies an
@@ -87,13 +75,11 @@ import numpy as np
 
 ### A Nonconjugate Running Example
 
-Why logistic regression? Because it is the smallest model where the problem
-is real. One Gaussian observation with a Gaussian prior stays Gaussian —
-conjugacy hands us the posterior for free. Replace the Gaussian likelihood
-with a sigmoid and the gift is withdrawn: no prior matches a logistic
-likelihood, and the posterior is a genuinely new function we can evaluate
-but not integrate. Every classifier in this book lives on the far side of
-that line, so this is the right miniature.
+Logistic regression is a small nonconjugate model. A Gaussian observation with
+a Gaussian prior has a closed-form Gaussian posterior. A logistic likelihood
+has no matching conjugate prior, so its posterior can be evaluated pointwise
+but not integrated in closed form. Its two-parameter version is therefore a
+useful example for comparing approximation methods.
 
 For binary observations $y_i\in\{0,1\}$ and scalar features $x_i$, logistic
 regression writes
@@ -156,7 +142,7 @@ def grad_log_joint(theta):
     return (y_bayes - probs) @ Z_bayes - theta / prior_var
 ```
 
-### A Grid as a Reference, Not a General Algorithm
+### Grid Integration as a Low-Dimensional Reference
 
 With two parameters we can cheat: evaluate the log posterior on a dense
 grid, exponentiate stably, and normalize the sum. This is deterministic
@@ -186,7 +172,7 @@ print('grid correlation   :',
             np.sqrt(posterior_cov[0, 0] * posterior_cov[1, 1]), 4))
 ```
 
-### What Averaging Buys: Mean, MAP, and Prediction
+### Posterior Mean, MAP, and Predictive Averaging
 
 Before approximating the posterior, let us see what keeping it actually
 changes. Two candidate summaries compete: the **posterior mean** (an
@@ -270,9 +256,9 @@ a ratio of random quantities. As always with products of many likelihood
 terms, the computation belongs in log space with a max subtracted, exactly
 like log-sum-exp.
 
-Everything therefore rides on one question: *where does the proposal put
-its draws?* :numref:`fig_mdl-prob-bayes-importance` shows the failure mode
-and, more disturbingly, how it hides.
+The accuracy of the estimator depends on where the proposal places its draws.
+:numref:`fig_mdl-prob-bayes-importance` shows both adequate and inadequate
+proposal coverage.
 
 ![Importance sampling stands or falls with proposal coverage. Both panels reweight 24 draws from a Gaussian proposal (dashed) against the same two-mode target (solid); stems show the normalized weights. Left: a narrow proposal never samples the right-hand mode, so the weights are blind to it — yet the effective sample size looks nearly perfect. Right: a proposal that covers the target yields well-distributed weights and trustworthy estimates.](../img/mdl-prob-bayes-importance.svg)
 :label:`fig_mdl-prob-bayes-importance`
@@ -338,9 +324,9 @@ count, sets how much you actually learned.
 ## Markov Chain Monte Carlo
 :label:`sec_mdl-bayes-mcmc`
 
-Importance sampling makes one global guess about where the posterior lives
-and pays dearly when the guess is off. The next idea abandons guessing for
-*exploration*: start anywhere, take small steps, and bias the steps so
+Importance sampling depends on a global proposal that covers the posterior.
+Markov chain Monte Carlo instead explores the parameter space: start anywhere,
+take small steps, and bias the steps so
 that, in the long run, the walker's location is distributed exactly as the
 posterior — time spent in a region proportional to the probability mass it
 holds. Then the chain's states *are* posterior samples (dependent ones),
@@ -413,9 +399,9 @@ for c, start in enumerate(starts):
 chains = np.asarray(chains)
 ```
 
-### Diagnostics: Mixing, Not Just Draw Count
+### Diagnosing Markov Chain Mixing
 
-The price of exploration is dependence: consecutive states are correlated,
+Exploration introduces dependence: consecutive states are correlated,
 so a chain of $10{,}000$ states holds far less information than $10{,}000$
 independent draws — how much less depends on how fast the walk forgets
 where it was. Because the chain also starts wherever we put it, we need
@@ -519,7 +505,7 @@ The two classical instantiations differ in what "nearest" means — and both
 reuse machinery we already have: optimization from
 :numref:`sec_mdl-maximum_likelihood`, Taylor expansion, and the ELBO.
 
-### Laplace: the Free Gaussian in Every MAP
+### The Laplace Approximation at a Posterior Mode
 
 Training already finds the MAP; the Laplace approximation observes that the
 mode's neighborhood contains more reusable information. Expand the log
@@ -549,7 +535,7 @@ In our running example the effect is mild but visible: the Laplace mean
 *is* the MAP, while the true posterior mean sits slightly away from it,
 shifted by the skew the parabola cannot see.
 
-### Variational Inference: Integration Becomes Optimization
+### Variational Inference as Optimization
 
 The Laplace approximation lets the mode dictate the Gaussian. Variational
 inference instead *searches* for the best tractable approximation: fix a
@@ -680,7 +666,7 @@ ellipse is centered at the MAP with roughly the right shape; the mean-field
 ellipse is axis-aligned — it *cannot* tilt — and slightly small. One plot,
 all four trade-offs.
 
-## A Practical Decision Map
+## Choosing an Approximation Method
 :label:`sec_mdl-bayes-decision-map`
 
 The methods answer the same question with different failure modes.
@@ -716,8 +702,8 @@ deserve more space once the book needs them operationally.
   calibrated uncertainty — plug-in point estimates are systematically
   overconfident because a nonlinear function of an average is not the
   average of the function.
-* Everything is built from two cheap operations: evaluating the
-  unnormalized posterior and its gradient. The unknown normalizer always
+* The methods use evaluations of the unnormalized posterior and its gradient.
+  The unknown normalizer
   cancels — in importance ratios, in Metropolis acceptances, in the ELBO.
 * Importance sampling reweights draws from a wrong-but-easy proposal;
   coverage is everything, and weight ESS cannot see mass that was never
@@ -726,8 +712,8 @@ deserve more space once the book needs them operationally.
   proportion — detailed balance makes time spent proportional to posterior
   mass. Judge chains by mixing (traces, split $\widehat R$, ESS, MCSE),
   never by acceptance rate alone.
-* Laplace is the free Gaussian hiding in every MAP fit — right location
-  and curvature, blind to skew, tails, and other modes. Variational
+* Laplace uses local value and curvature at the MAP estimate, so it misses
+  skewness, tails, and other modes. Variational
   inference turns integration into optimization of the ELBO and inherits
   reverse KL's mode-seeking, too-confident failure mode.
 
@@ -826,7 +812,7 @@ that makes the rest of the lecture necessary.
 @bayesian-computation-grid
 :::
 
-::: {.slide title="What averaging buys"}
+::: {.slide title="Predictive averaging and parameter uncertainty"}
 [The target]{.kicker}
 
 The posterior predictive is pulled toward $\tfrac12$ relative to the
@@ -937,7 +923,7 @@ sd$/\sqrt{N_{\text{eff}}}$.
 :::
 :::
 
-::: {.slide title="Laplace: the free Gaussian in every MAP"}
+::: {.slide title="Laplace approximation at the MAP estimate"}
 [Laplace]{.kicker}
 
 ::: {.cols .vc}

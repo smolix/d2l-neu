@@ -1,15 +1,11 @@
 # Sequence Models
 :label:`chap_rnn`
 
-A great deal of intelligent behavior looks like predicting what comes next.
-We finish each other's sentences, anticipate the next note in a melody,
-and extrapolate a trend from the numbers seen so far.
-Each of these tasks takes a *sequence* of observations and asks for its continuation.
-The parts of this book that came before treated learning as a mapping
-from a fixed-length input to a single output, one example at a time.
-That framing served us well for tabular data and for images,
-but it quietly assumed away two features that define sequential data,
-and it is exactly those two features that this chapter is built to handle.
+Many learning problems involve ordered observations: words in a sentence,
+notes in a melody, or measurements in a time series. Earlier chapters mapped a
+fixed-length input to an output and usually treated examples as independent.
+Sequence models must instead represent dependence across positions and inputs
+whose lengths may vary.
 
 The first assumption was that examples are independent and identically distributed.
 When we fit linear and logistic regression in :numref:`chap_regression`
@@ -23,45 +19,38 @@ Even the images of :numref:`chap_cnn` arrived as a fixed grid of pixels.
 A document, a recording, or a price history has no such fixed length,
 and two examples rarely share one.
 
-Two ideas carry us through the whole chapter.
-The first is *autoregressive factorization*.
+The chapter develops two main ideas. The first is *autoregressive
+factorization*.
 Rather than model the probability of a whole sequence at once,
 we factor it into a product of one-step-ahead predictions:
 the probability of each element given the elements that precede it.
 This turns an unwieldy generative problem into an ordinary supervised one,
 in which the input is a prefix and the label is the next element.
-Every position in a sequence thus becomes another training signal,
-and generation becomes nothing more than repeating that prediction
-and feeding each output back in as the next input.
+Every position in a sequence thus becomes another training signal.
+Generation repeats this prediction while feeding each generated output back
+as the next input.
 
 The second idea is the *hidden state*.
 A prefix grows without bound as a sequence unrolls,
 yet we cannot afford a memory that grows along with it.
 So we insist that the model carry a fixed-size summary
 of everything it has read so far, revising that summary as each new element arrives.
-This is what a recurrent neural network does,
-and the tension at its heart runs through the rest of the part:
-how much of an unbounded past can a bounded state honestly remember?
-Getting a useful answer to that question is what makes the difference
-between a model that forgets within a few steps and one that holds a thought.
+This is the role of the recurrent neural network. A central limitation is that
+the bounded state may not retain information from an arbitrarily long past.
 
-Language modeling is the running application that ties these ideas together,
-and by the end we will have trained a small language model
-and sampled fresh text from it properly.
-The path there is a single build, one section handing off to the next:
-we tokenize a corpus, set a baseline to beat, learn a recurrence,
-face down the gradients that make it hard to train, and finally sample from it.
+Language modeling provides the running application. We tokenize a corpus,
+construct a counting baseline, define and train a recurrence, analyze its
+gradients, and compare methods for generating text.
 We begin with sequences in the abstract in :numref:`sec_sequence`,
 then turn text into tokens a model can consume in :numref:`sec_text-sequence`.
 :numref:`sec_language-model` frames the language-modeling task
 and fits a simple counting baseline to beat.
 :numref:`sec_rnn` introduces the recurrent network itself,
 and :numref:`sec_rnn-scratch` implements an RNN language model end to end.
-:numref:`sec_bptt` confronts the gradient realities of training through time,
-and :numref:`sec_decoding` closes the loop
+:numref:`sec_bptt` analyzes gradients through time,
+and :numref:`sec_decoding` concludes
 by turning a trained model's predictions back into readable text.
 
-A word on where this material stands.
 Recurrent networks powered the deep-learning breakthroughs of the 2010s
 in speech recognition and machine translation,
 and for a while they were the default model for anything sequential.
@@ -70,8 +59,8 @@ Yet recurrence has returned in modern guise, which we take up in :numref:`chap_m
 precisely because a bounded-memory state makes inference cheap
 when the alternative grows with the length of the sequence.
 Whichever architecture wins a given task,
-the later material on large language models stands on exactly
-the concepts introduced here: autoregressive factorization, perplexity,
+the later material on large language models uses the same concepts introduced
+here: autoregressive factorization, perplexity,
 backpropagation through time, and decoding.
 They are worth learning once, and learning carefully.
 
@@ -113,7 +102,7 @@ comfortably side by side. All are freely accessible online except where noted.
 
 - [Prediction and Entropy of Printed English — Claude E. Shannon (1951), *Bell System Technical Journal*](https://www.princeton.edu/~wbialek/rome/refs/shannon_51.pdf) — free scan; frames language as a next-symbol guessing game and measures the entropy of English with human predictors — the direct ancestor of the perplexity and bits-per-byte of :numref:`sec_language-model`, and still a delight to read.
 - [Finding Structure in Time — Jeffrey Elman (1990), *Cognitive Science*](https://doi.org/10.1207/s15516709cog1402_1) — the network of :numref:`sec_rnn` in its original habitat: a hidden state fed back on itself discovers word boundaries and grammatical structure from raw sequences (paywalled, noted; widely reproduced online).
-- [A Neural Probabilistic Language Model — Bengio, Ducharme, Vincent & Jauvin (2003), *JMLR*](https://jmlr.org/papers/v3/bengio03a.html) — free; the answer to the sparsity wall of :numref:`sec_language-model`: replace counting with learned embeddings and a neural network, the embedding-plus-softmax design that :numref:`sec_rnn-scratch` inherits.
+- [A Neural Probabilistic Language Model — Bengio, Ducharme, Vincent & Jauvin (2003), *JMLR*](https://jmlr.org/papers/v3/bengio03a.html) — free; replaces the sparse count tables of :numref:`sec_language-model` with learned embeddings and a neural network, the embedding-plus-softmax design that :numref:`sec_rnn-scratch` inherits.
 - [Recurrent Neural Network Based Language Model — Mikolov et al. (2010), *Interspeech*](https://www.isca-archive.org/interspeech_2010/mikolov10_interspeech.html) — free; the demonstration that RNN language models beat smoothed $n$-grams in practice — the model of :numref:`sec_rnn-scratch`, evaluated the way :numref:`sec_language-model` teaches.
 - [On the Difficulty of Training Recurrent Neural Networks — Pascanu, Mikolov & Bengio (2013), *ICML*](https://proceedings.mlr.press/v28/pascanu13.html) — free; the modern account of vanishing and exploding gradients and the source of the gradient-norm clipping used in :numref:`sec_rnn-scratch`; the difficulty itself was first formalized by [Bengio, Simard & Frasconi (1994)](https://doi.org/10.1109/72.279181) (paywalled, noted).
 - [Neural Machine Translation of Rare Words with Subword Units — Sennrich, Haddow & Birch (2016), *ACL*](https://aclanthology.org/P16-1162/) — free; the paper that brought byte pair encoding into NLP — the merge algorithm implemented from scratch in :numref:`sec_text-sequence`.

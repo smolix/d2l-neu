@@ -6,53 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Generalization
 :label:`sec_generalization_basics`
 
-Consider two college students diligently
-preparing for their final exam.
-Commonly, this preparation will consist
-of practicing and testing their abilities
-by taking exams administered in previous years.
-Nonetheless, doing well on past exams is no guarantee
-that they will excel when it matters.
-For instance, imagine a student, Extraordinary Ellie,
-whose preparation consisted entirely
-of memorizing the answers
-to previous years' exam questions.
-Even if Ellie were endowed
-with an extraordinary memory,
-and thus could perfectly recall the answer
-to any *previously seen* question,
-she might nevertheless freeze
-when faced with a new (*previously unseen*) question.
-By comparison, imagine another student,
-Inductive Irene, with comparably poor
-memorization skills,
-but a knack for picking up patterns.
-Note that if the exam truly consisted of
-recycled questions from a previous year,
-Ellie would handily outperform Irene.
-Even if Irene's inferred patterns
-yielded 90% accurate predictions,
-they could never compete with
-Ellie's 100% recall.
-However, even if the exam consisted
-entirely of fresh questions,
-Irene might maintain her 90% average.
+A model is trained on a finite collection of examples, but it is usually
+deployed on examples it has not seen. A small training error therefore does
+not by itself establish that the model has learned a useful pattern: a model
+may instead have fit details specific to its training set.
 
-As machine learning scientists,
-our goal is to discover *patterns*.
-But how can we be sure that we have
-truly discovered a *general* pattern
-and not simply memorized our data?
-Most of the time, our predictions are only useful
-if our model discovers such a pattern.
-We do not want to predict yesterday's stock prices, but tomorrow's.
-We do not need to recognize
-already diagnosed diseases
-for previously seen patients,
-but rather previously undiagnosed
-ailments in previously unseen patients.
-This is the fundamental problem of machine learning,
-and arguably of all of statistics:
+The central question is how well the fitted model predicts data drawn from the
+same population but not used for fitting. This distinction matters whenever
+predictions concern future observations, new patients, or other unseen cases.
+It leads to the fundamental statistical problem of *generalization*:
 how to discover patterns that *generalize*.
 We might cast this problem as just one slice
 of a far grander question
@@ -611,21 +573,15 @@ why these values dominate practice :cite:`Kohavi.1995`.
 
 ## Summary
 
-This section explored some of the  underpinnings
-of generalization in  machine learning.
-Some of these ideas become complicated
-and counterintuitive when we get to deeper models; here, models are capable of overfitting data badly,
-and the relevant notions of complexity
-can be both implicit and counterintuitive
-(e.g., larger architectures with more parameters
-generalizing better).
-We leave you with a few rules of thumb:
+Generalization concerns the difference between performance on the training
+sample and performance on new data from the same distribution. The following
+principles guide model selection in the settings considered here:
 
 1. Use validation sets (or $K$*-fold cross-validation*) for model selection;
 1. More complex models often require more data;
 1. Relevant notions of complexity include both the number of parameters and the range of values that they are allowed to take;
 1. Keeping the learning procedure and data distribution fixed, more data usually improves generalization, but the curve need not be monotone;
-1. This entire talk of generalization is all predicated on the IID assumption. If we relax this assumption, allowing for distributions to shift between the train and testing periods, then we cannot say anything about generalization absent a further (perhaps milder) assumption.
+1. These conclusions assume that training and test data are IID. Distribution shift requires additional assumptions.
 
 
 ## Exercises

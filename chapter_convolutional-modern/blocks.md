@@ -6,7 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Blocks, Bottlenecks, and Branches: VGG, NiN, GoogLeNet
 :label:`sec_blocks`
 
-AlexNet gave empirical proof that deep convolutional networks work, but it offered no template for designing the next one: every layer was shaped individually. In the two years that followed, progress came less from new operations than from new ways of *organizing* convolutions, and the three architectures of this section each contributed one organizing idea that every current network still uses. VGG :cite:`Simonyan.Zisserman.2014` made the repeated *block* the unit of design, so that a whole network can be specified by a short list of block parameters. Network in network (NiN) :cite:`Lin.Chen.Yan.2013` mixed channels with $1 \times 1$ convolutions and replaced the parameter-hungry fully connected head with global average pooling. GoogLeNet :cite:`Szegedy.Liu.Jia.ea.2015` ran convolutions of several sizes in parallel inside a *multi-branch* block and, in passing, established the stem-body-head vocabulary in which architectures are still described. The progression mirrors VLSI chip design, where engineers moved from placing transistors to logical elements to logic blocks :cite:`Mead.1980`; carried to its conclusion, the unit of design today is often an entire pretrained network, a *foundation model* :cite:`bommasani2021opportunities`.
+AlexNet demonstrated the effectiveness of deep convolutional networks, but its
+layers were designed individually. The next architectures introduced reusable
+organization. VGG :cite:`Simonyan.Zisserman.2014` made the repeated *block*
+the unit of design. Network in network (NiN) :cite:`Lin.Chen.Yan.2013` mixed
+channels with $1 \times 1$ convolutions and replaced fully connected
+classifiers by global average pooling. GoogLeNet
+:cite:`Szegedy.Liu.Jia.ea.2015` applied several convolution sizes in parallel
+within a multi-branch block and used the stem--body--head organization that
+remains common today.
 
 ```{.python .input #blocks-imports}
 %%tab mxnet
@@ -925,7 +933,7 @@ $192 \cdot 16 + 25 \cdot 16 \cdot 32 \approx 16$k, a **10×**
 saving. This trick is in nearly every network since.
 :::
 
-::: {.slide title="The whole network as data"}
+::: {.slide title="Specifying the Network by Block Parameters"}
 Nine Inception blocks in three groups (2, 5, 2), pooling
 between groups. The hand-picked channel allocations are just a
 tuple; assembly is stem + body + head:
@@ -942,7 +950,7 @@ Cheaper than VGG (~7M vs. ~138M parameters) *and* more accurate:
 the start of deliberate cost--accuracy design.
 :::
 
-::: {.slide title="What survived"}
+::: {.slide title="Architectural Contributions"}
 - **Blocks** (VGG): everything is specified block by block.
 - **1×1 convolution** (NiN): the standard channel mixer.
 - **Global average pooling** (NiN): the default head.

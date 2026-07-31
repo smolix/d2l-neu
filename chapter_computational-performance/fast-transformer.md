@@ -1,18 +1,13 @@
-# Case Study: Making a Transformer Fast
+# Case Study: Optimizing a Transformer
 :label:`sec_fast_transformer`
 
-This section teaches nothing new. That is the point. Six sections built a
-method — measure, classify the regime, apply the matching fix, re-measure —
-and a toolbox: the roofline and the profiler (:numref:`sec_perf_model`),
-the hardware that sets the constants (:numref:`sec_hardware`), compilation
-(:numref:`sec_compilation`), precision and memory
-(:numref:`sec_memory_precision`), and data parallelism
-(:numref:`sec_multi_gpu`, :numref:`sec_multi_gpu_concise`). Here we run the
-whole loop end to end on a real model — the GPT of :numref:`sec_gpt` — and
-take it down a *waterfall*: one rung per technique, each measured, each
-attributed to the section that taught it, re-profiling as the bottleneck
-moves. The result is a single plot that is the chapter's closing argument:
-the method is real, and it compounds.
+This section applies the chapter's method to the GPT model of
+:numref:`sec_gpt`. We profile a baseline, classify its limiting regime,
+apply one optimization, and profile again before choosing the next step.
+The sequence includes compilation, reduced precision, larger batches,
+activation checkpointing, and data parallelism. Reporting each incremental
+change separates the contribution of a technique from interactions among
+techniques.
 
 *Prerequisites: the entire chapter. The subject is* `d2l.GPT` *and*
 `d2l.TimeMachine` *from* :numref:`sec_gpt`*, reused verbatim.*
@@ -263,7 +258,7 @@ print(f'fp32 control @512 (clocked up front): {ctl512:.0f} tokens/s, '
       f'plan {plan32_gib:.1f} GiB')
 ```
 
-## Rung 0: Baseline, Profiled
+## Baseline Measurement
 :label:`subsec_ft-baseline`
 
 :begin_tab:`pytorch`
@@ -370,7 +365,7 @@ dispatch, wall to wall" by construction — so classification is deferred
 one rung, to the first program worth examining: the compiled one.
 :end_tab:
 
-## Rungs, Each One Measured
+## Successive Optimizations
 :label:`subsec_ft-rungs`
 
 :begin_tab:`pytorch`
@@ -1075,7 +1070,7 @@ fixed. Still well short of linear — the fabric is what it is — but the
 predicted the failure.
 :end_tab:
 
-## The Waterfall
+## Aggregate Results
 :label:`subsec_ft-waterfall`
 
 :begin_tab:`pytorch`
@@ -1216,7 +1211,7 @@ print(f'smoothed loss: first 20 steps {first:.2f} -> last 20 steps {last:.2f}')
 assert last < first, 'speed that breaks the model is not speed'
 ```
 
-## The Lore, and the Ladder Beyond
+## Further Optimization Techniques
 :label:`subsec_ft-lore`
 
 The competitive edge of this method is a spectator sport. The
@@ -1241,12 +1236,11 @@ model, one rung at a time.
 ## Summary
 
 :begin_tab:`pytorch`
-* The chapter's method applied whole: profile the baseline, classify the
-  regime, apply one technique per rung, re-profile. On ch. 11's GPT
-  (width 512, ~19M params), compile paid roughly 1.2×, bf16 about half
-  again on top, a bigger batch roughly another 1.2× — no single dominant
-  win, but three modest ones multiplying to a bit over 2×, with the
-  waterfall cell printing the exact cumulative figure.
+* We profiled a baseline, classified its limiting regime, applied one
+  technique, and profiled again. On the GPT of :numref:`sec_gpt` (width
+  512, about 19 million parameters), compilation improved throughput by
+  roughly 1.2×. Bf16 and a larger batch supplied further gains, for a
+  cumulative improvement of a little over 2× in this experiment.
 * Every rung is attributed to a section, and the bottleneck is
   re-profiled as it moves: after compilation the elementwise tail is
   fused away and the matmuls' share rises, which is what makes precision
@@ -1269,15 +1263,12 @@ model, one rung at a time.
 :end_tab:
 
 :begin_tab:`jax`
-* The chapter's method applied whole: measure the baseline, classify
-  with the compiler's own accounting, one technique per rung,
-  re-measure. On ch. 11's GPT (width 512, ~19M params), jit is worth
-  around twenty-fold over the un-jitted strawman; bf16 at batch 64 then
-  measures almost *nothing* (the dispatch wall), the fp32 control shows
-  batch-up alone is *negative* (the memory wall) — and together the two
-  rungs pay most of a factor of two. Rungs interact; ladders are
-  measured cumulatively. The waterfall prints the figure from the
-  jitted baseline.
+* The same procedure uses the compiler's cost accounting in JAX. On the
+  GPT of :numref:`sec_gpt`, JIT compilation improves throughput by about
+  twenty times over un-jitted execution. Bf16 at batch 64 has little effect,
+  and increasing the fp32 batch alone reduces throughput; together, reduced
+  precision and the larger batch improve throughput by most of a factor of
+  two over the jitted baseline.
 * Precision in JAX is explicit, and *layered*: casting the arrays is not
   enough — flax modules remember a compute dtype from construction, and
   the model's own fp32 arithmetic (rope's trigonometry) promotes values
@@ -1380,7 +1371,7 @@ Two traps corrupted an early draft by tens of percent:
 - a **ragged final batch** put a `torch.compile` retrace
   *inside* the timing window → keep shapes constant
 - the profiler's instrumentation **outlives its cell** →
-  `TEARDOWN_CUPTI=1`, or every later timing pays a launch tax
+  `TEARDOWN_CUPTI=1`, or profiler overhead affects later timings
 
 The metric is end-to-end tokens/s — `DataLoader` and H2D
 included.
@@ -1391,32 +1382,32 @@ Traps that corrupted early drafts — JAX edition:
 
 - a changed shape is not a retrace, it is a **recompile** →
   whole batches only, one shape
-- the stock `tf.data` loader taxed the fast rungs by ~¼ →
+- the stock `tf.data` loader reduced throughput by about one quarter →
   stage the 5 MB corpus **on device**, shuffle there
 - no `block_until_ready`, no measurement — you timed the
   *enqueue* (§13.1)
 - never re-time one cached batch: the GPU serves it from
-  cache. Honest data is fresh data.
+  cache; use fresh data for each timing.
 :::
 
-::: {.slide title="Rung 0: Baseline, Profiled" only="pytorch"}
+::: {.slide title="Baseline Profile" only="pytorch"}
 Classify before you fix.
 
 @fast-transformer-rung-0-baseline-profiled
 
 Matmuls ≈ half the device time; the rest is a fusible
 elementwise tail, with dispatch busy most of the step. That
-predicts compile pays, then precision.
+suggests applying compilation first and reduced precision next.
 :::
 
 ::: {.slide title="Rungs 0 → 1: The Only Real Baseline" only="jax"}
-Un-jitted JAX is a strawman — measure it once, briefly, to
-price the mistake; nobody trains there.
+Un-jitted JAX is included only as a reference point; practical training
+uses a compiled step.
 
 @fast-transformer-rungs-each-one-measured-1
 
 `nnx.jit` on the *whole* step (loss + grads + update) is one
-transformation and roughly **20×**. Every honest ratio below
+transformation and roughly **20×**. Every subsequent ratio
 starts from this bar, not from R0.
 :::
 
@@ -1430,7 +1421,7 @@ not saturated — a mixed workload. Cheapest next rung on §13.4's
 ladder: **bf16** — double the roof, half the bytes.
 :::
 
-::: {.slide title="The Rungs" only="pytorch"}
+::: {.slide title="Successive Optimizations" only="pytorch"}
 - **R1 compile** — fuses the tail: **~1.2×** (and asserts
   compiled ≡ eager first)
 - **R2 bf16** — tensor cores, matmuls wide enough: **~1.5×**
@@ -1456,10 +1447,10 @@ wall is per-step *dispatch*, which precision cannot touch.
 Masters and grads stay fp32. No `GradScaler`.
 :::
 
-::: {.slide title="Rungs 3–4: Rungs Interact" only="jax"}
+::: {.slide title="Interaction between Batch Size and Precision" only="jax"}
 @fast-transformer-rungs-each-one-measured-3
 
-**Neither rung pays alone.** fp32 at 512 is *slower* than at
+**The two changes interact.** fp32 at 512 is *slower* than at
 64 — the ~15 GiB plan is traffic, a memory wall. bf16 at 64
 was flat — a dispatch wall. Together: most of 2×, ~43 TFLOP/s.
 Measure ladders cumulatively. Checkpointing then costs ~a
@@ -1467,7 +1458,7 @@ tenth of the speed for memory the plan says we did not
 need — the same negative rung as the PyTorch tab.
 :::
 
-::: {.slide title="The Waterfall" only="pytorch"}
+::: {.slide title="Aggregate Results" only="pytorch"}
 @fast-transformer-the-waterfall
 
 Cumulative — each bar inherits every choice to its left. No
@@ -1477,7 +1468,7 @@ model *hurts* this one. A 300-step run confirms the fast
 configuration still learns.
 :::
 
-::: {.slide title="The Waterfall" only="jax"}
+::: {.slide title="Aggregate Results" only="jax"}
 @fast-transformer-the-waterfall
 
 jit is the cliff (~20×). bf16 stalls at batch 64 — the flat
@@ -1514,7 +1505,7 @@ fast config is a loop — efficiency recovers exactly as the
 grown compute term predicts.
 :::
 
-::: {.slide title="The Lore, and the Ladder Beyond"}
+::: {.slide title="Further Optimization Techniques"}
 modded-nanoGPT's speedrun = this chapter's contents stacked to
 the ceiling: compiled kernels, FlashAttention, a better
 optimizer (Muon), fp8. Each record a new rung.

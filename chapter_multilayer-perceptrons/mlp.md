@@ -6,22 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multilayer Perceptrons
 :label:`sec_mlp`
 
-In :numref:`sec_softmax`, we introduced
-softmax regression,
-implementing the algorithm from scratch
-(:numref:`sec_softmax_scratch`) and using high-level APIs
-(:numref:`sec_softmax_concise`). This allowed us to
-train classifiers capable of recognizing
-10 categories of clothing from low-resolution images.
-Along the way, we learned how to wrangle data,
-coerce our outputs into a valid probability distribution,
-apply an appropriate loss function,
-and minimize it with respect to our model's parameters.
-Now that we have mastered these mechanics
-in the context of simple linear models,
-we can launch our exploration of deep neural networks,
-the comparatively rich class of models
-with which this book is primarily concerned.
+Softmax regression maps its inputs to class scores with a single affine
+transformation. This makes the model easy to optimize but restricts its
+decision boundaries. Multilayer perceptrons add one or more hidden layers and
+nonlinear activation functions, allowing the model to represent nonlinear
+relations while retaining the same data, loss, and optimization procedure.
 
 ```{.python .input #mlp-multilayer-perceptrons}
 %%tab mxnet
@@ -860,7 +849,7 @@ bought ourselves a more powerful model.
 :::
 
 ::: {.slide title="But two affine maps collapse into one"}
-[The catch]{.kicker}
+[Composition without nonlinearity]{.kicker}
 
 Substitute $\mathbf{H}$ into the output layer:
 
@@ -925,7 +914,7 @@ then **folds** the two label-1 corners onto the same point
 :::
 :::
 
-::: {.slide title="First receipt: all four corners, exactly right" only="pytorch"}
+::: {.slide title="An MLP represents XOR" only="pytorch"}
 [XOR · verified]{.kicker}
 
 With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
@@ -942,7 +931,7 @@ Playground* (playground.tensorflow.org).
 :::
 :::
 
-::: {.slide title="First receipt: all four corners, exactly right" except="pytorch"}
+::: {.slide title="An MLP represents XOR" except="pytorch"}
 [XOR · verified]{.kicker}
 
 With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
@@ -1000,7 +989,7 @@ Each ReLU unit contributes a **hinge** $a_k\operatorname{ReLU}(x - t_k)$: with $
 ![Three hinges (left) sum to a 4-piece polyline that tracks the smooth target (right); the shaded band is the error.](../img/mdl-mlp-uat-hinges.svg){width=88%}
 :::
 
-::: {.slide title="Second receipt: depth multiplies pieces, width only adds" only="pytorch"}
+::: {.slide title="Depth and the number of linear regions" only="pytorch"}
 [Expressive power · verified]{.kicker}
 
 Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws, widths 2–16):
@@ -1012,7 +1001,7 @@ One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **fo
 :::
 :::
 
-::: {.slide title="Second receipt: depth multiplies pieces, width only adds" except="pytorch"}
+::: {.slide title="Depth and the number of linear regions" except="pytorch"}
 [Expressive power · verified]{.kicker}
 
 Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws):
@@ -1127,7 +1116,7 @@ activation. Today it lives mostly at the **edges** of a net:
 :::
 
 ::: {.slide title="Why sigmoid stalls deep networks"}
-[Activations · the catch]{.kicker}
+[Activation saturation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1179,7 +1168,7 @@ like sigmoid's.
 :::
 :::
 
-::: {.slide title="Activation cheat sheet"}
+::: {.slide title="Comparison of activation functions"}
 [Reference]{.kicker}
 
 | | Range | Saturates? | Typical use |

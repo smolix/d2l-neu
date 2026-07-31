@@ -1,29 +1,14 @@
 # From Fully Connected Layers to Convolutions
 :label:`sec_why-conv`
 
-To this day,
-the models that we have discussed so far
-remain appropriate options
-when we are dealing with tabular data.
-By tabular, we mean that the data consist
-of rows corresponding to examples
-and columns corresponding to features.
-With tabular data, we might anticipate
-that the patterns we seek could involve
-interactions among the features,
-but we do not assume any structure *a priori*
-concerning how the features interact.
+The models introduced so far treat the input as a collection of features
+without assuming a spatial relation among them. This is appropriate for many
+tabular datasets, where columns have no natural ordering. Images have a known
+two-dimensional organization, and ignoring it makes a fully connected model
+both inefficient and insensitive to useful prior knowledge.
 
-Sometimes, we truly lack the knowledge to be able to guide the construction of fancier architectures.
-In these cases, an MLP
-may be the best that we can do.
-However, for high-dimensional perceptual data,
-such structureless networks can grow unwieldy.
-
-For instance, let's return to our running example
-of distinguishing cats from dogs.
-Say that we do a thorough job in data collection,
-collecting an annotated dataset of one-megapixel photographs.
+Consider a classifier that distinguishes cats from dogs in one-megapixel
+photographs.
 This means that each input to the network has one million dimensions.
 Even an aggressive reduction to one thousand hidden dimensions
 would require a fully connected layer
@@ -34,40 +19,27 @@ and an extraordinary amount of patience,
 learning the parameters of this network
 may turn out to be infeasible.
 
-A careful reader might object to this argument
-on the basis that one megapixel resolution may not be necessary.
-However, while we might be able
-to get away with one hundred thousand pixels,
-our hidden layer of size 1000 grossly underestimates
-the number of hidden units that it takes
-to learn good representations of images,
-so a practical system will still require billions of parameters.
+Reducing the resolution to one hundred thousand pixels does not remove the
+problem, because a practical representation may also require substantially
+more than 1000 hidden units. A fully connected model can therefore still
+require billions of parameters.
 Moreover, learning a classifier by fitting so many parameters
 might require collecting an enormous dataset.
 And yet today both humans and computers are able
 to distinguish cats from dogs quite well,
 seemingly contradicting these intuitions.
-That is because images exhibit rich structure
-that can be exploited by humans
-and machine learning models alike.
-Convolutional neural networks (CNNs) are one creative way
-that machine learning has embraced for exploiting
-some of the known structure in natural images.
+Images exhibit spatial structure that a model can exploit. Convolutional
+neural networks (CNNs) encode two important parts of this structure: local
+interactions and a shared response to the same pattern at different
+locations.
 
 
 ## Invariance
 
-Imagine that we want to detect an object in an image.
-It seems reasonable that whatever method
-we use to recognize objects should not be overly concerned
-with the precise location of the object in the image.
-Ideally, our system should exploit this knowledge.
-Pigs usually do not fly and planes usually do not swim.
-Nonetheless, we should still recognize
-a pig were one to appear at the top of the image.
-We can draw some inspiration here
-from the children's game "Where's Waldo"
-(which itself has inspired many real-life imitations, such as that depicted in :numref:`img_waldo`).
+An object detector should recognize a pattern at different locations in an
+image. The children's game "Where's Waldo," illustrated in
+:numref:`img_waldo`, provides a simple example: the target retains its identity
+regardless of where it appears in the scene.
 The game consists of a number of chaotic scenes
 bursting with activities.
 Waldo shows up somewhere in each,

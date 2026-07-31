@@ -1,18 +1,15 @@
 # A GPT from Scratch
 :label:`sec_gpt`
 
-One block, stacked, is most of a language model. This section adds the
-little that remains — an embedding, positions, a causal mask, an output
-head — and packages the result as a single `GPT` class whose constructor
-arguments span the design space: the block flags of
-:numref:`sec_transformer-block` plus a positional scheme. That
-one-class-many-configurations shape is the spine of this chapter. The same
-class, with the modern flags, trains from scratch on *The Time Machine* in
-about a minute; with the 2019 flags, it accepts the released weights of
-GPT-2 :cite:`Radford.Wu.Child.ea.2019` and completes English sentences.
-Between those two demonstrations sit the practical crafts this section
-teaches: reading a loss curve for what it actually shows, breaking a model
-with a normalization flag, and sampling from a trained distribution.
+A GPT-style language model adds token embeddings, positional information,
+a causal mask, and an output head to a stack of transformer blocks. We
+implement these components in a `GPT` class whose constructor includes the
+block options from :numref:`sec_transformer-block` and a choice of positional
+scheme. With a current configuration, this class trains from scratch on
+*The Time Machine* in about a minute. With the GPT-2 configuration, it also
+accepts the released GPT-2 weights :cite:`Radford.Wu.Child.ea.2019`. These
+experiments illustrate how to interpret a loss curve, diagnose a poor
+normalization choice, and sample from a trained distribution.
 
 ```{.python .input #gpt-a-gpt-from-scratch}
 %%tab pytorch
@@ -356,7 +353,7 @@ pipelines, custom kernels, and the parallelism of
 :numref:`chap_performance`. The block abstraction is the part that
 transfers, which is why it is worth learning on a novella.
 
-### Breaking It with One Flag
+### Effect of Normalization Placement
 
 :numref:`sec_transformer-block` predicted, from initialization statistics
 alone, that the post-LN arrangement starves its attention layers' query
@@ -391,7 +388,7 @@ for pre_norm in (True, False):
                    for k in (100, 200, 400, 800)))
 ```
 
-The pre-norm model trains as if nothing happened. The post-norm model does
+The pre-norm model trains normally. The post-norm model does
 not diverge — no NaNs, no explosion — it does something more telling: it
 sticks at about $2.8$ nats and never leaves. That number is exactly the
 unigram entropy of this text ($2.83$ nats: predict letter frequencies,
@@ -697,43 +694,30 @@ out = gpt2.generate(enc.encode('The secret of a good deep learning '
 d2l.print_wrapped(enc.decode(out))
 ```
 
-Take stock of what just happened: with the right five flags, a class we
-wrote in two notebook sections runs a model that in 2019 was considered
-too dangerous to release. The gap between our minute of
-training and GPT-2 was never architectural — it is five orders of
-magnitude of data, four of compute, and the engineering to spend them. The
-rest of this chapter dissects exactly that gap: making generation cheap
-(the KV cache, next), other ways of wiring the same block
-(encoders and cross-attention), scaling its FFN sideways
-(mixture of experts), and the laws that say what all those FLOPs buy
-(scaling laws) — where the constructor calls for Llama, Qwen, and
-DeepSeek appear as rows of a table, every one of them an argument list
-for this class.
+With five configuration choices, the class developed here can load and run
+GPT-2. The difference between our short training run and GPT-2 lies primarily
+in the amounts of data and computation, together with the engineering needed
+to use them. The following sections examine efficient generation with a KV
+cache, encoder and encoder--decoder variants, mixture-of-experts layers, and
+the relation between scale and performance. The configurations of Llama,
+Qwen, and DeepSeek will then be expressed in terms of the same class.
 
 ## Summary
 
-A GPT is a token embedding, a stack of causally masked transformer
-blocks, a final norm, and an output head tied to the embedding; positions
-enter either as a learned table added at the bottom (GPT-2) or as
-rotations applied inside every attention head (RoPE, the modern default).
-Our `GPT` class takes the block's flags plus `pos`, and its causal
-attention drops into `d2l.TransformerBlock` through the same
-`attn_factory` hook later sections use for cache-friendly attention.
-Trained from scratch on a 180 KB novel, the modern configuration reaches
-its best validation loss within a few hundred steps and then memorizes;
-both the val/train gap and the apparently memorized stretches in its
-samples read straight off a 30-to-1 parameter-to-data ratio, and argue
-for the scaling laws that close the chapter. Flipping `pre_norm=False` at
-a learning rate the pre-norm model tolerates pins training at the unigram
-entropy: the initialization-time gradient starvation of the previous
-section, realized as a model that never learns to use context. Sampling
-is temperature plus truncation, implemented once and reused by the real
-GPT-2: the released 124M checkpoint loads into our class with a
-name-mapping dictionary (transposing the Conv1D layout in PyTorch;
-adopting it unchanged in JAX), its tokenizer reassembles from two pinned
-data files and the BPE pattern of :numref:`sec_text-sequence`, and the loaded model
-passes both a perplexity check and a readable one — completing English
-prompts the way the history books say it should.
+A GPT consists of a token embedding, causally masked transformer blocks, a
+final normalization layer, and an output head tied to the embedding.
+Positions can be represented by a learned table, as in GPT-2, or by RoPE
+inside each attention head. Our `GPT` class exposes these choices and inserts
+causal attention through the `attn_factory` interface of
+`d2l.TransformerBlock`. On the 180 KB training text, validation loss reaches
+its minimum within a few hundred steps and then rises as the model memorizes
+the corpus. With post-norm at the same learning rate, training remains near
+the unigram entropy, consistent with the gradient attenuation measured in
+the preceding section. Temperature and truncation control sampling. The
+released 124M-parameter GPT-2 checkpoint loads into the same class through a
+parameter-name mapping, with the Conv1D matrices transposed in PyTorch and
+left unchanged in JAX. The loaded model passes a perplexity check and
+produces coherent completions for the example prompts.
 
 ## Exercises
 
@@ -886,6 +870,6 @@ Silent-failure insurance, one number and one sentence:
   unigram plateau.
 - Sampling = temperature + truncation; naive generation recomputes
   everything (the KV cache fixes this, next).
-- The released GPT-2 loads into our class and completes English the way
-  the history books say it should.
+- The released GPT-2 loads into our class and produces coherent English
+  completions for the example prompts.
 :::

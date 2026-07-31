@@ -1,25 +1,23 @@
 # Generation and the KV Cache
 :label:`sec_kv-cache`
 
-The `generate` method of :numref:`sec_gpt` was left deliberately naive:
-every new token reruns the full forward pass over the whole history. This
-section measures that waste, eliminates it, and then studies what the fix
-costs. The fix is the *KV cache*: because causal attention never lets the
-past depend on the future, the keys and values of every token already
-generated are final the moment they are computed, and can simply be stored.
+The `generate` method of :numref:`sec_gpt` reruns the full forward pass over
+the history for every new token. This section measures the resulting cost
+and introduces the *KV cache*. Because causal attention prevents past states
+from depending on future tokens, the keys and values already computed for
+the prefix can be stored and reused.
 Caching makes the dominant dense-layer work linear in the generated
 length. (Attention itself still reads the whole growing cache at every
 step, so its cumulative cost stays quadratic, a term that is real but
-subdominant at the sizes we run.) It also converts a compute problem into
-a *memory* problem, so the second half of this section is about the bill.
+subdominant at the sizes we run.) Caching also converts a compute problem into
+a *memory* problem, so the second half of this section analyzes its storage cost.
 We derive the cache-size formula and check it against the allocator, see
 why generating tokens is bound by memory bandwidth while reading a prompt
 is bound by arithmetic, and then shrink the cache three ways: sharing keys
 and values across heads (MQA and GQA),
 compressing them to a low-rank latent (the idea behind MLA), and bounding
-the context with a sliding window, which works only together with a
-counterintuitive companion, the *attention sink*. Everything runs on the
-`d2l.GPT` class of the previous section, including the real GPT-2, which
+the context with a sliding window and retaining the *attention sink*. The
+experiments use the `d2l.GPT` class of the previous section, including GPT-2, which
 supplies the phenomena that our one-minute character models are too small
 to show.
 
@@ -451,10 +449,9 @@ way; "time to first token" is our prefill call, and "tokens per second"
 is the cached decode loop.
 :end_tab:
 
-## The Memory Bill
+## Memory Required by the KV Cache
 
-The cache is not free; it is a rent paid in the scarcest resource a GPU
-has. Each of the $n_\textrm{layers}$ layers stores one key and one value
+The cache consumes GPU memory. Each of the $n_\textrm{layers}$ layers stores one key and one value
 vector of dimension $n_\textrm{kv} \cdot d_\textrm{head}$ per token, so a
 batch of $b$ sequences of length $n$ holds
 
@@ -587,18 +584,16 @@ print(f'bandwidth ceiling for decode: about '
       f'{1.0e12 / moved:.0f} tokens/s')
 ```
 
-The measurement is blunt: this model reads a two-thousand-token prompt at
+The measurement shows that this model reads a two-thousand-token prompt at
 tens of thousands of tokens per second and then generates at under a
 hundred — nearly three orders of magnitude apart, on identical hardware,
 running identical layers. Note also the gap between our measured decode rate and
 the bandwidth ceiling the arithmetic promises: a Python loop that
-launches every kernel of every block one token at a time pays overheads
-that production engines eliminate with compiled decode loops and CUDA
-graphs, and the ceiling is what they climb toward. The structural point
-survives sloppy plumbing, though: decode speed is set by *bytes that must
-move per token*, weights plus cache, so every byte shaved off the cache
-buys decode speed, longer feasible contexts, or more concurrent users. That
-is why the rest of this section is about making the cache smaller.
+launches every kernel of every block for each token incurs overheads that
+production engines reduce with compiled decode loops and CUDA graphs.
+Nevertheless, decode speed is set largely by the *bytes moved per token*,
+including weights and cache. Reducing the cache can therefore increase
+decode speed, permit longer contexts, or support more concurrent users.
 
 ## Sharing Keys and Values across Heads
 
@@ -1116,7 +1111,7 @@ projection, trained once and shared globally, that the model learns to
 write through, pushing the compression much further than after-the-fact
 truncation can.
 
-### A Window Needs a Sink
+### Sliding Windows and Attention Sinks
 
 The remaining lever is length: cap the cache at the last $w$ tokens,
 evicting the oldest as generation proceeds, and memory is bounded
@@ -1231,7 +1226,7 @@ Modern designs increasingly build it in on purpose: gpt-oss ships an
 explicit learned sink logit per head in its sliding-window layers
 :cite:`OpenAI.2025`, which frees the first token from double duty.
 
-### The Cache-Relief Map
+### Comparison of Cache-Reduction Methods
 
 The techniques of this section slot into one map, organized by which
 factor of :eqref:`eq_kv-cache-bytes` they attack. GQA and MLA shrink the
@@ -1254,31 +1249,22 @@ to the Language Models part.
 
 ## Summary
 
-Naive generation reruns the full forward pass per token, quadratic in
-the length of the text; since causality freezes every past token's keys
-and values, storing them makes the dominant dense-layer work linear
-(attention still reads the growing cache, a cumulative quadratic that
-stays subdominant at our sizes). The cached step is
-mostly plumbing — a per-layer K/V buffer and a position offset for RoPE
-(in JAX, a preallocated fixed-shape buffer with index writes, so one
-compiled function serves every step) — and it leaves the logits
-unchanged to floating-point rounding while decoding several times faster
-at long contexts. The price is memory: $2 \cdot n_\textrm{layers} \cdot
-n_\textrm{kv} \cdot d_\textrm{head} \cdot n \cdot b$ elements, verified
-against the allocator, and the cache moves on every step. Counting FLOPs
-against bytes shows prefill compute-bound and decode memory-bound, which
-is why cache bytes are the currency of generation speed. GQA spends that
-insight on head sharing: our sweep from 8 key-value heads to 1 shrank
-the cache eightfold with best validation loss flat to within seed noise,
-matching the large-scale ablations. MLA compresses width instead, and
-the oracle version of its premise checks out on GPT-2 (a rank-256
-truncation of the 1536-wide KV cache leaves the loss unchanged on our
-passage). Bounding length with a sliding window fails catastrophically
-if it evicts the *attention sink* (the first token, where trained
-softmax attention parks a third to a half of its weight), and
-keeping even one sink token restores the model; gpt-oss builds the sink
-in as a learned logit. Linear attention removes the cache entirely, and
-hybrid stacks interleave the two regimes.
+Naive generation repeats a full forward pass for each token and therefore
+has quadratic dense-layer cost in the generated length. Reusing past keys
+and values makes this part linear, although attention still reads a growing
+cache. A cached implementation requires a per-layer key--value buffer and a
+position offset for RoPE; JAX uses a preallocated, fixed-shape buffer with
+indexed updates. The cached and uncached implementations agree to numerical
+precision, and caching gives several-fold faster decoding at long contexts.
+The cache contains $2 \cdot n_\textrm{layers} \cdot n_\textrm{kv} \cdot
+d_\textrm{head} \cdot n \cdot b$ elements. Prefill is compute-bound, whereas
+decoding is usually memory-bandwidth-bound. GQA reduces storage by sharing
+keys and values across query heads; in our experiment, reducing eight KV
+heads to one reduces the cache eightfold without a measurable change in
+validation loss. MLA instead compresses the width of the cache. Sliding
+windows bound its length, but must retain attention-sink tokens to avoid the
+large loss observed when the first token is evicted. Linear-attention and
+hybrid architectures provide further alternatives.
 
 ## Exercises
 
@@ -1323,7 +1309,7 @@ hybrid stacks interleave the two regimes.
 [Dive into Deep Learning · §12.3]{.kicker}
 
 Generation and the KV cache<br>
-**stop recomputing the past · the memory bill · GQA, MLA, windows and sinks**
+**reusing past states · cache memory · GQA, MLA, windows, and sinks**
 :::
 :::
 
@@ -1378,7 +1364,7 @@ JAX: growing shapes would recompile every step — preallocate
 @!kv-cache-same-logits-measured-3
 :::
 
-::: {.slide title="The memory bill"}
+::: {.slide title="KV-cache memory"}
 $$\textrm{cache bytes} = 2 \cdot n_\textrm{layers} \cdot n_\textrm{kv} \cdot d_\textrm{head} \cdot n \cdot b \cdot (\textrm{bytes/elem})$$
 
 72 KiB per token here: at 4k context, 288 MiB — more than half the model.
@@ -1459,8 +1445,8 @@ head's dumping ground:
   learned sink logit per head.
 :::
 
-::: {.slide title="The cache-relief map"}
-Attack the factors of the cache formula:
+::: {.slide title="Cache-reduction methods"}
+The methods address different factors in the cache formula:
 
 - **Width**: GQA (fewer KV heads), MLA (low-rank latent).
 - **Length**: sliding window + sinks.
@@ -1476,8 +1462,8 @@ Attack the factors of the cache formula:
   unchanged.
 - Cache bytes $= 2 L\, n_\textrm{kv} d_\textrm{head}\, n\, b$ — verified
   against the allocator; it *moves* every step.
-- Prefill compute-bound, decode memory-bound: cache bytes are the currency
-  of generation speed.
+- Prefill is compute-bound, while decode speed is often limited by the
+  number of cache bytes transferred per token.
 - GQA: 8x smaller cache, quality flat at our scale and at theirs.
 - MLA: compress width; windows: bound length — but keep the sink.
 :::

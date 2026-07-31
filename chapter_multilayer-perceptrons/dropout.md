@@ -7,9 +7,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_dropout`
 
 
-Let's think briefly about what we
-expect from a good predictive model.
-We want it to perform well on unseen data.
+The purpose of a predictive model is to perform well on unseen data.
 Classical generalization theory
 suggests that to close the gap between
 train and test performance,
@@ -38,9 +36,9 @@ between the requirement that a function be smooth (and thus simple),
 and the requirement that it be resilient
 to perturbations in the input.
 
-Then, :citet:`Srivastava.Hinton.Krizhevsky.ea.2014`
-developed a clever idea for how to apply Bishop's idea
-to the internal layers of a network, too.
+Building on related noise-injection ideas,
+:citet:`Srivastava.Hinton.Krizhevsky.ea.2014` applied random perturbations
+to a network's internal layers.
 Their idea, called *dropout*, involves
 injecting noise while computing
 each internal layer during forward propagation,
@@ -531,8 +529,8 @@ third is the *implicit ensemble*: every training step trains a different thinned
 subnetwork, and evaluating the full network at test time approximates averaging
 the predictions of all $2^n$ of them :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`.
 
-A word on currency. Dropout was transformative for the fully connected vision
-networks of the mid-2010s, but its role has narrowed since. Convolutional
+Dropout was important for fully connected vision networks of the mid-2010s,
+but its role has since narrowed. Convolutional
 networks typically replace it with batch normalization (see
 :numref:`sec_batch_norm`), which supplies similar noise-driven regularization.
 The two also combine poorly. Batch normalization accumulates its running
@@ -606,11 +604,11 @@ model from leaning too hard on the training set.
 :::
 :::
 
-::: {.slide title="Dropout: damage the network on purpose"}
+::: {.slide title="Dropout randomly masks hidden activations"}
 [The idea]{.kicker}
 
 Srivastava, Hinton et al. (2014) gave a simple
-recipe:
+definition:
 
 > *Each training step, set each hidden unit to zero
 > independently with probability* $p$, *then rescale the
@@ -739,7 +737,7 @@ Sample a Bernoulli keep-mask from a uniform draw, multiply, then rescale the sur
 @dropout-implementation-from-scratch-1
 :::
 
-::: {.slide title="Sanity check on a 2×8 input" except="tensorflow"}
+::: {.slide title="Dropout on a 2×8 input" except="tensorflow"}
 [From Scratch]{.kicker}
 
 @dropout-implementation-from-scratch-2
@@ -752,7 +750,7 @@ Sample a Bernoulli keep-mask from a uniform draw, multiply, then rescale the sur
 - $p = 1$ → everything dropped (degenerate).
 :::
 
-::: {.slide title="Sanity check on a 2×8 input" only="tensorflow"}
+::: {.slide title="Dropout on a 2×8 input" only="tensorflow"}
 [From Scratch]{.kicker}
 
 @-dropout-implementation-from-scratch-2
@@ -796,8 +794,8 @@ training only.
 @dropout-defining-the-model
 :::
 
-::: {.slide title="The payoff: the train/val gap stays shut"}
-[From Scratch · payoff]{.kicker}
+::: {.slide title="Dropout reduces the training-validation gap"}
+[From scratch · result]{.kicker}
 
 Two 256-unit hidden layers, dropout $0.2$ after the first and $0.5$
 after the second (the gentler-near-the-input convention in action),
@@ -819,7 +817,7 @@ gap a plain 256-256 MLP would open up is held in check.
 :::
 :::
 
-::: {.slide title="Just add a Dropout layer"}
+::: {.slide title="The framework Dropout layer"}
 [Concise]{.kicker}
 
 `nn.Dropout(p)` is a stock layer that also knows the
@@ -839,7 +837,7 @@ masking and rescaling internally:
 :::
 
 ::: {.slide title="Dropout today"}
-[Currency]{.kicker}
+[Current practice]{.kicker}
 
 Dropout was transformative for the dense vision nets of
 the mid-2010s; its role has since narrowed.
@@ -885,7 +883,7 @@ family of stochastic-regularization methods.
 ::: {.d2l-note}
 Exercise 5 flips the switch: keep dropout **on** at test time,
 average 20 passes, and you get uncertainty estimates (MC dropout).
-Next (the Kaggle house-prices section): everything in this chapter,
+Next, the Kaggle house-prices section applies the methods from this chapter,
 deployed on a Kaggle competition.
 :::
 :::

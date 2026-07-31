@@ -1,23 +1,21 @@
 # Adam
 :label:`sec_adam`
 
-Momentum (:numref:`sec_momentum`) improved the *direction* of the step by
-averaging gradients over time. It did nothing about the step's size per
-coordinate: every parameter still moves by the same multiple of its gradient,
-so a single learning rate must serve the stiffest direction and the flattest
-one at once. This section builds the other half of the modern default. The
-construction takes three moves, each repairing a defect of the previous one:
+Momentum (:numref:`sec_momentum`) averages gradients over time but still uses
+the same learning rate for every coordinate. This can be inefficient when
+coordinates differ substantially in scale or curvature. This section develops
+adaptive per-coordinate learning rates through three related methods:
 AdaGrad scales every coordinate by the history of its own gradients, RMSProp
 makes that history forget, and Adam :cite:`Kingma.Ba.2014` adds momentum back
 in and corrects the startup bias. The result has been the default optimizer of
 deep learning for a decade.
 
-Being the default earns a harder question: where does Adam actually win, and
-why? The second half of the section answers it experimentally. We introduce
+The second half of the section examines when Adam improves on momentum. We
+introduce
 the testbed that the rest of the chapter trains on, a tiny transformer
-language model, and race tuned Adam against tuned SGD with momentum on it and
-on a convolutional network. The two races end very differently, and the
-difference is one of the more instructive facts in modern optimization.
+language model, and compare tuned Adam with tuned SGD with momentum on this
+model and on a convolutional network. The comparison isolates settings in
+which per-coordinate adaptation is most useful.
 
 ```{.python .input #adam}
 %%tab pytorch
@@ -161,7 +159,7 @@ d2l.train_ch11(adagrad, init_adagrad_states(feature_dim),
                {'lr': 0.1}, data_iter, feature_dim);
 ```
 
-### RMSProp: Forgetting on Purpose
+### RMSProp: An Exponential Average
 
 AdaGrad's accumulator never forgets. Since $\mathbf{s}_t$ grows without
 bound, roughly linearly under persistent gradient noise, the effective step
@@ -605,10 +603,11 @@ optimizers train the same model from the same initialization for the same
 2,000 steps at a constant learning rate, with no schedule, clipping, or
 weight decay. Each gets a four-point learning-rate grid spaced by factors of
 about three, and the run with the best final training loss represents its
-family. Training loss is the right scoreboard here: the question is who
+family. Training loss is the relevant metric here: the question is which
+method
 optimizes faster, not who generalizes better.
 
-### The Race on the Language Model
+### Comparison on the Language Model
 
 ```{.python .input #adam-the-race-on-the-language-model-1}
 %%tab pytorch
@@ -680,7 +679,7 @@ opening at the end. No rate in our grid rescued SGD: the sweep found its
 best, and the next one diverged. On this problem, per-coordinate
 scaling is worth more than any amount of step-size tuning.
 
-### The Same Race on a CNN
+### Comparison on a CNN
 
 Now the identical protocol on an image classifier: a compact convolutional
 network on Fashion-MNIST, defined in a few lines. Note that `train_lm` never
@@ -884,7 +883,7 @@ history must forget (an exponential average with window $1/(1-\beta_2)$),
 and a momentum average of the gradient itself, with both averages debiased
 exactly against their zero initialization. The result is a diagonal
 preconditioner estimated from first-order information, cheap enough to run
-at any scale, at the price of two extra state buffers per parameter.
+at any scale, while requiring two extra state buffers per parameter.
 
 Where it wins is not uniform. At matched tuning on a small transformer
 language model, Adam beats SGD with momentum decisively, and no rate in
@@ -931,7 +930,7 @@ and Yogi are the standard responses.
 1. Per-coordinate methods are axis-aligned. Rotate the toy problem by 45°,
    $f(\mathbf{x}) = 0.1 (x_1 + x_2)^2 + 2 (x_1 - x_2)^2$, and rerun
    `adagrad_2d` and `rmsprop_2d`. How much of the advantage over gradient
-   descent survives?
+   descent remains effective?
 1. Following :citet:`Kunstner.Yadav.Milligan.ea.2024`, log the training loss
    of `TinyLM` separately for frequent and rare characters (split the
    vocabulary by corpus frequency) under tuned SGD and tuned Adam. Which
@@ -956,7 +955,7 @@ Per-coordinate learning rates and the modern default<br>
 :::
 :::
 
-::: {.slide title="One learning rate is not enough"}
+::: {.slide title="Motivation for per-coordinate learning rates"}
 [Motivation]{.kicker}
 
 Momentum fixed the *direction*; the step *size per coordinate* is still
@@ -968,7 +967,6 @@ one global $\eta$.
   step size per direction. Curvature is unaffordable; the gradient's own
   history is not.
 
-. . .
 
 **AdaGrad** (Duchi, Hazan & Singer, 2011): decay each coordinate by its
 *own* activity,
@@ -983,19 +981,17 @@ oscillation, but the accumulated $\mathbf{s}_t$ grinds the steps down:
 
 @adam-per-coordinate-learning-rates-1
 
-. . .
 
 The scaling is adaptive, so a formerly unthinkable $\eta = 2$ is safe:
 
 @adam-per-coordinate-learning-rates-2
 :::
 
-::: {.slide title="RMSProp: forgetting on purpose"}
+::: {.slide title="RMSProp: an exponential average"}
 AdaGrad never forgets: $\mathbf{s}_t$ grows forever, steps decay like
 $t^{-1/2}$ *by construction* — right for convex problems, wrong for deep
 nets that need to move late in training.
 
-. . .
 
 **RMSProp** (Hinton, 2012): same rule, leaky average instead of sum,
 
@@ -1030,7 +1026,6 @@ Two buffers per parameter plus a step counter:
 
 @adam-adam-both-moments-debiased-1
 
-. . .
 
 @adam-adam-both-moments-debiased-2
 :::
@@ -1048,7 +1043,7 @@ the census, not the mechanism, is what optimization sees.
 :::
 :::
 
-::: {.slide title="The parameter census"}
+::: {.slide title="Parameter groups"}
 Three populations — later sections treat them differently (decay
 exclusions, matrix vs. non-matrix preconditioning):
 
@@ -1059,11 +1054,10 @@ exclusions, matrix vs. non-matrix preconditioning):
 - **vectors**: LayerNorm scales and biases
 :::
 
-::: {.slide title="The race: tuned SGD vs. tuned Adam"}
+::: {.slide title="Tuned SGD and Adam on a language model"}
 Symmetric protocol: same model, same init, same 2,000 steps, constant
 learning rate, four-point grid each, best final training loss wins.
 
-. . .
 
 On the language model:
 
@@ -1074,7 +1068,7 @@ On the language model:
 - The gap opens early and no rate in our grid closes it.
 :::
 
-::: {.slide title="Same race, same harness, on a CNN"}
+::: {.slide title="Tuned SGD and Adam on a CNN"}
 @!adam-the-same-race-on-a-cnn-4
 
 - Curves nearly coincide; test accuracy within a point or two, either way.
@@ -1082,7 +1076,7 @@ On the language model:
   optimizer wins" depends on the *model*, not just the tuning.
 :::
 
-::: {.slide title="Why: heterogeneity"}
+::: {.slide title="Effect of parameter heterogeneity"}
 Live research, but the threads agree (Kunstner et al. 2023, 2024; Zhang
 et al. 2024):
 
@@ -1100,7 +1094,7 @@ et al. 2024):
 - Adam = per-coordinate scaling (AdaGrad) + forgetting (RMSProp) +
   momentum + exact bias correction.
 - Cost: two state buffers per parameter — 3× parameter memory.
-- Wins big on transformers (heterogeneity), little on CNNs — at
+- Gives a large improvement on the transformer and a small one on the CNN — at
   *matched* tuning.
 - $\epsilon$ is a step ceiling $\eta/\epsilon$, not just a numerical
   guard; AMSGrad/Yogi patch the variance estimate (exercises).

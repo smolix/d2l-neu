@@ -1,7 +1,9 @@
-# Which Data May Drive Which Update
+# On-Policy, Off-Policy, and Offline Learning
 :label:`sec_offline`
 
-Every algorithm in these two chapters answers one question differently: which data may drive which update? :numref:`sec_ppo` threw each batch away after a few reuse epochs, while the deep Q-network of :numref:`sec_dqn` trained happily on transitions collected by policies that no longer exist. That difference is not a matter of taste. This section states the rule behind it, lets SARSA flip the answer with a single symbol, and then pushes the question to its limit: no interaction at all, one fixed dataset, the *offline* setting. Learning then fails in a specific, measurable way, and on the one environment in either chapter whose true optimum we can compute, we will measure the failure against that optimum and repair it with the count-shrinking radius of :numref:`sec_qlearning`'s exploration bonus, sign flipped.
+On-policy estimators require data from the current policy, whereas off-policy value methods can use transitions collected by other policies. This distinction determines whether a batch may be reused and whether learning from a fixed dataset is possible. We first compare the Q-learning and SARSA targets to make the distinction explicit.
+
+In *offline reinforcement learning*, the agent receives a fixed dataset and cannot collect additional transitions. Errors on poorly covered actions are therefore not corrected by subsequent interaction. Using tabular FrozenLake, where the optimal value is known, we measure this extrapolation error and examine a count-based pessimistic penalty. The example also clarifies the difference between improving predicted value and improving the policy's delivered return.
 
 ```{.python .input #offline-rl-which-data-may-drive-which-update}
 %%tab pytorch
@@ -23,7 +25,7 @@ import numpy as np
 
 ### The Two Families of Update Rules
 
-The update rules of the last two chapters fall into two families. Each rule was assigned to its family when it first appeared. This section only collects the results. The policy gradient of :numref:`sec_policygradient` is an expectation under the *current* policy's trajectory distribution, so a sample from any other policy estimates the wrong quantity: REINFORCE, the actor-critic of :numref:`sec_actorcritic` and, with a bounded allowance, PPO are *on-policy*. The Q-learning target $r + \gamma \max_{a'} \hat{Q}(s', a')$ is a sample of the Bellman optimality backup at $(s, a)$, and that backup depends on the environment alone: which $s'$ follows $(s, a)$, and what reward arrives. Nothing in it refers to the policy that happened to choose $a$; :numref:`sec_qlearning` planted this observation inside the $\max$, and the replay buffer of :numref:`sec_dqn` is the license exercised at scale. Any real transition is a valid sample of the same quantity, whether from yesterday's policy, another agent, or a fixed log: *off-policy*. :numref:`fig_rl_data_rules` draws the two regimes, and the third one this section adds.
+The update rules of the last two chapters fall into two families. A policy gradient is an expectation under the current policy's trajectory distribution, so samples from another policy generally estimate a different quantity. REINFORCE and actor-critic are therefore *on-policy*; PPO permits limited reuse by correcting action probabilities. By contrast, the Q-learning target $r + \gamma \max_{a'} \hat{Q}(s', a')$ depends on the environment transition but not on the policy that selected $a$. A transition collected by an earlier policy, another agent, or a fixed log is therefore a valid sample of the same Bellman backup. This is *off-policy* learning. :numref:`fig_rl_data_rules` compares these cases with the offline setting introduced below.
 
 ![Three data regimes, one vocabulary: a policy acts, the data feeds an update, and the update hands back a new policy. On-policy methods estimate an expectation under the policy currently running, so a batch is used once and then stale, with PPO's ratios buying a few epochs of extra life. Off-policy methods estimate the Bellman optimality backup, whose target does not mention who collected the data, so the stack of every past policy's transitions remains valid. Offline learning cuts the arrow to the environment entirely: the dataset is collected once, the update can only sweep it, and no mistake the learned policy makes is ever discovered before deployment.](../img/mdl-rl-data-rules.svg)
 :label:`fig_rl_data_rules`
@@ -94,7 +96,7 @@ Each table matches the answer to its own question. Q-learning's entries value gr
 
 ### Bounded Staleness and Importance Ratios
 
-On-policy is a spectrum, not a prison, and :numref:`sec_ppo` already priced the slack: importance ratios reweight data from a nearby policy, exactly in principle by :eqref:`eq_change_of_measure`, at a variance cost that explodes as the collecting policy drifts away, which is why PPO reuses a batch for a bounded number of epochs and no longer. At industrial scale the same allowance is an engineering budget: distributed actors inevitably run a few parameter updates behind the central learner, and IMPALA's V-trace truncates the importance corrections so that slightly stale data stays usable at bounded variance :cite:`Espeholt.Soyer.Munos.ea.2018`. The spectrum runs from fresh-only through bounded staleness to Q-learning's any-policy license; the rest of this section walks to the far end, one fixed log and not a step more.
+The distinction is not absolute in practical systems. Importance ratios can correct data from a nearby policy, but their variance grows rapidly as the two policies separate; PPO therefore reuses each batch for only a limited number of epochs. In distributed learning, actors may also lag behind the central learner. IMPALA's V-trace truncates importance corrections so that moderately stale data remains useful with controlled variance :cite:`Espeholt.Soyer.Munos.ea.2018`. The remainder of this section considers the extreme case: a fixed dataset with no further interaction.
 
 ## Offline Learning
 
@@ -241,7 +243,7 @@ d2l.plt.ylabel('discounted value')
 d2l.plt.legend();
 ```
 
-Read the naive bars first, medians with the min-to-max whiskers of the printout. Across the fifteen datasets the naive method predicts a start-state value between $0.185$ and $0.388$, median $0.274$, against a true optimum of $0.180$ drawn as the dashed line: on every single dataset the prediction is above what *any* policy can achieve in this environment, which is overestimation caught red-handed, no baseline policy needed for the comparison. What its greedy policy actually earns is $0.097$ in the median. The algorithm promises close to three times what it delivers, and in a real offline deployment the promise is the only number you would see before acting on the policy. Comparing what a method predicts against what it earns is the standard diagnostic of the field, and our factor of two or three is the gentle, tabular edition: run the same comparison with deep networks on continuous control and the predicted values run orders of magnitude above reality :cite:`Levine.Kumar.Tucker.ea.2020,Fujimoto.Meger.Precup.2019`.
+Across the fifteen datasets, naive offline Q-learning predicts a start-state value between $0.185$ and $0.388$, with median $0.274$. The true optimum is $0.180$, so every prediction exceeds the value achievable by any policy in this environment. Yet the learned greedy policies have a median return of only $0.097$. Comparing predicted value with realized return is a standard diagnostic in offline reinforcement learning; with deep networks and continuous actions, the discrepancy can be much larger :cite:`Levine.Kumar.Tucker.ea.2020,Fujimoto.Meger.Precup.2019`.
 
 The clone bars answer the reviewer's question. Cloning promises a median of $0.007$ and delivers $0.008$: perfectly calibrated, and nearly worthless, because the behavior it faithfully reproduces is a random walk. Naive offline Q-learning, for all its lying, delivers a policy worth an order of magnitude more than the behavior that collected the data, stitched together from the good halves of many bad episodes: the case for offline reinforcement learning in one number. The field's standard of evidence is exactly this pair of comparisons, against the clone and against the promise, and the naive method wins the first and fails the second.
 
@@ -283,7 +285,7 @@ Keep four distinct failures apart, because the toy compresses them: *support fai
 
 ### Calibration after Pessimism
 
-With that reading, return to the statistics cell and put the pessimistic lines against the naive ones. The median prediction falls from $0.274$ to $0.121$, below the true optimum, and on all but two of the fifteen datasets the promise no longer exceeds what any policy could deliver; the spread, $0.035$ to $0.225$, is printed rather than hidden. The policy itself is *not* better: the pessimistic greedy policy out-earns the naive one on only four of the fifteen datasets, and its median return of $0.080$ sits a shade below the naive $0.097$. What improved is the ledger: the gap between promise and delivery shrank from close to threefold to about one and a half. Pessimism did not conjure a better policy out of the same data; what it bought is a prediction a deployment could roughly trust, and that is the currency of the offline setting. This under-promise principle runs through most of modern offline reinforcement learning, in far more sophisticated forms :cite:`Levine.Kumar.Tucker.ea.2020`.
+The pessimistic estimate has median $0.121$, down from $0.274$, and exceeds the true optimum on only two of the fifteen datasets. Its range is $0.035$ to $0.225$. The policy itself is not better: it outperforms the naive policy on only four datasets, and its median return is $0.080$ rather than $0.097$. Pessimism has instead reduced the discrepancy between predicted and realized performance. More sophisticated versions of this conservative principle are common in modern offline reinforcement learning :cite:`Levine.Kumar.Tucker.ea.2020`.
 
 ## Beyond the Gridworld
 
@@ -323,9 +325,9 @@ One caveat remains. Every judgment this section passed, the actual-return bars a
 
 ## Summary
 
-Which data may drive which update is a property of what the update estimates. On-policy updates estimate expectations under the current policy and spoil when the data comes from anyone else; importance ratios extend their reach exactly as far as their variance allows. Off-policy updates like Q-learning's estimate the Bellman optimality backup, which depends on the environment and not on the data collector, so replay across stale policies is legitimate; SARSA sits one symbol away :eqref:`eq_sarsa` and estimates the behavior's value instead, exploration tax included, as its dimmer table testified when read policy-weighted. Offline reinforcement learning is the off-policy license pushed to a fixed dataset, where the self-correction of online learning is severed: the max hunts the upward errors, nothing audits them, and on fifteen datasets the naive method promised more than the theoretical optimum on every one while delivering about a third of its promise. Behavior cloning's promise was calibrated and tiny. Subtracting a count-shrinking penalty $\kappa/\sqrt{n}$ restored roughly calibrated promises while leaving the policy no better; the penalty is :numref:`sec_qlearning`'s confidence-radius idea with its sign flipped and its $\log t$ dropped, a count-based shrinkage heuristic rather than a confidence bound. Beyond tables the same instincts become constraints on the policy, penalties on the values, or both, or drop the bootstrap for sequence modeling; and selecting among offline-trained models without a simulator remains the setting's open sore.
+On-policy updates estimate expectations under the current policy; importance ratios permit limited correction for older policies. Q-learning is off-policy because its Bellman target does not depend on the data-collection policy, whereas SARSA evaluates the behavior policy itself. Offline reinforcement learning applies off-policy updates to a fixed dataset. Without interaction, overestimated actions outside the dataset's support cannot be tested and corrected. A count-based pessimistic penalty reduces these estimates but does not guarantee a better policy. Deep offline methods likewise constrain policies, values, or both, and model selection without online evaluation remains difficult.
 
-**What the experiments show, and what they do not.** Every cell is seeded numpy, shared verbatim between the two framework tabs, so both print identical digits and reruns reproduce them exactly. The SARSA comparison is one seed of each algorithm at one exploration rate on one map: the robust content is the value gap between the two tables, $0.062$ against $0.182$ at the start entries, while the single-state policy flip is a tie broken differently and would not survive reseeding. The offline results are medians over fifteen datasets with spreads printed beside them, and the spreads are wide, a factor of two between datasets being routine; the claims that survive reseeding are the ordered ones: every naive promise above the optimum, pessimistic promises calibrated on all but a couple of datasets, and the clone calibrated and far below both. The offline arms' policy evaluations are $500$ episodes each, so individual actual-return entries carry noise of a few thousandths. And the grading against $V^*$ and $Q^*$ is a laboratory privilege: nothing in the algorithms used the model, but every judgment of them did, which is the one commodity a real offline deployment lacks. The compute belongs to readers.
+**Experimental scope.** The SARSA comparison uses one seed and one exploration rate. The offline experiment reports fifteen independently collected datasets and 500 evaluation episodes per learned policy. Naive offline Q-learning predicts values above the known optimum on every dataset. Pessimism substantially improves calibration but does not improve median return in this example. Exact optimal values are available only because the experiment uses a small known MDP.
 
 ## Exercises
 
@@ -386,7 +388,7 @@ Every update estimates something; the estimand sets the data rule.
 ![](../img/mdl-rl-data-rules.svg){width=98%}
 :::
 
-::: {.slide title="SARSA: One Symbol, the Opposite Rule"}
+::: {.slide title="The SARSA Update"}
 $$\delta_{\textrm{SARSA}} = r + \gamma\, Q(s', a') - Q(s, a)$$
 
 Bootstrap on the action *actually taken*: the fixed point becomes
@@ -411,7 +413,7 @@ $Q^{\pi_e}$, the behavior's value, exploration and all. On-policy.
 - Same arrows, within noise; different *reference*.
 :::
 
-::: {.slide title="Offline: No Second Chances"}
+::: {.slide title="Offline Learning without New Data"}
 Fixed dataset, no interaction. Improving on the behavior means
 answering **counterfactual queries**, and the learned policy prefers
 exactly the actions whose values are inflated: consulted where least
@@ -442,7 +444,7 @@ each judged on **promise** and **delivery**.
 @!offline-rl-the-experiment-with-a-behavior-cloning-bar-5
 :::
 
-::: {.slide title="Caught Red-Handed, Then Repaired"}
+::: {.slide title="Overestimation and Pessimism"}
 - Naive: median promise $0.274$, above the optimum $0.180$ on **all
   fifteen** datasets; median delivery $0.097$. Close to a threefold lie.
 - Pessimistic: median promise $0.121$; calibrated on all but two
@@ -456,7 +458,7 @@ the naive method beats the clone tenfold: the dataset knew more than
 its collector used.
 :::
 
-::: {.slide title="The Sign, Completed"}
+::: {.slide title="Optimism and Pessimism"}
 Online, an optimistic error summons the data that convicts it.
 Offline, it is never tested: the safe direction of error is down.
 

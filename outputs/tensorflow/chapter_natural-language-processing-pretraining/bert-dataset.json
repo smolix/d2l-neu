@@ -54,18 +54,18 @@
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-4": {
-      "code_fingerprint": "sha256:5e33967d551c1ad8a44cb3ac405da9132553d0bfe78d262f0cf0b36b24537f10",
+      "code_fingerprint": "sha256:3ffca4f6ccb47ad9da9ede7606d0780289fd391ae224ffcaea1885e5a7572795",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "(512, 64) (512, 64) (512,) (512, 10) (512, 10) (512, 10) (512,)\n"
+          "text": "(512, 64) (512, 64) (512,)\n(512, 10) (512, 10) (512, 10) (512,)\n"
         }
       ]
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-5": {
-      "code_fingerprint": "sha256:6b27fb017c1cc2c9bdfde36646f3f3f9b6f0b39e4a65caf6ae711143be386eee",
+      "code_fingerprint": "sha256:3f5c96eadf14e039daa244432ff6938a7c28735f879b3c0dcd8486fc2be32789",
       "kind": "text",
       "outputs": [
         {

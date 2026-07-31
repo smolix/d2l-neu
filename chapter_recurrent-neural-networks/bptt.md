@@ -9,14 +9,15 @@ look closely at how backpropagation actually works in a sequence model, so that
 *vanishing* and *exploding* gradients become precise phenomena rather than
 slogans.
 
-Forward propagation in an RNN is straightforward: loop over time steps, reusing
-the same parameters at each one. Backpropagation is where the length of the
-sequence bites. Applying backpropagation to an RNN is called *backpropagation
+Forward propagation in an RNN iterates over time while reusing the same
+parameters. Applying backpropagation to this recurrent computation is called
+*backpropagation
 through time* :cite:`Werbos.1990`: we unroll the computational graph one step at
 a time into an ordinary feedforward network, then apply the chain rule,
 remembering that the same parameters reappear at every step, so their gradients
 are summed over all those occurrences (the weight tying is exactly as in a
-convolutional network). The catch is scale. A text sequence can run to thousands
+convolutional network). Long sequences create both computational and numerical
+problems. A text sequence can run to thousands
 of tokens; the input at step 1 then passes through a thousand matrix products
 before it reaches the output, and another thousand to compute the gradient. This
 is costly in memory and, as we will see, numerically treacherous.
@@ -318,7 +319,7 @@ recurrence one step at a time into a feedforward net where the **same** weights
 reappear at every step, then apply the chain rule and **sum** each weight's
 gradient over all its occurrences (weight tying, as in a CNN).
 
-The catch is length: a thousand-token sequence means a thousand matrix products
+Sequence length determines the cost: a thousand-token sequence requires a thousand matrix products
 forward, and another thousand back.
 :::
 
@@ -349,7 +350,7 @@ A matrix power is ruled by its eigenvalues (spectral radius $\rho$):
 - $\rho = 1$: the knife-edge.
 :::
 
-::: {.slide title="Watch it happen"}
+::: {.slide title="Numerical growth and decay"}
 Operator norm $\|\mathbf{J}^k\|$ of the $k$-step Jacobian product for a symmetric
 recurrence rescaled to spectral radius $\rho$ (log scale):
 
@@ -359,7 +360,7 @@ Three straight lines: decay, flat, blow-up. Over 40 steps the signal is
 amplified more than fortyfold or crushed below two percent.
 :::
 
-::: {.slide title="Fix: arithmetic vs. architecture"}
+::: {.slide title="Clipping and architectural changes"}
 - **Explosion** is easy: rescale it. **Gradient clipping** caps the gradient
   norm before each update.
 - **Vanishing** cannot be rescaled away (scaling up noise only gives bigger

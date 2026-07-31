@@ -1,19 +1,14 @@
 # Scaling Up
 :label:`sec_scaling`
 
-Every method in this chapter was tuned by sweeping. In :numref:`sec_adam` each
-optimizer received a grid of learning rates and its best run spoke for it; in
-:numref:`sec_batch_size` we swept batch sizes the same way. On models that
-train in seconds this is the right procedure. But the models that matter are
-trained once: a frontier language model occupies thousands of accelerators
-for months, and there is no grid search at that price. Its hyperparameters
-still have to come from somewhere. The working answer across the industry is
-to tune something small and *transfer* the result up.
+The experiments in this chapter tune hyperparameters with sweeps over small
+models. Such sweeps are infeasible for models trained for months on thousands
+of accelerators. Large-scale training therefore tunes smaller proxy models
+and attempts to transfer the selected hyperparameters to larger models.
 
-This section is about when that transfer works. We first demonstrate that by
-default it does not: the best learning rate of a model family is not a
-property of the task but of the model's size, and it drifts as the network
-widens. We then present the *maximal update parametrization* (muP), which
+This section studies the conditions under which transfer works. Under the
+standard parametrization, the best learning rate changes as a network widens.
+The *maximal update parametrization* (muP)
 moves the width dependence out of the hyperparameters and into the model,
 together with the two experiments practitioners use to verify it — a
 *coordinate check* and a transfer sweep. We close by connecting the fix to
@@ -43,7 +38,7 @@ import numpy as np
 import optax
 ```
 
-## The Optimum Does Not Stay Put
+## Learning Rate as Width Changes
 
 ### A Family of Widths
 
@@ -185,7 +180,7 @@ def train_mlp(arch, width, lr, num_steps=400, batch_size=512):
     return min(v, 2.5) if math.isfinite(v) else 2.5
 ```
 
-### The Sweep
+### Learning-Rate Sweep
 
 Now the experiment. Four widths, eight learning rates spaced by factors of
 two, one short run each — 32 runs, about a minute on one GPU. This is
@@ -511,9 +506,9 @@ muP's per-layer control comes built in — though its RMS-matched scale is an
 empirical convention, not the $\sqrt{n_{\text{out}} / n_{\text{in}}}$ of
 :eqref:`eq_spectral_condition`, a distinction :numref:`sec_muon` already
 flagged. This is one reason learning rates chosen
-for Muon-family optimizers tend to survive width changes with less ceremony.
+for Muon-family optimizers tend to change less with width.
 
-## What the Big Runs Do
+## Hyperparameter Transfer in Large Runs
 
 Among production labs, "tune small, transfer big" is universal; the
 mechanism is not. Cerebras adopted muP directly: the Cerebras-GPT family was
@@ -548,7 +543,7 @@ you choose. It is cheap, mechanical, and unambiguous.
 
 ## Summary
 
-Hyperparameters tuned on a small model do not survive scaling by default:
+Hyperparameters tuned on a small model do not transfer by default:
 the best learning rate drifts down as the network widens, because one Adam
 step perturbs a hidden layer's activations in proportion to its fan-in
 (:eqref:`eq_scaling_first_step`). The maximal update parametrization removes
@@ -591,17 +586,16 @@ matched update sizes; the goal of transfer is common to all of them.
 ::: {.cover}
 [Dive into Deep Learning · §9.11]{.kicker}
 
-Making small-scale tuning survive scale<br>
+Transferring small-scale tuning to larger models<br>
 **the drifting optimum · muP · the coordinate check · what the labs do**
 :::
 :::
 
-::: {.slide title="One run, no sweeps"}
-Everything in this chapter was tuned by sweeping — fine when a run costs
-seconds.
+::: {.slide title="Hyperparameter transfer to large models"}
+Sweeps are practical when each run takes seconds.
 
 - A frontier model is trained **once**: thousands of accelerators, months.
-  No grid search at that price.
+  A full grid search is infeasible.
 - Industry answer: tune something small, **transfer** up.
 - This section: when transfer fails, how muP repairs it, how to verify it,
   what labs actually do.
@@ -615,12 +609,11 @@ zero — **standard parametrization** (SP).
 
 @scaling-a-family-of-widths-2
 
-. . .
 
 400 Adam steps at batch 512; score = final loss on the whole training set.
 :::
 
-::: {.slide title="The sweep: the optimum moves"}
+::: {.slide title="Learning rate as width changes"}
 Eight learning rates × four widths, 32 runs, about a minute:
 
 @scaling-the-sweep
@@ -632,7 +625,7 @@ Eight learning rates × four widths, 32 runs, about a minute:
 - The best learning rate is a property of the **model size**, not the task.
 :::
 
-::: {.slide title="Why: one step scales with fan-in"}
+::: {.slide title="Dependence of the first update on fan-in"}
 Single-example gradient of a hidden matrix = outer product
 $\mathbf{g} = \boldsymbol{\delta}\mathbf{h}^\top$; Adam's first update is a
 sign step, and signs of outer products factorize:
@@ -643,7 +636,6 @@ $$(\Delta\mathbf{W}\mathbf{h})_i = -\eta \operatorname{sign}(\delta_i)
 All $n$ terms add **coherently**: double the width, double the kick, halve
 the stable $\eta$.
 
-. . .
 
 Per layer: input weights (fan-in 784, fixed) and biases don't scale.
 One global $\eta$ = a compromise between layers that scale differently.
@@ -663,7 +655,7 @@ every layer keeps learning — the *maximal update*. Embeddings count as
 input-like; attention needs $1/d$; SGD has its own column.
 :::
 
-::: {.slide title="Two rules, one subclass"}
+::: {.slide title="Implementation of the muP rules"}
 @scaling-the-rules
 
 At the base width $m=1$: muP changes **nothing** about the model you tune.
@@ -704,8 +696,8 @@ The payoff: the same sweep, under muP:
   couple % of that width's best loss (SP: misses by 15–20%).
 - **Tune small, ship big**: TP5 tuned GPT-3 6.7B from a 40M proxy at ~7% of
   pretraining cost — and beat the original.
-- Caveat: at a width you *can* sweep, retuned SP matches; muP buys
-  the sweep you cannot afford.
+- At a width that can be swept directly, retuned standard parametrization
+  matches muP; muP avoids repeating that sweep at large scale.
 :::
 
 ::: {.slide title="The spectral view"}
@@ -720,7 +712,7 @@ $\|\mathbf{W}\|_2 \asymp \|\Delta\mathbf{W}\|_2 \asymp
   convention is not the $\sqrt{n_{\text{out}}/n_{\text{in}}}$ scale).
 :::
 
-::: {.slide title="What the big runs do"}
+::: {.slide title="Hyperparameter transfer in large runs"}
 - **Cerebras**: muP in production; family tuned from a ~40M proxy.
 - **DeepSeek**: don't remove the drift — *fit* it. Power laws for best LR
   and batch vs compute, extrapolated to the target run.

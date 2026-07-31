@@ -1,12 +1,11 @@
 # Gated Recurrence
 :label:`sec_lstm`
 
-:numref:`subsec_bptt-gradient-pathologies` ended with a diagnosis. The
+:numref:`subsec_bptt-gradient-pathologies` showed that the
 gradient that travels $k$ steps back through a vanilla RNN is multiplied by
 the $k$-th power of the recurrent Jacobian, so it shrinks or grows
-geometrically; clipping tames the growth, but no amount of arithmetic can
-restore a signal that has decayed into noise. The cure has to change the
-dynamics of the recurrence itself. This section builds that cure:
+geometrically. Gradient clipping limits growth but does not recover a
+vanished signal. This motivates changing the recurrence through
 *multiplicative gating*, a mechanism that lets the network learn what to
 write into its memory, what to erase, and what to reveal. The analysis
 behind it goes back to Hochreiter's 1991 diploma thesis and to
@@ -16,17 +15,15 @@ the *long short-term memory* (LSTM) cell of
 :citet:`Hochreiter.Schmidhuber.1997`, which powered speech recognition,
 translation, and language modeling for most of the 2010s.
 
-Gates are worth understanding in 2026 for a reason beyond history. The
-architectures that displaced the LSTM kept its central trick: the
+Gating also appears in newer architectures. The
 transformer's gated feed-forward networks multiply one branch of
 activations by another, a design whose value :numref:`sec_transformer-block`
-measured directly, and the modern linear recurrences that occupy the rest
-of this chapter are, at heart, a forget gate wrapped around a linear
-state. We develop the idea once, carefully, here: first the gate itself,
+measured directly, and modern linear recurrences use an input-dependent
+forgetting coefficient around a linear state. We develop the gate first,
 then the LSTM from scratch and with framework layers, then the gated
 recurrent unit (GRU) as its streamlined descendant, then a brief look at
 two structural axes (depth and bidirectionality), and finally a survey of
-where gating lives today.
+current uses of gating.
 
 *Prerequisites: the RNN language-modeling pipeline of
 :numref:`sec_rnn-scratch` (data, scaffold, and training recipe are reused
@@ -52,7 +49,7 @@ from jax import numpy as jnp
 import math
 ```
 
-## Memory Needs a Controller
+## Controlling Memory Updates
 
 Start from what the gradient analysis demands. As motivation, take the
 simplest caricature: if the state-to-state Jacobian were one fixed
@@ -767,7 +764,7 @@ produce contextual word embeddings (see also
 encode-both-directions idea, and we study BERT in the pretraining
 chapters.
 
-## Gates beyond Recurrent Networks
+## Gates in Other Architectures
 
 The cells above are, by the standards of this book's earlier chapters, old
 technology. The gate is not. Its shape is a sigmoid (or other bounded)
@@ -850,7 +847,7 @@ architectures: it routes channels in transformer MLPs
 (xLSTM), and, made input-dependent only, powers the linear recurrences
 and state space models that the rest of this chapter builds.
 
-**What the experiments show, and what they do not.** Under one fixed
+**Experimental scope.** Under one fixed
 small-corpus recipe, gate-equipped cells train reliably where the vanilla
 RNN plateaus, and initialization can matter as much as architecture at a
 ten-epoch budget. These are single seeded runs on one small corpus: they
@@ -1067,8 +1064,8 @@ previous step; a one-argument change with `num_layers`:
 
 @lstm-deep-recurrent-networks-3
 
-Read the scoreboard: the second layer does **not** pay on a corpus
-this small. Depth pays at scale; knowing when it won't is craft.
+On this small corpus, the second layer does not improve the result.
+Additional depth is useful only when the data and optimization support it.
 :::
 
 ::: {.slide title="Bidirectional RNNs"}
@@ -1113,8 +1110,8 @@ the encoder.
   is the constant error carousel (the protected direct path).
 - GRU: two gates, convex blend, cheaper, and the section's best
   perplexity: it beats the vanilla RNN clearly.
-- The LSTM needs budget and init care before its machinery pays:
-  architecture and optimization are judged together.
+- The LSTM requires sufficient data, computation, and careful initialization;
+  architecture and optimization must be evaluated together.
 - Depth = stacked cells (rarely paid); bidirectional = encoder-only.
 - The gate outlived the RNN: SwiGLU, Mamba's $\Delta_t$, xLSTM —
   input-only gates open the door to linear recurrence, next.

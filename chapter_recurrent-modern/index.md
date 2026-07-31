@@ -1,54 +1,18 @@
 # State Space Models
 :label:`chap_modern_rnn`
 
-You now own two kinds of memory. The transformer of
-:numref:`chap_transformers` keeps everything: its key–value cache is an
-archive that grows with every token, answers exact-recall questions by
-lookup, and carries a cost that :numref:`sec_kv-cache` measured directly
-— a cost that in production sets the economics of long-context serving.
-The recurrent networks of :numref:`chap_rnn` keep one thing: a fixed-size
-state, updated in place, whose cost per token does not grow with the
-length of the context and whose memory of the past is whatever its
-finitely many bits managed to squeeze in. This chapter
-asks the question that sits between those designs: how far can a fixed
-state actually go? Its answer comes as five verbs and a truce, and as of
-this writing that is the field's answer too. *Gate* the state, so that learned sigmoids
-decide what is written and what is erased. *Linearize* it, so that
-training parallelizes across the sequence. *Select*, so that the dynamics
-read the data as it flows past. *Edit*, so that a write can correct the
-memory instead of piling on top of it. *Learn*, the reading under which
-all of these turn out to be one algorithm fitting a regressor at test
-time. And then the truce that production systems have settled on:
-*hybridize*, keeping a few layers of genuine attention inside a mostly
-recurrent stack.
+Transformers retain a key--value pair for every token, so their cache grows
+with the context. Recurrent models instead update a fixed-size state. This
+reduces inference memory, but it limits how much information the model can
+retain and retrieve. The chapter studies this tradeoff and the main
+mechanisms used to improve fixed-state sequence models.
 
-The first three verbs are the chapter's classical spine.
-:numref:`sec_lstm` builds the gate once, carefully: starting from the
-observation that only an additive state passes gradients unattenuated, it
-derives the LSTM's three gates and the GRU's two, trains both against the
-vanilla RNN under one fixed recipe, and keeps the scoreboard — at
-a ten-epoch budget the cheaper GRU wins while the LSTM merely matches the
-baseline until its initialization is repaired, because architecture and
-optimization cannot be judged separately. :numref:`sec_ssm` deletes the
-nonlinearity from the state path: what remains of the GRU is an affine
-recurrence that an associative scan evaluates in logarithmic depth, and
-the state space view rebuilds the same object from continuous time, where
-discretization *derives* the gate rather than positing it and the HiPPO
-theory supplies dynamics under which a fixed state's memory of the past
-is provably good. The section trains an S4D classifier on 784-pixel
-image sequences, then runs the trained model both ways (all pixels at
-once through the scan, one pixel at a time through a carried state,
-verifying that the two agree) and prints the punchline: the model's entire
-memory of an arbitrarily long history is a kilobyte-scale state, the same
-at token one hundred as at token one hundred thousand, where a
-transformer's cache would have grown a thousandfold. :numref:`sec_mamba`
-restores what linearization gave up. A selective-copying task built to
-defeat time-invariant dynamics motivates making the step size a function
-of the input (the forget gate derived a third time), and the resulting
-Mamba block solves the copy task, tops the chapter's three-answers
-scoreboard in our PyTorch run (in the JAX run the far cheaper minGRU
-edges it out), and generates text at a per-token cost that does not grow
-with the prefix, through its own stepped path.
+:numref:`sec_lstm` begins with multiplicative gates in the LSTM and GRU.
+:numref:`sec_ssm` then makes the state update linear, which permits
+parallel evaluation by an associative scan, and derives state space models
+by discretizing continuous linear dynamics. :numref:`sec_mamba` makes
+those dynamics input-dependent so that the model can select which tokens
+affect the state.
 
 The next three sections carry the story to the present.
 :numref:`sec_matrix-state` is where this chapter's road meets the one

@@ -1,27 +1,19 @@
-# DeltaNet: Memory That Edits
+# DeltaNet and Corrective Memory Updates
 :label:`sec_deltanet`
 
-Read down the write column of :numref:`tab_ms-family` one more time. Seven
-models, three research lineages, and every write is an addition: whatever
-$\mathbf{k}_t \mathbf{v}_t^\top$ says, the memory takes it on top of what is
-already there. The previous section measured what crowding does to such a
-memory and built the decay ladder to manage it, but decay is indiscriminate:
-to weaken one stale entry, the model must weaken everything. This section
-changes the write rule instead. The fix is to *read before writing*: look
-up what the memory currently returns for $\mathbf{k}_t$, subtract it, and
-write only the correction, a repair
-:citet:`Schlag.Irie.Schmidhuber.2021` proposed for exactly this failure.
-We first isolate the failure the additive write
-cannot escape, with a memory whose entries are *overwritten* rather than
-merely accumulated. We then derive the corrective write, the *delta rule*,
-and find that it is one step of gradient descent on a recall loss, taken
-inside the forward pass. A memory whose transition is no longer diagonal
-resists the chunked training schedule of :numref:`subsec_ms-chunked`, so we
-rebuild that schedule around a triangular solve; with a decay gate added
-back we arrive at Gated DeltaNet, the cell inside several current
-production models, and train it on our language-modeling scoreboard.
-Finally we ask what the new transition can *compute*, and meet a capability
-that no model of :numref:`sec_matrix-state` has: state tracking.
+The matrix memories in :numref:`sec_matrix-state` update their state by
+addition. If a key is used more than once, its old and new values are
+superposed. Decay reduces old contributions by age, but cannot selectively
+replace the value associated with one key. DeltaNet addresses this problem
+by reading the current value before writing and storing only the correction
+:cite:`Schlag.Irie.Schmidhuber.2021`.
+
+We first demonstrate the failure of additive writes on an overwrite task.
+We then derive the delta rule as one gradient step on a recall loss. Its
+non-diagonal transition requires a different chunked implementation, which
+we obtain from a triangular solve. Adding a decay gate gives Gated DeltaNet.
+The final section studies the additional state-tracking computations allowed
+by this transition.
 
 *Prerequisites: the matrix-state recurrence and its capacity law
 (:numref:`sec_matrix-state`, :eqref:`eq_ms-retrieval-error`), the chunked
@@ -54,7 +46,7 @@ import optax
 import time
 ```
 
-## The Trouble with Adding
+## Limitations of Additive Writes
 :label:`subsec_dn-overwrite`
 
 The capacity law of :numref:`subsec_ms-capacity` blamed *crowding*: store
@@ -153,7 +145,7 @@ orthogonal keys there is no crowding, so the decay ladder of
 :numref:`subsec_ms-decay-ladder` would not help here. Decay discounts by
 *age*; the failure is indexed by *key*.
 
-### Trained Models Hit the Same Ceiling
+### End-to-End Training on the Overwrite Task
 :label:`subsec_dn-trained`
 
 A fair objection: no trained model is forced to use its memory the way we
@@ -535,7 +527,7 @@ with jax.default_matmul_precision('highest'):
     assert err < 1e-5              # One rule, two readings
 ```
 
-## Training It: the WY Trick
+## Chunked Training with the WY Representation
 :label:`subsec_dn-wy`
 
 The recurrence above is fine for generation, one token, constant memory,
@@ -992,7 +984,7 @@ has become, one write rule later, a family with two parents: choose the
 decay structure (scalar, diagonal), choose the write rule (additive,
 delta, generalized delta), and the model largely follows.
 
-## What the Transition Can Compute
+## Computational Properties of the Transition
 :label:`subsec_dn-expressivity`
 
 The memory story is done; a computational story has been hiding inside
@@ -1211,7 +1203,7 @@ trained DeltaNet variants jump from near-zero length generalization on
 parity to essentially perfect once $\beta$ may exceed $1$, with modular
 arithmetic improving in step.
 
-### The Ladder, and Its Ceiling
+### Expressivity and Its Limits
 :label:`subsec_dn-ladder`
 
 Climbing one more rung: a reflection along one axis per token buys
@@ -1271,7 +1263,7 @@ step on *one* loss. :numref:`sec_test-time-regression` asks the general
 question: what if a sequence layer is an optimizer, full stop? It then
 re-derives this whole chapter from that view.
 
-**What this section's experiments do and do not show.** The overwrite
+**Experimental scope.** The overwrite
 cells are diagnostics under a stated restriction, write addresses
 computed from the key token alone, and show that within it the additive
 write superposes and the delta write does not, both mechanistically and
@@ -1375,7 +1367,7 @@ DeltaNet<br>
 :::
 :::
 
-::: {.slide title="The write column, revisited"}
+::: {.slide title="Additive Write Rules"}
 Last section's family table: seven models, three lineages — and **every
 write is an addition**.
 

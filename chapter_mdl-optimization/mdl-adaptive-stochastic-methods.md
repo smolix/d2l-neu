@@ -1,23 +1,16 @@
 # Stochastic and Adaptive Methods
 :label:`sec_mdl-adaptive-stochastic-methods`
 
-The optimizer that trains essentially every modern network is AdamW with warmup
-and a decaying learning-rate schedule, not the plain gradient descent whose
-theory :numref:`sec_mdl-gradient-based-optimization` developed. This section
-closes the gap between that theory and that default. Two questions were left
-open there. First, the $O(1/K)$ stationarity rate, our smooth nonconvex
-benchmark for deep networks, was proved for the exact gradient, while
-training uses noisy minibatch estimates; what survives?
-Second, the whole $\kappa$ story was about a *single* step size $\eta$ forced
-to respect the stiffest curvature direction. The obvious escape, a *separate*
-step size per coordinate, is exactly what AdaGrad, RMSProp, and Adam
-implement, and it deserves the same treatment the global $\eta$ received: a
-derivation, a rate, and an account of where it fails. Along the way we
-derive Adam's bias correction rather than assert it, state and verify the
-counterexample showing that Adam can converge to the *worst* point of a convex
-problem, work out why weight decay through a preconditioner is not weight
-decay, and give learning-rate schedules and warmup the mathematical reading
-they usually go without.
+Modern networks are commonly trained with AdamW, warmup, and a decaying
+learning-rate schedule rather than plain gradient descent. This section relates
+those methods to the theory developed in
+:numref:`sec_mdl-gradient-based-optimization`. We first extend the deterministic
+$O(1/K)$ stationarity analysis to noisy minibatch gradients. We then replace a
+single global step size with coordinatewise scaling, as used by AdaGrad,
+RMSProp, and Adam. The analysis derives Adam's bias correction, examines a
+convex counterexample to its convergence, distinguishes preconditioned $L_2$
+penalties from decoupled weight decay, and explains learning-rate schedules and
+warmup.
 
 We lean on :numref:`sec_mdl-gradient-based-optimization` throughout (the
 descent lemma, the condition number $\kappa$, the minibatch variance
@@ -29,9 +22,8 @@ preconditioning. The MAP reading of weight decay comes from
 ladder reaches back to the SVD and Newton--Schulz material of
 :numref:`sec_mdl-svd-low-rank`. Standard references are
 :citet:`Bottou.Curtis.Nocedal.2018` for the stochastic theory and the original
-papers cited as we go. As everywhere in this chapter, the code is plain NumPy:
-every optimizer below is under ten lines written by hand, which is the fastest
-way to see there is no magic in any of them.
+papers cited as we go. The implementations use plain NumPy so that each update
+can be compared directly with its defining equation.
 
 ```{.python .input #adaptive-stochastic-methods-imports}
 #@tab mxnet
@@ -132,9 +124,9 @@ $$
 \;\le\; f(\mathbf{x}_k) - \eta\left(1 - \tfrac{L\eta}{2}\right) \|\nabla f(\mathbf{x}_k)\|^2 + \tfrac{L\eta^2 \sigma^2}{2},
 $$
 
-the descent lemma with one new term: a *noise tax* of
-$\tfrac{L}{2}\eta^2\sigma^2$ per step, paid whether or not the gradient is
-large. For $\eta \le 1/L$ the bracket is at least $\tfrac12$. Take total
+the descent lemma with an additional variance term
+$\tfrac{L}{2}\eta^2\sigma^2$ per step. For $\eta \le 1/L$ the bracket is at
+least $\tfrac12$. Take total
 expectations, telescope over $k = 0, \ldots, K-1$ (the left side collapses to
 $\mathbb{E}[f(\mathbf{x}_K)] - f(\mathbf{x}_0) \ge -\Delta$), and divide by
 $\eta K/2$ to get :eqref:`eq_mdl-opt-ghadimi-lan`. The first term of the bound
@@ -214,40 +206,38 @@ $K^{-1/2}$ order as the noise term, so it cannot steepen the slope.) The
 min-so-far column falls much faster,
 slope $-1.23$: on this benign toy the best iterate beats the guarantee by a
 wide margin, exactly why one would love to return it and exactly what the
-noise forbids you from *identifying*. Worst-case bounds are contracts: the
-guaranteed rate here is $K^{-1/2}$, and the schedule designs of this section
+noise forbids you from *identifying*. The worst-case guarantee here is
+$K^{-1/2}$, and the schedule designs of this section
 build on it rather than on the lucky minimum.
 
 ## Per-Coordinate Step Sizes
 :label:`subsec_mdl-per-coordinate`
 
-### One Global Step Must Respect the Stiffest Mode
+### Limitations of a Global Step Size
 
 In :numref:`sec_mdl-gradient-based-optimization`, stability chained the
 single step size to the stiffest mode ($\eta < 2/\lambda_{\max}$), so the
 flattest mode advances by only $\eta\lambda_{\min} \approx 2/\kappa$ per
-step: one scalar doing a matrix's job, at cost linear in $\kappa$. But
+step, which gives a cost linear in $\kappa$. Now
 suppose the coordinate axes happen to *be* the eigendirections, as they are
 for
 $f(\mathbf{x}) = \tfrac12 \mathbf{x}^\top \mathrm{diag}(\boldsymbol{\lambda})\, \mathbf{x}$,
 and we allow a *separate* step size $\eta_i$ per coordinate. Then
 $\eta_i = 1/\lambda_i$ contracts every mode to zero in one step: a diagonal
 matrix of step sizes is a diagonal Newton's method, and the condition number
-simply disappears from the problem. This is the entire thesis of adaptive
-methods, drawn in :numref:`fig_mdl-opt-per-coordinate`: gradient descent's
-zig-zag comes from using one number where $n$ are called for, and it
-disappears once each coordinate gets its own.
+no longer depends on the condition number. This observation motivates the
+coordinatewise scaling shown in :numref:`fig_mdl-opt-per-coordinate`.
 
-![The section's thesis, drawn. Both panels show the same elongated quadratic ($\kappa = 20$) from the same start, and both paths are actual runs of the stated update. Left: gradient descent with one global step size near the stability ceiling zig-zags across the stiff axis while crawling along the slow one. Right: Adam's per-coordinate normalization (with $\beta_1 = 0$, to isolate the rescaling from momentum) moves both coordinates at comparable speed and curves smoothly into the minimum: the valley is effectively rounded, at the cost of estimating the rescaling from gradients alone.](../img/mdl-opt-per-coordinate.svg)
+![Both panels show optimization of the same elongated quadratic ($\kappa = 20$) from the same initial point. Left: gradient descent with a global step size near the stability limit oscillates across the high-curvature direction while progressing slowly along the low-curvature direction. Right: Adam with $\beta_1 = 0$ uses coordinatewise normalization, so the two coordinates advance at comparable rates.](../img/mdl-opt-per-coordinate.svg)
 :label:`fig_mdl-opt-per-coordinate`
 
 Two obstacles stand between this observation and an algorithm. The
 eigenvalues are unknown, and off the quadratic model they vary from place to
 place; and with stochastic gradients we never see clean curvature, only noisy
-first-order information. Everything in the adaptive family is a scheme for
-estimating a useful diagonal rescaling *from the gradients themselves*.
+first-order information. Adaptive methods therefore estimate a useful diagonal
+rescaling from the observed gradients.
 
-### AdaGrad: Calibrating Steps by Accumulated Evidence
+### AdaGrad and Accumulated Squared Gradients
 
 The first such scheme is **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` (shown in
 action in :numref:`sec_adam`). It keeps a
@@ -307,7 +297,7 @@ the optimizer may need to cross a plateau or a saddle region long after
 $\mathbf{s}_t$ has grown large, and it arrives with steps ground down to
 nothing. The method stalls because it remembers too much.
 
-### RMSProp: Forgetting on Purpose
+### RMSProp and Exponential Averaging
 
 The repair is to replace the all-time sum with an **exponential moving
 average**, the same fix that turns a cumulative mean into
@@ -400,7 +390,7 @@ $\sqrt{\hat{v}_i} \approx |g_i| = \lambda_i |x_i|$, so the update on
 coordinate $i$ is
 $\eta\, g_i / \sqrt{\hat{v}_i} \approx \eta\,\mathrm{sign}(x_i)$:
 constant-magnitude *sign descent*, where a diagonal Newton step would move by
-$x_i$ itself. What survives of the opening argument is the *ratio* between
+$x_i$ itself. The relevant part of the opening argument is the *ratio* between
 coordinates: the effective step $\eta/(\lambda_i |x_i|)$ scales like
 $1/\lambda_i$ wherever the $|x_i|$ are comparable (as at the equal-coordinate
 start of the race below), so stiff coordinates take small steps and flat ones
@@ -434,8 +424,8 @@ maximal, and its average regret does not vanish.*
 $\beta_1 < \sqrt{\beta_2}$ (every practical setting): for any fixed
 exponential decay there is a $C$ that defeats it.*
 
-The mechanism fits in one sentence: **the effective step on the informative
-gradient shrinks faster than its information accrues.** When the rare large
+The failure occurs because **the effective step on the informative gradient
+shrinks faster than its information accrues.** When the rare large
 gradient $C$ arrives, it lands in $\mathbf{v}$ *quadratically*: $v_t$
 jumps to nearly $C^2$, so the very step that should exploit the information
 is normalized by nearly $C$ and moves the iterate by only $O(\eta_t)$. Then
@@ -570,7 +560,7 @@ $$
 = (1 - \eta\lambda)\, \mathbf{w}_t - \eta\, \mathbf{g}_t .
 $$
 
-Under Adam they are not, and the two-line derivation is the whole story.
+Under Adam they are not, as the following derivation shows.
 Feed the penalized gradient through :eqref:`eq_mdl-opt-adam` and look at the
 decay term alone (take $\beta_1 = 0$ for clarity, so the update is
 $-\eta\,(\mathbf{g}_t + \lambda\mathbf{w}_t)/(\sqrt{\hat{\mathbf{v}}_t} + \epsilon)$):
@@ -737,16 +727,15 @@ schedule ends one to two orders lower. The instructive row is WSD: at $80\%$
 of the budget it is *still on the constant's floor* ($9.5 \times 10^{-2}$,
 equal to the constant row to every printed digit, since the two runs are the
 same trajectory until the decay begins), then the final $400$ steps drop it
-by a factor of $17$. All of WSD's visible gain
-arrives in the decay phase: the loss-curve cliff that WSD training runs
-are known for, reproduced here by a one-line quadratic. On this pure
-quadratic, cosine's longer tail of small steps wins the endgame
+by a factor of $17$. All of WSD's visible improvement arrives in the decay
+phase. On this quadratic, cosine's longer tail of small steps gives the lower
+final error
 ($1.6 \times 10^{-3}$); the reasons to prefer WSD (re-decayable
 checkpoints, more time at large steps on losses whose transient is the
 bottleneck) live off this toy, in exactly the gap between the noise-ball
 theorem and practice.
 
-### Warmup: Do Not Trust an Estimated Preconditioner Cold
+### Warmup for an Estimated Preconditioner
 
 Every schedule above begins with **warmup**: $\eta_t$ ramped linearly from
 $\approx 0$ over the first fraction of training
@@ -873,7 +862,7 @@ d2l.plot(np.arange(1, epochs_vr + 1), [gaps_sgd, gaps_svrg],
 ```
 
 SGD makes cheaper early progress, but its constant-step iterates continue to
-wander around the optimum. SVRG pays for its snapshots and then drives the gap
+wander around the optimum. SVRG incurs the cost of its snapshots and then drives the gap
 down geometrically on this finite, strongly convex problem. The result does not
 say SVRG universally beats SGD: full passes are expensive on enormous or
 streaming datasets, the linear-rate theorem uses finite-sum smoothness and
@@ -895,7 +884,7 @@ average is generally biased for the gradient at the current point. SVRG and
 SAGA engineer an estimator that is unbiased at the current point and whose
 variance shrinks as the optimization converges.
 
-## Beyond Diagonals: the Preconditioning Ladder
+## Preconditioners Beyond Diagonal Scaling
 :label:`subsec_mdl-preconditioning-ladder`
 
 Step back and every method in this section is one answer to a single design
@@ -903,9 +892,8 @@ question: *which matrix $B_t$ should multiply the gradient*,
 $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, B_t\, \mathbf{g}_t$? Gradient
 descent answers $B = I$; Newton answers $B = (\nabla^2 f)^{-1}$ at $O(d^3)$;
 Adam answers with a diagonal estimated from gradient history at $O(d)$.
-Between the diagonal and the full inverse Hessian runs a ladder of structured
-compromises, and 2020s practice has climbed it rung by rung. What makes the
-climb affordable is one structural fact the "one long vector
+Between the diagonal and the full inverse Hessian are structured
+approximations. They are affordable because of a structural fact that the "one long vector
 $\mathbf{x} \in \mathbb{R}^d$" notation hides: a network's parameters come in
 *layers of matrices*, and curvature between layers can be ignored while
 curvature within a layer is captured cheaply.
@@ -976,7 +964,7 @@ $\eta$ transfers from a small model to a large one.
 
 * The **Ghadimi--Lan theorem** extends the no-convexity guarantee to
   SGD: with $\eta \le 1/L$ the descent lemma survives in expectation with a
-  noise tax $\tfrac{L}{2}\eta^2\sigma^2$ per step, and at the balanced
+  variance term $\tfrac{L}{2}\eta^2\sigma^2$ per step, and at the balanced
   $\eta \propto 1/\sqrt{K}$ a random iterate satisfies
   $\mathbb{E}\|\nabla f\|^2 = O(\sigma\sqrt{L\Delta/K})$. Noise turns the
   deterministic $1/K$ rate into $K^{-1/2}$, and the
@@ -1009,7 +997,7 @@ $\eta$ transfers from a small model to a large one.
 * **Schedules** negotiate the noise floor ($\propto \eta$) against transient
   progress; beyond convexity no theorem ranks decay shapes. Cosine spends a
   long small-step tail; **WSD** stays on the constant-step floor until a
-  final decay phase drops it (the loss cliff, reproduced on a noisy
+  final decay phase reduces it sharply, as illustrated on a noisy
   quadratic). **Warmup** is the adaptive family's structural need: at small
   $t$ the preconditioner is estimated from a handful of gradients (unbiased
   $\ne$ accurate), and the stability ceiling has not yet adapted to the
@@ -1153,7 +1141,7 @@ Every modern network trains with AdamW, warmup, and a decaying schedule,
 not the plain gradient descent we analyzed. Two gaps to close:
 
 - The one guarantee deep nets keep was proved for the **exact** gradient;
-  training uses noisy minibatch estimates. *What survives?*
+  training uses noisy minibatch estimates. *Which guarantee remains valid?*
 - The whole $\kappa$ story chained a **single** $\eta$ to the stiffest
   mode. *What if every coordinate had its own?*
 
@@ -1174,11 +1162,11 @@ Every optimizer below is under ten lines of NumPy, written by hand.
 
 [SGD without convexity]{.dtitle}
 
-[the descent lemma survives noise, taxed]{.dsub}
+[the descent lemma with stochastic gradients]{.dsub}
 :::
 :::
 
-::: {.slide title="The descent lemma pays a noise tax"}
+::: {.slide title="The descent lemma with gradient noise"}
 [Ghadimi--Lan]{.kicker}
 
 Feed an unbiased gradient with variance $\sigma^2$ through the quadratic
@@ -1188,8 +1176,8 @@ $$\mathbb{E}\left[f(\mathbf{x}_{k+1}) \mid \mathbf{x}_k\right]
 \;\le\; f(\mathbf{x}_k) - \eta\bigl(1 - \tfrac{L\eta}{2}\bigr)\,\|\nabla f(\mathbf{x}_k)\|^2
 + \tfrac{L\eta^2\sigma^2}{2}.$$
 
-One new term in the descent lemma: a **noise tax** paid every step,
-gradient large or not.
+Gradient noise contributes the additional term
+$L\eta^2\sigma^2/2$ at every step.
 
 . . .
 
@@ -1227,8 +1215,8 @@ column (slope $-1.23$) is exactly the luck you cannot bank on.
 :::
 :::
 
-::: {.slide title="One number, doing a matrix's job"}
-[The thesis]{.kicker}
+::: {.slide title="Coordinatewise scaling on a diagonal quadratic"}
+[Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
@@ -1236,9 +1224,8 @@ On a diagonal quadratic, per-coordinate steps $\eta_i = 1/\lambda_i$
 solve the problem in **one step**: a diagonal Newton's method, and
 $\kappa$ simply disappears.
 
-The zig-zag comes from using one number where $n$ are called for.
-Adaptive methods estimate those $n$ numbers *from the gradients
-themselves*.
+A global step size is limited by the largest curvature. Adaptive methods
+estimate separate coordinate scales from the observed gradients.
 :::
 
 ::: {.col .fig .big}
@@ -1254,7 +1241,7 @@ $$\mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t^2,
 \qquad
 \mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t} + \epsilon}\,\mathbf{g}_t.$$
 
-Two derivations, one rule: steepest descent in the metric
+The update can be derived as steepest descent in the metric
 $\mathrm{diag}(\sqrt{\mathbf{s}_t})$ (a coordinate is expensive in
 proportion to the evidence its gradients have been large) and the
 regret-optimal step for **sparse** features: a rare word's step decays
@@ -1344,8 +1331,8 @@ $x^\star = -1$.
 . . .
 
 ::: {.d2l-note .warn}
-The mechanism in one sentence: **the effective step on the informative
-gradient shrinks faster than its information accrues.** The rare $+C$
+The effective step on the informative gradient shrinks faster than its
+information accrues. The rare $+C$
 lands in $\mathbf{v}$ *quadratically* and throttles its own step by
 $\approx C$; then $\beta_2$ forgets, and the two $-1$ steps run at full
 size, the wrong way. Signal is throttled by its own magnitude; noise
@@ -1464,7 +1451,7 @@ The mathematics a schedule negotiates was already proved: a constant
 step parks on a **noise floor** $\propto \eta$; Robbins--Monro decay
 reaches the optimum; beyond convexity *no theorem ranks decay shapes*.
 
-- **cosine**: one knob, no kinks, a long gentle tail
+- **cosine**: smooth decay with a long tail of small steps
 - **WSD**: hold the plateau, drop the floor in a final decay;
   checkpoints stay re-decayable to any budget
 :::
@@ -1475,7 +1462,7 @@ reaches the optimum; beyond convexity *no theorem ranks decay shapes*.
 :::
 :::
 
-::: {.slide title="All of WSD's gain arrives in the decay phase"}
+::: {.slide title="WSD improves during its decay phase"}
 [Schedules]{.kicker}
 
 On the noisy quadratic (the miniature where the floor is exact),
@@ -1484,13 +1471,12 @@ at $80\%$ of budget and at the end:
 @!adaptive-stochastic-methods-schedules
 
 WSD sits *on the constant's floor* at $80\%$ (same trajectory, to every
-digit), then $400$ decay steps drop it $17\times$: the loss-curve cliff
-of WSD runs, reproduced by a one-line quadratic. Cosine's longer tail
-wins this pure-quadratic endgame; WSD's case lives off the toy, in
+digit), then $400$ decay steps reduce it by $17\times$. Cosine's longer tail
+gives the lower final error on this quadratic; WSD remains useful for
 re-decayable checkpoints and time spent at large steps.
 :::
 
-::: {.slide title="Warmup: never trust an estimated preconditioner cold"}
+::: {.slide title="Warmup for an estimated preconditioner"}
 [Warmup]{.kicker}
 
 For adaptive methods warmup is close to structural, and both reasons are
@@ -1523,7 +1509,7 @@ independently.
 :::
 :::
 
-::: {.slide title="Every optimizer answers one question"}
+::: {.slide title="A hierarchy of preconditioners"}
 [The ladder]{.kicker}
 
 *Which matrix $B_t$ multiplies the gradient?* GD says $I$; Newton says
@@ -1538,8 +1524,8 @@ whitening by polar factor (**Muon**) → full Newton (unreachable)
 
 . . .
 
-K-FAC's whole trick in one display, a curvature matrix with $(mn)^2$
-entries preconditioned by two small inverses:
+K-FAC preconditions a curvature matrix with $(mn)^2$ entries using two small
+inverses:
 
 $$(A \otimes G)^{-1}\,\mathrm{vec}(V) \;=\; \mathrm{vec}\left(G^{-1}\, V\, A^{-1}\right).$$
 :::
@@ -1549,8 +1535,8 @@ $$(A \otimes G)^{-1}\,\mathrm{vec}(V) \;=\; \mathrm{vec}\left(G^{-1}\, V\, A^{-1
 
 ::: {.cols}
 ::: {.col}
-- **Ghadimi--Lan:** the descent lemma survives noise, taxed; the
-  stochastic rate is $K^{-1/2}$.
+- **Ghadimi--Lan:** stochastic noise changes the deterministic rate to
+  $K^{-1/2}$.
 - **AdaGrad** is steepest descent in a learned metric; **Adam** adds an
   EMA, momentum, and an *exactly* unbiased startup correction.
 - **Reddi:** Adam can converge to the worst point of a convex problem;

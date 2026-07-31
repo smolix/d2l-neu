@@ -1,13 +1,11 @@
 # Softmax Regression
 :label:`sec_softmax`
 
-In :numref:`sec_linear_regression`, we introduced linear regression,
-working through implementations from scratch in :numref:`sec_linear_scratch`
-and again using high-level APIs of a deep learning framework
-in :numref:`sec_linear_concise` to do the heavy lifting.
+In :numref:`sec_linear_regression`, linear regression produced numerical
+predictions using a linear output and a loss derived from a noise model.
+Classification instead predicts which of several categories applies.
 
-Regression is the hammer we reach for when
-we want to answer *how much?* or *how many?* questions.
+Regression is appropriate for *how much?* or *how many?* questions.
 If you want to predict the number of dollars (price)
 at which a house will be sold,
 or the number of wins a baseball team might have,
@@ -25,13 +23,8 @@ for which least mean squares is not ideal either;
 such time-to-event analysis is the province
 of a specialized subfield called *survival modeling*.
 
-The point here is not to overwhelm you but just
-to let you know that there is a lot more to estimation
-than simply minimizing squared errors.
-And more broadly, there is a lot more to supervised learning than regression.
-In this section, we focus on *classification* problems
-where we put aside *how much?* questions
-and instead focus on *which category?* questions.
+These examples also show why squared error is not a universal objective.
+This section develops *classification* for *which category?* questions.
 
 
 
@@ -678,7 +671,7 @@ $$\operatorname*{argmax}_j \hat{y}_j = \operatorname*{argmax}_j o_j.$$
 So to *predict* a class we never need to compute the softmax; we read off the biggest logit. The softmax matters for the **loss**, not the decision.
 :::
 
-::: {.slide title="Temperature: one dial from argmax to uniform"}
+::: {.slide title="Temperature controls distribution sharpness"}
 [The Softmax · Boltzmann's dial]{.kicker}
 
 Boltzmann weighted energy states by $\exp(-E/kT)$; for us, replace
@@ -693,7 +686,7 @@ confidence does. Hold this dial; it returns at the end of the section.
 :::
 :::
 
-::: {.slide title="The softmax *is* an argmax, plus the right noise"}
+::: {.slide title="Softmax from randomized utility"}
 [The Softmax · origins]{.kicker}
 
 Another route to probabilities: perturb each score and report the winner,
@@ -770,7 +763,8 @@ $$-\log P(\mathbf{Y}\mid\mathbf{X}) = \sum_{i=1}^n l\bigl(\mathbf{y}^{(i)}, \hat
 
 . . .
 
-Minimizing this negative log-likelihood is exactly the recipe we used for squared error, now over discrete categories.
+Minimizing this negative log-likelihood applies the same principle used to
+derive squared error, now for discrete categories.
 :::
 
 ::: {.slide title="The cross-entropy loss"}
@@ -786,7 +780,7 @@ It is $\ge 0$, and $0$ only with certainty on the right class, which finite logi
 :::
 
 ::: {.slide title="The gradient: prediction minus truth"}
-[Loss · the payoff]{.kicker}
+[Loss · gradient]{.kicker}
 
 Substitute the softmax into the loss and it collapses to a log-partition term minus a linear term, $l = g(\mathbf{o}) - \mathbf{y}^\top\mathbf{o}$ with $g(\mathbf{o}) = \log\sum_k \exp(o_k)$. Differentiate:
 

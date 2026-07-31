@@ -6,15 +6,13 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Normalization Layers
 :label:`sec_batch_norm`
 
-Training deep neural networks is difficult.
-Getting them to converge in a reasonable amount of time can be tricky.
-In this section, we describe *batch normalization*, a popular and effective technique
-that consistently accelerates the convergence of deep networks :cite:`Ioffe.Szegedy.2015`.
-Together with residual blocks---covered later in :numref:`sec_resnet`---batch normalization
-has made it possible for practitioners to routinely train networks with over 100 layers.
-A secondary (serendipitous) benefit of batch normalization lies in its inherent regularization.
-Batch statistics are not the only option, though: we also cover layer normalization
-and group normalization, close cousins that normalize each example on its own.
+Deep networks can be sensitive to activation scale and may converge slowly.
+*Batch normalization* standardizes intermediate activations using minibatch
+statistics and often accelerates optimization :cite:`Ioffe.Szegedy.2015`.
+Together with residual connections (:numref:`sec_resnet`), it enabled routine
+training of networks with more than one hundred layers. This section derives
+batch normalization and compares it with layer normalization and group
+normalization, which compute their statistics within each example.
 
 ```{.python .input #batch-norm-batch-normalization}
 %%tab mxnet
@@ -1166,7 +1164,7 @@ switch automatically:
 @batch-norm-concise-implementation-2
 :::
 
-::: {.slide title="The two real problems"}
+::: {.slide title="Limitations of Batch Statistics"}
 BatchNorm couples examples through the batch statistics:
 
 - **Minibatch coupling**: the estimates degrade as batches shrink.

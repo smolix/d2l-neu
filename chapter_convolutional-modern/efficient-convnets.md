@@ -785,9 +785,17 @@ branches that fold away also appear in large-kernel and hybrid architectures.
 
 ## Summary and Discussion
 
-Efficiency turned out to be a design axis of its own, with its own architectures and its own failure modes. Depthwise separability cuts the cost of convolution by roughly $k^2$ at small accuracy cost; the inverted bottleneck arranges the factorized operations so that the expensive tensors are also the transient ones; compound scaling and architecture search allocate a budget across width, depth, and resolution better than manual choice; and structural re-parameterization separates the network you train from the network you ship, connected by exact weight algebra. Twice in this section the correct accounting was memory traffic rather than arithmetic: EfficientNetV2 removed depthwise convolutions from early stages because they starve the accelerator, and RepVGG's whole premise is that fewer, larger operations beat more, smaller ones at equal FLOPs. Operation counts are a proxy, and hardware keeps score in its own currency.
+Efficiency is a separate design objective with its own architectures and
+failure modes. Depthwise separability reduces convolutional arithmetic; inverted
+bottlenecks arrange the factorized operations so that their largest tensors are
+transient; compound scaling and architecture search allocate computation across
+width, depth, and resolution; and structural re-parameterization uses different
+but algebraically equivalent graphs for training and deployment. Arithmetic
+alone is insufficient: EfficientNetV2 avoids depthwise convolutions in early
+stages because of memory traffic, and RepVGG obtains better hardware utilization
+from fewer, larger operations at similar FLOPs.
 
-As of 2026, deployment sorts by that currency. On the cheapest tier,
+As of 2026, deployment choices depend on these measured hardware costs. On the cheapest tier,
 microcontrollers and entry phones, plain depthwise convnets of the MobileNet
 lineage remain the only thing that fits. Flagship phones run
 convolution-attention hybrids such as FastViT and MobileNetV4 variants, using

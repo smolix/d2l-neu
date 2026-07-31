@@ -6,17 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Concise Implementation of Linear Regression
 :label:`sec_linear_concise`
 
-In :numref:`sec_linear_scratch` we implemented every piece of linear regression
-by hand: we initialized the weights, coded the forward pass, wrote out the squared
-error, and ran the parameter update ourselves.
-You *should* know how to do this, and doing it once is instructive.
-But because data iterators, loss functions, optimizers, and neural network layers
-are so common, modern deep learning frameworks package all of them as reusable,
-heavily optimized, well-tested components, freeing us to focus on the model
-rather than on low-level bookkeeping.
-In this section we rebuild the very same model from :numref:`sec_linear_scratch`
-using these high-level APIs, showing exactly which hand-rolled piece each
-framework primitive replaces.
+In :numref:`sec_linear_scratch` we initialized the parameters, defined the
+forward pass and squared loss, and implemented the update explicitly. Modern
+frameworks provide reusable implementations of each of these components. This
+section rebuilds the same model with framework data loaders, layers, losses,
+and optimizers, identifying the primitive that replaces each explicit step.
 
 ```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab mxnet
@@ -404,27 +398,13 @@ print(f'error in estimating b: {data.b - b}')
 
 ## Summary
 
-This section contains the first
-implementation of a deep network (in this book)
-to tap into the conveniences afforded
-by modern deep learning frameworks,
-such as MXNet :cite:`Chen.Li.Li.ea.2015`, 
-JAX :cite:`Frostig.Johnson.Leary.2018`, 
-PyTorch :cite:`Paszke.Gross.Massa.ea.2019`, 
-and Tensorflow :cite:`Abadi.Barham.Chen.ea.2016`.
-We used framework defaults for loading data, defining a layer,
-a loss function, an optimizer and a training loop.
-Whenever the framework provides all necessary features,
-it is generally a good idea to use them,
-since the library implementations of these components
-tend to be heavily optimized for performance
-and properly tested for reliability.
-At the same time, try not to forget
-that these modules *can* be implemented directly.
-This is especially important for aspiring researchers
-who wish to live on the leading edge of model development,
-where you will be inventing new components
-that cannot possibly exist in any current library.
+MXNet :cite:`Chen.Li.Li.ea.2015`, JAX
+:cite:`Frostig.Johnson.Leary.2018`, PyTorch
+:cite:`Paszke.Gross.Massa.ea.2019`, and TensorFlow
+:cite:`Abadi.Barham.Chen.ea.2016` provide standard implementations of data
+loaders, layers, losses, optimizers, and training utilities. These components
+are concise, tested, and optimized. Direct implementations remain useful when
+a model requires a component that the framework does not provide.
 
 :begin_tab:`mxnet`
 In Gluon, the `data` module provides tools for data processing,

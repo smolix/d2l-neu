@@ -6,14 +6,12 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Parameters, State, and Memory
 :label:`sec_parameters`
 
-Almost everything we do to a model other than calling it operates on its
-*state*: the optimizer updates it, a checkpoint serializes it, device
-placement moves it, fine-tuning trains part of it, and the answer to "will
-this model fit on my GPU?" is a few lines of arithmetic over it. So far that
-state has been handled for us; the layers created the tensors and the
-training loop updated them. This section opens the box: how to reach any tensor in a model,
-which tensors are trained and which merely travel with the model, what they
-all cost in bytes, and how to share or freeze them.
+A model's *state* includes the tensors updated by the optimizer and the
+persistent tensors used by its computation. Checkpointing serializes this
+state, device placement moves it, and fine-tuning selects which parts to
+update. Its size also determines a substantial fraction of training memory.
+This section explains how to access state, distinguish parameters from
+buffers, count its storage, tie parameters, and freeze selected components.
 
 
 ```{.python .input #parameters-state-memory-parameters-state-and-memory}
@@ -694,7 +692,7 @@ memory, and the answer is arithmetic you can do on a napkin. Counting
 parameters is one line. Counting *bytes* requires remembering everything that
 training keeps per parameter: the weight itself, its gradient, and the
 optimizer's state. Adam maintains two running moments per parameter, so in
-fp32 the ledger reads:
+For fp32 the memory calculation is:
 
 | Training state       | Precision | Bytes per parameter |
 |----------------------|-----------|---------------------|

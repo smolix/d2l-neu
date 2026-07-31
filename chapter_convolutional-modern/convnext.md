@@ -8,7 +8,18 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 By 2021, vision transformers :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` had taken over the top of the ImageNet leaderboard, and hierarchical variants such as the Swin transformer :cite:`liu2021swin` were displacing convnets as the default backbone for detection and segmentation. It was tempting to conclude that attention had made convolution obsolete. But a transformer differs from a 2015 ResNet in many ways besides attention: its training recipe, its stem, its activation function, its normalization layers, the shape and depth of its stages. Which of these differences actually carried the improvement?
 
-:citet:`liu2022convnet` answered by experiment. Starting from a ResNet-50, they applied one transformer-inspired design change at a time, measured ImageNet accuracy after each, kept what helped, and never added attention. The end point, named ConvNeXt, reaches 82.0% top-1 accuracy where the Swin-T transformer of the same computational cost reaches 81.3%. The exercise is the best guided tour of modern architecture design we know of, because every step uses a concept this book has already taught: training recipes (:numref:`sec_training_recipes`), depthwise convolutions (:numref:`sec_depthwise_separable`), the inverted bottleneck (:numref:`sec_efficient_cnns`), receptive fields (:eqref:`eq_receptive_field`), and normalization layers (:numref:`sec_batch_norm`). In this section we walk the roadmap, implement the result, and train a scaled-down ConvNeXt with the modern recipe of :numref:`sec_training_recipes`.
+:citet:`liu2022convnet` answered by experiment. Starting from a ResNet-50,
+they applied one transformer-inspired design change at a time, measured
+ImageNet accuracy, retained changes that helped, and did not add attention. The
+resulting ConvNeXt reaches 82.0% top-1 accuracy, compared with 81.3% for a
+Swin-T transformer of similar computational cost. The modifications use
+concepts introduced earlier: modern training procedures
+(:numref:`sec_training_recipes`), depthwise convolutions
+(:numref:`sec_depthwise_separable`), inverted bottlenecks
+(:numref:`sec_efficient_cnns`), receptive fields
+(:eqref:`eq_receptive_field`), and normalization layers
+(:numref:`sec_batch_norm`). We examine the ablation sequence, implement the
+architecture, and train a scaled-down ConvNeXt.
 
 ```{.python .input #convnext-imports}
 %%tab mxnet
@@ -710,7 +721,7 @@ End point: **ConvNeXt, 82.0%** vs. Swin-T's 81.3% at equal FLOPs.
 | separate downsampling | **82.0%** |
 :::
 
-::: {.slide title="Read the first row first"}
+::: {.slide title="Interpreting the Ablation Table"}
 The largest single jump, **+2.7 points, is the recipe**, not the
 architecture (and RSB pushed the same ResNet-50 to 80.4%).
 
@@ -795,7 +806,7 @@ label smoothing + Mixup, from the previous section:
 @convnext-eval@pytorch
 :::
 
-::: {.slide title="Read the result plainly"}
+::: {.slide title="Interpreting the Result"}
 - ConvNeXt, 3.4M params: **about 92%**.
 - Parameter-matched Compact ResNet-18, 3.35M, same recipe and budget: **about 94%**.
 

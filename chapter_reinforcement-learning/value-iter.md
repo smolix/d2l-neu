@@ -1,7 +1,7 @@
 # Dynamic Programming
 :label:`sec_valueiter`
 
-Hand the agent the four objects $(\mathcal{S}, \mathcal{A}, P, r)$ and "act well" becomes a computation: the value of a state decomposes into now plus later, the decomposition ties all states into one system of equations, and the system is solved by iterating a map that *contracts*, shrinking its error geometrically at rate $\gamma$ from any starting guess. This is *dynamic programming* :cite:`BellmanDPBook`, the exact, model-based corner of reinforcement learning and the yardstick for every learning algorithm in these two chapters. On our slippery lake the answer justifies the machinery: the optimal policy is not the shortest path, and we will measure what the difference is worth.
+When the state space, action space, transition kernel, and reward are known, an optimal policy can be computed by *dynamic programming* :cite:`BellmanDPBook`. The Bellman equations decompose each state's value into its immediate reward and the values of possible successor states. For discounted finite MDPs, the associated Bellman operator is a contraction, which yields a unique solution and a convergent iterative algorithm. We apply these results to FrozenLake and compare the optimal policy with the shortest-path policy.
 
 ```{.python .input #value-iter-dynamic-programming}
 %%tab pytorch
@@ -39,7 +39,7 @@ note that the summation inside the expectation is from $t=1,\ldots, \infty$ beca
 
 ### The Identity Linking $V$ and $Q$
 
-The two functions are one step apart. Average the pinned first action of $Q^\pi$ under the policy and the pin disappears:
+The value function averages the action-value function over the policy's first action:
 
 $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, Q^\pi(s, a);\ \textrm{for all } s \in \mathcal{S}.$$
 
@@ -47,14 +47,14 @@ Conversely, the first stage of $Q^\pi$ is explicit: $Q^\pi(s, a) = r(s, a) + \ga
 
 ### The Advantage Function
 
-The gap deserves a name: the *advantage* of an action is its value in excess of the policy's own habit at that state,
+The *advantage* of an action is its value relative to the policy's average value at that state,
 
 $$
 A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad E_{a \sim \pi(s)} \big[ A^\pi(s, a) \big] = 0,
 $$
 :eqlabel:`eq_advantage`
 
-the zero mean being the averaging identity read backwards. The advantage is the currency of improvement: $A^\pi(s, a) > 0$ says "do $a$ more often", and a policy with no positive advantages has nothing left to fix. It is also what every policy-gradient estimator from :numref:`sec_policygradient` onward tries to approximate; we define it once, here, so later sections can use the symbol without ceremony.
+The zero-mean identity follows directly from the relation between $V^\pi$ and $Q^\pi$. A positive advantage indicates that action $a$ performs better than the policy's current average at state $s$. Later policy-gradient methods estimate or approximate this quantity when updating the policy.
 
 ## The Bellman Equations
 
@@ -126,26 +126,26 @@ $$\|TV - TV'\|_\infty \leq \gamma\, \|V - V'\|_\infty.$$
 
 **Proof.** Fix $s$ and write $f(a)$ and $g(a)$ for the bracketed terms in $(TV)(s)$ and $(TV')(s)$. For every $a$, $|f(a) - g(a)| = \gamma\, |\sum_{s'} P(s' \mid s, a)(V(s') - V'(s'))| \leq \gamma \|V - V'\|_\infty$, because the probabilities are non-negative and sum to one. A maximum moves less than its inputs, $|\max_a f(a) - \max_a g(a)| \leq \max_a |f(a) - g(a)|$, so $|(TV)(s) - (TV')(s)| \leq \gamma \|V - V'\|_\infty$ for every $s$. $\blacksquare$
 
-The discount that made the return finite in :numref:`sec_mdp` here makes planning converge. This is precisely the situation of Banach's fixed-point theorem, the tool that gave differential equations existence and uniqueness in :numref:`sec_mdl-ode-existence-uniqueness`, and the picture (:numref:`fig_rl_contraction`) is the same: nested balls closing in on a point the map cannot escape.
+The contraction permits an application of Banach's fixed-point theorem. It implies that the Bellman operator has a unique fixed point and that repeated application converges to it. :numref:`fig_rl_contraction` illustrates the resulting nested error bounds.
 
 ![Value iteration converges because the Bellman operator is a contraction. (a) A two-state MDP in the plane of its value functions: the sup-norm balls of radius $\gamma^k r_0$ around $V^*$ are nested squares, and each backup lands the iterate strictly inside the next smaller one. (b) The same statement measured on the slippery lake at $\gamma = 0.95$, starting from $V_0 = 0$: the distance to $V^*$ never exceeds the $\gamma^k$ guarantee, the dashed line, and here shrinks somewhat faster.](../img/mdl-rl-contraction.svg)
 :label:`fig_rl_contraction`
 
-### Four Consequences: Uniqueness, Rate, Stopping Rule and the $\gamma = 1$ Boundary
+### Consequences of Contraction
 
-Everything this chapter needs falls out in four steps. First, **uniqueness**: two fixed points would satisfy $\|V - V'\|_\infty \leq \gamma \|V - V'\|_\infty$, which for $\gamma < 1$ forces $\|V - V'\|_\infty = 0$: the optimality equation pins $V^*$ down completely. Second, **convergence from anywhere, at rate $\gamma$**: iterating $V_{k+1} = TV_k$ from any $V_0$ gives
+The contraction has four consequences. First, the fixed point is unique: if $V$ and $V'$ are fixed points, then $\|V-V'\|_\infty\leq\gamma\|V-V'\|_\infty$, which for $\gamma<1$ implies $V=V'$. Second, value iteration converges from any initial $V_0$ at a geometric rate:
 
 $$\|V_k - V^*\|_\infty = \|TV_{k-1} - TV^*\|_\infty \leq \gamma\, \|V_{k-1} - V^*\|_\infty \leq \cdots \leq \gamma^k\, \|V_0 - V^*\|_\infty,$$
 
-so reaching accuracy $\varepsilon$ takes at most $\log(\|V_0 - V^*\|_\infty / \varepsilon) / \log(1/\gamma)$ sweeps; since $\log(1/\gamma) \approx 1 - \gamma$ near one, that is the *effective horizon* $1/(1-\gamma)$ of :numref:`sec_mdp` times $\ln(1/\varepsilon)$: far-sighted objectives are solvable, just proportionally slower. Third, a **stopping rule**: the bound above mentions the unknown $V^*$, but telescoping $\|V_k - V^*\|_\infty \leq \sum_{j \geq k} \|V_{j+1} - V_j\|_\infty$ and shrinking each summand by $\gamma$ per step gives
+Thus accuracy $\varepsilon$ is reached after at most $\log(\|V_0-V^*\|_\infty/\varepsilon)/\log(1/\gamma)$ sweeps. For $\gamma$ near one, the denominator is approximately $1-\gamma$, connecting the rate to the effective horizon of :numref:`sec_mdp`. Third, the successive differences provide a computable stopping rule:
 
 $$\|V_k - V^*\|_\infty \leq \frac{\gamma}{1 - \gamma}\, \|V_k - V_{k-1}\|_\infty,$$
 
-a certificate built from the observable sweep-to-sweep change, which is what an implementation should actually test; we do so below. Fourth, **the boundary**: at $\gamma = 1$ the contraction modulus is $1$, the argument collapses, and the undiscounted operator can have no fixed point or a continuum of them; episodic problems at $\gamma = 1$ can still behave (ours does), but the *guarantee* is gone (exercise 5 makes both halves precise). Finally, the max entered the proof only through the "maximum of differences" step, so replacing it by an average under a fixed policy $\pi$ yields an operator $T^\pi$ that contracts by the same argument, with unique fixed point $V^\pi$. One proof, two algorithms; the full theory is in :cite:`Puterman.1994,Bertsekas.2025`.
+The right-hand side depends only on consecutive iterates. Fourth, when $\gamma=1$ the operator is no longer a strict contraction, so uniqueness and convergence do not follow from this argument. Some episodic undiscounted problems still converge, but the general guarantee is absent. Replacing the maximum by an expectation under a fixed policy gives the policy-evaluation operator $T^\pi$, which is a contraction by the same proof and has fixed point $V^\pi$ :cite:`Puterman.1994,Bertsekas.2025`.
 
 ## Value Iteration, Policy Evaluation and Policy Iteration
 
-A theorem this constructive is rare: its proof *is* an algorithm, and this section runs it on the slippery lake of :numref:`sec_mdp`, rebuilt as a dense model in two lines:
+Repeated application of the Bellman operator gives value iteration. We apply it to the slippery FrozenLake model from :numref:`sec_mdp`:
 
 ```{.python .input #value-iter-three-algorithms}
 %%tab pytorch, jax
@@ -214,7 +214,7 @@ for name, e in [('sweep-to-sweep change', gap),
 k_cert = np.argmax(certified <= 1e-6) + 2
 ```
 
-The naive test, "stop when a sweep changes nothing beyond $10^{-6}$", fires at sweep $128$ and promises nothing by itself. Multiplied by $\gamma / (1 - \gamma) = 19$ it becomes a certificate, firing at sweep $164$; the truth it certifies crossed $10^{-6}$ at sweep $158$. A guaranteed answer costs a handful of extra sweeps, and the assert confirms the certificate never lies.
+The unadjusted rule $\|V_{k+1}-V_k\|_\infty<10^{-6}$ stops at sweep $128$ but does not directly bound the error to $V^*$. The contraction-based certificate stops at sweep $164$, while the actual error first falls below $10^{-6}$ at sweep $158$. Thus the certified rule is conservative by six sweeps in this example.
 
 ### Policy Evaluation
 
@@ -265,7 +265,7 @@ while True:
 assert np.abs(V - V_star).max() < 1e-12
 ```
 
-The assert is the point: two different algorithms agree on $V^*$ to twelve decimals, which is what "the fixed point is unique" looks like in a terminal. The bookkeeping is lopsided, though:
+The assertion verifies that value iteration and policy iteration agree on $V^*$ to twelve decimal places. Their computational costs, however, are organized differently:
 
 ```{.python .input #value-iter-policy-iteration-and-generalized-policy-iteration-2}
 %%tab pytorch, jax
@@ -276,9 +276,9 @@ print(f'its greedy policy already equals pi* from sweep '
       f'{np.argmax(ok) + 1} on')
 ```
 
-Policy iteration needed two rounds: greedy on the random walker's values is already optimal on this small lake, and the second round merely confirms it. But each round hid $800$ evaluation sweeps, so the like-for-like comparison is in Bellman backups, not rounds; exercise 6 does that accounting. The more interesting number is value iteration's: its greedy policy stops changing at sweep $14$, some $150$ sweeps before the values are certified. Policies converge long before values do, because the argmax needs only the ranking of the actions, not the digits.
+Policy iteration requires two improvement rounds on this example, but each round contains 800 evaluation sweeps. Bellman backups therefore provide a more informative comparison than outer iterations. For value iteration, the greedy policy becomes optimal at sweep 14, well before the value-error certificate is satisfied. The policy depends only on the ordering of action values, so it can stabilize before their numerical values have converged.
 
-That observation licenses a whole design space: evaluation need not run to convergence before improvement acts, and improvement need not wait. Any interleaving that keeps nudging $V$ toward $V^\pi$ and $\pi$ toward greedy($V$) ends at the same corner, where both conditions hold and :eqref:`eq_bellman_optimality` is satisfied. Sutton and Barto call this schema *generalized policy iteration* (GPI) :cite:`Sutton.Barto.2018`, and :numref:`fig_rl_gpi` draws it: policy iteration completes each move, value iteration improves after a single sweep, and the algorithms ahead take smaller, noisier steps still, Q-learning improving on one sampled backup (:numref:`sec_qlearning`), actor-critic moving along both axes at once (:numref:`sec_actorcritic`). Whenever you wonder why acting greedily on a learned value estimate is sensible at all, the answer is the policy improvement theorem, applied with more or less patience.
+Policy evaluation and improvement need not be completed in separate phases. *Generalized policy iteration* (GPI) interleaves updates that move $V$ toward $V^\pi$ with updates that move $\pi$ toward a greedy policy :cite:`Sutton.Barto.2018`. Policy iteration performs nearly complete evaluation before improvement, whereas value iteration improves after each sweep. Q-learning uses sampled backups (:numref:`sec_qlearning`), and actor--critic methods update value and policy estimates together (:numref:`sec_actorcritic`). :numref:`fig_rl_gpi` summarizes these cases.
 
 ![Generalized policy iteration. Evaluation, $V = V^\pi$, and greediness, $\pi = \mathrm{greedy}(V)$, hold together only at the optimum, and each algorithm is a discipline for stepping toward both: policy iteration completes each move, value iteration improves after one sweep, Q-learning takes single sampled backups, actor-critic moves along both axes at once.](../img/mdl-rl-gpi.svg)
 :label:`fig_rl_gpi`
@@ -319,7 +319,7 @@ for name, p in [('slip-aware optimum', pi_star),
     print(f'{name}: reaches the goal in {success:.1%} of 2000 episodes')
 ```
 
-About $0.74$ against about $0.05$: the dynamic-programming policy reaches the goal roughly sixteen times as often. (The rates count episodes finishing within the environment's $100$-step limit; a slip-aware walk is unhurried, and with the limit lifted its success probability is about $0.78$.) The shortest path fails because five of its six moves are taken beside holes, and every command has two perpendicular slips; the optimum buys distance from the holes with time. Where it pays for safety is visible state by state:
+The dynamic-programming policy reaches the goal in about $0.74$ of the episodes, compared with about $0.05$ for the shortest-path policy. These rates count episodes that finish within the environment's 100-step limit; without the limit, the success probability of the optimal policy is about $0.78$. The shortest path places five of its six actions next to holes, where perpendicular slips can terminate the episode. The optimal policy takes a longer route that reduces this risk. The statewise differences are shown below:
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-3}
 %%tab pytorch, jax
@@ -334,9 +334,9 @@ for s in away:
           f'the shortest path takes {"<v>^"[shortest[s]]}')
 ```
 
-At four of the eleven frozen cells the optimal command moves the agent *away* from the goal, on the grid of :numref:`fig_rl_gridworld`. One reads like a proof in miniature: at $s = 8$, commanding *up* is the only action all three of whose outcomes avoid the hole at $12$: slide left into the wall, slide right to $9$, or move up to $4$. The policy has also learned the wall trick: at $s = 1$ and $s = 3$ it commands *up*, straight into the wall, wasting the intended move so that only the harmless sideways slips remain. None of this is cleverness we put in; it is :eqref:`eq_optimal_policy` evaluating three-outcome averages nobody would compute by hand.
+At four of the eleven nonterminal frozen cells, the optimal command points away from the goal. At state 8, *up* is the only action whose three possible outcomes all avoid the hole at state 12: the agent moves to state 4, state 9, or remains against the wall. At states 1 and 3, commanding *up* also uses the wall to avoid more dangerous outcomes. These choices follow from averaging over the three transition outcomes in :eqref:`eq_optimal_policy`.
 
-**Aside: calm ice, in closed form.** Switch the slip off and the subtlety vanishes so cleanly that the computation can be done in your head. With deterministic moves the optimality equation says $V^*(s) = \gamma\, V^*(s')$ along the best move, so the value is $\gamma^{d(s) - 1}$ with $d(s)$ the number of moves to the goal, and sweep $k$ reaches exactly the cells within $k$ moves of it: convergence in six sweeps because the map is six moves deep (:numref:`fig_rl_value_wavefront`). That wavefront reading of sweeps as steps to the goal holds only in this deterministic special case; on ice the sweep count is set by $\gamma$, as we measured. The closed form also explains our hand-written opponent: greedy on the calm-ice solution *is* the shortest-path policy, which the assert below checks, so the $0.05$ above is no strawman but the exact optimum of the wrong model.
+**Deterministic case.** Without slippery transitions, $V^*(s)=\gamma V^*(s')$ along an optimal move. Hence $V^*(s)=\gamma^{d(s)-1}$, where $d(s)$ is the shortest distance to the goal. After $k$ sweeps, value has propagated to exactly the states within $k$ moves of the goal, and this map converges in six sweeps (:numref:`fig_rl_value_wavefront`). This finite wavefront is specific to deterministic terminal rewards; the stochastic case converges geometrically. The greedy policy for the deterministic solution is exactly the shortest-path policy, as verified below.
 
 ![Value iteration on the calm lake, where the answer is available in closed form. With the slip off, sweep $k$ reaches exactly the cells within $k$ moves of the goal, the orange outline marking the newly reached ones; the value at distance $d$ is $\gamma^{d-1}$. The start cell is six moves away, so its estimate stays at zero for five sweeps and equals $\gamma^5 = 0.774$ from the sixth on.](../img/mdl-rl-value-wavefront.svg)
 :label:`fig_rl_value_wavefront`
@@ -350,20 +350,20 @@ assert (calm.backup(V_calm).argmax(axis=1) == shortest).all()
 print(f'V*(s0) on calm ice: {V_calm[0]:.4f};  gamma^5 = {gamma ** 5:.4f}')
 ```
 
-The two start-state values bracket what the stochasticity costs, $0.774$ calm against $0.180$ on ice under optimal play: no policy can buy it back, only pay less of it than the shortest path does.
+The optimal start-state value decreases from $0.774$ on deterministic ice to $0.180$ on slippery ice. This difference quantifies the effect of the stochastic transitions under optimal play.
 
 ## Summary
 
-Given the model, acting well is computable. A policy is scored by $V^\pi$ and $Q^\pi$, linked by averaging, $V^\pi(s) = \sum_a \pi(a \mid s) Q^\pi(s, a)$, with the advantage :eqref:`eq_advantage` naming the gap improvement exploits. The Markov assumption folds infinite-horizon expectations into one-step recursions, the Bellman expectation equations for a fixed policy and the optimality equation :eqref:`eq_bellman_optimality` for the best one. The optimality operator is a $\gamma$-contraction in the sup norm: its fixed point $V^*$ is unique, value iteration converges geometrically from any start, and the sweep-to-sweep change certifies the error via the factor $\gamma / (1 - \gamma)$. Policy evaluation is the same sweep without the max; policy iteration alternates it with greedy improvement, which provably never hurts; interleaving the two at any granularity is generalized policy iteration, the skeleton the coming learning algorithms hang on. All of it consumed `env.unwrapped.P`: this was the book's one purely model-based section, and the measurement primitive `evaluate` is what survives when the model is taken away.
+A policy is described by its state and action values, related by $V^\pi(s)=\sum_a\pi(a\mid s)Q^\pi(s,a)$. The Bellman expectation equations characterize a fixed policy, and the Bellman optimality equation characterizes $V^*$. For $\gamma<1$, the optimality operator is a contraction: its fixed point is unique, value iteration converges geometrically, and consecutive iterates give a computable error bound. Policy evaluation replaces maximization by an expectation under a fixed policy. Policy iteration alternates evaluation with greedy improvement, while generalized policy iteration permits partial interleaving. These methods require the transition and reward model; later sections replace exact expectations by sampled transitions.
 
-**What the experiments show, and what they do not.** Every number here except two is an exact computation on the known model, reproducible to the printed digit: the sweep counts ($128$, $158$, $164$), the start-state values ($0.1805$ on ice, $0.7738 = \gamma^5$ calm), the round count, and the away-pointing states are deterministic facts about one MDP at $\gamma = 0.95$. The exceptions are the two Monte Carlo success rates, $2{,}000$ seeded episodes each: rerunning with these seeds reproduces $73.6\%$ and $4.7\%$ exactly; a different seed moves each by a percentage point or so. The comparison shows that planning against the true stochastic model beats planning against a simplified one on *this* lake; it does not show how to act when the model is not given, which is the entire remaining problem of these two chapters.
+**Experimental scope.** The value functions, convergence counts, and policies are exact for this MDP at $\gamma=0.95$. The two success rates are Monte Carlo estimates from $2{,}000$ seeded episodes and vary slightly with the seed. The comparison demonstrates the value of planning with the correct stochastic model on this environment; it does not address learning when the model is unknown.
 
 ## Exercises
 
 1. [short-code] *Cost of a sweep.* Give the cost of one value iteration sweep
    :eqref:`eq_value_iteration` in terms of the number of states, the number of
    actions, and the number of successors per state-action pair, and say which
-   of the three the dense `mdp.backup` of :numref:`sec_mdp` actually pays for.
+   of the three the dense `mdp.backup` of :numref:`sec_mdp` actually computes.
    Then use $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$ to show
    that reaching accuracy $\varepsilon$ needs
    $O(\log(1/\varepsilon) / \log(1/\gamma))$ sweeps. Confirm the per-sweep cost
@@ -405,7 +405,7 @@ Given the model, acting well is computable. A policy is scored by $V^\pi$ and $Q
    converged in $2$ rounds against value iteration's $164$ certified sweeps,
    which looks like a rout, but each round contained $800$ evaluation sweeps
    of :eqref:`eq_policy_eval` before the greedy step :eqref:`eq_optimal_policy`.
-   Charge both algorithms in the same currency, Bellman backups, and plot the
+   Measure both algorithms by the number of Bellman backups, and plot the
    sup-norm error against backups on the $4 \times 4$ and $8 \times 8$ maps
    (a few seconds each). Which converges in fewer outer iterations, which in
    fewer backups, and how does the answer move as $\gamma \to 1$? Does
@@ -459,7 +459,7 @@ $$V^*(s) = \max_{a} \Big[ r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^*(s') \
 . . .
 
 Every algorithm in these two chapters walks one step down this tree;
-the sampled backup (right) is :numref:`sec_qlearning` in one picture.
+the sampled backup (right) leads to :numref:`sec_qlearning`.
 :::
 
 ::: {.slide title="Why It Converges"}
@@ -517,7 +517,7 @@ slips remain: not cleverness, just :eqref:`eq_optimal_policy`.
 - Bellman: expectation form for a policy, optimality form :eqref:`eq_bellman_optimality` for the best one.
 - The operator contracts at rate $\gamma$: unique $V^*$, geometric convergence, checkable certificate.
 - Value iteration, policy evaluation, policy iteration: one proof, three algorithms.
-- Generalized policy iteration is the skeleton of everything ahead.
+- Generalized policy iteration alternates approximate evaluation and improvement.
 - On ice, the optimal policy is not the shortest path, and we measured the difference: 0.74 vs 0.05.
 - This was the book's model-based corner; from :numref:`sec_qlearning` on, only samples.
 :::

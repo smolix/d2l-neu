@@ -1360,10 +1360,8 @@ a significant chunk of modern deep learning.
 There is a lot more to it: matrix decompositions, for example,
 reveal low-dimensional structure in real-world datasets
 and power entire subfields of machine learning.
-But the best time to learn more mathematics
-is once you have gotten your hands dirty
-applying machine learning to real data,
-so we wrap up here.
+The later mathematics chapters develop these topics when they become relevant
+to specific learning problems.
 
 If you are eager to learn more linear algebra,
 start with :numref:`chap_mdl-linear-algebra`,

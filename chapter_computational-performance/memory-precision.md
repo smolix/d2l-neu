@@ -1,19 +1,16 @@
 # Memory and Precision
 :label:`sec_memory_precision`
 
-So far this chapter has fought for *time*: fewer memory round trips, fewer
-kernel launches, more arithmetic per byte. This section fights for *space*.
-Sooner or later a model stops fitting: the optimizer states, the
-activations held for the backward pass, and a large enough batch together
-overflow the card, and training dies with an out-of-memory error long
-before it is slow. The good news is that memory is the most *legible* of
-the resources — you can write down exactly where every byte of a training
-step goes, measure it against that prediction, and then spend three
-well-understood techniques to buy headroom: lower-precision formats, which
-also buy speed; activation checkpointing, which trades compute for memory;
-and gradient accumulation, which trades *time* for the effect of a bigger
-batch. Together these are the "it doesn't fit" rung of the ladder, and
-they are what stands between a 24 GB card and a model that wants 30.
+The preceding sections focused on execution time. This section considers
+device-memory capacity. Parameters, optimizer states, saved activations, and
+the minibatch must all fit simultaneously during training. Their sizes can
+be estimated before execution and compared with runtime measurements.
+
+We study three methods for reducing the limiting allocation. Lower-precision
+formats reduce tensor size and can increase throughput. Activation
+checkpointing recomputes selected activations during backpropagation instead
+of storing them. Gradient accumulation preserves the effect of a larger
+batch while processing smaller microbatches.
 
 *Prerequisites: the format ladder and tensor-core requirement of*
 :numref:`sec_hardware`*; the* `d2l.Benchmark` *timer of*
@@ -41,7 +38,7 @@ from jax import numpy as jnp
 import numpy as np
 ```
 
-## The Memory Anatomy of a Training Step
+## Memory Components of a Training Step
 :label:`subsec_mp-anatomy`
 
 A training step holds four kinds of tensor in memory, and knowing their
@@ -434,7 +431,7 @@ arrives as more launches over smaller, lower-intensity GEMMs, so by this
 chapter's own accounting it is usually slightly *slower* — it only
 rearranges *when* the optimizer step happens.
 
-## The Ladder So Far
+## Choosing a Memory Optimization
 :label:`subsec_mp-ladder`
 
 Four sections in, the escalation is worth naming as a checklist. When a
@@ -509,7 +506,7 @@ where the accounting gets hardest.
 
 <!-- slides -->
 
-::: {.slide title="The Memory Anatomy of a Step"}
+::: {.slide title="Memory Components of a Training Step"}
 ![](../img/mdl-perf-memory-anatomy.svg){width=78%}
 
 Params $4P$ + grads $4P$ + Adam states $8P$ = **$16P$ bytes
@@ -561,7 +558,7 @@ mean-losses). Big *effective* batch at micro-batch memory —
 ≈ same wall-clock, never faster.
 :::
 
-::: {.slide title="The Ladder So Far"}
+::: {.slide title="Choosing a Memory Optimization"}
 1. slow (bandwidth/overhead) → **compile** (usually free)
 2. slow (compute) or tight → **bf16** (~1.5–2×, half the bytes)
 3. doesn't fit → **checkpoint** (large memory cut, modest time)

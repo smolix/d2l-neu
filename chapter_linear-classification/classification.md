@@ -6,7 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # The Base Classification Model
 :label:`sec_classification`
 
-Every classification model in this book shares two common needs: a *validation step* that reports both loss and accuracy, and a default optimizer. That is as true of the linear softmax regressor we build next as of the deep convolutional networks of later chapters. Rather than re-implementing these in every subclass, we collect them once in a `Classifier` base class that extends the `d2l.Module` scaffold introduced in :numref:`sec_oo-design`. The payoff is the same one that motivated `Module` itself: a new classifier supplies only what is genuinely model-specific (its `forward` pass, and a `loss` if it is not plain cross-entropy), and inherits the training and evaluation machinery for free.
+Classification models require a validation step that reports both loss and
+accuracy, together with an optimizer. We implement these shared operations in
+a `Classifier` base class extending the `d2l.Module` introduced in
+:numref:`sec_oo-design`. A subclass then supplies the model-specific `forward`
+method and, when needed, a loss other than cross-entropy.
 
 ```{.python .input #classification-the-base-classification-model}
 %%tab mxnet
@@ -200,7 +204,7 @@ def parameters(self):
 
 ## Beyond Accuracy
 
-Accuracy treats every example, and every kind of mistake, as equally important. Once classes are *imbalanced*, that assumption fails in a way that can make accuracy actively misleading. Consider screening for a disease that affects 1% of the population. A "classifier" that ignores its input and always predicts *healthy* is right 99% of the time, so its accuracy is 0.99, and it is also perfectly useless: it finds not a single sick patient. The counts make this concrete:
+Accuracy treats every example, and every kind of mistake, as equally important. Once classes are *imbalanced*, that assumption fails in a way that can make accuracy actively misleading. Consider screening for a disease that affects 1% of the population. A classifier that ignores its input and always predicts *healthy* is right 99% of the time, so its accuracy is 0.99, but it finds not a single sick patient. The counts make this concrete:
 
 ```{.python .input #classification-beyond-accuracy}
 n, sick = 100_000, 1_000            # 1% of the population carries the disease
@@ -255,7 +259,7 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 ::: {.cover}
 [Dive into Deep Learning · §4.3]{.kicker}
 
-The base **classification** model<br>One forward pass, read two ways: a *loss* to train on, an *accuracy* to report, and what to do when accuracy lies.
+The base **classification** model<br>A shared interface for training loss and evaluation metrics.
 :::
 :::
 
@@ -264,14 +268,14 @@ The base **classification** model<br>One forward pass, read two ways: a *loss* t
 
 ::: {.cols .vc}
 ::: {.col}
-A classifier scores the classes, then the picture **forks**:
+A classifier produces class scores that support two calculations:
 
 - **train** on a smooth **loss** that gradient descent can minimize;
 - **report** a hard **accuracy**, the number benchmarks care about.
 
 ::: {.d2l-note}
 We collect both, once, in a `Classifier` base class so every model
-in the book inherits them for free.
+in the book inherits their implementations.
 :::
 :::
 
@@ -307,8 +311,8 @@ chapter, adding classification defaults.
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-Same payoff as `Module` itself: write the model-specific part once,
-get the training and evaluation machinery for free.
+As with `Module`, the model-specific part is defined once and the shared
+training and evaluation procedures are inherited.
 :::
 :::
 :::
@@ -442,11 +446,11 @@ probabilities match empirical frequencies), **not a bug**.
 
 [Beyond Accuracy]{.dtitle}
 
-[when the headline number lies]{.dsub}
+[when accuracy is insufficient]{.dsub}
 :::
 :::
 
-::: {.slide title="99% accurate, perfectly useless" only="pytorch"}
+::: {.slide title="High accuracy under class imbalance" only="pytorch"}
 [Beyond Accuracy]{.kicker}
 
 Screen for a disease carried by **1%** of the population. A "classifier"
@@ -462,7 +466,7 @@ never does its job.
 :::
 :::
 
-::: {.slide title="99% accurate, perfectly useless" except="pytorch"}
+::: {.slide title="High accuracy under class imbalance" except="pytorch"}
 [Beyond Accuracy]{.kicker}
 
 Screen for a disease carried by **1%** of the population. A "classifier"
@@ -537,7 +541,7 @@ label shift.
 :::
 
 ::: {.col}
-- Under **imbalance** accuracy can lie: always-healthy scores **0.99**
+- Under **imbalance**, accuracy can mislead: always-healthy scores **0.99**
   with recall **0.0**.
 - **Precision / recall** split the failure modes; **F1** compresses them.
 - The **confusion matrix** itemizes all $q^2$ outcomes, computed in the

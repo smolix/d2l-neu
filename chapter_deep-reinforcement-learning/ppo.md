@@ -1,7 +1,9 @@
 # Trust Regions and Proximal Policy Optimization
 :label:`sec_ppo`
 
-The methods of the last four sections share a trait that no earlier algorithm in these two chapters had: they parameterize the policy directly. Value Iteration and Q-Learning adjusted value estimates and read the policy off them; REINFORCE and actor-critic adjust $\theta$, and the agent's behavior *is* $\pi_\theta$. That raises a question gradient ascent cannot answer on its own, because gradient ascent controls the size of the step in parameters, while what we care about is the size of the step in the policy, and :numref:`sec_actorcritic` closed by measuring why the question is urgent: a better advantage estimate is a bigger step at the same learning rate. This section opens with an example in which the two step sizes come apart completely. The answer to that question, together with a way to reuse each batch of trajectories instead of discarding it after one update, gives the two ideas of this section: trust regions :cite:`Schulman.Levine.Abbeel.ea.2015` and the clipped objective of Proximal Policy Optimization :cite:`Schulman.Wolski.Dhariwal.ea.2017`, PPO for short. PPO is the workhorse of modern policy optimization; when language models are trained from human feedback (:numref:`sec_rl_sequences`), this is most often the algorithm running underneath.
+Policy-gradient methods update parameters $\theta$, but the same parameter displacement can produce very different changes in the distribution $\pi_\theta(\cdot\mid s)$. Large policy changes can invalidate the data used to estimate an update and can move an on-policy learner into a poor data-collection regime. We begin with a two-action example that makes this mismatch explicit.
+
+Trust-region methods constrain change in policy space rather than parameter space :cite:`Schulman.Levine.Abbeel.ea.2015`. Proximal Policy Optimization (PPO) replaces the explicit constraint with a clipped surrogate objective and reuses each on-policy batch for several updates :cite:`Schulman.Wolski.Dhariwal.ea.2017`. This section derives importance-ratio correction, relates trust regions to the performance-difference lemma, and evaluates clipping through training curves and policy-drift diagnostics.
 
 ```{.python .input #ppo-trust-regions-and-proximal-policy-optimization-1}
 %%tab pytorch
@@ -49,7 +51,7 @@ So the quantity to control is the change in the policy, not the change in the pa
 
 ### The Change of Measure
 
-Now to the second want. Every estimator since :numref:`sec_policygradient` required trajectories sampled from the current policy: one gradient step, and the batch that produced it is stale. :numref:`sec_policygradient` priced that discipline in environment steps and found that most of the cost went to data whose only use was one update, because nothing bought earlier could be reused. Suppose instead the batch was collected by an older snapshot of the policy, $\pi_{\theta_{\textrm{old}}}$, and we want to keep learning from it after $\theta$ has moved. What, exactly, can old data tell us about a new policy?
+Every estimator since :numref:`sec_policygradient` has used trajectories sampled from the current policy. After one gradient step, that batch was treated as stale, which made policy-gradient learning expensive in environment interactions. Suppose instead that the batch was collected by an earlier policy $\pi_{\theta_{\textrm{old}}}$. How can it be used to evaluate an updated policy $\pi_\theta$?
 
 Importance sampling gives the exact answer. For any function $f$ of trajectories,
 
@@ -80,7 +82,7 @@ and optimize the sampled surrogate objective
 $$\hat{L}(\theta) = \frac{1}{n} \sum_{i=1}^n \sum_{t} \rho_t^i(\theta)\ \hat{A}_t^i,$$
 :eqlabel:`eq_surrogate`
 
-where $\hat{A}_t^i$ is any advantage estimate for step $t$ of trajectory $i$, e.g., the normalized reward-to-go of :numref:`sec_baselines`. Two corners have been cut relative to :eqref:`eq_offpolicy_objective`, and both deserve naming: the product of ratios became a single ratio per step, and the states in the batch remain distributed as $\pi_{\theta_{\textrm{old}}}$ visits them, not as $\pi_\theta$ would. In exchange, the weights stay bounded per step and the variance stays manageable. What survives the surgery is local fidelity: at $\theta = \theta_{\textrm{old}}$ every ratio equals one, and differentiating :eqref:`eq_surrogate` there gives back exactly the policy gradient estimator, since $\nabla_\theta \rho_t \,|_{\theta_{\textrm{old}}} = \nabla_\theta \log \pi_\theta(a_t \mid s_t)\,|_{\theta_{\textrm{old}}}$. The surrogate is a local model of the objective: trustworthy near where it was built and a liar far away. This brings back the first section's concern as a concrete question: how far may $\theta$ move before we must stop trusting $\hat{L}$?
+where $\hat{A}_t^i$ is an advantage estimate for step $t$ of trajectory $i$, such as the normalized reward-to-go of :numref:`sec_baselines`. Relative to :eqref:`eq_offpolicy_objective`, this approximation replaces the product of ratios by one ratio per step and retains the old policy's state distribution. These choices reduce variance. The approximation is locally exact in the sense needed for optimization: at $\theta = \theta_{\textrm{old}}$, every ratio equals one and $\nabla_\theta \rho_t = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$. Thus :eqref:`eq_surrogate` has the correct policy gradient at the old parameters, but it may be inaccurate after a large policy change. This raises the next question: how should the size of that change be measured and controlled?
 
 ### The Length-Normalized Trajectory Ratio
 
@@ -101,7 +103,7 @@ $$
 
 **Proof.** Write $V$ for $V^{\pi_{\theta_{\textrm{old}}}}$. Along any trajectory, the sum $\sum_t \gamma^t \big( r_t + \gamma V(s_{t+1}) - V(s_t) \big)$ telescopes: the interior $V$ terms cancel in pairs, and $V = 0$ at termination, leaving $R(\tau) - V(s_0)$. Now take expectations under $\tau \sim P(\cdot;\, \theta)$. On the left, conditioned on $(s_t, a_t)$, the expectation of $r_t + \gamma V(s_{t+1})$ over the next state is $Q^{\pi_{\theta_{\textrm{old}}}}(s_t, a_t)$, by :eqref:`eq_dynamic_programming_q` written with $V^\pi$, so each term becomes $\gamma^t\, E\big[ A^{\textrm{old}}(s_t, a_t) \big]$. On the right, $E[R(\tau)] = J(\theta)$, and $E[V(s_0)] = J(\theta_{\textrm{old}})$ because both policies draw $s_0$ from the same $\mu_0$. $\blacksquare$
 
-Read it as marching orders: to improve on the old policy, put the new policy's probability mass where the old policy's own advantages say the improvement is. All the difficulty hides in one subscript: the expectation is over the *new* policy's trajectories, which cannot be sampled without deploying the candidate. Approximate it with the states the old policy visited, reweight only the actions by $\rho_t$, drop the $\gamma^t$ factor as everywhere since :eqref:`eq_rtg`, and what appears is precisely the surrogate :eqref:`eq_surrogate`. So the two corners the surrogate cut are one corner seen twice: collapsing the product to a per-step ratio and freezing the visited states are both the act of evaluating the new policy on the old policy's state distribution. The lemma also prices the corner: the surrogate is exact at $\theta_{\textrm{old}}$, and its error grows with the gap between the two policies' state distributions, again a statement about how far the *policy* has moved, not the parameters.
+The lemma says that improvement depends on the old policy's advantages evaluated along trajectories of the new policy. Those trajectories are unavailable until the candidate policy is deployed. Replacing their state distribution by the old policy's state distribution, and reweighting only the sampled actions by $\rho_t$, gives the surrogate in :eqref:`eq_surrogate` after omitting the conventional factor $\gamma^t$. The approximation is exact at $\theta_{\textrm{old}}$ and deteriorates as the two policies induce different state distributions. Its accuracy therefore depends on policy change, not directly on parameter distance.
 
 ### Trust Regions and the Monotonic-Improvement Bound
 
@@ -113,14 +115,14 @@ where the Kullback-Leibler divergence (:numref:`sec_mdl-information_theory`) mea
 
 $$\bar{L}(\theta) = \sum_s \rho_{\textrm{old}}(s) \sum_a \pi_\theta(a \mid s)\, A^{\textrm{old}}(s, a),$$
 
-the sampled surrogate with every sample replaced by its expectation. Two facts separate the pair. First, $\bar{L}(\theta_{\textrm{old}}) = 0$ exactly, because the old policy's expected advantage vanishes at every state; the finite-sample $\hat{L}$ of :eqref:`eq_surrogate` need not vanish there, and it also drops the $\gamma^t$ weights, the choice priced once at :eqref:`eq_rtg`. Second, the divergence in the bound is taken at the *worst* state, a quantity no sampled batch can even see. With $A_{\max} = \max_{s, a} \lvert A^{\textrm{old}}(s, a) \rvert$,
+the sampled surrogate with every sample replaced by its expectation. Two facts distinguish the two quantities. First, $\bar{L}(\theta_{\textrm{old}})=0$ because the old policy's expected advantage vanishes at every state; the finite-sample $\hat{L}$ need not be zero there and also omits the $\gamma^t$ weights, as discussed after :eqref:`eq_rtg`. Second, the theoretical bound uses the largest divergence over all states, including states absent from a sampled batch. With $A_{\max} = \max_{s, a} \lvert A^{\textrm{old}}(s, a) \rvert$,
 
 $$
 J(\theta)\ \geq\ J(\theta_{\textrm{old}}) + \bar{L}(\theta)\ -\ \frac{4 \gamma A_{\max}}{(1-\gamma)^2}\ \max_s\, D_{\textrm{KL}}\big( \pi_{\theta_{\textrm{old}}}(\cdot \mid s)\ \Vert\ \pi_\theta(\cdot \mid s) \big),
 $$
 :eqlabel:`eq_trpo_bound`
 
-:cite:`Kakade.Langford.2002,Schulman.Levine.Abbeel.ea.2015`. At $\theta = \theta_{\textrm{old}}$ both non-$J$ terms are zero and the bound holds with equality, so any $\theta$ that raises the right-hand side has certifiably improved the true objective: repeatedly maximizing this lower bound ascends $J$ monotonically, however badly the surrogate lies outside the region the penalty prices. Practice softens the theorem three times, each a named concession rather than fine print: the sampled $\hat{L}$ stands in for $\bar{L}$; the max-over-states divergence is relaxed to the empirical mean over visited states, the constraint written above, which is a practical proxy carrying no bound of its own; and the penalty coefficient the theorem demands is so conservative that its maximizing steps shrink toward nothing, so TRPO chooses $\delta_{\textrm{KL}}$ by hand and solves the constrained problem with second-order machinery that we will not build here. The idea to keep is the shape of the guarantee, a step-size rule expressed in policy space rather than parameter space: it does not matter how far $\theta$ moved, it matters how much $\pi_\theta$ moved. One sentence ties this to the optimization chapter: measuring steps by $D_{\textrm{KL}}$ instead of by parameter norm is steepest ascent under the local geometry the policy family induces, the Fisher metric, whose update direction is the natural gradient :cite:`Amari.1998,Kakade.2002`, the same steepest-descent-under-a-chosen-norm view that organized :numref:`sec_muon`; the right panel of :numref:`fig_rl_trust_region` draws that metric's ellipse against the Euclidean ball.
+:cite:`Kakade.Langford.2002,Schulman.Levine.Abbeel.ea.2015`. At $\theta=\theta_{\textrm{old}}$, the bound holds with equality. Increasing its right-hand side therefore guarantees an increase in the true objective. TRPO makes three practical approximations: it replaces $\bar{L}$ by the sampled surrogate, replaces the worst-state divergence by an empirical mean over visited states, and chooses the KL limit $\delta_{\textrm{KL}}$ rather than using the very conservative theoretical coefficient. It then solves the constrained problem with second-order optimization. The important point is that the step is measured in policy space rather than parameter space. Locally, the KL divergence induces the Fisher metric and the corresponding update is the natural gradient :cite:`Amari.1998,Kakade.2002`. The right panel of :numref:`fig_rl_trust_region` compares this geometry with a Euclidean constraint.
 
 ![Bounding the step in policy space. Left: the surrogate $L$ is tangent to the true objective $J$ at $\theta_{\textrm{old}}$ and a liar far away; the unconstrained maximizer of $L$ drives $J$ from $0.82$ down to $-0.38$, while the best point inside the shaded trust region raises it to $1.52$. Right: for a three-action softmax family, the set of steps with $D_{\textrm{KL}} \leq 0.02$ under the exact Fisher metric at $\theta_{\textrm{old}}$ is an ellipse, not a ball; two parameter steps of equal Euclidean length move the policy by $D_{\textrm{KL}} = 0.008$ and $0.049$, so the parameter norm misprices policy change in both directions.](../img/mdl-rl-trust-region.svg)
 :label:`fig_rl_trust_region`
@@ -132,12 +134,12 @@ PPO gets most of the benefit with none of the second-order machinery. Instead of
 $$L^{\textrm{CLIP}}(\theta) = \frac{1}{n} \sum_{i,t} \min\Big( \rho_t^i(\theta)\, \hat{A}_t^i,\ \ \textrm{clip}\big(\rho_t^i(\theta),\ 1-\epsilon,\ 1+\epsilon\big)\, \hat{A}_t^i \Big),$$
 :eqlabel:`eq_ppo_clip`
 
-with a clipping parameter $\epsilon$, typically $0.2$. Read it one sample at a time. If $\hat{A}_t > 0$, the objective grows with $\rho_t$ but only up to $\rho_t = 1+\epsilon$; past that point the clipped term is smaller and the min selects it, so the sample's gradient becomes zero. The optimizer gains nothing by pushing the action's probability more than $\epsilon$ beyond what the old policy assigned. If $\hat{A}_t < 0$, the same happens on the way down at $1-\epsilon$. The min makes the bound one-sided in the pessimistic direction: a sample can always pull the objective down if the update has made things worse, it just cannot keep paying out for moving further away. Each sample stops contributing once its ratio leaves the band, and an update driven by :eqref:`eq_ppo_clip` stalls, per sample, at the edge of the trust region. Note precisely what is clipped: the sample's contribution to the objective, in the paying direction only, never the ratio itself, which remains unbounded. The stall is an incentive rather than a hard constraint: nothing pins a ratio at the boundary, and gradient steps driven by other samples move the same network and can carry a ratio past the band, which is why the clipped fraction we measure below is not zero. The clip removes the payoff for drifting further, and that is enough in practice. We can now afford several epochs of updates on each batch.
+with a clipping parameter $\epsilon$, typically $0.2$. Consider one sample. If $\hat{A}_t > 0$, its contribution increases with $\rho_t$ only until $\rho_t = 1+\epsilon$; beyond this value, the clipped term is selected and its gradient is zero. If $\hat{A}_t < 0$, the corresponding threshold is $1-\epsilon$. The minimum is deliberately one-sided: a change that lowers the objective remains visible, whereas further movement in the favorable direction is no longer rewarded. The ratio itself is not clipped and can still cross the band because other samples share the same network parameters. Thus clipping is a soft incentive rather than a hard constraint. It nevertheless permits several epochs of optimization on a single batch without continually rewarding large changes in individual action probabilities.
 
 ![The clipped objective :eqref:`eq_ppo_clip` one sample at a time, as a function of the ratio $\rho_t(\theta) = \pi_\theta(a_t \mid s_t) / \pi_{\theta_{\textrm{old}}}(a_t \mid s_t)$. For a positive advantage the objective grows with the ratio only until $1 + \epsilon$; beyond that the minimum selects the clipped term and the sample's gradient is zero. For a negative advantage the same happens on the way down at $1 - \epsilon$. In both panels the unclipped side of the minimum stays open in the pessimistic direction: a sample can always pull the objective down, it just cannot keep paying out for moving further away.](../img/mdl-rl-ppo-clip.svg)
 :label:`fig_rl_ppo_clip`
 
-Set against :eqref:`eq_trpo_bound`, the ledger reads: PPO keeps the *shape* of the guarantee, a per-sample bound on how far movement keeps paying, and none of the guarantee itself. Nothing in :eqref:`eq_ppo_clip` implies monotonic improvement; the ablation below is the empirical substitute for the theorem, and the diagnostics after it are what practitioners watch in the theorem's place.
+Unlike the TRPO bound in :eqref:`eq_trpo_bound`, the clipped objective does not guarantee monotonic improvement. It is a first-order heuristic that discourages large changes in sampled action probabilities. The ablation below tests its effect empirically, and the subsequent diagnostics measure the policy changes that the theorem would otherwise constrain.
 
 ### Asymmetric Clipping Bands
 
@@ -370,9 +372,9 @@ d2l.plot_curves({name: r[:, :, 0] for name, r in runs.items()},
                 reference=500)
 ```
 
-In our runs the unclipped control leaves half or more of the eight seeds dead at the end, down at the score of a pole that falls almost immediately. That collapse is the two-action example made real: twenty unconstrained passes over one noisy batch add up to exactly the oversized policy change the sigmoid picture warned about, the policy lands in saturation, gradients vanish, and every later batch is collected by the broken policy, so no later data can undo it. The clipped runs take the same twenty passes over the same batches and every seed ends near the ceiling. Read the printed list of casualties as a sample rather than a fact: *which* seeds die reshuffles with the floating-point arithmetic of the run, and it is the rate that is stable, at least half of the unclipped runs in every tab we have run never recovering while every clipped seed survives. At gentler settings, fewer epochs or a smaller learning rate, the unclipped variant survives almost always; the clip is insurance against the interaction of reuse with step size, not a speedup.
+With twenty optimization epochs per batch, at least half of the unclipped seeds finish with a return below 100. Repeated unconstrained updates move the policy into a saturated region in which gradients are small, and subsequent batches are then collected by the poor policy. Every clipped seed finishes near the maximum return under the same data and update schedule. The identities of the failed seeds can vary with numerical details, so the comparison concerns the failure rate rather than particular seeds. With fewer epochs or a smaller learning rate, the unclipped variant usually succeeds; clipping is most useful when batch reuse and step size would otherwise produce an excessive policy change.
 
-Note also how rarely the insurance pays out, and count it carefully, because the denominator is easy to get wrong. Each update checks every sample's ratio once per epoch, and the first epoch's checks always find $\rho_t = 1$, inside the band by construction; so we report the fraction of *all* per-epoch ratio checks that fall outside the band, and with it the same fraction at the last epoch of each batch, where drift has had nineteen steps to accumulate:
+The clipping rate must be defined carefully. Each update checks every sample once per epoch, and the first epoch begins with $\rho_t=1$ for every sample. We report both the fraction of all per-epoch checks outside the band and the corresponding fraction in the final epoch of each batch:
 
 ```{.python .input #ppo-the-ablation-5}
 %%tab pytorch, jax
@@ -399,7 +401,7 @@ print(f'entropy: {diag[:, :5, :, 2].mean():.2f} over the first five '
       f'updates, {diag[:, -5:, :, 2].mean():.2f} over the last five')
 ```
 
-The within-batch shape is the clip working. The approximate KL and the outside-the-band fraction start at zero, by construction, and climb over the first handful of epochs as the policy walks away from the collector; then the curves flatten and even ease back, because once a ratio leaves the band its payoff is gone, and the gradients that remain, the pessimistic side and the entropy bonus, pull toward the band rather than away. In the displayed runs the drift a batch suffers is front-loaded, which is why twenty epochs are survivable here at all. Across updates, the printed pair shows the policy's entropy decaying from about $0.65$ toward $0.25$ nats as the policy sharpens. Nothing in this section stops that slide; the bonus only slows it. :numref:`sec_regularized` shows the unregularized *optimum* is a point mass, a destination built into the objective rather than an accident, and prices the cure.
+Within each batch, the approximate KL divergence and the fraction outside the clipping band begin at zero and increase during the first few epochs. They then level off because samples beyond the band no longer contribute gradients in the favorable direction. Most policy movement therefore occurs early in the batch. Across updates, policy entropy decreases from about $0.65$ to $0.25$ nats. The entropy bonus slows this concentration but does not prevent it; :numref:`sec_regularized` studies the corresponding regularized objective directly.
 
 The distribution behind those summary fractions is worth one look. Take two fresh identical agents at the *start* of training, where drift is largest, give both the same batch, the same frozen advantages and log-probabilities, and spend twenty passes with the clip on in one and off in the other, reading every ratio after each pass:
 
@@ -465,7 +467,7 @@ print(f'greedy mean return over 100 episodes: {score:.0f}')
 
 ### Vectorized Collection and Minibatch Updates
 
-Everything above is a teaching loop: one environment, whole episodes, full-batch epochs, and a learning rate four to forty times what tuned PPO references run, the container's default of $10^{-2}$. The rate stays because this section wants the unclipped failure on screen within sixty updates; do not carry it out of the section, since a deployed PPO anneals a rate an order of magnitude smaller, under which the unclipped control would merely limp instead of dying. Two structural differences from a deployed loop deserve to be seen at working size. First, real implementations do not collect episodes one environment at a time; they step $N$ environments in lockstep for a fixed $T$ steps, harvesting an $N \times T$ *rectangle* of transitions whose shape never changes, which is what compiled code wants, the same reasoning as our padded buckets. The rectangle's right edge almost always cuts episodes mid-flight, and the cut is priced the way this book has priced every truncation since :numref:`sec_mdp`: the value function fills in the future the recording lost.
+The implementation above is deliberately small: it uses one environment, complete episodes, full-batch epochs, and a learning rate of $10^{-2}$. This rate is four to forty times larger than common tuned settings so that the unclipped failure is visible within sixty updates; it should not be treated as a recommended PPO default. Production implementations usually step $N$ environments in parallel for a fixed horizon $T$, producing an $N\times T$ array of transitions. Since this array often ends in the middle of an episode, the value function supplies the continuation value at the truncation boundary, as described in :numref:`sec_mdp`.
 
 ```{.python .input #ppo-from-a-teaching-loop-to-a-real-one-1}
 %%tab pytorch, jax
@@ -483,7 +485,7 @@ print(f'V at the cut, pricing the unrecorded future: '
       f'{ac.value_np(obs).round(0)}')
 ```
 
-Our trained agent drops nothing in 32 steps, so every one of the eight columns ends mid-episode, and the value read at the cut prices the missing future at about $1/(1-\gamma) = 100$, the discounted value of balancing forever: without the bootstrap the rectangle would be worthless, with it, as usable as complete episodes. Second, real implementations do not take full-batch passes; the default recipe shuffles the rectangle into a few passes of small minibatches, four passes of minibatches of 32 being a common shape. On one frozen batch the two recipes take gradient steps of different counts and sizes, and land close together in total drift:
+The trained agent does not terminate within 32 steps, so all eight trajectories end at the collection horizon. Their continuation values are close to $1/(1-\gamma)=100$, the discounted value of balancing indefinitely. Without this bootstrap, the truncated data would omit most of its return. Production implementations also shuffle the collected array into a few epochs of minibatches rather than using full-batch passes. The following comparison uses four epochs with minibatches of size 32:
 
 ```{.python .input #ppo-from-a-teaching-loop-to-a-real-one-2}
 %%tab pytorch, jax
@@ -512,15 +514,15 @@ for name, ag in (('full batch', full), ('minibatches', mini)):
           f'{kl:.3f}')
 ```
 
-The two totals of policy movement land within a small factor of each other: minibatching is not a different algorithm, it is the same budget of drift spent in smaller coins, justified by memory and hardware throughput plus a little gradient noise that practitioners treat as a feature. What changes is bookkeeping: each ratio is re-checked against the band four times rather than twenty, and the advantage normalization of :numref:`sec_baselines` is usually recomputed per minibatch, at the granularity the gradient actually uses. One structural difference survives even at matched drift, and it is worth naming because it is an update-ordering difference, not a detail: our loop finishes the critic's twenty regression passes first and computes advantages from the updated critic before any actor pass, while a production loop computes advantages once from the pre-update critic and then interleaves the policy and value losses minibatch by minibatch.
+The two procedures produce policy changes of similar order. Minibatching reduces memory requirements and improves hardware utilization while adding gradient noise. Each sample's ratio is checked four times rather than twenty, and advantage normalization is commonly recomputed within each minibatch. There is also an update-order difference: our loop completes all critic passes before computing advantages and updating the actor, whereas typical implementations compute advantages once with the pre-update critic and then interleave policy and value losses across minibatches.
 
 ### Omitted Implementation Details
 
 The gap between this section's PPO and a production one is a list of small, named decisions, none of which needs new theory:
 
-| What real implementations add | Why, in one line |
+| What real implementations add | Purpose |
 |---|---|
-| Learning-rate annealing to zero | late updates on a nearly converged policy must be small; a constant rate keeps paying step-size risk for no return |
+| Learning-rate annealing to zero | reduce late updates as the policy approaches convergence |
 | Observation and reward normalization | running estimates hold network inputs and value targets near unit scale on tasks whose raw numbers vary by orders of magnitude |
 | Value-loss clipping | the critic gets a band of its own; its measured benefit is disputed, yet nearly every implementation ships it |
 | KL-based early stopping | stop the epochs when the measured approximate KL passes a threshold: our diagnostic panel turned into an actuator |
@@ -532,9 +534,9 @@ The list is not ours. A community audit collected 37 such implementation details
 
 ## Summary
 
-Directly parameterized policies make step size treacherous: equal moves in parameter space can be a rewrite of the behavior or a no-op, so the quantity to control is the change in the policy, not the change in $\theta$. Importance sampling turns the objective of a new policy into an exact expectation over data from an old one; the trajectory-level weight is a product of policy ratios in which the transition probabilities cancel, unbiased but with variance that compounds along the horizon, and the per-step surrogate :eqref:`eq_surrogate` tames it at the price of being only a local model. The performance difference lemma :eqref:`eq_perf_diff` makes the target exact, improvement equals the new policy's expected old-policy advantage, and it exposes the surrogate's two cut corners as one: the state distribution stays the old policy's. TRPO states the bound :eqref:`eq_trpo_bound` for the population surrogate under the worst-state divergence, a monotonic improvement guarantee whose practical form relaxes the max to a mean-KL constraint; PPO keeps the shape of the guarantee and none of the guarantee, a per-sample clip at $1 \pm \epsilon$ that zeroes a sample's gradient once its ratio leaves the band in the paying direction. Our full-batch teaching implementation runs GAE($0.95$) by default, adds an entropy bonus in the objective, and returns its diagnostics as data: on CartPole, twenty epochs of reuse per batch destroy most unclipped runs through the saturation collapse of the sigmoid example, while every clipped run trains to the ceiling with about one ratio check in twenty landing outside the band. The diagnostics say why reuse is survivable in these runs: drift within a batch is front-loaded, and the clipped batch's importance weights stay nearly flat on the weight-only effective-sample-size reading. What remains between this loop and a deployed one is a fixed rectangle of vectorized experience, jointly minibatched policy and value updates, and a list of named implementation details whose collective weight rivals the algorithm's.
+Equal parameter steps need not produce equal changes in a policy. Importance sampling corrects expectations when data come from an older policy, but trajectory-level products of ratios can have high variance. The per-step surrogate is a local approximation that retains the old policy's state distribution. TRPO controls this approximation through a divergence constraint and a monotonic-improvement bound. PPO instead clips individual probability ratios; this is simpler but does not inherit the TRPO guarantee. Practical PPO also uses GAE, an entropy bonus, repeated optimization epochs, and diagnostics for KL divergence, clipping, entropy, and effective sample size.
 
-**What the experiments show, and what they do not.** All curves come from seeded runs through the shared numpy sampling stream; the two framework tabs share every estimator line but initialize their networks differently, so their curves and casualty lists differ seed by seed while supporting the same statements, and every statistic quoted in prose is printed by a visible cell. The ablation is eight seeds per arm per tab: every clipped seed ends near the ceiling in both tabs, and the unclipped control loses at least half of its eight seeds in each tab; the casualty *rate* is the stable object, its exact value and the identities of the dead seeds are not. The outside-the-band fractions, near five percent for clipped runs against three or four times that for the control, are stable in level and ordering, not in digit. The within-batch diagnostic shapes, front-loaded KL and a flattening outside-band curve, recur across seeds and tabs; the entropy decay from about $0.65$ to about $0.25$ nats varies by a few hundredths. The probe pair is a single seeded batch per tab: its weight-concentration (ESS) endpoints come out nearly flat with the clip and concentrated to half or less without; the exact fraction differs between tabs while the gap's direction and size class agree. The greedy audit ties CartPole's ceiling, a statement about the task, not the algorithm. Single seeded runs per tab, not sweeps: the compute belongs to readers.
+**Experimental scope.** The clipping ablation uses eight seeds per method and framework. With twenty reuse epochs, every clipped run reaches high CartPole return, whereas at least half of the unclipped runs collapse. The exact failure rate and diagnostic values vary across seeds. The implementation uses full batches from a single environment and omits vectorized collection and minibatch updates, so it illustrates the clipped objective rather than reproducing a production PPO system.
 
 ## Exercises
 
@@ -609,7 +611,7 @@ data is collected by the broken policy: **the run is over**. Capping
 the step in $\theta$ caps the wrong quantity.
 :::
 
-::: {.slide title="Old Data, Exactly"}
+::: {.slide title="Importance Sampling"}
 What can a batch from $\pi_{\theta_{\text{old}}}$ say about
 $\pi_\theta$? Change of measure:
 
@@ -626,7 +628,7 @@ $$J(\theta)
   trajectory; all the bias traded for horizon-growing variance
 :::
 
-::: {.slide title="A Surrogate You Can Afford"}
+::: {.slide title="The Per-Step Surrogate"}
 Keep one ratio per step:
 
 $$\rho_t = \frac{\pi_\theta(a_t\mid s_t)}
@@ -680,7 +682,7 @@ Measuring steps in KL is steepest ascent under the Fisher metric:
 the natural gradient, :numref:`sec_muon`'s norm story again.
 :::
 
-::: {.slide title="The Clip"}
+::: {.slide title="The Clipped Objective"}
 $$L^{\text{CLIP}} = \frac1n\sum_{i,t}
   \min\!\big(\rho\hat A,\ \text{clip}(\rho,1-\epsilon,1+\epsilon)
   \hat A\big)$$
@@ -694,7 +696,7 @@ gradient is zero; the pessimistic side stays open. PPO keeps the
 **shape** of the guarantee and **none** of the guarantee.
 :::
 
-::: {.slide title="ppo_epochs: Reuse as a Function"}
+::: {.slide title="Reusing a Batch"}
 Freeze the advantages and the collector's log-probabilities, then
 spend the epochs; diagnostics returned as data:
 
@@ -719,7 +721,7 @@ ceiling. The insurance pays out on about one ratio check in twenty.
 Which seeds die reshuffles; the **rate** is what is stable.
 :::
 
-::: {.slide title="How to Know Your RL Is Broken"}
+::: {.slide title="Training Diagnostics"}
 @!ppo-how-to-know-your-rl-is-broken-1
 
 . . .
@@ -730,7 +732,7 @@ Which seeds die reshuffles; the **rate** is what is stable.
   slows the slide, :numref:`sec_regularized` explains it
 :::
 
-::: {.slide title="The Batch Goes Stale, Measured"}
+::: {.slide title="Policy Drift within a Batch"}
 Ratios are importance weights, so the appendix's effective sample
 size applies, as a **ratio-concentration diagnostic**:
 
@@ -744,7 +746,7 @@ half or less. Weights-only: blind to advantages, dependence, and
 state-distribution staleness.
 :::
 
-::: {.slide title="From a Teaching Loop to a Real One"}
+::: {.slide title="Vectorized Collection and Minibatches"}
 - $N \times T$ **rectangle** from vectorized environments; the cut
   edge is priced by $V$, like every truncation since
   :numref:`sec_mdp`

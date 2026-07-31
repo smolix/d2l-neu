@@ -3,14 +3,18 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Design Spaces and the Big Picture
+# Convolutional Network Design Spaces
 :label:`sec_cnn-design`
 
 Every architecture in this chapter was designed by hand. AlexNet (:numref:`sec_alexnet`) established that deep networks beat feature engineering; VGG (:numref:`sec_vgg`) organized convolutions into repeated blocks of $3 \times 3$ kernels; NiN (:numref:`sec_nin`) mixed channels with $1 \times 1$ convolutions and aggregated with global pooling; GoogLeNet (:numref:`sec_googlenet`) combined branches of different convolution widths; ResNet (:numref:`sec_resnet`) rebiased networks towards the identity mapping, making great depth trainable; and ResNeXt (:numref:`subsec_resnext`) added grouped convolutions for a better parameter--computation trade-off. This *network engineering* succeeded, but each step depended on the intuition of its designers rather than on any systematic exploration of the space of possible networks.
 
 One alternative is *neural architecture search* (NAS) :cite:`zoph2016neural,liu2018darts`: fix a search space, then let a search strategy (reinforcement learning, evolutionary algorithms, or gradient-based relaxations) select an architecture based on estimated performance. EfficientNet is a prominent product of this approach :cite:`tan2019efficientnet`. But the cost is usually enormous, and the outcome is a *single network instance*: we learn that it works, not why.
 
-This section covers a middle way due to :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`: *designing network design spaces*. Instead of hunting for the single best network, we study *distributions over networks* and tune the parameters of the distribution so that a typical member performs well. This is far cheaper than NAS, and it yields transferable design principles rather than one opaque winner. The outcome is the *RegNet* family (RegNetX and RegNetY). This way of thinking is the direct ancestor of the scaling-law analyses that guide model design today: it characterizes whole populations of models by a few simple empirical laws instead of championing individual instances.
+:citet:`Radosavovic.Kosaraju.Girshick.ea.2020` propose instead to design the
+*space* from which networks are sampled. A distribution over architectures is
+parameterized so that typical samples perform well. This is cheaper than a
+large NAS procedure and exposes regularities shared by many architectures. The
+resulting constraints define the RegNetX and RegNetY families.
 
 ```{.python .input #cnn-design-designing-convolutional-network-architectures}
 %%tab mxnet
@@ -407,7 +411,7 @@ with d2l.try_gpu():
     trainer.fit(model, data)
 ```
 
-## The Big Picture: ConvNets and Transformers
+## Comparing Convnets and Vision Transformers
 :label:`subsec_cnn_big_picture`
 
 For most of a decade, the networks in this chapter defined the state of the art in computer vision. Then came vision Transformers (:numref:`sec_vision-transformer`) :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021,touvron2021training`, which have far weaker inductive biases towards locality and translation equivariance (:numref:`sec_why-conv`). They surpassed CNNs on large-scale image classification, and it became common to read that convolution was obsolete. The evidence that has accumulated since is more precise.

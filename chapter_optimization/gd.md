@@ -1,17 +1,13 @@
 # Gradient Descent
 :label:`sec_gd`
 
-Gradient descent itself trains almost nothing in deep learning: every method
-in this chapter replaces it with a stochastic variant — the update rule you
-have been applying since :numref:`sec_linear_scratch`, so far without a
-justification. We begin with the noise-free version anyway because its
-failure modes carry over intact. A learning rate that diverges on
-a one-dimensional parabola diverges on a billion-parameter transformer for the
-same reason, and preconditioning, the cure for badly scaled coordinates,
-reappears in estimated form inside the adaptive methods of
-:numref:`sec_adam`. Of the three decisions framed in
-:numref:`sec_optimization-intro`, this section isolates direction and step
-size; noise enters in :numref:`sec_sgd`.
+Deep learning usually uses stochastic variants of gradient descent, but the
+deterministic method exposes the same effects of step size and curvature.
+A learning rate that causes divergence on a one-dimensional quadratic can
+cause divergence in a large network for the same reason. Likewise,
+preconditioning for differently scaled coordinates reappears in the adaptive
+methods of :numref:`sec_adam`. This section studies descent direction and
+step size; :numref:`sec_sgd` adds gradient noise.
 
 ## One-Dimensional Gradient Descent
 
@@ -357,7 +353,7 @@ objective on the entire dataset.
 
 ### Preconditioning
 
-What survives at scale is the underlying idea. Instead of inverting the full
+At large scale, the underlying idea remains useful. Instead of inverting the full
 Hessian, rescale the update by a cheap approximation of it — a
 *preconditioner*. The cheapest useful choice is the diagonal:
 
@@ -416,8 +412,8 @@ The rule:
 
 $$x \leftarrow x - \eta \nabla f(x).$$
 
-A first-order Taylor expansion shows that for small enough
-$\eta$, this decreases $f$ locally. The art is picking
+A first-order Taylor expansion shows that for sufficiently small
+$\eta$, this decreases $f$ locally. Performance depends on the choice of
 $\eta$.
 :::
 
@@ -426,7 +422,6 @@ Setup and define $f$, $f'$:
 
 @gd-one-dimensional-gradient-descent-1
 
-. . .
 
 @gd-one-dimensional-gradient-descent-2
 :::
@@ -436,7 +431,6 @@ Start at $x = 10$, $\eta = 0.2$, 10 steps. Converges to 0:
 
 @gd-one-dimensional-gradient-descent-3
 
-. . .
 
 @gd-one-dimensional-gradient-descent-4
 :::
@@ -454,7 +448,7 @@ dominates and the iterates diverge:
 @gd-learning-rate-2
 :::
 
-::: {.slide title="Non-convex: trapped in a local min"}
+::: {.slide title="Gradient descent on a nonconvex objective"}
 $f(x) = x \cos(cx)$ has infinitely many local minima. Even
 with a moderately large learning rate, GD ends up in
 whichever basin it falls into:
@@ -472,15 +466,13 @@ $x_2$ direction is steeper.
 
 @gd-multivariate-gradient-descent-1
 
-. . .
 
 @gd-multivariate-gradient-descent-2
 :::
 
-::: {.slide title="Run it"}
+::: {.slide title="Multivariate trajectory"}
 @gd-multivariate-gradient-descent-3
 
-. . .
 
 The path bends: the two coordinates want *different* step
 sizes. One global $\eta$ can't satisfy both.
@@ -498,24 +490,23 @@ learning rate to tune:
 @gd-newton-s-method-1
 :::
 
-::: {.slide title="Newton fails on non-convex"}
+::: {.slide title="Newton's method under negative curvature"}
 $f(x) = x \cos(cx)$: Newton divides by the second
 derivative, so negative curvature sends it *uphill*,
 toward a maximum. Damping ($\eta = 0.5$) restores sanity:
 
 @gd-newton-s-method-2
 
-. . .
 
 @gd-newton-s-method-3
 :::
 
-::: {.slide title="Preconditioning: the idea that scales"}
+::: {.slide title="Approximate preconditioning"}
 Full Newton at $d \sim 10^9$: $\mathcal{O}(d^2)$ memory,
 $\mathcal{O}(d^3)$ solve — exabytes before the first step.
 
-What survives: rescale each update by a *cheap approximation*
-of curvature.
+Deep-learning optimizers instead rescale updates with inexpensive
+approximations to curvature.
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta\, \textrm{diag}(\mathbf{H})^{-1} \nabla f(\mathbf{x})$$
 
@@ -536,6 +527,6 @@ chapter.
 - Newton uses the Hessian as the *ideal* preconditioner —
   one step on quadratics, but $\mathcal{O}(d^2)$ memory and
   unsafe under negative curvature.
-- What deep learning keeps is cheap preconditioning:
+- Deep-learning methods use inexpensive preconditioning:
   per-coordinate (Adam) and per-matrix (Muon) rescaling.
 :::

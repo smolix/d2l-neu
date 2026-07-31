@@ -619,7 +619,7 @@ Three ideas made deep training routine:
 
 ::: {.d2l-note .rule}
 Get init wrong and the gradient **dies** or **blows up** before
-learning starts. Keep score: ten sigmoid layers tax the gradient to
+learning starts. In the examples below, ten sigmoid layers reduce the gradient to
 $10^{-6}$; a hundred random matrices explode past $10^{24}$; and one
 closing plot shows $10^{80}$ vs $10^{-15}$ vs *flat* (naive, Xavier,
 He).
@@ -705,7 +705,7 @@ A poorly scaled initialization does *exactly this* to the gradient. No optimizer
 :::
 :::
 
-::: {.slide title="The three crashes you will actually see"}
+::: {.slide title="Three observable failure modes"}
 [Unstable Gradients · in practice]{.kicker}
 
 - **Loss is NaN from step 1** $\to$ exploding *initialization* (weights too large).
@@ -802,7 +802,7 @@ Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as named i
 :::
 
 ::: {.slide title="The demonstration: 10⁸⁰ vs 10⁻¹⁵ vs flat" only="pytorch"}
-[Initialization · payoff]{.kicker}
+[Initialization · result]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
@@ -820,7 +820,7 @@ All three regimes in one plot: push a unit-scale signal through **50 ReLU layers
 :::
 
 ::: {.slide title="The demonstration: 10⁸⁰ vs 10⁻¹⁵ vs flat" except="pytorch"}
-[Initialization · payoff]{.kicker}
+[Initialization · result]{.kicker}
 
 All three regimes in one experiment: push a unit-scale signal through **50 ReLU layers** of width 100 and track the second moment $E[(h^{(l)})^2]$ layer by layer, under three weight scales.
 
@@ -835,7 +835,7 @@ assumptions. Run the sweep yourself in the notebook.
 :::
 :::
 
-::: {.slide title="Init is the floor, not the ceiling"}
+::: {.slide title="Initialization is necessary but not sufficient"}
 [Beyond]{.kicker}
 
 Good init buys a deep net that trains without NaNs. To reach **hundreds** of layers, modern architecture re-normalizes *during* training:

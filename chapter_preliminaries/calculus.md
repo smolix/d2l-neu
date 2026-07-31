@@ -539,13 +539,13 @@ How a loss changes when we nudge a parameter<br>**limits · derivatives · gradi
 :::
 :::
 
-::: {.slide title="Optimization asks one question: which way is downhill?"}
+::: {.slide title="Derivatives indicate a direction of descent"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Training a model = **minimizing a loss**. Calculus answers the only
-question an optimizer ever asks:
+Training a model requires **minimizing a loss**. Calculus describes how that
+loss changes with the parameters:
 
 - The **derivative**: how fast the loss moves when one parameter is
   nudged.

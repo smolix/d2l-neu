@@ -1,19 +1,16 @@
 # Convex Sets and Convex Functions
 :label:`sec_mdl-convexity`
 
-Convexity is the line between "gradient descent provably finds the answer" and "we
-hope." For a convex problem, *every local minimum is global*, there are no saddle
-points or spurious basins to get stuck in, and the rates of
-:numref:`sec_mdl-gradient-based-optimization` come with global guarantees.
-Convexity tells you which deep-learning sub-problems are *easy* (the last-layer
-softmax/logistic loss in the logits, projections onto constraint sets, the
-$\ell_1$ and $\ell_2$ regularizers, the SVM dual of
-:numref:`sec_mdl-constrained-optimization-duality`), and it tells you precisely
-what you forfeit by stacking nonlinear layers. This section develops the three
-equivalent lenses for recognizing a convex function, Jensen's inequality, the
-global convergence guarantees that follow, a calculus for certifying
-convexity without computing a single Hessian, and a reality check on why deep
-networks are non-convex and what we keep anyway.
+Convexity identifies optimization problems for which local information implies
+global conclusions. Every local minimum of a convex function is global, and the
+rates in :numref:`sec_mdl-gradient-based-optimization` then become global
+guarantees. Convex examples in machine learning include logistic losses as
+functions of the logits, projections onto convex constraint sets, $\ell_1$ and
+$\ell_2$ regularizers, and the SVM dual in
+:numref:`sec_mdl-constrained-optimization-duality`. This section gives three
+equivalent characterizations of convex functions, derives Jensen's inequality
+and convergence guarantees, develops rules for recognizing convexity, and
+states which conclusions remain useful for nonconvex neural networks.
 
 We lean on :numref:`sec_mdl-geometry-linear-algebraic-ops` (inner products,
 hyperplanes, half-spaces), :numref:`sec_mdl-single_variable_calculus` and
@@ -84,7 +81,7 @@ their midpoint is the origin, which the annulus excludes: the chord tunnels
 through the hole. Holes, dents, and disconnected pieces are exactly what
 :eqref:`eq_mdl-opt-convex-set` forbids.
 
-### The Catalog Deep Learning Uses
+### Common Convex Sets in Machine Learning
 
 Four families of convex sets cover most of what this book touches, and each is
 convex for a one-line reason.
@@ -157,10 +154,10 @@ induction. The
 simplex is the convex hull of the coordinate vectors: every probability
 distribution is an average of certainties.
 
-## Convex Functions: Three Lenses
+## Three Characterizations of Convex Functions
 :label:`subsec_mdl-three-lenses`
 
-### The Chord Lens
+### The Chord Condition
 
 A function $f : C \to \mathbb{R}$ on a convex domain $C$ is **convex** if its
 graph lies on or below every chord:
@@ -187,7 +184,7 @@ above the graph precisely when :eqref:`eq_mdl-opt-chord` holds. This dictionary
 lets every fact about convex sets generate a fact about convex functions, and we
 will use it shortly.
 
-### The First-Order Lens
+### The First-Order Condition
 
 The chord lens needs no derivatives. When $f$ is differentiable, an equivalent
 test reads the tangent instead of the chord: the first-order Taylor
@@ -213,7 +210,7 @@ minimum. We return to this in :numref:`subsec_mdl-why-convexity-matters`.
 ![Two equivalent lenses on convexity. Left (chord lens): the chord joining two points lies above the graph, so $f(\theta\mathbf{x}+(1-\theta)\mathbf{y})\le\theta f(\mathbf{x})+(1-\theta)f(\mathbf{y})$. Right (first-order lens): the tangent at a point lies below the graph, so $f(\mathbf{y})\ge f(\mathbf{x})+\nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x})$.](../img/mdl-opt-chord-above-graph.svg)
 :label:`fig_mdl-opt-chord-above-graph`
 
-### The Second-Order Lens
+### The Second-Order Condition
 
 When $f$ is twice differentiable on an open convex domain there is a third
 test, usually the easiest to run: $f$ is convex if and only if its Hessian is
@@ -809,8 +806,8 @@ real losses are built from convex atoms by exactly these operations.
    $h(t) = t^2$ and $g(x) = x^2 - 1$ compose to the double well we just watched
    trap gradient descent.
 
-This calculus certifies most of the convex losses in this book in one line
-each. The hinge loss $\max(0, 1 - y\,\mathbf{w}^\top\mathbf{x})$ is a maximum
+These rules certify most of the convex losses in this book directly. The hinge
+loss $\max(0, 1 - y\,\mathbf{w}^\top\mathbf{x})$ is a maximum
 of two affine functions of $\mathbf{w}$ (rules 3 and 2). The $\ell_1$ norm
 $\|\mathbf{w}\|_1 = \sum_i \max(w_i, -w_i)$ is a sum of maxima of affine
 functions (rules 1, 3, 2). The logistic loss
@@ -1010,8 +1007,8 @@ $$
 well defined for the closed convex $f$ we use: the objective is $1$-strongly
 convex, so the uniqueness proposition above rules out a second minimizer, and
 closedness supplies the existence that an indicator (which is not continuous)
-would otherwise put in doubt. The prox moves toward lower $f$ but pays
-quadratically for straying from
+would otherwise put in doubt. The prox balances lower values of $f$ against a
+quadratic penalty for moving away from
 $\mathbf{z}$. Two special cases calibrate the definition. If $f = 0$, the prox
 is the identity. If $f$ is the *indicator* of a closed convex set $C$ (zero on
 $C$, $+\infty$ outside), then minimizing forces $\mathbf{x} \in C$ and the
@@ -1030,7 +1027,7 @@ for vectors in :numref:`subsec_mdl-three-lenses`) dispatches it in three lines: 
 minimizer $x \neq 0$, stationarity reads $\lambda\,\mathrm{sign}(x) + x - z = 0$,
 i.e. $x = z - \lambda\,\mathrm{sign}(z)$, consistent only when $|z| > \lambda$;
 if $x = 0$, the criterion asks $z \in [-\lambda, \lambda]$; and the two cases
-splice into one formula,
+combine as
 
 $$
 \mathrm{prox}_{\lambda|\cdot|}(z) \;=\; \mathrm{sign}(z)\, \max\left(|z| - \lambda,\, 0\right).
@@ -1087,10 +1084,10 @@ The closed form matches the brute-force minimizer to grid resolution, and
 after twenty proximal-gradient steps five of the eight coordinates are
 *exactly* zero, snapped there by the $\max$ in
 :eqref:`eq_mdl-opt-soft-threshold`, while the three nonzero coordinates sit
-near the planted values $(2.0, -1.5, 1.0)$. No amount of plain gradient
-descent can produce an exact zero (a smooth step lands wherever the arithmetic
-falls); the prox is the piece of the algorithm that *knows about the kink*,
-and one application per step suffices for sparsity.
+near the planted values $(2.0, -1.5, 1.0)$. Plain gradient descent does not
+produce exact zeros because it uses only smooth steps. The proximal operator
+incorporates the nonsmooth term, and one application per step suffices for
+sparsity.
 
 ### Coordinate and Block Coordinate Descent
 :label:`subsec_mdl-coordinate-descent`
@@ -1187,7 +1184,7 @@ updates. It remains important for sparse linear models, embedding tables,
 alternating minimization, and inner problems where a block has a closed-form or
 very cheap solve.
 
-### Reality Check: Deep Networks Are Non-Convex
+### Nonconvex Neural Networks
 
 The convexity calculus had one missing rule,
 composition with non-monotone nonlinear maps, and a neural network is nothing
@@ -1207,8 +1204,8 @@ of $(1, 1)$ and $(-1, -1)$ did for $(ab - 1)^2$, and a minimizer set that
 contains distinct copies but not their averages cannot be convex. Deep
 architectures rule out convexity structurally.
 
-What survives? More than the worst case suggests, and the
-linear-rate proof already told us where to look. Its second half consumed only
+Some linear-rate conclusions remain valid without convexity. The
+second half of the proof used only
 the inequality :eqref:`eq_mdl-opt-pl`, known as the
 **Polyak--Łojasiewicz (PL) condition** (after Polyak and Łojasiewicz, who
 introduced it independently in 1963 :cite:`Polyak.1963,Lojasiewicz.1963`):
@@ -1395,9 +1392,9 @@ curvature and conditioning.
 
 ## Discussions
 
-Within this part, this section is load-bearing in both directions.
-:numref:`sec_mdl-gradient-based-optimization` proved what smoothness alone
-buys (stationarity); here convexity upgraded those rates to global guarantees,
+This section connects the preceding optimization analysis to the constrained
+problems that follow. :numref:`sec_mdl-gradient-based-optimization` proved that
+smoothness alone gives stationarity; convexity upgrades those rates to global guarantees,
 and the PL condition showed how much of the upgrade survives without convexity.
 :numref:`sec_mdl-constrained-optimization-duality` consumes nearly everything
 above: convex feasible sets for projections, KKT sufficiency and Slater's
@@ -1610,11 +1607,10 @@ $f(\mathbb{E}[X])$. For concave $f$ the inequality flips.
 :::
 :::
 
-::: {.slide title="One inequality, three classics"}
+::: {.slide title="Consequences of Jensen's inequality"}
 [Jensen]{.kicker}
 
-Apply Jensen to the right convex (or concave) function and out fall the
-staples of the probabilistic chapters:
+Applying Jensen's inequality to suitable convex or concave functions gives:
 
 - $-\log$ is convex $\Rightarrow$ $D_{\mathrm{KL}}(p\,\|\,q) \ge 0$, with equality iff $p=q$
 - $\log$ is concave $\Rightarrow$ AM $\ge$ GM
@@ -1724,7 +1720,7 @@ nonnegative sums · affine pre-composition · pointwise max ·
 
 . . .
 
-So in one line each: the **hinge** is a max of affines; $\ell_1$ a sum of
+The **hinge** is a maximum of affine functions; $\ell_1$ is a sum of
 such maxes; **logistic** is the convex $\log(1+e^t)$ after an affine map;
 ridge-anything is strongly convex. The one missing rule, *non-monotone*
 inner maps, is where deep networks exit the theory.
@@ -1766,11 +1762,11 @@ one-hot draws reproduce the analytic Hessian: it really is a covariance
 you can sample from.
 :::
 
-::: {.slide title="The prox is the piece that knows about the kink"}
+::: {.slide title="Proximal operators for nonsmooth terms"}
 [Recognizing convexity]{.kicker}
 
-$\mathrm{prox}_f(\mathbf{z})$ moves toward lower $f$ but pays
-quadratically for straying from $\mathbf{z}$: a projection,
+$\mathrm{prox}_f(\mathbf{z})$ balances lower values of $f$ against a
+quadratic penalty for moving away from $\mathbf{z}$: a projection,
 generalized from sets to functions. For $\lambda|x|$ the subgradient
 criterion solves it in closed form: **soft-thresholding**,
 
@@ -1792,7 +1788,7 @@ sparsifies where $\ell_2$ only shrinks.
 
 [Reality check]{.dtitle}
 
-[deep nets are non-convex, and what survives]{.dsub}
+[deep nets are non-convex; the PL condition still gives a rate]{.dsub}
 :::
 :::
 
@@ -1819,7 +1815,7 @@ $f = 1 > 0$: not a minimum.
 :::
 :::
 
-::: {.slide title="What survives: the PL condition"}
+::: {.slide title="The PL condition without convexity"}
 [Reality check]{.kicker}
 
 The linear-rate proof never used convexity in its second half, only

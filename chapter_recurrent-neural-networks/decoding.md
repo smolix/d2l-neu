@@ -1,19 +1,15 @@
 # Decoding and Generation
 :label:`sec_decoding`
 
-The language model of :numref:`sec_rnn-scratch` ended with a cliffhanger. We
-trained a network that assigns a probability to every possible next token,
-and the moment we asked it to write, two crude recipes presented themselves:
-always take the most probable token, or draw one at random from the model's
-distribution. Both produced text, and both produced problems, from
-continuations that circle through the same phrase to continuations that
-wander into gibberish. This section treats the step we improvised there as
-a subject of its own. *Decoding* turns a model of next tokens into actual
-sequences, and it is a design space with its own algorithms, failure modes,
-and a modern toolkit :cite:`Graves.2013,Holtzman.Buys.Du.ea.2020`, largely
-independent of the network that feeds it: everything we build here applies
-unchanged to the gated architectures of the next chapter and to the largest
-of large language models.
+The model in :numref:`sec_rnn-scratch` assigns a probability to each possible
+next token. Producing a sequence requires an additional rule for selecting
+from these distributions. Always choosing the most probable token often
+repeats phrases, whereas unconstrained sampling can produce incoherent text.
+
+*Decoding* comprises the algorithms that turn next-token distributions into
+sequences :cite:`Graves.2013,Holtzman.Buys.Du.ea.2020`. These algorithms are
+largely independent of the network and apply to the recurrent models of the
+next chapter as well as transformer language models.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -110,7 +106,7 @@ We need a trained model to experiment on, and the concise RNN language
 model of :numref:`sec_rnn-scratch` is ideal: small enough to train here in
 about a minute, good enough (recall, about 2.4 bits per byte) that its
 continuations respond visibly to decoding choices. We retrain it with
-exactly the recipe used there.
+the same training procedure used there.
 
 ```{.python .input #decoding-a-model-to-decode-from-1}
 data = d2l.TimeMachine(batch_size=1024, num_steps=32,
@@ -256,7 +252,7 @@ $$\begin{aligned}P(A, x_2 \mid x_{\leq m}) &= P(A \mid x_{\leq m}) P(x_2 \mid A,
 
 ten numbers in all (here $x_{\leq m}$ denotes the given prefix), and keep
 the two largest, say $P(A, B \mid x_{\leq m})$ and $P(C, E \mid x_{\leq
-m})$. The third step repeats the recipe from the survivors $AB$ and $CE$,
+m})$. The third step repeats the calculation from the survivors $AB$ and $CE$,
 yielding say $ABD$ and $CED$. Note what pruning bought us: instead of
 $5^3 = 125$ sequences we scored $5 + 10 + 10 = 25$, and in general beam
 search costs $\mathcal{O}(k |\mathcal{V}| T)$, a factor $k$ more than
@@ -275,7 +271,7 @@ $$\frac{1}{L^\alpha} \sum_{t=m+1}^{m+L} \log P(x_t \mid x_{<t}),$$
 
 where $\alpha$ (typically around 0.75) interpolates between no correction
 ($\alpha = 0$) and the per-token average log-probability ($\alpha = 1$).
-The implementation below follows the recipe directly. Finished candidates
+The implementation below follows this procedure directly. Finished candidates
 (those that produced `eos_id`) pass through unchanged from round to round;
 live ones are expanded and rescored. Since the global top $k$ can contain
 at most $k$ continuations of any single prefix, it suffices to consider
@@ -374,7 +370,7 @@ If the model's distribution is worth trusting, the principled way to
 generate is to *sample* from it: draw $x_t \sim P(x_t \mid x_{<t})$,
 append, repeat. Text produced this way is distributed exactly as the model
 believes text should be, with all the diversity that maximization threw
-away and none of its repetition traps. The catch appears in the tail. Our
+away and none of its repetition patterns. The remaining problem lies in the tail. Our
 model spreads small probability over a thousand tokens, a large model over
 hundreds of thousands, and although each unlikely token is individually
 negligible, their combined mass at every step is not. Sampling therefore
@@ -507,7 +503,7 @@ for dial in (dict(k=2), dict(p=0.85), dict(min_p=0.5)):
 
 ### One Distribution, Three Cutoffs
 
-Toy numbers are one thing; here is the real object every dial acts on. We
+We now examine the distribution modified by each decoding parameter. We
 query the trained model once and plot its entire next-token distribution,
 sorted by decreasing probability, on logarithmic axes (the shape is
 Zipf-like, as :numref:`sec_language-model` would lead us to expect). On
@@ -736,8 +732,8 @@ acceptable continuations, each individually improbable; picking the single
 most probable one discards the diversity we asked for.
 :::
 
-::: {.slide title="One narrow interface"}
-Train the RNN LM of 9.5 (same recipe), then wrap it: token ids in, numpy
+::: {.slide title="A common decoding interface"}
+Train the RNN language model of 9.5 with the same procedure, then wrap it: token ids in, NumPy
 logits for the next token out. Every strategy below is plain Python
 against this interface:
 
@@ -828,14 +824,14 @@ Truncation on a toy distribution (0.45, 0.25, 0.15, 0.10, 0.05):
 @decoding-a-unified-sampler-3
 :::
 
-::: {.slide title="One distribution, three cutoffs"}
+::: {.slide title="Three probability cutoffs"}
 @decoding-one-distribution-three-cutoffs-1
 
 top-$k$: vertical cut at fixed rank; top-$p$: vertical cut that slides
 with the head; min-$p$: horizontal cut that rides the model's confidence.
 :::
 
-::: {.slide title="The dials adapt (or don't)"}
+::: {.slide title="Fixed and adaptive truncation"}
 @decoding-one-distribution-three-cutoffs-2
 
 The more confident the model, the smaller the kept sets, and min-$p$

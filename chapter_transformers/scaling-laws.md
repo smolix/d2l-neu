@@ -1,20 +1,14 @@
-# Scaling Laws and the Modern Recipe
+# Scaling Laws and Current Transformer Configurations
 :label:`sec_scaling-laws`
 
-The models of this chapter differ from the deployed ones mainly by a
-number. Same block, same causal wiring, same training loop; what separates
-our minute of GPU time from a frontier run is parameters, tokens, and the
-floating-point operations that couple them. This closing section is about
-that number. One boundary first: :numref:`sec_scaling` in the optimization
-chapter asked how to *tune* across scale — muP transfers a learning rate
-found on a small model to a large one. Here we ask what scale itself buys,
-and how a training budget should be split between model size and data. We
-learn to count parameters and FLOPs, deriving the $6ND$ rule and checking
-it against a profiler; we run a scaling study small enough for one GPU
-that shows both the celebrated straight line and its less celebrated end;
-and we read the 2023–2025 open-weights reports as a table
-whose rows are, almost verbatim, constructor calls of the `GPT` class from
-:numref:`sec_gpt`.
+The models in this chapter use the same blocks and training objectives as
+much larger deployed models, but differ greatly in parameter count, data,
+and computation. :numref:`sec_scaling` studied how hyperparameters transfer
+between model sizes. Here we instead ask how performance changes with scale
+and how a fixed training budget should be allocated between parameters and
+data. We derive the $6ND$ approximation for training cost and compare it with
+a profiler, conduct a small scaling experiment on one GPU, and summarize
+the configurations reported for several 2023--2025 open-weight models.
 
 ```{.python .input #scaling-laws-scaling-laws-and-the-modern-recipe}
 %%tab pytorch
@@ -38,7 +32,7 @@ import optax
 
 ## Counting Parameters and FLOPs
 
-### A Parameter Census
+### Counting Parameters
 
 A GPT holds two kinds of parameters, and they scale differently. The
 blocks hold $12d^2$ each — $4d^2$ of attention, $8d^2$ of feed-forward
@@ -235,16 +229,15 @@ static analysis, which counts everything, lands about ten percent above
 $6ND$, right where the $n/(6d)$ correction plus softmax and normalization
 put it, and splits forward to backward at almost exactly one to two: the
 derivation's 2-plus-4, read off a compiler's ledger. The timing line adds
-a sobering coda: our achieved throughput is roughly an order of magnitude
+a practical limitation: our achieved throughput is roughly an order of magnitude
 below what the GPU can deliver, because a model this small cannot keep
-the machine fed. Production runs choose widths and batch sizes with the
-hardware's appetite in mind, which is one reason real models are as large
-as they are.
+the hardware fully utilized. Production runs choose widths and batch sizes
+to increase utilization, which favors larger matrix operations.
 
 ## A Miniature Scaling Study
 
-Counting tells us what a run costs; it says nothing about what the cost
-buys. The *scaling law* is the empirical regularity that changed how
+Counting determines the cost of a run but not its resulting performance.
+A *scaling law* describes the empirical regularity that
 budgets are planned: across many orders of magnitude, language-model loss
 falls as a power law in each of model size, data, and compute, provided
 none of the three is the bottleneck :cite:`kaplan2020scaling`. On log-log
@@ -263,7 +256,7 @@ We can watch both halves of that story — the line and the reason it
 breaks — on one GPU, by training one family of models on one fixed
 corpus.
 
-### A Corpus Bigger than a Novella
+### Constructing the Training Corpus
 
 :numref:`sec_gpt` already showed what a too-small corpus does: 4.7M
 parameters against 180 KB of Wells bottomed out their validation loss
@@ -271,8 +264,7 @@ within a few hundred steps and spent the rest of the run memorizing. Our
 own preliminary check confirms the diagnosis for the whole size range: on
 *The Time Machine* alone, every configuration beyond about $10^5$
 parameters is saturated more or less immediately. A scaling study needs a
-corpus that can keep its larger sizes honest for at least a while, and we
-can assemble one without leaving the book's pantry: the Penn Treebank
+corpus large enough to distinguish the configurations. We use the Penn Treebank
 training text (5 MB of Wall Street Journal prose that
 :numref:`sec_word2vec_data` uses for word vectors) concatenated onto the
 novel. The subclass below reuses the entire character pipeline of
@@ -339,7 +331,7 @@ this can feed at the published twenty-tokens-per-parameter optimum to
 fifty times past it, which is exactly the position a study of saturation
 wants to be in.
 
-### Five Sizes, One Diet
+### Comparing Five Model Sizes
 
 The design: hold the data fixed and move only the model. Five sizes of
 `d2l.GPT`, widths 96 to 384 and depths 3 to 8 grown together the way real
@@ -435,7 +427,7 @@ d2l.plot(Ns, [curves['train'], curves['validation']],
          fmts=('o-', 's--'))
 ```
 
-### Reading the Bend
+### Interpreting the Departure from a Power Law
 
 The plot has two curves and each tells half the story. The smaller sizes
 line up roughly on a straight line: on this diet, multiplying parameters
@@ -523,7 +515,7 @@ shape of both terms — the straight stretch is $A/N^{\alpha}$ falling
 while the data term is negligible, and the bend is the crossover where
 the fixed corpus's $B/D^{\beta}$ takes over.
 
-## The Modern Recipe
+## Current Transformer Configurations
 
 If scale is what matters, what exactly do the trillion-token runs build?
 The reports read like a single answer arrived at independently.
@@ -535,7 +527,7 @@ open-weights families onto the axes this chapter built: Mistral 7B
 DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024`, Gemma 3
 :cite:`Gemma.Team.2025`, and GPT-OSS :cite:`OpenAI.2025`.
 
-### Convergent Evolution
+### Common Architectural Choices
 
 :The 2023–2025 open-weights recipe, one row per model family. Attention and cache column: :numref:`sec_kv-cache`. Normalization: :numref:`sec_transformer-block`. Positions: :numref:`sec_positional-information`. Mixture of experts: :numref:`sec_moe`.
 :label:`tab_modern-recipe`
@@ -573,10 +565,10 @@ schemes (:numref:`sec_positional-information`); the newest twist is still
 a setting of the same dial, dropping positions entirely on some layers as
 Llama 4's NoPE-interleaved long-context layers do.
 
-### Recipe Rows as Constructor Calls
+### Expressing Configurations as Constructor Calls
 
-:numref:`sec_gpt` promised that these rows would come back as argument
-lists, and the debt is now due. Scaled to our size — width 256, six
+:numref:`sec_gpt` represented architectural choices as constructor
+arguments. At width 256 and six
 blocks — here are four rows of the table as configurations of `d2l.GPT`,
 with grouped-query attention dropped in through the same seam
 :numref:`sec_kv-cache` built:
@@ -646,62 +638,51 @@ two rows we did not instantiate are the two seams working as designed:
 DeepSeek's MLA is the low-rank cache compression whose miniature
 :numref:`sec_kv-cache` trained, and every MoE cell in the table swaps the
 FFN through `ffn_factory` for the expert layer of :numref:`sec_moe`.
-Convergent evolution is the biologist's name for this: independent
-lineages under the same selection pressure arriving at the same body
-plan. The selection pressures here are three bills — training stability,
-decode-time memory, capacity per FLOP — and every 2026 deployment is
-recognizably the 2017 transformer with engineering applied to exactly
-those three lines of the budget.
+The configurations share solutions to three requirements: stable training,
+limited decode-time memory, and high capacity per FLOP. They retain the
+basic 2017 transformer block while changing normalization, attention, and
+feed-forward components to address these requirements.
 
 ## Where the Field Is Moving
 
-Three directions are worth pointers as this chapter closes. First, the
-attention layer's quadratic cost (:numref:`sec_attention-at-scale`) is
-increasingly rationed rather than paid: the sliding-window rows of
+Three directions extend the material in this chapter. First, models reduce
+the attention layer's quadratic cost (:numref:`sec_attention-at-scale`). The sliding-window rows of
 :numref:`tab_modern-recipe` are the mild form, and the stronger form
 replaces most attention layers outright with the linear-time recurrent
 mixers of :numref:`chap_modern_rnn`, keeping full attention in only a
-fraction of layers. These hybrids bet that exact global lookup is worth
-its price only a few times per stack; where that bet pays, and where it
-fails, is that chapter's story. Second, long context has become an
+fraction of layers. These hybrids perform exact global lookup only in
+selected layers; :numref:`chap_modern_rnn` examines the resulting tradeoffs.
+Second, long context has become an
 engineering discipline of its own: the number in a model card is a
 compound of RoPE base inflation and interpolation
 (:numref:`sec_positional-information`), window-and-sink cache policies
 (:numref:`sec_kv-cache`), and the systems work of
-:numref:`chap_performance`. None of it is a new body plan: the
-architectural moves are settings of the attention layer this chapter
+:numref:`chap_performance`. The architectural changes are settings of the attention layer this chapter
 already built, and the rest is positional bookkeeping and systems
-engineering. Third, the gains have moved to everything this chapter held
-fixed, namely what to train *on* and what happens after the loss stops
-falling; data curation, instruction tuning, and learning from feedback
+engineering. Third, further gains depend on choices held fixed in this
+chapter: the training data and the procedures applied after pretraining.
+Data curation, instruction tuning, and learning from feedback
 are the subject of the Language Models part, beginning in
 :numref:`chap_nlp_pretrain`.
 
 ## Summary
 
-Transformer training cost is two multiplications: non-embedding
-parameters ($N \approx 12Ld^2$; embeddings are tokenizer bookkeeping and
-are counted separately) times tokens, times six — two FLOPs per parameter
-per token forward, four backward, :eqref:`eq_six_nd` — with corrections
-(attention scores, $n/6d$) that stay subleading until contexts reach
-thousands. A profiler and XLA's cost analysis both confirm the rule on
-our GPT to within a few percent. On a fixed diet of tokens, loss falls
-with model size along a rough power law until the corpus can no longer
-feed the model, then bends away: our five-size study on 5.1M characters
-shows the straight stretch, the departure of the largest model, and the
-widening train–validation gap that explains it. The published account of
-that shape is $L(N,D) = E + A N^{-\alpha} + B D^{-\beta}$ — an entropy
-floor, a capacity term, a data term — whose compute-optimal allocation
-under $C \approx 6ND$ grows parameters and tokens together, at about
-twenty tokens per parameter (the Chinchilla ratio); its lesson is that
-data must scale with parameters. What the scaled-up runs build has
-converged: GQA or latent-compressed attention over a pre-norm RMSNorm
-block with a gated FFN, RoPE positions, no dropout, and mixture of
-experts where parameters should outnumber FLOPs; our recipe table's
-modern rows collapse to a single argument list of the `GPT` class,
-differing in dial settings rather than design. The
-2017 block, plus stability, cache, and capacity engineering, is the 2026
-frontier.
+For a transformer with $N \approx 12Ld^2$ non-embedding parameters trained
+on $D$ tokens, the leading training cost is approximately $6ND$: two
+floating-point operations per parameter and token in the forward pass and
+four in the backward pass. Attention-score computation adds a correction
+that remains smaller for the configurations studied here. PyTorch profiling
+and XLA cost analysis confirm the approximation within a few percent. In
+our five-size experiment with a fixed 5.1-million-character corpus, loss
+initially follows a power law with model size and then departs from it as the
+largest model becomes data-limited. The model
+$L(N,D)=E+A N^{-\alpha}+B D^{-\beta}$ separates irreducible, parameter, and
+data terms. Under $C\approx6ND$, compute-optimal training increases both
+parameters and tokens, with the Chinchilla result suggesting about twenty
+tokens per parameter. Current configurations commonly combine pre-norm and
+RMSNorm with gated FFNs, RoPE, and GQA or latent-compressed attention; some
+also use mixture-of-experts layers. These models differ mainly in their
+settings of a shared collection of architectural components.
 
 ## Exercises
 
@@ -750,18 +731,18 @@ frontier.
 ::: {.cover}
 [Dive into Deep Learning · §12.7]{.kicker}
 
-Scaling laws and the modern recipe<br>
-**count parameters and FLOPs · a scaling study, bend included · seven model families, one argument list**
+Scaling laws and current transformer configurations<br>
+**parameter and FLOP counts · a scaling experiment · seven model families**
 :::
 :::
 
-::: {.slide title="What scale buys"}
-[Boundary: §9's *Scaling Up* transfers hyperparameters across size (muP); this section asks what size itself buys]{.kicker}
+::: {.slide title="Performance as a function of scale"}
+[§9's *Scaling Up* transfers hyperparameters across model sizes; this section studies performance as size changes.]{.kicker}
 
 - Our GPT and a frontier model differ by a **number**: parameters,
   tokens, FLOPs.
-- Learn to count → verify against the machine → measure what the count
-  buys → read the 2023–2025 reports as configurations of our class.
+- Count parameters and FLOPs, verify the estimate empirically, and express
+  2023–2025 model reports as configurations of our class.
 :::
 
 ::: {.slide title="The parameter census"}
@@ -786,7 +767,7 @@ $$C \approx \underbrace{2ND}_{\textrm{forward}} + \underbrace{4ND}_{\textrm{back
 
 ::: {.d2l-note}
 Decode-time arithmetic (why a generated token costs $2N$) was §11.3's —
-the KV cache turns it into a memory bill.
+the KV cache makes memory traffic the main constraint.
 :::
 :::
 
@@ -868,13 +849,13 @@ outweighs the parameters.
 - The three modern rows print the **same argument list**.
 - What the flags don't reach: window widths, RoPE bases, expert counts;
   MLA = §11.3's low-rank cache, MoE swaps in via `ffn_factory` (§11.6).
-- Convergent evolution: three selection pressures — stability, cache,
-  capacity per FLOP — one body plan: the 2017 block.
+- The configurations retain the 2017 block while addressing stability,
+  cache size, and capacity per FLOP.
 :::
 
 ::: {.slide title="Recap"}
 - Cost = $6ND$; a profiler and a compiler both endorse the formula.
-- On a fixed diet, loss falls with size along a rough line **until the
+- With a fixed number of training tokens, loss falls with size along a rough line **until the
   corpus saturates the model** — the bend is the Chinchilla lesson.
 - The 2026 recipe: GQA/MLA on a pre-norm RMSNorm block, gated FFN, RoPE,
   no dropout, MoE for capacity — our `GPT` class with different flags.

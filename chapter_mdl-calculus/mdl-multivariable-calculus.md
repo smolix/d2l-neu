@@ -1,24 +1,21 @@
 # Multivariable Calculus
 :label:`sec_mdl-multivariable_calculus`
 
-A deep network's loss is a function of millions to billions of weights, yet
-training rests on a single question asked over and over: how does the loss
-change when we nudge the parameters? :numref:`sec_mdl-single_variable_calculus`
-answered this for one variable. This section lifts that local-linear picture to
-many variables. The central object is the *gradient*, and we will see three
-things about it that the rest of deep learning leans on: it is the multivariable
-derivative (a first-order approximation), it points in the direction of steepest
-change (which is why we descend along it), and organizing the chain rule around
-it *is* the backpropagation algorithm. We close with the *Hessian*, the
-second-order term that tells a minimum from a saddle.
+A deep network's loss depends on many parameters.
+:numref:`sec_mdl-single_variable_calculus` described the response to a change
+in one variable; here we extend the local linear approximation to several
+variables. The *gradient* represents the first-order derivative and determines
+directions of steepest change. Applying the multivariable chain rule efficiently
+gives backpropagation. We conclude with the *Hessian*, whose second-order
+information distinguishes minima, maxima, and saddle points.
 
 ## From Partial Derivatives to the Gradient
 
 ### Partial Derivatives
 
-The one observation we already have is this: if we change a *single* weight
+If we change a *single* weight
 $w_1$ and freeze the rest, we are back to a function of one variable, and
-:numref:`sec_mdl-single_variable_calculus` applies verbatim:
+:numref:`sec_mdl-single_variable_calculus` applies directly:
 
 $$L(w_1+\epsilon_1, w_2, \ldots, w_N) \approx L(w_1, w_2, \ldots, w_N) + \epsilon_1 \frac{\partial}{\partial w_1} L(w_1, w_2, \ldots, w_N).$$
 :eqlabel:`eq_mdl-part_der`
@@ -36,7 +33,7 @@ contributes $\epsilon_2\frac{\partial L}{\partial w_2}$, and so on. The
 corrections that involve *two* perturbations, like
 $\epsilon_1\epsilon_2\frac{\partial^2 L}{\partial w_1 \partial w_2}$, are
 products of small quantities (second order), and we discard them exactly as we
-discarded $\epsilon^2$ in one variable. What survives is a single sum:
+discarded $\epsilon^2$ in one variable. The first-order terms form a single sum:
 
 $$
 L(w_1+\epsilon_1, \ldots, w_N+\epsilon_N) \approx L(w_1, \ldots, w_N) + \sum_{i=1}^N \epsilon_i \frac{\partial L}{\partial w_i}.
@@ -220,7 +217,7 @@ content of gradient descent, first introduced in :numref:`sec_linear_regression`
 3. Take a small step that way: $\mathbf{w} \leftarrow \mathbf{w} + \eta\mathbf{v}$.
 4. Repeat.
 
-Everything hinges on step 2. Write the gradient's effect on a unit direction
+To solve step 2, write the gradient's effect on a unit direction
 $\mathbf{v}$ using the geometric form of the dot product from
 :numref:`sec_mdl-geometry-linear-algebraic-ops`,
 
@@ -417,10 +414,9 @@ each edge a direct functional dependence.
 ![The function relations of :eqref:`eq_mdl-multi_func_def`, drawn as a graph where nodes are values and edges show direct functional dependence.](../img/mdl-cal-chain-net1.svg)
 :label:`fig_mdl-chain-1`
 
-We *could* substitute everything and differentiate the resulting monster
-directly, but $\frac{\partial f}{\partial w}$ alone expands into a page of
-repeated subexpressions, and $\frac{\partial f}{\partial x}$ would repeat most
-of them again. That waste is precisely what the chain rule organizes away.
+Direct substitution produces long expressions with repeated subexpressions;
+computing another partial derivative repeats much of the same work. The chain
+rule organizes these shared computations.
 
 ### The Rule as a Sum Over Paths
 
@@ -444,7 +440,7 @@ $$
 In words, there are two *pathways* by which $a$
 influences $f$: $a \to u \to f$ and $a \to v \to f$. Each path contributes the
 *product* of the derivatives along its edges, and the total derivative is the
-*sum* over paths. This is the whole rule.
+*sum* over paths.
 
 In general, to differentiate the output with respect to an input we **sum, over
 every directed path from that input to the output, the product of the edge
@@ -525,12 +521,11 @@ df_dw = df_du*du_dw + df_dv*dv_dw
 print(f'df/dw at {w}, {x}, {y}, {z} is {df_dw}')
 ```
 
-This computes one derivative, $\frac{\partial f}{\partial w}$. The trouble is
-that it gives us *no head start* on $\frac{\partial f}{\partial x}$: by keeping
-$\partial w$ in every denominator, we organized the work around "how $w$ affects
-everything." But in deep learning we want the opposite: how *one* loss is
-affected by *every* parameter. So we keep $\partial f$ in every *numerator*
-instead, walking the graph from the output backward:
+This computes $\frac{\partial f}{\partial w}$ but does not reuse the calculation
+for $\frac{\partial f}{\partial x}$. Deep learning instead requires the
+derivative of one loss with respect to every parameter. We therefore keep
+$\partial f$ in each numerator and traverse the graph backward from the
+output:
 
 $$
 \begin{aligned}
@@ -915,13 +910,11 @@ saddles too :cite:`Dauphin.Pascanu.Gulcehre.ea.2014`, one reason gradient
 methods fare better in practice than the old fear of "getting stuck in a bad
 local minimum" suggests.
 
-With the Hessian in hand, the one-variable toolkit has been fully lifted:
-gradient for slope, Hessian for curvature, and the chain rule organized
-backward for the computation. What has *not* yet been lifted is the function
-itself: everything above differentiated a *scalar* loss, while real layers map
-vectors to vectors and carry matrix parameters, so the derivative becomes a
-matrix of partials, the *Jacobian*, with the gradient and Hessian as special
-cases. One caution for that road: the Mean Value Theorem of
+The gradient, Hessian, and multivariable chain rule extend the one-variable
+methods to scalar functions of several variables. Neural network layers also
+map vectors to vectors and use matrix parameters. Their derivative is a matrix
+of partial derivatives, the *Jacobian*, with gradients and Hessians as special
+cases. The Mean Value Theorem of
 :numref:`sec_mdl-mvt` does *not* survive the passage to vector-valued maps;
 only an inequality remains, the mean value inequality :cite:`Rudin.1976`.
 :numref:`sec_mdl-matrix-calculus-autodiff` develops the Jacobian machinery, the
@@ -1003,7 +996,7 @@ Differentiation in many variables<br>**the gradient · its geometry · the chain
 :::
 :::
 
-::: {.slide title="One question, asked billions of times"}
+::: {.slide title="Derivatives with Many Parameters"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -1038,7 +1031,7 @@ parameters?**
 [Gradients]{.kicker}
 
 Perturb every coordinate at once and discard the second-order cross terms,
-exactly as in one variable. What survives is a dot product:
+exactly as in one variable. The first-order term is a dot product:
 
 $$L(\mathbf{w} + \boldsymbol{\epsilon}) \approx L(\mathbf{w}) + \boldsymbol{\epsilon}\cdot \nabla_{\mathbf{w}} L(\mathbf{w}), \qquad \nabla_{\mathbf{w}} L = \left[\tfrac{\partial L}{\partial w_1}, \ldots, \tfrac{\partial L}{\partial w_N}\right]^\top.$$
 
@@ -1070,7 +1063,7 @@ Autograd reproduces the hand gradient:
 @!mdl-multivariable-calculus-directional-derivatives-1
 :::
 
-::: {.slide title="Every direction at once"}
+::: {.slide title="Directional Derivatives"}
 [Gradients]{.kicker}
 
 Read the approximation along a unit direction $\mathbf{u}$ and the rate of
@@ -1118,7 +1111,7 @@ $\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}} L$.
 :::
 :::
 
-::: {.slide title="Two faces of one approximation"}
+::: {.slide title="Linearization and Gradient Geometry"}
 [Geometry]{.kicker}
 
 ::: {.cols .vc}
@@ -1236,7 +1229,7 @@ gradient flow.
 :::
 :::
 
-::: {.slide title="Forward sweep: one derivative"}
+::: {.slide title="Forward-Mode Derivative Evaluation"}
 [Chain rule]{.kicker}
 
 Push an input forward through the graph and the single-step partials multiply out. One forward sweep returns only $\partial f/\partial w$, with no head start on the other inputs:
@@ -1244,7 +1237,7 @@ Push an input forward through the graph and the single-step partials multiply ou
 @!multivariable-calculus-the-backpropagation-algorithm-1
 :::
 
-::: {.slide title="Backward sweep: the whole gradient"}
+::: {.slide title="Backward Evaluation of the Gradient"}
 [Chain rule]{.kicker}
 
 Walk the graph from the output **backward**, keeping $\partial f$ in every *numerator*: compute $\tfrac{\partial f}{\partial u}, \tfrac{\partial f}{\partial v}$ once, reuse them, and **all** four input derivatives fall out in a single sweep. This *is* backpropagation.
@@ -1351,7 +1344,7 @@ The surface $f(x,y) = x\,e^{-x^2-y^2}$ has exactly two critical points, $(\pm 1/
 Differentiate twice, extract eigenvalues, read the signs: all positive is a minimum, all negative a maximum, and a saddle shows one of each.
 :::
 
-::: {.slide title="Why saddles, not bad minima"}
+::: {.slide title="Saddle Points in High Dimensions"}
 [Hessian]{.kicker}
 
 A minimum needs **all** $n$ eigenvalues positive at once. If their signs
@@ -1365,7 +1358,7 @@ So the critical points met while training deep nets are overwhelmingly
 methods do so well in practice.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Summary"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

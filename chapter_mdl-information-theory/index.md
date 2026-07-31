@@ -1,12 +1,13 @@
 # Information Theory and Divergences
 :label:`chap_mdl-information-theory`
 
-Information theory is the language of losses. This chapter builds entropy,
-cross-entropy, and the Kullback--Leibler divergence, shows that minimizing
-cross-entropy *is* maximum likelihood, and then broadens to the wider family of
-divergences and distances (f-divergences, optimal transport, integral
-probability metrics) that define modern generative objectives, and to mutual
-information and the contrastive objectives of representation learning.
+Information theory provides a common language for many learning objectives.
+This chapter begins with entropy, cross-entropy, and the Kullback--Leibler
+divergence, including the equivalence between cross-entropy minimization and
+maximum likelihood. It then studies broader families of discrepancies between
+distributions, including $f$-divergences, integral probability metrics, and
+optimal transport, before turning to mutual information and contrastive
+objectives for representation learning.
 
 ```toc
 :maxdepth: 2
@@ -18,7 +19,9 @@ mdl-mutual-information
 
 ## Resources and Further Reading {.unnumbered}
 
-A short, curated reading list for information theory and divergences as they appear in machine and deep learning: entropy and cross-entropy, the KL and broader $f$-divergences, mutual information, optimal transport, and the information bottleneck.
+The following references cover information theory and divergences as they
+arise in machine learning, including mutual information, optimal transport,
+and the information bottleneck.
 
 **Books**
 

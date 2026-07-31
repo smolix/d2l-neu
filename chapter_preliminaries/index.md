@@ -1,27 +1,16 @@
 #  Preliminaries
 :label:`chap_preliminaries`
 
-To prepare for your dive into deep learning,
-you will need a few survival skills:
-(i) techniques for storing and manipulating data;
-(ii) libraries for ingesting 
-and preprocessing data from a variety of sources;
-(iii) knowledge of the basic linear algebraic operations
-that we apply to high-dimensional data elements;
-(iv) just enough calculus to determine
-which direction to adjust each parameter
-in order to decrease the loss function;
-(v) the ability to automatically compute derivatives
-so that you can forget much of 
-the calculus you just learned;
-(vi) some basic fluency in probability,
-our primary language for reasoning under uncertainty;
-and (vii) some aptitude for finding answers 
-in the official documentation when you get stuck.
+Deep learning combines numerical computation with a small set of
+mathematical tools. This chapter introduces the prerequisites used throughout
+the book: storing and manipulating data, preprocessing tabular datasets,
+linear algebra, differential calculus, automatic differentiation, and
+probability. It concludes with a practical method for consulting framework
+documentation.
 
-In short, this chapter provides a rapid introduction 
-to the basics that you will need to follow 
-*most* of the technical content in this book.
+The treatment is intentionally concise. Each section introduces the notation
+and operations needed by later chapters; the mathematics appendices develop
+the same subjects in greater depth.
 
 ```toc
 :maxdepth: 2
@@ -37,7 +26,9 @@ lookup-api
 
 ## Resources and Further Reading {.unnumbered}
 
-The references below round out the survival skills sketched in this chapter: array programming, data wrangling, the linear algebra / calculus / probability we only touch lightly, and the habit of finding answers in official documentation; all are freely accessible online except where noted.
+The references below provide fuller treatments of array programming, data
+preprocessing, linear algebra, calculus, probability, and framework
+documentation. All are freely accessible online except where noted.
 
 **Books**
 
@@ -61,4 +52,3 @@ The references below round out the survival skills sketched in this chapter: arr
 - [pandas user guide — pandas project](https://pandas.pydata.org/docs/user_guide/index.html) — the official, topic-organized reference for the loading, indexing, and missing-data handling covered in the pandas section.
 - [PyTorch documentation — PyTorch project](https://docs.pytorch.org/docs/stable/index.html) — the official API docs; the canonical place to look up tensor operations and `autograd`, directly reinforcing the lookup-api section's message. The corresponding documentation hubs for JAX, TensorFlow, and MXNet are collected in :numref:`sec_lookup_api`.
 - [SciPy documentation — SciPy project](https://docs.scipy.org/doc/scipy/) — official docs for linear algebra, optimization, and statistics routines that complement the linear-algebra, calculus, and probability sections.
-

@@ -1,20 +1,19 @@
 # Learning at Test Time
 :label:`sec_test-time-regression`
 
-The memories of this chapter were built as architectures: an outer-product
-write, a ladder of decays, a delta-rule edit. This section rebuilds them as
-statistics. The claim is that every one of these layers is solving a
-*regression problem at test time*, and :citet:`Wang.Shi.Fox.2025` makes
-it precise: as tokens arrive, the layer fits a small regressor to the
-(key, value) pairs it has seen, and it answers each query by evaluating
-the fit. Under this reading an architecture is nothing but three choices:
-how past pairs are weighted, which function class the regressor comes
-from, and how hard the fit is pursued. The models we have met occupy
-corners of that design cube, and two further corners fall out of the same view: a
-state update whose gate is *derived* rather than designed (Longhorn), and
-a memory that is itself a small neural network adapted inside the forward
-pass (Titans). We end where a regression view must end, with data whose
-distribution drifts, where forgetting becomes a statistical necessity.
+The preceding sections introduced outer-product writes, several forms of
+decay, and delta-rule corrections. These updates can be interpreted as
+solving a *regression problem at test time*
+:cite:`Wang.Shi.Fox.2025`. As tokens arrive, the layer fits a small
+regressor to observed key--value pairs and answers each query by evaluating
+that fit.
+
+This interpretation separates three design choices: how past pairs are
+weighted, the regressor's function class, and the optimization method used
+for the inner fit. It also yields Longhorn, whose gate follows from an
+implicit update, and Titans, whose memory is a small neural network adapted
+during the forward pass. We conclude with drifting data, where emphasizing
+recent observations can reduce tracking error.
 
 *Prerequisites: attention as kernel regression
 (:numref:`sec_attention-pooling`), the matrix-state family and its
@@ -23,7 +22,7 @@ capacity law (:numref:`sec_matrix-state`), the delta rule
 decay (:numref:`chap_optimization`). Every experiment in this section runs
 on a CPU.*
 
-We start small, though, with a thread left hanging in
+We begin with the estimator introduced in
 :numref:`sec_attention-pooling`: a regression estimator with exactly one
 parameter, and the question of how to learn it.
 
@@ -184,7 +183,7 @@ $1$: gradient descent finds, in five steps, a bandwidth in the same region
 the hand sweep picked. That is the answer to the exercise, but the plots
 say it better.
 
-### What Learning Sharpened
+### Effect of the Learned Bandwidth
 
 ```{.python .input #test-time-regression-what-learning-sharpened-1}
 %%tab pytorch
@@ -237,7 +236,7 @@ the data it serves. Keep the shape of what just happened in view: a
 it will be queried on*. Every memory in this chapter turns out to be an
 instance of it.
 
-## One Recipe
+## Components of an Online Regressor
 :label:`subsec_ttr-recipe`
 
 Now the general statement. An autoregressive sequence layer receives, by
@@ -433,7 +432,7 @@ state adapted within one.
 ![Two learning loops. Left: during pretraining, the outer parameters $\theta$ — projections, gate networks, the initial state — parameterize every inner update, and the gradient of the pretraining loss reaches them through the whole chain of inner updates. Right: at inference only the inner loop runs; the state adapts online, with no labels and no update to $\theta$.](../img/mdl-modernrnn-inner-outer.svg)
 :label:`fig_ttr-inner-outer`
 
-### The Spectrum, Measured
+### Comparing Inner Solvers
 :label:`subsec_ttr-spectrum`
 
 If the rows of :numref:`tab_ttr-recipe` really are one problem under
@@ -996,7 +995,7 @@ richer test-time objectives and solvers, from TTT's mini-batch inner loop
 :cite:`Sun.Li.Dalal.ea.2024` onward; the chapter's Resources section maps
 it, and this book stops at the recipe.
 
-## Regression That Tracks: the Forecasting Connection
+## Tracking Distribution Drift
 :label:`subsec_ttr-tracking`
 
 One question from the recipe is still open. The weights $\gamma_i^{(t)}$
@@ -1091,7 +1090,7 @@ motivates rather than demonstrates. The conclusion that the experiment
 does support is the scoped one: forgetting reduces tracking error under
 drift, at the price of statistical efficiency on stationary stretches.
 
-**What this section's experiments do and do not show.** The bandwidth,
+**Experimental scope.** The bandwidth,
 spectrum, Longhorn, Titans, and drift cells are identity checks and
 mechanism illustrations on synthetic streams: they verify derivations
 (the closed-form implicit step), exhibit solver behavior (underfit
@@ -1196,7 +1195,7 @@ Learning at test time<br>
 :::
 :::
 
-::: {.slide title="A thread from the attention chapter"}
+::: {.slide title="Kernel Regression Revisited"}
 Nadaraya–Watson regression: attention with a hand-picked kernel; one knob,
 the bandwidth $\sigma$ — swept by hand, never learned.
 
@@ -1219,7 +1218,7 @@ Leave-one-out keys and values, plain gradient descent on the scalar $w$:
   the learned bandwidth lands where the hand sweep pointed.
 :::
 
-::: {.slide title="What learning sharpened"}
+::: {.slide title="Effect of Learned Bandwidth"}
 @!test-time-regression-what-learning-sharpened-2
 
 - The region of large attention weights becomes **sharper** once the
@@ -1229,7 +1228,7 @@ Leave-one-out keys and values, plain gradient descent on the scalar $w$:
   serves. Hold that shape.
 :::
 
-::: {.slide title="One recipe"}
+::: {.slide title="Components of an Online Regressor"}
 Memorize by regression, retrieve by evaluation (Wang, Shi & Fox 2025):
 
 $$m_t = \mathop{\mathrm{argmin}}_{m \in \mathcal{M}} \frac{1}{2} \sum_{i \le t} \gamma_i^{(t)} \big\| \mathbf{v}_i - m(\mathbf{k}_i) \big\|^2, \qquad \mathbf{o}_t = m_t(\mathbf{q}_t)$$
@@ -1241,7 +1240,7 @@ Three choices fix a layer:
 - **solver** — how hard to fit, once per token
 :::
 
-::: {.slide title="The reveal"}
+::: {.slide title="Sequence Layers as Regressors"}
 | model | weights | class | solver |
 |:--|:--|:--|:--|
 | softmax attention | query kernel | nonparametric | exact (Nadaraya–Watson) |
@@ -1270,7 +1269,7 @@ bias).
 - Applies verbatim to DeltaNet, Longhorn, Titans.
 :::
 
-::: {.slide title="The spectrum, measured"}
+::: {.slide title="Comparison of Inner Solvers"}
 One dataset, one feature space, one **shared ridge objective** — five
 solvers:
 
@@ -1353,7 +1352,7 @@ writing superseded values.
   stationary stretches.
 :::
 
-::: {.slide title="Where this leaves the chapter"}
+::: {.slide title="Implications for Sequence Models"}
 - One problem: memorize by weighted regression, retrieve at the query.
 - Softmax attention = Nadaraya–Watson; linear attention = LS with a term
   deleted; decay = the weighted cross-moment of weighted LS; delta = one

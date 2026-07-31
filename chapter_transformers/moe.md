@@ -1,29 +1,26 @@
 # Mixture of Experts
 :label:`sec_moe`
 
-Every model in this chapter so far spends its parameters and its compute
-in lockstep: a token flowing through the GPT of :numref:`sec_gpt`
-multiplies against every weight the model owns, so a model with twice
-the parameters charges every token twice the floating-point operations.
-The scaling laws that close this chapter will say that parameters are
-precisely what we want more of, and the census of
-:numref:`sec_transformer-block` says where they would go, since the
-feed-forward network already holds two thirds of every block. A
-*mixture of experts* (MoE) breaks the lockstep at exactly that spot:
+In the dense models considered so far, parameter count and computation grow
+together: each token is processed by every model parameter, so doubling the
+number of parameters approximately doubles the floating-point operations.
+The scaling laws at the end of this chapter explain how performance changes
+with parameter count, while :numref:`sec_transformer-block` shows that the
+feed-forward network already contains two thirds of each block's parameters. A
+*mixture of experts* (MoE) separates the two quantities at that point:
 keep $E$ copies of the FFN (the *experts*) and let a small learned
 *router* send each token to only $k$ of them. Parameters now scale
-with $E$ while per-token compute scales with $k$, and the two dials
-turn independently. The idea is old (a committee of specialist
+with $E$ while per-token compute scales with $k$. The idea is old (a committee of specialist
 networks under a gating network dates to
 :citet:`Jacobs.Jordan.Nowlan.ea.1991`, sparse routing at scale to
-:citet:`Shazeer.Mirhoseini.Maziarz.ea.2017`), but it is having its
-decade: Mixtral, DeepSeek-V3, Qwen3, and gpt-oss all ship it
+:citet:`Shazeer.Mirhoseini.Maziarz.ea.2017`). Current models including
+Mixtral, DeepSeek-V3, Qwen3, and gpt-oss use this design
 :cite:`Jiang.Sablayrolles.Roux.ea.2024,Liu.Feng.Xue.ea.2024,Yang.Li.Yang.ea.2025,OpenAI.2025`.
-This section does the accounting that makes the idea attractive, builds
-the layer, meets the failure mode that nearly killed it — routing
-collapse — and repairs it twice, once with an auxiliary loss and once
-without. We close by swapping the FFN of our GPT for a mixture and
-measuring what the extra parameters buy.
+This section analyzes the parameter and computation costs, implements the
+layer, and studies routing collapse. We compare an auxiliary balancing loss
+with a balancing method that does not modify the training objective. Finally,
+we replace the FFN in our GPT with an MoE layer and measure the effect of the
+additional parameters.
 
 ```{.python .input #moe-mixture-of-experts}
 %%tab pytorch
@@ -46,15 +43,13 @@ import optax
 
 ## Conditional Computation
 
-The bet behind MoE is that a language model's FFN parameters do not all
-need to fire on every token. Predicting the next token after "the
+MoE assumes that a language model need not use every FFN parameter for every
+token. Predicting the next token after "the
 integral of" exercises different knowledge from predicting it after "Act
-I, Scene"; a dense FFN pays for both everywhere, a routed one lets each
-token consult the specialists it needs. What makes the bet so attractive
-is the asymmetry of the two costs. Stored parameters are cheap: they sit
-in memory (or on other devices) and idle experts charge no FLOPs per
-token. Compute is the expensive, per-token resource. An MoE layer holds
-$E$ experts' parameters but each token pays the FLOPs of $k$, so at
+I, Scene". A dense FFN evaluates the same parameters in both cases, whereas
+a routed layer selects a subset. Stored parameters occupy memory, but idle
+experts require no arithmetic for the current token. An MoE layer holds
+$E$ experts' parameters but each token evaluates only $k$, so at
 roughly 2 forward FLOPs per active parameter per token, the model's
 capacity and its serving cost decouple.
 
@@ -281,7 +276,7 @@ experts. The interesting question is whether training keeps it that way.
 
 It does not.
 
-### The Rich Get Richer
+### Positive Feedback in Routing
 
 Follow the feedback loop. Early in training, by pure initialization luck,
 some expert is slightly better than its peers on the tokens it happens to
@@ -356,7 +351,7 @@ cross-device traffic); our layer keeps the softmax router and changes
 only the selection bias — the mechanism :citet:`Wang.Gao.Zeng.ea.2024`
 isolate.
 
-### Three Runs, One Budget
+### Comparing Balancing Methods at Fixed Compute
 
 Both repairs slot into an ordinary training loop. The trainer below is
 `d2l.train_lm` (:numref:`sec_gpt`) plus the two mechanisms, each
@@ -775,23 +770,24 @@ precisely the part that does transfer across five orders of magnitude.
 A mixture of experts replaces the transformer block's FFN with $E$
 parallel FFNs and a linear router that sends each token to the top $k$
 of them, weighted by routing probability: parameters scale with $E$,
-per-token FLOPs with $k$. The accounting is the argument, computed
-from published configurations: Mixtral 8x7B stores 46.7B parameters
+per-token FLOPs with $k$. Published configurations illustrate the resulting
+separation: Mixtral 8x7B stores 46.7B parameters
 and activates 12.9B per token, and DeepSeek-V3 stores 28 times what a
-token touches. Left alone, routing collapses: winners attract
-gradient, gradient makes winners, and a few experts end up serving
-everything while the rest die. The auxiliary balancing loss penalizes
-the correlation between load and routing probability at the price of a
-gradient that competes with the language-modeling objective; the
+token touches. Without balancing, routing can enter a positive-feedback
+loop in which frequently selected experts receive more updates and become
+still more likely to be selected. A few experts then process most tokens.
+The auxiliary balancing loss penalizes the correlation between load and
+routing probability, but introduces a gradient that can compete with the
+language-modeling objective; the
 auxiliary-loss-free bias steers only the top-$k$ selection through a
-gradient-free control loop. In our triptych both flatten usage
-completely and both beat the collapsed run, while differing from each
-other by less than seed noise. Modern designs slice capacity thinner
+gradient-free control loop. In our three experiments, both methods make
+usage nearly uniform and outperform the unbalanced run, while differing
+from each other by less than seed noise. Modern designs use many narrow experts
 (many narrow experts, sometimes one shared always-on expert), and our
 GPT accepts the whole apparatus through a swapped FFN: at matched
 active parameters, the mixture trains comparably to dense while
-holding several times the weights — the trade that has made MoE a
-major scaling strategy at the frontier.
+holding several times the weights. This separation of active computation
+from stored parameters makes MoE useful for large models.
 
 ## Exercises
 
@@ -892,7 +888,7 @@ was built with:
 At initialization: usage nearly uniform. Training will not keep it so.
 :::
 
-::: {.slide title="Routing collapse: the rich get richer"}
+::: {.slide title="Positive feedback in routing"}
 - A slightly-lucky expert improves on its tokens **and** gains routing
   probability — more tokens, more gradient, more probability.
 - Losers starve, learn slowly, sink. End state: a couple of experts
@@ -913,13 +909,13 @@ $$\mathcal{E}_k = \operatorname{argtop}_k(p_i + b_i), \qquad b_i \leftarrow b_i 
 — steers *selection only*; the loss contains no balancing term at all.
 :::
 
-::: {.slide title="Three runs, one budget"}
+::: {.slide title="Balancing methods at fixed compute"}
 Same init, same data, same 800 steps; only the balancing differs:
 
 @!moe-three-runs-one-budget-3
 :::
 
-::: {.slide title="Reading the triptych"}
+::: {.slide title="Experimental results"}
 @!moe-three-runs-one-budget-4
 
 - **No balancing**: collapse in every seed, both frameworks — from two

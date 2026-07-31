@@ -1,7 +1,9 @@
 # Soft Actor-Critic
 :label:`sec_sac`
 
-:numref:`sec_regularized` closed with a promise: an algorithm assembled from three components this book already owns, the entropy-regularized objective of that section, the pathwise gradient of :numref:`sec_deeprl`, and the replay-and-target machinery of :numref:`sec_dqn`, plus one mechanism it deferred as bookkeeping. This section is that paragraph made executable. Soft Actor-Critic, SAC :cite:`Haarnoja.Zhou.Abbeel.ea.2018,Haarnoja.Zhou.Hartikainen.ea.2018`, is the workhorse of off-policy continuous control, and almost nothing in it will be new: every equation below arrives with a pointer to where you met it, and the one genuinely new ingredient is a single line of calculus. What the assembly buys is measured at the end, on the task :numref:`sec_deeprl` left unfinished: REINFORCE with a learned baseline spent $480{,}000$ Pendulum steps without ever reaching the $-200$ neighborhood of a working swing-up controller, and the agent built here crosses that line in under ten thousand.
+Soft Actor-Critic (SAC) combines an entropy-regularized objective with off-policy value learning for continuous actions :cite:`Haarnoja.Zhou.Abbeel.ea.2018,Haarnoja.Zhou.Hartikainen.ea.2018`. Its actor uses a pathwise gradient through a differentiable critic, while replay, target networks, and double critics stabilize value learning. Bounded actions are represented by applying a hyperbolic tangent to a Gaussian sample, which requires a change-of-variables correction to the log density.
+
+This section derives the soft policy-evaluation and improvement steps, constructs the squashed Gaussian policy, and assembles the SAC update. On Pendulum, we compare sample efficiency with REINFORCE and evaluate both policy return and critic calibration.
 
 ```{.python .input #sac-soft-actor-critic-1}
 %%tab pytorch
@@ -26,7 +28,7 @@ import numpy as np
 import optax
 ```
 
-The laboratory is Pendulum, exactly as :numref:`sec_deeprl` set it up: state $(\cos\vartheta, \sin\vartheta, \dot\vartheta)$, a torque in $[-2, 2]$, a cost of roughly the squared angle from upright at every one of 200 steps, so an aimless policy collects about $-1200$ per episode and a controller that swings up and balances about $-200$ or better. The budget is stated in environment steps, the unit the agent spends (:numref:`sec_dqn`): $20{,}000$ steps per run, one gradient update per step after a thousand random warm-up steps. The critics are ordinary regression networks that take the state *and the action* as input and return one number; the argmax over actions that :numref:`sec_dqn` needed is about to be replaced by a policy trained to climb them.
+Pendulum has state $(\cos\vartheta,\sin\vartheta,\dot\vartheta)$ and torque actions in $[-2,2]$. An uncontrolled policy obtains a return near $-1200$, while a controller that swings up and balances obtains about $-200$ or better. Each run uses $20{,}000$ environment steps, with one gradient update per step after $1{,}000$ random warm-up steps. Each critic takes a state and action as input and returns a scalar value; the actor replaces explicit maximization over continuous actions.
 
 ```{.python .input #sac-soft-actor-critic-2}
 %%tab pytorch, jax
@@ -91,7 +93,7 @@ The sampled form in :eqref:`eq_sac_target` is what an actor-critic can compute w
 
 ### Soft Policy Improvement
 
-The improvement half is where owning :numref:`sec_regularized` pays most. Its proposition's proof established, for any policy $\pi$ and any reward vector,
+The policy-improvement step follows directly from :numref:`sec_regularized`. For any policy $\pi$ and reward vector,
 
 $$
 E_{\pi}[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).
@@ -104,7 +106,7 @@ L_{\pi}(\theta) = E_{s \sim \mathcal{D},\, z}\Big[ \alpha \log \pi_\theta\big(\t
 $$
 :eqlabel:`eq_sac_actor`
 
-with $z \sim \mathcal{N}(0, I)$ and states drawn from the replay buffer $\mathcal{D}$. How to differentiate an expectation whose distribution depends on $\theta$ is a solved problem twice over, and :eqref:`eq_sac_actor` picks the second solution: this is the pathwise gradient of :eqref:`eq_score_vs_pathwise`, differentiating straight through the sampled action into a critic that, being a network, is differentiable in the action by construction. :numref:`sec_deeprl` priced the choice, factor-of-twenty variance reductions in exchange for exactly that differentiability premise, and the premise is why the recipe does not port to discrete actions without summing the expectation exactly or smoothing the argmax away.
+with $z \sim \mathcal{N}(0,I)$ and states drawn from the replay buffer $\mathcal{D}$. Equation :eqref:`eq_sac_actor` uses the pathwise gradient from :eqref:`eq_score_vs_pathwise`, differentiating through the sampled action and the critic. This estimator usually has lower variance than the score-function estimator but requires the critic to be differentiable with respect to its action. For discrete actions, one must instead sum the expectation exactly or use a continuous relaxation.
 
 One guarantee travels with the improvement step, and it is five lines from the same proposition.
 
@@ -278,7 +280,7 @@ The frozen copies $w_j^-$ do the target network's job from :numref:`sec_dqn` on 
 
 ### Off-Policy Learning without Importance Ratios
 
-This is the chapter's second off-policy algorithm, and it earns the license the way :numref:`sec_dqn` did, not the way :numref:`sec_ppo` did. PPO's importance ratios corrected an expectation over actions *the old policy chose*; here no estimate is ever taken under the collecting policy. The critic's target never mentions the collector, and the actor's expectation re-samples its own fresh actions, so the buffer contributes only states. What replay does shift is the *state distribution* the losses average over, a shift no action ratio repairs. The cost of that shift is the organizing subject of :numref:`sec_offline`; here, where the agent keeps interacting, it stays mild.
+SAC is off-policy for the same reason as DQN, rather than through PPO-style importance weighting. The critic target does not depend on the collecting policy, and the actor draws new actions from its current policy; the replay buffer supplies states and transitions. Replay still changes the state distribution over which the losses are averaged, and action-probability ratios do not correct that shift. :numref:`sec_offline` studies the consequences when no new interaction is available.
 
 The container is three lines of bookkeeping. :numref:`sec_deeprl`'s `ActorCritic` finally stops fitting, for a structural reason worth naming: its second head was $V(s)$, and SAC's critics take the action as an input, so the pair $(Q_{w_1}, Q_{w_2})$ with their frozen copies replaces the value head. The replay buffer of :numref:`sec_dqn` needs one column widened, since it stored actions as integers for a discrete world and Pendulum's action is a float vector; everything else, the ring, the eviction, the time-scrambling `sample`, is inherited unchanged.
 
@@ -516,7 +518,7 @@ for arm in runs:
 
 Read the shape before the level. The trace enters high, a wide young policy, and the objective spends that entropy quickly while the critic learns what the noise costs; it overshoots to roughly half a nat below zero during the steepest stretch of the return curve, then buys some of the entropy back once the task is mastered and noise near the balanced state is cheap, and ends in the neighborhood of zero, where the printed final values sit in both arms and both tabs. Nothing about that ending is a collapse: the policy remains a genuine distribution at convergence, exactly the "stochastic by design" the objective promised. And since the entropy here is differential, zero is not special and negative values along the way are not a bug, merely a density that concentrates, a fact exercise 4 makes quantitative. Two accounting notes keep this plot honest. The printed entropy is under our convention that carries the $\log c$ of :eqref:`eq_tanh_logdet`; implementations that drop it report the same policy $\log 2 \approx 0.69$ nats lower, and comparing entropy numbers across codebases without checking that convention is comparing different quantities. And the level the trace settles at is the measured justification for fixing $\alpha = 0.2$ rather than building the autotuning apparatus: the constrained variant of :cite:`Haarnoja.Zhou.Hartikainen.ea.2018` would target $\bar{H} = -\dim \mathcal{A} = -1$ and let $\alpha$ float, our fixed exchange rate lands the entropy within about a nat of that target on its own, and exercise 1 closes the remaining gap. What $\alpha$ is *not* is a learning rate: it is an exchange rate in reward units per nat, which makes it reward-scale dependent, doubling every reward halves the effective temperature, and that sensitivity, not any optimization subtlety, is what the autotuning variant automates away.
 
-The evaluation discipline of :numref:`sec_dqn` applies with one twist. The training returns above are collected by the stochastic policy, which is paid to keep noise, so evaluate the deterministic policy $c \tanh(\mu_\theta(s))$ separately, and evaluate the stochastic one beside it to price the noise:
+Training returns are generated by the stochastic policy because entropy is part of the objective. We therefore evaluate both that policy and the deterministic mean action $c\tanh(\mu_\theta(s))$:
 
 ```{.python .input #sac-the-entropy-the-policy-keeps-2}
 %%tab pytorch, jax
@@ -533,11 +535,11 @@ for arm in runs:
               f'stochastic {s:7.1f}, noise cost {g - s:+6.1f}')
 ```
 
-Every deterministic evaluation, both arms and both tabs, lands between about $-140$ and $-190$, and the stochastic policy lands within about ten points of its own deterministic twin: at the entropy this policy kept, the noise costs almost nothing. That near-equality is not a triviality; it is :numref:`sec_regularized`'s frontier read at its flat top. A concave trade of reward against entropy is nearly level near its peak, so the first nat of noise is nearly free, and a state-dependent $\sigma$ spends it where it is cheapest. The contrast with :numref:`sec_dqn`'s $\epsilon$-greedy tax is instructive: there the exploration noise was a constant foreign forcing that the evaluation had to strip away; here the noise is priced into the objective, and the policy has already moved it out of harm's way.
+Across variants and frameworks, deterministic returns lie between about $-140$ and $-190$, and the stochastic policy is within about ten points of its deterministic counterpart. The learned state-dependent standard deviation therefore preserves entropy with little loss of return on this task. Unlike fixed $\epsilon$-greedy exploration, the stochasticity is optimized jointly with the policy under the entropy-regularized objective.
 
 ### Critic Calibration: Predicted against Delivered
 
-Promised value against delivered return (:numref:`tab_rl_diagnostics`) is what finally separates the arms. This is the diagnostic this chapter trusts most. For each trained agent, run twenty stochastic episodes, record the critics' promise $\min_j Q_{w_j}(s_0, a_0)$ at each episode's first state and action, and compare it with what the episode then delivered. One bookkeeping precaution makes the comparison fair, and skipping it manufactures a phantom bias: a soft critic predicts the *soft* return, $\sum_t \gamma^t (r_t - \alpha \log \pi(a_t \mid s_t))$, so that is the yardstick, computed from the same log-probabilities the sampler already knows; the plain return is printed beside it to show the stakes of the distinction.
+The critic variants differ more clearly in calibration than in return. For each trained agent, we run twenty stochastic episodes and compare $\min_j Q_{w_j}(s_0,a_0)$ with the realized return. A soft critic predicts the entropy-regularized return $\sum_t \gamma^t(r_t-\alpha\log\pi(a_t\mid s_t))$, so this quantity is the appropriate target; the ordinary return is reported alongside it.
 
 ```{.python .input #sac-honest-promises-predicted-against-delivered}
 %%tab pytorch
@@ -615,13 +617,13 @@ for arm in runs:
               f'(soft) {soft:7.1f}, gap {pred - soft:+6.1f}, plain {plain:7.1f}')
 ```
 
-The effect points the same way on every seed and in both tabs. It is not the direction :numref:`sec_dqn` would lead you to predict. *Neither arm meaningfully over-promises*: no reading in either tab sits more than a few points above delivery. The single critic's promise lands near calibrated, never more than about thirty points below delivery and usually much closer, while the twin-critic minimum under-promises by about thirty to sixty points, and on every individual seed the minimum's gap exceeds the single critic's: the $\min$ is pessimistic by construction, and here the construction shows up in the measurement, a critic that promises less than it delivers, at policy quality the previous experiments already showed to be identical. Two honesty clauses belong to this table. Part of any under-promise has nothing to do with the minimum: a critic chasing a still-improving policy predicts yesterday's returns, so the clean signal is the *difference between the arms*, not the level of either. And the soft-versus-plain columns differ by under a dozen points here, but the sign and size of that difference are set by $\alpha$ and the entropy, and grading a soft critic against the plain return on a task with more entropy at stake would manufacture tens of points of phantom bias. So the second critic's dividend on Pendulum is not a better policy, it is a *calibrated pessimism* that costs nothing; on harder tasks, where an optimistic critic feeds the actor's climb and the climb feeds the optimism, that margin is what stands between this loop and :numref:`sec_dqn`'s self-confirming collapse, and :numref:`sec_offline` will need the same idea with the interaction removed entirely.
+The result is consistent across seeds and frameworks. Neither variant substantially overestimates the realized soft return. The single critic is close to calibrated, typically within thirty points, whereas the minimum of two critics underestimates the return by about thirty to sixty points. The gap is larger for the twin-critic variant on every seed, as expected from taking a minimum. Some underestimation may also arise because the policy continues to improve while the critic tracks earlier data, so the comparison between variants is more informative than their absolute offsets. On Pendulum, the second critic changes calibration without improving the final policy. On harder tasks, its deliberate pessimism can limit the feedback between critic overestimation and actor updates; :numref:`sec_offline` uses related ideas without further interaction.
 
 ## Summary
 
-SAC assembles three owned components and one new line of calculus. The objective is :numref:`sec_regularized`'s KL-regularized objective with a uniform reference, entropy charged at every step at exchange rate $\alpha$; soft evaluation adds one term to the one-step target, $-\alpha \log \pi$ at a fresh next action, certified in a cell to be the logsumexp backup of :numref:`sec_regularized` in sampled form; soft improvement is that section's proposition applied to $Q$, making "maximize $E[Q] + \alpha H$" and "project $e^{Q/\alpha}$ onto the policy family in KL" the same optimization up to a constant, with a five-line proof that exact per-state improvement raises the value everywhere. The gradient is :numref:`sec_deeprl`'s pathwise estimator through a critic that is differentiable in the action by construction. The one new mechanism is the tanh-squashed Gaussian: clipping has zero derivative exactly where a swing-up controller lives and a clipped Gaussian is not a density, so the boundedness moves into the distribution and the density gains the log-determinant of :eqref:`eq_tanh_logdet`, computed in the softplus form that is exact everywhere, since the epsilon-guarded alternative silently stops charging for saturation at $-13.8155$. A quadrature cell shows the corrected density integrates to one and the uncorrected one misses by half its mass. The machinery of :numref:`sec_dqn` returns off the shelf: replay with one column widened, target networks as Polyak averages with a 139-update half-life, twin critics whose minimum prices the actor's climb over the critic's errors, no target actor and no ratios anywhere. On Pendulum the agent clears $-200$ in under ten thousand environment steps where :numref:`sec_deeprl`'s REINFORCE spent $480{,}000$ and never arrived; the entropy settles within a nat of the $-\dim \mathcal{A}$ target that autotuning would enforce, at a noise cost the evaluations price near zero; and the twin critics leave the return untouched while converting the critic's promise from mild under-prediction to a deliberate, measured pessimism.
+SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha\log\pi$ to the bootstrap target, and soft policy improvement uses a pathwise gradient through the critic. A tanh transformation enforces bounded actions; its log density must include the change-of-variables determinant, evaluated in a numerically stable form. Replay, Polyak-averaged target networks, and the minimum of two critics provide the off-policy value-learning machinery. No target actor or importance ratios are required.
 
-**What the experiments show, and what they do not.** The identity check, the saturation table, and the quadrature cell are deterministic numpy, print identical digits in both framework tabs, and are quotable to the digit. The training runs are three seeds per arm per tab with the two tabs initializing networks from different distributions; what is stable across all of them is the shape and the orderings: every seed clears $-200$ before ten thousand environment steps, deterministic evaluations land between about $-140$ and $-190$ with the stochastic policy within about ten points of its own deterministic twin, the entropy trace falls from its high start through a dip of roughly half a nat below zero and ends near zero, and the twin-critic minimum's calibration gap exceeds the single critic's on every individual seed. The individual crossing steps, evaluation digits, and gap sizes move from seed to seed and rerun to rerun, and the prose quotes them only as ranges; the return curves of the two arms are statistically indistinguishable at this budget, and no return difference is claimed. Single runs per configuration; the compute belongs to readers.
+**Experimental scope.** The density and soft-backup checks are deterministic. Training uses three seeds per method and framework. Every SAC run reaches return $-200$ within $10{,}000$ environment steps on Pendulum, while deterministic final evaluations lie roughly between $-140$ and $-190$. Twin and single critics have similar returns at this budget; the twin-critic minimum is more pessimistic in every calibration comparison. Exact crossing times and calibration gaps vary across seeds.
 
 ## Exercises
 
@@ -687,7 +689,7 @@ Soft Actor-Critic<br>
 :::
 :::
 
-::: {.slide title="The Objective, Already Proved"}
+::: {.slide title="The Maximum-Entropy Objective"}
 :numref:`sec_regularized`'s KL penalty, uniform reference, charged
 per step; $\alpha$ for $\beta$, the field's convention:
 
@@ -703,7 +705,7 @@ actor-critic of this objective
 :cite:`Haarnoja.Zhou.Abbeel.ea.2018`.
 :::
 
-::: {.slide title="Soft Evaluation: One New Term"}
+::: {.slide title="Soft Policy Evaluation"}
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)
 \Big( \min_{j=1,2} Q_{w_j^-}(s', \tilde{a}')
 - \alpha \log \pi_\theta(\tilde{a}' \mid s') \Big)$$
@@ -720,7 +722,7 @@ At the tilted optimum the bracket is 15.3's logsumexp, exactly:
 @!sac-soft-evaluation-one-new-term-in-the-target
 :::
 
-::: {.slide title="Improvement Is the Proposition"}
+::: {.slide title="Soft Policy Improvement"}
 15.3's proof line, read with $r \to Q(s, \cdot)$, uniform
 reference:
 
@@ -741,7 +743,7 @@ differentiable in $a$ by construction.
 maximization raises $V$ everywhere; five lines from 15.3.
 :::
 
-::: {.slide title="A Policy That Fits in a Box"}
+::: {.slide title="A Squashed Gaussian Policy"}
 14.7 let the environment clip the torque. The score estimator
 never differentiated through the action; the pathwise one does:
 
@@ -758,7 +760,7 @@ $$\log \pi(a \mid s) = \sum_i \Big[ \log \mathcal{N}(u_i; \mu_i,
 @sac-the-change-of-variables
 :::
 
-::: {.slide title="The Epsilon That Hides"}
+::: {.slide title="Numerical Stability near the Boundary"}
 $1 - \tanh^2 u = 4 e^{-2u}/(1 + e^{-2u})^2$, so
 $\log(1 - \tanh^2 u) = 2(\log 2 - u - \operatorname{softplus}(-2u))$,
 exact. What the guard `+ 1e-6` does instead:
@@ -774,7 +776,7 @@ checkable by quadrature, at zero training cost:
 @!sac-the-stable-form-and-what-the-epsilon-hides-2
 :::
 
-::: {.slide title="The Machinery, Off the Shelf"}
+::: {.slide title="The Components of SAC"}
 - **twin critics, min**: the actor climbs the critic, a maximizer
   over its errors (15.4's argument, argmax $\to$ gradient
   ascent); the min of two independent critics is the cheapest
@@ -790,7 +792,7 @@ checkable by quadrature, at zero training cost:
 - `ReplayBufferC`: one column widened to float vectors
 :::
 
-::: {.slide title="One Update"}
+::: {.slide title="The SAC Update"}
 @sac-one-update-1
 
 . . .
@@ -800,7 +802,7 @@ the bootstrap is always taken; storing `done` would teach the
 agent that the world ends at step 200.
 :::
 
-::: {.slide title="Under Ten Thousand Steps"}
+::: {.slide title="Sample Efficiency"}
 @!sac-sample-efficiency-on-the-axis-that-bills
 
 . . .
@@ -811,7 +813,7 @@ per sample, hundreds of updates per sample. The two arms are
 indistinguishable on this axis.
 :::
 
-::: {.slide title="The Entropy the Policy Keeps"}
+::: {.slide title="Policy Entropy"}
 @!sac-the-entropy-the-policy-keeps-1
 
 . . .
@@ -827,7 +829,7 @@ indistinguishable on this axis.
   ten points: the noise was kept where it is cheap
 :::
 
-::: {.slide title="Honest Promises"}
+::: {.slide title="Critic Calibration"}
 @!sac-honest-promises-predicted-against-delivered
 
 . . .

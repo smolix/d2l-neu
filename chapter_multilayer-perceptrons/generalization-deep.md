@@ -2,18 +2,11 @@
 :label:`sec_generalization_deep`
 
 
-In :numref:`chap_regression` and :numref:`chap_classification`,
-we tackled regression and classification problems
-by fitting linear models to training data.
-In both cases, we provided practical algorithms
-for finding the parameters that maximized
-the likelihood of the observed training labels.
-And then, towards the end of each chapter,
-we recalled that fitting the training data
-was only an intermediate goal.
-Our real quest all along was to discover *general patterns*
-on the basis of which we can make accurate predictions
-even on new examples drawn from the same underlying population.
+In :numref:`chap_regression` and :numref:`chap_classification`, we separated
+optimization on a training sample from generalization to new examples. That
+distinction becomes more difficult for deep networks, whose capacity and
+optimization dynamics are not well described by the classical measures used
+for linear models.
 Optimization is merely a means to an end: machine learning researchers
 consume optimization algorithms, and sometimes invent new ones,
 but always in service of a statistical goal.
@@ -23,25 +16,18 @@ as some statistical principle (known or unknown)
 leads the resulting models to generalize beyond the training set.
 
 
-On the bright side, it turns out that deep neural networks
-trained by stochastic gradient descent generalize well
+Deep neural networks trained by stochastic gradient descent generalize well
 across myriad prediction problems, spanning computer vision;
 natural language processing; time series data; recommender systems;
 electronic health records; protein folding;
 value function approximation in video games
 and board games; and numerous other domains.
-On the downside, if you were looking
-for a straightforward account
-of either the optimization story
-(why we can fit them to training data)
-or the generalization story
-(why the resulting models generalize to unseen examples),
-then you might want to pour yourself a drink.
+No single theory yet provides a complete account of either optimization or
+generalization in these models.
 While our procedures for optimizing linear models
 and the statistical properties of the solutions
 are both described well by a comprehensive body of theory,
-our understanding of deep learning
-still resembles the wild west on both fronts.
+many aspects of deep learning remain subjects of active research.
 
 Both the theory and practice of deep learning
 are rapidly evolving,
@@ -521,7 +507,7 @@ error. A large gap means we have **overfit**.
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-**Classical recipe** to close the gap: make the model *less* complex.
+**Classical approach:** reduce model complexity to close the gap.
 
 - fewer features
 - fewer nonzero parameters
@@ -559,7 +545,7 @@ modern scales. Data- and algorithm-dependent explanations remain active work.
 
 [Double descent]{.dtitle}
 
-[the U-curve, and what lies past it]{.dsub}
+[the U-curve and the overparameterized regime]{.dsub}
 :::
 :::
 
@@ -592,7 +578,7 @@ the classical story predicts.
 ![One curve, two regimes: the classical U ends at the interpolation threshold, where training error reaches zero and test error peaks — then descends a second time. That second descent is contingent on the model, data, optimizer, and training budget.](../img/mdl-mlp-double-descent.svg){width=70%}
 :::
 
-::: {.slide title="One mechanism in tractable models"}
+::: {.slide title="A mechanism in tractable models"}
 [Double descent]{.kicker}
 
 In linear least-squares and random-feature models, the minimum-norm
@@ -610,7 +596,7 @@ follows the same curve or selects the same kind of interpolant.
 :::
 :::
 
-::: {.slide title="Three knobs trace the curve"}
+::: {.slide title="Width, training time, and regularization"}
 [Double descent]{.kicker}
 
 Model size is only one of **three** ways to cross the threshold (Nakkiran

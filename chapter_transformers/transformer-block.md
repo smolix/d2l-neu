@@ -1,20 +1,17 @@
 # The Transformer Block
 :label:`sec_transformer-block`
 
-The previous chapter built attention: a layer that lets every position read
-from every other, weighted by learned relevance. Attention alone, however, is
-not what anyone deploys. Deployed models stack a composite unit — the
-*transformer block* — in which attention supplies communication between
-positions and a position-wise feed-forward network supplies computation
-within each one, both writing their results into a shared residual stream.
-This section builds that unit. We settle the two design decisions that
-separate a 2017 block from a 2026 one: where the normalization layers go
-(with an experiment at initialization that shows why nearly every modern
-model moved them), and what the feed-forward network computes (with a
-matched-budget race between the classic MLP and its gated successor). The
-product is a single configurable `TransformerBlock` class whose flags span
-a decade of architectures; the next section stacks it into a language model,
-and the rest of the chapter never builds another block.
+The previous chapter developed attention as a layer in which each position
+can read from the others. Deployed models place this layer in a
+*transformer block*. Attention communicates between positions, a
+position-wise feed-forward network transforms each position independently,
+and both add their outputs to a shared residual stream. This section studies
+two design choices that distinguish the original block from current ones:
+the placement of normalization and the form of the feed-forward network.
+Experiments examine signal propagation at initialization and compare a
+standard MLP with its gated successor at matched parameter count. We then
+combine these choices in a configurable `TransformerBlock` class used
+throughout the remainder of the chapter.
 
 ```{.python .input #transformer-block-the-transformer-block}
 %%tab pytorch
@@ -37,9 +34,9 @@ import optax
 import time
 ```
 
-## The Anatomy of a Block
+## Components of a Transformer Block
 
-A transformer block is two sublayers wired to one highway.
+A transformer block contains two sublayers connected by a residual stream.
 :numref:`sec_what-attention-computes` introduced the *residual stream* view:
 each token carries a running vector $\mathbf{x} \in \mathbb{R}^d$ from layer
 to layer, and sublayers do not replace it — they read from it, compute, and
@@ -47,13 +44,13 @@ to layer, and sublayers do not replace it — they read from it, compute, and
 
 - **Attention** is the only place where positions interact. Each token
   queries the others as in :numref:`sec_multihead-attention` and adds the
-  retrieved mixture to its stream. Everything the model knows about
-  *context* enters here.
+  retrieved mixture to its stream. Contextual information enters through
+  this sublayer.
 - The **feed-forward network** (FFN) acts on each position separately: the
   same two- or three-matrix MLP, applied token by token, with no
   interaction between positions. Everything the model computes *from* a
-  token's accumulated state — and, as we will see, most of its parameters —
-  lives here.
+  token's accumulated state. As we will see, this sublayer also contains
+  most of the block's parameters.
 
 Writing $\mathrm{Attn}$ for multi-head self-attention and $\mathrm{Norm}$
 for a normalization layer, the modern (*pre-norm*) block computes
@@ -518,9 +515,9 @@ for act in ('gelu', 'swiglu'):
     print(f'{act:>7}: {n} parameters')
 ```
 
-Whether the gate is *worth* anything at equal cost is an empirical
-question, and a matched-budget race settles it — but only once we have a
-model to train. That is the closing experiment of this section.
+Whether the gate improves performance at equal parameter count is an
+empirical question. The final experiment compares the alternatives in a
+small language model.
 
 ## A Configurable Block
 
@@ -695,9 +692,9 @@ class CharLM(nnx.Module):
         return self.token_emb.attend(self.norm(H))
 ```
 
-### The Flags at Work: GELU versus SwiGLU
+### Comparing GELU and SwiGLU
 
-Now the promised race. Same data (the character-level Time Machine corpus
+We now compare the two alternatives on the same data (the character-level Time Machine corpus
 of :numref:`sec_text-sequence`), same model, same seed, same optimizer and
 learning rate, same 600 steps — the only difference is the `act` flag, and
 the parameter counts match to a tenth of a percent.
@@ -729,39 +726,29 @@ for act in ('gelu', 'swiglu'):
         f'{sum(losses[k-100:k]) / 100:.2f}' for k in (200, 400, 600)))
 ```
 
-The gated FFN ends more than a tenth of a nat ahead — a margin that holds
+The gated FFN ends more than a tenth of a nat ahead. This margin holds
 up across seeds, since rerunning with seeds 1 and 2 moves each number by a
 couple of hundredths, not the gap. More importantly, it agrees in direction
 with :citet:`Shazeer.2020`'s systematic sweep and with the consistent
 choice of the major model families since Llama. It is a modest, real
-improvement of the kind that architecture progress is actually made of: no
-single dramatic win, but a percent here and a percent there, at equal cost,
-compounding.
+improvement at equal parameter count. Such incremental gains can accumulate
+when several architectural choices are combined.
 
 ## Summary
 
-A transformer block is two sublayers writing into a residual stream:
-attention communicates between positions, the position-wise FFN computes
-within each one and holds about two thirds of the parameters. Where the
-normalization goes decides how deep stacks behave at initialization: the
-post-LN arrangement of 2017 renormalizes the stream after each addition,
-which pins its scale but lets near-uniform attention collapse the tokens
-geometrically — the query and key projections at the top of a 32-block
-stack receive gradients six orders of magnitude smaller than at the
-bottom, while the value, output, and FFN weights keep ordinary gradients;
-it is the where-to-attend pathway that starves.
-Pre-norm moves the normalizer onto each branch, lets the stream grow like
-the square root of the depth, and keeps every block trainable; it has been
-the default since GPT-2. RMSNorm keeps only the scale statistic (same
-measured cost, less machinery), and QK-norm extends the same discipline to
-the attention logits. In the FFN, SwiGLU replaces the fixed nonlinearity
-with a learned soft gate; at matched parameter count it wins by a small,
-seed-stable margin on our character model, consistent with its
-near-universal adoption. The section's product is `TransformerBlock`:
-normalization, activation, and arrangement as flags, attention and FFN as
-swappable factories — the single unit from which this chapter builds a
-GPT, a KV-cached decoder, an encoder, a vision transformer, and a
-mixture-of-experts model.
+A transformer block contains attention and a position-wise FFN connected
+through a residual stream. Attention communicates between positions; the
+FFN transforms each position and contains about two thirds of the
+parameters. In the original post-LN arrangement, normalization fixes the
+scale of the residual stream, but the query and key projections near the top
+of a 32-block stack receive gradients six orders of magnitude smaller than
+those near the bottom. Pre-norm instead normalizes each branch input and
+preserves usable gradients throughout the stack. RMSNorm retains only the
+scale statistic, while QK-norm controls the scale of attention logits.
+Finally, SwiGLU replaces a fixed activation with a learned gate and gives a
+small, seed-stable improvement at matched parameter count in our experiment.
+The resulting `TransformerBlock` exposes normalization, activation, and
+placement as options, with replaceable attention and FFN modules.
 
 ## Exercises
 
@@ -812,7 +799,7 @@ The transformer block<br>
 :::
 :::
 
-::: {.slide title="Anatomy: two sublayers, one highway"}
+::: {.slide title="Components of a transformer block"}
 - **Attention**: the only place positions interact — each token queries
   the others and adds the retrieved mixture to its stream.
 - **FFN**: per-position computation — and about **two thirds of the

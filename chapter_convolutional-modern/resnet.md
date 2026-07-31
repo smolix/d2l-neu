@@ -6,11 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Residual Networks: ResNet, ResNeXt, and DenseNet
 :label:`sec_resnet`
 
-As we design ever deeper networks it becomes imperative to understand how adding layers can increase the complexity and expressiveness of the network.
-Even more important is the ability to design networks where adding layers
-preserves every function the shallower network could represent, while making
-additional functions available.
-To make some progress we need a bit of mathematics.
+Adding layers should enlarge a model's function class without making the
+shallower solution difficult to recover. Residual networks achieve this by
+parameterizing each block as a change to the identity map. We first formalize
+this inclusion of function classes and then implement residual blocks, ResNet,
+ResNeXt, and DenseNet.
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab mxnet

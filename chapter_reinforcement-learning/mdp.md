@@ -1,9 +1,9 @@
 # Markov Decision Processes
 :label:`sec_mdp`
 
-Everywhere else in this book, a model's prediction changes nothing about the data it is shown next. An agent that acts has no such luxury: press a key, and the world that answers is the world the keypress created. Learning to act therefore needs a model of acting itself. The *Markov decision process* (MDP) :cite:`BellmanMDP,Puterman.1994` is that model: four objects and one assumption that turn "act well over time" into a mathematical problem.
+A *Markov decision process* (MDP) provides a mathematical model of sequential interaction :cite:`BellmanMDP,Puterman.1994`. It consists of states, actions, transition probabilities, and rewards, together with the Markov assumption that the current state contains the information needed to predict the next state. This section develops these components using a sixteen-state FrozenLake environment.
 
-We build the object twice: first as data read out of a running simulator, then as notation, because notation is easier to trust once printed. Three of the four objects are facts about the world. The fourth, the reward, is written by you, and the section's final experiment shows an optimizer doing exactly what a plausible reward *says* instead of what its author *meant*. Our laboratory is a frozen lake of sixteen cells whose ice does not respect commands.
+We first inspect the simulator's transition data and then express the same model in notation. The transition dynamics describe the environment, whereas the reward specifies the objective. A final example shows how an apparently reasonable reward modification can change the optimal policy in an unintended way.
 
 ```{.python .input #mdp-markov-decision-processes}
 %%tab pytorch
@@ -23,7 +23,7 @@ import numpy as np
 
 ## The Model
 
-:numref:`fig_rl_gridworld` shows the environment that carries the next four sections: FrozenLake, from the Gymnasium suite :cite:`Towers.Kwiatkowski.Terry.ea.2024`. The agent starts at the top-left cell and wants the goal at the bottom right, which pays a reward of one; four cells are holes; reaching either ends the episode. The rest is *slippery* ice: a commanded move goes as intended with probability $1/3$ and slides to one of the two perpendicular neighbors with probability $1/3$ each. Commands are proposals, not guarantees.
+:numref:`fig_rl_gridworld` shows the environment used in the next four sections: FrozenLake from the Gymnasium suite :cite:`Towers.Kwiatkowski.Terry.ea.2024`. The agent starts at the top-left cell and seeks the goal at the bottom right, which gives reward one. Four cells are holes, and reaching either a hole or the goal ends the episode. On *slippery* ice, a commanded move occurs with probability $1/3$; each of the two perpendicular moves also occurs with probability $1/3$.
 
 ![The environment for the next four sections. (a) S marks the start, G the goal, and the grey cells marked H are holes; each cell carries its state index. On non-slippery ice the shortest path takes six moves, for a discounted return of $\gamma^5$. (b) One command on slippery ice, read straight out of the transition table: from state $s = 9$ the action *down* lands in one of the three shaded cells with probability $1/3$ each; the intended move is one outcome among equals, and the probabilities sum to one.](../img/mdl-rl-gridworld.svg)
 :label:`fig_rl_gridworld`
@@ -95,17 +95,19 @@ for s, a in np.argwhere(mdp.r > 0):
     print(f'r(s={s}, a={"<v>^"[a]}) = {mdp.r[s, a]:.3f}')
 ```
 
-Rows of $P$ sum to one, exactly. The reward array is almost entirely zero: its nonzero entries all sit at state 14, the one cell from which the goal can be entered, and they equal $1/3$ rather than $1$ because each such command reaches the goal a third of the time. The sparsity records a fact we will use shortly: FrozenLake pays only for finishing.
+Every row of $P$ sums to one. The reward array is almost entirely zero: its nonzero entries occur at state 14, the only cell from which the goal can be entered, and equal $1/3$ because the corresponding action reaches the goal with that probability. FrozenLake therefore provides reward only on transitions into the goal.
 
 ### Reward Design and Potential-Based Shaping
 
-The reward is designed by the user (the person who creates the reinforcement learning algorithm) with the goal in mind. The states, the actions and the kernel are facts about the environment; we read all three out of the simulator. The reward is the interface through which you tell the optimizer what you want, and the optimizer maximizes what you wrote, not what you meant: a strong optimizer seeks out any gap between the two, because the gap is where reward can be had without doing the task.
+The reward is chosen by the designer to represent the task. In contrast, the states, actions, and transition kernel describe the environment. An optimization algorithm maximizes the specified reward, so a mismatch between the reward and the intended task can produce undesirable behavior.
 
 One modification of a reward is provably safe. Take any *potential* $\Phi: \mathcal{S} \to \mathbb{R}$ that is zero at every state that ends an episode (the boundary condition doing quiet work below) and replace the reward on each transition by
 
 $$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s).$$
 
-Along any trajectory the corrections telescope: summed to step $T$ they leave $\gamma^T \Phi(s_T) - \Phi(s_0)$, and the endpoint term dies either because the trajectory never ends, the discount killing the tail, or because it ends at a state where $\Phi = 0$. Every policy's return then shifts by the same constant $-\Phi(s_0)$ and the optimal policy is unchanged, for any such $\Phi$ :cite:`Ng.Harada.Russell.1999`: *potential-based shaping* is the licensed way to densify a sparse reward. The boundary condition is not decoration. A free $\Phi$ on returns that stop at the terminal transition leaves the residual $\gamma^T \Phi(s_T)$ standing, a payment that depends on where and when a policy ends, which is precisely a change of optimum; equivalently, one may keep $\Phi$ free and run the shaped reward through the absorbing continuation the next part of this section introduces, where the absorbing steps pay the residual back. Bonuses not of this form change the optimum, however plausible they sound; at the end of the section we write one and watch the policy it makes optimal refuse to reach the goal. Guarding this interface with explicit penalties is the subject of :numref:`sec_regularized`, and reward hacking returns at scale in :numref:`sec_rl_sequences`.
+Along a trajectory, the shaping terms telescope to $\gamma^T \Phi(s_T)-\Phi(s_0)$. The first term vanishes for an infinite discounted trajectory or for an episode ending at a state with $\Phi(s_T)=0$. Every policy's return then changes by the same constant $-\Phi(s_0)$, so the optimal policy is unchanged :cite:`Ng.Harada.Russell.1999`. This construction is called *potential-based shaping*.
+
+The terminal-state condition is essential. If returns stop at the terminal transition and $\Phi(s_T)$ is unconstrained, the remaining term $\gamma^T\Phi(s_T)$ can depend on the terminal state and duration, thereby changing the optimum. Equivalently, one may retain an unconstrained terminal potential if the return includes an absorbing continuation that cancels the residual. General bonuses need not preserve the optimal policy; the example at the end of the section demonstrates such a failure. :numref:`sec_regularized` discusses explicit constraints, and :numref:`sec_rl_sequences` returns to reward misspecification at larger scale.
 
 ## Return, Discount and Horizon
 
@@ -133,7 +135,7 @@ while not (terminated or truncated):
 print(f'terminated={terminated}, truncated={truncated}, return={ret:.0f}')
 ```
 
-Read the transcript against :numref:`fig_rl_gridworld`: at $t = 0$ the agent commands *right* and does not move; at $t = 2$ it commands *left* and slides *down* to state 4; at $t = 8$ it commands *right* from state 10 and falls into the hole at 11. The ice, not the command, decides. Every reward is zero, so the return is zero: this environment pays only for finishing, and a random walker rarely finishes.
+In the transcript, the agent commands *right* at $t=0$ but remains in place. At $t=2$, it commands *left* and instead moves *down* to state 4. At $t=8$, it commands *right* from state 10 and enters the hole at state 11. These outcomes illustrate the stochastic transition kernel in :numref:`fig_rl_gridworld`. Because the agent never reaches the goal, every reward and the total return are zero.
 
 ### The Geometric Bound and the Effective Horizon
 
@@ -141,11 +143,11 @@ An agent that wanders forever without reaching a hole or the goal has an infinit
 
 $$R(\tau) = r_0 + \gamma r_1 + \gamma^2 r_2 + \cdots = \sum_{t=0}^\infty \gamma^t r_t.$$
 
-Discounting buys finiteness at a quantifiable price. If rewards are bounded, $|r_t| \leq r_{\max}$, the geometric series bounds both the return and its tail:
+If rewards are bounded by $|r_t|\leq r_{\max}$, discounting makes the infinite return finite and gives a geometric bound on its tail:
 
 $$|R(\tau)| \leq \frac{r_{\max}}{1 - \gamma}, \qquad \Big| \sum_{t \geq k} \gamma^t r_t \Big| \leq \frac{\gamma^k \, r_{\max}}{1 - \gamma}.$$
 
-The first bound makes the objective finite; the second makes $1/(1-\gamma)$ the *effective horizon*: the window within which rewards still carry appreciable weight. A scale, not a cliff: the fraction of a constant reward stream's discounted mass lying past step $k$ is exactly $\gamma^k$, so 95 percent of the mass sits in the first $\log 0.05 / \log \gamma$ steps, about three effective horizons (the third column of the table below). Read this way, $\gamma = 0.99$ is not a magic number but a horizon of one hundred steps, and $\gamma = 0.5$ is an agent that can barely see two steps ahead, *myopic* where $\gamma$ near one is *far-sighted*. In numbers:
+The first bound makes the objective finite. The second motivates the *effective horizon* $1/(1-\gamma)$. For a constant reward stream, the fraction of discounted mass after step $k$ is $\gamma^k$; hence 95 percent lies within $\log(0.05)/\log(\gamma)$ steps, approximately three effective horizons. For example, the effective horizons for $\gamma=0.5$ and $\gamma=0.99$ are two and one hundred steps, respectively.
 
 ```{.python .input #mdp-the-geometric-bound-and-the-effective-horizon}
 %%tab pytorch, jax
@@ -155,36 +157,36 @@ for g in [0.5, 0.9, 0.95, 0.99]:
     print(f'{g:>6} {1 / (1 - g):>20.0f} {t5:>18}')
 ```
 
-:numref:`fig_rl_return_discount` plots the same facts. Our shortest path takes six moves, so the weight $\gamma^5$ on the final reward must be worth acting for: about three percent at $\gamma = 0.5$, a comfortable $0.77$ at our $\gamma = 0.95$. Choosing the discount is choosing how far the problem reaches into the future; it sits on the same design surface as the reward.
+:numref:`fig_rl_return_discount` shows these quantities. The shortest path in FrozenLake takes six moves, so the terminal reward receives weight $\gamma^5$: approximately $0.03$ for $\gamma=0.5$ and $0.77$ for $\gamma=0.95$. The discount factor therefore determines the relative importance of delayed rewards.
 
 ![Discounting turns $\gamma$ into a horizon. (a) The weight $\gamma^t$ of a reward $t$ steps away falls below $0.05$ at $t = 5$ for $\gamma = 0.5$, at $t = 29$ for $\gamma = 0.9$, and only at $t = 299$ for $\gamma = 0.99$. (b) The horizon $1/(1-\gamma)$ on a logarithmic axis: from two steps at $\gamma = 0.5$ to a hundred at $\gamma = 0.99$.](../img/mdl-rl-return-discount.svg)
 :label:`fig_rl_return_discount`
 
 ### Episodes, Termination and Truncation
 
-The trajectory we sampled ended in a hole. A state that ends the process is *terminal*; for analysis it can be represented as *absorbing*, every action leading back to it with reward zero. FrozenLake's transition table happens to store the holes and the goal exactly that way, but the running episode simply ends and must be `reset`, so the absorbing continuation is a mathematical completion, not a simulator behavior to rely on. A run from start to a terminal state is an *episode*; tasks whose trajectories always end are *episodic*, unlike *continuing* tasks, where only the discount keeps the objective finite. The number of steps an episode may last is its *horizon*, and when episodes are bounded by $T$ steps, a sum of $T$ bounded rewards is finite already and $\gamma = 1$ is legitimate.
+A state that ends the process is *terminal*. For analysis it may be represented as an absorbing state whose actions return to itself with zero reward. FrozenLake stores holes and the goal in this form, although the simulator ends the episode and requires a reset. A trajectory from the start to a terminal state is an *episode*. In an episodic task with at most $T$ steps, bounded rewards have a finite undiscounted sum and $\gamma=1$ is permitted. Continuing tasks instead rely on discounting or another average-reward formulation.
 
-Gymnasium's `step` returns two flags whose difference is a fact about the MDP, not a software detail. `terminated=True` means the process entered a terminal state: the future is empty, worth exactly zero. `truncated=True` means we merely stopped watching, usually a time limit (FrozenLake cuts episodes at one hundred steps): the state has a future that our recording does not show. Merging the flags is fine for loop control, as in the cell above, and disastrous for value estimation, where treating a truncated state as worthless trains on a lie. The learning algorithms from :numref:`sec_qlearning` onward therefore mask bootstrapped targets with `terminated` alone; the exact computations of this section never needed a mask, because absorbing states at reward zero silence their own values.
+Gymnasium distinguishes termination from truncation. `terminated=True` means that the process reached a terminal state and has zero continuation value. `truncated=True` means that observation stopped, usually because of a time limit, although the state can have nonzero continuation value. Either flag may stop an interaction loop, but only termination should set a bootstrapped target's continuation to zero. The learning algorithms beginning in :numref:`sec_qlearning` therefore mask targets with `terminated` alone.
 
 ## The Choice of State
 
-The kernel $P(s' \mid s, a)$ conditions on the current state and action only: the *Markov assumption*, the "one assumption" of this section's opening. Given the present, the past is irrelevant for predicting the future; whether that holds depends on what you call the state, and the choice is yours.
+The kernel $P(s' \mid s,a)$ conditions only on the current state and action. This is the *Markov assumption*: once the present state is known, the history provides no additional information for predicting the next state. Whether the assumption holds depends on how the state is defined.
 
 ### The Markov Assumption and State Augmentation
 
-Let us think of a new agent where the state $s_t$ is the location as above but the action $a_t$ is the acceleration that the agent applies to its wheels instead of an abstract command like "go forward". If this agent has some non-zero velocity at state $s_t$, then the next location $s_{t+1}$ is a function of the past location $s_t$, the acceleration $a_t$, and also the velocity of the agent at time $t$, which is proportional to $s_t - s_{t-1}$. This indicates that we should have
+Suppose the recorded state $s_t$ is a vehicle's location and the action $a_t$ is its acceleration. The next location also depends on the current velocity, which cannot generally be recovered from the current location alone. If velocity is inferred from successive locations, the dynamics have the form
 
-$$s_{t+1} = \textrm{some function}(s_t, a_t, s_{t-1});$$
+$$s_{t+1} = f(s_t, a_t, s_{t-1});$$
 
-the "some function" in our case would be Newton's law of motion. This is quite different from our transition function that simply depends upon $s_t$ and $a_t$.
+and the location by itself is not Markov.
 
-Markov systems are all systems where the next state $s_{t+1}$ is only a function of the current state $s_t$ and the action $a_t$ taken at the current state. In Markov systems, the next state does not depend on which actions were taken in the past or the states that the agent was at in the past. For example, the new agent that has acceleration as the action above is not Markovian because the next location $s_{t+1}$ depends upon the previous state $s_{t-1}$ through the velocity. It may seem that the Markovian nature of a system is a restrictive assumption, but it is not so. Markov Decision Processes are still capable of modeling a very large class of real systems. For example, for our new agent, if we choose our state $s_t$ to be the tuple $(\textrm{location}, \textrm{velocity})$ then the system is Markovian because its next state $(\textrm{location}_{t+1}, \textrm{velocity}_{t+1})$ depends only upon the current state $(\textrm{location}_t, \textrm{velocity}_t)$ and the action at the current state $a_t$.
+The problem is resolved by defining the state as $(\textrm{location},\textrm{velocity})$. Newtonian dynamics then determine the distribution of the next location and velocity from the current pair and the applied acceleration. Thus the Markov property is a condition on the representation of state, not only on the physical system.
 
-This move, *state augmentation*, is the standard repair: enlarge the state until the future depends only on it. The price is a larger state space, and what to pack into the state is one of the quiet design decisions of applied reinforcement learning. The repair also has a ceiling: the sufficient statistic may be unknown, too large to store, or simply not observable, and in the last case the principled replacement is a distribution over the hidden part, the belief of the next paragraph.
+This construction is called *state augmentation*: the state is enlarged until it contains the information needed to predict the future. Augmentation increases the state-space dimension, and the required sufficient statistic may be unknown, too large to store, or unobservable. The unobservable case leads to partial observability and belief states.
 
 ### Partial Observability
 
-Augmentation assumes you can observe what you add, and often you cannot: a poker player does not see the opponents' cards. An agent that receives an *observation* $o_t$ revealing only part of the state lives in a *partially observable* MDP, where exact treatments must reason over beliefs about the hidden state and become dramatically harder. The workaday remedy is augmentation applied to observations: feed the agent a short window of recent observations and call the window the state. The classic instance is Atari, where a single frame shows where the ball is but not where it is going, and stacking four frames restores enough of the Markov property to play well; exercise 1 makes precise what the frame is missing. These two chapters assume the observation *is* the state; this paragraph is the fence around that assumption.
+State augmentation requires the added variables to be observable. A poker player, for example, cannot observe the opponents' cards. When an agent receives an observation $o_t$ that reveals only part of the state, the problem is a *partially observable* MDP. Exact methods then maintain beliefs over the hidden state. A common approximation augments the observation with a short history. In Atari, a single frame gives position but not velocity, whereas several consecutive frames reveal motion. The remainder of this chapter assumes that the observation is a Markov state.
 
 ## Bandits, Degenerate MDPs and the Model-Based Axis
 
@@ -192,17 +194,17 @@ Two degenerate corners of the MDP, and one axis, organize much of what follows.
 
 ### The Bandit as a One-State MDP
 
-Delete the states. With $|\mathcal{S}| = 1$, every episode is a single action followed by a reward draw: the *multi-armed bandit*, exploration in its purest form. Nothing remains to plan (no next state exists) or to discount; the problem is to learn which action pays best from noisy samples, while the samples cost whatever the inferior arms lose. When :numref:`sec_qlearning` needs to isolate exploration from everything else that makes reinforcement learning hard, the bandit is the instrument we reach for.
+When $|\mathcal{S}|=1$, each round consists of selecting an action and observing a reward. This is a *multi-armed bandit*. There are no state transitions or delayed rewards, so the problem isolates the exploration required to identify the action with the largest expected reward. :numref:`sec_qlearning` uses this setting to compare exploration strategies.
 
 ### The Degenerate MDP: Deterministic Transitions, Terminal Reward
 
-Keep the states but delete the randomness and the intermediate payments: transitions deterministic, reward zero everywhere except at termination. Our lake is halfway there already, since the consistency check showed its reward is terminal-only; make the ice non-slippery and the degeneracy is complete. It looks too simple to need this chapter's machinery, yet it is exactly text generation viewed as a decision process: appending a token to a context is a deterministic transition, and a verifier or reward model pays once, at the end. When :numref:`sec_rl_sequences` builds that correspondence, the degeneracies will *remove* terms from our algorithms rather than add any.
+Another special case has deterministic transitions and reward only at termination. FrozenLake has terminal-only reward, and disabling its slippery dynamics makes the transitions deterministic as well. Text generation has this structure when appending a token deterministically updates the context and a verifier or reward model assigns a score to the completed sequence. :numref:`sec_rl_sequences` develops this formulation.
 
 ### Model-Based versus Model-Free Methods
 
-Everything in this section used the model itself: we read $P$ and $r$ from the simulator, and every number was an exact expectation. Algorithms that plan with a known or learned model are *model-based*; :numref:`sec_valueiter` is the canonical example. Algorithms that only touch sampled transitions $(s, a, r, s')$ are *model-free*; they begin in :numref:`sec_qlearning` and dominate everything after, because nobody hands you `env.unwrapped.P` for an environment of interest. The axis matters for data too: a model can be queried anywhere, while samples arrive only where the agent goes.
+The computations above use the transition and reward model directly. Algorithms that plan with a known or learned model are *model-based*; value iteration in :numref:`sec_valueiter` is an example. *Model-free* algorithms instead use sampled transitions $(s,a,r,s')$, as in :numref:`sec_qlearning`. A model can be evaluated at any state-action pair, whereas samples are available only for pairs visited by the data-collection policy.
 
-With the model in hand, we can settle the debt this section owes. Because the true reward pays only for finishing, learning will be slow, so consider a fix any practitioner might write: a bonus of $0.3$ for every step that moves the agent closer to the goal, in expectation $\tilde r(s, a) = r(s, a) + 0.3 \sum_{s'} P(s' \mid s, a) \, \mathbf{1}(d(s') < d(s))$ with $d$ the Manhattan distance. It is not potential-based: approach is paid, retreat is not charged. We compute the policy it makes optimal by sweeping `backup` to convergence (the procedure gets its name in :numref:`sec_valueiter`) and score both policies under the *true* reward by solving "my value is my reward plus the discounted value of where the kernel sends me":
+Because the original reward is sparse, one might add a bonus of $0.3$ whenever a transition moves closer to the goal. In expectation this gives $\tilde r(s,a)=r(s,a)+0.3\sum_{s'}P(s'\mid s,a)\mathbf{1}(d(s')<d(s))$, where $d$ is Manhattan distance. This modification is not potential based: movement toward the goal receives a bonus, whereas movement away incurs no corresponding penalty. We compute its optimal policy by repeated backups and evaluate both policies under the original reward using exact policy evaluation:
 
 ```{.python .input #mdp-model-based-versus-model-free}
 %%tab pytorch, jax
@@ -228,13 +230,13 @@ print(f'true-optimal:   at s=14 goes {"<v>^"[pi_true[14]]}, true value '
       f'{exact_value(pi_true):.3f}')
 ```
 
-Look at state 14, the only cell from which the goal can be entered. The true optimum commands *down* there, and a third of those outcomes finish the task. The shaped optimum commands *left*, whose three outcomes are 10, 13 and 14: none is the goal, and no other cell borders the goal, so this policy can *never* finish. Its true value is exactly zero, while by the yardstick we wrote it is a star, worth $2.15$ against the true optimum's $0.180$. The optimizer has discovered that a task that ends is a bonus stream that stops. Nobody wanted this policy; the reward asked for it. The failure is quiet: at a bonus of $0.1$ (rerun the cell) the shaped optimum still reaches the goal, so nothing announces the cliff. Exercise 4 repairs the bonus with a potential.
+State 14 is the only cell from which the goal can be entered. The optimal policy for the original reward commands *down*, which reaches the goal with probability $1/3$. The policy optimized for the shaped reward instead commands *left*, whose possible successors are states 10, 13, and 14. It therefore never reaches the goal. Its value under the original reward is zero, although its value under the shaped reward is $2.15$, compared with $0.180$ for the original optimum. The per-step bonus favors continuing to collect approach rewards instead of terminating. With a smaller bonus of $0.1$, the policy still reaches the goal but remains altered. Exercise 4 replaces the bonus with a potential-based reward.
 
 ## Summary
 
-A Markov decision process is four objects, $(\mathcal{S}, \mathcal{A}, P, r)$: states, actions, a transition kernel giving the distribution of the next state, and a reward defining the task. Its one assumption is that the state carries everything the past could say about the future, and that is a property of your modeling, not of the world: augment the state until it holds, where you can observe and afford what the augmentation needs; where you cannot, the problem is partially observed. The objective is the expected discounted return, and the discount is an effective horizon $1/(1-\gamma)$: rewards beyond roughly that many steps are geometrically negligible, so $\gamma = 0.99$ means "care about the next hundred steps". Terminal states end the future; truncation ends only the recording, and confusing the two corrupts value estimates. The one-state MDP is the bandit, the deterministic terminal-reward MDP is text generation in disguise, and the first question to ask of any algorithm is whether it uses the kernel or only samples from it. Above all, the reward is authored, an optimizer is an adversary of sloppy authorship, and only potential-based reshaping with a potential that vanishes at episode-ending states is guaranteed harmless.
+A Markov decision process consists of states $\mathcal{S}$, actions $\mathcal{A}$, a transition kernel $P$, and a reward $r$. The Markov assumption requires the state to contain the information from the past needed to predict the future; state augmentation can restore this property when the necessary information is observable. The objective is expected discounted return, and $1/(1-\gamma)$ provides a useful effective-horizon scale. Terminal states end the process, whereas truncation ends only the observation of it, so bootstrapped value estimates must distinguish the two. A one-state MDP is a bandit, and a deterministic MDP with terminal reward describes settings such as text generation. Potential-based shaping preserves the optimal policy when its terminal conditions are handled correctly; arbitrary reward modifications do not.
 
-**What the experiments show, and what they do not.** Every number in this section is an exact computation on a known sixteen-state model: no learning, no seeds to vary, and any rerun reproduces it to the digit, except the single sampled trajectory, one draw shown for concreteness. The reward-hacking demonstration is an existence proof on one map with one bonus size: it shows the attack surface is real, not that every shaped reward fails, and at smaller bonuses the exploit disappears while the policy is still subtly distorted. It shows none of the difficulties of *learning* (estimation from samples, exploration, function approximation), which the rest of these two chapters measures.
+**Experimental scope.** Except for the illustrative sampled trajectory, the results in this section are exact computations on a known sixteen-state model. The reward-shaping example establishes that one plausible bonus can change the optimal policy; it does not imply that all reward shaping fails. Estimation, exploration, and function approximation are introduced in later sections.
 
 ## Exercises
 
@@ -262,9 +264,9 @@ A Markov decision process is four objects, $(\mathcal{S}, \mathcal{A}, P, r)$: s
    is below one percent of the maximum possible return. Plot $k$ against
    $1/(1-\gamma)$. Our gridworld's optimal path is six steps long: which of these
    discount factors can even see the goal?
-1. [conceptual] *Reward design and its failure.* The gridworld pays $1$ at the
+1. [conceptual] *Reward design and its failure.* The gridworld gives reward $1$ at the
    goal and nothing elsewhere, which makes learning slow. The section's shaped
-   reward paid the agent for getting closer to the goal, and the policy it made
+   reward gives a bonus for moving closer to the goal, and the policy it makes
    optimal never reached the goal at all. Consider the closely related two-sided
    form $r(s, a) = d(s) - d(s')$ with $d$ the Manhattan distance. Show that on a
    map with a wall this too can make a policy that never reaches the goal earn
@@ -340,7 +342,7 @@ R(\tau) = \sum_{t=0}^{\infty} \gamma^t r_t$$
 
 @mdp-return-discount-and-horizon
 
-FrozenLake pays only for finishing: this episode earns zero.
+FrozenLake gives reward only on reaching the goal; this episode has return zero.
 :::
 
 ::: {.slide title="The Discount Is a Horizon"}
@@ -365,8 +367,8 @@ Control flow may merge them. Value estimation never may:
 bootstrapped targets are masked by `terminated` alone.
 :::
 
-::: {.slide title="The Reward Will Be Attacked"}
-A plausible fix for a sparse reward: pay $0.3$ per step that moves
+::: {.slide title="Reward Misspecification"}
+A plausible modification of a sparse reward: add $0.3$ for a step that moves
 the agent closer to the goal.
 
 @mdp-model-based-versus-model-free

@@ -1,8 +1,8 @@
 # Linear Recurrence and State Space Models
 :label:`sec_ssm`
 
-The gated cells of :numref:`sec_lstm` solved the memory problem and promptly
-ran into a compute problem. A recurrent network must consume its input one
+The gated cells of :numref:`sec_lstm` improve information retention, but a
+recurrent network must consume its input one
 step at a time: $\mathbf{H}_t$ cannot be computed before
 $\mathbf{H}_{t-1}$ exists, so a sequence of length $T$ costs $T$
 *sequential* rounds of work no matter how many processors we own. Modern
@@ -15,16 +15,15 @@ once*. That difference in training throughput is what pushed recurrent
 networks out of large-scale use, far more than any difference in modeling
 power.
 
-This section is about getting the parallelism back without giving up the
-thing that makes recurrence attractive: a state of fixed size, updated in
+This section develops parallel evaluation while retaining a state of fixed size, updated in
 constant time per token at inference (:numref:`subsec_rnn-constant-memory`).
-The obstacle turns out to be the nonlinearity wrapped around the state
-update, and the section removes it in two passes. First we strip the GRU
+The nonlinearity in the state update prevents an associative evaluation.
+First we reduce the GRU
 down to a minimal gated cell whose update is *linear* in the state, which
 makes the whole sequence computable by a parallel *scan* in logarithmic
-depth. Then we rebuild the linear recurrence properly, starting from a
-continuous-time *state space model* (SSM): discretization will hand us
-principled gates, stability by construction rather than by hope, an exact
+depth. We then derive the linear recurrence from a
+continuous-time *state space model* (SSM): discretization provides
+step-size gates, a stable parameterization, an exact
 equivalence between recurrence and convolution, and, through the HiPPO
 theory, a principled answer to what dynamics make a fixed-size state a
 good memory of the past. The result is the S4 family of models
@@ -741,7 +740,7 @@ The three views agree to floating-point precision. Each is the right tool
 for a different job, and the freedom to switch among them at will is the
 practical superpower of keeping the recurrence linear.
 
-### What Control Theory Already Knew
+### Interpretation from Control Theory
 :label:`subsec_classical_ssm`
 
 State space models were not invented for deep learning: they are the
@@ -804,7 +803,7 @@ they are deterministic feature extractors trained by backpropagation,
 with no noise model and no posterior. The shared name records lineage,
 not equivalence.
 
-## Remembering the Past: HiPPO
+## HiPPO Memory Initialization
 :label:`subsec_hippo`
 
 One question remains before we can call this a principled design: what
@@ -1472,7 +1471,7 @@ the state update — which is why such models earn partial credit, though
 not success, on the selectivity task of the next section. That section
 cures the limitation at the operator level while keeping the scan.
 
-**What the experiments show, and what they do not.** The scan-vs-loop
+**Experimental scope.** The scan-vs-loop
 and step-vs-rerun benchmarks establish *shapes* (logarithmic against
 linear, flat against growing), measured with teaching-grade kernels on
 one GPU; they are not production throughput numbers. The equivalence

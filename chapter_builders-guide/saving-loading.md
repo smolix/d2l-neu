@@ -12,12 +12,12 @@ sized it. The *model state* is the tensors that training filled in: weights,
 biases, and running statistics. Optimizer moments, random-number streams, and
 the step belong to the wider *training state*. A weight file saves model state;
 a resumable checkpoint saves full training state. The code
-stays in your source repository, under version control, exactly like any other
-Python. To bring a model back you need both halves: run the code to rebuild an
-empty network, then pour the saved state into it.
+stays in your source repository under version control. Restoring a model
+therefore requires rebuilding its structure in code and loading the saved
+state into that structure.
 
-This split explains most of what follows. It is why a checkpoint cannot
-resurrect a model on its own, why the config object from
+This distinction explains why a checkpoint cannot reconstruct an arbitrary
+model on its own, why the config object from
 :numref:`sec_model_construction` belongs *inside* the checkpoint, and why the
 format that stores the state matters once you start sharing files with people who
 do not have your code.

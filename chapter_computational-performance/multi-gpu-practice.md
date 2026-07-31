@@ -1,16 +1,13 @@
 # Multi-GPU in Practice
 :label:`sec_multi_gpu_concise`
 
-The hand-rolled loop of :numref:`sec_multi_gpu` taught the mechanism and
-then lost the race: on a tiny model over a host-staged wire, the second
-GPU made things slower. Two things were wrong, and only one was the
-hardware. This section fixes the other — the *software* — by replacing our
-loop with the production machinery, and in doing so meets the chapter's
-sharpest framework contrast: PyTorch makes you launch processes and the
-collectives are explicit; JAX runs in one process and you merely *annotate
-the layout*, letting the compiler write the collectives for you. We
-measure real scaling on 2–4 GPUs, sketch how the same ideas shard a model
-too big to replicate (FSDP), and stop at the edge of the single node.
+The hand-written loop of :numref:`sec_multi_gpu` was slower on two GPUs
+because the model underutilized each device and the implementation lacked
+production communication mechanisms. This section replaces that loop with
+standard data-parallel training. PyTorch launches one process per device and
+uses explicit collectives; JAX runs one process and derives collectives from
+array-layout annotations. We measure scaling on two to four GPUs, introduce
+fully sharded data parallelism, and remain within a single node.
 
 *Prerequisites: the from-scratch data-parallel loop, the ring-allreduce
 identity, and the cost model of* :numref:`sec_multi_gpu`*; the memory
@@ -56,7 +53,7 @@ import time
 os.environ.setdefault('NCCL_LOCAL_REGISTER', '0')
 ```
 
-## What Our Hand-Rolled Loop Lacked
+## Limitations of the Hand-Written Loop
 :label:`subsec_mgp-lacked`
 
 Our :numref:`sec_multi_gpu` implementation had three deficits, and modern
@@ -89,7 +86,7 @@ bucket's allreduce overlap the rest of the backward pass, instead of
 waiting for all of it.](../img/mdl-perf-ddp-overlap.svg)
 :label:`fig_ddp_overlap`
 
-## DDP, Really Run
+## Distributed Data Parallel
 :label:`subsec_mgp-ddp`
 
 DDP needs multiple processes, and a notebook is one process — so we launch
@@ -428,7 +425,7 @@ measurements (the exercises have you reproduce both halves). The cost
 model is indifferent either way — :eqref:`eq_dp_cost` simply takes
 whatever $\beta$ your fabric, as configured, sustains.
 
-## Sharding the Redundant: the FSDP Idea
+## Fully Sharded Data Parallelism
 :label:`subsec_mgp-fsdp`
 
 DDP replicates *everything* on every rank: $k$ identical copies of the
@@ -507,7 +504,7 @@ the threshold arrives at a few billion parameters. The production
 distributed-training map, and how to combine FSDP with the other
 parallelism axes, lives in :numref:`sec_training_systems`.
 
-## JAX: Annotate the Layout, the Compiler Writes the Collectives
+## Declarative Sharding in JAX
 :label:`subsec_mgp-jax`
 
 Everything above was PyTorch's world: multiple processes, explicit
@@ -799,7 +796,7 @@ that turn a synchronous step into a queueing problem.
 
 <!-- slides -->
 
-::: {.slide title="What the Hand-Rolled Loop Lacked"}
+::: {.slide title="Limitations of the Hand-Written Loop"}
 Three deficits, all software:
 
 - **no overlap** — communicate only after the whole backward
@@ -817,7 +814,7 @@ Gradients arrive back-to-front; bucket them and allreduce each
 as it fills, hiding communication under compute.
 :::
 
-::: {.slide title="DDP, Really Run"}
+::: {.slide title="Distributed Data Parallel"}
 Multiple processes from a notebook: write a sidecar script,
 launch with `torchrun`, read back per-rank results.
 
@@ -838,7 +835,7 @@ Strong scaling (global batch 512, split thinner) parts company
 as $k$ grows. NVLink changes only the constant.
 :::
 
-::: {.slide title="Price the Fabric, Then Check the Bill"}
+::: {.slide title="Predicted and Measured Communication Cost"}
 `no_sync()` turns gradient sync off ⇒ synced − unsynced steps
 estimate the communication time.
 
@@ -881,7 +878,7 @@ Batch sharded, weights replicated — and still replicated
 identical.
 :::
 
-::: {.slide title="The Receipt"}
+::: {.slide title="Measured JAX Scaling"}
 Nobody wrote a collective — so find it in the compiled program:
 
 @multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3@jax

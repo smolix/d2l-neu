@@ -1,44 +1,31 @@
 # Computational Performance
 :label:`chap_performance`
 
-The book so far has made two kinds of choice. We chose *models* — which
-architecture, how deep, what kind of attention — and we chose *data* — how
-much, how batched, how tokenized. This chapter is about the third choice,
-the one every training run makes whether or not you attend to it: how to
-use the *machine*. Two models with identical loss curves can differ by an
-order of magnitude in wall-clock time and in whether they fit in memory
-at all — and holding the model and its loss curve fixed, that difference
-is systems, not mathematics. It is whether
-the code kept the arithmetic units fed, moved as few bytes as it could,
-stayed out of the interpreter's way, and spent its memory where it
-counted.
+The same model and optimization method can differ substantially in
+wall-clock time and memory use across implementations. The difference
+depends on how well the program uses arithmetic units, limits data movement,
+amortizes framework overhead, and allocates device memory. This chapter
+develops a quantitative method for analyzing these effects.
 
-There is one map to start from, and one method. The map is the
-*roofline*: a computation is limited either by how fast the machine can do
-arithmetic or by how fast it can move bytes, and a single ratio —
-arithmetic intensity, the FLOPs performed per byte moved — tells you which,
-before you run anything. The method is a loop: **measure** what the program
-actually does, **classify** which of three regimes it is in
-(compute-bound, bandwidth-bound, or overhead-bound), **fix** the binding
-constraint with the technique that targets it, and **re-measure**, because
-every fix moves the bottleneck. :numref:`sec_perf_model` builds both the
-map and the method on the book's own build machine; every section after it
-is the loop applied to one regime.
+The roofline model compares arithmetic throughput with memory bandwidth.
+Arithmetic intensity, measured in FLOPs per byte moved, determines which
+resource bounds an operation. A third regime appears when dispatch overhead
+dominates both. The practical procedure is to measure a program, classify
+its limiting regime, apply a corresponding optimization, and measure again.
+:numref:`sec_perf_model` introduces this procedure and the remaining
+sections apply it.
 
-The seven sections form a ladder from a single operation to a full model
-on many GPUs. :numref:`sec_perf_model` establishes the roofline, the three
+The sections proceed from individual operations to full models on multiple
+GPUs. :numref:`sec_perf_model` establishes the roofline, the three
 regimes, and the measurement discipline the frameworks' asynchronous
 dispatch makes non-optional. :numref:`sec_hardware` explains where the
 roofline's two numbers come from — the memory hierarchy, the tensor cores
 and their format ladder, the interconnects, and the energy budget
 underneath them all — using our own four-GPU box as the worked example.
 :numref:`sec_compilation` targets the bandwidth and overhead regimes:
-capturing the compute graph and letting a compiler fuse it can collapse
-both, and the section contrasts `torch.compile`'s bytecode capture with
-`jax.jit`'s tracing. Not every technique pays on every model, though, and
-:numref:`sec_fast_transformer` measures one that *costs* time when its
-constraint does not bind, which is why diagnosis comes first.
-:numref:`sec_memory_precision` turns to space: the memory anatomy of a
+capturing the compute graph can reduce both, and the section contrasts
+`torch.compile`'s bytecode capture with `jax.jit`'s tracing.
+:numref:`sec_memory_precision` turns to memory use: the allocation of a
 training step, mixed precision, activation checkpointing, and gradient
 accumulation — the techniques that decide whether a model fits.
 :numref:`sec_multi_gpu` builds data parallelism from scratch, derives the
@@ -46,9 +33,8 @@ ring allreduce, and measures the communication bill;
 :numref:`sec_multi_gpu_concise` replaces the hand-rolled version with
 production data parallelism and contrasts PyTorch's explicit collectives
 with JAX's declarative sharding. Finally :numref:`sec_fast_transformer`
-runs the whole method on a real Transformer, taking one of the book's own
-GPT models down a measured waterfall of every technique the chapter
-taught. That capstone runs in both frameworks, each in its own idiom —
+runs the complete procedure on a GPT model. The case study uses each
+framework in its usual idiom —
 `torch.compile`, autocast, and DDP on the PyTorch side; `jax.jit`,
 explicit bf16 threading, and declarative sharding on the JAX side — and
 the two waterfalls diverge exactly where the frameworks do: what a
@@ -69,7 +55,7 @@ written so that a reader on two GPUs, or one, sees the same story.
 
 ## What This Chapter Is Not {.unnumbered}
 
-The performance story is large, and this chapter draws sharp borders.
+This chapter has a limited systems scope.
 *Multi-node* training is the province of the Language Models part, which
 has data large enough to warrant it: splitting a model across machines
 with tensor, pipeline, or expert parallelism, and the network fabrics

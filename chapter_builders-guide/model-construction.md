@@ -746,7 +746,7 @@ one) and their named parts (embedding, final normalization, output head) as
 attributes.
 :end_tab:
 
-## Forward Is Just Python
+## Dynamic Forward Computation
 
 :begin_tab:`pytorch`
 `forward` is an ordinary Python method. Nothing restricts it to chaining

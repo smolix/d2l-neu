@@ -6,37 +6,29 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Pooling
 :label:`sec_pooling`
 
-In many cases our ultimate task asks some global question about the image,
-e.g., *does it contain a cat?* Consequently, the units of our final layer 
-should be sensitive to the entire input.
-We accomplish this by gradually aggregating information into coarser and coarser
-maps, ultimately learning a global representation,
-while keeping all of the advantages of convolutional layers at the intermediate layers of processing.
+Many image tasks require a global prediction, such as whether an image
+contains a cat. The final representation must therefore combine information
+from the entire input. Convolutional networks commonly build this
+representation by progressively reducing spatial resolution while increasing
+the receptive field of each hidden unit.
 The deeper we go in the network,
 the larger the receptive field (relative to the input)
 to which each hidden node is sensitive. Reducing spatial resolution 
 accelerates this process, 
 since the convolution kernels cover a larger effective area. 
 
-Moreover, when detecting lower-level features, such as edges
-(as discussed in :numref:`sec_conv_layer`),
-we often want our representations to be somewhat invariant to translation.
+For lower-level features such as edges, we also want small translations of the
+input to produce modest changes in the representation.
 For instance, if we take the image `X`
 with a sharp delineation between black and white
 and shift the whole image by one pixel to the right,
 i.e., `Z[i, j] = X[i, j - 1]`,
 then the output for the new image `Z` might be vastly different.
 The edge will have shifted by one pixel.
-In reality, objects hardly ever occur exactly at the same place.
-In fact, even with a tripod and a stationary object,
-vibration of the camera due to the movement of the shutter
-might shift everything by a pixel or so
-(high-end cameras are loaded with special features to address this problem).
+Such shifts occur whenever an object or camera moves slightly.
 
-This section introduces *pooling layers*,
-which serve the dual purposes of
-mitigating the sensitivity of convolutional layers to location
-and of spatially downsampling representations.
+This section introduces *pooling layers*, which summarize local windows to
+reduce spatial resolution and sensitivity to small translations.
 
 ```{.python .input #pooling}
 %%tab mxnet

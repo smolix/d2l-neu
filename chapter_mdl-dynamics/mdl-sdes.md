@@ -1,25 +1,22 @@
 # Stochastic Differential Equations
 :label:`sec_mdl-sdes`
 
-Diffusion models are built on a **forward noising SDE** that corrupts clean data
-into pure Gaussian noise. To read DDPM :cite:`ho2020denoising` and score-based
-models :cite:`song2021score` you need three things this section develops from
-scratch: Brownian motion (the canonical source of continuous randomness), the
-Itô calculus (why a "$\tfrac12 g^2\partial_{xx}$" correction term appears the
-moment noise enters), and the Ornstein--Uhlenbeck process, the simple
-mean-reverting SDE that the variance-preserving diffusion forward process
-discretizes. The payoff is a precise, simulatable description of the
-*information-destroying* half of every diffusion model;
-:numref:`sec_mdl-fokker-planck-probability-flow` then shows how to reverse it.
+Diffusion models use a **forward noising SDE** to transform data toward a
+Gaussian reference distribution. This section develops three ingredients
+needed for DDPM :cite:`ho2020denoising` and score-based models
+:cite:`song2021score`: Brownian motion, Itô calculus, and the
+Ornstein--Uhlenbeck process underlying variance-preserving diffusion. These
+tools give a precise and simulatable account of the forward process;
+:numref:`sec_mdl-fokker-planck-probability-flow` studies its reversal.
 
-One scaling law powers everything in this section. A Brownian increment over a
-time step $\Delta t$ has size $\sqrt{\Delta t}$, not $\Delta t$: noise is
-*much larger* than drift on short time scales. Its square,
-$(\Delta W)^2 \approx \Delta t$, refuses to vanish to second order, so the
+A Brownian increment over a time step $\Delta t$ has scale
+$\sqrt{\Delta t}$ rather than $\Delta t$, so noise dominates drift over short
+intervals. Its square, $(\Delta W)^2 \approx \Delta t$, remains a first-order
+quantity. Consequently, the
 second-order Taylor term that ordinary calculus discards survives as a
 first-order effect. The Itô correction, the form of Itô's lemma, the
 $\sqrt{\Delta t}$ noise kick in the Euler--Maruyama scheme, and the convergence
-rates of that scheme are all consequences of this one observation.
+rates of that scheme all follow from this scaling.
 
 We lean on :numref:`sec_mdl-odes-solvers` (vector fields, the forward Euler
 method, linear stability), and on :numref:`sec_mdl-random_variables` and
@@ -265,7 +262,7 @@ $$
 
 which is precisely why Taylor expansions in ordinary calculus stop at first
 order: $(dx)^2$ is negligible against $dx$. For Brownian motion the same sum
-refuses to die: each $(\Delta W_i)^2$ has *mean* $\Delta t_i$, and the means
+has a nonzero limit: each $(\Delta W_i)^2$ has *mean* $\Delta t_i$, and the means
 add up to exactly $t$ no matter how fine the mesh
 (:numref:`fig_mdl-dyn-qv-convergence`).
 
@@ -749,7 +746,7 @@ when it reads DDPM's forward chain as exactly this discretization.
 ## The Ornstein--Uhlenbeck Process
 :label:`sec_mdl-ornstein-uhlenbeck`
 
-The one SDE to know by heart :cite:`Uhlenbeck.Ornstein.1930`:
+The Ornstein--Uhlenbeck process :cite:`Uhlenbeck.Ornstein.1930` is
 
 $$
 dX = -\theta X \, dt + \sigma\,dW, \qquad \theta > 0.
@@ -758,20 +755,18 @@ $$
 
 The drift is the stable linear ODE of :numref:`sec_mdl-linear-odes-stability`
 ($\dot{x} = -\theta x$, exponential decay toward the origin) with
-Brownian jitter of constant amplitude $\sigma$ added. The two ingredients
-fight: **mean reversion** pulls every excursion back toward zero at rate
-$\theta$, while the noise endlessly creates new excursions. The
-Ornstein--Uhlenbeck (OU) process is the truce they settle on
-(:numref:`fig_mdl-dyn-ou-mean-reversion`), and it is the
-rare SDE whose law we can write down completely, which is why the
-variance-preserving diffusion forward process is built on it.
+Brownian noise of constant amplitude $\sigma$ added. The **mean-reverting**
+drift pulls excursions toward zero at rate $\theta$, while the noise
+continually introduces new variation. The resulting process
+(:numref:`fig_mdl-dyn-ou-mean-reversion`) has a closed-form transition law and
+therefore provides a convenient basis for variance-preserving diffusion.
 
-![Mean reversion in one picture: the OU drift $-\theta x$ as a direction field in the $(t, x)$ plane, sample paths from three different starts relaxing toward zero, the saturating $\pm 2\sigma_t$ band, and the stationary Gaussian they settle into, drawn sideways at the right edge.](../img/mdl-dyn-ou-mean-reversion.svg)
+![Mean reversion in the OU process. The drift $-\theta x$ is shown as a direction field in the $(t, x)$ plane, with sample paths from three initial values, the saturating $\pm 2\sigma_t$ band, and the stationary Gaussian at the right edge.](../img/mdl-dyn-ou-mean-reversion.svg)
 :label:`fig_mdl-dyn-ou-mean-reversion`
 
 ### Solving the SDE with Itô's Lemma
 
-The trick is the same integrating factor that solves the deterministic
+We use the same integrating factor that solves the deterministic
 equation. Apply Itô's lemma :eqref:`eq_mdl-sde-ito-lemma` to
 $\phi(x, t) = e^{\theta t} x$, for which $\phi_t = \theta e^{\theta t} x$,
 $\phi_x = e^{\theta t}$, and (the punchline) $\phi_{xx} = 0$, so the Itô

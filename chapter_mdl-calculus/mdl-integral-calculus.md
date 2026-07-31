@@ -1,25 +1,21 @@
 # Integral Calculus
 :label:`sec_mdl-integral_calculus`
 
-Differentiation answered a local question: how does a function change when we
-nudge its input? Integration answers a global one: how much of something is
-there in total, whether the area under a curve, the volume under a surface, or
-the probability under a density. The two look unrelated, yet the *fundamental
-theorem of calculus* joins them into a single subject: integration is
-differentiation run backwards. That one fact is what makes integrals
-computable at all, and it is the reason a deep-learning reader needs them, since
-every continuous probability is an integral and every expectation is an integral
-average (:numref:`sec_mdl-random_variables`).
+Differentiation describes local change, whereas integration accumulates a
+quantity over an interval or region. Examples include area under a curve,
+volume under a surface, and probability under a density. The *fundamental
+theorem of calculus* relates these operations by expressing integration through
+antiderivatives. Continuous probabilities and expectations therefore require
+integration (:numref:`sec_mdl-random_variables`).
 
-We will not need the full machinery of a calculus course. This section builds
-what an integral *is* (a limit of sums, extended to unbounded domains), the
-fundamental theorem that lets us *compute* integrals together with the
-integration-by-parts and change-of-variables rules it yields, and the
-multiple-integral toolkit (Fubini's theorem and the $n$-dimensional change of
-variables) that powers the Gaussian normalizer and, later, normalizing flows
-(:numref:`sec_mdl-continuous-normalizing-flows`). The last part turns to
-probability: densities, expectations, Monte Carlo estimation, and
-differentiation under the integral sign.
+We define the integral as a limit of sums and extend the definition to
+unbounded domains. We then derive computation rules from the fundamental
+theorem, including integration by parts and change of variables. Multiple
+integrals, Fubini's theorem, and multidimensional change of variables lead to
+the Gaussian normalizer and normalizing flows
+(:numref:`sec_mdl-continuous-normalizing-flows`). The final part covers
+densities, expectations, Monte Carlo estimation, and differentiation under the
+integral sign.
 
 ```{.python .input #integral-imports}
 #@tab mxnet
@@ -186,7 +182,7 @@ $\epsilon<0$ the sliver sits to the left of $x$ and the same bounds apply, with
 both sign flips canceling in the quotient). That limit is
 exactly $F'(x)$. $\blacksquare$
 
-The sliver argument is the whole story: the rate at which accumulated area grows
+The argument shows that the rate at which accumulated area grows
 is just the current height of the curve. This *reverses* the problem. Finding
 areas, hard on its own, becomes the search for an **antiderivative**, a function
 whose derivative is $f$, which we can read straight off the derivative table of
@@ -658,7 +654,7 @@ print('grid integral of e^(-x^2-y^2):', round(val, 6))
 print('exact value pi               :', round(float(onp.pi), 6))
 ```
 
-## Integration Meets Probability
+## Integration in Probability
 
 This is why a deep-learning reader needs integration at all. A continuous
 probability **density** is nothing more than a non-negative function that is
@@ -1094,7 +1090,7 @@ $\epsilon \to dx$.
 :::
 :::
 
-::: {.slide title="Watching the limit converge"}
+::: {.slide title="Convergence of Riemann Sums"}
 [The integral]{.kicker}
 
 The definition converges, but slowly. Refine the partition for
@@ -1167,7 +1163,7 @@ finite normalizer or mean at all.
 :::
 :::
 
-::: {.slide title="Two errors, two knobs"}
+::: {.slide title="Truncation and Discretization Error"}
 [The integral]{.kicker}
 
 Watch a convergent improper integral, $\int_0^\infty e^{-x}\,dx=1$,
@@ -1388,7 +1384,7 @@ integrates to $1$, and symmetry sends its mean to $0$.
 @!integral-density
 :::
 
-::: {.slide title="Monte Carlo beats the curse of dimensionality"}
+::: {.slide title="Monte Carlo in High Dimensions"}
 [Probability]{.kicker}
 
 ::: {.cols .vc}
@@ -1434,7 +1430,7 @@ and you get a confidently wrong gradient.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Summary"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

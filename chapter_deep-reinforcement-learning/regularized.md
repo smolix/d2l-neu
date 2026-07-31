@@ -1,7 +1,9 @@
 # Regularized Policy Optimization
 :label:`sec_regularized`
 
-Every constraint in :numref:`sec_ppo` was measured against a moving target. The trust region and the clip keep the new policy near the *previous iterate*: they bound each step, and once the iterates stop moving they bind nothing at all, so nothing in that section stopped the policy from marching, one safe step at a time, into the saturated corner its own entropy measurements complained about. Nothing so far keeps the policy near anywhere in particular. This section adds a penalty measured against a *fixed* policy, and that change of reference point changes the optimum itself, into a closed form we can verify to machine precision, one formula that contains the entropy bonus of :numref:`sec_ppo`, maximum-entropy reinforcement learning, and the KL-anchored objective behind influential language-model post-training recipes. Before earning it, we ask a question :numref:`chap_reinforcement_learning` deferred: what happens when the reward itself is *learned*, and what an optimizer does to a learned reward's errors. The experiments are tabular throughout and run in seconds.
+PPO constrains each policy update relative to the preceding policy. A different objective keeps the policy near a fixed reference by subtracting a KL-divergence penalty from expected reward. This changes the optimum, not only the path taken by the optimizer, and it includes entropy regularization as the special case of a uniform reference.
+
+We first examine why such a reference can be useful when rewards are learned from preferences. A reward model is accurate only where its comparison data provide information, and optimizing it can exploit errors elsewhere. A tabular gridworld makes this failure measurable against the true reward. We then derive the KL-regularized optimum, its soft Bellman backup, and its connections to language-model post-training and maximum-entropy reinforcement learning.
 
 ```{.python .input #regularized-regularized-policy-optimization}
 %%tab pytorch
@@ -19,7 +21,7 @@ import numpy as np
 
 ## Learning Rewards from Preferences
 
-:numref:`sec_mdp` called the reward the interface through which you tell the optimizer what you want, and showed an optimizer attacking a small crack in it. That section assumed you could write the reward down. For many tasks you cannot: no formula scores a helpful answer, a safe merge into traffic, or a good summary. What people *can* do reliably is compare: shown two attempts, they can usually say which one is better. Learning a reward from comparisons, then optimizing it, is preference-based reinforcement learning :cite:`Christiano.Leike.Brown.ea.2017`, and it is how language models are trained to follow instructions. Everything this section needs from that pipeline fits in one classical model and one logistic regression.
+For many tasks, such as evaluating a helpful answer or a safe driving maneuver, an explicit numerical reward is difficult to specify. Pairwise comparisons are often easier to obtain. Preference-based reinforcement learning fits a reward model to these comparisons and then optimizes the learned reward :cite:`Christiano.Leike.Brown.ea.2017`. We represent the comparison model with logistic regression.
 
 ### Preferences and the Bradley-Terry Model
 
@@ -84,7 +86,7 @@ print(f'entries into the hazard lane: true '
       f'fitted {np.round(r_hat[[1, 4, 2, 5], [1, 2, 1, 2]], 2)}')
 ```
 
-Read the three lines together. Where the reference's data lives, the fit is decent: an rms error of $0.19$ across the forty-six well-traveled state-action pairs. Where the data never goes, the fit is not wrong so much as *silent*: nine pairs were never visited, and their fitted reward sits at its initialization of zero. The third line is the trap being armed. Entering the hazard lane truly costs $-1.5$; the fitted reward prices those entries at roughly zero, because a policy that knows better produced the data, so the comparisons contain almost no evidence about the lane. Silence reads as zero, and zero is optimistic here. One scope note: that the fit stays *quiet* rather than wild off-support is a property of this zero-initialized, weight-decayed linear model; a neural reward model owes you no such quiet, and can extrapolate unpredictably exactly where the data is absent.
+The fit has an rms error of $0.19$ on the forty-six state-action pairs visited by the reference policy. Nine pairs are absent from the data, so their fitted rewards remain at the initialization value of zero. This matters for the hazard lane: entering it has true reward $-1.5$, but the fitted model assigns a value near zero because the reference policy rarely provides comparisons there. In this example, zero initialization and weight decay make unsupported predictions remain near zero. A neural reward model need not behave this way and may extrapolate unpredictably outside the data distribution.
 
 ### Identifiability and the Per-Prompt Baseline
 
@@ -118,7 +120,7 @@ for name, r in (('true reward  ', r_true), ('fitted reward', r_hat)):
           f'true return {ret(pi, r_true):+.2f}')
 ```
 
-By the fitted yardstick the hacked plan is the better policy, $-0.03$ against $-0.24$; only differences mean anything here, since the yardstick's absolute level was never identified. Under the true reward it is a disaster, $-2.11$ against $+0.59$: the plan drives straight down the hazard lane, through both cells the data priced at zero. Nothing malfunctioned. Value iteration did its job on the numbers we gave it, and the numbers were wrong precisely where the reference policy's competence kept the data from going. That inversion returns as the central obstacle of :numref:`sec_offline`: the proxy's errors live exactly where the data thins out.
+Under the fitted reward, the optimized policy scores $-0.03$, compared with $-0.24$ for the reference policy; only the difference is meaningful because the additive reward constant is unidentified. Under the true reward, however, the scores are $-2.11$ and $+0.59$. The optimized policy enters the hazard lane because its unsupported rewards were estimated near zero. Value iteration has optimized the supplied reward correctly; the failure lies in the reward model outside the reference policy's data distribution. :numref:`sec_offline` encounters the same problem for learned value functions.
 
 ### True Return against the KL Budget
 
@@ -166,7 +168,7 @@ d2l.plot(kls, [true_ret, prox_ret], 'KL from the reference (nats)', 'return',
          legend=['true return', 'fitted return'])
 ```
 
-This is the section's most transferable picture, and every point on it is an exact optimum: the residual prints as zero at double precision, the backup iterated to its fixed point, so the curve is the true frontier of the penalized objective, not a family of guesses. The fitted return rises along the entire sweep: by its own yardstick, more optimization is always better. The true return rises from $-0.10$ to a peak of $+0.53$ at a budget of just under four nats, well above anything the reference achieved, then falls off a cliff as the remaining budget buys commitment to the hazard lane. Moderate optimization against the flawed proxy genuinely helped; the same optimization continued became the attack we just watched. The same experiment produces the same rise and turn at language-model scale: optimize a policy against a learned reward while watching a held-out gold reward :cite:`Gao.Schulman.Hilton.2023`. The x axis, distance from the reference, is about to become the knob we control directly.
+Every point in this figure is an optimum of the penalized objective; the Bellman residual is zero to double precision. The fitted return increases throughout the sweep. The true return instead rises from $-0.10$ to $+0.53$ at a divergence just below four nats, and then decreases sharply as the policy concentrates on the hazard lane. Moderate optimization of the imperfect reward model improves the true return, whereas further optimization exploits its unsupported predictions. A similar nonmonotonic relation has been observed when language models are optimized against a learned reward and evaluated by a separate reference measure :cite:`Gao.Schulman.Hilton.2023`. This motivates controlling the divergence from the reference policy directly.
 
 ## The Regularized Objective
 
@@ -291,7 +293,7 @@ Everything above was one decision. In an MDP the penalty is charged at every ste
 
 $$V(s) = \max_a Q(s, a) \quad \textrm{becomes} \quad V(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q(s, a)/\beta},$$
 
-the backup that `soft_v` iterated to a fixed point, its printed residual zero at double precision: a logsumexp at inverse temperature, with the plain $\max$ recovered as $\beta \to 0$. With a uniform reference this is *soft value iteration* and the objective is maximum-entropy reinforcement learning. When :numref:`sec_dqn` builds deep learning on top of the hard $\max$, it will pay dearly for that operator's brittleness; it is worth knowing in advance that the $\max$ is the sharp corner of a family whose smooth members exist. Exercise 6 transplants the backup to the slippery lake and watches one dial sweep from value iteration to policy evaluation.
+the backup that `soft_v` iterated to a fixed point, with residual zero to double precision. It replaces the maximum by a log-sum-exp, recovering the ordinary $\max$ as $\beta \to 0$. With a uniform reference, this is *soft value iteration* and the objective is maximum-entropy reinforcement learning. The smooth backup provides an alternative to the hard maximum whose estimation bias was discussed in :numref:`sec_dqn`. Exercise 6 applies this backup to the slippery lake and varies $\beta$ from value iteration toward policy evaluation.
 
 ### DDPG, TD3 and SAC
 
@@ -303,9 +305,9 @@ Three sections point back here. :numref:`sec_dqn` studies what happens to the ha
 
 ## Summary
 
-Rewards can be learned from pairwise comparisons: Bradley-Terry is logistic regression on score differences, it identifies the reward only up to a function of the start state, which is why a per-prompt baseline is free on both the reward and the policy ledgers, and it is accurate where the preference data lives and silent where it does not. Optimizing a learned reward finds its errors, Goodhart's law in action: our optimal planner drove the fitted reward's unpriced hazard lane, and soft value iteration solved the exact regularized frontier per exchange rate with its Bellman residual checked; along that frontier the true return rose and then fell while the fitted return rose throughout, the overoptimization curve in miniature. The repair is to change the objective: expected reward minus $\beta$ times the KL divergence to a frozen reference. Its optimum is the reference exponentially tilted by reward, with value $\beta \log Z$, proved in four lines by Gibbs' inequality and verified to machine precision; no penalty gives a point mass, a uniform reference gives the entropy bonus and maximum-entropy RL, the soft backup replaces the hard maximum by a logsumexp, and the whole construction is Bayes' rule with $e^{r/\beta}$ as likelihood. A penalty against a frozen reference shapes the optimum; a trust region against the previous iterate shapes only the path; modern fine-tuning runs both, and the penalty's reverse KL direction is why it sharpens rather than broadens.
+Pairwise preferences identify reward differences but not an additive term depending only on the start state. A learned reward is reliable only on regions supported by its comparison data, and optimizing it can exploit errors elsewhere. A KL penalty relative to a fixed reference changes the objective and limits this displacement. Its exact optimum is the reference distribution exponentially tilted by reward, with value $\beta\log Z$. A uniform reference yields entropy regularization, and the corresponding Bellman update replaces a maximum by a log-sum-exp. Unlike a trust region relative to the previous iterate, a fixed-reference penalty changes the final optimum.
 
-**What the experiments show, and what they do not.** Every cell is seeded numpy and prints identically in both framework tabs; reruns reproduce the digits exactly. The bandit-side results are exact computations: the closed form and the numerical optimum agree to floating-point resolution, and the frontier and limit statements are properties of :eqref:`eq_kl_optimum`, not of a sample. The gridworld results are one map, one reference policy, and one seeded draw of preferences: the frontier is solved exactly for the fitted reward the seed produced, so what moves under reseeding is the fitted reward itself, and with it the fitting errors, the hacked plan's route, the frontier peak's location, and its height by a tenth or two, while reseeding preserves the qualitative claims: an accurate fit where data lives, silence where it does not, a plan exploiting the silence, and a true-return curve that rises and then falls. The hazard costs and the amount of preference data were chosen so that the failure is visible rather than marginal; gentler versions of the same numbers produce gentler versions of the same story. The compute belongs to readers.
+**Experimental scope.** The closed-form bandit calculations are exact. The gridworld experiment uses one map, one reference policy, and one seeded preference dataset. For that dataset, fitted return increases after true return begins to decrease, demonstrating overoptimization of the proxy. The location and size of this effect depend on the preference coverage and chosen hazard cost.
 
 ## Exercises
 
@@ -343,7 +345,7 @@ Regularized policy optimization<br>
 :::
 :::
 
-::: {.slide title="Rewards You Learn"}
+::: {.slide title="Learning a Reward Model"}
 No formula scores a helpful answer; people can *compare*.
 
 $$P(\tau \succ \tau') = \sigma\big( r(\tau) - r(\tau') \big)$$
@@ -360,7 +362,7 @@ knew better, so the data is silent. **Silence reads as zero**,
 a property of the zero-initialized linear fit.
 :::
 
-::: {.slide title="Reward Hacking, Produced"}
+::: {.slide title="Optimizing an Imperfect Reward"}
 Plan *optimally* against the fitted reward; grade under the truth.
 
 @!regularized-reward-hacking-and-goodhart
@@ -381,8 +383,8 @@ exact optimum.
 
 . . .
 
-- fitted return rises the whole way; true return rises to
-  $+0.53$ at $\approx 4$ nats, then falls off a cliff
+- fitted return rises throughout; true return reaches
+  $+0.53$ at $\approx 4$ nats and then decreases sharply
 - the same curve at language-model scale:
   :cite:`Gao.Schulman.Hilton.2023`
 - so control the x axis directly
@@ -406,7 +408,7 @@ Verified numerically: largest gap over a ladder of $\beta$
 is $\approx 10^{-16}$.
 :::
 
-::: {.slide title="One Picture"}
+::: {.slide title="The Closed-Form Optimum"}
 ![](../img/mdl-rl-kl-tilting.svg){width=98%}
 
 . . .
@@ -446,7 +448,7 @@ is mode-seeking, so post-training *sharpens*
 (:numref:`sec_mdl-fwd-vs-rev-kl`).
 :::
 
-::: {.slide title="Where This Goes"}
+::: {.slide title="Connections to SAC"}
 $$V(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\,
 e^{Q(s, a)/\beta} \ \xrightarrow{\ \beta \to 0\ } \ \max_a Q(s, a)$$
 

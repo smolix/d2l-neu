@@ -1,22 +1,16 @@
 # Maximum Likelihood
 :label:`sec_mdl-maximum_likelihood`
 
-Many standard machine-learning losses have a probabilistic interpretation. When
-we minimize a classifier's cross-entropy or a regressor's squared error under a
-Gaussian noise model, we are answering one question: *which parameters make the
-observed data most probable?* That is the **maximum likelihood** principle, the idea
-that turns a probabilistic model into a trainable objective. This section
-states the principle and proves the three equivalences that make it
-operational: likelihood becomes a *negative log-likelihood*, the negative
-log-likelihood *is* the cross-entropy to the data, and the Gaussian case *is*
-mean squared error. It then asks how good the resulting estimates are
-(consistency, asymptotic normality, and the Fisher information) and shows how
-putting a prior back in recovers $L_2$ regularization. The section ends where
-modern generative models begin: when latent variables make the likelihood
-intractable, a lower bound (the ELBO) and the EM algorithm make it tractable
-again. We keep the running coin-flip example throughout because it is small
-enough to solve by hand, which lets us check every claim against the answer we
-already know.
+Many standard machine-learning losses arise from probabilistic models.
+Maximizing the probability of the observed data gives the **maximum likelihood**
+principle. Taking logarithms yields a negative log-likelihood; for common models
+this objective becomes cross-entropy or mean squared error. This section derives
+these relationships and then studies consistency, asymptotic normality, and
+Fisher information. Adding a prior gives MAP estimation and, in the Gaussian
+case, $L_2$ regularization. For latent-variable models, the evidence lower bound
+and expectation--maximization replace a likelihood that is difficult to optimize
+directly. A coin-flip example provides a calculation that can be checked in
+closed form.
 
 ```{.python .input #maximum-likelihood-imports}
 #@tab mxnet
@@ -286,13 +280,13 @@ is why every minibatch loss in the book is an *average* of per-example NLLs:
 the gradient of a sum is the sum of gradients, so we can estimate
 $\nabla\ell$ from a random subset of the data.
 
-## Maximum Likelihood Is Minimizing a Loss
+## Maximum Likelihood and Loss Minimization
 
 We now make precise the claim from the introduction. "Minimize the loss" and "do
 maximum likelihood" are the same instruction in different words. The bridge is
 one rescaling.
 
-### NLL Is the Cross-Entropy to the Data
+### Negative Log-Likelihood as Cross-Entropy
 :label:`subsec_mdl-nll-crossentropy`
 
 Dividing the NLL :eqref:`eq_mdl-nll` by the number of examples turns it into an
@@ -413,7 +407,7 @@ exactly as in the discrete case. Maximum likelihood thus operates on continuous
 variables by swapping probabilities for densities and nothing more. The most
 important density to swap in is the Gaussian, which we do next.
 
-### Gaussian NLL Is Mean Squared Error
+### Gaussian Negative Log-Likelihood and Mean Squared Error
 :label:`subsec_mdl-gaussian-mse`
 
 The most-used regression loss falls out of the same principle by choosing a
@@ -712,7 +706,7 @@ concrete, and it is why the curvature of a loss surface (its Fisher
 information, or empirically its Hessian) tells us how trustworthy a fitted
 parameter is.
 
-## MAP Estimation: Priors as Regularizers
+## MAP Estimation and Regularization
 :label:`subsec_mdl-map`
 
 We dropped the prior $P(\boldsymbol{\theta})$ by declaring it flat.
@@ -733,7 +727,7 @@ The objective is the familiar data-fit term plus a penalty: the negative
 log-prior. A prior concentrated near small parameters penalizes large ones, which
 is precisely what a regularizer does.
 
-### Gaussian Priors Are Weight Decay
+### Gaussian Priors and Weight Decay
 
 **Proposition (Gaussian prior = $L_2$ / weight decay).** *A Gaussian prior
 $\boldsymbol{\theta}\sim\mathcal{N}(\mathbf 0,\tau^2 \mathbf I)$ contributes the
@@ -845,7 +839,7 @@ Bayes (:numref:`sec_mdl-naive_bayes`) leans on exactly this smoothing to keep
 never-observed feature--class pairs from annihilating its products; the
 pseudo-count accounting built here is what justifies it.
 
-### The Posterior Mode Is Not the Posterior
+### Distinguishing the Posterior Mode from the Posterior
 
 One caution before we move on: MAP is *not* the same as "being Bayesian." MAP
 restores the prior but still reports a single point: the *mode* of the posterior
@@ -892,7 +886,7 @@ p(x;\boldsymbol{\theta}) = \sum_{z} p(z;\boldsymbol{\theta})\, p(x\mid z;\boldsy
 $$
 :eqlabel:`eq_mdl-marginal-lik`
 
-### Why Latent Variables Break the Recipe
+### The Difficulty Introduced by Latent Variables
 
 The canonical example is the **Gaussian mixture model** (GMM): the latent
 $z \in \{1,\ldots,K\}$ picks a component with probability

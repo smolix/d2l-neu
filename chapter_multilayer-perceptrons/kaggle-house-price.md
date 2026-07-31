@@ -6,14 +6,8 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Predicting House Prices on Kaggle
 :label:`sec_kaggle_house`
 
-Now that we have introduced some basic tools
-for building and training deep networks
-and regularizing them with techniques including
-weight decay and dropout,
-we are ready to put all this knowledge into practice
-by participating in a Kaggle competition.
-The house price prediction competition
-is a great place to start.
+This section applies the chapter's modeling and regularization methods to the
+Kaggle house-price prediction competition.
 The data is fairly generic and does not exhibit exotic structure
 that might require specialized models (as audio or video might).
 This dataset, collected by :citet:`De-Cock.2011`,
@@ -23,11 +17,8 @@ teaching datasets (e.g. Boston Housing) that preceded it, with more
 examples and more features.
 
 
-In this section, we will walk you through details of
-data preprocessing, model design, and hyperparameter selection.
-We hope that through a hands-on approach,
-you will gain some intuitions that will guide you
-in your career as a data scientist.
+The example covers data preprocessing, model design, validation,
+hyperparameter selection, and submission generation.
 
 ```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab mxnet
@@ -702,7 +693,7 @@ fine-tuning of pretrained models.
 ::: {.cover}
 [Dive into Deep Learning · §5.7]{.kicker}
 
-Predicting **house prices** on Kaggle<br>An end-to-end pipeline: messy data in, a scored prediction out. **The difference between an underfit baseline and a converged one is nothing but training it properly.**
+Predicting **house prices** on Kaggle<br>Preprocessing, validation, model comparison, and submission.
 :::
 :::
 
@@ -721,13 +712,13 @@ mixed features, predict the sale price of **1459** more.
 
 ::: {.d2l-note}
 Preprocess, match the loss to the metric, cross-validate, submit. That
-recipe outlives any single model.
+procedure applies to many model classes.
 :::
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-Everything here works for **any** model class, not just neural nets.
+The evaluation procedure applies to **any** model class, not only neural networks.
 :::
 :::
 :::
@@ -772,7 +763,7 @@ overfitting the leaderboard.
 The data is generic on purpose: no images, audio, or sequences, just a
 spreadsheet of house attributes and one price column.
 
-That makes it the perfect first capstone, the whole job is the
+This makes it a suitable first case study: the main work is the
 **pipeline** around the model.
 :::
 
@@ -792,7 +783,7 @@ That makes it the perfect first capstone, the whole job is the
 :::
 :::
 
-::: {.slide title="One imports cell, then read the CSVs"}
+::: {.slide title="Imports and CSV input"}
 [Setup]{.kicker}
 
 ::: {.cols .vc}
@@ -862,7 +853,7 @@ test statistics is **leakage** and flatters every later score.
 :::
 :::
 
-::: {.slide title="One method: impute, standardize, one-hot" layout="code"}
+::: {.slide title="Imputation, standardization, and one-hot encoding" layout="code"}
 [Preprocessing]{.kicker}
 
 Fit means, standard deviations, and the categorical vocabulary on the
@@ -985,7 +976,7 @@ A fresh model per fold; average:
 :::
 :::
 
-::: {.slide title="The trap: an underfit baseline flatters everything" only="pytorch"}
+::: {.slide title="An underfit baseline gives a misleading comparison" only="pytorch"}
 [Model selection]{.kicker}
 
 ::: {.cols .vc}
@@ -1042,7 +1033,7 @@ optimizer to attach weight decay.
 :::
 :::
 
-::: {.slide title="The verdict: the MLP edges ahead" only="pytorch"}
+::: {.slide title="Cross-validation comparison" only="pytorch"}
 [Model selection]{.kicker}
 
 Same K-fold loop, learning rate, and epoch budget, only the model changes:
@@ -1054,7 +1045,7 @@ Same K-fold loop, learning rate, and epoch budget, only the model changes:
 :::
 :::
 
-::: {.slide title="The verdict: the MLP edges ahead" except="pytorch"}
+::: {.slide title="Cross-validation comparison" except="pytorch"}
 [Model selection]{.kicker}
 
 The natural next step is a small MLP: one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget, it edges out the competently trained linear baseline: about $0.027$ vs $0.036$.
@@ -1088,7 +1079,7 @@ ensembling*.
 :::
 :::
 
-::: {.slide title="The general competition recipe"}
+::: {.slide title="A general competition workflow"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
@@ -1129,7 +1120,8 @@ images, text, audio. The pipeline is identical.
 - **A baseline counts only if trained competently**: underfit
   vs converged, same model.
 - **Ensemble the folds in log space** (or refit), then submit.
-- The model is a few lines; **everything around it is the lesson**.
+- Model code is short; preprocessing and evaluation determine whether its
+  score is meaningful.
 :::
 :::
 

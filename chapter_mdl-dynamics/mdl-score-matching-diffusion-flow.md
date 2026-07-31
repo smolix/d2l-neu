@@ -1,28 +1,25 @@
 # Score Matching, Diffusion, and Flow Matching
 :label:`sec_mdl-score-matching-diffusion-flow`
 
-The preceding sections built the tools: numerical solvers for ODEs
-(:numref:`sec_mdl-odes-solvers`), the forward noising SDE
-(:numref:`sec_mdl-sdes`), and the central reduction that *the only unknown
-standing between noise and data is the score* $\nabla \log p_t$
-(:numref:`sec_mdl-fokker-planck-probability-flow`). What remains is to *learn*
-that unknown, and the method behind today's image, audio, and video generators
-is simple: **learn a score or a velocity field by a plain least-squares
-regression, then sample by solving the learned ODE or SDE.** We develop score
-matching and its tractable denoising form, recognize DDPM
+The preceding sections developed ODE solvers
+(:numref:`sec_mdl-odes-solvers`), forward noising SDEs
+(:numref:`sec_mdl-sdes`), and the role of the score $\nabla \log p_t$ in
+probability flow and time reversal
+(:numref:`sec_mdl-fokker-planck-probability-flow`). This section studies how to
+estimate a score or velocity field by regression and then sample by integrating
+the resulting ODE or SDE. We develop score matching and its denoising form,
+interpret DDPM
 :cite:`ho2020denoising` as a discretized variance-preserving SDE, derive
 Langevin sampling, DDIM, and guidance from the same score calculus, and then
-build flow matching and rectified flow as the complementary route that
-*prescribes* the noise-to-data path, closing with the optimal-transport
-connection between straight paths and kinetic energy and a single table that
-unifies the whole family :cite:`song2021score,Lipman.Chen.BenHamu.ea.2022`.
+develop flow matching and rectified flow as methods that prescribe a
+noise-to-data path, and relate straight paths to kinetic energy in optimal
+transport :cite:`song2021score,Lipman.Chen.BenHamu.ea.2022`.
 
-One idea powers everything. The quantity we want, a marginal score or a
-marginal velocity, is an *average* we cannot compute. But it is the
-conditional expectation of a *per-sample* quantity we can compute in closed
-form, and least-squares regression against a noisy target automatically fits
-its conditional mean. Every training objective in this section, implicit
-score matching aside, is a restatement of this one observation.
+The principal statistical device is conditional expectation. A marginal score
+or velocity may be unavailable directly but can be expressed as the
+conditional expectation of a tractable per-sample quantity. Least-squares
+regression against that quantity recovers its conditional mean. This identity
+supports both denoising score matching and conditional flow matching.
 
 We lean on the Fokker–Planck equation and the probability-flow ODE
 (:numref:`sec_mdl-fokker-planck`, :numref:`sec_mdl-probability-flow-ode`), the
@@ -31,10 +28,10 @@ Euler–Maruyama steps (:numref:`sec_mdl-euler-runge-kutta`,
 :numref:`sec_mdl-euler-maruyama`), and the divergences of
 :numref:`sec_mdl-divergences-distances` (Fisher divergence via
 :numref:`sec_mdl-fisher-divergence`, optimal transport via
-:numref:`sec_mdl-optimal-transport`). The code is deliberately light: two tiny
-training loops (a one-dimensional score network in plain NumPy and a
+:numref:`sec_mdl-optimal-transport`). The numerical examples include two short
+training loops (a one-dimensional score network in NumPy and a
 two-dimensional flow-matching model, the latter retrained once more to measure
-reflow) plus closed-form simulations for everything else.
+reflow) plus closed-form simulations for the remaining examples.
 
 ```{.python .input #score-matching-diffusion-flow-imports}
 #@tab mxnet
@@ -76,7 +73,7 @@ import optax
 ## Learning the Score
 :label:`sec_mdl-score-matching`
 
-### Why the Score?
+### A Normalizer-Free Objective
 
 Fitting a density $p_{\boldsymbol{\theta}}$ to data by maximum likelihood
 requires evaluating its normalizing constant, for a neural-network
@@ -152,21 +149,21 @@ that point *inward* toward the data (negative divergence at the samples, like
 $-\nabla E$ near a minimum), while $\tfrac12\|\mathbf{s}_{\boldsymbol{\theta}}\|^2$
 stops the field from growing without bound.
 
-Why, then, is implicit score matching not the loss behind modern diffusion
-models? Cost. The divergence is the trace of the Jacobian,
+Implicit score matching is expensive in high dimensions. The divergence is
+the trace of the Jacobian,
 $\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}} = \operatorname{tr}\, (\partial \mathbf{s}_{\boldsymbol{\theta}} / \partial \mathbf{x})$,
 and computing it exactly takes $d$ backward passes
 (:numref:`sec_mdl-matrix-calculus-autodiff`): the same trace bottleneck that
 afflicts continuous normalizing flows
 (:numref:`sec_mdl-continuous-normalizing-flows`), and just as there, Hutchinson
 trace estimates only trade compute for variance. For images, $d$ is in the
-millions. The fix is a better identity.
+millions. Denoising score matching avoids this trace computation.
 
 ### Denoising Score Matching
 :label:`sec_mdl-denoising-score-matching`
 
-The trick that made score models practical is to stop matching the score of the
-clean data and match the score of *Gaussian-blurred* data instead
+Score models become practical by matching the score of *Gaussian-blurred*
+data rather than the clean data distribution
 :cite:`Vincent.2011`. Perturb each sample with Gaussian noise of scale
 $\sigma$:
 
@@ -349,7 +346,7 @@ objective can teach.
 ## Score-Based Diffusion Models
 :label:`sec_mdl-score-based-generative-modeling`
 
-### From One Noise Level to All of Them
+### Scores Across Noise Levels
 
 A single noise scale $\sigma$ leaves a dilemma. Small $\sigma$ makes
 $p_\sigma \approx p$, but then noised samples never visit low-density regions,
@@ -822,7 +819,7 @@ theorem. In $\boldsymbol{\epsilon}$-parameterization, :eqref:`eq_mdl-cfg` is
 applied verbatim to $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$, since the
 two differ by the $t$-dependent factor $-\sqrt{1 - \bar{\alpha}_t}$.
 
-Like everything else in this section, guidance can be watched in closed form.
+Guidance can also be examined in closed form.
 Label the two modes of our standardized mixture as classes, with $y$ naming the
 right mode: the class-conditional $p_t(\cdot \mid y)$ is a single moving
 Gaussian, the unconditional $p_t$ is the mixture, and both scores are exact,
@@ -975,21 +972,21 @@ plus the posterior variance term
 $C = \mathbb{E}\| Y - \mathbf{u}_t(\mathbf{x}) \|^2$, which does not involve
 $\boldsymbol{\theta}$. $\blacksquare$
 
-Compare this proof with Vincent's theorem: same lemma, same structure, with
+This proof has the same structure as Vincent's theorem, with
 (score of the noising kernel $\to$ marginal score) replaced by (conditional
 velocity $\to$ marginal velocity). Denoising score matching *is* conditional
-flow matching for the score field; the flow-matching literature made the trick
-generic. And as before, the theorem's constant $C$ is the irreducible variance
+flow matching for the score field. The flow-matching formulation extends this
+argument to general velocity fields. As before, the theorem's constant $C$ is the irreducible variance
 of the conditional target: the CFM training loss plateaus well above zero even
 for a perfect model, at the average disagreement among the conditional
 velocities passing through each point.
 
-### Score, Noise, and Velocity Are One Function
+### Relations Among Score, Noise, and Velocity
 :label:`sec_mdl-score-velocity-dictionary`
 
-Diffusion trains a score; flow matching trains a velocity. For the Gaussian
-paths that dominate practice these are one
-function wearing different clothes, and the conversions can be enumerated.
+Diffusion trains a score, whereas flow matching trains a velocity. For the
+Gaussian paths used in practice, these quantities determine one another
+through explicit transformations.
 Condition on a data point and take the Gaussian path
 
 $$
@@ -1114,9 +1111,9 @@ print(f'max |u_posterior - u_dictionary| on [-4, 4]: '
 ```
 
 The two routes agree to about $10^{-15}$ (machine precision) across both
-modes and the low-density valley. Nothing was fitted: the posterior route never
-mentions a score, the dictionary route never mentions a velocity, and they
-trace the same curve because both are affine in the one quantity
+modes and the low-density valley. No model was fitted: the posterior
+calculation does not use a score, while the alternative calculation uses the
+score--velocity relation. They agree because both are affine in the quantity
 $\hat{x}_1$ that the posterior knows. When a paper says its model "predicts
 noise" and a library says it "trains a velocity field", this cell is the
 translation between them.
@@ -1124,8 +1121,7 @@ translation between them.
 ### Rectified Flow and Straight Paths
 :label:`sec_mdl-rectified-flow`
 
-Everything now rests on the choice of conditional path, and the simplest
-choice is hard to beat. Condition on a *pair*
+We now choose a conditional path. Condition on a *pair*
 $\mathbf{z} = (\mathbf{x}_0, \mathbf{x}_1)$, a noise sample and a data
 sample drawn independently, and connect them by a straight line traversed at
 constant speed:
@@ -1150,11 +1146,11 @@ $$
 $$
 :eqlabel:`eq_mdl-rf-loss`
 
-Training is one line: draw noise,
-draw data, interpolate, regress on the difference. (For the measure-theoretic
+Training draws noise and data, interpolates between them, and regresses on the
+difference. (For the measure-theoretic
 comfort of strictly positive conditional densities, smooth the line with an
 infinitesimal Gaussian, $p_t(\cdot \mid \mathbf{z}) = \mathcal{N}((1-t)\mathbf{x}_0 + t \mathbf{x}_1, \sigma_{\min}^2 I)$,
-and let $\sigma_{\min} \to 0$; nothing below changes. Gaussian conditional
+and let $\sigma_{\min} \to 0$; the limiting objective is unchanged. Gaussian conditional
 paths with general $(\mu_t, \sigma_t)$ schedules recover diffusion-style
 targets: that is how flow matching subsumes the VP path, modulo the
 time-reversal callout above.)
@@ -1410,7 +1406,7 @@ Euler steps already work where a comparable diffusion sampler would want
 dozens to hundreds. How mildly, and what it costs to be curved at all, is a
 question about optimal transport.
 
-### One Reflow Round, Measured
+### The Effect of One Reflow Round
 
 Before leaving the trained model, we can test rectified flow's central claim,
 that reflow straightens the learned paths. Run the procedure of
@@ -1710,13 +1706,13 @@ and minibatch plans are biased toward their batch, so OT-CFM and reflow are
 best read as *variance- and curvature-reduction devices* with the dynamic OT
 problem as their idealized limit, not as exact $W_2$ solvers.
 
-## Sampling Is Solving the Learned Dynamics
+## Numerical Sampling of Learned Dynamics
 :label:`sec_mdl-sampling-learned-dynamics`
 
-Training produced a function: a score $\mathbf{s}_{\boldsymbol{\theta}}$ or a
-velocity $\mathbf{v}_{\boldsymbol{\theta}}$. Generation, in every model of
-this section, is the *same act*: plug the function into the dynamics and
-integrate from the easy distribution to the hard one,
+Training produces a score $\mathbf{s}_{\boldsymbol{\theta}}$ or velocity
+$\mathbf{v}_{\boldsymbol{\theta}}$. Generation substitutes this function into
+the corresponding dynamics and integrates from the reference distribution to
+the data distribution,
 
 $$
 \underbrace{\dot{\mathbf{x}} = \mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t)
@@ -1740,8 +1736,8 @@ only for the exact field, divergence, and numerical integration. The SDE route
 injects fresh noise and can improve exploration or empirical robustness, but
 noise does not universally contract model or discretization error, nor does it
 by itself guarantee sample diversity. Predictor–corrector methods combine the
-two styles. The remaining dial is the number of
-steps, and we can now measure exactly what it buys. The cell reuses the
+two styles. The remaining numerical choice is the number of steps. The
+following cell measures its effect by reusing the
 trained two-moons velocity field and grades Euler sampling at increasing step
 counts with the squared energy distance.
 
@@ -1814,24 +1810,24 @@ which distill a diffusion teacher into a one-step generator
 in an autoencoder's latent space :cite:`Rombach.Blattmann.Lorenz.ea.2022`;
 and discrete diffusion for text :cite:`Austin.Johnson.Ho.ea.2021`.
 
-### A Unifying Table
+### Comparison of Model Families
 :label:`sec_mdl-unifying-table`
 
-The zoo of this section is one template with three slots (a probability
-path, a regression target, a sampler):
+The following table compares the probability path, regression target, and
+sampler used by each model family.
 
 | Model family | Object learned | Training loss | Sampler | Stochastic? |
 | :-- | :-- | :-- | :-- | :-- |
-| **DDPM** :cite:`ho2020denoising` | $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$, i.e. the score in disguise | $\mathbb{E} \lVert \boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}} \rVert^2$ (= DSM, $\lambda(t) = 1 - \bar{\alpha}_t$) | ancestral reverse chain, $T \sim 1000$ steps | yes |
+| **DDPM** :cite:`ho2020denoising` | $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$, an equivalent score parameterization | $\mathbb{E} \lVert \boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}} \rVert^2$ (= DSM, $\lambda(t) = 1 - \bar{\alpha}_t$) | ancestral reverse chain, $T \sim 1000$ steps | yes |
 | **Score SDE (VE/VP)** :cite:`song2021score` | $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t) \approx \nabla \log p_t$ | noise-conditional DSM :eqref:`eq_mdl-ncsm-loss` | reverse SDE via Euler–Maruyama; + Langevin corrector | yes |
 | **Probability-flow ODE** :cite:`song2021score` | same $\mathbf{s}_{\boldsymbol{\theta}}$ (shared training) | same | ODE solver (Euler/Heun/RK); exact likelihood | no |
 | **DDIM** :cite:`Song.Meng.Ermon.2020` | same $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$ as DDPM (no retraining) | same as DDPM | deterministic update :eqref:`eq_mdl-ddim-update` on a sparse time grid | no ($\eta$ interpolates) |
 | **Flow matching / rectified flow** :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022` | velocity $\mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ | CFM :eqref:`eq_mdl-cfm-loss`; linear path: $\mathbb{E} \lVert \mathbf{v}_{\boldsymbol{\theta}} - (\mathbf{x}_1 - \mathbf{x}_0) \rVert^2$ | ODE solver, few steps (straighter paths) | no |
 
-Read it column by column and the section compresses to three sentences. Every
-*object learned* is a conditional expectation of a closed-form per-sample
-quantity. Every *training loss* is least-squares regression onto that
-quantity, justified by the regression lemma. Every *sampler* is a numerical
+In each case, the *object learned* is a conditional expectation of a
+closed-form per-sample quantity. The *training loss* is least-squares
+regression onto that quantity, justified by the regression lemma. The
+*sampler* is a numerical
 integrator from :numref:`sec_mdl-odes-solvers` or :numref:`sec_mdl-sdes`
 applied to dynamics in which the learned function is the only unknown, and
 the speed of that integrator is governed by the geometry (curvature, hence
@@ -1881,15 +1877,11 @@ $\gamma_t \equiv 0$. Exercise 8 walks the construction.
   solver
   order (Heun, EDM) and path straightness set the step budget.
 
-The dynamical lens of this chapter does not stop at generative models. Read a
-transformer layer by layer and it, too, is a discretized dynamics: layer
-normalization keeps each token on a sphere, and self-attention is an
-interaction that pulls every token toward a weighted average of the others.
-:citet:`Geshkovski.Letrouit.Polyanskiy.ea.2023` make this precise: attention
-is an *interacting particle system* whose continuous-time flow
-provably drives the tokens to cluster as $t \to \infty$, analyzed with the
-same vocabulary of vector fields, flows, and evolving marginals that this
-chapter developed.
+Related dynamical descriptions also apply beyond generative models.
+:citet:`Geshkovski.Letrouit.Polyanskiy.ea.2023` model self-attention as an
+interacting particle system on normalized token representations and analyze
+the resulting continuous-time clustering behavior using vector fields and
+flows.
 
 ## Exercises
 
@@ -2188,7 +2180,7 @@ equation. The intractable marginal velocity is again a posterior mean:
 
 $$\mathbf u_t(\mathbf x) = \mathbb E\bigl[\mathbf u_t(\mathbf x\mid\mathbf z)\mid\mathbf x_t=\mathbf x\bigr].$$
 
-Same disease as score matching, same cure.
+The same conditional-expectation argument used for score matching applies.
 :::
 
 ::: {.slide title="The conditional flow-matching theorem"}
@@ -2204,8 +2196,8 @@ $\mathbf u_t(\mathbf x\mid\mathbf z)$; its conditional mean is the marginal
 velocity. $\blacksquare$ Identical structure to Vincent's theorem.
 :::
 
-::: {.slide title="Score, noise, velocity: one function"}
-[The dictionary]{.kicker}
+::: {.slide title="Relations among score, noise, and velocity"}
+[Parameterization relations]{.kicker}
 
 On a Gaussian path
 $\mathbf x_t = \alpha_t\,\mathbf x_1 + \sigma_t\,\boldsymbol\epsilon$, the
@@ -2223,7 +2215,7 @@ $\hat{\mathbf x}_1 = \mathbb E[\mathbf x_1\mid\mathbf x_t]$ (Tweedie again):
 Route one never mentions a score; route two never mentions a velocity.
 :::
 
-::: {.slide title="One posterior mean, many targets"}
+::: {.slide title="Common prediction targets"}
 [Parameterizations]{.kicker}
 
 Every target a practitioner meets is a $t$-dependent affine transformation of
@@ -2262,7 +2254,7 @@ the crescents as step count grows:
 @score-matching-diffusion-flow-cfm-panels
 :::
 
-::: {.slide title="One reflow round, measured"}
+::: {.slide title="Effect of one reflow round"}
 [Reflow]{.kicker}
 
 Integrate the trained ODE once, keep the couplings
@@ -2286,7 +2278,7 @@ too: the coupling's posterior variance is gone.
 :::
 :::
 
-::: {.slide title="Straight = optimal"}
+::: {.slide title="Straight paths and optimal transport"}
 [Benamou–Brenier]{.kicker}
 
 $$W_2^2(p_0,p_1) = \min_{(p_t,\mathbf v_t)}\int_0^1\!\!\int\|\mathbf v_t\|^2 p_t.$$
@@ -2300,7 +2292,7 @@ OT couplings straighten the paths.
 :::
 :::
 
-::: {.slide title="Steps buy quality; order sets the price"}
+::: {.slide title="Step count and solver order"}
 [Sampling]{.kicker}
 
 Error falls with steps until model bias dominates; a higher-order solver buys

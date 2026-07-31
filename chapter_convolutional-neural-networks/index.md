@@ -1,12 +1,10 @@
 # Convolutional Neural Networks
 :label:`chap_cnn`
 
-Image data is represented as a two-dimensional grid of pixels, whether the
-image is monochromatic or in color, so that each pixel carries either a single
-numerical value or several of them. So far we have ignored this rich
-structure and treated images as vectors of numbers by *flattening* them, irrespective of the spatial relation between pixels. This
-deeply unsatisfying approach was necessary in order to feed the
-resulting one-dimensional vectors through a fully connected MLP.
+An image is a two-dimensional grid of pixels, with one or more values at each
+location. The models introduced so far flatten this grid into a vector before
+applying a fully connected layer. Flattening discards the explicit spatial
+relationship between neighboring pixels.
 
 An MLP assigns a separate weight to every input coordinate but has no built-in
 notion that two coordinates are neighbors. If we permute the pixels in every
@@ -28,9 +26,8 @@ Today they share the field with vision transformers
 (:numref:`chap_transformers`) and remain the default
 where latency, small datasets, or dense prediction dominate.
 
-Modern CNNs, as they are called colloquially, owe their design to
-inspirations from biology, group theory, and a healthy dose of
-experimental tinkering.  In addition to their sample efficiency in
+CNN design draws on ideas from biology, group theory, and empirical research.
+In addition to their sample efficiency in
 achieving accurate models, CNNs tend to be computationally efficient,
 both because they require fewer parameters than fully connected
 architectures and because convolutions are easy to parallelize across
@@ -44,11 +41,9 @@ conventionally used.  Some clever adaptations of CNNs have also
 brought them to bear on graph-structured data :cite:`Kipf.Welling.2016` and
 in recommender systems.
 
-First, we will examine the motivation for convolutional
-neural networks. This is followed by a walk through the basic operations
-that comprise the backbone of all convolutional networks.
-These include the convolutional layers themselves,
-nitty-gritty details including padding, stride, and dilation,
+We begin by deriving the structural assumptions behind convolutional neural
+networks and then introduce their basic operations. These include
+convolutional layers, padding, stride, dilation,
 the pooling layers used to aggregate information
 across adjacent spatial regions,
 the use of multiple channels at each layer,

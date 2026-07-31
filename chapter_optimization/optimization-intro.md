@@ -1,8 +1,8 @@
 # Landscapes
 :label:`sec_optimization-intro`
 
-For a deep learning problem we first define a loss function, and once we
-have it, an optimization algorithm drives it down. In optimization the loss
+For a deep learning problem, an optimization algorithm minimizes a specified
+loss function. In optimization the loss
 is called the *objective function*; by convention we minimize, and if we
 ever need to maximize something, flipping the sign of the objective
 suffices. One more convention: the optimization literature writes the thing
@@ -13,17 +13,17 @@ to state. The difficulty lies in the surface being minimized: the graph of
 a deep network's loss over a parameter space with millions of dimensions.
 The shape of that surface decides which algorithms work.
 This section surveys the terrain before the
-chapter builds the machinery: what minimizing the objective does and does
+chapter develops the algorithms: what minimizing the objective does and does
 not accomplish, the places where gradients die, and the two properties of
 the surface — curvature and noise — that set the pace of every method that
 follows.
 
-One idea organizes the whole chapter. An optimizer is three decisions.
+We describe an optimizer through three decisions.
 First, a *descent direction*: which way counts as "down" depends on which
 norm measures the size of a step — the gradient is the answer under the
 Euclidean norm, not the only answer, and changing the norm changes the
 algorithm, a thread that pays off in :numref:`sec_muon`. Second, a *step
-size over time*: how far to trust the local slope, and how that trust
+size over time*: how far to move along the local slope and how the step
 should shrink or grow over a training run, the subject of
 :numref:`sec_scheduler`. Third, a *way of living with noise*: at any
 interesting scale the gradient is an estimate computed on a minibatch,
@@ -152,7 +152,7 @@ critical point would be a saddle. Independent fair coin flips are only a
 heuristic: the eigenvalues of a Hessian at a critical point form a structured
 spectrum, not independent balanced signs — the second exercise below is one
 probe of why — and conditioning on criticality further ties the fraction of
-negative eigenvalues to the height of the loss. The conclusion survives the
+negative eigenvalues to the height of the loss. The conclusion holds despite the
 caveats, though: exact local minima are vanishingly rare beside saddles. Convex functions — those whose Hessian
 eigenvalues are nowhere negative — have neither saddle points nor spurious
 minima, which is one reason classical optimization theory is built on
@@ -192,7 +192,7 @@ optimization is hard. In daily practice they are rarely what hurts.
 Training is slow, or unstable, for two humbler reasons: the gradient is a
 poor guide when curvature differs across directions, and we never see the
 exact gradient anyway. These two — ill-conditioning and noise — are the
-recurring villains of this chapter, and most of its methods exist to fight
+recurring difficulties in this chapter, and most methods address
 one or the other.
 
 ### An Ill-Conditioned Valley
@@ -269,7 +269,7 @@ The phenomenon is easy to check on a 25-parameter network, and
 
 ### Noisy Gradients
 
-The second villain is that the gradient we act on is an estimate. The loss
+The second difficulty is that the gradient we use is an estimate. The loss
 is an average over the training set, so computing its exact gradient costs
 a full pass over the data; every practical method instead uses a minibatch
 of $b$ examples. The estimate is unbiased, and its variance falls like
@@ -283,7 +283,7 @@ Batch size becomes a second dial next to the learning rate — one with
 hardware consequences (:numref:`sec_minibatch_sgd`) and, at scale, a
 measurable point of diminishing returns (:numref:`sec_batch_size`).
 Averaging over time quiets the noise that batching alone leaves behind,
-and that is momentum's second job (:numref:`sec_momentum`). Nor is noise purely a tax:
+and that is momentum's second role (:numref:`sec_momentum`). Noise can also
 it helps bounce the iterate out of the shallow local minima and saddle
 points of the previous section — though gradient descent from a random
 start escapes strict saddles even without noise, and a deep basin is
@@ -291,7 +291,7 @@ expensive to leave, noise or not. Living with noise — spending it,
 canceling it, budgeting for it — is the third of the chapter's three
 decisions.
 
-## What Convexity Still Buys
+## The Role of Convexity
 
 Every surface in this section was nonconvex, deliberately so. Yet the
 vocabulary we used to describe them comes from *convex* analysis, where
@@ -338,10 +338,9 @@ single learning rate to serve directions of very different steepness; and
 noise, since minibatch gradients are estimates whose variance we choose
 via the batch size. Real training adds a twist to the classical stability
 story — sharpness rises until it sits at the edge that the step size
-tolerates. Convex analysis survives all this as a source of vocabulary,
-baselines, and local approximations. The rest of the chapter builds the
-machinery: a descent direction, a step size over time, and a way of
-living with noise.
+tolerates. Convex analysis still provides vocabulary, baselines, and local
+approximations. The rest of the chapter develops descent directions,
+learning-rate schedules, and methods for controlling gradient noise.
 
 ## Exercises
 
@@ -438,7 +437,6 @@ supplies exactly that.
 
 ![](../img/mdl-opt-inflection.svg){width=52%}
 
-. . .
 
 High-dim: a zero-gradient point is a minimum only if **all** Hessian
 eigenvalues are positive — with mixed signs it is a saddle. At $10^6$
@@ -457,14 +455,13 @@ ReLU and good initialization fixed this at the *model* level — not the
 optimizer's job.
 :::
 
-::: {.slide title="The first villain: curvature"}
+::: {.slide title="Effect of curvature"}
 $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$: curvatures $0.2$ and $4$, one
 learning rate. Steep direction caps $\eta < 0.5$; flat direction then
 keeps $> 90\%$ of its value per step:
 
 @optimization-intro-an-ill-conditioned-valley
 
-. . .
 
 Zig-zag across, crawl along. Condition number $\kappa =
 \lambda_{\max}/\lambda_{\min} = 20$; iterations scale **linearly with
@@ -492,7 +489,7 @@ in the "forbidden" regime.
   25-parameter net in the math appendix.
 :::
 
-::: {.slide title="The second villain: noise"}
+::: {.slide title="Effect of gradient noise"}
 The gradient is a minibatch estimate: unbiased, variance $\propto 1/b$
 (measured on a real network in the SGD section).
 
@@ -501,15 +498,15 @@ The gradient is a minibatch estimate: unbiased, variance $\propto 1/b$
 - Batch size = a second dial, with hardware consequences (Minibatches)
   and diminishing returns at scale (Batch Size).
 - Momentum's second job: averaging noise over *time*.
-- Not purely a tax — noise kicks the iterate out of saddles and shallow
+- Noise can move the iterate away from saddles and shallow
   minima; deep barriers stay expensive.
 :::
 
-::: {.slide title="What convexity still buys"}
+::: {.slide title="The role of convexity"}
 Deep losses are *not* convex — permutation symmetry alone gives every
 minimum $d!$ separated copies; convex minima form one connected set.
 
-What survives:
+Useful consequences include:
 
 - **Language and baselines**: condition number, rates, noise ball — all
   theorems in the convex world. A method that fails on a quadratic has no
@@ -527,7 +524,7 @@ Full treatment: the convexity chapter of the math appendix.
 - Classical hazards: local minima, saddles (dominant in high dim),
   vanishing gradients.
 - Practical hazards: **curvature** (condition number $\kappa$) and
-  **noise** (minibatch variance) — the chapter's two villains.
+  **noise** (minibatch variance).
 - Modern twist: training equilibrates at the edge of stability.
 - The toolkit ahead = three decisions: direction, step size over time,
   living with noise.

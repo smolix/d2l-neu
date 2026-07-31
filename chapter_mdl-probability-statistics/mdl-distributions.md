@@ -1,20 +1,16 @@
 # Distributions
 :label:`sec_mdl-distributions`
 
-A *distribution* assigns a probability to every outcome a random variable can
-take (:numref:`sec_mdl-random_variables`). A working deep-learning practitioner
-does not need a zoo of hundreds: the fourteen distributions of this section
-cover almost everything, and they form a small family with a few generators and
-a handful of limiting arrows connecting them.
-The Bernoulli coin flip is the seed: sum $n$ of them and you get the binomial;
-let the trials become many and rare and the binomial collapses to the Poisson;
-let them become many and ordinary and the *central limit theorem* sends it to the
-Gaussian. The categorical generalizes the Bernoulli from two outcomes to $K$, and
-its softmax parameterization is the output layer of every classifier. At the end
-we will see that almost all of these (and more) are special cases of one form,
-the *exponential family*, which is the reason their maximum-likelihood losses are the
-convex objectives we minimize in practice and the reason each has a
-*conjugate prior* that makes Bayesian updating as simple as counting.
+A *distribution* assigns probabilities to the possible values of a random
+variable (:numref:`sec_mdl-random_variables`). This section introduces a small
+collection of distributions used frequently in machine learning and relates
+them through constructions and limits. A sum of Bernoulli variables has a
+binomial distribution. Appropriate many-trial limits yield the Poisson or,
+under the central limit theorem, the Gaussian distribution. The categorical
+distribution extends Bernoulli variables to $K$ outcomes and provides the
+probabilistic model behind a softmax classifier. Many of these distributions
+belong to the exponential family and admit conjugate priors, which simplifies
+maximum-likelihood and Bayesian calculations.
 
 :numref:`fig_mdl-prob-family-tree` draws the picture: the distributions are
 nodes, the construction and limit relationships are arrows, and the whole
@@ -807,7 +803,7 @@ $$
 
 is whatever it takes to make :eqref:`eq_mdl-exp_family` integrate to one.
 
-### Recognizing Old Friends
+### Identifying Standard Distributions
 
 The form looks abstract until we match the pieces. The **Bernoulli**
 $p^x(1-p)^{1-x}$ rewrites as
@@ -853,7 +849,7 @@ conjugate prior, and their negative log-likelihoods are not convex in the
 parameters. Both conveniences are exponential-family privileges, as the rest of
 this section shows.
 
-### Where the Form Comes From: Maximum Entropy
+### Maximum-Entropy Derivation
 
 The exponential form is exactly what *maximizing
 entropy* produces. The two maximum-entropy facts cited earlier
@@ -928,7 +924,7 @@ $$
 $$
 
 so $A$ is *convex* (a covariance matrix is PSD, :numref:`subsec_mdl-psd`).
-Convexity pays off in fitting. For a sample $x_1,\dots,x_n$ the negative
+Consequently, for a sample $x_1,\dots,x_n$ the negative
 log-likelihood is
 
 $$
@@ -989,7 +985,7 @@ the parameters rather than changing the shape of the distribution. This closes t
 tree: a tier of prior nodes flanks the data distributions in
 :numref:`fig_mdl-prob-family-tree`, joined to them by "conjugate prior" links.
 
-### Beta--Bernoulli: Counting with Pseudo-Counts
+### Beta--Bernoulli Conjugacy and Pseudo-Counts
 
 The **Beta** distribution is a density on the unit interval $p\in[0,1]$ (exactly
 the range of a probability) with two shape parameters $\alpha,\beta>0$,
@@ -1073,7 +1069,7 @@ shrinking like $1/\sqrt n$ as the real counts swamp the phantom ones.
 ![Bayesian updating as sharpening. Starting from the flat $\mathrm{Beta}(1,1)$ prior (left), observing $9$ heads in $13$ flips of a coin with true bias $\theta^\ast=0.7$ (dashed line) gives the $\mathrm{Beta}(10,5)$ posterior (middle); after $130$ flips the $\mathrm{Beta}(91,41)$ posterior has piled up tightly around $\theta^\ast$ (right). Each update just adds the observed heads and tails to the pseudo-counts, and the posterior standard deviation shrinks like $1/\sqrt{n}$.](../img/mdl-prob-beta-posterior.svg)
 :label:`fig_mdl-prob-beta-posterior`
 
-### The Rest of the Tier, and the General Fact
+### Other Conjugate Pairs
 
 The other discrete laws have their own conjugate partners, built the same way.
 
@@ -1308,7 +1304,7 @@ makes discrete choices differentiable.
 ::: {.slide title="The discrete gallery"}
 [Discrete]{.kicker}
 
-Four laws in one picture, mass on the integers:
+The figure compares four probability laws on the integers:
 
 @fig:mdl-prob-discrete-pmfs
 
@@ -1487,7 +1483,7 @@ draws are nearly orthogonal, cosine $\sim 1/\sqrt d$:
 @!mdl-distributions-multivariate-gaussian-1
 
 ::: {.d2l-note}
-Load-bearing facts: $1/\sqrt d$ **initialization** keeps
+The $1/\sqrt d$ **initialization** scale keeps
 $\|\mathbf{Wx}\|\approx\|\mathbf x\|$; cosine similarity is informative
 *because* unrelated vectors sit near $0$; nearest-neighbor contrast
 fades. Exponential tail bounds arrive in the concentration-and-generalization

@@ -7,20 +7,18 @@ and writing text. Text poses a problem that the synthetic series of
 while text arrives as a string of characters. Before we can model language,
 we must decide how to carve a string into *tokens*, the atomic units that
 our models will treat as observations $x_t$, and how to map each token to a
-numerical index. This choice looks like bookkeeping but turns out to shape
-everything downstream: the size of the model's output layer, the effective
+numerical index. This choice determines the size of the model's output layer, the effective
 length of every document it reads, and even which arithmetic problems it
 can solve. Every modern language model ships with a tokenizer, and the
 tokenizer is best thought of as part of the model.
 
-This section builds tokenization up from first principles. We start with
-the two obvious schemes, characters and words, and see that they sit at
-opposite ends of a trade-off. We then rebuild text from raw bytes and learn
+We first compare character and word tokens, which occupy opposite ends of a
+vocabulary-size and sequence-length trade-off. We then represent text as raw
+bytes and learn
 a vocabulary *from data* with byte pair encoding (BPE), the algorithm
 behind essentially every production tokenizer today
 :cite:`Sennrich.Haddow.Birch.2015,Radford.Wu.Child.ea.2019`. Our
-implementation is small enough to read in one sitting, yet exact: at the
-end of the section we load the published merge table of GPT-2 into it and
+implementation also accepts the published GPT-2 merge table and
 reproduce the output of OpenAI's `tiktoken` library token for token.
 
 ## Reading the Dataset
@@ -536,7 +534,7 @@ print_wrapped('longest tokens gained instead:',
 ### From Tokens to Indices
 
 For the character- and word-level pipelines that some later sections still
-use, we need the classical piece of machinery that BPE gave us for free: a
+use, we need a component already supplied by BPE: a
 *vocabulary* object that assigns each distinct token string an index and
 maps unknown tokens to a reserved `<unk>` slot. Rare tokens (below
 `min_freq` occurrences) can be dropped to keep the table small; needing to
@@ -898,7 +896,7 @@ byte-level BPE will need none of it:
   and unseen words are **out of vocabulary**.
 :::
 
-::: {.slide title="One trade-off curve"}
+::: {.slide title="Vocabulary size and sequence length"}
 ![A larger vocabulary encodes the same text in fewer tokens; BPE interpolates.](../img/mdl-rnn-granularity-spectrum.svg){width=72%}
 :::
 
@@ -931,7 +929,7 @@ Greedy compression with a learned dictionary.
 ![New text replays the merges: "hugs" → hug+s; rare "bun" falls back to bytes.](../img/mdl-rnn-merge-tree.svg){width=62%}
 :::
 
-::: {.slide title="The trainer, verified on the toy corpus"}
+::: {.slide title="BPE training on a small corpus"}
 `BPETokenizer.train`: ids 0–255 are bytes, each merge takes the
 next id, so **id order = merge rank**.
 
@@ -1003,7 +1001,7 @@ GPT-2's first merges (" t", " a") match what we learned from
 one novella: the head of English is that stable.
 :::
 
-::: {.slide title="The verification moment"}
+::: {.slide title="Comparison with the GPT-2 tokenizer"}
 Load GPT-2's published ranks into **our** encoder and reproduce
 `tiktoken` token for token:
 

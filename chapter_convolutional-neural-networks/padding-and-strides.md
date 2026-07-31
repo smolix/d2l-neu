@@ -16,24 +16,19 @@ the output shape will be $(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\
 we can only shift the convolution kernel so far until it runs out
 of pixels to apply the convolution to. 
 
-In the following we will explore a number of techniques,
-including padding, strided convolutions, and dilation,
-that offer more control over the size of the output
-and over the area of the input that each output element sees. 
-As motivation, note that since kernels generally
-have width and height greater than $1$,
-after applying many successive convolutions,
-we tend to wind up with outputs that are
-considerably smaller than our input.
+This section introduces padding, stride, and dilation. Together they control
+the output size and the region of the input that contributes to each output
+element. Because kernels usually have width and height greater than $1$,
+successive unpadded convolutions progressively reduce the spatial dimensions.
 If we start with a $240 \times 240$ pixel image,
 ten unpadded layers of $5 \times 5$ convolutions
 reduce the representation to $200 \times 200$ pixels. The surviving outputs
 are centered away from the original boundary, and boundary pixels influence
 far fewer activations than interior pixels.
-*Padding* is the most popular tool for handling this issue.
-In other cases, we may want to reduce the dimensionality drastically,
-e.g., if we find the original input resolution to be unwieldy.
-*Strided convolutions* are a popular technique that can help in these instances.
+*Padding* controls this shrinkage and increases the use of boundary pixels.
+When a lower-resolution representation is desired, a *strided convolution*
+performs convolution and downsampling in one operation. *Dilation* enlarges a
+kernel's effective field of view without increasing its number of parameters.
 
 ```{.python .input #padding-and-strides-padding-and-stride}
 %%tab mxnet
@@ -63,8 +58,9 @@ from jax import numpy as jnp
 
 ## Padding
 
-As described above, one tricky issue when applying convolutional layers
-is that we tend to lose pixels on the perimeter of our image. Consider :numref:`img_conv_reuse`, which depicts the pixel utilization as a function of the convolution kernel size and the position within the image. The pixels in the corners are hardly used at all. 
+Unpadded convolutions use boundary pixels less often than interior pixels and
+eventually remove them from the representation. :numref:`img_conv_reuse`
+shows how utilization depends on kernel size and position.
 
 ![Pixel utilization for convolutions of size $1 \times 1$, $2 \times 2$, and $3 \times 3$ respectively.](../img/conv-reuse.svg)
 :label:`img_conv_reuse`

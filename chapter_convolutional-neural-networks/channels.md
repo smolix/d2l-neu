@@ -623,9 +623,8 @@ This is why
 - Multi-output-channel: stack independent filter banks; one
   output channel per filter set.
 - Total weights: $c_o c_i k_h k_w + c_o$.
-- $1\times 1$ convs = per-pixel fully connected layer
-  across channels; the workhorse of modern CNN
-  architecture (bottlenecks, pointwise convs).
+- $1\times 1$ convolutions are per-pixel fully connected layers across
+  channels and are widely used in bottlenecks and pointwise convolutions.
 - Compute scales linearly with $c_i \cdot c_o$ — the
   dominant cost in deep CNNs.
 :::

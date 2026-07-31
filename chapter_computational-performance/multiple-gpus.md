@@ -1,28 +1,18 @@
 # Multi-GPU from First Principles
 :label:`sec_multi_gpu`
 
-The ladder of :numref:`sec_memory_precision` ended with the one rung that
-buys more arithmetic and more *aggregate* memory at once: another GPU.
-This section
-adds it — but honestly, and from the ground up. We build data-parallel
-training by hand, with explicit device-to-device copies and a
-hand-rolled gradient sum, so that when :numref:`sec_multi_gpu_concise`
-replaces our loop with production machinery, you know exactly what that
-machinery does. We derive the communication algorithm the professionals
-use (ring allreduce) and its cost, and — because this book's build box
-has no fast inter-GPU fabric — we *measure* what communication actually
-costs and discover the central fact of parallel training: **a second GPU
-is not free, and whether it pays is an accounting question you can answer
-before you run.**
+Adding GPUs increases aggregate arithmetic and memory capacity. This
+section builds data-parallel training explicitly, with device-to-device
+copies and a hand-written gradient sum, so that the production mechanisms
+in :numref:`sec_multi_gpu_concise` are clear. We derive ring allreduce and
+its communication cost. Because the build machine has no fast inter-GPU
+fabric, the experiments also show when communication or reduced per-device
+utilization prevents speedup.
 
-That last point is why this section is built on a machine with no NVLink
-and no peer-to-peer transfer (:numref:`sec_hardware`). A datacenter
-fabric shrinks the constant in front of the communication term; it does
-not repeal the accounting — at frontier scale the same arithmetic decides
-how thousands of GPUs are spent, and it matters more, not less. Our slow
-fabric merely makes the cost loud enough to hear, which makes this box
-the better teacher. Every conclusion here holds at two GPUs as well as
-four — the number of devices is a variable, never a constant.
+The experimental machine has neither NVLink nor peer-to-peer transfer
+(:numref:`sec_hardware`). A faster fabric reduces the communication term
+but does not remove it. Since the derivation treats the number of devices as
+a variable, the same cost model applies beyond this machine.
 
 *Prerequisites: minibatch SGD and the effect of batch size on the gradient
 estimate (*:numref:`sec_minibatch_sgd`*); LeNet (*:numref:`sec_lenet`*); the
@@ -419,7 +409,7 @@ diagnosing exactly why is the next two subsections' work: separating the
 communication cost, which is small here, from the underutilization cost,
 which is not.
 
-## Doing Better: Ring Allreduce
+## Ring Allreduce
 :label:`subsec_mg-ring`
 
 Our star `allreduce` has an obvious flaw: device 0 is a hub through which
@@ -472,7 +462,7 @@ practice lesson in miniature — NCCL will still pick a ring or tree per
 message size, but on this hardware the constant in front of $N$ is what
 hurts, and no algorithm fixes a slow wire.
 
-## The Accounting
+## Communication Cost and Scaling
 :label:`subsec_mg-accounting`
 
 We can now answer the question data parallelism always poses — *does the
@@ -675,7 +665,7 @@ production map is :numref:`sec_training_systems`.
 
 <!-- slides -->
 
-::: {.slide title="The Next Rung: Another GPU"}
+::: {.slide title="Adding a GPU"}
 More GPUs buy more compute *and* more memory. The catch:
 communication is not free, and on a box with no NVLink it is
 loud enough to hear.
@@ -720,7 +710,7 @@ $\frac{2(k-1)}{k}N$ per device — **nearly constant, bounded by
 $2N$ for any $k$**. The identity that becomes FSDP.
 :::
 
-::: {.slide title="The Accounting"}
+::: {.slide title="Communication Cost and Scaling"}
 $$t_{\text{step}}(k) \approx t_{\text{compute}}(B/k) + 2N/\beta$$
 
 @multiple-gpus-the-accounting

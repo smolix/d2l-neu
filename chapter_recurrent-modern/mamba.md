@@ -1,29 +1,18 @@
 # Selective State Space Models
 :label:`sec_mamba`
 
-The previous section ended on a confession. Linearizing the recurrence
-gained us parallel training by scan, stability by construction, and
-provably good memory, and all of it came at the price of *time
-invariance*: the S4D applies the same dynamics at every step, so what it
-remembers is decided before it ever sees the input. Its convolution kernel weights the
-past by *position*, never by *content*. The gated cells of
-:numref:`sec_lstm` had the opposite profile: their forget gates read the
-data as it streamed past and decided, token by token, what deserved space
-in the state, but their nonlinear recurrence trained sequentially. This
-section closes the loop. We make the step size, and with it the dynamics,
-a *function of the input*, following :citet:`Gu.Dao.2023`, and discover
-that this one change re-derives the forget gate a third time while keeping
-the parallel scan. Packaged into a residual block called *Mamba*, the
-result brought selective recurrence into competitive language-model
-scaling in 2023: S4 had already beaten every transformer of its day on
-long-range classification benchmarks (:numref:`subsec_hippo`), but
-language modeling itself had remained attention's territory since the
-transformer displaced the LSTM. Mamba also sharpens a question that the
-rest of this chapter pursues: a selective state space model decides,
-token by token, what to keep, and attention (:numref:`chap_attention`)
-decides, query by query, what to retrieve. How deep does that
-resemblance run? Deeper than it has any right to, as the next section
-shows.
+Linear state space models permit parallel training by scan, but an LTI S4D
+layer applies the same dynamics at every step. Its convolution kernel weights
+the past by position rather than content. The gated cells of
+:numref:`sec_lstm` instead use the input to control the state, but their
+nonlinear recurrence is evaluated sequentially.
+
+To combine input-dependent updates with a parallel scan, we make the step
+size, and hence the dynamics, a function of the input
+:cite:`Gu.Dao.2023`. The resulting selective recurrence remains linear in
+the state. Packaged into the residual *Mamba* block, it supports
+content-dependent updates and constant-size recurrent inference. The next
+section relates this selective recurrence to attention.
 
 *Prerequisites: the associative scan and the S4D layer of
 :numref:`sec_ssm` (:numref:`subsec_parallel-scans`,
@@ -299,7 +288,7 @@ scan. Can we put it back without giving up parallel training?
 ## Selective State Space Models
 :label:`subsec_selective-ssm`
 
-### Making the Dynamics Look at the Data
+### Input-Dependent Dynamics
 
 Recall from :numref:`subsec_zoh` where the S4D's dynamics come from: a
 continuous system $(\mathbf{A}, \mathbf{B}, \mathbf{C})$ and a step size
@@ -357,7 +346,7 @@ $\mathbf{B}_t$ and $\mathbf{C}_t$ extend the same courtesy to *where*
 input enters the state and *which* state coordinates are read out; an
 exercise asks how much they add over selectivity in $\Delta$ alone.
 
-### What Selectivity Costs, and What Survives
+### Parallel Evaluation with Selectivity
 
 There is no free lunch: with time-varying coefficients the model is no
 longer LTI, and the convolutional view of :numref:`subsec_ssm-conv` dies
@@ -623,7 +612,7 @@ resolution.
 | the scan's mathematics: the same affine combine, the same logarithmic depth | the fused kernel becomes a generic `associative_scan` that materializes the $(T, \textrm{batch}, H, N)$ coefficient tensors | identical outputs; memory traffic sets the wall clock, the slow `s/epoch` column below |
 | the block interface: width expansion, gating, pre-norm residual | textbook scale ($N = 4$ states, two blocks), LayerNorm in place of RMSNorm, added dropout | small enough to train in a notebook; the results are illustrations at this scale, not scaling claims |
 
-### The Three Answers, Measured on One Task
+### Comparing Recurrent Models
 :label:`subsec_capstone`
 
 This chapter proposed three answers to its opening question of what a
@@ -1157,7 +1146,7 @@ recurrence we built from ODEs and the attention we built in
 :numref:`chap_attention` are about to turn out to be the same
 computation (:numref:`sec_matrix-state`).
 
-What this section's experiments do and do not show: the selective-copy
+**Experimental scope.** The selective-copy
 runs are a *diagnostic*, built so that content-independent dynamics
 fail it. They show our S4D stack stalling and Mamba solving the same
 instance, with the measured $\Delta_t$ separation as the mechanism;
@@ -1255,7 +1244,7 @@ Filler is token 0, queries are token 1, symbols are ids 2-9:
 @mamba-a-task-that-defeats-time-invariance
 :::
 
-::: {.slide title="Two witnesses from earlier sections"}
+::: {.slide title="Two Baseline Models"}
 The S4D stack of the previous section (imported from `d2l`) vs. the
 LSTM, both ~30k parameters, same harness: embed, encode, classify the
 query slots.
@@ -1301,7 +1290,7 @@ input gate in one scalar**, on a linear state:
 The gate, derived a third time.
 :::
 
-::: {.slide title="The price and the save"}
+::: {.slide title="Parallelism under Selectivity"}
 **Price**: time-varying coefficients kill the convolution view. No fixed
 $\bar{\mathbf{K}}$, no FFT. Of the three views only the recurrence
 survives.
@@ -1350,7 +1339,7 @@ A dozen lines around `SelectiveSSM`; the stack keeps the
 @mamba-the-mamba-block
 :::
 
-::: {.slide title="Capstone: the chapter's three answers on one task"}
+::: {.slide title="Recurrent-Model Comparison"}
 **Gate it** (LSTM) vs. **linearize it** (minGRU) vs. **select it**
 (Mamba); Time Machine BPE, 50k windows of 32, ten epochs, clip 1:
 
@@ -1410,7 +1399,7 @@ the trained model (one forward pass, no retraining):
 The narrated gate is what training actually found.
 :::
 
-::: {.slide title="Summary: one question, three answers (so far)"}
+::: {.slide title="Summary"}
 ![](../img/mdl-modernrnn-three-answers.svg){width=100%}
 
 . . .

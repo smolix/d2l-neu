@@ -6,11 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutions for Images
 :label:`sec_conv_layer`
 
-Now that we understand how convolutional layers work in theory,
-we are ready to see how they work in practice.
-Building on our motivation of convolutional neural networks
-as efficient architectures for exploring structure in image data,
-we stick with images as our running example.
+The preceding section derived convolutional layers from locality and
+translation equivariance. We now define the two-dimensional cross-correlation
+operation, implement it directly, and show how its kernels can be learned from
+image data.
 
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab mxnet

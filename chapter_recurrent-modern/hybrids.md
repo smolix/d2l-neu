@@ -1,33 +1,17 @@
 # Hybrid Architectures
 :label:`sec_hybrids`
 
-Every memory in this chapter has been a fixed block of numbers. We gated
-it, linearized it, made it selective, taught it to edit itself, and
-finally recognized it as a regressor fitting itself at test time — and
-none of that changed its size. :numref:`sec_test-time-regression` ended
-on the question the whole chapter has been postponing: when the state is
-not enough, how much genuine attention must a model keep? This section
-answers with measurements. It is also the delivery of a promise made
-from the other side of the divide: the cache-relief map of
-:numref:`sec_kv-cache` ended with a rung it could only gesture at —
-interleave a few full-attention layers into a mostly recurrent stack, so
-that most layers pay no cache at all while a few retain exact recall —
-and :numref:`sec_scaling-laws` called the bet on that rung "that
-chapter's story". This is that story.
+The preceding sections improve how a fixed-size state stores information,
+but do not change its finite capacity. Exact recall over an unbounded
+context therefore remains impossible. A hybrid architecture combines the
+constant-memory behavior of recurrent layers with the exact retrieval of a
+smaller number of attention layers.
 
-The plan follows the trade itself. First the *limit*: what a fixed state
-cannot do, with the counting theorem — conditions included — and the
-production symptoms that made hybrids necessary. Then the *price*: only
-attention layers pay a
-growing cache, an asymmetry worth a factor of eight in serving memory at
-long context. Then the *experiment*, the section's centerpiece: three
-matched models — pure linear recurrence, pure attention, and a hybrid
-differing by a single layer — swept until the fixed state saturates,
-with a language-modeling panel that shows why perplexity did not see the
-problem. Finally the *engineering*: the measured design rules from
-shipped systems, a recipe table from Jamba to Kimi Linear, and the
-distillation shortcut that turns a pretrained transformer into a hybrid
-for a fraction of the training bill.
+This section first states a counting bound for fixed-state recall and then
+compares the cache cost of recurrent and attention layers. Three matched
+models isolate the effect of inserting one attention layer into a recurrent
+stack. We conclude with design patterns reported for deployed hybrids and
+with methods for distilling a pretrained transformer into a hybrid model.
 
 *Prerequisites: the KV-cache accounting of :numref:`sec_kv-cache`
 (:eqref:`eq_kv-cache-bytes`); the matrix state, its capacity
@@ -148,7 +132,7 @@ database loses the economics. The obvious synthesis is where production
 actually landed, a brain in front of a database, and the rest of this
 section is about its terms.
 
-## The Economics
+## Inference-Memory Cost
 :label:`subsec_hy-economics`
 
 If the fixed state loses the recall fight, why not concede and serve
@@ -209,7 +193,7 @@ map, delivered. What remains is the quantitative question the map could
 not answer: how few attention layers can a model keep and still recall
 like a transformer?
 
-## The Experiment: One Attention Layer Rescues Recall
+## Recall with One Attention Layer
 :label:`subsec_hy-experiment`
 
 We answer at teaching scale, with machinery this book has already
@@ -743,7 +727,7 @@ and needle-in-a-haystack evaluations to see it at all
 and why a perplexity-matched "efficient" model can quietly fail as a
 retrieval engine in production. Benchmark what you actually need.
 
-### The Memory Bill, Measured
+### Measured Inference State
 
 The third panel is the other side of the trade, on our own models. At
 generation time an attention layer must carry its keys and values for
@@ -796,7 +780,7 @@ the result transfers to billion-parameter models trained on language.
 For that, the ablation studies and shipped configurations of the next
 two sections are the evidence.
 
-## Design Rules, Measured
+## Empirical Design Rules
 :label:`subsec_hy-design`
 
 Our experiment fixed one design by fiat: one attention layer in four,
@@ -939,7 +923,7 @@ explains the investment: the models built for the longest contexts are
 hybrids of this table's shape, because :eqref:`eq_kv-cache-bytes` made
 the alternative a hardware bill.
 
-## Distillation, and Where This Leaves Us
+## Distillation from Pretrained Transformers
 :label:`subsec_hy-distill`
 
 One practical question remains: must a hybrid be pretrained from
@@ -974,7 +958,7 @@ The retained attention layers are
 where the recall lives, which by this point in the section is
 not a surprise; it is the design rule, observed a third way.
 
-### The Chapter in One Table
+### Architecture Comparison
 
 The chapter's architectures differ in what they compute; what they
 *charge* lines up in one table. Each row prices one layer of one
@@ -1147,7 +1131,7 @@ Hybrid Architectures<br>
 :::
 :::
 
-::: {.slide title="The wall no update rule moves"}
+::: {.slide title="Finite-State Recall Limit"}
 Five upgrades this chapter — gate, linearize, select, edit, learn — and
 **none changed the state's size**.
 
@@ -1180,7 +1164,7 @@ ablate a hybrid's few attention layers and needle-in-a-haystack drops
 to ~0.
 :::
 
-::: {.slide title="Only attention pays rent"}
+::: {.slide title="Attention-Layer Cache Cost"}
 Per layer, at production width (16-bit):
 
 - Full attention (GQA $8 \times 128$): **4 KB per token** — 512 MB per
@@ -1192,7 +1176,7 @@ Per layer, at production width (16-bit):
 The hybrid's bill = attention fraction × the transformer's.
 :::
 
-::: {.slide title="The Jamba bill, 256K context"}
+::: {.slide title="Jamba Cache at 256K Context"}
 | model | KV cache |
 |:--|--:|
 | Llama-2-70B-class | 128 GB |
@@ -1240,7 +1224,7 @@ before $W_o$, or the recurrent blocks flood the residual stream and
 the attention layer downstream never sees the tokens.
 :::
 
-::: {.slide title="The sweep: one layer buys back recall"}
+::: {.slide title="Recall with One Attention Layer"}
 @!hybrids-the-recall-sweep-2
 
 - Linear: degradation, then collapse at 64 pairs — the crowding
@@ -1334,7 +1318,7 @@ not a recurrence in disguise. Conversion is a *learned approximation*:
   length; remove them all and it does not.
 :::
 
-::: {.slide title="The chapter in one table"}
+::: {.slide title="Architecture Comparison"}
 Per layer: decode work / persistent state / training depth / exact?
 
 | architecture | decode | state | depth | exact? |

@@ -8,10 +8,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 
 
-Just as high-level deep learning frameworks
-made it easier to implement linear regression
-(see :numref:`sec_linear_concise`),
-they are similarly convenient here.
+Deep learning frameworks provide a linear layer and a numerically stable
+cross-entropy loss. We use these components to express the model of
+:numref:`sec_softmax_scratch` more concisely.
 
 ```{.python .input #softmax-regression-concise-concise-implementation-of-softmax-regression}
 %%tab mxnet
@@ -332,7 +331,7 @@ FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (ver
 ::: {.cover}
 [Dive into Deep Learning · §4.5]{.kicker}
 
-Concise softmax regression<br>One linear layer, and the *numerically stable* loss the framework hands you for free.
+Concise softmax regression<br>A linear layer with a numerically stable framework loss.
 :::
 :::
 
@@ -404,7 +403,7 @@ Applying softmax here *and* in the loss would apply it twice.
 :::
 :::
 
-::: {.slide title="The danger hiding in softmax"}
+::: {.slide title="Numerical instability in a direct softmax"}
 [Numerical stability]{.kicker}
 
 Softmax exponentiates the logits: $\hat y_j = \exp(o_j) / \sum_k \exp(o_k)$.
@@ -482,7 +481,7 @@ clamp to perturb it.
 :::
 :::
 
-::: {.slide title="The soft max hugs the hard max: gap at most log 2" only="pytorch"}
+::: {.slide title="The soft maximum differs by at most log 2" only="pytorch"}
 [Numerical stability · measured]{.kicker}
 
 ::: {.cols .vc}
@@ -504,7 +503,7 @@ indistinguishable.
 :::
 :::
 
-::: {.slide title="The soft max hugs the hard max: gap at most log 2" except="pytorch"}
+::: {.slide title="The soft maximum differs by at most log 2" except="pytorch"}
 [Numerical stability · the bound]{.kicker}
 
 For two classes with logits $(x, 0)$ the loss's first term is
@@ -531,7 +530,7 @@ indistinguishable.
 :::
 :::
 
-::: {.slide title="Hand the loss the logits" only="pytorch"}
+::: {.slide title="Pass logits directly to the loss" only="pytorch"}
 [The fused loss]{.kicker}
 
 PyTorch's `F.cross_entropy` consumes **logits** by definition: it
@@ -541,7 +540,7 @@ computes the stable log-sum-exp internally. We attach it to the base
 @softmax-regression-concise-softmax-revisited
 :::
 
-::: {.slide title="Hand the loss the logits" only="tensorflow"}
+::: {.slide title="Pass logits directly to the loss" only="tensorflow"}
 [The fused loss]{.kicker}
 
 `SparseCategoricalCrossentropy(from_logits=True)` is the switch that
@@ -551,7 +550,7 @@ log-sum-exp instead of assuming a softmax already ran:
 @softmax-regression-concise-softmax-revisited
 :::
 
-::: {.slide title="Hand the loss the logits" only="jax"}
+::: {.slide title="Pass logits directly to the loss" only="jax"}
 [The fused loss]{.kicker}
 
 Optax names it for exactly what it does:
@@ -561,7 +560,7 @@ labels and fuses the stable softmax with the cross-entropy:
 @softmax-regression-concise-softmax-revisited
 :::
 
-::: {.slide title="Hand the loss the logits" only="mxnet"}
+::: {.slide title="Pass logits directly to the loss" only="mxnet"}
 [The fused loss]{.kicker}
 
 MXNet's `SoftmaxCrossEntropyLoss` (default `from_logits=False`) applies
@@ -571,10 +570,10 @@ pass raw logits, never probabilities:
 @softmax-regression-concise-softmax-revisited
 :::
 
-::: {.slide title="One rule for the fused loss"}
+::: {.slide title="The fused-loss interface"}
 [The fused loss]{.kicker}
 
-The name differs by library; the contract does not. **The built-in fused
+The name differs by library; the interface does not. **The built-in fused
 loss takes logits, not probabilities**: passing softmax outputs would
 softmax twice.
 

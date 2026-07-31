@@ -6,23 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Environment and Distribution Shift
 :label:`sec_environment-and-distribution-shift`
 
-In the previous sections, we worked through
-a number of hands-on applications of machine learning,
-fitting models to a variety of datasets.
-And yet, we never stopped to contemplate
-either where data came from in the first place
-or what we ultimately plan to do
-with the outputs from our models.
-Too often, machine learning developers
-in possession of data rush to develop models
-without pausing to consider these fundamental issues.
-
-Many failed machine learning deployments
-can be traced back to this failure.
-Sometimes models appear to perform marvelously
-as measured by test set accuracy
-but fail catastrophically in deployment
-when the distribution of data suddenly shifts.
+The preceding analysis assumes that training and deployment data follow the
+same distribution. In practice, data collection, time, policy, and user
+behavior can change that distribution. A model with high test accuracy may
+then perform poorly after deployment.
 More insidiously, sometimes the very deployment of a model
 can be the catalyst that perturbs the data distribution.
 Say, for example, that we trained a model
@@ -44,10 +31,9 @@ making decisions based on footwear,
 customers would catch on and change their behavior.
 Before long, all applicants would be wearing Oxfords,
 without any coincident improvement in credit-worthiness.
-Take a minute to digest this because similar issues abound
-in many applications of machine learning:
-by introducing our model-based decisions to the environment,
-we might break the model. This is a machine-learning incarnation of *Goodhart's law*:
+Similar feedback occurs in many applications: model-based decisions can alter
+the environment that supplies later inputs. This is an instance of
+*Goodhart's law*:
 when a measure becomes a target, it ceases to be a good measure.
 
 While we cannot possibly give these topics
@@ -797,7 +783,7 @@ When the world stops matching the training set<br>**Distribution shift**: how it
 :::
 :::
 
-::: {.slide title="The question we skipped"}
+::: {.slide title="From prediction to deployment"}
 [Why this matters]{.kicker}
 
 We fit models to data and measure test accuracy. But we rarely ask **where the data came from** or **what the prediction will be used for**.
@@ -899,28 +885,30 @@ abrupt changes require faster detection and may require a new model.
 ::: {.divider}
 [02]{.dnum}
 
-[When It Bites]{.dtitle}
+[Consequences]{.dtitle}
 
 [spurious features and slow drift]{.dsub}
 :::
 :::
 
 ::: {.slide title="The model learned the wrong thing"}
-[When it bites]{.kicker}
+[Spurious correlation]{.kicker}
 
 A blood-test startup drew **healthy controls from students**, sick patients from the clinic. The classifier hit near-perfect accuracy, on age, hormones, and diet, **not the disease**.
 
 . . .
 
 ::: {.d2l-note .warn}
-**The tank fable.** A net "detects tanks" perfectly on held-out images, then fails in the field. The tank photos were shot at noon, the empty ones at dawn: it learned the **lighting**, never the tank.
+**A tank-classification example.** A network performs well on held-out images
+but fails in the field because tank photos were taken at noon and empty scenes
+at dawn. The model learned **lighting**, not the presence of a tank.
 :::
 
 A spurious feature, present in your sample but gone at deployment, fools a model that never saw the distinction you care about.
 :::
 
 ::: {.slide title="Slow drift, stale model"}
-[When it bites]{.kicker}
+[Temporal drift]{.kicker}
 
 The subtler failure: the distribution moves **gradually** (a *nonstationary* world) and the model is never refreshed.
 
@@ -1029,7 +1017,7 @@ $56$.
 :::
 
 ::: {.slide title="Reweighting turns a coin flip into 0.93" only="pytorch"}
-[Covariate shift correction · the verdict]{.kicker}
+[Covariate shift correction · result]{.kicker}
 
 Train the actual classifier three ways on the *same* labeled source data;
 evaluate on the **target**, the domain we care about:
@@ -1045,7 +1033,7 @@ $c=5$ tames the $\beta > 50$ outliers and even helps: **0.945**.
 :::
 
 ::: {.slide title="Watch it work: 0.502 → 0.933 → 0.945" except="pytorch"}
-[Covariate shift correction · the verdict]{.kicker}
+[Covariate shift correction · result]{.kicker}
 
 A 2-D rig: source Gaussian at the origin, target shifted to $(2, 0)$, one
 shared curved labeling rule, so the true log-ratio is known: $2x_1 - 2$.
@@ -1083,7 +1071,7 @@ The system requires a **nonsingular** $\mathbf{C}$. Strict diagonal dominance
 sufficient condition; then form $\beta_i$ and reweight.
 :::
 
-::: {.slide title="Concept shift: just keep up"}
+::: {.slide title="Concept shift requires updating the model"}
 [Concept shift correction]{.kicker}
 
 When the labels are redefined, there is no clever reweighting, the old answers are simply wrong.
@@ -1111,7 +1099,7 @@ Keep the current weights and **take a few update steps on fresh data**, rather t
 ::: {.slide title="A taxonomy of learning problems"}
 [The bigger picture]{.kicker}
 
-Everything above assumed we *passively predict*. The environment can also **react**:
+The preceding cases assumed *passive prediction*. The environment can also **react**:
 
 . . .
 

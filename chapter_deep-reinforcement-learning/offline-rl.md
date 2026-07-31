@@ -27,7 +27,7 @@ import numpy as np
 
 The update rules of the last two chapters fall into two families. A policy gradient is an expectation under the current policy's trajectory distribution, so samples from another policy generally estimate a different quantity. REINFORCE and actor-critic are therefore *on-policy*; PPO permits limited reuse by correcting action probabilities. By contrast, the Q-learning target $r + \gamma \max_{a'} \hat{Q}(s', a')$ depends on the environment transition but not on the policy that selected $a$. A transition collected by an earlier policy, another agent, or a fixed log is therefore a valid sample of the same Bellman backup. This is *off-policy* learning. :numref:`fig_rl_data_rules` compares these cases with the offline setting introduced below.
 
-![Three data regimes, one vocabulary: a policy acts, the data feeds an update, and the update hands back a new policy. On-policy methods estimate an expectation under the policy currently running, so a batch is used once and then stale, with PPO's ratios buying a few epochs of extra life. Off-policy methods estimate the Bellman optimality backup, whose target does not mention who collected the data, so the stack of every past policy's transitions remains valid. Offline learning cuts the arrow to the environment entirely: the dataset is collected once, the update can only sweep it, and no mistake the learned policy makes is ever discovered before deployment.](../img/mdl-rl-data-rules.svg)
+![Three data regimes. On-policy methods estimate expectations under the current policy; reusing older batches requires a change-of-measure correction such as PPO's ratios. Off-policy Bellman targets do not explicitly contain the behavior policy, although learning still requires coverage of the target policy's relevant state--action pairs. Offline learning uses a fixed dataset and cannot collect new transitions to test actions selected by the learned policy.](../img/mdl-rl-data-rules.svg)
 :label:`fig_rl_data_rules`
 
 ### SARSA: Bootstrapping on the Action Taken
@@ -375,7 +375,7 @@ Which data may drive which update<br>
 :::
 :::
 
-::: {.slide title="The Rule"}
+::: {.slide title="Data Reuse Depends on the Target Expectation"}
 Every update estimates something; the estimand sets the data rule.
 
 - **On-policy**: an expectation under the *current* policy. Fresh data
@@ -453,7 +453,7 @@ each judged on **promise** and **delivery**.
 
 . . .
 
-Pessimism buys a **roughly trustworthy promise**, not a better policy;
+Pessimism improves value calibration here but does not improve policy return;
 the naive method beats the clone tenfold: the dataset knew more than
 its collector used.
 :::

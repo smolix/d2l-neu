@@ -51,38 +51,30 @@ standard dropout consists of zeroing out
 some fraction of the nodes in each layer
 before calculating the subsequent layer.
 
-To be clear, we are imposing
-our own narrative with the link to Bishop.
-The original paper on dropout
-offers intuition through a surprising
-analogy to sexual reproduction.
-The authors argue that neural network overfitting
-is characterized by a state in which
-each layer relies on a specific
-pattern of activations in the previous layer,
-calling this condition *co-adaptation*.
-Dropout, they claim, breaks up co-adaptation
-just as sexual reproduction is argued to
-break up co-adapted genes.
-While such a justification of this theory is certainly up for debate,
-the dropout technique itself has proved enduring,
-and various forms of dropout are implemented
-in most deep learning libraries.
+For an activation $h$ and dropout probability $p$, inverted dropout draws
 
-:citet:`Srivastava.Hinton.Krizhevsky.ea.2014` themselves offer a third
-perspective, closer to why dropout works.
+$$h' = \begin{cases}0 & \text{with probability }p,\\
+h/(1-p) & \text{with probability }1-p.
+\end{cases}$$
+
+Thus $\mathbb{E}[h'\mid h]=h$ exactly at this layer. The equality does not
+generally extend through later nonlinear layers to the output of the whole
+network.
+
+The original paper proposed *co-adaptation* and an analogy to sexual
+reproduction as motivation. These are historical intuitions, not consequences
+of the dropout definition. A second interpretation treats the masked networks
+as an implicit ensemble.
 A network with $n$ hidden units has $2^n$ possible dropout masks,
 each defining a *thinned* subnetwork that shares its weights
 with all the others.
 On each training step we sample one such mask,
 so the gradient update nudges the shared weights
 in a direction that helps that particular thinned network.
-Running the full network at test time then approximates
-*averaging* the predictions of all $2^n$ subnetworks.
-(The weight-scaling rule that justifies this is exact only for a
-single linear layer; in deeper networks the test-time forward pass
-computes something closer to a *geometric* mean
-of the subnetworks' predictions.)
+Running the full network at test time is a computational approximation motivated
+by model averaging; in a nonlinear network it is not generally equal to the
+arithmetic or geometric mean of all masked-network predictions. The scaling
+identity is exact only at the individual dropped activation.
 From this angle dropout is cheap model averaging,
 which suggests why it tends to reduce variance:
 ensembles average away the idiosyncrasies of their members.
@@ -525,18 +517,18 @@ equivalence is proved only for additive input noise, not multiplicative
 dropout). The
 second is *anti-co-adaptation*: because no hidden unit can count on any specific
 partner being present, each unit is pushed to learn broadly useful features. The
-third is the *implicit ensemble*: every training step trains a different thinned
-subnetwork, and evaluating the full network at test time approximates averaging
-the predictions of all $2^n$ of them :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`.
+third is the historical *implicit ensemble* interpretation: every training step
+trains a different thinned subnetwork. The deterministic test-time network is a
+computational surrogate, not an exact average of their predictions
+:cite:`Srivastava.Hinton.Krizhevsky.ea.2014`.
 
 Dropout was important for fully connected vision networks of the mid-2010s,
 but its role has since narrowed. Convolutional
 networks typically replace it with batch normalization (see
 :numref:`sec_batch_norm`), which supplies similar noise-driven regularization.
-The two also combine poorly. Batch normalization accumulates its running
-statistics while dropout perturbs the activations' variance during training, so
-those statistics mismatch the variance it sees at evaluation time; placing
-dropout before a batch-normalization layer therefore tends to hurt
+Placement matters when the two are combined. Dropout immediately before batch
+normalization can perturb the variance used to accumulate running statistics,
+creating a train--evaluation mismatch in that configuration
 :cite:`Li.Chen.Hu.ea.2019`.
 Large transformer-based language models use dropout lightly (rates around 0.0 to
 0.1) or not at all in their core layers, reserving it mostly for final
@@ -578,7 +570,7 @@ seed for a family of stochastic-regularization methods.
 ::: {.cover}
 [Dive into Deep Learning · §5.6]{.kicker}
 
-Regularizing with **dropout**<br>Randomly silence hidden units during training, and a network that would have memorized instead generalizes.
+Regularizing with **dropout**<br>Randomly mask hidden activations during training and evaluate the full network at test time.
 :::
 :::
 
@@ -666,14 +658,12 @@ $2^{512} \approx 10^{154}$ subnetworks.
 - **Train:** sample one mask per step; the update nudges
   the shared weights to help *that* subnetwork.
 - **Test:** run the full net with dropout off, which
-  approximates *averaging* all $2^n$ subnetworks.
+  serves as a computational surrogate for the masked subnetworks.
 
 ::: {.d2l-note}
-Cheap model averaging: ensembles average away their members'
-idiosyncrasies, so we expect **variance reduction**. The
-weight-scaling rule is *exact* only for a single linear layer;
-in deeper nets the full pass computes closer to a **geometric**
-mean of the subnetworks' predictions.
+The ensemble view is historical motivation. In a nonlinear network, the full
+test-time pass is not generally the arithmetic or geometric mean of the masked
+networks. Only the activation-level expectation is exact.
 :::
 :::
 
@@ -794,7 +784,7 @@ training only.
 @dropout-defining-the-model
 :::
 
-::: {.slide title="Dropout reduces the training-validation gap"}
+::: {.slide title="Training and validation curves with dropout"}
 [From scratch · result]{.kicker}
 
 Two 256-unit hidden layers, dropout $0.2$ after the first and $0.5$
@@ -803,8 +793,9 @@ on Fashion-MNIST:
 
 @!dropout-training
 
-The train and validation curves track closely across 30 epochs: the
-gap a plain 256-256 MLP would open up is held in check.
+The displayed train and validation curves track closely across 30 epochs. A
+causal claim about dropout would require a seed-matched no-dropout run under the
+same training settings.
 :::
 
 ::: {.slide}
@@ -848,9 +839,8 @@ the mid-2010s; its role has since narrowed.
   often only on the **classifier head**.
 
 ::: {.d2l-note .warn}
-The two combine poorly: batch norm's running statistics, accumulated
-while dropout perturbs the activations' variance, mismatch what it
-sees at eval time: don't place dropout **before** a BN layer
+In the configuration where dropout is placed **before** batch norm, masking can
+distort the running variance and create an evaluation-time mismatch
 (Li et al., 2019).
 :::
 
@@ -874,8 +864,8 @@ family of stochastic-regularization methods.
 ::: {.col}
 - Place it **after the activation**, before the next
   linear layer; gentler near the input ($0.2$, then $0.5$ here).
-- Three views: a **thinned subnetwork** each step, an
-  implicit **$2^n$ ensemble**, broken **co-adaptation**.
+- Proposed views include a **thinned subnetwork** each step, historical ensemble
+  motivation, and reduced **co-adaptation**; only the masking expectation is exact.
 - `nn.Dropout(p)` does it all and respects train/eval.
 :::
 :::

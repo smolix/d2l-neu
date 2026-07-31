@@ -380,13 +380,13 @@ model-inspection tooling attaches; we use it in :numref:`sec_repro`.
 :label:`subsec_model-construction-sequential`
 
 :begin_tab:`pytorch`
-To see that there is no magic left in `nnx.Sequential`, we can write it
+To see the mechanism behind `nn.Sequential`, we can write it
 ourselves. Two ingredients suffice: register each child under a name, and loop
 over the children in `forward`.
 :end_tab:
 
 :begin_tab:`jax`
-To see that there is no magic left in `nnx.Sequential`, we can write it
+To see the mechanism behind `nnx.Sequential`, we can write it
 ourselves. Two ingredients suffice: declare a field that holds the list of
 children, and loop over them in `__call__`.
 :end_tab:
@@ -398,7 +398,7 @@ loop over them in `call`.
 :end_tab:
 
 :begin_tab:`mxnet`
-To see that there is no magic left in `nnx.Sequential`, we can write it
+To see the mechanism behind `nn.Sequential`, we can write it
 ourselves. Two ingredients suffice: register each child, and loop over the
 children in `forward`. One Gluon 2.0 wrinkle: the registry holds weak
 references, so our class also keeps the blocks in a plain list to keep them
@@ -746,19 +746,26 @@ one) and their named parts (embedding, final normalization, output head) as
 attributes.
 :end_tab:
 
-## Dynamic Forward Computation
+## Eager and Compiled Forward Computation
+
+Forward methods use ordinary Python syntax, but execution semantics depend on
+whether the framework is eager, traced, or compiled. Static loops over module
+structure are usually safe. Data-dependent branches and loops must use the
+framework's tensor control-flow operators or may trigger tracing,
+recompilation, graph breaks, or errors. Side effects likewise cannot be assumed
+to run once per model call under compilation.
 
 :begin_tab:`pytorch`
-`forward` is an ordinary Python method. Nothing restricts it to chaining
-children: it can branch, loop, call any tensor function, and combine
+In eager execution, `forward` can branch, loop, call tensor functions, and combine
 intermediate results however it likes. The loop in `ModuleListMLP` already used
 this freedom. Its most consequential one-line use is the *residual
 connection*, the wiring idiom at the heart of ResNets and Transformers alike:
 :end_tab:
 
 :begin_tab:`jax`
-`__call__` is an ordinary Python method. Nothing restricts it to chaining
-children: it can branch, loop, call any `jnp` function, and combine
+Before `jax.jit`, `__call__` can use Python structure and `jnp` operations. Under
+JIT, Python control flow is traced from static values; data-dependent control
+flow requires JAX primitives such as `lax.cond` or `lax.scan`. The method can combine
 intermediate results however it likes. The loop in `MySequential` already used
 this freedom. Its most consequential one-line use is the *residual
 connection*, the wiring idiom at the heart of ResNets and Transformers alike.
@@ -766,20 +773,17 @@ The residual body is constructed once and then reused on every call.
 :end_tab:
 
 :begin_tab:`tensorflow`
-`call` is an ordinary Python method. Nothing restricts it to chaining
-children: it can branch, loop, call any TensorFlow function, and combine
-intermediate results however it likes; TensorFlow executes eagerly, so all of
-this runs one operation at a time, just as in NumPy. (Once a model is wrapped
-in `tf.function` for speed, as the `Trainer` from :numref:`sec_oo-design`
-does, AutoGraph rewrites such control flow into graph form.) The loop in
+In eager mode, `call` can use Python control flow and TensorFlow operations.
+Once wrapped in `tf.function`, as the `Trainer` from :numref:`sec_oo-design`
+does, AutoGraph converts supported control flow; unsupported Python side effects
+or value-dependent constructs may trace once rather than execute per call. The loop in
 `MySequential` already used this freedom. Its most consequential one-line use
 is the *residual connection*, the wiring idiom at the heart of ResNets and
 Transformers alike:
 :end_tab:
 
 :begin_tab:`mxnet`
-`forward` is an ordinary Python method. Nothing restricts it to chaining
-children: it can branch, loop, call any `np` function, and combine
+For an eager Gluon `Block`, `forward` can branch, loop, call `np` functions, and combine
 intermediate results however it likes; a Gluon `Block` executes eagerly, so
 all of this runs one operation at a time, just as in NumPy. (Gluon's
 `HybridBlock` can compile the forward computation into a graph for speed, at
@@ -1576,42 +1580,14 @@ for cfg in (MLPConfig(), MLPConfig(d_hidden=512, num_blocks=8)):
           f'{n:,} parameters')
 ```
 
-:begin_tab:`pytorch`
-Because `build` is deterministic in `cfg`, the config is all you need to
-reconstruct the module tree later; :numref:`sec_read_write` saves it
-alongside the weights so that loading a checkpoint starts by rebuilding the
-exact same model. A config of widths and depths feeding a loop that stacks
-identical residual blocks is a common construction pattern in the Transformer
-implementations later in the book.
-:end_tab:
-
-:begin_tab:`jax`
-Because `build` is deterministic in `cfg`, the config is all we need to
-reconstruct the object graph later; :numref:`sec_read_write` saves it
-alongside the state. Width and depth fields feeding a loop that stacks
-identical residual blocks form a common construction pattern in the
-Transformer models later in the book.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Because `build` is deterministic in `cfg`, the config is all you need to
-reconstruct the module tree later; :numref:`sec_read_write` saves it
-alongside the weights so that loading a checkpoint starts by rebuilding the
-exact same model. Keras bakes the same idea into every layer: `get_config()`
-returns the constructor arguments needed to re-create the object, and that is
-what Keras model serialization records. A config of widths and depths feeding
-a loop that stacks identical residual blocks is a common construction pattern
-in the Transformer implementations later in the book.
-:end_tab:
-
-:begin_tab:`mxnet`
-Because `build` is deterministic in `cfg`, the config is all you need to
-reconstruct the module tree later; :numref:`sec_read_write` saves it
-alongside the weights so that loading a checkpoint starts by rebuilding the
-exact same model. A config of widths and depths feeding a loop that stacks
-identical residual blocks is a common construction pattern in the Transformer
-implementations later in the book.
-:end_tab:
+A configuration records architecture data, but reconstruction also requires
+versioned construction code, available custom classes, compatible library
+versions, and the expected state schema. :numref:`sec_read_write` therefore
+saves the configuration with weights and records enough version information to
+detect or migrate incompatible checkpoints. Width and depth fields feeding a
+loop of repeated blocks form a common construction pattern in later Transformer
+models. Keras exposes the same principle through `get_config()`, which records
+constructor arguments but still depends on the corresponding layer code.
 
 ## Summary
 

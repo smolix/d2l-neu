@@ -72,10 +72,9 @@ exactly the identity: gradients pass backwards through it unattenuated, no
 matter how many steps they travel. Additive updates, not repeated matrix
 multiplication, are the memory-friendly primitive.
 
-But a pure accumulator is a terrible memory. It adds *everything*, forever:
-irrelevant tokens pile onto relevant ones, the sum typically grows with
-sequence length, and there is no way to discard a fact once it has stopped
-mattering. A
+But a pure accumulator cannot discard obsolete information. Every update
+remains in the sum, so irrelevant inputs interfere with relevant ones and
+the state magnitude typically grows with sequence length. A
 useful memory must make decisions. Should this input be written down?
 Should this stored value be kept or cleared? Should the memory influence
 the output right now, or stay silent? What turns these discrete-sounding
@@ -696,13 +695,14 @@ for name, p in ppls.items():
     print(f'{name:>16} {p:>8.1f}')
 ```
 
-The scoreboard repays a careful read. The GRU beats the vanilla
+The results require a narrow interpretation. The GRU beats the vanilla
 RNN of :numref:`sec_rnn-scratch` clearly at the same recipe; the
 single-layer LSTM roughly matches the vanilla model within this short
 budget, for the initialization and budget reasons discussed above; and the
-second layer does not pay at all, adding optimization difficulty and
-capacity that a corpus this small cannot fill. Depth pays on large
-corpora; knowing when it will not is part of the craft.
+second layer does not improve validation perplexity under this recipe.
+It adds parameters and optimization work that this small corpus and short
+training budget do not use effectively. This result does not imply that
+depth is unhelpful on larger corpora or with longer training.
 
 ### Bidirectional Recurrent Networks
 :label:`sec_bi_rnn`
@@ -744,11 +744,11 @@ outputs.shape
 One warning matters more than the mechanics: **a bidirectional network
 cannot serve unchanged as a causal decoder**. Every $\mathbf{H}_t$
 conditions on tokens after $t$, so the model cannot emit tokens
-left-to-right autoregressively; at generation time the future it expects
-does not exist. Worse, training one to "predict the
-next token" is self-deception: the backward pass hands the network the
-very token it must predict, training loss collapses, and the model is
-useless at inference, a common and expensive mistake in the RNN era.
+left-to-right autoregressively because future tokens are unavailable.
+Training such a model to predict the next token also leaks the target:
+the backward recurrence receives that token as part of its input. The
+resulting low training loss therefore does not measure causal prediction,
+and the model cannot be used unchanged for left-to-right generation.
 The scope of the warning is the causal role, not generation wholesale:
 bidirectional encoders live inside generative systems (the encoder half
 of a translation model conditions a causal decoder), and
@@ -781,7 +781,7 @@ their MLPs: the gated linear unit family is the standard MLP in most
 contemporary open language models, its SwiGLU variant
 :cite:`Shazeer.2020` computing
 $\textrm{Swish}(\mathbf{x}\mathbf{W}_1) \odot \mathbf{x}\mathbf{W}_2$;
-:numref:`sec_transformer-block` measured what that gate buys in a
+:numref:`sec_transformer-block` measured the effect of that gate in a
 matched-parameter sweep. And the recurrence story of this chapter
 continues the pattern most directly: the selective state space model
 Mamba :cite:`Gu.Dao.2023` modulates a linear state with an
@@ -811,7 +811,7 @@ training, and appears where it belongs, in the family table of
 
 The last three rows share a further twist: their gates depend on the
 *input only*, not on the state. Give up state-dependent gating and the
-recurrence becomes linear, which unlocks parallel training across the
+recurrence becomes linear, which permits parallel training across the
 sequence while keeping the learned forgetting that made the LSTM work.
 :numref:`sec_ssm` takes exactly that step, and the rest of the chapter
 rides it: linear state space models, made selective in
@@ -820,7 +820,7 @@ rides it: linear state space models, made selective in
 :numref:`sec_deltanet`, reread as learning at test time in
 :numref:`sec_test-time-regression`, and finally hybridized with the
 transformer in :numref:`sec_hybrids`. The gate you now understand is the
-first rung of that ladder.
+starting point for that comparison.
 
 ## Summary
 
@@ -922,7 +922,7 @@ Schmidhuber, 1997).
   and in every linear recurrence of this chapter.
 :::
 
-::: {.slide title="The gate"}
+::: {.slide title="Gates Learn Selective State Updates"}
 The only recurrence whose Jacobian is exactly the identity is an
 **accumulator**: $\mathbf{S}_t = \mathbf{S}_{t-1} + (\textrm{new})$.
 But it never forgets. Memory needs *decisions*: write? clear? reveal?

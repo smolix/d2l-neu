@@ -1,42 +1,41 @@
 # Neural Collaborative Filtering for Personalized Ranking
 
-This section moves beyond explicit feedback, introducing the neural collaborative filtering (NCF) framework for recommendation with implicit feedback. Implicit feedback is pervasive in recommender systems. Actions such as clicks, buys, and watches are common implicit feedback which are easy to collect and indicative of users' preferences. The model we will introduce, titled NeuMF :cite:`He.Liao.Zhang.ea.2017`, short for neural matrix factorization, aims to address the personalized ranking task with implicit feedback. This model leverages the flexibility and non-linearity of neural networks to replace dot products of matrix factorization, aiming at enhancing the model expressiveness. In specific, this model is structured with two subnetworks including generalized matrix factorization (GMF) and MLP and models the interactions from two pathways instead of simple dot products. The outputs of these two networks are concatenated for the final prediction scores calculation. Unlike the rating prediction task in AutoRec, this model generates a ranked recommendation list to each user based on the implicit feedback. We will use the personalized ranking loss introduced in the last section to train this model.
+Clicks, purchases, and viewing events are easier to record than explicit ratings, but they pose a different statistical problem. An observed event is evidence of interest; an unobserved event may instead reflect a lack of exposure. We therefore seek a score that ranks plausible items for each user, and train it against sampled unobserved items. Neural matrix factorization (NeuMF) :cite:`He.Liao.Zhang.ea.2017` constructs this score from two complementary feature maps: an elementwise interaction, closely related to matrix factorization, and a multilayer network applied to the user and item embeddings.
 
 ## The NeuMF model
 
-As aforementioned, NeuMF fuses two subnetworks. The GMF is a generic neural network version of matrix factorization where the input is the elementwise product of user and item latent factors. It consists of two neural layers:
+The generalized matrix factorization (GMF) branch associates user $u$ and item $i$ with vectors $\mathbf{p}_u,\mathbf{q}_i\in\mathbb{R}^k$ and forms
 
 $$
 \begin{aligned}
-\mathbf{x} &= \mathbf{p}_u \odot \mathbf{q}_i \\
-\hat{y}_{ui} &= \alpha(\mathbf{h}^\top \mathbf{x}),
+\mathbf{x}_{\mathrm{GMF}} = \mathbf{p}_u \odot \mathbf{q}_i,
 \end{aligned}
 $$
 
-where $\odot$ denotes the Hadamard product of vectors. $\mathbf{P} \in \mathbb{R}^{m \times k}$  and $\mathbf{Q} \in \mathbb{R}^{n \times k}$ correspond to user and item latent matrix respectively. $\mathbf{p}_u \in \mathbb{R}^{ k}$ is the $u^\textrm{th}$ row of $P$ and $\mathbf{q}_i \in \mathbb{R}^{ k}$ is the $i^\textrm{th}$ row of $Q$.  $\alpha$ and $\mathbf{h}$ denote the activation function and weight of the output layer. $\hat{y}_{ui}$ is the prediction score of the user $u$ might give to the item $i$.
+where $\odot$ denotes elementwise multiplication. Unlike the dot product $\mathbf{p}_u^\top\mathbf{q}_i$, this operation retains all $k$ coordinatewise products for the final prediction layer.
 
-Another component of this model is MLP. To enrich model flexibility, the MLP subnetwork does not share user and item embeddings with GMF. It uses the concatenation of user and item embeddings as input. With the complicated connections and nonlinear transformations, it is capable of estimating the intricate interactions between users and items. More precisely, the MLP subnetwork is defined as:
+The multilayer perceptron (MLP) branch uses separate embeddings $\mathbf{U}_u$ and $\mathbf{V}_i$. Starting from their concatenation, it computes
 
 $$
 \begin{aligned}
-z^{(1)} &= \phi_1(\mathbf{U}_u, \mathbf{V}_i) = \left[ \mathbf{U}_u, \mathbf{V}_i \right] \\
-\phi^{(2)}(z^{(1)})  &= \alpha^1(\mathbf{W}^{(2)} z^{(1)} + b^{(2)}) \\
-&... \\
-\phi^{(L)}(z^{(L-1)}) &= \alpha^L(\mathbf{W}^{(L)} z^{(L-1)} + b^{(L)}) \\
-\hat{y}_{ui} &= \alpha(\mathbf{h}^\top\phi^L(z^{(L-1)}))
+\mathbf{z}^{(1)} &= [\mathbf{U}_u;\mathbf{V}_i], \\
+\mathbf{z}^{(\ell)} &= \alpha_\ell\!\left(\mathbf{W}^{(\ell)}\mathbf{z}^{(\ell-1)}+\mathbf{b}^{(\ell)}\right), \qquad \ell=2,\ldots,L,
 \end{aligned}
 $$
 
-where $\mathbf{W}^*, \mathbf{b}^*$ and $\alpha^*$ denote the weight matrix, bias vector, and activation function. $\phi^*$ denotes the function of the corresponding layer. $\mathbf{z}^*$ denotes the output of corresponding layer.
+where $[\cdot;\cdot]$ denotes concatenation and $\alpha_\ell$ is the activation at layer $\ell$. Separate embeddings allow the two branches to represent users and items in coordinate systems suited to their respective computations.
 
-To fuse the results of GMF and MLP, instead of simple addition, NeuMF concatenates the second last layers of two subnetworks to create a feature vector which can be passed to the further layers. Afterwards, the outputs are projected with matrix $\mathbf{h}$ and a sigmoid activation function. The prediction layer is formulated as:
+NeuMF concatenates the two feature vectors and applies a learned linear
+readout. Because BPR depends only on score differences, the implementation
+returns the raw score
 $$
-\hat{y}_{ui} = \sigma(\mathbf{h}^\top[\mathbf{x}, \phi^L(z^{(L-1)})]).
+s_{ui} = \mathbf{h}^\top[\mathbf{x}_{\mathrm{GMF}};\mathbf{z}^{(L)}].
 $$
+A sigmoid may convert this logit to a pointwise probability in a separately
+calibrated model, but it should not be inserted before the BPR score
+difference.
 
-The following figure illustrates the model architecture of NeuMF.
-
-![Illustration of the NeuMF model](../img/rec-neumf.svg)
+![NeuMF combines a GMF branch, which preserves coordinatewise products, with an MLP branch, which transforms concatenated user and item embeddings. A linear readout maps the combined features to an implicit-feedback score.](../img/rec-neumf.svg)
 
 ```{.python .input #neumf-the-neumf-model  n=1}
 #@tab mxnet
@@ -122,7 +121,16 @@ class NeuMF(nn.Module):
 
 ## Customized Dataset with Negative Sampling
 
-For pairwise ranking loss, an important step is negative sampling. For each user, the items that a user has not interacted with form the pool of negative items. The following function takes user identities and the per-user set of *observed* items (the `candidates` argument, holding items each user has interacted with) and samples a random negative item for each user by drawing from the complement — items not in that user's observed set. During training, the model learns to rank observed positive items above sampled items that were not observed for that user.
+For pairwise ranking, the sampling distribution is part of the objective. The
+following dataset samples uniformly from the complement of each user's observed
+training items. Samples are redrawn on every access, so repeated epochs compare
+an observed item with different unobserved items.
+
+This compact experiment also removes the held-out positive from the sampling
+pool. That avoids assigning opposite labels to the same item, but it consults
+the identity of the evaluation event during training. A strict final test would
+instead tune this choice on validation users or define a proposal without using
+test labels, then reserve test identities until evaluation.
 
 ```{.python .input #neumf-customized-dataset-with-negative-sampling  n=3}
 #@tab mxnet
@@ -131,8 +139,9 @@ class PRDataset(gluon.data.Dataset):
         self.users = users
         self.items = items
         # Precompute each user's negative pool once: items the user has not
-        # interacted with in train AND not held out as a test positive
-        # (excluding test positives prevents leakage into the BPR loss).
+        # interacted with in train, excluding the known held-out positive.
+        # This avoids a contradictory sampled label but uses evaluation identity;
+        # see the protocol limitation in the surrounding text.
         all_items = set(range(num_items))
         test_items = test_items or {}
         self.neg_pool = {
@@ -155,8 +164,9 @@ class PRDataset(torch.utils.data.Dataset):
         self.users = users
         self.items = items
         # Precompute each user's negative pool once: items the user has not
-        # interacted with in train AND not held out as a test positive
-        # (excluding test positives prevents leakage into the BPR loss).
+        # interacted with in train, excluding the known held-out positive.
+        # This avoids a contradictory sampled label but uses evaluation identity;
+        # see the protocol limitation in the surrounding text.
         all_items = set(range(num_items))
         test_items = test_items or {}
         self.neg_pool = {
@@ -172,22 +182,21 @@ class PRDataset(torch.utils.data.Dataset):
         return self.users[idx], self.items[idx], neg_items[indices]
 ```
 
-## Evaluator
-In this section, we adopt the splitting by time strategy to construct the training and test sets. Two evaluation measures including hit rate at given cutting off $\ell$ ($\textrm{Hit}@\ell$) and area under the ROC curve (AUC) are used to assess the model effectiveness.  Hit rate at given position $\ell$ for each user indicates that whether the recommended item is included in the top $\ell$ ranked list. The formal definition is as follows:
+## Evaluation on a Chronological Holdout
+
+For each user $u$, the final observed item $g_u$ is held out and ranked within an evaluation candidate set $C_u$ that contains $g_u$ and items not observed in the training history. The candidate set is part of the protocol: ranking against every item and ranking against a sampled subset generally produce different values. The hit rate at cutoff $\ell$ is
 
 $$
-\textrm{Hit}@\ell = \frac{1}{m} \sum_{u \in \mathcal{U}} \textbf{1}(rank_{u, g_u} <= \ell),
+\operatorname{Hit}@\ell = \frac{1}{|\mathcal{U}|}\sum_{u\in\mathcal{U}}\mathbf{1}\{\operatorname{rank}_u(g_u)\leq\ell\}.
 $$
 
-where $\textbf{1}$ denotes an indicator function that is equal to one if the ground truth item is ranked in the top $\ell$ list, otherwise it is equal to zero. $rank_{u, g_u}$ denotes the ranking of the ground truth item $g_u$ of the user $u$ in the recommendation list (The ideal ranking is 1). $m$ is the number of users. $\mathcal{U}$ is the user set.
-
-The definition of AUC is as follows:
+It records whether the held-out item appears among the first $\ell$ candidates, then averages over users. The corresponding per-user AUC is the fraction of other candidates scored below the held-out item:
 
 $$
-\textrm{AUC} = \frac{1}{m} \sum_{u \in \mathcal{U}} \frac{1}{|\mathcal{I} \backslash S_u|} \sum_{j \in \mathcal{I} \backslash S_u} \textbf{1}(rank_{u, g_u} < rank_{u, j}),
+\operatorname{AUC}=\frac{1}{|\mathcal{U}|}\sum_{u\in\mathcal{U}}\frac{1}{|C_u|-1}\sum_{j\in C_u\setminus\{g_u\}}\mathbf{1}\{\hat y_{u g_u}>\hat y_{uj}\}.
 $$
 
-where $\mathcal{I}$ is the item set and $S_u$ is the set of items user $u$ has already interacted with, so $\mathcal{I} \setminus S_u$ denotes the user's unobserved items that are ranked at evaluation time. Note that many other evaluation protocols such as precision, recall and normalized discounted cumulative gain (NDCG) can also be used.
+The formula assigns no credit to ties; a protocol that awards half credit must say so explicitly. Hit rate and AUC answer different questions, and neither corrects for the fact that a held-out click reflects both exposure and preference.
 
 The following function calculates the hit counts and AUC for each user.
 
@@ -404,9 +413,8 @@ We then create and initialize the model. We use a three-layer MLP with constant 
 #@tab mxnet
 devices = d2l.try_all_gpus()
 net = NeuMF(10, num_users, num_items, nums_hiddens=[10, 10, 10])
-# Use Xavier so MLP weights are large enough to escape the sigmoid plateau;
-# Normal(0.01) leaves the prediction layer's pre-sigmoid output near zero
-# (since MX Dense biases are zeros), and BPR gradients then vanish.
+# Xavier gives the GMF and MLP branches comparable initial activation scales.
+# The model returns raw scores; BPR applies a sigmoid to their difference.
 net.initialize(ctx=devices, force_reinit=True, init=mx.init.Xavier())
 ```
 
@@ -445,8 +453,8 @@ train_ranking(net, train_iter, test_iter, loss, optimizer, None, num_users,
 
 ## Summary
 
-* Adding nonlinearity to matrix factorization model is beneficial for improving the model capability and effectiveness.
-* NeuMF is a combination of matrix factorization and an MLP. The MLP takes the concatenation of user and item embeddings as input.
+* NeuMF combines coordinatewise latent-factor interactions with nonlinear features computed from concatenated user and item embeddings.
+* The two branches use separate embeddings and are joined only at the prediction layer.
 
 ## Exercises
 
@@ -486,10 +494,10 @@ with negative sampling + leave-one-out ranking evaluator
 (Hit@50, AUC) — the recommender-systems evaluation classic.
 :::
 
-::: {.slide title="Model architecture"}
+::: {.slide title="GMF and MLP provide complementary feature maps"}
 Two embedding tables per side (one for GMF, one for MLP);
 elementwise product on one side, concat→MLP on the other;
-final concat → linear → sigmoid score:
+final concat → linear raw score:
 
 ![NeuMF architecture: GMF and MLP pathways are fused before scoring a user-item pair.](../img/rec-neumf.svg)
 
@@ -498,7 +506,7 @@ final concat → linear → sigmoid score:
 @neumf-model-implementation
 :::
 
-::: {.slide title="Implicit-feedback dataset"}
+::: {.slide title="Unobserved items are sampled comparisons, not dislikes"}
 Each training instance: a (user, positive item) plus
 sampled negatives. The dataset class handles negative
 sampling on the fly:
@@ -524,7 +532,7 @@ $$\textrm{Hit@}K = \mathbf{1}\{\textrm{rank}(i^+) \le K\}.$$
 @neumf-evaluator-2
 :::
 
-::: {.slide title="Training helper"}
+::: {.slide title="Training and evaluation use different candidate roles"}
 BPR loss + Adam. Each minibatch contains a user, one positive
 item, and one sampled negative item; the update increases the
 positive score relative to the negative score:
@@ -532,21 +540,21 @@ positive score relative to the negative score:
 @neumf-training-and-evaluating-the-model-1
 :::
 
-::: {.slide title="Implicit MovieLens split"}
+::: {.slide title="Chronological holdout asks a prospective question"}
 Binarize MovieLens ratings into implicit feedback, then hold out
 each user's latest interaction for leave-one-out ranking:
 
 @neumf-training-and-evaluating-the-model-2
 :::
 
-::: {.slide title="Model initialization"}
-The model uses separate GMF and MLP embeddings. Initialization
-matters because a saturated sigmoid head can erase BPR gradients:
+::: {.slide title="Separate branch embeddings specialize independently"}
+The model uses separate GMF and MLP embeddings. Xavier initialization keeps
+the two branches at comparable initial scales:
 
 @neumf-training-and-evaluating-the-model-3
 :::
 
-::: {.slide title="Training and Metrics"}
+::: {.slide title="Metrics depend on the evaluation candidate set"}
 The final printout should be read as ranking quality: higher
 Hit@50 and AUC mean the held-out item is placed above more
 unobserved candidates. They are not rating-prediction metrics:
@@ -554,7 +562,7 @@ unobserved candidates. They are not rating-prediction metrics:
 @neumf-training-and-evaluating-the-model-4
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="NeuMF learns a score from two interaction maps"}
 - NeuMF = GMF (elementwise product) + MLP (concat) →
   fused score.
 - Implicit-feedback training with BPR + negative sampling.

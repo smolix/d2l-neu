@@ -452,21 +452,19 @@ contributions a chunk holds; a full chunk (4) is
 complete.](../img/mdl-perf-ring-allreduce.svg)
 :label:`fig_ring_allreduce`
 
-The catch, on our box, is that the elegant $2(k-1)/k$ accounting assumes
-the links are the bottleneck — and they are, but *which* links? With no
+The $2(k-1)/k$ byte count does not determine the transfer rate. On the
+build machine, peer-to-peer transfer is unavailable, so each nominal
 peer-to-peer transfer, every "neighbor to neighbor" hop is really a
 round trip through host memory (:numref:`subsec_hw-interconnects`), so the
-ring's theoretical advantage over the star is largely erased: the
-transport, not the topology, is the ceiling. This is the theory-versus-
-practice lesson in miniature — NCCL will still pick a ring or tree per
-message size, but on this hardware the constant in front of $N$ is what
-hurts, and no algorithm fixes a slow wire.
+ring hop is staged through host memory (:numref:`subsec_hw-interconnects`).
+The resulting transport bandwidth largely removes the ring's theoretical
+advantage over a star. NCCL may still select a ring or tree by message
+size, but measured link bandwidth supplies the constant in the cost model.
 
 ## Communication Cost and Scaling
 :label:`subsec_mg-accounting`
 
-We can now answer the question data parallelism always poses — *does the
-next GPU pay?* — with a cost model rather than a guess. One step on $k$
+We can now estimate whether another device reduces step time. One step on $k$
 GPUs takes roughly
 
 $$
@@ -485,7 +483,7 @@ communication term does not. Parallelism pays exactly when the compute
 you offload exceeds the communication you take on — models with high
 compute per byte of gradient traffic, large per-device batches, and fast
 links all push in your favor; a tiny model on a slow link, like LeNet on
-our box, is the case where it never pays.
+the build machine, is a case where the second device does not improve time.
 
 Two scaling conventions deserve names here, because every published
 speedup quietly picks one. :eqref:`eq_dp_cost` holds the global batch $B$
@@ -587,13 +585,12 @@ communication term is *not* what denies the speedup. The culprit is the
 other term: $t_{\text{compute}}(B/k)$ does not actually fall like $1/k$
 for a small model, because halving an already-small batch leaves each GPU
 underutilized, so $t_{\text{compute}}(B/2) \approx t_{\text{compute}}(B)$
-and the second GPU does redundant-feeling work for no wall-clock gain. The
-model pays off only when compute genuinely scales with the batch — a
+and the second GPU provides no wall-clock reduction. Multiple devices improve
+throughput only when compute time decreases with the per-device batch — for
+a
 compute-dense network with a large per-device batch, where
 $t_{\text{compute}}(B/k) \approx t_{\text{compute}}(B)/k$ dominates the
-small $t_{\text{comm}}$. That is exactly the regime
-:numref:`sec_multi_gpu_concise` moves to, and where the second GPU finally
-earns its keep.
+small $t_{\text{comm}}$. :numref:`sec_multi_gpu_concise` tests this regime.
 
 A closing word of history, because it names the lineage. Before
 synchronous ring allreduce won for dense training, large-scale learning

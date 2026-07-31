@@ -1,6 +1,9 @@
 # Initialization
 :label:`sec_init_param`
 
+> **Archive notice.** This file records pre-promotion design decisions. The live
+> source one directory above is authoritative; markers and API claims here are historical.
+
 The live label is preserved because downstream sections already cite it.
 
 > **Role.** The API companion to :numref:`sec_numerical_stability` (which

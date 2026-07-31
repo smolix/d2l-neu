@@ -351,8 +351,9 @@ assert final[6][1] > 0.95, 'trained delta must keep near-perfect recall'
 assert final[6][0] < 0.5, 'trained Hebbian must collapse under overwrites'
 ```
 
-Training does not rescue the additive write. The trained Hebbian model
-tracks the mechanistic collapse, near $0.5$ at two writes per key and
+Training does not remove the additive write's limitation in this setup.
+The trained Hebbian model follows the mechanistic result, reaching about
+$0.5$ accuracy at two writes per key and
 roughly $0.25$--$0.35$ by four to six, while the delta model learns a
 perfect overwriting memory and stays at $1.000$ throughout. Both models
 have identical parameter counts and see identical data; the entire gap is
@@ -532,7 +533,7 @@ with jax.default_matmul_precision('highest'):
 
 The recurrence above is fine for generation, one token, constant memory,
 but training wants the whole sequence at once, and here DeltaNet is
-genuinely harder than everything in :numref:`sec_matrix-state`. The
+more involved than the scalar transition in :numref:`sec_matrix-state`. The
 chunked schedule of :numref:`subsec_ms-chunked` leaned on the transition
 being a scalar: products of decays collapse into `segsum`, an elementwise
 log-space cumulative sum. DeltaNet's transitions are the matrices
@@ -1187,7 +1188,7 @@ for T in [8, 24, 64]:
 The projection erases the very component that counts, accuracy at
 chance at every length, while the reflection computes parity *exactly*
 at $T = 64$ as easily as at $T = 8$: no optimization horizon, because
-nothing was optimized. This one eigenvalue is the entire content of a
+nothing was optimized. This eigenvalue determines the alternating
 design flag you will meet in production DeltaNet code, `allow_neg_eigval`,
 which simply doubles the gate to $\beta_t = 2\,\sigma(\cdot) \in (0, 2)$.
 Note that the interval is open: for finite logits $2\sigma(\cdot)$
@@ -1206,7 +1207,7 @@ arithmetic improving in step.
 ### Expressivity and Its Limits
 :label:`subsec_dn-ladder`
 
-Climbing one more rung: a reflection along one axis per token buys
+Adding a reflection along one axis per token permits
 sign-flip state, but composing *rotations* needs transitions that mix
 several directions at once: tracking a permutation as it composes, say
 the word problem of the symmetric group $S_3$. DeltaProduct
@@ -1237,10 +1238,10 @@ published rung climbs higher without giving up the parallel schedule.
 :numref:`tab_dn-ladder` summarizes the ladder with
 the evidence this section put on the table.
 
-:What a transition can track. Each rung adds structure to $\mathbf{D}_t$ in :eqref:`eq_ms-recurrence`; the right column names the cheapest capability the rung unlocks, per this section's experiments and the cited theory.
+:What a transition can track. Each row adds structure to $\mathbf{D}_t$ in :eqref:`eq_ms-recurrence`; the right column names a capability supported by this section's diagnostics or by the cited theory.
 :label:`tab_dn-ladder`
 
-| transition $\mathbf{D}_t$ | eigenvalues | models | unlocks |
+| transition $\mathbf{D}_t$ | eigenvalues | models | demonstrated capability |
 |:--|:--|:--|:--|
 | $\mathbf{I}$ | all $1$ | linear attention | accumulation only |
 | scalar or diagonal, $(0, 1)$ | non-negative | RetNet, Mamba-2, GLA | forgetting; parity out of reach (fixed state, finite precision, arbitrary length) |
@@ -1282,7 +1283,7 @@ not a trained result.
 
 An additive matrix memory cannot re-bind a key: after $R$ writes to the
 same key it returns the superposition of all $R$ values, and recall of
-the latest collapses like guesswork, a failure that survives end-to-end
+latest approaches chance accuracy, a failure that persists under end-to-end
 training whenever write addresses must be reused (and one that decay
 cannot fix, since decay discounts by age, not by key). The delta rule
 reads before writing and stores only the correction,
@@ -1504,7 +1505,7 @@ $1 - \beta$ along $\mathbf{k}$:
   $\beta = 2$ itself is the boundary construction.
 :::
 
-::: {.slide title="The ladder, and its ceiling"}
+::: {.slide title="Transition Structure Determines Representable Dynamics"}
 | transition | unlocks |
 |:--|:--|
 | scalar / diagonal $(0,1)$ | forgetting; parity out of reach |

@@ -109,8 +109,8 @@ sketched in :numref:`fig_mdl-divergence-taxonomy`:
    the statistician's family, computable from samples alone, and include
    total variation, maximum mean discrepancy (MMD), and Wasserstein-1.
 3. **Optimal transport distances** measure the minimum cost of physically
-   moving the mass of $P$ onto $Q$. They metrize the *geometry* of the sample
-   space, and they alone stay informative when $P$ and $Q$ do not overlap.
+   moving the mass of $P$ onto $Q$. They use the geometry of the sample space
+   and often vary when bounded f-divergences saturate on disjoint supports; a geometry-sensitive characteristic-kernel MMD can also vary there.
 
 The families intersect: total variation is both an f-divergence and an IPM,
 and Wasserstein-1 is both an IPM and a transport distance. The
@@ -132,6 +132,14 @@ $$
 D_f(P\|Q) = E_{x \sim Q}\!\left[ f\!\left( \frac{p(x)}{q(x)} \right) \right].
 $$
 :eqlabel:`eq_mdl-f-div-def`
+
+This formula assumes $P$ is absolutely continuous with respect to $Q$, written
+$P\ll Q$. For general measures, decompose $P$ into a part with density $p/q$
+relative to $Q$ and a singular part $P_\perp$. The extended definition adds
+$f'(\infty)P_\perp(\mathcal X)$, where
+$f'(\infty)=\lim_{t\to\infty}f(t)/t$. Thus support mismatch may give a finite
+boundary contribution for some generators and $+\infty$ for forward KL.
+
 
 (When the support condition fails, the definition extends by the standard
 conventions $0 \cdot f(0/0) = 0$ and, for outcomes with $q(x) = 0 < p(x)$, a
@@ -323,9 +331,11 @@ distributions, which is precisely the regime early in training.
 
 The definition :eqref:`eq_mdl-f-div-def` has a practical flaw: it needs the
 densities. A generative model can *sample*, and the data are samples, but
-neither side hands you $p(x)/q(x)$. The fix is convex duality, which rewrites
-every f-divergence as the value of a *game* that only ever evaluates
-expectations, and expectations can be estimated from samples.
+neither side hands you $p(x)/q(x)$. Convex duality gives a variational equality
+when the critic ranges over a sufficiently rich measurable class and the
+required expectations are finite. Restricting the critic to a neural family
+turns that equality into a lower bound; finite-sample estimation and incomplete
+optimization introduce further gaps.
 
 ### The Fenchel Conjugate and the f-GAN Bound
 :label:`sec_mdl-f-gan-dual`
@@ -402,9 +412,10 @@ with an undertrained critic the game systematically *underestimates* the
 divergence: adversarial losses are biased low. And the critic that attains
 the bound depends on the density ratio, so on disjoint supports (where the
 ratio is $0$ or $\infty$) optimal critics saturate, previewing the gradient
-problems of :numref:`sec_mdl-optimal-transport`.
+problems discussed in :numref:`sec_mdl-optimal-transport`.
 
-Let's verify the proposition where we can see everything: on the categorical
+We can verify the proposition exactly on a finite categorical example, where
+expectations reduce to sums. Use the
 pair from before, with the $\chi^2$ generator $f(u) = (u-1)^2$. Its conjugate
 is $f^*(t) = t + t^2/4$ and the optimal critic is $T^\star = 2(p/q - 1)$
 (Exercise 2 derives both). One fine point: $t + t^2/4$ is the conjugate taken
@@ -1012,9 +1023,10 @@ where it is needed, in :numref:`sec_mdl-score-matching-diffusion-flow`.
 ## Scores: Fisher Divergence, Stein Discrepancy, and the Objective Map
 
 One last family compares distributions through *derivatives* of their
-log-densities. It looks exotic until you notice that it is the only family
-that never asks for a normalizing constant, which is exactly the term modern
-energy-based and diffusion models cannot compute.
+log-densities. Score matching is a principal route that cancels a density's
+normalizing constant. It requires differentiable log densities and suitable
+support or boundary conditions; ratio and Stein methods offer other
+normalizer-free constructions.
 
 ### The Score and the Fisher Divergence
 :label:`sec_mdl-fisher-divergence`
@@ -1268,8 +1280,8 @@ for name, s in [('true model  N(0,1)', lambda t: -t),
 
 Against the true model the U-statistic is $\approx 0.0002$, consistent with
 zero (like the unbiased MMD estimator, it may even dip slightly negative);
-against the model whose mean is off by one it is $\approx 0.64$, clearly
-positive and three orders of magnitude larger, although the *sample* never
+against the model whose mean is off by one it is $\approx 0.64$: positive
+and three orders of magnitude larger, although the *sample* never
 changed and $P'$ was never sampled at all: the discrepancy reads the mismatch
 straight off the score. This sample-versus-model comparison makes KSD the
 natural goodness-of-fit test for unnormalized models
@@ -1281,19 +1293,18 @@ score.
 ### The Divergence-to-Objective Map
 :label:`sec_mdl-divergence-objective-map`
 
-The following table relates modern generative objectives to choices of
-divergence. Each
-row names a training objective, the divergence its loss minimizes (often
-implicitly), where this section treats it, and the behavior the divergence
-makes inevitable.
+The table records idealized population correspondences. Exact equalities may
+require an unrestricted optimal critic, a sufficiently rich model family, and
+population expectations. A restricted critic, finite data, and incomplete
+optimization can change both the effective objective and its behavior.
 
-| Training objective | Divergence minimized | Treated in | Characteristic behavior |
+| Training objective | Idealized divergence | Treated in | Tendency and qualification |
 |:---|:---|:---|:---|
-| maximum likelihood: autoregressive models, normalizing flows | forward KL | :numref:`sec_mdl-fwd-vs-rev-kl` | zero-avoiding and often mass-covering; may over-spread |
-| variational inference, VAE posterior (ELBO) | reverse KL | :numref:`sec_mdl-fwd-vs-rev-kl` | mode-seeking; sharp but can drop modes; local optima |
-| original GAN | Jensen--Shannon | :numref:`sec_mdl-f-gan-dual` | sharp samples; no gradient on disjoint supports |
-| f-GAN | any chosen f-divergence | :numref:`sec_mdl-f-gan-dual` | inherits the chosen generator's behavior; critic-limited |
-| WGAN | Wasserstein-1 | :numref:`sec_mdl-optimal-transport` | gradients survive disjoint supports; needs Lipschitz critic |
+| maximum likelihood: autoregressive models, normalizing flows | forward KL | :numref:`sec_mdl-fwd-vs-rev-kl` | penalizes assigning zero density to data; model constraints govern coverage |
+| variational inference, VAE posterior (ELBO) | reverse KL | :numref:`sec_mdl-fwd-vs-rev-kl` | may select one mode in restricted families; local optima also matter |
+| original GAN with optimal discriminator | Jensen--Shannon | :numref:`sec_mdl-f-gan-dual` | the ideal objective saturates on disjoint supports |
+| f-GAN with unrestricted optimal critic | chosen f-divergence | :numref:`sec_mdl-f-gan-dual` | a restricted or underoptimized critic gives only a lower bound |
+| WGAN with a valid optimal Lipschitz critic | Wasserstein-1 | :numref:`sec_mdl-optimal-transport` | measures displacement across disjoint supports; critic enforcement is approximate |
 | MMD-GAN, two-sample tests | MMD | :numref:`sec_mdl-ipm-mmd` | closed-form, adversary-free; kernel choice sets sensitivity |
 | score matching, diffusion models | Fisher divergence | :numref:`sec_mdl-fisher-divergence` | normalizer-free; trains on the score field |
 | SVGD, model criticism | kernel Stein discrepancy | :numref:`sec_mdl-stein-discrepancy` | needs only the model's score; no model samples |
@@ -1301,21 +1312,17 @@ makes inevitable.
 *Maximum likelihood*
 (row 1) is forward KL by the NLL--cross-entropy equivalence of
 :numref:`subsec_mdl-nll-crossentropy`, so a language model trained on
-next-token prediction is mass-covering by construction: it would rather
-assign some probability to text it will never produce than risk assigning
-none to text that occurs. *The GAN family* (rows 3--5) is one design axis:
-the original GAN minimizes a bounded f-divergence and inherits its
-flat-on-disjoint-supports gradient pathology; WGAN swaps families to optimal
-transport, which supplies gradients everywhere but requires a constrained critic.
-*Diffusion models* (row 7) sidestep densities entirely: Fisher divergence
-compares score fields, the normalizer cancels, and the training loss becomes
-a regression onto $\nabla_{\mathbf{x}} \log p$, which is where
-:numref:`sec_mdl-score-matching-diffusion-flow` picks up the story.
+next-token prediction is penalized heavily for assigning negligible probability
+to observed text. Whether it covers all relevant modes depends on model capacity,
+data, and optimization. In the ideal-discriminator analysis, the original GAN's
+bounded divergence saturates on disjoint supports; WGAN instead optimizes a
+transport dual with a Lipschitz critic, whose approximation determines the
+usable gradient. *Diffusion models* compare score fields: the normalizer cancels,
+and the training loss becomes a regression onto $\nabla_{\mathbf{x}}\log p$, where
+:numref:`sec_mdl-score-matching-diffusion-flow` develops the corresponding models.
 
-The choice of divergence imposes characteristic behavior. Mode dropping,
-over-dispersion, and vanishing gradients can often be traced to the geometry of
-$f$, the direction of KL, the boundedness of JS, or the function class of an
-IPM before optimization begins.
+The divergence supplies one inductive bias. Model restriction, critic class,
+sampling, and optimization determine how strongly the idealized tendency appears.
 
 ## Summary
 
@@ -1682,7 +1689,7 @@ $\varepsilon$ sharpens it onto the LP's never-crossing staircase:
 :::
 :::
 
-::: {.slide title="The score never sees the normalizer"}
+::: {.slide title="Scores Cancel Unknown Normalizing Constants"}
 [Fisher divergence]{.kicker}
 
 ::: {.cols .vc}
@@ -1713,27 +1720,29 @@ This is why score matching works where density estimation cannot.
 [KSD]{.kicker}
 
 For any smooth $f$, $\mathbb{E}_P[f' + f\,s_P] = 0$: a fingerprint of $P$ that
-needs only its score. Violating it certifies the sample is not from $P$:
+needs only its score. A systematic population violation distinguishes the
+distributions; a finite-sample test still requires calibration:
 
 @divergences-distances-stein
 
-The kernel Stein discrepancy turns this into a test; its descent direction is
-SVGD.
+The kernel Stein discrepancy turns this identity into a test statistic; its
+descent direction yields SVGD.
 :::
 
-::: {.slide title="One map for every objective"}
+::: {.slide title="Divergences Induce Distinct Idealized Objectives"}
 [Objective comparison]{.kicker}
 
 ::: {.d2l-note .rule}
-MLE/flows → forward KL · VAE → reverse KL · GAN → JS · f-GAN → any $f$ · WGAN
+MLE/flows → forward KL · VAE → reverse KL · optimal GAN critic → JS ·
+f-GAN → an $f$-divergence · WGAN
 → $W_1$ · MMD-GAN → MMD · diffusion → Fisher · SVGD → KSD.
 :::
 
-Choose the divergence; you have chosen the objective, and inherited its
-failure modes.
+These correspondences describe population objectives under their idealized
+critic and model assumptions; finite optimization can behave differently.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Divergences Encode Different Modeling Priorities"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

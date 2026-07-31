@@ -64,10 +64,16 @@ $$
 \min_{\mathbf{x}}\; f(\mathbf{x}) \quad \textrm{subject to} \quad g(\mathbf{x}) = 0.
 $$
 
-:numref:`sec_mdl-multivariable_calculus` already showed us the picture: the
-admissible moves from a feasible point are, to first order, the directions
-*tangent* to the surface $\{g = 0\}$, and at a constrained optimum the level
-curves of $f$ *kiss* the constraint surface. :numref:`fig_mdl-opt-lagrange-tangency`
+The geometric argument requires the regularity condition
+$\nabla g(\mathbf{x}^\star)\ne\mathbf{0}$. It ensures that the feasible set is
+locally a smooth surface with a well-defined tangent space. Without it, the
+tangency conclusion may fail; an adjacent counterexample follows the
+proposition.
+
+:numref:`sec_mdl-multivariable_calculus` supplies the picture: the admissible
+moves from a feasible point are, to first order, directions tangent to the
+surface $\{g = 0\}$, and at a regular constrained optimum the level set of
+$f$ is tangent to the constraint surface. :numref:`fig_mdl-opt-lagrange-tangency`
 shows why tangency is forced. At a feasible point where a level curve of $f$
 *crosses* the constraint curve, the gradient $\nabla f$ has a nonzero component
 along the constraint, so sliding along the constraint against that component
@@ -83,8 +89,8 @@ multiple of $\nabla g$.
 **Proposition (Lagrange condition).** *Let $f$ and $g$ be continuously
 differentiable, and let $\mathbf{x}^\star$ be a local minimum of $f$ on
 $\{\mathbf{x} : g(\mathbf{x}) = 0\}$ at which $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$.
-Then there is a unique scalar $\nu^\star$, the* **Lagrange multiplier**,
-*with*
+Then there is a unique scalar $\nu^\star$, called the **Lagrange multiplier**,
+such that*
 
 $$
 \nabla f(\mathbf{x}^\star) + \nu^\star\,\nabla g(\mathbf{x}^\star) = \mathbf{0}.
@@ -126,8 +132,8 @@ subject to $g(\mathbf{x}) = x_1^2 + x_2^2 = 0$: the feasible set is the single
 point $\mathbf{0}$, which is therefore the minimum, yet
 $\nabla f(\mathbf{0}) = (1, 0)$ while $\nabla g(\mathbf{0}) = \mathbf{0}$: no
 multiplier exists. The constraint set has collapsed to a point, the "surface" is
-not a surface, and the tangent-space argument has nothing to stand on. Whenever
-you invoke multipliers, you are implicitly certifying that the constraint
+not a surface, so the tangent-space argument does not apply. Invoking
+multipliers therefore requires verifying that the constraint
 gradients do not degenerate at the optimum.
 
 ### The Lagrangian
@@ -323,7 +329,7 @@ it is how every example in the rest of this section will be solved.
 
 The KKT conditions characterize the answer; this subsection turns them into an
 *algorithm*. Take the ordinary gradient step,
-and if it leaves the feasible set, snap back to the nearest feasible point.
+and if it leaves the feasible set, project to the nearest feasible point.
 
 ### Projection onto a Convex Set
 
@@ -414,16 +420,13 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-pgd`
 
-Everything we know about plain gradient descent
-(:numref:`sec_mdl-gradient-based-optimization`) survives. Nonexpansiveness is
-the intuition: the appended map $\Pi_C$ cannot amplify the distance between
-iterates. The proof needs slightly more (the projection is in fact *firmly*
-nonexpansive) and we do not give it: for convex $L$-smooth $f$ with
-$\eta = 1/L$, PGD converges at the same
-$O(1/k)$ rate as the unconstrained method :cite:`Nesterov.2018`. Just as
-important, it stops in the right place: the fixed points of
-:eqref:`eq_mdl-opt-pgd` are exactly the points with no feasible descent
-direction. Indeed, $\mathbf{x}^\star = \Pi_C(\mathbf{x}^\star - \eta \nabla f(\mathbf{x}^\star))$
+For a nonempty closed convex set $C$, a convex $L$-smooth objective, and
+$\eta=1/L$, PGD has an $O(1/k)$ objective-value rate
+:cite:`Nesterov.2018`. Nonexpansiveness of the projection is part of that
+analysis. More generally, for differentiable $f$, convex $C$, and any
+$\eta>0$, the fixed points of :eqref:`eq_mdl-opt-pgd` are exactly the
+first-order stationary points for the constrained problem. Indeed,
+$\mathbf{x}^\star = \Pi_C(\mathbf{x}^\star - \eta \nabla f(\mathbf{x}^\star))$
 holds iff plugging $\mathbf{y} = \mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star)$
 into :eqref:`eq_mdl-opt-proj-variational` does, which after cancelling
 $\mathbf{x}^\star$ reads
@@ -434,14 +437,18 @@ $$
 $$
 
 This is the constrained first-order condition, reducing to $\nabla f = \mathbf{0}$
-when $C = \mathbb{R}^n$, and, under a constraint qualification such as Slater's
-(introduced below), equivalent to the KKT conditions when $C$ is given
-by convex inequalities. Deep-learning practice is full of disguised PGD steps:
-gradient clipping is the ball projection of :numref:`subsec_mdl-kkt-conditions`,
-non-negativity is enforced by
-clamping (projection onto the orthant), and max-norm weight constraints project
-each row back onto a ball after the update. The method is practical whenever
-$\Pi_C$ is cheap, which brings us to the projection behind sparse attention.
+when $C = \mathbb{R}^n$. If $f$ is convex, the condition is also sufficient for
+global optimality; if $f$ is nonconvex, it certifies only stationarity. Under a
+constraint qualification such as Slater's (introduced below), it is equivalent
+to the KKT conditions when $C$ is described by convex inequalities. Convexity
+of $C$ is also essential: for a nonconvex set the projection may be multivalued
+and the fixed-point equivalence can fail.
+
+Non-negativity constraints use projection onto the orthant, and max-norm weight
+constraints project rows onto balls after the update. Gradient norm clipping
+also projects the *gradient vector* onto a ball, but is not generally PGD for a
+constraint on the parameters. PGD is practical whenever $\Pi_C$ is cheap,
+which brings us to the projection behind sparse attention.
 
 ### Projection onto the Simplex
 
@@ -949,7 +956,7 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-svm-dual`
 
-Two structural payoffs before any algorithm. *Complementary slackness*,
+Two consequences hold before any algorithm is chosen. *Complementary slackness*,
 $\alpha_i (1 - y_i(\mathbf{w}^\top\mathbf{x}_i + b)) = 0$, says
 $\alpha_i > 0$ only for points sitting *exactly on the margin*: the
 **support vectors**, the active constraints of the active-set picture in
@@ -960,7 +967,7 @@ $\mathbf{x}_i^\top\mathbf{x}_j$: replace them by a kernel evaluation
 $k(\mathbf{x}_i, \mathbf{x}_j)$ and the same dual trains a nonlinear
 classifier, an option the primal formulation does not expose.
 
-Now let us *solve* the dual, with the tools of this section and nothing else.
+We can solve the dual using the preceding conditions.
 One simplification first: the equality constraint $\sum_i \alpha_i y_i = 0$
 entered only because the unpenalized offset $b$ made the Lagrangian affine in
 one direction. If we instead fold the
@@ -1145,7 +1152,7 @@ d2l.plot(lams, [g, np.full_like(lams, p_star)], 'lambda', 'value',
          legend=['dual function g(lambda)', 'primal optimum p*'])
 ```
 
-Note the trap this example disarms. A strictly feasible point exists
+This example also shows that a strictly feasible point can exist
 ($x = 0$ has $f_1 = -\tfrac12 < 0$), yet the gap is real: Slater's
 condition certifies strong duality *only for convex problems*, and $f_0 = -x^2$
 is not convex. In the supporting-line picture of
@@ -1195,11 +1202,12 @@ the current iterate :cite:`Nocedal.Wright.2006`.
   $\lambda_i g_i = 0$, which finds the active set. KKT is necessary under a
   constraint qualification and *sufficient* for global optimality in convex
   problems.
-* **Projections** onto closed convex sets are unique and **nonexpansive**, and
-  **projected gradient descent** $\mathbf{x} \leftarrow \Pi_C(\mathbf{x} - \eta\nabla f)$
-  inherits gradient descent's guarantees; its fixed points are exactly the
-  constrained first-order optima. The simplex projection is a KKT-derived
-  sort-and-threshold (sparsemax).
+* **Projections** onto nonempty closed convex sets are unique and
+  **nonexpansive**. For convex $L$-smooth objectives, projected gradient descent
+  with a suitable step has the usual $O(1/k)$ value guarantee. Its fixed points
+  satisfy constrained first-order stationarity; convexity of the objective is
+  what upgrades stationarity to global optimality. The simplex projection is a
+  KKT-derived sort-and-threshold (sparsemax).
 * The **dual function** $g(\boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{x}} \mathcal{L}$
   is *always concave*, and **weak duality** $d^\star \le p^\star$ *always*
   holds: dual points are certificates. **Slater's condition** (convexity plus a
@@ -1218,7 +1226,7 @@ the current iterate :cite:`Nocedal.Wright.2006`.
   and heuristic.
 * Multipliers are **shadow prices**: $\lambda_i^\star = -\partial p^\star/\partial u_i$
   measures what relaxing constraint $i$ is worth. It is $1/w$ in
-  water-filling, and it is why slack constraints cost nothing.
+  water-filling, and it is why slack constraints have zero shadow price.
 * The SVM dual (support vectors = active constraints, kernels via inner
   products) and water-filling (pour to a common level, bisection on the level)
   show the full pipeline; LP/QP/SOCP/SDP is the solver map for the convex
@@ -1457,20 +1465,22 @@ a three-line convexity argument. KKT *is* the answer.
 
 ::: {.cols .vc}
 ::: {.col}
-$\Pi_C(\mathbf{y})$ is the nearest feasible point. On a convex set it is
-**nonexpansive** ($\|\Pi_C\mathbf{x} - \Pi_C\mathbf{y}\| \le \|\mathbf{x} - \mathbf{y}\|$),
-so appending it keeps gradient descent's guarantees:
+For nonempty closed convex $C$, $\Pi_C(\mathbf{y})$ is the unique nearest
+feasible point and is **nonexpansive**
+($\|\Pi_C\mathbf{x} - \Pi_C\mathbf{y}\| \le \|\mathbf{x} - \mathbf{y}\|$),
+which supports projected-gradient analysis:
 
 $$\mathbf{x}_{t+1} = \Pi_C\!\left(\mathbf{x}_t - \eta\,\nabla f(\mathbf{x}_t)\right).$$
 
-Its **fixed points are exactly the constrained optima**, equivalent to KKT.
+Its fixed points are constrained **stationary points**. They are global optima
+when $f$ is convex; otherwise no global conclusion follows.
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-You have run **PGD** in disguise: gradient **clipping** projects onto a
-ball; non-negativity is a projection onto the orthant; max-norm weight
-caps project each row.
+Non-negativity and max-norm parameter constraints give PGD steps. Gradient norm
+clipping projects the gradient, but is not generally PGD for a parameter
+constraint.
 :::
 :::
 :::
@@ -1551,7 +1561,8 @@ Relax constraint $i$ by a unit and the optimum improves by $\lambda_i^\star$.
 :::
 :::
 
-Slack constraints cost nothing; only binding ones command a price.
+Slack constraints have zero shadow price; binding constraints can have a
+nonzero price.
 :::
 
 ::: {.slide title="Strong duality is a saddle point"}
@@ -1659,7 +1670,7 @@ strong duality only for **convex** problems.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Constraints replace zero gradients by feasible stationarity"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
@@ -1668,7 +1679,7 @@ strong duality only for **convex** problems.
   precise by Lagrange and **KKT**; complementary slackness finds the
   active set.
 - **Projections** onto convex sets are nonexpansive; projected GD is
-  gradient descent plus a snap back to feasibility.
+  gradient descent followed by projection back to feasibility.
 :::
 
 ::: {.col}

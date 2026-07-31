@@ -419,14 +419,14 @@ wants low *risk* (expected loss on the population). The optimizer only
 ever sees the former — and the two minima sit in different places, which
 no optimizer can fix:
 
-![](../img/mdl-opt-risk-gap.svg){width=62%}
+![The empirical-risk and population-risk minima need not coincide, so lower training loss does not guarantee lower population loss.](../img/mdl-opt-risk-gap.svg){width=62%}
 :::
 
 ::: {.slide title="Local minima"}
 $f(x) = x \cos(\pi x)$ has a local minimum that is not global. Near it,
 the gradient goes to zero — the signal cannot tell the two apart:
 
-![](../img/mdl-opt-local-minima.svg){width=58%}
+![The derivative vanishes at both local and global minima; local gradient information alone does not distinguish them.](../img/mdl-opt-local-minima.svg){width=58%}
 
 *Noise* can knock the iterate out of a shallow basin — minibatch variance
 supplies exactly that.
@@ -435,21 +435,21 @@ supplies exactly that.
 ::: {.slide title="Saddle points"}
 1D: $f(x) = x^3$ has $f'(0) = 0$, yet no minimum:
 
-![](../img/mdl-opt-inflection.svg){width=52%}
+![At the origin, the first and second derivatives vanish even though the cubic has no extremum.](../img/mdl-opt-inflection.svg){width=52%}
 
 
 High-dim: a zero-gradient point is a minimum only if **all** Hessian
 eigenvalues are positive — with mixed signs it is a saddle. At $10^6$
 parameters, essentially every critical point is a saddle:
 
-![](../img/mdl-opt-saddle.svg){width=72%}
+![The origin is a minimum along one axis and a maximum along the other, giving a saddle with mixed Hessian signs.](../img/mdl-opt-saddle.svg){width=72%}
 :::
 
 ::: {.slide title="Vanishing gradients"}
 No critical point needed: $f(x) = \tanh(x)$ at $x = 4$ has
 $f'(4) \approx 0.0013$. The surface is just *flat* where we stand:
 
-![](../img/mdl-opt-tanh-flat.svg){width=58%}
+![At $x=4$, $\tanh x$ has a very small gradient without a nearby critical point; flatness alone can stall descent.](../img/mdl-opt-tanh-flat.svg){width=58%}
 
 ReLU and good initialization fixed this at the *model* level — not the
 optimizer's job.

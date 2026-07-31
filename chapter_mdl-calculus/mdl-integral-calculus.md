@@ -53,33 +53,31 @@ from jax import numpy as jnp
 
 ## The Definite Integral
 
-Take a function $f$ and ask for the area trapped between its graph and the
-$x$-axis over an interval $[a, b]$. The area under an entire curve is usually
-infinite or undefined, so we always pin it between two endpoints. The recipe is
-the same one Archimedes used: chop $[a,b]$ into $N$ thin vertical slices of width
-$\epsilon = (b-a)/N$, approximate each slice by a rectangle of height $f(x_i)$,
-and add them up. As the slices shrink, the staircase of rectangles squeezes onto
-the curve and the sum approaches a definite number, shown in
-:numref:`fig_mdl-riemann`.
+To accumulate a function over $[a,b]$, choose a partition
+$P:a=x_0<x_1<\cdots<x_N=b$ and a tag $\xi_i\in[x_{i-1},x_i]$ for each subinterval.
+The tagged sum $\sum_i f(\xi_i)(x_i-x_{i-1})$ approximates the net contribution
+of the curve: regions above the axis contribute positively and regions below it
+negatively. The equal-width rectangles below show one special sequence of such
+partitions.
 
-![Left to right: the area under $f$ from $a$ to $b$ approximated by rectangles of shrinking width $\epsilon$. As $\epsilon\to 0$ the rectangle sum $\sum_i \epsilon\,f(x_i)$ converges to the definite integral, the exact signed area.](../img/mdl-cal-riemann.svg)
+![Left to right, equal-width tagged sums approximate the net signed area between $f$ and the axis on $[a,b]$. For a Riemann-integrable function, the sums converge to the same definite integral as the maximum subinterval width tends to zero, independently of the tag chosen in each interval.](../img/mdl-cal-riemann.svg)
 :label:`fig_mdl-riemann`
 
-We *define* the **definite integral** as this limit and write it with the
-elongated-$S$ symbol,
+A bounded function $f$ is **Riemann integrable** on $[a,b]$ if there is a number
+$I$ such that every tagged sum approaches $I$ as the partition mesh tends to zero:
 
 $$
-\int_a^b f(x)\,dx = \lim_{\epsilon\to 0}\ \sum_i \epsilon\, f(x_i),
+\int_a^b f(x)\,dx = I = \lim_{\|P\|\to0}\sum_{i=1}^N f(\xi_i)(x_i-x_{i-1}),
 $$
 :eqlabel:`eq_mdl-riemann`
 
-a continuous analogue of a sum: $\sum$ becomes $\int$, the spacing $\epsilon$
-becomes $dx$, and the term $f(x_i)$ becomes $f(x)$. The inner variable is a dummy,
-exactly like a summation index, so $\int_a^b f(x)\,dx = \int_a^b f(z)\,dz$. We
-grant the following facts about this limit once and for all
-:cite:`Folland.1999`. For bounded, piecewise-continuous $f$ (continuous except
-at finitely many jump points), which covers everything we meet in machine
-learning, the limit exists and does not depend on how the slices are chosen.
+Here $\|P\|=\max_i(x_i-x_{i-1})$, and the limit must be the same for every choice
+of tags. The integral is a continuous analogue of a sum; its variable is dummy,
+so $\int_a^b f(x)\,dx=\int_a^b f(z)\,dz$. Bounded piecewise-continuous functions
+are Riemann integrable :cite:`Folland.1999`, but this class does not cover every
+integral used in machine learning. Unbounded densities and infinite intervals
+require improper or Lebesgue integrals; the Riemann construction supplies the
+geometric starting point, while measure theory supplies the broader foundation.
 The integral it defines is *monotone*, so $f \le g$ implies
 $\int_a^b f\,dx \le \int_a^b g\,dx$, and *additive over subintervals*, so
 $\int_a^c f\,dx = \int_a^b f\,dx + \int_b^c f\,dx$ for $a\le b\le c$; both are
@@ -88,8 +86,8 @@ on $f$ is genuinely needed: for the function that is $1$ on the rationals and
 $0$ elsewhere, the rectangle sums never settle on any value at all. Lebesgue's
 integral, built on measure theory rather than on slicing the axis, handles even
 that function, assigning it integral $0$ because the rationals have measure
-zero, and it is the foundation probability theory ultimately stands on; the
-Riemann picture suffices for every computation in this book.)
+zero. Probability theory uses this measure-theoretic extension when the Riemann
+conditions are insufficient.)
 
 The definition is not yet a *computation*: only the simplest
 integrands (a line, $\int_a^b x\,dx$) succumb to summing the rectangles by hand.
@@ -508,8 +506,8 @@ containing $U$.
 
 ### Change of Variables in Many Dimensions
 
-The one-dimensional stretch factor $\frac{du}{dx}$ has a multidimensional
-successor, and it is the key that unlocks the Gaussian integral below. Let $U\subseteq\mathbb{R}^n$
+The one-dimensional stretch factor $du/dx$ becomes a local volume factor in
+several dimensions. This factor will let polar coordinates separate the Gaussian integral below. Let $U\subseteq\mathbb{R}^n$
 be open and let $\boldsymbol{\phi}:U\to\mathbb{R}^n$ be a **$C^1$-diffeomorphism**
 onto its image; that is, $\boldsymbol{\phi}$ is continuously differentiable,
 injective, and has $\det D\boldsymbol{\phi}(\mathbf{x})\neq 0$ everywhere on $U$.
@@ -1074,14 +1072,14 @@ there in total, and the fundamental theorem joins the two together.
 
 ::: {.cols .vc}
 ::: {.col}
-Archimedes' recipe: chop $[a,b]$ into $N$ slices of width
-$\epsilon$, stand a rectangle of height $f(x_i)$ on each, and add.
-As the slices shrink, the staircase squeezes onto the curve:
+Choose a tagged partition $P$ of $[a,b]$. If every choice of tags
+converges to the same value as the largest subinterval shrinks, then
+$f$ is Riemann integrable and
 
-$$\int_a^b f(x)\,dx = \lim_{\epsilon\to 0}\ \sum_i \epsilon\, f(x_i).$$
+$$\int_a^b f(x)\,dx = \lim_{\|P\|\to0}\sum_i f(\xi_i)(x_i-x_{i-1}).$$
 
-The continuous analogue of a sum: $\sum \to \int$, spacing
-$\epsilon \to dx$.
+Equal-width rectangles are one special sequence; values below the
+axis contribute negatively.
 :::
 
 ::: {.col .fig .big}
@@ -1430,7 +1428,7 @@ and you get a confidently wrong gradient.
 :::
 :::
 
-::: {.slide title="Summary"}
+::: {.slide title="Integration accumulates signed contributions"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

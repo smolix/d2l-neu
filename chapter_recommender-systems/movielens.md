@@ -6,7 +6,7 @@ There are a number of datasets that are available for recommendation research. A
 ## Getting the Data
 
 
-The MovieLens dataset is hosted by the [GroupLens](https://grouplens.org/datasets/movielens/) website. Several versions are available. We will use the MovieLens 100K dataset :cite:`Herlocker.Konstan.Borchers.ea.1999`.  This dataset is comprised of $100,000$ ratings, ranging from 1 to 5 stars, from 943 users on 1682 movies. It has been cleaned up so that each user has rated at least 20 movies. Some simple demographic information such as age, gender, genres for the users and items are also available.  We can download the [ml-100k.zip](http://files.grouplens.org/datasets/movielens/ml-100k.zip) and extract the `u.data` file, which contains all the $100,000$ ratings in the csv format. There are many other files in the folder, a detailed description for each file can be found in the [README](http://files.grouplens.org/datasets/movielens/ml-100k-README.txt) file of the dataset.
+MovieLens 100K contains $100{,}000$ ratings on a one-to-five scale, contributed by 943 users for 1,682 movies :cite:`Herlocker.Konstan.Borchers.ea.1999`. Every included user rated at least 20 movies, so the dataset cannot evaluate a truly new user. The archive also contains timestamps and limited demographic and genre fields; this chapter uses the ratings and timestamps in `u.data`. The [GroupLens documentation](http://files.grouplens.org/datasets/movielens/ml-100k-README.txt) describes the remaining files.
 
 To begin with, let's import the packages required to run this section's experiments.
 
@@ -69,7 +69,7 @@ def read_data_ml100k():
 
 ## Statistics of the Dataset
 
-Let's load up the data and inspect the first five records manually. It is an effective way to learn the data structure and verify that they have been loaded properly.
+Inspecting a few records checks both the delimiter and the column order before downstream indexing turns identifiers into array positions.
 
 ```{.python .input #movielens-statistics-of-the-dataset-1  n=3}
 #@tab mxnet
@@ -89,7 +89,7 @@ print(f'matrix sparsity: {sparsity:f}')
 print(data.head(5))
 ```
 
-We can see that each line consists of four columns, including "user id" 1-943, "item id" 1-1682, "rating" 1-5 and "timestamp". We can construct an interaction matrix of size $n \times m$, where $n$ and $m$ are the number of users and the number of items respectively. This dataset only records the existing ratings, so we can also call it rating matrix and we will use interaction matrix and rating matrix interchangeably in case that the values of this matrix represent exact ratings. Most of the values in the rating matrix are unknown as users have not rated the majority of movies. We also show the sparsity of this dataset. The sparsity is defined as `1 - number of nonzero entries / ( number of users * number of items)`. Clearly, the interaction matrix is extremely sparse (i.e., sparsity = 93.695%). Real world datasets may suffer from a greater extent of sparsity and has been a long-standing challenge in building recommender systems. A viable solution is to use additional side information such as user/item features to alleviate the sparsity.
+Each record contains a user identifier, item identifier, rating, and timestamp. Placing the observed ratings in an $m\times n$ user--item matrix leaves most entries missing: the observed fraction is $100{,}000/(943\cdot1{,}682)$, or about $6.3\%$. Missing is not the numerical value zero, nor does it mean dislike. A separate observation mask is therefore required whenever the matrix is represented densely.
 
 We then plot the distribution of the count of different ratings. As expected, it appears to be a normal distribution, with most ratings centered at 3-4.
 
@@ -113,7 +113,21 @@ d2l.plt.show()
 
 ## Splitting the dataset
 
-We split the dataset into training and test sets. The following function provides two split modes including `random` and `seq-aware`. In the `random` mode, the function splits the 100k interactions randomly without considering timestamp and uses the 90% of the data as training samples and the rest 10% as test samples by default. In the `seq-aware` mode, we leave out the item that a user rated most recently for test, and users' historical interactions as training set.  User historical interactions are sorted from oldest to newest based on timestamp. This mode will be used in the sequence-aware recommendation section.
+The split defines the prediction problem. In `random` mode, each interaction is
+assigned independently to training or test data, with 90% used for training by
+default. The same users and items can therefore occur in both sets, and later
+interactions may be used to predict earlier ones. This is a warm-start
+interpolation protocol; it should not be interpreted as a prospective
+recommendation test.
+
+In `seq-aware` mode, each user's most recent interaction is held out and the
+earlier interactions are ordered by time for training. This protocol asks
+whether a history predicts a later event, although it still excludes cold-start
+users and items. A production evaluation should also preserve a validation set
+for model selection and reserve the test set for the final report. The compact
+experiments below use a single holdout to keep the implementation short. They
+therefore demonstrate the mechanics of the metrics but do not provide a clean
+estimate after hyperparameter selection.
 
 ```{.python .input #movielens-splitting-the-dataset  n=5}
 #@tab mxnet
@@ -179,11 +193,14 @@ def split_data_ml100k(data, num_users, num_items,
     return train_data, test_data
 ```
 
-Note that it is good practice to use a validation set in practice, apart from only a test set. However, we omit that for the sake of brevity. In this case, our test set can be regarded as our held-out validation set.
+The returned second split is named `test_data` for compatibility with the
+chapter code. If its metrics guide architecture or hyperparameter choices, it
+is functioning as validation data and a separate untouched test split is still
+required for a final estimate.
 
 ## Loading the data
 
-After dataset splitting, we will convert the training set and test set into lists and dictionaries/matrix for the sake of convenience. The following function reads the dataframe line by line and enumerates the index of users/items start from zero. The function then returns lists of users, items, ratings and a dictionary/matrix that records the interactions. We can specify the type of feedback to either `explicit` or `implicit`.
+After splitting, `load_data_ml100k` maps the one-based identifiers to zero-based array indices and returns aligned user, item, and rating lists. For explicit feedback it also constructs a dense rating matrix; for implicit feedback it records each user's observed item set. These representations retain the split chosen above and must not be recombined before evaluation.
 
 ```{.python .input #movielens-loading-the-data-1  n=6}
 #@tab mxnet
@@ -314,7 +331,7 @@ following decks build matrix factorization, AutoRec, and
 neural collaborative filtering on top.
 :::
 
-::: {.slide title="Downloading"}
+::: {.slide title="MovieLens supplies ratings, identifiers, and time"}
 @movielens-getting-the-data-1
 
 . . .
@@ -322,7 +339,7 @@ neural collaborative filtering on top.
 @movielens-getting-the-data-2
 :::
 
-::: {.slide title="Dataset statistics"}
+::: {.slide title="Most user--item entries are unobserved"}
 Sparsity calculation, rating distribution histogram —
 the two most informative diagnostics for a recommender
 dataset:
@@ -334,7 +351,7 @@ dataset:
 @movielens-statistics-of-the-dataset-2
 :::
 
-::: {.slide title="Train / test split"}
+::: {.slide title="Random and chronological splits estimate different tasks"}
 Two splits to support different evaluation protocols:
 
 - *Random* — split rows uniformly. For rating prediction.
@@ -344,7 +361,7 @@ Two splits to support different evaluation protocols:
 @movielens-splitting-the-dataset
 :::
 
-::: {.slide title="DataLoader"}
+::: {.slide title="Explicit and implicit tasks require different examples"}
 @movielens-loading-the-data-1
 
 . . .
@@ -352,7 +369,7 @@ Two splits to support different evaluation protocols:
 @movielens-loading-the-data-2
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="The evaluation protocol is part of the problem"}
 - MovieLens-100k: small, well-understood ratings dataset
   — ideal for teaching, too small for SOTA claims.
 - Sparsity (~94% missing) is the central challenge for

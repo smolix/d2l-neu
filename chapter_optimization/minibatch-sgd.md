@@ -21,26 +21,20 @@ and multiple servers requires sending at least one example to each device,
 so with 8 GPUs per server and 16 servers the minibatch is already no smaller
 than 128 if every device is to contribute.
 
-On a single GPU or CPU the reason is subtler: arithmetic is abundant and
-memory traffic is not. A current server CPU sustains on the order of
-$10^{12}$ to $10^{13}$ floating point operations per second across its cores
-and vector units, yet its memory interface delivers a few hundred gigabytes
-per second. A GPU is more lopsided still: on the order of $10^{14}$
-operations per second in single precision — and another order of magnitude
-through its matrix units at the reduced precisions used for deep learning —
-against a few terabytes per second of memory bandwidth. In both cases
-arithmetic outruns bandwidth by roughly two orders of magnitude, so keeping
-the processor busy requires each byte fetched from memory to take part in
-tens to hundreds of operations before being evicted.
+On a single GPU or CPU the reason is subtler: peak arithmetic throughput grows
+faster than memory bandwidth. The exact ratio depends on the processor and
+numeric format, but modern accelerators can perform many arithmetic operations
+in the time needed to fetch a small number of values from off-chip memory.
+Keeping the arithmetic units busy therefore requires each fetched byte to be
+reused across many operations. This ratio of operations to transferred bytes
+is the *arithmetic intensity* of a computation.
 
 Processors bridge the gap with a hierarchy of memories: a small number of
 registers, then L1, L2, and often L3 caches of increasing size and latency
 and decreasing bandwidth, the largest shared among cores. Access patterns
 matter as much as volume: the first access to a region of memory is
 expensive, while the sequential reads that follow (a *burst read*) are
-comparatively cheap. See this
-[Wikipedia article](https://en.wikipedia.org/wiki/Cache_hierarchy) for a more
-in-depth discussion. Whether the hierarchy helps is a property of the
+comparatively cheap. Whether the hierarchy helps is a property of the
 algorithm, not the hardware: data must be *reused* while it is still
 resident. Consider matrix multiplication, $\mathbf{A} = \mathbf{B}\mathbf{C}$.
 We have several options for computing $\mathbf{A}$:

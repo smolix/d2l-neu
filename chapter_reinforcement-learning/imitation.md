@@ -124,7 +124,16 @@ class ActorCritic(nnx.Module):  #@save
                    lr)
 ```
 
-The `tabular` constructor is a softmax-regression model in a thin disguise: an embedding table holds one preference $\theta_{s, a}$ per state-action pair, an integer state indexes its row, and a softmax turns the row into $\pi_\theta(\cdot \mid s)$. Zero initialization makes the starting policy exactly uniform. The class also carries a *value* head and a second optimizer that nothing in this section touches: the container is named for the actor-critic architecture it will grow into, and introducing it here as a supervised-learning object is deliberate, because :numref:`sec_policygradient` will then need no new policy class, only a new way to choose the weights: no expert, only reward.
+The `tabular` constructor is a softmax-regression model: an embedding
+table holds one preference $\theta_{s,a}$ per state--action pair, an
+integer state indexes its row, and a softmax produces
+$\pi_\theta(\cdot\mid s)$. Zero initialization makes the initial policy
+uniform.
+
+The class also contains a value head and a second optimizer, neither of
+which is used for behavior cloning. They are included so that
+:numref:`sec_policygradient` can reuse the same policy container when the
+training signal changes from expert actions to sampled rewards.
 
 The environment, `d2l.evaluate`, and everything else we share between frameworks speaks numpy, so the class gets a numpy boundary: four small methods through which framework arrays leave the model. The `torch` tab must wrap them in `no_grad`; the JAX tab needs no equivalent, since nothing records a gradient graph outside an explicit `grad` trace:
 
@@ -429,7 +438,7 @@ Learning from demonstrations<br>
 :::
 :::
 
-::: {.slide title="No Kernel, No Reward, Just an Expert"}
+::: {.slide title="Behavior Cloning Is Supervised Action Prediction"}
 Behavior cloning consumes two columns of a demonstration:
 the states visited and the actions taken.
 Fitting $\pi_\theta(a \mid s)$ to the pairs is **softmax regression**.
@@ -448,7 +457,7 @@ Fitting $\pi_\theta(a \mid s)$ to the pairs is **softmax regression**.
 zero init = uniform policy. The value head sleeps until :numref:`sec_policygradient`.
 :::
 
-::: {.slide title="The Fit Is Perfect. That Is the Trap."}
+::: {.slide title="Training Fit Does Not Cover Unvisited States"}
 @imitation-the-reduction-to-classification-4
 
 . . .
@@ -458,7 +467,7 @@ $\pi(\cdot \mid s = 3)$ is exactly uniform, and greedy
 tie-breaking picks *left*, a choice nobody made.
 :::
 
-::: {.slide title="Zero Mistakes, a Quarter of the Return"}
+::: {.slide title="Distribution Shift Reduces Policy Return"}
 @imitation-what-the-reduction-quietly-assumes-1
 
 . . .

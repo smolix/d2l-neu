@@ -51,24 +51,15 @@ report quotes them (tokens or sequences).
 | OLMo 2 7B :cite:`OLMo.2025` | AdamW | 0.9, 0.95 | $3{\times}10^{-4}$, cosine to 10% of peak | 2k steps | 1.0 | 0.1, embeddings exempt | 1,024 seqs, fixed |
 | Kimi K2 :cite:`Kimi.Team.2025` | MuonClip | — | $2{\times}10^{-4}$, constant to 10T tokens, cosine to $2{\times}10^{-5}$ | 500 steps | — | 0.1 | 67M tokens, fixed |
 
-Read down the columns and a consensus core appears. The optimizer is AdamW
-with $(\beta_1, \beta_2) = (0.9, 0.95)$, the shortened second-moment window
-that :numref:`sec_adamw` discussed. Weight decay is 0.1, with the exemptions
-that section derived (OLMo 2 states the embedding exemption outright).
-Gradients are clipped at global norm 1. The schedule is a brief warmup, a
-few hundred to a few thousand steps out of a million, into either cosine
-decay or the warmup--stable--decay shape of :numref:`sec_scheduler`, ending
-one to two orders of magnitude below the peak. Where batch handling is
-disclosed, the batch is ramped up early in training, while the gradient
-noise scale is still small (:numref:`sec_batch_size`). The blanks carry
-information too: even a report of Llama 3's length leaves betas, weight
-decay, and clipping unstated, because much of the recipe travels as defaults in
-training code rather than as prose. And one row breaks the optimizer
-column: Kimi K2 runs the Muon split of :numref:`sec_muon` inside an
-otherwise consensus recipe, hidden matrices under orthogonalized momentum
-with AdamW for the rest. That is the current state of the art in one table: a
-stable core, one production-proven challenger, and the details you would
-need to reproduce any row only partly on the record.
+These four reports are case studies, not a representative survey. Three
+report AdamW and one reports a Muon/AdamW split. Two disclose
+$(\beta_1,\beta_2)=(0.9,0.95)$, weight decay 0.1, and global-norm clipping at
+1; the dashes in the other rows indicate missing evidence rather than implied
+defaults. All four report warmup followed by either cosine decay or a stable
+phase and later decay. Batch ramping appears in two rows and fixed batches in
+the other two. The table therefore shows several repeated choices and one
+production use of Muon, while also showing that the published fields are
+insufficient to reproduce any run in full.
 
 ## Gradient Clipping
 
@@ -178,7 +169,7 @@ for clip in (False, True):
     print(f'{label}: final loss {final_loss(curves[label]):.3f}')
 ```
 
-The first steps tell the story, so we plot them raw, on a log scale.
+The instability occurs early, so we plot the first 150 steps on a log scale.
 
 ```{.python .input #practice-a-nan-averted-3}
 d2l.plot(list(range(150)), [curves[k][:150] for k in curves], 'step',
@@ -191,8 +182,8 @@ itself: an oversized step lands the iterate somewhere steeper, the gradient
 there is larger, momentum compounds it, and within two dozen steps the loss
 has climbed six orders of magnitude and overflows. The clipped run, at the
 identical learning rate, trains to a final loss at or slightly below the
-tuned unclipped run of :numref:`sec_adam`. The last print is the heart of
-the matter: the median gradient norm was far below the threshold, and
+tuned unclipped run of :numref:`sec_adam`. The median gradient norm was far
+below the threshold, and
 clipping changed the update on six steps out of two thousand. Six
 interventions were the entire difference between a NaN and the best SGD
 result in this chapter.
@@ -492,9 +483,8 @@ the trajectory.
 
 ## How to Tune
 
-Everything in this chapter was tuned somehow, and the somehow deserves to
-be stated as method rather than left as folklore. The clearest statement of
-the method practitioners actually use is Google's Tuning Playbook
+Every comparison in this chapter depends on a tuning protocol, which must be
+reported as part of the method. Google's Tuning Playbook
 :cite:`Godbole.Dahl.Gilmer.ea.2023`, and its central move is a vocabulary.
 In any experiment, split the hyperparameters into three classes:
 *scientific* hyperparameters, the ones your question is about; *nuisance*
@@ -661,11 +651,10 @@ Optimization in practice<br>
 | OLMo 2 7B | AdamW | 0.9, 0.95 | $3{\times}10^{-4}$, cosine | 2k | 1.0 | 0.1* |
 | Kimi K2 | MuonClip | — | $2{\times}10^{-4}$, WSD | 500 | — | 0.1 |
 
-- Consensus core: AdamW (0.9, 0.95) · wd 0.1 with exemptions · clip 1.0 ·
-  warmup + cosine-or-WSD · early batch ramp.
-- Blank entries indicate quantities not stated in the report.
-- One break in the optimizer column: K2 runs the **Muon split** (§9.9)
-  inside an otherwise consensus recipe.
+- Three reports use AdamW; Kimi K2 reports a **Muon split** (§9.9).
+- Two reports disclose (0.9, 0.95), weight decay 0.1, and clipping at 1.0.
+- All report warmup; later schedules and batch handling differ.
+- Blank entries are missing evidence, not implied defaults.
 :::
 
 ::: {.slide title="Gradient clipping in three lines"}

@@ -15,11 +15,12 @@ tokenizer is best thought of as part of the model.
 We first compare character and word tokens, which occupy opposite ends of a
 vocabulary-size and sequence-length trade-off. We then represent text as raw
 bytes and learn
-a vocabulary *from data* with byte pair encoding (BPE), the algorithm
-behind essentially every production tokenizer today
-:cite:`Sennrich.Haddow.Birch.2015,Radford.Wu.Child.ea.2019`. Our
-implementation also accepts the published GPT-2 merge table and
-reproduce the output of OpenAI's `tiktoken` library token for token.
+a vocabulary *from data* with byte pair encoding (BPE), one of several
+widely deployed subword schemes
+:cite:`Sennrich.Haddow.Birch.2015,Radford.Wu.Child.ea.2019`. WordPiece and
+Unigram tokenization make different modeling choices. Our implementation also
+accepts the published GPT-2 merge table and reproduces the GPT-2 output of
+OpenAI's `tiktoken` library token for token.
 
 ## Reading the Dataset
 
@@ -629,11 +630,12 @@ print('pad/bos/eos ids:', bpe.pad, bpe.bos, bpe.eos, '| len:', len(bpe))
 
 ### What a Production Tokenizer Stores
 
-Everything a deployed tokenizer knows fits in one table. OpenAI's
-open-source `tiktoken` library ships, for each model family, a mapping
-from byte strings to integer *ranks* plus a pre-tokenization pattern, and
-that is the entire artifact: no neural network, no language-specific
-rules. Peeking at the GPT-2 table around the byte boundary is instructive.
+GPT-2's tokenizer is specified by a mergeable-rank table, a byte-to-symbol
+mapping, a pre-tokenization pattern, and special-token rules. It has no neural
+network at inference time. Other tokenizer families may additionally store
+normalization rules or a probabilistic segmentation model. We inspect the
+GPT-2 rank table around the byte boundary below; the leading underscore on
+`_mergeable_ranks` marks this as a version-sensitive private API.
 
 ```{.python .input #text-sequence-what-a-production-tokenizer-stores}
 enc = tiktoken.get_encoding('gpt2')
@@ -975,7 +977,7 @@ Split text into chunks with a regex; merges never cross chunks
 
 @text-sequence-pre-tokenization-telling-bpe-where-words-end-2
 
-![](../img/mdl-rnn-pretokenization-pipeline.svg){width=88%}
+![The regex first separates words, digit runs, and punctuation; BPE merges are then restricted to each resulting chunk.](../img/mdl-rnn-pretokenization-pipeline.svg){width=88%}
 :::
 
 ::: {.slide title="Retrain with the pattern"}

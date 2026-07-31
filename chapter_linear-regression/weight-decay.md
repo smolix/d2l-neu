@@ -151,9 +151,8 @@ We divide by $2$ by convention:
 when we take the derivative of a quadratic function,
 the $2$ and $1/2$ cancel out, ensuring that the expression
 for the update looks nice and simple.
-The astute reader might wonder why we work with the squared
-norm and not the standard norm (i.e., the Euclidean distance).
-We do this for computational convenience.
+We use the squared norm rather than the norm itself for computational
+convenience.
 By squaring the $\ell_2$ norm, we remove the square root,
 leaving the sum of squares of
 each component of the weight vector.
@@ -161,9 +160,7 @@ This makes the derivative of the penalty easy to compute:
 the sum of derivatives equals the derivative of the sum.
 
 
-Moreover, you might ask why we work with the $\ell_2$ norm
-in the first place and not, say, the $\ell_1$ norm.
-In fact, other choices are valid and
+Other penalties are also valid and
 popular throughout statistics.
 While $\ell_2$-regularized linear models constitute
 the classic *ridge regression* algorithm :cite:`Hoerl.Kennard.1970`,
@@ -263,10 +260,15 @@ $$-\log p(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) = \frac{1}{2\sigma^2} \sum_{i=
 In short, *MAP estimation is maximum likelihood plus a prior*, and the objective
 above is exactly of our weight-decay form. The regularization constant $\lambda$
 is thereby *proportional to* the prior precision $1/\tau^2$: a tighter prior
-(smaller $\tau$) means stronger shrinkage. The exact constant of proportionality
-involves the noise variance $\sigma^2$ and the sample size $n$, because the loss
-$L$ above is an *average* while the log-posterior is a *sum*; exercise 6 asks you
-to make the correspondence precise. :numref:`fig_wd-map-prior` illustrates this:
+(smaller $\tau$) means stronger shrinkage. Because $L$ is the *average*
+half-squared error while the log-posterior contains a sum, multiplying the
+negative log-posterior by $\sigma^2/n$ gives
+
+$$L(\mathbf{w},b)+\frac{\lambda}{2}\|\mathbf{w}\|^2,
+\qquad \lambda=\frac{\sigma^2}{n\tau^2}.$$
+
+Thus regularization strength depends on prior precision, observation noise, and
+sample size under this averaging convention. :numref:`fig_wd-map-prior` illustrates this:
 the prior's quadratic bowl pulls the maximum-likelihood estimate back
 toward the origin. This recovers the classical *ridge regression* estimator.
 
@@ -742,10 +744,18 @@ layer, a simple, effective heuristic we adopt throughout the book.
 
 ## Summary
 
-Regularization is a common method for dealing with overfitting. Classical regularization techniques add a penalty term to the loss function (when training) to reduce the complexity of the learned model.
-One particular choice for keeping the model simple is using an $\ell_2$ penalty. This leads to weight decay in the update steps of the minibatch stochastic gradient descent algorithm.
-In practice, the weight decay functionality is provided in optimizers from deep learning frameworks.
-Different sets of parameters can have different update behaviors within the same training loop.
+Weight decay adds an $\ell_2$ penalty to the training objective. Geometrically,
+the penalty expresses a preference for smaller weight norms; under SGD, it
+appears as multiplicative shrinkage in each update. In linear regression, the
+spectral view shows that ridge suppresses directions that the data constrain
+weakly, continuously reducing the effective degrees of freedom.
+
+With Gaussian observation noise and a zero-mean Gaussian prior on the weights,
+the same objective is MAP estimation, with
+$\lambda=\sigma^2/(n\tau^2)$ for the averaged-loss convention used here.
+Framework optimizers implement weight decay directly and allow parameter groups
+to follow different update rules. The value of $\lambda$ is selected on
+validation data, not from training error alone.
 
 
 
@@ -831,7 +841,9 @@ A budget $\|\mathbf{w}\| \le t$ turns the penalty into a *constraint*: the answe
 ![Loss contours centred on the unconstrained optimum $\hat{\mathbf{w}}$ grow until they meet the constraint at $\mathbf{w}^\star$. Left ($\ell_2$ ball): contact is tangential, so both coordinates shrink. Right ($\ell_1$ diamond): contact is at a corner, forcing $w_2$ to exactly zero.](../img/mdl-linreg-ridge-geometry.svg){width=82%}
 
 ::: {.d2l-note}
-A round ball touches **off-axis** (everything shrinks); a pointed diamond touches at a **corner** (sparsity). This is why lasso does feature selection and ridge does not.
+A round ball generally produces continuous shrinkage without exact zeros; a
+pointed diamond can touch at a **corner**, producing sparsity. Thus lasso can
+perform feature selection whereas ridge generally does not.
 :::
 :::
 
@@ -1073,7 +1085,9 @@ $$\underbrace{-\log p(\mathbf{y}\mid\mathbf{X},\mathbf{w})}_{\textrm{MLE: }\,\fr
   \;\Rightarrow\; \textrm{MAP} = \textrm{ridge}.$$
 
 ::: {.d2l-note .rule}
-**MAP = MLE + a prior.** The linear-regression section got squared loss from Gaussian *noise*; weight decay adds a Gaussian *prior* on $\mathbf{w}$, with $\lambda$ the prior precision.
+**MAP = MLE + a prior.** The linear-regression section obtained squared loss
+from Gaussian *noise*; a Gaussian prior on $\mathbf{w}$ adds weight decay, with
+$\lambda=\sigma^2/(n\tau^2)$ under the averaged-loss convention.
 :::
 :::
 

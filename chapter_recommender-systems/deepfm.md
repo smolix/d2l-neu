@@ -1,36 +1,29 @@
 # Deep Factorization Machines
 
-Learning effective feature combinations is critical to the success of click-through rate prediction task. Factorization machines model feature interactions in a linear paradigm (e.g., bilinear interactions). This is often insufficient for real-world data where inherent feature crossing structures are usually very complex and nonlinear. What's worse, second-order feature interactions are generally used in factorization machines in practice. Modeling higher degrees of feature combinations with factorization machines is possible theoretically but it is usually not adopted due to numerical instability and high computational complexity.
+A second-order factorization machine assigns a structured coefficient to each feature pair, but its score contains no interaction involving three or more feature values at once. An MLP applied to all field embeddings can represent such joint dependence, although it does not preserve the FM's explicit pairwise term. DeepFM :cite:`Guo.Tang.Ye.ea.2017` combines these two inductive biases and shares the embedding table between them.
 
-One effective solution is using deep neural networks. Deep neural networks are powerful in feature representation learning and have the potential to learn sophisticated feature interactions. As such, it is natural to integrate deep neural networks to factorization machines. Adding nonlinear transformation layers to factorization machines gives it the capability to model both low-order feature combinations and high-order feature combinations. Moreover, non-linear inherent structures from inputs can also be captured with deep neural networks. In this section, we will introduce a representative model named deep factorization machines (DeepFM) :cite:`Guo.Tang.Ye.ea.2017` which combine FM and deep neural networks.
+The distinction is architectural, not a guarantee that one branch learns only “low-order” effects and the other only “high-order” effects. Their learned roles depend on the data, regularization, and optimization.
 
 
 ## Model Architectures
 
-DeepFM consists of an FM component and a deep component which are integrated in a parallel structure. The FM component is the same as the 2-way factorization machines which is used to model the low-order feature interactions. The deep component is an MLP that is used to capture high-order feature interactions and nonlinearities. These two components share the same inputs/embeddings and their outputs are summed up as the final prediction. It is worth pointing out that the spirit of DeepFM resembles that of the Wide \& Deep architecture which can capture both memorization and generalization. The advantages of DeepFM over the Wide \& Deep model is that it reduces the effort of hand-crafted feature engineering by identifying feature combinations automatically.
+Suppose an example contains one categorical value from each of $f$ fields. A shared lookup table maps those values to embeddings $\mathbf{e}_1,\ldots,\mathbf{e}_f\in\mathbb{R}^k$. The FM branch uses the embeddings in its pairwise inner products. In parallel, the deep branch concatenates them:
 
-We omit the description of the FM component for brevity and denote the output as $\hat{y}^{(FM)}$. Readers are referred to the last section for more details. Let $\mathbf{e}_i \in \mathbb{R}^{k}$ denote the latent feature vector of the $i^\textrm{th}$ field.  The input of the deep component is the concatenation of the dense embeddings of all fields that are looked up with the sparse categorical feature input, denoted as:
-
-$$
-\mathbf{z}^{(0)}  = [\mathbf{e}_1, \mathbf{e}_2, ..., \mathbf{e}_f],
-$$
-
-where $f$ is the number of fields.  It is then fed into the following neural network:
+$$\mathbf{z}^{(0)}=[\mathbf{e}_1;\mathbf{e}_2;\cdots;\mathbf{e}_f]\in\mathbb{R}^{fk}.$$
 
 $$
-\mathbf{z}^{(l)}  = \alpha(\mathbf{W}^{(l)}\mathbf{z}^{(l-1)} + \mathbf{b}^{(l)}),
+\mathbf{z}^{(\ell)}=\alpha_\ell\!\left(\mathbf{W}^{(\ell)}\mathbf{z}^{(\ell-1)}+\mathbf{b}^{(\ell)}\right), \qquad \ell=1,\ldots,L.
 $$
 
-where $\alpha$ is the activation function.  $\mathbf{W}_{l}$ and $\mathbf{b}_{l}$ are the weight and bias at the $l^\textrm{th}$ layer. Let $y_{DNN}$ denote the output of the prediction. The ultimate prediction of DeepFM is the summation of the outputs from both FM and DNN. So we have:
+Let $s_{\mathrm{FM}}$ be the FM logit and $s_{\mathrm{DNN}}=\mathbf{a}^\top\mathbf{z}^{(L)}+b$ the deep-branch logit. Their sum determines the click probability:
 
 $$
-\hat{y} = \sigma(\hat{y}^{(FM)} + \hat{y}^{(DNN)}),
+\hat p(y=1\mid\mathbf{x})=\sigma(s_{\mathrm{FM}}+s_{\mathrm{DNN}}).
 $$
 
-where $\sigma$ is the sigmoid function. The architecture of DeepFM is illustrated below.
-![Illustration of the DeepFM model](../img/rec-deepfm.svg)
+![DeepFM uses one field-embedding table in two branches. The FM branch computes linear and pairwise terms; the MLP branch transforms the concatenated embeddings. Adding their logits before the sigmoid produces the click probability.](../img/rec-deepfm.svg)
 
-It is worth noting that DeepFM is not the only way to combine deep neural networks with FM. We can also add nonlinear layers over the feature interactions :cite:`He.Chua.2017`.
+DeepFM is one of several ways to combine explicit interaction terms with learned nonlinear features; another applies nonlinear layers directly to interaction features :cite:`He.Chua.2017`.
 
 ```{.python .input #deepfm-model-architectures  n=2}
 #@tab mxnet
@@ -170,12 +163,12 @@ loss = nn.BCEWithLogitsLoss(reduction='none')
 d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 ```
 
-Compared with FM, DeepFM converges faster and achieves better performance.
+On this particular split and optimization setting, the plotted DeepFM run reaches a lower loss sooner than the FM run. This is an illustrative comparison, not evidence that DeepFM dominates FM across datasets or matched hyperparameter searches.
 
 ## Summary
 
-* Integrating neural networks to FM enables it to model complex and high-order interactions.
-* DeepFM outperforms the original FM on the advertising dataset.
+* DeepFM adds the logits of an FM branch and an MLP branch that share field embeddings.
+* The FM supplies explicit pairwise terms; the MLP permits joint nonlinear dependence among all embedded fields.
 
 ## Exercises
 
@@ -208,7 +201,7 @@ for CTR models after 2017: explicit interaction terms plus
 learned nonlinear feature mixing.
 :::
 
-::: {.slide title="Architecture"}
+::: {.slide title="Shared embeddings feed two distinct score branches"}
 Shared embeddings feed both the FM head and the deep MLP
 head:
 
@@ -217,18 +210,18 @@ head:
 $$\hat y = \sigma(\hat y^{(FM)} + \hat y^{(DNN)})$$
 :::
 
-::: {.slide title="Implementation"}
+::: {.slide title="The implementation adds logits before the sigmoid"}
 @deepfm-implementation-of-deepfm
 :::
 
-::: {.slide title="Training"}
+::: {.slide title="A controlled comparison must hold the protocol fixed"}
 Same CTR pipeline as the FM deck — only the model
 changes:
 
 @deepfm-training-and-evaluating-the-model
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Explicit pair terms and an MLP encode different biases"}
 - DeepFM = FM (low-order) + deep MLP (high-order),
   sharing the same embedding table.
 - Same input format as FM; one extra branch.

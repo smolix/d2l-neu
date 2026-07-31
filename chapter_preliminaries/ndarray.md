@@ -894,8 +894,7 @@ id(X_new) == id(X)
 :begin_tab:`mxnet, tensorflow`
 Converting to a NumPy tensor (`ndarray`), or vice versa, is easy.
 The converted result does not share memory.
-This minor inconvenience is actually quite important:
-the framework may execute operations asynchronously,
+Framework operations may execute asynchronously,
 possibly on a GPU, while NumPy works on a buffer in host memory.
 If the two shared that buffer, each side would have to
 synchronize with the other before reading or writing it;

@@ -1,16 +1,24 @@
 # Dynamics: Differential Equations and Generative Flows
 :label:`chap_mdl-dynamics`
 
-Differential equations provide a useful description of several modern
-generative models. This chapter develops the required tools in sequence:
-ordinary differential equations and numerical solvers, stochastic differential
-equations and Itô calculus, the Fokker--Planck equation and probability-flow
-ODE, and finally score matching, diffusion, and flow matching. These methods
-differ in their choice of probability path, training objective, and sampler.
-The presentation draws on calculus (:numref:`chap_mdl-calculus`), probability
-(:numref:`chap_mdl-probability-statistics`), optimization
-(:numref:`chap_mdl-optimization`), and divergences
-(:numref:`chap_mdl-information-theory`).
+A generative model must carry a simple reference distribution to a complicated
+data distribution. A dynamical model makes three choices: the probability path
+between the endpoints, the vector field that moves samples along that path, and
+the numerical method used to integrate the field. Errors in these three choices
+have different causes. A poorly estimated field is a statistical error; a
+coarse solver is a numerical error; and an inconvenient path may make even an
+accurate field expensive to integrate.
+
+The four sections separate these questions in dependency order. Ordinary
+differential equations define deterministic flows and the solvers used to
+integrate them. Stochastic differential equations add Brownian noise and Itô
+calculus. The Fokker--Planck equation then converts random path dynamics into
+deterministic density evolution, exposing the score needed for time reversal.
+Finally, score matching and flow matching estimate the unknown field by
+regression and use it for generation. The presentation assumes the calculus,
+probability, optimization, and divergence material developed in
+:numref:`chap_mdl-calculus`, :numref:`chap_mdl-probability-statistics`,
+:numref:`chap_mdl-optimization`, and :numref:`chap_mdl-information-theory`.
 
 ```toc
 :maxdepth: 2

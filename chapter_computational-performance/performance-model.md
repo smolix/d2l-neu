@@ -98,8 +98,8 @@ performs one FLOP per element while moving $2b$ bytes (read $x_i$, write
 $y_i$), an intensity of $1/(2b)$ — a fraction of a FLOP per byte, no matter
 how large the tensor.
 
-The *roofline model* :cite:`Williams.Waterman.Patterson.2009` turns
-intensity into a performance prediction with one line of arithmetic. An
+The *roofline model* :cite:`Williams.Waterman.Patterson.2009` converts
+arithmetic intensity into an upper bound. An
 operation with intensity $I$ running on a machine with peak compute $P$
 (FLOP/s) and memory bandwidth $\beta$ (bytes/s) can attain at most
 
@@ -108,19 +108,15 @@ $$
 $$
 :eqlabel:`eq_roofline`
 
-Plotted on log–log axes (:numref:`fig_roofline`), the bound is a sloped
-"bandwidth wall" that rises with intensity until it hits the flat "compute
-roof". The corner where they meet is the **ridge point** $I^* = P/\beta$:
+Plotted on log–log axes (:numref:`fig_roofline`), the bandwidth bound rises
+with intensity until it meets the flat compute roof. The intersection is the
+**ridge point** $I^* = P/\beta$:
 operations with intensity below $I^*$ are *bandwidth-bound* — the memory
 system cannot feed the arithmetic units fast enough, and extra arithmetic
 hides under the memory time; operations above it are *compute-bound* — the
 arithmetic units are saturated, and moving fewer bytes would not help.
 
-![The roofline model, drawn with our build GPU's numbers. Attainable
-throughput is the minimum of the bandwidth wall (slope = memory bandwidth)
-and the compute roof. An elementwise operation lives far down the slope; a
-large matrix multiplication reaches the roof. The ridge point — about 165
-FLOP/byte here — separates the two regimes.](../img/mdl-perf-roofline.svg)
+![Roofline bound using the build GPU's peak compute and memory bandwidth. Attainable throughput is bounded by the smaller of peak compute and arithmetic intensity times bandwidth. The ridge point is about 165 FLOP/byte for this device; operations below it are bandwidth-bound in the model.](../img/mdl-perf-roofline.svg)
 :label:`fig_roofline`
 
 Let's compute the ridge point for the card this book is built on. Peak
@@ -410,8 +406,8 @@ d2l.plot(sizes, [achieved], 'matrix size $n$', 'achieved TFLOP/s',
 print([f'{n}: {tf:.1f}' for n, tf in zip(sizes, achieved)])
 ```
 
-The JAX tab shows off a genuinely elegant tool: instead of writing the
-$2n^3$ formula by hand, it asks the compiler. Ahead-of-time lowering
+The JAX tab obtains the operation count from the compiler rather than
+substituting the $2n^3$ formula. Ahead-of-time lowering
 (`jit(...).lower(...).compile()`) produces a compiled object whose
 `cost_analysis()` reports the exact analytic FLOP count of the program —
 no execution, no estimation. We will lean on this introspection again in
@@ -427,7 +423,7 @@ point, so the intensity model alone declares it compute-bound — yet the
 card delivers a tenth of peak or less. A $512^2$ output is simply too
 little work to fill 128 streaming multiprocessors, and the launch
 overhead has not yet been amortized away. Through the middle sizes
-throughput therefore climbs steeply — a single doubling of $n$ can buy
+throughput therefore climbs steeply — a single doubling of $n$ can yield
 several times the TFLOP/s — and the curve approaches the specification
 number only around $n \approx 2048$–$4096$, where the tensor cores
 finally saturate and the operation is compute-bound in fact as well as on
@@ -454,12 +450,11 @@ fix applies; misdiagnosing wastes effort — more FLOP/s cannot help a
 bandwidth-bound program.](../img/mdl-perf-regimes.svg)
 :label:`fig_regimes`
 
-**Compute-bound** — the arithmetic units are the constraint. This is the
-regime you *want*: the silicon is earning its price. The remaining levers
-are to buy the arithmetic more cheaply — a lower-precision format doubles
-throughput per halving (:numref:`sec_hardware`,
-:numref:`sec_memory_precision`) — or to buy more silicon
-(:numref:`sec_multi_gpu`).
+**Compute-bound** — arithmetic throughput is the limiting resource.
+Lower-precision formats may raise the applicable compute ceiling
+(:numref:`sec_hardware`, :numref:`sec_memory_precision`), while additional
+devices increase aggregate compute only when the parallel workload can
+use them (:numref:`sec_multi_gpu`).
 
 **Bandwidth-bound** — intensity below the ridge; the compute units starve
 while memory serves bytes. The fix is to *move fewer bytes*: fuse chains
@@ -533,10 +528,9 @@ The chain performs a handful of cheap operations, but eager execution runs
 each as its own kernel, and each kernel pays the full memory round trip —
 so the chain costs roughly as many round trips as it has operations,
 despite computing one output from one input. The diagnosis is complete:
-bandwidth-bound, with a factor-of-several overpayment in bytes. We could
-cure it right now by hand-writing one fused kernel; instead we deliberately
-leave it bleeding. :numref:`sec_compilation` will cure it with one line,
-and explain what the compiler saw.
+bandwidth-bound, with several redundant memory round trips.
+:numref:`sec_compilation` shows how compiler fusion replaces the sequence
+with one kernel and verifies both numerical agreement and reduced time.
 
 ## Profiling Complete Programs
 :label:`subsec_perf-profiler`
@@ -667,7 +661,7 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
 <!-- slides -->
 
 ::: {.slide title="Same Chip, Two Orders of Magnitude Apart"}
-One kernel — a square matmul — timed honestly at two sizes on
+One square matrix multiplication, synchronized and timed at two sizes on
 the same GPU delivers a percent or so of peak at one size and
 nearly the full specification number at the other.
 
@@ -749,9 +743,8 @@ the time and the arithmetic hides under it.**
 :::
 
 ::: {.slide title="The Method"}
-An unfused elementwise chain pays one memory round trip per op —
-we measured it, we diagnosed it, and we leave it bleeding until
-the compiler section cures it with one line.
+An unfused elementwise chain performs one memory round trip per operation.
+The compiler section measures how fusion removes the redundant traffic.
 
 **measure → classify → fix → re-measure**
 

@@ -61,7 +61,12 @@ The identity has four increasingly ambitious uses: drop terms, subtract a consta
 
 ### Reward-to-Go and Causality
 
-Look at what multiplies the score at time $t$ in the REINFORCE estimator: the return $R(\tau_i)$ of the whole trajectory, including rewards that were collected *before* the agent took the action $a_t^i$. The action did not cause those rewards. By the observation above, each product of a past reward with the score at time $t$ has zero mean; it contributes nothing to the gradient on average and adds variance for free. Dropping all such terms from $\nabla_\theta J(\theta)$ leaves
+In the REINFORCE estimator, the score at time $t$ is multiplied by the
+return $R(\tau_i)$ of the whole trajectory, including rewards collected
+before action $a_t^i$. Those earlier rewards cannot depend on that action.
+Their product with the time-$t$ score therefore has zero expectation but
+can have nonzero variance. Removing these zero-mean terms from
+$\nabla_\theta J(\theta)$ leaves
 
 $$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ \sum_{t'=t}^{T-1} \gamma^{t'} r_{t'} \Big].$$
 
@@ -237,7 +242,18 @@ The caveat attached to $\mu$ above can be removed rather than tolerated: the mea
 
 $$b_i = \frac{1}{n-1} \sum_{j \neq i} R(\tau_j),$$
 
-so that $b_i$ is independent of everything trajectory $i$ did. The conditional identity of the first section then applies with no correction term: the estimator is exactly unbiased at every batch size, not just asymptotically. It also costs nothing, because $R_i - b_i = \frac{n}{n-1}(R_i - \mu)$: leave-one-out is batch centering rescaled by the constant $n/(n-1)$, so the bias of plain centering with per-trajectory weights is a pure shrinkage of the mean by $(n-1)/n$, nothing more. Both statements can be verified *exactly* on a decision problem small enough to enumerate, two states visited in order, two actions at each, rewards from a table, with the scores coming straight from :eqref:`eq_softmax_score` and no autograd:
+so that $b_i$ is independent of trajectory $i$ conditional on the other
+trajectories. The conditional zero-mean identity therefore applies with no
+correction term: the estimator is unbiased at every batch size. Moreover,
+
+$$R_i-b_i=\frac{n}{n-1}(R_i-\mu),$$
+
+so leave-one-out centering differs from ordinary batch centering only by
+the constant $n/(n-1)$. Plain centering with per-trajectory weights thus
+shrinks the mean estimator by $(n-1)/n$. We verify both statements on a
+small decision problem that can be enumerated exactly: two states visited
+in order, two actions at each state, table-based rewards, and analytic
+scores from :eqref:`eq_softmax_score`.
 
 ```{.python .input #baselines-leave-one-out}
 %%tab pytorch, jax
@@ -535,8 +551,8 @@ has a mean-zero product with the score,
 $$E\big[ c\ \nabla_\theta \log \pi_\theta(a_t \mid s_t) \big] = 0.$$
 
 Multiply a score by such a $c$, or subtract it from the weight,
-and the average never moves. **Everything in this section is
-this lemma.**
+and the expectation is unchanged. Reward-to-go, state baselines, and
+leave-one-out baselines are applications of this identity.
 :::
 
 ::: {.slide title="Reward-to-Go: One Scan"}
@@ -593,7 +609,7 @@ Monte Carlo regression today; bootstrapped targets are
 actor-critic (next chapter).
 :::
 
-::: {.slide title="Estimator Hygiene"}
+::: {.slide title="Dependence Conditions Determine Baseline Bias"}
 Leave-one-out: $b_i = \frac{1}{n-1}\sum_{j \neq i} R(\tau_j)$,
 independent of trajectory $i$: *exactly* unbiased. It is
 $\frac{n}{n-1} \times$ centering, and it is RLOO.

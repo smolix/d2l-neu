@@ -9,26 +9,15 @@ sequences, but their fixed-size summaries may lose information in long
 sequences. We seek an operation that can access any input representation while
 using a fixed set of parameters.
 
-Databases have exactly this property. In their simplest form they are
-collections of keys ($k$) and values ($v$). For instance, our database
-$\mathcal{D}$ might consist of tuples \{("Zhang", "Aston"), ("Lipton",
-"Zachary"), ("Li", "Mu"), ("Smola", "Alex"), ("Hu", "Rachel"), ("Werness",
-"Brent")\} with the last name being the key and the first name being the
-value. We can operate on $\mathcal{D}$, for instance with the exact query
-($q$) for "Li", which would return the value "Mu". If ("Li", "Mu") was not a
-record in $\mathcal{D}$, there would be no valid answer. If we also allowed
-for approximate matches, we would retrieve ("Lipton", "Zachary") instead.
-This example has four relevant properties:
-
-* We can design queries $q$ that operate on ($k$,$v$) pairs in such a manner
-  as to be valid regardless of the database size.
-* The same query can receive different answers, according to the contents of
-  the database.
-* The "code" being executed for operating on a large state space (the
-  database) can be quite simple (e.g., exact match, approximate match,
-  top-$k$).
-* There is no need to compress or simplify the database to make the
-  operations effective.
+Databases have this property because a query is evaluated against stored
+key--value pairs. Consider the scalar database
+$\mathcal{D}=\{(2,10),(5,20)\}$. An exact query $q=5$ returns the value 20.
+A soft query first defines a score, for example
+$a(q,k)=-(q-k)^2$, and normalizes the two scores. For $q=4$, key 5 receives
+the larger weight, but both values contribute to the result. The same rule
+works for any database size, and its output changes when the stored pairs
+change; the query does not require compressing the database into one fixed
+vector first.
 
 The *attention mechanism* :cite:`Bahdanau.Cho.Bengio.2014` is a differentiable
 version of this lookup. This section defines the operation and illustrates it
@@ -52,32 +41,21 @@ from jax import numpy as jnp
 
 ## Attention as Differentiable Lookup
 
-Denote by $\mathcal{D} \stackrel{\textrm{def}}{=} \{(\mathbf{k}_1,
-\mathbf{v}_1), \ldots, (\mathbf{k}_m, \mathbf{v}_m)\}$ a database of $m$
-tuples of *keys* and *values*, and by $\mathbf{q}$ a *query*. Then we define
-the *attention* over $\mathcal{D}$ as
+Let $\mathbf{q},\mathbf{k}_i \in \mathbb{R}^{d_k}$ and
+$\mathbf{v}_i \in \mathbb{R}^{d_v}$. Denote by $\mathcal{D}
+\stackrel{\textrm{def}}{=} \{(\mathbf{k}_1, \mathbf{v}_1), \ldots,
+(\mathbf{k}_m, \mathbf{v}_m)\}$ a database of $m$ key--value pairs. We
+define the attention output in $\mathbb{R}^{d_v}$ by
 
 $$\textrm{Attention}(\mathbf{q}, \mathcal{D}) \stackrel{\textrm{def}}{=} \sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i,$$
 :eqlabel:`eq_attention_pooling`
 
-where $\alpha(\mathbf{q}, \mathbf{k}_i) \in \mathbb{R}$ ($i = 1, \ldots, m$)
-are scalar attention weights. The operation is called *attention pooling*.
-The output is a linear combination of the values, with larger weights giving
-larger contributions. The exact-lookup example above is the special case in
-which all but one weight is zero. Several regimes of
-:eqref:`eq_attention_pooling` are useful:
-
-* The weights $\alpha(\mathbf{q}, \mathbf{k}_i)$ are nonnegative. In this
-  case the output of the attention mechanism is contained in the convex cone
-  spanned by the values $\mathbf{v}_i$.
-* The weights form a convex combination, i.e., $\sum_i \alpha(\mathbf{q},
-  \mathbf{k}_i) = 1$ and $\alpha(\mathbf{q}, \mathbf{k}_i) \geq 0$ for all
-  $i$. This is the most common setting in deep learning.
-* Exactly one of the weights is $1$ and all others are $0$. This is the
-  traditional database query.
-* All weights are equal, $\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{1}{m}$.
-  This amounts to averaging across the entire database, also called average
-  pooling.
+where the scalar weights $\alpha(\mathbf{q},\mathbf{k}_i)$ determine each
+value's contribution. In the layers used below, the weights are nonnegative
+and sum to one, so the output is a convex combination of the values. Exact
+lookup is the limiting one-hot case, and uniform weights give average pooling.
+Signed or unnormalized variants exist, but they are not the default operation
+in this chapter.
 
 A common strategy for ensuring that the weights sum up to $1$ is to start
 from any scoring function $a(\mathbf{q}, \mathbf{k})$ and normalize. To make

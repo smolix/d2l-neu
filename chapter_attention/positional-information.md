@@ -35,7 +35,8 @@ import optax
 ## Attention Ignores Order
 
 Let $\mathbf{X} \in \mathbb{R}^{n \times d}$ hold a sequence of $n$ token
-representations and let $f$ be an (unmasked) self-attention layer,
+representations. At evaluation time, with dropout disabled and with no mask
+or position-dependent bias, let $f$ be the self-attention layer
 
 $$
 f(\mathbf{X}) = \mathrm{softmax}\!\left(\frac{\mathbf{X}\mathbf{W}_q (\mathbf{X}\mathbf{W}_k)^\top}{\sqrt{d}}\right) \mathbf{X}\mathbf{W}_v.
@@ -336,10 +337,9 @@ different question, which we examine next.
 ## Extrapolation Beyond the Training Length
 
 Every scheme above fixes permutation blindness at the training length. They
-differ at *deployment*: contexts grow — users paste longer documents — and
-retraining for every length is not an option. This subfield asks for *length
-extrapolation*: train at context $L$, evaluate at $4L$, and hope perplexity
-survives. Two more schemes were designed with exactly this test in mind.
+differ when evaluated outside the training range. A length-extrapolation test
+trains at context $L$ and compares perplexity at $L$ with perplexity at, for
+example, $4L$. Two more schemes were designed for this setting.
 
 ### ALiBi and NoPE
 
@@ -555,7 +555,7 @@ class TinyCharLM(nnx.Module):  #@save
 
 ### The Experiment
 
-We train one copy per scheme on the character-level Time Machine corpus of
+We train one fixed-seed copy per scheme on the character-level Time Machine corpus of
 :numref:`sec_text-sequence` at context length 128, using the same fixed-step
 training loop as :numref:`sec_adam`. Each run takes well under a minute on
 one GPU. The learned and sinusoidal tables are allocated out to `max_len`
@@ -593,8 +593,8 @@ for pos in schemes:
     print(f'{pos:>10}: final training loss {sum(losses[-100:]) / 100:.2f}')
 ```
 
-Now the test the section has been building toward. Every model was trained on
-length-$128$ sequences, so we evaluate validation perplexity at that training
+Every model above was trained on length-$128$ sequences. We evaluate
+validation perplexity at that training
 context, $n = 128$, and at two and four times it ($n = 256$ and $512$) — the
 first point is in range, the other two probe extrapolation — on the same
 held-out text:
@@ -658,26 +658,23 @@ d2l.plot(list(contexts), [ppls[pos] for pos in schemes],
          fmts=('-', 'm--', 'g-.', 'r:', 'c-'))
 ```
 
-Two readings of this table, both instructive. At the training context, the
-ranking rewards explicit position information: RoPE comes out best at
-perplexity around 5, the learned table close behind, the sinusoidal table
-and ALiBi land together at around 7 — ALiBi's handicap being its fixed
-recency prior — and NoPE trails at around 9. The causal mask does leak
-position, but weakly at this scale. At four times the
-training context, the ordering inverts. Both absolute schemes degrade badly,
-to several times their training-length perplexity: the learned table because
-positions past 128 are untrained noise, the sinusoidal one because the model
-has never seen those fingerprints. The striking failure is RoPE: *relative in
-form is not relative in practice*. Its scores depend only on offsets — we
-proved and measured as much — but offsets beyond 127 were still never seen in
-training, and its length-512 perplexity lands at several times its
-training-length value. Relative to where it started, that blow-up is as large
-as the one the absolute schemes suffer, and in some runs far larger. Only
-the two schemes with no position table are stable: ALiBi stays essentially flat
-across every length, as its authors' "train short, test long" title
-promised, and NoPE is flat too, just from a weaker starting point. (The
-exact perplexities fluctuate run to run and between frameworks; the ordering
-and the shape of the curves are what replicate.)
+For this fixed seed and training protocol, explicit position information
+improves perplexity at the training length: RoPE is lowest, followed by the
+learned table, while sinusoidal embeddings and ALiBi are similar and NoPE is
+higher. This comparison does not isolate the cause of the differences; for
+example, describing ALiBi's result as a consequence of its recency bias would
+require a separate intervention.
+
+At contexts longer than those seen during training, the learned and
+sinusoidal absolute schemes deteriorate. The learned table has untrained rows
+beyond position 128, whereas the sinusoidal table supplies vectors outside the
+training distribution. RoPE also deteriorates in this run. Although its score
+depends on relative offset, offsets beyond 127 did not occur during training,
+so relative parameterization alone does not guarantee length extrapolation.
+ALiBi and NoPE remain approximately flat in this experiment. Since each curve
+comes from one seed in each framework, these observations illustrate the
+possible behavior of the schemes; they do not establish a stable ranking or
+an estimate of run-to-run variation.
 
 ### Extending a Trained Model's Context
 
@@ -691,8 +688,8 @@ instead of extrapolation. This is *position interpolation*
 :cite:`Chen.Wong.Chen.ea.2023`, which (with a brief fine-tune) extended
 Llama from 2k to 32k context; YaRN :cite:`Peng.Quesnelle.Fan.ea.2024`
 refines it by rescaling the fast, position-discriminating frequencies
-differently from the slow, content-carrying ones. A scheme of this family
-produced every long-context RoPE model you are likely to use. Note
+differently from the slow, content-carrying ones. Many long-context RoPE
+models use schemes from this family. Note
 that the recipe has two halves: rescaling *and* a brief fine-tune at the
 scaled angles. Exercise 3 walks through both halves on our character model;
 in our runs the rescaling alone actually hurts — compressing the angle
@@ -708,10 +705,11 @@ sinusoidal embeddings define the vectors analytically, while learned tables are
 defined only over positions used in training. RoPE rotates query and key feature
 pairs so their inner product depends on relative offset. ALiBi adds a per-head
 linear distance penalty, and NoPE uses only the positional asymmetry supplied by
-the causal mask. In the character-model experiment, RoPE performs best at the
-training length, but both absolute encodings and RoPE degrade at four times that
-length. ALiBi and NoPE remain stable. Position interpolation and YaRN rescale
-RoPE frequencies to map longer contexts into the trained range.
+the causal mask. In the fixed-seed character-model experiment, RoPE has the
+lowest perplexity at the training length, while both absolute encodings and
+RoPE degrade at four times that length. ALiBi and NoPE are approximately
+stable in that run. Position interpolation and YaRN rescale RoPE frequencies
+to map longer contexts into the trained range.
 
 ## Exercises
 

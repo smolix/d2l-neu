@@ -7,17 +7,11 @@ fixed-length input to an output and usually treated examples as independent.
 Sequence models must instead represent dependence across positions and inputs
 whose lengths may vary.
 
-The first assumption was that examples are independent and identically distributed.
-When we fit linear and logistic regression in :numref:`chap_regression`
-and :numref:`chap_classification`, or multilayer perceptrons in :numref:`chap_perceptrons`,
-we drew each example without regard to the others.
-In a sentence or a time series the opposite is true:
-every element depends on the ones before it,
-and that dependence is precisely the signal we want to model.
-The second assumption was that each input has a fixed shape.
-Even the images of :numref:`chap_cnn` arrived as a fixed grid of pixels.
-A document, a recording, or a price history has no such fixed length,
-and two examples rarely share one.
+Earlier objectives usually treated examples as exchangeable, fixed-shape
+records. Sequence tasks retain the order within each example: conditioning on
+earlier words, notes, or measurements can change the distribution of later
+ones. Sequence lengths may also vary, even though implementations often pad or
+batch them into equal-sized arrays.
 
 The chapter develops two main ideas. The first is *autoregressive
 factorization*.
@@ -31,25 +25,18 @@ Generation repeats this prediction while feeding each generated output back
 as the next input.
 
 The second idea is the *hidden state*.
-A prefix grows without bound as a sequence unrolls,
-yet we cannot afford a memory that grows along with it.
-So we insist that the model carry a fixed-size summary
-of everything it has read so far, revising that summary as each new element arrives.
-This is the role of the recurrent neural network. A central limitation is that
-the bounded state may not retain information from an arbitrarily long past.
+A prefix grows with time, but a recurrent model carries a fixed-size state
+$h_t=f(x_t,h_{t-1})$. The state is a function of the prefix, and training
+determines which predictive information it retains. Its fixed size makes
+incremental inference inexpensive but may discard information from the distant
+past.
 
-Language modeling provides the running application. We tokenize a corpus,
-construct a counting baseline, define and train a recurrence, analyze its
-gradients, and compare methods for generating text.
-We begin with sequences in the abstract in :numref:`sec_sequence`,
-then turn text into tokens a model can consume in :numref:`sec_text-sequence`.
-:numref:`sec_language-model` frames the language-modeling task
-and fits a simple counting baseline to beat.
-:numref:`sec_rnn` introduces the recurrent network itself,
-and :numref:`sec_rnn-scratch` implements an RNN language model end to end.
-:numref:`sec_bptt` analyzes gradients through time,
-and :numref:`sec_decoding` concludes
-by turning a trained model's predictions back into readable text.
+Language modeling provides the running application. We turn text into tokens,
+factor sequence probabilities into next-token conditionals, and replace a
+fixed context window with a recurrent state. The implementation then exposes
+two remaining problems: gradients must propagate through repeated state
+updates, and a probability distribution still needs a decoding rule to produce
+text.
 
 Recurrent networks powered the deep-learning breakthroughs of the 2010s
 in speech recognition and machine translation,

@@ -148,17 +148,18 @@ function with a new shape triggers a full **retrace and recompile**. In a
 training loop with variable-length batches this can mean recompiling every
 step. The escape hatches are to keep shapes static (the
 `drop_remainder=True` data-loading discipline of :numref:`sec_fashion_mnist`
-was exactly this, paying off now), to mark genuinely-constant arguments
+was designed for this case), to mark genuinely constant arguments
 with `static_argnums`, and to express data-dependent control flow with
 `lax.cond`/`lax.scan` so it lives *inside* the graph rather than breaking
-it. The contrast in one line: **`torch.compile` bends around Python and
-you watch for breaks; `jax.jit` demands purity and you watch for
-recompiles.**
+it. The frameworks therefore require different checks: `torch.compile`
+allows more Python but must be inspected for graph breaks, whereas
+`jax.jit` requires pure traced computation and must be inspected for
+shape- or dtype-triggered recompilation.
 
 ## Operation Fusion
 :label:`subsec_comp-fusion`
 
-Now the payoff. Recall the bleeding elementwise chain from
+Recall the unfused elementwise chain from
 :numref:`subsec_perf-regimes` — a handful of cheap operations, each its
 own kernel, each a full memory round trip. Compilation fuses them into
 one kernel that reads the input once, does all the arithmetic in
@@ -236,7 +237,9 @@ compiling the optimizer too is possible, just not what the one-liner
 gives you. In JAX, nothing stops the jitted function from *being* the
 whole step: loss, gradients, and the parameter update, one compiled
 program. Either way, the lesson to internalize is the *shape* of the
-cost: a fixed price on the first call, repaid over every step after:
+cost: a fixed compilation time on the first call followed by lower
+steady-state execution time. Whether compilation reduces total runtime
+depends on the number of subsequent calls:
 
 ```{.python .input #compilation-whole-step-compilation-measured}
 %%tab pytorch
@@ -365,7 +368,7 @@ print(d2l.Benchmark(lambda: compiled(deep_params, x), desc='jit'))
 
 The `reduce-overhead` mode captures the model's kernel launches into a
 CUDA graph and replays the whole thing per call, collapsing a
-hundred-odd launch latencies into one. The catch is that replay is
+hundred-odd launch latencies into one. Replay is
 *rigid*: a replayed graph is a fixed sequence of kernels on fixed memory
 addresses, so the input shape must not change between calls (change it
 and PyTorch re-captures). That rigidity is also why we time the forward
@@ -382,9 +385,9 @@ consequence of compile-by-tracing.
 
 Compilation is not free and not always worth it. The checklist:
 
-* **Short runs.** If you train for a few dozen steps, the seconds of
-  compile time may exceed everything you save. Compilation pays over
-  thousands of steps, not tens.
+* **Short runs.** If training lasts only a few dozen steps, compilation
+  time may exceed the accumulated steady-state reduction. Report both
+  first-call and repeated-call times and compute the break-even call count.
 * **Graph breaks in hot loops.** A `torch.compile`d function riddled with
   data-dependent branches compiles many small fragments and falls back to
   Python between them, keeping little of the benefit. `torch._dynamo.explain`
@@ -488,7 +491,7 @@ price of having no graph breaks.
 :::
 
 ::: {.slide title="Fusion Reduces Memory Traffic"}
-The bleeding chain from §13.1, cured in one line:
+The unfused chain from §13.1, compiled for fusion:
 
 @compilation-what-the-compiler-does-fusion
 

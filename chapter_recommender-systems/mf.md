@@ -1,41 +1,53 @@
 # Matrix Factorization
 
-Matrix Factorization :cite:`Koren.Bell.Volinsky.2009` is a well-established algorithm in the recommender systems literature. The first version of matrix factorization model is proposed by Simon Funk in a famous [blog
-post](https://sifter.org/%7Esimon/journal/20061211.html) in which he described the idea of factorizing the interaction matrix. It then became widely known due to the Netflix contest which was held in 2006. At that time, Netflix, a media-streaming and video-rental company, announced a contest to improve its recommender system performance. The best team that can improve on the Netflix baseline, i.e., Cinematch, by 10 percent would win a one million USD prize.  As such, this contest attracted
-a lot of attention to the field of recommender system research. Subsequently, the grand prize was won by the BellKor's Pragmatic Chaos team, a combined team of BellKor, Pragmatic Theory, and BigChaos (you do not need to worry about these algorithms now). Although the final score was the result of an ensemble solution (i.e., a combination of many algorithms), the matrix factorization algorithm played a critical role in the final blend. The technical report of the Netflix Grand Prize solution :cite:`Toscher.Jahrer.Bell.2009` provides a detailed introduction to the adopted model. In this section, we will dive into the details of the matrix factorization model and its implementation.
+Matrix factorization represents each user and item by a low-dimensional vector
+and predicts a rating from their inner product :cite:`Koren.Bell.Volinsky.2009`.
+The method became prominent through the Netflix Prize, where factor models were
+important components of the winning ensemble
+:cite:`Toscher.Jahrer.Bell.2009`. Its lasting value is conceptual as well as
+practical: a sparse interaction matrix can be modeled through two compact sets
+of embeddings, with parameters shared across all observed ratings.
 
 
 ## The Matrix Factorization Model
 
-Matrix factorization is a class of collaborative filtering models. Specifically, the model factorizes the user-item interaction matrix (e.g., rating matrix) into the product of two lower-rank matrices, capturing the low-rank structure of the user-item interactions.
+Let $\mathbf R\in\mathbb R^{m\times n}$ contain the explicit ratings of $m$
+users for $n$ items. We approximate it by
+$\hat{\mathbf R}=\mathbf P\mathbf Q^\top$, where
+$\mathbf P\in\mathbb R^{m\times k}$ contains user embeddings and
+$\mathbf Q\in\mathbb R^{n\times k}$ contains item embeddings, with $k\ll\min(m,n)$.
 
-Let $\mathbf{R} \in \mathbb{R}^{m \times n}$ denote the interaction matrix with $m$ users and $n$ items, and the values of $\mathbf{R}$ represent explicit ratings. The user-item interaction will be factorized into a user latent matrix $\mathbf{P} \in \mathbb{R}^{m \times k}$ and an item latent matrix $\mathbf{Q} \in \mathbb{R}^{n \times k}$, where $k \ll m, n$, is the latent factor size. Let $\mathbf{p}_u$ denote the $u^\textrm{th}$ row of $\mathbf{P}$ and $\mathbf{q}_i$ denote the $i^\textrm{th}$ row of $\mathbf{Q}$.  For a given item $i$, the elements of $\mathbf{q}_i$ measure the extent to which the item possesses those characteristics such as the genres and languages of a movie. For a given user $u$, the elements of $\mathbf{p}_u$ measure the extent of interest the user has in items' corresponding characteristics. These latent factors might measure obvious dimensions as mentioned in those examples or are completely uninterpretable. The predicted ratings can be estimated by
+The row $\mathbf p_u$ represents user $u$, and $\mathbf q_i$ represents item
+$i$. Their inner product is large when the two embeddings align. Individual
+coordinates should not usually be read as fixed semantic attributes: rotating
+both embedding spaces by the same orthogonal matrix leaves every prediction
+unchanged. The model identifies a useful relative geometry, not a unique label
+for each latent coordinate. The predicted matrix is
 
 $$\hat{\mathbf{R}} = \mathbf{PQ}^\top$$
 
-where $\hat{\mathbf{R}}\in \mathbb{R}^{m \times n}$ is the predicted rating matrix which has the same shape as $\mathbf{R}$. One major problem of this prediction rule is that users/items biases can not be modeled. For example, some users tend to give higher ratings or some items always get lower ratings due to poorer quality. These biases are commonplace in real-world applications. To capture these biases, user specific and item specific bias terms are introduced. Specifically, the predicted rating user $u$ gives to item $i$ is calculated by
+The plain inner product omits systematic offsets: some users give higher ratings
+than others, and some items receive higher ratings across users. User and item
+biases model these effects,
 
 $$
 \hat{\mathbf{R}}_{ui} = \mathbf{p}_u\mathbf{q}^\top_i + b_u + b_i
 $$
 
-Then, we train the matrix factorization model by minimizing the mean squared error between predicted rating scores and real rating scores.  The objective function is defined as follows:
+We fit the model only on the observed set $\mathcal K$ and regularize all learned parameters:
 
 $$
-\underset{\mathbf{P}, \mathbf{Q}, b_*}{\mathrm{argmin}} \sum_{(u, i) \in \mathcal{K}} \| \mathbf{R}_{ui} -
-\hat{\mathbf{R}}_{ui} \|^2 + \lambda (\| \mathbf{P} \|^2_F + \| \mathbf{Q}
-\|^2_F + b_u^2 + b_i^2 )
+\underset{\mathbf P,\mathbf Q,\mathbf b^{(u)},\mathbf b^{(i)}}{\mathrm{argmin}}
+\sum_{(u,i)\in\mathcal K}(R_{ui}-\hat R_{ui})^2
++\lambda\left(\|\mathbf P\|_F^2+\|\mathbf Q\|_F^2
++\|\mathbf b^{(u)}\|_2^2+\|\mathbf b^{(i)}\|_2^2\right).
 $$
 
-where $\lambda$ denotes the regularization rate. The regularizing term $\lambda (\| \mathbf{P} \|^2_F + \| \mathbf{Q}
-\|^2_F + b_u^2 + b_i^2 )$ is used to avoid over-fitting by penalizing the magnitude of the parameters. The $(u, i)$ pairs for which $\mathbf{R}_{ui}$ is known are stored in the set
-$\mathcal{K}=\{(u, i) \mid \mathbf{R}_{ui} \textrm{ is known}\}$. The model parameters can be learned with an optimization algorithm, such as Stochastic Gradient Descent and Adam.
+The loss does not treat missing entries as zero ratings. The coefficient
+$\lambda$ penalizes embedding and bias magnitudes, and the parameters can be
+fitted with stochastic gradient methods.
 
-An intuitive illustration of the matrix factorization model is shown below:
-
-![Illustration of matrix factorization model](../img/rec-mf.svg)
-
-In the rest of this section, we will explain the implementation of matrix factorization and train the model on the MovieLens dataset.
+![Matrix factorization looks up a user embedding $\mathbf p_u$ and an item embedding $\mathbf q_i$. Their inner product, together with user and item biases, predicts $R_{ui}$; the parameters share information across the sparse interaction matrix.](../img/rec-mf.svg)
 
 ```{.python .input #mf-the-matrix-factorization-model  n=2}
 #@tab mxnet
@@ -319,7 +331,7 @@ Famously won the Netflix Prize era (Koren et al., 2009).
 Still a strong baseline; deep models add capacity on top.
 :::
 
-::: {.slide title="The model"}
+::: {.slide title="Dot products score user--item compatibility"}
 Two embedding tables + per-user / per-item bias:
 
 @mf-the-matrix-factorization-model
@@ -329,7 +341,7 @@ Two embedding tables + per-user / per-item bias:
 @mf-model-implementation
 :::
 
-::: {.slide title="Evaluation: RMSE"}
+::: {.slide title="RMSE evaluates held-out observed ratings"}
 Standard rating-prediction metric:
 
 $$\text{RMSE} = \sqrt{\frac{1}{|\mathcal{T}|} \sum_{(u,i) \in \mathcal{T}} (r_{ui} - \hat r_{ui})^2}.$$
@@ -337,7 +349,7 @@ $$\text{RMSE} = \sqrt{\frac{1}{|\mathcal{T}|} \sum_{(u,i) \in \mathcal{T}} (r_{u
 @mf-evaluation-measures
 :::
 
-::: {.slide title="Training"}
+::: {.slide title="Only observed ratings enter the objective"}
 Adam on MSE loss with $\ell_2$ weight decay (regularizes the
 embedding magnitudes — important for unobserved (u, i)
 pairs):
@@ -345,7 +357,7 @@ pairs):
 @mf-training-and-evaluating-the-model-1
 :::
 
-::: {.slide title="Model fit"}
+::: {.slide title="A fitted subspace need not have named coordinates"}
 Initialize the embedding tables, run rating prediction training,
 then interpret the final RMSE as average prediction error on the
 1-5 rating scale:
@@ -357,7 +369,7 @@ then interpret the final RMSE as average prediction error on the
 @mf-training-and-evaluating-the-model-3
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Low rank shares evidence across sparse ratings"}
 - Matrix factorization = low-rank approximation of the
   user × item rating matrix.
 - $\hat r_{ui} = \mathbf{p}_u^\top \mathbf{q}_i + b_u + b_i$,

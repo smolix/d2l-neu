@@ -53,7 +53,10 @@ A classifier maps an example $\mathbf{x}\in\mathbb{R}^d$ to a label $y\in\{1,\ld
 
 $$\hat{y} = \mathop{\mathrm{argmax}}_y \, p(y\mid\mathbf{x}).$$
 
-Estimating $p(y\mid\mathbf{x})$ directly is hopeless. With $d$ binary features there are $2^d$ distinct inputs $\mathbf{x}$; storing a label distribution for each would need on the order of $2^d$ numbers, and we would have to *see* most of those inputs to estimate them. With the $784$ pixels of an MNIST image that is $2^{784}$ patterns, vastly more than there are atoms in the universe. Memorizing one answer per input amounts to a lookup table we could never fill.
+An unconstrained table for $p(y\mid\mathbf{x})$ is impractical in high
+dimensions. With $d$ binary features there are $2^d$ possible inputs, so the
+table grows exponentially and most entries receive little or no data. For an
+MNIST image, $d=784$.
 
 Bayes' rule, :eqref:`eq_mdl-bayes_density`, turns the problem around. Instead of modelling "which label, given this image," we model "which images, given this label", the *generative* direction:
 
@@ -87,20 +90,25 @@ joint distribution into one-feature marginals:
 $$p(\mathbf{x}\mid y) = \prod_{i=1}^d p(x_i\mid y).$$
 :eqlabel:`eq_mdl-naive_assumption`
 
-As a graphical model the assumption is a star: the label $y$ points to every
-feature, and the features are joined by nothing
-(:numref:`fig_mdl-naive-independence`, left). All a feature can learn about the
-others, it learns through the class label; given $y$, the features no longer
-talk to one another. A faithful model of a digit would add edges *among* the
-features (neighboring pixels co-fire), and naive Bayes simply erases them
-(:numref:`fig_mdl-naive-independence`, right).
+For binary features, an unrestricted class-conditional distribution has
+$2^d-1$ free probabilities per class. The factorization uses only $d$
+Bernoulli parameters per class, plus $K-1$ class-prior parameters. This is the
+computational and statistical benefit of the assumption.
 
-![The naive assumption as a graphical model. Left: the label $y$ fans out to the features $x_1,\ldots,x_d$ with no edges *among* the features, so they are independent once $y$ is known: the picture of conditional independence. Right: a faithful model would carry dependence edges between features (here $x_1$–$x_2$ and $x_3$–$x_d$); naive Bayes throws them away (struck out), which is exactly what makes it cheap and what makes it wrong.](../img/mdl-prob-naive-independence.svg)
+As a graphical model the factorization is a star: the label $y$ is a parent of
+each feature, with no edges among features
+(:numref:`fig_mdl-naive-independence`, left). Pixel data retain substantial
+conditional dependence after the digit label is known, as illustrated by the
+additional feature edges in the right panel.
+
+![Conditional-independence structures. Left: in naive Bayes, the label $y$ is a parent of each feature and there are no feature-to-feature edges, representing $p(\mathbf x\mid y)=\prod_i p(x_i\mid y)$. Right: a model with additional conditional dependence includes feature edges such as $x_1$–$x_2$ and $x_3$–$x_d$.](../img/mdl-prob-naive-independence.svg)
 :label:`fig_mdl-naive-independence`
 
-This is the assumption that makes Bayes "naive," and it is *false*: in a real digit the pixels are strongly correlated, since an inked pixel makes its neighbors far more likely to be inked too. The model pretends each pixel is painted by an independent coin flip whose bias depends only on the digit. Yet the assumption is cheap. We no longer estimate one giant joint distribution; we estimate $d$ tiny one-feature distributions $p(x_i\mid y)$ per class, only $\mathcal{O}(dK)$ numbers instead of $\mathcal{O}(2^d K)$. The curse of dimensionality, the same exponential blow-up that defeats grid-based integration in :numref:`sec_mdl-integral_calculus`, is broken by fiat.
-
-Why tolerate a false assumption? Because the classifier only needs the largest probability to land on the correct label; the probabilities themselves can be far off. A model can be badly miscalibrated (massively over- or under-confident, as multiplying $784$ falsely-independent factors will be) and still pick the right winner. Naive Bayes routinely classifies well even where its independence story is plainly wrong :cite:`Domingos.Pazzani.1997`, and the savings let it learn from a modest dataset rather than an impossible one.
+For MNIST this assumption is inaccurate: neighboring pixels remain correlated
+within a digit class. Nevertheless, classification depends on the ordering of
+class scores, not on every estimated probability being accurate. Naive Bayes
+can therefore classify well even when its posterior probabilities are poorly
+calibrated :cite:`Domingos.Pazzani.1997`.
 
 Substituting the factorized class-conditional :eqref:`eq_mdl-naive_assumption` into the Bayes-rule predictor $\hat{y} = \mathop{\mathrm{argmax}}_y p(\mathbf{x}\mid y)\,p(y)$ (the label-independent denominator already discarded) gives the **naive Bayes classifier** :cite:`Maron.1961`:
 
@@ -120,7 +128,20 @@ The score also has a telling shape. For a binary feature, $\log p(x_i\mid y) = x
 
 $$\log p(y) + \sum_{i=1}^d \Bigl[ x_i \log p(x_i{=}1\mid y) + (1-x_i)\log p(x_i{=}0\mid y) \Bigr],$$
 
-which is **affine in $\mathbf{x}$**, a constant plus a weighted sum of the pixels :cite:`Bishop.2006`. Each class score is therefore $\mathbf{w}_y\cdot\mathbf{x} + b_y$, and the boundary between any two classes, where their scores tie, is a hyperplane. So naive Bayes is a *linear* classifier: it carves the input space with the same decision planes as the softmax classifier of :numref:`sec_softmax` (and the mean-difference rule of :numref:`sec_mdl-geometry-linear-algebraic-ops`); the two models differ only in how they *set* those planes: by counting class-conditional frequencies here, by gradient descent on the posterior there.
+which is **affine in $\mathbf{x}$**, a constant plus a weighted sum of the
+pixels :cite:`Bishop.2006`. Thus **Bernoulli naive Bayes** has class scores
+$\mathbf{w}_y\cdot\mathbf{x}+b_y$, and every pairwise decision boundary is a
+hyperplane. Multinomial naive Bayes is similarly affine in feature counts.
+These models have the same boundary form as softmax regression, although their
+parameters are estimated from class-conditional counts rather than by directly
+optimizing conditional likelihood.
+
+This linear-boundary conclusion does not hold for every naive Bayes likelihood.
+With Gaussian features, the class score contains
+$-(x_i-\mu_{iy})^2/(2\sigma_{iy}^2)$. If the variance of feature $i$ is shared
+across classes, its $x_i^2$ term cancels when two class scores are compared and
+the boundary is linear. With class-specific variances, the quadratic terms do
+not cancel, and the boundary is generally quadratic.
 
 ## Parameter Estimation from Counts
 
@@ -285,10 +306,15 @@ On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accura
 
 * Bayes' rule recasts classification generatively: $p(y\mid\mathbf{x}) \propto p(\mathbf{x}\mid y)\,p(y)$, predicting the label that maximizes the numerator.
 * As a **generative** model it estimates $p(\mathbf{x}\mid y)\,p(y)$, the mirror image of a **discriminative** model like softmax regression, which estimates $p(y\mid\mathbf{x})$ directly. Sample-efficiency and asymptotic-error comparisons depend on the model families and which assumptions match the data.
-* The **naive** conditional-independence assumption $p(\mathbf{x}\mid y)=\prod_i p(x_i\mid y)$ replaces $\mathcal{O}(2^d)$ parameters with $\mathcal{O}(d)$, and the classifier needs only the $\mathrm{argmax}$, not the probabilities, to be right.
+* For binary features, the conditional-independence factorization
+  $p(\mathbf{x}\mid y)=\prod_i p(x_i\mid y)$ replaces $2^d-1$
+  class-conditional parameters per class by $d$. Classification can remain
+  useful even when the resulting probabilities are inaccurate.
 * Working in log space avoids the underflow of multiplying hundreds of probabilities. Bernoulli and multinomial naive Bayes have scores affine in their chosen features and therefore linear decision boundaries; Gaussian naive Bayes with class-dependent variances generally has quadratic boundaries.
 * Training is maximum likelihood by counting: class priors and per-feature frequencies. Laplace smoothing, $(n_{iy}+1)/(n_y+2)$ for a binary feature, is the posterior mean under a uniform prior (:numref:`subsec_mdl-beta-map`) and keeps every log-probability finite.
-* On MNIST it learns ten averaged digit templates and classifies respectably, but its independence assumption caps accuracy. It shines where features are closer to independent, the canonical case being bag-of-words text classification.
+* On MNIST it learns ten averaged digit templates. Conditional dependence and
+  binarization limit this model; sparse bag-of-words text is a common domain in
+  which naive Bayes remains a useful baseline.
 * The $84.27\%$ carries a bootstrap error bar of about $\pm 0.7$ points; the confusion matrix localizes the failures in template-overlapping pairs like $4/9$ and $5/3$; and the model is severely **miscalibrated**, claiming $98.6\%$ mean confidence while delivering $84.3\%$ accuracy, because falsely independent factors double-count correlated evidence. Bin confidence against accuracy (a reliability diagram) before trusting any classifier's probabilities.
 
 ## Exercises
@@ -331,8 +357,8 @@ The chapter's ideas at work in one system<br>**count, smooth, argmax, then check
 ::: {.cols .vc}
 ::: {.col}
 A classifier wants $\hat y = \operatorname{argmax}_y p(y\mid\mathbf x)$.
-Estimating that table directly is hopeless: $2^d$ feature patterns
-($2^{784}$ for MNIST, more than atoms in the universe).
+An unrestricted conditional table has $2^d$ binary feature patterns and is
+impractical at MNIST scale ($d=784$).
 
 ::: {.d2l-note}
 The plan: **maximum likelihood** (the maximum-likelihood section) fits a
@@ -371,8 +397,9 @@ $2^d$ patterns. No savings *yet*.
 - **Discriminative** (softmax / logistic): fit the boundary $p(y\mid\mathbf x)$ directly.
 
 ::: {.d2l-note}
-In some matched model comparisons, generative fitting reaches its error floor sooner while discriminative fitting reaches a lower floor;
-discriminative wins given enough data.
+In some well-specified comparisons, generative fitting approaches its
+asymptotic error with fewer samples while discriminative fitting has lower
+asymptotic error. This ordering is model dependent.
 :::
 :::
 
@@ -402,8 +429,8 @@ $$p(\mathbf x\mid y) = \prod_{i=1}^d p(x_i\mid y).$$
 . . .
 
 ::: {.d2l-note .rule}
-This collapses $\mathcal O(2^d)$ parameters to $\mathcal O(d)$ per class:
-the curse of dimensionality broken by fiat.
+For binary features, this replaces $2^d-1$ class-conditional parameters per
+class by $d$ Bernoulli parameters.
 :::
 :::
 
@@ -412,11 +439,13 @@ the curse of dimensionality broken by fiat.
 
 ::: {.cols .vc}
 ::: {.col}
-The label fans out to every feature; **no** edges run between features.
-The right panel shows the dependence we throw away.
+The label is a parent of every feature; no feature-to-feature edges appear in
+the factorized model. The right panel illustrates conditional dependence that
+the model does not represent.
 
-The assumption is false (pixels are correlated), but the classifier only
-needs the **argmax** right, not calibrated probabilities.
+For MNIST the assumption is inaccurate because pixels remain correlated within
+a class. Classification can still be useful even when probabilities are
+miscalibrated.
 :::
 
 ::: {.col .fig .big}
@@ -431,7 +460,7 @@ needs the **argmax** right, not calibrated probabilities.
 
 [Log space and linearity]{.dtitle}
 
-[underflow, the log-sum, and why naive Bayes is linear]{.dsub}
+[underflow, the log-sum, and Bernoulli decision boundaries]{.dsub}
 :::
 :::
 
@@ -446,7 +475,7 @@ $$\hat y = \operatorname*{argmax}_y\, \log p(y) +
 \sum_{i=1}^d \log p(x_i\mid y).$$
 :::
 
-::: {.slide title="The score is affine → linear classifier"}
+::: {.slide title="Bernoulli scores are affine"}
 [Linearity]{.kicker}
 
 For binary pixels, $\log p(x_i\mid y) = x_i\log p_{iy} + (1-x_i)\log(1-p_{iy})$,
@@ -457,6 +486,9 @@ $$s_y(\mathbf x) = \mathbf w_y^\top\mathbf x + b_y.$$
 ::: {.d2l-note .rule}
 Naive Bayes draws the **same kind of decision hyperplanes** as softmax
 regression; only the way it fits the weights differs.
+
+Gaussian naive Bayes is linear only when each feature variance is shared across
+classes; class-specific variances generally give quadratic boundaries.
 :::
 :::
 
@@ -527,17 +559,17 @@ products would have done:
 @!naive-bayes-predict
 
 ::: {.d2l-note .rule}
-**84.27%**: far above $10\%$ chance, far below modern nets ($<1\%$
-error). The gap traces back to the wrong independence assumption.
+**84.27%** on this implementation: far above $10\%$ chance and far below
+modern image classifiers. Conditional independence and binarization are both
+important model limitations.
 :::
 :::
 
-::: {.slide title="Where it shines: text"}
+::: {.slide title="A common domain: text"}
 [Domain]{.kicker}
 
-Pixels are tightly coupled, so the assumption hurts. **Words** in a
-bag-of-words model are far closer to independent: naive Bayes dominated
-spam filtering for decades.
+Pixels are tightly coupled. In a bag-of-words representation, the factorized
+model is often a useful and inexpensive baseline, including for spam filtering.
 
 ::: {.d2l-note}
 The multinomial event model counts word occurrences (with a $+|V|$
@@ -607,19 +639,22 @@ consume.
 ::: {.cols}
 ::: {.col}
 - Bayes' rule + conditional independence = naive Bayes.
-- Breaks the curse of dimensionality: $\mathcal O(d)$ not $\mathcal O(2^d)$ parameters.
+- Reduces an unrestricted $2^d-1$ binary class-conditional table to $d$
+  Bernoulli parameters per class.
 - Training is one counting pass; smooth (a $\text{Beta}$ prior), predict in log space.
-- The log-space score is affine → a **linear** classifier, like softmax.
+- Bernoulli and multinomial scores are affine; Gaussian boundaries are linear
+  only under shared per-feature variances and otherwise quadratic.
 :::
 
 ::: {.col}
-- Great where features are near-independent (text); weak on images, where they are not.
+- Often useful for sparse text features; limited on images by conditional
+  dependence and the chosen pixel model.
 - Checked with the chapter's own tools: $84.3\%\pm0.7$ (bootstrap), failures where templates overlap (confusion), confidence wildly inflated (calibration).
 :::
 :::
 
 ::: {.d2l-note}
-Never ship an accuracy without its error bar, its failure map, and a
-calibration check.
+An accuracy report is more informative when accompanied by uncertainty,
+classwise errors, and a calibration check.
 :::
 :::

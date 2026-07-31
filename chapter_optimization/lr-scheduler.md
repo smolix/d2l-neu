@@ -448,9 +448,9 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
 train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
 
-The catch is the milestones themselves: someone has to pick them, and the
-right answer depends on the budget, the dataset, and the architecture. The
-next shape removes that knob.
+The milestones are additional hyperparameters, and their useful values depend
+on the budget, dataset, and architecture. Cosine decay removes these discrete
+transition points.
 
 ### Cosine Decay
 
@@ -545,10 +545,9 @@ preconditioner is estimated from a handful of gradients early on and should
 not be trusted at full step size (:numref:`subsec_mdl-schedules-warmup`).
 Our testbed uses plain SGD, which isolates the curvature story.
 
-Here is the failure. Our network, thanks to its batch normalization layers,
-shrugs off surprisingly large learning rates from a cold start — but not
-without limit. We train at $\eta = 7.5$, twenty-five times the rate of our
-baseline:
+Batch normalization lets this network tolerate a broad range of initial
+learning rates, but a stability limit remains. We train at $\eta = 7.5$,
+twenty-five times the baseline rate:
 
 ```{.python .input #lr-scheduler-warmup-1}
 %%tab pytorch
@@ -590,12 +589,11 @@ train(net, train_iter, test_iter, 10, loss, trainer, device, warmup)
 train(net_fn, train_iter, test_iter, 10, hot_lr, warmup)
 ```
 
-With the ramp, the identical network trains at the identical target rate to
-80–90% accuracy in ten epochs. The contrast is reproducible across
-restarts, but it is a band, not a magic trick: cold starts at somewhat lower
-rates remain stable, and at rates far enough above the ceiling no warmup length
-saves the run. Warmup widens the window of usable peak rates; it does not
-remove the window's edge. :citet:`Gotmare.Keskar.Xiong.ea.2018` probed what warmup does
+With the ramp, this fixed-seed run reaches 80–90% accuracy in ten epochs at
+the same target rate. Cold starts at lower rates can remain stable, while
+rates sufficiently above the stability limit fail even with warmup. Thus the
+experiment shows that warmup widens the usable range for this model; it does
+not remove its upper edge. :citet:`Gotmare.Keskar.Xiong.ea.2018` probed what warmup does
 inside deeper networks and found its main measurable effect is exactly this
 kind of containment: it limits how far the parameters, especially in later
 layers, can diverge while everything is still random.

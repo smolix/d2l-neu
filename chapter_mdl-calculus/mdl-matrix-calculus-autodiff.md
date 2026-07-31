@@ -8,8 +8,9 @@ represented by *Jacobians*. This section develops matrix calculus and explains
 the computational cost of automatic differentiation. Backpropagation is
 reverse-mode automatic differentiation implemented through vector--Jacobian
 products, while forward mode computes Jacobian--vector products. The dimensions
-of the Jacobian determine which mode is more efficient. We also derive common
-matrix identities and implement both modes in compact Python examples.
+of a dense full Jacobian give the first cost comparison. Graph structure, repeated
+products, sparsity, batching, and memory can alter that choice. We also derive
+common matrix identities and implement both modes in compact Python examples.
 
 We use the following imports throughout this section.
 
@@ -53,6 +54,9 @@ generalizes both the slope of
 :numref:`sec_mdl-single_variable_calculus` and the gradient of
 :numref:`sec_mdl-multivariable_calculus`.
 
+We use numerator layout for a vector-valued Jacobian, so $\mathbf J_{\mathbf f}\in\mathbb R^{m\times n}$, and write the gradient of a scalar field as a column. A later reference box compares this convention with the transposed alternative.
+
+
 ### The Jacobian as the Best Linear Approximation
 
 In one variable, the derivative is the slope of the best straight-line fit:
@@ -86,14 +90,14 @@ to nudging input $j$. The Jacobian *is* the best local linear approximation; the
 partial-derivative formula is a consequence, not the definition.
 
 :numref:`fig_mdl-cal-jacobian-ellipse` makes the definition visible. Up close, a
-differentiable map *is* a linear map: a small circle of inputs around
-$\mathbf x_0$ lands on (very nearly) an ellipse: the image of that circle under
+differentiable map is *approximated by* a linear map: a small circle of inputs around
+$\mathbf x_0$ lands nearly on the ellipse obtained from that circle under
 $\mathbf J(\mathbf x_0)$, exactly the picture from
 :numref:`sec_mdl-geometry-linear-algebraic-ops` of what a matrix does to the
 plane. The leftover bend is the $o(\|\boldsymbol\delta\|)$ remainder, which
 vanishes faster than the circle shrinks.
 
-![Up close, a differentiable map is a linear map. The nonlinear $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ carries a small circle and grid around $\mathbf x_0=(0.5,0.5)$ (left) into the output plane (right). The true image (blue) is nearly indistinguishable from the ellipse $\mathbf f(\mathbf x_0)+\mathbf J(\mathbf x_0)\,\boldsymbol\delta$ predicted by the Jacobian (orange); the small mismatch is the $o(\|\boldsymbol\delta\|)$ remainder and shrinks faster than the circle does.](../img/mdl-cal-jacobian-ellipse.svg)
+![A differentiable map is locally approximated by its Jacobian. The nonlinear $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ carries a small circle and grid around $\mathbf x_0=(0.5,0.5)$ (left) into the output plane (right). The true image (blue) nearly matches the affine ellipse $\mathbf f(\mathbf x_0)+\mathbf J(\mathbf x_0)\boldsymbol\delta$ (orange); their residual is $o(\|\boldsymbol\delta\|)$ and therefore shrinks faster than the input radius.](../img/mdl-cal-jacobian-ellipse.svg)
 :label:`fig_mdl-cal-jacobian-ellipse`
 
 Two special cases recover everything we have already met. When $m=1$ (a scalar
@@ -1428,7 +1432,7 @@ Matrix multiplication is **associative**, so the chain $\mathbf J_L\cdots\mathbf
 - Multiply **left-to-right** $\Rightarrow$ propagate *sensitivities backward*. **Reverse mode.**
 
 ::: {.d2l-note}
-Choosing forward vs reverse mode is nothing but choosing the cheaper way to multiply a chain of matrices.
+For a dense derivative product, the two modes are alternative parenthesizations; graph reuse, sparsity, batching, and memory can change the practical cost.
 :::
 :::
 
@@ -1659,7 +1663,7 @@ Reverse mode must keep every forward intermediate alive until the backward sweep
 **Checkpointing** stores only every $\sqrt{L}$-th activation and recomputes each segment when the sweep reaches it: $O(\sqrt{L})$ memory for roughly one extra forward pass.
 :::
 
-::: {.slide title="Summary"}
+::: {.slide title="JVPs and VJPs compute derivative actions"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
@@ -1677,6 +1681,6 @@ Reverse mode must keep every forward intermediate alive until the backward sweep
 :::
 
 ::: {.d2l-note}
-Two products, JVP and VJP, compose into everything a training loop needs.
+JVPs and VJPs provide the derivative actions used by gradients, Hessian--vector products, and implicit differentiation without assembling full Jacobians.
 :::
 :::

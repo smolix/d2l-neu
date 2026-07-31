@@ -69,18 +69,17 @@ $$
 
 with drift $\mathbf{f} : \mathbb{R}^d \times [0, T] \to \mathbb{R}^d$ and a
 scalar noise schedule $g(t)$, and start it from a random initial condition
-$\mathbf{X}_0 \sim p_0$. There are two ways to watch what happens next.
+$\mathbf{X}_0 \sim p_0$. There are two ways to analyze its evolution.
 
 The *Lagrangian* view follows one particle: a single realization of the
 Brownian motion produces a single path $\mathbf{X}_t(\omega)$, different on
-every run. The *Eulerian* view stands still at a point $\mathbf{x}$ and watches
-the crowd stream past: it tracks the **time-marginal**
+every run. The *Eulerian* view instead fixes a point $\mathbf{x}$ and tracks
+the **time-marginal**
 $p_t(\mathbf{x})$, the density of the random variable $\mathbf{X}_t$. The
 marginal averages over both sources of randomness (the draw of
 $\mathbf{X}_0$ and the noise along the way), and that averaging is exactly
-what makes it deterministic. Run the experiment twice with a large cloud and
-you get two indistinguishable evolving densities, even though no two
-individual paths agree.
+what makes it deterministic. Repeated large-cloud experiments estimate the
+same evolving density, even though their individual paths differ.
 
 Our running example is the Ornstein--Uhlenbeck (OU) process of
 :numref:`sec_mdl-ornstein-uhlenbeck`, $dX = -\theta X\,dt + \sigma\,dW$, whose
@@ -171,7 +170,7 @@ shifting derivatives from a test function onto a density.
 
 ### Simulating the Marginal Density
 
-Before deriving anything, let us *see* the claim that the marginal is
+Before the derivation, a simulation illustrates that the marginal is
 deterministic and, for OU, exactly the Gaussian
 :eqref:`eq_mdl-dyn-ou-marginal`. We release $100{,}000$ particles from the
 point $x_0 = 2$, march them with Euler--Maruyama
@@ -336,6 +335,15 @@ spatial-divergence term. The later formula
 $\mathbf{f}-\tfrac12g^2\nabla\log p_t$ is precisely the simplification for
 $a=g(t)^2I$.
 
+| Diffusion | Fokker--Planck second-order term | Probability-flow correction to $\mathbf f$ |
+| :-- | :-- | :-- |
+| $g(t)I$ | $\tfrac12g(t)^2\Delta p$ | $-\tfrac12g(t)^2\nabla\log p$ |
+| $G(\mathbf x,t)$, $a=GG^\top$ | $\tfrac12\sum_{ij}\partial_i\partial_j(a_{ij}p)$ | $-\tfrac12a\nabla\log p-\tfrac12\nabla\cdot a$ |
+
+The second row requires the derivatives and boundary conditions used in the
+probability-current derivation; it cannot be obtained by replacing scalar
+$g^2$ with a matrix while leaving the rest of the formula unchanged.
+
 ### Drift Transports, Diffusion Smooths
 
 Read :eqref:`eq_mdl-dyn-fokker-planck` term by term. The first term,
@@ -373,7 +381,7 @@ $$
 
 and we claim the Gaussian marginal :eqref:`eq_mdl-dyn-ou-marginal` solves it.
 To see this, and to see *which* Gaussians solve it, plug in a generic
-Gaussian and watch the PDE collapse into two ODEs for the mean and variance.
+Gaussian and reduce the PDE to two ODEs for the mean and variance.
 
 **Proposition (Gaussian solutions of the OU equation).** *Let
 $p(x, t) = \mathcal{N}(x; m(t), v(t))$ be a Gaussian density with
@@ -578,9 +586,9 @@ of the term itself, exactly as $-x$ misses $x$. Signs matter.
 ### The Probability-Flow ODE
 :label:`sec_mdl-probability-flow-ode`
 
-A continuity equation is the law of motion of a *deterministic* flow. So the
-proposition above hands us, for free, an ODE whose particles sweep out the
-same evolving density as the SDE's random walkers:
+A continuity equation is the law of motion of a deterministic flow. Rewriting
+the Fokker--Planck equation in this form identifies an ODE whose particles
+sweep out the same evolving density as the SDE's random walkers:
 
 $$
 \frac{d\mathbf{x}}{dt} = \mathbf{v}_t(\mathbf{x}) = \mathbf{f}(\mathbf{x}, t) - \tfrac12 g(t)^2\, \nabla \log p_t(\mathbf{x}),
@@ -630,8 +638,9 @@ $$
 
 which is the instantaneous change of variables of
 :numref:`sec_mdl-continuous-normalizing-flows` applied to the
-probability-flow field. With the exact score, exact divergence, and exact ODE
-integration, it evaluates the model likelihood exactly. A learned score,
+probability-flow field. With the exact score, a known exact terminal density,
+exact divergence, and exact ODE integration, it evaluates the model likelihood
+exactly. A learned score,
 Hutchinson trace estimate, or numerical solver introduces approximation;
 this is the route used to estimate diffusion-model likelihoods
 :cite:`song2021score`.
@@ -742,15 +751,12 @@ for ax, s in zip(axes[1:], ts_show):
 
 The leftmost panel contrasts the trajectories: thin blue SDE paths fluctuate
 and cross, while thick orange ODE trajectories are smooth and do not touch.
-Despite this difference, the histogram panels show statistically indistinguishable
-clouds: the Kolmogorov--Smirnov distance between the two
-$20{,}000$-particle clouds stays in the $0.006$--$0.009$ range, below the
-$\approx 0.014$ critical value (at significance level $\alpha = 0.05$) for
-two independent samples of the *same* distribution at this size, and both
-sit on the analytic $p_t$ (black curve). Same marginals, different
-choreography: the probability-flow ODE is a working deterministic sampler,
-four lines of NumPy plus one ingredient we took from a closed form, the
-score.
+Despite this difference, both histograms track the analytic marginal. The
+Kolmogorov--Smirnov distance between the two $20{,}000$-particle clouds stays
+in the $0.006$--$0.009$ range. This empirical discrepancy includes
+finite-sample and numerical error; because the clouds share their initial
+sample, a standard independent-sample KS threshold is not the relevant
+calibration.
 
 ## The Score Function
 :label:`sec_mdl-score-function`
@@ -772,12 +778,13 @@ canonical home of the definition and of the Fisher divergence built from it.
 Geometrically, $\mathbf{s}_t$ is a vector field over data space: at each point
 it points in the direction of steepest ascent of the log-density ("uphill,
 toward the data"), with length proportional to how fast the density rises.
-It vanishes exactly at the critical points of $p_t$: at modes (where everything
-around is downhill) and at troughs and saddles between them.
+It vanishes exactly at the interior critical points of $p_t$: modes, troughs,
+and saddles. The Hessian, rather than the zero score alone, distinguishes these
+cases.
 :numref:`fig_mdl-dyn-score-field` shows the field for a two-mode density in
 two dimensions.
 
-![The score $\mathbf{s}(\mathbf{x})=\nabla\log p(\mathbf{x})$ of a two-component Gaussian mixture, drawn as a vector field over the density contours. The arrows point uphill on the density, toward the nearest mode, and vanish at the two modes (orange) where the density is locally flat. This vector field is the only quantity in the probability-flow ODE and the reverse SDE that is not known by design.](../img/mdl-dyn-score-field.svg)
+![The score $\mathbf{s}(\mathbf{x})=\nabla\log p(\mathbf{x})$ of a two-component Gaussian mixture, drawn over density contours. The arrows point uphill and vanish at critical points; the orange points mark the two modes, while the symmetry point between them is another zero with different curvature. When the forward drift and diffusion schedule are fixed, this score is the unknown field required by the probability-flow ODE and reverse SDE.](../img/mdl-dyn-score-field.svg)
 :label:`fig_mdl-dyn-score-field`
 
 ### Two Worked Scores
@@ -793,9 +800,9 @@ $$
 :eqlabel:`eq_mdl-dyn-gaussian-score`
 
 a linear spring pulling toward the mean, stiffer for smaller $\sigma$. (For a
-general covariance, $-\Sigma^{-1}(\mathbf{x} - \boldsymbol{\mu})$.) This is
-the analytic score we used to validate the probability-flow ODE, and it is the
-reason everything in this chapter can be checked without learning anything.
+general covariance, $-\Sigma^{-1}(\mathbf{x} - \boldsymbol{\mu})$.) This
+analytic score lets the numerical examples isolate solver error without also
+introducing estimation error.
 
 **The mixture.** For $p(x) = \sum_k \pi_k\, \mathcal{N}(x; \mu_k, s_k^2)$,
 differentiate $\log p = \log \sum_k \pi_k N_k$ directly:
@@ -827,7 +834,7 @@ the right of $0$ the score is large and positive, pushing mass toward $+\mu$.
 
 ### Independence from the Normalizing Constant
 
-Suppose you only know the density up to its normalizing constant:
+Consider a density known only up to its normalizing constant:
 $p(\mathbf{x}) = \tilde{p}(\mathbf{x}) / Z$ with
 $Z = \int \tilde{p}\, d\mathbf{x}$ unknown, the standing situation for
 energy-based models $p \propto e^{-E(\mathbf{x})}$
@@ -837,18 +844,18 @@ since $Z$ is constant in $\mathbf{x}$,
 $\nabla \log p = \nabla \log \tilde{p}$, the normalizer-blindness of the
 score :eqref:`eq_mdl-score-def` established in
 :numref:`sec_mdl-fisher-divergence`. For the energy-based model the score
-is simply $-\nabla E$. *This* is why the score is the right object to learn:
-a neural network can represent a vector field without ever promising that it
-integrates to one, and the Fisher divergence of
+is $-\nabla E$. Score-based objectives can therefore avoid evaluating $Z$.
+A neural network can represent a vector field without explicitly normalizing a
+density, and the Fisher divergence of
 :numref:`sec_mdl-fisher-divergence` measures the quality of such a field
 directly. The probability-flow ODE and (next) the reverse SDE consume only
-the score, so the entire generative problem reduces to score estimation,
-which is :numref:`sec_mdl-score-matching-diffusion-flow`'s job.
+the score. Estimating that field remains a statistical and computational
+problem, developed in :numref:`sec_mdl-score-matching-diffusion-flow`.
 
 The code makes all three points at once: it plots the bimodal score field
 :eqref:`eq_mdl-dyn-tanh-score`, confirms the responsibility formula against
 it, locates the zeros, and checks that scaling the density by an arbitrary
-constant changes the score by *nothing*.
+constant leaves the score unchanged.
 
 ```{.python .input #fokker-planck-mixture-score}
 gs = np.linspace(-3.5, 3.5, 1401)
@@ -872,10 +879,9 @@ d2l.plot(gs, [s_resp, dens * (np.abs(s_resp).max() / dens.max())], 'x', '',
 The two formulas agree to machine precision; the zeros sit at the modes
 $\pm 2$ and the repelling trough at $0$; and multiplying the density by $7.3$
 moves the (finite-difference) score by less than $10^{-12}$: the
-normalizer is invisible. Note the shape of the plot: the score is *largest in the empty
-region between the modes*, where the log-density climbs steeply toward the
-nearest mode, precisely where a generative sampler, arriving from noise,
-most needs directions.
+normalizer is invisible. The score is large near the low-density separation
+region where the log-density climbs steeply toward either mode; it also grows
+in the tails of this Gaussian mixture.
 
 ## Time Reversal
 :label:`sec_mdl-time-reversal`
@@ -1007,12 +1013,13 @@ Note what :eqref:`eq_mdl-dyn-reverse-sde` asks of us. The forward drift
 $\mathbf{f}$ and schedule $g$: chosen by us. The terminal distribution
 $p_T$: by design, approximately a known Gaussian (the whole point of noising).
 The score $\nabla \log p_t$: the *single* unknown, the same one the
-probability-flow ODE needed. One function to learn, two samplers for free.
+probability-flow ODE needed. With the forward drift and schedule fixed, one
+estimated field can therefore be used by both samplers.
 :numref:`fig_mdl-dyn-forward-reverse` shows the pair of processes as evolving
 densities, the one-dimensional rendition of the two-dimensional cloud story
 that :numref:`fig_mdl-dyn-noising-denoising` tells in the next section.
 
-![The forward and reverse diffusion processes on a density. Top row (left to right): the forward noising SDE turns a structured bimodal data density $p_0$ into a single Gaussian $p_T$ across a few time slices, each panel an exact variance-preserving (OU) marginal of the mixture. Bottom row (right to left): the reverse process, driven by the score $\nabla\log p_t$, runs the same marginals backward to recover the data density from noise. Forward is fixed by design; reverse needs only the learned score.](../img/mdl-dyn-forward-reverse.svg)
+![The forward and reverse diffusion processes on a density. Top row (left to right): the forward noising SDE turns a structured bimodal data density $p_0$ into a nearly Gaussian $p_T$ across a few time slices, each panel an exact variance-preserving (OU) marginal of the mixture. Bottom row (right to left): with the exact score $\nabla\log p_t$, the reverse process runs the same marginals backward to recover the data density.](../img/mdl-dyn-forward-reverse.svg)
 :label:`fig_mdl-dyn-forward-reverse`
 
 ### Noise Back into Data
@@ -1058,15 +1065,15 @@ Starting from featureless Gaussian noise (justified, since
 $\max_x |p_T - \mathcal{N}(0,1)|$ is about $0.0015$ against a density peak of
 $0.40$), the reverse SDE re-grows both modes at $\pm 2.00$ and splits its
 mass $0.500/0.500$. The recovered mode widths read $0.260$ and $0.261$
-against the target $0.250$: that is Euler--Maruyama's $O(\Delta t)$ weak bias
-(:numref:`sec_mdl-euler-maruyama`), and halving the step size moves them
-toward $0.25$, to $0.255$ and $0.252$ (try it). The same bias is what nudges
-the Kolmogorov--Smirnov distance to a fresh exact $p_0$ sample ($0.017$)
-slightly above the two-sample sampling floor. Every diffusion model you have
-seen generating images is this loop, with two substitutions: $\mathbf{x}$
-lives in a million dimensions, and $\nabla \log p_t$, the one thing we got
-for free from a Gaussian mixture, is a trained neural network. How to train
-it is the business of :numref:`sec_mdl-score-matching-diffusion-flow`.
+against the target $0.250$. Euler--Maruyama has $O(\Delta t)$ weak bias under
+the conditions of :numref:`sec_mdl-euler-maruyama`, and a separate run with
+half the step gives widths $0.255$ and $0.252$. These finite experiments do
+not isolate discretization bias from Monte-Carlo variation or the small
+terminal-reference mismatch. Likewise, the Kolmogorov--Smirnov distance
+$0.017$ to a fresh exact $p_0$ sample is a sample statistic, not a universal
+noise floor. In a diffusion model, the analytic mixture score used here is
+replaced by a trained neural network, as developed in
+:numref:`sec_mdl-score-matching-diffusion-flow`.
 
 ## Summary
 
@@ -1100,8 +1107,8 @@ it is the business of :numref:`sec_mdl-score-matching-diffusion-flow`.
   invertible. CNF likelihood evaluation is exact only with the exact field,
   divergence, and numerical integration.
 * The **score** $\nabla_{\mathbf{x}} \log p_t$ is a vector field pointing
-  uphill on the log-density; it ignores the normalizing constant, which is
-  why it is learnable where the density is not. Gaussian:
+  uphill on the log-density; it ignores the normalizing constant, so a score
+  model need not evaluate a normalized density. Gaussian:
   $-(\mathbf{x} - \boldsymbol{\mu})/\sigma^2$; mixtures:
   responsibility-weighted component scores.
 * **Anderson's theorem**: the time reversal of a diffusion is the diffusion
@@ -1210,7 +1217,7 @@ $p_t(\mathbf x)$ that evolves **deterministically**.
 :::
 :::
 
-::: {.slide title="One particle, or the whole cloud"}
+::: {.slide title="Marginals average over path randomness"}
 [Two viewpoints]{.kicker}
 
 The Lagrangian view follows one realization; the Eulerian view tracks the
@@ -1256,7 +1263,7 @@ $$\partial_t p_t = -\nabla\cdot(\mathbf f\,p_t) + \tfrac12 g(t)^2\,\Delta p_t.$$
 
 . . .
 
-For $\mathbf f = -\nabla V$ this PDE is itself a *gradient flow*: steepest
+For $\mathbf f = -\nabla V$ and constant $g$, this PDE is itself a *gradient flow*: steepest
 descent of the free energy $\int pV + \tfrac12 g^2\!\int p\log p$ in the
 **Wasserstein geometry** (Jordan–Kinderlehrer–Otto), the same transport
 geometry that powers flow matching.
@@ -1340,18 +1347,19 @@ velocity
 $$\frac{d\mathbf x}{dt} = \mathbf f(\mathbf x,t) - \tfrac12 g(t)^2\,\nabla\log p_t(\mathbf x).$$
 
 ::: {.d2l-note .rule}
-This ODE has the **same time-marginals** as the SDE, by uniqueness of the
-linear transport PDE. With the exact score and divergence, it is smooth,
-invertible, and has an exact likelihood identity.
+Under the stated positivity, regularity, boundary, and well-posedness
+assumptions, this ODE has the **same time-marginals** as the SDE. Invertibility
+and the likelihood identity additionally concern the exact field and exact
+integration.
 :::
 :::
 
 ::: {.slide title="SDE and ODE marginals"}
 [The experiment]{.kicker}
 
-Same marginals, different motion: SDE paths cross and rattle, ODE
-trajectories glide and never cross. The clouds are statistically
-indistinguishable ($\mathrm{KS} < 0.009$):
+Same target marginals, different motion: SDE paths cross while ODE
+trajectories are smooth and do not cross under uniqueness. In this finite
+experiment the empirical CDF gap remains below $0.009$:
 
 @!fokker-planck-pf-ode-overlay
 :::
@@ -1372,7 +1380,8 @@ indistinguishable ($\mathrm{KS} < 0.009$):
 ::: {.cols .vc}
 ::: {.col}
 $\mathbf s_t(\mathbf x)=\nabla_{\mathbf x}\log p_t(\mathbf x)$ points uphill on
-the log-density and vanishes at modes. Gaussian:
+the log-density and vanishes at every interior critical point. Curvature
+distinguishes modes from troughs and saddles. Gaussian:
 $-(\mathbf x-\boldsymbol\mu)/\sigma^2$, a spring to the mean; a mixture gives
 responsibility-weighted springs.
 :::
@@ -1383,7 +1392,7 @@ responsibility-weighted springs.
 :::
 :::
 
-::: {.slide title="Why scores beat densities"}
+::: {.slide title="Scores remove the normalizing constant"}
 [Normalizer-invariance]{.kicker}
 
 For $p=\tilde p/Z$, $\nabla\log p = \nabla\log\tilde p$ since
@@ -1393,8 +1402,8 @@ no intractable $Z$:
 @fokker-planck-mixture-score
 
 ::: {.d2l-note .rule}
-A network can represent the score without ever normalizing, which is why
-score matching works where density estimation fails.
+A network can represent the score without evaluating $Z$. This removes one
+obstacle; estimation error, support, and integrability still matter.
 :::
 :::
 
@@ -1421,23 +1430,23 @@ A Bayesian Euler step shows why: the marginal $p_t$ acts as a prior that bends
 each reversed step toward where the data was.
 :::
 
-::: {.slide title="The factor of two, drawn"}
+::: {.slide title="Reverse-time noise doubles the score correction at λ = 1"}
 [Time reversal]{.kicker}
 
-One dial covers every sampler:
+Within this scalar, state-independent diffusion family, one dial gives
 $\mathbf b_\lambda = \mathbf f - \tfrac{1+\lambda^2}{2}g^2\nabla\log p_t$ with
 noise $\lambda g$, all sharing the marginals $p_t$. More injected noise, more
 drift correction: the factor slides from $\tfrac12 g^2$ ($\lambda=0$, the
 PF-ODE) to $g^2$ ($\lambda=1$, Anderson):
 
-![](../img/mdl-dyn-lambda-family.svg){width=94%}
+![](../img/mdl-dyn-lambda-family.svg)
 :::
 
-::: {.slide title="Noise back into data"}
+::: {.slide title="The exact mixture score recovers the bimodal target numerically"}
 [Generation]{.kicker}
 
-Zero training: the closed-form mixture score re-grows both modes from noise;
-swap in a trained network and this loop **is** a diffusion model:
+The closed-form mixture score isolates the reverse-SDE computation without
+training. A diffusion model replaces that analytic field with an estimate:
 
 @!fokker-planck-reverse-sde
 :::
@@ -1449,14 +1458,13 @@ swap in a trained network and this loop **is** a diffusion model:
 ::: {.col}
 - Fokker–Planck, $\partial_t p = -\nabla\cdot(\mathbf f p)+\tfrac12 g^2\Delta p$: drift transports, diffusion smooths.
 - Transport identity (plus sign!) makes it a continuity equation.
-- PF-ODE: same marginals as the SDE, deterministic, exact likelihood identity
-  for the exact score and divergence.
+- Under the stated regularity and boundary assumptions, the PF-ODE has the same marginals as the SDE; exact likelihood also requires exact integration.
 :::
 
 ::: {.col}
-- Score $\nabla\log p_t$: normalizer-free, points to data, learnable.
+- Score $\nabla\log p_t$: normalizer-free and directed along log-density ascent.
 - Reverse SDE drift corrects by $g^2\nabla\log p_t$, twice the ODE's.
-- The single unknown in all three: the score.
+- When forward drift and diffusion are fixed, the score is the field to estimate.
 :::
 :::
 

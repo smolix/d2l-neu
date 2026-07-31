@@ -1,6 +1,9 @@
 # Modules and Model Construction
 :label:`sec_model_construction_v2`
 
+> **Archive notice.** This file records pre-promotion design decisions. The live
+> source one directory above is authoritative; markers and API claims here are historical.
+
 > **Role.** The foundational section: every model from Chapter 7 onward is
 > built with what is taught here. Keeps the recursive module-hierarchy mental
 > model from the current section, while noting that shared children form an

@@ -53,12 +53,11 @@ Recall where this book first met attention. In
 Nadaraya--Watson regression :cite:`Nadaraya.1964,Watson.1964`: keys were
 training inputs, values were their labels, and a Gaussian kernel turned
 each query into a weighted average of nearby values,
-:eqref:`eq_nadaraya-watson`. Nothing was learned. We swept the one knob,
+:eqref:`eq_nadaraya-watson`. Its bandwidth was not learned: we swept
 the kernel bandwidth $\sigma$, by hand, and the section closed by asking
 what would happen if we learned it by gradient descent instead, warning
-that the obvious approach hides a trap. That exercise has waited long
-enough; we answer it now, because the answer, scaled up, is this
-section.
+that direct training on each point's own target causes leakage. We now
+learn the bandwidth with a leave-one-out objective.
 
 ### A Fixed Kernel, Revisited
 
@@ -126,11 +125,11 @@ $$
 :eqlabel:`eq_ttr-parametric-nw`
 
 and the training loss is the squared error on the training points
-themselves. Here is the trap the exercise warned about: each $y_i$ enters
+themselves. Each $y_i$ then enters
 the computation of $f(x_i)$. Driving $w \to \infty$ shrinks the kernel
 until every training point attends only to itself, the training error
-drops to zero, and the estimator degenerates into a lookup table that has
-learned nothing about the function between the points. The fix is
+drops to zero, and the estimator degenerates into a lookup table without
+constraining predictions between observations. Use a
 *leave-one-out* construction: when predicting at $x_i$, the model may use
 every training pair except $(x_i, y_i)$. Below, each row of `keys` and
 `values` holds the other $n-1$ points, built by masking the diagonal of a
@@ -206,7 +205,7 @@ d2l.plt.plot(x_train, y_train, 'o', alpha=0.4);
 ```
 
 The learned fit bends where the function bends, recovering the rise and
-the crest that the $\sigma = 1$ fit smooths away, at the price of
+the crest that the $\sigma = 1$ fit smooths away, while also
 following the noise a little more closely. The attention weights show the
 mechanism:
 
@@ -998,8 +997,8 @@ it, and this book stops at the recipe.
 ## Tracking Distribution Drift
 :label:`subsec_ttr-tracking`
 
-One question from the recipe is still open. The weights $\gamma_i^{(t)}$
-are the *statistical* knob, and everything measured so far treated the
+The remaining statistical question concerns the weights $\gamma_i^{(t)}$.
+The preceding measurements treated the
 stream as stationary, the capacity of :numref:`subsec_ms-capacity` and
 the spectrum above alike. For a fixed target, a linear model that contains it, and
 constant parameters, uniform weights are then the efficient choice:
@@ -1203,8 +1202,8 @@ $$f(x) = \sum_{i=1}^{n} \frac{\exp\big(-\tfrac{1}{2} ((x - x_i) w)^2\big)}{\sum_
 
 . . .
 
-The trap: $y_i$ enters $f(x_i)$ — driving $w \to \infty$ zeroes the
-training error and learns nothing.
+Direct fitting leaks $y_i$ into $f(x_i)$: as $w \to \infty$, training
+error approaches zero without constraining predictions between samples.
 
 **Fix:** leave-one-out — predict each point from all the *others*.
 :::

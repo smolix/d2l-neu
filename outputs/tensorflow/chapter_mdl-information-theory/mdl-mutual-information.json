@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:4b6fd938b87bd40b1bcc2e53f30a7387fc8628664a251ccc2d2fe8e9f74d233f"
+          "sha256": "sha256:d25bc36cbb870135464badf227de73a546206b1783d4a3fe98a7c1ed60382b9a"
         }
       ]
     },
@@ -71,12 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample correlation rho = -0.0028\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "binned MI estimate     = 0.9814 nats\nafter x -> 2x + 3      = 0.9814 nats\n"
+          "text": "sample correlation rho = -0.0028\nbinned MI estimate     = 0.9814 nats\nafter x -> 2x + 3      = 0.9814 nats\n"
         }
       ]
     },
@@ -98,7 +93,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\nd = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
+          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
         },
         {
           "type": "stream",
@@ -131,7 +131,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:3a810cd744f395d75b48c89fe8b97476e9e6d00176f7d41ac8afe934844b63a6"
+          "sha256": "sha256:06ccfe7ab2aab56590a7a8e241468d01d0d624f8b69a8d51df270adc47d1ddb0"
         }
       ]
     },
@@ -142,17 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
+          "text": "  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
         }
       ]
     },
@@ -163,22 +158,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.571 nats\n"
+          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.570 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.410 nats\n"
+          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.408 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.767 nats\n"
+          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.765 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.895 nats\ntrue I(X;Y) = 1.959 nats\n"
+          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.892 nats\ntrue I(X;Y) = 1.959 nats\n"
         }
       ]
     },
@@ -196,18 +191,18 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:810da83697a5adba49601359cd68ff6bcf044f2bbd10f512bbcced3e618f803e"
+          "sha256": "sha256:16c88fb1e9aa4dfc21a8097706dabc965e59f1b51ad65a3c274e567a20c1130c"
         }
       ]
     },
     "mutual-information-fano": {
-      "code_fingerprint": "sha256:ca7b0505450eb3c040bd735e5a6beae60ae9daa890a15ee0c92add878d3a43a6",
+      "code_fingerprint": "sha256:86d3748ab72ed6f3e43a5191fd50a088ed30689813a5e7eb885da30a0ec5f64a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "5% error on 1000 balanced classes needs I(X;Y) >= 6.364 nats\ncertifying that much MI needs N > e^I = 581 samples\n"
+          "text": "5% error on 1000 balanced classes needs I(X;Y) >= 6.364 nats\nInfoNCE can reach that value only if N >= e^I = 581\n"
         }
       ]
     }

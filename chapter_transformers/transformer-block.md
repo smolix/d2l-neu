@@ -286,29 +286,22 @@ then renormalizes, locking in the contraction, and the spread decays
 *geometrically* — by block 32 the tokens are identical to about one part in
 ten thousand. Pre-LN dilutes the same contraction by the growing stream,
 and the spread falls only polynomially, still at $0.4$ after 32 blocks.
-This is the *rank collapse* of :citet:`Dong.Cordonnier.Loukas.2021` caught
-in the act, and the gradients show why it matters for learning: a head
-attending over identical tokens returns the same mixture *whatever its
-query and key weights*, so those weights stop receiving gradient. The
-block-32 norms printed above locate the starvation precisely: post-LN's
-query and key projections receive gradients of order $10^{-9}$, six
-orders of magnitude below their pre-LN counterparts, while its value and
-output projections — which transform the one surviving token rather than
-compare tokens — come in around $0.06$, as healthy as pre-LN's (the FFN
-parameters, fed by the same residual stream, are likewise unaffected). It
-is specifically the query/key pathway that dies, the part that decides
-*where* to attend; the plot shows the same starvation deepening block by
-block down the post-LN stack, while pre-LN tapers gently. (The effect
-softens under today's smaller initializations — one of several crutches,
-along with learning-rate warmup, that kept deep post-LN models trainable
-:cite:`xiong2020layer`.)
+The decreasing token spread is an initialization-time diagnostic related to
+the rank-collapse phenomenon analyzed by
+:citet:`Dong.Cordonnier.Loukas.2021`; it does not demonstrate collapse during
+training. In this 32-block stack, the post-LN query and key projections receive
+gradients of order $10^{-9}$, about six orders of magnitude below their
+pre-LN counterparts, while the value and output projection norms are near
+$0.06$. Once token representations become nearly identical, the attention
+mixture becomes insensitive to the query and key weights, which explains the
+small gradients in this constructed setting. Different initializations,
+residual scales, optimizers, and training dynamics can change the effect
+:cite:`xiong2020layer`.
 
-The practical verdict matched this picture: post-LN transformers diverge
-without carefully tuned warmup, pre-LN models train without incident at the
-same depth :cite:`xiong2020layer`, and essentially every model since GPT-2
-has been pre-norm :cite:`Radford.Wu.Child.ea.2019`. We make pre-norm our
-default; the next section has a trainable model and will show the post-LN
-failure not at initialization but live, during training.
+The experiments of :citet:`xiong2020layer` likewise find that post-LN is more
+sensitive to learning-rate warmup than pre-LN under their training protocols.
+We therefore use pre-norm as the default in the teaching model and test both
+placements during training in :numref:`sec_gpt`.
 
 ### RMSNorm
 
@@ -370,15 +363,13 @@ for name, f in (('LayerNorm', nnx.jit(layernorm)),
     print(f'{name}: {(time.time() - t0) / 200 * 1e3:.3f} ms')
 ```
 
-The timing is close to an anticlimax: on a modern GPU both normalizers are
-memory-bound, and what dropping the mean subtraction saves depends on the
-framework's kernel — nothing measurable in our PyTorch run, roughly a third
-in our JAX run, and either way microseconds in blocks that spend their time
-elsewhere. What RMSNorm actually buys is less machinery — no centering, no
-bias parameter, one statistic instead of two — at comparable quality, which
-is why Llama and most open models since use it :cite:`touvron2023llama`. The
-lesson is about defaults rather than speed: when a component's job is "keep
-the scale near one", the simplest layer that does the job wins.
+In this benchmark, the PyTorch timings are indistinguishable at the displayed
+precision, while the JAX RMSNorm kernel is roughly one third faster. These are
+framework- and device-specific measurements rather than an architectural speed
+guarantee. RMSNorm omits centering and a bias parameter and computes one
+statistic instead of two; its quality must be assessed in the surrounding
+model. Llama is one prominent model family that uses it
+:cite:`touvron2023llama`.
 
 ### Normalizing Queries and Keys
 
@@ -391,18 +382,15 @@ stall — an instability first met at vision-transformer scale, where
 attention entropy was observed collapsing in billion-parameter runs
 :cite:`Dehghani.Djolonga.Mustafa.ea.2023`. *QK-norm*
 :cite:`Henry.Dachapally.Pawar.ea.2020` applies RMSNorm to the queries and
-keys per head, right before the dot product, so the logit scale is pinned
-by construction rather than by hope. It costs two extra norms per layer and
-has become a standard ingredient of 2025-era models (Gemma 3, Qwen3, and
-OLMo 2 all ship it). OLMo 2 is also the one prominent re-litigation of this
-section's verdict: it pairs QK-norm with norms placed *after* each sublayer
-— though still off the stream's identity path, conceding the main lesson of
-the experiment above :cite:`OLMo.2025`. Gemma 3 hedges in the other
-direction and normalizes each branch on both sides, before *and* after the
-sublayer :cite:`Gemma.Team.2025`. :numref:`fig_norm-taxonomy` lays the four
-placements now in circulation side by side; note that only the original
-post-LN interrupts the stream itself, which is why it alone collapses in
-the experiment above. We leave QK-norm as an exercise rather than a flag;
+keys per head, right before the dot product, thereby controlling vector norms
+before scoring. It costs two extra norms per layer. Reports for Gemma 3,
+Qwen3, and OLMo 2 document its use in those model families. OLMo 2 combines
+QK-norm with normalization after each sublayer but outside the residual
+stream's identity path :cite:`OLMo.2025`; Gemma 3 normalizes each branch both
+before and after the sublayer :cite:`Gemma.Team.2025`.
+:numref:`fig_norm-taxonomy` compares these placements. Only original post-LN
+normalizes the residual stream after addition; the signal experiment above
+directly compares that arrangement with pre-LN. We leave QK-norm as an exercise rather than a flag;
 it drops into the block through the `attn_factory` hook introduced below.
 
 ![Four placements of normalization around one sublayer; the FFN sublayer is treated identically, and the residual stream runs bottom to top. Post-LN normalizes the stream itself after each addition; pre-LN normalizes what the branch reads; OLMo 2 normalizes what the branch writes; Gemma 3 normalizes the branch on both sides. Only post-LN touches the stream's identity path.](../img/mdl-transformers-norm-taxonomy.svg)
@@ -734,6 +722,13 @@ choice of the major model families since Llama. It is a modest, real
 improvement at equal parameter count. Such incremental gains can accumulate
 when several architectural choices are combined.
 
+The diagnostics in this section use one initialization, a 32-block synthetic
+stack, and framework-specific normalization kernels. They establish algebraic
+identities and report local signal, gradient, timing, and loss measurements;
+they do not by themselves establish causal explanations or universal model
+rankings. The cited large-scale studies provide separate evidence for the
+training practices discussed above.
+
 ## Summary
 
 A transformer block contains attention and a position-wise FFN connected
@@ -839,39 +834,40 @@ sequence through — deterministic, seconds:
   healthy in both.
 
 ::: {.d2l-note}
-Rank collapse (Dong et al., 2021) caught in the act; why post-LN needed
-warmup (Xiong et al., 2020) and GPT-2 went pre-norm.
+Initialization-time token contraction is related to rank collapse (Dong et
+al., 2021). Xiong et al. (2020) separately analyze post-LN sensitivity to
+warmup.
 :::
 :::
 
-::: {.slide title="RMSNorm: drop what you don't need"}
+::: {.slide title="RMSNorm Omits Mean Centering"}
 $$\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\tfrac{1}{d}\sum_i x_i^2 + \epsilon}} \odot \boldsymbol{\gamma}$$
 
 @!transformer-block-rmsnorm
 
-No centering, no bias, one statistic — comparable quality, less machinery
-(Zhang & Sennrich, 2019; Llama onward).
+No centering, no bias, and one statistic. Quality and speed comparisons depend
+on the model, framework, and kernel (Zhang & Sennrich, 2019).
 :::
 
 ::: {.slide title="Four places for the norm"}
-Post-LN (2017), pre-LN (the default), post-sublayer off-stream (OLMo 2),
+Post-LN (2017), pre-LN, post-sublayer off-stream (OLMo 2),
 pre-and-post (Gemma 3) — only post-LN interrupts the stream's identity
 path:
 
 @fig:mdl-transformers-norm-taxonomy
 :::
 
-::: {.slide title="QK-norm: the same discipline, inside attention"}
-- Nothing above controls the **attention logits**
+::: {.slide title="QK-Norm Controls Query and Key Scale"}
+- The block normalizers do not directly constrain the **attention logits**
   $\mathbf{q}^\top\mathbf{k}/\sqrt{d}$: if training inflates q and k, the
   softmax saturates and its gradient vanishes.
-- QK-norm: RMSNorm on queries and keys, per head, right before the dot
-  product — logit scale pinned by construction.
-- Met at ViT-22B scale; standard in 2025 models (Gemma 3, Qwen3, OLMo 2).
+- QK-norm applies RMSNorm to queries and keys per head before the dot product.
+- ViT-22B reported attention-entropy instability; Gemma 3, Qwen3, and OLMo 2
+  are dated examples that use QK-norm.
 
 ::: {.d2l-note}
-OLMo 2 also re-litigated placement: norms *after* each sublayer — but
-still off the stream's identity path.
+OLMo 2 places norms after each sublayer while leaving the stream's identity
+path unnormalized.
 :::
 :::
 

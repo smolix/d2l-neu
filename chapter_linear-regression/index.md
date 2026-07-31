@@ -17,8 +17,8 @@ the same framework to classification.
 :maxdepth: 2
 
 linear-regression
-oo-design
 synthetic-regression-data
+oo-design
 linear-regression-scratch
 linear-regression-concise
 generalization

@@ -193,8 +193,8 @@ def forward(self, X):
 
 ### Training
 
-Fortunately, the training loop for MLPs
-is exactly the same as for softmax regression. We define the model, data, and trainer, then finally invoke the `fit` method on model and data.
+The training loop is the same as for softmax regression. We define the model,
+data, and trainer, then invoke `fit` on the model and data.
 
 ```{.python .input #mlp-implementation-training}
 model = MLPScratch(num_inputs=784, num_outputs=10, num_hiddens=256, lr=0.1)
@@ -203,10 +203,9 @@ trainer = d2l.Trainer(max_epochs=30)
 trainer.fit(model, data)
 ```
 
-You should see the validation accuracy settle at typically around $0.87$, a
-modest improvement over the softmax regression baseline of
-:numref:`sec_softmax_scratch` on the same data, bought by the hidden layer and
-its ReLU.
+In the displayed run, validation accuracy settles near $0.87$, above the earlier
+softmax-regression run. This comparison is illustrative: initialization,
+shuffling, framework defaults, and optimization settings also affect the result.
 
 ## Concise Implementation
 
@@ -311,7 +310,11 @@ trainer.fit(model, data)
 
 ## Summary
 
-We have now built and trained a working multilayer perceptron, a network with a hidden layer and a nonlinearity, in both a from-scratch and a concise form. The from-scratch version makes the new ingredients concrete: two weight matrices, two bias vectors, a hand-rolled ReLU, and a two-step forward computation. The concise version shows that `nn.Sequential` collapses all of that into a four-element stack. The training loop, the loss function, and the data loader are unchanged from softmax regression, a benefit of the modular design.
+We have built and trained a multilayer perceptron in both from-scratch and concise
+forms. The from-scratch version exposes two weight matrices, two bias vectors, a
+ReLU, and the two affine computations. The concise version represents the same
+architecture as a four-element `nn.Sequential` stack. The training loop, loss,
+and data loader remain unchanged from softmax regression.
 
 The from-scratch version also exposes why we reach for the high-level API: naming and tracking parameters by hand quickly becomes awkward. Imagine inserting another layer between layers 42 and 43; we would be stuck renaming or improvising a "layer 42b". `nn.Sequential` removes both problems at once.
 
@@ -488,9 +491,9 @@ from softmax regression. Only the model class is new:
 @!mlp-implementation-training
 
 ::: {.d2l-note .rule}
-Validation accuracy typically settles around $\approx 0.87$ over 30 epochs,
+In this run, validation accuracy settles around $\approx 0.87$ over 30 epochs,
 a modest gain over the softmax regression baseline on the same data,
-bought by one hidden layer and its ReLU.
+for a model with one hidden layer and a ReLU.
 :::
 :::
 
@@ -615,13 +618,13 @@ section explains.
   regression (modularity paying off).
 - Hyperparameters (depth, width, lr) live **outside** the
   model; the same loop trains any of them.
-- Validation accuracy settles around **$\approx 0.87$**, a modest
-  gain from the hidden layer and its ReLU.
+- The displayed run settles around **$\approx 0.87$**; a controlled comparison
+  would also match seeds, initialization, and optimization settings.
 :::
 :::
 
 ::: {.d2l-note}
-Next (the forward/backward-propagation section): open the black box, what
-`backward()` actually computes, by hand and then verified.
+The next section derives the gradients computed by `backward()` and verifies
+them numerically.
 :::
 :::

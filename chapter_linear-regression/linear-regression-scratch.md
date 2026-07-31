@@ -56,9 +56,10 @@ we need to have some parameters in the first place.
 In the following we initialize weights by drawing
 random numbers from a normal distribution with mean 0
 and a standard deviation of 0.01. 
-The magic number 0.01 often works well in practice, 
-but you can specify a different value 
-through the argument `sigma`.
+For this convex linear model, a small nonzero scale such as 0.01 is sufficient
+to start optimization and is not a general initialization prescription. The
+argument `sigma` exposes the choice; variance-preserving schemes for deep
+networks are developed in :numref:`sec_numerical_stability`.
 Moreover we set the bias to 0.
 Note that for object-oriented design
 we add the code to the `__init__` method of a subclass of `d2l.Module` (introduced in :numref:`subsec_oo-design-models`).
@@ -356,13 +357,9 @@ def configure_optimizers(self):
 
 ## Training
 
-Now that we have all of the parts in place
-(parameters, loss function, model, and optimizer),
-we are ready to implement the main training loop.
-You will want to understand this code fully,
-since you will employ similar training loops
-for every other deep learning model
-covered in this book.
+The parameters, loss, model, and optimizer now define one minibatch update. The
+training loop repeats that update over every batch and records its progress; the
+same ordering constraints recur in later models.
 In each *epoch*, we iterate through 
 the entire training dataset, 
 passing once through every example
@@ -421,7 +418,7 @@ same operations one at a time from Python grows with model and batch size.
 :end_tab:
 
 :begin_tab:`jax`
-Under the hood JAX still traces pure functions, but NNX hides the plumbing:
+JAX traces pure functions, while NNX manages the associated object state:
 the module owns its parameters, and `nnx.value_and_grad` differentiates the
 loss *with respect to the module itself*. Running each operation one at a
 time from Python would pay a dispatch cost on every call; compiling the
@@ -819,7 +816,8 @@ $\mathbf{Xw}$ is a vector, $b$ a scalar; **broadcasting** adds $b$ to every entr
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-This single line is the only "architecture" in linear regression. Deep nets just stack many of them with nonlinearities between.
+This affine map is the complete linear-regression architecture. Later networks
+compose affine maps with nonlinearities and other structured operations.
 :::
 :::
 :::
@@ -946,7 +944,9 @@ Clear before the backward pass, or stale gradients leak between batches; keep th
 ::: {.slide title="Reproducibility: fix the seed" only="pytorch"}
 [Training · PyTorch]{.kicker}
 
-So the run is repeatable, we seed the global RNG before building the model. The figures and recovered parameters on the next slides are exactly what this produces:
+For the PyTorch run shown here, seeding the global RNG before model construction
+fixes initialization and minibatch order; the following figures and parameter
+estimates correspond to that configuration:
 
 @-linear-regression-scratch-training-seed
 :::

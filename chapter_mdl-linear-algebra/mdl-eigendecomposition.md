@@ -82,17 +82,16 @@ signals a non-invertible matrix.) For a fixed eigenvalue $\lambda$, the set of
 all vectors satisfying $\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$, together with
 $\mathbf 0$, forms a subspace, the *eigenspace* of $\lambda$.
 
-To picture eigenvectors, ask what a matrix does to the
-*unit circle*, the set of all unit vectors. A full-rank matrix maps it to an
-ellipse (a singular matrix flattens the ellipse further, into a segment or a
-point), and for a *symmetric* matrix the axes of that ellipse lie exactly along
-the eigenvectors, with half-lengths $|\lambda_i|$ (an axis flips when
-$\lambda_i<0$). :numref:`fig_mdl-la-eig-ellipse` draws this for our
-$\operatorname{diag}(2,-1)$ above and for the symmetric
-$[[2,1],[1,2]]$ that we revisit in the exercises. This is the same "circle becomes an ellipse"
-picture that the singular value decomposition will generalize to *every* matrix
-in :numref:`sec_mdl-svd-low-rank`; for a symmetric matrix, the input and output
-axes coincide.
+The image of the unit circle is an ellipse, or a lower-dimensional segment or
+point when the matrix is singular. For a general matrix, however, the input
+directions and output axes of this ellipse are its right and left singular
+vectors, not necessarily its eigenvectors. The two coincide for the symmetric
+examples below: their ellipse axes lie along orthonormal eigenvectors, with
+half-lengths $|\lambda_i|$ and an orientation reversal when $\lambda_i<0$.
+:numref:`fig_mdl-la-eig-ellipse` draws $\operatorname{diag}(2,-1)$ and
+$[[2,1],[1,2]]$. The SVD in :numref:`sec_mdl-svd-low-rank` retains this
+picture for every matrix by allowing distinct orthonormal bases for the input
+and output spaces.
 
 ![The unit circle maps to an ellipse. For a symmetric matrix the ellipse axes lie along the eigenvectors (green), with images scaled by the eigenvalues (red). Left: $\operatorname{diag}(2,-1)$, axes along the coordinate directions. Right: the symmetric $\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$, axes along the diagonal directions.](../img/mdl-la-eig-ellipse.svg)
 :label:`fig_mdl-la-eig-ellipse`
@@ -111,14 +110,11 @@ To find the eigenvalues, subtract $\lambda\mathbf v$ from both sides of
 $$(\mathbf{A} - \lambda \mathbf{I})\mathbf{v} = 0.$$
 :eqlabel:`eq_mdl-eigvalue_der`
 
-For :eqref:`eq_mdl-eigvalue_der` to happen, we see that $(\mathbf{A} - \lambda \mathbf{I})$
-must compress some direction down to zero,
-hence it is not invertible, and thus the determinant is zero.
-Thus, we can find the *eigenvalues*
-by finding for what $\lambda$ is $\det(\mathbf{A}-\lambda \mathbf{I}) = 0$.
-Once we find the eigenvalues, we can solve
+Because $\mathbf v$ must be nonzero, this equation has a solution precisely when
+$\mathbf{A}-\lambda\mathbf I$ has a nontrivial null space. Equivalently, the
+matrix is singular and $\det(\mathbf{A}-\lambda\mathbf I)=0$. The eigenvalues
+are the roots of this equation. For each root, solving
 $\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$
-to find the associated *eigenvector(s)*.
 
 Let's see this with a more challenging matrix
 
@@ -191,7 +187,7 @@ affordable.
 
 ### Eigendecomposition and What It Computes
 
-Let's continue the previous example one step further.  Let
+Continue the preceding example. Let
 
 $$
 \mathbf{W} = \begin{bmatrix}
@@ -200,7 +196,7 @@ $$
 \end{bmatrix},
 $$
 
-be the matrix where the columns are the eigenvectors of the matrix $\mathbf{A}$. Let
+whose columns are the two eigenvectors of $\mathbf A$. Let
 
 $$
 \boldsymbol{\Lambda} = \begin{bmatrix}
@@ -209,15 +205,15 @@ $$
 \end{bmatrix},
 $$
 
-be the matrix with the associated eigenvalues on the diagonal.
-Then the definition of eigenvalues and eigenvectors tells us that
+whose diagonal entries are the associated eigenvalues. The two eigenvector
+equations can then be written together as
 
 $$
 \mathbf{A}\mathbf{W} =\mathbf{W} \boldsymbol{\Lambda} .
 $$
 
-The matrix $\mathbf{W}$ is invertible, so we may multiply both sides by $\mathbf{W}^{-1}$ on the right,
-we see that we may write
+Because the eigenvectors are linearly independent, $\mathbf W$ is invertible.
+Multiplying on the right by $\mathbf W^{-1}$ gives
 
 $$\mathbf{A} = \mathbf{W} \boldsymbol{\Lambda} \mathbf{W}^{-1}.$$
 :eqlabel:`eq_mdl-eig_decomp`
@@ -1927,7 +1923,7 @@ clipping, and LSTM/GRU gating.
 :::
 :::
 
-::: {.slide title="Summary"}
+::: {.slide title="Eigenstructure governs repeated square maps"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

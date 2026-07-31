@@ -209,13 +209,18 @@ Making this `discover → inspect → read → verify` loop a habit
 will carry you through the unfamiliar corners of any library,
 long after the specific functions in this book have changed.
 
-Coding assistants are often the quickest route to a first answer:
-ask "how do I sample from a normal distribution in this framework?"
-and you will usually get a function and a working call in seconds.
-Treat the suggestion the way you would a knowledgeable colleague's tip:
-a good starting point that still goes through the loop above.
+Coding assistants can propose an API call for a question such as “how do I
+sample from a normal distribution in this framework?” Treat the result as an
+unverified candidate that still goes through the loop above.
 Glance at the signature with `help` or `?`, run a small example,
-and rely on the suggestion once it survives both.
+and accept the suggestion only once it survives both.
+
+## Summary
+
+For an unfamiliar operation, discover candidate names, inspect the signature,
+read the relevant documentation, and verify the behavior with the smallest run
+that exposes shapes, dtypes, and values. This procedure remains valid as library
+APIs change and applies equally to suggestions from search or coding assistants.
 
 ## Exercises
 

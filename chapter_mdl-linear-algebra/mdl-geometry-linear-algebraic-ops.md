@@ -10,6 +10,8 @@ stability, PCA, and Hessian analysis, and singular value decomposition
 (:numref:`sec_mdl-svd-low-rank`) for low-rank approximation, conditioning, and
 LoRA.
 
+The section has four stages. We first develop vector geometry and subspaces, then examine high-dimensional similarity and a linear-classifier example. After that application, we return to matrices as maps, rank, and determinants. A final part introduces tensor index notation. The part headings are intended as stopping points; later sections require the geometric and matrix-map stages, but not the classifier example.
+
 ## Vectors and Their Geometry
 
 ### Points and Directions
@@ -568,12 +570,12 @@ $1/\sqrt{d}$, concentrating ever more tightly at $0$. This is a first taste of
 *concentration of measure*, the phenomenon that makes high-dimensional geometry
 behave very differently from our $2$- and $3$-dimensional intuition; we
 quantify it with exponential tail bounds in
-:numref:`sec_mdl-concentration-generalization`. It is also
-why cosine similarity is a useful signal: since unrelated items are nearly
-orthogonal by default, a cosine that is appreciably above $0$ is unlikely to
-be an accident and instead reflects real shared structure. This is the
-working assumption behind embedding-based retrieval and the attention
-mechanism.
+:numref:`sec_mdl-concentration-generalization`. Under this isotropic random
+reference model, a fixed pair has fluctuations on the scale $1/\sqrt d$.
+Whether an observed cosine is unusual depends on the dimension, the number of
+candidates searched, and how the representations were trained; a positive
+cosine alone is not evidence of semantic relatedness. Embedding retrieval uses
+cosine similarity because training makes direction informative, not by chance.
 
 We can watch the concentration happen by sampling random unit vectors and
 histogramming their pairwise cosines as the dimension grows, shown in
@@ -591,10 +593,10 @@ collapsed into a spike of width $\approx 0.03$.
 This concentration is the operating environment of **dot-product attention**
 (:numref:`sec_attention-scoring-functions`). An
 attention layer compares one query $\mathbf{q}$ against thousands of keys
-$\mathbf{k}_1, \mathbf{k}_2, \ldots$ by dot product, and near-orthogonality is
-what makes the comparison informative at scale: the scores of the many
-unrelated keys concentrate near zero, so the few keys that genuinely share
-structure with the query stand out against a quiet background. A short
+$\mathbf{k}_1, \mathbf{k}_2, \ldots$ by dot product. Under an isotropic reference
+model each unrelated score is centered at zero, although the largest among many
+scores need not be small. Attention learns the query and key representations;
+near-orthogonality alone does not guarantee separation. A short
 variance computation also explains the otherwise mysterious $\sqrt{d}$ in the
 attention scores $\mathbf{Q}\mathbf{K}^\top/\sqrt{d}$
 :cite:`Vaswani.Shazeer.Parmar.ea.2017`. Let the query and key have
@@ -1764,25 +1766,13 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
 :numref:`sec_mdl-eigendecompositions`.
 
 ## Summary
-* Vectors can be interpreted geometrically as either points or directions in space.
-* Dot products define the notion of angle to arbitrarily high-dimensional spaces.
-* Spans, subspaces, and bases organize collections of vectors: a basis assigns every vector of a subspace unique coordinates, and the dimension counts the basis vectors. The column space and null space of a matrix record what it can produce and what it destroys.
-* Projection produces the closest point of a line (or, via the projection matrix $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, of any subspace) and is characterized by an orthogonal residual. This is the geometry of the least-squares problem :eqref:`eq_mdl-least-squares`.
-* Hyperplanes generalize lines and planes to higher dimensions and commonly
-  define linear decision boundaries for classification.
-* Matrix multiplication can be geometrically interpreted as uniform distortions of the underlying coordinates: a matrix skews, rotates, and scales, and it treats every part of space the same way. Multiplying two matrices composes the corresponding maps.
-* Orthogonal matrices are the rigid motions: they preserve lengths, angles, and (up to a sign recording reflections) volumes.
-* Linear dependence indicates that a collection of vectors occupies a
-  lower-dimensional subspace. Matrix rank is the maximum number of linearly
-  independent columns, and rank--nullity states that rank plus nullity equals
-  the number of columns.
-* An invertible matrix has an inverse transformation. Explicit matrix
-  inversion is useful in theory but often avoided in numerical computation.
-* The determinant is the signed volume scaling of a matrix. It is characterized by three properties (multilinear, alternating, $\det\mathbf{I} = 1$), it flips sign under a column swap, and it satisfies $\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{A})\det(\mathbf{B}) = \det(\mathbf{B}\mathbf{A})$. A nonzero determinant is equivalent to invertibility; a zero determinant means the matrix is singular.
-* Tensor contractions and Einstein summation express many machine learning
-  computations through repeated indices. This notation also makes identities
-  such as $\textrm{tr}(\mathbf{A}\mathbf{B}) =
-  \textrm{tr}(\mathbf{B}\mathbf{A})$ concise.
+
+* Dot products determine lengths and angles. Orthogonal projection gives the closest point in a subspace and leaves a residual perpendicular to that subspace.
+* A basis assigns unique coordinates within a subspace. Hyperplanes are codimension-one subspaces or their affine translates and form linear decision boundaries.
+* A matrix is a linear map. Its range contains attainable outputs; its null space contains inputs it erases. Rank--nullity relates their dimensions.
+* Orthogonal matrices preserve lengths and angles. Invertible matrices preserve all dimensions, whereas singular matrices collapse at least one direction.
+* The determinant is signed volume scaling. It is nonzero exactly when a square matrix is invertible; singular values, introduced later, measure directional scaling without a sign.
+* Einstein notation makes tensor contractions explicit by summing over repeated indices and extends the same bookkeeping from dot products to matrix and tensor products.
 
 ## Exercises
 1. What is the angle between
@@ -2320,7 +2310,7 @@ matrix–vector call recovers our worked $\mathbf{A}\mathbf{v} = [0, -5]^\top$):
 @-geometry-linear-algebraic-ops-expressing-in-code-2
 :::
 
-::: {.slide title="Summary"}
+::: {.slide title="Subspaces describe what a linear map preserves and erases"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

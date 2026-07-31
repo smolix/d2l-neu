@@ -21,8 +21,8 @@ and the noise distribution),
 then any *systematic* failure to recover them
 (beyond the irreducible noise) points to the algorithm
 or implementation.
-This is why synthetic datasets are the first test
-for any new learning method.
+This is why a compatible synthetic dataset is a useful early implementation
+test for a new learning method.
 We confirm that it solves a problem with a known answer
 before we ever hand it a real one.
 
@@ -370,8 +370,7 @@ This is because `get_tensorloader` passes `drop_remainder=True` when
 training: the final partial batch of 8 examples is discarded.
 We do this so that every training minibatch has an identical shape,
 which keeps a `@jax.jit`-compiled training step from being recompiled
-for the differently sized last batch (a recompilation that can cost
-minutes per epoch on larger datasets). The price is that we drop a
+for the differently sized last batch. The price is that we drop a
 handful of examples each epoch, which is negligible here. A loader that
 keeps the partial batch would report 32.
 :end_tab:
@@ -381,7 +380,9 @@ keeps the partial batch would report 32.
 Synthetic data lets us check the recovered parameters against the truth
 we fixed: because we chose $\mathbf{w}^*$ and $b^*$ ourselves, we can see
 after training whether the estimates agree, which makes such datasets
-the first place to validate any new algorithm.
+an early place to validate an algorithm against a compatible known-answer
+problem. Passing this check does not establish robustness to misspecification
+or real deployment data.
 The `SyntheticRegressionData` class introduced here packages this
 data-generating process as a `DataModule` subclass, separating *where
 the batches come from* from *how a model consumes them*.

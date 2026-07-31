@@ -45,44 +45,22 @@ import jax
 
 ## Training Deep Networks
 
-When working with data, we often preprocess before training.
-Choices regarding data preprocessing often make an enormous difference in the final results.
-Recall our application of MLPs to predicting house prices (:numref:`sec_kaggle_house`).
-Our first step when working with real data
-was to standardize each input feature to have zero mean and unit marginal
-variance across observations. In vector notation, the mean is
-$\boldsymbol{\mu}=\boldsymbol{0}$ and the covariance has unit diagonal,
-$\Sigma_{ii}=1$; its off-diagonal entries need not vanish
-:cite:`friedman1987exploratory`.
-Yet another strategy is to rescale vectors to unit length, possibly zero mean *per observation*.
-This can work well, e.g., for spatial sensor data. These preprocessing techniques and many others, are
-beneficial for keeping the estimation problem well controlled. 
-For a review of feature selection and extraction see the article of :citet:`guyon2008feature`, for example.
-Standardizing vectors also has the nice side-effect of constraining the function complexity of functions that act upon it. For instance, the celebrated radius-margin bound :cite:`Vapnik95` in support vector machines and the Perceptron Convergence Theorem :cite:`Novikoff62` rely on inputs of bounded norm. 
+Input standardization places observed features on comparable scales before
+optimization begins. A deep network creates a related problem internally:
+the affine outputs entering one layer can have scales that differ across
+features, layers, and training steps. Large or highly unequal scales can make
+one learning rate unsuitable for all parameters.
 
-Intuitively, this standardization plays nicely with our optimizers
-since it puts the parameters *a priori* on a similar scale.
-As such, it is only natural to ask whether a corresponding normalization step *inside* a deep network
-might not be beneficial. While this is not quite the reasoning that led to the invention of batch normalization :cite:`Ioffe.Szegedy.2015`, it is a useful way of understanding it and its cousin, layer normalization :cite:`Ba.Kiros.Hinton.2016`, within a unified framework.
-
-Second, for a typical MLP or CNN, as we train,
-the variables 
-in intermediate layers (e.g., affine transformation outputs in MLP)
-may take values with widely varying magnitudes:
-whether along the layers from input to output, across units in the same layer,
-and over time due to our updates to the model parameters.
-The inventors of batch normalization postulated informally
-that this drift in the distribution of such variables could hamper the convergence of the network.
-Intuitively, we might conjecture that if one
-layer has variable activations that are 100 times that of another layer,
-this might necessitate compensatory adjustments in the learning rates. Adaptive solvers
-such as AdaGrad :cite:`Duchi.Hazan.Singer.2011`, Adam :cite:`Kingma.Ba.2014`, Yogi :cite:`Zaheer.Reddi.Sachan.ea.2018`, or Distributed Shampoo :cite:`anil2020scalable` aim to address this from the viewpoint of optimization, e.g., by adding aspects of second-order methods. 
-The alternative is to prevent the problem from occurring, simply by adaptive normalization.
-
-Third, deeper networks are complex and tend to be more liable to overfitting.
-This means that regularization becomes more critical. A common technique for regularization is noise
-injection. This has been known for a long time, e.g., with regard to noise injection for the
-inputs :cite:`Bishop.1995`. It also forms the basis of dropout in :numref:`sec_dropout`. As it turns out, quite serendipitously, batch normalization conveys all three benefits: preprocessing, numerical stability, and regularization.
+Batch normalization :cite:`Ioffe.Szegedy.2015` controls these scales during
+training. For each feature it computes a minibatch mean and variance,
+standardizes the activation, and then applies a learned scale and offset. The
+analogy with input preprocessing is useful but limited. Batch statistics
+depend on the current parameters and minibatch, whereas input statistics are
+normally fixed before training. The resulting minibatch noise can also have a
+regularizing effect, but this is an empirical property rather than the
+definition of the layer. Layer normalization :cite:`Ba.Kiros.Hinton.2016`
+uses the same standardize-and-rescale pattern with statistics computed within
+each example.
 
 Batch normalization is applied to individual layers, or optionally, to all of them:
 In each training iteration,
@@ -992,7 +970,7 @@ Even with dropout and weight decay,
 they remain so flexible that their ability to generalize to unseen data
 likely needs significantly more refined learning-theoretic generalization guarantees.
 
-The original paper proposing batch normalization :cite:`Ioffe.Szegedy.2015` introduced a powerful and useful tool, and it also
+The original batch-normalization paper :cite:`Ioffe.Szegedy.2015` also
 offered an explanation for why it works:
 by reducing *internal covariate shift*.
 Presumably by *internal covariate shift* they
@@ -1094,9 +1072,9 @@ The practical points are:
 
 <!-- slides -->
 
-::: {.slide title="BatchNorm stabilizes deep nets"}
-**Batch Normalization** (Ioffe & Szegedy, 2015) is the
-single-biggest stability win in modern deep learning.
+::: {.slide title="Batch Normalization Controls Activation Scale"}
+**Batch normalization** (Ioffe & Szegedy, 2015) standardizes activations with
+minibatch statistics during training.
 
 At each layer, **normalize** activations within the
 minibatch to zero mean / unit variance, then **rescale**
@@ -1105,14 +1083,16 @@ with learned $\gamma$ and $\beta$:
 $$\text{BN}(\mathbf{x}) = \gamma \cdot \frac{\mathbf{x} - \hat\mu_\mathcal{B}}{\sqrt{\hat\sigma_\mathcal{B}^2 + \epsilon}} + \beta.$$
 :::
 
-::: {.slide title="Why it works"}
-- Lets you train **much deeper** nets — gradients stay
-  well-conditioned through the depth.
-- Allows **higher learning rates**; mildly regularizing.
+::: {.slide title="Observed Effects and Related Normalizers"}
+- Often permits **higher learning rates** and faster optimization.
+- Minibatch-dependent statistics can add regularizing noise.
 - **Test time** uses running estimates of mean / variance
   (no minibatch then).
 - Spawned a family — **LayerNorm** (per-example, used in
   Transformers), **GroupNorm**, **InstanceNorm**.
+
+These effects are empirical; no single proposed mechanism explains them in
+all architectures.
 :::
 
 ::: {.slide title="From scratch"}

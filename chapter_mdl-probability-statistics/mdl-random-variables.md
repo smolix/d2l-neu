@@ -63,37 +63,32 @@ $1.5$ and $2.5\,\textrm{cm}$, not what we asked. Measure finer, to bins of
 $0.1\,\textrm{cm}$: now perhaps $3$ throws land in $[1.95,2.05]$, suggesting
 $3\%$. We have only pushed the problem one digit down.
 
-Abstract it. Knowing the first $k$ digits match $2.000\ldots$, the
-$(k{+}1)$-th digit is essentially a uniform draw from $\{0,\ldots,9\}$: no
-physical mechanism makes the micrometer count prefer a $7$ to a $3$. So each
-extra digit of accuracy shrinks the probability by a factor of $10$:
+The relevant object is the probability of a short interval, not the behavior
+of successive decimal digits. For $\epsilon>0$, consider
+$P(x\leq X<x+\epsilon)$. If the local probability-to-width ratio has a limit,
+define
 
 $$
-P(\textrm{distance is}\; 2.00\ldots \;\textrm{to}\; k \;\textrm{digits}) \approx p\cdot 10^{-k}.
+p(x)=\lim_{\epsilon\downarrow0}
+\frac{P(x\leq X<x+\epsilon)}{\epsilon}.
 $$
 
-Knowing $k$ digits pins the value to an interval of width $10^{-k}$. Writing
-$\epsilon$ for that width, the statement becomes $P(X\text{ in an interval of
-width }\epsilon\text{ around }2)\approx \epsilon\cdot p$. Nothing privileged the point $2$: a good
-dart thrower is likelier to land near the center, so the constant depends on
-*where* we look. Calling it $p(x)$,
+At points where $p$ is continuous, this definition gives
 
-$$P(X \;\textrm{is in an}\; \epsilon \textrm{-sized interval around}\; x ) \approx \epsilon \cdot p(x).$$
+$$P(x\leq X<x+\epsilon)=\epsilon p(x)+o(\epsilon).$$
 :eqlabel:`eq_mdl-pdf_def`
 
-This *is* the *probability density function* (p.d.f.): a function $p(x)$ encoding
-the relative likelihood of landing near $x$ versus elsewhere. It is the exact
-object introduced as a normalized non-negative function in
-:eqref:`eq_mdl-density`; here we see *where it comes from*.
+When interval probabilities have the representation
+$P(X\in A)=\int_A p(x)\,dx$, the law is *absolutely continuous* and $p$ is its
+probability density function (p.d.f.). Not every probability law has a density;
+discrete laws have atoms, and mixed laws contain both atomic and density parts.
 
-One consequence is immediate, and it is where continuous probability first
-feels strange. Shrinking the interval to a single point
-($\epsilon\to 0$) sends the right-hand side of :eqref:`eq_mdl-pdf_def` to zero,
-so for *any* fixed value $x$,
+If $X$ has a density, every singleton has zero probability. Thus, for any fixed
+$x$,
 
 $$P(X = x) = 0.$$
 
-This resolves the dartboard paradox: the probability of landing *exactly*
+This resolves the dartboard example: the probability of landing *exactly*
 $2\,\textrm{cm}$ out is zero, even though the dart certainly lands *somewhere*.
 The size notion at work here deserves a name. A set has *measure zero* when,
 for every $\varepsilon>0$, it can be covered by a countable collection of
@@ -104,10 +99,9 @@ $\varepsilon$. For a variable with a density, every measure-zero set carries
 zero probability: covering the set by intervals of total length $\delta$ caps
 its probability at the integral of $p$ over those intervals, which shrinks to
 zero with $\delta$ (immediately when $p$ is bounded, and with a little more
-care in general). A point carrying *positive* mass is called an *atom*, so a
-variable with a density has no atoms; sets of positive length, by contrast, can
-carry positive probability, and we read those probabilities off the density by
-integrating.
+care in general). A point carrying *positive* mass is called an *atom*. A
+purely absolutely continuous variable has no atoms, whereas a mixed law may
+have atoms and a density on the remainder of its support.
 
 ### Densities and Their Two Defining Properties
 
@@ -930,8 +924,8 @@ deviations-as-vectors geometry underlies least squares
 ### Change of Variables for Densities
 
 One final result closes the section. When we push a random variable
-through a function $Y=g(X)$, its density is *not*
-simply $p_X\!\big(g^{-1}(y)\big)$: as the map stretches and compresses space the
+through a function $Y=g(X)$, its density is not generally
+$p_X\!\big(g^{-1}(y)\big)$: as the map stretches and compresses space the
 density must be re-scaled to keep its total mass at $1$. We already computed
 the re-scaling factor. The integral change-of-variables theorem of
 :numref:`sec_mdl-integral_calculus` already established that a reparametrization
@@ -942,7 +936,9 @@ x))\,|\det D\boldsymbol\phi(\mathbf x)|\,d\mathbf x$
 constraint that the total integral stays $1$: *probability mass in equals
 probability mass out*.
 
-Take the one-dimensional case first, $g$ monotone so it has an inverse. The
+Take the one-dimensional case first. Assume that $g$ is continuously
+differentiable, one-to-one and monotone on the support of $X$, with
+$g'(x)\ne0$. The
 intuition is that the mass
 in a tiny interval must survive the map, $p_Y(y)\,|dy| = p_X(x)\,|dx|$ with
 $y=g(x)$; solving for the new density and writing $x=g^{-1}(y)$ gives the
@@ -961,10 +957,24 @@ p_Y(y) = p_X\!\big(g^{-1}(y)\big)\,\left|\frac{d g^{-1}}{dy}(y)\right|.
 $$
 :eqlabel:`eq_mdl-cov_density_1d`
 
+If $g$ has finitely many regular inverse branches, their contributions add:
+
+$$
+p_Y(y)=\sum_{x\in g^{-1}(\{y\})}\frac{p_X(x)}{|g'(x)|},
+$$
+
+for values $y$ whose preimages satisfy $g'(x)\ne0$. For example, if $Y=X^2$
+and $y>0$, then
+$p_Y(y)=[p_X(\sqrt y)+p_X(-\sqrt y)]/(2\sqrt y)$. Critical points where
+$g'(x)=0$, infinitely many inverse branches, and transformations that create
+atoms require additional analysis.
+
 The derivative factor is exactly the local stretch of the map: where $g$ spreads a
 small interval out, the density must drop to keep the area fixed. In several
-dimensions the scalar stretch $|dg^{-1}/dy|$ becomes the absolute Jacobian
-determinant, by instantiating :eqref:`eq_mdl-change_var_nd` with
+dimensions, assume that $g$ is a continuously differentiable bijection with a
+continuously differentiable inverse and nonzero Jacobian determinant. The
+scalar stretch $|dg^{-1}/dy|$ becomes the absolute Jacobian determinant, by
+instantiating :eqref:`eq_mdl-change_var_nd` with
 $\boldsymbol\phi=g^{-1}$ and $f=p_X$:
 $P(Y\in A)=P\bigl(X\in g^{-1}(A)\bigr)=\int_{g^{-1}(A)}p_X(\mathbf x)\,d\mathbf x
 =\int_A p_X\bigl(g^{-1}(\mathbf y)\bigr)\,\bigl|\det J_{g^{-1}}(\mathbf y)\bigr|\,d\mathbf y$,
@@ -1141,8 +1151,9 @@ $$P\bigl(X \in [x, x+\epsilon]\bigr) \approx \epsilon\, p(x).$$
 
 . . .
 
-So $P(X = x) = 0$ for every fixed point, and $p(x)$ may exceed $1$:
-a density is a *rate*, not a probability.
+If $X$ has a density, then $P(X = x) = 0$ for every fixed point, while
+$p(x)$ may exceed $1$: a density is a *rate*, not a probability. Discrete
+and mixed distributions may instead place positive mass at individual points.
 :::
 
 ::: {.slide title="Probability is area"}
@@ -1447,14 +1458,18 @@ PCA (the spectral theorem in action).
 ::: {.slide title="Change of variables for densities"}
 [Pushforward]{.kicker}
 
-Map $Y=g(X)$. To conserve probability, density thins by the local
-stretch:
+Suppose $g$ is one-to-one and differentiable, with nonzero derivative, and
+set $Y=g(X)$. Conservation of probability gives
 
 $$p_Y(y) = p_X\bigl(g^{-1}(y)\bigr)\,\left|\frac{dg^{-1}}{dy}(y)\right|.$$
 
+If a value $y$ has several regular preimages, sum this contribution over
+them. Critical points and atoms require separate care.
+
 . . .
 
-In many dimensions this becomes a log-determinant of the Jacobian:
+For a differentiable bijection in many dimensions, with a differentiable
+inverse and nonsingular Jacobian, this becomes
 
 $$\log p_Y(\mathbf y) = \log p_X(\mathbf x) - \log\bigl|\det J_g(\mathbf x)\bigr|.$$
 

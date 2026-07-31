@@ -620,20 +620,18 @@ differ in silhouette are easy.
 
 ## Summary and Discussion
 
-In this section we built softmax regression entirely from scratch: the softmax
-operation, the cross-entropy loss, parameter initialization, the forward pass, and
-training on Fashion-MNIST. Breaking each piece open by hand is the purpose. Once
-you have seen these five moving parts separately, the one-liner in
-:numref:`sec_softmax_concise` is just notation.
+In this section we built softmax regression from its constituent operations:
+softmax, cross-entropy, parameter initialization, the forward pass, and the
+optimization step. The concise implementation in :numref:`sec_softmax_concise`
+packages the same computation into framework primitives, including a fused and
+numerically stable loss.
 
-**What the training curve tells you.** After 10 epochs with minibatch SGD the
-model converges to roughly 82--83% validation accuracy. That ceiling is the
-limit of linear separability on Fashion-MNIST rather than a tuning artifact,
-since the ten classes are not linearly separable in pixel space: shirts and
-pullovers look nearly identical to a linear model, as the misclassification
-gallery and the confusion matrix at the end of the section make concrete.
-Replacing the flat linear layer with even a single hidden layer
-(:numref:`chap_perceptrons`) pushes past it.
+**What this training curve shows.** In the displayed run, 10 epochs of minibatch
+SGD reach roughly 82--83% validation accuracy. The confusion matrix shows that
+many remaining errors involve upper-body garments with similar pixel patterns.
+This observation diagnoses the fitted model; it does not establish a universal
+accuracy ceiling for linear classifiers or rule out improvements from different
+preprocessing, optimization, or regularization.
 
 **Why the clip is only a band-aid.** The clip stops $\log 0$ but leaves the naive
 `softmax` free to overflow for large logits; the real fix (subtracting the row
@@ -920,9 +918,8 @@ Sweep the whole validation set and average the per-example correct flags:
 @softmax-regression-scratch-prediction-accuracy
 
 ::: {.d2l-note}
-Roughly **82--83%** run to run: the *ceiling* of a linear
-model on Fashion-MNIST, not a tuning artifact. The next slide shows where
-the missing 18% lives.
+This run reaches roughly **82--83%**. The confusion matrix on the next slide
+shows which class pairs account for many of its errors.
 :::
 :::
 
@@ -931,11 +928,11 @@ the missing 18% lives.
 
 Sweep the whole validation set and average the per-example correct flags
 returned by `accuracy(..., averaged=False)`: the overall test accuracy
-lands at roughly **82--83%**, matching the validation curve above.
+lands at roughly **82--83%** in the displayed run, matching the validation
+curve above.
 
 ::: {.d2l-note}
-That is the *ceiling* of a linear model on Fashion-MNIST, not a tuning
-artifact. The next slide shows where the missing 18% lives.
+The next slide resolves this aggregate accuracy into class-specific errors.
 :::
 :::
 
@@ -1021,9 +1018,8 @@ ceiling.
 ::: {.col}
 - **Training** reuses the regression `Trainer`; `Classifier` adds
   accuracy reporting through the base class.
-- **82--83%** is the linear ceiling on Fashion-MNIST; the confusion matrix
-  shows the errors in two blocks (upper-body garments, footwear), exactly
-  where silhouette fails.
+- This run reaches **82--83%**; its confusion matrix concentrates errors among
+  visually similar upper-body garments and, to a lesser extent, footwear.
 - `exp(1000)` = `NaN`: the naive softmax is fragile and the clip merely
   hides it; the concise-softmax-regression section derives the real fix.
 :::

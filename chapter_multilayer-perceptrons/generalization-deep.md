@@ -2,61 +2,18 @@
 :label:`sec_generalization_deep`
 
 
-In :numref:`chap_regression` and :numref:`chap_classification`, we separated
-optimization on a training sample from generalization to new examples. That
-distinction becomes more difficult for deep networks, whose capacity and
-optimization dynamics are not well described by the classical measures used
-for linear models.
-Optimization is merely a means to an end: machine learning researchers
-consume optimization algorithms, and sometimes invent new ones,
-but always in service of a statistical goal.
-At its core, machine learning is a statistical discipline
-and we wish to optimize training loss only insofar
-as some statistical principle (known or unknown)
-leads the resulting models to generalize beyond the training set.
+Earlier chapters related generalization to model complexity, but the raw number
+of parameters is an unreliable capacity measure for deep networks. Networks can
+interpolate a training set and still generalize, and different optimizers can
+select different solutions from the same parameterized family. No single theory
+accounts for all such behavior.
 
-
-Deep neural networks trained by stochastic gradient descent generalize well
-across myriad prediction problems, spanning computer vision;
-natural language processing; time series data; recommender systems;
-electronic health records; protein folding;
-value function approximation in video games
-and board games; and numerous other domains.
-No single theory yet provides a complete account of either optimization or
-generalization in these models.
-While our procedures for optimizing linear models
-and the statistical properties of the solutions
-are both described well by a comprehensive body of theory,
-many aspects of deep learning remain subjects of active research.
-
-Both the theory and practice of deep learning
-are rapidly evolving,
-with theorists adopting new strategies
-to explain what's going on,
-even as practitioners continue
-to develop heuristics for training deep networks
-and a body of empirical knowledge
-that provide guidance for deciding
-which techniques to apply in which situations.
-
-As things stand, the theory of deep learning
-has produced promising lines of attack and scattered fascinating results,
-but still appears far from a comprehensive account
-of both (i) why we are able to optimize neural networks
-and (ii) how models learned by gradient descent
-manage to generalize so well, even on high-dimensional tasks.
-In many benchmark settings, optimization can drive training error close to
-zero, making generalization the harder unexplained part. Optimization is not
-universally solved: failures remain common in very deep, constrained, or
-poorly conditioned models.
-On the other hand, even absent the comfort of a coherent scientific theory,
-practitioners have developed a large collection of techniques
-that may help you to produce models that generalize well in practice.
-While no pithy summary can possibly do justice
-to the vast topic of generalization in deep learning,
-and while the overall state of research is far from resolved,
-we hope, in this section, to present a broad overview
-of the state of research and practice.
+This section develops one bounded conclusion: parameter count alone does not
+predict test error. Double descent supplies empirical and tractable-model
+evidence near the interpolation threshold; implicit regularization explains why
+the training algorithm also matters. Early stopping and grokking are then
+presented as consequences of this dependence on optimization time, not as a
+catalogue of universal laws.
 
 
 ## Revisiting Overfitting and Regularization
@@ -471,7 +428,7 @@ is to find patterns that **predict well on unseen data**.
 :::
 
 ::: {.col .fig .big}
-![Bigger past the interpolation threshold is *better*, not worse: the deep-learning surprise this section explains.](../img/mdl-mlp-double-descent.svg){width=100%}
+![In some model, data, optimizer, and training regimes, test error descends again beyond the interpolation threshold.](../img/mdl-mlp-double-descent.svg){width=100%}
 :::
 :::
 :::
@@ -554,8 +511,8 @@ modern scales. Data- and algorithm-dependent explanations remain active work.
 
 ::: {.cols .vc}
 ::: {.col}
-Classical theory predicts a **U-shaped** test-error curve as capacity
-grows:
+The elementary fixed-family bias--variance picture predicts a **U-shaped**
+test-error curve as capacity grows:
 
 $$\underbrace{\text{error}}_{\text{test}} \;=\;
 \underbrace{\text{bias}^2}_{\downarrow\ \text{with capacity}} \;+\;
@@ -567,8 +524,8 @@ spot** sits in between.
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-This is the left half of the picture on the next slide, and it is *all*
-the classical story predicts.
+This is the elementary picture introduced earlier. Modern statistical theory
+also analyzes interpolation and high-dimensional regimes.
 :::
 :::
 :::

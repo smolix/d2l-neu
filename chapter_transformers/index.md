@@ -31,28 +31,21 @@ feed-forward networks with mixture-of-experts layers. The chapter concludes
 by deriving parameter and FLOP counts, conducting a small scaling study, and
 comparing the configurations of several current models.
 
-The 2017 transformer was an encoder–decoder for translation, normalized after each sublayer,
-with sinusoidal positions and a plain ReLU network. What survived is
-the block; nearly every choice around it changed, and the changes
-concentrate on three axes — stability at depth (pre-norm, RMSNorm,
-QK-norm), the memory required for generation (grouped queries, cache
-compression, windows), and capacity (experts). Independent model families
-have adopted increasingly similar choices. This common structure allows us to treat the architecture as a
-configurable model rather than as a collection of unrelated designs.
+The original 2017 Transformer was an encoder--decoder for translation, with
+post-sublayer normalization, sinusoidal positions, and ReLU feed-forward
+networks. The model configurations tabulated at the end of this chapter,
+reported from 2023 through 2025, retain the residual attention--FFN block but
+vary normalization, position encoding, cache layout, and expert routing. This
+shared interface motivates the configurable implementation used here; it is
+not a claim that all transformer families have converged on one design.
 
-This chapter assumes the treatment of tokenization in
-:numref:`chap_rnn` and optimizers in :numref:`chap_optimization`; both
-are used here without comment. Pretraining corpora, instruction tuning,
-and everything downstream of the base model belong to the Language
-Models part, as does BERT, whose encoder this chapter's taxonomy
-locates but does not train. Vision applications beyond the ViT itself
-are the Image Models part's. Kernels, parallelism, quantization, and
-serving systems belong to the Computational Performance chapter. Here
-they appear only as black-box fused-attention calls, whose kernels are
-that chapter's subject, and as one closing sentence on speculative
-decoding. And the state-space alternative to
-attention has its own chapter, :numref:`chap_modern_rnn`, which picks
-continues the discussion of alternatives to a growing key--value cache.
+This chapter assumes the tokenization methods of :numref:`chap_rnn` and the
+optimizers of :numref:`chap_optimization`. It covers base-model architecture,
+not corpus construction, instruction tuning, or downstream adaptation.
+Vision applications beyond ViT appear in :numref:`chap_cv`; kernels,
+parallelism, quantization, and serving are deferred to
+:numref:`chap_performance`. State-space alternatives to a growing key--value
+cache are developed in :numref:`chap_modern_rnn`.
 
 ```toc
 :maxdepth: 2
@@ -90,7 +83,7 @@ scaling. All are freely available unless noted.
 
 **The arithmetic of scale**
 
-- [Transformer Inference Arithmetic — kipply (2022)](https://kipp.ly/transformer-inference-arithmetic/) — the napkin-math discipline behind :numref:`sec_kv-cache`'s memory-bill section: 2P FLOPs per token, cache bytes, and why decode is bandwidth-bound, checked against a real system.
+- [Transformer Inference Arithmetic — kipply (2022)](https://kipp.ly/transformer-inference-arithmetic/) — derives per-token inference FLOPs, cache storage, and bandwidth limits and compares the estimates with a real system.
 - [Transformer Math 101 — EleutherAI (2023)](https://blog.eleuther.ai/transformer-math/) — the training-side companion: where 6ND comes from and what it predicts, the accounting :numref:`sec_scaling-laws` verifies against a profiler.
 - [Training Compute-Optimal Large Language Models — Hoffmann et al. (2022)](https://arxiv.org/abs/2203.15556) — Chinchilla: the tokens-per-parameter result whose small-scale shadow is the bend in :numref:`sec_scaling-laws`'s miniature study.
 - [The Ultra-Scale Playbook — Hugging Face (2025)](https://huggingface.co/spaces/nanotron/ultrascale-playbook) — what happens past one GPU: the parallelism and memory engineering this chapter deliberately leaves to the Computational Performance chapter.

@@ -177,6 +177,22 @@ convex**; if $-f$ is convex, $f$ is **concave**. Note that the domain must be
 convex for the definition to even parse: the point
 $\theta\mathbf{x} + (1-\theta)\mathbf{y}$ has to be somewhere $f$ is defined.
 
+**Immediate consequence (local minima are global).** *If $f$ is convex on a
+convex set $C$, every local minimum is global.* Let $\mathbf{x}^\star$ be
+locally minimal and take any $\mathbf{y}\in C$. For sufficiently small
+$\theta>0$, the point
+$\mathbf{z}_\theta=(1-\theta)\mathbf{x}^\star+\theta\mathbf{y}$ lies in the
+local neighborhood. Hence
+
+$$
+f(\mathbf{x}^\star)\le f(\mathbf{z}_\theta)
+\le (1-\theta)f(\mathbf{x}^\star)+\theta f(\mathbf{y}),
+$$
+
+and rearranging gives $f(\mathbf{x}^\star)\le f(\mathbf{y})$. Convexity thus
+turns a local optimality certificate into a global one. It does not, by itself,
+guarantee that a particular optimization algorithm reaches a minimizer.
+
 Sets and functions are one theory: $f$ is convex exactly when its
 **epigraph** $\{(\mathbf{x}, t) : t \ge f(\mathbf{x})\}$, the region on and
 above the graph, is a convex set. Chords between points of the epigraph stay
@@ -535,49 +551,24 @@ comfortably nonnegative, while $D_{\mathrm{KL}}(p\,\|\,p)$ prints as
 ## Why Convexity Matters
 :label:`subsec_mdl-why-convexity-matters`
 
-### Every Local Minimum Is Global
+### Geometry, Minimizers, and Uniqueness
 
-Here is the central theorem of the section, with the picture first.
-:numref:`fig_mdl-opt-local-equals-global` shows why convexity is the dividing
-line for optimization. On a convex objective, gradient descent reaches the
-single global minimum no matter where it starts; on a non-convex objective the
-same algorithm slides into whichever of two saddle-separated basins it happens
-to start in, and the local minimum on one side is *not* the global one.
+The local-to-global proposition following the definition is the main
+optimization consequence of convexity. :numref:`fig_mdl-opt-local-equals-global`
+contrasts the illustrated smooth convex objective with a nonconvex objective
+having two basins. For the displayed step size and starting points, gradient
+descent reaches the convex minimizer in the first panel but can reach different
+local minima in the second. This algorithmic behavior also depends on
+smoothness and a stable step size.
 
-![Why convexity matters. Left: a convex objective has one global minimum, and gradient descent from any start reaches it. Right: a non-convex objective with two local minima separated by a saddle; gradient descent lands in different minima depending on its starting point, so a local minimum need not be global.](../img/mdl-opt-local-equals-global.svg)
+![Local and global minima. Left: on the illustrated smooth convex objective, gradient descent with the displayed stable step reaches the global minimizer from either start. Right: on a nonconvex objective with two local minima separated by a saddle, the same update can reach different minima from different starts.](../img/mdl-opt-local-equals-global.svg)
 :label:`fig_mdl-opt-local-equals-global`
 
-**Proposition (local minima are global).** *Let $f$ be convex on a convex set
-$C$ and let $\mathbf{x}^\star$ be a local minimum: $f(\mathbf{x}^\star) \le f(\mathbf{z})$
-for all feasible $\mathbf{z}$ within some radius $r > 0$ of $\mathbf{x}^\star$.
-Then $f(\mathbf{x}^\star) \le f(\mathbf{y})$ for* every *$\mathbf{y} \in C$.
-Moreover the set of minimizers is convex, and if $f$ is differentiable on open
-$C$, then any stationary point ($\nabla f = \mathbf{0}$) is a global minimum.*
-
-**Proof.** Take any $\mathbf{y} \in C$ and slide from $\mathbf{x}^\star$ toward
-it: for small $\theta > 0$ the point
-$\mathbf{z}_\theta = (1 - \theta)\mathbf{x}^\star + \theta\mathbf{y}$ is
-feasible (convexity of $C$) and within $r$ of $\mathbf{x}^\star$, so local
-minimality and the chord inequality give
-
-$$
-f(\mathbf{x}^\star) \;\le\; f(\mathbf{z}_\theta)
-\;\le\; (1 - \theta) f(\mathbf{x}^\star) + \theta f(\mathbf{y}).
-$$
-
-Subtract $(1-\theta)f(\mathbf{x}^\star)$ and divide by $\theta$:
-$f(\mathbf{x}^\star) \le f(\mathbf{y})$. The minimizer set is the sublevel set
-$\{\mathbf{x} \in C : f(\mathbf{x}) \le f^\star\}$, and every sublevel set of a
-convex function is convex by the chord inequality. The stationary-point claim is
-:eqref:`eq_mdl-opt-first-order` read at $\mathbf{x}$ with
-$\nabla f(\mathbf{x}) = \mathbf{0}$. $\blacksquare$
-
-Read the proof's geometry: a convex function cannot ambush you. If anywhere in
-the domain there were a strictly better point, the chord toward it would already
-be descending *inside your local neighborhood*, so "no local improvement"
-instantly means "no improvement anywhere." Saddle points and spurious basins
-are structurally impossible, and those are the very failure modes that haunt
-deep loss surfaces. One more consequence follows:
+The same chord argument shows that the minimizer set is convex: if
+$\mathbf{x}$ and $\mathbf{y}$ both attain $f^\star$, every point between them
+does as well. For differentiable $f$ on an open domain, the first-order
+condition also shows that $\nabla f(\mathbf{x})=0$ implies global optimality.
+A stronger assumption gives uniqueness.
 
 **Proposition (uniqueness).** *A strictly convex $f$ has at most one minimizer;
 a continuous, strongly convex $f$ on a closed convex set has exactly one.*
@@ -639,8 +630,8 @@ $6.7 \times 10^{-16}$, machine epsilon; the histogram of outcomes is a single
 spike. On the double well the histogram has two bars: $271$ runs find the global
 minimum at $x \approx -1.06$ with $g \approx -0.515$, while the other $229$ are
 captured by the local minimum at $x \approx 0.93$ with $g \approx 0.483$,
-nearly a full unit worse, and no amount of further descent will fix it. Nothing
-about the *algorithm* changed between the two lines; convexity is a property of
+nearly a full unit worse, and further descent remains at that local minimum. The
+*algorithm* was identical in the two lines; convexity is a property of
 the objective, and it alone decides whether the starting point matters.
 
 ### From Local Steps to Global Rates
@@ -699,7 +690,7 @@ Two remarks. The bound is *dimension-free*: a million parameters cost no more
 iterations than two, one reason first-order methods scale to
 neural networks. And the telescoping display has a bonus reading: every bracket
 is nonnegative (its left factor is $f(\mathbf{x}_{t+1}) - f^\star \ge 0$), so
-$\|\mathbf{x}_t - \mathbf{x}^\star\|$ never increases: the iterates march
+$\|\mathbf{x}_t - \mathbf{x}^\star\|$ never increases: the iterates move
 monotonically closer to the optimum.
 
 With strong convexity, the sublinear $O(1/k)$ sharpens to a geometric decay.
@@ -804,7 +795,7 @@ real losses are built from convex atoms by exactly these operations.
    $(h \circ g)'' = h''(g)\,(g')^2 + h'(g)\, g'' \ge 0$, each summand
    nonnegative). The monotonicity hypothesis is essential:
    $h(t) = t^2$ and $g(x) = x^2 - 1$ compose to the double well we just watched
-   trap gradient descent.
+   create nonglobal local minima.
 
 These rules certify most of the convex losses in this book directly. The hinge
 loss $\max(0, 1 - y\,\mathbf{w}^\top\mathbf{x})$ is a maximum
@@ -954,7 +945,7 @@ The pair that matters for deep learning is **log-sum-exp $\leftrightarrow$
 negative entropy**. Compute
 $\mathrm{lse}^*(\mathbf{p}) = \sup_{\mathbf{x}} \mathbf{p}^\top\mathbf{x} - \mathrm{lse}(\mathbf{x})$.
 If $\mathbf{p}$ has a negative coordinate, send that $x_i \to -\infty$ and the
-objective blows up; if $\mathbf{1}^\top\mathbf{p} \neq 1$, march $\mathbf{x} = c\mathbf{1}$
+objective is unbounded; if $\mathbf{1}^\top\mathbf{p} \neq 1$, take $\mathbf{x} = c\mathbf{1}$
 off to $\pm\infty$ and shift invariance does the same. So the supremum is finite
 only for $\mathbf{p}$ in the simplex, where stationarity demands
 $\mathrm{softmax}(\mathbf{x}) = \mathbf{p}$, solved by
@@ -988,7 +979,7 @@ hard, one-hot $\arg\max$, and the entropy term is what softens it. The identity
 is also the prototype
 for the variational representations of divergences: Donsker--Varadhan and the
 $f$-GAN duals in :numref:`sec_mdl-divergences-distances` are this same
-conjugate trick applied to KL and its relatives.
+conjugate construction applied to KL and its relatives.
 
 ### Proximal Operators
 :label:`subsec_mdl-proximal-operators`
@@ -1036,7 +1027,7 @@ $$
 
 This is **soft-thresholding**, the same solution Exercise 3 derives from the
 subdifferential, now recognized as a prox. Inputs smaller than $\lambda$ are
-snapped to *exactly* zero; larger ones are shrunk by $\lambda$. This is the
+set to *exactly* zero; larger ones are shrunk by $\lambda$. This is the
 mechanism by which $\ell_1$ regularization produces genuinely sparse weights
 where $\ell_2$ only shrinks them.
 
@@ -1082,7 +1073,7 @@ print('exact zeros:', int((w == 0).sum()), 'of 8 coordinates')
 
 The closed form matches the brute-force minimizer to grid resolution, and
 after twenty proximal-gradient steps five of the eight coordinates are
-*exactly* zero, snapped there by the $\max$ in
+*exactly* zero, set there by the $\max$ in
 :eqref:`eq_mdl-opt-soft-threshold`, while the three nonzero coordinates sit
 near the planted values $(2.0, -1.5, 1.0)$. Plain gradient descent does not
 produce exact zeros because it uses only smooth steps. The proximal operator
@@ -1186,9 +1177,11 @@ very cheap solve.
 
 ### Nonconvex Neural Networks
 
+#### Structural Nonconvexity in Standard Parameterizations
+
 The convexity calculus had one missing rule,
-composition with non-monotone nonlinear maps, and a neural network is nothing
-but a tower of such compositions. The loss surface of a deep network in its
+composition with non-monotone nonlinear maps, and a neural network is built
+from repeated compositions. The loss surface of a deep network in its
 *parameters* is not convex, and a two-parameter "network" already shows why.
 Take $f(a, b) = (ab - 1)^2$: a linear model with two stacked scalar weights and
 a squared loss. Its global minima form the hyperbola $\{ab = 1\}$, a
@@ -1201,8 +1194,10 @@ the computed function unchanged, so every minimum comes with combinatorially
 many symmetric copies scattered across parameter space. Generically the copies
 are distinct and averaging two of them raises the loss, exactly as the midpoint
 of $(1, 1)$ and $(-1, -1)$ did for $(ab - 1)^2$, and a minimizer set that
-contains distinct copies but not their averages cannot be convex. Deep
-architectures rule out convexity structurally.
+contains distinct copies but not their averages cannot be convex. Standard
+multilayer parameterizations are therefore generally nonconvex.
+
+#### A Formal Nonconvex Guarantee
 
 Some linear-rate conclusions remain valid without convexity. The
 second half of the proof used only
@@ -1226,7 +1221,7 @@ argument). PL says the
 gradient cannot be small unless the *value* is nearly optimal: flat spots
 exist only at the bottom. Strong convexity implies PL (that was the first half
 of the proof), but the converse fails: PL functions can have multiple minima,
-plateaus of minimizers, and wild non-convexity, as long as every stationary
+plateaus of minimizers, and nonconvex curvature, as long as every stationary
 point is global. The standard example is $f(x) = x^2 + 3\sin^2 x$, whose second
 derivative dips to $-4$, so it is not convex, yet it satisfies PL globally.
 The cell verifies both claims on $[-5, 5]$ and then runs gradient descent,
@@ -1258,11 +1253,18 @@ crosses the slow middle stretch, then settle at exactly $0.25$: a constant
 contraction, i.e. linear convergence, on a non-convex function. (The asymptotic
 $0.25$ is no mystery: near the minimum $f$ looks like $\tfrac12 f''(0) x^2$ with
 $f''(0) = 8$, each step scales $x$ by $1 - 8/16 = \tfrac12$, and the gap is
-quadratic in $x$.) Conditions of PL type are one current explanation for why
-heavily over-parameterized networks train so reliably: near interpolation, wide
-networks have been argued to satisfy local PL-style inequalities
-:cite:`Liu.Zhu.Belkin.2022`, so first-order methods converge fast to global
-*training-loss* minima even though the loss surface is nothing like convex.
+quadratic in $x$.)
+
+#### Model-Specific Analyses
+
+For specified overparameterized models and initialization regimes, analyses can
+establish local PL-style inequalities near interpolation
+:cite:`Liu.Zhu.Belkin.2022`. Within the neighborhood where those assumptions
+remain valid, first-order methods may converge rapidly to a global
+*training-loss* minimum. This is not a generic property of neural networks and
+does not by itself imply a generalization guarantee.
+
+#### Optimizer-Dependent Selection in Specific Models
 
 Non-convexity has one more consequence the convex theory never had to face:
 *which* global minimum you reach is up for grabs, and the optimizer itself does
@@ -1276,20 +1278,17 @@ the same solution the pseudoinverse computes
 of :numref:`sec_mdl-gradient-based-optimization` has you derive it). For
 logistic regression on separable data, gradient descent's direction converges
 to the maximum-margin separator :cite:`Soudry.Hoffer.Nacson.ea.2018`, the
-SVM solution of :numref:`sec_mdl-constrained-optimization-duality`, obtained
-without ever being asked for. Which minimum an optimizer prefers is part of
-what a
-trained model *is*, and it is one reason architecture-plus-optimizer, not
-architecture alone, determines generalization.
+SVM solution of :numref:`sec_mdl-constrained-optimization-duality`. These
+examples show that an optimizer can select among multiple interpolating
+solutions. The selected solution can affect generalization, but the form of the
+implicit bias depends on the model, loss, initialization, and optimization
+dynamics.
 
-This chapter's relationship to practice, then: convex theory
-is the *idealization* that the working optimizer approximates, not a literal
-description of deep training. The losses are convex in the last layer and in
-many sub-problems (projections, duals); the proofs (descent
-lemma, PL, rates) are the instruments we carry into non-convex territory; and
-where the instruments lose their guarantees, they usually keep their shape:
-the same step sizes, the same contraction heuristics, the same role for
-curvature and conditioning.
+Convex analysis applies directly to convex output-layer or auxiliary problems
+and supplies useful comparison results for nonconvex training. Outside its
+assumptions, however, its global guarantees do not transfer automatically;
+smoothness, PL conditions, and implicit-bias statements must be checked for the
+particular model and regime.
 
 ## Summary
 
@@ -1396,7 +1395,7 @@ This section connects the preceding optimization analysis to the constrained
 problems that follow. :numref:`sec_mdl-gradient-based-optimization` proved that
 smoothness alone gives stationarity; convexity upgrades those rates to global guarantees,
 and the PL condition showed how much of the upgrade survives without convexity.
-:numref:`sec_mdl-constrained-optimization-duality` consumes nearly everything
+:numref:`sec_mdl-constrained-optimization-duality` draws on most of the
 above: convex feasible sets for projections, KKT sufficiency and Slater's
 condition require convex objectives and constraints, the dual function's
 concavity is the sup-of-affine rule, and its linear-constraint duals are
@@ -1497,7 +1496,7 @@ Affine maps and convex hulls round it out.
 
 [Three lenses on a convex function]{.dtitle}
 
-[chord, tangent, Hessian, and the kink repair]{.dsub}
+[chord, tangent, Hessian, and subgradients at nondifferentiable points]{.dsub}
 :::
 :::
 
@@ -1653,9 +1652,10 @@ on a convex bowl and on a tilted double well:
 
 @!convexity-basins
 
-The bowl collapses all 500 runs onto one point (spread at machine
-epsilon). The double well splits them across two basins. Convexity is a
-property of the objective, and it alone decides whether the start matters.
+For this stable step, the bowl sends all 500 runs to one point, while the
+double well splits them across two basins. Convexity rules out nonglobal local
+minima; convergence of the update still requires its smoothness and step-size
+conditions.
 :::
 
 ::: {.slide title="Local steps become global rates"}
@@ -1675,8 +1675,8 @@ $$f(\mathbf{x}_k) - f^\star \le \bigl(1 - \tfrac{\mu}{L}\bigr)^{k}\bigl(f(\mathb
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-Both bounds are **dimension-free**: a million parameters cost no more
-iterations than two. This is why first-order methods scale.
+The displayed bounds contain no explicit dimension factor. Dimension can still
+affect $L$, $\mu$, gradient cost, and the validity of the assumptions.
 :::
 :::
 :::
@@ -1777,7 +1777,7 @@ kink is **ISTA**, which keeps gradient descent's $O(1/k)$ rate:
 
 @!convexity-prox-ista
 
-Five of eight coordinates are *exactly* zero, snapped there by the
+Five of eight coordinates are *exactly* zero, set there by the
 $\max$, which no smooth gradient step can do. This is how $\ell_1$
 sparsifies where $\ell_2$ only shrinks.
 :::
@@ -1792,7 +1792,7 @@ sparsifies where $\ell_2$ only shrinks.
 :::
 :::
 
-::: {.slide title="Deep networks are non-convex by construction"}
+::: {.slide title="Standard multilayer parameterizations are nonconvex"}
 [Reality check]{.kicker}
 
 ::: {.cols .vc}
@@ -1801,9 +1801,9 @@ Take $f(a,b) = (ab-1)^2$, a two-weight linear model. Its minima form the
 hyperbola $\{ab=1\}$, a **non-convex set**, but minimizer sets of convex
 functions *are* convex. So $f$ cannot be convex.
 
-Real networks inherit this: permuting hidden units leaves the function
-unchanged, scattering equivalent minima everywhere. Deep architectures
-rule out convexity structurally.
+In standard hidden-layer parameterizations, permuting units leaves the computed
+function unchanged and produces distinct equivalent parameters. Their averages
+need not remain minima, so the parameter-space loss is generally nonconvex.
 :::
 
 ::: {.col .narrow}
@@ -1828,7 +1828,8 @@ flat spots sit only at the bottom: linear convergence with *no* convexity.
 @!convexity-pl-rate
 
 The gap contracts by a constant factor on $x^2 + 3\sin^2 x$, whose Hessian
-dips to $-4$. One current account of why huge overparameterized nets train.
+dips to $-4$. Local PL analyses apply in specified overparameterized regimes,
+not to neural networks in general.
 :::
 
 ::: {.slide title="Which minimum? Implicit bias decides"}
@@ -1845,7 +1846,7 @@ has an **implicit bias**:
 Which minimum an optimizer prefers is part of what a trained model *is*.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Convexity turns local certificates into global guarantees"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
@@ -1862,8 +1863,8 @@ Which minimum an optimizer prefers is part of what a trained model *is*.
   both dimension-free.
 - **Calculus** certifies hinge, $\ell_1$, logistic, softmax; log-sum-exp's
   Hessian *is* the softmax covariance.
-- **Deep nets** are non-convex, but **PL** keeps the rate and **implicit
-  bias** picks the minimum.
+- Standard deep-network parameterizations are nonconvex. **PL** and implicit
+  bias give model-specific conclusions under additional assumptions.
 :::
 :::
 

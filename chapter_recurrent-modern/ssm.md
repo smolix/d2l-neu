@@ -191,9 +191,11 @@ perfect work for an accelerator.
 This doubling schedule is the scheme of Hillis and Steele: it performs
 $O(T \log T)$ total work, a $\log T$ factor more than the sequential loop,
 in exchange for $O(\log T)$ depth.
-Blelloch's classic two-sweep scan gets the work back down to $O(T)$ at
-slightly more than twice the depth; production kernels use it, and we
-happily pay the log factor for code that fits on a slide.
+Blelloch's classic two-sweep scan reduces the work to $O(T)$ at slightly
+more than twice the depth and is common in production kernels. We use the
+Hillis--Steele form because its shorter implementation exposes the
+associative operation; its additional logarithmic work must be included
+when interpreting the timings below.
 
 ### Implementation
 
@@ -332,9 +334,8 @@ The sequential curve climbs linearly with $T$, dominated by the cost of
 launching $T$ tiny dependent steps. The scan's curve stays well below it
 at every length, by roughly an order of magnitude in our runs: its
 handful of rounds are large batched operations that actually saturate the
-hardware. This plot is the
-"trains like a CNN" moment for recurrence, and everything else in this
-section and the next is built on top of it. Note what the scan did *not*
+hardware. Thus the recurrence can be evaluated with a small number of
+batched operations during training. Note what the scan did *not*
 change: at inference we still update
 $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ one
 token at a time, in constant memory, exactly like any RNN. We make good
@@ -1229,8 +1230,8 @@ the field take state space models seriously.
 This section opened with a bargain: train in parallel, then run the model
 the old recurrent way at inference, a fixed-size state updated in constant
 time per token. We have delivered the first half with the scan and, so
-far, only asserted the second. Time to collect. There is nothing to
-derive: :eqref:`eq_ssm_disc` *is* the inference algorithm. Given the last
+far, only asserted the second. Equation :eqref:`eq_ssm_disc` is also the
+inference update. Given the last
 state $\mathbf{x}_{t-1}$ and one new input $u_t$,
 
 $$
@@ -1415,7 +1416,7 @@ growing. At this toy width the absolute
 times are launch-overhead-bound, so read the shapes, not the
 milliseconds.
 
-The printed number is the punchline's other half. A transformer
+The printed number gives the corresponding memory comparison. A transformer
 generating with a KV cache also avoids re-running its prefix, but it
 does so by *storing* the past: its cache grows linearly with context, at
 a rate we measured in :numref:`sec_kv-cache` (tens of kibibytes per
@@ -1423,10 +1424,10 @@ token for even a small model), and serving budgets are set by that
 growth. The recurrent model's entire memory of an arbitrarily long
 history is the $(H, N)$ state per layer printed above, about a
 kibibyte here, the same at token 100 as at token 100,000. This
-constant-memory inference is why recurrent layers are back inside
-production language models, and it is the prize for which linear
-attention gave up its softmax in :numref:`sec_attention-at-scale`. What
-the fixed-size state *costs*, and when it is worth paying, is a question
+constant-memory inference motivates the use of recurrent layers in
+language models. Linear attention obtains this property by replacing
+softmax attention, as described in :numref:`sec_attention-at-scale`. What
+the fixed-size state cannot retain, and when that limitation matters, is a question
 this chapter returns to once the selective models are on the table.
 
 ## Summary
@@ -1797,7 +1798,7 @@ Same arithmetic, different association order: float-level agreement.
 The `assert` doubles as a regression guard.
 :::
 
-::: {.slide title="The stopwatch and the memory bill"}
+::: {.slide title="Recurrent Decoding Has Constant Persistent State"}
 Cost of absorbing the next token after a prefix of $P$, batch of 32
 streams:
 

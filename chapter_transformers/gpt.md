@@ -63,8 +63,8 @@ score matrix. Second, positions.
 between the two schemes that :numref:`sec_positional-information` found in
 deployed models: `'learned'` adds a trained position vector to the
 embedding — GPT-2's scheme, capped at the table's length — and `'rope'`
-rotates queries and keys inside every attention head, which is what
-essentially every current model does. RoPE lives where queries and keys
+rotates queries and keys inside every attention head. RoPE is used by the
+Llama and Qwen model families cited later in this chapter. It lives where queries and keys
 are made, so the attention module implements it itself (the same
 `_rope` we gave `TinyCharLM`); nothing else in the model knows positions
 exist.
@@ -235,16 +235,14 @@ each token type a handful of training examples. Characters keep the
 statistics dense, the vocabulary trivial, and the comparison fair against
 the character-level models of previous chapters.
 
-## Training the Modern Configuration
+## Training a Pre-Norm RMSNorm Configuration
 
 We train the default configuration on the character-level Time Machine
-corpus. Its flags — pre-norm, RMSNorm, SwiGLU, RoPE — are the same
-settings you would find in a Llama or Qwen checkpoint
-:cite:`touvron2023llama`, with one concession to the size of the corpus:
-`dropout=0.1`, a regularizer that frontier models dropped precisely
-because their corpora outweigh their parameters, which is the opposite of
-our situation here. We watch the validation loss as we go rather than
-admiring the training curve alone.
+corpus. Its pre-norm, RMSNorm, SwiGLU, and RoPE settings also appear in the
+Llama and Qwen families :cite:`touvron2023llama`. We set `dropout=0.1` for
+this small repeated corpus. Several large-model reports tabulated later use no
+dropout, but this comparison does not isolate why. We record validation loss
+throughout training.
 
 ```{.python .input #gpt-training-the-modern-configuration}
 %%tab pytorch
@@ -324,19 +322,15 @@ print(f'final: train {train_curve[-1]:.2f}, '
       f'{steps[val_curve.index(min(val_curve))]}')
 ```
 
-Read the two curves separately, because they tell different stories. The
-training loss falls smoothly toward a few tenths of a nat — the
-architecture works, the optimizer works. The validation loss bottoms out
-around $1.5$ nats within the first few hundred steps and then *rises* while
-training keeps improving. No bug: our run feeds the model roughly 16
-million tokens drawn from a corpus of one hundred thousand characters,
-about 160 passes over the book, with 4.7 million parameters to spend —
-dozens of parameters per unique character of text. Past the first epochs,
-gradient descent has nothing left to learn from this book except the book
-itself. The cure is not fewer steps or a bigger dropout but *more data*,
-and this chapter's closing section on scaling laws takes up how loss
-actually scales when data and parameters grow together
-:cite:`kaplan2020scaling,hoffmann2022training`.
+The training loss falls toward a few tenths of a nat. Validation loss reaches
+its minimum near $1.5$ nats within the first few hundred steps and then rises
+while training loss continues to decrease. The run processes roughly 16
+million tokens drawn repeatedly from about one hundred thousand characters,
+or about 160 passes through the corpus, with 4.7 million parameters. This
+train--validation divergence is consistent with memorization under repeated
+corpus reuse. The experiment does not isolate a remedy; larger and more varied
+training data is the change studied by the scaling analysis at the end of the
+chapter :cite:`kaplan2020scaling,hoffmann2022training`.
 
 It is worth locating this run on the cost map. At roughly $6ND$
 floating-point operations for training a model of $N$ parameters on $D$
@@ -637,10 +631,10 @@ layout that PyTorch users must transpose happens to be exactly the layout
 `nnx.Linear` keeps its kernels in.
 :end_tab:
 
-Did it work? Weight-loading bugs are notorious for failing silently — a
-transposed matrix still multiplies. Two checks, one quantitative and one
-you can read. First, the model should assign natural English a
-respectable probability:
+Shape checks alone do not validate a loaded checkpoint because a transposed
+square matrix still multiplies. We therefore use a quantitative loss check and
+a generated-text check. First, the model should assign natural English a
+plausible probability:
 
 ```{.python .input #gpt-loading-gpt-2-3}
 %%tab pytorch
@@ -787,7 +781,7 @@ Four ingredients on top of the stacked block:
 @gpt-from-blocks-to-a-language-model-1
 :::
 
-::: {.slide title="Train the modern configuration"}
+::: {.slide title="Train a Pre-Norm RMSNorm Configuration"}
 4.7M parameters, character-level Time Machine, one GPU, about a minute:
 
 @!gpt-training-the-modern-configuration
@@ -797,10 +791,10 @@ Four ingredients on top of the stacked block:
 - Train falls smoothly to ~0.15 nats; validation bottoms near 1.5 within
   a few hundred steps, then **rises**.
 - 16M training tokens over a 100k-character book ≈ 160 passes, with
-  dozens of parameters per character: past the first epochs there is
-  nothing to learn but the book itself.
-- The cure is **more data**, not more steps — the scaling-laws section's
-  subject.
+  dozens of parameters per character. The divergence is consistent with
+  memorization under repeated corpus reuse.
+- The scaling-laws section studies how larger and more varied data changes
+  this regime; the present run does not isolate a remedy.
 
 ::: {.d2l-note}
 Cost anchor: this run ≈ $6ND \approx 5 \times 10^{14}$ FLOPs. GPT-2
@@ -826,12 +820,12 @@ Deliberately naive: every token reruns the full forward pass — measuring
 and fixing that is the next section (KV cache).
 :::
 
-::: {.slide title="What a minute of training sounds like"}
+::: {.slide title="Samples after the Short Training Run"}
 @!gpt-sampling-from-the-model-2
 
-Fluent pseudo-Wells — much of it apparently *memorized* Wells: the
-validation gap made audible. Temperature barely matters when a memorizing
-model is this confident.
+The samples resemble the training text closely, consistent with the widening
+train--validation gap. Temperature has little effect because the fitted token
+distribution is already concentrated.
 :::
 
 ::: {.slide title="Loading GPT-2: config = constructor call"}
@@ -853,8 +847,8 @@ One dictionary from checkpoint names to modules; the one trap is GPT-2's
 @gpt-loading-gpt-2-2
 :::
 
-::: {.slide title="Did it work?"}
-Silent-failure insurance, one number and one sentence:
+::: {.slide title="Validating the Loaded GPT-2 Checkpoint"}
+Perplexity and a completion check detect common mapping or tokenizer errors:
 
 @!gpt-loading-gpt-2-3
 

@@ -11,9 +11,11 @@ descent direction, and this section makes the choice explicit: the direction
 of steepest descent *depends on the norm* used to measure the step. Under the
 Euclidean norm the answer is the gradient, and we recover the direction of
 SGD. Under the
-$\ell_\infty$ norm the answer is the sign of the gradient, and we recover, in
-essence, Adam. Under the *spectral* norm, the natural way to measure a matrix,
-the answer is the gradient with its singular values erased, and we arrive at
+$\ell_\infty$ norm the answer is the sign of the gradient, which resembles
+the limiting direction of a coordinate-normalized adaptive update but omits
+Adam's moment estimates, bias correction, and $\epsilon$. Under the *spectral*
+norm, which controls worst-case changes to a linear layer's activations, the
+answer is the gradient with its singular values erased, and we arrive at
 Muon :cite:`Jordan.Jin.Boza.ea.2024`, which since 2024 has gone from a
 speed-run leaderboard to trillion-parameter training runs. We derive it,
 implement it in about fifteen lines, compare it with AdamW on the testbeds of
@@ -92,9 +94,9 @@ heterogeneity of language models produces.
 Both balls above treat the parameter as a bag of coordinates. But the census
 told us where the parameters actually live: in our tiny transformer, about
 95% sit in two-dimensional hidden matrices whose job is to *transform
-activations*, $\mathbf{y} = \mathbf{W}\mathbf{x}$. For such a parameter, what
-we should mean by "a step of size $\eta$" is not how much the entries change
-but how much the layer's *behavior* changes, and that is governed by the
+activations*, $\mathbf{y} = \mathbf{W}\mathbf{x}$. For such a parameter, one
+useful definition of a step's size is the largest change it can make to an
+activation vector. This change is governed by the
 spectral norm: $\|\Delta \mathbf{W} \mathbf{x}\|_2 \leq \|\Delta
 \mathbf{W}\|_2\, \|\mathbf{x}\|_2$, with equality for the worst-case input.
 The spectral norm $\|\Delta \mathbf{W}\|_2$ is the largest singular value,
@@ -832,11 +834,11 @@ it. Benchmark verdicts are also protocol-dependent: AlgoPerf's fixed tuning
 budgets crowned Shampoo, the speedrun's unlimited tinkering crowned Muon,
 and a comparison run at one scale with one tuning budget is evidence about
 that protocol, not a universal ranking
-:cite:`Schmidt.Schneider.Hennig.2021`. Where this leaves a practitioner
-in 2026: AdamW remains the default; Muon on hidden matrices is the one
-challenger with both a clean derivation and frontier-scale production
-mileage, and its advantage is real but measured in tens of percent, not
-multiples.
+:cite:`Schmidt.Schneider.Hennig.2021`. Under the protocols summarized here,
+AdamW remains the more established default. Muon has both a norm-based
+derivation and reported large-scale use, but the measured advantage depends on
+model, tuning budget, and benchmark and is typically reported in tens of
+percent rather than multiples.
 
 ## Summary
 

@@ -44,34 +44,24 @@ import jax
 
 ## Function Classes
 
-Consider $\mathcal{F}$, the class of functions represented by a network
-architecture as its weights and biases vary. This definition concerns the
-parameterization; which members an optimizer can reach is a separate question.
-Let's assume that $f^*$ is the "truth" function that we really would like to find.
-If it is in $\mathcal{F}$, we are in good shape but typically we will not be quite so lucky.
-Instead, we will try to find some $f^*_\mathcal{F}$ which is our best bet within $\mathcal{F}$.
-For instance,
-given a dataset with features $\mathbf{X}$
-and labels $\mathbf{y}$,
-we might try finding it by solving the following optimization problem:
+Let $\mathcal{F}$ be the class of functions represented by an architecture as
+its parameters vary. Given training data $(\mathbf{X},\mathbf{y})$, define the
+best empirical-loss value available in this class by
 
-$$f^*_\mathcal{F} \stackrel{\textrm{def}}{=} \mathop{\mathrm{argmin}}_f L(\mathbf{X}, \mathbf{y}, f) \textrm{ subject to } f \in \mathcal{F}.$$
+$$L^*_{\mathcal{F}} \stackrel{\textrm{def}}{=}
+\inf_{f\in\mathcal{F}} L(\mathbf{X},\mathbf{y},f).$$
 
-We know that regularization :cite:`tikhonov1977solutions,morozov2012methods` may control complexity of $\mathcal{F}$
-and achieve consistency, so a larger size of training data
-generally leads to better $f^*_\mathcal{F}$.
-It is only reasonable to assume that if we design a different and more powerful architecture $\mathcal{F}'$ we should arrive at a better outcome. In other words, we would expect that $f^*_{\mathcal{F}'}$ is "better" than $f^*_{\mathcal{F}}$. However, if $\mathcal{F} \not\subseteq \mathcal{F}'$ there is no guarantee that this should even happen. In fact, $f^*_{\mathcal{F}'}$ might well be worse.
-As illustrated by :numref:`fig_functionclasses`,
-for non-nested function classes, a larger function class does not always move closer to the "truth" function $f^*$. For instance,
-on the left of :numref:`fig_functionclasses`,
-though $\mathcal{F}_3$ is closer to $f^*$ than $\mathcal{F}_1$, $\mathcal{F}_6$ moves away and there is no guarantee that further increasing the complexity can reduce the distance from $f^*$.
-With nested function classes
-where $\mathcal{F}_1 \subseteq \cdots \subseteq \mathcal{F}_6$
-on the right of :numref:`fig_functionclasses`,
-we can avoid the aforementioned issue from the non-nested function classes.
+If $\mathcal{F}\subseteq\mathcal{F}'$, then
+$L^*_{\mathcal{F}'}\leq L^*_{\mathcal{F}}$: the larger class can always reuse
+the best function available to the smaller one. This is a statement about
+representational capacity and the optimal training loss. It does not guarantee
+that an optimizer will find that function or that the resulting model will
+generalize better. For non-nested classes, even the empirical optima have no
+such ordering. :numref:`fig_functionclasses` illustrates containment rather
+than a distance to an undefined target function.
 
 
-![For non-nested function classes, a larger (indicated by area) function class does not guarantee we will get closer to the "truth" function ($\mathit{f}^*$). This does not happen in nested function classes.](../img/functionclasses.svg)
+![Non-nested function classes do not order their attainable solutions. Nested classes preserve every function represented by the preceding class, so their optimal empirical loss cannot increase; this containment does not guarantee easier optimization or better generalization.](../img/functionclasses.svg)
 :label:`fig_functionclasses`
 
 Thus, if larger function classes contain the smaller ones, increasing capacity
@@ -83,11 +73,9 @@ $f(\mathbf{x}) = \mathbf{x}$, the deeper model contains the shallower one as a
 special case. This protects representation capacity; it does not guarantee
 that optimization will find the best member of the larger class.
 
-This is the question that :citet:`He.Zhang.Ren.ea.2016` considered when working on very deep computer vision models.
-At the heart of their proposed *residual network* (*ResNet*) is the idea that every additional layer should
-more easily
-contain the identity function as one of its elements.
-These considerations led to a simple solution, a *residual block*.
+ResNet :cite:`He.Zhang.Ren.ea.2016` makes this containment easy to express:
+each added block can represent the identity mapping by setting its residual
+branch to zero. The resulting component is a *residual block*.
 With it, ResNet won the ImageNet Large Scale Visual Recognition Challenge in 2015. The design influenced how to
 build deep neural networks. For instance, residual blocks have been added to recurrent networks :cite:`prakash2016neural,kim2017residual`. Likewise, Transformers :cite:`Vaswani.Shazeer.Parmar.ea.2017` use them to stack many layers of networks efficiently. It is also used in graph neural networks :cite:`Kipf.Welling.2016` and, as a basic concept, it has been used extensively in computer vision :cite:`Redmon.Farhadi.2018,Ren.He.Girshick.ea.2015`. 
 Highway networks :cite:`srivastava2015highway` predate ResNet and share some
@@ -537,7 +525,11 @@ ResNet18().layer_summary((1, 96, 96, 1))
 
 ## Training
 
-We train ResNet on the Fashion-MNIST dataset, just like before. ResNet is quite a powerful and flexible architecture. The plot capturing training and validation loss illustrates a significant gap between both graphs, with the training loss being considerably lower. For a network of this flexibility, more training data would offer distinct benefit in closing the gap and improving accuracy.
+We train ResNet on Fashion-MNIST under the same protocol as the preceding
+models. In this run the training loss falls below the validation loss, which
+indicates a generalization gap. Additional data, stronger augmentation,
+regularization, and a smaller model are distinct possible responses; this
+single curve does not identify which would help most.
 
 ```{.python .input #resnet-training}
 %%tab mxnet

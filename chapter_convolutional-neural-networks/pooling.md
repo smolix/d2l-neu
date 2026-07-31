@@ -364,10 +364,9 @@ nnx.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
 ```
 
 :begin_tab:`tensorflow`
-Note that the output for the TensorFlow pooling appears at first glance to be different, however
-numerically the same results are presented as MXNet and PyTorch.
-The difference lies in the dimensionality, and reading the
-output vertically yields the same output as the other implementations.
+TensorFlow stores these tensors in NHWC order, whereas the MXNet and PyTorch
+tabs use NCHW order. Transposing the TensorFlow result from NHWC to NCHW gives
+the same values; only the channel axis is displayed in a different position.
 :end_tab:
 
 ## Summary
@@ -433,7 +432,7 @@ between a query and representation vectors rather than by spatial location.
 slide a window, replace it with a single summary value
 (max or mean).
 
-Two reasons it's everywhere:
+Two reasons to use it:
 
 - **Spatial aggregation** — summarize over locations to
   answer "is there a cat *anywhere* in the image?".
@@ -445,16 +444,16 @@ Two reasons it's everywhere:
 example.
 :::
 
-::: {.slide title="Max-pooling at a glance"}
+::: {.slide title="Max-Pooling Selects the Largest Local Response"}
 Same sliding-window pattern as a convolution, but the
 operation is `max` instead of multiply-and-sum:
 
 ![2×2 max-pool: each output = max of a 2×2 input window. $\max(0, 1, 3, 4) = 4$.](../img/pooling.svg){width=78%}
 
-Average pooling replaces `max` with `mean`. Max is the
-default in modern nets — it's more selective ("did the
-feature fire *somewhere* in this region?") and better
-preserves sharp activations.
+Average pooling replaces `max` with `mean`. Local max-pooling was the standard
+downsampler in early CNNs and remains in some stems. Modern networks more often
+use strided convolutions for learned downsampling and global average pooling in
+the classification head.
 :::
 
 ::: {.slide title="Implementation"}

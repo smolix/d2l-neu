@@ -1,14 +1,22 @@
 # Probability and Statistical Learning
 :label:`chap_mdl-probability-statistics`
 
-Probabilistic models describe how data may vary. This chapter develops the
-continuous probability used throughout deep learning: densities, expectations,
-transformations, and standard distributions. It then derives maximum-likelihood
-and MAP estimation, posterior approximation by Monte Carlo and variational
-methods, and statistical procedures for estimation and testing. Concentration
-inequalities lead to uniform convergence, Rademacher complexity, and a
-discussion of interpolation and double descent. A final naive Bayes example
-combines model fitting, prediction, and statistical evaluation.
+This chapter separates four questions. A probability distribution describes
+how outcomes vary; an estimator maps observed data to a parameter or other
+quantity; a posterior approximation computes with uncertainty under a chosen
+probabilistic model; and a generalization result states conditions under which
+sample performance controls population performance. Confusing these objects
+leads, for example, to treating a density as a point probability or a confidence
+interval as a posterior probability.
+
+The foundational path is random variables, distributions, maximum likelihood,
+and statistics. It develops densities and transformations, common probability
+laws, point estimation, sampling distributions, tests, and confidence
+intervals. Bayesian computation and concentration/generalization form an
+advanced path: the former approximates posterior integrals, while the latter
+derives tail and uniform-convergence bounds under explicit assumptions. Naive
+Bayes is the capstone. It combines a likelihood, an independence factorization,
+parameter estimation, prediction, and an uncertainty audit in one classifier.
 
 ```toc
 :maxdepth: 2

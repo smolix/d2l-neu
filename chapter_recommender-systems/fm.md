@@ -1,22 +1,22 @@
 # Factorization Machines
 
-Factorization machines (FM), proposed by :citet:`Rendle.2010`, are a supervised algorithm that can be used for classification, regression, and ranking tasks. It quickly took notice and became a popular and impactful method for making predictions and recommendations. Particularly, it is a generalization of the linear regression model and the matrix factorization model. Moreover, it is reminiscent of support vector machines with a polynomial kernel. The strengths of factorization machines over the linear regression and matrix factorization are: (1) it can model $\chi$-way variable interactions, where $\chi$ is the number of polynomial order and is usually set to two. (2) A fast optimization algorithm associated with factorization machines can reduce the polynomial computation time to linear complexity, making it extremely efficient especially for high dimensional sparse inputs.  For these reasons, factorization machines are widely employed in modern advertisement and products recommendations. The technical details and implementations are described below.
+A linear model assigns a separate weight to every feature but cannot change the contribution of one feature according to another. Explicitly assigning a parameter to every feature pair is usually infeasible for sparse, high-dimensional inputs. A second-order factorization machine (FM) :cite:`Rendle.2010` gives each feature a $k$-dimensional vector and uses vector inner products as pairwise coefficients. This low-rank parameterization shares statistical strength across pairs and admits a computation linear in the number of active features.
 
 
 ## 2-Way Factorization Machines
 
-Formally, let $x \in \mathbb{R}^d$ denote the feature vectors of one sample, and $y$ denote the corresponding label which can be real-valued label or class label such as binary class "click/non-click". The model for a factorization machine of degree two is defined as:
+For an input $\mathbf{x}\in\mathbb{R}^d$, a second-order FM has score
 
 $$
-\hat{y}(x) = \mathbf{w}_0 + \sum_{i=1}^d \mathbf{w}_i x_i + \sum_{i=1}^d\sum_{j=i+1}^d \langle\mathbf{v}_i, \mathbf{v}_j\rangle x_i x_j
+\hat{y}(\mathbf{x}) = w_0 + \sum_{i=1}^d w_i x_i + \sum_{i=1}^d\sum_{j=i+1}^d \langle\mathbf{v}_i, \mathbf{v}_j\rangle x_i x_j.
 $$
 
-where $\mathbf{w}_0 \in \mathbb{R}$ is the global bias; $\mathbf{w} \in \mathbb{R}^d$ is the vector of linear weights, whose $i^\textrm{th}$ entry $\mathbf{w}_i$ is the weight of the $i^\textrm{th}$ variable; $\mathbf{V} \in \mathbb{R}^{d\times k}$ represents the feature embeddings; $\mathbf{v}_i$ represents the $i^\textrm{th}$ row of $\mathbf{V}$; $k$ is the dimensionality of latent factors; $\langle\cdot, \cdot \rangle$ is the dot product of two vectors.  $\langle \mathbf{v}_i, \mathbf{v}_j \rangle$ model the interaction between the $i^\textrm{th}$ and $j^\textrm{th}$ feature. Some feature interactions can be easily understood so they can be designed by experts. However, most other feature interactions are hidden in data and difficult to identify. So modeling feature interactions automatically can greatly reduce the efforts in feature engineering. It is obvious that the first two terms correspond to the linear regression model and the last term is an extension of the matrix factorization model. If the feature $i$ represents an item and the feature $j$ represents a user, the third term is exactly the dot product between user and item embeddings. It is worth noting that FM can also generalize to higher orders (degree > 2). Nevertheless, the numerical stability might weaken the generalization.
+Here $w_0\in\mathbb{R}$ is an intercept, $\mathbf{w}\in\mathbb{R}^d$ contains the linear coefficients, and the rows $\mathbf{v}_i\in\mathbb{R}^k$ of $\mathbf{V}\in\mathbb{R}^{d\times k}$ determine the pairwise coefficients. The coefficient for $x_ix_j$ is not free: it must equal $\langle\mathbf{v}_i,\mathbf{v}_j\rangle$. For one-hot user and item features, this pairwise term contains the matrix-factorization score as a special case. Higher-order FMs require additional parameterizations; they do not follow from the second-order equation merely by increasing $k$.
 
 
 ## An Efficient Optimization Criterion
 
-Optimizing the factorization machines in a  straight forward method leads to a complexity of $\mathcal{O}(kd^2)$ as all pairwise interactions require to be computed. To solve this inefficiency problem, we can reorganize the third term of FM which could greatly reduce the computation cost, leading to a linear time complexity ($\mathcal{O}(kd)$).  The reformulation of the pairwise interaction term is as follows:
+Directly summing all feature pairs costs $\mathcal{O}(kd^2)$ for a dense input. For latent coordinate $l$, expand $(\sum_i v_{i,l}x_i)^2$: its cross terms count every unordered pair twice, while $\sum_i v_{i,l}^2x_i^2$ contains the diagonal terms. Subtracting the diagonal and dividing by two gives
 
 $$
 \begin{aligned}
@@ -28,7 +28,7 @@ $$
  \end{aligned}
 $$
 
-With this reformulation, the model complexity is decreased greatly. Moreover, for sparse features, only non-zero elements need to be computed so that the overall complexity is linear to the number of non-zero features.
+The two inner sums can be accumulated in one pass. The cost is therefore $\mathcal{O}(kd)$ for a dense vector and $\mathcal{O}(k\,\mathrm{nnz}(\mathbf{x}))$ when only nonzero entries are visited.
 
 To learn the FM model, we can use the MSE loss for regression task, the cross-entropy loss for classification tasks, and the BPR loss for ranking task. Standard optimizers such as stochastic gradient descent and Adam are viable for optimization.
 
@@ -51,7 +51,7 @@ import os
 ```
 
 ## Model Implementation
-The following code implement the factorization machines. It is clear to see that FM consists a linear regression block and an efficient feature interaction block. The model returns raw scores (logits); the sigmoid transformation is absorbed into the loss function (`SigmoidBinaryCrossEntropyLoss` / `BCEWithLogitsLoss`) for numerical stability.
+The implementation computes the linear term and the square-of-sum identity separately. It returns logits; combining the sigmoid and binary cross-entropy in `SigmoidBinaryCrossEntropyLoss` or `BCEWithLogitsLoss` avoids explicitly taking logarithms of probabilities near zero or one.
 
 ```{.python .input #fm-model-implementation  n=2}
 #@tab mxnet
@@ -159,8 +159,8 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 
 ## Summary
 
-* FM is a general framework that can be applied on a variety of tasks such as regression, classification, and ranking.
-* Feature interaction/crossing is important for prediction tasks and the 2-way interaction can be efficiently modeled with FM.
+* A second-order FM parameterizes every pair coefficient as an inner product of feature vectors, sharing parameters across sparse feature pairs.
+* Its pairwise score costs $\mathcal{O}(k\,\mathrm{nnz}(\mathbf{x}))$ using the square-of-sum identity.
 
 ## Exercises
 
@@ -195,33 +195,33 @@ $\mathcal{O}(kn)$ instead of $\mathcal{O}(n^2)$ via:
 
 $$\sum_{i<j} \langle \mathbf{v}_i, \mathbf{v}_j \rangle x_i x_j = \tfrac{1}{2} \sum_f \big[ (\sum_i v_{i,f} x_i)^2 - \sum_i v_{i,f}^2 x_i^2 \big].$$
 
-Powerful for **CTR prediction** on sparse one-hot ad
+This structure is useful for **CTR prediction** on sparse one-hot ad
 features. Generalizes MF (with two features = user +
 item) and recovers logistic regression as a special case.
 :::
 
-::: {.slide title="Efficient optimization"}
+::: {.slide title="A square expansion removes the pairwise loop"}
 @fm-an-efficient-optimization-criterion
 :::
 
-::: {.slide title="Model implementation"}
+::: {.slide title="Two accumulators compute every pair coefficient"}
 @fm-model-implementation
 :::
 
-::: {.slide title="CTR (advertising) dataset"}
+::: {.slide title="Field indices represent sparse categorical inputs"}
 Standard sparse-features benchmark — many one-hot
 categorical fields per row:
 
 @fm-load-the-advertising-dataset
 :::
 
-::: {.slide title="Training"}
+::: {.slide title="Binary log loss trains the click logit"}
 Binary cross-entropy + Adam:
 
 @fm-train-the-model
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Low-rank coefficients share information across pairs"}
 - FMs = linear model + bilinear feature interactions, all
   feature pairs share latent factor structure.
 - Closed-form $\mathcal{O}(kn)$ pairwise computation

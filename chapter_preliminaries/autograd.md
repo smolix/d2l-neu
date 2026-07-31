@@ -263,22 +263,13 @@ x_grad == 4 * x
 ```
 
 :begin_tab:`mxnet`
-Now let's calculate 
-another function of `x`
-and take its gradient. 
-Note that MXNet resets the gradient buffer 
-whenever we record a new gradient. 
+For the new objective $y=\sum_i x_i$, MXNet replaces the recorded gradient
+with the new value.
 :end_tab:
 
 :begin_tab:`pytorch`
-Now let's calculate 
-another function of `x`
-and take its gradient.
-Note that PyTorch does not automatically 
-reset the gradient buffer 
-when we record a new gradient. 
-Instead, the new gradient
-is added to the already-stored gradient.
+For the new objective $y=\sum_i x_i$, PyTorch adds the new derivative to the
+existing gradient buffer unless it is cleared first.
 This behavior comes in handy
 when we want to optimize the sum 
 of multiple objective functions.
@@ -287,11 +278,8 @@ we can call `x.grad.zero_()` as follows:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Now let's calculate 
-another function of `x`
-and take its gradient.
-Note that TensorFlow resets the gradient buffer 
-whenever we record a new gradient. 
+For the new objective $y=\sum_i x_i$, `GradientTape.gradient` returns a new
+gradient value rather than accumulating into a tensor-owned buffer.
 :end_tab:
 
 ```{.python .input #autograd-a-simple-function-6}

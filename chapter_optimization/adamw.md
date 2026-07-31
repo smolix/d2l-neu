@@ -1,9 +1,11 @@
 # AdamW
 :label:`sec_adamw`
 
-Adam is commonly used with decoupled weight decay, producing *AdamW*: Adam with
-weight decay, typically $\lambda = 0.1$, on most but not all of the
-parameters. This section explains the W. Back in :numref:`sec_weight_decay`
+Adam is commonly used with decoupled weight decay, producing *AdamW*: Adam
+with a separate shrinkage update applied to selected parameter groups. The
+coefficient depends on the model, schedule, training horizon, and parameter
+group; later examples report values used in specific language-model recipes.
+This section explains the W. Back in :numref:`sec_weight_decay`
 we saw that adding an $\ell_2$ penalty to the loss and shrinking the weights
 by a fixed factor each step are the same operation under stochastic gradient
 descent. Under Adam, however, the adaptive preconditioner changes the penalty
@@ -52,8 +54,9 @@ $$
 
 Penalizing the loss *is* shrinking the weights, by the uniform factor
 $1 - \eta\lambda$. Now feed the same penalized gradient through Adam's
-update :eqref:`eq_adam-update`. Everything in the gradient is divided by
-$\sqrt{\hat{\mathbf{v}}_t}$, the penalty included. Schematically, treating
+update :eqref:`eq_adam-update`. The moments are built from the penalized
+gradient, so the penalty also passes through the adaptive preconditioner. The
+following display is schematic: treating
 $\sqrt{\hat{\mathbf{v}}_t}$ as a common preconditioner for loss term and
 penalty alike (both moments are in fact built from the penalized gradient),
 the shrinkage applied to coordinate $i$ is no longer uniform:

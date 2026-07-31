@@ -3,6 +3,16 @@
 
 Value-based methods obtain a policy by maximizing an estimated action-value function. A policy-gradient method instead parameterizes $\pi_\theta(a \mid s)$ directly and optimizes the expected return $J(\theta)$ :cite:`Williams.1992`. The log-derivative identity expresses the gradient as an expectation over trajectories in which the unknown transition probabilities cancel. This produces the REINFORCE estimator, which can be computed from sampled rollouts without a model or value function. On the small FrozenLake problem, we can compare the estimator with the exact gradient and measure how its error changes with batch size.
 
+The derivation below assumes that $\pi_\theta(a\mid s)$ is differentiable
+and positive on sampled actions, that the environment dynamics do not
+depend on $\theta$, and that differentiation may be interchanged with the
+trajectory expectation. We use finite, almost-surely terminating episodes
+with bounded rewards, which makes the required expectations finite. The
+Monte Carlo estimator is on-policy: its trajectories are sampled from the
+same $\pi_\theta$ whose gradient is being estimated. Later sections state
+explicitly when an implementation replaces the exact discounted estimator
+by a per-step surrogate.
+
 ```{.python .input #policy-gradient-policy-gradient}
 %%tab pytorch
 %matplotlib inline

@@ -1,12 +1,17 @@
 #  Preliminaries
 :label:`chap_preliminaries`
 
-Deep learning combines numerical computation with a small set of
-mathematical tools. This chapter introduces the prerequisites used throughout
-the book: storing and manipulating data, preprocessing tabular datasets,
-linear algebra, differential calculus, automatic differentiation, and
-probability. It concludes with a practical method for consulting framework
-documentation.
+Consider the smallest complete learning problem: load a table of examples,
+represent it as tensors, compute a prediction and a loss, differentiate that
+loss, and decide whether the result is plausible. Each step fails without a
+specific tool. Arrays store and transform the data; linear algebra expresses
+the prediction; calculus and automatic differentiation supply its gradients;
+probability distinguishes a stable pattern from sampling noise; and framework
+documentation resolves the implementation details.
+
+This chapter develops those prerequisites in that order, beginning with tensor
+and tabular-data operations and ending with a practical method for consulting
+framework documentation.
 
 The treatment is intentionally concise. Each section introduces the notation
 and operations needed by later chapters; the mathematics appendices develop

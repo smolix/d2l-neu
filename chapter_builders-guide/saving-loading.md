@@ -474,28 +474,11 @@ with open('mlp-mx.safetensors', 'rb') as f:
 header['hidden.weight']
 ```
 
-:begin_tab:`pytorch`
-`torch.save` keeps its place for your own scratch files and for the older code
-you will still meet. safetensors is what you use to hand a model to anyone else.
-:end_tab:
-
-:begin_tab:`jax`
-`jnp.save` keeps its place for your own scratch arrays and quick experiments.
-safetensors is what you use to hand a model to anyone else.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`np.save` and Keras's own `.weights.h5` keep their place for your own scratch
-files and checkpoints. safetensors is what you use to hand a model to anyone
-else.
-:end_tab:
-
-:begin_tab:`mxnet`
-`save_parameters` keeps its place for your own scratch files and checkpoints.
-safetensors is what you use to hand a model to anyone else, and for an
-archived framework it is also the exit route: current safetensors bindings
-outside MXNet can read the file you just wrote.
-:end_tab:
+Interchange files should be non-executable, documented, and accompanied by a
+checksum and a state schema. Safetensors is the data-only example used here;
+framework-native formats remain appropriate when all consumers share a trusted,
+compatible runtime. For archived frameworks, a data-only format also supplies
+an exit path that current tools can read.
 
 ## Checkpointing a Training Run
 

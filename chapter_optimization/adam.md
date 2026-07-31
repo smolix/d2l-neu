@@ -7,8 +7,9 @@ coordinates differ substantially in scale or curvature. This section develops
 adaptive per-coordinate learning rates through three related methods:
 AdaGrad scales every coordinate by the history of its own gradients, RMSProp
 makes that history forget, and Adam :cite:`Kingma.Ba.2014` adds momentum back
-in and corrects the startup bias. The result has been the default optimizer of
-deep learning for a decade.
+in and corrects the startup bias. Adam-family methods became common defaults
+for transformer training, while tuned SGD with momentum remains competitive in
+several computer-vision settings.
 
 The second half of the section examines when Adam improves on momentum. We
 introduce
@@ -652,12 +653,12 @@ adam_lm = run_lm(lambda model, lr: torch.optim.Adam(model.parameters(), lr),
 adam_lm = run_lm(optax.adam, lrs=[3e-4, 1e-3, 3e-3, 1e-2])
 ```
 
-The sweeps already tell most of the story. SGD's best learning rate sits
-directly below the divergent one: push it one grid point higher and the loss
-is NaN. That knife-edge is characteristic of SGD on transformers, whose
-heavy-tailed gradients make the largest stable step the best one and the
-next step fatal. Adam's optimum is interior, with stable neighbors on both
-sides. Now the head-to-head comparison of the two winners:
+On this grid, SGD's best learning rate sits directly below a divergent one:
+moving one grid point higher produces a NaN loss. Adam's optimum is interior,
+with stable neighboring rates on both sides. This experiment establishes the
+difference for this model and grid; it does not by itself identify gradient
+tails as the cause or characterize all transformers. We now compare the best
+rate found for each method:
 
 ```{.python .input #adam-the-race-on-the-language-model-3}
 best_sgd = min(sgd_lm, key=lambda lr: final_loss(sgd_lm[lr]))

@@ -687,12 +687,9 @@ else:
 
 ## Counting Parameters, Counting Bytes
 
-Before any training job comes the question of whether the model fits in
-memory, and the answer is arithmetic you can do on a napkin. Counting
-parameters is one line. Counting *bytes* requires remembering everything that
-training keeps per parameter: the weight itself, its gradient, and the
-optimizer's state. Adam maintains two running moments per parameter, so in
-For fp32 the memory calculation is:
+An initial memory estimate begins with persistent state per parameter: the
+weight, its gradient, and optimizer slots. For dense Adam with fp32 weights,
+gradients, and two fp32 running moments, the idealized calculation is:
 
 | Training state       | Precision | Bytes per parameter |
 |----------------------|-----------|---------------------|
@@ -701,6 +698,12 @@ For fp32 the memory calculation is:
 | Adam first moment    | fp32      | 4                   |
 | Adam second moment   | fp32      | 4                   |
 | Total                |           | 16                  |
+
+This 16-byte figure is a lower-bound accounting of persistent dense state. It
+excludes activations, temporary workspaces, allocator fragmentation,
+mixed-precision master copies, exponential moving averages, communication
+buffers, and changes from sharding. :numref:`sec_use_gpu` measures total device
+allocation and peak memory directly.
 
 ```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-1}
 %%tab pytorch

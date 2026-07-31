@@ -77,4 +77,5 @@ The resources in :numref:`chap_reinforcement_learning` cover the general theory 
 - The [RL Baselines3 Zoo](https://github.com/DLR-RM/rl-baselines3-zoo) :cite:`Raffin.Hill.Gleave.ea.2021` ships tuned hyperparameter configurations per environment, the sensible starting point when a method of this chapter meets a task that is not CartPole.
 - The offline survey of :citet:`Levine.Kumar.Tucker.ea.2020` continues :numref:`sec_offline` at full depth, from the tabular diagnosis to the deep-scale methods it could only name.
 - Chapters 11 to 13 of Sutton and Barto :cite:`Sutton.Barto.2018` give the deadly triad of :numref:`sec_dqn` its full theory, including what is provable once one corner is dropped.
-- [The RLHF book](https://rlhfbook.com/) :cite:`Lambert.2026` is the road of :numref:`sec_rl_sequences` continued into post-training practice; after these two chapters you own every estimator in it.
+- [The RLHF book](https://rlhfbook.com/) :cite:`Lambert.2026` develops the
+  post-training applications introduced in :numref:`sec_rl_sequences`.

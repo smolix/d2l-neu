@@ -121,7 +121,15 @@ data = FashionMNIST(resize=(32, 32))
 len(data.train[0]), len(data.val[0])
 ```
 
-We instantiated the dataset with `resize=(32, 32)`, so each image is delivered as a single-channel tensor of spatial size $32 \times 32$. One subtlety matters here: where the channel axis lives. There are two conventions, *channel-first* $c \times h \times w$ ($c$ color channels, then height and width) and *channel-last* $h \times w \times c$. The `get_dataloader` method below produces the appropriate layout; we confirm the per-image shape once the loader is in place, below. Here $c = 1$ since the images are grayscale; most photographs have $c = 3$ channels (red, green, blue).
+Fashion-MNIST images are natively $28\times28$. We use
+`resize=(32, 32)` to match the spatial dimensions used by later convolution
+examples; interpolation changes the pixels and increases per-image storage and
+compute, but not the labels. Each image is delivered as a single-channel tensor
+of spatial size $32 \times 32$. One subtlety matters here: where the channel
+axis lives. There are two conventions, *channel-first* $c \times h \times w$
+and *channel-last* $h \times w \times c$. The `get_dataloader` method below
+produces the appropriate layout, which we confirm after constructing the loader.
+Here $c = 1$ because the images are grayscale; most photographs have $c = 3$.
 
 
 
@@ -220,7 +228,10 @@ X, y = next(iter(data.train_dataloader()))
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
 
-Let us time one full pass through the training set. A single pass takes seconds, not minutes; loading is not the bottleneck. For the convolutional networks of the coming chapters, a single forward and backward pass over a minibatch takes far longer than the corresponding I/O. (For the tiny linear models of *this* chapter the gap is much smaller; try the first exercise below.) If loading *were* slower than training, you would overlap I/O with compute via prefetching or raise the number of loader workers.
+Let us time one full pass through the training set as a local loader smoke test.
+The result depends on storage, worker count, framework, and hardware; it tells
+us whether loading is a bottleneck only for this run. If loading is slower than
+training on a target system, prefetching or additional loader workers may help.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-3}
 tic = time.time()
@@ -290,7 +301,12 @@ We are now ready to work with the Fashion-MNIST dataset in the sections that fol
 
 ## Summary
 
-We now have a slightly more realistic dataset to use for classification. Fashion-MNIST is an apparel classification dataset consisting of images representing 10 categories. We will use this dataset in subsequent sections and chapters to evaluate various network designs, from a simple linear model to advanced residual networks. As we commonly do with images, we read them as a tensor of shape (batch size, number of channels, height, width). For now, we only have one channel as the images are grayscale (the visualization above uses a false color palette for improved visibility). A well-implemented data iterator keeps loading fast, so that training speed is set by the model rather than by I/O.
+Fashion-MNIST contains grayscale apparel images from 10 categories. A batch has
+a batch axis, two spatial axes, and one channel axis: PyTorch and MXNet use
+$(n,c,h,w)$, while TensorFlow and JAX use $(n,h,w,c)$. The visualization uses
+false color, but the underlying data have one grayscale channel. Loader
+throughput must be measured together with model computation on the target
+system; it is not guaranteed to be faster than training.
 
 
 ## Exercises
@@ -512,7 +528,8 @@ A `visualize` method tiles one validation batch, each image captioned with its c
 ::: {.col}
 - **Channel axis** differs: PyTorch/MXNet $c\times h\times w$, TensorFlow/JAX $h\times w\times c$ (the loader hides it).
 - Always **look at your data**; a full loading pass costs seconds, so training speed is set by the model, not I/O.
-- Next: a linear classifier on this data, and its **~82% ceiling** (the softmax-from-scratch section).
+- Next: a linear classifier on this data and the accuracy it attains under the
+  configuration used in the softmax-from-scratch section.
 :::
 :::
 :::

@@ -36,10 +36,10 @@ and iterating
 
 $$x \leftarrow x - \eta f'(x)$$
 
-should drive the value of $f$ downhill until the gradient becomes small or we
-run out of iterations. Everything interesting hides in the word "should": the
-guarantee holds only while $\eta$ is small enough for :eqref:`gd-taylor` to be
-trusted.
+decreases the objective locally when the Taylor remainder is dominated by the
+first-order term. A global step-size guarantee needs an additional smoothness
+condition. If $f'$ is $L$-Lipschitz, for example, gradient descent decreases
+$f$ for $0<\eta<2/L$; :numref:`chap_mdl-optimization` proves this result.
 
 To watch the iteration at work we use $f(x)=x^2$. We know that $x=0$ is the
 minimizer, which makes it easy to judge how the iterates behave.

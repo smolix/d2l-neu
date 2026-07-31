@@ -18,13 +18,8 @@ remains common today.
 
 ```{.python .input #blocks-imports}
 %%tab mxnet
-# Memory-footprint knobs (set before importing mxnet). VGG and NiN train
-# back-to-back at 224x224; MXNet's default "Naive" GPU pool keeps each
-# training's freed blocks in size-exact free lists, so NiN's differently
-# shaped activations cannot reuse VGG's and the pool high-water grows. The
-# "Round" pool buckets allocations by rounded size, letting the second model
-# reuse the first's memory; disabling cuDNN autotune drops its scratch
-# workspace. Together: ~7.7 GiB -> ~6.4 GiB true peak, with identical results.
+# Bound allocator and autotuning memory while training several 224x224 models
+# in one process; these settings do not change the model computation.
 import os
 os.environ['MXNET_GPU_MEM_POOL_TYPE'] = 'Round'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
@@ -50,13 +45,8 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #blocks-imports}
 %%tab jax
-# Memory-footprint knob (set before JAX initialises its GPU backend). At
-# 224x224 the VGG/NiN convolutions' true peak is dominated not by activations
-# but by the cuDNN convolution workspace XLA allocates while autotuning
-# algorithms. Capping XLA's memory pool bounds that workspace budget, so
-# autotuning simply picks the fastest algorithm that fits -- cutting the true
-# peak from ~7.6 GiB to ~6.4 GiB with numerically identical convolutions and
-# no slowdown (unlike disabling autotune outright).
+# Bound the JAX allocator while training several 224x224 models in one process;
+# this setting does not change the model computation.
 import os
 os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '.25'
 from d2l import jax as d2l
@@ -67,16 +57,32 @@ from jax import numpy as jnp
 ## VGG: Blocks as the Unit of Design
 :label:`sec_vgg`
 
-The idea of building networks from repeated blocks first emerged from the Visual Geometry Group (VGG) at Oxford University, in their eponymously named *VGG* network :cite:`Simonyan.Zisserman.2014`. Repeated structures are easy to express in code with loops and subroutines, and, as we will see, they turn the design of an entire network into the choice of a handful of numbers.
+VGG :cite:`Simonyan.Zisserman.2014` replaced individually chosen layers with
+repeated blocks. A block makes depth, channel count, and downsampling schedule
+explicit and lets code construct a network from a short configuration.
 
 ### VGG Blocks
 :label:`subsec_vgg-blocks`
 
-The classic building pattern of CNNs is a sequence of the following: (i) a convolutional layer with padding to maintain the resolution, (ii) a nonlinearity such as a ReLU, (iii) a pooling layer such as max-pooling to reduce the resolution. One problem with this approach is that the spatial resolution decreases quite rapidly. In particular, it imposes a hard limit of $\log_2 d$ convolutional layers on a network with input dimension $d$ before all resolution is used up. For instance, in the case of ImageNet, it would be impossible to have more than 8 convolutional layers in this way.
+If every convolution is followed immediately by stride-2 pooling, an input of
+width $d$ permits at most $\lfloor\log_2 d\rfloor$ such stages before its
+spatial extent collapses. For a 224-pixel ImageNet input, this gives at most
+seven or eight stages, depending on boundary conventions. Depth can instead
+increase within a fixed resolution stage.
 
-The key idea of :citet:`Simonyan.Zisserman.2014` was to use *multiple* convolutions in between downsampling via max-pooling in the form of a block. They were primarily interested in whether deep or wide networks perform better, and the receptive-field formula :eqref:`eq_receptive_field` explains why stacking is affordable: two stacked $3 \times 3$ convolutions (stride 1) see the same $5 \times 5$ window as a single $5 \times 5$ convolution while using $18c^2$ rather than $25c^2$ parameters for $c$ input and output channels, and three of them cover a $7 \times 7$ receptive field with $27c^2$ rather than $49c^2$ parameters, with a nonlinearity after every layer. In a rather detailed analysis they showed that deep and narrow networks significantly outperform their shallow counterparts. This set deep learning on a quest for ever deeper networks, with over 100 layers for typical applications. Stacking $3 \times 3$ convolutions became a gold standard in later deep networks, a design decision only revisited recently by :citet:`liu2022convnet`, and fast implementations for small convolutions became a staple on GPUs :cite:`lavin2016fast`.
+VGG places several stride-1 convolutions between pooling operations. Two
+stacked $3 \times 3$ convolutions see the same $5 \times 5$ window as one
+$5 \times 5$ convolution while using $18c^2$ rather than $25c^2$ weights
+when input and output widths are both $c$. Three layers cover a $7 \times 7$
+window with $27c^2$ rather than $49c^2$ weights, and insert a nonlinearity
+after every layer. The experiments of :citet:`Simonyan.Zisserman.2014` found
+that these deeper configurations improved ImageNet accuracy under their
+training protocol. Small stacked kernels consequently became common and
+received specialized GPU implementations :cite:`lavin2016fast`.
 
-Back to VGG: a VGG block consists of a *sequence* of convolutions with $3\times3$ kernels with padding of 1 (keeping height and width) followed by a $2 \times 2$ max-pooling layer with stride of 2 (halving height and width after each block). In the code below, we define a function called `vgg_block` to implement one VGG block. It takes two arguments, the number of convolutional layers `num_convs` and the number of output channels `num_channels`.
+A VGG block therefore contains `num_convs` convolutions with $3\times3$
+kernels and padding 1, followed by $2\times2$ max-pooling with stride 2. The
+function below takes the number of convolutions and their output channel count.
 
 ```{.python .input #vgg-vgg-blocks  n=2}
 %%tab mxnet

@@ -61,31 +61,29 @@ magnitude more bytes and delivers orders of magnitude fewer of them per
 second.](../img/mdl-perf-memory-hierarchy.svg)
 :label:`fig_memory_hierarchy`
 
-Two ladders quantify the hierarchy, and both are worth staring at.
-:numref:`fig_bandwidth_ladder` ranks the *pipes* by bandwidth: from an
+Two comparisons quantify the hierarchy. :numref:`fig_bandwidth_ladder`
+ranks data paths by bandwidth: from an
 NVMe drive's 14 GB/s, through PCIe and socket DRAM, up to on-package HBM
-at 8 TB/s. The span is almost three orders of magnitude, and the rungs
+at 8 TB/s. The span is almost three orders of magnitude, and the levels
 correspond to physical boundaries: on-package memory is fastest because
 it sits on the same package, millimeters from the die over thousands of
 short interposer wires; everything that crosses a connector,
-a board trace, or a cable pays. The rule of thumb: **every chip boundary
+a board trace, or a cable reduces available bandwidth. As a rule of thumb,
+**every chip boundary
 costs roughly an order of magnitude of bandwidth**. Keep the bytes home.
 
-![The 2026 bandwidth ladder. Our own GPU's GDDR6X sits two rungs below a
-B200's HBM3e; every boundary crossed costs roughly an order of
-magnitude.](../img/mdl-perf-bandwidth-ladder.svg)
+![Representative mid-2026 bandwidths for storage, host memory, PCIe, GPU memory, and on-package HBM. The build GPU's GDDR6X bandwidth is below a B200's HBM3e; exact ratios depend on the listed devices and transfer path.](../img/mdl-perf-bandwidth-ladder.svg)
 :label:`fig_bandwidth_ladder`
 
-:numref:`fig_latency_ladder` ranks the same world by *latency* — how long
+:numref:`fig_latency_ladder` compares the same systems by *latency* — how long
 before the first byte arrives — and spans eight orders of magnitude, from
 a one-nanosecond L1 hit to a sixty-millisecond WAN round trip. Note where
-the highlighted rung sits: launching a CUDA kernel costs 5–15 µs of
+the highlighted point sits: launching a CUDA kernel costs 5–15 µs of
 latency, thousands of L2 hits' worth, which is why the overhead regime of
 :numref:`sec_perf_model` exists at all and why this chapter keeps returning
 to "fewer, larger operations".
 
-![The 2026 latency ladder (log scale, nanoseconds). The kernel-launch rung
-is the one deep learning code trips over most often.](../img/mdl-perf-latency-ladder.svg)
+![Representative mid-2026 latencies on a logarithmic nanosecond scale. A CUDA kernel launch takes roughly 5--15 microseconds on the systems summarized here, so many small launches can dominate short kernels.](../img/mdl-perf-latency-ladder.svg)
 :label:`fig_latency_ladder`
 
 Latency and bandwidth interact through *access patterns*. DRAM delivers
@@ -201,15 +199,15 @@ the same insight as the TPU's systolic array
 :cite:`Jouppi.Young.Patil.ea.2017,Kung.1988`. The consequence: matrix
 multiplications run an order of magnitude faster than anything else on
 the chip, *provided* the data comes in the formats the tensor cores
-speak. Those formats are the ladder in :numref:`fig_float_formats`.
+speak. :numref:`fig_float_formats` compares their bit allocations.
 
-![The floating-point format ladder, bit-for-bit to scale. fp32, tf32, and
+![Floating-point formats drawn bit-for-bit to scale. fp32, tf32, and
 bf16 share an 8-bit exponent and hence a dynamic range; each halving of
 width doubles peak arithmetic and halves the bytes
 moved.](../img/mdl-perf-float-formats.svg)
 :label:`fig_float_formats`
 
-Two rules organize the ladder. First, **the exponent width sets the
+Two rules organize the comparison. First, **the exponent width sets the
 range, the mantissa width sets the precision**. fp32, tf32, and bf16 all
 carry the same 8-bit exponent: they represent the same span of
 magnitudes, so swapping among them costs precision, not range — you give
@@ -225,7 +223,7 @@ usual recipe rather than by any rule), and fp4 has just sixteen
 representable values.
 Second, **every halving of storage wins twice**: half the bits means
 double the peak FLOP/s (twice the tile fits in the same silicon) *and*
-half the bytes per operand — the format ladder climbs the roofline along
+half the bytes per operand — reduced precision moves the roofline bound along
 both axes at once. tf32 is the exception that proves the byte rule: it is
 a tensor-core *compute* format that still stores 32 bits (the figure
 draws exactly this), so it buys throughput but saves nothing on memory
@@ -333,19 +331,19 @@ transfers with compute, and treat a per-step `device_put` of fresh host
 data as a red flag.
 :end_tab:
 
-Either way the conclusion is structural: get data onto the device, keep
-it there, and overlap the unavoidable transfers with compute. This is
-also your first sighting of the number that will dominate the multi-GPU
-sections: *everything that leaves the GPU moves at bus speed — at best —
-not memory speed*.
+The resulting guideline is to stage data on the device and overlap
+unavoidable transfers with compute. Inter-device transfers are bounded by
+the applicable interconnect rather than by local device-memory bandwidth;
+the multi-GPU sections measure that difference directly.
 
 ## Interconnects: Our Box as the Worked Example
 :label:`subsec_hw-interconnects`
 
-When one GPU is not enough, GPUs must talk to each other, and the
-bandwidth ladder says this is where performance goes to die. Datacenter
+When one GPU is not enough, devices exchange gradients, parameters, or
+activations over an interconnect whose bandwidth is usually far below
+local memory bandwidth. Datacenter
 parts attack the problem with dedicated fabrics: NVLink gives each B200
-1.8 TB/s to its peers — memory-class bandwidth, one rung below HBM — and
+1.8 TB/s to its peers — memory-class bandwidth below HBM — and
 an NVL72 rack wires 72 GPUs into a single 130 TB/s domain. Consumer
 parts get PCIe, and the current GeForce generations (RTX 40 and 50
 series) have *peer-to-peer transfers disabled* as market segmentation,
@@ -386,17 +384,14 @@ exist; we will have measured it.
 ## Energy Cost of Data Movement
 :label:`subsec_hw-energy`
 
-There is a final ladder underneath the other two.
-:numref:`fig_energy_ladder` shows the energy cost of elementary
+Energy provides another comparison. :numref:`fig_energy_ladder` shows the
+energy cost of elementary
 operations at a fixed process node :cite:`Horowitz.2014`: an 8-bit
 integer add costs 0.03 pJ, an fp32 multiply 3.7 pJ — and *one 64-bit
-read from DRAM costs about 2,000 pJ*. One memory access buys roughly
-five hundred multiplies. Arithmetic is nearly free; fetching operands is
-the budget, and a chip's power limit is in the end an energy-per-second
-limit. This is the deepest version of the ridge-point story: the reason
-compute outruns bandwidth is not just wire count but joules — you can
-afford to place more multipliers, but you cannot afford to feed them
-from far away.
+read from DRAM costs about 2,000 pJ*. Thus this table assigns one DRAM
+read approximately the energy of five hundred fp32 multiplies. The exact
+numbers depend on process and hardware generation, but the ordering
+explains why data movement is often a primary power and performance cost.
 
 ![Energy per operation (45 nm-class magnitudes). One DRAM access costs
 about five hundred fp32 multiplies.](../img/mdl-perf-energy-ladder.svg)
@@ -471,7 +466,7 @@ Rules of thumb worth carrying out of this section:
 
 * Memory is a hierarchy: each level away from the arithmetic holds orders
   of magnitude more bytes and delivers orders of magnitude fewer per
-  second, with a latency ladder spanning eight decades. Bandwidth is
+  second, with the compared latencies spanning eight decades. Bandwidth is
   earned by streaming; boundaries cost an order of magnitude each.
 * Compute scales with die area, I/O with die perimeter. The long-run
   outcome is compute growing ~4× per generation against bandwidth's ~2×
@@ -489,9 +484,9 @@ Rules of thumb worth carrying out of this section:
   settings (:numref:`sec_multi_gpu` finds the binding stage) — one to
   three orders of magnitude below an NVLink domain, which is why
   datacenter fabrics exist.
-* Energy explains everything twice: a DRAM access costs ~500 multiplies,
-  so every technique in this chapter is a variation on "more arithmetic
-  per byte fetched".
+* In the cited 45 nm measurements, a DRAM access costs about as much
+  energy as 500 fp32 multiplies. Fusion, reuse, and recomputation can
+  therefore reduce both data-movement time and energy.
 * One model can live at both ends of the roofline: long-context prefill
   is typically compute-bound, single-stream decode is bandwidth-bound
   with tokens/s ≲ bandwidth / model bytes.
@@ -530,7 +525,7 @@ Rules of thumb worth carrying out of this section:
    the "shared-nothing" version can be many times faster despite
    identical arithmetic.
 1. Your DataLoader delivers batches at 300 MB/s from NVMe while your GPU
-   consumes them at 2 GB/s. Using the ladders in this section, list the
+   consumes them at 2 GB/s. Using the comparisons in this section, list the
    three cheapest interventions in order of expected payoff.
 
 <!-- slides -->
@@ -549,7 +544,7 @@ why $P/\beta$ has climbed over the long run.
 Properties here; buying advice lives in the Tools appendix.
 :::
 
-::: {.slide title="The Bandwidth Ladder"}
+::: {.slide title="Bandwidth Across the Memory Hierarchy"}
 ![](../img/mdl-perf-bandwidth-ladder.svg){width=85%}
 
 Every chip boundary ≈ one order of magnitude. Keep bytes home.
@@ -558,7 +553,7 @@ Every chip boundary ≈ one order of magnitude. Keep bytes home.
 ::: {.slide title="Latency: Eight Orders of Magnitude"}
 ![](../img/mdl-perf-latency-ladder.svg){width=85%}
 
-The highlighted rung — 5–15 µs to launch a kernel — is why the
+The highlighted range — 5–15 µs to launch a kernel — is why the
 overhead regime exists.
 :::
 
@@ -581,7 +576,7 @@ bandwidth faster, and their ridge points *fell*. Packaging picks
 which wall moves; HBM-on-interposer is the countermeasure.
 :::
 
-::: {.slide title="The Format Ladder"}
+::: {.slide title="Floating-Point Format Comparison"}
 ![](../img/mdl-perf-float-formats.svg){width=75%}
 
 Same 8-bit exponent (fp32/tf32/bf16) ⇒ same range: swapping costs

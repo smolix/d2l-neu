@@ -105,7 +105,15 @@ The critic's update is the sampled policy evaluation of the previous section, a 
 
 ### Two Timescales
 
-Two learning rates appear because the two learners have different jobs. The critic chases a moving target twice over: every actor update changes the policy, which changes the values the critic is trying to predict, and every critic update moves the bootstrapped targets themselves. The actor then judges its actions with whatever the critic currently believes. If the actor moves much faster than the critic, the advantages are judged against stale values and the updates degrade. The practical rule of thumb is to let the critic learn faster than the actor, a *two-timescale* intuition; the theory that makes it precise assumes separated, decaying step-size schedules under function-approximation and noise conditions our setup does not meet. Our implementation keeps one nominal learning rate for both heads and buys the separation with update count instead: `critic_steps` regression passes per batch, a heuristic realization of the intuition rather than the theorem's schedule.
+The actor and critic have different optimization problems. Actor updates
+change the policy and hence the value function being estimated; critic
+updates also change the bootstrapped targets. If the actor changes much
+faster than the critic, its advantages may be evaluated with stale value
+estimates. Classical two-timescale results address this interaction using
+separated, decaying step-size schedules under assumptions that this
+experiment does not meet. Here both heads use the same nominal learning
+rate, with `critic_steps` regression passes per batch. This is a heuristic,
+not an implementation of the theorem's schedule.
 
 ### A Batched Actor-Critic and A2C
 
@@ -509,7 +517,9 @@ for name in runs:
     print(f'{name:>20}: greedy mean return over 100 episodes: {score:.0f}')
 ```
 
-Both agents land at 499 or 500 of the 500 ceiling: the ceiling can only be tied, and nothing here ranks them. What the section's measurements ranked was never the final policy but the estimator that got there: how noisy the road was, how big the steps were, and how still the arrival.
+Both agents finish at 499 or 500, so this experiment does not rank their
+final policies. It instead compares estimator variance, gradient norms,
+and the persistence of ceiling-level batches during training.
 
 ## Summary
 

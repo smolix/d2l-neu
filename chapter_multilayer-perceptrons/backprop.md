@@ -42,13 +42,15 @@ We work through a neural network with one hidden layer, recording the
 intermediate quantities required by the backward pass.
 
 
-For the sake of simplicity, let's assume
-that the input example is $\mathbf{x}\in \mathbb{R}^d$
-and that our hidden layer does not include a bias term.
-Note a switch of convention: :numref:`sec_mlp` processed a minibatch of *rows*
-via $\mathbf{X}\mathbf{W}$, whereas here we track a single example as a *column*
-vector acted on from the left, $\mathbf{W}\mathbf{x}$, so every weight matrix in
-this section is transposed relative to its counterpart there.
+For clarity, consider one input $\mathbf{x}\in \mathbb{R}^d$ and omit the hidden
+bias. This section writes examples as columns so that a forward step has the form
+$\mathbf{W}\mathbf{x}$. Relative to the row-batch convention in
+:numref:`sec_mlp`, the correspondence is
+$\mathbf{x}\leftrightarrow\mathbf{X}^{\mathsf T}$ and
+$\mathbf{W}^{(l)}_{\mathrm{here}}\leftrightarrow
+(\mathbf{W}^{(l)}_{\mathrm{there}})^{\mathsf T}$. The column form keeps each
+chain-rule product in forward order; the computed derivatives are otherwise
+identical.
 Here the intermediate variable is:
 
 $$\mathbf{z}= \mathbf{W}^{(1)} \mathbf{x},$$
@@ -303,8 +305,9 @@ no gradient means no learning signal, a concrete instance of the "dying ReLU" we
 met in :numref:`sec_mlp`. You can confirm every number here in a few lines of
 automatic differentiation (:numref:`sec_autograd`): rebuild the same tensors
 with gradient tracking, run the forward pass, sweep back through the graph, and
-compare against the gradients we just derived by hand. The PyTorch cell below
-does exactly this.
+compare against the gradients we just derived by hand. The arithmetic is
+framework-independent; the PyTorch cell below provides one compact autograd
+check.
 
 ```{.python .input #backprop-verify}
 %%tab pytorch
@@ -560,7 +563,7 @@ engine accumulates for exactly this reason.
 :::
 
 ::: {.slide title="Local backward rules"}
-[Backpropagation · the trick]{.kicker}
+[Backpropagation · local chain rule]{.kicker}
 
 Strip away the symbols and every backward step is the same gesture: at each
 node, **multiply the gradient arriving from downstream by the node's local

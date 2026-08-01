@@ -27,6 +27,23 @@ HTML_ONLY_REFS = {
 }
 
 
+def add_frontmatter_page_numbering(content):
+    """Start Roman numbering at the actual LaTeX document boundary.
+
+    ``include-in-header`` files may mention ``\\begin{document}`` in comments.
+    Matching the first occurrence blindly can split such a comment, turning its
+    remaining text into document content and creating spurious opening pages.
+    Require the command to occupy its own (otherwise whitespace-only) line.
+    """
+    pattern = re.compile(r'(?m)^(?P<indent>[ \t]*)\\begin\{document\}[ \t]*$')
+    match = pattern.search(content)
+    if match is None:
+        raise ValueError('No standalone \\begin{document} command found')
+    replacement = (f'{match.group("indent")}\\begin{{document}}\n'
+                   f'{match.group("indent")}\\pagenumbering{{roman}}')
+    return content[:match.start()] + replacement + content[match.end():]
+
+
 def fix_html_only_refs(content):
     for target, wording in HTML_ONLY_REFS.items():
         for pat in (r'\textbf{?@%s}' % target, '?@%s' % target):
@@ -176,9 +193,7 @@ def fix_all(content):
             f'Chapter~\\ref{{{label}}}', f'\\hyperref[{label}]{{{title}}}')
 
     # ── Phase 5: Page numbering ──
-    content = content.replace(
-        '\\begin{document}',
-        '\\begin{document}\n\\pagenumbering{roman}', 1)
+    content = add_frontmatter_page_numbering(content)
 
     first_chapter = re.search(
         r'\\setcounter\{chapter\}\{0\}\n\\chapter\{Preliminaries\}', content)

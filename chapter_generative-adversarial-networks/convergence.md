@@ -30,7 +30,7 @@ import optax
 
 The second failure has been invisible because the chapter's method could not see it. Every derivation so far evaluates the game at the critic's best response: an inner optimization solved exactly, then an outer one. Training solves neither. It updates two coupled players by simultaneous or alternating gradient steps, and each player's step changes the landscape the other is descending. Nothing in the analysis of equilibria says that this coupled process approaches the equilibrium, and on the example below it provably does not, even though the equilibrium is unique and the generator starts one step away from it.
 
-Both failures are visible on one tiny example, a single point mass chasing another. The section first analyzes its training dynamics exactly: gradient flow circles the solution, and discretization turns the circles into outward spirals. A pair of penalties on the critic's input gradient then restores convergence, with eigenvalues that can be written down; near equilibrium, the penalized game turns out to measure a linearized Wasserstein-2 distance, connecting the fix back to the transport geometry of :numref:`sec_gan_objectives`. The section ends by assembling objective and penalties into the R3GAN recipe and measuring, on a twenty-five-mode toy distribution, which failure each ingredient repairs.
+Both failures are visible on one tiny example, a single point mass chasing another. The section first analyzes its training dynamics exactly: gradient flow circles the solution, and discretization turns the circles into outward spirals. A pair of penalties on the critic's input gradient then restores convergence, with eigenvalues that can be written down; near equilibrium, the penalized game turns out to measure a linearized Wasserstein-2 distance, connecting the fix back to the transport geometry of :numref:`sec_gan_objectives`. The section ends by assembling objective and penalties into the R3GAN recipe and measuring, on a twenty-five-mode toy distribution, what the penalties repair --- and what a toy of this size cannot show.
 
 ## The Dirac-GAN
 
@@ -217,7 +217,7 @@ The portraits agree with the eigenvalues. The integrated flow retraces the same 
 
 The Dirac-GAN cannot distinguish $R_1$ from $R_2$: the linear critic's slope is the same everywhere, so the two penalties coincide there. Its verdict, that either penalty alone stabilizes training, is genuinely correct near equilibrium in general. There the supports of $p$ and $q$ nearly coincide, regularizing the critic under one measure regularizes it under the other, and :eqref:`eq_gan_sobolev` holds with $m$ replaced by either; local convergence needs one penalty, which is the form in which :citet:`Mescheder.Geiger.Nowozin.2018` proved it.
 
-Far from equilibrium the two penalties stop being interchangeable, and a second reading of the penalty, due to :citet:`Roth.Lucchi.Nowozin.ea.2017`, explains why. Up to a weighting factor and a higher-order error term, penalizing $E_p\big[\|\nabla_x D\|^2\big]$ has the same effect on the game as convolving $p$ with Gaussian noise of covariance proportional to $\gamma$, and $R_2$ likewise smooths $q$. Smoothing is exactly what disjoint supports call for: two mutually singular distributions, blurred, overlap everywhere, their density ratio becomes finite, and the divergence between them depends again on how far apart they sit. The penalties implement this convolution analytically, without adding noise to any sample. But the argument needs *both* distributions smoothed. Blurring $p$ alone does not create overlap between $p$ and $q$, and an $R_1$-only critic pays nothing for growing steep in the region where the generator's samples live. :citet:`Huang.Gokaslan.Kuleshov.ea.2024` observe exactly this failure mode: trained with $R_1$ alone, the critic's gradient on generated samples grows without bound and training diverges.
+Far from equilibrium the two penalties stop being interchangeable, and a second reading of the penalty, due to :citet:`Roth.Lucchi.Nowozin.ea.2017`, explains why. Up to a weighting factor and a higher-order error term, penalizing $E_p\big[\|\nabla_x D\|^2\big]$ has the same effect on the game as convolving $p$ with Gaussian noise of covariance proportional to $\gamma$, and $R_2$ likewise smooths $q$. Smoothing is exactly what disjoint supports call for: two mutually singular distributions, blurred, overlap everywhere, their density ratio becomes finite, and the divergence between them depends again on how far apart they sit. The penalties implement this convolution analytically, without adding noise to any sample. But the argument needs *both* distributions smoothed: an $R_1$-only critic pays nothing for growing steep in the region where the generator's samples live, so its input gradients there are uncontrolled. :citet:`Huang.Gokaslan.Kuleshov.ea.2024` observe exactly this failure mode: trained with $R_1$ alone, the critic's gradient on generated samples grows without bound and training diverges.
 
 The evidence is empirical and comes with a scope. In R3GAN's ablation, $R_1$-only training diverged early on StackedMNIST, for the classical and the pairing objective alike, and sweeping $\gamma$ from 0.1 to 100 did not rescue it; adding $R_2$ restored convergence in every case :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Against this stands one prominent counterexample: StyleGAN2 trained successfully at FFHQ scale with $R_1$ alone :cite:`Karras.Laine.Aittala.ea.2020`. Whether one penalty suffices evidently depends on the dataset and on the rest of the recipe. Symmetric smoothing is what the argument above asks for, both penalties are what restored convergence where one failed, and the second penalty costs one additional term in a backward pass that is already being taken.
 
@@ -303,11 +303,11 @@ Reading the table from both ends: removing the tricks costs five FID points, and
 
 The penalties are responsible for convergence, and the pairing objective for coverage: under identical penalties, the classical loss recovers 693 modes at reverse KL 0.927 where the pairing loss recovers all 1000 at 0.078, and without $R_2$ both objectives diverge at every $\gamma$ tried :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. These are single runs on one synthetic dataset; the separation of mechanisms, not its magnitude, is the finding.
 
-Two practical numbers calibrate expectations before the experiment. The penalty weight is not portable: across R3GAN's benchmarks $\gamma$ ranges from 0.05 on CIFAR-10 to 150 on FFHQ-256, scaling with resolution and dataset, so a value tuned on one problem transfers to another only as an order-of-magnitude starting point. And the compute behind the quoted results is substantial: seven hours on eight L40 GPUs for StackedMNIST, four days for CIFAR-10, about three weeks on eight A6000s for FFHQ-256, and on the order of five thousand H100-hours for ImageNet :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. :numref:`sec_dcgan` discusses what changes at that scale; the experiment below runs in minutes.
+Two practical numbers calibrate expectations before the experiment. The penalty weight is not portable: across R3GAN's benchmarks $\gamma$ ranges from 0.05 on CIFAR-10 to 150 on FFHQ-256, scaling with resolution and dataset, so a value tuned on one problem transfers to another only as an order-of-magnitude starting point. And the compute behind the quoted results is substantial: seven hours on eight L40 GPUs for StackedMNIST, four days for CIFAR-10, about three weeks on eight A6000s for FFHQ-256, and about a day on 32 H100s for conditional ImageNet :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. :numref:`sec_dcgan` discusses what changes at that scale; the experiment below runs in minutes.
 
 ### Mode Coverage on 25 Gaussians
 
-The closing experiment measures, at toy scale, which failure each ingredient repairs. The target is a mixture of 25 Gaussians on a $5 \times 5$ grid, spacing 2 and standard deviation $\sigma = 0.05$, so the modes are far apart relative to their width and coverage is unambiguous: a mode counts as covered if at least one of 10,000 generated samples lands within $3\sigma$ of its center. Three configurations train on identical networks and identical optimization: the non-saturating GAN of :numref:`sec_basic_gan` with no penalty, the same objective with $R_1 + R_2$ added, and the full recipe, RpGAN with $R_1 + R_2$. The generator maps a 64-dimensional latent through two hidden layers of 256 units; the critic mirrors that width with leaky ReLU and, per principle (c), no normalization layers; both use Adam with $\beta_1 = 0$, $\beta_2 = 0.99$, learning rate $2 \cdot 10^{-4}$, batch size 256, and 20,000 generator steps, with $\gamma = 1$ wherever penalties apply.
+The closing experiment measures, at toy scale, what the penalties repair. The target is a mixture of 25 Gaussians on a $5 \times 5$ grid, spacing 2 and standard deviation $\sigma = 0.05$, so the modes are far apart relative to their width and coverage is unambiguous: a mode counts as covered if at least one of 10,000 generated samples lands within $3\sigma$ of its center. Three configurations train on identical networks and identical optimization: the non-saturating GAN of :numref:`sec_basic_gan` with no penalty, the same objective with $R_1 + R_2$ added, and the full recipe, RpGAN with $R_1 + R_2$. The generator maps a 64-dimensional latent through two hidden layers of 256 units; the critic mirrors that width with leaky ReLU and, per principle (c), no normalization layers; both use Adam with $\beta_1 = 0$, $\beta_2 = 0.99$, learning rate $2 \cdot 10^{-4}$, batch size 256, and 20,000 generator steps, with $\gamma = 1$ wherever penalties apply.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-1}
 %%tab pytorch
@@ -458,7 +458,7 @@ generators = {name: train_toy(loss_type, gamma)
               for name, loss_type, gamma in configs}
 ```
 
-The evaluation draws 10,000 samples from each trained generator and reports three statistics. A mode counts as covered when at least one sample lands within $3\sigma$ of its center, and each such sample is assigned to its nearest center. The reverse KL divergence of the resulting 25-way histogram from the uniform distribution measures how evenly the covered modes are used, and the on-mode fraction records how much of the mass lands within $3\sigma$ of a center at all.
+The evaluation draws 10,000 samples from each trained generator and reports two groups of statistics. The first group measures reach and evenness of use. A mode counts as covered when at least one sample lands within $3\sigma$ of its center, each such sample is assigned to its nearest center, and the reverse KL divergence of the resulting 25-way histogram from the uniform distribution measures how evenly the covered modes are used. The second group measures how much probability mass those neighborhoods actually receive. The on-mode fraction is the share of samples within $3\sigma$ of some center, printed together with its complement, the off-mode mass, and with the mean and median distance from each sample to its nearest center. A final number aggregates fit into one divergence: the reverse KL of the unconditional 26-bin histogram, the 25 mode bins plus one off-mode bin, from the target mixture's own histogram. In two dimensions a Gaussian places $1 - e^{-9/2} \approx 0.989$ of its mass within $3\sigma$ of its center, so the target histogram is $0.989/25$ per mode bin and $0.011$ in the off-mode bin; a generator that matched the mixture would drive this KL to zero.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-2}
 %%tab pytorch
@@ -468,22 +468,33 @@ def mode_coverage(net_G, n=10000, latent=64, std=0.05):
         x = net_G(torch.randn(n, latent, device=device))
     near, idx = torch.cdist(x, centers).min(dim=1)
     on = near <= 3 * std
-    counts = torch.bincount(idx[on], minlength=len(centers)).float()
+    counts = torch.bincount(idx[on], minlength=len(centers)).float().cpu()
     share = counts[counts > 0] / counts.sum()
     rev_kl = float((share * (share * len(centers)).log()).sum())
-    return x.cpu(), int((counts > 0).sum()), rev_kl, float(on.float().mean())
+    on_mass = 1 - np.exp(-4.5)             # P(|x - c| <= 3 sigma) in 2d
+    p = torch.cat([torch.full((25,), on_mass / 25),
+                   torch.tensor([1 - on_mass])])
+    q = torch.cat([counts, (n - counts.sum()).reshape(1)]) / n
+    kl26 = float((q[q > 0] * (q[q > 0] / p[q > 0]).log()).sum())
+    stats = dict(covered=int((counts > 0).sum()), rev_kl=rev_kl,
+                 on_frac=float(on.float().mean()), d_mean=float(near.mean()),
+                 d_med=float(near.median()), kl26=kl26)
+    return x.cpu(), stats
 
 fig, axes = d2l.plt.subplots(1, 3, figsize=(9.5, 3.4))
 for ax, (name, _, _) in zip(axes, configs):
-    x, covered, rev_kl, frac = mode_coverage(generators[name])
+    x, s = mode_coverage(generators[name])
     ax.scatter(x[:3000, 0], x[:3000, 1], s=2, alpha=0.3)
     ax.scatter(centers.cpu()[:, 0], centers.cpu()[:, 1], marker='x', s=30,
                c='C3')
-    ax.set_title(f'{name}: {covered}/25 modes')
+    ax.set_title(f"{name}: {s['covered']}/25 modes")
     ax.set_xlim(-6, 6), ax.set_ylim(-6, 6)
     ax.set_aspect('equal')
-    print(f'{name}: {covered}/25 modes, reverse KL {rev_kl:.2f}, '
-          f'on-mode fraction {frac:.2f}')
+    print(f"{name}: {s['covered']}/25 modes, reverse KL {s['rev_kl']:.2f}, "
+          f"on-mode fraction {s['on_frac']:.2f}")
+    print(f"    off-mode mass {1 - s['on_frac']:.2f}, nearest-center "
+          f"distance mean {s['d_mean']:.2f} / median {s['d_med']:.2f}, "
+          f"26-bin KL {s['kl26']:.2f}")
 fig.tight_layout()
 ```
 
@@ -497,35 +508,47 @@ def mode_coverage(net_G, n=10000, latent=64, std=0.05):
     counts = jnp.bincount(idx[on], length=len(centers)).astype(jnp.float32)
     share = counts[counts > 0] / counts.sum()
     rev_kl = float((share * jnp.log(share * len(centers))).sum())
-    return np.asarray(x), int((counts > 0).sum()), rev_kl, float(on.mean())
+    on_mass = 1 - np.exp(-4.5)             # P(|x - c| <= 3 sigma) in 2d
+    p = jnp.append(jnp.full(25, on_mass / 25), 1 - on_mass)
+    q = jnp.append(counts, n - counts.sum()) / n
+    kl26 = float(jnp.where(q > 0, q * jnp.log(q / p), 0.0).sum())
+    stats = dict(covered=int((counts > 0).sum()), rev_kl=rev_kl,
+                 on_frac=float(on.mean()), d_mean=float(near.mean()),
+                 d_med=float(jnp.median(near)), kl26=kl26)
+    return np.asarray(x), stats
 
 fig, axes = d2l.plt.subplots(1, 3, figsize=(9.5, 3.4))
 for ax, (name, _, _) in zip(axes, configs):
-    x, covered, rev_kl, frac = mode_coverage(generators[name])
+    x, s = mode_coverage(generators[name])
     ax.scatter(x[:3000, 0], x[:3000, 1], s=2, alpha=0.3)
     ax.scatter(centers[:, 0], centers[:, 1], marker='x', s=30, c='C3')
-    ax.set_title(f'{name}: {covered}/25 modes')
+    ax.set_title(f"{name}: {s['covered']}/25 modes")
     ax.set_xlim(-6, 6), ax.set_ylim(-6, 6)
     ax.set_aspect('equal')
-    print(f'{name}: {covered}/25 modes, reverse KL {rev_kl:.2f}, '
-          f'on-mode fraction {frac:.2f}')
+    print(f"{name}: {s['covered']}/25 modes, reverse KL {s['rev_kl']:.2f}, "
+          f"on-mode fraction {s['on_frac']:.2f}")
+    print(f"    off-mode mass {1 - s['on_frac']:.2f}, nearest-center "
+          f"distance mean {s['d_mean']:.2f} / median {s['d_med']:.2f}, "
+          f"26-bin KL {s['kl26']:.2f}")
 fig.tight_layout()
 ```
 
-The comparison that is stable across reruns and seeds is the left panel against the other two. The plain non-saturating GAN trains without any numerical trouble here: no divergence, no exploding losses. That pathology belongs to the Dirac-GAN analysis. Its failure is one of coverage and balance. On no seed we tried does it reach all 25 modes, and its printed reverse KL is markedly higher than either penalized run's. The left panel shows why: mass gathers in dense filaments and clumps while some centers receive none. Both penalized configurations reach all 25 modes on every seed, and their markedly lower reverse KL says the covered modes are used far more evenly. One caveat keeps the count honest. Coverage is a threshold statistic, and samples that trail between neighboring modes count toward it; the printed on-mode fraction shows that most of every configuration's mass lies between centers rather than on them. A covered grid is therefore a statement about reach, not a certificate that every mode carries the right probability.
+The comparison that is stable across reruns and seeds is the left panel against the other two. The plain non-saturating GAN trains without any numerical trouble here: no divergence, no exploding losses. That pathology belongs to the Dirac-GAN analysis. Its failure is one of reach and balance. On no seed we tried does it reach all 25 modes, and its printed reverse KL is markedly higher than either penalized run's. The left panel shows why: mass gathers in dense filaments and clumps while some centers receive none. Both penalized configurations reach all 25 modes on every seed, and their markedly lower reverse KL says the covered modes are used far more evenly.
 
-What this experiment cannot show is the difference between the two penalized configurations, and the reason is instructive. At 25 well-separated modes, both sit at the ceiling of the coverage statistic; the advantage of the pairing objective is a claim about many modes under capacity pressure, and it is carried by the StackedMNIST citation above --- 1000 of 1000 modes at reverse KL 0.078 against 693 at 0.927 for the classical loss, with both objectives requiring the penalties to converge at all :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. A two-dimensional toy with 25 modes has neither the mode count nor the starved generator that make that gap visible. The division of labor, though, the toy states cleanly: the penalties repair the dynamics, which here shows up as complete and even coverage, and the pairing objective repairs the landscape, which needs a harder problem to matter. Exercise 4 probes the one knob the experiment fixed, the penalty weight, in both directions.
+The second group of printed statistics bounds what that comparison means. The target mixture puts 98.9% of its mass within $3\sigma$ of the centers; every configuration here, penalized or not, places only a small fraction of its mass there --- about a tenth or less in the stored runs --- and the nearest-center distances, whose mean and median run to several times the target's $\sigma = 0.05$, say where the rest sits: the generated per-mode clouds are far wider than the modes they surround. The 26-bin KL is correspondingly dominated by its off-mode bin. The experiment therefore demonstrates support reach and evenness of use --- the penalties turn a generator that misses modes and loads the ones it hits unevenly into one that reaches every mode and spreads its samples across them evenly --- and it does not demonstrate a distributional fit to the mixture, which none of the three configurations achieves at this budget and architecture.
+
+What this experiment cannot show is the difference between the two penalized configurations, and the reason is instructive. At 25 well-separated modes, both sit at the ceiling of the coverage statistic; the advantage of the pairing objective is a claim about many modes under capacity pressure, and it is carried by the StackedMNIST citation above --- 1000 of 1000 modes at reverse KL 0.078 against 693 at 0.927 for the classical loss, with both objectives requiring the penalties to converge at all :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. A two-dimensional toy with 25 modes has neither the mode count nor the starved generator that make that gap visible. The division of labor the toy does state is the scoped one: the penalties buy stable training, full reach, and even use of the modes here, while the pairing objective's additional advantage rests on the cited StackedMNIST evidence. Exercise 4 reconciles the printed statistics with one another.
 
 ## Summary
 
-This section answered the question the chapter's analysis had postponed: whether gradient descent finds the equilibria that the objectives define. On the Dirac-GAN, the smallest adversarial game, the answer is exactly no. The simultaneous gradient field is orthogonal to the position, so the continuous flow conserves the distance to the equilibrium and moves on circles, with purely imaginary eigenvalues $\pm i\,\ell'(0)$. Discrete simultaneous descent increases that distance at every step, whatever the step size. Neither the non-saturating weighting nor the pairing objective changes the field near the equilibrium. The zero-centered penalties $R_1$ and $R_2$, with sum $\gamma\, E_m\big[\|\nabla_x D\|^2\big]$, supply the missing damping. The penalized eigenvalues $-\gamma/2 \pm \sqrt{\gamma^2/4 - \ell'(0)^2}$ have negative real part for every $\gamma > 0$, and the dynamics are critically damped at $\gamma = 2\,|\ell'(0)|$. Near equilibrium the penalized game evaluates $\tfrac{a^2}{4\gamma}\, \|p - q\|^2_{\dot H^{-1}(m)}$, the squared linearized Wasserstein-2 distance. That quantity is built from the difference of the distributions rather than their ratio, so locally it is free of the saturation ceiling. The one-centered WGAN-GP penalty instead rewards a sloped critic at the equilibrium and fails the same Dirac test. Far from equilibrium the penalties act by implicitly smoothing the two distributions, which is why one penalty alone can fail. R3GAN's ablation finds $R_1$-only training divergent on StackedMNIST even though StyleGAN2 trained with $R_1$ alone at scale. Objective plus penalties compose into the R3GAN loss, whose ablations attribute convergence to the penalties and mode coverage to the pairing objective. The 25-Gaussians experiment reproduces the first attribution at toy scale. The second is invisible at 25 modes and rests on the cited StackedMNIST result. :numref:`sec_dcgan` carries this loss to images.
+This section answered the question the chapter's analysis had postponed: whether gradient descent finds the equilibria that the objectives define. On the Dirac-GAN, the smallest adversarial game, the answer is exactly no. The simultaneous gradient field is orthogonal to the position, so the continuous flow conserves the distance to the equilibrium and moves on circles, with purely imaginary eigenvalues $\pm i\,\ell'(0)$. Discrete simultaneous descent increases that distance at every step, whatever the step size. Neither the non-saturating weighting nor the pairing objective changes the field near the equilibrium. The zero-centered penalties $R_1$ and $R_2$, with sum $\gamma\, E_m\big[\|\nabla_x D\|^2\big]$, supply the missing damping. The penalized eigenvalues $-\gamma/2 \pm \sqrt{\gamma^2/4 - \ell'(0)^2}$ have negative real part for every $\gamma > 0$, and the dynamics are critically damped at $\gamma = 2\,|\ell'(0)|$. Near equilibrium the penalized game evaluates $\tfrac{a^2}{4\gamma}\, \|p - q\|^2_{\dot H^{-1}(m)}$, the squared linearized Wasserstein-2 distance. That quantity is built from the difference of the distributions rather than their ratio, so locally it is free of the saturation ceiling. The one-centered WGAN-GP penalty instead rewards a sloped critic at the equilibrium and fails the same Dirac test. Far from equilibrium the penalties act by implicitly smoothing the two distributions, which is why one penalty alone can fail. R3GAN's ablation finds $R_1$-only training divergent on StackedMNIST even though StyleGAN2 trained with $R_1$ alone at scale. Objective plus penalties compose into the R3GAN loss, whose ablations attribute convergence to the penalties and mode coverage to the pairing objective. The 25-Gaussians experiment shows the penalties' contribution at toy scale as reach and evenness: the penalized runs cover every mode and use them far more evenly, while all three configurations place only a small fraction of their mass within $3\sigma$ of the centers, so the toy demonstrates support reach, not a fit to the mixture. The pairing objective's advantage is invisible at 25 modes and rests on the cited StackedMNIST result. :numref:`sec_dcgan` carries this loss to images.
 
 ## Exercises
 
 1. The discrete simultaneous update of the Dirac-GAN with step size $\eta > 0$ is the map $(\theta, \psi) \mapsto \big(\theta + \eta\,\psi\,\ell'(-\psi\theta),\; \psi - \eta\,\theta\,\ell'(-\psi\theta)\big)$. Compute the Jacobian of this map at the equilibrium $(0, 0)$ and show that its eigenvalues are $1 \pm i\,\eta\,\ell'(0)$, so the spectral radius is $\sqrt{1 + \eta^2\,\ell'(0)^2} > 1$ for every step size. Conclude that no choice of $\eta$ makes the unpenalized game locally convergent. The norm identity in the text shows this growth exactly, at every point of the plane; the eigenvalue computation here recovers the same conclusion in linearized form at the equilibrium.
 1. Derive :eqref:`eq_gan_r1r2_sum` from :eqref:`eq_gan_r1r2`. Then explain why the mixture weighting matters: construct a critic and a pair of distributions with separated supports for which $E_p\big[\|\nabla_x D\|^2\big] = 0$ while $E_q\big[\|\nabla_x D\|^2\big]$ is arbitrarily large, and relate your construction to the failure of $R_1$-only training described in the text.
 1. Prove :eqref:`eq_gan_sobolev`. Restrict the objective to a ray $\{t D_0 : t \in \mathbb{R}\}$ with $\int m\,\|\nabla_x D_0\|^2 = 1$, maximize the resulting scalar quadratic in $t$, and then take the supremum over directions $D_0$. Verify from the result that the value of the penalized game is proportional to $1/\gamma$, so that doubling the penalty weight halves the value at every fixed pair $(p, q)$.
-1. Re-run the mode-coverage experiment with the penalty weight set to $\gamma = 10$ and to $\gamma = 0.1$. Which failure returns in each direction: dropped modes, or samples spreading away from the mode centers? Report the covered-mode count together with the fraction of samples within $3\sigma$ of their nearest center for all three values of $\gamma$, and reconcile the trade-off with the damping regimes of :eqref:`eq_gan_dirac_pen`.
+1. The printed statistics of the mode-coverage experiment appear to conflict: a penalized run covers 25 of 25 modes, yet only a small fraction of its mass lies within $3\sigma$ of any center. (a) Explain how both can be true at once, given that coverage is a threshold statistic over 10,000 samples. (b) From the printed on-mode fraction, compute the off-mode bin's contribution $q_{\textrm{off}} \log(q_{\textrm{off}} / 0.011)$ to the 26-bin KL and compare it with the printed total: how much of the divergence is the off-mode mass alone? (c) Two arrangements are consistent with a small on-mode fraction: per-mode clouds centered on the modes but wider than the target's $\sigma = 0.05$, and mass strewn along paths between modes. Which statistics of the nearest-center distance distribution, beyond the printed mean and median, would distinguish them, and what would each arrangement predict? (d) Without re-running anything, predict from the damping regimes of :eqref:`eq_gan_dirac_pen` which failure each direction of the penalty weight invites: $\gamma = 10$ versus $\gamma = 0.1$.
 1. In the middle panel of the phase portrait, sweep the step size over $\eta \in \{0.01, 0.05, 0.2, 0.5\}$ with $\gamma = 0$. Does any step size stabilize the unpenalized game, or change anything other than the rate at which the spiral grows? Reconcile the observation with Exercise 1.
 
 [Discussions](https://d2l.discourse.group/)
@@ -646,11 +669,14 @@ damped — it turns once and heads in without rotation.
 ::: {.slide title="Mode Coverage on 25 Gaussians"}
 @!convergence-mode-coverage-on-25-gaussians-2
 
-- Plain GAN: stable training, but it never covers all 25 modes and uses
+- Plain GAN: stable training, but it never reaches all 25 modes and uses
   them unevenly (markedly higher reverse KL).
-- Either penalized configuration: all 25 modes on every seed, with a
-  markedly lower reverse KL.
-- No visible difference between the two penalized losses **at this scale**.
+- Either penalized configuration: all 25 modes on every seed, used far more
+  evenly — and no visible difference between the two penalized losses at
+  this scale.
+- Every configuration puts only a small fraction of mass within $3\sigma$
+  of the centers — the per-mode clouds are far wider than $\sigma = 0.05$.
+  **Reach and even use, not a fit to the mixture.**
 :::
 
 ::: {.slide title="What the Toy Cannot Show"}
@@ -663,7 +689,8 @@ StackedMNIST (cited):
 | GAN + $R_1$ + $R_2$ | 693 | 0.927 |
 | either + $R_1$ only | diverged | — |
 
-Penalties buy convergence; the pairing objective buys coverage.
+In the toy, penalties buy stable training, full reach, and even use; the
+pairing objective's coverage advantage is this cited evidence.
 $\gamma$ is dataset-dependent (0.05–150 across R3GAN's benchmarks).
 :::
 
@@ -675,6 +702,7 @@ $\gamma$ is dataset-dependent (0.05–150 across R3GAN's benchmarks).
 - Near equilibrium the penalized game $=$ scaled **linearized $W_2^2$** —
   difference, not ratio; one-centered penalties fail the same test.
 - Far from equilibrium: implicit smoothing — of **both** distributions.
-- RpGAN + $R_1$ + $R_2$ = the R3GAN loss: penalties → convergence,
-  pairing → coverage. Next: images.
+- RpGAN + $R_1$ + $R_2$ = the R3GAN loss: penalties → convergence (in the
+  toy: reach and even use, not a fit), pairing → coverage (StackedMNIST).
+  Next: images.
 :::

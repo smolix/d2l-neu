@@ -191,6 +191,7 @@ book:
         - chapter_generative-adversarial-networks/relativistic.qmd
         - chapter_generative-adversarial-networks/convergence.qmd
         - chapter_generative-adversarial-networks/dcgan.qmd
+        - chapter_generative-adversarial-networks/conditional.qmd
         - chapter_generative-adversarial-networks/adversarial-losses.qmd
         - chapter_diffusion-models/index.qmd
     - part: chapter_language-models/index.qmd

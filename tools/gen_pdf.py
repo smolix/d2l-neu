@@ -29,6 +29,11 @@ from d2l_preprocess import (
 from build_lib import flatten_tab_branches
 
 
+# A dark, conventional hyperlink blue that remains legible in print. Quarto's
+# LaTeX template loads xcolor with the dvipsnames palette, which defines it.
+PDF_LINK_COLOR = 'NavyBlue'
+
+
 def convert_prose_tabs_single(text, framework):
     """Keep only the target framework's prose tab content."""
     tab_pattern = re.compile(
@@ -422,9 +427,9 @@ format:
       - top=1in
       - bottom=1in
       - twoside
-    linkcolor: black
-    citecolor: black
-    urlcolor: black
+    linkcolor: "{PDF_LINK_COLOR}"
+    citecolor: "{PDF_LINK_COLOR}"
+    urlcolor: "{PDF_LINK_COLOR}"
     include-in-header: static/d2l-preamble.tex
     toc: true
     toc-depth: 2

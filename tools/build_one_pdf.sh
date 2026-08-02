@@ -10,10 +10,13 @@
 # Produces _pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf and copies it to
 # _book/pdf/.
 #
-# Control flow (;-separated, no `set -e`) intentionally mirrors the original
-# recipe: only a missing .tex hard-fails here. `check_book_artifacts.py`
-# (make check-all-artifacts) is the backstop that verifies each framework's PDF
-# actually got produced.
+# Control flow is deliberate (no blanket `set -e`), but the two steps whose
+# failure produces a WRONG book — quarto's LaTeX generation and the final PDF
+# publish — hard-fail with explicit checks. A 2026-08-02 /tmp-full incident
+# showed why: quarto crashed mid-write, this script compiled the truncated
+# .tex it left behind, and a plausible-looking half-book PDF sailed through
+# `check_book_artifacts.py`'s byte-size floor. The backstop now also checks
+# page counts, but the first line of defense is failing here, at the source.
 
 fw="$1"
 [ -n "$fw" ] || { echo "usage: build_one_pdf.sh <framework>" >&2; exit 2; }
@@ -43,7 +46,14 @@ done
 # to the PROJECT ROOT (chapter_x/../img/...), so copy it up to _pdf/<fw>/ and
 # compile there (where chapter_*/ + img/ live).
 cd "_pdf/$fw" && "$quarto" render --to latex
+quarto_rc=$?
 cd "$root"
+if [ "$quarto_rc" -ne 0 ]; then
+	echo "ERROR: quarto render --to latex failed for $fw (rc=$quarto_rc);" >&2
+	echo "       refusing to compile a possibly truncated .tex. Check disk" >&2
+	echo "       space on /tmp (quarto sessions live there) and the log." >&2
+	exit 1
+fi
 
 src_tex="$(find "_pdf/$fw" -name Dive-into-Deep-Learning.tex -path '*book-latex*' -print -quit 2>/dev/null)"
 [ -n "$src_tex" ] || src_tex="$(find "_pdf/$fw" -name Dive-into-Deep-Learning.tex -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)"
@@ -51,6 +61,9 @@ src_tex="$(find "_pdf/$fw" -name Dive-into-Deep-Learning.tex -path '*book-latex*
 cp -f "$src_tex" "_pdf/$fw/Dive-into-Deep-Learning.tex"
 python3 tools/fix_latex.py "_pdf/$fw/Dive-into-Deep-Learning.tex"
 
+# Remove any prior run's published PDF first, so the post-compile existence
+# check below proves THIS run produced one (a stale file must not stand in).
+rm -f "_pdf/$fw/_pdf/Dive-into-Deep-Learning-$fw.pdf"
 cd "_pdf/$fw"
 xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1
 xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1
@@ -63,7 +76,9 @@ if [ -f "_pdf/$fw/Dive-into-Deep-Learning.pdf" ]; then
 	mkdir -p "_pdf/$fw/_pdf"
 	mv -f "_pdf/$fw/Dive-into-Deep-Learning.pdf" "_pdf/$fw/_pdf/Dive-into-Deep-Learning-$fw.pdf"
 fi
-if [ -f "_pdf/$fw/_pdf/Dive-into-Deep-Learning-$fw.pdf" ]; then
-	mkdir -p _book/pdf
-	cp "_pdf/$fw/_pdf/Dive-into-Deep-Learning-$fw.pdf" _book/pdf/
+if [ ! -f "_pdf/$fw/_pdf/Dive-into-Deep-Learning-$fw.pdf" ]; then
+	echo "ERROR: xelatex produced no PDF for $fw — see _pdf/$fw/Dive-into-Deep-Learning.log" >&2
+	exit 1
 fi
+mkdir -p _book/pdf
+cp "_pdf/$fw/_pdf/Dive-into-Deep-Learning-$fw.pdf" _book/pdf/

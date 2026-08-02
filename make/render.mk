@@ -69,6 +69,23 @@ _pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/bui
 pdf-preflight:
 	@command -v xelatex >/dev/null 2>&1 || { echo "ERROR: xelatex not found on PATH — install TeX Live (e.g. apt install texlive-xetex texlive-latex-recommended texlive-fonts-recommended) for PDF builds."; exit 1; }
 	@command -v rsvg-convert >/dev/null 2>&1 || { echo "ERROR: rsvg-convert not found on PATH — install librsvg2-bin (Quarto converts SVG→PDF with it)."; exit 1; }
+	@# Quarto stages each render session under $$TMPDIR (default /tmp), which on
+	@# this box is a small dedicated partition. Running out of it mid-render
+	@# crashes quarto mid-.tex (2026-08-02: four parallel PDF sessions hit a
+	@# /tmp filled with ~378 MB git-snapshot dirs the Codex CLI leaks per
+	@# session, and truncated half-book PDFs were staged). Fail fast instead:
+	@# 2 GiB comfortably covers RENDER_JOBS concurrent sessions. Clean stale
+	@# /tmp/tmp.* snapshot dirs to recover space; D2L_SKIP_TMP_CHECK=1 overrides.
+	@if [ -z "$$D2L_SKIP_TMP_CHECK" ]; then \
+		avail_kb=$$(df -Pk "$${TMPDIR:-/tmp}" | awk 'NR==2 {print $$4}'); \
+		if [ -n "$$avail_kb" ] && [ "$$avail_kb" -lt 2097152 ]; then \
+			echo "ERROR: $${TMPDIR:-/tmp} has only $$((avail_kb / 1024)) MiB free (< 2 GiB);"; \
+			echo "       quarto PDF sessions will die mid-render and stage truncated books."; \
+			echo "       Clear stale /tmp/tmp.* snapshot dirs (Codex CLI leaks ~378 MB per"; \
+			echo "       session) or set D2L_SKIP_TMP_CHECK=1 to proceed anyway."; \
+			exit 1; \
+		fi; \
+	fi
 	@echo "PDF toolchain OK: $$(xelatex --version 2>/dev/null | head -1), rsvg-convert $$(rsvg-convert --version 2>/dev/null)"
 
 # Generate per-framework PDF rules (GNU Make only supports one % per pattern)

@@ -1279,43 +1279,6 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
-def update_D(X, Z, net_D, net_G, loss, trainer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = X.shape[0]
-    ones = np.ones((batch_size,), ctx=X.ctx)
-    zeros = np.zeros((batch_size,), ctx=X.ctx)
-    with autograd.record():
-        real_Y = net_D(X)
-        fake_X = net_G(Z)
-        # Do not need to compute gradient for `net_G`, detach it from
-        # computing gradients.
-        fake_Y = net_D(fake_X.detach())
-        loss_D = (loss(real_Y, ones) + loss(fake_Y, zeros)) / 2
-    loss_D.backward()
-    trainer_D.step(batch_size)
-    return float(loss_D.sum())
-
-def update_G(Z, net_D, net_G, loss, trainer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = np.ones((batch_size,), ctx=Z.ctx)
-    with autograd.record():
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = net_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X)
-        loss_G = loss(fake_Y, ones)
-    loss_G.backward()
-    trainer_G.step(batch_size)
-    return float(loss_G.sum())
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
-
 class Encoder(nn.Block):
     """The base encoder interface for the encoder-decoder architecture.
 

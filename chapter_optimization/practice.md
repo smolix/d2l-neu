@@ -727,7 +727,7 @@ the chapter's leaky average, now on the weights (SWA; Izmailov et al.,
   size: too small to call from a single run.
 - LLMs: checkpoint averaging (LAWA); **Llama 3 shipped an average** of its
   annealing checkpoints. Model soups: average fine-tuned models.
-- Diffusion (ch. 15): EMA is **mandatory** — quality tracks the window so
+- Diffusion (:numref:`chap_diffusion`): EMA is **mandatory** — quality tracks the window so
   tightly that Karras et al. (2024) reconstruct the EMA post hoc to tune it.
 :::
 

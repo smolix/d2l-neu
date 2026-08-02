@@ -1,7 +1,7 @@
 # Generative Adversarial Networks
 :label:`sec_basic_gan`
 
-Every model this book has trained so far was fit through its likelihood: pick parameters, evaluate how probable they make the observed data, and ascend. A sampler assembled from a neural network breaks this recipe, because it produces examples without producing probabilities. This section develops the training objective that :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` proposed for that situation, and analyzes it exactly: what quantity the objective computes when the discriminator is trained to optimality, and why the generator's naive loss fails even on problems it should find easy. Every result is checked numerically at the end of the section on a two-dimensional Gaussian.
+The generative models introduced so far were trained through their likelihoods: evaluate the probability of the observed data and adjust the parameters to increase it. A neural sampler breaks this recipe because it produces examples without providing their probabilities. This section develops the adversarial objective proposed by :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014`. We derive the quantity computed by an optimal discriminator and explain why the literal minimax loss can give the generator an unusably small gradient. A two-dimensional Gaussian experiment then checks each result against a closed form.
 
 ```{.python .input #gan-generative-adversarial-networks}
 %%tab pytorch
@@ -26,7 +26,7 @@ import optax
 
 Maximum likelihood is distribution matching. Fitting a density $p_\theta$ to samples maximizes $\sum_i \log p_\theta(x_i)$, and :numref:`subsec_mdl-nll-crossentropy` showed that this is the same as minimizing the Kullback--Leibler divergence from the empirical distribution to the model. When the likelihood is intractable rather than absent, as in latent-variable models, the ELBO of :numref:`sec_mdl-latent-em-elbo` substitutes a bound. Either way, training needs $\log p_\theta(x)$ or a surrogate for it.
 
-The models of this chapter offer neither. An *implicit generator* draws a latent variable $z \sim \mathcal{N}(0, I_k)$ and outputs $x' = G(z)$, where $G$ is a neural network. Sampling is a single forward pass. The density of $x'$, however, is the pushforward of the Gaussian through $G$, and for the networks we care about it is unavailable: when $k$ is smaller than the data dimension the samples concentrate on a lower-dimensional surface and no density exists at all, and even when the dimensions match, evaluating the density would require inverting $G$. The quantity that maximum likelihood needs is not there to be computed.
+The models of this chapter offer neither. An *implicit generator* draws a latent variable $z \sim \mathcal{N}(0, I_k)$ and outputs $x' = G(z)$, where $G$ is a neural network. Sampling is a single forward pass. The distribution of $x'$ is the pushforward of the Gaussian through $G$, but its density is generally unavailable. When $k$ is smaller than the data dimension, the samples concentrate on a lower-dimensional surface and have no density with respect to volume in the ambient space. Even when the dimensions match, evaluating the density would require an invertible $G$ with a tractable Jacobian. An unrestricted neural sampler therefore does not provide the quantity required by maximum likelihood.
 
 One might respond by restricting $G$ until the likelihood becomes tractable. Before accepting that constraint, it is worth asking how much the likelihood was measuring in the first place. Consider a model that mixes the data density with noise,
 
@@ -36,16 +36,16 @@ $$
 
 For every $x$ we have $\tilde p(x) \geq 0.01\, p_{\textrm{data}}(x)$, so $\log \tilde p(x) \geq \log p_{\textrm{data}}(x) - \log 100$: the expected log-likelihood of $\tilde p$ is within $\log 100 \approx 4.6$ nats of the best achievable by any model. For images or audio, log-likelihoods run to thousands of nats, so this penalty is negligible. Yet 99 percent of the mixture's samples are noise. A model can therefore be nearly optimal by the likelihood yardstick while being useless as a sampler :cite:`Theis.Oord.Bethge.2016`. If samples are the product, samples are what should be judged.
 
-Judging samples is a problem statistics already owns. Given a set of real examples and a set of generated ones, deciding whether the two sets came from the same distribution is a *two-sample test*. Generative adversarial networks turn the test into a training signal: fit a classifier, the *discriminator*, to distinguish generated data from real data, and train the generator to defeat it. A generator that no classifier can beat has, by that measure, matched the data distribution. :numref:`fig_gan` shows the resulting loop.
+Statistics provides a direct way to compare samples. Given real and generated examples, a *two-sample test* asks whether the two sets came from the same distribution. A generative adversarial network turns this test into a training signal: fit a classifier, called the *discriminator*, to distinguish generated data from real data, and train the generator to make that classification difficult. Relative to the chosen discriminator class, the generator has matched the data when no discriminator can reliably separate their samples. :numref:`fig_gan` shows the resulting computation.
 
 ![The adversarial game. A latent draw $z$ passes through the generator $G$ to produce a batch of generated samples, and the discriminator $D$ assigns realness logits to this batch and to a batch of real data. Both networks train on the same objective with opposite goals: the discriminator raises its scores on data and lowers them on generated samples, while the generator's update flows through the discriminator's response to make the two batches harder to tell apart.](../img/mdl-gan-architecture.svg)
 :label:`fig_gan`
 
-The picture leaves the central questions open. Training the generator against a classifier is a mechanism, not yet an objective: to know what the mechanism optimizes we must ask what the game evaluates when the discriminator plays its best response, and whether the resulting quantity gives the generator a gradient it can follow. The rest of the section answers both questions for the original logistic-loss game.
+The diagram specifies the training mechanism but not the quantity it optimizes. We next compute the value obtained by the discriminator's best response and then determine whether that value supplies a useful generator gradient. Both calculations use the original logistic-loss game.
 
 ## The Log-Loss Game
 
-The discriminator solves an ordinary classification problem, and making the problem explicit is most of the work. Draw a label $y \sim \textrm{Bernoulli}(\tfrac12)$; if $y = 1$ draw $x$ from the data density $p$, and if $y = 0$ draw $x$ from the generator density $q$. The marginal density of $x$ is then the balanced mixture $m = (p + q)/2$, the distribution of a sample whose origin is unknown. Throughout this chapter $p$ is the data distribution, $q$ the generator's, and two derived quantities recur: the density ratio $\rho = p/q$ and its logarithm $\lambda = \log \rho$. The discriminator is a function $D: \mathcal{X} \to \mathbb{R}$ producing a *realness logit*: $\sigma(D(x))$, with $\sigma(t) = 1/(1 + e^{-t})$, is the model's estimate of $P(y = 1 \mid x)$, and larger $D(x)$ means the sample looks more real. We use the identities $\sigma(-t) = 1 - \sigma(t)$ and $\tfrac{d}{dt} \log \sigma(t) = \sigma(-t)$ repeatedly.
+The discriminator solves an ordinary classification problem. Draw a label $y \sim \textrm{Bernoulli}(\tfrac12)$; if $y = 1$ draw $x$ from the data density $p$, and if $y = 0$ draw $x$ from the generator density $q$. The marginal density of $x$ is then the balanced mixture $m = (p + q)/2$, the distribution of a sample whose origin is unknown. Throughout this chapter $p$ is the data distribution, $q$ the generator's, and two derived quantities recur: the density ratio $\rho = p/q$ and its logarithm $\lambda = \log \rho$. The discriminator is a function $D: \mathcal{X} \to \mathbb{R}$ producing a *realness logit*: $\sigma(D(x))$, with $\sigma(t) = 1/(1 + e^{-t})$, is the model's estimate of $P(y = 1 \mid x)$, and larger $D(x)$ means the sample looks more real. We use the identities $\sigma(-t) = 1 - \sigma(t)$ and $\tfrac{d}{dt} \log \sigma(t) = \sigma(-t)$ repeatedly.
 
 The natural loss for a probabilistic classifier is the log loss, and on the balanced problem the discriminator's expected negative log-likelihood is $-\tfrac12 E_{x \sim p}[\log \sigma(D(x))] - \tfrac12 E_{x' \sim q}[\log \sigma(-D(x'))]$. Dropping the factor $\tfrac12$ and flipping the sign gives the objective the discriminator maximizes,
 
@@ -115,7 +115,7 @@ $$
 = -\,E_z\big[\sigma(D(x'))\, \nabla_\theta D(G(z))\big] ,
 $$
 
-where $\nabla_\theta D(G(z))$ is the gradient of the composite map. A gradient-descent step on this loss therefore moves each generated sample up the critic's score surface, with a per-sample step weight $\sigma(D(x'))$: the critic's estimate that the sample is real. This weight is the problem. Early in training, and for the worst samples at any stage, the critic rejects confidently, $D(x') \ll 0$, and the weight $\sigma(D(x'))$ is exponentially small. The loss has *saturated*: exactly the samples that most need improving contribute least to the update.
+where $\nabla_\theta D(G(z))$ is the gradient of the composite map. A gradient-descent step on this loss therefore moves each generated sample up the critic's score surface, with a per-sample step weight $\sigma(D(x'))$: the critic's estimate that the sample is real. Early in training, and for poorly modeled samples at any stage, the critic may reject confidently, $D(x') \ll 0$. The weight $\sigma(D(x'))$ is then exponentially small. The loss has *saturated*: exactly the samples that most need improving contribute least to the update.
 
 :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` therefore substitute a different generator loss in practice: rather than minimizing the probability of being called fake, the generator maximizes the probability of being called real, minimizing $-E_z[\log \sigma(D(G(z)))]$. The same differentiation, now with $\tfrac{d}{du} \log \sigma(u) = \sigma(-u)$, gives
 
@@ -144,7 +144,7 @@ $$
 $$
 :eqlabel:`eq_gan_ns_value`
 
-where the inequality holds because $\mathrm{KL}(q \,\|\, \cdot)$ is convex and $m$ is the midpoint of $p$ and $q$, so $\mathrm{KL}(q \| m) \leq \tfrac12 \mathrm{KL}(q \| p) + \tfrac12 \mathrm{KL}(q \| q)$, and the last term is zero. The bound exceeds $\log 2$ unless $\mathrm{KL}(q \| p) = 0$, and at $q = p$ the loss attains exactly $\log 2$; the non-saturating loss at the optimal critic is therefore minimized uniquely at $q = p$. The non-saturating loss thus reweights the gradient field of a game whose solution is unchanged: the divergence it minimizes at the optimal critic differs from $\mathrm{JS}$, but its minimizer does not move. What the reweighting buys, and what it cannot buy, is what the experiment now measures.
+where the inequality holds because $\mathrm{KL}(q \,\|\, \cdot)$ is convex and $m$ is the midpoint of $p$ and $q$, so $\mathrm{KL}(q \| m) \leq \tfrac12 \mathrm{KL}(q \| p) + \tfrac12 \mathrm{KL}(q \| q)$, and the last term is zero. The bound exceeds $\log 2$ unless $\mathrm{KL}(q \| p) = 0$, and at $q = p$ the loss attains exactly $\log 2$; the non-saturating loss at the optimal critic is therefore minimized uniquely at $q = p$. The non-saturating loss thus reweights the gradient field without changing its desired solution. At the optimal critic it minimizes a quantity different from $\mathrm{JS}$, but both quantities have the unique minimizer $q=p$. The following experiment measures when this reweighting helps and where its benefit ends.
 
 ## Fitting a Gaussian
 
@@ -300,7 +300,7 @@ def update_G(Z, net_D, net_G, optimizer_G):
 
 ### Training
 
-The loop alternates the two half-steps over minibatches, records each player's per-sample loss, and can photograph the generator's output distribution at chosen epochs; the snapshots are used by the comparison experiment below. Adam serves as the optimizer for both players, with the discriminator given the larger learning rate so that its scores stay close to their best response to the current generator.
+The loop alternates the two half-steps over minibatches, records each player's per-sample loss, and stores generated samples at selected epochs. These snapshots are used by the comparison experiment below. Adam serves as the optimizer for both players, with the discriminator given the larger learning rate so that its scores stay close to their best response to the current generator.
 
 ```{.python .input #gan-training-1}
 %%tab pytorch
@@ -391,7 +391,7 @@ axes[1].legend()
 fig.tight_layout()
 ```
 
-The loss curves are the value of the game made visible. The discriminator starts below $\log 2$, winning while the generator's output is far from the data, and climbs toward the dashed line at $\log 2 \approx 0.693$ as the generator improves: its per-sample loss is the negative log-likelihood whose optimum :eqref:`eq_gan_js_value` places at $\log 2 - \mathrm{JS}(p, q)$, and training has driven $\mathrm{JS}$ toward zero, leaving chance-level classification with no information in a sample about its origin. The generator's loss descends to the same level from above for a different reason: by :eqref:`eq_gan_ns_value`, the non-saturating loss against a near-optimal critic approaches its minimum $\log 2$ as $q$ approaches $p$. The overlay confirms what the curves report, with generated samples spread along the same tilted ellipse as the data. A loss curve flattening at $\log 2$ says only that *this* discriminator is beaten, however; equilibrium of the pair is not proof that $q = p$, which is why the next two cells measure the fit independently.
+The loss curves provide an observable check of the value calculation. The discriminator starts below $\log 2$ while the generated and real samples remain distinguishable, and its loss climbs toward the dashed line at $\log 2 \approx 0.693$ as the generator improves. Its per-sample loss is the negative log-likelihood whose optimum :eqref:`eq_gan_js_value` places at $\log 2 - \mathrm{JS}(p, q)$. Training has driven $\mathrm{JS}$ toward zero, leaving chance-level classification with no information in a sample about its origin. The generator's loss descends to the same level from above for a different reason: by :eqref:`eq_gan_ns_value`, the non-saturating loss against a near-optimal critic approaches its minimum $\log 2$ as $q$ approaches $p$. The overlay confirms what the curves report, with generated samples spread along the same tilted ellipse as the data. A loss curve flattening at $\log 2$ says only that *this* discriminator is beaten, however; equilibrium of the pair is not proof that $q = p$, which is why the next two cells measure the fit independently.
 
 ### Verifying the Optimal Critic
 
@@ -534,7 +534,7 @@ for name, net in [('at initialization', make_nets()[0]),
           f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.3f} nats')
 ```
 
-The divergence falls from roughly eight nats at initialization to a small fraction of a nat. The adversarial game, which never evaluates a density, has performed density estimation: the classifier supplied the training signal that maximum likelihood could not.
+The divergence falls from roughly eight nats at initialization to a small fraction of a nat. Although the training loop never evaluates the generator density, the classifier supplies enough information to fit its parameters. The resulting generator distribution closely approximates the data distribution.
 
 ### Saturating versus Non-Saturating Training
 
@@ -637,11 +637,19 @@ fig.tight_layout()
 
 The two runs separate as predicted, and the printed final KL values quantify the contrast. The saturating generator never leaves its initialization, in either framework: its samples sit at the starting blob in both snapshots, and its final divergence remains above three hundred nats. Its mechanism is visible in the loss trace: the discriminator reaches near-zero loss within the first epochs and stays there, so $\sigma(D(x')) \approx 0$ on every generated sample, and by :eqref:`eq_gan_weights` each update arrives with a weight of nearly zero. Confident rejection freezes the generator, and the frozen generator keeps rejection confident. The non-saturating generator improves on the same figure by orders of magnitude, but how far it gets within this budget depends on the draw. The stored PyTorch run crosses the plane and settles onto the data region, ending near one nat with the discriminator's loss returning to $\log 2$ as its advantage evaporates; the stored JAX run stalls partway, at several dozen nats with the ellipse only partially matched, held on a plateau by this small critic's imperfect score surface. What the reweighting guarantees is a usable gradient out of the trap, not a complete fit at this budget.
 
-The reweighting rescued this experiment, but the rescue has a boundary. Both weights in :eqref:`eq_gan_weights` multiply the same factor $\nabla_\theta D$, so the non-saturating loss helps only while the critic's score surface retains a slope for the weight to amplify; here the small tanh critic was far from its best response, and its smooth, imperfect scores were what the generator climbed. Against an optimal critic on separated supports no slope survives. Take the smallest such case, two point masses $p = \delta_0$ and $q_\theta = \delta_\theta$ on the line: for every $\theta \neq 0$ the supports are disjoint, the divergence sits at its ceiling $\mathrm{JS} = \log 2$, and the value of the game is independent of $\theta$. A quantity that does not depend on $\theta$ provides no gradient with respect to it, no matter how its samples are reweighted, even though the generator is one step from the solution. This is not an artifact of the toy: high-dimensional generators push a low-dimensional latent forward, their samples concentrate near a low-dimensional set, and near-disjoint support from the data is the typical situation :cite:`Arjovsky.Bottou.2017`. The failure lies in the objective, not in the optimizer, so the next section changes the objective: it maps the space of quantities an adversarial game can evaluate and identifies which of them keep a nonzero gradient when the supports come apart.
+Reweighting rescued this experiment, but only because the critic's score surface retained a useful slope. Both weights in :eqref:`eq_gan_weights` multiply the same factor $\nabla_\theta D$. The non-saturating loss can amplify that factor; it cannot create it. Here the small tanh critic was far from its best response, and the generator could climb its smooth, imperfect score surface. No such slope remains for an optimal critic on separated supports.
+
+Consider the smallest example: two point masses $p = \delta_0$ and $q_\theta = \delta_\theta$ on the line. For every $\theta \neq 0$, their supports are disjoint, $\mathrm{JS}(p,q_\theta) = \log 2$, and the value of the game is independent of $\theta$. A constant objective supplies no gradient with respect to $\theta$, regardless of how its samples are reweighted, even when the generator lies arbitrarily close to the solution.
+
+The same issue arises in high dimensions. A generator maps a lower-dimensional latent variable into the sample space, so generated samples often concentrate near a low-dimensional set whose support is nearly disjoint from that of the data :cite:`Arjovsky.Bottou.2017`. The next section therefore changes the objective itself and asks which adversarial discrepancies preserve a gradient when supports separate.
 
 ## Summary
 
-An implicit generator produces samples without a density, so maximum likelihood does not apply, and the mixture argument shows that even where likelihood applies it can rate a model highly while the model emits noise. Adversarial training replaces the likelihood with a learned comparison: a discriminator trained with the log loss to separate data from generated samples. Solved pointwise, the game has the optimal critic $\sigma(D^\star) = p/(p+q)$, whose logit is the log density ratio $\lambda = \log(p/q)$, determined exactly, additive constant included. At this optimum the value of the game is $2\,\mathrm{JS}(p,q) - 2\log 2$, and the Jensen--Shannon divergence carries two equivalent readings: the Jensen gap of the entropy functional at the equal mixture, and the mutual information $I(x;y)$ between a sample and its origin, which bounds it by $\log 2$ with the ceiling attained on disjoint supports. The generator's two standard losses share the fixed point $q = p$ but weight each sample oppositely, $\sigma(D)$ against $\sigma(-D)$, and the saturating weight vanishes on exactly the samples the critic confidently rejects. The Gaussian experiment confirmed each claim: both losses settle at $\log 2$, the trained critic tracks the analytic log ratio, the closed-form KL drops from roughly eight nats to a small fraction of a nat, and a far-initialized generator improves by orders of magnitude under the non-saturating weight, in some runs to a close fit, while stalling completely under the saturating one. What no reweighting fixes is separation: on disjoint supports the objective is pinned at its ceiling and the generator's gradient is zero, which is the problem the next section takes up.
+An implicit generator supplies samples without a tractable density, so maximum likelihood cannot be applied directly. The mixture example also shows that a high likelihood need not imply useful samples. Adversarial training instead learns a comparison between real and generated data.
+
+For the logistic loss, pointwise optimization gives $\sigma(D^\star) = p/(p+q)$ and $D^\star = \lambda = \log(p/q)$. Substituting this critic into the value function yields $2\,\mathrm{JS}(p,q) - 2\log 2$. The Jensen--Shannon divergence is both the Jensen gap of entropy at the equal mixture and the mutual information $I(x;y)$ between a sample and its origin. This information interpretation gives the upper bound $\log 2$, attained when the supports are disjoint.
+
+The saturating and non-saturating generator losses have the same fixed point but weight samples by $\sigma(D)$ and $\sigma(-D)$, respectively. The Gaussian experiment confirmed the predicted loss value, the critic's recovery of the log density ratio, and the reduction in the analytic KL divergence. A distant initialization also showed the practical difference between the two weights: the non-saturating generator moved toward the data while the saturating one stalled. Neither weighting resolves support separation, because the optimal value is constant once the supports are disjoint. The next section therefore changes the discrepancy itself.
 
 ## Exercises
 
@@ -736,7 +744,7 @@ w_{\textrm{ns}}(x') = \sigma(-D(x'))$$
   different game.
 :::
 
-::: {.slide title="The Toy Problem: Fit a Gaussian, Check Every Claim"}
+::: {.slide title="A Gaussian Test with Analytic Reference Values"}
 Data $= z A + b$: a Gaussian with known mean and covariance. A **linear**
 generator keeps $q$ Gaussian too, so $\log(p/q)$ and $\mathrm{KL}(q\|p)$
 have closed forms to check against.
@@ -762,7 +770,7 @@ Points hug the identity line; errors grow only where the mixture has almost
 no samples, because ratio estimation is unconstrained off-support.
 :::
 
-::: {.slide title="Saturation, Demonstrated From an Identical Initialization"}
+::: {.slide title="Saturation under an Identical Initialization"}
 Start the generator far from the data, where the critic rejects confidently;
 train the same initialization under each weighting:
 

@@ -1,9 +1,9 @@
 # Adversarial Losses Beyond GANs
 :label:`sec_gan_beyond`
 
-This chapter has treated the adversarial game as a way to train a stand-alone sampler: :numref:`sec_basic_gan` analyzed the objective, :numref:`sec_gan_objectives` mapped its alternatives, :numref:`sec_gan_relativistic` and :numref:`sec_gan_convergence` repaired its landscape and its dynamics, and :numref:`sec_dcgan` trained the repaired game on images. Stand-alone training is no longer where the objective earns its keep. The generative models that carry image, audio, and video synthesis today are trained by regression against closed-form targets, the subject of :numref:`chap_diffusion`; yet a discriminator keeps appearing in the training recipes of the systems built from them. One-step image generators are finished with an adversarial phase, the tokenizers underneath latent-space models were trained against patch critics, and neural vocoders have used adversarial losses continuously for years. This section asks where the adversarial objective survives and why exactly there, and it closes by rereading the chapter's first identity in a way that separates the objective from the two-player optimization that has given it so much trouble.
+The chapter has so far used adversarial objectives to train stand-alone samplers. :numref:`sec_basic_gan` analyzed the original objective, :numref:`sec_gan_objectives` compared its alternatives, :numref:`sec_gan_relativistic` and :numref:`sec_gan_convergence` studied its landscape and dynamics, and :numref:`sec_dcgan` applied the resulting recipe to images. Current image, audio, and video generators are often trained instead by regression against closed-form targets, as developed in :numref:`chap_diffusion`. Adversarial losses nevertheless remain in one-step image generators, the tokenizers used by latent-space models, and neural vocoders. This section explains why these applications retain a learned comparison. It concludes by separating the adversarial objective from the simultaneous two-player optimization used to estimate it.
 
-One mechanism organizes most of the answers: the interaction of a pointwise regression loss with a model that lacks the capacity, or the information, to produce every valid answer. We establish that mechanism first, on a problem small enough that both training runs take seconds and the failure is visible in a single plot. The applications then read as instances, each one paragraph: distillation, tokenizers, audio, video. The last two parts step back from the applications: one sorts the field's responses to adversarial instability into three exits, and the other follows the chapter's first identity to its current endpoint, where the discriminator reappears inside likelihood models.
+The common mechanism is a mismatch between a pointwise regression loss and a model that lacks the capacity or information to represent every valid output. We first demonstrate this mismatch on a small problem whose regression and adversarial solutions can be compared directly. We then examine its consequences for distillation, tokenizers, audio, and video. The final sections compare three approaches to adversarial instability and show how the density-ratio identity of :numref:`sec_basic_gan` can be used inside a likelihood model without training a separate discriminator.
 
 ```{.python .input #adversarial-losses-adversarial-losses-beyond-gans}
 %%tab pytorch
@@ -205,7 +205,9 @@ d2l.plt.xlabel('$x$'), d2l.plt.ylabel('$y$')
 d2l.plt.legend();
 ```
 
-The two students separate the same way on every run of this experiment, in both frameworks and on every seed we tried. The squared-error student's curve runs along the corridor between the bands, close to the line $y = x$ that :eqref:`eq_beyond_condmean` predicts: its mean distance to the nearest mode is nearly the full unit offset, and it rarely passes near a data point. The adversarial student's curve lies on a band almost everywhere; on the run above its mean distance to the nearest mode is a few hundredths, and across reruns the residual distance comes almost entirely from narrow crossings, never approaching the squared-error student's. What does vary between runs is which band: sometimes the curve follows a single band across the whole input range, sometimes it follows different bands on different stretches, connected by a narrow crossing through the corridor, as in the run above. The switching is a spurious dependence on the input: the mode $m$ is drawn independently of $x$, so the location of the switch is an artifact of the student's continuity and its training run, not structure in the data. A continuous map that switches answers must cross the empty region somewhere; the critic's contribution is to confine that crossing to a small interval rather than spreading it, as the squared error does, over the entire domain.
+The two students separate consistently across frameworks and seeds. The squared-error student's curve follows the corridor between the bands, close to the line $y = x$ predicted by :eqref:`eq_beyond_condmean`. Its mean distance to the nearest mode is nearly the full unit offset, and it rarely passes near a data point. The adversarial student's curve instead lies on one of the bands almost everywhere. In the run above, its mean distance to the nearest mode is only a few hundredths. Across reruns, nearly all residual error comes from narrow crossings between bands.
+
+The selected band varies between runs. Sometimes the curve follows one band across the entire input range; sometimes it follows different bands on different intervals and crosses the corridor between them, as it does above. This switch is a spurious dependence on the input because the mode $m$ is drawn independently of $x$. Its location reflects the student's continuity and the optimization run, not structure in the data. A continuous function that changes bands must cross the empty region somewhere. The critic confines that crossing to a small interval, whereas squared-error training spreads its predictions throughout the corridor.
 
 The demonstration also shows what the adversarial loss does not buy. The student is a deterministic map, so it produces one answer per input; committing to a band is the best its hypothesis class contains, and the other band simply goes unserved. The critic decides where the student's graph lies, not how much of the conditional law it covers. Systems that need conditional diversity therefore give the student a latent input, or keep several sampling steps, and the mode-coverage question returns in the forms :numref:`sec_gan_relativistic` analyzed.
 
@@ -215,9 +217,9 @@ The pattern recurs at scale, with the two bands replaced by the many sharp textu
 
 Diffusion and flow models, previewed here and developed in :numref:`chap_diffusion`, generate by iterating a learned denoiser, spending dozens to hundreds of network evaluations per sample :cite:`ho2020denoising,Lipman.Chen.BenHamu.ea.2022`. Distillation trains a student to produce the endpoint in one to four evaluations. This is the capacity situation of the previous section at its most extreme: a single forward pass must reproduce the output distribution of a long iterative computation. The regression targets available to the student, teacher outputs or teacher scores, are exactly the pointwise kind that average.
 
-Adversarial diffusion distillation made the resulting trade explicit :cite:`Sauer.Lorenz.Blattmann.ea.2023`. ADD trains a one-step student with two losses, a score-distillation regression toward its frozen teacher and an adversarial loss against real images, the critic built from frozen DINOv2 features with small trainable heads. Its loss ablation isolates what each term contributes: in their one-step ablation setting, with everything else held fixed, the distillation loss alone reaches FID 315.6, the adversarial loss alone 20.8, and the two together 20.6. At one step, the regression toward the teacher produces averages that the metric treats as failure; the adversarial term carries essentially all of the sample fidelity, and the teacher's role reduces to guidance.
+Adversarial diffusion distillation makes this trade-off explicit :cite:`Sauer.Lorenz.Blattmann.ea.2023`. ADD trains a one-step student with a score-distillation regression toward a frozen teacher and an adversarial loss against real images. Its critic uses frozen DINOv2 features with small trainable heads. In the reported one-step ablation, with other settings held fixed, distillation alone gives FID 315.6, the adversarial loss alone gives 20.8, and the two together give 20.6. In this setting, the regression target produces averages that score poorly, while the adversarial term supplies nearly all of the measured sample fidelity. The teacher still provides guidance but does not by itself yield a useful one-step sampler.
 
-The systems that followed adopted the term for different reasons. DMD2 adds an adversarial loss not to sharpen the student but to train it on real data, escaping the ceiling set by the teacher's own imperfect scores; its ImageNet-64 student reaches FID 1.28, below its teacher :cite:`Yin.Gharbi.Park.ea.2024`. LADD reuses the teacher diffusion model itself as the discriminator backbone, and finds training on synthetic teacher samples effective enough that the distillation loss is dropped entirely, leaving an adversarial objective alone :cite:`Sauer.Boesel.Dockhorn.ea.2024`. The recipe ships: FLUX.1-schnell, a twelve-billion-parameter rectified-flow transformer, states in its model card that it was trained by latent adversarial diffusion distillation to generate in one to four steps :cite:`BlackForestLabs.2024`.
+Later systems use the adversarial term for different reasons. DMD2 adds an adversarial loss to train on real data rather than only sharpen teacher outputs, allowing its ImageNet-64 student to reach FID 1.28, below its teacher :cite:`Yin.Gharbi.Park.ea.2024`. LADD reuses the teacher diffusion model as the discriminator backbone and finds synthetic teacher samples effective enough to remove the distillation loss entirely, leaving only the adversarial objective :cite:`Sauer.Boesel.Dockhorn.ea.2024`. The approach is also used in deployed models. The FLUX.1-schnell model card states that its twelve-billion-parameter rectified-flow transformer was trained by latent adversarial diffusion distillation to generate in one to four steps :cite:`BlackForestLabs.2024`.
 
 The adversarial term is not necessary for few-step generation, and the strongest current evidence deserves equal weight. MeanFlow trains a one-evaluation generator from scratch, with no teacher, no distillation, and no discriminator, to FID 3.43 on ImageNet-256 :cite:`Geng.Deng.Bai.ea.2025`; continuous-time consistency models reach FID 1.88 on ImageNet-512 in two evaluations, likewise without an adversarial term :cite:`Lu.Song.2025`. Both replace the missing critic with a more carefully constructed regression target rather than a learned comparison. As of 2026 the two lines coexist: the adversarial term is one working answer to the capacity problem of few-step generation, and the field has at least one answer that does without it.
 
@@ -229,9 +231,9 @@ In audio, adversarial training remains a major vocoder family and the dominant r
 
 Real-time video generation currently relies on the same mechanism. Adversarial post-training fine-tunes a video generator against real data, with a zero-centered gradient penalty in the family of :numref:`sec_gan_convergence`, and produces two seconds of $1280 \times 720$ video at 24 frames per second in a single forward evaluation :cite:`Lin.Xia.Ren.ea.2025`.
 
-## Three Exits from Instability
+## Three Approaches to Adversarial Instability
 
-Every adoption above inherits the failure modes this chapter analyzed, and ViTok-v2 shows what happens when they bind. The responses the field developed group into three, distinguished by what they treat as the source of the instability: the dynamics of the game, the freedom of the critic, or the game itself. :numref:`fig_gan_exits` lays the three out with their representative methods and their costs.
+Each application above inherits the failure modes analyzed earlier in the chapter, and ViTok-v2 illustrates that they can prevent stable scaling. Existing responses fall into three groups according to what they treat as the source of instability: the dynamics of the game, the flexibility of the critic, or the use of a game at all. :numref:`fig_gan_exits` compares representative methods and their costs.
 
 ![Three exits from unstable adversarial training, each keyed to a different diagnosis of the cause: repair the dynamics of the game, constrain the critic, or remove the game in favor of a fixed discrepancy or a regression objective. Each lane lists its price: a remaining minimax loop with a penalty weight to tune, a critic tied to the biases of its fixed features, or discrepancies that weaken in high dimension and slow multi-step sampling. The third lane does not close the subject, because the adversarial term returns when the resulting models are distilled to few steps.](../img/mdl-gan-exits.svg)
 :label:`fig_gan_exits`
@@ -294,7 +296,7 @@ $$E\big[(y - f(x))^2\big]
   lies? Its optimum is the log ratio $\log(p/q)$.
 :::
 
-::: {.slide title="Where Capacity Binds, the Two Losses Part"}
+::: {.slide title="Capacity Limits Make the Two Losses Differ"}
 Two bands $y = x \pm 1$; one deterministic student per loss:
 
 @!adversarial-losses-the-capacity-argument-3
@@ -303,7 +305,7 @@ The MSE student runs through the empty corridor at the conditional mean;
 the adversarial student commits to a band, crossing only where it switches.
 :::
 
-::: {.slide title="One Ablation Separates the Two Terms"}
+::: {.slide title="An Ablation Separates Regression and Adversarial Terms"}
 ADD trains a **one-step** distillation student with two losses; ablating
 them (everything else fixed):
 
@@ -319,7 +321,7 @@ At one step, regression toward the teacher averages; the adversarial term
 carries essentially all of the sample fidelity.
 :::
 
-::: {.slide title="Distillation Adopted the Term for Different Reasons"}
+::: {.slide title="Distillation Uses the Adversarial Term for Different Purposes"}
 - **ADD**: stay on the image manifold at one step (frozen DINOv2 critic).
 - **DMD2**: train on *real* data — escape the teacher's ceiling
   (ImageNet-64 FID 1.28, below its teacher).
@@ -352,7 +354,7 @@ useful, not necessary.
   a single forward evaluation.
 :::
 
-::: {.slide title="Three Exits from Instability"}
+::: {.slide title="Three Approaches to Adversarial Instability"}
 ![](../img/mdl-gan-exits.svg){width=90%}
 
 The game was removed three times; the learned critic returned three times —

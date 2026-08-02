@@ -156,7 +156,7 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
 
 - **Framework coverage policy (2026-07-17, per Alex):** the Basics part
   (ch. 1–8) and the math appendix carry all four frameworks; the **Advanced
-  part (ch. 9–16) carries PyTorch and JAX only**. New or rewritten Advanced
+  part (ch. 9–17) carries PyTorch and JAX only**. New or rewritten Advanced
   content must not add TensorFlow/MXNet tabs, and existing TF/MXNet material
   there is slated for removal as chapters are touched. Per-chapter framework
   subsets are already supported by the pipeline (the RL chapter ships
@@ -371,11 +371,14 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   Recurrence"), 13 Computational Performance (rebuilt 2026-07-20:
   roofline/regimes method, hardware, compilation, memory/precision, from-
   scratch + practical multi-GPU, transformer case study; PyTorch+JAX only),
-  14 RL, 15 GANs, 16 Diffusion Models (placeholder) | **Language Models**
-  (formerly "Natural Language Processing") = 17–18 | **Image Models**
-  (formerly "Computer Vision") = 19 | **Attic** = 20 GP, 21 HPO, 22 RecSys
-  (GP leads the Attic: it is the Bayesian-optimization background HPO builds
-  on) | math appendix 23–28 | Tools 29. Title shortenings ("Computation",
+  14 RL, 15 Deep RL (the RL chapter was split in two, 2026-07), 16 GANs
+  (rebuilt 2026-08: closed-form objectives, relativistic/R3GAN, gradient
+  penalties, six sections; PyTorch+JAX only), 17 Diffusion Models
+  (placeholder) | **Language Models** (formerly "Natural Language
+  Processing") = 18–19 | **Image Models** (formerly "Computer Vision") = 20
+  | **Attic** = 21 GP, 22 HPO, 23 RecSys (GP leads the Attic: it is the
+  Bayesian-optimization background HPO builds on) | math appendix 24–29 |
+  Tools 30. Title shortenings ("Computation",
   "Modern Convnets", "Sequence Models", singular "Multilayer Perceptron")
   are deliberate: inside a single "Basics" part the long framework-y titles
   were redundant, and ch. 12's rename marks the book's pivot to the

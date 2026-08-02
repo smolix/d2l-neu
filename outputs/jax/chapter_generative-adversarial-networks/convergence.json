@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "source": "chapter_generative-adversarial-networks/convergence.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "convergence-gradient-penalties-and-convergence": {
+      "code_fingerprint": "sha256:8f1d9ae04edbd4d2e3b516bf44921519009ade1e63396835c68667b8e0f66251",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-phase-portraits": {
+      "code_fingerprint": "sha256:f137c8ae1367e52ab4e832a302a9a1f105d0b14a9d6cbd14945eb042bef8b81c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "convergence/convergence-phase-portraits-1.png",
+          "bytes": 58675,
+          "sha256": "sha256:4a8d1710ee0ffa514bad420f6094fd2e73e9c980bc430346ac2e526fdee8f0c7"
+        }
+      ]
+    },
+    "convergence-the-loss-in-code": {
+      "code_fingerprint": "sha256:2ec8ab4c687a7cb01739e42ec125c441dddd347e6b0c54a9539316702096195e",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-1": {
+      "code_fingerprint": "sha256:948fa238b8eee6d43d0ef0bce7f0d9b815127da61c9b1734b9f4b91687a07d64",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-2": {
+      "code_fingerprint": "sha256:3f805f82ce12fec1f7cc0315e92d0636e6d46ce6397446c63161937eab0e12cf",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GAN: 22/25 modes, reverse KL 0.89, on-mode fraction 0.05\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GAN + $R_1 + R_2$: 25/25 modes, reverse KL 0.17, on-mode fraction 0.03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RpGAN + $R_1 + R_2$: 25/25 modes, reverse KL 0.22, on-mode fraction 0.04\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.png",
+          "bytes": 177261,
+          "sha256": "sha256:84b8b0011ce2906140dd27325cb414689ce4bf20222d77861ce5aacfe1b3c59c"
+        }
+      ]
+    }
+  }
+}

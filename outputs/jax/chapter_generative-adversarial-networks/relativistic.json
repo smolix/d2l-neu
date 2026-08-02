@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "source": "chapter_generative-adversarial-networks/relativistic.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "relativistic-relativistic-objectives": {
+      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "kind": "text",
+      "outputs": []
+    },
+    "relativistic-verifying-the-closed-form-1": {
+      "code_fingerprint": "sha256:7d625cd23c70a54d02b89a5f304e42f2fbd9511ae24e82443313554a7a95f5e1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sup Phi + log 2, by gradient ascent:    0.376889913\nJS(p (x) q, q (x) p), computed directly: 0.376889913\nentropy form H[(P+Q)/2] - H[p] - H[q]:  0.376889913\nJS(p, q) = 0.234050,  log 2 = 0.693147\nmax |D - lambda|, both centered:        4.4e-16\n"
+        }
+      ]
+    },
+    "relativistic-verifying-the-closed-form-2": {
+      "code_fingerprint": "sha256:4a2172740acdcb4160f6d42d0be39cf90a7985442ee718dbfe6ecae17f3f6f3d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "relativistic/relativistic-verifying-the-closed-form-2-1.svg",
+          "bytes": 37905,
+          "sha256": "sha256:7f3f8d8107399bc62cb60ced03744e177de35273512ea2544d80f6ea2fb043e6"
+        }
+      ]
+    }
+  }
+}

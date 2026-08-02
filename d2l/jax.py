@@ -2645,42 +2645,57 @@ def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,
 
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update discriminator.
+    """Update the discriminator.
 
     Defined in :numref:`sec_basic_gan`"""
     batch_size = X.shape[0]
-    ones = jnp.ones((batch_size,))
-    zeros = jnp.zeros((batch_size,))
-    # Do not need to compute gradient for `net_G`
-    fake_X = net_G(Z)
+    fake_X = net_G(Z)  # computed outside the loss: no gradient to net_G
     def loss_D_fn(model_D):
         real_Y = model_D(X).squeeze()
         fake_Y = model_D(fake_X).squeeze()
-        loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(real_Y, ones)) +
-                  jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, zeros))
-                  ) / 2
-        return loss_D
+        return (jnp.sum(optax.sigmoid_binary_cross_entropy(
+                    real_Y, jnp.ones(batch_size))) +
+                jnp.sum(optax.sigmoid_binary_cross_entropy(
+                    fake_Y, jnp.zeros(batch_size)))) / 2
     loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
     optimizer_D.update(net_D, grads_D)
     return loss_D
 
 @nnx.jit
 def update_G(Z, net_D, net_G, optimizer_G):
-    """Update generator.
+    """Update the generator on the non-saturating loss.
 
     Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = jnp.ones((batch_size,))
-    def loss_G_fn(model_G):
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = model_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X).squeeze()
-        loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, ones))
-        return loss_G
-    loss_G, grads_G = nnx.value_and_grad(loss_G_fn)(net_G)
+    def loss_G_fn(model_G, model_D):
+        fake_Y = model_D(model_G(Z)).squeeze()
+        return jnp.sum(optax.sigmoid_binary_cross_entropy(
+            fake_Y, jnp.ones(Z.shape[0])))
+    loss_G, grads_G = nnx.value_and_grad(loss_G_fn, argnums=0)(net_G, net_D)
     optimizer_G.update(net_G, grads_G)
     return loss_G
+
+def rpgan_loss_D(critic, real, fake):
+    """Relativistic pairing loss for the critic: -E[log sigma(D(x) - D(y))].
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return jax.nn.softplus(critic(fake) - critic(real)).mean()
+
+def rpgan_loss_G(critic, real, fake):
+    """Non-saturating pairing loss for the generator.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return jax.nn.softplus(critic(real) - critic(fake)).mean()
+
+def r1_r2_penalty(critic, real, fake):
+    """Per-sample squared critic input gradients on real (R1) and fake (R2),
+
+    Defined in :numref:`sec_gan_convergence`"""
+    def sq_grad_norm(x):
+        x = jax.lax.stop_gradient(x)
+        grad_fn = jax.grad(lambda xi: critic(xi[None, ...]).squeeze())
+        grad = jax.vmap(grad_fn)(x)
+        return (grad.reshape(x.shape[0], -1) ** 2).sum(axis=1)
+    return sq_grad_norm(real), sq_grad_norm(fake)
 
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')

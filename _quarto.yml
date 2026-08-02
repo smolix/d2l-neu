@@ -187,7 +187,11 @@ book:
         - chapter_deep-reinforcement-learning/rl-sequences.qmd
         - chapter_generative-adversarial-networks/index.qmd
         - chapter_generative-adversarial-networks/gan.qmd
+        - chapter_generative-adversarial-networks/objectives.qmd
+        - chapter_generative-adversarial-networks/relativistic.qmd
+        - chapter_generative-adversarial-networks/convergence.qmd
         - chapter_generative-adversarial-networks/dcgan.qmd
+        - chapter_generative-adversarial-networks/adversarial-losses.qmd
         - chapter_diffusion-models/index.qmd
     - part: chapter_language-models/index.qmd
       chapters:

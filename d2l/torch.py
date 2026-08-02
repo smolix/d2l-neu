@@ -2448,7 +2448,7 @@ def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,
     return np.maximum(Q - penalty, 0.0)
 
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
-    """Update discriminator.
+    """Update the discriminator.
 
     Defined in :numref:`sec_basic_gan`"""
     batch_size = X.shape[0]
@@ -2456,9 +2456,8 @@ def update_D(X, Z, net_D, net_G, loss, trainer_D):
     zeros = torch.zeros((batch_size,), device=X.device)
     trainer_D.zero_grad()
     real_Y = net_D(X)
+    # The generator is the fixed player here: detach its output
     fake_X = net_G(Z)
-    # Do not need to compute gradient for `net_G`, detach it from
-    # computing gradients.
     fake_Y = net_D(fake_X.detach())
     loss_D = (loss(real_Y, ones.reshape(real_Y.shape)) +
               loss(fake_Y, zeros.reshape(fake_Y.shape))) / 2
@@ -2467,20 +2466,40 @@ def update_D(X, Z, net_D, net_G, loss, trainer_D):
     return loss_D
 
 def update_G(Z, net_D, net_G, loss, trainer_G):
-    """Update generator.
+    """Update the generator on the non-saturating loss.
 
     Defined in :numref:`sec_basic_gan`"""
     batch_size = Z.shape[0]
     ones = torch.ones((batch_size,), device=Z.device)
     trainer_G.zero_grad()
-    # We could reuse `fake_X` from `update_D` to save computation
-    fake_X = net_G(Z)
-    # Recomputing `fake_Y` is needed since `net_D` is changed
-    fake_Y = net_D(fake_X)
+    # net_D changed in its half-step, so recompute the scores
+    fake_Y = net_D(net_G(Z))
     loss_G = loss(fake_Y, ones.reshape(fake_Y.shape))
     loss_G.backward()
     trainer_G.step()
     return loss_G
+
+def rpgan_loss_D(critic, real, fake):
+    """Relativistic pairing loss for the critic: -E[log sigma(D(x) - D(y))].
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return F.softplus(critic(fake) - critic(real)).mean()
+
+def rpgan_loss_G(critic, real, fake):
+    """Non-saturating pairing loss for the generator.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return F.softplus(critic(real) - critic(fake)).mean()
+
+def r1_r2_penalty(critic, real, fake):
+    """Per-sample squared critic input gradients on real (R1) and fake (R2),
+
+    Defined in :numref:`sec_gan_convergence`"""
+    def sq_grad_norm(x):
+        x = x.detach().requires_grad_(True)
+        grad, = torch.autograd.grad(critic(x).sum(), x, create_graph=True)
+        return grad.reshape(x.shape[0], -1).pow(2).sum(dim=1)
+    return sq_grad_norm(real), sq_grad_norm(fake)
 
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')

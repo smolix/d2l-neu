@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "source": "chapter_generative-adversarial-networks/objectives.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "objectives-adversarial-objectives-and-divergences": {
+      "code_fingerprint": "sha256:8f1d9ae04edbd4d2e3b516bf44921519009ade1e63396835c68667b8e0f66251",
+      "kind": "text",
+      "outputs": []
+    },
+    "objectives-divergence-against-separation": {
+      "code_fingerprint": "sha256:a4a043bc026b879b2cd68691dce7e33b43cebf634a3621e4c09b5789cb149117",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "JS at d = 8: 0.693054 nats (ceiling log 2 = 0.693147)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "objectives/objectives-divergence-against-separation-1.svg",
+          "bytes": 37132,
+          "sha256": "sha256:d5e7bd37ecdf2b564e8c3fa46ba7a92cdf6141487501c2936c2027905877553b"
+        }
+      ]
+    },
+    "objectives-one-testbed-four-losses-1": {
+      "code_fingerprint": "sha256:7e09218198f244861cd7ba1eccf00ae0f4854a3836782b336cb8068d6e939289",
+      "kind": "text",
+      "outputs": []
+    },
+    "objectives-one-testbed-four-losses-2": {
+      "code_fingerprint": "sha256:c4dfbc0a3770c9de4d7edf3d91eeadd3e61eea95f850026b05e40695edcfc9ce",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "JS(p, q) at initialization: 0.552 nats\n"
+        }
+      ]
+    },
+    "objectives-one-testbed-four-losses-3": {
+      "code_fingerprint": "sha256:73b993f7b7fdbe0165ffceea9f152884b15f4978a71f25cac9796ecffe8f42bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "objectives-one-testbed-four-losses-4": {
+      "code_fingerprint": "sha256:065ad3ec8835e29f21fc63049f4e45a6018dc4ce525d1062056b5e5c6ef1ed61",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "logistic       final JS(p, q) = 0.0008 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "least squares  final JS(p, q) = 0.0005 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "hinge          final JS(p, q) = 0.0041 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "MMD            final JS(p, q) = 0.0001 nats\n"
+        }
+      ]
+    },
+    "objectives-one-testbed-four-losses-5": {
+      "code_fingerprint": "sha256:b870f757b0cf0a8528ab9ecf460a583986cf7f31726a1df74b9e7d914334fb27",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "objectives/objectives-one-testbed-four-losses-5-1.svg",
+          "bytes": 289762,
+          "sha256": "sha256:a3a9a9ef29f35c7602633046e32e8048d3a1d3bb731716398442eb47c8f746ed"
+        }
+      ]
+    },
+    "objectives-one-testbed-four-losses-6": {
+      "code_fingerprint": "sha256:f07c75dda2bb9dc27ea604982a595bc0e097df6247e2f87dd8772dfee4203307",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "objectives/objectives-one-testbed-four-losses-6-1.svg",
+          "bytes": 40279,
+          "sha256": "sha256:3e247266efa6a1b24c2cef80b8b0bf990b6444d7d8edb06f3fabfbae10676c88"
+        }
+      ]
+    },
+    "objectives-what-each-critic-estimates": {
+      "code_fingerprint": "sha256:f6c96708cdc9ac5ee5ab1e1d634901ed05cdf0228699fffce49e9b953f30d7de",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "snapshot JS(p, q) = 0.042 nats\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "objectives/objectives-what-each-critic-estimates-1.svg",
+          "bytes": 228523,
+          "sha256": "sha256:a82bc1786189e343f4568f5c28e3ef42426b314bb67f678b70325aed613bcc9a"
+        }
+      ]
+    },
+    "objectives-recovering-the-ratio-by-duality-1": {
+      "code_fingerprint": "sha256:0f247e2793b88e91a8a54a6399ef27c14a82086f46382a43d07d2bc2335df26e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact KL(p || q) = 1.0166, attained bound = 1.0071\n"
+        }
+      ]
+    },
+    "objectives-recovering-the-ratio-by-duality-2": {
+      "code_fingerprint": "sha256:ec56fceddbd045216d15400a8fa1c083f00c9c6bf6422a399c074a1491842b0a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "objectives/objectives-recovering-the-ratio-by-duality-2-1.svg",
+          "bytes": 27245,
+          "sha256": "sha256:d7a2a75d1bf79cfa3ead83b29ad6b88e486eca80a002e5e55b57828180f185bb"
+        }
+      ]
+    }
+  }
+}

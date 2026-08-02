@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": "chapter_generative-adversarial-networks/adversarial-losses.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "adversarial-losses-adversarial-losses-beyond-gans": {
+      "code_fingerprint": "sha256:8f1d9ae04edbd4d2e3b516bf44921519009ade1e63396835c68667b8e0f66251",
+      "kind": "text",
+      "outputs": []
+    },
+    "adversarial-losses-the-capacity-argument-1": {
+      "code_fingerprint": "sha256:d5faed643667be84abfbde09f4e41a4c56eba3addfda2f318e47f20a52056620",
+      "kind": "text",
+      "outputs": []
+    },
+    "adversarial-losses-the-capacity-argument-2": {
+      "code_fingerprint": "sha256:365424bc08e73df44f59cb144a3b7fb8a2d70f15890b65a8fd55fe4315abe430",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "MSE student: mean distance 0.90 to the nearest mode, 0.10 to the conditional mean\nadversarial student: mean distance 0.02 to the nearest mode, 0.98 to the conditional mean\n"
+        }
+      ]
+    },
+    "adversarial-losses-the-capacity-argument-3": {
+      "code_fingerprint": "sha256:66116213e7af18dd08dfdfea0ff2d2141feadeeff1419abd1fafc99b23669292",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
+          "bytes": 67789,
+          "sha256": "sha256:7ce4ddb9db1e970ecdd2f05893e6abf718ab80af86fd368b7ea6bd98dc98d2c9"
+        }
+      ]
+    }
+  }
+}

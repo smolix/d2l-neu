@@ -1016,6 +1016,24 @@ all four PDFs (~46–51 MB each) with no manual steps:
   `make -j4 pdfs`) now `find img/outputs -name '*.pdf' -delete`, so `make all` is
   self-sufficient. For a bare standalone `make pdfs` on a dirty tree, run
   `make clean` first if you suspect stale scratch.
+- **A full `/tmp` truncates the book silently (2026-08-02).** Quarto stages
+  each render session under `$TMPDIR` (default `/tmp`), which on the GPU box
+  is a dedicated 9.3 GiB partition. When it filled mid-render, quarto died
+  partway through writing the `.tex` (`No space left on device`, Deno stack
+  trace), `build_one_pdf.sh` compiled the truncated `.tex` it left behind, and
+  plausible-looking half-book PDFs (411 and 1,189 pages) passed the verifier's
+  byte-size floor. Three guards now close this chain: (1) `build_one_pdf.sh`
+  hard-fails on a nonzero `quarto render --to latex` exit and on a missing
+  fresh output PDF (it also deletes the prior run's PDF first, so a stale file
+  cannot satisfy the check); (2) `pdf-preflight` requires ≥ 2 GiB free on
+  `$TMPDIR` before the render fleet starts (`D2L_SKIP_TMP_CHECK=1` overrides);
+  (3) `check_book_artifacts.py` verifies a page-count floor per PDF
+  (`MIN_PDF_PAGES = 1500`; healthy books run 1,900–2,300 pages) via `pdfinfo`,
+  degrading to the byte check if poppler-utils is absent. The disk pressure
+  itself came from outside the build: the Codex CLI leaks a ~378 MB git
+  snapshot dir (`/tmp/tmp.XXXXXXXXXX` containing `index` + `objects/`) per
+  review session — every repo build path was tested clean of `/tmp` leaks.
+  If the preflight trips, clear stale `/tmp/tmp.*` dirs first.
 
 Not fixed here (cosmetic, non-fatal): a few `:numref:`fig_mdl-dyn-*`` references
 in the still-incomplete Dynamics chapter render as "?" — the figures, SVGs, and

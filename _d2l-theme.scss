@@ -330,7 +330,9 @@ $d2l-grid-cols-mobile:
 
 .sidebar-item-section > .sidebar-item-container > .sidebar-item-text,
 .sidebar-section > .sidebar-item > .sidebar-item-container >
-  .sidebar-item-text[href$="/index.html"] {
+  .sidebar-item-text[href$="/index.html"],
+.sidebar-section > .sidebar-item > .sidebar-item-container >
+  .sidebar-item-text[data-original-href$="/index.html"] {
   color: $ink;
   font-weight: 600;
   font-size: 0.875rem;

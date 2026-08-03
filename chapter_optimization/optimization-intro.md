@@ -2,33 +2,27 @@
 :label:`sec_optimization-intro`
 
 For a deep learning problem, an optimization algorithm minimizes a specified
-loss function. In optimization the loss
-is called the *objective function*; by convention we minimize, and if we
-ever need to maximize something, flipping the sign of the objective
-suffices. One more convention: the optimization literature writes the thing
-being adjusted as a single vector $\mathbf{x}$, so for the next few sections
-$\mathbf{x}$ bundles up all the parameters that earlier chapters wrote as
-$(\mathbf{w}, b)$ — same object, shorter name. None of this is difficult
-to state. The difficulty lies in the surface being minimized: the graph of
-a deep network's loss over a parameter space with millions of dimensions.
-The shape of that surface decides which algorithms work.
-This section surveys the terrain before the
-chapter develops the algorithms: what minimizing the objective does and does
-not accomplish, the places where gradients die, and the two properties of
-the surface — curvature and noise — that set the pace of every method that
-follows.
+loss function. In optimization the loss is called the *objective function*. By convention
+we minimize; maximizing a quantity is equivalent to minimizing its negative.
+The optimization literature also writes the parameters as a single vector
+$\mathbf{x}$. For the next few sections, $\mathbf{x}$ therefore contains all
+the parameters that earlier chapters wrote as $(\mathbf{w}, b)$. The main
+difficulty is the objective itself: a deep network's loss is a surface over a
+parameter space with millions of dimensions, and its geometry determines
+which algorithms work. This section explains what minimizing the objective
+does and does not accomplish, where gradients vanish, and how curvature and
+noise control the progress of the methods that follow.
 
 We describe an optimizer through three decisions.
-First, a *descent direction*: which way counts as "down" depends on which
-norm measures the size of a step — the gradient is the answer under the
-Euclidean norm, not the only answer, and changing the norm changes the
-algorithm, a thread that pays off in :numref:`sec_muon`. Second, a *step
-size over time*: how far to move along the local slope and how the step
-should shrink or grow over a training run, the subject of
-:numref:`sec_scheduler`. Third, a *way of living with noise*: at any
-interesting scale the gradient is an estimate computed on a minibatch,
-and the batch size, together with averaging over time, decides how noisy
-an estimate we act on
+First, a *descent direction* specifies which way to move. The choice depends
+on the norm used to measure the size of a step: the negative gradient is the steepest
+descent direction under the Euclidean norm, and changing the norm changes the
+algorithm, as :numref:`sec_muon` develops. Second, a *step size over time*
+specifies how far to move along the local slope and how this distance changes
+during training (:numref:`sec_scheduler`). Third, a *method for controlling
+noise* accounts for the fact that, at practical scales, the gradient is a
+minibatch estimate. The batch size and any averaging over time determine the
+variance of the update
 (:numref:`sec_minibatch_sgd`, :numref:`sec_batch_size`). Each method in
 this chapter, from gradient descent to Muon, is a particular way of making
 these three decisions.
@@ -62,18 +56,18 @@ from jax import numpy as jnp
 import numpy as np
 ```
 
-To make the gap concrete, picture a smooth risk function $f$ and an
-empirical risk function $g$ that wobbles around it, the way an average over
-finitely many training examples wobbles around an expectation. The minimum
+For a concrete example, consider a smooth risk function $f$ and an
+empirical risk function $g$ that fluctuates around it because a finite-sample
+average differs from the population expectation. The minimum
 of the empirical risk need not sit at the minimum of the risk, and here it
 does not:
 
 ![The optimizer minimizes the empirical risk $g$, which wobbles around the risk $f$; their minima lie in different places.](../img/mdl-opt-risk-gap.svg)
 :label:`fig_mdl-opt-risk-gap`
 
-No optimizer, however good, can close this gap: it is a property of the
-data, not of the algorithm, and closing it is the business of the
-regularization and model-selection tools met earlier in the book. For the
+No optimizer can close this gap by itself: it arises from sampling the data,
+not from the optimization algorithm. Regularization and model selection
+address the resulting generalization problem. For the
 rest of the chapter we therefore set generalization aside and take the
 objective at face value. Even so restricted, the problem is hard. Deep
 learning objectives admit no analytical solution of the kind we found for
@@ -122,7 +116,7 @@ that are not extrema, and we use "saddle" broadly for either:
 ![At $x=0$ the cubic $f(x)=x^3$ has $f'=f''=0$ yet no extremum: a stationary inflection.](../img/mdl-opt-inflection.svg)
 :label:`fig_mdl-opt-inflection`
 
-Saddle points in higher dimensions are more insidious. Consider
+Saddle points become more prevalent in higher dimensions. Consider
 $f(x, y) = x^2 - y^2$: its saddle point at $(0, 0)$ is a minimum with
 respect to $x$ and a maximum with respect to $y$, and the surface looks
 like the saddle that gives the phenomenon its name:
@@ -146,32 +140,31 @@ gradient is zero:
   the point may be a minimum, a maximum, or a saddle.
 
 For a zero-gradient point of a high-dimensional function to be a local
-minimum, *every one* of thousands or millions of eigenvalues must be
-positive; if signs were even roughly balanced coin flips, nearly every
-critical point would be a saddle. Independent fair coin flips are only a
-heuristic: the eigenvalues of a Hessian at a critical point form a structured
-spectrum, not independent balanced signs — the second exercise below is one
-probe of why — and conditioning on criticality further ties the fraction of
-negative eigenvalues to the height of the loss. The conclusion holds despite the
-caveats, though: exact local minima are vanishingly rare beside saddles. Convex functions — those whose Hessian
-eigenvalues are nowhere negative — have neither saddle points nor spurious
-minima, which is one reason classical optimization theory is built on
-them. Deep learning objectives are not convex, but the theory has not
-therefore become useless; we return to what it still offers at the end of
-this section.
+minimum, all of its thousands or millions of Hessian eigenvalues must be
+positive. If the signs were roughly balanced independent coin flips, nearly
+every critical point would instead be a saddle. This coin-flip argument is
+only a heuristic. Hessian eigenvalues at a critical point form a structured
+spectrum rather than independent balanced signs, as the second exercise below
+helps illustrate. Conditioning on criticality also relates the fraction of
+negative eigenvalues to the loss value. Even with these qualifications,
+saddles greatly outnumber exact local minima in high dimensions. Convex
+functions, whose Hessian eigenvalues are nowhere negative, have neither
+saddle points nor spurious minima. Deep learning objectives are not convex,
+but convex theory still supplies useful local analyses and baselines, as the
+final section explains.
 
 ### Vanishing Gradients
 
-The most insidious way to starve the gradient signal involves no critical
-point at all. This is old news by now — :numref:`sec_numerical_stability`
-diagnosed vanishing and exploding gradients through depth and prescribed
-initialization, and :numref:`sec_bptt` traced the same disease through time
-— but it is worth seeing in its purest one-dimensional form. Recall the
+The gradient can also become too small to guide an update without vanishing
+at a critical point. :numref:`sec_numerical_stability` explained vanishing
+and exploding gradients through depth and the role of initialization, while
+:numref:`sec_bptt` analyzed the same problem through time. A one-dimensional
+example isolates the effect. Recall the
 activation functions of
 :numref:`subsec_activation-functions` and suppose we want to minimize
 $f(x) = \tanh(x)$ starting from $x = 4$. The derivative is
-$f'(x) = 1 - \tanh^2(x)$, so $f'(4) = 0.0013$: the surface is simply very
-flat where we happen to stand, and gradient descent barely moves for a
+$f'(x) = 1 - \tanh^2(x)$, so $f'(4) = 0.0013$: the surface is very flat at
+the initial point, and gradient descent barely moves for a
 long time before making progress.
 
 ![Minimizing $f(x)=\tanh x$ from $x=4$ stalls: the surface is nearly flat, slope about $0.0013$ — a vanishing gradient with no critical point.](../img/mdl-opt-tanh-flat.svg)
@@ -187,13 +180,11 @@ actually limits training speed day to day is usually something else.
 
 ## Curvature and Noise
 
-Zero-gradient traps are the textbook picture of why nonconvex
-optimization is hard. In daily practice they are rarely what hurts.
-Training is slow, or unstable, for two humbler reasons: the gradient is a
-poor guide when curvature differs across directions, and we never see the
-exact gradient anyway. These two — ill-conditioning and noise — are the
-recurring difficulties in this chapter, and most methods address
-one or the other.
+Zero-gradient points are a standard explanation for the difficulty of
+nonconvex optimization, but they seldom dominate routine training. Two other
+problems more often make training slow or unstable: curvature differs across
+directions, and the computed gradient is only a minibatch estimate. Most
+methods in this chapter address one or both of these problems.
 
 ### An Ill-Conditioned Valley
 
@@ -207,8 +198,8 @@ coordinates with the same learning rate $\eta$, and each step multiplies
 $x_1$ by $1 - 0.2\,\eta$ and $x_2$ by $1 - 4\eta$. The steep direction
 sets a ceiling: for $x_2$ to shrink rather than explode we need
 $|1 - 4\eta| < 1$, that is $\eta < 0.5$. The flat direction sets the pace:
-for any stable $\eta$, each step keeps more than $90\%$ of $x_1$. To watch
-the squeeze we borrow two helpers built in :numref:`sec_gd`:
+for any stable $\eta$, each step keeps more than $90\%$ of $x_1$. To observe the resulting constraint, we use two helpers built in
+:numref:`sec_gd`:
 `d2l.train_2d` iterates an update rule from a fixed starting point, and
 `d2l.show_trace_2d` draws the resulting trace over the objective's
 contours. With those we run 30 steps at $\eta = 0.45$, just under the ceiling:
@@ -224,12 +215,12 @@ def gd_valley(x1, x2, s1, s2):
 d2l.show_trace_2d(f_valley, d2l.train_2d(gd_valley, steps=30))
 ```
 
-The trace is the signature of ill-conditioning: zig-zag *across* the
-valley, crawl *along* it. The steep coordinate overshoots the valley floor
+The trace shows the characteristic behavior of an ill-conditioned problem:
+the iterate oscillates across the valley and advances slowly along it. The steep coordinate overshoots the valley floor
 on every step, its sign flipping each iteration, while the flat coordinate
 sheds only nine percent of its remaining distance per step — at that rate,
 every factor of ten along $x_1$ costs about 24 steps. The number that controls this
-squeeze is the ratio of the largest to the smallest curvature, the
+behavior is the ratio of the largest to the smallest curvature, the
 *condition number*
 
 $$\kappa = \frac{\lambda_{\max}}{\lambda_{\min}},$$
@@ -239,10 +230,9 @@ at $2/\lambda_{\max}$, the flat curvature then contracts by only
 $1 - 2/\kappa$ per step, and the iteration count grows *linearly* with
 $\kappa$ — the arithmetic is worked out in
 :numref:`subsec_mdl-quadratic-model`. For deep networks $\kappa$ is not
-$20$; measured values run to the thousands and beyond, so this valley is
-the right mental model for why plain gradient descent crawls, only with
-the squeeze turned much further up. Much of the
-chapter is aimed at exactly this picture: momentum cuts the effective cost
+$20$; measured values run to the thousands and beyond, so the same mechanism
+can make plain gradient descent much slower on a deep network. The methods
+that follow address this anisotropy in different ways: momentum cuts the effective cost
 from $\kappa$ to $\sqrt{\kappa}$ (:numref:`sec_momentum`), adaptive
 methods rescale each coordinate by its own history (:numref:`sec_adam`),
 and Muon rescales whole matrices at once (:numref:`sec_muon`).
@@ -251,20 +241,19 @@ and Muon rescales whole matrices at once (:numref:`sec_muon`).
 
 The valley analysis treats curvature as a fixed property of the surface,
 and the classical advice follows from it: measure the sharpness
-$\lambda_{\max}$, then choose $\eta < 2/\lambda_{\max}$. On real networks
-the causality runs backwards. Train a network with full-batch gradient
-descent and the sharpness *rises* — "progressive sharpening" — until it
-reaches roughly $2/\eta$, and then hovers there, with the loss still
-falling, non-monotonically, in the very regime the quadratic analysis
-forbids :cite:`Cohen.Kaur.Li.ea.2021`. The stability ceiling behaves less
-like a fence the optimizer must stay behind and more like an attractor it
-equilibrates onto: you pick $\eta$, and the network adapts its curvature
-to your choice. Training does not live in the tidy descent regime that
+$\lambda_{\max}$, then choose $\eta < 2/\lambda_{\max}$. On real networks the direction of
+dependence can reverse. Under full-batch gradient descent, the network's
+sharpness often *rises* through "progressive sharpening" until it reaches
+roughly $2/\eta$. The sharpness then remains near this value while the loss
+continues to fall nonmonotonically in a regime that the quadratic analysis
+predicts to be unstable :cite:`Cohen.Kaur.Li.ea.2021`. Thus the chosen
+learning rate can determine the sharpness reached during training. This
+behavior falls outside the monotone-descent regime that
 most of this chapter's stated results (and the appendix's proofs) analyze;
 the results remain the right guide to the mechanisms, but this is a gap
 worth knowing about, and it is one reason the learning-rate schedules of
 :numref:`sec_scheduler` — warmup especially — matter as much as they do.
-The phenomenon is easy to check on a 25-parameter network, and
+A 25-parameter network demonstrates the phenomenon, and
 :numref:`subsec_mdl-quadratic-model` does exactly that.
 
 ### Noisy Gradients
@@ -273,37 +262,33 @@ The second difficulty is that the gradient we use is an estimate. The loss
 is an average over the training set, so computing its exact gradient costs
 a full pass over the data; every practical method instead uses a minibatch
 of $b$ examples. The estimate is unbiased, and its variance falls like
-$1/b$ — :numref:`sec_sgd` measures this on a real network, nearly three
-orders of magnitude of batch size falling neatly on the $1/b$ line. Noise
-changes the character of the iteration: with a constant learning rate the
-parameters do not converge but rattle around the optimum in a *noise
-ball* whose squared radius scales with $\eta$, which is the fundamental
-reason learning rates must decay (:numref:`sec_sgd`, :numref:`sec_scheduler`).
-Batch size becomes a second dial next to the learning rate — one with
-hardware consequences (:numref:`sec_minibatch_sgd`) and, at scale, a
-measurable point of diminishing returns (:numref:`sec_batch_size`).
-Averaging over time quiets the noise that batching alone leaves behind,
-and that is momentum's second role (:numref:`sec_momentum`). Noise can also
-it helps bounce the iterate out of the shallow local minima and saddle
-points of the previous section — though gradient descent from a random
-start escapes strict saddles even without noise, and a deep basin is
-expensive to leave, noise or not. Living with noise — spending it,
-canceling it, budgeting for it — is the third of the chapter's three
-decisions.
+$1/b$. :numref:`sec_sgd` measures this relation on a real network across
+nearly three orders of magnitude in batch size. With a constant learning
+rate, the parameters fluctuate around the optimum in a *noise ball* whose
+squared radius scales with $\eta$. Learning rates must therefore decay for
+the iterates to converge (:numref:`sec_sgd`, :numref:`sec_scheduler`). Batch
+size provides a second means of controlling variance, with hardware
+consequences (:numref:`sec_minibatch_sgd`) and a measurable point of
+diminishing returns at scale (:numref:`sec_batch_size`). Momentum also
+reduces variance by averaging gradients over time (:numref:`sec_momentum`).
+Gradient noise can help the iterate leave shallow local minima and saddle
+points, although gradient descent from a random start escapes strict saddles
+even without noise, and noise may not overcome a deep basin. Controlling
+gradient noise is the third of the chapter's three optimization decisions.
 
 ## The Role of Convexity
 
 Every surface in this section was nonconvex, deliberately so. Yet the
 vocabulary we used to describe them comes from *convex* analysis, where
-condition number, convergence rate, and noise ball are each a theorem
-rather than a cartoon. That is the first thing convexity still
-buys: a language, and clean baselines. A convex function has no bad local
+condition numbers, convergence rates, and noise balls can be characterized
+by theorems. Convexity therefore supplies precise terminology and controlled
+baselines. A convex function has no bad local
 minima and no saddle points to hide in, so any weakness an optimizer shows
 on a convex problem is intrinsic to the optimizer. If a method misbehaves
-on a quadratic, it has no business near a transformer, and throughout this
-chapter new methods meet quadratics first.
+on a quadratic, it is unlikely to succeed on a transformer. Throughout this
+chapter, new methods are therefore tested on quadratics first.
 
-The second purchase is local. Near a good minimum, a smooth loss is
+Convex analysis is also useful locally. Near a good minimum, a smooth loss is
 approximately a quadratic bowl — the bottom of the surface looks locally
 convex even when the whole is anything but. This is why the valley
 analysis above predicts the late-training behavior of real networks, and
@@ -313,7 +298,7 @@ bowl, as in stochastic weight averaging
 that transfers to deep networks essentially intact
 (:numref:`sec_practice`).
 
-The limits are just as instructive. A deep network's loss cannot be convex
+This local argument does not make the full objective convex. A deep network's loss cannot be convex
 globally: permuting the hidden units of a layer leaves the function
 computed unchanged, so every minimum comes with a combinatorial family of
 separated copies of itself, while a convex function's minima form a single
@@ -335,10 +320,10 @@ saddle points (overwhelmingly more common in high dimension), and
 saturated activations. The hazards that dominate practice are different:
 curvature, summarized by the condition number $\kappa$, which forces a
 single learning rate to serve directions of very different steepness; and
-noise, since minibatch gradients are estimates whose variance we choose
-via the batch size. Real training adds a twist to the classical stability
-story — sharpness rises until it sits at the edge that the step size
-tolerates. Convex analysis still provides vocabulary, baselines, and local
+noise, since minibatch gradients are estimates whose variance depends on
+the batch size. Real training also differs from the classical stability
+analysis: sharpness rises until it approaches the limit tolerated by the
+step size. Convex analysis still provides vocabulary, baselines, and local
 approximations. The rest of the chapter develops descent directions,
 learning-rate schedules, and methods for controlling gradient noise.
 
@@ -402,8 +387,8 @@ What makes deep-net optimization hard<br>
 [The chapter's frame]{.kicker}
 
 1. A **descent direction** — which way is "down"? Depends on which *norm*
-   measures the step. Euclidean → the gradient. Other norms → other
-   algorithms (payoff: Muon).
+   measures the step. Euclidean → the negative gradient. Other norms → other
+   algorithms (as developed for Muon).
 2. A **step size over time** — how far to trust the local slope, and how
    that trust changes over a run (schedules, warmup).
 3. A **way of living with noise** — every gradient is a minibatch
@@ -440,14 +425,15 @@ supplies exactly that.
 
 High-dim: a zero-gradient point is a minimum only if **all** Hessian
 eigenvalues are positive — with mixed signs it is a saddle. At $10^6$
-parameters, essentially every critical point is a saddle:
+parameters, nearly every critical point is a saddle under the balanced-sign
+heuristic:
 
 ![The origin is a minimum along one axis and a maximum along the other, giving a saddle with mixed Hessian signs.](../img/mdl-opt-saddle.svg){width=72%}
 :::
 
 ::: {.slide title="Vanishing gradients"}
 No critical point needed: $f(x) = \tanh(x)$ at $x = 4$ has
-$f'(4) \approx 0.0013$. The surface is just *flat* where we stand:
+$f'(4) \approx 0.0013$. The surface is *flat* near the initial point:
 
 ![At $x=4$, $\tanh x$ has a very small gradient without a nearby critical point; flatness alone can stall descent.](../img/mdl-opt-tanh-flat.svg){width=58%}
 
@@ -463,13 +449,14 @@ keeps $> 90\%$ of its value per step:
 @optimization-intro-an-ill-conditioned-valley
 
 
-Zig-zag across, crawl along. Condition number $\kappa =
+The iterate oscillates across the valley and advances slowly along it. Condition number $\kappa =
 \lambda_{\max}/\lambda_{\min} = 20$; iterations scale **linearly with
 $\kappa$**. Real networks: $\kappa$ in the thousands.
 
 ::: {.d2l-note}
-Momentum → $\sqrt{\kappa}$. Adam → per-coordinate rescaling. Muon →
-per-matrix rescaling. Most of the chapter fights this picture.
+On strongly convex quadratics, momentum improves the condition-number
+dependence to $\sqrt{\kappa}$. Adam uses per-coordinate rescaling, and Muon
+uses per-matrix rescaling. Each method reduces the effect of anisotropic curvature.
 :::
 :::
 
@@ -484,7 +471,7 @@ in the "forbidden" regime.
 
 - The ceiling is an *attractor*, not a fence: pick $\eta$, the network
   adapts its curvature to it.
-- Training does not live in the tidy descent regime the proofs analyze.
+- Training often lies outside the monotone-descent regime analyzed by the proofs.
 - One reason warmup and schedules matter (§ Schedules); measured on a
   25-parameter net in the math appendix.
 :::
@@ -509,9 +496,9 @@ minimum $d!$ separated copies; convex minima form one connected set.
 Useful consequences include:
 
 - **Language and baselines**: condition number, rates, noise ball — all
-  theorems in the convex world. A method that fails on a quadratic has no
-  business near a transformer.
-- **Local honesty**: near a good minimum the loss is approximately a
+  theorems for convex objectives. A method that fails on a quadratic is
+  unlikely to succeed on a transformer.
+- **Local approximation**: near a good minimum the loss is approximately a
   quadratic bowl — which is why the valley cartoon predicts late-training
   behavior (and why weight averaging works).
 
@@ -525,7 +512,7 @@ Full treatment: the convexity chapter of the math appendix.
   vanishing gradients.
 - Practical hazards: **curvature** (condition number $\kappa$) and
   **noise** (minibatch variance).
-- Modern twist: training equilibrates at the edge of stability.
+- In modern networks, training often equilibrates at the edge of stability.
 - The toolkit ahead = three decisions: direction, step size over time,
   living with noise.
 :::

@@ -5,9 +5,9 @@ The GPT of :numref:`sec_gpt` uses a causal mask in addition to stacked
 transformer blocks. This mask supports next-token prediction, but restricts
 each representation to preceding context. In this section, the attention
 mask and the sources of queries, keys, and values become design choices.
-Removing it gives an *encoder*, a model that reads in both directions and
-excels at representing rather than generating; and joining a masked stack
-to an unmasked one through the cross-attention of
+Removing it gives an *encoder*, which reads in both directions and produces
+contextual representations. Joining a masked stack to an unmasked one
+through the cross-attention of
 :numref:`sec_multihead-attention` gives the *encoder--decoder* that
 transformers started as :cite:`Vaswani.Shazeer.Parmar.ea.2017`. We build
 both from the same `d2l.TransformerBlock`, examine whether a learned
@@ -159,8 +159,8 @@ $$
 :eqlabel:`eq_mlm`
 
 where $\mathcal{M}$ is the masked set. Prediction at a masked position
-draws on context from *both* sides, which is the point of dropping the
-mask in the first place. We train the recipe in miniature on the
+draws on context from *both* sides, the capability provided by removing the
+causal mask. We train the recipe in miniature on the
 character-level Time Machine corpus of :numref:`sec_text-sequence`,
 masking 15% of characters per window and giving `<mask>` one extra
 embedding row; the tied output head is the same trick as in
@@ -238,19 +238,19 @@ print('masked loss at step 500/1000/2000: ' + '/'.join(
 ```
 
 A minute of training brings the masked loss to about one nat and the
-masked-character accuracy to roughly 65% — against a 28-way vocabulary
-whose unigram entropy alone is $2.83$ nats. More interesting than the
-average is *where* the model earns it.
+masked-character accuracy to roughly 65%, compared with a unigram entropy
+of $2.83$ nats for the 28-way vocabulary. The loss by position shows how
+available context contributes to this average.
 
 ### Loss by Available Context
 
 Our windows are 64 characters long, and that finiteness builds a
 comparison into every batch: a masked character in the interior has
 context on both sides, while one at position 0 or 63 sees only one side
-— the final position is exactly the situation a causal language model is
-in at every step. Same model, same objective, so binning the validation
-loss by position measures directly what the second side of the context is
-worth.
+— the final position has the one-sided context available to a causal
+language model at every step. Because the model and objective remain fixed,
+binning validation loss by position measures the contribution of context
+from the second side.
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-1}
 %%tab pytorch
@@ -366,7 +366,7 @@ of choice for retrieval and classification at small model sizes
 
 ### A Task Whose Alignment We Know
 
-The encoder--decoder earns its keep when input and output are different
+An encoder--decoder is useful when the input and output are different
 sequences. Its signature component, cross-attention, is usually
 illustrated on machine translation, but a trained translation model gives
 us no ground truth to check its attention against. So we choose a task
@@ -718,8 +718,8 @@ before $t$.
 
 ### Reading the Alignment
 
-Now the promised check. We run a batch through the model, pull the
-cross-attention weights out of the decoder block, and compare each target
+We run a batch through the model, extract the cross-attention weights from
+the decoder block, and compare each target
 position's attention against the alignment the task dictates.
 
 ```{.python .input #encoders-decoders-reading-the-alignment}
@@ -757,13 +757,13 @@ d2l.show_heatmaps(w[0][None], xlabel='source position',
                   figsize=(9, 2.5), cmap='Blues')
 ```
 
-The maps show the anti-diagonal of :numref:`fig_three-wirings`'s third
-panel made real: averaged over heads, the argmax lands on the true source
-position for well over nine rows in ten, with most of the softmax mass
-concentrated there. The model has *learned* the alignment we built into
-the task, and cross-attention is where it lives. Readable evidence like
-this is exactly what :numref:`sec_multihead-attention` warned is the
-exception rather than the rule. It is readable here because we made the
+The maps contain the anti-diagonal predicted by the third panel of
+:numref:`fig_three-wirings`. Averaged over heads, the argmax lands on the
+true source position for well over nine rows in ten, with most of the
+softmax mass concentrated there. The cross-attention therefore represents
+the alignment built into the task. As :numref:`sec_multihead-attention`
+noted, such readable attention patterns are the exception rather than the
+rule. It is readable here because we made the
 model small; give the encoder and decoder more depth and heads and the
 task stays solved while the maps delocalize, as one of the exercises
 demonstrates.
@@ -773,8 +773,8 @@ demonstrates.
 ### Queries Need Not Come from a Sequence
 
 In the decoder, the cross-attention queries came from the target stream.
-Nothing in the mechanism requires that. A query is just a vector, and a
-set of $M$ query vectors can simply be *learned parameters* — a fixed
+Nothing in the mechanism requires that source. A set of $M$ query vectors
+can instead be *learned parameters* — a fixed
 array that exists before any input arrives. Cross-attending it into an
 input of length $N$ costs $O(MN)$; the quadratic term of
 :numref:`sec_attention-at-scale` never appears, because the $M$ latents
@@ -951,23 +951,23 @@ time by about four, the signature of an $N^2$ term taking over. The
 Perceiver's time grows more slowly over this range (its $O(MN)$
 cross-attention grows linearly but remains dominated by the fixed $O(M^2)$
 latent processing),
-and by $N = 8192$ the gap exceeds an order of magnitude. The left end of
-the plot deserves attention too: at short inputs the perceiver's fixed
-$O(M^2)$ latent cost is a large fraction of its total, so its margin is
+and by $N = 8192$ the gap exceeds an order of magnitude. At the left end
+of the plot, the Perceiver's fixed $O(M^2)$ latent cost is a large fraction
+of the total, so its margin is
 slim — and with PyTorch's kernels full self-attention is actually faster
-at $N = 1024$. A latent bottleneck is worth having when the input is long
-and a fixed-size summary of it suffices.
+at $N = 1024$. A latent bottleneck is advantageous when the input is long
+and a fixed-size summary suffices.
 
 ### Perceiver IO and the Idea's Descendants
 
-Reading through learned queries has a mirror image: *writing* through
-them. Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2022` adds an output
+Learned queries can also determine the output structure. Perceiver IO
+:cite:`Jaegle.Borgeaud.Alayrac.ea.2022` adds an output
 query array that cross-attends *out of* the latent summary, so the output
 size and shape are set by the queries rather than by the input — one
 query for a classification label, one per pixel for optical flow, one per
 audio sample for a waveform. Input length, latent width, and output shape
-become three independent dials, with everything in between a fixed-cost
-transformer.
+become three independent choices, while the latent transformer retains a
+fixed cost.
 
 The pattern's descendants run through today's multimodal systems.
 Flamingo's Perceiver resampler compresses a variable number of image and
@@ -1165,8 +1165,8 @@ maps (exercise): readable attention is the exception.
 :::
 
 ::: {.slide title="Cross-attention as interface"}
-A query is just a vector — it can be a **learned parameter**. $M$
-latents read a length-$N$ input:
+A query can be a **learned parameter**. $M$ latents read a length-$N$
+input:
 
 @fig:mdl-transformers-latent-bottleneck
 

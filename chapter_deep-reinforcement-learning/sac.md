@@ -51,29 +51,29 @@ if tab.selected('jax'):
 
 ### The Maximum-Entropy Objective
 
-Start from what :numref:`sec_regularized` proved. That section's objective charged, at every step, a KL penalty against a fixed reference policy, and its proposition gave the optimum in closed form; one of its four consequences was that a uniform reference turns the penalty into an entropy bonus, up to a constant that moves no optimizer. SAC maximizes exactly that special case, written in the field's notation, $\alpha$ for the exchange rate :numref:`sec_regularized` called $\beta$:
+Section :numref:`sec_regularized` derived an objective with a per-step KL penalty relative to a fixed reference policy. For a uniform reference, this penalty is equivalent to an entropy bonus up to a policy-independent constant. SAC maximizes this special case, conventionally writing $\alpha$ for the coefficient denoted by $\beta$ in :numref:`sec_regularized`:
 
 $$
 J(\pi) = E_{\pi}\Big[ \sum_t \gamma^t \big( r_t + \alpha\, H(\pi(\cdot \mid s_t)) \big) \Big].
 $$
 :eqlabel:`eq_maxent_objective`
 
-Read the term placement carefully, because it is the most common misreading of this method: the entropy is not a bonus bolted onto training the way :numref:`sec_ppo`'s entropy regularizer was bolted onto the actor loss. It is part of the *objective*, so it changes the optimum itself, and the optimal policy is stochastic by design rather than stochastic while training lasts. With a continuous action set the entropy is differential entropy, an integral rather than a sum, and it can be negative; that detail returns below with real stakes. This is maximum-entropy reinforcement learning, a line of work older than deep learning :cite:`Ziebart.Maas.Bagnell.ea.2008`, read by :numref:`sec_regularized` as inference :cite:`Levine.2018`; SAC is its off-policy actor-critic instance, with a lineage running through soft Q-learning :cite:`Haarnoja.Tang.Abbeel.ea.2017`.
+Unlike the optional entropy term in :numref:`sec_ppo`'s actor loss, the entropy term here is part of the *objective* and changes the optimum. The optimal policy can therefore remain stochastic after training. For continuous actions, this quantity is differential entropy, which is defined by an integral and can be negative. This distinction matters when interpreting the diagnostics below. This is maximum-entropy reinforcement learning, a line of work older than deep learning :cite:`Ziebart.Maas.Bagnell.ea.2008`, read by :numref:`sec_regularized` as inference :cite:`Levine.2018`; SAC is its off-policy actor-critic instance, with a lineage running through soft Q-learning :cite:`Haarnoja.Tang.Abbeel.ea.2017`.
 
-Like every objective in these two chapters, :eqref:`eq_maxent_objective` is optimized by generalized policy iteration (:numref:`fig_rl_gpi`): an evaluation half that estimates values under the current policy, and an improvement half that uses them. Both halves go soft, and each is a two-line edit of machinery you have.
+Equation :eqref:`eq_maxent_objective` can be optimized by generalized policy iteration (:numref:`fig_rl_gpi`): policy evaluation estimates values under the current policy, and policy improvement updates the policy using those estimates. Entropy regularization modifies both steps.
 
 ### Soft Policy Evaluation
 
-Under :eqref:`eq_maxent_objective` the value of a state collects reward *and* the entropy the policy will earn later, so the state value satisfies $V^{\pi}(s) = E_{a \sim \pi}\big[ Q^{\pi}(s, a) - \alpha \log \pi(a \mid s) \big]$: the entropy is $-E[\log \pi]$, sampled by the action just drawn. Substituting this into the one-step bootstrap of :numref:`sec_actorcritic` grows the critic's regression target by exactly one term,
+Under :eqref:`eq_maxent_objective`, a state value includes future reward and policy entropy, so $V^{\pi}(s) = E_{a \sim \pi}\big[ Q^{\pi}(s, a) - \alpha \log \pi(a \mid s) \big]$: the entropy is $-E[\log \pi]$, sampled by the action just drawn. Substituting this identity into the one-step bootstrap of :numref:`sec_actorcritic` adds one term to the critic target,
 
 $$
 y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \Big( \min_{j=1,2} Q_{w_j^-}(s', \tilde{a}') - \alpha \log \pi_\theta(\tilde{a}' \mid s') \Big), \qquad \tilde{a}' \sim \pi_\theta(\cdot \mid s'),
 $$
 :eqlabel:`eq_sac_target`
 
-and this is the difference between an entropy *bonus* and an entropy *objective* in one display: PPO's bonus lived in the actor loss alone, while the $-\alpha \log \pi$ here lives in the critic's target, because a soft critic must value the entropy the policy will collect for the rest of time. Everything else in the display is a promissory note from :numref:`sec_dqn`, twin critics $Q_{w_1}, Q_{w_2}$, frozen copies $w_j^-$, and a minimum, cashed in the algorithm section below. Note also what is *not* in it. The transition $(s, a, r, s')$ comes from the replay buffer, but the action $\tilde{a}'$ is sampled fresh from the current policy, because the expectation defining $V^{\pi}$ is an expectation under the policy being evaluated; the buffer supplies only the environment's part of the data, which no policy owns. And soft evaluation is ordinary policy evaluation on the augmented reward $r + \alpha H$, so the contraction argument of :numref:`sec_valueiter` carries over unedited.
+The term $-\alpha \log \pi$ appears in the critic target because a soft critic includes entropy collected at future states. The remaining components—two critics $Q_{w_1}, Q_{w_2}$, target copies $w_j^-$, and their minimum—come from the value-learning methods developed in :numref:`sec_dqn` and are detailed below. The transition $(s, a, r, s')$ comes from the replay buffer, whereas $\tilde{a}'$ is sampled from the current policy because the expectation defining $V^{\pi}$ is under the policy being evaluated. Thus the buffer supplies the observed transition and the current policy supplies the next action. Soft evaluation is ordinary policy evaluation for the augmented reward $r + \alpha H$, so the contraction argument of :numref:`sec_valueiter` still applies.
 
-The new term is not an approximation of :numref:`sec_regularized`'s soft backup; at the per-state optimum it *is* that backup. If $\pi^\star(a) \propto e^{Q(s, a)/\alpha}$, then $\log \pi^\star = Q/\alpha - \log Z$, so the bracket $Q - \alpha \log \pi^\star$ is the same number $\alpha \log Z$ for every action, and its expectation is the logsumexp that section displayed. Three lines certify the identity to floating-point depth, the same genre of check :numref:`sec_dqn` used to certify "the same expression" across tabs:
+The new term is not an approximation of :numref:`sec_regularized`'s soft backup; at the per-state optimum it *is* that backup. If $\pi^\star(a) \propto e^{Q(s, a)/\alpha}$, then $\log \pi^\star = Q/\alpha - \log Z$, so the bracket $Q - \alpha \log \pi^\star$ is the same number $\alpha \log Z$ for every action, and its expectation is the logsumexp that section displayed. The following calculation verifies the identity numerically, as in the cross-framework expression checks of :numref:`sec_dqn`:
 
 ```{.python .input #sac-soft-evaluation-one-new-term-in-the-target}
 %%tab pytorch, jax
@@ -115,7 +115,7 @@ $$
 
 with $z \sim \mathcal{N}(0,I)$ and states drawn from the replay buffer $\mathcal{D}$. Equation :eqref:`eq_sac_actor` uses the pathwise gradient from :eqref:`eq_score_vs_pathwise`, differentiating through the sampled action and the critic. This estimator usually has lower variance than the score-function estimator but requires the critic to be differentiable with respect to its action. For discrete actions, one must instead sum the expectation exactly or use a continuous relaxation.
 
-One guarantee travels with the improvement step, and it is five lines from the same proposition.
+The same proposition also yields a soft policy-improvement guarantee.
 
 **Proposition.** Let $\Pi$ contain $\pi_{\textrm{old}}$, and let $\pi_{\textrm{new}}(\cdot \mid s)$ maximize $E_{a \sim \pi}\big[ Q^{\pi_{\textrm{old}}}(s, a) \big] + \alpha H(\pi(\cdot \mid s))$ over $\Pi$ at every $s$. Then $V^{\pi_{\textrm{new}}} \geq V^{\pi_{\textrm{old}}}$ everywhere.
 
@@ -127,13 +127,13 @@ $$
 
 Expand $Q^{\pi_{\textrm{old}}}(s, a) = r(s, a) + \gamma\, E_{s'}\big[ V^{\pi_{\textrm{old}}}(s') \big]$ on the left and apply the same inequality at $s'$, then at $s''$, and so on: each substitution pushes $V^{\pi_{\textrm{old}}}$ one step deeper while accumulating rewards and entropies collected under $\pi_{\textrm{new}}$. Bounded rewards and $\gamma < 1$ send the remainder to zero, and the accumulated series is $V^{\pi_{\textrm{new}}}(s)$. $\blacksquare$
 
-The caveat is the one :numref:`sec_actorcritic` and :numref:`sec_dqn` attach to their own guarantees: the argument assumes exact per-state maximization and a converged $Q^{\pi_{\textrm{old}}}$, and SAC takes one gradient step on each. It is the shape of the guarantee, not a certificate for the loop below; the full telescoping treatment is Appendix B of :cite:`Haarnoja.Zhou.Abbeel.ea.2018`.
+The caveat is the one :numref:`sec_actorcritic` and :numref:`sec_dqn` attach to their own guarantees: the argument assumes exact per-state maximization and a converged $Q^{\pi_{\textrm{old}}}$, and SAC takes one gradient step on each. It describes the exact-update setting rather than certifying the approximate loop below; the full telescoping treatment is Appendix B of :cite:`Haarnoja.Zhou.Abbeel.ea.2018`.
 
 ## Bounded Actions and the Squashed Gaussian Policy
 
 ### Why Clipping Breaks the Pathwise Gradient
 
-:numref:`sec_deeprl`'s `GaussianPolicy` emitted an unbounded Gaussian and let the environment clip the torque to $[-2, 2]$, and that was correct there, because the score-function estimator touches the environment only through the returned reward; nothing behind that interface needs a derivative. The pathwise estimator differentiates *through the action*, and the clip destroys it twice. First, outside the box the clip has derivative zero, so for any state whose sampled action lands beyond the boundary, $\partial a / \partial \theta = 0$ and the actor receives no signal at all, and states whose best action sits *at* the boundary, maximum torque mid-swing, are exactly where a swing-up controller lives. Second, a clipped Gaussian is not a density: it piles atoms of probability onto the two boundary points, and the $\alpha \log \pi$ that :eqref:`eq_sac_target` and :eqref:`eq_sac_actor` both charge is undefined on an atom. Two failures, one repair: make the boundedness part of the distribution, differentiably.
+:numref:`sec_deeprl`'s `GaussianPolicy` emitted an unbounded Gaussian and allowed the environment to clip torque to $[-2, 2]$. That construction suffices for a score-function estimator because it does not differentiate through the environment action. SAC instead uses a pathwise estimator that differentiates *through the action*. Clipping causes two problems. First, its derivative is zero outside the interval, so samples beyond a boundary provide no actor gradient, including states where a boundary action is optimal. Second, clipping maps continuous probability mass to atoms at the boundaries, so the result has no ordinary density there and $\log \pi$ is not defined as required by :eqref:`eq_sac_target` and :eqref:`eq_sac_actor`. A differentiable bounded distribution resolves both problems.
 
 ### The Tanh Change of Variables
 
@@ -244,7 +244,7 @@ class SquashedGaussianPolicy(nnx.Module):
         return c * np.tanh(np.asarray(mean))
 ```
 
-One bookkeeping rule inside `log_prob` deserves its sentence: the Gaussian term and the Jacobian term are summed *together* over the action dimension before anything is averaged over the batch. Mixing a sum on one with a mean on the other is a documented bug class in public implementations, invisible at one action dimension and quietly wrong at two, and exercise 6 ports this code to a two-dimensional action.
+Inside `log_prob`, the Gaussian and Jacobian terms must be summed over the action dimension before averaging over the batch. Summing one term but averaging the other is incorrect for multidimensional actions, although a one-dimensional test would not expose the error. Exercise 6 tests this reduction in a two-dimensional environment.
 
 ### A Numerically Stable Log-Determinant
 
@@ -257,7 +257,7 @@ $$
 \log\big(1 - \tanh^2 u\big) = 2\, \big( \log 2 - u - \operatorname{softplus}(-2u) \big),
 $$
 
-exact for every $u$, with no subtraction of nearly equal numbers anywhere; it is what the `log_prob` above computes. The measurement of what it repairs is worth a cell, because the failure it prevents is the quiet kind this chapter keeps warning about. Three candidates, in float32, the arithmetic both tabs run:
+This identity is exact for every $u$ and avoids subtracting nearly equal numbers; `log_prob` uses this form. The following float32 calculation compares the direct expression, an epsilon-guarded expression, and the stable identity:
 
 ```{.python .input #sac-the-stable-form-and-what-the-epsilon-hides-1}
 %%tab pytorch, jax
@@ -272,9 +272,9 @@ for row in zip(u, naive, guarded, stable):
     print(f'{row[0]:4.0f} {row[1]:10.4f} {row[2]:10.4f} {row[3]:10.4f}')
 ```
 
-The naive form hits $-\infty$ the moment float32 rounds $\tanh u$ to $1$, at $|u|$ around $10$; that failure at least announces itself. The interesting column is the guarded one, the widespread `+ 10^{-6}` patch: it never crashes and it is silently wrong, pinned at $\log 10^{-6} = -13.8155$ for every $|u| \gtrsim 7$. From there on the density stops charging the policy for saturating, which is precisely the regularizer's job in :eqref:`eq_sac_actor`; the reported entropy detaches from the actual noise, the temperature loses its meaning, and no curve anywhere looks wrong. Deep reinforcement learning does not fail loudly, and this is the failure mode in one printed table.
+The direct form becomes $-\infty$ when float32 rounds $\tanh u$ to $1$, near $|u|=10$. Adding $10^{-6}$ avoids the infinity but clips the result at $\log 10^{-6}=-13.8155$ for $|u|\gtrsim7$. Beyond that point, the computed log density no longer reflects additional saturation. Consequently, reported entropy and the effective entropy penalty in :eqref:`eq_sac_actor` become inaccurate even when the return curve appears regular.
 
-Whether the whole change of variables is right is also checkable in one cell, with no training and no reference implementation: a density must integrate to one. Grid the action interval, invert the squash on the grid, the section's only $\mathrm{arctanh}$, and integrate :eqref:`eq_tanh_logdet` by the trapezoid rule, with and without the Jacobian term:
+Normalization provides a second check of the change of variables. We evaluate the density on an action grid, invert the squash on that grid, and integrate :eqref:`eq_tanh_logdet` by the trapezoid rule with and without the Jacobian term:
 
 ```{.python .input #sac-the-stable-form-and-what-the-epsilon-hides-2}
 %%tab pytorch, jax
@@ -294,17 +294,17 @@ for m, s in ((0.0, 0.5), (0.7, 0.8)):
           f'log-det, {wo:.3f} without')
 ```
 
-With the correction the density integrates to $1.000000$ at both parameter settings; without it the same integral reads $1.65$ and $1.13$, off by half its own mass, and the "density" being trained against is not a density at all. This one line is the log-det ablation at zero training cost, and it is the cheaper half of a lesson the experiments finish: deleting the correction barely moves the Pendulum return, but it detaches every reported entropy from reality, which is exactly how such a bug ships. The grid margin of $10^{-6}$ is the check's residual, since $\mathrm{arctanh}$ overflows at the boundary itself, and pushing $\sigma$ far above one piles mass against the boundary faster than any fixed grid resolves, which is why the check uses moderate parameters.
+With the correction, the density integrates to $1.000000$ at both parameter settings. Without it, the integrals are $1.65$ and $1.13$, so the uncorrected expression is not normalized. This deterministic check exposes an error that can have little effect on Pendulum return while making reported entropy invalid. The grid margin of $10^{-6}$ is the check's residual, since $\mathrm{arctanh}$ overflows at the boundary itself, and pushing $\sigma$ far above one piles mass against the boundary faster than any fixed grid resolves, which is why the check uses moderate parameters.
 
 ## The Algorithm
 
 ### Twin Critics and the Pessimistic Minimum
 
-:numref:`sec_dqn` measured what a maximum over noisy estimates does: it flatters itself, one full unit of bias from four actions of unit noise. SAC's actor is not an argmax, but it is trained to *climb* the critic, which makes it a maximizer over the critic's errors all the same, the Thrun-Schwartz argument :cite:`Thrun.Schwartz.1993` with the enumeration replaced by gradient ascent. The repair is imported from TD3 :cite:`Fujimoto.vanHoof.Meger.2018`, the deterministic sibling that diagnosed this bias in continuous control: train two critics, independently initialized, and let every consumer of a value take the pointwise minimum, both the target in :eqref:`eq_sac_target` and the actor loss in :eqref:`eq_sac_actor`. The point is not that an ensemble of two averages away noise; the point is the $\min$, the cheapest available pessimistic estimate. What that pessimism buys on this task is measured at the end of the section, and it is a calibration story, not a return story.
+:numref:`sec_dqn` showed that maximizing over noisy estimates produces positive bias. SAC's actor is optimized against the critic and can similarly favor actions with positive critic error, replacing discrete maximization by gradient optimization; this is the continuous-action form of the argument in :cite:`Thrun.Schwartz.1993`. Following TD3 :cite:`Fujimoto.vanHoof.Meger.2018`, SAC trains two independently initialized critics and uses their pointwise minimum in both the target :eqref:`eq_sac_target` and actor loss :eqref:`eq_sac_actor`. The minimum is a pessimistic estimate rather than an average. The experiment below evaluates its effect on critic calibration separately from policy return.
 
 ### Polyak-Averaged Target Networks
 
-The frozen copies $w_j^-$ do the target network's job from :numref:`sec_dqn` on a different schedule. Rather than a hard sync every $C$ steps, every update moves the copy a small fraction of the way to the online weights, Polyak averaging, $w^- \leftarrow \tau w + (1 - \tau) w^-$ with $\tau = 0.005$: an exponential moving average with a half-life of $\ln 2 / \tau \approx 139$ updates, so the regression surface drifts continuously instead of standing still and jumping. Same stability mechanism, no sync-moment shocks to guard against. One asymmetry is worth noticing because DDPG and TD3 got it wrong before SAC got it right: only the *critics* have frozen copies. The action $\tilde{a}'$ in the target comes from the live policy, and no target-policy smoothing is needed, because a stochastic policy smooths its own targets by sampling.
+The frozen copies $w_j^-$ do the target network's job from :numref:`sec_dqn` on a different schedule. Rather than a hard sync every $C$ steps, every update moves the copy a small fraction of the way to the online weights, Polyak averaging, $w^- \leftarrow \tau w + (1 - \tau) w^-$ with $\tau = 0.005$: an exponential moving average with a half-life of $\ln 2 / \tau \approx 139$ updates, so the regression surface drifts continuously instead of standing still and jumping. Both schedules slow changes in the bootstrap target, but Polyak averaging avoids discontinuities from periodic hard synchronization. Only the *critics* have target copies. The action $\tilde{a}'$ in the target comes from the live policy, and no target-policy smoothing is needed, because a stochastic policy smooths its own targets by sampling.
 
 ### Off-Policy Learning without Importance Ratios
 
@@ -376,7 +376,7 @@ def make_sac(seed, num_critics=2):
 
 ### The Update Step
 
-The update is :eqref:`eq_sac_target` and :eqref:`eq_sac_actor` verbatim: a regression step for both critics toward the shared soft target, one pathwise ascent step for the actor against the current critics' minimum, then the Polyak drift. The critic target is computed without gradients, data by the time the regression sees it, the same discipline `td_target`'s numpy boundary enforced in :numref:`sec_actorcritic`; both fresh actions are drawn inside the update, $\tilde{a}'$ for the target and $\tilde{a}$ for the actor.
+The update implements :eqref:`eq_sac_target` and :eqref:`eq_sac_actor`: both critics regress toward the shared soft target, the actor takes one pathwise step using the current critics' minimum, and the target critics receive a Polyak update. The critic target is computed without gradients, data by the time the regression sees it, the same discipline `td_target`'s numpy boundary enforced in :numref:`sec_actorcritic`; both fresh actions are drawn inside the update, $\tilde{a}'$ for the target and $\tilde{a}$ for the actor.
 
 ```{.python .input #sac-one-update-1}
 %%tab pytorch
@@ -497,7 +497,7 @@ def train_sac(seed, agent, num_env_steps=num_env_steps):
             logp_sum, n_upd = 0.0, 0
 ```
 
-Two arms, three seeds each, agents caller-owned as in :numref:`sec_dqn` so that later cells can audit them: the algorithm as described, and an ablation with a single critic, everything else identical. The single-critic arm is not a strawman; it is SAC as its first paper ran it, before the TD3 import.
+We train two variants with three seeds each and retain their agents for later diagnostics, as in :numref:`sec_dqn`. The standard variant uses two critics; the ablation uses one critic with all other settings unchanged. The single-critic configuration also matches the first SAC paper before the TD3 components were incorporated.
 
 ```{.python .input #sac-one-update-3}
 %%tab pytorch, jax
@@ -513,7 +513,7 @@ runs = {arm: np.array([list(train_sac(seed, agents[arm][seed]))
 
 ### Sample Efficiency in Environment Steps
 
-The headline claim of the off-policy family is sample efficiency, so the headline plot puts the return against environment steps, with the $-200$ line of a working swing-up controller dashed:
+To evaluate sample efficiency, we plot return against environment steps and mark $-200$ as the threshold for a successful swing-up controller:
 
 ```{.python .input #sac-sample-efficiency-on-the-axis-that-bills}
 %%tab pytorch, jax
@@ -542,7 +542,7 @@ for arm in runs:
           f'{[steps_to(r) for r in runs[arm]]}')
 ```
 
-Every seed of both arms starts at the aimless policy's $-1200$ or worse and clears the $-200$ line before ten thousand environment steps, most within about five to eight thousand. Put that number against this book's own baseline rather than a foreign one. :numref:`sec_deeprl` trained the same task with REINFORCE and a learned baseline at 300 updates of 8 episodes of 200 steps, which is $480{,}000$ environment steps, twenty-four runs of this budget, and reported improvement without mastery: no seed reached $-200$. The gap is the chapter's two licenses compounding. The pathwise gradient turns the critic into a differentiable model of the objective, so each update extracts more signal per sample, and replay lets every one of those samples drive hundreds of updates instead of one. Note also what the plot does *not* show: the two arms are indistinguishable, their bands overlap the whole way, and neither orders the crossings consistently across tabs. Whatever the second critic buys, it is not visible on this axis at this scale, which is exactly the reading :numref:`sec_dqn` gave for Double DQN at two actions; the last experiment goes looking for what it does buy.
+Every seed of both variants starts near $-1200$ or below and crosses $-200$ before ten thousand environment steps, most after about five to eight thousand. For comparison, :numref:`sec_deeprl` trained REINFORCE with a learned baseline on the same task for 300 updates of 8 episodes and 200 steps, or $480{,}000$ environment steps. That experiment reported improvement, but no seed reached $-200$. The comparison reflects two algorithmic differences. The pathwise gradient differentiates the actor objective through the critic, and replay permits multiple updates from collected transitions. The two variants are not distinguishable in this plot: their uncertainty bands overlap throughout training, and their crossing times have no consistent ordering across frameworks. At this budget, any effect of the second critic is not visible in the return curves, as in the two-action comparison in :numref:`sec_dqn`. The final experiment instead examines critic calibration.
 
 ### Policy Entropy and Temperature
 
@@ -598,7 +598,7 @@ for arm in runs:
 
 Across variants and frameworks, deterministic returns lie between about $-140$ and $-190$, and the stochastic policy is within about ten points of its deterministic counterpart. The learned state-dependent standard deviation therefore preserves entropy with little loss of return on this task. Unlike fixed $\epsilon$-greedy exploration, the stochasticity is optimized jointly with the policy under the entropy-regularized objective.
 
-### Critic Calibration: Predicted against Delivered
+### Critic Calibration: Predicted and Realized Returns
 
 The critic variants differ more clearly in calibration than in return. For each trained agent, we run twenty stochastic episodes and compare $\min_j Q_{w_j}(s_0,a_0)$ with the realized return. A soft critic predicts the entropy-regularized return $\sum_t \gamma^t(r_t-\alpha\log\pi(a_t\mid s_t))$, so this quantity is the appropriate target; the ordinary return is reported alongside it.
 
@@ -678,7 +678,7 @@ for arm in runs:
               f'(soft) {soft:7.1f}, gap {pred - soft:+6.1f}, plain {plain:7.1f}')
 ```
 
-The result is consistent across seeds and frameworks. Neither variant substantially overestimates the realized soft return. The single critic is close to calibrated, typically within thirty points, whereas the minimum of two critics underestimates the return by about thirty to sixty points. The gap is larger for the twin-critic variant on every seed, as expected from taking a minimum. Some underestimation may also arise because the policy continues to improve while the critic tracks earlier data, so the comparison between variants is more informative than their absolute offsets. On Pendulum, the second critic changes calibration without improving the final policy. On harder tasks, its deliberate pessimism can limit the feedback between critic overestimation and actor updates; :numref:`sec_offline` uses related ideas without further interaction.
+The result is consistent across seeds and frameworks. Neither variant substantially overestimates the realized soft return. The single critic's prediction is typically within thirty points, whereas the minimum of two critics underestimates the return by about thirty to sixty points. The absolute gap is larger for the twin-critic variant on every seed, consistent with taking a minimum. Some underestimation may also arise because the policy continues to improve while the critic tracks earlier data, so the comparison between variants is more informative than their absolute offsets. On Pendulum, the second critic changes calibration without improving the final policy. On harder tasks, pessimistic targets are intended to reduce feedback between critic overestimation and actor updates; :numref:`sec_offline` uses related ideas without further interaction.
 
 ## Summary
 
@@ -699,9 +699,8 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
    to the $0.2$ we fixed?
 1. [short-code] *Delete the log-determinant.* Remove the `logdet` term from
    `log_prob` and retrain one seed. Report three readings: the return curve,
-   the entropy trace, and the quadrature check. Which of the three noticed,
-   and what does the answer say about debugging a reinforcement learning run
-   by its learning curve?
+   the entropy trace, and the quadrature check. Which diagnostics expose the
+   error, and why can the return curve fail to do so?
 1. [conceptual] *Off-policy without ratios.* For each expectation in
    :eqref:`eq_sac_target` and :eqref:`eq_sac_actor`, state the distribution it
    is taken under and which part the replay buffer supplies. Where
@@ -746,21 +745,21 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
 [Dive into Deep Learning · §15.5]{.kicker}
 
 Soft Actor-Critic<br>
-**the objective from 15.3 · the gradient from 14.7 · the critics from 15.4 · one new line of calculus**
+**maximum-entropy control · pathwise actor gradients · twin critics · squashed Gaussian actions**
 :::
 :::
 
 ::: {.slide title="The Maximum-Entropy Objective"}
-:numref:`sec_regularized`'s KL penalty, uniform reference, charged
-per step; $\alpha$ for $\beta$, the field's convention:
+:numref:`sec_regularized`'s KL penalty, with a uniform reference,
+applied at every step; $\alpha$ for $\beta$, the field's convention:
 
 $$J(\pi) = E_{\pi}\Big[ \sum_t \gamma^t \big( r_t
 + \alpha\, H(\pi(\cdot \mid s_t)) \big) \Big]$$
 
 . . .
 
-Not a bonus bolted onto training: part of the **objective**, so
-the optimum itself is stochastic, by design. Continuous actions:
+The entropy term is part of the **objective**, so it changes the
+optimum and can make the final policy stochastic. Continuous actions:
 differential entropy, can be negative. SAC = the off-policy
 actor-critic of this objective
 :cite:`Haarnoja.Zhou.Abbeel.ea.2018`.
@@ -805,11 +804,12 @@ maximization raises $V$ everywhere; five lines from 15.3.
 :::
 
 ::: {.slide title="A Squashed Gaussian Policy"}
-14.7 let the environment clip the torque. The score estimator
-never differentiated through the action; the pathwise one does:
+Section 14.7 allowed the environment to clip torque because the
+score estimator did not differentiate through actions. SAC's
+pathwise estimator does:
 
-- outside the box the clip's derivative is **zero**: no signal at
-  the boundary, where swing-up lives
+- outside the interval the clip's derivative is **zero**, so samples
+  beyond a boundary provide no actor gradient
 - a clipped Gaussian is not a density: atoms at $\pm 2$, and
   $\alpha \log \pi$ is undefined on an atom
 
@@ -830,25 +830,24 @@ exact. What the guard `+ 1e-6` does instead:
 
 . . .
 
-$-13.8155$ forever: the density stops charging for saturation and
-no curve looks wrong. And the whole change of variables is
-checkable by quadrature, at zero training cost:
+The guarded expression remains at $-13.8155$ after saturation,
+so it no longer represents the density accurately. Quadrature
+checks normalization without training:
 
 @!sac-the-stable-form-and-what-the-epsilon-hides-2
 :::
 
 ::: {.slide title="The Components of SAC"}
-- **twin critics, min**: the actor climbs the critic, a maximizer
-  over its errors (15.4's argument, argmax $\to$ gradient
-  ascent); the min of two independent critics is the cheapest
-  pessimism :cite:`Fujimoto.vanHoof.Meger.2018`
+- **twin critics, minimum**: actor optimization can favor
+  positive critic errors (15.4's maximization argument); the
+  minimum of two independent critics is pessimistic :cite:`Fujimoto.vanHoof.Meger.2018`
 - **Polyak targets**: $w^- \leftarrow \tau w + (1-\tau) w^-$,
-  half-life $\ln 2 / \tau \approx 139$ updates; drifts, never
-  jumps
+  with half-life $\ln 2 / \tau \approx 139$ updates; the target
+  changes continuously
 - **no target actor**: $\tilde{a}'$ from the live policy; the
   stochastic policy smooths its own targets
-- **no ratios**: the target never mentions the collector, the
-  actor re-samples; the buffer shifts only the *state*
+- **no ratios**: the target is independent of the collecting policy,
+  and the actor samples new actions; the buffer shifts the *state*
   distribution (:numref:`sec_offline`)
 - `ReplayBufferC`: one column widened to float vectors
 :::
@@ -859,8 +858,8 @@ checkable by quadrature, at zero training cost:
 . . .
 
 Pendulum has **no terminal state**: `term` is identically zero,
-the bootstrap is always taken; storing `done` would teach the
-agent that the world ends at step 200.
+the bootstrap is always taken; storing `done` would impose an
+incorrect zero continuation value at step 200.
 :::
 
 ::: {.slide title="Sample Efficiency"}
@@ -869,8 +868,8 @@ agent that the world ends at step 200.
 . . .
 
 14.7's REINFORCE spent $480{,}000$ steps on this task and never
-reached $-200$. Pathwise gradient $\times$ replay: more signal
-per sample, hundreds of updates per sample. The two arms are
+reached $-200$. Pathwise actor gradients and replay both improve reuse of
+collected transitions. The two variants are
 indistinguishable on this axis.
 :::
 
@@ -879,15 +878,15 @@ indistinguishable on this axis.
 
 . . .
 
-- spent fast during the climb, overshooting below zero, partly
-  bought back once the task is mastered; ends near zero:
-  stochastic **at convergence**
+- decreases during rapid return improvement and finishes near
+  zero; differential entropy can be negative, and the policy
+  remains stochastic
 - within about a nat of autotuning's target
   $\bar{H} = -\dim \mathcal{A} = -1$
   :cite:`Haarnoja.Zhou.Hartikainen.ea.2018`; $\alpha$ is an
   exchange rate in reward per nat, not a learning rate
-- deterministic and stochastic evaluations agree within about
-  ten points: the noise was kept where it is cheap
+- deterministic and stochastic evaluations differ by about ten
+  points on this task
 :::
 
 ::: {.slide title="Critic Calibration"}
@@ -895,9 +894,8 @@ indistinguishable on this axis.
 
 . . .
 
-Neither arm meaningfully over-promises. The single critic is
-near calibrated; the min under-promises by thirty to sixty
-points, on every seed, at identical policy quality: **pessimism,
-measured, for free**. On harder tasks that margin is what stands
-between this loop and 15.4's self-confirming collapse.
+Neither variant substantially overestimates the realized soft
+return. The single critic is near calibrated; the minimum of two
+critics underestimates by thirty to sixty points on every seed.
+At this budget, the return curves remain similar.
 :::

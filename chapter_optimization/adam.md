@@ -82,7 +82,7 @@ usable proxy for the diagonal of the Hessian, and
 first-order information alone. Both readings can be made precise; the metric
 and regret derivations live in :numref:`subsec_mdl-per-coordinate`.
 
-Let's watch the per-coordinate scaling work on the quadratic
+The following quadratic illustrates per-coordinate scaling
 $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ from :numref:`sec_momentum`, with the
 same learning rate $\eta = 0.4$ that plain gradient descent could only use
 timidly.
@@ -165,10 +165,9 @@ d2l.train_ch11(adagrad, init_adagrad_states(feature_dim),
 AdaGrad's accumulator never forgets. Since $\mathbf{s}_t$ grows without
 bound, roughly linearly under persistent gradient noise, the effective step
 decays like $\mathcal{O}(t^{-1/2})$ whether or not the optimization is
-anywhere near done. That schedule is exactly right for the convex problems
-AdaGrad was invented for, and exactly wrong for a nonconvex landscape where
-the model may need to cross a plateau late in training and arrives with its
-steps ground down to nothing.
+anywhere near done. This decay is appropriate for the convex settings that motivated AdaGrad, but
+can be too aggressive for a nonconvex objective that requires substantial
+movement late in training.
 
 RMSProp :cite:`Tieleman.Hinton.2012` keeps the per-coordinate scaling and
 discards the lifetime memory, replacing the sum with an exponential moving
@@ -272,8 +271,7 @@ cancels the deficit identically at every $t$. The transient being cancelled
 is not small: at $\beta_2 = 0.999$, after ten steps $\mathbf{v}_t$ holds
 about $1\%$ of its stationary value, so uncorrected Adam would take its
 most aggressive steps precisely when its scale estimate is built from the
-fewest samples. :numref:`subsec_mdl-per-coordinate` has the derivation and
-a picture of the transient.
+fewest samples. :numref:`subsec_mdl-per-coordinate` derives this transient behavior.
 
 One more difference from :eqref:`eq_rmsprop`: Adam adds $\epsilon$
 *outside* the square root. At this demo's scales, where
@@ -359,20 +357,19 @@ hardware budgets, and we return to the accounting in the next section.
 :label:`subsec_tinylm`
 
 On the airfoil problem every optimizer in this chapter looks fine, and on
-small image models the differences stay small. The phenomena that separate
-modern optimizers show up clearly on *language models*, and with them the
-reason Adam rather than SGD is the default. So we now build the smallest language model
-that exhibits them, and it will serve as the chapter's testbed from here on.
+small image models the differences stay small. Language models provide a setting in which modern optimizers differ more
+substantially. We therefore build a small language model that exhibits these
+differences and use it as the chapter's testbed.
 
 The reader has trained language models on exactly this data before: *The
 Time Machine*, tokenized and batched as in :numref:`sec_text-sequence`, with
 quality measured in perplexity as in :numref:`sec_language-model`. Only the
 architecture is new. `TinyLM` is a *decoder-only transformer*, the
 architecture of :numref:`chap_transformers`, and we are
-deliberately using it two chapters early: nothing in this chapter requires
-knowing how attention works. For our purposes it is a black box, a
-differentiable function with a particular *census* of parameters, and the
-census rather than the mechanism is what optimization sees.
+deliberately using it two chapters early: the optimization discussion does not require the details of attention. Here
+the model is a differentiable function with several parameter groups, and
+the optimizer acts on their gradients rather than on the attention
+mechanism directly.
 
 ```{.python .input #adam-a-tiny-language-model-1}
 data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
@@ -458,10 +455,8 @@ class TinyLM(nnx.Module):  #@save
         return self.head(self.norm(H))
 ```
 
-Before training it, look at what it is made of. The census below groups the
-parameters into three populations: *embeddings*, whose rows receive
-gradients only when their token occurs, the sparse features of AdaGrad's
-origin story; two-dimensional *matrices*, which hold nearly all of the
+Before training, we group the parameters into three populations: *embeddings*, whose rows receive
+gradients only when their token occurs, the sparse features that motivated AdaGrad; two-dimensional *matrices*, which hold nearly all of the
 parameters; and one-dimensional *vectors*, the LayerNorm scales and biases.
 Later sections treat these populations differently, deciding which ones to
 weight-decay and which ones a matrix preconditioner should own, so this
@@ -587,8 +582,8 @@ print(f'perplexity per character: {math.exp(final_loss(losses)):.2f}')
 
 The model reaches a per-character perplexity below 3, against a uniform
 baseline of about 28 (the vocabulary size): it has learned a good deal of
-English spelling in those twenty seconds. Good enough to optimize; now the
-question is how much of that speed belongs to Adam.
+English spelling in those twenty seconds. A matched comparison can determine
+how much of this optimization speed depends on Adam.
 
 ## Where Adam Wins
 
@@ -657,8 +652,7 @@ On this grid, SGD's best learning rate sits directly below a divergent one:
 moving one grid point higher produces a NaN loss. Adam's optimum is interior,
 with stable neighboring rates on both sides. This experiment establishes the
 difference for this model and grid; it does not by itself identify gradient
-tails as the cause or characterize all transformers. We now compare the best
-rate found for each method:
+tails as the cause or characterize all transformers. We compare the best rate found for each method:
 
 ```{.python .input #adam-the-race-on-the-language-model-3}
 best_sgd = min(sgd_lm, key=lambda lr: final_loss(sgd_lm[lr]))
@@ -682,7 +676,7 @@ scaling is worth more than any amount of step-size tuning.
 
 ### Comparison on a CNN
 
-Now the identical protocol on an image classifier: a compact convolutional
+We apply the same protocol to an image classifier: a compact convolutional
 network on Fashion-MNIST, defined in a few lines. Note that `train_lm` never
 asked its model to be a language model; it streams minibatches and computes
 cross-entropy, so the same harness trains the CNN unchanged.
@@ -800,7 +794,7 @@ print(f'test accuracy: SGD {sgd_cnn_acc[best_sgd]:.3f}, '
       f'Adam {adam_cnn_acc[best_adam]:.3f}')
 ```
 
-A different picture. Both tuned optimizers drive the training loss into the
+The CNN produces a different comparison. Both tuned optimizers drive the training loss into the
 same low regime along closely tracking curves, and their test accuracies
 land within a point or two of each other, around 90–92%; whatever residual
 edge remains is small and varies from run to run. Nothing here resembles the
@@ -835,9 +829,9 @@ architectural as well as lexical: across the blocks of a transformer,
 embedding, attention, and MLP parameters have curvature spectra so different
 that no single learning rate suits them all, whereas the blocks of a CNN
 look far more alike :cite:`Zhang.Chen.Ding.ea.2024`. A per-coordinate method
-supplies every block its own effective step; a global method must serve the
-stiffest and starve the rest. Our census is the coarse version of this
-story: three populations with different geometry and different update
+supplies every block its own effective step; a global method must use a rate small enough for the
+stiffest block, slowing updates elsewhere. The parameter groups provide a
+coarse version of this distinction: three populations with different geometry and different update
 statistics, all sharing one $\eta$ under SGD.
 
 None of these accounts is final, and they are not mutually exclusive. The
@@ -850,10 +844,9 @@ the practice: on transformers, use the method that scales per coordinate.
 ## When the Variance Estimate Misbehaves
 
 Adam's preconditioner $\hat{\mathbf{v}}_t$ is an estimate built from a
-single noisy gradient stream, and estimates can be wrong in load-bearing
-ways. When gradients are sparse or heavy-tailed, the exponential average
+single noisy gradient stream, and errors in this estimate can produce very large updates. When gradients are sparse or heavy-tailed, the exponential average
 forgets between informative events: a coordinate's $\hat{\mathbf{v}}$ decays
-toward zero during a quiet stretch, and the rare large gradient then arrives
+toward zero during a sequence of small gradients, and the rare large gradient then arrives
 with an enormous effective step. :citet:`Reddi.Kale.Kumar.2019` turned this
 into a theorem, exhibiting convex problems on which Adam converges to the
 *worst* point. :numref:`subsec_mdl-per-coordinate` works through their
@@ -886,7 +879,7 @@ exactly against their zero initialization. The result is a diagonal
 preconditioner estimated from first-order information, cheap enough to run
 at any scale, while requiring two extra state buffers per parameter.
 
-Where it wins is not uniform. At matched tuning on a small transformer
+The improvement is not uniform across model classes. At matched tuning on a small transformer
 language model, Adam beats SGD with momentum decisively, and no rate in
 our grid closed the gap; on a comparable CNN the two are close. The best
 current explanations point at heterogeneity that a single global learning
@@ -977,8 +970,9 @@ $$\mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t^2,\qquad
 :::
 
 ::: {.slide title="AdaGrad on the valley"}
-Same quadratic as the momentum section, $\eta = 0.4$ — smooth, no
-oscillation, but the accumulated $\mathbf{s}_t$ grinds the steps down:
+On the quadratic from the momentum section, $\eta = 0.4$ produces a smooth
+trajectory without oscillation, but the accumulated $\mathbf{s}_t$ makes
+later steps progressively smaller:
 
 @adam-per-coordinate-learning-rates-1
 
@@ -990,8 +984,8 @@ The scaling is adaptive, so a formerly unthinkable $\eta = 2$ is safe:
 
 ::: {.slide title="RMSProp: an exponential average"}
 AdaGrad never forgets: $\mathbf{s}_t$ grows forever, steps decay like
-$t^{-1/2}$ *by construction* — right for convex problems, wrong for deep
-nets that need to move late in training.
+$t^{-1/2}$ by construction. This rate suits its original convex setting but
+can prevent substantial late movement in deep-network training.
 
 
 **RMSProp** (Hinton, 2012): same rule, leaky average instead of sum,
@@ -1019,7 +1013,8 @@ $$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1-\beta_1^t},\quad
 - Bias correction is *exact*: $\mathbb{E}[\mathbf{v}_t]$ carries the
   fraction $1-\beta_2^t$ of the true scale; division cancels it at every
   $t$. After 10 steps, $\mathbf{v}_t$ holds ~1% of its stationary value —
-  uncorrected Adam takes its biggest steps on its worst estimates.
+  without correction, Adam takes its largest early steps when the scale
+estimate uses the fewest samples.
 :::
 
 ::: {.slide title="From scratch"}
@@ -1033,14 +1028,14 @@ Two buffers per parameter plus a step counter:
 
 ::: {.slide title="A tiny language model"}
 The differences that matter show on *language models*. `TinyLM`: a
-decoder-only transformer (subject of ch. 10 — here, a black box), on the
+decoder-only transformer (developed in Chapter 10), on the
 character-level *Time Machine* from ch. 8.
 
 @adam-a-tiny-language-model-2
 
 ::: {.d2l-note}
-A differentiable function with a particular **census of parameters** —
-the census, not the mechanism, is what optimization sees.
+Optimization depends on the model's parameter groups and gradients rather
+than on the internal interpretation of the attention mechanism.
 :::
 :::
 
@@ -1056,8 +1051,9 @@ exclusions, matrix vs. non-matrix preconditioning):
 :::
 
 ::: {.slide title="Tuned SGD and Adam on a language model"}
-Symmetric protocol: same model, same init, same 2,000 steps, constant
-learning rate, four-point grid each, best final training loss wins.
+The comparison uses the same model, initialization, 2,000-step budget, and
+constant learning-rate protocol. Each method receives a four-point grid and
+is compared at its lowest final training loss.
 
 
 On the language model:
@@ -1073,8 +1069,8 @@ On the language model:
 @!adam-the-same-race-on-a-cnn-4
 
 - Curves nearly coincide; test accuracy within a point or two, either way.
-- This is why SGD carried computer vision for a decade — and why "which
-  optimizer wins" depends on the *model*, not just the tuning.
+- The small difference is consistent with the long use of SGD in computer
+  vision. Optimizer rankings depend on the model as well as the tuning.
 :::
 
 ::: {.slide title="Effect of parameter heterogeneity"}
@@ -1087,16 +1083,16 @@ et al. 2024):
 - Language is heavy-tailed: GD stalls on **rare tokens**; Adam keeps
   moving on all of them.
 - Transformer blocks have wildly different curvature; CNN blocks look
-  alike. One global $\eta$ must serve the stiffest block and starve the
-  rest.
+  alike. One global $\eta$ must be stable for the stiffest block, which slows the
+  remaining blocks.
 :::
 
 ::: {.slide title="Recap"}
 - Adam = per-coordinate scaling (AdaGrad) + forgetting (RMSProp) +
   momentum + exact bias correction.
-- Cost: two state buffers per parameter — 3× parameter memory.
-- Gives a large improvement on the transformer and a small one on the CNN — at
-  *matched* tuning.
+- Cost: two state buffers per parameter, for three times the parameter memory.
+- At matched tuning, Adam improves substantially on the transformer and only
+  slightly on the CNN.
 - $\epsilon$ is a step ceiling $\eta/\epsilon$, not just a numerical
   guard; AMSGrad/Yogi patch the variance estimate (exercises).
 :::

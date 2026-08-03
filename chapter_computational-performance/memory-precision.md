@@ -79,8 +79,7 @@ target.
 ## Measuring Memory
 :label:`subsec_mp-measuring`
 
-The frameworks let you check the anatomy against reality, and — as with
-timing — the two do it in characteristically different ways. PyTorch keeps
+The frameworks expose this memory allocation differently. PyTorch keeps
 running *counters* you query at runtime; JAX lets the compiler *plan*
 memory ahead of time and reports the plan. Start with PyTorch's counters,
 the numbers the anatomy table predicts:
@@ -171,8 +170,8 @@ print(f'argument + output: '
       f'{(a.argument_size_in_bytes + a.output_size_in_bytes) / 1e6:.0f} MB')
 ```
 
-The contrast is worth stating plainly: **PyTorch counts allocations as
-they happen; XLA plans memory at compile time.** Neither is better; they
+**PyTorch counts allocations as they occur, whereas XLA plans memory at
+compile time.** Neither is better; they
 reflect the eager-versus-traced split of :numref:`sec_compilation`, and
 knowing which mental model your framework uses tells you where to look
 when memory surprises you. Just do not compare the two frameworks' digits
@@ -191,8 +190,9 @@ numerically delicate things (the master weights, the loss reduction) in
 fp32. On our Ada card the arithmetic win is real and robust — but only if
 you know what your baseline is running, the lesson :numref:`sec_hardware`
 flagged. Whether plain fp32 matmuls use the tensor cores' tf32 path is a
-framework default: PyTorch ships with tf32 *off*, so a naive fp32
-baseline is needlessly slow and inflates the apparent speedup; JAX on
+framework default: PyTorch ships with tf32 *off*, so an fp32 baseline that
+leaves tf32 disabled understates baseline throughput
+and overstates the apparent speedup; JAX on
 this card runs tf32-class dot compute *by default*, so its naive baseline
 is already fair — but is not the true fp32 it appears to be. We time all
 three configurations, once, so the difference is unmistakable:
@@ -252,7 +252,7 @@ print(d2l.Benchmark(lambda: grad_fn(params, jnp.bfloat16), desc='bf16'))
 
 Against the fair tf32 baseline, bf16 runs about one and a half to two
 times as fast here — the exact ratio is framework- and shape-dependent —
-and the three timings tell the same two-step story in both tabs: moving
+and the three timings show the same two-step effect in both tabs: moving
 true fp32 dots onto the tf32 tensor cores already yields a sizable change,
 and bf16 then adds at least as much again. Both are genuine tensor-core
 wins, not measurement artifacts.
@@ -260,10 +260,9 @@ Note what the PyTorch tab does *not* use: a `GradScaler`. Loss scaling
 exists to keep tiny fp16 gradients from underflowing fp16's narrow
 5-bit-exponent range; bf16 shares fp32's 8-bit exponent
 (:numref:`fig_float_formats`), so its gradients do not underflow and no
-scaler is needed. fp16-plus-`GradScaler` is the pre-Ampere legacy path,
-worth one sentence and an exercise. The JAX tab makes the philosophical
-difference visible: precision in JAX is *explicit* — you thread dtypes
-through the computation, and `jax.default_matmul_precision` sets how fp32
+scaler is needed. fp16 with `GradScaler` remains relevant for pre-Ampere hardware and is
+examined in an exercise. The JAX tab shows that precision is *explicit*: dtypes are passed through
+the computation, and `jax.default_matmul_precision` sets how fp32
 dots are *computed* (true fp32 versus tf32-class tensor-core compute)
 without changing what any tensor *stores*. On this card JAX's default
 matches `'high'`, tf32-class, bit for bit — which is why the middle
@@ -377,9 +376,9 @@ backward on each while *summing* the gradients, and only then takes one
 optimizer step. The activations of just one micro-batch are live at a
 time, so peak memory follows the micro-batch, while the update sees the
 full global batch: $B_{\textrm{global}} = B_{\textrm{micro}} \times k$
-(times the number of devices, once :numref:`sec_multi_gpu` adds them). The
-parity check is worth seeing, because it is the whole correctness claim:
-accumulating $k$ micro-batches must match one full-batch step.
+(times the number of devices, once :numref:`sec_multi_gpu` adds them).
+Correctness requires accumulation over $k$ micro-batches to match one
+full-batch step, which the following parity check verifies.
 
 ```{.python .input #memory-precision-gradient-accumulation}
 %%tab pytorch
@@ -435,8 +434,8 @@ rearranges *when* the optimizer step happens.
 ## Choosing a Memory Optimization
 :label:`subsec_mp-ladder`
 
-Four sections in, the escalation is worth naming as a checklist. When a
-model does not fit or does not run fast enough, in order of cost:
+When a model does not fit or runs too slowly, consider the following
+interventions in increasing order of cost:
 
 1. **It's slow, bandwidth- or overhead-bound** → compile it
    (:numref:`sec_compilation`). Usually free.
@@ -451,8 +450,8 @@ model does not fit or does not run fast enough, in order of cost:
 5. **It's still too slow, or genuinely too big for one card** → add
    devices (:numref:`sec_multi_gpu`).
 
-The next section takes that last step — and finds that adding devices is
-where the accounting gets hardest.
+The next section analyzes the additional accounting required when devices
+are added.
 
 ## Summary
 

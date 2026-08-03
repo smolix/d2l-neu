@@ -65,9 +65,9 @@ $-\eta\,\mathbf{g}/\|\mathbf{g}\|_2$ — the SGD direction. Ordinary SGD takes
 that direction with a length that scales with $\|\mathbf{g}\|_2$
 (equivalently, it solves the regularized model $\min_{\mathbf{d}} \langle
 \mathbf{g}, \mathbf{d} \rangle + \|\mathbf{d}\|_2^2 / (2\eta)$ rather than the
-fixed ball); every ball in this section settles the *direction*, and how the
-step length scales is a separate dial. So "just follow the gradient"
-was never norm-free; it is the Euclidean choice, made silently, and every
+fixed ball); each ball in this section determines the direction, while the rule for
+scaling the step length remains separate. Following the gradient therefore
+assumes Euclidean geometry, and every
 method in this chapter that we described as a modification of SGD can instead
 be read as a different answer to the same question.
 
@@ -75,24 +75,22 @@ Take the $\ell_\infty$ norm, $\|\mathbf{d}\|_\infty = \max_i |d_i|$. The ball
 is now a box: a step is "size $\eta$" as long as *no single coordinate* moves
 more than $\eta$. To make $\langle \mathbf{g}, \mathbf{d} \rangle$ as negative
 as possible we push every coordinate to its wall, and the minimizer is
-$\mathbf{d}^\star = -\eta\, \mathrm{sign}(\mathbf{g})$: sign descent. This is
-not a new acquaintance. In :numref:`sec_adam` we switched off Adam's two
+$\mathbf{d}^\star = -\eta\, \mathrm{sign}(\mathbf{g})$: sign descent. This direction already appeared in Adam. In :numref:`sec_adam` we switched off Adam's two
 averages ($\beta_1 = \beta_2 = 0$, $\epsilon \to 0$) and were left with
 exactly $\eta\,\mathrm{sign}(\mathbf{g}_t)$, and we saw that Adam's advantage
 over SGD on language models tracks the advantage of sign descent
 :cite:`Kunstner.Chen.Lavington.ea.2023`. In the geometric reading, Adam is
-smoothed steepest descent under $\ell_\infty$: the box says "move every
-coordinate the same distance, however lopsided the gradient", which is
-precisely the per-coordinate equalization that :numref:`sec_adam` found to be
-Adam's real work, and the moment estimates are there to keep the sign stable
-under minibatch noise. Choosing this ball is sensible exactly when
-coordinates have wildly different gradient scales, which is what the
+smoothed steepest descent under $\ell_\infty$: the box moves every coordinate by the same magnitude regardless of the
+gradient's coordinate scales. This is the per-coordinate equalization
+identified in :numref:`sec_adam`, and the moment estimates are there to keep the sign stable
+under minibatch noise. This ball is particularly useful when
+coordinates have very different gradient scales, which is what the
 heterogeneity of language models produces.
 
 ### Matrices and the Spectral Norm
 
-Both balls above treat the parameter as a bag of coordinates. But the census
-told us where the parameters actually live: in our tiny transformer, about
+Both preceding norms treat a parameter as an unstructured vector. Most
+parameters in the testbed instead belong to matrices: in our tiny transformer, about
 95% sit in two-dimensional hidden matrices whose job is to *transform
 activations*, $\mathbf{y} = \mathbf{W}\mathbf{x}$. For such a parameter, one
 useful definition of a step's size is the largest change it can make to an
@@ -104,9 +102,8 @@ and hence the largest factor by which the update can stretch any activation
 vector passing through the layer. Flattening the matrix and using the Euclidean norm
 of the entries (the Frobenius norm) instead adds up energy across all
 $\min(m, n)$ singular directions, so it can call an update "large" even when
-its effect on every activation is small; controlling the spectral norm of
-updates is also the condition under which feature learning remains effective
-scaling the network up :cite:`Yang.Simon.Bernstein.2023`, a thread
+its effect on every activation is small; controlling the spectral norm of updates is also required to preserve
+feature learning when scaling the network :cite:`Yang.Simon.Bernstein.2023`, a thread
 :numref:`sec_scaling` picks up.
 
 So let the ball be spectral and solve :eqref:`eq_muon-ball` for a matrix
@@ -129,22 +126,22 @@ negating it attains the minimum. (Checking the diagonal-entry claim is an
 exercise; the surrounding theory, including what this has to do with
 preconditioning, lives in :numref:`subsec_mdl-preconditioning-ladder`.)
 
-Look at what :eqref:`eq_muon-spectral-step` does. The gradient
+Equation :eqref:`eq_muon-spectral-step` equalizes singular directions. The gradient
 $\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ names a set of directions and
 weights them by singular values that, for real training gradients, are
-dominated by a few large ones. The steepest spectral step keeps the
-directions and *erases the weights*: every direction the gradient identifies
+dominated by a few large ones. The steepest spectral step keeps the singular vectors and replaces every nonzero singular value by
+one: every direction the gradient identifies
 moves at the same rate. This is per-direction equalization, in whatever basis
 the gradient supplies, whereas Adam manages only per-coordinate equalization
 in the axis basis it is handed. The reasoning also says where it does *not*
 apply. An embedding table never multiplies a dense activation vector; its
 input is one-hot, each row is looked up in isolation, and the norm the input
 induces is the largest *row* norm rather than the spectral norm — a geometry
-for which spectral orthogonalization is the wrong tool
+for which spectral orthogonalization is an inappropriate geometry
 :cite:`Bernstein.2025`. Embeddings, the
-output head, and the one-dimensional vectors stay with AdamW, and the census
-split becomes an optimizer assignment. :numref:`tab_muon_norms` collects the
-story so far.
+output head, and the one-dimensional vectors stay with AdamW, and the parameter-group
+split becomes an optimizer assignment. :numref:`tab_muon_norms` summarizes
+the three geometries.
 
 :Steepest descent under three norms. Each ball yields a closed-form step and
 suits a different population of the parameter census.
@@ -166,8 +163,7 @@ suits a different population of the parameter census.
 Equation :eqref:`eq_muon-spectral-step` asks for $\mathbf{U}\mathbf{V}^\top$,
 and computing an SVD for every matrix at every step is out of the question:
 SVD is expensive, hard to parallelize well on accelerators, and unavailable
-in the low-precision arithmetic that training runs in. Muon's answer is a
-classical iteration rediscovered for this purpose. Notice that for any *odd*
+in the low-precision arithmetic that training runs in. Muon uses a classical matrix iteration for this computation. For any *odd*
 polynomial applied as a matrix polynomial,
 
 $$
@@ -232,7 +228,7 @@ def newton_schulz(M, num_iters=5, eps=1e-7):
     return X.T if tall else X
 ```
 
-Let's watch it work. We take a random $96 \times 64$ matrix, whose singular
+The following experiment measures the iteration. We take a random $96 \times 64$ matrix, whose singular
 values after normalization span an order of magnitude, and plot the spectrum
 after 0, 1, 3, and 5 iterations. (The SVD below is for *measuring* the
 result; the iteration itself never computes one.)
@@ -272,7 +268,8 @@ training.)
 
 ### The Update
 
-Muon assembles three ingredients we now have in hand. Gradients are noisy, so
+Muon combines momentum, Nesterov look-ahead, and approximate
+orthogonalization. Gradients are noisy, so
 we do not orthogonalize the raw gradient. We keep a momentum buffer, the
 leaky average of :numref:`sec_momentum`, with the same $\mu = 0.95$ used by
 its authors, and we hand Newton--Schulz the Nesterov blend
@@ -395,7 +392,7 @@ for name, (num, size) in counts.items():
 The eight hidden matrices hold about 95% of the parameters. Note what the
 split does to optimizer state: AdamW carries two buffers per parameter, Muon
 one, so the hybrid's state memory is nearly half of all-AdamW's, an
-accounting :numref:`sec_adamw` taught us to notice. The factory below builds
+as follows from the state-memory accounting in :numref:`sec_adamw`. The factory below builds
 the hybrid; with the RMS-matched scale of :eqref:`eq_muon-update`, both
 halves share a single learning rate.
 
@@ -493,8 +490,8 @@ adamw_lm = run_lm(lambda lr: optax.adamw(lr, weight_decay=0.0),
                   lrs=[3e-4, 1e-3, 3e-3, 1e-2])
 ```
 
-Now the hybrid, over the same grid; thanks to the RMS matching, the grid
-means the same thing for both:
+We evaluate the hybrid over the same grid. RMS matching makes the nominal
+rates comparable between the two optimizers:
 
 ```{.python .input #muon-the-race-on-the-language-model-2}
 %%tab pytorch
@@ -522,38 +519,37 @@ print(f'final perplexity: '
 ```
 
 :begin_tab:`pytorch`
-Tuned against tuned, the hybrid finishes a few percent of perplexity below
-AdamW; from a single seed we claim a modest edge and no more. The edge is
-not nothing — the
-hybrid gets there carrying nearly half the optimizer state — but a
-0.4M-parameter model trained for a minute cannot show much more. The
+After tuning both methods, the hybrid finishes a few percent lower in
+perplexity than AdamW. This single-seed result supports only a modest
+difference, although the hybrid also uses nearly half the optimizer state.
+A 0.4M-parameter model trained for a minute cannot establish a broader
+ranking. The
 fair-tuning literature discussed at the end of this section measures
 Muon-family gains in tens of percent of data efficiency at small scale,
-an effect two thousand steps can only hint at. The demo is mechanism, not
+an effect two thousand steps can only hint at. The experiment demonstrates the mechanism rather than providing a
 benchmark; before drawing conclusions, consider the same comparison in the JAX tab,
 where the identical protocol produces a very different margin.
 :end_tab:
 
 :begin_tab:`jax`
-Here the tuned hybrid beats tuned AdamW by a wide margin — several tenths of
-a nat, a visibly lower curve throughout. Resist the strong conclusion: the
+In the JAX run, the tuned hybrid finishes several tenths of a nat below
+tuned AdamW and remains lower throughout training. This margin does not
+support a general conclusion: the
 PyTorch tab runs the identical protocol and ends with a far smaller edge. The two
 frameworks differ in details as mundane as default layer initialization,
 and comparisons this small are sensitive to all of them. Across both tabs,
-is the weaker statement the data supports: the hybrid beat AdamW
-in both single-seed runs — narrowly in PyTorch, by a wide margin here — while carrying
-nearly half the optimizer state. Claims about optimizers really are this
-protocol-sensitive. That is not an embarrassment to hide but the
-section's recurring lesson, and the fair-tuning studies at the end of the
+the supported conclusion is narrower: the hybrid finished below AdamW in
+both single-seed runs, narrowly in PyTorch and by a wider margin in JAX,
+while using nearly half the optimizer state. The differing margins show
+that small optimizer comparisons are protocol-sensitive, and the fair-tuning studies at the end of the
 section exist precisely because of it. The demo is mechanism, not
 benchmark.
 :end_tab:
 
 ### Comparison on a CNN
 
-:numref:`sec_adam` found that Adam's advantage over SGD, dramatic on the
-language model, nearly vanished on a CNN. It is natural to ask the same
-question of Muon. We reuse the compact Fashion-MNIST CNN from that section,
+:numref:`sec_adam` found that Adam's substantial advantage over SGD on the
+language model nearly vanished on a CNN. We apply the same comparison to Muon. We reuse the compact Fashion-MNIST CNN from that section,
 along with its test-accuracy check; `reshape` in the update flattens each
 convolution kernel to a matrix (one row per output channel in PyTorch, one
 column in Flax), and the output head stays with AdamW.
@@ -676,12 +672,10 @@ print(f'test accuracy: AdamW {adamw_acc[best_adamw_cnn]:.3f}, '
 ```
 
 The two metrics give different conclusions. On training loss the hybrid
-pulls clearly ahead: orthogonalized updates drive this small CNN into its
-memorization regime several times faster. On test accuracy, the number a
-vision practitioner actually cares about, the two land within about a point
+reaches lower values: orthogonalized updates drive this small CNN into its
+memorization regime several times faster. On test accuracy, the deployment metric in this experiment, the two land within about a point
 of each other. Optimizing faster and predicting better are different claims,
-and on a small, quickly saturated task the second is the one that resists
-improvement — the same compression of differences that :numref:`sec_adam`
+and on a small, quickly saturated task the second changes little. This resembles the small difference that :numref:`sec_adam`
 found between Adam and SGD here. The same conclusion applies:
 an optimizer comparison is a statement about a workload and a metric, not a
 universal ranking.
@@ -701,7 +695,7 @@ above.
 :begin_tab:`jax`
 Optax ships Muon in `optax.contrib`. Unlike our scratch version it manages
 the split internally: parameters marked with `MuonDimensionNumbers` are
-orthogonalized and everything else falls through to Adam. By default every
+orthogonalized, while all other parameters use Adam. By default every
 2-D parameter is treated as a hidden matrix, which would orthogonalize the
 embedding tables too, so we pass an explicit spec that sends embeddings and
 the head to Adam; `consistent_rms=0.2` selects the RMS-matched scale of
@@ -773,7 +767,7 @@ SOAP :cite:`Vyas.Morwani.Zhao.ea.2024` refines it further by running Adam
 inside Shampoo's slowly refreshed eigenbasis, cutting the overhead between
 factor recomputations.
 
-Muon's place in the tree is now easy to state: *it is Shampoo with the
+Muon has the following relationship to Shampoo: *it is Shampoo with the
 memory removed*. Switch off Shampoo's accumulators, keeping only the current
 gradient with SVD $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$,
 and
@@ -798,8 +792,7 @@ the derivations, from diagonal through Kronecker to spectral.
 Muon's rise was unusually public. It debuted in late 2024 not in a paper but
 as a record on the NanoGPT speedrun :cite:`Jordan.2024`, a standing
 competition to train a fixed GPT-2-class model to a fixed validation loss on
-fixed hardware in the least wall-clock time. The speedrun is a small model of
-good evidence culture: one variable changes per record, the diff is public,
+fixed hardware in the least wall-clock time. The speedrun provides a transparent experimental record: one variable changes per record, the diff is public,
 and anyone can rerun it. Its headline number mixes optimizer,
 architecture, and data-schedule improvements, so it should not be read as
 an optimizer benchmark: a baseline of 45 minutes came down to a few minutes
@@ -815,22 +808,20 @@ mixture-of-experts model, was pretrained on 15.5 trillion tokens with
 MuonClip: Muon plus a cap on attention logits (QK-clip) to contain the
 instability that surfaced at that scale. It reports zero loss spikes for
 the entire run :cite:`Kimi.Team.2025`. GLM-4.5 likewise trained with Muon
-:cite:`Zeng.Lv.Zheng.ea.2025`. For an optimizer to reach the training runs
-of multiple frontier labs, and core PyTorch, within two years of its first
-appearance is a pace the field had not seen since Adam itself.
+:cite:`Zeng.Lv.Zheng.ea.2025`. Within two years, Muon was used in several reported large-scale runs and
+added to core PyTorch.
 
-Against this, hold the sobering result of the fair-tuning literature.
+Matched-tuning studies report smaller gains than several early comparisons.
 :citet:`Wen.Hall.Ma.ea.2025` re-benchmarked eleven optimizers under matched,
 per-optimizer hyperparameter tuning across model scales, and found that most
-published "beats AdamW by 2×" claims deflate badly: the genuine speedups
-belong to the matrix-preconditioned family (Muon, SOAP, Kron), but they are
+published claims of twofold improvements over AdamW shrink substantially: the remaining improvements
+are concentrated in the matrix-preconditioned family (Muon, SOAP, Kron), but they are
 roughly 1.4× at 100M parameters and shrink toward 1.1× by a billion. The
 study's most instructive case is Sophia :cite:`Liu.Li.Hall.ea.2023`, a
 second-order method that reported a 2× speedup on GPT-2 pretraining and did
 not replicate under matched tuning — a finding published by a group
-overlapping with Sophia's own authors, which is how self-correction is
-supposed to work. None of this contradicts the production story; it bounds
-it. Benchmark verdicts are also protocol-dependent: AlgoPerf's fixed tuning
+overlapping with Sophia's own authors, providing an independent reassessment with overlapping authorship. These
+results narrow the interpretation of the production reports. Benchmark verdicts are also protocol-dependent: AlgoPerf's fixed tuning
 budgets crowned Shampoo, the speedrun's unlimited tinkering crowned Muon,
 and a comparison run at one scale with one tuning budget is evidence about
 that protocol, not a universal ranking
@@ -845,8 +836,8 @@ percent rather than multiples.
 Steepest descent defines a family of algorithms indexed by a norm: the
 Euclidean ball yields normalized SGD, the $\ell_\infty$ box yields sign
 descent and its
-smoothed form Adam, and the spectral ball, the right measure for a matrix
-that transforms activations, yields the orthogonalized gradient
+smoothed form Adam, and the spectral ball, a norm that measures the largest effect of a matrix
+update on activations, yields the orthogonalized gradient
 $\mathbf{U}\mathbf{V}^\top$. Muon computes it without an SVD by a tuned
 five-step Newton--Schulz iteration of pure matrix multiplications that run
 in low precision, applies it to each hidden matrix's Nesterov blend
@@ -924,10 +915,10 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \leq \eta} \langle \
 Not fully posed until the **ball** is chosen (Bernstein & Newhouse, 2024):
 
 - Euclidean ball → $-\eta\,\mathbf{g}/\|\mathbf{g}\|_2$: the **SGD direction** —
-  following the gradient was a choice, made silently; the step's length is a
-  separate dial.
+  the direction assumes Euclidean geometry, while the step length follows a
+  separate rule.
 - Box ($\ell_\infty$) → $-\eta\,\mathrm{sign}(\mathbf{g})$: every coordinate moves the
-  same distance — the equalization that is Adam's real work (§9.6).
+  same distance, matching Adam's per-coordinate equalization (§9.6).
 :::
 
 ::: {.slide title="The spectral norm for matrix updates"}
@@ -942,8 +933,8 @@ $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$:
 
 $$\Delta\mathbf{W}^\star = -\eta\, \mathbf{U}\mathbf{V}^\top$$
 
-— keep the gradient's **directions**, erase its **weights**. Per-*direction*
-equalization where Adam is per-coordinate.
+The update keeps the gradient's singular vectors and replaces its nonzero
+singular values by one. It equalizes directions rather than coordinates.
 
 ::: {.d2l-note}
 Embeddings see one-hot inputs — the induced norm is the max *row* norm, not
@@ -968,8 +959,8 @@ has slope 3.44 at 0 → five iterations suffice, in `bfloat16`, all matmuls.
 @!muon-orthogonalization-by-newton-schulz-2
 
 - 0 iterations: an order of magnitude of spread.
-- 5 iterations: a band around 1 (~0.7–1.2) — $\mathbf{U}\mathbf{V}^\top$
-  for an optimizer's purposes, at the cost of 15 matmuls.
+- After 5 iterations, the singular values lie in a band around 1
+  (approximately 0.7--1.2), using 15 matrix multiplications.
 :::
 
 ::: {.slide title="Muon in fifteen lines"}
@@ -994,13 +985,14 @@ Hidden matrices → Muon; embeddings, head, vectors → AdamW
 :::
 
 ::: {.slide title="Muon and AdamW on the language model"}
-Same init, 2,000 steps, constant lr, four-point grid each, weight decay off
-— the only difference is the **direction**:
+The comparison uses the same initialization, 2,000-step budget, constant
+learning rate, and four-point grid, with weight decay disabled. The
+optimizer direction is the intended difference:
 
 @!muon-the-race-on-the-language-model-3
 
-- The hybrid **beat** AdamW in both single-seed runs — carrying
-  ~half the optimizer state.
+- The hybrid finished below AdamW in both single-seed runs while using about
+  half the optimizer state.
 - The margin ranged from *modest* (PyTorch) to *substantial* (JAX) under
   the identical protocol, which shows that small comparisons are
   protocol-sensitive.
@@ -1010,8 +1002,8 @@ Same init, 2,000 steps, constant lr, four-point grid each, weight decay off
 @!muon-the-same-race-on-a-cnn-3
 
 - Training loss: the hybrid reaches the memorization regime much faster.
-- Test accuracy: within about a point — optimizing faster ≠ predicting
-  better on a small, saturated task.
+- Test accuracy differs by about one point; faster optimization does not imply
+  better prediction on this small, saturated task.
 - Same compression Adam-vs-SGD showed here (§9.6): the verdict depends on
   workload **and metric**.
 :::
@@ -1021,7 +1013,7 @@ Same init, 2,000 steps, constant lr, four-point grid each, weight decay off
 - **Shampoo** (2018): AdaGrad-style two-sided factors; won AlgoPerf's
   external-tuning track (~30% faster than tuned AdamW).
 - **SOAP** (2024): Adam inside Shampoo's eigenbasis.
-- **Muon = Shampoo without the memory**:
+- **Muon has the following Shampoo-style orthogonalization identity**:
 
 $$(\mathbf{G}\mathbf{G}^\top)^{-1/4}\mathbf{G}(\mathbf{G}^\top\mathbf{G})^{-1/4} = \mathbf{U}\mathbf{V}^\top.$$
 
@@ -1036,7 +1028,8 @@ Kimi K2 — 15.5T tokens with MuonClip, zero loss spikes; GLM-4.5;
 
 
 With matched tuning (Wen et al., 2025), matrix methods are
-genuinely fastest, but ~1.4× at 100M params, → ~1.1× at 1B. Sophia's 2×
+fastest in these experiments, with speedups of about 1.4× at 100M
+parameters and 1.1× at 1B. Sophia's 2×
 did not replicate — reported by its own authors' group.
 
 ::: {.d2l-note}

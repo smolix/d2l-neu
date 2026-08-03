@@ -147,8 +147,8 @@ stream = batches(data)
 ```
 
 :begin_tab:`pytorch`
-Before comparing optimizations, the measurement must be trustworthy. Two errors
-had to be defused here — both worth naming, because each corrupted an
+Before comparing optimizations, the measurement must be trustworthy. Two
+errors required explicit handling because each corrupted an
 early draft of this section by tens of percent. First, the dataset's
 ragged final batch (10,000 windows do not divide by 64) hands
 `torch.compile` a new shape once per epoch, and the retrace it triggers
@@ -241,8 +241,8 @@ One measurement has to be taken out of order, and memory is why. Configuration 3
 will pit a batch-512 step in bf16 against the *same step in fp32* as a
 control. That fp32 control's working set is about 15 GiB (its compiler
 plan, in Configuration 3, confirms it) — nearly this whole card — so on a GPU
-already holding the rest of the sequence's compiled programs it simply
-will not fit alongside them. The framework preallocates a large pool and
+already holding the remaining compiled programs in this sequence, it does
+not fit. The framework preallocates a large pool and
 does not hand it back, so once the un-jitted baseline below has grown the
 pool, the fp32-512 control can no longer find a contiguous 15 GiB. So we
 clock it *now*, on a clean allocator, and keep the number for Configuration 3 —
@@ -289,9 +289,9 @@ intermediate gradients, the optimizer's whole tree of updates — and
 re-traces the function on every call; eager JAX is a development surface,
 not a training mode. (It is also already tf32-fair: on this card JAX's
 default matmul precision is tensor-core tf32, the fair baseline
-:numref:`sec_memory_precision` established.) But a cumulative comparison wants a
-floor, so we measure the un-jitted step once, briefly, to know exactly
-what the first configuration is worth:
+:numref:`sec_memory_precision` established.) A cumulative comparison requires
+this baseline, so we measure the un-jitted
+step once:
 :end_tab:
 
 ```{.python .input #fast-transformer-rung-0-baseline-profiled}
@@ -390,7 +390,7 @@ residue is tf32 matmuls re-associated by fusion, not a wrong answer).
 
 :begin_tab:`jax`
 **Configuration 1 — jit the whole step (:numref:`sec_compilation`).** The configuration is
-one transformation: `nnx.jit` swallows the loss, the gradients, *and* the
+one transformation: `nnx.jit` captures the loss, the gradients, *and* the
 optimizer update — 13.3's whole-step lesson — and the training step
 becomes a single compiled program. Whole-step JIT is the practical JAX
 baseline, so cumulative ratios start here. The correctness check comes first:
@@ -443,8 +443,8 @@ them. A re-profile confirms the bottleneck moved:
 The first call takes several seconds to compile. Steady-state throughput is
 roughly twenty times the un-jitted result — the two-orders-of-magnitude pattern
 :numref:`sec_compilation` measured on its toy step, compressed here
-because this model's kernels are chunky enough to partly hide the
-dispatch. Now there is a program worth classifying. The profile the
+because this model's larger kernels partly amortize dispatch. The compiled
+program can now be classified by its limiting resource. The profile the
 PyTorch tab reads is one tool; the compiler's own accounting is the more
 natural one in JAX (:numref:`sec_memory_precision` used the same trick
 for memory): lower the step, compile it, and ask the compiled object
@@ -505,8 +505,8 @@ tensor cores to pay:
 **Configuration 2 — bf16, threaded explicitly (:numref:`sec_memory_precision`).**
 There is no autocast to lean on: precision in JAX is explicit — you
 thread dtypes through the computation yourself, and nothing casts unless
-you say so. The apparently obvious move is the functional cast the
-builder's guide used on a small stack: split the model, `astype` every
+you say so. A functional cast, as used for the smaller stack in the
+builder's guide, provides a first attempt: split the model, `astype` every
 floating array to bf16, merge back into a compute copy (the fp32
 originals stay in the model and the optimizer as the master weights, and
 no `GradScaler` — bf16 shares fp32's exponent range). Measure it:
@@ -554,13 +554,13 @@ print('the receipt:', bf16_arrays(model).token_emb(X).dtype)
 Flat — and the second print is the receipt. The embedding layer still
 emits fp32: flax modules record a *compute dtype* at construction
 (`Embed` remembers its `param_dtype`), and their `__call__` promotes
-inputs and parameters to it — so the bf16 table we so carefully installed
-was promoted straight back to fp32 at the first layer, and everything
-downstream followed. Our "bf16 configuration" measured a wardrobe change, not a
-precision change. This is the JAX tab's version of the PyTorch tab's
+inputs and parameters to that dtype. The
+installed bf16 arrays were therefore promoted back to fp32 at the first
+layer, and downstream computation remained fp32. This configuration changed
+array storage but not compute precision. This is the JAX tab's version of the PyTorch tab's
 corrupted-measurement traps, and it is nastier for being *silent*: no
-error, no warning, a plausible number. The measurement — plus one dtype
-print — caught it. Threading bf16 for real takes two more moves. First,
+error, no warning, a plausible number. The timing and one dtype check
+detected the error. Threading bf16 for real takes two more steps. First,
 set the compute dtype the modules remember, not just the arrays. Second,
 one leak is in the model's own arithmetic: rope's fp32 trigonometry
 promotes the query and key back to fp32 on their way into attention —
@@ -630,9 +630,9 @@ print(f'R2 +bf16, threaded: {tput2:.0f} tokens/s ({tput2 / tput1:.2f}x)')
 The second surprise, and the better lesson: bf16 is now provably *real* —
 the receipt prints `bfloat16`, the compiler's planned temporaries drop by
 about two-fifths — and the throughput *still* barely moves, nowhere near
-the factor the format sequence promised. Diagnose before despairing. The
-device-side work genuinely shrank, and the plan says so. What did not
-shrink is everything around it: the per-call Python that walks the
+the factor the format sequence promised. The profile explains the result. The
+device-side work genuinely shrank, and the plan confirms it. The surrounding
+overhead did not shrink: the per-call Python that walks the
 module graph, the stream's dispatches, the launch path, a fixed per-step
 toll that the fp32 step was already brushing against. At batch 64 this
 step is
@@ -746,11 +746,11 @@ for the fp32 program — its compute rate does not rise, holding around
 twenty TFLOP/s, no better than the batch-64 step — and the plan says
 why: roughly 15 GiB of temporaries,
 dominated by materialized fp32 attention buffers, and a plan that large
-is not just occupancy, it is *traffic* — the fp32 step crosses into the
-bandwidth regime just as the host toll recedes. So neither configuration pays by
-itself here: bf16 at batch 64 hit the dispatch wall; batch-up at fp32
-hits the memory wall; *together* they pay, because bf16 halves the
-bytes exactly where the bigger batch needs it, and the bigger batch
+also increases memory traffic. The fp32 step becomes bandwidth-bound as
+host overhead recedes. Neither configuration improves throughput by
+itself here: bf16 at batch 64 is dispatch-bound, while the larger fp32 batch
+is memory-bound. Together they improve throughput because bf16 halves the
+bytes where the larger batch needs it, and the larger batch
 amortizes the dispatch exactly where bf16 needs it. Techniques
 interact. That is why the cumulative comparison is cumulative, why every configuration is
 re-measured on top of the last — and why a recipe of independent "tips"
@@ -856,7 +856,8 @@ print(f'R4 +checkpoint: {tput4:.0f} tokens/s ({tput4 / tput3:.2f}x), '
 :begin_tab:`pytorch`
 **Configuration 5 — data parallel across 2–4 GPUs
 (:numref:`sec_multi_gpu_concise`), predicted first.** Before measuring, we
-*predict*, using the accounting of :numref:`sec_multi_gpu`. This GPT has
+predict the result using the accounting of
+:numref:`sec_multi_gpu`. This GPT has
 about 19M parameters, so roughly 76 MB of gradients must allreduce every
 step; the NCCL collective on our host-staged box sustains around five
 GB/s per device in :numref:`sec_multi_gpu`'s bytes-per-device convention,
@@ -884,7 +885,8 @@ convergence claim):
 :begin_tab:`jax`
 **Configuration 5 — data parallel across 2–4 GPUs
 (:numref:`sec_multi_gpu_concise`), predicted first.** Before measuring, we
-*predict*, using the accounting of :numref:`sec_multi_gpu`. This GPT has
+predict the result using the accounting of
+:numref:`sec_multi_gpu`. This GPT has
 about 19M parameters, so roughly 76 MB of gradients must be summed across
 devices every step — and :numref:`sec_multi_gpu` measured the very
 collective JAX will run, `psum` through NCCL on this host-staged box, at
@@ -893,8 +895,8 @@ the allreduce at the same tens of milliseconds as the *entire* compute
 step: a transformer's parameters are proportional to its compute, so
 unlike a convolutional ResNet it offers little extra compute to hide
 communication behind. Summing the two terms, :eqref:`eq_dp_cost` predicts
-something blunt — at $k=2$, barely one single-GPU throughput: the second
-GPU buys nearly nothing; under half of linear at $k=4$. The mechanism,
+limited scaling: at $k=2$, throughput barely exceeds the single-GPU
+result, and at $k=4$ it remains under half of linear scaling. The mechanism,
 though, is 13.6's declarative recipe at its cleanest: build a mesh,
 replicate the state, shard the batch, and feed the **unchanged** jitted
 step — no launcher, no sidecar script, no rank files; one process, three
@@ -1044,9 +1046,9 @@ through why its efficiency comes out *higher* is the point of doing it.
 :begin_tab:`jax`
 The measurement lands where the model said it would — at the floor,
 nowhere near the linear ceiling — and in our runs a shade *under* it. At
-$k=2$ the second GPU buys nothing at all; the total can even dip below
-one GPU's throughput, because the floor is a model and models omit
-terms: the global batch stages through one device before scattering,
+$k=2$, the second GPU gives no predicted throughput increase. Measured
+throughput may fall below the one-GPU result because the model omits some
+costs: the global batch stages through one device before scattering,
 and the collective must still be scheduled. At $k=4$ the shortfall
 widens — the floor was priced with the $\beta$ measured at two GPUs, and
 four ranks hammering the same host path do not sustain that constant
@@ -1059,8 +1061,9 @@ constant changes, the method does not. And here the one-process,
 annotate-the-layout model pays a dividend the sidecar cannot: stacking
 data parallelism on the *full* sequence — bf16, batch 512 — is one more
 loop over the same helpers, so we run the measurement the PyTorch tab
-leaves as an exercise. Eight-fold more compute per step, the same 76 MB
-gradient bill: :eqref:`eq_dp_cost` promises much better efficiency —
+leaves as an exercise. The step performs eight times more compute with the
+same 76 MB of gradient communication, so :eqref:`eq_dp_cost` predicts much
+better efficiency:
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-10}
@@ -1165,7 +1168,7 @@ behavior. We therefore train the final configuration — compiled, bf16, batch
 loss, smoothed over twenty steps, actually fall. (On this tiny corpus a
 few hundred big-batch steps revisit the text over a hundred times, so the
 loss falls very far — the assertion, not the final value, is the point.)
-Speed that breaks the model is not speed:
+Performance changes are valid only if the optimized model still trains:
 
 ```{.python .input #fast-transformer-the-waterfall-1}
 %%tab pytorch
@@ -1321,7 +1324,7 @@ model, one configuration at a time.
    at context 1024, reading both tokens/s and the compiler's planned temp
    bytes. Where does the fused kernel start to pay, and why does context
    length matter more than batch size?
-1. (JAX) Configuration 5 sharded only the batch. Following 13.6's punchline,
+1. (JAX) Configuration 5 sharded only the batch. Following the sharding analysis in §13.6,
    change the `PartitionSpec` so the *parameters* are sharded across the
    mesh as well (the FSDP pattern), leaving the step function untouched.
    Read the compiled HLO for the collectives GSPMD inserts in place of
@@ -1447,8 +1450,8 @@ PyTorch tab.
 ::: {.slide title="Aggregate Results" only="pytorch"}
 @fast-transformer-the-waterfall
 
-Cumulative — each bar inherits every choice to its left. No
-dominant configuration; three modest wins multiply to **a bit over 2×**.
+Each bar inherits every preceding choice. Three moderate improvements
+combine to give **a little over 2×** throughput.
 Checkpointing is red: a technique that helped a different
 model *hurts* this one. A 300-step run confirms the fast
 configuration still learns.
@@ -1470,9 +1473,9 @@ a **no-overlap floor**; DDP's bucketing buys back some overlap.
 
 @fast-transformer-rungs-each-one-measured-8
 
-Measured lands at the floor — just above it at $k=2$ (overlap),
-just below at $k=4$ (the staged fabric sags) — priced *before*
-the launch. NVLink changes the constant, not the method.
+Measured throughput is near the predicted floor: slightly above it at
+$k=2$ because of overlap and slightly below it at $k=4$ because the
+host-staged fabric provides less bandwidth. NVLink changes the constant, not the method.
 :::
 
 ::: {.slide title="Predict, Then Measure: Data Parallel" only="jax"}
@@ -1483,9 +1486,9 @@ no launcher, no sidecar.
 
 @fast-transformer-rungs-each-one-measured-8
 
-On the floor at $k=2$, below it at $k=4$ (the staged fabric
-sags). And because DP is three annotations, stacking it on the
-fast config is a loop — efficiency recovers exactly as the
+Throughput is near the floor at $k=2$ and below it at $k=4$ as effective
+fabric bandwidth falls. Because data parallelism requires three annotations,
+the fast configuration can be rerun in a loop; efficiency then improves as the
 grown compute term predicts.
 :::
 

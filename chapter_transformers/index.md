@@ -11,8 +11,8 @@ be described by a small set of architectural choices.
 
 We therefore begin by building a configurable GPT class: normalization type and placement,
 activation, positional scheme, and the attention and feed-forward
-modules are all constructor arguments. Every subsequent section changes
-one component and measures the difference. At the end of the chapter,
+modules are all constructor arguments. Subsequent sections vary
+one component at a time and measure the resulting difference. At the end of the chapter,
 the configurations in a table of current models can be expressed as
 constructor arguments. The training runs finish in minutes on a single
 GPU. We state when conclusions depend on this small scale and compare the
@@ -67,9 +67,9 @@ scaling. All are freely available unless noted.
 **Build-alongs**
 
 - [Let's build GPT: from scratch, in code — Andrej Karpathy (2023)](https://www.youtube.com/watch?v=kCc8FmEb1nY) — the video counterpart of :numref:`sec_gpt`: a character-level GPT assembled and trained in real time; [nanoGPT](https://github.com/karpathy/nanoGPT) and [build-nanogpt](https://github.com/karpathy/build-nanogpt) are its repository forms, and [nanochat](https://github.com/karpathy/nanochat) extends the same discipline to a full chat system with stated dollar costs.
-- [The Annotated Transformer — Harvard NLP (2018, refreshed 2022)](https://nlp.seas.harvard.edu/annotated-transformer/) — the original encoder–decoder implemented line by line against the paper; the format this book's executable sections descend from, and the best companion to :numref:`sec_transformer`.
+- [The Annotated Transformer — Harvard NLP (2018, refreshed 2022)](https://nlp.seas.harvard.edu/annotated-transformer/) — the original encoder–decoder implemented line by line against the paper; its executable format closely matches the construction in :numref:`sec_transformer`.
 - [Build a Large Language Model (From Scratch) — Sebastian Raschka (2024)](https://github.com/rasbt/LLMs-from-scratch) — a book-length version of :numref:`sec_transformer-block` through :numref:`sec_kv-cache`, with bonus notebooks for GQA, sliding windows, and from-scratch ports of current open models.
-- [Stanford CS336: Language Modeling from Scratch](https://cs336.stanford.edu/) — the course whose first assignment is this chapter as graded homework: BPE, RMSNorm, RoPE, SwiGLU, causal attention, and the training loop, all from primitives, with lectures on YouTube.
+- [Stanford CS336: Language Modeling from Scratch](https://cs336.stanford.edu/) — a course whose first assignment builds BPE, RMSNorm, RoPE, SwiGLU, causal attention, and the training loop from primitives; lectures are available on YouTube.
 - [CMU Advanced NLP, minLlama assignment](https://www.phontron.com/class/anlp-fall2024/) — build a Llama-style decoder and load real pretrained weights into it, the same payoff as :numref:`sec_gpt`'s GPT-2 cell at larger scale.
 
 **The architecture record**
@@ -78,7 +78,7 @@ scaling. All are freely available unless noted.
 - [On Layer Normalization in the Transformer Architecture — Xiong et al. (2020)](https://arxiv.org/abs/2002.04745) — the pre-norm/post-norm analysis behind :numref:`sec_transformer-block`'s signal-propagation experiment, and the paper that explains why warmup exists.
 - [GLU Variants Improve Transformer — Shazeer (2020)](https://arxiv.org/abs/2002.05202) — the four-page note whose matched-parameter sweep :numref:`sec_transformer-block` reproduces in miniature.
 - [GQA: Training Generalized Multi-Query Transformer Models — Ainslie et al. (2023)](https://arxiv.org/abs/2305.13245) — grouped-query attention as :numref:`sec_kv-cache` implements it, including the uptraining recipe that converted existing checkpoints.
-- [An Image is Worth 16x16 Words — Dosovitskiy et al. (2021)](https://arxiv.org/abs/2010.11929) — the ViT paper behind :numref:`sec_vision-transformer`, with the scale-versus-inductive-bias evidence our small-scale experiment recreates from the losing side.
+- [An Image is Worth 16x16 Words — Dosovitskiy et al. (2021)](https://arxiv.org/abs/2010.11929) — the ViT paper behind :numref:`sec_vision-transformer`; our small-scale experiment examines the same scale-versus-inductive-bias question in a different regime.
 - [Switch Transformers — Fedus et al. (2021)](https://arxiv.org/abs/2101.03961) and [DeepSeek-V3 — DeepSeek-AI (2024)](https://arxiv.org/abs/2412.19437) — the two poles of :numref:`sec_moe`: top-1 routing with an auxiliary balancing loss, and fine-grained experts balanced without one.
 
 **The arithmetic of scale**
@@ -86,4 +86,4 @@ scaling. All are freely available unless noted.
 - [Transformer Inference Arithmetic — kipply (2022)](https://kipp.ly/transformer-inference-arithmetic/) — derives per-token inference FLOPs, cache storage, and bandwidth limits and compares the estimates with a real system.
 - [Transformer Math 101 — EleutherAI (2023)](https://blog.eleuther.ai/transformer-math/) — the training-side companion: where 6ND comes from and what it predicts, the accounting :numref:`sec_scaling-laws` verifies against a profiler.
 - [Training Compute-Optimal Large Language Models — Hoffmann et al. (2022)](https://arxiv.org/abs/2203.15556) — Chinchilla: the tokens-per-parameter result whose small-scale shadow is the bend in :numref:`sec_scaling-laws`'s miniature study.
-- [The Ultra-Scale Playbook — Hugging Face (2025)](https://huggingface.co/spaces/nanotron/ultrascale-playbook) — what happens past one GPU: the parallelism and memory engineering this chapter deliberately leaves to the Computational Performance chapter.
+- [The Ultra-Scale Playbook — Hugging Face (2025)](https://huggingface.co/spaces/nanotron/ultrascale-playbook) — a guide to the parallelism and memory engineering required beyond one GPU, topics covered in the Computational Performance chapter.

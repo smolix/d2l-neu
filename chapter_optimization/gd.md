@@ -142,7 +142,7 @@ show_trace(gd(2, f_grad), f)
 
 ## Multivariate Gradient Descent
 
-Now consider the general case, $\mathbf{x} = [x_1, x_2, \ldots, x_d]^\top$,
+The same update extends to the multivariate case, $\mathbf{x} = [x_1, x_2, \ldots, x_d]^\top$,
 where the objective $f: \mathbb{R}^d \to \mathbb{R}$ maps vectors to scalars.
 Its gradient is the vector of $d$ partial derivatives:
 
@@ -214,9 +214,8 @@ def show_trace_2d(f, results):  #@save
 ```
 
 With learning rate $\eta = 0.1$, twenty steps bring $\mathbf{x}$ near its
-minimum at $[0, 0]$. Progress is well behaved but slow — and notice the shape
-of the path: the trajectory bends because the two coordinates want different
-step sizes, a first glimpse of the conditioning problem that
+minimum at $[0, 0]$. Progress is stable but slow. The path bends because the two coordinates
+contract fastest at different step sizes, a first glimpse of the conditioning problem that
 :numref:`sec_momentum` takes up in earnest.
 
 ```{.python .input #gd-multivariate-gradient-descent-3}
@@ -236,11 +235,10 @@ show_trace_2d(f_2d, train_2d(gd_2d, f_grad=f_2d_grad))
 
 ## Newton's Method
 
-As :numref:`subsec_gd-learningrate` showed, getting the learning rate "just
-right" is tricky, and the multivariate demo made things worse: the best rate
-differs per coordinate. What if the objective itself told us how far to step?
-Methods that consult the *curvature* of the objective — its second
-derivatives — do exactly that. They cannot be applied to deep networks
+The learning-rate experiments in :numref:`subsec_gd-learningrate` showed
+that one step size may be too small or too large, and the multivariate example
+showed that the best rate can differ by coordinate. Second-order methods use
+the objective's *curvature* to choose a scaled step. They cannot be applied to deep networks
 directly, for reasons of cost we quantify below, but they define the ideal
 that the practical algorithms later in this chapter approximate.
 
@@ -254,8 +252,8 @@ $$f(\mathbf{x} + \boldsymbol{\epsilon}) = f(\mathbf{x}) + \boldsymbol{\epsilon}^
 Define $\mathbf{H} \stackrel{\textrm{def}}{=} \nabla^2 f(\mathbf{x})$, the
 Hessian of $f$, a $d \times d$ matrix. For small $d$ and simple problems
 $\mathbf{H}$ is easy to compute; for a deep network it is prohibitively large,
-with $\mathcal{O}(d^2)$ entries. For now, set that aside and see what
-algorithm the expansion suggests.
+with $\mathcal{O}(d^2)$ entries. For the moment, assume that the Hessian is available and derive the
+corresponding update.
 
 The minimum of $f$ satisfies $\nabla f = 0$. Taking derivatives of
 :eqref:`gd-hot-taylor` with regard to $\boldsymbol{\epsilon}$ (following the
@@ -266,13 +264,14 @@ $$\nabla f(\mathbf{x}) + \mathbf{H} \boldsymbol{\epsilon} = 0 \textrm{ and hence
 \boldsymbol{\epsilon} = -\mathbf{H}^{-1} \nabla f(\mathbf{x}).$$
 
 Newton's method is gradient descent with the gradient premultiplied by the
-inverse Hessian — the step size problem solved by the objective itself. As a
+inverse Hessian, so the objective's local curvature determines the scale of
+each coordinate. As a
 simple example, for $f(x) = \frac{1}{2} x^2$ we have $\nabla f(x) = x$ and
 $\mathbf{H} = 1$, so for any $x$ the update is $\epsilon = -x$: a *single*
 step converges perfectly, with no learning rate to tune. We got a bit lucky
 here: the Taylor expansion of this $f$ was exact.
 
-Let's see what happens in other problems. Given a convex hyperbolic cosine
+The next experiments consider other objectives. Given a convex hyperbolic cosine
 function $f(x) = \cosh(cx)$ for some constant $c$, the global minimum at
 $x=0$ is reached after a few iterations.
 
@@ -300,11 +299,11 @@ def newton(eta=1):
 show_trace(newton(), f)
 ```
 
-Now let's consider a *nonconvex* function, such as $f(x) = x \cos(c x)$.
+Consider a *nonconvex* function such as $f(x) = x \cos(c x)$.
 Newton's method divides by the Hessian, so wherever the second derivative is
-*negative* the update walks toward *increasing* values of $f$ — toward a
-maximum. That is a fatal flaw of the algorithm. Let's see what happens in
-practice.
+negative, the update moves toward increasing values of $f$ and may converge
+to a maximum. The following experiment demonstrates this failure of the
+undamped Newton update.
 
 ```{.python .input #gd-newton-s-method-2}
 c = d2l.tensor(0.15 * np.pi)
@@ -354,8 +353,8 @@ objective on the entire dataset.
 ### Preconditioning
 
 At large scale, the underlying idea remains useful. Instead of inverting the full
-Hessian, rescale the update by a cheap approximation of it — a
-*preconditioner*. The cheapest useful choice is the diagonal:
+Hessian, a *preconditioner* rescales the update using an inexpensive
+approximation. The simplest useful choice is the diagonal:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \, \textrm{diag}(\mathbf{H})^{-1} \nabla f(\mathbf{x}).$$
 
@@ -377,9 +376,8 @@ gradient, and the guarantee holds only while the step is small enough for the
 first-order Taylor expansion to be trusted. That proviso carries all the
 trouble: a learning rate chosen too small wastes iterations, one too large
 overshoots or diverges, and on nonconvex objectives even a well-chosen rate
-merely reaches *some* local minimum. Newton's method removes the step-size
-problem by dividing out the curvature — the ideal preconditioner — and
-converges in one step on a quadratic, but its $\mathcal{O}(d^2)$ cost and its
+may reach a local rather than global minimum. On a positive-definite quadratic, Newton's method divides out the curvature
+and converges in one step, but its $\mathcal{O}(d^2)$ cost and its
 attraction to saddle points rule it out for deep networks. The rest of this
 chapter builds cheap, gradient-estimated stand-ins for that ideal.
 
@@ -402,9 +400,9 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
 <!-- slides -->
 
 ::: {.slide title="Gradient Descent"}
-Plain gradient descent isn't what trains deep nets — SGD
-and its descendants do — but every issue those methods
-hit shows up here first, in cleaner form: LR sensitivity,
+Deep networks are usually trained with SGD or its descendants rather than
+full-batch gradient descent. The simpler full-batch setting isolates their
+shared issues: LR sensitivity,
 divergence, local minima, poor conditioning, second-order
 corrections.
 
@@ -461,8 +459,8 @@ Same rule on vectors:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
 
-Demo on $f(x_1, x_2) = x_1^2 + 2 x_2^2$ — anisotropic,
-$x_2$ direction is steeper.
+For $f(x_1, x_2) = x_1^2 + 2 x_2^2$, the $x_2$ direction has greater
+curvature.
 
 @gd-multivariate-gradient-descent-1
 
@@ -484,8 +482,8 @@ the second-order Taylor expansion:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - [\nabla^2 f(\mathbf{x})]^{-1} \nabla f(\mathbf{x}).$$
 
-For $f(x) = \cosh(cx)$, a few steps find the minimum — no
-learning rate to tune:
+For $f(x) = \cosh(cx)$, a few Newton steps reach the minimum without a
+manually chosen learning rate:
 
 @gd-newton-s-method-1
 :::
@@ -503,7 +501,8 @@ toward a maximum. Damping ($\eta = 0.5$) restores sanity:
 
 ::: {.slide title="Approximate preconditioning"}
 Full Newton at $d \sim 10^9$: $\mathcal{O}(d^2)$ memory,
-$\mathcal{O}(d^3)$ solve — exabytes before the first step.
+an $\mathcal{O}(d^3)$ solve. Storing the Hessian alone would require
+exabytes.
 
 Deep-learning optimizers instead rescale updates with inexpensive
 approximations to curvature.

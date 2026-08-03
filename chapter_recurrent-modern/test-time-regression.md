@@ -22,9 +22,8 @@ capacity law (:numref:`sec_matrix-state`), the delta rule
 decay (:numref:`chap_optimization`). Every experiment in this section runs
 on a CPU.*
 
-We begin with the estimator introduced in
-:numref:`sec_attention-pooling`: a regression estimator with exactly one
-parameter, and the question of how to learn it.
+We begin by learning the single parameter of the regression estimator
+introduced in :numref:`sec_attention-pooling`.
 
 ```{.python .input #test-time-regression-learning-at-test-time}
 %%tab pytorch
@@ -179,8 +178,8 @@ print(f'learned bandwidth 1/w = {1 / float(w):.3f}')
 
 The loss falls every epoch and $w$ climbs well past its initialization at
 $1$: gradient descent finds, in five steps, a bandwidth in the same region
-the hand sweep picked. That is the answer to the exercise, but the plots
-say it better.
+the hand sweep picked. The resulting fit and attention weights show the
+effect of this estimate.
 
 ### Effect of the Learned Bandwidth
 
@@ -228,17 +227,16 @@ d2l.show_heatmaps(jnp.stack([attn_fixed.T, attn_learned.T])[None],
 ```
 
 The region of large attention weights becomes sharper once the bandwidth
-is learned: each query concentrates on fewer, closer keys. One scalar,
-five epochs, and the estimator has adapted its notion of similarity to
-the data it serves. Keep the shape of what just happened in view: a
-*regression estimator whose fit we tuned by gradient descent on the data
-it will be queried on*. Every memory in this chapter turns out to be an
-instance of it.
+is learned: each query concentrates on fewer, closer keys. After five
+epochs, the estimator has adapted its similarity scale using the
+data on which it will be queried. The same structure — a regression estimator
+fitted on the current sequence — describes the memories considered below.
 
 ## Components of an Online Regressor
 :label:`subsec_ttr-recipe`
 
-Now the general statement. An autoregressive sequence layer receives, by
+An autoregressive sequence layer admits the following general formulation.
+By
 time $t$, the pairs $(\mathbf{k}_1, \mathbf{v}_1), \ldots, (\mathbf{k}_t,
 \mathbf{v}_t)$ and must answer the query $\mathbf{q}_t$. Following
 :citet:`Wang.Shi.Fox.2025`, treat this as two operations. *Memorize*: fit
@@ -256,11 +254,11 @@ $$
 :eqlabel:`eq_ttr-memorize`
 
 The regression is solved afresh at every step, on the sequence being
-processed: it is learning *at test time*. That phrase needs one
-distinction kept sharp, because two learning loops are involved — an
-outer loop that trains the layer and an inner loop that runs inside it —
-and :numref:`subsec_ttr-two-loops` fixes the vocabulary before we lean on
-it. A layer is then specified by three choices:
+processed: it is learning *at test time*. This formulation involves two
+learning loops: an outer loop that trains the
+layer and an inner loop that runs within it. :numref:`subsec_ttr-two-loops`
+defines this distinction precisely. A layer is then specified by three
+choices:
 
 1. **The weights** $\gamma_i^{(t)}$: which past pairs count, and by how
    much.
@@ -269,9 +267,8 @@ it. A layer is then specified by three choices:
 3. **The solver**: how close to the argmin the layer actually gets, given
    that it must run inside a forward pass.
 
-What makes this more than a taxonomy is that every model of the last
-three sections drops out of :eqref:`eq_ttr-memorize` as a corner of this
-cube, and the derivations are one or two lines each.
+The models from the preceding three sections arise from different choices
+along these three axes in :eqref:`eq_ttr-memorize`.
 
 **Softmax attention is the Nadaraya--Watson estimator.** Let
 $\mathcal{M}$ be nonparametric: around each query, fit the best *local
@@ -284,9 +281,9 @@ $\mathbf{o}_t = \sum_i s(\mathbf{k}_i, \mathbf{q}_t)\, \mathbf{v}_i /
 :eqref:`eq_nadaraya-watson` verbatim. Choose the kernel
 $s(\mathbf{k}, \mathbf{q}) = \exp(\mathbf{k}^\top \mathbf{q} / \sqrt{d})$
 and this is *exactly* the softmax-attention readout of
-:numref:`chap_attention`. The loop opened there is now closed in both
-directions: we introduced attention through kernel regression as an
-analogy, and the analogy was an identity all along. Softmax attention
+:numref:`chap_attention`. Thus the kernel-regression interpretation used to
+introduce attention is
+an exact identity for this estimator. Softmax attention
 memorizes by keeping every pair and smoothing among them at query time;
 its "state" is the whole history, which is why its cache grows and a
 recurrence's does not.
@@ -339,17 +336,17 @@ bias.
 *weighted* least-squares problem whose shortcut solution accumulates
 decayed outer products, which is the decay ladder of
 :numref:`sec_matrix-state`, from RetNet's fixed scalar to the
-input-dependent gates of Mamba-2 and GLA. This makes good on the promise
-made there, with the same fine print as above: writing
+input-dependent gates of Mamba-2 and GLA. This gives the statistical
+interpretation stated there, subject to the
+same qualification as above: writing
 $\boldsymbol{\Gamma}_t = \mathrm{diag}(\gamma_1^{(t)}, \ldots,
 \gamma_t^{(t)})$, the decayed state is the weighted cross-moment
 $\mathbf{K}_t^\top \boldsymbol{\Gamma}_t \mathbf{V}_t$ — one half of the
 sufficient pair for weighted least squares. The exact minimizer also
 needs the weighted key covariance $\mathbf{K}_t^\top \boldsymbol{\Gamma}_t
 \mathbf{K}_t$, and dropping it is the identical covariance-deletion
-shortcut. Choosing the gate is choosing how fast evidence expires; we
-will see at the end of this section *when* that choice is statistically
-forced.
+shortcut. The gate determines how fast evidence expires. The final experiment
+identifies a setting in which this weighting improves estimation.
 
 **The delta rule is a solver.** Keep the linear class and uniform
 weights, but instead of solving, take one stochastic-gradient step on the
@@ -392,8 +389,8 @@ above, and the first exercise places it on the table.
 ### Two Loops: What Learns When
 :label:`subsec_ttr-two-loops`
 
-"Learning at test time" invites a confusion this chapter cannot afford,
-so we fix the vocabulary now. Two different quantities adapt, on two
+"Learning at test time" refers to two distinct adaptation schedules. Two
+different quantities adapt on
 different schedules (:numref:`fig_ttr-inner-outer`).
 
 The **inner loop** is the regression of :eqref:`eq_ttr-memorize`. Its
@@ -419,7 +416,7 @@ that make its inner regressor fit well — when :numref:`sec_deltanet`
 trained delta-rule models end to end, the outer loop was shaping the
 inner one.
 
-So "no gradient at test time" is a statement about the outer loop only:
+Thus, "no gradient at test time" refers only to the outer loop:
 at inference $\theta$ is frozen and no pretraining objective exists,
 while the inner state keeps adapting. The distinction applies verbatim to
 every row of :numref:`tab_ttr-recipe` — DeltaNet, Longhorn, and Titans
@@ -449,8 +446,8 @@ all), online gradient descent over the stream with one, five, and thirty
 passes (the delta rule, taken increasingly seriously as a solver), and
 the exact batch ridge solve.
 
-One alignment matters and is easy to get wrong: a solver spectrum is
-meaningful only if every solver pursues the *same objective*. We
+A solver comparison is meaningful only when every solver optimizes the
+same objective. We
 therefore give each online step the same $L2$ term the batch solve
 carries — a small per-step shrink of the weights, the decoupled decay of
 this chapter's gated cells — so that online gradient descent and the
@@ -576,8 +573,8 @@ assert float(((f_batch - y_q)**2).mean()) < \
     float(((fits['online GD, 1 pass'] - y_q)**2).mean())
 ```
 
-The spectrum lands as the recipe predicts, and every parametric row is
-now graded on one scale. A single online pass visibly underfits, and a
+The results compare every parametric solver on the same objective. A single
+online pass visibly underfits, and a
 single pass is the budget an actual recurrent layer gets: its test error
 is several times the batch solve's. More passes improve both solver columns
 monotonically — the shared objective falls toward the batch value, and
@@ -590,8 +587,7 @@ slightly below it — stopping a solver early acts as a regularizer, so
 the objective column, not the test column, is what orders the solvers.
 Nadaraya--Watson sits off the parametric axis entirely, competitive in
 error yet fitting nothing, because it keeps all eighty pairs and smooths
-at query time. The three characters are easiest to tell apart by their
-fits:
+at query time. The fitted functions distinguish the three methods:
 
 ```{.python .input #test-time-regression-the-spectrum-measured-2}
 %%tab pytorch
@@ -616,19 +612,17 @@ delta fit is smooth but shallow, still pulled toward zero where it has
 not finished learning, and the batch solve threads the noise. Every
 sequence layer in :numref:`tab_ttr-recipe` is a point on this picture,
 chosen under a hard constraint the picture leaves out: the solver must
-run once per token, forward-only, in constant memory. Which raises a
-question the delta rule left open. If one *explicit* gradient step is the
-best a streaming solver can afford, is the step size $\beta_t$ doomed to
-be a designed, learned gate, or can the optimization view do better?
+run once per token, forward-only, in constant memory. This comparison
+leaves one question: can an affordable streaming update
+derive a form for the step size $\beta_t$ from the optimization problem
+rather than using a designed gate?
 
 ## Deriving the Gate: Longhorn
 :label:`subsec_ttr-longhorn`
 
-There is a classical answer: replace the explicit gradient step with an
-*implicit* one, also called a proximal step. Rather than stepping along
-the gradient at the old state, ask directly for the state that best
-balances staying close to what we knew against fitting the newest pair,
-and solve that subproblem exactly. Longhorn :cite:`Liu.Wang.Wu.ea.2024`
+An *implicit*, or proximal, step provides such an update. It solves exactly
+for the state that balances proximity to the preceding state against fit to
+the newest pair. Longhorn :cite:`Liu.Wang.Wu.ea.2024`
 builds a state space model from precisely this update. Per output
 channel, with state $\mathbf{s} \in \mathbb{R}^{d_k}$ (a column of the
 matrix state) and target $v_t$,
@@ -665,13 +659,14 @@ identity, $(\mathbf{I} + \beta_t \mathbf{k}_t \mathbf{k}_t^\top)^{-1} =
 stated; multiplying out and collecting terms gives
 :eqref:`eq_ttr-longhorn-gate`. $\blacksquare$
 
-Look at what emerged. The update has exactly the delta-rule shape of
-:numref:`sec_deltanet` (erase along the key, write the correction), but
-the functional *form* of its step size $\Delta_t$ was not designed: it
-fell out of the algebra. What remains learned is the coefficient that
+The update has the delta-rule shape of :numref:`sec_deltanet`: it erases
+along the key and writes the correction. The algebra determines the
+functional form of its step size $\Delta_t$. What remains learned is the
+coefficient that
 drives it — the model emits $\beta_t$, and $\Delta_t = \beta_t / (1 +
 \beta_t \mathbf{k}_t^\top \mathbf{k}_t)$ inherits that data dependence.
-And the derived form arrives with guarantees the explicit step lacks.
+The derived form also has a stability guarantee absent from an
+unconstrained explicit step.
 Since $\Delta_t\, \mathbf{k}_t^\top \mathbf{k}_t = \beta_t
 \mathbf{k}_t^\top \mathbf{k}_t / (1 + \beta_t \mathbf{k}_t^\top
 \mathbf{k}_t) < 1$ for every $\beta_t \ge 0$, the transition's eigenvalue
@@ -791,7 +786,7 @@ $$
 $$
 :eqlabel:`eq_ttr-titans`
 
-The paper reads the pieces psychologically, and the reading is useful.
+The paper interprets the three terms through their effects on adaptation.
 The gradient is *momentary surprise*: it is large exactly when the memory
 retrieves the wrong value for the current key. The momentum term
 $\eta_t \mathbf{U}_{t-1}$ is *past surprise*, letting an unexpected event
@@ -812,11 +807,10 @@ For a linear memory the gradient is analytic,
 $\nabla_{\mathbf{S}} \|\mathbf{S}^\top \mathbf{k} - \mathbf{v}\|^2 = 2\,
 \mathbf{k} (\mathbf{S}^\top \mathbf{k} - \mathbf{v})^\top$, so the whole
 Titans update runs in a dozen lines of NumPy with no autograd anywhere.
-That gives us a clean instrument for a question the recipe raises: the
-delta rule of the previous section was a *perfect* overwriter, holding
-recall of the latest value near $1$ no matter how often keys were
-rebound; momentum and forgetting change the solver, so do they change
-that? We repeat the overwrite protocol: write $R$ values per key in
+This analytic update lets us test how momentum and forgetting affect the
+delta rule's exact overwriting behavior, which keeps latest-value recall
+near $1$. We repeat the overwrite protocol:
+write $R$ values per key in
 shuffled order over orthonormal keys, then query every key for its
 *latest* value.
 
@@ -860,8 +854,9 @@ by four and eight overwrites it collapses toward chance
 overwriter than the pure delta rule, and the mechanism is visible in
 :eqref:`eq_ttr-titans`: the surprise from an earlier binding persists in
 $\mathbf{U}$ and keeps writing the superseded value for several more
-steps, while $\alpha$ erodes keys that were never touched. This is a
-teaching contrast, not a defect. Momentum smooths the fit across tokens,
+steps, while $\alpha$ erodes keys that were never touched. The result
+isolates the bias introduced by momentum. Momentum smooths the fit across
+tokens,
 which is the wrong bias when the stream rebinds keys adversarially and a
 useful one when successive tokens carry consistent evidence, precisely
 the regime that this section's closing experiment returns to, as does one
@@ -886,8 +881,9 @@ sequence, not module state.
 We initialize the output layer to zero, so the memory starts *empty*
 (every key retrieves $\mathbf{0}$, just as $\mathbf{S} = \mathbf{0}$
 does), then stream $64$ tokens in which each of $16$ associations recurs
-four times in shuffled order, as facts recur in a document. Three lines
-per token: gradient, velocity, write.
+four times in shuffled order, as facts recur in a document. Each token
+applies three operations: compute the gradient, update the
+velocity, and update the memory.
 
 ```{.python .input #test-time-regression-a-deep-memory-via-autograd}
 %%tab pytorch
@@ -1002,17 +998,15 @@ The preceding measurements treated the
 stream as stationary, the capacity of :numref:`subsec_ms-capacity` and
 the spectrum above alike. For a fixed target, a linear model that contains it, and
 constant parameters, uniform weights are then the efficient choice:
-every observation is equally informative about the same quantity. So
-when is decay not merely harmless but
-*necessary*? When the quantity being regressed refuses to sit still. This
-is the native habitat of forecasting, and it deserves a demonstration,
-because it is the cleanest statistical argument for why sequence models
-gate, decay, and adapt at test time at all.
+every observation is equally informative about the same quantity. Decay
+becomes useful when the regression target changes over time. A
+forecasting example provides a statistical explanation for gating, decay,
+and test-time adaptation.
 
 Take a streaming linear regression whose ground truth *drifts*: targets
 $v_t = \mathbf{w}^{*\top}_t \mathbf{k}_t + \epsilon_t$, where
 $\mathbf{w}^*_t$ takes a small random step on the unit sphere at every
-time step, a slow, relentless change of regime. We track it three ways,
+time step. We track it three ways,
 all rows of :numref:`tab_ttr-recipe`. First, *uniform least squares*: the
 exact solver over all history, our batch-ridge optimum streamed via its
 sufficient statistics. Second, *decayed least squares*: the same exact
@@ -1064,21 +1058,21 @@ assert tails['uniform LS'] > 2 * tails['implicit step']
 
 The curves separate as the regression view predicts. For the
 first few dozen steps the three trackers are indistinguishable, since
-with little drift accumulated, all evidence is good evidence. Then
-uniform least squares goes *stale*: its error climbs steadily and never
-comes back, ending several times the others', because the estimator
-keeps averaging in a world that no longer exists. Note what failed. The solver is exact; the function class
-contains the truth; only the *weights* are wrong. Decayed least squares
+with little drift accumulated, all evidence is informative. Uniform least
+squares then becomes *stale*: its error rises steadily and
+ends several times above the other methods because old observations retain
+full weight after the target has changed. The solver remains exact and the
+function class contains the truth; only the observation weights are
+misspecified. Decayed least squares
 is the same solver with expiring evidence, and it tracks the drift
 indefinitely; the implicit step tracks nearly as well with no solve, no
 matrix, and a step size $\Delta_t$ it derived for itself.
 
-This is the forecasting connection, and it is the last piece of the
-chapter's argument. A sequence model predicting a nonstationary stream —
-a market, a conversation — is this experiment writ large: it must
-regress recent structure onto the present without being anchored by a
-past that has expired. Decay implements a *belief about how fast the
-world changes*. In the cell above that belief was ours, not the data's:
+A sequence model predicting a nonstationary stream, such as a market
+or conversation, must regress recent structure onto the present without
+giving equal weight to observations from an obsolete regime. Decay encodes
+an assumption about how fast the process changes. In the cell above, that
+assumption was fixed rather than learned from the data:
 we fixed $\gamma = 0.95$ and $\beta = 1$ by hand, and a differently
 paced drift would want different values. The trained models of this
 chapter emit these coefficients per token — the input-dependent gates of
@@ -1100,7 +1094,7 @@ rest on the cited papers.
 
 ## Summary
 
-This section replaced a zoo of architectures with one problem statement.
+This section described several architectures with one regression problem.
 A sequence-mixing layer maintains an associative memory by solving the
 weighted regression :eqref:`eq_ttr-memorize` at test time and answers
 queries by evaluating the fit; a layer is fixed by its weights, its
@@ -1278,8 +1272,8 @@ solvers:
   optimum — in objective *and* in distance to the batch fit.
 - Test error is not the objective: an unconverged iterate can edge past
   the optimum there (early stopping as a regularizer).
-- Nadaraya–Watson: a different estimator family — it *fits nothing*, it
-  keeps every pair.
+- Nadaraya–Watson uses a different estimator family: it stores every
+  pair and evaluates the kernel smoother directly.
 :::
 
 ::: {.slide title="Three characters"}
@@ -1362,6 +1356,6 @@ writing superseded values.
 
 . . .
 
-Still missing: exact recall from an *unbounded* past.
-**Hybrids — next.**
+These fixed-size memories still cannot provide exact recall from an
+unbounded past. The next section introduces hybrid architectures.
 :::

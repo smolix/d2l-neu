@@ -45,13 +45,12 @@ import optax
 import time
 ```
 
-Everything in this section is built on the associative scan of
+This section uses the associative scan of
 :numref:`subsec_parallel-scans`, which evaluates the affine recurrence
 $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ in
 logarithmic depth.
 
-That section saved the scan in the `d2l` library, so we simply pick it
-back up.
+That section saved the scan in the `d2l` library, which we reuse here.
 
 ```{.python .input #mamba-selective-state-space-models-2}
 %%tab pytorch, jax
@@ -274,16 +273,17 @@ frameworks essentially perfect (how far it gets inside the budget depends
 on each framework's initialization defaults, the same effect
 :numref:`subsec_s4d` dissected): its input and forget gates are
 functions of the data, so "store this, it is a symbol" is a computation
-it can learn, given enough epochs. The S4D crawls. Its pointwise
-nonlinear blocks can learn to suppress filler locally, which earns it
-partial credit well above chance, but the time-invariant state cannot
+it can learn, given enough epochs. The S4D improves slowly. Its pointwise
+nonlinear blocks can learn to suppress filler locally, which raises its
+accuracy well above chance, but the time-invariant state cannot
 cleanly align "the third symbol I saw" with "the third query slot" when
 the spacing between symbols changes from example to example, and it ends
-the same budget far from a solution. This is the first task in the book
-where the *older* architecture is simply the right tool. That should
-feel like a cliffhanger: the LSTM's advantage is precisely the
-input-dependence that :numref:`sec_ssm` deleted for the sake of the
-scan. Can we put it back without giving up parallel training?
+the same budget far from a solution. For this task, the older LSTM
+architecture is better suited to the required
+content-dependent updates. Its advantage is precisely the input dependence
+that :numref:`sec_ssm` removed to enable a scan. The remaining question is
+whether input dependence can be restored without giving up parallel
+training.
 
 ## Selective State Space Models
 :label:`subsec_selective-ssm`
@@ -293,8 +293,8 @@ scan. Can we put it back without giving up parallel training?
 Recall from :numref:`subsec_zoh` where the S4D's dynamics come from: a
 continuous system $(\mathbf{A}, \mathbf{B}, \mathbf{C})$ and a step size
 $\Delta$, discretized by the zero-order hold into per-step coefficients.
-Everything downstream of that box stays fixed; the *selective* state
-space model of :citet:`Gu.Dao.2023` changes one design principle: the
+The downstream construction remains fixed; the *selective* state space
+model of :citet:`Gu.Dao.2023` changes one design principle: the
 SSM's parameters become functions of the input. Three coupled
 projections realize that principle. The step size, the input
 matrix, and the read-out are no longer constants but functions of the
@@ -330,27 +330,27 @@ simplifies the zero-order hold on the input path to the first-order rule
 $\bar{\mathbf{B}}_t = \Delta_{t,h} \mathbf{B}_t$; the exponential on the
 state path, which controls stability, is kept exact.)
 
-Now watch what the boxed correspondence of :numref:`subsec_zoh` does with
-an input-dependent $\Delta$. There, a small $\Delta$ froze the state and
+The correspondence in :numref:`subsec_zoh` gives a direct interpretation
+of an input-dependent $\Delta$. There, a small $\Delta$ froze the state and
 ignored the input; a large $\Delta$ flushed the state and admitted the
 input. Make $\Delta$ a function of $\mathbf{u}_t$ and the model can
 *choose per token*: filler should produce
-$\Delta_t \approx 0$ (state glides through untouched, input contributes
-nothing), while a marked symbol should produce a large $\Delta_t$ (reset
+$\Delta_t \approx 0$ (the state changes little and the input contributes
+almost nothing), while a marked symbol should produce a large $\Delta_t$ (reset
 toward the new content). That is a forget gate and an input gate, fused
-into one scalar, acting on a linear state. We have now derived the gate
-three times, once by engineering (:numref:`sec_lstm`), once from
-numerical integration (:numref:`subsec_zoh`), and now from the demand
-that a linear recurrence be able to ignore what does not matter.
-$\mathbf{B}_t$ and $\mathbf{C}_t$ extend the same courtesy to *where*
-input enters the state and *which* state coordinates are read out; an
+into one scalar acting on a linear state. The same gating mechanism has
+arisen from three requirements: controlled memory updates
+(:numref:`sec_lstm`), numerical integration (:numref:`subsec_zoh`), and
+content-dependent selection in a linear recurrence.
+$\mathbf{B}_t$ and $\mathbf{C}_t$ similarly control *where* input enters
+the state and *which* state coordinates are read out; an
 exercise asks how much they add over selectivity in $\Delta$ alone.
 
 ### Parallel Evaluation with Selectivity
 
-There is no free lunch: with time-varying coefficients the model is no
-longer LTI, and the convolutional view of :numref:`subsec_ssm-conv` dies
-on the spot. There is no fixed kernel $\bar{\mathbf{K}}$ to materialize
+With time-varying coefficients, the model is no longer LTI and the
+convolutional view of :numref:`subsec_ssm-conv` no longer applies. There
+is no fixed kernel $\bar{\mathbf{K}}$ to materialize
 and no FFT shortcut; of the three views in :numref:`fig_ssm_views`, only
 the recurrence survives. This is why we built the scan rather than the
 FFT in :numref:`sec_ssm`. The recurrence
@@ -359,7 +359,7 @@ with per-step coefficients, and the associative combine
 :eqref:`eq_scan_combine` never assumed those coefficients were constant.
 The same `associative_scan` evaluates the selective recurrence in the
 same logarithmic depth, now called with tensors whose leading axis
-varies per step. Seeing is believing, one more time: a sequential loop
+varies per step. We verify this equivalence by comparing a sequential loop
 with time-varying decays against the scan.
 
 ```{.python .input #mamba-what-selectivity-costs-and-what-survives-1}
@@ -935,12 +935,12 @@ print(f'stepped vs scanned logits: deviation {err:.2e}, '
 assert err < 1e-3 * scale
 ```
 
-Every language model in this book must also pass the smell test of
-:numref:`sec_decoding`: generate something. We sample each model with
+We also evaluate the language models through generation, following
+:numref:`sec_decoding`. We sample each model with
 the same prefix, temperature, and min-$p$ filter, using the
 `d2l.generate` helper built there. For the gated baselines we keep that
 section's harness, which re-runs the growing prefix at every token; for
-Mamba we now do it properly. `d2l.generate` hands our callback the full
+Mamba we use recurrent decoding. `d2l.generate` hands our callback the full
 token list each call, so the closure below keeps `(state, seen)` and
 feeds only the *unseen* suffix through `step`: the first call plays the
 prompt into the state and every later call advances one token, the same
@@ -1013,8 +1013,9 @@ for name, model, fn in [('LSTM', lstm_lm, step_fn),
 
 ### Selective Copying, Revisited
 
-The scoreboard above is the everyday test; the section opened with the
-diagnostic one. We now run the Mamba stack on the selective copying task
+The language-model comparison evaluates end-to-end quality; the opening
+copying task isolates content-dependent selection. We run the Mamba stack
+on the selective copying task
 that the S4D could not solve, at the same parameter budget as before, and
 replot all three curves together.
 
@@ -1102,16 +1103,16 @@ axes[0].set_ylabel(r'learned $\Delta_t$ (channel mean)');
 
 The trained step sizes separate by role: on filler tokens $\Delta_t$
 sits low, on the marked symbols it opens, and the query slots read out
-with their own regime. That is the narrated gate, measured rather than
-asserted, on the model that solved the task. The architectural circle
-closes here. The content-dependent gating that :numref:`subsec_mingru`
+with their own regime. These measurements show that the trained model uses
+the step size as the
+proposed content-dependent gate. The content-dependent gating that :numref:`subsec_mingru`
 deleted to linearize the recurrence has been restored, not by putting
 the state back inside a nonlinearity, but by letting the input choose
-the coefficients of a linear map, and the scan never noticed the
-difference.
+the coefficients of a linear map while preserving the affine structure
+required by the scan.
 
-We have now built selectivity from the state-space side: start from
-continuous dynamics, discretize, and let the input set the step size.
+Selectivity follows from the state-space construction: begin with continuous
+dynamics, discretize them, and let the input set the step size.
 The next section (:numref:`sec_matrix-state`) starts over from the
 attention side, with the linear-attention recurrence of
 :numref:`sec_attention-at-scale`, and arrives at the same recurrence.
@@ -1121,18 +1122,15 @@ attention side, with the linear-attention recurrence of
 ![Three recurrent designs compared by their state update: LSTMs use state-dependent gates; minGRU and S4D use linear state paths that admit a scan; Mamba makes the linear dynamics input-dependent.](../img/mdl-modernrnn-three-answers.svg)
 :label:`fig_three_answers`
 
-This chapter opened by asking what a hidden state should remember, and
-has now given three answers of increasing refinement
-(:numref:`fig_three_answers`). *Gate it*: multiplicative gates let the
-data control writing, keeping, and exposing memory, and made recurrent
-networks trainable over long ranges. *Linearize it*: removing the
-nonlinearity from the state path turned the recurrence into an
-associative scan, restoring parallel training, and the state space view
-added principled step-size gates, stability by construction, and
-provably good memory. *Select it*: making the step size and projections
-functions of the input restored the content-awareness that
-linearization lost, at the same asymptotic scan depth though not the
-same wall clock. Our teaching implementation materializes the scan
+The chapter has developed three increasingly flexible state updates
+(:numref:`fig_three_answers`). Multiplicative gates let the data control
+writing, retention, and readout. Removing the nonlinearity from the state
+path turns the recurrence into an associative scan, while the state-space
+view supplies step-size gates, stable parameterizations, and memory
+constructions with formal guarantees. Making the step size and projections
+input-dependent restores content-dependent updates at the same asymptotic
+scan depth, although not at the same wall-clock cost. Our teaching
+implementation materializes the scan
 coefficients and therefore takes several times longer per epoch than the
 gated baselines in this experiment.
 The resulting Mamba block solved our selective-copy task, posted the
@@ -1272,7 +1270,7 @@ query slots.
 :::
 
 ::: {.slide title="Selective SSMs: let the input choose the dynamics"}
-One change to the S4D recipe: step size, input matrix, read-out become
+Relative to S4D, the step size, input matrix, and readout become
 functions of the input,
 
 $$\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{u}_t \mathbf{W}_{\Delta} + \mathbf{b}_{\Delta}), \qquad \mathbf{B}_t = \mathbf{u}_t \mathbf{W}_B, \qquad \mathbf{C}_t = \mathbf{u}_t \mathbf{W}_C,$$
@@ -1411,6 +1409,6 @@ constant-size state.
 
 . . .
 
-Next section, the other road: start from the **linear-attention
-recurrence** of ch. 10 and arrive at *the same recurrence*.
+The next section starts from the **linear-attention recurrence** of ch. 10
+and derives the same recurrence.
 :::

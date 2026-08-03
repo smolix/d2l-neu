@@ -51,7 +51,7 @@ tensor when we load its weights.
 
 **A causal mask.** A language model predicts token $t+1$ from tokens $1,
 \ldots, t$, so position $t$ must not attend forward. In
-:numref:`sec_transformer-block` we got causality by handing
+:numref:`sec_transformer-block` we enforced causality by passing
 `d2l.MultiHeadAttention` a per-query valid length. Here we build the causal
 variant natively, for two reasons. First, efficiency: the fused attention
 kernels of :numref:`sec_attention-at-scale`
@@ -70,8 +70,7 @@ are made, so the attention module implements it itself (the same
 exist.
 
 **The blocks themselves** are `d2l.TransformerBlock`, unchanged: the
-causal attention drops in through the `attn_factory` hook, exactly the
-seam it was designed to be.
+causal attention enters through the `attn_factory` hook.
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-1}
 %%tab pytorch
@@ -225,12 +224,12 @@ n = sum(p.size for p in jax.tree.leaves(nnx.state(model, nnx.Param)))
 print(f'{n / 1e6:.2f}M parameters')
 ```
 
-One decision above deserves a defense: the model reads *characters*, not
-subwords. Deployed language models tokenize into subwords — byte-pair
+The model reads *characters* rather than subwords because the training
+corpus is small. Deployed language models tokenize into subwords — byte-pair
 encoding is the most common scheme — and :numref:`sec_text-sequence` built
 a full BPE tokenizer; we will even reuse its GPT-2 pattern verbatim when we
-load GPT-2 below. But BPE earns
-its keep on gigabytes; on a 180 KB novel a subword vocabulary would leave
+load GPT-2 below. BPE becomes advantageous on much larger corpora. On a
+180 KB novel, a subword vocabulary would leave
 each token type a handful of training examples. Characters keep the
 statistics dense, the vocabulary trivial, and the comparison fair against
 the character-level models of previous chapters.
@@ -332,7 +331,8 @@ corpus reuse. The experiment does not isolate a remedy; larger and more varied
 training data is the change studied by the scaling analysis at the end of the
 chapter :cite:`kaplan2020scaling,hoffmann2022training`.
 
-It is worth locating this run on the cost map. At roughly $6ND$
+The estimated training cost locates this run relative to larger models.
+At roughly $6ND$
 floating-point operations for training a model of $N$ parameters on $D$
 tokens, our minute of GPU time spent about $5 \times 10^{14}$ FLOPs. The
 124M-parameter GPT-2 we load below cost on the order of
@@ -344,16 +344,15 @@ around $10^{25}$ or beyond. Across
 those ten orders of magnitude the model definition barely changes —
 block, mask, embedding, head — but everything around it does: data
 pipelines, custom kernels, and the parallelism of
-:numref:`chap_performance`. The block abstraction is the part that
-transfers, which is why it is worth learning on a novella.
+:numref:`chap_performance`. The block abstraction therefore transfers even though the surrounding
+training system changes with scale.
 
 ### Effect of Normalization Placement
 
 :numref:`sec_transformer-block` predicted, from initialization statistics
-alone, that the post-LN arrangement starves its attention layers' query
-and key projections of gradient. Now that we own a trainable model, we
-can watch the prediction come true. Same model, same data, same 800
-steps at learning rate
+alone, that the post-LN arrangement reduces the gradients received by its
+attention layers' query and key projections. We test this prediction with
+the same model, data, and 800-step budget at learning rate
 $3 \times 10^{-3}$ — three times the rate above, still comfortable for
 pre-norm — with `pre_norm` flipped:
 
@@ -550,16 +549,17 @@ ids = enc.encode('Attention is all you need.')
 print(ids, [enc.decode([i]) for i in ids])
 ```
 
-The tokenizer cell is the BPE machinery of :numref:`sec_text-sequence`
-meeting the real artifact: GPT-2's released merge list and vocabulary,
-interpreted with the *same* pre-tokenization pattern our own
-`d2l.BPETokenizer` uses, assembled into `tiktoken`'s fast encoder. No
-model library, no configuration framework — two data files and a regular
-expression.
+The tokenizer cell applies the BPE machinery of
+:numref:`sec_text-sequence` to GPT-2's released merge list and vocabulary.
+It uses the same pre-tokenization pattern as `d2l.BPETokenizer` and
+assembles the result into `tiktoken`'s encoder. The construction requires
+two data files and a regular expression, without a model library or
+configuration framework.
 
-Now the weights. The checkpoint stores one tensor per parameter under
-names like `h.3.attn.c_attn.weight`; our job is a dictionary mapping those
-names onto our modules. One historical trap: GPT-2's original code
+The checkpoint stores one tensor per parameter under names such as
+`h.3.attn.c_attn.weight`, so loading requires a dictionary that maps these
+names onto our modules. One historical detail requires care: GPT-2's
+original code
 implemented linear layers as a `Conv1D` class that keeps weights as
 $(\textrm{in}, \textrm{out})$ — the transpose of `nn.Linear`'s
 $(\textrm{out}, \textrm{in})$ — so every 2-D weight must be transposed on
@@ -808,9 +808,9 @@ scale — the systems around it change.
 
 @!gpt-breaking-it-with-one-flag
 
-No divergence — worse: pinned at **2.83 nats = the unigram entropy** of
-the text. Attention never learns to use context, exactly as the
-at-initialization gradients predicted.
+The loss remains pinned at **2.83 nats, the unigram entropy** of the text.
+Attention does not learn to use context, consistent with the
+initialization-time gradient analysis.
 :::
 
 ::: {.slide title="Sampling: temperature and truncation"}
@@ -840,8 +840,8 @@ GPT-2 (124M) **is** our class with the 2019 flags:
 :::
 
 ::: {.slide title="The weight mapping"}
-One dictionary from checkpoint names to modules; the one trap is GPT-2's
-`Conv1D` layout, $(\textrm{in}, \textrm{out})$ — transpose for
+One dictionary maps checkpoint names to modules. GPT-2's `Conv1D` layout
+requires care: $(\textrm{in}, \textrm{out})$ — transpose for
 `nn.Linear`, adopt unchanged for `nnx.Linear`:
 
 @gpt-loading-gpt-2-2
@@ -858,12 +858,12 @@ Perplexity and a completion check detect common mapping or tokenizer errors:
 ::: {.slide title="Recap"}
 - GPT = embedding + causal blocks + final norm + tied head; positions
   learned-or-rotary; one class, flags for a decade of designs.
-- Read both curves: best validation early, then memorization — data, not
-  steps.
+- The validation loss reaches its minimum early and then rises as training
+  loss falls, consistent with memorization under repeated corpus reuse.
 - `pre_norm=False` at a healthy learning rate pins training at the
   unigram plateau.
-- Sampling = temperature + truncation; naive generation recomputes
-  everything (the KV cache fixes this, next).
+- Temperature and truncation control sampling; naive generation recomputes
+  the prefix, whereas the next section's KV cache reuses it.
 - The released GPT-2 loads into our class and produces coherent English
   completions for the example prompts.
 :::

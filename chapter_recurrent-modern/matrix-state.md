@@ -42,7 +42,7 @@ import time
 ## The Matrix-State Recurrence
 :label:`subsec_ms-two-roads`
 
-Recall the object that fell out of kernelizing attention,
+Kernelizing attention produced
 :eqref:`eq_linear-attn-recurrence`: a state
 $\mathbf{S}_t \in \mathbb{R}^{d_k \times d_v}$, with keys indexing rows,
 written by outer products and read by the query. Every model in this
@@ -55,18 +55,18 @@ $$
 $$
 :eqlabel:`eq_ms-recurrence`
 
-where the *transition* $\mathbf{D}_t$ decides what survives of the past and
-the *write* $\mathbf{k}_t \mathbf{v}_t^\top$ files the current token under
-its key. Linear attention is the case $\mathbf{D}_t = \mathbf{I}$: never
+where the *transition* $\mathbf{D}_t$ determines which preceding state is
+retained and the *write* $\mathbf{k}_t \mathbf{v}_t^\top$ associates the
+current token with its key. Linear attention is the case $\mathbf{D}_t = \mathbf{I}$: never
 forget. The minGRU and the selective SSM obeyed the same shape one level
 down, as the elementwise affine recurrence :eqref:`eq_affine_recurrence`
 evaluated by the parallel scan of :numref:`subsec_parallel-scans`; here the
 state is a matrix rather than a vector, but the algebra is identical:
 affine maps composing into affine maps.
 
-Before building on this template, we should record what it keeps
-from :numref:`sec_attention-at-scale` and what it drops. What you verified
-there was a *pair* of states: $\mathbf{S}_t$ together with a normalizer
+This template differs from the construction in
+:numref:`sec_attention-at-scale`. That construction used a pair of states:
+$\mathbf{S}_t$ together with a normalizer
 $\mathbf{z}_t = \sum_{s \le t} \phi(\mathbf{k}_s)$, read as
 $\phi(\mathbf{q}_t)^\top \mathbf{S}_t / \phi(\mathbf{q}_t)^\top \mathbf{z}_t$,
 with the feature map $\phi = \mathrm{elu} + 1$ keeping everything positive
@@ -82,8 +82,8 @@ state; when we meet it, the pair $(\mathbf{S}, \mathbf{z})$ of :numref:`chap_att
 ### Memory and Computation Costs
 :label:`subsec_ms-capacity`
 
-A matrix as associative memory is an old idea, and its failure mode is just
-as old. Suppose we store $n$ pairs with $\mathbf{D}_t = \mathbf{I}$, so
+A matrix associative memory fails through interference between stored
+keys. Suppose we store $n$ pairs with $\mathbf{D}_t = \mathbf{I}$, so
 $\mathbf{S} = \sum_{i=1}^{n} \mathbf{k}_i \mathbf{v}_i^\top$, and read back
 key $j$. If the keys have unit norm (an assumption we make throughout this
 subsection; normalized keys are also the shipped default in this model
@@ -95,15 +95,15 @@ $$
 $$
 :eqlabel:`eq_ms-retrieval-error`
 
-The stored value comes back exactly, plus a sum of every *other* value
-weighted by how much its key overlaps ours. Only mutually orthogonal keys
+The read returns the stored value plus every *other* value weighted by its
+key's overlap with the target key. Only mutually orthogonal keys
 retrieve without error, and $\mathbb{R}^{d_k}$ holds at most $d_k$ of
-those: the capacity of the memory is capped by its width, not by time. As
-Songlin Yang puts it, the enemy of such a memory is not time, it is other
-memories :cite:`Yang.Wang.Zhang.ea.2024`.
+those: the capacity of the memory is capped by its width, not by time. The
+limiting resource is therefore interference from other stored pairs, not
+elapsed time :cite:`Yang.Wang.Zhang.ea.2024`.
 
-How fast does interference bite? The answer is a proposition whose
-assumptions matter as much as its formula.
+The following proposition quantifies how interference grows under
+independent isotropic keys.
 
 **Proposition.** Let the keys $\mathbf{k}_1, \ldots, \mathbf{k}_n$ be
 independent and isotropic on the unit sphere of $\mathbb{R}^{d_k}$
@@ -130,8 +130,9 @@ remains is $\sum_{i \neq j} \mathbb{E}[(\mathbf{k}_i^\top
 $\mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)^2] = 1/d_k$, with $n-1$
 terms. $\blacksquare$
 
-Error linear in how much you store, inverse in the width you store it
-into — *for keys that are independent and spread evenly*. Both
+The expected squared error grows linearly with the number of stored pairs
+and inversely with key width, provided that keys are independent and
+isotropic. Both
 assumptions are load-bearing: correlated keys revive the cancelled
 cross terms, and learned keys are rarely isotropic. The cell below
 measures the law under its own assumptions and then breaks them on
@@ -200,8 +201,9 @@ already at small $n$ and grows faster than linearly, and recall
 degrades well before $n$ reaches $d_k$.
 Width stops helping when the keys all resemble one another; this is why
 the family normalizes its keys and why key *geometry*, not just key
-count, decides what a matrix memory holds. The right panel is the
-law's consequence. Recall is essentially perfect while the interference
+count, determines what a matrix memory holds. The right panel shows the
+corresponding recall accuracy. Recall is essentially perfect while the
+interference
 stays small relative to the unit-norm signal, then grows with $n$
 past $d_k$; at a fixed error level, doubling the width doubles how many
 pairs fit. Nothing in either panel depends on *when* a pair was stored.
@@ -224,8 +226,8 @@ recall sweep and which none of the first three numbers guarantees.
 ### Forms of Decay
 :label:`subsec_ms-decay-ladder`
 
-If crowding is the failure, forgetting is the first fix: shrink the past
-before each write and the interference sum stops growing. The family did
+Decay limits crowding by shrinking preceding writes before each new write,
+preventing the interference sum from growing without bound. The family did
 this in three steps, each a one-line change to
 :eqref:`eq_ms-recurrence`:
 
@@ -244,9 +246,9 @@ different heads keep different horizons. (If you worked the closing
 exercise of :numref:`sec_attention-at-scale`, you have already built this
 rung and verified that its parallel form weights past values by
 $\gamma^{t-s}$.) An *input-dependent scalar* $a_t$ is the transition of
-Mamba-2 :cite:`Dao.Gu.2024`, one number per head per token: the model
-reads the token and decides how much of the whole memory survives it, the
-forget gate of :numref:`sec_lstm` acting on a matrix state. And an
+Mamba-2 :cite:`Dao.Gu.2024`, one number per head per token. The token
+determines how much of the whole memory is retained, analogous to
+the forget gate of :numref:`sec_lstm` applied to a matrix state. And an
 input-dependent *diagonal* $\mathrm{diag}(\boldsymbol{\alpha}_t)$ decays
 each key coordinate at its own rate, the design of gated linear attention
 (GLA) :cite:`Yang.Wang.Shen.ea.2024` and RWKV-6
@@ -308,16 +310,17 @@ $$
 :eqlabel:`eq_ms-semiseparable`
 
 where $\circ$ is the elementwise product and $\mathbf{L}$ is lower
-triangular with ones on the diagonal. Now stare at $\mathbf{L}$. If every
+triangular with ones on the diagonal. The structure of $\mathbf{L}$
+establishes the equivalence. If every
 $a_t = 1$, then $L_{ts} = 1$ for $t \ge s$ and zero otherwise: $\mathbf{L}$
 *is the causal mask*, and :eqref:`eq_ms-semiseparable` is masked linear
 attention, scores $\mathbf{Q}\mathbf{K}^\top$, mask, value mixing, exactly
 as in :numref:`sec_attention-at-scale`. A gated linear recurrence is
 attention whose 0/1 causal mask has been replaced by a *learned, decaying*
-mask. One object, two readings; :citet:`Dao.Gu.2024` named the
-correspondence *state space duality* (SSD), and matrices of $\mathbf{L}$'s
+mask. These are two formulations of the same object. :citet:`Dao.Gu.2024` named
+the correspondence *state space duality* (SSD), and matrices of $\mathbf{L}$'s
 form are called 1-semiseparable, every submatrix below the diagonal
-having rank one. Keep the equivalence's scope in view: it is an identity
+having rank one. The equivalence has a restricted scope: it is an identity
 for this structured family, a scalar-gated (1-semiseparable) mask on
 *linear* attention, not a statement about softmax attention, whose
 exponential kernel is no masked linear read.
@@ -329,8 +332,10 @@ $\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top$ first and you compute
 attention: quadratic in $T$, all positions in parallel, no state in sight.
 Sweep the sum over $s$ from the left instead, one $t$ at a time, and the
 partial sums *are* the state $\mathbf{S}_t$: linear in $T$, constant
-memory, one token at a time. Same tensor contraction, two orders. Let's
-verify that on real numbers, recurrent form first:
+memory, one token at a time. The two methods use different contraction
+orders for the same tensor. The
+following computation verifies their agreement, beginning with the recurrent
+form:
 
 ```{.python .input #matrix-state-the-state-space-duality-1}
 %%tab pytorch
@@ -431,9 +436,9 @@ have run, not an analogy. It also locates Mamba-2 precisely: take
 :numref:`sec_mamba`'s selective model, restrict its per-coordinate decay
 to a single input-dependent scalar per head, and the layer *is*
 :eqref:`eq_ms-semiseparable`, trainable in whichever mode is cheaper.
-Which raises the practical question: if the recurrence costs
-$\mathcal{O}(T)$ but crawls token by token, and the dual is one big matmul
-but costs $\mathcal{O}(T^2)$, is there something in between?
+The recurrence costs $\mathcal{O}(T)$ but executes sequentially, whereas the
+dual is parallel but costs $\mathcal{O}(T^2)$. Chunking provides an
+intermediate schedule.
 
 ## Chunked Computation: Mostly Matmul, a Little Scan
 :label:`subsec_ms-chunked`
@@ -447,11 +452,11 @@ product, quadratic only in the chunk length, and all of them run in
 parallel. Everything below the diagonal is the influence of earlier chunks
 on later ones, and here the semiseparable structure pays off: those blocks
 have rank at most $d_k$, because all a later chunk needs from the entire
-past is the $d_k \times d_v$ state at its boundary. So the algorithm is:
-compute the diagonal blocks as matmuls, pass the state chunk to chunk with
-a short recurrence of $T/C$ steps, and add each chunk's read of its
-incoming state. Attention inside, recurrence across; mostly matmul, a
-little scan :cite:`Dao.Gu.2024`.
+past is the $d_k \times d_v$ state at its boundary. The algorithm computes
+the diagonal blocks as matmuls, passes the state
+between chunks with a recurrence of $T/C$ steps, and adds each chunk's read
+of its incoming state. It therefore uses attention within chunks and
+recurrence across chunks :cite:`Dao.Gu.2024`.
 
 ![One matrix, three schedules. The mask $\mathbf{L}$ of :eqref:`eq_ms-semiseparable`, computed for random decays and partitioned into chunks; the shading fades as the decays compound. Diagonal blocks (blue) are $C \times C$ masked-attention matmuls computed in parallel; every off-diagonal block (orange) has rank at most $d_k$, so its contribution flows through the $d_k \times d_v$ state passed from chunk to chunk (arrows).](../img/mdl-modernrnn-semiseparable.svg)
 :label:`fig_ms-semiseparable`
@@ -551,9 +556,8 @@ $C = 1$ each diagonal block shrinks to the $1 \times 1$ self-write
 $(\mathbf{q}_t^\top \mathbf{k}_t)\,\mathbf{v}_t$ — within-chunk
 interaction between *distinct* tokens is gone, and everything earlier
 flows through the state recurrence; at $C = T$ there is one block and
-no recurrence. Where between the endpoints should we sit? Time and
-memory answer differently, so we measure both, on the same footing as
-the attention measurements of :numref:`sec_attention-at-scale`.
+no recurrence. The preferred chunk size depends on both time and memory, so we measure each
+as in the attention experiments of :numref:`sec_attention-at-scale`.
 
 ```{.python .input #matrix-state-chunked-computation-mostly-matmul-a-little-scan-2}
 %%tab pytorch
@@ -640,11 +644,11 @@ the best schedule: its $T$ steps are serialized, whether as eager kernel
 launches or as a compiled scan, so the accelerator's parallelism sits
 unused, though its memory footprint is trivial. The quadratic dual is the
 mirror image: matmul-fast, but its $T \times T$ matrices dominate the
-memory column and grow fourfold with every doubling of $T$. The chunked
-schedule takes both prizes at once: with chunks of a few hundred tokens it
-runs within a small factor of the dual's speed (in some runs ahead of it)
-at an order of magnitude less memory, and its constituent operations are
-exactly the dense matmuls the hardware wants to run. The FLOP-optimal
+memory column and grow fourfold with every doubling of $T$. With chunks of
+a few hundred tokens, the chunked schedule runs within a
+small factor of the dual's speed, and sometimes faster in these runs, while
+using an order of magnitude less memory. Its principal operations are dense
+matmuls that use the accelerator efficiently. The FLOP-optimal
 chunk size sits near $C \approx d_k$, as an exercise asks you to derive;
 the measured optimum drifts higher because
 kernel-launch overhead penalizes many small chunks.
@@ -652,18 +656,18 @@ kernel-launch overhead penalizes many small chunks.
 ### Measured Performance
 :label:`subsec_ms-hardware`
 
-This schedule is the main story of Mamba-2 relative to Mamba, not any
-change in the model class. Recall from
+Mamba-2 differs from Mamba primarily in its computational schedule rather
+than its model class. Recall from
 :numref:`sec_attention-at-scale` that an accelerator moves bytes far more
 slowly than it multiplies them; its full arithmetic rate is reserved for
 dense matrix products on tensor cores. Mamba-1's parallel scan is
 elementwise work, so it runs at memory bandwidth and leaves the matmul
 units idle. Restricting the transition to a scalar per head buys the
-chunked form above, whose inner loop is matmuls, and the practical
-consequence — the Mamba-2 paper's empirical scaling observation, not a
-theorem — was startling: training got several times faster *and* the
-state dimension could jump from $N = 16$ to $64$--$256$ at little extra
-wall clock, because a bigger state just makes the matmuls better shaped
+chunked form above, whose inner loop uses matmuls. The Mamba-2 paper reports
+that this schedule made training several times
+faster while allowing the state dimension to increase from $N = 16$ to
+$64$--$256$ with little additional wall-clock time, because a larger state
+produces better-shaped matmuls
 for the hardware :cite:`Dao.Gu.2024`. The capacity law of
 :numref:`subsec_ms-capacity` says what that buys: an order of magnitude
 more pairs held at the same read error. The trade is not one-sided, and
@@ -732,11 +736,9 @@ Holding both numbers in mind at once is the whole hybrid-design problem of
 ## Model Family
 :label:`subsec_ms-family`
 
-We can now lay out the family that this section and its two predecessors
-have assembled, one row per model, every row an instance of
-:eqref:`eq_ms-recurrence`. The table is worth reading column by column:
-the *transition* column compares decay structures, and the *write* column is,
-for now, monotonous by design.
+The models in this section and its two predecessors are instances of
+:eqref:`eq_ms-recurrence`. In the table below, the *transition* column
+compares decay structures, and the *write* column is uniform by design.
 
 > **Reading the papers.** The literature does not agree on which way the
 > state matrix points. :citet:`Katharopoulos.Vyas.Pappas.ea.2020` write
@@ -777,9 +779,8 @@ section derived.
 ### The One That Kept the Normalizer
 :label:`subsec_ms-mlstm`
 
-The last row deserves its promised closer look, because it answers a
-question :numref:`chap_attention` left open: whatever happened to the normalizer
-$\mathbf{z}$? The mLSTM is the matrix-memory cell of xLSTM
+The last row retains the normalizer $\mathbf{z}$ introduced in
+:numref:`chap_attention`. The mLSTM is the matrix-memory cell of xLSTM
 :cite:`Beck.Poppel.Spanring.ea.2024`, the LSTM rebuilt on
 :eqref:`eq_ms-recurrence`: a forget gate $f_t$ and input gate $i_t$,
 computed from the token, gating a matrix cell state and, alongside it, the
@@ -1045,7 +1046,7 @@ $$\mathbf{S}_t = \mathbf{D}_t\, \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\to
 
 What the modern family drops from ch. 10's construction: the feature map
 $\phi$ and the normalizer state $\mathbf{z}$ (output normalization instead).
-One member keeps $\mathbf{z}$ — wait for the mLSTM.
+The mLSTM retains $\mathbf{z}$.
 :::
 
 ::: {.slide title="Measured Memory Cost"}
@@ -1058,8 +1059,8 @@ $\mathbf{S}^\top \mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\to
   isotropic unit keys; recall collapses past $n \approx d_k$.
 - Correlated keys (dotted) revive the cancelled cross terms: width
   stops helping.
-- Capacity is set by **width**, not time: the enemy of memory is other
-  memories.
+- Capacity is set by **width**, not time: interference comes from other
+  stored pairs.
 :::
 
 ::: {.slide title="Forms of Decay"}
@@ -1176,5 +1177,6 @@ steps; the fix is online softmax's running max, carried as a state $m_t$.
 The fast weight programmers' repair (1990s → 2021): *read what the memory
 holds at $\mathbf{k}_t$, write only the correction.*
 
-A memory that edits: **DeltaNet, next section.**
+The next section introduces DeltaNet, whose corrective write can edit an
+existing binding.
 :::

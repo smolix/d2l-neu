@@ -66,13 +66,13 @@ operation known from multinomial models:
 $$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}.$$
 :eqlabel:`eq_softmax_attention`
 
-This operation is available in all deep learning frameworks, it is
-differentiable, and its Jacobian is never the zero matrix, so gradients keep
-flowing. Attention
-mechanisms that are not differentiable exist, e.g., trained with
-reinforcement learning methods :cite:`Mnih.Heess.Graves.ea.2014`, but they
-are much harder to optimize. The bulk of modern attention research follows
-the framework of :numref:`fig_qkv`, and so will we.
+This operation is available in all deep learning frameworks and is
+differentiable. For at least two entries and finite scores, its Jacobian is
+not the zero matrix, although its entries can become very small when the
+distribution saturates. Nondifferentiable attention mechanisms also exist
+and may be trained with reinforcement learning
+:cite:`Mnih.Heess.Graves.ea.2014`, but they are harder to optimize. This
+chapter uses the differentiable framework in :numref:`fig_qkv`.
 
 ![The attention mechanism computes a linear combination over values $\mathbf{v}_\mathit{i}$ via attention pooling, where weights are derived according to the compatibility between a query $\mathbf{q}$ and keys $\mathbf{k}_\mathit{i}$.](../img/mdl-attention-soft-lookup.svg)
 :label:`fig_qkv`
@@ -116,10 +116,9 @@ d2l.show_heatmaps(attention_weights, xlabel='Keys', ylabel='Queries')
 Equation :eqref:`eq_attention_pooling` does not require learned weights. Long
 before deep learning, statisticians used this operation with specified
 weights: Nadaraya--Watson kernel regression
-:cite:`Nadaraya.1964,Watson.1964`. Seeing attention work in that classical
-setting is worth a short stop, both because it lets us watch the weights do
-their job on a problem we can plot, and because its limitation motivates the
-rest of the chapter.
+:cite:`Nadaraya.1964,Watson.1964`. This classical setting makes the effect of the weights visible on a problem
+we can plot. Its fixed similarity function also motivates the learned
+scoring rules developed in the rest of the chapter.
 
 ### Similarity Kernels
 
@@ -159,7 +158,7 @@ converges to the statistically optimal predictor :cite:`mack1982weak`.
 
 ### Nadaraya--Watson Regression in Action
 
-Let's watch the estimator work. We draw $40$ noisy training examples from
+To examine the estimator, we draw $40$ noisy training examples from
 $y = 2\sin(x) + x + \epsilon$ with standard Gaussian noise $\epsilon$ and
 evaluate on a grid.
 
@@ -186,9 +185,9 @@ y_val = 2 * jnp.sin(x_val) + x_val
 The estimator itself is four lines: compute all query--key distances, apply
 a Gaussian kernel with bandwidth $\sigma$, normalize over the keys, and take
 the weighted sum of the values. The normalized kernel matrix *is* the
-attention weight matrix, so we return it too. The old rule of thumb holds
-here as well: the kernel's precise shape matters far less than its
-bandwidth, so we vary $\sigma$ and keep the kernel Gaussian.
+attention weight matrix, so we return it too. For these data, the bandwidth affects the estimate more than the choice
+among the displayed kernel shapes. We therefore vary $\sigma$ and keep the
+kernel Gaussian.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-2}
 %%tab pytorch
@@ -223,7 +222,7 @@ d2l.plt.plot(x_train, y_train, 'o', alpha=0.4);
 All three bandwidths produce workable estimates. The narrow kernel chases
 individual noisy observations; the wide one oversmooths toward a global
 average; $\sigma = 0.5$ tracks the underlying function well. The attention
-weights say why:
+weights show how the bandwidth produces these differences:
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-3}
 %%tab pytorch
@@ -252,12 +251,10 @@ the dataset. Picking one global $\sigma$ is itself a compromise;
 density, and similar nearest-neighbor interpolation ideas resurface in
 modern cross-modal representation learning :cite:`norelli2022asif`.
 
-This is also where the classical story ends and ours begins. The kernel—its
-shape, its bandwidth, the space in which distances are measured—is chosen by
-the modeler, and every query is served by the same fixed notion of
-similarity. The alternative is to *learn* the mechanism: to learn
-representations of queries and keys such that the induced attention weights
-serve the task. The next section develops a learnable scoring function.
+Nadaraya--Watson regression fixes the kernel shape, bandwidth, and space in
+which distances are measured. Every query therefore uses the same prescribed
+notion of similarity. A learned attention mechanism instead learns query and
+key representations whose induced weights serve the task. The next section develops a learnable scoring function.
 
 ## Summary
 
@@ -305,17 +302,18 @@ Queries, keys, and values<br>
 :::
 
 ::: {.slide title="The fixed-size bottleneck"}
-Every network so far assumes inputs of fixed, known size — $224 \times 224$
-images, or a sequence squeezed through a fixed-dimensional RNN state.
+Many networks either assume a fixed input size, such as $224 \times 224$
+images, or compress a variable-length sequence into a fixed-dimensional RNN
+state.
 
 . . .
 
-Databases don't have this problem. A database is a set of
+A database need not compress its records into one fixed-size state. A database is a set of
 $(\text{key}, \text{value})$ pairs; a query retrieves the matching value.
 
 - The query stays simple no matter how large the database is.
 - The same query gets different answers from different databases.
-- No need to compress the database to make lookup work.
+- Lookup does not require compressing the database first.
 
 We want a *differentiable* layer with these properties.
 :::
@@ -332,8 +330,8 @@ other distributions interpolate between them.
 :::
 
 ::: {.slide title="Softmax makes any score a weight"}
-Pick *any* scoring function $a(\mathbf{q}, \mathbf{k})$, exponentiate,
-normalize:
+Given a scoring function $a(\mathbf{q}, \mathbf{k})$, exponentiate and
+normalize its scores:
 
 $$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}.$$
 
@@ -344,8 +342,8 @@ $$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\s
 :::
 
 ::: {.slide title="Visualizing attention weights"}
-The (queries × keys) heatmap is the standard diagnostic — here the
-identity, i.e. exact lookup:
+A queries-by-keys heatmap displays the weights. The identity matrix below
+represents exact lookup:
 
 @queries-keys-values-visualizing-attention-weights
 :::
@@ -357,7 +355,8 @@ similarity kernel:
 $$f(\mathbf{q}) = \sum_i \mathbf{v}_i \frac{\alpha(\mathbf{q}, \mathbf{k}_i)}{\sum_j \alpha(\mathbf{q}, \mathbf{k}_j)}.$$
 
 Keys = training inputs, values = labels, query = where to predict.
-No training at all — and consistent, if the kernel narrows with more data.
+The estimator requires no parameter training and is consistent if the kernel
+narrows at a suitable rate as data accumulate.
 
 ![Gaussian, boxcar, constant, and triangular kernels.](../img/mdl-attention-kernels.svg){width=88%}
 :::
@@ -386,7 +385,7 @@ distances → kernel → normalize over keys → weighted sum of labels.
   $\sum_i \alpha(\mathbf{q}, \mathbf{k}_i)\, \mathbf{v}_i$.
 - Softmax of any scoring function gives valid weights; exact lookup and
   average pooling are the extreme weight patterns.
-- Works on databases of any size with a small, fixed amount of machinery.
-- Nadaraya–Watson: attention with fixed kernels already works — learning
-  the queries and keys is what the rest of the chapter adds.
+- A fixed set of parameters can operate on databases of different sizes.
+- Nadaraya–Watson uses fixed kernels; the rest of the chapter learns query
+  and key representations instead.
 :::

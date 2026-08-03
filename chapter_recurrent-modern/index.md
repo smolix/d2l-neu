@@ -27,7 +27,7 @@ and GLA, and derives state-space duality — a gated linear recurrence and maske
 attention are the same matrix computed in two contraction orders, with
 the chunked third order being how these models train at scale.
 :numref:`sec_deltanet` changes the write rule. A memory that can only add
-fails when a key must be re-bound: in the section's flagship experiment,
+fails when a key must be re-bound. In the section's overwrite experiment,
 recall of the latest value roughly halves by two writes per key and
 approaches chance by eight. End-to-end training does not prevent this
 failure in the deliberately restricted memory class tested there,
@@ -58,14 +58,14 @@ state has limited exact-recall capacity, whereas an attention cache grows
 with context length. Several deployed architectures therefore interleave
 attention and recurrent layers. The section trains
 three matched models, a pure recurrent stack, a pure attention stack, and
-a hybrid with a single attention layer mid-stack, and watches that one
-layer recover most or all of the recall lost by the recurrent stack
+a hybrid with a single attention layer mid-stack, and measures how that
+layer recovers most or all of the recall lost by the recurrent stack
 (roughly 0.92 to 1.00 across the sweep in our runs) while perplexity
 barely moves. It then relates this tradeoff to engineering choices:
 measured design rules for how much attention to keep and where to put it,
 and a recipe table of shipped hybrids from Jamba to Kimi
-Linear. One recipe threads all of these
-experiments together: every trained language model in the chapter runs on
+Linear. A shared experimental setup connects these
+comparisons: every trained language model in the chapter runs on
 the *Time Machine* text of :numref:`sec_rnn-scratch` — the classical spine
 and the Gated DeltaNet row on one shared scoreboard, the hybrid stacks on
 their own matched panel — and the mechanistic experiments (capacity,
@@ -94,19 +94,19 @@ which is different again). The chapter teaches algorithms, not kernels:
 the chunked forms here are twenty-line teaching implementations, and the
 Triton kernels and memory hierarchies that make them fast belong to
 :numref:`chap_performance`. It trains no large models: the Language
-Models part owns pretraining recipes, data pipelines, the serving stacks
-that turn a trained model into a service, and everything downstream of a
-base model. The efficient-attention
+Models part covers pretraining recipes, data pipelines, serving stacks,
+and downstream adaptation of a base model. The efficient-attention
 taxonomy stays in :numref:`chap_attention`, which already implemented the
 surviving variants; applications of state space models to vision, audio,
 and genomics are out of scope; and the fast-moving family of
-test-time-training architectures beyond Titans is fenced off at a
-pointer in the resources below. What remains is one adversary, met six
-ways: the fixed-size state, and the measured question of how much
-attention a model must keep when the state is not enough.
+test-time-training architectures beyond Titans is represented only by a
+pointer in the resources below. The chapter instead examines the fixed-size
+state through six mechanisms and measures how much attention a model must
+retain when that state is insufficient.
 
-Two maps are worth carrying into the chapter. The first pins down its
-most overloaded word. *State* names five related but distinct objects in
+Two tables define the terminology and experimental scope. The first
+clarifies the chapter's most overloaded word. *State* names five related
+but distinct objects in
 the sections ahead:
 
 | What "state" means | Where | Typical shape | At autoregressive inference |
@@ -122,13 +122,12 @@ fixed-memory model carries from token to token. The KV cache of
 :numref:`sec_kv-cache` is the contrast class, per-token storage that
 grows with the context; "state" in this chapter never means that.
 
-The second map is for reading the experiments. Each probes one property,
-and each has a confounder worth knowing before its conclusion arrives:
+The second table lists the property and main confounder of each experiment:
 
 | Experiment | Probes | Main confounder |
 | :-- | :-- | :-- |
 | Sequential-image classification (:numref:`sec_ssm`) | long-range mixing (mean-pool readout) vs. state retention (final-step readout) | the readout decides which is measured; the LSTM baseline is initialization-sensitive |
-| Selective copying (:numref:`sec_mamba`) | content-dependent selection | a deep network around LTI mixers earns partial credit without selectivity |
+| Selective copying (:numref:`sec_mamba`) | content-dependent selection | a deep network around LTI mixers can achieve above-chance accuracy without selectivity |
 | Random-key capacity (:numref:`sec_matrix-state`) | additive-memory interference vs. key width | assumes independent isotropic keys; learned keys are neither |
 | Overwrite task (:numref:`sec_deltanet`) | key re-binding: additive vs. delta writes | the trained baseline is a deliberately restricted memory class |
 | Parity vs. length (:numref:`sec_deltanet`) | representability vs. trainability of sign-flipping transitions | optimization noise across seeds and lengths |
@@ -136,8 +135,7 @@ and each has a confounder worth knowing before its conclusion arrives:
 | Hybrid recall sweep (:numref:`sec_hybrids`) | exact recall vs. attention budget | position handling and parameter matching |
 | LM scoreboards (:numref:`sec_lstm`, :numref:`sec_mamba`, :numref:`sec_hybrids`) | end-to-end quality at teaching scale | one seeded run each; optimizer and parameter-count asymmetries |
 
-When a section's conclusion reads stronger than its table, this map is
-the antidote.
+These confounders delimit the conclusions supported by each experiment.
 
 ```toc
 :maxdepth: 2
@@ -177,7 +175,7 @@ course counterparts. All are freely accessible online.
 **Papers that organize the field**
 
 - [Test-Time Regression — Wang, Shi, and Fox (2025)](https://arxiv.org/abs/2501.12352) — the unifying frame of :numref:`sec_test-time-regression` at full mathematical strength; the closest thing this chapter has to a companion paper.
-- [Speed Always Wins — Sun et al. (2025)](https://arxiv.org/abs/2508.09834) — an eighty-page survey of linear sequence modeling, sparse attention, mixtures of experts, hybrids, and diffusion language models; the field-scale map for everything this chapter had to leave out.
+- [Speed Always Wins — Sun et al. (2025)](https://arxiv.org/abs/2508.09834) — an eighty-page survey of linear sequence modeling, sparse attention, mixtures of experts, hybrids, and diffusion language models; it covers the broader field beyond this chapter's scope.
 
 **Course counterparts**
 

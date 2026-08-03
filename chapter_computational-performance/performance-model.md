@@ -19,7 +19,7 @@ precision for speed; :numref:`sec_multi_gpu` and
 :numref:`sec_multi_gpu_concise` add devices;
 :numref:`sec_fast_transformer` runs the whole loop on a real Transformer.
 
-Two ideas carry the section. The first is *arithmetic intensity*: how many
+The analysis uses two quantities. The first is *arithmetic intensity*: how many
 floating-point operations a computation performs per byte it moves to and
 from memory. Compared against a single machine-dependent threshold,
 intensity predicts which regime an operation lands in — before you run
@@ -85,7 +85,7 @@ $$
 \;\approx\; \frac{2B}{b} \quad \textrm{for } B \ll D, F.
 $$
 
-The approximation is worth memorizing: for a skinny batch pushed through a
+The approximation has a direct scaling consequence: for a skinny batch pushed through a
 wide layer, **intensity grows linearly with the batch size**, because each
 weight fetched from memory is reused across every row of the batch. A
 batch of one reuses nothing — each weight is fetched, used once, and
@@ -112,8 +112,9 @@ Plotted on log–log axes (:numref:`fig_roofline`), the bandwidth bound rises
 with intensity until it meets the flat compute roof. The intersection is the
 **ridge point** $I^* = P/\beta$:
 operations with intensity below $I^*$ are *bandwidth-bound* — the memory
-system cannot feed the arithmetic units fast enough, and extra arithmetic
-hides under the memory time; operations above it are *compute-bound* — the
+system cannot feed the arithmetic units fast enough. Additional arithmetic
+does not increase elapsed time while memory
+traffic remains limiting; operations above it are *compute-bound* — the
 arithmetic units are saturated, and moving fewer bytes would not help.
 
 ![Roofline bound using the build GPU's peak compute and memory bandwidth. Attainable throughput is bounded by the smaller of peak compute and arithmetic intensity times bandwidth. The ridge point is about 165 FLOP/byte for this device; operations below it are bandwidth-bound in the model.](../img/mdl-perf-roofline.svg)
@@ -149,7 +150,8 @@ what a neural network does naturally reaches that ratio — which is why
 the rest of this chapter is mostly about bytes, not FLOPs. For the square
 matmul above ($B = D = F = n$, bf16), intensity is $n/3$: *in principle*,
 sizes beyond $n \approx 500$ stop being bandwidth-limited. The measured
-sweep below will show that this number is only half the story.
+sweep below shows that occupancy and launch overhead also
+determine the crossover.
 :numref:`sec_hardware` explains where $P$ and $\beta$ come from
 physically, and why their ratio has climbed, over the long run, from one
 hardware generation to the next.
@@ -157,8 +159,9 @@ hardware generation to the next.
 ## Correct GPU Timing
 :label:`subsec_perf-measuring`
 
-Before we can map our GPU against the roofline, we must be able to time it —
-and the obvious way is wrong. Deep learning frameworks dispatch GPU work
+Mapping a GPU against the roofline requires synchronized timing. Timing only
+the asynchronous Python call underestimates execution time. Deep learning
+frameworks dispatch GPU work
 *asynchronously*: when Python executes a tensor operation, the framework
 enqueues a kernel on the device and returns immediately, long before the
 arithmetic happens. Python then races ahead and enqueues more work while
@@ -370,8 +373,8 @@ make that convention load-bearing.
 ## Throughput across Matrix Sizes
 :label:`subsec_perf-sweep`
 
-Armed with a synchronized timer, we can produce the plot this section
-opened with: achieved TFLOP/s as a function of matrix size, against the
+A synchronized timer lets us measure the quantity introduced at the start
+of this section: achieved TFLOP/s as a function of matrix size, against the
 roofline's bound. A square bf16 matmul at size $n$ performs $2n^3$ FLOPs;
 its intensity $n/3$ crosses our card's ridge point near $n \approx 500$,
 so the *ceiling* of :eqref:`eq_roofline` rises for small $n$ and flattens
@@ -420,7 +423,7 @@ per-kernel overhead (a few microseconds to launch work at all — see
 :numref:`sec_hardware`) rivals the arithmetic. More telling is $n = 512$.
 Its nominal intensity ($\approx 171$) already sits *above* the ridge
 point, so the intensity model alone declares it compute-bound — yet the
-card delivers a tenth of peak or less. A $512^2$ output is simply too
+card delivers a tenth of peak or less. A $512^2$ output provides too
 little work to fill 128 streaming multiprocessors, and the launch
 overhead has not yet been amortized away. Through the middle sizes
 throughput therefore climbs steeply — a single doubling of $n$ can yield
@@ -438,9 +441,8 @@ what the profiler below is for.
 ## Three Regimes
 :label:`subsec_perf-regimes`
 
-The sweep exposed all three ways a GPU program spends its time, and they
-are worth naming precisely, because the *fix depends on the diagnosis*
-:cite:`He.2022`. A step of any workload divides its wall-clock time among
+The sweep distinguishes three performance regimes. Each regime requires a
+different optimization :cite:`He.2022`. A step of any workload divides its wall-clock time among
 arithmetic, memory traffic, and idle gaps where the device waits for
 Python; whichever dominates names the regime
 (:numref:`fig_regimes`).
@@ -456,21 +458,22 @@ Lower-precision formats may raise the applicable compute ceiling
 devices increase aggregate compute only when the parallel workload can
 use them (:numref:`sec_multi_gpu`).
 
-**Bandwidth-bound** — intensity below the ridge; the compute units starve
-while memory serves bytes. The fix is to *move fewer bytes*: fuse chains
+**Bandwidth-bound** — intensity below the ridge; the compute units remain
+idle while waiting for memory. The fix is to *move fewer bytes*: fuse chains
 of operations so intermediate results never make the round trip to memory
 (:numref:`sec_compilation`), recompute rather than store
 (:numref:`sec_memory_precision`), or restructure the algorithm for reuse —
-the FlashAttention kernel of :numref:`sec_attention-at-scale` is this fix,
-executed by hand at world-class level.
+the FlashAttention kernel of :numref:`sec_attention-at-scale` applies this
+restructuring in a specialized implementation.
 
 **Overhead-bound** — the device finishes each kernel before Python can
 supply the next one; the GPU is idle most of the time. Small models with
-many small layers live here. The fix is to get Python out of the loop:
+many small layers lie in this regime. The corresponding optimization
+removes Python from the launch loop:
 capture the whole graph once and replay it without the interpreter
 (:numref:`sec_compilation`).
 
-Here is a bandwidth-bound specimen, and a first taste of diagnosis. Take
+A large elementwise operation provides a bandwidth-bound example. Take
 one large tensor and apply single elementwise kernels of wildly different
 arithmetic cost — an add, a multiply, and a transcendental:
 
@@ -497,9 +500,9 @@ each kernel's cost is set by the 128 MB it reads and writes, not by what
 it computes on the way through. (In the PyTorch tab the four times are
 all but identical; where they scatter, as in the JAX tab, the spread is
 per-dispatch overhead on these un-jitted calls — a preview of the third
-regime — not the arithmetic.) While bandwidth binds,
-extra arithmetic hides under the memory time — the definition of
-bandwidth-bound. Now chain a few of these operations, the way any
+regime — not the arithmetic.) While bandwidth is limiting, the added arithmetic
+does not increase elapsed time. This is the defining behavior of a
+bandwidth-bound operation. Now chain a few of these operations, as in any
 activation function or normalization layer does:
 
 ```{.python .input #performance-model-three-regimes-2}
@@ -726,9 +729,9 @@ Warmup (kernel selection, compilation), sync, time, sync:
 
 . . .
 
-Tiny: overhead-bound (launches rival arithmetic). Middle: a steep
-climb while the kernel learns to fill 128 SMs. Large: flat at the
-roof — compute-bound. The roofline is the *ceiling*; the
+Small matrices are overhead-bound because launch time rivals arithmetic.
+Intermediate matrices use an increasing fraction of the 128 SMs. Large
+matrices approach the compute roof. The roofline is the *ceiling*; the
 measured knee (~2048–4096) sits well past the nominal crossover (~500) —
 that gap is utilization and overhead.
 :::
@@ -738,8 +741,8 @@ that gap is utilization and overhead.
 
 @performance-model-three-regimes-1
 
-sin costs no more than add: below the ridge, **memory traffic sets
-the time and the arithmetic hides under it.**
+Below the ridge, sin and addition take similar time because **memory
+traffic, rather than arithmetic, determines elapsed time.**
 :::
 
 ::: {.slide title="The Method"}

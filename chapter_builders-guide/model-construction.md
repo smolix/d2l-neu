@@ -185,9 +185,8 @@ net
 :begin_tab:`pytorch`
 This registry is what the `nn.Module` machinery traverses: `net.parameters()`
 collects parameters by walking `_modules` recursively, and the same walk
-underlies device movement and serialization. A module the registry does not
-contain might as well not exist, a fact we will exploit for a demonstration
-shortly.
+underlies device movement and serialization. A module absent from the registry is also absent from parameter traversal,
+device movement, and serialization. We demonstrate this failure shortly.
 :end_tab:
 
 :begin_tab:`jax`
@@ -200,18 +199,18 @@ without maintaining a second model representation by hand.
 :begin_tab:`tensorflow`
 This list is what the Keras machinery traverses: `net.trainable_variables`
 collects variables by walking the children recursively, and the same walk
-underlies serialization. A layer the tracker does not see might as well not
-exist, though as we will see shortly, Keras goes to some lengths to make
-sure that cannot happen by accident.
+underlies serialization. A layer absent from the tracker is also absent from variable traversal and
+serialization. Keras prevents several common forms of accidental omission, as
+shown shortly.
 :end_tab:
 
 :begin_tab:`mxnet`
 This registry is what the `Block` machinery traverses: `net.collect_params()`
 gathers parameters by walking the children recursively and keys them by those
 registry names (`0.weight`, `1.bias`, ...), and the same walk underlies
-initialization, device movement, and serialization. A block the registry does
-not contain might as well not exist, a fact we will exploit for a
-demonstration shortly.
+initialization, device movement, and serialization. A block absent from the registry is also absent from parameter traversal,
+initialization, device movement, and serialization. We demonstrate this failure
+shortly.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -392,8 +391,7 @@ children, and loop over them in `__call__`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-To see that there is no magic left in `Sequential`, we can write it
-ourselves. Two ingredients suffice: store the children in an attribute, and
+To expose the mechanism behind `Sequential`, we can write it ourselves. Two ingredients suffice: store the children in an attribute, and
 loop over them in `call`.
 :end_tab:
 
@@ -517,8 +515,7 @@ net(X).shape
 ```
 
 :begin_tab:`pytorch`
-The registration step is easy to lose. The following module looks reasonable,
-and its forward pass works, so nothing appears wrong:
+The following module omits registration even though its forward pass works:
 :end_tab:
 
 :begin_tab:`jax`
@@ -527,15 +524,15 @@ the child modules and still supports ordinary indexing and iteration:
 :end_tab:
 
 :begin_tab:`tensorflow`
-In older imperative frameworks this registration step is famously easy to
-lose: store the children in a plain Python list instead of the framework's
+In some imperative frameworks, this registration step can be omitted
+accidentally: store the children in a plain Python list instead of the framework's
 dedicated container, and their parameters silently vanish from the model.
-Keras closes that trap. Because the attribute scan looks inside lists and
+Keras tracks this case automatically. Because the attribute scan looks inside lists and
 dictionaries, a plain list of layers is tracked like any other child:
 :end_tab:
 
 :begin_tab:`mxnet`
-The registration step is easy to lose. The following block stores its layers
+The following block omits registration by storing its layers
 in a plain Python list, which the `__setattr__` interception ignores, so
 nothing inside it is registered. Since `net.initialize()` walks the registry,
 it cannot reach the hidden children either, so we initialize each layer by
@@ -615,13 +612,11 @@ registered. The layers still hold perfectly good tensors, which is why
 `forward` runs. But `net.parameters()` is empty: hand this model to an
 optimizer and training proceeds without a single error while updating nothing;
 `net.to(device)` leaves every layer behind on the CPU; `net.state_dict()`
-checkpoints an empty model. Because no step raises an exception, this bug is
-usually diagnosed by staring at a loss curve that refuses to move.
+checkpoints an empty model. Because no step raises an exception, the failure may first appear as a loss curve that does not change.
 :end_tab:
 
 :begin_tab:`pytorch`
-The registered container for a list of children is `nn.ModuleList`. Wrapping
-the existing list is the entire fix:
+The registered container for a list of children is `nn.ModuleList`. Wrapping the existing list registers the children:
 :end_tab:
 
 :begin_tab:`jax`
@@ -646,13 +641,12 @@ The model computes, yet it owns zero parameters: hand it to a `Trainer` and
 training updates nothing; `save_parameters` checkpoints an empty model. Gluon
 does not let this pass in silence, though. `collect_params()` scans the
 block's ordinary attributes for lists, tuples, and dictionaries holding
-unregistered blocks, and the call above printed a warning naming the guilty
+unregistered blocks, and the call above printed a warning naming the unregistered
 attribute (`"PlainListMLP.layers" is an unregistered container with
 Blocks...`) along with the fix. And had we skipped the by-hand
 initialization, the first forward pass would have stopped with a
-`Parameter has not been initialized` error instead of running at all. Where
-PyTorch's version of this bug is diagnosed by staring at a loss curve,
-Gluon's announces itself.
+`Parameter has not been initialized` error instead of running at all. PyTorch permits the forward pass and may leave the problem to be inferred from
+training behavior, whereas Gluon reports the unregistered container.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -738,8 +732,7 @@ head) as separate attributes.
 :begin_tab:`mxnet`
 Same forward pass, 7946 registered parameters, and no warning. Gluon ships no
 `ModuleList` or `ModuleDict` equivalents: the two registered homes for
-children are named attributes and `nn.Sequential`, with `register_child` as
-the escape hatch for anything else, such as a list of blocks whose loop body
+children are named attributes and `nn.Sequential`, with `register_child` for other structures, such as a list of blocks whose loop body
 is not a plain chain. Transformer implementations in Gluon conventionally
 keep their stack of blocks in an `nn.Sequential` (or register them one by
 one) and their named parts (embedding, final normalization, output head) as
@@ -758,8 +751,8 @@ to run once per model call under compilation.
 :begin_tab:`pytorch`
 In eager execution, `forward` can branch, loop, call tensor functions, and combine
 intermediate results however it likes. The loop in `ModuleListMLP` already used
-this freedom. Its most consequential one-line use is the *residual
-connection*, the wiring idiom at the heart of ResNets and Transformers alike:
+this freedom. One important use is the *residual connection*, which appears throughout
+ResNets and Transformers:
 :end_tab:
 
 :begin_tab:`jax`
@@ -767,8 +760,8 @@ Before `jax.jit`, `__call__` can use Python structure and `jnp` operations. Unde
 JIT, Python control flow is traced from static values; data-dependent control
 flow requires JAX primitives such as `lax.cond` or `lax.scan`. The method can combine
 intermediate results however it likes. The loop in `MySequential` already used
-this freedom. Its most consequential one-line use is the *residual
-connection*, the wiring idiom at the heart of ResNets and Transformers alike.
+this freedom. One important use is the *residual connection*, which appears throughout
+ResNets and Transformers.
 The residual body is constructed once and then reused on every call.
 :end_tab:
 
@@ -777,9 +770,8 @@ In eager mode, `call` can use Python control flow and TensorFlow operations.
 Once wrapped in `tf.function`, as the `Trainer` from :numref:`sec_oo-design`
 does, AutoGraph converts supported control flow; unsupported Python side effects
 or value-dependent constructs may trace once rather than execute per call. The loop in
-`MySequential` already used this freedom. Its most consequential one-line use
-is the *residual connection*, the wiring idiom at the heart of ResNets and
-Transformers alike:
+`MySequential` already used this freedom. One important use is the *residual connection*, which appears throughout
+ResNets and Transformers:
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -788,9 +780,8 @@ intermediate results however it likes; a Gluon `Block` executes eagerly, so
 all of this runs one operation at a time, just as in NumPy. (Gluon's
 `HybridBlock` can compile the forward computation into a graph for speed, at
 the price of restricting it to traceable operations; we stay with `Block`
-here.) The loop in `MySequential` already used this freedom. Its most
-consequential one-line use is the *residual connection*, the wiring idiom at
-the heart of ResNets and Transformers alike:
+here.) The loop in `MySequential` already used this freedom. One important use is the *residual connection*, which appears throughout
+ResNets and Transformers:
 :end_tab:
 
 ```{.python .input #model-construction-forward-is-just-python-1}
@@ -1092,8 +1083,7 @@ has shape `(256, in_units)`, and we never said what `in_units` is. The layer
 cannot know it at construction time, since it depends on the data it will
 receive. So Gluon does not allocate parameters at construction time at all.
 Deferred initialization is not a special mode or a dedicated `Lazy*` class;
-it is how every Gluon layer works, and `in_units` is simply an optional
-argument:
+it is how every Gluon layer works, and `in_units` is an optional argument:
 :end_tab:
 
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-1}
@@ -1600,7 +1590,7 @@ discovered through registration: attribute
 assignment and the containers `nn.Sequential`, `nn.ModuleList`, and
 `nn.ModuleDict` register children, while a plain Python list hides them,
 yielding a model that runs but trains nothing. `forward` is ordinary Python;
-a residual connection is one line in it. Lazy layers declare output widths and
+a residual connection can be expressed directly in it. Lazy layers declare output widths and
 infer input widths on the first forward pass, so initialization and inspection
 follow a dry run (`apply_init`). Configs turn architecture into data: a
 `dataclass` of widths and depths plus a `build` function that stacks blocks.
@@ -1611,8 +1601,7 @@ A module owns parameters, child modules, and a `__call__` method. Layers,
 blocks, and whole models are the same kind of object, and state selection,
 optimizer updates, and serialization traverse the NNX object graph.
 `nnx.List` and `nnx.Dict` register collections of children; a plain container
-holding graph nodes is rejected. `__call__` is ordinary Python, so a residual
-connection is one line. NNX linear layers take both widths and create their
+holding graph nodes is rejected. `__call__` is ordinary Python, so a residual connection can be expressed directly. NNX linear layers take both widths and create their
 parameters in the constructor. A dataclass config plus a deterministic build
 function records those widths and repeated-block counts.
 :end_tab:
@@ -1627,8 +1616,7 @@ assigned attribute, lists and dictionaries included, so even a plain Python
 list of layers is tracked. Variables are created by `build`, not by the
 constructor: every layer infers its input width when the first batch arrives
 (or when `build(input_shape)` is called), after which the model's structure
-is locked. `call` is ordinary Python; a residual connection is one line in
-it. Configs turn architecture into data: a `dataclass` of widths and depths
+is locked. `call` is ordinary Python and can express a residual connection directly. Configs turn architecture into data: a `dataclass` of widths and depths
 plus a `build(cfg)` function that stacks blocks, with `get_config()` as the
 Keras-native form of the same idea.
 :end_tab:
@@ -1642,7 +1630,7 @@ Children are discovered through
 registration: attribute assignment, `nn.Sequential`'s `add`, and
 `register_child` register children, while a plain Python list hides them,
 though `collect_params()` warns about the hidden blocks by name. `forward` is
-ordinary Python; a residual connection is one line in it. Deferred
+ordinary Python; a residual connection can be expressed directly in it. Deferred
 initialization is Gluon's native mode: every layer declares its output width,
 `initialize()` records the initializer, and the first forward pass infers
 input widths and allocates the parameters, so inspection and training follow

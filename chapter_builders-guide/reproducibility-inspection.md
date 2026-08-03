@@ -6,14 +6,13 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Reproducibility and Inspection
 :label:`sec_repro`
 
-Run yesterday's experiment again and the loss curve comes out different.
-Is this morning's change an improvement, or a lucky seed? Answering that
-question requires knowing where every random number in a training run comes
-from. And once two runs *do* disagree, or a loss turns into NaN, the next
-question is what the model computed layer by layer, ideally without editing
-its source. These are two independent tasks, treated in two parts: first an
-inventory of random streams and determinism controls, then inspection of a
-running model through call wrappers and hooks.
+Repeated training runs can produce different loss curves because their
+random streams or arithmetic differ. Evaluating a code change therefore
+requires an inventory of random-number sources and determinism controls. When
+two runs disagree or a loss becomes NaN, layer-level inspection can locate the
+first divergent or non-finite value without changing the model's computation.
+This chapter treats reproducibility first, then model inspection through call
+wrappers and hooks.
 
 ```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
 %%tab pytorch
@@ -51,10 +50,11 @@ first try: initialization draws every weight (:numref:`sec_init_param`),
 dropout samples a fresh mask at each step
 :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`, the data loader shuffles
 examples differently in every epoch, augmentations sample crops and flips,
-and the loader's worker processes each do all of this in parallel. Every one
-of these consults a pseudorandom number generator, a deterministic algorithm
-whose entire output sequence is fixed by its seed. Seed every generator and
-the run is repeatable; miss one and it is not.
+and loader workers can perform these operations in parallel. Each random
+operation consults a pseudorandom number generator whose output sequence is
+fixed by its seed. Seeding every relevant generator fixes those random streams;
+bitwise repetition also requires deterministic arithmetic and a stable
+software and hardware configuration.
 
 :begin_tab:`pytorch`
 In PyTorch, `torch.manual_seed(k)` seeds the global generator on the CPU
@@ -63,7 +63,7 @@ NumPy, which keep their own global generators (`random.seed`,
 `np.random.seed`), nor NumPy `Generator` objects created by
 `np.random.default_rng`, which carry their own seeds. The function below
 draws everything, weights, data, and shuffling, from torch's global
-generator, so one call pins the whole run:
+generator, so one call fixes the random draws in this function:
 :end_tab:
 
 :begin_tab:`jax`
@@ -72,8 +72,8 @@ a value that fully determines its output: `jax.random.normal(key, shape)`
 returns the same numbers every time it is called with that key, and fresh
 randomness comes only from deriving fresh keys with `jax.random.split`. The
 function below turns its seed into one key and splits it three ways, one
-key each for initialization, inputs, and targets, so the seed pins the
-whole run by construction:
+key each for initialization, inputs, and targets, so the seed fixes the
+random draws in this function:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -84,7 +84,7 @@ typical training script consults. It does not reach generators that carry
 their own state (`tf.random.Generator` objects, NumPy `Generator` objects
 from `np.random.default_rng`), each of which has its own seed. The function
 below draws everything, weights and data alike, from the seeded global
-state, so one call pins the whole run:
+state, so one call fixes the random draws in this function:
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -93,10 +93,10 @@ MXNet keeps one global generator per device. `np.random.seed(k)` (MXNet's
 from the seed and its device id, so initialization, sampling, and dropout
 are pinned on every device at once (pass `device=` instead to bring a
 single generator to a device-independent state). It does not touch
-Python's `random` module or classic NumPy, which keep their own global
-generators, a gap that will matter when the data pipeline enters. The
+Python's `random` module or NumPy's legacy global generator, which keep
+their own state, a gap that will matter when the data pipeline enters. The
 function below draws everything, weights and data alike, from MXNet's
-seeded generators, so one call pins the whole run:
+seeded generators, so one call fixes the random draws in this function:
 :end_tab:
 
 ```{.python .input #reproducibility-inspection-seeds-and-randomness}
@@ -206,7 +206,7 @@ that differ in their last bits — the reason emerges in the next section.
 ### Generator Objects
 
 :begin_tab:`pytorch`
-A single global stream is fragile: every consumer shares it, so inserting
+A single global stream couples every consumer, so inserting
 one extra random call (a new layer's initialization, a stray `torch.randn`
 while debugging) shifts everything drawn after it. A `torch.Generator` is a
 private stream with its own seed. Here a data split stays fixed no matter
@@ -214,7 +214,7 @@ what else consumes randomness in between:
 :end_tab:
 
 :begin_tab:`jax`
-A single shared stream is fragile: every consumer advances it, so
+A single shared stream couples every consumer, so
 inserting one extra random call shifts everything drawn after it. In JAX
 the keys *are* the generator objects: each key is a private stream you
 hold as a value, and `jax.random.split` manufactures as many independent
@@ -225,16 +225,15 @@ unrelated draw between two uses of the same key changes nothing:
 :end_tab:
 
 :begin_tab:`tensorflow`
-A single global stream is fragile: every consumer shares it, so inserting
+A single global stream couples every consumer, so inserting
 one extra random call shifts everything drawn after it. A
 `tf.random.Generator` is a private stream with its own seed. Here a data
 split stays fixed no matter what else consumes randomness in between (the
-generator has no permutation method, so we sort random uniforms, the
-standard trick):
+generator has no permutation method, so the example sorts random uniforms):
 :end_tab:
 
 :begin_tab:`mxnet`
-A single global stream is fragile: every consumer shares it, so inserting
+A single global stream couples every consumer, so inserting
 one extra random call shifts everything drawn after it. MXNet offers no
 private stream to retreat to: there is no generator object, and no
 sampling function takes one. The substitute is seeding discipline: re-seed
@@ -362,8 +361,8 @@ well.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The classic reproducibility hole in the loader-worker world is that
-parallel workers inherit or reseed a hidden generator: on fork-based
+A reproducibility failure in process-based data loaders occurs when parallel
+workers inherit or independently reseed a generator: on fork-based
 loaders every child starts with a byte-for-byte copy of the parent's NumPy
 state, so all workers apply the same "random" augmentations, or each child
 seeds itself from entropy and no two runs agree. `tf.data` sidesteps the
@@ -406,24 +405,20 @@ bridge the gap, and the pool outlives any one epoch. Two consequences.
 First, deliberate per-worker seeding has to live in the dataset itself:
 make augmentation a deterministic function of the sample by seeding from
 the sample index inside `__getitem__`, and it stops mattering which
-worker runs it. Second, a surprise from the source: the shuffle order of
-`DataLoader(shuffle=True)` is drawn from *classic* NumPy's global
-generator (`RandomSampler` calls `numpy.random.shuffle`), so pinning it
+worker runs it. Second, the source shows that the shuffle order of
+`DataLoader(shuffle=True)` is drawn from NumPy's legacy global generator (`RandomSampler` calls `numpy.random.shuffle`), so pinning it
 takes a NumPy seed; MXNet's own seed does not reach it.
 :end_tab:
 
 ### Randomness as a Value
 
-Every failure above is hidden global state: a generator that lives
-somewhere your code does not mention, silently copied or shared. Some
-library designs remove the hiding place altogether. In an explicit-PRNG
-design (JAX is the prominent example), randomness is threaded through the
-program as a value: every random operation takes a key argument, using the
-same key twice yields the same numbers by definition, and independent
-streams are obtained by explicitly splitting a key in two. Accidentally
-duplicating a stream would require writing the duplication into the code,
-so the worker bug cannot be expressed. The price is bookkeeping, since
-every function that needs randomness must accept and split keys. PyTorch's
+The worker failures above arise from generator state that is copied or shared
+without appearing in the data flow. In an explicit-PRNG design such as JAX,
+randomness is instead passed through the program as a value: every random
+operation takes a key, using the same key twice yields the same numbers, and
+independent streams are obtained by splitting a key. A key can still be reused
+incorrectly, but the duplication is visible in the program's data flow. This
+design requires every function that uses randomness to accept and split keys. PyTorch's
 global seed is the convenient version of the same contract, one implicit
 key that everything shares; generator objects recover the explicit version
 where it matters.
@@ -496,7 +491,7 @@ machine* can differ in the last bits, and after enough training steps, in
 the loss curve. `torch.use_deterministic_algorithms(True)` is the switch
 that forbids this: operations with a deterministic implementation use it
 (often at some speed cost), and operations without one raise a
-`RuntimeError` rather than silently varying. On CUDA you must additionally
+`RuntimeError` rather than returning nondeterministic results. On CUDA you must additionally
 set the environment variable `CUBLAS_WORKSPACE_CONFIG=:4096:8`, or cuBLAS
 matrix multiplications themselves raise. A related but narrower setting is
 `torch.backends.cudnn.benchmark`: when true, cuDNN times several
@@ -511,10 +506,9 @@ For the *drawn numbers*, JAX's answer is structural. Its PRNG is
 counter-based (Threefry): a draw is a pure function of the key and the
 requested shape, not of any evolving state, so the same key produces the
 same numbers on CPU, GPU, and TPU alike (the documented caveat is that
-JAX does not promise identical bits *across its own releases*). For the
-*arithmetic*, the story splits by backend. On CPU, XLA's kernels are
-deterministic, and the bitwise agreement of `train_once` above is exactly
-that, verified. On GPU, some XLA kernels commit partial sums via atomic
+JAX does not promise identical bits *across its own releases*). Arithmetic determinism depends on the backend and operation. The CPU
+operations used by `train_once` above produced bitwise agreement in this
+environment. On GPU, some XLA kernels commit partial sums via atomic
 additions in whatever order threads finish, the same last-bits
 nondeterminism as elsewhere; setting the environment variable
 `XLA_FLAGS=--xla_gpu_deterministic_ops=true` before JAX initializes
@@ -533,7 +527,7 @@ sums in whatever order threads happen to finish, so two seeded runs on the
 steps, in the loss curve. `tf.config.experimental.enable_op_determinism()`
 is the switch that forbids this: operations with a deterministic
 implementation use it (often at some speed cost), operations without one
-raise `tf.errors.UnimplementedError` rather than silently varying, and
+raise `tf.errors.UnimplementedError` rather than returning nondeterministic results, and
 stateful random operations refuse to run without a seed, since an
 operation that seeds itself from entropy is nondeterminism by another
 name. Two properties follow from its design. It is meant to be called at
@@ -595,10 +589,10 @@ pinned machine, library version, and flag configuration. That makes bitwise
 reproducibility a *debugging* tool, the setting that lets you bisect
 exactly where two runs diverge. The *scientific* goal is statistical
 reproducibility: the same conclusions across seeds, reported as a mean and
-spread over several runs rather than one fortunate curve. The distinction
-mirrors :numref:`sec_numerics`: changing dtype changes results in the
-last bits by design, and an experimental claim that survives neither a new
-seed nor bfloat16 was never a result.
+spread over several runs rather than a single run. The distinction mirrors
+:numref:`sec_numerics`: changing dtype changes results in the last bits by
+design, and a conclusion that does not persist across reasonable seeds or
+numeric configurations requires further evidence.
 
 ## Inspecting Model Execution with Hooks
 
@@ -851,9 +845,9 @@ unhybridized while observing it.
 ### A NaN Finder
 
 When a loss becomes NaN at step 40,000, the useful question is which layer
-produced the first non-finite value. Check every leaf module's output for
-finiteness and the answer arrives in one forward pass. We sabotage a
-weight deep in the stack to watch it fire:
+produced the first non-finite value. Checking every leaf module's output for finiteness can identify the first
+affected layer in one forward pass. The example injects a NaN into a weight
+deep in the stack:
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}
 %%tab pytorch
@@ -958,43 +952,38 @@ for h in handles:
 ```
 
 :begin_tab:`pytorch`
-The report names module `3.body.0`, the layer we poisoned, rather than
-leaving you to bisect with print statements while NaNs propagate through
-everything downstream.
+The report names module `3.body.0`, the layer containing the injected NaN,
+without requiring manual per-layer print statements.
 :end_tab:
 
 :begin_tab:`jax`
 We inspect the captured outputs of linear modules in object-graph order, which
 matches execution order for this sequential network. The report names
-`('layers', 3, 'body', 'layers', 0)`, the layer we poisoned, rather than
-leaving you to bisect with print statements while NaNs propagate through
-everything downstream.
+`('layers', 3, 'body', 'layers', 0)`, the layer containing the injected NaN,
+without requiring manual per-layer print statements.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The report names `block3`, the layer we poisoned, rather than leaving you
-to bisect with print statements while NaNs propagate through everything
-downstream. The check runs on every forward pass until you edit it out of
+The report names `block3`, the layer containing the injected NaN, without
+requiring manual per-layer print statements. The check runs on every forward pass until you edit it out of
 `call`, the price of building observation into the model rather than
-attaching it from outside. For a one-off hunt TensorFlow also ships the
-whole idiom as a switch: `tf.debugging.enable_check_numerics()` instruments
+attaching it from outside. For temporary diagnosis, TensorFlow also provides this behavior through a
+switch: `tf.debugging.enable_check_numerics()` instruments
 every operation and reports the first one to produce an inf or NaN.
 :end_tab:
 
 :begin_tab:`mxnet`
-The report names block `3.body.1`, the layer we poisoned, rather than
-leaving you to bisect with print statements while NaNs propagate through
-everything downstream. Two Gluon-specific details show in the setup.
-First, blocks carry no path names and there is no `named_modules`
-equivalent, so we spell out the list of leaves ourselves, easy here
-because the structure is ours. Second, we deliberately poison the block's
-*second* dense layer: Gluon's fused `Dense(..., activation='relu')`
-kernel maps NaN to $0$, so a NaN planted before the fused activation is
-silently erased before any hook can see it — a small object lesson, in a
-section about diagnosis, that the instrument must be placed where the
-symptom can actually appear. Registration order does not matter: hooks
-fire in execution order, so the first completed forward with a
-non-finite output is the culprit.
+The report names block `3.body.1`, the layer containing the injected NaN,
+without requiring manual per-layer print statements. Two Gluon-specific
+details appear in the setup. First, blocks carry no path names and there is no
+`named_modules` equivalent, so the example constructs the list of leaves
+explicitly. Second, it injects the NaN into the block's *second* dense layer:
+Gluon's fused `Dense(..., activation='relu')` kernel maps NaN to $0$, so a NaN
+before the fused activation can be replaced before a hook observes it.
+Diagnostic hooks must therefore be placed where the target condition remains
+observable. Registration order does not matter: hooks fire in execution order,
+so the first completed forward with a non-finite output identifies the
+affected block.
 :end_tab:
 
 ### Backward Hooks and Beyond
@@ -1069,47 +1058,47 @@ for v, g in list(zip(net.trainable_variables, grads))[10:12]:
 
 ## Summary
 
-Reproducibility is an inventory problem: initialization, dropout,
-shuffling, augmentation, and loader workers each draw from some generator,
-and a run repeats only if every one of them is seeded.
+Reproducibility requires an inventory of random streams and arithmetic:
+initialization, dropout, shuffling, augmentation, and loader workers each use
+a generator, while deterministic kernels are required for bitwise repetition.
 
 :begin_tab:`pytorch`
 `torch.manual_seed` covers torch's CPU and CUDA generators; NumPy and
 `random` need their own seeds in the main process. `DataLoader` derives
 distinct worker seeds and a supplied `generator` pins the shuffle order;
 `worker_init_fn` also configures generator objects that the loader cannot
-discover. Seeding
-makes the program repeatable, not the arithmetic:
-`torch.use_deterministic_algorithms(True)` pins kernel choice too, raising
-on operations that cannot comply.
+discover. Seeding fixes random streams but does not determine arithmetic.
+`torch.use_deterministic_algorithms(True)` additionally requests deterministic
+implementations and raises on operations that cannot comply.
 :end_tab:
 
 :begin_tab:`jax`
 The JAX PRNG portion of the inventory is explicit: the same key gives the same
-draws, and independent JAX streams come from `jax.random.split`. A whole program
-must still inventory Python `random`, NumPy, data loaders, host callbacks, and
-external libraries. Keys make JAX draws repeatable, not the arithmetic: on CPU,
-XLA's kernels are already deterministic, while on GPU the flag
-`--xla_gpu_deterministic_ops=true` pins kernel choice too.
+draws, and independent JAX streams come from `jax.random.split`. A whole
+program must still inventory Python `random`, NumPy, data loaders, host callbacks, and
+external libraries. Keys make JAX draws repeatable but do not determine
+arithmetic. The CPU operations tested in this chapter were deterministic in this environment;
+on GPU, `--xla_gpu_deterministic_ops=true` requests deterministic kernels.
 :end_tab:
 
 :begin_tab:`tensorflow`
 `tf.keras.utils.set_random_seed` covers Python's `random`, NumPy, and
 TensorFlow's global generator in one call; `tf.random.Generator` objects
-and `Dataset.shuffle(seed=...)` carry their seeds explicitly. Seeding
-makes the program repeatable, not the arithmetic:
-`tf.config.experimental.enable_op_determinism()` pins kernel choice too,
-raising on operations that cannot comply, and wants to be the first line
-of the program.
+and `Dataset.shuffle(seed=...)` carry their seeds explicitly. Seeding fixes
+random streams but does not determine arithmetic.
+`tf.config.experimental.enable_op_determinism()` additionally requests
+deterministic implementations,
+raising on operations that cannot comply; enable it near program startup,
+before creating operations.
 :end_tab:
 
 :begin_tab:`mxnet`
 `np.random.seed` covers MXNet's generator on every device in one call;
-classic NumPy and Python's `random` need their own seeds, and Gluon's
-loader consults NumPy for its shuffle order while offering no per-worker
+NumPy's legacy global generator and Python's `random` need their own seeds,
+and Gluon's loader consults NumPy for its shuffle order while offering no per-worker
 seeding hook, so worker randomness must be pinned inside the dataset.
-Seeding makes the program repeatable, not the arithmetic: MXNet has no
-determinism switch, only the autotuning lever
+Seeding fixes random streams but does not determine arithmetic. MXNet has no
+determinism switch, only the autotuning control
 `MXNET_CUDNN_AUTOTUNE_DEFAULT=0`.
 :end_tab:
 
@@ -1175,8 +1164,8 @@ are read after the fact from `param.grad()`.
    collect those values with `nnx.capture(net, nnx.Intermediate)`. Compare
    capture-all-methods, opt-in `sow`, and
    PyTorch-style mutable hooks: which requires touching model
-   code, which can silently retain memory, and which would you want for a
-   model you do not own?
+   code, which can retain tensors or hook state, and which is applicable to
+   a model you do not own?
 :end_tab:
 
 :begin_tab:`tensorflow`

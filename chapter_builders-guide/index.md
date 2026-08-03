@@ -42,7 +42,7 @@ reproducibility-inspection
 
 ## Resources and Further Reading {.unnumbered}
 
-The references below go deeper on the machinery this chapter opens up: how
+The references below develop the mechanisms introduced in this chapter: how
 frameworks represent models and state, automatic differentiation, numerics and
 mixed precision, devices and memory, and reproducible training. All are freely
 accessible online except where noted.
@@ -54,18 +54,18 @@ accessible online except where noted.
 
 **Courses and video lectures**
 
-- [CMU 10-414/714: Deep Learning Systems — Chen & Kolter](https://dlsyscourse.org/) — free lectures and assignments; you build "needle", a miniature framework with autograd, modules, initialization, and GPU support — this entire chapter from the implementor's side.
-- [Neural Networks: Zero to Hero — Andrej Karpathy](https://karpathy.ai/zero-to-hero.html) — free video series; builds autograd, modules, and training loops from scratch in plain Python, making every abstraction in this chapter concrete before you rely on the library's version.
-- [fast.ai Part 2: Deep Learning Foundations — Howard et al.](https://course.fast.ai/Lessons/part2.html) — free; rebuilds a training framework from tensor ops upward (modules, initialization, mixed precision, accelerated training), the practitioner's companion to this chapter.
+- [CMU 10-414/714: Deep Learning Systems — Chen & Kolter](https://dlsyscourse.org/) — free lectures and assignments; students build "needle", a miniature framework with autograd, modules, initialization, and GPU support, providing an implementer's view of these abstractions.
+- [Neural Networks: Zero to Hero — Andrej Karpathy](https://karpathy.ai/zero-to-hero.html) — free video series; builds autograd, modules, and training loops from scratch in plain Python, illustrating the abstractions used by deep learning libraries.
+- [fast.ai Part 2: Deep Learning Foundations — Howard et al.](https://course.fast.ai/Lessons/part2.html) — free; rebuilds a training framework from tensor operations upward, including modules, initialization, mixed precision, and accelerated training.
 
 **Tutorials, notes, and interactive**
 
-- [PyTorch internals — Edward Yang](http://blog.ezyang.com/2019/05/pytorch-internals/) — free; the classic guided tour of tensors, strides, dispatch, and autograd inside PyTorch, one level below :numref:`sec_model_construction`.
+- [PyTorch internals — Edward Yang](http://blog.ezyang.com/2019/05/pytorch-internals/) — free; a guided tour of tensors, strides, dispatch, and autograd inside PyTorch, one level below :numref:`sec_model_construction`.
 - [JAX — The Sharp Bits](https://docs.jax.dev/en/latest/notebooks/Common_Gotchas_in_JAX.html) — free; pure functions, explicit PRNG keys, and jit constraints — the functional worldview behind this book's JAX tab, stated as a list of gotchas.
 - [Train With Mixed Precision — NVIDIA](https://docs.nvidia.com/deeplearning/performance/mixed-precision-training/index.html) — free; the vendor guide to fp16/bf16 arithmetic and loss scaling that :numref:`sec_numerics` distills.
 - [What Every Computer Scientist Should Know About Floating-Point Arithmetic — David Goldberg](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html) — free; the standard reference beneath every rounding and overflow issue in :numref:`sec_numerics`.
-- [Making Deep Learning Go Brrrr From First Principles — Horace He](https://horace.io/brrr_intro.html) — free; the compute-, memory-, and overhead-bound mental model that :numref:`sec_use_gpu` builds on.
-- [Reproducibility — PyTorch notes](https://pytorch.org/docs/stable/notes/randomness.html) — free; the determinism flags, their costs, and their limits — the fine print behind :numref:`sec_repro`.
+- [Making Deep Learning Go Brrrr From First Principles — Horace He](https://horace.io/brrr_intro.html) — free; a first-principles account of compute, memory, and framework overhead covered in :numref:`sec_use_gpu`.
+- [Reproducibility — PyTorch notes](https://pytorch.org/docs/stable/notes/randomness.html) — free; the determinism flags, their costs, and their limits, complementing :numref:`sec_repro`.
 
 **Foundational papers**
 

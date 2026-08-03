@@ -219,8 +219,7 @@ list, parallel to the variables you differentiate with respect to:
 :begin_tab:`mxnet`
 The gradient is the second array a `Parameter` carries: `.data()` returns the
 value and `.grad()` its gradient buffer. gluon allocates the buffer alongside
-the data at initialization time, so before any backpropagation it simply
-holds zeros:
+the data at initialization time, so before any backpropagation it holds zeros:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-4}
@@ -624,7 +623,7 @@ whiten.mean.data().dtype, whiten.note.dtype
 ```
 
 :begin_tab:`pytorch`
-The device version of the same fact is the classic bug: a model works on the
+The same registration issue appears during device movement: a model works on the
 CPU, then crashes after `.to('cuda')` because an unregistered tensor stayed
 behind. On a machine with a GPU the following confirms that buffers move with
 the module:
@@ -642,13 +641,13 @@ Device placement works differently here: a TensorFlow variable's device is
 decided when the variable is *created*, not by a later move. With a GPU
 visible, Keras creates variables on it by default, non-trainable weights
 included, and a `tf.device` scope overrides the choice. There is no `.to()`
-to forget, so the classic left-behind-tensor bug cannot arise; the price is
+to forget, so an unregistered tensor cannot be left behind by `.to()`; the price is
 that relocating existing state means rebuilding it. Each variable reports its
 placement:
 :end_tab:
 
 :begin_tab:`mxnet`
-The device version of the same fact is the classic bug: a model works on the
+The same registration issue appears during device movement: a model works on the
 CPU, then crashes after `reset_device(npx.gpu(0))` because an unregistered
 tensor stayed behind. On a machine with a GPU the following confirms that
 constants move with the block:
@@ -1303,27 +1302,22 @@ head_trainer.step(batch_size=1)
 ```
 
 :begin_tab:`pytorch`
-Only the last two entries, the head's weight and bias, changed. Two pitfalls
-deserve a warning, because both fail silently.
+Only the last two entries, the head's weight and bias, changed. Two additional effects require attention because neither raises an error.
 :end_tab:
 
 :begin_tab:`jax`
 Only the two leaves under `layers[3]`, the head's kernel and bias, changed.
-Freezing traditionally carries two silent pitfalls, one about optimizer
-memory and one about batch normalization; with explicit state, both become
-questions you can settle by inspection.
+Freezing also affects optimizer memory and batch-normalization state. NNX makes
+both effects visible in the explicit state tree.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Only the last two entries, the head's kernel and bias, changed. Two pitfalls
-deserve attention here: one about optimizer memory, and one about batch
-normalization, where Keras quietly protects you.
+Only the last two entries, the head's kernel and bias, changed. Two effects require attention: optimizer memory and batch-normalization state.
+Keras handles the latter specially.
 :end_tab:
 
 :begin_tab:`mxnet`
-Only the two leaves under `3`, the head's weight and bias, changed. Two
-pitfalls deserve attention here: one about optimizer memory, and one about
-batch normalization.
+Only the two leaves under `3`, the head's weight and bias, changed. Two effects require attention: optimizer memory and batch-normalization state.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1411,8 +1405,7 @@ statistics still drift because they never pass through the optimizer:
 
 :begin_tab:`tensorflow`
 Second, batch normalization. Its running statistics are non-trainable weights
-that the forward pass recomputes in training mode. Elsewhere that is a
-classic trap: freeze the layer's scale and shift and the statistics drift
+that the forward pass recomputes in training mode. In other frameworks this requires explicit care: freeze the layer's scale and shift and the statistics drift
 anyway, since they never pass through the optimizer. Keras special-cases
 exactly this: setting `trainable = False` on a `BatchNormalization` layer
 also switches its forward pass to inference mode, so the statistics hold
@@ -1505,7 +1498,7 @@ hold its statistics still, either by keeping it out of `record()` or by
 constructing it with `use_global_stats=True`.
 :end_tab:
 
-Freezing whole tensors is the bluntest form of partial training.
+Freezing whole tensors is one form of partial training.
 Parameter-efficient methods instead add small trainable low-rank corrections
 next to frozen weights; the linear algebra behind them is developed in
 :numref:`sec_mdl-svd-low-rank`. A related idea maintains derived,

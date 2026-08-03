@@ -71,8 +71,8 @@ there.
 ### Directional Derivatives
 
 Reading :eqref:`eq_mdl-nabla_use` for a perturbation $\boldsymbol{\epsilon} =
-h\,\mathbf{u}$ of size $h$ along a unit direction $\mathbf{u}$ shows what the
-gradient says about *any* direction at once:
+h\,\mathbf{u}$ of size $h$ along a unit direction $\mathbf{u}$ shows how the
+gradient determines the derivative in *any* direction:
 
 $$
 \frac{L(\mathbf{w} + h\,\mathbf{u}) - L(\mathbf{w})}{h} \;\xrightarrow{\;h\to 0\;}\; \mathbf{u}\cdot\nabla_{\mathbf{w}} L(\mathbf{w}).
@@ -155,8 +155,8 @@ shrinks a hundredfold. The discarded term has a name and a formula (the Hessian
 quadratic $\tfrac12\boldsymbol{\epsilon}^\top\mathbf{H}f\,\boldsymbol{\epsilon}$),
 which we develop at the end of this section.
 
-The same example models a workflow we will use constantly: whenever we derive a
-gradient by hand, we check it against automatic differentiation. Here
+The same example illustrates a standard verification procedure: compare a
+hand-derived gradient against automatic differentiation. Here
 autograd should reproduce $\nabla f(0, \log 2) = [\tfrac13, \tfrac23]^\top$.
 
 ```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
@@ -281,20 +281,19 @@ Hence $\mathbf{v}\cdot\nabla L = 0$; by the definition of orthogonality from
 :numref:`sec_mdl-geometry-linear-algebraic-ops`, $\mathbf{v}\perp\nabla L$.
 $\blacksquare$
 
-So on a contour map the gradient is the arrow crossing the contours at right
-angles, pointing toward higher ground, and it is longest where the contours
-bunch together, exactly where $L$ changes fastest, as drawn in
-:numref:`fig_mdl-cal-gradient-field`. Gradient descent slides *downhill across
-the contours*, always perpendicular to them.
+On a contour map, the gradient crosses each contour at a right angle and points
+toward increasing values. Its norm is largest where $L$ changes fastest, as
+shown in :numref:`fig_mdl-cal-gradient-field`. Gradient descent moves in the
+opposite direction, perpendicular to the contours.
 
-![Contours of a scalar field $L$ with its gradient $\nabla L$ drawn at several points: each arrow crosses the contours at a right angle, points toward higher values, and is longest where the contours bunch together, where $L$ changes fastest.](../img/mdl-cal-gradient-field.svg)
+![Contours of a scalar field $L$ with $\nabla L$ at several points. Each gradient is normal to its contour, points toward increasing values, and has greater norm where $L$ changes more rapidly.](../img/mdl-cal-gradient-field.svg)
 :label:`fig_mdl-cal-gradient-field`
 
 ### Tangent Planes and Linearization
 
-The level-set picture lives in the *base plane*, where the gradient is the arrow
-normal to the contours. There is a companion picture one dimension up, on the
-*graph* $z = f(\mathbf{x})$ itself. Reading :eqref:`eq_mdl-nabla_use` as an
+A level-set diagram represents the domain in the *base plane*, with the gradient
+normal to each contour. The *graph* $z = f(\mathbf{x})$ gives a second
+representation one dimension higher. Reading :eqref:`eq_mdl-nabla_use` as an
 equation for the height $z$ rather than as an approximation gives the
 *linearization* of $f$ at $\mathbf{x}_0$,
 
@@ -314,12 +313,11 @@ Rewrite
 this says the augmented vector $[\nabla f(\mathbf{x}_0),\, -1]^\top$ is normal,
 *in graph space*, to the tangent plane; the gradient is normal to the surface
 once we account for the height direction. Drop the height coordinate, projecting
-that normal straight down onto the base plane, and we recover $\nabla f$ crossing
-the level curves at right angles. :numref:`fig_mdl-tangent-plane` shows both at
-once: the tangent plane riding the surface, and the gradient's shadow meeting the
-contours square on.
+that normal onto the base plane, and we recover $\nabla f$ crossing
+the level curves at right angles. :numref:`fig_mdl-tangent-plane` shows the
+tangent plane together with this projected gradient.
 
-![A surface $z = f(\mathbf{x})$ with its tangent plane at a point, and the gradient $\nabla f$ projected onto the base plane, where it crosses the level curves of $f$ at right angles. The tangent plane is the graph-space view of the linearization; the perpendicular crossing is the base-plane view, two faces of the same first-order approximation.](../img/mdl-cal-tangent-plane.svg)
+![A surface $z = f(\mathbf{x})$ with its tangent plane at a point and $\nabla f$ projected onto the base plane. The tangent plane represents the linearization in graph space; the projected gradient is normal to the corresponding level curve of $f$.](../img/mdl-cal-tangent-plane.svg)
 :label:`fig_mdl-tangent-plane`
 
 ### Critical Points and the First-Order Test
@@ -329,8 +327,8 @@ arise in deep learning are far too complex to minimize in closed form. But the
 geometry above gives a cheap, exact *necessary* condition that every minimum
 must satisfy.
 
-Suppose someone hands us a point $\mathbf{x}_0$ and claims it minimizes $L$. Is
-the claim even plausible? Read :eqref:`eq_mdl-nabla_use` at $\mathbf{x}_0$: if
+A necessary condition can reject a proposed minimizer of $L$ at $\mathbf{x}_0$. Applying
+:eqref:`eq_mdl-nabla_use` at $\mathbf{x}_0$, if
 $\nabla L(\mathbf{x}_0) \neq \mathbf{0}$, then stepping along
 $-\nabla L(\mathbf{x}_0)$ strictly decreases $L$, so $\mathbf{x}_0$ cannot be a
 minimum. Contrapositively, **a minimum forces $\nabla L(\mathbf{x}_0) =
@@ -387,10 +385,11 @@ $$
 :eqlabel:`eq_mdl-lagrange-condition`
 
 for some scalar $\lambda$, the *Lagrange multiplier*. This single picture is
-the first-order condition for constrained optimization, the seed of the KKT
-conditions and of duality: the contours of $f$ kiss the constraint surface
-where their gradients align (:numref:`fig_mdl-lagrange-tangency`). We meet it
-again in full force in :numref:`sec_mdl-constrained-optimization-duality`.
+the first-order condition for constrained optimization and a basis for the KKT
+conditions and duality. At the solution, a contour of $f$ is tangent to the
+constraint surface and their gradients align
+(:numref:`fig_mdl-lagrange-tangency`). :numref:`sec_mdl-constrained-optimization-duality`
+develops this condition further.
 
 ![Lagrange multipliers as tangency. At the constrained optimum the level set of $f$ is tangent to the constraint curve $g = c$ and the two gradients align, $\nabla f = \lambda \nabla g$. At a non-optimal feasible point the gradients disagree, so $\nabla f$ keeps a component along the constraint and sliding along it still improves $f$.](../img/mdl-cal-lagrange-tangency.svg)
 :label:`fig_mdl-lagrange-tangency`
@@ -684,7 +683,7 @@ and when to prefer it over forward mode.
 ## Second-Order Structure: the Hessian
 
 The gradient is a first-order, linear approximation; to know whether a critical
-point is a minimum we need the *curvature*, which lives in the second
+point is a minimum we need the *curvature*, which is determined by the second
 derivatives. A function of $n$ variables has $n^2$ second partials,
 
 $$
@@ -726,8 +725,7 @@ at another nearby point. Let $h \to 0$: by continuity the two expressions
 converge to the two mixed partials at $\mathbf{x}$, and since they are equal
 for every $h$, the limits agree. $\blacksquare$
 
-Symmetry matters because it puts the Hessian in the world of symmetric matrices,
-where the spectral theorem and positive-definiteness from
+Symmetry allows the spectral theorem and positive-definiteness results from
 :numref:`sec_mdl-eigendecompositions` apply, which is exactly what the
 second-derivative test will use.
 
@@ -785,7 +783,7 @@ gradient, and Hessian at $\mathbf{x}_0 = [-1, 0]^\top$ via
 :eqref:`eq_mdl-second_taylor` gives the approximating quadratic
 $q(x, y) = e^{-1}\bigl(-1 - (x+1) + (x+1)^2 + y^2\bigr)$.
 :numref:`fig_mdl-taylor-quadratic` plots the surface against this quadratic;
-near $[-1, 0]^\top$ they hug each other and peel apart only as we move away.
+near $[-1, 0]^\top$ they are nearly indistinguishable and separate only farther from the base point.
 
 ![The surface $z = xe^{-x^2-y^2}$ (blue) and its second-order Taylor quadratic at the base point $(-1, 0)^\top$ (orange). The two agree in value, slope, and curvature there, so they are nearly indistinguishable in a neighborhood of the base point and separate only farther out.](../img/mdl-cal-taylor-quadratic.svg)
 :label:`fig_mdl-taylor-quadratic`
@@ -1002,7 +1000,7 @@ rests on a single question: **how does the loss change when we nudge the
 parameters?**
 
 - The **gradient** $\nabla_{\mathbf{w}} L$ is the answer, the derivative in many dimensions.
-- It points the way **downhill**, the engine of every optimizer.
+- Its negative gives the direction of steepest **descent**, which underlies gradient-based optimization.
 - The **chain rule**, organized by the gradient, *is* backpropagation.
 - The **Hessian** tells a minimum from a saddle.
 :::
@@ -1070,7 +1068,7 @@ $$\frac{L(\mathbf{w} + h\,\mathbf{u}) - L(\mathbf{w})}{h} \;\xrightarrow{\,h\to 
 
 ::: {.d2l-note}
 One vector $\nabla_{\mathbf{w}} L$ encodes the slope in **every** direction
-simultaneously. The rest of the geometry falls out of this single identity.
+simultaneously. The geometric results follow from this identity.
 :::
 :::
 
@@ -1270,7 +1268,7 @@ The one-line autograd call runs exactly this backward pass. The four gradients m
 ::: {.slide title="The Hessian: curvature"}
 [Hessian]{.kicker}
 
-The gradient is first-order; curvature lives in the $n^2$ second partials,
+The gradient is first-order; the $n^2$ second partials determine curvature,
 collected into the **Hessian** $\mathbf{H}_f$.
 
 ::: {.d2l-note .rule}
@@ -1279,8 +1277,8 @@ $\partial^2 f/\partial x_i\partial x_j = \partial^2 f/\partial x_j\partial x_i$,
 so $\mathbf{H}_f = \mathbf{H}_f^\top$.
 :::
 
-Symmetry puts $\mathbf{H}$ in the world of the spectral theorem, exactly
-what the second-derivative test needs.
+Because $\mathbf{H}$ is symmetric, the spectral theorem applies and supports
+the second-derivative test.
 :::
 
 ::: {.slide title="The best-fitting quadratic"}

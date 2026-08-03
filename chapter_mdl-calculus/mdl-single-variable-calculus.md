@@ -32,7 +32,7 @@ such as the smooth curve in :numref:`fig_mdl-zoom-sequence`, becomes increasingl
 close to its tangent line on smaller neighborhoods of a differentiable point.
 :numref:`fig_mdl-zoom-sequence` shows three successively smaller windows.
 
-![The same smooth curve viewed over shrinking $x$-ranges: as we zoom in around the base point it flattens onto its tangent line.](../img/mdl-cal-zoom-sequence.svg)
+![The same smooth curve over progressively smaller $x$-ranges. Near the base point, the tangent line increasingly approximates the curve.](../img/mdl-cal-zoom-sequence.svg)
 :label:`fig_mdl-zoom-sequence`
 
 At a differentiable point, the tangent is a first-order approximation: after a step $\epsilon$, the approximation error is negligible relative to $|\epsilon|$ as $\epsilon\to0$. The proportionality between the leading input and output changes is the tangent slope.
@@ -45,9 +45,13 @@ $$
 \frac{f(x+\epsilon) - f(x)}{(x+\epsilon) - x} = \frac{f(x+\epsilon) - f(x)}{\epsilon},
 $$
 
-the slope of the *secant* line through $(x, f(x))$ and $(x+\epsilon, f(x+\epsilon))$. As $\epsilon$ shrinks, the second point slides toward the first and the secant rotates into the tangent line we saw under the microscope; :numref:`fig_mdl-secant-to-tangent` shows this rotation. We can watch the slope settle down in code. We use the following imports throughout the section.
+the slope of the *secant* line through $(x, f(x))$ and $(x+\epsilon, f(x+\epsilon))$. As
+$\epsilon$ shrinks, the second point approaches the first and the secant slope
+approaches the tangent slope, as shown in :numref:`fig_mdl-secant-to-tangent`. The
+following computation measures this convergence. We use these imports throughout the
+section.
 
-![The difference quotient is the slope of the secant through $(x, f(x))$ and $(x+\epsilon, f(x+\epsilon))$; as $\epsilon \to 0$ the second point slides toward the first and the secant rotates into the tangent line, whose slope is the derivative $f'(x)$.](../img/mdl-cal-secant-to-tangent.svg)
+![The difference quotient is the slope of the secant through $(x, f(x))$ and $(x+\epsilon, f(x+\epsilon))$. As $\epsilon \to 0$, this slope approaches the tangent slope $f'(x)$.](../img/mdl-cal-secant-to-tangent.svg)
 :label:`fig_mdl-secant-to-tangent`
 
 ```{.python .input #single-variable-calculus-imports}
@@ -110,7 +114,12 @@ $$
 \lim_{\epsilon \rightarrow 0}\frac{f(4+\epsilon) - f(4)}{\epsilon} = 8.
 $$
 
-The table only ever creeps toward that limit; the framework's automatic differentiation (:numref:`sec_autograd`) applies exact differentiation rules instead, evaluated in floating-point arithmetic, so there is no $\epsilon$ and no truncation error (only rounding remains). Asking the framework for the slope of the same $f$ at $x = 4$ returns $8$. The rules below formalize this calculation, and :numref:`sec_mdl-matrix-calculus-autodiff` builds an automatic differentiation system from them.
+The table approaches the limit through finite differences. Automatic differentiation
+(:numref:`sec_autograd`) instead applies exact differentiation rules in floating-point
+arithmetic, so it introduces no $\epsilon$ or truncation error; only rounding remains.
+For the same $f$ at $x = 4$, it returns $8$. The rules below formalize this calculation,
+and :numref:`sec_mdl-matrix-calculus-autodiff` builds an automatic differentiation
+system from them.
 
 ```{.python .input #single-variable-calculus-autograd-check}
 #@tab mxnet
@@ -146,7 +155,15 @@ print(f"autograd: f'(4) = {t.gradient(y, x).numpy():.1f}")
 print(f"autograd: f'(4) = {jax.grad(f)(4.0):.1f}")
 ```
 
-This very computation is the *method of finite differences*, and it measures the effect of a weight on the loss directly: perturb the weight, re-run the network, watch the loss move. It costs an extra evaluation of $L$ per weight (or two, for the centered differences that halve the truncation error), so with even a few thousand parameters it is thousands of forward passes for a single gradient. The *backpropagation algorithm* popularized in 1986 by :citet:`Rumelhart.Hinton.Williams.ea.1988` removes that bottleneck: it delivers the effect of *all* weights at once, at a small constant multiple of the cost of one forward pass, the *cheap-gradient principle* :cite:`Griewank.Walther.2008`. Backpropagation is the chain rule (below) run in reverse over the network.
+This computation is the *method of finite differences*. It measures a weight's effect on
+the loss by perturbing that weight and evaluating the network again. It costs an extra
+evaluation of $L$ per weight (or two, for the centered differences that halve the
+truncation error), so with even a few thousand parameters it is thousands of forward
+passes for a single gradient. The *backpropagation algorithm* popularized in 1986 by
+:citet:`Rumelhart.Hinton.Williams.ea.1988` removes that bottleneck: it delivers the
+effect of *all* weights at once, at a small constant multiple of the cost of one forward
+pass, the *cheap-gradient principle* :cite:`Griewank.Walther.2008`. Backpropagation is
+the chain rule (below) run in reverse over the network.
 
 The slope is itself a function of $x$, so we name it. The **derivative** of $f$ is
 
@@ -182,7 +199,10 @@ be used to derive differentiation rules, gradient descent, and Taylor series.
 ## Computing Derivatives
 :label:`sec_mdl-derivative_table`
 
-A fully formal course would build every derivative from the limit :eqref:`eq_mdl-der_def`. We take the working mathematician's route instead: a short table of derivatives for the elementary functions, plus a handful of *rules* for combining them, from which any expression built out of sums, products, quotients, and compositions can be differentiated mechanically.
+Rather than deriving every elementary derivative from the limit :eqref:`eq_mdl-der_def`,
+we use a short table of derivatives for the elementary functions, plus a handful of
+*rules* for combining them, from which any expression built out of sums, products,
+quotients, and compositions can be differentiated mechanically.
 
 ### A Table of Common Derivatives
 
@@ -200,7 +220,8 @@ As in :numref:`sec_calculus`, most derivatives reduce to a few core ones, repeat
 
 ### Rules for Combining Derivatives
 
-Storing a derivative for every conceivable function is hopeless. What makes calculus tractable is that derivatives respect the ways we *build* functions (adding, multiplying, dividing, and composing), so any expression assembled from the table can be differentiated by following the matching rules:
+Derivatives respect addition, multiplication, division, and composition. Therefore, the
+following rules differentiate any expression assembled from the table:
 
 * **Sum rule.** $\frac{d}{dx}\left(g(x) + h(x)\right) = \frac{dg}{dx}(x) + \frac{dh}{dx}(x)$.
 * **Product rule.** $\frac{d}{dx}\left(g(x)\, h(x)\right) = g(x)\frac{dh}{dx}(x) + \frac{dg}{dx}(x)h(x)$.
@@ -218,7 +239,7 @@ f(x+\epsilon) = g(x+\epsilon) + h(x+\epsilon)
 \approx \Bigl(g(x) + h(x)\Bigr) + \epsilon\left(\frac{dg}{dx}(x) + \frac{dh}{dx}(x)\right),
 $$
 
-so the coefficient of $\epsilon$, the derivative, is $\frac{dg}{dx}(x) + \frac{dh}{dx}(x)$. Two changes simply add. $\blacksquare$
+so the coefficient of $\epsilon$, the derivative, is $\frac{dg}{dx}(x) + \frac{dh}{dx}(x)$. The two first-order changes add. $\blacksquare$
 
 **Product rule.** Expanding both factors and multiplying out,
 
@@ -281,7 +302,11 @@ $$
 f(x+\epsilon) \approx f(x) + \epsilon \frac{df}{dx}(x)
 $$
 
-passes through $(x, f(x))$ with slope $\frac{df}{dx}(x)$: it is the *tangent* at $x$, the best straight-line model of $f$ nearby and the limit of the rotating secants of :numref:`fig_mdl-secant-to-tangent`. Drawing the tangent at several points of $\sin$, using $\frac{d}{dx}\sin(x) = \cos(x)$, shows each line hugging the curve in a neighborhood and peeling away as we move off.
+passes through $(x, f(x))$ with slope $\frac{df}{dx}(x)$: it is the *tangent* at $x$,
+the best straight-line model of $f$ nearby and the limit of the rotating secants of
+:numref:`fig_mdl-secant-to-tangent`. Drawing the tangent at several points of $\sin$,
+using $\frac{d}{dx}\sin(x) = \cos(x)$, shows that each line approximates the curve well
+near its base point and diverges from it farther away.
 
 ```{.python .input #single-variable-calculus-linear-approximation}
 import numpy as onp
@@ -298,7 +323,12 @@ d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 
 ### The Gradient-Descent Step
 
-So far we have *observed* $\epsilon$; now we get to *choose* it. In the small-change identity :eqref:`eq_mdl-small_change` the step $\epsilon$ is ours to pick, and we want to pick it so that $f$ goes *down*. The identity already predicts the effect of any step: a step $\epsilon$ changes the output by about $\epsilon\, f'(x)$. To make that change negative, point the step opposite the slope: take $\epsilon = -\eta\, f'(x)$ for a step size $\eta > 0$, and, *if the step is not too large*, the descent is guaranteed.
+The step $\epsilon$ can also be chosen to reduce the function value. In the small-change
+identity :eqref:`eq_mdl-small_change` the step $\epsilon$ is ours to pick, and we want
+to pick it so that $f$ goes *down*. The identity already predicts the effect of any
+step: a step $\epsilon$ changes the output by about $\epsilon\, f'(x)$. To make that
+change negative, point the step opposite the slope: take $\epsilon = -\eta\, f'(x)$ for
+a step size $\eta > 0$, and, *if the step is not too large*, the descent is guaranteed.
 
 The qualification matters. The small-change identity by itself only describes the first-order *model*; turning "the model goes down" into "$f$ really goes down" needs control on how fast the slope can change over the step, which is exactly the curvature. The standard hypothesis is that $f'$ is **$L$-Lipschitz** near $x$, meaning $|f'(u) - f'(v)| \le L\,|u-v|$ for $u,v$ in a neighborhood, so the slope cannot swing by more than $L$ per unit of $x$. (If $f$ is twice differentiable this just says $|f''| \le L$ there.) Under that single assumption the first-order *guess* becomes a genuine *inequality*, the descent lemma of smooth optimization :cite:`Nesterov.2018`.
 
@@ -331,7 +361,7 @@ function at the base point. Its minimizer is the gradient step with
 $\eta=1/L$, where the bound has decreased by
 $\tfrac{1}{2L}[f'(x)]^2$. The actual decrease can be larger.
 
-![With an $L$-Lipschitz slope the function is trapped beneath the quadratic upper bound $f(x) + f'(x)s + \frac{L}{2}s^2$, which touches the graph at the base point. The gradient step with $\eta = 1/L$ lands exactly at the parabola's minimizer, where the ceiling, and hence $f$ beneath it, sits at least $\frac{1}{2L}f'(x)^2$ below the starting value. Here $f(x) = \sin(2x)$ with $L = 4$: the actual drop far exceeds the guaranteed one, which is the point, since the lemma is a worst-case floor.](../img/mdl-cal-descent-lemma.svg)
+![For an $L$-Lipschitz slope, $f(x) + f'(x)s + \frac{L}{2}s^2$ is a quadratic upper bound that equals $f$ at the base point. The gradient step with $\eta = 1/L$ minimizes this bound and guarantees a decrease of at least $\frac{1}{2L}f'(x)^2$. Here $f(x) = \sin(2x)$ with $L = 4$, and the actual decrease exceeds the worst-case guarantee.](../img/mdl-cal-descent-lemma.svg)
 :label:`fig_mdl-descent-lemma`
 
 The first-order decrease is $-\eta[f'(x)]^2$, while curvature contributes the
@@ -345,7 +375,7 @@ x_{t+1} = x_t - \eta\, f'(x_t),
 $$
 :eqlabel:`eq_mdl-gd-loop`
 
-which is exactly the weight update $\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla L(\mathbf{w})$ from the introduction, one coordinate at a time. :numref:`fig_mdl-gd-step` shows a single step: stand at $x$, follow the tangent downhill by $-\eta f'(x)$, and land lower on the curve.
+which is exactly the weight update $\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla L(\mathbf{w})$ from the introduction, one coordinate at a time. :numref:`fig_mdl-gd-step` shows how a step of $-\eta f'(x)$ from $x$ moves in the direction opposite the slope and decreases the local linear model.
 
 ![One gradient-descent step on a 1-D bowl. At $x$ the tangent line has slope $f'(x)$; the step $-\eta f'(x)$ moves opposite the slope and lands at $x - \eta f'(x)$, lower on the curve, with the drop equal to $\eta f'(x)^2$ to first order.](../img/mdl-cal-gd-step.svg)
 :label:`fig_mdl-gd-step`
@@ -365,7 +395,15 @@ $$
 x_{t+1} = x_t - \eta\,(2x_t) = (1 - 2\eta)\, x_t,
 $$
 
-a simple geometric recursion with closed form $x_t = (1-2\eta)^t x_0$. So the iterates converge to the minimum $x = 0$ exactly when $|1 - 2\eta| < 1$, i.e. for $0 < \eta < 1$. This is the descent lemma made exact: here $f'' \equiv 2$ so $L = 2$ and the safe range $\eta < 2/L = 1$ is precisely the convergence threshold. Within it, tiny $\eta$ creeps in monotonically, the optimal $\eta = 1/L = \tfrac12$ jumps to the minimum in one step, $\tfrac12 < \eta < 1$ overshoots and oscillates inward, $\eta = 1$ oscillates forever between $\pm x_0$, and $\eta > 1$ diverges. The next code cell runs the recursion for a sweep of step sizes, prints where each lands after ten steps, and plots the five trajectories $x_t$.
+a simple geometric recursion with closed form $x_t = (1-2\eta)^t x_0$. So the iterates
+converge to the minimum $x = 0$ exactly when $|1 - 2\eta| < 1$, i.e. for $0 < \eta < 1$.
+This is the descent lemma made exact: here $f'' \equiv 2$ so $L = 2$ and the safe range
+$\eta < 2/L = 1$ is precisely the convergence threshold. Within it, a small $\eta$
+converges monotonically but slowly, the optimal $\eta = 1/L = \tfrac12$ reaches the
+minimum in one step, $\tfrac12 < \eta < 1$ overshoots and oscillates inward, $\eta = 1$
+oscillates forever between $\pm x_0$, and $\eta > 1$ diverges. The next code cell runs
+the recursion for a sweep of step sizes, prints the value of each iterate after ten steps, and
+plots the five trajectories $x_t$.
 
 ```{.python .input #single-variable-calculus-gradient-descent}
 # Gradient descent on f(x) = x^2 from x0 = 1, for several step sizes
@@ -384,7 +422,13 @@ d2l.plot(list(range(11)), trajectories, 'step t', 'x_t', ylim=[-2.5, 2.5],
          fmts=('-', 'm--', 'g-.', 'r:', 'c-'))
 ```
 
-The printout and the picture tell the same story, one regime per curve: $\eta = 0.05$ creeps toward $0$ monotonically, $\eta = 0.5$ lands on it in a single step, $\eta = 0.9$ converges while zig-zagging across the minimum, $\eta = 1.0$ bounces between $\pm 1$ forever, and $\eta = 1.1$ oscillates with *growing* amplitude: it has left the plotting window within a handful of steps and reaches $|x_{10}| \approx 6.2$. The threshold $\eta = 2/L$ separating the last two regimes is exactly where the descent lemma's guarantee expires.
+The printout and figure show one regime per curve: $\eta = 0.05$ converges slowly and
+monotonically to $0$, $\eta = 0.5$ reaches it in a single step, $\eta = 0.9$ converges
+while alternating across the minimum, $\eta = 1.0$ alternates between $\pm 1$
+indefinitely, and $\eta = 1.1$ oscillates with *growing* amplitude: it has left the
+plotting window within a handful of steps and reaches $|x_{10}| \approx 6.2$. The
+threshold $\eta = 2/L$ separating the last two regimes is exactly where the descent
+lemma's guarantee expires.
 
 ## Curvature and Taylor Series
 
@@ -436,7 +480,7 @@ $$
 
 Two corollaries are the facts we already used. If $f' > 0$ throughout an interval then for any $x_1 < x_2$ in it, :eqref:`eq_mdl-mvt` gives $f(x_2) - f(x_1) = f'(\xi)(x_2 - x_1) > 0$ for some $\xi$ between them, so $f$ is **increasing**: a positive slope really does mean the function climbs, and the sign of $f'$ governs monotonicity. And if $f$ has a *constant* sign of $f'$ on each side of a stationary point, the theorem turns that into the rise-and-fall behaviour the second-derivative test read off. The Mean Value Theorem is the formal bridge from *the derivative at a point* to *the behaviour of the function on an interval*.
 
-### The Best Quadratic, and the Taylor Idea
+### Quadratic Approximation and the Taylor Expansion
 
 The first derivative built the best line; the second lets us build the best *parabola*. Consider a generic quadratic $g(x) = ax^2 + bx + c$, for which
 
@@ -453,9 +497,13 @@ $$
 g(x) = \sin(x_0) + \cos(x_0)\,(x - x_0) - \tfrac{1}{2}\sin(x_0)\,(x-x_0)^2,
 $$
 
-a parabola that hugs the curve over a visibly wider window than the tangent lines we plotted above, because it captures curvature as well as slope; :numref:`fig_mdl-best-parabola` draws all three together. We will make the "wider window" claim quantitative, and verify it in code, once the Taylor remainder is on the table. But first, the quadratic model changes how we optimize.
+a parabola that remains accurate over a visibly wider interval than the tangent lines
+plotted above because it captures curvature as well as slope;
+:numref:`fig_mdl-best-parabola` draws all three together. We will make the "wider
+window" claim quantitative, and verify it in code, once the Taylor remainder is on the
+table. But first, the quadratic model changes how we optimize.
 
-![The sine curve with its two local models at $x_0$: the tangent line matches value and slope, while the best parabola also matches curvature and stays close over a wider window before peeling away.](../img/mdl-cal-best-parabola.svg)
+![The sine curve with its two local models at $x_0$: the tangent line matches value and slope, while the best parabola also matches curvature and remains accurate over a wider interval.](../img/mdl-cal-best-parabola.svg)
 :label:`fig_mdl-best-parabola`
 
 ### Newton's Method
@@ -486,7 +534,11 @@ for t in range(6):
     x = x - (x**3 - 1) / (3 * x**2)  # x - f'(x) / f''(x)
 ```
 
-Read the error column's exponents: after a couple of settling-in steps they go $10^{-2} \to 10^{-4} \to 10^{-8}$: each step roughly *squares* the previous error, doubling the number of correct digits. Contrast the $\eta$-sweep above, where gradient descent shrinks the error by the same fixed factor $|1 - 2\eta|$ every step: geometric convergence gains a fixed number of digits per step, Newton doubles them. Matching yet *more* derivatives with higher-degree polynomials is the Taylor series, to which we now turn.
+After the first few steps, the error exponents progress as $10^{-2} \to 10^{-4} \to 10^{-8}$: each step roughly *squares* the previous error, doubling the number of correct
+digits. Contrast the $\eta$-sweep above, where gradient descent shrinks the error by the
+same fixed factor $|1 - 2\eta|$ every step: geometric convergence gains a fixed number
+of digits per step, Newton doubles them. Matching yet *more* derivatives with
+higher-degree polynomials is the Taylor series, to which we now turn.
 
 ### Taylor Series
 
@@ -635,7 +687,7 @@ $$
 \begin{cases} +1 & \epsilon > 0, \\ -1 & \epsilon < 0. \end{cases}
 $$
 
-The two sides give different limits, so no single number is *the* slope: approaching from the right the function rises with slope $+1$, from the left it falls with slope $-1$. These are the **one-sided derivatives** $f'_+(0) = +1$ and $f'_-(0) = -1$. The ordinary two-sided derivative exists only when they agree. For $\mathrm{ReLU}$ at $0$ the same computation gives $f'_-(0) = 0$ (flat on the left) and $f'_+(0) = 1$ (slope $1$ on the right). Note there is no limit to take: for $|x|$ at $0$ the two quotients are the *constants* $\pm 1$, the same at every $\epsilon$, so the next cell prints them once. It then asks the question this section turns on: what does autograd return at the corner, where no true derivative exists?
+The two sides give different limits, so no single number is *the* slope: approaching from the right the function rises with slope $+1$, from the left it falls with slope $-1$. These are the **one-sided derivatives** $f'_+(0) = +1$ and $f'_-(0) = -1$. The ordinary two-sided derivative exists only when they agree. For $\mathrm{ReLU}$ at $0$ the same computation gives $f'_-(0) = 0$ (flat on the left) and $f'_+(0) = 1$ (slope $1$ on the right). Note there is no limit to take: for $|x|$ at $0$ the two quotients are the *constants* $\pm 1$, the same at every $\epsilon$, so the next cell prints them once. It then evaluates what autograd returns at the corner, where no true derivative exists.
 
 ```{.python .input #single-variable-calculus-one-sided}
 #@tab mxnet
@@ -695,7 +747,8 @@ for name, fn in [('d|x|/dx', jnp.abs), ("ReLU'", jax.nn.relu)]:
     print(f"{name} at 0: autograd returns {jax.grad(fn)(0.0):.1f}")
 ```
 
-Autograd does not refuse. For both $\frac{d}{dx}|x|$ and $\mathrm{ReLU}'$ at $0$ it returns the fixed value $0$: one particular slope, chosen by convention, from the set of candidates we now define.
+For both $\frac{d}{dx}|x|$ and $\mathrm{ReLU}'$ at $0$ it returns the fixed value $0$:
+one particular slope, chosen by convention, from the set of candidates we now define.
 
 ### Subgradients and Optimality
 
@@ -728,7 +781,15 @@ This is no harder to prove than its smooth cousin: taking $g = 0$ in :eqref:`eq_
 
 ### Nonsmooth Points in Stochastic Training
 
-Corners do not, in practice, break training. To see why, look at what autograd actually does at them. One clarification first, so the convexity above is not over-read: a deep network's loss surface is wildly *non*-convex, while the subdifferential :eqref:`eq_mdl-subgrad` is a *convex*-function notion. The kinks in a network come from convex building blocks ($|x|$, $\mathrm{ReLU}$, the hinge loss $\max(0, 1-x)$), and what autograd does at each kink is simple: it returns *one fixed element* of that piece's subdifferential (the deep-learning libraries' convention is $\mathrm{ReLU}'(0) = 0$, as the cell above showed) and lets the chain rule propagate that choice through the surrounding, nonconvex composition.
+Nondifferentiable corners generally do not prevent stochastic training. The relevant
+behavior is the value that autograd assigns at each corner. One clarification first, so
+the convexity above is not over-read: a deep network's loss surface is wildly
+*non*-convex, while the subdifferential :eqref:`eq_mdl-subgrad` is a *convex*-function
+notion. The kinks in a network come from convex building blocks ($|x|$, $\mathrm{ReLU}$,
+the hinge loss $\max(0, 1-x)$), and what autograd does at each kink is simple: it
+returns *one fixed element* of that piece's subdifferential (the deep-learning
+libraries' convention is $\mathrm{ReLU}'(0) = 0$, as the cell above showed) and lets the
+chain rule propagate that choice through the surrounding, nonconvex composition.
 
 Two caveats apply. First, even for a convex function a subgradient step need not be a *descent* step: at the minimum of $|x|$ the perfectly valid subgradient $g = \tfrac12 \in \partial|x|(0)$ sends the update to $x = -\eta/2$ and *increases* the function; the subgradient method of convex optimization converges by shrinking its step sizes, not by descending monotonically :cite:`Nesterov.2018`. Second, the chain rule carries no warranty at kinks: chaining per-kink choices can produce a number that is not a subgradient of the composite *at all*. The simplest failure is the identity in disguise
 
@@ -828,7 +889,7 @@ Why does training tolerate the occasional bad chained value? The usual picture i
 ::: {.cover}
 [Dive into Deep Learning · §23.1]{.kicker}
 
-The local linear model behind every optimizer<br>**the derivative · gradient descent · curvature · Taylor · corners**.
+Local approximation for optimization<br>**the derivative · gradient descent · curvature · Taylor · corners**.
 :::
 :::
 
@@ -844,7 +905,7 @@ local derivatives.
 Holding every weight but one fixed gives a curve $f(x)$ in a single variable:
 
 ::: {.d2l-note}
-*Which way is downhill, and by how much?* The derivative answers both at once.
+The derivative determines the local direction and rate of decrease.
 :::
 :::
 
@@ -867,7 +928,8 @@ Holding every weight but one fixed gives a curve $f(x)$ in a single variable:
 ::: {.slide title="Local Linear Approximation"}
 [The derivative]{.kicker}
 
-Zoom in on any smooth function and the wiggles flatten until the graph is *indistinguishable from a straight line*, the tangent, whose slope is all that is left to pin down.
+On a sufficiently small neighborhood, a differentiable function is approximated by its
+tangent line. The tangent slope is the derivative.
 
 ::: {.cols .vc}
 ::: {.col .fig .big}
@@ -897,13 +959,13 @@ As $\epsilon \to 0$ the second point slides in and the secant rotates into the t
 ::: {.slide title="Convergence of the Difference Quotient"}
 [The derivative]{.kicker}
 
-The secant slope of $f(x) = x^2 + 1701(x-4)^3$ at $x=4$ marches toward $8$ as $\epsilon$ shrinks:
+For $f(x) = x^2 + 1701(x-4)^3$ at $x=4$, the secant slope approaches $8$ as $\epsilon$ shrinks:
 
 @single-variable-calculus-differential-calculus-4
 
 . . .
 
-The table only *creeps*; autograd returns it *exactly*, no $\epsilon$:
+Finite differences approach the limit; autograd applies differentiation rules without $\epsilon$:
 
 @!single-variable-calculus-autograd-check
 :::
@@ -939,7 +1001,7 @@ this local approximation.
 ::: {.col}
 Read as a function of the displacement, $f(x+\epsilon) \approx f(x) + \epsilon f'(x)$ is the **tangent line** at $x$, the best straight-line model of $f$ nearby.
 
-Drawn at three points of $\sin$ (using $\tfrac{d}{dx}\sin = \cos$), each line hugs the curve in a neighborhood and peels away beyond it.
+For three points of $\sin$ (using $\tfrac{d}{dx}\sin = \cos$), each tangent is accurate locally and diverges from the curve farther away.
 :::
 
 ::: {.col .fig}
@@ -953,7 +1015,7 @@ Drawn at three points of $\sin$ (using $\tfrac{d}{dx}\sin = \cos$), each line hu
 
 ::: {.cols .vc}
 ::: {.col}
-Now we *choose* the step. Take $\epsilon = -\eta\,f'(x)$ with step size $\eta > 0$: moving against the slope makes the model drop by
+Choose $\epsilon = -\eta\,f'(x)$ with step size $\eta > 0$. The first-order model then decreases by
 
 $$\approx \eta\,[f'(x)]^2 \ge 0.$$
 
@@ -975,7 +1037,7 @@ Whatever the sign of $f'$, stepping against it lowers $f$, by an amount proporti
 :::
 
 ::: {.col}
-If the slope is $L$-Lipschitz, the curvature erects a **quadratic ceiling** $f(x) + f'(x)s + \tfrac{L}{2}s^2$ that touches the graph at the base point.
+If the slope is $L$-Lipschitz, $f(x) + f'(x)s + \tfrac{L}{2}s^2$ is a **quadratic upper bound** that equals the function at the base point.
 
 Stepping to the ceiling's minimizer (the gradient step with $\eta = 1/L$) drops $f$ by at least $\tfrac{1}{2L}[f'(x)]^2$:
 
@@ -997,7 +1059,7 @@ A strict decrease for every $0 < \eta < 2/L$.
 ::: {.col}
 Gradient descent on $f(x) = x^2$ ($L = 2$) from $x_0 = 1$, ten steps each.
 
-Creep ($\eta{=}0.05$), one-shot ($\tfrac12{=}1/L$), zig-zag ($0.9$), bounce ($1.0$), diverge ($1.1$): the threshold $\eta = 2/L$ is where the lemma's guarantee expires.
+The cases are slow convergence ($\eta{=}0.05$), one-step convergence ($\tfrac12{=}1/L$), oscillatory convergence ($0.9$), a two-cycle ($1.0$), and divergence ($1.1$). The guarantee ends at $\eta = 2/L$.
 :::
 :::
 :::
@@ -1037,11 +1099,11 @@ At a stationary point ($f'=0$) the *sign* of $f''$ decides the shape: up into a 
 
 ::: {.cols .vc}
 ::: {.col}
-The bridge from *the derivative at a point* to *the behavior of $f$ on an interval*: the average rate of change is hit exactly, somewhere inside.
+The theorem relates a derivative of $f$ at an interior point to the average rate of change over an interval:
 
 $$f'(\xi) = \frac{f(b) - f(a)}{b - a}\quad\text{for some }\xi \in (a,b).$$
 
-It is why a positive slope means $f$ climbs, and what makes the Taylor remainder precise.
+It shows how the sign of the derivative determines where $f$ is increasing and also supports the Taylor remainder bound.
 :::
 
 ::: {.col .fig}
@@ -1109,7 +1171,7 @@ The Lagrange remainder makes "the approximation improves near $x_0$" quantitativ
 
 @!single-variable-calculus-taylor-error-rate
 
-The measured ratios land right on the predicted $4$, $8$, $16$: each extra matched derivative adds a power of closeness, the wider-window effect measured.
+The measured ratios match the predicted $4$, $8$, and $16$. Each additional matched derivative increases the error order by one.
 :::
 
 ::: {.slide title="Smooth is not analytic"}
@@ -1117,7 +1179,7 @@ The measured ratios land right on the predicted $4$, $8$, $16$: each extra match
 
 ::: {.cols .vc}
 ::: {.col}
-A warning before we lean on infinite series. The function $f(x) = e^{-1/x^2}$ is smooth everywhere, yet *every* derivative at $0$ vanishes.
+Smoothness alone does not justify an infinite Taylor representation. The function $f(x) = e^{-1/x^2}$ is smooth everywhere, yet *every* derivative at $0$ vanishes.
 
 Its Taylor series at $0$ is identically zero: it converges on the whole line, but **to the zero function**, agreeing with $f$ only at the origin. Convergence of the series is not convergence *to $f$*.
 :::
@@ -1159,7 +1221,9 @@ Optimality relaxes from $f'(x)=0$ to the inclusion $0 \in \partial f(x)$.
 ::: {.slide title="The split is in the difference quotient"}
 [Nonsmooth]{.kicker}
 
-The one-sided quotients of $|x|$ at $0$ are constants that never agree: $+1$ from the right, $-1$ from the left, so there is no limit to take. At the corner itself, autograd still answers:
+The one-sided quotients of $|x|$ at $0$ are constants that never agree: $+1$ from the
+right, $-1$ from the left, so there is no limit to take. At the corner, autograd returns
+a convention-dependent value:
 
 @single-variable-calculus-one-sided
 
@@ -1181,10 +1245,11 @@ Autograd reports slope $0$ for the identity function: the chained convention $0 
 ::: {.slide title="Nonsmooth Points in Stochastic Training"}
 [Nonsmooth]{.kicker}
 
-The failure we just watched lives only **at** the kink, and the kinks form (heuristically) a **measure-zero set**.
+The incorrect chained value occurs only **at** a kink. The set of kinks is often treated
+heuristically as a **measure-zero set**.
 
 ::: {.d2l-note}
-Under a continuous sampling distribution, a fixed measure-zero set is hit with probability zero. Training iterates are data-dependent, however, and can land on kinks. Conservative-field convergence results cover many definable networks under their stated boundedness, step-size, and noise assumptions; they are not an unconditional guarantee for arbitrary nonsmooth training.
+Under a continuous sampling distribution, a fixed measure-zero set is hit with probability zero. Training iterates are data-dependent, however, and can encounter kinks. Conservative-field convergence results cover many definable networks under their stated boundedness, step-size, and noise assumptions; they are not an unconditional guarantee for arbitrary nonsmooth training.
 :::
 :::
 

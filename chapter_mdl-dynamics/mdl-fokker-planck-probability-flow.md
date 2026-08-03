@@ -18,15 +18,13 @@ the quantity that must be estimated from data in
 :numref:`sec_mdl-score-matching-diffusion-flow`.
 
 We first distinguish pathwise and density evolution and review the required
-vector-calculus identities: divergence, the Laplacian, and integration by parts
-in $d$ dimensions. We then derive the
-Fokker--Planck equation from Itô's lemma, check it in closed form and
-numerically on the Ornstein--Uhlenbeck process, rewrite it as a *continuity
-equation* and identify the probability-flow ODE. The
-score function gets its own treatment (worked Gaussians and mixtures, and
-the normalizer-invariance that makes it learnable) before Anderson's
-time-reversal theorem gives the reverse process. The numerical examples use
-NumPy and closed-form densities; no model is trained in this section.
+vector-calculus identities: divergence, the Laplacian, and integration by parts in $d$
+dimensions. We then derive the Fokker--Planck equation from Itô's lemma, check it in
+closed form and numerically on the Ornstein--Uhlenbeck process, rewrite it as a
+*continuity equation* and identify the probability-flow ODE. We then derive scores for
+Gaussians and mixtures, establish their invariance to the normalizing constant, and
+apply Anderson's time-reversal theorem. The numerical examples use NumPy and closed-form
+densities; no model is trained in this section.
 
 ```{.python .input #fokker-planck-imports}
 #@tab mxnet
@@ -101,12 +99,10 @@ Fokker--Planck equation will make both halves of that sentence into operators.
 
 ### Three Identities from Vector Calculus
 
-The rest of this section speaks the language of vector calculus. Beyond the
-gradient of :numref:`sec_mdl-multivariable_calculus`, we need exactly three
-facts about a smooth vector field
+Beyond the gradient of :numref:`sec_mdl-multivariable_calculus`, the
+derivation uses three vector-calculus identities about a smooth vector field
 $\mathbf{v} : \mathbb{R}^d \to \mathbb{R}^d$ and a smooth scalar field
-$h : \mathbb{R}^d \to \mathbb{R}$. None of them is hard, and together they
-are the entire toolkit.
+$h : \mathbb{R}^d \to \mathbb{R}$. Together they provide the required analytic tools.
 
 **Divergence.** The divergence of $\mathbf{v}$ is the scalar field
 
@@ -127,8 +123,8 @@ $$
 $$
 :eqlabel:`eq_mdl-dyn-divergence-theorem`
 
-i.e., the total "sourceness" inside a region equals the net flux out through
-its boundary. In one dimension this is just the fundamental theorem of
+Thus, the integrated divergence over a region equals the net outward boundary
+flux. In one dimension this is just the fundamental theorem of
 calculus, $\int_a^b v'(x)\,dx = v(b) - v(a)$: what accumulates inside $[a, b]$
 is whatever crosses the two endpoints. We take the divergence theorem itself
 as a granted fact; a proof is in :citet:`Folland.1999`.
@@ -161,19 +157,19 @@ $$
 $\nabla \cdot (h \mathbf{v}) = \nabla h \cdot \mathbf{v} + h\, \nabla \cdot \mathbf{v}$;
 integrate both sides over a ball of radius $R$ and let $R \to \infty$: by
 the divergence theorem the left side is a boundary flux of $h\mathbf{v}$,
-which the decay kills. $\blacksquare$
+which vanishes under the decay assumption. $\blacksquare$
 
 Applied twice with $\mathbf{v} = \nabla u$, integration by parts moves a whole
 Laplacian across the integral sign: $\int h\, \Delta u = \int u\, \Delta h$.
-That maneuver is the only trick the Fokker--Planck derivation needs:
-shifting derivatives from a test function onto a density.
+This identity shifts derivatives from a test function onto a density, which is
+the main step in the Fokker--Planck derivation.
 
 ### Simulating the Marginal Density
 
 Before the derivation, a simulation illustrates that the marginal is
 deterministic and, for OU, exactly the Gaussian
-:eqref:`eq_mdl-dyn-ou-marginal`. We release $100{,}000$ particles from the
-point $x_0 = 2$, march them with Euler--Maruyama
+:eqref:`eq_mdl-dyn-ou-marginal`. We initialize $100{,}000$ particles at
+$x_0 = 2$, simulate them with Euler--Maruyama
 (:numref:`sec_mdl-euler-maruyama`), and compare histograms of the cloud
 against the analytic density at three times. We take $\theta = 1$ and
 $\sigma = \sqrt{2}$ throughout, so the stationary law is exactly
@@ -209,24 +205,24 @@ for t, color in zip(ts_show, ('C0', 'C1', 'C2')):
 d2l.plt.xlabel('x'); d2l.plt.ylabel('density'); d2l.plt.legend();
 ```
 
-The histograms sit on their analytic curves: at $t = 0.5$ the cloud's mean
+The histograms match their analytic densities: at $t = 0.5$ the cloud's mean
 $1.2137$ and standard deviation $0.7987$ match the analytic
 $2e^{-0.5} \approx 1.2131$ and $\sqrt{1 - e^{-1}} \approx 0.7951$ to within a
 few parts in a thousand (the gap is Euler--Maruyama discretization plus
 sampling noise), and by $t = 2$ the cloud is already close to the stationary
 $\mathcal{N}(0, 1)$.
-One hundred thousand random walks, one deterministic density movie. The next
-subsection writes down the PDE that this movie obeys.
+Despite random individual paths, the ensemble estimates one deterministic
+time-dependent density. The next subsection derives its PDE.
 
 ## The Fokker--Planck Equation
 :label:`sec_mdl-fokker-planck`
 
 ### From Itô's Lemma to a PDE
 
-Here is the derivation, intuition first. We cannot differentiate a path, but
-we *can* differentiate the expectation of a smooth function along a path:
-Itô's lemma (:numref:`sec_mdl-ito-lemma`) tells us how. Probing the density
-with every smooth function then pins the density down completely.
+Although an SDE path is not differentiable, the expectation of a smooth test
+function along the path can be differentiated using Itô's lemma
+(:numref:`sec_mdl-ito-lemma`). Equality against every smooth test function then
+determines the density evolution.
 
 Take any smooth, compactly supported **test function**
 $\phi : \mathbb{R}^d \to \mathbb{R}$. For
@@ -255,8 +251,8 @@ $$
 \int \phi\; \partial_t p_t\; d\mathbf{x} = \int (\nabla\phi \cdot \mathbf{f})\, p_t\; d\mathbf{x} + \tfrac12 g^2 \int (\Delta\phi)\, p_t\; d\mathbf{x}.
 $$
 
-The derivatives sit on $\phi$, where we cannot use them; integration by parts
-:eqref:`eq_mdl-dyn-integration-by-parts` moves them onto $p_t$, where we can.
+Integration by parts :eqref:`eq_mdl-dyn-integration-by-parts` transfers the
+derivatives from $\phi$ to $p_t$.
 Applied once to the drift term (with $h = \phi$,
 $\mathbf{v} = \mathbf{f} p_t$) and twice to the diffusion term,
 
@@ -300,7 +296,7 @@ J_i(\mathbf{x},t)
 - \frac12\sum_j \partial_j\big(a_{ij}(\mathbf{x},t)p_t(\mathbf{x})\big).
 $$
 
-Then the general Fokker--Planck equation is simply
+Then the general Fokker--Planck equation is
 $\partial_t p_t=-\nabla\cdot\mathbf{J}$. Integrating it over a domain
 $\Omega$ gives
 
@@ -309,7 +305,7 @@ $$
 = -\int_{\partial\Omega}\mathbf{J}\cdot\mathbf{n}\,dS.
 $$
 
-This identity also says which boundary assumptions a derivation has hidden.
+This identity makes the required boundary assumptions explicit.
 On all of $\mathbb{R}^d$ we require the current to decay sufficiently fast.
 A **reflecting** boundary imposes $\mathbf{J}\cdot\mathbf{n}=0$; periodic
 boundaries match density and flux on opposite faces. A common **absorbing**
@@ -344,15 +340,14 @@ The second row requires the derivatives and boundary conditions used in the
 probability-current derivation; it cannot be obtained by replacing scalar
 $g^2$ with a matrix while leaving the rest of the formula unchanged.
 
-### Drift Transports, Diffusion Smooths
+### Drift and Diffusion Terms
 
-Read :eqref:`eq_mdl-dyn-fokker-planck` term by term. The first term,
-$-\nabla \cdot (\mathbf{f} p)$, is *advection*: probability streams along the
-drift field exactly like dye carried by a current; we will see in the next
-section that it is the signature of pure transport. The second term,
+Equation :eqref:`eq_mdl-dyn-fokker-planck` contains two distinct terms. The first term,
+$-\nabla \cdot (\mathbf{f} p)$, is *advection*: probability is transported along the
+drift field. The next section identifies this term with pure transport. The second term,
 $\tfrac12 g^2 \Delta p$, is *diffusion*: by the neighborhood-average reading
-of the Laplacian, it raises the density wherever the density dips below its
-surroundings, smoothing peaks away. It is the
+of the Laplacian, it increases density below the local average and decreases density above the
+local average. It is the
 $(dW)^2 = dt$ correction of Itô's lemma made macroscopic.
 
 Switch the drift off entirely and the Fokker--Planck equation *is* the **heat
@@ -379,9 +374,9 @@ $$
 \partial_t p = \theta\, \partial_x (x\, p) + \tfrac12 \sigma^2\, \partial_{xx} p,
 $$
 
-and we claim the Gaussian marginal :eqref:`eq_mdl-dyn-ou-marginal` solves it.
-To see this, and to see *which* Gaussians solve it, plug in a generic
-Gaussian and reduce the PDE to two ODEs for the mean and variance.
+The Gaussian marginal :eqref:`eq_mdl-dyn-ou-marginal` solves this equation.
+Substituting a generic Gaussian identifies the complete Gaussian solution
+family and reduces the PDE to two ODEs for the mean and variance.
 
 **Proposition (Gaussian solutions of the OU equation).** *Let
 $p(x, t) = \mathcal{N}(x; m(t), v(t))$ be a Gaussian density with
@@ -424,10 +419,9 @@ $\partial_t p = 0$ of the PDE (you will re-derive it from scratch, without the
 Gaussian ansatz, in the exercises). And setting $\theta = 0$ recovers the heat
 equation's linear variance growth $\dot v = \sigma^2$.
 
-Closed form is good; a numerical check is better, since it also exercises the
-machinery we will trust later. We evaluate both sides of the PDE by finite
-differences on a grid ($\partial_t$ by a centered difference in time,
-$\partial_x$ and $\partial_{xx}$ by `np.gradient`) and measure the
+A finite-difference calculation independently checks the closed-form result. We evaluate
+both sides of the PDE by finite differences on a grid ($\partial_t$ by a centered
+difference in time, $\partial_x$ and $\partial_{xx}$ by `np.gradient`) and measure the
 residual.
 
 ```{.python .input #fokker-planck-ou-residual}
@@ -450,8 +444,8 @@ for t in ts_show:
 
 At every time the residual is four to five orders of magnitude below the scale
 of $\partial_t p$ (at $t = 0.5$, a residual of $5 \times 10^{-6}$ against a
-left-hand side of size $0.54$): pure finite-difference truncation error. The
-cloud's evolving density really does obey :eqref:`eq_mdl-dyn-fokker-planck`.
+left-hand side of size $0.54$): pure finite-difference truncation error. Thus the evolving empirical density is consistent with
+:eqref:`eq_mdl-dyn-fokker-planck` at the tested resolution.
 
 One further reading, for later context: for a gradient drift
 $\mathbf{f} = -\nabla V$ and constant $g$, the Fokker--Planck equation is the
@@ -498,12 +492,11 @@ flows in at $a$ minus what leaks out at $b$.
 ![The continuity equation as a flux balance. A density $p(x)$ (blue) is carried by a drift $f$, giving the probability current $j(x)=f\,p(x)$. Over the fixed region from $a$ to $b$ the enclosed mass (orange) changes only through the current crossing its two boundaries: $\partial_t\int_a^b p\,dx = j(a)-j(b)$, the net inward flux. Probability is conserved, never created or destroyed inside the region.](../img/mdl-dyn-fokker-planck-flux.svg)
 :label:`fig_mdl-dyn-fokker-planck-flux`
 
-Two consequences fall out immediately. Integrating
-:eqref:`eq_mdl-dyn-continuity` over all of $\mathbb{R}^d$ kills the divergence
-term (it is the flux of $q_t \mathbf{v}$ at infinity, which the decay of that
-product kills), so total mass $\int q_t = 1$ is conserved automatically. And
-along a trajectory of the flow, a particle's log-density changes at minus the
-local divergence,
+Two consequences follow. Integrating :eqref:`eq_mdl-dyn-continuity` over all
+of $\mathbb{R}^d$ makes the divergence term vanish because the flux of
+$q_t \mathbf{v}$ at infinity is zero under the decay assumption. Thus total
+mass $\int q_t = 1$ is conserved. Along a flow trajectory, a particle's
+log-density changes at minus the local divergence,
 
 $$
 \frac{d}{dt} \log q_t(\mathbf{x}(t)) = -\nabla \cdot \mathbf{v}(\mathbf{x}(t), t) :
@@ -900,7 +893,7 @@ $$
 p(\mathbf{x}_{t+\tau} \mid \mathbf{x}_t) \approx \mathcal{N}\big(\mathbf{x}_{t+\tau};\; \mathbf{x}_t + \mathbf{f}(\mathbf{x}_t, t)\,\tau,\; g^2 \tau I\big).
 $$
 
-Reversing a step means asking: given where the particle *landed*,
+For a reversed step, condition on the particle's endpoint:
 $\mathbf{x}_{t+\tau} = \mathbf{y}$, where did it *come from*? Bayes' rule
 answers with the forward kernel reweighted by the marginal:
 
@@ -908,7 +901,7 @@ $$
 p(\mathbf{x}_t = \mathbf{x} \mid \mathbf{x}_{t+\tau} = \mathbf{y}) \propto p(\mathbf{y} \mid \mathbf{x})\; p_t(\mathbf{x}).
 $$
 
-Take logs and expand $\log p_t(\mathbf{x})$ around the landing point:
+Take logs and expand $\log p_t(\mathbf{x})$ around the endpoint:
 $\log p_t(\mathbf{x}) \approx \log p_t(\mathbf{y}) + (\mathbf{x} - \mathbf{y}) \cdot \nabla \log p_t(\mathbf{y})$,
 with corrections of higher order in $\tau$ (the step is of size
 $\sqrt{\tau}$). Adding this linear term to the Gaussian exponent
@@ -924,7 +917,7 @@ $g^2 \tau$ (a diffusion) whose drift is the forward drift *corrected by
 the full $g^2$ times the score*. The marginal $p_t$ acts as a Bayesian prior
 that bends the reversed step toward where the data density actually was. (One
 bookkeeping remark for the careful reader: we evaluated $\mathbf{f}$ and the
-score at the landing point $\mathbf{y}$ rather than at $\mathbf{x}$; since the
+score at the endpoint $\mathbf{y}$ rather than at $\mathbf{x}$; since the
 step itself is of size $\sqrt{\tau}$, switching evaluation points perturbs the
 mean only at order $\tau^{3/2}$, invisible at the order $\tau$ we keep.)
 
@@ -989,15 +982,13 @@ $\lambda > 0$ it is uniqueness for a *parabolic* Fokker--Planck equation,
 which we take as a granted fact under our standing assumptions
 :cite:`Risken.1996`. $\blacksquare$
 
-The factor of two now has an explanation. The reverse process *keeps
-injecting noise*, and its own diffusion smooths the density just as the
-forward one did. So the reverse drift must work twice: one
+The factor of two follows from the diffusion term in reverse time. The reverse
+process injects noise, which smooths its density. One
 $-\tfrac12 g^2 \nabla \log p_t$
-merely switches off the forward smoothing (that alone is the
-probability-flow ODE, which injects no noise), and a second
-$-\tfrac12 g^2 \nabla \log p_t$ pre-compensates the smoothing that the
-reverse-time noise will re-inflict. Anderson's $\lambda = 1$ pays both
-charges; the dial in between trades off sampler stochasticity at fixed
+cancels the forward smoothing; this is the correction used by the
+probability-flow ODE, which injects no noise. A second
+$-\tfrac12 g^2 \nabla \log p_t$ compensates for smoothing from the reverse-time noise. Anderson's $\lambda = 1$
+includes both terms; intermediate values trade sampler stochasticity at fixed
 marginals, a freedom that diffusion-model samplers exploit deliberately
 (:numref:`sec_mdl-score-matching-diffusion-flow`).
 :numref:`fig_mdl-dyn-lambda-family` shows the dial in action: three values of
@@ -1006,23 +997,23 @@ Anderson's result is a statement about the full reverse-time *process*
 (filtrations, reverse Brownian motions and all), stronger than the marginal
 statement proved here; see :citet:`Anderson.1982`.
 
-![One dial, one density movie. Left: reverse-time trajectories from the same terminal noise draws, integrated with the exact mixture score under the drift $\mathbf{f} - \tfrac{1+\lambda^2}{2} g^2 \nabla \log p_t$ and noise $\lambda g$: the probability-flow ODE $\lambda = 0$ glides, $\lambda = 0.5$ rattles gently, Anderson's reverse SDE $\lambda = 1$ is jagged. More injected noise demands more drift correction, the factor sliding from $\tfrac12 g^2$ up to $g^2$ so the extra smoothing is pre-compensated. Right: after the full reverse pass, all three clouds land in the same terminal histogram, the bimodal data density $p_0$. Marginals fixed, paths free.](../img/mdl-dyn-lambda-family.svg)
+![Reverse-time trajectories from the same terminal draws, using the exact mixture score with drift $\mathbf{f} - \tfrac{1+\lambda^2}{2} g^2 \nabla \log p_t$ and noise $\lambda g$. The probability-flow ODE ($\lambda = 0$) is deterministic, while $\lambda = 0.5$ and Anderson's reverse SDE ($\lambda = 1$) add increasing noise and drift correction. The correction coefficient increases from $\tfrac12 g^2$ to $g^2$. All three methods produce the same terminal bimodal density $p_0$ within sampling and discretization error.](../img/mdl-dyn-lambda-family.svg)
 :label:`fig_mdl-dyn-lambda-family`
 
-Note what :eqref:`eq_mdl-dyn-reverse-sde` asks of us. The forward drift
+Equation :eqref:`eq_mdl-dyn-reverse-sde` separates known and unknown quantities. The forward drift
 $\mathbf{f}$ and schedule $g$: chosen by us. The terminal distribution
 $p_T$: by design, approximately a known Gaussian (the whole point of noising).
 The score $\nabla \log p_t$: the *single* unknown, the same one the
 probability-flow ODE needed. With the forward drift and schedule fixed, one
 estimated field can therefore be used by both samplers.
 :numref:`fig_mdl-dyn-forward-reverse` shows the pair of processes as evolving
-densities, the one-dimensional rendition of the two-dimensional cloud story
+densities, the one-dimensional counterpart of the two-dimensional example
 that :numref:`fig_mdl-dyn-noising-denoising` tells in the next section.
 
 ![The forward and reverse diffusion processes on a density. Top row (left to right): the forward noising SDE turns a structured bimodal data density $p_0$ into a nearly Gaussian $p_T$ across a few time slices, each panel an exact variance-preserving (OU) marginal of the mixture. Bottom row (right to left): with the exact score $\nabla\log p_t$, the reverse process runs the same marginals backward to recover the data density.](../img/mdl-dyn-forward-reverse.svg)
 :label:`fig_mdl-dyn-forward-reverse`
 
-### Noise Back into Data
+### Reverse-Time Sampling
 
 The final demonstration is generation itself, with the learned network
 replaced by our closed-form mixture score: diffusion sampling with zero
@@ -1061,10 +1052,10 @@ d2l.plt.plot(gs, p_t(gs, 0.0), 'k', lw=1, label='data density $p_0$')
 d2l.plt.xlabel('x'); d2l.plt.ylabel('density'); d2l.plt.legend();
 ```
 
-Starting from featureless Gaussian noise (justified, since
+Starting from Gaussian reference noise (justified, since
 $\max_x |p_T - \mathcal{N}(0,1)|$ is about $0.0015$ against a density peak of
-$0.40$), the reverse SDE re-grows both modes at $\pm 2.00$ and splits its
-mass $0.500/0.500$. The recovered mode widths read $0.260$ and $0.261$
+$0.40$), the reverse SDE recovers modes at $\pm 2.00$ and assigns
+mass $0.500/0.500$ between them. The recovered mode widths read $0.260$ and $0.261$
 against the target $0.250$. Euler--Maruyama has $O(\Delta t)$ weak bias under
 the conditions of :numref:`sec_mdl-euler-maruyama`, and a separate run with
 half the step gives widths $0.255$ and $0.252$. These finite experiments do
@@ -1183,7 +1174,7 @@ the score.
 ::: {.cover}
 [Dive into Deep Learning · §27.3]{.kicker}
 
-The cloud's law of motion<br>**Fokker–Planck, the probability-flow ODE, and the reverse SDE**.
+Density evolution under stochastic dynamics<br>**Fokker–Planck, the probability-flow ODE, and the reverse SDE**.
 :::
 :::
 
@@ -1192,8 +1183,8 @@ The cloud's law of motion<br>**Fokker–Planck, the probability-flow ODE, and th
 
 ::: {.cols .vc}
 ::: {.col}
-One SDE path is jagged and unrepeatable. The *cloud* of paths is a density
-$p_t(\mathbf x)$ that evolves **deterministically**.
+An SDE path is random, whereas its time-marginal density
+$p_t(\mathbf x)$ evolves **deterministically**.
 
 - Drift transports it, diffusion smooths it.
 - The same marginals can be produced by a deterministic ODE.
@@ -1252,10 +1243,10 @@ These three identities suffice for the derivations that follow.
 ::: {.slide title="Itô + by parts → a PDE"}
 [Derivation]{.kicker}
 
-Take a test function $\phi$: Itô gives
+For a test function $\phi$, Itô's lemma gives
 $d\phi=(\nabla\phi\cdot\mathbf f+\tfrac12 g^2\Delta\phi)dt+\text{noise}$. Take
-$\mathbb E[\cdot]=\int(\cdot)\,p_t$, kill the Itô term, and integrate by parts
-onto $p_t$:
+$\mathbb E[\cdot]=\int(\cdot)\,p_t$, use the zero mean of the Itô integral,
+and integrate by parts onto $p_t$:
 
 ::: {.d2l-note .rule}
 $$\partial_t p_t = -\nabla\cdot(\mathbf f\,p_t) + \tfrac12 g(t)^2\,\Delta p_t.$$
@@ -1266,7 +1257,7 @@ $$\partial_t p_t = -\nabla\cdot(\mathbf f\,p_t) + \tfrac12 g(t)^2\,\Delta p_t.$$
 For $\mathbf f = -\nabla V$ and constant $g$, this PDE is itself a *gradient flow*: steepest
 descent of the free energy $\int pV + \tfrac12 g^2\!\int p\log p$ in the
 **Wasserstein geometry** (Jordan–Kinderlehrer–Otto), the same transport
-geometry that powers flow matching.
+geometry used by flow matching.
 :::
 
 ::: {.slide title="Drift transports, diffusion smooths"}
@@ -1332,7 +1323,7 @@ $$\tfrac12 g^2\,\Delta p = \nabla\cdot\!\bigl(p\,\bigl[+\tfrac12 g^2\,\nabla\log
 
 . . .
 
-**Sign trap:** standalone it carries a **plus**; the minus appears only after
+The standalone identity carries a **plus** sign; the minus appears only after
 folding into continuity form. The wrong sign misses by a factor of two:
 
 @fokker-planck-diffusion-identity

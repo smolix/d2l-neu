@@ -46,9 +46,9 @@ import numpy as np
 
 ## From Discrete to Continuous Probability
 
-Continuous random variables are subtler than discrete ones, and the technical
-jump is exactly the jump from *summing a list* to *integrating a function*. We
-develop the theory in three steps: the density that replaces the mass function,
+For a continuous random variable, probabilities are obtained by integrating
+rather than summing. We develop the theory in three steps: first the density
+that replaces the mass function,
 the cumulative function that turns it back into a genuine probability, and the
 derivative relationship between them, which is the fundamental theorem of
 calculus restated for probabilities.
@@ -149,10 +149,10 @@ mask = (x > -2) & (x <= 3)
 print(f'P(-2 < X <= 3) : {float(onp.sum(epsilon * p[mask])):.4f}')
 ```
 
-The total mass prints as $1.0000$, just as :eqref:`eq_mdl-density` demands
+The total mass is $1.0000$, as :eqref:`eq_mdl-density` requires
 (the grid spans $[-8,8]$, wide enough that the truncated Gaussian tails hold
 mass under $10^{-7}$), and the interval integral returns a genuine probability
-in $[0,1]$: the printed $0.7725$ sits within $6\times10^{-4}$ of the exact value
+in $[0,1]$. The estimate $0.7725$ is within $6\times10^{-4}$ of the exact value
 $0.7731$, the small bias of a left-endpoint Riemann sum at $\epsilon=0.01$. A
 catalogue of named densities (Gaussian, exponential, and the rest) follows in
 :numref:`sec_mdl-distributions`; here we stay abstract.
@@ -238,13 +238,13 @@ $$
 P\bigl(F^{-1}(U)\le x\bigr) = P\bigl(U\le F(x)\bigr) = F(x). \quad\blacksquare
 $$
 
-:numref:`fig_mdl-prob-inverse-transform` is the picture: feed the uniform level
-$U$ into the *vertical* axis of the c.d.f. and reflect it through the curve down
-to the horizontal axis. Because the curve is steep where the density is high, a
-uniformly spread set of levels lands its reflections densely exactly there: the
-c.d.f.'s slope, which is the density by :eqref:`eq_mdl-cdf_deriv`, does the
-shaping. This one-line proposition is how libraries turn raw uniform noise into
-samples from any one-dimensional distribution: generate $U$, look up
+:numref:`fig_mdl-prob-inverse-transform` illustrates the construction. Place the
+uniform level $U$ on the *vertical* axis of the c.d.f. and map it through the
+curve to the horizontal axis. Where the density is high, the c.d.f. is steep,
+so a uniform range of vertical levels maps to a narrow range of horizontal
+values. Thus the transformed samples are concentrated where the density is
+large. This proposition gives a general procedure for turning uniform noise
+into samples from a one-dimensional distribution: generate $U$, then evaluate
 $F^{-1}(U)$. We put it to work when we meet the named distributions in
 :numref:`sec_mdl-distributions`, where inverting the exponential's c.d.f. gives
 that distribution's standard sampler in closed form.
@@ -263,10 +263,10 @@ expectation, the law of large numbers, is stated and proved in
 ## Summarizing a Distribution
 
 A full distribution is often more than we can interpret at a glance. *Summary
-statistics* compress it to a few numbers: the *mean* says where the variable
-sits, the *variance* and *standard deviation* say how far it spreads. Each is an
-expectation (a density-weighted average, :eqref:`eq_mdl-expectation`), and each
-obeys algebra that we prove once and reuse everywhere.
+statistics* reduce it to a few numbers: the *mean* locates its center, while the
+*variance* and *standard deviation* measure its spread. Each is an expectation,
+that is, a density-weighted average as in :eqref:`eq_mdl-expectation`. We derive
+their basic algebra once and use it throughout the book.
 
 ### The Mean
 
@@ -284,9 +284,9 @@ weighting averages any *function* of $X$: $E[g(X)]=\sum_i g(x_i)\,p_i$ in the
 discrete case, while the continuous form $\int g(x)\,p(x)\,dx$ restates the
 second half of :eqref:`eq_mdl-expectation`. We apply the rule so routinely and
 so silently that it has earned a name: the *law of the unconscious
-statistician*. It is at work below every time we average $X^2$ or a squared
-deviation; what is new here is only the name and the discrete form. The mean
-tells us, with some caution, where the variable tends to sit.
+statistician*. It applies below whenever we average $X^2$ or a squared
+deviation; only the name and the discrete form are new here. The mean describes
+the center of a distribution, although it need not be a typical value.
 
 A running example recurs through the whole section. Let $X$ take $a-2$ with
 probability $p$, $a+2$ with probability $p$, and $a$ with probability $1-2p$.
@@ -298,8 +298,9 @@ $$
 
 the center of symmetry, exactly as intuition demands.
 
-The two algebraic properties of the mean we lean on most are that it is
-*linear*: constants pull out and sums split. Both follow in one line from the
+The most frequently used algebraic property of the mean is *linearity*:
+constants may be taken outside an expectation, and the expectation of a sum is
+the sum of the expectations. Both statements follow directly from the
 definition.
 
 **Proposition (linearity of expectation).** *For random variables $X,Y$ and
@@ -413,11 +414,10 @@ example $\sigma_X=2\sqrt{2p}$, back in units of stars.
 
 ### Markov's and Chebyshev's Inequalities
 
-Does $\sigma_X$ have a concrete reading? Yes: it sets the scale over which $X$
-fluctuates, and a pair of inequalities, each with a one-line proof, makes this
-rigorous for *any* distribution. The first, *Markov's inequality*, turns
-knowledge of a bare mean into a tail bound: a non-negative variable cannot put
-much mass far above its mean.
+The standard deviation $\sigma_X$ sets the scale of typical fluctuations. Two
+inequalities make this statement precise for *any* distribution. The first,
+*Markov's inequality*, turns the mean into a tail bound: a non-negative
+variable cannot assign much probability to values far above its mean.
 
 **Proposition (Markov's inequality).** *If $X\ge 0$ and $a>0$, then*
 
@@ -471,11 +471,11 @@ ten or more standard deviations from the mean; at least $99\%$ lies strictly
 within. The standard deviation is thus a universal yardstick for "how far is
 far."
 
-The bound is *sharp*, and our running example shows exactly why no tighter
-constant is possible. With $\mu_X=a$ and $\sigma_X=2\sqrt{2p}$, Chebyshev at
-$\alpha=2$ promises $P\bigl(|X-a|\ge 4\sqrt{2p}\bigr)\le\tfrac14$: at most a
-quarter of the mass sits $4\sqrt{2p}$ or farther from the mean. The two outlying
-atoms $a\pm2$ sit at distance exactly $2$, and as $p$ shrinks the threshold
+The bound is *sharp*: our running example shows why no smaller constant can
+hold in general. With $\mu_X=a$ and $\sigma_X=2\sqrt{2p}$, Chebyshev's
+inequality at $\alpha=2$ gives
+$P\bigl(|X-a|\ge 4\sqrt{2p}\bigr)\le\tfrac14$. The two outlying
+atoms $a\pm2$ are at distance exactly $2$, and as $p$ decreases the threshold
 $4\sqrt{2p}$ shrinks with it. :numref:`fig_mdl-prob-chebyshev` shows the three
 regimes. For $p>\tfrac18$ the threshold exceeds $2$, no atom lies that far out,
 and the left-hand side is $0$: the bound holds with room to spare. At
@@ -491,8 +491,8 @@ beyond it, and their combined mass $2p<\tfrac14$ keeps the inequality satisfied.
 
 ### Means and Variances in the Continuum
 
-Everything above transfers to continuous variables by the now-familiar move:
-slice $\mathbb{R}$ into width-$\epsilon$ pieces, apply the discrete definition,
+The preceding definitions extend to continuous variables by the same limiting
+argument: slice $\mathbb{R}$ into width-$\epsilon$ pieces, apply the discrete definition,
 and let $\epsilon\to0$ to turn the sum into an integral. The mean is the
 density-weighted average :eqref:`eq_mdl-expectation`, and the variance follows
 from its computational form :eqref:`eq_mdl-var_comp`:
@@ -618,9 +618,10 @@ p_{X\mid Y}(x\mid y) = \frac{p_{Y\mid X}(y\mid x)\,p_X(x)}{p_Y(y)},
 $$
 :eqlabel:`eq_mdl-bayes_density`
 
-the engine of every Bayesian update in this book.
+which is the identity used for every Bayesian update in this book.
 
-The sharpest special case is when learning $Y$ tells us *nothing* about $X$.
+An important special case occurs when the distribution of $X$ is unchanged
+after observing $Y$.
 
 **Proposition (independence).** *The following are equivalent: (i) the joint
 factorizes, $p_{X,Y}(x,y)=p_X(x)\,p_Y(y)$ for all $x,y$; (ii) the conditional equals
@@ -990,11 +991,11 @@ p_Y(\mathbf y) &= p_X\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf
 $$
 :eqlabel:`eq_mdl-cov_density`
 
-The log form is the one that matters in practice: pushing data through an
-invertible network adds a single $-\log|\det J_g|$ term to the log-density, and
-because $\log|\det(J_2 J_1)| = \log|\det J_1| + \log|\det J_2|$ these terms simply
-*sum* along a composition of layers. That additivity is what makes
-**normalizing flows** :cite:`rezende2015variational` trainable at scale
+The logarithmic form is convenient in practice. Passing data through an
+invertible network adds $-\log|\det J_g|$ to the log-density. Because
+$\log|\det(J_2 J_1)| = \log|\det J_1| + \log|\det J_2|$, a composition of
+layers contributes the sum of their log-determinants. This additivity permits
+efficient likelihood evaluation in **normalizing flows** :cite:`rezende2015variational`
 (:numref:`sec_mdl-continuous-normalizing-flows`).
 
 As a worked example, let $X\sim\mathcal N(0,1)$ and $Y=e^X$, so $g^{-1}(y)=\log y$
@@ -1111,9 +1112,9 @@ Densities, moments, and joint distributions<br>**the continuous language of deep
 
 ::: {.cols .vc}
 ::: {.col}
-Pixels, weights, activations, and noise are all continuous. A single
-exact outcome now has probability **zero**: probability lives in
-*areas*, not points.
+Pixels, weights, activations, and noise are commonly modeled as continuous.
+A single exact outcome then has probability **zero**; probabilities are
+assigned to intervals or regions.
 
 - Density $p$, mean, variance, covariance, the matrix $\boldsymbol\Sigma$.
 - The toolkit behind SGD, normalizing flows, and Bayesian inference.
@@ -1474,8 +1475,8 @@ inverse and nonsingular Jacobian, this becomes
 $$\log p_Y(\mathbf y) = \log p_X(\mathbf x) - \log\bigl|\det J_g(\mathbf x)\bigr|.$$
 
 ::: {.d2l-note .rule}
-Log-dets **add** under composition → a normalizing flow stacks layers
-and just sums one $-\log|\det J_g|$ per layer.
+Log-determinants **add** under composition, so a normalizing flow sums one
+$-\log|\det J_g|$ term per layer.
 :::
 :::
 

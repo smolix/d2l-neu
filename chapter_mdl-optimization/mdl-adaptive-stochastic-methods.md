@@ -45,17 +45,16 @@ import numpy as np
 ## SGD Without Convexity
 :label:`subsec_mdl-nonconvex-sgd`
 
-### What the Deterministic Theorem Leaves Open
+### Combining Nonconvexity and Gradient Noise
 
-Recall the two bookends from :numref:`sec_mdl-gradient-based-optimization`.
+Recall two results from :numref:`sec_mdl-gradient-based-optimization`.
 For $L$-smooth $f$ bounded below, *deterministic* gradient descent satisfies
 $\min_{k < K} \|\nabla f(\mathbf{x}_k)\|^2 \le 2L(f(\mathbf{x}_0) - f^\star)/K$:
 stationarity at rate $O(1/K)$, no convexity needed. And for *stochastic*
 gradients on a strongly convex quadratic, a fixed step converges to a noise
 ball of squared radius $\approx \eta\sigma^2/(2\lambda)$ around the minimizer
-:eqref:`eq_mdl-opt-noise-ball`. Training a
-network lives in the intersection of the two settings, nonconvex *and* noisy,
-which neither result covers. The theorem of :citet:`Ghadimi.Lan.2013` applies
+:eqref:`eq_mdl-opt-noise-ball`. Neural-network training combines the two settings: the objective is nonconvex
+and the gradients are noisy. Neither preceding result covers both properties. The theorem of :citet:`Ghadimi.Lan.2013` applies
 the descent lemma conditionally on the current iterate. Conditional
 unbiasedness removes one cross term, while a conditional variance bound controls
 the quadratic term. With a biased estimator, an additional inner product
@@ -95,7 +94,7 @@ $$
 \qquad R \sim \mathrm{Uniform}\{0, \ldots, K-1\}.
 $$
 
-**Proof.** Apply the quadratic ceiling
+**Proof.** Apply the quadratic upper bound
 :eqref:`eq_mdl-opt-quadratic-ceiling` to the step actually taken,
 $\mathbf{x}_{k+1} - \mathbf{x}_k = -\eta\,\mathbf{g}_k$:
 
@@ -125,11 +124,11 @@ falls in $\eta$, the second grows; the stated $\eta$ equalizes them, and the
 average over $k$ *is* the expectation at a uniformly random iterate $R$.
 $\blacksquare$
 
-Read the optimized bound against its deterministic ancestor. Without noise
+Compare the optimized bound with its deterministic counterpart. Without noise
 ($\sigma = 0$) the second term vanishes and the $2L\Delta/K$ term reproduces
 the $O(1/K)$ rate exactly. With noise, the second term dominates for large
-$K$, and it decays like $K^{-1/2}$: **noise turns the deterministic $1/K$
-into a square root**, the same square root that governed the minibatch
+$K$, and it decays like $K^{-1/2}$: the stochastic term changes the asymptotic rate from $1/K$
+to square-root order, the same square root that governed the minibatch
 variance ($1/b$ energy, $1/\sqrt{b}$ amplitude). Be careful about what is
 bounded: the theorem controls the **expected squared gradient norm**. Running
 $100\times$ longer reduces that bound by $10\times$; interpreting it as a bound
@@ -137,16 +136,14 @@ on the gradient norm itself gives only a factor $\sqrt{10}$. A tenfold reduction
 of that norm would require $10{,}000\times$ the budget under this worst-case
 rate. The prescribed step obeys the same
 logic as the noise-ball analysis: a longer budget affords a smaller $\eta$,
-shrinking the floor the iterates can reach.
+reducing the stationary error associated with persistent noise.
 
-One subtlety is a feature of the theorem rather than a defect. The
-deterministic result bounded $\min_k \|\nabla f(\mathbf{x}_k)\|^2$: you may
-keep the best iterate, because you can *evaluate* which one it is. With
-stochastic gradients you never observe $\|\nabla f(\mathbf{x}_k)\|$, only
-noisy estimates, so "return the best iterate" is not an executable
-instruction. The theorem's output is therefore a *randomly selected* iterate,
+One subtlety is a feature of the theorem rather than a defect. The deterministic result bounded $\min_k \|\nabla f(\mathbf{x}_k)\|^2$; when
+exact gradients are available, the best iterate can be identified. With
+stochastic gradients, $\|\nabla f(\mathbf{x}_k)\|$ is not observed directly,
+so selecting the best iterate requires additional estimation. The theorem's output is therefore a *randomly selected* iterate,
 whose expected squared gradient norm is the average that
-:eqref:`eq_mdl-opt-ghadimi-lan` controls. The cell verifies precisely this
+:eqref:`eq_mdl-opt-ghadimi-lan` controls. The following experiment measures this
 distinction on a nonconvex toy (a one-neuron $\tanh$ regression with noisy
 labels, single-example gradients), sweeping the budget $K$ with the
 theory-prescribed $\eta \propto 1/\sqrt{K}$ and measuring both the
@@ -188,18 +185,16 @@ print(f'log-log slope, min-so-far:     '
 ```
 
 The random-iterate column scales as promised: a $64\times$ increase in budget
-yields a $12\times$ reduction, log-log slope $-0.60$, within reach of the
-theoretical $-1/2$. (The residual steepness comes from the average itself:
+yields a $12\times$ reduction, log-log slope $-0.60$, close to the
+theoretical $-1/2$ for this finite experiment. (The residual steepness comes from the average itself:
 the trajectory average still contains the early high-gradient iterates, whose
-contribution decays like $1/K$. The bound's transient $2\Delta/(\eta K)$ term
-is innocent here: with the cell's $\eta \propto 1/\sqrt{K}$ it is of the same
+contribution decays like $1/K$. The transient term $2\Delta/(\eta K)$ does not explain this difference: with the cell's $\eta \propto 1/\sqrt{K}$ it is of the same
 $K^{-1/2}$ order as the noise term, so it cannot steepen the slope.) The
 min-so-far column falls much faster,
-slope $-1.23$: on this benign toy the best iterate beats the guarantee by a
-wide margin, exactly why one would love to return it and exactly what the
-noise forbids you from *identifying*. The worst-case guarantee here is
+slope $-1.23$: on this example the best iterate improves faster than the worst-case guarantee,
+but noisy gradient observations do not directly identify that iterate. The worst-case guarantee here is
 $K^{-1/2}$, and the schedule designs of this section
-build on it rather than on the lucky minimum.
+use the random-iterate guarantee rather than the trajectory minimum.
 
 ## Per-Coordinate Step Sizes
 :label:`subsec_mdl-per-coordinate`
@@ -215,17 +210,15 @@ for
 $f(\mathbf{x}) = \tfrac12 \mathbf{x}^\top \mathrm{diag}(\boldsymbol{\lambda})\, \mathbf{x}$,
 and we allow a *separate* step size $\eta_i$ per coordinate. Then
 $\eta_i = 1/\lambda_i$ contracts every mode to zero in one step: a diagonal
-matrix of step sizes is a diagonal Newton's method, and the condition number
-no longer depends on the condition number. This observation motivates the
+matrix of step sizes is a diagonal Newton's method, and the condition-number dependence is eliminated. This observation motivates the
 coordinatewise scaling shown in :numref:`fig_mdl-opt-per-coordinate`.
 
 ![Both panels show optimization of the same elongated quadratic ($\kappa = 20$) from the same initial point. Left: gradient descent with a global step size near the stability limit oscillates across the high-curvature direction while progressing slowly along the low-curvature direction. Right: Adam with $\beta_1 = 0$ uses coordinatewise normalization, so the two coordinates advance at comparable rates.](../img/mdl-opt-per-coordinate.svg)
 :label:`fig_mdl-opt-per-coordinate`
 
-Two obstacles stand between this observation and an algorithm. The
-eigenvalues are unknown, and off the quadratic model they vary from place to
-place; and with stochastic gradients we never see clean curvature, only noisy
-first-order information. Adaptive methods therefore estimate a useful diagonal
+Two issues remain. The eigenvalues are unknown and, beyond a fixed quadratic,
+local curvature varies with the iterate. Stochastic gradients also provide only
+noisy first-order information. Adaptive methods therefore estimate a useful diagonal
 rescaling from the observed gradients.
 
 ### AdaGrad and Accumulated Squared Gradients
@@ -243,29 +236,29 @@ $$
 :eqlabel:`eq_mdl-opt-adagrad`
 
 with all operations elementwise and $\epsilon$ a small constant that keeps the
-division finite. Two independent derivations land on this rule.
+division finite. Two independent derivations motivate this rule.
 
 *The metric view.* Exercise 2 of
 :numref:`sec_mdl-gradient-based-optimization` showed that steepest descent is
 relative to a choice of norm: measuring step length by
 $\|\mathbf{d}\|_A = \sqrt{\mathbf{d}^\top A\, \mathbf{d}}$ makes the steepest
 direction $-A^{-1}\nabla f$, a *preconditioned* gradient. AdaGrad is steepest
-descent in the metric $A_t = \mathrm{diag}(\sqrt{\mathbf{s}_t})$: it declares
-a coordinate "expensive to move" in proportion to the evidence
+descent in the metric $A_t = \mathrm{diag}(\sqrt{\mathbf{s}_t})$: it weights each
+coordinate in proportion to the accumulated evidence
 $\sqrt{\sum_{s \le t} g_{s,i}^2}$ that its gradient has been large. Newton
 would use the true curvature $\mathrm{diag}(\lambda_i)$; AdaGrad substitutes
-the cheapest available proxy, the gradient's own history (Exercise 1 derives
+a first-order proxy based on gradient history (Exercise 1 derives
 the update from this view).
 
 *The regret view, and why the square root.* AdaGrad was invented for
 **online convex optimization**: convex losses $f_1, f_2, \ldots$ arrive one
-at a time, the algorithm must play $\mathbf{x}_t$ *before* seeing $f_t$, and
+at a time, the algorithm must choose $\mathbf{x}_t$ *before* observing $f_t$, and
 performance is measured by **regret**, the gap
 $\sum_{t=1}^{T} f_t(\mathbf{x}_t) - \min_{\mathbf{x}} \sum_{t=1}^{T} f_t(\mathbf{x})$
 between the accumulated loss and that of the best *fixed* point chosen in
 hindsight; an algorithm learns, in this sense, when its average regret
 (regret divided by $T$) vanishes as $T \to \infty$. The problems AdaGrad was
-built for have **sparse features**: think of a bag-of-words
+built for have **sparse features**: for example, a bag-of-words
 model where the coordinate for a rare word receives a nonzero gradient once
 in ten thousand steps. A global $\eta_t \propto 1/\sqrt{t}$ decays that rare
 coordinate's step size along with everyone else's, so by the time the rare
@@ -280,18 +273,18 @@ $G\sqrt{T}$ regret of plain SGD by a factor up to $\sqrt{d}$ when gradients
 are sparse :cite:`Duchi.Hazan.Singer.2011`.
 
 The same accumulation is AdaGrad's defect outside the convex setting. Since
-$\mathbf{s}_t$ never forgets, the effective step decays like
+$\mathbf{s}_t$ is cumulative, so the effective step decays like
 $\eta/(\sigma\sqrt{t})$ under persistent gradient noise: a
-Robbins--Monro-style schedule *hard-wired into the optimizer*. On a convex
+Robbins--Monro-style schedule determined by the update definition. On a convex
 problem this can meet a standard convergence requirement; on a nonconvex objective
-the optimizer may need to cross a plateau or a saddle region long after
-$\mathbf{s}_t$ has grown large, and it arrives with steps close to zero. The
-method can stall because its accumulator never forgets.
+the iterates may encounter a plateau or saddle region after
+$\mathbf{s}_t$ has grown large, when effective steps are close to zero. The
+cumulative denominator can therefore make later progress impractically slow.
 
 ### RMSProp and Exponential Averaging
 
 RMSProp replaces the all-time sum with an **exponential moving
-average**, which can track changes that a cumulative mean cannot. **RMSProp**
+average**, allowing the scale estimate to respond to recent gradients. **RMSProp**
 :cite:`Tieleman.Hinton.2012` (shown in action in :numref:`sec_adam`) keeps
 
 $$
@@ -306,13 +299,13 @@ effective memory of about $1/(1 - \beta_2)$ steps ($10$ at RMSProp's standard
 decay $\beta_2 = 0.9$). The preconditioner now estimates the *current* gradient
 scale per coordinate rather than the lifetime total: steps no longer decay to
 zero by construction, and the method can keep moving when gradient scales
-change. The corresponding limitation is that forgetting can discard rare
-gradient information, as the counterexample below demonstrates.
+change. The corresponding limitation is that exponential decay reduces the influence
+of rare past gradients, as the counterexample below demonstrates.
 
 ### Adam: Momentum, Second Moments, and Bias Correction
 
 **Adam** :cite:`Kingma.Ba.2014` (shown in action in :numref:`sec_adam`)
-completes the recipe by applying the same exponential averaging to the
+combines these components by applying the same exponential averaging to the
 gradient itself and correcting both averages for their startup bias. The
 gradient average $\mathbf{m}_t$ is momentum
 (:numref:`subsec_mdl-momentum-acceleration`) in averaged form: where the
@@ -337,7 +330,7 @@ with defaults $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$, and
 $\mathbf{m}_0 = \mathbf{v}_0 = \mathbf{0}$. The default $\beta_2 = 0.999$
 gives the second-moment estimate an effective memory of
 about $1/(1-\beta_2) = 1000$ steps, a hundred times longer than RMSProp's
-customary ten. The bias correction is a two-line computation. Unroll the
+customary ten. The bias correction follows by unrolling the recursion. Unroll the
 recursion:
 
 $$
@@ -357,11 +350,10 @@ $$
 
 so dividing by $1 - \beta_2^t$ makes $\hat{\mathbf{v}}_t$ an *exactly*
 unbiased estimate of $\bar{\mathbf{g}^2}$ at every $t$: the correction
-factors cancel the zero initialization identically, at every step, rather
-than merely fading with it. The same computation with $\beta_1$ handles
+factors remove the zero-initialization bias identically at every step. The same computation with $\beta_1$ handles
 $\hat{\mathbf{m}}_t$ (Exercise 2). The transient being corrected is
-large: at the defaults, $\mathbf{v}_{10}$ carries only about $1\%$ of its
-stationary value, and the raw ratio
+large: at the defaults, $\mathbf{v}_{10}$ has only about $1\%$ of its
+stationary expectation, and the raw ratio
 $\mathbf{m}_t/(\sqrt{\mathbf{v}_t} + \epsilon)$ mis-scales early steps by
 the factor $(1-\beta_1^t)/\sqrt{1-\beta_2^t}$: already $3.16$ at
 $t = 1$, peaking above $6\times$ near $t = 12$, because the momentum
@@ -369,17 +361,17 @@ average saturates in about ten steps while the second-moment average needs
 about a thousand. :numref:`fig_mdl-opt-bias-correction` plots the transient
 and its cancellation.
 
-![Why Adam corrects for bias. Left: with zero initialization, the running average $\mathbf{v}_t$ carries only the fraction $1-\beta_2^t$ of the true squared-gradient scale; at $\beta_2=0.999$ it has recovered just $63\%$ after $1000$ steps, and dividing by $1-\beta_2^t$ cancels the deficit exactly, at every $t$. Right: the resulting mis-scaling of the raw update $\mathbf{m}_t/\sqrt{\mathbf{v}_t}$, the factor $(1-\beta_1^t)/\sqrt{1-\beta_2^t}$: it is $3.16$ at $t=1$, peaks above $6\times$ near $t=12$ (the numerator saturates in about ten steps, the denominator needs about a thousand), and decays back to $1$ only on the $1/(1-\beta_2)$ timescale. Uncorrected Adam takes its *largest* steps precisely when its preconditioner is estimated from the fewest samples.](../img/mdl-opt-bias-correction.svg)
+![Bias correction in Adam. Left: with zero initialization, the running average $\mathbf{v}_t$ has only the fraction $1-\beta_2^t$ of the true squared-gradient scale; at $\beta_2=0.999$ it reaches $63\%$ after $1000$ steps, and dividing by $1-\beta_2^t$ cancels the deficit exactly, at every $t$. Right: the resulting mis-scaling of the raw update $\mathbf{m}_t/\sqrt{\mathbf{v}_t}$, the factor $(1-\beta_1^t)/\sqrt{1-\beta_2^t}$: it is $3.16$ at $t=1$, peaks above $6\times$ near $t=12$ (the numerator saturates in about ten steps, the denominator needs about a thousand), and decays back to $1$ only on the $1/(1-\beta_2)$ timescale. Uncorrected Adam takes its *largest* steps precisely when its preconditioner is estimated from the fewest samples.](../img/mdl-opt-bias-correction.svg)
 :label:`fig_mdl-opt-bias-correction`
 
-Assembled, Adam is three ideas stacked: RMSProp's per-coordinate scale
+Adam combines three components: RMSProp's per-coordinate scale
 estimate, momentum's variance-averaged direction, and an exact startup
 correction for both. Near a minimum of a quadratic with diagonal Hessian, the
 scale estimate obeys
 $\sqrt{\hat{v}_i} \approx |g_i| = \lambda_i |x_i|$, so the update on
 coordinate $i$ is
 $\eta\, g_i / \sqrt{\hat{v}_i} \approx \eta\,\mathrm{sign}(x_i)$:
-constant-magnitude *sign descent*, where a diagonal Newton step would move by
+approximately constant-magnitude *sign descent*, where a diagonal Newton step would move by
 $x_i$ itself. The relevant part of the opening argument is the *ratio* between
 coordinates: the effective step $\eta/(\lambda_i |x_i|)$ scales like
 $1/\lambda_i$ wherever the $|x_i|$ are comparable (as at the equal-coordinate
@@ -388,7 +380,7 @@ take large steps, estimated from first-order information alone.
 
 ### When Adam Fails to Converge
 
-Adam's forgetting prevents a general convergence guarantee, even for convex
+Adam's exponentially weighted second moment does not provide a general convergence guarantee, even for convex
 online problems. :citet:`Reddi.Kale.Kumar.2019` give the following
 one-dimensional construction.
 
@@ -426,16 +418,14 @@ theorem.
 
 The failure occurs because **the effective step on the informative gradient
 shrinks faster than its information accrues.** When the rare large
-gradient $C$ arrives, it lands in $\mathbf{v}$ *quadratically*: $v_t$
-jumps to nearly $C^2$, so the very step that should exploit the information
+gradient $C$ occurs, its squared value enters $\mathbf{v}$: $v_t$
+jumps to nearly $C^2$, so the corresponding update
 is normalized by nearly $C$ and moves the iterate by only $O(\eta_t)$. Then
-$\beta_2$ forgets: over the next two steps $v_t$ collapses back toward $1$,
-and the two small $-1$ gradients each get full-sized steps in the *wrong*
-direction. Signal is throttled by its own magnitude, noise is not, and the
-mismatch compounds forever. This is a different failure from the noise ball
+$\beta_2$'s exponential decay reduces its contribution: over the next two steps $v_t$ collapses back toward $1$,
+and the two small $-1$ gradients each receive much larger effective steps toward the suboptimal boundary. The
+resulting signed drift repeats every period. This is a different failure from the noise ball
 of :numref:`sec_mdl-gradient-based-optimization` (which shrinks with the step
-size): the drift has a *sign*, and the iterate travels to the
-worst boundary and stays. The one-line fix, **AMSGrad**
+size): the drift is directed, and the iterate converges to the suboptimal boundary. The **AMSGrad** modification
 :cite:`Reddi.Kale.Kumar.2019`, replaces $\hat{\mathbf{v}}_t$ by the running
 *maximum* $\tilde{\mathbf{v}}_t = \max(\tilde{\mathbf{v}}_{t-1}, \mathbf{v}_t)$,
 which makes the per-coordinate step nonincreasing (the large gradient is
@@ -476,10 +466,10 @@ rare tokens, rare classes, or occasional loss spikes in ordinary training. The
 theorem supports the narrower conclusion that vanilla Adam lacks a general
 convergence guarantee without additional assumptions or modification.
 
-### The Valley, Revisited
+### Coordinate Scaling on a Diagonal Quadratic
 
-The counterpart of that failure is what Adam does to the condition number,
-and here the news is good. The cell returns to the ill-conditioned quadratic
+A separate experiment measures the benefit of Adam's coordinate scaling on an
+ill-conditioned diagonal quadratic. The cell returns to the ill-conditioned quadratic
 of :numref:`sec_mdl-gradient-based-optimization` at $\kappa = 10^3$ and compares
 tuned gradient descent (the optimal single step
 $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$) against hand-rolled
@@ -523,32 +513,30 @@ effective steps say why: from the
 first iteration Adam's step on the stiff coordinate is $10^{-5}$ and on the
 flat coordinate $10^{-2}$, the $1000\times$ ratio of the eigenvalues,
 reconstructed from gradient magnitudes alone, with no eigendecomposition and
-no Hessian. Both coordinates then travel toward zero at comparable speed
-(this is the right panel of :numref:`fig_mdl-opt-per-coordinate`): the valley
-has been rescaled into a bowl.
+no Hessian. Both coordinates then approach zero at comparable rates, as shown in the right
+panel of :numref:`fig_mdl-opt-per-coordinate`. The diagonal scaling reduces the
+coordinatewise imbalance.
 
-Now the counterpoint. On *this* problem, exact preconditioning is
+This comparison has important limitations. On *this* problem, exact preconditioning is
 available: Newton's method solves it in one step, and even a fixed
-diagonal $\eta_i = 1/\lambda_i$ needs no adaptivity at all. What Adam offers
-is an approximation to that oracle built *from noisy first-order data,
-continuously, at $O(d)$ cost*. And the approximation is crude:
+diagonal $\eta_i = 1/\lambda_i$ needs no adaptivity at all. Adam estimates coordinate scales continuously from noisy first-order data at
+$O(d)$ cost. And the approximation is crude:
 $\sqrt{\hat{\mathbf{v}}}$
 conflates curvature with gradient noise (both inflate squared gradients), the
 diagonal ignores every off-axis correlation (rotate this quadratic by
 $45°$ and per-coordinate rescaling loses most of its effect), and the Reddi
-construction shows the estimate can be steered adversarially. Adaptive
-methods occupy a well-chosen point partway along a cost--fidelity curve; the
-preconditioning ladder at the end of this section climbs further up it.
+construction gives an adversarial sequence for which the estimate fails. Adaptive methods trade curvature fidelity for per-step cost. The final section
+compares diagonal scaling with more structured preconditioners.
 
 ## Decoupled Weight Decay
 :label:`subsec_mdl-decoupled-weight-decay`
 
 ### The Penalty Gradient Goes Through the Preconditioner
 
-Weight decay looks too simple to interact with any of this: add
+Under SGD, adding
 $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss, get $\lambda \mathbf{w}$
-added to the gradient. Under SGD the two implementations are *identical*,
-whether we "penalize the loss" or "shrink the weights":
+added to the gradient. produces the same update whether implemented as an objective penalty or as
+direct parameter shrinkage:
 
 $$
 \mathbf{w}_{t+1} = \mathbf{w}_t - \eta\,(\mathbf{g}_t + \lambda \mathbf{w}_t)
@@ -625,7 +613,7 @@ print(f'AdamW prediction (1 - alpha*lam)^T = {(1 - alpha * lam_wd)**T:.4f}')
 Under $\ell_2$-through-Adam the noisy coordinate has decayed from $1$ to only
 $0.968$ after $4000$ steps while the quiet coordinate has collapsed to
 $0.024$: effective decay rates of $10^{-5}$ versus $10^{-3}$, the
-predicted $\eta\lambda/\sigma_i$, a $100\times$ disparity that nobody chose.
+predicted $\eta\lambda/\sigma_i$, an induced $100\times$ disparity.
 AdamW shrinks both to $\approx 0.66$, within $2\%$ of the pure-decay
 prediction $(1 - \eta\lambda)^T = 0.6703$: one $\lambda$ with one meaning.
 (A subtlety about fixed points: at a *deterministic* stationary point,
@@ -633,7 +621,7 @@ coupled Adam is stationary exactly where SGD with $\ell_2$ is, at
 $\nabla L + \lambda\mathbf{w} = \mathbf{0}$, while *AdamW's* stationary
 points sit elsewhere; Exercise 4 derives both conditions and explains why
 decoupling matters in the noisy, never-stationary training regime, where
-paths matter more than fixed points.) In the major libraries, `AdamW` and
+the sequence of updates matters in addition to fixed points.) In the major libraries, `AdamW` and
 `Adam` with a `weight_decay` flag implement two different regularizers: the
 former is the decoupled update exactly, the latter the coupled
 :eqref:`eq_mdl-opt-adamw`.
@@ -644,8 +632,7 @@ former is the decoupled update exactly, the latter the coupled
 ### What Decay Does, and Which Shape
 
 A learning-rate schedule is a sequence $\eta_t$ (the main book surveys the
-common ones in :numref:`sec_scheduler`), and the mathematics it must
-negotiate was already proved in
+common ones in :numref:`sec_scheduler`), and the relevant mathematical tradeoff was already proved in
 :numref:`sec_mdl-gradient-based-optimization`: on the persistent-noise
 quadratic analyzed there, a constant step leaves SGD at a noise floor
 proportional to $\eta$ :eqref:`eq_mdl-opt-noise-ball`. Under the assumptions of
@@ -658,11 +645,10 @@ nonconvex budget $K$, a *constant* $\eta \propto 1/\sqrt{K}$ is already
 **minimax-optimal**, meaning no method that sees only the same
 unbiased, bounded-variance gradient oracle can guarantee a better worst-case
 rate than the $K^{-1/2}$ it achieves; the matching lower bound is due to
-:citet:`Arjevani.Carmon.Duchi.ea.2023`. The theory therefore assigns decay a
-specific job: it lowers the noise floor, at a cost in transient progress, and
+:citet:`Arjevani.Carmon.Duchi.ea.2023`. In this analysis, decay has a specific role: it lowers the noise floor, at a cost in transient progress, and
 beyond convex problems no theorem ranks one decay *shape* against another.
-We mark as we go which of the statements below are proved and which are read
-off practice. The three shapes to know, drawn in
+The following discussion distinguishes proved statements from empirical design
+choices. Three common schedules, drawn in
 :numref:`fig_mdl-opt-schedule-zoo`, are these:
 
 ![Four schedules at equal budget on the noisy quadratic used below. A constant step retains a nonzero noise floor; $c/k$ decay is sensitive to $c$; cosine allocates a long tail to small steps; warmup--stable--decay (WSD) keeps a constant plateau before a final decay. The plotted runs include linear warmup, a common empirical choice while an adaptive preconditioner is estimated from few gradients.](../img/mdl-opt-schedule-zoo.svg)
@@ -672,8 +658,8 @@ off practice. The three shapes to know, drawn in
 $\eta_t = \tfrac12 \eta_0 (1 + \cos(\pi t / K))$: a smooth descent from
 $\eta_0$ to $0$ with most of its time spent at moderate steps and a long,
 gentle tail. It satisfies no optimality theorem; it is popular because it has
-one parameter ($\eta_0$), no kinks to tune, and behaves gracefully across
-budgets. **Warmup--stable--decay (WSD)** :cite:`Hu.Tu.Han.ea.2024` holds
+one parameter ($\eta_0$), no kinks to tune, and is widely used across
+training budgets. **Warmup--stable--decay (WSD)** :cite:`Hu.Tu.Han.ea.2024` holds
 $\eta_0$ constant for most of the run and decays only in a final fraction
 (often the last $10$--$20\%$). Its practical appeal is operational: the
 long constant plateau means checkpoints from one run can be re-decayed to any
@@ -723,10 +709,9 @@ same trajectory until the decay begins), then the final $400$ steps drop it
 by a factor of $17$. All of WSD's visible improvement arrives in the decay
 phase. On this quadratic, cosine's longer tail of small steps gives the lower
 final error
-($1.6 \times 10^{-3}$); the reasons to prefer WSD (re-decayable
-checkpoints, more time at large steps on losses whose transient is the
-bottleneck) live off this toy, in exactly the gap between the noise-ball
-theorem and practice.
+($1.6 \times 10^{-3}$); this quadratic does not evaluate WSD's operational benefits, such as
+re-decayable checkpoints or allocating more steps to a large-learning-rate
+phase.
 
 ### Warmup for an Estimated Preconditioner
 
@@ -741,7 +726,7 @@ $\hat{\mathbf{v}}_1 = \mathbf{g}_1^2$: the per-coordinate rescaling is
 estimated from a single sample, and bias correction makes it *unbiased*, not
 *accurate*. The step direction
 $\hat{\mathbf{m}}_1/(\sqrt{\hat{\mathbf{v}}_1} + \epsilon) = \mathrm{sign}(\mathbf{g}_1)$
-commits to full-magnitude movement on every coordinate, including ones whose
+produces full-magnitude movement on every coordinate, including ones whose
 lone observed gradient was dominated by noise. The exponential weights have a
 characteristic timescale $1/(1 - \beta_2) = 1000$ steps, although the useful
 warmup length depends on the gradient distribution and batch size. Ramping
@@ -853,10 +838,9 @@ d2l.plot(np.arange(1, epochs_vr + 1), [gaps_sgd, gaps_svrg],
          legend=['SGD, fixed step', 'SVRG, fixed step'], yscale='log')
 ```
 
-SGD makes cheaper early progress, but its constant-step iterates continue to
-wander around the optimum. SVRG incurs the cost of its snapshots and then drives the gap
-down geometrically on this finite, strongly convex problem. The result does not
-say SVRG universally beats SGD: full passes are expensive on enormous or
+SGD reduces the objective quickly at first, but its constant-step iterates
+continue to fluctuate around the optimum. SVRG incurs the cost of its snapshots and then drives the gap
+down geometrically on this finite, strongly convex problem. The result does not establish that SVRG universally outperforms SGD: full passes are expensive on enormous or
 streaming datasets, the linear-rate theorem uses finite-sum smoothness and
 convexity, and stale control variates are less effective when the objective
 changes during training.
@@ -865,8 +849,7 @@ changes during training.
 seen gradient for every example and using their table average as the control
 variate. It spends one new component gradient per step but stores $O(nd)$
 numbers in the literal form (structure can reduce this for generalized linear
-models). SARAH-style estimators update the control variate recursively. The
-shared principle is more important than the acronyms: correlate a noisy new
+models). SARAH-style estimators update the control variate recursively. The methods share one control-variate principle: correlate a noisy new
 estimate with a stored estimate whose mean is known, subtract the shared noise,
 and add the known mean back.
 
@@ -880,7 +863,7 @@ variance shrinks as the optimization converges.
 :label:`subsec_mdl-preconditioning-ladder`
 
 Each method in this section chooses a matrix $B_t$ to multiply the gradient,
-$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, B_t\, \mathbf{g}_t$? Gradient
+$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, B_t\, \mathbf{g}_t$. Gradient
 descent answers $B = I$; Newton answers $B = (\nabla^2 f)^{-1}$ at $O(d^3)$;
 Adam answers with a diagonal estimated from gradient history at $O(d)$.
 Between the diagonal and the full inverse Hessian are structured
@@ -917,8 +900,7 @@ $$
 
 Thus, preconditioning by a curvature matrix with $(mn)^2$ entries requires two
 smaller inverses, of sizes $n \times n$ and $m \times m$. Preconditioning by
-the Fisher is the
-it is the **natural gradient** :cite:`Amari.1998`, steepest descent when
+the Fisher gives the **natural gradient** :cite:`Amari.1998`, steepest descent when
 distance is measured
 between the *distributions* the parameters define rather than between
 parameter vectors, the metric view of AdaGrad again, with the Fisher as
@@ -940,12 +922,11 @@ computed by the Newton--Schulz iteration demonstrated in
 directly: every singular direction of the update moves at the same rate,
 per-*direction* step equalization where Adam manages only per-coordinate.
 
-The ladder, assembled: diagonal (Adam, $O(d)$) $\to$ per-layer Kronecker
+The resulting hierarchy is: diagonal (Adam, $O(d)$) $\to$ per-layer Kronecker
 factors (K-FAC) $\to$ per-layer full-matrix roots (Shampoo) $\to$ per-layer
 spectral normalization (Muon) $\to$ full second order (Newton, unreachable).
-Each rung captures geometry the previous one ignored and costs more per-step
-arithmetic; where training runs land on the ladder is set by hardware
-economics as much as mathematics, which is why the frontier keeps moving.
+Each level represents more structure and requires more per-step arithmetic.
+The practical choice depends on hardware cost as well as approximation quality.
 The same matching of step size to geometry also extends *across model
 sizes*: the maximal-update parametrization (muP) :cite:`Yang.Hu.2021` derives
 how per-layer learning rates must scale with width so that one tuned
@@ -961,11 +942,11 @@ $\eta$ transfers from a small model to a large one.
   deterministic $1/K$ rate into $K^{-1/2}$, and the
   guarantee is for a *random* iterate (the best one cannot be identified
   from noisy evaluations).
-* **Per-coordinate step sizes** attack $\kappa$ directly: on a diagonal
+* **Per-coordinate step sizes** address $\kappa$ directly: on a diagonal
   quadratic, $\eta_i = 1/\lambda_i$ removes the condition number entirely.
   **AdaGrad** is steepest descent in the metric
   $\mathrm{diag}(\sqrt{\sum_t \mathbf{g}_t^2})$, built for sparse
-  gradients, but its never-forgetting denominator can drive steps toward zero
+  gradients, but its cumulative denominator can drive steps toward zero
   and make progress impractically slow on persistent noisy or nonconvex
   problems; **RMSProp** substitutes an EMA; **Adam** adds momentum
   and *exact* bias correction: $\mathbb{E}[\mathbf{v}_t] =
@@ -979,14 +960,14 @@ $\eta$ transfers from a small model to a large one.
   predict failure on every finite-data problem. On the $\kappa = 10^3$
   quadratic used here, Adam
   reconstructs the $1000\times$ eigenvalue ratio from gradient magnitudes
-  alone and beats optimally tuned GD by $18\times$.
+  alone and requires $18\times$ fewer iterations than optimally tuned GD in this experiment.
 * **Coupling an $\ell_2$ penalty to Adam produces coordinate-dependent
   shrinkage**: its coefficient is
   $\eta\lambda/(\sqrt{\hat{v}_i} + \epsilon)$ per coordinate. **AdamW**
   decouples the decay from the preconditioner,
   restoring the uniform $(1 - \eta\lambda)$ that the MAP-prior and
   norm-constraint readings of $\lambda$ presuppose.
-* **Schedules** negotiate the noise floor ($\propto \eta$) against transient
+* **Schedules** balance the noise floor ($\propto \eta$) against transient
   progress; beyond convexity no theorem ranks decay shapes. Cosine spends a
   long small-step tail; **WSD** stays on the constant-step floor until a
   final decay phase reduces it sharply, as illustrated on a noisy
@@ -1000,7 +981,7 @@ $\eta$ transfers from a small model to a large one.
   replaces full-gradient refreshes by a table of stored component gradients.
   These methods can reach linear fixed-step convergence under smooth strong
   convexity, but require repeated access to a finite dataset.
-* Between Adam's diagonal and Newton's full inverse runs the
+* Between Adam's diagonal approximation and Newton's full inverse lies a
   **preconditioning ladder**: K-FAC's Kronecker-factored Fisher (natural
   gradient at two small inverses via
   $(A \otimes G)^{-1}\mathrm{vec}(V) = \mathrm{vec}(G^{-1}VA^{-1})$),
@@ -1043,7 +1024,7 @@ $\eta$ transfers from a small model to a large one.
    three Adam updates of one period of :eqref:`eq_mdl-opt-reddi` and show
    the net displacement over the period is positive (toward the wrong
    endpoint) for small $\eta$. Where exactly does the factor
-   $\sqrt{v} \approx C$ throttle the informative step?
+   $\sqrt{v} \approx C$ reduce the informative step?
 4. **Coupled versus decoupled fixed points.** For
    $L(\mathbf{w}) = \tfrac12 (\mathbf{w} - \mathbf{w}_0)^\top
    \mathrm{diag}(h_1, h_2) (\mathbf{w} - \mathbf{w}_0)$ with
@@ -1097,19 +1078,19 @@ $\eta$ transfers from a small model to a large one.
 
 ## Discussions
 
-This section is the bridge between this chapter's theory and the optimizer
-actually running in your training loop. The main book shows the methods in
+This section connects the chapter's analysis with commonly used training
+optimizers. The main book shows the methods in
 action (:numref:`sec_sgd` and :numref:`sec_minibatch_sgd` for stochastic
 descent, :numref:`sec_momentum` for velocity, :numref:`sec_adam` for the
 adaptive family, :numref:`sec_scheduler` for schedules), while the
 Ghadimi--Lan rate, the diagonal-metric derivation, the bias-correction
 identity, the Reddi counterexample, and the decoupling algebra proved here
-are the mathematics those recipes stand on. Within this part,
-:numref:`sec_mdl-gradient-based-optimization` supplied every instrument
+provide the mathematical basis for those algorithms. Within this part,
+:numref:`sec_mdl-gradient-based-optimization` supplied the required results
 (descent lemma, $\kappa$, minibatch variance, noise ball);
 :numref:`sec_mdl-convexity` explains which guarantees return when convexity
 does; and the stationary-distribution view of constant-step SGD, the noise
-ball as an invariant measure, is developed properly with the SDE machinery
+ball as an invariant measure, is developed further with the SDE analysis
 of :numref:`chap_mdl-dynamics`.
 
 Further connections are useful after the main derivations: the MAP
@@ -1126,11 +1107,11 @@ the matrix factorizations of :numref:`sec_mdl-svd-low-rank`.
 ::: {.cover}
 [Dive into Deep Learning · §24.2]{.kicker}
 
-From the theory to the default optimizer<br>**SGD without convexity · AdaGrad to AdamW · schedules, warmup, and the preconditioning ladder**.
+Stochastic and adaptive optimization<br>**nonconvex SGD · coordinate scaling · AdamW · schedules · structured preconditioners**.
 :::
 :::
 
-::: {.slide title="Two questions the theory left open"}
+::: {.slide title="Extending the Deterministic Analysis"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -1181,7 +1162,7 @@ $$\mathbb{E}\bigl[\|\nabla f(\mathbf{x}_R)\|^2\bigr]
 \qquad R \sim \mathrm{Uniform}\{0, \ldots, K-1\}.$$
 :::
 
-::: {.slide title="Noise turns 1/K into a square root"}
+::: {.slide title="Stochastic Noise Gives a Square-Root Rate"}
 [Ghadimi--Lan]{.kicker}
 
 At $\sigma = 0$ the deterministic $O(1/K)$ returns; with noise the
@@ -1193,7 +1174,7 @@ the budget. Measured on a nonconvex toy, $20$ seeds per budget:
 ::: {.d2l-note}
 The guarantee is for a **randomly selected** iterate: with noisy
 evaluations you can never *identify* the best one, and the min-so-far
-column (slope $-1.23$) is exactly the luck you cannot bank on.
+column (slope $-1.23$) is not directly selectable from noisy observations.
 :::
 :::
 
@@ -1242,15 +1223,14 @@ with *its own* activity, not wall-clock time.
 . . .
 
 ::: {.d2l-note .warn}
-$\mathbf{s}_t$ never forgets, so steps decay like $\eta/(\sigma\sqrt{t})$:
+$\mathbf{s}_t$ is cumulative, so steps decay like $\eta/(\sigma\sqrt{t})$:
 Robbins--Monro hard-wired in. On some nonconvex problems the resulting decay can make progress
-impractically slow because the accumulator remembers too much. **RMSProp**
-forgets on purpose: an EMA with memory $\approx 1/(1-\beta_2)$ steps
+impractically slow because the accumulated denominator is large. **RMSProp** uses exponential averaging: an EMA with memory $\approx 1/(1-\beta_2)$ steps
 ($10$ at its standard $\beta_2 = 0.9$).
 :::
 :::
 
-::: {.slide title="Bias correction is a two-line theorem"}
+::: {.slide title="Bias Correction from the EMA Recursion"}
 [The family]{.kicker}
 
 ::: {.cols .vc}
@@ -1277,7 +1257,7 @@ above $6\times$ near $t=12$.
 :::
 :::
 
-::: {.slide title="Adam is three ideas stacked"}
+::: {.slide title="Components of Adam"}
 [The family]{.kicker}
 
 $$\mathbf{m}_t = \beta_1\mathbf{m}_{t-1} + (1-\beta_1)\,\mathbf{g}_t,
@@ -1310,7 +1290,7 @@ $1/\lambda_i$ ratio, reconstructed from first-order information alone.
 :::
 :::
 
-::: {.slide title="A convex problem built to defeat Adam"}
+::: {.slide title="A Convex Counterexample for Adam"}
 [The counterexample]{.kicker}
 
 Reddi--Kale--Kumar (2018): on $x \in [-1,1]$, cycle the convex losses
@@ -1323,16 +1303,15 @@ $x^\star = -1$.
 . . .
 
 ::: {.d2l-note .warn}
-The effective step on the informative gradient shrinks faster than its
-information accrues. The rare $+C$
-lands in $\mathbf{v}$ *quadratically* and throttles its own step by
-$\approx C$; then $\beta_2$ forgets, and the two $-1$ steps run at full
-size, the wrong way. Signal is throttled by its own magnitude; noise
-is not.
+The effective step on the large positive gradient is smaller than those on the
+two negative gradients. The rare $+C$ contributes quadratically to $\mathbf{v}$ and reduces its own
+effective step by $\approx C$. The $\beta_2$ decay then reduces that contribution,
+so the two $-1$ gradients receive larger effective steps toward the suboptimal
+boundary.
 :::
 :::
 
-::: {.slide title="The periodic construction defeats Adam"}
+::: {.slide title="Behavior on the Periodic Counterexample"}
 [The counterexample]{.kicker}
 
 Running the construction at $C = 4$, against AMSGrad and projected SGD
@@ -1360,7 +1339,7 @@ optimally tuned GD versus hand-rolled Adam:
 
 @!adaptive-stochastic-methods-adam-vs-gd
 
-From the first iteration Adam's per-coordinate steps sit in the ratio
+From the first iteration, Adam's per-coordinate steps have ratio
 $10^{-2} : 10^{-5}$, the eigenvalue ratio, reconstructed from gradient
 magnitudes with no Hessian. **GD $6160$, Adam $344$.**
 
@@ -1412,7 +1391,7 @@ decay is the only systematic force:
 @!adaptive-stochastic-methods-adamw
 
 Coupled decay gave the two weights effective rates $100\times$ apart,
-a disparity nobody chose; AdamW shrinks both by the uniform
+an induced disparity; AdamW shrinks both by the uniform
 $(1-\eta\lambda)^T$, within $2\%$ of prediction.
 
 ::: {.d2l-note}
@@ -1432,17 +1411,17 @@ coupled one.
 :::
 :::
 
-::: {.slide title="Schedules trade transient progress against the noise floor"}
+::: {.slide title="Schedules Balance Transient Progress and Stationary Error"}
 [Schedules]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-On the persistent-noise quadratic, a constant step retains a **noise floor**
+On the persistent-noise quadratic, a constant step has a nonzero stationary error
 $\propto \eta$. Under Robbins--Monro assumptions, a suitable decaying step can
 converge to the optimum; beyond convexity *no theorem ranks decay shapes*.
 
 - **cosine**: smooth decay with a long tail of small steps
-- **WSD**: hold the plateau, drop the floor in a final decay;
+- **WSD**: hold the constant phase, then reduce the step in a final decay;
   checkpoints stay re-decayable to any budget
 :::
 
@@ -1455,13 +1434,13 @@ converge to the optimum; beyond convexity *no theorem ranks decay shapes*.
 ::: {.slide title="WSD improves during its decay phase"}
 [Schedules]{.kicker}
 
-On the noisy quadratic (the miniature where the floor is exact),
+On the noisy quadratic, where the stationary error is known exactly,
 at $80\%$ of budget and at the end:
 
 @!adaptive-stochastic-methods-schedules
 
-WSD sits *on the constant's floor* at $80\%$ (same trajectory, to every
-digit), then $400$ decay steps reduce it by $17\times$. Cosine's longer tail
+WSD matches the constant schedule at $80\%$ (the trajectories agree to every
+printed digit), then $400$ decay steps reduce it by $17\times$. Cosine's longer tail
 gives the lower final error on this quadratic; WSD remains useful for
 re-decayable checkpoints and time spent at large steps.
 :::
@@ -1480,8 +1459,8 @@ Warmup can address two early transients:
   that is stable later may violate an early stability bound.
 
 ::: {.d2l-note}
-Ramping $\eta$ while the preconditioner accumulates data can reduce early
-instability. The useful duration and shape remain model- and data-dependent.
+Ramping $\eta$ while the preconditioner accumulates data can reduce the
+magnitude of early updates. The useful duration and shape remain model- and data-dependent.
 :::
 :::
 
@@ -1491,21 +1470,20 @@ instability. The useful duration and shape remain model- and data-dependent.
 
 [Beyond diagonals]{.dtitle}
 
-[the preconditioning ladder]{.dsub}
+[structured preconditioning choices]{.dsub}
 :::
 :::
 
-::: {.slide title="A hierarchy of preconditioners"}
+::: {.slide title="Structured Preconditioners"}
 [The ladder]{.kicker}
 
 *Which matrix $B_t$ multiplies the gradient?* GD says $I$; Newton says
-$(\nabla^2 f)^{-1}$ at $O(d^3)$; Adam says a diagonal at $O(d)$. The
-rungs between exploit one structural fact: parameters come in **matrices**.
+$(\nabla^2 f)^{-1}$ at $O(d^3)$; Adam says a diagonal at $O(d)$. Intermediate methods exploit one structural fact: parameters come in **matrices**.
 
 ::: {.d2l-note .rule}
 diagonal (**Adam**) → Kronecker-factored Fisher (**K-FAC**, natural
 gradient) → two-sided full-matrix roots (**Shampoo**) → spectral
-whitening by polar factor (**Muon**) → full Newton (unreachable)
+whitening by polar factor (**Muon**) → full Newton
 :::
 
 . . .
@@ -1516,7 +1494,7 @@ inverses:
 $$(A \otimes G)^{-1}\,\mathrm{vec}(V) \;=\; \mathrm{vec}\left(G^{-1}\, V\, A^{-1}\right).$$
 :::
 
-::: {.slide title="Noise, scaling, and regularization play distinct roles"}
+::: {.slide title="Noise, Scaling, and Regularization Have Distinct Effects"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
@@ -1530,12 +1508,13 @@ $$(A \otimes G)^{-1}\,\mathrm{vec}(V) \;=\; \mathrm{vec}\left(G^{-1}\, V\, A^{-1
 :::
 
 ::: {.col}
-- What adaptivity wins back: the $1000\times$ eigenvalue ratio from
+- Benefit measured here: the $1000\times$ eigenvalue ratio from
   gradients alone; GD $6160$, Adam $344$.
 - **AdamW** decouples decay from the preconditioner: one $\lambda$, one
   meaning.
 - **Schedules** trade the noise floor against the transient; **warmup**
-  shields a cold preconditioner; beyond the diagonal, the ladder.
+  reduces early steps while the preconditioner is estimated; structured methods
+extend beyond diagonal scaling.
 :::
 :::
 :::

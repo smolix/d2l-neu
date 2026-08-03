@@ -222,15 +222,14 @@ integration is unavailable?
 ## Importance Sampling: Correcting a Proposal
 :label:`sec_mdl-bayes-importance`
 
-We cannot draw samples from the posterior. But we can draw from *something
-else* — a Gaussian, say — and no law forbids using those draws, as long as
-we account for the mismatch. A draw that lands where the proposal
-over-represents the posterior should count for less; one landing where the
-proposal under-represents it should count for more. "How much less or
-more" is just the density ratio. That single idea — sample from the wrong
-distribution, then reweight by right-over-wrong — is **importance
-sampling**, and it turns the unknown integral into two averages we can
-estimate. If $q$ is a normalized proposal we can sample and evaluate, and
+Suppose that direct sampling from the posterior is unavailable, but that we
+can sample from a tractable *proposal* distribution $q$. We correct the
+difference between the proposal and posterior by assigning each draw a weight
+proportional to their density ratio. A draw receives less weight where the
+proposal density is too large and more weight where it is too small. This
+procedure is **importance sampling**. It expresses the desired posterior
+expectation as a ratio of expectations under the proposal. If $q$ is a
+normalized density that we can sample and evaluate, and
 $\widetilde p(\boldsymbol\theta)=p(\mathcal D,\boldsymbol\theta)$ is our
 evaluable unnormalized target, then
 
@@ -245,8 +244,8 @@ w(\boldsymbol\theta)=\frac{\widetilde p(\boldsymbol\theta)}
 $$
 :eqlabel:`eq_mdl-bayes-importance`
 
-Dividing by the average weight is what disposes of the unknown normalizer —
-it appears in numerator and denominator and cancels. Replacing both
+The unknown normalizing constant appears in both numerator and denominator and
+therefore cancels. Replacing both
 expectations by sample averages gives **self-normalized importance
 sampling**: consistent, though slightly biased at finite $N$ because it is
 a ratio of random quantities. As always with products of many likelihood
@@ -336,11 +335,11 @@ chain can be averaged to approximate :eqref:`eq_mdl-bayes-predictive`. The
 Metropolis--Hastings construction needs posterior ratios between the current
 and proposed states, so the unknown normalizer cancels.
 
-The **Metropolis** rule makes the bias concrete: from
+The **Metropolis** rule is easiest to state for a symmetric proposal. From
 $\boldsymbol\theta$, propose
-$\boldsymbol\theta'\sim q(\cdot\mid\boldsymbol\theta)$; if the proposal is
-uphill ($\widetilde p$ increases), accept it always; if it is downhill,
-accept it with probability equal to the ratio $\widetilde
+$\boldsymbol\theta'\sim q(\cdot\mid\boldsymbol\theta)$. If
+$\widetilde p(\boldsymbol\theta')\ge\widetilde p(\boldsymbol\theta)$, accept
+the proposal; otherwise, accept it with probability $\widetilde
 p(\boldsymbol\theta')/\widetilde p(\boldsymbol\theta)$ — otherwise stay
 put. In general, with an asymmetric proposal,
 
@@ -354,17 +353,16 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-mh`
 
-Why does always-up, sometimes-down produce the right distribution and not
-just a hill-climber? Because the occasional accepted downhill move is
-calibrated *exactly*: the acceptance ratio makes the probability flow from
-$\boldsymbol\theta$ to $\boldsymbol\theta'$ equal the flow back — a
-condition called **detailed balance**. This establishes that the posterior is
-stationary. Convergence from an initial state additionally requires the chain
-to be irreducible and aperiodic (with the usual recurrence conditions on
-general state spaces). Two bookkeeping consequences
-follow directly: rejected proposals are not discarded — the repeated state
-is what "spending more time where mass is high" looks like — and the
-normalizer never appears, having cancelled in the ratio.
+The acceptance ratio enforces **detailed balance**: under the target
+distribution, the probability flow from $\boldsymbol\theta$ to
+$\boldsymbol\theta'$ equals the reverse flow. The target posterior is therefore
+a stationary distribution of the chain. Convergence from an initial state also
+requires irreducibility, aperiodicity, and the appropriate recurrence
+conditions on general state spaces.
+
+A rejection leaves the chain at its current state, so repeated states must be
+included when computing averages. The target normalizer is unnecessary because
+it cancels from the acceptance ratio.
 
 ![A Metropolis random walk on posterior contours. From the starting square, each step proposes a local move; uphill moves are always accepted (path), downhill moves only sometimes — a rejected proposal (crosses) leaves the chain in place for another step. In the long run the time the walk spends in a region is proportional to its posterior mass.](../img/mdl-prob-bayes-metropolis.svg)
 :label:`fig_mdl-prob-bayes-metropolis`
@@ -481,38 +479,35 @@ d2l.plt.tight_layout()
 d2l.plt.show()
 ```
 
-Acceptance rate alone is not a convergence diagnostic: tiny proposals
-accept nearly everything while crawling, huge ones are mostly rejected. Nor
-does discarding a longer "burn-in" repair poor mixing. Run multiple chains,
-inspect the quantities you care about, and report ESS and Monte Carlo error
-alongside every posterior estimate.
+Acceptance rate alone does not establish convergence. Proposals that are too
+small have high acceptance but strong serial correlation, while proposals that
+are too large are usually rejected. Extending warm-up does not correct poor
+mixing. Use multiple chains, inspect diagnostics for the quantities of interest,
+and report effective sample size and Monte Carlo error with posterior estimates.
 
-Metropolis is the smallest useful MCMC algorithm, not the last word.
-**Gibbs sampling** exploits models whose conditionals are tractable,
-sampling one block at a time. **Hamiltonian Monte Carlo** uses the gradient
-of the log posterior to make long, directed moves (the No-U-Turn Sampler
-adapts their length), mixing dramatically faster in correlated
-high-dimensional posteriors. Both inherit the same workflow: multiple
-chains, geometry-aware tuning, and the diagnostics above.
+Metropolis is a basic MCMC method. **Gibbs sampling** applies when conditional
+distributions are tractable and updates one variable or block at a time.
+**Hamiltonian Monte Carlo** uses gradients of the log posterior to propose
+distant states while maintaining high acceptance; the No-U-Turn Sampler adapts
+the trajectory length. These methods still require multiple chains, appropriate
+tuning, and convergence diagnostics.
 
 ## Deterministic Approximations
 :label:`sec_mdl-bayes-approximations`
 
-Sampling spends compute at prediction time. The alternative is to spend it
-once, up front: replace the awkward posterior by the *nearest tractable
-distribution* $q$, then integrate against $q$ in closed form forever after.
-The two classical instantiations differ in what "nearest" means — and both
-reuse machinery we already have: optimization from
-:numref:`sec_mdl-maximum_likelihood`, Taylor expansion, and the ELBO.
+Sampling represents a posterior by draws and therefore incurs Monte Carlo cost
+when expectations are estimated. Deterministic approximations instead replace
+the posterior by a tractable distribution $q$. Laplace approximation and
+variational inference use different criteria for choosing $q$ and draw on
+optimization (:numref:`sec_mdl-maximum_likelihood`), Taylor expansion, and the
+evidence lower bound.
 
 ### The Laplace Approximation at a Posterior Mode
 
-Training already finds the MAP; the Laplace approximation observes that the
-mode's neighborhood contains more reusable information. Expand the log
-posterior to second order about $\boldsymbol\theta_{\mathrm{MAP}}$: the
-linear term vanishes at a maximum, so locally the log posterior is a
-downward parabola — and a distribution whose log is a parabola is a
-Gaussian. With $H$ the negative Hessian at the mode,
+The Laplace approximation uses a second-order expansion of the log posterior
+around $\boldsymbol\theta_{\mathrm{MAP}}$. The linear term vanishes at the
+mode, leaving a local quadratic form. Exponentiating this quadratic gives a
+Gaussian. If $H$ is the negative Hessian at the mode,
 
 $$
 p(\boldsymbol\theta\mid\mathcal D)
@@ -520,29 +515,27 @@ p(\boldsymbol\theta\mid\mathcal D)
 $$
 :eqlabel:`eq_mdl-bayes-laplace`
 
-which costs one Hessian beyond the optimization you were doing anyway —
-that is its enduring appeal, from classical statistics to
-uncertainty-for-deep-networks toolboxes, where $H$ is further approximated
-(diagonal, Kronecker-factored, last-layer-only) to scale.
+Computing this approximation requires the posterior mode and its Hessian.
+For large neural networks, the Hessian is commonly approximated by a diagonal,
+Kronecker-factored, or last-layer matrix to reduce computational cost.
 
 ![The Laplace approximation is a quadratic fit to the log posterior at its mode. Left: the fit matches value, slope, and curvature at the mode and nothing else. Right: after exponentiating, the implied Gaussian reproduces the peak's location and width but misses the skew — too much mass on one side, a dropped tail on the other.](../img/mdl-prob-bayes-laplace.svg)
 :label:`fig_mdl-prob-bayes-laplace`
 
-:numref:`fig_mdl-prob-bayes-laplace` shows exactly what is kept and what is
-lost: location and curvature survive; skewness, heavy tails, boundaries,
-and any second mode do not — the approximation is *local* by construction.
-In our running example the effect is mild but visible: the Laplace mean
-*is* the MAP, while the true posterior mean sits slightly away from it,
-shifted by the skew the parabola cannot see.
+:numref:`fig_mdl-prob-bayes-laplace` shows the scope of the approximation.
+It preserves the mode and local curvature but cannot represent skewness, heavy
+tails, boundaries, or additional modes. In this example, the Gaussian mean is
+the MAP estimate, while the exact posterior mean differs slightly because the
+posterior is skewed.
 
 ### Variational Inference as Optimization
 
-The Laplace approximation lets the mode dictate the Gaussian. Variational
-inference instead *searches* for the best tractable approximation: fix a
-family $q_\phi$ (here, Gaussians), define "best" as minimal
-$D_{\mathrm{KL}}(q_\phi\,\|\,p(\cdot\mid\mathcal D))$, and optimize
-$\phi$. That KL still contains the unknown evidence — but only as an
-additive constant, so maximizing the **ELBO**
+The Laplace approximation determines a Gaussian from local curvature at the
+mode. Variational inference instead chooses $q_\phi$ from a tractable family
+by minimizing
+$D_{\mathrm{KL}}(q_\phi\|p(\cdot\mid\mathcal D))$. The unknown evidence in
+this divergence is constant with respect to $\phi$, so the equivalent
+optimization maximizes the **ELBO**
 
 $$
 \mathcal L(\phi)
@@ -552,32 +545,31 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-vi-elbo`
 
-is the same problem, and every term in it is computable. This maneuver —
-trading an integral for an optimization over distributions — is the single
-most consequential idea in modern approximate inference: with
-$q_\phi$ produced by a neural network it is the training objective of the
-VAE, and the same bound underlies diffusion-model training.
+Every term in this objective is computable. Optimizing a distributional
+approximation in this way is central to modern approximate inference. When
+$q_\phi$ is produced by a neural network, the same objective trains a
+variational autoencoder; related variational bounds also appear in diffusion
+models.
 
-The choice of KL direction has teeth, and
-:numref:`fig_mdl-prob-bayes-kl-modes` shows them. Reverse KL charges $q$
-infinitely for placing mass where $p$ has none, so when the family is too
-simple to cover everything, the optimum *retreats into one mode* and
-reports confident, too-narrow uncertainty. The forward direction (used by
-expectation propagation and moment matching) makes the opposite error,
-smearing mass across the valley. Neither is "wrong" — they answer
-different questions — but you should know which failure you have signed up
-for: variational inference is the mode-seeking one.
+The direction of the KL divergence affects the approximation, as shown in
+:numref:`fig_mdl-prob-bayes-kl-modes`. Reverse KL assigns an infinite penalty
+when $q$ puts mass where $p$ is zero. If a unimodal family approximates a
+multimodal target, its optimum may therefore concentrate on one mode and
+underestimate uncertainty. Forward KL, used in moment-matching methods, instead
+favors covering the target mass and may place density between modes. Standard
+variational inference minimizes reverse KL and consequently tends toward the
+first behavior.
 
 ![The direction of the KL divergence decides how a too-simple approximation fails. For a two-mode target, the best reverse-KL Gaussian — what variational inference optimizes — locks onto a single mode and understates uncertainty, while the best forward-KL Gaussian covers the mass of both modes at the price of putting its bulk where the target is small.](../img/mdl-prob-bayes-kl-modes.svg)
 :label:`fig_mdl-prob-bayes-kl-modes`
 
-To optimize the ELBO we need its gradient, and here the reparameterization
-trick of :numref:`subsec_mdl-stochastic-gradient-estimators` earns its
-keep. Take a mean-field Gaussian
-$q=\mathcal N(\mathbf m,\operatorname{diag}(\mathbf s^2))$ and write
+The reparameterization estimator from
+:numref:`subsec_mdl-stochastic-gradient-estimators` supplies gradients of the
+ELBO. For a mean-field Gaussian
+$q=\mathcal N(\mathbf m,\operatorname{diag}(\mathbf s^2))$, write
 $\boldsymbol\theta=\mathbf m+\mathbf s\odot\boldsymbol\epsilon$ with
-$\boldsymbol\epsilon\sim\mathcal N(\mathbf 0,\mathbf I)$; gradients then
-flow through the sample:
+$\boldsymbol\epsilon\sim\mathcal N(\mathbf0,\mathbf I)$. Differentiation can
+then pass through $\boldsymbol\theta$:
 
 $$
 \nabla_{\mathbf m}\mathcal L
@@ -588,10 +580,9 @@ $$
  \odot\mathbf s\odot\boldsymbol\epsilon]+\mathbf1,
 $$
 
-where the $+\mathbf1$ is the Gaussian entropy derivative. The cell
-optimizes these one-sample-batch estimates with a small Adam loop in plain
-NumPy — the same optimizer loop you have used all book, applied to a
-distribution instead of a network.
+where $+\mathbf1$ is the derivative of the Gaussian entropy. The following
+NumPy implementation estimates these expectations with batches of 256 samples
+and optimizes the parameters with Adam.
 
 ```{.python .input #bayesian-computation-variational}
 rng_vi = np.random.default_rng(31)
@@ -623,14 +614,13 @@ print('Laplace   ', theta_map.round(4), np.sqrt(np.diag(laplace_cov)).round(4))
 print('mean-field', m_vi.round(4), np.exp(log_s_vi).round(4))
 ```
 
-Both failure modes predicted above are on display. Mean-field's diagonal
-covariance cannot represent the posterior's intercept–slope correlation at
-all, and reverse KL prefers a slightly too-concentrated fit over leaking
-mass into low-posterior regions. A richer family — full covariance, a
-normalizing flow, a mixture — buys back fidelity at more optimization and
-implementation cost. And a stabilized ELBO means one optimization run has
-settled, not that the family was adequate: validate against predictions,
-not against the objective.
+The results exhibit both limitations. A diagonal mean-field covariance cannot
+represent posterior correlation between the intercept and slope. Reverse KL
+also produces a distribution that is slightly too concentrated. Full-covariance
+Gaussians, normalizing flows, or mixtures can represent richer dependence at
+greater computational and implementation cost. Convergence of the ELBO only
+indicates that optimization has stabilized within the chosen family; it does
+not establish that the family approximates the posterior well.
 
 The following plot compares the grid reference, Metropolis draws, and the two
 Gaussian approximations on the same axes.
@@ -775,15 +765,15 @@ only up to a normalizing constant.
 
 [The target]{.dtitle}
 
-[a nonconjugate posterior, and an exact reference to audit against]{.dsub}
+[a nonconjugate posterior with a numerical reference solution]{.dsub}
 :::
 :::
 
 ::: {.slide title="The smallest real problem"}
 [The target]{.kicker}
 
-Bayesian logistic regression: sigmoid likelihood, Gaussian prior —
-no conjugate rescue.
+Bayesian logistic regression combines a sigmoid likelihood with a Gaussian
+prior; the posterior is not conjugate.
 
 $$p(\boldsymbol\theta\mid\mathcal D)\propto
 \prod_i\sigma(\mathbf z_i^\top\boldsymbol\theta)^{y_i}

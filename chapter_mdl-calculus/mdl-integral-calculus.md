@@ -89,14 +89,14 @@ that function, assigning it integral $0$ because the rationals have measure
 zero. Probability theory uses this measure-theoretic extension when the Riemann
 conditions are insufficient.)
 
-The definition is not yet a *computation*: only the simplest
-integrands (a line, $\int_a^b x\,dx$) succumb to summing the rectangles by hand.
-The next section gives the tool that computes the rest. First let us check that
-the limit :eqref:`eq_mdl-riemann` is real by watching it converge. Take
+The definition does not yet provide a general evaluation method: rectangle sums
+can be computed by hand only for simple integrands such as $\int_a^b x\,dx$.
+The next section develops a broader method. We first verify the convergence in
+:eqref:`eq_mdl-riemann` numerically. Take
 $\int_0^2 \tfrac{x}{1+x^2}\,dx$, whose exact value is $\tfrac12\log 5$ (we will
-see why shortly), and refine the partition: the rectangle sum should march toward
-the truth, with the error shrinking roughly in proportion to $\epsilon$ for this
-left-endpoint rule.
+see why shortly), and refine the partition: the rectangle sum should approach
+the exact value, with error proportional to $\epsilon$ for this left-endpoint
+rule.
 
 ```{.python .input #integral-riemann-converge}
 import numpy as onp
@@ -111,14 +111,14 @@ for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
 print(f'truth = (1/2) log 5 = {truth:.6f}')
 ```
 
-The error falls by about a factor of ten each time we cut $\epsilon$ by ten,
-confirming the first-order convergence of the left-rule. Refining the partition
-*works*, but it is slow and gives no closed form. We need a better idea.
+The error falls by about a factor of ten each time we cut $\epsilon$ by ten, confirming
+the first-order convergence of the left-rule. Refining the partition converges, but
+slowly, and does not produce a closed form.
 
 ## The Fundamental Theorem of Calculus
 
-The breakthrough is to stop treating the integral as a fixed number and instead
-let its upper limit *move*. Define the **area-so-far function**
+Treating the upper limit as a variable connects integration to
+differentiation. Define the **area-so-far function**
 
 $$
 F(x) = \int_a^x f(y)\,dy,
@@ -140,8 +140,9 @@ accumulating from a base point $c$ at the left edge of the plot.
 ![The area under $f$ from $a$ to $b$ as the difference of two areas accumulated from a base point $c$ at the plot's left edge: $\int_a^b f\,dx = \int_c^b f\,dx - \int_c^a f\,dx$. Every definite integral is a difference of two values of a single accumulation function.](../img/mdl-cal-sub-area.svg)
 :label:`fig_mdl-area-subtract`
 
-So knowing $F$ solves the whole problem. The *fundamental theorem of calculus*
-says that a derivative determines $F$.
+The function $F$ encodes accumulated area. The *fundamental theorem of
+calculus* identifies the derivative of $F$ and thereby provides an evaluation
+method.
 
 **Theorem (Fundamental theorem of calculus).** *Let $f$ be continuous and let
 $F(x)=\int_a^x f(y)\,dy$. Then $F$ is differentiable and*
@@ -196,8 +197,8 @@ $$
 for *any* antiderivative $G$. The arbitrary constant of integration is real but
 irrelevant to definite integrals.
 
-This turns hard sums into easy lookups. The derivative of $x^n$ is $nx^{n-1}$, so
-running it backwards,
+This converts the limit of sums into an antiderivative evaluation. The derivative of
+$x^n$ is $nx^{n-1}$, so running it backwards,
 
 $$
 \int_0^{x} n\,y^{n-1}\,dy = x^n - 0^n = x^n ,
@@ -239,8 +240,9 @@ left-endpoint rule.
 
 ### Improper Integrals
 
-Many densities live on an unbounded domain (the Gaussian, the exponential, any
-heavy tail), so we will need to integrate "all the way to infinity," yet
+Many densities have an unbounded domain, including Gaussian, exponential, and
+heavy-tailed densities. Their normalization requires integration to infinity,
+whereas
 :eqref:`eq_mdl-riemann` only defined integrals over a finite $[a,b]$. We fill the
 gap the same way we defined the integral itself: as a limit. The **improper
 integral** is
@@ -264,19 +266,15 @@ $$
 = \begin{cases} \dfrac{1}{p-1}, & p>1\ \text{(converges)},\\[1ex] \infty, & p\le 1\ \text{(diverges)}.\end{cases}
 $$
 
-The antiderivative $\tfrac{b^{1-p}-1}{1-p}$ is the $0/0$ indeterminate form at
-exactly $p=1$, where the integrand $x^{-1}$ has antiderivative $\log x$ instead, so
-$\int_1^\infty x^{-1}\,dx=\lim_{b\to\infty}\log b=\infty$; the case split above
-already records this divergent value. So $\int_1^\infty x^{-2}\,dx = 1$ while
-$\int_1^\infty x^{-1}\,dx=\infty$: the boundary between convergence and divergence
-sits exactly at $p=1$. A *heavy-tailed* density is one whose tail decays like a
-power law rather than exponentially, and this single threshold is what decides
-whether such a density even has a finite
-normalizer or mean, a recurring concern once we reach probability. The cell
-watches a convergent improper integral, $\int_0^\infty e^{-x}\,dx = 1$, through
-two lenses at once: the *exact* partial integrals
-$\int_0^b e^{-x}\,dx = 1-e^{-b}$, read off the antiderivative, and a
-left-Riemann approximation of each with $\epsilon = 10^{-3}$.
+The antiderivative $\tfrac{b^{1-p}-1}{1-p}$ is the $0/0$ indeterminate form at exactly
+$p=1$, where the integrand $x^{-1}$ has antiderivative $\log x$ instead, so
+$\int_1^\infty x^{-1}\,dx=\lim_{b\to\infty}\log b=\infty$; the case split above already
+records this divergent value. So $\int_1^\infty x^{-2}\,dx = 1$ while $\int_1^\infty x^{-1}\,dx=\infty$: the boundary between convergence and divergence sits exactly at
+$p=1$. A *heavy-tailed* density is one whose tail decays like a power law rather than
+exponentially, and this single threshold is what decides whether such a density even has
+a finite normalizer or mean, a recurring concern once we reach probability. The
+following computation evaluates the convergent improper integral $\int_0^\infty e^{-x}\,dx = 1$ in two ways: the *exact* partial integrals $\int_0^b e^{-x}\,dx = 1-e^{-b}$, read off the antiderivative, and a left-Riemann approximation of each with
+$\epsilon = 10^{-3}$.
 
 ```{.python .input #integral-improper}
 import numpy as onp
@@ -287,7 +285,7 @@ for b in [1., 2., 5., 10., 20.]:
     print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
 ```
 
-Read the two columns against each other. The exact partials approach $1$
+The two columns isolate different error sources. The exact partials approach $1$
 quickly: the
 *truncation error* of stopping at $b$ is $e^{-b}$, already invisible at six
 decimals by $b=20$. The left-Riemann column tells a subtler story: it
@@ -296,9 +294,9 @@ error*. The left rule samples each slice at its left edge, where the decreasing
 integrand $e^{-x}$ is largest, so every rectangle overcounts slightly; the
 overcounts add up to a bias of
 $\approx \tfrac{\epsilon}{2}\bigl(f(0)-f(b)\bigr) \to \tfrac{\epsilon}{2}
-= 0.0005$. The two error sources are independent knobs: growing $b$ removes
-the first, shrinking $\epsilon$ the second, and no amount of turning one
-compensates for neglecting the other.
+= 0.0005$. The two errors are independent: increasing $b$ reduces truncation error, while
+shrinking $\epsilon$ reduces discretization error. Changing either parameter
+does not eliminate the other error.
 
 ### Integration by Parts
 :label:`subsec_mdl-integration-by-parts`
@@ -322,8 +320,8 @@ $$
 $\int_a^b (u'v + uv')\,dx = [\,u(x)v(x)\,]_a^b$; subtract $\int_a^b u'v\,dx$
 from both sides. $\blacksquare$
 
-The formula is a *trade*, not an evaluation: it moves the derivative from one
-factor onto the other, which helps whenever the new integrand
+The formula transfers the derivative from one factor to the other. It is useful
+when the new integrand
 $u'v$ is simpler than the old one $uv'$. The model example takes $u(x)=x$ and
 $v'(x)=e^{-x}$, so that $u'=1$ and $v=-e^{-x}$: applying
 :eqref:`eq_mdl-parts` on $[0,b]$ and letting $b\to\infty$,
@@ -337,15 +335,15 @@ $$
 The boundary term vanishes because $x e^{-x}\to 0$ at both ends, and what
 survives is exactly the improper integral computed above. This particular
 value is the mean of the exponential distribution
-(:numref:`sec_mdl-distributions`), and it shows the form in which the trick
-returns throughout probability: expectations $\int g(x)\,p(x)\,dx$ are
+(:numref:`sec_mdl-distributions`), and it illustrates how the identity is used
+throughout probability: expectations $\int g(x)\,p(x)\,dx$ are
 integrals of products, and often the only move available is to shift a
 derivative from a factor we cannot handle onto one we can. The identity returns
 in Hyvärinen's score matching :cite:`Hyvarinen.2005`
-(:numref:`sec_mdl-score-matching-diffusion-flow`), where a single integration
-by parts converts an objective no one can evaluate into one that can be
-estimated from samples. The ingredient beyond reach there is the score of the
-data distribution, the gradient $\nabla_{\mathbf{x}} \log p(\mathbf{x})$ of the
+(:numref:`sec_mdl-score-matching-diffusion-flow`), where one integration
+by parts converts an objective involving an unknown score into one that can be
+estimated from samples. The unavailable quantity is the score of the data
+distribution, the gradient $\nabla_{\mathbf{x}} \log p(\mathbf{x})$ of the
 log-density with respect to the *data point*.
 
 ### A Note on Signed Area
@@ -387,19 +385,17 @@ $$
 $$
 :eqlabel:`eq_mdl-change_var`
 
-The picture explains the mysterious factor $\frac{du}{dx}$. Look at one thin
-rectangle. On the left side of :eqref:`eq_mdl-change_var`, the sliver from $x$ to
-$x+\epsilon$ has area $\approx \epsilon\,f(u(x))$. On the right, the corresponding
-sliver runs from $u(x)$ to $u(x+\epsilon)\approx u(x)+\epsilon\,u'(x)$, so its
-width is *stretched* by the factor $u'(x)$ and its area is
-$\approx \epsilon\,u'(x)\,f(u(x))$. To make the two slivers agree we must multiply
-by exactly the local stretch $\frac{du}{dx}$, as :numref:`fig_mdl-rect-transform`
-shows.
+A thin rectangle explains the factor $\frac{du}{dx}$. On the left side of
+:eqref:`eq_mdl-change_var`, the sliver from $x$ to $x+\epsilon$ has area $\approx \epsilon\,f(u(x))$. On the right, the corresponding sliver runs from $u(x)$ to
+$u(x+\epsilon)\approx u(x)+\epsilon\,u'(x)$, so its width is *stretched* by the factor
+$u'(x)$ and its area is $\approx \epsilon\,u'(x)\,f(u(x))$. To make the two slivers
+agree we must multiply by exactly the local stretch $\frac{du}{dx}$, as
+:numref:`fig_mdl-rect-transform` shows.
 
 ![A thin rectangle under the substitution $y=u(x)$. The sliver of width $\epsilon$ at $x$ maps to a sliver of width $\epsilon\,u'(x)$; matching the two areas forces the factor $du/dx$ in the change-of-variables formula.](../img/mdl-cal-rect-trans.svg)
 :label:`fig_mdl-rect-transform`
 
-With the right $u$ this collapses hard integrals to trivial ones. Taking $f=1$
+A suitable $u$ reduces the original integral to a known form. Taking $f=1$
 and $u(x)=e^{-x^2}$ (so $u'(x)=-2x\,e^{-x^2}$),
 
 $$
@@ -425,9 +421,9 @@ rule to $n$ dimensions.
 
 In higher dimensions we integrate over regions. For $f(x,y)$ on a rectangle
 $U=[a,b]\times[c,d]$, the integral is the (signed) volume trapped between the
-surface $z=f(x,y)$ and the base plane, written $\int_U f(x,y)\,dx\,dy$, and
-the rectangle recipe survives intact: tile $U$ with $\epsilon\times\epsilon$
-squares, stand a box of height $f$ on each, and total the volumes.
+surface $z=f(x,y)$ and the base plane, written $\int_U f(x,y)\,dx\,dy$.
+The Riemann approximation tiles $U$ with $\epsilon\times\epsilon$ squares and
+sums boxes with height $f$.
 :numref:`fig_mdl-bell-surface` shows our running example, the two-dimensional
 bell $e^{-x^2-y^2}$ over the box $[-2,2]^2$; the cell totals its boxes.
 
@@ -492,17 +488,16 @@ $$
 $$
 :eqlabel:`eq_mdl-fubini`
 
-The hypothesis matters. The standard
-counterexample is $f(x,y)=(x^2-y^2)/(x^2+y^2)^2$ on $[0,1]^2$: integrating $x$
-first gives $-\tfrac{\pi}{4}$, integrating $y$ first gives $+\tfrac{\pi}{4}$, and
-the orders disagree precisely because the singularity at the origin makes
-$\int_U |f|\,dx\,dy$ infinite. For the continuous, absolutely integrable
-functions of machine learning
-there is no such trouble, and we freely swap orders. When the region $U$ is more
-complicated than a rectangle we write the integral compactly as $\int_U
-f(\mathbf{x})\,d\mathbf{x}$; it is defined by *zero-extension*: extend $f$ by
-$0$ outside $U$ and integrate the extended function over any rectangle
-containing $U$.
+The hypothesis matters. The standard counterexample is $f(x,y)=(x^2-y^2)/(x^2+y^2)^2$ on
+$[0,1]^2$: integrating $x$ first gives $-\tfrac{\pi}{4}$, integrating $y$ first gives
+$+\tfrac{\pi}{4}$, and the orders disagree precisely because the singularity at the
+origin makes $\int_U |f|\,dx\,dy$ infinite. For the continuous, absolutely integrable
+functions of machine learning the absolute-integrability condition holds, so either
+integration order is valid. When the region $U$ is more complicated than a rectangle we
+write the integral compactly as $\int_U
+f(\mathbf{x})\,d\mathbf{x}$; it is defined by
+*zero-extension*: extend $f$ by $0$ outside $U$ and integrate the extended function over
+any rectangle containing $U$.
 
 ### Change of Variables in Many Dimensions
 
@@ -553,7 +548,7 @@ area theorem here and defer that density specialization to the probability chapt
 
 ### The Gaussian Integral
 
-The machinery just assembled evaluates the **Gaussian
+The preceding results evaluate the **Gaussian
 integral**, which we will meet again as the normalizer of the normal
 distribution. It is the *one-dimensional* integral
 
@@ -564,7 +559,8 @@ $$
 that resists direct attack: $e^{-x^2}$ has no elementary antiderivative (its
 antiderivative is the error function from the bell-volume cell, *defined* as
 that integral rather than expressed in older functions), so the fundamental
-theorem does not apply directly. The trick is to go *up* a dimension.
+theorem does not apply directly. The standard derivation introduces a second
+dimension.
 
 One preliminary. The plan involves integrals over all of $\mathbb{R}^2$, and we
 have defined improper integrals only on the line :eqref:`eq_mdl-improper`. For
@@ -577,7 +573,7 @@ of regions gives the same value, since every disc is contained in some box and
 every box in some disc. Everything we integrate below is nonnegative, so this
 definition is in force throughout.
 
-Now square the integral and rename the dummy variable in the second copy:
+Square the integral and use a different dummy variable in the second factor:
 
 $$
 \left(\int_{-\infty}^{\infty} e^{-x^2}\,dx\right)^{\!2}
@@ -757,7 +753,7 @@ d2l.plot(Ns, [err, 0.2 * Ns ** -0.5], 'samples N', 'integration error',
 The running estimate closes in on the quadrature value as $n$
 grows, unevenly, as randomness must: the $1/\sqrt{n}$ rate holds *in
 expectation* (about $6\times 10^{-4}$ at $n=10^5$ for this integrand), and an
-individual prefix can land lucky, as the $n=1000$ row here does, its error a
+individual prefix can have unusually small error, as the $n=1000$ row here does, with error a
 tenth of the predicted scale. The log-log plot shows the measured error
 scattering around the $0.2\,N^{-1/2}$ guide line while tracking its slope of
 $-\tfrac12$ across four decades. A second-order grid would beat that slope at
@@ -1032,7 +1028,7 @@ for a gradient.
 ::: {.cover}
 [Dive into Deep Learning · §23.4]{.kicker}
 
-How much of something is there in total<br>**Riemann sums · the fundamental theorem · change of variables · probability**.
+Accumulation over intervals and regions<br>**Riemann sums · the fundamental theorem · change of variables · probability**.
 :::
 :::
 
@@ -1041,9 +1037,9 @@ How much of something is there in total<br>**Riemann sums · the fundamental the
 
 ::: {.cols .vc}
 ::: {.col}
-Differentiation answered a *local* question: how does $f$ change
-when we nudge $x$? Integration answers a *global* one, how much is
-there in total, and the fundamental theorem joins the two together.
+Differentiation describes the *local* change in $f$ under a perturbation of
+$x$. Integration accumulates a quantity over an interval or region, and the
+fundamental theorem relates the two operations.
 
 - An **area** under a curve, a **volume** under a surface.
 - Every continuous **probability** is an integral, $\int p = 1$.
@@ -1101,8 +1097,7 @@ $\epsilon$:
 . . .
 
 First-order convergence: cut $\epsilon$ by ten, cut the error by
-ten. It works, but it is slow and gives no closed form. We need a
-better idea.
+ten. The procedure is slow and produces no closed form.
 :::
 
 ::: {.slide title="The fundamental theorem of calculus"}
@@ -1110,7 +1105,7 @@ better idea.
 
 ::: {.cols .vc}
 ::: {.col}
-Let the upper limit *move*: the **area-so-far** function
+Let the upper limit vary. The **area-so-far** function
 $F(x)=\int_a^x f$ accumulates signed area out to $x$. Nudge $x$ by
 $\epsilon$ and only one thin sliver of new area appears, of height
 $f(x)$, so
@@ -1134,7 +1129,7 @@ If $G'=f$ then every definite integral is a difference of two values:
 
 $$\int_a^b f(x)\,dx = G(b) - G(a).$$
 
-Hard sums become table lookups. We check it numerically: build $F$
+The limit of sums becomes an antiderivative evaluation. We check it numerically: build $F$
 as a cumulative Riemann sum, finite-difference it, and compare
 against $f$ itself.
 
@@ -1164,8 +1159,8 @@ finite normalizer or mean at all.
 ::: {.slide title="Truncation and Discretization Error"}
 [The integral]{.kicker}
 
-Watch a convergent improper integral, $\int_0^\infty e^{-x}\,dx=1$,
-through two lenses: the exact partials $1-e^{-b}$ and a left-Riemann
+Evaluate the convergent improper integral $\int_0^\infty e^{-x}\,dx=1$
+using two approximations: the exact partials $1-e^{-b}$ and a left-Riemann
 sum of each:
 
 @!integral-improper
@@ -1174,8 +1169,7 @@ sum of each:
 
 The partials approach $1$ as $b$ grows (*truncation* error
 $e^{-b}$); the left rule settles near $1.0005$, not $1$
-(*discretization* error $\approx\tfrac{\epsilon}{2}$). Two
-independent knobs: neither fixes the other.
+(*discretization* error $\approx\tfrac{\epsilon}{2}$). The error sources are independent; reducing one does not reduce the other.
 :::
 
 ::: {.slide title="Integration by parts"}
@@ -1240,7 +1234,7 @@ local **stretch** factor:
 
 $$\int_{u(a)}^{u(b)} f(y)\,dy = \int_a^b f(u(x))\,\frac{du}{dx}\,dx.$$
 
-With the right $u$ this collapses hard integrals to trivial ones.
+A suitable $u$ reduces the original integral to a known form.
 :::
 
 ::: {.col .fig}
@@ -1265,9 +1259,8 @@ With the right $u$ this collapses hard integrals to trivial ones.
 ::: {.cols .vc}
 ::: {.col}
 For $f(x,y)$ on a box, $\int_U f\,d\mathbf{x}$ is the volume between
-the surface and the base plane. The rectangle recipe survives: tile
-the base with $\epsilon\times\epsilon$ squares, stand a box on each,
-and total the volumes.
+the surface and the base plane. The Riemann approximation tiles the base with
+$\epsilon\times\epsilon$ squares and sums the corresponding box volumes.
 
 Our running example is the bell $e^{-x^2-y^2}$ over $[-2,2]^2$.
 :::
@@ -1336,7 +1329,7 @@ parallelepiped of volume $|\det D\boldsymbol{\phi}|\,d\mathbf{x}$.
 
 ::: {.d2l-note}
 Read for *densities* instead of areas, this same factor (as
-$-\log|\det D\boldsymbol{\phi}|$) is the engine behind
+$-\log|\det D\boldsymbol{\phi}|$) underlies
 **normalizing flows**.
 :::
 :::
@@ -1394,8 +1387,8 @@ deviation of $g(X)$, may grow with $d$; the *exponent* never does).
 
 A grid to resolution $\epsilon$ in $d$ dimensions costs
 $N=\epsilon^{-d}$ points and decays only as $N^{-2/d}$: the exponent
-is divided by $d$. Past a handful of dimensions, sampling is the
-only practical choice.
+is divided by $d$. In moderate or high dimensions, sampling is generally more practical than a
+uniform grid.
 :::
 
 ::: {.col .fig .big}
@@ -1423,8 +1416,8 @@ Each moving endpoint sweeps area in or out at the rate it moves, weighted by the
 integrand's value there.
 
 ::: {.d2l-note .warn}
-A density supported on $[0,\theta]$ is the classic trap: drop the boundary term
-and you get a confidently wrong gradient.
+For a density supported on $[0,\theta]$, omitting the boundary term produces an
+incorrect gradient.
 :::
 :::
 

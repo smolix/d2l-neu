@@ -91,7 +91,7 @@ partial-derivative formula is a consequence, not the definition.
 
 :numref:`fig_mdl-cal-jacobian-ellipse` makes the definition visible. Up close, a
 differentiable map is *approximated by* a linear map: a small circle of inputs around
-$\mathbf x_0$ lands nearly on the ellipse obtained from that circle under
+$\mathbf x_0$ maps nearly to the ellipse obtained from that circle under
 $\mathbf J(\mathbf x_0)$, exactly the picture from
 :numref:`sec_mdl-geometry-linear-algebraic-ops` of what a matrix does to the
 plane. The leftover bend is the $o(\|\boldsymbol\delta\|)$ remainder, which
@@ -180,7 +180,7 @@ coefficient of $\boldsymbol\delta$ is the best linear map, so by uniqueness it *
 the Jacobian of the composite: $\mathbf J_{\mathbf g\circ\mathbf f}=\mathbf B\mathbf A$.
 $\blacksquare$
 
-The entry-wise chain rule falls out by reading off one entry of $\mathbf B\mathbf A$:
+The entry-wise chain rule follows from one entry of $\mathbf B\mathbf A$:
 $[\mathbf B\mathbf A]_{ik}=\sum_j \partial g_i/\partial y_j\cdot\partial f_j/\partial x_k$
 is exactly the "sum over intermediate variables" of
 :numref:`sec_mdl-multivariable_calculus`. Matrix multiplication *is* the
@@ -263,7 +263,7 @@ transpose; use :eqref:`eq_mdl-grad-is-jacobian-transpose` to fix it. The Matrix
 Cookbook :cite:`Petersen.Pedersen.ea.2008` tabulates hundreds of such identities;
 the point of the next section is that you need to *memorize* almost none of them.
 
-## A Few Key Identities, Derived Not Tabulated
+## Key Matrix-Derivative Identities
 :label:`subsec_mdl-matrix-identities`
 
 A reference table of matrix-derivative identities is long and forgettable. In
@@ -512,7 +512,7 @@ print('d loss / d z :', np.asarray(jax.grad(loss)(z)).round(6))
 print('p - y        :', np.asarray(p - y).round(6))
 ```
 
-The logit gradient lands exactly on $\mathbf p-\mathbf y$, no matter how the
+The logit gradient equals $\mathbf p-\mathbf y$, no matter how the
 intermediate Jacobian looks. Four identities, one method: differentiate a single
 component, then read the matrix back off the indices, sanity-checking against the
 scalar collapse.
@@ -520,11 +520,11 @@ scalar collapse.
 ## Forward-Mode AD and Dual Numbers
 :label:`subsec_mdl-forward-mode`
 
-We now stop differentiating by hand. Automatic differentiation evaluates a function
-*and* its derivative in one sweep, to full numerical precision, by carrying
+Automatic differentiation evaluates a function *and* its derivative in one
+sweep, to full numerical precision, by carrying
 derivative information alongside every value. It is neither symbolic differentiation
-(which manipulates formulas and explodes in size, as the swamp of repeated terms in
-:numref:`sec_mdl-multivariable_calculus` showed) nor numerical differentiation
+(which manipulates formulas and can produce expressions that grow rapidly, as
+the repeated terms in :numref:`sec_mdl-multivariable_calculus` showed) nor numerical differentiation
 (finite differences, which trade off truncation against round-off error). It is
 the chain rule, applied mechanically to the *program* that computes the
 function :cite:`Baydin.Pearlmutter.Radul.ea.2018`. *Forward mode* is the simplest
@@ -551,8 +551,7 @@ $$
 $$
 :eqlabel:`eq_mdl-dual-mul`
 
-Stare at the $\varepsilon$ coefficient: $ad+bc$ is the *product rule*. This is no
-coincidence.
+The $\varepsilon$ coefficient $ad+bc$ is the *product rule*.
 
 **Proposition (dual numbers compute derivatives).** *For $f$ expressed as a
 composition of the primitives below (constants, the identity, sums, products, and
@@ -589,7 +588,7 @@ $f(g(x))+f'(g(x))g'(x)\,\varepsilon$: the chain rule, and consistent with the
 sum and product cases. Since $f$ is assembled from these primitives,
 induction on its expression gives :eqref:`eq_mdl-dual-eval`. $\blacksquare$
 
-So differentiation is *free*: run the ordinary computation in the dual-number
+The derivative is obtained in the same pass: run the ordinary computation in the dual-number
 algebra, set the input's $\varepsilon$-part to $1$ (the "seed"), and the output's
 $\varepsilon$-part is the derivative. No formula for $f'$ is ever written down. The
 implementation is a few lines of operator overloading.
@@ -678,12 +677,13 @@ print('forward-mode J:\n', J_fwd.round(6))
 print('JVP matches analytic Jacobian:', np.allclose(J_fwd, J_exact))
 ```
 
-Each forward pass produced one column of $\mathbf J$ in its $\varepsilon$-slot, with
-no Jacobian ever materialized; the reverse-mode tape below is verified the same way,
-against a framework's autograd. So forward mode is cheap for *tall* Jacobians (many
-outputs, few inputs, $m\gg n$) and expensive when $n$ is large, exactly the wrong
-regime for a deep network, whose loss has a single scalar output and millions of
-inputs. For that we need the other parenthesization.
+Each forward pass computes one column of $\mathbf J$ in its $\varepsilon$-slot
+without materializing the full Jacobian. The reverse-mode tape below is verified
+against a framework's autograd in the same way. Forward mode is efficient for
+*tall* Jacobians (many outputs, few inputs, $m\gg n$) but requires too many passes
+when $n$ is large, as in a deep network whose loss has one scalar output and
+millions of inputs.
+Reverse mode uses the alternative parenthesization.
 
 ## Reverse-Mode AD, the Tape, and Backprop
 :label:`subsec_mdl-reverse-mode`
@@ -886,10 +886,9 @@ output adjoint, and replay the graph backward while accumulating VJPs.
 
 ### The Cost Asymmetry, Counted
 
-With both engines on the table, the cost claim that opened this half of the
-section stops being an assertion. Take a scalar function of $n=200$ inputs,
-built from nothing but the additions and multiplications both engines support.
-Forward mode must run one pass per input direction to assemble the gradient (a
+The two implementations allow a direct comparison of pass counts. Take a scalar function
+of $n=200$ inputs, built from nothing but the additions and multiplications both engines
+support. Forward mode must run one pass per input direction to assemble the gradient (a
 $1\times n$ Jacobian, column by column); the tape runs *one* backward sweep.
 
 ```{.python .input #mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured}
@@ -1291,7 +1290,7 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
 ::: {.cover}
 [Dive into Deep Learning · §23.3]{.kicker}
 
-Why the backward pass is cheap<br>**Jacobians · the chain rule · forward- and reverse-mode autodiff**.
+Derivative computation for neural networks<br>**Jacobians · the chain rule · forward- and reverse-mode autodiff**.
 :::
 :::
 
@@ -1342,7 +1341,7 @@ Row $i$ collects the partials of output $i$; column $j$ says how every output re
 :::
 :::
 
-A small circle of inputs lands on (nearly) an **ellipse**, its image under $\mathbf J$. The leftover bend is the $o(\|\boldsymbol\delta\|)$ remainder.
+A small circle of inputs maps to an approximate **ellipse**, its image under $\mathbf J$. The leftover bend is the $o(\|\boldsymbol\delta\|)$ remainder.
 :::
 
 ::: {.slide title="Jacobians, Gradients, and Hessians"}
@@ -1501,7 +1500,7 @@ The $\varepsilon$-coefficient $ad+bc$ **is** the product rule. So running a prog
 
 $$f(x+\varepsilon)=f(x)+f'(x)\,\varepsilon.$$
 
-Differentiation is free: seed the input's $\varepsilon$-part with $1$, read the output's $\varepsilon$-part.
+The same pass computes the derivative: seed the input's $\varepsilon$-part with $1$ and read the output's $\varepsilon$-part.
 :::
 
 ::: {.slide title="Dual Numbers in Python"}
@@ -1520,7 +1519,7 @@ A handful of overloaded operators *is* forward-mode AD: the $\varepsilon$-part r
 With a *vector* tangent, one forward pass carries a **Jacobian–vector product** $\mathbf J\mathbf v$, a linear combination of columns, never forming $\mathbf J$. Seeding $\mathbf e_j$ reads off literal **column** $j$.
 
 ::: {.d2l-note}
-Forward mode costs one pass per **input**. Cheap for *tall* Jacobians ($m\gg n$), and exactly wrong for a deep net, whose loss is one scalar over millions of inputs.
+Forward mode costs one pass per **input**. It is efficient for *tall* Jacobians ($m\gg n$) but inefficient for a scalar loss over millions of inputs.
 :::
 :::
 
@@ -1601,7 +1600,8 @@ One forward pass records the tape; one backward pass yields both partials, match
 ::: {.slide title="Forward- and Reverse-Mode Cost"}
 [Reverse mode]{.kicker}
 
-With both engines on the table, the cost claim stops being an assertion. Take a scalar function of $n = 200$ inputs: forward mode assembles the gradient one input direction per pass; the tape runs *one* backward sweep.
+The two engines make the pass-count difference measurable. Take a scalar function of $n = 200$ inputs: forward mode assembles the gradient one input direction per pass; the
+tape runs *one* backward sweep.
 
 @!mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured
 
@@ -1613,10 +1613,11 @@ Identical gradients, a factor-$n$ gap in pass counts; per-pass costs match to a 
 ::: {.slide title="Products Without Explicit Jacobians"}
 [Reverse mode]{.kicker}
 
-A dense $m\times n$ Jacobian costs $\min(m,n)$ passes and $\Theta(mn)$ storage; what you *want* costs one pass and holds only a vector.
+A dense $m\times n$ Jacobian costs $\min(m,n)$ passes and $\Theta(mn)$ storage; a JVP or
+VJP costs one pass and stores only a vector.
 
 ::: {.d2l-note .warn}
-If you are assembling a Jacobian, you have probably written down a matrix you could have multiplied through. Autograd exposes the JVP and the VJP; you **compose** them.
+Most derivative calculations require only the action of a Jacobian. Autograd exposes JVPs and VJPs so these actions can be **composed** without assembling the matrix.
 :::
 
 One order up, the **Hessian–vector product** $\mathbf H\mathbf v$ is the directional derivative of the gradient map: curvature in a direction without ever forming $\mathbf H$.
@@ -1625,7 +1626,8 @@ One order up, the **Hessian–vector product** $\mathbf H\mathbf v$ is the direc
 ::: {.slide title="Hessian--Vector Products"}
 [Reverse mode]{.kicker}
 
-Differentiate the gradient *once, in one direction*. For $L(\mathbf x) = \tfrac12\mathbf x^\top\mathbf A\mathbf x$ the Hessian is $\mathbf A$ itself, so the right answer is known in advance, and no $2\times2$ matrix of second derivatives is ever assembled:
+Differentiate the gradient *once, in one direction*. For $L(\mathbf x) = \tfrac12\mathbf x^\top\mathbf A\mathbf x$ the Hessian is $\mathbf A$ itself, so the expected product is
+known in advance, and no $2\times2$ matrix of second derivatives is ever assembled:
 
 @mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up
 
@@ -1650,7 +1652,7 @@ One linear solve per gradient, however many iterations the solver ran. Checked o
 
 @!mdl-matrix-calculus-autodiff-differentiating-through-equations
 
-The *equation* carries the derivative, not the algorithm that solved it: the seed of the adjoint method, deep equilibrium models, and bilevel optimization.
+The derivative depends on the defining equation rather than the solver trajectory. This principle underlies the adjoint method, deep equilibrium models, and bilevel optimization.
 :::
 
 ::: {.slide title="Tape Memory and Checkpointing"}

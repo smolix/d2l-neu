@@ -1291,32 +1291,31 @@ f'{trainable} trainable of {total}'
 ```
 
 :begin_tab:`pytorch`
-torchvision is one source; the Hugging Face Hub is the ecosystem-scale one, and
-it distributes its weights as safetensors, which closes the loop with the format
-of the previous section. This section covers *how* to load and adapt pretrained
+torchvision and the Hugging Face Hub are two sources of pretrained weights.
+Many Hub repositories distribute safetensors files in the format described in
+the previous section. This section covers *how* to load and adapt pretrained
 weights; :numref:`sec_fine_tuning` covers when it helps and how far to unfreeze.
 :end_tab:
 
 :begin_tab:`jax`
-The Hugging Face Hub distributes JAX weights as safetensors, so the flat dict
-you just merged has the same shape as the artifact you will download in
-practice. This section covers *how* to load and adapt pretrained weights;
+The Hugging Face Hub distributes JAX weights as safetensors, whose flat
+mapping has the same structure as the mapping merged above. This section
+covers *how* to load and adapt pretrained weights;
 :numref:`sec_fine_tuning` covers when it helps and how far to unfreeze.
 :end_tab:
 
 :begin_tab:`tensorflow`
-`keras.applications` is one source; the Hugging Face Hub is the ecosystem-scale
-one, and it distributes its weights as safetensors, which closes the loop with
-the format of the previous section. This section covers *how* to load and adapt
+`keras.applications` and the Hugging Face Hub are two sources of pretrained
+weights. Many Hub repositories distribute safetensors files in the format
+described in the previous section. This section covers *how* to load and adapt
 pretrained weights; :numref:`sec_fine_tuning` covers when it helps and how far
 to unfreeze.
 :end_tab:
 
 :begin_tab:`mxnet`
-`gluon.model_zoo` is one source, frozen where the project stopped; the
-Hugging Face Hub is the ecosystem-scale one, and it distributes weights as
-safetensors, which for MXNet means the numpy bridge of the previous section
-is also your import path. This section covers *how* to load and adapt
+`gluon.model_zoo` is one source, frozen where the project stopped. The Hugging
+Face Hub also distributes weights as safetensors. MXNet reads them through the
+NumPy bridge from the previous section. This section covers *how* to load and adapt
 pretrained weights; :numref:`sec_fine_tuning` covers when it helps and how
 far to unfreeze.
 :end_tab:

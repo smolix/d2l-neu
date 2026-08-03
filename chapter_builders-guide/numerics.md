@@ -183,12 +183,12 @@ the largest finite value slightly smaller. Its `eps` of 0.0078 means two to
 three significant decimal digits. fp16 resolves about three to four digits,
 overflows at 65504, enters the subnormal range below about
 $6.10 \times 10^{-5}$, and reaches zero only below about
-$5.96 \times 10^{-8}$. The trade is precision against range, and for deep
-learning the choice is lopsided: activations and gradients span many orders
-of magnitude, occasional large values are routine, and running out of range
-produces `inf` while losing a low-order digit usually costs nothing a noisy
-gradient estimate had to offer anyway. On accelerators with native bf16 support,
-that exponent range often makes bf16 preferable to fp16 for training. Older
+$5.96 \times 10^{-8}$. The tradeoff is precision against range. In deep
+learning workloads, activations and gradients can span many orders of
+magnitude. Insufficient range produces `inf`, while lower mantissa precision
+introduces rounding error that must be evaluated for the model and task. On
+accelerators with native bf16 support, that exponent range often makes bf16
+preferable to fp16 for training. Older
 devices and deployment targets may instead favor fp16 or another format.
 
 ### TF32: What Happens to fp32 Matrix Multiplication
@@ -1084,18 +1084,19 @@ mixed-precision utilities during debugging.
 :end_tab:
 
 :begin_tab:`jax`
-JAX can localize the culprit for you: set
+JAX can identify the first operation that produces NaN: set
 `jax.config.update('jax_debug_nans', True)` and execution stops with an error
-at the first operation whose output is NaN, instead of letting it wash
-downstream into the loss. The check reruns jitted code operation by
-operation when it trips, so treat it as a debugging mode, not a default.
+at the first operation whose output is NaN. When the check detects a NaN, it
+reruns jitted code operation by operation. Use this check as a debugging mode,
+not as the default execution mode.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow can localize the culprit for you: call
+TensorFlow can identify the first operation that produces a non-finite
+value. Call
 `tf.debugging.enable_check_numerics()` and execution stops with an
 `InvalidArgumentError` at the first operation whose output contains `inf` or
-NaN, instead of letting it wash downstream into the loss. The check wraps
+NaN. The check wraps
 every operation, so treat it as a debugging mode, not a default.
 :end_tab:
 

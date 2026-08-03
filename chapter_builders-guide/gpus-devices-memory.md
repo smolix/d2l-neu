@@ -882,8 +882,8 @@ accounting itself holds unchanged, with one timing difference:
 Gluon allocates each parameter's gradient buffer at `initialize` time (and
 `attach_grad` does the same for from-scratch arrays), so the $4N$ gradient
 term is resident from the start rather than appearing at the first backward
-pass. The coarse before/after measurement above, wrapped around a whole
-training step, is the best MXNet offers; the batch-size lesson at the end of
+pass. The device-wide counter supports the coarse before/after measurement
+above around a complete training step; the batch-size lesson at the end of
 this subsection applies in full.
 :end_tab:
 
@@ -1506,7 +1506,7 @@ The full treatment of asynchrony, streams, and multi-device parallelism is in
 :numref:`chap_performance`.
 :end_tab:
 
-## The Trainer, Now with Devices
+## Device-Aware Trainer
 
 :begin_tab:`pytorch`
 In :numref:`sec_oo-design` the `Trainer` accepted a `num_gpus` argument and

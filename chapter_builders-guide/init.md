@@ -852,7 +852,7 @@ In NNX, a custom initializer follows the shared
 :end_tab:
 
 :begin_tab:`tensorflow`
-An initializer is just an object mapping `(shape, dtype)` to a tensor:
+An initializer is an object that maps `(shape, dtype)` to a tensor:
 subclass `tf.keras.initializers.Initializer` and implement `__call__`; layers
 then accept an instance through their initializer arguments.
 :end_tab:
@@ -1020,8 +1020,8 @@ net[0].weight.data()[0]
 :begin_tab:`pytorch`
 One caveat when building with lazy layers (:numref:`sec_lazy_init`): before
 the first forward pass their parameters are placeholders with no shape, so
-`apply`-based initializers and direct surgery alike must come *after* the dry
-run that materializes them.
+`apply`-based initialization and direct parameter assignment must follow the
+dry run that materializes them.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1032,9 +1032,9 @@ so both graph walks and direct assignment can run immediately.
 :begin_tab:`tensorflow`
 The ordering caveat of the lazy world (:numref:`sec_lazy_init`) splits by
 route here: a constructor initializer is stored and runs at build time, so it
-can never fire too early, but `assign` surgery needs a kernel to exist and
-must therefore follow the first call (or an explicit `build`). The cells
-above respected that order by running `net(X)` before touching
+runs only when the variables are created. Direct `assign` calls require a
+kernel to exist and must therefore follow the first call (or an explicit
+`build`). The cells above respected that order by running `net(X)` before touching
 `net.layers[0].kernel`.
 :end_tab:
 

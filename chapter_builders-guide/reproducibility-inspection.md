@@ -445,7 +445,7 @@ one call up front and a re-seed at any boundary that must be pinned, is
 the entire toolkit.
 :end_tab:
 
-## Determinism and Its Price
+## Deterministic Arithmetic and Performance
 
 Seeding fixes which numbers the program draws. It does not fix how the
 arithmetic evaluates. Floating-point addition is not associative
@@ -632,12 +632,12 @@ black-box model from a library or a checkpoint without touching its code
 has no TensorFlow equivalent. Two idioms reach the same measurements with
 a little structure. In a *functional* model every
 intermediate tensor is a first-class object, so a second `tf.keras.Model`
-over the same graph can declare any internal tensor an output: surgery
-rather than hooking, sharing all weights and adding no computation. And
-where you own the model's code, an overridden `call` can stash or check
-whatever it likes as it runs. :numref:`fig_bg_hooks` still draws the right
-picture, with one amendment: in TensorFlow the observer cannot stand in
-the gap unless the model was built to leave one.
+over the same graph can declare any internal tensor as an output. This
+secondary model shares all weights and adds no computation. When you own the
+model's code, an overridden `call` can stash or check
+the requested values as it runs. :numref:`fig_bg_hooks` still describes the
+computation order, but TensorFlow requires observation outputs to be declared
+in the model structure.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -651,9 +651,9 @@ model's source, which matters precisely when the model came from a
 library or a checkpoint you do not want to edit. Gluon itself relies on
 the mechanism: `Block.summary()` builds its per-layer table by
 registering a forward hook on every block. :numref:`fig_bg_hooks` draws
-the wrapper as a pipeline: hooks slot into the gap the `__call__` wrapper
-already leaves around `forward`, so an observer can capture or check
-without a single line of the model changing (Gluon's contract is
+the wrapper as a pipeline: the `__call__` wrapper invokes hooks around
+`forward`, allowing an observer to capture or check values without modifying
+the model source (Gluon's contract is
 observe-only: a hook's return value is ignored, so unlike PyTorch's it
 cannot modify the output).
 :end_tab:
@@ -802,8 +802,8 @@ stores `output.detach().std()`; storing `output` itself would keep the
 autograd graph of every forward pass alive until `stats` is cleared, a
 memory leak that grows with each batch. Second, *keep the handle and call*
 `handle.remove()`: a hook stays registered for the module's lifetime
-otherwise, taxing every later forward pass and accumulating stashed
-tensors.
+otherwise, adding overhead to later forward passes and retaining any tensors
+that it stores.
 :end_tab:
 
 :begin_tab:`jax`
@@ -820,11 +820,11 @@ finer control, a module can call
 Nothing needs detaching and nothing needs removing: `probe` shares the
 original model's layers and weights outright, its outputs are ordinary
 tensors with no gradient tape attached, and no observer stays registered
-anywhere, because the "hook" is just another model output. The limit is
-structural. Surgery needs a functional graph; a subclassed model whose
-`call` is imperative Python has no symbolic intermediates to tap. For that
-case you override `call` itself, which the next problem gives us a reason
-to do.
+anywhere, because the "hook" is another model output. The limitation is
+structural: a secondary inspection model requires a functional graph. A
+subclassed model whose `call` is imperative Python has no symbolic intermediate
+tensors to expose, so its `call` method must record the requested values
+explicitly.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -1019,9 +1019,8 @@ There are no backward hooks, but gradients do not need them:
 `tf.GradientTape` already hands back the gradient of every variable as a
 value. To log per-layer gradient norms, catch exploding gradients at their
 source, or experiment with per-layer clipping, compute the gradients and
-inspect or transform them like any other data. For the specific job of
-extracting features from a pretrained backbone, the surgery idiom is also
-the production tool:
+inspect or transform them like any other data. For extracting features from a
+pretrained backbone, a secondary functional model provides the required output:
 `tf.keras.Model(backbone.input, backbone.get_layer('avg_pool').output)`
 turns any functional backbone into a feature extractor by naming the
 tensor you want.
@@ -1173,8 +1172,8 @@ are read after the fact from `param.grad()`.
    `Checked`-style `call` override that stashes `tf.math.reduce_std` of
    every layer's output, and on a model you did not write, a
    `tf.keras.applications` backbone, by naming layers with `get_layer`.
-   Compare the three contracts you now know, functional surgery, `call`
-   overrides, and PyTorch-style mutable hooks: which requires a symbolic
+   Compare the three contracts introduced here: functional inspection models,
+   `call` overrides, and PyTorch-style mutable hooks: which requires a symbolic
    graph, which requires owning the model's code, and which black-box
    models does each admit?
 :end_tab:

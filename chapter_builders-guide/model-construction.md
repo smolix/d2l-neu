@@ -375,7 +375,7 @@ registered on the block. That gap between call and forward is where
 model-inspection tooling attaches; we use it in :numref:`sec_repro`.
 :end_tab:
 
-## Sequential and Friends: Containers
+## Module Containers
 :label:`subsec_model-construction-sequential`
 
 :begin_tab:`pytorch`

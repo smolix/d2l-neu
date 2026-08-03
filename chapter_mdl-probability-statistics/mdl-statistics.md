@@ -163,7 +163,23 @@ $$
 
 What remains is $\operatorname{Var}(\hat\theta_n)+\operatorname{Bias}(\hat\theta_n)^2$. $\blacksquare$
 
-Because the deviation from the center has mean zero, the systematic part and the fluctuating part of the error never interfere, and the squared error splits into the two pieces of :numref:`fig_mdl-sampling-distribution`. One immediate payoff is the consistency criterion promised above: if both $\operatorname{Bias}(\hat\theta_n)\to0$ and $\operatorname{Var}(\hat\theta_n)\to0$, then :eqref:`eq_mdl-bias-variance` forces $\operatorname{MSE}(\hat\theta_n)\to0$, which implies $\hat\theta_n\xrightarrow{P}\theta$: applying Markov's inequality :eqref:`eq_mdl-markov` from :numref:`sec_mdl-random_variables` to the nonnegative random variable $(\hat\theta_n-\theta)^2$ gives $P(|\hat\theta_n-\theta|>\varepsilon) \le \operatorname{MSE}(\hat\theta_n)/\varepsilon^2 \to 0$. (For an unbiased estimator this is Chebyshev's inequality :eqref:`eq_mdl-chebyshev`; aiming Markov at $\theta$ directly covers the biased case too. Sharper, exponentially decaying rates come from the concentration inequalities of :numref:`sec_mdl-concentration-generalization` when the data are bounded or sub-Gaussian.)
+Because the centered fluctuation has mean zero, its cross term with the bias
+vanishes, giving the decomposition in
+:numref:`fig_mdl-sampling-distribution`. This identity also supplies a
+consistency criterion. If both
+$\operatorname{Bias}(\hat\theta_n)\to0$ and
+$\operatorname{Var}(\hat\theta_n)\to0$, then
+:eqref:`eq_mdl-bias-variance` implies
+$\operatorname{MSE}(\hat\theta_n)\to0$. Markov's inequality applied to
+$(\hat\theta_n-\theta)^2$ then gives
+$$
+P(|\hat\theta_n-\theta|>\varepsilon)
+\le \frac{\operatorname{MSE}(\hat\theta_n)}{\varepsilon^2}\to0,
+$$
+so $\hat\theta_n\xrightarrow{P}\theta$. For an unbiased estimator this reduces
+to Chebyshev's inequality. The concentration results in
+:numref:`sec_mdl-concentration-generalization` provide sharper rates for
+bounded or sub-Gaussian observations.
 
 ### The Law of Large Numbers
 
@@ -241,7 +257,13 @@ $$
 s_0^2 = \frac1n\sum_{i=1}^n (x_i-\bar x)^2 .
 $$
 
-This is *biased*: it systematically underestimates $\sigma^2$, because the deviations are measured from $\bar x$ (the point that *minimizes* the sum of squared deviations for this particular sample) rather than from the unknown true mean $\mu$. The $n$-divided estimator matters in its own right: $s_0^2$ *is* the maximum-likelihood estimator of a Gaussian's variance, so the bias computed here is precisely the finite-sample bias of the MLE that :numref:`sec_mdl-maximum_likelihood` promised when it called maximum likelihood only *asymptotically* unbiased. The fix is to divide by $n-1$ instead of $n$, and the factor is exactly what unbiasedness requires.
+This estimator is biased downward because its deviations are measured from the
+sample mean $\bar x$, which minimizes the sum of squared deviations for the
+observed sample, rather than from the unknown population mean $\mu$. The
+estimator $s_0^2$ is also the Gaussian maximum-likelihood estimate of variance,
+so this calculation exhibits the finite-sample bias discussed in
+:numref:`sec_mdl-maximum_likelihood`. Dividing by $n-1$ instead of $n$ removes
+the bias.
 
 **Proposition (unbiased sample variance).** *For i.i.d. samples with variance $\sigma^2$,*
 
@@ -283,7 +305,10 @@ With $n=3$ the biased estimator averages near $\tfrac{n-1}{n}\sigma^2 = \tfrac23
 
 ## Hypothesis Testing
 
-The bias-variance picture asks *how good* a single estimate is. Hypothesis testing asks a different question that dominates experimental practice: given two estimates (a baseline and a new model, a control group and a treatment), is the observed difference *real*, or could it be a fluke of the particular sample? This is the framework behind A/B testing and behind claims that one architecture beats another on a benchmark.
+Bias and variance characterize the error of an estimator. Hypothesis testing
+addresses a different question: whether an observed difference between two
+groups or models is compatible with sampling variation under a specified null
+hypothesis. This framework underlies A/B tests and benchmark comparisons.
 
 ### Null and Alternative Hypotheses
 
@@ -319,7 +344,14 @@ n \;=\; \frac{\bigl(z_{1-\alpha/2} + z_{1-\beta}\bigr)^{2}}{\delta^{2}} .
 $$
 :eqlabel:`eq_mdl-power-sample-size`
 
-At $\alpha=0.05$ and power $0.8$ we have $z_{0.975}\approx1.960$ and $z_{0.8}\approx0.842$, so $n\approx(2.80)^2/\delta^2 = 7.85/\delta^2$: about $8$ samples suffice for a large effect $\delta=1$, while a tiny effect $\delta=0.01$ needs $78{,}489$. This is the $1/\delta^2$ law with its constant filled in, the formula behind exercise 6, and the reason marginal benchmark gains demand enormous test sets to confirm. :numref:`fig_mdl-power` traces the whole family of *power curves*: for each effect size $\delta$, the probability of detection climbs from $\alpha$ (a false-positive rate is all a test delivers at $\delta=0$) toward $1$ as $n$ grows, crossing the conventional target $0.8$ at a sample size proportional to $1/\delta^2$.
+For $\alpha=0.05$ and power $0.8$,
+$z_{0.975}\approx1.960$ and $z_{0.8}\approx0.842$, giving
+$n\approx7.85/\delta^2$. Thus an effect of one standard deviation requires
+about eight samples, whereas an effect of $0.01$ standard deviations requires
+about 78,489. :numref:`fig_mdl-power` plots the corresponding power curves.
+For each nonzero effect, power approaches one as $n$ increases and reaches
+$0.8$ at a sample size proportional to $1/\delta^2$. At $\delta=0$, rejection
+occurs with probability $\alpha$, the test's false-positive rate.
 
 ![Power of the one-sample two-sided $z$-test at $\alpha=0.05$ as a function of the sample size $n$, one curve per effect size $\delta$. Every curve starts near $\alpha$ and climbs toward $1$; the dashed line marks the conventional target $0.8$, reached at a sample size that scales like $1/\delta^2$: about $8$ samples for $\delta=1$ but nearly $80{,}000$ for $\delta=0.01$.](../img/mdl-prob-power.svg)
 :label:`fig_mdl-power`
@@ -380,13 +412,29 @@ d2l.plt.xlabel('gap under label shuffling')
 d2l.plt.ylabel('count');
 ```
 
-The observed gap is $0.0073$ (model B looks better by about three quarters of an accuracy point), and only about $2\%$ of label shuffles produce a gap that large, so $p \approx 0.02 \le \alpha = 0.05$ and we reject $H_0$: the improvement is unlikely to be a fluke. The histogram of shuffled gaps makes the verdict visual: they pile up in a bell around zero (no Gaussian assumption put it there; the bell is the *finite-population* central limit theorem for means drawn without replacement from the pooled forty numbers, a relative of the i.i.d. CLT of :numref:`sec_mdl-distributions`), while the observed gap (solid line) sits far out in the right tail, with only a sliver of the null mass beyond the two lines that the two-sided test counts. Note how close the call is, though. A *real* $0.8\%$ improvement measured over twenty seeds only just clears the bar, which is the power discussion above in action; with five seeds (a common budget) the same gap would usually go undetected. The permutation test assumes no Gaussian shape and works for any statistic we care to compute on the two groups; the same resample-and-recompute idea returns in the bootstrap below.
+The observed difference is $0.0073$: model B is better by about 0.73
+percentage points. Only about 2% of label permutations produce a difference at
+least this large in magnitude, so $p\approx0.02\le\alpha=0.05$ and the test
+rejects $H_0$.
+
+The permutation distribution is approximately bell-shaped around zero. This
+shape is not assumed by the test; it follows here from a finite-population
+central limit effect for means formed from the pooled 40 observations, related
+to the iid CLT in :numref:`sec_mdl-distributions`. The observed statistic lies
+in its tail. The result is nevertheless close to the threshold: an improvement
+of about 0.8 percentage points is detected with 20 seeds but would often be
+missed with five. A permutation test requires exchangeability under the null,
+not Gaussian observations, and can be applied to other group-comparison
+statistics.
 
 One refinement matters in practice. When the comparison is *paired*, with models A and B trained and evaluated on the *same* seeds, the exchangeable objects are not the $40$ pooled numbers but the per-seed *differences*, and the right test flips the sign of each difference at random: the paired, or sign-flip, permutation test. It respects the pairing and typically gains power.
 
 ## Confidence Intervals
 
-A point estimate $\hat\theta$ carries no notion of uncertainty: it is a single number that hides how much it would wobble on fresh data. A **confidence interval** repairs this by reporting an *interval* engineered to contain the true $\theta$ with high probability. The idea is due to Jerzy Neyman :cite:`Neyman.1937`.
+A point estimate $\hat\theta$ does not describe its sampling uncertainty.
+A **confidence interval** is constructed by a procedure designed to cover the
+fixed parameter $\theta$ at a specified long-run rate
+:cite:`Neyman.1937`.
 
 ### Definition and Interpretation
 
@@ -399,7 +447,20 @@ $$
 
 where $1-\alpha$ is the *confidence level* or *coverage*. We write $C_n \ni \theta$ rather than $\theta \in C_n$ to stress where the randomness lives: $\theta$ is a *fixed* unknown, and it is the *interval* $C_n$ that is random, redrawn with every dataset.
 
-This makes the correct interpretation subtle. A $95\%$ confidence interval does *not* mean "the true $\theta$ lies in this particular interval with probability $95\%$": that particular interval is already drawn, and $\theta$ either is or is not inside it. The right reading is *about the procedure*: if we generated many intervals this way, $95\%$ of them would contain $\theta$. The guarantee is on the long-run hit rate of the procedure, not on any single interval. :numref:`fig_mdl-prob-coverage` draws the reading literally: one hundred intervals from one hundred independent datasets, almost all trapping the fixed truth, a handful missing; nothing about any single interval announces which kind it is. This frequentist guarantee should not be confused with the Bayesian *credible interval*, which treats $\theta$ itself as random with a prior (the machinery behind MAP estimation in :numref:`sec_mdl-maximum_likelihood`) and therefore *can* assert "$\theta$ lies in this particular interval with probability $95\%$," at the price of that probability depending on the chosen prior. For the Beta posterior of :numref:`sec_mdl-distributions`, for instance, a $95\%$ credible interval for a coin's bias is read directly off the posterior's quantiles ($2.5\%$ and $97.5\%$ of $\mathrm{Beta}(\alpha+x,\ \beta+n-x)$), with no sampling-distribution argument needed.
+A 95% confidence interval does not assign probability 0.95 to the fixed
+parameter lying in the realized interval. Instead, under repeated sampling,
+95% of intervals constructed by the procedure contain $\theta$.
+:numref:`fig_mdl-prob-coverage` illustrates this interpretation with 100
+independent datasets: most intervals contain the fixed parameter and some do
+not.
+
+A Bayesian **credible interval** has a different interpretation because
+$\theta$ is assigned a posterior distribution conditional on a prior and the
+observed data. For the Beta posterior in
+:numref:`sec_mdl-distributions`, a 95% credible interval for a Bernoulli
+parameter is given by the 2.5% and 97.5% posterior quantiles of
+$\mathrm{Beta}(\alpha+x,\beta+n-x)$. Its probability statement is conditional
+on the chosen model and prior.
 
 ![One hundred $95\%$ confidence intervals, each computed from its own independent dataset, plotted against the fixed true mean (dashed line). Most intervals trap the truth; the orange ones miss. The $95\%$ guarantee is a statement about this long-run hit rate of the procedure, not about any single interval; a given interval carries no marker of whether it traps the truth.](../img/mdl-prob-coverage.svg)
 :label:`fig_mdl-prob-coverage`
@@ -446,7 +507,12 @@ print(f'{hits.sum()} of {trials} intervals contain the true mean '
       f'(expected about {0.95 * trials:.0f})')
 ```
 
-This run counts $937$ hits. Its true target is in fact $\approx947$ rather than $950$: at $n=100$ the exact $t$-quantile is a touch wider than $1.96$, the finite-$n$ effect noted above, so the procedure's true coverage here is $94.7\%$. The printed $937$ sits $1.4$ standard deviations below that target (the count is binomial with standard deviation $\approx7$), well within sampling noise. This is the coverage-strip picture of :numref:`fig_mdl-prob-coverage` rendered as a count, and it is the only sense in which any confidence interval is ever "$95\%$ sure."
+This simulation obtains 937 covered intervals. For $n=100$, using $1.96$ in
+place of the exact $t$ quantile gives true coverage of about 94.7%, or 947
+intervals in expectation. The binomial standard deviation of the coverage count
+is about seven, so 937 is 1.4 standard deviations below its expectation and is
+consistent with sampling variation. This count is the repeated-sampling
+interpretation shown in :numref:`fig_mdl-prob-coverage`.
 
 **Propagating error bars: the delta method.** Often the number we report is not $\hat\theta$ itself but a smooth function of it: the log-odds of an accuracy, the ratio of two losses, a percentage change. A first-order Taylor expansion, $g(\hat\theta)\approx g(\theta)+g'(\theta)\,(\hat\theta-\theta)$, says the fluctuation of $g(\hat\theta)$ is the fluctuation of $\hat\theta$ scaled by the local slope, so standard errors propagate as
 
@@ -594,9 +660,9 @@ Estimators, hypothesis tests, and confidence intervals<br>**statistics for pract
 
 ::: {.cols .vc}
 ::: {.col}
-A trained model is a guess made from random data. Statistics says how far
-that guess sits from the truth, whether an improvement is real, and how
-much to trust a number.
+A trained model is estimated from a random sample. Statistics quantifies the
+estimation error, assesses evidence for an improvement, and reports the
+uncertainty in numerical results.
 
 - Bias–variance = the under/overfit U-curve.
 - p-values behind every A/B test and benchmark claim.
@@ -842,8 +908,8 @@ times; the histogram *is* the null distribution, no Gaussian assumed:
 
 @!statistics-permutation-test
 
-The observed $0.73\%$ gap sits in the far tail: $p\approx 0.02$, real,
-but only just, with $20$ seeds.
+The observed gap of $0.73\%$ has $p\approx0.02$ under the permutation null.
+With $20$ seeds, the evidence is significant at the $5\%$ level but not the $1\%$ level.
 :::
 
 ::: {.slide}

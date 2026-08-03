@@ -12,20 +12,19 @@ and averaging.
 
 Two properties of the loss surface make the decisions consequential. The
 first is *curvature*: a deep network's loss rises steeply along some
-directions of parameter space and barely at all along others, and a single
-step size must serve both — too bold and the steep directions oscillate
-out of control, too timid and the flat directions never arrive. The second
-is *noise*: the exact gradient costs a full pass over the dataset, so
-any method that scales settles for a minibatch estimate whose variance is
-ours to choose. :numref:`sec_optimization-intro` introduces these properties.
-The next five sections develop gradient descent and the ideal of
-preconditioning (:numref:`sec_gd`), stochastic gradients and why learning
-rates must decay (:numref:`sec_sgd`), minibatching and what the hardware
-has to say about it (:numref:`sec_minibatch_sgd`), momentum against
-curvature (:numref:`sec_momentum`), and per-coordinate scaling from
-AdaGrad through RMSProp to Adam (:numref:`sec_adam`) — where we also build
-the tiny transformer language model on which the rest of the chapter runs
-its experiments.
+directions of parameter space and slowly along others. A single step size
+must serve both, so a large step causes oscillation in steep directions
+while a small step makes slow progress in flat directions. The second
+is *noise*: an exact gradient costs a full pass over the dataset, so
+scalable methods use minibatch estimates whose variance depends on the batch
+size. :numref:`sec_optimization-intro` introduces these properties.
+The next five sections develop gradient descent and preconditioning
+(:numref:`sec_gd`), stochastic gradients and learning-rate decay
+(:numref:`sec_sgd`), the computational effects of minibatching
+(:numref:`sec_minibatch_sgd`), momentum for ill-conditioned objectives
+(:numref:`sec_momentum`), and per-coordinate scaling from AdaGrad through
+RMSProp to Adam (:numref:`sec_adam`). The Adam section also builds the tiny
+transformer language model used in later experiments.
 
 The second half removes simplifying assumptions from this progression. AdamW
 separates shrinkage from adaptive preconditioning, and learning-rate schedules
@@ -82,18 +81,18 @@ with proofs — and we do not repeat those entries here.
 
 **Foundational and current papers**
 
-- [Old Optimizer, New Norm: An Anthology — Bernstein & Newhouse (2024)](https://arxiv.org/abs/2409.20325) — free; the unification that organizes :numref:`sec_muon`: SGD, sign descent/Adam, and Shampoo are each steepest descent under a different norm, which turns the chapter's zoo of methods into one question asked three ways.
+- [Old Optimizer, New Norm: An Anthology — Bernstein & Newhouse (2024)](https://arxiv.org/abs/2409.20325) — free; the unification that organizes :numref:`sec_muon`: SGD, sign descent/Adam, and Shampoo are each steepest descent under a different norm, which compares these methods through a shared geometric question.
 - [An Empirical Model of Large-Batch Training — McCandlish et al. (2018)](https://arxiv.org/abs/1812.06162) — free; defines the gradient-noise scale and the critical batch size, the two quantities measured at the center of :numref:`sec_batch_size`, and predicts when doubling the batch stops halving the steps.
 - [Understanding Warmup-Stable-Decay Learning Rates: A River Valley Loss Landscape Perspective — Wen et al. (2024)](https://arxiv.org/abs/2410.05192) — free; the modern upgrade of the ill-conditioned valley of :numref:`sec_optimization-intro`: a river-valley landscape in which the stable phase travels along the river and the decay phase descends its bank, explaining the WSD loss cliff of :numref:`sec_scheduler`.
-- [Fantastic Pretraining Optimizers and Where to Find Them — Stanford (2025)](https://arxiv.org/abs/2509.02046) — free; re-benchmarks ten optimizers under matched tuning and watches most claimed speedups over AdamW shrink — the fair-comparison discipline that :numref:`sec_muon` and :numref:`sec_practice` adopt as a rule.
+- [Fantastic Pretraining Optimizers and Where to Find Them — Stanford (2025)](https://arxiv.org/abs/2509.02046) — free; re-benchmarks ten optimizers under matched tuning and finds that many reported speedups over AdamW shrink; it motivates the matched-comparison discipline that :numref:`sec_muon` and :numref:`sec_practice` adopt as a rule.
 - [Benchmarking Neural Network Training Algorithms — Dahl et al. (2023)](https://arxiv.org/abs/2306.07179) — free; the MLCommons AlgoPerf benchmark ([code and results](https://github.com/mlcommons/algorithmic-efficiency)): why optimizer verdicts depend on the comparison protocol, the evidence standard behind the caveats of :numref:`sec_muon` and :numref:`sec_practice`.
 
 **Tutorials, notes, and interactive**
 
-- [Why Momentum Really Works — Gabriel Goh, Distill (2017)](https://distill.pub/2017/momentum/) — free, interactive; the damping and acceleration story of :numref:`sec_momentum` with sliders for $\eta$ and $\beta$ — the fastest way to internalize why the critical $\beta$ exists and what ringing looks like.
-- [An Overview of Gradient Descent Optimization Algorithms — Sebastian Ruder (2016)](https://www.ruder.io/optimizing-gradient-descent/) — free; the field guide to the classical ladder of :numref:`sec_sgd` through :numref:`sec_adam`, and a historical marker: everything a practitioner needed in 2016, and a measure of how much the modern layer has added since.
+- [Why Momentum Really Works — Gabriel Goh, Distill (2017)](https://distill.pub/2017/momentum/) — free, interactive; an interactive treatment of damping and acceleration with sliders for $\eta$ and $\beta$, illustrating the critical value of $\beta$ and oscillatory trajectories.
+- [An Overview of Gradient Descent Optimization Algorithms — Sebastian Ruder (2016)](https://www.ruder.io/optimizing-gradient-descent/) — free; a survey of the classical progression from :numref:`sec_sgd` through :numref:`sec_adam` and a useful record of common practice in 2016.
 - [Deep Learning Tuning Playbook — Godbole et al., Google Research](https://github.com/google-research/tuning_playbook) — free; the scientific/nuisance/fixed-hyperparameter methodology and budget-tiered sweeps that :numref:`sec_practice` teaches, from the team that ran them at production scale.
 - [Muon: An Optimizer for Hidden Layers in Neural Networks — Keller Jordan (2024)](https://kellerjordan.github.io/posts/muon/) — free; the original post: design decisions, Newton–Schulz coefficients, and ablations behind the optimizer that :numref:`sec_muon` builds from scratch.
-- [modded-nanogpt — Keller Jordan et al.](https://github.com/KellerJordan/modded-nanogpt) — free; the speedrun repository where Muon first proved itself, with every record documented and reproducible — the evidence culture that :numref:`sec_muon` holds up as a model.
+- [modded-nanogpt — Keller Jordan et al.](https://github.com/KellerJordan/modded-nanogpt) — free; the speedrun repository in which Muon was first demonstrated, with documented and reproducible records; its reporting practice informs the evidence standard that :numref:`sec_muon` holds up as a model.
 - [Deriving Muon — Jeremy Bernstein](https://jeremybernste.in/writing/deriving-muon) — free; a compact derivation of Muon from the steepest-descent-under-a-norm principle, the note-form companion to the derivation in :numref:`sec_muon`.
 - [The Practitioner's Guide to the Maximal Update Parameterization — EleutherAI](https://blog.eleuther.ai/mutransfer/) — free; muP implemented step by step with the coordinate-check experiments of :numref:`sec_scaling`, including the failure modes a first implementation actually hits.

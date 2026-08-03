@@ -68,7 +68,7 @@ $\mathbf{q}_t$ against the keys and values $\mathbf{k}_{1..t},
 \mathbf{v}_{1..t}$. The causal mask guarantees that positions
 $1, \ldots, t-1$ never see position $t$, so their hidden states — and
 therefore their keys and values — are the same at step $t$ as they were at
-step $t-1$. The fix writes itself: keep a per-layer buffer of all keys and
+step $t-1$. A KV cache stores a per-layer buffer of all keys and
 values computed so far, and at each step run the transformer on *one*
 token, appending its $\mathbf{k}_t, \mathbf{v}_t$ to the buffer and
 attending against the whole of it. :numref:`fig_kv-cache` contrasts the
@@ -101,9 +101,9 @@ assert below refuses the combination.
 :end_tab:
 
 :begin_tab:`jax`
-Growing a tensor by one slot per step would be poison for JAX: every new
-length is a new shape, and every new shape triggers a fresh XLA
-compilation. The naive `generate` of :numref:`sec_gpt` already solved
+Growing a tensor by one slot per step is unsuitable for JAX because every
+new length creates a new shape and triggers a fresh XLA compilation. The
+naive `generate` of :numref:`sec_gpt` already solved
 this problem once, by allocating the token buffer at its final size and
 overwriting it. The cache follows the same discipline, and it is exactly
 how production JAX serving works: preallocate K and V buffers of shape
@@ -111,8 +111,8 @@ how production JAX serving works: preallocate K and V buffers of shape
 values into their slots with `dynamic_update_slice`, and mask attention
 so that queries only see filled positions. The function compiles once
 for the prompt shape and once for the single-token step, and the decode
-loop then reuses that compilation at every step — static shapes are not a
-limitation here but the feature that makes the compiled path possible.
+loop then reuses that compilation at every step. Static shapes enable the
+compiled path in this setting.
 :end_tab:
 
 ```{.python .input #kv-cache-the-cached-forward-pass-1}
@@ -319,8 +319,9 @@ $10^{-4}$ level and would obscure the fact that they are the same
 computation.)
 :end_tab:
 
-Agreement to floating-point rounding. Now the payoff. We time a single
-generation step at growing context length on a GPT-2-sized instance of
+The cached and full computations agree to floating-point rounding. We next
+time a single generation step at growing context length on a GPT-2-sized
+instance of
 our class — 124M parameters, untrained, since arithmetic does not care
 what the weights are. The naive step is a full forward pass over $n$
 tokens; the cached step is a forward pass over one token against a cache
@@ -1385,12 +1386,13 @@ Every decoded token reads **all weights + the whole cache** for $2N$ FLOPs:
 @!kv-cache-prefill-is-compute-bound-decode-is-memory-bound
 
 - Same layers, same GPU: tens of thousands vs. under a hundred tokens/s.
-- Decode speed = bytes moved per token. Every cache byte shaved is speed.
+- Decode speed depends on bytes moved per token, so reducing the cache can
+  increase throughput.
 :::
 
 ::: {.slide title="Sharing keys and values: MQA and GQA"}
-Queries ask; keys and values are the library. Nothing forces
-$n_\textrm{kv} = H$.
+Queries may use a different number of heads from keys and values; nothing
+forces $n_\textrm{kv} = H$.
 
 @fig:mdl-transformers-gqa
 
@@ -1460,9 +1462,10 @@ The methods address different factors in the cache formula:
 :::
 
 ::: {.slide title="Recap"}
-- Causality freezes the past: cache K/V — the dense work goes quadratic →
-  linear (cache reads stay cumulatively quadratic, subdominant), logits
-  unchanged.
+- Because causality leaves past states unchanged, caching their keys and
+  values reduces cumulative dense-layer work from quadratic to linear in
+  generated length without changing logits. Cache reads remain cumulatively
+  quadratic but are subdominant here.
 - Cache bytes $= 2 L\, n_\textrm{kv} d_\textrm{head}\, n\, b$ — verified
   against the allocator; it *moves* every step.
 - Prefill is compute-bound, while decode speed is often limited by the

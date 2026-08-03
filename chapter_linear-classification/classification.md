@@ -119,14 +119,14 @@ def configure_optimizers(self):
 
 ## Accuracy
 
-Before we implement the accuracy metric, consider why a classifier needs *two* numbers at all. A single forward pass produces a vector of scores $\mathbf{o}\in\mathbb{R}^q$, one per class, and from there the picture forks into two branches that read the *same* scores for very different purposes (:numref:`fig_mdl-clf-loss-accuracy`). On the training branch we turn the scores into probabilities with the softmax and read off the cross-entropy loss. This loss is a smooth function of the parameters, so gradient descent can minimize it, and it keeps rewarding the model for putting more probability on the correct class even after the decision is already right, nudging a confidence of $0.51$ toward $0.99$. On the evaluation branch we take the $\arg\max$ of the scores to a single hard decision $\hat{y}$, compare it with the label, and count the hit. This is the accuracy: the fraction of correct decisions. It is a common benchmark metric but a *discrete* quantity whose gradient is zero almost everywhere, since a tiny change to the scores almost never flips which entry is largest. Whether accuracy is the right deployment metric depends on the costs of different errors and on how the scores will be used.
+A classifier uses the same score vector $\mathbf{o}\in\mathbb{R}^q$ for training and evaluation in different ways (:numref:`fig_mdl-clf-loss-accuracy`). During training, softmax converts the scores to probabilities and cross-entropy provides a smooth loss for gradient descent. The loss distinguishes, for example, correct-class probabilities of $0.51$ and $0.99$ even though both produce the same hard decision. During evaluation, $\arg\max$ converts the scores to a class $\hat{y}$, and accuracy records whether it matches the label. Accuracy is discrete and has zero gradient almost everywhere, so it is unsuitable as the direct training objective. Whether it is an appropriate deployment metric depends on the costs of different errors and on how predictions are used.
 
-So we report both, and for complementary reasons. Two models can reach identical accuracy while one is confidently right and the other barely so, and only the loss can tell them apart, which is why it, not accuracy, is what we optimize. Accuracy in turn measures the hard-decision quality that the loss only stands in for. When the two disagree (accuracy flat while the loss still drops, say) that is diagnostic information about optimization and calibration (how well the predicted probabilities match empirical frequencies), not a bug.
+We therefore report both quantities. The loss measures probability quality and supplies the optimization objective; accuracy measures hard decisions. A decreasing loss with unchanged accuracy can indicate increasing margins or changing calibration rather than an implementation error.
 
 ![From model scores to a training loss and an evaluation accuracy. One forward pass produces the logits $\mathbf{o}$; the top branch softmaxes them into probabilities $\hat{\mathbf{y}}$ and reads off the differentiable cross-entropy loss that drives gradient descent, while the bottom branch takes the $\arg\max$ to a hard decision $\hat{y}$, compares it with the label $y$, and counts it for accuracy. The numbers shown are the exact softmax and cross-entropy of the logits $(1.0, 2.2, 0.3)$ for true class $y=1$.](../img/mdl-clf-loss-accuracy.svg)
 :label:`fig_mdl-clf-loss-accuracy`
 
-Many applications require exactly this hard decision. Given the predicted probability distribution `y_hat`, we choose the class with the highest predicted probability whenever we must commit to one. Gmail, for instance, must file an email under "Primary", "Social", "Updates", "Forums", or "Spam": it might estimate probabilities internally, but at the end of the day it has to pick a single folder. A prediction that matches the label class `y` is correct, and accuracy is simply the fraction of predictions that are.
+Many applications require a hard decision. Given the predicted distribution `y_hat`, we select its highest-probability class. An email system, for example, may estimate probabilities internally but ultimately assign each message to one folder. Accuracy is the fraction of selected classes that match the labels `y`.
 
 Accuracy is computed as follows.
 First, if `y_hat` is a matrix,
@@ -436,7 +436,7 @@ $0.99$, which is why it, not accuracy, is what we optimize.
 ::: {.d2l-note .rule}
 When the two disagree (accuracy flat while loss still drops) that is a
 diagnostic about optimization and calibration (how well predicted
-probabilities match empirical frequencies), **not a bug**.
+probabilities match empirical frequencies) rather than an implementation error.
 :::
 :::
 
@@ -455,14 +455,14 @@ probabilities match empirical frequencies), **not a bug**.
 
 Screen for a disease carried by **1%** of the population. A "classifier"
 that ignores its input and always says *healthy* is right 99% of the time,
-and finds **not one** sick patient:
+and identifies **none** of the sick patients:
 
 @classification-beyond-accuracy
 
 ::: {.d2l-note .warn}
 Accuracy **0.99**, recall **0.0**. Accuracy weights every example equally,
 so under class imbalance it can award a near-perfect score to a model that
-never does its job.
+fails to identify any positive case.
 :::
 :::
 
@@ -480,7 +480,7 @@ $$\textrm{accuracy} = 1 - \frac{\textrm{FP} + \textrm{FN}}{n}
 ::: {.d2l-note .warn}
 Accuracy **0.99**, recall **0.0**: it finds not one sick patient. Accuracy
 weights every example equally, so under class imbalance it can award a
-near-perfect score to a model that never does its job.
+near-perfect score to a model that fails to identify any positive case.
 :::
 :::
 

@@ -1,15 +1,12 @@
 # Model Serving
 :label:`sec_model_serving`
 
-Training produces weights; serving turns them into something other people
-(or programs) can call. The engineering here is different in kind from
-training: latency distributions instead of loss curves, memory that scales
-with *users* instead of parameters, and a software landscape that
-consolidated, in the span of two years, around a handful of engines you
-should simply know by name. This section maps the landscape practically —
-what to run on a laptop, what to run behind an API, and the small set of
-ideas (KV-cache management, continuous batching, prefix reuse,
-quantization) that explain why those engines are fast.
+Training produces model parameters; serving exposes model inference to
+people or programs. Serving emphasizes latency distributions, concurrent
+request state, capacity planning, and operational controls. This section
+compares representative local and server engines as of mid-2026 and explains
+four recurring techniques: KV-cache management, continuous batching, prefix
+reuse, and quantization.
 
 ## Know Your Workload
 
@@ -26,7 +23,7 @@ across all users) trades against both.
 Which numbers matter depends on the workload, and the workload picks the
 tool:
 
-:Serving workloads and sensible starting points (mid-2026)
+:Serving workloads and example starting points (mid-2026)
 :label:`tab_serving_workloads`
 
 | Workload | Optimize for | Start with |
@@ -43,25 +40,24 @@ collapses.
 
 ## Serving on Your Own Machine
 
-The local stack standardized around **llama.cpp** and its **GGUF** file
-format, which now accounts for the majority of quantized models published
-on Hugging Face — community quantizers upload GGUF conversions within
-hours of any release. You rarely invoke llama.cpp directly:
+Many local inference tools use **llama.cpp** and its **GGUF** file format.
+Community repositories commonly publish GGUF conversions of open-weight
+models. Users often access llama.cpp through a wrapper:
 
 * **Ollama** wraps it (plus an Apple-MLX backend) in a one-command
   experience — `ollama run qwen3:8b` downloads, caches, and serves a model
-  with an OpenAI-compatible local API. The default for "I just want a
-  model on my machine."
+  with an OpenAI-compatible local API. It provides a low-configuration
+  starting point for local use.
 * **LM Studio** offers the same engines behind a GUI, with per-layer GPU
-  offload control — the friendliest on-ramp for non-terminal users.
-* **MLX** is Apple's array framework; on M-series Macs `mlx-lm` is
-  typically the fastest option for models under ~14B, with thousands of
-  pre-converted models on the Hub.
+  offload control — a graphical interface for users who prefer not to work in a terminal.
+* **MLX** is Apple's array framework; on M-series Macs, `mlx-lm` is
+  optimized for Apple silicon and has many pre-converted models on the Hub.
+  Performance depends on the model and conversion.
 
-GGUF's quantization ladder is a vocabulary worth learning: `Q4_K_M`
-(~4.5 bits/weight) is the community default — roughly a quarter of the
-FP16 footprint at a few percent quality cost; `Q5_K_M` buys measurable
-stability for reasoning tasks; `Q8_0` is near-lossless at half of FP16.
+Common GGUF quantizations include `Q4_K_M` (~4.5 bits/weight),
+`Q5_K_M`, and `Q8_0`. Higher-bit formats require more memory and usually
+retain model quality better, but the effect is model- and task-dependent and
+should be measured on the target workload.
 The rule of thumb follows the decode bound of
 :numref:`sec_hardware_buyers`: pick the largest model whose chosen quant
 fits your memory with room for the KV cache, then take the highest quant
@@ -71,8 +67,8 @@ that still fits.
 
 ### vLLM and SGLang
 
-For a GPU server exposed to real traffic, the open-source default is
-**vLLM**: continuous batching, paged KV-cache management, prefix caching,
+For an open-source GPU server, **vLLM** provides continuous batching, paged
+KV-cache management, prefix caching,
 tensor parallelism, quantized-model support, and an OpenAI-compatible
 server in one command:
 
@@ -81,25 +77,24 @@ vllm serve Qwen/Qwen3-8B --max-model-len 32768
 ```
 
 **SGLang** is its closest peer, distinguished by *RadixAttention* — a
-radix-tree KV cache shared across requests, which shines when many
+radix-tree KV cache shared across requests, which can improve reuse when many
 requests share long prefixes (chat with a system prompt, RAG over the
-same documents, agent trees). High-volume shops, notably the DeepSeek
-ecosystem, favor it for exactly those workloads. Both projects are now
-community-governed, move monthly, and support NVIDIA plus (increasingly)
-AMD hardware; benchmarking *your* prompt mix on both is a one-afternoon
-exercise and the only comparison that matters.
+same documents, agent trees). The DeepSeek ecosystem has used it for such
+workloads. Both projects evolve
+quickly and support multiple accelerator backends. Benchmark both with the
+target prompt-length and concurrency distributions before selecting one.
 
-The NVIDIA-proprietary tier trades flexibility for peak numbers:
-**TensorRT-LLM** compiles a model into optimized engines (fastest steady-
-state serving of a fixed model, at real setup cost), while **Dynamo**
+NVIDIA-specific tools trade portability for compiled optimizations.
+**TensorRT-LLM** compiles a model into optimized engines, which can improve
+steady-state serving at the cost of additional setup, while **Dynamo**
 orchestrates disaggregated prefill/decode and KV-aware routing across a
 fleet, wrapping vLLM, SGLang, or TensorRT-LLM as backends. These matter
 at datacenter scale; below it, they are complexity you do not need.
 
 ### One Client Contract
 
-Nearly everything above speaks the OpenAI chat-completions API, which has
-become the de-facto client contract — the same application code targets a
+Many of these tools implement the OpenAI chat-completions API, which serves
+as a common client contract — the same application code targets a
 local Ollama, your vLLM server, or a commercial provider by changing one
 URL:
 
@@ -121,8 +116,7 @@ vary. Keep a small conformance test and rerun it before swapping engines.
 
 ## Why These Engines Are Fast
 
-Four ideas, composable and worth knowing even if you never implement
-them:
+Four composable techniques explain much of serving-engine performance:
 
 **Continuous batching.** A static batch waits for its slowest member.
 Continuous batching admits new requests and retires finished ones between
@@ -131,9 +125,8 @@ decode steps, keeping the GPU full:
 ![Continuous batching reclaims finished slots and admits waiting requests instead of padding every sequence to the longest output.](../img/tools-continuous-batching.svg)
 :label:`fig_tools_continuous_batching`
 
-The toy scheduler below captures the idea in ten lines; extend it with
-arrival times and a memory budget and you have reinvented the core of a
-serving engine:
+The toy scheduler below captures the idea in ten lines. The exercises extend
+it with arrival times and a memory budget:
 
 ```{.python .input #model-serving-scheduler}
 from collections import deque
@@ -154,8 +147,8 @@ timeline
 length; vLLM's PagedAttention allocates it in fixed-size blocks, like
 virtual memory, eliminating the fragmentation that once capped batch
 sizes. Capacity planning follows: GPU memory must hold weights *plus* KV
-for every concurrent sequence — the reason a 7B model on a 24 GB card can
-still refuse the fifty-first user.
+for every concurrent sequence. A model that fits for one request may therefore
+exceed memory under high concurrency.
 
 **Prefix caching.** When two requests share a tokenized prefix (the same
 system prompt, the same document), its KV state can be computed once and
@@ -164,17 +157,18 @@ reused:
 ![A prefix cache reuses KV state only when tokenized prefixes match, then computes each request's unique suffix.](../img/tools-prefix-cache.svg)
 :label:`fig_tools_prefix_cache`
 
-This is also why commercial APIs price "cached input tokens" at ~10% of
-regular ones — structure your prompts (shared prefix first, variable
-suffix last) and the discount is automatic.
+Some commercial APIs charge less for cached input tokens. Place shared,
+stable content before variable suffixes when the provider's documented cache
+semantics support prefix reuse; prices and eligibility vary by provider.
 
 **Speculative decoding and quantization.** A small draft model proposes
 several tokens; the target model verifies them in one parallel pass —
-2–3× decode speedups when acceptance is high, with provably unchanged
-output distribution. Quantization attacks the decode bound directly:
-fewer bytes per weight, more tokens per second. On datacenter GPUs the
-current ladder is FP8 (native since Hopper) and NVFP4 (Blackwell), with
-AWQ the workhorse for 4-bit weights in vLLM/SGLang deployments; GGUF
+potential decode speedups when acceptance is high, while preserving the
+target distribution under the algorithm's sampling assumptions.
+Quantization reduces the bytes transferred during decode:
+fewer bytes per weight, more tokens per second. On recent datacenter GPUs,
+supported formats include FP8 on Hopper and NVFP4 on Blackwell, while vLLM
+and SGLang support AWQ for 4-bit weights; GGUF
 quants play the same role locally.
 
 ## Operating Notes
@@ -197,11 +191,11 @@ quality as well as latency.
   (bandwidth-bound, sets TPOT), and pick tools by workload: Ollama/LM
   Studio/MLX locally, vLLM or SGLang for services, TensorRT-LLM and
   Dynamo at NVIDIA-fleet scale.
-* GGUF and its quant ladder rule local serving; AWQ/FP8/NVFP4 rule
-  servers; in both cases quantization converts bytes saved into tokens
+* GGUF quantizations are common in local serving, while server engines support
+  formats such as AWQ, FP8, and NVFP4; in both cases quantization converts bytes saved into tokens
   per second.
 * Continuous batching, paged KV, prefix caching, and speculative decoding
-  are the four ideas behind every fast engine — and prefix structure is
+  are four recurring serving optimizations — and prefix structure is
   something *you* control from the prompt side.
 * The OpenAI-compatible API is the portable client contract; verify
   compatibility with your own conformance tests.
@@ -215,7 +209,7 @@ quality as well as latency.
    shortest-remaining-work on p95 TTFT.
 1. Serve the same 8B model through Ollama (Q4_K_M) and vLLM (AWQ) on
    whatever hardware you have, and measure TTFT and TPOT at concurrency
-   1, 4, and 16. Which engine wins where, and why?
+   1, 4, and 16. Which engine performs better for each workload, and why?
 1. Estimate KV-cache bytes per token for a model whose config you know
    (layers × 2 × kv-heads × head-dim × bytes), then compute how many
    8K-context users fit beside the weights on a 24 GB card.

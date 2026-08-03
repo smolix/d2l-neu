@@ -43,7 +43,7 @@ import time
 We begin by comparing the computational properties of three sequence layers.
 Consider the problem of mapping a
 sequence of $n$ tokens, each a $d$-dimensional vector, to another sequence
-of the same shape. Three architectures we now know can do it: a
+of the same shape. Three familiar architectures can perform this mapping: a
 one-dimensional CNN (:numref:`chap_cnn`), an RNN (:numref:`sec_rnn`), and
 self-attention (:numref:`sec_multihead-attention`).
 :numref:`fig_cnn-rnn-self-attention` draws all three as graphs over the
@@ -95,7 +95,7 @@ of this section studies ways to reduce its memory use or arithmetic cost.
 
 ### Counting FLOPs
 
-We now compute the leading constants. One attention layer
+The leading constants make this comparison more precise. One attention layer
 receives $n$ queries, keys, and values of dimension $d$ and computes
 :eqref:`eq_softmax_QK_V`: the score matrix $\mathbf{Q}\mathbf{K}^\top$
 costs $2n^2 d$ floating-point operations (each of the $n^2$ entries is a
@@ -110,7 +110,7 @@ $$
 :eqlabel:`eq_attn-layer-flops`
 
 Recall from :eqref:`eq_multihead-flops` that the projections wrapped around
-attention in a multi-head layer cost $8nd^2$—linear in $n$—and that the head
+attention in a multi-head layer cost $8nd^2$, which is linear in $n$, and that the head
 count drops out of both terms. Setting $4n^2d = 8nd^2$ locates the
 crossover: the quadratic part dominates the layer as soon as $n > 2d$.
 Working the ratio for a production-sized configuration, $d = 4096$ and
@@ -122,7 +122,8 @@ crossover.
 ### Counting Memory
 
 Arithmetic is only one part of the cost, and at inference time memory is
-often more important. The layer *materializes* the score matrix and its softmax:
+often more important. A naive implementation materializes the score matrix
+and its softmax:
 two $n \times n$ buffers of activations, $8n^2$ bytes in single precision,
 per head and per sequence in the batch; during training the attention
 weights are also saved for the backward pass. The projections, by contrast,
@@ -147,9 +148,9 @@ is the two $n \times n$ float buffers, $8n^2$ bytes.
 Measuring per-op memory at runtime is awkward in JAX, for two reasons. XLA
 *preallocates* a large fraction of GPU memory as an arena at startup (this
 book's runs cap it at 40%), so device-side counters describe the arena, not
-the op. More fundamentally, the compiler fuses and rematerializes freely,
-so *what gets materialized at all is a compilation decision*, not a
-property of your Python code. The authoritative answer therefore comes from
+the operation. The compiler may also fuse or rematerialize operations, so
+the buffers it materializes are determined during compilation rather than
+directly by the Python source. The authoritative answer therefore comes from
 the compiler itself: lowering a jitted function and compiling it yields a
 `memory_analysis()` report of exactly how much temporary buffer space the
 executable reserves. We compare it against the two $n \times n$ float
@@ -194,12 +195,12 @@ for n in [2048, 4096, 8192, 16384]:
           f'predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
 ```
 
-The formula matches the measurement exactly from $n = 4096$ up — and the
-XLA compiler's report matches it at every size — while the allocator's
+The formula matches the measurement from $n = 4096$ onward, and the XLA
+compiler report matches it at every size. The allocator's
 smallest run ($n = 2048$) shows a few MiB of workspace overhead on top of
-the two score buffers. Doubling $n$ quadruples the footprint, and at
-$n = 16{,}384$ a single fp32 head already needs 2 GB of scratch. Time tells
-the same story. We time the forward pass as $n$ doubles (after a warm-up
+the two score buffers. Doubling $n$ quadruples the footprint. At
+$n = 16{,}384$, a single fp32 head already needs 2 GB of temporary storage.
+The runtime has the same quadratic dependence. We time the forward pass as $n$ doubles (after a warm-up
 call, and synchronizing before reading the clock—on an accelerator, kernel
 launches return before the work is done):
 
@@ -236,9 +237,10 @@ for n in [2048, 4096, 8192, 16384]:
     print(f'n = {n:5d}: {wall_clock(layer, Q, Q, Q)*1e3:6.2f} ms')
 ```
 
-At small $n$ the timings barely move—the GPU is not yet saturated and we are
-measuring launch overhead—but from a few thousand tokens on, each doubling
-of $n$ roughly quadruples the time, as $4n^2d$ arithmetic says it must.
+At small $n$, the timings change little because the GPU is not saturated
+and launch overhead dominates. Beyond a few thousand tokens, each doubling
+of $n$ roughly quadruples the time, consistent with the $4n^2d$ operation
+count.
 (Accounting at the level of a whole *model*, including the allocation of
 FLOPs among parameters and data, is the subject of the scaling-laws discussion in the
 next chapter; here we stay inside one layer.)
@@ -251,8 +253,8 @@ The full $n \times n$ matrix need not be stored. The apparent obstacle to
 computing attention piecewise
 seems to be the softmax, since each weight
 $\exp(a_j)/\sum_{j'}\exp(a_{j'})$ depends on *all* scores of its row
-through the normalizer—and, for numerical safety, through the row maximum
-subtracted before exponentiation. But both the maximum and the normalizer
+through the normalizer and, for numerical safety, through the row maximum
+subtracted before exponentiation. Both quantities
 can be maintained *online*, the way one computes a running mean
 :cite:`Milakov.Gimelshein.2018`. Process the keys in blocks and keep, per
 query, three running statistics: the maximum $m$ seen so far, the sum $s$ of
@@ -284,10 +286,9 @@ running state of size $\mathcal{O}(nd)$
 ### A Chunked Implementation
 
 From here on we work in the causal setting of a language model, masking with
-the dtype-safe idiom of :numref:`sec_attention-scoring-functions`. First the
-naive reference, then the chunked version—about twenty lines that carry
-:eqref:`eq_online-softmax` over all queries at once, one key block per
-iteration.
+the dtype-safe idiom of :numref:`sec_attention-scoring-functions`. We first implement a naive reference and then a chunked version.
+The chunked implementation applies :eqref:`eq_online-softmax` to all
+queries at once and processes one key block per iteration.
 
 ```{.python .input #attention-at-scale-a-chunked-implementation-1}
 %%tab pytorch
@@ -383,9 +384,9 @@ with jax.default_matmul_precision('highest'):
 print(f'maximum deviation: {float(err):.2e}')
 ```
 
-The two computations agree to floating-point rounding, around $10^{-7}$ in
-fp32—this is the same answer, not an approximation of it. Now the payoff.
-The chunked version touches $n \times c$ scores at a time instead of
+The two computations agree up to floating-point rounding, around $10^{-7}$
+in fp32. Chunking therefore changes the evaluation order rather than the
+attention definition. The chunked version touches $n \times c$ scores at a time instead of
 $n \times n$, so its footprint should grow linearly in $n$ rather than
 quadratically:
 
@@ -428,13 +429,12 @@ again for the value mixing. The chunked schedule keeps each stripe in
 fast on-chip memory, finishes all work on it, and never writes it out.
 FlashAttention :cite:`Dao.Fu.Ermon.ea.2022` is this algorithm engineered to
 the hardware: tile sizes matched to on-chip SRAM, softmax statistics kept in
-registers, and—during training—the backward pass *recomputing* the stripes
-instead of storing weights, since recomputation is cheaper than the memory
-traffic it avoids. The result is exact attention that is faster *and*
+registers. During training, the backward pass recomputes the stripes instead
+of storing the weights because this additional arithmetic costs less than
+the avoided memory traffic. The result is exact attention that is faster *and*
 asymptotically smaller, and it ships in every framework as a fused kernel:
 `torch.nn.functional.scaled_dot_product_attention` in PyTorch,
-`jax.nn.dot_product_attention` in JAX. Let's measure it against our naive
-implementation in a realistic configuration (8 heads of dimension 64, half
+`jax.nn.dot_product_attention` in JAX. We compare it with the naive implementation in a representative configuration (8 heads of dimension 64, half
 precision, $n = 8192$):
 
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
@@ -482,25 +482,21 @@ for name, f in [('naive', naive_heads), ('fused', fused_heads)]:
 ```
 
 :begin_tab:`pytorch`
-In our runs — one GPU, half precision, the FlashAttention backend — the fused
-kernel is more than ten times faster than the naive implementation and its
-footprint is hundreds of times smaller—megabytes
-where the naive version allocates gigabytes. Both effects come from the
-same place: the score matrix never travels to off-chip memory. There is no
-trade-off to weigh here; for dense attention on sequences beyond a few
-hundred tokens, the fused kernel is simply the right way to compute it,
-which is why production stacks route through it.
+On one GPU in half precision with the FlashAttention backend, the fused
+kernel is more than ten times faster than the naive implementation and uses
+hundreds of times less temporary memory: megabytes rather than gigabytes.
+Both improvements result from keeping the score blocks out of off-chip
+memory. Production systems therefore use fused kernels for dense attention
+on sequences beyond a few hundred tokens.
 :end_tab:
 
 :begin_tab:`jax`
-In our runs — one GPU, half precision, the cuDNN backend — the fused cuDNN
-kernel is several times faster than the naive implementation, and the
-compiler's memory report makes the structural
-difference stark: the naive version reserves gigabytes of temporary buffer
-for its score matrices, the fused kernel essentially none—the scores never
-exist outside on-chip memory. For dense attention on sequences beyond a
-few hundred tokens the fused kernel is simply the right way to compute it,
-which is why production stacks route through it.
+On one GPU in half precision with the cuDNN backend, the fused kernel is
+several times faster than the naive implementation. The compiler report
+also shows that the naive version reserves gigabytes of temporary memory for
+score matrices, whereas the fused kernel keeps score blocks in on-chip
+memory. Production systems therefore use fused kernels for dense attention
+on sequences beyond a few hundred tokens.
 :end_tab:
 
 ## Windowed and Sparse Attention
@@ -605,7 +601,7 @@ As with online softmax, the mask defines the semantics but not the savings:
 most of them. The efficient implementation processes the sequence in blocks
 of $w$ queries; a query in block $b$ can only attend to keys in blocks
 $b-1$ and $b$, so each block scores a $w \times 2w$ tile and the total work
-is $2nw$ scores instead of $n^2$—linear in $n$ at fixed window.
+is $2nw$ scores instead of $n^2$, which is linear in $n$ for fixed $w$.
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-1}
 %%tab pytorch
@@ -650,8 +646,8 @@ def windowed_attention(Q, K, V, w):
     return (jax.nn.softmax(scores, axis=-1) @ Vb).reshape(n, d)
 ```
 
-The blocked version must agree with the mask-based definition—same
-semantics, cheaper schedule:
+The blocked version should agree with the mask-based definition while using
+a lower-cost evaluation schedule:
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-2}
 %%tab pytorch
@@ -684,7 +680,7 @@ print(f'maximum deviation: {float(err):.2e}')
 
 Fixed windows are the crudest possible sparsity pattern: position decides
 what may be attended, before the content is seen. The current frontier
-makes the sparsity pattern itself *trainable*—DeepSeek's natively sparse
+makes the sparsity pattern itself trainable. DeepSeek's natively sparse
 attention learns which blocks each query should visit, under the same
 hardware-aligned block structure used here
 :cite:`Yuan.Gao.Dai.ea.2025`.
@@ -716,9 +712,9 @@ $$
 :eqlabel:`eq_linear-attn`
 
 Because the query enters linearly, it factors out of the
-sum, and what remains—$\mathbf{S}_t$ and $\mathbf{z}_t$—does not depend on
-the query at all. The pairwise interaction has been rearranged away, and
-with it the quadratic cost: instead of $t$ scores per query, one
+sum. The remaining terms, $\mathbf{S}_t$ and $\mathbf{z}_t$, do not depend
+on the query. Reordering the sums therefore removes the explicit pairwise
+interaction and its quadratic cost: instead of $t$ scores per query, one
 matrix-vector product against a running summary
 :cite:`Katharopoulos.Vyas.Pappas.ea.2020`. Following that paper, we take
 $\phi(x) = \mathrm{elu}(x) + 1$, which keeps features positive so that the
@@ -735,8 +731,8 @@ $$
 
 a *recurrence*: a fixed-size state of $d \times d$ numbers, updated by an
 outer-product write as each token arrives, then read by the query. Linear
-attention is a recurrent network—one whose hidden state is a matrix acting
-as an associative memory, with $\phi(\mathbf{k}_t)$ the address and
+attention is a recurrent network whose hidden state is a matrix. The state
+acts as an associative memory, with $\phi(\mathbf{k}_t)$ the address and
 $\mathbf{v}_t$ the content, an idea that reaches back to the fast weight
 programmers of the early 1990s :cite:`Schlag.Irie.Schmidhuber.2021`. The
 same computation therefore has two implementations: a *parallel* form for
@@ -796,9 +792,9 @@ def linear_attention_recurrent(Q, K, V):
     return outputs
 ```
 
-The two forms must agree—:eqref:`eq_linear-attn-recurrence` is just
-:eqref:`eq_linear-attn` summed in a different order—and they do, to
-floating-point rounding:
+Equations :eqref:`eq_linear-attn-recurrence` and :eqref:`eq_linear-attn`
+sum the same terms in different orders. Their implementations therefore
+agree up to floating-point rounding:
 
 ```{.python .input #attention-at-scale-kernelizing-the-score-2}
 %%tab pytorch
@@ -831,10 +827,10 @@ $n=8192$. Its cache therefore grows linearly with the generated sequence,
 whereas the recurrent state above remains fixed.
 
 The state $\mathbf{S}_t$ is a lossy summary. All past values are represented
-by $d \times d$ numbers, so retrieving one
-specific token from a long context—the thing exact attention is best
-at—degrades as the context grows, and softmax's sharp, winner-take-all
-weighting is replaced by a milder polynomial kernel. Where the quality
+by $d \times d$ numbers, so retrieval of one
+specific token can degrade as the context grows. Exact attention retains
+all token representations and can assign a nearly one-hot softmax weight,
+whereas the factorized form uses a smoother polynomial kernel. Where the quality
 gap matters and where it does not is an empirical question. A hybrid design
 can retain occasional full-attention layers within a mostly linear stack, but
 its quality and efficiency must be evaluated for the target workload.
@@ -903,13 +899,13 @@ axes[0].legend();
 ```
 
 :begin_tab:`pytorch`
-The picture rewards a careful read. Dense attention's curves bend to slope
-two on the log-log axes (quadratic, as derived), while the windowed
+Dense attention's curves approach slope two on the log--log axes, consistent
+with quadratic scaling, while the windowed
 mechanism's cost is so small at these sizes that it stays pinned near the
-launch-overhead floor throughout. Linear attention is the instructive
-case. Its memory grows linearly but with the large constant $nd_h^2$—the
-parallel form materializes the running matrix state for every position—so
-it undercuts dense attention only once $n$ clearly exceeds $d_h^2$. Its
+launch-overhead floor throughout. Linear attention has linear memory growth but a large $nd_h^2$ constant
+because the parallel form materializes the running matrix state at every
+position. It uses less memory than dense attention only once $n$ exceeds
+$d_h^2$ by a sufficient margin. Its
 wall clock is *worse* than dense attention's at moderate lengths: a
 cumulative sum of outer products is bandwidth-bound, while dense attention
 rides highly optimized matrix-multiply units, and asymptotics only pull
@@ -923,8 +919,8 @@ recurrence carried between them.
 :end_tab:
 
 :begin_tab:`jax`
-The picture rewards a careful read. Dense attention's curves bend to slope
-two on the log-log axes—quadratic, as derived—while the windowed
+Dense attention's curves approach slope two on the log--log axes, consistent
+with quadratic scaling, while the windowed
 mechanism's cost stays near the launch-overhead floor at these sizes.
 Linear attention fares better under XLA than a bandwidth-bound cumulative
 sum of outer products might suggest: the compiler fuses the scan, and from
@@ -967,8 +963,7 @@ correspondence between selective state space models and masked attention
 exact :cite:`Dao.Gu.2024`. Attention that retains the full history and
 recurrence that compresses it into a fixed-size state are two endpoints of a design space,
 and the mechanisms of this section—windows, chunks, matrix-state
-recurrences—are the intermediate points that production systems actually
-occupy.
+recurrences provide intermediate tradeoffs used by production systems.
 
 ## Summary
 
@@ -1068,11 +1063,12 @@ One layer: $4n^2d$ FLOPs, two $n \times n$ score buffers = $8n^2$ bytes
   it.
 :::
 
-::: {.slide title="Time tells the same story"}
+::: {.slide title="Measured runtime is quadratic"}
 @attention-at-scale-counting-memory-2
 
 - Launch-bound while the GPU is idle; from a few thousand tokens on, each
-  doubling of $n$ roughly quadruples the time — $4n^2d$ in action.
+  doubling of $n$ roughly quadruples the time, consistent with the $4n^2d$
+  operation count.
 :::
 
 ::: {.slide title="Online softmax: the matrix never needs to exist"}
@@ -1081,8 +1077,9 @@ blocks:
 
 $$m' = \max(m, \max_j a_j), \quad s' = s\,e^{m-m'} + \sum_j e^{a_j - m'}, \quad \mathbf{o}' = \mathbf{o}\,e^{m-m'} + \sum_j e^{a_j-m'}\mathbf{v}_j$$
 
-$\mathbf{o}/s$ is **exactly** $\mathrm{softmax}(\mathbf{a})\mathbf{V}$ —
-raising the max retroactively rescales the past.
+$\mathbf{o}/s$ equals $\mathrm{softmax}(\mathbf{a})\mathbf{V}$. When the
+running maximum increases, the factors $e^{m-m'}$ rescale earlier partial
+sums.
 
 ![Online softmax carries a running maximum, normalizer, and weighted-value sum across key blocks.](../img/mdl-attention-online-softmax.svg){width=72%}
 :::
@@ -1113,7 +1110,7 @@ in registers, backward pass *recomputes* instead of storing.
 :::
 
 ::: {.slide title="Attention through a window"}
-Let each query attend to the $w$ most recent positions — the causal mask
+If each query attends to the $w$ most recent positions, the causal mask
 becomes a band:
 
 @!attention-at-scale-attention-through-a-window
@@ -1125,7 +1122,7 @@ becomes a band:
 
 ::: {.slide title="Depth restores the reach"}
 Information hops $w-1$ positions per layer: receptive field
-$1 + L(w-1)$ after $L$ layers — computed, not asserted:
+$1 + L(w-1)$ after $L$ layers, as the following check confirms:
 
 @!attention-at-scale-depth-restores-the-reach
 
@@ -1167,7 +1164,7 @@ $\mathbf{S}, \mathbf{z}$) for generation:
   attention, and linear attention in recurrent form.
 :::
 
-::: {.slide title="Recap: three ways out"}
+::: {.slide title="Recap: three scaling strategies"}
 - **Reorganize**: online softmax → FlashAttention. Exact, linear memory;
   the bottleneck was traffic, not FLOPs.
 - **Restrict**: sliding windows; depth restores reach as $1 + L(w-1)$.
@@ -1177,7 +1174,8 @@ $$\mathbf{S}_t = \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top$$
 
 . . .
 
-That recurrence **is** the state-space recurrence of ch. 12 with
-identity decay; train it with the parallel scan, gate it and you get Mamba —
-attention and recurrence are two ends of one design space (SSD, 2024).
+With identity decay, this recurrence has the state-space form developed in
+Chapter 12. Parallel scans and learned gates lead to related models such as
+Mamba; attention and recurrence occupy two ends of this design space
+(SSD, 2024).
 :::

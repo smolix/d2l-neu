@@ -1,40 +1,35 @@
 # Ecosystem
 :label:`sec_software_ecosystem`
 
-Almost nothing in modern machine learning starts from an empty directory.
-You begin from someone else's work: a pretrained checkpoint, a curated
-dataset, a paper with released code, a benchmark that tells you what "good"
-currently means. Knowing *where to look* — and how to judge what you find —
-has quietly become a core skill, as load-bearing as knowing how to write a
-training loop. This section is the map we wish someone had handed us: the
-places that matter in 2026, the leaderboards worth trusting, how to stay
-current in a field that turns over monthly, and the handful of habits that
-keep borrowed artifacts from becoming liabilities.
+Modern machine learning projects commonly begin with pretrained checkpoints,
+datasets, released code, and benchmark results. Using these artifacts requires
+knowing where to find them, how to evaluate their relevance, and how to record
+their provenance. This section surveys prominent sources as of 2026, explains
+how to interpret leaderboards, and presents practices for managing external
+artifacts safely.
 
 ## Where to Find Things
 
 ### Models
 
-The [Hugging Face Hub](https://huggingface.co/models) is the default: over
-two million public models as of spring 2026, with Git-style versioning,
-model cards, and integration into effectively every library in this book.
-Its scale cuts both ways — the top 200 repositories account for about half
-of all downloads, and most of the rest is abandoned experiments — so search
-by task, sort by downloads and recency, and read the model card before
-committing bandwidth. Complements worth knowing:
+The [Hugging Face Hub](https://huggingface.co/models) listed more than two
+million public models in spring 2026 and provides Git-style versioning, model
+cards, and integrations with the libraries used in this book. Because
+popularity does not establish suitability, search by task, inspect recency and
+download signals, and read the model card before selecting a repository. Complementary sources include:
 
-* [ModelScope](https://modelscope.cn/), Alibaba's hub, is the primary home
+* [ModelScope](https://modelscope.cn/), Alibaba's hub, hosts a large part
   of the Chinese open-model ecosystem (Qwen and friends, 170,000+ models) —
-  increasingly where open-weight state of the art appears first.
+  and frequently publishes new open-weight releases.
 * [Kaggle Models](https://www.kaggle.com/models) hosts curated weights
   wired into Kaggle's competition and notebook infrastructure
   (:numref:`sec_hosted_notebooks`).
 * The [Ollama library](https://ollama.com/library) is a short, curated
   menu of local-runtime models — less a discovery surface than a
   convenience layer (:numref:`sec_model_serving`).
-* [`timm`](https://huggingface.co/timm) remains the reference collection
-  of vision backbones; [Civitai](https://civitai.com/) dominates community
-  image-generation checkpoints and LoRAs.
+* [`timm`](https://huggingface.co/timm) provides a broad collection of vision
+  backbones; [Civitai](https://civitai.com/) hosts community image-generation
+  checkpoints and LoRAs.
 
 ### Datasets
 
@@ -43,54 +38,53 @@ public datasets) and [Kaggle](https://www.kaggle.com/datasets) cover most
 supervised needs. For pretraining-scale text, the lineage runs from raw
 [Common Crawl](https://commoncrawl.org/) through filtered derivatives —
 [FineWeb](https://huggingface.co/datasets/HuggingFaceFW/fineweb) (~15
-trillion tokens, plus a 1,000-language successor) has become the standard
-open baseline, the role C4 played in this book's era of BERT. For
-vision–language pairs, DataComp superseded LAION as the recommended
-starting point. Older and very large corpora sometimes live only on
+trillion tokens, plus a 1,000-language successor) provides a widely used open
+baseline, analogous to C4 in the period when
+BERT was developed. For
+vision–language pairs, DataComp provides an alternative to LAION with an emphasis on controlled
+dataset construction and evaluation. Older and very large corpora are sometimes available only through
 [Academic Torrents](https://academictorrents.com/). Whatever the source:
-datasets have versions, licenses, and documented failure modes exactly as
-models do, and the data card deserves the same read as the model card.
+datasets, like models, have versions, licenses, and documented failure modes.
+Review a dataset's documentation before adopting it.
 
 ### Papers and Code
 
 New work appears on [arXiv](https://arxiv.org/list/cs.LG/recent) first;
 the community's curated front page for ML is [Hugging Face
 Papers](https://huggingface.co/papers), which absorbed that role when
-Papers with Code — for years the standard index from papers to code and
-benchmarks — was shut down without notice in mid-2025. (Its historical
-leaderboard data survives only as a frozen archive; let that be a lesson
-about free infrastructure.) [Semantic Scholar](https://www.semanticscholar.org/)
+Papers with Code—for years an index from papers to code and benchmarks—closed
+in mid-2025. Its historical leaderboard data survives as a static archive,
+illustrating why project inputs should not depend on one external index. [Semantic Scholar](https://www.semanticscholar.org/)
 and [alphaXiv](https://alphaxiv.org/) help with search and discussion, and
-GitHub remains where the code actually is — a repository's issue tracker
-and commit recency tell you more about whether a method reproduces than
-the paper's abstract does.
+Released implementations commonly reside on GitHub. Issue history, recent
+commits, and documented reproduction results provide evidence beyond the
+paper's abstract.
 
 ## Choosing a Model: Benchmarks and Leaderboards
 
-"Which model should I use?" changed answers a dozen times while this book
-was written; what stays stable is *how* to answer it. No single number
-survived contact with optimization — static benchmark suites become
-training data, and the once-canonical Open LLM Leaderboard was retired in
-2025 for exactly that reason. Practitioners now triangulate:
+Model rankings change as models, evaluation sets, and optimization methods
+evolve. Static benchmark suites can also enter training data. The Open LLM
+Leaderboard was retired in 2025 after contamination reduced its usefulness.
+Model selection should therefore combine several sources of evidence:
 
 * [LMArena](https://lmarena.ai/) (now Arena) — blind human pairwise
-  preference; hard to game, but measures "pleasing an average user," which
-  may not be your task.
+  preference; it measures aggregate user preferences, which may differ from
+  the target task.
 * [LiveBench](https://livebench.ai/) — contamination-resistant by rotating
   fresh questions monthly.
-* [SWE-bench Verified](https://www.swebench.com/) — the reference for
-  agentic coding against real GitHub issues; representative of the
+* [SWE-bench Verified](https://www.swebench.com/) — an evaluation for
+  coding agents on real GitHub issues; it exemplifies the
   benchmark-per-capability pattern (math, long context, safety all have
   their own).
 * [Artificial Analysis](https://artificialanalysis.ai/) — the
   quality/price/latency triangulation across hundreds of models and
-  providers; usually the first stop when cost matters.
+  providers; useful when cost and latency are selection criteria.
 * [OpenRouter rankings](https://openrouter.ai/rankings) — revealed
   preference by real token volume rather than scores; instructive
   precisely where it disagrees with the quality leaderboards.
 
-Then the step that outranks all of the above: build a small evaluation set
-from *your* task — even fifty examples — and run the shortlist on it. The
+After forming a shortlist, build a small evaluation set from the target task
+and run each candidate on it. The
 gap between leaderboard rank and performance on your distribution is
 routinely larger than the gap between adjacent leaderboard entries. The
 evaluation discipline this book has practiced throughout — held-out data,
@@ -99,12 +93,13 @@ as it does to training them.
 
 ## Staying Current
 
-A field this fast rewards a deliberate information diet over doomscrolling.
+A small, deliberate set of information sources is easier to evaluate than a
+continuous stream of announcements.
 A workable minimal set, as of 2026:
 
-* [r/LocalLLaMA](https://www.reddit.com/r/LocalLLaMA/) — the town square
-  of open-weight ML; new releases, quantizations, and hardware reports
-  surface here first, usually with reproduction attempts attached.
+* [r/LocalLLaMA](https://www.reddit.com/r/LocalLLaMA/) — a community source
+  for open-weight releases, quantizations, hardware reports, and reproduction
+  attempts.
 * [Hugging Face Papers](https://huggingface.co/papers) daily — a curated
   dozen papers instead of arXiv's daily hundreds.
 * One good newsletter — Andrew Ng's *The Batch*, Jack Clark's *Import AI*,
@@ -141,9 +136,8 @@ path = snapshot_download(
 )
 ```
 
-A tiny manifest turns "which model was that?" from archaeology into a
-lookup — in production you would add file hashes, library versions, and an
-evaluation record:
+A small manifest records the model identity explicitly. In production, add
+file hashes, library versions, and an evaluation record:
 
 ```{.python .input #software-ecosystem-manifest}
 from dataclasses import asdict, dataclass
@@ -170,8 +164,8 @@ whose numerical fidelity someone should have checked against the source.
 
 ### Trust and Licenses
 
-Downloaded models are software supply-chain inputs, and the ecosystem has
-real teeth:
+Downloaded models are software supply-chain inputs with security and licensing
+implications:
 
 * Prefer **safetensors** — a pure tensor container. Legacy pickle-based
   checkpoints can execute arbitrary code on load, and the Hub's scanners
@@ -181,12 +175,12 @@ real teeth:
   genuinely requires it.
 * "Open" spans a wide range of licenses: permissive Apache/MIT weights,
   acceptable-use licenses with commercial thresholds, research-only
-  releases, and gated models whose terms you accept per account. The
-  license lives in the repository — record the one you actually accepted,
-  since repositories can relicense between revisions.
+  releases, and gated models whose terms you accept per account. Record the
+  license associated with the pinned repository revision, since repositories
+  can relicense between revisions.
 * Every hub client caches aggressively (tens to hundreds of gigabytes in
-  `~/.cache/huggingface` is routine). Learn your cache tool's `scan` and
-  `delete` commands before your disk teaches you.
+  `~/.cache/huggingface` is routine). Learn the cache tool's `scan` and
+  `delete` commands and monitor disk use.
 
 ## Summary
 
@@ -194,17 +188,16 @@ real teeth:
   datasets, with ModelScope, Kaggle, Ollama's library, and Civitai as the
   complements that matter; FineWeb-class corpora are the open pretraining
   baseline.
-* Papers with Code is gone; arXiv plus Hugging Face Papers is the 2026
-  reading pipeline, with GitHub as the ground truth for whether code
-  exists and is alive.
+* Papers with Code closed in 2025; arXiv and Hugging Face Papers provide paper
+  discovery, while repository activity and reproduction reports help assess
+  released code.
 * No leaderboard is trusted alone: triangulate Arena, LiveBench,
   task-specific benchmarks, and price/latency data — then decide on a
   small evaluation you built from your own task.
-* Keep a deliberate information diet: one community, one curated paper
-  feed, one newsletter.
+* Use a small set of complementary sources, such as a community, a curated
+  paper feed, and a newsletter.
 * Pin revisions, prefer safetensors, read licenses, treat remote code as
-  code review, and manage your caches — borrowed artifacts are supply
-  chain, not just downloads.
+  code review, and manage your caches — treat external artifacts as supply-chain dependencies.
 
 ## Exercises
 

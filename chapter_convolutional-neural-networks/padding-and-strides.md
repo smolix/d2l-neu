@@ -12,9 +12,7 @@ and the convolution kernel had both a height and width of 2,
 yielding an output representation with dimension $2\times2$.
 Assuming that the input shape is $n_\textrm{h}\times n_\textrm{w}$
 and the convolution kernel shape is $k_\textrm{h}\times k_\textrm{w}$,
-the output shape will be $(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1)$: 
-we can only shift the convolution kernel so far until it runs out
-of pixels to apply the convolution to. 
+the output shape is $(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1)$ because the kernel must remain within the input.
 
 This section introduces padding, stride, and dilation. Together they control
 the output size and the region of the input that contributes to each output
@@ -65,14 +63,9 @@ shows how utilization depends on kernel size and position.
 ![Pixel utilization for convolutions of size $1 \times 1$, $2 \times 2$, and $3 \times 3$ respectively.](../img/conv-reuse.svg)
 :label:`img_conv_reuse`
 
-Since we typically use small kernels,
-for any given convolution
-we might only lose a few pixels
-but this can add up as we apply
-many successive convolutional layers.
-One straightforward solution to this problem
-is to add extra pixels of filler around the boundary of our input image,
-thus increasing the effective size of the image.
+Each convolution with a small kernel removes only a few positions, but the loss
+accumulates across layers. We can instead add pixels around the input boundary,
+increasing its effective size.
 Typically, we set the values of the extra pixels to zero.
 In :numref:`img_conv_pad`, we pad a $3 \times 3$ input,
 increasing its size to $5 \times 5$.
@@ -95,8 +88,7 @@ will increase by $p_\textrm{h}$ and $p_\textrm{w}$, respectively.
 
 In many cases, we will want to set $p_\textrm{h}=k_\textrm{h}-1$ and $p_\textrm{w}=k_\textrm{w}-1$
 to give the input and output the same height and width.
-This will make it easier to predict the output shape of each layer
-when constructing the network.
+This choice makes the output shape of each layer predictable.
 Assuming that $k_\textrm{h}$ is odd here,
 we will pad $p_\textrm{h}/2$ rows on both sides of the height.
 If $k_\textrm{h}$ is even, one possibility is to
@@ -111,9 +103,7 @@ that we can preserve the dimensionality
 while padding with the same number of rows on top and bottom,
 and the same number of columns on left and right.
 
-Moreover, this practice of using odd kernels
-and padding to precisely preserve dimensionality
-offers a clerical benefit.
+Odd kernels with shape-preserving padding also provide a convenient alignment.
 Take any two-dimensional tensor `X`, an odd kernel size,
 and the same number of padding rows and columns
 on all sides, so that the output
@@ -246,11 +236,9 @@ we start with the convolution window
 at the upper-left corner of the input tensor,
 and then slide it over all locations both down and to the right.
 In the previous examples, we defaulted to sliding one element at a time.
-However, sometimes, either for computational efficiency
-or because we wish to downsample,
-we move our window more than one element at a time,
-skipping the intermediate locations. This is particularly useful if the convolution 
-kernel is large since it captures a large area of the underlying image.
+For computational efficiency or downsampling, we can move the window by more
+than one element and skip intermediate positions. This can be useful when a
+large kernel already covers a broad input region.
 
 We refer to the number of rows and columns traversed per slide as *stride*.
 So far, we have used strides of 1, both for height and width.
@@ -309,7 +297,7 @@ conv2d = nnx.Conv(1, 1, kernel_size=(3, 3), padding=1, strides=2,
 comp_conv2d(conv2d, X).shape
 ```
 
-Let's look at a slightly more complicated example.
+The following example uses different settings along the two axes.
 
 ```{.python .input #padding-and-strides-stride-2}
 %%tab mxnet
@@ -375,7 +363,7 @@ $$\lfloor(n_\textrm{h}-d_\textrm{h}(k_\textrm{h}-1)+p_\textrm{h}+s_\textrm{h}-1)
 With $d_\textrm{h}=d_\textrm{w}=1$ this reduces to the strided formula,
 and with unit stride and no padding to the $(n-k+1)$ rule we started from.
 
-The point of dilation is receptive-field growth on a budget.
+Dilation enlarges the receptive field without adding kernel parameters.
 In the receptive-field formula :eqref:`eq_receptive_field`,
 each layer contributes $k'_i - 1 = d_i(k_i - 1)$ at stride 1,
 so doubling the dilation at every layer,
@@ -392,7 +380,7 @@ but the output must keep the input's resolution;
 we will meet it again in the fully convolutional networks
 of :numref:`sec_fcn`.
 
-Let's verify the effective-size claim numerically:
+We verify the effective-size calculation numerically:
 on our $8 \times 8$ input,
 a $3 \times 3$ kernel at dilation 2
 produces the same $4 \times 4$ output
@@ -446,12 +434,21 @@ to that of interior pixels: a corner pixel still belongs to fewer windows
 containing real image values. Typically we pick symmetric padding on both sides
 of the input height and width. In this case we refer to
 $(p_\textrm{h}, p_\textrm{w})$ padding. Most commonly we set
-$p_\textrm{h} = p_\textrm{w}$, in which case we simply state that we choose
+$p_\textrm{h} = p_\textrm{w}$, in which case we say that we choose
 padding $p$.
 
-A similar convention applies to strides. When the vertical stride $s_\textrm{h}$ and horizontal stride $s_\textrm{w}$ match, we simply talk about stride $s$. The stride can reduce the resolution of the output, for example reducing the height and width of the output to only $1/n$ of the height and width of the input for $n > 1$. The same shorthand covers dilation: when $d_\textrm{h} = d_\textrm{w}$ we speak of dilation $d$. Dilation widens the window each output sees without adding weights or reducing resolution, which is what dense prediction needs. By default, the padding is 0 and the stride and dilation are 1.
+A similar convention applies to strides. When the vertical stride $s_\textrm{h}$ and horizontal stride $s_\textrm{w}$ match, we refer to stride $s$. A stride of $n > 1$ can reduce each output dimension to $1/n$ of the corresponding input dimension. The same shorthand covers dilation: when $d_\textrm{h} = d_\textrm{w}$, we speak of dilation $d$. Dilation widens the region seen by each output without adding weights or reducing resolution, as required for dense prediction. By default, padding is 0 and stride and dilation are 1.
 
-So far all padding that we discussed simply extended images with zeros. This is cheap, and operators can be engineered to handle it implicitly without allocating a larger tensor, but it is not a neutral choice: zero padding is a *boundary condition*, an assertion that the world outside the image is black. Filters whose window overlaps the border therefore see systematically different inputs from filters in the interior, and the resulting artifacts propagate deep into the feature maps :cite:`Alsallakh.Kokhlikyan.Miglani.ea.2020`. Padding also leaks absolute position: convolution itself cannot tell where in the image it is, but a unit near the border can infer its location from how much zero "whitespace" it sees, and trained CNNs do exploit this signal. Alternatives such as reflect padding (mirroring the border rows and columns) or replicate padding (repeating them) remove the artificial black frame; in practice they are reached for when border artifacts become visible, for example in image generation.
+The examples above use zero padding. Libraries can implement it without
+allocating a larger tensor, but it imposes a *boundary condition*: values
+outside the image are treated as zero. Filters that overlap the border
+therefore receive systematically different inputs from interior filters, and
+the artifacts can propagate through the feature maps
+:cite:`Alsallakh.Kokhlikyan.Miglani.ea.2020`. Padding also conveys absolute
+position because a unit can infer its proximity to a border from the zeros it
+sees. Reflect padding mirrors border rows and columns, while replicate padding
+repeats them; these alternatives can reduce visible border artifacts, for
+example in image generation.
 
 
 ## Exercises
@@ -459,7 +456,7 @@ So far all padding that we discussed simply extended images with zeros. This is 
 1. Given the final code example in this section with kernel size $(3, 5)$, padding $(0, 1)$, and stride $(3, 4)$, 
    calculate the output shape to check if it is consistent with the experimental result.
 1. For audio signals, what does a stride of 2 correspond to?
-1. Implement mirror padding, i.e., padding where the border values are simply mirrored to extend tensors. 
+1. Implement mirror padding, where the border values are reflected to extend a tensor.
 1. What are the computational benefits of a stride larger than 1?
 1. What might be statistical benefits of a stride larger than 1?
 1. How would you implement a stride of $\frac{1}{2}$? What does it correspond to? When would this be useful? Compare your answer with the transposed convolutions of :numref:`sec_transposed_conv`.
@@ -502,7 +499,7 @@ number of evaluated positions.
 Even before stacking, single convs use boundary pixels much
 less than central ones. Each pixel only contributes when the
 kernel window covers it — interior pixels appear in many
-windows, corner pixels in just one:
+windows, whereas corner pixels appear in one:
 
 ![Pixel utilization: 1×1, 2×2, and 3×3 kernels. Larger kernels make the boundary problem worse.](../img/conv-reuse.svg){width=88%}
 
@@ -528,10 +525,10 @@ To **preserve shape**: pick $p_h = k_h - 1$, $p_w = k_w - 1$.
 :::
 
 ::: {.slide title="Why kernels are usually odd"}
-For odd $k$, $(k-1)/2$ is an integer — we can pad
+For odd $k$, $(k-1)/2$ is an integer, so we can pad
 **symmetrically**, the same on both sides, and the output
 position $(i, j)$ corresponds to a window **centered** on
-input $(i, j)$. Clean to reason about.
+input $(i, j)$.
 
 - **Standard sizes**: 1, 3, 5, 7.
 - "**SAME** padding" = $p = (k-1)/2$ → output shape = input shape.
@@ -560,8 +557,7 @@ asymmetric kernel, mirror the asymmetry in the padding:
 :::
 
 ::: {.slide title="Stride: skipping positions on purpose"}
-The opposite problem: sometimes the input is huge and we
-*want* to shrink fast. Move the kernel by $s > 1$ at each step
+To reduce a large input, move the kernel by $s > 1$ at each step
 — skipping intermediate positions:
 
 ![Cross-correlation with vertical stride 3 and horizontal stride 2. The kernel jumps three rows down and two columns right.](../img/conv-stride.svg){width=78%}
@@ -600,8 +596,7 @@ padding 0×1, stride 3×4:
 
 @padding-and-strides-stride-2
 
-The output formula above predicts the shape; the code just
-confirms it.
+The output formula above predicts the shape; the code verifies it.
 :::
 
 ::: {.slide title="Dilation: nine weights, a wider view"}
@@ -619,7 +614,7 @@ Doubling $d$ at every layer grows the receptive field
 :::
 
 ::: {.slide title="Three patterns to remember"}
-Most production CNNs are built from these three:
+These three patterns occur frequently:
 
 | | kernel | padding | stride | output |
 |---|---|---|---|---|
@@ -633,8 +628,8 @@ downsample layer. *Patchify*: ViT turns 224×224 into a
 :::
 
 ::: {.slide title="Recap"}
-- Vanilla conv shrinks: $n \to n - k + 1$. Cumulative
-  shrinkage destroys boundary information.
+- An unpadded convolution shrinks: $n \to n - k + 1$. Cumulative
+  shrinkage removes boundary positions.
 - **Padding $p$** grows the input — pick $p = k - 1$ to
   preserve shape ("SAME"). Odd kernels make this symmetric.
 - **Stride $s$** skips positions — $s = 2$ is the standard

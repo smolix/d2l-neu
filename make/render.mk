@@ -96,6 +96,8 @@ _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated tools/inje
 	@QUARTO="$(CURDIR)/$(QUARTO)" tools/build_one_pdf.sh $(1) 2>&1 | tee $(LOGDIR)/pdf-$(1)-$(TS).log
 
 pdf-$(1): _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf
+	@mkdir -p _book/pdf
+	@cp -f "$$<" _book/pdf/
 	@echo "Output: $$<"
 	@echo "Log:    $(LOGDIR)/pdf-$(1)-$(TS).log"
 endef

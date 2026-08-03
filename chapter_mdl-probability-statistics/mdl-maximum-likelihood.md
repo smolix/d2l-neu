@@ -86,12 +86,12 @@ P(X \mid \theta) = \theta^{n_H}(1-\theta)^{n_T}.
 $$
 :eqlabel:`eq_mdl-coin-like`
 
-Flip $13$ coins and observe the sequence "HHHTHTTHHHHHT", which has $n_H=9$ and
-$n_T=4$, giving the likelihood $P(X \mid \theta) = \theta^9(1-\theta)^4$. We know
-the answer we *want*: asked "$9$ of $13$ flips were heads, what is the bias?",
-everyone replies $9/13$. The value of the maximum-likelihood machinery is that it
-*derives* that number from first principles, in a way that scales to models with
-billions of parameters where no intuition is available.
+Suppose that $13$ flips produce the sequence "HHHTHTTHHHHHT", with $n_H=9$
+heads and $n_T=4$ tails. The likelihood is then
+$P(X \mid \theta)=\theta^9(1-\theta)^4$. The empirical fraction of heads,
+$9/13$, is the natural estimate of the bias. Maximum likelihood derives this
+estimate from a general principle that also applies when the parameters cannot
+be estimated by inspection.
 
 The likelihood is a function of $\theta$ alone, so we can plot it and read off
 its peak.
@@ -122,10 +122,9 @@ $$
 \hat\theta = \frac{9}{13},
 $$
 
-exactly the observed fraction of heads. The same calculation on the general
+the observed fraction of heads. The same calculation on the general
 likelihood :eqref:`eq_mdl-coin-like` gives $\hat\theta = n_H/(n_H+n_T)$: the MLE
-of a coin's bias is *always* the empirical frequency of heads, our first sign
-that maximum likelihood recovers the "obvious" estimator.
+of a coin's bias is the empirical frequency of heads.
 
 ### The Negative Log-Likelihood
 
@@ -282,9 +281,9 @@ $\nabla\ell$ from a random subset of the data.
 
 ## Maximum Likelihood and Loss Minimization
 
-We now make precise the claim from the introduction. "Minimize the loss" and "do
-maximum likelihood" are the same instruction in different words. The bridge is
-one rescaling.
+We now make precise the relation stated in the introduction. For the models
+below, minimizing the loss is equivalent to maximizing the likelihood after a
+change of sign and scale.
 
 ### Negative Log-Likelihood as Cross-Entropy
 :label:`subsec_mdl-nll-crossentropy`
@@ -373,7 +372,7 @@ softmax cross-entropy loss of :numref:`sec_softmax`.
 
 ### From Probabilities to Densities
 
-Everything so far was phrased for discrete outcomes, where $P(X\mid\boldsymbol{\theta})$
+The preceding discussion concerned discrete outcomes, where $P(X\mid\boldsymbol{\theta})$
 is a genuine probability. For continuous data we replace probabilities by
 densities $p$. The discrete empirical-cross-entropy identity above should not
 be copied literally: an atomic empirical measure is generally singular with
@@ -410,9 +409,9 @@ $$
 -\sum_{i} \log p(x_i\mid\boldsymbol{\theta})
 $$
 
-exactly as in the discrete case. Maximum likelihood thus operates on continuous
-variables by swapping probabilities for densities and nothing more. The most
-important density to swap in is the Gaussian, which we do next.
+exactly as in the discrete case. Thus continuous-data likelihoods use density
+values in place of probability masses. We next apply this construction to the
+Gaussian density.
 
 ### Gaussian Negative Log-Likelihood and Mean Squared Error
 :label:`subsec_mdl-gaussian-mse`
@@ -464,9 +463,9 @@ $p(y\mid\mathbf x)$: pick the noise model and its negative log *is* the loss.
 | Categorical (one-hot $y$) | $-\sum_k y_k \log \hat p_k$ | softmax cross-entropy |
 | Laplace, fixed scale | $\tfrac{1}{b}\lvert y-\hat y\rvert + \textrm{const}$ | mean absolute error (MAE) |
 
-Each row is one line of algebra (take the density, drop the
-$\boldsymbol{\theta}$-free constants) of exactly the kind we just did for the
-Gaussian. Picking a loss *is* picking a noise model.
+Each row follows by taking the negative logarithm of the density and omitting
+terms independent of $\boldsymbol{\theta}$. Thus the choice of loss encodes an
+assumption about the conditional distribution of the observations.
 
 ## Estimator Theory: Why Maximum Likelihood Works
 
@@ -476,12 +475,12 @@ estimates the expected negative log-likelihood. When the laws have a common
 dominating measure and the expectations are finite, this population objective
 differs from a KL divergence by a constant and is minimized at the truth
 $\boldsymbol{\theta}=\boldsymbol{\theta}^\star$, where the KL term vanishes.
-"Exactly at" needs one hypothesis we have so far left implicit: the model must be
+This conclusion requires the model to be
 **identifiable**, meaning distinct parameters give distinct distributions,
 $\boldsymbol{\theta}\neq\boldsymbol{\theta}'\Rightarrow p_{\boldsymbol{\theta}}\neq p_{\boldsymbol{\theta}'}$;
 otherwise several parameters tie for the minimum and "the" true parameter is not
-even well defined. The hypothesis bites in deep learning: neural networks fail
-identifiability spectacularly, since permuting the hidden units of a layer
+even well defined. Neural networks are generally not identifiable: permuting
+the hidden units of a layer
 (together with their weights) changes the parameter vector but not the function
 it computes, so for such models consistency can only ever be a statement about
 the fitted *distribution* $p_{\hat{\boldsymbol{\theta}}}$, never about the
@@ -713,15 +712,16 @@ The empirical variance of the maximum-likelihood estimates matches the
 Cramér--Rao floor $\theta(1-\theta)/n$ to two digits: the coin's MLE is as
 tight as :eqref:`eq_mdl-cramer-rao` permits. This is asymptotic efficiency made
 concrete, and it is why the curvature of a loss surface (its Fisher
-information, or empirically its Hessian) tells us how trustworthy a fitted
-parameter is.
+information, or empirically its Hessian) quantifies the local uncertainty of a
+fitted parameter.
 
 ## MAP Estimation and Regularization
 :label:`subsec_mdl-map`
 
-We dropped the prior $P(\boldsymbol{\theta})$ by declaring it flat.
-Keeping it instead turns maximum likelihood into *maximum a posteriori* (MAP)
-estimation, and the prior reappears as a regularizer. Maximizing the full
+Maximum likelihood does not use a prior over parameters. Introducing a prior
+$P(\boldsymbol{\theta})$ leads instead to *maximum a posteriori* (MAP)
+estimation. Its negative logarithm appears in the optimization objective as a
+regularizer. Maximizing the full
 posterior :eqref:`eq_mdl-map` and taking negative logs,
 
 $$
@@ -771,8 +771,8 @@ belief that weights should be small. The same construction with a *Laplace* prio
 $p(\boldsymbol{\theta})\propto e^{-\lVert\boldsymbol{\theta}\rVert_1/b}$ gives the
 $L_1$ penalty $\tfrac{1}{b}\lVert\boldsymbol{\theta}\rVert_1$, whose kink at the
 origin produces exact zeros, i.e. sparsity. :numref:`fig_mdl-prob-map-prior` shows
-the tug-of-war: the NLL pulls toward the MLE, the log-prior pulls toward the
-prior mean, and the MAP estimate sits between them.
+the resulting compromise: the NLL favors the MLE, the negative log-prior favors
+the prior mean, and the MAP estimate lies between them.
 
 ![Maximum a posteriori balances data against prior. The negative log-likelihood (blue) is minimized at the MLE; adding a Gaussian log-prior centered at the prior mean (orange, dashed) yields the MAP objective (green), whose minimum is pulled from the MLE toward the prior mean. A tighter prior (smaller $\tau$) pulls harder; as $\tau\to\infty$ the prior flattens and MAP returns to the MLE.](../img/mdl-prob-map-prior.svg)
 :label:`fig_mdl-prob-map-prior`
@@ -782,21 +782,20 @@ or $b\to\infty$) the penalty vanishes and $\hat{\boldsymbol{\theta}}_{\textrm{MA
 \to \hat{\boldsymbol{\theta}}_{\textrm{MLE}}$, the flat-prior assumption
 we started with. And as the data grows the NLL term deepens faster than the fixed
 prior, so the data term dominates and MAP again approaches the MLE. A bookkeeping
-footnote makes the second limit quantitative: deep-learning code minimizes the
+detail makes the second limit quantitative: deep-learning code minimizes the
 *mean* per-example loss rather than the sum, and dividing the MAP objective by
 $n$ rescales the weight decay to $\lambda = \sigma^2/(n\tau^2)$: the prior's
-pull on the averaged loss literally fades as $1/n$. Regularization matters most
+contribution to the averaged loss decreases as $1/n$. Regularization matters most
 precisely when data is scarce.
 
 ### A Beta Prior on the Coin
 :label:`subsec_mdl-beta-map`
 
-Weight decay is MAP for regression; we now give the running coin its MAP
-treatment, completing the example. A prior on a coin's bias must
-live on $[0,1]$, and the natural family is the **Beta distribution**
+We now return to the coin example. A prior on its bias must have support on
+$[0,1]$; a common choice is the **Beta distribution**
 $p(\theta)\propto\theta^{a-1}(1-\theta)^{b-1}$ with shape parameters $a, b > 0$,
 the conjugate prior of :numref:`sec_mdl-distributions`: multiplying by the
-likelihood :eqref:`eq_mdl-coin-like` just shifts the exponents by the observed
+likelihood :eqref:`eq_mdl-coin-like` shifts the exponents by the observed
 counts, so the posterior is again a Beta (:eqref:`eq_mdl-beta_posterior`),
 
 $$
@@ -842,12 +841,12 @@ $$
 which under the flat prior becomes $(n_H+1)/(n+2)$: **Laplace's rule of
 succession** :cite:`Laplace.1814`, precisely the add-one rule. So add-one
 smoothing *is* a Bayes
-estimate under the uniform prior, just a different summary: the posterior
+estimate under the uniform prior, but it uses a different summary: the posterior
 **mean**, not the posterior **mode**. (Numerically it coincides with the
 $\mathrm{Beta}(2,2)$ mode, which is why the two are so often conflated.) Naive
-Bayes (:numref:`sec_mdl-naive_bayes`) leans on exactly this smoothing to keep
+Bayes (:numref:`sec_mdl-naive_bayes`) uses this smoothing to keep
 never-observed feature--class pairs from annihilating its products; the
-pseudo-count accounting built here is what justifies it.
+pseudo-count interpretation explains the correction.
 
 ### Distinguishing the Posterior Mode from the Posterior
 
@@ -861,10 +860,10 @@ rather than plugging in one $\hat{\boldsymbol{\theta}}_{\textrm{MAP}}$. That
 average propagates parameter *uncertainty* into the prediction, where the mode
 discards it. The mode is not even reparameterization-invariant, since a
 nonlinear change of variables moves the peak of a density but not its integral.
-Maximum likelihood does not suffer this wobble: it is **equivariant** under
+Maximum likelihood is instead **equivariant** under
 reparameterization, meaning that if $\hat\theta$ is the MLE of $\theta$, then $g(\hat\theta)$
-is the MLE of $g(\theta)$ for any one-to-one $g$, so the MLE of the coin's
-log-odds is simply $\log\frac{9/13}{4/13} = \log\frac{9}{4}$
+is the MLE of $g(\theta)$ for any one-to-one $g$. For example, the MLE of the coin's
+log-odds is $\log\frac{9/13}{4/13} = \log\frac{9}{4}$
 :cite:`Wasserman.2013`. The reason is that relabeling the parameter axis moves
 no maximum: likelihood values are attached to points, while densities carry a
 Jacobian. MAP inherits the prior density's Jacobian, and with it the

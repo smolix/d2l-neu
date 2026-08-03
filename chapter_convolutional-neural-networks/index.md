@@ -8,7 +8,7 @@ relationship between neighboring pixels.
 
 An MLP assigns a separate weight to every input coordinate but has no built-in
 notion that two coordinates are neighbors. If we permute the pixels in every
-image consistently and retrain the MLP, we have merely renamed its input
+image consistently and retrain the MLP, we have only renamed its input
 coordinates; the model class has not changed, even though the spatial layout
 has disappeared. Ideally, we would use our prior knowledge that nearby pixels
 are typically related to each other, to build efficient models for
@@ -18,10 +18,9 @@ This chapter introduces *convolutional neural networks* (CNNs)
 :cite:`LeCun.Jackel.Bottou.ea.1995`. CNNs preserve spatial organization by
 connecting each output to a local neighborhood and sharing the same weights
 across locations.
-On the ImageNet collection
-:cite:`Deng.Dong.Socher.ea.2009` it was convolutional neural networks that
-provided significant performance
-improvements :cite:`Krizhevsky.Sutskever.Hinton.2012`, and CNN-based
+On the ImageNet collection :cite:`Deng.Dong.Socher.ea.2009`, convolutional
+neural networks delivered substantial performance improvements
+:cite:`Krizhevsky.Sutskever.Hinton.2012`, and CNN-based
 architectures dominated computer vision from roughly 2012 to 2021.
 Today they share the field with vision transformers
 (:numref:`chap_transformers`) and remain the default
@@ -34,7 +33,8 @@ in models for audio, text, and time series, but this chapter concentrates on
 images, where locality and translation equivariance have a direct spatial
 interpretation.
 
-We first derive convolution from locality and translation equivariance. We
+We first derive convolution from locality and translation equivariance in
+:numref:`sec_why-conv`. We
 then define the operation and show how padding, stride, dilation, channels,
 and pooling control its shape and information flow. LeNet combines these
 components in a complete image classifier. The next chapter studies the
@@ -61,9 +61,9 @@ All are freely accessible online except where noted.
 
 **Books**
 
-- [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 9 (Convolutional Networks) is the canonical treatment of sparse interactions, parameter sharing, and equivariance — the same three-step argument as :numref:`sec_why-conv`, developed at length.
+- [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 9 develops sparse interactions, parameter sharing, and equivariance in detail.
 - [Understanding Deep Learning — Simon J. D. Prince](https://udlbook.github.io/udlbook/) — free PDF; Chapter 10 covers convolutions, stride, dilation, and receptive fields with unusually good figures.
-- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap6.html) — free online; Chapter 6 introduces convolutional layers, shared weights, and pooling from first principles, a gentle second telling of this chapter.
+- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap6.html) — free online; Chapter 6 introduces convolutional layers, shared weights, and pooling from first principles.
 
 **Courses and video lectures**
 

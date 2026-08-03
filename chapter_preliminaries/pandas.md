@@ -63,15 +63,14 @@ data = pd.read_csv(data_file)
 data
 ```
 
-Notice that `pandas` has replaced the empty fields
+`pandas` has replaced the empty fields
 with a special `NaN` (*not a number*) marker.
 These are *missing values*, and dealing with them
 is one of the central chores of data preprocessing.
 
 ### Knowing Your Data
 
-Before transforming anything, look at it.
-A few one-liners save hours of debugging downstream.
+Inspect the data before transforming it.
 The **shape** tells you how much data you have;
 the **dtypes** tell you how `pandas` interpreted each column:
 numeric (`int64`/`float64`) versus non-numeric strings (`str`/`object`,
@@ -138,7 +137,7 @@ with any missing entry here leaves only a fraction of the dataset:
 len(inputs.dropna()), len(inputs)
 ```
 
-Only four of ten rows survive: too wasteful. So we **impute** instead.
+Only four of ten rows remain, so we **impute** instead.
 For a numerical column the simplest estimate is the column **mean** (use
 the median when the column is skewed). `fillna` applies it. We impute the
 numerical columns now and leave the categorical `RoofType` for the next
@@ -255,7 +254,7 @@ y = jnp.array(targets.to_numpy(dtype=float))
 X, y
 ```
 
-From here on we work with tensors, ready for gradients and GPUs.
+Subsequent sections use these tensors for model computation and differentiation.
 
 ## Discussion
 
@@ -315,7 +314,7 @@ From a messy file to a model-ready tensor<br>**load · inspect · clean · encod
 :::
 :::
 
-::: {.slide title="Raw data never arrives model-ready"}
+::: {.slide title="Raw data requires preprocessing"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -326,7 +325,7 @@ and how to fill them, how to turn categories into numbers, whether to
 rescale.
 
 ::: {.d2l-note}
-Get these wrong and even a perfect model learns nothing useful.
+These decisions affect both what a model can learn and how it is evaluated.
 :::
 :::
 
@@ -412,7 +411,7 @@ throws away most of this dataset:
 
 @pandas-handling-missing-values-2
 
-Too wasteful on small data. So we impute instead.
+This discards most of a small dataset, so we impute instead.
 :::
 
 ::: {.slide title="Imputation fills gaps without discarding rows"}
@@ -479,7 +478,7 @@ whole dataset leaks the test set into training.
 :::
 :::
 
-::: {.slide title="The payoff: a (10, 5) tensor, ready for a model"}
+::: {.slide title="A (10, 5) tensor ready for a model"}
 [Scale &amp; convert]{.kicker}
 
 Every column is numeric, so `.to_numpy()` hands the frame to the
@@ -488,8 +487,8 @@ tensor constructor:
 @-pandas-conversion-to-tensor-format
 
 ::: {.d2l-note}
-`X` is a `(10, 5)` float tensor, `y` a `(10,)` target: five decisions
-turned a holey CSV into model input. (Real pipelines cast to
+`X` is a `(10, 5)` float tensor and `y` a `(10,)` target. The preprocessing
+steps converted a CSV with missing entries into model input. (Real pipelines cast to
 `float32`.)
 :::
 :::

@@ -61,11 +61,10 @@ npx.set_np()
 
 ## Floating-Point Formats
 
-Half-precision (`float16`, "fp16") sounds like a free lunch: half the
-bytes of fp32, and the format that accelerator hardware sped up first. Here
-is the catch. The largest number fp16 can represent is 65504. Square a value
-of 300, which is nothing exotic (an unnormalized logit, an intermediate in a
-variance computation), and you have already left the representable range:
+Half-precision (`float16`, "fp16") uses half the storage of fp32 and is
+supported by fast arithmetic on many accelerators. Its largest representable
+number is 65504. Squaring 300, a value that can occur as an unnormalized logit
+or an intermediate in a variance computation, already exceeds that range:
 
 ```{.python .input #numerics-the-dtype-zoo-1}
 %%tab pytorch
@@ -96,8 +95,8 @@ floating point), returns 90112: wrong in the fourth digit, since the exact
 square is 90000, but finite. The two formats spend the same 16 bits
 differently. fp16 uses 5 exponent bits and 10 mantissa bits: fine-grained
 steps, tiny range. bf16 keeps fp32's full 8 exponent bits and pays with a
-7-bit mantissa: fp32's range, coarse steps. The one-line demo above shows both
-consequences at once.
+7-bit mantissa: fp32's range, coarse steps. The example above demonstrates
+both consequences.
 
 :begin_tab:`mxnet`
 The MXNet cell shows only the first half of the demo, because `mx.np` arrays
@@ -171,8 +170,8 @@ depends on; each `tf` dtype hands over its NumPy counterpart via
 
 :begin_tab:`mxnet`
 `mx.np.finfo` follows the array-API naming, so the smallest normal value is
-the field `smallest_normal` rather than `tiny`; under the hood it hands the
-dtype to NumPy and repackages the answer. NumPy knows no bfloat16 and MXNet
+the field `smallest_normal` rather than `tiny`; it passes the dtype to NumPy
+and repackages the result. NumPy knows no bfloat16 and MXNet
 stores none, so the loop covers fp32 and fp16 and we state bf16's numbers for
 the record: `max` $3.39 \times 10^{38}$ and `tiny` $1.18 \times 10^{-38}$,
 matching fp32's exponent range, with `eps` $2^{-7} \approx 0.0078$.
@@ -184,12 +183,12 @@ the largest finite value slightly smaller. Its `eps` of 0.0078 means two to
 three significant decimal digits. fp16 resolves about three to four digits,
 overflows at 65504, enters the subnormal range below about
 $6.10 \times 10^{-5}$, and reaches zero only below about
-$5.96 \times 10^{-8}$. The trade is precision against range, and for deep
-learning the choice is lopsided: activations and gradients span many orders
-of magnitude, occasional large values are routine, and running out of range
-produces `inf` while losing a low-order digit usually costs nothing a noisy
-gradient estimate had to offer anyway. On accelerators with native bf16 support,
-that exponent range often makes bf16 preferable to fp16 for training. Older
+$5.96 \times 10^{-8}$. The tradeoff is precision against range. In deep
+learning workloads, activations and gradients can span many orders of
+magnitude. Insufficient range produces `inf`, while lower mantissa precision
+introduces rounding error that must be evaluated for the model and task. On
+accelerators with native bf16 support, that exponent range often makes bf16
+preferable to fp16 for training. Older
 devices and deployment targets may instead favor fp16 or another format.
 
 ### TF32: What Happens to fp32 Matrix Multiplication
@@ -228,15 +227,14 @@ tf.config.experimental.enable_tensor_float_32_execution(True)  # the default
 :begin_tab:`pytorch`
 The default is `'highest'`: fp32 matrix multiplications compute in true fp32
 and the tensor-core shortcut stays off. Setting `'high'` opts in (it also
-flips the older `allow_tf32` flag; they are two views of one setting). The
-history is a trap for readers of old tutorials: PyTorch 1.7 through 1.11
-enabled tf32 *by default*, and the default changed to off in 1.12 without a
-warning. Material from that era asserts that tf32 is automatic on Ampere GPUs;
-on any current version it is not, and the check above is how you find out what
-your process is actually doing. For training, `'high'` is generally safe
-(products still accumulate in fp32) and substantially faster on tensor-core
-hardware; keep `'highest'` for ill-conditioned linear algebra or when
-reproducing results bit for bit.
+flips the older `allow_tf32` flag; they are two views of one setting). PyTorch
+1.7 through 1.11 enabled tf32 *by default*, and the default changed to off in
+1.12. Older tutorials can therefore describe behavior that differs from an
+installed version; the check above reports the setting used by the current
+process. For many training workloads, `'high'` improves tensor-core throughput
+without a material accuracy change because products still accumulate in fp32.
+Validate that choice for the model and task, and keep `'highest'` for
+ill-conditioned linear algebra or bitwise reproduction.
 :end_tab:
 
 :begin_tab:`jax`
@@ -250,9 +248,10 @@ Individual operations accept the same choice per call, as in
 `jnp.dot(A, B, precision='float32')`. On the CPU this notebook runs on there
 are no tensor cores and every setting computes plain fp32, which is why the
 cell above changes nothing but the config value; the distinction takes effect
-on the GPUs of :numref:`sec_use_gpu`. For training, tf32 is generally safe
-(products still accumulate in fp32); ask for `'float32'` when doing
-ill-conditioned linear algebra or reproducing results bit for bit.
+on the GPUs of :numref:`sec_use_gpu`. For many training workloads, tf32
+improves throughput without a material accuracy change because products still
+accumulate in fp32. Validate that choice for the model and task; request
+`'float32'` for ill-conditioned linear algebra or bitwise reproduction.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -263,9 +262,10 @@ the fast path unless you say otherwise. The switch is global, not scoped: a
 numerically delicate block disables it, computes, and restores it, as the
 cell does. On the CPU this notebook runs on there are no tensor cores and
 the flag changes nothing beyond its own value; the distinction takes effect
-on the GPUs of :numref:`sec_use_gpu`. For training, the default is
-generally safe (products still accumulate in fp32); disable it for
-ill-conditioned linear algebra or when reproducing results bit for bit.
+on the GPUs of :numref:`sec_use_gpu`. For many training workloads, the
+default improves throughput without a material accuracy change because
+products still accumulate in fp32. Validate that choice for the model and
+task; disable it for ill-conditioned linear algebra or bitwise reproduction.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -551,18 +551,15 @@ one level lower, by the operator. (No `Flatten` layer either; Gluon's
 `Dense` flattens trailing dimensions by default.)
 :end_tab:
 
-Casting the model like this is the right tool for *inference*: half the
-memory, no gradients to worry about, and a rounding error in the forward pass
-rarely changes an argmax. For *training* it is a trap. A single optimizer
-update changes a weight by roughly $\eta \cdot g$, often a factor $10^{-4}$
-or less of the weight's own magnitude, and adding an increment smaller than
-about `eps` times the weight rounds to no change at all. With bf16's `eps` of
-0.0078, small updates evaporate and learning stalls; in fp16 the small
-gradients themselves flush to zero first. Hence the rule that resolves the
-single most common confusion in practice:
-
-**Cast the model for inference. For training, keep fp32 weights and run the
-compute in 16 bits.**
+For *inference*, casting a model can halve parameter memory, but its effect
+on predictions must be evaluated for the model and task. For *training*,
+casting all parameters to 16 bits can suppress small updates. A single
+optimizer update changes a weight by roughly $\eta \cdot g$, often a factor
+$10^{-4}$ or less of the weight's own magnitude, and adding an increment
+smaller than about `eps` times the weight rounds to no change at all. With
+bf16's `eps` of 0.0078, small updates can round away; in fp16, small gradients
+can underflow first. Mixed-precision training therefore retains fp32 master
+weights while performing selected computations in 16 bits.
 
 ## Mixed-Precision Training
 
@@ -693,8 +690,8 @@ thing on CPU, GPU, and TPU.
 
 :begin_tab:`tensorflow`
 Compute in bf16, storage in fp32: exactly the opposite split from
-`dtype='bfloat16'`, obtained from one line before construction and nothing
-per layer. There is no device argument; the same policy means the same
+`dtype='bfloat16'`. A global policy sets this split before construction, so
+individual layers need no policy argument. There is no device argument; the same policy means the same
 thing on CPU, GPU, and TPU.
 :end_tab:
 
@@ -708,9 +705,9 @@ state to show it. The practical consequence is identical: forward and
 backward run in 16 bits, the update accumulates in fp32.
 :end_tab:
 
-Let us verify the claim that matters, that accuracy survives.
-We train the same MLP on Fashion-MNIST twice, once in fp32 and once with
-16-bit compute, from the same initialization and on the same batches:
+The following experiment compares accuracy under fp32 and 16-bit compute.
+It trains the same MLP on Fashion-MNIST from the same initialization and on
+the same batches:
 
 ```{.python .input #numerics-mixed-precision-training-2}
 %%tab pytorch
@@ -1043,10 +1040,11 @@ accelerators.
 
 ## Numerical Failure Modes
 
-A short field guide for the day training misbehaves.
+This section examines common sources of non-finite results and inaccurate
+reductions.
 
-**The loss is NaN.** NaN is usually a symptom, not the disease; the disease is
-`inf`, because `inf` arithmetic breeds NaN:
+**Trace NaNs to earlier non-finite values.** NaNs often follow an overflow to
+`inf`, because arithmetic involving infinite values can produce NaN:
 
 ```{.python .input #numerics-when-numerics-bite-1}
 %%tab pytorch
@@ -1072,32 +1070,33 @@ s = np.array(60000., dtype='float16') * 2  # overflows
 s, s - s
 ```
 
-By the time a NaN reaches your loss, the overflow that spawned it may be many
-operations upstream, and once a NaN lands in the weights it poisons every
-subsequent step. So diagnose in order: first check ranges (is anything in
-fp16? are intermediate values in the $10^4$ regime and headed for the 65504
-ceiling?), and only then blame the learning rate.
+An overflow can occur many operations before a NaN appears in the loss, and
+a parameter update containing NaN makes subsequent results non-finite. Check
+ranges first: is any computation in fp16, and are intermediate values in the
+$10^4$ regime and approaching the 65504 ceiling? Then evaluate other causes,
+including the learning rate.
 
 :begin_tab:`pytorch`
 Under autocast with
 `GradScaler`, the gradient check catches the `inf` in the very step it occurs
-and skips the update, one more reason to prefer the standard recipe over
-hand-rolled fp16 even while debugging.
+and skips the update. This behavior also supports using the framework's
+mixed-precision utilities during debugging.
 :end_tab:
 
 :begin_tab:`jax`
-JAX can localize the culprit for you: set
+JAX can identify the first operation that produces NaN: set
 `jax.config.update('jax_debug_nans', True)` and execution stops with an error
-at the first operation whose output is NaN, instead of letting it wash
-downstream into the loss. The check reruns jitted code operation by
-operation when it trips, so treat it as a debugging mode, not a default.
+at the first operation whose output is NaN. When the check detects a NaN, it
+reruns jitted code operation by operation. Use this check as a debugging mode,
+not as the default execution mode.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow can localize the culprit for you: call
+TensorFlow can identify the first operation that produces a non-finite
+value. Call
 `tf.debugging.enable_check_numerics()` and execution stops with an
 `InvalidArgumentError` at the first operation whose output contains `inf` or
-NaN, instead of letting it wash downstream into the loss. The check wraps
+NaN. The check wraps
 every operation, so treat it as a debugging mode, not a default.
 :end_tab:
 
@@ -1109,7 +1108,7 @@ diagnose-in-order advice above matters all the more when the tooling will
 not do the walking for you.
 :end_tab:
 
-**Let the library take the log.** The naive evaluation of
+**Use a stable log-sum-exp implementation.** The direct evaluation of
 $\log \sum_i \exp(x_i)$ overflows long before the answer does:
 
 ```{.python .input #numerics-when-numerics-bite-2}
@@ -1137,9 +1136,9 @@ m = x.max()
 np.log(np.exp(x).sum()), m + np.log(np.exp(x - m).sum())
 ```
 
-The answer, 12.4, is unremarkable; only the intermediate $e^{12}$ exceeds
-65504. The subtract-the-max shift from :numref:`sec_numerical_stability` fixes
-it, and the practical form of the lesson is to never hand-roll the pattern.
+The result is 12.4, but the intermediate $e^{12}$ exceeds 65504. The
+subtract-the-max shift from :numref:`sec_numerical_stability` avoids this
+overflow. Prefer a tested library implementation when one is available.
 
 :begin_tab:`pytorch`
 `torch.logsumexp`, `F.log_softmax`, and `F.cross_entropy` all build the shift
@@ -1158,9 +1157,8 @@ losses with `from_logits=True` all build the shift in.
 
 :begin_tab:`mxnet`
 `mx.np` ships no `logsumexp`, so this is the one tab where the cell writes
-the shift out: subtract the maximum before exponentiating, add it back
-outside the log. This algebra is still not something to hand-roll inside a
-model: `npx.log_softmax` and Gluon's
+the shift explicitly: subtract the maximum before exponentiating, then add
+it back outside the log. Within a model, `npx.log_softmax` and Gluon's
 `SoftmaxCrossEntropyLoss` build the same shift in.
 :end_tab:
 
@@ -1243,8 +1241,8 @@ accumulator, as the second and third expressions do.
 :end_tab:
 
 :begin_tab:`pytorch`
-Two smaller traps, for completeness. `scaler.unscale_(opt)` may be called at
-most once per step, so if you unscale to clip gradients, do not unscale again
+Two details constrain scaler bookkeeping. `scaler.unscale_(opt)` may be
+called at most once per step, so if you unscale to clip gradients, do not unscale again
 to log them, or `scaler.update()` will raise. And under gradient accumulation,
 call `scaler.update()` once per *effective* batch, after the last micro-step,
 not once per micro-step.
@@ -1264,11 +1262,10 @@ scale-the-loss, unscale-the-gradients pairing is yours to keep straight.
 :end_tab:
 
 :begin_tab:`mxnet`
-One smaller trap, for completeness: `multi_precision` belongs to the
-*optimizer*, so it must ride in the optimizer parameters when the `Trainer`
-is created. Casting the network alone trains with fp16 accumulation, and the
-optimizer's warning about poor accuracy is one line in a noisy log, easy to
-scroll past.
+The `multi_precision` setting belongs to the *optimizer*, so it must appear
+in the optimizer parameters when the `Trainer` is created. Casting the network
+alone trains with fp16 accumulation; the optimizer reports this condition in
+a warning.
 :end_tab:
 
 Finally, do not expect bitwise equality across
@@ -1305,8 +1302,7 @@ operation, and Keras layers resolve this by casting inputs to their dtype
 policy, the pair of storage and compute formats fixed at construction.
 `dtype='bfloat16'` sets both and casts a model for inference;
 `set_global_policy('mixed_bfloat16')` keeps fp32 master weights over bf16
-compute, mixed-precision training as one line of configuration (reset the
-policy when you are done, it is global). fp16 training additionally needs
+compute (reset the policy when you are done, because it is global). fp16 training additionally needs
 the loss scaling that `LossScaleOptimizer` automates under
 `'mixed_float16'`; bf16 does not.
 :end_tab:
@@ -1322,9 +1318,8 @@ loss scaling is either two manual lines or the unexercised `mxnet.amp`
 module.
 :end_tab:
 
-When numbers misbehave: check for
-overflow before blaming the learning rate, use the library's `logsumexp`
-family, and accumulate long sums in fp32.
+When numerical results become non-finite or inaccurate, inspect ranges,
+use a stable `logsumexp` implementation, and accumulate long sums in fp32.
 
 ## Exercises
 

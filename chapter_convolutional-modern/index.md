@@ -55,15 +55,15 @@ cnn-design
 
 ## Resources and Further Reading {.unnumbered}
 
-The references below trace the architecture race this chapter narrates
-and the modern practice it lands on: landmark networks from AlexNet to
+The references below trace the architectural developments covered in this
+chapter and current practice: landmark networks from AlexNet to
 ConvNeXt, the training recipes that confound naive comparisons between
 them, and efficient networks for deployment. All are freely accessible
 online except where noted.
 
 **Books**
 
-- [Deep Learning for Coders with fastai and PyTorch — Howard & Gugger](https://github.com/fastai/fastbook) — free notebooks; builds ResNets from scratch and applies the modern training tricks (augmentation, schedules, mixed precision) of :numref:`sec_training_recipes` in working code.
+- [Deep Learning for Coders with fastai and PyTorch — Howard & Gugger](https://github.com/fastai/fastbook) — free notebooks; builds ResNets from scratch and applies modern training techniques (augmentation, schedules, mixed precision) of :numref:`sec_training_recipes` in working code.
 - [Understanding Deep Learning — Simon J. D. Prince](https://udlbook.github.io/udlbook/) — free PDF; Chapter 11 (Residual networks) analyzes *why* residual connections ease optimization — loss-surface and gradient-propagation arguments complementing :numref:`sec_resnet`.
 
 **Courses and video lectures**
@@ -74,7 +74,7 @@ online except where noted.
 
 **Tutorials, notes, and surveys**
 
-- [timm (pytorch-image-models) — Ross Wightman et al.](https://huggingface.co/docs/timm) — free; the reference implementation zoo where every architecture in this chapter lives, with trained weights and [results tables](https://github.com/huggingface/pytorch-image-models/tree/main/results) comparing them under consistent evaluation.
+- [timm (pytorch-image-models) — Ross Wightman et al.](https://huggingface.co/docs/timm) — free; an implementation collection containing the architectures in this chapter, with trained weights and [results tables](https://github.com/huggingface/pytorch-image-models/tree/main/results) comparing them under consistent evaluation.
 - [A Recipe for Training Neural Networks — Andrej Karpathy](https://karpathy.github.io/2019/04/25/recipe/) — free; the debugging-first training discipline that :numref:`sec_training_recipes` systematizes.
 - [Zoom In: An Introduction to Circuits — Olah et al. (2020), *Distill*](https://distill.pub/2020/circuits/zoom-in/) — free; opens trained vision models to inspect the features and circuits they learn, useful perspective once you can train the architectures in this chapter.
 
@@ -87,6 +87,6 @@ chapter retells, worth reading in the original:
 - [Batch Normalization — Ioffe & Szegedy (2015)](https://arxiv.org/abs/1502.03167) — read together with its critique in :numref:`sec_batch_norm`.
 - [Deep Residual Learning for Image Recognition — He, Zhang, Ren & Sun (2015)](https://arxiv.org/abs/1512.03385) — ResNet (:numref:`sec_resnet`), the most-cited paper in deep learning.
 - [Bag of Tricks for Image Classification with CNNs — He et al. (2019)](https://arxiv.org/abs/1812.01187) — the first systematic demonstration that recipe details rival architecture changes.
-- [ResNet Strikes Back — Wightman, Touvron & Jégou (2021)](https://arxiv.org/abs/2110.00476) — the definitive recipe-vs-architecture accounting behind :numref:`sec_training_recipes`.
+- [ResNet Strikes Back — Wightman, Touvron & Jégou (2021)](https://arxiv.org/abs/2110.00476) — a controlled analysis of training recipes and architecture behind :numref:`sec_training_recipes`.
 - [A ConvNet for the 2020s — Liu et al. (2022)](https://arxiv.org/abs/2201.03545) — ConvNeXt (:numref:`sec_convnext`), a controlled ablation worth studying as method, not just result.
 - [ConvNets Match Vision Transformers at Scale — Smith et al. (2023)](https://arxiv.org/abs/2310.16764) — the scaling-law resolution of the convnet-vs-transformer debate closing this chapter.

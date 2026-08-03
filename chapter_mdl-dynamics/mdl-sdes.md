@@ -21,8 +21,8 @@ rates of that scheme all follow from this scaling.
 We lean on :numref:`sec_mdl-odes-solvers` (vector fields, the forward Euler
 method, linear stability), and on :numref:`sec_mdl-random_variables` and
 :numref:`sec_mdl-distributions` (Gaussians, expectation, variance,
-independence). Gentle and thorough treatments, in that order, are
-:citet:`Sarkka.Solin.2019` and :citet:`Oksendal.2003`; the numerical theory is
+independence). Introductory and rigorous treatments are provided by
+:citet:`Sarkka.Solin.2019` and :citet:`Oksendal.2003`, respectively; the numerical theory is
 :citet:`Kloeden.Platen.1992`. The code in this section is plain NumPy:
 every experiment is a seeded simulation plus a closed-form check; the `d2l`
 module is loaded only for plotting.
@@ -64,8 +64,8 @@ import numpy as np
 velocity field $\mathbf{f}$ moves every point along the one trajectory through
 it, and the resulting exact flow map is invertible under the well-posedness
 conditions of :numref:`sec_mdl-odes-solvers`. This is useful for deterministic
-transport, whereas the forward half of a diffusion model must
-*destroy* information, and destroy it *controllably*: starting from data
+transport, whereas the forward process of a diffusion model must erase information in a
+controlled manner: starting from data
 distributed as $p_0 = p_{\textrm{data}}$, it should end at a known,
 distribution-independent target,
 
@@ -81,10 +81,10 @@ so distinct data laws stay distinct. (A *learned, data-dependent*
 deterministic flow does carry one *given* $p_{\textrm{data}}$ to the
 Gaussian; that is exactly what flow matching will build in
 :numref:`sec_mdl-flow-matching`, but such a map must be discovered by
-training. The forward half of a diffusion model has to work *before* any
-learning, for whatever data arrives.) Adding *noise* instead forgets the data
-smoothly (the distribution at every intermediate time is a blurred version of
-the data, full-dimensional and well behaved), and the process can be run in
+training. The forward process must be defined independently of learned parameters and the
+particular data distribution.) Adding *noise* instead progressively reduces information about the data. The
+distribution at each intermediate time is a smoothed, full-dimensional version
+of the data, and the process can be run in
 reverse *on average* once we know the score of those blurred distributions,
 the gradient $\nabla \log p_t$ of the log-density
 (:numref:`sec_mdl-fokker-planck-probability-flow`). The object that
@@ -97,10 +97,10 @@ d\mathbf{X} \;=\; \underbrace{\mathbf{f}(\mathbf{X}, t)\,dt}_{\textrm{drift}}
 $$
 :eqlabel:`eq_mdl-sde-template`
 
-The rest of the section first defines the noise source $\mathbf{W}$, then
-develops Itô calculus and gives :eqref:`eq_mdl-sde-template` a
-precise meaning, simulate it (Euler--Maruyama), and work the one example that
-diffusion models actually use (Ornstein--Uhlenbeck).
+The remainder of the section defines the noise source $\mathbf{W}$, develops
+Itô calculus to give :eqref:`eq_mdl-sde-template` a precise meaning, introduces
+Euler--Maruyama simulation, and analyzes the Ornstein--Uhlenbeck process used by
+diffusion models.
 
 ### From Random Walks to the Wiener Process
 :label:`sec_mdl-wiener-process`
@@ -119,17 +119,16 @@ $$
 $$
 
 *independently of the step size*. The exponent in that step size is forced.
-Steps of size $c\,\Delta t$ would give variance $c^2 t\,\Delta t \to 0$: the
-walk freezes into a flat line. Steps of fixed size $c$ would give variance
-$c^2 t / \Delta t \to \infty$: the walk blows up. Only the square-root scaling
+Steps of size $c\,\Delta t$ would give variance $c^2 t\,\Delta t \to 0$, so
+the limiting process is constant. Steps of fixed size $c$ would give variance
+$c^2 t / \Delta t \to \infty$: the variance diverges. Only the square-root scaling
 $\sqrt{\Delta t}$ produces a nontrivial limit; it returns as
 the noise term of every numerical scheme below. As $\Delta t \to 0$ the number
 of steps before time $t$ grows without bound, and the central limit theorem
 (a sum of many independent, mean-zero contributions with total variance $t$
 is approximately $\mathcal{N}(0, t)$) makes the limiting position Gaussian.
 The limit process is called **Brownian motion** or the **Wiener process**
-:cite:`Wiener.1923`, and its defining properties are the ones the walk hands
-us:
+:cite:`Wiener.1923`, and its defining properties are
 
 1. $W_0 = 0$;
 2. **independent increments**: for $s < t$, the increment $W_t - W_s$ is
@@ -145,8 +144,7 @@ Donsker's invariance principle.
 
 In particular $\mathbb{E}[W_t] = 0$ and $\operatorname{Var}(W_t) = t$: the
 process spreads, with standard deviation $\sqrt{t}$, forever
-(:numref:`fig_mdl-dyn-brownian-paths`). For simulation
-the increment form is the one to remember:
+(:numref:`fig_mdl-dyn-brownian-paths`). Simulation uses the increment form
 
 $$
 \Delta W \;=\; W_{t + \Delta t} - W_t \;=\; \sqrt{\Delta t}\;\xi,
@@ -160,8 +158,7 @@ $$
 The multivariate version $\mathbf{W}_t$ runs one independent scalar
 Brownian motion per coordinate; for the diagonal, state-independent noise
 $g(t)\,d\mathbf{W}$ used throughout this chapter, the calculations below extend
-coordinate-wise. Two
-consequences of the definition do a lot of work later. The first is the
+coordinate-wise. Two consequences of the definition are used below. The first is the
 correlation structure.
 
 **Proposition (covariance of Brownian motion).** *For all $s, t \ge 0$,
@@ -196,11 +193,9 @@ $$
 Thus a fresh difference quotient does not remain bounded in probability. This
 scaling is not a proof of the pathwise theorem: increments at nested scales are
 dependent, and nowhere differentiability requires a separate argument. It does
-explain the obstruction. Zooming in on a
-smooth curve flattens it into its tangent line
-(:numref:`sec_mdl-single_variable_calculus`); zooming in on a Brownian path
-reveals fluctuations at every scale, with the same statistical structure
-after rescaling. Thus "$dW/dt$" does not exist, and a velocity-field reading of
+explain the obstruction. A differentiable curve has a tangent under local rescaling
+(:numref:`sec_mdl-single_variable_calculus`), whereas a Brownian path retains
+fluctuations at every scale with the same rescaled statistical structure. Thus "$dW/dt$" does not exist, and a velocity-field reading of
 :eqref:`eq_mdl-sde-template` is unavailable: we will have to make sense of
 $dW$ *inside integrals*, which is exactly what the Itô calculus does.
 
@@ -226,8 +221,8 @@ d2l.plot(t, [W[i] for i in range(8)] + [2 * np.sqrt(t), -2 * np.sqrt(t)],
          't', '$W_t$', fmts=['-'] * 8 + ['k--', 'k--'], figsize=(5, 3))
 ```
 
-The empirical variances $0.2486$, $0.4950$, $1.0014$ track $t$ to within
-Monte-Carlo error, and the path fan fills the square-root envelope. The
+The empirical variances $0.2486$, $0.4950$, and $1.0014$ match $t$ within
+Monte Carlo error, and most plotted paths lie inside the square-root envelope. The
 covariance structure is just as checkable: the ensemble average of
 $W_s W_t$ over a grid of time pairs should reproduce $\min(s, t)$ entry by
 entry.
@@ -242,7 +237,7 @@ print(f'max |empirical - min(s,t)| = {np.abs(emp - np.minimum.outer(ts, ts)).max
 ```
 
 The printed matrix matches $\min(s, t)$ to within $0.005$ in every entry, and
-it is constant along each row past the diagonal: new wiggles after time $s$
+it is constant along each row past the diagonal: increments after time $s$
 are uncorrelated with $W_s$. Future increments are independent of the entire
 path so far; only the current position matters.
 
@@ -296,11 +291,11 @@ $$
 
 and mean-square convergence follows. $\blacksquare$
 
-![Running sums of squared increments along one fixed Brownian path, on meshes of $n = 16$, $256$, and $4096$ intervals: the partial sums hug the line $y = t$ ever more tightly: the quadratic variation. The same sums for the smooth path $\sin 2\pi t$ (gray) collapse to zero as the mesh refines.](../img/mdl-dyn-qv-convergence.svg)
+![Running sums of squared increments along one Brownian path for meshes of $n = 16$, $256$, and $4096$ intervals. The sums approach $y = t$, whereas the corresponding sums for the smooth path $\sin 2\pi t$ (gray) approach zero.](../img/mdl-dyn-qv-convergence.svg)
 :label:`fig_mdl-dyn-qv-convergence`
 
-Squared Brownian increments accumulate *deterministically*: randomness in,
-certainty out. The proposition is usually compressed into the **Itô
+The sum of squared Brownian increments converges to the deterministic elapsed
+time. The proposition is usually compressed into the **Itô
 multiplication table**, the working rules for manipulating differentials:
 
 $$
@@ -328,13 +323,11 @@ for k in range(4, 19, 2):
     print(f'{n:8d} {np.sum(np.diff(Wn)**2):10.4f} {np.sum(np.diff(sn)**2):18.6f}')
 ```
 
-Read the two columns against the proposition. The Brownian column starts noisy
-($0.56$ on $16$ intervals, where the proof predicts a standard deviation of
-$\sqrt{2/n} \approx 0.35$ around the mean $1$) and converges to
-$t = 1$ as the mesh shrinks ($0.9980$ at $n = 2^{18}$, where
-$\sqrt{2/n} \approx 0.003$). The smooth column collapses toward zero like
-$1/n$, exactly as the differentiable-path estimate says. One column dies, the
-other converges to the elapsed time: that gap *is* stochastic calculus.
+Read the two columns against the proposition. The Brownian column starts noisy ($0.56$
+on $16$ intervals, where the proof predicts a standard deviation of $\sqrt{2/n} \approx 0.35$ around the mean $1$) and converges to $t = 1$ as the mesh shrinks ($0.9980$ at $n = 2^{18}$, where $\sqrt{2/n} \approx 0.003$). The smooth column collapses toward zero
+like $1/n$, exactly as the differentiable-path estimate says. The smooth-path column
+converges to zero, whereas the Brownian column converges to elapsed time. This
+distinction requires stochastic calculus.
 
 ### The Itô Integral
 
@@ -393,7 +386,7 @@ The isometry converts a stochastic computation (the variance of a noise
 integral) into an ordinary integral, and it is how we will obtain the
 Ornstein--Uhlenbeck variance in closed form below.
 
-Does the endpoint really matter? For a smooth integrator it would not:
+The evaluation point changes the stochastic integral. For a smooth integrator,
 left, right, and midpoint Riemann sums share one limit. Here they do not:
 evaluating at the right endpoint instead changes the sum by
 
@@ -412,7 +405,7 @@ may not peek at the upcoming noise), which is why this book builds on it.
 ### Itô's Lemma
 :label:`sec_mdl-ito-lemma`
 
-The chain rule for this calculus now writes itself. Let $X_t$ solve
+The Itô multiplication table determines the corresponding chain rule. Let $X_t$ solve
 $dX = f\,dt + g\,dW$ (made fully precise in
 :numref:`sec_mdl-sde-definition`; for now, read it through its increments)
 and let $\phi(x, t)$ be once continuously differentiable in time and twice in
@@ -518,7 +511,7 @@ plot.
 
 ### Drift, Diffusion, and What a Solution Is
 
-We can now write the object the whole chapter is about. A **stochastic
+The preceding definitions specify a stochastic differential equation. A **stochastic
 differential equation** is
 
 $$
@@ -656,7 +649,7 @@ $\tfrac12 g\, \partial_x g\,\left((\Delta W)^2 - \Delta t\right)$
 this is mean-zero with standard deviation proportional to $\Delta t$, and
 summing $1/\Delta t$ independent mean-zero terms grows their total like a
 random walk: $\Delta t \cdot \sqrt{1/\Delta t} = \sqrt{\Delta t}$, the
-order $\tfrac12$. For additive noise $\partial_x g = 0$ kills the Milstein term
+order $\tfrac12$. For additive noise $\partial_x g = 0$ makes the Milstein term vanish
 *identically*. Under the extra smoothness just stated, the remaining terms
 accumulate to a global $O(\Delta t)$ strong error. With sufficiently smooth
 test functions and coefficients, the leading mean-zero terms cancel in
@@ -706,8 +699,8 @@ d2l.plot(dts, [errs_ou, errs_gbm, np.array(dts), 0.5 * np.sqrt(dts)],
 
 The measured slopes are $1.02$ for the additive-noise OU process and $0.45$
 for multiplicative-noise GBM: the two propositions, confirmed side by side
-on the same Brownian increments. On the log--log plot the OU error hugs the
-slope-$1$ guide while GBM tracks the slope-$\tfrac12$ guide; at
+on the same Brownian increments. On the log--log plot the OU error follows the
+slope-$1$ guide while GBM follows the slope-$\tfrac12$ guide; at
 $\Delta t = 2^{-8}$ the additive problem is already two orders of magnitude
 more accurate.
 
@@ -857,7 +850,7 @@ and then *saturates*, which brings us to where the process ends up.
 ### The Stationary Distribution
 
 Send $t \to \infty$ in the kernel :eqref:`eq_mdl-sde-ou-kernel`: the mean
-$x_0 e^{-\theta t}$ dies and the variance climbs to the limit
+$x_0 e^{-\theta t}$ decays and the variance approaches the limit
 $\sigma^2\!/(2\theta)$, leaving
 
 $$
@@ -915,7 +908,7 @@ converted a point mass into a distribution close to the stationary Gaussian.
 
 ### The Variance-Preserving Normalization
 
-One free parameter remains, and diffusion models pin it down: choose
+Diffusion models select the remaining parameter by setting
 
 $$
 \sigma^2 = 2\theta
@@ -934,7 +927,7 @@ X_t \;=\; \sqrt{\bar{\alpha}_t}\; X_0 \;+\; \sqrt{1 - \bar{\alpha}_t}\;
 $$
 :eqlabel:`eq_mdl-sde-vp-marginal`
 
-which is letter for letter the DDPM forward marginal
+which has the same form as the DDPM forward marginal
 :cite:`ho2020denoising`, with $\bar{\alpha}_t$ playing its usual role. Now
 suppose the data is normalized to zero mean and unit variance (standard
 practice, and the next display is why). Taking variances in
@@ -961,7 +954,7 @@ as possible at unit variance, the two-point (Rademacher) distribution
 $X_0 = \pm 1$, and track two moments: the variance, which should stay
 pinned at $1$, and the fourth moment $\mathbb{E}[X_t^4]$, which
 :eqref:`eq_mdl-sde-vp-marginal` predicts to be
-$3 - 2\bar{\alpha}_t^2$ (Exercise 8), gliding from the bimodal value $1$
+$3 - 2\bar{\alpha}_t^2$ (Exercise 8), changing from the bimodal value $1$
 to the Gaussian value $3$.
 
 ```{.python .input #sdes-vp-normalization}
@@ -982,7 +975,7 @@ for s in [0.0, 0.25, 1.0, 3.0]:
 ```
 
 The variance column reads $1.000$, $1.003$, $1.007$, $1.014$ (pinned at
-$1$ up to EM bias) while the fourth moment marches from $1.000$ through
+$1$ up to EM bias) while the fourth moment changes from $1.000$ through
 $2.286$ (analytic $2.264$) to $3.06$ against the Gaussian $3$. The overshoot
 is mostly EM's weak bias: the printed variance $1.014$ corresponds to a
 Gaussian fourth moment of $3v^2 \approx 3.08$, and the remainder sits inside
@@ -1129,7 +1122,7 @@ Brownian motion, Itô calculus, and the SDE<br>**a continuous-time model for dif
 No *fixed* map can forget every dataset: a data-independent bijection sends
 distinct laws to distinct endpoints, so no single deterministic flow carries
 **every** $p_{\text{data}}$ to the same $\mathcal N(\mathbf 0, \sigma^2 I)$.
-Noise does it before any learning:
+Noise defines such a process without learned parameters:
 
 $$d\mathbf X = \underbrace{\mathbf f(\mathbf X,t)\,dt}_{\text{drift}}
 + \underbrace{g(t)\,d\mathbf W}_{\text{diffusion}}.$$
@@ -1210,7 +1203,7 @@ variance is $\sum 2\Delta t_i^2 \le 2\delta t\to 0$. $\blacksquare$
 
 ::: {.d2l-note .rule}
 $$(dW)^2 = dt, \qquad dW\,dt = 0, \qquad (dt)^2 = 0.$$
-A squared increment is no longer negligible: it is $dt$.
+A squared Brownian increment contributes at order $dt$.
 :::
 :::
 
@@ -1239,7 +1232,7 @@ $$d\phi = \bigl(\phi_t + f\,\phi_x + \tfrac12 g^2\,\phi_{xx}\bigr)dt + g\,\phi_x
 
 . . .
 
-The $\tfrac12 g^2\phi_{xx}$ term is the seed of the Fokker–Planck diffusion.
+The $\tfrac12 g^2\phi_{xx}$ term produces the diffusion term in the Fokker–Planck equation.
 Check $\phi=x^2$, $X=W$: $d(W^2)=2W\,dW+dt$, so $\int_0^t W\,dW=\tfrac12(W_t^2-t)$:
 
 @sdes-ito-correction
@@ -1261,7 +1254,7 @@ Check $\phi=x^2$, $X=W$: $d(W^2)=2W\,dW+dt$, so $\int_0^t W\,dW=\tfrac12(W_t^2-t
 $dX = f\,dt + g\,dW$ means
 $X_t = X_0 + \int_0^t f\,ds + \int_0^t g\,dW_s$. Here $f$ is the mean velocity
 ($\mathbb E[dX]=f\,dt$) and $g^2$ the variance rate
-($\operatorname{Var}(dX)=g^2\,dt$); a solution is an **ensemble** of jittery
+($\operatorname{Var}(dX)=g^2\,dt$); a solution defines a distribution over
 paths, and $g=0$ recovers the ODE.
 
 @fig:mdl-dyn-sde-paths
@@ -1341,8 +1334,8 @@ $$X_t\mid X_0 \sim \mathcal N\!\Bigl(X_0 e^{-\theta t},\;
 ::: {.slide title="The stationary distribution"}
 [OU]{.kicker}
 
-As $t\to\infty$ the mean dies and the variance saturates, independent of the
-start:
+As $t\to\infty$, the mean approaches zero and the variance approaches its
+stationary value, independently of the initial state:
 
 $$X_\infty \sim \mathcal N\!\bigl(0,\ \sigma^2/(2\theta)\bigr),$$
 
@@ -1387,6 +1380,6 @@ $dX=-\tfrac12\beta(t)X\,dt+\sqrt{\beta(t)}\,dW$.
 :::
 
 ::: {.d2l-note}
-Next: track the whole **density**, the Fokker–Planck equation.
+The next section derives the evolution of the full **density** through the Fokker–Planck equation.
 :::
 :::

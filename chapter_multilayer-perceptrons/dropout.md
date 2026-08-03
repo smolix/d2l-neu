@@ -75,9 +75,8 @@ Running the full network at test time is a computational approximation motivated
 by model averaging; in a nonlinear network it is not generally equal to the
 arithmetic or geometric mean of all masked-network predictions. The scaling
 identity is exact only at the individual dropped activation.
-From this angle dropout is cheap model averaging,
-which suggests why it tends to reduce variance:
-ensembles average away the idiosyncrasies of their members.
+From this perspective, dropout approximates model averaging and may reduce
+variance by combining the behavior of many subnetworks.
 The analogy is loose rather than literal, though: the $2^n$
 subnetworks share a single set of weights and are trained jointly,
 not fit independently the way the members of a bagging ensemble are.
@@ -410,16 +409,14 @@ trainer.fit(model, data)
 
 ## Concise Implementation
 
-With high-level APIs, all we need to do is add a `Dropout` layer
-after each fully connected layer,
-passing in the dropout probability
-as the only argument to its constructor.
+With high-level APIs, we add a `Dropout` layer after each fully connected
+layer and pass the dropout probability to its constructor.
 During training, the `Dropout` layer will randomly
 drop out outputs of the previous layer
 (or equivalently, the inputs to the subsequent layer)
 according to the specified dropout probability.
 When not in training mode,
-the `Dropout` layer simply passes the data through during testing.
+the `Dropout` layer passes the data through unchanged during testing.
 
 ```{.python .input #dropout-concise-implementation-1}
 %%tab mxnet
@@ -523,18 +520,19 @@ computational surrogate, not an exact average of their predictions
 :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`.
 
 Dropout was important for fully connected vision networks of the mid-2010s,
-but its role has since narrowed. Convolutional
-networks typically replace it with batch normalization (see
-:numref:`sec_batch_norm`), which supplies similar noise-driven regularization.
-Placement matters when the two are combined. Dropout immediately before batch
+but its use now depends on the architecture and training scale. Convolutional
+networks often rely on data augmentation, normalization
+(:numref:`sec_batch_norm`), weight decay, and stochastic depth, using dropout
+selectively. These methods do not reproduce dropout's mechanism. Placement
+matters when dropout and batch normalization are combined. Dropout immediately before batch
 normalization can perturb the variance used to accumulate running statistics,
 creating a train--evaluation mismatch in that configuration
 :cite:`Li.Chen.Hu.ea.2019`.
-Large transformer-based language models use dropout lightly (rates around 0.0 to
-0.1) or not at all in their core layers, reserving it mostly for final
-classifier heads. It nonetheless remains a cheap, reliable regularizer that
-combines well with weight decay and data augmentation, and it is the conceptual
-seed for a family of stochastic-regularization methods.
+Transformer configurations may apply dropout to embeddings, attention and
+MLP blocks, or output heads, whereas some large-scale models use a rate of
+zero. Dropout remains a low-cost option that can be combined with weight decay
+and data augmentation, and it motivated a family of stochastic-regularization
+methods.
 
 
 ## Exercises
@@ -585,13 +583,13 @@ gradient descent can drive *training* error to zero by
 memorizing.
 
 ::: {.d2l-note}
-We want a knob that keeps capacity but discourages the
-model from leaning too hard on the training set.
+We want to retain capacity while discouraging the model from fitting
+peculiarities of the training set.
 :::
 :::
 
 ::: {.col .fig .big}
-![Test error past the interpolation threshold: capacity alone does not buy generalization.](../img/mdl-mlp-double-descent.svg)
+![Test error past the interpolation threshold: capacity alone does not ensure generalization.](../img/mdl-mlp-double-descent.svg)
 :::
 :::
 :::
@@ -608,10 +606,8 @@ definition:
 
 . . .
 
-Counterintuitive (we actively cripple the network
-mid-training), yet it is among the most reliable
-regularizers we have, and it still ships in modern
-Transformers.
+Although dropout removes part of the network on each training step, it
+can improve generalization and is used in many Transformer configurations.
 :::
 
 ::: {.slide}
@@ -821,8 +817,8 @@ no-op, with no rescaling needed.
 ::: {.slide title="Train the concise model"}
 [Concise]{.kicker}
 
-Same hyperparameters, same result: the layer does the
-masking and rescaling internally:
+With the same hyperparameters, the layer performs the masking and
+rescaling internally:
 
 @dropout-concise-implementation-3
 :::
@@ -830,13 +826,14 @@ masking and rescaling internally:
 ::: {.slide title="Dropout today"}
 [Current practice]{.kicker}
 
-Dropout was transformative for the dense vision nets of
-the mid-2010s; its role has since narrowed.
+Dropout usage depends on the architecture, dataset size, and training
+scale.
 
-- **CNNs** mostly replace it with **batch norm**, which
-  supplies similar noise-driven regularization.
-- **Transformers** use it lightly (rates $0.0$–$0.1$),
-  often only on the **classifier head**.
+- **CNNs** often combine data augmentation, normalization, weight decay, and
+  stochastic depth, using dropout selectively.
+- **Transformers** may apply dropout to embeddings, attention and MLP blocks,
+  or output heads. Rates from $0.0$–$0.1$ are common, while some large-scale
+  configurations use a rate of zero.
 
 ::: {.d2l-note .warn}
 In the configuration where dropout is placed **before** batch norm, masking can
@@ -844,9 +841,9 @@ distort the running variance and create an evaluation-time mismatch
 (Li et al., 2019).
 :::
 
-Still a cheap, reliable regularizer that combines well with weight
-decay and data augmentation, and the conceptual seed of a whole
-family of stochastic-regularization methods.
+Dropout is a low-cost regularizer that can be combined with weight decay
+and data augmentation. It also motivated a broader family of stochastic
+regularization methods.
 :::
 
 ::: {.slide title="Summary"}
@@ -871,7 +868,7 @@ family of stochastic-regularization methods.
 :::
 
 ::: {.d2l-note}
-Exercise 5 flips the switch: keep dropout **on** at test time,
+Exercise 5 keeps dropout **on** at test time:
 average 20 passes, and you get uncertainty estimates (MC dropout).
 Next, the Kaggle house-prices section applies the methods from this chapter,
 deployed on a Kaggle competition.

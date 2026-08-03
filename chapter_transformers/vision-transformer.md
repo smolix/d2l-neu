@@ -154,16 +154,15 @@ embeddings.
 The body of the model is the transformer block of
 :numref:`sec_transformer-block` in its pre-norm configuration: normalization
 sits on each branch, right before multi-head attention and before the MLP,
-and the residual stream runs uninterrupted. ViT adopted this arrangement just
-as its training advantages were being established
-:cite:`baevski2018adaptive,wang2019learning,xiong2020layer`, and its success
-helped make pre-norm the default it is today.
+and the residual stream runs uninterrupted. ViT adopted this arrangement
+as analyses began to establish its training advantages :cite:`baevski2018adaptive,wang2019learning,xiong2020layer`.
+Pre-norm subsequently became common in transformer architectures.
 
 Two details are specific to the vision variant. The MLP uses the Gaussian
 error linear unit (GELU), a smooth relative of ReLU
 :cite:`Hendrycks.Gimpel.2016`, and applies dropout after each of its two
-linear layers — at ViT scale, unlike at LLM scale, regularization earns its
-keep. And because every patch is a valid token that may look at every other,
+linear layers. Dropout is retained in the ViT training recipe, unlike in
+many large language-model recipes. And because every patch is a valid token that may look at every other,
 the block needs no mask: the `valid_lens` argument of the
 `d2l.MultiHeadAttention` from :numref:`sec_multihead-attention` stays
 `None` throughout this section.
@@ -211,8 +210,8 @@ class ViTBlock(nnx.Module):  #@save
         return X + self.mlp(self.ln2(X))
 ```
 
-As with every transformer block, the output shape equals the input shape, so
-blocks stack without further ceremony.
+As with every transformer block, the output shape equals the input shape,
+so the blocks can be stacked directly.
 
 ```{.python .input #vision-transformer-the-vision-transformer-block-2}
 %%tab pytorch
@@ -238,16 +237,17 @@ sum with the positional embeddings goes through dropout, then through
 `num_blks` stacked `ViTBlock` instances, and finally the head projects the
 “&lt;cls&gt;” token's representation to the class logits.
 
-The positional embeddings deserve a pause. The sinusoidal and rotary
+The positional embeddings must represent a two-dimensional grid. The
+sinusoidal and rotary
 constructions of :numref:`sec_positional-information` encode positions along
 a line, but a patch has a row *and* a column, and it is not obvious what a
 hand-designed two-dimensional code should look like. ViT sidesteps the
 question: the position embeddings are a freely learnable parameter,
 initialized to small Gaussian noise as in the original recipe, one vector
-per sequence position. At
-initialization, the model therefore has no idea that patch 7 sits directly
-left of patch 8 and directly above patch 13 — as far as it is concerned the
-patches are an unordered set of vectors. Whatever spatial structure the
+per sequence position. At initialization, the model therefore does not
+encode that patch 7 lies
+directly left of patch 8 and directly above patch 13; the patches enter as
+an unordered set of vectors. Whatever spatial structure the
 trained model uses, it must discover during training. We will check how far
 it gets.
 
@@ -408,18 +408,19 @@ d2l.show_heatmaps(sim.reshape(6, 6, 6, 6), xlabel='', ylabel='',
 ```
 
 Each map's darkest cell is its own position, which is mere self-similarity;
-the question is what surrounds it. After ten epochs the answer is: the
-first faint traces of the grid and no more. The printed statistic makes it
+the surrounding similarities determine whether spatial structure has
+emerged. After ten epochs, they show only weak traces of the grid. The
+printed statistic makes it
 precise: averaged over positions, immediate grid neighbors score slightly
 positive cosine similarity while distant positions score slightly negative,
 and several maps show a diffuse halo around their own cell or a weak band
 along their own column — but the values are small and the pattern is easy
 to miss without the summary statistics. Compare this with the crisp
 row-and-column structure that emerges in fully trained ViTs, and the state
-of our model is clear: the geometry it was never told is beginning to show
-in its embeddings, and at this scale of data and training it has not
-gotten far. Keep that in mind as we turn to an architecture that does not
-need to learn the geometry at all.
+of our model is clear: the embeddings contain weak evidence of the spatial
+geometry that was not
+encoded at initialization. The next comparison uses an architecture that
+encodes this geometry directly.
 
 ### A Convolutional Baseline at the Same Budget
 
@@ -498,10 +499,12 @@ print(f'ViT: {vit_params/1e6:.1f}M parameters, '
       f'validation accuracy {vit_acc:.2f}')
 ```
 
-At the same parameter count, with the same data and number of epochs, the CNN performs better
-by several points, about 90–92% against the ViT's 86–87%, a margin well
-beyond the run-to-run noise of these ten-epoch runs. The gap is what the
-convolutional prior provides at this scale. Locality and translation
+At the same parameter count, with the same data and number of epochs, the
+CNN performs better by several points, about 90–92% against the ViT's
+86–87%, a margin well beyond the run-to-run noise of these ten-epoch runs.
+The result is consistent with an advantage from the convolutional prior at
+this scale, although the comparison does not isolate that cause. Locality
+and translation
 equivariance are a strong prior the CNN has by construction; the
 transformer must infer both from data. After ten epochs, the position-embedding
 similarities show only weak grid structure. This experiment compares two
@@ -612,8 +615,8 @@ This is the *entire* interface between vision and the transformer.
 ::: {.slide title="The ViT block"}
 The pre-norm block of the chapter, with two vision-era details:
 **GELU** in the MLP and **dropout** after each of its linear layers —
-at this scale, regularization earns its keep. No mask: every patch
-attends to every patch.
+dropout follows the ViT training recipe. No mask is needed because every
+patch attends to every patch.
 
 @vision-transformer-the-vision-transformer-block-1
 :::
@@ -651,14 +654,14 @@ reshaped into the 6×6 grid — position $(i,j)$ shows its map at $(i,j)$:
   slightly negative — a faint halo, a weak column band here and there.
 
 ::: {.d2l-note}
-The geometry the model was never told is *beginning* to show — and at
-this scale it has not gotten far.
+The embeddings contain weak row-and-column structure after this short
+training run.
 :::
 :::
 
 ::: {.slide title="A CNN at the same budget"}
-Same parameter count (ResNet-style, 7×7 stem + seven residual blocks),
-same data, same ten epochs:
+The ResNet-style baseline uses the same parameter count, data, and ten-epoch
+budget:
 
 @!vision-transformer-a-convolutional-baseline-at-the-same-budget-2
 :::

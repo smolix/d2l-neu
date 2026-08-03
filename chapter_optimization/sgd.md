@@ -126,17 +126,15 @@ Close to it, contraction and noise injection balance at
 $$\mathbb{E}\big[x_\infty^2\big] \approx \frac{\eta\, \sigma^2}{2\lambda}.$$
 :eqlabel:`eq_sgd-noise-ball`
 
-The iterates rattle around inside a *noise ball* whose squared radius grows
-linearly with the learning rate — the same noise ball that
-:numref:`sec_linear_regression` promised an explanation for when it first
-named the phenomenon. :numref:`subsec_mdl-stochastic-gradients` supplies
-the two-line derivation, along with a picture of GD and SGD racing on the
-same bowl. Equation :eqref:`eq_sgd-noise-ball`
+The iterates fluctuate within a *noise ball* whose squared radius grows
+linearly with the learning rate. :numref:`sec_linear_regression` first
+introduced this phenomenon. :numref:`subsec_mdl-stochastic-gradients` supplies
+the derivation and compares GD with SGD on the same quadratic objective. Equation :eqref:`eq_sgd-noise-ball`
 says exactly what the demo showed: a constant $\eta$ stalls at a noise floor
 proportional to $\eta$. Halving $\eta$ halves the floor — and also halves the
-speed of the initial approach. The escape is a *time-dependent* learning rate
-$\eta(t)$: large early to cross the valley, decaying later to quench the
-noise.
+speed of the initial approach. A *time-dependent* learning rate $\eta(t)$ resolves this tradeoff: large
+early steps make rapid progress, while smaller later steps reduce the noise
+floor.
 
 Choosing how fast $\eta(t)$ decays becomes the new problem. Too fast, and
 optimization stops prematurely; too slow, and we waste time bouncing in the
@@ -152,10 +150,8 @@ $$
 $$
 
 In the *piecewise constant* scenario we drop the learning rate whenever
-progress stalls — riding each noise floor until we hit it, then lowering the
-floor. *Exponential decay* is more aggressive. *Polynomial decay* with
-$\alpha = 0.5$ is a standard well-behaved choice for convex problems. Let's
-see what exponential decay looks like in practice.
+progress stalls, lowering the noise floor after the iterates reach it. *Exponential decay* is more aggressive. *Polynomial decay* with
+$\alpha = 0.5$ is a standard well-behaved choice for convex problems. The next experiment shows exponential decay in practice.
 
 ```{.python .input #sgd-dynamic-learning-rate-1}
 def exponential_lr():
@@ -169,7 +165,7 @@ lr = exponential_lr
 d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=1000, f_grad=f_grad))
 ```
 
-The variance in the parameters is much reduced — but the iterates never reach
+The parameter variance is substantially smaller, but the iterates never reach
 the optimum $\mathbf{x} = (0, 0)$, even after 1000 steps. The schedule
 quenches the noise *too* eagerly: its total budget $\sum_t \eta(t)$ is
 finite, so the iterate can only ever travel a bounded distance from where it
@@ -214,7 +210,7 @@ comes from *which* examples land in the minibatch, and there we hold a dial —
 the batch size $b$. A minibatch gradient averages $b$ independent draws, so
 its variance is $1/b$ times the single-example variance
 (:numref:`subsec_mdl-stochastic-gradients` states and proves this precisely).
-That $1/b$ is a claim about real networks, so let us measure it on one: a
+We test the $1/b$ prediction on a real network: a
 small two-layer MLP on the airfoil-noise regression dataset that serves as
 this chapter's workhorse from :numref:`sec_minibatch_sgd` on. We freeze the
 parameters at a random initialization, take the full-dataset gradient as
@@ -293,15 +289,15 @@ compute per step reduces the noise amplitude by only a factor of $10$. Batch siz
 a genuine second dial next to the learning rate, but one with diminishing
 returns. :numref:`sec_minibatch_sgd` takes up how to spend a compute budget
 between the two, and how batching interacts with the hardware that made it
-cheap; :numref:`sec_batch_size` asks what happens to the $1/b$ payoff at
-the scale of modern language models.
+cheap; :numref:`sec_batch_size` asks when the $1/b$ variance reduction stops improving data efficiency at the
+scale of modern language models.
 
 One loose end. Our theory and the measurement above both sampled indices
 *with replacement*: each draw is independent, which is what makes the analysis
 clean. Practice does something else. Drawing $n$ times with replacement
 touches only a fraction $1 - (1-1/n)^n \approx 1 - e^{-1} \approx 0.63$ of
-the dataset per pass while picking other examples twice or more — worse data
-efficiency, and higher variance, than simply shuffling the dataset and
+the dataset per pass while picking other examples twice or more — lower data
+efficiency and higher variance than shuffling the dataset and
 traversing it exactly once per epoch. So that is what every training loop in
 this book does, reshuffling before each epoch. The cost is theoretical:
 within an epoch, successive gradients are no longer independent, and the
@@ -315,7 +311,8 @@ gradient estimate in place of an $\mathcal{O}(n)$ exact one. This introduces
 variance, and this section met both of the dials that control it. A constant
 learning rate leaves the iterates rattling in a noise ball of squared radius
 proportional to $\eta$; decaying learning rates converge, provided the decay
-is slow enough to travel arbitrarily far yet fast enough to quench the noise.
+permits unbounded cumulative movement while making the accumulated noise
+finite.
 Batch size is the other dial: minibatch gradient variance falls like $1/b$,
 measured on a real network over a factor of 500 in batch size, though at a
 linear cost in compute per step. The proofs owed here live in
@@ -380,9 +377,9 @@ watch how the trajectory differs:
 :::
 
 ::: {.slide title="SGD trajectory"}
-With a constant learning rate, SGD never settles — near the
-minimum the true gradient vanishes but the noise doesn't,
-so the iterates random-walk around the optimum:
+With a constant learning rate, SGD does not converge to one point. Near the
+minimum, the true gradient vanishes but sampling noise remains, so the
+iterates fluctuate around the optimum:
 
 @sgd-stochastic-gradient-updates-3
 :::
@@ -399,8 +396,8 @@ $$\mathbb{E}\big[x_\infty^2\big] \approx \frac{\eta\,\sigma^2}{2\lambda}.$$
 - Halving $\eta$ halves the floor — and the speed of approach.
 
 ::: {.d2l-note}
-Escape: make $\eta$ *time-dependent* — large early to travel,
-decaying to quench the noise.
+A time-dependent $\eta$ uses large early steps for rapid progress and
+smaller later steps to reduce noise.
 :::
 :::
 
@@ -419,8 +416,8 @@ $\sum_t \eta(t)^2 < \infty$ (noise quenched).
 :::
 
 ::: {.slide title="Limitation of exponential decay"}
-$\sum_t \eta(t) < \infty$ — a finite travel budget. The
-iterate stops short of the optimum, out of learning rate:
+When $\sum_t \eta(t) < \infty$, the total possible movement is finite.
+The iterate may therefore stop short of the optimum:
 
 @sgd-dynamic-learning-rate-1
 :::
@@ -444,8 +441,8 @@ size 1 to 512:
 
 ::: {.slide title="Diminishing variance reduction with batch size"}
 - Variance $\propto 1/b$ → noise *amplitude* $\propto 1/\sqrt{b}$.
-- $100\times$ more compute per step → only $10\times$ quieter
-  gradients.
+- $100\times$ more compute per step reduces the noise amplitude by only a
+  factor of $10$.
 - How to spend compute between $\eta$ and $b$: next section.
   What happens at LM scale: the batch-size section later in
   the chapter.

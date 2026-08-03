@@ -5,14 +5,14 @@ In supervised learning, a prediction typically does not affect which test exampl
 
 :numref:`fig_rl_agent_env` shows this interaction. Unrolling the agent--environment loop over time produces a *trajectory* $\tau=(s_0,a_0,r_0,s_1,\ldots)$. This feedback introduces the central difficulties studied in this chapter: exploration determines which data are collected, errors alter later state distributions, and policy updates change the distribution used for subsequent learning. The same formulation also applies to language-model generation, where the context is a state and the next token is an action; :numref:`sec_rl_sequences` develops that correspondence.
 
-![The agent emits an action $a_t$ (blue); the environment answers with a reward $r_t$ and the next state $s_{t+1}$ (orange). Below, the same emissions unrolled in time interleave into the trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$, each symbol colored by the box that produced it: the loop and the trajectory are the same object.](../img/mdl-rl-agent-env.svg)
+![At time $t$, the agent selects action $a_t$ (blue), and the environment returns reward $r_t$ and next state $s_{t+1}$ (orange). Unrolling this interaction produces the trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$.](../img/mdl-rl-agent-env.svg)
 :label:`fig_rl_agent_env`
 
 The sections progress from settings with the most information to settings with the least. :numref:`sec_mdp` defines the Markov decision process, and :numref:`sec_valueiter` solves a known finite MDP by dynamic programming. :numref:`sec_imitation` replaces the model with expert demonstrations. :numref:`sec_qlearning` then removes the expert and learns action values from sampled transitions. :numref:`sec_policygradient` optimizes the policy directly, while :numref:`sec_baselines` develops lower-variance estimators. Finally, :numref:`sec_deeprl` replaces tabular representations with neural networks for continuous state and action spaces.
 
-:numref:`chap_deep_rl` continues with bootstrapped critics, safe reuse of on-policy data, replay buffers, regularized objectives, and offline learning. :numref:`fig_rl_roadmap` organizes the methods in both chapters by what they learn and which data they use.
+:numref:`chap_deep_rl` continues with bootstrapped critics, controlled reuse of on-policy data, replay buffers, regularized objectives, and offline learning. :numref:`fig_rl_roadmap` organizes the methods in both chapters by what they learn and which data they use.
 
-![Both chapters on one map: what is learned, against which data may drive the update. Solid boxes are this chapter's; dashed boxes belong to the next, as do the greyed names inside shared boxes. DAgger sits in the on-policy column because its update data are the learner's own rollouts, expert-relabeled; behavior cloning alone trains from a fixed dataset. Value iteration is the map's one model-based resident: it consumes the kernel itself rather than sampled data, and occupies its cell for what it learns. The arrow out of the policy-gradient cell is that chapter's opening move: reusing slightly stale data through importance ratios, under a variance budget.](../img/mdl-rl-roadmap.svg)
+![Reinforcement-learning methods organized by what they estimate and which data they use. Solid boxes denote methods introduced in this chapter; dashed boxes and gray labels denote methods from :numref:`chap_deep_rl`. Behavior cloning trains on a fixed expert dataset, whereas DAgger trains on learner-generated states relabeled by an expert. Value iteration consumes a known transition kernel rather than sampled transitions. The arrow from policy gradients to PPO denotes limited reuse of recent trajectories through importance ratios.](../img/mdl-rl-roadmap.svg)
 :label:`fig_rl_roadmap`
 
 :numref:`tab_rl_map` provides a more detailed guide to the algorithms in both chapters. It records what each method estimates, which data it can use, and where it is introduced.
@@ -60,31 +60,31 @@ deep-rl
 
 ## Resources and Further Reading {.unnumbered}
 
-Grouped by role: the books under the theory, the courses that teach it, the implementations to build from, and the record of what makes these methods work in practice. All are freely accessible online.
+The following freely available resources provide theoretical treatments, courses, implementations, and empirical guidance.
 
 **Textbooks**
 
-- Sutton and Barto, *Reinforcement Learning: An Introduction* :cite:`Sutton.Barto.2018` remains the field's front door, and the field now carries the profession's highest honor: Sutton and Barto received the 2024 Turing Award for building it.
+- Sutton and Barto, *Reinforcement Learning: An Introduction* :cite:`Sutton.Barto.2018` provides a comprehensive introduction to value methods, policy methods, planning, and function approximation. Sutton and Barto received the 2024 Turing Award for their foundational contributions to reinforcement learning.
 - Szepesvári, *Algorithms for Reinforcement Learning* :cite:`Szepesvari.2010` states this chapter's algorithms and their guarantees in under a hundred pages.
-- Bertsekas, *A Course in Reinforcement Learning* :cite:`Bertsekas.2025` teaches the same material from the optimal-control side, where dynamic programming is the trunk and learning the branch.
+- Bertsekas, *A Course in Reinforcement Learning* :cite:`Bertsekas.2025` develops reinforcement learning from the perspective of optimal control and dynamic programming.
 - Agarwal, Jiang, Kakade, and Sun, *Reinforcement Learning: Theory and Algorithms* :cite:`Agarwal.Jiang.Kakade.ea.2019` supplies the sample-complexity rates this chapter states qualitatively.
 - Lattimore and Szepesvári, *Bandit Algorithms* :cite:`Lattimore.Szepesvari.2020` is the full theory behind the exploration interlude of :numref:`sec_qlearning`.
 
 **Courses**
 
-- [Berkeley CS285: Deep Reinforcement Learning](https://rail.eecs.berkeley.edu/deeprlcourse/) is the standard graduate treatment of the material these two chapters open.
+- [Berkeley CS285: Deep Reinforcement Learning](https://rail.eecs.berkeley.edu/deeprlcourse/) covers policy gradients, value methods, model-based learning, and offline reinforcement learning at the graduate level.
 - [Stanford CS234: Reinforcement Learning](https://web.stanford.edu/class/cs234/) is the course closest in scope to this chapter: foundations, exploration, and policy gradients with their guarantees.
 - [Stanford CS224R: Deep Reinforcement Learning](https://cs224r.stanford.edu/) covers the practice, imitation and offline methods included.
 - [CMU 10-703: Deep Reinforcement Learning and Control](https://cmudeeprl.github.io/703website/) pairs the algorithms with control and physical embodiment.
-- [MIT 6.7920: Reinforcement Learning: Foundations and Methods](https://web.mit.edu/6.7920/www/) develops the dynamic-programming spine of :numref:`sec_valueiter` at full depth.
+- [MIT 6.7920: Reinforcement Learning: Foundations and Methods](https://web.mit.edu/6.7920/www/) develops the dynamic-programming theory introduced in :numref:`sec_valueiter`.
 
 **Annotated implementations**
 
-- [CleanRL](https://github.com/vwxyzjn/cleanrl) :cite:`Huang.Dossa.Ye.ea.2022` publishes single-file, benchmarked implementations of the major deep reinforcement learning algorithms; the natural next step after :numref:`sec_deeprl`.
-- [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) :cite:`Raffin.Hill.Gleave.ea.2021` is the reliable library form of the same algorithms, with tuned hyperparameters in its accompanying zoo.
-- [Gymnasium](https://gymnasium.farama.org/) :cite:`Towers.Kwiatkowski.Terry.ea.2024` documents the environment interface every agent in these two chapters speaks.
+- [CleanRL](https://github.com/vwxyzjn/cleanrl) :cite:`Huang.Dossa.Ye.ea.2022` provides single-file, benchmarked implementations of the major deep reinforcement learning algorithms discussed after :numref:`sec_deeprl`.
+- [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) :cite:`Raffin.Hill.Gleave.ea.2021` provides library implementations of the same algorithms, with tuned hyperparameters in its accompanying zoo.
+- [Gymnasium](https://gymnasium.farama.org/) :cite:`Towers.Kwiatkowski.Terry.ea.2024` documents the environment interface used throughout these chapters.
 
-**The record**
+**Empirical practice**
 
 - [Spinning Up in Deep RL](https://spinningup.openai.com/) :cite:`Achiam.2018` is a short curriculum from the score function to SAC, written to be read beside running code.
-- [The 37 Implementation Details of Proximal Policy Optimization](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/) :cite:`Huang.Dossa.Raffin.ea.2022` documents, one detail at a time, how much of reported performance lives in choices papers do not mention; the strongest published argument for the estimator hygiene of :numref:`sec_baselines`.
+- [The 37 Implementation Details of Proximal Policy Optimization](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/) :cite:`Huang.Dossa.Raffin.ea.2022` documents how implementation choices omitted from algorithm descriptions affect PPO performance and reproducibility.

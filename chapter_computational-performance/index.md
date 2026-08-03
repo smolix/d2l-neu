@@ -16,9 +16,9 @@ its limiting regime, apply a corresponding optimization, and measure again.
 sections apply it.
 
 The sections proceed from individual operations to full models on multiple
-GPUs. :numref:`sec_perf_model` establishes the roofline, the three
-regimes, and the measurement discipline the frameworks' asynchronous
-dispatch makes non-optional. :numref:`sec_hardware` explains where the
+GPUs. :numref:`sec_perf_model` establishes the roofline, the three regimes,
+and the measurement discipline required by asynchronous framework dispatch.
+:numref:`sec_hardware` explains where the
 roofline's two numbers come from — the memory hierarchy, the tensor cores
 and their numerical formats, interconnects, and energy costs
 underneath them all — using our own four-GPU box as the worked example.
@@ -37,21 +37,21 @@ runs the complete procedure on a GPT model. The case study uses each
 framework in its usual idiom —
 `torch.compile`, autocast, and DDP on the PyTorch side; `jax.jit`,
 explicit bf16 threading, and declarative sharding on the JAX side — and
-the two waterfalls diverge exactly where the frameworks do: what a
-compiled execution changes, and how data parallelism is launched.
+the cumulative results differ in how compilation changes execution and how
+data parallelism is launched.
 
-A word on the machine this chapter is built on, because it shapes what
-you will see. The book's build box is four consumer RTX 4090 GPUs with no
+The build machine determines the constants in the measurements below. It
+contains four consumer RTX 4090 GPUs with no
 NVLink and — a deliberate market segmentation — no peer-to-peer transfer:
 every byte between two GPUs is staged through host memory over PCIe — tens
 of gigabytes per second at best, roughly two orders of magnitude below a
-datacenter NVLink fabric. This is not a handicap to apologize for; it is a
-teaching instrument. Most readers'
+datacenter NVLink fabric. This configuration represents the interconnect available in many
+workstations. Most readers'
 multi-GPU machines look like ours, not like a datacenter rack with a
 terabyte-per-second fabric, and a slow interconnect makes the *accounting*
 of parallel training impossible to ignore. The constants in this chapter
-are ours; the reasoning transfers to any machine, and the sections are
-written so that a reader on two GPUs, or one, sees the same story.
+are ours; the reasoning transfers to any machine. The same accounting
+applies to machines with one or two GPUs.
 
 ## What This Chapter Is Not {.unnumbered}
 
@@ -60,7 +60,7 @@ This chapter has a limited systems scope.
 has data large enough to warrant it: splitting a model across machines
 with tensor, pipeline, or expert parallelism, and the network fabrics
 that make it possible, all belong there. :numref:`sec_multi_gpu_concise`
-builds the bridge and stops at the water's edge.
+introduces the required concepts but does not cover multi-node execution.
 *Kernel authoring* in CUDA, Triton,
 or Pallas is fenced off book-wide (:numref:`sec_custom_layer`); we teach
 how to get performance from the operations you already have, and point to
@@ -75,17 +75,19 @@ reading of :numref:`sec_hardware`) but not the engines that exploit them.
 production library map and hardware-selection guidance both live in the Tools appendix
 (:numref:`sec_training_systems`, :numref:`sec_hardware_buyers`): which
 distributed framework to reach for at which scale, how to checkpoint a
-long run, how to launch across a cluster. This chapter earns the concepts
-at notebook scale, and the appendix names the products at datacenter
-scale.
+long run, and how to launch across a cluster. This chapter develops the
+concepts at notebook scale, while the appendix
+identifies systems for datacenter-scale use.
 
 ## Resources and Further Reading {.unnumbered}
 
-The references below follow the chapter's arc — the roofline and the
-regimes, the compiler and the memory, the collectives and the case study.
-All are freely accessible online. Where this chapter fences off a topic —
-kernel authoring, multi-node parallelism, serving — the resource that owns
-it is flagged as such.
+The references below follow the chapter's progression from the roofline and
+performance regimes through compilation, memory, collectives, and the case
+study.
+All are freely accessible online. Resources on kernel authoring,
+multi-node parallelism, and serving are
+identified explicitly because those topics lie outside this chapter's
+scope.
 
 **Books and long-form**
 

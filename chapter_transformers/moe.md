@@ -53,8 +53,7 @@ $E$ experts' parameters but each token evaluates only $k$, so at
 roughly 2 forward FLOPs per active parameter per token, the model's
 capacity and its serving cost decouple.
 
-The arithmetic deserves to be computed rather than asserted, and it is
-short enough to check against the published configurations of two
+We check this arithmetic against the published configurations of two
 deployed models: Mixtral 8x7B, with 8 full-width experts of which each
 token activates 2 :cite:`Jiang.Sablayrolles.Roux.ea.2024`, and
 DeepSeek-V3, with 256 narrow experts per layer of which each token
@@ -87,9 +86,9 @@ print(f'     with attention and embeddings: {(store+attn+emb)/1e9:.1f}B '
 moe_accounting('DeepSeek-V3', 7168, 2048, 256, 8, 58, shared=1)
 ```
 
-For Mixtral, the model card comes out exactly right once we add the
-non-expert parameters, grouped-query attention (:numref:`sec_kv-cache`)
-and untied embeddings: 46.7B parameters stored, 12.9B active per token.
+For Mixtral, adding the non-expert parameters, grouped-query attention
+(:numref:`sec_kv-cache`), and untied embeddings yields 46.7B stored
+parameters and 12.9B active parameters per token.
 The name "8x7B" describes stored expert capacity rather than per-token
 computation: each token activates less than two-sevenths of the stored
 parameters. DeepSeek-V3 has a larger separation: its 58 expert
@@ -289,7 +288,7 @@ measured load.
 
 ### Positive Feedback in Routing
 
-Follow the feedback loop. Early in training, by pure initialization luck,
+Follow the feedback loop. Early in training, random initialization may cause
 some expert is slightly better than its peers on the tokens it happens to
 receive. The loss gradient rewards it twice: its parameters
 improve on those tokens, *and* the router's gradient raises its
@@ -324,7 +323,7 @@ correlation grow. Its gradient (through $\bar{p}$ only) pushes
 probability away from overloaded experts *for every token, whatever the
 token needs* — and that is the cost. The balancing gradient is added to
 the language-modeling gradient at every step, and the two disagree
-whenever genuinely popular knowledge deserves a busy expert. Tune
+when some token classes legitimately require a busier expert. Tune
 $\alpha$ too high and routing quality degrades; too low and the
 imbalance persists. This interference is documented rather than
 hypothetical :cite:`Wang.Gao.Zeng.ea.2024`, and it motivated the second
@@ -522,9 +521,8 @@ def usage_fractions(model, data, num_batches=10):
     return jnp.stack([l.usage[...] / l.usage[...].sum() for l in layers])
 ```
 
-Now the experiment. One small model, trained three times from the same
-initialization on the character-level Time Machine for the same 800
-steps: two blocks of width 128, eight experts per block, one active per
+We train one small model three times from the same initialization on the
+character-level Time Machine for the same 800 steps: two blocks of width 128, eight experts per block, one active per
 token (the Switch configuration, where the feedback loop bites hardest).
 The only difference between the runs is the balancing: none,
 the auxiliary loss at $\alpha = 0.01$, or the bias thermostat at
@@ -663,10 +661,10 @@ We train two models on the same data for the same 600
 steps: the dense `d2l.GPT` of :numref:`sec_gpt` at width 256 with four
 blocks, and the same model with every FFN replaced by a mixture of
 eight experts, one active, balanced by the bias controller. Because the
-active expert is a full-width `FeedForward`, the two models do the
-same per-token compute and hold the same *active* parameters up to the
-router's rounding error; the MoE simply holds seven spare experts per
-block. Since :numref:`sec_gpt` showed this corpus drives models into
+active expert is a full-width `FeedForward`, the two models have the
+same per-token computation and nearly the same *active* parameter count;
+the MoE stores seven additional inactive experts per block. Since
+:numref:`sec_gpt` showed this corpus drives models into
 memorization within a few hundred steps, we compare the *best*
 validation loss over the budget, as :numref:`sec_kv-cache` did.
 
@@ -881,7 +879,8 @@ $$\mathcal{E}_k = \operatorname{argtop}_k(p_i + b_i), \qquad b_i \leftarrow b_i 
 :::
 
 ::: {.slide title="Balancing methods at fixed compute"}
-Same init, same data, same 800 steps; only the balancing differs:
+The runs share their initialization, data, and 800-step budget; only the
+balancing method differs:
 
 @!moe-three-runs-one-budget-3
 :::
@@ -933,8 +932,8 @@ Swap every block's FFN (`moe_gpt`), balance with the bias controller, match
 - An auxiliary loss changes the training objective; a bias controller changes
   selection without adding a gradient term. Both reduce imbalance in the
   fixed-seed experiment.
-- Fine-grained + shared experts: the same budget, sliced for
-  composability.
+- Fine-grained experts provide more routing combinations at a fixed active
+  budget; a shared expert handles processing common to all tokens.
 - In our GPT: several times the stored parameters at matched active parameter
   count; quality comparisons remain local to the teaching experiment.
 :::

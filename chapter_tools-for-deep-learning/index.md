@@ -9,8 +9,8 @@ constraints: distributed training incurs accelerator-communication costs, wherea
 serving must also meet latency and throughput targets while storing persistent
 model and cache state.
 
-This part develops those decisions from one notebook to a deployed system. Use
-the following map to enter at the problem at hand.
+This part develops these decisions from a single notebook to a deployed system.
+Use the following table to find the section relevant to your problem.
 
 | Task | Section | Principal question |
 | :-- | :-- | :-- |

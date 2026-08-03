@@ -23,14 +23,10 @@ any learning algorithm generalizes better on some data distributions
 and worse on others.
 Thus, given a finite training set,
 a model must rely on assumptions, or *inductive biases*.
-To achieve human-level performance
-it can help to choose inductive biases
-that reflect how humans think about the world.
-Such inductive biases show preferences 
-for solutions with certain properties.
-For example,
-a deep MLP has an inductive bias
-towards building up a complicated function by the composition of simpler functions.
+Effective inductive biases often reflect known structure in the data.
+They express preferences for solutions with particular properties.
+For example, a deep MLP favors complicated functions formed by composing
+simpler functions.
 
 With machine learning models encoding inductive biases,
 our approach to training them
@@ -66,7 +62,7 @@ must come by way of regularization,
 either by reducing the complexity of the model class,
 or by applying a penalty, severely constraining
 the set of values that our parameters might take.
-But that is where things start to get weird.
+Deep learning does not always follow this classical pattern.
 
 For many deep learning benchmarks, several candidate architectures can reach
 nearly zero training error. Their useful differences then appear in validation
@@ -76,18 +72,13 @@ we can actually *reduce the generalization error*
 further by making the model *even more expressive*,
 e.g., adding layers, nodes, or training
 for a larger number of epochs.
-Stranger yet, the pattern relating the generalization gap
-to the *complexity* of the model
-(as captured, for example, in the depth or width of the networks)
-can be non-monotonic,
-with greater complexity hurting at first
-but subsequently helping in a so-called "double-descent" pattern
-:cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`,
-which we examine in detail below.
-Thus the deep learning practitioner possesses a bag of tricks,
-some of which seemingly restrict the model in some fashion
-and others that seemingly make it even more expressive,
-and all of which, in some sense, are applied to mitigate overfitting.
+The relationship between the generalization gap and model complexity
+(as measured, for example, by network depth or width) can also be
+nonmonotonic: additional complexity initially hurts and subsequently helps
+in a "double-descent" pattern
+:cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`, which we examine below.
+Consequently, methods used to mitigate overfitting may either restrict a
+model or make it more expressive.
 
 Complicating things even further,
 while the guarantees provided by classical learning theory
@@ -113,7 +104,7 @@ Double descent is one observed departure from the simplest classical picture.
 Classical theory predicts a *U-shaped* test-error curve:
 as we add capacity, error first falls (we stop underfitting)
 and then rises (we begin overfitting),
-with a sweet spot in between
+with an intermediate optimum
 (recall :numref:`fig_capacity_vs_error` from :numref:`sec_generalization_basics`).
 In some models, datasets, and training regimes, test error instead shows
 *double descent*. Near the *interpolation threshold*, the smallest capacity at
@@ -176,7 +167,7 @@ as the amount of available data grows.
 Perhaps the simplest example of a nonparametric model
 is the $k$-nearest neighbor algorithm (we will cover more nonparametric models later, for example in :numref:`sec_attention-pooling`).
 Here, at training time,
-the learner simply memorizes the dataset.
+the learner retains the dataset.
 Then, at prediction time,
 when confronted with a new point $\mathbf{x}$,
 the learner looks up the $k$ nearest neighbors
@@ -186,7 +177,7 @@ When $k=1$, this algorithm is called $1$-nearest neighbors,
 and it achieves zero training error when training inputs are distinct and
 ties are resolved in favor of the queried example.
 That, however, does not mean that the algorithm will not generalize.
-In fact, it turns out that under some mild conditions,
+Under suitable conditions,
 the error of the $1$-nearest neighbor rule
 comes within a factor of two of the optimal (Bayes) error
 as the dataset grows :cite:`Cover.Hart.1967`,
@@ -384,9 +375,8 @@ and at other times appear to decrease complexity.
 However, these methods seldom decrease complexity
 sufficiently for classical theory
 to explain the generalization of deep networks,
-and *why certain choices lead to improved generalization*
-remains for the most part a massive open question
-despite the concerted efforts of many brilliant researchers.
+and explaining *why particular choices improve generalization*
+remains an active research problem.
 
 
 ## Exercises
@@ -653,8 +643,8 @@ induces.
 
 ::: {.col .narrow}
 Memorization and generalization can coexist: **1-nearest-neighbor**
-memorizes everything, achieves zero training error, and still lands
-asymptotically within a **factor of two** of the optimal Bayes error
+retains every example, achieves zero training error, and still has
+asymptotic error within a **factor of two** of the optimal Bayes error
 (Cover & Hart, 1967).
 
 Over-parametrized nets likewise *interpolate*, so the nonparametric
@@ -681,20 +671,20 @@ intuition is often the more reliable one.
 With label noise, networks fit the **cleanly labeled** examples first and
 only later interpolate the **mislabeled** ones.
 
-Stop while the clean data is fit but the noise is not, and you can
-**certify** generalization (with high probability).
+Stopping before the model fits mislabeled examples can improve validation
+performance in this setting.
 
 ::: {.d2l-note}
-**Patience criterion:** monitor validation error each epoch; stop when it
-fails to improve by $\epsilon$ for a few epochs. It also saves training
-time and money.
+**Patience criterion:** monitor validation error each epoch and stop when it
+fails to improve by $\epsilon$ for a chosen number of epochs. This also
+reduces training time and compute cost.
 :::
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Matters most under **label noise** or intrinsic label variability. On
-clean, separable data it changes little.
+The benefit may be larger under **label noise** or intrinsic label
+variability; it must be validated for each dataset.
 :::
 :::
 :::
@@ -746,8 +736,8 @@ is the next such tool.)
 :::
 
 ::: {.d2l-note}
-Why certain choices improve generalization remains a **massive open
-question**. Try the surprises yourself: exercise 6 reproduces epoch-wise
+Why particular choices improve generalization remains an **open research
+question**. Exercise 6 reproduces epoch-wise
 double descent; exercise 7, grokking on modular addition. Next (the dropout
 section): dropout, regularization by structured noise.
 :::

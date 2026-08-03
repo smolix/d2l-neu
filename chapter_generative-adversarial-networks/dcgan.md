@@ -33,11 +33,11 @@ from PIL import Image
 
 ## The 2015 Recipe
 
-The original GAN and the Laplacian-pyramid GAN :cite:`Denton.Chintala.Szlam.ea.2015` had already produced recognizable images, but the classic objective remained difficult to train reliably. The deep convolutional GAN (DCGAN) of :citet:`Radford.Metz.Chintala.2015` improved reliability through a specific architecture without changing the objective. Its generator upsamples by transposed convolution, its discriminator downsamples by strided convolution, and both networks use batch normalization. The generator uses ReLU activations followed by a tanh output; the discriminator uses leaky ReLU; and Adam uses the reduced momentum parameter $\beta_1 = 0.5$ (:numref:`sec_adam`). Batch normalization controls activation scales as both networks change, tanh matches the generator's range to the scaled image data, and reduced momentum shortens the optimizer's memory in a changing gradient field. The training loss remains the non-saturating log loss of :numref:`sec_basic_gan`. This distinction between architectural stabilization and objective design motivates the controlled comparison later in the section.
+The original GAN and the Laplacian-pyramid GAN :cite:`Denton.Chintala.Szlam.ea.2015` had already produced recognizable images, but the classic objective remained difficult to train reliably. The deep convolutional GAN (DCGAN) of :citet:`Radford.Metz.Chintala.2015` improved reliability through a specific architecture without changing the objective. Its generator upsamples by transposed convolution, its discriminator downsamples by strided convolution, and both networks use batch normalization. The generator uses ReLU activations followed by a tanh output. The discriminator uses leaky ReLU, and Adam uses the reduced momentum parameter $\beta_1 = 0.5$ (:numref:`sec_adam`). Batch normalization controls activation scales as both networks change. The tanh output matches the generator's range to the scaled image data, while reduced momentum shortens the optimizer's memory in a changing gradient field. The training loss remains the non-saturating log loss of :numref:`sec_basic_gan`. The controlled comparison later in the section separates architectural stabilization from objective design.
 
 ### The Pokemon Sprites
 
-The dataset is a collection of 40,597 Pokemon sprite images covering 721 species, in many variants per species, obtained from [pokemondb](https://pokemondb.net/sprites). Sprites suit a from-scratch experiment: the images are small, the objects are centered on clean backgrounds, and the distribution has real diversity in silhouette and palette. Each image is resized to $64 \times 64$ with bilinear resampling and its pixel values are scaled to $[-1, 1]$, the range conventions of this section: real and generated images live on the same scale, and the 2015 generator's tanh output lands in the same interval. We decode the whole dataset into a single tensor up front, since forty thousand small images fit comfortably in memory and every later experiment then draws minibatches by indexing.
+The dataset contains 40,597 Pokemon sprite images obtained from [pokemondb](https://pokemondb.net/sprites). It covers 721 species, with many variants of each species. Sprites are suitable for a from-scratch experiment because they are small, centered on clean backgrounds, and diverse in silhouette and palette. We resize each image to $64 \times 64$ with bilinear resampling and scale its pixel values to $[-1, 1]$. Real and generated images then use the same scale, which also matches the range of the 2015 generator's tanh output. Because the full dataset fits comfortably in memory, we decode it into one tensor and draw subsequent minibatches by indexing.
 
 ```{.python .input #dcgan-the-pokemon-sprites-1}
 %%tab pytorch
@@ -75,7 +75,7 @@ images = np.stack([load_image(f) for f in files])
 images.shape
 ```
 
-A tenth of the images, chosen by a fixed permutation, is held out and never used for training. The held-out sprites serve two purposes later: they let us test whether a trained critic scores training images differently from images it has never seen, which is a question about the critic's overfitting and distinct from whether the *generator* memorizes training images, and they provide the real-data pool against which generated samples are scored. The split is by image, not by species, so variants of one creature can land on both sides; both later uses inherit that caveat.
+A fixed permutation selects one tenth of the images for a held-out set that is never used for training. We use this set both to detect critic overfitting and to evaluate generated samples against unseen real images. Comparing critic scores on the training and held-out sets tests whether the critic has memorized its training images; it does not test whether the *generator* has copied them. The split is by image rather than species, so variants of one creature may appear in both sets. This dependence limits both uses of the holdout set.
 
 ```{.python .input #dcgan-the-pokemon-sprites-2}
 %%tab pytorch
@@ -207,7 +207,7 @@ The discriminator runs the same pipeline in reverse: ordinary strided convolutio
 
 $$\textrm{leaky ReLU}(x) = \begin{cases}x & \textrm{if}\ x > 0,\\ \alpha x & \textrm{otherwise},\end{cases}$$
 
-with slope $\alpha \in (0, 1)$ on the negative side. An ordinary ReLU that outputs zero also passes zero gradient, and a discriminator unit stuck in that state stops informing the generator entirely; the leak keeps a gradient flowing through negative activations, which matters more than usual here because the generator learns only through the discriminator's gradients.
+with slope $\alpha \in (0, 1)$ on the negative side. An ordinary ReLU passes zero gradient whenever its input is negative. A discriminator unit that remains in this regime supplies no gradient to the generator. The nonzero negative slope preserves that gradient path, which is especially important because the generator learns only through derivatives of the discriminator.
 
 ```{.python .input #dcgan-discriminator-1}
 %%tab pytorch
@@ -286,7 +286,7 @@ net_D(jnp.zeros((1, 64, 64, 3))).shape
 
 ### Training with the Classic Loss
 
-The update rules are the ones :numref:`sec_basic_gan` saved to the library: `d2l.update_D` ascends the log-loss objective :eqref:`eq_gan_V` and `d2l.update_G` descends the non-saturating generator loss of :eqref:`eq_gan_weights`. Nothing about them is specific to two-dimensional toys, which is why they were written once. The loop below alternates the two half-steps over shuffled minibatches, following the DCGAN prescription of a shared learning rate and $\beta_1 = 0.5$. Initialization also follows the DCGAN convention, by parameter role: convolution and transposed-convolution kernels are drawn from $\mathcal{N}(0, 0.02^2)$, batch-normalization scales from $\mathcal{N}(1, 0.02^2)$, and all offsets start at zero. Both framework tabs apply this same convention, PyTorch through the `dcgan_init` function below and JAX through the initializers declared in the blocks above.
+The library functions from :numref:`sec_basic_gan` also apply to images. The function `d2l.update_D` ascends the log-loss objective :eqref:`eq_gan_V`, and `d2l.update_G` descends the non-saturating generator loss from :eqref:`eq_gan_weights`. The loop below alternates these updates over shuffled minibatches, with the shared learning rate and $\beta_1 = 0.5$ prescribed by DCGAN. Initialization also follows the DCGAN convention. Convolution and transposed-convolution kernels are drawn from $\mathcal{N}(0, 0.02^2)$, batch-normalization scales from $\mathcal{N}(1, 0.02^2)$, and all offsets start at zero. PyTorch applies this convention through `dcgan_init`; JAX uses the initializers declared in the preceding blocks.
 
 ```{.python .input #dcgan-training-with-the-classic-loss-1}
 %%tab pytorch
@@ -377,13 +377,13 @@ fake = net_G(jax.random.normal(jax.random.PRNGKey(2), (20, 1, 1, 100)))
 d2l.show_images(np.asarray(fake) / 2 + 0.5, num_rows=4, num_cols=5);
 ```
 
-The samples have the main visual properties of the dataset: centered shapes, plausible palettes, rough silhouettes, and clean backgrounds. This result established the practical value of the DCGAN architecture, but it did not change the underlying objective. The mode-dropping minima discussed in :numref:`sec_gan_relativistic` and the divergent dynamics analyzed in :numref:`sec_gan_convergence` remain possible. DCGAN training is consequently sensitive to hyperparameters and can collapse during longer runs. To isolate the contribution of a modern objective, we next use a backbone without normalization or the other DCGAN-specific stabilizers.
+The samples reproduce several visible properties of the dataset: centered shapes, plausible palettes, rough silhouettes, and clean backgrounds. DCGAN made the classic objective practical for image generation, but its architecture does not alter that objective. The mode-dropping minima of :numref:`sec_gan_relativistic` and the divergent dynamics of :numref:`sec_gan_convergence` therefore remain possible. DCGAN remains sensitive to hyperparameters and may collapse during longer runs. To compare objectives directly, we next use a backbone without normalization or other DCGAN-specific stabilizers.
 
 ## A Modern Minimal Backbone
 
 The R3GAN recipe of :numref:`sec_gan_convergence` combines the pairing loss and two zero-centered penalties with a simpler architecture. At the scale of the sprite experiment, we use bilinear interpolation followed by an ordinary $3 \times 3$ convolution for both upsampling and downsampling. This replaces strided and transposed convolutions, whose uneven kernel overlap can produce checkerboard artifacts :cite:`Odena.Dumoulin.Olah.2016`. Both networks use leaky ReLU throughout, and the generator has no tanh output. Neither network uses normalization. Batch normalization would make each critic score depend on the entire minibatch, coupling the per-sample input gradients in :eqref:`eq_gan_r1r2` and confounding the penalty with a second stabilizer. Removing normalization also eliminates running statistics and the distinction between training and evaluation modes, so the update rules of :numref:`sec_basic_gan` apply without special cases.
 
-One design decision deserves explicit statement. The modern generator starts from a learned constant, a $4 \times 4 \times 128$ tensor of trained parameters, rather than from the latent vector itself, so the latent code must enter somewhere. R3GAN's Config E injects it through a *basis layer*: $4 \times 4$ learnable feature maps modulated by $z$ through a linear layer, in a network the paper nonetheless describes as normalization-free. We simplify that mechanism deliberately. A linear layer projects $z$ to a $4 \times 4 \times 100$ map, the map is concatenated with the learned constant along the channel axis, and a $3 \times 3$ mixing convolution fuses the two before the upsampling stack begins. Concatenation is cheaper than modulation and leaves the constant itself untouched. The constant learns a generic sprite scaffold shared by every sample; the concatenated projection of $z$ is the only source of per-sample variation.
+The modern generator begins from a learned $4 \times 4 \times 128$ constant rather than from the latent vector, so it needs a separate path for the latent code. R3GAN's Config E uses a *basis layer*: a linear function of $z$ modulates learned $4 \times 4$ feature maps. We use a simpler mechanism. A linear layer projects $z$ to a $4 \times 4 \times 100$ map, which is concatenated with the learned constant along the channel axis. A $3 \times 3$ convolution mixes the two inputs before upsampling begins. Concatenation costs less than modulation and leaves the constant unchanged. The constant represents features shared across samples, whereas the projected latent code supplies the per-sample variation.
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-1}
 %%tab pytorch
@@ -447,7 +447,7 @@ class Generator(nnx.Module):
         return self.to_rgb(x)                        # no tanh: raw output
 ```
 
-The critic mirrors the generator: four stages of convolution, leaky ReLU, and bilinear *down*sampling take the image from $64 \times 64$ to $4 \times 4$ while the channel count grows, a mixing convolution widens the final map, and a linear head reads out one scalar. The mirror-image structure is deliberate; neither player gets a resolution or capacity advantage the other lacks.
+The critic reverses the generator's resolution schedule. Four stages of convolution, leaky ReLU, and bilinear *down*sampling reduce a $64 \times 64$ image to a $4 \times 4$ feature map while increasing the channel count. A mixing convolution widens the final map, and a linear head produces one scalar. This mirrored design gives the two networks comparable resolution schedules and capacities.
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-2}
 %%tab pytorch
@@ -506,9 +506,9 @@ for net in (Generator(rngs=nnx.Rngs(0)), Discriminator(rngs=nnx.Rngs(0))):
     print(f'{type(net).__name__}: {n} parameters')
 ```
 
-At about 2.8 million generator and 1.6 million critic parameters, this is a small model, and explicitly a reduced instance of the R3GAN design rather than the published Config E: the paper's grouped convolutions, inverted bottlenecks, and residual depth are capacity refinements that matter at its scale and are skipped at ours.
+The generator has about 2.8 million parameters and the critic about 1.6 million. This model is a reduced instance of the R3GAN design rather than the published Config E. We omit its grouped convolutions, inverted bottlenecks, and additional residual depth, which provide capacity at the larger scale considered in that work.
 
-Two training-side ingredients complete the recipe. Real images are augmented with a random horizontal flip: on a dataset this small, a capable critic can begin to memorize individual training images, and augmentation is the standard countermeasure, developed into a feedback-controlled system at scale by :citet:`Karras.Aittala.Hellsten.ea.2020`. And the weights we evaluate are not the raw iterates but an exponential moving average of the generator's parameters, the same weight EMA that :numref:`sec_training_recipes` introduced in :eqref:`eq_ema` for classifiers. It helps doubly here, because the two-player dynamics of :numref:`sec_gan_convergence` rotate as they contract, and averaging along the spiral lands nearer its center; we use a half-life of 500 steps.
+Two additional training choices complete the recipe. First, random horizontal flips augment the real images. A critic with enough capacity can memorize a dataset of this size, and augmentation reduces that risk; :citet:`Karras.Aittala.Hellsten.ea.2020` develops a feedback-controlled version for larger models. Second, evaluation uses an exponential moving average of the generator parameters rather than the raw iterates. This is the weight EMA introduced for classifiers in :eqref:`eq_ema`. The two-player dynamics analyzed in :numref:`sec_gan_convergence` rotate while contracting, so averaging successive iterates also reduces their displacement from the equilibrium. We use a half-life of 500 steps.
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-3}
 %%tab pytorch
@@ -562,9 +562,11 @@ def sample_real(key, images, n):
 
 ## Loss A/B on One Backbone
 
-The controlled comparison uses two training arms with the same backbone and initialization. Every convolutional and linear weight is drawn from $\mathcal{N}(0, 0.02^2)$, following the 2015 convention, and every bias starts at zero. Both frameworks apply the same role-aware convention used for DCGAN above; because this backbone has no normalization parameters, the roles reduce to weights and biases. Within each framework, the two arms therefore begin with identical parameters. Across frameworks, the backbones have the same layers, initialization convention, and antialiased bilinear downsampling, but they are not bitwise identical because each library uses its own random stream. The arms also share Adam with $\beta_1 = 0$ and $\beta_2 = 0.99$ at learning rate $2 \cdot 10^{-4}$, batch size 64, augmentation, EMA, and a budget of 15,000 steps, or about 26 epochs. They differ only in the loss. The first arm uses the classic non-saturating objective through `d2l.update_D` and `d2l.update_G`. The second uses the loss from :numref:`sec_gan_convergence`: the relativistic pairing objective with its non-saturating generator, `d2l.rpgan_loss_D` and `d2l.rpgan_loss_G`, plus both zero-centered penalties from `d2l.r1_r2_penalty`.
+The controlled comparison uses two training arms with the same backbone and initialization. Every convolutional and linear weight is drawn from $\mathcal{N}(0, 0.02^2)$, following the 2015 convention, and every bias starts at zero. Both frameworks apply the same role-aware convention used for DCGAN above; because this backbone has no normalization parameters, the roles reduce to weights and biases. Within each framework, the two arms therefore begin with identical parameters. Across frameworks, the backbones have the same layers, initialization convention, and antialiased bilinear downsampling, but they are not bitwise identical because each library uses its own random stream.
 
-The penalty weight is $\gamma = 10$. The number was picked by sweeping powers of ten on this dataset: weights from 1 to 100 all train stably here, so the choice within that plateau is not delicate, while $\gamma = 0.1$ under-damps the game and training collapses. The plateau itself does not transfer. Across R3GAN's benchmarks the tuned $\gamma$ ranges from 0.05 on CIFAR-10 to 150 on FFHQ-256 :cite:`Huang.Gokaslan.Kuleshov.ea.2024`, so any single value, ours included, travels to a new dataset only as an order-of-magnitude starting point.
+The arms share Adam with $\beta_1 = 0$ and $\beta_2 = 0.99$ at learning rate $2 \cdot 10^{-4}$, batch size 64, augmentation, EMA, and a budget of 15,000 steps, or about 26 epochs. They differ only in the loss. The first arm uses the classic non-saturating objective through `d2l.update_D` and `d2l.update_G`. The second uses the loss from :numref:`sec_gan_convergence`: the relativistic pairing objective with its non-saturating generator, `d2l.rpgan_loss_D` and `d2l.rpgan_loss_G`, plus both zero-centered penalties from `d2l.r1_r2_penalty`.
+
+We set the penalty weight to $\gamma = 10$ after sweeping powers of ten on this dataset. Weights from 1 to 100 train stably, whereas $\gamma = 0.1$ under-damps the game and leads to collapse. This stable range is specific to the experiment. Across the R3GAN benchmarks, the tuned value ranges from 0.05 on CIFAR-10 to 150 on FFHQ-256 :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. A value chosen on one dataset therefore provides only an order-of-magnitude starting point for another.
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-1}
 %%tab pytorch
@@ -661,7 +663,7 @@ def train_backbone(loss_type, gamma=10.0, num_steps=15000, batch_size=64,
     return ema_G, net_D, np.array(history)
 ```
 
-The two runs are the longest computation in this chapter, with the penalized arm the more expensive of the two because the penalty differentiates the critic's input gradient a second time. The stored runs used a single RTX 4090: the pair of arms takes twenty to thirty minutes in PyTorch and about half that in JAX, with peak memory modest at batch size 64. After each run we also record one diagnostic the loop does not need but the analysis does: the trained critic's average score on training images versus held-out images. A critic that has memorized its training set scores the images it trained on higher; a gap near zero says that this critic does not separate the two sets in mean score. Whether the *generator* memorizes training images is a separate question that no critic statistic settles; the direct test is a nearest-neighbor comparison of generated samples against the training set, and :numref:`subsec_gan_limited_data` runs it.
+These two runs are the longest computation in the chapter. The penalized arm costs more because the penalty differentiates the critic's input gradient a second time. On one RTX 4090, the pair takes twenty to thirty minutes in PyTorch and about half that time in JAX; peak memory remains modest at batch size 64. After each run, we compare the critic's mean score on training and held-out images. A positive training--holdout gap is evidence that the critic distinguishes its training set from unseen images, whereas a gap near zero shows no such difference in the mean score. This statistic does not determine whether the *generator* memorizes training images. :numref:`subsec_gan_limited_data` tests generator memorization directly by comparing generated samples with their nearest training images.
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-2}
 %%tab pytorch
@@ -726,11 +728,11 @@ for ax, (name, (ema_G, hist)) in zip(axes, runs.items()):
 fig.tight_layout()
 ```
 
-The classic arm has collapsed completely: all 64 latent codes map to what is visually the same image, a single textured blob repeated across the grid. This is mode collapse at its terminal extreme, one of the mode-dropping minima identified in :numref:`sec_gan_relativistic`. The outcome depends on initialization. Under either framework's default initialization, the classic arm survives this training budget; Exercise 5 runs that control. Here, the $\mathcal{N}(0, 0.02^2)$ convention inherited from the 2015 recipe places optimization within reach of a mode-dropping minimum. A landscape that contains such minima makes the endpoint depend on the starting point, and the classic objective provides no mechanism that excludes collapsed solutions.
+The classic arm collapses: all 64 latent codes produce visually indistinguishable images. This is the most extreme form of mode collapse and corresponds to one of the mode-dropping minima identified in :numref:`sec_gan_relativistic`. The result depends on initialization. With either framework's default initialization, the classic arm remains diverse over this training budget; Exercise 5 performs that control. The $\mathcal{N}(0, 0.02^2)$ initialization inherited from DCGAN instead leads optimization to a mode-dropping minimum. Because the classic objective does not exclude such minima, different starting points can produce different endpoints.
 
-Starting from the same initialization and using the same budget, the penalized relativistic arm produces diverse, creature-shaped sprites. Their silhouettes and palettes vary, none of the 64 images is an obvious repeat, and checkerboard texture is absent. In the best-response theory of :numref:`sec_gan_relativistic`, the pairing objective removes collapsed configurations from the set of minima :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. This experiment changes the loss recipe as a whole, however: it introduces both the pairing objective and the two penalties. It therefore demonstrates a failure and a repaired recipe without isolating the contribution of each ingredient. The three-configuration experiment in :numref:`sec_gan_convergence`, together with the StackedMNIST ablation cited there, provides that separation.
+From the same initialization and with the same training budget, the penalized relativistic arm produces diverse, creature-shaped sprites. The silhouettes and palettes vary, no duplicate is visible, and the grid contains no checkerboard texture. The best-response analysis in :numref:`sec_gan_relativistic` shows that the pairing objective removes collapsed configurations from the set of minima :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. This comparison changes the complete loss recipe, adding both the pairing objective and the two penalties, so it does not isolate their individual effects. The three-configuration experiment in :numref:`sec_gan_convergence` and the StackedMNIST ablation cited there separate these components.
 
-The penalized arm's printed train--holdout gap is near zero, so its critic does not distinguish the two splits by mean score. The classic arm's gap is clearly positive, but it is measured on that critic's inflated score scale; the two gaps are not directly comparable. Neither gap tests whether the generator memorizes training images. That question requires the nearest-neighbor check in :numref:`subsec_gan_limited_data`. A second seed reproduces both outcomes.
+The penalized arm has a train--holdout gap near zero, so its critic assigns similar mean scores to the two splits. The classic arm has a positive gap, but its critic also operates on a much larger score scale; the gap magnitudes are therefore not directly comparable. Neither statistic tests whether the generator memorizes training images. The nearest-neighbor comparison in :numref:`subsec_gan_limited_data` addresses that question. A second seed reproduces both training outcomes.
 
 The grids record only the endpoint of each run. The loss traces below show the dynamics that produced it.
 
@@ -766,32 +768,34 @@ axes[2].set_xlabel('step'), axes[2].legend()
 fig.tight_layout()
 ```
 
-In the classic arm the discriminator wins outright: its loss sits pinned near zero while the generator's swings erratically several times higher, and the third panel shows the mechanism. The classic critic's scores on real images climb without bound, with wild oscillations, while the penalized critic's stay bounded throughout. The penalties of :eqref:`eq_gan_r1r2` tax the input gradient $\nabla_x D$, not the score, so the runaway level is a symptom of an ever-steeper critic rather than the taxed quantity itself; the collapsed generator is what that one-sided gradient field leaves behind. In the penalized arm both losses hover near their equilibrium values, and after an initial transient the critic's real-image score settles into a narrow band. Where the band sits is arbitrary, and it lands somewhere different on every rerun: the pairing objective sees only score *differences*, so the critic's absolute level is the unidentified direction that :numref:`sec_gan_relativistic` proved shift-invariant, and the penalties, which act on gradients, do not pin it either. The stable-but-unanchored level of that third curve is the shift symmetry made visible.
+In the classic arm, the discriminator loss remains near zero while the generator loss is both larger and highly variable. The third panel helps explain this behavior: the critic's scores on real images grow without bound and oscillate widely. By contrast, the penalized critic's scores remain bounded. The penalties in :eqref:`eq_gan_r1r2` act on the input gradient $\nabla_x D$, not on the score itself. The increasing score level therefore accompanies an increasingly steep critic rather than being penalized directly, and the resulting one-sided gradients lead the generator to collapse.
+
+In the penalized arm, both losses remain near their equilibrium values. After an initial transient, the critic's mean score on real images stays within a narrow band. The position of this band varies between runs because the pairing objective depends only on score *differences*. Its absolute level is the shift-invariant direction identified in :numref:`sec_gan_relativistic`, and gradient penalties do not determine that level.
 
 ### Architectural Developments after DCGAN
 
 The preceding comparison moves directly from the 2015 recipe to a 2024 backbone. During the intervening decade, many improvements to image GANs were architectural responses to specific training failures. The pattern predates DCGAN: the Laplacian-pyramid GAN split generation into stages at different scales :cite:`Denton.Chintala.Szlam.ea.2015`, while DCGAN replaced those stages with a single convolutional network stabilized by normalization :cite:`Radford.Metz.Chintala.2015`. Later methods addressed high-resolution instability, critic smoothness, long-range structure, and controllable synthesis in turn.
 
-| Design | Failure it patched |
+| Design | Problem addressed |
 |:--|:--|
 | Progressive growing :cite:`Karras.Aila.Laine.ea.2017` | Instability at high resolution: both networks start at $4 \times 4$ and grow in lockstep, so the game is never played at a resolution before the coarser ones have settled. |
 | Spectral normalization :cite:`Miyato.Kataoka.Koyama.ea.2018` | An unboundedly steep critic: dividing each weight matrix by its largest singular value caps the critic's Lipschitz constant by construction. |
-| Self-attention :cite:`Zhang.Goodfellow.Metaxas.ea.2019` | Missing long-range structure: convolutional players judge texture locally, so attention gives both networks image-wide receptive fields. |
+| Self-attention :cite:`Zhang.Goodfellow.Metaxas.ea.2019` | Missing long-range structure: convolutional networks process texture locally, so attention gives both networks image-wide receptive fields. |
 | BigGAN :cite:`Brock.Donahue.Simonyan.2019` | Small-scale ceilings: large batches, wide networks, and a catalog of stabilizing tricks, with the paper reporting that collapse is delayed rather than removed. |
 | StyleGAN :cite:`Karras.Laine.Aila.2019` | Entangled latent factors: a mapping network and per-layer style modulation separate coarse attributes from fine detail. |
 | StyleGAN2 :cite:`Karras.Laine.Aittala.ea.2020` | Droplet artifacts introduced by StyleGAN's own normalization, which is replaced by weight demodulation. |
 | StyleGAN3 :cite:`Karras.Aittala.Laine.ea.2021` | Texture sticking to pixel coordinates, an aliasing artifact of the resampling stack, which is replaced by band-limited resampling. |
-| Projected discriminators :cite:`Sauer.Chitta.Muller.ea.2021` | Slow, unreliable critic learning: the discriminator judges frozen pretrained features instead of learning image statistics from scratch. |
+| Projected discriminators :cite:`Sauer.Chitta.Muller.ea.2021` | Slow, unreliable critic learning: the discriminator evaluates frozen pretrained features instead of learning image statistics from scratch. |
 
-The second column sorts into two groups. One group meets the chapter's derived pathologies structurally rather than at their source: spectral normalization is the hard-constraint counterpart of the zero-centered penalties, bounding the critic's steepness everywhere instead of taxing it at the data, and progressive growing does not make the high-resolution game convergent, it defers playing it until the low-resolution game has settled. The other group patches earlier patches: StyleGAN2 removes an artifact that StyleGAN's normalization introduced, and StyleGAN3 removes one that the resampling stack introduced. Reading the table this way explains why its devices stack rather than supersede one another --- each treats a symptom, so the symptoms it does not treat remain.
+The methods in the second column address two types of problem. Some impose architectural constraints on pathologies derived earlier in the chapter. Spectral normalization is the hard-constraint counterpart of the zero-centered penalties: it bounds the critic's steepness throughout the input space rather than penalizing gradients at the data. Progressive growing does not make the high-resolution game convergent; it postpones that game until training has established a coarse representation. Other methods correct artifacts introduced by previous architectures. StyleGAN2 removes artifacts caused by StyleGAN's normalization, and StyleGAN3 removes aliasing caused by its resampling stack. These components accumulate because each addresses a different failure.
 
-R3GAN ran the control that this reading calls for :cite:`Huang.Gokaslan.Kuleshov.ea.2024`: fix the objective first --- the pairing loss and both zero-centered penalties, the repairs of :numref:`sec_gan_convergence` that this section's second arm trains with --- and rebuild the backbone as a plain modernized convnet with none of the table's devices: no growing schedule, no spectral normalization, no attention, no style machinery, no pretrained features. On the standard benchmarks that network matches or beats the accumulated stack. The A/B above is the same experiment in miniature, and both point to the same conclusion: much of the decade's architectural sophistication compensated for an ill-posed training signal, and with the signal repaired, ordinary convolutional design practice suffices. What survives of the table on independent grounds is the part that was never about stabilizing the game --- capacity scaling, and attention where an image's long-range structure demands it --- along with a caution attached to the last row: a critic built on pretrained ImageNet features flatters any metric computed in similar features, a coupling the measurements below return to.
+R3GAN tests this distinction directly :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. It first replaces the objective with the pairing loss and both zero-centered penalties from :numref:`sec_gan_convergence`. It then uses a modern convolutional backbone without progressive growing, spectral normalization, attention, style modulation, or pretrained features. On standard benchmarks, this simpler network matches or exceeds the performance of architectures that combine those devices. The smaller comparison above follows the same design. Together, the results suggest that many architectural stabilizers compensated for deficiencies in the training objective. Capacity scaling and attention may still be useful for representational reasons. Pretrained discriminators require a separate caution: ImageNet features in the critic can favor evaluation metrics computed from similar features, a dependence considered below.
 
 ## Measuring Sample Quality
 
-The grids convinced by eye, and eyes do not scale. Comparing checkpoints, sweeping $\gamma$, or claiming that one method beats another requires a number, and the number cannot be a likelihood, since the generator has none. The field's answer is to compare distributions of *features*: pass $n$ real and $n$ generated images through a fixed feature map $\phi$, and measure the discrepancy between the two feature clouds with any of the distribution distances this chapter has developed. The two standard metrics are precisely the chapter's two analytically solvable cases, transplanted into feature space.
+Sample grids reveal gross failures such as collapse, but they do not support systematic comparisons across checkpoints or hyperparameters. An implicit generator also provides no likelihood with which to rank such models. Instead, common metrics pass $n$ real and $n$ generated images through a fixed feature map $\phi$ and compare the resulting feature distributions. The two metrics used here apply the chapter's analytically tractable Wasserstein and MMD cases in this feature space.
 
-The Fréchet inception distance (FID) of :citet:`Heusel.Ramsauer.Unterthiner.ea.2017` fits a Gaussian to each feature cloud, $\mathcal{N}(\mu_p, \Sigma_p)$ to the real features and $\mathcal{N}(\mu_q, \Sigma_q)$ to the generated ones, and reports the squared Wasserstein-2 distance between the two Gaussians. :numref:`sec_gan_objectives` deferred exactly this closed form, the one pair of distributions for which the $W_2$ optimal-transport problem of :eqref:`eq_mdl-w2` has an explicit solution :cite:`Dowson.Landau.1982,Givens.Shortt.1984`:
+The Fréchet inception distance (FID) of :citet:`Heusel.Ramsauer.Unterthiner.ea.2017` fits one Gaussian to each feature distribution: $\mathcal{N}(\mu_p, \Sigma_p)$ for real features and $\mathcal{N}(\mu_q, \Sigma_q)$ for generated features. It reports the squared Wasserstein-2 distance between these Gaussians. This is the closed form deferred in :numref:`sec_gan_objectives`, where the general $W_2$ problem in :eqref:`eq_mdl-w2` had no explicit solution :cite:`Dowson.Landau.1982,Givens.Shortt.1984`:
 
 $$
 \mathrm{FID}
@@ -801,7 +805,7 @@ $$
 $$
 :eqlabel:`eq_gan_fid`
 
-The formula is transparent in the commuting case. If $\Sigma_p$ and $\Sigma_q$ commute they share an eigenbasis; writing $\lambda_i$ and $\nu_i$ for their eigenvalues along it, the matrix $\Sigma_p^{1/2} \Sigma_q \Sigma_p^{1/2}$ has eigenvalues $\lambda_i \nu_i$, and the trace term becomes $\sum_i \big(\sqrt{\lambda_i} - \sqrt{\nu_i}\big)^2$. FID is then the squared distance between the means plus the squared distances between the standard deviations along each shared principal axis, and in one dimension it reduces to $(\mu_p - \mu_q)^2 + (\sigma_p - \sigma_q)^2$ (Exercise 1 derives this from the transport problem). The general, non-commuting formula is the theorem of the citations above. Two costs are built in: the Gaussian fit sees only the first two moments of the feature distribution, and the plug-in estimate from $n$ samples is biased at finite $n$, in a way examined below.
+The commuting case makes the formula easy to interpret. If $\Sigma_p$ and $\Sigma_q$ commute, they share an eigenbasis. Let $\lambda_i$ and $\nu_i$ denote their eigenvalues in this basis. The matrix $\Sigma_p^{1/2} \Sigma_q \Sigma_p^{1/2}$ then has eigenvalues $\lambda_i \nu_i$, and the trace term becomes $\sum_i (\sqrt{\lambda_i}-\sqrt{\nu_i})^2$. FID therefore adds the squared distance between the means to the squared differences between standard deviations along the shared principal axes. In one dimension, it reduces to $(\mu_p-\mu_q)^2+(\sigma_p-\sigma_q)^2$; Exercise 1 derives this expression from optimal transport. The cited results establish the non-commuting case. FID has two immediate limitations: the Gaussian approximation retains only the first two feature moments, and its plug-in estimate is biased for finite $n$.
 
 The kernel inception distance (KID) of :citet:`Binkowski.Sutherland.Arbel.ea.2018` uses the chapter's other closed form, the maximum mean discrepancy. Its population value is the kernel expression :eqref:`eq_mdl-mmd2`, and KID reports the *unbiased* estimator of that quantity, the U-statistic that omits the diagonal self-similarity terms:
 
@@ -841,7 +845,7 @@ def kid_score(feat_p, feat_q):
 
 ### A Feature Network Trained in the Notebook
 
-Both metrics require a feature map $\phi$. Published FID usually uses pooled features from an Inception-v3 classifier trained on ImageNet. To keep the experiment reproducible within the notebook, we instead train a small convolutional classifier on CIFAR-10 in about two minutes and use its 128-dimensional penultimate layer as $\phi$. The resulting setup retains an important limitation of standard FID: features trained on one distribution, here natural photographs from ten classes, are used to score another distribution, here sprites. We train the network on bilinearly upsampled $64 \times 64$ CIFAR-10 images rather than downsampling the sprites to $32 \times 32$. Downsampling the generated images could suppress checkerboard texture and lost fine detail, which are among the artifacts the metric should detect.
+Both metrics require a feature map $\phi$. Published FID usually uses pooled features from an Inception-v3 classifier trained on ImageNet. To keep the experiment reproducible within the notebook, we train a small convolutional classifier on CIFAR-10 in about two minutes and use its 128-dimensional penultimate layer as $\phi$. This choice retains a limitation of standard FID: features learned on one distribution, here natural photographs from ten classes, evaluate another distribution, here sprites. We train the network on bilinearly upsampled $64 \times 64$ CIFAR-10 images rather than downsampling the sprites to $32 \times 32$. Downsampling generated images could suppress checkerboard texture and lost fine detail that the metric should detect.
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-1}
 %%tab pytorch
@@ -1038,22 +1042,26 @@ for name, (ema_G, hist) in runs.items():
 
 Both scores rank the penalized relativistic run far above the collapsed classic run. The gap between the arms is two orders of magnitude larger than the real-versus-real reference, so estimator noise at this scale is unlikely to reverse the ordering. The numerical values remain specific to this run and feature network, but reruns with different feature-network seeds and larger sample sizes preserve the ordering. The reference row also demonstrates the finite-sample behavior described above: real-versus-real FD is positive because the fitted moments of two finite samples differ, whereas the unbiased $\mathrm{MMD}^2$ estimate fluctuates around zero.
 
-The main limitations are structural rather than numerical. First, both scores depend on the feature network as well as on the generator. Our CIFAR-trained CNN emphasizes properties useful for CIFAR-10 classification, just as Inception features emphasize properties useful for ImageNet classification. A different feature network changes the values and may change the ordering when two models are close (Exercise 3 tests this). Second, metric features can interact with the training procedure. Because Inception features encode ImageNet class structure, FID can be reduced by matching the ImageNet class histogram of the real data without a visible improvement in quality. Discriminators that use ImageNet-pretrained features can partly exploit this dependence :cite:`Kynkaanniemi.Karras.Aittala.ea.2023`, so R3GAN reports results without pretrained discriminators :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Third, image preprocessing matters. Incorrect antialiasing during resizing can shift FID by amounts comparable to the gaps between published methods :cite:`Parmar.Zhang.Zhu.2022`; this is why our feature network is trained at the sprites' native resolution. Fourth, the finite-sample bias shown by the reference row depends on the model as well as on $n$. At small sample sizes, bias alone can reverse the ordering of two models :cite:`Chong.Forsyth.2020` (Exercise 2 measures the effect).
+The main limitations concern the evaluation design. First, each score depends on the feature network as well as the generator. Our CIFAR-trained CNN emphasizes properties useful for CIFAR-10 classification, just as Inception features emphasize properties useful for ImageNet classification. Changing the feature network changes the values and may reverse the ordering of two similar models; Exercise 3 tests this dependence.
 
-A single number also conflates two failures that this chapter has treated as distinct: samples that look wrong, and samples that miss modes of the data. The precision and recall metrics of :citet:`Kynkaanniemi.Karras.Laine.ea.2019` separate them by comparing feature-space neighborhoods, precision asking what fraction of generated samples land inside the support of the real features, recall asking what fraction of real samples are covered by the generated ones. A collapsed generator such as our classic arm can retain nonzero precision, its one blob may sit near the data manifold, while its recall is near zero; that asymmetry is invisible inside a single FID value. Recall is the diversity number R3GAN reports alongside FID, and the fidelity--coverage split recurs throughout the evaluation literature.
+Second, the evaluation features may overlap with features used during training. Matching the ImageNet class histogram of the real data can reduce Inception-based FID without a visible improvement in sample quality. A discriminator built from ImageNet-pretrained features may exploit this dependence :cite:`Kynkaanniemi.Karras.Aittala.ea.2023`; R3GAN therefore reports results without pretrained discriminators :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Third, preprocessing affects the score. Incorrect antialiasing during resizing can shift FID by amounts comparable to reported differences between methods :cite:`Parmar.Zhang.Zhu.2022`. We avoid one such change by training the feature network at the sprites' native resolution. Finally, the finite-sample bias shown by the reference row depends on both the model and $n$. At small sample sizes, this bias alone can reverse a ranking :cite:`Chong.Forsyth.2020`; Exercise 2 measures the effect.
+
+A single score also combines two distinct failures: low-fidelity samples and missing modes. The precision and recall metrics of :citet:`Kynkaanniemi.Karras.Laine.ea.2019` separate them through feature-space neighborhoods. Precision measures the fraction of generated samples that lie within the support of the real features; recall measures the fraction of real samples covered by generated features. A collapsed generator can retain nonzero precision if its single output lies near the data manifold, while its recall approaches zero. FID does not expose this asymmetry. R3GAN therefore reports recall as a separate measure of diversity alongside FID.
 
 ## Limited Data, Scale, and Scope
 
 ### Training on Limited Data
 :label:`subsec_gan_limited_data`
 
-Forty thousand sprites is a small dataset by the standards of the critic trained on it. Over this section's budget of 15,000 steps at batch size 64, the critic revisits each training image roughly twenty-five times, and nothing in the game requires it to respond by estimating a density ratio: a network with 1.6 million parameters can instead begin to recognize the training images individually. As the critic overfits, its scores on training reals rise while its scores on everything else, held-out reals included, fall. The training signal then degenerates, because the generator is no longer pushed toward the data distribution but toward membership in a finite set, and sample quality decays as the critic's judgments detach from anything a fresh image could satisfy. This failure is why the A/B loop measured the critic's train--holdout score gap: that gap is the overfitting statistic, near zero for the penalized arm on this dataset, and it is the number to watch as the dataset shrinks, since the fewer real images there are, the sooner a critic of fixed capacity separates them from the rest of image space :cite:`Karras.Aittala.Hellsten.ea.2020`.
+Forty thousand sprites is a small dataset for a critic with 1.6 million parameters. During 15,000 steps at batch size 64, the critic sees each training image about twenty-five times on average. Rather than approximating a density ratio, it can begin to recognize individual training images. An overfit critic assigns higher scores to training images than to held-out real images. Its generator update then favors resemblance to a finite training set rather than the broader data distribution, and sample quality may decline. The A/B experiment therefore records the critic's train--holdout score gap. This gap is near zero for the penalized arm on the present dataset. As the dataset shrinks, a fixed-capacity critic can separate training images from the rest of image space sooner, so the gap becomes an informative diagnostic :cite:`Karras.Aittala.Hellsten.ea.2020`.
 
-Augmentation is the countermeasure, and where the augmentation is applied decides what it does. Our loop flips real images horizontally, which is dataset augmentation in the ordinary sense: a mirrored sprite is a plausible sprite, so the enlarged set describes the same distribution. Most augmentations lack this property. Train the critic on color-jittered or cutout-erased reals, and the generator, which learns only what the critic rewards, matches the *augmented* distribution --- the jitter and the erasure rectangles turn up in its samples. Differentiable augmentation :cite:`Zhao.Liu.Lin.ea.2020` removes the restriction by transforming both of the critic's input streams instead of the dataset: the same random transformation is applied to real and generated images before the critic scores them, in the discriminator update and the generator update alike, and the transformation is differentiable so that the generator's gradient passes through it. Memorization breaks because the critic never sees a training image the same way twice. The target stays intact because both distributions pass through the identical transformation, so matching the transformed pair still matches the originals, provided the transformation does not map distinct distributions to the same one --- the condition :citet:`Karras.Aittala.Hellsten.ea.2020` make precise as *non-leaking*.
+Augmentation reduces critic memorization, but its placement determines the target distribution. Our loop flips only real images, treating the sprite distribution as approximately invariant to horizontal reflection. The plausibility of individual mirrored sprites alone would not establish exact invariance. Color jitter or cutout does not generally preserve that distribution. If these transformations are applied only to real images, the generator is trained to reproduce the transformed distribution and may generate color shifts or erased regions.
 
-The remaining choice is strength: too little augmentation fails to stop the critic from memorizing, too much makes its task needlessly hard. Adaptive discriminator augmentation :cite:`Karras.Aittala.Hellsten.ea.2020` closes a feedback loop around this choice, raising the probability of augmentation while an overfitting statistic sits above a target and lowering it otherwise. One of their candidate statistics is built from exactly the train-versus-validation score gap our loop prints; the one they adopt, computed from the critic's scores on training reals alone, tracks the same drift without spending images on a holdout set. Under this control, StyleGAN2 trains to competitive quality on datasets of a few thousand images, roughly an order of magnitude smaller than its usual training sets.
+Differentiable augmentation instead applies the same random transformation to real and generated inputs during both updates :cite:`Zhao.Liu.Lin.ea.2020`. The transformation remains in the generator's differentiation path. Because the critic observes multiple transformed versions of each training image, direct memorization becomes harder. Applying the transformation to both distributions preserves the original matching problem when the transformation cannot map distinct distributions to the same one. :citet:`Karras.Aittala.Hellsten.ea.2020` call this requirement *non-leaking*.
 
-A critic that memorizes is one hazard; a generator that memorizes is a different one, and no critic-side statistic measures it, because every such statistic describes the state of the game rather than the origin of the samples. The direct test compares distances. Embed the penalized arm's samples, the same 500 scored above, in the feature space of this section's CIFAR-CNN, and find each sample's nearest training image. The distances mean nothing on their own; calibration comes from the held-out sprites, genuine new images from the same distribution, embedded and matched against the training set the same way. A copying generator would place its samples closer to individual training images than fresh real images sit to theirs. Recall from the data split that many held-out sprites have a near-variant of themselves in the training set; that pulls the calibration distances down, so only pronounced copying would clear the bar.
+The augmentation strength must also be controlled. Too little augmentation permits memorization, whereas too much makes the classification problem unnecessarily difficult. Adaptive discriminator augmentation changes the augmentation probability in response to an overfitting statistic :cite:`Karras.Aittala.Hellsten.ea.2020`. The authors considered the train--validation score gap used here, but adopted a related statistic computed from training images alone so that no data need be withheld. With this control, StyleGAN2 attains competitive quality on datasets of a few thousand images, about an order of magnitude smaller than its usual training sets.
+
+Critic memorization and generator memorization require different diagnostics. To test the generator directly, we embed the same 500 generated samples used above in the CIFAR-CNN feature space and find each sample's nearest training image. We calibrate these distances by matching held-out sprites against the same training set. A generator that copies its training data should place generated samples closer to individual training images than genuine held-out images are. Because variants of the same species may occur in both data splits, some held-out sprites already have close training neighbors. This makes the comparison conservative: it will detect pronounced copying but may miss more subtle reuse.
 
 ```{.python .input #dcgan-training-on-limited-data}
 %%tab pytorch
@@ -1101,7 +1109,9 @@ pairs = jnp.concatenate([gen[closest], train_imgs[nn_idx[closest]]])
 d2l.show_images(np.asarray(pairs) / 2 + 0.5, num_rows=2, num_cols=8);
 ```
 
-The printed medians answer the calibration question, and by a wider margin than the test requires: the generated samples sit *farther* from the training set than the held-out sprites do, in the runs above by a factor of two to three, with none of the collapse toward zero that copying would produce. The direction makes sense --- many held-out sprites have a near-variant of themselves in the training set, while the generator's samples have no such twins. The grid says the same thing about individuals. Its top row shows the eight generated samples nearest to any training image, its bottom row those nearest neighbors, and even these closest pairs are different creatures: they share a palette and a rough silhouette, but the generated member is softer and less articulated than any stored sprite. Two limits keep the conclusion in scope. The distances are measured as the CIFAR-CNN measures them, so the check screens for wholesale copying and cannot rule out memorized parts recombined. And the verdict is a property of this generator on this dataset: hold the budget fixed while shrinking the training set, and this same diagnostic is the one that would catch the generator crossing into memorization. Exercise 6 extends the check to mirrored candidates and to pixel space.
+The generated samples are farther from the training set than the held-out sprites are, by a factor of two to three in the recorded runs. Copying would instead drive the generated distances toward zero. The lower held-out distances are consistent with the data split: many held-out sprites have a variant of the same species in the training set. The grid gives an image-level comparison. Its top row contains the eight generated samples closest to the training set, and its bottom row contains their nearest neighbors. Even these pairs depict different creatures; they share palettes or coarse silhouettes, but the generated samples are softer and less articulated.
+
+This test has two limitations. Distances are defined by the CIFAR-CNN features, so they can detect direct copying but cannot rule out recombination of memorized parts. The result also applies only to this generator and dataset. Repeating the diagnostic after reducing the training set would reveal whether the generator begins to memorize under greater data scarcity. Exercise 6 extends the comparison to mirrored candidates and raw pixels.
 
 ### Scale
 
@@ -1109,7 +1119,7 @@ The sprite experiment uses far less computation than published large-scale resul
 
 Larger experiments require different schedules and numerical settings while using the same underlying objective and regularization. The penalty weight depends on resolution and dataset, ranging from 0.05 to 150 across R3GAN's benchmarks compared with 10 here, and it is decayed together with the learning rate. R3GAN reports that mixed-precision training fails with FP16 and succeeds with BF16. The EMA half-life grows to millions of images and follows its own schedule, while the augmentation probability is tuned or controlled by feedback :cite:`Karras.Aittala.Hellsten.ea.2020`. These choices set the operating regime of the same method at larger scale.
 
-We have now specified an end-to-end image GAN pipeline: an objective, regularization, an architecture, and evaluation metrics. Each component follows from the analysis in :numref:`sec_basic_gan` through :numref:`sec_gan_convergence`. The remaining capability is conditional control: selecting a class, caption, or source image. :numref:`sec_gan_conditional` develops that extension. Diffusion models for large-scale image generation are covered in :numref:`chap_diffusion`, image-specific applications in :numref:`chap_cv`, and the roles of adversarial losses inside current systems in :numref:`sec_gan_beyond`.
+The resulting image-generation pipeline specifies an objective, regularization, an architecture, and evaluation metrics. Each component follows from the analysis in :numref:`sec_basic_gan` through :numref:`sec_gan_convergence`. The next section adds conditional control through a class, caption, or source image. :numref:`chap_diffusion` covers diffusion models for large-scale image generation, :numref:`chap_cv` develops image-specific applications, and :numref:`sec_gan_beyond` examines adversarial losses within current systems.
 
 ## Summary
 
@@ -1151,17 +1161,17 @@ architectural commitments:
 
 . . .
 
-Each choice tames the statistics flowing between the players. The objective
-underneath is untouched: the same non-saturating log loss of
+Together, these choices control activation and optimizer statistics as the
+two networks change. The objective remains the non-saturating log loss of
 :numref:`sec_basic_gan`.
 :::
 
 ::: {.slide title="The Historical Baseline on Pokemon Sprites"}
 @!dcgan-training-with-the-classic-loss-3
 
-Sprite-like blobs: plausible palettes, rough silhouettes. The landmark of
-2015 — but the mode-dropping landscape and divergent dynamics are properties
-of the *loss*, and normalization does not remove them.
+The samples have plausible palettes and rough sprite-like silhouettes.
+The architecture made the classic loss practical on images, but normalization
+does not remove its mode-dropping minima or divergent dynamics.
 :::
 
 ::: {.slide title="A Modern Minimal Backbone"}
@@ -1194,9 +1204,9 @@ value is portable.
 
 . . .
 
-The arms differ by the loss **recipe as a whole** (pairing + penalties
-together): one failure case, one repaired recipe. Ingredient isolation
-lives in :numref:`sec_gan_convergence`'s toy + the StackedMNIST ablation.
+The arms differ in the complete loss recipe: pairing and penalties change
+together. The toy experiment in :numref:`sec_gan_convergence` and the cited
+StackedMNIST ablation isolate the individual components.
 :::
 
 ::: {.slide title="The Penalized Relativistic Loss Avoids Collapse"}
@@ -1212,15 +1222,15 @@ lives in :numref:`sec_gan_convergence`'s toy + the StackedMNIST ablation.
   check of :numref:`subsec_gan_limited_data`.
 :::
 
-::: {.slide title="Critic Scores Diverge without the Penalties"}
+::: {.slide title="Critic Scores Diverge under the Classic Recipe"}
 @!dcgan-loss-a-b-on-one-backbone-4
 
-- Classic: $D$'s loss pinned near 0; its real-image scores climb without
-  bound, with wild oscillations — the ever-steeper critic whose input
-  gradient $\nabla_x D$ the zero-centered penalties exist to tax.
-- Penalized: losses hover at equilibrium; the critic's level settles into a
-  narrow band whose location is arbitrary — the pairing objective's
-  **shift invariance** made visible.
+- Classic: $D$'s loss remains near 0, while its real-image scores grow
+  without bound and oscillate widely.
+- Penalized: both losses remain near equilibrium. The critic's mean score stays
+  within a narrow band whose location is arbitrary because the pairing
+  objective is **shift invariant**. The A/B changes the objective and penalties
+  together, so it does not isolate the source of the bounded behavior.
 :::
 
 ::: {.slide title="FID Is the Gaussian W2 Closed Form"}
@@ -1247,9 +1257,9 @@ magnitude below the gap.
 :::
 
 ::: {.slide title="What the Numbers Do Not Settle"}
-- **Feature dependence**: scores are functions of $\phi$ first — our
-  CIFAR-trained CNN scoring sprites *is* Inception-on-ImageNet in
-  miniature.
+- **Feature dependence**: scores depend on $\phi$. Using a CIFAR-trained
+  CNN to score sprites has the same type of distribution mismatch as using an
+  ImageNet-trained Inception network on other image domains.
 - **Leakage**: FID drops by matching ImageNet class histograms
   (Kynkäänniemi et al., 2023); R3GAN avoids pretrained discriminators for
   this reason.
@@ -1272,9 +1282,10 @@ magnitude below the gap.
 
 @!dcgan-training-on-limited-data
 
-Generator-side check, calibrated by held-out reals: generated samples sit
-*farther* from the training set than fresh sprites do, and the closest
-pairs are different creatures — no sign of copying.
+The generator-side check is calibrated with held-out real images.
+Generated samples lie farther from the training set than held-out sprites do,
+and even the closest pairs depict different creatures. This test finds no
+evidence of direct copying.
 :::
 
 ::: {.slide title="Scale Changes the Constants, Not the Recipe"}
@@ -1295,16 +1306,16 @@ Mimg, tuned augmentation. Steering the sampler with a class or caption:
 ::: {.slide title="Recap"}
 - 2015: architecture stabilizes the classic objective. The modern recipe
   combines a regularized objective with a simpler backbone.
-- The decade between — growing, spectral norm, attention, style blocks —
-  patched symptoms the repaired loss removes at the source (R3GAN's
-  control).
+- Progressive growing, spectral normalization, attention, and style blocks
+  address distinct architectural and optimization problems. R3GAN's control
+  shows which stabilizers become unnecessary after changing the objective.
 - Same backbone, same budget: classic loss **collapses completely** from
   the 2015-recipe init (framework defaults survive the budget);
   RpGAN + $R_1{+}R_2$ at $\gamma = 10$ trains stably to diverse sprites.
 - FID = Bures–Wasserstein $W_2^2$; KID = unbiased MMD — the chapter's two
   closed forms, in learned feature space.
-- Both rank B far above A; the ordering is robust, the values are not the
-  point.
+- Both metrics strongly prefer the penalized arm; the ordering is more
+  transferable than the numerical values.
 - Every metric inherits its meaning from its feature network.
 - Next: steering the sampler with conditions (:numref:`sec_gan_conditional`),
   then where the adversarial loss survives beyond stand-alone GANs

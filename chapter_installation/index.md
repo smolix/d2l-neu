@@ -4,8 +4,8 @@
 The examples in this book are available as Jupyter notebooks for PyTorch, JAX,
 TensorFlow, and MXNet. Each framework download contains the notebooks, their
 saved outputs, the figures they reference, the matching `d2l` source code, and
-pinned CPU and GPU environments. This makes a notebook bundle the shortest path
-to running the book locally.
+pinned CPU and GPU environments. The framework-specific bundle is therefore
+the simplest way to run the book locally.
 
 The downloads are ZIP archives rather than tar-gzipped files. Saved outputs can
 be read without installing a framework. Running the notebooks requires Python,
@@ -38,7 +38,7 @@ framework-specific ZIP above is smaller and requires fewer build tools.
 
 ## Install uv
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) manages both the
+[uv](https://docs.astral.sh/uv/getting-started/installation/) manages the
 Python interpreter and the packages used by the notebooks. Conda is not needed.
 On macOS or Linux, install uv with its standalone installer or a system package
 manager:
@@ -193,6 +193,6 @@ Consequently, executing data-dependent notebooks requires an internet
 connection and additional disk space even though reading their saved outputs
 does not.
 
-Some later examples also require more memory or execution time than a typical
-laptop provides. Begin with the CPU environment and the early chapters, then
-move to the GPU environment or a remote machine when the workload warrants it.
+Some later examples require more memory or execution time than a typical laptop
+provides. Begin with the CPU environment and the early chapters; move to a GPU
+or a remote machine when the workload requires it.

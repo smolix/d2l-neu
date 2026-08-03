@@ -76,9 +76,9 @@ import optax
 ### A Normalizer-Free Objective
 
 Fitting a density $p_{\boldsymbol{\theta}}$ to data by maximum likelihood
-requires evaluating its normalizing constant, for a neural-network
-energy-based model a $d$-dimensional integral with no closed form. The
-**score** $\nabla_{\mathbf{x}} \log p_{\boldsymbol{\theta}}$ never sees that
+requires evaluating its normalizing constant, which for a neural-network
+energy-based model is a $d$-dimensional integral with no closed form. The
+**score** $\nabla_{\mathbf{x}} \log p_{\boldsymbol{\theta}}$ is independent of that
 constant (:eqref:`eq_mdl-score-def`; re-derived for energy-based models in
 :numref:`sec_mdl-score-function`). Objectives and samplers formulated only in
 terms of scores therefore need not evaluate that constant. Instead of matching densities, match
@@ -120,8 +120,7 @@ is the divergence and $C$ does not depend on $\boldsymbol{\theta}$.*
 **Proof.** Expand the square in :eqref:`eq_mdl-esm-objective`: the term
 $\tfrac12 \mathbb{E}\|\nabla \log p\|^2$ is the constant $C$, the term
 $\tfrac12 \mathbb{E}\|\mathbf{s}_{\boldsymbol{\theta}}\|^2$ appears verbatim in
-:eqref:`eq_mdl-hyvarinen`, and the cross term is the one that needs work. In
-one dimension,
+:eqref:`eq_mdl-hyvarinen`, and it remains to transform the cross term. In one dimension,
 
 $$
 -\mathbb{E}_{x \sim p}\left[ s_{\boldsymbol{\theta}}(x)\, (\log p)'(x) \right]
@@ -132,7 +131,7 @@ $$
 and integrating by parts with the boundary term
 $\left[ s_{\boldsymbol{\theta}} \, p \right]_{-\infty}^{\infty} = 0$ leaves
 $+\int s_{\boldsymbol{\theta}}'(x)\, p(x)\, dx = \mathbb{E}_p[s_{\boldsymbol{\theta}}']$.
-The unknown score has disappeared into a derivative of the *model*. In $d$
+This step replaces the unknown score with a derivative of the *model*. In $d$
 dimensions, apply the same one-dimensional step to each coordinate $i$ (with
 $s_i$ in place of $s_{\boldsymbol{\theta}}$ and $\partial_i p$ in place of
 $p'$, integrating coordinate-wise, which Fubini justifies under the stated
@@ -143,11 +142,11 @@ $\blacksquare$
 Every quantity in :eqref:`eq_mdl-hyvarinen` is an expectation under $p$ of
 something we can evaluate, so we can minimize it from samples alone, with no
 $Z_{\boldsymbol{\theta}}$ and no $\nabla \log p$; the right-hand side is called
-**implicit score matching**. The intuition for the two terms:
-the $\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}}$ term rewards score fields
-that point *inward* toward the data (negative divergence at the samples, like
-$-\nabla E$ near a minimum), while $\tfrac12\|\mathbf{s}_{\boldsymbol{\theta}}\|^2$
-stops the field from growing without bound.
+**implicit score matching**. The two terms have complementary effects. The
+$\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}}$ term favors score fields with
+negative divergence at the samples, as for $-\nabla E$ near a minimum, while
+$\tfrac12\|\mathbf{s}_{\boldsymbol{\theta}}\|^2$ penalizes fields of unbounded
+magnitude.
 
 Implicit score matching is expensive in high dimensions. The divergence is
 the trace of the Jacobian,
@@ -176,9 +175,9 @@ p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) = \mathcal{N}(\tilde{\mathbf{x}};\,
 $$
 
 The noised marginal $p_\sigma(\tilde{\mathbf{x}}) = \int p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})\, p(\mathbf{x})\, d\mathbf{x}$
-is the data density convolved with a Gaussian: for small $\sigma$, a faithful
-smoothing of $p$. Its score is still intractable. But the score of the
-*conditional* is a one-line computation: taking $\log$ of the Gaussian density,
+is the data density convolved with a Gaussian and approaches $p$ as
+$\sigma$ decreases. Its score is still intractable, but the score of the
+*conditional* follows directly by taking $\log$ of the Gaussian density:
 
 $$
 \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})
@@ -187,8 +186,8 @@ $$
 $$
 :eqlabel:`eq_mdl-dsm-target`
 
-It points from the noisy point toward its clean origin. **Denoising score
-matching** (DSM) regresses on that:
+This vector points from the noisy observation toward the corresponding clean
+sample. **Denoising score matching** (DSM) uses it as a regression target:
 
 $$
 J_{\mathrm{DSM}}(\boldsymbol{\theta})
@@ -223,7 +222,7 @@ conditional mean $\mathbf{m}(X)$, up to an additive constant.*
 $2\, \mathbb{E}\left[ (\mathbf{v}(X) - \mathbf{m}(X))^\top (\mathbf{m}(X) - Y) \right]$;
 conditioning on $X$ (the tower rule,
 :numref:`sec_mdl-random_variables`) and using
-$\mathbb{E}[\mathbf{m}(X) - Y \mid X] = \mathbf{0}$ kills it. $\blacksquare$
+$\mathbb{E}[\mathbf{m}(X) - Y \mid X] = \mathbf{0}$ makes it vanish. $\blacksquare$
 
 **Proposition (Vincent's theorem).** *Under the conditions above, with
 expectations finite,*
@@ -256,19 +255,19 @@ where the first equality writes out the posterior
 $p(\mathbf{x} \mid \tilde{\mathbf{x}})$ by Bayes' rule and the second swaps the
 gradient with the integral. $\blacksquare$
 
-Notice what the proof did *not* use: that the kernel is Gaussian. Any smooth
-noising kernel works; the Gaussian is chosen because its conditional score
-:eqref:`eq_mdl-dsm-target` is linear in the noise, making the regression target
-trivial. By :eqref:`eq_mdl-dsm-target`, predicting the score and predicting the
-noise $\boldsymbol{\epsilon}$ are the same task up to the factor $-1/\sigma$:
-the "$\boldsymbol{\epsilon}$-prediction" of diffusion models, three
-sections early. Two corollaries follow.
+The proof does not require a Gaussian kernel: any smooth noising kernel
+satisfying the stated conditions works. Gaussian noise is convenient because
+its conditional score :eqref:`eq_mdl-dsm-target` is linear in the noise. By
+:eqref:`eq_mdl-dsm-target`, predicting the score and predicting the noise
+$\boldsymbol{\epsilon}$ differ only by the factor $-1/\sigma$; this is the
+$\boldsymbol{\epsilon}$-prediction parameterization used in diffusion models.
+Two corollaries follow.
 
 * **Tweedie's formula** :cite:`Efron.2011`. Rearranging
   $\mathbb{E}[(\mathbf{x} - \tilde{\mathbf{x}})/\sigma^2 \mid \tilde{\mathbf{x}}] = \nabla \log p_\sigma(\tilde{\mathbf{x}})$
   gives
   $\mathbb{E}[\mathbf{x} \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma^2\, \nabla \log p_\sigma(\tilde{\mathbf{x}})$:
-  *the optimal denoiser is a step up the score*
+  *the optimal denoiser adds a score-based correction*
   (:numref:`fig_mdl-dyn-tweedie`). Under squared error and Gaussian
   corruption, the posterior-mean denoiser is determined by the marginal score.
 * **The population loss need not go to zero.** By :eqref:`eq_mdl-regression-lemma`, the DSM
@@ -281,7 +280,7 @@ sections early. Two corollaries follow.
   optimization error, so it should be compared with an estimated Bayes-risk
   floor rather than with zero.
 
-![Tweedie's formula. A noisy observation $\tilde{x}$ sits in the low-density valley of the smoothed mixture $p_\sigma$; the exact posterior over its clean origin is bimodal but lopsided, and the single step up the score, $\tilde{x} + \sigma^2 \nabla \log p_\sigma(\tilde{x})$, lands exactly on the posterior mean $\hat{x}_0$, the optimal denoiser.](../img/mdl-dyn-tweedie.svg)
+![Tweedie's formula. A noisy observation $\tilde{x}$ lies in the low-density valley of the smoothed mixture $p_\sigma$. Its posterior clean-data distribution is bimodal but asymmetric, and the score correction $\tilde{x} + \sigma^2 \nabla \log p_\sigma(\tilde{x})$ equals the posterior mean $\hat{x}_0$, the optimal denoiser.](../img/mdl-dyn-tweedie.svg)
 :label:`fig_mdl-dyn-tweedie`
 
 ### A Score Network in One Dimension
@@ -295,10 +294,10 @@ targets are $-\epsilon/\sigma$, and training requires samples rather than an
 analytic expression for the true density. Because the noised marginal is
 again a Gaussian mixture (variance
 $0.5^2 + \sigma^2 = 0.5$ per component), we have the analytic
-$\nabla \log p_\sigma$ to grade the result against. The network is small enough
-that we write its forward pass, its backward pass
-(:numref:`sec_mdl-matrix-calculus-autodiff`), and an Adam update by hand in
-plain NumPy, with no framework in the loop.
+$\nabla \log p_\sigma$ against which to evaluate the result. The network is
+small enough that we write its forward pass, its backward pass
+(:numref:`sec_mdl-matrix-calculus-autodiff`), and an Adam update directly in
+plain NumPy, without an automatic-differentiation framework.
 
 ```{.python .input #score-matching-diffusion-flow-dsm-train}
 rng = np.random.default_rng(7)
@@ -351,11 +350,11 @@ consistent with little reducible error remaining in this particular fit.
 
 ### Scores Across Noise Levels
 
-A single noise scale $\sigma$ leaves a dilemma. Small $\sigma$ makes
-$p_\sigma \approx p$, but then noised samples rarely visit low-density regions,
-so the learned score is poorly constrained where a sampler starting from random
-noise may need it. Large $\sigma$ covers space, but estimates the score of the
-wrong (over-smoothed) density. The resolution
+A single noise scale $\sigma$ creates a trade-off. Small $\sigma$ makes
+$p_\sigma \approx p$, but noised samples then seldom enter low-density regions,
+so the learned score is poorly constrained where a sampler initialized from
+random noise may need it. Large $\sigma$ provides broader coverage but
+estimates the score of an over-smoothed density. The standard solution
 :cite:`song2019generative,song2021score`: learn the score at *every* noise level
 along a forward process that moves the data toward a tractable reference, by making the
 network noise-conditional, $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t)$
@@ -378,7 +377,7 @@ the one-dimensional density movie in :numref:`fig_mdl-dyn-forward-reverse`).
   the signal as it adds noise so that unit-variance data keeps unit variance
   for *all* $t$ (shown for the discrete chain below).
 
-![A two-moons cloud under the VP forward process at $t = 0$, $t = 0.7$, and $t = T$ (top row, left to right) dissolving into an isotropic Gaussian. The bottom row traverses the same marginals in reverse, right to left: the reverse process rebuilds the data, with short arrows showing the score field steering the samples.](../img/mdl-dyn-noising-denoising.svg)
+![A two-moons distribution under the VP forward process at $t = 0$, $t = 0.7$, and $t = T$ (top row, left to right), approaching an isotropic Gaussian. The bottom row traverses the same marginals in reverse, right to left; short arrows show the score field used to recover the data distribution.](../img/mdl-dyn-noising-denoising.svg)
 :label:`fig_mdl-dyn-noising-denoising`
 
 In both cases the transition kernel $p_t(\mathbf{x}_t \mid \mathbf{x}_0)$ is an
@@ -408,8 +407,8 @@ sample quality rather than for that bound. Generation then follows the program o
 start from the chosen terminal reference (approximately Gaussian at finite
 noising time) and integrate either the reverse-time
 SDE :cite:`Anderson.1982` or the probability-flow ODE, with
-$\mathbf{s}_{\boldsymbol{\theta}}$ standing in for the true score. Forward
-A generative model is specified by this combination of forward process,
+$\mathbf{s}_{\boldsymbol{\theta}}$ standing in for the true score. A generative
+model is specified by this combination of forward process,
 learned score, and numerical sampler.
 
 ::: {.callout-important title="Two clocks: the time conventions of diffusion and flow matching"}
@@ -495,11 +494,11 @@ variances:
 $\alpha_t (1 - \bar{\alpha}_{t-1}) + \beta_t = \alpha_t - \bar{\alpha}_t + 1 - \alpha_t = 1 - \bar{\alpha}_t$,
 and $\alpha_t \bar{\alpha}_{t-1} = \bar{\alpha}_t$. $\blacksquare$
 
-The name "variance-preserving" is now an identity: for
+The term "variance-preserving" follows from the identity: for
 unit-variance data, $\mathrm{Var}(\mathbf{x}_t) = \bar{\alpha}_t \cdot 1 + (1 - \bar{\alpha}_t) = 1$
 for *every* $t$, not merely in the limit. And because
 :eqref:`eq_mdl-ddpm-marginal` is a Gaussian kernel with scale
-$\sqrt{1 - \bar{\alpha}_t}$, denoising score matching applies off the shelf.
+$\sqrt{1 - \bar{\alpha}_t}$, denoising score matching applies directly.
 
 **Proposition (the DDPM loss is reweighted DSM).** *The conditional score of
 :eqref:`eq_mdl-ddpm-marginal` is
@@ -533,7 +532,7 @@ maximize an evidence lower bound, as in
 :numref:`sec_mdl-latent-em-elbo` :cite:`sohl2015deep,ho2020denoising`.
 After the same Gaussian algebra as above, the KL terms between the Gaussian
 forward posteriors and the learned reverse steps collapse into weighted
-$\boldsymbol{\epsilon}$-prediction losses; the ELBO and the score view land on
+$\boldsymbol{\epsilon}$-prediction losses; the ELBO and score-based derivations produce
 the same objective with a different $\lambda(t)$, and :citet:`Luo.2022` is a
 careful walkthrough of that equivalence.
 
@@ -589,7 +588,7 @@ for all $t \ge 0$.*
 **Proof.** The Fokker–Planck equation (:numref:`sec_mdl-fokker-planck`) for
 drift $\mathbf{b} = \tfrac12 \nabla \log p$ and unit diffusion reads
 $\partial_t \rho = -\nabla \cdot (\rho\, \mathbf{b}) + \tfrac12 \Delta \rho$.
-Substitute $\rho = p$ and use the one-line rewrite
+Substitute $\rho = p$ and use the identity
 $p\, \nabla \log p = \nabla p$:
 
 $$
@@ -627,17 +626,17 @@ cold = langevin(np.full(10000, -2.0), 0.01, 2000, rng)
 print(f'one-mode start:   P(X > 0) = {(cold > 0).mean():.3f}  (slow mixing)')
 ```
 
-Started from a broad cloud, the chains settle onto the right answer: half the
-mass in each mode, second moment matching the truth. Started inside the left
-mode, almost no walkers cross even after two thousand steps: between the
-modes the density is tiny, the score points back toward whichever mode you
-came from, and only a lucky run of noise gets a walker across. This *mixing*
-failure makes plain Langevin sampling inefficient on multimodal targets and
-why diffusion models rely on a noise schedule: **annealed
+From a broad initial distribution, the chains approach the target proportions:
+half the mass lies in each mode, and the second moment matches the true value.
+When all chains start in the left mode, almost none cross after two thousand
+steps because the density between the modes is small and the score points back
+toward the current mode. This slow *mixing* makes plain Langevin sampling
+inefficient on multimodal targets and motivates the noise schedules used by
+diffusion models: **annealed
 Langevin dynamics** :cite:`song2019generative` runs Langevin at a *ladder* of
 noise levels $\sigma_1 > \cdots > \sigma_L$, using
 $\mathbf{s}_{\boldsymbol{\theta}}(\cdot, \sigma_i)$ at level $i$. At large
-$\sigma$ the smoothed density has no barriers and walkers redistribute freely;
+$\sigma$ the smoothed density has no barriers, so chains move between regions;
 as $\sigma$ shrinks, detail re-emerges with the global proportions already
 right. The same idea survives inside modern samplers as the
 **predictor–corrector** scheme :cite:`song2021score`: alternate a reverse-SDE
@@ -662,7 +661,7 @@ $$
 = \frac{\mathbf{x}_t - \sqrt{1 - \bar{\alpha}_t}\; \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)}{\sqrt{\bar{\alpha}_t}}.
 $$
 
-DDPM would now *resample*: draw fresh noise and form a noisy
+DDPM would *resample* by drawing fresh noise and forming a noisy
 $\mathbf{x}_{t-1}$. DDIM instead **reuses the predicted direction**, forming
 $\mathbf{x}_{t-1}$ from the current clean estimate
 $\hat{\mathbf{x}}_0$ and noise estimate
@@ -741,8 +740,8 @@ print(f'mode fraction at 1000 steps: {(x_ref > 0).mean():.3f}; '
       'the same initial draws are used at every stride count')
 ```
 
-Ten strides land every sample in the same mode as the thousand-step reference
-and slip by only $0.08$ per sample on a scale where the modes sit at
+Ten strides place every sample in the same mode as the thousand-step reference
+and differ by only $0.08$ per sample on a scale where the modes sit at
 $\pm 0.97$. (The mode fraction is *identical* at every stride count: the update
 is deterministic, and in this run no trajectory crosses the valley.)
 The discrepancy illustrates the central point: the predicted
@@ -756,11 +755,11 @@ comparison rather than an independent-sample hypothesis test. Larger strides
 reduce the number of evaluations while increasing finite-stride approximation
 error.
 
-### Guidance: Steering with Bayes' Rule
+### Guidance with Bayes' Rule
 
-Generation is rarely unconditional: we want *a picture of a cat*, not a
-picture. Conditioning a score model turns out to be pure probability, no new
-training theory. Bayes' rule at noise level $t$ reads
+Generative models often condition on a label or prompt. Conditioning a score
+model follows directly from probability identities and requires no new
+training objective. Bayes' rule at noise level $t$ reads
 $p_t(\mathbf{x} \mid y) \propto p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})$, and
 it becomes additive for scores, since the gradient is in $\mathbf{x}$ and the
 evidence term drops:
@@ -776,8 +775,8 @@ Any sampler from this section runs unchanged with the conditional score in
 place of the unconditional one. **Classifier guidance**
 :cite:`Dhariwal.Nichol.2021` implements the second term with an auxiliary
 classifier $p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t)$ trained on *noisy*
-inputs (a clean-image classifier is wrong off the data manifold, which is where
-$\mathbf{x}_t$ lives), and sharpens it with a **guidance scale**
+inputs, because a clean-image classifier is not calibrated off the data
+manifold where $\mathbf{x}_t$ is evaluated, and scales it with a **guidance scale**
 $\gamma > 1$:
 
 $$
@@ -786,9 +785,10 @@ $$
 = \nabla \log \left[ \frac{p_t(\mathbf{x})\, p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t)^{\gamma}}{Z} \right].
 $$
 
-The second equality says what guidance actually samples: a *tilted*
-distribution in which the classifier's verdict counts $\gamma$ times, more
-prototypically "$y$" and less diverse.
+The second equality identifies the sampled distribution as a *tilted*
+distribution in which the classifier contribution is weighted by $\gamma$.
+This weighting favors more prototypical examples of "$y$" and reduces
+diversity.
 
 **Classifier-free guidance (CFG)** :cite:`Ho.Salimans.2022` removes the
 auxiliary classifier with one more application of
@@ -820,7 +820,7 @@ the exponent's role. One caveat: for $\gamma > 1$ the tilted object
 $p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})^\gamma$ is not, in general, the
 noised marginal of *any* clean distribution: the guided field is a useful
 controlled distortion, not the score of a consistent diffusion, and the
-fidelity-versus-diversity trade-off it buys is an engineering choice, not a
+resulting fidelity-versus-diversity trade-off is an engineering choice, not a
 theorem. In $\boldsymbol{\epsilon}$-parameterization, :eqref:`eq_mdl-cfg` is
 applied verbatim to $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$, since the
 two differ by the $t$-dependent factor $-\sqrt{1 - \bar{\alpha}_t}$.
@@ -867,7 +867,7 @@ where the unconditional mixture would put only half of it. Pushing $\gamma$ to
 $3$ and $10$ has no more mass to reallocate, so it distorts the surviving mode
 instead: the mean slides from $0.97$ to $1.04$ to $1.07$, away from the class
 boundary ("more prototypically $y$") while the histogram narrows slightly.
-That drifting, sharpening mode is the caveat above in numbers:
+This shift and narrowing illustrate the preceding caveat:
 for $\gamma > 1$ the samples track no noised marginal of any clean
 distribution; the tilt is its own object, more emphatic and less diverse than
 the class it names.
@@ -877,9 +877,9 @@ the class it names.
 
 ### Probability Paths and Velocity Fields
 
-Diffusion *derives* its bridge between noise and data from a stochastic
-process, then reverses it. Flow matching :cite:`Lipman.Chen.BenHamu.ea.2022`
-asks the question directly: *prescribe* a family of densities
+Diffusion derives a bridge between noise and data from a stochastic process
+and then reverses it. Flow matching :cite:`Lipman.Chen.BenHamu.ea.2022`
+instead prescribes a family of densities
 $(p_t)_{t \in [0, 1]}$ with $p_0$ = noise and $p_1$ = data (a
 **probability path**) and learn the velocity field that transports mass along
 it. Recall from :numref:`sec_mdl-continuity-equation` that a velocity field
@@ -898,8 +898,8 @@ $$
 $$
 :eqlabel:`eq_mdl-fm-loss`
 
-and it has exactly the problem that explicit score matching had: the marginal
-velocity $\mathbf{u}_t$ is unknown. The fix is also the same. Build the path
+Like explicit score matching, this objective contains an unknown marginal
+field, the velocity $\mathbf{u}_t$. A tractable alternative constructs the path
 out of *conditional* paths, one per data point: pick
 $p_t(\mathbf{x} \mid \mathbf{z})$, a little moving blob that starts spread as
 noise and collapses onto the conditioning variable $\mathbf{z}$ (say, a data
@@ -940,10 +940,9 @@ $\blacksquare$
 
 ### The Conditional Flow Matching Theorem
 
-We now have a target that is an intractable posterior mean
-:eqref:`eq_mdl-marginal-velocity` of a tractable per-sample quantity, exactly
-the situation the regression lemma :eqref:`eq_mdl-regression-lemma` was made
-for. Define the **conditional flow matching** loss, which needs only samples
+The target is an intractable posterior mean
+:eqref:`eq_mdl-marginal-velocity` of a tractable per-sample quantity, so the
+regression lemma :eqref:`eq_mdl-regression-lemma` applies. Define the **conditional flow matching** loss, which needs only samples
 $(t, \mathbf{z}, \mathbf{x})$ and the closed-form conditional velocity:
 
 $$
@@ -1047,11 +1046,11 @@ $$
 $$
 
 Substitute this into the velocity display above and collect the $\mathbf{x}$
-and $\nabla \log p_t$ terms: :eqref:`eq_mdl-score-velocity` falls out.
+and $\nabla \log p_t$ terms to obtain :eqref:`eq_mdl-score-velocity`.
 $\blacksquare$
 
-The same posterior mean $\hat{\mathbf{x}}_1$ underlies every parameterization a
-practitioner meets, so the parameterizations are inter-convertible by
+The same posterior mean $\hat{\mathbf{x}}_1$ underlies the common
+parameterizations, so they are inter-convertible by
 $t$-dependent affine maps of the same posterior mean:
 
 | Network predicts | Posterior meaning | From the score $\mathbf{s} = \nabla \log p_t$ |
@@ -1117,15 +1116,14 @@ print(f'max |u_posterior - u_dictionary| on [-4, 4]: '
 The two routes agree to about $10^{-15}$ (machine precision) across both
 modes and the low-density valley. No model was fitted: the posterior
 calculation does not use a score, while the alternative calculation uses the
-score--velocity relation. They agree because both are affine in the quantity
-$\hat{x}_1$ that the posterior knows. When a paper says its model "predicts
-noise" and a library says it "trains a velocity field", this cell is the
-translation between them.
+score--velocity relation. They agree because both are affine in the same
+posterior mean $\hat{x}_1$. Thus noise-prediction and velocity-field
+implementations can represent equivalent targets.
 
 ### Rectified Flow and Straight Paths
 :label:`sec_mdl-rectified-flow`
 
-We now choose a conditional path. Condition on a *pair*
+Consider a conditional path defined by a *pair*
 $\mathbf{z} = (\mathbf{x}_0, \mathbf{x}_1)$, a noise sample and a data
 sample drawn independently, and connect them by a straight line traversed at
 constant speed:
@@ -1154,12 +1152,13 @@ Training draws noise and data, interpolates between them, and regresses on the
 difference. (For the measure-theoretic
 comfort of strictly positive conditional densities, smooth the line with an
 infinitesimal Gaussian, $p_t(\cdot \mid \mathbf{z}) = \mathcal{N}((1-t)\mathbf{x}_0 + t \mathbf{x}_1, \sigma_{\min}^2 I)$,
-and let $\sigma_{\min} \to 0$; the limiting objective is unchanged. Gaussian conditional
+and let $\sigma_{\min} \to 0$; the limiting objective is unchanged. Gaussian
+conditional
 paths with general $(\mu_t, \sigma_t)$ schedules recover diffusion-style
 targets: that is how flow matching subsumes the VP path, modulo the
 time-reversal callout above.)
 
-![Straight conditional segments connecting independent noise--data pairs cross each other; the marginal flow they induce cannot cross itself, so it bends, averaging the directions of the segments passing through each point. Reflow re-couples endpoints using the model's own ODE, straightening the learned paths.](../img/mdl-dyn-fm-paths.svg)
+![Straight conditional segments connect independent noise--data pairs and may intersect. The induced marginal velocity averages the directions of segments passing through each point, while its ODE trajectories remain nonintersecting and therefore curve. Reflow re-couples endpoints using the model's ODE to reduce this curvature.](../img/mdl-dyn-fm-paths.svg)
 :label:`fig_mdl-dyn-fm-paths`
 
 A subtlety (:numref:`fig_mdl-dyn-fm-paths`): the *conditional* paths are straight, but the *marginal*
@@ -1197,7 +1196,7 @@ $$
 
 an MMD-style two-sample discrepancy
 (:numref:`sec_mdl-ipm-mmd`) that is zero iff the distributions agree; we use
-its square, on $2048$-point samples, to grade generated samples against a
+its square, on $2048$-point samples, to compare generated samples with a
 held-out target sample throughout.
 
 ```{.python .input #score-matching-diffusion-flow-two-moons}
@@ -1223,8 +1222,8 @@ print(f'training set {moons.shape}; energy distance of a fresh sample '
 ```
 
 The fresh-sample-to-held-out value ($\approx 0.001$ in this draw) is a
-finite-sample reference for the metric, not a universal lower bound. Now the
-model, a velocity field
+finite-sample reference for the metric, not a universal lower bound. The model
+is a velocity field
 $\mathbf{v}_{\boldsymbol{\theta}} : \mathbb{R}^2 \times [0, 1] \to \mathbb{R}^2$
 as a $3 \to 64 \to 64 \to 2$ tanh MLP, trained for $4000$ Adam steps on the
 rectified-flow objective :eqref:`eq_mdl-rf-loss`. Each batch follows the same
@@ -1343,9 +1342,9 @@ def train(params, state, key):
 print(f'CFM loss: step 0 {losses[0]:.3f} -> step 4000 {losses[-1]:.3f}')
 ```
 
-The loss falls from about $2$ to about $1.3$ and stops: the plateau the CFM
-theorem predicted, sitting at the variance of $\mathbf{x}_1 - \mathbf{x}_0$
-around its posterior mean, not at zero. Sampling is an Euler loop
+The loss falls from about $2$ to about $1.3$ and then plateaus, as the CFM
+theorem predicts. This value reflects the conditional variance of
+$\mathbf{x}_1 - \mathbf{x}_0$ around its posterior mean rather than zero. Sampling is an Euler loop
 (:numref:`sec_mdl-euler-runge-kutta`) integrating
 $\dot{\mathbf{x}} = \mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ from
 $t = 0$ to $1$. For this trained field, the panels show how the selected
@@ -1610,9 +1609,8 @@ not establish one-step equivalence for other models or datasets.
 ## Optimal Transport and Straightness
 :label:`sec_mdl-ot-connection`
 
-Why should straight paths be the gold standard, and in what precise sense is
-"straight" optimal? The answers come from optimal transport. We keep this
-self-contained: :numref:`sec_mdl-optimal-transport` develops the
+Optimal transport specifies the precise sense in which straight paths can be
+optimal. We keep this discussion self-contained: :numref:`sec_mdl-optimal-transport` develops the
 Kantorovich-dual $W_1$ picture behind WGANs, but here we need the *quadratic*
 cost and its dynamic, fluid-flow formulation.
 
@@ -1688,8 +1686,7 @@ Jensen's inequality is tight iff the particle has constant velocity, hence
 follows their straight segment. Attaining the global $W_2^2$ floor additionally
 requires an *optimal endpoint coupling*. Curvature raises the kinetic energy
 for a fixed coupling, but straight segments under an arbitrary coupling need
-not be optimal transport. In this light the methods of this section line up as
-one program:
+not be optimal transport. This distinction organizes the methods in this section:
 
 * **Diffusion / probability-flow trajectories** can be curved. For a fixed
   endpoint coupling, curvature raises kinetic energy relative to constant-speed
@@ -1702,7 +1699,7 @@ one program:
   pairs generated by the current model. It does not by itself certify the
   optimal-transport coupling; in more than one dimension, noncrossing alone
   implies neither straightness nor optimality.
-* **Minibatch OT couplings** attack the same waste before training: within
+* **Minibatch OT couplings** reduce inefficient pairings before training: within
   each batch, re-pair the noise and data samples by solving a small discrete
   OT problem (an assignment over $256$ points) and run CFM on the matched
   pairs :cite:`Tong.Fatras.Malkin.ea.2023,Pooladian.BenHamu.DomingoEnrich.ea.2023`.
@@ -1712,8 +1709,8 @@ one program:
 
 One caveat: exact OT in high dimension is expensive
 and minibatch plans are biased toward their batch, so OT-CFM and reflow are
-best read as *variance- and curvature-reduction devices* with the dynamic OT
-problem as their idealized limit, not as exact $W_2$ solvers.
+should be viewed as *variance- and curvature-reduction methods* whose idealized
+limit is the dynamic OT problem, rather than as exact $W_2$ solvers.
 
 ## Numerical Sampling of Learned Dynamics
 :label:`sec_mdl-sampling-learned-dynamics`
@@ -1747,8 +1744,8 @@ noise does not universally contract model or discretization error, nor does it
 by itself guarantee sample diversity. Predictor–corrector methods combine the
 two styles. The remaining numerical choice is the number of steps. The
 following cell measures its effect by reusing the
-trained two-moons velocity field and grades Euler sampling at increasing step
-counts with the squared energy distance.
+trained two-moons velocity field and evaluates Euler sampling at increasing
+step counts with the squared energy distance.
 
 ```{.python .input #score-matching-diffusion-flow-steps-quality}
 steps_list = [1, 2, 4, 8, 16, 32, 64]
@@ -1951,8 +1948,8 @@ flows.
    Derive the conditional velocity
    $\mathbb{E}[\dot{\alpha}_t \mathbf{x}_0 + \dot{\beta}_t \mathbf{x}_1 + \dot{\gamma}_t \mathbf{w} \mid \mathbf{x}_t]$
    as the CFM target, and identify schedule choices that recover (a) rectified
-   flow and (b) a variance-preserving diffusion path. What does $\gamma_t > 0$
-   in the interior buy?
+   flow and (b) a variance-preserving diffusion path. What effect does $\gamma_t > 0$
+   have in the interior?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/)
@@ -1964,7 +1961,7 @@ flows.
 ::: {.cover}
 [Dive into Deep Learning · §27.4]{.kicker}
 
-One regression, then one integral<br>**score matching, diffusion, and flow matching**.
+**Score Matching, Diffusion, and Flow Matching**
 :::
 :::
 
@@ -1974,7 +1971,7 @@ One regression, then one integral<br>**score matching, diffusion, and flow match
 ::: {.cols .vc}
 ::: {.col}
 An energy model $p_\theta = e^{-E_\theta}/Z_\theta$ needs the intractable
-$Z_\theta$ at every step. The **score** sidesteps it:
+$Z_\theta$ at every step. The **score** is independent of it:
 
 $$\nabla_{\mathbf x}\log p_\theta = -\nabla_{\mathbf x} E_\theta,
 \qquad \nabla\log Z_\theta = 0.$$
@@ -2016,7 +2013,7 @@ scales with $d$ (for example, one reverse-mode pass per Jacobian row).
 :::
 
 ::: {.slide title="The regression lemma"}
-[The engine]{.kicker}
+[Conditional means]{.kicker}
 
 ::: {.d2l-note .rule}
 $\mathbb E\|\mathbf v(X)-Y\|^2 = \mathbb E\|\mathbf v(X)-\mathbf m(X)\|^2
@@ -2040,7 +2037,7 @@ on it (Vincent) recovers the marginal score. Rearranged, that is **Tweedie**:
 $$\mathbb E[\mathbf x\mid\tilde{\mathbf x}]
 = \tilde{\mathbf x} + \sigma^2\,\nabla\log p_\sigma(\tilde{\mathbf x})$$
 
-One step up the score lands exactly on the posterior mean.
+The score correction equals the posterior mean.
 :::
 
 ::: {.col .fig .big}
@@ -2076,8 +2073,9 @@ score, with loss close to a finite-sample estimate of the Bayes risk:
 ::: {.slide title="A noise schedule connects coverage to detail"}
 [Forward process]{.kicker}
 
-Small $\sigma$ approximates $p$ but ignores empty space; large $\sigma$ covers
-but blurs. The fix: a noise-conditional score $\mathbf s_\theta(\mathbf x,t)$
+Small $\sigma$ approximates $p$ but provides little coverage of low-density
+regions; large $\sigma$ provides coverage but over-smooths. Train a
+noise-conditional score $\mathbf s_\theta(\mathbf x,t)$
 trained along a forward SDE (VE or VP), then a reverse pass to generate:
 
 @fig:mdl-dyn-forward-reverse
@@ -2116,8 +2114,8 @@ $\rho=p$ into Fokker–Planck → $0$). But it mixes slowly across modes:
 @score-matching-diffusion-flow-langevin
 
 ::: {.d2l-note}
-From one mode, almost no walker crosses ($P(X>0)=0.012$). Fix: anneal the
-noise, or use predictor–corrector.
+From one mode, almost no chain crosses ($P(X>0)=0.012$). Annealed noise or a
+predictor–corrector method improves movement between modes.
 :::
 :::
 
@@ -2147,8 +2145,8 @@ sample, so a finite stride is approximate.
 ::: {.slide title="Sparse DDIM strides trade evaluations for bias"}
 [Sampling]{.kicker}
 
-On the closed-form mixture (no learning in the loop), ten strides land every
-sample in the same mode as the thousand-step numerical reference; at fifty
+On the closed-form mixture, with no learned approximation, ten strides place
+every sample in the same mode as the thousand-step numerical reference; at fifty
 strides the paired empirical CDF gap is $0.018$:
 
 @!mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed
@@ -2171,8 +2169,8 @@ $\tilde{\mathbf s} = (1-\gamma)\,\mathbf s_\varnothing + \gamma\,\mathbf s_y$.
 
 Measured on the closed-form mixture: $\gamma=1$ closely approximates the exact
 conditional (mean $0.966$ vs the analytic $0.970$); at $\gamma=3, 10$ there is
-no more mass to move, so the mode *distorts*, drifting to $1.04$, then
-$1.07$, and narrowing.
+no additional mass to reallocate, so the mode shifts to $1.04$, then $1.07$,
+and narrows.
 
 ::: {.d2l-note}
 For $\gamma>1$ the tilt $p_t(\mathbf x)\,p_t(y\mid\mathbf x)^\gamma$ is not,
@@ -2232,14 +2230,15 @@ $\hat{\mathbf x}_1 = \mathbb E[\mathbf x_1\mid\mathbf x_t]$ (Tweedie again):
 
 @!mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function
 
-Route one never mentions a score; route two never mentions a velocity.
+One route uses the posterior mean directly; the other uses the score--velocity
+identity.
 :::
 
 ::: {.slide title="Common prediction targets"}
 [Parameterizations]{.kicker}
 
-Every target a practitioner meets is a $t$-dependent affine transformation of
-the score $\mathbf s = \nabla\log p_t$:
+The common prediction targets are $t$-dependent affine transformations of the
+score $\mathbf s = \nabla\log p_t$:
 
 | network predicts | in terms of $\mathbf s$ | scaling |
 |:--|:--|:--|
@@ -2261,7 +2260,7 @@ still change with the clock.
 The simplest path is a straight line,
 $\mathbf x_t=(1-t)\mathbf x_0+t\mathbf x_1$, with constant target
 $\mathbf x_1-\mathbf x_0$. Conditional paths are straight; the marginal flow
-bends only where paths cross:
+curves where conditional paths intersect:
 
 @fig:mdl-dyn-fm-paths
 :::
@@ -2269,8 +2268,8 @@ bends only where paths cross:
 ::: {.slide title="Euler step count resolves the learned two-moons geometry"}
 [Flow matching]{.kicker}
 
-A small MLP trained by the rectified-flow loss, then Euler-integrated, sharpens
-the crescents as step count grows:
+A small MLP trained by the rectified-flow loss is integrated with Euler's
+method. The generated crescents become more accurate as the step count grows:
 
 @score-matching-diffusion-flow-cfm-panels
 :::
@@ -2338,7 +2337,7 @@ reference, as the observed second-order convergence predicts:
 ::: {.slide title="Conditional regression supplies several learned dynamics"}
 [Sampling]{.kicker}
 
-Every method here is the same template: **a probability path, a closed-form
+These methods share three components: **a probability path, a closed-form
 conditional regression target, and a numerical integrator**.
 
 ::: {.d2l-note .rule}
@@ -2354,7 +2353,7 @@ detail, in this family.
 
 ::: {.cols}
 ::: {.col}
-- Score sidesteps $Z$; DSM (Vincent) regresses on $-\boldsymbol\epsilon/\sigma$; Tweedie = optimal denoising.
+- The score is independent of $Z$; DSM (Vincent) regresses on $-\boldsymbol\epsilon/\sigma$; Tweedie's formula gives the optimal denoiser.
 - DDPM = VP-SDE discretized; $\bar\alpha_t$ marginal; $\boldsymbol\epsilon$-loss = reweighted DSM.
 - Langevin mixes slowly; DDIM is deterministic; guidance is Bayes on scores.
 :::

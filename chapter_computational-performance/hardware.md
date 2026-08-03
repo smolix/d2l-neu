@@ -1,9 +1,9 @@
 # Hardware
 :label:`sec_hardware`
 
-The previous section introduced a model with two machine parameters: a machine
-delivers $\min(P, I\beta)$ — peak arithmetic $P$ if you feed it enough work
-per byte, bandwidth $\beta$ times intensity if you cannot. This section
+The previous section introduced a model with two machine parameters. A machine
+delivers $\min(P, I\beta)$: peak arithmetic $P$ when the operation supplies
+enough work per byte, and bandwidth $\beta$ times intensity otherwise. This section
 explains where those two numbers come from, why their ratio — the ridge
 point — has climbed over the long run of hardware generations, and what else about
 the machine (latency, capacity, interconnect, energy) a practitioner needs
@@ -69,8 +69,9 @@ correspond to physical boundaries: on-package memory is fastest because
 it sits on the same package, millimeters from the die over thousands of
 short interposer wires; everything that crosses a connector,
 a board trace, or a cable reduces available bandwidth. As a rule of thumb,
-**every chip boundary
-costs roughly an order of magnitude of bandwidth**. Keep the bytes home.
+**every chip boundary costs roughly an order of
+magnitude of bandwidth**. Performance therefore improves when data remains
+near the arithmetic units that use it.
 
 ![Representative mid-2026 bandwidths for storage, host memory, PCIe, GPU memory, and on-package HBM. The build GPU's GDDR6X bandwidth is below a B200's HBM3e; exact ratios depend on the listed devices and transfer path.](../img/mdl-perf-bandwidth-ladder.svg)
 :label:`fig_bandwidth_ladder`
@@ -90,8 +91,9 @@ Latency and bandwidth interact through *access patterns*. DRAM delivers
 its rated bandwidth only for *burst* reads: addressing a location costs
 on the order of a hundred nanoseconds, after which sequential transfers
 stream at full rate — so the first word of a random read is hundreds of
-times more expensive than the words that follow it. Hardware therefore
-rewards streaming through memory in order and punishes pointer-chasing;
+times more expensive than the words that follow it. Sequential streaming
+therefore approaches rated memory bandwidth, whereas
+pointer-chasing does not;
 caches amortize latency only when access patterns are local and
 predictable. For dense tensors this is mostly handled for you — a matmul
 kernel is a carefully choreographed burst-read machine — but it is why
@@ -124,22 +126,21 @@ print(f'measured {2 * x.size * 4 / t / 1e12:.2f} TB/s '
 
 A well-shaped streaming kernel lands within tens of percent of the
 specification — the spec number is real, not marketing. Remember what
-this kernel is: the bandwidth-bound regime made flesh. Every elementwise
+this kernel is: a direct measurement of the bandwidth-bound regime. Every elementwise
 operation in every network you train runs at this speed, no matter how
 little it computes.
 
 ## Why Compute Outruns Bandwidth
 :label:`subsec_hw-shoreline`
 
-The ridge point of :numref:`sec_perf_model` is not an accident of one
-product; it is geometry. Arithmetic units fill the *interior* of a die:
+The geometric scaling of compute and I/O explains the ridge point in
+:numref:`sec_perf_model`. Arithmetic units fill the *interior* of a die:
 double the die's side length (or halve the feature size) and you get four
 times the compute, because compute scales with *area*. But the wires that
 leave the chip — the I/O drivers that talk to memory — live on the die's
 *edge*, and the edge only doubles. Compute scales as $n^2$, I/O as $n$
 (:numref:`fig_shoreline`). Chip designers call the edge "beachfront", and
-there is never enough of it: with every generation, bytes-per-FLOP falls,
-and the model starves a little more.
+there is never enough of it: bytes-per-FLOP therefore tends to fall across hardware generations.
 
 ![The shoreline problem: compute is area, I/O is perimeter. Scaling the
 die up buys compute four times faster than it buys
@@ -155,10 +156,10 @@ wires.
 The second countermeasure is size: dies are manufactured against a hard
 lithographic ceiling (the *reticle limit*, about $858\,\textrm{mm}^2$),
 and flagship accelerators live at it — a B200 is two reticle-limit dies
-bridged into one logical GPU. When you cannot grow the die, you bridge
-dies; when you cannot bridge, you network — the interconnect story of
-:numref:`subsec_hw-interconnects` is the shoreline problem continued by
-other means.
+bridged into one logical GPU. When a die cannot grow further, multiple dies
+are connected on-package or
+through a network. :numref:`subsec_hw-interconnects` examines the resulting
+bandwidth limits.
 
 The long-run trend to memorize, averaged over many hardware generations
 at fixed precision: **compute grows about $4\times$ per generation,
@@ -173,7 +174,8 @@ barely moved, in fact edging slightly *down*), and the consumer
 4090→5090 step bought bandwidth far faster than compute, dropping its
 ridge point by nearly a third — check the ridge row of
 :numref:`tab_gpu_specs` below. The shoreline sets the long-run pressure;
-engineering chooses, one generation at a time, which wall to push.
+engineering choices determine whether compute or bandwidth improves more
+in a particular generation.
 Averaged over the decade, compute wins — which is why a chapter about
 performance is mostly a chapter about bytes, and why it will remain one.
 
@@ -227,9 +229,9 @@ half the bytes per operand — reduced precision moves the roofline bound along
 both axes at once. tf32 is the exception that proves the byte rule: it is
 a tensor-core *compute* format that still stores 32 bits (the figure
 draws exactly this), so it buys throughput but saves nothing on memory
-traffic. The catch: each halving buys about $2\times$ on real silicon,
-not the $4\times$ the marketing arithmetic suggests, and the big jumps
-between generations come from new architectures, not formats alone.
+traffic. Each halving yields about $2\times$ higher throughput on current silicon,
+not the $4\times$ suggested by multiplying the compute and storage factors.
+Larger generational gains also depend on architectural changes.
 
 The numbers-dense table, for orientation (conventions below it):
 
@@ -260,7 +262,7 @@ MI355X (288 GB HBM3e at 8 TB/s, 2,500 TF dense bf16), Google's TPU v7
 667 TF). Different silicon, one design point; the roofline reasoning of
 this chapter applies unchanged to all of them.
 
-One more distinction the table hides: *training* hardware must hold
+The table does not show a further distinction: *training* hardware must hold
 activations for the backward pass and accumulate gradients robustly
 (bf16 with fp32 accumulation as the floor — :numref:`sec_memory_precision`),
 while *inference* can run forward-only in the smallest format quality
@@ -273,15 +275,15 @@ allows. That asymmetry shapes the memory anatomy we build in
 
 The CPU in a deep learning machine is no longer where the FLOPs happen —
 one RTX 4090 out-multiplies a 64-core CPU by two orders of magnitude —
-but three jobs still live or die on it. First, the CPU is the
+but it remains responsible for three performance-sensitive tasks. First, the CPU is the
 *orchestrator*: every kernel the GPU runs was launched by a CPU thread at
-5–15 µs apiece (:numref:`fig_latency_ladder`), which is exactly the
-Python-must-stay-ahead story of :numref:`sec_perf_model` — until the
+5–15 µs apiece (:numref:`fig_latency_ladder`), which is the
+Python dispatch constraint from :numref:`sec_perf_model` — until the
 capture-and-replay of :numref:`sec_compilation` takes the CPU out of that
 loop. Second, it runs
 the *input pipeline*: decoding JPEGs, tokenizing text, augmenting,
-batching — if those fall behind, the GPU starves no matter how fast it
-is (a dataloader-starved profile is the overhead regime with extra
+batching — if those operations fall behind, the GPU remains idle regardless of its
+peak throughput (a dataloader-starved profile is the overhead regime with extra
 steps). Third, it *feeds the bus*: host-to-device copies cross PCIe, and
 how you stage the host memory matters. A regular (pageable) host tensor
 must first be copied into a locked staging buffer before DMA can move it;
@@ -319,8 +321,8 @@ overlap the copy with compute.
 :end_tab:
 
 :begin_tab:`jax`
-The number deserves a hard look: the wire underneath is capable of tens
-of GB/s, yet `jax.device_put` from a pageable NumPy array lands far below
+The physical link supports tens of GB/s, yet `jax.device_put` from a
+pageable NumPy array lands far below
 the bus limit — around one gigabyte per second at our pin. The copy is
 not the cost; JAX's transfer path (validation, layout, staging through
 its own host buffer) is, and that is itself the lesson: a transfer runs
@@ -373,7 +375,8 @@ pairs behind two PCIe host bridges, no P2P, no NVLink. The highlighted
 path is what every inter-GPU byte actually travels.](../img/mdl-perf-pcie-topology.svg)
 :label:`fig_pcie_topology`
 
-We treat this as a teaching instrument, not an embarrassment. Most
+This host-staged configuration makes communication costs directly
+measurable. Most
 readers' multi-GPU machines look like ours, not like an NVL72; and a slow
 fabric makes the *accounting* of parallel training vivid — on this box,
 communication costs are impossible to ignore, so the cost model of
@@ -402,15 +405,14 @@ The practical corollaries are the fixes this chapter teaches: fusion
 intermediates on-die; low-precision formats
 (:numref:`sec_memory_precision`) halve the bytes and hence nearly halve
 the energy per operand; recomputation trades cheap arithmetic for
-expensive memory traffic. When a technique in this chapter feels like a
-trick, check it against :numref:`fig_energy_ladder` — nearly all of them
-are the same move: *do more arithmetic per byte fetched*.
+expensive memory traffic. The techniques in this chapter follow the same principle: perform more
+arithmetic per byte fetched, as quantified by :numref:`fig_energy_ladder`.
 
 ## Reading the Roofline: Two Workloads
 :label:`subsec_hw-two-workloads`
 
-Close the loop by reading one model's two working regimes straight off
-the hardware numbers — the exercise this section exists to enable.
+The hardware numbers place one language model in two different performance
+regimes.
 Consider a language model of the kind built in
 :numref:`sec_gpt`, with $N$ parameters in bf16 ($2N$ bytes of weights),
 serving a prompt and then generating.
@@ -428,7 +430,7 @@ context to reuse each weight against.)
 a single token performs about $2N$ FLOPs but must read all $2N$ weight
 bytes (plus the KV cache of :numref:`sec_kv-cache`): intensity $\approx
 1$ FLOP/byte, the bottom of the roofline. Decode is *bandwidth-bound*,
-and its speed limit is arithmetic you can do on a napkin:
+and its bandwidth limit is
 
 $$
 \textrm{tokens/s} \;\lesssim\;
@@ -447,7 +449,7 @@ The systems that exploit this belong to the Language Models part —
 batching schedulers, paged caches, speculative decoding — while the
 *economics* fit in the equation above.
 
-Rules of thumb worth carrying out of this section:
+The following table summarizes the characteristic performance scales:
 
 :Performance rules of thumb — characteristic magnitudes and why each matters.
 :label:`tab_rules_of_thumb`
@@ -547,7 +549,8 @@ Properties here; buying advice lives in the Tools appendix.
 ::: {.slide title="Bandwidth Across the Memory Hierarchy"}
 ![](../img/mdl-perf-bandwidth-ladder.svg){width=85%}
 
-Every chip boundary ≈ one order of magnitude. Keep bytes home.
+Every chip boundary reduces bandwidth by roughly one order of magnitude.
+Keep frequently used data near the device.
 :::
 
 ::: {.slide title="Latency: Eight Orders of Magnitude"}
@@ -569,8 +572,8 @@ Streaming kernels land within tens of percent of spec.
 ::: {.slide title="Compute and I/O Scaling"}
 ![](../img/mdl-perf-shoreline.svg){width=80%}
 
-Long run, per generation: compute ~4×, bandwidth ~2×, capacity
-~1.7× — the ridge point climbs, the model starves a little more.
+Over many generations, compute grows by about 4×, bandwidth by 2×, and
+capacity by 1.7×, so the ridge point tends to increase.
 Any single step can buck it: B200 and RTX 5090 both bought
 bandwidth faster, and their ridge points *fell*. Packaging picks
 which wall moves; HBM-on-interposer is the countermeasure.

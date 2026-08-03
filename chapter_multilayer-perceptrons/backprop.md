@@ -8,7 +8,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 Our implementations use minibatch stochastic gradient descent, with automatic
 differentiation supplying the parameter gradients. To understand the cost and
-behavior of this calculation, we now examine how a network evaluates its
+behavior of this calculation, we examine how a network evaluates its
 outputs and propagates derivatives backward.
 
 The automatic calculation of gradients
@@ -89,7 +89,7 @@ $$s = \frac{\lambda}{2} \left(\|\mathbf{W}^{(1)}\|_\textrm{F}^2 + \|\mathbf{W}^{
 :eqlabel:`eq_forward-s`
 
 where the Frobenius norm of the matrix
-is simply the $\ell_2$ norm applied
+is the $\ell_2$ norm applied
 after flattening the matrix into a vector.
 Finally, the model's regularized loss
 on a given data example is:
@@ -146,7 +146,7 @@ after the necessary operations,
 such as transposition and swapping input positions,
 have been carried out.
 For vectors, this is straightforward:
-it is simply matrix--matrix multiplication.
+it is matrix--matrix multiplication.
 For higher dimensional tensors,
 we use the appropriate counterpart.
 The operator $\textrm{prod}$ hides all the notational overhead;
@@ -193,7 +193,7 @@ $$\frac{\partial s}{\partial \mathbf{W}^{(1)}} = \lambda \mathbf{W}^{(1)}
 \; \textrm{and} \;
 \frac{\partial s}{\partial \mathbf{W}^{(2)}} = \lambda \mathbf{W}^{(2)}.$$
 
-Now we are able to calculate the gradient
+We can therefore calculate the gradient
 $\partial J/\partial \mathbf{W}^{(2)} \in \mathbb{R}^{q \times h}$
 of the model parameters closest to the output layer.
 Using the chain rule yields:
@@ -249,8 +249,7 @@ $$
 
 ### A Worked Example
 
-Symbols can hide what backpropagation actually *does*, so let us push real
-numbers through a graph. We apply the local rule that produced every equation
+A numerical example makes each backpropagation operation explicit. We apply the local rule that produced every equation
 above: at each node, multiply the gradient arriving from downstream by the
 node's *local* derivative.
 
@@ -260,8 +259,7 @@ $d = a + b = 3$ and then $e = d\,c = -9$. For the *backward pass* we seed
 $\partial e/\partial e = 1$ and walk back. The multiply node $e = d\,c$ has
 local derivatives $\partial e/\partial d = c = -3$ and
 $\partial e/\partial c = d = 3$. The add node $d = a + b$ has
-$\partial d/\partial a = \partial d/\partial b = 1$, so it simply *passes its
-incoming gradient through* to both inputs. Chaining,
+$\partial d/\partial a = \partial d/\partial b = 1$, so it *passes its incoming gradient unchanged* to both inputs. Chaining,
 
 $$\frac{\partial e}{\partial a} = \frac{\partial e}{\partial d}\frac{\partial d}{\partial a} = -3,\quad
   \frac{\partial e}{\partial b} = -3,\quad
@@ -271,7 +269,7 @@ This small graph illustrates the algorithm: *add* nodes broadcast the upstream
 gradient unchanged, *multiply* nodes scale it by the other input. Every backward
 equation in this section is an instance of this local calculation.
 
-We now apply the same calculation to a network of the form above, reduced to
+Apply the same calculation to the preceding network, reduced to
 $d = h = 2$ inputs and hidden units, $q = 1$ output, with ReLU activation
 $\phi(z) = \max(0, z)$ and (for clarity) no regularization, $\lambda = 0$. Take
 
@@ -291,8 +289,7 @@ $$\frac{\partial L}{\partial \mathbf{W}^{(2)}} = \frac{\partial L}{\partial o}\,
 $$\frac{\partial L}{\partial \mathbf{h}} = {\mathbf{W}^{(2)}}^\top \frac{\partial L}{\partial o} = [-4,\ 2]^\top,\qquad
   \frac{\partial L}{\partial \mathbf{z}} = \frac{\partial L}{\partial \mathbf{h}} \odot \phi'(\mathbf{z}) = [-4,\ 2]^\top \odot [0,\ 1]^\top = [0,\ 2]^\top,$$
 
-using $\phi'(z) = \mathbf{1}[z > 0]$, which is exactly where the *dead* first
-unit blocks the gradient. Finally,
+using $\phi'(z) = \mathbf{1}[z > 0]$, so the inactive first unit has zero derivative and blocks the gradient. Finally,
 
 $$\frac{\partial L}{\partial \mathbf{W}^{(1)}} = \frac{\partial L}{\partial \mathbf{z}}\,\mathbf{x}^\top
   = \begin{bmatrix} 0 \\ 2 \end{bmatrix}[1,\ 2]
@@ -305,7 +302,7 @@ no gradient means no learning signal, a concrete instance of the "dying ReLU" we
 met in :numref:`sec_mlp`. You can confirm every number here in a few lines of
 automatic differentiation (:numref:`sec_autograd`): rebuild the same tensors
 with gradient tracking, run the forward pass, sweep back through the graph, and
-compare against the gradients we just derived by hand. The arithmetic is
+compare against the manually derived gradients. The arithmetic is
 framework-independent; the PyTorch cell below provides one compact autograd
 check.
 
@@ -334,8 +331,8 @@ negative upstream gradient; it compares equal to $0$.)
 
 ### From the Chain Rule to Autograd
 
-What we have just done by hand is precisely what a deep learning framework does
-when you ask it for gradients: it records the computational graph during the forward
+A deep learning framework performs the same operations when computing
+gradients: it records the computational graph during the forward
 pass, seeds a gradient of $1$ at the scalar objective, and sweeps the graph in
 reverse, multiplying the local derivative at each node (our $\textrm{prod}$) to
 accumulate the gradient with respect to every parameter in a *single* pass. This
@@ -418,7 +415,7 @@ and training requires significantly more memory than prediction.
 ::: {.cover}
 [Dive into Deep Learning · §5.3]{.kicker}
 
-What `backward()` actually does<br>**the chain rule on a graph · every gradient by hand · autograd confirms each one**.
+**Forward and Backward Propagation**<br>The chain rule on a computational graph
 :::
 :::
 
@@ -428,16 +425,16 @@ What `backward()` actually does<br>**the chain rule on a graph · every gradient
 ::: {.cols .vc}
 ::: {.col}
 Training so far: a **forward pass** computes the loss, then one call to
-`backward()` hands us every gradient. Today we open that black box.
+`backward()` returns every parameter gradient. This section makes that
+calculation explicit.
 
 - **Forward**: push the input through the net, storing each intermediate value.
 - **Backward**: walk the *same* graph in reverse, accumulating gradients by the **chain rule**.
 - The chain rule explains both the computation and its memory requirements.
 
 ::: {.d2l-note .rule}
-By the end we will have computed **all four gradients
-of a real network by hand**, and a six-line autograd script will
-print the same numbers, digit for digit.
+The worked example computes **all four gradients** manually,
+and a short autograd script verifies the numerical values.
 :::
 :::
 
@@ -534,7 +531,8 @@ $$\frac{\partial J}{\partial \mathbf{o}} = \frac{\partial L}{\partial \mathbf{o}
 
 . . .
 
-The parameter gradients fall out along the way, each picking up its weight-decay term:
+The same reverse traversal produces the parameter gradients, including each
+weight-decay term:
 
 $$\frac{\partial J}{\partial \mathbf{W}^{(2)}} = \frac{\partial J}{\partial \mathbf{o}}\,\mathbf{h}^\top + \lambda\mathbf{W}^{(2)},
 \qquad
@@ -565,7 +563,7 @@ engine accumulates for exactly this reason.
 ::: {.slide title="Local backward rules"}
 [Backpropagation · local chain rule]{.kicker}
 
-Strip away the symbols and every backward step is the same gesture: at each
+Each backward step applies the same local rule: at each
 node, **multiply the gradient arriving from downstream by the node's local
 derivative**.
 
@@ -592,7 +590,7 @@ Every backward equation in this section applies this local rule.
 
 [A Worked Example]{.dtitle}
 
-[real numbers through the graph]{.dsub}
+[a numerical traversal of the graph]{.dsub}
 :::
 :::
 
@@ -612,14 +610,15 @@ $$\frac{\partial e}{\partial a} = -3,\qquad
   \frac{\partial e}{\partial c} = d = 3.$$
 
 ::: {.d2l-note}
-Add broadcasts, multiply scales: exactly the two moves from the last slide.
+An addition copies the incoming gradient; a multiplication scales it by the
+other input.
 :::
 :::
 
 ::: {.slide title="The forward pass, with numbers"}
 [Worked Example]{.kicker}
 
-Now the real network, shrunk to $d=h=2$, $q=1$, ReLU activation, $\lambda=0$,
+Consider the network with $d=h=2$, $q=1$, ReLU activation, $\lambda=0$,
 squared-error loss, and
 
 $$\mathbf{x}=\begin{bmatrix}1\\2\end{bmatrix},\quad
@@ -668,7 +667,7 @@ weights never update. This is the *dying ReLU* in one matrix.
 :::
 :::
 
-::: {.slide title="Now let the machine check our work" only="pytorch" layout="code"}
+::: {.slide title="Verify the gradients with autograd" only="pytorch" layout="code"}
 [Worked Example · verified]{.kicker}
 
 Build the same tensors with `requires_grad`, run the forward pass, call
@@ -731,7 +730,7 @@ of autograd, one hand derivation, no disagreements.
 ::: {.slide title="From the chain rule to autograd"}
 [Why It Matters]{.kicker}
 
-What we did by hand is exactly what `backward()` does: record the graph on the
+The manual calculation follows the same procedure as `backward()`: record the graph on the
 forward pass, seed a $1$ at the scalar loss, and sweep in reverse, multiplying
 each local derivative to accumulate **every** parameter gradient in a *single*
 pass.
@@ -744,7 +743,7 @@ deep-learning regime.
 
 We developed the mechanics, including when *forward mode* is preferable, in
 the automatic-differentiation section; the full theory (both modes as
-Jacobian products, and the memory trade-offs they imply) lives in the
+Jacobian products and their memory trade-offs) is developed in the
 calculus appendix.
 :::
 

@@ -137,8 +137,7 @@ accounting convention; profiler comparisons below quantify the discrepancy.
 
 ### Checking the Arithmetic
 
-A formula this convenient deserves a check against an authority that has
-not read our derivation.
+We compare the approximation with framework operation counts.
 
 :begin_tab:`pytorch`
 PyTorch's profiler attributes FLOPs to the operations it recognizes —
@@ -146,8 +145,9 @@ above all the `aten::mm` matrix multiplies behind every linear layer. The
 fused attention kernel keeps its score arithmetic to itself and reports
 none, so the profiler and :eqref:`eq_six_nd` ignore the *same* subleading
 term. For the count, $N$ plus the tied output head is exactly the 2-D
-parameters of the RoPE configuration (the embedding earns its FLOPs as
-the head; a gather costs nothing).
+parameters of the RoPE configuration. The embedding participates in matrix
+multiplication as the head, whereas the lookup itself contributes no
+counted FLOPs.
 :end_tab:
 
 :begin_tab:`jax`
@@ -536,10 +536,10 @@ cache*: GQA as the default, with the window-plus-sink and latent
 compressions of :numref:`sec_kv-cache` where long contexts make the
 cache the binding cost. *Capacity per FLOP*: gated FFNs in every row, and
 mixture of experts (:numref:`sec_moe`) where the budget wants more
-parameters than FLOPs. The dropout column is the quiet punchline of our
-scaling study: at trillion-token scale the corpus outweighs the
-parameters, overfitting is not the failure mode, and the regularizer we
-still needed in :numref:`sec_gpt` has simply left the recipe. Even the
+parameters than FLOPs. The dropout column also follows from the scaling
+regime: at trillion-token scale the corpus outweighs the parameters,
+overfitting is not the failure mode, and the regularizer used in
+:numref:`sec_gpt` is omitted. Even the
 positions column is one idea at different dial settings: RoPE with an
 inflated base for longer contexts, stretched further by interpolation
 schemes (:numref:`sec_positional-information`); the newest twist is still
@@ -609,8 +609,8 @@ for name, cfg in recipes.items():
           + f', kv_heads={kv_heads}')
 ```
 
-The printout is the point: the three modern rows are the *same argument
-list*. At the resolution of our constructor, the field has one recipe,
+The three modern rows print the *same argument list*. At the resolution of
+our constructor, these configurations share one recipe,
 and what distinguishes deployed families lives in the columns the flags
 do not reach: window widths, RoPE bases, expert counts, and the
 normalization refinements we left as exercises (QK-norm slots in through
@@ -765,10 +765,10 @@ the KV cache makes memory traffic the main constraint.
 :::
 
 ::: {.slide title="A scaling study on one GPU"}
-Design: hold the diet fixed, move only the model.
+The experiment holds the training data fixed and varies only the model.
 
 - Corpus: *The Time Machine* + PTB text = **5.1M characters** (the novel
-  alone saturates everything past $10^5$ parameters).
+  alone stops improving validation loss substantially past $10^5$ parameters).
 - Five sizes, widths 96→384 with depths 3→8: **0.33M → 14.2M** params.
 - Identical data exposure: 16.4M tokens, approximately three passes;
   dropout 0; one seed, so no uncertainty estimate.
@@ -837,8 +837,9 @@ outweighs the parameters.
 ::: {.slide title="Recap"}
 - $6ND$ estimates parameter-linked matmul FLOPs; attention-score, softmax,
   normalization, and optimizer work are additional terms.
-- With a fixed number of training tokens, loss falls with size along a rough line **until the
-  corpus saturates the model** — the bend is the Chinchilla lesson.
+- With a fixed number of training tokens, loss initially falls with model
+  size, then improves more slowly as the data term begins to limit
+  performance.
 - The reported 2023--2025 configurations combine these components in
   different ways; the table is a dated comparison, not a universal recipe.
 - Next frontiers: linear-attention hybrids (ch. 13), long context as

@@ -1,21 +1,18 @@
-# Developers Guide
+# Contributor Guide
 :label:`sec_developers_guide`
 
-This book is a software project. Every page you have read was generated
-from source files in a Git repository, executed by a build system, and
-reviewed like code — and the same machinery is open to you. This section
-explains how the book is put together, enough Git to participate, why we
-recommend working on it with a coding agent, and how to contribute a fix
-or an improvement. Even if you never send us a patch, this is a case study
-in reproducible technical writing: the problems we solve here — one source
-feeding many outputs, generated files, executable documents — appear in
-every serious ML project's documentation and experiment repositories.
+This book is maintained as a software project. Its pages are generated from
+Git-tracked source files, executed by a build system, and reviewed as code.
+This section explains the build, the Git workflow for contributions, optional
+use of coding agents, and the checks required for a patch. The same
+single-source, generated-artifact, and executable-document concerns arise in
+many machine learning documentation and experiment repositories.
 
 ## How the Book Is Built
 
 ### One Source, Many Artifacts
 
-Each section lives in a single Markdown file — for example, this one is
+Each section is stored in a single Markdown file — for example, this one is
 `chapter_appendix-tools-for-deep-learning/developers-guide.md`. From these
 sources the build derives everything else:
 
@@ -27,7 +24,7 @@ chapter_*/*.md               source of truth (edit these)
 └── _slides/<fw>/...         generated lecture slides
 ```
 
-Three consequences of this design are the rules that trip up newcomers:
+This design has three practical consequences:
 
 * **Never edit generated files.** A `.qmd` or `.ipynb` edit is destroyed
   by the next build. Edit the `.md` source and regenerate.
@@ -40,9 +37,9 @@ Three consequences of this design are the rules that trip up newcomers:
   and framework views can refer to a cell across renames and moves.
 
 Why Markdown sources instead of committing notebooks directly? Version
-control. A `.ipynb` file is JSON that entangles code with outputs,
-execution counts, and editor metadata, which makes diffs unreadable and
-code review nearly impossible. The Markdown source diffs like prose;
+control. A `.ipynb` file is JSON that combines code, outputs, execution counts, and
+editor metadata, producing noisier diffs than the Markdown source. Markdown
+source produces readable prose diffs;
 executed outputs are stored separately (and only re-blessed when the code
 that produced them changes); and one file drives the website, the PDF,
 four notebook sets, and the slide decks without four copies drifting
@@ -69,12 +66,12 @@ d2l-neu/
 
 `make html` renders the site from committed outputs on any laptop — no
 GPU required; executing notebooks that need accelerators is a separate,
-explicit step. The Makefile and `CLAUDE.md` document every target.
+explicit step. The Makefile and `CLAUDE.md` document the supported targets.
 
 ## Git in Five Minutes
 
-If you already use Git daily, skip ahead. Otherwise, the six commands
-below are most of what contributing requires. First, make your own copy:
+If you already use Git daily, skip ahead. Otherwise, the commands below
+establish the main contribution workflow. First, make your own copy:
 click **Fork** on the [repository page](https://github.com/smolix/d2l-neu),
 then
 
@@ -97,40 +94,38 @@ git push -u origin fix-typo-in-attention
 GitHub will offer to open a *pull request* — your branch, proposed for
 merging, with a diff the maintainers can review and comment on. (The
 [`gh` command-line tool](https://cli.github.com/) does the same with
-`gh pr create`.) Small, focused pull requests get reviewed quickly;
-"fixed one equation" merges in a day, "rewrote three chapters" invites a
-long conversation. This fork-branch-PR loop is the collaboration pattern
-of essentially all open source, so time spent learning it here repays
-itself far beyond this book.
+`gh pr create`.) Small, focused pull requests are easier to review than changes spanning
+several chapters. The fork-branch-pull-request workflow is common in
+open-source projects and makes each proposed change explicit.
 
 ## Working with a Coding Agent
 
-The single best piece of practical advice in this section: work on the
-book — and on your own notebook projects — with a coding agent (Claude
-Code, Codex, Gemini CLI, and peers). This repository is deliberately
-agent-friendly, and the reasons illustrate what makes *any* project
-agent-friendly:
+Coding agents can assist with bounded repository tasks such as locating a
+definition, propagating a mechanical change, or running verification. Their
+use is optional, and generated edits require the same review as human-written
+changes. This repository supports agent-assisted work through three
+properties:
 
 * **The build is self-describing.** `CLAUDE.md` tells an agent how to
-  regenerate, execute, and render everything. Documentation written for
-  agents turns out to be excellent documentation for humans, and vice
-  versa.
+  regenerate, execute, and render the artifacts. The same explicit build
+  instructions also support human contributors.
 * **Verification is executable.** The definition of "this edit works" is
   mechanical: the notebook executes top to bottom in all frameworks, the
-  linter passes, the page renders. An agent can run that whole loop —
-  edit, regenerate, execute, inspect the failure, fix — dozens of times
-  while you review only the final diff.
+  linter passes, the page renders. An agent can run the edit, regeneration,
+  execution, and failure-inspection
+  loop, but the contributor must review both the final diff and the evidence
+  from the checks.
 * **The tedious parts are mechanical.** Keeping four framework
   implementations in sync, checking that every `:numref:` resolves,
-  regenerating figures: exactly the multi-file consistency work agents do
-  well and humans do grudgingly.
+  and regenerating figures are mechanical multi-file tasks that can be
+  automated and then reviewed.
 
-A workflow that works in practice: describe the change at the level of
-intent ("the momentum notebook's contour plot mislabels the axes; fix it
-and re-run the affected notebooks"), let the agent locate sources, edit,
-and verify, and then *review the diff yourself* — you are the author of
-anything you submit, and agents inherit your responsibility, not the
-reverse. Two cautions from experience. Agents share the newcomer failure
+A useful workflow specifies the intended change and its verification, for
+example: "the momentum notebook's contour plot mislabels the axes; correct
+the source and rerun the affected notebooks." The agent may locate sources,
+edit, and run checks, but the contributor remains responsible for reviewing
+the diff and validating the technical result. Two cautions apply. Agents can
+share the newcomer failure
 mode of editing generated files unless the project documentation warns
 them (ours does). And an agent eager to make a failing check pass may
 weaken the check or the code instead of fixing the cause — "the notebook
@@ -140,9 +135,7 @@ thing." Review accordingly.
 ## Contributing Your Changes
 :label:`sec_how_to_contribute`
 
-Found a typo, a broken link, or an explanation that reads worse than it
-should? Contributions are welcome, and readers' pull requests have
-improved every chapter of this book. In rough order of effort:
+Contributions range from one-line corrections to executable content changes:
 
 * **Small text fixes.** For a one-line fix you do not even need a local
   checkout: open the source file on GitHub, press the edit (pencil)
@@ -150,13 +143,13 @@ improved every chapter of this book. In rough order of effort:
   the browser.
 * **Code and content changes.** Clone, branch, edit the source `.md`, and
   verify before submitting: regenerate the affected notebooks and run
-  them end to end (with an agent, this is one instruction), and render
+  them end to end and render
   the page with `make html` to check formatting, references, and
   figures. If you edit code that carries `#@save`, rebuild the library
   (`make lib`) and expect downstream notebooks to be affected.
 * **Working in the notebook view.** If you prefer editing in Jupyter or
   VS Code rather than raw Markdown, this repository ships a VS Code
-  extension (under `.vscode-extension/`) built for exactly that: it opens
+  extension (under `.vscode-extension/`) designed for this workflow: it opens
   the generated notebook for any section with the right kernel
   preselected, switches between the PyTorch/TensorFlow/JAX/MXNet views of
   the same source, previews the section's slide deck live, and syncs
@@ -178,9 +171,9 @@ artifact — is what changed.
   reviewable pull requests are what make a 250-notebook book maintainable.
 * The contribution loop is fork → branch → edit source → verify (execute
   notebooks, render) → small pull request.
-* Coding agents fit this workflow unusually well because the build is
-  self-describing and verification is executable — but you review and own
-  what you submit.
+* Coding agents can automate parts of this workflow because the build is
+  documented and verification is executable; contributors must review and
+  take responsibility for submitted changes.
 * The VS Code extension bridges notebook-style editing and
   Markdown-source truth: framework views, slide preview, and sync-back.
 

@@ -48,11 +48,11 @@ to the chosen prompt distribution.
 
 ### Deterministic Transitions
 
-The transition kernel of this MDP is string concatenation: from prefix $s_t$ with token $a_t$, the next state is $(s_t, a_t)$ with probability one, and the reward is terminal, one number $r(x, y)$ when the response ends. This is the degenerate corner :numref:`sec_mdp` set aside, with the promise that the degeneracy would *remove* terms from our algorithms rather than add any. In :numref:`sec_policygradient` the trajectory probability :eqref:`eq_traj_prob` carried transition factors, and the derivation needed an argument for why they vanish from the score; here each factor *is the constant one* before anybody differentiates. Every "the transitions cancel" argument in these chapters becomes trivial rather than subtle, all randomness in a rollout is the policy's own sampling, and the model whose absence drove :numref:`sec_qlearning` is perfectly known: it is concatenation.
+The transition kernel is string concatenation: from prefix $s_t$ and token $a_t$, the next state is $(s_t, a_t)$ with probability one. A terminal reward $r(x,y)$ is assigned when the response ends. This is the deterministic case described in :numref:`sec_mdp`. In :numref:`sec_policygradient`, the trajectory probability :eqref:`eq_traj_prob` includes transition factors; here each factor is the constant one and contributes no score term. Under these assumptions, all rollout randomness comes from policy sampling. Unlike the model-free setting in :numref:`sec_qlearning`, the transition model is known exactly.
 
 ### The Factorization Proposition
 
-One identity connects "a policy over responses" to "a next-token softmax"; it is the single equation the Language Models part needs from this book.
+The following identity connects a response distribution to its next-token factorization.
 
 **Proposition.** For the token MDP of :numref:`tab_rl_sequence_dictionary`, the response-level and token-level views give the same gradient:
 
@@ -82,7 +82,7 @@ sequential formulation.
 
 ## Simplifications for Sequence Generation
 
-Sorting both chapters through the dictionary of :numref:`tab_rl_sequence_dictionary` is the payoff of having built everything explicitly; :numref:`fig_rl_token_mdp` draws the sort.
+The correspondence in :numref:`tab_rl_sequence_dictionary` determines which general reinforcement-learning components simplify; :numref:`fig_rl_token_mdp` summarizes the result.
 
 ### Terms That Disappear
 
@@ -103,12 +103,12 @@ transition model, intermediate Bellman backups, or token-level TD targets.
 Those components return when the task supplies process rewards or
 nontrivial environment transitions.
 
-![The token MDP, and what it deletes. Top: a response is a trajectory whose states are prefixes, whose actions are tokens, and whose transitions append the chosen token with probability one, so all randomness is the policy's; the reward arrives once, on the terminal edge into EOS. Below: the same object collapsed to one step, a single draw $y \sim \pi_\theta(\cdot \mid x)$ scored by $r(x, y)$, the two views sharing one gradient by :eqref:`eq_seq_factorization`. Right: what simplifies away under these assumptions, struck through, and what survives; the struck machinery returns with process rewards, tool calls or multi-turn feedback.](../img/mdl-rl-token-mdp.svg)
+![The token MDP and the components that simplify under its assumptions. Top: a response is a trajectory whose states are prefixes, whose actions are tokens, and whose transitions append the chosen token with probability one, so all randomness is the policy's; the reward arrives once, on the terminal edge into EOS. Below: the same object collapsed to one step, a single draw $y \sim \pi_\theta(\cdot \mid x)$ scored by $r(x, y)$, the two views sharing one gradient by :eqref:`eq_seq_factorization`. Right: components unnecessary under these assumptions are struck through; they become necessary again with process rewards, tool calls, or multi-turn feedback.](../img/mdl-rl-token-mdp.svg)
 :label:`fig_rl_token_mdp`
 
 ### The Smallest Instance: Four Prompts and a Verifier
 
-The one-step view invites the smallest laboratory in either chapter: no environment object at all, because concatenation needs no simulator. Four "prompts", nine candidate "responses" shared across them, a verifier that checks a response exactly, and a reference policy $\pi_{\textrm{ref}}$, the stand-in for a pretrained model, which spreads its mass over the honest candidates and, with probability about $0.2$ percent, *hedges* by listing every number it has seen. Two prompts are deliberately beyond this model: no candidate matches their answers, so the verifier's ceiling is $0.5$. The policy is :eqref:`eq_softmax_policy`, one preference row per prompt; training starts from the reference, as post-training does.
+We study a finite one-step example that requires no environment simulator. It contains four prompts, nine candidate responses shared across prompts, an exact-match verifier, and a reference policy $\pi_{\textrm{ref}}$ representing a pretrained model. The reference assigns probability across the ordinary candidates and about $0.2$ percent to a response that lists every possible answer. For two prompts, no individual candidate matches the answer, so the maximum exact-match score is $0.5$. The policy is :eqref:`eq_softmax_policy`, one preference row per prompt; training starts from the reference, as post-training does.
 
 ```{.python .input #rl-sequences-the-smallest-instance}
 %%tab pytorch, jax
@@ -137,7 +137,7 @@ print(f'success of a response sampled from the reference: '
 
 ### The Group Mean as the Baseline
 
-Now run the survivors, and nothing but the survivors. Sample a group of $K$ responses per prompt, score each, standardize the scores within the group, and take one ascent step on the log-probabilities: the normalization of :eqref:`eq_pg_normalized` with the group as the batch and the prompt as the start state. The group mean is the per-prompt baseline, so no value network exists anywhere. One term rides along for later: the KL penalty of :numref:`sec_regularized` to the frozen reference, folded into each sample's reward as $r - \beta \log \big( \pi_\theta(y \mid x) / \pi_{\textrm{ref}}(y \mid x) \big)$, the simplest way to charge it; the named method assembled at the end of the section keeps its KL as a separate loss term instead. At $\beta = 0$ it is inert.
+For each prompt, we sample a group of $K$ responses, score them, standardize scores within the group, and take one ascent step on the log-probabilities. This applies :eqref:`eq_pg_normalized` with the group as the batch and the prompt as the start state. The group mean serves as a per-prompt baseline, so the example uses no value network. We also include the fixed-reference KL penalty from :numref:`sec_regularized` by replacing each sampled reward with $r - \beta \log \big( \pi_\theta(y \mid x) / \pi_{\textrm{ref}}(y \mid x) \big)$. The GRPO objective described below instead estimates KL as a separate loss term. Setting $\beta=0$ removes this penalty.
 
 ```{.python .input #rl-sequences-the-group-is-the-baseline-1}
 %%tab pytorch, jax
@@ -152,7 +152,7 @@ def group_step(theta, K, reward, rng, beta=0.0, lr=2.0):
     return theta + lr * g
 ```
 
-One bookkeeping fact must be stated before the sweep, because :numref:`sec_baselines` proved it and the estimator above quietly trades on it. The zero-mean lemma licenses only baselines that ignore the sample's own action, and the group mean does not qualify: it contains the current sample's reward, so same-group centering is a *biased* estimator whose expectation is exactly $(K - 1)/K$ of the true gradient, the shrinkage :numref:`sec_baselines` derived, and dividing by the group's standard deviation stacks a random denominator on top. The exactly unbiased repair is also that section's: leave-one-out, each sample measured against the mean of the other $K - 1$. On this toy, both facts can be checked by enumerating every group of two, with the centering isolated from the standardization:
+The zero-mean lemma applies only when a baseline does not depend on the sampled action. A same-group mean includes the current sample's reward, so centering by it produces a biased estimator whose expectation is $(K-1)/K$ times the true gradient, as derived in :numref:`sec_baselines`. The leave-one-out correction is also described in :numref:`sec_baselines`. Division by the group standard deviation adds a random scale factor. Leave-one-out centering is unbiased because each sample is compared with the mean of the other $K-1$ samples. The following enumeration verifies the centering result for groups of two, without standardization:
 
 ```{.python .input #rl-sequences-the-group-is-the-baseline-3}
 %%tab pytorch, jax
@@ -170,7 +170,7 @@ print(f'rescaled by K/(K-1), leave-one-out, it is exact: '
       f'{np.allclose(u * K / (K - 1), g)}')
 ```
 
-Now the prediction the sweep must confirm. At $K = 1$ the shrinkage factor $(K - 1)/K$ is zero: the group mean *is* the sample's own reward, the standardized advantage is identically zero, and the parameters never move, however many samples are spent. This is not "no relative information to extract" but self-inclusion bias at its maximum, the limiting case of the fact just verified; the true policy gradient at $K = 1$ is of course nonzero, and plain REINFORCE without the baseline would learn here. The $K = 1$ row below must therefore print exactly the reference's $0.062$, no learning at all. The sweep holds the *sample budget* fixed at $6400$ scored responses per prompt, so small groups get proportionally more updates and no arm is favored:
+At $K=1$, the factor $(K-1)/K$ is zero: the group mean equals the sample's reward, the standardized advantage is zero, and the reward-gradient update does not change the parameters. The underlying policy gradient is generally nonzero, and REINFORCE without this baseline would still learn. The $K=1$ row below therefore retains the reference score of $0.062$. The sweep fixes the sample budget at $6400$ scored responses per prompt, so smaller groups receive proportionally more updates:
 
 ```{.python .input #rl-sequences-the-group-is-the-baseline-2}
 %%tab pytorch, jax
@@ -183,23 +183,23 @@ for K in (1, 2, 4, 8, 32):
           f'{success(policy(theta), verify):.3f}')
 ```
 
-The prediction lands to the third decimal, and every $K \geq 2$ reaches the verifier's ceiling of $0.5$ on the same budget: at any $K \geq 2$ the $(K-1)/K$ shrinkage is a rescaling the ascent shrugs off, and the bias that stops learning is only the total one at $K = 1$. "The group mean replaced the critic" is usually an architecture claim, and here it is a column of numbers: the per-prompt reference for "better than usual" that a critic would supply is assembled from the group itself, $K - 1$ parts other samples and one part self-inclusion, and a group of one is all self-inclusion. A corollary with teeth: on the hard prompts every group scores all zeros and the advantages vanish, so a group-relative method learns nothing from prompts it always fails, and, by symmetry, from prompts it always solves. Note the zero-update conclusion's scope: it belongs to this reward-only toy, and an implementation whose loss carries other terms, a separate KL gradient or a supervised mixture, still moves at $K = 1$.
+The $K=1$ result matches the predicted reference score to three decimal places, while every tested $K\geq2$ reaches the verifier ceiling of $0.5$ at the same sample budget. For $K\geq2$, the factor $(K-1)/K$ rescales the centered gradient rather than eliminating it. The group samples provide the per-prompt comparison that a learned value baseline would otherwise supply, but the current sample's inclusion causes the stated bias. If every response in a group receives the same score, all standardized advantages are zero; this occurs on prompts that the current policy always fails or always solves. The zero-update result is specific to the reward-gradient term. Separate KL gradients, supervised objectives, or other loss terms can still update parameters at $K=1$.
 
 ## Where the Reward Comes From
 
-Every collapse so far concerned the policy half of the loop. What remains is the reward $r(x, y)$, and at scale it is never given; it is estimated, one of two ways.
+The preceding analysis concerned the policy estimator. In large-scale applications, the reward $r(x,y)$ is typically learned from preferences or computed by a verifier.
 
 ### Learned Rewards from Preferences
 
-When quality cannot be computed, it is elicited: people compare pairs of responses to the same prompt, and a reward model $r_\phi(x, y)$ is fit by the Bradley-Terry logistic regression of :numref:`sec_regularized`, :eqref:`eq_bradley_terry`. Everything measured there transfers: the fit is accurate where the preference data lives and silent where it does not; the score is identified only up to a function of the prompt, which is why the group mean subtracted above removes nothing the comparisons ever measured; and the reward is terminal, exactly the shape the proposition assumed.
+When quality cannot be computed directly, people can compare pairs of responses to the same prompt, and a reward model $r_\phi(x,y)$ can be fitted with the Bradley-Terry model from :numref:`sec_regularized`, :eqref:`eq_bradley_terry`. Its evidence is strongest on the distribution represented by preference data, and its score is identifiable only up to an additive function of the prompt. A per-prompt baseline removes this unidentified term. A response-level reward is also terminal, matching the assumptions of the factorization proposition.
 
 ### Checked Rewards from Verifiers
 
-For a growing family of tasks the reward needs no model at all, because the response can be *checked*: a unit-test harness runs the code, a proof assistant validates the derivation, an exact-match grader scores the final answer. Training against such checked rewards is called reinforcement learning from verifiable rewards, RLVR, the regime in which recent reasoning models are trained :cite:`DeepSeekAI.2025`. A verifier is not a lesser reward model but a different trust profile: it cannot be flattered where it actually checks, and it is blind everywhere it does not.
+For a growing family of tasks the reward needs no model at all, because the response can be *checked*: a unit-test harness runs the code, a proof assistant validates the derivation, an exact-match grader scores the final answer. Training against such checked rewards is called reinforcement learning from verifiable rewards, RLVR, the regime in which recent reasoning models are trained :cite:`DeepSeekAI.2025`. A verifier has a different error profile from a learned reward model: it is reliable for the property it checks but may omit relevant aspects of the intended objective.
 
 ### Reward Hacking as One Mechanism
 
-Both learned reward models and programmatic verifiers are estimates of the intended objective, and optimization can exploit their errors. This is the same mechanism seen for a fitted $\hat{Q}$ in :numref:`sec_offline` and for a learned reward in :numref:`sec_regularized`. To demonstrate it, replace exact matching by a verifier that merely searches for the answer string. A hedged response now receives reward on every prompt, including the two prompts the model cannot solve. Equation :eqref:`eq_kl_optimum` predicts the regularization required to suppress this response: its reference log-odds disadvantage is $4$, while its reward advantage is $1$, giving the threshold $\beta=1/4$.
+Both learned reward models and programmatic verifiers are estimates of the intended objective, and optimization can exploit their errors. This is the same mechanism seen for a fitted $\hat{Q}$ in :numref:`sec_offline` and for a learned reward in :numref:`sec_regularized`. To demonstrate this mechanism, replace exact matching with a verifier that searches for the answer string. The response listing all answers then receives reward on every prompt, including the two without an individual correct candidate. Equation :eqref:`eq_kl_optimum` predicts the regularization required to suppress this response: its reference log-odds disadvantage is $4$, while its reward advantage is $1$, giving the threshold $\beta=1/4$.
 
 ```{.python .input #rl-sequences-reward-hacking-unified}
 %%tab pytorch, jax
@@ -215,11 +215,11 @@ for beta in (0.0, 0.1, 0.2, 0.3, 0.5):
           f'gold {success(pi, verify):.2f}, hedge {pi[:, 8].mean():.2f}')
 ```
 
-The columns report the approximate grader score, the exact score, and the average probability of the hedged response. At $\beta=0$, the policy obtains a perfect grader score but only $0.50$ under exact evaluation. The hedged response remains favored at $\beta=0.1$, is nearly balanced at $0.2$, and is suppressed above the predicted threshold of $1/4$. Each row is close to the tilted optimum in :eqref:`eq_kl_optimum`, although group standardization introduces a random denominator and can shift the stationary point. Larger $\beta$ also limits useful changes to the policy: at $\beta=0.5$, the exact score falls to $0.24$. Thus regularization selects a point on the reward--divergence frontier rather than providing an absolute safeguard.
+The columns report the approximate grader score, the exact score, and the average probability of the hedged response. At $\beta=0$, the policy obtains a perfect grader score but only $0.50$ under exact evaluation. The multi-answer response remains favored at $\beta=0.1$, is nearly balanced at $0.2$, and is suppressed above the predicted threshold of $1/4$. Each row is close to the tilted optimum in :eqref:`eq_kl_optimum`, although group standardization introduces a random denominator and can shift the stationary point. Larger $\beta$ also limits useful changes to the policy: at $\beta=0.5$, the exact score falls to $0.24$. Thus regularization selects a point on the reward--divergence frontier rather than providing an absolute safeguard.
 
 ## GRPO and the Notation Contract
 
-### GRPO Assembled from Owned Parts
+### Components of GRPO
 
 Group Relative Policy Optimization (GRPO)
 :cite:`Shao.Wang.Zhu.ea.2024` samples $K$ responses for each prompt and
@@ -241,7 +241,7 @@ $\beta$ penalty compares with a frozen reference and changes the optimum.
 They therefore play the two distinct roles described in
 :numref:`sec_regularized`.
 
-The toy experiment above is not a complete GRPO implementation. It takes
+The finite experiment above is not a complete GRPO implementation. It takes
 one update per group, folds the KL term into the reward, uses one-token
 responses, and applies no response-length normalization. It does share
 the same-group mean and hence the self-inclusion bias measured above;
@@ -284,13 +284,13 @@ The Language Models part inherits these symbols verbatim; every object below was
 
 ## Where to Go Next
 
-Two chapters are a first introduction, not the field. Three directions matter most.
+These chapters provide an introduction rather than comprehensive coverage. Three extensions are especially relevant.
 
-**Model-based reinforcement learning and search.** This is the largest deliberate omission in these chapters, and the transferable idea fits in one paragraph. :numref:`sec_valueiter` is the book's only model-based corner; the smallest step beyond it is Dyna-Q, a rewarding exercise on :numref:`sec_qlearning`'s tabular loop: keep a table of observed transitions and, between real steps, replay imagined ones through the same Q-update. The consequential step is Monte Carlo tree search read correctly: not a game trick but a *policy-improvement operator*, a search that returns a better move distribution than the policy it started from, whose output is distilled back into the network as a supervised target. That loop is AlphaZero :cite:`Silver.Schrittwieser.Simonyan.ea.2017,Silver.Hubert.Schrittwieser.ea.2018`; MuZero learns the model it searches in :cite:`Schrittwieser.Antonoglou.Hubert.ea.2020`; DreamerV3 and TD-MPC2 train control inside learned world models :cite:`Hafner.Pasukonis.Ba.ea.2025,Hansen.Su.Wang.2024`. "Search at decision time, distill into the policy" is also the pattern of test-time reasoning in language models, which makes this the omission most worth repairing on your own.
+**Model-based reinforcement learning and search.** :numref:`sec_valueiter` is the book's only model-based method. A direct extension is Dyna-Q: augment :numref:`sec_qlearning`'s tabular loop by storing observed transitions and applying the same Q-update to model-generated transitions between environment steps. Monte Carlo tree search can be viewed as a *policy-improvement operator*: search produces an improved action distribution, which is then distilled into the policy as a supervised target. That loop is AlphaZero :cite:`Silver.Schrittwieser.Simonyan.ea.2017,Silver.Hubert.Schrittwieser.ea.2018`; MuZero learns the model it searches in :cite:`Schrittwieser.Antonoglou.Hubert.ea.2020`; DreamerV3 and TD-MPC2 train control inside learned world models :cite:`Hafner.Pasukonis.Ba.ea.2025,Hansen.Su.Wang.2024`. The same search-and-distillation pattern appears in test-time reasoning methods for language models.
 
 **Continuous control since 2024.** The objectives of :numref:`sec_deeprl` through :numref:`sec_regularized` stand; recent gains have come from normalization, scale and stability rather than new losses, and careful normalization even lets streaming, replay-free temporal-difference learning work after decades of not working :cite:`Elsayed.Vasan.Mahmood.2024,Gallici.Fellows.Ellis.ea.2025`. Reading a modern paper here, you should recognize nearly every symbol.
 
-**What we deliberately left out.** Multi-agent reinforcement learning, where the opponent learns too, reached superhuman poker with search plus self-play :cite:`Brown.Sandholm.2017`. Distributional reinforcement learning models the return's whole distribution rather than its mean :cite:`Bellemare.Dabney.Munos.2017`. Meta-learning, hierarchy and partial observability each relax one of :numref:`sec_mdp`'s assumptions; Murphy's overview treats all three at textbook depth :cite:`Murphy.2025`. And for this section's road continued into post-training practice, the reinforcement-learning-from-human-feedback book :cite:`Lambert.2026` is the natural next read: you now own every estimator in it.
+**What we deliberately left out.** Multi-agent reinforcement learning, where the opponent learns too, reached superhuman poker with search plus self-play :cite:`Brown.Sandholm.2017`. Distributional reinforcement learning models the return's whole distribution rather than its mean :cite:`Bellemare.Dabney.Munos.2017`. Meta-learning, hierarchy and partial observability each relax one of :numref:`sec_mdp`'s assumptions; Murphy's overview treats all three at textbook depth :cite:`Murphy.2025`. For a broader treatment of post-training practice, see the reinforcement-learning-from-human-feedback book :cite:`Lambert.2026`.
 
 ## Capstone Projects
 
@@ -300,7 +300,7 @@ These four projects play the role of a course programming assignment; each runs 
 
 **B. Which implementation details actually matter.** Ablate five of the 37 catalogued PPO details, one at a time, three seeds each. Bar: at least one factor changes the median by more than the seed spread, and you can say which.
 
-**C. Break a trained policy.** Take three deliberately broken agents, one with a saturated policy, one with a critic that never learned, one with a replay buffer too small, and name each fault from the chapter's diagnostics alone, before reading the code.
+**C. Diagnose three faulty policies.** Examine one agent with a saturated policy, one with an untrained critic, and one with an undersized replay buffer. Identify each fault from the chapter's diagnostics before inspecting the code.
 
 **D. GRPO from REINFORCE, in two lines.** Start from :numref:`sec_baselines`'s `train`, add the group-standardized weight and the clip, and reproduce this section's $K$-sweep. Bar: $K = 1$ shows no learning; $K \geq 4$ reaches the verifier's ceiling.
 
@@ -316,7 +316,7 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
    $\nabla_\theta \log \pi_\theta(y \mid x) = \sum_t \nabla_\theta \log \pi_\theta(y_t \mid x, y_{<t})$
    and say why this makes the token-level and response-level views the same
    algorithm.
-1. [conceptual] *What collapses.* For each of discounting, bootstrapping, the
+1. [conceptual] *Which terms disappear.* For each of discounting, bootstrapping, the
    TD error and replay, say in one sentence what property of the token MDP
    removes it, and name one setting (multi-turn dialogue, tool use) in which
    it comes back.
@@ -339,7 +339,7 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
 [Dive into Deep Learning · §15.6]{.kicker}
 
 Sequences are trajectories<br>
-**text generation as an MDP · response-probability factorization · terminal-reward simplifications · policy-optimization components**
+**text generation as an MDP · response factorization · terminal rewards · group baselines and KL penalties**
 :::
 :::
 
@@ -357,7 +357,7 @@ Sequences are trajectories<br>
 . . .
 
 Transitions are *concatenation*: deterministic, known, probability one.
-All randomness is the policy's; the reward is terminal.
+All randomness comes from policy sampling; the reward is terminal.
 :::
 
 ::: {.slide title="Sequence and Token Gradients"}
@@ -368,10 +368,11 @@ $$\nabla_\theta \log \pi_\theta(y \mid x)
 
 - chain rule, no transition factors to drop: three-line proof
 - terminal reward $\Rightarrow$ one response-level weight
-  $r(x, y) - b(x)$ on every token's score (not the
+  $r(x, y) - b(x)$ on every token's score (rather than the
   prefix-dependent $A(s_t, a_t)$)
-- one action per episode: the *contextual bandit* of
-  :numref:`sec_qlearning`, until multi-turn closes the loop
+- one structured action per episode: the contextual bandit of
+  :numref:`sec_qlearning`; multi-turn interaction restores
+  sequential dependence
 :::
 
 ::: {.slide title="Simplifications for Sequence Generation"}
@@ -379,8 +380,9 @@ $$\nabla_\theta \log \pi_\theta(y \mid x)
 
 . . .
 
-Everything that leaned on the kernel or on intermediate reward
-collapsed; the policy-optimization spine survived whole.
+Deterministic concatenation and terminal reward remove the need
+for transition learning and intermediate Bellman targets; policy
+optimization components remain applicable.
 :::
 
 ::: {.slide title="The Group-Mean Baseline"}
@@ -394,23 +396,23 @@ and the update vanishes identically.
 
 . . .
 
-$0.062$ is the reference, untouched: self-inclusion bias at its
-maximum, not "no relative information". "The group mean replaced
-the critic", as a measurement.
+$0.062$ is the unchanged reference score. At $K=1$, including
+the sample in its own baseline makes the reward-gradient update
+identically zero.
 :::
 
 ::: {.slide title="Reward-Model Exploitation"}
-A sloppy grader greps for the answer; a hedge that lists every
-number passes everything. :eqref:`eq_kl_optimum` prices it:
-exploit pays iff $\beta < $ reward gap / reference log-odds $= 1/4$.
+A grader that searches for the answer accepts a response listing
+every candidate. :eqref:`eq_kl_optimum` predicts that this response
+is favored when $\beta < $ reward gap / reference log-odds $= 1/4$.
 
 @!rl-sequences-reward-hacking-unified
 
 . . .
 
-Hacked at $\beta = 0$; stops paying past $0.2$; every row lands
-close to the tilted optimum. $\beta$ is an exchange rate, not a
-safety valve.
+At $\beta=0$, the approximate score is perfect while the exact
+score is $0.5$. Above the predicted threshold, the multi-answer
+response is suppressed. The penalty limits rather than prevents exploitation.
 :::
 
 ::: {.slide title="Components of GRPO"}
@@ -423,8 +425,8 @@ safety valve.
   estimator: :eqref:`eq_kl_objective`
 - both KLs at once: clip against the *previous iterate*, penalty
   against the *frozen reference*
-- the toy simplifies: one step per group (nothing clipped), KL
-  folded into the reward, one-token responses
+- the example uses one step per group, no clipping, a KL term
+  folded into the reward, and one-token responses
 
 . . .
 
@@ -435,9 +437,9 @@ policy directly: DPO :cite:`Rafailov.Sharma.Mitchell.ea.2023`.
 ::: {.slide title="Notation for Later Chapters"}
 Reward is **learned** (Bradley-Terry, :numref:`sec_regularized`)
 or **checked** (a verifier: RLVR :cite:`DeepSeekAI.2025`).
-Either way it is an estimate, and an optimizer finds an
-estimate's errors: $\hat{Q}$ in :numref:`sec_offline`,
-$r_\phi$ in :numref:`sec_regularized`, the grader here.
+Both can omit aspects of the intended objective, as do $\hat{Q}$
+in :numref:`sec_offline`, $r_\phi$ in :numref:`sec_regularized`,
+and the approximate grader here.
 
 . . .
 
@@ -455,8 +457,7 @@ Language Models part.
   normalization and scale
 - omitted with pointers: multi-agent, distributional, meta,
   hierarchical, POMDPs
-- next read: the RLHF book :cite:`Lambert.2026`; you own every
-  estimator in it
+- next read: the RLHF book :cite:`Lambert.2026`
 :::
 
 ::: {.slide title="Recap"}
@@ -464,9 +465,9 @@ Language Models part.
   response = trajectory; transitions are concatenation
 - one gradient, two views; terminal reward puts one
   response-level weight $r - b(x)$ on every token
-- $K = 1$'s update is identically zero (self-inclusion bias at
-  its maximum), measured; the hedge gets hacked, measured;
-  $\beta = $ gap / log-odds prices the exploit
+- at $K=1$, the reward-gradient update is zero because of
+  self-inclusion; the verifier example matches the predicted
+  threshold $\beta = $ reward gap / reference log-odds
 - policy-gradient estimation, clipping, and KL regularization carry
   directly to the Language Models part
 :::

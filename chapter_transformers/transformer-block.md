@@ -47,10 +47,9 @@ to layer, and sublayers do not replace it — they read from it, compute, and
   retrieved mixture to its stream. Contextual information enters through
   this sublayer.
 - The **feed-forward network** (FFN) acts on each position separately: the
-  same two- or three-matrix MLP, applied token by token, with no
-  interaction between positions. Everything the model computes *from* a
-  token's accumulated state. As we will see, this sublayer also contains
-  most of the block's parameters.
+  same two- or three-matrix MLP is applied token by token, with no
+  interaction between positions. It transforms each token's accumulated
+  state and contains most of the block's parameters.
 
 Writing $\mathrm{Attn}$ for multi-head self-attention and $\mathrm{Norm}$
 for a normalization layer, the modern (*pre-norm*) block computes
@@ -70,7 +69,7 @@ change that — positional information is the model's job, not the block's,
 a division of responsibilities the next section exploits.
 
 :numref:`fig_transformer-block` shows the wiring, in the two normalization
-arrangements whose difference is our first order of business.
+arrangements compared below.
 
 ![The transformer block: attention and a position-wise FFN read from the residual stream and add their results back. Left, the 2017 arrangement — normalization sits on the stream itself, after each addition. Right, the modern arrangement — normalization moves onto each branch, and the stream runs uninterrupted from input to output.](../img/mdl-transformers-block-anatomy.svg)
 :label:`fig_transformer-block`
@@ -161,9 +160,9 @@ class MiniBlock(nnx.Module):
 
 Which arrangement is better? We can get a long way without training
 anything. A freshly initialized network is a fixed random function, so we
-can *measure* how it treats signals: stack $N$ blocks, push a random
-sequence through, and watch what survives — deterministically, in seconds,
-with no seed lottery. We initialize every weight matrix as the original
+can *measure* how it treats signals. We stack $N$ blocks, pass a random
+sequence through them, and measure the output without training. Fixing the
+seed makes the experiment deterministic. We initialize every weight matrix as the original
 transformer did (Xavier initialization) and track three quantities: the
 scale of the residual stream, how *distinct* the tokens remain from one
 another, and how much gradient each block's attention receives from a
@@ -509,8 +508,8 @@ small language model.
 
 ## A Configurable Block
 
-We now assemble the block for real, and we build it the way this chapter
-will use it: every design decision above becomes a constructor argument.
+We assemble the block used throughout this chapter. Every design
+decision above becomes a constructor argument.
 `norm` selects LayerNorm or RMSNorm, `act` selects the FFN, `pre_norm`
 selects the arrangement, and two factory hooks let later sections swap
 whole sublayers — a mixture-of-experts FFN, or a cache-friendly
@@ -682,9 +681,9 @@ class CharLM(nnx.Module):
 
 ### Comparing GELU and SwiGLU
 
-We now compare the two alternatives on the same data (the character-level Time Machine corpus
-of :numref:`sec_text-sequence`), same model, same seed, same optimizer and
-learning rate, same 600 steps — the only difference is the `act` flag, and
+We compare the two alternatives on the same data (the character-level Time Machine corpus
+of :numref:`sec_text-sequence`), holding the model, seed, optimizer,
+learning rate, and 600-step budget fixed. Only the `act` flag differs, and
 the parameter counts match to a tenth of a percent.
 
 ```{.python .input #transformer-block-the-flags-at-work-gelu-versus-swiglu}
@@ -896,8 +895,8 @@ Same data, seed, optimizer, 600 steps; parameters matched to 0.1%:
 
 @!transformer-block-the-flags-at-work-gelu-versus-swiglu
 
-More than a tenth of a nat, stable across seeds — the kind of small,
-real, equal-cost win architecture progress is made of.
+Across the tested seeds, SwiGLU improves the loss by more than a tenth of a
+nat at the same parameter cost.
 :::
 
 ::: {.slide title="Recap"}
@@ -909,6 +908,6 @@ real, equal-cost win architecture progress is made of.
   trainable.
 - RMSNorm = the scale statistic only; QK-norm pins the attention logits.
 - SwiGLU beats the matched-budget MLP by a small, seed-stable margin.
-- `TransformerBlock`: a decade of designs as one constructor signature —
-  the chapter never builds another block.
+- `TransformerBlock` expresses the block designs used in this chapter through
+  one constructor signature.
 :::

@@ -142,9 +142,9 @@ layer = CenteredLayer()
 layer(np.array([1.0, 2, 3, 4, 5]))
 ```
 
-Nothing distinguishes this class from a built-in layer. We can place it inside
-a `Sequential`, and the container neither knows nor cares that one of its
-children is user code. The output mean should be zero; because we are adding
+The class follows the same module interface as a built-in layer. It can be
+placed inside a `Sequential`, which invokes it through that shared interface.
+The output mean should be zero; because we are adding
 up floating-point numbers, we may see a very small nonzero value instead,
 which is roundoff, not a bug.
 
@@ -194,19 +194,17 @@ Y.mean()
 :begin_tab:`pytorch`
 A layer with something to learn must create its own parameters, and wrapping a
 tensor in `nn.Parameter` is what registers them (:numref:`sec_parameters`).
-We could show the mechanics by re-implementing `nn.Linear`, but that teaches
-nothing the built-in does not already do. Instead we implement *RMSNorm*
-:cite:`Zhang.Sennrich.2019`, a normalization used by many current language
-models, in the same five lines.
+To demonstrate parameter registration beyond another affine layer, we
+implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, a normalization used in many
+language models.
 :end_tab:
 
 :begin_tab:`jax`
 A layer with something to learn must create its own parameters, and
 `nnx.Param` is what registers them in the object graph
-(:numref:`sec_parameters`). We could show the mechanics by re-implementing
-`nnx.Linear`, but that teaches nothing the built-in does not already do. Instead
-we implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, a normalization used by
-many current language models, in the same handful of lines.
+(:numref:`sec_parameters`). To demonstrate parameter registration beyond
+another affine layer, we implement *RMSNorm*
+:cite:`Zhang.Sennrich.2019`, a normalization used in many language models.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -214,10 +212,9 @@ A layer with something to learn must create its own parameters, and
 `add_weight` is what registers them (:numref:`sec_parameters`). Keras
 splits creation off into a `build` method that runs on the first call, once
 the input shape is known, so the layer need not be told its width in advance.
-We could show the mechanics by re-implementing `Dense`, but that teaches
-nothing the built-in does not already do. Instead we implement *RMSNorm*
-:cite:`Zhang.Sennrich.2019`, a normalization used by many current language
-models.
+To demonstrate parameter registration beyond another affine layer, we
+implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, a normalization used in many
+language models.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -226,10 +223,9 @@ a `gluon.Parameter` to an attribute is what registers it
 (:numref:`sec_parameters`). The parameter is declared with a name, a
 shape, and an initializer; its array is allocated only when `initialize()`
 runs, and the forward pass fetches the copy on the input's device with
-`.data(X.device)`. We could show the mechanics by re-implementing `nn.Dense`,
-but that teaches nothing the built-in does not already do. Instead we
-implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, a normalization used by many
-current language models.
+`.data(X.device)`. To demonstrate parameter registration beyond another affine
+layer, we implement *RMSNorm*
+:cite:`Zhang.Sennrich.2019`, a normalization used in many language models.
 :end_tab:
 
 Layer normalization standardizes each input vector: subtract the mean, divide
@@ -541,28 +537,22 @@ nnx.update(net, jax.device_put(nnx.state(net), device))
 net.layers[1].gain.device, net(X).device
 ```
 
-None of this took any code beyond the class definition. The guarantee comes
-from the base class: subclass it, register state through the proper channels,
-and containers, optimizers, checkpoints, and devices all treat your layer as
-native.
+The base class and registered state provide the integration demonstrated
+above: containers, optimizers, checkpoints, and device-placement utilities
+process the custom layer through the standard module interface.
 
-### Checking against the Built-in
+### Comparison with Framework Implementations
 
 :begin_tab:`pytorch, jax, tensorflow`
-RMSNorm proved useful enough that the library now ships its own
-implementation. That gives us a referee. We copy a nontrivial gain into both
-implementations, so that agreement cannot be an accident of default values,
-and compare outputs.
+These frameworks provide an RMSNorm implementation. We assign the same
+nondefault gain to the custom and framework implementations, then compare their
+outputs.
 :end_tab:
 
 :begin_tab:`mxnet`
-RMSNorm proved useful enough that most libraries now ship their own
-implementation. This Gluon version is the exception: it has `nn.LayerNorm`
-but no RMSNorm, so there is no referee
-to check our five-liner against. The general rule for custom layers is to
-build one to understand it, then use the native implementation in production.
-Here it resolves differently: when the library ships nothing to prefer, keep
-the tested custom implementation.
+Gluon provides `nn.LayerNorm` but no RMSNorm implementation, so this tab cannot
+compare against a framework equivalent. Use a framework implementation when it
+meets the required behavior; otherwise retain and test the custom layer.
 :end_tab:
 
 :begin_tab:`jax`
@@ -923,8 +913,8 @@ class RoundSTE(autograd.Function):
 Two rules govern the class. First, invoke it through `RoundSTE.apply(X)`,
 never by calling `forward` directly: `apply` is what inserts the operation
 into the autograd graph, while a direct call computes the same values with no
-bookkeeping, and `backward` then never runs. This is the most common
-first-time bug with custom functions, and it fails without an error message.
+bookkeeping, and `backward` then never runs. Calling `forward` directly
+therefore omits the custom backward rule without raising an error.
 Second, `backward` receives the loss gradient with respect to the output and
 must return the gradient with respect to each input. Ours ignores the input
 values entirely; a backward that needs them must stash them in `forward` with
@@ -934,9 +924,8 @@ values entirely; a backward that needs them must stash them in `forward` with
 :begin_tab:`jax`
 Two rules govern the definition. First, the forward rule must return a
 *pair*: the output plus whatever residuals the backward rule will need. Ours
-needs nothing and returns `None`; returning the output alone is the most
-common first-time bug, and JAX reports it as a puzzling structure mismatch
-rather than pointing at the missing residuals. Second, the backward rule
+needs nothing and returns `None`; returning the output alone instead produces
+a structure-mismatch error because the residual is missing. Second, the backward rule
 receives those residuals and the loss gradient with respect to the output,
 and must return a tuple holding one gradient per argument of the original
 function, hence `(grad_output,)` rather than `grad_output`. An argument that
@@ -947,13 +936,13 @@ through `nondiff_argnums` so it is routed past the gradient machinery.
 :begin_tab:`tensorflow`
 Two rules govern the decorator. First, the decorated function returns a
 *pair*: the output and the gradient function. Because the gradient function
-is a closure defined inside the forward pass, anything the backward
-computation needs, the input values say, is captured for free; there is no
-separate residual mechanism, and the decorated function is invoked like any
-other, the decorator handling the tape bookkeeping. Second, `grad` receives
-the loss gradient with respect to the output and must return one gradient per
-argument of the decorated function. The genuine trap is state: if the wrapped
-computation reads a `tf.Variable`, the gradient function must instead accept
+is a closure defined inside the forward pass, it captures values such as the
+inputs that the backward computation needs. There is no separate residual
+mechanism, and the decorated function is invoked like any other function; the
+decorator handles the tape bookkeeping. Second, `grad` receives the loss
+gradient with respect to the output and must return one gradient per argument
+of the decorated function. State requires an additional interface: if the
+wrapped computation reads a `tf.Variable`, the gradient function must accept
 a `variables` keyword argument and return the variables' gradients as a
 second result; TensorFlow raises a `TypeError` naming this requirement if it
 is missing.
@@ -1047,8 +1036,8 @@ parameter tracking, container compatibility, serialization, and device
 movement, as we verified on RMSNorm axis by axis. When the chain rule itself
 must be overridden, as in
 the straight-through estimator, `torch.autograd.Function` lets you supply
-`forward` and `backward` as a pair, invoked through `apply`. Build custom
-implementations to understand them; prefer the native ones in production.
+`forward` and `backward` as a pair, invoked through `apply`. Custom implementations expose these mechanisms; framework-provided
+operations are preferable when they meet production requirements.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1060,35 +1049,33 @@ device movement, as we verified on RMSNorm axis by axis. When the chain
 rule itself must be overridden, as in the straight-through estimator,
 `jax.custom_vjp` attaches a forward and a backward rule to a function, and
 `jax.lax.stop_gradient` covers the identity-surrogate case in a single
-expression. Build custom implementations to understand them; prefer the
-native ones in production.
+expression. Custom implementations expose these mechanisms; framework-provided
+operations are preferable when they meet production requirements.
 :end_tab:
 
 :begin_tab:`tensorflow`
 A custom layer is a layer subclass: `call` defines the computation,
 `add_weight` registers learnable state, and `add_weight(trainable=False)`
-registers persistent state that no optimizer should touch. Registration is
-what buys composability; a correctly written layer gets parameter tracking,
-container compatibility, and serialization for free, with device placement
-settled at creation, as we verified on RMSNorm axis by axis. When the chain
+registers persistent state that no optimizer should touch. Registration provides parameter tracking, container compatibility, and
+serialization, with device placement settled at creation, as the RMSNorm
+examples verified. When the chain
 rule itself must be overridden, as in the straight-through estimator,
 `@tf.custom_gradient` lets the forward function return its own backward rule.
-Build custom implementations to understand them; prefer the native ones in
-production.
+Custom implementations expose these mechanisms; framework-provided
+operations are preferable when they meet production requirements.
 :end_tab:
 
 :begin_tab:`mxnet`
 A custom layer is a block subclass: `forward` defines the computation,
 assigning a `gluon.Parameter` registers learnable state, and `gluon.Constant`
 registers persistent state that autograd and the `Trainer` ignore.
-Registration is what buys composability; a correctly written layer gets
-parameter tracking, container compatibility, serialization, and device
-movement for free, as we verified on RMSNorm axis by axis. When the chain
+Registration provides parameter tracking, container compatibility,
+serialization, and device movement, as the RMSNorm examples verified. When the chain
 rule itself must be overridden, as in the straight-through estimator,
 `autograd.Function` lets you supply `forward` and `backward` as a pair, one
-fresh instance per call. Build custom implementations to understand them;
-prefer the native ones in production, and where gluon ships none, as with
-RMSNorm, keep your own.
+fresh instance per call. Custom implementations expose these mechanisms. Use framework-provided
+operations when they meet production requirements; where Gluon provides none,
+as with RMSNorm, maintain the custom implementation.
 :end_tab:
 
 ## Exercises

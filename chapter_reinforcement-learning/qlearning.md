@@ -27,21 +27,23 @@ Value iteration, written for the action-value function, sweeps
 
 $$Q_{k+1}(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q_k (s', a'); \ \textrm{for all } s \in \mathcal{S} \textrm{ and } a \in \mathcal{A},$$
 
-whose fixed point is $Q^*$; call the right-hand side $(TQ)(s, a)$, the optimality operator of :numref:`sec_valueiter` on action-value tables. We work with $Q$ rather than $V$ for the reason flagged there: extracting the optimal policy from $Q^*$ is an argmax over a table row, no model required. The kernel enters the sweep through one expectation, $E_{s' \sim P(\cdot \mid s, a)} [\max_{a'} Q_k(s', a')]$, and an expectation can be estimated from samples. That is the entire idea, and :numref:`fig_rl_backups` has already drawn it: Q-learning is panel (d), one sampled branch where the exact backup sums over all of them, the maximum at the next state kept.
+whose fixed point is $Q^*$; call the right-hand side $(TQ)(s, a)$, the optimality operator of :numref:`sec_valueiter` on action-value tables. We use $Q$ rather than $V$ because extracting the optimal policy from $Q^*$ requires only an argmax over a table row and no transition model. The kernel enters the sweep through one expectation, $E_{s' \sim P(\cdot \mid s, a)} [\max_{a'} Q_k(s', a')]$, and an expectation can be estimated from samples. Panel (d) of :numref:`fig_rl_backups` shows this substitution: Q-learning uses one sampled successor where the exact backup sums over every successor, while retaining the maximum over next actions.
 
-Let the agent act with some data-collection policy $\pi_e(a \mid s)$, its *behavior policy*, and record $n$ trajectories of $T$ timesteps each, $\{ (s_t^i, a_t^i)_{t=0,\ldots,T-1}\}_{i=1,\ldots, n}$. Value iteration is really a set of constraints tying the action-values of all state-action pairs together; an approximate version enforces those constraints on the pairs the data contains:
+Let the agent act with some data-collection policy $\pi_e(a \mid s)$, its *behavior policy*, and record $n$ trajectories of $T$ timesteps each, $\{ (s_t^i, a_t^i)_{t=0,\ldots,T-1}\}_{i=1,\ldots, n}$. The Bellman equations constrain the action values of all state--action pairs. A sampled objective can impose corresponding residual terms only for pairs present in the data:
 
 $$\hat{Q} = \mathrm{argmin}_Q \underbrace{\frac{1}{nT} \sum_{i=1}^n \sum_{t=0}^{T-1} (Q(s_t^i, a_t^i) - r(s_t^i, a_t^i) - \gamma \max_{a'} Q(s_{t+1}^i, a'))^2}_{\stackrel{\textrm{def}}{=} \ell(Q)}.$$
 :eqlabel:`q_learning_optimization_problem`
 
-The term that required the kernel is gone. We have not cheated: as the agent uses the policy $\pi_e$ to take an action $a_t^i$ at state $s_t^i$, the next state $s_{t+1}^i$ is a sample drawn from the transition function. So the optimization objective also has access to the transition function, but implicitly in terms of the data collected by the agent. For every constraint to be represented, $\pi_e$ must keep visiting every state-action pair. Note that an optimal deterministic policy would *not* qualify: it never takes the actions it considers suboptimal, so $\ell(Q)$ would contain no term for those state-action pairs and their values would be left unconstrained. The third part of this section takes that requirement seriously.
+The objective does not evaluate the kernel explicitly. Instead, when the behavior policy $\pi_e$ takes action $a_t^i$ at state $s_t^i$, the next state $s_{t+1}^i$ is sampled from the transition distribution. The collected data therefore provide sampled access to the transition dynamics. For every constraint to be represented, $\pi_e$ must keep visiting every state-action pair.
 
-Rather than solve the problem outright we make cheap incremental progress on its variables, the table entries. For each observed transition $(s, a, r, s')$, nudge the one entry it constrains toward the *bootstrapped target* $r + \gamma \max_{a'} Q(s', a')$, treating the target as a constant even though it contains $Q$:
+An optimal deterministic policy would *not* qualify: it never takes the actions it considers suboptimal, so $\ell(Q)$ would contain no term for those state-action pairs and their values would be left unconstrained. The third part of this section takes that requirement seriously.
+
+Instead of solving the joint problem directly, Q-learning updates individual table entries. For each observed transition $(s, a, r, s')$, it moves the corresponding entry toward the *bootstrapped target* $r + \gamma \max_{a'} Q(s', a')$, treating the target as a constant even though it contains $Q$:
 
 $$Q(s, a) \leftarrow (1 - \alpha)\, Q(s, a) + \alpha \big( r + \gamma \max_{a'} Q(s', a') \big),$$
 :eqlabel:`q_learning`
 
-where $\alpha$ is the step size. Because the target itself depends on $Q$ and we deliberately hold it fixed, this is called a semi-gradient step: Q-Learning is not gradient descent on $\ell(Q)$ in the strict sense, but the update is simple, cheap, and works well in practice. Rearranged, the update is a correction proportional to a single scalar,
+where $\alpha$ is the step size. Because the target itself depends on $Q$ and we deliberately hold it fixed, this is called a semi-gradient step: Q-learning is therefore not gradient descent on $\ell(Q)$ in the strict sense; it is a semi-gradient stochastic-approximation update. Rearranged, the update is a correction proportional to a single scalar,
 
 $$\delta = r + \gamma \max_{a'} Q(s', a') - Q(s, a), \qquad Q(s, a) \leftarrow Q(s, a) + \alpha\, \delta.$$
 :eqlabel:`eq_td_error`
@@ -63,23 +65,25 @@ Convergence instead follows from the expected update. Averaging :eqref:`eq_td_er
 
 ### Step Sizes and the Robbins-Monro Conditions
 
-For each state-action pair, the Robbins--Monro conditions are $\sum_k\alpha_k=\infty$ and $\sum_k\alpha_k^2<\infty$ :cite:`Robbins.Monro.1951`. A constant step size violates the second condition. With stochastic transitions, its estimates continue to fluctuate around $Q^*$. In a deterministic environment, the target has no transition noise and an update has the form $Q(s,a)\leftarrow(1-\alpha)Q(s,a)+\alpha(TQ)(s,a)$. Updating all entries gives a contraction with modulus $(1-\alpha)+\alpha\gamma$. The sampled asynchronous method additionally requires repeated visitation of every entry. Panel (c) of :numref:`fig_rl_exploration` measures this coverage for deterministic FrozenLake, where a constant step size of $0.9$ learns quickly within the finite budget.
+For each state-action pair, the Robbins--Monro conditions are $\sum_k\alpha_k=\infty$ and $\sum_k\alpha_k^2<\infty$ :cite:`Robbins.Monro.1951`. A constant step size violates the second condition. With stochastic transitions, its estimates continue to fluctuate around $Q^*$. In a deterministic environment, the target has no transition noise and an update has the form $Q(s,a)\leftarrow(1-\alpha)Q(s,a)+\alpha(TQ)(s,a)$. Updating all entries gives a contraction with modulus $(1-\alpha)+\alpha\gamma$. The sampled asynchronous method additionally requires repeated visitation of every entry.
 
-The conditions are necessary for the guarantee, not sufficient for a budget. The textbook sample-average rule $\alpha = 1/(1 + n(s, a))$, with $n(s, a)$ counting visits to the entry, passes Robbins-Monro yet weights the useless early targets (computed when the table was all zeros) as heavily as the informed late ones, and at a realistic budget it strands the estimate. Our default $\alpha = 1/(1 + 0.1\, n(s, a))$ also passes but stays ten times larger at the same visit count. We measure all three schedules below on the same seeds; the difference is not a constant factor but success against failure.
+Panel (c) of :numref:`fig_rl_exploration` measures this coverage for deterministic FrozenLake, where a constant step size of $0.9$ learns quickly within the finite budget.
+
+The conditions are necessary for the guarantee, not sufficient for a budget. The textbook sample-average rule $\alpha = 1/(1 + n(s, a))$, with $n(s, a)$ counting visits to the entry, passes Robbins-Monro but weights early targets computed from an inaccurate zero table as heavily as later, better-informed targets. At the tested finite budget, this slows learning substantially. Our default $\alpha = 1/(1 + 0.1\, n(s, a))$ also passes but stays ten times larger at the same visit count. We compare all three schedules on the same seeds and report their finite-budget value errors and returns.
 
 ### Terminal Masking
 
-One term must be repaired before the update meets an episodic environment. When $s'$ is terminal, the goal or a hole, there is no continuation to bootstrap: the future is empty and worth exactly zero, so the target is the reward alone,
+The update requires terminal masking in an episodic environment. When $s'$ is terminal, its continuation value is zero, so the target contains only the immediate reward,
 
 $$Q(s, a) \leftarrow Q(s, a) + \alpha \Big( r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a' \in \mathcal{A}} Q(s', a') - Q(s, a) \Big).$$
 
-The flag that gates the mask is `terminated`, never `truncated`: :numref:`sec_mdp` drew the line between a state with no future and a recording that stopped, and this update is where confusing them corrupts values, teaching the table that standing on frozen ice at the time limit is worthless. In code the whole repair is one factor, `gamma * (1 - terminated) * Q[s_next].max()`.
+The mask uses `terminated`, not `truncated`: :numref:`sec_mdp` distinguishes a terminal state from an observation stopped by a time limit. Treating truncation as termination would impose an incorrect zero continuation value on a nonterminal state. In code the whole repair is one factor, `gamma * (1 - terminated) * Q[s_next].max()`.
 
 ## Q-Learning on the Lake
 
 ### The Implementation
 
-Back to the slippery lake of :numref:`sec_mdp`, same discount. We compute the exact solution one last time and lock it away: the learner touches the environment only through `reset` and `step`; `mdp`, `V_star` and `pi_star` exist so that, for once in reinforcement learning, the learned table can be graded against the truth.
+We return to the slippery lake of :numref:`sec_mdp` with the same discount. The learner accesses the environment only through `reset` and `step`; `mdp`, `V_star`, and `pi_star` are retained solely to compare the learned table with the exact solution.
 
 ```{.python .input #qlearning-the-implementation-1}
 %%tab pytorch, jax
@@ -104,7 +108,7 @@ The second is the behavior policy. With probability $\epsilon$ it takes a unifor
 $$\pi_e(a \mid s) = \begin{cases} 1 - \epsilon + \epsilon/|\mathcal{A}| & a = \mathrm{argmax}_{a'} \hat{Q}(s, a') \\ \epsilon/|\mathcal{A}| & \textrm{otherwise}, \end{cases}$$
 :eqlabel:`epsilon_greedy`
 
-the *$\epsilon$-greedy* policy, with ties in the argmax broken uniformly at random. The tie-breaking is not a nicety: a zero-initialized table makes *every* state a four-way tie, and `np.argmax` always returns the first index:
+the *$\epsilon$-greedy* policy, with ties in the argmax broken uniformly at random. Random tie-breaking is necessary for exploration from a zero-initialized table, where every state begins as a four-way tie. In contrast, `np.argmax` always returns the first index:
 
 ```{.python .input #qlearning-the-implementation-3}
 %%tab pytorch, jax
@@ -118,7 +122,7 @@ def epsilon_greedy(q, epsilon, rng):  #@save
     return int(rng.choice(np.flatnonzero(q == q.max())))
 ```
 
-The algorithm is now a dozen lines: act, observe one transition, correct one entry by $\alpha\, \delta$, and yield each episode's return, keeping all bookkeeping outside the loop. The caller passes in the two arrays the loop mutates, the table and the visit counts, and it wants both: the counter drives the step-size schedule and doubles as the experiment's ledger. The exploration rate anneals from $1$ to a floor of $0.05$ over the first half of the budget, leaving the second half mostly exploitation:
+The implementation repeatedly selects an action, observes one transition, and changes one table entry by $\alpha\delta$. It mutates both the value table and the visit counts; the counts determine the step-size schedule and also record state--action coverage. The exploration rate decreases from $1$ to $0.05$ during the first half of training and remains at that floor thereafter:
 
 ```{.python .input #qlearning-the-implementation-4}
 %%tab pytorch, jax
@@ -152,7 +156,7 @@ d2l.plot_curves({'Q-learning': returns}, xlabel='episode',
                 ylabel='return per episode', smooth=200)
 ```
 
-The curve is a trailing 200-episode average with the band spanning the seeds. It sits at zero while success is a rare accident, climbs as the first successes propagate value backward through the table, and flattens once the schedule reaches its floor.
+The curve is a trailing 200-episode average, with the band spanning the seeds. It remains near zero while successful episodes are rare, increases as successful transitions update preceding state--action values, and flattens after the exploration schedule reaches its floor.
 
 ### The Learned Table against the Exact Solution
 
@@ -179,7 +183,7 @@ Across seeds, the learned value functions are within $0.006$ to $0.021$ of $V^*$
 
 The median run used $95{,}569$ environment steps. By comparison, :numref:`sec_valueiter` certified $V^*$ after $164$ sweeps of $64$ exact model backups, or about $10{,}500$ backups. These quantities are not directly interchangeable: a Bellman backup requires the full transition kernel, whereas an environment step provides only one sampled transition. Exercise 5 compares the two methods while keeping these different information requirements explicit.
 
-What did the agent actually learn? Place the two solutions side by side:
+The following panels compare the learned and exact solutions:
 
 ```{.python .input #qlearning-reading-the-curve-honestly-2}
 %%tab pytorch, jax
@@ -280,7 +284,7 @@ classifying single-turn preference optimization.
 
 ### Regret and the Epsilon-Greedy Family
 
-The bandit also fixes the right score. Success rate flattered our training curve; regret charges each pull the gap between the best arm's mean $\mu^* = \max_a \mu_a$ and the pulled arm's,
+A bandit permits evaluation by cumulative regret rather than success rate. Each pull contributes the gap between the best mean $\mu^* = \max_a \mu_a$ and the selected arm's mean,
 
 $$\textrm{regret after } t \textrm{ pulls} = \sum_{u=1}^{t} \big( \mu^* - \mu_{a_u} \big),$$
 
@@ -339,11 +343,13 @@ d2l.plot_curves(regret, xlabel='pulls', ylabel='cumulative regret')
 
 Both methods have lower regret than the $\epsilon$-greedy variants in this experiment. The curvature on the logarithmic plot is consistent with logarithmic regret, but $2000$ pulls cannot verify an asymptotic rate. The coefficient also matters: $\kappa=0.5$ was selected for these arms; $\kappa=\sqrt{2}$ gives regret near $200$, while $\kappa=0.15$ sometimes commits to a suboptimal arm and in one of twenty runs exceeds $900$. At $\kappa=0.5$, total regret ranges from $21$ to $53$ across seeds. The relative performance of UCB and Thompson sampling is therefore specific to this experiment.
 
-**Online and offline uncertainty.** UCB adds an uncertainty term because an online agent can test optimistic estimates by collecting new observations. Offline methods often subtract an uncertainty penalty because no new data can correct an overestimate (:numref:`sec_offline`). The two terms express a related principle, but they are calibrated differently: UCB uses the online count and time, whereas an offline penalty is defined relative to a fixed dataset.
+**Online and offline uncertainty.** UCB adds an uncertainty term because an online agent can test optimistic estimates by collecting new observations. Offline methods often subtract an uncertainty penalty because no new data can correct an overestimate (:numref:`sec_offline`). The two terms express a related principle, but they are calibrated differently. UCB uses the online count and time, whereas an offline penalty is defined relative to a fixed dataset.
 
 ### Exploration in MDPs
 
-Bandit actions are immediately available, whereas an uncertain state-action pair in an MDP may be reachable only through a particular sequence of actions. Under independent random exploration, the probability of executing a required sequence of $k$ actions decreases geometrically with $k$. Difficult MDPs therefore require exploration over temporally extended behavior. One approach assigns bonuses to uncertain state-action pairs and propagates them through value backups, so the policy selects action sequences leading toward uncertain states. With function approximation, explicit counts are unavailable; alternatives include density-model pseudo-counts, curiosity based on prediction error, random network distillation, state archives, and ensembles for approximate posterior sampling :cite:`Burda.Edwards.Storkey.ea.2019`. FrozenLake does not expose this difficulty: with only 44 nonterminal state-action pairs, the exploration schedules used here provide broad coverage within the training budget.
+Bandit actions are immediately available, whereas an uncertain state-action pair in an MDP may be reachable only through a particular sequence of actions. Under independent random exploration, the probability of executing a required sequence of $k$ actions decreases geometrically with $k$. Difficult MDPs therefore require exploration over temporally extended behavior.
+
+One approach assigns bonuses to uncertain state-action pairs and propagates them through value backups, so the policy selects action sequences leading toward uncertain states. With function approximation, explicit counts are unavailable; alternatives include density-model pseudo-counts, curiosity based on prediction error, random network distillation, state archives, and ensembles for approximate posterior sampling :cite:`Burda.Edwards.Storkey.ea.2019`. FrozenLake does not expose this difficulty. With only 44 nonterminal state--action pairs, the exploration schedules used here provide broad coverage within the training budget.
 
 ## Off-Policy Learning
 
@@ -370,7 +376,9 @@ The maximum of noisy estimates tends to exceed the maximum of their expectations
 
 ## Summary
 
-Q-learning replaces the expectation in a Bellman backup with a sampled transition. Its temporal-difference update is $Q \leftarrow Q + \alpha \delta$. In stochastic environments, this semi-gradient update should not be confused with minimizing a sampled squared Bellman residual, whose population objective contains an additional variance term. Under sustained visitation and Robbins--Monro step sizes, tabular Q-learning converges to $Q^*$. Exploration can be studied separately in a one-state bandit: fixed-$\epsilon$ exploration has linear regret, whereas UCB and Thompson sampling reduce exploration as uncertainty decreases. The maximum in the target makes Q-learning off-policy and also introduces maximization bias. Replacing the table by a neural network gives the deep Q-learning methods developed in :numref:`sec_dqn`.
+Q-learning replaces the expectation in a Bellman backup with a sampled transition. Its temporal-difference update is $Q \leftarrow Q + \alpha \delta$. In stochastic environments, this semi-gradient update should not be confused with minimizing a sampled squared Bellman residual, whose population objective contains an additional variance term. Under sustained visitation and Robbins--Monro step sizes, tabular Q-learning converges to $Q^*$. Exploration can be studied separately in a one-state bandit: fixed-$\epsilon$ exploration has linear regret, whereas UCB and Thompson sampling reduce exploration as uncertainty decreases. The maximum in the target makes Q-learning off-policy and also introduces maximization bias.
+
+Replacing the table by a neural network gives the deep Q-learning methods developed in :numref:`sec_dqn`.
 
 **Experimental scope.** The FrozenLake results use five seeds, one finite state space, and a fixed training budget. They show that tabular Q-learning approaches the exact solution under the tested schedule, but they do not establish an optimal schedule or a scaling law. The bandit curves average twenty runs; the UCB coefficient was tuned for these arms, and $2{,}000$ pulls are insufficient to verify an asymptotic regret rate. The reported exploration cost is specific to the geometry of this environment.
 
@@ -457,8 +465,8 @@ transition you just observed:
 $$\delta = r + \gamma \max_{a'} Q(s', a') - Q(s, a), \qquad
 Q(s, a) \leftarrow Q(s, a) + \alpha\, \delta$$
 
-- $\delta$ is the **temporal-difference error**: reality's one-step report
-  minus the table's claim.
+- $\delta$ is the **temporal-difference error**: the sampled one-step
+  target minus the current table estimate.
 - Bootstrap masked by `terminated`, never `truncated`.
 
 . . .
@@ -472,8 +480,8 @@ The sampled least-squares objective is *not* the right justification:
 
 $$L(Q) = E_\mu \big[ (Q - TQ)^2 \big] + \gamma^2\, E_\mu \big[ \mathrm{Var}_{s'} ( \max_{a'} Q(s', a') ) \big]$$
 
-$Q^*$ zeroes the first term; the variance term moves the argmin
-(**double sampling**). Deterministic transitions kill it; ice does not.
+$Q^*$ makes the first term zero, but the variance term can change the
+minimizer (**double sampling**). It vanishes for deterministic transitions.
 
 . . .
 
@@ -491,7 +499,7 @@ convergent under Robbins-Monro steps.
 :::
 
 ::: {.slide title="Graded Against Dynamic Programming"}
-The check no agent in the wild can run: we kept the solved MDP.
+This finite example retains the exact MDP for evaluation.
 
 @!qlearning-reading-the-curve-honestly-1
 
@@ -507,9 +515,9 @@ reduces the measured success rate of the behavior policy to $54\%$.
 
 . . .
 
-- constant $0.9$: a noise ball that never shrinks ($0.06$ to $0.27$)
+- constant $0.9$: estimates continue to fluctuate ($0.06$ to $0.27$)
 - $1/(1 + 0.1 n)$: converged, leaning slightly high
-- $1/(1 + n)$: passes Robbins-Monro, strands **all five seeds** below $0.025$
+- $1/(1 + n)$: satisfies Robbins--Monro but leaves **all five seeds** below $0.025$ at this budget
 :::
 
 ::: {.slide title="Exploration Measured by Regret"}
@@ -527,15 +535,15 @@ UCB $37$ · Thompson $32$.
 ::: {.slide title="Optimism and Uncertainty"}
 $$a_t = \mathrm{argmax}_a \big[ \hat{\mu}(a) + \kappa \sqrt{\log t / n(a)} \big]$$
 
-Per-arm, self-extinguishing exploration: logarithmic regret where any fixed
-$\epsilon$ is linear (proved at $\kappa = \sqrt 2$; play each arm once
+Per-arm exploration decreases as observations accumulate: logarithmic regret
+under the stated UCB conditions, whereas fixed $\epsilon$ has linear regret (proved at $\kappa = \sqrt 2$; play each arm once
 first). Thompson: sample a Beta posterior, play the argmax.
 
 . . .
 
-**The sign.** Online exploration *adds* a count-shrinking confidence
-radius; offline pessimism (:numref:`sec_offline`) *subtracts* one. Optimism
-is safe only where it gets tested.
+**Online and offline uncertainty.** Online exploration adds a confidence
+radius that decreases with counts; offline pessimism (:numref:`sec_offline`)
+subtracts an uncertainty penalty because no new samples can correct errors.
 :::
 
 ::: {.slide title="Which Policy Is Being Learned"}
@@ -543,16 +551,16 @@ is safe only where it gets tested.
   Learn about the greedy policy from data collected by any policy.
 - One symbol away: SARSA bootstraps on the action taken, learning the
   behavior's value, $\epsilon$ floor and all.
-- The $\max$ also **leans high**: four of five final estimates sat above
-  the true $0.180$, none below. Maximization bias, repaired in
+- The $\max$ also produces positive bias here: four of five final estimates
+  exceed the true $0.180$, and none are below it. Maximization bias, repaired in
   :numref:`sec_dqn`.
 :::
 
 ::: {.slide title="Recap"}
 - TD error :eqref:`eq_td_error`: the one-step residual; reused by every
   algorithm ahead.
-- Correctness lives at the fixed point of the update, not the argmin of
-  the sampled objective (double sampling).
+- Convergence follows from the expected update's fixed point, not from
+  minimizing the sampled squared objective (double sampling).
 - Robbins-Monro is necessary for the guarantee; budgets decide between
   schedules that both pass.
 - Online feedback: selecting an overestimated action provides data that can
@@ -560,5 +568,5 @@ is safe only where it gets tested.
 - Fixed $\epsilon$ has linear regret; UCB and Thompson sampling reduce
   exploration as uncertainty decreases. The uncertainty term changes sign in
   :numref:`sec_offline`.
-- Off-policy by one $\max$; maximization bias by the same $\max$.
+- The first $\max$ defines a greedy off-policy target; the same $\max$ can also introduce maximization bias.
 :::

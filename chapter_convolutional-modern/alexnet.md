@@ -125,7 +125,7 @@ that time NVIDIA and ATI had begun optimizing them for general computing
 Where a CPU core runs at a high clock frequency and spends most of its chip
 area on the machinery of general control flow (branch predictors, deep
 pipelines, speculative execution, large caches), a GPU packs thousands of
-much simpler cores onto one chip. This wins on power, since consumption grows
+much simpler cores onto one chip. This improves power efficiency because consumption grows
 roughly quadratically with clock frequency: for the budget of one CPU core
 running at four times the speed, 16 GPU cores at $\frac{1}{4}$ the speed
 deliver $16 \times \frac{1}{4} = 4$ times the throughput. GPUs also have far
@@ -171,7 +171,7 @@ AlexNet consists of eight layers: five convolutional layers,
 two fully connected hidden layers, and one fully connected output layer.
 Second, AlexNet used the ReLU instead of the sigmoid
 as its activation function.
-Let's look at the details.
+We next examine the architecture.
 
 ### Architecture
 
@@ -357,11 +357,11 @@ One of the problems with applying AlexNet directly on Fashion-MNIST
 is that its images have lower resolution ($28 \times 28$ pixels)
 than ImageNet images.
 To make things work, we upsample them to $224 \times 224$.
-This is generally not a smart practice, as it simply increases the computational
-complexity without adding information. Nonetheless, we do it here to be faithful to the AlexNet architecture.
+Upsampling increases computation without adding information. We nevertheless
+do so here to preserve the AlexNet architecture.
 We perform this resizing with the `resize` argument in the `d2l.FashionMNIST` constructor.
 
-Now, we can start training AlexNet.
+We can now train AlexNet.
 Compared to LeNet in :numref:`sec_lenet`,
 the main change here is the use of a smaller learning rate
 and much slower training due to the deeper and wider network,

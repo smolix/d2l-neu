@@ -41,23 +41,23 @@ We have several options for computing $\mathbf{A}$:
 
 1. We could compute $\mathbf{A}_{ij} = \mathbf{B}_{i,:} \mathbf{C}_{:,j}$, i.e., elementwise by means of dot products.
 1. We could compute $\mathbf{A}_{:,j} = \mathbf{B} \mathbf{C}_{:,j}$, i.e., one column at a time. Likewise we could compute $\mathbf{A}$ one row $\mathbf{A}_{i,:}$ at a time.
-1. We could simply compute $\mathbf{A} = \mathbf{B} \mathbf{C}$ in one go.
+1. We could compute $\mathbf{A} = \mathbf{B} \mathbf{C}$ in one call.
 1. We could break $\mathbf{B}$ and $\mathbf{C}$ into smaller block matrices and compute $\mathbf{A}$ one block at a time.
 
 Option 1 fetches a row and a column for every single output element, and
 since matrices are laid out linearly in memory, one of the two is read from
 widely scattered addresses. Option 2 keeps the column vector
 $\mathbf{C}_{:,j}$ in cache while traversing $\mathbf{B}$, halving the memory
-traffic. Option 3 is best, but most matrices do not fit into cache — that is
-the problem we started with. Option 4 is the practical answer: move blocks of
+traffic. Option 3 has the least dispatch overhead, but most matrices do not fit in
+cache. Option 4 preserves locality for larger matrices: move blocks of
 both matrices into cache and multiply them there, so every loaded byte is
 reused across a whole block of outputs. Optimized libraries do this for us.
 
 Memory is not the only overhead. Every operation launched from Python pays
 for the interpreter, the framework's bookkeeping, and, on a GPU, a kernel
 launch — microseconds per operation, against the nanoseconds of arithmetic a
-small operation actually contains. The remedy is the same as for memory:
-fewer, larger operations. Let's measure how much all of this matters in
+small operation actually contains. Both costs favor fewer, larger operations. We measure their combined effect
+in
 practice.
 
 ```{.python .input #minibatch-sgd-vectorization-and-caches-1}
@@ -183,8 +183,7 @@ matrices $\mathbf{B} \in \mathbb{R}^{m \times n}$ and
 $\mathbf{C} \in \mathbb{R}^{n \times p}$ takes approximately $2mnp$ floating
 point operations, when scalar multiplication and addition are counted
 separately (fused in practice). Multiplying two $256 \times 256$ matrices
-thus takes $0.03$ billion floating point operations. Let's see the respective
-speeds.
+thus takes $0.03$ billion floating point operations. The following timings compare the three approaches.
 
 ```{.python .input #minibatch-sgd-vectorization-and-caches-5}
 %%tab pytorch
@@ -214,16 +213,17 @@ print(f'performance in Gigaflops: element {gigaflops[0]:.3f}, '
 :begin_tab:`pytorch`
 On the CPU the three strategies land orders of magnitude apart: the
 elementwise loop runs in the megaflop range, the single library call in the
-gigaflops. Nothing about the arithmetic changed between them — only how much
-of it we exposed to the library per call, and hence how much overhead and
-memory traffic each floating point operation had to carry.
+gigaflops. Both strategies perform the same arithmetic. They differ in the work
+submitted per library call and therefore in dispatch overhead and memory
+traffic per floating-point operation.
 :end_tab:
 
 :begin_tab:`jax`
 On a GPU these matrices are tiny: even the full multiplication returns in
 roughly the time it takes to *launch* it, so the column, full, and block
 variants all measure the dispatch overhead rather than arithmetic throughput
-— the overhead wall of this section, seen from the other side. (The
+. This regime measures dispatch overhead rather than arithmetic
+throughput. (The
 elementwise variant ran in NumPy on the CPU and is not comparable.) Scale the
 matrices up to $4096 \times 4096$ and the one-call version pulls orders of
 magnitude ahead; the exercises ask you to try.
@@ -257,7 +257,8 @@ Batching therefore helps twice, and the two reasons deserve to be kept apart.
 The *hardware* reason is this section's: $b$ examples share one pass over the
 weights and one round of dispatch overhead, so the cost per example falls
 steeply as $b$ grows from 1 and flattens once the device is saturated. The
-*statistical* reason is :numref:`sec_sgd`'s: a quieter gradient. But
+*statistical* reason is the lower gradient variance derived in
+:numref:`sec_sgd`. But
 amplitude only falls as $b^{-1/2}$, so spending $100\times$ more compute per
 step reduces the noise amplitude by a factor of $10$. Both effects saturate, and neither
 tells us when a bigger batch stops converting into faster training. How
@@ -298,8 +299,7 @@ timer.stop()
 print(f'performance in Gigaflops: block {0.03 / timer.times[3]:.3f}')
 ```
 
-Computation on the minibatch is essentially as efficient as on the full
-matrix: 64 columns at a time is already enough work per dispatch to amortize
+Computation on the minibatch is nearly as efficient as on the full matrix: 64 columns at a time is already enough work per dispatch to amortize
 the overhead. One caveat before transferring this intuition wholesale to
 training: layers that compute statistics *across* the batch change
 behavior as $b$ grows, since the noise they inject shrinks with the batch.
@@ -381,8 +381,8 @@ def sgd(params, grads, states, hyperparams):
 
 Next, a generic training function. It initializes a linear regression model
 and trains it with any update rule of the above signature, plotting the loss
-against elapsed wall-clock time — the axis that actually matters when
-comparing optimizers.
+against elapsed wall-clock time, which measures computational rather than update
+efficiency.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-2}
 %%tab pytorch
@@ -460,10 +460,10 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
     return timer.cumsum(), animator.Y[0]
 ```
 
-We now compare full-batch, single-example, and intermediate updates. First, batch gradient
+We compare full-batch, single-example, and intermediate updates. First, batch gradient
 descent: a minibatch of 1500 is the whole dataset, so the parameters move
 once per epoch. Progress stalls after roughly six steps — each
-step is well aimed, but there are too few of them.
+step is low variance, but only a few occur within the measured time.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-3}
 def train_sgd(lr, batch_size, num_epochs=2):
@@ -479,8 +479,8 @@ updates per epoch, at a constant (and necessarily small) learning rate. The
 loss falls quickly at first and then the decline slows. Both procedures
 process 1500 examples per epoch, but SGD takes *more clock time per epoch*
 than gradient descent here: it dispatches 1500 tiny operations where gradient
-descent dispatches one large one — the overhead story of the previous
-section, incurred at every step.
+descent dispatches one large operation. The single-example method
+therefore incurs dispatch overhead at every step.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-4}
 sgd_res = train_sgd(0.005, 1)
@@ -656,8 +656,8 @@ Practical training usually uses a **minibatch** of $b$ examples:
 $$\mathbf{w} \leftarrow \mathbf{w} - \frac{\eta}{b} \sum_{i \in \mathcal{B}} \nabla f_i(\mathbf{w}).$$
 
 - Statistics (last section): variance $\propto 1/b$.
-- **This section: the mechanics** — why $b$ at once costs far less than
-  $b$ one at a time.
+- This section analyzes why processing $b$ examples together costs less
+  than processing them individually.
 :::
 
 ::: {.slide title="Arithmetic outruns memory"}
@@ -703,8 +703,8 @@ the cache and vector units do the work.
 @minibatch-sgd-minibatches
 
 
-Already as fast as the full multiplication: modest batches amortize
-essentially all the overhead.
+This block size is already as fast as the full multiplication because
+modest batches amortize most dispatch overhead.
 
 - Two reasons to batch, kept apart: **hardware** (this section) and
   **variance** (last section). Both saturate.
@@ -713,15 +713,16 @@ essentially all the overhead.
 :::
 
 ::: {.slide title="Airfoil dataset"}
-Real regression data for the whole chapter — 1500 examples, 5 features,
-whitened; every run takes seconds:
+The chapter uses a whitened regression dataset with 1500 examples and 5
+features; each run takes seconds:
 
 @minibatch-sgd-reading-the-dataset
 :::
 
 ::: {.slide title="The optimizer interface"}
-Every optimizer in this chapter: `(params, states, hyperparams)` —
-`states` carries the algorithm's memory (empty for SGD):
+Every optimizer uses the interface `(params, states, hyperparams)`.
+The `states` object contains algorithm-specific memory and is empty for
+SGD:
 
 @minibatch-sgd-implementation-from-scratch-1
 :::
@@ -759,8 +760,8 @@ extreme.
 :::
 
 ::: {.slide title="Concise: framework optimizer"}
-Same experiment through the built-in optimizer — the harness the rest of
-the chapter reuses:
+The built-in optimizer runs through the same harness used later in the
+chapter:
 
 @minibatch-sgd-concise-implementation-1
 

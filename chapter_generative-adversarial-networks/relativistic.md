@@ -1,7 +1,7 @@
 # Relativistic Objectives
 :label:`sec_gan_relativistic`
 
-:numref:`sec_gan_objectives` proposed keeping the log loss while changing what the critic scores. A relativistic critic still assigns a scalar score to each sample, but its loss compares one real and one generated sample and rewards the correct ranking. This section derives the value of that pairing game at the optimal critic. It is the Jensen--Shannon divergence between the two possible orderings of a real--generated pair, obtained by reducing the paired problem to the log-loss game of :numref:`sec_basic_gan`. We then show how pairing replaces the generator's threshold-based update weight with a rank statistic. This property motivates the objective used in R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024`, whose full training recipe is developed in :numref:`sec_gan_convergence` and tested on images in :numref:`sec_dcgan`. Pairing changes the landscape, but it does not prevent saturation when the supports are disjoint.
+:numref:`sec_gan_objectives` kept the critic's task fixed while varying its loss. A relativistic critic makes the complementary change: it assigns scalar scores as before, but evaluates the difference between the scores of one real and one generated sample. We derive the value of this pairing objective at the optimal critic by reducing it to the log-loss game of :numref:`sec_basic_gan`. The resulting value is the Jensen--Shannon divergence between the two possible orderings of a real--generated pair. Pairing also replaces the generator's threshold-based update weight with a rank statistic, which changes the loss landscape. This property motivates the R3GAN objective :cite:`Huang.Gokaslan.Kuleshov.ea.2024`, developed further in :numref:`sec_gan_convergence` and tested on images in :numref:`sec_dcgan`. Pairing does not, however, prevent saturation on disjoint supports.
 
 ```{.python .input #relativistic-relativistic-objectives}
 %%tab pytorch
@@ -26,18 +26,18 @@ $$
 $$
 :eqlabel:`eq_gan_rp`
 
-The critic maximizes $\Phi$ and the generator minimizes it. Reading the objective term by term: $\sigma(D(x) - D(x'))$ is the probability the critic assigns to the correct ordering of the pair, so the critic is paid, in log-probability, for ranking the real member above the generated one, and the generator is paid for making that comparison hard.
+The critic maximizes $\Phi$, whereas the generator minimizes it. The quantity $\sigma(D(x) - D(x'))$ is the critic's probability that the pair is correctly ordered, with the real sample ranked above the generated sample. Thus the critic maximizes the log probability of the correct order, while the generator reduces the critic's ability to distinguish the order.
 
-The probability model inside :eqref:`eq_gan_rp` has appeared in this book before. $\sigma(D(x) - D(x'))$ is the Bradley--Terry probability :cite:`Bradley.Terry.1952` that $x$ is preferred to $x'$ under the score function $D$, the comparison model :eqref:`eq_bradley_terry` that :numref:`sec_regularized` fits to human preference pairs when it trains a reward model. The pairing game therefore trains the critic as a reward model for realness: $\Phi$ is the pairwise logistic log-likelihood of ranking real above fake, and maximizing it is learning to rank rather than learning to classify. The same model is how generative models are themselves ranked in public evaluations: an Elo-style leaderboard fitted to pairwise human votes is a Bradley--Terry fit with models in place of samples.
+The probability model in :eqref:`eq_gan_rp` is the Bradley--Terry model :cite:`Bradley.Terry.1952`. Under the score function $D$, it assigns probability $\sigma(D(x) - D(x'))$ to preferring $x$ over $x'$. Section :numref:`sec_regularized` uses the same comparison model in :eqref:`eq_bradley_terry` to fit reward models from human preferences. Here $\Phi$ is the pairwise logistic log-likelihood of ranking real samples above generated ones, so the critic learns a ranking rather than a classification rule. Elo-style evaluations of generative models use the same construction at the model level by fitting Bradley--Terry scores to pairwise human votes.
 
-The move from classifying to ranking shows up first as a symmetry. :numref:`fig_gan_pairing` compares the two decisions the critic can be asked to make about its scores.
+Ranking introduces an additive-shift symmetry absent from the classification objective. :numref:`fig_gan_pairing` compares the two uses of the critic scores.
 
 ![Scoring one sample against a threshold versus scoring a pair by its difference. On the left, the classical critic's verdict depends on whether $D(x)$ clears a fixed level, so adding a constant $b$ to every score changes the verdict. On the right, the pairing critic compares two scores, and the same shift moves both members together and leaves the difference $D(x) - D(x')$ unchanged.](../img/mdl-gan-pairing.svg)
 :label:`fig_gan_pairing`
 
-Formally, replacing $D$ by $D + b$ for any constant $b$ leaves every difference, hence $\Phi$ itself, unchanged. The pairing game consequently identifies its critic only up to an additive constant, and this is a genuine loss of information relative to :numref:`sec_basic_gan`, whose game pins the optimal critic exactly, additive constant included. Shifting that optimum strictly lowers the classical value, as the section's first exercise shows. The invariance is visible in how :citet:`Huang.Gokaslan.Kuleshov.ea.2024` state their equilibrium condition: the critic need only be constant on the support of the data, with the constant arbitrary. (One convention note: in the R3GAN paper, $D$ is a fakeness logit, so the paper's equations become the ones in this section under the substitution $D \mapsto -D$. The released implementation already scores realness and needs no translation. We keep the realness convention throughout.)
+Formally, replacing $D$ by $D + b$ for any constant $b$ leaves every score difference, and therefore $\Phi$, unchanged. The pairing game consequently identifies the critic only up to an additive constant. By contrast, the classical game of :numref:`sec_basic_gan` determines this constant as well; shifting its optimal critic strictly decreases the objective, as Exercise 1 shows. This invariance also appears in the equilibrium condition of :citet:`Huang.Gokaslan.Kuleshov.ea.2024`, which requires only that the critic be constant on the support of the data. The paper uses $D$ as a fakeness logit, so its equations match ours after the substitution $D \mapsto -D$. The released implementation already uses the realness convention adopted here.
 
-The second structural change concerns how the objective depends on the distributions. The expectation in :eqref:`eq_gan_rp` runs over the product measure $p \otimes q$, so $\Phi$ is quadratic in the pair $(p, q)$ rather than affine. Every objective in :numref:`sec_gan_objectives` was a supremum of functionals affine in $(p, q)$. Pointwise decoupling, joint convexity, and the classification of values as f-divergences all relied on that structure and do not transfer automatically. We must therefore compute the value of the pairing game directly.
+The objective also depends differently on the two distributions. The expectation in :eqref:`eq_gan_rp` is taken under the product measure $p \otimes q$, making $\Phi$ quadratic rather than affine in $(p, q)$. The objectives in :numref:`sec_gan_objectives` were suprema of functionals affine in $(p, q)$, a property used to establish pointwise decoupling, joint convexity, and their interpretation as f-divergences. Those results do not apply directly to the pairing game, whose value we now compute.
 
 ## The Value of the Pairing Game
 
@@ -56,9 +56,9 @@ $$
 $$
 :eqlabel:`eq_gan_rp_stationarity`
 
-At $D = \lambda$ we have $\sigma(\lambda(x') - \lambda(t)) = \rho(x')/(\rho(x') + \rho(t))$, and the identity $q\rho = p$ converts both terms into the same integral: the first becomes $p(t) \int p(x')/(\rho(x') + \rho(t))\, dx'$ and the second becomes $q(t)\, \rho(t) \int p(x)/(\rho(t) + \rho(x))\, dx$, which is the identical expression. The derivative vanishes everywhere, so $\lambda$ is a maximizer, and strict concavity of $\log \sigma$ in the score differences makes the maximizer unique up to the additive shifts that $\Phi$ cannot see. $\blacksquare$
+At $D = \lambda$, we have $\sigma(\lambda(x') - \lambda(t)) = \rho(x')/(\rho(x') + \rho(t))$. The identity $q\rho = p$ converts the first term of :eqref:`eq_gan_rp_stationarity` to $p(t) \int p(x')/(\rho(x') + \rho(t))\, dx'$. It converts the second to $q(t)\, \rho(t) \int p(x)/(\rho(t) + \rho(x))\, dx$, which is the same expression because $q(t)\rho(t)=p(t)$. The derivative therefore vanishes everywhere, so $\lambda$ is a maximizer. Strict concavity of $\log \sigma$ in the score differences makes this maximizer unique up to an additive shift. $\blacksquare$
 
-The ranker estimates the same object as the classifier. Equation :eqref:`eq_gan_dstar` returned $D^\star = \lambda$ for the log-loss game, and the pairing game returns it again, minus only the additive constant that its shift invariance leaves undetermined. Changing the critic's task from classification to ranking changes neither what the critic computes at its optimum nor, as the theorem below confirms, the location $q = p$ of the game's fixed point. What changes is the value of the game and the shape of the objective away from the optimum, and both changes can be computed exactly.
+The ranking and classification objectives estimate the same log density ratio. Equation :eqref:`eq_gan_dstar` gives $D^\star = \lambda$ for the log-loss classifier, and the pairing objective gives the same result up to its undetermined additive constant. Replacing classification with ranking therefore preserves both the optimal critic and, as the theorem below confirms, the fixed point $q = p$. It changes the value and the shape of the objective away from that fixed point.
 
 ### The Lifted Game
 
@@ -66,7 +66,19 @@ $\Phi$ is the expectation of a fixed function of the pair $(x, x')$ under $p \ot
 
 **Lemma (lifting).** *Let $P = p \otimes q$ and $Q = q \otimes p$. Then: (i) the log ratio of the two orderings separates, $\log \frac{dP}{dQ}(a_1, a_2) = \lambda(a_1) - \lambda(a_2)$, an antisymmetric difference of single-sample scores; (ii) every difference critic $\mathcal{D}(a_1, a_2) = D(a_1) - D(a_2)$ satisfies $V_{P,Q}(\mathcal{D}) = 2\,\Phi(D)$; (iii) restricting the pair critic to differences does not lower the supremum, $\sup_{\mathcal{D}} V_{P,Q}(\mathcal{D}) = \sup_{D} V_{P,Q}\big(D(a_1) - D(a_2)\big)$.*
 
-**Proof.** *The product ratio separates.* The two product densities share their factors, so $\frac{dP}{dQ}(a_1, a_2) = \frac{p(a_1)\, q(a_2)}{q(a_1)\, p(a_2)} = \frac{\rho(a_1)}{\rho(a_2)}$, and taking logarithms gives (i). *The swap symmetry doubles the objective.* The first term of $V_{P,Q}(\mathcal{D})$ is $E_{(a_1, a_2) \sim P}[\log \sigma(\mathcal{D}(a_1, a_2))] = \Phi(D)$, directly from the definitions of $P$ and $\mathcal{D}$. In the second term the pair is drawn from $Q$, so $a_1 \sim q$ and $a_2 \sim p$, and antisymmetry gives $-\mathcal{D}(a_1, a_2) = D(a_2) - D(a_1)$; relabeling $(x, x') = (a_2, a_1)$, which is distributed as $p \otimes q$, turns this term into $E[\log \sigma(D(x) - D(x'))] = \Phi(D)$ as well, proving (ii). *Differences suffice.* The pointwise maximization behind :eqref:`eq_gan_dstar`, run on $\mathcal{X} \times \mathcal{X}$, identifies the optimizing pair critic with $\log \frac{dP}{dQ}$ wherever both densities are positive, and by (i) that critic is the difference critic with $D = \lambda$, so restricting the supremum to differences does not lower it. $\blacksquare$
+**Proof.** *The product ratio separates.* The two product densities contain the same factors in opposite order:
+
+$$
+\frac{dP}{dQ}(a_1, a_2)
+= \frac{p(a_1)\, q(a_2)}{q(a_1)\, p(a_2)}
+= \frac{\rho(a_1)}{\rho(a_2)}.
+$$
+
+Taking logarithms proves (i).
+
+*The swap symmetry doubles the objective.* Under $P$, the first term of $V_{P,Q}(\mathcal{D})$ is $E[\log \sigma(D(a_1)-D(a_2))] = \Phi(D)$. Under $Q$, we have $a_1 \sim q$ and $a_2 \sim p$. Antisymmetry gives $-\mathcal{D}(a_1,a_2)=D(a_2)-D(a_1)$, and relabeling $(x,x')=(a_2,a_1)$ turns the second term into $\Phi(D)$ as well. Hence $V_{P,Q}(\mathcal{D})=2\Phi(D)$, proving (ii).
+
+*Differences suffice.* Pointwise maximization of the log-loss game on $\mathcal{X} \times \mathcal{X}$ gives the optimal pair critic $\log(dP/dQ)$ wherever both densities are positive. By (i), this critic has the difference form with $D=\lambda$. Restricting the supremum to difference critics therefore does not change its value. $\blacksquare$
 
 Part (iii) depends on the logistic payoff: the pointwise optimum on the pair space is separable because the log ratio of two product measures is a sum of per-coordinate terms. Under other payoffs the Bayes-optimal pair critic is a nonlinear function of that log ratio, no longer a difference of single-sample scores, and the corresponding relativistic objective only bounds its lifted divergence from below. Exercise 6 works this out. With the lemma in hand, the value of the pairing game follows from results already proved.
 
@@ -79,9 +91,11 @@ d_{\mathrm{Rp}}(p, q)
 $$
 :eqlabel:`eq_gan_rp_value`
 
-**Proof.** *Apply the value formula on the pair space.* By parts (ii) and (iii) of the lemma, $2 \sup_D \Phi(D) = \sup_{\mathcal{D}} V_{P,Q}(\mathcal{D})$, and :eqref:`eq_gan_js_value`, applied to the pair $(P, Q)$, evaluates the right-hand side as $2\, \mathrm{JS}(P, Q) - 2 \log 2$; halving and adding $\log 2$ gives the first equality. *Collapse the pair entropies.* The entropy form :eqref:`eq_gan_entropy_gap` of the Jensen--Shannon divergence, applied on $\mathcal{X} \times \mathcal{X}$, subtracts $\tfrac12(H[P] + H[Q])$ from the mixture entropy; entropy is additive across independent components, so $H[P] = H[Q] = H[p] + H[q]$, and the subtracted average is $H[p] + H[q]$; this rearrangement assumes the entropies involved are finite, a condition the measure-level identity of the first equality does not need. $\blacksquare$
+**Proof.** *Apply the value formula on the pair space.* Parts (ii) and (iii) of the lemma give $2 \sup_D \Phi(D) = \sup_{\mathcal{D}} V_{P,Q}(\mathcal{D})$. Equation :eqref:`eq_gan_js_value`, applied to $(P, Q)$, evaluates the right-hand side as $2\, \mathrm{JS}(P, Q) - 2 \log 2$. Halving and adding $\log 2$ proves the first equality.
 
-The constant in the definition of $d_{\mathrm{Rp}}$ is the value of blind play: a constant critic, which is always feasible and is the best response when $p = q$, makes every comparison a coin flip and earns $\Phi = \log \sigma(0) = -\log 2$. The divergence therefore measures the improvement that looking at the pair buys over guessing. That this improvement is nonnegative, and zero exactly at $q = p$, is what makes $d_{\mathrm{Rp}}$ a usable training objective, and it was proved by :citet:`Jolicoeur-Martineau.2020` for every concave payoff $\ell$ with $\ell(0) = 0$, $\ell'(0) \neq 0$, and positive supremum attained at a positive argument. Her theorem establishes that the value is a divergence without computing it. The theorem above computes the value for the logistic payoff, the one standard payoff for which the lifting argument is exact.
+*Collapse the pair entropies.* Applying :eqref:`eq_gan_entropy_gap` on $\mathcal{X} \times \mathcal{X}$ subtracts $\tfrac12(H[P] + H[Q])$ from the mixture entropy. Since each product measure has independent components, $H[P] = H[Q] = H[p] + H[q]$, which gives the second equality. This entropy calculation assumes the displayed entropies are finite; the measure-level first equality does not. $\blacksquare$
+
+The additive constant in $d_{\mathrm{Rp}}$ calibrates the objective against a constant critic. Such a critic assigns probability one half to either ordering and obtains $\Phi = \log \sigma(0) = -\log 2$; it is optimal when $p = q$. Thus $d_{\mathrm{Rp}}$ measures the reduction in ordering uncertainty relative to random guessing. :citet:`Jolicoeur-Martineau.2020` proved that this calibrated value is nonnegative and vanishes exactly at $q = p$ for every concave function $\ell$ satisfying $\ell(0) = 0$, $\ell'(0) \neq 0$, and a positive supremum attained at a positive argument. Her theorem establishes the divergence property without computing its value. The theorem above supplies the value for the logistic objective, for which the lifting argument is exact.
 
 Substituting the optimal critic $D^\star = \lambda$ into :eqref:`eq_gan_rp` directly, using $\sigma(\lambda(x) - \lambda(x')) = \rho(x)/(\rho(x) + \rho(x'))$, gives the same value in a form that is convenient for expansions:
 
@@ -114,11 +128,17 @@ The closed form permits an exact comparison between the pairing game and the cor
 
 *(c) if $p$ and $q$ have disjoint supports, then $d_{\mathrm{Rp}}(p, q) = \log 2$, independently of how far apart the supports lie.*
 
-**Proof.** (a) Discarding the second member of the pair, $(a_1, a_2) \mapsto a_1$, pushes $P$ forward to $p$ and $Q$ to $q$; since $\mathrm{JS}$ is an f-divergence, the data-processing inequality of :numref:`sec_mdl-tv-pinsker` gives $\mathrm{JS}(p, q) \leq \mathrm{JS}(P, Q) = d_{\mathrm{Rp}}$. The upper bound is the information ceiling of :eqref:`eq_gan_rp_mi`: $I\big((a_1, a_2); b\big) \leq H(b) = \log 2$. (b) Write $u = \lambda(x') - \lambda(x)$ in :eqref:`eq_gan_rp_explicit` and expand $\log(1 + e^u) = \log 2 + \tfrac{u}{2} + \tfrac{u^2}{8} + O(u^4)$; the moments are $E[u] = -\epsilon^2 E_p[h^2] + O(\epsilon^3)$ and $E[u^2] = 2 \epsilon^2 E_p[h^2] + O(\epsilon^3)$, so $d_{\mathrm{Rp}} = \tfrac{\epsilon^2}{2} E_p[h^2] - \tfrac{\epsilon^2}{4} E_p[h^2] + O(\epsilon^3)$, while the same expansion applied to :eqref:`eq_gan_entropy_gap` gives $\mathrm{JS} = \tfrac{\epsilon^2}{8} E_p[h^2] + O(\epsilon^3)$; Exercise 4 fills in the moment computations. (c) A real-first pair occupies $\operatorname{supp} p \times \operatorname{supp} q$ and a fake-first pair occupies $\operatorname{supp} q \times \operatorname{supp} p$; when the two supports are disjoint these product sets are disjoint, so $P$ and $Q$ are mutually singular, every pair identifies its ordering with certainty, and $\mathrm{JS}(P, Q) = \log 2$. $\blacksquare$
+**Proof.** (a) The map $(a_1, a_2) \mapsto a_1$ pushes $P$ forward to $p$ and $Q$ forward to $q$. Since $\mathrm{JS}$ is an f-divergence, the data-processing inequality of :numref:`sec_mdl-tv-pinsker` gives $\mathrm{JS}(p, q) \leq \mathrm{JS}(P, Q) = d_{\mathrm{Rp}}$. Equation :eqref:`eq_gan_rp_mi` gives the upper bound because $I\big((a_1, a_2); b\big) \leq H(b) = \log 2$.
 
-Part (a) says, through :eqref:`eq_gan_rp_mi`, that a pair constrained to contain exactly one real member cannot carry less information about the labeling than a single sample carries about its origin. It is the quantitative version of an ordering that :citet:`Jolicoeur-Martineau.2020` proved for general concave payoffs (driving the relativistic objective to zero forces the pointwise objective to zero), and the closed form recovers her ordering in the logistic case with a rate attached. Part (b) locates the two divergences at the other extreme: near the fixed point the two members of the pair contribute independent evidence, so the pair carries exactly twice the information of a single sample. The ratio $d_{\mathrm{Rp}}/\mathrm{JS}$ always lies in $[1, 2]$. The lower end restates part (a), and the upper end also follows from :eqref:`eq_gan_rp_mi`: the two members of the pair are independent given the label, so the pair's information is the sum of what each member carries alone, $2\, \mathrm{JS}(p, q)$, minus the members' unconditional dependence, which is nonnegative. The experiment below observes a ratio of about 1.6.
+(b) In :eqref:`eq_gan_rp_explicit`, set $u = \lambda(x') - \lambda(x)$ and expand $\log(1 + e^u) = \log 2 + \tfrac{u}{2} + \tfrac{u^2}{8} + O(u^4)$. The moments satisfy $E[u] = -\epsilon^2 E_p[h^2] + O(\epsilon^3)$ and $E[u^2] = 2 \epsilon^2 E_p[h^2] + O(\epsilon^3)$. Substitution gives $d_{\mathrm{Rp}} = \tfrac{\epsilon^2}{4} E_p[h^2] + O(\epsilon^3)$. Applying the corresponding expansion to :eqref:`eq_gan_entropy_gap` gives $\mathrm{JS} = \tfrac{\epsilon^2}{8} E_p[h^2] + O(\epsilon^3)$. Exercise 4 supplies the moment calculations.
 
-Part (c) is the negative result: pairing does not repair the failure that closed :numref:`sec_basic_gan`. On the two-point-mass example from that section's ending, $p = \delta_0$ and $q_\theta = \delta_\theta$, the pairing value sits at its ceiling $\log 2$ for every $\theta \neq 0$ and supplies no gradient in $\theta$. The parametric version is sharper still: with a linear critic on that example, the relativistic and classical objectives differ by an additive constant, so their gradient fields coincide exactly, an observation recorded by :citet:`Huang.Gokaslan.Kuleshov.ea.2024` in their appendix. The same authors prove that gradient training of the unregularized pairing game does not always converge. What the pairing objective does change is the shape of the loss landscape over generator configurations, developed next. What restores convergence of the training dynamics is regularization of the critic, and that is the subject of :numref:`sec_gan_convergence`.
+(c) A real-first pair lies in $\operatorname{supp} p \times \operatorname{supp} q$, whereas a fake-first pair lies in $\operatorname{supp} q \times \operatorname{supp} p$. These product sets are disjoint when the original supports are disjoint. Thus $P$ and $Q$ are mutually singular, the pair determines its ordering with certainty, and $\mathrm{JS}(P, Q) = \log 2$. $\blacksquare$
+
+Part (a) shows that a pair containing one sample from each distribution provides at least as much information about its ordering as a single sample provides about its origin. This quantitatively refines the ordering proved by :citet:`Jolicoeur-Martineau.2020` for general concave objectives: convergence of the relativistic divergence to zero forces convergence of the pointwise divergence.
+
+Near $q = p$, part (b) shows that the two members provide independent evidence to second order, so the ratio $d_{\mathrm{Rp}}/\mathrm{JS}$ tends to 2 under nonzero local perturbations. More generally, this ratio lies in $[1, 2]$ whenever $p \neq q$. The upper bound follows from :eqref:`eq_gan_rp_mi`: conditional on the label, the two samples are independent, so the pair's information equals $2\, \mathrm{JS}(p, q)$ minus their nonnegative unconditional dependence. The finite example below gives a ratio of about 1.6.
+
+Part (c) shows that pairing does not resolve support saturation. For the point masses $p = \delta_0$ and $q_\theta = \delta_\theta$ from :numref:`sec_basic_gan`, the pairing value equals $\log 2$ for every $\theta \neq 0$ and therefore supplies no gradient in $\theta$. With a linear critic, the relativistic and classical objectives differ only by an additive constant, so their gradient fields coincide exactly, as :citet:`Huang.Gokaslan.Kuleshov.ea.2024` observe. The same authors show that gradient training of the unregularized pairing game need not converge. Pairing instead changes the loss landscape over generator configurations, as discussed next. Critic regularization addresses convergence in :numref:`sec_gan_convergence`.
 
 ## Ranking and Mode Coverage
 
@@ -141,13 +161,13 @@ w_{\mathrm{GAN}}(x') = \sigma\big(D(x')\big).
 $$
 :eqlabel:`eq_gan_rp_weights`
 
-The classical weight measures a sample against a threshold: the critic's zero, a level fixed by the classical game but arbitrary in the pairing game. The relativistic weight is instead a rank statistic: the probability that $x'$ outranks a random real sample. Like the objective, it is invariant to an additive constant in the critic.
+The classical weight compares a sample with the critic's zero level, which is determined by the classical game but arbitrary under the pairing objective. The relativistic weight instead equals the probability that $x'$ outranks a random real sample. This rank statistic is invariant to an additive shift of the critic.
 
-This distinction matters for mode collapse. A threshold can be satisfied wholesale: a generator may place all of its mass beyond one decision boundary, making every per-sample factor appear real without matching how the data distribute their mass. Collapse onto a few well-scored points has exactly this form. A rank statistic offers no corresponding shortcut because improving it requires improving the generated distribution's ranks against the entire real population.
+This distinction changes the incentives for mode collapse. A generator can place all its mass beyond one decision boundary, making every generated sample receive a high threshold weight without matching the data distribution across modes. Concentrating on a few high-scoring points has this form. A rank statistic cannot be increased in the same way because it compares generated scores with the entire distribution of real scores.
 
 :citet:`Sun.Fang.Schwing.2020` turn this observation into a result about the empirical loss landscape. For $n$ data points and $n$ generated points, the classical objective has at least $n^n - n!$ suboptimal strict local minima, one for every mode-dropping assignment with at least one collision. Under the relativistic objective, every configuration has a descending path to a global minimum. We use this result without reproducing its proof. It applies to a finite-sample, best-response setting and neither contradicts nor follows from part (c) of the proposition above. Pairing changes where optimization can become trapped; it does not change the objective's value on separated supports.
 
-The rank weight saturates like its classical counterpart. If $D(x')$ sits far below every real score, then $w_{\mathrm{Rp}}(x') \approx 0$ and the worst samples again learn least. The remedy is also the classical one. Differentiating the swapped objective, in which the generator maximizes $E[\log \sigma(D(x') - D(x))]$ rather than minimizing $\Phi$, produces the same update direction with the complementary weight. The two-line computation that produced :eqref:`eq_gan_weights` repeats verbatim with the score difference in place of the score:
+The rank weight still saturates. If $D(x')$ is far below every real score, then $w_{\mathrm{Rp}}(x') \approx 0$, so the generated samples requiring the largest change receive the smallest updates. As in the classical game, a non-saturating objective reverses this weighting. Maximizing $E[\log \sigma(D(x') - D(x))]$ rather than minimizing $\Phi$ gives the same update direction with the complementary weight. Repeating the calculation from :eqref:`eq_gan_weights` with a score difference gives
 
 | generator objective | weight on the update of $x'$ | on a badly ranked sample |
 |:---|:---|:---|
@@ -164,7 +184,7 @@ The expectation over $p \otimes q$ can be estimated in two natural ways. Given $
 
 ## Verifying the Closed Form
 
-The theorem is an identity, so it can be checked to many digits rather than to within noise. On a sample space of five atoms, $p$ and $q$ are two fixed probability vectors and the critic is five numbers $D \in \mathbb{R}^5$. The objective $\Phi$ becomes an exact double sum over the 25 pairs (no sampling, no estimator), and every quantity in :eqref:`eq_gan_rp_value` is computable directly, since $\mathrm{JS}(p \otimes q, q \otimes p)$ is an entropy calculation on 25 atoms. We maximize $\Phi$ by gradient ascent on the five critic values, and the ascent direction is nothing new: the gradient of $\Phi$ with respect to $D(t)$ is the functional derivative :eqref:`eq_gan_rp_stationarity` that the optimal-critic proof set to zero. Three numbers must then agree: the maximized $\Phi$ plus $\log 2$, the product-space Jensen--Shannon divergence, and the entropy form. The recovered critic must in addition equal $\lambda$ up to an additive constant.
+Because the theorem is an identity, a finite example can verify it to numerical precision without sampling error. Let $p$ and $q$ be fixed probability vectors on a five-element space, and represent the critic by $D \in \mathbb{R}^5$. Then $\Phi$ is an exact sum over 25 pairs, and $\mathrm{JS}(p \otimes q, q \otimes p)$ is an entropy calculation on 25 atoms. We maximize $\Phi$ by gradient ascent using the functional derivative :eqref:`eq_gan_rp_stationarity`. The maximized value plus $\log 2$, the product-space Jensen--Shannon divergence, and the entropy expression in :eqref:`eq_gan_rp_value` should agree. The optimized critic should also equal $\lambda$ up to an additive constant.
 
 ```{.python .input #relativistic-verifying-the-closed-form-1}
 %%tab pytorch, jax
@@ -198,7 +218,7 @@ print(f'max |D - lambda|, both centered:        '
       f'{np.abs(D_c - lam_c).max():.1e}')
 ```
 
-The three computations of $d_{\mathrm{Rp}}$ agree to nine decimal places, and the recovered critic matches $\lambda$ up to its undetermined additive constant at the level of double-precision round-off: the identity holds as exactly as floating-point arithmetic can attest. The printed comparison also locates the pairing divergence where part (a) of the proposition requires, with $\mathrm{JS}(p, q) \approx 0.23$ below it and the ceiling $\log 2 \approx 0.69$ above it. At $d_{\mathrm{Rp}} \approx 0.38$ the pair carries about 1.6 times the information of a single sample, inside the $[1, 2]$ range established above: less than the local factor of two, which holds only near $q = p$, and more than the ratio of one that the ceiling would force.
+The three computations of $d_{\mathrm{Rp}}$ agree to nine decimal places, and after centering, the recovered critic matches $\lambda$ to double-precision round-off. The value also satisfies the bounds in part (a): $\mathrm{JS}(p, q) \approx 0.23 < d_{\mathrm{Rp}} \approx 0.38 < \log 2 \approx 0.69$. For these distributions, a pair carries about 1.6 times as much information about the label as a single sample. This ratio lies between its limiting value 2 under local perturbations of $q = p$ and the value 1 attained when both divergences saturate.
 
 The same atoms make the ranking discussion concrete without training anything. With the recovered critic, both weights of :eqref:`eq_gan_rp_weights` are explicit functions of a generated sample's score $t$: the threshold weight $\sigma(t)$, and the rank weight $\sum_x p(x)\, \sigma(t - D^\star(x))$, a mixture of sigmoids anchored at the real atoms' scores. The plot draws both, marking those scores.
 
@@ -219,13 +239,15 @@ d2l.plt.ylabel('weight')
 d2l.plt.legend();
 ```
 
-The two curves separate as the ranking argument predicts. The threshold weight is one sigmoid centered at zero, a level the pairing game does not even determine, and its rise is tied to that level alone, indifferent to where the real population's scores lie: at the highest real score it already exceeds 0.9. The rank weight's transition is instead anchored to the dotted lines. It rises where the real scores actually lie, weighting each stratum by its mass $p(x)$, and at the highest real score it has reached only about 0.75, still separating samples that the threshold weight rates as nearly equivalent. A generated sample stops mattering to the rank weight only once it outranks essentially all of the real population. The anchoring is also what the shift symmetry promised: adding a constant to the critic changes a sample's threshold weight, but it moves the sample's score and the real atoms together, so the sample's rank weight is unchanged.
+The curves differ as predicted. The threshold weight is a single sigmoid centered at zero, even though the pairing game does not determine that level. It exceeds 0.9 by the highest real score and is otherwise independent of the distribution of real scores. The rank weight instead changes across the dotted lines marking those scores, with each transition weighted by the corresponding mass $p(x)$. At the highest real score it is only about 0.75, so it still distinguishes samples that the threshold weight treats as nearly equivalent. The rank weight approaches one only when a generated sample outranks nearly the entire real population. Adding a constant to all critic scores changes the threshold weight but shifts both the generated and real scores equally, leaving the rank weight unchanged.
 
 ## Summary
 
-This section changed what the critic scores and computed what the change does. Scoring a real--fake pair by the difference of two realness scores gives the pairing objective :eqref:`eq_gan_rp`, the Bradley--Terry log-likelihood of ranking real above fake, with two structural symmetries: the critic is identified only up to an additive constant, where the classical game pinned it exactly, and the objective depends on the distributions through the product $p \otimes q$, placing it outside the affine template of :numref:`sec_gan_objectives`. The optimal critic is nevertheless the same log density ratio $\lambda$, and the value of the game has a closed form: lifting the pair to a single observation shows that the pairing game is the log-loss game of :numref:`sec_basic_gan` played between the two orderings $p \otimes q$ and $q \otimes p$, so its calibrated value is $d_{\mathrm{Rp}} = \mathrm{JS}(p \otimes q, q \otimes p)$, the nats a randomly ordered pair carries about which member is real. The identity gives exact comparisons: $d_{\mathrm{Rp}}$ sits between $\mathrm{JS}(p, q)$ and $\log 2$, equals twice $\mathrm{JS}$ near the fixed point, and saturates on disjoint supports exactly as the classical value does, so pairing does not repair the separation failure.
+The pairing objective :eqref:`eq_gan_rp` is the Bradley--Terry log-likelihood of ranking a real sample above a generated one. Because it depends only on score differences, the critic is identified up to an additive constant. The objective also depends on the distributions through $p \otimes q$, outside the affine framework of :numref:`sec_gan_objectives`. Despite these changes, the optimal critic remains the log density ratio $\lambda$ up to a constant.
 
-What pairing changes is the generator's incentive structure. The per-sample update weight becomes a rank statistic against the real population instead of a threshold statistic, mode-dropping configurations lose their status as local minima of the empirical landscape :cite:`Sun.Fang.Schwing.2020`, and the saturating/non-saturating distinction of :numref:`sec_basic_gan` reappears for pairs. The practical lesson is that the R3GAN paper states the zero-sum form while its reference implementation trains the non-saturating one, so the equation and the code differ exactly where training starts. The finite verification confirmed the closed form to nine decimal places and displayed the two weights side by side. Left unresolved is convergence: the value analysis says nothing about whether alternating gradient descent finds the optimum, the unregularized pairing game provably need not converge, and :numref:`sec_gan_convergence` supplies the analysis and the regularization that fixes it.
+Lifting an ordered pair to a single observation turns the pairing objective into the log-loss game of :numref:`sec_basic_gan` between $p \otimes q$ and $q \otimes p$. Its calibrated value is therefore $d_{\mathrm{Rp}} = \mathrm{JS}(p \otimes q, q \otimes p)$, which measures how much information the ordered pair provides about the position of the real sample. It satisfies $\mathrm{JS}(p, q) \leq d_{\mathrm{Rp}} \leq \log 2$, equals twice $\mathrm{JS}$ locally near $q = p$, and reaches $\log 2$ on disjoint supports. Pairing thus preserves the support-saturation limitation of the classical game.
+
+Pairing changes the generator's per-sample weight from a comparison with one threshold to a rank statistic over the real population. In finite-sample best-response analysis, this change removes mode-dropping local minima :cite:`Sun.Fang.Schwing.2020`. The saturating and non-saturating variants nevertheless remain distinct. R3GAN states a zero-sum objective in the paper but uses the non-saturating generator update in its reference implementation, so reproducing the displayed minimax equation gives a different early-training update. The finite example verifies the closed form to nine decimal places and illustrates the two weights. This value analysis does not imply convergence of alternating gradient updates; :numref:`sec_gan_convergence` analyzes that problem and introduces regularization that restores local convergence.
 
 ## Exercises
 
@@ -263,13 +285,14 @@ $$\Phi(D) = E_{x \sim p,\; x' \sim q}\big[\log \sigma\big(D(x) - D(x')\big)\big]
 
 - Additive shift: $\Phi(D + b) = \Phi(D)$ — the critic is identified only
   **up to a constant**, where the log-loss game pinned it exactly.
-- $\Phi$ depends on $(p, q)$ only through $p \otimes q$: quadratic in the
-  pair — outside the template of :numref:`sec_gan_objectives`, so nothing
-  from that section transfers automatically.
+- $\Phi$ depends on $(p, q)$ through $p \otimes q$ and is quadratic in
+  the pair. The affine results of :numref:`sec_gan_objectives` therefore do
+  not apply directly.
 :::
 
 ::: {.slide title="The Optimal Critic Is Still the Log Ratio"}
-Concave in $D$, so stationarity decides. The functional derivative:
+Because $\Phi$ is concave in $D$, any stationary point is a global
+maximum. Its functional derivative is
 
 $$\frac{\delta \Phi}{\delta D(t)}
 = p(t)\, E_{x' \sim q}[\sigma(D(x') - D(t))]
@@ -303,8 +326,8 @@ $$d_{\mathrm{Rp}}(p, q) := \sup_D \Phi + \log 2
 = \mathrm{JS}(p \otimes q,\, q \otimes p)
 = H\big[\tfrac12(p \otimes q + q \otimes p)\big] - H[p] - H[q]$$
 
-- Information reading: the nats a randomly ordered pair carries about which
-  member is real.
+- Information interpretation: the divergence equals the mutual information
+  between a randomly ordered pair and the position of its real member.
 - The divergence property is :citet:`Jolicoeur-Martineau.2020` (general
   concave payoffs, value not computed); the closed form above is computed
   here, for the logistic payoff.
@@ -317,9 +340,9 @@ $$d_{\mathrm{Rp}}(p, q) := \sup_D \Phi + \log 2
 | near $q = p$ | $d_{\mathrm{Rp}} = 2\,\mathrm{JS} + O(\epsilon^3)$: a pair carries twice the information |
 | disjoint supports | $d_{\mathrm{Rp}} = \log 2$: saturates exactly as JS does |
 
-Pairing does **not** fix the separation failure, and unregularized RpGAN
-training provably need not converge: the analysis is
-:numref:`sec_gan_convergence`.
+Pairing still saturates on disjoint supports, and unregularized RpGAN
+training need not converge. Section :numref:`sec_gan_convergence` analyzes
+the training dynamics.
 :::
 
 ::: {.slide title="Rank Weight Replaces Threshold Weight"}
@@ -327,8 +350,8 @@ $$w_{\mathrm{Rp}}(x') = E_{x \sim p}[\sigma(D(x') - D(x))]
 \qquad
 w_{\mathrm{GAN}}(x') = \sigma(D(x'))$$
 
-- Threshold: one boundary satisfies every sample — mode collapse is such a
-  configuration.
+- A threshold weight can remain high when generated mass concentrates beyond
+  one decision boundary without matching the data distribution across modes.
 - Rank: anchored to the real population's scores, invariant to the critic's
   constant.
 - :citet:`Sun.Fang.Schwing.2020`: $n^n - n!$ mode-dropping local minima for
@@ -338,17 +361,17 @@ w_{\mathrm{GAN}}(x') = \sigma(D(x'))$$
 ::: {.slide title="The Closed Form, Checked Exactly"}
 @!relativistic-verifying-the-closed-form-1
 
-Gradient ascent on $\Phi$ — the stationarity condition as update rule —
-meets the direct product-space JS computation to nine decimal places, and
-the recovered critic is $\lambda$ up to a constant.
+Gradient ascent using the stationarity condition agrees with the direct
+product-space JS computation to nine decimal places. The recovered critic
+equals $\lambda$ up to a constant.
 :::
 
 ::: {.slide title="The Two Weights on the Same Atoms"}
 @!relativistic-verifying-the-closed-form-2
 
-The threshold weight completes one transition at the arbitrary zero, while
-the rank weight rises across the real population's scores and is still
-climbing where the threshold weight has little left to distinguish.
+The threshold weight changes around the arbitrary zero level. The rank
+weight changes across the distribution of real scores and continues to
+distinguish samples after the threshold weight is nearly saturated.
 :::
 
 ::: {.slide title="Saturating Paper, Non-Saturating Code"}
@@ -357,8 +380,9 @@ climbing where the threshold weight has little left to distinguish.
 | minimize $\Phi$ (paper's zero-sum Eq. 2) | $E_{x \sim p}[\sigma(D(x') - D(x))]$ | $\to 0$: stalls |
 | maximize $E[\log \sigma(D(x') - D(x))]$ (the code) | $E_{x \sim p}[\sigma(D(x) - D(x'))]$ | $\to 1$: largest |
 
-Same fixed point, different start. Implementing the paper's equation
-literally gives the weaker variant.
+Both variants have the same fixed point, but the paper's displayed
+zero-sum objective gives smaller updates to badly ranked samples early in
+training.
 :::
 
 ::: {.slide title="Recap"}
@@ -369,8 +393,8 @@ literally gives the weaker variant.
   log-loss game lifted to the two orderings of a pair.
 - $\mathrm{JS} \leq d_{\mathrm{Rp}} \leq \log 2$, locally $2\,\mathrm{JS}$,
   still saturating on disjoint supports.
-- Generator weight: rank statistic, not threshold — the mode-dropping basins
-  disappear.
-- Verified to nine decimals on five atoms; convergence is
-  :numref:`sec_gan_convergence`'s problem.
+- The generator weight is a rank statistic rather than a threshold
+  statistic; the finite-sample mode-dropping basins disappear.
+- The five-atom example verifies the value to nine decimal places.
+  Convergence requires the analysis of :numref:`sec_gan_convergence`.
 :::

@@ -44,12 +44,12 @@ import optax
 ## What a Fixed State Cannot Do
 :label:`subsec_hy-limits`
 
-Selectivity fixed content-blindness. The delta rule fixed the additive
-write. Test-time learning fixed staleness. None of them fixed capacity,
-and none can: a state of $N$ numbers at any fixed numerical precision
-holds a bounded number of bits, and
-information theory does not care how cleverly the update rule was
-chosen. To reproduce $k$ arbitrary tokens from a vocabulary of size
+Selectivity makes recurrent updates content-dependent. The delta rule
+replaces additive writes with corrective writes, and test-time learning
+updates the state from recent observations. None of these changes increases
+the capacity of a fixed-size state. At any fixed numerical precision, a state
+of $N$ numbers holds a bounded number of bits. To reproduce $k$ arbitrary
+tokens from a vocabulary of size
 $V$, *something* in the model must hold $k \log_2 V$ bits from the
 moment they appear to the moment they are needed. Our own measurements
 have analyzed this limitation throughout the chapter. The crowding
@@ -114,30 +114,25 @@ perplexity and most benchmarks while scoring 29% on five-shot MMLU
 against the transformer's 46%, and its phone-book recall collapsed once
 the book grew past a few hundred tokens; the authors call the mode
 *fuzzy memory* — the model returns an answer that shares digits with
-the right one :cite:`Waleffe.Byeon.Riach.ea.2024`. The practitioner's
-version of the diagnosis is blunter: ablate the few full-attention
-layers of a shipped hybrid and needle-in-a-haystack retrieval drops to
-roughly zero. A handful of full layers carries retrieval; the linear
-majority carries cheap throughput.
+the right one :cite:`Waleffe.Byeon.Riach.ea.2024`. Ablating the few
+full-attention layers of a deployed hybrid reduces needle-in-a-haystack
+retrieval to roughly zero. A small number of
+full-attention layers provides retrieval, whereas the linear-recurrent
+majority provides less expensive throughput.
 
-:citet:`Gu.2025` offers a framing for this trade worth carrying to the
-end of the section. A recurrent state is a *brain*: a compressed,
-always-on working memory at constant cost per step, which must decide at
-write time what will matter later, and therefore forgets. The
-transformer's growing key–value cache is a *database*: a lossless log of
-everything, pay-per-query at ever-growing cost, which never has to
-predict what will matter because it keeps it all. Neither dominates,
-because they fail on different bills — the brain loses exact recall, the
-database loses the economics. The obvious synthesis is where production
-actually landed, a brain in front of a database, and the rest of this
-section is about its terms.
+:citet:`Gu.2025` describes the trade in terms of compressed and
+uncompressed memory. A recurrent state compresses the preceding sequence
+into a fixed-size representation and must determine at write time which
+information to retain. A transformer's key–value cache instead stores a
+separate representation for every retained token, preserving exact
+retrieval at a cost that grows with context length. Hybrid architectures
+combine these complementary memory mechanisms.
 
 ## Inference-Memory Cost
 :label:`subsec_hy-economics`
 
-If the fixed state loses the recall fight, why not concede and serve
-pure transformers? Because of the bill that :numref:`sec_kv-cache`
-measured: cache bytes $= 2 \cdot n_\textrm{layers} \cdot n_\textrm{kv}
+A pure transformer preserves recall but incurs the cache cost measured in
+:numref:`sec_kv-cache`: cache bytes $= 2 \cdot n_\textrm{layers} \cdot n_\textrm{kv}
 \cdot d_\textrm{head} \cdot n \cdot b$ times the element size,
 :eqref:`eq_kv-cache-bytes`, growing linearly in the context length
 $n$. The factor that matters here is $n_\textrm{layers}$: *the cache is
@@ -155,12 +150,12 @@ million. A full-attention layer with grouped queries at the same width
 pays 4 KB *per token*: past a few hundred tokens the growing archive
 dwarfs the flat state, and by 128K context one attention layer holds
 512 MB against the recurrent layer's 2 MB.
-:numref:`fig_hy-cache` draws the consequence for a whole model: replace
-most attention layers with recurrent ones and the memory bill drops by
-almost exactly the fraction of attention you removed, because the
-surviving attention layers are the only ones still paying rent.
+:numref:`fig_hy-cache` draws the consequence for a whole model: replacing
+most attention layers with recurrent ones reduces persistent memory by
+almost exactly the removed attention fraction, because only the surviving
+attention layers retain a context-dependent cache.
 
-![Persistent decode state against context length for a 32-layer model at production width (GQA with $8$ key–value heads of dimension 128, Mamba-2-sized states, 16-bit). The count covers only the per-user state a server holds between decode steps — KV cache plus recurrent state — excluding parameters, activations, and workspace. A pure transformer's cache reaches 32 GB at 256K context; a pure recurrent stack stays near 64 MB at every length; a 4-of-32 hybrid pays the attention fraction of the transformer bill.](../img/mdl-modernrnn-hybrid-cache.svg)
+![Persistent decode state against context length for a 32-layer model at production width (GQA with $8$ key–value heads of dimension 128, Mamba-2-sized states, 16-bit). The count covers only the per-user state a server holds between decode steps — KV cache plus recurrent state — excluding parameters, activations, and workspace. A pure transformer's cache reaches 32 GB at 256K context; a pure recurrent stack stays near 64 MB at every length; a 4-of-32 hybrid pays the attention fraction of the transformer cache.](../img/mdl-modernrnn-hybrid-cache.svg)
 :label:`fig_hy-cache`
 
 Those curves are not hypothetical: they are the memory column of
@@ -188,10 +183,9 @@ compressible-versus-not but *what grows with context and what does not*.
 A hybrid gets both moves: the recurrent majority contributes only
 constant state, and the attention minority keeps a cache that GQA, MLA,
 and quantization still shrink (the recipe table below shows shipped
-hybrids doing exactly this). That is the last rung of the cache-relief
-map, delivered. What remains is the quantitative question the map could
-not answer: how few attention layers can a model keep and still recall
-like a transformer?
+hybrids doing exactly this). The remaining quantitative question is how
+few attention layers a model
+can retain while preserving transformer-like recall.
 
 ## Recall with One Attention Layer
 :label:`subsec_hy-experiment`
@@ -249,9 +243,8 @@ which :numref:`subsec_ms-duality` verified equal to the recurrence to
 float32 rounding — so this is a genuine linear-recurrence model,
 computed the fast way.
 
-Three lines of the implementation are load-bearing, and each encodes a
-lesson that cost real debugging time, so we state them as prose rather
-than leaving them as comments. First, **a fresh gate must retain**.
+Three implementation details determine whether the comparison is valid.
+First, **initialize a new gate to retain information**.
 With a default-initialized gate the decay comes out around
 $a \approx 0.5$ per token — a state half-life of one token — and the
 untrained model destroys the write phase before the query phase
@@ -282,8 +275,8 @@ and the RMSNorm inside our Gated DeltaNet cell): a per-head RMSNorm on
 the read-out before the output projection. Without it, our four-block
 stacks train erratically at this sequence length — in one framework
 the hybrid never leaves chance recall — because the untrained
-recurrent blocks flood the residual stream and the attention layer
-downstream never sees the tokens.
+recurrent-block outputs dominate the residual stream, preventing the
+downstream attention layer from recovering the tokens.
 
 ```{.python .input #hybrids-three-matched-models-2}
 %%tab pytorch
@@ -450,11 +443,11 @@ The printed counts back the "matched" claim with numbers: 58,544
 (linear), 57,984 (attention), and 58,404 (hybrid) parameters — a spread
 of 560, just under one percent, coming from the gate projection and
 read-out norm that each scalar-gated mixer carries and the attention
-mixer does not. Parameter count is not the whole story of a fair
+mixer does not. Parameter count is not sufficient for a fair
 comparison (the mixers do different amounts of compute per token, which
 :numref:`tab_hy-ledger` prices), but it rules out the
 crudest confound: none of the recall differences below can come from
-one model simply being bigger.
+a larger model.
 
 ### The Recall Sweep
 
@@ -474,9 +467,8 @@ $\{3 \times 10^{-4}, 10^{-3}, 3 \times 10^{-3}\}$ and pin the winner,
 $3 \times 10^{-3}$, for every cell below; at $3 \times 10^{-4}$,
 *every* architecture sits near chance at the largest loads, and a
 careless single-rate comparison at that setting would report no
-architecture gap at all. Optimization noise can manufacture or erase
-the effect you are looking for — sweep or pin deliberately, and say
-which.
+architecture gap at all. The learning rate can create or obscure the architecture gap. We therefore
+select it with a pilot sweep and report the fixed value used below.
 
 ```{.python .input #hybrids-the-recall-sweep-1}
 %%tab pytorch
@@ -589,9 +581,9 @@ points while moving reasoning benchmarks by single digits
 
 ### The Language-Modeling Panel
 
-If the deficit is that dramatic, why did pure recurrent language models
-ever look competitive? Because the deficit hides from the training
-objective. We train the same three stacks — same widths, same blocks,
+Pure recurrent language models can remain competitive because average
+language-modeling loss is insensitive to this recall deficit. We train the
+same three stacks — same widths, same blocks,
 nothing changed but the input pipeline — as character-level language
 models on *The Time Machine* of :numref:`sec_rnn-scratch`, with a
 128-character context so that the window is long enough for recall to
@@ -705,10 +697,9 @@ or beats the pure-attention stack: the model that just
 failed on
 the recall sweep is, by the language-modeling objective, the equal of
 the models that aced it.
-This is the cautionary dissociation, and it is the single most
-important measurement in this section. Scope it first: one pass over
-one small corpus at one seed, so it demonstrates that perplexity *can*
-remain nearly unchanged while exact recall degrades, not that it always does. The
+This run uses one pass over one small corpus at one seed. It therefore
+demonstrates only that perplexity *can* remain nearly unchanged while exact
+recall degrades. The
 larger-scale evidence says the dissociation is the rule, though:
 across seventeen trained language models most of the
 efficient-architecture perplexity gap concentrated on the rare recall
@@ -732,7 +723,7 @@ The third panel is the other side of the trade, on our own models. At
 generation time an attention layer must carry its keys and values for
 the whole context, :eqref:`eq_kv-cache-bytes`; a scalar-gated layer
 carries its
-$d_k \times d_v$ state per head, full stop. As in
+$d_k \times d_v$ state per head. As in
 :numref:`fig_hy-cache`, we count only the *persistent decode state* —
 the bytes a server must hold for a user between decode steps.
 Parameters, activations, and workspace are excluded; they are nearly
@@ -787,7 +778,7 @@ mid-stack, full attention, one recurrence. Each of those choices is an
 axis, and by now each has been swept — by ablation studies at the
 hundred-million-to-billion scale, and by the engineering teams whose
 models the recipe table below records. :numref:`fig_hy-stacks` shows
-where four representative systems landed.
+the configurations of four representative systems.
 
 ![Four shipped answers to "where does the attention go?", drawn from each release's config at the variant named in the label. Jamba 52B repeats a 1-attention-in-8 block; Nemotron-H 8B spreads 4 attention layers on an 11-layer period, none at the front; Samba 3.8B alternates Mamba with sliding-window attention only; Zamba2 7B re-enters two weight-shared attention blocks 13 times along an 81-layer Mamba-2 backbone.](../img/mdl-modernrnn-hybrid-stacks.svg)
 :label:`fig_hy-stacks`
@@ -805,8 +796,9 @@ at 8–12.5% full attention (Jamba and MiniMax at 12.5%, Nemotron-H near
 higher: Qwen3-Next fixes one full-attention layer per four
 :cite:`Qwen.Team.2025`, and Kimi Linear's ablation of the ratio
 $\{0{:}1, 1{:}1, 3{:}1, 7{:}1\}$ places the knee at 3:1 — at 7:1
-training loss matched but validation degraded, at 1:1 nothing improved
-but the bill, and pure attention (0:1) was strictly worse
+training loss matched but validation degraded, at 1:1 quality did not
+improve despite the additional cost, and pure attention (0:1) was strictly
+worse
 :cite:`Kimi.Team.2025b`. Controlled academic sweeps agree from the
 other side: recall climbs steeply with the attention fraction up to
 about 1:3 while perplexity stays nearly flat across the whole range
@@ -860,7 +852,7 @@ Parameter sharing is orthogonal to the sequential-parallel axis, and it
 sharpens the section's moral: if a few attention layers carry
 retrieval, perhaps they do not even need to be *different* layers.
 
-**The pieces interact.** The components of a hybrid are not chosen
+**Interaction between components.** The components of a hybrid are not chosen
 independently, and the cleanest evidence is a negative result. AI21
 tested Mamba-2 — larger state, better standalone model — inside Jamba
 and *rejected* it: the Mamba-1-plus-attention combination trained
@@ -908,19 +900,19 @@ with the attention layers wearing the cache compressions of
 | Kimi Linear (48B-A3B) :cite:`Kimi.Team.2025b` | 27 | 7 (26%), 3 KDA per MLA | MLA, NoPE | KDA (gated DeltaNet) | 1M |
 | Falcon-H1 (34B) :cite:`Zuo.Velikanov.Chahed.ea.2025` | — | parallel: attn $\parallel$ SSM channels, every layer | full, GQA | Mamba-2 | 256K |
 
-Read down the columns and the section's arguments reappear as shipped
-hardware. The recurrence column is the last three sections' family —
+The columns connect these architectural choices to deployed systems. The
+recurrence column is the family developed in the preceding three sections—
 Mamba-1/2 from :numref:`sec_mamba`, gated DeltaNet and its per-channel
 refinement KDA from :numref:`subsec_dn-gated` (the cell we trained on
 our scoreboard is the one Qwen3-Next ships). The attention-variant
 column shows the composition argument in action: Kimi Linear pairs its
 recurrence with MLA, Granite and Kimi drop positional encodings on the
 attention layers (NoPE), Qwen3-Next keeps only 2 key–value heads — the
-surviving cache, being most of the memory bill, receives every
+surviving cache accounts for most of the memory, so it receives every
 compression :numref:`sec_kv-cache` taught. And the context column
 explains the investment: the models built for the longest contexts are
 hybrids of this table's shape, because :eqref:`eq_kv-cache-bytes` made
-the alternative a hardware bill.
+the alternative more expensive in hardware.
 
 ## Distillation from Pretrained Transformers
 :label:`subsec_hy-distill`
@@ -985,32 +977,31 @@ that established it.
 | softmax attention (:numref:`sec_gpt`, :numref:`sec_kv-cache`) | $O(t\, d)$ — grows | $2 t d$ numbers — grows (:eqref:`eq_kv-cache-bytes`) | $O(T^2 d)$ | $O(1)$ | trivially: the parallel form is the definition |
 | 1-in-4 hybrid (this section) | $\tfrac{3}{4} O(h\, d_k d_v) + \tfrac{1}{4} O(t\, d)$ | constant $+\ \tfrac14$ of the cache | mixed | per component | per component |
 
-Read across the attention row and the SSD row and the whole section
-reappears: attention pays $t$-dependent work and state for exact recall;
+The attention and SSD rows summarize the central tradeoff: attention pays
+$t$-dependent work and state for exact recall;
 the matrix-state family pays a constant for a bounded memory; the
 hybrid row is a convex combination with the attention fraction as the
-mixing weight. Read down the exactness column for the chapter's other
-running theme: every linear-recurrence training trick — scan, chunk,
+mixing weight. The exactness column records a second distinction: every
+linear-recurrence training method — scan, chunk,
 dual, WY — is a reassociation of the same arithmetic, not an
 approximation, which is what made their speed free of modeling cost.
 
 So: where does this leave the fixed state? This chapter gave it five
-upgrades, and this section drew its boundary. The fixed state lost the
-exact-recall fight — by a counting bound under its stated assumptions,
-and by a collapse
-measurable in an afternoon at width 32 — and it won the economics, not
-narrowly: flat kilobytes against gigabytes that grow with every
-token of context. Production stopped treating those as competing claims
+upgrades, and this section drew its boundary. The counting bound and the
+width-32 experiment delimit the fixed state's exact-recall capability. Its
+persistent state remains constant in context length, whereas an attention
+cache grows with every retained token. Production stopped treating those as
+competing claims
 and shipped both, in proportions this section measured from three
 independent directions — ablation sweeps, shipped configurations, and
 distillation experiments, all pointing at a small attention minority
-carrying retrieval through a cheap recurrent majority. What this
-section did *not* cover is the systems story that makes the recurrent
+carrying retrieval through a less expensive recurrent majority. This
+section did not cover the systems techniques that make the recurrent
 majority fast in practice — the chunked forms of
 :numref:`subsec_ms-chunked` living as fused kernels, which belongs to
 :numref:`chap_performance`; and the pretraining and post-training of
 full-scale language models, hybrid or not, together with the serving
-stacks that exploit their mostly flat memory bill, which are the subject
+stacks that exploit their nearly constant persistent memory, which are the subject
 of the Language Models part. The pendulum question from this chapter's
 introduction — whether attention remains on top on January 1, 2027 —
 stays open. But notice what would settle it: not a better gate or a
@@ -1172,7 +1163,8 @@ Per layer, at production width (16-bit):
 
 @fig:mdl-modernrnn-hybrid-cache
 
-The hybrid's bill = attention fraction × the transformer's.
+The hybrid cache equals the attention fraction times the transformer
+cache.
 :::
 
 ::: {.slide title="Jamba Cache at 256K Context"}
@@ -1219,8 +1211,8 @@ only the LM panel triggers it, never the recall task.
 
 **Normalize the read-out.** $\mathbf{S}^\top \mathbf{q}$ grows with
 what the state has accumulated ($\sqrt{T}$ at init); per-head RMSNorm
-before $W_o$, or the recurrent blocks flood the residual stream and
-the attention layer downstream never sees the tokens.
+before $W_o$; otherwise, recurrent-block outputs dominate the residual
+stream before it reaches the downstream attention layer.
 :::
 
 ::: {.slide title="Recall with One Attention Layer"}
@@ -1259,8 +1251,8 @@ Same three stacks as character LMs on *The Time Machine*:
 
 . . .
 
-Recalls like attention, pays like recurrence, plus a quarter of the
-rent.
+The hybrid matches attention recall while retaining one quarter of the
+attention stack's context-dependent state.
 :::
 
 ::: {.slide title="Design rules, measured"}
@@ -1278,7 +1270,7 @@ rent.
 @fig:mdl-modernrnn-hybrid-stacks
 :::
 
-::: {.slide title="The pieces interact"}
+::: {.slide title="Interactions Between Components"}
 AI21 tested Mamba-2 in Jamba — the better standalone model — and
 **rejected it**.
 
@@ -1289,8 +1281,8 @@ AI21 tested Mamba-2 in Jamba — the better standalone model — and
 
 . . .
 
-Judge the recurrent half *in the presence of* the attention half;
-where quality saturates, economics decides.
+Evaluate the recurrent component together with the attention component.
+Once quality saturates, choose the less expensive configuration.
 :::
 
 ::: {.slide title="The recipe table"}

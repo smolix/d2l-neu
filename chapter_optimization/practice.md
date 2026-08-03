@@ -30,13 +30,13 @@ import optax
 
 ## Configurations Reported for Large-Scale Training
 
-A frontier language model is trained once, so its hyperparameters are not
-found by sweeping at full scale; they are assembled from smaller proxies
+A target-scale language-model run is too expensive for an exhaustive
+hyperparameter sweep, so its hyperparameters are assembled from smaller
+proxies
 (:numref:`sec_scaling`), from precedent, and from the recipes of earlier
 runs. Some of what the teams settled on is public. :numref:`tab_practice_recipes`
 collects the optimizer configurations disclosed by four prominent
-pretraining reports from 2024--2026. Read it as evidence about practice, not
-as gospel: each entry is what a team reported shipping, usually with no
+pretraining reports from 2024--2026. The table documents these cases rather than defining a general recipe: each entry is what a team reported shipping, usually with no
 ablation attached, and a dash means the report does not say.
 
 :What four pretraining reports disclose about their optimizer configuration.
@@ -63,10 +63,10 @@ insufficient to reproduce any run in full.
 
 ## Gradient Clipping
 
-One column of the table has no section behind it yet. Gradient clipping
+The next section examines the clipping column. Gradient clipping
 entered this book in :numref:`sec_rnn-scratch` as the fix for exploding RNN
-gradients; the table shows that it outlived the architecture that motivated
-it. Every run above that discloses a threshold clips, and every disclosed
+gradients; the reports show that the method is also used beyond recurrent
+architectures. Every run above that discloses a threshold clips, and every disclosed
 threshold is 1. Global-norm clipping treats all parameters as one long
 vector: with $\mathbf{g}$ the concatenation of every parameter's gradient
 and $\theta$ the threshold,
@@ -125,8 +125,9 @@ def clipped(tx, max_norm=1.0):
 
 :numref:`sec_adam` swept SGD with momentum on `TinyLM` and found a knife's
 edge: the best learning rate sat one grid point below one that returned
-NaN. That divergent grid point is exactly what clipping is for, so we rerun
-it, with and without the guard, and nothing else changed.
+NaN. This divergent grid point provides a direct test of whether clipping can
+prevent the observed numerical failure. We rerun it with and without
+clipping, changing nothing else.
 
 ```{.python .input #practice-a-nan-averted-1}
 data = d2l.TimeMachine(batch_size=64, num_steps=64, tokenization='char',
@@ -184,9 +185,8 @@ has climbed six orders of magnitude and overflows. The clipped run, at the
 identical learning rate, trains to a final loss at or slightly below the
 tuned unclipped run of :numref:`sec_adam`. The median gradient norm was far
 below the threshold, and
-clipping changed the update on six steps out of two thousand. Six
-interventions were the entire difference between a NaN and the best SGD
-result in this chapter.
+clipping changed the update on six steps out of two thousand. In these paired runs, those six interventions separate the divergent
+trajectory from the stable one.
 :end_tab:
 
 :begin_tab:`jax`
@@ -200,27 +200,24 @@ not report how often it fired; the instrumented PyTorch tab counts six
 interventions in two thousand steps, and the picture here is the same.
 :end_tab:
 
-That count is the right mental model for clipping. On a healthy step the
-guard does nothing; on the rare step when a spike arrives out of the
-gradient distribution's tail, it is the difference between an incident and
-a log entry. The tail is not an accident of our small model: gradient noise
+This count illustrates clipping used as a guard: most updates remain
+unchanged, while a small number of unusually large gradients are rescaled. The tail is not an accident of our small model: gradient noise
 in language models is measurably heavy-tailed, and under such noise clipped
 SGD provably converges where plain SGD can fail
-:cite:`Zhang.Karimireddy.Veit.ea.2020`. The threshold should be set
-accordingly, above the typical norms of a healthy run, which you know
-because you logged them. A guard that fires on most steps is not guarding
-anything; it is a learning-rate cut in disguise, and the fix is
-to lower the learning rate or raise the threshold
+:cite:`Zhang.Karimireddy.Veit.ea.2020`. The threshold can be set above the typical norms observed in a stable run.
+If clipping activates on most steps, it continuously normalizes or rescales
+the update rather than serving only as an outlier guard; the learning rate
+and threshold should then be tuned together
 :cite:`Godbole.Dahl.Gilmer.ea.2023`. For the Adam family the arithmetic
-differs but the conclusion holds. In steady state Adam's normalization
-keeps every coordinate's step near $\eta$ (:numref:`sec_adam`), transiently
+differs but the conclusion holds. For a persistent gradient, Adam's normalized update in a coordinate is on
+the order of $\eta$ (:numref:`sec_adam`), transiently
 up to a few times that: $|\hat{m}/\sqrt{\hat{v}}|$ can briefly reach
 $(1 - \beta_1)/\sqrt{1 - \beta_2} \approx 3$ at the defaults. So clipping
 is no substitute for lowering a too-large Adam learning rate, and in our
 runs it was not. What it
-still provides is protection for the estimates: one enormous gradient otherwise
-enters $\mathbf{m}$ and $\mathbf{v}$ and distorts the steps for the
-$\sim 1/(1-\beta_2)$ steps the averages take to forget it.
+still provides is protection for the estimates: one enormous gradient otherwise enters both moment estimates, and its
+contribution to the slower second-moment average decays over a timescale on
+the order of $1/(1-\beta_2)$ steps.
 
 ### Additional Stability Methods
 
@@ -232,10 +229,9 @@ from drifting large :cite:`chowdhery2022palm`. *QK-norm* normalizes queries
 and keys immediately before their dot product, so attention logits cannot
 grow with the norms of what feeds them
 :cite:`Henry.Dachapally.Pawar.ea.2020`; OLMo 2 adopted it as part of the
-stability overhaul that its report documents :cite:`OLMo.2025`. MuonClip's
-*QK-clip* rescales the query and key projections whenever the largest
-attention logit crosses a cap, the addition that carried Kimi K2 through
-15.5T tokens without a loss spike (:numref:`sec_muon`,
+stability overhaul that its report documents :cite:`OLMo.2025`. MuonClip's *QK-clip* rescales the query and key projections whenever the
+largest attention logit crosses a cap; the Kimi K2 report includes this
+method in a 15.5-trillion-token run with no reported loss spike (:numref:`sec_muon`,
 :cite:`Kimi.Team.2025`). And when prevention fails, the practice is
 unglamorous. Facing about twenty spikes in a run, the PaLM team rewound to
 a checkpoint a few hundred steps earlier and skipped the offending batches,
@@ -244,17 +240,17 @@ a different state: spikes came from state and data together, not from bad
 data alone :cite:`chowdhery2022palm`. The OPT team published its training
 logbook along with the model; it records two months of restarts, mid-flight
 learning-rate cuts, and hardware failures in a way no polished paper does,
-and it remains the best public record of what babysitting a large run is
-actually like :cite:`zhang2022opt`.
+and it provides an unusually detailed public record of operational
+interventions during a large run :cite:`zhang2022opt`.
 
 ## Weight Averaging
 
 The chapter's third recurring decision is living with noise, and it has one
 more tool, one that is nearly free. A constant-rate iterate rattles around its
 noise ball (:numref:`sec_sgd`), and a schedule quenches the rattling by
-decaying the rate (:numref:`sec_scheduler`). Averaging quenches it without
-touching the rate: the bounces roughly cancel in the mean, so an average of
-iterates sits near the center of the region the run is circling.
+decaying the rate (:numref:`sec_scheduler`). Averaging can reduce this variability without changing the learning rate:
+when iterate fluctuations are weakly correlated around a region, some of
+them cancel in the mean.
 Stochastic weight averaging made this a standard trick, averaging
 checkpoints from the tail of training and evaluating the average
 :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`. You have met the running form
@@ -268,8 +264,8 @@ for evaluation. The training run never sees it. What is new here is the
 noise-ball reading of *why* it helps.
 
 We test it on the schedule testbed of :numref:`sec_scheduler`, reproduced
-verbatim, in the situation where that section's story began: the constant
-learning rate baseline, whose test accuracy stalled and jittered. Alongside
+verbatim, for its constant-learning-rate baseline, whose test accuracy plateaued and
+varied across epochs. Alongside
 the live weights we maintain an EMA with $\alpha = 0.999$, an averaging
 window of about a thousand steps, roughly four epochs here.
 
@@ -335,7 +331,7 @@ test_iter = fashion.get_dataloader(train=False)
 The EMA update walks the two `state_dict`s in parallel. Floating-point
 entries are averaged, which includes the BatchNorm running statistics, so
 the averaged model stays approximately consistent — an EMA of running
-statistics is not the exact statistic of the EMA weights; the clean
+statistics is not the exact statistic of the EMA weights; a more accurate
 alternative is to recompute them for the averaged weights, as the
 checkpoint-averaging note below prescribes. Integer buffers are copied
 through.
@@ -345,7 +341,7 @@ through.
 The EMA update is one `tree.map` over the parameters and BatchNorm
 statistics of the two models. Averaging the running statistics keeps the
 averaged model approximately consistent — an EMA of running statistics is
-not the exact statistic of the EMA weights; the clean alternative is to
+not the exact statistic of the EMA weights; a more accurate alternative is to
 recompute them for the averaged weights, as the checkpoint-averaging note
 below prescribes.
 :end_tab:
@@ -439,23 +435,20 @@ the average still carries heavy weight on stale, near-initialization
 iterates. This is lag, not the zero-initialization deficit that Adam's bias
 correction removes (:numref:`sec_adam`): the average starts at the initial
 weights, so its coefficients already sum to one and there is nothing to
-correct — the early estimates are simply dominated by old iterates. That
+correct — the early average retains substantial weight on old iterates. That
 lag is why
-practical EMAs either warm up the decay or start averaging late. Second,
-once the window has filled, the averaged model is better and much steadier.
-In our runs the EMA ends half a point to a point above the live weights,
-and the steadiness matters more than the size: the live curve gambles a few
-points of accuracy on when you happen to stop, and the average does not.
+practical EMAs either warm up the decay or start averaging late. Second, after the window fills, the EMA curve is higher and less variable
+than the live-weight curve in this run. It ends roughly 0.5--1 percentage
+point higher, while reducing sensitivity to the particular stopping epoch.
 The averaged model
 at a constant rate lands in the range the decayed schedules of
-:numref:`sec_scheduler` reached, which is the schedule-free observation of
-that section from the other side: decay and averaging are two ways to
-quench the same noise. That also predicts a limit. Add the same
+:numref:`sec_scheduler` reached, consistent with the schedule-free discussion in
+that section: decay reduces the noise injected into future iterates, whereas
+averaging reduces variation in the evaluated parameters. That also predicts a limit. Add the same
 EMA to a run whose schedule already decayed well, and on a model this size
-the remaining nudge is too small to call from a single run. The technique
-earns its keep where the decayed endpoint is expensive to reach, or where
-no decay is coming. The cost is one extra copy of the parameters, cheap by
-the accounting of :numref:`sec_adamw`. One footnote for checkpoint
+the remaining nudge is too small to call from a single run. The technique is most useful when a comparable decayed endpoint is expensive
+to reach or no decay is planned. Its principal memory cost is one additional
+copy of the parameters, as discussed in :numref:`sec_adamw`. One footnote for checkpoint
 averaging: if you average a few saved checkpoints instead of keeping a
 running EMA, the BatchNorm statistics belong to none of the averaged
 weights, so recompute them with a pass over the training data before
@@ -463,29 +456,26 @@ trusting the result.
 
 ### Averaging at Scale
 
-At scale the trick wears several uniforms. Averaging the latest $k$
-checkpoints of an LLM run, uniformly rather than exponentially, gives a
-consistent mid-training speedup :cite:`Kaddour.2022`, and the top row of
+Large-scale pipelines use several forms of weight averaging. Averaging the latest $k$
+checkpoints of an LLM run, uniformly rather than exponentially, can produce a loss comparable to a later
+single checkpoint :cite:`Kaddour.2022`, and the top row of
 :numref:`tab_practice_recipes` does it in production: the Llama 3 model
 that shipped is the average of checkpoints from its final annealing phase
 :cite:`Grattafiori.Dubey.Jauhri.ea.2024`. Model soups push the idea past a single run,
 averaging separately fine-tuned models into one, with accuracy gains at no
-inference cost :cite:`Wortsman.Ilharco.Gadre.ea.2022`. And in one model
-family averaging is not an optimization but a requirement: diffusion models
-(:numref:`chap_diffusion`) are evaluated on EMA weights essentially always,
-and sample quality depends on the averaging window strongly enough that
-:citet:`Karras.Aittala.Lehtinen.ea.2024` developed a method to reconstruct the
-EMA at any window *after* training, just to be able to tune it. A plausible
-reading of the asymmetry: a classifier's accuracy is one forward pass and
-plateaus, while a diffusion sampler applies the network hundreds of times
-in sequence, so weight noise that a single pass shrugs off compounds across
-the trajectory.
+inference cost :cite:`Wortsman.Ilharco.Gadre.ea.2022`. Diffusion-model training commonly evaluates an EMA of the weights
+(:numref:`chap_diffusion`) and sample quality can depend strongly on the averaging window;
+:citet:`Karras.Aittala.Lehtinen.ea.2024` developed a method to reconstruct
+multiple EMA windows after training so that the window can be tuned. The
+difference from the classifier example may partly reflect the repeated
+application of a denoiser during sampling, but this comparison alone does
+not establish the mechanism.
 
 ## How to Tune
 
 Every comparison in this chapter depends on a tuning protocol, which must be
 reported as part of the method. Google's Tuning Playbook
-:cite:`Godbole.Dahl.Gilmer.ea.2023`, and its central move is a vocabulary.
+:cite:`Godbole.Dahl.Gilmer.ea.2023` provides a useful vocabulary.
 In any experiment, split the hyperparameters into three classes:
 *scientific* hyperparameters, the ones your question is about; *nuisance*
 hyperparameters, which must be re-optimized for every setting of the
@@ -494,19 +484,19 @@ hyperparameters, held constant and acknowledged as limits on the claim. The
 playbook's rule is that a comparison is a statement about scientific
 hyperparameters only after the nuisances have been re-tuned per arm, and
 its most common instance is also the most common failure in published
-comparisons: the learning rate is almost always a nuisance, and a
-comparison at one shared learning rate is a comparison of nothing.
+comparisons: the learning rate is usually a nuisance, and one shared learning rate can
+favor a method whose preferred scale happens to match it.
 
 This vocabulary names what the chapter has been doing since
 :numref:`sec_adam`. In each comparison, the optimizer was the scientific
 hyperparameter; the learning rate was the nuisance, re-tuned per contestant
 on a four-point grid spaced by factors of about three; steps, batch size,
 initialization, and the absence of a schedule were fixed and stated, which
-is why every conclusion was phrased as conditional on that protocol. The
-design scales up without changing shape: more nuisance dimensions (peak
-rate, decay horizon, warmup, weight decay), quasi-random search once a grid
-is too coarse, exploration before a final exploitation sweep. What does not
-remain valid without retuning. :citet:`Schmidt.Schneider.Hennig.2021`
+is why every conclusion was phrased as conditional on that protocol. At larger scale, the same design includes more nuisance dimensions (peak
+rate, decay horizon, warmup, and weight decay), may replace a coarse grid
+with quasi-random search, and separates broad exploration from a narrower
+final sweep. Conclusions need to be reassessed when these nuisance
+parameters are not retuned. :citet:`Schmidt.Schneider.Hennig.2021`
 benchmarked fifteen optimizers across many problems and found that trying
 several optimizers at default settings works about as well as extensively
 tuning a single one. Read it as consolation or as warning: defaults encode
@@ -518,23 +508,22 @@ Budgets shape the rest. With a handful of runs, take the consensus column
 of :numref:`tab_practice_recipes` as given and spend every run on the peak
 learning rate. With tens of runs, add weight decay and the schedule, and
 sweep jointly only what is genuinely coupled: $\eta$ and $\lambda$ act
-through their product (:numref:`sec_adamw`), so their joint grid is really
-a ridge plus one cross-direction. Past that, you are running a study, and
+through their product (:numref:`sec_adamw`), so a joint grid should cover both their product and deviations from a
+constant-product ridge. Past that, you are running a study, and
 the playbook is the reference. On the models of this chapter a run cost
 seconds to minutes, which is why we could afford the middle tier
-everywhere; the entire point of :numref:`sec_scaling` was to keep that
+everywhere; one purpose of :numref:`sec_scaling` was to keep that
 affordability relevant as models grow.
 
-Finally, the log. A result you cannot reproduce is a rumor, so record for
-every run the full configuration, including the hyperparameters you
+Finally, maintain a reproducible experiment log. For every run, record the full configuration, including the hyperparameters you
 consider fixed, the code version, the seed, and the one thing you changed.
-Change one thing at a time. Keep the diverged runs: the NaN edge of a
+Vary one factor at a time when estimating a marginal effect, and use
+factorial designs when interactions are the question. Retain diverged runs: the NaN edge of a
 sweep marks the stability boundary, and :numref:`sec_adam` read its NaN
 column as data, not as failure. Write the conclusion next to the curves
 while you still believe it, because a directory of loss curves with no
 sentences attached goes stale within weeks. Assignments in the CS336 mold
-now grade the experiment log alongside the final loss, and that is the
-right emphasis: the log is the experiment.
+now grade the experiment log alongside the final loss, emphasizing that the experimental record is part of the result.
 
 ## Topics Covered Elsewhere
 
@@ -542,16 +531,15 @@ Three method families were left out on purpose. Sharpness-aware
 minimization takes an inner ascent step before each descent step to seek
 the flat minima whose connection to generalization
 :numref:`sec_generalization_deep` discussed; it doubles the gradient cost,
-and its dependable wins are in vision and fine-tuning rather than
-large-scale pretraining :cite:`Foret.Kleiner.Mobahi.ea.2021`.
+and the cited results establish improvements mainly in vision tasks rather
+than large-scale pretraining :cite:`Foret.Kleiner.Mobahi.ea.2021`.
 Variance-reduction methods of the SVRG family have an elegant theory for
 finite sums but have not produced consistent improvements on deep networks;
 :numref:`sec_mdl-variance-reduction` presents the theory
-and a careful post-mortem. LARS and LAMB, the layerwise-adaptive
-methods once synonymous with large-batch training, are superseded: re-tune
-the nuisance hyperparameters, exactly the rule of the previous section, and
-standard momentum and AdamW match them at the batch sizes they
-were designed for :cite:`Nado.Gilmer.Shallue.ea.2021`.
+and a careful post-mortem. LARS and LAMB are layerwise-adaptive methods developed for large-batch
+training. In the cited benchmark, after nuisance hyperparameters were
+retuned, standard momentum and AdamW matched them at the studied batch
+sizes :cite:`Nado.Gilmer.Shallue.ea.2021`.
 
 The remaining questions concern placement rather than optimization. This
 chapter analyzed optimizer state (:numref:`sec_adamw`) on a single device.
@@ -564,26 +552,23 @@ move.
 
 ## Summary
 
-Disclosed practice at the frontier is a small, stable recipe: AdamW with
-$(0.9, 0.95)$, weight decay 0.1 with embeddings and norms exempt, global
-gradient clipping at 1, brief warmup into cosine or warmup--stable--decay,
-and an early batch ramp, with the Muon split as the one production
-challenger inside the same frame. Clipping is cheap insurance against a
-heavy gradient tail: healthy runs barely trigger it, and when it triggers
-on most steps it has become a learning-rate cut. Beyond it, large runs
-use additional stability methods (z-loss, QK-norm, QK-clip) and may rewind
-and skip batches after a loss spike. Weight averaging reduces
-noise without touching the learning rate; it is a point of accuracy and a
-steadier endpoint on our testbed, checkpoint averaging in production LLMs,
-and mandatory equipment for diffusion. Tuning is a protocol, not a talent:
-scientific, nuisance, and fixed hyperparameters, nuisances re-tuned per
-arm, budgets spent on the learning rate first, and a log that makes every
-run reproducible.
+The four reports document repeated choices without defining a complete or
+representative recipe. Among disclosed fields, AdamW, $(0.9,0.95)$ moment
+coefficients, weight decay 0.1, clipping at 1, warmup, and later decay recur;
+one report uses a Muon/AdamW split. Clipping can guard against rare,
+heavy-tailed gradients, but frequent activation changes the update rule and
+must be tuned with the learning rate. Large runs also report z-loss,
+QK-norm, QK-clip, checkpoint recovery, and batch skipping. On our
+single-seed testbed, weight averaging raises and stabilizes endpoint
+accuracy; large language-model and diffusion pipelines also use checkpoint
+or exponential averaging. Fair optimizer comparisons identify scientific,
+nuisance, and fixed hyperparameters, retune nuisance parameters per arm, and
+retain a reproducible experiment log.
 
-Every method in this chapter specifies three decisions: which direction to
-move, which is a choice of norm; how far to move as training proceeds, which
-is a schedule; and how to control sampled noise through batching, momentum,
-and averaging. The
+The methods in this chapter address three related decisions: how gradients
+are transformed into an update direction; how the step scale changes during
+training; and how sampling noise is managed through batching, momentum, and
+averaging. The
 configuration table gives coordinated settings of all three. When a run
 misbehaves, first determine which decision is responsible. Optimizers change,
 but this decomposition has remained useful for decades.
@@ -654,7 +639,7 @@ Optimization in practice<br>
 - Three reports use AdamW; Kimi K2 reports a **Muon split** (§9.9).
 - Two reports disclose (0.9, 0.95), weight decay 0.1, and clipping at 1.0.
 - All report warmup; later schedules and batch handling differ.
-- Blank entries are missing evidence, not implied defaults.
+- Dashes mark undisclosed fields, not implied defaults.
 :::
 
 ::: {.slide title="Gradient clipping in three lines"}
@@ -662,8 +647,9 @@ Global norm, all parameters as one vector:
 
 $$\mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \mathbf{g}$$
 
-Direction kept, length capped. Met in ch. 8 for RNNs — it outlived the
-architecture: every disclosed threshold in the table is 1.
+The transformation preserves direction and caps the global norm. Introduced
+for RNNs in ch. 8, it also appears in the two reports that disclose clipping;
+both use threshold 1.
 
 @practice-gradient-clipping-1
 :::
@@ -675,9 +661,9 @@ divergent point, with and without the guard:
 @!practice-a-nan-averted-3
 
 
-- Unclipped: oversized step → steeper ground → bigger gradient → momentum
-  compounds → overflow.
-- Clipped, same lr: trains to the tuned run's range.
+- Unclipped: a large step reaches a region with larger gradients, momentum
+  compounds the growth, and the run overflows.
+- Clipped at the same learning rate: final loss is in the tuned runs' range.
 :::
 
 ::: {.slide title="Frequency of clipping"}
@@ -686,9 +672,10 @@ The instrumented run: median gradient norm ~0.3, threshold 1.0 —
 
 - Language-model gradient noise is heavy-tailed
   (Zhang et al., 2020); the guard exists for the tail.
-- Firing on most steps = a learning-rate cut in disguise. Lower $\eta$ or
-  raise $\theta$.
-- Adam: steps sit near $\eta$ in steady state (transients up to ~3×), so
+- If clipping fires on most steps, it continuously changes the update rule;
+  tune $\eta$ and $\theta$ together.
+- For a persistent gradient, Adam's coordinate update is on the order of
+  $\eta$ (with transients up to about 3×), so
   clipping is no substitute for lowering a too-large $\eta$ — it guards
   $\mathbf{m}, \mathbf{v}$ from one huge gradient lingering
   $1/(1-\beta_2)$ steps.
@@ -703,13 +690,15 @@ Clipping is one item. The rest aims at attention logits and the softmax:
   zero spikes (§9.9).
 
 
-When prevention fails: PaLM **rewound ~100 steps and skipped the batches**
-— same data replayed later caused no spike; state and data conspire. The
-OPT logbook: two months of restarts and lr cuts, published as-is.
+When prevention failed, PaLM rewound to an earlier checkpoint and skipped
+the implicated batches. Replaying those batches from a different state did
+not reproduce the spike, indicating an interaction between state and data.
+The OPT logbook documents two months of restarts and learning-rate changes.
 :::
 
 ::: {.slide title="Weight averaging"}
-Third decision, third tool: quench noise **without touching the rate** —
+Weight averaging reduces endpoint variability **without changing the
+learning rate**:
 $\bar{\mathbf{x}}_t = \alpha \bar{\mathbf{x}}_{t-1} + (1-\alpha)\mathbf{x}_t$,
 the chapter's leaky average, now on the weights (SWA; Izmailov et al.,
 2018).
@@ -718,42 +707,43 @@ the chapter's leaky average, now on the weights (SWA; Izmailov et al.,
 
 - Window must fill first — the early gap is lag on stale iterates, not a
   bias to correct; warm up the decay or start late.
-- Then: modestly above the live weights, and no when-to-stop lottery.
+- Afterward, this EMA run is modestly above the live-weight curve and less
+  sensitive to the stopping epoch.
 :::
 
 ::: {.slide title="Averaging: where it matters"}
-- Constant rate + EMA ≈ decayed schedule: decay and averaging quench the
-  same noise (§9.8's schedule-free view). On an already-decayed run this
-  size: too small to call from a single run.
+- Constant rate plus EMA reaches the range of the decayed schedules in
+  §9.8, though decay changes future iterates whereas averaging changes the
+  evaluated parameters. With prior decay, one run shows no clear added gain.
 - LLMs: checkpoint averaging (LAWA); **Llama 3 shipped an average** of its
   annealing checkpoints. Model soups: average fine-tuned models.
-- Diffusion (:numref:`chap_diffusion`): EMA is **mandatory** — quality tracks the window so
-  tightly that Karras et al. (2024) reconstruct the EMA post hoc to tune it.
+- Diffusion models (:numref:`chap_diffusion`) commonly use EMA; Karras et al. (2024) reconstruct multiple
+  EMA windows after training to tune the window.
 :::
 
 ::: {.slide title="How to tune"}
 [The Tuning Playbook's vocabulary]{.kicker}
 
-- **Scientific** hyperparameters: the question. **Nuisance**: re-tune per
-  arm, or the comparison is void. **Fixed**: the claim's fine print.
+- **Scientific** hyperparameters define the question. **Nuisance**
+  hyperparameters are retuned per arm. **Fixed** settings limit the claim.
 - This chapter, named: optimizer scientific, lr nuisance (four-point grid
   per contestant), all else fixed and stated.
 - Schmidt et al. (2021): several optimizers at defaults ≈ one optimizer
-  heavily tuned. Untuned comparisons measure effort, not algorithms.
+  heavily tuned. Untuned comparisons confound optimizer choice with tuning effort.
 
 
-Budgets: few runs → consensus recipe, sweep peak lr only. Tens → add wd +
-schedule ($\eta\lambda$ is a ridge, §9.7). And log everything: config,
-seed, the one change, the NaNs. **The log is the experiment.**
+With few runs, prioritize the peak learning rate; with tens, add weight
+decay and schedule parameters. Log the configuration, seed, changes, and
+diverged runs so the comparison is reproducible.
 :::
 
 ::: {.slide title="Topics covered elsewhere"}
 - **SAM**: flat minima at 2× gradient cost — wins concentrate in vision
   and fine-tuning.
-- **Variance reduction**: beautiful finite-sum theory, never paid off for
-  deep networks → ch. 25.
-- **LARS/LAMB**: superseded — re-tuned momentum/AdamW match them at the
-  same batch sizes.
+- **Variance reduction**: strong finite-sum theory, but no consistent
+  improvement reported for deep networks → ch. 25.
+- **LARS/LAMB**: in the cited benchmark, retuned momentum/AdamW matched
+  them at the studied batch sizes.
 - **Systems**: sharding state, data parallelism, overlap → ch. 11 and the
   training-systems appendix.
 :::
@@ -761,12 +751,12 @@ seed, the one change, the NaNs. **The log is the experiment.**
 ::: {.slide title="Recap: three decisions"}
 - **Direction**: a norm — gradient, sign, or orthogonalized (§9.2, §9.6,
   §9.9).
-- **Step size over time**: warmup, cosine, WSD (§9.8) — plus clip 1.0 as
-  the fuse.
+- **Step scale over time**: warmup, cosine, and WSD (§9.8); clipping is
+  a separate guard on unusually large gradients.
 - **Noise**: batch (§9.4, §9.10), momentum (§9.5), averaging (here).
 
 
-The recipe table is one coordinated setting of all three. When a run
+Each row of the table is one reported coordination of these choices. When a run
 misbehaves, ask which decision is failing. Optimizers change; the
 decomposition has been stable for decades.
 :::

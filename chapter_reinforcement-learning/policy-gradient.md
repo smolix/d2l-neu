@@ -44,7 +44,9 @@ env = gym.wrappers.TimeLimit(
     gym.make('FrozenLake-v1', is_slippery=False).env, max_episode_steps=10_000)
 ```
 
-We use deterministic FrozenLake because a nearly random policy reaches the goal too rarely on the slippery version for whole-trajectory REINFORCE to provide a useful signal at this computational budget. We also remove Gymnasium's default 100-step time limit and retain a 10,000-step cap only as a safeguard. The objective is defined over complete episodes; treating a time-limit truncation as termination would instead optimize a truncated objective. A softmax policy assigns positive probability to every action, so on this finite deterministic map it reaches a terminal state with probability one. In a simulation of 100,000 episodes from the initial uniform policy, none exceeded 80 steps, and the safeguard was never reached. :numref:`sec_baselines` uses the same environment and horizon convention.
+We use deterministic FrozenLake because a nearly random policy reaches the goal too rarely on the slippery version for whole-trajectory REINFORCE to provide a useful signal at this computational budget. We also remove Gymnasium's default 100-step time limit and retain a 10,000-step cap only as a safeguard.
+
+The objective is defined over complete episodes; treating a time-limit truncation as termination would instead optimize a truncated objective. A softmax policy assigns positive probability to every action, so on this finite deterministic map it reaches a terminal state with probability one. In a simulation of 100,000 episodes from the initial uniform policy, none exceeded 80 steps, and the safeguard was never reached. :numref:`sec_baselines` uses the same environment and horizon convention.
 
 ### Softmax Preferences
 
@@ -96,11 +98,11 @@ Although a deterministic optimal policy exists, stochastic parameterizations are
 
 ## The Policy Gradient
 
-We now derive the gradient of expected return with respect to the policy parameters.
+We next derive the gradient of expected return with respect to the policy parameters.
 
 ### An Optimization Problem over Trajectories
 
-Imagine, as in :numref:`sec_valueiter`, that the agent starts at a state $s_0$ and takes actions from the policy $\pi_\theta$ for $T$ timesteps, producing a trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots, s_T)$ with return $R(\tau) = \sum_{t=0}^{T-1} \gamma^t r(s_t, a_t)$. The probability of observing a particular trajectory $\tau$ is the product of the probabilities of each action taken by the agent and each transition made by the environment,
+As in :numref:`sec_valueiter`, suppose the agent starts at state $s_0$ and takes actions from $\pi_\theta$ for $T$ timesteps, producing a trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots, s_T)$ with return $R(\tau) = \sum_{t=0}^{T-1} \gamma^t r(s_t, a_t)$. The probability of observing a particular trajectory $\tau$ is the product of the probabilities of each action taken by the agent and each transition made by the environment,
 
 $$P(\tau; \theta) = \prod_{t=0}^{T-1} \pi_\theta(a_t \mid s_t)\ P(s_{t+1} \mid s_t, a_t).$$
 :eqlabel:`eq_traj_prob`
@@ -186,7 +188,7 @@ where we multiplied and divided by $P(\tau; \theta)$ and used the identity $\nab
 $$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau)\ \nabla_\theta \log P(\tau; \theta) \Big],$$
 :eqlabel:`eq_pg_gradient`
 
-and averages over trajectories are exactly what the agent can estimate by sampling: it simply runs its current policy.
+This expectation can be estimated by sampling trajectories from the current policy.
 
 ### Cancellation of the Transition Probabilities
 
@@ -203,12 +205,14 @@ The transition probabilities do not depend on $\theta$, so their derivatives are
 
 ### The REINFORCE Estimator
 
-We now approximate the expectation in :eqref:`eq_pg_gradient` with an empirical average. The agent runs its current policy $\pi_\theta$ to collect $n$ trajectories $\tau_1, \ldots, \tau_n$ and computes
+We approximate the expectation in :eqref:`eq_pg_gradient` with an empirical average. The agent runs its current policy $\pi_\theta$ to collect $n$ trajectories $\tau_1, \ldots, \tau_n$ and computes
 
 $$\hat{u} = \frac{1}{n} \sum_{i=1}^n R(\tau_i)\ \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i),$$
 :eqlabel:`eq_reinforce`
 
-This is an unbiased estimate of $\nabla_\theta J(\theta)$. REINFORCE :cite:`Williams.1992` applies the ascent step $\theta\leftarrow\theta+\alpha\hat u$. Each trajectory return weights the scores of all actions in that trajectory. On FrozenLake the returns are nonnegative, so sampled actions receive nonnegative weights; their relative probabilities still change through the softmax coupling. Baselines introduced in :numref:`sec_baselines` provide weights that are positive for better-than-typical outcomes and negative for worse ones. Since each update changes the policy, a new on-policy batch is collected before the next update. :numref:`fig_rl_score_ascent` illustrates one update.
+This is an unbiased estimate of $\nabla_\theta J(\theta)$. REINFORCE :cite:`Williams.1992` applies the ascent step $\theta\leftarrow\theta+\alpha\hat u$. Each trajectory return weights the scores of all actions in that trajectory. On FrozenLake the returns are nonnegative, so sampled actions receive nonnegative weights; their relative probabilities still change through the softmax coupling. Baselines introduced in :numref:`sec_baselines` provide weights that are positive for better-than-typical outcomes and negative for worse ones.
+
+Since each update changes the policy, a new on-policy batch is collected before the next update. :numref:`fig_rl_score_ascent` illustrates one update.
 
 ![One REINFORCE step on a one-step problem. The Gaussian policy is $\pi_\theta(a)=\mathcal{N}(a;\mu,1)$ with $\mu=0$, and the reward is $R(a)=0.4+2e^{-(a-2)^2/2}$, giving expected reward $J=0.92$ and exact gradient $\mathrm{d}J/\mathrm{d}\mu=0.52$. (a) Twelve sampled actions increase their log-probabilities in proportion to their rewards. All arrows point upward because all rewards are positive. (b) After the update, the policy mean moves from $0$ to $0.55$, toward the actions with higher rewards.](../img/mdl-rl-score-ascent.svg)
 :label:`fig_rl_score_ascent`
@@ -262,7 +266,7 @@ The arrows show the most probable action in each state, and shading shows its pr
 
 ### The Policy Gradient Theorem
 
-REINFORCE weights a whole trajectory's score by the whole trajectory's return. The same gradient has a second form, organized by states rather than by trajectories, which is how the literature most often writes it and how this book will use it from the next section on.
+REINFORCE weights a whole trajectory's score by the whole trajectory's return. The same gradient can be expressed by state occupancy rather than complete trajectories. Later sections use this form.
 
 **Proposition (policy gradient theorem).** *For the objective $J(\theta) = E_{s_0 \sim \mu_0} [V^{\pi_\theta}(s_0)]$,*
 
@@ -271,7 +275,9 @@ $$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 
 
 *where $d^{\pi_\theta}_\gamma(s) = (1 - \gamma) \sum_{t \geq 0} \gamma^t \Pr(s_t = s)$ is the discounted state-occupancy distribution* :cite:`Sutton.McAllester.Singh.ea.2000`.
 
-The theorem has three useful consequences. First, the score at time $t$ is weighted by $Q^{\pi_\theta}(s_t,a_t)$ rather than by rewards received before the action was taken; removing those earlier rewards yields the reward-to-go estimator of :numref:`sec_baselines`. Second, the occupancy form averages over the discounted frequency with which the policy visits each state, including the effect of the start distribution $\mu_0$. Third, omitting the factors $\gamma^t$, as many implementations do, replaces the discounted occupancy $d^{\pi_\theta}_\gamma$ by an undiscounted visitation distribution. This changes the relative weighting of states and generally produces the gradient of a different objective. Exercise 6 examines the difference.
+The theorem has three useful consequences. First, the score at time $t$ is weighted by $Q^{\pi_\theta}(s_t,a_t)$ rather than by rewards received before the action was taken; removing those earlier rewards yields the reward-to-go estimator of :numref:`sec_baselines`. Second, the occupancy form averages over the discounted frequency with which the policy visits each state, including the effect of the start distribution $\mu_0$. Third, omitting the factors $\gamma^t$, as many implementations do, replaces the discounted occupancy $d^{\pi_\theta}_\gamma$ by an undiscounted visitation distribution. This changes the relative weighting of states and generally produces the gradient of a different objective.
+
+Exercise 6 examines the difference.
 
 ## Costs and Limitations
 
@@ -288,11 +294,13 @@ print(f'environment steps spent by that update:  {np.sort(to_hit)}')
 print(f'environment steps spent by the full run: {np.sort(steps.sum(axis=1))}')
 ```
 
-Learning required roughly $3{,}000$--$4{,}500$ environment steps, while the complete run used about $27{,}000$. Data collection continues at every on-policy update even after performance has stabilized. The median Q-learning run in :numref:`sec_qlearning` used $95{,}569$ steps on the harder slippery environment, while its deterministic comparison used 256 episodes on this map. These results are not a controlled algorithm comparison, but they illustrate why interaction should be reported in environment steps. Exercise 5 reuses a batch for several uncorrected updates and tracks the probability ratio between the updated policy and the policy that collected the data; :numref:`sec_ppo` develops a controlled form of such reuse.
+Learning required roughly $3{,}000$--$4{,}500$ environment steps, while the complete run used about $27{,}000$. Data collection continues at every on-policy update even after performance has stabilized. The median Q-learning run in :numref:`sec_qlearning` used $95{,}569$ steps on the harder slippery environment, while its deterministic comparison used 256 episodes on this map. These results are not a controlled algorithm comparison, but they illustrate why interaction should be reported in environment steps.
+
+Exercise 5 reuses a batch for several uncorrected updates and tracks the probability ratio between the updated policy and the policy that collected the data; :numref:`sec_ppo` develops a controlled form of such reuse.
 
 ### Unbiasedness and Variance
 
-The word *unbiased* has been doing quiet work since :eqref:`eq_reinforce`. It is a strong claim: the noisy vector computed from a handful of trajectories points, on average, exactly along $\nabla_\theta J(\theta)$. Almost nobody ever checks it, because almost nobody has the true gradient; on sixteen states we do. For the softmax policy, writing $P^\pi$ for its transition matrix and $r^\pi$ for its expected one-step reward, the objective of :eqref:`eq_pg_objective` has the closed form
+Unbiasedness in :eqref:`eq_reinforce` means that the expectation of the sampled vector equals $\nabla_\theta J(\theta)$. Exact gradients are generally unavailable, but the sixteen-state example permits a direct comparison. For the softmax policy, writing $P^\pi$ for its transition matrix and $r^\pi$ for its expected one-step reward, the objective of :eqref:`eq_pg_objective` has the closed form
 
 $$J(\theta) = V^{\pi_\theta}(s_0) = \Big[ \big(I - \gamma P^{\pi_\theta}\big)^{-1} r^{\pi_\theta} \Big]_{s_0},$$
 
@@ -453,7 +461,7 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
 [Dive into Deep Learning · §14.5]{.kicker}
 
 Policy gradient<br>
-**differentiate the return itself · the log-derivative trick · the transitions cancel · unbiased, measured against the exact gradient**
+**a parameterized policy · the log-derivative identity · model-free gradient estimation · bias and variance diagnostics**
 :::
 :::
 
@@ -481,8 +489,8 @@ $$\frac{\partial \log \pi_\theta(a \mid s)}{\partial \theta_{s,b}}
 
 . . .
 
-Autograd *verifies* the equation instead of re-implementing it;
-two tabs, two mechanisms, one identity.
+Automatic differentiation verifies the analytic score identity in
+both framework implementations.
 :::
 
 ::: {.slide title="The Log-Derivative Trick"}
@@ -498,7 +506,7 @@ $$\nabla_\theta J(\theta)
 $$\nabla_\theta \log P(\tau; \theta)
 = \sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)$$
 
-The transition terms have zero gradient: **the kernel cancels**.
+The transition terms have zero gradient because the kernel does not depend on the policy parameters.
 Sampling $n$ trajectories gives **REINFORCE**:
 
 $$\hat u = \frac{1}{n} \sum_i R(\tau_i)
@@ -510,15 +518,16 @@ $$\hat u = \frac{1}{n} \sum_i R(\tau_i)
 
 . . .
 
-Every arrow points up; only the sizes differ. An estimator that can
-only push up is precisely what :numref:`sec_baselines` repairs.
+All rewards in this example are positive, so every sampled action
+receives a positive weight. :numref:`sec_baselines` introduces
+centered weights that can be positive or negative.
 :::
 
 ::: {.slide title="Trajectories Become Data"}
 @policy-gradient-an-optimization-problem-over-trajectories-2
 
-`term` records `terminated`, never `truncated`: written once, used by
-every algorithm ahead.
+`term` records `terminated`, not `truncated`; later algorithms use
+the same distinction.
 :::
 
 ::: {.slide title="REINFORCE on the Calm Lake"}
@@ -528,19 +537,19 @@ every algorithm ahead.
 
 @!policy-gradient-the-reinforce-estimator-2
 
-Zero until the first lucky success, then compounding, then hovering
-just under $\gamma^5 = 0.774$.
+Updates are zero until the first successful trajectory. The mean
+return then increases and stabilizes below $\gamma^5 = 0.774$.
 :::
 
 ::: {.slide title="What It Costs"}
-On-policy: the derivation licenses only fresh trajectories.
+The on-policy derivation requires trajectories from the current policy.
 
 @!policy-gradient-on-policy-fresh-data-after-every-update
 
 . . .
 
-Learning cost 3 to 4.5 thousand steps; the run cost 27 thousand,
-still buying data after convergence. :numref:`sec_qlearning`'s
+Learning requires about 3,000--4,500 steps, while the complete run
+uses about 27,000 because every update collects new data. :numref:`sec_qlearning`'s
 slippery-map run: 95,569 steps.
 :::
 
@@ -552,21 +561,21 @@ differentiable linear solve: autograd gives the **exact** gradient.
 
 . . .
 
-The mean estimate points along the truth; a single batch is mostly
-noise, shrinking as $1/\sqrt{n}$. Every variance claim in
-:numref:`sec_baselines` is measured against this yardstick.
+The mean estimate aligns with the exact gradient, while individual
+batches have substantial error that decreases as $1/\sqrt{n}$.
+:numref:`sec_baselines` uses the same exact-gradient reference.
 :::
 
 ::: {.slide title="Recap"}
-- Log-derivative trick: $\nabla_\theta J$ becomes an average over
-  trajectories; the kernel cancels out of it.
-- REINFORCE: weight each trajectory's score by its return. Unbiased,
-  and we measured it against the exact $\nabla_\theta J$.
+- The log-derivative identity expresses $\nabla_\theta J$ as an
+  expectation over trajectory scores; kernel terms have zero derivative.
+- REINFORCE weights each trajectory score by its return. Its sample
+  mean is compared with the exact $\nabla_\theta J$ in this example.
 - Policy gradient theorem: the same gradient over the discounted
   occupancy, $Q^\pi$ against the score.
 - On-policy methods collect fresh data after every update.
-- $J(\theta)$ is not concave: ascent promises a stationary point,
-  not $\pi^*$.
+- Because $J(\theta)$ is not concave, gradient ascent may reach only a
+  stationary point rather than a globally optimal policy $\pi^*$.
 - Noise falls only as $1/\sqrt{n}$: variance reduction is
   :numref:`sec_baselines`.
 :::

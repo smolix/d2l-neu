@@ -70,9 +70,9 @@ ahead two steps: substituting the update into itself buries
 $\mathbf{H}_{t-2}$ under two nested applications of $\phi$, and nothing
 simplifies. A composition of nonlinear maps has no compact closed form, so
 the only way to evaluate step $t$ is to have evaluated step $t-1$. The
-nonlinearity in the *state path* is the exact culprit. Everything else
-about the cell creates no such obstruction: gates computed from the
-input, nonlinear read-outs of the state, deep stacks of layers.
+nonlinearity in the *state path* prevents this parallel evaluation. Gates
+computed from the input, nonlinear state readouts, and deep stacks of layers
+do not create the same dependency.
 
 That observation suggests a surgical experiment: keep the gating idea of
 :numref:`sec_lstm`, but remove every appearance of $\mathbf{H}_{t-1}$
@@ -276,8 +276,8 @@ err = jnp.abs(associative_scan(a, b) - sequential_scan(a, b)).max()
 print(f'maximum deviation: {float(err):.2e}')
 ```
 
-Now the payoff. We time the parallel scan against the sequential
-evaluation as the sequence grows from 256 to 16,384 steps, at a fixed
+We time the parallel scan against the sequential evaluation as the
+sequence grows from 256 to 16,384 steps, at a fixed
 batch of 32 sequences with 128 units.
 
 ```{.python .input #ssm-implementation-3}
@@ -523,8 +523,9 @@ still exists (at $\mathbf{A} = \mathbf{0}$ it is simply $\Delta
 \mathbf{B}$). (A cruder alternative, the Euler
 step $\bar{\mathbf{A}} \approx \mathbf{I} + \Delta \mathbf{A}$, is the
 subject of an exercise.) In practice $\mathbf{A}$ is taken *diagonal*,
-$\mathbf{A} = \mathrm{diag}(a_1, \ldots, a_N)$, which costs surprisingly
-little modeling power and makes :eqref:`eq_zoh` elementwise:
+$\mathbf{A} = \mathrm{diag}(a_1, \ldots, a_N)$, which makes
+:eqref:`eq_zoh` elementwise. The S4D results below provide
+empirical evidence for this diagonal restriction:
 
 $$
 \bar{a}_n = e^{\Delta a_n},
@@ -539,21 +540,20 @@ $|\Delta a_n|$ the numerator $e^{\Delta a_n} - 1$ cancels catastrophically
 in floating point, so code should call `expm1`, which computes
 $e^x - 1$ accurately near zero. Our implementations below do.
 
-Now make $\Delta$ a *learnable parameter* and watch what it does.
+Making $\Delta$ a *learnable parameter* turns the step size into a gate.
 
-> **The step size is a gate.** As $\Delta \to 0$, we get
+> As $\Delta \to 0$, we get
 > $\bar{\mathbf{A}} \to \mathbf{I}$ and $\bar{\mathbf{B}} \to \mathbf{0}$:
 > the state copies itself forward and ignores the input, a frozen memory.
 > As $\Delta$ grows (with the real parts of the eigenvalues of
 > $\mathbf{A}$ negative), $\bar{\mathbf{A}} \to \mathbf{0}$ and the state
 > is rewritten from the current input alone. A learned $\Delta$ is
 > therefore an update gate in the sense of :numref:`sec_lstm`,
-> interpolating between "remember everything" and "overwrite everything",
-> except that it was not bolted on: it fell out of asking how fast a
-> continuous memory should run. This one correspondence is the bridge
-> between the gated RNNs behind us and the selective models ahead, where
-> $\Delta$ becomes input-dependent and gating is rediscovered a third
-> time.
+> interpolating between retaining the previous state and overwriting it
+> from the current input. This correspondence follows from the rate of the
+> continuous dynamics and provides the bridge
+> between gated RNNs and the selective models developed next, where
+> $\Delta$ becomes input-dependent.
 
 The correspondence becomes an identity, not an analogy, in one worked
 scalar case. Discretize the
@@ -587,8 +587,8 @@ The choice is less about accuracy than about guarantees: every rule but
 forward Euler maps the stable half-plane into the stable disk for any
 $\Delta$. S4 used the bilinear transform :cite:`Gu.Goel.Re.2022`; we use
 ZOH throughout this chapter, as Mamba does (with a further first-order
-simplification we meet in :numref:`sec_mamba`); forward Euler earns its
-place in the exercise that shows how it fails.
+simplification we meet in :numref:`sec_mamba`). The exercise uses forward
+Euler to show how its stability can fail.
 
 :numref:`subsec_bptt-gradient-pathologies` taught us to fear for
 stability; here stability is a matter of *parameterization* rather than
@@ -610,9 +610,10 @@ every single step. A general non-normal matrix is slipperier, since its
 powers can grow substantially for many steps before eigenvalue decay
 wins (:numref:`sec_mdl-nonnormal-transient`); every $\mathbf{A}$ this
 chapter trains is diagonal, so the stronger, per-step reading applies.
-Contrast the vanilla RNN, whose
-$\mathbf{W}_{\textrm{hh}}$ had to be coaxed toward the knife-edge
-$\rho \approx 1$ by clipping and prayer. Allowing complex $a_n$
+By contrast, a vanilla RNN must learn a recurrent matrix
+$\mathbf{W}_{\textrm{hh}}$ whose effective dynamics remain near
+$\rho \approx 1$; gradient clipping alone does not enforce this property.
+Allowing complex $a_n$
 (conjugate pairs) adds rotation to the decay: each state dimension
 becomes a damped oscillator with a learned frequency, enriching the
 dynamics at no cost to stability. For everything we train below, plain
@@ -624,8 +625,8 @@ negative-real $a_n$ suffices.
 > for our diagonal systems this is exactly $|\bar{a}_n| < 1$, and it is
 > what "by construction" above means. *BIBO stability*: bounded inputs
 > yield bounded outputs; internal stability implies it here, though the
-> two can part ways when an unstable mode hides from the output (a story
-> told below). *Nonexpansive transition*: a single step never increases
+> the two can differ when an unstable mode is unobservable, as the
+> control-theory example below shows. *Nonexpansive transition*: a single step never increases
 > the state norm — a stronger per-step property that returns for the
 > delta-rule transitions of :numref:`sec_deltanet`. *Numerical
 > stability*: the floating-point computation neither loses accuracy nor
@@ -663,23 +664,24 @@ $$
 :eqlabel:`eq_ssm_kernel`
 
 That is a plain causal convolution, with a kernel $\bar{\mathbf{K}}$ as
-long as the sequence itself, materialized from three small matrices. One
-model is thus three models (:numref:`fig_ssm_views`): a continuous ODE
-(elegant for analysis and parameterization), a recurrence (constant-state
-inference, one token at a time), and a convolution (parallel training).
+long as the sequence itself, materialized from three small matrices. The
+same model therefore has three equivalent views
+(:numref:`fig_ssm_views`): a continuous ODE for analysis and
+parameterization, a recurrence for constant-state inference, and a
+convolution for parallel training.
 The S4 line of work trains through this convolutional view, computing
 $\bar{\mathbf{K}}$ and applying it with FFTs in $O(T \log T)$ time
-:cite:`Gu.Goel.Re.2022`; it is a beautiful trick, but it leans on
-time-invariance, and the next section will make the dynamics
+:cite:`Gu.Goel.Re.2022`; this method relies on time-invariance. The next
+section makes the dynamics
 input-dependent precisely to gain selectivity. The parallel scan covers
 both cases, so the scan is the path we implement.
 
 ![Three views of one linear state space model. Left: a continuous-time ODE responds to an input pulse. Middle: the discretized system is a linear recurrence, one step per token. Right: unrolled, the same system is a causal convolution whose kernel collects the impulse response.](../img/mdl-modernrnn-ssm-views.svg)
 :label:`fig_ssm_views`
 
-Seeing is believing: for a random diagonal SSM we now compute the same
-outputs three ways, with the sequential recurrence, with the parallel
-scan, and by convolving with the materialized kernel from
+For a random diagonal SSM, we compute the same outputs three ways: with
+the sequential recurrence, the parallel scan, and convolution with the
+materialized kernel from
 :eqref:`eq_ssm_kernel` (we drop the $D$ skip here, since all three views
 share it verbatim).
 
@@ -737,16 +739,16 @@ print(f'scan vs loop: {float(jnp.abs(y_scan - y_loop).max()):.2e}, '
       f'conv vs loop: {float(jnp.abs(y_conv - y_loop).max()):.2e}')
 ```
 
-The three views agree to floating-point precision. Each is the right tool
-for a different job, and the freedom to switch among them at will is the
-practical superpower of keeping the recurrence linear.
+The three views agree to floating-point precision. Each view supports a
+different operation, and linearity makes it possible
+to switch among them.
 
 ### Interpretation from Control Theory
 :label:`subsec_classical_ssm`
 
 State space models were not invented for deep learning: they are the
-core formalism of 1960s control theory, and four of its ideas earn their
-keep in this chapter. All four show up in the smallest interesting
+core formalism of 1960s control theory. Four concepts clarify the models
+used in this chapter. All four show up in the smallest interesting
 example, a two-state diagonal system
 
 $$
@@ -760,9 +762,10 @@ input never touches the second state: that mode is *uncontrollable*, and
 no input signal can move it off its decay. With $\mathbf{C} = (1, 0)$
 the output never sees it: the mode is *unobservable*. Either way, the
 two-state system behaves at its terminals exactly like a one-state
-system. State size is an upper bound on dynamical richness, not a
-measurement of it — worth remembering whenever a later section prices a
-model by its state, since $N$ counts coordinates, not used memory.
+system. State size is therefore an upper bound on dynamical richness rather
+than a
+measurement of it: $N$ counts coordinates, not the amount of memory the
+model uses.
 
 *Transfer function and poles.* Solved in the frequency domain, the LTI
 system is multiplication by the *transfer function*
@@ -792,7 +795,7 @@ compute one function — a theme that returns as the state-space duality
 of :numref:`sec_matrix-state`. For the classical theory at full
 strength, see :citet:`Astrom.Murray.2021`.
 
-A scope note, finally, because the term is older than our usage of it.
+The term has a different scope in statistics and signal processing.
 In statistics and signal processing a "state space model" is usually
 *stochastic*: process noise drives the state, observation noise corrupts
 the output, and the computational problem is inference — recovering a
@@ -815,13 +818,14 @@ poorly. The question has a crisp mathematical form. The state
 $\mathbf{x}(t)$ is a fixed budget of $N$ numbers summarizing the input
 seen so far; which $N$ numbers lose the least?
 
-HiPPO (high-order polynomial projection operators) is the answer
+HiPPO (high-order polynomial projection operators) provides one answer
 :cite:`Gu.Dao.Ermon.ea.2020`. Fix a measure over the past, say uniform
 weight on everything seen so far, and ask that $\mathbf{x}(t)$ hold the
 $N$ coefficients of the best *orthogonal polynomial approximation* (of
 degree less than $N$) of the input's history under that measure, the same
-least-squares projection that powers Fourier and Legendre series. The remarkable
-theorem is that this optimal compression can be maintained *online*: as
+least-squares projection that underlies Fourier and Legendre series. A
+central HiPPO result is that this optimal compression can be maintained
+*online*: as
 new input arrives, the optimal coefficients evolve according to a
 linear, *time-varying* ODE,
 
@@ -845,17 +849,16 @@ $$
 :eqlabel:`eq_hippo`
 
 for $n, k = 0, \ldots, N-1$. We state the matrix and cite the
-derivation; the $1/t$, though, deserves a sentence, because it is what
-makes :eqref:`eq_hippo_ode` *not* an instance of the LTI system
+derivation. The factor $1/t$ makes :eqref:`eq_hippo_ode` *not* an instance of the LTI system
 :eqref:`eq_ssm_cont`. The measure spreads uniform weight over all of
 $[0, t]$, so by time $t$ each new instant is only a $1/t$ fraction of
 the history it joins, and the dynamics must slow down accordingly:
 discretized at unit steps the update is
 $\mathbf{x}_k = (\mathbf{I} + \mathbf{A}/k)\, \mathbf{x}_{k-1} +
 (\mathbf{B}/k)\, u_k$, a recurrence whose effective step size decays
-like $1/k$ rather than holding constant. (A pleasant consequence: the
-system has no timescale $\Delta$ to tune, because rescaling time maps
-its trajectories onto themselves.) What the theorem buys is shown in
+like $1/k$ rather than holding constant. The system has no timescale
+$\Delta$ to tune because rescaling time maps its trajectories onto
+themselves. The consequence of the theorem appears in
 :numref:`fig_hippo_reconstruction`, whose generator integrates exactly
 this time-varying system: a signal is compressed online into a LegS
 state of size $N$ and then reconstructed from the state alone at the
@@ -882,19 +885,20 @@ measure.
 *S4 is an LTI model initialized at the HiPPO matrix.* S4
 :cite:`Gu.Goel.Re.2022` freezes :eqref:`eq_hippo` into the
 time-invariant system :eqref:`eq_ssm_cont`, adds a learnable step size
-per channel, and trains everything by gradient descent. The optimality
+per channel, and trains the resulting parameters by gradient descent. The
+optimality
 theorem does not transfer — a time-invariant system maintains no
 uniform-measure projection; tracking one is precisely what the $1/t$ was
-for — but the HiPPO matrix proved to be a superb *initialization*,
+for — but the HiPPO matrix provides an effective *initialization*,
 giving the state a spread of decay timescales and long-memory structure
 that random matrices lack. Speed came from structure: the HiPPO matrix
 is *normal plus low-rank* (NPLR), so it is unitarily similar to a
 diagonal-plus-low-rank (DPLR) matrix with complex-conjugate modes, and
 with that form the convolution kernel :eqref:`eq_ssm_kernel` reduces to
 Cauchy-kernel evaluations computable in near-linear time — machinery we
-cite rather than rebuild. The payoff landed on the Long Range Arena
-benchmark :cite:`Tay.Dehghani.Abnar.ea.2021`: tasks with dependencies
-over 16,000 steps, solved ahead of every transformer of S4's day.
+cite rather than rebuild. On the Long Range Arena benchmark
+:cite:`Tay.Dehghani.Abnar.ea.2021`, S4 outperformed the compared
+transformers on tasks with dependencies over 16,000 steps.
 
 *S4D is the diagonal approximation.* Drop the low-rank correction and
 keep a diagonal state matrix, collapsing the machinery to the
@@ -1186,7 +1190,8 @@ for name, (params, acc, secs) in results.items():
     print(f'{name:>12} {params:>8,} {acc:>8.3f} {secs:>8.1f}')
 ```
 
-Read the table one comparison at a time. On the mean-pool benchmark the
+The table supports two separate comparisons. On the mean-pool benchmark,
+the
 S4D lands in the low-to-mid eighties in both frameworks
 and every rerun, clipped or unclipped. The final-state run answers the
 retention question the mean pool cannot: reading nothing but the state
@@ -1194,23 +1199,20 @@ after 784 updates costs the S4D little to nothing in our runs — the two
 readouts finish within run-to-run noise of each other, at most a few
 points apart and sometimes nearly tied — so what the classifier uses
 genuinely survives to the end of the
-sequence rather than being rescued by early outputs. The LSTM baseline
-is another
-story: across repeated runs (with and without clipping, at nearby
+sequence rather than being recovered from early outputs. The LSTM baseline
+is more variable: across repeated runs (with and without clipping, at nearby
 learning rates) its final accuracy has ranged from roughly 60 to 84
-percent, and where a given run lands is a matter of initialization and
-luck. Plain uniform recurrent weights (PyTorch's default) leave
-long-range memory to chance; orthogonal recurrent weights (Flax's
-default) improve the odds without securing them; reliably closing the
-gap takes the rest of the folklore of :numref:`sec_lstm`, starting with
-a forget-gate bias of 1. The contrast is the section's thesis in
-miniature. At initialization the S4D's channels already implement a
+percent, and the result depends strongly on initialization. Plain uniform
+recurrent weights (PyTorch's default) produce less reliable
+long-range retention than orthogonal recurrent weights (Flax's default).
+A forget-gate bias of 1, discussed in :numref:`sec_lstm`, further improves
+this initialization. The initialization explains an important part of the
+measured contrast. At initialization, the S4D's channels already implement a
 bank of exponential memories with time constants spanning more than two
 orders of magnitude (what the log-uniform $\Delta$ init provides), so
 pixel-to-pixel structure hundreds of steps apart is visible to the model
-from the first gradient step, in any framework; an LSTM holds long-range
-state only when a decade's worth of initialization folklore is applied
-on its behalf, and hopes for a lucky draw otherwise. What the SSM
+from the first gradient step in either framework. The LSTM requires an
+appropriate initialization to retain state reliably in this experiment. What the SSM
 parameterization provides — stability by construction and a multiscale
 initialization — is that memory *by design*, robustly, rather than
 by folklore. The table also gives wall-clock per epoch, which
@@ -1221,16 +1223,16 @@ faster than the sequential LSTM; production SSM kernels close the
 remaining gap the same way cuDNN once did for the LSTM. On the Long
 Range Arena :cite:`Tay.Dehghani.Abnar.ea.2021`, with sequences up to
 16,000 steps, this architecture family was the first to solve tasks on
-which both RNNs and transformers had failed, which is what first made
-the field take state space models seriously.
+which both RNNs and transformers had failed. This result motivated
+subsequent work on state space sequence models.
 
 ## Inference, One Token at a Time
 :label:`subsec_ssm-step`
 
-This section opened with a bargain: train in parallel, then run the model
-the old recurrent way at inference, a fixed-size state updated in constant
-time per token. We have delivered the first half with the scan and, so
-far, only asserted the second. Equation :eqref:`eq_ssm_disc` is also the
+The scan provides parallel training. At inference, the same model can run
+recurrently with a fixed-size state and constant work per token; the next
+experiment verifies this second property. Equation :eqref:`eq_ssm_disc`
+is also the
 inference update. Given the last
 state $\mathbf{x}_{t-1}$ and one new input $u_t$,
 
@@ -1347,7 +1349,7 @@ print(f'stepped vs scanned: deviation {err:.2e} '
 assert err < 1e-3 * scale
 ```
 
-Now the stopwatch. Picture the model serving a stream, a batch of 32
+We next measure inference cost on a batch of 32
 sequences arriving one token at a time, and consider the cost of
 absorbing the next token once $P$ tokens have already passed. Without a
 carried state we would do what our training path does: re-run the scan
@@ -1405,7 +1407,7 @@ print(f'carried state: {sum(4 * x.size for x in states) // 32} '
       f'bytes per sequence, at every prefix length')
 ```
 
-The two curves have the shapes the theory promises. Re-running the
+The two curves have the predicted shapes. Re-running the
 prefix costs more the longer the history, linearly once the sequence is
 long enough for real work to dominate per-call overhead; the recurrent
 step costs the same at every prefix length. How wide the gap has grown
@@ -1460,7 +1462,7 @@ floating-point accuracy, costs the same at any prefix length, and
 carries a state a few hundred bytes per layer where a transformer's KV
 cache grows with the length of the context (:numref:`sec_kv-cache`).
 
-Everything here, though, is *linear and time-invariant*: the kernel
+The state update here remains *linear and time-invariant*: the kernel
 $\bar{\mathbf{K}}$ is fixed before the model ever sees the input, and with
 it the decision of what to remember. An S4D *layer* cannot read a token
 and decide that *this one* matters while its neighbor is noise: its
@@ -1563,13 +1565,13 @@ $$\mathbf{H}_t = \phi(\mathbf{X}_t \mathbf{W}_{xh} + \mathbf{H}_{t-1} \mathbf{W}
 
 Substitute it into itself: $\mathbf{H}_{t-2}$ is buried under two nested
 $\phi$'s. **Nonlinear compositions don't simplify**: the nonlinearity on
-the *state path* is the exact culprit.
+the *state path* creates the sequential dependency.
 
 . . .
 
-Everything else is innocent: gates from inputs, nonlinear readouts, depth
-between layers. So: remove $\mathbf{H}_{t-1}$ from inside nonlinearities,
-keep the rest.
+Input-derived gates, nonlinear readouts, and depth between layers do not
+prevent a scan. Removing $\mathbf{H}_{t-1}$ from the nonlinearities is the
+required change.
 :::
 
 ::: {.slide title="minGRU: two cuts"}
@@ -1649,7 +1651,8 @@ Time Machine, 1,024-token BPE, 50k windows of 32, emb 64, hidden 128,
 - A few points behind the GRU (low-to-mid eighties vs. high seventies to
   low eighties) at ~1/4 of its recurrent parameters: $2h(d{+}1)$ vs.
   $3h(d{+}h{+}1)$.
-- Modest claim: nothing essential lost, training became a scan.
+- In this experiment, the linearized cell retains the measured accuracy
+  while enabling scan-based training.
 - Price paid: the decay $\mathbf{a}_t$ is decided by the **input alone**
   (remember that).
 :::
@@ -1774,7 +1777,8 @@ parameter-matched LSTM (~30k params each):
   and parity takes the full folklore (+ forget bias 1).
 - The $\Delta$-init hands the S4D multi-scale memory **by design**; the
   LSTM gets it only from initialization folklore.
-- LRA (16k steps) is where this family first beat everything.
+- On Long Range Arena tasks of up to 16k steps, this family first
+  surpassed the compared baselines.
 :::
 
 ::: {.slide title="Inference, one token at a time"}
@@ -1821,7 +1825,7 @@ streams:
   time-varying system; frozen, its matrix initializes S4/S4D.
 - Inference delivered: `step` == scan to float precision; flat cost per
   token; ~1 KiB of state vs. a KV cache that grows with context.
-- But everything is **LTI**: the kernel is fixed before the model sees
-  the data — the state update is content-blind (the MLPs around it are
+- The update remains **LTI**: the kernel is fixed before the model sees
+  the data, so the state update is content-blind (the MLPs around it are
   not). Fixing that (and keeping the scan) is the next section.
 :::

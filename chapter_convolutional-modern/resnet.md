@@ -85,7 +85,7 @@ of its motivation, using learned gates rather than a direct identity shortcut.
 ## Residual Blocks
 :label:`subsec_residual-blks`
 
-Let's focus on a local part of a neural network, as depicted in :numref:`fig_residual_block`. Denote the input by $\mathbf{x}$.
+Consider the part of a neural network depicted in :numref:`fig_residual_block`. Denote the input by $\mathbf{x}$.
 We assume that $f(\mathbf{x})$, the desired underlying mapping we want to obtain by learning, is to be used as input to the activation function on the top.
 On the left,
 the portion within the dotted-line box
@@ -128,7 +128,7 @@ post-activation block is exactly the identity only on inputs that are already
 nonnegative. The pre-activation variant discussed in the exercises places the
 activation inside the residual branch and permits an exact identity on
 arbitrary inputs.
-This kind of design requires that the output of the two convolutional layers has to be of the same shape as the input, so that they can be added together. If we want to change the number of channels, we need to introduce an additional $1\times 1$ convolutional layer to transform the input into the desired shape for the addition operation. Let's have a look at the code below.
+This kind of design requires that the output of the two convolutional layers has to be of the same shape as the input, so that they can be added together. If we want to change the number of channels, we need to introduce an additional $1\times 1$ convolutional layer to transform the input into the desired shape for the addition operation. The code below implements both cases.
 
 ```{.python .input #resnet-residual-blocks-1}
 %%tab mxnet
@@ -246,7 +246,7 @@ This code generates two types of networks: one where we add the input directly t
 ![The two ResNet block variants side by side: with an identity skip when input and output shapes match (left), and with a $1 \times 1$ convolution on the skip path that adjusts channels and resolution so the addition is well defined (right).](../img/arch-resnet-block.svg)
 :label:`fig_resnet_block`
 
-Now let's look at a situation where the input and output are of the same shape, where $1 \times 1$ convolution is not needed.
+We first consider matching input and output shapes, for which the $1 \times 1$ convolution is unnecessary.
 
 ```{.python .input #resnet-residual-blocks-2}
 %%tab mxnet
@@ -423,7 +423,7 @@ def block(self, num_residuals, num_channels, in_channels,
     return nnx.Sequential(*blk)
 ```
 
-Then, we add all the modules to ResNet. Here, two residual blocks are used for each module. Lastly, just like GoogLeNet, we add a global average pooling layer, followed by the fully connected layer output.
+We assemble the modules into ResNet, using two residual blocks per module. As in GoogLeNet, global average pooling precedes the fully connected output layer.
 
 ```{.python .input #resnet-resnet-model-3}
 %%tab pytorch
@@ -1078,7 +1078,7 @@ A common feature of the designs we have discussed so far is that the network des
 1. Refer to Table 1 in the ResNet paper :cite:`He.Zhang.Ren.ea.2016` to implement different variants of the network. 
 1. For deeper networks, ResNet introduces a "bottleneck" architecture to reduce model complexity. Try to implement it.
 1. In subsequent versions of ResNet, the authors changed the "convolution, batch normalization, and activation" structure to the "batch normalization, activation, and convolution" structure. Make this improvement yourself. See Figure 1 in :citet:`He.Zhang.Ren.ea.2016*1` for details. This ordering is essentially what ConvNeXt adopts (:numref:`sec_convnext`).
-1. Why can't we just increase the complexity of functions without bound, even if the function classes are nested?
+1. Why can increasing function-class complexity without bound still be undesirable when the classes are nested?
 1. One of the advantages claimed in the DenseNet paper :cite:`Huang.Liu.Van-Der-Maaten.ea.2017` is that its models have fewer parameters than comparable ResNets. Why is this the case? Consider which computations a concatenated feature saves relative to recomputing it.
 1. For a dense block whose $k$ convolutions each emit $g$ channels (the growth rate) on an input with $c$ channels, how many channels does the $i$-th convolution consume? Sum these to compare the activation memory of the dense block with that of $k$ residual blocks of constant width $c$, and relate your answer to the memory-efficient implementations of :citet:`pleiss2017memory`.
 

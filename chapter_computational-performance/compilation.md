@@ -10,11 +10,11 @@ again. The program was bandwidth-bound because it transferred every
 intermediate tensor. This section shows how compilation fuses the chain and
 then examines the resulting computation.
 
-The fix is *compilation*: instead of executing the network one operation
-at a time as Python reaches it (*eager* execution), capture the whole
-computation as a graph and hand it to a compiler, which can see across
-operations and rewrite them — fusing that elementwise chain into a single
-kernel that reads once, computes everything, and writes once. Both of our
+Compilation captures the computation as a graph instead of executing each
+operation when Python reaches it (*eager* execution). A compiler can then
+rewrite operations across the graph, for example by fusing the elementwise
+chain into one kernel that reads once, performs all operations, and writes
+once. Both of our
 frameworks do this with different capture mechanisms and different failure
 modes.
 
@@ -51,12 +51,12 @@ import time
 A neural network *is* a computation graph — you have been building them
 since :numref:`sec_autograd`. When you write `y = relu(x @ W + b)`,
 autograd records a directed graph of operations precisely so it can walk
-it backward for gradients (:numref:`fig_compute_graph`). The graph is not
-new; what is new is *who gets to see it*. (Two footnotes keep the picture
-honest: what autograd records is a *tape* for the backward pass, not a
-compiler's whole-program IR; and not every node costs a kernel — a view
-launches nothing, and a library matmul is already many operations fused
-behind one launch.)
+it backward for gradients (:numref:`fig_compute_graph`). Autograd exposes
+this graph to the backward pass, whereas compilation
+constructs an intermediate representation for program transformation.
+Autograd's graph is a *tape*, not a compiler's whole-program IR. Moreover,
+not every node launches a kernel: a view launches nothing, and a library
+matmul already combines many operations behind one launch.
 
 ![The compute graph of a two-layer network. Autograd already builds this
 to run the backward pass; a compiler that sees the whole graph can rewrite
@@ -68,15 +68,13 @@ each line. Every node becomes a kernel launch (5–15 µs of CPU-to-GPU
 latency, :numref:`sec_hardware`) and, for a memory-bound op, a round trip
 to HBM. Python sees one operation, dispatches it, and moves on; it never
 learns that the `add` feeding the `relu` could have been done *inside*
-the same kernel. A compiler that captures the whole graph before running
-it can — that is the entire source of its advantage.
+the same kernel. A compiler that captures the whole graph can fuse these operations before
+execution.
 
-A word of history, at footnote altitude: the frameworks once forced a
-choice between *imperative* execution (flexible, debuggable, slow) and
-*symbolic* graph construction (fast, rigid, awkward). That war is over.
-Everyone converged on the same answer — **eager by default, with a
-tracing compiler you turn on** — and the rest of this section is about the
-two leading implementations of that answer.
+Earlier frameworks required a choice between *imperative* execution and
+*symbolic* graph construction. Current PyTorch and JAX workflows instead use
+eager execution for development and enable tracing compilation for
+performance. The two frameworks implement this design differently.
 
 ## Graph Capture in PyTorch and JAX
 :label:`subsec_comp-capture`
@@ -103,8 +101,8 @@ function into a jaxpr and recompiles when input shapes or dtypes
 change.](../img/mdl-perf-compile-pipelines.svg)
 :label:`fig_compile_pipelines`
 
-Let's see a graph break happen. A branch on a tensor's *value* forces one,
-because the trace cannot know which way it goes until runtime:
+A branch on a tensor's *value* forces a graph break because the trace cannot
+know which path it takes until runtime:
 
 ```{.python .input #compilation-capture-two-philosophies-1}
 %%tab pytorch
@@ -139,10 +137,10 @@ print(jax.make_jaxpr(lambda x: jnp.sin(x) + 1)(x))  # The captured graph
 _ = f(x); _ = f(x)   # Second call: no print — the trace is cached
 ```
 
-The purity requirement is the flip side of having no graph breaks: because
-the whole function must be traceable, JAX cannot fall back to Python
+JAX avoids graph breaks by requiring the entire function to be traceable.
+It cannot fall back to Python
 mid-graph — but in exchange it never silently splits your function into
-compiled fragments. Its characteristic footgun is elsewhere: the trace is
+compiled fragments. Its main failure mode is recompilation: the trace is
 specialized to the *shapes and dtypes* it saw, so calling the compiled
 function with a new shape triggers a full **retrace and recompile**. In a
 training loop with variable-length batches this can mean recompiling every
@@ -195,19 +193,18 @@ print(d2l.Benchmark(lambda: gelu_ish(x), desc='eager'))
 print(d2l.Benchmark(lambda: compiled(x), desc='compiled'))
 ```
 
-The `assert` is not decoration: a compiler that rewrites your arithmetic
-must first return the same answer — here to within $10^{-6}$, the slack
-that reordered floating-point arithmetic legitimately needs — and only
-then is "faster" worth having. It is: the fused version is dramatically
-faster — close to an order of magnitude
+The `assert` verifies that compilation preserves the result within
+$10^{-6}$, allowing for floating-point reassociation. Performance is compared
+only after this correctness check. The fused version is close to an order
+of magnitude faster
 on this chain — and the reason is entirely on the bytes side of the
 roofline: the chain performs the same arithmetic either way, but eager
 execution makes one memory round trip *per operation* while the fused
 kernel makes a single round trip for the whole chain. Fuse eight
-elementwise ops and you cut roughly eight memory traversals to one. This
-is the general rule — **fusion trades kernel launches and memory traffic
-for free arithmetic in registers** — and it is why compilation helps most
-exactly where :numref:`sec_perf_model` said you are bandwidth- or
+elementwise ops and you cut roughly eight memory traversals to one. More
+generally, **fusion exchanges kernel launches and memory traffic for
+arithmetic in registers**. Compilation therefore helps most when
+:numref:`sec_perf_model` classifies the computation as bandwidth- or
 overhead-bound, and barely at all where you are already compute-bound (a
 single large matmul is already one well-tuned kernel; there is nothing to
 fuse).
@@ -222,23 +219,21 @@ is deliberately out of scope for this book (:numref:`sec_custom_layer`
 drew that fence); Triton :cite:`Tillet.Kung.Cox.2019` (an important
 backend of `torch.compile`'s Inductor, which also draws on template and
 library kernels) and Pallas let you author them in Python-like
-syntax. The point here is that the compiler gets you most of the
-fusion win automatically, for free, on the code you already wrote.
+syntax. A compiler applies many common fusion transformations automatically to the
+existing program.
 
 ## Measured Training-Step Compilation
 :label:`subsec_comp-wholestep`
 
-Fusing one elementwise chain is a demonstration; the real use is
-compiling the training step. It is worth being precise about what each
-framework captures, because they differ. In PyTorch,
+The practical application is compiling a complete training step. The two
+frameworks differ in which parts of that step they capture. In PyTorch,
 `torch.compile(net)` captures the model's forward *and* the backward that
 flows through it, but the optimizer's `opt.step()` below stays eager —
 compiling the optimizer too is possible, just not what the one-liner
 gives you. In JAX, nothing stops the jitted function from *being* the
 whole step: loss, gradients, and the parameter update, one compiled
-program. Either way, the lesson to internalize is the *shape* of the
-cost: a fixed compilation time on the first call followed by lower
-steady-state execution time. Whether compilation reduces total runtime
+program. In both cases, the first call pays a fixed compilation cost, and
+subsequent calls have lower steady-state execution time. Whether compilation reduces total runtime
 depends on the number of subsequent calls:
 
 ```{.python .input #compilation-whole-step-compilation-measured}
@@ -301,9 +296,9 @@ call carries a visible one-time cost while the compiler works: a fraction
 of a second to a couple of seconds on this toy step, depending on the
 framework and the state of its compile cache, and about two seconds for
 the real Transformer of :numref:`sec_fast_transformer`. On a short
-experiment that price may never be repaid; on a real training run of
-thousands of steps it is amortized to nothing. The JAX tab also shows off its
-ahead-of-time staging: `lower(...).compile()` runs the compiler *now*, as
+experiment that price may never be repaid; on a training run of thousands
+of steps, the compilation cost becomes negligible per step. The JAX tab also demonstrates
+ahead-of-time compilation: `lower(...).compile()` runs the compiler as
 an explicit step rather than lazily on first call, returning a compiled
 object you can then introspect — `compiled.memory_analysis()` reports the
 memory the compiler *planned* before a single byte is allocated, a theme
@@ -312,21 +307,20 @@ we develop in :numref:`sec_memory_precision`.
 :begin_tab:`jax`
 Look at the JAX ratio once more: the un-jitted step is about two orders
 of magnitude slower than the compiled one, because every operation in the
-loss, the gradient, *and* the update dispatches separately. The practical
-rule for JAX users is blunt — never run a training step un-jitted except
-to debug. Eager JAX is a development surface; essentially all of its
-performance lives behind `jax.jit`.
+loss, the gradient, *and* the update dispatches separately. JAX training
+steps should normally use `jax.jit`; un-jitted execution is useful
+primarily for debugging because each operation dispatches separately.
 :end_tab:
 
 ## The Overhead Regime: Capture and Replay
 :label:`subsec_comp-overhead`
 
-Fusion attacks the bandwidth regime. The third regime —
-*overhead-bound*, where the GPU sits idle waiting for Python to launch the
-next tiny kernel — needs a different weapon. A model that is a deep stack
+Fusion reduces bandwidth costs. An *overhead-bound* program instead spends
+most of its time waiting for Python to launch small kernels and requires
+capture and replay. A model that is a deep stack
 of thin layers issues a great many small kernels, and if each takes
-longer to *launch* than to *run*, the device starves no matter how little
-work it truly has (:numref:`fig_async_timeline`). Compiling for fusion
+longer to *launch* than to *run*, the device remains idle even though
+each kernel requires little computation (:numref:`fig_async_timeline`). Compiling for fusion
 helps some, but the decisive fix is to stop involving Python at all:
 record the entire sequence of launches once, then *replay* it with a
 single command. This is what CUDA graphs do, and `torch.compile` exposes
@@ -374,8 +368,8 @@ addresses, so the input shape must not change between calls (change it
 and PyTorch re-captures). That rigidity is also why we time the forward
 pass under `torch.no_grad()`: autograd's saved-for-backward activations
 are fresh allocations on every call, and their changing addresses would
-force a re-capture each time. The JAX tab needs no separate
-mechanism and says so: a jitted function is *already* a single dispatched
+force a re-capture each time. JAX needs no separate replay mechanism: a
+jitted function is *already* a single dispatched
 executable, so XLA amortizes launch overhead by construction — the
 absence of a "reduce-overhead" knob in JAX is not a missing feature but a
 consequence of compile-by-tracing.
@@ -401,15 +395,16 @@ Compilation is not free and not always worth it. The checklist:
   Compiling is usually harmless, but measure rather than assume —
   compilation can also regress time or memory — and do not expect a win.
 
-Diagnosis still comes first. Compilation is the fix for the bandwidth and
+The measured performance regime determines whether compilation is
+appropriate. Compilation is the fix for the bandwidth and
 overhead regimes; reach for it when :numref:`sec_perf_model`'s method
 points there, not reflexively. One last note on portability: the same
 capture machinery that compiles a graph can also *export* it — PyTorch's
 `torch.export` emits a portable captured graph, and JAX lowers jitted
 functions to the StableHLO interchange format; either path lets a model
 run outside Python entirely, in a serving runtime or on a phone.
-That is the modern successor to the old model-serialization story, and it
-belongs to deployment rather than training; we note it and move on.
+These export paths replace earlier model-serialization mechanisms and
+belong to deployment rather than training.
 
 ## Summary
 
@@ -468,7 +463,7 @@ Autograd already builds a compute graph — to run *backward*.
 
 Eager: walk it one kernel at a time (a launch + a memory round
 trip each). Capture it, and a compiler can rewrite across
-nodes. That is the whole idea.
+nodes. Capturing the graph allows transformations across nodes.
 :::
 
 ::: {.slide title="Graph Capture in PyTorch and JAX"}
@@ -504,9 +499,9 @@ idea by hand.
 ::: {.slide title="Compile the Training Step"}
 @compilation-whole-step-compilation-measured
 
-Fixed cost on call one; repaid over every step after.
+The first call pays a fixed compilation cost; later calls amortize it.
 `torch.compile(net)` captures forward+backward (the optimizer
-stays eager); `jax.jit` swallows the whole step, update included.
+stays eager); `jax.jit` captures the whole step, including the update.
 JAX's AOT `lower().compile()` also lets you *inspect* the plan.
 :::
 

@@ -8,7 +8,13 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 Every architecture in this chapter was designed by hand. AlexNet (:numref:`sec_alexnet`) established that deep networks beat feature engineering; VGG (:numref:`sec_vgg`) organized convolutions into repeated blocks of $3 \times 3$ kernels; NiN (:numref:`sec_nin`) mixed channels with $1 \times 1$ convolutions and aggregated with global pooling; GoogLeNet (:numref:`sec_googlenet`) combined branches of different convolution widths; ResNet (:numref:`sec_resnet`) rebiased networks towards the identity mapping, making great depth trainable; and ResNeXt (:numref:`subsec_resnext`) added grouped convolutions for a better parameter--computation trade-off. This *network engineering* succeeded, but each step depended on the intuition of its designers rather than on any systematic exploration of the space of possible networks.
 
-One alternative is *neural architecture search* (NAS) :cite:`zoph2016neural,liu2018darts`: fix a search space, then let a search strategy (reinforcement learning, evolutionary algorithms, or gradient-based relaxations) select an architecture based on estimated performance. EfficientNet is a prominent product of this approach :cite:`tan2019efficientnet`. But the cost is usually enormous, and the outcome is a *single network instance*: we learn that it works, not why.
+One alternative is *neural architecture search* (NAS)
+:cite:`zoph2016neural,liu2018darts`: define a search space, then use
+reinforcement learning, evolutionary algorithms, or gradient-based
+relaxations to select an architecture by estimated performance. EfficientNet
+is a prominent result of this approach :cite:`tan2019efficientnet`. NAS can
+require substantial computation, and a selected network does not by itself
+explain which design principles made it effective.
 
 :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` propose instead to design the
 *space* from which networks are sampled. A distribution over architectures is
@@ -54,7 +60,7 @@ Following :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`, we first need a templa
 ![The AnyNet design space: a stem, a body of four stages, and a head. Each stage container holds $\mathit{d_i}$ ResNeXt blocks producing $\mathit{c_i}$ channels; the first block of a stage halves the resolution. The $(\mathit{c}, \mathit{r})$ annotations give the number of channels $\mathit{c}$ and the resolution $\mathit{r} \times \mathit{r}$ at each point. Design choices per stage $\mathit{i}$: depth $\mathit{d_i}$, output channels $\mathit{c_i}$, number of groups $\mathit{g_i}$, and bottleneck ratio $\mathit{k_i}$.](../img/arch-anynet.svg)
 :label:`fig_anynet_full`
 
-Let's review the structure of :numref:`fig_anynet_full` in detail. The stem takes RGB images (3 channels) and applies a $3 \times 3$ convolution with a stride of $2$, followed by batch norm, halving the resolution from $r \times r$ to $r/2 \times r/2$ and producing $c_0$ channels that serve as input to the body.
+We now examine the structure of :numref:`fig_anynet_full`. The stem takes RGB images (3 channels) and applies a $3 \times 3$ convolution with a stride of $2$, followed by batch norm, halving the resolution from $r \times r$ to $r/2 \times r/2$ and producing $c_0$ channels that serve as input to the body.
 
 Since the network is designed for ImageNet images of shape $224 \times 224 \times 3$, the body reduces this to $7 \times 7 \times c_4$ through 4 stages (recall that $224 / 2^{1+4} = 7$), each with an eventual stride of $2$. The head is entirely standard: global average pooling, as in NiN (:numref:`sec_nin`), followed by a fully connected layer emitting an $n$-dimensional vector for $n$-class classification.
 
@@ -235,7 +241,7 @@ def create_net(self, in_channels, rngs):
 
 ## Distributions and Parameters of Design Spaces
 
-Parameters of a design space are hyperparameters of networks in that design space. Consider the problem of identifying good parameters in the AnyNet design space. We could try to find the *single best* parameter choice for a given amount of computation (e.g., FLOPs). But even with only *two* possible choices per parameter, we would have to explore $2^{17} = 131072$ combinations. Worse, exhaustive search teaches us nothing about *how* to design a network: add a new stage type or operation and we start from scratch, and training stochasticity (rounding, shuffling) means no two runs produce exactly the same result anyway. A better strategy is to determine general guidelines for how parameter choices should be related, e.g., that the bottleneck ratio, the number of channels, blocks, and groups, or their change between stages, should be governed by a collection of simple rules. The approach in :citet:`radosavovic2019network` relies on the following four assumptions:
+Parameters of a design space are hyperparameters of networks in that design space. Consider the problem of identifying good parameters in the AnyNet design space. We could try to find the *single best* parameter choice for a given amount of computation (e.g., FLOPs). But even with only *two* possible choices per parameter, we would have to explore $2^{17} = 131072$ combinations. Moreover, exhaustive search provides little guidance about *how* to design a network: add a new stage type or operation and we start from scratch, and training stochasticity (rounding, shuffling) means no two runs produce exactly the same result anyway. A better strategy is to determine general guidelines for how parameter choices should be related, e.g., that the bottleneck ratio, the number of channels, blocks, and groups, or their change between stages, should be governed by a collection of simple rules. The approach in :citet:`radosavovic2019network` relies on the following four assumptions:
 
 1. General design principles actually exist, so that many networks satisfying them offer good performance. Consequently, identifying a *distribution* over networks is a sensible strategy: there are many good needles in the haystack.
 1. We need not train networks to convergence to assess whether they are good; intermediate results are reliable guidance for final accuracy. Using such approximate proxies to optimize an objective is referred to as multi-fidelity optimization :cite:`forrester2007multi`. Design optimization is thus carried out based on the accuracy achieved after only a few passes through the dataset, reducing the cost significantly.
@@ -404,7 +410,7 @@ The output has the same shape as the input: an SE gate can be dropped into any b
 
 ## Training
 
-Training the 32-layer RegNetX on the Fashion-MNIST dataset is just like before.
+We train the 32-layer RegNetX on Fashion-MNIST as before.
 
 ```{.python .input #cnn-design-training}
 %%tab mxnet, pytorch, jax
@@ -428,9 +434,18 @@ with d2l.try_gpu():
 
 For most of a decade, the networks in this chapter defined the state of the art in computer vision. Then came vision Transformers (:numref:`sec_vision-transformer`) :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021,touvron2021training`, which have far weaker inductive biases towards locality and translation equivariance (:numref:`sec_why-conv`). They surpassed CNNs on large-scale image classification, and it became common to read that convolution was obsolete. The evidence that has accumulated since is more precise.
 
-First, the scaling question was settled. When convolutional networks are given modern training recipes and the same compute budget as vision Transformers, they keep up: NFNets :cite:`brock2021nfnet` match ViT accuracy at equal compute when pretrained at JFT-4B scale :cite:`smith2023convnets`, and modernizing the recipe (:numref:`sec_training_recipes`) and architecture of a ResNet yields ConvNeXt (:numref:`sec_convnext`) :cite:`liu2022convnet`, which is competitive with contemporary Transformers. The apparent gap between the two families around 2021 was mostly a gap in recipe and scale, not in representational power.
+Controlled comparisons give a more qualified account of scaling. When
+convolutional networks receive modern training recipes and the same compute
+budget as vision Transformers, they can remain competitive: NFNets :cite:`brock2021nfnet` match ViT accuracy at equal compute when pretrained at JFT-4B scale :cite:`smith2023convnets`, and modernizing the recipe (:numref:`sec_training_recipes`) and architecture of a ResNet yields ConvNeXt (:numref:`sec_convnext`) :cite:`liu2022convnet`, which is competitive with contemporary Transformers. The apparent gap between the two families around 2021 was mostly a gap in recipe and scale, not in representational power.
 
-What remains is a division of labor. Foundation-scale pretraining and multimodal systems belong to the Transformer: it trains on billion-scale image--text corpora, and it plugs directly into the tooling, scaling infrastructure, and language models built around the same architecture (:numref:`sec_large-pretraining-transformers`). Convolutional networks own the regimes where their inductive bias pays: latency-constrained and edge deployment, small datasets, and much of dense prediction. In medical image segmentation, the self-configuring convolutional U-Net nnU-Net still wins controlled benchmarks :cite:`isensee2021nnunet`. And convolutions persist *inside* Transformers: Whisper, for example, feeds its Transformer encoder from a convolutional stem :cite:`radford2023whisper`. :numref:`sec_efficient_cnns` covers the deployment side of this division in detail.
+The two families now serve overlapping but distinct regimes. Transformers are
+common in foundation-scale pretraining and multimodal systems because they
+integrate with the tooling, scaling infrastructure, and language models built
+around the same architecture (:numref:`sec_large-pretraining-transformers`).
+Convolutional networks remain effective for latency-constrained and edge
+deployment, small datasets, and many dense-prediction tasks. In medical image
+segmentation, the self-configuring convolutional U-Net nnU-Net performs
+strongly in controlled benchmarks :cite:`isensee2021nnunet`. And convolutions persist *inside* Transformers: Whisper, for example, feeds its Transformer encoder from a convolutional stem :cite:`radford2023whisper`. :numref:`sec_efficient_cnns` covers the deployment side of this division in detail.
 
 The same pattern holds beyond classification. Diffusion image generators moved from convolutional U-Nets to diffusion Transformers at the frontier :cite:`peebles2023dit`, while convolutional U-Nets remain standard in deployed and smaller systems.
 
@@ -567,7 +582,7 @@ trivially with compute.
   classification around 2021.
 - The scaling resolution: with modern recipes and equal compute,
   **ConvNets match ViTs** (NFNets at JFT-4B scale; ConvNeXt).
-- The 2021 gap was mostly **recipe + scale**, not
+- Much of the 2021 gap reflected **recipe + scale**, not
   representational power.
 :::
 
@@ -575,7 +590,7 @@ trivially with compute.
 - **Transformers**: foundation-scale pretraining, multimodal
   stacks, billion-scale image-text corpora.
 - **ConvNets**: edge/latency, small data, dense prediction
-  (nnU-Net still wins medical segmentation).
+  (nnU-Net remains strong in medical segmentation).
 - Conv stems persist *inside* Transformers (Whisper); diffusion
   moved U-Net → DiT at the frontier, conv U-Nets deployed widely.
 - Inductive bias is a **data-efficiency dial**, not a ceiling.

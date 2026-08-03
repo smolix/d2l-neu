@@ -94,7 +94,7 @@ mutual information; the discrete identity must not be transferred verbatim.
 Often we care about a directed version of the question. Take $X$ to be the
 pixels of an image and $Y$ its class label. The image is a complicated,
 information-rich object, but once we have *seen* it, the label holds few
-surprises: a legible digit already tells you which digit it is. The
+surprises: a legible digit already reveals its class. The
 *conditional entropy*
 
 $$H(Y \mid X) = - E_{(x, y) \sim P_{X,Y}} [\log p(y \mid x)],$$
@@ -117,8 +117,7 @@ $\blacksquare$
 Read it as an accounting statement: the total information in the pair is the
 information in $X$ plus whatever $Y$ adds once $X$ is known.
 
-Let's make the definitions concrete on a $2 \times 2$ joint distribution.
-Take
+Consider the $2 \times 2$ joint distribution
 
 $$
 p_{X,Y} = \begin{pmatrix} 0.1 & 0.4 \\ 0.2 & 0.3 \end{pmatrix},
@@ -205,7 +204,7 @@ $H(Y)$ as overlapping disks. The overlap is $I(X;Y)$, the crescents are the
 conditional entropies, the union is the joint entropy, and each identity in
 claim 1 is one way of reading off the overlap's area. The picture also
 explains the directed reading: $I(X;Y) = H(X) - H(X \mid Y)$ is the
-*reduction in surprise* about $X$ that observing $Y$ buys.
+*reduction in surprise* about $X$ obtained by observing $Y$.
 
 ![Mutual information $I(X;Y)$ as the overlap of the entropies $H(X)$ and $H(Y)$: the crescents are the conditional entropies $H(X\mid Y)$ and $H(Y\mid X)$, the union is the joint entropy $H(X,Y)$, and the three equivalent expressions for $I(X;Y)$ follow by reading off the areas.](../img/mdl-it-mi-overlap.svg)
 :label:`fig_mdl-mi-overlap`
@@ -281,8 +280,8 @@ between, the formula gives concrete targets: $\rho = 0.5$ carries
 $\approx 0.144$ nats, $\rho = 0.9$ carries $\approx 0.830$ nats, and
 $\rho = 0.99$ carries $\approx 1.96$ nats.
 
-Let's verify :eqref:`eq_mdl-gaussian_mi` empirically with the simplest
-estimator there is: bin the samples into a 2-D histogram and apply the
+The following example estimates :eqref:`eq_mdl-gaussian_mi` by binning the
+samples into a 2-D histogram and applying the
 discrete formula to the bin frequencies.
 
 ```{.python .input #mutual-information-gaussian-binned}
@@ -321,9 +320,8 @@ strong. The high-dimensional estimators developed below face still sharper limit
 
 ### Pointwise Mutual Information
 
-Mutual information is an *average*. The quantity being averaged in
-:eqref:`eq_mdl-mut_ent_def` is interesting in its own right: the
-*pointwise mutual information*
+Mutual information is an *average*. Its summand in
+:eqref:`eq_mdl-mut_ent_def` is the *pointwise mutual information*
 
 $$\textrm{pmi}(x, y) = \log\frac{p_{X, Y}(x, y)}{p_X(x)\, p_Y(y)}$$
 :eqlabel:`eq_mdl-pmi_def`
@@ -347,7 +345,7 @@ in a small corpus and tally how often each of the first words *new*,
 | **the** | 11 | 21 | 168 |
 
 The raw counts mislead: "the day" is by far the most frequent pair ($168$
-occurrences against $38$ for "new york"), simply because *the* and *day* are
+occurrences against $38$ for "new york"), because *the* and *day* are
 both frequent words. Pointwise mutual information corrects for the marginals.
 
 ```{.python .input #mutual-information-pmi-corpus}
@@ -365,7 +363,7 @@ for (i, j) in [(0, 0), (1, 1), (2, 2), (2, 0)]:
 print(f'I(first; second) = {float((p * pmi).sum()):.4f} nats')
 ```
 
-The ranking flips, exactly as a fluent speaker would rank the collocations:
+After adjustment for the marginals, the collocations receive the higher scores:
 "new york" scores $\textrm{pmi} \approx 1.52$ nats and "machine learning"
 $\approx 1.37$, while the frequent-but-unremarkable "the day" manages only
 $\approx 0.34$; the pair "the york" comes out *negative*
@@ -393,7 +391,7 @@ $I(g(X); h(Y)) = I(X; Y)$.*
 
 **Proof.** For discrete variables, invertibility means $g$ and $h$ merely
 relabel outcomes: the joint p.m.f. of $(g(X), h(Y))$ takes the same values as
-that of $(X, Y)$, just at different labels, and the sum in
+that of $(X, Y)$ at different labels, and the sum in
 :eqref:`eq_mdl-mut_ent_def` is unchanged. For continuous variables, write
 mutual information as the KL divergence
 $D_{\textrm{KL}}(P_{X,Y} \| P_X \otimes P_Y)$ and apply the smooth change of
@@ -404,9 +402,9 @@ it is coordinate-dependent; see :numref:`sec_mdl-information_theory`.)
 $\blacksquare$
 
 Correlation enjoys no such invariance: it is preserved only by *affine* maps
-(up to sign). So mutual information is the more principled notion of
+(up to sign). Mutual information therefore captures a broader notion of
 dependence: it asks whether two variables are informative about each other
-in *any* coordinates, not whether they happen to line up. A standard
+in *any* coordinates, not only whether they align linearly. A standard
 counterexample makes both points at once: let $X \sim \mathcal{N}(0, 1)$ and
 $Y = X^2 + 0.3\,\epsilon$ with independent noise
 $\epsilon \sim \mathcal{N}(0,1)$. Then $\textrm{Cov}(X, Y) = E[X^3] = 0$ by
@@ -431,13 +429,12 @@ reparameterization of $X$ leaves the estimate exactly unchanged (the
 histogram bins stretch with the data, so even the bin counts are identical).
 One caution for later: this invariance is also why mutual information is hard
 to *estimate*, since an estimator must implicitly cope with every
-reparameterization of the data at once, and we will see in
-:numref:`sec_mdl-mi-hard` that this costs dearly.
+reparameterization of the data at once; :numref:`sec_mdl-mi-hard` describes
+the resulting estimation cost.
 
 ### Conditional Mutual Information and the Chain Rule
 
-One more piece of calculus and the toolbox is complete. Just as entropy has a
-conditional version, so does mutual information: the *conditional mutual
+Like entropy, mutual information has a conditional version. The *conditional mutual
 information*
 
 $$I(X; Y \mid Z) = H(X \mid Z) - H(X \mid Y, Z)$$
@@ -490,8 +487,8 @@ $X \to Y \to Z$, when $Z$ depends on $(X, Y)$ only through $Y$:
 $p(z \mid x, y) = p(z \mid y)$. This is the structure of *processing*: $Y$ is
 computed from $X$ (a measurement, a feature map, a hidden layer), then $Z$ is
 computed from $Y$ alone. Equivalently, $X$ and $Z$ are conditionally
-independent given $Y$, i.e., $I(X; Z \mid Y) = 0$. The following calculation
-theorem :cite:`Cover.Thomas.1999` is the conservation law that governs it.
+independent given $Y$, i.e., $I(X; Z \mid Y) = 0$. The following theorem
+:cite:`Cover.Thomas.1999` governs this structure.
 
 **Proposition (data-processing inequality).** *If $X \to Y \to Z$ is a
 Markov chain, then*
@@ -509,23 +506,23 @@ $$
 I(X; Z) + I(X; Y \mid Z) = I(X; Y, Z) = I(X; Y) + I(X; Z \mid Y).
 $$
 
-The Markov property kills the last term, $I(X; Z \mid Y) = 0$, leaving
+The Markov property makes the last term zero, $I(X; Z \mid Y) = 0$, leaving
 $I(X; Z) = I(X; Y) - I(X; Y \mid Z) \leq I(X; Y)$, since conditional mutual
 information is non-negative. Equality holds exactly when
 $I(X; Y \mid Z) = 0$. $\blacksquare$
 
-No processing of $Y$, deterministic or random, clever or dumb, can
-*increase* the information it carries about $X$. Three readings:
+No deterministic or random processing of $Y$ can *increase* the information
+it carries about $X$. Three consequences follow:
 
 * **Representations only lose.** A network computes its representation
   layer-by-layer, $X \to Z_1 \to Z_2 \to \cdots$, so
   $I(X; Z_1) \geq I(X; Z_2) \geq \cdots$ and likewise
   $I(Y; Z_1) \geq I(Y; Z_2) \geq \cdots$ for a label $Y$ at the *input* end
   of the chain (since $Y \to X \to Z_\ell$ is Markov). Whatever label
-  information the input lacks, no architecture can conjure; whatever a layer
+  information the input lacks, no architecture can create; whatever a layer
   discards, no later layer recovers. This is the theorem that makes the
   information bottleneck of :numref:`sec_mdl-information-bottleneck` a
-  sensible objective rather than wishful thinking.
+  well-defined objective.
 * **Equality is achievable.** If $Z = g(Y)$ for an *invertible* $g$, then the
   chain runs both ways and $I(X; Z) = I(X; Y)$, consistent with the
   reparameterization invariance proved earlier. A many-to-one or noisy map may lose information, but it need not: a
@@ -546,7 +543,7 @@ turns zero dependence into a full $\ln 2$ nats (Exercise 6 works this out).
 $X \to Y \to Z$ alone; outside that structure, conditioning can raise or
 lower dependence, as the XOR example shows.
 
-Let's verify the bookkeeping numerically on the simplest nontrivial chain:
+The following example verifies the bookkeeping on a simple nontrivial chain:
 a fair bit $X$, flipped with probability $0.1$ to give $Y$, flipped again
 with probability $0.2$ to give $Z$.
 
@@ -591,7 +588,7 @@ With $b$ bins per axis, a $d$-dimensional
 histogram has $b^d$ cells; at $d = 10$ and a modest $b = 10$ that is ten
 billion cells, almost all empty at any realistic sample size, and the
 plug-in estimate is dominated by sampling noise in the occupied few. Already
-at $d = 2$ and $\rho = 0.99$ we watched the histogram miss $0.18$ nats.
+at $d = 2$ and $\rho = 0.99$ the histogram underestimated MI by $0.18$ nats.
 
 Nonparametric estimators can improve sample efficiency but retain strong
 dimension-dependent limitations. The KSG estimator
@@ -657,8 +654,8 @@ $\hat{I}_N$, computed from $N$ samples of the joint, such that
 $\hat{I}_N \leq I(X; Y)$ with high probability *for every distribution*.
 (Lower bounds are the useful direction for representation learning, where we
 want to certify that two views share a lot of information.)
-:citet:`McAllester.Stratos.2020` proved that any such estimator is
-essentially capped:
+:citet:`McAllester.Stratos.2020` proved that any such estimator has the
+following order-level limitation:
 
 > **Theorem (McAllester--Stratos, informal).** Any distribution-free,
 > high-confidence lower bound on $I(X;Y)$ computed from $N$ samples cannot
@@ -719,7 +716,7 @@ d2l.plot(true_mi, ests + [true_mi], 'true I(X;Y) (nats)', 'estimate (nats)',
          legend=['N=16', 'N=128', 'N=1024', 'truth'], figsize=(5, 3))
 ```
 
-Each curve hugs the diagonal while the true mutual information is small, then
+Each curve follows the diagonal while the true mutual information is small, then
 bends flat as it approaches its ceiling $\ln N$ ($\approx 2.77$, $4.85$, and
 $6.93$ nats for the three batch sizes), *even though the critic is exact*.
 Changing the architecture or optimizing the critic more accurately cannot
@@ -831,7 +828,7 @@ $\log E[e^T]$ term makes naive minibatch gradients biased.
 
 ### The NWJ Bound and the Bias--Variance Spectrum
 
-The logarithm in front of $E_Q[e^T]$ is the troublemaker: it couples all
+The logarithm in front of $E_Q[e^T]$ causes the difficulty: it couples all
 samples in the batch and gives the DV bound its bias and, at high MI, its
 exploding variance (the expectation of $e^T$ under $Q$ is carried by the
 same rare events that the McAllester--Stratos argument warned about). The
@@ -909,7 +906,7 @@ $$I(X; Y) \geq \hat{I}_{\textrm{NCE}} = \log N - \mathcal{L}_{\textrm{NCE}}, \qq
 where $(X, Y_1) \sim P_{X,Y}$ and the negatives $Y_{2:N} \sim P_Y$ are
 independent of $(X, Y_1)$.
 
-*Step 1: the negatives are free.* By the corollary to the chain rule,
+*Step 1: independent negatives add no information.* By the corollary to the chain rule,
 independent side information adds nothing: $I(X; V) = I(X; Y_1)$.
 
 *Step 2: define a normalized variational model.* Define
@@ -954,7 +951,7 @@ density ratio $f^*(x,y) = \textrm{pmi}(x,y) + c(x)$ (Exercise 8;
 :cite:`Poole.Oord.Alemi.ea.2019`). With $N$ candidates, the bound has the exact
 upper limit $\log N$. This fact partly motivates the large candidate sets used
 by CPC, SimCLR, and CLIP, although optimization and negative diversity also
-matter. One practical dial deserves naming: in
+matter. One practical hyperparameter deserves attention: in
 SimCLR-style systems the critic is a scaled cosine similarity between the
 two embeddings, $f(x, y) = \textrm{sim}(z_x, z_y)/\tau$, and the
 *temperature* $\tau$
@@ -963,8 +960,8 @@ temperature of :numref:`sec_mdl-information_theory`: lowering $\tau$
 sharpens the softmax over candidates and concentrates the loss on the
 hardest negatives.
 
-Before training anything, let's compare all three bounds in their ideal
-state, critics set to their optima exactly using the closed-form Gaussian
+The following experiment compares all three bounds with critics set to their
+optima using the closed-form Gaussian
 ratio. The remaining behavior therefore belongs to the *bounds*, rather than
 critic optimization. We use a batch of $N=128$ and report the mean and standard
 deviation over $200$ batches.
@@ -1001,10 +998,10 @@ characteristic ways: InfoNCE stays steady (standard deviation a few
 hundredths of a nat) but saturates at its ceiling; NWJ's batch-to-batch
 spread grows first, exploding to many nats while its mean falls far below
 the truth; and DV's log-of-average adds upward bias and the largest blow-up,
-until single batches return values that are pure noise: at a true MI of $6$
+until single batches return highly unstable values: at a true MI of $6$
 nats its batch estimates average far *above* the truth with a spread of tens
-of nats. With a perfect
-critic. Estimator choice is a bias--variance decision, not a ranking.
+of nats, despite using a perfect critic. Estimator choice is therefore a
+bias--variance decision, not a ranking.
 
 ### Experiment: Learning the Critic
 
@@ -1014,8 +1011,8 @@ $\rho = 0.99$, whose true mutual information we know exactly:
 $-\tfrac{1}{2}\log(1 - 0.99^2) \approx 1.958$ nats. The
 data are generated once in NumPy with a fixed
 seed; training uses batches of $N = 128$, and we then evaluate the trained
-critic's InfoNCE bound at several evaluation batch sizes to watch the
-$\log N$ ceiling and the approach to the truth in one table.
+critic's InfoNCE bound at several evaluation batch sizes to examine the
+$\log N$ ceiling and its approach to the true value.
 
 ```{.python .input #mutual-information-infonce-train}
 #@tab mxnet
@@ -1309,20 +1306,21 @@ for beta in [1.0, 1.5, 2.0, 4.0, 16.0]:
 ```
 
 The frontier rises steeply from the origin (the first fraction of a nat of
-retained input information buys label information at the best exchange rate,
+retained input information increases label information at the best exchange rate,
 $\rho^2$ nats per nat), then flattens as $I(Y;Z)$ approaches its DPI ceiling
-$I(X;Y)$: keeping ever more of $X$ buys less and less about $Y$. The marked
+$I(X;Y)$: retaining more of $X$ yields progressively less additional
+information about $Y$. The marked
 points show the $\beta$ knob at work, including the degenerate regime: for
 $\beta \leq 1/\rho^2 \approx 1.23$ the exchange rate never beats the price
-and the optimum is total collapse, $I(X;Z) = I(Y;Z) = 0$; beyond it, rising
-$\beta$ slides the operating point up the frontier. A deep VIB does exactly
-this on real data (encoder noise instead of $\sigma$, variational bounds
-instead of closed forms), and its $\beta$-sweep traces a noisy version of
-the same curve.
+and the optimum is the origin, $I(X;Z) = I(Y;Z) = 0$; beyond it, rising
+$\beta$ moves the operating point up the frontier. A deep VIB approximates
+this construction on real data using encoder noise instead of $\sigma$ and
+variational bounds instead of closed forms.
+Its $\beta$-sweep traces a noisy version of the same curve.
 
 ### The Compression-Phase Debate
 
-The information plane also hosts one of deep learning's livelier disputes.
+The information plane has also been central to a debate about deep learning.
 :citet:`Shwartz-Ziv.Tishby.2017` plotted estimated $(I(X;Z), I(Y;Z))$
 trajectories of ordinary classifiers *during training* and reported a
 two-phase dynamic, a fast *fitting* phase (both informations rise) followed
@@ -1332,7 +1330,7 @@ proposed as the mechanism by which deep networks generalize.
 compression phase to be largely an artifact: it appears with saturating
 activations (tanh squashes activations into the bins' edges, which the
 binned MI estimator reads as compression) and disappears with ReLU networks,
-which generalize just as well without any measured compression. Worse, for
+which can generalize without any measured compression. Moreover, for
 a *deterministic* network with continuous inputs, $I(X; Z)$ is in fact
 infinite or constant (the singular case flagged at the definition
 :eqref:`eq_mdl-mut_ent_def`): whatever the plotted trajectories track, it is
@@ -1341,9 +1339,8 @@ stands: the
 IB *objective* :eqref:`eq_mdl-ib_lagrangian` is well-posed for explicitly
 stochastic encoders and trains well (VIB improves robustness and
 calibration in practice), but the claim that standard training *implicitly*
-performs IB compression remains unsettled, and the dispute itself is a case
-study in how treacherous MI estimation is, which is precisely this
-section's second theme.
+performs IB compression remains unsettled. The debate illustrates the
+difficulty of interpreting MI estimates.
 
 ### What Mutual Information Guarantees: Fano's Inequality
 
@@ -1378,8 +1375,7 @@ Fano converts information into a floor on achievable error: no
 representation, classifier, or amount of compute can beat it. It quantifies
 the "prerequisite" reading of contrastive learning: features that support
 accurate downstream classification *must* carry high mutual information with
-the label. The numbers are sobering when combined with this section's
-estimation ceiling:
+the label. Combining this requirement with the estimation ceiling gives:
 
 ```{.python .input #mutual-information-fano}
 k, p_e = 1000, 0.05
@@ -1396,7 +1392,7 @@ reach that numerical value only when $N\geq e^{6.36}\approx581$. This is a
 necessary range condition for InfoNCE, not a universal sample-size threshold
 for every estimator or confidence procedure.
 
-### What Mutual Information Estimates Can and Cannot Tell You
+### What Mutual Information Estimates Establish
 :label:`sec_mdl-mi-limits`
 
 The preceding results suggest several guidelines for interpreting mutual
@@ -1419,9 +1415,9 @@ information estimates.
   information content. Maximizing an MI bound can therefore be a useful
   training signal without providing a reliable numerical estimate of mutual
   information.
-* **Invariances cut both ways.** MI's reparameterization invariance makes it
-  the right notion of dependence and simultaneously the wrong target for
-  easy estimation; any pipeline that needs a trustworthy dependence number
+* **Invariances complicate estimation.** MI's reparameterization invariance
+  provides a broad notion of dependence but makes estimation difficult; any
+  pipeline that needs a trustworthy dependence number
   on high-dimensional data should confront that tension directly (e.g., by
   validating its estimator on a known-MI synthetic pair, as we did here).
 * **The formal guarantees remain useful.** The definitions
@@ -1553,7 +1549,7 @@ $$I = H(X) - H(X\mid Y) = H(X)+H(Y)-H(X,Y).$$
 ::: {.slide title="Joint and conditional entropy"}
 [Bookkeeping]{.kicker}
 
-The chain rule $H(X,Y) = H(X) + H(Y\mid X)$ is pure accounting: the surprise
+The chain rule $H(X,Y) = H(X) + H(Y\mid X)$ is an accounting identity: the surprise
 of the pair is the surprise of $X$ plus the residual in $Y$:
 
 @!mutual-information-joint-conditional
@@ -1565,7 +1561,7 @@ Every entropy quantity, one concrete number.
 [Definition]{.kicker}
 
 The shared area of the entropy diagram, computed two ways (the KL-from-
-independence form and the entropy identity), agrees to the digit:
+independence form and the entropy identity), gives the same numerical value:
 
 @mutual-information-discrete-joint
 
@@ -1630,7 +1626,7 @@ into $I(X;Y\mid Z) = \ln 2$.
 :::
 
 ::: {.slide title="Estimation in high dimensions"}
-[Bad news]{.kicker}
+[Estimation limits]{.kicker}
 
 A histogram needs $b^d$ cells, almost all empty in high dimensions. The very
 reparameterization-invariance that makes MI the *right* notion of dependence
@@ -1679,7 +1675,7 @@ With 256 candidates, the InfoNCE lower bound is at most $\ln256\approx5.5$ nats.
 :::
 
 ::: {.slide title="Bound MI from below"}
-[The toolkit]{.kicker}
+[Variational bounds]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1699,7 +1695,7 @@ All bound below; all are maximized, not measured.
 :::
 
 ::: {.slide title="Bias against variance"}
-[The spectrum]{.kicker}
+[Estimator behavior]{.kicker}
 
 With *exact* critics on a known-MI pair: past $\log N$, NWJ's batch-to-batch
 spread explodes (unbiased for its bound, heavy tails); DV's log-of-average adds
@@ -1708,7 +1704,7 @@ ceiling:
 
 @!mutual-information-perfect-critic-bounds
 
-You pick your poison: bias or variance.
+The estimators trade bias against variance.
 :::
 
 ::: {.slide title="InfoNCE: estimation as classification"}
@@ -1753,7 +1749,7 @@ again, concentrating the loss on the hardest negatives.
 
 [The bottleneck and the limits of MI]{.dtitle}
 
-[compression with a purpose, Fano, and what MI estimates can tell you]{.dsub}
+[compression with a purpose, Fano, and the scope of MI estimates]{.dsub}
 :::
 :::
 
@@ -1786,7 +1782,7 @@ value, *certifying* that much MI needs batches of $N \gtrsim e^{6.36} \approx 58
 The ceiling and the floor meet.
 :::
 
-::: {.slide title="What MI estimates can tell you"}
+::: {.slide title="What MI estimates establish"}
 [The caveats]{.kicker}
 
 ::: {.d2l-note .rule}

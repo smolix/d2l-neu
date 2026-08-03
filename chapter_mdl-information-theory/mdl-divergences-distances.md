@@ -140,13 +140,12 @@ $f'(\infty)P_\perp(\mathcal X)$, where
 $f'(\infty)=\lim_{t\to\infty}f(t)/t$. Thus support mismatch may give a finite
 boundary contribution for some generators and $+\infty$ for forward KL.
 
-
-(When the support condition fails, the definition extends by the standard
+For discrete distributions, the same boundary terms follow from the standard
 conventions $0 \cdot f(0/0) = 0$ and, for outcomes with $q(x) = 0 < p(x)$, a
 contribution $p(x)\, f'(\infty)$ with
 $f'(\infty) = \lim_{t \to \infty} f(t)/t$, possibly infinite; the
 disjoint-support evaluations of :numref:`sec_mdl-optimal-transport` use this
-extension.)
+extension.
 
 The density ratio $u = p/q$ says, point by point, how $P$ over- or
 under-represents $x$ relative to $Q$; the generator $f$ decides how to *score*
@@ -197,7 +196,7 @@ in :numref:`fig_mdl-f-div-generators`.
 ![Six generators on the same axes. Every curve is convex and touches zero at the no-discrepancy point of the density ratio, but they penalize over- and under-representation very differently: the KL generator grows slowly for small ratios and superlinearly for large ones, the reverse-KL generator diverges as the ratio approaches zero, the chi-squared generator is the symmetric parabola, and the total-variation generator grows only linearly.](../img/mdl-it-f-div-generators.svg)
 :label:`fig_mdl-f-div-generators`
 
-*Reverse KL* is just KL with its arguments swapped: $D_f(P\|Q)$ with
+*Reverse KL* is KL with its arguments swapped: $D_f(P\|Q)$ with
 $f(u) = -\log u$ equals $E_Q[\log(q/p)] = D_{\textrm{KL}}(Q\|P)$, so the
 asymmetry of KL becomes a *choice of generator* rather than a quirk
 (Exercise 1). *Total variation* with
@@ -205,7 +204,7 @@ $f(u) = \tfrac{1}{2}|u - 1|$ unwinds to
 $\tfrac{1}{2}\sum_x |p(x) - q(x)|$, half the $\ell_1$ distance between the
 probability vectors; we study it in :numref:`sec_mdl-tv-pinsker`. And the
 **Jensen--Shannon divergence** :cite:`Lin.1991` is the natural symmetrization
-of KL, however unguessable its generator looks: writing
+of KL. Writing
 $M = \tfrac{1}{2}(P + Q)$ for the even mixture,
 
 $$
@@ -222,7 +221,7 @@ $0 \leq \textrm{JS}(P, Q) \leq \log 2$, with the upper bound attained exactly
 when $P$ and $Q$ have disjoint supports (each $\log(p/m)$ becomes $\log 2$ on
 its own support); its square root is moreover a genuine metric
 :cite:`Endres.Schindelin.2003`, as the gallery table records. That
-boundedness will return as a *bug* in
+boundedness becomes a limitation in
 :numref:`sec_mdl-optimal-transport`: on disjoint supports JS is constant at
 $\log 2$, so it provides no gradient. Expanding :eqref:`eq_mdl-js-def` in
 terms of the ratio $u = p/q$ produces the generator in the table (Exercise 1
@@ -331,7 +330,7 @@ distributions, which is precisely the regime early in training.
 
 The definition :eqref:`eq_mdl-f-div-def` has a practical flaw: it needs the
 densities. A generative model can *sample*, and the data are samples, but
-neither side hands you $p(x)/q(x)$. Convex duality gives a variational equality
+neither source provides $p(x)/q(x)$. Convex duality gives a variational equality
 when the critic ranges over a sufficiently rich measurable class and the
 required expectations are finite. Restricting the critic to a neural family
 turns that equality into a lower bound; finite-sample estimation and incomplete
@@ -393,11 +392,11 @@ in expectation. $\blacksquare$
 
 Look at what the right-hand side of :eqref:`eq_mdl-f-gan-bound` asks for:
 an average of $T$ over samples from $P$ and an average of $f^*(T)$ over
-samples from $Q$. *No densities anywhere.* Parameterize $T$ by a neural
-network and you can estimate, and ascend, this bound from minibatches. That
-is the **f-GAN** recipe: an inner player (the critic) pushes the bound up
-toward the true divergence, an outer player (the generator, which controls
-$Q$) pushes it down. The original GAN of
+samples from $Q$; neither average requires densities. Parameterizing $T$ by a
+neural network makes the bound estimable and optimizable from minibatches. In
+the **f-GAN** objective, the critic maximizes the bound, which equals the true
+divergence at optimality, while the generator controlling $Q$ minimizes it. The
+original GAN of
 :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` is the special case
 corresponding to the Jensen--Shannon generator: at the optimal discriminator,
 the classic GAN value function equals $2\,\textrm{JS}(P, Q) - \log 4$. For the
@@ -407,7 +406,7 @@ again, tightened into Donsker--Varadhan form, when
 :numref:`sec_mdl-mutual-information` estimates mutual information
 variationally.
 
-Two practical caveats. The bound is tight only at the *optimal* critic, so
+Two practical caveats remain. The bound is tight only at the *optimal* critic, so
 with an undertrained critic the game systematically *underestimates* the
 divergence: adversarial losses are biased low. And the critic that attains
 the bound depends on the density ratio, so on disjoint supports (where the
@@ -423,8 +422,8 @@ over all $u \in \mathbb{R}$; over the generator's true domain $u \in (0, \infty)
 the supremum flattens to $f^*(t) = -1$ for $t \leq -2$. Using the larger
 $\mathbb{R}$-conjugate is safe (a bigger $f^*$ only *lowers* the bound
 :eqref:`eq_mdl-f-gan-bound`) and costs nothing at the optimum, where
-$T^\star = 2(p/q - 1) > -2$ automatically. On three outcomes a critic is just
-a vector of three numbers.
+$T^\star = 2(p/q - 1) > -2$ automatically. On three outcomes a critic is a
+vector of three numbers.
 
 ```{.python .input #divergences-distances-f-gan-bound}
 chi_sq = generators['chi^2']            # f(u) = (u - 1)^2
@@ -446,8 +445,8 @@ for scale in (0.5, 1.0, 2.0):
 
 The optimal critic reproduces the exact divergence, $1.0133$, to every
 printed digit, and every random perturbation of it ($0.9678$, $0.3661$,
-$0.9600$) lands strictly below: the variational objective is a floor that
-only the right critic touches.
+$0.9600$) gives a strictly smaller value. The variational objective equals
+the true divergence only at the optimal critic.
 
 ### Forward vs. Reverse KL: Mode-Covering vs. Mode-Seeking
 :label:`sec_mdl-fwd-vs-rev-kl`
@@ -463,8 +462,9 @@ for different things:
 * **Reverse KL**, $D_{\textrm{KL}}(Q_\theta \,\|\, P) = E_{Q_\theta}[\log(q_\theta/p)]$,
   samples from the *model*. Now $p$ is the denominator: the model is punished
   for putting mass where the truth has none, while modes it never visits
-  leave the objective untouched. Reverse KL is **zero-forcing**: the model hugs the
-  mass it can explain and confidently drops the rest.
+  leave the objective untouched. Reverse KL is **zero-forcing**: the model
+  concentrates on the mass it can explain and assigns little probability to
+  the rest.
 
 The two directions correspond to the two great fitting paradigms. Maximum
 likelihood *is* forward KL minimization: we proved in
@@ -476,7 +476,7 @@ variational posteriors are characteristically too narrow and why VAEs can drop
 modes.
 
 When the model family contains the target, both directions agree on the
-answer. The interesting case is a *misspecified* family, and the simplest
+answer. The two directions differ for a *misspecified* family; the simplest
 instance is fitting a single Gaussian to a bimodal target. For the forward
 direction the optimum is fully characterized:
 
@@ -499,8 +499,9 @@ zero gives $\sigma^2 = v$. $\blacksquare$
 
 (The same argument runs for any exponential family: the forward-KL projection
 matches expected sufficient statistics, the *M-projection* of information
-geometry :cite:`Amari.2016`.) The reverse direction has no such closed form, and that is the
-point: its optima are local, one per mode. Let's compute both fits for the
+geometry :cite:`Amari.2016`.) The reverse direction has no such closed form
+and can have local optima associated with different modes. The following
+example computes both fits for the
 mixture $P = 0.7\,\mathcal{N}(-2, 0.6^2) + 0.3\,\mathcal{N}(2, 0.6^2)$,
 evaluating each KL by quadrature on a grid and minimizing over
 $(\mu, \log\sigma)$ with a derivative-free optimizer.
@@ -550,21 +551,20 @@ mixture's mean $0.7(-2) + 0.3(2) = -0.8$ and standard deviation
 $\sqrt{3.72} \approx 1.929$, as the proposition demands: a broad Gaussian
 draped across both modes, with substantial mass in the valley between them
 where $P$ has almost none. The reverse fit lands at $\mu = -1.998$,
-$\sigma = 0.603$: it *is* the dominant component, and the minor mode is
-simply dropped. Its divergence is $0.356$ nats, essentially
+$\sigma = 0.603$: it closely matches the dominant component and assigns
+little mass to the minor mode. Its divergence is $0.356$ nats, approximately
 $\log(1/0.7) \approx 0.357$: the divergence incurred by treating the $70\%$
 component as the whole distribution. And reverse KL is genuinely multimodal
 as an objective: restarting the optimizer near the minor mode converges to a
 *second* local optimum at $\mu = +1.995$ with KL
 $\approx 1.202 \approx \log(1/0.3)$ nats. Which local optimum a variational
-method finds depends on initialization, a failure mode every practitioner of
-variational inference eventually meets.
+method finds depends on initialization, a common failure mode in variational
+inference.
 
-The generative-modeling translation: maximum-likelihood families
-(autoregressive models, normalizing flows) inherit forward KL's
-mass-covering, so they rarely miss a mode but can produce blurry,
-over-dispersed samples; adversarial and variational objectives built on
-reverse-type divergences produce sharp samples but can silently drop modes.
+In idealized generative modeling, maximum-likelihood objectives inherit
+forward KL's mass-covering tendency, whereas reverse-type objectives may
+concentrate on a subset of modes. Actual behavior also depends on the model
+family and optimization.
 The table in :numref:`sec_mdl-divergence-objective-map` summarizes how this
 distinction appears in common objectives.
 
@@ -588,8 +588,8 @@ $$
 $$
 :eqlabel:`eq_mdl-tv-def`
 
-If $\textrm{TV}(P, Q) = 0.03$, then *no event you can test* will see the two
-distributions differ by more than three percentage points. TV is a genuine metric (symmetry is
+If $\textrm{TV}(P, Q) = 0.03$, then no event distinguishes the two
+distributions by more than three percentage points. TV is a genuine metric (symmetry is
 visible in :eqref:`eq_mdl-tv-def`; the triangle inequality is Exercise 4),
 and the supremum has a closed form.
 
@@ -617,7 +617,7 @@ $$
 The same argument bounds $Q(A) - P(A)$ by the same quantity. $\blacksquare$
 
 :numref:`fig_mdl-tv-area` shows the picture: TV is half the total area where
-the two densities disagree, and the optimal distinguishing event is simply
+the two densities disagree, and the optimal distinguishing event is
 "the region where $P$ is the better explanation". This gives TV its
 operational meaning. Hand a tester one sample, drawn from $P$ or $Q$ with
 equal probability, and ask which distribution produced it: the best possible
@@ -630,9 +630,9 @@ exactly $\textrm{TV}(P, Q)$.
 ![Two densities and the region where they disagree. The total variation distance is half the shaded area, and the event that attains the supremum is the set where the first density exceeds the second: betting on P exactly there is the best possible single-sample test.](../img/mdl-it-tv-area.svg)
 :label:`fig_mdl-tv-area`
 
-So TV bounds what any test can detect, which makes the next inequality
-consequential, because it says *KL bounds TV*. Train a model to small KL
-divergence and you have certified indistinguishability against every test.
+Thus TV bounds what any test can detect. The next inequality says that *KL
+bounds TV*: a small KL divergence certifies indistinguishability against every
+test.
 
 **Proposition (Pinsker's inequality).** :cite:`Pinsker.1964`
 
@@ -703,7 +703,7 @@ TV is bounded by $1$ while KL is unbounded, so the bound goes slack for
 distant pairs (two unit-variance Gaussians $50$ apart have
 $\textrm{TV} \approx 1$ but KL $= 1250$ nats), and small TV does *not* imply
 small KL (a model can assign $q = 0$ to a rare event and have infinite KL at
-tiny TV). Let's check both the bound and its tightness numerically: first
+tiny TV). The following experiment checks both the bound and its tightness:
 over $10{,}000$ random pairs of distributions on five outcomes, then on pairs
 of coins approaching each other, where the binary-case analysis says the
 ratio should approach $1$.
@@ -736,8 +736,8 @@ original argument.
 :label:`sec_mdl-ipm-mmd`
 
 The definition of total variation takes a supremum of differences over
-events, and it generalizes wholesale. Replace indicator functions of events
-by an arbitrary class $\mathcal{F}$ of test functions and you get the
+events. Replacing indicator functions of events by an arbitrary class
+$\mathcal{F}$ of test functions yields the
 **integral probability metrics** :cite:`Muller.1997`:
 
 $$
@@ -827,7 +827,7 @@ at once, and :eqref:`eq_mdl-mmd2` evaluates its supremum in closed form.
 ### Optimal Transport and the Wasserstein Distance
 :label:`sec_mdl-optimal-transport`
 
-Every divergence so far shares a blind spot. Let $P = \delta_0$ be a point
+Every divergence so far has a common limitation. Let $P = \delta_0$ be a point
 mass at the origin and $Q_d = \delta_d$ a point mass at distance $d$. For any
 $d \neq 0$ the supports are disjoint, so the density ratio is degenerate
 everywhere and *every f-divergence is a constant*:
@@ -941,8 +941,8 @@ Geometrically, $W_1$ is the *area between the two CDFs* (the shaded region of
 :numref:`fig_mdl-ot-transport-plan`). Slicing that area horizontally instead
 of vertically gives the equivalent quantile form
 $W_1 = \int_0^1 |F_P^{-1}(u) - F_Q^{-1}(u)|\, du$, which for two equal-size
-empirical samples is just the mean absolute difference of their *sorted*
-values (Exercise 7). Let's verify :eqref:`eq_mdl-w1-cdf` against the primal
+empirical samples is the mean absolute difference of their *sorted*
+values (Exercise 7). The following example compares :eqref:`eq_mdl-w1-cdf` with the primal
 :eqref:`eq_mdl-w1-primal`, solved exactly as a linear program over transport
 plans (the plan $\gamma$ is a matrix with row sums $p$ and column sums $q$,
 compare :numref:`subsec_mdl-lagrangian-duality`).
@@ -1066,7 +1066,7 @@ posterior probability ("responsibility") that $x$ came from it.
 The score is useful because it does not depend on a normalizing constant. Suppose
 we can only write the density up to a constant,
 $p(\mathbf{x}) = \tilde{p}(\mathbf{x}) / Z$ with
-$Z = \int \tilde{p}$ intractable, the universal situation for energy-based
+$Z = \int \tilde{p}$ intractable, as commonly occurs for energy-based
 models. Then
 
 $$
@@ -1098,7 +1098,7 @@ equal-variance Gaussians the scores differ by the constant
 $(\mu_2 - \mu_1)/\sigma^2$, so
 $D_{\textrm{F}} = (\mu_1 - \mu_2)^2 / (2\sigma^4)$; compare KL's
 $(\mu_1 - \mu_2)^2/(2\sigma^2)$ from :eqref:`eq_mdl-gaussian_kl`; the general
-unequal-variance form is Exercise 9. Let's verify the mixture score formula,
+unequal-variance form is Exercise 9. The following example verifies the mixture score formula,
 the normalizer-blindness, and the Gaussian closed form numerically.
 
 ```{.python .input #divergences-distances-score}
@@ -1129,7 +1129,7 @@ print(f'Fisher divergence N(0,1)||N(1,1): quadrature {fisher:.6f}, '
 
 The analytic mixture score matches the numerical gradient of $\log p$ to the
 grid's finite-difference accuracy ($\approx 3.5 \times 10^{-4}$), rescaling
-the density by $2.7$ changes the score by nothing but floating-point dust
+the density by $2.7$ changes the score only at floating-point precision
 ($\approx 2 \times 10^{-12}$), and the quadrature reproduces the Gaussian
 closed form $0.5$ to six decimals.
 
@@ -1224,7 +1224,7 @@ $$
 :eqlabel:`eq_mdl-stein-kernel`
 
 where the last term is the sum of mixed partials
-$\sum_i \partial_{x_i} \partial_{x'_i} k$; in one dimension it is just
+$\sum_i \partial_{x_i} \partial_{x'_i} k$; in one dimension it reduces to
 $\partial_x \partial_{x'} k$. The squared **kernel Stein discrepancy (KSD)**
 is the expected Stein kernel under two independent draws from $Q$:
 
@@ -1233,7 +1233,7 @@ $$
 $$
 :eqlabel:`eq_mdl-ksd-def`
 
-Three properties make this the right tool for modern models. First,
+Three properties make KSD useful for modern models. First,
 :eqref:`eq_mdl-stein-kernel` involves $P$ only through its score, so by the
 normalizer-blindness of :numref:`sec_mdl-fisher-divergence` an unnormalized
 model works exactly as well as a normalized one, and no samples from $P$ are
@@ -1247,7 +1247,8 @@ $$
 \widehat{\mathrm{KSD}}^2 = \frac{1}{n(n-1)} \sum_{i \neq j} u_P(x_i, x_j),
 $$
 
-the same diagonal-excluding average as the MMD estimator. Let's compute it.
+the same diagonal-excluding average as the MMD estimator. The following
+example computes it.
 For the 1-D RBF kernel $k(x, y) = e^{-(x-y)^2/(2\ell^2)}$ the derivatives in
 :eqref:`eq_mdl-stein-kernel` are closed-form:
 $\partial_y k = \frac{x-y}{\ell^2}\, k$,
@@ -1351,7 +1352,7 @@ sampling, and optimization determine how strongly the idealized tendency appears
   continuous when supports are disjoint (they need not be differentiable or
   smooth there), equal an integral of CDF differences in 1-D, and
   are computed at scale by entropic regularization and Sinkhorn iterations.
-* The score $\nabla_{\mathbf{x}} \log p$ is blind to the normalizing
+* The score $\nabla_{\mathbf{x}} \log p$ does not depend on the normalizing
   constant; the Fisher divergence compares score fields and underlies score
   matching and diffusion; Stein's identity and the kernel Stein discrepancy
   turn the score into goodness-of-fit tests.
@@ -1449,7 +1450,7 @@ sampling, and optimization determine how strongly the idealized tendency appears
 ::: {.cover}
 [Dive into Deep Learning · §26.2]{.kicker}
 
-Choose your divergence, inherit its failure modes<br>**f-divergences, optimal transport, and the objective map**.
+Comparing probability distributions<br>**f-divergences, optimal transport, and the objective map**.
 :::
 :::
 
@@ -1494,11 +1495,11 @@ $f(1)=0$.
 = f(1) = 0$. Jensen, once, for the whole family. $\blacksquare$
 :::
 
-Convexity of $f$ is *exactly* what buys non-negativity.
+Convexity of $f$ yields non-negativity.
 
 . . .
 
-One more Jensen buys **data processing**: pushing $P$ and $Q$ through any
+Another application of Jensen gives **data processing**: pushing $P$ and $Q$ through any
 channel $K$ only loses distinguishability, $D_f(PK\,\|\,QK) \le D_f(P\|Q)$,
 for every $f$ at once.
 :::
@@ -1515,7 +1516,7 @@ One curve $f$ per divergence:
 - Hellinger: $(\sqrt u-1)^2$
 - total variation: $\tfrac12|u-1|$
 - Jensen–Shannon (symmetric)
-- $\alpha$-family: a dial from reverse to forward KL; its log-transform is
+- $\alpha$-family: a parameter from reverse to forward KL; its log-transform is
   **Rényi's** $D_\alpha$
 
 Near $P=Q$ all agree, $\propto f''(1)\,\chi^2$; they differ only far apart.
@@ -1582,7 +1583,7 @@ make the bound tight.
 [Mode geometry]{.kicker}
 
 Same target, two optima: forward KL (maximum likelihood) must *cover* every
-mode; reverse KL (variational inference) *hugs* one, paying $\log(1/0.7)$ nats
+mode; reverse KL (variational inference) concentrates on one, paying $\log(1/0.7)$ nats
 for the mass it drops:
 
 @!divergences-distances-fwd-rev-kl
@@ -1607,8 +1608,8 @@ $\mathrm{TV}(P,Q) = \sup_A|P(A)-Q(A)| = \tfrac12\|p-q\|_1$. Hand a tester one
 sample: the best test succeeds with probability $\tfrac12(1+\mathrm{TV})$; in
 the cryptographers' convention, an *advantage* of exactly $\mathrm{TV}$.
 
-Pinsker: $\mathrm{TV} \le \sqrt{D_{\mathrm{KL}}/2}$, so a small KL silences
-*every* test at once.
+Pinsker: $\mathrm{TV} \le \sqrt{D_{\mathrm{KL}}/2}$, so a small KL bounds
+the distinguishing advantage of every event.
 :::
 
 ::: {.col .fig}
@@ -1673,8 +1674,8 @@ Beyond one dimension no such formula exists, and the LP has $n^2$ variables.
 [Entropic OT]{.kicker}
 
 Sinkhorn's row/column rescalings solve the $-\varepsilon H(\gamma)$-regularized
-plan on a GPU. At $\varepsilon=1$ the blurred plan costs $1.77$ vs $1.70$; shrinking
-$\varepsilon$ sharpens it onto the LP's never-crossing staircase:
+plan on a GPU. At $\varepsilon=1$ the diffuse plan costs $1.77$ vs $1.70$;
+decreasing $\varepsilon$ approaches the LP's monotone transport plan:
 
 @!divergences-distances-sinkhorn
 :::
@@ -1708,7 +1709,7 @@ the basis of score matching and diffusion.
 ::: {.slide title="Normalizer-blindness, numerically"}
 [The point]{.kicker}
 
-Rescaling the density leaves the score unchanged to floating-point dust, and
+Rescaling the density leaves the score unchanged to floating-point precision, and
 the Gaussian Fisher divergence matches its closed form:
 
 @!divergences-distances-score
@@ -1750,7 +1751,7 @@ critic and model assumptions; finite optimization can behave differently.
 - f-divergence $= \mathbb{E}_Q[f(p/q)]$; Jensen gives $D_f \ge 0$ *and* its DPI.
 - The $\alpha$/Rényi family sweeps reverse $\to$ forward KL.
 - Fenchel duality turns any $f$ into a critic game (the f-GAN); GAN is the JS case.
-- Forward KL covers modes; reverse KL hugs one.
+- Forward KL tends to cover modes; reverse KL may concentrate on one.
 :::
 
 ::: {.col}

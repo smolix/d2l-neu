@@ -25,11 +25,11 @@ import numpy as np
 
 A *stochastic policy* $\pi(a \mid s)$ (policy for short) is a conditional distribution over the actions $a \in \mathcal{A}$ given the state $s \in \mathcal{S}$: at some state of the lake the probabilities of *left*, *down*, *right*, *up* might be $(0.4, 0.2, 0.1, 0.3)$. A *deterministic* policy puts all its probability on a single action, which we then call $\pi(s)$; more generally we abbreviate the distribution $\pi(\cdot \mid s)$ as $\pi(s)$.
 
-Fix a policy and release the agent: from $s_0$ it samples $a_t \sim \pi(s_t)$, moves to $s_{t+1} \sim P(\cdot \mid s_t, a_t)$, and traces out the trajectory $\tau$ of :numref:`sec_mdp`. Different runs give different trajectories, so the natural score is the average,
+For a fixed policy, an agent starting from $s_0$ samples $a_t \sim \pi(s_t)$, moves to $s_{t+1} \sim P(\cdot \mid s_t, a_t)$, and traces out the trajectory $\tau$ of :numref:`sec_mdp`. Different runs give different trajectories, so the natural score is the average,
 
 $$V^\pi(s_0) = E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \Big],$$
 
-the *value function* of $\pi$. The start state is arbitrary, so $V^\pi$ assigns a number to every state, and it is this whole table the algorithms below manipulate.
+the *value function* of $\pi$. Because the start state is arbitrary, $V^\pi$ assigns a number to every state. The algorithms below operate on this value table.
 
 In implementations, it is often useful to maintain a closely related quantity called the "action value" function. This is defined as the average *return* of a trajectory that begins at $s_0$ but whose first-stage action is fixed to be $a_0$
 
@@ -43,7 +43,7 @@ The value function averages the action-value function over the policy's first ac
 
 $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, Q^\pi(s, a);\ \textrm{for all } s \in \mathcal{S}.$$
 
-Conversely, the first stage of $Q^\pi$ is explicit: $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V^\pi(s')$. The identity looks innocent and is not: it makes $V^\pi(s)$ a convex combination of the $Q^\pi(s, a)$, so $\max_a Q^\pi(s, a) \geq V^\pi(s)$, with a strict gap exactly when the policy wastes probability on worse actions. Every improvement step in these two chapters lives in that gap.
+Conversely, the first stage of $Q^\pi$ is explicit: $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V^\pi(s')$. Because $V^\pi(s)$ is a convex combination of $Q^\pi(s, a)$ over actions, $\max_a Q^\pi(s, a) \geq V^\pi(s)$. The inequality is strict when the policy assigns positive probability to actions below the maximum. Policy-improvement methods increase probability on actions with positive advantage.
 
 ### The Advantage Function
 
@@ -58,11 +58,11 @@ The zero-mean identity follows directly from the relation between $V^\pi$ and $Q
 
 ## The Bellman Equations
 
-The definitions above are infinite sums over trajectories; the Markov assumption collapses them into local equations.
+The Markov assumption converts the infinite trajectory sums above into local recursive equations.
 
 ### The Expectation Form
 
-We next break down the trajectory into two stages: (i) the first stage which corresponds to $s_0 \to s_1$ upon taking the action $a_0$, and (ii) a second stage which is the trajectory $\tau' = (s_1, a_1, r_1, \ldots)$ thereafter. The key idea behind all algorithms in reinforcement learning is that the value of state $s_0$ can be written as the average reward obtained in the first stage and the value function averaged over all possible next states $s_1$. This is quite intuitive and arises from our Markov assumption: the average return from the current state is the sum of the average return from the next state and the average reward of going to the next state. Mathematically, we write the two stages as
+Separate a trajectory after its first transition. The first part contains action $a_0$, reward $r(s_0,a_0)$, and next state $s_1$; the remainder is the trajectory beginning at $s_1$. By the Markov property, the expected return of the remainder depends on the past only through $s_1$ and equals $V^\pi(s_1)$. The value at $s_0$ is therefore the expected immediate reward plus the discounted expected value of the next state:
 
 $$V^\pi(s_0) = E_{a_0 \sim \pi(s_0)} \Big[ r(s_0, a_0) + \gamma\ E_{s_1 \sim P(s_1 \mid s_0, a_0)} \Big[ V^\pi(s_1) \Big] \Big].$$
 :eqlabel:`eq_dynamic_programming`
@@ -77,7 +77,7 @@ as sums:
 $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s,  a) + \gamma\  \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_dynamic_programming_val`
 
-Importantly, the above identity holds for all states $s \in \mathcal{S}$, because we can think of any trajectory that begins at that state and break it down into two stages. We can again break down the trajectory into two parts and write
+The same decomposition applies to a trajectory beginning at any state $s\in\mathcal{S}$. Conditioning additionally on the first action gives the corresponding equation for the action value:
 
 $$Q^\pi(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \sum_{a' \in \mathcal{A}} \pi(a' \mid s')\ Q^\pi(s', a');\ \textrm{ for all } s \in \mathcal{S}, a \in \mathcal{A}.$$
 :eqlabel:`eq_dynamic_programming_q`
@@ -86,11 +86,11 @@ This version is the analog of :eqref:`eq_dynamic_programming_val` for the action
 
 ### The Optimality Equation
 
-Value functions rank policies: we want the top of the ranking, $\pi^* = \mathrm{argmax}_\pi\, V^\pi(s_0)$. As written, the winner could depend on the start state; for discounted MDPs it does not.
+An optimal policy maximizes the value function. We may write $\pi^* = \mathrm{argmax}_\pi V^\pi(s_0)$ for a chosen start state. For a discounted finite MDP, however, one stationary deterministic policy is optimal from every state.
 
 **Proposition (a uniformly optimal policy exists).** *In a finite MDP with discount $0 \leq \gamma < 1$ there is a deterministic, stationary policy $\pi^*$ that is optimal at every state simultaneously: $V^{\pi^*}(s) \geq V^\pi(s)$ for all $s \in \mathcal{S}$ and all policies $\pi$, including stochastic and history-dependent ones* :cite:`Puterman.1994`.
 
-The intuition is the two-stage decomposition itself: what is best at a state does not depend on how the agent arrived there, so the best behaviors from different starts never conflict; and randomizing cannot help, since a convex combination of action values never exceeds their maximum. Write $V^* \equiv V^{\pi^*}$ and $Q^* \equiv Q^{\pi^*}$, and insert $\pi^*$ into :eqref:`eq_dynamic_programming_val`: probability sits only on maximizing actions, so the average becomes a maximum,
+The intuition is the two-stage decomposition itself: what is best at a state does not depend on how the agent arrived there, so the best behaviors from different starts never conflict; and randomizing cannot help, since a convex combination of action values never exceeds their maximum. Write $V^* \equiv V^{\pi^*}$ and $Q^* \equiv Q^{\pi^*}$, and insert $\pi^*$ into :eqref:`eq_dynamic_programming_val`: the policy assigns probability only to maximizing actions, so the average becomes a maximum,
 
 $$V^*(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^*(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_bellman_optimality`
@@ -106,7 +106,7 @@ from one model-based lookahead:
 $$\pi^*(s) = \underset{a \in \mathcal{A}}{\mathrm{argmax}} \Big[ r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^*(s') \Big].$$
 :eqlabel:`eq_optimal_policy`
 
-A good mnemonic to remember this is that the optimal action at state $s$ (for a deterministic policy) is the one that maximizes the sum of reward $r(s, a)$ from the first stage and the average *return* of the trajectories starting from the next state $s'$, averaged over all possible next states $s'$ from the second stage. The action-value version of :eqref:`eq_bellman_optimality` is
+For a deterministic policy, the optimal action at state $s$ maximizes its immediate reward $r(s, a)$ plus the discounted expected value over possible next states $s'$. The next state $s'$ is averaged according to the transition model. The action-value version of :eqref:`eq_bellman_optimality` is
 
 $$Q^*(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q^*(s', a'),$$
 
@@ -117,7 +117,7 @@ $P$ and $r$ in the lookahead.
 
 ### Backup Diagrams
 
-The four equations of this section share one shape: the value at a root is assembled from values one step below it. Updates of this kind are called *backups*, because they carry value backwards, from futures to presents; :numref:`fig_rl_backups` draws the vocabulary. Every algorithm in these two chapters walks one step down such a tree, and when :numref:`sec_qlearning` replaces the environment's average by a single observed transition, the change is the one blue path through the rightmost diagram.
+The four equations share a common structure: the value at a root is computed from values one step below it. Such updates are called *backups*; :numref:`fig_rl_backups` illustrates them. The sampled update in :numref:`sec_qlearning` replaces the expectation over next states with the single observed transition shown in blue in the rightmost diagram.
 
 ![Backup diagrams. Open circles are states, filled dots are state-action pairs, and each diagram shows how the value at the root is assembled from the values one step below it. Left to right: (a) the value function averages over the policy's actions and the environment's next states; (b) the action-value function fixes the first action and averages afterwards; (c) the optimality operator replaces the average over actions by a maximum, drawn as the arc; (d) a sampled backup cannot take the environment's average, so it uses the single observed transition, in blue, and keeps the maximum at the next state.](../img/mdl-rl-backups.svg)
 :label:`fig_rl_backups`
@@ -128,7 +128,7 @@ The Bellman optimality equation defines $V^*$ implicitly. To compute it, read :e
 
 $$(TV)(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V(s') \Big],$$
 
-so that :eqref:`eq_bellman_optimality` says exactly $V^* = TV^*$: the optimal value function is a *fixed point* of $T$, and $T$ turns out to shrink distances.
+so that :eqref:`eq_bellman_optimality` says exactly $V^* = TV^*$: the optimal value function is a *fixed point* of $T$. The operator $T$ contracts distances in the sup norm.
 
 ### The Contraction Proposition
 
@@ -138,7 +138,7 @@ Distance between value functions is measured in the sup norm $\|V\|_\infty = \ma
 
 $$\|TV - TV'\|_\infty \leq \gamma\, \|V - V'\|_\infty.$$
 
-**Proof.** Fix $s$ and write $f(a)$ and $g(a)$ for the bracketed terms in $(TV)(s)$ and $(TV')(s)$. For every $a$, $|f(a) - g(a)| = \gamma\, |\sum_{s'} P(s' \mid s, a)(V(s') - V'(s'))| \leq \gamma \|V - V'\|_\infty$, because the probabilities are non-negative and sum to one. A maximum moves less than its inputs, $|\max_a f(a) - \max_a g(a)| \leq \max_a |f(a) - g(a)|$, so $|(TV)(s) - (TV')(s)| \leq \gamma \|V - V'\|_\infty$ for every $s$. $\blacksquare$
+**Proof.** Fix $s$ and write $f(a)$ and $g(a)$ for the bracketed terms in $(TV)(s)$ and $(TV')(s)$. For every $a$, $|f(a) - g(a)| = \gamma\, |\sum_{s'} P(s' \mid s, a)(V(s') - V'(s'))| \leq \gamma \|V - V'\|_\infty$, because the probabilities are non-negative and sum to one. The difference between two maxima is bounded by the largest input difference, $|\max_a f(a) - \max_a g(a)| \leq \max_a |f(a) - g(a)|$, so $|(TV)(s) - (TV')(s)| \leq \gamma \|V - V'\|_\infty$ for every $s$. $\blacksquare$
 
 The contraction permits an application of Banach's fixed-point theorem. It implies that the Bellman operator has a unique fixed point and that repeated application converges to it. :numref:`fig_rl_contraction` illustrates the resulting nested error bounds.
 
@@ -176,7 +176,7 @@ Iterate the operator: initialize $V_0$ arbitrarily (we use zeros) and sweep
 $$V_{k+1}(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V_k(s') \Big];\ \textrm{for all } s \in \mathcal{S},$$
 :eqlabel:`eq_value_iteration`
 
-that is, $V_{k+1} = TV_k$. This is *value iteration*, and the contraction has already done the analysis: $V_k \to V^*$ from any initialization, at rate $\gamma$. In code the sweep is one line, because `mdp.backup` from :numref:`sec_mdp` computes the bracket for every state-action pair at once:
+that is, $V_{k+1} = TV_k$. This is *value iteration*. The contraction result implies that $V_k \to V^*$ from any initialization at geometric rate $\gamma$. In code the sweep is one line, because `mdp.backup` from :numref:`sec_mdp` computes the bracket for every state-action pair at once:
 
 ```{.python .input #value-iter-value-iteration-1}
 %%tab pytorch, jax
@@ -204,7 +204,7 @@ print(f'V*(s0) = {V_star[0]:.4f}')
 d2l.show_grid(env.unwrapped.desc, V_star, pi_star)
 ```
 
-The values climb from about $0.18$ at the start toward $0.72$ beside the goal, and notice how modest they are: on calm ice the start would be worth $\gamma^5 \approx 0.774$, so the slips destroy three quarters of its value even under optimal play. Several arrows point away from the goal; we defer reading them to the last subsection and first check the theory against the run:
+The values increase from about $0.18$ at the start to $0.72$ beside the goal. On deterministic ice, the shortest route would give the start state value $\gamma^5\approx0.774$; stochastic slips reduce that value by roughly three quarters even under the optimal policy. Several optimal actions point away from the goal. We interpret them below after checking the predicted convergence rate:
 
 ```{.python .input #value-iter-value-iteration-3}
 %%tab pytorch, jax
@@ -217,7 +217,7 @@ d2l.plot_curves({'value iteration': np.log10(err[k]),
                 xlabel='sweep k', ylabel='log10 of sup-norm distance to V*')
 ```
 
-On this logarithmic scale geometric decay is a straight line, and the measured error hugs a line slightly *steeper* than the guaranteed one: the bound contracts by $\gamma = 0.95$ per sweep, the run by about $0.92$; the guarantee promises $10^{-6}$ by sweep $263$, the run gets there at $158$. This is the correct mental model of the cost: the sweep count is set by the discount through the effective horizon, not by the size of the map, and not, on a stochastic problem, by the distance to the goal. An implementation, which cannot see the error curve, tests the stopping rule instead:
+On the logarithmic scale, geometric decay appears as a straight line. The guarantee contracts by $\gamma=0.95$ per sweep, whereas the measured error contracts by about $0.92$. The bound reaches $10^{-6}$ at sweep 263, and the measured error reaches it at sweep 158. Thus the discount factor, through the effective horizon, governs the worst-case sweep count; neither the number of cells nor their distance from the goal appears in the contraction rate. An implementation cannot observe the true error and must instead use a stopping criterion:
 
 ```{.python .input #value-iter-value-iteration-4}
 %%tab pytorch, jax
@@ -258,17 +258,17 @@ print(f'V(s0) for the uniformly random policy: '
       f'{policy_evaluation(mdp, uniform, 400)[-1][0]:.4f}')
 ```
 
-The uniformly random walker of :numref:`sec_mdp` finished almost none of its episodes; it is worth $0.0078$ at the start, about four percent of the optimum. Evaluation is measurement without improvement, and the critics of :numref:`sec_actorcritic` will spend most of their capacity doing approximately what these seven lines do exactly.
+The uniformly random policy of :numref:`sec_mdp` reaches the goal in very few episodes. Its start-state value is $0.0078$, about four percent of the optimum. Policy evaluation measures performance without improving the policy; learned critics in :numref:`sec_actorcritic` approximate the same value computation from sampled data.
 
 ### Policy Iteration and Generalized Policy Iteration
 
-Evaluation plus the greedy step :eqref:`eq_optimal_policy` suggests a different algorithm: evaluate the current policy fully, act greedily on its value function, repeat. For this to work, greedy improvement must actually improve; that is the chapter's third short theorem.
+Evaluation plus the greedy step :eqref:`eq_optimal_policy` suggests a different algorithm: evaluate the current policy fully, act greedily on its value function, repeat. The following policy-improvement proposition justifies the greedy step.
 
 **Proposition (policy improvement).** *Let $\pi$ be any policy and let $\pi'$ be greedy with respect to $V^\pi$, that is $\pi'(s) = \mathrm{argmax}_a \big[ r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V^\pi(s') \big]$. Then $V^{\pi'}(s) \geq V^\pi(s)$ at every state, and if equality holds everywhere then both policies are optimal.*
 
 **Proof.** Greediness says one step of $\pi'$ is at least as good as one step of $\pi$: $T^{\pi'} V^\pi = T V^\pi \geq T^\pi V^\pi = V^\pi$. The operator $T^{\pi'}$ is monotone (its coefficients are probabilities), so $V^\pi \leq T^{\pi'} V^\pi \leq (T^{\pi'})^2 V^\pi \leq \cdots \to V^{\pi'}$, the limit being $T^{\pi'}$'s unique fixed point. If $V^{\pi'} = V^\pi$, the first line reads $TV^\pi = V^\pi$, so $V^\pi$ solves the optimality equation and uniqueness finishes the job. $\blacksquare$
 
-Each round of *policy iteration* therefore strictly improves the policy until it is optimal, and a finite MDP has finitely many deterministic policies, so termination is guaranteed :cite:`Puterman.1994`. Four lines, plus a stopping check:
+Each round of *policy iteration* therefore strictly improves the policy until it is optimal, and a finite MDP has finitely many deterministic policies, so termination is guaranteed :cite:`Puterman.1994`. The implementation alternates evaluation and improvement until the policy stops changing:
 
 ```{.python .input #value-iter-policy-iteration-and-generalized-policy-iteration-1}
 %%tab pytorch, jax
@@ -303,7 +303,7 @@ Policy evaluation and improvement need not be completed in separate phases. *Gen
 
 ### The Optimal Policy on Slippery Ice
 
-The theory certifies that $\pi^*$ maximizes expected return; it does not say the result will look reasonable. Before reading the strange arrows, we need an instrument that scores a policy by average return over real episodes, the only standard that counts, with no access to the model:
+Although $\pi^*$ maximizes expected return, some of its actions point away from the goal. We evaluate policies by their mean return over sampled episodes without using the transition model:
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-1}
 %%tab pytorch, jax
@@ -322,7 +322,7 @@ def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):  #@save
     return total / num_episodes
 ```
 
-The protocol matters: a policy is a function from observation to action, possibly consuming randomness from an explicit generator, and everything that acts in these two chapters will speak it. With the default $\gamma = 1$ and terminal-only reward, the mean return *is* the success rate. Now pit $\pi^*$ against the policy any of us would write first, the shortest path, as if the ice were calm:
+The evaluation protocol represents a policy as a function from observation to action, optionally using an explicit random generator. Later sections use the same interface. With the default $\gamma = 1$ and terminal-only reward, the mean return *is* the success rate. We compare $\pi^*$ with the shortest-path policy derived for deterministic ice:
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-2}
 %%tab pytorch, jax
@@ -356,7 +356,7 @@ At four of the eleven nonterminal frozen cells, the optimal command points away 
 
 **Deterministic case.** Without slippery transitions, $V^*(s)=\gamma V^*(s')$ along an optimal move. Hence $V^*(s)=\gamma^{d(s)-1}$, where $d(s)$ is the shortest distance to the goal. After $k$ sweeps, value has propagated to exactly the states within $k$ moves of the goal, and this map converges in six sweeps (:numref:`fig_rl_value_wavefront`). This finite wavefront is specific to deterministic terminal rewards; the stochastic case converges geometrically. The greedy policy for the deterministic solution is exactly the shortest-path policy, as verified below.
 
-![Value iteration on the calm lake, where the answer is available in closed form. With the slip off, sweep $k$ reaches exactly the cells within $k$ moves of the goal, the orange outline marking the newly reached ones; the value at distance $d$ is $\gamma^{d-1}$. The start cell is six moves away, so its estimate stays at zero for five sweeps and equals $\gamma^5 = 0.774$ from the sixth on.](../img/mdl-rl-value-wavefront.svg)
+![Value iteration on deterministic FrozenLake, whose values have a closed form. With the slip off, sweep $k$ reaches exactly the cells within $k$ moves of the goal, the orange outline marking the newly reached ones; the value at distance $d$ is $\gamma^{d-1}$. The start cell is six moves away, so its estimate stays at zero for five sweeps and equals $\gamma^5 = 0.774$ from the sixth on.](../img/mdl-rl-value-wavefront.svg)
 :label:`fig_rl_value_wavefront`
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-4}
@@ -412,16 +412,16 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
    printed $V^*(s_0) = 0.180$ on ice and $0.774$ calm, a ratio of about
    $4.3$: is that larger or smaller than the naive reading "each commanded
    move now succeeds with probability $1/3$" suggests, and what does the
-   difference say about what the optimal policy salvages from the slips?
+   difference show about how the optimal policy accounts for slips?
 1. [conceptual] *When $\gamma$ equals one.* The contraction proposition needs
    $\gamma < 1$, yet running the section's code with $\gamma = 1$ on FrozenLake
    converges. Explain why, using that the goal and the holes are absorbing and
    all rewards are non-negative, and say what the limit $V_k(s)$ means in that
    case. Then construct a two-state MDP with a single action on which $V_k$
    grows without bound at $\gamma = 1$, and verify it in three lines of code.
-1. [extended] *Policy iteration, charged in backups.* Policy iteration
+1. [extended] *Policy iteration measured in backups.* Policy iteration
    converged in $2$ rounds against value iteration's $164$ certified sweeps,
-   which looks like a rout, but each round contained $800$ evaluation sweeps
+   which suggests a large advantage in outer iterations, but each round contained $800$ evaluation sweeps
    of :eqref:`eq_policy_eval` before the greedy step :eqref:`eq_optimal_policy`.
    Measure both algorithms by the number of Bellman backups, and plot the
    sup-norm error against backups on the $4 \times 4$ and $8 \times 8$ maps
@@ -453,7 +453,7 @@ The gap is the *advantage* (:eqref:`eq_advantage`):
 
 $$A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad E_{a \sim \pi(s)}[A^\pi] = 0$$
 
-$A^\pi(s,a) > 0$ means "do $a$ more often". Improvement lives here.
+$A^\pi(s,a) > 0$ identifies actions $a$ whose value exceeds the policy average.
 :::
 
 ::: {.slide title="The Bellman Equations"}
@@ -468,7 +468,7 @@ For the *optimal* policy the average over actions becomes a max
 
 $$V^*(s) = \max_{a} \Big[ r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^*(s') \Big]$$
 
-"The remainder of an optimal trajectory is also optimal."
+After the first transition, the continuation is optimal from the resulting state.
 :::
 
 ::: {.slide title="Backup Diagrams"}
@@ -476,8 +476,8 @@ $$V^*(s) = \max_{a} \Big[ r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^*(s') \
 
 . . .
 
-Every algorithm in these two chapters walks one step down this tree;
-the sampled backup (right) leads to :numref:`sec_qlearning`.
+The diagrams show one-step backups; the sampled form on the right
+is used in :numref:`sec_qlearning`.
 :::
 
 ::: {.slide title="Why It Converges"}
@@ -490,7 +490,7 @@ the Bellman operator is a $\gamma$-contraction.
 - $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$ from **any** start
 - stopping certificate:
   $\|V_k - V^*\|_\infty \leq \frac{\gamma}{1-\gamma} \|V_k - V_{k-1}\|_\infty$
-- at $\gamma = 1$, all guarantees void
+- at $\gamma = 1$, this contraction argument provides no guarantee
 
 ![](../img/mdl-rl-contraction.svg){width=72%}
 :::
@@ -502,13 +502,13 @@ the Bellman operator is a $\gamma$-contraction.
 
 @value-iter-value-iteration-4
 
-Naive test at 128, certificate at 164, truth at 158:
-a guarantee costs a handful of sweeps.
+The naive test stops at sweep 128, before the target error is reached at 158.
+The certified rule stops at sweep 164.
 :::
 
 ::: {.slide title="Policy Iteration and GPI"}
 Evaluate the policy, act greedily on its values, repeat.
-Improvement provably never hurts.
+The policy-improvement proposition guarantees nondecreasing value.
 
 @value-iter-policy-iteration-and-generalized-policy-iteration-2
 
@@ -518,16 +518,16 @@ Improvement provably never hurts.
 :::
 
 ::: {.slide title="Not the Shortest Path"}
-The payoff experiment: $\pi^*$ against the calm-ice shortest path,
-2000 episodes each, on slippery ice.
+Compare $\pi^*$ with the shortest-path policy derived for deterministic ice,
+using 2000 episodes per policy on the stochastic environment.
 
 @value-iter-what-the-optimal-policy-looks-like-on-ice-2
 
 . . .
 
-Sixteen times the success rate. The optimum points *away* from the
-goal at four cells and commands *into walls* so that only harmless
-slips remain: not cleverness, just :eqref:`eq_optimal_policy`.
+The optimal policy succeeds about sixteen times as often. At four cells it
+points away from the goal, and at others it points into walls, because
+:eqref:`eq_optimal_policy` accounts for the outcomes of stochastic slips.
 :::
 
 ::: {.slide title="Recap"}
@@ -537,5 +537,5 @@ slips remain: not cleverness, just :eqref:`eq_optimal_policy`.
 - Value iteration, policy evaluation, policy iteration: one proof, three algorithms.
 - Generalized policy iteration alternates approximate evaluation and improvement.
 - On ice, the optimal policy is not the shortest path, and we measured the difference: 0.74 vs 0.05.
-- This was the book's model-based corner; from :numref:`sec_qlearning` on, only samples.
+- Value iteration uses a known model; methods from :numref:`sec_qlearning` onward use sampled transitions.
 :::

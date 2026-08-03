@@ -80,8 +80,8 @@ from pprint import pprint
 ## Discovering What Exists: `dir`
 
 When you know roughly *where* a tool should live but not what it is called,
-the `dir` function lists everything defined in a module.
-For instance, to see what is on offer for random sampling
+the `dir` function lists the names defined in a module.
+For instance, to inspect the available random-sampling tools
 (we print the first twenty names):
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
@@ -140,7 +140,7 @@ random key that every JAX sampler takes.
 
 In a notebook you can get the same list interactively, filtered as you
 type, by writing the module name followed by a dot and pressing `Tab`;
-this is usually the fastest way to turn up a name.
+this often locates a name quickly.
 
 ## Reading the Signature: `help`, `?`, and `??`
 
@@ -174,15 +174,13 @@ shape with every element set to 1.
 In a Jupyter notebook, two shortcuts make this quicker still:
 `ones?` opens the same docstring in a side pane,
 and `ones??` additionally displays the function's *source code*.
-The source is the final word when a docstring is terse or ambiguous,
-and reading it is one of the better ways to pick up idioms
-from high-quality libraries.
+When a docstring is terse or ambiguous, the source can clarify the
+implementation. Reading library source also reveals established usage idioms.
 
 ## Verifying With a Quick Run
 
 Docstrings can be terse, and they occasionally drift out of date.
-The fastest way to be certain is to run a tiny example
-and look at the result:
+A small example can verify the behavior directly:
 
 ```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab mxnet
@@ -204,7 +202,7 @@ tf.ones(4)
 jax.numpy.ones(4)
 ```
 
-The shape and values are exactly what the docstring promised.
+The result has the documented shape and values.
 Making this `discover → inspect → read → verify` loop a habit
 will carry you through the unfamiliar corners of any library,
 long after the specific functions in this book have changed.
@@ -310,29 +308,26 @@ often an example.
 
 ::: {.d2l-note}
 In Jupyter, `ones?` opens the docstring in a side pane, and `ones??`
-shows the **source code**: the final word when a docstring is terse or
-ambiguous.
+shows the **source code**, which can clarify a terse or ambiguous docstring.
 :::
 :::
 
 ::: {.slide title="A tiny run settles it"}
 [Verify]{.kicker}
 
-Docstrings drift out of date; a running call does not lie:
+Docstrings can drift out of date; verify the current behavior with a small call:
 
 @lookup-api-specific-functions-and-classes-2
 
-Exactly the promised shape and values. This
-**discover → inspect → read → verify** loop outlives every function in
-this book.
+The result has the documented shape and values. The
+**discover → inspect → read → verify** loop remains useful as APIs change.
 :::
 
 ::: {.slide title="Coding assistants enter the same loop"}
 [Assistants]{.kicker}
 
-An assistant usually produces a plausible function and a working call in
-seconds. Treat the suggestion like a knowledgeable colleague's tip: a
-good starting point that still gets a two-line check before you build on it.
+An assistant may produce a plausible function and call. Treat the suggestion
+as a candidate to check before building on it.
 
 ::: {.d2l-note .rule}
 Glance at the signature (`help` / `?`), then run a small example. A

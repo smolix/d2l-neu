@@ -30,6 +30,8 @@ Images exhibit spatial structure that a model can exploit. Convolutional
 neural networks (CNNs) encode two important parts of this structure: local
 interactions and a shared response to the same pattern at different
 locations.
+The derivation below maps an input image $\mathbf{X}$ to a hidden
+representation $\mathbf{H}$ while imposing these two constraints.
 
 
 ## Invariance
@@ -38,19 +40,10 @@ An object detector should recognize a pattern at different locations in an
 image. The children's game "Where's Waldo," illustrated in
 :numref:`img_waldo`, provides a simple example: the target retains its identity
 regardless of where it appears in the scene.
-The game consists of a number of chaotic scenes
-bursting with activities.
-Waldo shows up somewhere in each,
-typically lurking in some unlikely location.
-The reader's goal is to locate him.
-Despite his characteristic outfit,
-this can be surprisingly difficult,
-due to the large number of distractions.
-However, *what Waldo looks like*
-does not depend upon *where Waldo is located*.
-We could sweep the image with a Waldo detector
-that could assign a score to each patch,
-indicating the likelihood that the patch contains Waldo. 
+Each scene contains many people and activities, with Waldo placed among the
+distractions. His appearance does not depend on his location. A detector could
+therefore scan the image and assign each patch a score indicating its
+likelihood of containing Waldo.
 In fact, many object detection :cite:`Girshick.Donahue.Darrell.ea.2014` 
 and semantic segmentation :cite:`Long.Shelhamer.Darrell.2015` algorithms 
 are based on this approach. 
@@ -62,9 +55,8 @@ with fewer parameters.
 :width:`400px`
 :label:`img_waldo`
 
-We can now make these intuitions more concrete 
-by enumerating a few desiderata to guide our design
-of a neural network architecture suitable for computer vision:
+These observations suggest three requirements for a computer vision
+architecture:
 
 1. In the earliest layers, our network
    should respond similarly to the same patch,
@@ -77,8 +69,8 @@ of a neural network architecture suitable for computer vision:
    without regard for the contents of the image in distant regions. This is the *locality* principle.
    Eventually, these local representations can be aggregated
    to make predictions at the whole image level.
-1. As we proceed, deeper layers should be able to capture longer-range features of the 
-   image, in a way similar to higher level vision in nature. 
+1. Deeper layers should combine local representations to capture progressively
+   longer-range structure.
 
 The distinction drawn in the first desideratum deserves precise notation.
 Let $T_v$ denote the operator that translates an image by an offset $v$,
@@ -95,17 +87,14 @@ that we develop in :numref:`sec_padding` and :numref:`sec_pooling`. Where we
 want invariance, a global aggregation in the head can supply it: such an
 operation discards *where* a feature occurred and keeps whether it occurred.
 
-Let's see how this translates into mathematics.
+We now express these requirements mathematically.
 
 
 ## Constraining the MLP
 
-To start off, we can consider an MLP
-with two-dimensional images $\mathbf{X}$ as inputs
-and their immediate hidden representations
-$\mathbf{H}$ similarly represented as matrices (they are two-dimensional tensors in code), where both $\mathbf{X}$ and $\mathbf{H}$ have the same shape.
-We now imagine that the hidden representations,
-just like the inputs, possess spatial structure.
+Consider an MLP whose input $\mathbf{X}$ and immediate hidden representation
+$\mathbf{H}$ are matrices of the same shape (two-dimensional tensors in code).
+We retain the spatial organization of both arrays.
 
 Let $[\mathbf{X}]_{i, j}$ and $[\mathbf{H}]_{i, j}$ denote the pixel
 at location $(i,j)$
@@ -125,21 +114,24 @@ $$\begin{aligned} \left[\mathbf{H}\right]_{i, j} &= [\mathbf{U}]_{i, j} + \sum_k
 The switch from $\mathsf{W}$ to $\mathsf{V}$ is entirely cosmetic for now
 since there is a one-to-one correspondence
 between coefficients in both fourth-order tensors.
-We simply re-index the subscripts $(k, l)$
-such that $k = i+a$ and $l = j+b$.
+We re-index the subscripts $(k, l)$ so that $k = i+a$ and $l = j+b$.
 In other words, we set $[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$.
 The indices $a$ and $b$ run over both positive and negative offsets,
 covering the entire image.
 For any given location ($i$, $j$) in the hidden representation $[\mathbf{H}]_{i, j}$,
 we compute its value by summing over pixels in $x$,
-centered around $(i, j)$ and weighted by $[\mathsf{V}]_{i, j, a, b}$. Before we carry on, let's consider the total number of parameters required for a *single* layer in this parametrization: a $1000 \times 1000$ image (1 megapixel) is mapped to a $1000 \times 1000$ hidden representation. This requires $10^{12}$ parameters. Networks of that size do get trained these days, but spending them on a single layer of a pet classifier would be pure waste: a trillion parameters is roughly a million times more than the number of training images we could plausibly collect, so the data could never pin most of them down.  
+centered around $(i, j)$ and weighted by $[\mathsf{V}]_{i, j, a, b}$. Mapping
+a $1000 \times 1000$ image (1 megapixel) to a $1000 \times 1000$ hidden
+representation in this parameterization requires $10^{12}$ parameters in a
+*single* layer. A trillion parameters is roughly a million times the number of
+training images we could plausibly collect for a pet classifier, so the data
+would not constrain most of them.
 
 ### Translation Equivariance
 
-Now let's invoke the first principle
-established above: translation equivariance :cite:`Zhang.ea.1988`.
-This implies that a shift in the input $\mathbf{X}$
-should simply lead to a shift in the hidden representation $\mathbf{H}$.
+We first impose translation equivariance :cite:`Zhang.ea.1988`: shifting the
+input $\mathbf{X}$ should shift the hidden representation $\mathbf{H}$ by the
+same amount.
 For a linear map on an infinite or periodically extended grid, this requires
 $\mathsf{V}$ and $\mathbf{U}$ not to depend on $(i, j)$. As such,
 we have $[\mathsf{V}]_{i, j, a, b} = [\mathbf{V}]_{a, b}$ and $\mathbf{U}$ is a constant, say $u$.
@@ -148,11 +140,11 @@ As a result, we can simplify the definition for $\mathbf{H}$:
 $$[\mathbf{H}]_{i, j} = u + \sum_a\sum_b [\mathbf{V}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 
 
-This is a *convolution*!
+This is a *convolution*.
 We are effectively weighting pixels at $(i+a, j+b)$
 in the vicinity of location $(i, j)$ with coefficients $[\mathbf{V}]_{a, b}$
 to obtain the value $[\mathbf{H}]_{i, j}$.
-Note that $[\mathbf{V}]_{a, b}$ needs many fewer coefficients than $[\mathsf{V}]_{i, j, a, b}$ since it
+$[\mathbf{V}]_{a, b}$ needs many fewer coefficients than $[\mathsf{V}]_{i, j, a, b}$ because it
 no longer depends on the location within the image. Consequently, the number
 of parameters required is no longer $10^{12}$ but roughly $4 \times 10^6$:
 there are $(2001)^2$ choices of offsets
@@ -162,11 +154,8 @@ some of the first examples to exploit this idea
 
 ###  Locality
 
-Now let's invoke the second principle: locality.
-As motivated above, we believe that we should not have
-to look very far away from location $(i, j)$
-in order to glean relevant information
-to assess what is going on at $[\mathbf{H}]_{i, j}$.
+We next impose locality: computing $[\mathbf{H}]_{i, j}$ should require only a
+neighborhood around $(i, j)$.
 This means that outside some range $|a|> \Delta$ or $|b| > \Delta$,
 we should set $[\mathbf{V}]_{a, b} = 0$.
 Equivalently, we can rewrite $[\mathbf{H}]_{i, j}$ as
@@ -177,19 +166,18 @@ $$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Del
 This reduces the number of parameters from roughly $4 \times 10^6$ to
 $(2\Delta+1)^2$, where $\Delta$ is typically smaller than $10$. We reduced
 the number of parameters by another four orders of magnitude. Equation
-:eqref:`eq_conv-layer` is, in a nutshell, a *convolutional layer*.
+:eqref:`eq_conv-layer` defines a *convolutional layer*.
 *Convolutional neural networks* (CNNs)
 are a special family of neural networks that contain convolutional layers.
 In the deep learning research community,
 $\mathbf{V}$ is referred to as a *convolution kernel*,
-a *filter*, or simply the layer's *weights* that are learnable parameters.
+a *filter*, or the layer's learnable *weights*.
 
-While previously, we might have required billions of parameters
-to represent just a single layer in an image-processing network,
-we now typically need just a few hundred, without
+Where the unrestricted layer required billions of parameters, a local kernel
+typically requires a few hundred without
 altering the dimensionality of either
 the inputs or the hidden representations.
-The price paid for this drastic reduction in parameters
+The tradeoff for this reduction in parameters
 is that our features are now translation equivariant
 and that our layer can only incorporate local information,
 when determining the value of each hidden activation.
@@ -197,18 +185,18 @@ All learning depends on imposing inductive bias.
 When that bias agrees with reality,
 we get sample-efficient models
 that generalize well to unseen data.
-But of course, if those biases do not agree with reality,
-e.g., if the same local pattern required a different response at every location,
+If those biases do not agree with reality---if the same local pattern requires
+a different response at every location, for example---
 our models might struggle even to fit our training data.
 
-This dramatic reduction in parameters brings us to our last desideratum, 
-namely that deeper layers should represent larger and more complex aspects 
-of an image. This can be achieved by interleaving nonlinearities and convolutional 
-layers repeatedly. 
+Stacking convolutional layers with nonlinearities gives deeper units larger
+effective receptive fields, allowing them to represent larger and more complex
+image structure.
 
 ## Convolutions
 
-Let's briefly review why :eqref:`eq_conv-layer` is called a convolution. 
+To understand the terminology, compare :eqref:`eq_conv-layer` with the
+mathematical definition of convolution.
 In mathematics, the *convolution* between two functions :cite:`Rudin.1973`,
 say $f, g: \mathbb{R}^d \to \mathbb{R}$ is defined as
 
@@ -242,7 +230,7 @@ We will come back to this in the following section.
 ## Channels
 :label:`subsec_why-conv-channels`
 
-Returning to our Waldo detector, let's see what this looks like.
+Return to the Waldo detector.
 The convolutional layer picks windows of a given size
 and weighs intensities according to the filter $\mathsf{V}$, as demonstrated in :numref:`fig_waldo_mask`.
 We might aim to learn a model so that
@@ -253,9 +241,8 @@ we should find a peak in the hidden layer representations.
 :width:`400px`
 :label:`fig_waldo_mask`
 
-There is just one problem with this approach.
-So far, we blissfully ignored that images consist
-of three channels: red, green, and blue. 
+The preceding derivation omitted the three color channels in an image: red,
+green, and blue.
 In sum, images are not two-dimensional objects
 but rather third-order tensors,
 characterized by a height, width, and channel,
@@ -267,21 +254,15 @@ We thus index $\mathsf{X}$ as $[\mathsf{X}]_{i, j, k}$.
 The convolutional filter has to adapt accordingly.
 Instead of $[\mathbf{V}]_{a,b}$, we now have $[\mathsf{V}]_{a,b,c}$.
 
-Moreover, just as our input consists of a third-order tensor,
-it turns out to be a good idea to similarly formulate
-our hidden representations as third-order tensors $\mathsf{H}$.
-In other words, rather than just having a single hidden representation
-corresponding to each spatial location,
-we want an entire vector of hidden representations
-corresponding to each spatial location.
+We likewise formulate the hidden representation as a third-order tensor
+$\mathsf{H}$, assigning a vector rather than a scalar to each spatial location.
 We could think of the hidden representations as comprising
 a number of two-dimensional grids stacked on top of each other.
 As in the inputs, these are sometimes called *channels*.
 They are also sometimes called *feature maps*,
 as each provides a spatialized set
 of learned features for the subsequent layer.
-Intuitively, you might imagine that at lower layers that are closer to inputs,
-some channels could become specialized to recognize edges while
+In early layers, some channels may specialize in edges while
 others could recognize textures.
 
 To support multiple channels in both inputs ($\mathsf{X}$) and hidden representations ($\mathsf{H}$),
@@ -327,9 +308,10 @@ do not preserve arbitrary functions.
 
 Adding channels restores some of the expressive capacity removed by locality
 and translation equivariance. It is natural to add channels other than red,
-green, and blue. Many satellite
-images, in particular for agriculture and meteorology, are hyperspectral instead: they have
-tens to hundreds of channels, reporting data on many different wavelengths. In the following we will see how to use convolutions effectively to manipulate the dimensionality of the images they operate on, how to move from location-based to channel-based representations, and how to deal with large numbers of categories efficiently. 
+green, and blue. Many satellite images used in agriculture and meteorology are
+hyperspectral, with tens to hundreds of channels that record different
+wavelengths. The following sections show how convolutions transform spatial
+dimensions and channels efficiently.
 
 ## Exercises
 
@@ -391,7 +373,7 @@ object detection and segmentation systems work this way.
 Desiderata for a vision architecture:
 
 - **Translation equivariance**: in the earliest layers, shifting
-  the input should simply shift the feature map. The same patch
+  the input should shift the feature map by the same amount. The same patch
   gets the same response wherever it appears.
 - **Locality**: early layers should look only at small
   neighborhoods, ignoring distant regions.

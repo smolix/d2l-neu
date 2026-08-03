@@ -56,8 +56,8 @@ with one hidden layer and 256 hidden units
 (:numref:`fig_mdl-mlp-arch`).
 Both the number of layers and their width are adjustable
 (they are considered hyperparameters).
-Typically, we choose each layer width to be a power of 2, which is efficient
-for hardware memory addressing.
+Powers-of-two widths often align well with accelerator kernels, although the
+fastest dimensions depend on the hardware and numerical precision.
 
 ![The two-layer MLP of this section: a batched input is flattened to 784 features, mapped by an affine layer to a 256-dimensional hidden representation, passed through a ReLU, then mapped by a second affine layer to 10 logits.](../img/mdl-mlp-arch.svg)
 :label:`fig_mdl-mlp-arch`
@@ -149,9 +149,8 @@ class MLPScratch(d2l.Classifier):
 
 ### Model
 
-To make sure we know how everything works,
-we will implement the ReLU activation ourselves
-rather than invoking the built-in `relu` function directly.
+To expose the complete forward computation, we implement ReLU directly rather
+than invoking the built-in `relu` function.
 
 ```{.python .input #mlp-implementation-model-1}
 %%tab mxnet
@@ -180,8 +179,8 @@ def relu(X):
 Since we are disregarding spatial structure,
 we `reshape` each two-dimensional image into
 a flat vector of length  `num_inputs`.
-Finally, we implement our model
-with just a few lines of code. Since autograd handles the backward pass, this is all that it takes.
+The forward method then requires only the flattening and two affine
+computations. Automatic differentiation supplies the backward pass.
 
 ```{.python .input #mlp-implementation-model-2}
 @d2l.add_to_class(MLPScratch)
@@ -209,7 +208,8 @@ shuffling, framework defaults, and optimization settings also affect the result.
 
 ## Concise Implementation
 
-As you might expect, by relying on the high-level APIs, we can implement MLPs even more concisely.
+High-level framework layers provide a more concise implementation of the same
+architecture.
 
 ### Model
 
@@ -271,28 +271,17 @@ class MLP(d2l.Classifier):
         return self.output(nnx.relu(self.hidden(X)))
 ```
 
-Previously, we defined `forward` methods for models to transform input using the model parameters.
-These operations are essentially a pipeline:
-you take an input and
-apply a transformation (e.g.,
-matrix multiplication with weights followed by bias addition),
-then repetitively use the output of the current transformation as
-input to the next transformation.
-However, you may have noticed that 
-no `forward` method is defined here.
-In fact, `MLP` inherits the `forward` method from the `Module` class (:numref:`subsec_oo-design-models`) to 
-simply invoke `self.net(X)` (`X` is input),
-which is now defined as a sequence of transformations
-via the `Sequential` class.
-The `Sequential` class abstracts the forward process
-enabling us to focus on the transformations.
-We will further discuss how the `Sequential` class works in :numref:`subsec_model-construction-sequential`.
+A `forward` method applies each model transformation to the output of the
+preceding one. Here, `MLP` inherits the `Module` implementation
+(:numref:`subsec_oo-design-models`), which invokes `self.net(X)`. The
+`Sequential` container applies its registered transformations in order and
+therefore defines the forward computation. :numref:`subsec_model-construction-sequential`
+examines this container in detail.
 
 
 ### Training
 
-The training loop is exactly the same
-as when we implemented softmax regression.
+The training loop is the same as for softmax regression.
 This modularity enables us to separate
 matters concerning the model architecture
 from orthogonal considerations.
@@ -316,7 +305,9 @@ ReLU, and the two affine computations. The concise version represents the same
 architecture as a four-element `nn.Sequential` stack. The training loop, loss,
 and data loader remain unchanged from softmax regression.
 
-The from-scratch version also exposes why we reach for the high-level API: naming and tracking parameters by hand quickly becomes awkward. Imagine inserting another layer between layers 42 and 43; we would be stuck renaming or improvising a "layer 42b". `nn.Sequential` removes both problems at once.
+The from-scratch version also shows why high-level containers are useful:
+manually naming and tracking parameters becomes cumbersome as layers are added
+or reordered. `nn.Sequential` handles both registration and execution order.
 
 Three questions remain open, and each is the subject of one of the next sections:
 
@@ -324,7 +315,7 @@ Three questions remain open, and each is the subject of one of the next sections
 * **Why does such a flexible model generalize to unseen data at all?** (:numref:`sec_generalization_deep`)
 * **How can we regularize it to generalize better?** (:numref:`sec_dropout`)
 
-Answering them turns this small working model into a reliable building block.
+The following sections address these requirements for reliable training.
 
 
 ## Exercises
@@ -333,9 +324,9 @@ Answering them turns this small working model into a reliable building block.
 1. Try adding a hidden layer to see how it affects the results. In particular, add one to the *from-scratch* model while keeping its $\sigma = 0.01$ Gaussian initialization: you may find that the deeper network trains *worse*. Why that happens, and what to do about it, is the subject of :numref:`sec_numerical_stability`.
 1. Why is it a bad idea to insert a hidden layer with a single neuron? What could go wrong?
 1. How does changing the learning rate alter your results? With all other parameters fixed, which learning rate gives you the best results? How does this relate to the number of epochs?
-1. Let's optimize over all hyperparameters jointly, i.e., learning rate, number of epochs, number of hidden layers, and number of hidden units per layer.
+1. Optimize all hyperparameters jointly: learning rate, number of epochs, number of hidden layers, and number of hidden units per layer.
     1. What is the best result you can get by optimizing over all of them?
-    1. Why it is much more challenging to deal with multiple hyperparameters?
+    1. Why is it much more challenging to tune multiple hyperparameters?
     1. Describe an efficient strategy for optimizing over multiple parameters jointly.
 1. Compare the speed of the framework and the from-scratch implementation for a challenging problem. How does it change with the complexity of the network?
 1. Measure the speed of tensor--matrix multiplications for well-aligned and misaligned matrices. For instance, test for matrices with dimension 1024, 1025, 1026, 1028, and 1032.
@@ -366,7 +357,7 @@ Answering them turns this small working model into a reliable building block.
 ::: {.cover}
 [Dive into Deep Learning · §5.2]{.kicker}
 
-Implementing a **multilayer perceptron**<br>One hidden layer, two ways to build it, reaching **$\approx 0.87$** validation accuracy.
+**Implementing a Multilayer Perceptron**<br>From-scratch and framework-layer implementations; the displayed run reaches $\approx 0.87$ validation accuracy
 :::
 :::
 
@@ -403,10 +394,9 @@ softmax regression.
 Fashion-MNIST: $784$ inputs, $10$ classes. We pick **256**
 hidden units, giving $\approx 200\text{k}$ parameters.
 
-- **Width 256:** big enough to fit the data, small enough
-  to train in seconds.
-- **A power of 2** because matmul kernels run more efficiently
-  at those widths (nothing breaks at 250).
+- **Width 256:** a representative capacity for this example.
+- **A power of 2:** often favorable for accelerator kernels,
+  although performance depends on hardware and precision.
 - **One hidden layer** suffices here; spatial structure
   waits for convolutions.
 
@@ -464,8 +454,8 @@ applied elementwise:
 @mlp-implementation-model-1
 
 ::: {.d2l-note}
-Zero out the negatives, pass the positives through. That one
-kink is what lets a stack of affine maps bend.
+Map negative inputs to zero and retain positive inputs. This
+nonlinearity prevents the affine maps from collapsing into one.
 :::
 :::
 
@@ -482,7 +472,7 @@ $$\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}),
 @mlp-implementation-model-2
 :::
 
-::: {.slide title="Result: ≈0.87 validation accuracy"}
+::: {.slide title="Training the from-scratch model"}
 [From Scratch]{.kicker}
 
 The loss, the loaders, and the `Trainer` are **unchanged**
@@ -503,7 +493,7 @@ for a model with one hidden layer and a ReLU.
 
 [Concise]{.dtitle}
 
-[let the framework hold the parameters]{.dsub}
+[framework layers register parameters and compose operations]{.dsub}
 :::
 :::
 
@@ -553,11 +543,11 @@ Same architecture as the diagram, one compact method.
 :::
 :::
 
-::: {.slide title="Same loop, same result"}
+::: {.slide title="Reusing the training loop"}
 [Concise]{.kicker}
 
-Reusing the very same `trainer` and data, the concise model
-converges just like the scratch one:
+The concise model reuses the same `trainer` and data. Its
+trajectory can differ because its initializer is different:
 
 @mlp-implementation-training-2
 

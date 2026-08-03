@@ -114,10 +114,8 @@ class LinearRegressionScratch(d2l.Module):  #@save
         self.b = nnx.Param(jnp.zeros(1))
 ```
 
-Next we must define our model,
-relating its input and parameters to its output.
-Using the same notation as :eqref:`eq_linreg-y-vec`
-for our linear model we simply take the matrix--vector product
+We next define how the model maps its inputs and parameters to its output.
+Using the notation of :eqref:`eq_linreg-y-vec`, the linear model takes the matrix--vector product
 of the input features $\mathbf{X}$ 
 and the model weights $\mathbf{w}$,
 and add the offset $b$ to each example.
@@ -178,30 +176,24 @@ $$\frac{\partial \ell}{\partial \mathbf{w}} = (\hat{y} - y)\, \mathbf{x} \qquad 
 Differentiating the square produces the error $\hat{y} - y$, which is then
 multiplied by the derivative of $\hat{y}$ with respect to each parameter:
 $\mathbf{x}$ for the weights and $1$ for the bias. In words, *the gradient is
-the error-weighted input*: each weight $w_j$ will be nudged in proportion to
-how wrong the prediction was times how strongly $x_j$ contributed to it, and
-the bias simply soaks up the average error. Averaging these per-example
+the error-weighted input*: each weight $w_j$ receives a gradient proportional to the residual and to
+$x_j$, while the bias gradient equals the residual. Averaging these per-example
 gradients over a minibatch recovers exactly the closed-form update we wrote
-down in :eqref:`eq_linreg_batch_update`. This averaged gradient is precisely
-what the backward pass deposits in each parameter's gradient field, so when
-the `SGD` class below reads `param.grad`, you now know what it contains.
+down in :eqref:`eq_linreg_batch_update`. The backward pass stores this averaged gradient in each parameter's gradient
+field, which the `SGD` class below reads through `param.grad`.
 
 ## Defining the Optimization Algorithm
 
 As discussed in :numref:`sec_linear_regression`,
 linear regression has a closed-form solution.
-However, our goal here is to illustrate 
-how to train more general neural networks,
-and that requires that we teach you 
-how to use minibatch SGD.
-Hence we will take this opportunity
-to introduce your first working example of SGD.
+Our purpose here is to establish the minibatch SGD procedure used to train
+models that lack a closed-form solution.
 At each step, using a minibatch 
 randomly drawn from our dataset,
 we estimate the gradient of the loss
 with respect to the parameters.
-Next, we update the parameters
-in the direction that may reduce the loss.
+Next, we subtract a scaled gradient; for a suitable learning rate, this
+direction locally reduces the loss.
 
 The following code applies the update, 
 given a set of parameters, and a learning rate `lr`.
@@ -311,19 +303,19 @@ class SGD(d2l.HyperParameters):  #@save
         return optax.GradientTransformation(self.init, self.update)
 ```
 
-Every optimization step is built from the same moves: a forward pass and loss, a
-backward pass that fills each parameter's gradient with $\partial L/\partial
-\theta$ averaged over the minibatch, and an update that subtracts $\eta$ times the
-gradient from each parameter, *in place*. Two invariants govern their order. First,
+Every optimization step has a forward pass and loss, a backward pass that
+stores each parameter's minibatch-average gradient $\partial L/\partial
+\theta$,
+and an in-place update that subtracts $\eta$ times that gradient. Two ordering
+constraints matter. First,
 if the backward pass *accumulates* into whatever gradient is already stored
 (:numref:`sec_autograd`), those buffers must be cleared before it runs, or a
 leftover gradient from the previous minibatch contaminates this one. Second, the
 update must run last and *outside* the gradient graph, so that the subtraction is
 not itself differentiated and does not extend the graph; this is why it sits under
-a no-tracking guard. Miss the clearing and stale gradients leak from one batch into
-the next; miss the guard and the update either errors or silently grows the graph.
-Strip away the bookkeeping and training a neural network is exactly this loop, run
-on minibatch after minibatch, which is what `fit_epoch` implements below.
+a no-tracking guard. Without clearing, the next backward pass includes gradients from earlier
+minibatches. Without the guard, the update may raise an error or extend the
+computation graph. The `fit_epoch` method applies this sequence to each minibatch.
 
 We next define the `configure_optimizers` method, which returns an instance of the `SGD` class.
 
@@ -623,9 +615,8 @@ trainer.fit(model, data)
 The `fit` call above produces a live plot of the training and validation loss
 against the epoch. Both curves fall together and flatten near the irreducible
 noise floor (with $\sigma = 0.01$ the per-example squared loss bottoms out around
-$\sigma^2/2 \approx 5\times 10^{-5}$). The validation curve tracks the
-training curve with **no gap**: a two-dimensional linear model fit on 1000
-examples has no capacity to overfit. We return to the train/validation gap, and
+$\sigma^2/2 \approx 5\times 10^{-5}$). In this run, the validation curve closely tracks the training curve. That small
+gap is consistent with fitting a low-capacity model to 1000 examples. We return to the train/validation gap, and
 what to do when it opens, in :numref:`sec_generalization_basics`.
 
 Because we synthesized the dataset ourselves,
@@ -668,13 +659,13 @@ we are often less concerned
 with recovering true underlying parameters
 than with finding parameters 
 that lead to highly accurate prediction :cite:`Vapnik.1992`.
-Fortunately, even on difficult optimization problems,
-stochastic gradient descent can often find good solutions,
+Even on difficult optimization problems, stochastic gradient descent can often
+find parameters with low training loss,
 owing partly to the fact that, for deep networks,
 there exist many configurations of the parameters
 that lead to highly accurate prediction.
-Why the solutions that SGD finds among these many candidates
-also *generalize* so well is a deep question,
+Explaining why some solutions found by SGD also generalize well remains an
+active research problem,
 taken up in :numref:`sec_generalization_deep`.
 
 
@@ -742,7 +733,7 @@ curb overfitting, the first of many regularizers we will meet.
 ::: {.cover}
 [Dive into Deep Learning · §3.4]{.kicker}
 
-Built by hand once, demystified for good<br>**model · loss · optimizer · training loop: nothing but tensors and autograd**.
+Linear regression implemented from first principles<br>**model · loss · optimizer · training loop**.
 :::
 :::
 
@@ -751,7 +742,7 @@ Built by hand once, demystified for good<br>**model · loss · optimizer · trai
 
 ::: {.cols .vc}
 ::: {.col}
-Four pieces, built by hand today: a **model** (`w`, `b`, `forward`), a
+The implementation has four explicit pieces: a **model** (`w`, `b`, `forward`), a
 **loss**, an **optimizer**, and the **training loop** driving them,
 each slotted into the `Module` / `Trainer` / `DataModule` scaffold of
 the object-oriented-design section.
@@ -759,8 +750,8 @@ the object-oriented-design section.
 ::: {.d2l-note .rule}
 Because we manufactured the data (the synthetic-regression-data section,
 noise $\sigma = 0.01$), we can check a
-*correct* implementation against known targets. It must deliver **two
-numbers**: a loss landing on the noise floor
+*correct* implementation against known targets. We compare **two
+quantities**: a loss near the expected noise floor
 $\sigma^2/2 = 5\times10^{-5}$, and parameters returning to
 $\mathbf{w}^* = [2, -3.4]$, $b^* = 4.2$.
 :::
@@ -793,7 +784,7 @@ We need parameters before we can optimize them. Draw `w` from a tiny Gaussian, s
 PyTorch's `requires_grad=True` is the flag that matters: it tells autograd
 to track `w` and `b` so gradients can flow back from the loss (JAX tracks
 via its `grad` transformation, TensorFlow via `GradientTape`, MXNet via
-`attach_grad`). For a single linear layer **any** small init works
+`attach_grad`). For this single linear layer, a small initialization works
 (exercise 1); symmetry breaking only matters once we stack layers.
 :::
 :::
@@ -803,7 +794,7 @@ via its `grad` transformation, TensorFlow via `GradientTape`, MXNet via
 
 ::: {.cols .vc}
 ::: {.col}
-The whole model is an affine map: multiply the feature matrix by the weights and add the bias.
+The model is an affine map: multiply the feature matrix by the weights and add the bias.
 
 $$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$$
 
@@ -867,7 +858,7 @@ $$\nabla_{\mathbf{w}} L = \frac{1}{|\mathcal{B}|}\sum_{i\in\mathcal{B}}(\hat{y}^
 . . .
 
 ::: {.d2l-note .rule}
-The gradient is the **error-weighted input**: a large residual $\hat{y}-y$ gives a large push, in the direction of $\mathbf{x}$. This is exactly what the backward pass fills in and what the SGD step subtracts.
+The gradient is the **error-weighted input**: a large residual $\hat{y}-y$ gives a proportionally large weight gradient in the direction of $\mathbf{x}$. This is exactly what the backward pass fills in and what the SGD step subtracts.
 :::
 :::
 
@@ -889,7 +880,7 @@ preserving the pure computation required by `jit` and `grad`.
 ::: {.slide title="The optimizer: minibatch SGD by hand" except="tensorflow,jax"}
 [Optimizer]{.kicker}
 
-The update rule $\;\theta \leftarrow \theta - \eta\,\nabla_\theta L\;$ is the entire algorithm: walk the parameters and subtract the gradient in place. `configure_optimizers` then hands the parameters to it.
+The update rule $\;\theta \leftarrow \theta - \eta\,\nabla_\theta L\;$ defines the update: subtract the scaled gradient from each parameter in place. `configure_optimizers` then hands the parameters to it.
 
 @linear-regression-scratch-defining-the-optimization-algorithm-1
 :::
@@ -937,7 +928,8 @@ Each minibatch update consists of four steps:
 . . .
 
 ::: {.d2l-note .warn}
-Clear before the backward pass, or stale gradients leak between batches; keep the update outside the graph, or it gets differentiated.
+Clear gradients before the backward pass so they do not accumulate across
+minibatches. Keep the update outside the graph so it is not differentiated.
 :::
 :::
 
@@ -952,7 +944,7 @@ estimates correspond to that configuration:
 :::
 
 ::: {.slide title="Training loss approaches the noise level"}
-[Training · payoff]{.kicker}
+[Training · results]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -967,19 +959,19 @@ The `fit` call drives the four-step loop over every minibatch and plots both los
 @!linear-regression-scratch-training-3
 
 ::: {.d2l-note .rule}
-Both curves flatten at $\approx 5\times10^{-5}$, **exactly** the
-$\sigma^2/2$ we predicted, so the residual error is the noise we injected,
-not a bug. And validation tracks training with **no gap**: 2 parameters
-on 1000 points has no room to overfit (the generalization section).
+Both curves flatten near $\approx 5\times10^{-5}$, consistent with the
+$\sigma^2/2$ noise contribution. Validation closely tracks training in this
+run, as expected for 2 parameters fitted to 1000 points (the generalization
+section).
 :::
 :::
 :::
 :::
 
-::: {.slide title="The truth, recovered"}
-[Training · payoff]{.kicker}
+::: {.slide title="Compare fitted and generating parameters"}
+[Training · results]{.kicker}
 
-We synthesized the data, so we know the truth: $\mathbf{w}^*=[2,-3.4]$, $b^*=4.2$. The result:
+The synthetic generator specifies $\mathbf{w}^*=[2,-3.4]$, $b^*=4.2$. The result:
 
 @linear-regression-scratch-training-4
 
@@ -987,7 +979,8 @@ We synthesized the data, so we know the truth: $\mathbf{w}^*=[2,-3.4]$, $b^*=4.2
 Off by a few $10^{-4}$ at most. Exact recovery needs linearly
 independent features and is *not* the everyday goal (deep models have
 many equally good parameter settings, and we care about accurate
-**prediction**), but on a problem with one right answer, our loop found it.
+**prediction**), and accurate prediction is normally the primary objective. Here the fitted
+parameters are close to the generating values.
 :::
 :::
 

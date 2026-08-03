@@ -34,23 +34,23 @@ The chapter develops these issues through seven examples. Actor--critic methods 
 
 Training loss alone is often insufficient to diagnose a reinforcement-learning run. A value estimate can diverge while its regression loss decreases, and a poor policy can continue to generate apparently regular curves. :numref:`tab_rl_diagnostics` collects the additional measurements used in this chapter and indicates how they should be interpreted.
 
-:How to know your reinforcement learning is broken. Healthy readings are quoted at this chapter's scale; the constants move with the task, the shapes do not.
+:Diagnostics for the reinforcement-learning experiments in this chapter. The reported ranges are task-specific; the qualitative patterns are more general.
 :label:`tab_rl_diagnostics`
 
 | diagnostic | healthy reading | measured in |
 |:--|:--|:--|
 | the ratio $\rho_t$ on the first reuse epoch | exactly $1$, by construction; anything else is a bug in the frozen log-probabilities | :numref:`sec_ppo` |
-| approximate KL within a batch | small and front-loaded: it climbs for a few epochs, then flattens; climbing without flattening is runaway drift | :numref:`sec_ppo` |
+| approximate KL within a batch | small and front-loaded: it increases for a few epochs, then flattens; continued growth indicates excessive policy change | :numref:`sec_ppo` |
 | fraction of ratios outside the clip band | about one check in twenty; several times that means the reuse or the step size is too aggressive | :numref:`sec_ppo` |
-| policy entropy | a slow decay, about $0.65$ to $0.25$ nats over a CartPole run; a crash toward zero is saturation, the unclipped death | :numref:`sec_ppo` |
+| policy entropy | a slow decrease, about $0.65$ to $0.25$ nats over a CartPole run; a rapid decrease toward zero indicates policy saturation | :numref:`sec_ppo` |
 | weight-only effective sample size of the reused batch | ratio concentration: weights nearly flat through the reuse epochs; concentration to half or less says stop reusing; blind to advantages, dependence, and state staleness | :numref:`sec_ppo` |
 | correlation of the TD error with the Monte Carlo advantage | about $0.3$ early, falling toward zero as episodes lengthen, consistent with the Monte Carlo weight dissolving into tail noise; a descriptive diagnostic, not a critic certificate | :numref:`sec_actorcritic` |
 | pre-clip gradient norm, and how often the clip binds | stable norms, the clip binding on a bounded fraction of updates: about a third for the bootstrapped weight and none for Monte Carlo, at matched normalization; descriptive of where variance lives, not proof of signal | :numref:`sec_actorcritic` |
 | streak lengths at the ceiling | long runs of consecutive perfect batches, a run-specific stability visualization; arriving without resting points at the estimator's noise, not the policy | :numref:`sec_actorcritic` |
 | value estimate at the start state | below the ceiling of the objective the update defines, $1/(1-\gamma) = 100$ on CartPole's continuing formulation, by tens of points at most; above the line is overestimation, growing without bound is divergence | :numref:`sec_dqn` |
-| best against final trailing window, across seeds | descriptive statistics of the curve only: the final window is a stopping-time lottery, the retrospective best window is optimistic selection; report a predeclared fixed-budget evaluation instead | :numref:`sec_dqn`, and the boxed reading rule of :numref:`sec_baselines` |
-| the entropy trace of a stochastic continuous policy | descends from its wide start and ends within about a nat of the autotuning target $-\dim \mathcal{A}$; an entropy that can rise without bound, or that disagrees with a one-line quadrature check of the density, means the squashing bookkeeping is broken | :numref:`sec_sac` |
-| predicted value against delivered return | the promise at or below what any policy can earn; a promise above the computable optimum is overestimation, established with no baseline needed | :numref:`sec_offline`, and the twin-against-single calibration of :numref:`sec_sac` |
+| best against final trailing window, across seeds | descriptive statistics of the curve only: the final window depends on when training stops, while the retrospective best window is affected by optimistic selection; report a predeclared fixed-budget evaluation instead | :numref:`sec_dqn`, and the boxed reading rule of :numref:`sec_baselines` |
+| the entropy trace of a stochastic continuous policy | descends from its wide start and ends within about a nat of the autotuning target $-\dim \mathcal{A}$; an entropy that rises without bound, or disagrees with a one-line quadrature check of the density, indicates an incorrect squashing-density calculation | :numref:`sec_sac` |
+| predicted value against evaluated return | predictions should not exceed the maximum achievable return; a prediction above a computable optimum establishes overestimation without requiring a baseline | :numref:`sec_offline`, and the twin-against-single calibration of :numref:`sec_sac` |
 
 Most experiments use CartPole and several random seeds. :numref:`sec_regularized` and :numref:`sec_offline` use tabular gridworlds because their optimal values can be computed exactly, and :numref:`sec_rl_sequences` uses deterministic string concatenation rather than a simulator. The chapter does not cover multi-agent, meta-, hierarchical, goal-conditioned, partially observable, or model-based reinforcement learning. Large-scale RLHF, DPO, and additional GRPO variants are treated in the Language Models part.
 

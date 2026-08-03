@@ -49,7 +49,7 @@ from d2l import jax as d2l
 import jax
 ```
 
-Hyperparameters.
+## Hyperparameter Utilities
 
 ```{.python .input #utils-utility-functions-and-classes-2}
 @d2l.add_to_class(d2l.HyperParameters)  #@save
@@ -64,7 +64,7 @@ def save_hyperparameters(self, ignore=None):
         setattr(self, k, v)
 ```
 
-Progress bar.
+## Progress and Plotting
 
 ```{.python .input #utils-utility-functions-and-classes-3  n=22}
 #@save
@@ -206,7 +206,7 @@ def flush(self):
     self._render(thread=False)
 ```
 
-Plot learning curves and grid-world snapshots
+## Reinforcement Learning Visualizations
 
 ```{.python .input #utils-utility-functions-and-classes-18}
 %%tab pytorch, jax
@@ -274,9 +274,9 @@ def show_grid(desc, values, policy, titles=None):  #@save
     fig.tight_layout()
 ```
 
-Trainer
+## Training Utilities
 
-Legacy helper functions retained for backward compatibility:
+The following legacy helper functions are retained for backward compatibility:
 
 ```{.python .input #utils-utility-functions-and-classes-8}
 %%tab mxnet
@@ -1010,7 +1010,7 @@ def grad_clipping(grads, theta):  #@save
     return new_grad
 ```
 
-More for the attention chapter.
+## Sequence and Attention Utilities
 
 ```{.python .input #utils-utility-functions-and-classes-16}
 %%tab pytorch, mxnet, tensorflow
@@ -1369,11 +1369,11 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
 The legacy helpers in this section (`evaluate_accuracy`, `train_ch6`,
 `train_seq2seq`, `predict_seq2seq`, `MaskedSoftmaxCELoss`) are kept for
 parity with the original D2L implementation, which predates the unified
-`d2l.Trainer` class introduced in this edition. They are deliberately
-not provided for JAX, and PyTorch only ships the subset that is genuinely
-useful outside of the `Trainer` flow. If you are reading the JAX tab,
+`d2l.Trainer` class introduced in this edition. They are not provided for
+JAX, and the PyTorch module includes only the subset used outside the
+`Trainer` workflow. If you are reading the JAX tab,
 the corresponding chapters use `d2l.Trainer.fit(model, data)` end-to-end;
-the per-batch logic that these helpers spell out lives inside
+the corresponding per-batch logic is implemented in
 `Trainer.fit_epoch` and the `@d2l.add_to_class` extensions defined
 alongside it. The MXNet and TensorFlow tabs additionally retain
 `evaluate_accuracy` because some of their earlier-chapter snippets call
@@ -1387,7 +1387,7 @@ The `d2l` package collects shared utility classes and
 functions reused across the book — `Trainer`, `Module`,
 `DataModule`, `Classifier`, plotting helpers, etc.
 
-This page is the canonical listing of those helpers. Most
+This page lists those helpers and their roles. Most
 chapters subclass and extend them rather than reimplement
 from scratch.
 :::
@@ -1409,8 +1409,7 @@ from scratch.
 - The display helpers are intentionally stateful: they remember
   previous points so chapter code can call `plot` or `add` from
   inside minibatch loops.
-- For lecture slides, the important invariant is not the plotting
-  implementation; it is the API shape: log scalar metrics against
+- The shared API logs scalar metrics against
   an x-axis such as epoch, update count, or wall-clock time.
 :::
 
@@ -1438,8 +1437,8 @@ from scratch.
   entry point for every learning curve in the RL chapters.
 - `show_grid` renders a gridworld's values and greedy policy,
   reading the map shape from the environment description.
-- Deliberately tiny, and they only draw: every statistic the RL
-  chapters quote is computed in a visible notebook cell.
+- These functions only visualize values; the RL chapters compute each
+  reported statistic in a visible notebook cell.
 :::
 
 ::: {.slide title="Sequence-model helpers"}
@@ -1455,7 +1454,7 @@ from scratch.
 ::: {.slide title="Recap"}
 - The `d2l` library provides reusable training, plotting,
   and data primitives so chapter code can focus on the
-  ideas, not boilerplate.
+  chapter-specific concepts.
 - Newer chapters use the `Trainer.fit(model, data)` shape;
   legacy chapters retain framework-specific helpers where
   older examples depend on them.

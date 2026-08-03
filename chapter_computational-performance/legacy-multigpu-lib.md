@@ -13,11 +13,10 @@ symbols:
   * `d2l.split_batch` (mxnet): `chapter_natural-language-processing-applications/natural-language-inference-attention.md`, `chapter_computer-vision/{image-augmentation,kaggle-cifar10,kaggle-dog}.md`
   * `d2l.resnet18` (tensorflow, mxnet): `chapter_computer-vision/image-augmentation.md`, `chapter_computer-vision/kaggle-cifar10.md`
   * `d2l.evaluate_accuracy_gpus` (mxnet): `chapter_computer-vision/{image-augmentation,kaggle-cifar10}.md`
-Semantics are frozen byte-for-byte as they were in the pre-rebuild
-`multiple-gpus.md` / `multiple-gpus-concise.md`, so those chapters' committed
-outputs stay reproducible from source without a re-capture. This file is
-deleted, and its symbols removed, when ch. 17–19 (the Language Models / Image
-Models parts) drop their tensorflow/mxnet tabs — a removal already expected.
+The code remains byte-for-byte identical to its pre-rebuild form in
+`multiple-gpus.md` / `multiple-gpus-concise.md`, preserving the committed
+outputs without another capture. This file and its symbols can be removed when
+Chapters 17–19 drop their TensorFlow and MXNet tabs.
 -->
 
 <!-- These labels are NOT rendered (this file is build-only, absent from

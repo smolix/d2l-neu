@@ -36,7 +36,7 @@ All are freely accessible online except where noted.
 **Books**
 
 - [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 6 (Deep Feedforward Networks) is the canonical reference for hidden units, activation functions, the universal approximation theorem, and backpropagation as reverse-mode differentiation; Chapter 7 covers dropout and regularization.
-- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/) — free online; Chapter 2 derives the four equations of backpropagation from first principles with unusual clarity, a strong companion to this chapter's backprop section.
+- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/) — free online; Chapter 2 derives the four equations of backpropagation from first principles step by step, complementing this chapter's backpropagation section.
 - [Understanding Deep Learning — Simon J. D. Prince](https://udlbook.github.io/udlbook/) — free PDF; a modern (2023), figure-rich treatment whose early chapters on shallow and deep networks, initialization, and training map directly onto this chapter.
 - [Deep Learning: Foundations and Concepts — Bishop & Bishop](https://www.bishopbook.com/) — free online edition; a probabilistically-flavoured (2024) account of MLPs, backpropagation, initialization, and regularization.
 
@@ -44,7 +44,7 @@ All are freely accessible online except where noted.
 
 - [CMU 11-785 Introduction to Deep Learning — Bhiksha Raj et al.](https://deeplearning.cs.cmu.edu/) — free slides and recordings; devotes multiple lectures to the perceptron, universal approximation, and backpropagation at exactly this chapter's depth.
 - [Stanford CS231n: Deep Learning for Computer Vision](https://cs231n.github.io/) — free course notes; the "Neural Networks" and "Backpropagation, Intuitions" modules are one of the most widely cited online treatments of the computational-graph view of backprop and the activation-function comparison.
-- [MIT 6.S191: Introduction to Deep Learning — Amini & Amini](https://introtodeeplearning.com/) — free, updated annually; the opening lectures build the MLP and training loop from scratch with polished visuals.
+- [MIT 6.S191: Introduction to Deep Learning — Amini & Amini](https://introtodeeplearning.com/) — free, updated annually; the opening lectures build the MLP and training loop from scratch with accompanying visual explanations.
 - [NYU Deep Learning — LeCun & Canziani](https://atcold.github.io/NYU-DLSP21/) — free notebooks and videos; gradient descent, backpropagation, and training taught by Yann LeCun, a founder of the field, and Alfredo Canziani.
 
 **Foundational papers**
@@ -62,7 +62,7 @@ All are freely accessible online except where noted.
 
 - [TensorFlow Playground — Smilkov & Carter](https://playground.tensorflow.org/) — free, zero-install; tune depth, width, activation, and regularization and watch a decision boundary train in real time, a hands-on way to build hidden-layer intuition.
 - [Backpropagation, Intuitions — Stanford CS231n](https://cs231n.github.io/optimization-2/) — free; the gate/computational-graph view with worked numerical examples, a concrete complement to this chapter's backprop derivation.
-- [micrograd — Andrej Karpathy](https://github.com/karpathy/micrograd) — free; a ~100-line scalar autograd engine plus a [video walkthrough](https://www.youtube.com/watch?v=VMj-3S1tku0) that builds it from scratch, a good way to internalize the backprop section (and the blueprint for its capstone exercise).
-- [Yes you should understand backprop — Andrej Karpathy](https://karpathy.medium.com/yes-you-should-understand-backprop-e2f06810dcbe) — free; a short argument, with real failure cases (saturated sigmoids, dead ReLUs, exploding clips), for why treating backprop as a leaky abstraction bites practitioners.
+- [micrograd — Andrej Karpathy](https://github.com/karpathy/micrograd) — free; a ~100-line scalar autograd engine plus a [video walkthrough](https://www.youtube.com/watch?v=VMj-3S1tku0) that builds it from scratch, a compact implementation related to the backpropagation section and its capstone exercise.
+- [Yes you should understand backprop — Andrej Karpathy](https://karpathy.medium.com/yes-you-should-understand-backprop-e2f06810dcbe) — free; a short argument, for practical analysis of saturated sigmoids, inactive ReLUs, exploding gradients, and gradient clipping.
 - [Double Descent — MLU-Explain](https://mlu-explain.github.io/double-descent/) — free, interactive; animates the interpolation threshold and second descent, a clear visual companion to the modern-generalization section.
 - [KAN: Kolmogorov–Arnold Networks — Liu et al. (2024)](https://arxiv.org/abs/2404.19756) — free; a recent alternative that places learnable activations on edges rather than fixed activations on nodes, useful context for where the MLP sits among modern parameterizations.

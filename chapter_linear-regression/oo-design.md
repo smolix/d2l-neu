@@ -83,7 +83,7 @@ def add_to_class(Class):  #@save
     return wrapper
 ```
 
-Let's have a quick look at how to use it. We plan to implement a class `A` with a method `do`. Instead of having code for both `A` and `do` in the same code block, we can first declare the class `A` and create an instance `a`.
+To illustrate its use, we declare a class `A` and create an instance `a` before defining its method `do` in a later cell.
 
 ```{.python .input #oo-design-utilities-2}
 class A:
@@ -93,7 +93,7 @@ class A:
 a = A()
 ```
 
-Next we define the method `do` as we normally would, but not in class `A`'s scope. Instead, we decorate this method by `add_to_class` with class `A` as its argument. In doing so, the method is able to access the member variables of `A` just as we would expect had it been included as part of `A`'s definition. Let's see what happens when we invoke it for the instance `a`.
+We define `do` outside the original class block and decorate it with `add_to_class(A)`. The registered method can access the instance attributes of `A` in the same way as a method written in the class definition. We then invoke it on `a`.
 
 ```{.python .input #oo-design-utilities-3}
 @add_to_class(A)
@@ -402,17 +402,17 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
 ```
 
 :begin_tab:`mxnet`
-You may notice that `Module` is a subclass of `nn.Block`, the base class of neural networks in Gluon.
+`Module` is a subclass of `nn.Block`, the base class of neural networks in Gluon.
 It provides convenient features for handling neural networks. For example, if we define a `forward` method, such as `forward(self, X)`, then for an instance `a` we can invoke this method by `a(X)`. This works since it calls the `forward` method in the built-in `__call__` method. You can find more details and examples about `nn.Block` in :numref:`sec_model_construction`.
 :end_tab:
 
 :begin_tab:`pytorch`
-You may notice that `Module` is a subclass of `nn.Module`, the base class of neural networks in PyTorch.
+`Module` is a subclass of `nn.Module`, the base class of neural networks in PyTorch.
 It provides convenient features for handling neural networks. For example, if we define a `forward` method, such as `forward(self, X)`, then for an instance `a` we can invoke this method by `a(X)`. This works since it calls the `forward` method in the built-in `__call__` method. You can find more details and examples about `nn.Module` in :numref:`sec_model_construction`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-You may notice that `Module` is a subclass of `tf.keras.Model`, the base class of neural networks in TensorFlow.
+`Module` is a subclass of `tf.keras.Model`, the base class of neural networks in TensorFlow.
 It provides convenient features for handling neural networks. For example, it invokes the `call` method in the built-in `__call__` method. Here we redirect `call` to the `forward` method, saving its arguments as a class attribute, consistent with the `forward` convention used elsewhere in the book.
 Note that in `__init__` we remove the `loss` instance attribute
 that Keras 3 sets to `None`,
@@ -428,7 +428,7 @@ book. Later, `nnx.jit` and `nnx.value_and_grad` will traverse that object graph
 without requiring a separate parameter dictionary.
 :end_tab:
 
-##  Data
+## Data
 :label:`oo-design-data`
 
 The `DataModule` class is the base class for data. Quite frequently the `__init__` method is used to prepare the data. This includes downloading and preprocessing if needed. The `train_dataloader` returns the data loader for the training dataset. A data loader is a (Python) generator that yields a data batch each time it is used. This batch is then fed into the `training_step` method of `Module` to compute the loss. There is an optional `val_dataloader` to return the validation dataset loader. It behaves in the same manner, except that it yields data batches for the `validation_step` method in `Module`.
@@ -757,7 +757,7 @@ collaborating classes:
 ::: {.slide title="Define a class, then grow it"}
 [Utilities]{.kicker}
 
-A notebook wants short cells, so declare the **shell** first and instantiate it...
+To keep notebook cells focused, declare the class first and instantiate it:
 
 @oo-design-utilities-2
 
@@ -789,7 +789,7 @@ each next to the prose that explains it.
 :::
 :::
 
-::: {.slide title="Stop hand-copying constructor args"}
+::: {.slide title="Store constructor arguments consistently"}
 [Utilities]{.kicker}
 
 Every `__init__` is full of `self.lr = lr; self.n = n; ...`. The
@@ -843,9 +843,9 @@ rules:
 . . .
 
 ::: {.d2l-note .warn}
-So every naïve "plot the loss each batch" either breaks the compiled
-graph or drains the device pipeline. Real-time monitoring and efficiency
-seem to be at war.
+A direct plotting call in every batch can break a compiled graph or force
+frequent device synchronization. Monitoring therefore needs a separate path
+from the compiled training step.
 :::
 :::
 
@@ -886,7 +886,7 @@ compiled; push logging, plotting, and checkpointing off to the side.**
 Every model subclasses `Module` and supplies three things:
 
 - **`forward`** / `loss`: the prediction and how wrong it is.
-- **`training_step`**: loss on one batch (plots it for free).
+- **`training_step`**: computes the loss for one batch and schedules its metric for plotting.
 - **`configure_optimizers`**: the optimizer to use.
 
 ::: {.d2l-note}
@@ -1013,9 +1013,9 @@ self.val_model = nnx.view(
 :::
 
 ::: {.col}
-- `ProgressBoard` plots the loss live yet never blocks: **keep the hot
-  path pure and compiled; push logging off to the side**, a theme that
-  recurs all book.
+- `ProgressBoard` plots loss while reducing synchronization in the training
+  path: **keep compiled computation pure and move logging to a separate
+  path**. This design recurs throughout the book.
 :::
 :::
 :::
@@ -1033,9 +1033,9 @@ self.val_model = nnx.view(
 :::
 
 ::: {.col}
-- `ProgressBoard` plots the loss live yet never blocks: **keep the hot
-  path pure and compiled; push logging off to the side**, a theme that
-  recurs all book.
+- `ProgressBoard` plots loss while reducing synchronization in the training
+  path: **keep compiled computation pure and move logging to a separate
+  path**. This design recurs throughout the book.
 - **Watch the framing:** NNX keeps JAX transformations functional while
   presenting the model, variables, and optimizer as explicit object graphs.
 :::

@@ -51,7 +51,7 @@ import optax
 
 ## What Changed between 2015 and 2022
 
-The original ResNet recipe was already careful: SGD with momentum, weight decay, a learning rate dropped by a factor of 10 twice during training, and random crops and horizontal flips as augmentation :cite:`He.Zhang.Ren.ea.2016`. Between then and roughly 2022, every one of those choices was revisited. The first systematic accounting, in 2019, collected the accumulated tricks (warmup, cosine decay, label smoothing, Mixup, zero-initializing the last batch-norm scale in each block) and showed that stacking them, plus a small tweak to the downsampling path, lifts ResNet-50 from 75.3% to 79.3% :cite:`He.Zhang.Zhang.ea.2019`, an early sign that the recipe rivals the architecture. :numref:`tab_recipe_2015_2022` summarizes the full shift.
+The original ResNet recipe was already careful: SGD with momentum, weight decay, a learning rate dropped by a factor of 10 twice during training, and random crops and horizontal flips as augmentation :cite:`He.Zhang.Ren.ea.2016`. Between then and roughly 2022, every one of those choices was revisited. The first systematic accounting, in 2019, collected the accumulated techniques (warmup, cosine decay, label smoothing, Mixup, zero-initializing the last batch-norm scale in each block) and showed that stacking them, plus a small tweak to the downsampling path, lifts ResNet-50 from 75.3% to 79.3% :cite:`He.Zhang.Zhang.ea.2019`, an early sign that the recipe rivals the architecture. :numref:`tab_recipe_2015_2022` summarizes the full shift.
 
 :A 2015 ImageNet recipe and a representative high-accuracy recipe from the
 early 2020s. The later column is not a universal standard; strong recipes still
@@ -78,7 +78,9 @@ Adam-based sibling LAMB, used for recipe A1 above.
 
 The *schedule* row replaces discrete drops with a smooth cosine decay :cite:`Loshchilov.Hutter.2016`, preceded by a few epochs of linear warmup that protect the network from divergence while its randomly initialized layers produce large, poorly scaled gradients. We implement and plot it below.
 
-The *augmentation* and *regularization* rows are where most of the accuracy lives. RandAugment :cite:`cubuk2020randaugment` applies randomly chosen image transformations at a single tuned strength; Mixup :cite:`zhang2018mixup` and CutMix :cite:`yun2019cutmix` blend pairs of training images and their labels; label smoothing :cite:`Szegedy.Vanhoucke.Ioffe.ea.2016` softens the targets themselves; stochastic depth :cite:`huang2016stochasticdepth` randomly skips whole residual blocks during training. All of these inject noise that the network must average over, and averaging over more noise takes longer: that is why the *duration* row grows from 90 epochs to several hundred. A heavily regularized short run underperforms an unregularized one; regularization and duration must move together.
+The *augmentation* and *regularization* rows account for much of the accuracy improvement. RandAugment :cite:`cubuk2020randaugment` applies randomly chosen image transformations at a single tuned strength; Mixup :cite:`zhang2018mixup` and CutMix :cite:`yun2019cutmix` blend pairs of training images and their labels; label smoothing :cite:`Szegedy.Vanhoucke.Ioffe.ea.2016` softens the targets themselves; stochastic depth :cite:`huang2016stochasticdepth` randomly skips whole residual blocks during training. These methods alter the training targets, examples, or computation and
+generally require longer optimization; accordingly, the *duration* row grows
+from 90 epochs to several hundred. A heavily regularized short run underperforms an unregularized one; regularization and duration must move together.
 
 The final row changes what gets evaluated. Instead of the last iterate of a noisy stochastic optimization, modern recipes evaluate an exponential moving average (EMA) of the weights, a cheap online cousin of the averaging schemes studied by :citet:`Izmailov.Podoprikhin.Garipov.ea.2018`. It typically adds a few tenths of a point for one extra copy of the parameters.
 
@@ -273,7 +275,7 @@ $$
 $$
 :eqlabel:`eq_stochastic_depth`
 
-where the $1/(1-p)$ rescaling keeps the branch's expected contribution unchanged, so at evaluation time we simply use the block as-is. Modern implementations draw $b$ per *sample* rather than per batch. The wrapper below subclasses the `Residual` block of :numref:`sec_resnet` and inserts the drop before the addition; running a large batch through it in training mode confirms that close to a fraction $p$ of the samples pass through untouched.
+where the $1/(1-p)$ rescaling keeps the branch's expected contribution unchanged, so at evaluation time we use the block without stochastic dropping. Modern implementations draw $b$ per *sample* rather than per batch. The wrapper below subclasses the `Residual` block of :numref:`sec_resnet` and inserts the drop before the addition; running a large batch through it in training mode confirms that close to a fraction $p$ of the samples pass through untouched.
 
 ```{.python .input #training-recipes-stochastic-depth}
 %%tab pytorch
@@ -400,7 +402,9 @@ skip a dropped branch entirely and thereby shorten training.
 
 ### Averaging Weights
 
-The last row of :numref:`tab_recipe_2015_2022` costs almost nothing. Stochastic gradients keep the parameters jittering around a good region of the loss surface rather than settling at a point; averaging the iterates cancels much of that jitter and lands closer to the region's center, a phenomenon exploited more aggressively by stochastic weight averaging :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`. The online version keeps a *shadow copy* $\bar{\theta}$ of the parameters and after every update blends in the current weights,
+The last row of :numref:`tab_recipe_2015_2022` costs almost nothing. Stochastic gradients cause parameters to fluctuate within a low-loss region.
+Averaging the iterates reduces these fluctuations, an approach also used by
+stochastic weight averaging :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`. The online version keeps a *shadow copy* $\bar{\theta}$ of the parameters and after every update blends in the current weights,
 
 $$
 \bar{\theta} \leftarrow \beta \bar{\theta} + (1-\beta) \theta,
@@ -467,7 +471,7 @@ The choice of $\beta$ sets an averaging horizon of roughly $1/(1-\beta)$ steps. 
 
 ## Controlled Comparison on One Network
 
-Now we put the ingredients together. The network is the ResNet-18 of
+We now combine these ingredients. The network is the ResNet-18 of
 :numref:`sec_resnet`, rebuilt here from the library's `Residual` block. The
 task is Fashion-MNIST at $96 \times 96$ resolution, with one deliberate
 modification: we train on a random subset of 10,000 of the 60,000 training
@@ -745,7 +749,7 @@ Two practical warnings from this experiment. First, the recipes' hyperparameters
 
 ## Reading the Scoreboard
 
-The recipe story reshapes how you should read reported benchmark numbers, on ImageNet above all.
+These results change how reported benchmark numbers, especially on ImageNet, should be interpreted.
 
 First, ImageNet top-1 accuracy separates strong models less clearly than it
 once did, and the residual differences are heavily *recipe-confounded*. When
@@ -769,7 +773,7 @@ so it does not explain away the distribution shift. Together the studies say
 that both test distribution and annotation protocol matter once model
 accuracies are close.
 
-Third, the discriminating evaluations have moved downstream. Because classification at ImageNet scale is nearly solved, backbones are now separated by how well their features *transfer*: object detection on COCO and semantic segmentation on ADE20K stress resolution, receptive field, and memory behavior in ways a 224-pixel classification task does not, and they reorder models that are indistinguishable on top-1 accuracy. When we evaluate the architectures of the following sections, transfer performance is the score that modern papers argue over.
+Third, the discriminating evaluations have moved downstream. Because ImageNet classification distinguishes leading backbones less clearly than before, backbones are now separated by how well their features *transfer*: object detection on COCO and semantic segmentation on ADE20K stress resolution, receptive field, and memory behavior in ways a 224-pixel classification task does not, and they reorder models that are indistinguishable on top-1 accuracy. When we evaluate the architectures of the following sections, transfer performance is the score that modern papers argue over.
 
 ## Summary and Discussion
 
@@ -781,7 +785,9 @@ the cited ResNet-50 study their combined effect is about four ImageNet points.
 Our smaller experiment tests a compact subset of that menu on subsampled
 Fashion-MNIST and reports its seed-to-seed variation.
 
-That number carries two lessons beyond the ingredients themselves. Methodologically, no architecture comparison is meaningful unless the recipes match; the strong baseline, retrained with modern methods, is the control experiment of this field. And practically, if you have a fixed network and a fixed budget, tuning the recipe is usually the cheapest accuracy available. :numref:`sec_convnext` turns this logic around: starting from the modern recipe, it asks how much of the transformer's advantage over convnets survives once the recipe is equalized, and modernizes the architecture itself.
+That number carries two lessons beyond the ingredients themselves. Methodologically, architecture comparisons require comparable training
+procedures; a strong baseline retrained with the same methods provides the
+appropriate control. And practically, if you have a fixed network and a fixed budget, tuning the training procedure can be more economical than changing the architecture. :numref:`sec_convnext` turns this logic around: starting from the modern recipe, it asks how much of the transformer's advantage over convnets survives once the recipe is equalized, and modernizes the architecture itself.
 
 ## Exercises
 
@@ -844,7 +850,7 @@ $\lambda \sim \mathrm{Beta}(\alpha, \alpha)$:
 
 $$\tilde{\mathbf{x}} = \lambda \mathbf{x}_i + (1-\lambda) \mathbf{x}_j, \qquad \tilde{y} = \lambda y_i + (1-\lambda) y_j.$$
 
-Cross-entropy is linear in the target, so this is just a
+Cross-entropy is linear in the target, so this is a
 $\lambda$-weighted pair of ordinary losses:
 
 @training-recipes-mixup-1
@@ -924,6 +930,6 @@ AdamW), and never compare *training* losses across recipes.
   Mixup/CutMix, stochastic depth, weight EMA.
 - Regularization and duration move together; heavily regularized
   short runs underperform.
-- No architecture comparison is meaningful without matched recipes:
+- Architecture comparisons require matched training procedures:
   the strong baseline is the control experiment.
 :::

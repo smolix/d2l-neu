@@ -134,10 +134,9 @@ class SoftmaxRegression(d2l.Classifier):  #@save
 
 In :numref:`sec_softmax_scratch` we computed the softmax explicitly
 and then took its logarithm inside the cross-entropy loss. To keep that
-version usable we had to *clamp* the probabilities away from zero, a
-band-aid that prevents $\log 0$ but still forms the overflow-prone
-softmax first and silently kills the gradient on any clamped entry.
-Here we remove the problem at its source rather than patch its symptom.
+version usable we *clamped* probabilities away from zero. This prevents
+$\log 0$ but still forms the overflow-prone softmax and sets the gradient of a
+clamped entry to zero. Here we use a stable expression instead.
 
 Recall that the softmax function computes probabilities via
 
@@ -170,15 +169,12 @@ numerator never exceeds $1$, thus preventing numerical overflow. Numerical under
 occurs when $\exp(o_j - \bar{o})$ numerically evaluates as $0$. Nonetheless, a few steps down
 the road we might find ourselves in trouble when we want to compute $\log \hat{y}_j$ as $\log 0$.
 In particular, in backpropagation,
-we might find ourselves faced with a screenful
-of the dreaded `NaN` (Not a Number) results.
+the computation can produce `NaN` (Not a Number) values.
 
-Fortunately, we are saved by the fact that
-even though we are computing exponential functions,
-we ultimately intend to take their log
+The loss ultimately takes the logarithm of the expression involving the
+exponentials
 (when calculating the cross-entropy loss).
-By combining softmax and cross-entropy,
-we can escape the numerical stability issues altogether. We have:
+Combining softmax and cross-entropy yields a numerically stable expression. We have:
 
 $$
 \log \hat{y}_j =
@@ -186,7 +182,8 @@ $$
 o_j - \bar{o} - \log \sum_k \exp (o_k - \bar{o}).
 $$
 
-This avoids both overflow and underflow. We are not quite done, though,
+This avoids overflow and avoids taking the logarithm of a probability that
+underflowed to zero. We are not quite done, though,
 because the object we actually need is not $\log \hat y_j$ but the loss.
 For an example with true class $y$, the cross-entropy loss is
 $\ell = -\log \hat y_y$. Substituting the stabilized expression above turns
@@ -201,7 +198,7 @@ $$
 The first term, $\log \sum_k \exp(o_k)$, is the *log-sum-exp* function, a
 smooth upper bound on $\max_k o_k$ (you proved this, including the fact that
 the gap never exceeds $\log q$, in :numref:`sec_softmax`, exercise 6); the
-second equality is the only safe way
+second equality provides a stable way
 to evaluate it, since every exponent $o_k - \bar{o} \leq 0$. This is precisely
 what the built-in cross-entropy loss computes when handed raw logits: it never
 forms the softmax probabilities at all, so neither $\exp$ of a large number nor
@@ -215,7 +212,7 @@ the fused operation do the rest.
 
 For two classes with
 logits $(x, 0)$ the loss's first term is $\mathrm{lse}(x, 0) = \log(1 + e^x)$,
-which hugs $\max(x, 0)$ from above, with the gap largest at the tie $x = 0$,
+which approaches $\max(x, 0)$ from above, with the gap largest at the tie $x = 0$,
 where it equals $\log 2 \approx 0.69$, our bound $\log q$ for $q = 2$:
 
 ```{.python .input #softmax-regression-concise-lse-vs-max}
@@ -383,7 +380,7 @@ the 10 class scores. Everything else is inherited from
 ::: {.slide title="The forward pass returns logits"}
 [The model]{.kicker}
 
-Notice what `forward` does **not** do: there is no softmax. It
+The `forward` method does **not** apply softmax. It
 returns raw scores $\mathbf{o}\in\mathbb{R}^{10}$ (the *logits*).
 
 . . .
@@ -420,8 +417,8 @@ $-104$.
 
 ::: {.d2l-note .warn}
 Feed the from-scratch softmax the logits $\mathbf{o}=(1000, 0, 0)$:
-$\exp(1000)=\infty$, the ratio is $\infty/\infty=$ `NaN`, and one
-`NaN` poisons the entire backward pass. We watched this happen in the
+$\exp(1000)=\infty$, the ratio is $\infty/\infty=$ `NaN`, and a
+`NaN` propagates through the backward pass. The example in the
 softmax-from-scratch section; the fused loss below never forms that ratio.
 :::
 :::
@@ -445,7 +442,7 @@ $(0, 1]$: **no overflow**. The denominator sits in $[1, q]$.
 ::: {.slide title="Fix, step 2: never form the softmax"}
 [Numerical stability]{.kicker}
 
-Underflow could still bite if we then took $\log$ of a near-zero
+Underflow remains a problem if we then take $\log$ of a near-zero
 probability. But we only ever want $\log \hat y_j$ for the loss, so
 fold the $\log$ in and the division disappears:
 
@@ -453,8 +450,8 @@ $$\log \hat y_j = (o_j - \bar{o}) - \log \sum_k \exp(o_k - \bar{o}).$$
 
 . . .
 
-No probability is ever materialized: no $\exp$ of a large number, no
-$\log$ of a zero.
+No probability is materialized: the expression evaluates neither $\exp$ of a
+large positive argument nor $\log$ of an underflowed zero.
 :::
 
 ::: {.slide title="The log-sum-exp loss"}
@@ -470,8 +467,7 @@ $$\ell(y, \mathbf{o}) =
 
 ::: {.cols}
 ::: {.col}
-$\log\sum_k\exp(o_k)$ is a **smooth upper bound on $\max_k o_k$**, the
-"soft max" the function is named for.
+$\log\sum_k\exp(o_k)$ is a **smooth upper bound on $\max_k o_k$**, which motivates the name *soft maximum*.
 :::
 
 ::: {.col}
@@ -493,8 +489,7 @@ $\mathrm{lse}(x, 0) = \log(1 + e^x)$. Plot it against $\max(x, 0)$:
 ::: {.d2l-note .rule}
 The gap peaks at the **tie** $x = 0$, where it equals
 $\log 2 \approx 0.69$, the bound $\log q$ you proved in the softmax-regression
-section (exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
-indistinguishable.
+section (exercise 6), here at $q = 2$. The gap decreases away from the tie.
 :::
 :::
 
@@ -516,8 +511,7 @@ $$\max_k o_k \;\le\; \mathrm{lse}(\mathbf{o}) \;\le\; \max_k o_k + \log q.$$
 ::: {.d2l-note .rule}
 The gap peaks at the **tie** $x = 0$, where it equals
 $\log 2 \approx 0.69$, the bound $\log q$ you proved in the softmax-regression
-section (exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
-indistinguishable.
+section (exercise 6), here at $q = 2$. The gap decreases away from the tie.
 :::
 :::
 
@@ -588,7 +582,7 @@ inherits the stable loss.
 
 [Train]{.dtitle}
 
-[same data, same curve, less code]{.dsub}
+[same linear model with framework components]{.dsub}
 :::
 :::
 
@@ -603,9 +597,9 @@ Same Fashion-MNIST, same 10 epochs, same `Trainer`:
 :::
 
 ::: {.col .narrow}
-Converges to the **same ~83–84%** validation accuracy as the
-from-scratch model of the softmax-from-scratch section, now in a handful of
-lines, and with the *correct* loss instead of a clamped one.
+In the displayed run, validation accuracy is **~83–84%**, close to the
+from-scratch model in the softmax-from-scratch section. The implementation uses
+a stable fused loss rather than explicit softmax followed by clipping.
 :::
 :::
 :::
@@ -616,7 +610,7 @@ lines, and with the *correct* loss instead of a clamped one.
 ::: {.cols}
 ::: {.col}
 - **From scratch** taught *what* softmax and cross-entropy are;
-  **concise** is what we reach for.
+  **concise** uses the stable framework components typical of applications.
 - The forward pass outputs **logits**; the built-in loss owns the
   softmax.
 :::
@@ -627,8 +621,8 @@ lines, and with the *correct* loss instead of a clamped one.
   `softmax → log → NLL`.
 - lse is a **smooth max**: within $\log q$ of $\max_k o_k$, gap largest
   ($\log 2$ for $q{=}2$) exactly at the tie.
-- Fewer lines **and** numerically correct: float32's $\pm 88$ (and $-104$)
-  cliffs never come into play.
+- The fused expression avoids the float32 $\pm 88$ (and $-104$) thresholds by
+  evaluating the stable log-sum-exp form directly.
 :::
 :::
 :::

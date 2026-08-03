@@ -73,10 +73,8 @@ and the gradient operator $\mathbf{v}^{(l)}$.
 Thus we are susceptible to the same
 problems of numerical underflow that often crop up
 when multiplying together too many probabilities.
-When dealing with probabilities, a common trick is to
-switch into log-space, i.e., shifting
-pressure from the mantissa to the exponent
-of the numerical representation.
+Products of probabilities can often be stabilized by switching to log-space,
+which represents multiplication as addition.
 Unfortunately, our problem above is more serious:
 each Jacobian $\mathbf{M}^{(l)}$ can stretch or shrink the vectors it acts on
 by widely varying factors (its *singular values*: for the rectangular
@@ -113,7 +111,7 @@ Since early artificial neural networks were inspired
 by biological neural networks,
 the idea of neurons that fire either *fully* or *not at all*
 (like biological neurons) seemed appealing.
-Let's take a closer look at the sigmoid
+Consider the sigmoid
 to see why it can cause vanishing gradients.
 
 ```{.python .input #numerical-stability-and-init-vanishing-gradients}
@@ -240,13 +238,12 @@ the first and second hidden units.
 In other words, we have permutation symmetry
 among the hidden units of each layer.
 
-This is more than just a theoretical nuisance.
+This symmetry directly restricts learning.
 Consider the aforementioned one-hidden-layer MLP
 with two hidden units.
 For illustration,
 suppose that the output layer transforms the two hidden units into only one output unit.
-Imagine what would happen if we initialized
-all the parameters of the hidden layer
+Suppose we initialized all the parameters of the hidden layer
 as $\mathbf{W}^{(1)} = c$ for some constant $c$.
 In this case, during forward propagation
 either hidden unit takes the same inputs and parameters
@@ -296,7 +293,7 @@ The variance analysis that follows explains *why* they work,
 ### Xavier Initialization
 :label:`subsec_xavier`
 
-Let's look at the scale distribution of
+We inspect the scale distribution of
 an output $o_{i}$ for some fully connected layer
 *without nonlinearities*.
 With $n_\textrm{in}$ inputs $x_j$
@@ -310,8 +307,8 @@ independently from the same distribution.
 Furthermore, let's assume that this distribution
 has zero mean and variance $\sigma^2$.
 Note that this does not mean that the distribution has to be Gaussian,
-just that the mean and variance need to exist.
-For now, let's assume that the inputs to the layer $x_j$
+only that its mean and variance must exist.
+Assume also that the inputs to the layer $x_j$
 also have zero mean and variance $\gamma^2$
 and that they are independent of $w_{ij}$ and independent of each other.
 In this case, we can compute the mean of $o_i$:
@@ -342,7 +339,7 @@ these vanish because the weights are independent of each other
 
 One way to keep the variance fixed
 is to set $n_\textrm{in} \sigma^2 = 1$.
-Now consider backpropagation.
+Next consider backpropagation.
 A gradient signal flowing *back* through this layer
 is multiplied by $\mathbf{W}^\top$,
 so by the identical variance computation,
@@ -353,7 +350,7 @@ therefore requires $n_\textrm{out} \sigma^2 = 1$,
 where $n_\textrm{out}$ is the number of outputs of this layer.
 This leaves us in a dilemma:
 we cannot satisfy both conditions simultaneously unless $n_\textrm{in}=n_\textrm{out}$.
-Instead, we simply try to satisfy:
+A compromise satisfies the averaged condition
 
 $$
 \begin{aligned}
@@ -362,8 +359,7 @@ $$
 \end{aligned}
 $$
 
-This is the reasoning underlying the now-standard
-and practically beneficial *Xavier initialization*,
+This variance argument yields *Xavier initialization*,
 named after the first author of its creators :cite:`Glorot.Bengio.2010`.
 Typically, the Xavier initialization
 samples weights from a Gaussian distribution
@@ -381,8 +377,7 @@ $$U\left(-\sqrt{\frac{6}{n_\textrm{in} + n_\textrm{out}}}, \sqrt{\frac{6}{n_\tex
 Though the assumption that there are no nonlinearities
 in the above mathematical reasoning
 can be easily violated in neural networks,
-the Xavier initialization method
-turns out to work well in practice.
+Xavier initialization often works well in practice.
 
 
 ### He Initialization
@@ -428,8 +423,8 @@ in :numref:`chap_computation`.
 
 ### Watching the Variance Propagate
 
-The 100-matrix product above showed the *explosion* half of the story. Now
-that we have the fix in hand, one plot shows all three regimes at once:
+The preceding matrix product demonstrated growth under an unsuitable scale.
+The following experiment compares three initialization regimes:
 push a unit-scale signal through $50$ ReLU layers of
 width $100$ and track the second moment $E[(h^{(l)})^2]$ of the activations
 (the quantity the He argument preserves) layer by layer, under three weight
@@ -580,7 +575,7 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 ::: {.cover}
 [Dive into Deep Learning · §5.4]{.kicker}
 
-Numerical stability & **initialization**<br>Why deep nets once refused to train: **the problem, the diagnosis, and the cure**.
+**Numerical Stability and Initialization**<br>Vanishing gradients, exploding gradients, and variance-preserving scales
 :::
 :::
 
@@ -589,18 +584,18 @@ Numerical stability & **initialization**<br>Why deep nets once refused to train:
 
 ::: {.cols .vc}
 ::: {.col}
-A deep net composes many layers before any loss is seen. The **initial**
-weights decide whether a signal survives the trip, forward and back.
+A deep network composes many layers. Its **initial** weights strongly affect
+the scale of forward activations and backward gradients.
 
 Three ideas made deep training routine:
 
 1. **Non-saturating activations** (ReLU).
 2. **Variance-preserving init** (Xavier, He).
-3. **Symmetry breaking** (random, never constant).
+3. **Symmetry breaking** (different initial weights across hidden units).
 
 ::: {.d2l-note .rule}
-Get init wrong and the gradient **dies** or **blows up** before
-learning starts. In the examples below, ten sigmoid layers reduce the gradient to
+An unsuitable initialization can make gradients **vanish** or **diverge**
+before useful learning begins. In the examples below, ten sigmoid layers reduce the gradient to
 $10^{-6}$; a hundred random matrices explode past $10^{24}$; and one
 closing plot shows $10^{80}$ vs $10^{-15}$ vs *flat* (naive, Xavier,
 He).
@@ -643,11 +638,11 @@ Whether the product grows or shrinks is set by the Jacobians' **scale**.
 
 . . .
 
-- Factors with spectral radius $< 1$ $\Rightarrow$ the product **shrinks geometrically** $\Rightarrow$ *vanishing* gradient: bottom layers stop learning.
+- Factors that contract relevant directions by $< 1$ $\Rightarrow$ the product **shrinks geometrically** $\Rightarrow$ *vanishing* gradient: early layers learn slowly.
 
 . . .
 
-- Factors with spectral radius $> 1$ $\Rightarrow$ the product **grows geometrically** $\Rightarrow$ *exploding* gradient: updates overshoot, loss goes to NaN.
+- Factors that expand relevant directions by $> 1$ $\Rightarrow$ the product **grows geometrically** $\Rightarrow$ *exploding* gradient: updates can overshoot or produce nonfinite loss.
 
 ::: {.d2l-note .rule}
 A constant per-layer factor $\rho$ compounds to $\rho^{\,L-\ell}$. Only $\rho \approx 1$ stays usable across depth.
@@ -664,7 +659,9 @@ The sigmoid's derivative **peaks at $0.25$** and is flat at zero in both tails.
 Stack ten such layers and $0.25^{10} \approx 10^{-6}$: the bottom layer sees a millionth of the gradient.
 
 ::: {.d2l-note}
-ReLU's derivative is exactly **1** wherever a unit is active, so it does not attenuate the signal. Hence ReLU is the modern default.
+ReLU's derivative is exactly **1** on active coordinates, so the activation
+does not attenuate gradients there. This property contributes to its use as a
+common default.
 :::
 :::
 
@@ -677,27 +674,28 @@ ReLU's derivative is exactly **1** wherever a unit is active, so it does not att
 ::: {.slide title="Exploding: one hundred random matrices, entries past 10²⁴"}
 [Unstable Gradients · exploding]{.kicker}
 
-Multiply one hundred $\mathcal{N}(0,1)$ matrices (`for i in range(100): M = M @ randn(4, 4)`), exactly what a deep linear stack does to a gradient. Each factor is a little too large, and the product compounds:
+Multiply one hundred $\mathcal{N}(0,1)$ matrices (`for i in range(100): M = M @ randn(4, 4)`), exactly what a deep linear stack does to a gradient. The scale of each factor causes rapid growth in the product:
 
 @!numerical-stability-and-init-exploding-gradients
 
 ::: {.d2l-note .warn}
-A poorly scaled initialization does *exactly this* to the gradient. No optimizer converges from here.
+A similarly scaled deep linear network produces gradients of unusable
+magnitude, for which ordinary optimization typically fails.
 :::
 :::
 
 ::: {.slide title="Three observable failure modes"}
 [Unstable Gradients · in practice]{.kicker}
 
-- **Loss is NaN from step 1** $\to$ exploding *initialization* (weights too large).
+- **Loss is NaN from step 1** $\to$ may indicate an exploding initialization or another numerical error.
 
 . . .
 
-- **Loss spikes mid-training** $\to$ exploding gradient on a bad batch.
+- **Loss spikes mid-training** $\to$ may indicate a large gradient on a particular minibatch.
 
 . . .
 
-- **Loss refuses to drop** $\to$ vanishing gradient (saturated activations), or a learning rate that is simply too small.
+- **Loss remains nearly constant** $\to$ may indicate vanishing gradients, saturated activations, or a learning rate that is too small.
 :::
 
 ::: {.slide title="Random init breaks a hidden symmetry"}
@@ -709,7 +707,8 @@ Set every weight in a layer to the same constant $c$:
 - Every unit gets the **same** gradient.
 - After each update the weights are **still** identical.
 
-An $h$-unit layer is then stuck behaving like a **single** unit, forever.
+The $h$-unit layer therefore behaves like a **single** unit under gradient
+descent.
 
 ::: {.d2l-note .warn}
 Gradient descent alone never breaks this tie. **Random** initialization does; so does dropout. Bias may still start at $0$.
@@ -819,10 +818,12 @@ assumptions. Run the sweep yourself in the notebook.
 ::: {.slide title="Initialization is necessary but not sufficient"}
 [Beyond]{.kicker}
 
-Good init buys a deep net that trains without NaNs. To reach **hundreds** of layers, modern architecture re-normalizes *during* training:
+A suitable initialization provides usable activation and gradient scales at
+the start of training. To reach **hundreds** of layers, modern architecture re-normalizes *during* training:
 
 - **BatchNorm / LayerNorm** rescale activations to unit variance each step, lifting the burden off init.
-- **Residual connections** $\mathbf{h}^{(\ell+1)} = \mathbf{h}^{(\ell)} + f(\mathbf{h}^{(\ell)})$ give the gradient a shortcut, so shrinkage stops compounding.
+- **Residual connections** $\mathbf{h}^{(\ell+1)} = \mathbf{h}^{(\ell)} + f(\mathbf{h}^{(\ell)})$ provide an identity contribution to the gradient, reducing repeated
+attenuation through residual branches.
 
 We return to both in the chapters on modern CNNs.
 :::
@@ -833,14 +834,14 @@ We return to both in the chapters on modern CNNs.
 ::: {.cols}
 ::: {.col}
 - A deep gradient is a **product of per-layer Jacobians**, so it vanishes or explodes without care.
-- **Vanishing:** saturating activations (sigmoid/tanh) crush the signal; ReLU keeps it.
+- **Vanishing:** saturating activations such as sigmoid and tanh attenuate gradients; ReLU avoids positive-side saturation.
 - **Exploding:** over-large weights drive the product, and the loss, to NaN.
 :::
 
 ::: {.col}
 - **Fix the scale:** init weights so $\textrm{Var}$ is preserved, via **Xavier** ($\tanh$) and **He** (ReLU).
 - **50-layer experiment:** $10^{80}$ (naive) vs $10^{-15}$ (Xavier under ReLU) vs **flat** (He).
-- **Break the symmetry:** random init, never a constant.
+- **Break hidden-unit symmetry:** initialize their weights differently.
 - **At scale:** normalization + residuals + careful init together reach 100+ layers.
 :::
 :::

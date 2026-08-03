@@ -8,9 +8,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 
 
-One widely used benchmark for image classification is [MNIST](https://en.wikipedia.org/wiki/MNIST_database) :cite:`LeCun.Bottou.Bengio.ea.1998`, a dataset of 70,000 handwritten-digit images ($28 \times 28$ pixels, 10 classes). MNIST shaped a generation of machine learning research, but today even simple models exceed 95% accuracy (and a linear classifier already tops 90%), so differences between strong and weak models are hard to see. To compare models meaningfully we need a dataset where a linear baseline is clearly outpaced by a richer one.
+[MNIST](https://en.wikipedia.org/wiki/MNIST_database) :cite:`LeCun.Bottou.Bengio.ea.1998` is a widely used image-classification benchmark with 70,000 handwritten-digit images ($28 \times 28$ pixels, 10 classes). Many simple models now achieve high accuracy on it, which makes differences among model classes less visible.
 
-We therefore use **Fashion-MNIST** :cite:`Xiao.Rasul.Vollgraf.2017`, a drop-in replacement released in 2017. It has exactly the same structure (60,000 training and 10,000 test images of $28 \times 28$ grayscale pixels, in 10 classes) but the classes are clothing categories (t-shirt, trouser, pullover, and so on) that are harder to tell apart, which makes accuracy differences between models clearly visible. For large-scale experiments the standard benchmark is ImageNet :cite:`Deng.Dong.Socher.ea.2009` (1.2 million images, 1000 classes), but it is too large to keep our examples interactive; Fashion-MNIST teaches the same lessons at a fraction of the compute cost.
+We therefore use **Fashion-MNIST** :cite:`Xiao.Rasul.Vollgraf.2017`, a 2017 replacement with the same structure: 60,000 training and 10,000 test images, each containing $28 \times 28$ grayscale pixels from one of 10 clothing categories. These categories provide a more discriminating comparison of the models developed in this chapter. ImageNet :cite:`Deng.Dong.Socher.ea.2009` supports larger-scale experiments with 1.2 million images and 1000 classes, but Fashion-MNIST keeps the examples interactive.
 
 ```{.python .input #image-classification-dataset-the-image-classification-dataset}
 %%tab mxnet
@@ -147,8 +147,7 @@ def text_labels(self, indices):
 
 ## Reading a Minibatch
 
-To make our life easier when reading from the training and test sets,
-we use the built-in data iterator rather than creating one from scratch.
+We use the built-in data iterator to read the training and test sets.
 Recall that at each iteration, a data iterator
 reads a minibatch of data with size `batch_size`.
 We also randomly shuffle the examples for the training data iterator.
@@ -207,7 +206,7 @@ def get_dataloader(self, train):
     return d2l.TensorFlowDataLoader(dataset)
 ```
 
-Now that the loader is defined, let us read one image and confirm where the channel axis lands.
+We read one image to confirm the location of the channel axis.
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-3}
 %%tab mxnet, pytorch
@@ -228,7 +227,7 @@ X, y = next(iter(data.train_dataloader()))
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
 
-Let us time one full pass through the training set as a local loader smoke test.
+We time one full pass through the training set as a local loader check.
 The result depends on storage, worker count, framework, and hardware; it tells
 us whether loading is a bottleneck only for this run. If loading is slower than
 training on a target system, prefetching or additional loader workers may help.
@@ -244,8 +243,7 @@ f'{time.time() - tic:.2f} sec'
 
 We will often be using the Fashion-MNIST dataset. The `d2l` library provides a convenience function `show_images` that lays out a list of images in a grid with optional per-image titles.
 
-Let's put it to good use. In general, it is a good idea to visualize and inspect data that you are training on. 
-Humans are very good at spotting oddities, so visualization is a cheap safeguard against errors in the design of experiments. Here are the images and their corresponding labels (in text)
+We visualize a minibatch before training. This check can reveal mislabeled examples, unexpected transformations, or shape errors early. Here are the images and their corresponding labels (in text)
 for the first few examples in the training dataset.
 
 ```{.python .input #image-classification-dataset-visualization-2}
@@ -352,7 +350,7 @@ The Image Classification Dataset<br>**Fashion-MNIST**, the dataset we will class
 - **Fashion-MNIST**: a drop-in replacement, same shape and API, but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
 
 ::: {.d2l-note}
-Here a linear model caps out near **82%** (the softmax-from-scratch section): headroom the deeper models of later chapters will spend.
+Under the configuration in the softmax-from-scratch section, the linear model reaches about **82%** accuracy; later chapters compare more expressive models on the same data.
 :::
 :::
 
@@ -375,7 +373,7 @@ Here a linear model caps out near **82%** (the softmax-from-scratch section): he
 ::: {.slide title="A reusable Fashion-MNIST data module"}
 [Loading]{.kicker}
 
-A `DataModule` owns this framework's download, transform, and `train`/`val` splits, so every model we build later just asks for batches:
+A `DataModule` packages this framework's download, transforms, and `train`/`val` splits behind a common minibatch interface:
 
 @image-classification-dataset-loading-the-dataset-1
 :::
@@ -476,10 +474,9 @@ Time one full pass over all 60,000 training images:
 @image-classification-dataset-reading-a-minibatch-3
 
 ::: {.d2l-note .rule}
-Seconds, not minutes. For the ConvNets of later chapters, one forward +
-backward pass costs **10--100×** the corresponding I/O, so a well-built
-loader keeps data off the critical path. If it ever *were* the bottleneck:
-prefetch and raise `num_workers`.
+This measurement is specific to the current storage, worker count, framework,
+and hardware. If loading limits training throughput, prefetch batches or
+increase `num_workers`.
 :::
 :::
 
@@ -491,10 +488,9 @@ Time one full pass over all 60,000 training images:
 @-image-classification-dataset-reading-a-minibatch-3
 
 ::: {.d2l-note .rule}
-Seconds, not minutes. For the ConvNets of later chapters, one forward +
-backward pass costs **10--100×** the corresponding I/O, so a well-built
-loader keeps data off the critical path. If it ever *were* the bottleneck:
-prefetch and raise `num_workers`.
+This measurement is specific to the current storage, worker count, framework,
+and hardware. If loading limits training throughput, prefetch batches or
+increase `num_workers`.
 :::
 :::
 
@@ -504,14 +500,14 @@ prefetch and raise `num_workers`.
 
 [Looking at the Data]{.dtitle}
 
-[always eyeball what you train on]{.dsub}
+[inspect examples before training]{.dsub}
 :::
 :::
 
 ::: {.slide title="Inspecting a minibatch"}
 [Visualization]{.kicker}
 
-A `visualize` method tiles one validation batch, each image captioned with its class name. Eyeballing data is a cheap, powerful sanity check:
+A `visualize` method tiles one validation batch, each image captioned with its class name. Inspecting examples can reveal label, transformation, and layout errors:
 
 @image-classification-dataset-visualization-2
 :::
@@ -527,7 +523,7 @@ A `visualize` method tiles one validation batch, each image captioned with its c
 
 ::: {.col}
 - **Channel axis** differs: PyTorch/MXNet $c\times h\times w$, TensorFlow/JAX $h\times w\times c$ (the loader hides it).
-- Always **look at your data**; a full loading pass costs seconds, so training speed is set by the model, not I/O.
+- Inspect the data before training, and measure whether loading or model computation limits throughput on the target system.
 - Next: a linear classifier on this data and the accuracy it attains under the
   configuration used in the softmax-from-scratch section.
 :::

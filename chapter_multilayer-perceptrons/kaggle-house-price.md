@@ -107,9 +107,7 @@ For example, the year of construction
 is represented by an integer,
 the roof type by discrete categorical assignments,
 and other features by floating point numbers.
-And here is where reality complicates things:
-for some examples, some data is altogether missing
-with the missing value marked simply as "na".
+Some examples have missing values, represented as "na".
 The price of each house is included
 for the training set only
 (it is a competition after all).
@@ -159,8 +157,8 @@ print(data.raw_val.shape)
 
 ## Data Preprocessing
 
-Let's take a look at the first four and final two features
-as well as the label (SalePrice) from the first four examples.
+We inspect the first four and final two features, together with the label
+(SalePrice), for the first four examples.
 
 ```{.python .input #kaggle-house-price-data-preprocessing-1  n=10}
 print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
@@ -176,7 +174,7 @@ Furthermore, given a wide variety of data types,
 we will need to preprocess the data before we can start modeling.
 
 
-Let's start with the numerical features.
+We begin with the numerical features.
 First, we apply a heuristic,
 replacing all missing values
 by the corresponding feature's mean.
@@ -195,7 +193,7 @@ E\!\left[\frac{x-\mu}{\sigma}\right] = 0
 \mathrm{Var}\!\left[\frac{x-\mu}{\sigma}\right] = 1,
 $$
 
-so every column now lives on the same zero-mean, unit-variance scale.
+so every column now has zero mean and unit variance.
 We compute $\mu$ and $\sigma$ from the *training* set only and
 apply the very same transformation to the test set. Using statistics that
 include the test data would let information about the test distribution
@@ -283,10 +281,10 @@ than about the absolute error $y - \hat{y}$.
 For instance, if our prediction is off by \$100,000
 when estimating the price of a house in rural Ohio,
 where the value of a typical house is \$125,000,
-then we are probably doing a horrible job.
-On the other hand, if we err by this amount
+then the relative error is large.
+If we err by the same amount
 in Los Altos Hills, California,
-this might represent a stunningly accurate prediction
+the relative error may instead be small
 (there, the median house price exceeds \$4 million).
 
 One way to address this problem is to
@@ -524,13 +522,13 @@ models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
 :begin_tab:`pytorch`
 For the tested configurations, the small MLP has the lower mean
 cross-validated log error: about $0.027$ versus $0.036$ for the linear model.
-The fold-level dispersion printed above is necessary for judging this difference. The
-lesson is still deliberately undramatic. The MLP survives at all only
-because it is small enough and regularized enough for a dataset of barely a
-thousand rows, and the bulk of the improvement over a careless, underfit
-baseline came simply from training *either* model to convergence. As the
-caveat above motivates testing a gradient-boosted tree ensemble, but its result
-cannot be inferred without running that baseline. The exercises invite this comparison.
+The fold-level dispersion printed above is necessary for judging this
+difference. This result applies only to the configurations and training budget
+tested here. Preprocessing and regularization make the MLP viable on a dataset
+of barely a thousand rows, and a longer training schedule improves both
+baselines. The preceding caveat motivates measuring a gradient-boosted tree
+ensemble rather than inferring its result. The exercises invite this
+comparison.
 :end_tab:
 
 Notice that sometimes the number of training errors
@@ -540,16 +538,13 @@ grows considerably higher.
 This indicates that we are overfitting.
 Throughout training you will want to monitor both numbers.
 Less overfitting might indicate that our data can support a more powerful model.
-Massive overfitting might suggest that we can gain
-by incorporating regularization techniques.
+Substantial overfitting may indicate that stronger regularization could
+help.
 
 ##  Submitting Predictions on Kaggle
 
-Now that we know what a good choice of hyperparameters should be,
-we might 
-calculate the average predictions 
-on the test set
-by all the $K$ models.
+After selecting hyperparameters by cross-validation, we average the
+predictions of the $K$ models on the test set.
 Since the models predict *log*-prices and the competition scores
 root-mean-squared *log* error,
 we average in log space before exponentiating:
@@ -561,13 +556,12 @@ This *fold ensembling* deserves a closer look, though. Each of the $K$
 models saw only $(K-1)/K$ of the training data, so the "average validation
 log mse" we computed above estimates the error of a *single* such model; it
 does not measure the error of the ensemble we are about to submit.
-The canonical alternative is to *refit* one model on
-all of the training data using the hyperparameters that cross-validation
-selected, so that the submitted model is a fresh draw of exactly the thing we
-scored. Fold ensembling is standard Kaggle practice: it is free (the $K$
-models are already trained) and the averaging usually buys a small variance
-reduction, so it tends to edge out the refit. But the refit is the more
-direct experiment, and you should choose between them deliberately.
+An alternative is to *refit* one model on all of the training data using
+the hyperparameters selected by cross-validation. Fold ensembling reuses the
+$K$ trained models, and averaging their predictions usually reduces variance.
+Refitting instead trains on every available example. These procedures estimate
+and use the data differently, so their performance should be compared
+empirically.
 
 Saving the predictions in a csv file
 will simplify uploading the results to Kaggle.
@@ -664,7 +658,7 @@ model capacity matters: adding hidden layers, tuning the dropout rate, and
 searching over learning rate and weight decay can improve substantially on
 the baseline shown here, which is exactly what the exercises ask you to do.
 
-Looking ahead, the moves we made here recur throughout supervised learning.
+The methods used here recur throughout supervised learning.
 Feature scaling and imputation reappear in nearly every tabular pipeline, and
 the competition recipe (download, preprocess, match the loss to the metric,
 cross-validate, refit, submit) generalizes directly: later chapters apply the
@@ -709,7 +703,7 @@ Predicting **house prices** on Kaggle<br>Preprocessing, validation, model compar
 :::
 :::
 
-::: {.slide title="The model is five lines; the pipeline is the lesson"}
+::: {.slide title="The modeling pipeline"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -772,7 +766,7 @@ overfitting the leaderboard.
 
 ::: {.cols .vc}
 ::: {.col}
-The data is generic on purpose: no images, audio, or sequences, just a
+The data contains no images, audio, or sequences, only a
 spreadsheet of house attributes and one price column.
 
 This makes it a suitable first case study: the main work is the
@@ -940,8 +934,8 @@ folds; train $K$ times, each time holding out a different fold;
 **average** the $K$ validation scores.
 
 ::: {.d2l-note}
-Costs $K\times$ the compute, buys a far steadier estimate, and the same
-loop supports hyperparameter search. Fit preprocessing anew inside each
+This costs $K\times$ the compute but provides a more stable estimate, and
+the same loop supports hyperparameter search. Fit preprocessing anew inside each
 training fold; otherwise the held-out fold leaks into the model pipeline.
 :::
 :::

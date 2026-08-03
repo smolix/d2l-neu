@@ -91,13 +91,11 @@ by passing the outcome through the logistic function (i.e., modeling the log-odd
 
 Note that we can easily come up with examples
 that violate monotonicity.
-Say for example that we want to predict health as a function
-of body temperature.
+Consider predicting health risk from body temperature.
 For individuals with a normal body temperature
 above 37°C (98.6°F),
 higher temperatures indicate greater risk.
-However, if the body temperatures drops
-below 37°C, lower temperatures indicate greater risk!
+Below 37°C, however, lower temperatures also indicate greater risk.
 Again, we might resolve the problem
 with some clever preprocessing, such as using the distance from 37°C
 as a feature.
@@ -112,21 +110,15 @@ Reliance on a linear model corresponds to the implicit
 assumption that the only requirement
 for differentiating cats and dogs is to assess
 the brightness of individual pixels.
-This approach is doomed to fail in a world
-where inverting an image preserves the category.
+This approach fails because transformations such as intensity inversion can
+preserve the category while changing every pixel value.
 
-And yet despite the apparent absurdity of linearity here,
-as compared with our previous examples,
-it is less obvious that we could address the problem
-with a simple preprocessing fix.
-That is, because the significance of any pixel
-depends in complex ways on its context
-(the values of the surrounding pixels).
-While there might exist a representation of our data
-that would take into account
-the relevant interactions among our features,
-on top of which a linear model would be suitable,
-we simply do not know how to calculate it by hand.
+Unlike the preceding scalar examples, this problem has no evident fixed
+preprocessing solution because the significance of a pixel depends on its
+context, including the values of surrounding pixels.
+A representation that captures the relevant feature interactions might make a
+linear predictor suitable, but constructing such a representation manually is
+generally impractical.
 With deep neural networks, we use observational data
 to jointly learn both a representation via hidden layers
 and a linear predictor that acts upon that representation.
@@ -137,10 +129,9 @@ in their most basic form use a sequence of binary decisions to
 decide upon class membership :cite:`quinlan2014c4`. Likewise, kernel
 methods have been used for many decades to model nonlinear dependencies
 :cite:`Aronszajn.1950`, including nonparametric spline models
-:cite:`Wahba.1990`. It is also something that the brain solves
-quite naturally. After all, neurons feed into other neurons which,
-in turn, feed into other neurons again :cite:`Cajal.Azoulay.1894`.
-Consequently we have a sequence of relatively simple transformations.
+:cite:`Wahba.1990`. Biological neural systems also organize neurons in successive connections
+:cite:`Cajal.Azoulay.1894`, motivating models built from sequences of simple
+transformations.
 
 ### Incorporating Hidden Layers
 
@@ -199,7 +190,7 @@ function class. The hidden units are affine functions of the inputs, and the
 outputs are affine functions of those hidden units. A composition of affine
 maps is again affine, which the original linear model could already represent.
 
-To see this formally we can just collapse out the hidden layer in the above definition,
+To verify this claim, substitute the hidden-layer expression into the output layer:
 yielding an equivalent single-layer model with parameters
 $\mathbf{W} = \mathbf{W}^{(1)}\mathbf{W}^{(2)}$ and $\mathbf{b} = \mathbf{b}^{(1)} \mathbf{W}^{(2)} + \mathbf{b}^{(2)}$:
 
@@ -245,23 +236,21 @@ one atop another, yielding ever more expressive models.
 
 ### A Concrete Win: XOR
 
-The collapse argument above told us what a hidden layer *cannot* do
-without a nonlinearity. Let's now see what one *can* do once the
-nonlinearity is in place, using the smallest problem that defeats every
-linear model: the *exclusive-or* (XOR) function. Place four points at the
+The collapse argument above establishes the limitation of a hidden layer
+without a nonlinearity. The smallest problem that demonstrates the effect of
+adding a nonlinearity is the *exclusive-or* (XOR) function. Place four points at the
 corners of the unit square and label each by whether its two coordinates
 *differ*: $(0,0)$ and $(1,1)$ get label $0$, while $(0,1)$ and $(1,0)$ get
 label $1$. As :numref:`fig_mdl-mlp-xor` shows on the left, the two classes
 sit on opposite diagonals, so no straight line can put one class on each
-side. A linear classifier is provably helpless here, no matter how we
+side. No linear classifier can solve this problem, regardless of how we
 choose its weights.
 
 ![XOR is not linearly separable, but one ReLU hidden layer makes it so. Left: the four corners of the unit square, coloured by the XOR label (the digit on each marker); the two classes lie on opposite diagonals, so any line misclassifies a corner. Right: the same four points after the hidden map $\mathbf{h} = \operatorname{ReLU}(\mathbf{x}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ with $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$ and $\mathbf{b}^{(1)} = (0, -1)$. The two class-1 corners are folded onto the *same* point $(1,0)$, and the cloud becomes linearly separable: the output neuron $h_1 - 2h_2$ now realizes XOR.](../img/mdl-mlp-xor.svg)
 :label:`fig_mdl-mlp-xor`
 
-A single hidden layer with just two ReLU units solves it. The trick is
-that the hidden layer is free to *re-represent* the inputs, and a clever
-representation can fold the two awkward corners together. The classic
+A hidden layer with two ReLU units solves the problem by *re-representing* the
+inputs so that the two class-1 corners coincide in the hidden space. The classic
 choice (see :citet:`Goodfellow.Bengio.Courville.2016`, Chapter 6) uses
 
 $$\mathbf{W}^{(1)} = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix},
@@ -274,7 +263,7 @@ with a ReLU on the hidden layer. The first hidden unit fires for any
 and subtracting twice the second unit cancels the lone case the first
 unit gets wrong. The right panel of :numref:`fig_mdl-mlp-xor` plots the
 hidden representation: the two label-1 corners land on top of each other
-at $(1,0)$, after which a single line separates the classes. Let's verify
+at $(1,0)$, after which a single line separates the classes. We verify
 that this hand-built network computes XOR exactly on all four inputs.
 
 ```{.python .input #mlp-xor}
@@ -289,9 +278,8 @@ onp.column_stack([X, (O > 0.5).astype(float)])
 
 The third column is exactly the XOR of the first two. We *constructed* the
 weights here, but the whole point of the rest of this book is that
-optimization can *discover* such representations from data. The XOR fix
-generalizes: stack nonlinear hidden layers and the network can carve the
-input space into arbitrarily complicated regions.
+optimization can *discover* such representations from data. The same principle generalizes: stacked nonlinear hidden layers can represent
+increasingly complex partitions of the input space.
 To watch that discovery happen live, try the XOR and spiral datasets at the
 [TensorFlow Playground](https://playground.tensorflow.org/), varying the
 number of hidden units and layers as you go.
@@ -313,16 +301,15 @@ any activation that is not a polynomial, a form that also covers the unbounded
 ReLU. The conclusion therefore does not hinge on which of ReLU, sigmoid, or tanh
 we pick.
 
-To see why such a theorem should be *plausible*, set the citations aside and
-consider a one-hidden-layer ReLU network on the real line. Each hidden unit
+A one-dimensional construction illustrates the theorem. Consider a one-hidden-layer ReLU network on the real line. Each hidden unit
 contributes $a_k \operatorname{ReLU}(w_k x + b_k)$ to the output: a *hinge*,
 flat on one side of the joint at $x = -b_k/w_k$ and linear on the other. The
 network's output is a sum of $D$ such hinges, so it is a continuous piecewise
 linear function whose slope can change only at a joint: with $D$ hidden units it
 has at most $D$ joints and hence at most $D+1$ linear pieces. Seen this way,
-approximating a continuous function is no more mysterious than approximating a
-curve with a polyline: place enough joints in the right locations and pick the
-right slopes, and the error shrinks as finely as we please
+approximating a continuous function reduces to approximating a curve with a
+polyline. Placing sufficiently many joints and choosing their slopes reduces
+the error to any prescribed tolerance
 (:numref:`fig_mdl-mlp-uat-hinges`). The exponential-width caveat below is
 visible here too: a very wiggly target needs a joint for every wiggle, one
 hidden unit apiece.
@@ -330,15 +317,15 @@ hidden unit apiece.
 ![Universal approximation, one hinge at a time. Left: each of the three hidden units contributes a single hinge $a_k \operatorname{ReLU}(x - t_k)$ whose joint $t_k$ is marked on the horizontal axis. Right: adding the hinges to a base line yields a piecewise linear function with $D+1 = 4$ pieces (blue) that tracks the smooth target (gray); the shaded band is the approximation error, which shrinks as more joints are added.](../img/mdl-mlp-uat-hinges.svg)
 :label:`fig_mdl-mlp-uat-hinges`
 
-Width, however, buys pieces only *linearly*: one extra unit, one extra joint.
+Width increases the number of pieces only *linearly*: one extra unit adds one joint.
 Depth is different. A second hidden layer applies its hinges not to $x$ but to
 the piecewise linear output of the first layer, and composing with a hinge
 *folds the graph*: every existing piece that crosses the new joint is split in
 two. Each added layer can therefore roughly *double* the number of linear
 pieces, so $k$ layers of width $D$ can produce on the order of
 $(D+1)\,2^{k-1}$ pieces, a count that a single hidden layer could match only
-with exponentially many units. This multiplicative-versus-additive gap
-is the essence of why depth pays. Both claims are easy to check numerically:
+with exponentially many units. This multiplicative-versus-additive gap explains why depth can be more
+parameter-efficient than width. Both claims are easy to check numerically:
 below we evaluate randomly initialized ReLU MLPs on a dense one-dimensional
 grid, detect where the slope changes, and count the linear pieces.
 
@@ -389,16 +376,15 @@ argument.
 ## Activation Functions
 :label:`subsec_activation-functions`
 
-Activation functions are (almost everywhere) differentiable operators for transforming
-pre-activation signals to outputs, introducing nonlinearity into the network.
-Because activation functions are fundamental to deep learning,
-let's briefly survey some common ones.
+Activation functions transform pre-activation signals into outputs and
+introduce nonlinearity into the network. Most are differentiable almost
+everywhere. We next examine several common choices.
 
 ### ReLU Function
 
 The most popular choice,
 due to both simplicity of implementation and
-its good performance on a variety of predictive tasks,
+its empirical performance across many predictive tasks,
 is the *rectified linear unit* (*ReLU*) :cite:`Nair.Hinton.2010`.
 ReLU provides a very simple nonlinear transformation.
 Given an element $x$, the function is defined
@@ -483,7 +469,7 @@ d2l.plot(x, grad_relu(x), 'x', 'grad of relu', figsize=(5, 2.5))
 
 The reason for using ReLU is that
 its derivatives are particularly well behaved:
-either they vanish or they just let the argument through.
+they are either zero or one.
 This makes optimization better behaved
 and it mitigated the well-documented problem
 of vanishing gradients that plagued
@@ -492,8 +478,7 @@ previous versions of neural networks (more on this later).
 This same flatness has a downside, however. Because the gradient is exactly
 zero for negative inputs, a unit whose pre-activation is pushed negative for
 every training example receives no gradient and stops updating: it becomes a
-permanently silent *dead ReLU*. To keep gradient flowing in that regime, a
-number of variants let a little signal through on the left. The best known is
+permanently silent *dead ReLU*. To keep gradient flowing in that regime, several variants retain a nonzero slope for negative inputs. A common example is
 the *parametrized ReLU* (*pReLU*) :cite:`He.Zhang.Ren.ea.2015`, which adds a
 linear term so some information still gets through, even when the argument is
 negative:
@@ -723,7 +708,7 @@ remains the sensible default for the models we build next.
    continuous piecewise linear function.
 1. Explain intuitively why composing ReLU layers can roughly *double* the number
    of linear pieces the network represents with each added layer, so that depth
-   buys exponentially many pieces while width buys only linearly many. (This is
+   can yield exponentially many pieces, whereas width yields only linearly many. (This is
    the depth-versus-width gap behind the universal-approximation caveat above.)
 1. Sigmoid and tanh are very similar.
     1. Show that $\operatorname{tanh}(x) + 1 = 2 \operatorname{sigmoid}(2x)$.
@@ -753,7 +738,7 @@ remains the sensible default for the models we build next.
 ::: {.cover}
 [Dive into Deep Learning · §5.1]{.kicker}
 
-Multilayer Perceptrons<br>**one kink between affine layers · XOR untangled · any function, hinge by hinge · why depth beats width**.
+**Multilayer Perceptrons**<br>Hidden layers, nonlinear representations, and activation functions
 :::
 :::
 
@@ -771,7 +756,7 @@ line-shaped** decisions.
 - **XOR**: a line *provably* cannot separate it.
 
 ::: {.d2l-note .rule}
-The fix: learn the features, keep the linear predictor on top.
+Learn the features and retain a linear predictor at the output.
 A two-unit net computes **XOR exactly**, and
 **depth multiplies** what width merely adds.
 :::
@@ -847,7 +832,7 @@ plain softmax regression.
 :::
 
 ::: {.slide title="The missing ingredient: a nonlinearity"}
-[The fix]{.kicker}
+[Nonlinear activation]{.kicker}
 
 Apply an elementwise nonlinearity $\sigma$ *after* every
 hidden affine map:
@@ -857,23 +842,22 @@ $$\mathbf{H} = \sigma\!\left(\mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)}\righ
 
 . . .
 
-Now the layers can no longer be merged: the network bends,
-folds, and curves its decision surface. Two ingredients
-(**affine + nonlinear**), and every architecture in this book
-follows.
+The layers can no longer be merged into one affine map. Composing
+affine transformations with nonlinear activations produces nonlinear
+decision surfaces, a pattern used throughout this book.
 :::
 
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
 
-[A Concrete Win: XOR]{.dtitle}
+[A Nonlinear Example: XOR]{.dtitle}
 
-[one ReLU layer untangles the impossible case]{.dsub}
+[a ReLU hidden layer makes the classes linearly separable]{.dsub}
 :::
 :::
 
-::: {.slide title="XOR: impossible for a line, easy after a fold"}
+::: {.slide title="A hidden layer makes XOR linearly separable"}
 [Why nonlinearity matters]{.kicker}
 
 ::: {.cols .vc}
@@ -884,7 +868,7 @@ diagonals** (left), so no straight line works.
 
 One hidden layer $\mathbf{h} = \operatorname{ReLU}(\mathbf{x}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$
 then **folds** the two label-1 corners onto the same point
-(right), and now a single line separates them.
+(right), after which a single line separates them.
 :::
 
 ::: {.col .fig .big}
@@ -932,7 +916,7 @@ Playground* (playground.tensorflow.org).
 :::
 :::
 
-::: {.slide title="How far does this go? Universal approximation"}
+::: {.slide title="Universal approximation"}
 [Expressive power]{.kicker}
 
 ::: {.cols .vc}
@@ -955,12 +939,11 @@ generalizes.
 
 . . .
 
-This is why we reach for **depth**: a deep net often
-represents the same function far more compactly than a shallow
-one would, trading width for layers.
+Depth can represent some functions more compactly than a shallow
+network, trading additional layers for width.
 :::
 
-::: {.slide title="Why it is plausible: one hinge at a time"}
+::: {.slide title="A one-dimensional hinge construction"}
 [Expressive power]{.kicker}
 
 For a one-dimensional construction, each ReLU unit contributes a **hinge**
@@ -978,7 +961,7 @@ Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the sl
 @!mlp-region-count
 
 ::: {.d2l-note .rule}
-One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count, the multiplicative-vs-additive gap that makes depth pay.
+One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count, the multiplicative-versus-additive gap that can make depth more parameter-efficient.
 :::
 :::
 
@@ -995,7 +978,7 @@ Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the sl
 | depth 3 | 3.6 | 8.1 | 22.1 | 40.1 |
 
 ::: {.d2l-note .rule}
-One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count, the multiplicative-vs-additive gap that makes depth pay.
+One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count, the multiplicative-versus-additive gap that can make depth more parameter-efficient.
 :::
 :::
 
@@ -1020,7 +1003,7 @@ $$\operatorname{ReLU}(x) = \max(0, x).$$
 :::
 
 ::: {.col .narrow}
-Keep the positive part, zero the rest. Why it won:
+The activation retains positive inputs and maps negative inputs to zero:
 
 - **No right-side saturation:** gradient is exactly $1$
   for $x>0$.
@@ -1045,9 +1028,9 @@ $$\operatorname{ReLU}'(x) = \mathbb{1}[x > 0].$$
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
 **Dead ReLU:** a unit pushed negative for *every* example
-gets zero gradient forever. *LeakyReLU / PReLU*,
-$\max(0,x)+\alpha\min(0,x)$, leak a little signal to keep it
-alive.
+receives zero gradient. *LeakyReLU / PReLU*,
+$\max(0,x)+\alpha\min(0,x)$, retain a nonzero negative-side
+slope.
 :::
 :::
 :::
@@ -1068,9 +1051,9 @@ $$\operatorname{ReLU}'(x) = \mathbb{1}[x > 0].$$
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
 **Dead ReLU:** a unit pushed negative for *every* example
-gets zero gradient forever. *LeakyReLU / PReLU*,
-$\max(0,x)+\alpha\min(0,x)$, leak a little signal to keep it
-alive.
+receives zero gradient. *LeakyReLU / PReLU*,
+$\max(0,x)+\alpha\min(0,x)$, retain a nonzero negative-side
+slope.
 :::
 :::
 :::
@@ -1087,8 +1070,8 @@ $$\operatorname{sigmoid}(x) = \frac{1}{1 + e^{-x}}.$$
 :::
 
 ::: {.col .narrow}
-A smooth, differentiable threshold, and the original neuron
-activation. Today it lives mostly at the **edges** of a net:
+This smooth approximation to a threshold is now used mainly at
+network outputs and in gating mechanisms:
 
 - **Binary output**, read as a probability.
 - **Gates** in LSTM/GRU and attention.
@@ -1096,7 +1079,7 @@ activation. Today it lives mostly at the **edges** of a net:
 :::
 :::
 
-::: {.slide title="Why sigmoid stalls deep networks"}
+::: {.slide title="Sigmoid saturation attenuates gradients"}
 [Activation saturation]{.kicker}
 
 ::: {.cols .vc}
@@ -1110,8 +1093,8 @@ $$\operatorname{sigmoid}'(x) = \operatorname{sigmoid}(x)\,(1 - \operatorname{sig
 The gradient peaks at just $0.25$ and **vanishes** past
 $|x|\gtrsim 5$. Even at its best, ten stacked layers attenuate the
 backward signal by $0.25^{10} \approx 10^{-6}$: the
-**vanishing-gradient** problem ReLU fixed (the full story in the
-numerical-stability section).
+**vanishing-gradient** problem discussed in the
+numerical-stability section.
 :::
 :::
 :::
@@ -1186,7 +1169,7 @@ probabilities.
 ::: {.col}
 - One wide hidden layer is a **universal approximator**: one
   hinge per unit, $\le D+1$ pieces; depth *multiplies* pieces
-  and makes that power parameter-efficient.
+  and can represent some functions with fewer parameters.
 - **ReLU** is the default; sigmoid and tanh survive in
   gates, outputs, and RNN cells.
 :::

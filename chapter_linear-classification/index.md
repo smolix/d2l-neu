@@ -25,7 +25,7 @@ environment-and-distribution-shift
 
 ## Resources and Further Reading {.unnumbered}
 
-The classical machine-learning texts listed in the previous chapter (**Linear Regression in Neural Networks**) cover classification equally well, so we do not repeat them here; the references below focus on what is specific to the classification setting: softmax regression and cross-entropy, calibration, and the distribution shift introduced at the end of this chapter. All are freely accessible online except where noted.
+The classical machine-learning texts listed in the previous chapter (**Linear Regression in Neural Networks**) also cover classification, so we do not repeat them here. The references below focus on softmax regression, cross-entropy, calibration, and distribution shift. All are freely accessible online except where noted.
 
 **Tutorials and notes**
 
@@ -35,7 +35,7 @@ The classical machine-learning texts listed in the previous chapter (**Linear Re
 **Foundational papers**
 
 - [Fashion-MNIST: a Novel Image Dataset for Benchmarking Machine Learning Algorithms — Xiao, Rasul & Vollgraf (2017)](https://arxiv.org/abs/1708.07747) — the dataset used throughout this chapter's image-classification examples.
-- [On Calibration of Modern Neural Networks — Guo, Pleiss, Sun & Weinberger (2017)](https://arxiv.org/abs/1706.04599) — shows that a classifier's softmax confidences are often miscalibrated, and that temperature scaling fixes it; essential context for reading softmax outputs as probabilities.
+- [On Calibration of Modern Neural Networks — Guo, Pleiss, Sun & Weinberger (2017)](https://arxiv.org/abs/1706.04599) — shows that a classifier's softmax confidences are often miscalibrated and that temperature scaling can improve calibration; useful context for interpreting softmax outputs as probabilities.
 
 **Books**
 

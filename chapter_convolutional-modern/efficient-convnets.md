@@ -65,7 +65,7 @@ The inverted bottleneck outlived its mobile origins: ConvNeXt (:numref:`sec_conv
 
 ### A Mini-MobileNet
 
-Let's build a small MobileNetV1-style network for Fashion-MNIST. We use the original block rather than the inverted bottleneck: it is the clearest expression of the factorization, and at Fashion-MNIST scale the difference is negligible. Real mobile networks since MobileNetV2 use inverted bottlenecks throughout. The block below is the pair from :numref:`fig_dws_block`; a stride of 2 downsamples.
+We build a small MobileNetV1-style network for Fashion-MNIST. We use the original block rather than the inverted bottleneck: it is the clearest expression of the factorization, and at Fashion-MNIST scale the difference is negligible. Real mobile networks since MobileNetV2 use inverted bottlenecks throughout. The block below is the pair from :numref:`fig_dws_block`; a stride of 2 downsamples.
 
 ```{.python .input #efficient-convnets-a-mini-mobilenet-1}
 %%tab mxnet
@@ -509,7 +509,7 @@ from run to run.
 | VGG-style control | 583,594 | 384.9 million | ≈89.5% | ≈89.5% | ≈92.5% |
 
 The two models have comparable accuracy in this small experiment: every run
-of both architectures lands in a band of roughly 89–93%, and which of the
+of both architectures falls in a band of roughly 89–93%, and which of the
 two comes out ahead varies with the framework and the seed — a difference
 within run-to-run noise, on which no conclusion should be built. The stable
 result is computational. At this parameter budget the separable network
@@ -532,7 +532,10 @@ MobileNetV4 :cite:`qin2024mobilenetv4` pushed the same logic across hardware. It
 
 ### The RepVGG Block
 
-Multi-branch architectures train better than plain ones; that was the lesson of :numref:`sec_resnet`. At inference time, however, every branch must be computed and its output held in memory until the join, and the many small operations of a branchy block leave accelerator kernels underutilized. A plain stack of $3 \times 3$ convolutions, VGG-style, is the shape inference hardware likes best: one big, regular operation per layer, one activation tensor alive at a time. RepVGG :cite:`ding2021repvgg` obtains both. During training, each layer is a three-branch block: a $3 \times 3$ convolution, a $1 \times 1$ convolution, and an identity path, each with its own batch normalization, summed before the ReLU (:numref:`fig_repvgg_reparam`). For deployment, the three branches are *fused into a single $3 \times 3$ convolution* whose output is identical, not approximately but exactly, because everything involved is linear. The train-time network enjoys residual-style optimization; the deployed network is a plain convolution stack.
+Multi-branch architectures train better than plain ones; that was the lesson of :numref:`sec_resnet`. At inference time, however, every branch must be computed and its output held in memory until the join, and the many small operations of a branchy block leave accelerator kernels underutilized. A VGG-style stack of $3 \times 3$ convolutions maps efficiently to many
+inference accelerators: each layer uses one large, regular operation and
+requires one intermediate activation tensor at a time. RepVGG :cite:`ding2021repvgg` obtains both. During training, each layer is a three-branch block: a $3 \times 3$ convolution, a $1 \times 1$ convolution, and an identity path, each with its own batch normalization, summed before the ReLU (:numref:`fig_repvgg_reparam`). For deployment, the three branches are *fused into a single $3 \times 3$ convolution* whose output is identical, not approximately but exactly, because everything involved is linear. The train-time network retains residual-style paths, whereas the deployed
+network is a plain convolutional stack.
 
 ![Structural re-parameterization. At training time each RepVGG layer sums three branches, a $3 \times 3$ convolution, a $1 \times 1$ convolution, and an identity, each with batch normalization. For inference the branches are folded into one $3 \times 3$ convolution with a bias; the two networks compute the same function.](../img/arch-repvgg-reparam.svg)
 :label:`fig_repvgg_reparam`
@@ -774,7 +777,9 @@ The maximum difference is on the order of $10^{-6}$, single-precision roundoff: 
 
 ### From Paper to Product
 
-Deployment adds a constraint that the fusion algebra does not model. The fused kernel is a *sum* of branches whose scales, after folding batch normalization into them by :eqref:`eq_bn_fold`, can differ by orders of magnitude, so the summed weights and the activations they produce have wide, poorly centered distributions. Naive post-training INT8 quantization collapses on such distributions, since it represents each tensor with 256 evenly spaced values: a fused RepVGG drops from 75.1% to 40.2% top-1 accuracy on ImageNet, where a plain ResNet loses a fraction of a point. Quantization-aware re-parameterization variants restore the lost accuracy by constraining the branch statistics during training :cite:`chu2024qarepvgg`. The episode is a useful corrective to reading papers too literally: "mathematically identical" holds in FP32, and the real world quantizes.
+Deployment adds a constraint that the fusion algebra does not model. The fused kernel is a *sum* of branches whose scales, after folding batch normalization into them by :eqref:`eq_bn_fold`, can differ by orders of magnitude, so the summed weights and the activations they produce have wide, poorly centered distributions. Naive post-training INT8 quantization collapses on such distributions, since it represents each tensor with 256 evenly spaced values: a fused RepVGG drops from 75.1% to 40.2% top-1 accuracy on ImageNet, where a plain ResNet loses a fraction of a point. Quantization-aware re-parameterization variants restore the lost accuracy by constraining the branch statistics during training :cite:`chu2024qarepvgg`. This result distinguishes algebraic equivalence in floating-point arithmetic
+from behavior after quantization: an equivalent FP32 transformation need not
+preserve accuracy under a fixed INT8 quantization scheme.
 
 The idea has since appeared in deployment-oriented architectures. MobileOne
 :cite:`vasu2023mobileone` applies train-time over-parameterization to
@@ -802,7 +807,7 @@ convolution-attention hybrids such as FastViT and MobileNetV4 variants, using
 convolutions at high resolution and attention where the feature maps are
 small. Pure vision transformers appear where a dedicated neural accelerator
 and its memory budget can be assumed, and in the datacenter. Convnets did not
-lose the efficiency race; they are its incumbent, and the hybrid designs
+become irrelevant to efficient inference; they remain widely used, and hybrid designs
 concede exactly as much of the network to attention as the hardware can
 afford. How to navigate such trade-offs systematically, rather than
 architecture by architecture, is the subject of :numref:`sec_cnn-design`.
@@ -891,7 +896,7 @@ Once the 3×3 is depthwise, wide is cheap and MobileNetV2
 
 . . .
 
-The tensors alive across blocks are the thin ones, so activation
+The tensors retained across blocks are the narrow ones, so activation
 memory stays small. ConvNeXt reused this exact shape with a 7×7
 depthwise convolution.
 :::

@@ -27,7 +27,7 @@ weight-decay
 
 ## Resources and Further Reading {.unnumbered}
 
-The references below develop the linear-model family this chapter introduces: the statistical foundations shared with classification (these classical texts are listed here once, and the next chapter builds on them), then material specific to regression, least squares, generalization, and the weight decay we use as $L_2$ regularization. All are freely accessible online except where noted.
+The references below cover the statistical foundations shared with classification, followed by material specific to regression, least squares, generalization, and weight decay as $L_2$ regularization. The next chapter builds on the shared references rather than listing them again. All are freely accessible online except where noted.
 
 **Books**
 

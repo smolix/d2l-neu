@@ -76,10 +76,8 @@ For a fully connected activation normalized only across examples, a minibatch
 of size 1 removes all input-dependent signal: after subtracting the mean, every
 normalized feature is 0. The shift parameter and later biases can still learn,
 but the normalized feature cannot convey how that example differs from another.
-As you might guess, since we are devoting a whole section to batch normalization,
-with large enough minibatches the approach proves effective and stable.
-One takeaway here is that when applying batch normalization,
-the choice of batch size affects both the noise in the statistics and the
+With sufficiently large minibatches, batch normalization can be effective and
+stable. Batch size affects both the noise in the estimated statistics and the
 resulting optimization behavior.
 
 Denote by $\mathcal{B}$ a minibatch and let $\mathbf{x} \in \mathcal{B}$ be an input to 
@@ -95,7 +93,7 @@ After applying standardization,
 the resulting minibatch has zero mean and variance close to one; the added
 $\epsilon$ makes the variance slightly smaller than one.
 The choice of unit variance
-(rather than some other magic number) is arbitrary. We recover this degree of freedom
+(rather than another positive constant) is arbitrary. We recover this degree of freedom
 by including an elementwise
 *scale parameter* $\boldsymbol{\gamma}$ and *shift parameter* $\boldsymbol{\beta}$,
 with one entry per normalized feature (or channel) and broadcasting over the
@@ -118,14 +116,10 @@ to ensure that we never attempt division by zero,
 even in cases where the empirical variance estimate might be very small or vanish.
 The estimates $\hat{\boldsymbol{\mu}}_\mathcal{B}$ and ${\hat{\boldsymbol{\sigma}}_\mathcal{B}}$ counteract the scaling issue
 by using noisy estimates of mean and variance.
-You might think that this noisiness should be a problem.
-On the contrary, it is actually beneficial.
-
-This turns out to be a recurring theme in deep learning.
-For reasons that are not yet well-characterized theoretically,
-various sources of noise in optimization
-often lead to faster training and less overfitting:
-this variation appears to act as a form of regularization.
+The noise in these estimates can have a regularizing effect.
+Although the mechanisms are not fully characterized theoretically, several
+sources of optimization noise are empirically associated with faster training
+or less overfitting in some settings.
 :citet:`Teye.Azizpour.Smith.2018` and :citet:`Luo.Wang.Shao.ea.2018`
 related the properties of batch normalization to Bayesian priors and penalties, respectively. 
 In particular, this sheds some light on the puzzle
@@ -162,7 +156,7 @@ Batch normalization implementations for fully connected layers
 and convolutional layers are slightly different.
 One key difference between batch normalization and other layers
 is that because the former operates on a full minibatch at a time,
-we cannot just ignore the batch dimension
+we cannot ignore the batch dimension
 as we did before when introducing other layers.
 
 ### Fully Connected Layers
@@ -253,7 +247,7 @@ we might need to apply our model to make one prediction at a time.
 
 Typically, after training, we use the entire dataset
 to compute stable estimates of the variable statistics
-and then fix them at prediction time.
+and then hold them fixed at prediction time.
 Hence, batch normalization behaves differently during training than at test time.
 Recall that dropout also exhibits this characteristic.
 
@@ -387,7 +381,7 @@ This pattern enables a clean separation of mathematics from boilerplate code.
 Also note that for the sake of convenience
 we did not worry about automatically inferring the input shape here;
 thus we need to specify the number of features throughout.
-By now all modern deep learning frameworks offer automatic detection of size and shape in the
+Modern deep learning frameworks automatically infer sizes and shapes in the
 high-level batch normalization APIs (in practice we will use this instead).
 
 ```{.python .input #batch-norm-implementation-from-scratch-2}
@@ -676,7 +670,7 @@ with d2l.try_gpu():
     trainer.fit(model, data)
 ```
 
-Let's have a look at the scale parameter `gamma`
+We inspect the scale parameter `gamma`
 and the shift parameter `beta` learned
 from the first batch normalization layer.
 
@@ -705,7 +699,7 @@ model.net.layers[1].beta[...].reshape((-1,))
 ## Concise Implementation
 
 Compared with the `BatchNorm` class,
-which we just defined ourselves,
+which we defined above,
 we can use the `BatchNorm` class defined in high-level APIs from the deep learning framework directly.
 The code looks virtually identical
 to our implementation above, except that we no longer need to provide additional arguments for it to get the dimensions right.

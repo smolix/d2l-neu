@@ -12,16 +12,13 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 The preceding sections fitted a softmax classifier by minimizing
 cross-entropy on a training set. The purpose of the fitted model is to
 classify new examples, so training accuracy alone is insufficient.
-Whenever each of our inputs is unique
-(and indeed this is true for most high-dimensional datasets),
-we can attain perfect accuracy on the training set
-by just memorizing the dataset on the first training epoch,
-and subsequently looking up the label whenever we see a new image.
+A sufficiently expressive model can attain perfect training accuracy by
+memorizing the label associated with each distinct training input and returning
+that label whenever the same input appears again.
 And yet, memorizing the exact labels
 associated with the exact training examples
 does not tell us how to classify new examples.
-Absent further guidance, we might have to fall back
-on random guessing whenever we encounter new examples.
+Memorization alone provides no rule for a genuinely new input.
 
 This raises three questions:
 
@@ -34,8 +31,7 @@ This raises three questions:
 Whereas :numref:`sec_generalization_basics` introduced
 overfitting and generalization
 in the context of linear regression,
-this chapter will go a little deeper,
-introducing some of the foundational ideas
+this section introduces foundational ideas
 of statistical learning theory.
 It turns out that we often can guarantee generalization *a priori*:
 for many models,
@@ -46,16 +42,13 @@ such that if our training set contains at least $n$
 samples, our empirical error will lie
 within $t$ of the true error,
 *for any data generating distribution*.
-Unfortunately, it also turns out
-that while these sorts of guarantees provide
-a set of intellectual building blocks,
-they are of limited practical utility
-to the deep learning practitioner.
+These guarantees provide important theoretical foundations but can be too loose
+to guide the sample sizes used for deep networks.
 In short, these guarantees suggest
 that ensuring generalization
 of deep neural networks *a priori*
-requires an absurd number of examples
-(perhaps trillions or more),
+can require sample counts far beyond those used in practice
+(in some calculations, trillions or more),
 even when we find that, on the tasks we care about,
 deep neural networks typically generalize
 well with far fewer examples (thousands).
@@ -75,18 +68,14 @@ to explain why deep neural networks generalize in practice.
 
 ## The Test Set
 
-Since we have already begun to rely on test sets
-as the gold standard method
-for assessing generalization error,
-let's get started by discussing
-the properties of such error estimates.
-Let's focus on a fixed classifier $f$,
+Since we have already begun to rely on test sets to assess generalization error, we begin with the statistical
+properties of their estimates. Consider a fixed classifier $f$,
 without worrying about how it was obtained.
 Moreover suppose that we possess
 a *fresh* dataset of examples $\mathcal{D} = {(\mathbf{x}^{(i)},y^{(i)})}_{i=1}^n$
 that were not used to train the classifier $f$.
 The *empirical error* of our classifier $f$ on $\mathcal{D}$
-is simply the fraction of instances
+is the fraction of instances
 for which the prediction $f(\mathbf{x}^{(i)})$
 disagrees with the true label $y^{(i)}$,
 and is given by the following expression:
@@ -120,7 +109,7 @@ is an expectation (of the random variable $\mathbf{1}(f(X) \neq Y)$)
 and the corresponding estimator $\epsilon_\mathcal{D}(f)$
 is the sample average,
 estimating the population error
-is simply the classic problem of mean estimation,
+is the classical problem of mean estimation,
 which you may recall from :numref:`sec_prob`.
 
 An important classical result from probability theory
@@ -131,7 +120,7 @@ then, as the number of samples $n$ approaches infinity,
 the sample average $\hat{\mu}$ approximately
 tends towards a normal distribution centered
 at the true mean and with standard deviation $\sigma/\sqrt{n}$.
-Already, this tells us something important:
+Consequently,
 as the number of examples grows large,
 our test error $\epsilon_\mathcal{D}(f)$
 should approach the true error $\epsilon(f)$
@@ -160,8 +149,7 @@ is actually the true error rate $\epsilon(f)$.
 The variance $\sigma^2$ of a Bernoulli
 depends on its parameter (here, $\epsilon(f)$)
 according to the expression $\epsilon(f)(1-\epsilon(f))$.
-A little investigation of this function
-reveals that our variance is highest
+This function is largest
 when the true error rate is close to $0.5$
 and can be far lower when it is
 close to $0$ or close to $1$.
@@ -185,19 +173,16 @@ then we will need 10,000 samples!
 
 This turns out to be the size of the test sets
 for many popular benchmarks in machine learning.
-You might be surprised to find out that thousands
-of applied deep learning papers get published every year
-making a big deal out of error rate improvements of $0.01$ or less.
+Improvements of $0.01$ or less should therefore be interpreted together with
+the test-set size and uncertainty of the estimate.
 Of course, when the error rates are much closer to $0$,
 then an improvement of $0.01$ can indeed be a big deal.
 
 
-One pesky feature of our analysis thus far
-is that it really only tells us about asymptotics,
+The preceding analysis is asymptotic:
 i.e., how the relationship between $\epsilon_\mathcal{D}$ and $\epsilon$
 evolves as our sample size goes to infinity.
-Fortunately, because our random variable is bounded,
-we can obtain valid finite sample bounds
+Because the random variable is bounded, we can also obtain finite-sample bounds
 by applying an inequality due to :citet:`Hoeffding.1963`,
 proved in :numref:`sec_mdl-concentration-generalization`:
 
@@ -214,14 +199,9 @@ as compared with the 10,000 examples suggested
 by the asymptotic analysis above.
 If you go deeper into statistics
 you will find that this trend holds generally.
-Guarantees that hold even in finite samples
-are typically slightly more conservative.
-Note that in the scheme of things,
-these numbers are not so far apart,
-reflecting the general usefulness
-of asymptotic analysis for giving
-us ballpark figures even if they are not
-guarantees we can take to court.
+Finite-sample guarantees are typically more conservative. The comparable order
+of magnitude here also shows why asymptotic calculations can provide useful
+approximations even when they are not finite-sample guarantees.
 
 All of the above is pencil-and-paper reasoning,
 but it is also one short simulation away from being visible.
@@ -320,7 +300,7 @@ d2l.plot(np.arange(1, k + 1), best, 'number of models evaluated',
 ```
 
 The best apparent accuracy climbs steadily, exceeding $0.56$ after ten
-thousand tries, even though *nothing was learned*: the models are coin flips,
+thousand tries, even though the classifiers contain no learned signal: the models are coin flips,
 and the climb is pure selection, growing like $\sqrt{\log(k)/(2n)}$ by the
 same Hoeffding bound applied to $k$ events at once. Whenever you pick the
 best of many models by their score on one shared test set, some of the
@@ -365,8 +345,7 @@ from some pre-specified set of functions $\mathcal{F}$.
 Recall from our discussion of test sets
 that while it is easy to estimate
 the error of a single classifier,
-things get hairy when we begin
-to consider collections of classifiers.
+collections of classifiers require simultaneous control.
 Even if the empirical error
 of any one (fixed) classifier
 will be close to its true error
@@ -463,7 +442,7 @@ a VC dimension of exactly $3$ for two-dimensional linear classifiers
 The general statement holds in both directions, and neither is deep.
 For the lower bound, the $d+1$ points
 $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
-can be shattered by weights that are simply *read off* the desired labels;
+can be shattered by weights constructed directly from the desired labels;
 exercise 5 walks you through it.
 For the upper bound, *no* set of $d+2$ points can be shattered:
 by Radon's theorem :cite:`Radon.1921`, any $d+2$ points in $\mathbb{R}^d$
@@ -473,8 +452,7 @@ and no halfspace can put two intersecting hulls on opposite sides.
 ![A linear classifier in two dimensions shatters any 3 points in general position (all $2^3$ labelings are realizable by a halfplane) but cannot shatter 4 points (the XOR labeling, with one class on each diagonal, has no linear separator). Hence the VC dimension of lines in the plane is 3.](../img/mdl-clf-shattering.svg)
 :label:`fig_mdl-clf-shattering`
 
-Unfortunately, the theory tends to be
-overly pessimistic for more complex models
+For complex models, the resulting bound is often pessimistic
 and obtaining this guarantee typically requires
 far more examples than are actually needed
 to achieve the desired error rate.
@@ -543,20 +521,16 @@ each facilitating an analogous generalization guarantee.
 One such measure, *Rademacher complexity*, is developed in full
 in :numref:`sec_mdl-concentration-generalization`,
 which also reproduces from scratch (as *double descent*)
-the surprisingly benign behavior of overparametrized models
+the empirical behavior of overparameterized models
 that we are about to describe.
 See :citet:`boucheron2005theory` for a detailed discussion
 of several advanced ways of measuring function complexity.
-Unfortunately, while these complexity measures
-have become broadly useful tools in statistical theory,
-they turn out to be powerless
-(as straightforwardly applied)
-for explaining why deep neural networks generalize :cite:`zhang2021understanding`.
+These complexity measures are broadly useful in statistical theory, but their
+direct application does not explain why deep neural networks generalize :cite:`zhang2021understanding`.
 Deep neural networks often have millions of parameters (or more),
 and can easily assign random labels to large collections of points.
 Nevertheless, they generalize well on practical problems
-and, surprisingly, they often generalize better,
-when they are larger and deeper,
+and on some tasks they generalize better when they are larger and deeper,
 despite incurring higher VC dimensions.
 We revisit generalization in the context of deep learning
 in :numref:`sec_generalization_deep`.
@@ -611,8 +585,8 @@ in :numref:`sec_generalization_deep`.
 
 ::: {.cols .vc}
 ::: {.col}
-Train accuracy is **free**: on distinct inputs a model can memorize every
-label on epoch one, then look them up.
+A sufficiently expressive model can memorize distinct training inputs and attain
+zero training error without defining useful predictions for new inputs.
 
 The score we care about is the **population error**, on data we never
 trained on. Three questions stand between us and trusting it:
@@ -620,7 +594,7 @@ trained on. Three questions stand between us and trusting it:
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-1. How many test points pin down the error?
+1. How many test points estimate the error precisely?
 2. What if we reuse the same test set?
 3. Why expect a *trained* model to beat memorizing at all?
 :::
@@ -667,7 +641,7 @@ $$\epsilon_\mathcal{D}(f) \approx \epsilon(f) \pm \mathcal{O}(1/\sqrt{n}).$$
 . . .
 
 ::: {.d2l-note .rule}
-The $\sqrt{n}$ tax: **2× the precision costs 4× the data**; 10× the
+The $\sqrt{n}$ rate implies that **2× the precision costs 4× the data**; 10× the
 precision costs 100×. This rate is usually the best statistics can offer.
 :::
 :::
@@ -688,8 +662,8 @@ $$2\sqrt{0.25/n}\le 0.01 \;\Longrightarrow\; n\approx 10{,}000.$$
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-This is *exactly* the test-set size of many famous benchmarks, and why a
-$0.01$ improvement can be a real result.
+Many benchmarks use test sets of this order. The uncertainty calculation is
+necessary when interpreting an improvement of $0.01$.
 :::
 :::
 :::
@@ -746,7 +720,7 @@ a Bernoulli$(0.1)$ coin, so the estimate is $\mathrm{Binomial}(n, 0.1)/n$.
 On log–log axes the measured spread, the CLT prediction
 $\sqrt{\epsilon(1-\epsilon)/n}$, and the 95% Hoeffding radius
 $\sqrt{\log(2/0.05)/(2n)}$ are three **parallel lines of slope
-$-\tfrac{1}{2}$**: the $\sqrt{n}$ law in the flesh.
+$-\tfrac{1}{2}$**: consistent with the $\sqrt{n}$ rate.
 
 ::: {.d2l-note}
 The simulated spread sits **on** the CLT line; the Hoeffding envelope runs
@@ -760,7 +734,7 @@ a constant factor above it, the price of a guarantee at every finite $n$.
 
 [Reusing the Test Set]{.dtitle}
 
-[why a held-out set decays the moment you peek twice]{.dsub}
+[multiple comparisons and adaptive overfitting]{.dsub}
 :::
 :::
 
@@ -778,8 +752,8 @@ test set**. The data is still on disk, but it is no longer unseen.
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Every score you read off a held-out set leaks a little of it. Read it
-enough times and nothing is held out.
+Each test score used to guide development makes subsequent choices depend on
+the test set, weakening its independence as a final evaluation.
 :::
 :::
 :::
@@ -814,8 +788,8 @@ past $0.56$ after ten thousand tries, by pure selection.
 
 ::: {.d2l-note .warn}
 The climb grows like $\sqrt{\log(k)/(2n)}$, Hoeffding over $k$ events
-at once. Best-of-many on a shared test set *always* buys some of its
-improvement this way.
+at once. Best-of-many selection on a shared test set includes a selection effect of this
+kind.
 :::
 :::
 
@@ -839,16 +813,15 @@ thousand tries, by pure selection: the best of many lucky coin flips.
 
 ::: {.d2l-note .warn}
 The climb grows like $\sqrt{\log(k)/(2n)}$, Hoeffding over $k$ events at
-once. Best-of-many on a shared test set *always* buys some of its
-improvement this way, and an adaptive modeler, steering each model toward
-what scored well before, climbs faster still.
+once. Best-of-many selection includes this effect. Adaptive choices can introduce
+additional dependence by using earlier scores to guide later models.
 :::
 :::
 
 ::: {.slide title="Limit access to the test set"}
 [Test-Set Reuse · in practice]{.kicker}
 
-The worst-case theory is bleak, but real life is usually kinder. In
+The worst-case theory motivates conservative test-set practice. In
 practice:
 
 ::: {.d2l-note .rule}
@@ -874,13 +847,13 @@ practice:
 
 ::: {.cols .vc}
 ::: {.col}
-A test set is *post hoc*: it tells you a model generalized, never that it
-*should*. Learning theory wants a guarantee from the **model class**
+A test set provides a *post hoc* estimate for one fitted model; it does not
+explain why a learning procedure generalizes. Learning theory wants a guarantee from the **model class**
 $\mathcal{F}$ alone.
 
 Under **uniform convergence**, with probability $\ge 1-\delta$,
 *every* $f\in\mathcal{F}$ has its empirical error close to its true error at
-once. Then minimizing training error is safe.
+once. Then the selected empirical-risk minimizer inherits the uniform bound.
 :::
 
 ::: {.col .narrow}
@@ -904,7 +877,7 @@ $\mathcal{F}$ is:
 ::: {.col}
 ::: {.d2l-note .warn}
 **Memorizers** are *too flexible*: zero training error, no generalization.
-No uniform-convergence result can save them.
+Their training fit alone yields no useful uniform-convergence guarantee.
 :::
 :::
 
@@ -961,13 +934,13 @@ now for the *learned* model.
 ::: {.slide title="Why this breaks for deep networks"}
 [Learning Theory · the paradox]{.kicker}
 
-VC bounds are exact for linear models, but for deep nets they are essentially
-**vacuous**: they demand absurd sample counts (perhaps trillions).
+VC dimension is exact for linear model classes, but the resulting generalization
+bounds for deep networks can be **vacuous**, requiring sample counts (perhaps trillions).
 
 ::: {.d2l-note .warn}
 A deep net can fit **random labels**, so its VC dimension is enormous, yet it
 generalizes well on real data, and often *better* as it gets larger and
-deeper. Classical complexity measures do not explain this.
+deeper. These classical capacity bounds do not explain this empirical behavior.
 :::
 
 The modern road, **Rademacher complexity** and the double-descent behavior
@@ -985,7 +958,7 @@ in the generalization-in-deep-learning section.
   $\mathcal{O}(1/\sqrt{n})$. About **10k** points give $\pm 0.01$ at 95%.
 - **Asymptotic vs finite:** Hoeffding is valid at any $n$, and a little more
   conservative (~18.5k).
-- **Reuse decays it:** false discovery + adaptive overfitting. Treat a test
+- **Reuse affects validity:** false discovery + adaptive overfitting. Treat a test
   set as scarce.
 :::
 
@@ -995,7 +968,7 @@ in the generalization-in-deep-learning section.
 - **VC dimension** = largest shatterable set; for linear models exactly
   $d+1$ (labels read off / Radon); it bounds the gap at
   $\mathcal{O}(1/\sqrt{n})$.
-- **Deep nets** defy these bounds, generalizing despite huge capacity:
+- **Deep nets** are not explained by these bounds, generalizing despite huge capacity:
   the puzzle of the generalization-in-deep-learning section, with the modern
   tools in the concentration-and-generalization section.
 :::

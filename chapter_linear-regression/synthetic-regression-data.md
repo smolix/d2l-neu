@@ -12,8 +12,8 @@ Real datasets are what we ultimately care about,
 but they conflate three separate sources of failure:
 a misspecified model, a flawed optimization algorithm,
 and pathological data.
-When a method performs poorly on real data,
-all three explanations remain on the table at once.
+When a method performs poorly on real data, these explanations can be
+difficult to distinguish.
 *Synthetic data* removes this ambiguity by construction.
 If we know the data-generating process exactly
 (the true weights $\mathbf{w}^*$, the true bias $b^*$,
@@ -23,8 +23,8 @@ then any *systematic* failure to recover them
 or implementation.
 This is why a compatible synthetic dataset is a useful early implementation
 test for a new learning method.
-We confirm that it solves a problem with a known answer
-before we ever hand it a real one.
+We first confirm that the implementation solves a compatible problem with known
+parameters before evaluating it on real data.
 
 ```{.python .input #synthetic-regression-data}
 %%tab mxnet
@@ -64,8 +64,7 @@ import tensorflow as tf
 
 ## Generating the Dataset
 
-For this example, we will work in low dimension
-for succinctness.
+For clarity, this example uses two-dimensional inputs.
 The following code snippet generates 1000 examples
 with 2-dimensional features drawn 
 from a standard normal distribution.
@@ -154,7 +153,7 @@ Later, we can check our estimated parameters against these *ground truth* values
 data = SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 ```
 
-Each row of `data.X` is a feature vector in $\mathbb{R}^2$ and each row of `data.y` is a scalar label. Let's have a look at the first entry.
+Each row of `data.X` is a feature vector in $\mathbb{R}^2$, and each row of `data.y` is a scalar label. We inspect the first entry.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-3}
 print('features:', data.X[0],'\nlabel:', data.y[0])
@@ -236,9 +235,8 @@ def get_dataloader(self, train):
         yield self.X[batch_indices], self.y[batch_indices]
 ```
 
-To build some intuition, let's inspect the first minibatch of
-data. Each minibatch of features provides us with both its size and the dimensionality of input features.
-Likewise, our minibatch of labels will have a matching shape given by `batch_size`.
+We inspect the first minibatch. The feature shape records the minibatch size
+and input dimensionality, while the label shape has the same leading dimension.
 
 ```{.python .input #synthetic-regression-data-reading-the-dataset-2}
 X, y = next(iter(data.train_dataloader()))
@@ -365,7 +363,7 @@ random order on each call; exercise 8 of :numref:`sec_linear_scratch`
 asks why this reshuffling matters.
 
 :begin_tab:`jax`
-You may notice that the JAX loader reports 31 batches rather than 32.
+The JAX loader reports 31 batches rather than 32.
 This is because `get_tensorloader` passes `drop_remainder=True` when
 training: the final partial batch of 8 examples is discarded.
 We do this so that every training minibatch has an identical shape,
@@ -440,27 +438,28 @@ we use from here on.
 ::: {.cover}
 [Dive into Deep Learning · §3.3]{.kicker}
 
-Build a dataset whose answer you already know<br>**so a failed fit can only be the algorithm's fault**.
+Build a dataset with known generating parameters<br>**to isolate implementation and optimization errors**.
 :::
 :::
 
-::: {.slide title="Why fabricate the data?"}
+::: {.slide title="Why use synthetic data?"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-On **real** data, a poor result has three suspects at once: a wrong
-model, a broken optimizer, or pathological data.
+On **real** data, a poor result may reflect model misspecification, an
+optimization or implementation error, or properties of the data.
 
-**Synthetic** data removes the third. We *choose* the generative law,
-so the data is provably learnable:
+**Synthetic** data specifies the generative law, so we can test whether a
+compatible method recovers known parameters:
 
 $$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon},
   \qquad \boldsymbol{\epsilon}\sim\mathcal{N}(0,\sigma^2 I).$$
 
 ::: {.d2l-note}
-Recover $\mathbf{w}^*,b^*$ → the method works. Miss them → the bug is
-yours, full stop.
+Agreement with $\mathbf{w}^*,b^*$ supports the implementation on this controlled
+problem. Systematic disagreement indicates an optimization or implementation
+problem, provided the fitted model matches the generator.
 :::
 :::
 
@@ -483,7 +482,7 @@ The dataset lives in a `DataModule` (the object-oriented-design section):
 :::
 :::
 
-::: {.slide title="A DataModule that builds itself" except="jax"}
+::: {.slide title="Generate data in a DataModule" except="jax"}
 [Generating the data]{.kicker}
 
 Draw $\mathbf{X}\sim\mathcal{N}(0,1)$, apply the true line, add tiny noise,
@@ -496,7 +495,7 @@ all inside `__init__` ($n=2000$ examples, two features):
 :::
 :::
 
-::: {.slide title="A DataModule that builds itself" only="jax"}
+::: {.slide title="Generate data with explicit JAX keys" only="jax"}
 [Generating the data]{.kicker}
 
 JAX randomness is **functional**: thread a `key` in, `split` it for
@@ -506,7 +505,7 @@ independent $\mathbf{X}$ and $\boldsymbol{\epsilon}$ draws (same `key` in
 @synthetic-regression-data-generating-the-dataset-1
 :::
 
-::: {.slide title="Fix the ground truth, then peek"}
+::: {.slide title="Set and inspect the generating parameters"}
 [Generating the data]{.kicker}
 
 Instantiate with the true $\mathbf{w}^*=[2,-3.4]^\top$, $b^*=4.2$:
@@ -520,8 +519,8 @@ Each feature row is a vector in $\mathbb{R}^2$; each label is a scalar:
 @synthetic-regression-data-generating-the-dataset-3
 
 ::: {.d2l-note .rule}
-Memorize $[2, -3.4]$ and $4.2$: the next two sections train models whose
-*only* pass mark is giving these numbers back.
+The next two sections compare the fitted parameters with $[2, -3.4]$ and
+$4.2$, allowing for estimation error from the added noise.
 :::
 :::
 
@@ -538,7 +537,7 @@ Memorize $[2, -3.4]$ and $4.2$: the next two sections train models whose
 ::: {.slide title="A minibatch sampler, by hand"}
 [Reading the data]{.kicker}
 
-Roll the minibatch loader ourselves: shuffle the indices (afresh on
+The hand-written minibatch loader shuffles the indices (afresh on
 every training pass), then `yield` `batch_size` rows at a time (one
 batch is $32\times2$ features, $32\times1$ labels).
 
@@ -547,8 +546,8 @@ batch is $32\times2$ features, $32\times1$ labels).
 . . .
 
 ::: {.d2l-note .warn}
-Transparent, but it costs three ways: all data in memory, single-threaded
-Python, and no prefetching to overlap loading with compute.
+This implementation is transparent, but it keeps all data in memory, iterates
+in single-threaded Python, and does not prefetch batches.
 :::
 :::
 
@@ -558,21 +557,21 @@ Python, and no prefetching to overlap loading with compute.
 
 [The built-in loader]{.dtitle}
 
-[same interface, production speed]{.dsub}
+[the same interface with framework data-loading features]{.dsub}
 :::
 :::
 
 ::: {.slide title="Hand the work to the framework" except="jax"}
 [The built-in loader]{.kicker}
 
-The framework's loader shuffles, prefetches, and parallelizes for us.
-Wrap the tensors once...
+The framework loader can shuffle, prefetch, and parallelize loading. First,
+wrap the tensors:
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-1
 
 . . .
 
-...then rewire `get_dataloader` to use it (training vs. validation split):
+Then make `get_dataloader` use it for the training or validation split:
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-2
 :::
@@ -580,7 +579,7 @@ Wrap the tensors once...
 ::: {.slide title="Hand the work to the framework" only="jax"}
 [The built-in loader]{.kicker}
 
-JAX ships no loader, so borrow TensorFlow's and unwrap it to NumPy. The one twist is `drop_remainder=train`; `get_dataloader` then slices the train/val range and calls this.
+JAX ships no loader, so borrow TensorFlow's and unwrap it to NumPy. The relevant option is `drop_remainder=train`; `get_dataloader` then slices the train/val range and calls this.
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-1
 :::
@@ -615,7 +614,7 @@ last batch, so every `@jax.jit` step sees one shape.
 @synthetic-regression-data-concise-implementation-of-the-data-loader-4
 
 ::: {.d2l-note .rule}
-We lose 8 examples per epoch, here negligible.
+This setting omits 8 examples in each epoch for this dataset.
 :::
 :::
 
@@ -625,7 +624,7 @@ We lose 8 examples per epoch, here negligible.
 ::: {.cols}
 ::: {.col}
 - **Synthetic data** fixes the answer up front ($\mathbf{w}^*=[2,-3.4]$,
-  $b^*=4.2$), so a failed fit can only be the algorithm's fault.
+  $b^*=4.2$), enabling a controlled check of a compatible training method.
 - A `DataModule` packages *where batches come from*, reusable across
   models.
 :::

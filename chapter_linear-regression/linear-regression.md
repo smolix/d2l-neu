@@ -70,11 +70,9 @@ import time
 
 ## Basics
 
-*Linear regression* is both the simplest
-and most popular among the standard tools
-for tackling regression problems.
-Dating back to the dawn of the 19th century :cite:`Legendre.1805,Gauss.1809`,
-linear regression flows from a few simple assumptions.
+*Linear regression* is a standard method for regression problems.
+Developed at the beginning of the 19th century :cite:`Legendre.1805,Gauss.1809`,
+it begins with a small set of assumptions.
 First, we assume that the relationship
 between features $\mathbf{x}$ and target $y$
 is approximately linear,
@@ -97,9 +95,8 @@ and $x_j^{(i)}$ denotes its $j^{\textrm{th}}$ coordinate.
 ### Model
 :label:`subsec_linear_model`
 
-At the heart of every solution is a model
-that describes how features can be transformed
-into an estimate of the target.
+A model specifies how the features determine
+an estimate of the target.
 The assumption of linearity means that
 the expected value of the target (price) can be expressed
 as a weighted sum of the features (area and age):
@@ -190,9 +187,7 @@ and (ii) a procedure for updating the model to improve its quality.
 ### Loss Function
 :label:`subsec_linear-regression-loss-function`
 
-Naturally, fitting our model to the data requires
-that we agree on some measure of *fitness*
-(or, equivalently, of *unfitness*).
+Fitting the model requires a measure of prediction error.
 *Loss functions* quantify the distance
 between the *real* and *predicted* values of the target.
 The loss will usually be a nonnegative number
@@ -221,13 +216,10 @@ in a problem with one-dimensional inputs.
 ![Fitting a linear regression model to one-dimensional data.](../img/fit-linreg.svg)
 :label:`fig_fit_linreg`
 
-Note that large differences between
-estimates $\hat{y}^{(i)}$ and targets $y^{(i)}$
-lead to even larger contributions to the loss,
-due to its quadratic form
-(this quadraticity cuts both ways: it strongly discourages large errors but is
-oversensitive to anomalous data).
-That sensitivity is easy to see in action. Below we place twenty points
+Large differences between estimates $\hat{y}^{(i)}$ and targets $y^{(i)}$
+make disproportionately large contributions to the quadratic loss. This
+property strongly discourages large errors but also makes the loss sensitive
+to anomalous data. The following example demonstrates that sensitivity. Below we place twenty points
 exactly on the line $y = 2x$, corrupt a single label, and fit a line through
 the origin twice: minimizing squared error (closed form) and minimizing the
 *mean absolute error* $\frac{1}{n}\sum_i |\hat{y}^{(i)} - y^{(i)}|$
@@ -282,12 +274,12 @@ for _ in range(2000):
 print(f'true w: 2.00, squared loss: {float(w_sq):.2f}, MAE: {float(w_mae):.2f}')
 ```
 
-One bad label drags the squared-loss estimate an order of magnitude away from
-the truth, while the absolute-error fit barely moves. We return to this
+The corrupted label moves the squared-loss estimate an order of magnitude away
+from the generating value, while the absolute-error estimate changes little. We return to this
 trade-off between losses at the end of the chapter's probabilistic treatment,
 and the exercises explore it further.
 To measure the quality of a model on the entire dataset of $n$ examples,
-we simply average (or, up to a rescaling of the learning rate, sum)
+we average (or, up to a rescaling of the learning rate, sum)
 the losses on the training set:
 
 $$L(\mathbf{w}, b) =\frac{1}{n}\sum_{i=1}^n l^{(i)}(\mathbf{w}, b) =\frac{1}{n} \sum_{i=1}^n \frac{1}{2}\left(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\right)^2.$$
@@ -297,14 +289,18 @@ that minimize the total loss across all training examples:
 
 $$\mathbf{w}^*, b^* = \operatorname*{argmin}_{\mathbf{w}, b}\  L(\mathbf{w}, b).$$
 
+There is also a probabilistic reason for this choice. If the label equals the
+linear prediction plus independent Gaussian noise of constant variance, then
+minimizing squared error is exactly maximum-likelihood estimation. Other noise
+models produce other losses. We derive this correspondence and compare several
+choices in :numref:`subsec_normal_distribution_and_squared_loss`; for now, the
+squared loss supplies the objective whose optimization we study.
+
 ### Analytic Solution
 
 Unlike most of the models that we will cover,
-linear regression presents us with
-a surprisingly easy optimization problem.
-In particular, we can find the optimal parameters
-(as assessed on the training data)
-analytically by applying a simple formula as follows.
+linear regression has an analytic solution for the optimal training-set
+parameters. We derive that solution next.
 First, we can subsume the bias $b$ into the parameter $\mathbf{w}$
 by appending a column to the design matrix consisting of all 1s.
 Then our prediction problem is to minimize $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2$.
@@ -356,43 +352,32 @@ developed with a picture in :numref:`sec_mdl-geometry-linear-algebraic-ops`.
 
 
 
-While simple problems like linear regression
-may admit analytic solutions,
-you should not get used to such good fortune.
-Although analytic solutions allow for nice mathematical analysis,
-the requirement of an analytic solution is so restrictive
-that it would exclude almost all exciting aspects of deep learning.
+Some models, including linear regression with squared loss, admit analytic
+solutions that support direct mathematical analysis. Most deep learning models
+do not, so they require iterative optimization.
 
 ### Minibatch Stochastic Gradient Descent
 
-Fortunately, even in cases where we cannot solve the models analytically,
-we can still often train models effectively in practice.
-Moreover, for many tasks, those hard-to-optimize models
-turn out to be so much better that figuring out how to train them
-ends up paying off.
-
-The key technique for optimizing nearly every deep learning model
-consists of iteratively reducing the error
-by updating the parameters in the direction
-that incrementally lowers the loss function,
-and we will call upon it throughout this book.
+When an analytic solution is unavailable, iterative methods can still train
+the model effectively. Gradient descent, used throughout this book, repeatedly
+updates the parameters in a direction that reduces the loss locally.
 This algorithm is called *gradient descent*.
 
-The most naive application of gradient descent
+The full-batch form of gradient descent
 consists of taking the derivative of the loss function,
 which is an average of the losses computed
 on every single example in the dataset.
-In practice, this can be extremely slow:
+For large datasets, this can be slow:
 we must pass over the entire dataset before making a single update,
 even if the update steps might be very powerful :cite:`Liu.Nocedal.1989`.
-Even worse, if there is a lot of redundancy in the training data,
-the benefit of a full update is limited.
+Redundant training examples can further reduce the benefit of computing each
+update from the full dataset.
 
 The other extreme is to consider only a single example at a time and to take
 update steps based on one observation at a time.
 The resulting algorithm is *stochastic gradient descent* (SGD),
 which can be an effective strategy :cite:`Bottou.2010`, even for large datasets.
-Unfortunately, SGD has drawbacks, both computational and statistical.
+Single-example SGD also has computational and statistical drawbacks.
 One problem is that processors are a lot faster
 at multiplying and adding numbers than
 at moving data from main memory to processor cache.
@@ -412,8 +397,8 @@ we take a *minibatch* of observations :cite:`Li.Zhang.Chen.ea.2014`.
 The specific choice of minibatch size depends on many factors,
 such as the amount of memory, the number of accelerators,
 the choice of layers, and the total dataset size.
-Despite all that, a number between 32 and 256,
-preferably a multiple of a large power of $2$, is a good start.
+On many current accelerators, powers of $2$ between 32 and 256 are reasonable
+initial candidates, but the best value depends on the task and hardware.
 This leads us to *minibatch stochastic gradient descent*.
 
 In its most basic form, in each iteration $t$,
@@ -456,10 +441,9 @@ Note that even if our function is truly linear and noiseless,
 these parameters will not be the exact minimizers of the loss, nor even deterministic.
 Although the algorithm converges slowly towards the minimizers,
 it typically will not find them exactly in a finite number of steps.
-In fact, this vague statement has a precise form: with a constant learning
-rate, minibatch SGD does not settle on the minimizer at all but hovers in a
-*noise ball* around it, whose squared radius scales like $\eta$ times the
-gradient noise. Shrinking the learning rate shrinks the ball, which is why
+With a constant learning rate, minibatch SGD instead approaches a stochastic
+neighborhood of the minimizer whose squared radius scales like $\eta$ times
+the gradient noise. Shrinking the learning rate shrinks the ball, which is why
 learning-rate *schedules* matter.
 Why gradient descent converges, at what rate, and how the learning rate and
 its schedule interact with gradient noise are worked out in
@@ -472,8 +456,7 @@ Linear least squares always has a global minimizer because its loss is a
 convex quadratic bounded below. Full column rank, equivalently an invertible
 $\mathbf{X}^\top\mathbf{X}$, makes that minimizer unique.
 However, the loss surfaces for deep networks contain many saddle points and minima.
-Fortunately, we typically do not care about finding
-an exact set of parameters but merely any set of parameters
+For prediction, we typically need parameters
 that leads to accurate predictions (and thus low loss).
 In practice, deep learning practitioners
 seldom struggle to find parameters
@@ -506,8 +489,7 @@ vectorize the calculations and use
 fast linear algebra libraries
 rather than writing costly for-loops in Python.
 
-To see why this matters so much,
-let's consider two methods for adding vectors.
+To measure the effect, we compare two methods for adding vectors.
 To start, we instantiate two 1000-dimensional vectors
 containing all 1s.
 In the first method, we loop over the vectors with a Python for-loop.
@@ -587,14 +569,9 @@ for the squared loss objective
 by making probabilistic assumptions
 about the distribution of noise.
 
-Linear regression was invented at the turn of the 19th century.
-While it has long been debated whether Gauss or Legendre
-first thought up the idea,
-it was Gauss who also discovered the normal distribution
-(also called the *Gaussian*).
-It turns out that the normal distribution
-and linear regression with squared loss
-share a deeper connection than common parentage.
+Linear regression and the normal distribution were both developed near the
+beginning of the 19th century. More importantly here, a Gaussian noise model
+leads directly to linear regression with squared loss.
 
 To begin, recall that a normal distribution
 with mean $\mu$ and variance $\sigma^2$ (standard deviation $\sigma$)
@@ -728,7 +705,7 @@ because it does not depend on $\mathbf{w}$ or $b$.
 The second term is identical
 to the squared error loss introduced earlier,
 except for the multiplicative constant $\frac{1}{\sigma^2}$.
-Fortunately, the solution does not depend on $\sigma$ either.
+The solution does not depend on $\sigma$ either.
 It follows that minimizing the mean squared error
 is equivalent to the maximum likelihood estimation
 of a linear model under the assumption of additive Gaussian noise.
@@ -750,8 +727,8 @@ assumptions yield other losses:
 
 :numref:`fig_linreg-loss-menu` shows why the first two rows differ: the
 Laplace density places far more mass in its tails than a Gaussian of equal
-variance, so a large residual is *unsurprising* under the Laplace model and
-its loss penalizes it only linearly, exactly the robustness we observed in
+variance, so the Laplace model assigns a large residual more probability and
+its loss penalizes that residual only linearly, exactly the robustness we observed in
 the outlier demonstration above. The figure also marks the *Huber* loss, a
 compromise that is quadratic near zero (like squared error) but linear in the
 tails (like absolute error). Each of these losses is explored in the
@@ -1007,8 +984,9 @@ view below explains *both* behaviors.
 
 $$\mathbf{w}^* = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}.$$
 
-Exact, but it needs a matrix inverse, and it exists **only** for
-linear models with squared loss.
+This expression applies when the normal-equation matrix is invertible. Numerical
+implementations solve the least-squares system directly instead of forming the
+inverse.
 
 . . .
 
@@ -1044,16 +1022,16 @@ normal equation $\mathbf{X}^\top(\mathbf{X}\mathbf{w}^*-\mathbf{y})=\mathbf{0}$.
 [The Model]{.kicker}
 
 - **Initialize** $\mathbf{w}, b$ at random.
-- **Sample** a minibatch $\mathcal{B}$ (size 32--256: a full batch is
-  slow, a single point is noisy).
+- **Sample** a minibatch $\mathcal{B}$ (32--256 is a common initial range,
+  subject to the data and hardware).
 - **Average** the per-example gradients on $\mathcal{B}$.
 - **Step** a small distance $\eta$ (the *learning rate*) downhill.
 
 . . .
 
 ::: {.d2l-note .rule}
-With a constant $\eta$, SGD never lands on the minimizer: it hovers in a
-**noise ball** whose squared radius scales with $\eta$. Shrinking $\eta$
+With a constant $\eta$, stochastic gradients generally keep the parameters in
+a neighborhood of the minimizer whose squared radius scales with $\eta$. Shrinking $\eta$
 shrinks the ball, the reason learning-rate *schedules* exist (the
 stochastic-and-adaptive-methods section).
 :::
@@ -1065,11 +1043,11 @@ stochastic-and-adaptive-methods section).
 
 [Vectorization]{.dtitle}
 
-[why the inner loop never lives in Python]{.dsub}
+[why vectorized kernels reduce interpreter overhead]{.dsub}
 :::
 :::
 
-::: {.slide title="A thousand interpreter trips, or one kernel call" layout="tight"}
+::: {.slide title="One vectorized kernel replaces repeated interpreter calls" layout="tight"}
 [Vectorization]{.kicker}
 
 ::: {.cols}
@@ -1088,8 +1066,9 @@ Or hand the whole array to **one compiled kernel**:
 :::
 
 ::: {.d2l-note .rule}
-Identical math, orders-of-magnitude different cost, and the gap *grows*
-with vector length. Push inner loops into the library, never Python.
+The operations are mathematically identical, but the vectorized form can be
+much faster because it invokes one compiled kernel. Keep tensor inner loops in
+vectorized library operations when possible.
 :::
 :::
 
@@ -1114,8 +1093,8 @@ $$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon,
   \qquad \epsilon \sim \mathcal{N}(0, \sigma^2).$$
 
 Shifting the **mean** slides the bell; growing the **variance** flattens
-it. Note how fast the tails die: under a Gaussian, a huge error is
-essentially *impossible*.
+it. The Gaussian density assigns very low probability to errors many standard
+deviations from the mean.
 :::
 
 ::: {.col .fig}
@@ -1127,7 +1106,7 @@ essentially *impossible*.
 ::: {.slide title="Maximum likelihood turns the assumption into the loss"}
 [Where losses come from]{.kicker}
 
-The Gaussian assumption prices every $y$:
+The Gaussian assumption assigns a density to every $y$:
 $P(y\mid\mathbf{x}) = \tfrac{1}{\sqrt{2\pi\sigma^2}}
     \exp\!\bigl(-\tfrac{(y-\hat{y})^2}{2\sigma^2}\bigr)$.
 Maximize the likelihood of the dataset = minimize its negative log:
@@ -1138,18 +1117,16 @@ $$-\log P(\mathbf{y}\mid\mathbf{X})
 . . .
 
 The constant and $\sigma$ drop out: **maximum likelihood under Gaussian
-noise *is* squared error.** The square was never arbitrary: it is the
-Gaussian's $(\cdot)^2$, inherited.
+noise *is* squared error.** The $(\cdot)^2$ term follows from the exponent in the Gaussian density.
 
 ::: {.d2l-note .rule}
-This also explains the outlier demo: squared loss trusted the Gaussian's
-thin tails, so a $10000$ where $12$ was expected read as *impossible* and
-dominated the fit.
+This also explains the outlier demo: the Gaussian model assigns very little probability to observing $10000$ where
+$12$ was expected, so the corresponding squared loss dominates the fit.
 :::
 :::
 
 ::: {.slide title="Match the loss to the noise model"}
-[Where losses come from · payoff]{.kicker}
+[Where losses come from · comparison]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
@@ -1160,8 +1137,8 @@ dominated the fit.
 - Gaussian on $\log y$ → log-price regression
 - Poisson → $\lambda - k\log\lambda$ (counts)
 
-Laplace's heavy tails *expect* the occasional wild point and penalize it
-only linearly, the robust MAE fit from the outlier demo.
+The Laplace model assigns more probability to large residuals and penalizes
+them linearly, producing the robust MAE fit in the outlier example.
 :::
 
 ::: {.col .fig}
@@ -1190,7 +1167,7 @@ the next chapter applies the same likelihood principle to categorical data → s
 
 ::: {.cols .vc}
 ::: {.col}
-Wire every input $x_1,\ldots,x_d$ **directly** to a single output $o_1$.
+Connect every input $x_1,\ldots,x_d$ directly to a single output $o_1$.
 
 The output is the same weighted sum $\sum_i w_i x_i + b$, so linear
 regression is a **single-layer, fully connected** network: $d$ inputs,
@@ -1213,9 +1190,9 @@ weighted by synaptic strengths $w_i$; the nucleus sums them; the axon
 carries the result on.
 
 ::: {.d2l-note .warn}
-Planes were inspired by birds, but aeronautics is not ornithology:
-today's deep learning draws at least as much on mathematics, statistics,
-and computer science as on the brain.
+The biological analogy motivated the terminology, but modern deep learning is
+principally described with concepts from mathematics, statistics, and computer
+science.
 :::
 :::
 
@@ -1239,16 +1216,10 @@ and computer science as on the brain.
 
 ::: {.col}
 - **Vectorize:** one kernel call, never a Python inner loop.
-- **One bad label:** in twenty, slope $22.88$ vs. $2.02$, the square's
-  thin-tailed trust exposed.
+- **One bad label:** in twenty, the squared-loss slope is $22.88$ while
+  the absolute-error slope is $2.02$.
 - **Likelihood interpretation:** squared loss corresponds to Gaussian noise;
   changing the noise model changes the loss.
 :::
 :::
 :::
-There is also a probabilistic reason for this choice. If the label equals the
-linear prediction plus independent Gaussian noise of constant variance, then
-minimizing squared error is exactly maximum-likelihood estimation. Other noise
-models produce other losses. We derive this correspondence and compare several
-choices in :numref:`subsec_normal_distribution_and_squared_loss`; for now, the
-squared loss supplies the objective whose optimization we study.

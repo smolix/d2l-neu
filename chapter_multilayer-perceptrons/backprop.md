@@ -28,8 +28,26 @@ a one-hidden-layer MLP
 with weight decay ($\ell_2$ regularization, introduced in :numref:`sec_weight_decay`).
 
 ```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
+%%tab mxnet
+from mxnet import autograd, np, npx
+
+npx.set_np()
+```
+
+```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
 %%tab pytorch
 import torch
+```
+
+```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
+%%tab tensorflow
+import tensorflow as tf
+```
+
+```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
+%%tab jax
+import jax
+from jax import numpy as jnp
 ```
 
 ## Forward Propagation
@@ -303,8 +321,38 @@ met in :numref:`sec_mlp`. You can confirm every number here in a few lines of
 automatic differentiation (:numref:`sec_autograd`): rebuild the same tensors
 with gradient tracking, run the forward pass, sweep back through the graph, and
 compare against the manually derived gradients. The arithmetic is
-framework-independent; the PyTorch cell below provides one compact autograd
-check.
+framework-independent; the frameworks differ only in how they expose the
+gradients at interior nodes of the graph. PyTorch retains them on request,
+TensorFlow's tape can differentiate with respect to any tensor it recorded,
+JAX differentiates the tail function that consumes the node, and MXNet
+replays the tail of the graph with the node as an input.
+
+```{.python .input #backprop-verify}
+%%tab mxnet
+x, y = np.array([1., 2.]), 0
+W1 = np.array([[1., -1.], [0., 1.]])
+W2 = np.array([[2., -1.]])
+for v in (W1, W2): v.attach_grad()
+with autograd.record():
+    z = np.dot(W1, x)
+    h = npx.relu(z)
+    o = np.dot(W2, h)
+    L = ((o - y) ** 2).sum() / 2
+L.backward()
+# the replay below also writes W1.grad and W2.grad, so copy them out first
+dW1, dW2 = W1.grad.copy(), W2.grad.copy()
+# attach_grad() on an interior node would detach it from the graph, so
+# rebuild z and h as leaves and replay the tail of the graph from each
+z, h = np.dot(W1, x), npx.relu(np.dot(W1, x))
+for v in (z, h): v.attach_grad()
+with autograd.record():
+    Lz = ((np.dot(W2, npx.relu(z)) - y) ** 2).sum() / 2
+    Lh = ((np.dot(W2, h) - y) ** 2).sum() / 2
+    Ltail = Lz + Lh
+Ltail.backward()
+print(f'L = {L}, dL/dW2 = {dW2}, dL/dh = {h.grad}')
+print(f'dL/dz = {z.grad}, dL/dW1 =\n{dW1}')
+```
 
 ```{.python .input #backprop-verify}
 %%tab pytorch
@@ -319,6 +367,38 @@ L = ((o - y) ** 2).sum() / 2
 L.backward()
 print(f'L = {L.item()}, dL/dW2 = {W2.grad}, dL/dh = {h.grad}')
 print(f'dL/dz = {z.grad}, dL/dW1 =\n{W1.grad}')
+```
+
+```{.python .input #backprop-verify}
+%%tab tensorflow
+x, y = tf.constant([1., 2.]), 0
+W1 = tf.Variable([[1., -1.], [0., 1.]])
+W2 = tf.Variable([[2., -1.]])
+with tf.GradientTape() as tape:
+    z = tf.linalg.matvec(W1, x)
+    h = tf.nn.relu(z)
+    o = tf.linalg.matvec(W2, h)
+    L = tf.reduce_sum((o - y) ** 2) / 2
+# the tape can differentiate with respect to interior tensors directly
+dW1, dW2, dz, dh = tape.gradient(L, [W1, W2, z, h])
+print(f'L = {L.numpy()}, dL/dW2 = {dW2.numpy()}, dL/dh = {dh.numpy()}')
+print(f'dL/dz = {dz.numpy()}, dL/dW1 =\n{dW1.numpy()}')
+```
+
+```{.python .input #backprop-verify}
+%%tab jax
+x, y = jnp.array([1., 2.]), 0
+W1 = jnp.array([[1., -1.], [0., 1.]])
+W2 = jnp.array([[2., -1.]])
+z, h = W1 @ x, jax.nn.relu(W1 @ x)
+loss = lambda W1, W2: ((W2 @ jax.nn.relu(W1 @ x) - y) ** 2).sum() / 2
+L, (dW1, dW2) = jax.value_and_grad(loss, argnums=(0, 1))(W1, W2)
+# the gradient at an interior node is the gradient of the tail function
+# of the graph that consumes it
+dh = jax.grad(lambda h: ((W2 @ h - y) ** 2).sum() / 2)(h)
+dz = jax.grad(lambda z: ((W2 @ jax.nn.relu(z) - y) ** 2).sum() / 2)(z)
+print(f'L = {L}, dL/dW2 = {dW2}, dL/dh = {dh}')
+print(f'dL/dz = {dz}, dL/dW1 =\n{dW1}')
 ```
 
 Every printed gradient matches the hand computation, down to the zeroed-out
@@ -667,16 +747,16 @@ weights never update. This is the *dying ReLU* in one matrix.
 :::
 :::
 
-::: {.slide title="Verify the gradients with autograd" only="pytorch" layout="code"}
+::: {.slide title="Verify the gradients with autograd" layout="code"}
 [Worked Example · verified]{.kicker}
 
-Build the same tensors with `requires_grad`, run the forward pass, call
-`backward()`. The entire verification is a few lines:
+Rebuild the same tensors with gradient tracking, run the forward pass, and
+sweep backward. The entire verification is a few lines:
 
 @-backprop-verify
 :::
 
-::: {.slide title="Autograd repeats every number" only="pytorch"}
+::: {.slide title="Autograd repeats every number"}
 [Worked Example · verified]{.kicker}
 
 The script compares autograd with the manual derivation:
@@ -693,27 +773,6 @@ $$L = 2.0,\quad
 Every gradient matches, down to the zeroed row for the dead unit. (The $-0$
 is floating point's *signed zero*, $h_1 = 0$ times a negative upstream
 gradient; it compares equal to $0$.)
-:::
-:::
-
-::: {.slide title="Autograd repeats every number" except="pytorch"}
-[Worked Example · verified]{.kicker}
-
-Rebuild the same tensors with gradient tracking, run the forward pass, call
-the framework's backward sweep, and the printout matches the hand derivation
-exactly:
-
-$$L = 2.0,\qquad
-\frac{\partial L}{\partial \mathbf{W}^{(2)}} = [0,\ {-4}],\qquad
-\frac{\partial L}{\partial \mathbf{h}} = [-4,\ 2]^\top,$$
-
-$$\frac{\partial L}{\partial \mathbf{z}} = [0,\ 2]^\top,\qquad
-\frac{\partial L}{\partial \mathbf{W}^{(1)}} =
-\begin{bmatrix} 0 & 0\\ 2 & 4\end{bmatrix}.$$
-
-::: {.d2l-note}
-Every gradient matches, down to the zeroed row for the dead unit: six lines
-of autograd, one hand derivation, no disagreements.
 :::
 :::
 

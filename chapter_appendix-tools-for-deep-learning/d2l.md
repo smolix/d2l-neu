@@ -1,8 +1,11 @@
-# The `d2l` API Document
+# The `d2l` API Reference
 :label:`sec_d2l`
 
-This section displays classes and functions (sorted alphabetically) in the `d2l` package, showing where they are defined in the book so you can find more detailed implementations and explanations. 
-See also the source code on the [GitHub repository](https://github.com/d2l-ai/d2l-en/tree/master/d2l).
+This section lists the classes and functions in the `d2l` package
+alphabetically and links each entry to its definition and explanation in the
+book.
+The generated modules are also available in this book's
+[GitHub repository](https://github.com/smolix/d2l-neu/tree/main/d2l).
 
 ## Classes
 

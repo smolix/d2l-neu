@@ -1,13 +1,11 @@
 # Hardware
 :label:`sec_hardware_buyers`
 
-At some point most practitioners ask: should I buy a machine? This section
-is a buyers guide. Concrete hardware advice ages quickly — we quote prices
-as of July 2026 and expect them to be wrong in a year (indeed, 2026's
-memory shortage has GPUs *appreciating*, an anomaly worth remembering when
-you read anyone's price table, including ours). What does not age is the
+This section explains how to evaluate a hardware purchase. Concrete advice
+ages quickly: the prices below are a July 2026 snapshot, not current
+quotations, and require verification before purchase. What does not age is the
 reasoning: figure out whether your workload is bound by memory capacity,
-memory bandwidth, or compute, and buy the binding constraint. The specific
+memory bandwidth, or compute, and prioritize the binding constraint. The specific
 machines below are reference points for that reasoning as much as
 recommendations. Where :numref:`sec_hardware` explains *why* the machine
 behaves the way it does — the roofline, the memory hierarchy, the format
@@ -28,8 +26,9 @@ $$
 
 while *prompt processing* (prefill) and *training* are parallel across
 tokens and lean on compute instead. Machines differ by an order of
-magnitude on each axis, in different directions — which is why "what
-should I buy?" has no single answer, but always the same analysis.
+magnitude on each axis, in different directions. Hardware selection therefore
+depends on the workload, although the same capacity, bandwidth, and compute
+analysis applies.
 
 ## What Are You Buying For?
 
@@ -53,8 +52,8 @@ for b in [0.1, 1, 7]:
 
 A 7B full fine-tune wants ~90 GiB — no consumer card holds it — while
 LoRA (freeze the weights, train small adapters, quantize the base to
-4 bits) collapses the same job to under 8 GiB. That single technique is
-why a 16 GB card is a genuine training machine in 2026. For inference,
+4 bits) reduces the estimate for the same job to under 8 GiB. This allows
+some 7B adapter fine-tuning workloads to fit on a 16 GB card. For inference,
 apply the decode bound:
 
 ```{.python .input #hardware-decode-bound}
@@ -67,10 +66,10 @@ for device, bw in sorted(bandwidth_gbs.items(), key=lambda kv: -kv[1]):
     print(f"{device:>16s}: <= {bw / active_gb:5.0f} tok/s")
 ```
 
-Realized speed is typically 50–80% of this bound, but the *ordering* it
-predicts matches measurement remarkably well — and it explains oddities
-like a \$4,700 DGX Spark decoding no faster than a MacBook: both stream
-weights at roughly 273 GB/s.
+Realized speed depends on kernels and workload, but the bound often predicts
+the ordering of bandwidth-limited systems. For example, systems with similar
+memory bandwidth can have similar decode rates despite large differences in
+compute throughput and price.
 
 ![Discrete GPUs pair modest capacity with very high bandwidth; unified-memory machines invert the trade. The gap in the upper right is where datacenter GPUs live.](../img/tools-hardware-menu.svg)
 :label:`fig_tools_hardware_menu`
@@ -82,36 +81,36 @@ RTX PRO 6000 bridging them at a price. Everything below walks this figure.
 
 ## Training Boxes: Discrete NVIDIA GPUs
 
-For training and fine-tuning, a discrete NVIDIA card remains the default:
-highest bandwidth per dollar, mature software (every framework in this
-book, FlashAttention, quantization kernels) and the same CUDA stack you
-will meet on rented cloud machines.
+For many training and fine-tuning workloads, a discrete NVIDIA GPU offers
+high memory bandwidth and broad software support, including the frameworks
+in this book, FlashAttention, quantization kernels, and the CUDA stack common
+on rented machines.
 
-### RTX 5070 Ti: the Smallest Serious Trainer
+### RTX 5070 Ti: A 16 GB Training Reference
 
 The RTX 5070 Ti (16 GB GDDR7 at 896 GB/s, 300 W, ~\$900 in July 2026
-against a \$749 list) is about the smallest card we would recommend for
-*training* rather than only inference. Sixteen gigabytes runs every
-notebook in this book with plenty of headroom, LoRA/QLoRA fine-tunes of
+against a \$749 list) provides a useful lower-capacity reference for local
+training. Sixteen gigabytes runs every notebook in this book and supports
+some LoRA/QLoRA fine-tunes of
 7–8B models comfortably, and diffusion fine-tuning at 1024² — while a
-12 GB card starts excluding exactly the experiments you will want to try
-next. A complete quiet desktop around it (any 8-core CPU, 64 GB RAM, 1 TB
-NVMe, 850 W supply) lands near \$2,000–2,500. Its natural competitor is
+12 GB card excludes more model, sequence-length, and batch-size
+configurations. A complete quiet desktop around it (any 8-core CPU, 64 GB RAM, 1 TB
+NVMe, 850 W supply) cost about \$2,000–2,500 in this snapshot. A comparable
+alternative is
 the used RTX 3090 (24 GB at 936 GB/s, ~\$1,000–1,400 used in July 2026):
 more memory and similar bandwidth, but 350 W, no FP8/FP4 tensor cores, no
 warranty, and — a 2026 curiosity — a price that has been rising.
 
-### RTX 5090: the Enthusiast Box
+### RTX 5090: A High-End Desktop Reference
 
 The RTX 5090 (32 GB GDDR7 at 1.79 TB/s, 575 W, \$3,000–4,300 street in
 July 2026 against a \$1,999 list) is the fastest thing you can put in a
 desktop: datacenter-class bandwidth, Blackwell FP8/FP4 tensor cores, and
 enough memory for full fine-tunes of small models and LoRA on anything up
-to ~30B. It is also a *system-design problem*: budget a 1200 W power
-supply with a native 16-pin connector (measured transients approach
-660 W), a full tower with real airflow, the noise tolerance of a small
-space heater, and — on a 120 V circuit — awareness that the whole box
-under load approaches what the wall socket provides. A balanced build
+to ~30B. The card also imposes system-level requirements: a 1200 W power supply with
+a native 16-pin connector, a chassis with sufficient airflow, and a circuit
+that can sustain the system's load. Reported transient power can approach
+660 W. A balanced build
 (:numref:`fig_tools_workstation`) pairs it with a current 16-core CPU,
 64–128 GB of RAM, and fast NVMe scratch for datasets; in the 2026 memory
 market that totals \$6,500–10,000 depending mostly on the RAM.
@@ -119,15 +118,16 @@ market that totals \$6,500–10,000 depending mostly on the RAM.
 ![A balanced workstation feeds the GPU, stores data and checkpoints, and sustains power and cooling under load.](../img/tools-workstation.svg)
 :label:`fig_tools_workstation`
 
-Two cards? Multi-GPU consumer rigs (classically 2–4 used 3090s) remain a
-beloved r/LocalLLaMA pattern for cheap VRAM aggregation, and data
-parallelism over PCIe works fine. Know what you are signing up for:
+Multi-GPU consumer systems, often built from two to four used 3090s, can
+aggregate memory capacity. Data parallelism can operate over PCIe, but the
+platform must satisfy several constraints:
 consumer boards offer one full-bandwidth slot, so you want used
 Threadripper/EPYC platforms for lanes; power adds up (dual supplies are
 common); and no consumer card since the 3090 has NVLink, so
-communication-heavy tensor parallelism scales poorly. Renting an 8×GPU
-node for a day (:numref:`sec_cloud_instances`) is the cheap way to learn
-whether your workload cares.
+communication-heavy tensor parallelism scales poorly. A short rental of an
+8×GPU node (:numref:`sec_cloud_instances`) can measure
+whether interconnect bandwidth limits the workload before purchasing a
+multi-GPU system.
 
 ## Local Inference: the Unified-Memory Class
 
@@ -138,10 +138,11 @@ A second family of machines answers a different question: not "how fast
 can I train?" but "how large a model can I *run* at home?" These systems
 give the GPU direct access to a large pool of ordinary (LPDDR5X) memory —
 lots of capacity at a fraction of GDDR7/HBM bandwidth
-(:numref:`fig_tools_memory_path`). The decode bound tells you exactly what
-to expect: big models run, none of them run fast, and mixture-of-experts
-models — which activate only a few billion parameters per token — are the
-loophole that makes the class shine. The July 2026 menu:
+(:numref:`fig_tools_memory_path`). The decode bound predicts the main
+trade-off: large models may fit but decode
+slowly, while mixture-of-experts models read only their active parameters for
+each token and can therefore decode faster than dense models of similar total
+size. The July 2026 menu:
 
 :Unified-memory machines for local inference (July 2026)
 :label:`tab_unified_memory`
@@ -161,10 +162,11 @@ Strix Halo; a *dense* 70B at 4-bit limps at 5–12 tok/s on all of them.
 Where they differ sharply is prefill: the Spark's Blackwell tensor cores
 chew through long prompts several times faster than Strix Halo or Apple's
 GPU at the same decode speed — the compute-versus-bandwidth split of our
-opening formula, embodied in retail products. Choose by stack: CUDA
-development in miniature → DGX Spark; cheapest 128 GB and Linux → Strix
-Halo; the fastest local decode and a polished laptop-to-desktop path →
-Apple with MLX.
+opening formula in retail products. The software stack also matters: DGX
+Spark provides CUDA, Strix Halo supports
+Linux with a developing ROCm ecosystem, and Apple systems use MLX. Measure
+the relevant models because framework and kernel support can change the
+hardware-level ordering.
 
 ## The Top End: Workstation Blackwell
 
@@ -196,7 +198,8 @@ pedagogical value of hardware you can take apart.
 
 ## Keeping Current
 
-Everything above will drift; the sources below stay good. For build
+The specifications and prices above will change. The following sources can
+supply newer measurements, but their claims still require cross-checking. For build
 advice and street prices, [r/LocalLLaMA](https://www.reddit.com/r/LocalLLaMA/)
 (hardware megathreads) and the
 [Level1Techs forum](https://forum.level1techs.com/) (multi-GPU build
@@ -205,8 +208,8 @@ used servers — [ServeTheHome](https://www.servethehome.com/); for
 apples-to-apples numbers, the community benchmark threads in
 [llama.cpp discussions](https://github.com/ggml-org/llama.cpp/discussions)
 and [llm-tracker.info](https://llm-tracker.info/); and for the durable
-*reasoning* about GPU choice, Tim Dettmers' classic guide (frozen in 2023,
-still right about everything except the part numbers). One warning: GPU
+*reasoning* about GPU choice, Tim Dettmers' guide, last updated in 2023, for a workload-based method rather
+than current part recommendations. One warning: GPU
 search results are now thick with machine-generated pages quoting invented
 benchmarks — trust datasheets, named reviewers, and numbers that pass the
 decode-bound sanity check above.
@@ -217,12 +220,15 @@ decode-bound sanity check above.
   decode speed, compute gates training and prefill — and the decode bound
   (bandwidth ÷ active bytes) predicts generation speed to within a factor
   of two.
-* Reference points, July 2026: RTX 5070 Ti (~\$900, 16 GB) is the smallest
-  serious trainer; RTX 5090 (~\$3–4k, 32 GB) is the enthusiast ceiling and
-  a system-design exercise; used 3090s remain the budget VRAM play.
+* Reference points, July 2026: an RTX 5070 Ti (~\$900, 16 GB) represents a
+  lower-capacity training system;
+  an RTX 5090 (~\$3–4k, 32 GB) represents a high-end desktop with substantial
+  power and cooling requirements; used 3090s trade warranty and efficiency
+  for memory capacity.
 * Unified-memory machines (Strix Halo, DGX Spark, Apple silicon) trade
-  bandwidth for capacity: large MoE models run well, dense 70B crawls,
-  and prefill speed separates otherwise similar boxes.
+  bandwidth for capacity: large MoE models can fit and decode faster than
+  dense models of similar total size, while prefill speed can distinguish
+  systems with similar bandwidth.
 * The RTX PRO 6000 class (96 GB at full bandwidth, no NVLink) bridges the
   two families for five figures; before spending it, price the rented
   equivalent.

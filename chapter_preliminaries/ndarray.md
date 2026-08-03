@@ -51,7 +51,7 @@ by other components of MXNet.
 
 :begin_tab:`pytorch`
 To start, we import the PyTorch library.
-Note that the package name is `torch`.
+The package name is `torch`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -93,7 +93,7 @@ In the one-dimensional case, i.e., when only one axis is needed for the data,
 a tensor is called a *vector*.
 With two axes, a tensor is called a *matrix*.
 With $k > 2$ axes, we drop the specialized names
-and just refer to the object as a $k^\textrm{th}$-*order tensor*.
+and refer to the object as a $k^\textrm{th}$-*order tensor*.
 
 Several functions create new tensors
 prepopulated with values.
@@ -219,7 +219,7 @@ We can access a tensor's *shape*
 (the length along each axis)
 by inspecting its `shape` attribute.
 Because we are dealing with a vector here,
-the `shape` contains just a single element
+the `shape` contains a single element
 and is identical to the size.
 
 ```{.python .input #ndarray-getting-started-4}
@@ -234,7 +234,7 @@ our vector `x` whose shape is (12,)
 to a matrix `X` with shape (3, 4).
 This new tensor retains all elements
 but reconfigures them into a matrix.
-Notice that the elements of our vector
+The elements of our vector
 are laid out one row at a time and thus
 `x[3] == X[0, 3]`, as :numref:`fig_ndarray_reshape` illustrates.
 
@@ -253,7 +253,7 @@ X = tf.reshape(x, (3, 4))
 X
 ```
 
-Note that specifying every shape component
+Specifying every shape component
 to `reshape` is redundant.
 Because we already know our tensor's size,
 we can work out one component of the shape given the rest.
@@ -438,7 +438,7 @@ Beyond reading them, we can also *write* elements of a matrix by specifying indi
 :begin_tab:`tensorflow`
 `Tensors` in TensorFlow are immutable, and cannot be assigned to.
 `Variables` in TensorFlow are mutable containers of state that support
-assignments. Keep in mind that gradients in TensorFlow do not flow backwards
+assignments. Gradients in TensorFlow do not flow backward
 through `Variable` assignments.
 
 Beyond assigning a value to the entire `Variable`, we can write elements of a
@@ -517,7 +517,7 @@ In mathematical notation, we denote such
 *unary* scalar operators (taking one input)
 by the signature 
 $f: \mathbb{R} \rightarrow \mathbb{R}$.
-This just means that the function maps
+This means that the function maps
 from any real number onto some other real number.
 Most standard operators, including unary ones like $e^x$, can be applied elementwise.
 
@@ -600,7 +600,7 @@ in :numref:`sec_linear-algebra`.
 
 We can also *concatenate* multiple tensors,
 stacking them end-to-end to form a larger one.
-We just need to provide a list of tensors
+We provide a list of tensors
 and tell the system along which axis to concatenate.
 The example below shows what happens when we concatenate
 two matrices along rows (axis 0)
@@ -775,7 +775,7 @@ we dereference the tensor that `Y` used to point to
 and instead point `Y` at the newly allocated memory.
 We can demonstrate the rebinding with Python's `id()` function,
 which identifies a Python object for the duration of its lifetime.
-Note that after we run `Y = Y + X`,
+After we run `Y = Y + X`,
 `id(Y)` changes.
 That is because Python first evaluates `Y + X`,
 allocating new memory for the result 
@@ -806,7 +806,7 @@ lest we spring a memory leak
 or inadvertently refer to stale parameters.
 
 :begin_tab:`mxnet, pytorch`
-Fortunately, performing in-place operations is easy.
+Frameworks that support mutation provide in-place operations.
 We can assign the result of an operation
 to a previously allocated array `Y`
 by using slice notation: `Y[:] = <expression>`.
@@ -892,7 +892,7 @@ id(X_new) == id(X)
 ## Conversion to Other Python Objects
 
 :begin_tab:`mxnet, tensorflow`
-Converting to a NumPy tensor (`ndarray`), or vice versa, is easy.
+We can convert between a framework tensor and a NumPy `ndarray`.
 The converted result does not share memory.
 Framework operations may execute asynchronously,
 possibly on a GPU, while NumPy works on a buffer in host memory.
@@ -902,7 +902,7 @@ copying removes the coordination.
 :end_tab:
 
 :begin_tab:`pytorch`
-Converting to a NumPy tensor (`ndarray`), or vice versa, is easy.
+We can convert between a PyTorch tensor and a NumPy `ndarray`.
 The torch tensor and NumPy array 
 will share their underlying memory, 
 and changing one through an in-place operation 
@@ -910,7 +910,7 @@ will also change the other.
 :end_tab:
 
 :begin_tab:`jax`
-Converting to a NumPy tensor (`ndarray`), or vice versa, is easy:
+We can convert between a JAX array and a NumPy `ndarray`:
 `jax.device_get` copies a JAX array to the host as a NumPy array,
 and `jax.device_put` transfers it back.
 The converted result does not share memory,
@@ -1295,16 +1295,16 @@ Reductions remove axes;<br>no `dim=` gives a scalar:
 
 ::: {.d2l-note}
 `==, <, >` build masks; `sum, mean, max` reduce axes; add `dim=` to
-reduce just one.
+reduce one selected axis.
 :::
 :::
 
-::: {.slide title="Broadcasting stretches size-1 axes for free"}
+::: {.slide title="Broadcasting expands size-1 axes virtually"}
 [Operations · the exception]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Size-1 axes are **virtually stretched**<br>a $3\times1$ plus a $1\times2$
+Size-1 axes are **expanded virtually**:<br>a $3\times1$ plus a $1\times2$
 gives a $3\times2$:
 
 @-ndarray-broadcasting-1
@@ -1312,7 +1312,7 @@ gives a $3\times2$:
 @ndarray-broadcasting-2
 
 ::: {.d2l-note .rule}
-Any axis of size **1** stretches to match the other tensor, without a copy.
+An axis of size **1** can expand to match the other tensor without a copy.
 :::
 
 ::: {.d2l-note .warn}
@@ -1326,7 +1326,7 @@ Compatible only if each axis is **equal** or **1**.
 :::
 :::
 
-::: {.slide title="…or it refuses: no size-1 axis, no guess"}
+::: {.slide title="Incompatible shapes raise an error"}
 [Operations · the exception]{.kicker}
 
 Line up $(3, 2)$ and $(2, 3)$ from the right, pairing $2$ with $3$ and
@@ -1351,11 +1351,11 @@ Broadcasting aligns shapes **from the right**; each axis pair must be
 :::
 :::
 
-::: {.slide title="The hidden cost of `Y = Y + X`"}
+::: {.slide title="Allocation in `Y = Y + X`"}
 [Performance]{.kicker}
 
-Every arithmetic expression **allocates a new tensor**<br>costly when `Y`
-is gigabytes and updated many times per second:
+In eager execution, `Y = Y + X` typically allocates a new tensor, which is
+costly when `Y` is large and updated frequently:
 
 @ndarray-saving-memory-1
 
@@ -1373,7 +1373,7 @@ Write into pre-allocated storage with<br>`Z[:] = ...`; the address holds:
 
 @ndarray-saving-memory-2
 
-If `X` isn't needed afterward, `X += Y` is cheapest:
+If `X` is not needed afterward, `X += Y` can reuse its storage:
 
 @ndarray-saving-memory-3
 :::
@@ -1411,8 +1411,8 @@ array, so `id` changes:
 @ndarray-saving-memory-3
 
 ::: {.d2l-note .rule}
-Under `jit`, XLA fuses such updates and **reuses** buffers, recovering
-the in-place benefit.
+Under `jit`, XLA may fuse such updates and reuse buffers without exposing
+mutation.
 :::
 :::
 
@@ -1477,7 +1477,7 @@ A size-1 tensor unwraps to a Python scalar with `.item()`:
 
 ::: {.col}
 - **Elementwise** math, **comparisons** (masks), **reductions**, `cat`.
-- **Broadcasting** stretches size-1 axes and refuses anything else.
+- **Broadcasting** expands size-1 axes virtually and rejects incompatible shapes.
 - **Save memory** with in-place ops (`X[:] = …`, `+=`), or in JAX via
   `jit` buffer reuse.
 - **Interop:** tensor ↔ NumPy, `.item()` for scalars.

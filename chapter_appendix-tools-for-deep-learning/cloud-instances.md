@@ -1,24 +1,19 @@
 # Cloud Computing
 :label:`sec_cloud_instances`
 
-Sooner or later a workload outgrows the free tiers of
-:numref:`sec_hosted_notebooks`: the dataset takes a day to preprocess, the
-model needs 80 GB of accelerator memory, or you want eight GPUs for an
-afternoon. Renting is the natural next step, and it has never been cheaper —
-the same H100 that rented for around \$8 per hour during the 2023 shortage
-goes for \$2–4 on specialist clouds in mid-2026, and a consumer RTX 4090
-can be had for well under a dollar an hour. For calibration: the notebooks
-in this book are kept below 8 GB of GPU memory, so *any* rentable GPU with
-16 GB runs everything here with room to spare. It is working with large
-language models — fine-tuning beyond LoRA, serving long contexts,
-pretraining anything — that pushes you up the memory ladder, and the price
-ladder with it.
+A workload may exceed the hosted-notebook limits described in
+:numref:`sec_hosted_notebooks` because preprocessing takes
+many hours, the model requires 80 GB of accelerator memory, or an experiment
+needs several GPUs. Renting provides access to larger configurations without
+purchasing them. The dated mid-2026 examples below show substantial price
+variation across providers; current prices must be checked before use. The
+book's notebooks stay below 8 GB of GPU memory, so a 16 GB rentable GPU has
+adequate capacity. Full fine-tuning, long-context serving, and pretraining
+increase both memory requirements and cost.
 
-The hard part of cloud computing is not clicking **Create instance**. It is
-knowing what the market offers, picking a machine that fits the workload
-rather than the marketing page, and running it with the discipline that
-disposable compute demands: results leave the machine, and the machine gets
-deleted.
+Effective cloud use requires matching a machine to the workload and treating
+the instance as disposable. Results must be copied to durable storage before
+the instance is deleted.
 
 ## The Rental Market
 
@@ -31,32 +26,33 @@ deleted.
   embedded in a full cloud: identity management, virtual networks, managed
   storage, and every adjacent service. You pay for that integration; their
   on-demand GPU prices are consistently the highest, and the largest
-  instances often hide behind quota requests or sales conversations. They
-  are the right answer when the data already lives there, when compliance
-  matters, or when a training job is one part of a bigger system. Google
-  additionally rents TPUs (a v5e chip for about \$1.20 per hour), the
-  natural target for the JAX code in this book.
+  instances often require quota requests or sales contact. They are often
+  appropriate when data already resides in that cloud, when
+  compliance requirements apply, or when training is part of a larger
+  managed system. Google
+  additionally rents TPUs (a v5e chip for about \$1.20 per hour in this
+  snapshot), which can run the JAX code in this book.
 * **GPU specialists** — Lambda, CoreWeave, Crusoe, Nebius, Voltage Park,
   Together, and others — do one thing: accelerators with fast interconnect
   and ML-ready images. Self-serve H100s run \$2–4.30 per hour (July 2026);
   Lambda and Nebius are fully self-serve, while CoreWeave publishes prices
-  but onboards through sales. This tier is the sweet spot for serious
-  training runs that do not need a hyperscaler's ecosystem.
+  but onboards through sales. This tier suits substantial training runs that do not require a
+  hyperscaler's surrounding services.
 * **Marketplaces** — Vast.ai, RunPod, TensorDock, Prime Intellect, and the
   auction-style SF Compute — aggregate machines from many independent
-  operators, including consumer GPUs that the big clouds do not carry. This
-  is where compute is cheapest: an RTX 4090 for \$0.30–0.60 per hour, an
+  operators, including consumer GPUs that the large clouds do not carry.
+  These marketplaces often list the lowest hourly prices: an RTX 4090 for
+  \$0.30–0.60 per hour, an
   H100 from about \$1.50. The catch is variance: host reliability, disk
   speed, and network quality differ per listing, and your code runs on a
   stranger's machine — fine for coursework and public data, inappropriate
   for anything sensitive unless the platform's vetted tier is used.
 
-### What Things Cost
+### A Dated Price Snapshot
 
-Prices move quickly — the long arc is downward, though 2026's capacity
-crunch pushed some rates back up — so treat the following July 2026
-snapshot as a calibration, not a catalog. The *ratios* between tiers,
-however, have been stable for years:
+Prices change quickly and vary by region, availability, commitment, and host.
+Treat the following July 2026 snapshot as an illustration rather than a
+catalog, and obtain current quotes before making a purchasing decision:
 
 :GPU rental snapshot, on-demand (July 2026)
 :label:`tab_cloud_prices`
@@ -73,10 +69,10 @@ however, have been stable for years:
 | Azure (hyperscaler) | A10 24 GB | 1.43 | 6.98 |
 | Google Cloud (hyperscaler) | L4 24 GB | 0.70 | ≈ 11 (A3) |
 
-Three practical notes. First, the free money: new accounts get trial
-credits (Google Cloud \$300, Azure \$100–200 for students, AWS \$1,000
-through its startup program), which comfortably covers every experiment in
-this book many times over. Second, multi-GPU nodes price linearly per GPU
+Three qualifications matter. First, providers may offer account-, student-,
+or startup-specific credits. Eligibility and amounts change, so verify them
+on the provider's official program page rather than budgeting from this
+snapshot. Second, multi-GPU nodes price linearly per GPU
 on most providers, but the interconnect does not: an 8×H100 machine with
 NVLink is a qualitatively different tool from eight PCIe cards, and
 communication-heavy training (:numref:`sec_training_systems`) will feel the
@@ -88,11 +84,11 @@ and FP8/FP4 throughput.
 
 The hourly price is the most visible term of a larger sum: setup time,
 idle time while you debug, storage that keeps billing after the run, data
-egress, and — the term engineers habitually forget — your own time. A
-faster, pricier GPU frequently wins on cost per *completed* experiment.
-The little model below is worth re-running with your own assumptions;
-here it compares a cheap marketplace card against two datacenter GPUs for
-the same eight-hour (on the slowest card) job:
+egress, and engineering time. A faster, more expensive GPU can reduce the
+cost per *completed* experiment.
+The model below compares an inexpensive marketplace card with two datacenter
+GPUs for the same eight-hour job on the slowest card. Rerun it with
+workload-specific assumptions:
 
 ```{.python .input #cloud-instances-cost-model}
 import numpy as np
@@ -112,18 +108,18 @@ for row in zip(gpu, np.round(wall_hours, 1), np.round(invoice, 2),
     print(row)
 ```
 
-The invoice favors the cheap card; the complete cost is nearly a tie, and
-if slow iteration means one extra debugging round, the fast card wins. This
-is also why an unreliable \$0.30 host can be the most expensive machine you
-ever rent. For scale: a LoRA fine-tune of a 7B model is a few hours on one
-consumer GPU — \$3–15 total on a marketplace — while pretraining even a
-small LLM from scratch is thousands of GPU-hours. Know which regime you
-are in before optimizing pennies.
+The hourly invoice favors the inexpensive card, but including engineering
+time makes the totals similar. If slower iteration adds another debugging
+round, the faster card can cost less overall. Reliability therefore belongs
+in the cost model. As an order-of-magnitude example, a LoRA fine-tune of a 7B model may take
+hours on one consumer GPU, whereas pretraining a small language model can
+require thousands of GPU-hours. Estimate the workload before comparing small
+differences in hourly price.
 
 Two cost traps deserve their own warnings:
 
-* **Spot and interruptible capacity** is 50–90% off, and it is the right
-  default for any job that checkpoints and resumes cleanly
+* **Spot and interruptible capacity** may be substantially discounted and can
+  suit jobs that checkpoint and resume cleanly
   (:numref:`sec_training_systems`). It is the wrong discount for an
   interactive session or an uncheckpointed run — eviction notice can be as
   short as a few seconds on marketplace spot tiers. Test recovery *before*
@@ -138,9 +134,9 @@ Two cost traps deserve their own warnings:
 
 ### Boot, Connect, Verify
 
-Start from the provider's current deep-learning image — drivers, CUDA, and
-container runtime preinstalled. Hand-installing CUDA on a bare OS image is
-an afternoon you never get back, and reproducing it next month is another.
+Start from the provider's current deep-learning image, with drivers, CUDA,
+and the container runtime preinstalled. A bare OS image requires additional
+setup that must also be reproduced later.
 Connect with the SSH-tunnel pattern of :numref:`sec_interactive_development`
 (the same two commands work on every provider), or use VS Code Remote SSH.
 Run long jobs under `tmux` so an SSH disconnect does not kill training, and
@@ -152,9 +148,9 @@ df -h                      # scratch disk has room for data + checkpoints?
 python -c "import torch; print(torch.cuda.get_device_name(0))"
 ```
 
-A one-minute smoke test — one batch through the model, one checkpoint
-written and read back — catches most of what the console's green checkmark
-does not: broken drivers, full disks, read-only mounts, and datasets that
+A short smoke test—one batch through the model and one checkpoint written
+and read back—can detect problems that instance-health indicators omit:
+broken drivers, full disks, read-only mounts, and datasets that
 stream too slowly to keep the GPU busy.
 
 ### Compute Is Disposable, Results Are Not
@@ -163,13 +159,12 @@ stream too slowly to keep the GPU busy.
 :label:`fig_tools_cloud_lifecycle`
 
 The workflow in :numref:`fig_tools_cloud_lifecycle` separates the lifetime
-of the machine from the lifetime of your work. Code lives in Git and is
+of the machine from the lifetime of your work. Code is stored in Git and
 cloned onto the instance; data and checkpoints sync to durable object
 storage (S3, GCS, or the provider's volume product) on a schedule the job
 controls; the instance itself can then be preempted, crashed, or deleted
 without losing more than the last checkpoint interval. This is not merely a
-safety practice — it is what makes spot pricing and marketplace hosts
-usable at all.
+safety practice — it enables recovery from preemption or host failure.
 
 When the experiment ends, tear down *everything that bills*: the instance,
 its disks and snapshots, reserved IP addresses, and stale buckets. Set a
@@ -182,12 +177,13 @@ credential and a very large invoice.
 * Every notebook in this book fits in 8 GB of GPU memory, so the cheapest
   rentable GPUs suffice; LLM-scale work is what climbs the price ladder.
 * The market has three tiers — hyperscalers, GPU specialists, and
-  marketplaces — with roughly a 4× price spread for the same GPU and a
-  matching spread in integration, reliability, and trust.
+  marketplaces — with a substantial price spread for the same GPU and different levels of
+  integration, reliability, and operational trust.
 * Compare cost per completed result, not per hour: include setup, idle
   time, storage, egress, and your own time.
-* Spot capacity is the right default for checkpointed jobs and wrong for
-  everything else; egress fees punish moving large artifacts.
+* Spot capacity can reduce the cost of checkpointed, restartable jobs but is
+  unsuitable for some interactive or uncheckpointed work; egress fees can
+  make repeated artifact transfers expensive.
 * Treat instances as disposable: provider image, SSH tunnel, `tmux`,
   checkpoints to durable storage, then delete every billable resource.
 

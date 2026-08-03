@@ -57,7 +57,7 @@ We can therefore multiply any score in the REINFORCE estimator by such a quantit
 
 ## Variance Reduction from the Zero-Mean Identity
 
-The identity has four increasingly ambitious uses: drop terms, subtract a constant, subtract the best constant, subtract a function of the state. Each keeps the estimator unbiased, and each makes the same episode budget go further.
+The identity supports four modifications: removing past-reward terms, subtracting a constant, choosing a variance-minimizing constant, and subtracting a state-dependent function. Each preserves the expected gradient under its stated dependence conditions.
 
 ### Reward-to-Go and Causality
 
@@ -79,9 +79,9 @@ is called the reward-to-go from step $t$. It is the discounted return of the tra
 $$\hat{u} = \frac{1}{n} \sum_{i=1}^n \sum_{t=0}^{T-1} \hat{G}_t^i\ \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i).$$
 :eqlabel:`eq_rtg`
 
-This refinement is sometimes summarized by the word causality: the policy's choice at time $t$ can only influence rewards from time $t$ onward, so only those rewards should judge it.
+This removal follows from causality: the action chosen at time $t$ can influence only rewards from time $t$ onward, so earlier rewards have zero expected product with its score.
 
-In code, the reward-to-go is one backward pass over the batch, restarted at each episode boundary, and we make the pass itself the reusable object rather than the special case:
+In code, reward-to-go requires one backward scan over the batch, restarted at each episode boundary. We implement the general scan for later reuse:
 
 ```{.python .input #baselines-reward-to-go-and-causality}
 %%tab pytorch, jax
@@ -158,7 +158,7 @@ We do not know $V^{\pi_\theta}$, but we can estimate it from the same batch of t
 $$\hat{V}(s_t) \leftarrow \hat{V}(s_t) + \alpha_V \big( \hat{G}_t - \hat{V}(s_t) \big),$$
 :eqlabel:`eq_value_baseline`
 
-with a step size $\alpha_V$, its subscript keeping it clear of the policy step $\alpha$. This algorithm is REINFORCE with a baseline :cite:`Williams.1992`. Note that $\hat{V}$ is trained here by regression on Monte Carlo returns, meaning reward-to-go values computed from complete sampled trajectories; in :numref:`sec_actorcritic` we will let it build its targets from its own predictions instead, and the pair of a parameterized policy and a learned value estimate will get a name of its own.
+with a step size $\alpha_V$, its subscript keeping it clear of the policy step $\alpha$. This algorithm is REINFORCE with a baseline :cite:`Williams.1992`. Note that $\hat{V}$ is trained here by regression on Monte Carlo returns, meaning reward-to-go values computed from complete sampled trajectories; in :numref:`sec_actorcritic`, bootstrapped targets will also depend on its predictions, producing an actor--critic method.
 
 ## Centering, Scaling, and Normalization
 
@@ -210,7 +210,7 @@ V_pi = np.asarray(V_fn(theta))
 print(f'J(theta) = {V_pi[0]:.3f}, |grad J| = {np.linalg.norm(g_exact):.3f}')
 ```
 
-The printed $J(\theta) = 0.313$ matches the previous section's frozen probe to the digit, because it is the same probe: mid-training, past the first lucky successes, with real work left to do. Every claim below is graded against this $\nabla_\theta J$.
+The printed $J(\theta) = 0.313$ matches the fixed intermediate policy from the previous section. The exact $\nabla_\theta J$ provides the reference for the measurements below.
 
 ### Batch Centering versus Variance Scaling
 
@@ -219,11 +219,11 @@ A practical variant standardizes the reward-to-go values within each batch. Coll
 $$\tilde{G}_t^i = \frac{\hat{G}_t^i - \mu}{\sigma + 10^{-8}}$$
 :eqlabel:`eq_pg_normalized`
 
-in place of $\hat{G}_t^i$, where the constant $10^{-8}$ avoids dividing by zero. Subtracting $\mu$ acts as a baseline, with one caveat: $\mu$ is computed from the same batch, so it depends weakly on the sampled actions, and the exact zero-bias argument above holds only up to a correction that vanishes as the batch grows. Dividing by $\sigma + 10^{-8}$ is different in kind: it rescales the update so that its size no longer depends on the scale of the rewards, which spares us from re-tuning the learning rate every time the reward magnitudes change.
+in place of $\hat{G}_t^i$, where the constant $10^{-8}$ avoids dividing by zero. Subtracting $\mu$ acts as a baseline, with one caveat: $\mu$ is computed from the same batch, so it depends weakly on the sampled actions, and the exact zero-bias argument above holds only up to a correction that vanishes as the batch grows. Dividing by $\sigma + 10^{-8}$ is different in kind: it rescales the update so that its size no longer depends on the scale of the rewards, which reduces sensitivity to changes in reward scale, although it changes the effective step size.
 
 Centering and scaling have different effects. Subtracting $\mu$ changes the relative weights of the samples and can change the direction of the estimate. Dividing by $\sigma+10^{-8}$ multiplies the complete batch estimate by one positive scalar, leaving its direction unchanged. It is therefore a per-batch step-size adjustment rather than a baseline. On FrozenLake, $0\leq\hat{G}_t\leq1$ implies $\sigma\leq1/2$, so normalization increases the step norm by at least a factor of two at a fixed learning rate; the measured factor below is about five. Any performance difference must consequently be interpreted together with the optimizer and effective step size, as in :numref:`sec_sgd` and :numref:`sec_batch_size`.
 
-Two four-line tools make the rest of the section runnable: `normalize` is :eqref:`eq_pg_normalized`, and `run_seeds` runs a seeded training generator over a set of seeds and stacks the yielded curves. The runner is deliberately visible: every multi-seed number quoted in the rest of these two chapters is computed in a cell you can read, never inside a plotting helper.
+Two utilities support the remaining experiments: `normalize` implements :eqref:`eq_pg_normalized`, and `run_seeds` executes a seeded training generator and stacks its curves. The experiments compute multi-seed results explicitly before plotting.
 
 ```{.python .input #baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling}
 %%tab pytorch, jax
@@ -238,7 +238,7 @@ def run_seeds(train, num_seeds, **kwargs):  #@save
 
 ### The Leave-One-Out Baseline
 
-The caveat attached to $\mu$ above can be removed rather than tolerated: the mean was computed from the very batch whose scores it multiplies. Give each trajectory a baseline built from the *other* trajectories in the batch,
+Leave-one-out centering removes the self-dependence of the batch mean $\mu$. For each trajectory, define a baseline from the *other* trajectories in the batch,
 
 $$b_i = \frac{1}{n-1} \sum_{j \neq i} R(\tau_j),$$
 
@@ -288,7 +288,9 @@ Both identities hold to machine precision. The same estimator is used for langua
 
 ### Summing over Episodes of Different Lengths
 
-The normalization of a summed loss determines the resulting estimator. The double sum in :eqref:`eq_rtg` ranges over episodes and steps. Dividing by the number of episodes $n$ gives the estimator in that equation. Dividing by the total number of steps rescales each batch by its realized mean episode length, which varies across batches and may correlate with performance. Dividing each episode's contribution by its own length can also change the gradient direction because episodes receive different relative weights. Division by a fixed constant changes only the overall scale. We compare these four choices on a FrozenLake batch whose episode lengths differ:
+The normalization of a summed loss determines the resulting estimator. The double sum in :eqref:`eq_rtg` ranges over episodes and steps. Dividing by the number of episodes $n$ gives the estimator in that equation. Dividing by the total number of steps rescales each batch by its realized mean episode length, which varies across batches and may correlate with performance. Dividing each episode's contribution by its own length can also change the gradient direction because episodes receive different relative weights. Division by a fixed constant changes only the overall scale.
+
+We compare these four choices on a FrozenLake batch whose episode lengths differ:
 
 ```{.python .input #baselines-summing-over-episodes-of-different-lengths}
 %%tab pytorch, jax
@@ -315,7 +317,7 @@ for k, u in grads.items():
           f'cos to episodes = {cos:.3f}')
 ```
 
-Three of the four gradients are exactly parallel, at sizes an order of magnitude apart; the per-own-length variant tilts away from the rest. In order, these are the per-trajectory estimator, the per-response length normalization, the token-level loss, and the fixed-constant normalization of the LLM post-training literature, where the divisor has been a live controversy: GRPO normalizes each response by its own length, and the "Dr. GRPO" correction argues for a constant precisely because only rescalings leave the estimator's direction alone. On a four-episode toy batch the entire debate fits in two printed columns.
+Three of the four gradients are exactly parallel, at sizes an order of magnitude apart; the per-own-length variant tilts away from the rest. In order, these are the per-trajectory estimator, the per-response length normalization, the token-level loss, and the fixed-constant normalization of the LLM post-training literature. The choice of divisor differs among language-model objectives: GRPO normalizes each response by its own length, whereas the "Dr. GRPO" modification uses a constant because only batchwise rescaling preserves the estimator direction. The following four-episode example shows the resulting gradients.
 
 ### Normalized Returns and GRPO
 
@@ -338,10 +340,10 @@ The methods introduced above differ in the quantity multiplying the score at ste
 3. **Constant baseline** $\hat{G}_t - b$: unbiased for every $b$; the best constant is the control-variate optimum $c^*$.
 4. **State baseline** $\hat{G}_t - b(s_t)$: unbiased; the natural target for $b$ is $V^{\pi_\theta}$.
 5. **Leave-one-out**: exactly unbiased, batch coupling included.
-6. **A learned critic** $\hat{V}(s)$: unbiased while it only replaces $b(s_t)$; bias arrives the moment its own predictions enter the weight, and that step is :numref:`sec_actorcritic`.
-7. **Generalized advantage estimation**: a dial $\lambda$ between the reward-to-go and the bootstrapped critic (:numref:`sec_actorcritic`, :numref:`sec_ppo`).
+6. **A learned critic** $\hat{V}(s)$: baseline subtraction remains unbiased when the critic only replaces $b(s_t)$; using critic predictions inside bootstrapped targets introduces the approximation studied in :numref:`sec_actorcritic`.
+7. **Generalized advantage estimation**: a coefficient $\lambda$ interpolating between reward-to-go and a bootstrapped critic (:numref:`sec_actorcritic`, :numref:`sec_ppo`).
 
-Before any training run, the static measurement: hold the probe's $\theta$ frozen, draw 200 batches of the size the training runs will use, and form each weighting's estimate through the score identity, averaged per episode, as the hygiene subsection prescribed. With the exact gradient in hand, both halves of every claim above are measurable: whether the mean moved, and how much the noise shrank. For the state baseline we can afford here what training cannot: the exact $V^{\pi_\theta}$ from the linear solve.
+Before training, we hold $\theta$ fixed, draw 200 batches of the training batch size, and compute each per-episode estimator through the score identity. Comparison with the exact gradient measures both the estimator mean and its sampling variance. For the state baseline we can afford here what training cannot: the exact $V^{\pi_\theta}$ from the linear solve.
 
 ```{.python .input #baselines-five-estimators-1}
 %%tab pytorch, jax
@@ -375,7 +377,7 @@ for k, u in draws.items():
 
 The cosine column checks whether the sample means align with the exact gradient. Cosine similarity cannot detect magnitude errors or errors parallel to the true gradient, but all five estimators agree within the resolution of these 200 draws. The variance measurements show that centering reduces relative variance by about one third and the exact state baseline nearly halves it. Dividing by $\sigma$ adds little variance reduction beyond centering, consistent with its interpretation as a step-size adjustment. Reward-to-go provides only a small improvement here because FrozenLake has a single terminal reward and therefore few past rewards to remove.
 
-We now compare the five variants. They share the same data generator and differ only in the weights passed to `policy_step`. We use plain SGD because Adam would partially normalize parameter-wise scale differences and make the effects studied here harder to interpret. Every run maintains the same value table, although only the learned-baseline variant uses it. At each update we record success rate, parameter-step norm, and policy entropy.
+We compare the five variants. They share the same data generator and differ only in the weights passed to `policy_step`. We use plain SGD because Adam would partially normalize parameter-wise scale differences and make the effects studied here harder to interpret. Every run maintains the same value table, although only the learned-baseline variant uses it. At each update we record success rate, parameter-step norm, and policy entropy.
 
 ```{.python .input #baselines-five-estimators-2}
 %%tab pytorch, jax
@@ -423,7 +425,7 @@ def train(seed, variant):
                float(np.linalg.norm(table(ac) - before)), entropy(ac))
 ```
 
-A hundred training runs, five variants by twenty seeds, and `runs[v]` stacks to shape (seeds, updates, 3):
+We run five variants with twenty seeds each; `runs[v]` has shape (seeds, updates, 3):
 
 ```{.python .input #baselines-five-estimators-4}
 %%tab pytorch, jax
@@ -440,7 +442,7 @@ d2l.plot_curves({v: r[:, :, 0] for v, r in runs.items()}, xlabel='update',
                 ylabel='batch success rate', smooth=10)
 ```
 
-The ranking and the step sizes belong in one place, because either alone misleads:
+We report performance and parameter-step norms together because both affect the observed ordering:
 
 ```{.python .input #baselines-five-estimators-6}
 %%tab pytorch, jax
@@ -480,7 +482,9 @@ The leave-one-out calculation is framework independent. Measurements that use fr
 
 ## Summary
 
-The score function has zero conditional mean. This identity permits the removal of rewards that precede an action and the subtraction of action-independent baselines without changing the expected gradient. Constant control variates and state-dependent value baselines reduce variance, while reward-to-go removes terms that cannot be influenced by the current action. Batch centering introduces a finite-sample shrinkage that leave-one-out centering removes. Dividing by the batch standard deviation instead changes the effective step size and should be evaluated separately from variance reduction. The empirical comparison confirms these distinctions and reports parameter-step norms alongside training performance. The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`, and `run_seeds` to the shared library.
+The score function has zero conditional mean. This identity permits the removal of rewards that precede an action and the subtraction of action-independent baselines without changing the expected gradient. Constant control variates and state-dependent value baselines reduce variance, while reward-to-go removes terms that cannot be influenced by the current action. Batch centering introduces a finite-sample shrinkage that leave-one-out centering removes. Dividing by the batch standard deviation instead changes the effective step size and should be evaluated separately from variance reduction. The empirical comparison confirms these distinctions and reports parameter-step norms alongside training performance.
+
+The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`, and `run_seeds` to the shared library.
 
 **Experimental scope.** The variance comparison probes one intermediate policy with 200 batches of four episodes. Different policies change the numerical variances, although the ordering is stable in these experiments. Training results use twenty seeds, and their spreads are often wider than the gaps between methods. FrozenLake's sparse terminal reward limits the benefit of reward-to-go, while plain SGD makes differences in effective step size visible.
 
@@ -556,7 +560,7 @@ leave-one-out baselines are applications of this identity.
 :::
 
 ::: {.slide title="Reward-to-Go: One Scan"}
-Past rewards pair with the score at $t$ to zero mean. Drop them:
+Past rewards have zero expected product with the score at $t$, so they can be removed:
 
 $$\hat u = \frac1n \sum_i \sum_t \hat G^i_t\,
   \nabla_\theta \log \pi_\theta(a^i_t \mid s^i_t),
@@ -599,14 +603,14 @@ $1 - \mathrm{corr}^2 = 0.23$ of the variance.
 :::
 
 ::: {.slide title="The Advantage, and a Learned Baseline"}
-The best $b(s)$ is the value function: then the weight is a
+A natural $b(s)$ is the value function, which makes the weight a
 sampled advantage (:numref:`sec_valueiter` defined it).
 
 $$\hat V(s_t) \leftarrow \hat V(s_t) + \alpha_V\,(\hat G_t - \hat V(s_t)),
 \qquad \textrm{weight} = \hat G_t - \hat V(s_t) \approx A^{\pi_\theta}.$$
 
-Monte Carlo regression today; bootstrapped targets are
-actor-critic (next chapter).
+This section uses Monte Carlo regression; the next chapter introduces
+bootstrapped actor--critic targets.
 :::
 
 ::: {.slide title="Dependence Conditions Determine Baseline Bias"}
@@ -629,48 +633,46 @@ $$A_j = \frac{r_j - \mu}{\sigma + 10^{-8}}$$
 
 - prompt $\leftrightarrow$ start state; group of $K$ responses
   $\leftrightarrow$ batch of trajectories
-- group mean = a free per-prompt baseline (no value network!)
+- group mean = a per-prompt baseline without a value network
 - dividing by $\sigma$: a per-prompt **step-size rescaling**,
   not a baseline (Dr. GRPO's objection)
 :::
 
 ::: {.slide title="Five Estimators at a Frozen Theta"}
-Same frozen policy as the last section's yardstick; the exact
-gradient grades every claim.
+The policy is held fixed, and its exact gradient provides the reference
+against which every estimator is measured.
 
 @!baselines-five-estimators-1
 
 . . .
 
-Baselines move nothing (cosines agree). Centering cuts variance
-by a third; the exact state baseline nearly halves it;
-$\div\,\sigma$ adds nothing; reward-to-go buys a few percent,
-because terminal-only reward leaves causality nothing to drop.
+The matching cosines confirm that baselines preserve the expected gradient.
+Centering reduces variance by one third, and the exact state baseline nearly
+halves it. Dividing by $\sigma$ gives no further reduction, while reward-to-go
+helps little because a terminal-only reward leaves no earlier rewards to omit.
 :::
 
 ::: {.slide title="Estimator Comparison"}
-Same $\alpha$ (plain SGD, on purpose), same batches, twenty
-seeds; five arms differing in one line.
+All variants use the same $\alpha$, plain SGD, matched batches, and
+twenty seeds; only the score weights differ.
 
 @!baselines-five-estimators-6
 
 . . .
 
-- normalization learns fastest here, but its steps are about $5\times$
-  centered's and $2\times$ reward-to-go's
-- subtracting $\mu$: a baseline. Dividing by $\sigma + 10^{-8}$:
-  a per-batch **step size**, not a baseline.
-- at fixed $\alpha$, the ordering depends on step size as well as
-  variance
+- Normalization learns fastest here, but its updates are about $5\times$
+  those of centering and $2\times$ those of reward-to-go.
+- Subtracting $\mu$ gives a baseline. Dividing by $\sigma + 10^{-8}$
+  changes the per-batch **step size** rather than the baseline.
+- At fixed $\alpha$, performance depends on both variance and update scale.
 :::
 
 ::: {.slide title="How To Read RL Curves"}
 - every band is wide: slowest seed $> 2\times$ the fastest,
   same variant, only the seed changed
-- one training curve is an anecdote; a lucky-vs-unlucky pairing
-  flips the conclusion
-- twenty seeds pin the *ordering*, not the digits: quote ranges
-  and ratios
+- individual seeds can reverse an apparent ordering
+- twenty seeds support the broad ordering rather than precise digits;
+  report ranges and ratios
 - several seeds, matched hyper-parameters, medians, spread
   :cite:`Henderson.Islam.Bachman.ea.2018,Agarwal.Schwarzer.Castro.ea.2021,Engstrom.Ilyas.Santurkar.ea.2020`
 :::
@@ -680,11 +682,11 @@ seeds; five arms differing in one line.
   determined at $s_t$ can weight or offset it, bias-free.
 - Reward-to-go, baselines, the optimal $c^*$, the learned
   $\hat V$: four uses of the identity.
-- A baseline is a control variate; $(1 - \mathrm{corr}^2)$ says
-  what it buys.
+- A baseline is a control variate; the factor $(1-\mathrm{corr}^2)$
+  quantifies its variance reduction.
 - Centering is a baseline; $\div\,\sigma$ is a step size;
   leave-one-out is exact; the loss divisor is a fourth estimator
   choice. GRPO is this section at scale.
-- Entropy fell from $\ln 4$ to about $0.8$ nats unmanaged:
-  :numref:`sec_ppo` takes over from here.
+- Entropy decreases from $\ln 4$ to about $0.8$ nats without an
+  explicit constraint; :numref:`sec_ppo` controls policy change.
 :::

@@ -30,7 +30,7 @@ import numpy as np
 
 ### States, Actions and the Transition Kernel
 
-The set of *states* $\mathcal{S}$ is here the agent's cell, $\{0, 1, \ldots, 15\}$ numbered row by row; the set of *actions* $\mathcal{A}$ available in each state is the four commands *left*, *down*, *right*, *up*, encoded as 0 through 3. On slippery ice an action changes the state only in distribution; before writing that in symbols, look at it as data, because Gymnasium stores the ground truth of this environment as a table:
+Here the set of *states* $\mathcal{S}$ consists of the agent's cell, $\{0, 1, \ldots, 15\}$ numbered row by row. The set of *actions* $\mathcal{A}$ contains the four commands *left*, *down*, *right*, and *up*, encoded as 0 through 3. On slippery ice, an action determines a distribution over next states. Gymnasium stores this transition model as a table:
 
 ```{.python .input #mdp-states-actions-and-the-transition-kernel-1}
 %%tab pytorch, jax
@@ -38,9 +38,9 @@ env = gym.make('FrozenLake-v1', is_slippery=True)
 env.unwrapped.P[9][1]
 ```
 
-Three tuples, one per outcome, each of the form (probability, next state, reward, terminated): commanded *down* from state 9, the agent reaches 13 as intended, or slides into 8 or 10, with probability $1/3$ each, as drawn in :numref:`fig_rl_gridworld`. In symbols this is the *transition kernel* $P: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \to [0, 1]$, where $P(s' \mid s, a)$ is the conditional probability of reaching state $s'$ from state $s$ under action $a$; each row is a distribution, $\sum_{s' \in \mathcal{S}} P(s' \mid s, a) = 1$, because the agent must land somewhere.
+The output contains three tuples, one per outcome, each of the form (probability, next state, reward, terminated). When commanded *down* from state 9, the agent reaches 13, 8, or 10 with probability $1/3$ each, as shown in :numref:`fig_rl_gridworld`. In symbols this is the *transition kernel* $P: \mathcal{S} \times \mathcal{A} \times \mathcal{S} \to [0, 1]$, where $P(s' \mid s, a)$ is the conditional probability of reaching state $s'$ from state $s$ under action $a$; each row is a distribution, so $\sum_{s' \in \mathcal{S}} P(s' \mid s, a) = 1$.
 
-The fourth object scores behavior: the *reward* $r: \mathcal{S} \times \mathcal{A} \to \mathbb{R}$, large when taking action $a$ at state $s$ helps the task and small when it does not. Together:
+The fourth object is the *reward* $r: \mathcal{S} \times \mathcal{A} \to \mathbb{R}$, which assigns a numerical objective to taking action $a$ at state $s$. Together:
 
 $$
 \textrm{MDP}: \quad (\mathcal{S}, \mathcal{A}, P, r).
@@ -49,7 +49,7 @@ $$
 
 Some treatments fold the discount factor of the next subsection into this tuple, and some let the reward be random or depend on the next state; our $r(s, a)$ then plays the role of the expected reward, and nothing in this chapter loses generality from the simpler form.
 
-The whole model therefore fits in two dense arrays, which we wrap in a class and save to the `d2l` library; it is the object under study for the rest of this chapter:
+The transition and reward model fits in two dense arrays. We wrap them in a class and save it to the `d2l` library for use throughout the chapter:
 
 ```{.python .input #mdp-states-actions-and-the-transition-kernel-2}
 %%tab pytorch, jax
@@ -101,7 +101,7 @@ Every row of $P$ sums to one. The reward array is almost entirely zero: its nonz
 
 The reward is chosen by the designer to represent the task. In contrast, the states, actions, and transition kernel describe the environment. An optimization algorithm maximizes the specified reward, so a mismatch between the reward and the intended task can produce undesirable behavior.
 
-One modification of a reward is provably safe. Take any *potential* $\Phi: \mathcal{S} \to \mathbb{R}$ that is zero at every state that ends an episode (the boundary condition doing quiet work below) and replace the reward on each transition by
+One reward modification provably preserves the optimal policy. Let $\Phi: \mathcal{S} \to \mathbb{R}$ be a *potential* that is zero at every terminal state, and replace the reward on each transition by
 
 $$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s).$$
 
@@ -111,7 +111,7 @@ The terminal-state condition is essential. If returns stop at the terminal trans
 
 ## Return, Discount and Horizon
 
-A model is not yet a problem statement. The agent starts at a state $s_0$ drawn from a *start-state distribution* $\mu_0$ (a point mass on state 0 here; the distribution over prompts in :numref:`sec_rl_sequences`) and produces a *trajectory*
+The start-state distribution and return objective complete the problem specification. The agent starts at a state $s_0$ drawn from a *start-state distribution* $\mu_0$ (a point mass on state 0 here; the distribution over prompts in :numref:`sec_rl_sequences`) and produces a *trajectory*
 
 $$\tau = (s_0, a_0, r_0, s_1, a_1, r_1, s_2, a_2, r_2, \ldots),$$
 
@@ -119,7 +119,9 @@ where at each step $t$ it is at state $s_t$, takes action $a_t$, receives reward
 
 $$R(\tau) = r_0 + r_1 + r_2 + \cdots.$$
 
-The goal of reinforcement learning is to act so that the return is as large as possible, on average over the randomness of the kernel, the start state and the agent's own choices. For finite discounted MDPs the problem is well posed: an optimal way of acting exists and can be taken deterministic and time-independent :cite:`Puterman.1994`. We make this precise with policies and value functions in :numref:`sec_valueiter`; the same objects anchor imitation from demonstrations (:numref:`sec_imitation`) and direct improvement from sampled returns (:numref:`sec_policygradient`). First we make $\tau$ concrete, with an agent that picks every command uniformly at random:
+The goal of reinforcement learning is to act so that the return is as large as possible, on average over the randomness of the kernel, the start state and the agent's own choices. For finite discounted MDPs the problem is well posed: an optimal way of acting exists and can be taken deterministic and time-independent :cite:`Puterman.1994`.
+
+We make this precise with policies and value functions in :numref:`sec_valueiter`; the same objects define imitation from demonstrations (:numref:`sec_imitation`) and direct policy improvement from sampled returns (:numref:`sec_policygradient`). The following uniformly random policy produces one example trajectory $\tau$:
 
 ```{.python .input #mdp-return-discount-and-horizon}
 %%tab pytorch, jax
@@ -159,7 +161,7 @@ for g in [0.5, 0.9, 0.95, 0.99]:
 
 :numref:`fig_rl_return_discount` shows these quantities. The shortest path in FrozenLake takes six moves, so the terminal reward receives weight $\gamma^5$: approximately $0.03$ for $\gamma=0.5$ and $0.77$ for $\gamma=0.95$. The discount factor therefore determines the relative importance of delayed rewards.
 
-![Discounting turns $\gamma$ into a horizon. (a) The weight $\gamma^t$ of a reward $t$ steps away falls below $0.05$ at $t = 5$ for $\gamma = 0.5$, at $t = 29$ for $\gamma = 0.9$, and only at $t = 299$ for $\gamma = 0.99$. (b) The horizon $1/(1-\gamma)$ on a logarithmic axis: from two steps at $\gamma = 0.5$ to a hundred at $\gamma = 0.99$.](../img/mdl-rl-return-discount.svg)
+![Discounting defines an effective horizon through $\gamma$. (a) The weight $\gamma^t$ of a reward $t$ steps away falls below $0.05$ at $t = 5$ for $\gamma = 0.5$, at $t = 29$ for $\gamma = 0.9$, and only at $t = 299$ for $\gamma = 0.99$. (b) The horizon $1/(1-\gamma)$ on a logarithmic axis: from two steps at $\gamma = 0.5$ to a hundred at $\gamma = 0.99$.](../img/mdl-rl-return-discount.svg)
 :label:`fig_rl_return_discount`
 
 ### Episodes, Termination and Truncation
@@ -190,7 +192,7 @@ State augmentation requires the added variables to be observable. A poker player
 
 ## Bandits, Degenerate MDPs and the Model-Based Axis
 
-Two degenerate corners of the MDP, and one axis, organize much of what follows.
+Two special cases and the distinction between model-based and model-free methods organize the following sections.
 
 ### The Bandit as a One-State MDP
 
@@ -230,11 +232,15 @@ print(f'true-optimal:   at s=14 goes {"<v>^"[pi_true[14]]}, true value '
       f'{exact_value(pi_true):.3f}')
 ```
 
-State 14 is the only cell from which the goal can be entered. The optimal policy for the original reward commands *down*, which reaches the goal with probability $1/3$. The policy optimized for the shaped reward instead commands *left*, whose possible successors are states 10, 13, and 14. It therefore never reaches the goal. Its value under the original reward is zero, although its value under the shaped reward is $2.15$, compared with $0.180$ for the original optimum. The per-step bonus favors continuing to collect approach rewards instead of terminating. With a smaller bonus of $0.1$, the policy still reaches the goal but remains altered. Exercise 4 replaces the bonus with a potential-based reward.
+State 14 is the only cell from which the goal can be entered. The optimal policy for the original reward commands *down*, which reaches the goal with probability $1/3$. The policy optimized for the shaped reward instead commands *left*, whose possible successors are states 10, 13, and 14. It therefore never reaches the goal.
+
+Its value under the original reward is zero, although its value under the shaped reward is $2.15$, compared with $0.180$ for the original optimum. The per-step bonus favors continuing to collect approach rewards instead of terminating. With a smaller bonus of $0.1$, the policy still reaches the goal but remains altered. Exercise 4 replaces the bonus with a potential-based reward.
 
 ## Summary
 
-A Markov decision process consists of states $\mathcal{S}$, actions $\mathcal{A}$, a transition kernel $P$, and a reward $r$. The Markov assumption requires the state to contain the information from the past needed to predict the future; state augmentation can restore this property when the necessary information is observable. The objective is expected discounted return, and $1/(1-\gamma)$ provides a useful effective-horizon scale. Terminal states end the process, whereas truncation ends only the observation of it, so bootstrapped value estimates must distinguish the two. A one-state MDP is a bandit, and a deterministic MDP with terminal reward describes settings such as text generation. Potential-based shaping preserves the optimal policy when its terminal conditions are handled correctly; arbitrary reward modifications do not.
+A Markov decision process consists of states $\mathcal{S}$, actions $\mathcal{A}$, a transition kernel $P$, and a reward $r$. The Markov assumption requires the state to contain the information from the past needed to predict the future; state augmentation can restore this property when the necessary information is observable. The objective is expected discounted return, and $1/(1-\gamma)$ provides a useful effective-horizon scale. Terminal states end the process, whereas truncation ends only the observation of it, so bootstrapped value estimates must distinguish the two.
+
+A one-state MDP is a bandit, and a deterministic MDP with terminal reward describes settings such as text generation. Potential-based shaping preserves the optimal policy when its terminal conditions are handled correctly; arbitrary reward modifications do not.
 
 **Experimental scope.** Except for the illustrative sampled trajectory, the results in this section are exact computations on a known sixteen-state model. The reward-shaping example establishes that one plausible bonus can change the optimal policy; it does not imply that all reward shaping fails. Estimation, exploration, and function approximation are introduced in later sections.
 
@@ -275,7 +281,7 @@ A Markov decision process consists of states $\mathcal{S}$, actions $\mathcal{A}
    any function $\Phi$ with $\Phi = 0$ at terminal states: write out the
    telescoping sum for an episode of length $T$, exhibit the residual
    $\gamma^T \Phi(s_T)$ that survives at the endpoint, and give the two ways to
-   kill it (the zero boundary condition, or continuing the shaped reward
+   eliminate it (the zero boundary condition, or continuing the shaped reward
    through the absorbing state). Finally, identify what goes wrong with the
    naive fixes in that language.
 1. [conceptual] *Random rewards.* :numref:`sec_mdp` notes that a random reward
@@ -297,7 +303,7 @@ A Markov decision process consists of states $\mathcal{S}$, actions $\mathcal{A}
 [Dive into Deep Learning · §14.1]{.kicker}
 
 Markov decision processes<br>
-**four objects, one assumption · the kernel as data · the discount as a horizon · the reward will be attacked**
+**states, actions, transitions, and rewards · the Markov assumption · discounting · reward design**
 :::
 :::
 
@@ -308,7 +314,7 @@ $$\textrm{MDP}: \quad (\mathcal{S}, \mathcal{A}, P, r)$$
 
 - $\mathcal{S}$: states. $\mathcal{A}$: actions.
 - $P(s' \mid s, a)$: transition kernel, a **distribution** over next states.
-- $r(s, a)$: expected immediate reward. **Written by you.**
+- $r(s, a)$: expected immediate reward, specified by the task designer.
 
 . . .
 
@@ -352,19 +358,19 @@ FrozenLake gives reward only on reaching the goal; this episode has return zero.
 
 @!mdp-the-geometric-bound-and-the-effective-horizon
 
-$\gamma = 0.99$ is not "close to one"; it is a hundred steps.
+For $\gamma = 0.99$, the effective horizon is one hundred steps.
 :::
 
 ::: {.slide title="Terminated Is Not Truncated"}
-- **terminated**: the process entered a terminal state.
-  The future is empty, worth exactly zero.
-- **truncated**: we stopped watching (a time limit).
-  The state still has a future; the recording does not.
+- **terminated**: the process entered a terminal state, whose
+  continuation value is zero.
+- **truncated**: observation stopped, often because of a time limit;
+  the underlying state can still have nonzero continuation value.
 
 . . .
 
-Control flow may merge them. Value estimation never may:
-bootstrapped targets are masked by `terminated` alone.
+An interaction loop may stop for either flag, but value estimation
+must distinguish them: bootstrapped targets are masked by `terminated` alone.
 :::
 
 ::: {.slide title="Reward Misspecification"}
@@ -375,11 +381,11 @@ the agent closer to the goal.
 
 . . .
 
-At $s = 14$, the only cell bordering the goal, the shaped optimum
-turns **away**: it never finishes. Shaped value $2.15$; true value
-exactly $0$. Only potential-based shaping,
+At $s = 14$, the shaped-reward optimum selects *left* and never
+reaches the goal. Its shaped value is $2.15$, but its true value is
+$0$. Potential-based shaping,
 $r + \gamma \Phi(s') - \Phi(s)$ with $\Phi = 0$ at terminal states,
-is guaranteed safe.
+preserves the optimal policy.
 :::
 
 ::: {.slide title="Recap"}
@@ -389,5 +395,5 @@ is guaranteed safe.
 - Terminal states end the future; truncation only ends the recording.
 - Not Markov? Augment the state (location *and* velocity; stacked frames).
 - Bandit = one-state MDP; text generation = deterministic, terminal-reward MDP.
-- The reward is authored, and the optimizer exploits what you wrote.
+- Optimization follows the specified reward, including any mismatch with the intended task.
 :::

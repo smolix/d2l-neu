@@ -1,7 +1,9 @@
 # Function Approximation in Reinforcement Learning
 :label:`sec_deeprl`
 
-Tabular methods store separate values or policy parameters for every state. They therefore do not apply directly to continuous state spaces, where an agent may rarely encounter the same state twice. Neural networks replace these tables with functions that generalize across states. The policy-gradient derivations in :numref:`sec_policygradient` and :numref:`sec_baselines` require only a differentiable policy, a value estimate, and a sampling procedure, so the same training loop can use a neural policy for CartPole and a Gaussian policy for continuous control. We then examine how function approximation couples updates across states and compare score-function and pathwise gradient estimators.
+Tabular methods store separate values or policy parameters for every state. They therefore do not apply directly to continuous state spaces, where an agent may rarely encounter the same state twice. Neural networks replace these tables with functions that generalize across states.
+
+The policy-gradient derivations in :numref:`sec_policygradient` and :numref:`sec_baselines` require only a differentiable policy, a value estimate, and a sampling procedure, so the same training loop can use a neural policy for CartPole and a Gaussian policy for continuous control. We then examine how function approximation couples updates across states and compare score-function and pathwise gradient estimators.
 
 ```{.python .input #deep-rl-from-tables-to-networks}
 %%tab pytorch
@@ -32,7 +34,7 @@ CartPole is the classic small control problem: a cart slides along a track with 
 
 ### Replacing the Table with a Network
 
-The `ActorCritic` container of :numref:`sec_imitation` never asked what its policy *is*, only for a module that maps a state to one preference per action; `.tabular` happened to fill that slot with an embedding table. The constructor below fills it with a one-hidden-layer network instead, four numbers in, two preferences out, plus a second network of the same shape for the value head. The softmax of :eqref:`eq_softmax_policy` sits on the network's outputs exactly as it sat on a table row; the score $\nabla_\theta \log \pi_\theta(a \mid s)$ now carries a hidden layer's worth of chain rule, and autograd absorbs it without a new line of ours.
+The `ActorCritic` interface from :numref:`sec_imitation` requires a module that maps a state to one preference per action. The `.tabular` constructor supplies an embedding table; the constructor below instead supplies a one-hidden-layer network with four inputs and two action preferences, plus a value network of the same shape. The softmax in :eqref:`eq_softmax_policy` operates on the network outputs as it did on a table row. The score $\nabla_\theta \log \pi_\theta(a \mid s)$ now includes the hidden layer, and automatic differentiation applies the additional chain rule.
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-1}
 %%tab pytorch
@@ -71,7 +73,7 @@ def act(self, obs, rng):
     return int(rng.choice(len(probs), p=probs))
 ```
 
-The learned baseline of :numref:`sec_baselines` also has to stop being a table. There, :eqref:`eq_value_baseline` nudged one table entry toward the observed reward-to-go; for a network the same nudge is a regression step, mean squared error against the observed targets, run through the optimizer the container already owns. The `num_steps` argument sets how many regression steps the critic takes per batch; this section leaves the knob at $1$, and :numref:`sec_actorcritic` turns it.
+The learned baseline of :numref:`sec_baselines` must also use function approximation. Equation :eqref:`eq_value_baseline` moved one table entry toward an observed reward-to-go; for a network, the corresponding update minimizes mean squared error against the observed targets. The `num_steps` argument sets the number of critic regression steps per batch. This section uses $1$ step, while :numref:`sec_actorcritic` varies it.
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-2}
 %%tab pytorch
@@ -100,7 +102,9 @@ def fit_value(ac, obs, target, num_steps=1):  #@save
     return float(loss)
 ```
 
-The training function below is the learned-baseline REINFORCE algorithm from :numref:`sec_baselines`. It collects rollouts, computes reward-to-go, subtracts a learned value estimate, updates the policy, and fits the value function. The agent constructor and environment are arguments, allowing the same function to train different policy representations. We normalize the advantages because the tasks considered below have substantially different return scales; as discussed in :numref:`sec_baselines`, this changes the effective step size. The controlled estimator comparison used plain SGD to expose that effect, whereas the neural-network experiments use Adam through the optimizer owned by each policy object.
+The training function below is the learned-baseline REINFORCE algorithm from :numref:`sec_baselines`. It collects rollouts, computes reward-to-go, subtracts a learned value estimate, updates the policy, and fits the value function. The agent constructor and environment are arguments, allowing the same function to train different policy representations.
+
+We normalize the advantages because the tasks considered below have substantially different return scales; as discussed in :numref:`sec_baselines`, this changes the effective step size. The controlled estimator comparison used plain SGD to expose that effect, whereas the neural-network experiments use Adam through the optimizer owned by each policy object.
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-3}
 %%tab pytorch, jax
@@ -145,7 +149,7 @@ d2l.plot_curves({'REINFORCE + learned baseline': runs[:, :, 0]},
                 reference=500)
 ```
 
-The curve climbs from about 20, the return of the untrained random policy, to the ceiling's neighborhood: every seed's per-update batch mean crosses 400 within about fifty updates and holds above 400 to the end. Where in that upper range a seed settles moves from run to run, so read the level and not the last digit. The tabular derivation survived the move without a single new equation.
+The untrained policy obtains return about 20. Every seed's per-update batch mean exceeds 400 within approximately fifty updates and remains above 400 through the final update. Variation among seeds in this range makes the overall level more informative than the final digit. The tabular derivation requires no new equation for the network policy.
 
 ### Tables as Linear Networks on One-Hot States
 
@@ -234,7 +238,7 @@ class GaussianPolicy(d2l.ActorCritic):  #@save
         return np.asarray(self.policy(jnp.asarray(obs))[0])
 ```
 
-The environment clips whatever torque the sample lands on to $[-2, 2]$, so `act` may return the raw draw. Before trusting the new `log_prob` inside a training run, we check it the way :numref:`sec_policygradient` checked the softmax score, against the density written by hand; at initialization $\sigma = e^0 = 1$, so the handwritten Gaussian needs only the mean, which `act_greedy` reads out:
+The environment clips sampled torque to $[-2, 2]$, so `act` can return the unbounded Gaussian draw. Before training, we compare `log_prob` with the analytic Gaussian density, following the softmax-score check in :numref:`sec_policygradient`. At initialization, $\sigma = e^0 = 1$, so the analytic expression requires only the mean returned by `act_greedy`:
 
 ```{.python .input #deep-rl-the-gaussian-policy-2}
 %%tab pytorch, jax
@@ -253,7 +257,9 @@ print(np.allclose(gp.log_prob_np(obs, act), hand.sum(-1), atol=1e-5))
 
 ### The Score Function with Continuous Actions
 
-The derivation of :eqref:`eq_reinforce` requires $\log\pi_\theta$ to be differentiable in $\theta$, but does not require a finite action set. For a Gaussian policy, $\nabla_\theta\log\pi_\theta(a\mid s)$ is available just as it is for a softmax policy, so the same REINFORCE implementation applies. We train longer because the policy must discover how to swing the pendulum upright before balancing it. We also use $\gamma=0.95$, which shortens the credit-assignment horizon in a 200-step task with a loss at every step. Since the discount factor defines the objective (:numref:`sec_mdp`), this choice changes the relative importance of later rewards; it is part of the task specification rather than a variance-reduction parameter:
+The derivation of :eqref:`eq_reinforce` requires $\log\pi_\theta$ to be differentiable in $\theta$, but does not require a finite action set. For a Gaussian policy, $\nabla_\theta\log\pi_\theta(a\mid s)$ is available just as it is for a softmax policy, so the same REINFORCE implementation applies.
+
+We train longer because the policy must discover how to swing the pendulum upright before balancing it. We also use $\gamma=0.95$, which shortens the credit-assignment horizon in a 200-step task with a loss at every step. Since the discount factor defines the objective (:numref:`sec_mdp`), this choice changes the relative importance of later rewards; it is part of the task specification rather than a variance-reduction parameter:
 
 ```{.python .input #deep-rl-the-score-does-not-care-that-the-action-is-real}
 %%tab pytorch, jax
@@ -272,7 +278,9 @@ d2l.plot_curves({'REINFORCE + learned baseline': runs_p[:, :, 0]},
                 reference=-200, smooth=10)
 ```
 
-The initial returns lie between approximately $-1200$ and $-1600$. At their best, the runs reduce this loss by roughly one quarter to three quarters, depending on the seed and framework. No seed reaches the reference level of $-200$, which corresponds to a controller that reliably swings the pendulum upright and holds it there. Performance can also decline later because the fixed step size continues to update an already improved policy. Thus the experiment demonstrates improvement with a continuous-action policy, not mastery of the task. :numref:`sec_ppo` develops a more controlled policy update. A language model has the analogous discrete policy form: it maps a context to a distribution over vocabulary items, as discussed in :numref:`sec_rl_sequences`.
+The initial returns lie between approximately $-1200$ and $-1600$. At their best, the runs reduce this loss by roughly one quarter to three quarters, depending on the seed and framework. No seed reaches the reference level of $-200$, which corresponds to a controller that reliably swings the pendulum upright and holds it there. Performance can also decline later because the fixed step size continues to update an already improved policy.
+
+Thus the experiment demonstrates improvement with a continuous-action policy, not mastery of the task. :numref:`sec_ppo` develops a more controlled policy update. A language model has the analogous discrete policy form: it maps a context to a distribution over vocabulary items, as discussed in :numref:`sec_rl_sequences`.
 
 ### Score-Function versus Pathwise Gradients
 
@@ -281,7 +289,7 @@ An expected value can also be differentiated by reparameterizing its random vari
 $$\nabla_\mu\, E\big[ Q(a) \big] = E\Big[ Q(a)\, \frac{a - \mu}{\sigma^2} \Big] = E\big[ Q'(\mu + \sigma z) \big], \qquad z \sim \mathcal{N}(0, 1).$$
 :eqlabel:`eq_score_vs_pathwise`
 
-The first equality is the score-function identity this chapter is built on. The second substitutes $a = \mu + \sigma z$, so that $\mu$ appears inside $Q$ rather than inside the distribution, and differentiates straight through the sample; it is the *pathwise* or reparameterization gradient :cite:`Kingma.Welling.2014`, and :numref:`fig_rl_score_vs_pathwise` draws where each estimator's gradient flows. Both are unbiased. They are not equally noisy:
+The first equality is the score-function identity used throughout this chapter. The second substitutes $a = \mu + \sigma z$, placing $\mu$ inside $Q$ rather than the distribution, and differentiates through the sample. This is the *pathwise* or reparameterization gradient :cite:`Kingma.Welling.2014`, and :numref:`fig_rl_score_vs_pathwise` illustrates where each estimator's gradient flows. Both are unbiased. They are not equally noisy:
 
 ```{.python .input #deep-rl-score-function-versus-pathwise-gradients}
 %%tab pytorch
@@ -317,7 +325,7 @@ print(f'score variance if Q gains a constant +10: '
 
 Both sample means are close to the exact gradient $2.0$, but the score-function variance is about twenty times larger. Adding a constant to $Q$ increases the score-function variance by another order of magnitude, because $Q$ appears as a scalar multiplier. The pathwise estimator is unchanged because it depends on $Q'$ and the derivative of a constant is zero. This lower variance requires access to $Q$ as a differentiable function of the action, rather than only to sampled returns.
 
-![Two estimators of the same gradient. Left: the score-function estimator touches the environment only through the returned reward, so nothing behind that interface needs to be differentiable. Right: the pathwise estimator rewrites the sample as $a = \mu_\theta(s) + \sigma_\theta(s)\,z$ and differentiates through it, threading $\partial Q_w / \partial a$ and $\partial a / \partial \theta$; the critic $Q_w$ must be differentiable in the action, and in exchange it can be trained by regression on replayed past data, provided the buffer covers where the policy now goes.](../img/mdl-rl-score-vs-pathwise.svg)
+![Two estimators of the same gradient. Left: the score-function estimator uses the environment only through the returned reward, so the environment need not be differentiable. Right: the pathwise estimator rewrites the sample as $a = \mu_\theta(s) + \sigma_\theta(s)\,z$ and differentiates through $\partial Q_w / \partial a$ and $\partial a / \partial \theta$. The critic $Q_w$ must be differentiable in the action and can be trained by regression on replayed data, provided the buffer covers states and actions relevant to the current policy.](../img/mdl-rl-score-vs-pathwise.svg)
 :label:`fig_rl_score_vs_pathwise`
 
 ### The Argmax over Continuous Actions
@@ -326,13 +334,15 @@ Value-based methods obtain an action by maximizing $Q(s,a)$. With four discrete 
 
 A common continuous-action alternative trains a second network to approximate the maximizing action. A deterministic actor is updated through the learned critic $Q_w(s,a)$ using the pathwise derivative $\partial Q_w/\partial a\cdot\partial a/\partial\theta$ from :numref:`fig_rl_score_vs_pathwise`.
 
-Two independent choices help organize these methods. The first is the gradient estimator: score function or pathwise. The second is the data source: on-policy or off-policy. Pathwise gradients pair naturally with replayed data because the critic is trained by regression, but the pairing is not required by the mathematics. Importance weighting can adapt a score-function estimator to off-policy data, while a pathwise method still requires its replay buffer to cover relevant states and actions. DDPG and TD3 use deterministic actors; SAC uses a stochastic actor with a reparameterized gradient. In practice, DDPG, TD3, and SAC combine pathwise gradients with replay, whereas REINFORCE, actor--critic, and PPO commonly use score-function gradients with recent on-policy data.
+Two independent choices help organize these methods. The first is the gradient estimator: score function or pathwise. The second is the data source: on-policy or off-policy.
+
+Pathwise gradients pair naturally with replayed data because the critic is trained by regression, but the pairing is not required by the mathematics. Importance weighting can adapt a score-function estimator to off-policy data, while a pathwise method still requires its replay buffer to cover relevant states and actions. DDPG and TD3 use deterministic actors; SAC uses a stochastic actor with a reparameterized gradient. In practice, DDPG, TD3, and SAC combine pathwise gradients with replay, whereas REINFORCE, actor--critic, and PPO commonly use score-function gradients with recent on-policy data.
 
 ## Generalization across States
 
 ### Measuring State Coupling
 
-The move to networks did change something, and it is not the mathematics. A table update touches one row; a network update touches every state at once, because all states share the same weights. :numref:`fig_rl_table_vs_network` draws the claim, and it is measurable in eight lines: take a value head over a cloud of 256 random states, ask `fit_value` to raise its estimate at *one* of them by one unit, and watch what happens everywhere else. Then file the same request against the tabular container.
+Networks change how updates generalize across states. A table update changes one row, whereas a network update can change every state because all states share parameters. :numref:`fig_rl_table_vs_network` illustrates this coupling. The following diagnostic raises the estimated value of one state among 256 probes and measures the change at all probes, then repeats the update with a table.
 
 ```{.python .input #deep-rl-generalization-couples-states-measured}
 %%tab pytorch, jax
@@ -362,11 +372,13 @@ The network update changes the output at all 255 unobserved probe states, someti
 ![What one value update touches. A value estimate over a one-dimensional state is fitted twice, as a sixteen-entry table and as a model with 64 unit-normalized tanh random features, and each takes one gradient step of size $\alpha = 0.5$ toward a target one unit above its estimate at the marked state $x_0$, so the visited state moves by $+0.50$ under both. (a) The table moves one entry and nothing else. (b) The model moves its entire curve, because every state's estimate shares parameters with $x_0$'s. (c) The two changes side by side: the model's update is still $+0.40$ at the far end of the state space and nowhere less than $+0.33$.](../img/mdl-rl-table-vs-network.svg)
 :label:`fig_rl_table_vs_network`
 
-### Why Policy Gradients Survive Function Approximation
+### Policy Gradients with Function Approximation
 
 A policy-gradient update estimates the gradient of the scalar objective $J(\theta)$ in :eqref:`eq_pg_objective`. Under the usual assumptions of smoothness, bounded-variance unbiased gradients, and decaying step sizes, this has the form studied in stochastic optimization. The implementation here does not satisfy all of those assumptions: normalization rescales each batch using its data, samples depend on the collecting policy, and Adam uses a fixed step size. The curves should therefore be interpreted as empirical results rather than applications of a convergence theorem.
 
-The value network in this section is fitted to observed reward-to-go targets that do not depend on the network's own predictions. Bootstrapped value methods instead construct targets from the current value estimate. Although each update is a gradient step with its target held fixed, the expected semi-gradient field need not be the gradient of a single scalar objective, and function approximation can make the iteration diverge :cite:`Tsitsiklis.VanRoy.1997`. Residual-gradient methods optimize a Bellman-error objective directly but encounter the double-sampling problem from :numref:`sec_qlearning`. Bootstrapped critics and their stability are introduced in :numref:`chap_deep_rl` and :numref:`sec_dqn`.
+The value network in this section is fitted to observed reward-to-go targets that do not depend on the network's own predictions. Bootstrapped value methods instead construct targets from the current value estimate. Although each update is a gradient step with its target held fixed, the expected semi-gradient field need not be the gradient of a single scalar objective, and function approximation can make the iteration diverge :cite:`Tsitsiklis.VanRoy.1997`. Residual-gradient methods optimize a Bellman-error objective directly but encounter the double-sampling problem from :numref:`sec_qlearning`.
+
+Bootstrapped critics and their stability are introduced in :numref:`chap_deep_rl` and :numref:`sec_dqn`.
 
 ## The Surrogate Loss
 
@@ -389,13 +401,15 @@ The resulting agent still has three important limitations. It waits for complete
 
 ## Summary
 
-Tabular representations cannot cover continuous state spaces, whereas neural networks share parameters and generalize across states. `ActorCritic.mlp` replaces the tabular embedding with a one-hidden-layer network, and `fit_value` expresses the value-baseline update as regression. The same learned-baseline REINFORCE loop trains CartPole, and a Gaussian policy extends it to continuous actions on Pendulum. Score-function and pathwise estimators compute the same gradient with different variances and assumptions. This choice is separate from whether training uses on-policy or off-policy data, although pathwise gradients commonly appear with replay in DDPG, TD3, and SAC. Parameter sharing makes continuous problems learnable but also couples updates across states. The next chapter introduces bootstrapped critics, batch reuse, replay, and constraints on policy updates.
+Tabular representations cannot cover continuous state spaces, whereas neural networks share parameters and generalize across states. `ActorCritic.mlp` replaces the tabular embedding with a one-hidden-layer network, and `fit_value` expresses the value-baseline update as regression. The same learned-baseline REINFORCE loop trains CartPole, and a Gaussian policy extends it to continuous actions on Pendulum. Score-function and pathwise estimators compute the same gradient with different variances and assumptions. This choice is separate from whether training uses on-policy or off-policy data, although pathwise gradients commonly appear with replay in DDPG, TD3, and SAC.
+
+Parameter sharing makes continuous problems learnable but also couples updates across states. The next chapter introduces bootstrapped critics, batch reuse, replay, and constraints on policy updates.
 
 **Experimental scope.** CartPole and Pendulum use three seeds per framework, so the curves support broad trends rather than precise numerical comparisons. CartPole is solved reliably, whereas Pendulum improves without approaching its maximum return. The coupling and gradient-variance examples are deterministic probes; the measured variance ratio depends on the chosen function, policy spread, and offset.
 
 ## Exercises
 
-1. [conceptual] *A loss that is not a loss.* Show that the gradient of
+1. [conceptual] *A surrogate loss is not a performance metric.* Show that the gradient of
    :eqref:`eq_pg_surrogate_loss` equals $-\hat{u}$ up to a positive constant
    when the advantages are held fixed. Then describe a situation in which the
    value of that loss decreases while the return also decreases, and say what
@@ -419,7 +433,7 @@ Tabular representations cannot cover continuous state spaces, whereas neural net
    :numref:`sec_policygradient`, and rerun both tasks. Which of the two tasks
    degrades more, and why? (Compare the typical magnitude of $\hat{G}_t$ on
    CartPole and on Pendulum, and recall which optimizer the policy uses.)
-1. [conceptual] *Generalization cuts both ways.* On FrozenLake an update
+1. [conceptual] *Benefits and costs of generalization.* On FrozenLake an update
    touched one row of a table. Here it moves the policy at every state at
    once. Argue why a batch dominated by near-vertical-pole states can make the
    policy *worse* at large pole angles, and name two phenomena in
@@ -441,29 +455,29 @@ Tabular representations cannot cover continuous state spaces, whereas neural net
 [Dive into Deep Learning · §14.7]{.kicker}
 
 From tables to networks<br>
-**the derivations never used the table · one function trains an MLP and a Gaussian · score versus pathwise gradients · what this agent still cannot do**
+**neural policy and value functions · Gaussian actions · score and pathwise gradients · parameter sharing**
 :::
 :::
 
 ::: {.slide title="A State No Table Can Hold"}
 CartPole: four real numbers (position, velocity, angle, angular
 velocity), two actions, $+1$ per step upright, ceiling 500.
-No two visits alike, so no table.
+Continuous states make exact table lookup inapplicable.
 
 . . .
 
-The derivations never asked for one. Same container, new slot filler:
+The derivations require a differentiable policy rather than a table:
 
 @deep-rl-the-swap-as-a-three-line-diff-1
 
 The softmax of :eqref:`eq_softmax_policy` sits on network outputs
-exactly as it sat on a table row; autograd absorbs the extra
-chain rule.
+as it did on a table row; automatic differentiation applies the
+additional chain rule.
 :::
 
 ::: {.slide title="One Training Function"}
-The learned-baseline arm of :numref:`sec_baselines`, frozen;
-the constructor and the environment promoted to arguments.
+The learned-baseline algorithm of :numref:`sec_baselines` is reused;
+the constructor and environment become arguments.
 
 @deep-rl-the-swap-as-a-three-line-diff-3
 
@@ -479,33 +493,34 @@ The estimator and value-regression steps remain unchanged.
 
 . . .
 
-From about 20 to above 400 on every seed, within about fifty
-updates. Read the level, not the last digit. The dips are new,
-and the final slides summarize their consequences.
+Every seed increases from about 20 to above 400 within roughly
+fifty updates. Seed variation makes the level more informative
+than the final digit.
 :::
 
 ::: {.slide title="A Table Is a Linear Network"}
 `nn.Embedding(16, 4)` **is** a linear layer on one-hot states:
 selecting row $s$ = multiplying by the indicator of $s$.
 
-- every "tabular" method of this chapter was already training
-  a network, the smallest one
+- a tabular policy is equivalent to a linear model on fixed
+  one-hot features
 - one-hot features are orthogonal: no two states share a
   parameter, so an update at one state cannot touch another
-- the hidden layer makes features **overlap**; overlap *is*
+- hidden-layer features are shared across states, producing
   generalization
 
-What networks change is the features, not the mathematics.
+Networks change the representation and parameter sharing, not the
+policy-gradient identity.
 :::
 
-::: {.slide title="An Action No Argmax Can Search"}
-Pendulum: torque in $[-2, 2]$, one real number. A softmax over
-actions is not available even in principle.
+::: {.slide title="Continuous Actions"}
+Pendulum uses a real-valued torque in $[-2, 2]$, so a finite-action
+softmax is not applicable.
 
 @deep-rl-the-gaussian-policy-1
 
 Three overrides define the distribution; `rollout`,
-`policy_step`, `fit_value` consume the interface and cannot tell.
+`policy_step`, and `fit_value` use the same interface unchanged.
 :::
 
 ::: {.slide title="The Same Path, a Continuous Action"}
@@ -513,11 +528,10 @@ Three overrides define the distribution; `rollout`,
 
 . . .
 
-Starts at an aimless policy's $-1200$ to $-1300$; every seed's
-best stretch cuts the cost by a third to three quarters; none
-reaches $-200$ (swing up and hold), and gains are not always
-kept: sensitivity to the step size remains.
-A language model is this policy's discrete twin
+Initial returns are about $-1200$ to $-1300$. The best segments
+improve by one third to three quarters, but no seed reaches $-200$
+and later performance can decline under the fixed step size.
+A language model uses an analogous discrete policy
 (:numref:`sec_rl_sequences`).
 :::
 
@@ -530,28 +544,29 @@ $$\nabla_\mu\, E\big[ Q(a) \big]
 
 . . .
 
-Same mean, a factor of about twenty in variance; add a constant
-to $Q$ and the score's variance explodes while the pathwise
-estimator is unchanged. It requires $Q$ to be differentiable
+Same mean, a factor of about twenty in variance. Adding a constant
+to $Q$ substantially increases the score-function variance, while
+the pathwise estimator is unchanged. It requires $Q$ to be differentiable
 in the action :cite:`Kingma.Welling.2014`.
 :::
 
-::: {.slide title="Where the Argmax Died"}
+::: {.slide title="Continuous-Action Optimization"}
 ![](../img/mdl-rl-score-vs-pathwise.svg){width=98%}
 
 . . .
 
-- $\max_a Q(s, a)$ over $a \in \mathbb{R}^d$: an optimization
-  problem per step; the value family dies of it
-- the fix: a second network trained to *be* the argmax, by the
-  pathwise gradient
-- two independent axes: estimator (score / pathwise) and data
-  (on- / off-policy); the pairing is affinity, not implication
-- DDPG/TD3 (deterministic actors) and SAC (stochastic,
-  entropy-regularized) replay every transition;
-  REINFORCE/A2C/PPO require fresh batches
-- "PPO or SAC?" = which estimator, and which data may drive
-  the update
+- Computing $\max_a Q(s, a)$ over $a \in \mathbb{R}^d$ requires a
+  continuous optimization problem at every step, making direct value-based
+  action selection impractical.
+- Actor methods instead train a second network to produce high-value actions,
+  using a pathwise gradient when the critic is differentiable in its action.
+- The gradient estimator (score-function or pathwise) and the data source
+  (on-policy or off-policy) are separate design choices.
+- DDPG and TD3 use deterministic actors, while SAC uses a stochastic,
+  entropy-regularized actor; all three learn from replayed transitions.
+  REINFORCE, A2C, and PPO instead require fresh on-policy batches.
+- The choice between PPO and SAC therefore concerns both the gradient
+  estimator and whether previous experience may be reused.
 :::
 
 ::: {.slide title="One Update Moves Every State"}
@@ -577,7 +592,7 @@ One optimizer step on $L$ = one ascent step on the return.
 
 @!deep-rl-the-estimator-written-as-a-loss
 
-The return climbed twenty-fold; $L$ wandered around zero.
+Return increases substantially while $L$ fluctuates near zero.
 Because the sampled advantages and state distribution change between
 updates, this surrogate loss is not comparable across iterations. Report
 return, entropy, and value-error diagnostics alongside it.
@@ -591,8 +606,8 @@ return, entropy, and value-error diagnostics alongside it.
 - What this agent cannot do:
   - it waits for episodes to end (:numref:`sec_actorcritic`
     bootstraps)
-  - it throws every batch away (:numref:`sec_ppo` reuses,
-    :numref:`sec_dqn` replays)
-  - nobody said how big a step is safe (:numref:`sec_ppo`)
-- Those three debts, in that order, are :numref:`chap_deep_rl`.
+  - it uses each batch once (:numref:`sec_ppo` reuses batches,
+    :numref:`sec_dqn` replays transitions)
+  - it does not constrain policy-update size (:numref:`sec_ppo`)
+- :numref:`chap_deep_rl` develops these three extensions.
 :::

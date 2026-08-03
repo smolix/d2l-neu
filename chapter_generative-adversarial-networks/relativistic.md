@@ -102,8 +102,6 @@ The pairing divergence is the number of nats a randomly ordered pair carries abo
 
 **Remark (normalization).** :citet:`Jolicoeur-Martineau.2020` defines the relativistic divergence with a leading factor of two and shifts the payoff so that $\ell(0) = 0$, taking $\log \sigma(z) + \log 2$ in the logistic case. Her divergence equals $2\, d_{\mathrm{Rp}}$, and her upper bound is $2 \log 2$ where ours is $\log 2$. Numerical comparisons across the two conventions must account for the factor.
 
-**Remark (provenance).** We have not found the identity :eqref:`eq_gan_rp_value` in the literature. :citet:`Jolicoeur-Martineau.2020` establishes the divergence property for general concave payoffs without computing the value, and :citet:`Huang.Gokaslan.Kuleshov.ea.2024` do not compute it either. The lifting argument is short, so the identity may nonetheless be known, and the quantity $\mathrm{JS}(p \otimes q, q \otimes p)$ is natural enough that it could appear under another name, for instance in the literature on paired two-sample tests. The nearest construction we are aware of is the pairwise discriminator of :citet:`Tong.Garipov.Jaakkola.2020`, whose analysis contains the same mixture $\tfrac12(p \otimes q + q \otimes p)$. Their critic, however, answers a different question about the pair, asking whether its two members come from the same distribution (a homogeneity test rather than an ordering test), and the divergences they compute are not :eqref:`eq_gan_rp_value`.
-
 ### Bounds, Local Behavior, and Saturation
 
 The closed form permits an exact comparison between the pairing game and the corresponding single-sample game.
@@ -308,9 +306,8 @@ $$d_{\mathrm{Rp}}(p, q) := \sup_D \Phi + \log 2
 - Information reading: the nats a randomly ordered pair carries about which
   member is real.
 - The divergence property is :citet:`Jolicoeur-Martineau.2020` (general
-  concave payoffs, value not computed). We have not found the closed form in
-  the literature — nearest construction: PairGAN's homogeneity test
-  :cite:`Tong.Garipov.Jaakkola.2020`.
+  concave payoffs, value not computed); the closed form above is computed
+  here, for the logistic payoff.
 :::
 
 ::: {.slide title="Effects and Limits of Pairing"}

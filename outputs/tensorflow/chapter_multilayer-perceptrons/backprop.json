@@ -7,5 +7,22 @@
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
-  "cells": {}
+  "cells": {
+    "backprop-forward-propagation-backward-propagation-and-computational-graphs": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "backprop-verify": {
+      "code_fingerprint": "sha256:fd5117cc2a2cf11f4d8baf7988af43359fa2a1d28cd5ffa8897c87cff82a82f0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L = 2.0, dL/dW2 = [[-0. -4.]], dL/dh = [-4.  2.]\ndL/dz = [-0.  2.], dL/dW1 =\n[[-0. -0.]\n [ 2.  4.]]\n"
+        }
+      ]
+    }
+  }
 }

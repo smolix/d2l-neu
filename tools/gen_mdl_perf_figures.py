@@ -463,12 +463,13 @@ def fig_pcie_topology():
         ax.plot([cx, 7.3], [1.68, 2.57], color=GRAY, lw=1.6, zorder=1)
     ax.plot([2.7, 4.4], [3.33, 4.05], color=GRAY, lw=1.6, zorder=1)
     ax.plot([7.3, 5.6], [3.33, 4.05], color=GRAY, lw=1.6, zorder=1)
-    ax.text(1.70, 2.32, r"PCIe 4.0 $\times$16", ha="right", va="center",
+    ax.text(1.60, 2.20, r"PCIe 4 $\times$16", ha="right", va="center",
             fontsize=11.5, color="black", rotation=33)
 
-    # The staged path GPU0 -> host -> GPU2, highlighted alongside the links.
-    seg = [(1.18, 1.72), (2.55, 2.60), (2.62, 3.34), (4.32, 4.08)]
-    seg2 = [(5.68, 4.08), (7.38, 3.34), (7.45, 2.60), (6.42, 1.94)]
+    # The staged path GPU0 -> host -> GPU2 overlays the gray links exactly
+    # (the opaque bridge boxes hide the pass-through segments).
+    seg = [(1.30, 1.68), (2.7, 2.57), (2.7, 3.33), (4.4, 4.05)]
+    seg2 = [(5.6, 4.05), (7.3, 3.33), (7.3, 2.57), (6.30, 1.68)]
     ax.plot([p[0] for p in seg], [p[1] for p in seg], color=ORANGE, lw=2.6,
             zorder=2)
     ax.plot([p[0] for p in seg2[:-1]], [p[1] for p in seg2[:-1]], color=ORANGE,
@@ -729,15 +730,20 @@ def fig_data_parallel():
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.5))
     ax.annotate("", xy=(5.2, 1.14), xytext=(6.4, 1.76),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.5))
-    # Summed gradients flow back up (curved, outside the boxes).
-    ax.annotate("", xy=(0.28, 2.55), xytext=(1.95, 0.68),
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.6,
-                                linestyle="--",
-                                connectionstyle="arc3,rad=-0.4"))
-    ax.annotate("", xy=(8.12, 2.55), xytext=(6.45, 0.68),
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.6,
-                                linestyle="--",
-                                connectionstyle="arc3,rad=0.4"))
+    # Summed gradients flow back up: each arc swings outside its replica
+    # and lands on the box FLANK, incoming at 30 degrees (quadratic Bezier;
+    # the control point fixes the terminal tangent).
+    from matplotlib.path import Path as MplPath
+    from matplotlib.patches import FancyArrowPatch
+    for tail, tip, sgn in [((2.1, 0.72), (0.35, 2.55), -1),
+                           ((6.3, 0.72), (8.05, 2.55), +1)]:
+        ctrl = (tip[0] + sgn * 1.6 * 0.866, tip[1] - 1.6 * 0.5)
+        arc = MplPath([tail, ctrl, tip],
+                      [MplPath.MOVETO, MplPath.CURVE3, MplPath.CURVE3])
+        ax.add_patch(FancyArrowPatch(path=arc, arrowstyle="->",
+                                     mutation_scale=14, ls="--",
+                                     color=ORANGE, lw=1.6, fc=ORANGE,
+                                     zorder=2))
     ax.text(4.2, 0.0, "every device applies the identical update "
             r"$\rightarrow$ replicas stay in sync",
             ha="center", va="center", fontsize=12.5, color="black")
@@ -780,7 +786,8 @@ def fig_ring_allreduce():
         done = new
         ag_states.append(done.copy())
 
-    fig, axes = plt.subplots(2, 4, figsize=(10.0, 5.2))
+    fig, axes = plt.subplots(2, 4, figsize=(10.0, 4.7))
+    fig.subplots_adjust(hspace=0.02)
 
     def draw_state(ax, M, title):
         cs = 0.6

@@ -407,8 +407,9 @@ def fig_saddle():
     axs.plot(0, 0, "o", color="black", ms=7, zorder=6)
     axs.text(0.72, 0.60, r"$z=x^2$", color=BLUE, fontsize=13, ha="center")
     axs.text(0.72, -0.62, r"$z=-y^2$", color=ORANGE, fontsize=13, ha="center")
-    axs.text(0.03, 0.14, "minimum", color=BLUE, fontsize=11.5, ha="left")
-    axs.text(0.03, -0.16, "maximum", color=ORANGE, fontsize=11.5, ha="left",
+    # centred on the saddle, in the pocket between the two parabola arms
+    axs.text(0.0, 0.16, "minimum", color=BLUE, fontsize=11.5, ha="center")
+    axs.text(0.0, -0.16, "maximum", color=ORANGE, fontsize=11.5, ha="center",
              va="top")
     axs.set_xlim(-1.0, 1.0)
     axs.set_ylim(-1.1, 1.1)

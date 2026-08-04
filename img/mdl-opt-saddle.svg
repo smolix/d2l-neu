@@ -2177,7 +2177,7 @@ z
    </g>
    <g id="text_38">
     <!-- minimum -->
-    <g style="fill: #1565c0" transform="translate(474.548358 109.468) scale(0.115 -0.115)">
+    <g style="fill: #1565c0" transform="translate(447.756296 107.452) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Regular-30" d="M 1434 -77 
 Q 941 -77 710 233 
@@ -2211,7 +2211,7 @@ z
    </g>
    <g id="text_39">
     <!-- maximum -->
-    <g style="fill: #b45309" transform="translate(474.548358 151.208) scale(0.115 -0.115)">
+    <g style="fill: #b45309" transform="translate(446.853366 151.208) scale(0.115 -0.115)">
      <use xlink:href="#SourceSans3-Regular-28"/>
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(82.90625 0)"/>
      <use xlink:href="#SourceSans3-Regular-33" transform="translate(133.3125 0)"/>

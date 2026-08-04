@@ -1153,11 +1153,11 @@ z
    </g>
    <g id="patch_6">
     <path d="M 491.287617 110.246087 
-Q 512.8128 110.246087 532.325521 110.246087 
+Q 509.148939 110.246087 524.9978 110.246087 
 " clip-path="url(#peb82ff7db3)" style="fill: none; stroke: #565d66; stroke-width: 1.8; stroke-linecap: round"/>
-    <path d="M 526.325521 107.246087 
-L 532.325521 110.246087 
-L 526.325521 113.246087 
+    <path d="M 518.9978 107.246087 
+L 524.9978 110.246087 
+L 518.9978 113.246087 
 z
 " clip-path="url(#peb82ff7db3)" style="fill: #565d66; stroke: #565d66; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
@@ -1304,11 +1304,11 @@ z
    </g>
    <g id="patch_10">
     <path d="M 363.052487 110.246087 
-Q 384.57767 110.246087 404.090391 110.246087 
+Q 380.913809 110.246087 396.762669 110.246087 
 " clip-path="url(#peb82ff7db3)" style="fill: none; stroke: #565d66; stroke-width: 1.8; stroke-linecap: round"/>
-    <path d="M 398.090391 107.246087 
-L 404.090391 110.246087 
-L 398.090391 113.246087 
+    <path d="M 390.762669 107.246087 
+L 396.762669 110.246087 
+L 390.762669 113.246087 
 z
 " clip-path="url(#peb82ff7db3)" style="fill: #565d66; stroke: #565d66; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
@@ -1430,11 +1430,11 @@ z
    </g>
    <g id="patch_14">
     <path d="M 234.817357 110.246087 
-Q 256.342539 110.246087 275.855261 110.246087 
+Q 252.678678 110.246087 268.527539 110.246087 
 " clip-path="url(#peb82ff7db3)" style="fill: none; stroke: #565d66; stroke-width: 1.8; stroke-linecap: round"/>
-    <path d="M 269.855261 107.246087 
-L 275.855261 110.246087 
-L 269.855261 113.246087 
+    <path d="M 262.527539 107.246087 
+L 268.527539 110.246087 
+L 262.527539 113.246087 
 z
 " clip-path="url(#peb82ff7db3)" style="fill: #565d66; stroke: #565d66; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
@@ -1584,11 +1584,11 @@ z
    </g>
    <g id="patch_18">
     <path d="M 106.582226 110.246087 
-Q 128.107409 110.246087 147.62013 110.246087 
+Q 124.443548 110.246087 140.292408 110.246087 
 " clip-path="url(#peb82ff7db3)" style="fill: none; stroke: #565d66; stroke-width: 1.8; stroke-linecap: round"/>
-    <path d="M 141.62013 107.246087 
-L 147.62013 110.246087 
-L 141.62013 113.246087 
+    <path d="M 134.292408 107.246087 
+L 140.292408 110.246087 
+L 134.292408 113.246087 
 z
 " clip-path="url(#peb82ff7db3)" style="fill: #565d66; stroke: #565d66; stroke-width: 1.8; stroke-linecap: round"/>
    </g>

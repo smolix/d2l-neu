@@ -158,7 +158,7 @@ def fig_amp_loop():
     for (a, b), za in zip([(master, bf16w), (bf16w, fwd), (fwd, loss),
                            (loss, bwd)], [22, 18, 14, 10]):
         ax.add_patch(FancyArrowPatch(
-            (a["r"] - 0.28, y), (b["l"] + 0.16, y), arrowstyle="-|>",
+            (a["r"] - 0.28, y), (b["l"], y), arrowstyle="-|>",
             mutation_scale=15, color=GRAY, lw=1.8, shrinkA=0, shrinkB=0,
             zorder=za))
 

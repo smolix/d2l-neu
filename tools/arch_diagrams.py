@@ -373,16 +373,17 @@ class Diagram:
 # deliberately do NOT use the gallery accent colors.                         #
 # --------------------------------------------------------------------------- #
 
-FAMILY_BLUE = "#B2D9FF"     # the family's shaded-cell blue (from conv-pad.svg)
-GRID_LW = 1.2
-GRID_FS = 11.0              # in-cell values and grid titles
+FAMILY_BLUE = _T.BLUE.tint     # the family's shaded-cell blue (from conv-pad.svg)
+GRID_LW = 1.8   # heavier per the 2026-08-03 mobile-legibility review
+GRID_FS = 13.0              # in-cell values and grid titles
 
 
 class MechDiagram(Diagram):
     """Canvas for mechanics figures; adds the grid family's primitives."""
 
     def grid(self, x, y, rows, cols, cell=20.0, shaded=(), dashed=False,
-             values=None, title=None, zorder=4):
+             values=None, title=None, zorder=4, frame_only=False,
+             title_y=None):
         """Family grid with lower-left corner at (x, y).  ``shaded`` holds
         (row, col) pairs, row 0 at the TOP (reading order).  ``values`` maps
         (row, col) -> str.  Returns (width, height)."""
@@ -396,20 +397,23 @@ class MechDiagram(Diagram):
                 cx, cy = x + c * cell, y + (rows - 1 - r) * cell
                 self.ax.add_patch(Rectangle(
                     (cx, cy), cell, cell, zorder=zorder,
-                    facecolor=FAMILY_BLUE if (r, c) in shaded else "white",
+                    facecolor="none" if frame_only else
+                    (FAMILY_BLUE if (r, c) in shaded else "white"),
                     **style))
                 if values and (r, c) in values:
                     self.ax.text(cx + cell / 2, cy + cell / 2, values[(r, c)],
                                  fontsize=GRID_FS, color=INK, family=SANS,
                                  ha="center", va="center", zorder=zorder + 1)
         if title:
-            self.ax.text(x + cols * cell / 2, y + rows * cell + 10, title,
+            ty = title_y if title_y is not None else y + rows * cell + 10
+            self.ax.text(x + cols * cell / 2, ty, title,
                          fontsize=GRID_FS, color=INK, family=SANS,
                          ha="center", va="bottom", zorder=zorder + 1)
         return cols * cell, rows * cell
 
     def grid_stack(self, x, y, n, rows, cols, cell=20.0, offset=7.0,
-                   shaded_front=(), shade_backs=False, title=None, zorder=4):
+                   shaded_front=(), shade_backs=False, title=None, zorder=4,
+                   title_y=None):
         """A stack of ``n`` channel grids, drawn back-to-front with the front
         grid's lower-left at (x, y); deeper channels offset up-right (the
         conv-multi-in.svg convention).  ``shaded_front`` shades cells of the
@@ -425,7 +429,8 @@ class MechDiagram(Diagram):
         tw = cols * cell + (n - 1) * offset
         th = rows * cell + (n - 1) * offset
         if title:
-            self.ax.text(x + tw / 2, y + th + 10, title,
+            ty = title_y if title_y is not None else y + th + 10
+            self.ax.text(x + tw / 2, ty, title,
                          fontsize=GRID_FS, color=INK, family=SANS,
                          ha="center", va="bottom", zorder=zorder + 1)
         return tw, th

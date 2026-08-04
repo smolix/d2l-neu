@@ -1,17 +1,13 @@
 # Gradient Descent
 :label:`sec_gd`
 
-Gradient descent itself trains almost nothing in deep learning: every method
-in this chapter replaces it with a stochastic variant — the update rule you
-have been applying since :numref:`sec_linear_scratch`, so far without a
-justification. We begin with the noise-free version anyway because its
-failure modes carry over intact. A learning rate that diverges on
-a one-dimensional parabola diverges on a billion-parameter transformer for the
-same reason, and the cure for badly scaled coordinates — preconditioning —
-reappears, in estimated form, inside the adaptive methods of
-:numref:`sec_adam`. Of the three decisions framed in
-:numref:`sec_optimization-intro`, this section isolates direction and step
-size; noise enters in :numref:`sec_sgd`.
+Deep learning usually uses stochastic variants of gradient descent, but the
+deterministic method exposes the same effects of step size and curvature.
+A learning rate that causes divergence on a one-dimensional quadratic can
+cause divergence in a large network for the same reason. Likewise,
+preconditioning for differently scaled coordinates reappears in the adaptive
+methods of :numref:`sec_adam`. This section studies descent direction and
+step size; :numref:`sec_sgd` adds gradient noise.
 
 ## One-Dimensional Gradient Descent
 
@@ -40,10 +36,10 @@ and iterating
 
 $$x \leftarrow x - \eta f'(x)$$
 
-should drive the value of $f$ downhill until the gradient becomes small or we
-run out of iterations. Everything interesting hides in the word "should": the
-guarantee holds only while $\eta$ is small enough for :eqref:`gd-taylor` to be
-trusted.
+decreases the objective locally when the Taylor remainder is dominated by the
+first-order term. A global step-size guarantee needs an additional smoothness
+condition. If $f'$ is $L$-Lipschitz, for example, gradient descent decreases
+$f$ for $0<\eta<2/L$; :numref:`chap_mdl-optimization` proves this result.
 
 To watch the iteration at work we use $f(x)=x^2$. We know that $x=0$ is the
 minimizer, which makes it easy to judge how the iterates behave.
@@ -146,7 +142,7 @@ show_trace(gd(2, f_grad), f)
 
 ## Multivariate Gradient Descent
 
-Now consider the general case, $\mathbf{x} = [x_1, x_2, \ldots, x_d]^\top$,
+The same update extends to the multivariate case, $\mathbf{x} = [x_1, x_2, \ldots, x_d]^\top$,
 where the objective $f: \mathbb{R}^d \to \mathbb{R}$ maps vectors to scalars.
 Its gradient is the vector of $d$ partial derivatives:
 
@@ -166,10 +162,10 @@ $\eta > 0$ we obtain the prototypical gradient descent algorithm:
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
 
 To see the algorithm in action, take the quadratic
-$f(\mathbf{x})=x_1^2+2x_2^2$ with gradient
-$\nabla f(\mathbf{x}) = [2x_1, 4x_2]^\top$ — a bowl that curves twice as
-steeply in $x_2$ as in $x_1$ — and track the trajectory of $\mathbf{x}$ from
-the initial position $[-5, -2]$. We need two helper functions: the first
+$f(\mathbf{x})=x_1^2+2x_2^2$, a bowl that curves twice as steeply in $x_2$
+as in $x_1$, whose gradient is
+$\nabla f(\mathbf{x}) = [2x_1, 4x_2]^\top$. Starting from the initial
+position $[-5, -2]$, we track the trajectory of $\mathbf{x}$. We need two helper functions: the first
 applies an update rule repeatedly from the fixed starting point, the second
 draws the trajectory over a contour plot of the objective. Both will be
 reused throughout this chapter.
@@ -218,9 +214,8 @@ def show_trace_2d(f, results):  #@save
 ```
 
 With learning rate $\eta = 0.1$, twenty steps bring $\mathbf{x}$ near its
-minimum at $[0, 0]$. Progress is well behaved but slow — and notice the shape
-of the path: the trajectory bends because the two coordinates want different
-step sizes, a first glimpse of the conditioning problem that
+minimum at $[0, 0]$. Progress is stable but slow. The path bends because the two coordinates
+contract fastest at different step sizes, a first glimpse of the conditioning problem that
 :numref:`sec_momentum` takes up in earnest.
 
 ```{.python .input #gd-multivariate-gradient-descent-3}
@@ -240,11 +235,10 @@ show_trace_2d(f_2d, train_2d(gd_2d, f_grad=f_2d_grad))
 
 ## Newton's Method
 
-As :numref:`subsec_gd-learningrate` showed, getting the learning rate "just
-right" is tricky, and the multivariate demo made things worse: the best rate
-differs per coordinate. What if the objective itself told us how far to step?
-Methods that consult the *curvature* of the objective — its second
-derivatives — do exactly that. They cannot be applied to deep networks
+The learning-rate experiments in :numref:`subsec_gd-learningrate` showed
+that one step size may be too small or too large, and the multivariate example
+showed that the best rate can differ by coordinate. Second-order methods use
+the objective's *curvature* to choose a scaled step. They cannot be applied to deep networks
 directly, for reasons of cost we quantify below, but they define the ideal
 that the practical algorithms later in this chapter approximate.
 
@@ -258,8 +252,8 @@ $$f(\mathbf{x} + \boldsymbol{\epsilon}) = f(\mathbf{x}) + \boldsymbol{\epsilon}^
 Define $\mathbf{H} \stackrel{\textrm{def}}{=} \nabla^2 f(\mathbf{x})$, the
 Hessian of $f$, a $d \times d$ matrix. For small $d$ and simple problems
 $\mathbf{H}$ is easy to compute; for a deep network it is prohibitively large,
-with $\mathcal{O}(d^2)$ entries. For now, set that aside and see what
-algorithm the expansion suggests.
+with $\mathcal{O}(d^2)$ entries. For the moment, assume that the Hessian is available and derive the
+corresponding update.
 
 The minimum of $f$ satisfies $\nabla f = 0$. Taking derivatives of
 :eqref:`gd-hot-taylor` with regard to $\boldsymbol{\epsilon}$ (following the
@@ -270,13 +264,14 @@ $$\nabla f(\mathbf{x}) + \mathbf{H} \boldsymbol{\epsilon} = 0 \textrm{ and hence
 \boldsymbol{\epsilon} = -\mathbf{H}^{-1} \nabla f(\mathbf{x}).$$
 
 Newton's method is gradient descent with the gradient premultiplied by the
-inverse Hessian — the step size problem solved by the objective itself. As a
+inverse Hessian, so the objective's local curvature determines the scale of
+each coordinate. As a
 simple example, for $f(x) = \frac{1}{2} x^2$ we have $\nabla f(x) = x$ and
 $\mathbf{H} = 1$, so for any $x$ the update is $\epsilon = -x$: a *single*
 step converges perfectly, with no learning rate to tune. We got a bit lucky
 here: the Taylor expansion of this $f$ was exact.
 
-Let's see what happens in other problems. Given a convex hyperbolic cosine
+The next experiments consider other objectives. Given a convex hyperbolic cosine
 function $f(x) = \cosh(cx)$ for some constant $c$, the global minimum at
 $x=0$ is reached after a few iterations.
 
@@ -304,11 +299,11 @@ def newton(eta=1):
 show_trace(newton(), f)
 ```
 
-Now let's consider a *nonconvex* function, such as $f(x) = x \cos(c x)$.
+Consider a *nonconvex* function such as $f(x) = x \cos(c x)$.
 Newton's method divides by the Hessian, so wherever the second derivative is
-*negative* the update walks toward *increasing* values of $f$ — toward a
-maximum. That is a fatal flaw of the algorithm. Let's see what happens in
-practice.
+negative, the update moves toward increasing values of $f$ and may converge
+to a maximum. The following experiment demonstrates this failure of the
+undamped Newton update.
 
 ```{.python .input #gd-newton-s-method-2}
 c = d2l.tensor(0.15 * np.pi)
@@ -342,10 +337,10 @@ curvature it converges *quadratically*: the number of correct digits roughly
 doubles at every iteration. :numref:`subsec_mdl-why-not-newton` gives the
 proof and shows the doubling numerically. Second, nothing rescues the method
 at deep-learning scale. Storing the Hessian costs $\mathcal{O}(d^2)$ memory
-and solving with it $\mathcal{O}(d^3)$ time — at $d \sim 10^9$ parameters,
-exabytes before the first step — and, as the demo above showed in one
-dimension, a nonconvex objective hands Newton negative curvature that it
-follows toward saddle points and maxima. The classical remedies are cheaper
+and solving with it $\mathcal{O}(d^3)$ time, which at $d \sim 10^9$
+parameters means exabytes before the first step. Worse, as the demo above
+showed in one dimension, a nonconvex objective hands Newton negative
+curvature that it follows toward saddle points and maxima. The classical remedies are cheaper
 curvature estimates and safer step rules: quasi-Newton methods such as BFGS
 rebuild curvature from successive gradient differences
 (:numref:`subsec_mdl-quasi-newton`), line search picks $\eta$ by trial at run
@@ -357,9 +352,9 @@ objective on the entire dataset.
 
 ### Preconditioning
 
-What survives at scale is the underlying idea. Instead of inverting the full
-Hessian, rescale the update by a cheap approximation of it — a
-*preconditioner*. The cheapest useful choice is the diagonal:
+At large scale, the underlying idea remains useful. Instead of inverting the full
+Hessian, a *preconditioner* rescales the update using an inexpensive
+approximation. The simplest useful choice is the diagonal:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \, \textrm{diag}(\mathbf{H})^{-1} \nabla f(\mathbf{x}).$$
 
@@ -381,9 +376,8 @@ gradient, and the guarantee holds only while the step is small enough for the
 first-order Taylor expansion to be trusted. That proviso carries all the
 trouble: a learning rate chosen too small wastes iterations, one too large
 overshoots or diverges, and on nonconvex objectives even a well-chosen rate
-merely reaches *some* local minimum. Newton's method removes the step-size
-problem by dividing out the curvature — the ideal preconditioner — and
-converges in one step on a quadratic, but its $\mathcal{O}(d^2)$ cost and its
+may reach a local rather than global minimum. On a positive-definite quadratic, Newton's method divides out the curvature
+and converges in one step, but its $\mathcal{O}(d^2)$ cost and its
 attraction to saddle points rule it out for deep networks. The rest of this
 chapter builds cheap, gradient-estimated stand-ins for that ideal.
 
@@ -406,9 +400,9 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
 <!-- slides -->
 
 ::: {.slide title="Gradient Descent"}
-Plain gradient descent isn't what trains deep nets — SGD
-and its descendants do — but every issue those methods
-hit shows up here first, in cleaner form: LR sensitivity,
+Deep networks are usually trained with SGD or its descendants rather than
+full-batch gradient descent. The simpler full-batch setting isolates their
+shared issues: LR sensitivity,
 divergence, local minima, poor conditioning, second-order
 corrections.
 
@@ -416,8 +410,8 @@ The rule:
 
 $$x \leftarrow x - \eta \nabla f(x).$$
 
-A first-order Taylor expansion shows that for small enough
-$\eta$, this decreases $f$ locally. The art is picking
+A first-order Taylor expansion shows that for sufficiently small
+$\eta$, this decreases $f$ locally. Performance depends on the choice of
 $\eta$.
 :::
 
@@ -426,7 +420,6 @@ Setup and define $f$, $f'$:
 
 @gd-one-dimensional-gradient-descent-1
 
-. . .
 
 @gd-one-dimensional-gradient-descent-2
 :::
@@ -436,7 +429,6 @@ Start at $x = 10$, $\eta = 0.2$, 10 steps. Converges to 0:
 
 @gd-one-dimensional-gradient-descent-3
 
-. . .
 
 @gd-one-dimensional-gradient-descent-4
 :::
@@ -454,7 +446,7 @@ dominates and the iterates diverge:
 @gd-learning-rate-2
 :::
 
-::: {.slide title="Non-convex: trapped in a local min"}
+::: {.slide title="Gradient descent on a nonconvex objective"}
 $f(x) = x \cos(cx)$ has infinitely many local minima. Even
 with a moderately large learning rate, GD ends up in
 whichever basin it falls into:
@@ -467,20 +459,18 @@ Same rule on vectors:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
 
-Demo on $f(x_1, x_2) = x_1^2 + 2 x_2^2$ — anisotropic,
-$x_2$ direction is steeper.
+For $f(x_1, x_2) = x_1^2 + 2 x_2^2$, the $x_2$ direction has greater
+curvature.
 
 @gd-multivariate-gradient-descent-1
 
-. . .
 
 @gd-multivariate-gradient-descent-2
 :::
 
-::: {.slide title="Run it"}
+::: {.slide title="Multivariate trajectory"}
 @gd-multivariate-gradient-descent-3
 
-. . .
 
 The path bends: the two coordinates want *different* step
 sizes. One global $\eta$ can't satisfy both.
@@ -492,30 +482,30 @@ the second-order Taylor expansion:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - [\nabla^2 f(\mathbf{x})]^{-1} \nabla f(\mathbf{x}).$$
 
-For $f(x) = \cosh(cx)$, a few steps find the minimum — no
-learning rate to tune:
+For $f(x) = \cosh(cx)$, a few Newton steps reach the minimum without a
+manually chosen learning rate:
 
 @gd-newton-s-method-1
 :::
 
-::: {.slide title="Newton fails on non-convex"}
+::: {.slide title="Newton's method under negative curvature"}
 $f(x) = x \cos(cx)$: Newton divides by the second
 derivative, so negative curvature sends it *uphill*,
 toward a maximum. Damping ($\eta = 0.5$) restores sanity:
 
 @gd-newton-s-method-2
 
-. . .
 
 @gd-newton-s-method-3
 :::
 
-::: {.slide title="Preconditioning: the idea that scales"}
+::: {.slide title="Approximate preconditioning"}
 Full Newton at $d \sim 10^9$: $\mathcal{O}(d^2)$ memory,
-$\mathcal{O}(d^3)$ solve — exabytes before the first step.
+an $\mathcal{O}(d^3)$ solve. Storing the Hessian alone would require
+exabytes.
 
-What survives: rescale each update by a *cheap approximation*
-of curvature.
+Deep-learning optimizers instead rescale updates with inexpensive
+approximations to curvature.
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta\, \textrm{diag}(\mathbf{H})^{-1} \nabla f(\mathbf{x})$$
 
@@ -536,6 +526,6 @@ chapter.
 - Newton uses the Hessian as the *ideal* preconditioner —
   one step on quadratics, but $\mathcal{O}(d^2)$ memory and
   unsafe under negative curvature.
-- What deep learning keeps is cheap preconditioning:
+- Deep-learning methods use inexpensive preconditioning:
   per-coordinate (Adam) and per-matrix (Muon) rescaling.
 :::

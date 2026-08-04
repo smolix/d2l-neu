@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "source": "chapter_generative-adversarial-networks/convergence.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:0b92965b6edea7f7a9774fe1454bcf5d97917bed08e8e8d3b9e0adb033ed3dae",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "convergence-gradient-penalties-and-convergence": {
+      "code_fingerprint": "sha256:5429891acc4491fbac7224a72f5dfbffd80abcf6cbe41cc81751f99ecfbf1866",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-phase-portraits": {
+      "code_fingerprint": "sha256:ad4da6a051a9a9b72a3e43259781ba13b6eca12764dd223eee566d1dee57dbae",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "convergence/convergence-phase-portraits-1.png",
+          "bytes": 58675,
+          "sha256": "sha256:4a8d1710ee0ffa514bad420f6094fd2e73e9c980bc430346ac2e526fdee8f0c7"
+        }
+      ]
+    },
+    "convergence-the-loss-in-code": {
+      "code_fingerprint": "sha256:942401c9b8a8ac7ded7359fb4745807841e5a6335570fb2906e02de2c836ce23",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-1": {
+      "code_fingerprint": "sha256:66205f1d2bbf59b389cacac4d8be0f1fbe63d518d1ce7aa587032db291372835",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-2": {
+      "code_fingerprint": "sha256:c9fe3ea46f29ea36fcaf07555ff731019a483b73aebbc0680b18c2a240fded0e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GAN: 21/25 modes, reverse KL 0.91, on-mode fraction 0.06\n    off-mode mass 0.94, nearest-center distance mean 0.68 / median 0.68, 26-bin KL 4.06\nGAN + $R_1 + R_2$: 25/25 modes, reverse KL 0.51, on-mode fraction 0.10\n    off-mode mass 0.90, nearest-center distance mean 0.59 / median 0.59, 26-bin KL 3.78\nRpGAN + $R_1 + R_2$: 25/25 modes, reverse KL 0.48, on-mode fraction 0.09\n    off-mode mass 0.91, nearest-center distance mean 0.61 / median 0.62, 26-bin KL 3.85\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.png",
+          "bytes": 156716,
+          "sha256": "sha256:16c22a637b171ac282fce925a1f9ec21886e18168a94c0b9b16b79c0263de62e"
+        }
+      ]
+    }
+  }
+}

@@ -293,7 +293,12 @@ For example, suppose that the attending step determines that "need" and "sleep" 
 
 In the comparing step, we feed the concatenation (operator $[\cdot, \cdot]$) of tokens from one sequence and aligned tokens from the other sequence into a function $g$ (an MLP):
 
-$$\mathbf{v}_{A,i} = g([\mathbf{a}_i, \boldsymbol{\beta}_i]), i = 1, \ldots, m\\ \mathbf{v}_{B,j} = g([\mathbf{b}_j, \boldsymbol{\alpha}_j]), j = 1, \ldots, n.$$
+$$
+\begin{aligned}
+\mathbf{v}_{A,i} &= g([\mathbf{a}_i, \boldsymbol{\beta}_i]), i = 1, \ldots, m\\
+\mathbf{v}_{B,j} &= g([\mathbf{b}_j, \boldsymbol{\alpha}_j]), j = 1, \ldots, n.
+\end{aligned}
+$$
 
 :eqlabel:`eq_nli_v_ab`
 
@@ -696,7 +701,8 @@ test_iter_tf = test_iter.map(reformat)
 net.compile(optimizer=keras.optimizers.Adam(lr),
             loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
             metrics=['accuracy'])
-net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs)
+net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs,
+        verbose=2)
 ```
 
 ### Using the Model

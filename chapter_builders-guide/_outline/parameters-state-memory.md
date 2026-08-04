@@ -1,6 +1,9 @@
 # Parameters, State, and Memory
 :label:`sec_parameters_v2`
 
+> **Archive notice.** This file records pre-promotion design decisions. The live
+> source one directory above is authoritative; markers and API claims here are historical.
+
 > **Role.** Extends the current "parameters" section from *access mechanics*
 > to the full 2026 question: what state does a model carry, and what does it
 > cost? Adds buffers, memory accounting, freezing, and realistic weight

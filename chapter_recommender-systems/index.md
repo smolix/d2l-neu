@@ -4,12 +4,37 @@
 
 **Shuai Zhang** (*Amazon*), **Aston Zhang** (*Amazon*), and **Yi Tay** (*Google*)
 
-Recommender systems are widely employed in industry and are ubiquitous in our daily lives. These systems are utilized in a number of areas such as online shopping sites (e.g., amazon.com), music/movie services site (e.g., Netflix and Spotify), mobile application stores (e.g., iOS App Store and Google Play), online advertising, just to name a few. 
+A catalog may contain millions of items, while any one user will inspect only a
+small fraction of them. A recommender system uses the interactions that have
+been observed---ratings, clicks, purchases, or viewing histories---to score or
+rank the remaining candidates for that user. Unlike search, which begins with
+an explicit query, recommendation must infer a useful ranking from partial and
+selectively observed behavior.
 
-The major goal of recommender systems is to help users discover relevant items such as movies to watch, text to read or products to buy, so as to create a delightful user experience. Moreover, recommender systems are among the most powerful machine learning systems that online retailers implement in order to drive incremental revenue. Recommender systems are replacements of search engines by reducing the efforts in proactive searches and surprising users with offers they never searched for. Many companies managed to position themselves ahead of their competitors with the help of more effective recommender systems. As such, recommender systems are central to not only our everyday lives but also highly indispensable in some industries.
+This setting creates two recurring difficulties. First, an unobserved
+user--item pair is not an observed dislike: the user may never have encountered
+the item. Second, the evaluation protocol determines the question being asked.
+A random interaction split measures a warm-start interpolation problem, whereas
+a chronological split asks whether past behavior predicts a later choice.
 
+The chapter develops three families of tasks. Rating models predict explicit
+scores; ranking models learn from implicit interactions; and feature-rich
+models predict events such as clicks from user, item, and contextual fields.
+The progression from matrix factorization to AutoRec, NeuMF, Caser,
+factorization machines, and DeepFM shows how the input data and objective---not
+the presence of a neural network alone---determine what a model can learn.
 
-In this chapter, we will cover the fundamentals and advancements of recommender systems, along with exploring some common fundamental techniques for building recommender systems with different data sources available and their implementations. Specifically, you will learn how to predict the rating a user might give to a prospective item, how to generate a recommendation list of items and how to predict the click-through rate from abundant features. These tasks are commonplace in real-world applications. By studying this chapter, you will get hands-on experience pertaining to solving real world recommendation problems with not only classical methods but the more advanced deep learning based models as well.
+The models can be compared by the evidence supplied to them and the question
+used for evaluation:
+
+| Model | Input | Training objective | Assumption about unobserved pairs | Evaluation used here |
+|:--|:--|:--|:--|:--|
+| MF | Explicit ratings | Masked squared error | Omitted from the loss | RMSE on a random warm-start holdout |
+| AutoRec | Partially observed rating vectors | Masked reconstruction error | Omitted from the loss | RMSE on the same holdout |
+| NeuMF | User, observed item, sampled item | BPR pairwise loss | Sampled unobserved items act as comparisons | Hit rate and AUC on a chronological holdout |
+| Caser | Ordered recent items and user ID | BPR pairwise loss | Same sampling assumption as NeuMF | Next-item ranking after chronological holdout |
+| FM | Categorical impression fields | Binary log loss | Every row is an observed impression with a click label | Held-out log loss |
+| DeepFM | The same impression fields | Binary log loss | The same labeled-impression assumption as FM | Held-out log loss |
 
 ```toc
 :maxdepth: 2
@@ -25,4 +50,3 @@ ctr
 fm
 deepfm
 ```
-

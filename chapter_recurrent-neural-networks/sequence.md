@@ -1,15 +1,14 @@
 # Working with Sequences
 :label:`sec_sequence`
 
-Until now our models consumed a single feature vector
-$\mathbf{x} \in \mathbb{R}^d$, produced a single output,
-and assumed that examples were drawn independently
-from one common distribution.
-This chapter drops both assumptions.
+The models developed so far usually map one fixed-shape feature vector
+$\mathbf{x}\in\mathbb{R}^d$ to one output and optimize an average over
+examples. A sequence model must additionally preserve order within an example
+and accept lengths that may differ.
 We now work with *sequences*: ordered lists of feature vectors
 $\mathbf{x}_1, \dots, \mathbf{x}_T$, where the index
 $t \in \mathbb{Z}^+$ is a *time step*
-and neighboring entries are anything but independent.
+and neighboring entries may be statistically dependent.
 
 ```{.python .input  n=6}
 %load_ext d2lbook.tab
@@ -51,26 +50,25 @@ import numpy as np
 
 ## Sequential Data and Its Challenges
 
-Sequences are everywhere once you look for them.
-*Text* is a sequence of characters or words, and the word you are
-about to read depends on all the words before it;
-this is exactly why the auto-complete in your email client
-can finish a sentence better than random guessing.
+Consider text completion. The distribution of the next word changes with the
+preceding words, which lets an email client predict a continuation better than
+it could from marginal word frequencies alone.
+*Text* can be represented as a sequence of characters or words.
 *Audio*, whether speech or music, is a sequence of samples,
 or of the spectrogram frames a model actually consumes.
 *Time series* such as prices, sensor readings, and patient vitals
 arrive one measurement at a time, each shaped by its recent past.
 
-What these have in common, and what sets them apart from the data
-of Parts I and II, is dependence.
+What these examples share is that order and dependence can carry predictive
+information.
 We still assume that *entire* sequences (a whole document,
 a whole patient trajectory) are drawn independently
 from a fixed distribution over sequences.
 But *within* a sequence the entries are not independent:
 the medicine a patient receives on day ten of a hospital stay
 depends heavily on the previous nine days.
-If the entries were unrelated there would be nothing to predict,
-and no reason to treat the data as a sequence in the first place.
+If entries were independent, conditioning on neighboring entries would not
+improve prediction, although the marginal distribution could still be learned.
 
 Dependence also means that order carries information
 and that a sequence's statistics can drift:
@@ -91,12 +89,11 @@ Before handling targets of any kind, we tackle the most basic version:
 modeling the sequence itself,
 that is, estimating how probable a given sequence is,
 $P(\mathbf{x}_1, \ldots, \mathbf{x}_T)$.
-Almost everything else in the chapter builds on this.
+The later sections build on this probability model.
 
 ## Autoregressive Models
 
-Focus on the workhorse case: at each step we predict the next
-entry from the ones already seen.
+We begin by predicting each entry from the preceding observations.
 Given a numerical series such as a stock index or a temperature reading,
 a forecaster who wants to act on the next step
 cares about the conditional distribution
@@ -117,8 +114,7 @@ The number of conditioning inputs $x_{t-1}, \ldots, x_1$
 grows with $t$, so if we treat the history as a training set,
 every example has a different number of features
 and no fixed-input model applies.
-Two strategies resolve this,
-and they organize not just this section but much of the chapter
+Two strategies produce fixed-size representations of the history
 (:numref:`fig_ar-vs-latent`).
 
 ### Fixed Windows
@@ -152,9 +148,8 @@ so the whole unbounded past is compressed into bounded memory.
 This latent-state picture is exactly the recurrent neural network
 we build in :numref:`sec_rnn`, and, in a linearized form,
 the state space models of :numref:`chap_modern_rnn`.
-The entire arc of the next two chapters answers one question
-the diagram raises: what should the state $h_t$ remember,
-and how should it be updated?
+The next two chapters examine what the state $h_t$ should retain and how it
+should be updated.
 
 ![Two ways to give a sequence model a fixed-size input. (left) Autoregression conditions on a sliding window of the last $\tau$ observations and discards the rest. (right) Latent autoregression carries a recurrent state $h_t$ that summarizes the whole past in fixed size.](../img/mdl-rnn-ar-vs-latent.svg)
 :label:`fig_ar-vs-latent`
@@ -229,8 +224,8 @@ left to right it is.
 
 ## Training
 
-Enough theory; let us fit an autoregressive model.
-We work first with continuous synthetic data,
+The fixed-window objective now permits a controlled comparison between
+one-step prediction and recursive rollout. We work first with continuous synthetic data,
 where we control the ground truth.
 We draw 1000 points from the sine of 0.01 times the time step,
 corrupt each with additive noise,
@@ -450,11 +445,10 @@ the 16-step forecast is visibly damped,
 and by 64 steps the accumulated error has shrunk the prediction
 to a low-amplitude echo of the real series.
 
-### Why This Matters Everywhere
+### Error Accumulation in Autoregressive Rollouts
 
-This compounding is not a quirk of a weak model or a toy series.
-It is intrinsic to *any* autoregressive generator
-that consumes its own outputs.
+This compounding can occur whenever an autoregressive generator consumes its
+own outputs: prediction errors change the context used by later steps.
 A language model that samples one token at a time can drift
 off topic or into repetition once a few odd choices
 steer it into a region of text it never saw during training;
@@ -521,17 +515,18 @@ and expect extrapolation to be much harder than interpolation.
 <!-- slides -->
 
 ::: {.slide title="Working with Sequences"}
-Sequences are everywhere: text, audio, time series, video.
-Entries are dependent, so we predict each from its past.
+Text, audio, time series, and video can all be represented as ordered data.
+When earlier entries change the distribution of later ones, conditioning on
+the past improves prediction.
 
 - **Autoregression**: predict $x_t$ from a fixed window
   $(x_{t-\tau}, \ldots, x_{t-1})$. Turns sequence modeling into regression.
-- **Latent autoregression**: carry a state $h_t$ summarizing the whole past.
+- **Latent autoregression**: update a fixed-size state $h_t$ from the prefix.
 - **Multistep prediction**: feeding predictions back compounds error.
 :::
 
 ::: {.slide title="Two autoregressive strategies"}
-![](../img/mdl-rnn-ar-vs-latent.svg){width=88%}
+![A fixed window discards observations beyond lag $\tau$; a recurrent state keeps fixed memory while updating a learned function of the entire prefix.](../img/mdl-rnn-ar-vs-latent.svg){width=88%}
 
 Fixed window = the n-gram (and, later, an attention context window).
 Latent state = the RNN and the state space models of the next chapters.

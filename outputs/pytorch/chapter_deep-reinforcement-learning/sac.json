@@ -1,0 +1,193 @@
+{
+  "schema": 1,
+  "source": "chapter_deep-reinforcement-learning/sac.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:687b50f121e2c60fc61e5a82a3575f9fcca07e5c026b3bdb78a509a1b5e2ad30",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sac-soft-actor-critic-1": {
+      "code_fingerprint": "sha256:997220cc8188334417288c3782cea989cd725abee8df23d8b8494b18a697b476",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-soft-actor-critic-2": {
+      "code_fingerprint": "sha256:ea4ab5ef4914a5d0aed76b1591e3b8ae58995b9216c84685442f5f5b5fb3b528",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-soft-evaluation-one-new-term-in-the-target": {
+      "code_fingerprint": "sha256:2c8b2ef27539886986afd0fc32426789f0facb6cf9616519108155d2eed40fda",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "alpha = 0.1: E[Q - alpha log pi*] = 0.6415156557, alpha logsumexp(Q/alpha) = 0.6415156557\nalpha = 0.5: E[Q - alpha log pi*] = 0.9890764345, alpha logsumexp(Q/alpha) = 0.9890764345\nalpha = 2.0: E[Q - alpha log pi*] = 3.2962661899, alpha logsumexp(Q/alpha) = 3.2962661899\n"
+        }
+      ]
+    },
+    "sac-the-change-of-variables": {
+      "code_fingerprint": "sha256:b763c5b33beda99502c29e409b06e1132563021b510f92ffd82eb929ecc84743",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-the-stable-form-and-what-the-epsilon-hides-1": {
+      "code_fingerprint": "sha256:870c3a2ac7e2508f07828cf1806362f46571314e493aca61f77dbf0140458e5c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   u      naive    guarded     stable\n   0     0.0000     0.0000     0.0000\n   3    -4.6187    -4.6186    -4.6187\n   8   -14.5561   -13.4256   -14.6137\n  10       -inf   -13.8155   -18.6137\n  20       -inf   -13.8155   -38.6137\n"
+        }
+      ]
+    },
+    "sac-the-stable-form-and-what-the-epsilon-hides-2": {
+      "code_fingerprint": "sha256:68886874d5bbba7512fe1bbba14b55e5dc98ed034b9f0f69284434e8a7500660",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu = 0.0, sigma = 0.5: integrates to 1.000000 with the log-det, 1.653 without\nmu = 0.7, sigma = 0.8: integrates to 1.000000 with the log-det, 1.132 without\n"
+        }
+      ]
+    },
+    "sac-nothing-here-needs-a-ratio-1": {
+      "code_fingerprint": "sha256:a2ed2ddf3aaafa783daae88ed547b59d8d5c0dde35b40d48e2c2fd40fd72c511",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-nothing-here-needs-a-ratio-2": {
+      "code_fingerprint": "sha256:325c2376234bd7d0ddea7f9fb53ae8a275fd984bc1d329b228705d36caa9181e",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-one-update-1": {
+      "code_fingerprint": "sha256:f0fe69a78f6a6d19f62b05c4607bbe163240f7a6ea3ee5cd73ae927f0131c930",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-one-update-2": {
+      "code_fingerprint": "sha256:5c1fdf18b868ffcc2d7f319505ba3058c94bbce6a1cbed245848debbd0bee442",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-one-update-3": {
+      "code_fingerprint": "sha256:725bc7a4a46f970fcfb1473e979aa08835181ea36e2e368a3d96fb771b31dbb1",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-sample-efficiency-on-the-axis-that-bills": {
+      "code_fingerprint": "sha256:bbf7b6ce012a663cfe7c920c3a104af2713e3fe52e8a367e997c51bdafb06ed0",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SAC: env steps to a trailing five-episode average of -200: [6200, 7600, 7000]\nsingle critic: env steps to a trailing five-episode average of -200: [6000, 6800, 5600]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
+          "bytes": 34711,
+          "sha256": "sha256:3664e0de3962e3f747eaa2b69e6f476ee08cdcad098772aa334bd8316508e9a0"
+        }
+      ]
+    },
+    "sac-the-entropy-the-policy-keeps-1": {
+      "code_fingerprint": "sha256:7a55f36b2dcb5233809038627f3de5ddf9dcad97c2fae752efd661c208144352",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SAC: entropy over the last 20 episodes, per seed [-0.03  0.04  0.07]\nsingle critic: entropy over the last 20 episodes, per seed [-0.06  0.12  0.24]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
+          "bytes": 34937,
+          "sha256": "sha256:5f767734d3016f45b3cbca977130d9ea26eeacb23463dddbc141551f8465cbef"
+        }
+      ]
+    },
+    "sac-the-entropy-the-policy-keeps-2": {
+      "code_fingerprint": "sha256:8fabbfe7553dc811aeb32b64c0a8e7d4b9ee0cda45d1bcc2a379d9313271dafa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SAC, seed 0: deterministic  -184.5, stochastic  -184.7, noise cost   +0.2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SAC, seed 1: deterministic  -141.9, stochastic  -148.4, noise cost   +6.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "SAC, seed 2: deterministic  -184.2, stochastic  -184.5, noise cost   +0.3\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single critic, seed 0: deterministic  -183.6, stochastic  -182.7, noise cost   -0.9\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single critic, seed 1: deterministic  -146.6, stochastic  -147.7, noise cost   +1.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single critic, seed 2: deterministic  -183.3, stochastic  -183.5, noise cost   +0.2\n"
+        }
+      ]
+    },
+    "sac-honest-promises-predicted-against-delivered": {
+      "code_fingerprint": "sha256:ab31d41119995be7bf5d701870710f406e2141012aa08824986d11e61328cf1e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          SAC, seed 0: promised  -175.1, delivered (soft)  -117.9, gap  -57.1, plain  -126.4\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          SAC, seed 1: promised  -127.0, delivered (soft)   -89.7, gap  -37.3, plain   -98.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          SAC, seed 2: promised  -177.1, delivered (soft)  -135.6, gap  -41.6, plain  -141.9\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single critic, seed 0: promised  -119.6, delivered (soft)  -113.0, gap   -6.6, plain  -119.3\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single critic, seed 1: promised   -86.5, delivered (soft)   -81.8, gap   -4.7, plain   -93.7\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single critic, seed 2: promised  -144.2, delivered (soft)  -129.9, gap  -14.3, plain  -138.3\n"
+        }
+      ]
+    }
+  }
+}

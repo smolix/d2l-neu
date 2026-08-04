@@ -62,12 +62,66 @@ FRAMEWORK_ENV = {
         "XLA_PYTHON_CLIENT_MEM_FRACTION": ".40",
     },
     "tensorflow": {
-        "TF_CPP_MIN_LOG_LEVEL": "2",
         "TF_XLA_FLAGS": "--tf_xla_auto_jit=2",
     },
     "mxnet": {
         "MXNET_CUDNN_LIB_CHECKING": "0",
     },
+}
+
+
+# ── Output hygiene: keep terminal decoration out of the book ─────────────
+# Executed-notebook output is stored as plain text and rendered into both HTML
+# and a LaTeX `verbatim` block. Anything a library writes for a *live terminal*
+# — ANSI colour, carriage returns, backspace-erased progress bars, absolute
+# library paths — is captured verbatim and shows up as garbage in the PDF.
+#
+# These switches are framework-agnostic on purpose: they belong to "we are
+# rendering a book", not to any one library, and they apply to every notebook,
+# every framework, forever. The residue no env var can reach (flax.nnx and rich
+# ignore NO_COLOR outright) is handled by tools/nbquiet/sitecustomize.py, which
+# setup_framework_env() puts on PYTHONPATH below.
+#
+# See docs/build-system.md §3.6.
+QUIET_ENV = {
+    # Generic no-colour conventions. Honoured by (at least) pip, click, rich's
+    # non-Jupyter path, huggingface_hub and syne-tune's loggers.
+    #
+    # NOTE: do NOT add FORCE_COLOR=0 here. Per force-color.org (and rich's
+    # implementation) FORCE_COLOR is truthy whenever it is *present*, whatever
+    # its value, so "0" forces colour ON. apply_output_hygiene() unsets it, and
+    # the sitecustomize hook unsets it again after ipykernel re-adds it.
+    "NO_COLOR": "1",
+    "TERM": "dumb",
+    "TTY_COMPATIBLE": "0",
+    # tqdm: no bar at all. tqdm.std.tqdm.__init__ is @envwrap("TQDM_")-decorated,
+    # so TQDM_DISABLE maps onto its `disable=` parameter for every caller
+    # (tensorflow_datasets, etils, fsspec, huggingface_hub) — a \r-animated bar
+    # otherwise records one line per frame.
+    "TQDM_DISABLE": "1",
+    # huggingface_hub keeps its own bar switch (constants.py).
+    "HF_HUB_DISABLE_PROGRESS_BARS": "1",
+    # syne-tune prints the absolute results folder when a tuning run finishes
+    # ("Tuning finished, results of trials can be found on ..."). It defaults to
+    # ~/syne-tune/, so the author's home directory ended up printed in the book.
+    # syne_tune.util.experiment_path() reads this variable; a relative value
+    # keeps the printed line short and machine-independent, and the results land
+    # under the notebook's working directory, which is a build product.
+    "SYNETUNE_FOLDER": "syne-tune",
+    # TensorFlow / XLA / absl C++ logging. 3 = FATAL only. Level 2 still lets
+    # ERROR through, which is where XLA's benign
+    # "cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal
+    # accuracy" lands — a profiling hint, not a failure, that would otherwise
+    # appear mid-chapter. Real errors surface as Python exceptions, not logs.
+    # Read by TF *and* by jaxlib's CUDA plugin (both link tsl/absl logging).
+    "TF_CPP_MIN_LOG_LEVEL": "3",
+    # MXNet: the oneDNN storage-fallback notice is a ~700-char paragraph plus a
+    # multi-kilobyte "input storage types = [default, default, …]" dump, emitted
+    # once per DataLoader batch. The message documents this very variable as the
+    # way to turn it off.
+    "MXNET_STORAGE_FALLBACK_LOG_VERBOSE": "0",
+    # MXNet: cuDNN autotuning prints a per-op notice on first use.
+    "MXNET_CUDNN_AUTOTUNE_DEFAULT": "0",
 }
 
 # Env vars to suppress CUDA noise when running CPU-only (CUDA_VISIBLE_DEVICES="").
@@ -249,12 +303,43 @@ def nvidia_lib_path(venv_root=None):
     return ":".join(dirs) if dirs else ""
 
 
+NBQUIET_DIR = str(Path(__file__).resolve().parent / "nbquiet")
+
+
+def apply_output_hygiene(env=None):
+    """Apply QUIET_ENV and put tools/nbquiet on PYTHONPATH (idempotent).
+
+    `env` defaults to os.environ. Unlike the resource knobs these are *assigned*,
+    not `setdefault`-ed: an inherited TERM/NO_COLOR from the interactive shell
+    that launched `make` is exactly what we must override, since the notebook
+    child is not a terminal. `D2L_NO_QUIET=1` in the environment disables the
+    whole mechanism (both the vars here and the sitecustomize patches).
+
+    The PYTHONPATH entry makes CPython's `site` import
+    tools/nbquiet/sitecustomize.py at startup in every descendant interpreter —
+    nbconvert and, crucially, the ipykernel that runs the cells.
+    """
+    env = os.environ if env is None else env
+    if env.get("D2L_NO_QUIET"):
+        return env
+    env.update(QUIET_ENV)
+    for key in ("FORCE_COLOR", "CLICOLOR", "CLICOLOR_FORCE"):
+        env.pop(key, None)
+    parts = [NBQUIET_DIR]
+    existing = env.get("PYTHONPATH", "")
+    parts += [p for p in existing.split(os.pathsep) if p and p != NBQUIET_DIR]
+    env["PYTHONPATH"] = os.pathsep.join(parts)
+    return env
+
+
 def setup_framework_env(framework, venv_root=None):
     """Apply framework-specific env vars to os.environ (idempotent).
 
     Sets thread limits, memory fractions, LD_LIBRARY_PATH for NVIDIA libs,
-    and raises the nproc soft limit for XLA thread pools.
+    output-hygiene switches (see QUIET_ENV / apply_output_hygiene), and raises
+    the nproc soft limit for XLA thread pools.
     """
+    apply_output_hygiene()
     for k, v in FRAMEWORK_ENV.get(framework, {}).items():
         os.environ.setdefault(k, v)
     for k, v in THREAD_LIMIT_ENV.get(framework, {}).items():

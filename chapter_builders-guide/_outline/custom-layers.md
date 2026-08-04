@@ -1,6 +1,9 @@
 # Custom Layers and Functions
 :label:`sec_custom_layer`
 
+> **Archive notice.** This file records pre-promotion design decisions. The live
+> source one directory above is authoritative; markers and API claims here are historical.
+
 The live label is preserved because downstream sections already cite it.
 
 > **Role.** The escape hatch: what to do when the framework's layer zoo does
@@ -112,5 +115,5 @@ still worth making a layer?
   `mx.autograd.Function` genuinely exists and mirrors
   `torch.autograd.Function` (verified in source) with one gotcha — each
   Function *instance* is single-use (source-enforced), so instantiate per
-  call. [UNVERIFIED on GPU box: `autograd.Function` inside a training
-  loop.]
+  call. The design pass did not verify `autograd.Function` inside a GPU
+  training loop; this historical note is not validation evidence.

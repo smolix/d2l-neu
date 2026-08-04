@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95767,
-          "sha256": "sha256:dea0ccf1c36622b0e9491b3dad9e6b0925576d68109bed95e32d8a82dadde9bb"
+          "sha256": "sha256:d61fd7beacff0177bbe8792887f587a54841778c5cb5ac9815fafb4605485a02"
         }
       ]
     },
@@ -90,7 +90,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94721,
-          "sha256": "sha256:622a2cf6d4dd49abc667b389f8b026d3e269ea8d9afad94bd286db303438c99b"
+          "sha256": "sha256:e4c3d95e23d3dd3711cd79539adbf069849c646c0116ffe3e216eed2aff5018c"
         }
       ]
     },
@@ -158,7 +158,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96403,
-          "sha256": "sha256:51bcb67f893f698164e97241883ab6a1d3fed3cca2442514a0153f38dc635cfc"
+          "sha256": "sha256:767fb191f530459ed0f6deb581a52b435062239d34ecb29ee0e9c8206630ffdc"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/numpy/multiarray.py:6163: UserWarning: Currently, MXNet only support quicksort in backend, which is not stable\n  warnings.warn(\"Currently, MXNet only support quicksort in backend, which is not stable\")\n"
+          "text": "UserWarning: Currently, MXNet only support quicksort in backend, which is not\nstable\n"
         },
         {
           "type": "execute_result",
@@ -186,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 93212,
-          "sha256": "sha256:eb9e99269b4c753e1c6769cf6bf1afbfb3dce90caf9f5eec59f382cde1e34b76"
+          "sha256": "sha256:571587c9515bf8bb5386913329e8973d393296baeb46e393e0610bcc1716ed52"
         }
       ]
     }

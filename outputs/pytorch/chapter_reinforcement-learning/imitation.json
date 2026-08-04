@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/imitation.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:3e6b5fd1b72bb99f3a93c1d453e533a95bd27d1f3c74e7cc06d11004dc675957",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "imitation-learning-from-demonstrations": {
+      "code_fingerprint": "sha256:690b7fd104799b6bc38082ccb63a6fc196c557ca72133b973266a48e4e18b6ab",
+      "kind": "text",
+      "outputs": []
+    },
+    "imitation-the-reduction-to-classification-1": {
+      "code_fingerprint": "sha256:45df768192a9a1ac4bf568c73a1317fbd1bf848c863f8d0e8b5a0450b5e73044",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "96 state-action pairs from 3 expert episodes, covering 7 of 11 reachable states\n"
+        }
+      ]
+    },
+    "imitation-the-reduction-to-classification-2": {
+      "code_fingerprint": "sha256:4238aebcb097c05213baaa84bced7b9df9dee07dd560e4f7643bb836e0804e65",
+      "kind": "text",
+      "outputs": []
+    },
+    "imitation-the-reduction-to-classification-3": {
+      "code_fingerprint": "sha256:c3d5eaeb137df7f5c883974875bf55ceff60e0d850a53dc9ac26a81de13d74da",
+      "kind": "text",
+      "outputs": []
+    },
+    "imitation-the-reduction-to-classification-4": {
+      "code_fingerprint": "sha256:57cba9b63ee5d60518511f3e2cf42f6f6239815e52cd06d16f7c72d4f3e79ff9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cross-entropy on the demonstrations after the fit: 0.004\nclone pi(.|s=9): [0.001 0.996 0.001 0.001]\nclone pi(.|s=3): [0.25 0.25 0.25 0.25]\n"
+        }
+      ]
+    },
+    "imitation-the-reduction-to-classification-5": {
+      "code_fingerprint": "sha256:1b98af174708b79a28ca0d4a7073f46d1e06d5553edb5fa0a45fa71280834f40",
+      "kind": "text",
+      "outputs": []
+    },
+    "imitation-what-the-reduction-quietly-assumes-1": {
+      "code_fingerprint": "sha256:aa0b4b473d4d4c8dc69eacd57fa1ba21d5d104968c001b7f4ac06036d9e515cd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mistakes on the 96 demonstration pairs: 0\nsuccess rate: expert 73.4%, clone 17.5%\n"
+        }
+      ]
+    },
+    "imitation-what-the-reduction-quietly-assumes-2": {
+      "code_fingerprint": "sha256:2c5622ffac42b3180f3de0f40e2d9e9725a6af27069615821a8656ebcf130010",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 episodes: median success 44%, worst 0%, over ten datasets\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 3 episodes: median success 73%, worst 70%, over ten datasets\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "10 episodes: median success 73%, worst 70%, over ten datasets\n"
+        }
+      ]
+    },
+    "imitation-the-proposition": {
+      "code_fingerprint": "sha256:c9097bb5f0b6483d421aa7114fe71e78054e63525e0bb2f9b063b77bab34e70d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lost return at T=10: cloned 2.40 (eps T^2/2 = 2.50), recovering 0.51 (eps T = 0.50)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "imitation/imitation-the-proposition-1.svg",
+          "bytes": 28525,
+          "sha256": "sha256:99a09cd3b37fa030760b3ad46120d65b48972f701ea733b49a1c28fe8e1ac418"
+        }
+      ]
+    },
+    "imitation-why-this-is-not-a-defect-of-the-fit": {
+      "code_fingerprint": "sha256:f73805a8a4ce0f32a27d50a807070b444110e59e1e4289a1053e455c7d054c80",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "after  3 steps: total variation 0.000\nafter  5 steps: total variation 0.004\nafter 10 steps: total variation 0.063\nafter 20 steps: total variation 0.227\nmass in the hole at s=12 after 20 steps: expert 0.000, clone 0.221\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "imitation/imitation-why-this-is-not-a-defect-of-the-fit-1.svg",
+          "bytes": 36015,
+          "sha256": "sha256:092859907d0c51ce607bb2a22f8bdf4827a28a0e4471ab92e791370b148e56a7"
+        }
+      ]
+    },
+    "imitation-dagger-collect-from-the-learner-relabel-with-the-expert": {
+      "code_fingerprint": "sha256:e8ead8924f65fbbd253419db0bd18f6697161848222863687350551e5ec25b4c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "round 0: trained on  96 pairs, success rate 18.0%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "round 1: trained on 188 pairs, success rate 72.0%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "round 2: trained on 273 pairs, success rate 72.2%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "round 3: trained on 426 pairs, success rate 71.9%\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,19 +1,11 @@
 # Bayesian Computation
 :label:`sec_mdl-bayesian-computation`
 
-Everything we have trained so far ends the same way: optimization hands us
-one parameter vector, and from then on we act as if it were the truth.
-Maximum likelihood picks the single $\boldsymbol\theta$ that best explains
-the data; MAP (:numref:`sec_mdl-maximum_likelihood`) tempers it with a prior
-but still picks one point. When data are plentiful this is hard to beat. But
-when data are scarce, when predictions feed decisions with asymmetric costs
-— a medical call, a trading position, an autonomous-vehicle brake — or when
-we must say *how sure* we are, a single point is an overstatement. Many
-quite different parameter vectors explain 80 observations about equally
-well, and they disagree about the next prediction. Bayesian prediction requires
-averaging over them, weighted by how plausible each remains after seeing the
-data. That weighting is exactly the posterior, and the average is the
-**posterior predictive**
+Maximum-likelihood and MAP estimation each return a single parameter vector.
+When the data leave substantial parameter uncertainty, different plausible
+vectors can produce different predictions. Bayesian prediction averages these
+predictions with respect to the posterior distribution. The resulting
+**posterior predictive** distribution is
 
 $$
 p(y_\star\mid\mathbf x_\star,\mathcal D)
@@ -22,32 +14,26 @@ p(y_\star\mid\mathbf x_\star,\mathcal D)
 $$
 :eqlabel:`eq_mdl-bayes-predictive`
 
-Here is the catch: outside the conjugate families of
+Outside the conjugate families of
 :numref:`sec_mdl-distributions`, this integral — and the posterior's own
-normalizer — has no closed form. We can *evaluate* the posterior at any
-point, up to an unknown constant, but we cannot *integrate* it. So the whole
-of Bayesian practice hinges on one computational question:
+normalizer — usually has no closed form. We can evaluate the unnormalized
+posterior pointwise, but must approximate its integrals. This leads to the
+computational question:
 
 > **How do you average over a distribution you can only evaluate pointwise,
 > up to a constant?**
 
-**Bayesian computation** is the collection of answers, and this notebook
-develops the four that matter most, each embodying a different idea. Sample
-somewhere easy and *reweight* (importance sampling). *Walk* through
-parameter space so that time spent equals posterior mass (Markov chain Monte
-Carlo). Fit a *Gaussian at the peak* and integrate that instead (the Laplace
-approximation). Turn integration into *optimization* over a family of
-tractable distributions (variational inference). These are not museum
-pieces: variational inference is how VAEs and diffusion models are trained,
-Laplace and its relatives power practical uncertainty estimates for neural
-networks, and MCMC remains the reference answer everything else is checked
-against.
+This section develops four approximations. Importance sampling draws from a
+tractable proposal and reweights the samples. Markov chain Monte Carlo
+constructs a chain whose stationary distribution is the posterior. The Laplace
+approximation fits a Gaussian near a posterior mode. Variational inference
+optimizes a tractable distribution to approximate the posterior. These methods
+are used for posterior prediction, uncertainty estimates, and latent-variable
+models.
 
-One small Bayesian logistic-regression problem runs through the whole
-notebook. Because it has only two parameters, a dense grid supplies an
-essentially exact posterior against which every approximation can be
-audited — a luxury real problems never offer, which is precisely why it is
-the right training ground. Conjugate posteriors are treated in
+One Bayesian logistic-regression problem provides a common comparison. Because
+it has only two parameters, a sufficiently fine grid supplies a high-accuracy
+numerical reference for checking the approximations. Conjugate posteriors are treated in
 :numref:`sec_mdl-distributions`; MAP and the ELBO are developed in
 :numref:`sec_mdl-maximum_likelihood`; differentiation through random
 variables is in :numref:`subsec_mdl-stochastic-gradient-estimators`.
@@ -87,13 +73,11 @@ import numpy as np
 
 ### A Nonconjugate Running Example
 
-Why logistic regression? Because it is the smallest model where the problem
-is real. One Gaussian observation with a Gaussian prior stays Gaussian —
-conjugacy hands us the posterior for free. Replace the Gaussian likelihood
-with a sigmoid and the gift is withdrawn: no prior matches a logistic
-likelihood, and the posterior is a genuinely new function we can evaluate
-but not integrate. Every classifier in this book lives on the far side of
-that line, so this is the right miniature.
+Logistic regression is a small nonconjugate model. A Gaussian observation with
+a Gaussian prior has a closed-form Gaussian posterior. A logistic likelihood
+has no matching conjugate prior, so its posterior can be evaluated pointwise
+but not integrated in closed form. Its two-parameter version is therefore a
+useful example for comparing approximation methods.
 
 For binary observations $y_i\in\{0,1\}$ and scalar features $x_i$, logistic
 regression writes
@@ -120,10 +104,9 @@ $$
 
 where $\mathbf z_i=(1,x_i)^\top$. The suppressed normalizer — the
 **evidence** $p(\mathcal D)$ — is an integral over $\boldsymbol\theta$ that
-we do not know. Notice what we *can* still do cheaply: compare any two
-parameter values (the constant cancels in the ratio) and compute gradients
-of the log posterior. Every method below is built from exactly these two
-operations, which is what makes them general.
+we do not know. We can still evaluate relative log posterior values because the
+constant cancels, and we can compute gradients. The methods below all use value
+evaluations; gradient-based variants use the second operation as well.
 
 The cell creates a small dataset and implements the log of the unnormalized
 posterior. `logaddexp` evaluates $\log(1+e^z)$ without overflowing.
@@ -156,7 +139,7 @@ def grad_log_joint(theta):
     return (y_bayes - probs) @ Z_bayes - theta / prior_var
 ```
 
-### A Grid as a Reference, Not a General Algorithm
+### Grid Integration as a Low-Dimensional Reference
 
 With two parameters we can cheat: evaluate the log posterior on a dense
 grid, exponentiate stably, and normalize the sum. This is deterministic
@@ -186,20 +169,20 @@ print('grid correlation   :',
             np.sqrt(posterior_cov[0, 0] * posterior_cov[1, 1]), 4))
 ```
 
-### What Averaging Buys: Mean, MAP, and Prediction
+### Posterior Mean, MAP, and Predictive Averaging
 
 Before approximating the posterior, let us see what keeping it actually
 changes. Two candidate summaries compete: the **posterior mean** (an
 average) and the **MAP** (the single most probable point). To compare them,
-compute the MAP by Newton iteration; the negative Hessian of the log
-posterior,
+compute the MAP by Newton iteration. The negative Hessian of the log
+posterior is
 
 $$
 H(\boldsymbol\theta)
 =Z^\top\operatorname{diag}(p_i(1-p_i))Z+\tau^{-2}I,
 $$
 
-is positive definite thanks to the Gaussian prior, and — keep it in hand —
+positive definite thanks to the Gaussian prior, and — keep it in hand —
 its inverse at the MAP will become the Laplace approximation below.
 
 ```{.python .input #bayesian-computation-map-predictive}
@@ -231,23 +214,22 @@ that the sigmoid is nonlinear, and averaging a nonlinear function is not the
 same as applying it to an average — some plausible parameter vectors predict
 confidently one way, some the other, and posterior averaging hedges between
 them. Here the plug-in predictions are more extreme because they omit
-parameter uncertainty. The gap closes as the posterior
-concentrates with more data, but at $n=80$ it is visibly there, and this
-single effect is the practical payoff that justifies everything that
-follows.
+parameter uncertainty. The gap closes as the posterior concentrates with more
+data, but at $n=80$ it is visible. This example motivates the computational
+question that follows: how can we evaluate posterior averages when direct
+integration is unavailable?
 
 ## Importance Sampling: Correcting a Proposal
 :label:`sec_mdl-bayes-importance`
 
-We cannot draw samples from the posterior. But we can draw from *something
-else* — a Gaussian, say — and no law forbids using those draws, as long as
-we account for the mismatch. A draw that lands where the proposal
-over-represents the posterior should count for less; one landing where the
-proposal under-represents it should count for more. "How much less or
-more" is just the density ratio. That single idea — sample from the wrong
-distribution, then reweight by right-over-wrong — is **importance
-sampling**, and it turns the unknown integral into two averages we can
-estimate. If $q$ is a normalized proposal we can sample and evaluate, and
+Suppose that direct sampling from the posterior is unavailable, but that we
+can sample from a tractable *proposal* distribution $q$. We correct the
+difference between the proposal and posterior by assigning each draw a weight
+proportional to their density ratio. A draw receives less weight where the
+proposal density is too large and more weight where it is too small. This
+procedure is **importance sampling**. It expresses the desired posterior
+expectation as a ratio of expectations under the proposal. If $q$ is a
+normalized density that we can sample and evaluate, and
 $\widetilde p(\boldsymbol\theta)=p(\mathcal D,\boldsymbol\theta)$ is our
 evaluable unnormalized target, then
 
@@ -262,19 +244,27 @@ w(\boldsymbol\theta)=\frac{\widetilde p(\boldsymbol\theta)}
 $$
 :eqlabel:`eq_mdl-bayes-importance`
 
-Dividing by the average weight is what disposes of the unknown normalizer —
-it appears in numerator and denominator and cancels. Replacing both
+The unknown normalizing constant appears in both numerator and denominator and
+therefore cancels. Replacing both
 expectations by sample averages gives **self-normalized importance
 sampling**: consistent, though slightly biased at finite $N$ because it is
 a ratio of random quantities. As always with products of many likelihood
 terms, the computation belongs in log space with a max subtracted, exactly
 like log-sum-exp.
 
-Everything therefore rides on one question: *where does the proposal put
-its draws?* :numref:`fig_mdl-prob-bayes-importance` shows the failure mode
-and, more disturbingly, how it hides.
+The identity requires more than nominal overlap. At minimum,
+$q(\boldsymbol\theta)>0$ wherever the target contributes to the estimand, and
+$\mathbb E_q[|w h|]$ and $\mathbb E_q[w]$ must be finite. A finite-variance
+central limit theorem further requires finite second moments of the weighted
+quantity. Thus full support is necessary but may be practically useless when
+$q$ has lighter tails than the target or places negligible mass in an important
+mode.
 
-![Importance sampling stands or falls with proposal coverage. Both panels reweight 24 draws from a Gaussian proposal (dashed) against the same two-mode target (solid); stems show the normalized weights. Left: a narrow proposal never samples the right-hand mode, so the weights are blind to it — yet the effective sample size looks nearly perfect. Right: a proposal that covers the target yields well-distributed weights and trustworthy estimates.](../img/mdl-prob-bayes-importance.svg)
+The accuracy of the estimator depends on where the proposal places its draws.
+:numref:`fig_mdl-prob-bayes-importance` shows both adequate and inadequate
+proposal coverage.
+
+![Importance sampling with two proposals. Both panels reweight 24 draws from a Gaussian proposal (dashed) against the same two-mode target (solid); stems show normalized weights. Left: a narrow proposal misses the right-hand mode, so the weights are blind to it even though the effective sample size looks nearly perfect. Right: a broader proposal samples both modes and produces less concentrated weights in this run. Support alone is not sufficient: tail behavior and weight moments also control accuracy.](../img/mdl-prob-bayes-importance.svg)
 :label:`fig_mdl-prob-bayes-importance`
 
 The standard health check is the weight **effective sample size**
@@ -330,31 +320,26 @@ for name, result, n in [('prior proposal', prior_is, 20000),
 The prior proposal spends most of its 20,000 draws where the posterior is
 negligible — that is what its low ESS is reporting — while the Laplace
 proposal, aimed at the posterior, extracts more usable information from a
-quarter as many draws. This posterior is unimodal and nearly Gaussian, so
-the story ends well; in high dimension or under mode mismatch the weights
-degenerate rapidly, and the variance of the weights, not the nominal draw
-count, sets how much you actually learned.
+quarter as many draws. This posterior is unimodal and nearly Gaussian, so the
+local proposal works well here. In high dimension or under mode or tail
+mismatch, the weights may degenerate rapidly; weight moments and effective
+sample size, not the nominal draw count, determine the accuracy.
 
 ## Markov Chain Monte Carlo
 :label:`sec_mdl-bayes-mcmc`
 
-Importance sampling makes one global guess about where the posterior lives
-and pays dearly when the guess is off. The next idea abandons guessing for
-*exploration*: start anywhere, take small steps, and bias the steps so
-that, in the long run, the walker's location is distributed exactly as the
-posterior — time spent in a region proportional to the probability mass it
-holds. Then the chain's states *are* posterior samples (dependent ones),
-and averaging over the trajectory approximates
-:eqref:`eq_mdl-bayes-predictive`. This is **Markov chain Monte Carlo**, and
-the miracle is how little the walking rule needs to know: only posterior
-*ratios* between the current point and a proposed one — precisely the
-quantity that survives the unknown normalizer.
+Importance sampling depends on a global proposal that covers the posterior.
+Markov chain Monte Carlo instead constructs a Markov chain whose stationary
+distribution is the posterior. After convergence, dependent states from the
+chain can be averaged to approximate :eqref:`eq_mdl-bayes-predictive`. The
+Metropolis--Hastings construction needs posterior ratios between the current
+and proposed states, so the unknown normalizer cancels.
 
-The **Metropolis** rule makes the bias concrete: from
+The **Metropolis** rule is easiest to state for a symmetric proposal. From
 $\boldsymbol\theta$, propose
-$\boldsymbol\theta'\sim q(\cdot\mid\boldsymbol\theta)$; if the proposal is
-uphill ($\widetilde p$ increases), accept it always; if it is downhill,
-accept it with probability equal to the ratio $\widetilde
+$\boldsymbol\theta'\sim q(\cdot\mid\boldsymbol\theta)$. If
+$\widetilde p(\boldsymbol\theta')\ge\widetilde p(\boldsymbol\theta)$, accept
+the proposal; otherwise, accept it with probability $\widetilde
 p(\boldsymbol\theta')/\widetilde p(\boldsymbol\theta)$ — otherwise stay
 put. In general, with an asymmetric proposal,
 
@@ -368,17 +353,16 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-mh`
 
-Why does always-up, sometimes-down produce the right distribution and not
-just a hill-climber? Because the occasional accepted downhill move is
-calibrated *exactly*: the acceptance ratio makes the probability flow from
-$\boldsymbol\theta$ to $\boldsymbol\theta'$ equal the flow back — a
-condition called **detailed balance**. A distribution with no net flow
-anywhere has no reason to change, so the posterior is stationary: once the
-chain is distributed as the posterior it stays that way, and under mild
-conditions it converges there from any start. Two bookkeeping consequences
-follow directly: rejected proposals are not discarded — the repeated state
-is what "spending more time where mass is high" looks like — and the
-normalizer never appears, having cancelled in the ratio.
+The acceptance ratio enforces **detailed balance**: under the target
+distribution, the probability flow from $\boldsymbol\theta$ to
+$\boldsymbol\theta'$ equals the reverse flow. The target posterior is therefore
+a stationary distribution of the chain. Convergence from an initial state also
+requires irreducibility, aperiodicity, and the appropriate recurrence
+conditions on general state spaces.
+
+A rejection leaves the chain at its current state, so repeated states must be
+included when computing averages. The target normalizer is unnecessary because
+it cancels from the acceptance ratio.
 
 ![A Metropolis random walk on posterior contours. From the starting square, each step proposes a local move; uphill moves are always accepted (path), downhill moves only sometimes — a rejected proposal (crosses) leaves the chain in place for another step. In the long run the time the walk spends in a region is proportional to its posterior mass.](../img/mdl-prob-bayes-metropolis.svg)
 :label:`fig_mdl-prob-bayes-metropolis`
@@ -413,9 +397,9 @@ for c, start in enumerate(starts):
 chains = np.asarray(chains)
 ```
 
-### Diagnostics: Mixing, Not Just Draw Count
+### Diagnosing Markov Chain Mixing
 
-The price of exploration is dependence: consecutive states are correlated,
+Exploration introduces dependence: consecutive states are correlated,
 so a chain of $10{,}000$ states holds far less information than $10{,}000$
 independent draws — how much less depends on how fast the walk forgets
 where it was. Because the chain also starts wherever we put it, we need
@@ -495,38 +479,35 @@ d2l.plt.tight_layout()
 d2l.plt.show()
 ```
 
-Acceptance rate alone is not a convergence diagnostic: tiny proposals
-accept nearly everything while crawling, huge ones are mostly rejected. Nor
-does discarding a longer "burn-in" repair poor mixing. Run multiple chains,
-inspect the quantities you care about, and report ESS and Monte Carlo error
-alongside every posterior estimate.
+Acceptance rate alone does not establish convergence. Proposals that are too
+small have high acceptance but strong serial correlation, while proposals that
+are too large are usually rejected. Extending warm-up does not correct poor
+mixing. Use multiple chains, inspect diagnostics for the quantities of interest,
+and report effective sample size and Monte Carlo error with posterior estimates.
 
-Metropolis is the smallest useful MCMC algorithm, not the last word.
-**Gibbs sampling** exploits models whose conditionals are tractable,
-sampling one block at a time. **Hamiltonian Monte Carlo** uses the gradient
-of the log posterior to make long, directed moves (the No-U-Turn Sampler
-adapts their length), mixing dramatically faster in correlated
-high-dimensional posteriors. Both inherit the same workflow: multiple
-chains, geometry-aware tuning, and the diagnostics above.
+Metropolis is a basic MCMC method. **Gibbs sampling** applies when conditional
+distributions are tractable and updates one variable or block at a time.
+**Hamiltonian Monte Carlo** uses gradients of the log posterior to propose
+distant states while maintaining high acceptance; the No-U-Turn Sampler adapts
+the trajectory length. These methods still require multiple chains, appropriate
+tuning, and convergence diagnostics.
 
 ## Deterministic Approximations
 :label:`sec_mdl-bayes-approximations`
 
-Sampling spends compute at prediction time. The alternative is to spend it
-once, up front: replace the awkward posterior by the *nearest tractable
-distribution* $q$, then integrate against $q$ in closed form forever after.
-The two classical instantiations differ in what "nearest" means — and both
-reuse machinery we already have: optimization from
-:numref:`sec_mdl-maximum_likelihood`, Taylor expansion, and the ELBO.
+Sampling represents a posterior by draws and therefore incurs Monte Carlo cost
+when expectations are estimated. Deterministic approximations instead replace
+the posterior by a tractable distribution $q$. Laplace approximation and
+variational inference use different criteria for choosing $q$ and draw on
+optimization (:numref:`sec_mdl-maximum_likelihood`), Taylor expansion, and the
+evidence lower bound.
 
-### Laplace: the Free Gaussian in Every MAP
+### The Laplace Approximation at a Posterior Mode
 
-Training already finds the MAP; the Laplace approximation observes that the
-mode's neighborhood contains more reusable information. Expand the log
-posterior to second order about $\boldsymbol\theta_{\mathrm{MAP}}$: the
-linear term vanishes at a maximum, so locally the log posterior is a
-downward parabola — and a distribution whose log is a parabola is a
-Gaussian. With $H$ the negative Hessian at the mode,
+The Laplace approximation uses a second-order expansion of the log posterior
+around $\boldsymbol\theta_{\mathrm{MAP}}$. The linear term vanishes at the
+mode, leaving a local quadratic form. Exponentiating this quadratic gives a
+Gaussian. If $H$ is the negative Hessian at the mode,
 
 $$
 p(\boldsymbol\theta\mid\mathcal D)
@@ -534,29 +515,27 @@ p(\boldsymbol\theta\mid\mathcal D)
 $$
 :eqlabel:`eq_mdl-bayes-laplace`
 
-which costs one Hessian beyond the optimization you were doing anyway —
-that is its enduring appeal, from classical statistics to
-uncertainty-for-deep-networks toolboxes, where $H$ is further approximated
-(diagonal, Kronecker-factored, last-layer-only) to scale.
+Computing this approximation requires the posterior mode and its Hessian.
+For large neural networks, the Hessian is commonly approximated by a diagonal,
+Kronecker-factored, or last-layer matrix to reduce computational cost.
 
 ![The Laplace approximation is a quadratic fit to the log posterior at its mode. Left: the fit matches value, slope, and curvature at the mode and nothing else. Right: after exponentiating, the implied Gaussian reproduces the peak's location and width but misses the skew — too much mass on one side, a dropped tail on the other.](../img/mdl-prob-bayes-laplace.svg)
 :label:`fig_mdl-prob-bayes-laplace`
 
-:numref:`fig_mdl-prob-bayes-laplace` shows exactly what is kept and what is
-lost: location and curvature survive; skewness, heavy tails, boundaries,
-and any second mode do not — the approximation is *local* by construction.
-In our running example the effect is mild but visible: the Laplace mean
-*is* the MAP, while the true posterior mean sits slightly away from it,
-shifted by the skew the parabola cannot see.
+:numref:`fig_mdl-prob-bayes-laplace` shows the scope of the approximation.
+It preserves the mode and local curvature but cannot represent skewness, heavy
+tails, boundaries, or additional modes. In this example, the Gaussian mean is
+the MAP estimate, while the exact posterior mean differs slightly because the
+posterior is skewed.
 
-### Variational Inference: Integration Becomes Optimization
+### Variational Inference as Optimization
 
-The Laplace approximation lets the mode dictate the Gaussian. Variational
-inference instead *searches* for the best tractable approximation: fix a
-family $q_\phi$ (here, Gaussians), define "best" as minimal
-$D_{\mathrm{KL}}(q_\phi\,\|\,p(\cdot\mid\mathcal D))$, and optimize
-$\phi$. That KL still contains the unknown evidence — but only as an
-additive constant, so maximizing the **ELBO**
+The Laplace approximation determines a Gaussian from local curvature at the
+mode. Variational inference instead chooses $q_\phi$ from a tractable family
+by minimizing
+$D_{\mathrm{KL}}(q_\phi\|p(\cdot\mid\mathcal D))$. The unknown evidence in
+this divergence is constant with respect to $\phi$, so the equivalent
+optimization maximizes the **ELBO**
 
 $$
 \mathcal L(\phi)
@@ -566,32 +545,31 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-vi-elbo`
 
-is the same problem, and every term in it is computable. This maneuver —
-trading an integral for an optimization over distributions — is the single
-most consequential idea in modern approximate inference: with
-$q_\phi$ produced by a neural network it is the training objective of the
-VAE, and the same bound underlies diffusion-model training.
+Every term in this objective is computable. Optimizing a distributional
+approximation in this way is central to modern approximate inference. When
+$q_\phi$ is produced by a neural network, the same objective trains a
+variational autoencoder; related variational bounds also appear in diffusion
+models.
 
-The choice of KL direction has teeth, and
-:numref:`fig_mdl-prob-bayes-kl-modes` shows them. Reverse KL charges $q$
-infinitely for placing mass where $p$ has none, so when the family is too
-simple to cover everything, the optimum *retreats into one mode* and
-reports confident, too-narrow uncertainty. The forward direction (used by
-expectation propagation and moment matching) makes the opposite error,
-smearing mass across the valley. Neither is "wrong" — they answer
-different questions — but you should know which failure you have signed up
-for: variational inference is the mode-seeking one.
+The direction of the KL divergence affects the approximation, as shown in
+:numref:`fig_mdl-prob-bayes-kl-modes`. Reverse KL assigns an infinite penalty
+when $q$ puts mass where $p$ is zero. If a unimodal family approximates a
+multimodal target, its optimum may therefore concentrate on one mode and
+underestimate uncertainty. Forward KL, used in moment-matching methods, instead
+favors covering the target mass and may place density between modes. Standard
+variational inference minimizes reverse KL and consequently tends toward the
+first behavior.
 
 ![The direction of the KL divergence decides how a too-simple approximation fails. For a two-mode target, the best reverse-KL Gaussian — what variational inference optimizes — locks onto a single mode and understates uncertainty, while the best forward-KL Gaussian covers the mass of both modes at the price of putting its bulk where the target is small.](../img/mdl-prob-bayes-kl-modes.svg)
 :label:`fig_mdl-prob-bayes-kl-modes`
 
-To optimize the ELBO we need its gradient, and here the reparameterization
-trick of :numref:`subsec_mdl-stochastic-gradient-estimators` earns its
-keep. Take a mean-field Gaussian
-$q=\mathcal N(\mathbf m,\operatorname{diag}(\mathbf s^2))$ and write
+The reparameterization estimator from
+:numref:`subsec_mdl-stochastic-gradient-estimators` supplies gradients of the
+ELBO. For a mean-field Gaussian
+$q=\mathcal N(\mathbf m,\operatorname{diag}(\mathbf s^2))$, write
 $\boldsymbol\theta=\mathbf m+\mathbf s\odot\boldsymbol\epsilon$ with
-$\boldsymbol\epsilon\sim\mathcal N(\mathbf 0,\mathbf I)$; gradients then
-flow through the sample:
+$\boldsymbol\epsilon\sim\mathcal N(\mathbf0,\mathbf I)$. Differentiation can
+then pass through $\boldsymbol\theta$:
 
 $$
 \nabla_{\mathbf m}\mathcal L
@@ -602,10 +580,9 @@ $$
  \odot\mathbf s\odot\boldsymbol\epsilon]+\mathbf1,
 $$
 
-where the $+\mathbf1$ is the Gaussian entropy derivative. The cell
-optimizes these one-sample-batch estimates with a small Adam loop in plain
-NumPy — the same optimizer loop you have used all book, applied to a
-distribution instead of a network.
+where $+\mathbf1$ is the derivative of the Gaussian entropy. The following
+NumPy implementation estimates these expectations with batches of 256 samples
+and optimizes the parameters with Adam.
 
 ```{.python .input #bayesian-computation-variational}
 rng_vi = np.random.default_rng(31)
@@ -637,18 +614,16 @@ print('Laplace   ', theta_map.round(4), np.sqrt(np.diag(laplace_cov)).round(4))
 print('mean-field', m_vi.round(4), np.exp(log_s_vi).round(4))
 ```
 
-Both failure modes predicted above are on display. Mean-field's diagonal
-covariance cannot represent the posterior's intercept–slope correlation at
-all, and reverse KL prefers a slightly too-concentrated fit over leaking
-mass into low-posterior regions. A richer family — full covariance, a
-normalizing flow, a mixture — buys back fidelity at more optimization and
-implementation cost. And a stabilized ELBO means one optimization run has
-settled, not that the family was adequate: validate against predictions,
-not against the objective.
+The results exhibit both limitations. A diagonal mean-field covariance cannot
+represent posterior correlation between the intercept and slope. Reverse KL
+also produces a distribution that is slightly too concentrated. Full-covariance
+Gaussians, normalizing flows, or mixtures can represent richer dependence at
+greater computational and implementation cost. Convergence of the ELBO only
+indicates that optimization has stabilized within the chosen family; it does
+not establish that the family approximates the posterior well.
 
-The final picture overlays everything this notebook has produced on the
-grid reference: exact contours, Metropolis draws, and the two Gaussian
-approximations.
+The following plot compares the grid reference, Metropolis draws, and the two
+Gaussian approximations on the same axes.
 
 ```{.python .input #bayesian-computation-comparison-plot}
 def covariance_ellipse(mean, cov, color, label):
@@ -680,7 +655,7 @@ ellipse is centered at the MAP with roughly the right shape; the mean-field
 ellipse is axis-aligned — it *cannot* tilt — and slightly small. One plot,
 all four trade-offs.
 
-## A Practical Decision Map
+## Choosing an Approximation Method
 :label:`sec_mdl-bayes-decision-map`
 
 The methods answer the same question with different failure modes.
@@ -704,30 +679,25 @@ diagnostic proves that an unseen mode does not exist —
 :numref:`fig_mdl-prob-bayes-importance` is this notebook's standing
 reminder.
 
-One notebook is enough for this computational bridge because the shared
-target and reference grid make the methods comparable. It is not a full
-Bayesian curriculum: hierarchical models, Gibbs derivations, HMC/NUTS,
-sequential Monte Carlo, model comparison, and predictive checking each
-deserve more space once the book needs them operationally.
-
 ## Summary
 
-* Bayesian inference averages predictions over the posterior; the payoff is
-  calibrated uncertainty — plug-in point estimates are systematically
-  overconfident because a nonlinear function of an average is not the
-  average of the function.
-* Everything is built from two cheap operations: evaluating the
-  unnormalized posterior and its gradient. The unknown normalizer always
+* Bayesian prediction averages over the posterior and therefore represents
+  parameter uncertainty under the specified likelihood, prior, and inference
+  method. This does not guarantee empirical calibration; calibration must be
+  checked on relevant data. In the logistic example, the plug-in predictions
+  are more extreme, but that behavior is not universal.
+* All four methods use evaluations of the unnormalized posterior; some variants
+  also use its gradient. The unknown normalizer
   cancels — in importance ratios, in Metropolis acceptances, in the ELBO.
-* Importance sampling reweights draws from a wrong-but-easy proposal;
-  coverage is everything, and weight ESS cannot see mass that was never
-  sampled.
-* Metropolis explores: always accept uphill, accept downhill in exact
-  proportion — detailed balance makes time spent proportional to posterior
-  mass. Judge chains by mixing (traces, split $\widehat R$, ESS, MCSE),
+* Importance sampling reweights draws from a tractable proposal. Support is
+  necessary, while tail behavior and finite moments govern variance; weight
+  ESS cannot detect mass that was never sampled.
+* Metropolis uses an acceptance ratio that establishes detailed balance. Under
+  the convergence conditions stated above, long-run occupation follows
+  posterior mass. Judge chains by mixing (traces, split $\widehat R$, ESS, MCSE),
   never by acceptance rate alone.
-* Laplace is the free Gaussian hiding in every MAP fit — right location
-  and curvature, blind to skew, tails, and other modes. Variational
+* Laplace uses local value and curvature at the MAP estimate, so it misses
+  skewness, tails, and other modes. Variational
   inference turns integration into optimization of the ELBO and inherits
   reverse KL's mode-seeking, too-confident failure mode.
 
@@ -757,7 +727,7 @@ deserve more space once the book needs them operationally.
 ::: {.cover}
 [Dive into Deep Learning · §24.4]{.kicker}
 
-How to average over everything you don't know<br>**Bayesian computation**.
+Approximating posterior averages<br>**Bayesian computation**.
 :::
 :::
 
@@ -774,12 +744,12 @@ $$p(y_\star\mid\mathbf x_\star,\mathcal D)
 =\int p(y_\star\mid\mathbf x_\star,\boldsymbol\theta)\,
 p(\boldsymbol\theta\mid\mathcal D)\,d\boldsymbol\theta.$$
 
-- calibrated uncertainty instead of overconfident plug-in
-- the integral has no closed form outside conjugate pairs
+- parameter uncertainty represented under the chosen model and prior
+- the integral is often unavailable in closed form
 
 ::: {.d2l-note .rule}
-The whole subject: average over a distribution you can only *evaluate*,
-up to a constant.
+The computational task: approximate expectations under a distribution known
+only up to a normalizing constant.
 :::
 :::
 
@@ -795,23 +765,23 @@ up to a constant.
 
 [The target]{.dtitle}
 
-[a nonconjugate posterior, and an exact reference to audit against]{.dsub}
+[a nonconjugate posterior with a numerical reference solution]{.dsub}
 :::
 :::
 
 ::: {.slide title="The smallest real problem"}
 [The target]{.kicker}
 
-Bayesian logistic regression: sigmoid likelihood, Gaussian prior —
-no conjugate rescue.
+Bayesian logistic regression combines a sigmoid likelihood with a Gaussian
+prior; the posterior is not conjugate.
 
 $$p(\boldsymbol\theta\mid\mathcal D)\propto
 \prod_i\sigma(\mathbf z_i^\top\boldsymbol\theta)^{y_i}
 (1-\sigma(\mathbf z_i^\top\boldsymbol\theta))^{1-y_i}
 \exp\!\left(-\tfrac{\|\boldsymbol\theta\|^2}{2\tau^2}\right).$$
 
-Two operations stay cheap, and every method is built from them:
-evaluate $\log\widetilde p$ (up to a constant), and its gradient.
+All four methods use evaluations of $\log\widetilde p$ up to a constant; some
+algorithms also use its gradient.
 
 @!bayesian-computation-model
 :::
@@ -819,19 +789,19 @@ evaluate $\log\widetilde p$ (up to a constant), and its gradient.
 ::: {.slide title="A grid gives ground truth (here!)"}
 [The target]{.kicker}
 
-Two parameters $\Rightarrow$ quadrature on a $241\times241$ grid is exact
-enough to audit everything. In $d$ dimensions it costs $m^d$ — the curse
-that makes the rest of the lecture necessary.
+Two parameters allow quadrature on a $241\times241$ grid, giving a
+high-accuracy numerical reference. In $d$ dimensions an $m$-point grid per
+coordinate costs $m^d$, so this check does not scale.
 
 @bayesian-computation-grid
 :::
 
-::: {.slide title="What averaging buys"}
+::: {.slide title="Predictive averaging in this example"}
 [The target]{.kicker}
 
-The posterior predictive is pulled toward $\tfrac12$ relative to the
-plug-in MAP: averaging a nonlinear sigmoid $\ne$ sigmoid of the average.
-Parameter uncertainty is a confidence discount.
+Here the posterior predictive is pulled toward $\tfrac12$ relative to the
+plug-in MAP: averaging a nonlinear sigmoid $\ne$ sigmoid of the average. This
+direction is specific to the example, not a universal calibration guarantee.
 
 @bayesian-computation-map-predictive
 :::
@@ -857,7 +827,8 @@ $w=\widetilde p/q$; self-normalizing cancels the unknown evidence:
 $$\mathbb E_p[h]=
 \frac{\mathbb E_q[w\,h]}{\mathbb E_q[w]}.$$
 
-Coverage is everything — and the weight ESS
+The proposal must cover the target's relevant support, but support alone is
+not enough: tails and weight moments determine variance. The weight ESS
 $1/\sum_s\bar w_s^2$ **cannot see mass that was never sampled**.
 :::
 
@@ -937,7 +908,7 @@ sd$/\sqrt{N_{\text{eff}}}$.
 :::
 :::
 
-::: {.slide title="Laplace: the free Gaussian in every MAP"}
+::: {.slide title="Laplace approximation at the MAP estimate"}
 [Laplace]{.kicker}
 
 ::: {.cols .vc}
@@ -992,10 +963,11 @@ centered at the MAP; mean-field VI cannot tilt and is slightly narrow.
 ::: {.slide title="Takeaways"}
 [Summary]{.kicker}
 
-- Point estimates omit parameter uncertainty; the predictive integral is the
-  Bayesian target, and all methods approximate it from $\log\widetilde p$ and
-  $\nabla\log\widetilde p$ alone.
-- Importance sampling: coverage first; ESS is blind to unseen mass.
+- Point estimates omit parameter uncertainty; posterior averaging represents it
+  conditional on the model, prior, and approximation. Calibration still needs
+  empirical checking.
+- Importance sampling: support is necessary; tails and moments control
+  variance; ESS is blind to unseen mass.
 - MCMC: time spent $=$ posterior mass; judge by mixing, never by
   acceptance rate.
 - Laplace: right peak, wrong tails, one Hessian. VI: optimization replaces

@@ -67,8 +67,12 @@ import time
 ## Utilities
 :label:`oo-design-utilities`
 
-We need a few utilities to simplify object-oriented programming in Jupyter notebooks. One of the challenges is that class definitions tend to be fairly long blocks of code. Notebook readability demands short code fragments, interspersed with explanations, a requirement incompatible with the style of programming common for Python libraries. The first
-utility function allows us to register functions as methods in a class *after* the class has been created. In fact, we can do so *even after* we have created instances of the class! It allows us to split the implementation of a class into multiple code blocks.
+The book presents class definitions in short notebook cells next to the prose
+that explains them. The following decorator registers a function as a method
+after a class has been created, allowing one class definition to be split across
+those cells. This is notebook scaffolding rather than part of the learning
+algorithm; ordinary Python modules would usually define the complete class in
+one place.
 
 ```{.python .input #oo-design-utilities-1}
 def add_to_class(Class):  #@save
@@ -79,7 +83,7 @@ def add_to_class(Class):  #@save
     return wrapper
 ```
 
-Let's have a quick look at how to use it. We plan to implement a class `A` with a method `do`. Instead of having code for both `A` and `do` in the same code block, we can first declare the class `A` and create an instance `a`.
+To illustrate its use, we declare a class `A` and create an instance `a` before defining its method `do` in a later cell.
 
 ```{.python .input #oo-design-utilities-2}
 class A:
@@ -89,7 +93,7 @@ class A:
 a = A()
 ```
 
-Next we define the method `do` as we normally would, but not in class `A`'s scope. Instead, we decorate this method by `add_to_class` with class `A` as its argument. In doing so, the method is able to access the member variables of `A` just as we would expect had it been included as part of `A`'s definition. Let's see what happens when we invoke it for the instance `a`.
+We define `do` outside the original class block and decorate it with `add_to_class(A)`. The registered method can access the instance attributes of `A` in the same way as a method written in the class definition. We then invoke it on `a`.
 
 ```{.python .input #oo-design-utilities-3}
 @add_to_class(A)
@@ -121,9 +125,14 @@ class B(d2l.HyperParameters):
 b = B(a=1, b=2, c=3)
 ```
 
-The final utility allows us to plot experiment progress interactively while it is going on. In deference to the much more powerful (and complex) [TensorBoard](https://www.tensorflow.org/tensorboard) we name it `ProgressBoard`. The  implementation is deferred to :numref:`sec_utils`. For now, let's simply see it in action.
+The final utility plots experiment progress interactively. We call it
+`ProgressBoard`; its implementation is deferred to :numref:`sec_utils`.
 
-The `draw` method records a point `(x, y)` to be shown in the figure, with `label` specified in the legend. The optional `every_n` smooths the line: it shows one point per $n$ calls to `draw`, plotting the average of the last $n$ recorded values. As we explain just below, `draw` is *asynchronous*: it merely schedules the point and returns immediately, so that plotting never slows down training.
+The `draw` method records a point `(x, y)` to be shown in the figure, with
+`label` specified in the legend. The optional `every_n` smooths the line by
+plotting the average of the last $n$ recorded values. The method schedules the
+point and returns immediately, reducing synchronization and rendering overhead
+on the training path.
 
 ```{.python .input #oo-design-utilities-6}
 class ProgressBoard(d2l.HyperParameters):  #@save
@@ -140,23 +149,22 @@ class ProgressBoard(d2l.HyperParameters):  #@save
 
 Why does `draw` go to the trouble of *scheduling* work instead of plotting
 right away? The answer previews a theme that runs through the entire book.
-Modern frameworks get their speed by *compiling* the training computation into a
-graph that runs on the accelerator with little Python in the loop. Compilation
-imposes two rules we must respect. First, a compiled step has to be *pure*: a
-`print` or a plotting call inside it cannot be captured by the compiler, forcing a
-fallback to slower eager execution. Second, the accelerator runs *asynchronously*,
+Modern frameworks can compile or trace the training computation so that an
+accelerator executes it with little Python in the loop. The exact restrictions
+differ by framework: Python side effects may cause graph breaks, execute only
+during tracing, or be rejected. A second issue is common to accelerator
+execution: the device often runs *asynchronously*,
 ahead of Python; the instant we ask for a concrete number (to print or plot it),
 Python must *block* until the device catches up, stalling the very pipeline we
 worked to speed up.
 
-Real-time monitoring therefore seems to be at odds with efficiency. `ProgressBoard`
-resolves the tension by *decoupling* the two: `draw` hands the value to a queue and
-returns at once, while a background thread performs the device-to-host transfer and
-the (comparatively slow) rendering at its own pace, dropping points if it falls
-behind, since a live loss curve needs no more than a few updates per second. The
-training loop stays compiled and the device stays busy, yet we still watch the loss
-go down as it happens. The pattern is general: keep the hot path pure and compiled,
-and push logging, plotting, and checkpointing off to the side.
+`ProgressBoard` decouples monitoring from rendering: `draw` hands the value
+to a queue and returns, while a background thread performs device-to-host
+transfer and rendering at its own pace, dropping points if it falls behind.
+This design usually keeps rendering off the critical path, although queueing,
+host transfer, and the worker still have a measurable cost. The general pattern
+is to keep the hot path compatible with compilation and move logging, plotting,
+and checkpointing outside it.
 
 In the following example, we draw `sin` and `cos` with different smoothness. If you
 run this code block interactively, you will see the lines grow in animation. Because
@@ -394,17 +402,17 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
 ```
 
 :begin_tab:`mxnet`
-You may notice that `Module` is a subclass of `nn.Block`, the base class of neural networks in Gluon.
+`Module` is a subclass of `nn.Block`, the base class of neural networks in Gluon.
 It provides convenient features for handling neural networks. For example, if we define a `forward` method, such as `forward(self, X)`, then for an instance `a` we can invoke this method by `a(X)`. This works since it calls the `forward` method in the built-in `__call__` method. You can find more details and examples about `nn.Block` in :numref:`sec_model_construction`.
 :end_tab:
 
 :begin_tab:`pytorch`
-You may notice that `Module` is a subclass of `nn.Module`, the base class of neural networks in PyTorch.
+`Module` is a subclass of `nn.Module`, the base class of neural networks in PyTorch.
 It provides convenient features for handling neural networks. For example, if we define a `forward` method, such as `forward(self, X)`, then for an instance `a` we can invoke this method by `a(X)`. This works since it calls the `forward` method in the built-in `__call__` method. You can find more details and examples about `nn.Module` in :numref:`sec_model_construction`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-You may notice that `Module` is a subclass of `tf.keras.Model`, the base class of neural networks in TensorFlow.
+`Module` is a subclass of `tf.keras.Model`, the base class of neural networks in TensorFlow.
 It provides convenient features for handling neural networks. For example, it invokes the `call` method in the built-in `__call__` method. Here we redirect `call` to the `forward` method, saving its arguments as a class attribute, consistent with the `forward` convention used elsewhere in the book.
 Note that in `__init__` we remove the `loss` instance attribute
 that Keras 3 sets to `None`,
@@ -420,7 +428,7 @@ book. Later, `nnx.jit` and `nnx.value_and_grad` will traverse that object graph
 without requiring a separate parameter dictionary.
 :end_tab:
 
-##  Data
+## Data
 :label:`oo-design-data`
 
 The `DataModule` class is the base class for data. Quite frequently the `__init__` method is used to prepare the data. This includes downloading and preprocessing if needed. The `train_dataloader` returns the data loader for the training dataset. A data loader is a (Python) generator that yields a data batch each time it is used. This batch is then fed into the `training_step` method of `Module` to compute the loss. There is an optional `val_dataloader` to return the validation dataset loader. It behaves in the same manner, except that it yields data batches for the `validation_step` method in `Module`.
@@ -669,17 +677,12 @@ class Trainer(d2l.HyperParameters):  #@save
 
 ## Summary
 
-The classes above sketch the object-oriented design
-for our deep learning implementations: how their objects
-store data and interact with each other.
-We will keep enriching implementations of these classes,
-such as via `@add_to_class`,
-in the rest of the book.
-Moreover,
-these fully implemented classes
-are saved in the [D2L library](https://github.com/d2l-ai/d2l-en/tree/master/d2l),
-a *lightweight toolkit* that makes structured modeling for deep learning easy. 
-In particular, it facilitates reusing many components between projects without changing much at all. This modularity keeps implementations concise: you can swap just the optimizer, the model, or the dataset, and it can do the same for your own projects. 
+The `Module`, `DataModule`, and `Trainer` classes separate models, datasets,
+and optimization loops. Later sections extend these classes with
+`@add_to_class`. Their complete implementations are also available in the
+[D2L library](https://github.com/d2l-ai/d2l-en/tree/master/d2l). This modular
+design permits a model, optimizer, or dataset to change without rewriting the
+other components.
 
 
 ## Exercises
@@ -754,7 +757,7 @@ collaborating classes:
 ::: {.slide title="Define a class, then grow it"}
 [Utilities]{.kicker}
 
-A notebook wants short cells, so declare the **shell** first and instantiate it...
+To keep notebook cells focused, declare the class first and instantiate it:
 
 @oo-design-utilities-2
 
@@ -786,7 +789,7 @@ each next to the prose that explains it.
 :::
 :::
 
-::: {.slide title="Stop hand-copying constructor args"}
+::: {.slide title="Store constructor arguments consistently"}
 [Utilities]{.kicker}
 
 Every `__init__` is full of `self.lr = lr; self.n = n; ...`. The
@@ -820,8 +823,8 @@ $n$ values:
 :::
 
 ::: {.d2l-note}
-Why `draw` merely *schedules* the point (and `flush()` waits for the
-queue) is the point of the next slide.
+Fetching a device value can synchronize execution; scheduling the point and
+waiting only at `flush()` separates measurement from rendering.
 :::
 :::
 
@@ -840,9 +843,9 @@ rules:
 . . .
 
 ::: {.d2l-note .warn}
-So every naïve "plot the loss each batch" either breaks the compiled
-graph or drains the device pipeline. Real-time monitoring and efficiency
-seem to be at war.
+A direct plotting call in every batch can break a compiled graph or force
+frequent device synchronization. Monitoring therefore needs a separate path
+from the compiled training step.
 :::
 :::
 
@@ -883,7 +886,7 @@ compiled; push logging, plotting, and checkpointing off to the side.**
 Every model subclasses `Module` and supplies three things:
 
 - **`forward`** / `loss`: the prediction and how wrong it is.
-- **`training_step`**: loss on one batch (plots it for free).
+- **`training_step`**: computes the loss for one batch and schedules its metric for plotting.
 - **`configure_optimizers`**: the optimizer to use.
 
 ::: {.d2l-note}
@@ -898,13 +901,13 @@ instance is callable: `model(X)` runs `forward`.
 :::
 :::
 
-::: {.slide title="`Module`: the same contract, in NNX" only="jax"}
+::: {.slide title="The `Module` interface in NNX" only="jax"}
 [Base classes]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 An NNX module is an ordinary Python object that **owns its parameters**.
-The contract is the same as everywhere else:
+The interface has the same three responsibilities:
 
 - `forward` / `__call__`: the prediction.
 - **`training_step`**: loss on one batch; the trainer differentiates it
@@ -913,8 +916,8 @@ The contract is the same as everywhere else:
   `nnx.Optimizer`.
 
 ::: {.d2l-note .rule}
-JAX still traces pure functions under the hood — NNX splits the module
-into structure and state at the `jit` boundary, so *we* never have to.
+JAX traces pure functions; NNX separates module structure and state at the
+`jit` boundary.
 :::
 :::
 
@@ -978,7 +981,7 @@ NNX modules own parameters, random-number streams, and mutable collections.
 training and validation modes:
 
 ::: {.d2l-note .rule}
-Same `fit(model, data)` contract; `nnx.jit` follows the model and optimizer
+The same `fit(model, data)` interface applies; `nnx.jit` follows the model and optimizer
 graphs through each compiled step.
 :::
 :::
@@ -1010,9 +1013,9 @@ self.val_model = nnx.view(
 :::
 
 ::: {.col}
-- `ProgressBoard` plots the loss live yet never blocks: **keep the hot
-  path pure and compiled; push logging off to the side**, a theme that
-  recurs all book.
+- `ProgressBoard` plots loss while reducing synchronization in the training
+  path: **keep compiled computation pure and move logging to a separate
+  path**. This design recurs throughout the book.
 :::
 :::
 :::
@@ -1030,9 +1033,9 @@ self.val_model = nnx.view(
 :::
 
 ::: {.col}
-- `ProgressBoard` plots the loss live yet never blocks: **keep the hot
-  path pure and compiled; push logging off to the side**, a theme that
-  recurs all book.
+- `ProgressBoard` plots loss while reducing synchronization in the training
+  path: **keep compiled computation pure and move logging to a separate
+  path**. This design recurs throughout the book.
 - **Watch the framing:** NNX keeps JAX transformations functional while
   presenting the model, variables, and optimizer as explicit object graphs.
 :::

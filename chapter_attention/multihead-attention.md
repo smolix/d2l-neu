@@ -1,22 +1,15 @@
 # Multi-Head and Cross-Attention
 :label:`sec_multihead-attention`
 
-Scaled dot product attention, as built in :numref:`sec_attention-scoring-functions`,
-gives each query exactly one probability distribution over the keys, and
-returns the correspondingly weighted average of the values. One distribution
-per query is a real restriction: a token in a sentence participates in several
-relations at once — it agrees with a verb, refers back to an entity, sits
-inside a phrase — and a single weighted average must blend all of them into
-one vector. This section first makes the restriction precise: we construct a
-task on which a single attention head provably loses half of what it is asked
-to report, however it allocates its weights, and we verify the bound
-numerically. *Multi-head attention* :cite:`Vaswani.Shazeer.Parmar.ea.2017`
-removes the restriction at essentially no extra cost, and we implement it
-with one batched matrix multiplication for all heads — a common
-implementation strategy (fused attention kernels keep an explicit head axis
-instead). Finally we separate what is often conflated: the attention
-*function* is one piece of code, and *self-attention* and *cross-attention*
-are merely two ways of wiring its inputs.
+Scaled dot-product attention assigns each query one distribution over the keys
+and returns one weighted average of the values. A single average cannot preserve
+several independently requested values. We demonstrate this limitation on a
+task for which any single head loses half of the target variance.
+*Multi-head attention* :cite:`Vaswani.Shazeer.Parmar.ea.2017` computes several
+projected attention outputs and combines them linearly. With the usual choice
+of head dimensions, this changes the representation without changing the
+leading parameter or FLOP counts. We then distinguish self-attention and
+cross-attention as two input configurations of the same operation.
 
 ```{.python .input #multihead-attention-multi-head-and-cross-attention}
 %%tab pytorch
@@ -35,9 +28,9 @@ import jax
 from jax import numpy as jnp
 ```
 
-## One Head Must Average
+## A One-Mixture Bottleneck with Position-Only Keys
 
-Here is the smallest task that defeats a single head. Two source positions
+Consider a task that exposes this limitation. Two source positions
 hold value vectors $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^d$, drawn
 independently at random for every example; their keys mark only the
 *positions*, not the content. A query must report **both** values: the target
@@ -52,9 +45,11 @@ linear readout $\mathbf{W}_o \mathbf{m}$. Since the keys are fixed position
 markers, the weights cannot depend on the values: whatever the head learns,
 it applies the *same* mixture to every example. How well can it do?
 
-**Proposition.** For independent isotropic Gaussian values, the best
-achievable relative squared error of a single head on the copy-both task is
-$1/2$ — for *every* choice of $(\alpha_1, \alpha_2)$.
+**Proposition.** Consider one attention layer with two fixed, position-only
+keys, independent isotropic Gaussian values, no residual path, and a linear
+readout. For the copy-both task, the best achievable relative squared error of
+a single head is $1/2$ for every softmax pair
+$(\alpha_1,\alpha_2)$.
 
 **Proof.** Given the mixture $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2
 \mathbf{v}_2$, the best estimate of $\mathbf{v}_1$ is the conditional mean
@@ -62,14 +57,14 @@ $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}] = \tfrac{\alpha_1}{\alpha_1^2 +
 \alpha_2^2}\, \mathbf{m}$, which is linear, so a linear readout attains it.
 Its per-dimension error variance is $1 - \tfrac{\alpha_1^2}{\alpha_1^2 +
 \alpha_2^2} = \tfrac{\alpha_2^2}{\alpha_1^2 + \alpha_2^2}$; the error for
-$\mathbf{v}_2$ is $\tfrac{\alpha_1^2}{\alpha_1^2 + \alpha_2^2}$. The two
-add to exactly $1$ per dimension, against the target's total of $2$: half
-the variance is gone, no matter how the head splits its attention.
+$\mathbf{v}_2$ is $\tfrac{\alpha_1^2}{\alpha_1^2 + \alpha_2^2}$. The two errors sum to exactly $1$ per dimension, while the target's total
+variance is $2$ per dimension. Thus the relative squared error is $1/2$
+regardless of how the head splits its attention.
 $\blacksquare$
 
-The knob that softmax controls — where to put the weight — cannot help,
-because the failure is structural: one head hands the readout a *single*
-mixture of the values, and the task needs two. Let's watch the bound hold.
+Changing the softmax weights cannot remove the error because one head supplies
+the readout with only a single mixture of the two values. The following
+experiment verifies the bound.
 
 ```{.python .input #multihead-attention-one-head-must-average-1}
 %%tab pytorch
@@ -133,11 +128,11 @@ for a in (1.0, 0.88):
           f'relative error {readout_error(M2, target):.1e}')
 ```
 
-Two heads collapse the error by orders of magnitude, down to the
-least-squares solver's floating-point noise — and note that the second row
-does it with *soft* attention, weights $(0.88, 0.12)$. Sharpness is not
-the point. The two heads supply two different mixtures, the readout inverts
-the $2 \times 2$ mixing matrix, and both values come out exactly (the
+Two heads reduce the error to the least-squares solver's floating-point
+precision. The second row does so with *soft* attention weights
+$(0.88, 0.12)$. The two heads need distinct rather than one-hot weightings:
+they supply two mixtures, the readout inverts the $2 \times 2$ mixing matrix,
+and both values are recovered exactly (the
 inversion is well conditioned as long as the heads differ appreciably; the
 exercises probe what happens as they collapse toward each other).
 :numref:`fig_one-head-averages` summarizes the geometry.
@@ -146,17 +141,18 @@ exercises probe what happens as they collapse toward each other).
 :label:`fig_one-head-averages`
 
 The bound is a fact about this deliberately restricted interface — one layer,
-with value-blind keys that mark position only — not a universal law: a one-head
-model with content-dependent keys, more depth, or a residual connection is not
-bound by it, and the copy-both separation from two heads narrows accordingly.
+with value-blind keys that mark position only — not a universal law: it
+lifts once a one-head model gets content-dependent keys, more depth, or a
+residual connection, and the copy-both separation from two heads narrows
+accordingly.
 
-This is the design brief for multi-head attention: give each query several
-independently parametrized attention distributions — several *views* of the
-same key–value set — and let a learned output projection recombine them.
+Multi-head attention addresses this limitation by assigning each query several
+independently parameterized attention distributions and recombining their
+outputs with a learned projection.
 
 ## Multi-Head Attention
 
-### From One Head to $h$ Heads
+### Extending to $h$ Heads
 
 Rather than hand-designing the heads as above, we learn them. Given a query
 $\mathbf{q} \in \mathbb{R}^{d}$, keys $\mathbf{k} \in \mathbb{R}^{d}$, and
@@ -186,12 +182,15 @@ $$
 ![Multi-head attention: each head projects queries, keys, and values into its own subspace and attends there; the head outputs are concatenated and linearly recombined.](../img/mdl-attention-multi-head.svg)
 :label:`fig_multi-head-attention`
 
-### Same FLOPs, More Views
+### Parameter and FLOP Counts
 
 The standard dimension choice makes the heads collectively no more expensive
 than one big head: set the per-head width to $p = d/h$, so the $h$ heads
 together produce $hp = d$ numbers per token, exactly what a single head of
-width $d$ would. For a sequence of $n$ tokens the cost is then
+width $d$ would. For self-attention, write the sequence inputs as
+$\mathbf{Q},\mathbf{K},\mathbf{V}\in\mathbb{R}^{n\times d}$; each of the
+four learned projections is a $d\times d$ matrix, and each head receives
+matrices of shape $n\times p$. The resulting cost is
 
 $$
 \underbrace{8nd^2}_{\textrm{projections}} \;+\; \underbrace{4n^2 d}_{\textrm{scores and mixing}} \quad \textrm{FLOPs,} \qquad 4d^2 \ \textrm{parameters,}
@@ -201,16 +200,17 @@ $$
 *independent of $h$*: the four projection matrices are $d \times d$
 regardless of how their outputs are sliced into heads, and each head's score
 and mixing matmuls shrink by the factor $h$ that their count grows by
-(counting one multiply–add as two FLOPs). In this arithmetic the number of
-heads is a free dial that buys representational diversity, not extra
-compute — realized cost is not quite as flat, since more heads mean more,
-smaller matmuls and softmaxes for the kernels to keep efficient. What *does*
+(counting one multiply–add as two FLOPs). In this arithmetic, the number of
+heads changes the representation but not the leading operation count.
+Realized cost is not exactly constant because increasing the number of heads
+produces more, smaller matrix multiplications and softmaxes, whose kernel
+efficiency may differ. What *does*
 change with $h$ is the shape of the attention map — $h$ distributions of $n$
 weights per query instead of one.
 
 ### Implementation
 
-The per-head dimension choice also yields a standard implementation trick:
+The per-head dimension choice also yields a standard implementation:
 compute *one* query projection of width $d$, then
 *reshape* it into $h$ heads of width $d/h$, and fold the head axis into the
 batch axis. The attention code from :numref:`sec_attention-scoring-functions`
@@ -405,11 +405,11 @@ for num_heads in (1, 2, 4, 8):
 
 ## Self-Attention and Cross-Attention
 
-`MultiHeadAttention` takes three sequence arguments — queries, keys, values —
-and nothing in its code cares where they come from. The two wirings that
-dominate practice differ only in what we pass.
+`MultiHeadAttention` takes three sequence arguments: queries, keys, and values.
+Self-attention and cross-attention differ only in the sources of these
+arguments.
 
-### One Sequence Querying Itself
+### Self-Attention
 
 In *self-attention* :cite:`Lin.Feng.Santos.ea.2017,Vaswani.Shazeer.Parmar.ea.2017`,
 one sequence supplies all three arguments: every token emits a query against
@@ -423,10 +423,9 @@ $$
 $$
 :eqlabel:`eq_self-attention`
 
-where $f$ is multi-head attention pooling. Each token's new representation is
-assembled from the whole sequence in a single step — this is the layer that
-transformers stack, and its output shape equals its input shape, which is
-what makes stacking possible.
+where $f$ is multi-head attention pooling. Each token's new representation combines information from the whole
+sequence in a single step. Transformers stack these layers because the
+output and input shapes agree.
 
 ```{.python .input #multihead-attention-one-sequence-querying-itself}
 %%tab pytorch
@@ -449,17 +448,16 @@ d2l.check_shape(nnx.view(attention, deterministic=True)(
                 (batch_size, num_queries, num_hiddens))
 ```
 
-### One Sequence Querying Another
+### Cross-Attention
 
-In *cross-attention*, one sequence asks and another answers: the queries come
-from sequence $\mathbf{A}$, while keys and values come from sequence
-$\mathbf{B}$. The output has the length of $\mathbf{A}$ (one answer per
-question) and the information of $\mathbf{B}$. This is the wiring of the
+In *cross-attention*, the queries come from sequence $\mathbf{A}$, while keys
+and values come from sequence $\mathbf{B}$. The output has the length of
+$\mathbf{A}$ and aggregates information from $\mathbf{B}$. This is the wiring of the
 original encoder–decoder transformer, where each target-language position
 queries the source sentence; of a vision–language model, where text tokens
-query image patches; and of the historical alignment models that attention
-grew out of (:numref:`sec_attention-scoring-functions`). Same function, one
-changed argument:
+query image patches; and of the historical alignment models that introduced learned attention
+(:numref:`sec_attention-scoring-functions`). These cases use the same
+function with different argument sources:
 
 ```{.python .input #multihead-attention-one-sequence-querying-another}
 %%tab pytorch
@@ -478,10 +476,9 @@ d2l.check_shape(nnx.view(attention, deterministic=True)(
                 (batch_size, 4, num_hiddens))
 ```
 
-### An Alignment You Can Read
+### Visualizing Cross-Attention Alignment
 
-To see cross-attention *doing* something rather than merely reshaping, we
-strip it to its core. Assign every letter of the alphabet a random embedding,
+To visualize cross-attention, assign every letter of the alphabet a random embedding,
 and let the letters of one word query the letters of another through plain
 scaled dot product attention — no learned projections. Matching letters
 share an embedding, so their score concentrates near $\sqrt{d}$ after
@@ -524,30 +521,22 @@ their unique partners and attend sharply. The `a`, `t`, and `n` queries find
 *two* copies each and split their weight: a single head cannot choose
 between identical keys, the averaging of the first section in miniature.
 And the `e` query, whose letter does not occur in "translation" at all,
-spreads its weight diffusely: softmax must hand out probability mass
-somewhere even when nothing matches. Trained models show all three regimes
+spreads its weight diffusely because softmax assigns all probability mass
+across the available keys even when none matches. Trained models show all three regimes
 too, which is one reason reading attention maps as explanations requires
-care — a diffuse row may mean "nothing relevant", not "everything relevant".
+care. A diffuse row may indicate that no key is relevant rather than that
+all keys are relevant.
 
 ## Summary
 
-A single attention head gives each query one softmax distribution over the
-keys and hence one convex mixture of the values; on a task that asks one
-query to report two values through position-only keys — so the weights
-cannot adapt to the values — any single head loses half the target
-variance, however it allocates its weights — a limit of that value-blind,
-single-layer interface, not of one-head attention in general. Multi-head
-attention fixes this by running
-$h$ independently projected attention heads and linearly recombining their
-concatenated outputs. With the per-head width set to $d/h$, parameters and
-FLOPs are independent of $h$ — heads buy diversity of views, not extra
-compute — and the implementation folds the head axis into the batch axis so
-that all heads run as one batched matmul. The attention function is
-indifferent to where its arguments come from: self-attention feeds one
-sequence as queries, keys, and values alike (output length = input length,
-the stackable case), while cross-attention lets one sequence query another
-(output length = query length), which is the encoder–decoder and
-multimodal wiring.
+A single attention head gives each query one distribution over the keys and
+therefore one value mixture. On the value-blind copy-both task, any single head
+loses half the target variance. Multi-head attention computes $h$ projected
+mixtures and combines them linearly. With per-head width $d/h$, the parameter
+and FLOP counts are independent of $h$; implementations can fold the head axis
+into the batch axis. Self-attention draws queries, keys, and values from one
+sequence. Cross-attention draws queries from one sequence and keys and values
+from another, with output length equal to the query length.
 
 ## Exercises
 
@@ -589,12 +578,12 @@ multimodal wiring.
 [Dive into Deep Learning · §10.3]{.kicker}
 
 Multi-head and cross-attention<br>
-**why one head must average · heads for free · self- vs. cross-attention**
+**single-head limitations · multi-head computation · self- and cross-attention**
 :::
 :::
 
-::: {.slide title="One head, one mixture"}
-[The smallest task that defeats a single head]{.kicker}
+::: {.slide title="A single head provides one mixture"}
+[A limiting example]{.kicker}
 
 Two positions hold random values $\mathbf{v}_1, \mathbf{v}_2$; keys mark
 positions only. One query must report **both**:
@@ -608,8 +597,7 @@ A head can only output $\mathbf{W}_o(\alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}
 **Proposition.** Best achievable relative squared error $= 1/2$,
 for *every* choice of $(\alpha_1, \alpha_2)$.
 
-The knob softmax controls — where the weight goes — cannot help. The failure
-is structural: one mixture, two requests.
+Changing the weights cannot create a second independent mixture.
 :::
 
 ::: {.slide title="The bound, numerically"}
@@ -623,10 +611,10 @@ is structural: one mixture, two requests.
 ::: {.slide title="Two heads suffice"}
 @!multihead-attention-one-head-must-average-2
 
-- Error collapses to solver noise, orders of magnitude down.
-- Second row: *soft* heads, weights $(0.88, 0.12)$ — sharpness is not the
-  point. Two **different** mixtures let the readout invert the
-  $2 \times 2$ mixing matrix.
+- The error falls to the solver's floating-point precision.
+- Soft heads with weights $(0.88, 0.12)$ also recover both values. Two
+  **different** mixtures let the readout invert the $2 \times 2$ mixing
+  matrix; the weights need not be one-hot.
 
 @fig:mdl-attention-one-head-averages
 :::
@@ -640,13 +628,14 @@ $$\mathbf{h}_i = f\big(\mathbf W_i^{(q)}\mathbf q, \mathbf W_i^{(k)}\mathbf k, \
 @fig:multi-head-attention
 :::
 
-::: {.slide title="Heads are free"}
+::: {.slide title="Cost of multiple heads"}
 Per-head width $p = d/h$ ⇒ for $n$ tokens:
 
 $$\underbrace{8nd^2}_{\textrm{projections}} + \underbrace{4n^2 d}_{\textrm{scores, mixing}} \ \textrm{FLOPs}, \qquad 4d^2 \ \textrm{parameters}$$
 
-— **independent of $h$**. Heads buy diversity of views, not FLOPs or
-parameters (realized kernel efficiency does vary with head count).
+The expression is **independent of $h$**. The leading FLOP and parameter
+counts remain fixed,
+although kernel efficiency varies with head count.
 
 ::: {.d2l-note}
 What does change with $h$: the attention map — $h$ distributions per query
@@ -661,9 +650,10 @@ fold the head axis into the batch axis:
 @multihead-attention-implementation-1
 :::
 
-::: {.slide title="The reshape trick"}
+::: {.slide title="Folding heads into the batch axis"}
 `(batch, len, d)` → `(batch, len, h, d/h)` → `(batch·h, len, d/h)`:
-the attention code sees heads as extra batch entries — no loop over heads.
+The attention code treats heads as extra batch entries and requires no loop
+over heads.
 
 @multihead-attention-implementation-2
 :::
@@ -677,7 +667,8 @@ the attention code sees heads as extra batch entries — no loop over heads.
 :::
 
 ::: {.slide title="Self- vs. cross-attention: two wirings"}
-The function never asks where its arguments come from.
+Self-attention and cross-attention differ only in the sources of their
+arguments.
 
 - **Self-attention**: `attention(X, X, X)` — one sequence queries itself;
   output shape = input shape (the stackable case).
@@ -687,7 +678,7 @@ The function never asks where its arguments come from.
 @multihead-attention-one-sequence-querying-another
 :::
 
-::: {.slide title="An alignment you can read"}
+::: {.slide title="A cross-attention alignment"}
 Letters of "attention" query letters of "translation" through raw
 dot product attention on shared random embeddings:
 
@@ -698,19 +689,21 @@ dot product attention on shared random embeddings:
 - `i`, `o`: unique partner → **sharp** attention.
 - `a`, `t`, `n`: two copies → weight **splits** — the averaging of the
   construction, in miniature.
-- `e`: no partner → **diffuse** row; softmax must spend its mass somewhere.
+- `e`: no partner → **diffuse** row because softmax still normalizes over all
+  keys.
 
 ::: {.d2l-note}
-A diffuse row may mean "nothing relevant", not "everything relevant" —
-one reason attention maps are tricky as explanations.
+A diffuse row may indicate that no key is relevant rather than that every key
+is relevant. This ambiguity limits attention maps as explanations.
 :::
 :::
 
 ::: {.slide title="Recap"}
-- One head = one softmax distribution per query = one value mixture; the
-  copy-both task loses half its variance, whatever the split.
+- One head provides one softmax distribution and one value mixture per
+  query; on the copy-both task its relative squared error is $1/2$.
 - Multi-head: $h$ independently projected heads, concatenated, recombined
-  by $\mathbf{W}_o$ — with $p = d/h$, same parameters and FLOPs as one head.
+  by $\mathbf{W}_o$. With $p = d/h$, the leading parameter and FLOP counts
+  equal those of one full-width head.
 - Implementation folds heads into the batch axis: one batched matmul.
 - Self-attention and cross-attention are the same code with different
   arguments; only the wiring differs.

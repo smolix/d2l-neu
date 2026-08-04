@@ -27,7 +27,7 @@ html: _book/index.html
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
+_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py tools/inject_outputs.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Verifying committed outputs are fresh ==="
 	@python3 tools/audit_outputs.py --verify-fresh || \
@@ -53,7 +53,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 
-_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/build_lib.py
+_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/build_lib.py static/d2l-preamble.tex
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating PDF sources for $* ==="
 	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen-$(TS).log
@@ -69,16 +69,35 @@ _pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/bui
 pdf-preflight:
 	@command -v xelatex >/dev/null 2>&1 || { echo "ERROR: xelatex not found on PATH — install TeX Live (e.g. apt install texlive-xetex texlive-latex-recommended texlive-fonts-recommended) for PDF builds."; exit 1; }
 	@command -v rsvg-convert >/dev/null 2>&1 || { echo "ERROR: rsvg-convert not found on PATH — install librsvg2-bin (Quarto converts SVG→PDF with it)."; exit 1; }
+	@# Quarto stages each render session under $$TMPDIR (default /tmp), which on
+	@# this box is a small dedicated partition. Running out of it mid-render
+	@# crashes quarto mid-.tex (2026-08-02: four parallel PDF sessions hit a
+	@# /tmp filled with ~378 MB git-snapshot dirs the Codex CLI leaks per
+	@# session, and truncated half-book PDFs were staged). Fail fast instead:
+	@# 2 GiB comfortably covers RENDER_JOBS concurrent sessions. Clean stale
+	@# /tmp/tmp.* snapshot dirs to recover space; D2L_SKIP_TMP_CHECK=1 overrides.
+	@if [ -z "$$D2L_SKIP_TMP_CHECK" ]; then \
+		avail_kb=$$(df -Pk "$${TMPDIR:-/tmp}" | awk 'NR==2 {print $$4}'); \
+		if [ -n "$$avail_kb" ] && [ "$$avail_kb" -lt 2097152 ]; then \
+			echo "ERROR: $${TMPDIR:-/tmp} has only $$((avail_kb / 1024)) MiB free (< 2 GiB);"; \
+			echo "       quarto PDF sessions will die mid-render and stage truncated books."; \
+			echo "       Clear stale /tmp/tmp.* snapshot dirs (Codex CLI leaks ~378 MB per"; \
+			echo "       session) or set D2L_SKIP_TMP_CHECK=1 to proceed anyway."; \
+			exit 1; \
+		fi; \
+	fi
 	@echo "PDF toolchain OK: $$(xelatex --version 2>/dev/null | head -1), rsvg-convert $$(rsvg-convert --version 2>/dev/null)"
 
 # Generate per-framework PDF rules (GNU Make only supports one % per pattern)
 define PDF_RULE
-_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated $$(wildcard outputs/$(1)/*/*.json) | .venv-build/.synced pdf-preflight
+_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated tools/inject_outputs.py tools/build_one_pdf.sh tools/fix_latex.py $$(wildcard outputs/$(1)/*/*.json) | .venv-build/.synced pdf-preflight
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building PDF ($(1)) ==="
 	@QUARTO="$(CURDIR)/$(QUARTO)" tools/build_one_pdf.sh $(1) 2>&1 | tee $(LOGDIR)/pdf-$(1)-$(TS).log
 
 pdf-$(1): _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf
+	@mkdir -p _book/pdf
+	@cp -f "$$<" _book/pdf/
 	@echo "Output: $$<"
 	@echo "Log:    $(LOGDIR)/pdf-$(1)-$(TS).log"
 endef

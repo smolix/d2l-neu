@@ -1,20 +1,12 @@
 # Notation
 :label:`chap_notation`
 
-Throughout this book, we adhere 
-to the following notational conventions.
-Note that some of these symbols are placeholders,
-while others refer to specific objects.
-As a general rule of thumb, 
-the indefinite article "a" often indicates
-that the symbol is a placeholder
-and that similarly formatted symbols
-can denote other objects of the same type.
-For example, "$x$: a scalar" means 
-that lowercased letters generally
-represent scalar values,
-but "$\mathbb{Z}$: the set of integers"
-refers specifically to the symbol $\mathbb{Z}$.
+This book uses the following notational conventions. Some entries describe a
+class of symbols, while others define one particular symbol. The indefinite
+article “a” marks a convention: for example, “$x$: a scalar” means that
+lowercase letters generally denote scalars. The definite article marks a fixed
+meaning: “$\mathbb{Z}$: the set of integers” refers specifically to
+$\mathbb{Z}$.
 
 
 
@@ -26,7 +18,7 @@ refers specifically to the symbol $\mathbb{Z}$.
 * $\mathsf{X}$: a general tensor
 * $\mathbf{I}$: the identity matrix (of some given dimension), i.e., a square matrix with $1$ on all diagonal entries and $0$ on all off-diagonals
 * $x_i$, $[\mathbf{x}]_i$: the $i^\textrm{th}$ element of vector $\mathbf{x}$
-* $x_{ij}$, $x_{i,j}$,$[\mathbf{X}]_{ij}$, $[\mathbf{X}]_{i,j}$: the element of matrix $\mathbf{X}$ at row $i$ and column $j$.
+* $x_{ij}$, $x_{i,j}$, $[\mathbf{X}]_{ij}$, $[\mathbf{X}]_{i,j}$: the element of matrix $\mathbf{X}$ in row $i$ and column $j$
 
 
 
@@ -38,11 +30,11 @@ refers specifically to the symbol $\mathbb{Z}$.
 * $\mathbb{Z}^+$: the set of positive integers
 * $\mathbb{R}$: the set of real numbers
 * $\mathbb{R}^n$: the set of $n$-dimensional vectors of real numbers
-* $\mathbb{R}^{a\times b}$: The set of matrices of real numbers with $a$ rows and $b$ columns
+* $\mathbb{R}^{a\times b}$: the set of real matrices with $a$ rows and $b$ columns
 * $|\mathcal{X}|$: cardinality (number of elements) of set $\mathcal{X}$
 * $\mathcal{A}\cup\mathcal{B}$: union of sets $\mathcal{A}$ and $\mathcal{B}$
 * $\mathcal{A}\cap\mathcal{B}$: intersection of sets $\mathcal{A}$ and $\mathcal{B}$
-* $\mathcal{A}\setminus\mathcal{B}$: set subtraction of $\mathcal{B}$ from $\mathcal{A}$ (contains only those elements of $\mathcal{A}$ that do not belong to $\mathcal{B}$)
+* $\mathcal{A}\setminus\mathcal{B}$: the elements of $\mathcal{A}$ that do not belong to $\mathcal{B}$
 
 
 
@@ -53,8 +45,8 @@ refers specifically to the symbol $\mathbb{Z}$.
 * $\log(\cdot)$: the natural logarithm (base $e$)
 * $\log_2(\cdot)$: logarithm to base $2$
 * $\exp(\cdot)$: the exponential function
-* $\mathbf{1}(\cdot)$: the indicator function; evaluates to $1$ if the boolean argument is true, and $0$ otherwise
-* $\mathbf{1}_{\mathcal{X}}(z)$: the set-membership indicator function; evaluates to $1$ if the element $z$ belongs to the set $\mathcal{X}$ and $0$ otherwise
+* $\mathbf{1}(\cdot)$: the indicator function, equal to $1$ when its Boolean argument is true and $0$ otherwise
+* $\mathbf{1}_{\mathcal{X}}(z)$: the set-membership indicator, equal to $1$ when $z\in\mathcal{X}$ and $0$ otherwise
 * $\mathbf{(\cdot)}^\top$: transpose of a vector or a matrix
 * $\mathbf{X}^{-1}$: inverse of matrix $\mathbf{X}$
 * $\odot$: Hadamard (elementwise) product
@@ -83,18 +75,18 @@ refers specifically to the symbol $\mathbb{Z}$.
 * $X$: a random variable
 * $P$: a probability distribution
 * $X \sim P$: the random variable $X$ follows distribution $P$
-* $P(X=x)$: the probability assigned to the event where random variable $X$ takes value $x$
+* $P(X=x)$: the probability that random variable $X$ takes the value $x$
 * $P(X \mid Y)$: the conditional probability distribution of $X$ given $Y$
 * $p(\cdot)$: a probability density function (PDF) associated with distribution $P$
 * ${E}[X]$: expectation of a random variable $X$
 * $X \perp Y$: random variables $X$ and $Y$ are independent
-* $X \perp Y \mid Z$: random variables  $X$  and  $Y$ are conditionally independent given $Z$
+* $X \perp Y \mid Z$: random variables $X$ and $Y$ are conditionally independent given $Z$
 * $\sigma_X$: standard deviation of random variable $X$
 * $\textrm{Var}(X)$: variance of random variable $X$, equal to $\sigma^2_X$
 * $\textrm{Cov}(X, Y)$: covariance of random variables $X$ and $Y$
-* $\rho(X, Y)$: the Pearson correlation coefficient between $X$ and $Y$, equals $\frac{\textrm{Cov}(X, Y)}{\sigma_X \sigma_Y}$
+* $\rho(X, Y)$: the Pearson correlation coefficient, $\frac{\textrm{Cov}(X, Y)}{\sigma_X \sigma_Y}$
 * $H(X)$: entropy of random variable $X$
-* $D_{\textrm{KL}}(P\|Q)$: the KL-divergence (or relative entropy) from distribution $Q$ to distribution $P$
+* $D_{\textrm{KL}}(P\|Q)$: the KL divergence (relative entropy) from distribution $P$ to distribution $Q$
 
 
 

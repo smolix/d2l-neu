@@ -6,17 +6,20 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Blocks, Bottlenecks, and Branches: VGG, NiN, GoogLeNet
 :label:`sec_blocks`
 
-AlexNet gave empirical proof that deep convolutional networks work, but it offered no template for designing the next one: every layer was shaped individually. In the two years that followed, progress came less from new operations than from new ways of *organizing* convolutions, and the three architectures of this section each contributed one organizing idea that every current network still uses. VGG :cite:`Simonyan.Zisserman.2014` made the repeated *block* the unit of design, so that a whole network can be specified by a short list of block parameters. Network in network (NiN) :cite:`Lin.Chen.Yan.2013` mixed channels with $1 \times 1$ convolutions and replaced the parameter-hungry fully connected head with global average pooling. GoogLeNet :cite:`Szegedy.Liu.Jia.ea.2015` ran convolutions of several sizes in parallel inside a *multi-branch* block and, in passing, established the stem-body-head vocabulary in which architectures are still described. The progression mirrors VLSI chip design, where engineers moved from placing transistors to logical elements to logic blocks :cite:`Mead.1980`; carried to its conclusion, the unit of design today is often an entire pretrained network, a *foundation model* :cite:`bommasani2021opportunities`.
+AlexNet demonstrated the effectiveness of deep convolutional networks, but its
+layers were designed individually. The next architectures introduced reusable
+organization. VGG :cite:`Simonyan.Zisserman.2014` made the repeated *block*
+the unit of design. Network in network (NiN) :cite:`Lin.Chen.Yan.2013` mixed
+channels with $1 \times 1$ convolutions and replaced fully connected
+classifiers by global average pooling. GoogLeNet
+:cite:`Szegedy.Liu.Jia.ea.2015` applied several convolution sizes in parallel
+within a multi-branch block and used the stem--body--head organization that
+remains common today.
 
 ```{.python .input #blocks-imports}
 %%tab mxnet
-# Memory-footprint knobs (set before importing mxnet). VGG and NiN train
-# back-to-back at 224x224; MXNet's default "Naive" GPU pool keeps each
-# training's freed blocks in size-exact free lists, so NiN's differently
-# shaped activations cannot reuse VGG's and the pool high-water grows. The
-# "Round" pool buckets allocations by rounded size, letting the second model
-# reuse the first's memory; disabling cuDNN autotune drops its scratch
-# workspace. Together: ~7.7 GiB -> ~6.4 GiB true peak, with identical results.
+# Bound allocator and autotuning memory while training several 224x224 models
+# in one process; these settings do not change the model computation.
 import os
 os.environ['MXNET_GPU_MEM_POOL_TYPE'] = 'Round'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
@@ -42,13 +45,8 @@ from d2l import tensorflow as d2l
 
 ```{.python .input #blocks-imports}
 %%tab jax
-# Memory-footprint knob (set before JAX initialises its GPU backend). At
-# 224x224 the VGG/NiN convolutions' true peak is dominated not by activations
-# but by the cuDNN convolution workspace XLA allocates while autotuning
-# algorithms. Capping XLA's memory pool bounds that workspace budget, so
-# autotuning simply picks the fastest algorithm that fits -- cutting the true
-# peak from ~7.6 GiB to ~6.4 GiB with numerically identical convolutions and
-# no slowdown (unlike disabling autotune outright).
+# Bound the JAX allocator while training several 224x224 models in one process;
+# this setting does not change the model computation.
 import os
 os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '.25'
 from d2l import jax as d2l
@@ -59,16 +57,32 @@ from jax import numpy as jnp
 ## VGG: Blocks as the Unit of Design
 :label:`sec_vgg`
 
-The idea of building networks from repeated blocks first emerged from the Visual Geometry Group (VGG) at Oxford University, in their eponymously named *VGG* network :cite:`Simonyan.Zisserman.2014`. Repeated structures are easy to express in code with loops and subroutines, and, as we will see, they turn the design of an entire network into the choice of a handful of numbers.
+VGG :cite:`Simonyan.Zisserman.2014` replaced individually chosen layers with
+repeated blocks. A block makes depth, channel count, and downsampling schedule
+explicit and lets code construct a network from a short configuration.
 
 ### VGG Blocks
 :label:`subsec_vgg-blocks`
 
-The classic building pattern of CNNs is a sequence of the following: (i) a convolutional layer with padding to maintain the resolution, (ii) a nonlinearity such as a ReLU, (iii) a pooling layer such as max-pooling to reduce the resolution. One problem with this approach is that the spatial resolution decreases quite rapidly. In particular, it imposes a hard limit of $\log_2 d$ convolutional layers on a network with input dimension $d$ before all resolution is used up. For instance, in the case of ImageNet, it would be impossible to have more than 8 convolutional layers in this way.
+If every convolution is followed immediately by stride-2 pooling, an input of
+width $d$ permits at most $\lfloor\log_2 d\rfloor$ such stages before its
+spatial extent collapses. For a 224-pixel ImageNet input, this gives at most
+seven or eight stages, depending on boundary conventions. Depth can instead
+increase within a fixed resolution stage.
 
-The key idea of :citet:`Simonyan.Zisserman.2014` was to use *multiple* convolutions in between downsampling via max-pooling in the form of a block. They were primarily interested in whether deep or wide networks perform better, and the receptive-field formula :eqref:`eq_receptive_field` explains why stacking is affordable: two stacked $3 \times 3$ convolutions (stride 1) see the same $5 \times 5$ window as a single $5 \times 5$ convolution while using $18c^2$ rather than $25c^2$ parameters for $c$ input and output channels, and three of them cover a $7 \times 7$ receptive field with $27c^2$ rather than $49c^2$ parameters, with a nonlinearity after every layer. In a rather detailed analysis they showed that deep and narrow networks significantly outperform their shallow counterparts. This set deep learning on a quest for ever deeper networks, with over 100 layers for typical applications. Stacking $3 \times 3$ convolutions became a gold standard in later deep networks, a design decision only revisited recently by :citet:`liu2022convnet`, and fast implementations for small convolutions became a staple on GPUs :cite:`lavin2016fast`.
+VGG places several stride-1 convolutions between pooling operations. Two
+stacked $3 \times 3$ convolutions see the same $5 \times 5$ window as one
+$5 \times 5$ convolution while using $18c^2$ rather than $25c^2$ weights
+when input and output widths are both $c$. Three layers cover a $7 \times 7$
+window with $27c^2$ rather than $49c^2$ weights, and insert a nonlinearity
+after every layer. The experiments of :citet:`Simonyan.Zisserman.2014` found
+that these deeper configurations improved ImageNet accuracy under their
+training protocol. Small stacked kernels consequently became common and
+received specialized GPU implementations :cite:`lavin2016fast`.
 
-Back to VGG: a VGG block consists of a *sequence* of convolutions with $3\times3$ kernels with padding of 1 (keeping height and width) followed by a $2 \times 2$ max-pooling layer with stride of 2 (halving height and width after each block). In the code below, we define a function called `vgg_block` to implement one VGG block. It takes two arguments, the number of convolutional layers `num_convs` and the number of output channels `num_channels`.
+A VGG block therefore contains `num_convs` convolutions with $3\times3$
+kernels and padding 1, followed by $2\times2$ max-pooling with stride 2. The
+function below takes the number of convolutions and their output channel count.
 
 ```{.python .input #vgg-vgg-blocks  n=2}
 %%tab mxnet
@@ -126,7 +140,7 @@ Like AlexNet and LeNet, the VGG network can be partitioned into two parts: the f
 ![From AlexNet to VGG. AlexNet's layers are all designed individually; VGG composes one repeated block, several $3 \times 3$ convolutions followed by max-pooling, at growing channel counts.](../img/arch-vgg.svg)
 :label:`fig_vgg`
 
-The convolutional part of the network connects several VGG blocks from :numref:`fig_vgg` (also defined in the `vgg_block` function) in succession. This grouping of convolutions is a pattern that has remained almost unchanged over the past decade, although the specific choice of operations has undergone considerable modifications. The variable `arch` consists of a list of tuples (one per block), where each contains two values: the number of convolutional layers and the number of output channels, which are precisely the arguments required to call the `vgg_block` function. As such, VGG defines a *family* of networks rather than just a specific manifestation. To build a specific network we simply iterate over `arch` to compose the blocks.
+The convolutional part of the network connects several VGG blocks from :numref:`fig_vgg` (also defined in the `vgg_block` function) in succession. This grouping of convolutions is a pattern that has remained almost unchanged over the past decade, although the specific choice of operations has undergone considerable modifications. The variable `arch` consists of a list of tuples (one per block), where each contains two values: the number of convolutional layers and the number of output channels, which are precisely the arguments required to call the `vgg_block` function. As such, VGG defines a *family* of networks rather than just a specific manifestation. To build a specific network, we iterate over `arch` and compose the blocks.
 
 ```{.python .input #vgg-vgg-network-1  n=5}
 %%tab pytorch
@@ -268,14 +282,22 @@ with d2l.try_gpu():
     trainer.fit(model, data)
 ```
 
-One might argue that VGG is the first truly modern convolutional neural network. While AlexNet introduced many of the components of what makes deep learning effective at scale, it is VGG that introduced blocks of repeated convolutions and a preference for deep and narrow networks. It is also the first network that is actually an entire family of similarly parametrized models, giving the practitioner an ample trade-off between complexity and speed, and its architecture-as-a-tuple pattern is how networks have been specified ever since.
+VGG established several durable design patterns: repeated convolutional
+blocks, deeper and narrower networks, and a family of models specified by
+block parameters. Varying those parameters exposes trade-offs between
+computational cost and accuracy.
 
 ## NiN: $1 \times 1$ Convolutions and Global Average Pooling
 :label:`sec_nin`
 
 LeNet, AlexNet, and VGG all share a common design pattern: extract features exploiting *spatial* structure via a sequence of convolutions and pooling layers and post-process the representations via fully connected layers. The improvements upon LeNet by AlexNet and VGG mainly lie in how these later networks widen and deepen these two modules.
 
-This design poses two major challenges. First, the fully connected layers at the end of the architecture consume tremendous numbers of parameters: even a simple model such as VGG-11 needs a matrix occupying almost 400 MB of RAM in single precision (FP32) just for its first fully connected layer. That outlay is invisible on a server but rules out deployment on memory-constrained mobile and embedded devices, where an image classifier cannot claim the bulk of the device's memory. Second, it is equally impossible to add fully connected layers earlier in the network to increase the degree of nonlinearity: doing so would destroy the spatial structure and require potentially even more memory.
+This design poses two challenges. First, the fully connected head contains
+many parameters: in VGG-11, the matrix for its first fully connected layer
+alone occupies almost 400 MB in single precision (FP32). This cost can rule
+out deployment on memory-constrained devices. Second, inserting fully
+connected layers earlier would discard spatial structure and require even
+more parameters.
 
 The *network in network* (*NiN*) blocks :cite:`Lin.Chen.Yan.2013` offer an alternative, capable of solving both problems in one simple strategy: (i) use $1 \times 1$ convolutions to add local nonlinearities across the channel activations and (ii) use global average pooling to integrate across all locations in the last representation layer. Note that global average pooling would not be effective, were it not for the added nonlinearities.
 
@@ -477,17 +499,23 @@ NiN has dramatically fewer parameters than AlexNet and VGG, primarily
 because it needs no giant fully connected layers. Instead, global average
 pooling replaces an expensive learned reduction with a simple average across
 locations. Under ideal translation equivariance, a translation merely
-permutes those locations, so the global average is invariant. Finite boundaries
-and strided stages make real networks only approximately shift-invariant. Two
+permutes those locations, so the global average is invariant, although finite
+boundaries and strided stages make real networks only approximately
+shift-invariant. Two
 of NiN's choices outlived it: $1 \times 1$ convolution for channel mixing and
 global average pooling as the common classification head.
 
 ## GoogLeNet: Multi-Branch Blocks and the Stem-Body-Head Pattern
 :label:`sec_googlenet`
 
-In 2014, *GoogLeNet* won the ImageNet Challenge :cite:`Szegedy.Liu.Jia.ea.2015`, using a structure that combined the strengths of NiN :cite:`Lin.Chen.Yan.2013`, repeated blocks :cite:`Simonyan.Zisserman.2014`, and a cocktail of convolution kernels. It was arguably also the first network that exhibited a clear distinction among the stem (data ingest), body (data processing), and head (prediction) in a CNN. This design pattern has persisted ever since in the design of deep networks: the *stem* is given by the first two or three convolutions that operate on the image. They extract low-level features from the underlying images. This is followed by a *body* of convolutional blocks. Finally, the *head* maps the features obtained so far to the required classification, segmentation, detection, or tracking problem at hand.
+In 2014, *GoogLeNet* won the ImageNet Challenge :cite:`Szegedy.Liu.Jia.ea.2015`, using a structure that combined the strengths of NiN :cite:`Lin.Chen.Yan.2013`, repeated blocks :cite:`Simonyan.Zisserman.2014`, and a cocktail of convolution kernels. It was arguably also the first network that exhibited a clear distinction among the stem (data ingest), body (data processing), and head (prediction) in a CNN. This design pattern has persisted ever since in the design of deep networks: the *stem* is the first two or three convolutions that operate on the image and extract its low-level features. This is followed by a *body* of convolutional blocks. Finally, the *head* maps the features obtained so far to the required classification, segmentation, detection, or tracking problem at hand.
 
-The key contribution in GoogLeNet was the design of the network body. It solved the problem of selecting convolution kernels in an ingenious way. While other works tried to identify which convolution, ranging from $1 \times 1$ to $11 \times 11$, would be best, it simply *concatenated* multi-branch convolutions. In what follows we introduce a slightly simplified version of GoogLeNet: the original design included a number of tricks for stabilizing training through intermediate loss functions, applied to multiple layers of the network. They are no longer necessary due to the availability of improved training algorithms.
+GoogLeNet's principal contribution was its multi-branch body. Instead of
+selecting one convolution size between $1 \times 1$ and $11 \times 11$, an
+Inception block applies several operations in parallel and concatenates their
+outputs. We present a simplified GoogLeNet; the original also used auxiliary
+classifiers at intermediate layers to stabilize training, which the
+implementations here omit.
 
 ### The Inception Block
 
@@ -603,7 +631,7 @@ class Inception(nnx.Module):
         return jnp.concatenate((b1, b2, b3, b4), axis=-1)
 ```
 
-To see how the shapes work out, follow the first Inception block of the body on an ImageNet-sized input, where it receives 192 channels at $28 \times 28$ resolution (the annotations in :numref:`fig_inception`). With branch outputs of $c_1 = 64$, $c_2 = (96, 128)$, $c_3 = (16, 32)$, and $c_4 = 32$, the block emits $64+128+32+32 = 256$ channels at the same $28 \times 28$ resolution: multi-branch blocks change the channel count, never the spatial size. The $1 \times 1$ bottlenecks are what make the wide branches affordable. A direct $5 \times 5$ convolution from 192 to 32 channels would need $25 \cdot 192 \cdot 32 \approx 154$k weights; squeezing to 16 channels first costs $192 \cdot 16$ weights for the reduction plus $25 \cdot 16 \cdot 32$ for the convolution, about 16k in total, a tenfold saving. This bottleneck-before-expensive-convolution trick reappears in nearly every architecture in the rest of this chapter.
+To see how the shapes work out, follow the first Inception block of the body on an ImageNet-sized input, where it receives 192 channels at $28 \times 28$ resolution (the annotations in :numref:`fig_inception`). With branch outputs of $c_1 = 64$, $c_2 = (96, 128)$, $c_3 = (16, 32)$, and $c_4 = 32$, the block emits $64+128+32+32 = 256$ channels at the same $28 \times 28$ resolution: multi-branch blocks change the channel count, never the spatial size. The $1 \times 1$ bottlenecks are what make the wide branches affordable. A direct $5 \times 5$ convolution from 192 to 32 channels would need $25 \cdot 192 \cdot 32 \approx 154$k weights; squeezing to 16 channels first costs $192 \cdot 16$ weights for the reduction plus $25 \cdot 16 \cdot 32$ for the convolution, about 16k in total, a tenfold saving. This pattern of reducing channels before an expensive convolution recurs throughout the chapter.
 
 Beyond economy, the combination of filters explores the image at a variety of spatial extents, so details of different sizes can be recognized by filters of the matching size, and the channel allocation decides how much capacity each scale receives.
 
@@ -731,22 +759,31 @@ GoogleNet().layer_summary((1, 1, 96, 96))
 GoogleNet().layer_summary((1, 96, 96, 1))
 ```
 
-Training proceeds exactly as for AlexNet and VGG, so we do not repeat the run here. A key feature of GoogLeNet is that it is actually *cheaper* to compute than its predecessors, at about 7 million parameters against VGG's 138 million, while simultaneously providing improved accuracy. This marks the beginning of much more deliberate network design that trades off the cost of evaluating a network against a reduction in errors, and of experimentation at a block level with network design hyperparameters, even though it was entirely manual at the time. We will revisit this topic in :numref:`sec_cnn-design` when discussing strategies for network structure exploration.
+Training follows the AlexNet and VGG procedure, so we do not repeat the run
+here. GoogLeNet uses about 7 million parameters, compared with VGG's 138
+million, while improving accuracy in the cited comparison. It therefore
+illustrates explicit trade-offs between evaluation cost and error, as well as
+manual experimentation with block-level hyperparameters. We revisit systematic
+network-structure exploration in :numref:`sec_cnn-design`.
 
-GoogLeNet spawned a lineage: Inception-v2 and v3 :cite:`Szegedy.Vanhoucke.Ioffe.ea.2016` and Inception-v4 and Inception-ResNet :cite:`Szegedy.Ioffe.Vanhoucke.ea.2017` kept refining the branch mixtures. That lineage is dead: no current architecture descends from it, and nobody hand-tunes branch cocktails anymore. Two of its ideas survive in different clothes. Grouped convolutions, as in ResNeXt (:numref:`subsec_resnext`), are multi-branch blocks with all branches made identical, which removes the hand-tuning while keeping the cost savings. And RepVGG :cite:`ding2021repvgg` uses parallel branches at training time only, fusing them into a single convolution for inference (:numref:`sec_efficient_cnns`).
+GoogLeNet spawned a lineage: Inception-v2 and v3 :cite:`Szegedy.Vanhoucke.Ioffe.ea.2016` and Inception-v4 and Inception-ResNet :cite:`Szegedy.Ioffe.Vanhoucke.ea.2017` kept refining the branch mixtures. Direct descendants of Inception are less common in current backbone
+designs, and manually allocating heterogeneous branches has largely given way
+to more regular structures. Two Inception ideas persist in other forms. Grouped convolutions, as in ResNeXt (:numref:`subsec_resnext`), are multi-branch blocks with all branches made identical, which removes the hand-tuning while keeping the cost savings. And RepVGG :cite:`ding2021repvgg` uses parallel branches at training time only, fusing them into a single convolution for inference (:numref:`sec_efficient_cnns`).
 
 ## Summary
 
-Between 2013 and 2015 these three architectures explored the design space that AlexNet had opened. None of them is used today, but every one of them contributed at least one permanent idea, and the table below is a fair summary of what a decade of subsequent work kept.
+Between 2013 and 2015, these architectures explored the design space opened
+by AlexNet. Although the original models are less common in current
+applications, their components continue to influence later networks.
 
-| Idea | Introduced by | Where it lives today |
+| Idea | Introduced by | Current use |
 | :-- | :-- | :-- |
-| Repeated blocks, architecture as a tuple | VGG | every modern network is specified stage by stage as block parameters |
+| Repeated blocks, architecture as a tuple | VGG | many networks are specified stage by stage as block parameters |
 | $1 \times 1$ convolution | NiN | the channel-mixing layer in bottlenecks, ResNets, and transformers' per-position MLPs |
-| Global average pooling | NiN | the default classification head |
+| Global average pooling | NiN | a common classification head |
 | Multi-branch blocks | GoogLeNet | grouped convolutions (ResNeXt) and train-time-only branches (RepVGG) |
 
-The stem-body-head decomposition that GoogLeNet made explicit is now the universal vocabulary for describing vision architectures, and we will use it for the rest of the book. The next ingredient, which none of these networks had and all of their successors would adopt, is normalization.
+The stem-body-head decomposition that GoogLeNet made explicit is now a common vocabulary for vision architectures, and we use it throughout the rest of the book. The next ingredient, which none of these networks had and all of their successors would adopt, is normalization.
 
 ## Exercises
 
@@ -828,7 +865,7 @@ then a `2×2 MaxPool`:
 
 ::: {.slide title="The VGG network"}
 Five blocks at growing channel counts plus a 3-layer dense head.
-The "named architecture" is just a tuple of `(n_convs, channels)`
+The named architecture is represented by a tuple of `(n_convs, channels)`
 pairs; a different tuple gives VGG-13/16/19:
 
 @vgg-vgg-network-1
@@ -886,8 +923,8 @@ has one channel per class:
 ::: {.slide title="Training NiN"}
 @nin-training
 
-The averaging head costs nothing and does not hurt accuracy;
-that surprise made GAP the default head ever since.
+The averaging head has no learned parameters and became a common
+classification head.
 :::
 
 ::: {.slide title="GoogLeNet: go wide"}
@@ -921,12 +958,12 @@ weights.
 
 With a 16-channel 1×1 bottleneck first:
 $192 \cdot 16 + 25 \cdot 16 \cdot 32 \approx 16$k, a **10×**
-saving. This trick is in nearly every network since.
+saving. This bottleneck pattern appears in many later networks.
 :::
 
-::: {.slide title="The whole network as data"}
+::: {.slide title="Specifying the Network by Block Parameters"}
 Nine Inception blocks in three groups (2, 5, 2), pooling
-between groups. The hand-picked channel allocations are just a
+between groups. The hand-picked channel allocations form a
 tuple; assembly is stem + body + head:
 
 @blocks-stem-body-and-head-1
@@ -941,7 +978,7 @@ Cheaper than VGG (~7M vs. ~138M parameters) *and* more accurate:
 the start of deliberate cost--accuracy design.
 :::
 
-::: {.slide title="What survived"}
+::: {.slide title="Architectural Contributions"}
 - **Blocks** (VGG): everything is specified block by block.
 - **1×1 convolution** (NiN): the standard channel mixer.
 - **Global average pooling** (NiN): the default head.

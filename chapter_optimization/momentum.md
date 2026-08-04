@@ -1,17 +1,13 @@
 # Momentum
 :label:`sec_momentum`
 
-Gradient descent moves in the best direction available *at a single point*;
-it has no memory. This section shows what that costs and how cheaply it is
-fixed. The cost appears whenever different parameter directions demand
-different step sizes — the conditioning problem previewed in :numref:`sec_gd`
-— because a single learning rate must be small enough for the steepest
-direction and is then far too small for the shallowest. The fix is a running
-average of past gradients, the *velocity*: one extra buffer and one extra
-hyperparameter, and it speeds up gradient descent precisely on the problems
-where gradient descent crawls. Some form of momentum is built into nearly
-every optimizer used in deep learning, including the Adam family of
-:numref:`sec_adam`.
+Gradient descent uses only the gradient at the current point. On an
+ill-conditioned objective, a learning rate small enough for directions of
+high curvature gives slow progress in directions of low curvature. Momentum
+addresses this problem by maintaining a running average of past gradients,
+called the *velocity*. It requires one state buffer and a decay parameter,
+and is particularly effective on ill-conditioned objectives. The Adam family
+in :numref:`sec_adam` also incorporates momentum.
 
 ```{.python .input #momentum}
 %%tab pytorch
@@ -31,7 +27,7 @@ import optax
 
 In :numref:`sec_gd` we minimized $f(\mathbf{x}) = x_1^2 + 2 x_2^2$, a
 moderately distorted bowl, and already saw the trajectory bend: the two
-coordinates wanted different step sizes. Let's make the distortion severe by
+coordinates wanted different step sizes. We make the distortion pronounced by
 flattening the first direction,
 
 $$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2.$$
@@ -54,8 +50,8 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d, f_grad=f_2d_grad))
 ```
 
 The gradient in the $x_2$ direction is much larger and changes much faster
-than in $x_1$, so one learning rate serves two masters. Keep it small and the
-iterate does not diverge in $x_2$ — but crawls along $x_1$, as above. Raise
+than in $x_1$, so one learning rate must accommodate both coordinates. A small rate prevents
+divergence in $x_2$ but makes slow progress along $x_1$. Raise
 it, and progress along $x_1$ improves while $x_2$ starts to oscillate out of
 control. Even the slight increase from $0.4$ to $0.6$ tips the balance:
 
@@ -64,8 +60,7 @@ eta = 0.6
 d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d, f_grad=f_2d_grad))
 ```
 
-The information needed to do better is sitting in the history of the
-trajectory. Along $x_1$ successive gradients agree — small, but all pointing
+The trajectory history distinguishes these two directions. Along $x_1$ successive gradients agree — small, but all pointing
 the same way. Along $x_2$ they alternate in sign, each step undoing the last.
 An average over past gradients would amplify the first and cancel the second.
 
@@ -107,8 +102,8 @@ animations.
 
 On the valley, the leaky average does exactly what the trajectory history
 suggested: the persistent $x_1$ components accumulate while the alternating
-$x_2$ components cancel. With the same learning rate $0.6$ that just
-diverged, momentum $\beta = 0.5$ converges well:
+$x_2$ components cancel. At learning rate $0.6$, for which plain gradient
+descent diverged, momentum $\beta = 0.5$ converges well:
 
 ```{.python .input #momentum-the-momentum-method-1}
 def momentum_2d(x1, x2, v1, v2, f_grad):
@@ -120,9 +115,9 @@ eta, beta = 0.6, 0.5
 d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d, f_grad=f_2d_grad))
 ```
 
-Halving the momentum to $\beta = 0.25$ weakens the effect — the trajectory
-barely converges — but even this beats plain gradient descent, which diverged
-outright at this learning rate:
+Reducing the momentum to $\beta = 0.25$ weakens the effect, and the
+trajectory converges slowly. Plain gradient descent diverged at this learning
+rate:
 
 ```{.python .input #momentum-the-momentum-method-2}
 eta, beta = 0.6, 0.25
@@ -131,9 +126,9 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d, f_grad=f_2d_grad))
 
 Nothing in :eqref:`eq_momentum` requires the gradient to be exact. With
 minibatch gradients the same leaky average additionally smooths the sampling
-noise across steps — variance reduction beyond what the minibatch itself
-buys, at no extra gradient evaluations. Momentum thus earns its keep twice:
-against curvature, as above, and against noise.
+noise across steps. This reduces variance beyond minibatch averaging without
+additional gradient evaluations. Momentum therefore addresses both
+ill-conditioning and sampling noise.
 
 ### The Timescale of $\beta$
 
@@ -167,7 +162,8 @@ in the experiments below.
 
 Momentum does more than stabilize; on ill-conditioned problems it is
 provably *faster*. For a quadratic whose Hessian eigenvalues lie between
-$\mu$ and $L$, the condition number $\kappa = L/\mu$ governs everything:
+$\mu$ and $L$, the condition number $\kappa = L/\mu$ governs the worst-case
+rate:
 gradient descent needs on the order of $\kappa \log \frac{1}{\epsilon}$
 iterations to reach precision $\epsilon$, while heavy-ball momentum with
 optimally chosen $\eta$ and $\beta$ needs only on the order of
@@ -177,20 +173,18 @@ $$\beta^\star = \left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^{\!2}.$
 
 For $\kappa = 100$ that is a $10\times$ saving with $\beta^\star \approx
 0.67$; for $\kappa = 10^4$, a $100\times$ saving with $\beta^\star \approx
-0.96$. Note the trend: the harder the problem, the closer $\beta^\star$
-pushes toward $1$ — in the timescale reading, hard problems reward a memory
-of roughly $\sqrt{\kappa}$ steps.
+0.96$. Note the trend: as $\kappa$ grows, $\beta^\star$ approaches $1$. In the timescale
+interpretation, the optimum averages roughly $\sqrt{\kappa}$ steps.
 
-The right mental model for tuning $\beta$ is a damped oscillator. In each
+A damped oscillator provides a useful model for tuning $\beta$. In each
 eigendirection of the Hessian, :eqref:`eq_momentum` is a second-order
 recurrence — a mass on a spring with friction $1 - \beta$. Too little
 momentum and the system is *over-damped*: it creeps down the valley like
 gradient descent. Too much and it is *under-damped*: the iterate overshoots
 and rings around the minimum. The fastest setting, $\beta^\star$, sits at
 critical damping between the two. Our valley has $\kappa = 20$, giving
-$\beta^\star \approx 0.4$ — and in hindsight, the tuning that sailed down
-the valley earlier, $\eta = 0.6$ with $\beta = 0.5$, sits close to the
-optimum. Push $\beta$ too far and momentum turns against us. Here is
+$\beta^\star \approx 0.4$ — which is close to the earlier successful setting: $\eta = 0.6$ with
+$\beta = 0.5$. Push $\beta$ too far and momentum turns against us. Here is
 $\beta = 0.8$, well past the fastest-converging $\beta^\star$, at a
 learning rate where plain gradient descent would be perfectly stable:
 
@@ -202,17 +196,18 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d, f_grad=f_2d_grad))
 ![Convergence rate per step of heavy-ball momentum on a single quadratic mode, as a function of the momentum $\beta$. Below the critical value $\beta^{*}$ the iteration is over-damped and slow; at $\beta^{*}$ it is fastest; beyond it the rate degrades gently as $\sqrt{\beta}$. Worse conditioning (smaller $\eta\lambda$, dashed) pushes $\beta^{*}$ toward one — the reason large momentum values are the common default.](../img/mdl-opt-critical-damping.svg)
 :label:`fig_opt_critical_damping`
 
-The trajectory now sails along the valley floor but orbits the minimum
-before settling — momentum's own oscillation, distinct from the
-learning-rate divergence we saw earlier. :numref:`fig_opt_critical_damping`
+The trajectory advances along the valley but oscillates around the minimum
+before settling. This underdamped behavior differs from the earlier
+learning-rate divergence. :numref:`fig_opt_critical_damping`
 summarizes the tradeoff on a single quadratic mode: the per-step
 convergence rate falls as $\beta$ grows, is best at a critical value
-$\beta^{*}$, and degrades gently past it. The eigenmode analysis behind this
-picture, the $\sqrt{\kappa}$ theorem and its matching lower bound, and the
-proofs are developed in :numref:`subsec_mdl-momentum-acceleration`; one
-caveat worth carrying away from there is that the heavy-ball $\sqrt{\kappa}$
-rate is a statement about quadratics, and its practical standing on general
-objectives rests on the local quadratic picture plus a long empirical record
+$\beta^{*}$, and degrades gently past it.
+:numref:`subsec_mdl-momentum-acceleration` develops the eigenmode analysis
+behind this picture, the $\sqrt{\kappa}$ theorem and its matching lower
+bound, and the proofs. The scope of the result is important: the
+heavy-ball $\sqrt{\kappa}$ rate is a statement about quadratics, and its
+practical standing on general objectives rests on the local quadratic
+approximation together with empirical evidence
 :cite:`Sutskever.Martens.Dahl.ea.2013`.
 
 ## Implementation
@@ -311,7 +306,7 @@ d2l.train_concise_ch11(trainer, {'learning_rate': 0.005, 'momentum': 0.9},
 Heavy ball has one characteristic failure, and we have already seen it: with
 $\beta$ past the critical value, the accumulated velocity overshoots and the
 iterate rings around the minimum. :citet:`Nesterov.1983` proposed a fix of
-almost comic economy — look before you leap. Evaluate the gradient not at
+by evaluating the gradient at a look-ahead point. Evaluate the gradient not at
 the current point but at the point the velocity is about to carry you to:
 
 $$
@@ -338,9 +333,9 @@ eta, beta = 0.3, 0.8
 d2l.show_trace_2d(f_2d, d2l.train_2d(nesterov_2d, f_grad=f_2d_grad))
 ```
 
-Same learning rate, same $\beta = 0.8$ that made heavy ball ring — and the
-oscillation is gone: the look-ahead acts as built-in damping. Beyond the
-picture, Nesterov's method carries guarantees that heavy ball lacks. On
+At the same learning rate and $\beta = 0.8$ used for the oscillatory
+heavy-ball run, Nesterov momentum removes the visible oscillation: the look-ahead acts as built-in damping. Nesterov's method also has guarantees beyond this quadratic example that
+heavy-ball momentum lacks. On
 smooth convex functions it converges as $\mathcal{O}(1/k^2)$ against
 gradient descent's $\mathcal{O}(1/k)$, which is optimal for any method built
 from gradients; on strongly convex functions it achieves the
@@ -367,17 +362,18 @@ d2l.train_concise_ch11(
     {'learning_rate': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter)
 ```
 
-On this small, noisy problem the curve is essentially indistinguishable from
+On this small, noisy problem the curve is nearly indistinguishable from
 plain momentum, as is typical at small batch: the look-ahead correction is
 dwarfed by sampling noise.
-Nesterov momentum earns its difference where curvature dominates noise —
-full-batch or large-batch training, and $\beta$ pushed close to $1$. Since
-it costs nothing extra, it is often simply switched on.
+The look-ahead correction matters most when curvature dominates noise, as in
+full-batch or large-batch training with $\beta$ close to $1$. Because it
+requires no additional gradient evaluation, implementations often enable it
+by default.
 
 ## Summary
 
-Momentum replaces the gradient with a leaky average over past gradients —
-one buffer, one hyperparameter $\beta$. On ill-conditioned problems it cures
+Momentum replaces the gradient with a leaky average over past gradients. It
+adds one buffer and one hyperparameter, $\beta$. On ill-conditioned problems it cures
 the zigzag: persistent gradient components accumulate up to
 $\frac{1}{1-\beta}$-fold while oscillating ones cancel, and with optimal
 tuning the iteration count improves from order $\kappa$ to order
@@ -387,7 +383,7 @@ with too large a value producing ringing rather than progress. Nesterov's
 look-ahead variant damps that ringing and carries convergence guarantees
 beyond quadratics, at no extra cost per step. With stochastic gradients the
 same leaky average also smooths sampling noise, which is why some form of
-momentum appears in essentially every optimizer in the rest of this chapter.
+momentum appears in most optimizers considered in the rest of this chapter.
 
 ## Exercises
 
@@ -408,11 +404,11 @@ momentum appears in essentially every optimizer in the rest of this chapter.
 <!-- slides -->
 
 ::: {.slide title="Momentum"}
-Gradient descent has **no memory** — and pays for it whenever directions
-disagree about step size.
+Gradient descent uses only the current gradient, which is inefficient when
+different directions require different step sizes.
 
 - Ill-conditioned valley: steep walls cap $\eta$, flat floor needs big
-  $\eta$. One knob, two masters.
+  $\eta$.
 - Fix: a running (leaky) average of past gradients — the **velocity**.
 - One buffer, one hyperparameter $\beta$; inside nearly every deep
   learning optimizer.
@@ -423,7 +419,6 @@ $f(x_1, x_2) = 0.1 x_1^2 + 2 x_2^2$ — curvatures $0.2$ vs $4$:
 
 @momentum-an-ill-conditioned-problem-1
 
-. . .
 
 Raise $\eta$ from 0.4 to 0.6: $x_1$ speeds up, $x_2$ diverges:
 
@@ -445,13 +440,13 @@ an exponentially weighted sum of the past.
 :::
 
 ::: {.slide title="Momentum in the valley"}
-Same $\eta = 0.6$ that just diverged, now with $\beta = 0.5$:
+At $\eta = 0.6$, adding $\beta = 0.5$ changes the divergent gradient-descent
+trajectory to:
 
 @momentum-the-momentum-method-1
 
-. . .
 
-$\beta = 0.25$: weaker, barely converges — still beats divergence:
+With $\beta = 0.25$, the trajectory converges more slowly:
 
 @momentum-the-momentum-method-2
 :::
@@ -479,14 +474,15 @@ Each eigenmode = damped oscillator; $\beta$ is the damping knob.
 Proofs: math appendix (gradient-based optimization).
 :::
 
-::: {.slide title="Too much momentum: ringing"}
+::: {.slide title="Oscillation with excessive momentum"}
 This valley: $\kappa = 20$ → $\beta^\star \approx 0.4$. Now
 $\eta = 0.3$ (GD-stable), $\beta = 0.8$ — well past $\beta^\star$, under-damped:
 
 @momentum-acceleration-and-damping
 
-The iterate orbits the minimum before settling. Over-damped ↔ crawl;
-under-damped ↔ ringing; $\beta^\star$ = critical damping.
+The iterate oscillates around the minimum before settling. Values below
+$\beta^\star$ are overdamped; values above it are underdamped;
+$\beta^\star$ gives critical damping.
 :::
 
 ::: {.slide title="From scratch"}
@@ -494,7 +490,6 @@ Velocity = one buffer per parameter, carried in `states`:
 
 @momentum-implementation-from-scratch-1
 
-. . .
 
 @momentum-implementation-from-scratch-2
 :::
@@ -504,33 +499,33 @@ $\beta = 0.5$, $\eta = 0.02$:
 
 @momentum-implementation-from-scratch-3
 
-. . .
 
 $\beta = 0.9$ quintuples the effective step $\eta/(1-\beta)$ — so lower
 $\eta$ to 0.01, then 0.005:
 
 @momentum-implementation-from-scratch-4
 
-. . .
 
 @momentum-implementation-from-scratch-5
 :::
 
-::: {.slide title="Concise: one argument"}
+::: {.slide title="Framework implementation"}
 @momentum-concise-implementation
 :::
 
-::: {.slide title="Nesterov: look before you leap"}
+::: {.slide title="Nesterov momentum"}
 Evaluate the gradient at the point the velocity is taking you to:
 
 $$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \nabla f(\mathbf{x}_{t-1} - \eta \beta \mathbf{v}_{t-1}),\qquad
 \mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t.$$
 
-About to overshoot? The look-ahead gradient already points back.
+The look-ahead gradient changes direction before the current iterate reaches
+the corresponding overshoot.
 
 @momentum-nesterov-momentum-1
 
-Same $\eta$, $\beta$ as the ringing demo — oscillation gone.
+At the same $\eta$ and $\beta$ as the underdamped example, the visible
+oscillation is removed.
 :::
 
 ::: {.slide title="Nesterov in practice"}

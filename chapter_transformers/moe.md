@@ -1,29 +1,26 @@
 # Mixture of Experts
 :label:`sec_moe`
 
-Every model in this chapter so far spends its parameters and its compute
-in lockstep: a token flowing through the GPT of :numref:`sec_gpt`
-multiplies against every weight the model owns, so a model with twice
-the parameters charges every token twice the floating-point operations.
-The scaling laws that close this chapter will say that parameters are
-precisely what we want more of, and the census of
-:numref:`sec_transformer-block` says where they would go, since the
-feed-forward network already holds two thirds of every block. A
-*mixture of experts* (MoE) breaks the lockstep at exactly that spot:
+In the dense models considered so far, parameter count and computation grow
+together: each token is processed by every model parameter, so doubling the
+number of parameters approximately doubles the floating-point operations.
+The scaling laws at the end of this chapter explain how performance changes
+with parameter count, while :numref:`sec_transformer-block` shows that the
+feed-forward network already contains two thirds of each block's parameters. A
+*mixture of experts* (MoE) separates the two quantities at that point:
 keep $E$ copies of the FFN (the *experts*) and let a small learned
 *router* send each token to only $k$ of them. Parameters now scale
-with $E$ while per-token compute scales with $k$, and the two dials
-turn independently. The idea is old (a committee of specialist
+with $E$ while per-token compute scales with $k$. The idea is old (a committee of specialist
 networks under a gating network dates to
 :citet:`Jacobs.Jordan.Nowlan.ea.1991`, sparse routing at scale to
-:citet:`Shazeer.Mirhoseini.Maziarz.ea.2017`), but it is having its
-decade: Mixtral, DeepSeek-V3, Qwen3, and gpt-oss all ship it
+:citet:`Shazeer.Mirhoseini.Maziarz.ea.2017`). Current models including
+Mixtral, DeepSeek-V3, Qwen3, and gpt-oss use this design
 :cite:`Jiang.Sablayrolles.Roux.ea.2024,Liu.Feng.Xue.ea.2024,Yang.Li.Yang.ea.2025,OpenAI.2025`.
-This section does the accounting that makes the idea attractive, builds
-the layer, meets the failure mode that nearly killed it — routing
-collapse — and repairs it twice, once with an auxiliary loss and once
-without. We close by swapping the FFN of our GPT for a mixture and
-measuring what the extra parameters buy.
+This section analyzes the parameter and computation costs, implements the
+layer, and studies routing collapse. We compare an auxiliary balancing loss
+with a balancing method that does not modify the training objective. Finally,
+we replace the FFN in our GPT with an MoE layer and measure the effect of the
+additional parameters.
 
 ```{.python .input #moe-mixture-of-experts}
 %%tab pytorch
@@ -46,20 +43,17 @@ import optax
 
 ## Conditional Computation
 
-The bet behind MoE is that a language model's FFN parameters do not all
-need to fire on every token. Predicting the next token after "the
-integral of" and after "Act I, Scene" exercise different knowledge; a
-dense FFN pays for both everywhere, a routed one lets each token consult
-the specialists it needs. What makes the bet so attractive is the
-asymmetry of the two costs. Stored parameters are cheap: they sit in
-memory (or on other devices) and idle experts charge no FLOPs per token.
-Compute is the expensive, per-token resource. An MoE layer holds
-$E$ experts' parameters but each token pays the FLOPs of $k$, so — at
-roughly 2 forward FLOPs per active parameter per token — the model's
+MoE assumes that a language model need not use every FFN parameter for every
+token. Predicting the next token after "the
+integral of" exercises different knowledge from predicting it after "Act
+I, Scene". A dense FFN evaluates the same parameters in both cases, whereas
+a routed layer selects a subset. Stored parameters occupy memory, but idle
+experts require no arithmetic for the current token. An MoE layer holds
+$E$ experts' parameters but each token evaluates only $k$, so at
+roughly 2 forward FLOPs per active parameter per token, the model's
 capacity and its serving cost decouple.
 
-The arithmetic deserves to be computed rather than asserted, and it is
-short enough to check against the published configurations of two
+We check this arithmetic against the published configurations of two
 deployed models: Mixtral 8x7B, with 8 full-width experts of which each
 token activates 2 :cite:`Jiang.Sablayrolles.Roux.ea.2024`, and
 DeepSeek-V3, with 256 narrow experts per layer of which each token
@@ -92,16 +86,16 @@ print(f'     with attention and embeddings: {(store+attn+emb)/1e9:.1f}B '
 moe_accounting('DeepSeek-V3', 7168, 2048, 256, 8, 58, shared=1)
 ```
 
-For Mixtral, adding the non-expert parameters — grouped-query attention
-(:numref:`sec_kv-cache`) and untied embeddings — reproduces the model
-card exactly: 46.7B parameters stored, 12.9B active per token. The name
-"8x7B" suggests eight times the cost of a 7B model; the accounting says
-a token pays for less than two-sevenths of what it could read from.
-DeepSeek-V3 pushes the same lever much harder: its 58 expert layers
-store about 656B of the model's 671B parameters, yet a token activates
-only 23B of them, a 28-fold gap between capacity and per-token compute
-(the model card's 37B "active" adds attention, embeddings, and the three
-dense layers that our expert-only census leaves out). Our toy
+For Mixtral, adding the non-expert parameters, grouped-query attention
+(:numref:`sec_kv-cache`), and untied embeddings yields 46.7B stored
+parameters and 12.9B active parameters per token.
+The name "8x7B" describes stored expert capacity rather than per-token
+computation: each token activates less than two-sevenths of the stored
+parameters. DeepSeek-V3 has a larger separation: its 58 expert
+layers store about 656B of the model's 671B parameters, yet a token
+activates only 23B of them, a 28-fold gap between capacity and per-token
+compute (the model card's 37B "active" adds attention, embeddings, and
+the three dense layers that our expert-only census leaves out). Our toy
 configuration keeps Mixtral's eight-expert layout but routes top-1
 rather than top-2, so its 8x store-to-active ratio is twice as sparse
 as Mixtral's 4x.
@@ -134,10 +128,10 @@ $$
 where $\mathcal{E}_k(\mathbf{x})$ is the set of $k$ largest entries of
 $\mathbf{p}(\mathbf{x})$. This is *token-choice* routing: each token
 independently chooses its experts, so two adjacent tokens in the same
-sentence may consult entirely different parameters. Keeping the raw
-probability $p_i$ as the mixture weight (rather than renormalizing over
-the selected $k$) follows the Switch transformer
-:cite:`fedus2022switch`, and it is why the router can learn at all: the
+sentence may consult entirely different parameters. The mixture weight is
+the raw probability $p_i$ rather than a renormalization over the selected
+$k$, following the Switch transformer
+:cite:`fedus2022switch`, and that is why the router can learn at all: the
 selection itself, an argmax, has no gradient, but the *weight* on each
 chosen expert does. If expert $i$'s output helps, the loss's gradient
 raises $p_i$ and the router routes to it more eagerly — a point worth
@@ -279,25 +273,33 @@ experts. The interesting question is whether training keeps it that way.
 
 ## Routing Collapse and Load Balancing
 
-It does not.
+The following notation distinguishes router outputs, selected experts, and
+measured load.
 
-### The Rich Get Richer
+| symbol | meaning |
+|:--|:--|
+| $E$ | number of stored experts |
+| $k$ | experts selected per token |
+| $p_i(\mathbf{x})$ | router probability for expert $i$ before top-$k$ selection |
+| $\mathcal{E}_k(\mathbf{x})$ | selected expert indices for token $\mathbf{x}$ |
+| $f_i$ | fraction of routed assignments received by expert $i$ in a batch |
+| $\bar p_i$ | batch mean of $p_i(\mathbf{x})$ |
+| $b_i$ | non-gradient selection bias used by the auxiliary-loss-free controller |
 
-Follow the feedback loop. Early in training some expert — by pure
-initialization luck — is slightly better than its peers on the tokens it
-happens to receive. The loss gradient rewards it twice: its parameters
+### Positive Feedback in Routing
+
+Follow the feedback loop. Early in training, random initialization may cause
+some expert is slightly better than its peers on the tokens it happens to
+receive. The loss gradient rewards it twice: its parameters
 improve on those tokens, *and* the router's gradient raises its
 selection probability, because weighting a helpful expert more heavily
 lowers the loss. More tokens mean more gradient signal, which means a
 better expert, which attracts more tokens. The experts that lose the
 early rounds see ever fewer tokens, learn ever more slowly, and their
-router scores sink. The stable end state is *routing collapse*: a couple
-of experts serve everything while the rest ride along as dead weight,
-the capacity we listed as the whole point of the architecture unused.
-:citet:`Shazeer.Mirhoseini.Maziarz.ea.2017` describe exactly this
-self-reinforcing imbalance, and every practical MoE since has shipped
-some countermeasure. We will see the collapse live in a moment; first,
-the two countermeasures we will test against it.
+router scores decrease. This feedback can produce *routing collapse*, in which
+a few experts receive most assignments and much of the stored capacity is
+unused. :citet:`Shazeer.Mirhoseini.Maziarz.ea.2017` describe this imbalance
+and introduce load-balancing mechanisms. We next compare two such mechanisms.
 
 ### An Auxiliary Balancing Loss
 
@@ -321,7 +323,7 @@ correlation grow. Its gradient (through $\bar{p}$ only) pushes
 probability away from overloaded experts *for every token, whatever the
 token needs* — and that is the cost. The balancing gradient is added to
 the language-modeling gradient at every step, and the two disagree
-whenever genuinely popular knowledge deserves a busy expert. Tune
+when some token classes legitimately require a busier expert. Tune
 $\alpha$ too high and routing quality degrades; too low and the
 imbalance persists. This interference is documented rather than
 hypothetical :cite:`Wang.Gao.Zeng.ea.2024`, and it motivated the second
@@ -342,9 +344,9 @@ $$
 :eqlabel:`eq_moe-bias`
 
 where $\bar{f} = 1/E$ is the ideal load and $u$ is a small update speed.
-This is not gradient descent; it is a thermostat. After each step, every
-overloaded expert's bias ticks down and every underloaded expert's ticks
-up, making the starved experts slightly easier to *select* — but because
+This controller is not part of gradient descent. After each step, the bias of
+an overloaded expert decreases and that of an underloaded expert increases,
+making underused experts slightly easier to *select*. Because
 $b_i$ never enters the mixture weight $p_i$, the loss the model
 optimizes contains no balancing term at all, so there is no gradient
 interference to tune away. The controller steers where tokens go; the
@@ -355,13 +357,13 @@ cross-device traffic); our layer keeps the softmax router and changes
 only the selection bias — the mechanism :citet:`Wang.Gao.Zeng.ea.2024`
 isolate.
 
-### Three Runs, One Budget
+### Comparing Balancing Methods at Fixed Compute
 
 Both repairs slot into an ordinary training loop. The trainer below is
 `d2l.train_lm` (:numref:`sec_gpt`) plus the two mechanisms, each
 switched by one argument: `aux_weight` adds
 $\alpha \sum \mathcal{L}_{\mathrm{balance}}$ over the model's MoE
-layers, and `bias_rate` runs the thermostat of :eqref:`eq_moe-bias`
+layers, and `bias_rate` applies the controller of :eqref:`eq_moe-bias`
 after each optimizer step. To build the model we take `d2l.GPT`
 unchanged and replace each block's FFN, the same
 swap-after-construction move :numref:`sec_kv-cache` used to install
@@ -519,11 +521,10 @@ def usage_fractions(model, data, num_batches=10):
     return jnp.stack([l.usage[...] / l.usage[...].sum() for l in layers])
 ```
 
-Now the experiment. One small model — two blocks of width 128, eight
-experts per block, one active per token (the Switch configuration,
-where the feedback loop bites hardest) — trained three times from the
-same initialization on the character-level Time Machine for the same
-800 steps. The only difference between the runs is the balancing: none,
+We train one small model three times from the same initialization on the
+character-level Time Machine for the same 800 steps: two blocks of width 128, eight experts per block, one active per
+token (the Switch configuration, where the feedback loop bites hardest).
+The only difference between the runs is the balancing: none,
 the auxiliary loss at $\alpha = 0.01$, or the bias thermostat at
 $u = 0.01$.
 
@@ -598,32 +599,15 @@ axes[0].set_ylabel('fraction of tokens')
 axes[0].legend()
 ```
 
-The left panel is the collapse, caught red-handed. Without balancing, a
-handful of experts absorb most of the traffic and several fall below 2%
-usage — dead weight exactly as the feedback-loop argument predicted.
-How hard the collapse bites varies with the seed (rerunning, we have
-seen anywhere from two dead experts to a layer served entirely by a
-single one), but it appears in every run of every seed in both
-frameworks. The other two panels show both repairs doing their job: the
-auxiliary loss and the thermostat flatten usage onto the dashed uniform
-line, with no expert dead and none dominant, and they do it equally
-well.
-
-The training-loss column tells the quieter half of the story, and it
-needs the more careful reading. A collapsed model trains with only a
-fraction of its FFN parameters participating, and the runs bear the
-prediction out directionally: in every seed we tried, in both
-frameworks, the unbalanced run finished above both balanced ones. But
-the margin is anywhere from a few hundredths to a few tenths of a nat
-depending on the seed — the same order as the run-to-run spread of any
-single variant — so take the direction from the loss column and the
-conviction from the histograms. Between the two repairs our experiment
-offers no verdict at all: their loss ranges overlap across seeds, and
-the summary our data supports is that both recover the lost capacity
-equally well here. The reason DeepSeek prefers the bias is the interference
-argument above, and that is a frontier-scale, small-margin effect
-:cite:`Wang.Gao.Zeng.ea.2024`, far below our noise floor; we say so
-rather than pretend our 800 steps could adjudicate it.
+In the displayed seed, the unbalanced run assigns most tokens to a few experts
+and several experts receive less than 2% of assignments. Both balancing
+methods produce loads closer to the dashed uniform reference and finish with
+lower training loss than the unbalanced run. This is one 800-step run per
+method and framework, so it establishes neither the frequency of routing
+collapse nor an uncertainty interval for the loss difference. In particular,
+the overlapping final losses of the two balanced methods do not support a
+quality ranking. The large-scale motivation for the bias controller comes
+from the separate experiments of :citet:`Wang.Gao.Zeng.ea.2024`.
 
 ## Fine-Grained and Shared Experts
 
@@ -650,13 +634,11 @@ $k$ routed choices: the common knowledge lives once, in the always-on
 path, and the routed experts spend their entire width on what actually
 distinguishes them. Neither refinement changes a line of our layer's
 logic — narrower experts change a constructor argument, and the shared
-expert is one more FFN added outside the router's jurisdiction (the
-final exercise builds it). We do not race granularities here: at our
-two-block scale the difference sits inside seed noise, and the design's
-justification is a frontier-scale ablation
-:cite:`Dai.Deng.Zhao.ea.2024`, not a claim our 180 KB corpus can test.
-What the deployed configurations converged on, however, is worth
-reading as data:
+expert is one more FFN added outside the router (the final exercise builds
+it). We do not compare granularities in the teaching experiment. Evidence for
+the refinement comes from the large-scale ablations of
+:citet:`Dai.Deng.Zhao.ea.2024`. The following reported configurations show
+several choices rather than a single converged design:
 
 :Routed-expert configurations of deployed MoE language models.
 :label:`tab_moe-experts`
@@ -668,23 +650,21 @@ reading as data:
 | Qwen3-235B :cite:`Yang.Li.Yang.ea.2025` | 128 | 8 | 0.38 | none |
 | gpt-oss-120b :cite:`OpenAI.2025` | 128 | 4 | 1.0 | none |
 
-The trend since Mixtral runs toward many narrow experts with moderate
-$k$; the shared expert has advocates (DeepSeek since V2
-:cite:`DeepSeek-AI.2024`) and abstainers (Qwen3 dropped it after using
-one in its previous generation). As with the block architecture in
-:numref:`sec_transformer-block`, the field agrees on the axis and still
-argues about one notch on the dial.
+The three later configurations in the table use more, narrower experts and
+moderate $k$. Their shared-expert choices differ: DeepSeek has used one since
+V2 :cite:`DeepSeek-AI.2024`, whereas Qwen3 does not. These rows illustrate
+design variation rather than a universal progression.
 
 ## A Mixture-of-Experts GPT
 
-Time to collect. We train two models on the same data for the same 600
+We train two models on the same data for the same 600
 steps: the dense `d2l.GPT` of :numref:`sec_gpt` at width 256 with four
 blocks, and the same model with every FFN replaced by a mixture of
-eight experts, one active, balanced by the thermostat. Because the
-active expert is a full-width `FeedForward`, the two models do the
-same per-token compute and hold the same *active* parameters up to the
-router's rounding error; the MoE simply holds seven spare experts per
-block. Since :numref:`sec_gpt` showed this corpus drives models into
+eight experts, one active, balanced by the bias controller. Because the
+active expert is a full-width `FeedForward`, the two models have the
+same per-token computation and nearly the same *active* parameter count;
+the MoE stores seven additional inactive experts per block. Since
+:numref:`sec_gpt` showed this corpus drives models into
 memorization within a few hundred steps, we compare the *best*
 validation loss over the budget, as :numref:`sec_kv-cache` did.
 
@@ -749,48 +729,37 @@ for name in ('dense', 'MoE'):
           f'final training loss {sum(losses[-50:])/50:.2f}')
 ```
 
-The mixture holds between five and six times the parameters of the
-dense baseline at the same active count, and the comparison comes out
-the way our data budget says it must. Best validation loss is
-indistinguishable: both land near 1.5, within the couple-of-hundredths
-spread that reseeding produces. The training loss ends slightly lower
-for the MoE, consistently across seeds and frameworks: the spare
-experts are real capacity, and on a corpus this small, real capacity
-spends itself on memorizing faster (:numref:`sec_gpt`). That is the
-claim our scale supports: matched on active compute, the MoE trains
-comparably while carrying several times the parameters, and nothing
-more. The regime where the extra capacity pays on *validation* is the
-one the accounting cell described: corpora that outweigh any dense
-model you could afford to serve, where MoEs reach a given loss at a
-fraction of the training FLOPs of dense models
-:cite:`fedus2022switch,Dai.Deng.Zhao.ea.2024` and dominate the
-deployed frontier. What our small-scale run demonstrates is the
-mechanism working end to end — routed capacity added, balance held by
-a controller, quality preserved at fixed per-token cost — which is
-precisely the part that does transfer across five orders of magnitude.
+The mixture holds between five and six times the parameters of the dense
+baseline at the same active parameter count. In the displayed fixed-seed run,
+both best validation losses are near 1.5 and the MoE ends with slightly lower
+training loss. One run cannot establish equivalence, a seed distribution, or
+the cause of the training-loss difference. It shows that the implementation
+can route through a larger stored parameter set while keeping the active count
+matched. Published large-scale studies separately report compute--quality
+benefits for MoE models :cite:`fedus2022switch,Dai.Deng.Zhao.ea.2024`.
 
 ## Summary
 
 A mixture of experts replaces the transformer block's FFN with $E$
 parallel FFNs and a linear router that sends each token to the top $k$
 of them, weighted by routing probability: parameters scale with $E$,
-per-token FLOPs with $k$. The accounting is the argument, computed
-from published configurations: Mixtral 8x7B stores 46.7B parameters
-and activates 12.9B per token, and DeepSeek-V3 stores 28 times what a
-token touches. Left alone, routing collapses: winners attract
-gradient, gradient makes winners, and a few experts end up serving
-everything while the rest die. The auxiliary balancing loss penalizes
-the correlation between load and routing probability at the price of a
-gradient that competes with the language-modeling objective; the
+per-token FLOPs with $k$. Without balancing, routing can enter a positive-feedback
+loop in which frequently selected experts receive more updates and become
+still more likely to be selected. A few experts then process most tokens.
+The auxiliary balancing loss penalizes the correlation between load and
+routing probability, but introduces a gradient that can compete with the
+language-modeling objective; the
 auxiliary-loss-free bias steers only the top-$k$ selection through a
-gradient-free control loop. In our triptych both flatten usage
-completely and both beat the collapsed run, while differing from each
-other by less than seed noise. Modern designs slice capacity thinner
-(many narrow experts, sometimes one shared always-on expert), and our
-GPT accepts the whole apparatus through a swapped FFN: at matched
-active parameters, the mixture trains comparably to dense while
-holding several times the weights — the trade that has made MoE a
-major scaling strategy at the frontier.
+gradient-free control loop.
+
+In the fixed-seed teaching experiment, both balancing methods move expert
+loads toward uniformity and finish below the unbalanced training loss. The run
+does not distinguish the two balancing methods statistically. Published
+configurations illustrate the capacity--computation separation at larger
+scale: Mixtral 8x7B stores 46.7B parameters and activates 12.9B per token,
+while DeepSeek-V3 reports a larger stored-to-active parameter ratio. Some
+systems use narrower routed experts and an always-active shared expert. Our
+GPT implementation exposes the same mechanism by replacing the dense FFN.
 
 ## Exercises
 
@@ -845,22 +814,20 @@ major scaling strategy at the frontier.
 [Dive into Deep Learning · §12.6]{.kicker}
 
 Mixture of experts<br>
-**parameters without FLOPs · a token-choice router · collapse and two repairs · MoE in our GPT**
+**stored and active parameters · token-choice routing · load balancing · MoE in a GPT**
 :::
 :::
 
 ::: {.slide title="Conditional computation"}
-- A dense model spends parameters and compute in lockstep: every token
-  pays for every weight.
+- In a dense model, every token uses every layer parameter.
 - MoE breaks the lockstep at the FFN (two thirds of each block): store
   $E$ experts, route each token to $k$ of them.
-- Stored parameters are cheap (memory); per-token FLOPs are the
-  expensive resource — capacity and serving cost **decouple**.
+- MoE separates stored capacity from active parameters and per-token FLOPs.
 
 @fig:mdl-transformers-moe
 :::
 
-::: {.slide title="The accounting, computed not asserted"}
+::: {.slide title="Stored and Active Parameter Counts"}
 @!moe-conditional-computation
 
 - Mixtral 8x7B: our census + attention + embeddings = **46.7B / 12.9B**
@@ -881,7 +848,7 @@ $$\mathrm{MoE}(\mathbf{x}) = \sum_{i \in \mathcal{E}_k(\mathbf{x})} p_i(\mathbf{
 @moe-a-mixture-of-experts-layer-1
 :::
 
-::: {.slide title="It drops into the block"}
+::: {.slide title="Replacing the Block FFN"}
 Experts are `d2l.FeedForward`; the layer maps $(n, d) \to (n, d)$, so it
 enters `d2l.TransformerBlock` through `ffn_factory` — the seam the block
 was built with:
@@ -891,43 +858,42 @@ was built with:
 At initialization: usage nearly uniform. Training will not keep it so.
 :::
 
-::: {.slide title="Routing collapse: the rich get richer"}
+::: {.slide title="Positive feedback in routing"}
 - A slightly-lucky expert improves on its tokens **and** gains routing
   probability — more tokens, more gradient, more probability.
-- Losers starve, learn slowly, sink. End state: a couple of experts
-  serve everything; the advertised capacity is dead weight.
-- Observed since the first sparse MoE (Shazeer et al., 2017); every
-  deployed MoE ships a countermeasure.
+- Less-used experts receive fewer updates, which can amplify load imbalance.
+  In routing collapse, a few experts receive most assignments.
+- Sparse MoE systems commonly add capacity constraints or balancing methods
+  (Shazeer et al., 2017).
 :::
 
 ::: {.slide title="Two repairs"}
 **Auxiliary loss** (GShard, Switch): penalize load-probability
 correlation,
 $$\mathcal{L}_{\mathrm{balance}} = E \sum_i f_i\, \bar{p}_i$$
-— differentiable, but its gradient argues with the LM objective on
-every token.
+— differentiable, but it adds a gradient term to the language-model objective.
 
-**Aux-free bias** (Wang et al., 2024; DeepSeek-V3): a thermostat,
+**Auxiliary-loss-free bias** (Wang et al., 2024; DeepSeek-V3): a controller,
 $$\mathcal{E}_k = \operatorname{argtop}_k(p_i + b_i), \qquad b_i \leftarrow b_i + u\,\mathrm{sign}(\bar{f} - f_i)$$
 — steers *selection only*; the loss contains no balancing term at all.
 :::
 
-::: {.slide title="Three runs, one budget"}
-Same init, same data, same 800 steps; only the balancing differs:
+::: {.slide title="Balancing methods at fixed compute"}
+The runs share their initialization, data, and 800-step budget; only the
+balancing method differs:
 
 @!moe-three-runs-one-budget-3
 :::
 
-::: {.slide title="Reading the triptych"}
+::: {.slide title="Experimental results"}
 @!moe-three-runs-one-budget-4
 
-- **No balancing**: collapse in every seed, both frameworks — from two
-  dead experts up to a layer served by a single one.
-- **Both repairs**: usage flat on the uniform line, zero dead experts,
-  every balanced run beats every collapsed one.
-- Aux vs. bias: loss differences **within seed noise** at this scale;
-  DeepSeek's preference rests on the interference argument, a
-  frontier-scale margin invisible from here.
+- **No balancing**: in the displayed seed, several experts receive less than
+  2% of assignments.
+- **Both repairs**: the displayed loads are closer to the uniform reference
+  and training loss is lower than in the unbalanced run.
+- One run per method gives no uncertainty interval and does not distinguish
+  auxiliary loss from bias control.
 :::
 
 ::: {.slide title="Fine-grained and shared experts"}
@@ -946,28 +912,28 @@ Same init, same data, same 800 steps; only the balancing differs:
 :::
 
 ::: {.slide title="MoE in our GPT"}
-Swap every block's FFN (`moe_gpt`), balance with the thermostat, match
+Swap every block's FFN (`moe_gpt`), balance with the bias controller, match
 **active** parameters against the dense GPT of the previous sections:
 
 @!moe-a-mixture-of-experts-gpt
 
-- 5-6x the parameters at the same per-token compute.
-- Best validation: indistinguishable. Training loss: MoE slightly
-  lower — spare capacity memorizes faster on 180 KB.
-- The mechanism transfers to the frontier; the payoff needs
-  frontier data.
+- 5--6 times the stored parameters at the same active parameter count.
+- In the fixed-seed run, best validation losses are both near 1.5 and the MoE
+  ends with slightly lower training loss; neither equivalence nor cause is
+  established.
+- Published large-scale systems use the same conditional-computation mechanism;
+  this small experiment does not estimate their quality or efficiency gains.
 :::
 
 ::: {.slide title="Recap"}
 - MoE = $E$ FFNs + a router; parameters scale with $E$, FLOPs with $k$
   — Mixtral 46.7B/12.9B, DeepSeek-V3 a 28x gap.
-- Routers collapse without help: rich-get-richer dynamics kill most
-  experts.
-- Repair by auxiliary loss (gradient, interferes) or by a bias
-  thermostat (no gradient, selection only) — both flatten usage; at
-  our scale, indistinguishable losses.
-- Fine-grained + shared experts: the same budget, sliced for
-  composability.
-- In our GPT: several times the parameters at matched active compute,
-  comparable training — the economics behind much of the 2026 frontier.
+- Positive feedback can concentrate routing on a small subset of experts.
+- An auxiliary loss changes the training objective; a bias controller changes
+  selection without adding a gradient term. Both reduce imbalance in the
+  fixed-seed experiment.
+- Fine-grained experts provide more routing combinations at a fixed active
+  budget; a shared expert handles processing common to all tokens.
+- In our GPT: several times the stored parameters at matched active parameter
+  count; quality comparisons remain local to the teaching experiment.
 :::

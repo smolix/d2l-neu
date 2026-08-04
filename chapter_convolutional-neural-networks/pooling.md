@@ -6,37 +6,27 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Pooling
 :label:`sec_pooling`
 
-In many cases our ultimate task asks some global question about the image,
-e.g., *does it contain a cat?* Consequently, the units of our final layer 
-should be sensitive to the entire input.
-By gradually aggregating information, yielding coarser and coarser maps,
-we accomplish this goal of ultimately learning a global representation,
-while keeping all of the advantages of convolutional layers at the intermediate layers of processing.
-The deeper we go in the network,
-the larger the receptive field (relative to the input)
-to which each hidden node is sensitive. Reducing spatial resolution 
-accelerates this process, 
-since the convolution kernels cover a larger effective area. 
+Many image tasks require a global prediction, such as whether an image
+contains a cat. The final representation must therefore combine information
+from the entire input. Convolutional networks commonly build this
+representation by progressively reducing spatial resolution while increasing
+the receptive field of each hidden unit.
+Deeper hidden units have larger receptive fields relative to the input.
+Reducing spatial resolution accelerates this growth because subsequent kernels
+cover a larger effective area.
 
-Moreover, when detecting lower-level features, such as edges
-(as discussed in :numref:`sec_conv_layer`),
-we often want our representations to be somewhat invariant to translation.
+For lower-level features such as edges, we also want small translations of the
+input to produce modest changes in the representation.
 For instance, if we take the image `X`
 with a sharp delineation between black and white
 and shift the whole image by one pixel to the right,
 i.e., `Z[i, j] = X[i, j - 1]`,
-then the output for the new image `Z` might be vastly different.
-The edge will have shifted by one pixel.
-In reality, objects hardly ever occur exactly at the same place.
-In fact, even with a tripod and a stationary object,
-vibration of the camera due to the movement of the shutter
-might shift everything by a pixel or so
-(high-end cameras are loaded with special features to address this problem).
+then the edge in the new output shifts by one pixel and sampled values may
+change.
+Such shifts occur whenever an object or camera moves slightly.
 
-This section introduces *pooling layers*,
-which serve the dual purposes of
-mitigating the sensitivity of convolutional layers to location
-and of spatially downsampling representations.
+This section introduces *pooling layers*, which summarize local windows to
+reduce spatial resolution and sensitivity to small translations.
 
 ```{.python .input #pooling}
 %%tab mxnet
@@ -83,11 +73,10 @@ of the elements in the pooling window.
 These operations are called *maximum pooling* (*max-pooling* for short)
 and *average pooling*, respectively.
 
-*Average pooling* is essentially as old as CNNs. The idea is akin to 
-downsampling an image. Rather than just taking the value of every second (or third) 
-pixel for the lower resolution image, we can average over adjacent pixels to obtain 
-an image with better signal-to-noise ratio since we are combining the information 
-from multiple adjacent pixels. *Max-pooling* was introduced in 
+*Average pooling* dates to the earliest CNNs and resembles image downsampling.
+Instead of retaining every second or third pixel, it averages adjacent pixels,
+combining their information and reducing high-frequency variation.
+*Max-pooling* was introduced in
 :citet:`Riesenhuber.Poggio.1999` in the context of cognitive neuroscience to describe 
 how information might be aggregated hierarchically for the purpose 
 of object recognition; there already was an earlier version in speech recognition
@@ -112,14 +101,16 @@ The output tensor in :numref:`fig_pooling`  has a height of 2 and a width of 2.
 The four elements are derived from the maximum value in each pooling window:
 
 $$
-\max(0, 1, 3, 4)=4,\\
-\max(1, 2, 4, 5)=5,\\
-\max(3, 4, 6, 7)=7,\\
-\max(4, 5, 7, 8)=8.\\
+\begin{aligned}
+\max(0, 1, 3, 4) &= 4,\\
+\max(1, 2, 4, 5) &= 5,\\
+\max(3, 4, 6, 7) &= 7,\\
+\max(4, 5, 7, 8) &= 8.
+\end{aligned}
 $$
 
 More generally, we can define a $p \times q$ pooling layer by aggregating over 
-a region of said size. Returning to the problem of edge detection, 
+a region of that size. Returning to the problem of edge detection, 
 we use the output of the convolutional layer
 as input for $2\times 2$ max-pooling.
 Denote the edge-detector output by `X` and the pooling output by `Y`. If a
@@ -134,8 +125,8 @@ In the code below, we implement the forward propagation
 of the pooling layer in the `pool2d` function.
 This function is similar to the `corr2d` function
 in :numref:`sec_conv_layer`.
-However, no kernel is needed, computing the output
-as either the maximum or the average of each region in the input.
+No kernel is needed: the output is
+the maximum or the average of each region in the input.
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab mxnet, pytorch
@@ -186,7 +177,7 @@ X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
 pool2d(X, (2, 2))
 ```
 
-Also, we can experiment with the average pooling layer.
+We can likewise evaluate average pooling.
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-3}
 pool2d(X, (2, 2), 'avg')
@@ -204,7 +195,7 @@ We first construct an input tensor `X` whose shape has four dimensions,
 where the number of examples (batch size) and number of channels are both 1.
 
 :begin_tab:`tensorflow`
-Note that unlike other frameworks, TensorFlow
+Unlike the other frameworks, TensorFlow
 prefers and is optimized for *channels-last* input.
 :end_tab:
 
@@ -250,7 +241,8 @@ pool2d(X)
 nnx.max_pool(X, window_shape=(3, 3), strides=(3, 3))
 ```
 
-Needless to say, the stride and padding can be manually specified to override framework defaults if required.
+The stride and padding can be specified explicitly to override the framework
+defaults.
 
 ```{.python .input #pooling-padding-and-stride-3}
 %%tab mxnet
@@ -279,7 +271,7 @@ X_padded = jnp.pad(X, ((0, 0), (1, 0), (1, 0), (0, 0)), mode='constant')
 nnx.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
 ```
 
-Of course, we can specify an arbitrary rectangular pooling window with arbitrary height and width respectively, as the example below shows.
+Pooling windows can also have different heights and widths.
 
 ```{.python .input #pooling-padding-and-stride-4}
 %%tab mxnet
@@ -322,8 +314,8 @@ Below, we will concatenate tensors `X` and `X + 1`
 on the channel dimension to construct an input with two channels.
 
 :begin_tab:`tensorflow`
-Note that this will require a
-concatenation along the last dimension for TensorFlow due to the channels-last syntax.
+TensorFlow's channels-last layout requires concatenation along the final
+dimension.
 :end_tab:
 
 ```{.python .input #pooling-multiple-channels-1}
@@ -339,7 +331,7 @@ X = d2l.concat([X, X + 1], 3)
 X
 ```
 
-As we can see, the number of output channels is still two after pooling.
+The output still has two channels after pooling.
 
 ```{.python .input #pooling-multiple-channels-2}
 %%tab mxnet
@@ -370,10 +362,9 @@ nnx.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
 ```
 
 :begin_tab:`tensorflow`
-Note that the output for the TensorFlow pooling appears at first glance to be different, however
-numerically the same results are presented as MXNet and PyTorch.
-The difference lies in the dimensionality, and reading the
-output vertically yields the same output as the other implementations.
+TensorFlow stores these tensors in NHWC order, whereas the MXNet and PyTorch
+tabs use NCHW order. Transposing the TensorFlow result from NHWC to NCHW gives
+the same values; only the channel axis is displayed in a different position.
 :end_tab:
 
 ## Summary
@@ -386,7 +377,17 @@ learn. A $2 \times 2$ window with stride 2, which quarters the number of
 spatial locations, is the classical local configuration; global average
 pooling is now the common classification head.
 
-Be aware, though, that pooling is no longer how most downsampling happens. Modern convolutional networks reduce resolution mainly with *strided convolutions*: a convolution with stride 2 halves the resolution just as a pooling layer would, but it learns its aggregation weights rather than fixing them to max or mean. ResNet (:numref:`sec_resnet`) and its successors follow this pattern. Pooling survives in two roles. *Global average pooling*, introduced with the network-in-network architecture (:numref:`sec_nin`) :cite:`Lin.Chen.Yan.2013`, averages each channel over all spatial positions; it turns the final feature map into one number per channel and has replaced the large fully connected layers of early CNNs as the default classifier head. Max-pooling persists in some network stems (ResNet opens with one) and in detection models that merge feature maps across scales.
+Modern convolutional networks often reduce resolution with *strided
+convolutions*: a convolution with stride 2 halves the resolution while learning
+its aggregation weights instead of fixing them to a maximum or mean. ResNet
+(:numref:`sec_resnet`) uses this pattern within its stages. Pooling remains
+common in two roles. *Global average pooling*, introduced with the
+network-in-network architecture (:numref:`sec_nin`)
+:cite:`Lin.Chen.Yan.2013`, averages each channel over all spatial positions and
+turns the final feature map into one value per channel. It often replaces the
+large fully connected classifier stacks of early CNNs. Max-pooling persists in
+some network stems and in detection models that combine feature maps across
+scales.
 
 One caveat applies to every stride-2 downsampler, pooled or convolutional:
 subsampling a signal without first removing its high spatial frequencies can
@@ -439,7 +440,7 @@ between a query and representation vectors rather than by spatial location.
 slide a window, replace it with a single summary value
 (max or mean).
 
-Two reasons it's everywhere:
+Two reasons to use it:
 
 - **Spatial aggregation** — summarize over locations to
   answer "is there a cat *anywhere* in the image?".
@@ -451,20 +452,20 @@ Two reasons it's everywhere:
 example.
 :::
 
-::: {.slide title="Max-pooling at a glance"}
+::: {.slide title="Max-Pooling Selects the Largest Local Response"}
 Same sliding-window pattern as a convolution, but the
 operation is `max` instead of multiply-and-sum:
 
 ![2×2 max-pool: each output = max of a 2×2 input window. $\max(0, 1, 3, 4) = 4$.](../img/pooling.svg){width=78%}
 
-Average pooling replaces `max` with `mean`. Max is the
-default in modern nets — it's more selective ("did the
-feature fire *somewhere* in this region?") and better
-preserves sharp activations.
+Average pooling replaces `max` with `mean`. Local max-pooling was the standard
+downsampler in early CNNs and remains in some stems. Modern networks more often
+use strided convolutions for learned downsampling and global average pooling in
+the classification head.
 :::
 
 ::: {.slide title="Implementation"}
-A few lines — no kernel, just a reduction over each
+A few lines implement the operation: no kernel, only a reduction over each
 window. Two modes: max and avg.
 
 @pooling
@@ -475,7 +476,7 @@ window. Two modes: max and avg.
 :::
 
 ::: {.slide title="Verify against the figure"}
-Max gives 4, 5, 7, 8 — matches the diagram:
+Max-pooling returns 4, 5, 7, 8, matching the diagram:
 
 @pooling-maximum-pooling-and-average-pooling-2
 
@@ -498,10 +499,9 @@ downsampling but learns its own "pool" function.
 :::
 
 ::: {.slide title="Padding and stride for pooling"}
-Same knobs as conv, but different *defaults*: a
-framework `MaxPool2d` matches stride to window size
-(non-overlapping pools) — we want to *reduce*
-resolution, not preserve it.
+Pooling uses the same padding and stride controls as convolution, but a
+framework `MaxPool2d` typically matches the stride to the window size to create
+non-overlapping windows and reduce resolution.
 
 @pooling-padding-and-stride-1
 
@@ -546,9 +546,8 @@ output channel). Pooling does **not**:
   max-pool, then strided convs.
 - **Global average pooling**: at the very end, average
   the entire feature map per channel. Replaces the
-  fully-connected stack with a tiny linear classifier;
-  drastically cuts parameters. Default in ResNet, ViT
-  classification head, etc.
+  fully connected stack with a linear classifier, reducing the parameter
+  count. ResNet uses this design.
 :::
 
 ::: {.slide title="Recap"}

@@ -38,7 +38,7 @@ pytorch = [
     # To move to 2.12: bump these pins AND re-capture the store under 2.12.
     "torch==2.11.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "torchvision==0.26.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
-    "gymnasium[toy-text] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "gymnasium[toy-text,classic-control] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "gpytorch ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "syne-tune[gpsearchers] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     # Apple Silicon CPU/MPS: PyPI ships native arm64 wheels (CPU-only render
@@ -47,7 +47,7 @@ pytorch = [
     # resolves torch 2.11.0 from the default index.
     "torch==2.11.0 ; sys_platform == 'darwin'",
     "torchvision==0.26.0 ; sys_platform == 'darwin'",
-    "gymnasium[toy-text] ; sys_platform == 'darwin'",
+    "gymnasium[toy-text,classic-control] ; sys_platform == 'darwin'",
 ]
 mxnet = [
     # Custom MXNet 2.0 wheel built against CUDA 13 with Blackwell (sm_120) SASS.
@@ -85,6 +85,8 @@ jax = [
     "safetensors ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow-datasets ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # RL chapters (14-15) carry jax tabs; gymnasium mirrors the pytorch extra.
+    "gymnasium[toy-text,classic-control] ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     # Apple Silicon: plain `jax` resolves the CPU jaxlib arm64 macOS wheel.
     # tensorflow(+datasets) come along because d2l/jax.py imports tf for its
     # data utilities (mirrors the linux jax extra).
@@ -96,6 +98,7 @@ jax = [
     "safetensors ; sys_platform == 'darwin'",
     "tensorflow ; sys_platform == 'darwin'",
     "tensorflow-datasets ; sys_platform == 'darwin'",
+    "gymnasium[toy-text,classic-control] ; sys_platform == 'darwin'",
 ]
 run = [
     "jupyter",

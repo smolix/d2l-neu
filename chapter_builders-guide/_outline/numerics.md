@@ -1,6 +1,9 @@
 # Numerics: Dtypes and Mixed Precision
 :label:`sec_numerics_v2`
 
+> **Archive notice.** This file records pre-promotion design decisions. The live
+> source one directory above is authoritative; markers and API claims here are historical.
+
 > **Role.** Entirely new. A tensor has a *dtype* as well as a shape and a
 > device, and since ~2020 the dtype column has become as important as the
 > device column: essentially all serious training now runs in bf16/fp16
@@ -118,13 +121,14 @@ framework's native mixed-precision story rather than a forced translation.*
   raises immediately (verified), a sharper hook for dtype discipline than
   promotion rules. **One trim: no native fp8 dtype** in TF 2.21 (only via
   `ml_dtypes`, unintegrated) → forward-pointer prose only.
-- **MXNet — reduced variant (decision needed).** Lead with the verified
+- **MXNet — historical proposed reduced variant.** The proposal led with the
   low-ceremony recipe: `net.cast('float16')` + `Trainer(...,
   {'multi_precision': True})` (fp32 master weights — real, in source). A
   full `mxnet.amp` module exists in the pinned wheel (fp16 *and* bf16
   targets) but has **zero corpus evidence** of ever running under it —
-  demote to a pointer unless the GPU box validates it. tf32: SKIP (no user
-  switch exists). fp8: SKIP (dtype absent). bf16 dtype exists in source
-  [UNVERIFIED on GPU]. The mxnet tab of this section is therefore
+  demoted it to a pointer pending GPU validation. tf32: SKIP (no user
+  switch exists). fp8: SKIP (dtype absent). bf16 existed in source but was not
+  GPU-validated during the design pass; this is not evidence that it works.
+  The proposed MXNet tab was therefore
   ~"fp16 + master weights, everything else marked not-available" — explicit,
   and consistent with the archived status.

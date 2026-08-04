@@ -1,0 +1,47 @@
+# Allowlist for `python3 tools/audit_outputs.py --check-noise`.
+#
+# One entry per line:
+#
+#     <framework> <source> <cell-id> [kind[,kind...]]   # why
+#
+#   framework   pytorch | jax | tensorflow | mxnet | *
+#   source      chapter dir + .md file, exactly as the manifest records it
+#   cell-id     the `#<id>` on the code fence, or *
+#   kind        ansi | control | width   (default: all three)
+#
+# An entry here is a claim that the noise IS the lesson — a cell that
+# deliberately demonstrates a library error message, a repr the chapter is
+# about. It is NOT a place to park output that should have been fixed at
+# execution time (tools/runtime_env.py QUIET_ENV, tools/nbquiet/sitecustomize.py)
+# or at the call site (Keras `verbose=2`, a narrower table). Every line needs a
+# reason. See docs/build-system.md §3.6.
+
+# --- library text the chapter is *about* ----------------------------------
+* chapter_preliminaries/lookup-api.md lookup-api-specific-functions-and-classes-1 width  # help()'s own signature line; reflowing it would misrepresent the docstring
+
+# --- deliberate error demonstrations --------------------------------------
+mxnet chapter_preliminaries/ndarray.md ndarray-broadcasting-3 width          # the broadcast-failure message IS the lesson; MXNet writes it as one long line
+tensorflow chapter_preliminaries/ndarray.md ndarray-broadcasting-3 width     # same cell, TF's wording: one line carrying the op's device-scoped node name
+tensorflow chapter_builders-guide/numerics.md numerics-dtype-rules-promotion-parameters-and-casts-1 width  # TF's refusal to promote fp16+fp32, printed verbatim: this tab exists to show that it refuses
+pytorch chapter_builders-guide/saving-loading.md saving-loading-safetensors-the-interchange-format-2 width  # torch's weights_only refusal, printed verbatim on purpose
+tensorflow chapter_builders-guide/saving-loading.md saving-loading-loading-weights-you-did-not-train-2 width  # Keras' skip_mismatch warning, quoted verbatim; the prose reads the two disagreeing shapes out of its wording
+tensorflow chapter_builders-guide/model-construction.md model-construction-sequential-and-friends-containers-4 width  # Keras' "state after build" refusal, printed on purpose
+jax chapter_builders-guide/model-construction.md model-construction-sequential-and-friends-containers-4 width  # nnx' "data on a static attribute" refusal, printed on purpose
+mxnet chapter_builders-guide/model-construction.md model-construction-sequential-and-friends-containers-3 width  # Gluon's unregistered-container warning: the point of the cell
+
+# --- library reprs and status tables with no width knob -------------------
+mxnet chapter_computer-vision/fcn.md fcn-the-model-1 width                    # Gluon prints GlobalAvgPool2D's whole config on one line; that layer listing is exactly what the section points at
+pytorch chapter_hyperparameter-optimization/rs-async.md rs-async-asynchronous-scheduler-7 width  # syne-tune's own status table, written with DataFrame.to_string (pandas display options do not reach it); its columns are the section's config space, and the live trial status is the lesson. Same line also carries syne-tune's final results path.
+pytorch chapter_hyperparameter-optimization/sh-async.md sh-async-asynchronous-scheduler-3 width  # as rs-async: syne-tune's own to_string status table, here showing trials stopped early by successive halving
+
+# --- Keras `verbose=2` epoch lines ----------------------------------------
+# One line per epoch, no bar, no ANSI (the fix for the animated progress bar).
+# Keras fixes the format; with `metrics=['accuracy']` and validation data it
+# lands at 101-104 columns, i.e. 1-4 past the page, and fvextra wraps the tail
+# cleanly. Shortening it means renaming the metric (`metrics=['acc']`), which
+# costs more in the text than the wrap costs on the page.
+tensorflow chapter_natural-language-processing-applications/sentiment-analysis-cnn.md sentiment-analysis-cnn-training-and-evaluating-the-model-1 width
+tensorflow chapter_natural-language-processing-applications/sentiment-analysis-rnn.md sentiment-analysis-rnn-training-and-evaluating-the-model-1 width
+tensorflow chapter_natural-language-processing-applications/natural-language-inference-attention.md natural-language-inference-attention-training-and-evaluating-the-model-2-2 width
+tensorflow chapter_natural-language-processing-applications/natural-language-inference-bert.md natural-language-inference-bert-fine-tuning-bert-3 width
+tensorflow chapter_computer-vision/fcn.md fcn-training width

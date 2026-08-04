@@ -1,17 +1,23 @@
 # Probability and Statistical Learning
 :label:`chap_mdl-probability-statistics`
 
-Models are probabilistic statements about data. This chapter develops the
-continuous probability the rest of deep learning relies on---densities,
-expectations, and how they transform under a map---catalogues the distributions
-whose negative log-likelihoods are exactly our loss functions, derives
-maximum-likelihood and MAP estimation (and the priors that become regularizers),
-turns the resulting posterior integrals into computations with Monte Carlo and
-variational approximations, builds the statistics needed to tell a real improvement from noise, proves the
-concentration inequalities that make finite samples trustworthy---following them
-to uniform convergence, Rademacher complexity, and double descent---and caps it
-all with naive Bayes: a working classifier, fit by counting and then audited
-with the chapter's own tools.
+This chapter separates four questions. A probability distribution describes
+how outcomes vary; an estimator maps observed data to a parameter or other
+quantity; a posterior approximation computes with uncertainty under a chosen
+probabilistic model; and a generalization result states conditions under which
+sample performance controls population performance. Confusing these objects
+leads, for example, to treating a density as a point probability or a confidence
+interval as a posterior probability.
+
+The foundational path is random variables, distributions, maximum likelihood,
+and statistics. It develops densities and transformations, common probability
+laws, point estimation, sampling distributions, tests, and confidence
+intervals. Bayesian computation and concentration/generalization form an
+advanced path: the former approximates posterior integrals, while the latter
+derives tail and uniform-convergence bounds under explicit assumptions. The
+final section uses naive Bayes to combine a likelihood, a conditional-
+independence factorization, parameter estimation, prediction, and uncertainty
+analysis in one classifier.
 
 ```toc
 :maxdepth: 2
@@ -27,28 +33,27 @@ mdl-naive-bayes
 
 ## Resources and Further Reading {.unnumbered}
 
-A short, opinionated shelf for going deeper into the probability and statistical
-learning that underpins these chapters---random variables and distributions,
+The following references cover random variables and distributions,
 maximum-likelihood and MAP estimation, Bayesian inference, estimators, and
-hypothesis testing. We favor free and official sources.
+hypothesis testing.
 
 **Books**
 
-- [Introduction to Probability --- Blitzstein & Hwang](https://probabilitybook.net/): the gentlest rigorous route into random variables, expectation, and conditioning; the free PDF accompanies Harvard's Stat 110.
-- [All of Statistics --- Wasserman](https://www.stat.cmu.edu/~larry/all-of-statistics/): a compact graduate-level tour of probability *and* inference (estimation, testing, bootstrap) written for computer scientists; the companion page hosts errata, code, and datasets.
-- [Pattern Recognition and Machine Learning --- Bishop](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/): the classic treatment of probabilistic modeling and Bayesian methods, now released by Microsoft Research as a free PDF.
-- [Probabilistic Machine Learning: An Introduction --- Murphy](https://probml.github.io/pml-book/book1.html): a modern, deep-learning-aware reframing of ML through probability and decision theory; free draft PDF with runnable notebooks.
-- [Mathematics for Machine Learning --- Deisenroth, Faisal & Ong](https://mml-book.github.io/): Chapter 6, "Probability and Distribution," is a clean self-contained refresher pitched exactly at ML readers; full PDF is free.
-- [Information Theory, Inference, and Learning Algorithms --- MacKay](https://www.inference.org.uk/itila/book.html): connects probability and inference to information theory and coding; the full text is free to read online.
-- [Bayesian Data Analysis --- Gelman et al.](https://sites.stat.columbia.edu/gelman/book/): the standard reference for priors, posteriors, and practical Bayesian workflow once MAP and naive Bayes whet the appetite; third edition free as PDF.
-- [High-Dimensional Probability --- Vershynin](https://www.math.uci.edu/~rvershyn/papers/HDP-book/HDP-book.html): where concentration inequalities, sub-Gaussian variables, and the strange geometry of high dimensions (norm concentration, near-orthogonality) get their systematic treatment; the free PDF is the standard modern reference.
-- [Computer Age Statistical Inference --- Efron & Hastie](https://hastie.su.domains/CASI/): the bootstrap, large-scale testing, and the frequentist-Bayesian interplay told by two of the field's architects---the natural sequel to this chapter's statistics; free PDF from the authors.
+- [Introduction to Probability --- Blitzstein & Hwang](https://probabilitybook.net/): introduces random variables, expectation, and conditioning; a free PDF accompanies Harvard's Stat 110.
+- [All of Statistics --- Wasserman](https://www.stat.cmu.edu/~larry/all-of-statistics/): gives a compact treatment of probability and statistical inference for computer scientists; the companion page includes errata, code, and datasets.
+- [Pattern Recognition and Machine Learning --- Bishop](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/): covers probabilistic modeling and Bayesian methods; Microsoft Research provides a free PDF.
+- [Probabilistic Machine Learning: An Introduction --- Murphy](https://probml.github.io/pml-book/book1.html): develops machine learning through probability and decision theory, with a free draft and runnable notebooks.
+- [Mathematics for Machine Learning --- Deisenroth, Faisal & Ong](https://mml-book.github.io/): Chapter 6 provides a self-contained review of probability and distributions.
+- [Information Theory, Inference, and Learning Algorithms --- MacKay](https://www.inference.org.uk/itila/book.html): connects probability and inference with information theory and coding.
+- [Bayesian Data Analysis --- Gelman et al.](https://sites.stat.columbia.edu/gelman/book/): treats priors, posteriors, computation, and practical Bayesian workflow; the third edition is available as a free PDF.
+- [High-Dimensional Probability --- Vershynin](https://www.math.uci.edu/~rvershyn/papers/HDP-book/HDP-book.html): develops concentration inequalities, sub-Gaussian variables, and high-dimensional geometry.
+- [Computer Age Statistical Inference --- Efron & Hastie](https://hastie.su.domains/CASI/): discusses bootstrap methods, large-scale testing, and connections between frequentist and Bayesian inference.
 
 **Courses and video lectures**
 
-- [Statistics 110: Probability --- Harvard (Blitzstein)](https://stat110.hsites.harvard.edu/): a full course with lecture videos, problem sets, and 250+ practice problems with solutions, mirroring the Blitzstein & Hwang text.
-- [Stat 110 lecture videos --- YouTube](https://stat110.hsites.harvard.edu/youtube): the complete lecture series, ideal for building intuition about distributions and conditioning alongside the reading.
+- [Statistics 110: Probability --- Harvard (Blitzstein)](https://stat110.hsites.harvard.edu/): provides lecture videos, problem sets, and more than 250 practice problems with solutions.
+- [Stat 110 lecture videos --- YouTube](https://stat110.hsites.harvard.edu/youtube): contains the complete lecture series on probability, distributions, and conditioning.
 
 **Tutorials and notes**
 
-- [Probability Theory Review --- Stanford CS229 (Maleki & Do)](https://cs229.stanford.edu/section/cs229-prob.pdf): a terse, well-organized refresher of exactly the probability used in ML---random variables, expectation/variance, Gaussians, and multivariate distributions.
+- [Probability Theory Review --- Stanford CS229 (Maleki & Do)](https://cs229.stanford.edu/section/cs229-prob.pdf): reviews random variables, expectation, variance, Gaussian distributions, and multivariate probability for machine learning.

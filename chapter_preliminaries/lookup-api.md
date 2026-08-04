@@ -6,18 +6,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Documentation
 :label:`sec_lookup_api`
 
-No matter how much of a framework's API we cover here,
-there will always be functions, classes, and arguments
-we never reach, and the libraries keep changing under us.
-So rather than try to memorize the API,
-the durable skill is getting good at *looking things up*:
-finding what exists, reading how it works,
-and confirming that it does what you think.
-This short section lays out a small, repeatable loop for exactly that,
-using tools built into Python and your notebook.
+A framework API contains more functions, classes, and arguments than any
+single text can cover, and it changes across releases. Effective use therefore
+depends on being able to find an operation, inspect its interface, read its
+documentation, and verify its behavior with a small example. This section
+demonstrates that procedure using Python and notebook tools.
 
-The official documentation is always the source of truth;
-bookmark the reference and tutorial pages for the framework you use.
+The official reference and tutorial pages document the supported interface for
+each framework.
 
 :begin_tab:`mxnet`
 For MXNet these are the
@@ -49,11 +45,10 @@ For JAX these are the
 [tutorials](https://jax.readthedocs.io/en/latest/tutorials.html).
 :end_tab:
 
-For most day-to-day questions, though, you do not need to leave your
-notebook. Four moves, repeated until the call behaves, cover almost
-everything.
+Many routine questions can be answered without leaving the notebook. The
+procedure has four steps: discover, inspect, read, and verify.
 
-![Four moves, repeated until the call does what you want: **discover** the names that exist, **inspect** a candidate's signature, **read** the docs or source when you need the *why*, and **verify** with a quick run.](../img/lookup-api-discovery-loop.svg)
+![A four-step procedure for using an unfamiliar API: discover available names, inspect a candidate's signature, read its documentation or source, and verify its behavior with a small example.](../img/lookup-api-discovery-loop.svg)
 :label:`fig_lookup_loop`
 
 The examples below start from the standard import:
@@ -61,49 +56,56 @@ The examples below start from the standard import:
 ```{.python .input #lookup-api-documentation}
 %%tab mxnet
 from mxnet import np
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab pytorch
 import torch
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab tensorflow
 import tensorflow as tf
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab jax
 import jax
+from pprint import pprint
 ```
 
 ## Discovering What Exists: `dir`
 
 When you know roughly *where* a tool should live but not what it is called,
-the `dir` function lists everything defined in a module.
-For instance, to see what is on offer for random sampling
+the `dir` function lists the names defined in a module.
+For instance, to inspect the available random-sampling tools
 (we print the first twenty names):
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
-print([name for name in dir(np.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(np.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab pytorch
-print([name for name in dir(torch.distributions)
-       if not name.startswith('_')][:20])
+pprint([name for name in dir(torch.distributions)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab tensorflow
-print([name for name in dir(tf.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(tf.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module}
 %%tab jax
-print([name for name in dir(jax.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(jax.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 We can usually ignore names that begin and end with `__`
@@ -138,7 +140,7 @@ random key that every JAX sampler takes.
 
 In a notebook you can get the same list interactively, filtered as you
 type, by writing the module name followed by a dot and pressing `Tab`;
-this is usually the fastest way to turn up a name.
+this often locates a name quickly.
 
 ## Reading the Signature: `help`, `?`, and `??`
 
@@ -172,15 +174,13 @@ shape with every element set to 1.
 In a Jupyter notebook, two shortcuts make this quicker still:
 `ones?` opens the same docstring in a side pane,
 and `ones??` additionally displays the function's *source code*.
-The source is the final word when a docstring is terse or ambiguous,
-and reading it is one of the better ways to pick up idioms
-from high-quality libraries.
+When a docstring is terse or ambiguous, the source can clarify the
+implementation. Reading library source also reveals established usage idioms.
 
 ## Verifying With a Quick Run
 
 Docstrings can be terse, and they occasionally drift out of date.
-The fastest way to be certain is to run a tiny example
-and look at the result:
+A small example can verify the behavior directly:
 
 ```{.python .input #lookup-api-specific-functions-and-classes-2}
 %%tab mxnet
@@ -202,18 +202,23 @@ tf.ones(4)
 jax.numpy.ones(4)
 ```
 
-The shape and values are exactly what the docstring promised.
+The result has the documented shape and values.
 Making this `discover → inspect → read → verify` loop a habit
 will carry you through the unfamiliar corners of any library,
 long after the specific functions in this book have changed.
 
-Coding assistants are often the quickest route to a first answer:
-ask "how do I sample from a normal distribution in this framework?"
-and you will usually get a function and a working call in seconds.
-Treat the suggestion the way you would a knowledgeable colleague's tip:
-a good starting point that still goes through the loop above.
+Coding assistants can propose an API call for a question such as “how do I
+sample from a normal distribution in this framework?” Treat the result as an
+unverified candidate that still goes through the loop above.
 Glance at the signature with `help` or `?`, run a small example,
-and rely on the suggestion once it survives both.
+and accept the suggestion only once it survives both.
+
+## Summary
+
+For an unfamiliar operation, discover candidate names, inspect the signature,
+read the relevant documentation, and verify the behavior with the smallest run
+that exposes shapes, dtypes, and values. This procedure remains valid as library
+APIs change and applies equally to suggestions from search or coding assistants.
 
 ## Exercises
 
@@ -253,22 +258,22 @@ and rely on the suggestion once it survives both.
 ::: {.cover}
 [Dive into Deep Learning · §2.7]{.kicker}
 
-APIs change; the skill of looking things up doesn't<br>**discover · inspect · read · verify**.
+Using an unfamiliar API<br>**discover · inspect · read · verify**.
 :::
 :::
 
-::: {.slide title="You cannot memorize an API, so loop instead"}
+::: {.slide title="A procedure for consulting an API"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-No book covers a whole framework, and the libraries keep changing under
-us. The durable skill is a four-move loop, run without leaving the
-notebook, repeated until the call does what you want.
+No book covers an entire framework, and libraries change across releases.
+Four steps answer most routine questions from within a notebook: discover
+available names, inspect the interface, read the documentation, and verify the
+behavior with a small example.
 
 ::: {.d2l-note}
-The official docs remain the source of truth: bookmark your
-framework's reference and tutorial pages.
+Use the official reference and tutorial pages for the supported interface.
 :::
 :::
 
@@ -303,29 +308,26 @@ often an example.
 
 ::: {.d2l-note}
 In Jupyter, `ones?` opens the docstring in a side pane, and `ones??`
-shows the **source code**: the final word when a docstring is terse or
-ambiguous.
+shows the **source code**, which can clarify a terse or ambiguous docstring.
 :::
 :::
 
 ::: {.slide title="A tiny run settles it"}
 [Verify]{.kicker}
 
-Docstrings drift out of date; a running call does not lie:
+Docstrings can drift out of date; verify the current behavior with a small call:
 
 @lookup-api-specific-functions-and-classes-2
 
-Exactly the promised shape and values. This
-**discover → inspect → read → verify** loop outlives every function in
-this book.
+The result has the documented shape and values. The
+**discover → inspect → read → verify** loop remains useful as APIs change.
 :::
 
 ::: {.slide title="Coding assistants enter the same loop"}
 [Assistants]{.kicker}
 
-An assistant usually produces a plausible function and a working call in
-seconds. Treat the suggestion like a knowledgeable colleague's tip: a
-good starting point that still gets a two-line check before you build on it.
+An assistant may produce a plausible function and call. Treat the suggestion
+as a candidate to check before building on it.
 
 ::: {.d2l-note .rule}
 Glance at the signature (`help` / `?`), then run a small example. A

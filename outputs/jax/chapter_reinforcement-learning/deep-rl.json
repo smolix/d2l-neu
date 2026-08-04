@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/deep-rl.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:4ba3e6a356238e1ed58daa9e2ce55bbe415e79dde879503d933541948dccaf35",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "deep-rl-from-tables-to-networks": {
+      "code_fingerprint": "sha256:d0a170753958e2f8da4ba2a8c91de3d7fa96562ca6122c9ae0b83bbf4d6d6770",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-the-swap-as-a-three-line-diff-1": {
+      "code_fingerprint": "sha256:d09518b7b4611786301c7774b3e336f1e7915df0a5511fc1a66c7318a3439e1d",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-the-swap-as-a-three-line-diff-2": {
+      "code_fingerprint": "sha256:cd53ae869e1f07cee3fae408384b690a8bab5c691031e6d196b1f0688841c7ef",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-the-swap-as-a-three-line-diff-3": {
+      "code_fingerprint": "sha256:bbf319bb685cedd0d4ba7e05717c356528083777e4b305732e761a4b15c22cf1",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-the-swap-as-a-three-line-diff-4": {
+      "code_fingerprint": "sha256:5e1d8d6da0dd743ae8b364b991a6ed0a618daf4b7096ab8d7d746a85927e768d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
+          "bytes": 35639,
+          "sha256": "sha256:122efeb9b87dd061f2559469fc7e8a66959b6662a579cc4f883134f2125730e9"
+        }
+      ]
+    },
+    "deep-rl-the-gaussian-policy-1": {
+      "code_fingerprint": "sha256:8cb7f45c75c15402b37e16ab2f408806eed516a4e3f863b8619795124eed99c5",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-the-gaussian-policy-2": {
+      "code_fingerprint": "sha256:57eba6856c98065ce7aca3e4ba173ad0b8f89df0ea2d3bce31dd776d7db55df6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True\n"
+        }
+      ]
+    },
+    "deep-rl-the-score-does-not-care-that-the-action-is-real": {
+      "code_fingerprint": "sha256:8c8de120aa40814fc4308a9cf3cfe6a52bad36a9f06d3ff49c3b263b96705f2c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
+          "bytes": 52746,
+          "sha256": "sha256:727272f14ac8055a6c557c230caf8edadcccec2b906281b62c0285b05cf1effb"
+        }
+      ]
+    },
+    "deep-rl-score-function-versus-pathwise-gradients": {
+      "code_fingerprint": "sha256:760eb1d30f459ce472f277896924b8b94a2404f3a8b5b85057f78078349d4b9e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "score:    mean 1.98, variance 21.5\npathwise: mean 2.00, variance 1.00\nscore variance if Q gains a constant +10: 281; pathwise is unchanged\n"
+        }
+      ]
+    },
+    "deep-rl-generalization-couples-states-measured": {
+      "code_fingerprint": "sha256:f137bbd77d5c60dac94ef941fc3c2141a379da0134a1b94f846ab3d0bec310cf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "network: nudged state moved +1.12; 255 of the 255 others moved too, |change| up to 1.20\ntable:   nudged entry moved +1.18; largest move among the other fifteen: 0.000000\n"
+        }
+      ]
+    },
+    "deep-rl-the-estimator-written-as-a-loss": {
+      "code_fingerprint": "sha256:013c982b5652676a1e8fd18ee8c4b8439b7940560375879586131b4db21857ab",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
+          "bytes": 31691,
+          "sha256": "sha256:aee1e4011983b25933dbdd7bdf2bd70b1168443166cdacfba2629d608d40d2e7"
+        }
+      ]
+    }
+  }
+}

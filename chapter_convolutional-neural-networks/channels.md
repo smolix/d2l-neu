@@ -6,22 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multiple Input and Multiple Output Channels
 :label:`sec_channels`
 
-While we described the multiple channels
-that comprise each image (e.g., color images have the standard RGB channels
-to indicate the amount of red, green and blue) and convolutional layers for multiple channels in :numref:`subsec_why-conv-channels`,
-until now, we simplified all of our numerical examples
-by working with just a single input and a single output channel.
-This allowed us to think of our inputs, convolution kernels,
-and outputs each as two-dimensional tensors.
-
-When we add channels into the mix,
-our inputs and hidden representations
-both become three-dimensional tensors.
-For example, each RGB input image has shape $3\times h\times w$.
-We refer to this axis, with a size of 3, as the *channel* dimension. The notion of
-channels is as old as CNNs themselves: for instance LeNet-5 :cite:`LeCun.Jackel.Bottou.ea.1995` uses them. 
-In this section, we will take a deeper look
-at convolution kernels with multiple input and multiple output channels.
+The single-channel operator of :numref:`sec_conv_layer` cannot yet combine
+the red, green, and blue measurements of an image, nor can it produce several
+learned feature maps. With $c_\textrm{i}$ input channels, an input has shape
+$c_\textrm{i}\times h\times w$ and each filter has one spatial kernel per
+input channel. Producing $c_\textrm{o}$ features requires
+$c_\textrm{o}$ such filters, so the complete kernel has shape
+$c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$.
+This section derives both channel operations and then factorizes the dense
+kernel to reduce its cost.
 
 ```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab mxnet
@@ -60,8 +53,8 @@ with the same number of input channels as the input data,
 so that it can perform cross-correlation with the input data.
 Assuming that the number of channels for the input data is $c_\textrm{i}$,
 the number of input channels of the convolution kernel also needs to be $c_\textrm{i}$. If our convolution kernel's window shape is $k_\textrm{h}\times k_\textrm{w}$,
-then, when $c_\textrm{i}=1$, we can think of our convolution kernel
-as just a two-dimensional tensor of shape $k_\textrm{h}\times k_\textrm{w}$.
+then, when $c_\textrm{i}=1$, the convolution kernel is a two-dimensional tensor
+of shape $k_\textrm{h}\times k_\textrm{w}$.
 
 However, when $c_\textrm{i}>1$, we need a kernel
 that contains a tensor of shape $k_\textrm{h}\times k_\textrm{w}$ for *every* input channel. Concatenating these $c_\textrm{i}$ tensors together
@@ -87,10 +80,8 @@ $(1\times1+2\times2+4\times3+5\times4)+(0\times0+1\times1+3\times2+4\times3)=56$
 :label:`fig_conv_multi_in`
 
 
-To make sure we really understand what is going on here,
-we can implement cross-correlation operations with multiple input channels ourselves.
-Notice that all we are doing is performing a cross-correlation operation
-per channel and then adding up the results.
+We can implement the multi-input-channel operation directly by computing one
+cross-correlation per channel and summing the results.
 
 ```{.python .input #channels-multiple-input-channels-1}
 %%tab mxnet, pytorch, jax
@@ -124,19 +115,14 @@ corr2d_multi_in(X, K)
 Regardless of the number of input channels,
 so far we always ended up with one output channel.
 However, as we discussed in :numref:`subsec_why-conv-channels`,
-it turns out to be essential to have multiple channels at each layer.
-In the most popular neural network architectures,
-we actually increase the channel dimension
+multiple channels are needed to represent different learned features. Many
+neural network architectures increase the channel dimension
 as we go deeper in the neural network,
 typically downsampling to trade off spatial resolution
 for greater *channel depth*.
-Intuitively, you could think of each channel
-as responding to a different set of features.
-The reality is a bit more complicated than this. A naive interpretation would suggest 
-that representations are learned independently per pixel or per channel. 
-Instead, channels are optimized to be jointly useful.
-This means that rather than mapping a single channel to an edge detector, it may simply mean 
-that some direction in channel space corresponds to detecting edges.
+Each channel can respond to a different combination of features, but channels
+are optimized jointly rather than independently. An edge detector, for example,
+may correspond to a direction in channel space rather than to one channel.
 
 Denote by $c_\textrm{i}$ and $c_\textrm{o}$ the number
 of input and output channels, respectively,
@@ -149,9 +135,9 @@ We concatenate them on the output channel dimension,
 so that the shape of the convolution kernel
 is $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$.
 In cross-correlation operations,
-the result on each output channel is calculated
+the result on each output channel comes
 from the convolution kernel corresponding to that output channel
-and takes input from all channels in the input tensor.
+and draws on all channels in the input tensor.
 
 We implement a cross-correlation function
 to calculate the output of multiple channels as shown below.
@@ -164,7 +150,7 @@ def corr2d_multi_in_out(X, K):
     return d2l.stack([corr2d_multi_in(X, k) for k in K], 0)
 ```
 
-We construct a trivial convolution kernel with three output channels
+We construct an illustrative convolution kernel with three output channels
 by concatenating the kernel tensor for `K` with `K+1` and `K+2`.
 
 ```{.python .input #channels-multiple-output-channels-2}
@@ -187,13 +173,10 @@ corr2d_multi_in_out(X, K)
 ## $1\times 1$ Convolutional Layer
 :label:`subsec_1x1`
 
-At first, a $1 \times 1$ convolution, i.e., $k_\textrm{h} = k_\textrm{w} = 1$,
-does not seem to make much sense.
-After all, a convolution correlates adjacent pixels.
-A $1 \times 1$ convolution obviously does not.
-Nonetheless, they are popular operations that are sometimes included
-in the designs of complex deep networks :cite:`Lin.Chen.Yan.2013,Szegedy.Ioffe.Vanhoucke.ea.2017`.
-Let's see in some detail what it actually does.
+A $1 \times 1$ convolution, where $k_\textrm{h} = k_\textrm{w} = 1$, does not
+combine adjacent pixels. It instead mixes channels independently at every
+spatial position and is widely used in deep networks
+:cite:`Lin.Chen.Yan.2013,Szegedy.Ioffe.Vanhoucke.ea.2017`.
 
 Because the minimum window is used,
 the $1\times 1$ convolution loses the ability
@@ -206,7 +189,7 @@ on the channel dimension.
 :numref:`fig_conv_1x1` shows the cross-correlation computation
 using the $1\times 1$ convolution kernel
 with 3 input channels and 2 output channels.
-Note that the inputs and outputs have the same height and width.
+The inputs and outputs have the same height and width.
 Each element in the output is derived
 from a linear combination of elements *at the same position*
 in the input image.
@@ -216,15 +199,13 @@ to transform the $c_\textrm{i}$ corresponding input values into $c_\textrm{o}$ o
 Because this is still a convolutional layer,
 the weights are tied across pixel location.
 Thus the $1\times 1$ convolutional layer requires $c_\textrm{o}\times c_\textrm{i}$ weights
-(plus the bias). Also note that convolutional layers are typically followed 
-by nonlinearities. This ensures that $1 \times 1$ convolutions cannot simply be 
-folded into other convolutions. 
+(plus the bias). When a nonlinearity follows the layer, the $1 \times 1$
+convolution cannot in general be folded into an adjacent convolution.
 
 ![The cross-correlation computation uses the $1\times 1$ convolution kernel with three input channels and two output channels. The input and output have the same height and width.](../img/conv-1x1.svg)
 :label:`fig_conv_1x1`
 
-Let's check whether this works in practice:
-we implement a $1 \times 1$ convolution
+We verify the equivalence by implementing a $1 \times 1$ convolution
 using a fully connected layer.
 The only thing is that we need to make some adjustments
 to the data shape before and after the matrix multiplication.
@@ -322,15 +303,15 @@ $$
 
 For $k = 3$ and a large number of output channels this is close to $1/9$:
 the separable layer is roughly eight to nine times cheaper, in parameters
-and in operations alike. The saving is not free. A depthwise-separable
+and in operations alike. This saving restricts expressivity. A depthwise-separable
 layer can only express convolutions that factor into a per-channel spatial
 filter followed by a channel mixture, a strict subset of dense convolutions.
-In practice the accuracy given up is small relative to the compute saved,
-which is why the factorization anchors the mobile architectures of
+For many mobile architectures, the reduction in computation outweighs the
+change in accuracy. The factorization therefore anchors the architectures of
 :numref:`sec_efficient_cnns` and appears, with larger kernels, in
 ConvNeXt (:numref:`sec_convnext`).
 
-Let's verify the arithmetic. We build a dense $3 \times 3$ convolution with
+We verify the arithmetic by building a dense $3 \times 3$ convolution with
 128 input and output channels and its depthwise-separable factorization,
 then compare parameter counts; :eqref:`eq_depthwise_sep_ratio` predicts a
 ratio of $(1/128 + 1/9)^{-1} \approx 8.4$. We also check that both map an
@@ -408,7 +389,18 @@ location and mix them through learned linear maps and nonlinearities. They offer
 a practical trade-off between the parameter reduction arising from translation
 equivariance and locality and the need for expressive image models.
 
-Note, though, that this flexibility comes at a price. Given an image of size $(h \times w)$, the cost for computing a $k \times k$ convolution is $\mathcal{O}(h \cdot w \cdot k^2)$. For $c_\textrm{i}$ and $c_\textrm{o}$ input and output channels respectively this increases to $\mathcal{O}(h \cdot w \cdot k^2 \cdot c_\textrm{i} \cdot c_\textrm{o})$. For a $256 \times 256$ pixel image with a $5 \times 5$ kernel and $128$ input and output channels respectively this amounts to over 53 billion operations (we count multiplications and additions separately). Later on we will encounter effective strategies to cut down on the cost, e.g., by requiring the channel-wise operations to be block-diagonal, leading to architectures such as ResNeXt :cite:`Xie.Girshick.Dollar.ea.2017`. The depthwise-separable factorization of :numref:`sec_depthwise_separable` is the extreme point of that strategy: by :eqref:`eq_depthwise_sep_ratio` it cuts the cost by a factor of $(1/c_\textrm{o} + 1/k^2)^{-1}$, here about $21\times$. 
+This flexibility has a computational cost. For an image of size $(h \times w)$,
+a $k \times k$ convolution costs $\mathcal{O}(h \cdot w \cdot k^2)$. With
+$c_\textrm{i}$ input and $c_\textrm{o}$ output channels, the cost becomes
+$\mathcal{O}(h \cdot w \cdot k^2 \cdot c_\textrm{i} \cdot c_\textrm{o})$.
+For a $256 \times 256$ pixel image, a $5 \times 5$ kernel, and $128$ input and
+output channels, this is more than 53 billion operations when multiplications
+and additions are counted separately. Block-diagonal channel operations reduce
+this cost in architectures such as ResNeXt
+:cite:`Xie.Girshick.Dollar.ea.2017`. The depthwise-separable factorization of
+:numref:`sec_depthwise_separable` is the limiting case: by
+:eqref:`eq_depthwise_sep_ratio`, it reduces the cost by a factor of
+$(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
 
 ## Exercises
 
@@ -457,12 +449,11 @@ Note, though, that this flexibility comes at a price. Given an image of size $(h
 <!-- slides -->
 
 ::: {.slide title="Channels turn filters into feature banks"}
-Real images have **channels**: RGB has 3, a modern CNN's
-deep feature map has hundreds (64 → 2048 is typical).
+Real images have **channels**: RGB has 3, while deep CNN feature maps may have
+hundreds or thousands.
 
-Going deeper, networks trade spatial resolution for
-channel depth — same information capacity, but
-representing *kinds* of features instead of *places*.
+Going deeper, networks often trade spatial resolution for
+channel depth, representing more feature types at fewer locations.
 
 This deck:
 
@@ -502,8 +493,7 @@ $$\mathbf{Y}_j = \sum_{c=1}^{c_i} \mathbf{X}_c * \mathbf{K}_{j, c} \quad\text{fo
 
 Intuition: each of the $c_o$ output channels is a *different
 combination* of inputs, learned to detect a different feature.
-The network discovers an entire "feature dictionary" per
-layer.
+Together, the channels form a learned feature representation.
 :::
 
 ::: {.slide title="Output channels in code"}
@@ -534,13 +524,12 @@ learnable parameters. Standard sizes:
 - 256 → 256 channels, 3×3 kernel: 590k weights.
 - 512 → 2048 channels, 3×3 kernel: 9.4M weights.
 
-Channel count drives parameter count *quadratically*. That's
-why deeper layers in CNNs widen, but not too much.
+If input and output channel counts grow together, parameter count grows
+quadratically, which constrains how quickly networks can widen.
 :::
 
 ::: {.slide title="The 1×1 convolution"}
-A 1×1 kernel has *no* spatial structure — it doesn't look at
-neighbors. So why use it?
+A $1 \times 1$ kernel has no spatial extent beyond its current position.
 
 Because it acts as a **per-pixel fully connected layer
 across channels**. At every spatial position, it computes a
@@ -563,12 +552,12 @@ out and it's a single matrix multiply:
 :::
 
 ::: {.slide title="Why 1×1 convs everywhere"}
-Modern architectures use them constantly:
+Common uses include:
 
 - **Bottlenecks** (ResNet) — squeeze channels with 1×1,
   do expensive 3×3 in the smaller space, expand back with
-  1×1. Cuts compute by $\sim 4×$ for the same expressive
-  power.
+  1×1, reducing the cost of the spatial convolution. The exact saving
+  depends on channel widths and can be $\sim 4×$ overall.
 - **Pointwise convs** (MobileNet) — depthwise 3×3 +
   pointwise 1×1 splits a regular conv into two cheaper
   pieces.
@@ -581,7 +570,7 @@ Modern architectures use them constantly:
 A dense conv connects *every* input channel to *every* output
 channel. Split the channels into $g$ groups and convolve each
 group separately: parameters and compute drop by a factor of $g$
-(ResNeXt's trick).
+(as in ResNeXt).
 
 The extreme $g = c_i = c_o$ is a **depthwise convolution**:
 one $k \times k$ filter per channel, no channel mixing at all.
@@ -606,15 +595,15 @@ $c_i \to c_o$ channels takes
 
 $$\mathcal{O}(h \cdot w \cdot k^2 \cdot c_i \cdot c_o)$$
 
-operations. For a 256×256 image, 5×5 kernel, 128→128
-channels: ~53 *billion* multiply-adds. That's per layer;
-multiply by depth.
+operations. For a 256×256 image, 5×5 kernel, and 128→128
+channels, counting multiplications and additions separately gives more than 53
+billion operations for one layer.
 
-This is why
-- Convs benefit massively from GPU/TPU acceleration.
-- Channel reduction tricks (1×1 bottlenecks, depthwise
-  separable, group conv, ResNeXt) get serious attention
-  in efficiency-driven architectures.
+Consequently:
+
+- Convolutions benefit from GPU and TPU acceleration.
+- Efficient architectures use 1×1 bottlenecks, depthwise-separable
+  convolutions, and grouped convolutions to reduce channel costs.
 :::
 
 ::: {.slide title="Recap"}
@@ -623,9 +612,8 @@ This is why
 - Multi-output-channel: stack independent filter banks; one
   output channel per filter set.
 - Total weights: $c_o c_i k_h k_w + c_o$.
-- $1\times 1$ convs = per-pixel fully connected layer
-  across channels; the workhorse of modern CNN
-  architecture (bottlenecks, pointwise convs).
+- $1\times 1$ convolutions are per-pixel fully connected layers across
+  channels and are widely used in bottlenecks and pointwise convolutions.
 - Compute scales linearly with $c_i \cdot c_o$ — the
   dominant cost in deep CNNs.
 :::

@@ -6,11 +6,8 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Calculus
 :label:`sec_calculus`
 
-For a long time, how to calculate 
-the area of a circle remained a mystery.
-Then, in Ancient Greece, the mathematician Archimedes
-came up with the clever idea 
-to inscribe a series of polygons 
+In ancient Greece, Archimedes analyzed the area of a circle by inscribing a
+sequence of polygons
 with increasing numbers of vertices
 on the inside of a circle
 (:numref:`fig_circle_area`). 
@@ -32,14 +29,13 @@ This limiting procedure is at the root of both
 The former can tell us how to increase
 or decrease a function's value by
 manipulating its arguments. 
-This comes in handy for the *optimization problems*
+This supplies the derivatives used in the *optimization problems*
 that we face in deep learning,
 where we repeatedly update our parameters 
 in order to decrease the loss function.
 Optimization addresses how to fit our models to training data,
 and calculus is its key prerequisite.
-However, do not forget that our ultimate goal
-is to perform well on *previously unseen* data.
+The ultimate goal, however, is performance on *previously unseen* data.
 That problem is called *generalization*
 and will be a key focus of other chapters.
 
@@ -78,7 +74,7 @@ import numpy as np
 
 ## Derivatives and Differentiation
 
-Put simply, a *derivative* is the rate of change
+A *derivative* is the instantaneous rate of change
 in a function with respect to changes in its arguments.
 Derivatives can tell us how rapidly a loss function
 would increase or decrease were we 
@@ -96,8 +92,7 @@ and it tells us what happens
 to the value of an expression
 as a specified variable 
 approaches a particular value.
-This limit tells us what 
-the ratio between the change in the function value 
+This limit gives the value approached by the ratio between the change in the function value
 $f(x + h) - f(x)$ and the perturbation $h$ 
 converges to as we shrink $h$ to zero.
 Geometrically, the difference quotient is the slope of the *secant* line
@@ -116,9 +111,8 @@ we say that $f$ is differentiable on this set.
 Not all functions are differentiable,
 including many that we wish to optimize,
 such as classification accuracy.
-However, because nearly every algorithm 
-for training deep neural networks 
-must compute the derivative of the loss,
+Because most algorithms for training deep neural networks require derivatives
+of the loss,
 we often optimize a differentiable *surrogate* instead.
 
 
@@ -126,7 +120,7 @@ We can interpret the derivative
 $f'(x)$
 as the *instantaneous* rate of change 
 of $f(x)$ with respect to $x$.
-Let's develop some intuition with an example.
+Consider the following example.
 Define $u = f(x) = 3x^2-4x$.
 
 ```{.python .input #calculus-derivatives-and-differentiation-1}
@@ -155,9 +149,7 @@ def f(x):
 
 Setting $x=1$, we see that $\frac{f(x+h) - f(x)}{h}$ approaches $2$
 as $h$ approaches $0$.
-While this experiment lacks 
-the rigor of a mathematical proof,
-we can quickly see that indeed $f'(1) = 2$.
+This numerical experiment suggests that $f'(1) = 2$ but is not a proof.
 
 ```{.python .input #calculus-derivatives-and-differentiation-2}
 for h in 10.0**np.arange(-1, -6, -1):
@@ -186,8 +178,8 @@ The numerical limit is thus caught between two error sources:
 truncation error (from $h$ being too large)
 and cancellation (from $h$ being too small).
 This is one important reason why the automatic differentiation
-introduced in :numref:`sec_autograd` computes derivatives
-*analytically*, by applying differentiation rules,
+introduced in :numref:`sec_autograd` computes derivatives by applying
+differentiation rules to the recorded operations,
 rather than by finite differences.
 
 There are several equivalent notational conventions for derivatives.
@@ -219,8 +211,7 @@ We state these derivatives and rules without proof for now;
 each follows from the limit definition,
 as shown in :numref:`sec_mdl-single_variable_calculus`,
 which also collects a longer table of common derivatives.
-Note that derivatives tell us 
-the *slope* of a function 
+Derivatives give the *slope* of a function
 at a particular location.
 
 We can make that slope visible by plotting the function
@@ -239,7 +230,7 @@ d2l.plot(x, [f(x), 2 * x - 3], 'x', 'f(x)', legend=['f(x)', 'Tangent line (x=1)'
 :label:`subsec_calculus-grad`
 
 Thus far, we have been differentiating
-functions of just one variable.
+functions of one variable.
 In deep learning, we also need to work
 with functions of *many* variables, typically functions that take
 the vectors and matrices from :numref:`sec_linear-algebra`
@@ -309,7 +300,7 @@ This is the idea behind *gradient descent*, which takes a small step along
 $-\nabla f$. Later optimizers modify this direction using momentum,
 coordinatewise scaling, or curvature information, but the gradient remains
 the local signal from which their updates are constructed.
-:numref:`fig_calc_gradient_field` shows the picture to keep in mind:
+:numref:`fig_calc_gradient_field` illustrates the geometry:
 gradients are perpendicular to the *level sets* of $f$
 (the curves along which $f$ is constant)
 and point uphill, so $-\nabla f$ points downhill.
@@ -342,11 +333,8 @@ in :numref:`sec_mdl-matrix-calculus-autodiff`.
 ## Chain Rule
 
 In deep learning, the gradients of concern
-are often difficult to calculate
-because we are working with 
-deeply nested functions 
-(of functions (of functions...)).
-Fortunately, the *chain rule* takes care of this. 
+involve deeply nested compositions. The *chain rule* differentiates these
+compositions.
 Returning to functions of a single variable,
 suppose that $y = f(g(x))$
 and that the underlying functions 
@@ -393,7 +381,7 @@ so that later sections can invoke it
 `use_svg_display` requests crisp SVG output,
 `set_figsize` sets the figure size,
 and `set_axes` configures labels, ranges, and scales.
-You do not need to study these; skim and move on.
+The details are not prerequisites for the calculus material.
 
 ```{.python .input #calculus-visualization-utilities-1}
 def use_svg_display():  #@save
@@ -420,8 +408,8 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     axes.grid()
 ```
 
-Finally, `plot` overlays multiple curves;
-most of its body just aligns the shapes of its inputs.
+Finally, `plot` overlays multiple curves; most of its implementation aligns
+the input shapes.
 
 ```{.python .input #calculus-visualization-utilities-4}
 #@save
@@ -455,8 +443,7 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
 ## Discussion
 
 Three ideas from this section recur throughout the book.
-First, and most important for what follows:
-from the viewpoint of optimization,
+First, from the viewpoint of optimization,
 the gradient tells us how to move the parameters of a model
 in order to lower the loss.
 Because $-\nabla f$ points in the direction of steepest *descent*,
@@ -464,10 +451,7 @@ each step of the optimization algorithms used throughout this book
 amounts to evaluating the gradient
 and taking a short step along $-\nabla f$.
 Second, the composition rules for differentiation
-can be applied routinely, enabling
-us to compute gradients *automatically*;
-this task requires no creativity, so
-we can focus our cognitive powers elsewhere.
+can be applied systematically, enabling automatic gradient computation.
 Third, computing the derivatives of vector-valued functions 
 requires us to multiply matrices as we trace 
 the dependency graph of variables from output to input. 
@@ -485,8 +469,8 @@ aimed at machine learning.
 
 ## Exercises
 
-1. So far we took the rules for derivatives for granted. 
-   Using the definition and limits prove the properties 
+1. This section stated the derivative rules without proof. Using the limit
+   definition, prove the rules
    for (i) $f(x) = c$, (ii) $f(x) = x^n$, (iii) $f(x) = e^x$ and (iv) $f(x) = \log x$.
 1. In the same vein, prove the product, sum, and quotient rule from first principles. 
 1. Prove that the constant multiple rule follows as a special case of the product rule. 
@@ -535,20 +519,20 @@ aimed at machine learning.
 ::: {.cover}
 [Dive into Deep Learning · §2.4]{.kicker}
 
-How a loss changes when we nudge a parameter<br>**limits · derivatives · gradients · the chain rule**.
+How a loss changes under a small parameter perturbation<br>**limits · derivatives · gradients · the chain rule**.
 :::
 :::
 
-::: {.slide title="Optimization asks one question: which way is downhill?"}
+::: {.slide title="Derivatives indicate a direction of descent"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Training a model = **minimizing a loss**. Calculus answers the only
-question an optimizer ever asks:
+Training a model requires **minimizing a loss**. Calculus describes how that
+loss changes with the parameters:
 
 - The **derivative**: how fast the loss moves when one parameter is
-  nudged.
+  perturbed.
 - The **gradient** $\nabla_\theta L$: one slope per parameter, stacked.
 - Optimizers step along $-\nabla_\theta L$: downhill.
 - The **chain rule** differentiates nested functions.
@@ -624,8 +608,8 @@ must reproduce:
 ::: {.slide title="The quotient approaches 2, one digit per decade"}
 [Derivatives]{.kicker}
 
-At $x = 1$, shrink $h$ tenfold per row and watch the difference quotient
-close in on $f'(1) = 2$:
+At $x = 1$, shrinking $h$ tenfold per row makes the difference quotient
+approach $f'(1) = 2$:
 
 @calculus-derivatives-and-differentiation-2
 
@@ -643,8 +627,8 @@ floats, and their difference loses its leading digits to
 
 Error creeps back in at $h=10^{-12}$; at $10^{-16}$, when $1+h$ rounds
 to exactly $1$, the quotient collapses to $0$. This is a key reason
-**autograd** (the automatic-differentiation section) differentiates
-*analytically*.
+**autograd** (the automatic-differentiation section) applies differentiation
+rules to recorded operations.
 :::
 
 ::: {.slide title="The picture: tangent of slope 2 at x = 1"}
@@ -815,7 +799,7 @@ Evaluate **forward** ($x \to u \to y$); accumulate derivatives
 :::
 
 ::: {.slide title="The multivariate chain rule is a matrix–vector product"}
-[Chain rule · payoff]{.kicker}
+[Chain rule]{.kicker}
 
 With $m$ intermediates $u_j$, each depending on $n$ inputs $x_i$, the
 sums $\partial y/\partial x_i = \sum_j A_{ij}\, \partial y/\partial u_j$
@@ -851,13 +835,13 @@ This is why linear algebra is a prerequisite for deep learning.
 - **Identities:** $\nabla \mathbf{A}\mathbf{x} = \mathbf{A}^\top$,
   $\nabla \|\mathbf{x}\|^2 = 2\mathbf{x}$, …, all plain linear algebra.
 - The **chain rule** multiplies along the path; multivariate, it *is* a
-  matrix–vector product, the heart of backprop.
+  matrix–vector product used in backpropagation.
 - Next: **autograd** (the automatic-differentiation section) runs all of
-  this for us, analytically.
+  this by applying differentiation rules automatically.
 :::
 :::
 
 ::: {.d2l-note}
-Every optimization step in this book reduces to evaluating a gradient.
+Most optimization steps in this book use a gradient.
 :::
 :::

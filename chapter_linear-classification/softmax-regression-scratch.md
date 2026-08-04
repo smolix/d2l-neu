@@ -6,14 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Softmax Regression Implementation from Scratch
 :label:`sec_softmax_scratch`
 
-Because softmax regression is so fundamental,
-we believe that you ought to know
-how to implement it yourself.
-Here, we limit ourselves to defining the
-softmax-specific aspects of the model
-and reuse the other components
-from our linear regression section,
-including the training loop.
+This section implements the components specific to softmax regression: the
+softmax transformation, cross-entropy loss, parameters, and forward pass. The
+data and training loop reuse the abstractions introduced for linear
+regression, making the differences between regression and classification
+explicit.
 
 ```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab mxnet
@@ -44,8 +41,7 @@ from jax import numpy as jnp
 
 ## The Softmax
 
-Let's begin with the core piece:
-the mapping from scalars to probabilities.
+We begin with the transformation from scores to probabilities.
 Softmax normalizes each *row* of a matrix, so we will need per-row sums;
 recall from :numref:`subsec_lin-alg-reduction` and
 :numref:`subsec_lin-alg-non-reduction` how `axis` selects the dimension
@@ -448,7 +444,7 @@ print(f'Test accuracy: {float(jnp.concatenate(correct).mean()):.3f}')
 
 The overall test accuracy comes out at roughly 82--83% (the exact value
 varies a little from run to run), consistent with the training
-curve: the ceiling of a linear model on Fashion-MNIST. We are more interested in
+curve: the performance of this linear model on Fashion-MNIST. We are more interested in
 the images we label *incorrectly*. We visualize them by
 comparing their actual labels
 (first line of text output)
@@ -610,36 +606,34 @@ d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
                   ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
 ```
 
-The errors are anything but uniform: they form two blocks. Upper-body garments
-(t-shirt, pullover, dress, coat, shirt: columns 0, 2, 3, 4, 6) are traded
-almost exclusively among themselves, with the *shirt* column the most polluted
-of all as it leaks into t-shirt, pullover, and coat; and footwear (sandal,
+The errors concentrate in two groups. Upper-body garments
+(t-shirt, pullover, dress, coat, shirt: columns 0, 2, 3, 4, 6) trade errors
+almost exclusively among themselves, and the *shirt* column has the largest off-diagonal mass, with predictions often
+assigned to t-shirt, pullover, and coat; footwear (sandal,
 sneaker, ankle boot: columns 5, 7, 9) forms a second, smaller cluster.
-Meanwhile trousers and bags are nearly pure diagonal: their overall silhouette
-is unmistakable even to a linear model. This is the summary's claim made
-visible, since to a classifier that can only weigh pixels linearly, two
-garments with the same outline and mass distribution, like a shirt and a
-pullover, are close to indistinguishable, while classes that differ in
-silhouette are easy.
+Meanwhile, trousers and bags have predominantly diagonal entries, indicating
+fewer errors for this fitted linear model. This makes the summary's claim
+visible, since to a classifier that can only weigh pixels linearly, garments with similar global pixel patterns, such as shirts and pullovers, can
+be difficult to distinguish, while classes that
+differ in silhouette are easy.
 
 ## Summary and Discussion
 
-In this section we built softmax regression entirely from scratch: the softmax
-operation, the cross-entropy loss, parameter initialization, the forward pass, and
-training on Fashion-MNIST. Breaking each piece open by hand is the purpose. Once
-you have seen these five moving parts separately, the one-liner in
-:numref:`sec_softmax_concise` is just notation.
+In this section we built softmax regression from its constituent operations:
+softmax, cross-entropy, parameter initialization, the forward pass, and the
+optimization step. The concise implementation in :numref:`sec_softmax_concise`
+packages the same computation into framework primitives, including a fused and
+numerically stable loss.
 
-**What the training curve tells you.** After 10 epochs with minibatch SGD the
-model converges to roughly 82--83% validation accuracy. That ceiling is the
-limit of linear separability on Fashion-MNIST, not a tuning artifact.
-The ten classes are not linearly separable in pixel space (shirts and pullovers
-look nearly identical to a linear model). The misclassification gallery and the
-confusion matrix at the end of the section make this concrete. Replacing the flat linear layer with
-even a single hidden layer (:numref:`chap_perceptrons`) pushes past it.
+**What this training curve shows.** In the displayed run, 10 epochs of minibatch
+SGD reach roughly 82--83% validation accuracy. The confusion matrix shows that
+many remaining errors involve upper-body garments with similar pixel patterns.
+This observation diagnoses the fitted model; it does not establish a universal
+accuracy ceiling for linear classifiers or rule out improvements from different
+preprocessing, optimization, or regularization.
 
-**Why the clip is only a band-aid.** The clip stops $\log 0$ but leaves the naive
-`softmax` free to overflow for large logits; the real fix (subtracting the row
+**Why clipping is incomplete.** The clip stops $\log 0$ but leaves the naive
+`softmax` free to overflow for large logits; the stable approach (subtracting the row
 maximum before exponentiating and fusing softmax with log) is derived in
 :numref:`subsec_softmax-implementation-revisited`, which the concise
 implementation applies automatically.
@@ -685,11 +679,11 @@ implementation applies automatically.
 ::: {.cover}
 [Dive into Deep Learning · §4.4]{.kicker}
 
-Softmax regression **from scratch**<br>The whole classifier, opened up: the softmax, the cross-entropy loss, and the training loop, each built by hand.
+Softmax regression **from scratch**<br>An explicit softmax, cross-entropy loss, and training loop.
 :::
 :::
 
-::: {.slide title="The same recipe, two new pieces"}
+::: {.slide title="Two classification-specific components"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -701,7 +695,7 @@ them to a **distribution over classes**. Two new parts do that:
 2. **Cross-entropy** is the loss that scores a distribution.
 
 ::: {.d2l-note}
-Everything else, the `Module` / `Trainer` scaffold, is **reused** from
+The `Module` / `Trainer` scaffold is **reused** from
 the regression chapter; `Classifier` just adds accuracy reporting.
 :::
 :::
@@ -722,7 +716,7 @@ the regression chapter; `Classifier` just adds accuracy reporting.
 :::
 :::
 
-::: {.slide title="First, a reminder: sums along an axis"}
+::: {.slide title="Sums along an axis"}
 [The Softmax]{.kicker}
 
 ::: {.cols .vc}
@@ -755,8 +749,7 @@ each row by its total:
 @softmax-regression-scratch-the-softmax-2
 
 ::: {.d2l-note .warn}
-Naive `exp` **overflows** for large logits. Fine for teaching; never use
-it in production. The stable fix arrives in the concise-softmax-regression
+Naive `exp` **overflows** for large logits. This direct implementation exposes the formula but is numerically unstable. The stable fix arrives in the concise-softmax-regression
 section.
 :::
 :::
@@ -775,13 +768,13 @@ to 1**, exactly what a probability distribution over classes requires:
 
 A single logit of $1000$ sends $\exp$ to infinity in float32, so the max
 entry becomes $\infty/\infty=$ `NaN` (and the rest underflow to 0),
-poisoning the row. The framework's `softmax` shifts by the row maximum
+making the row invalid. The framework's `softmax` shifts by the row maximum
 first and stays finite on the identical input:
 
 @softmax-regression-scratch-the-softmax-overflow
 
 ::: {.d2l-note .warn}
-One `NaN` poisons every downstream gradient. The concise-softmax-regression
+A `NaN` propagates through downstream gradients. The concise-softmax-regression
 section derives the fix (fuse softmax and log via **log-sum-exp**) and shows
 the frameworks already ship it.
 :::
@@ -846,8 +839,8 @@ loop. True labels `0` and `2` select the highlighted probabilities:
 ::: {.col .narrow}
 ::: {.d2l-note}
 Minimizing cross-entropy maximizes the **log-likelihood** of the correct
-labels. It keeps rewarding higher confidence, nudging $0.51\to0.99$ even
-after the decision is already right.
+labels. It distinguishes correct-class probabilities of $0.51\to0.99$ even when
+the hard decision is unchanged.
 :::
 :::
 :::
@@ -863,8 +856,7 @@ clip keeps the log finite when a probability underflows to 0:
 
 ::: {.d2l-note .warn}
 The clip only masks $\log 0$; it does not fix the upstream overflow, and
-it silently kills the gradient on any clamped entry. The cure is the
-concise-softmax-regression section's fused loss.
+it silently kills the gradient on any clamped entry. The concise-softmax-regression section derives the stable fused loss.
 :::
 :::
 
@@ -883,7 +875,7 @@ utility now knows how to optimize this classifier:
 
 [Train & Predict]{.dtitle}
 
-[fit on Fashion-MNIST, then inspect mistakes]{.dsub}
+[fit on Fashion-MNIST, then inspect errors]{.dsub}
 :::
 :::
 
@@ -897,7 +889,7 @@ validation accuracy, no extra code:
 @softmax-regression-scratch-training
 :::
 
-::: {.slide title="Predict on a fresh batch"}
+::: {.slide title="Predictions on a validation batch"}
 [Prediction]{.kicker}
 
 Take the argmax of the model's outputs over a fresh validation batch,
@@ -906,16 +898,16 @@ one predicted class per image:
 @softmax-regression-scratch-prediction-1
 :::
 
-::: {.slide title="Look at the mistakes"}
+::: {.slide title="Inspect misclassified examples"}
 [Prediction]{.kicker}
 
-The interesting cases are the **errors**. Tile the misclassified images,
+We inspect the **errors** to identify recurring class confusions. Tile the misclassified images,
 each captioned `true / predicted`:
 
 @softmax-regression-scratch-prediction-2
 :::
 
-::: {.slide title="82%: a linear ceiling" only="pytorch"}
+::: {.slide title="Validation accuracy of the linear model" only="pytorch"}
 [Prediction]{.kicker}
 
 Sweep the whole validation set and average the per-example correct flags:
@@ -923,26 +915,25 @@ Sweep the whole validation set and average the per-example correct flags:
 @softmax-regression-scratch-prediction-accuracy
 
 ::: {.d2l-note}
-Roughly **82--83%** run to run: the *ceiling* of a linear
-model on Fashion-MNIST, not a tuning artifact. The next slide shows where
-the missing 18% lives.
+This run reaches roughly **82--83%**. The confusion matrix on the next slide
+shows which class pairs account for many of its errors.
 :::
 :::
 
-::: {.slide title="82%: a linear ceiling" except="pytorch"}
+::: {.slide title="Validation accuracy of the linear model" except="pytorch"}
 [Prediction]{.kicker}
 
 Sweep the whole validation set and average the per-example correct flags
 returned by `accuracy(..., averaged=False)`: the overall test accuracy
-lands at roughly **82--83%**, matching the validation curve above.
+lands at roughly **82--83%** in the displayed run, matching the validation
+curve above.
 
 ::: {.d2l-note}
-That is the *ceiling* of a linear model on Fashion-MNIST, not a tuning
-artifact. The next slide shows where the missing 18% lives.
+The next slide resolves this aggregate accuracy into class-specific errors.
 :::
 :::
 
-::: {.slide title="The errors form two blocks, not a blur" only="pytorch"}
+::: {.slide title="The confusion matrix identifies two error groups" only="pytorch"}
 [Prediction · the confusion matrix]{.kicker}
 
 ::: {.cols .vc}
@@ -951,14 +942,14 @@ Accumulate a $10\times 10$ count matrix over the validation set (the
 base-classification section's confusion matrix) and normalize each column:
 
 - **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**)
-  trade errors almost exclusively among themselves; the shirt column
-  is the most polluted of all.
+  account for many mutual confusions; the shirt column has the largest
+  off-diagonal mass.
 - **Footwear** (sandal, sneaker, ankle boot) forms a second cluster.
-- Trousers and bags are nearly pure diagonal: silhouette suffices.
+- Trousers and bags have predominantly diagonal entries in this run.
 
 ::: {.d2l-note}
-Same outline, same mass distribution → indistinguishable to a model
-that can only **weigh pixels linearly**.
+A linear pixel model cannot represent localized or nonlinear interactions that
+may distinguish garments with similar global patterns.
 :::
 :::
 
@@ -968,18 +959,18 @@ that can only **weigh pixels linearly**.
 :::
 :::
 
-::: {.slide title="The errors form two blocks, not a blur" except="pytorch"}
+::: {.slide title="The confusion matrix identifies two error groups" except="pytorch"}
 [Prediction · the confusion matrix]{.kicker}
 
 Accumulate a $10\times 10$ count matrix over the validation set (the
 base-classification section's confusion matrix), normalize each column, and
-the misses turn out to be anything but uniform:
+the errors concentrate in a few groups:
 
 - **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**) trade
-  errors almost exclusively among themselves; the shirt column is the
-  most polluted of all, leaking into t-shirt, pullover, and coat.
+  errors almost exclusively among themselves; the shirt column has the largest off-diagonal mass, often assigned to
+  t-shirt, pullover, or coat.
 - **Footwear** (sandal, sneaker, ankle boot) forms a second, smaller cluster.
-- Trousers and bags are nearly pure diagonal: silhouette suffices.
+- Trousers and bags have predominantly diagonal entries in this run.
 
 ::: {.d2l-note}
 Same outline, same mass distribution → indistinguishable to a model that
@@ -987,20 +978,18 @@ can only **weigh pixels linearly**.
 :::
 :::
 
-::: {.slide title="Why a linear model caps out"}
-[The ceiling]{.kicker}
+::: {.slide title="What the linear model cannot represent"}
+[Model capacity]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A linear classifier draws **straight** decision boundaries: the
-softmax-regression section's picture, now with a price tag. In pixel space
+A linear classifier draws **straight** decision boundaries: as shown in the softmax-regression section. In pixel space
 shirts and pullovers overlap, and no hyperplane separates them.
 
-The capacity of lines is finite: in the plane a line shatters any 3
-points but **never** the 4-point XOR pattern (the generalization-in-
+The capacity of lines is finite: in the plane a line can shatter 3 points in
+general position but cannot realize the 4-point XOR labeling (the generalization-in-
 classification section makes this precise). A single hidden layer (the
-multilayer-perceptrons chapter) bends the boundary and pushes past the
-ceiling.
+multilayer-perceptrons chapter) can represent nonlinear decision boundaries.
 :::
 
 ::: {.col .fig}
@@ -1017,18 +1006,16 @@ ceiling.
 - **Softmax** = exp, row-sum, divide → a probability distribution over
   classes.
 - **Cross-entropy** = $-\log \hat{y}_{\text{true}}$, averaged over the
-  batch: the natural classification loss.
+  batch: the negative log-likelihood used here.
 - **Model** = flatten → one linear layer ($784\times10$) → softmax.
 :::
 
 ::: {.col}
 - **Training** reuses the regression `Trainer`; `Classifier` adds
-  accuracy reporting for free.
-- **82--83%** is the linear ceiling on Fashion-MNIST; the confusion matrix
-  shows the errors in two blocks (upper-body garments, footwear), exactly
-  where silhouette fails.
-- `exp(1000)` = `NaN`: the naive softmax is fragile and the clip merely
-  hides it; the concise-softmax-regression section derives the real fix.
+  accuracy reporting through the base class.
+- This run reaches **82--83%**; its confusion matrix concentrates errors among
+  visually similar upper-body garments and, to a lesser extent, footwear.
+- `exp(1000)` = `NaN`: the naive softmax is fragile and clipping does not address the overflow; the concise-softmax-regression section derives the stable approach.
 :::
 :::
 :::

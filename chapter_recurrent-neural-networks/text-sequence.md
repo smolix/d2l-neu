@@ -7,21 +7,20 @@ and writing text. Text poses a problem that the synthetic series of
 while text arrives as a string of characters. Before we can model language,
 we must decide how to carve a string into *tokens*, the atomic units that
 our models will treat as observations $x_t$, and how to map each token to a
-numerical index. This choice looks like bookkeeping but turns out to shape
-everything downstream: the size of the model's output layer, the effective
+numerical index. This choice determines the size of the model's output layer, the effective
 length of every document it reads, and even which arithmetic problems it
 can solve. Every modern language model ships with a tokenizer, and the
 tokenizer is best thought of as part of the model.
 
-This section builds tokenization up from first principles. We start with
-the two obvious schemes, characters and words, and see that they sit at
-opposite ends of a trade-off. We then rebuild text from raw bytes and learn
-a vocabulary *from data* with byte pair encoding (BPE), the algorithm
-behind essentially every production tokenizer today
-:cite:`Sennrich.Haddow.Birch.2015,Radford.Wu.Child.ea.2019`. Our
-implementation is small enough to read in one sitting, yet exact: at the
-end of the section we load the published merge table of GPT-2 into it and
-reproduce the output of OpenAI's `tiktoken` library token for token.
+We first compare character and word tokens, which occupy opposite ends of a
+vocabulary-size and sequence-length trade-off. We then represent text as raw
+bytes and learn
+a vocabulary *from data* with byte pair encoding (BPE), one of several
+widely deployed subword schemes
+:cite:`Sennrich.Haddow.Birch.2015,Radford.Wu.Child.ea.2019`. WordPiece and
+Unigram tokenization make different modeling choices. Our implementation also
+accepts the published GPT-2 merge table and reproduces the GPT-2 output of
+OpenAI's `tiktoken` library token for token.
 
 ## Reading the Dataset
 
@@ -401,6 +400,20 @@ toy_tok.decode(toy_tok.encode('hug pug hugs'))
 
 ### Training on The Time Machine
 
+Token lists and, later in the chapter, generated text run wider than a
+printed page. One utility folds them, and we reach for it throughout the
+rest of the book whenever output would otherwise run off the margin.
+
+```{.python .input #text-sequence-training-on-the-time-machine-3}
+#@save
+import textwrap
+
+def print_wrapped(*args, width=76):  #@save
+    """Print like `print`, folding each line to the width of a page."""
+    for line in ' '.join(str(a) for a in args).split('\n'):
+        print(textwrap.fill(line, width, subsequent_indent='    '))
+```
+
 Now the real thing: we train a 1,024-token vocabulary on the raw,
 unnormalized novella. The first merges are humble letter pairs; by the end
 of training the tokenizer has discovered whole words of Wells' prose. Look
@@ -414,7 +427,7 @@ merged_ids = list(tok.merges.values())
 print('first:', [tok.vocab[i] for i in merged_ids[:8]])
 print('last: ', [tok.vocab[i] for i in merged_ids[-8:]])
 ids = tok.encode('The Time Traveller smiled. Are you sure?')
-print(len(ids), 'tokens:', [tok.vocab[i] for i in ids])
+print_wrapped(len(ids), 'tokens:', [tok.vocab[i] for i in ids])
 ```
 
 How much does a bigger vocabulary buy? Because ids are assigned in rank
@@ -460,7 +473,8 @@ that straddle word boundaries:
 ```{.python .input #text-sequence-pre-tokenization-telling-bpe-where-words-end-1}
 crossers = [v.decode('utf-8', 'replace') for i, v in tok.vocab.items()
             if i >= 256 and b' ' in v.strip(b' ')]
-print(len(crossers), 'tokens cross a word boundary, e.g.', crossers[:8])
+print_wrapped(len(crossers), 'tokens cross a word boundary, e.g.',
+              crossers[:8])
 ```
 
 Merges like "of the " compress the training corpus, but they are brittle
@@ -509,8 +523,8 @@ crossers = [v for i, v in bpe.vocab.items()
 print('boundary-crossing tokens now:', len(crossers))
 gained = sorted(set(bpe.vocab.values()) - set(tok.vocab.values()),
                 key=lambda v: (-len(v), v))
-print('longest tokens gained instead:',
-      [v.decode('utf-8', 'replace') for v in gained[:6]])
+print_wrapped('longest tokens gained instead:',
+              [v.decode('utf-8', 'replace') for v in gained[:6]])
 ```
 
 ![Pre-tokenization in action on a real sentence. The regex first cuts the text into chunks: words with their leading spaces, digit runs, and punctuation. BPE merges are then applied within each chunk, and can never cross a chunk boundary.](../img/mdl-rnn-pretokenization-pipeline.svg)
@@ -521,12 +535,11 @@ print('longest tokens gained instead:',
 ### From Tokens to Indices
 
 For the character- and word-level pipelines that some later sections still
-use, we need the classical piece of machinery that BPE gave us for free: a
+use, we need a component already supplied by BPE: a
 *vocabulary* object that assigns each distinct token string an index and
 maps unknown tokens to a reserved `<unk>` slot. Rare tokens (below
-`min_freq` occurrences) can be dropped to keep the table small; that this
-is even necessary is precisely the OOV problem that byte-level BPE
-eliminates.
+`min_freq` occurrences) can be dropped to keep the table small; needing to
+do so at all is precisely the OOV problem that byte-level BPE eliminates.
 
 ```{.python .input #text-sequence-vocabulary-1}
 class Vocab:  #@save
@@ -617,11 +630,12 @@ print('pad/bos/eos ids:', bpe.pad, bpe.bos, bpe.eos, '| len:', len(bpe))
 
 ### What a Production Tokenizer Stores
 
-Everything a deployed tokenizer knows fits in one table. OpenAI's
-open-source `tiktoken` library ships, for each model family, a mapping
-from byte strings to integer *ranks* plus a pre-tokenization pattern, and
-that is the entire artifact: no neural network, no language-specific
-rules. Peeking at the GPT-2 table around the byte boundary is instructive.
+GPT-2's tokenizer is specified by a mergeable-rank table, a byte-to-symbol
+mapping, a pre-tokenization pattern, and special-token rules. It has no neural
+network at inference time. Other tokenizer families may additionally store
+normalization rules or a probabilistic segmentation model. We inspect the
+GPT-2 rank table around the byte boundary below; the leading underscore on
+`_mergeable_ranks` marks this as a version-sensitive private API.
 
 ```{.python .input #text-sequence-what-a-production-tokenizer-stores}
 enc = tiktoken.get_encoding('gpt2')
@@ -632,8 +646,8 @@ print(enc._special_tokens)
 The first 256 ranks are the single bytes (in a permuted order: GPT-2 lists
 printable characters first), and rank 256 onward are learned merges in
 rank order, exactly the structure our `BPETokenizer` uses. Amusingly,
-GPT-2's first two merges, " t" and " a", learned from 40 gigabytes of web
-text, are among the very first our tokenizer learned from one Victorian
+GPT-2's first two merges, learned from 40 gigabytes of web text, are " t"
+and " a", among the very first our tokenizer learned from one Victorian
 novella: the head of the English fragment distribution is that stable.
 
 ### Verifying Our Implementation
@@ -797,9 +811,9 @@ forge them. Production tokenizers such as `tiktoken`'s are exactly this
 construction at scale, as we verified by reproducing GPT-2's tokenization
 token for token, and their fingerprints (fertility differences across
 languages, digit chunking, glitch tokens) are visible in the behavior of
-every deployed language model. The statistics of the token sequences we
-have just produced, and what it takes to model them, are the subject of
-:numref:`sec_language-model`.
+every deployed language model. :numref:`sec_language-model` takes up the
+statistics of the token sequences we have just produced, and what it takes
+to model them.
 
 ## Exercises
 
@@ -884,7 +898,7 @@ byte-level BPE will need none of it:
   and unseen words are **out of vocabulary**.
 :::
 
-::: {.slide title="One trade-off curve"}
+::: {.slide title="Vocabulary size and sequence length"}
 ![A larger vocabulary encodes the same text in fewer tokens; BPE interpolates.](../img/mdl-rnn-granularity-spectrum.svg){width=72%}
 :::
 
@@ -917,7 +931,7 @@ Greedy compression with a learned dictionary.
 ![New text replays the merges: "hugs" → hug+s; rare "bun" falls back to bytes.](../img/mdl-rnn-merge-tree.svg){width=62%}
 :::
 
-::: {.slide title="The trainer, verified on the toy corpus"}
+::: {.slide title="BPE training on a small corpus"}
 `BPETokenizer.train`: ids 0–255 are bytes, each merge takes the
 next id, so **id order = merge rank**.
 
@@ -963,7 +977,7 @@ Split text into chunks with a regex; merges never cross chunks
 
 @text-sequence-pre-tokenization-telling-bpe-where-words-end-2
 
-![](../img/mdl-rnn-pretokenization-pipeline.svg){width=88%}
+![The regex first separates words, digit runs, and punctuation; BPE merges are then restricted to each resulting chunk.](../img/mdl-rnn-pretokenization-pipeline.svg){width=88%}
 :::
 
 ::: {.slide title="Retrain with the pattern"}
@@ -989,7 +1003,7 @@ GPT-2's first merges (" t", " a") match what we learned from
 one novella: the head of English is that stable.
 :::
 
-::: {.slide title="The verification moment"}
+::: {.slide title="Comparison with the GPT-2 tokenizer"}
 Load GPT-2's published ranks into **our** encoder and reproduce
 `tiktoken` token for token:
 

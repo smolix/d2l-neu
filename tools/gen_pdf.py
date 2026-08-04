@@ -29,6 +29,11 @@ from d2l_preprocess import (
 from build_lib import flatten_tab_branches
 
 
+# A dark, conventional hyperlink blue that remains legible in print. Quarto's
+# LaTeX template loads xcolor with the dvipsnames palette, which defines it.
+PDF_LINK_COLOR = 'NavyBlue'
+
+
 def convert_prose_tabs_single(text, framework):
     """Keep only the target framework's prose tab content."""
     tab_pattern = re.compile(
@@ -321,11 +326,16 @@ def main():
         else:
             shutil.copy2(asset_src, asset_dst)
 
-    # Copy static files
+    # Copy static files. Refresh on every run: the old `if not exists` guard
+    # meant an edit to static/d2l-preamble.tex (the LaTeX preamble Quarto
+    # include-in-header's) never reached an already-generated _pdf/<fw>/, so
+    # preamble changes silently did nothing until someone deleted the tree.
+    # Re-copying static/ (~21 MB, mostly fonts) costs a fraction of a second
+    # against a multi-minute PDF build, so an unconditional copy is the cheap
+    # correct answer rather than a per-file staleness check.
     static_src = Path(__file__).parent.parent / 'static'
     static_dst = dst / 'static'
-    if not static_dst.exists():
-        shutil.copytree(static_src, static_dst, dirs_exist_ok=True)
+    shutil.copytree(static_src, static_dst, dirs_exist_ok=True)
 
     # Copy SVG→PDF lua filter
     lua_src = Path(__file__).parent.parent / '_svg-to-pdf.lua'
@@ -417,9 +427,9 @@ format:
       - top=1in
       - bottom=1in
       - twoside
-    linkcolor: black
-    citecolor: black
-    urlcolor: black
+    linkcolor: "{PDF_LINK_COLOR}"
+    citecolor: "{PDF_LINK_COLOR}"
+    urlcolor: "{PDF_LINK_COLOR}"
     include-in-header: static/d2l-preamble.tex
     toc: true
     toc-depth: 2

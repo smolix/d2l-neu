@@ -1,27 +1,23 @@
 # AdamW
 :label:`sec_adamw`
 
-Adam ended the last section as the default optimizer of deep learning, but
-the recipe card that practitioners actually run says *AdamW*: Adam with
-weight decay, typically $\lambda = 0.1$, on most but not all of the
-parameters. This section explains the W. Back in :numref:`sec_weight_decay`
+Adam is commonly used with decoupled weight decay, producing *AdamW*: Adam
+with a separate shrinkage update applied to selected parameter groups. The
+coefficient depends on the model, schedule, training horizon, and parameter
+group; later examples report values used in specific language-model recipes.
+This section explains the W. Back in :numref:`sec_weight_decay`
 we saw that adding an $\ell_2$ penalty to the loss and shrinking the weights
 by a fixed factor each step are the same operation under stochastic gradient
-descent, and we promised to return to the optimizer once we had better ones.
-That section already warned, and :numref:`sec_training_recipes` repeated in
-recipe form, that under Adam the two operations part ways: the penalty
-version is rescaled coordinate-by-coordinate and quietly stops doing its
-job. The one-line repair by :citet:`Loshchilov.Hutter.2019` became part of
-the name of the method. What the earlier chapters asserted, this section
-derives and measures.
+descent. Under Adam, however, the adaptive preconditioner changes the penalty
+coordinate by coordinate, so the two operations are no longer equivalent.
+The decoupled update of :citet:`Loshchilov.Hutter.2019` restores direct
+control over the shrinkage. This section derives and measures the difference.
 
-The plan: first the two-line algebra that breaks the equivalence, then AdamW
-from scratch, then an experiment on the language model of
-:numref:`subsec_tinylm` showing what decoupling buys. With the mechanics
-settled we turn to practice: what weight decay actually does in large-scale
-training (not what the word "regularization" suggests), which parameters
-should be exempt from it, and what the optimizer's state costs in memory,
-the one piece of systems arithmetic this chapter owns.
+We first derive the loss-penalty and decoupled updates, then implement AdamW
+and compare both forms on the language model of :numref:`subsec_tinylm`.
+The final sections discuss the effect of weight decay in large-scale
+training, the parameters commonly exempted from it, and the memory required
+for optimizer state.
 
 ```{.python .input #adamw}
 %%tab pytorch
@@ -58,8 +54,9 @@ $$
 
 Penalizing the loss *is* shrinking the weights, by the uniform factor
 $1 - \eta\lambda$. Now feed the same penalized gradient through Adam's
-update :eqref:`eq_adam-update`. Everything in the gradient is divided by
-$\sqrt{\hat{\mathbf{v}}_t}$, the penalty included. Schematically, treating
+update :eqref:`eq_adam-update`. The moments are built from the penalized
+gradient, so the penalty also passes through the adaptive preconditioner. The
+following display is schematic: treating
 $\sqrt{\hat{\mathbf{v}}_t}$ as a common preconditioner for loss term and
 penalty alike (both moments are in fact built from the penalized gradient),
 the shrinkage applied to coordinate $i$ is no longer uniform:
@@ -74,9 +71,10 @@ $$
 The regularization strength is now rescaled per coordinate by the same
 preconditioner that rescales the loss gradient, and backwards: a parameter
 with a large gradient history (large $\hat{v}_i$) is barely decayed at all,
-while a parameter whose gradients have gone quiet is decayed hard. Whatever
-$\lambda$ you chose, Adam re-prices it per coordinate and over time, and
-nobody chose those prices. The appendix works this out exactly and isolates
+while a parameter with a small gradient history receives much stronger
+effective decay. Whatever
+$\lambda$ you chose, Adam changes its effective value by coordinate and over
+time. The appendix works this out exactly and isolates
 it in a two-coordinate experiment where the same $\lambda$ produces
 effective decay rates $100\times$ apart
 (:numref:`subsec_mdl-decoupled-weight-decay`).
@@ -186,7 +184,7 @@ OLMo 2 :cite:`OLMo.2025` (not all: PaLM did not
 :cite:`chowdhery2022palm`). The shorter second-moment window
 (about twenty steps instead of a thousand) makes the scale estimate track
 heavy-tailed gradient noise faster, at some cost in smoothing; we return to
-what this buys in :numref:`sec_practice`. One thing that has *not* survived
+its effect in :numref:`sec_practice`. One property that has changed
 into practice is Adam's original claim that the method is robust to its
 hyperparameters; both $\eta$ and $\lambda$ still need to be chosen, and the
 next experiment is about whether they can at least be chosen independently.
@@ -210,7 +208,7 @@ def smooth(losses, k=25):
             for i in range(0, len(losses) - k + 1, k)]
 ```
 
-Weight decay is about generalization, so we also need a scoreboard the
+Weight decay concerns generalization, so we also need a metric that the
 training loss cannot see: the mean cross-entropy on held-out text.
 
 ```{.python .input #adamw-decoupling-demonstrated-2}
@@ -246,7 +244,7 @@ def val_loss(model, data):
     return total / count
 ```
 
-### One Number, Two Meanings
+### Interaction between Learning Rate and Decay
 
 First, the size of the problem. We train `TinyLM` twice, each framework at
 its own tuned learning rate from :numref:`sec_adam`, with the standard
@@ -285,8 +283,9 @@ d2l.plot(list(range(0, 1000, 25)), [smooth(c) for c in curves.values()],
          'step', 'training loss', legend=list(curves))
 ```
 
-The decoupled run trains essentially as if the decay were not there. The
-coupled run gets stuck more than a full nat higher, barely below its
+The decoupled run reaches nearly the same training loss as the no-decay
+baseline. The coupled run remains more than a full nat higher, only slightly
+below its
 starting loss. The mechanism is :eqref:`eq_coupled-decay` read as an
 amplifier: once training makes progress the loss gradients shrink,
 $\sqrt{\hat{\mathbf{v}}}$ shrinks with them, and the penalty, divided by
@@ -294,8 +293,9 @@ that small number, comes back amplified by orders of magnitude. Worse, once
 $\lambda \mathbf{x}$ dominates the gradient, Adam normalizes it like any
 other gradient: every coordinate then shrinks at a rate near $\eta$
 regardless of $\lambda$, so past this point the dial no longer responds.
-"$\lambda = 0.1$" is simply not one amount of regularization; it is a
-different amount for every coordinate, every step, and every problem.
+Under coupled decay, $\lambda = 0.1$ does not specify one uniform amount of
+regularization. The preconditioner changes its effect by coordinate, step,
+and problem.
 
 ### A Grid, Twice
 
@@ -306,15 +306,16 @@ whereas decoupling lets them be tuned separately. So we run the same
 experiment twice: a $3 \times 3$ grid of learning rate against weight
 decay, once coupled, once decoupled, scored by held-out loss.
 
-To give the decay something to do we make overfitting easy: a training
+To make the effect of decay measurable, we use a setting with repeated
+training data and visible overfitting: a training
 slice of 8,000 windows that the model revisits about six times in 800
 steps. (On the full corpus the model barely completes one pass, and in our
 runs two orders of magnitude of $\lambda$ move the held-out loss by a few
 hundredths of a nat: at this scale, weight decay is a knob for data you
-repeat. What decay does in genuinely one-pass training at much larger
-scale is a different story, taken up below.)
-Each arm gets the $\lambda$ range that suits it, which is already half the
-story: the coupled arm needs values two to three orders of magnitude
+repeat. The later discussion considers decay in genuinely one-pass training at much
+larger scale.)
+Each arm receives a suitable $\lambda$ range. The resulting scales already
+differ substantially: the coupled arm needs values two to three orders of magnitude
 smaller to land anywhere near its sweet spot.
 
 ```{.python .input #adamw-a-grid-twice-1}
@@ -414,12 +415,11 @@ best $\lambda$ in each row is set in bold, and each panel's best cell is
 boxed in red. In the AdamW grid the bold entries line up in a single
 column: the best weight decay is the same at every learning rate in the
 grid, and in this single-seed run the same column wins in both frameworks,
-whose different initializations shift everything else. In the
-coupled grid the bold entries wander: change $\eta$ and the $\lambda$ you
-tuned is no longer right, exactly the joint-tuning burden that
+despite the frameworks' different initializations. In the
+coupled grid the bold entries wander: change $\eta$ and the tuned $\lambda$ is no longer optimal, exactly the joint-tuning burden that
 :citet:`Loshchilov.Hutter.2019` documented on image classifiers, where the
 good region of the coupled $(\eta, \lambda)$ plane is a diagonal band and
-the decoupled one is axis-aligned. Note what decoupling does *not* buy at
+the decoupled one is axis-aligned. Note what decoupling does *not* change at
 this scale: after tuning both arms fully, their best held-out losses are
 close. The
 practical difference is that one of the two searches was a line search and
@@ -435,9 +435,10 @@ mostly does not. A language model trained for a single epoch on
 non-repeated data has little classical overfitting to fight, yet
 $\lambda = 0.1$ remains in every frontier recipe. What is it doing there?
 
-The current understanding, assembled from careful ablations
-:cite:`DAngelo.Andriushchenko.Varre.ea.2024,Kosson.Messmer.Jaggi.2024`, is
-that weight decay at scale is a *training-dynamics* control, not an
+Careful ablations
+:cite:`DAngelo.Andriushchenko.Varre.ea.2024,Kosson.Messmer.Jaggi.2024` have
+assembled the current understanding: weight decay at scale is a
+*training-dynamics* control, not an
 explicit regularizer. The mechanism runs through the weight norms. A weight matrix whose output is
 consumed only through a normalization layer is *scale-invariant*: rescaling
 the matrix leaves the network's function unchanged, because the norm discards
@@ -455,8 +456,8 @@ constant angle per step. Through this equilibrium $\lambda$ sets the
 *effective learning rate*, and sets it uniformly across layers. That is a
 large part of why decayed LLM runs reach *lower training loss* rather
 than trading training loss for validation loss, the signature
-:citet:`DAngelo.Andriushchenko.Varre.ea.2024` document, along with a
-second, mundane service: keeping parameters small enough that bfloat16
+:citet:`DAngelo.Andriushchenko.Varre.ea.2024` document. Decay performs a
+second, mundane service too: it keeps parameters small enough that bfloat16
 training does not wander into divergence.
 
 Two consequences carry forward. First, since the decay term is multiplied
@@ -469,8 +470,8 @@ recent scaling studies find that $\tau$ is the quantity to hold roughly
 steady, so that $\lambda$ is co-varied with batch and dataset size rather
 than re-tuned :cite:`Bergsma.Dey.Gosal.ea.2025b`. Second, none of this
 mechanism applies to parameters that are not followed by normalization,
-which is why the question of the next section, *which* parameters to
-decay, has a sharper answer than "all of them".
+which is why the next section can give a sharper answer than "all of them"
+to the question of *which* parameters to decay.
 
 ## What Not to Decay
 
@@ -479,23 +480,22 @@ populations: embeddings, two-dimensional matrices, and one-dimensional
 vectors, the LayerNorm scales and biases. Standard practice decays only
 the matrices.
 
-The reasons differ by population. LayerNorm scales and biases are few,
-set the model's normalization scales directly, and shrinking them toward
-zero fights the very equilibrium that gives decay its meaning; they are
-left alone, as biases were already in :numref:`sec_weight_decay`.
+The reasons differ by population. LayerNorm scales and biases are few, and
+they set the model's normalization scales directly, so shrinking them toward zero directly disrupts those normalization scales; they
+are left alone, as biases were already in :numref:`sec_weight_decay`.
 Embedding rows are sparse: a row receives a gradient only when its token
 occurs, but decay is applied every step, so rare rows are all decay and no
-signal. OLMo 2 traced a training instability to exactly this, decay
-grinding the embedding norms down until the $1/\|\mathbf{x}\|$ factor in
-LayerNorm's gradient blew the early layers up, and turned decay off for
-embeddings to let their norms settle :cite:`OLMo.2025`.
+signal. OLMo 2 traced a training instability to exactly this: decay ground
+the embedding norms down until the $1/\|\mathbf{x}\|$ factor in
+LayerNorm's gradient blew the early layers up. The fix was to turn decay
+off for embeddings and let their norms settle :cite:`OLMo.2025`.
 
 The implementation pattern is two parameter groups, and the census already
 computed the split. In PyTorch, `torch.optim.AdamW` takes a list of groups
 with per-group settings; in Optax, `optax.adamw` takes a mask over the
 parameter tree. The same split returns in :numref:`sec_muon`, where the
-matrices get a different optimizer entirely rather than merely a different
-decay.
+matrices receive a different optimizer rather than only a different decay
+setting.
 
 ```{.python .input #adamw-what-not-to-decay-1}
 %%tab pytorch
@@ -531,7 +531,8 @@ n = sum(int(p.size) for p in jax.tree.leaves(params))
 print(f'decayed: {n_decay} of {n} parameters')
 ```
 
-About 96% of the parameters are decayed and everything fragile is exempt.
+About 96% of the parameters are decayed; normalization parameters, biases,
+and embeddings are exempt.
 Trained on the full corpus, the two-group configuration matches the tuned
 Adam run of :numref:`sec_adam`:
 
@@ -546,12 +547,12 @@ This is the modern default configuration in full: AdamW, decay on the
 matrices only, $\lambda$ chosen jointly with the schedule. What remains is
 to ask what it costs.
 
-## Optimizer State and Memory
+## Memory Required for Optimizer State
 
 Adam and AdamW carry two extra numbers per parameter, $m$ and $v$. At this
 chapter's scale that is invisible; at language-model scale it decides what
 fits on a device, so we do the arithmetic once with real numbers, using
-the census total $n$ we just computed.
+the parameter total $n$ computed above.
 
 In full fp32 training, a parameter costs 4 bytes each for the weight, the
 gradient, $m$, and $v$: 16 bytes per parameter, three quarters of it the
@@ -572,34 +573,34 @@ for name, (w, g, s) in setups.items():
           f'{7e9 * per / 1e9:>8.0f}GB')
 ```
 
-For `TinyLM` the whole bill is a few megabytes. Scale the identical
+For `TinyLM` the total is a few megabytes. Scale the identical
 arithmetic to a 7-billion-parameter model and the common bf16 pattern
 costs about 140 GB before a single activation is stored, more than any
-single 80-GB accelerator holds, and 12 of the 20 bytes per parameter, the
-fp32 master, $m$, and $v$, belong to the optimizer. That ratio is why optimizer
+single 80-GB accelerator holds. Of the 20 bytes per parameter, 12 belong
+to the optimizer: the fp32 master, $m$, and $v$. That ratio is why optimizer
 state is the first target when memory runs out. Adafactor factors $v$ for
 each matrix into a row and a column sum, replacing $mn$ numbers by
 $m + n$ :cite:`Shazeer.Stern.2018`; 8-bit optimizers store $m$ and $v$
 block-quantized at one byte each :cite:`Dettmers.Lewis.Shleifer.ea.2022`.
 The other lever is not shrinking the state but not replicating it:
 ZeRO-style sharding spreads the 20 bytes across the data-parallel group
-:cite:`Rajbhandari.Rasley.Ruwase.ea.2020`, part of the systems story of
+:cite:`Rajbhandari.Rasley.Ruwase.ea.2020`, a systems technique discussed in
 :numref:`chap_performance` and :numref:`sec_training_systems`.
 
 ## Summary
 
 Under SGD, an $\ell_2$ penalty in the loss and a per-step shrinkage of the
 weights are the same thing; under Adam they are not, because the penalty's
-gradient is divided by the same $\sqrt{\hat{\mathbf{v}}}$ as everything
-else, re-scaling the regularization per coordinate, backwards, and beyond
-your control. AdamW applies the decay outside the preconditioner,
+gradient is divided by $\sqrt{\hat{\mathbf{v}}}$ along with the loss
+gradient. This rescales regularization separately for each coordinate and
+reverses the intended dependence on gradient scale. AdamW applies the decay outside the preconditioner,
 restoring one $\lambda$ with one meaning. Decoupling does not so much
 improve the best attainable loss as make it findable: in our grid the best
 $\lambda$ stopped depending on the learning rate. At scale, weight decay
 is less a regularizer than a training-dynamics control that sets the
 effective learning rate through an equilibrium of noise against decay, on
 a timescale set by the product $\eta\lambda$. Decay the matrices; exempt
-embeddings, norms, and biases. And remember the bill: with the standard
+embeddings, norms, and biases. With the standard
 mixed-precision pattern, an AdamW parameter costs about 20 bytes, 12 of
 them optimizer state.
 
@@ -653,7 +654,7 @@ Decoupled weight decay and the modern default<br>
 :::
 :::
 
-::: {.slide title="A promise from §3.7"}
+::: {.slide title="Penalty and decay under adaptive scaling"}
 [Motivation]{.kicker}
 
 Under SGD, penalty and decay are **the same operation**:
@@ -661,7 +662,6 @@ Under SGD, penalty and decay are **the same operation**:
 $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,(\mathbf{g}_t + \lambda \mathbf{x}_t)
 = (1 - \eta\lambda)\,\mathbf{x}_t - \eta\,\mathbf{g}_t.$$
 
-. . .
 
 Under Adam, the penalty goes **through the preconditioner**
 (schematically — the appendix has the exact recurrence):
@@ -670,9 +670,10 @@ $$\underbrace{\frac{\eta\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\, x_{t,i}}_{\t
 \qquad\textrm{vs.}\qquad
 \underbrace{\eta\lambda\, x_{t,i}}_{\textrm{weight decay}}$$
 
-- Large gradient history → barely decayed; quiet coordinate → crushed.
-- One $\lambda$, re-priced per coordinate, per step — **nobody chose those
-  prices** (100× disparity demo: appendix ch. 25).
+- A large gradient history produces weak effective decay; a small history
+  produces strong effective decay.
+- The effective shrinkage from a single $\lambda$ varies by coordinate and
+  step (a 100× disparity is demonstrated in appendix ch. 25).
 :::
 
 ::: {.slide title="AdamW: decay outside the preconditioner"}
@@ -682,45 +683,48 @@ $$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t
 Loss gradient → preconditioner. Decay → applied directly, scaled by the
 schedule (Loshchilov & Hutter, 2019).
 
-. . .
 
 One term added to Adam from §9.6:
 
 @adamw-adamw-from-scratch-1
 :::
 
-::: {.slide title="One number, two meanings"}
-Same model, same tuned $\eta$, same $\lambda = 0.1$ — coupled vs.
-decoupled:
+::: {.slide title="Coupled and decoupled updates"}
+The comparison holds the model, tuned $\eta$, and $\lambda = 0.1$ fixed
+while changing coupled to decoupled decay:
 
 @adamw-one-number-two-meanings
 
 - Decoupled: trains as if the decay were absent.
 - Coupled: stuck a full nat higher. Progress shrinks
   $\sqrt{\hat{\mathbf{v}}}$ → the penalty comes back **amplified**; once it
-  dominates, Adam normalizes it and the dial stops responding.
+  dominates, Adam normalizes it and increasing $\lambda$ has little effect.
 :::
 
-::: {.slide title="A grid, twice"}
+::: {.slide title="Learning-rate and decay sweeps"}
 $3\times 3$ learning rate × weight decay, held-out loss, on a training
 slice small enough to overfit. Best $\lambda$ per row in bold; each
 panel's best cell boxed in red:
 
 @!adamw-a-grid-twice-4
 
-- **AdamW: the bold column is the same at every $\eta$** — one line search.
+- For AdamW, the best displayed $\lambda$ is the same at every $\eta$, so
+  the two hyperparameters can be searched more independently.
 - Coupled: the optimum wanders, and lives 2–3 orders of magnitude lower.
-- Fully tuned, both reach similar loss — decoupling buys *tunability*.
+- Fully tuned, both reach similar loss; decoupling makes the two
+  hyperparameters easier to tune independently.
 :::
 
 ::: {.slide title="What weight decay is actually doing at scale"}
-One-epoch LLM training has little classical overfitting — yet
-$\lambda = 0.1$ is universal. Why?
+One-epoch LLM training has little classical overfitting, yet many reported
+configurations use $\lambda = 0.1$. Several scale-control effects help
+explain this choice.
 
 - Normalized layers are scale-invariant → gradient noise pushes norms up,
   decay pulls down → **equilibrium**: constant rotation per step
   (Kosson et al., 2024).
-- Through it, $\lambda$ sets the **effective learning rate** — decayed runs
+- Through this equilibrium, $\lambda$ influences the **effective learning
+rate**; decayed runs
   reach *lower training loss*, not a train/val trade
   (D'Angelo et al., 2024). Plus: keeps bf16 out of divergence.
 - $\eta\lambda$ = a timescale: $\tau = B/(\eta\lambda D)$ epochs; scale
@@ -730,35 +734,36 @@ $\lambda = 0.1$ is universal. Why?
 ::: {.slide title="What not to decay"}
 The census populations of §9.6, treated differently:
 
-- **Matrices** — decay (96% of parameters).
-- **Norms and biases** — exempt: they set the normalization scales.
-- **Embeddings** — exempt: sparse gradients, decay every step; OLMo 2
+- **Matrices** receive decay (96% of parameters).
+- **Normalization parameters and biases** are exempt because they directly
+  set normalization scales.
+- **Embeddings** are exempt because their gradients are sparse while decay
+  applies every step; OLMo 2
   traced spikes to decay grinding embedding norms down
   ($1/\|\mathbf{x}\|$ in LayerNorm's gradient).
 
-. . .
 
 @adamw-what-not-to-decay-1
 
 ::: {.d2l-note}
-The same matrices / non-matrices split returns in §9.9 — Muon gives the
-matrices a different *optimizer*, not just a different decay.
+Section 9.9 uses the same matrix/non-matrix split: Muon assigns matrices a
+different optimizer rather than only a different decay setting.
 :::
 :::
 
-::: {.slide title="The memory bill"}
-Two extra numbers per parameter — do the arithmetic once:
+::: {.slide title="Optimizer-state memory"}
+AdamW stores two additional numbers per parameter:
 
 @!adamw-optimizer-state-and-memory
 
-- bf16 does not shrink the bill; it adds an fp32 **master copy**.
+- bf16 parameters still require an fp32 **master copy** in this configuration.
 - 7B model ≈ **140 GB**, 12 of 20 B/param is optimizer state.
 - Shrink it: Adafactor (factored $v$), 8-bit states. Or **shard** it:
   ZeRO (→ ch. 11, §29.6).
 :::
 
 ::: {.slide title="Recap"}
-- $\ell_2$ through Adam ≠ weight decay: the preconditioner re-prices
+- $\ell_2$ through Adam ≠ weight decay: the preconditioner changes
   $\lambda$ per coordinate, backwards. AdamW decouples: one $\lambda$,
   one meaning.
 - Decoupled knobs tune **separately**: best $\lambda$ independent of

@@ -1,8 +1,10 @@
 # v2 → promotion checklist (archive, completed 2026-07-09)
 
-> This file records the promotion that created the current Chapter 6. Its
-> pending labels, framework order, and verification items are historical; the
-> live source files and `_outline/index.md` describe the current NNX edition.
+> This file records the promotion that created the current chapter. The live
+> source files one directory above are authoritative. Items below marked as
+> needing GPU capture remain historical verification debt; a CPU-guarded pass
+> is not evidence for GPU behavior, and this checklist must not be cited as a
+> current validation matrix.
 
 ## GPU-box verification / capture (cells guarded on CPU)
 

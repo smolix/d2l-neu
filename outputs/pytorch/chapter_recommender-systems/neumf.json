@@ -19,50 +19,50 @@
       "outputs": []
     },
     "neumf-customized-dataset-with-negative-sampling": {
-      "code_fingerprint": "sha256:97f7b7a47866e907ad7ccfe786ec80cc2707ad17f8d203b9e561ee6fd9b309c3",
+      "code_fingerprint": "sha256:983d4ad01270265d6b1d4d7384c2705073790e3e00141cc972656d3a2d21ba0f",
       "kind": "text",
       "outputs": []
     },
     "neumf-evaluator-1": {
-      "code_fingerprint": "sha256:f480ea645f682b4ba4b86cc4c2065b3d9ee6c23f9cca0c6b3e2c433634ea6cf9",
+      "code_fingerprint": "sha256:e5a21fda485d2e495cbff849a645a747440de6a7a51a50f587b8b6bb382638fc",
       "kind": "text",
       "outputs": []
     },
     "neumf-evaluator-2": {
-      "code_fingerprint": "sha256:840af578ca026bb460083db6937675a23be060fde7f73c5122719d85751a4057",
+      "code_fingerprint": "sha256:a70eee4bdf2796b13866114f44b8cdefde623db80e7a4acea0d8865a76bcf88b",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-1": {
-      "code_fingerprint": "sha256:7e16e5614ad44766f67a297392c83563a9d2109dc1ba54208a46c9eb3936f236",
+      "code_fingerprint": "sha256:5b2a76dced4e3cf33705881b88234fb91b8d92399d6f88812ec9a5f8f75124bd",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-2": {
-      "code_fingerprint": "sha256:579cec767724d2e82441ed0c1569924e3a1819cdbcd0f81c18f54b07613eb3b7",
+      "code_fingerprint": "sha256:44e18e991f9f40e6be1d66051c1746a0ef6b6622f7ed143189994ab2350a4612",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:c5238ac45b916e6703c89cdf2ebdb704818f4bb22200a045cacd21098faba7af",
+      "code_fingerprint": "sha256:887d5400087b9db6be3f85753c2c0a43fa97f7c4399e45b23789f93b6b91eb23",
       "kind": "text",
       "outputs": []
     },
     "neumf-training-and-evaluating-the-model-4": {
-      "code_fingerprint": "sha256:0f9e85c070ddaa8f29b597fb6807842489f8467d01202c374d41caec2a691d74",
+      "code_fingerprint": "sha256:41e9288f47d6fe0b1cc2bcc21c444d89c9e5e9ebcdc72f81a539e0df86d7aac1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.154, test hit rate 0.363, test AUC 0.880\n14.8 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.152, test hit rate 0.352, test AUC 0.883\n10.6 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
-          "bytes": 22608,
-          "sha256": "sha256:8eef652ce1bdeb63b9defb175ab91fc19990d721fc197155f5f7be9ca342f07d"
+          "bytes": 22611,
+          "sha256": "sha256:39a23c40cb36a0ee8d179720311cc14635b3b5ef9512a8f9981d6884d83d07a7"
         }
       ]
     }

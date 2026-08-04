@@ -14,25 +14,25 @@
       "outputs": []
     },
     "score-matching-diffusion-flow-dsm-train": {
-      "code_fingerprint": "sha256:c45cbff7a3c1a16fd7d7bb37ac88d4ef20c5336b5940b34608622a3bec88cfec",
+      "code_fingerprint": "sha256:d8334dd22cd92cc9943a56b12b2f505ce03c2766c57274ac51199ef7d16e4974",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DSM loss 2.036 vs irreducible floor 2.038; max |s_theta - score| on [-4, 4]: 0.199\n"
+          "text": "DSM loss 2.036 vs estimated Bayes risk 2.038; max |s_theta - score| on [-4, 4]: 0.199\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:408b09974aab76dbb7c13df3ba907e9b107b23552b668842eb6df12fa5805367"
+          "sha256": "sha256:b662860891c5fbc9ec8ad624cd23737409f4898d19651c69f0ed56dedd8fa8fb"
         }
       ]
     },
     "score-matching-diffusion-flow-ddpm-marginal": {
-      "code_fingerprint": "sha256:e6c3a0da17453033a3ea3a5c636ecbcf3e28909593ad2ee7933200fe8be28f53",
+      "code_fingerprint": "sha256:62bf00eabf187cafe9ab4f470347ddc7af5d923a111f7dcf7199833678ee44df",
       "kind": "text",
       "outputs": [
         {
@@ -48,7 +48,7 @@
       ]
     },
     "score-matching-diffusion-flow-langevin": {
-      "code_fingerprint": "sha256:22712236bc53a35361121432df4353b1f3ee6ac6604504411bea98ec4ddf2813",
+      "code_fingerprint": "sha256:f1354dc8eee7ddba1dd9f6420216a050d5cc38dae4cff3468b8a099492d7db59",
       "kind": "text",
       "outputs": [
         {
@@ -64,18 +64,18 @@
       ]
     },
     "mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed": {
-      "code_fingerprint": "sha256:33113dd65eea5c5fd48dfc304b9f0d81c1235cb10ae4a257b33bdd50c983d8bd",
+      "code_fingerprint": "sha256:cca904ea5c74f5f0f05e8c440eb4d7eb16d06ad81c58cc0b9b6e450d10027801",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; 5% KS threshold: 0.021\n"
+          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; the same initial draws are used at every stride count\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
-      "code_fingerprint": "sha256:61239f24ea1cb9c77a69b080161ecccb1024151b662f0137ed4cb75173255d21",
+      "code_fingerprint": "sha256:ec74cfd5386f46b7f91d831f8ce53bf2217814bf0fa1012833a1518aae557064",
       "kind": "mixed",
       "outputs": [
         {
@@ -88,12 +88,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
           "bytes": 30656,
-          "sha256": "sha256:64035a1ccd68285f26fa269e5ade2209a4fdf79964d26755b9a3995e2432e6ba"
+          "sha256": "sha256:10f253829a8ad75c6a2fb368f40ef9b50fe4402be7fca17547e030fe4b54f247"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
-      "code_fingerprint": "sha256:6fcab00543ec6ec261841174b1de6b025578ef6e04f3f4cf5539ffab335efcca",
+      "code_fingerprint": "sha256:73238933e1d8a21437db81fb04cf62a50117c77bae077b8faa7bf68808761729",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "score-matching-diffusion-flow-two-moons": {
-      "code_fingerprint": "sha256:d13cbeaeaa94f039de3318152209c34bb1d2094f85a446f9f3927831371a4739",
+      "code_fingerprint": "sha256:9b078f211ae254a996136d9eeb963a90d9c7b114e0b14e983c5b8629084e5737",
       "kind": "text",
       "outputs": [
         {
@@ -115,7 +115,7 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-train": {
-      "code_fingerprint": "sha256:1d0a62411afc873eb0276155827b4c7f16be8a0e11473ca2408466b82dae369f",
+      "code_fingerprint": "sha256:96427f03ad1c107d9407e5d7172b50ba8a9b5d0ad5fd7c03c99dc182cf966c13",
       "kind": "text",
       "outputs": [
         {
@@ -146,12 +146,12 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-sample": {
-      "code_fingerprint": "sha256:d96b903b2aaf2f153bb828542937814cfbb06fc27ff2fab02bf12abf6765d424",
+      "code_fingerprint": "sha256:68af29c57ded604838e89737157fdf584bed67918c727223c4bac4f892dbdafd",
       "kind": "text",
       "outputs": []
     },
     "score-matching-diffusion-flow-cfm-panels": {
-      "code_fingerprint": "sha256:bf17c937e4429ca0513193f38c9edbede954323c8468a7f8a25235b5a00caa71",
+      "code_fingerprint": "sha256:4987a9bde4b4af466c2651b91a1022e16ed869b3c859b0d40c0a9267f0733ade",
       "kind": "asset",
       "outputs": [
         {
@@ -159,12 +159,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114821,
-          "sha256": "sha256:787d16b579ef7f307ee47019e24e65a519ea249db3defcab9c8db1f9200837a3"
+          "sha256": "sha256:c17f4b009a91d474353bbe105accb19ac895167e8a3207fd5a4ec186fc091fc9"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
-      "code_fingerprint": "sha256:95a49a0ac09b8fad40cf748420d8074172e160665969635f905d202528899971",
+      "code_fingerprint": "sha256:725519a8104a5d58fee4b3a51b0f6cedc2855c88d8f6c1c366af0e51e8ef5220",
       "kind": "text",
       "outputs": [
         {
@@ -190,7 +190,7 @@
       ]
     },
     "score-matching-diffusion-flow-steps-quality": {
-      "code_fingerprint": "sha256:946b54aa4144e65475b213042ca4841b1049f8fa340f756253aee7e34b49b18d",
+      "code_fingerprint": "sha256:f8c264570d60a67ed99997a5ceaf0963c0e19165ddbeb7a453d884bc876852ba",
       "kind": "mixed",
       "outputs": [
         {
@@ -203,12 +203,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 24043,
-          "sha256": "sha256:97e40bfa663d581f460c79003d56f7567915fca83769729ad1f8372f13eba758"
+          "sha256": "sha256:ce9710352292aad07fecc0e22bbf28ff10a2efc32f86df18004556cc4b7b9cfc"
         }
       ]
     },
     "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:cb776e153aa2f0207fc7361d417a59ca871ebbd65be9291a67c8bbda2f35d9ec",
+      "code_fingerprint": "sha256:1f9f5d77255cf53b1019b394788bdb0982bba5e31e0295092448593b7d5b079b",
       "kind": "text",
       "outputs": [
         {

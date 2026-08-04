@@ -1,28 +1,18 @@
 # Multi-GPU from First Principles
 :label:`sec_multi_gpu`
 
-The ladder of :numref:`sec_memory_precision` ended with the one rung that
-buys more arithmetic and more *aggregate* memory at once: another GPU.
-This section
-adds it — but honestly, and from the ground up. We build data-parallel
-training by hand, with explicit device-to-device copies and a
-hand-rolled gradient sum, so that when :numref:`sec_multi_gpu_concise`
-replaces our loop with production machinery, you know exactly what that
-machinery does. We derive the communication algorithm the professionals
-use (ring allreduce) and its cost, and — because this book's build box
-has no fast inter-GPU fabric — we *measure* what communication actually
-costs and discover the central fact of parallel training: **a second GPU
-is not free, and whether it pays is an accounting question you can answer
-before you run.**
+Adding GPUs increases aggregate arithmetic and memory capacity. This
+section builds data-parallel training explicitly, with device-to-device
+copies and a hand-written gradient sum, so that the production mechanisms
+in :numref:`sec_multi_gpu_concise` are clear. We derive ring allreduce and
+its communication cost. Because the build machine has no fast inter-GPU
+fabric, the experiments also show when communication or reduced per-device
+utilization prevents speedup.
 
-That last point is why this section is built on a machine with no NVLink
-and no peer-to-peer transfer (:numref:`sec_hardware`). A datacenter
-fabric shrinks the constant in front of the communication term; it does
-not repeal the accounting — at frontier scale the same arithmetic decides
-how thousands of GPUs are spent, and it matters more, not less. Our slow
-fabric merely makes the cost loud enough to hear, which makes this box
-the better teacher. Every conclusion here holds at two GPUs as well as
-four — the number of devices is a variable, never a constant.
+The experimental machine has neither NVLink nor peer-to-peer transfer
+(:numref:`sec_hardware`). A faster fabric reduces the communication term
+but does not remove it. Since the derivation treats the number of devices as
+a variable, the same cost model applies beyond this machine.
 
 *Prerequisites: minibatch SGD and the effect of batch size on the gradient
 estimate (*:numref:`sec_minibatch_sgd`*); LeNet (*:numref:`sec_lenet`*); the
@@ -79,11 +69,11 @@ slice of every weight matrix — and communicates several times per layer.
 The latter two matter only at scales this part defers to the Language
 Models chapters, which have models large enough to warrant them; a single
 historical note is that the very first of them appeared in 2012, when
-AlexNet was split across two GPUs simply because its weights did not fit
+AlexNet was split across two GPUs because its weights did not fit
 in one card's 3 GB :cite:`Krizhevsky.Sutskever.Hinton.2012`. Data
-parallelism is our subject, and — a warning that :numref:`sec_memory_precision`
-already made — it does *not* let you train a bigger model: every GPU still
-holds a full copy.
+parallelism is our subject, and it does *not* let you train a bigger
+model, a warning that :numref:`sec_memory_precision` already made: every
+GPU still holds a full copy.
 
 ## Data Parallelism by Hand
 :label:`subsec_mg-byhand`
@@ -186,9 +176,9 @@ def split_batch(X, y, num_devices):  #@save
     return reshape(X), reshape(y)
 ```
 
-`allreduce` is the heart of it, and the naive version above is
-deliberately clumsy: it gathers every device's gradient onto device 0,
-sums there, and broadcasts back — a *star* topology, with device 0 as a
+`allreduce` is the central operation. The implementation above uses a
+simple star topology: it gathers every device's gradient onto device 0,
+sums there, and broadcasts back, with device 0 as a
 hub that handles all $k-1$ inbound and $k-1$ outbound transfers. Watch it
 work on two vectors living on two GPUs:
 
@@ -214,8 +204,8 @@ print('summed:', jnp.broadcast_to(data.sum(0), data.shape).tolist())
 
 The training step assembles the pieces. Each device computes its shard's
 gradient; we allreduce parameter by parameter; each device applies plain
-SGD. The whole thing runs in one Python process — nothing here needs
-multiple processes, because we move tensors explicitly:
+SGD. This implementation runs in one Python process because it moves tensors
+explicitly:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-4}
 %%tab pytorch
@@ -268,7 +258,7 @@ moves gradients between devices with explicit `.to(device)` copies inside
 a `jax.shard_map`, where the `PartitionSpec('data')` annotation tells XLA
 that the leading axis is sharded across devices. (Note the top-level
 `jax.shard_map` — the older `jax.pmap` is a compatibility shim as of JAX
-0.8 and we do not use it.) One subtlety in the JAX tab earns its line:
+0.8 and we do not use it.) The JAX tab requires one additional distinction:
 under `shard_map` the parameters arrive *replicated*, and differentiating
 a replicated tensor makes JAX's autodiff insert a gradient *sum* of its
 own — the transpose of "broadcast to every device" is "add up every
@@ -277,16 +267,16 @@ double-count. The `pcast(..., to='varying')` line opts out by declaring
 each replica device-local, so the code owns the collective: every device
 takes its shard's mean-loss gradient, and `pmean` averages them into
 exactly the gradient one device would compute on the whole batch. The
-collective is *visible in the code* in both tabs — exactly the point of
-building it by hand.
+collective is visible in both tabs, which is the purpose of this manual
+implementation.
 
-Both tabs also make a strong claim — that $k$ devices take *the same*
-step one device would — and a claim like that deserves a check, not a
-promise. From the same initialization, on the same minibatch, one step on
+Both tabs claim that $k$ devices take *the same* step as one device. The
+following parity check verifies this claim. From the same initialization and
+minibatch, one step on
 two GPUs must move the parameters exactly where one step on one GPU does.
-The test is cheap, and it is the test that catches normalization bugs —
-a summed instead of averaged gradient is an accidental $k\times$ learning
-rate — that no accuracy curve reliably reveals:
+The test is cheap, and it catches normalization bugs that no accuracy
+curve reliably reveals, such as a summed instead of averaged gradient
+acting as an accidental $k\times$ learning rate:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-7}
 %%tab pytorch
@@ -403,31 +393,30 @@ train(num_gpus=min(2, jax.local_device_count()), batch_size=256, lr=0.2)
 ```
 
 The second GPU buys **no speedup** — on our box the two-GPU run is at
-best on par with one GPU, and in JAX outright slower — and this is not a
-bug, it is the syllabus.
+best on par with one GPU and is slower in JAX, as expected when each device
+is underutilized.
 The reason is *not* slow communication: LeNet's parameters are tiny — the
 whole gradient set is about half a megabyte — so its allreduce is
-negligible, and we measure the transport directly below. The reason is
-that LeNet is simply too small
-to parallelize. Splitting a 256-example batch into two 128-example shards
+negligible, and we measure the transport directly below. LeNet is too small
+for data parallelism to improve throughput. Splitting a 256-example batch
+into two 128-example shards
 underfeeds each GPU — a convolution on half the batch does not run at half
 the time, because a small batch never filled the device to begin with —
 and the Python orchestration and per-step dispatch are not amortized
 by microsecond-scale compute. The technique is not wrong; the *regime* is
 wrong. This tiny model is the worst case for data parallelism, and
-diagnosing exactly why — separating the communication cost, which is small
-here, from the underutilization cost, which is not — is the next two
-subsections' work.
+diagnosing exactly why is the next two subsections' work: separating the
+communication cost, which is small here, from the underutilization cost,
+which is not.
 
-## Doing Better: Ring Allreduce
+## Ring Allreduce
 :label:`subsec_mg-ring`
 
-Our star `allreduce` has an obvious flaw: device 0 is a hub through which
-everything passes, so it moves $(k-1)N$ bytes in and $(k-1)N$ out for a
+Our star `allreduce` uses device 0 as a hub for all transfers. It moves
+$(k-1)N$ bytes in and $(k-1)N$ out for a
 parameter set of $N$ bytes, and the other devices' links sit idle while it
-works. The algorithm the professionals use — *ring allreduce*
-:cite:`Patarasuk.Yuan.2009` — removes the hub entirely, and it is worth
-deriving because the same identity reappears as the seed of FSDP in
+works. *Ring allreduce* :cite:`Patarasuk.Yuan.2009` removes this hub. Its two
+phases also provide the basis for FSDP in
 :numref:`sec_multi_gpu_concise`.
 
 Arrange the $k$ devices in a ring, each talking only to its neighbor.
@@ -462,21 +451,19 @@ contributions a chunk holds; a full chunk (4) is
 complete.](../img/mdl-perf-ring-allreduce.svg)
 :label:`fig_ring_allreduce`
 
-The catch, on our box, is that the elegant $2(k-1)/k$ accounting assumes
-the links are the bottleneck — and they are, but *which* links? With no
+The $2(k-1)/k$ byte count does not determine the transfer rate. On the
+build machine, peer-to-peer transfer is unavailable, so each nominal
 peer-to-peer transfer, every "neighbor to neighbor" hop is really a
 round trip through host memory (:numref:`subsec_hw-interconnects`), so the
-ring's theoretical advantage over the star is largely erased: the
-transport, not the topology, is the ceiling. This is the theory-versus-
-practice lesson in miniature — NCCL will still pick a ring or tree per
-message size, but on this hardware the constant in front of $N$ is what
-hurts, and no algorithm fixes a slow wire.
+ring hop is staged through host memory (:numref:`subsec_hw-interconnects`).
+The resulting transport bandwidth largely removes the ring's theoretical
+advantage over a star. NCCL may still select a ring or tree by message
+size, but measured link bandwidth supplies the constant in the cost model.
 
-## The Accounting
+## Communication Cost and Scaling
 :label:`subsec_mg-accounting`
 
-We can now answer the question data parallelism always poses — *does the
-next GPU pay?* — with a cost model rather than a guess. One step on $k$
+We can now estimate whether another device reduces step time. One step on $k$
 GPUs takes roughly
 
 $$
@@ -495,7 +482,7 @@ communication term does not. Parallelism pays exactly when the compute
 you offload exceeds the communication you take on — models with high
 compute per byte of gradient traffic, large per-device batches, and fast
 links all push in your favor; a tiny model on a slow link, like LeNet on
-our box, is the case where it never pays.
+the build machine, is a case where the second device does not improve time.
 
 Two scaling conventions deserve names here, because every published
 speedup quietly picks one. :eqref:`eq_dp_cost` holds the global batch $B$
@@ -550,11 +537,11 @@ else:
 The hand-rolled copy sustains roughly twenty GB/s — this is a plain PCIe
 transfer, staged through host memory, running near the bus limit, and
 two orders of magnitude below an NVLink domain's ~1.8 TB/s per GPU
-(:numref:`tab_gpu_specs`). A theory-versus-practice aside worth noticing:
-a *collective library* like NCCL, whose ring/tree chunking is tuned for
+(:numref:`tab_gpu_specs`). This result also shows that a *collective library*
+such as NCCL, whose ring/tree chunking is tuned for
 peer-to-peer fabrics, extracts noticeably *less* effective bandwidth than
 this naive one-shot copy on our P2P-less box — its busbw here is only a
-couple of GB/s. The wire is not the culprit: our copy and NCCL's cross
+couple of GB/s. The physical link is not limiting: our copy and NCCL cross
 the same PCIe links. The difference is *how* the bytes move. With
 peer-to-peer unavailable, NCCL falls back to a shared-memory transport
 whose default mode drives the transfer with a GPU kernel issuing
@@ -580,7 +567,7 @@ lesson: XLA hands the collective to NCCL, whose ring/tree chunking is
 tuned for peer-to-peer fabrics, and on our P2P-less box every "neighbor"
 hop stages through host memory — so the tuned library lands well *below*
 the roughly twenty GB/s a naive one-shot `.to()` copy achieves (the
-PyTorch tab measures it). The wire is not the culprit — both paths cross
+PyTorch tab measures it). The physical link is not limiting — both paths cross
 the same PCIe links. The gap is in *how* the fallback transport moves
 bytes (a latency-bound GPU-kernel copy by default, rather than the DMA
 copy engines), and a single NCCL environment switch recovers most of it
@@ -593,17 +580,16 @@ measuring.
 
 Now read the cost model against what we measured. LeNet's
 parameters are tiny, so $2N/\beta$ is a fraction of a millisecond — the
-communication term is *not* what denies the speedup. The culprit is the
+communication term is *not* what denies the speedup. The limiting factor is the
 other term: $t_{\text{compute}}(B/k)$ does not actually fall like $1/k$
 for a small model, because halving an already-small batch leaves each GPU
 underutilized, so $t_{\text{compute}}(B/2) \approx t_{\text{compute}}(B)$
-and the second GPU does redundant-feeling work for no wall-clock gain. The
-model pays off only when compute genuinely scales with the batch — a
+and the second GPU provides no wall-clock reduction. Multiple devices improve
+throughput only when compute time decreases with the per-device batch — for
+a
 compute-dense network with a large per-device batch, where
 $t_{\text{compute}}(B/k) \approx t_{\text{compute}}(B)/k$ dominates the
-small $t_{\text{comm}}$. That is exactly the regime
-:numref:`sec_multi_gpu_concise` moves to, and where the second GPU finally
-earns its keep.
+small $t_{\text{comm}}$. :numref:`sec_multi_gpu_concise` tests this regime.
 
 A closing word of history, because it names the lineage. Before
 synchronous ring allreduce won for dense training, large-scale learning
@@ -675,10 +661,11 @@ production map is :numref:`sec_training_systems`.
 
 <!-- slides -->
 
-::: {.slide title="The Next Rung: Another GPU"}
-More GPUs buy more compute *and* more memory. The catch:
-communication is not free, and on a box with no NVLink it is
-loud enough to hear.
+::: {.slide title="Adding a GPU"}
+Additional GPUs provide both compute and memory, subject to the following
+constraint:
+communication has a measurable cost, especially on a machine without
+NVLink.
 
 Plan: build data parallelism by hand, derive the collective
 the professionals use, then *measure* what a second GPU costs —
@@ -706,7 +693,7 @@ explicitly.
 ::: {.slide title="Two GPUs, No Speedup"}
 @multiple-gpus-data-parallelism-by-hand-6
 
-Not a bug — the syllabus. LeNet is too small: halving a small
+LeNet is too small for effective data parallelism: halving a small
 batch underutilizes each GPU. *Not* a bandwidth problem — the
 whole gradient set is about half a megabyte. Wrong regime, not
 wrong technique.
@@ -720,17 +707,17 @@ $\frac{2(k-1)}{k}N$ per device — **nearly constant, bounded by
 $2N$ for any $k$**. The identity that becomes FSDP.
 :::
 
-::: {.slide title="The Accounting"}
+::: {.slide title="Communication Cost and Scaling"}
 $$t_{\text{step}}(k) \approx t_{\text{compute}}(B/k) + 2N/\beta$$
 
 @multiple-gpus-the-accounting
 
 Raw copies sustain tens of GB/s (PCIe-limited); NCCL's fallback
-transport lands lower — one stage of it is the ceiling; §13.6
+transport achieves lower bandwidth because one stage limits it; §13.6
 measures the env-switch workaround, and its limits. So LeNet's no-speedup isn't
 communication — it's $t_{\text{compute}}(B/k)$ *not* shrinking
-when a small batch is halved. Big model + big batch → the
-second GPU pays (next section).
+when a small batch is halved. A larger model and batch can use the
+second GPU effectively, as the next section demonstrates.
 :::
 
 ::: {.slide title="Lineage"}

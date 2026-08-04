@@ -18,18 +18,6 @@
       "kind": "text",
       "outputs": [
         {
-          "type": "display_data",
-          "text": "Downloading bytes:           |  0.00B            "
-        },
-        {
-          "type": "display_data",
-          "text": "Reconstructing (incomplete total...): |          |  0.00B /  0.00B            "
-        },
-        {
-          "type": "display_data",
-          "text": "Fetching 1 files:   0%|          | 0/1 [00:00<?, ?it/s]"
-        },
-        {
           "type": "stream",
           "name": "stdout",
           "text": "Feature extractor output shape: (1, 10, 15, 2048)\n"
@@ -75,13 +63,7 @@
     "fcn-initializing-transposed-convolutional-layers-3": {
       "code_fingerprint": "sha256:f4e98129a477e7d24726e801331e0a5ec34a451eb72056504262e558dc314ad8",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "E0719 14:24:24.060179   40677 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
-        }
-      ]
+      "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-4": {
       "code_fingerprint": "sha256:768a3a45c393fd5a08b4cf5b7a0a16bfb0adddaea0fb7ad414656b2c0a21cb77",
@@ -97,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86064,
-          "sha256": "sha256:5b5f7b3418a8127cf72ec5a09010cb5130866dc9d823b5b5467a18bc54fb281a"
+          "sha256": "sha256:3bf2a9900681363aa117ce319524e9dc0a87b070fdda4211b49e79bbaa49bbe8"
         }
       ]
     },
@@ -129,27 +111,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.635, pixel acc 0.706, val loss 1.202, val pixel acc 0.731\n"
+          "text": "epoch 1, loss 1.621, pixel acc 0.706, val loss 1.201, val pixel acc 0.731\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 1.132, pixel acc 0.738, val loss 1.059, val pixel acc 0.747\n"
+          "text": "epoch 2, loss 1.143, pixel acc 0.737, val loss 1.091, val pixel acc 0.749\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 1.016, pixel acc 0.757, val loss 0.974, val pixel acc 0.765\n"
+          "text": "epoch 3, loss 1.030, pixel acc 0.755, val loss 0.971, val pixel acc 0.762\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.924, pixel acc 0.775, val loss 0.886, val pixel acc 0.781\n"
+          "text": "epoch 4, loss 0.940, pixel acc 0.772, val loss 0.905, val pixel acc 0.778\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.852, pixel acc 0.790, val loss 0.826, val pixel acc 0.790\n"
+          "text": "epoch 5, loss 0.866, pixel acc 0.787, val loss 0.836, val pixel acc 0.792\n"
         }
       ]
     },
@@ -171,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 157337,
-          "sha256": "sha256:55aae45cda692495f6a72174661ea55103cc6302528e4749c514342931b075b5"
+          "bytes": 157197,
+          "sha256": "sha256:5e7a5d57fc8daa5d1d800c08fbf7966f70a09c198e7a07cffc88a6bafebd6abb"
         }
       ]
     }

@@ -9,23 +9,23 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:d6403383c1958a4e14d264d7ec10f947af38dd58f7978489bc2258d1c3868266",
+      "code_fingerprint": "sha256:b9ec507a6436c02b3cf0daebb72e5098f39bbb13d035301ccc92bc302d527211",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:2a48a9c390db6a3291e8a29011cd8a0b0b764b314091994fb920aa0e9bcee073",
+      "code_fingerprint": "sha256:7460ef7d0b9df5cfbb586a2fba9d583ed374120d070f40eeda04de68c9693635",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['AbsTransform', 'AffineTransform', 'Bernoulli', 'Beta', 'Binomial', 'CatTransform', 'Categorical', 'Cauchy', 'Chi2', 'ComposeTransform', 'ContinuousBernoulli', 'CorrCholeskyTransform', 'CumulativeDistributionTransform', 'Dirichlet', 'Distribution', 'ExpTransform', 'Exponential', 'ExponentialFamily', 'FisherSnedecor', 'Gamma']\n"
+          "text": "['AbsTransform', 'AffineTransform', 'Bernoulli', 'Beta', 'Binomial',\n 'CatTransform', 'Categorical', 'Cauchy', 'Chi2', 'ComposeTransform',\n 'ContinuousBernoulli', 'CorrCholeskyTransform',\n 'CumulativeDistributionTransform', 'Dirichlet', 'Distribution', 'ExpTransform',\n 'Exponential', 'ExponentialFamily', 'FisherSnedecor', 'Gamma']\n"
         }
       ]
     },
     "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:00a21f9be58e4fb559d933b0ee300a6cf627ee351eae94290dcf913ad2e81297",
+      "code_fingerprint": "sha256:65e383fef85b61b885e1607305491076d4630d12fff486cfba8605be197945c3",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:679e409da80cdec3807ba39dfb384ac51263e6174e0429fc59528740e67bda42",
+      "code_fingerprint": "sha256:92b6f883abc6d599b236a05c70062b4c1f94eb6927666b572dadd1373e452707",
       "kind": "text",
       "outputs": [
         {

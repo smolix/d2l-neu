@@ -1,28 +1,16 @@
 # Concentration and Generalization
 :label:`sec_mdl-concentration-generalization`
 
-Every guarantee this chapter has offered so far decays *polynomially*.
-Chebyshev's inequality :eqref:`eq_mdl-chebyshev` caps the miss probability of a
-sample mean at $\sigma^2/(nt^2)$, a rate of $1/n$, and the tests and
-confidence intervals of :numref:`sec_mdl-statistics` traded that finite-sample
-bound away for Gaussian *approximations* that are only exact in the limit. The
-truth is far better: when the data are bounded, the probability that an
-average strays from its mean decays *exponentially* in $n$, and this section
-proves it. The main book bounded the error of a test-set
-estimate with Hoeffding's inequality (:numref:`chap_classification_generalization`),
-quoting it on faith; here we prove it. The same machinery
-then explains the strange geometry of high dimension teased in
-:numref:`sec_mdl-distributions` (thin shells, near-orthogonal random
-directions) and carries us to
-the question all of it serves: *generalization*. A learner that picks its
-function after seeing the data voids the single-function guarantee, and the
-repair (uniform convergence, first over finite classes and then through
-Rademacher complexity) is the promised mechanics behind the classical
-generalization bounds of :numref:`sec_generalization_deep`. The section closes
-where the classical story visibly breaks and something more interesting
-appears: interpolation and *double descent*, reproduced from scratch in
-twenty-six lines and explained by the very quantity that the Rademacher
-calculation says is the true capacity knob: the norm of the solution.
+Chebyshev's inequality :eqref:`eq_mdl-chebyshev` bounds deviations of a sample
+mean with a probability that decreases as $1/n$. For bounded data, Hoeffding's
+inequality gives exponential decay in $n$. We derive this inequality and use
+related concentration arguments to study norms and angles in high dimensions.
+For learning problems, a bound for one fixed function is insufficient because
+the function is selected after observing the data. Uniform convergence extends
+the guarantee to finite classes and then to infinite classes through
+Rademacher complexity. The section concludes by comparing these classical
+bounds with interpolation and double descent, emphasizing the role of solution
+norms in controlling capacity.
 
 Every computation in this section is a matter of tails, norms, and least
 squares, so the worked cells below use plain NumPy, imported as `onp`, with
@@ -63,11 +51,11 @@ import numpy as onp  # the worked cells compute with plain NumPy
 
 ## From Chebyshev to Chernoff
 
-### Polynomial Tails Are Not Enough
+### Polynomial and Exponential Tail Bounds
 
-Recall the ladder built in :numref:`sec_mdl-random_variables`. Markov's
-inequality :eqref:`eq_mdl-markov` turns a bare mean into a tail bound; feeding
-it the squared deviation sharpens it into Chebyshev's inequality
+Recall the inequalities derived in :numref:`sec_mdl-random_variables`. Markov's
+inequality :eqref:`eq_mdl-markov` turns a mean into a tail bound. Applying it
+to the squared deviation gives Chebyshev's inequality
 :eqref:`eq_mdl-chebyshev`. Applied to a sample mean $\bar X$ of $n$ i.i.d.
 draws with variance $\sigma^2$, Chebyshev gives
 
@@ -75,28 +63,29 @@ $$
 P\bigl(|\bar X - \mu| \ge t\bigr) \le \frac{\sigma^2}{n\,t^2},
 $$
 
-and this was enough to prove consistency in :numref:`sec_mdl-statistics`. But
-look at what it takes. To certify a miss probability of $10^{-6}$ at fixed $t$
-we must grow $n$ by a factor of a *million* relative to certifying $10^{0}$:
+which was enough to prove consistency in :numref:`sec_mdl-statistics`. To reduce
+the upper bound from $10^{0}$ to $10^{-6}$ at fixed $t$, however, $n$ must
+increase by a factor of one million:
 the bound decays only like $1/n$. Meanwhile the exact tail of, say, a fair
-coin's head-frequency collapses *exponentially* fast; we will compute it
-below and watch Chebyshev fall behind by eight orders of magnitude at
+coin's head frequency decreases *exponentially* fast. The calculation below
+shows that Chebyshev's bound exceeds the exact probability by eight orders of magnitude at
 $n=1{,}000$ and about forty-three at $n=5{,}000$. The
-Gaussian machinery of :numref:`sec_mdl-statistics` (the $z$-test, the
-$1.96\,\hat\sigma/\sqrt n$ interval) implicitly knows this, since Gaussian
+Gaussian approximations in :numref:`sec_mdl-statistics`, including the $z$-test and
+the $1.96\,\hat\sigma/\sqrt n$ interval, reflect this faster rate because Gaussian
 tails decay like $e^{-t^2/2}$, but it gets the rate from an approximation that
-is only exact as $n\to\infty$. What we want is a bound with the *Gaussian
-rate* and the *finite-sample validity* of Chebyshev. The obstruction is easy to
-name: Chebyshev sees only the second moment. A tail bound that decays like
-$e^{-ct^2}$ must see *every* moment at once, and there is a single function
-that packages them all.
+is only exact as $n\to\infty$. For bounded variables, we can instead obtain a
+Gaussian-shaped rate with finite-sample validity. One standard route applies
+Markov's inequality to an exponential transform. This requires the relevant
+exponential moments to be finite; martingale and bounded-difference methods
+provide other routes in related settings.
 
 ### The Chernoff Method
 
 The *moment generating function* (MGF) of a random variable $X$ is
-$M(\lambda)=E[e^{\lambda X}]$; expanding the exponential shows its Taylor
-coefficients are the moments $E[X^k]$ scaled by $1/k!$, so bounding $M$ bounds
-every moment simultaneously. The *Chernoff method* is Markov's inequality
+$M(\lambda)=E[e^{\lambda X}]$ at values of $\lambda$ for which this expectation
+is finite. If it is finite in a neighborhood of zero, derivatives at zero
+recover moments under standard interchange conditions. The *Chernoff method*
+is Markov's inequality
 applied not to $X$ but to $e^{\lambda X}$ (a monotone transform, so the event
 is unchanged), followed by an optimization over the free parameter: for any
 $\lambda>0$,
@@ -110,15 +99,13 @@ P(X \ge t) \le \inf_{\lambda > 0}\, e^{-\lambda t}\, M(\lambda).
 $$
 :eqlabel:`eq_mdl-chernoff`
 
-That is the whole method. Its power appears the moment $X$ is a *sum* of
+Its advantage is especially clear when $X$ is a *sum* of
 independent terms: the MGF of a sum factors into a *product* of MGFs (the
 expectation of a product of independent variables is the product of
 expectations), so the exponent in :eqref:`eq_mdl-chernoff` grows linearly in
 $n$, and optimizing $\lambda$ then turns that linear-in-$n$ exponent into the
-exponential decay we are after. Everything below is this one display with a
-good bound on the MGF plugged in. For bounded variables the sharpest generic
-MGF bound is a lemma of Hoeffding; we prove it carefully because it is the
-engine of the whole section.
+desired exponential decay. The remaining task is to supply a bound on the MGF.
+For bounded variables, Hoeffding's lemma provides such a bound.
 
 ### Hoeffding's Lemma and Hoeffding's Inequality
 
@@ -210,8 +197,8 @@ argument to $-Z_i$ bounds the lower tail identically, and the *union bound*
 sum of their probabilities) applied to the two tails supplies the factor $2$.
 $\blacksquare$
 
-This is the inequality of :cite:`Hoeffding.1963`, and it pays the main book's
-debt. :numref:`chap_classification_generalization` used exactly
+This is Hoeffding's inequality :cite:`Hoeffding.1963`.
+:numref:`chap_classification_generalization` used
 :eqref:`eq_mdl-hoeffding` (with losses in $[0,1]$, so $b-a=1$) to certify a
 test-set estimate of the error rate: demanding
 $P(|\epsilon_{\mathcal D}(f)-\epsilon(f)|\ge 0.01)\le 0.05$ and solving
@@ -240,8 +227,8 @@ trade-off is the constant: Hoeffding allows for the most adversarial
 distribution
 on $[a,b]$, so the range $b-a$ stands where the Gaussian interval enjoys the
 estimated $\hat\sigma$, and when the true spread is much smaller than the
-range the interval is correspondingly conservative, slack that Bernstein's
-inequality, below, is designed to recover. Keep
+range the interval is correspondingly conservative. Bernstein's inequality,
+below, is designed to recover that slack. Keep
 :eqref:`eq_mdl-hoeffding-interval` in view; it is the statement we will
 upgrade from one function to entire function classes in the second half of
 the section.
@@ -249,8 +236,8 @@ the section.
 ### Sub-Gaussian and Sub-Exponential Variables
 
 The proof used only one property of the summands: an MGF bounded by a
-Gaussian's. That property deserves a name, because it is the right abstraction
-for everything that follows. A random variable $X$ is **sub-Gaussian** with
+Gaussian's. That property is the useful abstraction for the next derivations.
+A random variable $X$ is **sub-Gaussian** with
 *variance proxy* $\sigma^2$ if
 
 $$
@@ -309,12 +296,12 @@ decay is exponential in $t$, which is the best a bounded-but-skewed sum can
 do. We will lean on exactly this small-deviation sharpness when we prove norm
 concentration below.
 
-### The Tail Race in Code
+### Comparing Tail Bounds Numerically
 
-Claims about rates deserve a measurement. For the fair coin we can compute the
+For a fair coin, we can compute the
 tail $P(|\hat p - \tfrac12| \ge 0.1)$ *exactly* (a finite binomial
 sum, which we evaluate in log-space so that $n=5{,}000$ does not underflow)
-and race it against Chebyshev ($\sigma^2=\tfrac14$, so the bound is
+and compare it with Chebyshev's bound ($\sigma^2=\tfrac14$, so the bound is
 $25/n$ at $t=0.1$) and Hoeffding ($2e^{-2nt^2}=2e^{-0.02n}$). No sampling is
 involved; every number below is deterministic.
 
@@ -363,13 +350,12 @@ polynomial decay that no constant can rescue.
 
 ## Probability in High Dimension
 
-Concentration governs more than sample means over datasets. The coordinates of
-a random *vector* are also "many independent contributions", so the same
-inequalities govern the geometry of high-dimensional space, and that geometry
-is where deep learning lives. The phenomenon has a name: **concentration of
-measure**, the fact that in high dimension any sufficiently well-behaved
-function of many independent coordinates is nearly constant, with fluctuations
-exponentially rare. This section quantifies it.
+Concentration also governs the geometry of random vectors. Their coordinates
+provide many independent contributions, so inequalities for sums yield
+high-dimensional geometric results. This phenomenon is called
+**concentration of measure**: in high dimension, a sufficiently regular
+function of many independent coordinates is close to its expected value with
+high probability. This section quantifies two important examples.
 :numref:`sec_mdl-distributions` stated two facts
 while cataloguing the multivariate Gaussian: the norm of a
 $d$-dimensional standard Gaussian locks onto $\sqrt d$, and two independent
@@ -391,10 +377,10 @@ $$
 sum of $d$ i.i.d. variables $x_i^2$ with mean $1$: exactly a sample-mean
 problem, except the summands are unbounded, so Hoeffding does not apply
 directly. They are, however, sub-exponential, precisely the small-$\lambda$
-regime defined above. The MGF is
+regime defined above. Its MGF is
 explicit, $E[e^{\lambda(x_i^2-1)}] = e^{-\lambda}/\sqrt{1-2\lambda}$ for
-$\lambda<\tfrac12$, and a one-line series comparison (which we state and skip;
-see :cite:`Vershynin.2018`, §2.7) shows
+$\lambda<\tfrac12$. A series comparison
+(see :cite:`Vershynin.2018`, §2.7) shows
 
 $$
 E\bigl[e^{\lambda (x_i^2 - 1)}\bigr] \le e^{2\lambda^2}
@@ -416,20 +402,20 @@ squares to norms: writing $z=\|\mathbf x\|/\sqrt d\ge 0$, if $|z-1|\ge\varepsilo
 then $|z^2-1|=|z-1|\,(z+1)\ge\varepsilon$, so the norm event implies the
 squared-norm event and inherits its bound.
 
-First, the *fluctuation of $\|\mathbf x\|$ is of constant
-order*: the bound says deviations of $\|\mathbf x\|$ from $\sqrt d$ beyond
+The bound has two consequences. First, the *fluctuation of $\|\mathbf x\|$ is of
+constant order*: deviations of $\|\mathbf x\|$ from $\sqrt d$ beyond
 $\varepsilon\sqrt d$ are exponentially rare in $d$, and a finer analysis puts
 the standard deviation of $\|\mathbf x\|$ near $1/\sqrt2$ *independently of
 $d$*. A standard Gaussian in $\mathbb{R}^d$ is therefore a **thin shell** of
-radius $\sqrt d$ and thickness $O(1)$; the mental picture of a fuzzy ball
-around the origin fails in high dimension. Second, the mode is not the mass:
+radius $\sqrt d$ and thickness $O(1)$, rather than a ball concentrated near
+the origin. Second, the point of highest density is not a typical point:
 the density is largest at the
 origin, yet the volume of a radius-$r$ shell grows like $r^{d-1}$, and the
-fight between decaying density and exploding volume is settled overwhelmingly
-at $r\approx\sqrt d$. In $d=784$ (an MNIST-sized Gaussian) a typical draw has
-norm within a few percent of $28$; a draw with norm below $14$ has probability at most $2e^{-24}$ by
-:eqref:`eq_mdl-norm-concentration`, so it is extraordinarily unlikely in an
-ordinary experiment.
+product of density and shell volume is largest near
+$r\approx\sqrt d$. In $d=784$ (an MNIST-sized Gaussian) a typical draw has
+norm within a few percent of $28$. By
+:eqref:`eq_mdl-norm-concentration`, a draw with norm below $14$ has probability
+at most $2e^{-24}$.
 
 ### Near-Orthogonality Revisited
 
@@ -524,11 +510,10 @@ measuring means; the cell below measures the *whole distribution*.
 
 ### Measuring the Shell
 
-The distributions chapter verified the *means* of the norm ratio and the
-cosine. Concentration makes distributional claims: what *fraction* of the
-mass sits inside the shell $(1\pm\varepsilon)\sqrt d$, and how badly
-nearest-neighbor contrast collapses. Those are what we measure, at
-$\varepsilon=0.1$.
+The distributions chapter verified the *means* of the norm ratio and cosine.
+We now estimate the fraction of the distribution inside the shell
+$(1\pm\varepsilon)\sqrt d$ and measure the reduction in nearest-neighbor
+contrast, using $\varepsilon=0.1$.
 
 ```{.python .input #mdl-concentration-generalization-measuring-the-shell}
 rng = onp.random.default_rng(0)
@@ -549,20 +534,19 @@ a fuzzy ball, and the nearest and farthest of $200$ points differ by a factor
 of $30$. By $d=200$ the same $\pm10\%$ shell already captures $95\%$ of the
 mass, close to what :eqref:`eq_mdl-norm-concentration`'s Gaussian-rate reading
 predicts ($\pm 2$ standard deviations at $\sigma\approx 1/\sqrt{2d}=0.05$),
-and at $d=2000$ the empirical mass is $100.0\%$: not one of ten thousand draws
-left the shell. The nearest-neighbor contrast tells the matching story,
-collapsing from $29.4$ to $0.08$: in $d=2000$ the farthest of two hundred
-random points is only $8\%$ farther than the nearest, so "nearest" no longer
-means much.
+and at $d=2000$ all ten thousand sampled points lie within the shell. The
+nearest-neighbor contrast decreases from $29.4$ to $0.08$: in $d=2000$ the
+farthest of two hundred random points is only $8\%$ farther from the query than
+the nearest. Distances therefore discriminate poorly among these points.
 
 ## From One Estimate to Uniform Convergence
 
-### The Function Chosen After the Data
+### Data-Dependent Function Selection
 
-Return to learning, where a subtlety voids everything proved so far.
-Hoeffding's inequality certifies the empirical risk of **one fixed function**:
+We now apply the result to learning. Hoeffding's inequality certifies the
+empirical risk of **one fixed function**:
 choose $f$, *then* draw the sample $S=\{(\mathbf x_i,y_i)\}_{i=1}^n$, and the
-empirical risk $\hat R(f)=\frac1n\sum_i \ell(f(\mathbf x_i),y_i)$ sits within
+empirical risk $\hat R(f)=\frac1n\sum_i \ell(f(\mathbf x_i),y_i)$ is within
 $t$ of the true risk $R(f)=E[\ell(f(\mathbf x),y)]$ except with probability
 $2e^{-2nt^2}$. A test set works exactly because it respects this order: the
 model was frozen before the test data were drawn. But a *learner* violates the
@@ -590,7 +574,7 @@ happens when it is not, we take up right after the proof.
 
 ### Finite Classes: the Union Bound
 
-For a finite class the repair is one line of probability.
+For a finite class, the union bound supplies a simultaneous guarantee.
 
 **Proposition (finite-class uniform convergence).** *Let $\mathcal F$ be
 finite, let the loss take values in $[0,1]$, and let $S$ be an i.i.d. sample
@@ -610,9 +594,9 @@ $|\mathcal F|$ bad events occurs is at most the sum of their probabilities
 (the union bound again), i.e. $2|\mathcal F|e^{-2nt^2}$. Setting this to
 $\delta$ and solving for $t$ gives the claim. $\blacksquare$
 
-Read the bound the way a practitioner should: $\log|\mathcal F|$ **is the
-price of choice**. Guaranteeing one function puts $\log(2/\delta)$ in the
-numerator; guaranteeing the freedom to pick among $|\mathcal F|$ adds
+The effect of selecting from a class appears as $\log|\mathcal F|$.
+Guaranteeing one function puts $\log(2/\delta)$ in the numerator; allowing a
+choice among $|\mathcal F|$ adds
 $\log|\mathcal F|$: one extra bit of sample information per bit of selection
 freedom. Since the deviation shrinks like the square root, the
 sample size needed grows only *logarithmically* in the class size, which is
@@ -657,13 +641,12 @@ $$
 :eqlabel:`eq_mdl-rademacher`
 
 with $\mathfrak R_n(\mathcal F)=E_S[\widehat{\mathfrak R}_S(\mathcal F)]$ its
-average over samples. The random signs are fictitious labels with *no signal
-whatsoever*; the supremum asks how large a sample correlation the class can
-manufacture with them anyway. A class that can chase arbitrary coin flips
-($\widehat{\mathfrak R}\approx 1$) can chase the noise in real labels too and
-its empirical risks mean little; a class that cannot
-($\widehat{\mathfrak R}\to 0$) has empirical means that track true means. That
-intuition is a theorem:
+average over samples. The random signs are fictitious labels containing no
+signal. The supremum measures how strongly functions in the class can
+correlate with them. If $\widehat{\mathfrak R}$ is near $1$, the class can fit
+arbitrary labels, and its empirical risks need not estimate population risks
+well. If $\widehat{\mathfrak R}$ tends to zero, empirical and population risks
+converge uniformly. The following theorem makes this relation precise:
 
 **Uniform convergence via Rademacher complexity**
 :cite:`Bartlett.Mendelson.2002`. *For $\mathcal F$ taking values in $[0,1]$,
@@ -676,10 +659,9 @@ R(f) \le \hat R(f) + 2\,\mathfrak R_n(\mathcal F)
 $$
 :eqlabel:`eq_mdl-rademacher-bound`
 
-In this statement $\mathcal F$ is the *loss* class: its members are the
-functions $(\mathbf x,y)\mapsto\ell(f(\mathbf x),y)$, which do take values in
-$[0,1]$; the bookkeeping paragraph at the end of this subsection converts
-between it and the predictor class.
+In this statement $\mathcal F$ is the *loss* class: its members are functions
+$(\mathbf x,y)\mapsto\ell(f(\mathbf x),y)$ taking values in $[0,1]$. We relate
+this class to the predictor class at the end of the subsection.
 We do not give the full proof, but its central move, *symmetrization* (the
 step that conjures coin flips out of a statement that contains none), is short
 enough to sketch, and it explains the factor $2$. Introduce a *ghost sample*
@@ -713,9 +695,9 @@ $\frac1n\sum\varepsilon_i f(\mathbf x_i)$ is $0$ with nothing to optimize) and
 :eqref:`eq_mdl-rademacher-bound` collapses to one-sided Hoeffding. A finite
 class obeys $\mathfrak R_n \le \sqrt{2\log|\mathcal F|/n}$ (Massart's lemma
 :cite:`Boucheron.Lugosi.Massart.2013`),
-recovering :eqref:`eq_mdl-finite-class` up to constants; for binary
-classes the growth-function/VC machinery is exactly a bound on how "finite"
-the class effectively is on $n$ points, giving
+recovering :eqref:`eq_mdl-finite-class` up to constants. For binary
+classes, the growth function and VC dimension bound the number of labelings
+that the class can realize on $n$ points, giving
 $\mathfrak R_n\lesssim\sqrt{d_{\mathrm{VC}}\log n / n}$
 :cite:`boucheron2005theory`. At the other end, the class of *all* functions
 into $[-1,1]$ matches every sign pattern perfectly,
@@ -724,10 +706,9 @@ that class can memorize anything.
 
 ### The Linear Class in Closed Form
 
-Rademacher complexity would be a definition without teeth if it could not be
-*computed*. For the class deep learning cares most about, linear functions
-with a norm constraint, the computation is four lines, and its conclusion
-drives the rest of the section.
+Rademacher complexity is useful when it can be bounded or computed. For
+norm-constrained linear functions, the calculation is short and leads directly
+to a dimension-independent bound.
 
 **Proposition (Rademacher complexity of a norm-bounded linear class).** *Let
 $\mathcal F=\{\mathbf x\mapsto\langle\mathbf w,\mathbf x\rangle :
@@ -771,15 +752,15 @@ dimension $d$. A linear class over a million features and over ten features
 has the *same* bound only when both its weight-radius $B$ and input-radius $r$
 match. Thus parameter count does not appear explicitly; capacity in this bound
 is controlled by the **product** $Br$. Changing or adding features can change
-$r$, so weight norm alone is not an invariant measure of capacity. This single line is the
-theory behind weight decay (:numref:`sec_weight_decay`): shrinking
-$\|\mathbf w\|$ shrinks $B$, which shrinks the one term in
-:eqref:`eq_mdl-rademacher-bound` the learner can control. Hold on to it; it
-is also the key that unlocks double descent in the final section, where the
-*norm* of an interpolating solution will fall even as its parameter count
-grows.
+$r$, so weight norm alone is not an invariant measure of capacity. The bound
+nevertheless gives one reason norm control can help: shrinking
+$\|\mathbf w\|$ permits a smaller radius $B$ when the class is specified
+independently of the sample. This connects to weight decay
+(:numref:`sec_weight_decay`) and motivates tracking solution norm below. It
+does not by itself explain the double-descent experiment, because feature
+radii and data-dependent selection also matter.
 
-One bookkeeping step stitches the two propositions together.
+One step connects the two propositions.
 :eqref:`eq_mdl-rademacher-bound` wants the complexity of the *loss* class
 $\ell\circ\mathcal F$ (the functions whose empirical means we actually
 compare), while :eqref:`eq_mdl-linear-rademacher` computes that of the
@@ -795,10 +776,10 @@ class of the norm-bounded linear model inherits the bound
 $L\,Br/\sqrt n$ and the norm-controls-capacity conclusion survives the
 composition intact.
 
-### Why the Bounds Go Vacuous, and Why the Language Survives
+### Vacuous Bounds and Useful Complexity Measures
 
-Apply this machinery to a modern network
-and the numbers are useless. :cite:`zhang2021understanding` trained standard
+For modern neural networks, these bounds are often vacuous.
+:cite:`zhang2021understanding` trained standard
 architectures to zero training error on CIFAR-10 with *randomly shuffled
 labels* (on ImageNet, random-label training still reaches near-perfect
 *training* accuracy): the class realized by "this architecture, trained by
@@ -809,22 +790,22 @@ nothing; norm-based refinements, evaluated at the sizes practitioners use,
 yield bounds orders of magnitude above the trivial bound of $1$. This is a
 fact about *these bounds*, the ones that take
 uniform convergence over the entire representable class.
-The same experiment shows the same network generalizing on real
-labels, so what needs explaining is a property of the *reached* solution, not
-the reachable set, and the modern program is to shrink the class to
-"functions the optimizer actually finds on data like this" and measure *its*
-complexity. Uniform convergence remains the right language for saying what a
-generalization guarantee even is; what failed is the crude choice of
-$\mathcal F$, and the last section of this chapter shows, in a model small
-enough to solve, exactly how a giant class can reliably deliver small-norm,
-well-generalizing solutions.
+The same architecture can generalize on real labels, showing that the data,
+optimizer, and reached solution contain information ignored by a bound on the
+entire representable class. Subsequent work therefore studies smaller,
+algorithm- or data-dependent classes. Uniform convergence provides one precise
+form of a generalization guarantee, but it is not the only framework for
+analyzing learning algorithms.
+Here the crude choice of $\mathcal F$ makes the displayed bound vacuous. The
+last section studies a smaller random-features model in which solution norm and
+conditioning can be computed directly.
 
 ### Coin Flips in Code
 
-Both halves of the story are measurable. First we estimate
+Both phenomena can be measured. First we estimate
 $\widehat{\mathfrak R}_S$ for the norm-bounded linear class by Monte Carlo:
 the proof gave the supremum in closed form,
-$\frac Bn\|\sum_i\varepsilon_i\mathbf x_i\|$, so we just average that norm
+$\frac Bn\|\sum_i\varepsilon_i\mathbf x_i\|$, so we average that norm
 over random sign draws and compare against $Br/\sqrt n$. Then we exhibit the
 Zhang phenomenon in miniature: a class rich enough to *interpolate* (here,
 minimum-norm least squares on $p=2n$ random features, via the pseudoinverse of
@@ -870,26 +851,18 @@ matters is the norm the fit actually uses on the data.
 
 ## Interpolation and Double Descent
 
-### The U-Curve, Revisited
+### Classical U-Shaped Risk Curves
 
-The classical picture of generalization is the U-curve, and this chapter
-derived it in full: the bias--variance decomposition
-:eqref:`eq_mdl-bias-variance` of :numref:`sec_mdl-statistics` splits the test
-error into a falling squared-bias term and a rising variance term as capacity
-grows, with a sweet spot between. Uniform convergence tells the same story in
-different units: more capacity means more Rademacher complexity in the bound.
-Both tellings tacitly assume the interesting regime is the one where the model
-*cannot* fit the training data perfectly. Modern practice lives on the other
-side. Networks are routinely trained to (near-)zero training error, that is,
-they *interpolate*, and past the **interpolation threshold**, where parameters
-suffice to fit every training point, the classical curves have nothing more to
-say: empirical risk is identically zero for every model in sight, and the
-observed test error *falls again* as capacity keeps growing. This second fall
-is **double descent** :cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`.
-:numref:`sec_generalization_deep` surveys the phenomenon across deep models;
-this section is its mathematical home: we now build the smallest model that
-exhibits it, locate the peak exactly, and explain both descents with the tools
-already on the table.
+The familiar U-curve is a useful heuristic: as a model class grows, bias may
+fall while variance rises. Neither the bias--variance identity nor uniform
+convergence requires this shape, however. In some interpolating regimes, test
+error peaks near the point where training error first reaches zero and then
+falls as the model grows. This behavior is called **double descent**
+:cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`.
+:numref:`sec_generalization_deep` surveys empirical examples in deep learning.
+Here we analyze one controlled random-features regression experiment. Its
+conditioning and minimum-norm mechanisms are exact for this construction; they
+should not be read as a general explanation of deep-network generalization.
 
 ### The Minimum-Norm Mechanism
 
@@ -899,9 +872,9 @@ built from randomness (ours will be $\phi(\mathbf x)=\mathrm{ReLU}
 (\mathbf V\mathbf x)$ with a random frozen $\mathbf V$, a one-hidden-layer
 network whose first layer is never trained) and fit only the linear head
 $\mathbf w\in\mathbb{R}^p$ by least squares on $n$ training points. The
-feature count $p$ is a capacity dial we can sweep straight through the
-threshold $p=n$, and the fitted model changes character three times along the
-way. Write $\boldsymbol\Phi\in\mathbb{R}^{n\times p}$ for the feature matrix
+We vary the feature count $p$ across the interpolation threshold $p=n$.
+The fitted model behaves differently below, at, and above this threshold.
+Write $\boldsymbol\Phi\in\mathbb{R}^{n\times p}$ for the feature matrix
 and fit $\mathbf w=\boldsymbol\Phi^{+}\mathbf y$ with the pseudoinverse of
 :numref:`subsec_mdl-pseudoinverse`, which returns the least-squares solution
 for $p<n$ and the **minimum-norm interpolant** for $p\ge n$.
@@ -945,9 +918,9 @@ algorithm-dependent argument. The experiment below therefore tracks solution
 norm as a diagnostic correlated with test error, not as a complete capacity
 certificate.
 
-### Double Descent in Twenty-Six Lines
+### A Numerical Double-Descent Example
 
-Now the full double-descent curve, from scratch. Forty training points
+We now compute the complete double-descent curve. We use forty training points
 from a noisy linear teacher in fifteen dimensions; ReLU random features with
 nested columns; the head fit by `pinv`: least squares below the threshold,
 minimum-norm interpolation above it. We sweep $p$ from $2$ to $400$ straight
@@ -984,21 +957,20 @@ d2l.plot(p_grid, [med[0], med[2]], 'number of random features p',
          xscale='log', yscale='log')
 ```
 
-*The classical
-regime plays out first*: test error falls from $1.04$ at $p=2$ to its
-classical sweet spot of about $0.68$ around $p=15$, then creeps up as
-variance grows, the familiar U. *The interpolation threshold shows up in the
-train column*: at $p=40=n$ the training error drops from
+In the underparameterized regime, test error falls from $1.04$ at $p=2$ to
+about $0.68$ around $p=15$, then rises as variance increases. At the
+interpolation threshold $p=40=n$, the training error drops from
 $5\times10^{-3}$ to $10^{-28}$ (exact interpolation, up to floating
-point) and precisely there the test error erupts to $33.6$, fifty times its
-classical minimum, while $\|\mathbf w\|$ jumps to $18.5$: the near-singular
-square system dividing noise by $\sigma_{\min}$, just as promised. *Then the
-second descent*: from $p=42$ onward the norm falls monotonically ($4.96$,
+point). At the same point, the test error rises to $33.6$, about fifty times its
+underparameterized minimum, while $\|\mathbf w\|$ increases to $18.5$. This is
+the effect of dividing the noise component by the small singular value
+$\sigma_{\min}$. Beyond the threshold, from $p=42$ onward, the norm decreases
+monotonically ($4.96$,
 $3.64$, $2.42$, $1.70$, $1.18$, down to $0.39$ at $p=400$; the nesting
-guarantees this) and the test error tracks it down through $0.65$ at
-$p=50$ and $0.18$ at $p=80$ to $0.060$ at $p=400$: *ten times better than the
-best underparameterized model*. Note also which curve did *not* move: train
-error is zero up to floating point everywhere past the threshold (the table
+guarantees this). The test error falls to $0.65$ at
+$p=50$, $0.18$ at $p=80$, and $0.060$ at $p=400$, ten times below the
+best underparameterized value. By contrast, the training error remains zero
+up to floating point everywhere past the threshold (the table
 prints $10^{-28}$), so no
 empirical-risk-based criterion can tell these models apart; the solution norm
 distinguishes them in this experiment. The Rademacher calculation motivates
@@ -1158,10 +1130,10 @@ Why averages can be trusted, and when learners cannot<br>**exponential tails · 
 
 ::: {.cols .vc}
 ::: {.col}
-Everything so far decays polynomially: Chebyshev caps a sample mean's
-miss probability at $\sigma^2/(nt^2)$, so certifying $10^{-6}$ takes a
+Chebyshev caps a sample mean's miss probability at $\sigma^2/(nt^2)$, so its
+bound for $10^{-6}$ takes a
 *million* times the data of certifying $10^0$. The truth for bounded
-data is **exponential** in $n$, and this section proves it.
+independent data admits an **exponential** finite-sample bound in $n$.
 
 The main book bounded test-set error with Hoeffding's
 inequality *on faith* (the generalization-in-classification section). Here we
@@ -1185,23 +1157,20 @@ generalization itself.
 :::
 :::
 
-::: {.slide title="The Chernoff method sees every moment at once"}
+::: {.slide title="The Chernoff method and exponential moments"}
 [Chernoff]{.kicker}
 
-Chebyshev sees only the second moment; a tail decaying like $e^{-ct^2}$
-must see them all. The MGF $M(\lambda)=E[e^{\lambda X}]$ packages every
-moment, and Markov applied to $e^{\lambda X}$ (a monotone transform)
-converts a bound on it into a tail:
+Where the MGF $M(\lambda)=E[e^{\lambda X}]$ is finite, Markov's inequality
+applied to $e^{\lambda X}$ converts an MGF bound into a tail bound:
 
 $$P(X \ge t) \;\le\; \inf_{\lambda>0}\; e^{-\lambda t}\, M(\lambda).$$
 
 . . .
 
 ::: {.d2l-note .rule}
-The power move: for a **sum** of independent terms the MGF *factors*, so
-the exponent grows linearly in $n$, and optimizing $\lambda$ turns that into
-exponential decay. Everything in this section is this display plus a good
-MGF bound.
+For a **sum** of independent terms the MGF factors, so the exponent grows
+linearly in $n$. This is one important concentration route; martingale and
+bounded-difference methods provide others.
 :::
 :::
 
@@ -1287,7 +1256,7 @@ variance where Hoeffding must assume the worst case.
 :::
 :::
 
-::: {.slide title="The tail race: rates always beat constants" layout="tight"}
+::: {.slide title="Numerical comparison of tail bounds" layout="tight"}
 [Measured: the fair coin's exact tail vs. both bounds]{.kicker}
 
 @!mdl-concentration-generalization-the-tail-race-in-code
@@ -1457,10 +1426,10 @@ $$\widehat{\mathfrak R}_S
 . . .
 
 ::: {.d2l-note .rule}
-Look at what is **absent**: the dimension $d$. A million features and ten
-features have the same capacity if the norms match. **Norm, not parameter
-count, controls capacity**: the theory behind weight decay, and the key
-to double descent below.
+The dimension $d$ is absent from this bound: linear classes with different
+feature counts have the same bound when the input and weight radii match.
+Feature changes can alter those radii, and a radius chosen after fitting needs
+a data-dependent analysis.
 :::
 :::
 
@@ -1479,7 +1448,7 @@ shows the norm it needed: the smallest linear class containing those fits
 has $Br/\sqrt n \approx 1.41 > 1$. Vacuous, as it must be.
 :::
 
-::: {.slide title="Why the bounds go vacuous, and what survives"}
+::: {.slide title="When uniform-convergence bounds are vacuous"}
 [Limits]{.kicker}
 
 Zhang et al. trained standard architectures to zero training error on
@@ -1490,13 +1459,13 @@ complexity is $\approx 1$ and the bound certifies nothing.
 . . .
 
 This is a fact about *these bounds*, which take uniform convergence over
-the entire representable class. The same
-network generalizes on real labels, so what needs explaining is the
-**reached solution**, not the reachable set.
+the entire representable class. The same network generalizes on real labels,
+so a whole-class bound misses properties of the data, algorithm, and reached
+solution.
 
 ::: {.d2l-note}
-The capacity that matters is the norm the fit actually uses on the data;
-the final section makes that exact in a model small enough to solve.
+Solution norm is one useful diagnostic. The final section studies it in a
+controlled random-features model; it is not a complete theory of deep networks.
 :::
 :::
 
@@ -1506,18 +1475,16 @@ the final section makes that exact in a model small enough to solve.
 
 [Interpolation and double descent]{.dtitle}
 
-[past the threshold, the norm takes over]{.dsub}
+[a controlled random-features example]{.dsub}
 :::
 :::
 
-::: {.slide title="The U-curve assumes you cannot fit"}
+::: {.slide title="Beyond the U-curve"}
 [Double descent]{.kicker}
 
-Bias–variance and uniform convergence both tacitly assume the model
-*cannot* fit the training data perfectly. Modern practice lives on the
-other side: past the **interpolation threshold** $p = n$, empirical risk
-is identically zero for every model in sight, and the observed test
-error *falls again* as capacity grows.
+The U-curve is a heuristic, not a consequence required by bias--variance or
+uniform convergence. In some interpolating problems, test error peaks near
+the **interpolation threshold** and then falls again as the model grows.
 
 . . .
 
@@ -1541,10 +1508,9 @@ at $p$ pads with a zero to one at $p+1$, so
 
 $$\bigl\|\mathbf w^{(p+1)}_{\min}\bigr\| \;\le\; \bigl\|\mathbf w^{(p)}_{\min}\bigr\| :$$
 
-**more features let the minimum-norm interpolant get smaller.** Recall
-$Br/\sqrt n$: the capacity that matters is the norm, so effective
-capacity *falls* as $p$ grows. The second descent is classical theory
-applied to the right complexity measure.
+**more nested features let the minimum-norm interpolant get smaller.** This
+helps explain the experiment below, but $Br/\sqrt n$ also contains the feature
+radius $r$, and a data-dependent fitted radius needs localized analysis.
 :::
 
 ::: {.slide title="Double descent in twenty-six lines" layout="tight"}
@@ -1553,7 +1519,7 @@ applied to the right complexity measure.
 @!mdl-concentration-generalization-double-descent-in-twenty-five-lines
 :::
 
-::: {.slide title="Only the norm can tell them apart"}
+::: {.slide title="Norm tracks the second descent here"}
 [Double descent]{.kicker}
 
 Read the sweep's numbers against the mechanism: at $p = n = 40$ the
@@ -1567,13 +1533,13 @@ noisy data exactly.
 . . .
 
 Past the threshold the train error is zero up to floating point
-everywhere: no
-empirical-risk criterion distinguishes the spiky $p=42$ model from the
-excellent $p=400$ one. The norm does, exactly as the Rademacher
-calculation predicts.
+everywhere, so training error does not distinguish the $p=42$ and $p=400$
+fits. Their solution norms differ and correlate with test error in this
+experiment; the Rademacher bound alone does not predict the curve because
+feature norms and data-dependent selection also matter.
 :::
 
-::: {.slide title="Benign overfitting: when fitting noise is free"}
+::: {.slide title="Benign overfitting in linear models"}
 [Double descent]{.kicker}
 
 The $p=400$ model reproduces every *corrupted* label exactly, yet tests
@@ -1584,7 +1550,7 @@ barely contaminates new predictions.
 
 . . .
 
-Implicit regularization without a regularizer: overfitting is **benign**
+Under suitable covariance spectra, interpolation can be **benign**
 when the spectrum offers a few strong directions for the signal and a
 large reservoir of weak ones to absorb the noise.
 
@@ -1610,17 +1576,18 @@ spectrum, the theory is instructive but open.
 
 ::: {.col}
 - **Uniform convergence:** $\log|\mathcal F|$ for a pre-registered pool,
-  then Rademacher; the linear class comes to $Br/\sqrt n$: **norm, not
-  parameter count**.
-- On interpolating classes the bounds are **vacuous** (Zhang).
+  then Rademacher; for a linear class with fixed input and weight radii the
+  bound is $Br/\sqrt n$, with no explicit parameter count.
+- Whole-class bounds can be **vacuous** for models able to interpolate random
+  labels (Zhang et al.).
 - **Double descent:** a $\sigma_{\min}$ spike, then the min-norm
   interpolant's norm falls, and overfitting can be benign.
 :::
 :::
 
 ::: {.d2l-note}
-One inequality, compounded: Hoeffding certifies the test set, the union
-bound extends it over a fixed pool of models, and the norm is the
-capacity that generalization actually tracks.
+Hoeffding certifies a fixed test-set estimate, and the union bound extends the
+result to a fixed finite collection of models. For linear classes, the
+resulting capacity measure depends on the norm.
 :::
 :::

@@ -1,24 +1,17 @@
 # Singular Value Decomposition and Low-Rank Approximation
 :label:`sec_mdl-svd-low-rank`
 
-The eigendecomposition of :numref:`sec_mdl-eigendecompositions` was powerful but
-*picky*: it needs a square matrix, and to be fully well-behaved (an orthonormal
-eigenbasis, real eigenvalues) it really wants a *symmetric* one. The defective
-shear there had a repeated eigenvalue but only a one-dimensional eigenspace, so it
-admitted no eigenbasis at all. The *singular value decomposition* (SVD) is the
-same idea made universal. It applies to **every** matrix (rectangular,
-rank-deficient, non-symmetric, defective) and factors it into a
-*rotate--scale--rotate* form whose scale factors, the *singular values*, are the
-right generalization of eigenvalues. The engine is one we already built: the
-spectral theorem of :numref:`subsec_mdl-spectral-theorem`, applied to the
-symmetric positive semidefinite matrix $\mathbf{A}^\top\mathbf{A}$. From this one
-factorization we obtain rank and the four fundamental subspaces (resolving the
-"efficient rank" promise of :numref:`sec_mdl-geometry-linear-algebraic-ops`), the
-*optimal* low-rank approximation, principal component analysis, the pseudoinverse
-and least squares, and the condition number that predicts numerical trouble and
-gradient-descent zig-zag. It is also the tool behind LoRA and other low-rank
-adapters, the Muon optimizer, and the spectral diagnostics of the closing
-section.
+Eigendecomposition applies to square matrices, and a general square matrix may
+not possess an eigenbasis. The *singular value decomposition* (SVD) instead
+applies to every matrix, including rectangular, rank-deficient, and defective
+ones. It factors a matrix into two orthogonal transformations and a diagonal
+scaling, whose non-negative scale factors are the *singular values*. The
+construction applies the spectral theorem of
+:numref:`subsec_mdl-spectral-theorem` to the symmetric positive semidefinite
+matrix $\mathbf{A}^\top\mathbf{A}$. We use the resulting factorization to study
+rank and the four fundamental subspaces, optimal low-rank approximation, PCA,
+the pseudoinverse, least squares, and conditioning. We then discuss its use in
+LoRA, the Muon optimizer, and spectral diagnostics of learned weights.
 
 We use the following imports throughout the section.
 
@@ -63,8 +56,9 @@ from jax import numpy as jnp
 
 Recall the central picture of :numref:`sec_mdl-eigendecompositions`: a matrix
 sends the unit circle to an ellipse. For a *symmetric* matrix, the ellipse's axes
-lie along the eigenvectors, and one orthonormal frame does the whole job. A
-general matrix bends the circle to an ellipse too, but now the input directions
+lie along the eigenvectors, so the same orthonormal frame describes both input
+and output directions. A
+general matrix maps the circle to an ellipse too, but now the input directions
 that undergo pure stretching and the output directions they land on are *two
 different* orthonormal frames. The SVD names both.
 
@@ -85,8 +79,8 @@ columns $\mathbf{v}_i$ of $\mathbf{V}$ are the *right singular vectors*, the
 columns $\mathbf{u}_i$ of $\mathbf{U}$ are the *left singular vectors*, and the
 $\sigma_i$ are the *singular values*.
 
-We prove existence in :numref:`subsec_mdl-svd-via-ata`; first we read off what it
-*means*. Because $\mathbf{V}$ and $\mathbf{U}$ are orthogonal, they are pure
+We prove existence in :numref:`subsec_mdl-svd-via-ata`. First consider the
+geometric interpretation. Because $\mathbf{V}$ and $\mathbf{U}$ are orthogonal, they are pure
 rotations (possibly with a reflection), and :eqref:`eq_mdl-svd` decomposes the
 action of $\mathbf{A}$ on a vector $\mathbf{x}$ into three stages applied right to
 left:
@@ -157,9 +151,9 @@ $$
 :eqlabel:`eq_mdl-svd-dyadic`
 
 each term a single outer product weighted by its singular value, ordered from
-largest to smallest. This form, a *ranked* list of rank-one ingredients, is the
-key to the low-rank approximation of :numref:`subsec_mdl-eckart-young`: keep the
-heavy terms, drop the light ones.
+largest to smallest. This ordered list of rank-one terms is the key to the
+low-rank approximation of :numref:`subsec_mdl-eckart-young`: retain the
+leading terms and discard the smaller ones.
 
 The dyadic sum is also a one-line `einsum` in the Einstein notation of
 :numref:`sec_mdl-geometry-linear-algebraic-ops`.
@@ -179,9 +173,8 @@ print('dyadic rebuild error:', round(float(np.linalg.norm(A_dyads - A)), 12))
 :label:`subsec_mdl-svd-via-ata`
 
 The SVD is the spectral theorem of :numref:`subsec_mdl-spectral-theorem` applied
-to the symmetric PSD matrix $\mathbf{A}^\top\mathbf{A}$, which we built for
-exactly this purpose in the bridge at the end of that section. The crux of the
-construction is that orthonormality of the $\mathbf{u}_i$ comes for free.
+to the symmetric PSD matrix $\mathbf{A}^\top\mathbf{A}$. A central part of the
+construction is that the $\mathbf{u}_i$ are automatically orthonormal.
 
 **Proof of :eqref:`eq_mdl-svd` (existence).** The matrix
 $\mathbf{A}^\top\mathbf{A}$ is symmetric and positive semidefinite (recall
@@ -219,7 +212,7 @@ Collecting these columns gives $\mathbf{A}\mathbf{V}=\mathbf{U}\boldsymbol{\Sigm
 and right-multiplying by $\mathbf{V}^\top=\mathbf{V}^{-1}$ yields
 $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. $\blacksquare$
 
-This proof also *computes* the SVD by hand: diagonalize the (small, symmetric)
+This proof also gives a direct construction of the SVD: diagonalize the symmetric
 matrix $\mathbf{A}^\top\mathbf{A}$, take square roots for the singular values, and
 push the eigenvectors through $\mathbf{A}$ for the left singular vectors.
 
@@ -250,8 +243,8 @@ the Courant--Fischer min-max principle of :numref:`subsec_mdl-rayleigh` translat
 from Rayleigh quotients to singular values.
 This "maximum stretch" reading is the one that recurs in Eckart--Young, PCA,
 conditioning, and Lipschitz/spectral-norm arguments. The constructive proof is the
-better *first* proof (concrete, reusing machinery we have); the variational one is
-the better *meaning*.
+better *first* proof (concrete, reusing results already established); the variational one
+explains better what $\sigma_1$ *means*.
 
 **Relationship to the eigendecomposition.** Substituting :eqref:`eq_mdl-svd` into
 the two Gram matrices gives, since $\mathbf{U}$ and $\mathbf{V}$ are orthogonal,
@@ -296,8 +289,8 @@ $$
 $$
 
 is *defective*: $\lambda=1$ has algebraic multiplicity $2$ but only a
-one-dimensional eigenspace, so it has **no eigenbasis** and the eigendecomposition
-simply does not exist. The SVD has no such trouble. Form
+one-dimensional eigenspace, so it has no eigenbasis and hence no diagonal
+eigendecomposition. The SVD instead permits distinct input and output bases. Form
 
 $$
 \mathbf{A}^\top\mathbf{A} = \begin{bmatrix} 1 & 1\\ 1 & 2\end{bmatrix},
@@ -314,14 +307,13 @@ $$
 $$
 
 the golden ratio and its reciprocal (consistent with
-$\sigma_1\sigma_2=|\det\mathbf{A}|=1$). Both are strictly positive, so the shear
-has full rank $2$ and a clean orthonormal factorization
-$\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$: there is nothing
-defective about it. The eigendecomposition stumbled because it insists on a
-*single* basis that both diagonalizes and is reused for input and output; the SVD
-succeeds because it is allowed two different orthonormal frames, which is exactly
-what the shear needs. The cell below verifies the singular values against
-the golden ratio.
+$\sigma_1\sigma_2=|\det\mathbf{A}|=1$). Both are positive, so the shear has rank
+$2$ and an SVD $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ with
+orthonormal factors. The obstruction to eigendecomposition was the requirement
+for one basis that serves on both sides of the map. The SVD avoids that
+requirement by choosing orthonormal input directions $\mathbf v_i$ and output
+directions $\mathbf u_i$ separately. The following calculation verifies the
+singular values against the golden ratio.
 
 ```{.python .input #svd-defective-shear}
 A = np.array([[1., 1.], [0., 1.]])
@@ -337,7 +329,7 @@ print('product sigma_1 * sigma_2 = |det A| =', round(float(s[0] * s[1]), 6))
 
 Because $\mathbf{U}$ and $\mathbf{V}$ are invertible, multiplying by them changes
 no dimensions, so $\operatorname{rank}\mathbf{A}=\operatorname{rank}\boldsymbol{\Sigma}$,
-which is simply the number of nonzero diagonal entries:
+which is the number of nonzero diagonal entries:
 
 $$
 \operatorname{rank}\mathbf{A} = \#\{i : \sigma_i > 0\} = r .
@@ -364,19 +356,19 @@ Splitting the singular vectors at the index $r$,
 
 The picture is a clean bijection: $\mathbf{A}$ maps the row space to the column
 space, sending each $\mathbf{v}_i\mapsto\sigma_i\mathbf{u}_i$ ($i\le r$) one-to-one
-and onto, while crushing the null space to zero. Input space splits orthogonally
+and onto, while mapping the null space to zero. Input space splits orthogonally
 as row space $\oplus$ null space; output space splits orthogonally as column space
 $\oplus$ left-null space. :numref:`fig_mdl-la-svd-subspaces` draws this two-plane
 map; the pseudoinverse of :numref:`subsec_mdl-pseudoinverse` will run the bijection
 backwards.
 
-![The four fundamental subspaces. $\mathbf{A}$ maps the row space $\operatorname{span}\{\mathbf{v}_1,\dots,\mathbf{v}_r\}$ bijectively onto the column space $\operatorname{span}\{\mathbf{u}_1,\dots,\mathbf{u}_r\}$ via $\mathbf{v}_i\mapsto\sigma_i\mathbf{u}_i$, and crushes the null space $\operatorname{span}\{\mathbf{v}_{r+1},\dots,\mathbf{v}_n\}$ to zero.](../img/mdl-la-svd-subspaces.svg)
+![The four fundamental subspaces. $\mathbf{A}$ maps the row space $\operatorname{span}\{\mathbf{v}_1,\dots,\mathbf{v}_r\}$ bijectively onto the column space $\operatorname{span}\{\mathbf{u}_1,\dots,\mathbf{u}_r\}$ via $\mathbf{v}_i\mapsto\sigma_i\mathbf{u}_i$, and maps the null space $\operatorname{span}\{\mathbf{v}_{r+1},\dots,\mathbf{v}_n\}$ to zero.](../img/mdl-la-svd-subspaces.svg)
 :label:`fig_mdl-la-svd-subspaces`
 
 **Numerical rank.** In floating-point arithmetic, a matrix that is mathematically
 rank-deficient rarely has exact zero singular values; rounding leaves tiny
-$\sigma_i$ of size around $\epsilon_{\text{mach}}\,\sigma_1$ instead. The
-practical notion of rank therefore *thresholds*: count the singular values above a
+$\sigma_i$ of size around $\epsilon_{\text{mach}}\,\sigma_1$ instead. In practice,
+then, rank is set by a *threshold*: count the singular values above a
 tolerance, which is exactly what `np.linalg.matrix_rank` does; its default cutoff is
 $\sigma_1\,\max(m,n)\,\epsilon_{\text{mach}}$, scaled by both the largest singular
 value and the matrix size. Building a deliberately rank-2
@@ -397,7 +389,7 @@ print('numerical rank :', int(np.linalg.matrix_rank(A)))
 ### Eckart--Young
 :label:`subsec_mdl-eckart-young`
 
-Here is the theorem that makes the SVD indispensable. The dyadic sum
+The dyadic sum
 :eqref:`eq_mdl-svd-dyadic` lists the rank-one pieces of $\mathbf{A}$ in order of
 importance. Keeping only the top $k$,
 
@@ -470,11 +462,12 @@ $$
 so $\|\mathbf{A}-\mathbf{B}\|_2\ge\sigma_{k+1}$ for every rank-$k$ $\mathbf{B}$,
 with equality at $\mathbf{A}_k$. $\blacksquare$
 
-The kernel of $\mathbf{B}$ and the top-$(k{+}1)$
-singular subspace *overfill* $\mathbb{R}^n$, so they must share a direction. On
-that shared vector $\mathbf{B}$ is blind ($\mathbf{B}\mathbf{x}=\mathbf 0$) while
-$\mathbf{A}$ still stretches by at least $\sigma_{k+1}$, so no rank-$k$
-$\mathbf{B}$ can track $\mathbf{A}$ everywhere.
+The kernel of $\mathbf{B}$ and the top-$(k{+}1)$ singular subspace are subspaces
+of $\mathbb{R}^n$ whose dimensions sum to more than the ambient dimension, so
+they must share a direction. On that direction, $\mathbf{B}$ vanishes:
+$\mathbf{B}\mathbf{x}=\mathbf 0$, while $\mathbf{A}$ still stretches by at
+least $\sigma_{k+1}$, so no rank-$k$ $\mathbf{B}$ can approximate
+$\mathbf{A}$ more closely in every direction.
 
 For the Frobenius norm, the case PCA relies on, the same conclusion follows from
 a one-line singular-value inequality, which we state as a lemma and cite rather
@@ -502,7 +495,7 @@ $$
 
 again with equality at the truncation $\mathbf{A}_k$. $\blacksquare$
 
-The error formulas give a quantitative *dial*. The fraction of "energy" retained
+The error formulas provide a criterion for choosing the rank. The fraction of "energy" retained
 by the rank-$k$ truncation is the *energy ratio*
 
 $$
@@ -514,24 +507,28 @@ $$
 so choosing $k$ to capture, say, 95% of the energy is a principled way to set the
 rank. When the singular values decay quickly (as they do for images with
 large-scale structure and, empirically, for many trained weight matrices), a small
-$k$ captures almost everything, which is exactly the regime in which low-rank
-compression pays off.
+$k$ captures most of the Frobenius norm, and low-rank compression is then
+effective.
 
 **Truncation as denoising.** There is a second, statistical reason to truncate.
-Suppose the matrix you observe is a low-rank signal plus noise,
-$\mathbf{A}=\mathbf{B}+\mathbf{N}$, with $\operatorname{rank}\mathbf{B}=r$ small
-and $\mathbf{N}$ having i.i.d. entries of standard deviation
-$\sigma_{\text{noise}}$. Then the spectrum of $\mathbf{A}$ *splits*: the $r$
-signal values stand essentially where they were, while the noise contributes a
-floor of singular values clustered below roughly
-$(\sqrt{m}+\sqrt{n})\,\sigma_{\text{noise}}$. Truncating just above that floor
-discards almost pure noise, so $\mathbf{A}_k$ can be *closer to the truth*
-$\mathbf{B}$ than the observed $\mathbf{A}$ is. Gavish and Donoho made the cutoff
-precise: for an $n\times n$ matrix with known noise level, the asymptotically
-optimal hard threshold is
-$\tfrac{4}{\sqrt3}\sqrt{n}\,\sigma_{\text{noise}}\approx2.309\,\sqrt{n}\,\sigma_{\text{noise}}$
-:cite:`Gavish.Donoho.2014`, a principled alternative to the 95%-energy dial when
-the data is noisy. Exercise 3 lets you watch the spectrum split.
+Suppose the observed matrix is a low-rank signal plus noise,
+$\mathbf{A}=\mathbf{B}+\mathbf{N}$, where $\mathbf{A}\in\mathbb R^{m\times n}$,
+$\operatorname{rank}\mathbf{B}=r$, and the entries of $\mathbf N$ are
+independent, mean zero, and have standard deviation
+$\sigma_{\text{noise}}$. In the large-dimensional iid model, the noise singular
+values lie below an edge near
+$(\sqrt{m}+\sqrt{n})\sigma_{\text{noise}}$. A sufficiently strong signal can
+produce singular values beyond this edge; weak components need not separate
+from the noise bulk. Truncation above an appropriate threshold can therefore
+reduce error, but the location of that threshold depends on the model.
+
+Under the square-matrix model with known noise level, Gavish and Donoho derive the
+asymptotically optimal hard threshold
+$\tfrac{4}{\sqrt3}\sqrt n\,\sigma_{\mathrm{noise}}\approx2.309\sqrt n\,\sigma_{\mathrm{noise}}$
+:cite:`Gavish.Donoho.2014`. Applying this constant to a different aspect ratio,
+noise distribution, normalization, or unknown-noise setting requires the
+corresponding version of the theory. Exercise 3 illustrates the spectral
+separation; it does not establish the asymptotic result.
 
 The same low-rank premise, with *missing* rather than noisy entries, is *matrix
 completion*: recommender systems fill in a sparsely observed ratings matrix by
@@ -544,10 +541,14 @@ rank that the $\ell_1$ norm plays for sparsity.
 left panel plots the singular-value spectrum on a log scale (note the rapid decay);
 the remaining panels reconstruct the image at ranks $k=1,5,20$ and full, each
 labeled with its relative Frobenius error
-$\|\mathbf{A}-\mathbf{A}_k\|_F/\|\mathbf{A}\|_F=\sqrt{\sum_{i>k}\sigma_i^2/\sum_i\sigma_i^2}$.
-A rank-20 truncation of this image already looks essentially correct while storing
-only a fraction of the numbers, because the discarded singular values carry little
-energy: a visual proof of Eckart--Young.
+
+$$
+\|\mathbf{A}-\mathbf{A}_k\|_F/\|\mathbf{A}\|_F=\sqrt{\sum_{i>k}\sigma_i^2/\sum_i\sigma_i^2}.
+$$
+
+For this image, the rank-20 truncation has small relative Frobenius error and
+retains the visually dominant structure. The panels illustrate the approximation
+theorem; the algebraic argument above supplies its proof.
 
 ![Eckart--Young on a grayscale image: the singular-value spectrum on a log scale (left, note the rapid decay) and the rank-$k$ reconstructions $\mathbf{A}_k$ for $k=1,5,20$ and full rank, each labeled with its relative Frobenius error.](../img/mdl-la-eckart-young.svg)
 :label:`fig_mdl-la-eckart-young`
@@ -555,8 +556,8 @@ energy: a visual proof of Eckart--Young.
 ### Principal Component Analysis
 :label:`subsec_mdl-pca`
 
-Principal component analysis is the most important single application of the SVD,
-and Eckart--Young turns it from a recipe into a theorem. Given data points as the
+Principal component analysis is a direct application of the SVD and the
+Eckart--Young theorem. Given data points as the
 rows of $\mathbf{X}\in\mathbb{R}^{n\times d}$, first *center* them by subtracting
 the mean row, $\tilde{\mathbf{X}}=\mathbf{X}-\mathbf 1\bar{\mathbf{x}}^\top$. The
 empirical covariance is the symmetric PSD matrix
@@ -666,12 +667,12 @@ $\blacksquare$
 
 Rotating into the SVD basis turns a coupled
 least-squares problem into a list of one-dimensional problems, and "small residual"
-and "small norm" land on *disjoint* coordinate blocks ($i\le r$ versus $i>r$), so
+and "small norm" occupy *disjoint* coordinate blocks ($i\le r$ versus $i>r$), so
 both can be satisfied at once. Two corollaries follow. When $\mathbf{A}$ is
 square and invertible, all $\sigma_i>0$ and
 $\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{-1}\mathbf{U}^\top=\mathbf{A}^{-1}$.
 And *truncating* the pseudoinverse (dropping terms with tiny $\sigma_i$ instead of
-dividing by them) caps the dangerous $1/\sigma_i$ blow-up; this is a form of
+dividing by them) caps the large $1/\sigma_i$ factor; this is a form of
 regularization, closely related to ridge regression, which we revisit when we
 discuss weight decay in :numref:`sec_weight_decay`.
 
@@ -702,8 +703,8 @@ print('cond(A^T A) =', round(float(np.linalg.cond(A.T @ A)), 3), '= cond(A)^2')
 :label:`subsec_mdl-condition-number`
 
 The *condition number* is the single SVD-derived scalar that predicts numerical
-pain. For an invertible (or full-rank) matrix it is the ratio of the largest to
-the smallest nonzero singular value,
+error amplification. For an invertible (or full-rank) matrix it is the ratio of
+the largest to the smallest nonzero singular value,
 
 $$
 \kappa(\mathbf{A}) = \frac{\sigma_1}{\sigma_r} .
@@ -767,7 +768,7 @@ $\kappa(\mathbf A)$ while the Hessian condition number that controls gradient
 descent is $\kappa(\mathbf A)^2$.) This is the same picture that ended
 the Rayleigh discussion in :numref:`subsec_mdl-rayleigh`, and it is no coincidence:
 with the best fixed step size, gradient descent's error contracts like
-$(\kappa-1)/(\kappa+1)$ per step on such a bowl: *one number, two consequences*,
+$(\kappa-1)/(\kappa+1)$ per step on such a bowl. *One number, two consequences*:
 error amplification in a solve and slow convergence in optimization. We make this
 precise when we analyze gradient descent in :numref:`sec_mdl-gradient-based-optimization`
 and study numerical conditioning in :numref:`sec_mdl-numerical-stability-conditioning`.
@@ -813,7 +814,7 @@ LoRA *learns* $\mathbf{B}$ and $\mathbf{A}$ by gradient descent rather than
 truncating a known matrix, so the theorem promises nothing about the learned
 adapter itself. What it quantifies is the *ceiling*: if the update that full
 fine-tuning would have made has singular values $\sigma_1\ge\sigma_2\ge\cdots$,
-then no rank-$r$ adapter can come closer to it than $\sigma_{r+1}$ in spectral
+then no rank-$r$ adapter can approximate it with error below $\sigma_{r+1}$ in spectral
 norm ($\sum_{i>r}\sigma_i^2$ in squared Frobenius norm), so the approach can only succeed when
 the true update's spectrum decays fast, which is exactly the empirical finding
 that motivated LoRA. PiSSA makes the link to the SVD literal: it *initializes*
@@ -822,11 +823,12 @@ $\mathbf{W}$ itself, so that fine-tuning starts by adapting the principal
 components :cite:`Meng.Wang.Zhang.2024`.
 
 **Orthogonalized updates (Muon).** The polar decomposition
-:eqref:`eq_mdl-polar` is the engine of Muon :cite:`Jordan.Jin.Boza.ea.2024`, an
+:eqref:`eq_mdl-polar` underlies Muon :cite:`Jordan.Jin.Boza.ea.2024`, an
 optimizer adopted in recent large-scale language-model training. Write the
-*momentum* matrix of a weight (the running average of gradients that optimizers
-keep per weight; see the optimization chapters)
-as $\mathbf{M}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. A standard momentum
+*momentum* matrix of a weight as
+$\mathbf{M}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$; the momentum is the
+running average of gradients that optimizers keep per weight (see the
+optimization chapters). A standard momentum
 step moves along $\mathbf{M}$, which is dominated by its few largest dyads; Muon
 instead steps along the *polar factor*
 $\mathbf{Q}=\mathbf{U}\mathbf{V}^\top$, the rotation part of the update with
@@ -848,16 +850,16 @@ negative, after which the iterates either stick near the spurious fixed point
 $-1$ or diverge; either way the polar factor is lost. So the iterates converge to
 $\mathbf{U}\mathbf{V}^\top$ using nothing but matrix multiplications (in practice
 Muon tunes the polynomial's coefficients so that about five iterations suffice).
-It is the same GPU-friendly bargain that spectral normalization strikes with
-power iteration below.
+Like the power iteration used for spectral normalization below, this procedure
+requires only matrix multiplications and is efficient on GPUs.
 
-The whole mechanism fits in a few lines.
-Frobenius-normalize a random "momentum" matrix, iterate the cubic, and every
-singular value marches to $1$ while the singular *vectors* stay put; the
-iterate lands on the polar factor $\mathbf{U}\mathbf{V}^\top$ computed from a
-direct SVD. With the plain $\tfrac12(3\sigma-\sigma^3)$ coefficients the
+The following calculation illustrates the iteration. After Frobenius
+normalization, repeated application of the cubic maps every nonzero singular
+value toward $1$ while preserving the singular vectors. The iterate therefore
+approaches the polar factor $\mathbf{U}\mathbf{V}^\top$ computed by a direct
+SVD. With the plain $\tfrac12(3\sigma-\sigma^3)$ coefficients, the
 smallest singular value (which starts closest to $0$, where $p$ only multiplies
-it by $\tfrac32$) is the straggler, needing about ten iterations here; Muon's
+it by $\tfrac32$) converges slowest, needing about ten iterations here; Muon's
 tuned polynomials accelerate exactly that small-$\sigma$ regime.
 
 ```{.python .input #mdl-svd-low-rank-the-svd-in-modern-deep-learning-1}
@@ -929,14 +931,14 @@ $\mathbf{Q}=\operatorname{qr}(\mathbf{Y})$. Because $\mathbf{A}$'s energy is
 concentrated in its top singular directions, the $k{+}p$ columns of $\mathbf{Q}$
 capture them with high probability, so one then factors only the *tiny* matrix
 $\mathbf{Q}^\top\mathbf{A}$ and maps its left singular vectors back through
-$\mathbf{Q}$. The cost drops from the $O(mn\min(m,n))$ of a full SVD to essentially
-a few passes over $\mathbf{A}$; this is the standard tool when only the leading singular
+$\mathbf{Q}$. The cost drops from the $O(mn\min(m,n))$ of a full SVD to
+a few passes over $\mathbf{A}$; this method is useful when only the leading singular
 triples are needed. A related family, *CUR* decompositions,
 approximates $\mathbf{A}$ with actual rows and columns of $\mathbf{A}$, trading
 accuracy for interpretability.
 
-Let us verify the two facts the whole section rests on: that the SVD reconstructs
-$\mathbf{A}$, and that $\sigma_i^2$ are the eigenvalues of $\mathbf{A}^\top\mathbf{A}$.
+We finish with a numerical check that the SVD reconstructs $\mathbf{A}$ and
+that $\sigma_i^2$ are the eigenvalues of $\mathbf{A}^\top\mathbf{A}$.
 
 ```{.python .input #svd-verify}
 A = np.array([[3., 1.], [1., 3.], [0., 2.]])   # a 3x2 matrix
@@ -960,15 +962,16 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
   $\mathbf{A}=\sum_i\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$.
 * The SVD is the spectral theorem applied to the symmetric PSD matrix
   $\mathbf{A}^\top\mathbf{A}$, with $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$;
-  it therefore *never fails*, even for the defective shear that had no
-  eigenbasis. Equivalently $\sigma_1=\max_{\|\mathbf{x}\|=1}\|\mathbf{A}\mathbf{x}\|=\|\mathbf{A}\|_2$.
+  it therefore exists even for the defective shear that had no eigenbasis.
+  Equivalently $\sigma_1=\max_{\|\mathbf{x}\|=1}\|\mathbf{A}\mathbf{x}\|=\|\mathbf{A}\|_2$.
 * Rank, range, and the four fundamental subspaces read off the spectrum;
   numerical rank thresholds the $\sigma_i$ at
   $\sim\sigma_1\max(m,n)\,\epsilon_{\text{mach}}$.
 * **Eckart--Young--Mirsky:** the top-$k$ truncation $\mathbf{A}_k$ is the optimal
   rank-$k$ approximation, with $\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$ and
-  $\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$. The energy ratio is the
-  "how much did we keep" dial.
+  $\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$. The retained-energy
+  ratio $\sum_{i\leq k}\sigma_i^2/\sum_i\sigma_i^2$ is one minus the squared
+  relative Frobenius error.
 * **PCA is Eckart--Young on centered data:** principal directions are the right
   singular vectors $\mathbf{v}_i$, explained variance is $\sigma_i^2/n$.
 * The pseudoinverse $\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{+}\mathbf{U}^\top$
@@ -997,7 +1000,7 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
    $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{200\times5}$ standard Gaussian, and add
    noise $\mathbf{N}$ with i.i.d. $\mathcal{N}(0,\sigma_{\text{noise}}^2)$ entries,
    $\sigma_{\text{noise}}=0.05$. Plot the singular values of
-   $\mathbf{B}+\mathbf{N}$ on a log scale and watch the spectrum split into five
+$\mathbf{B}+\mathbf{N}$ on a log scale and examine the separation between five
    signal values and a noise floor near
    $(\sqrt{m}+\sqrt{n})\,\sigma_{\text{noise}}$. Verify that hard-thresholding at
    the Gavish--Donoho cutoff
@@ -1059,23 +1062,23 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
 ::: {.cover}
 [Dive into Deep Learning · §22.3]{.kicker}
 
-The one factorization that **never fails**<br>**SVD, Eckart--Young, and the geometry of low rank**
+**The SVD, Eckart--Young, and Low-Rank Approximation**
 :::
 :::
 
-::: {.slide title="The picture, made universal"}
+::: {.slide title="The SVD for General Matrices"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The eigendecomposition was powerful but *picky*: it wants a square,
-ideally symmetric matrix, and a defective one has no eigenbasis at all.
+Eigendecomposition requires a square matrix, and a defective matrix has no
+eigenbasis.
 
-The **singular value decomposition** is the same rotate--scale--rotate
-idea applied to **every** matrix, rectangular or defective alike.
+The **singular value decomposition** gives a rotate--scale--rotate
+factorization for every matrix, including rectangular and defective matrices.
 
 ::: {.d2l-note}
-One factorization yields rank, low-rank approximation, PCA, the
+The factorization determines rank, low-rank approximations, PCA, the
 pseudoinverse, and the condition number.
 :::
 :::
@@ -1127,12 +1130,12 @@ so it has an orthonormal eigenbasis $\mathbf{v}_i$ with eigenvalues $\lambda_i\g
 
 . . .
 
-**(2)** Take square roots and push through $\mathbf{A}$:
+**(2)** Take square roots and apply $\mathbf{A}$:
 $\;\sigma_i=\sqrt{\lambda_i}$, $\;\mathbf{u}_i=\mathbf{A}\mathbf{v}_i/\sigma_i$.
 
 . . .
 
-**(3)** The output frame is orthonormal *for free*:
+**(3)** The output frame is orthonormal by construction:
 $\mathbf{u}_i^\top\mathbf{u}_j=\sigma_i^{-1}\sigma_j^{-1}\,
 \mathbf{v}_i^\top\mathbf{A}^\top\mathbf{A}\,\mathbf{v}_j=\delta_{ij}$.
 
@@ -1142,7 +1145,7 @@ rectangular or defective.
 :::
 :::
 
-::: {.slide title="The defective shear, finally decomposed"}
+::: {.slide title="SVD of a Defective Shear"}
 [The factorization]{.kicker}
 
 The shear $\begin{bmatrix}1&1\\0&1\end{bmatrix}$ is *defective*: one
@@ -1157,7 +1160,7 @@ and its reciprocal ($\sigma_1\sigma_2=|\det\mathbf{A}|=1$):
 @!svd-defective-shear
 :::
 
-::: {.slide title="Two frames, one stretch"}
+::: {.slide title="Left and Right Singular Vectors"}
 [The factorization]{.kicker}
 
 The action $\mathbf{A}\mathbf{v}_i=\sigma_i\mathbf{u}_i$ verifies in one
@@ -1182,8 +1185,8 @@ one-liner rebuilds the matrix exactly:
 
 @mdl-svd-low-rank-rotate-scale-rotate
 
-This *ranked list of rank-one ingredients* is what low-rank approximation
-truncates: keep the heavy terms, drop the light ones.
+Low-rank approximation truncates this ordered list of rank-one terms by
+retaining the leading terms and discarding the smaller ones.
 :::
 
 ::: {.slide title="Rank & the four fundamental subspaces"}
@@ -1191,7 +1194,7 @@ truncates: keep the heavy terms, drop the light ones.
 
 ::: {.cols .vc}
 ::: {.col}
-$\operatorname{rank}\mathbf{A}$ is just the number of nonzero
+$\operatorname{rank}\mathbf{A}$ is the number of nonzero
 $\sigma_i$. The singular vectors split into the row/null space (input)
 and column/left-null space (output); $\mathbf{A}$ is a bijection
 between the row and column spaces.
@@ -1203,7 +1206,7 @@ $\sigma_i>\sigma_1\max(m,n)\,\epsilon_{\text{mach}}$.
 :::
 
 ::: {.col .fig .big}
-![$\mathbf{A}$ maps the row space onto the column space and crushes the null space to zero.](../img/mdl-la-svd-subspaces.svg){width=100%}
+![$\mathbf{A}$ maps the row space onto the column space and maps the null space to zero.](../img/mdl-la-svd-subspaces.svg){width=100%}
 :::
 :::
 :::
@@ -1224,7 +1227,7 @@ where a test for exact zeros would fail.
 
 [Low-rank approximation]{.dtitle}
 
-[keep the heavy terms, drop the light ones]{.dsub}
+[retain the leading terms, discard the smaller ones]{.dsub}
 :::
 :::
 
@@ -1245,20 +1248,21 @@ $\dim\ker\mathbf{B}\ge n-k$, and $\mathcal{V}=\operatorname{span}\{\mathbf{v}_1,
 
 . . .
 
-They **overfill** $\mathbb{R}^n$: $(n-k)+(k+1)>n$, so a unit $\mathbf{x}$ lives in both, with $\mathbf{B}\mathbf{x}=\mathbf 0$.
+Their dimensions exceed that of $\mathbb{R}^n$: $(n-k)+(k+1)>n$, so a unit
+$\mathbf{x}$ belongs to both, with $\mathbf{B}\mathbf{x}=\mathbf 0$.
 
 . . .
 
-There $\mathbf{B}$ is blind while $\mathbf{A}$ still stretches:
-$\|(\mathbf{A}-\mathbf{B})\mathbf{x}\|=\|\mathbf{A}\mathbf{x}\|\ge\sigma_{k+1}$. The energy ratio $\sum_{i\le k}\sigma_i^2/\sum_i\sigma_i^2$ is the compression dial.
+There $\mathbf{B}$ vanishes while $\mathbf{A}$ still stretches the vector:
+$\|(\mathbf{A}-\mathbf{B})\mathbf{x}\|=\|\mathbf{A}\mathbf{x}\|\ge\sigma_{k+1}$. The energy ratio $\sum_{i\le k}\sigma_i^2/\sum_i\sigma_i^2$ determines the compression--error tradeoff.
 :::
 
-::: {.slide title="A visual proof on an image"}
+::: {.slide title="Image truncation illustrates the Eckart--Young error"}
 [Approximation]{.kicker}
 
-The spectrum decays fast (log scale, left), so rank-20 already looks
-essentially correct while storing a fraction of the numbers, the
-discarded $\sigma_i$ carrying little energy.
+The spectrum decays rapidly (log scale, left), so the rank-20 approximation
+has low visible error while storing a fraction of the entries; the discarded
+$\sigma_i$ carry little energy.
 
 ![Singular-value spectrum and rank-$k$ reconstructions, each labeled with its relative Frobenius error.](../img/mdl-la-eckart-young.svg){width=92%}
 :::
@@ -1287,7 +1291,7 @@ $\sigma_i^2/n$. The SVD axes and the covariance eigenvalues agree exactly:
 
 [Solving & conditioning]{.dtitle}
 
-[the pseudoinverse and the one number to watch]{.dsub}
+[the pseudoinverse and condition number]{.dsub}
 :::
 :::
 
@@ -1351,22 +1355,22 @@ $\mathbf{U}\mathbf{V}^\top$ of the momentum (Newton--Schulz, matmuls only).
 :::
 :::
 
-::: {.slide title="Muon: singular values marched to 1"}
+::: {.slide title="Newton--Schulz Iteration in Muon"}
 [Applications]{.kicker}
 
 Newton--Schulz, $\mathbf{X}\leftarrow\tfrac12(3\mathbf{X}-\mathbf{X}\mathbf{X}^\top\mathbf{X})$,
 applies the odd cubic $p(\sigma)=\tfrac12(3\sigma-\sigma^3)$ to every singular
 value while leaving $\mathbf{U}$ and $\mathbf{V}$ untouched; Frobenius
 normalization first puts every $\sigma$ inside the cubic's basin of attraction
-of $1$. Watch the spectrum march:
+of $1$. The following output shows the spectrum across iterations:
 
 @!mdl-svd-low-rank-the-svd-in-modern-deep-learning-1
 
 . . .
 
-Every $\sigma_i \to 1$ (the smallest is the straggler, exactly the regime
-Muon's tuned coefficients accelerate) and the iterate lands on the polar
-factor $\mathbf{U}\mathbf{V}^\top$: matmuls only, no SVD ever computed.
+Every $\sigma_i \to 1$; the smallest converges slowest, which is the regime
+Muon's tuned coefficients accelerate. The iterate converges to the polar
+factor $\mathbf{U}\mathbf{V}^\top$ using matrix multiplications without computing an SVD.
 :::
 
 ::: {.slide title="Effective rank, measured"}
@@ -1385,7 +1389,7 @@ the escapees are the learned correlation.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Two orthonormal bases expose rank and approximation"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
@@ -1393,13 +1397,13 @@ the escapees are the learned correlation.
 - **Rotate, scale, rotate:** $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$,
   $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$, never fails.
 - **Eckart--Young:** top-$k$ truncation is the *optimal* low-rank
-  approximation; the energy ratio is the dial.
+  approximation; the energy ratio measures the retained spectral energy.
 - **PCA** is Eckart--Young on centered data.
 :::
 
 ::: {.col}
 - **Pseudoinverse** $\mathbf{A}^{+}$ gives min-norm least squares.
-- **$\kappa=\sigma_1/\sigma_r$** is the one number to watch; the normal
+- **$\kappa=\sigma_1/\sigma_r$** summarizes conditioning; the normal
   equations square it.
 - Powers PCA, LoRA, Muon, and spectral normalization.
 :::

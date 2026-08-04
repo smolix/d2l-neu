@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d3a59957534bfdbbe1b1b7fb1046126d7a4b15b1669c63f82253935af51db8ef",
+    "d2l_lib_fingerprint": "sha256:7fc532d4bb7b51742431cfaf4f21274a434cc6b053cb0dbedeab2809a1e69b08",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
           "bytes": 19128,
-          "sha256": "sha256:6df826bc8bb7b1f71f1960df2234105e1826033f37c19666e6dfc5c06217d6fb"
+          "sha256": "sha256:a9242c95dfcb4c408cb07aadeb223d27891a53603915d06f6c37cbe2c7a5ed71"
         }
       ]
     },
@@ -42,54 +42,54 @@
       "outputs": []
     },
     "decoding-greedy-decoding": {
-      "code_fingerprint": "sha256:3de559983450f37af8bf4583a817c8f8af5fad28eaf8f1f62b406d6943d83d07",
+      "code_fingerprint": "sha256:2d7f0c941d8a1f3de8a4b5ad2c74c8266191e4c4dca258f2af1ddb3e11e18692",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller\\nand startment of the\\nsle of the\\nside of the\\nbut of the\\nbut of the\\nbut of the\\nbut of the\\nbut of the\\nbut of the\\nbut'\n\"it seemed to me that the\\nsidea.\\n\\n'In a\\nmath.\\n\\n'In a\\nbut I was a\\nsloring of the\\nbut of the\\nbut of the\\nbut of\"\n"
+          "text": "\"the time traveller to\\nthe Time Traveller's\\ndeliumerable\\nchanism.\n    The\\ndisappo, and\\ntherempatural\\nflted to\\nshalls of\\nwerest\"\n\"it seemed to me that the\\nsunnome to\\ntowards the\\nsunnels.\\n\\n'In\n    a\\nsharping\\nof the\\nlittle-side, and\\ntherentrely\"\n"
         }
       ]
     },
     "decoding-beam-search-1": {
-      "code_fingerprint": "sha256:7414fa5240b549aa31b845cd91c92c838042707e5fe91db09407c56864e3f3c0",
+      "code_fingerprint": "sha256:95b451db8ec7505211b08a4485e7d452e877db40e331db69b41cbc45384ce736",
       "kind": "text",
       "outputs": []
     },
     "decoding-beam-search-2": {
-      "code_fingerprint": "sha256:2868bcbf4e6777380f782b067881f067e38e79be209597b2b4238e82639a33e0",
+      "code_fingerprint": "sha256:66731740d45389064a7ec0f137978cf66303ef04951ab17ebc2a0b4b56b2df16",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.95, distinct-3 0.45: 'the time traveller\\nand startment of the\\nsle of the\\nside of the\\nbut of the\\nbut of the\\nbut of the\\nbut of the\\nbut'\nk=4, score -3.99, distinct-3 1.00: \"the time travellerface of the\\nside of the pright.\\n\\n'There I found a\\npresently the slope, and I was\\nflicate, and\"\n"
+          "text": "k=1, score -4.75, distinct-3 1.00: \"the time traveller to\\nthe Time\n    Traveller's\\ndeliumerable\\nchanism. The\\ndisappo,\n    and\\ntherempatural\\nflted to\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.19, distinct-3 0.82: \"it seemed to me that the\\nsidea.\\n\\n'In a\\nmath.\\n\\n'In a\\nbut I was a\\nsloring of the\\nbut of\"\n"
+          "text": "k=4, score -3.49, distinct-3 0.34: \"the time traveller.\\n\\n'As\n    the\\nsunnels.\\n\\n'As the\\nsunnels.\\n\\n'As the\\nsunnels.\"\nk=1, score -4.44, distinct-3 0.92: \"it seemed to me that the\\nsunnome\n    to\\ntowards the\\nsunnels.\\n\\n'In a\\nsharping\\nof the\\nlittle-\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.93, distinct-3 0.95: \"it seemed to me that the Time Traveller,\\nI had a\\nface.\\n\\n'Soy, and I\\nhand on the\\nflow.\\n\\n'There I found a\\n\"\n"
+          "text": "k=4, score -3.54, distinct-3 0.61: \"it seemed to me that ifuppose.\\n\\n'As\n    the\\nsunnels.\\n\\n'As the\\nsunnels.\\n\\n'Then I had seen\"\n"
         }
       ]
     },
     "decoding-a-unified-sampler-1": {
-      "code_fingerprint": "sha256:da46afbd506a299548c7e2e111ed829ced262d5d7744db17e76a0b5026c12378",
+      "code_fingerprint": "sha256:13d5aaff3c907f69a282e40149b7f0cc420caf2b38d93c00d5616301b7dbf3d9",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-unified-sampler-2": {
-      "code_fingerprint": "sha256:9165c28146d7344f08ddc3497128406ac325436e8be31d53a6180bf7d5f2f0a8",
+      "code_fingerprint": "sha256:f5b3fe961c8c0a44c668e99d0b8914bb875e8d2372b401cc2e02984073436736",
       "kind": "text",
       "outputs": []
     },
     "decoding-a-unified-sampler-3": {
-      "code_fingerprint": "sha256:9ab99e3bc1ddfc838d98255c1acb519775ab3fb30b448009b8eca77898375ab9",
+      "code_fingerprint": "sha256:84d57f94828b084772398cf2e4985acf4a3d40028b0e4b28c5ea5dd41d8b111a",
       "kind": "text",
       "outputs": [
         {
@@ -100,62 +100,67 @@
       ]
     },
     "decoding-one-distribution-three-cutoffs-1": {
-      "code_fingerprint": "sha256:930d722f552be7e06385d0dd97e7612d4b1f75c591cbdfdcdec2412addc230e0",
+      "code_fingerprint": "sha256:3368bd88658c65e654a32955fcf807f99c28acfeb3778bd8b9bf713227ece19e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7b94dd3b32c0>"
+          "text": "<matplotlib.legend.Legend at 0x75df62fc6c60>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 48371,
-          "sha256": "sha256:ebd97072c1400393423fa5a84358e49e475b0d4b441e3c1792eb02a8f52ba4bb"
+          "bytes": 49479,
+          "sha256": "sha256:2a623f724b805cd646fbfd28750a91fd7bebf9efb05d1077501fb08459812505"
         }
       ]
     },
     "decoding-one-distribution-three-cutoffs-2": {
-      "code_fingerprint": "sha256:846e8bb689c5be78af79b4fec4d9affdb780b889474309a7f69c132bf33f2372",
+      "code_fingerprint": "sha256:8938df11d1f6ba77aee6c8d53707ed36d17471703db71370c142030609517d2b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.11, top-k keeps 20, top-p keeps 179, min-p keeps 26\n'it seemed to me that': top prob 0.31, top-k keeps 20, top-p keeps 76, min-p keeps 6\n"
+          "text": "'the time traveller': top prob 0.14, top-k keeps 20, top-p keeps 103, min-p keeps 23\n'it seemed to me that': top prob 0.10, top-k keeps 20, top-p keeps 160, min-p keeps 39\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-1": {
-      "code_fingerprint": "sha256:78015e3a916818d5dbc0aaab6547edfe81bfa56ce933608d095414ea43131b15",
+      "code_fingerprint": "sha256:2b2994bd180e965b2c31c682261f7ded0c56bdc5639cf06a2aab5ce4ddc55a03",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: \"the time travellerley of the future. The Medical Man.\\n\\n'There was the\\ntime.\\n\\n'I so up the\\nconditions of the\\nhaster, the\\nfeight and the\\nha\"\nT=1.0: 'the time traveller of the\\nsal car new and tchle of nected\\npe-worldcle to tendill-�by, but even a\\nreyer was only necay upon mystand cl\\nexpl t'\nT=2.0: 'the time traveller fo could\\nfU inch could co�ps eyes. alverty bageibly the slowofust follow Medicalought ey off satig bet they into its�very time she tcl Time under\\x07 an black spolog'\n"
+          "text": "T=0.5: 'the time traveller the\\nsunning to believe and frog,\\nof a\\nlittle-\n    fournalk and fast\\nwerently to me, there is\\ntherempoint of the P'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=1.0: 'the time traveller\\nbutterus had e are l; and everything all\\nout\n    was\\nwerest I just that\\x1b me from be discondualar of pra though to\n    fairothes moraryed about'\nT=2.0: \"the time travellerive formerachin\\x14 whitetingreost mini Then, its\n    knowade back with like\\ning chan nworldmsychologistasable my\n    wasurdfterishibqu C�,' spur ruway r'ic before wasark\"\n"
         }
       ]
     },
     "decoding-the-same-prefix-under-every-strategy-2": {
-      "code_fingerprint": "sha256:7200e8fcc9d4dd8fbcf75c3bea7246edda4a9e12cba8a032fe136cb8f9195563",
+      "code_fingerprint": "sha256:8362c36a25289d280ca1b9452596a80a120da2475d4114a223c0b5010d6e3e1a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.35): 'the time traveller\\nand startment of the\\nsle of the\\nside of the\\nbut of the\\nbut of the\\nbut of the\\nbut of the\\nbut of the\\nbut of the\\nbut'\n"
+          "text": " greedy (distinct-3 1.00): \"the time traveller to\\nthe Time\n    Traveller's\\ndeliumerable\\nchanism. The\\ndisappo,\n    and\\ntherempatural\\nflted to\\nshalls of\\nwerest\"\n  T=1.0 (distinct-3 1.00): 'the time traveller\\nbutterus had e are l; and\n    everything all\\nout was\\nwerest I just that\\x1b me from be discondualar\n    of pra though to fairothes moraryed about'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): 'the time traveller of the\\nsal car new and tchle of nected\\npe-worldcle to tendill-�by, but even a\\nreyer was only necay upon mystand cl\\nexpl t'\n"
+          "text": "  top-k (distinct-3 1.00): 'the time traveller,\\nthey deacesoned\\ngouseingly\n    an\\nvention of\\ntheeral.\\nnel; for me\\nsheredalist was solerimbs. One\n    corce'\n  top-p (distinct-3 1.00): 'the time traveller in\\ndisx him more Busure,\n    there is \" Is of metaly--back alme!thditions. The Editor in which lit\n    from\\ntheimare people me.\\nThe'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): 'the time travellerster.\\nI cannot have\\ncovering with the mor and sension of the panishing into masch and in the sch. The Psychologist trilph over. But there was\\nfast'\n  top-p (distinct-3 1.00): 'the time travellersuching\\nconasp the last things, and Weena\\nexpllance and the\\nfelt the face of anyearartzen that the turnentif\\nhad. You was unless palred\\non'\n  min-p (distinct-3 0.98): 'the time travellerally\\ncame in my own me. (asching.\\nThey were\\ndown into a little c beonve I had the Time Machine, and the machine there of the\\nnold\\ndown-wor'\n"
+          "text": "  min-p (distinct-3 1.00): 'the time travellericate of the night of\n    ru\\nsselfk and half-deellectual\\nvisken sociar\\nstrange\n    right,\\nsoscriumphs of somethingy\\nun'\n"
         }
       ]
     }

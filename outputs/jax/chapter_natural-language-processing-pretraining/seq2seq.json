@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[ 524  735  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 641 1346  111  466  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 623  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  815  361 1819  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1118  338 1830  371 3663  262 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  740   45  507  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 6 3]\nshared vocabulary size: 4003\n"
+          "text": "source: [[1683  752  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 771  642  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [2151  471  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001 3547   45  507 1231  262 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 3554   45  507  486  262 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 3592  436  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 4 4]\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24562,
-          "sha256": "sha256:d7c9fdf0736132346b6667f4b5de12be9f1233b140c457b51d7d3d69aeedf9bc"
+          "sha256": "sha256:16c134d1a6b30d6e481ed33e64fdfeb3a3cfc7f96186c17d390abacbd02db1a1"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-jax/lib/python3.12/site-packages/jax/_src/numpy/array_methods.py:125: UserWarning: Explicitly requested dtype int64 requested in astype is not available, and will be truncated to dtype int32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.\n  return lax_numpy.astype(self, dtype, copy=copy, device=device)\n"
+          "text": "UserWarning: Explicitly requested dtype int64 requested in astype is not\navailable, and will be truncated to dtype int32. To enable more dtypes, set the\njax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment\nvariable. See https://github.com/jax-ml/jax#current-gotchas for more.\n"
         }
       ]
     },
@@ -116,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20438,
-          "sha256": "sha256:3b8b0c756670ffe8b82816d76889fbc80e747c22ae0cabfd93f8c684792a027b"
+          "bytes": 20800,
+          "sha256": "sha256:657479ec61236e040f92b213f50f348406c8705f6593b01d04950cd33bb39ba3"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis timide .'\n"
+          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis chez moi .'\n"
         }
       ]
     },
@@ -154,7 +154,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis timide .', chrF 0.342\n"
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
         }
       ]
     },
@@ -185,7 +185,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i'm home .   k=1: 0.34  k=2: 0.34  k=5: 0.34\n"
+          "text": "i'm home .   k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
         }
       ]
     },
@@ -202,8 +202,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 24538,
-          "sha256": "sha256:7b93cfa2c26cee5a16db7ce12048589c7c2b6f21a46681c06e02dcdef889aa61"
+          "bytes": 26024,
+          "sha256": "sha256:f3df1ec2b65369b33a7608b93d060271d73eeeb390ca54d01cdddae6034a1936"
         }
       ]
     }

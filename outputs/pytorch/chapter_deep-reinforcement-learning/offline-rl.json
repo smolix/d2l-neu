@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "source": "chapter_deep-reinforcement-learning/offline-rl.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:488123abb928b17d4e256b52decb1995092ba3d3030124eb4aa904c1d88d9dee",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "offline-rl-which-data-may-drive-which-update": {
+      "code_fingerprint": "sha256:f75014e863117b32a5563d437f27d01756d561630e26f20e1deae8b20af0052f",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-sarsa-one-symbol-the-opposite-rule-1": {
+      "code_fingerprint": "sha256:4f39ea511736f9a4716b87f1c5060ff98a1ee899645f887154206d5f21fe58b6",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-sarsa-one-symbol-the-opposite-rule-2": {
+      "code_fingerprint": "sha256:8590a63d1760caf46cc3a253d013f26985cb576b0a34f4bbd6770a8a1a9f42f4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "offline-rl/offline-rl-sarsa-one-symbol-the-opposite-rule-2-1.png",
+          "bytes": 18565,
+          "sha256": "sha256:b920fa683f16976608beba04effd59389918257bd646f8dd7191e126a566ab16"
+        }
+      ]
+    },
+    "offline-rl-sarsa-one-symbol-the-opposite-rule-3": {
+      "code_fingerprint": "sha256:7fadb732b7ec47149cac1702a14c6af34284eec8afbe4e8aad9eadfaa46aa28f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Q-learning: greedy policy succeeds 72.5%; the behavior earns 0.061\n            the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.180\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     SARSA: greedy policy succeeds 74.1%; the behavior earns 0.070\n            the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.061\n"
+        }
+      ]
+    },
+    "offline-rl-distribution-shift-measured": {
+      "code_fingerprint": "sha256:61da74eedb47c1d55c7e24e9f22d7e58546cc81c8dcdf7459fafa974631ec853",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3997 transitions; support over the 44 live pairs: min 7, median 42, max 465\nthe behavior earned 0.012 per episode, discounted\n"
+        }
+      ]
+    },
+    "offline-rl-the-experiment-with-a-behavior-cloning-bar-1": {
+      "code_fingerprint": "sha256:b3b3707e51ae7f6079c351a4df31a6d36acb31b4412bc85098e01c6191c15aa0",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-the-experiment-with-a-behavior-cloning-bar-2": {
+      "code_fingerprint": "sha256:90414a4ccb9a9eb81a4c0ad02e9410746f0248f7139338f12424af4f62c9d231",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-the-experiment-with-a-behavior-cloning-bar-3": {
+      "code_fingerprint": "sha256:6388c7f0020455aa9cb53613d314042219c6e2f1bb4f32ae47c99e3848f14b90",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the yardstick no offline deployment has: V*(s0) = 0.180\n"
+        }
+      ]
+    },
+    "offline-rl-the-experiment-with-a-behavior-cloning-bar-4": {
+      "code_fingerprint": "sha256:c628e9c777277be14ad7b4ea930d25b45c58249b546beff992d0afcdcd4a31c5",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-the-experiment-with-a-behavior-cloning-bar-5": {
+      "code_fingerprint": "sha256:6fe5a94a8d971737d56613d68999459c211d4ac70988fed33472fa84a0bcf080",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      naive: predicted median 0.274, spread 0.185 to 0.388\n             actual    median 0.097, spread 0.070 to 0.184\npessimistic: predicted median 0.121, spread 0.035 to 0.225\n             actual    median 0.080, spread 0.050 to 0.189\n      clone: predicted median 0.007, spread 0.004 to 0.014\n             actual    median 0.008, spread 0.003 to 0.014\npromises above V*(s0): naive on 15 of 15 datasets, pessimistic on 2 of 15\npessimism delivered the better policy on 4 of 15 datasets\n"
+        }
+      ]
+    },
+    "offline-rl-the-experiment-with-a-behavior-cloning-bar-6": {
+      "code_fingerprint": "sha256:6dc5077b36c108112d51e00de0e0ce9bc6a4bb775de6c2fb0bc43871aaac943d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
+          "bytes": 29617,
+          "sha256": "sha256:2f244ad58d6ed9018c3fca72f0865ebdb2b254715db05e7136bd21918cabca94"
+        }
+      ]
+    },
+    "offline-rl-kappa-over-root-n": {
+      "code_fingerprint": "sha256:899d940b9b2d93c14ee17177a67a40a2df0ade64458b28571c09ea1946db7804",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "659 supported live pairs over 15 datasets: error min 0.000, median 0.094, max 0.458\nkappa centering kappa/sqrt(n) on the cloud: 0.57\nresidual error at n > 100: median 0.077\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "offline-rl/offline-rl-kappa-over-root-n-1.svg",
+          "bytes": 101448,
+          "sha256": "sha256:32d2e1c2aa32e9fec0f10152bff934bbb1b5c738dea31fded21b05d862724887"
+        }
+      ]
+    },
+    "offline-rl-constrain-the-policy-the-values-or-both": {
+      "code_fingerprint": "sha256:f147c407d1b103c69d2799c7f260c355c010ee90a66c7b492e667a6198a172a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "on this dataset the support rule reproduces the naive run, bit for bit\n"
+        }
+      ]
+    }
+  }
+}

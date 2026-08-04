@@ -1,18 +1,15 @@
 # A GPT from Scratch
 :label:`sec_gpt`
 
-One block, stacked, is most of a language model. This section adds the
-little that remains — an embedding, positions, a causal mask, an output
-head — and packages the result as a single `GPT` class whose constructor
-arguments span the design space: the block flags of
-:numref:`sec_transformer-block` plus a positional scheme. That
-one-class-many-configurations shape is the spine of this chapter. The same
-class, with the modern flags, trains from scratch on *The Time Machine* in
-about a minute; with the 2019 flags, it accepts the released weights of
-GPT-2 :cite:`Radford.Wu.Child.ea.2019` and completes English sentences.
-Between those two demonstrations sit the practical crafts this section
-teaches: reading a loss curve for what it actually shows, breaking a model
-with a normalization flag, and sampling from a trained distribution.
+A GPT-style language model adds token embeddings, positional information,
+a causal mask, and an output head to a stack of transformer blocks. We
+implement these components in a `GPT` class whose constructor includes the
+block options from :numref:`sec_transformer-block` and a choice of positional
+scheme. With a current configuration, this class trains from scratch on
+*The Time Machine* in about a minute. With the GPT-2 configuration, it also
+accepts the released GPT-2 weights :cite:`Radford.Wu.Child.ea.2019`. These
+experiments illustrate how to interpret a loss curve, diagnose a poor
+normalization choice, and sample from a trained distribution.
 
 ```{.python .input #gpt-a-gpt-from-scratch}
 %%tab pytorch
@@ -54,7 +51,7 @@ tensor when we load its weights.
 
 **A causal mask.** A language model predicts token $t+1$ from tokens $1,
 \ldots, t$, so position $t$ must not attend forward. In
-:numref:`sec_transformer-block` we got causality by handing
+:numref:`sec_transformer-block` we enforced causality by passing
 `d2l.MultiHeadAttention` a per-query valid length. Here we build the causal
 variant natively, for two reasons. First, efficiency: the fused attention
 kernels of :numref:`sec_attention-at-scale`
@@ -66,15 +63,14 @@ score matrix. Second, positions.
 between the two schemes that :numref:`sec_positional-information` found in
 deployed models: `'learned'` adds a trained position vector to the
 embedding — GPT-2's scheme, capped at the table's length — and `'rope'`
-rotates queries and keys inside every attention head, which is what
-essentially every current model does. RoPE lives where queries and keys
+rotates queries and keys inside every attention head. RoPE is used by the
+Llama and Qwen model families cited later in this chapter. It lives where queries and keys
 are made, so the attention module implements it itself (the same
 `_rope` we gave `TinyCharLM`); nothing else in the model knows positions
 exist.
 
 **The blocks themselves** are `d2l.TransformerBlock`, unchanged: the
-causal attention drops in through the `attn_factory` hook, exactly the
-seam it was designed to be.
+causal attention enters through the `attn_factory` hook.
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-1}
 %%tab pytorch
@@ -228,25 +224,24 @@ n = sum(p.size for p in jax.tree.leaves(nnx.state(model, nnx.Param)))
 print(f'{n / 1e6:.2f}M parameters')
 ```
 
-One decision above deserves a defense: the model reads *characters*, not
-subwords. Deployed language models tokenize into subwords — byte-pair
+The model reads *characters* rather than subwords because the training
+corpus is small. Deployed language models tokenize into subwords — byte-pair
 encoding is the most common scheme — and :numref:`sec_text-sequence` built
 a full BPE tokenizer; we will even reuse its GPT-2 pattern verbatim when we
-load GPT-2 below. But BPE earns
-its keep on gigabytes; on a 180 KB novel a subword vocabulary would leave
+load GPT-2 below. BPE becomes advantageous on much larger corpora. On a
+180 KB novel, a subword vocabulary would leave
 each token type a handful of training examples. Characters keep the
 statistics dense, the vocabulary trivial, and the comparison fair against
 the character-level models of previous chapters.
 
-## Training the Modern Configuration
+## Training a Pre-Norm RMSNorm Configuration
 
-We train the default configuration — pre-norm, RMSNorm, SwiGLU, RoPE:
-the same flag settings you would find in a Llama or Qwen checkpoint
-:cite:`touvron2023llama` — on the character-level Time Machine corpus,
-with one concession to its size: `dropout=0.1`, a regularizer that
-frontier models dropped precisely because their corpora outweigh their
-parameters, which is the opposite of our situation here. We watch the
-validation loss as we go rather than admiring the training curve alone.
+We train the default configuration on the character-level Time Machine
+corpus. Its pre-norm, RMSNorm, SwiGLU, and RoPE settings also appear in the
+Llama and Qwen families :cite:`touvron2023llama`. We set `dropout=0.1` for
+this small repeated corpus. Several large-model reports tabulated later use no
+dropout, but this comparison does not isolate why. We record validation loss
+throughout training.
 
 ```{.python .input #gpt-training-the-modern-configuration}
 %%tab pytorch
@@ -326,41 +321,38 @@ print(f'final: train {train_curve[-1]:.2f}, '
       f'{steps[val_curve.index(min(val_curve))]}')
 ```
 
-Read the two curves separately, because they tell different stories. The
-training loss falls smoothly toward a few tenths of a nat — the
-architecture works, the optimizer works. The validation loss bottoms out
-around $1.5$ nats within the first few hundred steps and then *rises* while
-training keeps improving. No bug: our run feeds the model roughly 16
-million tokens drawn from a corpus of one hundred thousand characters,
-about 160 passes over the book, with 4.7 million parameters to spend —
-dozens of parameters per unique character of text. Past the first epochs,
-gradient descent has nothing left to learn from this book except the book
-itself. The cure is not fewer steps or a bigger dropout but
-*more data*; how loss actually scales when data and parameters grow
-together is the business of this chapter's closing section on scaling laws
-:cite:`kaplan2020scaling,hoffmann2022training`.
+The training loss falls toward a few tenths of a nat. Validation loss reaches
+its minimum near $1.5$ nats within the first few hundred steps and then rises
+while training loss continues to decrease. The run processes roughly 16
+million tokens drawn repeatedly from about one hundred thousand characters,
+or about 160 passes through the corpus, with 4.7 million parameters. This
+train--validation divergence is consistent with memorization under repeated
+corpus reuse. The experiment does not isolate a remedy; larger and more varied
+training data is the change studied by the scaling analysis at the end of the
+chapter :cite:`kaplan2020scaling,hoffmann2022training`.
 
-It is worth locating this run on the cost map. At roughly $6ND$
+The estimated training cost locates this run relative to larger models.
+At roughly $6ND$
 floating-point operations for training a model of $N$ parameters on $D$
 tokens, our minute of GPU time spent about $5 \times 10^{14}$ FLOPs. The
-124M-parameter GPT-2 we load below — same class, about 26 times our
-parameter count, a corpus five orders of magnitude larger — cost on the
-order of $7 \times 10^{18}$ by the same estimate, taking WebText at
-roughly ten billion tokens (the 1.5B-parameter GPT-2 XL lands near
-$10^{20}$), and frontier runs sit around $10^{25}$ or beyond. Across
+124M-parameter GPT-2 we load below cost on the order of
+$7 \times 10^{18}$ by the same estimate, taking WebText at roughly ten
+billion tokens; it is the same class with about 26 times our parameter
+count, trained on a corpus five orders of magnitude larger. The
+1.5B-parameter GPT-2 XL lands near $10^{20}$, and frontier runs sit
+around $10^{25}$ or beyond. Across
 those ten orders of magnitude the model definition barely changes —
 block, mask, embedding, head — but everything around it does: data
 pipelines, custom kernels, and the parallelism of
-:numref:`chap_performance`. The block abstraction is the part that
-transfers, which is why it is worth learning on a novella.
+:numref:`chap_performance`. The block abstraction therefore transfers even though the surrounding
+training system changes with scale.
 
-### Breaking It with One Flag
+### Effect of Normalization Placement
 
 :numref:`sec_transformer-block` predicted, from initialization statistics
-alone, that the post-LN arrangement starves its attention layers' query
-and key projections of gradient. Now that we own a trainable model, we
-can watch the prediction come true. Same model, same data, same 800
-steps at learning rate
+alone, that the post-LN arrangement reduces the gradients received by its
+attention layers' query and key projections. We test this prediction with
+the same model, data, and 800-step budget at learning rate
 $3 \times 10^{-3}$ — three times the rate above, still comfortable for
 pre-norm — with `pre_norm` flipped:
 
@@ -389,7 +381,7 @@ for pre_norm in (True, False):
                    for k in (100, 200, 400, 800)))
 ```
 
-The pre-norm model trains as if nothing happened. The post-norm model does
+The pre-norm model trains normally. The post-norm model does
 not diverge — no NaNs, no explosion — it does something more telling: it
 sticks at about $2.8$ nats and never leaves. That number is exactly the
 unigram entropy of this text ($2.83$ nats: predict letter frequencies,
@@ -399,9 +391,9 @@ starved query/key gradients we measured at initialization. At the gentler
 learning rate of the previous run, post-LN does train, trailing early
 (this is what learning-rate warmup was invented for
 :cite:`xiong2020layer`); at the rate pre-norm shrugs off, it fails
-outright. GPT-2's quiet move of the normalization, ahead of most of the
-field, is one reason its 48-block variant was trainable at all in 2019
-:cite:`Radford.Wu.Child.ea.2019`.
+outright. GPT-2 moved the normalization quietly, ahead of most of the
+field, and that is one reason its 48-block variant was trainable at all
+in 2019 :cite:`Radford.Wu.Child.ea.2019`.
 
 ## Sampling from the Model
 
@@ -414,8 +406,8 @@ by a temperature $\tau$, optionally keep only the $k$ most probable tokens
 $p$, *nucleus sampling* :cite:`Holtzman.Buys.Du.ea.2020` — an exercise),
 and sample. We add `generate` to the class. It is deliberately naive:
 every new token reruns the full forward pass over the whole history,
-which is quadratic work per token — measuring and then eliminating that
-waste is the entire next section.
+which is quadratic work per token. The entire next section measures that
+waste and then eliminates it.
 
 ```{.python .input #gpt-sampling-from-the-model-1}
 %%tab pytorch
@@ -480,8 +472,8 @@ prefix = data.vocab[list('the time traveller ')]
 for temperature, top_k in ((1.0, None), (0.7, 8), (2.0, None)):
     torch.manual_seed(0)
     out = model.generate(prefix, 120, temperature, top_k)
-    print(f'T={temperature}, top_k={top_k}: '
-          + repr(''.join(data.vocab.to_tokens(out))))
+    d2l.print_wrapped(f'T={temperature}, top_k={top_k}: '
+                      + repr(''.join(data.vocab.to_tokens(out))))
 ```
 
 ```{.python .input #gpt-sampling-from-the-model-2}
@@ -491,8 +483,8 @@ prefix = data.vocab[list('the time traveller ')]
 for temperature, top_k in ((1.0, None), (0.7, 8), (2.0, None)):
     out = model.generate(prefix, 120, seed=0, temperature=temperature,
                          top_k=top_k)
-    print(f'T={temperature}, top_k={top_k}: '
-          + repr(''.join(data.vocab.to_tokens(out))))
+    d2l.print_wrapped(f'T={temperature}, top_k={top_k}: '
+                      + repr(''.join(data.vocab.to_tokens(out))))
 ```
 
 The samples are fluent pseudo-Wells — and much of that fluency appears
@@ -557,16 +549,17 @@ ids = enc.encode('Attention is all you need.')
 print(ids, [enc.decode([i]) for i in ids])
 ```
 
-The tokenizer cell is the BPE machinery of :numref:`sec_text-sequence`
-meeting the real artifact: GPT-2's released merge list and vocabulary,
-interpreted with the *same* pre-tokenization pattern our own
-`d2l.BPETokenizer` uses, assembled into `tiktoken`'s fast encoder. No
-model library, no configuration framework — two data files and a regular
-expression.
+The tokenizer cell applies the BPE machinery of
+:numref:`sec_text-sequence` to GPT-2's released merge list and vocabulary.
+It uses the same pre-tokenization pattern as `d2l.BPETokenizer` and
+assembles the result into `tiktoken`'s encoder. The construction requires
+two data files and a regular expression, without a model library or
+configuration framework.
 
-Now the weights. The checkpoint stores one tensor per parameter under
-names like `h.3.attn.c_attn.weight`; our job is a dictionary mapping those
-names onto our modules. One historical trap: GPT-2's original code
+The checkpoint stores one tensor per parameter under names such as
+`h.3.attn.c_attn.weight`, so loading requires a dictionary that maps these
+names onto our modules. One historical detail requires care: GPT-2's
+original code
 implemented linear layers as a `Conv1D` class that keeps weights as
 $(\textrm{in}, \textrm{out})$ — the transpose of `nn.Linear`'s
 $(\textrm{out}, \textrm{in})$ — so every 2-D weight must be transposed on
@@ -638,10 +631,10 @@ layout that PyTorch users must transpose happens to be exactly the layout
 `nnx.Linear` keeps its kernels in.
 :end_tab:
 
-Did it work? Weight-loading bugs are notorious for failing silently — a
-transposed matrix still multiplies. Two checks, one quantitative and one
-you can read. First, the model should assign natural English a
-respectable probability:
+Shape checks alone do not validate a loaded checkpoint because a transposed
+square matrix still multiplies. We therefore use a quantitative loss check and
+a generated-text check. First, the model should assign natural English a
+plausible probability:
 
 ```{.python .input #gpt-loading-gpt-2-3}
 %%tab pytorch
@@ -665,73 +658,60 @@ loss = optax.softmax_cross_entropy_with_integer_labels(
 print(f'per-token loss {loss:.2f}, perplexity {jnp.exp(loss):.0f}')
 ```
 
-A per-token perplexity around 50 over a 50,257-way vocabulary — against
-50,257 for uniform guessing — says the plumbing is right. Second,
-the readable check: greedy decoding of a stock prompt reproduces GPT-2's
-well-documented continuation, and sampled continuations respond to the
-temperature and top-$k$ knobs the way the char model could not:
+A per-token perplexity around 50 says the plumbing is right: the
+vocabulary is 50,257-way, and uniform guessing would score 50,257.
+Second, the readable check: greedy decoding of a stock prompt reproduces
+GPT-2's well-documented continuation, and sampled continuations respond
+to the temperature and top-$k$ knobs the way the char model could not:
 
 ```{.python .input #gpt-loading-gpt-2-4}
 %%tab pytorch
 torch.manual_seed(0)
 out = gpt2.generate(enc.encode('Alan Turing theorized that computers '
                                'would one day become'), 16, top_k=1)
-print(enc.decode(out))
+d2l.print_wrapped(enc.decode(out))
 torch.manual_seed(0)
 out = gpt2.generate(enc.encode('The secret of a good deep learning '
                                'textbook is'), 40, temperature=0.8,
                     top_k=50)
-print(enc.decode(out))
+d2l.print_wrapped(enc.decode(out))
 ```
 
 ```{.python .input #gpt-loading-gpt-2-4}
 %%tab jax
 out = gpt2.generate(enc.encode('Alan Turing theorized that computers '
                                'would one day become'), 16, top_k=1)
-print(enc.decode(out))
+d2l.print_wrapped(enc.decode(out))
 out = gpt2.generate(enc.encode('The secret of a good deep learning '
                                'textbook is'), 40, seed=0, temperature=0.8,
                     top_k=50)
-print(enc.decode(out))
+d2l.print_wrapped(enc.decode(out))
 ```
 
-Take stock of what just happened: a class we wrote in two notebook
-sections, with the right five flags, runs a model that in 2019 was
-considered too dangerous to release. The gap between our minute of
-training and GPT-2 was never architectural — it is five orders of
-magnitude of data, four of compute, and the engineering to spend them. The
-rest of this chapter dissects exactly that gap: making generation cheap
-(the KV cache, next), other ways of wiring the same block
-(encoders and cross-attention), scaling its FFN sideways
-(mixture of experts), and the laws that say what all those FLOPs buy
-(scaling laws) — where the constructor calls for Llama, Qwen, and
-DeepSeek appear as rows of a table, every one of them an argument list
-for this class.
+With five configuration choices, the class developed here can load and run
+GPT-2. The difference between our short training run and GPT-2 lies primarily
+in the amounts of data and computation, together with the engineering needed
+to use them. The following sections examine efficient generation with a KV
+cache, encoder and encoder--decoder variants, mixture-of-experts layers, and
+the relation between scale and performance. The configurations of Llama,
+Qwen, and DeepSeek will then be expressed in terms of the same class.
 
 ## Summary
 
-A GPT is a token embedding, a stack of causally masked transformer
-blocks, a final norm, and an output head tied to the embedding; positions
-enter either as a learned table added at the bottom (GPT-2) or as
-rotations applied inside every attention head (RoPE, the modern default).
-Our `GPT` class takes the block's flags plus `pos`, and its causal
-attention drops into `d2l.TransformerBlock` through the same
-`attn_factory` hook later sections use for cache-friendly attention.
-Trained from scratch on a 180 KB novel, the modern configuration reaches
-its best validation loss within a few hundred steps and then memorizes —
-the val/train gap, and the apparently memorized stretches in its samples,
-both read straight off a 30-to-1 parameter-to-data ratio, and argue for
-the scaling laws that close the chapter. Flipping `pre_norm=False` at a
-learning rate the pre-norm model tolerates pins training at the unigram
-entropy: the initialization-time gradient starvation of the previous
-section, realized as a model that never learns to use context. Sampling
-is temperature plus truncation, implemented once and reused by the real
-GPT-2: the released 124M checkpoint loads into our class with a
-name-mapping dictionary (transposing the Conv1D layout in PyTorch;
-adopting it unchanged in JAX), its tokenizer reassembles from two pinned
-data files and the BPE pattern of ch. 8's tokenizer, and the loaded model
-passes both a perplexity check and a readable one — completing English
-prompts the way the history books say it should.
+A GPT consists of a token embedding, causally masked transformer blocks, a
+final normalization layer, and an output head tied to the embedding.
+Positions can be represented by a learned table, as in GPT-2, or by RoPE
+inside each attention head. Our `GPT` class exposes these choices and inserts
+causal attention through the `attn_factory` interface of
+`d2l.TransformerBlock`. On the 180 KB training text, validation loss reaches
+its minimum within a few hundred steps and then rises as the model memorizes
+the corpus. With post-norm at the same learning rate, training remains near
+the unigram entropy, consistent with the gradient attenuation measured in
+the preceding section. Temperature and truncation control sampling. The
+released 124M-parameter GPT-2 checkpoint loads into the same class through a
+parameter-name mapping, with the Conv1D matrices transposed in PyTorch and
+left unchanged in JAX. The loaded model passes a perplexity check and
+produces coherent completions for the example prompts.
 
 ## Exercises
 
@@ -801,7 +781,7 @@ Four ingredients on top of the stacked block:
 @gpt-from-blocks-to-a-language-model-1
 :::
 
-::: {.slide title="Train the modern configuration"}
+::: {.slide title="Train a Pre-Norm RMSNorm Configuration"}
 4.7M parameters, character-level Time Machine, one GPU, about a minute:
 
 @!gpt-training-the-modern-configuration
@@ -811,10 +791,10 @@ Four ingredients on top of the stacked block:
 - Train falls smoothly to ~0.15 nats; validation bottoms near 1.5 within
   a few hundred steps, then **rises**.
 - 16M training tokens over a 100k-character book ≈ 160 passes, with
-  dozens of parameters per character: past the first epochs there is
-  nothing to learn but the book itself.
-- The cure is **more data**, not more steps — the scaling-laws section's
-  subject.
+  dozens of parameters per character. The divergence is consistent with
+  memorization under repeated corpus reuse.
+- The scaling-laws section studies how larger and more varied data changes
+  this regime; the present run does not isolate a remedy.
 
 ::: {.d2l-note}
 Cost anchor: this run ≈ $6ND \approx 5 \times 10^{14}$ FLOPs. GPT-2
@@ -828,9 +808,9 @@ scale — the systems around it change.
 
 @!gpt-breaking-it-with-one-flag
 
-No divergence — worse: pinned at **2.83 nats = the unigram entropy** of
-the text. Attention never learns to use context, exactly as the
-at-initialization gradients predicted.
+The loss remains pinned at **2.83 nats, the unigram entropy** of the text.
+Attention does not learn to use context, consistent with the
+initialization-time gradient analysis.
 :::
 
 ::: {.slide title="Sampling: temperature and truncation"}
@@ -840,12 +820,12 @@ Deliberately naive: every token reruns the full forward pass — measuring
 and fixing that is the next section (KV cache).
 :::
 
-::: {.slide title="What a minute of training sounds like"}
+::: {.slide title="Samples after the Short Training Run"}
 @!gpt-sampling-from-the-model-2
 
-Fluent pseudo-Wells — much of it apparently *memorized* Wells: the
-validation gap made audible. Temperature barely matters when a memorizing
-model is this confident.
+The samples resemble the training text closely, consistent with the widening
+train--validation gap. Temperature has little effect because the fitted token
+distribution is already concentrated.
 :::
 
 ::: {.slide title="Loading GPT-2: config = constructor call"}
@@ -853,22 +833,22 @@ GPT-2 (124M) **is** our class with the 2019 flags:
 `pos='learned', norm='layer', act='gelu', pre_norm=True, bias=True`.
 
 - Weights + tokenizer files pinned by sha1 in `d2l.DATA_HUB`.
-- Tokenizer: GPT-2's merge list + vocabulary + ch. 8's BPE pattern,
+- Tokenizer: GPT-2's merge list + vocabulary + our earlier BPE pattern,
   assembled into tiktoken — no model library.
 
 @gpt-loading-gpt-2-1
 :::
 
 ::: {.slide title="The weight mapping"}
-One dictionary from checkpoint names to modules; the one trap is GPT-2's
-`Conv1D` layout, $(\textrm{in}, \textrm{out})$ — transpose for
+One dictionary maps checkpoint names to modules. GPT-2's `Conv1D` layout
+requires care: $(\textrm{in}, \textrm{out})$ — transpose for
 `nn.Linear`, adopt unchanged for `nnx.Linear`:
 
 @gpt-loading-gpt-2-2
 :::
 
-::: {.slide title="Did it work?"}
-Silent-failure insurance, one number and one sentence:
+::: {.slide title="Validating the Loaded GPT-2 Checkpoint"}
+Perplexity and a completion check detect common mapping or tokenizer errors:
 
 @!gpt-loading-gpt-2-3
 
@@ -878,12 +858,12 @@ Silent-failure insurance, one number and one sentence:
 ::: {.slide title="Recap"}
 - GPT = embedding + causal blocks + final norm + tied head; positions
   learned-or-rotary; one class, flags for a decade of designs.
-- Read both curves: best validation early, then memorization — data, not
-  steps.
+- The validation loss reaches its minimum early and then rises as training
+  loss falls, consistent with memorization under repeated corpus reuse.
 - `pre_norm=False` at a healthy learning rate pins training at the
   unigram plateau.
-- Sampling = temperature + truncation; naive generation recomputes
-  everything (the KV cache fixes this, next).
-- The released GPT-2 loads into our class and completes English the way
-  the history books say it should.
+- Temperature and truncation control sampling; naive generation recomputes
+  the prefix, whereas the next section's KV cache reuses it.
+- The released GPT-2 loads into our class and produces coherent English
+  completions for the example prompts.
 :::

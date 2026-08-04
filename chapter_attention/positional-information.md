@@ -1,23 +1,15 @@
 # Positional Information
 :label:`sec_positional-information`
 
-Attention treats its input as a set. Every mechanism in this chapter so far —
-scoring, masking, heads — computes with query–key similarities, and nothing
-in a dot product depends on *where* a token sits in its sequence. For
-language this is disqualifying: "dog bites man" and "man bites dog" contain
-the same tokens. This section first sharpens the deficiency into a one-line
-theorem, then works through the repairs in the order the field adopted them:
-*adding* position vectors to the input (sinusoidal and learned encodings),
-*rotating* queries and keys by position-dependent angles (RoPE, the default in
-most current open-weights models), and *biasing* attention scores
-by distance (ALiBi), or trusting the causal mask to leak position on its own
-(NoPE). What separates these schemes in practice is not accuracy at the
-training length but *extrapolation*: what happens when a model trained at one
-context length is asked to run at a longer one. To answer that question
-experimentally we build this chapter's shared workhorse, a character-level
-language model in which attention is the only trainable machinery that mixes
-information across positions, and train it five times, once per positional
-scheme.
+Without positional information, attention is permutation equivariant: reordering
+the input only reorders the output. This is unsuitable for sequences in which
+order changes meaning. This section proves the equivariance property and then
+studies four ways to represent position: sinusoidal and learned absolute
+embeddings, rotary position embeddings (RoPE), linear attention biases (ALiBi),
+and causal attention without explicit position embeddings (NoPE). We compare
+the methods both within the training context length and beyond it using a small
+character-level language model whose only cross-position operation is
+attention.
 
 ```{.python .input #positional-information}
 %%tab pytorch
@@ -43,7 +35,8 @@ import optax
 ## Attention Ignores Order
 
 Let $\mathbf{X} \in \mathbb{R}^{n \times d}$ hold a sequence of $n$ token
-representations and let $f$ be an (unmasked) self-attention layer,
+representations. At evaluation time, with dropout disabled and with no mask
+or position-dependent bias, let $f$ be the self-attention layer
 
 $$
 f(\mathbf{X}) = \mathrm{softmax}\!\left(\frac{\mathbf{X}\mathbf{W}_q (\mathbf{X}\mathbf{W}_k)^\top}{\sqrt{d}}\right) \mathbf{X}\mathbf{W}_v.
@@ -68,9 +61,9 @@ because $\boldsymbol{\Pi}^\top \boldsymbol{\Pi} = \mathbf{I}$. Concatenating
 heads and applying $\mathbf{W}_o$ row-wise preserves the property, so it
 holds for multi-head attention too. $\blacksquare$
 
-Shuffle the input, and the output shuffles along: each token's output is
-unchanged, only relabeled by the permutation, so nothing the layer computes
-depends on where in the sequence a token sits. The claim is easy to check
+Permuting the input applies the same permutation to the output: each token's
+output is unchanged except for its row index. Thus the layer does not use a
+token's position in the sequence. We can verify this property
 on the multi-head layer of :numref:`sec_multihead-attention`:
 
 ```{.python .input #positional-information-attention-ignores-order}
@@ -94,13 +87,13 @@ Y_perm = attention(X[:, perm], X[:, perm], X[:, perm], None)[0]
 print(f'max |Y[perm] - Y_perm|: {jnp.abs(Y[:, perm] - Y_perm).max():.2e}')
 ```
 
-Two caveats frame everything that follows. First, equivariance is a property
+Two caveats qualify this result. First, equivariance is a property
 of the *layer*; stacking equivariant layers and reading out per token leaves
 the model equivariant, so depth does not help. Second, the proposition is
 about unmasked attention: a causal mask singles out each position by how many
-predecessors it may see, which breaks the symmetry — a loophole we return to
-at the end of this section. The mainstream remedy is more direct: tell every
-token where it is.
+predecessors it may see, which breaks the symmetry. NoPE uses this asymmetry,
+as discussed near the end of the section. The other methods provide each
+token with explicit positional information.
 
 ## Absolute Position Embeddings
 
@@ -154,8 +147,8 @@ Adjacent column pairs share a frequency (one sine, one cosine), and the
 frequency falls as the column index grows. This is a continuous version of
 something familiar: binary counting. In the binary representations below, the
 lowest bit flips every number, the next every two numbers, the next every
-four — fast dimensions distinguish neighbors, slow dimensions distinguish
-regions:
+four. Fast dimensions distinguish neighboring positions, whereas slow
+dimensions distinguish broader regions:
 
 ```{.python .input #positional-information-sinusoidal-encodings-2}
 for i in range(8):
@@ -184,18 +177,17 @@ The empirical choice is to make $\mathbf{P}$ a trainable embedding table, one
 free vector per position, as in BERT and GPT-2
 :cite:`Devlin.Chang.Lee.ea.2018,Radford.Wu.Child.ea.2019`. It concedes that
 we do not know the right encoding and lets gradient descent find one. The
-concession has a price we can state before running anything: the table has
+limitation is apparent before training: the table has
 exactly as many rows as the training context, and a row that no training
 example ever used is still whatever initialization left there. Position 500
 is not "a bit beyond position 128"; it is undefined.
 
-### The Rotation Hidden in the Sinusoids
+### Sinusoidal Encodings as Rotations
 
-Why prefer designed sinusoids over a learned table at all? The original paper
-offers a hypothesis: they might let the model attend by *relative* position,
-"since for any fixed offset $\delta$, $\mathbf{p}_{i+\delta}$ is a linear
-function of $\mathbf{p}_i$". Let's verify this and, more importantly, see
-what the linear function is. Write $\omega_j = 1/10000^{2j/d}$ for the
+Designed sinusoids have a relative-position structure absent from a learned
+table. The original paper observed that "for any fixed offset $\delta$,
+$\mathbf{p}_{i+\delta}$ is a linear function of $\mathbf{p}_i$". The
+linear map can be written explicitly. Write $\omega_j = 1/10000^{2j/d}$ for the
 frequency shared by columns $2j$ and $2j{+}1$. Then
 
 $$
@@ -208,20 +200,17 @@ $$
 
 by the angle-addition identities. The map from position $i$ to position
 $i + \delta$ is a *rotation* of each two-column pair, by an angle $\delta
-\omega_j$ that depends only on the offset $\delta$, never on $i$. So the
-machinery for relative positions is present in the encoding — but only
-implicitly. The model receives $\mathbf{x}_i + \mathbf{p}_i$ and must *learn*
-projections that exploit the rotation structure, and the additive mix is
-noisy: a query–key product of two sums expands into four terms, of which only
-the position–position term carries the clean rotation. If rotations by
-relative offsets are what we want attention to see, why not apply them
-directly where the comparison happens?
+\omega_j$ that depends only on the offset $\delta$, never on $i$. Thus the encoding contains relative-position structure, but only implicitly.
+The model receives $\mathbf{x}_i + \mathbf{p}_i$ and must learn projections
+that exploit the rotations. Moreover, a query--key product of two such sums
+expands into four terms, and only the position--position term retains the
+rotation directly. RoPE instead applies relative rotations directly to the
+query--key comparison.
 
 ## Rotary Position Embeddings
 
-That question, taken seriously, produces the positional scheme of nearly
-every current open-weights language model — Llama, Qwen, DeepSeek, and the
-rest. *Rotary position embeddings* (RoPE) :cite:`Su.Lu.Pan.ea.2021` skip the
+This construction is used by many current open-weights language models,
+including Llama, Qwen, and DeepSeek. *Rotary position embeddings* (RoPE) :cite:`Su.Lu.Pan.ea.2021` skip the
 addition and instead act on queries and keys at the point where they meet:
 the score. We want a transformation $\mathbf{R}_i$, applied to the query at
 position $i$ and the key at position $j$, such that the score depends only on
@@ -232,9 +221,9 @@ $$
 $$
 :eqlabel:`eq_rope-goal`
 
-The requirement $\mathbf{R}_i^\top \mathbf{R}_j = \mathbf{R}_{j-i}$ says the
-$\mathbf{R}_i$ form a one-parameter group of orthogonal maps — which is
-exactly what planar rotations are. So RoPE recycles the sinusoidal
+The requirement $\mathbf{R}_i^\top \mathbf{R}_j = \mathbf{R}_{j-i}$ says that
+the $\mathbf{R}_i$ form a one-parameter group of orthogonal maps. Planar
+rotations satisfy this condition, so RoPE reuses the sinusoidal
 frequencies $\omega_m$, but *multiplicatively*: split the $d$ query
 dimensions into $d/2$ pairs, and rotate pair $m$ of the position-$i$ query by
 the angle $i\,\omega_m$ (and likewise for keys),
@@ -245,17 +234,18 @@ $$
 :eqlabel:`eq_rope-def`
 
 :numref:`fig_rope-rotation` shows one pair plane: shifting both positions by
-the same amount rotates query and key *together*, so the angle between them —
-and with it the dot product — never changes. Position vanishes from the
-score except through the offset. Two further properties come free: rotations
+the same amount rotates query and key together, preserving their angle and
+dot product. The score therefore depends on position only through the offset.
+The construction has two additional properties: rotations
 preserve norms, so RoPE never inflates or shrinks a token's content, and the
 geometric frequency ladder means low-frequency pairs rotate only slightly
 across a sentence while high-frequency pairs discriminate neighboring
-positions sharply — every pair carries content; the ladder only sets how
-fast position turns it. Only queries and keys are rotated; values pass
+positions sharply. Every pair still carries content; the frequency ladder
+only controls how quickly position rotates it. Only queries and keys are rotated; values pass
 through untouched. (Learned *relative*-position embeddings
 :cite:`shaw2018self,huang2018music` pursued the same goal by adding trained
-offset vectors into the score; RoPE gets it with no parameters at all.)
+offset vectors into the score; RoPE achieves relative scoring without
+additional learned parameters.)
 
 ![Rotary embeddings rotate each two-dimensional feature pair of the query and the key by an angle proportional to position. Shifting both positions by the same amount — here by 3 — rotates both vectors together and leaves the angle between them, and hence the attention score, unchanged. Here $\theta$ is the pair's per-position angle and $\varphi$ the angle between the unrotated query and key.](../img/mdl-attention-rope-rotation.svg)
 :label:`fig_rope-rotation`
@@ -293,8 +283,8 @@ def rope(x, offset=0):
                       x1 * sin + x2 * cos], -1).reshape(x.shape)
 ```
 
-Now the numerical check of :eqref:`eq_rope-goal`: shift all positions
-jointly, and the full score matrix must not move. For contrast, we run the
+A numerical check of :eqref:`eq_rope-goal` shifts all positions jointly.
+The full RoPE score matrix should remain unchanged. For contrast, we run the
 same test on the additive sinusoidal encoding, where the four-term expansion
 leaves absolute position in the score:
 
@@ -336,20 +326,18 @@ RoPE's scores are unchanged up to floating-point round-off (three or more
 orders of magnitude below the score scale in these runs) at every shift,
 including one far beyond where any additive table would end; the additive
 encoding moves the scores by an amount comparable to the scores themselves.
-Relative position is now a property of the *architecture*, not something the
-model must discover. Whether that property survives contact with training
-data — in particular, with offsets the training data never contained — is a
-different question, and we now have everything needed to ask it properly.
+Relative position is therefore encoded by the architecture rather than
+learned from data. This property does not guarantee accurate predictions at
+offsets absent from the training data, which the next experiment tests.
 
-## Train Short, Test Long
+## Extrapolation Beyond the Training Length
 
 Every scheme above fixes permutation blindness at the training length. They
-differ at *deployment*: contexts grow — users paste longer documents — and
-retraining for every length is not an option. This subfield asks for *length
-extrapolation*: train at context $L$, evaluate at $4L$, and hope perplexity
-survives. Two more schemes were designed with exactly this test in mind.
+differ when evaluated outside the training range. A length-extrapolation test
+trains at context $L$ and compares perplexity at $L$ with perplexity at, for
+example, $4L$. Two more schemes were designed for this setting.
 
-### Linear Biases, and Nothing at All
+### ALiBi and NoPE
 
 *ALiBi* (attention with linear biases) :cite:`Press.Smith.Lewis.2022`
 encodes no positions at all. It instead subtracts a distance penalty from
@@ -361,37 +349,37 @@ $$
 $$
 :eqlabel:`eq_alibi-def`
 
-Each head discounts far-away tokens at its own geometric rate — head 1
-steeply (local view), head $H$ barely (global view); the slope formula
+Each head discounts distant tokens at its own geometric rate. Head 1 uses a
+steep penalty and head $H$ a much smaller one; the slope formula
 $2^{-8h/H}$ is the paper's choice for head counts that are powers of two,
 with other $H$ interpolating the same geometric sequence. The bias depends
 only on distance, so it is defined for every context length, and a distance
-of 400 is merely "further" rather than "never seen". The cost is a fixed
+of 400 remains a valid input to the bias rather than an unallocated table
+index. The cost is a fixed
 recency prior the model cannot fully unlearn.
 
-*NoPE* (no positional encoding) pushes the loophole from our proposition to
-its logical end :cite:`Kazemnejad.Padhi.Ramamurthy.ea.2023`: in a *causal*
-model, drop positions entirely. The mask already breaks the symmetry —
+*NoPE* (no positional encoding) uses the asymmetry omitted from the
+proposition :cite:`Kazemnejad.Padhi.Ramamurthy.ea.2023`: a causal model can
+omit explicit position representations. The mask already breaks the symmetry —
 position 0 attends over one token, position 100 over a hundred and one — so
 the number of tokens competing in each softmax is itself positional
 information, and a decoder can in principle recover relative order from it.
-No table, no rotation, nothing to run out of range. The question is how much
-usable position signal actually leaks through.
+Because it uses neither a table nor a rotation, NoPE has no explicit
+position range. Its effectiveness depends on how much usable positional
+signal the mask supplies.
 
 ### An Attention-Only Language Model
 
-Claims about extrapolation are cheap; we test them by training. The model
-below — the chapter's shared specimen, reused later for a look inside
-trained attention — is deliberately minimal: a token embedding, a stack of
+We compare extrapolation by training a deliberately minimal model that is
+also analyzed later in the chapter: a token embedding, a stack of
 residual causal attention blocks, and an output head tied to the embedding
 :cite:`Press.Wolf.2017`. There is no feed-forward network and no
 normalization layer, and the attention projections carry no bias terms by
 default (a `bias` switch restores them;
-:numref:`sec_what-attention-computes` has one use for it): besides the
-embedding table (which doubles as the output head), attention
-is the only trainable machinery, and all mixing of information across
-positions passes through it — which is the point, and what makes the model
-exactly analyzable when we dissect it in
+:numref:`sec_what-attention-computes` has one use for it). Besides the
+embedding table, which doubles as the output head, attention is the only trainable cross-position operation. All mixing across
+positions therefore passes through attention, which makes the model easier
+to analyze in
 :numref:`sec_what-attention-computes`. It is the attention-only cousin of
 the `TinyLM` of :numref:`subsec_tinylm`, and the positional scheme is a
 constructor argument taking `'learned'`, `'sinusoidal'`, `'rope'`,
@@ -563,12 +551,12 @@ class TinyCharLM(nnx.Module):  #@save
 
 ### The Experiment
 
-We train one copy per scheme on the character-level Time Machine corpus of
+We train one fixed-seed copy per scheme on the character-level Time Machine corpus of
 :numref:`sec_text-sequence` at context length 128, using the same fixed-step
 training loop as :numref:`sec_adam`. Each run takes well under a minute on
 one GPU. The learned and sinusoidal tables are allocated out to `max_len`
-positions so that longer evaluation is *possible* — but only the first 128
-rows of the learned table will ever receive a gradient.
+positions to permit longer evaluation. Only the first 128 rows of the
+learned table receive gradients during training.
 
 ```{.python .input #positional-information-the-experiment-1}
 %%tab pytorch
@@ -601,11 +589,11 @@ for pos in schemes:
     print(f'{pos:>10}: final training loss {sum(losses[-100:]) / 100:.2f}')
 ```
 
-Now the test the section has been building toward. Every model was trained on
-length-$128$ sequences, so we evaluate validation perplexity at that training
-context, $n = 128$, and at two and four times it ($n = 256$ and $512$) — the
-first point is in range, the other two probe extrapolation — on the same
-held-out text:
+Every model above was trained on length-$128$ sequences. We evaluate
+validation perplexity at that training
+context, $n = 128$, and at two and four times this length ($n = 256$ and
+$512$). The first point is in range, while the other two measure
+extrapolation on the same held-out text:
 
 ```{.python .input #positional-information-the-experiment-2}
 %%tab pytorch
@@ -666,69 +654,57 @@ d2l.plot(list(contexts), [ppls[pos] for pos in schemes],
          fmts=('-', 'm--', 'g-.', 'r:', 'c-'))
 ```
 
-Two readings of this table, both instructive. At the training context, the
-ranking rewards explicit position information: RoPE comes out best at
-perplexity around 5, the learned table close behind, the sinusoidal table
-and ALiBi land together at around 7 — ALiBi's handicap being its fixed
-recency prior — and NoPE trails at around 9. The causal mask does leak
-position, but weakly at this scale. At four times the
-training context, the ordering inverts. Both absolute schemes degrade badly,
-to several times their training-length perplexity: the learned table because
-positions past 128 are untrained noise, the sinusoidal one because the model
-has never seen those fingerprints. The striking failure is RoPE: *relative in
-form is not relative in practice*. Its scores depend only on offsets — we
-proved and measured as much — but offsets beyond 127 were still never seen in
-training, and its length-512 perplexity lands at several times its
-training-length value — a blow-up as large, relative to where it started,
-as the absolute schemes suffer, and in some runs far larger. Only the two
-schemes with no position table are stable: ALiBi stays essentially flat
-across every length, as its authors' "train short, test long" title
-promised, and NoPE is flat too, just from a weaker starting point. (The
-exact perplexities fluctuate run to run and between frameworks; the ordering
-and the shape of the curves are what replicate.)
+For this fixed seed and training protocol, explicit position information
+improves perplexity at the training length: RoPE is lowest, followed by the
+learned table, while sinusoidal embeddings and ALiBi are similar and NoPE is
+higher. This comparison does not isolate the cause of the differences; for
+example, describing ALiBi's result as a consequence of its recency bias would
+require a separate intervention.
 
-### Stretching a Trained Model
+At contexts longer than those seen during training, the learned and
+sinusoidal absolute schemes deteriorate. The learned table has untrained rows
+beyond position 128, whereas the sinusoidal table supplies vectors outside the
+training distribution. RoPE also deteriorates in this run. Although its score
+depends on relative offset, offsets beyond 127 did not occur during training,
+so relative parameterization alone does not guarantee length extrapolation.
+ALiBi and NoPE remain approximately flat in this experiment. Since each curve
+comes from one seed in each framework, these observations illustrate the
+possible behavior of the schemes; they do not establish a stable ranking or
+an estimate of run-to-run variation.
 
-RoPE's failure at unseen offsets has a distinctive geometry: an offset of
-400 rotates the fast pairs through angles the training data never produced.
-But the rotation dial is continuous, which suggests a fix no other scheme
-admits: *rescale* the angles so that the deployed range maps back into the
-trained one. Evaluating at length $4L$ with every angle multiplied by $1/4$
+### Extending a Trained Model's Context
+
+At an unseen offset such as 400, RoPE rotates the high-frequency pairs
+through angles absent from the training data. Because these angles vary
+continuously, they can be *rescaled* so that the deployed range maps into the
+trained range. Evaluating at length $4L$ with every angle multiplied by $1/4$
 makes position $4\delta$ look like the familiar $\delta$: interpolation
 instead of extrapolation. This is *position interpolation*
 :cite:`Chen.Wong.Chen.ea.2023`, which (with a brief fine-tune) extended
 Llama from 2k to 32k context; YaRN :cite:`Peng.Quesnelle.Fan.ea.2024`
 refines it by rescaling the fast, position-discriminating frequencies
-differently from the slow, content-carrying ones. Schemes of this family are
-how every long-context RoPE model you are likely to use was produced. Note
+differently from the slow, content-carrying ones. Many long-context RoPE
+models use schemes from this family. Note
 that the recipe has two halves: rescaling *and* a brief fine-tune at the
 scaled angles. Exercise 3 walks through both halves on our character model;
-in our runs the rescaling alone actually hurts — compressing the angle
-ladder blurs exactly the fast pairs that tell neighboring characters
-apart — while rescaling followed by a few hundred fine-tuning steps
-recovers most of the lost perplexity.
+in our runs, rescaling alone increases perplexity because compressing the
+angle range makes neighboring characters less distinguishable in the
+high-frequency pairs. Rescaling followed by a few hundred fine-tuning steps
+recovers most of the lost performance.
 
 ## Summary
 
-Unmasked attention is permutation equivariant: shuffle the tokens and the
-outputs shuffle along, which we proved in one line and verified numerically.
-Absolute position embeddings restore order by adding a position vector to
-each token: sinusoidal tables encode position like a continuous binary
-counter, learned tables let the data pick the code but say nothing beyond
-the trained length. The sinusoidal table hides a cleaner idea: shifting
-positions is a rotation of feature pairs. RoPE applies that rotation
-directly to queries and keys, making attention scores depend on relative
-offsets by construction, the default in most current
-open-weights models. ALiBi replaces encodings with a per-head linear distance
-penalty, and NoPE relies on the causal mask's leak of position. Our
-train-short/test-long experiment on an attention-only character model sorted
-the schemes: RoPE wins at the training length, but at four times it,
-absolute encodings and RoPE alike blow up — relative form
-does not imply out-of-range competence — while ALiBi and NoPE hold flat.
-Position interpolation and YaRN exploit RoPE's continuous dial to map long
-contexts back into the trained range. The model behind the experiment,
-`TinyCharLM`, reappears later in this chapter as our specimen for studying
-what trained attention heads actually compute.
+Unmasked attention is permutation equivariant. Absolute position embeddings
+break this symmetry by adding a position-dependent vector to each token;
+sinusoidal embeddings define the vectors analytically, while learned tables are
+learned only at positions used during training. RoPE rotates query and key feature
+pairs so their inner product depends on relative offset. ALiBi adds a per-head
+linear distance penalty, and NoPE uses only the positional asymmetry supplied by
+the causal mask. In the fixed-seed character-model experiment, RoPE has the
+lowest perplexity at the training length, while both absolute encodings and
+RoPE degrade at four times that length. ALiBi and NoPE are approximately
+stable in that run. Position interpolation and YaRN rescale RoPE frequencies
+to map longer contexts into the trained range.
 
 ## Exercises
 
@@ -788,16 +764,18 @@ permutations; $\boldsymbol{\Pi}^\top\boldsymbol{\Pi} = \mathbf{I}$. $\blacksquar
 
 . . .
 
-- Stacking equivariant layers keeps the model equivariant — depth is no cure.
-- "dog bites man" = "man bites dog", as far as attention can tell.
+- Stacking equivariant layers preserves equivariance; additional depth does
+  not encode order.
+- Without positions, attention cannot distinguish "dog bites man" from a
+  corresponding permutation such as "man bites dog".
 :::
 
 ::: {.slide title="The shuffle check"}
 @!positional-information-attention-ignores-order
 
 ::: {.d2l-note}
-Caveat for later: a **causal mask** breaks the symmetry — position $i$
-attends over $i+1$ tokens. That loophole becomes NoPE.
+A **causal mask** breaks the symmetry because position $i$ attends over
+$i+1$ tokens. NoPE uses this asymmetry.
 :::
 :::
 
@@ -811,23 +789,24 @@ $$p_{i, 2j} = \sin\big(i/10000^{2j/d}\big), \qquad p_{i, 2j+1} = \cos\big(i/1000
 :::
 
 ::: {.slide title="A continuous binary counter"}
-Low bits flip fast, high bits flip slow — same pattern, smooth values:
+Low bits flip quickly and high bits slowly; sinusoidal encodings provide a
+smooth analogue:
 
 @!positional-information-sinusoidal-encodings-3
 
-Learned tables (BERT, GPT-2) instead train one free vector per position —
-and say *nothing* about positions beyond the trained length.
+Learned tables (BERT, GPT-2) instead train one free vector per position.
+Rows beyond the training length receive no gradient.
 :::
 
-::: {.slide title="The rotation hidden in the sinusoids"}
+::: {.slide title="Sinusoidal encodings as rotations"}
 Moving from position $i$ to $i + \delta$ is a **rotation** of each
 two-column pair, by an angle depending only on $\delta$:
 
 $$\begin{bmatrix} \cos(\delta\omega_j) & \sin(\delta\omega_j) \\ -\sin(\delta\omega_j) & \cos(\delta\omega_j) \end{bmatrix}\begin{bmatrix} p_{i, 2j} \\ p_{i, 2j+1} \end{bmatrix} = \begin{bmatrix} p_{i+\delta, 2j} \\ p_{i+\delta, 2j+1} \end{bmatrix}$$
 
-But additively encoded, the model must *learn* to exploit it — a query–key
-product of sums has four terms. Why not put the rotation into the score
-directly?
+With additive encoding, the model must learn to exploit this structure, and
+a query--key product of sums has four terms. RoPE puts the rotation directly
+into the score.
 :::
 
 ::: {.slide title="Rotary position embeddings (RoPE)"}
@@ -846,7 +825,7 @@ queries and keys by $i\,\omega_m$.
 :::
 
 ::: {.slide title="Invariance, measured"}
-Shift *all* positions jointly — RoPE scores must not move:
+Shifting all positions jointly should leave RoPE scores unchanged:
 
 @!positional-information-rotary-position-embeddings-2
 
@@ -854,22 +833,22 @@ Relative position is now a property of the **architecture**, not something
 training must discover.
 :::
 
-::: {.slide title="Train short, test long"}
+::: {.slide title="Extrapolation beyond the training length"}
 Contexts grow after deployment. Two schemes designed for extrapolation:
 
 - **ALiBi** (Press et al., 2022): no encoding; subtract a per-head linear
   distance penalty
   $\mathrm{score}_{ij} = \mathbf{q}_i^\top\mathbf{k}_j/\sqrt{d} - m_h\,(i-j)$,
-  slopes $m_h = 2^{-8h/H}$ (power-of-two $H$). Distance 400 is just
-  "further", never "unseen".
-- **NoPE** (Kazemnejad et al., 2023): nothing at all — the causal mask
-  leaks position; how much is usable?
+  slopes $m_h = 2^{-8h/H}$ (power-of-two $H$). The bias remains defined at
+  distance 400 because it does not use a position table.
+- **NoPE** (Kazemnejad et al., 2023): no explicit position representation;
+  positional information can still arise from the causal mask.
 :::
 
 ::: {.slide title="An attention-only language model"}
 `TinyCharLM`: token embedding + stacked residual causal attention + tied
-head. **No FFN, no LayerNorm, no projection biases** — attention is the
-only machinery mixing information across positions. Positional scheme is a
+head. It has **no FFN, LayerNorm, or projection biases**, so attention is
+the only operation that mixes information across positions. Positional scheme is a
 constructor choice:
 `'learned' · 'sinusoidal' · 'rope' · 'alibi' · 'none'`.
 
@@ -882,34 +861,35 @@ Character-level Time Machine, context 128, 3000 steps each:
 @!positional-information-the-experiment-1
 :::
 
-::: {.slide title="The verdict at 4× the training length"}
+::: {.slide title="Results at four times the training length"}
 @!positional-information-the-experiment-2
 
 - Training length: RoPE best (~5), learned close behind, sinusoidal ≈
   ALiBi (~7), NoPE worst (~9).
-- Length 512: **absolute schemes blow up; RoPE blows up too** — relative
-  in form is not relative in practice (offsets > 127 were never trained).
+- Length 512: absolute schemes and RoPE degrade substantially because offsets
+  above 127 were not observed during training.
 - **ALiBi: flat.** NoPE: flat, from a weaker start.
 :::
 
-::: {.slide title="Stretching a trained model"}
-RoPE's dial is continuous → rescale angles so length $4L$ maps into the
+::: {.slide title="Extending a trained model's context"}
+RoPE angles are continuous, so rescaling can map length $4L$ into the
 trained range: **position interpolation** (Chen et al., 2023) took Llama
 2k → 32k with a brief fine-tune; **YaRN** (Peng et al., 2024) rescales
 fast and slow frequencies differently.
 
-Interpolation beats extrapolation — this is how long-context RoPE models
-are actually made.
+Long-context RoPE models commonly use this interpolation strategy.
 :::
 
 ::: {.slide title="Recap"}
-- Unmasked attention is permutation equivariant — proven and measured.
-- Absolute encodings (sinusoidal, learned) restore order but stop at the
-  trained length.
+- Unmasked attention is permutation equivariant, as shown analytically and
+  numerically.
+- Absolute encodings restore order. Sinusoidal encodings remain defined
+  beyond the training length, while learned-table rows there are untrained.
 - RoPE rotates queries and keys: scores depend only on offsets, by
   construction.
-- Train short, test long: absolute *and* RoPE collapse at 4L; ALiBi and
-  NoPE stay flat; PI/YaRN rescue RoPE by interpolation.
-- `TinyCharLM` — attention-only, positional scheme as an argument —
-  returns later as our specimen for reading trained attention.
+- In this fixed-seed experiment, absolute encodings and RoPE degrade beyond
+  the training length, while ALiBi and NoPE remain stable. PI and YaRN
+  extend RoPE by interpolation.
+- `TinyCharLM` is an attention-only model whose positional scheme is a
+  constructor argument; a later section uses it to inspect trained attention.
 :::

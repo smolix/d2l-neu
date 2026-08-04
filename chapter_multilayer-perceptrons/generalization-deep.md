@@ -2,75 +2,18 @@
 :label:`sec_generalization_deep`
 
 
-In :numref:`chap_regression` and :numref:`chap_classification`,
-we tackled regression and classification problems
-by fitting linear models to training data.
-In both cases, we provided practical algorithms
-for finding the parameters that maximized
-the likelihood of the observed training labels.
-And then, towards the end of each chapter,
-we recalled that fitting the training data
-was only an intermediate goal.
-Our real quest all along was to discover *general patterns*
-on the basis of which we can make accurate predictions
-even on new examples drawn from the same underlying population.
-Optimization is merely a means to an end: machine learning researchers
-consume optimization algorithms, and sometimes invent new ones,
-but always in service of a statistical goal.
-At its core, machine learning is a statistical discipline
-and we wish to optimize training loss only insofar
-as some statistical principle (known or unknown)
-leads the resulting models to generalize beyond the training set.
+Earlier chapters related generalization to model complexity, but the raw number
+of parameters is an unreliable capacity measure for deep networks. Networks can
+interpolate a training set and still generalize, and different optimizers can
+select different solutions from the same parameterized family. No single theory
+accounts for all such behavior.
 
-
-On the bright side, it turns out that deep neural networks
-trained by stochastic gradient descent generalize well
-across myriad prediction problems, spanning computer vision;
-natural language processing; time series data; recommender systems;
-electronic health records; protein folding;
-value function approximation in video games
-and board games; and numerous other domains.
-On the downside, if you were looking
-for a straightforward account
-of either the optimization story
-(why we can fit them to training data)
-or the generalization story
-(why the resulting models generalize to unseen examples),
-then you might want to pour yourself a drink.
-While our procedures for optimizing linear models
-and the statistical properties of the solutions
-are both described well by a comprehensive body of theory,
-our understanding of deep learning
-still resembles the wild west on both fronts.
-
-Both the theory and practice of deep learning
-are rapidly evolving,
-with theorists adopting new strategies
-to explain what's going on,
-even as practitioners continue
-to develop heuristics for training deep networks
-and a body of empirical knowledge
-that provide guidance for deciding
-which techniques to apply in which situations.
-
-The summary of the present moment is that the theory of deep learning
-has produced promising lines of attack and scattered fascinating results,
-but still appears far from a comprehensive account
-of both (i) why we are able to optimize neural networks
-and (ii) how models learned by gradient descent
-manage to generalize so well, even on high-dimensional tasks.
-In many benchmark settings, optimization can drive training error close to
-zero, making generalization the harder unexplained part. Optimization is not
-universally solved: failures remain common in very deep, constrained, or
-poorly conditioned models.
-On the other hand, even absent the comfort of a coherent scientific theory,
-practitioners have developed a large collection of techniques
-that may help you to produce models that generalize well in practice.
-While no pithy summary can possibly do justice
-to the vast topic of generalization in deep learning,
-and while the overall state of research is far from resolved,
-we hope, in this section, to present a broad overview
-of the state of research and practice.
+This section develops one bounded conclusion: parameter count alone does not
+predict test error. Double descent supplies empirical and tractable-model
+evidence near the interpolation threshold; implicit regularization explains why
+the training algorithm also matters. Early stopping and grokking are then
+presented as consequences of this dependence on optimization time, not as a
+catalogue of universal laws.
 
 
 ## Revisiting Overfitting and Regularization
@@ -80,14 +23,10 @@ any learning algorithm generalizes better on some data distributions
 and worse on others.
 Thus, given a finite training set,
 a model must rely on assumptions, or *inductive biases*.
-To achieve human-level performance
-it can help to choose inductive biases
-that reflect how humans think about the world.
-Such inductive biases show preferences 
-for solutions with certain properties.
-For example,
-a deep MLP has an inductive bias
-towards building up a complicated function by the composition of simpler functions.
+Effective inductive biases often reflect known structure in the data.
+They express preferences for solutions with particular properties.
+For example, a deep MLP favors complicated functions formed by composing
+simpler functions.
 
 With machine learning models encoding inductive biases,
 our approach to training them
@@ -123,7 +62,7 @@ must come by way of regularization,
 either by reducing the complexity of the model class,
 or by applying a penalty, severely constraining
 the set of values that our parameters might take.
-But that is where things start to get weird.
+Deep learning does not always follow this classical pattern.
 
 For many deep learning benchmarks, several candidate architectures can reach
 nearly zero training error. Their useful differences then appear in validation
@@ -133,29 +72,25 @@ we can actually *reduce the generalization error*
 further by making the model *even more expressive*,
 e.g., adding layers, nodes, or training
 for a larger number of epochs.
-Stranger yet, the pattern relating the generalization gap
-to the *complexity* of the model
-(as captured, for example, in the depth or width of the networks)
-can be non-monotonic,
-with greater complexity hurting at first
-but subsequently helping in a so-called "double-descent" pattern
-:cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`,
-which we examine in detail below.
-Thus the deep learning practitioner possesses a bag of tricks,
-some of which seemingly restrict the model in some fashion
-and others that seemingly make it even more expressive,
-and all of which, in some sense, are applied to mitigate overfitting.
+The relationship between the generalization gap and model complexity
+(as measured, for example, by network depth or width) can also be
+nonmonotonic: additional complexity initially hurts and subsequently helps
+in a "double-descent" pattern
+:cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`, which we examine below.
+Consequently, methods used to mitigate overfitting may either restrict a
+model or make it more expressive.
 
 Complicating things even further,
 while the guarantees provided by classical learning theory
 can be conservative even for classical models,
-they appear powerless to explain why it is
-that deep neural networks generalize in the first place.
+they appear powerless to explain
+why deep neural networks generalize in the first place.
 Because deep neural networks are capable of fitting
 arbitrary labels even for large datasets,
 and despite the use of familiar methods such as $\ell_2$ regularization,
-worst-case complexity bounds based only on the full hypothesis class, such as
-basic parameter-count VC bounds, are often vacuous at modern scales. More
+worst-case complexity bounds are often vacuous at modern scales when they
+depend only on the full hypothesis class, as basic parameter-count VC bounds
+do. More
 data-dependent and algorithm-dependent bounds remain an active research area;
 no single account yet predicts deep-network generalization across settings.
 (:numref:`chap_classification_generalization` introduces these ideas;
@@ -169,7 +104,7 @@ Double descent is one observed departure from the simplest classical picture.
 Classical theory predicts a *U-shaped* test-error curve:
 as we add capacity, error first falls (we stop underfitting)
 and then rises (we begin overfitting),
-with a sweet spot in between
+with an intermediate optimum
 (recall :numref:`fig_capacity_vs_error` from :numref:`sec_generalization_basics`).
 In some models, datasets, and training regimes, test error instead shows
 *double descent*. Near the *interpolation threshold*, the smallest capacity at
@@ -191,8 +126,8 @@ least-squares and random-feature models, the minimum-norm interpolant can have
 high variance near a rank transition and lower variance after more features
 create additional interpolating solutions. This mechanism gives a precise
 double-descent calculation, but it is a model-specific explanation rather than
-a theorem about all deep networks. That calculation is developed
-in :numref:`sec_mdl-concentration-generalization`;
+a theorem about all deep networks.
+:numref:`sec_mdl-concentration-generalization` develops that calculation;
 we return below to what is known about optimizer-dependent implicit bias.
 
 Model size, moreover, is only one of three knobs that trace out this curve.
@@ -213,7 +148,7 @@ let you produce the epoch-wise one yourself.
 ## Inspiration from Nonparametrics
 
 Approaching deep learning for the first time,
-it is tempting to think of them as parametric models.
+it is tempting to think of deep networks as parametric models.
 After all, the models *do* have millions of parameters.
 When we update the models, we update their parameters.
 When we save the models, we write their parameters to disk.
@@ -232,7 +167,7 @@ as the amount of available data grows.
 Perhaps the simplest example of a nonparametric model
 is the $k$-nearest neighbor algorithm (we will cover more nonparametric models later, for example in :numref:`sec_attention-pooling`).
 Here, at training time,
-the learner simply memorizes the dataset.
+the learner retains the dataset.
 Then, at prediction time,
 when confronted with a new point $\mathbf{x}$,
 the learner looks up the $k$ nearest neighbors
@@ -241,8 +176,8 @@ some distance $d(\mathbf{x}, \mathbf{x}_i')$).
 When $k=1$, this algorithm is called $1$-nearest neighbors,
 and it achieves zero training error when training inputs are distinct and
 ties are resolved in favor of the queried example.
-That however, does not mean that the algorithm will not generalize.
-In fact, it turns out that under some mild conditions,
+That, however, does not mean that the algorithm will not generalize.
+Under suitable conditions,
 the error of the $1$-nearest neighbor rule
 comes within a factor of two of the optimal (Bayes) error
 as the dataset grows :cite:`Cover.Hart.1967`,
@@ -264,7 +199,7 @@ distributions; an arbitrary or degenerate distance need not satisfy it.
 Under those conditions, $1$-nearest neighbor approaches its near-optimal limit,
 but different distance metrics $d$
 encode different inductive biases
-and with a finite amount of available data
+and, with a finite amount of available data,
 will yield different predictors.
 Different choices of the distance metric $d$
 represent different assumptions about the underlying patterns
@@ -289,8 +224,8 @@ which they call the neural tangent kernel.
 While current neural tangent kernel models may not fully explain
 the behavior of modern deep networks,
 their success as an analytical tool
-shows how a nonparametric limit can help analyze
-for understanding the behavior of over-parametrized deep networks.
+shows how a nonparametric limit can help
+in understanding the behavior of over-parametrized deep networks.
 
 
 ## Early Stopping
@@ -320,10 +255,10 @@ and to cut off training when the validation error
 has not decreased by more than some small amount $\epsilon$
 for some number of epochs.
 This is sometimes called a *patience criterion*.
-As well as the potential to lead to better generalization
+Besides its potential to improve generalization
 in the setting of noisy labels,
-another benefit of early stopping is the time saved.
-Once the patience criterion is met, one can terminate training.
+early stopping also saves time:
+once the patience criterion is met, one can terminate training.
 For large models that might require days of training
 simultaneously across eight or more GPUs,
 well-tuned early stopping can save researchers days of time
@@ -350,9 +285,9 @@ in order to penalize large values of the weights.
 Depending on which weight norm is penalized
 this technique is known either as ridge regularization (for $\ell_2$ penalty)
 or lasso regularization (for an $\ell_1$ penalty).
-In the classical analysis of these regularizers,
-they are considered as sufficiently restrictive on the values
-that the weights can take to prevent the model from fitting arbitrary labels.
+The classical analysis treats them as restricting the values
+that the weights can take enough to prevent the model
+from fitting arbitrary labels.
 
 In deep learning implementations,
 weight decay remains a popular tool.
@@ -440,9 +375,8 @@ and at other times appear to decrease complexity.
 However, these methods seldom decrease complexity
 sufficiently for classical theory
 to explain the generalization of deep networks,
-and *why certain choices lead to improved generalization*
-remains for the most part a massive open question
-despite the concerted efforts of many brilliant researchers.
+and explaining *why particular choices improve generalization*
+remains an active research problem.
 
 
 ## Exercises
@@ -484,7 +418,7 @@ is to find patterns that **predict well on unseen data**.
 :::
 
 ::: {.col .fig .big}
-![Bigger past the interpolation threshold is *better*, not worse: the deep-learning surprise this section explains.](../img/mdl-mlp-double-descent.svg){width=100%}
+![In some model, data, optimizer, and training regimes, test error descends again beyond the interpolation threshold.](../img/mdl-mlp-double-descent.svg){width=100%}
 :::
 :::
 :::
@@ -520,7 +454,7 @@ error. A large gap means we have **overfit**.
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-**Classical recipe** to close the gap: make the model *less* complex.
+**Classical approach:** reduce model complexity to close the gap.
 
 - fewer features
 - fewer nonzero parameters
@@ -558,7 +492,7 @@ modern scales. Data- and algorithm-dependent explanations remain active work.
 
 [Double descent]{.dtitle}
 
-[the U-curve, and what lies past it]{.dsub}
+[the U-curve and the overparameterized regime]{.dsub}
 :::
 :::
 
@@ -567,8 +501,8 @@ modern scales. Data- and algorithm-dependent explanations remain active work.
 
 ::: {.cols .vc}
 ::: {.col}
-Classical theory predicts a **U-shaped** test-error curve as capacity
-grows:
+The elementary fixed-family bias--variance picture predicts a **U-shaped**
+test-error curve as capacity grows:
 
 $$\underbrace{\text{error}}_{\text{test}} \;=\;
 \underbrace{\text{bias}^2}_{\downarrow\ \text{with capacity}} \;+\;
@@ -580,8 +514,8 @@ spot** sits in between.
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-This is the left half of the picture on the next slide, and it is *all*
-the classical story predicts.
+This is the elementary picture introduced earlier. Modern statistical theory
+also analyzes interpolation and high-dimensional regimes.
 :::
 :::
 :::
@@ -591,7 +525,7 @@ the classical story predicts.
 ![One curve, two regimes: the classical U ends at the interpolation threshold, where training error reaches zero and test error peaks — then descends a second time. That second descent is contingent on the model, data, optimizer, and training budget.](../img/mdl-mlp-double-descent.svg){width=70%}
 :::
 
-::: {.slide title="One mechanism in tractable models"}
+::: {.slide title="A mechanism in tractable models"}
 [Double descent]{.kicker}
 
 In linear least-squares and random-feature models, the minimum-norm
@@ -609,7 +543,7 @@ follows the same curve or selects the same kind of interpolant.
 :::
 :::
 
-::: {.slide title="Three knobs trace the curve"}
+::: {.slide title="Width, training time, and regularization"}
 [Double descent]{.kicker}
 
 Model size is only one of **three** ways to cross the threshold (Nakkiran
@@ -709,8 +643,8 @@ induces.
 
 ::: {.col .narrow}
 Memorization and generalization can coexist: **1-nearest-neighbor**
-memorizes everything, achieves zero training error, and still lands
-asymptotically within a **factor of two** of the optimal Bayes error
+retains every example, achieves zero training error, and still has
+asymptotic error within a **factor of two** of the optimal Bayes error
 (Cover & Hart, 1967).
 
 Over-parametrized nets likewise *interpolate*, so the nonparametric
@@ -737,20 +671,20 @@ intuition is often the more reliable one.
 With label noise, networks fit the **cleanly labeled** examples first and
 only later interpolate the **mislabeled** ones.
 
-Stop while the clean data is fit but the noise is not, and you can
-**certify** generalization (with high probability).
+Stopping before the model fits mislabeled examples can improve validation
+performance in this setting.
 
 ::: {.d2l-note}
-**Patience criterion:** monitor validation error each epoch; stop when it
-fails to improve by $\epsilon$ for a few epochs. It also saves training
-time and money.
+**Patience criterion:** monitor validation error each epoch and stop when it
+fails to improve by $\epsilon$ for a chosen number of epochs. This also
+reduces training time and compute cost.
 :::
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Matters most under **label noise** or intrinsic label variability. On
-clean, separable data it changes little.
+The benefit may be larger under **label noise** or intrinsic label
+variability; it must be validated for each dataset.
 :::
 :::
 :::
@@ -802,8 +736,8 @@ is the next such tool.)
 :::
 
 ::: {.d2l-note}
-Why certain choices improve generalization remains a **massive open
-question**. Try the surprises yourself: exercise 6 reproduces epoch-wise
+Why particular choices improve generalization remains an **open research
+question**. Exercise 6 reproduces epoch-wise
 double descent; exercise 7, grokking on modular addition. Next (the dropout
 section): dropout, regularization by structured noise.
 :::

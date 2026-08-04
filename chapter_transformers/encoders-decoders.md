@@ -1,23 +1,20 @@
 # Encoders, Decoders, and Cross-Attention
 :label:`sec_transformer`
 
-The GPT of :numref:`sec_gpt` made one architectural commitment beyond
-stacking blocks: the causal mask. That mask is what lets the model factor a
-joint distribution into next-token predictions, and it is also a
-restriction: every representation is built from the left half of its
-context only. This section treats the mask as the design variable it is.
-Removing it gives an *encoder*, a model that reads in both directions and
-excels at representing rather than generating; combining a masked stack
-with an unmasked one, joined by the cross-attention of
-:numref:`sec_multihead-attention`, gives the *encoder--decoder* that
+The GPT of :numref:`sec_gpt` uses a causal mask in addition to stacked
+transformer blocks. This mask supports next-token prediction, but restricts
+each representation to preceding context. In this section, the attention
+mask and the sources of queries, keys, and values become design choices.
+Removing it gives an *encoder*, which reads in both directions and produces
+contextual representations. Joining a masked stack to an unmasked one
+through the cross-attention of
+:numref:`sec_multihead-attention` gives the *encoder--decoder* that
 transformers started as :cite:`Vaswani.Shazeer.Parmar.ea.2017`. We build
-both from the same `d2l.TransformerBlock` as always, watch a
-cross-attention map reproduce an alignment we know in advance, and then
-push cross-attention past sequence-to-sequence entirely: its queries need
-not come from a sequence at all, and making them learned parameters turns
-attention into a general interface between fixed-size computation and
-variable-size data — the Perceiver idea, alive today inside most
-vision--language models.
+both from the same `d2l.TransformerBlock`, examine whether a learned
+cross-attention map reproduces a known alignment, and then consider learned
+queries that do not come from an input sequence. These queries provide an
+interface between fixed-size computation and variable-size data, as used in
+Perceiver-style and vision--language models.
 
 ```{.python .input #encoders-decoders-encoders-decoders-and-cross-attention}
 %%tab pytorch
@@ -40,13 +37,13 @@ import optax
 import time
 ```
 
-## Three Wirings of One Block
+## Encoder, Decoder, and Encoder--Decoder Architectures
 :label:`sec_large-pretraining-transformers`
 
 A transformer block maps a sequence of $d$-dimensional vectors to a
 sequence of the same shape, and it leaves two questions open: which
 positions may attend to which, and where the keys and values come from.
-Three answers cover essentially every deployed transformer, and
+Three common wirings answer these questions, and
 :numref:`fig_three-wirings` draws them in the convention we will use for
 every attention map in this section — queries down the rows, keys along
 the columns.
@@ -57,12 +54,12 @@ the columns.
 **Encoder-only.** Drop the mask. Every token attends to every other, so
 each output vector summarizes the *whole* input as seen from its position.
 Such a model does not directly implement the left-to-right autoregressive
-factorization (with the future visible, next-token prediction is a copying
-exercise — though masked models can still be decoded by iterative
-re-masking, the idea text diffusion models develop), but it is the
-strongest way to *represent* an input, and one
-representation per token is exactly what classification, retrieval, and
-tagging consume. BERT is this wiring pretrained on text
+factorization: with the future visible, next-token prediction is a copying
+exercise (though masked models can still be decoded by iterative
+re-masking, the idea text diffusion models develop). But it is the
+strongest way to *represent* an input, and one representation per token is
+exactly what classification, retrieval, and tagging consume. BERT is this
+wiring pretrained on text
 :cite:`Devlin.Chang.Lee.ea.2018`; the vision transformer of
 :numref:`sec_vision-transformer` is the same wiring over image patches.
 
@@ -89,7 +86,7 @@ BART on denoising corrupted text :cite:`lewis2019bart`.
 The rest of this section builds the two wirings that :numref:`sec_gpt` did
 not, in order.
 
-## An Encoder: Predicting from Both Sides
+## Bidirectional Context for Masked-Token Prediction
 
 ### A Bidirectional Encoder in a Dozen Lines
 
@@ -162,8 +159,8 @@ $$
 :eqlabel:`eq_mlm`
 
 where $\mathcal{M}$ is the masked set. Prediction at a masked position
-draws on context from *both* sides, which is the point of dropping the
-mask in the first place. We train the recipe in miniature on the
+draws on context from *both* sides, the capability provided by removing the
+causal mask. We train the recipe in miniature on the
 character-level Time Machine corpus of :numref:`sec_text-sequence`,
 masking 15% of characters per window and giving `<mask>` one extra
 embedding row; the tied output head is the same trick as in
@@ -241,19 +238,19 @@ print('masked loss at step 500/1000/2000: ' + '/'.join(
 ```
 
 A minute of training brings the masked loss to about one nat and the
-masked-character accuracy to roughly 65% — against a 28-way vocabulary
-whose unigram entropy alone is $2.83$ nats. More interesting than the
-average is *where* the model earns it.
+masked-character accuracy to roughly 65%, compared with a unigram entropy
+of $2.83$ nats for the 28-way vocabulary. The loss by position shows how
+available context contributes to this average.
 
-### What the Second Side Is Worth
+### Loss by Available Context
 
 Our windows are 64 characters long, and that finiteness builds a
 comparison into every batch: a masked character in the interior has
 context on both sides, while one at position 0 or 63 sees only one side
-— the final position is exactly the situation a causal language model is
-in at every step. Same model, same objective, so binning the validation
-loss by position measures directly what the second side of the context is
-worth.
+— the final position has the one-sided context available to a causal
+language model at every step. Because the model and objective remain fixed,
+binning validation loss by position measures the contribution of context
+from the second side.
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-1}
 %%tab pytorch
@@ -354,22 +351,22 @@ for pos in (9, 14, 30):
 
 The doubled consonant in "trave_ler" comes back with high confidence:
 only the right-hand context ("ler") pins it down, and a left-to-right
-model would never see it. This experiment, scaled up (subword tokens,
-sentence pairs, gigabytes of text, a fine-tuning recipe per downstream
-task), is BERT :cite:`Devlin.Chang.Lee.ea.2018`, whose pretraining and
+model would never see it. Scaled up to subword tokens, sentence pairs,
+gigabytes of text, and a fine-tuning recipe per downstream task, this
+experiment is BERT :cite:`Devlin.Chang.Lee.ea.2018`, whose pretraining and
 fine-tuning the Language Models part covers in full
 (:numref:`chap_nlp_pretrain`). Nor did the wiring stop evolving in 2019:
 ModernBERT rebuilds the same encoder-only architecture with the modern
-block internals of this chapter, RoPE, gated FFN, alternating
-local--global attention, and an 8k context, and remains the backbone of
-choice for retrieval and classification at small model sizes
+block internals of this chapter (RoPE, gated FFN, alternating
+local--global attention, and an 8k context), and it remains the backbone
+of choice for retrieval and classification at small model sizes
 :cite:`Warner.Chaffin.Clavie.ea.2024`.
 
 ## An Encoder--Decoder: Cross-Attention at Work
 
 ### A Task Whose Alignment We Know
 
-The encoder--decoder earns its keep when input and output are different
+An encoder--decoder is useful when the input and output are different
 sequences. Its signature component, cross-attention, is usually
 illustrated on machine translation, but a trained translation model gives
 us no ground truth to check its attention against. So we choose a task
@@ -557,18 +554,18 @@ class EncoderDecoder(nnx.Module):
 
 Our reversal task ducks one bookkeeping question by construction: every
 string has the same length, so nothing is padding, and the only mask in
-sight is the decoder's causal one. A real batch — sequences of different
-lengths, padded to a rectangle — needs three masks, one per attention
-site, each composed from the two primitives of
+sight is the decoder's causal one. A real batch needs three masks, one per
+attention site, because its sequences have different lengths and are
+padded to a rectangle; each mask is composed from the two primitives of
 :numref:`sec_attention-scoring-functions`: a padding mask built from valid
 lengths, and the causal triangle, combined by logical AND under
 broadcasting. Encoder self-attention masks source padding. Decoder
 self-attention during teacher-forced training needs the causal triangle
 *and* target padding on the key side (padded query rows compute outputs
-the loss ignores). Cross-attention masks source padding again — the target may
-be mid-generation, but the source it reads is fully known. The cell below
-assembles all three for a toy ragged batch, as boolean arrays of shape
-(batch, queries, keys) — the form the fused kernels of
+the loss ignores). Cross-attention masks source padding again, since the
+target may be mid-generation but the source it reads is fully known. The
+cell below assembles all three for a toy ragged batch, as boolean arrays
+of shape (batch, queries, keys) — the form the fused kernels of
 :numref:`sec_attention-at-scale` accept; `d2l.MultiHeadAttention`'s
 `valid_lens` argument carries the same information in compressed form.
 
@@ -721,8 +718,8 @@ before $t$.
 
 ### Reading the Alignment
 
-Now the promised check. We run a batch through the model, pull the
-cross-attention weights out of the decoder block, and compare each target
+We run a batch through the model, extract the cross-attention weights from
+the decoder block, and compare each target
 position's attention against the alignment the task dictates.
 
 ```{.python .input #encoders-decoders-reading-the-alignment}
@@ -760,13 +757,13 @@ d2l.show_heatmaps(w[0][None], xlabel='source position',
                   figsize=(9, 2.5), cmap='Blues')
 ```
 
-The maps show the anti-diagonal of :numref:`fig_three-wirings`'s third
-panel made real: averaged over heads, the argmax lands on the true source
-position for well over nine rows in ten, with most of the softmax mass
-concentrated there. The model has *learned* the alignment we built into
-the task, and cross-attention is where it lives — which is exactly the
-kind of readable evidence :numref:`sec_multihead-attention` warned is the
-exception rather than the rule. It is readable here because we made the
+The maps contain the anti-diagonal predicted by the third panel of
+:numref:`fig_three-wirings`. Averaged over heads, the argmax lands on the
+true source position for well over nine rows in ten, with most of the
+softmax mass concentrated there. The cross-attention therefore represents
+the alignment built into the task. As :numref:`sec_multihead-attention`
+noted, such readable attention patterns are the exception rather than the
+rule. It is readable here because we made the
 model small; give the encoder and decoder more depth and heads and the
 task stays solved while the maps delocalize, as one of the exercises
 demonstrates.
@@ -776,8 +773,8 @@ demonstrates.
 ### Queries Need Not Come from a Sequence
 
 In the decoder, the cross-attention queries came from the target stream.
-Nothing in the mechanism requires that. A query is just a vector, and a
-set of $M$ query vectors can simply be *learned parameters* — a fixed
+Nothing in the mechanism requires that source. A set of $M$ query vectors
+can instead be *learned parameters* — a fixed
 array that exists before any input arrives. Cross-attending it into an
 input of length $N$ costs $O(MN)$; the quadratic term of
 :numref:`sec_attention-at-scale` never appears, because the $M$ latents
@@ -787,7 +784,7 @@ bottleneck that reads arbitrarily long, arbitrarily structured
 inputs through cross-attention, sketched in
 :numref:`fig_latent-bottleneck`.
 
-![The latent bottleneck. A learned array of M latents (M much smaller than the input length N) reads the input once through cross-attention at cost O(MN); all further processing is self-attention and FFN among the latents at cost O(M squared), independent of N.](../img/mdl-transformers-latent-bottleneck.svg)
+![A latent bottleneck with input length $N$, $M$ learned latents, width $d$, and $L$ latent blocks. One cross-attention read has mixing cost $O(MNd)$; each subsequent latent self-attention layer has mixing cost $O(M^2d)$, for $O(LM^2d)$ across the stack. These terms hold batch size, head count, and width fixed and omit projections and FFNs.](../img/mdl-transformers-latent-bottleneck.svg)
 :label:`fig_latent-bottleneck`
 
 A minimal version needs a parameter array, one cross-attention, and a
@@ -951,26 +948,26 @@ d2l.plot(list(lengths), [t_full, t_perc], 'input length N',
 
 Each doubling of $N$ eventually multiplies the self-attention encoder's
 time by about four, the signature of an $N^2$ term taking over. The
-Perceiver's time barely moves (its $O(MN)$ cross-attention grows
-linearly but stays dominated by the fixed $O(M^2)$ latent processing),
-and by $N = 8192$ the gap exceeds an order of magnitude. The left end of
-the plot belongs in the reading too: at short inputs the perceiver's
-fixed $O(M^2)$ latent cost is a large fraction of its total, so its
-margin is slim — and with PyTorch's kernels full self-attention is
-actually faster at $N = 1024$. A latent
-bottleneck is worth having when the input is long and a fixed-size
-summary of it suffices.
+Perceiver's time grows more slowly over this range (its $O(MN)$
+cross-attention grows linearly but remains dominated by the fixed $O(M^2)$
+latent processing),
+and by $N = 8192$ the gap exceeds an order of magnitude. At the left end
+of the plot, the Perceiver's fixed $O(M^2)$ latent cost is a large fraction
+of the total, so its margin is
+slim — and with PyTorch's kernels full self-attention is actually faster
+at $N = 1024$. A latent bottleneck is advantageous when the input is long
+and a fixed-size summary suffices.
 
 ### Perceiver IO and the Idea's Descendants
 
-Reading through learned queries has a mirror image: *writing* through
-them. Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2022` adds an output
+Learned queries can also determine the output structure. Perceiver IO
+:cite:`Jaegle.Borgeaud.Alayrac.ea.2022` adds an output
 query array that cross-attends *out of* the latent summary, so the output
 size and shape are set by the queries rather than by the input — one
 query for a classification label, one per pixel for optical flow, one per
 audio sample for a waveform. Input length, latent width, and output shape
-become three independent dials, with everything in between a fixed-cost
-transformer.
+become three independent choices, while the latent transformer retains a
+fixed cost.
 
 The pattern's descendants run through today's multimodal systems.
 Flamingo's Perceiver resampler compresses a variable number of image and
@@ -986,61 +983,50 @@ producing one detection :cite:`Carion.Massa.Synnaeve.ea.2020`. The Image
 Models part (:numref:`chap_cv`) takes up DETR and its successors in
 depth.
 
-## Which Wiring When
+## Choosing an Architecture
 
-The taxonomy of :numref:`fig_three-wirings` maps cleanly onto current
-practice:
+The taxonomy of :numref:`fig_three-wirings` describes several widely used
+model families. The table gives examples rather than an exhaustive ranking.
 
 | Wiring | Exemplars today | Typical use |
 |---|---|---|
 | encoder-only | BERT descendants, ModernBERT | embeddings, retrieval, classification |
 | encoder--decoder | T5 family, Whisper | translation, speech recognition |
-| decoder-only | essentially everything else | generation, chat, in-context everything |
+| decoder-only | GPT-style models | generation, chat, in-context learning |
 
-Encoder-only survives where the product *is* the representation: an
-embedding model is run once per document, at bidirectional quality, with
-no generation loop to pay for — which is why retrieval and reranking
-stacks still train BERT-shaped models
+Encoder-only models remain useful when the output is a representation. An
+embedding model processes each document once and can use bidirectional
+context, so retrieval and reranking systems still train BERT-shaped models
 :cite:`Warner.Chaffin.Clavie.ea.2024`. The encoder--decoder survives
 where the input is fully known before generation starts and deserves its
 own tower: T5-style text-to-text :cite:`raffel2020exploring`, and Whisper,
 whose encoder reads an entire audio clip bidirectionally while a text
 decoder cross-attends into it :cite:`radford2023whisper`.
 
-Everything else went decoder-only, and the reasons compound. One stack
-means one pretraining objective: next-token prediction on raw text, with
-no masking scheme or span-corruption design to engineer. Every parameter
-serves both understanding and generation instead of splitting the budget
-between towers. Generation needs no separate machinery, and in-context
-learning falls out of it :cite:`brown2020language`: a task description in
-the prompt does what a fine-tuned head used to. When one architecture,
-trained one way, covers everything from chat to code with the same
-serving stack, the coordination costs of maintaining three wirings stop
-being worth paying — except in the niches above, where the other two are
-simply better tools.
+Decoder-only models cover many generative applications. A single stack
+supports a single pretraining objective: next-token prediction on raw text, with
+no masking or span-corruption objective. The same stack supplies the states
+used for next-token generation, and sufficiently large decoder-only models can
+perform tasks specified in the prompt :cite:`brown2020language`. This shared
+training and serving interface is operationally convenient, but it does not
+make decoder-only models preferable for every representation or conditional
+generation task.
 
 ## Summary
 
-One transformer block supports three wirings. Removing the causal mask
-gives an encoder-only model: not a left-to-right generator, but the
-strongest way to compute one representation per token, trained by masking
-tokens and
-predicting them from both sides; in our character-level demo, positions
-with context on both sides had roughly half the loss of one-sided
-positions, which is the bidirectional advantage in one number.
-The encoder--decoder joins an unmasked encoder to a causal decoder
-through cross-attention; on a reversal task whose true alignment is known
-by construction, the learned cross-attention map reproduces the
-anti-diagonal almost exactly. Cross-attention also works with queries
-that come from no sequence at all: a learned latent array reading a
-length-$N$ input costs $O(MN)$ instead of $O(N^2)$, stays nearly constant
-in measured time as $N$ grows, and under the names Perceiver, resampler,
-and Q-Former is how today's multimodal models feed long perceptual
-streams into fixed-size computation. In current practice encoders own
-representation (retrieval, classification), encoder--decoders own tasks
-with a fully-known input in another modality or length regime
-(translation, speech), and decoder-only owns the rest — one model, one
-objective, generation for free.
+A transformer block supports encoder-only, decoder-only, and
+encoder--decoder architectures. Removing the causal mask produces an
+encoder that represents each token using context from both directions. In
+our character-level experiment, positions with context on both sides have
+roughly half the loss of positions with only left context. An
+encoder--decoder connects an unmasked encoder to a causal decoder through
+cross-attention; on a reversal task, the learned attention map recovers the
+known anti-diagonal alignment. Cross-attention can also use a learned latent
+array as its queries. Reading a length-$N$ input into $M$ latents costs
+$O(MN)$ rather than $O(N^2)$, and its measured runtime remains nearly
+constant as $N$ grows for fixed $M$. Encoder-only models are common for
+retrieval and classification, encoder--decoders for translation and speech,
+and decoder-only models for general autoregressive generation.
 
 ## Exercises
 
@@ -1114,7 +1100,7 @@ $$\max \; \sum_{t \in \mathcal{M}} \log p\left(x_t \mid \mathbf{x}_{\setminus \m
 @!encoders-decoders-the-masked-token-objective
 :::
 
-::: {.slide title="What the second side is worth"}
+::: {.slide title="Loss by Available Context"}
 Window edges are one-sided by construction — position 63 is where a
 causal LM lives *permanently*. Bin the loss by position:
 
@@ -1179,8 +1165,8 @@ maps (exercise): readable attention is the exception.
 :::
 
 ::: {.slide title="Cross-attention as interface"}
-A query is just a vector — it can be a **learned parameter**. $M$
-latents read a length-$N$ input:
+A query can be a **learned parameter**. $M$ latents read a length-$N$
+input:
 
 @fig:mdl-transformers-latent-bottleneck
 
@@ -1195,9 +1181,9 @@ $O(MN)$ to read, $O(M^2)$ to think — the $N^2$ term never appears
 ::: {.slide title="The cost curve"}
 @!encoders-decoders-the-cost-curve
 
-Self-attention: ~4× per doubling of $N$. Perceiver: barely moves; over
-an order of magnitude ahead by $N = 8192$. At short inputs the
-bottleneck buys nothing.
+Self-attention: about 4× per doubling of $N$. The Perceiver grows more slowly
+and is over an order of magnitude faster by $N = 8192$; at short inputs its
+fixed latent-processing overhead removes this advantage.
 :::
 
 ::: {.slide title="Which wiring when"}
@@ -1205,8 +1191,8 @@ bottleneck buys nothing.
   retrieval, classification (BERT descendants, ModernBERT).
 - **Encoder–decoder** — input fully known, own tower worth it: T5
   text-to-text, Whisper speech recognition.
-- **Decoder-only** — everything else: one stack, one objective,
-  generation free, in-context learning included.
+- **Decoder-only** — autoregressive generation and prompt-conditioned tasks:
+  one stack and a next-token objective.
 
 ::: {.d2l-note}
 Perceiver descendants live on inside multimodal models: Flamingo's
@@ -1222,6 +1208,6 @@ resampler, BLIP-2's Q-Former, DETR's object queries.
   the learned map.
 - Learned queries turn attention into an interface: $O(MN)$, flat cost
   curve, Perceiver → resampler → Q-Former.
-- Encoders represent, encoder–decoders translate and transcribe,
-  decoders do the rest.
+- The appropriate wiring depends on whether the output is a representation,
+  a sequence conditioned on a separate input, or an autoregressive continuation.
 :::

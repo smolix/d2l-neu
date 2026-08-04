@@ -1,13 +1,13 @@
 # Feature-Rich Recommender Systems
 
-Interaction data is the most basic indication of users' preferences and interests. It plays a critical role in former introduced models. Yet, interaction data is usually extremely sparse and can be noisy at times. To address this issue, we can integrate side information such as features of items, profiles of users, and even in which context that the interaction occurred into the recommendation model. Utilizing these features are helpful in making recommendations in that these features can be an effective predictor of users interests especially when interaction data is lacking. As such, it is essential for recommendation models also have the capability to deal with those features and give the model some content/context awareness. To demonstrate this type of recommendation models, we introduce another task on click-through rate (CTR) for online advertisement recommendations :cite:`McMahan.Holt.Sculley.ea.2013` and present an anonymous advertising dataset. Targeted advertisement services have attracted widespread attention and are often framed as recommendation engines. Recommending advertisements that match users' personal taste and interest is important for click-through rate improvement.
+In click-through-rate (CTR) prediction, one example is an impression: an item was displayed to a user in a particular context. Its input $\mathbf{x}$ contains user, item, and context features, and its label $y\in\{0,1\}$ records whether the impression produced a click. A model outputs a logit $s(\mathbf{x})$ or probability $\hat p(\mathbf{x})=\sigma(s(\mathbf{x}))$ and is commonly trained with binary log loss. Unlike interaction-only collaborative filtering, this formulation can use item attributes, device type, time, and other features that may support predictions when a user--item history is sparse :cite:`McMahan.Holt.Sculley.ea.2013`.
 
 
-Digital marketers use online advertising to display advertisements to customers. Click-through rate is a metric that measures the number of clicks advertisers receive on their ads per number of impressions and it is expressed as a percentage calculated with the formula: 
+For a collection of impressions, the empirical click-through rate is
 
 $$ \textrm{CTR} = \frac{\#\textrm{Clicks}} {\#\textrm{Impressions}} \times 100 \% .$$
 
-Click-through rate is an important signal that indicates the effectiveness of prediction algorithms. Click-through rate prediction is a task of predicting the likelihood that something on a website will be clicked. Models on CTR prediction can not only be employed in targeted advertising systems but also in general item (e.g., movies, news, products) recommender systems, email campaigns, and even search engines. It is also closely related to user satisfaction, conversion rate, and can be helpful in setting campaign goals as it can help advertisers to set realistic expectations.
+This aggregate rate is not itself a measure of model quality: it also changes with the population, candidate-selection policy, and display position. The prediction task is to estimate a conditional probability for each impression. Evaluation should therefore use a proper scoring rule such as held-out log loss, and any train/test split should respect the time or policy shift the model is expected to face.
 
 ```{.python .input #ctr-feature-rich-recommender-systems}
 #@tab mxnet
@@ -27,7 +27,7 @@ import os
 
 ## An Online Advertising Dataset
 
-With the considerable advancements of Internet and mobile technology, online advertising has become an important income resource and generates vast majority of revenue in the Internet industry. It is important to display relevant advertisements or advertisements that pique users' interests so that casual visitors can be converted into paying customers. The dataset we introduced is an online advertising dataset. It consists of 34 fields, with the first column representing the target variable that indicates if an ad was clicked (1) or not (0). All the other columns are categorical features. The columns might represent the advertisement id, site or application id, device id, time, user profiles and so on. The real semantics of the features are undisclosed due to anonymization and privacy concern.
+The anonymous advertising dataset contains a binary click label followed by 34 categorical fields. The undisclosed fields may encode quantities such as an advertisement, site, application, device, time bucket, or user group; because their semantics are hidden, the experiment can test feature-interaction models but cannot support a substantive interpretation of individual coefficients. Each categorical value is mapped to an integer index within its field, with an additional index reserved for rare or unseen values.
 
 The following code downloads the dataset from our server and saves it into the local data folder.
 
@@ -155,15 +155,15 @@ train_data = CTRDataset(os.path.join(data_dir, 'train.csv'))
 train_data[0]
 ```
 
-As can be seen, all the 34 fields are categorical features. Each value represents the one-hot index of the corresponding entry. The label $0$ means that it is not clicked. This `CTRDataset` can also be used to load other datasets such as the Criteo display advertising challenge [dataset](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/) and the Avazu click-through rate prediction [dataset](https://www.kaggle.com/c/avazu-ctr-prediction).  
+The encoded example contains one integer index per categorical field and a binary label; it does not materialize the corresponding high-dimensional one-hot vector. The wrapper can be adapted to other field-based datasets, but datasets with continuous variables require a separate numerical preprocessing path rather than categorical vocabulary lookup.
 
 ## Summary 
-* Click-through rate is an important metric that is used to measure the effectiveness of advertising systems and recommender systems.
-* Click-through rate prediction is usually converted to a binary classification problem. The target is to predict whether an ad/item will be clicked or not based on given features.
+* CTR prediction is binary probabilistic prediction conditional on an observed impression and its user, item, and context features.
+* Field-wise categorical indices permit sparse inputs to share compact embedding tables; aggregate CTR should not be confused with a model-evaluation metric.
 
 ## Exercises
 
-* Can you load the Criteo and Avazu dataset with the provided `CTRDataset`. It is worth noting that the Criteo dataset consisting of real-valued features so you may have to revise the code a bit.
+* Extend `CTRDataset` with an explicit path for continuous fields. How will you fit normalization or bin boundaries without leaking information from the test set?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/405)
@@ -190,7 +190,7 @@ recommendation in its purest form. The next two decks
 @ctr-feature-rich-recommender-systems
 :::
 
-::: {.slide title="The advertising dataset"}
+::: {.slide title="Each impression carries a binary click label"}
 Tab-separated; each row has many one-hot categorical
 fields plus a binary click label. Sparsity is extreme —
 think "1 of 10000 in each field":
@@ -198,7 +198,7 @@ think "1 of 10000 in each field":
 @ctr-an-online-advertising-dataset
 :::
 
-::: {.slide title="Dataset wrapper"}
+::: {.slide title="Per-field vocabularies avoid dense one-hot vectors"}
 Build per-field vocabularies, encode each row as a sparse
 feature index vector, yield (features, label) pairs:
 
@@ -209,7 +209,7 @@ feature index vector, yield (features, label) pairs:
 @ctr-dataset-wrapper-2
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="CTR conditions on an observed impression"}
 - CTR prediction = binary classification on sparse
   categorical features.
 - Side features handle cold start; pure collaborative

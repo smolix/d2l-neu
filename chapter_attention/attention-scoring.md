@@ -1,18 +1,14 @@
 # Attention Scoring and Masking
 :label:`sec_attention-scoring-functions`
 
-In :numref:`sec_attention-pooling` we computed attention weights from
-distance-based kernels such as the Gaussian. Distances are slightly more
-expensive to compute than dot products, and once the softmax
-:eqref:`eq_softmax_attention` guarantees nonnegative normalized weights, we
-are free to pick any *scoring function* $a(\mathbf{q}, \mathbf{k})$ we like.
-This section settles the choice used by essentially every modern
-architecture—the scaled dot product—and builds the two pieces of machinery
-that make it practical: a masked softmax that lets one batched computation
-serve sequences of different lengths (and autoregressive models that must
-not look ahead), and batched matrix multiplication. We close with the story
-of where these ideas came from: the machine translation problem that turned
-"learning to align" into the attention mechanism.
+In :numref:`sec_attention-pooling`, distance-based kernels such as the Gaussian
+defined the attention weights. A more general attention layer first computes a
+score $a(\mathbf{q}, \mathbf{k})$ and then normalizes the scores with softmax
+:eqref:`eq_softmax_attention`. This section derives scaled dot-product
+attention, including the $1/\sqrt d$ factor. Masked softmax handles padding and
+causal constraints, while batched matrix multiplication evaluates many queries
+and sequences efficiently. We conclude with the alignment model from neural
+machine translation that introduced learned attention.
 
 ```{.python .input #attention-scoring-attention-scoring-and-masking}
 %%tab pytorch
@@ -36,8 +32,8 @@ import math
 
 ## Dot-Product Attention
 
-Let's review the attention function (without exponentiation) arising from
-the Gaussian kernel:
+Expanding the Gaussian kernel gives the following attention score before
+exponentiation:
 
 $$
 a(\mathbf{q}, \mathbf{k}_i) = -\frac{1}{2} \|\mathbf{q} - \mathbf{k}_i\|^2  = \mathbf{q}^\top \mathbf{k}_i -\frac{1}{2} \|\mathbf{k}_i\|^2  -\frac{1}{2} \|\mathbf{q}\|^2.
@@ -50,47 +46,48 @@ equal, the middle term drops out the same way, and the Gaussian kernel and
 the dot product induce identical attention weights. In general the norms are
 not equal, and dropping the term is a modeling decision rather than an
 approximation: we adopt the dot product $\mathbf{q}^\top \mathbf{k}_i$ as a
-compatibility function in its own right — one that learned query and key
-representations can shape freely — with the Gaussian expansion surviving as
-the exact special case of equal key norms.
+compatibility function in its own right. Learned query and key representations can shape this
+compatibility, while the Gaussian expansion remains an exact special case
+when all key norms are equal.
 
-One adjustment is still needed, to keep the magnitude of the scores under
-control. Assume that all elements of the query $\mathbf{q} \in \mathbb{R}^d$
-and the key $\mathbf{k}_i \in \mathbb{R}^d$ are independent random variables
-with zero mean and unit variance. The dot product of the two vectors then
-has zero mean and variance $d$: the typical score grows like $\sqrt{d}$ for
-no reason other than vector length. Rescaling by $1/\sqrt{d}$ keeps the
-score variance at $1$ regardless of dimension, and yields the *scaled
+One adjustment controls the nominal score magnitude at initialization. Assume
+for this calculation that the $d_k$ coordinates of the query and key are
+independent, zero-mean, unit-variance random variables. Their dot product then
+has zero mean and variance $d_k$. Rescaling by $1/\sqrt{d_k}$ removes this
+dimension dependence under the stated assumptions and yields the *scaled
 dot-product attention* scoring function of the Transformer
 :cite:`Vaswani.Shazeer.Parmar.ea.2017`:
 
-$$ a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d}.$$
+$$ a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d_k}.$$
 :eqlabel:`eq_dot_product_attention`
 
 The attention weights are obtained, as always, with the softmax:
 
-$$\alpha(\mathbf{q}, \mathbf{k}_i) = \mathrm{softmax}(a(\mathbf{q}, \mathbf{k}_i)) = \frac{\exp(\mathbf{q}^\top \mathbf{k}_i / \sqrt{d})}{\sum_{j=1}^m \exp(\mathbf{q}^\top \mathbf{k}_j / \sqrt{d})}.$$
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \mathrm{softmax}(a(\mathbf{q}, \mathbf{k}_i)) = \frac{\exp(\mathbf{q}^\top \mathbf{k}_i / \sqrt{d_k})}{\sum_{j=1}^m \exp(\mathbf{q}^\top \mathbf{k}_j / \sqrt{d_k})}.$$
 :eqlabel:`eq_attn-scoring-alpha`
 
-### Softmax Saturation and the $1/\sqrt{d}$ Factor
+### Score Variance and the $1/\sqrt{d}$ Factor
 
-Why insist on unit score variance? The softmax saturates: once one score
-exceeds the others by a large margin, the winning weight approaches $1$, the
-rest approach $0$, and, since the Jacobian of the softmax is
+Learned queries and keys need not retain the independence or unit-variance
+assumptions, so the calculation is a scaling heuristic rather than a
+trained-model guarantee. Its purpose is to avoid dimension-induced softmax
+saturation at initialization. Once one score
+exceeds the others by a large margin, the winning weight approaches $1$ and
+the rest approach $0$. The gradient returning along the *score* path shrinks
+with them, because the Jacobian of the softmax is
 
 $$
 \frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha} \boldsymbol{\alpha}^\top,
 $$
 
-which tends to the zero matrix as $\boldsymbol{\alpha}$ approaches a one-hot
-vector, the gradient returning along the *score* path shrinks with it, and the
-queries and keys behind those scores stop being updated. (Only that query–key
-route saturates; gradients still flow through the values, the output
-projection, and any residual connection.) For finite scores this Jacobian is
+and this tends to the zero matrix as $\boldsymbol{\alpha}$ approaches a
+one-hot vector, so the queries and keys behind those scores stop being
+updated. (Only that query–key route saturates; gradients still flow through
+the values, the output projection, and any residual connection.) For finite
+scores this Jacobian is
 never the zero matrix — as we noted in :numref:`sec_queries-keys-values`, it
 always keeps the all-ones vector in its null space and nothing else — but it
-can come arbitrarily close. Let's measure both effects rather than take them
-on faith. We draw random queries
+can come arbitrarily close. We measure both effects with random queries
 and keys with unit-variance entries, compute attention over $64$ candidate
 keys, and record the entropy of the resulting weight distribution as the
 dimension $d$ grows, with and without the $1/\sqrt{d}$ factor.
@@ -141,12 +138,13 @@ d2l.plot(ds, entropies, 'dimension d', 'entropy (nats)',
 ```
 
 A uniform distribution over $64$ keys has entropy $\ln 64 \approx 4.2$ nats.
-The scaled scores hold their entropy essentially constant, at about $3.7$
-nats, across two orders of magnitude in $d$: the weight distribution keeps
-the same moderate sharpness no matter how wide the vectors are. Without
+The scaled scores retain an entropy of about $3.7$ nats across two orders of
+magnitude in $d$. Thus the weight distribution retains similar sharpness as
+the vector dimension grows. Without
 scaling, the entropy collapses as $d$ grows—below $0.2$ nats by $d = 512$,
 a near-deterministic weighting that concentrates almost all its mass on a
-single key purely because the vectors are long. The gradient tells the same story:
+single key purely because the vectors are long. The Jacobian norm measures
+the corresponding change in the score gradient:
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2}
 %%tab pytorch
@@ -169,11 +167,10 @@ for d in (4, 64, 512):
 
 With scaling, the Jacobian norm is the same at every dimension. Without it,
 the norm decays as the softmax saturates—by $d = 512$ it has fallen to
-about half the scaled value and is still shrinking. A model built on
-unscaled scores at realistic dimensions would start its life with
-near-one-hot attention and barely any gradient with which to fix it. One
-division by $\sqrt{d}$ removes the problem, which is why it is part of the
-definition :eqref:`eq_dot_product_attention` rather than a tuning trick.
+about half the scaled value and is still shrinking. At realistic dimensions, a model with unscaled scores would therefore begin
+with near-one-hot attention and small score gradients. Division by $\sqrt{d}$
+removes the dimension-induced scaling, so it is part of the definition
+:eqref:`eq_dot_product_attention` rather than a tuned hyperparameter.
 
 ## Masking
 
@@ -201,28 +198,24 @@ position (causality).
 
 ### The Masked Softmax Operation
 
-The operation is common enough to have a name, the *masked softmax*, and a
-standard implementation trick. Rather than branching on which keys are
-valid—conditionals are poison for the heavily optimized batched kernels
-that attention runs on—we overwrite the scores of the invalid positions
-with a very negative number before the softmax, so that their weights come
-out as zero.
+The *masked softmax* implements this restriction without branching over
+keys. It overwrites invalid scores with a very negative number before the
+softmax, making their normalized weights zero. This formulation preserves
+the regular array operations used by optimized batched kernels.
 
-The choice of "very negative" deserves care. Older codebases used a literal
+The replacement value depends on the numerical precision. Older codebases used a literal
 constant such as $-10^{6}$. In single precision that works; in the half
 precisions that modern training runs in, it does not. The float16 format
 tops out near $6.5 \times 10^4$, so $-10^6$ silently overflows, and in
 bfloat16 a merely-large constant may fail to fully suppress a weight once
-genuine scores are large themselves. Writing literal $-\infty$ masks
-exactly, but if every key of some query is masked the softmax returns NaN
-and poisons the training run. The dtype-safe idiom, which we adopt, masks
-with the most negative *finite* value of the score's dtype
+genuine scores are large themselves. Writing literal $-\infty$ masks exactly, but if every key of some query is
+masked, the softmax returns NaN and can invalidate the training run. We therefore adopt the dtype-safe idiom, which
+masks with the most negative *finite* value of the score's dtype
 (`torch.finfo(X.dtype).min` and `jnp.finfo(X.dtype).min`, respectively): the
-masked weights are exactly zero at any precision, with no NaN. A fully masked
-query — one with no valid key — would otherwise come out as a uniform average
-over its *invalid* values, still garbage, so `masked_softmax` zeroes any such
-row; callers should nonetheless guarantee that every query keeps at least one
-valid key.
+masked weights are exactly zero at any precision, with no NaN. A fully masked query, which has no valid key, would otherwise produce a
+uniform average over invalid values. The `masked_softmax` implementation
+therefore zeroes such a row, although callers should still ensure that every
+query retains at least one valid key.
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-1}
 %%tab pytorch
@@ -305,7 +298,7 @@ masked_softmax(jax.random.uniform(jax.random.key(1), (2, 2, 4)),
 
 Per-query valid lengths are exactly what causality needs: for a sequence of
 length $n$, the query at position $t$ may attend to keys $1, \ldots, t$, so
-the valid lengths are simply $(1, 2, \ldots, n)$, shared by every sequence
+the valid lengths are $(1, 2, \ldots, n)$, shared by every sequence
 in the batch. The resulting attention pattern is lower triangular:
 
 ```{.python .input #attention-scoring-causal-masking}
@@ -325,10 +318,9 @@ d2l.show_heatmaps(masked_softmax(scores, causal_lens)[None],
                   xlabel='Keys', ylabel='Queries')
 ```
 
-On the attention side, this triangular mask is the key difference between a
-model that merely reads a sequence and one that can be trained, in parallel
-over all positions, to generate it — generation also needs the shifted
-next-token objective and a decoding loop. The mask will accompany us through
+This triangular mask lets a generative model train all sequence positions in
+parallel without exposing future tokens. Generation additionally requires a
+shifted next-token objective and a decoding loop. The mask will accompany us through
 every decoder in the chapters ahead.
 
 ### Composing Masks
@@ -379,10 +371,9 @@ The first sequence shows the plain causal triangle; the second is cut off
 at its valid length of $3$, the intersection of both constraints. Composition
 sharpens the fully-masked hazard flagged above: masks that are harmless
 alone can leave some query with an empty intersection, so the guarantee of
-at least one valid key per query must hold for the *composite*. The same
-machinery handles *packed sequences* — several documents concatenated into
-one training row — by ANDing the causal mask with a block-diagonal mask
-that keeps each document from attending into its neighbors.
+at least one valid key per query must hold for the *composite*. The same mask composition handles *packed sequences*, in which several
+documents are concatenated into one training row. ANDing the causal mask
+with a block-diagonal mask prevents attention across document boundaries.
 
 ## Batched Attention
 
@@ -403,7 +394,7 @@ batch element,
 $$\textrm{BMM}(\mathbf{Q}, \mathbf{K}) = [\mathbf{Q}_1 \mathbf{K}_1, \mathbf{Q}_2 \mathbf{K}_2, \ldots, \mathbf{Q}_n \mathbf{K}_n] \in \mathbb{R}^{n \times a \times c}.$$
 :eqlabel:`eq_batch-matrix-mul`
 
-Let's see this in action in a deep learning framework:
+A framework batch-matrix multiplication has the expected shape:
 
 ```{.python .input #attention-scoring-batch-matrix-multiplication}
 %%tab pytorch
@@ -421,8 +412,7 @@ d2l.check_shape(jax.lax.batch_matmul(Q, K), (2, 3, 6))
 
 ### The DotProductAttention Class
 
-Now we can state scaled dot-product attention in the form in which it is
-actually computed. For $n$ queries and $m$ key--value pairs, with queries
+Scaled dot-product attention can now be written in its matrix form. For $n$ queries and $m$ key--value pairs, with queries
 and keys of length $d$ and values of length $v$, stack the queries into
 $\mathbf{Q} \in \mathbb{R}^{n \times d}$, the keys into $\mathbf{K} \in
 \mathbb{R}^{m \times d}$, and the values into $\mathbf{V} \in
@@ -513,7 +503,7 @@ output, attention_weights = nnx.view(
 d2l.check_shape(output, (2, 1, 4))
 ```
 
-The stored attention weights confirm that the mask did its job: weights
+The stored attention weights confirm the effect of the mask: weights
 vanish beyond the second and sixth key, respectively.
 
 ```{.python .input #attention-scoring-the-dotproductattention-class-3}
@@ -528,15 +518,15 @@ d2l.show_heatmaps(attention_weights.reshape((1, 1, 2, 10)),
                   xlabel='Keys', ylabel='Queries')
 ```
 
-## From Alignment to Attention
+## Attention as Learned Alignment
 
-Where did all of this come from? Not from databases, but from machine
-translation. Around 2014, the leading neural approach encoded a source
+Learned attention first became prominent in neural machine translation.
+Around 2014, the leading neural approach encoded a source
 sentence with an RNN into a single fixed-size state vector and decoded the
 translation from that vector with a second RNN (we build such
 encoder--decoder models in full in :numref:`sec_seq2seq`). The design has
-the flaw this chapter opened with: one fixed-size vector must carry an
-entire sentence, and for long sentences it cannot. Translation quality
+the flaw this chapter opened with: one fixed-size vector must represent the entire sentence, which becomes
+increasingly restrictive as sentences grow. Translation quality
 degraded visibly with sentence length. :citet:`Graves.2013` had faced a
 version of this problem when generating handwriting from text, and solved
 it with a differentiable model that *aligned* each output pen stroke with a
@@ -545,18 +535,17 @@ could only move forward, an assumption borrowed from decoding in speech
 recognition :cite:`rabiner1993fundamentals`.
 
 :citet:`Bahdanau.Cho.Bengio.2014` removed the constraint. Their translation
-model kept the two RNNs but gave the decoder a new capability at every
-step: use the current decoder state as a *query* against all encoder
+model kept the two RNNs but changed the decoder input at every step. The
+current decoder state served as a *query* against all encoder
 states, which serve as keys and values, and feed the resulting weighted
 summary—a fresh one per output token—into the next prediction. The paper's
 title called the idea "jointly learning to align and translate", and the
 learned weights behaved exactly like the soft alignments of classical
 statistical translation: mostly monotone along the diagonal, with clean
 departures where the two languages order words differently, as sketched in
-:numref:`fig_alignment`. Nothing forced the model to align; the behavior
-emerged from training. This is the attention mechanism of
-:eqref:`eq_attention_pooling` in its original habitat, and its impact
-reached far beyond translation.
+:numref:`fig_alignment`. The training objective did not directly supervise these alignments; they
+emerged while the model learned translation. This computation instantiates
+the attention mechanism in :eqref:`eq_attention_pooling`.
 
 ![Soft alignment between an English sentence and its French translation, in the style of a learned attention map (darker cells indicate larger weight; schematic). The alignment is mostly monotone, but "black cat" maps to "chat noir" with the order reversed, and both "était" and "assis" draw on "sat".](../img/mdl-attention-alignment.svg)
 :label:`fig_alignment`
@@ -607,36 +596,29 @@ d2l.check_shape(scores, (3, 6))
 jax.nn.softmax(scores, axis=-1)
 ```
 
-Additive attention held its own for a few years, but the outcome was
-decided by hardware: a dot product between all queries and all keys is a
-single matrix multiplication, the one operation accelerators are built
-around, while the additive score requires materializing an
+Dot-product attention later became the standard choice partly because it maps
+efficiently to accelerator hardware. All query--key dot products form one
+matrix multiplication, whereas the additive score requires an
 $n \times m \times h$ tensor of hidden activations. When a learned metric
-is wanted, projecting queries and keys with learned matrices *before* a dot
-product achieves it at matmul speed—which is precisely the form attention
+is wanted, we can project queries and keys with learned matrices *before* the
+dot product and have it at matmul speed—which is precisely the form attention
 takes inside the Transformer, whose authors then discarded the RNN
 scaffolding altogether and kept attention as the only mechanism relating
 sequence positions :cite:`Vaswani.Shazeer.Parmar.ea.2017`. The next
-sections follow that road: first attention with multiple heads, then what
-replaces the RNN's notion of position.
+next sections develop multiple attention heads and then introduce explicit
+positional information to replace the RNN's sequential ordering.
 
 ## Summary
 
-Softmax normalization turns any scoring function into valid attention
-weights, and the scoring function of choice is the scaled dot product
-:eqref:`eq_dot_product_attention`: it is a single batched matrix
-multiplication, and the $1/\sqrt{d}$ factor holds the score variance at $1$
-so that the softmax neither saturates nor starves its own gradient as the
-dimension grows—an effect we measured directly. Masking makes the same
-batched computation respect variable sequence lengths and causal
-structure: overwrite invalid scores with the most negative finite value of
-the dtype (not a hard-coded constant, which breaks in half precision)
-before the softmax; arbitrary boolean requirements — padding, causality,
-structure — compose into one mask by logical AND. `DotProductAttention` packages scoring, masking,
-dropout on the weights, and value pooling in a dozen lines that the rest of
-this book reuses. Additive attention, the original scoring function of the
-translation models that started the field, survives as history and as a
-reminder that attention weights are learned soft alignments.
+Scaled dot-product attention computes scores with one batched matrix
+multiplication. Dividing by $\sqrt d$ keeps the score variance independent of
+dimension and prevents premature softmax saturation. A mask excludes padding,
+future positions, or other invalid query--key pairs before normalization; use
+the most negative finite value of the dtype so the operation remains valid in
+reduced precision. Boolean masks for several constraints compose by logical
+AND. `DotProductAttention` combines scoring, masking, dropout, and value
+pooling. Additive attention provides an alternative learned score and was the
+form used in the original neural alignment model.
 
 ## Exercises
 
@@ -695,7 +677,7 @@ Transformer's scoring function:
 $$a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d}.$$
 :::
 
-::: {.slide title="Softmax saturation, measured"}
+::: {.slide title="Measured softmax saturation"}
 Random queries and keys, attention over 64 candidates, entropy of the
 weight distribution as $d$ grows:
 
@@ -706,7 +688,7 @@ weight distribution as $d$ grows:
   from vector length alone.
 :::
 
-::: {.slide title="Saturation kills the gradient"}
+::: {.slide title="Saturation reduces the softmax gradient"}
 The softmax Jacobian
 $\partial \boldsymbol{\alpha} / \partial \mathbf{a} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top$
 tends to zero as $\boldsymbol{\alpha}$ approaches one-hot:
@@ -715,8 +697,7 @@ tends to zero as $\boldsymbol{\alpha}$ approaches one-hot:
 
 - Scaled: constant at every dimension. Unscaled: decaying — about half by
   $d = 512$, still falling.
-- One division by $\sqrt{d}$ removes the problem. Part of the definition,
-  not a tuning trick.
+- Division by $\sqrt{d}$ keeps this scale independent of dimension.
 :::
 
 ::: {.slide title="Two reasons to mask"}
@@ -757,13 +738,13 @@ Per-query valid lengths work too:
 :::
 
 ::: {.slide title="Causal masking"}
-Query $t$ sees keys $1, \ldots, t$: valid lengths are just
+Query $t$ sees keys $1, \ldots, t$, so the valid lengths are
 $(1, 2, \ldots, n)$. The pattern is lower triangular:
 
 @attention-scoring-causal-masking
 
-- On the attention side, this mask is the key difference between reading a
-  sequence and being trainable, in parallel, to generate one.
+- The mask permits parallel training over all positions without exposing
+  future tokens.
 :::
 
 ::: {.slide title="Composing masks"}
@@ -790,8 +771,8 @@ $$\mathrm{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d}}\right)\mathbf
 :::
 
 ::: {.slide title="DotProductAttention"}
-Scoring, masking, dropout on the weights, value pooling — a dozen lines
-the rest of the book reuses:
+The implementation combines scoring, masking, dropout on the weights, and
+value pooling:
 
 @attention-scoring-the-dotproductattention-class-1
 :::
@@ -803,11 +784,11 @@ sixth key.
 @!attention-scoring-the-dotproductattention-class-3
 :::
 
-::: {.slide title="From alignment to attention"}
-[Where all of this came from]{.kicker}
+::: {.slide title="Attention as learned alignment"}
+[Machine translation]{.kicker}
 
-2014 machine translation: one fixed vector between encoder and decoder RNNs
-— long sentences don't fit. Bahdanau, Cho & Bengio: let the decoder state
+In 2014 neural machine translation, one fixed vector connected the encoder
+and decoder RNNs, restricting the representation of long sentences. Bahdanau, Cho & Bengio: let the decoder state
 *query* all encoder states, one fresh summary per output token —
 "jointly learning to align and translate".
 
@@ -822,18 +803,18 @@ $$a(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + 
 
 @attention-scoring-from-alignment-to-attention
 
-- Dot products won on hardware: one matmul vs. an $n \times m \times h$
-  tensor of activations. Learned projections + dot product give the metric
-  back — exactly the Transformer's form.
+- Dot products are efficient on current hardware: one matrix multiplication
+  instead of an $n \times m \times h$ tensor of activations. Learned
+  projections followed by a dot product give the metric
+  back, which gives the form used in the Transformer.
 :::
 
 ::: {.slide title="Recap"}
-- Scaled dot product is *the* scoring function:
+- Scaled dot product is the standard scoring function:
   $\mathbf{q}^\top\mathbf{k}/\sqrt{d}$ keeps score variance at 1, so the
-  softmax neither saturates nor starves its gradient — we measured both.
+  softmax avoids dimension-induced saturation and small score gradients.
 - Masking handles padding and causality with one primitive: overwrite
   invalid scores with the dtype's most negative finite value.
-- `DotProductAttention` = bmm → masked softmax → dropout → bmm.
-- Additive attention started it all, as learned soft alignment for
-  translation; it survives as history.
+- `DotProductAttention` uses BMM, masked softmax, dropout, and a second BMM.
+- Additive attention introduced learned soft alignment for translation.
 :::

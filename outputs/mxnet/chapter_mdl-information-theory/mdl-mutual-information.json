@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:b9626e4107dd55a15b5248b7686e536a1a99fd1329c3708692a658c5c3d495ad"
+          "sha256": "sha256:c37f0fd37ec0f29c58086c0d396aa0549ff12bdbf8eb1edb58269d7200cb393f"
         }
       ]
     },
@@ -71,12 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample correlation rho = -0.0028\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "binned MI estimate     = 0.9814 nats\nafter x -> 2x + 3      = 0.9814 nats\n"
+          "text": "sample correlation rho = -0.0028\nbinned MI estimate     = 0.9814 nats\nafter x -> 2x + 3      = 0.9814 nats\n"
         }
       ]
     },
@@ -136,7 +131,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:052e2ead3eb01a196867b210ccbae091fbec128237073c9ba3b059cc747dcd7a"
+          "sha256": "sha256:2c93f459112bd23785fd8eeb311fbc1d6b1b8f18272bc098564e46e2fc6bb89e"
         }
       ]
     },
@@ -147,17 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
+          "text": "  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
         }
       ]
     },
@@ -168,7 +158,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[14:01:17] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[22:57:18] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -194,30 +184,25 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta =  1.0: I(X;Z) = 0.000, I(Y;Z) = 0.000 nats\nbeta =  1.5: I(X;Z) = 0.382, I(Y;Z) = 0.284 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "beta =  2.0: I(X;Z) = 0.731, I(Y;Z) = 0.487 nats\nbeta =  4.0: I(X;Z) = 1.283, I(Y;Z) = 0.689 nats\nbeta = 16.0: I(X;Z) = 2.080, I(Y;Z) = 0.798 nats\n"
+          "text": "beta =  1.0: I(X;Z) = 0.000, I(Y;Z) = 0.000 nats\nbeta =  1.5: I(X;Z) = 0.382, I(Y;Z) = 0.284 nats\nbeta =  2.0: I(X;Z) = 0.731, I(Y;Z) = 0.487 nats\nbeta =  4.0: I(X;Z) = 1.283, I(Y;Z) = 0.689 nats\nbeta = 16.0: I(X;Z) = 2.080, I(Y;Z) = 0.798 nats\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:f88210353ef7f2eee6ea0434da51b6d2ceb814c20c041ea68653008fa569960e"
+          "sha256": "sha256:329d8e2470f1961266e837b596ba2fced67df86f5a195c5cd62355a4a8ec62b9"
         }
       ]
     },
     "mutual-information-fano": {
-      "code_fingerprint": "sha256:d24d464b179df763b3ed5b285315579effd6038474acedd85bc46bb6ee6825bd",
+      "code_fingerprint": "sha256:2e895451c3f2def5308616357deda0da91df874fe4785da1133e70fdcba79821",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "5% error on 1000 balanced classes needs I(X;Y) >= 6.364 nats\ncertifying that much MI needs N > e^I = 581 samples\n"
+          "text": "5% error on 1000 balanced classes needs I(X;Y) >= 6.364 nats\nInfoNCE can reach that value only if N >= e^I = 581\n"
         }
       ]
     }

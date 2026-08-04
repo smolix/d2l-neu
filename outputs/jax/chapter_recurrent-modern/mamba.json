@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:af1db91f3d19b40287c5ddbcff2f9be5e66532ea1f49cfad081cbbeae5ac7233",
+    "d2l_lib_fingerprint": "sha256:bb8562436e7226730eb4bb92dca21edbfeaca9d0bcad6fc5d4c3a91a42e94a8d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D: final validation accuracy 0.658\n"
+          "text": "S4D: final validation accuracy 0.631\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-3-1.svg",
-          "bytes": 21291,
-          "sha256": "sha256:3ce9d33de1b214e20ef2fdfa70af47cd22b9ff9719246063347aa07f9ca276c9"
+          "bytes": 21293,
+          "sha256": "sha256:f324c33f8c9dc88a0a0d2077a5c55d14a6d0ac103382461cc9b41170a9f6d4c3"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM: final validation accuracy 0.994\n"
+          "text": "LSTM: final validation accuracy 0.903\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-4-1.svg",
-          "bytes": 21870,
-          "sha256": "sha256:f74a6b7234aa145e194ebc412530ca3af751769cf232936d3c70ebf8ef64f6b2"
+          "bytes": 21316,
+          "sha256": "sha256:e40ed8fc8f57195d61b27736aa0c81ae55f0f8be85cd6dc394b3a1d21a998879"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-5-1.svg",
-          "bytes": 27637,
-          "sha256": "sha256:e4b13e1dcf55c4986ba9942d8fb0c308fa7b6cb0541eea9c0aed5b621dac57b6"
+          "bytes": 26908,
+          "sha256": "sha256:d6b3b5dadf43549281f4c48927d64004ae18e528daf517f24a7b931e4078b5bc"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-3-1.svg",
-          "bytes": 18945,
-          "sha256": "sha256:5a6d0277d11008f588ac2d587a9e40e0e8dd814782b0974bcea1858aa7b07747"
+          "bytes": 18952,
+          "sha256": "sha256:80ac777fb999fa05e622c8694d461988909c697052b339c86766af5de62098d0"
         }
       ]
     },
@@ -134,8 +134,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-4-1.svg",
-          "bytes": 18564,
-          "sha256": "sha256:a294ca9ae78c905d3ac56b81e1e43e8d7c395e2f239d401124e49b6f4ba8185f"
+          "bytes": 18571,
+          "sha256": "sha256:e508589cd75f1f4f36b899a9a0deeb5b322e3677e581a915a4901afa7da9f69c"
         }
       ]
     },
@@ -147,8 +147,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-5-1.svg",
-          "bytes": 20830,
-          "sha256": "sha256:0dc74d3987d278ed85f9195d390fad9127639df46f5cfeedfaf7b46e75ebc8ac"
+          "bytes": 20825,
+          "sha256": "sha256:daa74b7d98911f7e0942df5867d2687828454c49087bcb8b0c624b80c8d19dde"
         }
       ]
     },
@@ -159,7 +159,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     90.7   2.34   297,027      1.5\n minGRU     85.3   2.31   214,851      1.0\n  Mamba     88.9   2.33   488,739      2.5\n"
+          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     91.4   2.34   297,027      1.7\n minGRU     85.7   2.31   214,851      1.0\n  Mamba     88.6   2.33   488,739      2.8\n"
         }
       ]
     },
@@ -175,72 +175,72 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stepped vs scanned logits: deviation 4.77e-06, relative 4.38e-07\n"
+          "text": "stepped vs scanned logits: deviation 4.29e-06, relative 4.02e-07\n"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-7": {
-      "code_fingerprint": "sha256:f7203a3be2edc485fde14f5dcb5207fa5c1c8d16d739c113de42b3b8dc30ff1c",
+      "code_fingerprint": "sha256:faadd3dfcc9c47df952f828a3979d549b6255b4d1fd7bad565e422dbd5dc48e7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   LSTM: 'the time traveller. I had a clighted, and soft,\\nand resence of the world, and it was in'\n"
+          "text": "   LSTM: 'the time traveller. I had\\nconanted to fue. And the same\\nwas\n    circumstant, as'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " minGRU: \"the time travellering, and the ending of the haility of the Time Machine, and then the Psychologist. I'\\nf\"\n"
+          "text": " minGRU: \"the time traveller,\\nand a moment\\nI dw up down the three-\n    down.\\n\\n'I must have\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  Mamba: 'the time traveller, I was slored and fruit of the delicate entands of the sphinx.'\n"
+          "text": "  Mamba: 'the time traveller, I was not know. One of a\\nmind, but the\n    weather-world people as\\nthis'\n"
         }
       ]
     },
     "mamba-selective-copying-revisited-1": {
-      "code_fingerprint": "sha256:9d496546457acc48c1214cb0611098a19de3b7c5f8c703f7c2d86566a27c05c2",
+      "code_fingerprint": "sha256:478e1caefd97da2723ea0190b2283d70bb2074224e0398ca2a57a6789e20f294",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba: final validation accuracy 0.998\n"
+          "text": "Mamba: final validation accuracy 1.000\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-1-1.svg",
-          "bytes": 21897,
-          "sha256": "sha256:4c990903c4bbd6223ddea95a93fcbed512f56a0db3924d1aa7286b1a826d6b39"
+          "bytes": 21890,
+          "sha256": "sha256:b47a3fe9a82905217cfac77847cbd7bd51673fbce41ab1ee5f3603a067041d6e"
         }
       ]
     },
     "mamba-selective-copying-revisited-2": {
-      "code_fingerprint": "sha256:3bfc2dcdf1d3fdca9bbcadab94232bbb6fea90cd259e8a2539996e66b13cba52",
+      "code_fingerprint": "sha256:4842ea6a4afd08833b0f12dede5373582250cbd9f6587f4395cbf58b29c5b8ee",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-2-1.svg",
-          "bytes": 30478,
-          "sha256": "sha256:174b07f6b4aff70eaa1effefa94138745c7b50e8da5791bc185d0b455ba5dc85"
+          "bytes": 30431,
+          "sha256": "sha256:37e7291ace8ba584cbf552a8fc134a74351038e401861420cad6934f75414f02"
         }
       ]
     },
     "mamba-selective-copying-revisited-3": {
-      "code_fingerprint": "sha256:7e1983f17b300b85f4adf369d333f67e34abde7289f7a6de28f27aa2e3196fca",
+      "code_fingerprint": "sha256:8e39483047ef5b1b3b3a570acc67c6f28097cef1701397a9d96d5416926f8e36",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-3-1.svg",
-          "bytes": 34907,
-          "sha256": "sha256:eb0a9664c78f37528476cf3aca2cf8020557001b880e019634e2ea73ab81c2b6"
+          "bytes": 35672,
+          "sha256": "sha256:d1d900918a64a89f43a218d7dbc9584976f0ec0e990b25b74095dffb81e6c446"
         }
       ]
     }

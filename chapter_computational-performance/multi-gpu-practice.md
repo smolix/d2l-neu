@@ -1,22 +1,19 @@
 # Multi-GPU in Practice
 :label:`sec_multi_gpu_concise`
 
-The hand-rolled loop of :numref:`sec_multi_gpu` taught the mechanism and
-then lost the race: on a tiny model over a host-staged wire, the second
-GPU made things slower. Two things were wrong, and only one was the
-hardware. This section fixes the other — the *software* — by replacing our
-loop with the production machinery, and in doing so meets the chapter's
-sharpest framework contrast: PyTorch makes you launch processes and the
-collectives are explicit; JAX runs in one process and you merely *annotate
-the layout*, letting the compiler write the collectives for you. We
-measure real scaling on 2–4 GPUs, sketch how the same ideas shard a model
-too big to replicate (FSDP), and stop at the edge of the single node.
+The hand-written loop of :numref:`sec_multi_gpu` was slower on two GPUs
+because the model underutilized each device and the implementation lacked
+production communication mechanisms. This section replaces that loop with
+standard data-parallel training. PyTorch launches one process per device and
+uses explicit collectives; JAX runs one process and derives collectives from
+array-layout annotations. We measure scaling on two to four GPUs, introduce
+fully sharded data parallelism, and remain within a single node.
 
 *Prerequisites: the from-scratch data-parallel loop, the ring-allreduce
 identity, and the cost model of* :numref:`sec_multi_gpu`*; the memory
 anatomy of* :numref:`sec_memory_precision`*. The multi-process idiom below
-was verified to run under this book's notebook build; why this box's
-fabric is slow is the topology story of* :numref:`subsec_hw-interconnects`*,
+was verified to run under this book's notebook build; the reason this machine's
+fabric is slow follows from its topology in* :numref:`subsec_hw-interconnects`*,
 and what a collective costs on it is* :numref:`sec_multi_gpu`*'s
 measurement.*
 
@@ -56,7 +53,7 @@ import time
 os.environ.setdefault('NCCL_LOCAL_REGISTER', '0')
 ```
 
-## What Our Hand-Rolled Loop Lacked
+## Limitations of the Hand-Written Loop
 :label:`subsec_mgp-lacked`
 
 Our :numref:`sec_multi_gpu` implementation had three deficits, and modern
@@ -70,7 +67,7 @@ data parallelism repairs each.
 * **One Python process.** A single interpreter drove all $k$ GPUs, so one
   GIL-bound thread dispatched every kernel — the overhead regime of
   :numref:`sec_perf_model`, multiplied by $k$.
-* **A star topology.** Our `allreduce` funneled everything through device
+* **A star topology.** Our `allreduce` routed every transfer through device
   0; :numref:`subsec_mg-ring` showed the ring moves a constant per device
   instead.
 
@@ -89,7 +86,7 @@ bucket's allreduce overlap the rest of the backward pass, instead of
 waiting for all of it.](../img/mdl-perf-ddp-overlap.svg)
 :label:`fig_ddp_overlap`
 
-## DDP, Really Run
+## Distributed Data Parallel
 :label:`subsec_mgp-ddp`
 
 DDP needs multiple processes, and a notebook is one process — so we launch
@@ -165,11 +162,10 @@ class ResNet18(nnx.Module):
 The DDP training script, written to disk from a cell. The two lines that
 make training data-parallel are `init_process_group("nccl")` once per
 process and the `DDP(model)` wrap — after those, *the loop body is
-unchanged from single-GPU*. The rest is the launcher's housekeeping, shown
-in full so none of it is magic: a rank-local device, a
+unchanged from single-GPU*. The remaining code implements the launcher's
+required process setup: a rank-local device, a
 `DistributedSampler` that hands each rank a disjoint shard of the data
-(re-shuffled per epoch by `set_epoch`), and process-group teardown. One
-practicality earns its own line: the parent notebook downloads
+(re-shuffled per epoch by `set_epoch`), and process-group teardown. The parent notebook downloads
 Fashion-MNIST once, quietly, *before* any rank exists, so the ranks never
 race on the download:
 
@@ -350,18 +346,17 @@ if d2l.num_gpus() >= 2:
           f"(synced {comm['synced_ms']:.0f}, no_sync {comm['no_sync_ms']:.0f})")
 ```
 
-Prediction and measurement land within tens of percent of each other, and
-**that agreement is the result**: a scaling curve you can price before you
-buy, not a marketing "N× faster" claim — and it holds at two GPUs as
-clearly as at four. One line on what a datacenter box changes: an NVLink
+Prediction and measurement are within tens of percent in this setup. This
+agreement supports using :eqref:`eq_dp_cost` for the tested message sizes
+and topology; it is not a hardware-independent scaling guarantee. An NVLink
 fabric shrinks $t_{\text{comm}}$ by roughly two orders of magnitude
 (:numref:`tab_gpu_specs`), so the same accounting predicts near-linear
 scaling — same model, different constant. (The legacy `nn.DataParallel` is
 single-process and GIL-bound; use DDP even on one node, as PyTorch's own
 docs advise.)
 
-One loose end from :numref:`sec_multi_gpu` deserves to be closed by
-measurement rather than left as an assertion. The diagnosis there was
+The following measurement tests one diagnosis from
+:numref:`sec_multi_gpu`:
 that NCCL's P2P-less fallback moves bytes with a latency-bound GPU-kernel
 copy — in effect a performance bug in how the library's default transport
 interacts with this particular platform — and that one documented switch,
@@ -411,42 +406,43 @@ if d2l.num_gpus() >= 2:
           f'({fast / slow:.1f}x)')
 ```
 
-Roughly five-fold, from configuration alone. First the general lesson: a
-collective library's configuration — which transport it picks, what
-topology it assumes — can move communication performance by *factors*,
-not percent, so measure yours against what the wire demonstrably carries
+This configuration changes effective bandwidth by roughly a factor of five.
+The collective transport and its assumed topology can therefore change
+communication performance substantially, so measure
+yours against what the wire demonstrably carries
 (:numref:`sec_multi_gpu`'s raw copy) before trusting it. Then the
 specific one, which is why every training run above still uses the
-library's defaults: this workaround wins the microbenchmark and loses
-the workload. On our box, with this NCCL build, the copy-engine mode
+library's defaults: this workaround improves the microbenchmark but deadlocks
+the training workload. On our box, with this NCCL build, the copy-engine mode
 deadlocks DDP's overlapped training path within seconds — the very
 collectives that just ran flawlessly in isolation wedge inside the
 training loop — so adopting it here would trade a five-fold bandwidth
-win for a hung notebook. An escape hatch is platform-specific twice over:
-whether you need it, and whether it survives your workload, are both
-measurements (the exercises have you reproduce both halves). The cost
-model is indifferent either way — :eqref:`eq_dp_cost` simply takes
-whatever $\beta$ your fabric, as configured, sustains.
+win for a hung notebook. The workaround is specific to both the platform and the workload:
+measure whether it is needed and whether training remains reliable (the
+exercises reproduce both cases). Equation
+:eqref:`eq_dp_cost` uses the measured $\beta$ of the configured
+fabric in either case.
 
-## Sharding the Redundant: the FSDP Idea
+## Fully Sharded Data Parallelism
 :label:`subsec_mgp-fsdp`
 
-DDP replicates *everything* on every rank: $k$ identical copies of the
-parameters, the gradients, and the optimizer states. For the $16P$-byte
-training footprint of :numref:`sec_memory_precision`, that is $k-1$ copies
-of everything, wasted — and it caps the model size at what one GPU holds,
+DDP replicates the parameters, gradients, and optimizer states on every
+rank. For the $16P$-byte
+training footprint of :numref:`sec_memory_precision`, this creates $k-1$
+redundant copies and limits the model to the capacity of
+one GPU,
 the limitation :numref:`sec_multi_gpu` flagged. **Fully Sharded Data
 Parallel** (FSDP) removes the redundancy by *sharding* those tensors across
 ranks, each rank owning $1/k$ of each, and materializing a full layer only
 for the moment it is needed :cite:`Zhao.Gu.Varma.ea.2023`. The idea is the
-ZeRO ladder :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`: shard the
+ZeRO sequence :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`: shard the
 optimizer states first (they are the biggest, $8P$), then the gradients,
-then the parameters — each rung cutting memory toward $1/k$ at the cost of
-more communication.
+then the parameters. Each stage reduces replicated memory toward $1/k$ while
+introducing additional communication.
 
-The mechanism is the :numref:`sec_multi_gpu` identity, cashed in. Recall
-that allreduce = reduce-scatter + all-gather. FSDP simply *keeps the two
-halves separate*: an **all-gather** reconstructs a layer's full parameters
+The mechanism follows the collective identity in :numref:`sec_multi_gpu`.
+Allreduce equals reduce-scatter followed by all-gather. FSDP keeps these two
+phases separate: an **all-gather** reconstructs a layer's full parameters
 just before it computes, and frees them just after; a **reduce-scatter**
 sums each layer's gradients but leaves each rank holding only its own
 shard (:numref:`fig_fsdp_lifecycle`). No tensor's full replica ever lives
@@ -459,8 +455,8 @@ it; a reduce-scatter leaves each rank with its gradient
 shard.](../img/mdl-perf-fsdp-lifecycle.svg)
 :label:`fig_fsdp_lifecycle`
 
-That completes the small family of collectives this chapter needs — worth
-one table, since the rest of the book will name them without ceremony:
+The following table summarizes the collectives used in the remainder of
+the book:
 
 :The collective operations behind data-parallel and sharded training.
 :label:`tab_collectives`
@@ -472,10 +468,10 @@ one table, since the rest of the book will name them without ceremony:
 | all-gather | every shard, concatenated | FSDP parameters, just-in-time |
 | all-to-all | a different shard from each peer | expert parallelism (:numref:`sec_training_systems`) |
 
-FSDP's payoff — fitting a model that does not fit — is invisible on our
-11.2M-parameter demo, which occupies a few hundred MB of a 24 GB card, so
-we show the *shape* of the code rather than run it. The modern API is
-`fully_shard` over a `DeviceMesh`; the original `FullyShardedDataParallel`
+FSDP is useful when replicated training state does not fit on one device.
+That benefit is not measurable on our 11.2M-parameter demo, which occupies a few hundred MB of
+a 24 GB card, so we show the *shape* of the code rather than run it. The
+modern API is `fully_shard` over a `DeviceMesh`; the original `FullyShardedDataParallel`
 wrapper class still imports at our pin, but it is the deprecated legacy
 path:
 
@@ -499,21 +495,20 @@ print('FSDP sketch: reach for it past a few billion parameters, '
 print('JAX shards by annotation; the next subsection is the demo')
 ```
 
-You reach for FSDP when the training state at your precision — the
-parameters, gradients, and optimizer states of
-:numref:`sec_memory_precision`'s anatomy, plus activations — no longer
-fits on one GPU, or when that redundancy is worth trading away for
-communication; for this card class the threshold arrives at a few billion
-parameters. The production distributed-training map, and how to combine
-FSDP with the other parallelism axes, lives in
-:numref:`sec_training_systems`.
+You reach for FSDP when the training state at your precision no longer
+fits on one GPU — the parameters, gradients, and optimizer states of
+:numref:`sec_memory_precision`'s anatomy, plus activations — or when that
+redundancy is worth trading away for communication; for this card class
+the threshold arrives at a few billion parameters. The production
+distributed-training map, and how to combine FSDP with the other
+parallelism axes, lives in :numref:`sec_training_systems`.
 
-## JAX: Annotate the Layout, the Compiler Writes the Collectives
+## Declarative Sharding in JAX
 :label:`subsec_mgp-jax`
 
-Everything above was PyTorch's world: multiple processes, explicit
-collectives, a launcher. JAX offers a different deal, and it is the
-chapter's cleanest framework contrast. One process sees all the GPUs
+The PyTorch implementation uses multiple processes, explicit collectives,
+and a launcher. JAX instead expresses sharding in one process over all
+available GPUs. One process sees all the GPUs
 (:numref:`subsec_hw-interconnects`); you describe *how the data is laid out*
 across them with a `Mesh` and a `NamedSharding`, `device_put` the arrays
 onto that layout — parameters replicated (`P()`), the batch sharded along
@@ -550,9 +545,9 @@ def train_step(model, opt, X, y):
     return loss
 ```
 
-Now run it — a real `ResNet18`, a real optimizer, a real Fashion-MNIST
-batch (resized once to 64×64 and kept as host arrays). The reveal is
-`visualize_array_sharding`, which draws where a tensor actually lives: the
+We run the example with `ResNet18`, an optimizer, and a Fashion-MNIST batch
+resized once to 64×64 and retained as host arrays.
+`visualize_array_sharding` displays where each tensor resides: the
 batch split across the mesh before the step, and a weight *after* the step
 still replicated everywhere — the compiler's allreduce is what kept every
 copy identical:
@@ -600,8 +595,9 @@ sums, much as DDP buckets); the many small ones are batch-norm statistics,
 because under `jit` even normalization is computed over the *global*
 batch — the compiler preserves single-device semantics exactly, where DDP
 leaves each replica its own batch-norm statistics unless you ask for
-`SyncBatchNorm`. (The exact count is a compiler artifact; the two big ones
-are the point.)
+`SyncBatchNorm`. (The exact count depends on compilation; the two largest
+collectives
+dominate communication.)
 
 Measured, under the same weak-scaling convention as the DDP sweep
 (per-device batch 256) — one process, no launcher, no sidecar files:
@@ -640,7 +636,7 @@ grows, no cliff — with one instructive difference: the compiled XLA step
 is faster per device, so the same allreduce is a *larger fraction* of each
 step and the efficiency reads a few points lower (82% already at two GPUs
 in our runs). That is :eqref:`eq_dp_cost` again: speed up the compute and
-the fabric gets *relatively* slower. And note what these numbers are not:
+the fabric gets *relatively* slower. These measurements are not
 this loop feeds pre-staged host arrays while the DDP script pays a real
 `DataLoader`, so the absolute samples/s are not a framework shoot-out —
 the scaling curve is the comparison.
@@ -675,19 +671,19 @@ $10^{-2}$ — not the $10^{-9}$ of :numref:`sec_multi_gpu`'s LeNet check,
 and the gap is itself informative: these are two *different compiled
 programs*, whose tf32 convolutions and batch-norm reductions associate
 their arithmetic differently, so the residue is rounding. What the check
-exists to catch — a summed-instead-of-averaged gradient, an accidental
-$k\times$ learning rate — would announce itself at the scale of the update
-itself.
+exists to catch would announce itself at the scale of the update itself:
+a summed-instead-of-averaged gradient, an accidental $k\times$ learning
+rate.
 
-And here is the punchline. To move between *data* parallelism, *tensor*
+In JAX, moving between *data* parallelism, *tensor*
 parallelism, and *FSDP*-style sharding in JAX, you change the
 `PartitionSpec` — not the model code. Sharding the batch axis gives data
 parallelism (above); sharding a weight's feature axis gives tensor
 parallelism; sharding the parameters and letting XLA all-gather them
-just-in-time gives the FSDP pattern. **One sharding vocabulary — annotate
-the layout, the compiler writes the collectives — spans what PyTorch
-exposes as three different APIs** (DDP, tensor-parallel wrappers, FSDP) —
-though an effective sharding plan is still model-aware: someone has to
+just-in-time gives the FSDP pattern. **One sharding vocabulary spans what
+PyTorch exposes as three different APIs** (DDP, tensor-parallel wrappers,
+FSDP): annotate the layout, and the compiler writes the collectives. An
+effective sharding plan is still model-aware, though: someone has to
 choose the layouts and the constraint points. The manual end of the same
 spectrum is the `jax.shard_map` + `lax.psum` of :numref:`sec_multi_gpu`,
 where you write the collective yourself; `jit` + sharding is the
@@ -713,8 +709,8 @@ knowing the design space.
 ## When One Node Is Not Enough
 :label:`subsec_mgp-bridge`
 
-This chapter stops at the boundary of a single machine, and it is worth
-naming what lies past it. When a model is too large for even sharded data
+This chapter considers a single machine. Larger systems add further forms
+of parallelism. When a model is too large for even sharded data
 parallelism on one node — when the parameters, or the batch, or the
 sequence length outgrow what $k$ local GPUs can hold — the answer is to
 shard across *machines*, combining data parallelism with tensor, pipeline,
@@ -723,9 +719,10 @@ collectives then run over a network fabric measured in tens of GB/s
 between nodes rather than an NVLink domain within one, and the cost model
 of :numref:`sec_multi_gpu` acquires a second, slower bandwidth term. That
 is the province of the Language Models part, which has models and datasets
-large enough to warrant it; the production library map — Megatron, the
-FSDP/DTensor stack, DeepSpeed, and how to launch and checkpoint them across
-a cluster — is :numref:`sec_training_systems`. From here the communication
+large enough to warrant it; the production library map is
+:numref:`sec_training_systems` — Megatron, the FSDP/DTensor stack,
+DeepSpeed, and how to launch and checkpoint them across a cluster. From
+here the communication
 *algebra* stays the same; what multi-node adds is engineering on top of
 it — a hierarchy of fabrics (NVLink inside a node, a network between
 nodes), rendezvous and elastic restart when machines fail, and stragglers
@@ -750,8 +747,8 @@ that turn a synchronous step into a queueing problem.
   library's defaults and teach the pair of measurements instead.
   Collective-library configuration moves communication by factors, not
   percent; a workaround is validated per platform *and* per workload.
-* FSDP shards the $16P$-byte training state across ranks — the ZeRO ladder
-  — by splitting allreduce back into its reduce-scatter and all-gather
+* FSDP shards the $16P$-byte training state across ranks in successive ZeRO
+  stages by splitting allreduce back into its reduce-scatter and all-gather
   halves and materializing each layer just-in-time. It is for models whose
   training state outgrows one GPU — a few billion parameters on this card
   class.
@@ -775,7 +772,7 @@ that turn a synchronous step into a queueing problem.
    :eqref:`eq_ring_traffic`'s $2(k-1)/k$ growth and the flat $2N/\beta$
    of :eqref:`eq_dp_cost` — which fits better, and what does that tell
    you about how NCCL schedules the transfer on this P2P-less box?
-1. Reproduce both halves of the fabric-configuration story. First extend
+1. Reproduce both fabric-configuration behaviors. First extend
    the bare-collective comparison across payloads from 1 MB to 256 MB:
    where does each transport's effective bandwidth saturate, and does
    the five-fold gap persist? Then set `NCCL_SHM_USE_CUDA_MEMCPY=1`
@@ -799,7 +796,7 @@ that turn a synchronous step into a queueing problem.
 
 <!-- slides -->
 
-::: {.slide title="What the Hand-Rolled Loop Lacked"}
+::: {.slide title="Limitations of the Hand-Written Loop"}
 Three deficits, all software:
 
 - **no overlap** — communicate only after the whole backward
@@ -817,7 +814,7 @@ Gradients arrive back-to-front; bucket them and allreduce each
 as it fills, hiding communication under compute.
 :::
 
-::: {.slide title="DDP, Really Run"}
+::: {.slide title="Distributed Data Parallel"}
 Multiple processes from a notebook: write a sidecar script,
 launch with `torchrun`, read back per-rank results.
 
@@ -838,7 +835,7 @@ Strong scaling (global batch 512, split thinner) parts company
 as $k$ grows. NVLink changes only the constant.
 :::
 
-::: {.slide title="Price the Fabric, Then Check the Bill"}
+::: {.slide title="Predicted and Measured Communication Cost"}
 `no_sync()` turns gradient sync off ⇒ synced − unsynced steps
 estimate the communication time.
 
@@ -866,8 +863,8 @@ workload — measure the workload, not just the wire.
 
 DDP replicates the whole $16P$-byte state $k$ times. FSDP
 shards it: allreduce = reduce-scatter + all-gather, kept
-*separate* — gather a layer just-in-time, free it after. The
-§13.5 identity, cashed in.
+*separate*: gather a layer just in time and free it afterward. This applies
+the identity derived in §13.5.
 :::
 
 ::: {.slide title="JAX: Annotate the Layout"}
@@ -881,7 +878,7 @@ Batch sharded, weights replicated — and still replicated
 identical.
 :::
 
-::: {.slide title="The Receipt"}
+::: {.slide title="Measured JAX Scaling"}
 Nobody wrote a collective — so find it in the compiled program:
 
 @multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3@jax

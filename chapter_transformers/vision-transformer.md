@@ -1,35 +1,30 @@
 # Vision Transformer
 :label:`sec_vision-transformer`
 
-Everything this chapter has built so far consumed text. Yet nothing in the
-transformer block *asks* what its tokens are: attention mixes vectors, the
-feed-forward network transforms them, and neither cares whether those vectors
-started life as subwords. This section makes the point concrete by feeding the
-block pieces of an image.
+The transformer models considered so far operate on text, but their blocks
+process vectors without assuming that they represent words. This section
+applies the same blocks to vectors obtained from image patches.
 
-For years the presumed answer to "transformers for vision?" was that images
-are different. CNNs (:numref:`chap_modern_cnn`) owned computer vision, and
-their structural commitments, locality and translation equivariance
-(:numref:`sec_why-conv`), looked like exactly what images demand. Early
-attempts kept those commitments: :citet:`ramachandran2019stand` replaced
-convolutions with local self-attention, whose specialized attention patterns
-were hard to run fast on accelerators, and :citet:`cordonnier2020relationship`
-proved that self-attention *can* learn to behave like convolution,
-demonstrating it with $2 \times 2$ patches too small for realistic images.
+Convolutional networks encode locality and translation equivariance
+(:numref:`sec_why-conv`), whereas a plain transformer block does not. Early
+attention-based vision models retained local structure:
+:citet:`ramachandran2019stand` used local self-attention, and
+:citet:`cordonnier2020relationship` analyzed conditions under which
+self-attention can express convolutional operations.
 The *vision transformer* (ViT) of :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`
-dropped the caution: cut the image into $16 \times 16$ patches, embed each
-patch as a token, and run an unmodified transformer encoder over the
-resulting sequence. Trained on enough images (300 million of them), it beat
-the best CNNs of the day.
+divides an image into $16 \times 16$ patches, embeds each patch as a token,
+and applies an unmodified transformer encoder to the resulting sequence. In
+the ViT paper's JFT-300M pretraining and downstream fine-tuning protocol, the
+largest reported ViT variants exceeded the cited convolutional baselines on
+several classification benchmarks. That comparison changes data, model size,
+compute, augmentation, and pretraining together; it does not isolate data
+scale as the cause.
 
-We build that model here and train it on Fashion-MNIST, where the headline
-result is that it *loses* to a CNN of the same parameter count. The loss is
-the lesson: a convolutional network gets locality and translation
-equivariance by construction, while a transformer must learn them from data,
-and 60,000 images are not enough to close the gap that 300 million close
-easily. Along the way we open the trained model and check whether it has
-started learning what it was never told — that its 36 tokens came from a
-$6 \times 6$ grid.
+We build this model and train it on Fashion-MNIST, then compare it with a CNN
+at the same parameter count and training budget. The CNN performs better in
+this protocol. Its architectural priors are one plausible contributor, but
+the comparison does not isolate their causal effect. We also inspect whether
+the learned position embeddings reflect the $6 \times 6$ patch grid.
 
 ```{.python .input #vision-transformer}
 %%tab pytorch
@@ -150,25 +145,24 @@ d2l.check_shape(patch_emb(X),
                 (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
 
-This is the entire interface between vision and the transformer. Everything
-that follows treats the patch vectors exactly as the rest of this chapter
-treats token embeddings.
+This patch projection is the interface between the image and the transformer.
+Subsequent blocks process the patch vectors in the same form as token
+embeddings.
 
 ## The Vision Transformer Block
 
 The body of the model is the transformer block of
 :numref:`sec_transformer-block` in its pre-norm configuration: normalization
 sits on each branch, right before multi-head attention and before the MLP,
-and the residual stream runs uninterrupted. ViT adopted this arrangement just
-as its training advantages were being established
-:cite:`baevski2018adaptive,wang2019learning,xiong2020layer`, and its success
-helped make pre-norm the default it is today.
+and the residual stream runs uninterrupted. ViT adopted this arrangement
+as analyses began to establish its training advantages :cite:`baevski2018adaptive,wang2019learning,xiong2020layer`.
+Pre-norm subsequently became common in transformer architectures.
 
 Two details are specific to the vision variant. The MLP uses the Gaussian
 error linear unit (GELU), a smooth relative of ReLU
 :cite:`Hendrycks.Gimpel.2016`, and applies dropout after each of its two
-linear layers — at ViT scale, unlike at LLM scale, regularization earns its
-keep. And because every patch is a valid token that may look at every other,
+linear layers. Dropout is retained in the ViT training recipe, unlike in
+many large language-model recipes. And because every patch is a valid token that may look at every other,
 the block needs no mask: the `valid_lens` argument of the
 `d2l.MultiHeadAttention` from :numref:`sec_multihead-attention` stays
 `None` throughout this section.
@@ -216,8 +210,8 @@ class ViTBlock(nnx.Module):  #@save
         return X + self.mlp(self.ln2(X))
 ```
 
-As with every transformer block, the output shape equals the input shape, so
-blocks stack without further ceremony.
+As with every transformer block, the output shape equals the input shape,
+so the blocks can be stacked directly.
 
 ```{.python .input #vision-transformer-the-vision-transformer-block-2}
 %%tab pytorch
@@ -237,22 +231,23 @@ d2l.check_shape(nnx.view(encoder_blk, deterministic=True)(X), X.shape)
 ## The Full Model
 
 Assembling the pieces takes one class. Input images pass through a
-`PatchEmbedding` instance; the “&lt;cls&gt;” token embedding, a learnable
-parameter initialized to zeros, is prepended to the resulting sequence. The
+`PatchEmbedding` instance; a learnable “&lt;cls&gt;” token embedding,
+initialized to zeros, is prepended to the resulting sequence. The
 sum with the positional embeddings goes through dropout, then through
 `num_blks` stacked `ViTBlock` instances, and finally the head projects the
 “&lt;cls&gt;” token's representation to the class logits.
 
-The positional embeddings deserve a pause. The sinusoidal and rotary
+The positional embeddings must represent a two-dimensional grid. The
+sinusoidal and rotary
 constructions of :numref:`sec_positional-information` encode positions along
 a line, but a patch has a row *and* a column, and it is not obvious what a
 hand-designed two-dimensional code should look like. ViT sidesteps the
 question: the position embeddings are a freely learnable parameter,
 initialized to small Gaussian noise as in the original recipe, one vector
-per sequence position. At
-initialization, the model therefore has no idea that patch 7 sits directly
-left of patch 8 and directly above patch 13 — as far as it is concerned the
-patches are an unordered set of vectors. Whatever spatial structure the
+per sequence position. At initialization, the model therefore does not
+encode that patch 7 lies
+directly left of patch 8 and directly above patch 13; the patches enter as
+an unordered set of vectors. Whatever spatial structure the
 trained model uses, it must discover during training. We will check how far
 it gets.
 
@@ -413,18 +408,19 @@ d2l.show_heatmaps(sim.reshape(6, 6, 6, 6), xlabel='', ylabel='',
 ```
 
 Each map's darkest cell is its own position, which is mere self-similarity;
-the question is what surrounds it. The answer, after ten epochs, is: the
-first faint traces of the grid and no more. The printed statistic makes it
+the surrounding similarities determine whether spatial structure has
+emerged. After ten epochs, they show only weak traces of the grid. The
+printed statistic makes it
 precise: averaged over positions, immediate grid neighbors score slightly
 positive cosine similarity while distant positions score slightly negative,
 and several maps show a diffuse halo around their own cell or a weak band
 along their own column — but the values are small and the pattern is easy
 to miss without the summary statistics. Compare this with the crisp
 row-and-column structure that emerges in fully trained ViTs, and the state
-of our model is clear: the geometry it was never told is beginning to show
-in its embeddings, and at this scale of data and training it has not
-gotten far. Keep that in mind as we turn to an architecture that does not
-need to learn the geometry at all.
+of our model is clear: the embeddings contain weak evidence of the spatial
+geometry that was not
+encoded at initialization. The next comparison uses an architecture that
+encodes this geometry directly.
 
 ### A Convolutional Baseline at the Same Budget
 
@@ -503,52 +499,45 @@ print(f'ViT: {vit_params/1e6:.1f}M parameters, '
       f'validation accuracy {vit_acc:.2f}')
 ```
 
-Same parameter count, same data, same number of epochs — and the CNN wins
-by several points, about 90–92% against the ViT's 86–87%, a margin well
-beyond the run-to-run noise of these ten-epoch runs. The gap is what the
-convolutional prior is worth at this scale. Locality and translation
+At the same parameter count, with the same data and number of epochs, the
+CNN performs better by several points, about 90–92% against the ViT's
+86–87%, a margin well beyond the run-to-run noise of these ten-epoch runs.
+The result is consistent with an advantage from the convolutional prior at
+this scale, although the comparison does not isolate that cause. Locality
+and translation
 equivariance are a strong prior the CNN has by construction; the
-transformer must buy the same facts with data, and we just watched how
-slowly that purchase proceeds: after ten epochs its position embeddings
-have barely begun to encode the grid. Nothing here says transformers are
-worse at vision. It says that *at 60,000 images* the architecture with
-the stronger prior wins,
-and it sets the stakes for the discussion below, where the data budget
-grows by four orders of magnitude and the verdict flips.
+transformer must infer both from data. After ten epochs, the position-embedding
+similarities show only weak grid structure. This experiment compares two
+models on Fashion-MNIST; it does not rank vision architectures generally. The
+discussion below considers published results under much larger pretraining
+protocols.
 
-## Summary and Discussion
+## Summary
 
-A vision transformer demonstrates, by construction, that the transformer
-block does not care what its tokens are: one strided convolution turns an
-image into a sequence, and everything downstream is the encoder stack this
-chapter already built. The block is the pre-norm, GELU configuration of
-:numref:`sec_transformer-block`; the only genuinely new parts are the patch
-embedding, the “&lt;cls&gt;” readout, and position embeddings learned from
-scratch.
+A vision transformer converts an image into a sequence with a strided
+convolution and processes the sequence with an encoder stack. Relative to the
+text model, the new components are the patch embedding, the “&lt;cls&gt;”
+readout, and learned position embeddings.
 
-The experiments carry the real content. At matched parameter count, data,
-and training budget, the CNN wins, and it wins because of what it does not
-have to learn: convolution builds in locality and translation equivariance
+At matched parameter count, data, and training budget, the CNN performs
+better because convolution builds in locality and translation equivariance
 (:numref:`sec_why-conv`), while the transformer must extract both from
-60,000 images. Scale flips the verdict. Trained on 300 million images, ViTs
-beat the best ResNets in image classification
-:cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`: given enough data, learned
-structure overtakes built-in structure, and the architecture with fewer
-commitments has more room to improve. The crossover does not even require
-new data — DeiT showed that aggressive augmentation and distillation make
-ViTs competitive on ImageNet-1k alone :cite:`touvron2021training`,
-manufacturing by transformation the invariances that convolution would have
-supplied by design. A complementary line, Swin transformers, reinstates
-convolution-like priors (local attention windows, hierarchical resolution)
-partly to escape the quadratic cost of global attention
+60,000 images. Large-scale published comparisons reach a different outcome.
+Under the JFT-300M pretraining, model-size, and fine-tuning protocol of
+:citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`, ViT variants exceed the cited
+ResNet-based baselines. This result reflects the complete protocol, not data
+scale alone. DeiT showed that augmentation and distillation can make ViTs
+competitive on ImageNet-1k without JFT pretraining
+:cite:`touvron2021training`. A complementary line, Swin transformers,
+reinstates convolution-like priors (local attention windows, hierarchical
+resolution) partly to escape the quadratic cost of global attention
 (:numref:`sec_attention-at-scale`) at high resolution :cite:`liu2021swin`.
 
-In the years since, the plain ViT, not its convolution-flavored variants,
-has become the standard vision backbone. Contrastively pretrained ViT
-encoders such as CLIP's :cite:`radford2021learning` supply the image side
-of most vision-language models, and detection and segmentation systems
-routinely sit on ViT features; the Image Models part (:numref:`chap_cv`)
-takes up these applications.
+Plain ViT encoders are used in several vision--language model families,
+including CLIP :cite:`radford2021learning`, while hierarchical transformers
+and convolutional backbones remain common in classification, detection, and
+segmentation. The appropriate backbone depends on the task, training protocol,
+and deployment constraints; :numref:`chap_cv` develops these applications.
 
 ## Exercises
 
@@ -584,10 +573,10 @@ Vision transformer<br>
 :::
 :::
 
-::: {.slide title="Images were CNN country"}
-[Nothing in the block asks what its tokens are]{.kicker}
+::: {.slide title="Convolutional Priors in Vision"}
+[A plain transformer block does not encode locality or translation equivariance]{.kicker}
 
-CNNs owned vision on the strength of two built-in commitments:
+CNNs encode two useful structural assumptions:
 **locality** and **translation equivariance**.
 
 Early hybrids kept them: specialized local self-attention (Ramachandran
@@ -596,9 +585,10 @@ self-attention *can* learn to act like convolution — with 2×2 patches.
 
 . . .
 
-**ViT** (Dosovitskiy et al., 2021) dropped the caution: 16×16 patches,
+**ViT** (Dosovitskiy et al., 2021) uses 16×16 patches,
 one embedding per patch, an unmodified transformer encoder.
-On 300M images it beat the best CNNs.
+Its JFT-300M comparison also changed model size, compute, augmentation, and
+pretraining, so it does not isolate a single causal factor.
 :::
 
 ::: {.slide title="Architecture"}
@@ -625,8 +615,8 @@ This is the *entire* interface between vision and the transformer.
 ::: {.slide title="The ViT block"}
 The pre-norm block of the chapter, with two vision-era details:
 **GELU** in the MLP and **dropout** after each of its linear layers —
-at this scale, regularization earns its keep. No mask: every patch
-attends to every patch.
+dropout follows the ViT training recipe. No mask is needed because every
+patch attends to every patch.
 
 @vision-transformer-the-vision-transformer-block-1
 :::
@@ -657,30 +647,30 @@ reshaped into the 6×6 grid — position $(i,j)$ shows its map at $(i,j)$:
 @!vision-transformer-do-the-position-embeddings-discover-the-grid
 :::
 
-::: {.slide title="The grid, barely"}
+::: {.slide title="Learned Position-Embedding Similarity"}
 - Fully trained ViTs show crisp row/column bands: 2-D structure inferred
   from data alone.
 - After ten epochs: neighbors a few hundredths positive, far positions
   slightly negative — a faint halo, a weak column band here and there.
 
 ::: {.d2l-note}
-The geometry the model was never told is *beginning* to show — and at
-this scale it has not gotten far.
+The embeddings contain weak row-and-column structure after this short
+training run.
 :::
 :::
 
 ::: {.slide title="A CNN at the same budget"}
-Same parameter count (ResNet-style, 7×7 stem + seven residual blocks),
-same data, same ten epochs:
+The ResNet-style baseline uses the same parameter count, data, and ten-epoch
+budget:
 
 @!vision-transformer-a-convolutional-baseline-at-the-same-budget-2
 :::
 
-::: {.slide title="The loss is the lesson"}
-- Everything the CNN knows by construction, the ViT must *learn from
-  data* — and 60,000 images do not cover it.
-- 300M images flip the verdict: learned structure overtakes built-in
-  structure (Dosovitskiy et al., 2021).
+::: {.slide title="Effect of the convolutional prior"}
+- The CNN includes locality and translation equivariance; the ViT must
+  learn these properties from data.
+- Under the ViT paper's JFT-300M protocol, ViT variants exceeded its cited
+  convolutional baselines; several factors changed together.
 - **DeiT**: augmentation + distillation manufacture the missing
   invariances on ImageNet-1k alone.
 - **Swin**: reinstate locality and hierarchy, escape quadratic attention
@@ -690,10 +680,10 @@ same data, same ten epochs:
 ::: {.slide title="Recap"}
 - ViT = strided-conv patchify → standard pre-norm encoder → classify
   from `<cls>`; the block is untouched, only the tokenization is new.
-- Learned position embeddings start as noise; the 2-D grid must be
-  *discovered*, and at small scale it barely is.
-- At matched parameters and data, the CNN's priors win; at large scale
-  the transformer's capacity wins.
-- Today the plain ViT is the standard vision backbone — CLIP-style
-  encoders, detection, segmentation, multimodal models.
+- Learned position embeddings start as noise; after this run their similarities
+  show only weak two-dimensional grid structure.
+- In this matched Fashion-MNIST run, the CNN performs better; the experiment
+  does not predict the ranking under other data and training protocols.
+- Plain ViTs, hierarchical transformers, and convolutional backbones all
+  remain in use; the choice depends on task and deployment constraints.
 :::

@@ -14,30 +14,30 @@
       "outputs": []
     },
     "autorec-implementing-the-model": {
-      "code_fingerprint": "sha256:b78a92891a14ad16118a54a854e611f4985e202f4b2e81514a4efb5e4e73271e",
+      "code_fingerprint": "sha256:e2a4cacecb3648f15eb36931e857061ca8d80590b9bdb643adf0bbda0c28069e",
       "kind": "text",
       "outputs": []
     },
     "autorec-reimplementing-the-evaluator": {
-      "code_fingerprint": "sha256:1bbe01589eec25781fcb47b26ea8232e2cd76ebd461f324b2d4199c1f363752b",
+      "code_fingerprint": "sha256:1f1726d33e62b229a5985592ce5fd925557c67104dcdca8e96d60c87088d8725",
       "kind": "text",
       "outputs": []
     },
     "autorec-training-and-evaluating-the-model": {
-      "code_fingerprint": "sha256:36b983301560ddeca74225bd493ff350613b67825b10b691a9b0e0b4ded5ad6b",
+      "code_fingerprint": "sha256:702b6bbd6a418718593ed93d5a28132073fab18cce7dd0d64d75fa66bc70594c",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.000, test RMSE 0.905\n13042496.2 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.000, test RMSE 0.905\n25737111.1 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
-          "bytes": 22466,
-          "sha256": "sha256:df8da58bdf4d3e776d20c863b9b733ef8a5df009af0906669c13bf604c4d894d"
+          "bytes": 22469,
+          "sha256": "sha256:21e4c823af0ba0ccbf41d384375c9702f061bf659023a56befbacf5c1b657aad"
         }
       ]
     }

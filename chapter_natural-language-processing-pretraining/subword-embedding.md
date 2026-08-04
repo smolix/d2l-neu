@@ -110,6 +110,7 @@ First, we initialize the vocabulary of symbols as all the English lowercase char
 
 ```{.python .input #subword-embedding-byte-pair-encoding-1}
 import collections
+from pprint import pprint
 
 symbols = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
            'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -175,7 +176,7 @@ for i in range(num_merges):
 After 10 iterations of byte pair encoding, we can see that list `symbols` now contains 10 more symbols that are iteratively merged from other symbols.
 
 ```{.python .input #subword-embedding-byte-pair-encoding-6}
-print(symbols)
+pprint(symbols, compact=True)
 ```
 
 For the same dataset specified in the keys of the dictionary `raw_token_freqs`,

@@ -1,45 +1,52 @@
 # Sequence-Aware Recommender Systems
 
-In previous sections, we abstract the recommendation task as a matrix completion problem without considering users' short-term behaviors. In this section, we will introduce a recommendation model that takes  the sequentially-ordered user interaction logs into account.  It is a sequence-aware recommender :cite:`Quadrana.Cremonesi.Jannach.2018` where the input is an ordered and often timestamped list of past user actions.  A number of recent literatures have demonstrated the usefulness of incorporating such information in modeling users' temporal behavioral patterns and discovering their interest drift.
+The interaction matrix records which events occurred but discards their order. That omission matters when recent actions reveal a short-lived intent: a reader comparing cameras may want a memory card next, even if their long-run history concerns books. A sequence-aware recommender instead conditions on an ordered, often timestamped, interaction history :cite:`Quadrana.Cremonesi.Jannach.2018`.
 
-The model we will introduce, Caser :cite:`Tang.Wang.2018`, short for convolutional sequence embedding recommendation model, adopts convolutional neural networks capture the dynamic pattern influences of users' recent activities. The main component of Caser consists of a horizontal convolutional network and a vertical convolutional network, aiming to uncover the union-level and point-level sequence patterns, respectively.  Point-level pattern indicates the impact of single item in the historical sequence on the target item, while union level pattern implies the influences of several previous actions on the subsequent target. For example, buying both milk and butter together leads to higher probability of buying flour than just buying one of them. Moreover, users' general interests, or long term preferences are also modeled in the last fully connected layers, resulting in a more comprehensive modeling of user interests. Details of the model are described as follows.
+Caser :cite:`Tang.Wang.2018` represents the last $L$ items as a matrix and applies two kinds of convolution. Horizontal filters detect local patterns spanning several consecutive items; vertical filters combine the same embedding coordinate across the entire window. The resulting short-term representation is joined with a user embedding that represents longer-term preference.
 
 ## Model Architectures
 
-In sequence-aware recommendation system, each user is associated with a sequence of some items from the item set. Let $S^u = (S_1^u, ... S_{|S_u|}^u)$ denotes the ordered sequence. The goal of Caser is to recommend item by considering user general tastes as well as short-term intention. Suppose we take the previous $L$ items into consideration, an embedding matrix that represents the former interactions for time step $t$ can be constructed:
+Let $S^u=(S_1^u,\ldots,S_{|S^u|}^u)$ be user $u$'s interactions in chronological order. To score the item at time $t$, Caser embeds the preceding $L$ items as the rows of
 
 $$
 \mathbf{E}^{(u, t)} = \begin{bmatrix} \mathbf{q}_{S_{t-L}^u} \\ \vdots \\ \mathbf{q}_{S_{t-2}^u} \\ \mathbf{q}_{S_{t-1}^u} \end{bmatrix},
 $$
 
-where $\mathbf{Q} \in \mathbb{R}^{n \times k}$ represents item embeddings and $\mathbf{q}_i$ denotes the $i^\textrm{th}$ row. $\mathbf{E}^{(u, t)} \in \mathbb{R}^{L \times k}$ can be used to infer the transient interest of user $u$ at time-step $t$. We can view the input matrix $\mathbf{E}^{(u, t)}$ as an image which is the input of the subsequent two convolutional components.
+where $\mathbf{Q}\in\mathbb{R}^{n\times k}$ is the item-embedding matrix and $\mathbf{q}_i$ is its $i$th row. Thus $\mathbf{E}^{(u,t)}\in\mathbb{R}^{L\times k}$ has time along its rows and embedding coordinates along its columns. The image analogy is useful only for specifying the filter shapes; neither axis is spatial.
 
-The horizontal convolutional layer has $d$ horizontal filters $\mathbf{F}^j \in \mathbb{R}^{h \times k}, 1 \leq j \leq d, h = \{1, ..., L\}$, and the vertical convolutional layer has $d'$ vertical filters $\mathbf{G}^j \in \mathbb{R}^{ L \times 1}, 1 \leq j \leq d'$. After a series of convolutional and pool operations, we get the two outputs:
-
-$$
-\mathbf{o} = \textrm{HConv}(\mathbf{E}^{(u, t)}, \mathbf{F}) \\
-\mathbf{o}'= \textrm{VConv}(\mathbf{E}^{(u, t)}, \mathbf{G}) ,
-$$
-
-where $\mathbf{o} \in \mathbb{R}^d$ is the output of horizontal convolutional network and $\mathbf{o}' \in \mathbb{R}^{kd'}$ is the output of vertical convolutional network. For simplicity, we omit the details of convolution and pool operations. They are concatenated and fed into a fully connected neural network layer to get more high-level representations.
+For horizontal filter $j$, choose a height $h_j\in\{1,\ldots,L\}$ and weights $\mathbf{F}^j\in\mathbb{R}^{h_j\times k}$. The filter scores each consecutive block of $h_j$ items, and max pooling retains its strongest response:
 
 $$
-\mathbf{z} = \phi(\mathbf{W}[\mathbf{o}, \mathbf{o}']^\top + \mathbf{b}),
+\begin{aligned}
+c_{j,s} &= \rho\!\left(\langle\mathbf{F}^j,\mathbf{E}^{(u,t)}_{s:s+h_j-1,:}\rangle+a_j\right),\\
+o_j &= \max_s c_{j,s}, \qquad j=1,\ldots,d,
+\end{aligned}
 $$
 
-where $\mathbf{W} \in \mathbb{R}^{k \times (d + kd')}$ is the weight matrix and $\mathbf{b} \in \mathbb{R}^k$ is the bias. The learned vector $\mathbf{z} \in \mathbb{R}^k$ is the representation of user's short-term intent.
-
-At last, the prediction function combines users' short-term and general taste together, which is defined as:
+Here $\rho$ is an activation function and $\langle\cdot,\cdot\rangle$ is the Frobenius inner product. The $d$ pooled responses form $\mathbf{o}\in\mathbb{R}^d$. A vertical filter $\mathbf{G}^j\in\mathbb{R}^{L\times1}$ instead combines all $L$ time steps separately for each embedding coordinate. Concatenating the outputs of $d'$ such filters gives
 
 $$
-\hat{y}_{uit} = \mathbf{v}_i \cdot [\mathbf{z}, \mathbf{p}_u]^\top + \mathbf{b}'_i,
+\mathbf{o}'=[\rho((\mathbf{E}^{(u,t)})^\top\mathbf{G}^1+a'_1);\ldots;\rho((\mathbf{E}^{(u,t)})^\top\mathbf{G}^{d'}+a'_{d'})]\in\mathbb{R}^{kd'}.
 $$
 
-where $\mathbf{V} \in \mathbb{R}^{n \times 2k}$ is another item embedding matrix. $\mathbf{b}' \in \mathbb{R}^n$ is the item specific bias.  $\mathbf{P} \in \mathbb{R}^{m \times k}$ is the user embedding matrix for users' general tastes. $\mathbf{p}_u \in \mathbb{R}^{ k}$ is the $u^\textrm{th}$ row of $P$ and $\mathbf{v}_i \in \mathbb{R}^{2k}$ is the $i^\textrm{th}$ row of $\mathbf{V}$.
+The two branches are concatenated and mapped to a $k$-dimensional representation:
 
-The model can be learned with BPR or Hinge loss. The architecture of Caser is shown below:
+$$
+\mathbf{z} = \phi(\mathbf{W}[\mathbf{o};\mathbf{o}'] + \mathbf{b}),
+$$
 
-![Illustration of the Caser Model](../img/rec-caser.svg)
+where $\mathbf{W}\in\mathbb{R}^{k\times(d+kd')}$ and $\mathbf{b}\in\mathbb{R}^k$. The vector $\mathbf{z}\in\mathbb{R}^k$ summarizes the recent window.
+
+To retain information beyond the recent window, the final score also includes a user embedding $\mathbf{p}_u\in\mathbb{R}^k$:
+
+$$
+\hat{y}_{uit} = \mathbf{v}_i^\top[\mathbf{z};\mathbf{p}_u] + b'_i.
+$$
+
+Here $\mathbf{v}_i\in\mathbb{R}^{2k}$ and $b'_i$ are item-specific output parameters. The score can be trained with the BPR loss or a pairwise hinge loss; in either case, the negative items are sampled training comparisons rather than observed dislikes.
+
+
+![Caser embeds the last $L$ interactions as a matrix. Horizontal filters detect patterns across consecutive items, vertical filters aggregate an embedding coordinate across the window, and a user embedding supplies longer-term information to the item score.](../img/rec-caser.svg)
 
 We first import the required libraries.
 
@@ -169,9 +176,14 @@ class Caser(nn.Module):
 ```
 
 ## Sequential Dataset with Negative Sampling
-To process the sequential interaction data, we need to reimplement the `Dataset` class. The following code creates a new dataset class named `SeqDataset`. In each sample, it outputs the user identity, his previous $L$ interacted items as a sequence and the next item he interacts as the target. The following figure demonstrates the data loading process for one user. Suppose that this user liked 9 movies, we organize these nine movies in chronological order. The latest movie is left out as the test item. For the remaining eight movies, we can get three training samples, with each sample containing a sequence of five ($L=5$) movies and its subsequent item as the target item. Negative samples are also included in the customized dataset.
+`SeqDataset` converts each user's chronological history into next-item examples. With a window length $L$, an example contains the user identifier, $L$ consecutive items, and the item that followed them. The implementation reserves the final interaction for testing and forms training windows only from earlier events, preventing a future item from entering a training input. It also samples an unobserved item for each positive target to construct the pairwise loss.
 
-![Illustration of the data generation process](../img/rec-seq-data.svg)
+As in the NeuMF experiment, the negative pool excludes the known held-out
+positive. This avoids a contradictory sampled label but uses the evaluation
+event's identity during training; the resulting numbers illustrate the model
+and metric rather than a strict untouched-test protocol.
+
+![With nine chronological interactions and $L=5$, the final item is reserved for testing. Sliding a length-five window over the first eight interactions produces three training inputs, each paired with its observed next item and a sampled unobserved item.](../img/rec-seq-data.svg)
 
 ```{.python .input #seqrec-sequential-dataset-with-negative-sampling  n=5}
 #@tab mxnet
@@ -184,8 +196,8 @@ class SeqDataset(gluon.data.Dataset):
         u_ids, i_ids = user_ids[sort_idx], item_ids[sort_idx]
         temp, u_ids = {}, u_ids.asnumpy()
         # Precompute each user's negative pool once: items the user has not
-        # interacted with in train AND not held out as a test positive
-        # (excluding test positives prevents leakage into the BPR loss).
+        # interacted with in train, excluding the known held-out positive.
+        # This is a disclosed protocol shortcut; see the surrounding text.
         all_items = set(range(num_items))
         test_items = test_items or {}
         self.neg_pool = {
@@ -248,8 +260,8 @@ class SeqDataset(torch.utils.data.Dataset):
         u_ids, i_ids = user_ids[sort_idx], item_ids[sort_idx]
         temp, u_ids_np = {}, u_ids.numpy()
         # Precompute each user's negative pool once: items the user has not
-        # interacted with in train AND not held out as a test positive
-        # (excluding test positives prevents leakage into the BPR loss).
+        # interacted with in train, excluding the known held-out positive.
+        # This is a disclosed protocol shortcut; see the surrounding text.
         all_items = set(range(num_items))
         test_items = test_items or {}
         self.neg_pool = {
@@ -395,8 +407,8 @@ d2l.train_ranking(net, train_iter, test_iter, loss, trainer,
 ```
 
 ## Summary
-* Inferring a user's short-term and long-term interests can make prediction of the next item that he preferred more effectively.
-* Convolutional neural networks can be utilized to capture users' short-term interests from sequential interactions.
+* Sequence-aware recommendation predicts the next item from an ordered interaction history rather than an unordered user--item matrix.
+* Caser combines convolutional features of the recent window with a user embedding for longer-term preference.
 
 ## Exercises
 
@@ -451,7 +463,7 @@ $$\mathcal{L}_{BPR} = -\sum_{(u,i,j)}
 \log \sigma(\hat y_{uit} - \hat y_{ujt}).$$
 :::
 
-::: {.slide title="Architecture"}
+::: {.slide title="Two filter shapes summarize complementary patterns"}
 Two parallel CNN branches over the recent-items matrix —
 horizontal filters scan multi-item sequences, vertical
 filters mix item embeddings:
@@ -459,14 +471,14 @@ filters mix item embeddings:
 @seqrec-model-architectures
 :::
 
-::: {.slide title="Implementation"}
+::: {.slide title="Caser joins recent and long-term representations"}
 Embedding tables + parallel conv branches + per-user MF
 component → final score:
 
 @seqrec-model-implementation
 :::
 
-::: {.slide title="Sequential dataset"}
+::: {.slide title="Chronological windows define the next-item task"}
 Each example: (user, last-L items, target item, negative
 target). Per-user sliding windows over their interaction
 sequence:
@@ -474,7 +486,7 @@ sequence:
 @seqrec-sequential-dataset-with-negative-sampling
 :::
 
-::: {.slide title="Loading Sequence Data"}
+::: {.slide title="Each training window excludes future events"}
 The sequence-aware split holds out each user's most recent
 interaction. A training row is `(user, history, positive,
 negative)`, so the model sees both long-term identity and
@@ -483,7 +495,7 @@ short-term context:
 @seqrec-load-the-movielens-100k-dataset
 :::
 
-::: {.slide title="Training Caser"}
+::: {.slide title="Pairwise loss trains next-item scores"}
 Use the same optimizer and BPR loss as NeuMF for a fair comparison.
 The expensive part is ranking evaluation, which scores many
 candidate items per user:
@@ -491,7 +503,7 @@ candidate items per user:
 @seqrec-train-the-model
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Order supplies evidence absent from an interaction matrix"}
 - Sequence-aware recommenders use *order* of recent
   interactions, not just frequencies.
 - Caser: CNN over last-L items + per-user MF component +

@@ -4,38 +4,129 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5320cf06febd40d6eaf41ac185f60d3a0efc11cdb0876c64653f64d22e149b36",
+    "d2l_lib_fingerprint": "sha256:9a2504c31ddc68ee4d20c3b5b0d2d9dd0e2380f9f684316a309f08184d1aecbe",
     "max_inline_bytes": 0
   },
   "cells": {
-    "value-iter-implementation-of-value-iteration-1": {
-      "code_fingerprint": "sha256:6517663031fcf8dac9d083221d2ea051e2423470d4d3f90085b9931bed2dc08c",
+    "value-iter-dynamic-programming": {
+      "code_fingerprint": "sha256:f75014e863117b32a5563d437f27d01756d561630e26f20e1deae8b20af0052f",
       "kind": "text",
       "outputs": []
     },
-    "value-iter-implementation-of-value-iteration-2": {
-      "code_fingerprint": "sha256:b10364dbced9db3d36350e570a9b4518488a6cd55c2c7d5f77fc640d1e4509c4",
-      "kind": "asset",
+    "value-iter-three-algorithms": {
+      "code_fingerprint": "sha256:65cacfac4d3622e1f600e0299a34a27b91593e1d8027f11998651b9f83003ef5",
+      "kind": "text",
+      "outputs": []
+    },
+    "value-iter-value-iteration-1": {
+      "code_fingerprint": "sha256:07c49745cb5e2ed33affcd3ed939c0faa3dc840fe838024d0f7d72ee6ae786ff",
+      "kind": "text",
+      "outputs": []
+    },
+    "value-iter-value-iteration-2": {
+      "code_fingerprint": "sha256:689265bfdf26f9479c17f12be23871f04609d403c329bd79b082d4757f7f3962",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "V*(s0) = 0.1805\n"
+        },
         {
           "type": "display_data",
           "mime": "image/png",
-          "asset": "value-iter/value-iter-implementation-of-value-iteration-2-1.png",
-          "bytes": 74223,
-          "sha256": "sha256:cce97383c1580c187f7884d884b68fe4d9b2ab2ae31c17991a062a7abca477a6"
+          "asset": "value-iter/value-iter-value-iteration-2-1.png",
+          "bytes": 6954,
+          "sha256": "sha256:5e8475adf45f2eaf478b2aa3bcdc8767c1cfb59a847678c6c351dee8d972a12a"
         }
       ]
     },
-    "value-iter-implementation-of-value-iteration-3": {
-      "code_fingerprint": "sha256:bbeb663a2ddf27cf6131c4a4e583c3bf05417aa12e45e87f81edfc87a6a85ff5",
+    "value-iter-value-iteration-3": {
+      "code_fingerprint": "sha256:a93396fb23968ab4180e97887d9c40c9f322668b8947b181db5936c3ea5a1d7b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "value-iter/value-iter-implementation-of-value-iteration-3-1.svg",
-          "bytes": 24544,
-          "sha256": "sha256:14f8a7b66ccfad1dee6b1fc9b85ed894f2ef700d9cca200e9d45c6f89cb8f9f5"
+          "asset": "value-iter/value-iter-value-iteration-3-1.svg",
+          "bytes": 28730,
+          "sha256": "sha256:b73ca85fb44d4d7fdab95aaa3c676cd5a74440586c2e33984a810bcf11c5b0d1"
+        }
+      ]
+    },
+    "value-iter-value-iteration-4": {
+      "code_fingerprint": "sha256:61150b952a7aea3381f87d28f247563c46a80de38751d6683f4ea0df1b1edd29",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sweep-to-sweep change first below 1e-6 at sweep 128\ncertified error bound first below 1e-6 at sweep 164\ndistance to V* first below 1e-6 at sweep 158\n"
+        }
+      ]
+    },
+    "value-iter-policy-evaluation": {
+      "code_fingerprint": "sha256:18b581e5a9fe76b1fe51d95cf0428890ac2b8761fe7c751d9a5b0db44234dfe4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "V(s0) for the uniformly random policy: 0.0078\n"
+        }
+      ]
+    },
+    "value-iter-policy-iteration-and-generalized-policy-iteration-1": {
+      "code_fingerprint": "sha256:49557f58f1e53b007289fcd4491bd10932e195fc18d99a5f5145ea404d751be9",
+      "kind": "text",
+      "outputs": []
+    },
+    "value-iter-policy-iteration-and-generalized-policy-iteration-2": {
+      "code_fingerprint": "sha256:91c7926a037f17f036fef770d0862578312107310c35f2b56928dd9ac28f1443",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "policy iteration: 2 rounds of evaluate-then-improve\nvalue iteration: certified at sweep 164\nits greedy policy already equals pi* from sweep 14 on\n"
+        }
+      ]
+    },
+    "value-iter-what-the-optimal-policy-looks-like-on-ice-1": {
+      "code_fingerprint": "sha256:898c8fc2117e8e73aa476c11e8acd6f7c76615761bbcd0f84ab6a373c741de37",
+      "kind": "text",
+      "outputs": []
+    },
+    "value-iter-what-the-optimal-policy-looks-like-on-ice-2": {
+      "code_fingerprint": "sha256:3679e0dd24744fa24539d7169129e8d78d2bec38f89ed14a8184bd01d0089fc6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "slip-aware optimum: reaches the goal in 73.6% of 2000 episodes\nshortest-path policy: reaches the goal in 4.7% of 2000 episodes\n"
+        }
+      ]
+    },
+    "value-iter-what-the-optimal-policy-looks-like-on-ice-3": {
+      "code_fingerprint": "sha256:c1cbf531b63688ca776c5d72b9d8a651fa9e2f0132df18fbe2caad20a94c4e8d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "s= 2: pi* commands <, the shortest path takes v\ns= 6: pi* commands <, the shortest path takes v\ns= 8: pi* commands ^, the shortest path takes >\ns=10: pi* commands <, the shortest path takes v\n"
+        }
+      ]
+    },
+    "value-iter-what-the-optimal-policy-looks-like-on-ice-4": {
+      "code_fingerprint": "sha256:8c57940a7f92b9897a64e2a3d116933e47c7340428bf87d1f228c36fc93b8628",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "V*(s0) on calm ice: 0.7738;  gamma^5 = 0.7738\n"
         }
       ]
     }

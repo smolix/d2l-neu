@@ -1002,6 +1002,15 @@ class BPETokenizer:
     def to_tokens(self, ids):
         return [self.decode([int(i)]) for i in ids]
 
+import textwrap
+
+def print_wrapped(*args, width=76):
+    """Print like `print`, folding each line to the width of a page.
+
+    Defined in :numref:`sec_text-sequence`"""
+    for line in ' '.join(str(a) for a in args).split('\n'):
+        print(textwrap.fill(line, width, subsequent_indent='    '))
+
 class Vocab:
     """Vocabulary for text.
 
@@ -2260,44 +2269,433 @@ class ResNet18(nnx.Module):
     def __call__(self, x):
         return self.net(x)
 
+class TabularMDP:
+    """A finite MDP as dense arrays: P[s, a, s'] and r[s, a].
+
+    Defined in :numref:`sec_mdp`"""
+    def __init__(self, P, r, gamma):
+        self.P, self.r, self.gamma = P, r, gamma
+        self.num_states, self.num_actions = r.shape
+
+    @classmethod
+    def from_gym(cls, env, gamma):
+        """Read the transition table Gymnasium exposes as env.unwrapped.P."""
+        n_s, n_a = env.observation_space.n, env.action_space.n
+        P, r = np.zeros((n_s, n_a, n_s)), np.zeros((n_s, n_a))
+        for s, actions in env.unwrapped.P.items():
+            for a, outcomes in actions.items():
+                for p, s_next, reward, _ in outcomes:
+                    P[s, a, s_next] += p      # several outcomes may share s'
+                    r[s, a] += p * reward     # r(s,a) is the expected reward
+        return cls(P, r, gamma)
+
+    def backup(self, V):
+        """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s')."""
+        return self.r + self.gamma * self.P @ V
+
+def value_iteration(mdp, num_iters):
+    """Sweep V <- max_a backup(V); return the whole history of iterates.
+
+    Defined in :numref:`sec_valueiter`"""
+    V, history = np.zeros(mdp.num_states), []
+    for _ in range(num_iters):
+        V = mdp.backup(V).max(axis=1)
+        history.append(V)
+    return np.array(history)
+
+def policy_evaluation(mdp, pi, num_iters):
+    """Same sweep with the max replaced by an average under pi(a|s).
+
+    Defined in :numref:`sec_valueiter`"""
+    V, history = np.zeros(mdp.num_states), []
+    for _ in range(num_iters):
+        V = (pi * mdp.backup(V)).sum(axis=1)
+        history.append(V)
+    return np.array(history)
+
+def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
+    """Mean discounted return of an acting policy over Monte Carlo episodes.
+
+    `policy(obs, rng) -> action` is the protocol every agent in these two
+
+    Defined in :numref:`sec_valueiter`"""
+    total = 0.0
+    for _ in range(num_episodes):
+        obs, done, discount = env.reset()[0], False, 1.0
+        while not done:
+            obs, reward, terminated, truncated, _ = env.step(policy(obs, rng))
+            done = terminated or truncated
+            total, discount = total + discount * reward, discount * gamma
+    return total / num_episodes
+
+class ActorCritic(nnx.Module):
+    """A policy and a value function, each with its own optimizer.
+
+    Defined in :numref:`sec_imitation`"""
+    def __init__(self, policy, value, lr=1e-2):
+        self.policy, self.value = policy, value
+        self.opt_pi = nnx.Optimizer(policy, optax.adam(lr), wrt=nnx.Param)
+        self.opt_v = nnx.Optimizer(value, optax.adam(lr), wrt=nnx.Param)
+
+    def log_prob(self, obs, act, policy=None):
+        """log pi(a|s). Gradients flow w.r.t. the module you differentiate;
+        the update functions pass that module back in as `policy`."""
+        policy = self.policy if policy is None else policy
+        logp = jax.nn.log_softmax(policy(obs), axis=-1)
+        return jnp.take_along_axis(logp, act[:, None], axis=-1).squeeze(-1)
+
+    def V(self, obs, value=None):
+        value = self.value if value is None else value
+        return value(obs).squeeze(-1)
+
+    @classmethod
+    def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
+        """One preference theta_{s,a} per state-action pair: an embedding."""
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        zeros = nnx.initializers.zeros_init()
+        return cls(nnx.Embed(num_states, num_actions,
+                             embedding_init=zeros, rngs=rngs),
+                   nnx.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
+                   lr)
+
+    def act(self, obs, rng):
+        """Sample an action; numpy in, int out, the acting protocol of evaluate.
+
+        Defined in :numref:`sec_imitation`"""
+        probs = np.asarray(jax.nn.softmax(self.policy(jnp.asarray(obs)), axis=-1))
+        return int(rng.choice(len(probs), p=probs))
+
+    def act_greedy(self, obs, rng=None):
+        return int(self.policy(jnp.asarray(obs)).argmax())
+
+    def value_np(self, obs):
+        return np.asarray(self.V(jnp.asarray(obs)))
+
+    def log_prob_np(self, obs, act):
+        return np.asarray(self.log_prob(jnp.asarray(obs), jnp.asarray(act)))
+
+    @classmethod
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, rngs=None):
+        """The same container with the tables replaced by one-hidden-layer nets.
+
+        Defined in :numref:`sec_deeprl`"""
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        def net(out):
+            return nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh,
+                                  nnx.Linear(hidden, out, rngs=rngs))
+        return cls(net(num_actions), net(1), lr)
+
+def policy_step(ac, batch, advantage):
+    """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
+
+
+    Defined in :numref:`sec_imitation`"""
+    obs, act = jnp.asarray(batch.obs), jnp.asarray(batch.act)
+    adv = jnp.asarray(advantage)
+    loss, grads = nnx.value_and_grad(
+        lambda policy: -(adv * ac.log_prob(obs, act, policy)).mean())(ac.policy)
+    ac.opt_pi.update(ac.policy, grads)
+    return float(loss)
+
+def linear_schedule(start, end, num_steps):
+    """step -> value, interpolated from start to end, then held at end.
+
+    Defined in :numref:`sec_qlearning`"""
+    return lambda step: end + (start - end) * max(0.0, 1.0 - step / num_steps)
+
+def epsilon_greedy(q, epsilon, rng):
+    """Explore with probability epsilon, else act greedily on the values q.
+
+    Defined in :numref:`sec_qlearning`"""
+    if rng.random() < epsilon:
+        return int(rng.integers(len(q)))
+    # Random tie-breaking is load-bearing: np.argmax would always return
+    # action 0 on a zero-initialized table, and an agent that only ever
+    # proposes *left* on this lake never finds the goal.
+    return int(rng.choice(np.flatnonzero(q == q.max())))
+
+class Batch:
+    """A flat batch of transitions, plus the episode boundaries.
+
+    Defined in :numref:`sec_policygradient`"""
+    def __init__(self, obs, act, rew, next_obs, term, ep_ends):
+        self.obs, self.act, self.rew = obs, act, rew
+        self.next_obs, self.term = next_obs, term
+        self.ep_ends = ep_ends    # one past the last step of each episode
+
+    def __len__(self):
+        return len(self.rew)
+
+    def episodes(self):
+        """Yield one slice per episode."""
+        start = 0
+        for end in self.ep_ends:
+            yield slice(start, end)
+            start = end
+
+    def episode_returns(self, gamma=1.0):
+        """R(tau), the discounted return, one number per episode."""
+        return np.array([(gamma ** np.arange(ep.stop - ep.start)
+                          * self.rew[ep]).sum() for ep in self.episodes()])
+
+    def backward_scan(self, x, factor):
+        """y_t = x_t + factor * y_{t+1}, restarted at every episode boundary.
+
+        Defined in :numref:`sec_baselines`"""
+        y = np.zeros_like(x)
+        for ep in self.episodes():
+            running = 0.0
+            for t in reversed(range(ep.start, ep.stop)):
+                running = x[t] + factor * running
+                y[t] = running
+        return y
+
+    def reward_to_go(self, gamma):
+        """G_t: the discounted return of the rest of its episode, by one scan.
+
+        Defined in :numref:`sec_baselines`"""
+        return self.backward_scan(self.rew, gamma)
+
+    def td_target(self, bootstrap, gamma):
+        """r_t + gamma (1 - terminated) V(s'), by a numpy bootstrap.
+
+        Defined in :numref:`sec_actorcritic`"""
+        return self.rew + gamma * (1 - self.term) * bootstrap(self.next_obs)
+
+    def gae(self, value_fn, gamma, lam):
+        """GAE(gamma, lam): the reward-to-go scan, run on the TD errors.
+
+        Defined in :numref:`sec_actorcritic`"""
+        delta = self.td_target(value_fn, gamma) - value_fn(self.obs)
+        return self.backward_scan(delta, gamma * lam)
+
+def rollout(env, policy, num_episodes, rng):
+    """Collect complete episodes from `policy(obs, rng) -> action` as a
+    Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
+
+
+    Defined in :numref:`sec_policygradient`"""
+    cols, ep_ends = [[] for _ in range(5)], []
+    for _ in range(num_episodes):
+        obs, done = env.reset()[0], False
+        while not done:
+            act = policy(obs, rng)
+            next_obs, reward, terminated, truncated, _ = env.step(act)
+            done = terminated or truncated
+            for col, val in zip(cols, (obs, act, reward, next_obs,
+                                       float(terminated))):
+                col.append(val)
+            obs = next_obs
+        ep_ends.append(len(cols[0]))
+    obs, act, rew, next_obs, term = (np.asarray(c) for c in cols)
+    return Batch(obs, act, rew.astype(np.float32), next_obs,
+                 term.astype(np.float32), np.asarray(ep_ends))
+
+def normalize(x, eps=1e-8):
+    """Center a batch of weights and rescale them to unit spread.
+
+    Defined in :numref:`sec_baselines`"""
+    return (x - x.mean()) / (x.std() + eps)
+
+def run_seeds(train, num_seeds, **kwargs):
+    """Run train(seed, **kwargs), a generator of curve points, per seed.
+
+    Defined in :numref:`sec_baselines`"""
+    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+
+def fit_value(ac, obs, target, num_steps=1):
+    """Regress the value head on a fixed target: eq_value_baseline for nets.
+
+
+    Defined in :numref:`sec_deeprl`"""
+    obs, target = jnp.asarray(obs), jnp.asarray(target)
+    for _ in range(num_steps):
+        loss, grads = nnx.value_and_grad(
+            lambda value: ((ac.V(obs, value) - target) ** 2).mean())(ac.value)
+        ac.opt_v.update(ac.value, grads)
+    return float(loss)
+
+class GaussianHead(nnx.Module):
+    """Mean network plus a state-independent learned log standard deviation.
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, obs_dim, act_dim, hidden, rngs):
+        self.mean = nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs),
+                                   jnp.tanh,
+                                   nnx.Linear(hidden, act_dim, rngs=rngs))
+        self.log_std = nnx.Param(jnp.zeros(act_dim))
+
+    def __call__(self, obs):
+        return self.mean(obs), jnp.exp(self.log_std[...])
+
+class GaussianPolicy(d2l.ActorCritic):
+    """The same interface over a Normal instead of a softmax; nothing that
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden, rngs),
+                         nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs),
+                                        jnp.tanh,
+                                        nnx.Linear(hidden, 1, rngs=rngs)), lr)
+
+    def log_prob(self, obs, act, policy=None):
+        mean, std = (self.policy if policy is None else policy)(obs)
+        return jax.scipy.stats.norm.logpdf(act, mean, std).sum(-1)
+
+    def act(self, obs, rng):
+        if not hasattr(self, '_fwd'):   # compile the fixed-shape acting
+            self._fwd = nnx.cached_partial(nnx.jit(lambda net, o: net(o)),
+                                           self.policy)  # forward, once
+        mean, std = self._fwd(jnp.asarray(obs))
+        return np.asarray(mean) + np.asarray(std) * rng.standard_normal(
+            mean.shape, dtype=np.float32)
+
+    def act_greedy(self, obs, rng=None):
+        return np.asarray(self.policy(jnp.asarray(obs))[0])
+
+def _pad(x, size):
+    return jnp.asarray(np.pad(x, ((0, size - len(x)),) + ((0, 0),)
+                              * (x.ndim - 1)))
+
+@nnx.jit
+def _ppo_step(policy, opt, obs, act, adv, logp_old, mask, epsilon,
+              entropy_coef, use_clip):
+    def loss_fn(policy):
+        logp_all = jax.nn.log_softmax(policy(obs), axis=-1)
+        logp = jnp.take_along_axis(logp_all, act[:, None], -1).squeeze(-1)
+        rho = jnp.exp(logp - logp_old)
+        surr = jnp.where(use_clip, jnp.minimum(
+            rho * adv, jnp.clip(rho, 1 - epsilon, 1 + epsilon) * adv),
+            rho * adv)
+        entropy = -(jnp.exp(logp_all) * logp_all).sum(-1)
+        loss = -(mask * (surr + entropy_coef * entropy)).sum() / mask.sum()
+        return loss, (rho, logp, entropy)
+    (_, (rho, logp, entropy)), grads = nnx.value_and_grad(
+        loss_fn, has_aux=True)(policy)
+    opt.update(policy, grads)
+    n = mask.sum()
+    return ((mask * (jnp.abs(rho - 1) > epsilon)).sum() / n,
+            (mask * (logp_old - logp)).sum() / n, (mask * entropy).sum() / n)
+
+def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,
+               entropy_coef=0.01, use_clip=True):
+    """num_epochs clipped-surrogate passes on one frozen batch; returns
+    [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
+
+    Defined in :numref:`sec_ppo`"""
+    size = 1 << max(6, (len(adv) - 1).bit_length())
+    mask = jnp.asarray((np.arange(size) < len(adv)).astype(np.float32))
+    obs, act, adv, logp_old = (_pad(np.asarray(x), size) for x in
+                               (batch.obs, batch.act, adv, logp_old))
+    step = nnx.cached_partial(_ppo_step, ac.policy, ac.opt_pi)
+    return np.array([step(obs, act, adv, logp_old, mask, epsilon,
+                          entropy_coef, use_clip)
+                     for _ in range(num_epochs)])
+
+class ReplayBuffer:
+    """A ring of transitions in preallocated numpy; sample() returns a Batch.
+
+    Defined in :numref:`sec_dqn`"""
+    def __init__(self, capacity, obs_dim):
+        self.obs = np.zeros((capacity, obs_dim), np.float32)
+        self.act = np.zeros(capacity, np.int64)
+        self.rew = np.zeros(capacity, np.float32)
+        self.next_obs = np.zeros((capacity, obs_dim), np.float32)
+        self.term = np.zeros(capacity, np.float32)
+        self.capacity, self.size, self.ptr = capacity, 0, 0
+
+    def add(self, obs, act, rew, next_obs, term):
+        i = self.ptr
+        self.obs[i], self.act[i], self.rew[i] = obs, act, rew
+        self.next_obs[i], self.term[i] = next_obs, term
+        self.ptr, self.size = (i + 1) % self.capacity, min(self.size + 1,
+                                                           self.capacity)
+
+    def __len__(self):
+        return self.size
+
+    def sample(self, batch_size, rng):
+        i = rng.integers(self.size, size=batch_size)
+        return d2l.Batch(self.obs[i], self.act[i], self.rew[i],
+                         self.next_obs[i], self.term[i],
+                         np.array([batch_size]))
+
+def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,
+              shape=(16, 4), seed=0):
+    """Q-learning swept over a fixed dataset, with optional pessimism.
+
+    kappa > 0 subtracts kappa/sqrt(n(s, a)) from every value consulted;
+    an untried pair is distrusted entirely, and no pessimistic value
+    drops below zero, the floor this environment guarantees.
+
+    Defined in :numref:`sec_offline`"""
+    Q, counts = np.zeros(shape), np.zeros(shape)
+    np.add.at(counts, (batch.obs, batch.act), 1)
+    penalty = np.where(counts > 0, kappa / np.sqrt(np.maximum(counts, 1)),
+                       np.inf if kappa > 0 else 0.0)
+    rng = np.random.default_rng(seed)
+    for _ in range(num_sweeps):
+        for i in rng.permutation(len(batch)):
+            s, a, s2 = batch.obs[i], batch.act[i], batch.next_obs[i]
+            v2 = np.maximum(Q[s2] - penalty[s2], 0.0).max()
+            Q[s, a] += alpha * (batch.rew[i] + gamma
+                                * (1 - batch.term[i]) * v2 - Q[s, a])
+    return np.maximum(Q - penalty, 0.0)
+
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update discriminator.
+    """Update the discriminator.
 
     Defined in :numref:`sec_basic_gan`"""
     batch_size = X.shape[0]
-    ones = jnp.ones((batch_size,))
-    zeros = jnp.zeros((batch_size,))
-    # Do not need to compute gradient for `net_G`
-    fake_X = net_G(Z)
+    fake_X = net_G(Z)  # computed outside the loss: no gradient to net_G
     def loss_D_fn(model_D):
         real_Y = model_D(X).squeeze()
         fake_Y = model_D(fake_X).squeeze()
-        loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(real_Y, ones)) +
-                  jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, zeros))
-                  ) / 2
-        return loss_D
+        return (jnp.sum(optax.sigmoid_binary_cross_entropy(
+                    real_Y, jnp.ones(batch_size))) +
+                jnp.sum(optax.sigmoid_binary_cross_entropy(
+                    fake_Y, jnp.zeros(batch_size)))) / 2
     loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
     optimizer_D.update(net_D, grads_D)
     return loss_D
 
 @nnx.jit
 def update_G(Z, net_D, net_G, optimizer_G):
-    """Update generator.
+    """Update the generator on the non-saturating loss.
 
     Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = jnp.ones((batch_size,))
-    def loss_G_fn(model_G):
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = model_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X).squeeze()
-        loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, ones))
-        return loss_G
-    loss_G, grads_G = nnx.value_and_grad(loss_G_fn)(net_G)
+    def loss_G_fn(model_G, model_D):
+        fake_Y = model_D(model_G(Z)).squeeze()
+        return jnp.sum(optax.sigmoid_binary_cross_entropy(
+            fake_Y, jnp.ones(Z.shape[0])))
+    loss_G, grads_G = nnx.value_and_grad(loss_G_fn, argnums=0)(net_G, net_D)
     optimizer_G.update(net_G, grads_G)
     return loss_G
+
+def rpgan_loss_D(critic, real, fake):
+    """Relativistic pairing loss for the critic: -E[log sigma(D(x) - D(y))].
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return jax.nn.softplus(critic(fake) - critic(real)).mean()
+
+def rpgan_loss_G(critic, real, fake):
+    """Non-saturating pairing loss for the generator.
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return jax.nn.softplus(critic(real) - critic(fake)).mean()
+
+def r1_r2_penalty(critic, real, fake):
+    """Per-sample squared critic input gradients on real (R1) and fake (R2),
+
+    Defined in :numref:`sec_gan_convergence`"""
+    def sq_grad_norm(x):
+        x = jax.lax.stop_gradient(x)
+        grad_fn = jax.grad(lambda xi: critic(xi[None, ...]).squeeze())
+        grad = jax.vmap(grad_fn)(x)
+        return (grad.reshape(x.shape[0], -1) ** 2).sum(axis=1)
+    return sq_grad_norm(real), sq_grad_norm(fake)
 
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
@@ -3848,6 +4246,70 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
         return [x[0] for x in sorted_rung[:n]]
 
 import io, os, queue, threading, time
+
+def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
+                ylim=None):
+    """One panel per call. `curves` maps a label to an array of shape
+    [seed, step] (or [step] for a single seed); plots the seed median and
+    a shaded band between the seed min and max. `smooth`, if greater than
+    1, applies a trailing moving average of that many steps before taking
+    the seed statistics. `reference`, if given, draws a dashed horizontal
+
+    Defined in :numref:`sec_utils`"""
+    set_figsize((6, 4))
+    for name, values in curves.items():
+        values = np.atleast_2d(values)
+        if smooth > 1:
+            kernel = np.ones(smooth) / smooth
+            values = np.stack([np.convolve(v, kernel, 'valid')
+                               for v in values])
+        x = np.arange(values.shape[1])
+        line, = plt.plot(x, np.median(values, axis=0), label=name)
+        if values.shape[0] > 1:
+            plt.fill_between(x, values.min(axis=0), values.max(axis=0),
+                             alpha=0.2, color=line.get_color())
+    if reference is not None:
+        plt.axhline(reference, linestyle='--', color='gray')
+    if ylim is not None:
+        plt.ylim(ylim)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+def show_grid(desc, values, policy, titles=None):
+    """The gridworld: cell colour = `values`, arrow = `policy`. The grid
+    shape is read from `desc` (e.g. `env_info['desc']`), so it is not tied
+    to any one map size. `values` and `policy` may each be a single frame,
+    shape (num_states,), or a sequence of frames, shape
+
+    Defined in :numref:`sec_utils`"""
+    h, w = desc.shape
+    values = np.atleast_2d(values).reshape(-1, h, w)
+    policy = np.atleast_2d(policy).reshape(-1, h, w)
+    num_frames = values.shape[0]
+    action2offset = {0: (-.25, 0), 1: (0, .25), 2: (.25, 0), 3: (0, -.25)}
+    fig, axes = plt.subplots(1, num_frames, figsize=(3 * num_frames, 3),
+                             squeeze=False)
+    for k, ax in enumerate(axes[0]):
+        ax.imshow(values[k], cmap='bone')
+        ax.set_xticks(np.arange(-.5, w), minor=True)
+        ax.set_yticks(np.arange(-.5, h), minor=True)
+        ax.grid(which='minor', color='w', linewidth=2)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for y in range(h):
+            for x in range(w):
+                cell = desc[y, x].decode()
+                color = {'H': 'y', 'G': 'w'}.get(cell, 'g')
+                ax.text(x, y, cell, ha='center', va='center', color=color,
+                       fontweight='bold')
+                if cell not in ('H', 'G'):
+                    dx, dy = action2offset[int(policy[k, y, x])]
+                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2,
+                            head_length=0.15)
+        if titles is not None:
+            ax.set_title(titles[k])
+    fig.tight_layout()
 
 def linreg(X, w, b):
     """The linear regression model.

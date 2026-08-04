@@ -11,13 +11,7 @@
     "sh-intro-multi-fidelity-hyperparameter-optimization": {
       "code_fingerprint": "sha256:43ea3aa28c8782f4a24d0cd11d2bac410282213a9afcd5783025a729ab2c9ae1",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\nI0000 00:00:1784471612.015549   43722 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.\nTo enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.\n"
-        }
-      ]
+      "outputs": []
     },
     "sh-intro-successive-halving-1": {
       "code_fingerprint": "sha256:d580ddd3b9df30f33801bf40cdf1ad05141f4b2d08df83c2499a41bead58b848",
@@ -51,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.13659995794296265, runtime = 27.789305686950684\n"
+          "text": "    error = 0.13209998607635498, runtime = 40.7797474861145\n"
         }
       ]
     },
@@ -67,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-7-1.svg",
-          "bytes": 25863,
-          "sha256": "sha256:ca6703bc7ada10a105831868016cfa0ce7e29d2ec4201321e916dbf25823b2e3"
+          "bytes": 25890,
+          "sha256": "sha256:7d3d2d562a4b19b8727f9b35b098d59730e58b999ae6f79007960ff73f9f35ef"
         }
       ]
     }

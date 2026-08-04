@@ -870,7 +870,8 @@ net.compile(
     optimizer=keras.optimizers.Adam(lr),
     loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'])
-net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs)
+net.fit(train_iter_tf, validation_data=test_iter_tf, epochs=num_epochs,
+        verbose=2)
 ```
 
 ## Summary

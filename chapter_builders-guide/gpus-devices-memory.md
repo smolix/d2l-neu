@@ -6,20 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # GPUs, Devices, and Memory
 :label:`sec_use_gpu`
 
-So far every tensor in this book has lived in main memory and every computation
-has run on the CPU. Training at any interesting scale runs on an accelerator,
-almost always a CUDA GPU, and that changes two things at once. First, every
-tensor and every parameter now has a *home*, a device, and operations only
-combine tensors that live on the same one; placing data well is your job.
-Second, the GPU's memory is small compared with main memory, typically tens of
-gigabytes, and it is the resource you will exhaust first: the daily question of
-a single-GPU builder is not "is my model correct?" but "does it fit?". This
-section covers both skills: naming devices and placing tensors and models on
-them, then measuring what actually fills GPU memory during training, trading
-compute for memory when it does not fit, and keeping the device busy once it
-does. None of the code requires a GPU to run; the helpers we define fall back
-to the CPU, and the memory measurements simply report more interesting numbers
-when a GPU is present.
+Training beyond small examples usually runs on an accelerator, most often a
+CUDA GPU. This introduces two practical constraints. Every tensor and parameter
+has a device, and an operation generally requires its inputs to be on the same
+device. GPU memory is also much smaller than main memory and often limits the
+model or batch size. The section is organized around three operational
+questions: where arrays and state live; what occupies training memory and how
+checkpointing changes it; and when asynchronous execution or data transfer
+forces synchronization. The examples fall back to the CPU when no GPU is
+available, but CPU execution verifies API shape rather than GPU performance.
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab pytorch
@@ -60,7 +55,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-## Devices
+## Devices and Placement
 
 :begin_tab:`pytorch`
 In PyTorch every tensor carries a device. The CPU is `torch.device('cpu')` and
@@ -171,9 +166,8 @@ Note that constructing a device scope is free and always succeeds, whether or
 not the hardware exists; the name is checked only when an operation runs
 inside the scope. Even then, TensorFlow's default *soft placement* falls back
 to the CPU rather than raising when the requested device is missing, which is
-what lets `gpu(1)` print happily on a laptop. The flip side of that tolerance
-is that a mistyped device name never crashes; check `x.device` when placement
-matters.
+what lets `gpu(1)` print happily on a laptop. Soft placement can therefore mask an unavailable requested device; inspect
+`x.device` when placement matters.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -246,9 +240,9 @@ reachable through JAX; PyTorch now bundles the whole family behind the
 `current_accelerator()` do generically what our helpers do for CUDA. We keep
 our own helpers anyway: they give all four of the book's implementations one
 vocabulary, and they degrade to the CPU instead of failing, which is exactly
-what lets this book's code run unchanged on a laptop. The book standardizes on
-CPU plus CUDA; everything below transfers to the other accelerator types with
-little more than a renamed device string.
+what lets this book's code run unchanged on a laptop. The book standardizes on CPU plus CUDA. Most placement and accounting
+concepts below also apply to other accelerators, although their APIs and
+supported operations differ.
 :end_tab:
 
 :begin_tab:`jax`
@@ -257,9 +251,8 @@ GPU, or TPU, and plain `jax.devices()` lists the devices of the *default*
 backend, which is the best accelerator present. We keep our own helpers
 anyway: they give all four of the book's implementations one vocabulary, and
 they degrade to the CPU instead of failing, which is exactly what lets this
-book's code run unchanged on a laptop. The book standardizes on CPU plus
-CUDA; everything below transfers to TPUs with no change beyond the backend
-name.
+book's code run unchanged on a laptop. The book standardizes on CPU plus CUDA. Most placement and accounting
+concepts below also apply to TPUs, although backend behavior can differ.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -270,8 +263,9 @@ plugin exposes an Apple-silicon GPU as `'/GPU:0'`;
 runtime can see. We keep our own helpers anyway: they give all four of the
 book's implementations one vocabulary, and they degrade to the CPU instead of
 failing, which is exactly what lets this book's code run unchanged on a
-laptop. The book standardizes on CPU plus CUDA; everything below transfers to
-the other backends with little more than a renamed device string.
+laptop. The book standardizes on CPU plus CUDA. Most placement and accounting
+concepts below also apply to other backends, although their APIs and supported
+operations differ.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -284,7 +278,7 @@ degrade to the CPU instead of failing, which is exactly what lets this book's
 code run unchanged on a laptop.
 :end_tab:
 
-## Tensors, Models, and Devices
+### Tensors, Models, and Devices
 
 :begin_tab:`pytorch`
 By default, tensors are created on the CPU. We can query where a tensor lives.
@@ -419,22 +413,20 @@ Y
 :begin_tab:`pytorch`
 Whenever we operate on multiple tensors, they need to be on the same device.
 If `X` sits on the first GPU and `Y` on the second, `X + Y` raises
-`RuntimeError: Expected all tensors to be on the same device`, which is
-probably the single most common error message of a beginner's GPU life.
-PyTorch refuses to guess: an implicit copy would hide a slow bus transfer
-inside an innocent-looking `+`, and you would never find it. Instead we copy
-explicitly, as in :numref:`fig_copyto`, and then add.
+`RuntimeError: Expected all tensors to be on the same device`. PyTorch does
+not choose an implicit transfer because it would make the communication cost
+invisible at the call site. We instead copy explicitly, as in
+:numref:`fig_copyto`, and then add.
 :end_tab:
 
 :begin_tab:`jax`
 Whenever we operate on multiple arrays, they need to be on the same device.
 Uncommitted arrays are flexible: JAX decides where the result lives. But `X`
 is committed to the first GPU and `Y` to the second, and adding them raises an
-error about arrays on different devices, probably the most common error
-message of a beginner's GPU life. JAX refuses to guess between two explicit
-placements: an implicit copy would hide a slow bus transfer inside an
-innocent-looking `+`, and you would never find it. Instead we copy
-explicitly, as in :numref:`fig_copyto`, and then add.
+error about arrays on different devices. JAX does not choose between two
+explicit placements because an implicit transfer would make the communication
+cost invisible at the call site. We instead copy explicitly, as in
+:numref:`fig_copyto`, and then add.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -442,8 +434,8 @@ Whenever we operate on multiple tensors, they should be on the same device.
 TensorFlow's eager *device policy* defaults to silent, so if `X` sits on the
 first GPU and `Y` on the
 second, `X + Y` does not raise. TensorFlow copies one operand across and
-returns an answer. This hides a slow bus transfer inside an innocent-looking
-`+`, and nothing in your code marks the line that pays for it.
+returns a result. This implicit transfer incurs communication cost that is not
+visible at the call site.
 `tf.config.experimental.set_device_policy('explicit')` opts into strictness,
 turning silent copies into errors. Either way the discipline is the same:
 copy explicitly, as in :numref:`fig_copyto`, and then add. The explicit copy
@@ -454,9 +446,9 @@ in TensorFlow is `tf.identity` inside a device scope.
 Whenever we operate on multiple tensors, they need to be on the same device.
 If `X` sits on the first GPU and `Y` on the second, `X + Y` raises an error:
 the execution engine cannot find its operands on one device and refuses to
-guess where the result should live. An implicit copy would hide a slow bus
-transfer inside an innocent-looking `+`, and you would never find it. Instead
-we copy explicitly, as in :numref:`fig_copyto`, and then add.
+guess where the result should live. An implicit transfer would make the
+communication cost invisible at the call site. We instead copy explicitly,
+as in :numref:`fig_copyto`, and then add.
 :end_tab:
 
 ![X lives on GPU 0 and Y on GPU 1; X.to(gpu(1)) makes a copy Z on GPU 1 (dashed), and Y + Z then runs entirely on GPU 1.](../img/bg-copyto.svg)
@@ -558,13 +550,12 @@ Z2.unsafe_buffer_pointer() == Z.unsafe_buffer_pointer()
 Z.as_in_ctx(try_gpu(1)) is Z
 ```
 
-The reason for keeping every copy explicit is the cost model. A
-modern GPU multiplies matrices hundreds of times faster than it can receive
-data over the PCIe bus, so a transfer in the wrong place can erase the
-speedup you bought the GPU for. The discipline that follows is simple: move data to the device
-once, at the boundary of the computation, and keep everything inside the
-training loop on one device. Many small transfers are worse than one big one,
-and a transfer hidden in an inner loop is worst of all.
+The reason for keeping copies explicit is the cost model. Accelerators can
+have much higher arithmetic throughput than host-to-device bandwidth, so a
+transfer inside a frequently executed computation can dominate its runtime.
+Move data to the device at the computation boundary and keep operations in the
+training loop on one device. Batching transfers also reduces per-transfer
+overhead.
 
 ### Models on a Device
 
@@ -622,9 +613,8 @@ net.initialize(ctx=try_gpu())
 net(X)
 ```
 
-The input arrived on the device, the parameters live on the device, so the
-output is computed and stored there too. Let's confirm where the parameters
-ended up.
+The input and parameters reside on the device, so the output is computed and
+stored there as well. The next cell reports the parameter locations.
 
 ```{.python .input #gpus-devices-memory-models-on-a-device-2}
 %%tab pytorch
@@ -683,13 +673,16 @@ need to move an already-initialized model, `net.reset_ctx(device)` (2.0 name:
 `reset_device`) re-assigns every parameter in one call.
 :end_tab:
 
-## GPU Memory
+## Training Memory and Checkpointing
+
+GPU allocators commonly retain freed blocks for reuse, so process-level memory
+reported by `nvidia-smi` can remain high after live tensors disappear. The
+durable distinction is between memory held by live arrays, memory reserved by a
+framework allocator, and memory reported for the whole process. The APIs below
+expose different layers of that accounting.
 
 :begin_tab:`pytorch`
-Here is a puzzle that every PyTorch user hits in their first week. You delete
-your tensors, yet `nvidia-smi` still shows gigabytes in use; is that a leak?
-It is not, and the explanation is the right mental model for everything else
-in this section. Requesting memory from the CUDA driver is slow, so PyTorch
+PyTorch uses a *caching allocator*: requesting memory from the CUDA driver is slow, so it
 uses a *caching allocator*: when a tensor dies, its block is not returned to
 the driver but kept in a per-process cache for the next tensor of a similar
 size. PyTorch therefore reports two numbers. `torch.cuda.memory_allocated()`
@@ -701,11 +694,7 @@ three views nest inside one another.
 :end_tab:
 
 :begin_tab:`jax`
-Here is a puzzle that every JAX user hits in their first week. You create one
-small array, yet `nvidia-smi` shows the card nearly full; is that a leak? It
-is not, and the explanation is the right mental model for everything else in
-this section. Requesting memory from the CUDA driver is slow, so on first use
-XLA *preallocates* about 75% of the GPU's memory as one block and hands out
+On first use, XLA commonly *preallocates* a configurable fraction of GPU memory and hands out
 pieces of it from its own allocator (the fraction is controlled by the
 `XLA_PYTHON_CLIENT_PREALLOCATE` and `XLA_PYTHON_CLIENT_MEM_FRACTION`
 environment variables). `nvidia-smi` sees the process from the outside, so it
@@ -718,11 +707,7 @@ allocator and the call returns `None`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Here is a puzzle that every TensorFlow user hits in their first week. You
-create one small tensor, yet `nvidia-smi` shows the card nearly full; is that
-a leak? It is not, and the explanation is the right mental model for
-everything else in this section. Requesting memory from the CUDA driver is
-slow, so on first use TensorFlow maps nearly all of the GPU's memory in one
+On first use, TensorFlow may reserve a large fraction of GPU memory in one
 grab and hands out pieces of it from its own allocator;
 `tf.config.experimental.set_memory_growth(gpu, True)`, called before the
 first computation, switches to growing the reservation on demand instead.
@@ -736,10 +721,7 @@ and the call raises on `'CPU:0'`.
 :end_tab:
 
 :begin_tab:`mxnet`
-Here is a puzzle that every MXNet user hits in their first week. You delete
-your tensors, yet `nvidia-smi` still shows gigabytes in use; is that a leak?
-It is not, and the explanation is the right mental model for everything else
-in this section. Requesting memory from the CUDA driver is slow, so MXNet
+MXNet uses a device memory pool: requesting memory from the CUDA driver is slow, so it
 keeps a *memory pool* per device: when an array dies, its block is not
 returned to the driver but kept for the next array of a similar size, and
 `nvidia-smi` keeps counting it. MXNet 2.0 has no per-process counter of live
@@ -900,8 +882,8 @@ accounting itself holds unchanged, with one timing difference:
 Gluon allocates each parameter's gradient buffer at `initialize` time (and
 `attach_grad` does the same for from-scratch arrays), so the $4N$ gradient
 term is resident from the start rather than appearing at the first backward
-pass. The coarse before/after measurement above, wrapped around a whole
-training step, is the best MXNet offers; the batch-size lesson at the end of
+pass. The device-wide counter supports the coarse before/after measurement
+above around a complete training step; the batch-size lesson at the end of
 this subsection applies in full.
 :end_tab:
 
@@ -996,10 +978,8 @@ batch or longer sequence scales this term while the weights stay put. The third 
 them and leaves behind gradients exactly the size of the weights. The fourth
 adds $8N$ at the first `opt.step()`, when Adam lazily creates its moment
 buffers. From then on the loop cycles between plateaus two and three; the
-weights, gradients, and optimizer state are permanent residents. The practical
-consequence: when you are out of memory, the knob that works immediately is
-the batch size, because it scales the one term the model architecture does not
-fix. If a *growing* staircase appears across steps instead of this steady
+weights, gradients, and optimizer state are permanent residents. Batch size is the first memory control to test because it scales activation
+memory without changing the model architecture. If a *growing* staircase appears across steps instead of this steady
 cycle, look for tensors that keep the computation graph alive between
 iterations, such as accumulating `loss` rather than `loss.item()` into a
 running total.
@@ -1014,9 +994,8 @@ $8N$ when `optax.adam`'s `init` builds its two moment pytrees from the
 parameters, placed wherever they live. The activations never appear as a
 plateau: they exist only inside the `jax.grad` call, so the peak reading,
 several times the weights here because the batch is large, is the only
-evidence they leave. The practical consequence is the same everywhere: when
-you are out of memory, the knob that works immediately is the batch size,
-because it scales the one term the model architecture does not fix. If a
+evidence they leave. Batch size is the first memory control to test because it scales activation
+memory without changing the model architecture. If a
 *growing* staircase appears across steps, look for device arrays accumulating
 on the Python side, such as appending the loss array itself, rather than
 `loss.item()`, to a running log.
@@ -1032,12 +1011,11 @@ forward pass, frees it, and leaves behind gradients exactly the size of the
 weights. The fourth adds $8N$ at the first `apply_gradients`, when Adam
 creates its slot variables. From then on the loop cycles between plateaus two
 and three; the weights, gradients, and optimizer state are permanent
-residents. The practical consequence: when you are out of memory, the knob
-that works immediately is the batch size, because it scales the one term the
-model architecture does not fix. If a *growing* staircase appears across
+residents. Batch size is the first memory control to test because it scales activation
+memory without changing the model architecture. If a *growing* staircase appears across
 steps instead of this steady cycle, look for tensors kept alive between
-iterations, classically a Python list accumulating the loss tensor itself
-rather than `float(loss)`, or a persistent `GradientTape` that never dies.
+iterations, such as a Python list accumulating the loss tensor itself rather
+than `float(loss)`, or a persistent `GradientTape` that remains active.
 :end_tab:
 
 ### Trading Compute for Memory: Activation Checkpointing
@@ -1049,15 +1027,16 @@ them: it keeps only the inputs to selected segments of the network, and during
 the backward pass reruns each segment's forward computation to regenerate the
 activations it needs. For a stack of $N$ equally sized layers, dividing the
 stack into segments of about $\sqrt{N}$ layers reduces stored activations from
-$O(N)$ to $O(\sqrt{N})$. The price is roughly one extra forward pass, often
-30--40% more compute per step. :numref:`fig_bg_activation_checkpoint` sketches
-this schedule.
+$O(N)$ to $O(\sqrt{N})$. Recomputing selected segments adds work, but the
+runtime overhead depends on segment size, operator mix, compiler, RNG handling,
+and hardware; it is not fixed by the asymptotic memory schedule.
+:numref:`fig_bg_activation_checkpoint` sketches this schedule.
 The trade pays off exactly where deep learning spends most of its time: deep
 stacks of identical blocks, such as the residual stack we assembled in
 :numref:`sec_model_construction` and every Transformer you will meet later.
 We rebuild a compact version of that block here.
 
-![Standard backpropagation stores every activation (top); checkpointing keeps only segment-boundary activations and recomputes the rest during the backward pass (bottom), trading roughly 1.3x compute for O(sqrt(N)) instead of O(N) activation memory.](../img/bg-activation-checkpoint.svg)
+![Standard backpropagation stores every activation (top); checkpointing keeps only segment-boundary activations and recomputes the rest during the backward pass (bottom). For equally sized layers and segments of about $\sqrt{N}$ layers, stored activations fall from $O(N)$ to $O(\sqrt{N})$ while backward execution recomputes omitted forward operations.](../img/bg-activation-checkpoint.svg)
 :label:`fig_bg_activation_checkpoint`
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
@@ -1155,19 +1134,19 @@ on the forward pass but tells the tape to store only the inputs, rerunning
 `blk` during the backward pass to regenerate what it needs. One caveat:
 unlike its PyTorch counterpart it does not snapshot random-number state, so
 keep checkpointed segments deterministic (or drive their randomness with
-stateless seeds); a classic dropout layer inside the segment could resample
-on recomputation.
+stateless seeds); a stateful dropout layer inside the segment can resample on
+recomputation.
 :end_tab:
 
 :begin_tab:`mxnet`
 Activation checkpointing is not available in MXNet: neither `mxnet.autograd`
 nor Gluon offers a recompute-during-backward transform comparable to
 `torch.utils.checkpoint`, `jax.checkpoint`, or `tf.recompute_grad`, and none
-was added before development stopped. This subsection's code, the
-gradient-equality check and the peak-memory comparison below, therefore
-appears only in the supported tabs. Recomputation can cut activation memory
-at the cost of roughly a third more compute. In
-MXNet the remaining memory knob is the batch size.
+was added before development stopped. This subsection's code therefore
+appears only in the supported tabs: the gradient-equality check and the
+peak-memory comparison below. Recomputation can cut activation memory in
+supported frameworks, with overhead that depends on the segmented computation.
+In MXNet the remaining memory knob demonstrated here is the batch size.
 :end_tab:
 
 Before measuring memory, we should verify the claim that nothing about the
@@ -1294,63 +1273,41 @@ else:
     print('No GPU: peak-memory comparison needs a GPU.')
 ```
 
-Without checkpointing, the peak carries the activations of all sixteen blocks
-at once; with four-block segments, it carries the four segment inputs plus the
-recomputed activations of one segment, at the cost of a slower step. When a
-model almost fits, this
-trade is the difference between training and not training, which is why large
-Transformer training runs use it as a matter of course.
+Without checkpointing, the peak includes activations from all sixteen blocks.
+With four-block segments, it includes the four segment inputs plus the
+recomputed activations of one segment, at the cost of a slower step. This
+tradeoff can enable training when stored activations would otherwise exceed
+device memory, and it is widely used in large Transformer training runs.
 
-## Don't Break the Pipeline
+## Asynchronous Execution and Input Transfer
+
+Accelerator work is usually queued asynchronously: Python can return from an
+operation before the device finishes it. Accurate timing therefore requires a
+warm-up followed by an explicit synchronization, while frequent scalar reads,
+logging, or host conversions can serialize the pipeline. The backend-specific
+difference is the synchronization primitive and whether CPU dispatch is also
+asynchronous.
 
 :begin_tab:`pytorch`
-The GPU runs ahead of Python. When you write `B = A @ A`, PyTorch does not
-wait for the multiplication: it queues a kernel on the device and returns
-immediately, and Python races on to enqueue the next operation. This
-asynchrony is where much of the speed comes from, because the CPU can prepare
-work while the GPU crunches. It also means that timing or logging naively
-measures nothing, or worse, stalls everything. We can see the gap between
-*queueing* work and the work *finishing*.
+CUDA operations are asynchronous with respect to Python; use
+`torch.cuda.synchronize()` around a timed region. CPU operations here are
+synchronous.
 :end_tab:
 
 :begin_tab:`jax`
-The device runs ahead of Python; in JAX this *asynchronous dispatch* is the
-native execution model on every backend, the CPU included. When you write
-`B = A @ A`, JAX does not wait for the multiplication: it queues the
-computation, returns an array that is really a promise of the result, and
-Python races on to enqueue the next operation. This asynchrony is where much
-of the speed comes from, because Python can prepare work while the device
-crunches. It also means that timing or logging naively measures nothing, or
-worse, stalls everything. The explicit synchronization point is
-`block_until_ready()`; with it we can see the gap between *queueing* work and
-the work *finishing*, on this machine's CPU as well as on any GPU.
+JAX dispatch may be asynchronous on CPU and GPU. Call `block_until_ready()` on
+the result before stopping a timer.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The GPU runs ahead of Python. When you write `B = A @ A` on a GPU tensor,
-eager TensorFlow does not wait for the multiplication: it enqueues the kernel
-on the device's stream and returns a handle immediately, and Python races on
-to enqueue the next operation (inside a `@tf.function`, whole traced graphs
-are handed to the runtime the same way). This asynchrony is where much of the
-speed comes from, because the CPU can prepare work while the GPU crunches. It
-also means that timing or logging naively measures nothing, or worse, stalls
-everything. Eager ops on the CPU backend run synchronously, so seeing the gap
-between *queueing* work and the work *finishing* needs a GPU.
+GPU kernels and traced graphs can be dispatched asynchronously. In these
+examples `tf.test.experimental.sync_devices()` supplies the explicit barrier;
+eager CPU operations are synchronous.
 :end_tab:
 
 :begin_tab:`mxnet`
-The device runs ahead of Python, and MXNet is where this lesson was born:
-asynchrony is the founding design of its execution engine, on the CPU as
-well as the GPU. When you write `B = np.dot(A, A)`, MXNet does not wait for
-the multiplication: the frontend pushes the operation onto the backend
-engine's queue, which tracks dependencies between operations and executes
-each one when its inputs are ready, while Python races on to enqueue the
-next. This asynchrony is where much of the speed comes from, because Python
-can prepare work while the backend crunches. It also means that timing or
-logging naively measures nothing, or worse, stalls everything. The explicit
-synchronization point is `npx.waitall()`, which blocks until every queued
-operation has finished; with it we can see the gap between *queueing* work
-and the work *finishing*, on this machine's CPU as well as on any GPU.
+MXNet's engine is asynchronous on CPU and GPU. `npx.waitall()` blocks until
+queued operations finish and is the synchronization primitive used for timing.
 :end_tab:
 
 ```{.python .input #gpus-devices-memory-don-t-break-the-pipeline-1}
@@ -1425,7 +1382,8 @@ is exactly what our `ProgressBoard` from :numref:`sec_oo-design` does when the
 
 :begin_tab:`jax`
 Python returned from the loop in a few milliseconds — far less time than
-the thousand products take; they were still running. Any operation that needs a concrete value on the host forces a
+the 32 matrix products take; they were still running. Any operation that
+needs a concrete value on the host forces a
 *synchronization point*: `.item()`, `np.asarray`, `print`, an `if` on an
 array's value, and `block_until_ready()` itself, whose job is to make the
 synchronization explicit (our timings above depend on it). Each one makes
@@ -1541,25 +1499,26 @@ tensor on the training thread just before one copy can erase the benefit.
 `DataLoader(pin_memory=True)` performs the pinning in its input pipeline,
 while `non_blocking=True` lets the training thread enqueue the transfer without
 waiting; this is why the two options are the standard pairing. A
-non-blocking copy is a promise, not a completed fact: mutating the source CPU
-tensor before the transfer finishes silently corrupts the data on the device.
+non-blocking copy may still be in progress when the call returns. Mutating the
+source CPU tensor before the transfer finishes can change the data received by
+the device.
 The full treatment of asynchrony, streams, and multi-device parallelism is in
 :numref:`chap_performance`.
 :end_tab:
 
-## The Trainer, Now with Devices
+## Device-Aware Trainer
 
 :begin_tab:`pytorch`
 In :numref:`sec_oo-design` the `Trainer` accepted a `num_gpus` argument and
-ignored it. We can now redeem that promise with everything this section
-taught: the model moves to the device *once*, before training, and every batch
+did not use it. The implementation now applies the placement rules from this
+section: the model moves to the device *once*, before training, and every batch
 streams over per step, at the boundary of the computation.
 :end_tab:
 
 :begin_tab:`jax`
 In :numref:`sec_oo-design` the `Trainer` accepted a `num_gpus` argument and
-ignored it. We can now redeem that promise with everything this section
-taught: the parameters are created on the accelerator *once*, before training
+did not use it. The implementation now applies the placement rules from this
+section: the parameters are created on the accelerator *once*, before training
 (JAX initializes arrays on the default device, which is the accelerator
 whenever one exists), and every batch streams over per step, at the boundary
 of the computation.
@@ -1567,8 +1526,8 @@ of the computation.
 
 :begin_tab:`tensorflow`
 In :numref:`sec_oo-design` the `Trainer` accepted a `num_gpus` argument and
-ignored it. We can now redeem that promise with everything this section
-taught: the model's variables are created on the device by a first forward
+did not use it. The implementation now applies the placement rules from this
+section: the model's variables are created on the device by a first forward
 pass (which the `Trainer` already runs before training, when it compiles its
 step functions), and every batch is re-materialized on the device per step,
 at the boundary of the computation.
@@ -1576,8 +1535,8 @@ at the boundary of the computation.
 
 :begin_tab:`mxnet`
 In :numref:`sec_oo-design` the `Trainer` accepted a `num_gpus` argument and
-ignored it. We can now redeem that promise with everything this section
-taught: the model's parameters are re-assigned to the device *once*, before
+did not use it. The implementation now applies the placement rules from this
+section: the model's parameters are re-assigned to the device *once*, before
 training (`reset_ctx`, which works even while Gluon's parameters are still
 waiting for their shapes), and every batch streams over per step, at the
 boundary of the computation.
@@ -1814,14 +1773,14 @@ trainer.fit(ResMLPClassifier(), d2l.FashionMNIST(batch_size=256))
 
 :begin_tab:`pytorch`
 Every tensor and every parameter lives on a device, and operations combine
-only co-located tensors; copies between devices are explicit (`.to`), slow
-relative to compute, and belong at the boundary of the training loop, not
-inside it. GPU memory during training holds four things: weights, gradients,
+only co-located tensors; copies between devices are explicit (`.to`), can dominate short
+computations, and belong at the boundary of the training loop rather than
+inside it. The principal GPU-memory terms during training are weights, gradients,
 optimizer state (fixed by the model and optimizer), and activations (scaling
 with batch size); `memory_allocated()` tracks live tensors while `nvidia-smi`
 shows the caching allocator's high-water mark, so the two disagree by design.
-Activation checkpointing recomputes instead of stores, trading roughly a third
-more compute for activation memory. The GPU runs asynchronously ahead of
+Activation checkpointing recomputes instead of storing selected activations;
+its runtime overhead is configuration-dependent. The GPU runs asynchronously ahead of
 Python: `.item()`, `.numpy()`, and `print` are synchronization points that
 stall the pipeline, and pinned memory with `non_blocking=True` lets transfers
 overlap compute. The `Trainer` encodes the placement discipline: model moved
@@ -1831,14 +1790,14 @@ once, batches moved per step, graceful CPU fallback when no GPU exists.
 :begin_tab:`jax`
 Every array and every parameter lives on a device, and committed arrays
 combine only when co-located; copies between devices are explicit
-(`device_put`), slow relative to compute, and belong at the boundary of the
-training loop, not inside it. GPU memory during training holds four things:
+(`device_put`), can dominate short computations, and belong at the boundary
+of the training loop rather than inside it. The principal GPU-memory terms during training are
 weights, gradients, optimizer state (fixed by the model and optimizer), and
 activations (scaling with batch size); `device.memory_stats()` tracks live
 buffers inside the block XLA preallocates, while `nvidia-smi` shows the whole
 block, so the two disagree by design. Activation checkpointing
-(`jax.checkpoint`) recomputes instead of stores, trading roughly a third more
-compute for activation memory. Dispatch is asynchronous on every backend:
+(`jax.checkpoint`) recomputes instead of storing selected activations, with
+configuration-dependent overhead. Dispatch is asynchronous on every backend:
 `.item()`, `np.asarray`, and `print` are synchronization points that stall
 the pipeline, and `block_until_ready()` is the explicit one that accurate
 timings need. The `Trainer` encodes the placement discipline: parameters
@@ -1851,14 +1810,15 @@ Every tensor and every Keras variable lives on a device, and TensorFlow's
 silent device policy will copy across devices for you, so keeping copies
 explicit and at the boundary of the training loop is a discipline here rather
 than an enforced rule; it matters just as much, because the hidden transfer
-is just as slow. GPU memory during training holds four things: weights,
+has the same communication cost. The principal GPU-memory terms during
+training are: weights,
 gradients, optimizer state (fixed by the model and optimizer), and the
 activations the `GradientTape` records (scaling with batch size);
 `get_memory_info` tracks live tensors inside the reservation TensorFlow maps
 at startup, while `nvidia-smi` shows the whole reservation, so the two
 disagree by design. Activation checkpointing (`tf.recompute_grad`) recomputes
-instead of stores, trading roughly a third more compute for activation
-memory. On a GPU, eager kernels run asynchronously ahead of Python:
+instead of storing selected activations, with configuration-dependent runtime
+overhead. On a GPU, eager kernels run asynchronously ahead of Python:
 `.numpy()`, `float()`, and `print` are synchronization points that stall the
 pipeline, and `.prefetch(tf.data.AUTOTUNE)` is where input transfer overlaps
 compute. The `Trainer` encodes the placement discipline: variables created on
@@ -1870,12 +1830,13 @@ graceful CPU fallback when no GPU exists.
 Every tensor and every parameter lives on a device (MXNet 2.0's name for the
 1.x *context*), and operations combine only co-located tensors; copies
 between devices are explicit (`copyto`, or the no-op-when-possible
-`as_in_ctx`), slow relative to compute, and belong at the boundary of the
-training loop, not inside it. GPU memory during training holds four things:
+`as_in_ctx`), can dominate short computations, and belong at the boundary of
+the training loop rather than inside it. The principal GPU-memory terms during training are
 weights, gradients, optimizer state (fixed by the model and optimizer), and
 activations (scaling with batch size); MXNet has no per-process counter for
 them, only the device-wide `gpu_memory_info`, and no activation-checkpointing
-utility, so the batch size is its one memory knob. The execution engine is
+utility. In these examples, batch size is the main control over activation
+memory; architecture and numeric precision also affect total memory. The execution engine is
 asynchronous on every backend: `asnumpy()`, `.item()`, and `print` are
 synchronization points that stall the pipeline, and `npx.waitall()` is the
 explicit one that accurate timings need. The `Trainer` encodes the placement
@@ -1898,5 +1859,6 @@ CPU fallback when no GPU exists.
    difference in terms of synchronization points.
 1. If you have two GPUs, time 1000 matrix products of two $4096 \times 4096$
    matrices executed on one GPU, then 500 on each of two GPUs issued from the
-   same loop. You should see almost linear scaling; explain why Python can
-   drive both cards at once. Guard the experiment with `num_gpus() >= 2`.
+   same loop. Measure the scaling, explain how asynchronous dispatch lets
+   Python issue work to both devices, and identify sources of deviation from
+   linear scaling. Guard the experiment with `num_gpus() >= 2`.

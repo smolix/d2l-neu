@@ -6,11 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutions for Images
 :label:`sec_conv_layer`
 
-Now that we understand how convolutional layers work in theory,
-we are ready to see how they work in practice.
-Building on our motivation of convolutional neural networks
-as efficient architectures for exploring structure in image data,
-we stick with images as our running example.
+The preceding section derived convolutional layers from locality and
+translation equivariance. We now define the two-dimensional cross-correlation
+operation, implement it directly, and show how its kernels can be learned from
+image data.
 
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab mxnet
@@ -44,16 +43,15 @@ import tensorflow as tf
 
 ## The Cross-Correlation Operation
 
-Recall that strictly speaking, convolutional layers
-are a  misnomer, since the operations they express
-are more accurately described as cross-correlations.
-Based on our descriptions of convolutional layers in :numref:`sec_why-conv`,
-in such a layer, an input tensor
-and a kernel tensor are combined
-to produce an output tensor through a cross-correlation operation.
+Strictly speaking, the operation used by a convolutional layer is
+cross-correlation rather than mathematical convolution.
+As described in :numref:`sec_why-conv`,
+such a layer combines an input tensor
+and a kernel tensor
+into an output tensor through a cross-correlation operation.
 
-Let's ignore channels for now and see how this works
-with two-dimensional data and hidden representations.
+We first omit channels and consider two-dimensional inputs and hidden
+representations.
 In :numref:`fig_correlation`,
 the input is a two-dimensional tensor
 with a height of 3 and width of 3.
@@ -83,26 +81,26 @@ and the four elements are derived from
 the two-dimensional cross-correlation operation:
 
 $$
-0\times0+1\times1+3\times2+4\times3=19,\\
-1\times0+2\times1+4\times2+5\times3=25,\\
-3\times0+4\times1+6\times2+7\times3=37,\\
-4\times0+5\times1+7\times2+8\times3=43.
+\begin{aligned}
+0\times0+1\times1+3\times2+4\times3 &= 19,\\
+1\times0+2\times1+4\times2+5\times3 &= 25,\\
+3\times0+4\times1+6\times2+7\times3 &= 37,\\
+4\times0+5\times1+7\times2+8\times3 &= 43.
+\end{aligned}
 $$
 
-Note that along each axis, the output size
-is slightly smaller than the input size.
+Along each axis, the output is smaller than the input.
 Because the kernel has width and height greater than $1$,
 we can only properly compute the cross-correlation
-for locations where the kernel fits wholly within the image,
-the output size is given by the input size $n_\textrm{h} \times n_\textrm{w}$
-minus the size of the convolution kernel $k_\textrm{h} \times k_\textrm{w}$
-via
+for locations where the kernel fits wholly within the image.
+The output size is therefore the input size $n_\textrm{h} \times n_\textrm{w}$
+minus the size of the convolution kernel $k_\textrm{h} \times k_\textrm{w}$,
+that is,
 
 $$(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1).$$
 
-This is the case since we need enough space
-to "shift" the convolution kernel across the image.
-Later we will see how to keep the size unchanged
+The kernel must fit within the image at every evaluated position. The next
+section shows how to keep the size unchanged
 by padding the image with zeros around its boundary
 so that there is enough space to shift the kernel.
 Next, we implement this process in the `corr2d` function,
@@ -177,7 +175,7 @@ The two parameters of a convolutional layer
 are the kernel and the scalar bias.
 When training models based on convolutional layers,
 we typically initialize the kernels randomly,
-just as we would with a fully connected layer.
+as with a fully connected layer.
 
 We are now ready to implement a two-dimensional convolutional layer
 based on the `corr2d` function defined above.
@@ -241,19 +239,17 @@ class Conv2D(nnx.Module):
 ```
 
 In
-$h \times w$ convolution
+an $h \times w$ convolution,
 or an $h \times w$ convolution kernel,
-the height and width of the convolution kernel are $h$ and $w$, respectively.
-We also refer to
-a convolutional layer with an $h \times w$
-convolution kernel simply as an $h \times w$ convolutional layer.
+the height and width of the kernel are $h$ and $w$, respectively.
+We call a convolutional layer with this kernel an $h \times w$ convolutional
+layer.
 
 
 ## Object Edge Detection in Images
 
-Let's take a moment to parse a simple application of a convolutional layer:
-detecting the edge of an object in an image
-by finding the location of the pixel change.
+As a first application, we use a convolutional layer to detect an object's
+edge by locating changes in pixel values.
 First, we construct an "image" of $6\times 8$ pixels.
 The middle four columns are black ($0$) and the rest are white ($1$).
 
@@ -282,7 +278,15 @@ Next, we construct a kernel `K` with a height of 1 and a width of 2.
 When we perform the cross-correlation operation with the input,
 if the horizontally adjacent elements are the same,
 the output is 0. Otherwise, the output is nonzero.
-Note that this kernel is a special case of a finite difference operator. At location $(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, i.e., it computes the difference between the values of horizontally adjacent pixels. This is a discrete approximation of the first derivative in the horizontal direction (up to a sign). After all, for a function $f(i,j)$ its derivative is $\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j+\epsilon) - f(i,j)}{\epsilon}$, so the kernel output $x_{i,j} - x_{i,j+1}$ approximates $-\partial_j f(i,j)$. Let's see how this works in practice.
+This kernel is a special case of a finite-difference operator. At location
+$(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, the difference between horizontally
+adjacent pixels. Up to a sign, this is a discrete approximation to the first
+derivative in the horizontal direction. For a function $f(i,j)$, the derivative
+is
+
+$$\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j+\epsilon) - f(i,j)}{\epsilon},$$
+
+so the kernel output $x_{i,j} - x_{i,j+1}$ approximates $-\partial_j f(i,j)$.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-2}
 K = d2l.tensor([[1.0, -1.0]])
@@ -290,7 +294,7 @@ K = d2l.tensor([[1.0, -1.0]])
 
 We are ready to perform the cross-correlation operation
 with arguments `X` (our input) and `K` (our kernel).
-As you can see, we detect $1$ for the edge from white to black
+The output is $1$ at the edge from white to black
 and $-1$ for the edge from black to white.
 All other outputs take value $0$.
 
@@ -308,25 +312,18 @@ corr2d(d2l.transpose(X), K)
 
 ## Learning a Kernel
 
-Designing an edge detector by finite differences `[1, -1]` is neat
-if we know this is precisely what we are looking for.
-However, as we look at larger kernels,
-and consider successive layers of convolutions,
-it might be impossible to specify
-precisely what each filter should be doing manually.
+The finite difference `[1, -1]` works when the desired feature is known in
+advance. For larger kernels and successive convolutional layers, manually
+specifying every filter is generally impractical.
 
-Now let's see whether we can learn the kernel that generated `Y` from `X`
-by looking at the input--output pairs only.
+We therefore learn the kernel that maps `X` to `Y` from input--output pairs.
 We first construct a convolutional layer
 and initialize its kernel as a random tensor.
 Next, in each iteration, we will use the squared error
 to compare `Y` with the output of the convolutional layer.
 We can then calculate the gradient to update the kernel.
-For the sake of simplicity,
-in the following
-we use the built-in class
-for two-dimensional convolutional layers
-and ignore the bias.
+The following example uses the built-in two-dimensional convolutional layer and
+omits the bias.
 
 ```{.python .input #conv-layer-learning-a-kernel-1}
 %%tab mxnet
@@ -430,7 +427,7 @@ for i in range(10):
         print(f'epoch {i + 1}, loss {l:.3f}')
 ```
 
-Note that the error has dropped to a small value after 10 iterations. Now we will take a look at the kernel tensor we learned.
+After 10 iterations, the error is small. We can inspect the learned kernel.
 
 ```{.python .input #conv-layer-learning-a-kernel-2}
 %%tab mxnet
@@ -459,19 +456,13 @@ to the kernel tensor `K` we defined earlier.
 
 Recall our observation from :numref:`sec_why-conv` of the correspondence
 between the cross-correlation and convolution operations.
-Here let's continue to consider two-dimensional convolutional layers.
-What if such layers
-perform strict convolution operations
-as defined in :eqref:`eq_2d-conv-discrete`
-instead of cross-correlations?
-In order to obtain the output of the strict *convolution* operation, we only need to flip the two-dimensional kernel tensor both horizontally and vertically, and then perform the *cross-correlation* operation with the input tensor.
+For two-dimensional layers, strict convolution as defined in
+:eqref:`eq_2d-conv-discrete` differs from cross-correlation only by flipping the
+kernel horizontally and vertically before applying cross-correlation.
 
 Since kernels are learned from data in deep learning,
 the outputs of convolutional layers remain unaffected
-no matter such layers
-perform
-either the strict convolution operations
-or the cross-correlation operations.
+whether the layers perform strict convolution or cross-correlation.
 
 To illustrate this, suppose that a convolutional layer performs *cross-correlation* and learns the kernel in :numref:`fig_correlation`, which is here denoted as the matrix $\mathbf{K}$.
 Assuming that other conditions remain unchanged,
@@ -479,20 +470,17 @@ when this layer instead performs strict *convolution*,
 the learned kernel $\mathbf{K}'$ will be the same as $\mathbf{K}$
 after $\mathbf{K}'$ is
 flipped both horizontally and vertically.
-That is to say,
-when the convolutional layer
+Thus, when the convolutional layer
 performs strict *convolution*
-for the input in :numref:`fig_correlation`
-and $\mathbf{K}'$,
-the same output in :numref:`fig_correlation`
-(cross-correlation of the input and $\mathbf{K}$)
-will be obtained.
+on the input in :numref:`fig_correlation`
+with $\mathbf{K}'$,
+it produces the same output as in :numref:`fig_correlation`
+(the cross-correlation of the input and $\mathbf{K}$).
 
 In keeping with standard terminology in deep learning literature,
 we will continue to refer to the cross-correlation operation
-as a convolution even though, strictly-speaking, it is slightly different.
-Furthermore,
-we use the term *element* to refer to
+as a convolution even though the operations differ mathematically. We use the
+term *element* to refer to
 an entry (or component) of any tensor representing a layer representation or a convolution kernel.
 
 
@@ -501,6 +489,8 @@ an entry (or component) of any tensor representing a layer representation or a c
 Every output element in :numref:`fig_correlation` is a dot product:
 the kernel, flattened into a vector of length $k_\textrm{h} k_\textrm{w}$,
 multiplied with the input patch under the window, flattened the same way.
+For an input of spatial size $h \times w$, the number of such patches depends
+on the kernel, padding, and stride.
 If we extract each patch the sliding window visits,
 flatten it into a row, and stack the rows,
 we obtain a matrix with one row per output position.
@@ -565,17 +555,17 @@ is sometimes called a *feature map*,
 as it can be regarded as
 the learned representations (features)
 in the spatial dimensions (e.g., width and height)
-to the subsequent layer.
+that it passes on to the subsequent layer.
 In CNNs,
 for any element $x$ of some layer,
 its *receptive field* refers to
 all the elements (from all the previous layers)
 that may affect the calculation of $x$
 during the forward propagation.
-Note that the receptive field
-may be larger than the actual size of the input.
+The receptive field can extend beyond the valid input region when padding is
+used.
 
-Let's continue to use :numref:`fig_correlation` to explain the receptive field.
+We use :numref:`fig_correlation` to illustrate the receptive field.
 Given the $2 \times 2$ convolution kernel,
 the receptive field of the shaded output element (of value $19$)
 is
@@ -592,11 +582,8 @@ on $\mathbf{Y}$ includes all the four elements of $\mathbf{Y}$,
 while
 the receptive field
 on the input includes all the nine input elements.
-Thus,
-when any element in a feature map
-needs a larger receptive field
-to detect input features over a broader area,
-we can build a deeper network.
+Stacking layers therefore lets an element respond to input features over a
+broader area.
 
 This layer-by-layer counting has a closed form.
 Consider a stack of $L$ convolutional layers
@@ -654,7 +641,7 @@ Later, :citet:`Field.1987` modeled these responses on natural images
 with what are, in effect, convolutional kernels.
 We reprint a key figure in :numref:`field_visual`.
 
-![Figure and caption taken from :citet:`Field.1987`: An example of coding with six different channels. (Left) Examples of the six types of sensor associated with each channel. (Right) Convolution of the image in (Middle) with the six sensors shown in (Left). The response of the individual sensors is determined by sampling these filtered images at a distance proportional to the size of the sensor (shown with dots). This diagram shows the response of only the even symmetric sensors.](../img/field-visual.png)
+![Six receptive-field filters and their responses to a natural image, adapted from :citet:`Field.1987`. The left panel shows the filters, the middle panel the input image, and the right panel the filtered responses sampled at intervals proportional to each filter's size. Different filters respond to different local edge patterns.](../img/field-visual.png)
 :label:`field_visual`
 
 The correspondence extends to features computed by deeper layers of networks trained on image classification :cite:`Kuzovkin.Vicente.Petton.ea.2018`.

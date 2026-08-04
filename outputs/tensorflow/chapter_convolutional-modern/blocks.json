@@ -35,12 +35,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\n"
+          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\nSequential output shape:\t (1, 7, 7, 512)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 7, 7, 512)\nSequential output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
           "bytes": 20444,
-          "sha256": "sha256:84739042feef756862e14f269d9780fc3a1c42976f9fd5d8d813c99438c2d96a"
+          "sha256": "sha256:6e2bc7693b3b94760a0ae8ee8b10c63ea561a3221aca67520be3a7391d2981fd"
         }
       ]
     },
@@ -74,7 +74,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\nSequential output shape:\t (1, 5, 5, 10)\nGlobalAveragePooling2D output shape:\t (1, 10)\nFlatten output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 5, 5, 10)\nGlobalAveragePooling2D output shape:\t (1, 10)\nFlatten output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -86,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 21504,
-          "sha256": "sha256:a31f013c841aecf2179359f1a7059d5a553f0a6a60c9a93a6eec3ecfa24d8a4b"
+          "bytes": 20956,
+          "sha256": "sha256:219b2f8bc62826f0f9009fc4d9a4e8ec9881503db63e84ba9e8e01e13108a277"
         }
       ]
     },

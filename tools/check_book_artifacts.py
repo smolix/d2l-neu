@@ -30,7 +30,29 @@ FRAMEWORKS = ['pytorch', 'tensorflow', 'jax', 'mxnet']
 _IMG_EXTS = ('.svg', '.png', '.jpg', '.jpeg', '.gif')
 _LFS_SIG = b'version https://git-lfs.github.com/spec/v1'
 MIN_PDF_BYTES = 1_000_000   # a real per-framework book PDF is tens of MB
+MIN_PDF_PAGES = 1_500       # healthy books run 1900-2300 pages; the 2026-08-02
+                            # /tmp-full truncation shipped 411- and 1189-page
+                            # PDFs that passed the byte floor. If the book ever
+                            # legitimately shrinks below this, lower it here.
 MIN_ZIP_BYTES = 500_000     # a real per-framework notebook zip is several MB
+
+
+def pdf_page_count(pdf: Path):
+    """Pages per `pdfinfo` (poppler-utils), or None if pdfinfo is unavailable.
+    A present-but-unparseable PDF returns 0 so the caller flags it."""
+    import shutil
+    import subprocess
+    if shutil.which('pdfinfo') is None:
+        return None
+    try:
+        out = subprocess.run(['pdfinfo', str(pdf)], capture_output=True,
+                             text=True, timeout=60)
+        for line in out.stdout.splitlines():
+            if line.startswith('Pages:'):
+                return int(line.split()[1])
+        return 0
+    except (subprocess.SubprocessError, ValueError, OSError):
+        return 0
 
 
 def pointer_images(root: Path):
@@ -91,8 +113,11 @@ def main():
                       f'{book}/ (broken figures) — `git lfs pull` then re-render. '
                       f'e.g. {ptrs[0].relative_to(book)}')
 
-    # 3. PDFs (only assert if the PDF tree was built at all)
+    # 3. PDFs (only assert if the PDF tree was built at all). Size alone is
+    # not enough: a quarto crash mid-.tex leaves a compilable half-book that
+    # clears any byte floor, so also require a plausible page count.
     if (book / 'pdf').is_dir():
+        pdfinfo_missing_noted = False
         for fw in FRAMEWORKS:
             pdf = book / 'pdf' / f'Dive-into-Deep-Learning-{fw}.pdf'
             if not pdf.is_file():
@@ -100,6 +125,19 @@ def main():
             elif pdf.stat().st_size < MIN_PDF_BYTES:
                 errors.append(f'PDF {pdf} is only {pdf.stat().st_size} bytes '
                               f'(< {MIN_PDF_BYTES}) — render likely truncated')
+            else:
+                pages = pdf_page_count(pdf)
+                if pages is None:
+                    if not pdfinfo_missing_noted:
+                        print('  note: pdfinfo (poppler-utils) not found — '
+                              'PDF page-count check skipped')
+                        pdfinfo_missing_noted = True
+                elif pages < MIN_PDF_PAGES:
+                    errors.append(f'PDF {pdf} has {pages} pages '
+                                  f'(< {MIN_PDF_PAGES}) — truncated render '
+                                  f'(quarto/xelatex died mid-book?)')
+                else:
+                    print(f'  ✓ {fw}: PDF {pages} pages')
     else:
         print(f'  note: {book}/pdf absent — skipping PDF check (html-only build)')
 

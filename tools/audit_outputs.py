@@ -26,6 +26,11 @@ Modes:
   (default)        human report; exit non-zero on integrity errors.
   --verify-fresh   render gate: exit non-zero on any HARD-stale (inline) cell or
                    integrity error; SOFT (asset) staleness only warns.
+  --check-noise    output-hygiene gate (§3.6): exit non-zero if any stored output
+                   carries an ANSI escape, a progress-bar control character, or a
+                   line wider than the PDF page. Reported as a WARNING in every
+                   other mode, so `make html` surfaces regressions without
+                   blocking a render. Exceptions: tools/output_noise_allow.txt.
   --stale          print the minimal re-execution set (one source path per line).
   --stale-stamps   print the `.executed` stamp path of every stale (framework,
                    file) pair — the exact stamps to `rm` to FORCE re-execution
@@ -39,6 +44,7 @@ not execute anything.
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -190,6 +196,138 @@ def unmaterialized_lfs_pointers(store_dir):
     return out
 
 
+# ── output-noise gate (see docs/build-system.md §3.6) ────────────────────
+#
+# Captured output is rendered into HTML *and* into a LaTeX `verbatim` block, so
+# anything a library wrote for a live terminal survives into the book. Three
+# things are checked, all of them fixable at execution time (never at capture):
+#
+#   ansi     a CSI escape — colour, bold. Renders as literal "[38;2;79m" garbage.
+#   control  a carriage return / backspace / form feed: an animated progress bar
+#            whose every frame was recorded. Fix at the call site (Keras
+#            `verbose=2`, `TQDM_DISABLE=1`), not by hiding the output.
+#   width    a line too long for the page. The PDF's verbatim budget is
+#            452.6pt of text (A4 minus 1in margins) at Inconsolata 9pt
+#            (`\small` in an 11pt book, monofont Scale=0.9), i.e. 0.5em =
+#            4.5pt per character — about 100 characters. Beyond that fvextra
+#            wraps mid-token, which reads badly even though nothing is lost.
+#
+# The allowlist (tools/output_noise_allow.txt) exists for output whose noise IS
+# the lesson — a cell that deliberately demonstrates a library error, say.
+PDF_VERBATIM_COLUMNS = 100
+
+_ANSI_RE = re.compile(r'\x1b\[[0-9;?]*[ -/]*[@-~]')
+_CONTROL_RE = re.compile(r'[\r\b\x0c\x07]')
+_ALLOW_FILE = Path(__file__).resolve().parent / 'output_noise_allow.txt'
+
+
+def load_noise_allowlist(path=_ALLOW_FILE):
+    """Parse the allowlist: `<framework> <source> <cell-id> [kind,...]` per line.
+
+    `framework` and `cell-id` accept `*`. `kind` defaults to every kind. Blank
+    lines and `#` comments are ignored; a trailing `# reason` is required by
+    convention, not by the parser — every entry should say why.
+    """
+    entries = []
+    try:
+        text = Path(path).read_text(encoding='utf-8')
+    except OSError:
+        return entries
+    for raw in text.splitlines():
+        line = raw.split('#', 1)[0].strip()
+        if not line:
+            continue
+        parts = line.split()
+        if len(parts) < 3:
+            print(f'  ⚠ malformed allowlist line: {raw!r}', file=sys.stderr)
+            continue
+        fw, source, cell = parts[0], parts[1], parts[2]
+        kinds = set(parts[3].split(',')) if len(parts) > 3 else None
+        entries.append((fw, source, cell, kinds))
+    return entries
+
+
+def _allowed(entries, fw, source, cell, kind):
+    for e_fw, e_src, e_cell, e_kinds in entries:
+        if e_fw not in ('*', fw) or e_src != source:
+            continue
+        if e_cell not in ('*', cell):
+            continue
+        if e_kinds is None or kind in e_kinds:
+            return True
+    return False
+
+
+def scan_output_noise(store_dir, frameworks, max_width=PDF_VERBATIM_COLUMNS,
+                      allow=None):
+    """Findings for every stored output line that cannot render as book text.
+
+    Returns a list of dicts: framework, source, cell, kind, detail, sample.
+    """
+    allow = load_noise_allowlist() if allow is None else allow
+    findings = []
+    for fw in frameworks:
+        fw_dir = Path(store_dir) / fw
+        if not fw_dir.exists():
+            continue
+        for manifest_path in sorted(fw_dir.glob('chapter_*/*.json')):
+            try:
+                man = json.loads(manifest_path.read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                continue
+            source = man.get('source') or str(manifest_path)
+            for cell, rec in (man.get('cells') or {}).items():
+                hits = {}
+                for out in rec.get('outputs') or []:
+                    text = out.get('text')
+                    if not text:
+                        continue
+                    if _ANSI_RE.search(text):
+                        hits.setdefault('ansi', _ANSI_RE.search(text).group(0))
+                    if _CONTROL_RE.search(text):
+                        hits.setdefault('control', repr(
+                            _CONTROL_RE.search(text).group(0)))
+                    for line in _ANSI_RE.sub('', text).split('\n'):
+                        if len(line) > max_width and 'width' not in hits:
+                            hits['width'] = f'{len(line)} cols: {line[:60]}…'
+                for kind, detail in hits.items():
+                    if _allowed(allow, fw, source, cell, kind):
+                        continue
+                    findings.append(dict(framework=fw, source=source,
+                                         cell=cell, kind=kind, detail=detail))
+    return findings
+
+
+def report_output_noise(findings, max_width, strict, limit=25):
+    """Print the noise report. Returns True when it should fail the build."""
+    # Strict mode is a gate: findings are the failure, so they go to stderr.
+    # Advisory mode is part of the human report and must stay in reading order
+    # on stdout with the rest of it.
+    out = sys.stderr if strict else sys.stdout
+    if not findings:
+        print(f'  ✓ no terminal noise in stored output '
+              f'(no ANSI/control chars, ≤{max_width} columns).', file=out)
+        return False
+    by_kind = {}
+    for f in findings:
+        by_kind.setdefault(f['kind'], []).append(f)
+    files = {(f['framework'], f['source']) for f in findings}
+    head = 'FAIL (check-noise)' if strict else '  ⚠ output noise'
+    print(f'\n{head}: {len(findings)} cell(s) in {len(files)} manifest(s) carry '
+          f'output a book page cannot render '
+          f'({", ".join(f"{k}={len(v)}" for k, v in sorted(by_kind.items()))}).',
+          file=out)
+    for f in findings[:limit]:
+        print(f'      [{f["kind"]:7}] {f["framework"]:11} {f["source"]}'
+              f' :: {f["cell"]}\n                  {f["detail"]}', file=out)
+    if len(findings) > limit:
+        print(f'      ... and {len(findings) - limit} more', file=out)
+    print('      Fix at execution (tools/runtime_env.py QUIET_ENV, '
+          'tools/nbquiet/sitecustomize.py) or at the call site; allowlist a '
+          'deliberate demo in tools/output_noise_allow.txt.', file=out)
+    return strict
+
+
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__,
@@ -210,6 +348,14 @@ def main():
                     help='print the .executed stamp path of every stale '
                          '(framework, file) pair — the exact stamps to remove '
                          'to FORCE re-execution (see refresh-stale)')
+    ap.add_argument('--check-noise', action='store_true',
+                    help='gate: fail if any stored output line carries an ANSI '
+                         'escape, a progress-bar control character, or more '
+                         'columns than the PDF page holds '
+                         '(see tools/output_noise_allow.txt)')
+    ap.add_argument('--max-line-width', type=int, default=PDF_VERBATIM_COLUMNS,
+                    help=f'columns the PDF verbatim block holds '
+                         f'(default {PDF_VERBATIM_COLUMNS})')
     ap.add_argument('--json', action='store_true', help='machine-readable output')
     args = ap.parse_args()
 
@@ -222,6 +368,11 @@ def main():
         print(f'No store at {args.store_dir}/ — run `make capture-outputs` first',
               file=sys.stderr)
         return 1
+
+    if args.check_noise:
+        findings = scan_output_noise(store_dir, frameworks, args.max_line_width)
+        return 1 if report_output_noise(
+            findings, args.max_line_width, strict=True) else 0
 
     if args.check_lfs:
         ptrs = unmaterialized_lfs_pointers(store_dir)
@@ -312,7 +463,13 @@ def main():
     else:
         print('  ✓ no stale notebooks.')
 
-    if not (stale or integrity_err or missing):
+    # Terminal noise is reported in every mode, but only `--check-noise` makes
+    # it fatal: `make html` must keep rendering a store that still has it, so
+    # the gate warns loudly here and blocks only where it is asked to.
+    noise = scan_output_noise(store_dir, frameworks, args.max_line_width)
+    report_output_noise(noise, args.max_line_width, strict=False, limit=10)
+
+    if not (stale or integrity_err or missing or noise):
         print('\n  ✓ store is clean and fresh.')
 
     if args.verify_fresh:

@@ -11,10 +11,9 @@ connected layer mapping 512 inputs to 256 outputs brings a $256 \times 512$
 weight matrix filled with random numbers. :numref:`sec_numerical_stability` explains why the scale of those
 numbers decides whether a deep network trains at all, and derives the Xavier
 :cite:`Glorot.Bengio.2010` and He :cite:`He.Zhang.Ren.ea.2015` schemes that
-keep signal variance stable across layers. This section is the practical
-companion: what the library does when you say nothing, how to impose a scheme
-of your own on a whole model or a single block, what transformer-era code adds
-on top of Xavier and He, and how to write an initializer that no menu provides.
+keep signal variance stable across layers. This section examines library defaults, applies explicit schemes to a model or
+submodule, introduces initialization rules used in deep residual and Transformer
+architectures, and implements custom initializers.
 
 ```{.python .input #init-initialization}
 %%tab pytorch
@@ -47,7 +46,10 @@ npx.set_np()
 
 ## Defaults and When to Override Them
 
-You can usually ignore initialization because the default is sensible.
+Default initializers are suitable for standard library layers at ordinary
+depths. Inspect or override them when activation functions, residual depth,
+custom parameters, or reproduction of a published model impose a specific
+scaling rule.
 
 :begin_tab:`pytorch`
 PyTorch initializes an `nn.Linear` the moment it is constructed: weight and
@@ -56,7 +58,7 @@ $b = 1/\sqrt{n_\textrm{in}}$, where $n_\textrm{in}$ is the number of input
 features. (The documentation describes the weight rule as a variant of He
 initialization, `kaiming_uniform_` with `a=math.sqrt(5)`; the algebra collapses
 to the bound above.) A uniform distribution on $[-b, b]$ has standard deviation
-$b/\sqrt{3}$, so both claims are cheap to check against a fresh layer:
+$b/\sqrt{3}$, so a fresh layer can verify both claims:
 :end_tab:
 
 :begin_tab:`jax`
@@ -66,7 +68,7 @@ from a normal distribution with standard deviation
 $1/\sqrt{n_\textrm{in}}$, truncated so that no entry lands in the far tails
 (the initializer rescales after clipping to keep the standard deviation on target, which
 puts the hard bound near $2.3$ standard deviations), and the bias starts at
-zero. Both claims are cheap to check against a fresh layer:
+zero. A fresh layer can verify both claims:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -77,7 +79,7 @@ layer first learns its input shape (every Keras layer is lazy in the sense of
 of :numref:`subsec_xavier` in its uniform variant: the kernel comes from
 $U(-b, b)$ with $b = \sqrt{6/(n_\textrm{in} + n_\textrm{out})}$, and the bias
 starts at zero. A uniform distribution on $[-b, b]$ has standard deviation
-$b/\sqrt{3}$, so all three claims are cheap to check against a fresh layer:
+$b/\sqrt{3}$, so a fresh layer can verify all three claims:
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -88,8 +90,7 @@ the first forward pass (:numref:`sec_lazy_init`). What it draws is the legacy
 exception in the table below: every weight comes from $U(-0.07, 0.07)$
 regardless of the layer's shape, a fixed constant rather than a fan-aware
 bound, and the bias starts at zero. A uniform distribution on $[-b, b]$ has
-standard deviation $b/\sqrt{3}$, so all three claims are cheap to check
-against a fresh layer (passing `in_units` pins the input width, so nothing is
+standard deviation $b/\sqrt{3}$, so a fresh layer can verify all three claims (passing `in_units` pins the input width, so nothing is
 deferred here):
 :end_tab:
 
@@ -179,8 +180,8 @@ recipe; architecture-specific corrections such as the residual scaling later
 in this section; and parameters you create by hand, where Keras quietly
 substitutes a default of its own, since `add_weight` falls back to Glorot
 uniform unless you pass an `initializer`, a sensible scale for a weight
-matrix and the wrong one for almost anything else. There is no
-construction-time fine print to remember: fan-in and fan-out are read off
+matrix and generally unsuitable for parameters with other roles. No additional
+construction-time rule is needed: fan-in and fan-out are read off
 the input shape when `build` runs.
 :end_tab:
 
@@ -194,7 +195,7 @@ situations recur: a deep network without normalization layers, where variance
 compounds even when each layer is right (we demonstrate this below);
 reproducing a paper whose results depend on its initialization recipe; and
 architecture-specific corrections such as the residual scaling later in this
-section. The lazy fine print runs the other way from PyTorch's: with the
+section. Deferred initialization changes the timing: with the
 input width unspecified, `initialize()` merely records which initializer to
 use, and the draw happens at the first forward pass, once the layer knows its
 fan-in.
@@ -291,7 +292,7 @@ net = tf.keras.Sequential([
 
 X = tf.ones((2, 4))
 net(X)
-net.layers[0].kernel[:, 0], net.layers[0].bias[0]
+net.layers[0].kernel[:, 0].numpy(), net.layers[0].bias[0].numpy()
 ```
 
 ```{.python .input #init-applying-initializers-1}
@@ -379,7 +380,7 @@ net = tf.keras.Sequential([
         1, kernel_initializer=tf.keras.initializers.Constant(42.0))])
 
 net(X)
-net.layers[0].kernel[:, 0], net.layers[2].kernel[:, 0]
+net.layers[0].kernel[:, 0].numpy(), net.layers[2].kernel[:, 0].numpy()
 ```
 
 ```{.python .input #init-applying-initializers-2}
@@ -390,8 +391,8 @@ net[0].weight.data()[0], net[1].weight.data()
 ```
 
 :begin_tab:`pytorch`
-This ten-line pattern is the entire API. Later chapters wrap it into
-one-liners, `init_cnn` for convolutional networks and `init_seq2seq` for
+This pattern defines the relevant API. Later chapters package it as helper
+functions, `init_cnn` for convolutional networks and `init_seq2seq` for
 encoder-decoder models, but each is just a function like `init_normal` handed
 to `apply`.
 :end_tab:
@@ -445,7 +446,7 @@ reinit(net, tf.keras.initializers.GlorotUniform(seed=1))
 net.layers[2].kernel[:3]
 ```
 
-## Modern Schemes: Truncation, Depth, and Zeros
+## Truncation, Depth Scaling, and Zero Initialization
 
 Xavier and He set the variance of a single layer. The schemes below, standard
 in transformer codebases, adjust what happens in the distribution's tails,
@@ -454,10 +455,10 @@ across depth, and at a block's start.
 ### Truncated Normals
 
 A Gaussian gets the variance right, but its tails are unbounded. That is
-harmless for one draw and a near-certainty at scale: among the $10^8$ weights
-of a BERT-sized model, dozens land beyond five standard deviations. Large
-draws also consume disproportionate dynamic range once a model is cast to low
-precision (:numref:`sec_numerics`). BERT and implementations in the ViT
+harmless for one draw, while at scale a far-tail value is a near-certainty:
+among the $10^8$ weights of a BERT-sized model, dozens land beyond five
+standard deviations. Large draws also consume disproportionate dynamic range
+once a model is cast to low precision (:numref:`sec_numerics`). BERT and implementations in the ViT
 lineage use truncated-normal initialization
 :cite:`Devlin.Chang.Lee.ea.2018,Dosovitskiy.Beyer.Kolesnikov.ea.2021`: the
 tails are cut off at a fixed multiple of the nominal standard deviation. Raw
@@ -489,8 +490,8 @@ tails:
 :end_tab:
 
 :begin_tab:`mxnet`
-`mxnet.init` ships no truncated normal; the menu ends just before the scheme
-we want. The escape hatch is the one this section closes with: an initializer
+`mxnet.init` ships no truncated normal; the library does not provide this scheme. We therefore use the custom
+initializer interface introduced below: an initializer
 is a subclass of `init.Initializer` that fills an array inside its
 `_init_weight` method, so the missing entry costs a dozen lines. We draw
 normal values and redraw every entry that lands outside two standard
@@ -556,8 +557,9 @@ print(f'truncated: std {float(w.std()):.4f}, '
 
 A million plain-normal draws produce entries near $5\sigma = 0.1$; the
 truncated version guarantees $|w| \leq 0.04$. Its printed standard deviation
-dips slightly below the nominal 0.02 because truncation removes tail mass;
-practice ignores the difference.
+dips below the nominal 0.02 because truncation removes tail mass. Fixed-standard-
+deviation recipes such as BERT accept this reduced realized variance; a recipe
+whose derivation requires a target variance should compensate for truncation.
 
 ### Scaling Down Residual Branches
 
@@ -567,7 +569,7 @@ contributions. If every block is initialized identically, each contribution
 has variance proportional to that of the already-inflated stream it reads, and
 the stream's variance compounds geometrically with depth. This is the
 depth-wise cousin of the layer-wise explosion in
-:numref:`sec_numerical_stability`. GPT-2's fix is to shrink only the *last*
+:numref:`sec_numerical_stability`. GPT-2 addresses this effect by shrinking the *last*
 linear layer of each residual branch, the output projection that writes into
 the stream, by a factor of $1/\sqrt{N}$: with $N$ roughly independent
 contributions each scaled down that way, the sum's variance stays $O(1)$
@@ -600,9 +602,9 @@ from the previous one: GPT-2 makes every residual projection *small but
 nonzero*, whereas zero-init makes one layer *exactly zero* so the block starts
 as an exact identity.
 
-### Watching the Variance Compound
+### Measuring Variance across Depth
 
-Claims about variance at depth are cheap to test. We reuse a compact residual
+The following experiment measures variance across depth. We reuse a compact residual
 block (it repeats the one from :numref:`sec_model_construction`) and stack
 it $N$ deep:
 
@@ -838,30 +840,28 @@ behave, but it catches an unusable initialization before training begins.
 
 ## Custom Initializers
 
-Occasionally the menu has nothing you need.
+Some architectures require an initializer absent from the library.
 
 :begin_tab:`pytorch`
-An initializer is just a function that mutates a parameter, so writing one is
-no harder than using one.
+In PyTorch, a custom initializer is a function that mutates a parameter.
 :end_tab:
 
 :begin_tab:`jax`
-An initializer is just a function `(key, shape, dtype) -> array`, the
-signature everything in `nnx.initializers` shares, so writing one is no harder
-than using one.
+In NNX, a custom initializer follows the shared
+`(key, shape, dtype) -> array` signature.
 :end_tab:
 
 :begin_tab:`tensorflow`
-An initializer is just an object mapping `(shape, dtype)` to a tensor:
-subclass `tf.keras.initializers.Initializer`, implement `__call__`, and every
-layer will accept an instance, so writing one is no harder than using one.
+An initializer is an object that maps `(shape, dtype)` to a tensor:
+subclass `tf.keras.initializers.Initializer` and implement `__call__`; layers
+then accept an instance through their initializer arguments.
 :end_tab:
 
 :begin_tab:`mxnet`
 By now this is familiar: an initializer is a subclass of `init.Initializer`
 whose `_init_weight` method fills the array it is handed, in place, and this
-section has already written two (the truncated normal and the depth-scaled
-He). Writing one is no harder than using one.
+section has already implemented two: the truncated normal and depth-scaled He
+initializers.
 :end_tab:
 
 Suppose, to make the point vividly, we want weights distributed as
@@ -960,31 +960,31 @@ The `torch.no_grad()` block is required: parameters are leaf tensors that
 track gradients, and PyTorch rejects in-place arithmetic on them unless we
 declare that the mutation is not part of any computation to differentiate.
 (The `nn.init` routines run under their own `no_grad` internally, which is why
-the first line needs none.) The same escape hatch handles one-off surgery,
-such as offsetting a whole matrix or pinning a single entry:
+the first line needs none.) The same context supports direct parameter edits, such as offsetting a whole
+matrix or assigning a single entry:
 :end_tab:
 
 :begin_tab:`jax`
 NNX parameters are mutable variables. Assignment updates the value owned by
 the layer while preserving the `nnx.Param` object that optimizers and
-checkpoints track. One-off surgery therefore looks like ordinary indexed
-assignment:
+checkpoints track. Direct parameter edits therefore use ordinary indexed assignment:
 :end_tab:
 
 :begin_tab:`tensorflow`
 No guard is needed on the way in, because `assign` sits outside automatic
 differentiation: TensorFlow records gradients on a `GradientTape`, and an
 assignment is a write to the variable's buffer, not an operation on the tape.
-The same door handles one-off surgery, such as offsetting a whole matrix or
-pinning a single entry, since slicing a variable composes with `assign`:
+The same interface supports direct parameter edits, such as offsetting a
+whole matrix or assigning a single entry, because slicing a variable composes
+with `assign`:
 :end_tab:
 
 :begin_tab:`mxnet`
 No guard is needed on the way in, because gradients are only recorded inside
 an `autograd.record()` block: outside one, indexed assignment is a plain
 array write. `weight.data()` hands back the array the parameter holds on the
-device, so the same door handles one-off surgery, such as offsetting a whole
-matrix or pinning a single entry:
+device, so the same interface supports direct parameter edits, such as
+offsetting a whole matrix or assigning a single entry:
 :end_tab:
 
 ```{.python .input #init-custom-initializers-2}
@@ -1020,8 +1020,8 @@ net[0].weight.data()[0]
 :begin_tab:`pytorch`
 One caveat when building with lazy layers (:numref:`sec_lazy_init`): before
 the first forward pass their parameters are placeholders with no shape, so
-`apply`-based initializers and direct surgery alike must come *after* the dry
-run that materializes them.
+`apply`-based initialization and direct parameter assignment must follow the
+dry run that materializes them.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1032,9 +1032,9 @@ so both graph walks and direct assignment can run immediately.
 :begin_tab:`tensorflow`
 The ordering caveat of the lazy world (:numref:`sec_lazy_init`) splits by
 route here: a constructor initializer is stored and runs at build time, so it
-can never fire too early, but `assign` surgery needs a kernel to exist and
-must therefore follow the first call (or an explicit `build`). The cells
-above respected that order by running `net(X)` before touching
+runs only when the variables are created. Direct `assign` calls require a
+kernel to exist and must therefore follow the first call (or an explicit
+`build`). The cells above respected that order by running `net(X)` before touching
 `net.layers[0].kernel`.
 :end_tab:
 
@@ -1082,29 +1082,28 @@ override it more readily than elsewhere. The mechanism is one pattern: an
 parameter, with `force_reinit=True` to overwrite live values.
 :end_tab:
 
-On top of Xavier and He,
-transformer-era code truncates normal tails to bound outliers, shrinks each
-residual output projection by $1/\sqrt{N}$ so the stream's variance stays
-$O(1)$ at any depth, and zero-initializes a block's last layer to start it as
-the identity.
+Beyond Xavier and He, some architectures truncate normal tails to bound
+outliers, scale residual output projections by $1/\sqrt{N}$ to keep variance
+$O(1)$ under the assumptions above, or zero-initialize a block's last layer so the block initially
+implements the identity.
 
 :begin_tab:`pytorch`
-Anything the menu lacks is a few lines of tensor code under
+A custom scheme can be implemented with tensor operations under
 `torch.no_grad()`.
 :end_tab:
 
 :begin_tab:`jax`
-Anything the menu lacks is a few lines of `jax.random` code behind the same
+A custom scheme uses `jax.random` behind the same
 three-argument signature.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Anything the menu lacks is an `Initializer` subclass with a few lines of
+A custom scheme is an `Initializer` subclass using
 `tf.random` code in its `__call__`.
 :end_tab:
 
 :begin_tab:`mxnet`
-Anything the menu lacks, truncation included, is an `init.Initializer`
+A custom scheme, including truncation, is an `init.Initializer`
 subclass with a few lines of array code in its `_init_weight`.
 :end_tab:
 

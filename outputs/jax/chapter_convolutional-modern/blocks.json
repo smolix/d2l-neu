@@ -9,22 +9,22 @@
   },
   "cells": {
     "blocks-imports": {
-      "code_fingerprint": "sha256:8d42c533a4509cf16ad6696065443e51529d474d10d2c7b13600e6bade84970f",
+      "code_fingerprint": "sha256:2fe366f009af3796a1dc7ead234a29fa52287374d85b496c51dad56034be5a2a",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-blocks": {
-      "code_fingerprint": "sha256:3ffe933dd28af2724eddc5e44ad0958773a57b856040cabb6bfe640af0ffde03",
+      "code_fingerprint": "sha256:8c7b5922865418a5f8736f7d7ff2a9153c72388099840a673d4377f443afb90e",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-1": {
-      "code_fingerprint": "sha256:ed2e87eb8baf7fc5b25e73f7f084aadbfd70cb9b1b7167f7b65804758b21222b",
+      "code_fingerprint": "sha256:d60a78ea91add50e2401fe4ea4774a064b55def3e27df29cd469e4fab7593cd3",
       "kind": "text",
       "outputs": []
     },
     "vgg-vgg-network-2": {
-      "code_fingerprint": "sha256:634757a96dd2e551cd0a0b4e9acd4706d3786a9de5784ab1679f607c07ee9473",
+      "code_fingerprint": "sha256:69cd583a4cf8c72705a713023c77c8cf1dc098b1c39f75f528eaab01b57e518c",
       "kind": "text",
       "outputs": [
         {
@@ -75,30 +75,30 @@
       ]
     },
     "vgg-training": {
-      "code_fingerprint": "sha256:9edf3024eba9f51ae0f8b53334295762ebbcdef204c965894475cf3c808aa5c3",
+      "code_fingerprint": "sha256:07aaad4249f8e4cbb0a011afe36a83ed0b817c47378cf4da036b276bb427281f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 21001,
-          "sha256": "sha256:0feabef41fe21a4ce12690948d4f1d190f2eed6a1980a627d4fde8577a1b0747"
+          "bytes": 20996,
+          "sha256": "sha256:266e6dc7e379e474c8d74c0bcb97d0719036e2fc6da29d861489b1d6fcd748cf"
         }
       ]
     },
     "nin-nin-blocks": {
-      "code_fingerprint": "sha256:3d1608aa0eba20adc22937aa43ee48c389e337f10e6c293dc285dd1585c37840",
+      "code_fingerprint": "sha256:a85f6b1ead7b67737a39c376af11017049618be25fced5adcf100fbc1a637636",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-1": {
-      "code_fingerprint": "sha256:1ee98b99b67ae5a93eb531ecceb4d1a9cf37da3ab7355b25c008e71804714596",
+      "code_fingerprint": "sha256:476312b5c2f6da25475d51969d065928c8b7d9e0133a7ac6e51110b2fb4a0e9e",
       "kind": "text",
       "outputs": []
     },
     "nin-nin-model-2": {
-      "code_fingerprint": "sha256:02f3700d80cb736c8046b7cc84573344d1ede1c90153e79355724c79a24e1bdb",
+      "code_fingerprint": "sha256:36e86c10682de53339fc2e4925c29ebd406808e480fabf403d4a77a25a3a3415",
       "kind": "text",
       "outputs": [
         {
@@ -129,35 +129,35 @@
       ]
     },
     "nin-training": {
-      "code_fingerprint": "sha256:fbdce4b86203391df277f42a0dc2e2b5cf6c0db4bb85d725d1c42873a2d38218",
+      "code_fingerprint": "sha256:f77dc8ac4d8a8674d5416367c4d6061792df5528f1dbc63f5116c2286d5181aa",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 20971,
-          "sha256": "sha256:8c8f1cdb73ad6714deb46341a6477c2da2dd560f07323e3d988d400db33f3358"
+          "bytes": 21513,
+          "sha256": "sha256:3fd429292ef4ff2db926cbdaa0393ad8dcfbef85e83907bc8594fc0f4113831d"
         }
       ]
     },
     "googlenet-inception-blocks": {
-      "code_fingerprint": "sha256:08625bd94873c8f217a651c04ec2cdf10dcc0dda9de37173182ae2ec0f998060",
+      "code_fingerprint": "sha256:1ffafd7f69ba467c53af3d6969ed8d81ea193548aa385577d5aad12fbc8fe482",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-1": {
-      "code_fingerprint": "sha256:362dd85f8e3bbd489d035bb8c66eab9e93e7fb51e9ff534643718009c82cad51",
+      "code_fingerprint": "sha256:b96b252052ad7755bbd8633007e54b560a321c4ebca6a0fdc5753e88e69ca9ec",
       "kind": "text",
       "outputs": []
     },
     "blocks-stem-body-and-head-2": {
-      "code_fingerprint": "sha256:9a17721f7c8a96820ad6eb05ecf3b24191a5eaf5ad24451e8615ede979a57ad4",
+      "code_fingerprint": "sha256:5ad4004eafd38ad2df3a007e4b6fd8f19998fa5923f25f2ad6b73bf686595906",
       "kind": "text",
       "outputs": []
     },
     "googlenet-googlenet-model-7": {
-      "code_fingerprint": "sha256:2ca8e60ea936dc8f430ba81d73a398a14337848de1090a4e8a19792ba2b43110",
+      "code_fingerprint": "sha256:37be2c4a68ae0ab03d1273ad17e650d055f3606b7e03cd3446e189d62da461c0",
       "kind": "text",
       "outputs": [
         {

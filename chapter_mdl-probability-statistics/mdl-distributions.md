@@ -1,29 +1,39 @@
 # Distributions
 :label:`sec_mdl-distributions`
 
-A *distribution* assigns a probability to every outcome a random variable can
-take (:numref:`sec_mdl-random_variables`). A working deep-learning practitioner
-does not need a zoo of hundreds: the fourteen distributions of this section
-cover almost everything, and they form a small family with a few generators and
-a handful of limiting arrows connecting them.
-The Bernoulli coin flip is the seed: sum $n$ of them and you get the binomial;
-let the trials become many and rare and the binomial collapses to the Poisson;
-let them become many and ordinary and the *central limit theorem* sends it to the
-Gaussian. The categorical generalizes the Bernoulli from two outcomes to $K$, and
-its softmax parameterization is the output layer of every classifier. At the end
-we will see that almost all of these (and more) are special cases of one form,
-the *exponential family*, which is the reason their maximum-likelihood losses are the
-convex objectives we minimize in practice and the reason each has a
-*conjugate prior* that makes Bayesian updating as simple as counting.
+A *distribution* assigns probabilities to the possible values of a random
+variable (:numref:`sec_mdl-random_variables`). This section develops eleven
+data distributions and three conjugate priors used frequently in machine learning and relates
+them through constructions and limits. A sum of Bernoulli variables has a
+binomial distribution. Appropriate many-trial limits yield the Poisson or,
+under the central limit theorem, the Gaussian distribution. The categorical
+distribution extends Bernoulli variables to $K$ outcomes and provides the
+probabilistic model behind a softmax classifier. Many of these distributions
+belong to the exponential family and admit conjugate priors, which simplifies
+maximum-likelihood and Bayesian calculations.
 
-:numref:`fig_mdl-prob-family-tree` draws the picture: the distributions are
-nodes, the construction and limit relationships are arrows, and the whole
-picture sits inside the exponential-family envelope.
+:numref:`fig_mdl-prob-family-tree` summarizes these relationships. Its arrows
+denote constructions and limiting arguments, and the enclosing region marks
+the distributions that belong to the exponential family.
 
 ![The distribution family. Solid arrows *construct*: Bernoulli is the seed; summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson, whose waiting time between events is the Exponential; the many-and-ordinary limit (the central limit theorem) gives the Gaussian; the Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Dashed arrows attach each likelihood to its *conjugate prior*: the Beta to the Bernoulli and Binomial, the Gamma to the Poisson, and the Dirichlet to the Categorical and Multinomial. Every node, the conjugate priors included, lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
 :label:`fig_mdl-prob-family-tree`
 
-For each distribution we keep to a tight template: its mass or density function,
+The first two parts form a reference gallery; the exponential-family and
+conjugacy parts explain shared structure. A modeling choice also depends on the
+support and data-generating question:
+
+| observed quantity | useful starting model | condition or omission to check |
+|:--|:--|:--|
+| binary or one-of-$K$ outcome | Bernoulli or categorical | probabilities may depend on covariates |
+| successes in fixed trials | binomial | conditionally independent trials with a common success probability |
+| event count over exposure | Poisson | mean equals variance; overdispersion may require another count law |
+| positive waiting time | exponential | constant hazard; Gamma, Weibull, and log-normal laws are omitted |
+| bounded continuous value | continuous uniform as a baseline | an application need not have constant density |
+| real-valued residual | Gaussian or Laplace | mixtures and heavier-tailed laws may fit better |
+| correlated real vector | multivariate Gaussian | multimodality and structured covariance need richer models |
+
+For each distribution we use a common template: its mass or density function,
 where it *arises* in machine learning, its mean and variance *derived* rather than
 asserted, and a compact teaching cell that evaluates the law and draws a
 sample. We treat the discrete distributions first, then the continuous ones, then
@@ -92,8 +102,8 @@ p_1 = P(X=1) = p, \qquad p_0 = P(X=0) = 1-p .
 $$
 :eqlabel:`eq_mdl-bernoulli_pmf`
 
-**Where it arises.** The Bernoulli is the output distribution of *every binary
-classifier*: a model emits $\hat p$, and the negative log-likelihood
+**Where it arises.** A probabilistic binary classifier commonly uses a
+Bernoulli output: the model emits $\hat p$, and the negative log-likelihood
 $-y\log\hat p-(1-y)\log(1-\hat p)$ is exactly the *binary cross-entropy* loss,
 the maximum-likelihood view of binary classification developed in
 :numref:`subsec_mdl-nll-crossentropy`.
@@ -246,8 +256,9 @@ $$
 \sigma_X^2 = \operatorname{Var}\Bigl(\sum_i X_i\Bigr) = \sum_i \operatorname{Var}(X_i) = np(1-p) .
 $$
 
-Two one-line sums replace a page of algebra: the payoff of seeing the binomial as
-*built from* Bernoullis. Successive pmf terms differ by the ratio
+Representing a binomial variable as a sum of Bernoulli variables gives its mean
+and variance without manipulating binomial coefficients. Successive pmf terms
+differ by the ratio
 
 $$
 \frac{P(X=k+1)}{P(X=k)} = \frac{n-k}{k+1}\cdot\frac{p}{1-p},
@@ -605,10 +616,11 @@ $$
 The two-sided exponential gives it a sharp peak at $\mu$ and *heavier tails* than
 the Gaussian, visible in :numref:`fig_mdl-prob-continuous-pdfs`.
 
-**Where it arises.** It is the probabilistic shadow of the $L_1$ loss, just as the
-Gaussian is of MSE: the negative log-likelihood of a Laplace is $\propto|y-\hat y|$,
-the *mean absolute error*. As a *prior* on weights it produces the
-sparsity-inducing $L_1$ regularizer $\propto\|\mathbf w\|_1$, the engine of LASSO
+**Where it arises.** The Laplace likelihood corresponds to the $L_1$ loss, just
+as the Gaussian likelihood corresponds to squared error: its negative
+log-likelihood is proportional to $|y-\hat y|$, the *mean absolute error*. As a
+prior on weights, it gives the sparsity-inducing regularizer
+$\|\mathbf w\|_1$ used by LASSO
 :cite:`Tibshirani.1996`.
 
 **Mean and variance.** By symmetry $\mu_X=\mu$. For the variance, center at $\mu$
@@ -698,12 +710,11 @@ The conditional mean is a *linear* function of the observed block (a linear
 regression of $\mathbf x_1$ on $\mathbf x_2$ read straight off the covariance),
 and the conditional covariance
 $\boldsymbol\Sigma_{11}-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$
-is the *Schur complement* of $\boldsymbol\Sigma_{22}$, the standard name for the
-block that remains when the variables in $\mathbf x_2$ are eliminated; note that
-it does not depend on the observed value $\mathbf x_2$. This pair is the engine
-of Gaussian process regression (:numref:`chap_gp`): condition the joint Gaussian
-prior over function values on the observed points and read off the predictive
-mean and variance.
+is the *Schur complement* of $\boldsymbol\Sigma_{22}$, the block that remains
+when the variables in $\mathbf x_2$ are eliminated. It does not depend on the
+observed value $\mathbf x_2$. These formulas underlie Gaussian process
+regression (:numref:`chap_gp`): conditioning the joint Gaussian prior over
+function values on the observations gives the predictive mean and variance.
 
 **Sampling via Cholesky.** How do we draw from
 $\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ given only a standard-normal
@@ -712,8 +723,8 @@ introduced (:numref:`subsec_mdl-psd`): factor
 $\boldsymbol\Sigma=\mathbf L\mathbf L^\top$ with $\mathbf L$ lower triangular,
 draw $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$ ($d$ independent standard
 normals), and set $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$. Then $\mathbf x$
-is Gaussian (a linear map of a Gaussian), its mean is $\boldsymbol\mu$ because
-$\mathbb E[\mathbf z]=\mathbf 0$, and one line verifies the covariance:
+is Gaussian (a linear map of a Gaussian), and its mean is $\boldsymbol\mu$
+because $\mathbb E[\mathbf z]=\mathbf 0$. Its covariance is
 
 $$
 \mathbb E\bigl[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top\bigr]
@@ -807,7 +818,7 @@ $$
 
 is whatever it takes to make :eqref:`eq_mdl-exp_family` integrate to one.
 
-### Recognizing Old Friends
+### Identifying Standard Distributions
 
 The form looks abstract until we match the pieces. The **Bernoulli**
 $p^x(1-p)^{1-x}$ rewrites as
@@ -853,10 +864,18 @@ conjugate prior, and their negative log-likelihoods are not convex in the
 parameters. Both conveniences are exponential-family privileges, as the rest of
 this section shows.
 
-### Where the Form Comes From: Maximum Entropy
+### Maximum-Entropy Derivation
 
-The exponential form is exactly what *maximizing
-entropy* produces. The two maximum-entropy facts cited earlier
+Maximum entropy produces an exponential-family form only relative to a chosen
+support, base measure, and feasible set of constraints. Fix a base measure
+$h$, require $p$ to be absolutely continuous with respect to it, and impose
+normalization together with $\mathbb E_p[T(\mathbf x)]=\boldsymbol\tau$. If
+the constraints are feasible, the log-partition function is finite, and a
+maximizer exists in the regular interior case, the optimizer has the
+exponential form below. Existence can fail for incompatible constraints or
+heavy-tailed settings.
+
+The two maximum-entropy facts cited earlier
 :cite:`Cover.Thomas.1999` are the same
 statement seen twice: the discrete uniform is the maximum-entropy distribution on a
 finite set when we fix *nothing* but the support, and the Gaussian is the
@@ -876,11 +895,10 @@ are the natural parameters and $A(\boldsymbol\eta)$ is again the normalizer
 real work here. With plain Shannon entropy, i.e. $h\equiv1$, fixing the mean on
 $\{0,1,2,\dots\}$ yields the *geometric* distribution; only entropy relative to
 $h(k)=1/k!$ yields the Poisson. For the uniform and the Gaussian above, $h$ is
-constant, so plain entropy was the right notion all along. So the exponential
-family is the *least-committal* family
-consistent with knowing a fixed set of averages: the uniform fixes none, the
-Bernoulli/categorical fix the class probabilities, and the Gaussian fixes the first
-two moments.
+constant, so plain entropy was the relevant objective in those cases. Thus,
+when the optimization problem has a solution, the solution is least committal
+only relative to the selected support, base measure, entropy, and moment
+constraints. Changing those choices can change the optimizer.
 
 ### The Moment Property
 
@@ -928,7 +946,7 @@ $$
 $$
 
 so $A$ is *convex* (a covariance matrix is PSD, :numref:`subsec_mdl-psd`).
-Convexity pays off in fitting. For a sample $x_1,\dots,x_n$ the negative
+Consequently, for a sample $x_1,\dots,x_n$ the negative
 log-likelihood is
 
 $$
@@ -975,21 +993,19 @@ functions used by standard deep-learning losses
 
 ## Conjugate Priors
 
-The family tree so far has one half missing. The arrows of
-:numref:`fig_mdl-prob-family-tree` *build* distributions over data; but, as
-:numref:`subsec_mdl-map` develops, fitting a model can also mean placing a *prior*
-over its parameters, and the parameters of the distributions above are themselves
-quantities to be inferred: the Bernoulli's $p$, the Poisson's $\lambda$, the
-categorical's $\mathbf p$. A *prior* over those parameters is again a distribution,
-and three new continuous laws, the **Beta**, the **Gamma**, and the
-**Dirichlet**, are exactly the priors that pair with the discrete
-distributions we have met. A prior is **conjugate** to a likelihood when the
-posterior belongs to the *same family* as the prior, so Bayesian updating just moves
-the parameters rather than changing the shape of the distribution. This closes the
-tree: a tier of prior nodes flanks the data distributions in
-:numref:`fig_mdl-prob-family-tree`, joined to them by "conjugate prior" links.
+The distributions above model observations, but Bayesian inference also
+requires distributions over their parameters: the Bernoulli probability $p$,
+the Poisson rate $\lambda$, or the categorical probability vector $\mathbf p$.
+Such a distribution is a *prior*. Three continuous distributions provide the
+standard priors for the discrete likelihoods introduced above: the **Beta**,
+**Gamma**, and **Dirichlet** distributions.
 
-### Beta--Bernoulli: Counting with Pseudo-Counts
+A prior is **conjugate** to a likelihood if the posterior belongs to the same
+family as the prior. Observations then update the parameters of the
+distribution without changing its functional form. The dashed links in
+:numref:`fig_mdl-prob-family-tree` show these conjugate pairs.
+
+### Beta--Bernoulli Conjugacy and Pseudo-Counts
 
 The **Beta** distribution is a density on the unit interval $p\in[0,1]$ (exactly
 the range of a probability) with two shape parameters $\alpha,\beta>0$,
@@ -1003,7 +1019,7 @@ where the normalizing constant is
 $B(\alpha,\beta)=\Gamma(\alpha)\Gamma(\beta)/\Gamma(\alpha+\beta)$, with $\Gamma$
 the Gamma function that the exercises of :numref:`sec_mdl-integral_calculus`
 introduced (recall $\Gamma(z+1)=z\,\Gamma(z)$ and $\Gamma(n+1)=n!$). The mean
-takes one line from this normalizer:
+follows from this normalizer:
 
 $$
 \mathbb E[p]
@@ -1036,19 +1052,18 @@ p \mid x \;\sim\; \mathrm{Beta}\bigl(\alpha+x,\ \beta+(n-x)\bigr).
 $$
 :eqlabel:`eq_mdl-beta_posterior`
 
-This is the **pseudo-count** picture:
-$\alpha$ and $\beta$ act as *phantom* heads and tails seen
-before any real data, and observing $x$ real heads and $n-x$ real tails simply adds
-the real counts to the phantom ones. The posterior mean
+This update has a **pseudo-count** interpretation. The parameters
+$\alpha$ and $\beta$ act as prior counts for heads and tails. Observing $x$
+heads and $n-x$ tails adds these observations to the corresponding prior
+counts. The posterior mean
 
 $$
 \mathbb E[p\mid x] = \frac{\alpha+x}{\alpha+\beta+n}
 $$
 
-is literally the heads-frequency with the phantom flips included; it interpolates
-between the prior mean $\alpha/(\alpha+\beta)$ and the maximum-likelihood frequency
-$x/n$, and slides toward the data as $n$ grows, the same flattening of the prior
-that turns MAP into MLE in :numref:`subsec_mdl-map`. With the uniform prior
+is the empirical frequency after including the pseudo-counts. It lies between
+the prior mean $\alpha/(\alpha+\beta)$ and the maximum-likelihood estimate
+$x/n$, and approaches the latter as $n$ grows. With the uniform prior
 $\alpha=\beta=1$ it becomes *Laplace's rule of succession* $(x+1)/(n+2)$
 :cite:`Laplace.1814`: estimate a
 probability by adding one phantom observation of each outcome. The cell verifies
@@ -1064,24 +1079,25 @@ print('posterior Beta  =', (post_alpha, post_beta))
 print('posterior mean  =', round(post_alpha / (post_alpha + post_beta), 4))
 ```
 
-The posterior mean sits between the prior's $0.5$ and the data's $0.7$, exactly as
-the pseudo-count sum predicts. :numref:`fig_mdl-prob-beta-posterior` shows the
-same mechanism at work over a longer run of data: the flat $\mathrm{Beta}(1,1)$
-prior sharpens into a posterior that piles up on the true bias, its width
-shrinking like $1/\sqrt n$ as the real counts swamp the phantom ones.
+The posterior mean lies between the prior mean $0.5$ and the empirical
+frequency $0.7$, as the pseudo-count calculation predicts.
+:numref:`fig_mdl-prob-beta-posterior` shows the same update with more data: the
+flat $\mathrm{Beta}(1,1)$ prior becomes concentrated around the true bias, and
+its width decreases as $1/\sqrt n$.
 
 ![Bayesian updating as sharpening. Starting from the flat $\mathrm{Beta}(1,1)$ prior (left), observing $9$ heads in $13$ flips of a coin with true bias $\theta^\ast=0.7$ (dashed line) gives the $\mathrm{Beta}(10,5)$ posterior (middle); after $130$ flips the $\mathrm{Beta}(91,41)$ posterior has piled up tightly around $\theta^\ast$ (right). Each update just adds the observed heads and tails to the pseudo-counts, and the posterior standard deviation shrinks like $1/\sqrt{n}$.](../img/mdl-prob-beta-posterior.svg)
 :label:`fig_mdl-prob-beta-posterior`
 
-### The Rest of the Tier, and the General Fact
+### Other Conjugate Pairs
 
 The other discrete laws have their own conjugate partners, built the same way.
 
 * **Gamma--Poisson.** The **Gamma** distribution
   $\mathrm{Gamma}(\lambda\mid\alpha,\beta)=\frac{\beta^\alpha}{\Gamma(\alpha)}\,\lambda^{\alpha-1}e^{-\beta\lambda}$
   is a density on the rate $\lambda>0$ with mean $\alpha/\beta$ and variance
-  $\alpha/\beta^2$. It is conjugate to the Poisson by the same one-line move as
-  the Beta: $n$ observed counts $x_1,\dots,x_n$ contribute the likelihood
+  $\alpha/\beta^2$. Its conjugacy with the Poisson follows by the same
+  multiplication used for the Beta: $n$ observed counts $x_1,\dots,x_n$
+  contribute the likelihood
   $\propto\lambda^{\sum_i x_i}e^{-n\lambda}$, and multiplying by the prior
   collects powers into $\lambda^{\alpha+\sum_i x_i-1}e^{-(\beta+n)\lambda}$, the
   posterior $\mathrm{Gamma}\bigl(\alpha+\sum_i x_i,\ \beta+n\bigr)$: pseudo-events
@@ -1094,7 +1110,11 @@ The other discrete laws have their own conjugate partners, built the same way.
   $\mathrm{Exp}(\beta)$ waits, extending the exponential's arrow in the family
   tree just as the binomial extends the Bernoulli's.
 * **Dirichlet--Multinomial.** The **Dirichlet** distribution
-  $\mathrm{Dir}(\mathbf p\mid\boldsymbol\alpha)=\frac{\Gamma(\sum_k\alpha_k)}{\prod_k\Gamma(\alpha_k)}\prod_k p_k^{\alpha_k-1}$
+
+  $$
+  \mathrm{Dir}(\mathbf p\mid\boldsymbol\alpha)=\frac{\Gamma(\sum_k\alpha_k)}{\prod_k\Gamma(\alpha_k)}\prod_k p_k^{\alpha_k-1}
+  $$
+
   is the multivariate Beta, a density over probability vectors on the simplex,
   with mean $\mathbb E[p_k]=\alpha_k/\sum_j\alpha_j$. It is conjugate to the
   categorical/multinomial by the same multiplication: the likelihood contributes
@@ -1103,11 +1123,11 @@ The other discrete laws have their own conjugate partners, built the same way.
 
 These are three instances of one theorem. **Every exponential-family likelihood
 has a conjugate prior**, provided the hyperparameters are chosen so that the
-prior below is normalizable, and it is itself an exponential family in the
-natural parameters $\boldsymbol\eta$: writing the prior as
+prior below is normalizable, and that prior is itself an exponential family in
+the natural parameters $\boldsymbol\eta$: writing the prior as
 $p(\boldsymbol\eta)\propto\exp\!\bigl(\boldsymbol\nu^\top\boldsymbol\eta - \kappa\,A(\boldsymbol\eta)\bigr)$,
-multiplying by the likelihood :eqref:`eq_mdl-exp_family` just adds the data's
-sufficient statistics into $\boldsymbol\nu$ and increments $\kappa$ by the sample
+Multiplying by the likelihood :eqref:`eq_mdl-exp_family` adds the data's
+sufficient statistics to $\boldsymbol\nu$ and increments $\kappa$ by the sample
 size. The pseudo-count update of :eqref:`eq_mdl-beta_posterior` is this general
 mechanism specialized to the Bernoulli, and the hyperparameters
 $(\boldsymbol\nu,\kappa)$ are *pseudo-data*: a prior sufficient statistic and a prior
@@ -1117,8 +1137,8 @@ standard losses.
 
 ## Summary
 
-The eleven data distributions of this section in one view (their three conjugate
-priors, the Beta, Gamma, and Dirichlet, close the family). For the categorical
+Here are the eleven data distributions of this section in one view; their three
+conjugate priors, the Beta, Gamma, and Dirichlet, close the family. For the categorical
 and multinomial rows we code a draw as a one-hot vector, respectively as the sum
 of $n$ one-hot vectors: the coding the cross-entropy loss already uses, and the
 object whose mean and covariance the table states.
@@ -1157,9 +1177,9 @@ object whose mean and covariance the table states.
   limits, and standard integrals) rather than memorization.
 * The **exponential family** $p(\mathbf x)=h(\mathbf x)\exp(\boldsymbol\eta^\top
   T(\mathbf x)-A(\boldsymbol\eta))$ unifies almost all of them (the uniforms, whose
-  support moves with their parameters, stay outside); it is exactly the
-  maximum-entropy family (entropy taken relative to the base measure $h$) for a
-  fixed set of expected sufficient statistics. Its
+  support moves with their parameters, stay outside). Under feasible moment
+  constraints and regularity conditions, the form arises by maximizing
+  entropy relative to a selected base measure $h$. Its
   log-partition $A$ generates moments: $\nabla A(\boldsymbol\eta)=\mathbb E[T(\mathbf x)]$,
   and $A$ is convex. Thus its negative log-likelihood is convex in the natural
   parameters; with an affine parameter map this yields a convex generalized
@@ -1238,7 +1258,7 @@ object whose mean and covariance the table states.
 ::: {.cover}
 [Dive into Deep Learning · §25.2]{.kicker}
 
-The distributions a practitioner needs<br>**from Bernoulli to the Gaussian, and the family they belong to**.
+A core distribution vocabulary<br>**from Bernoulli to the Gaussian, and the family they belong to**.
 :::
 :::
 
@@ -1247,9 +1267,10 @@ The distributions a practitioner needs<br>**from Bernoulli to the Gaussian, and 
 
 ::: {.cols .vc}
 ::: {.col}
-Fourteen distributions cover almost everything in practice, and they
-**connect**: Bernoulli is the seed; construction and limit arrows grow
-the rest; conjugate priors close the tree, all inside one envelope.
+These fourteen distributions form a useful core vocabulary, and they
+**connect** through constructions, limits, and conjugacy. Important omissions
+include mixtures, heavy-tailed multivariate laws, survival families, and
+structured stochastic processes.
 
 ::: {.d2l-note}
 Learn the *map*, not a flat list of formulas.
@@ -1281,8 +1302,8 @@ collapse instantly: $\mathbb E[X]=p$, $\operatorname{Var}(X)=p(1-p)$.
 @distributions-bernoulli
 
 ::: {.d2l-note .rule}
-Every binary classifier outputs a Bernoulli; its negative log-likelihood
-**is** binary cross-entropy.
+A probabilistic binary classifier with a Bernoulli likelihood has binary
+cross-entropy as its negative log-likelihood.
 :::
 :::
 
@@ -1304,7 +1325,7 @@ makes discrete choices differentiable.
 ::: {.slide title="The discrete gallery"}
 [Discrete]{.kicker}
 
-Four laws in one picture, mass on the integers:
+The figure compares four probability laws on the integers:
 
 @fig:mdl-prob-discrete-pmfs
 
@@ -1468,24 +1489,24 @@ $$\boldsymbol\mu_{1\mid 2} = \boldsymbol\mu_1 +
 
 ::: {.d2l-note .rule}
 Conditional mean is **linear** in $\mathbf x_2$; the Schur-complement
-covariance is the entire engine of Gaussian-process regression.
+covariance determines the posterior uncertainty in Gaussian-process regression.
 :::
 :::
 
 ::: {.slide title="In high dimension, the Gaussian is a thin shell"}
 [Continuous]{.kicker}
 
-$\|\mathbf x\|^2$ sums $d$ independent mean-$1$ terms, so it concentrates
-near $d$: the mass lives in a shell of radius $\approx\sqrt d$, *far from
+$\|\mathbf x\|^2$ sums $d$ independent mean-$1$ terms, so it concentrates near
+$d$. Consequently, most probability lies in a shell of radius $\approx\sqrt d$, *far from
 the origin where the density is pointwise largest*; and two independent
 draws are nearly orthogonal, cosine $\sim 1/\sqrt d$:
 
 @!mdl-distributions-multivariate-gaussian-1
 
 ::: {.d2l-note}
-Load-bearing facts: $1/\sqrt d$ **initialization** keeps
+The $1/\sqrt d$ **initialization** scale keeps
 $\|\mathbf{Wx}\|\approx\|\mathbf x\|$; cosine similarity is informative
-*because* unrelated vectors sit near $0$; nearest-neighbor contrast
+*because* unrelated vectors have cosine similarity near $0$; nearest-neighbor contrast
 fades. Exponential tail bounds arrive in the concentration-and-generalization
 section.
 :::

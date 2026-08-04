@@ -6,11 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Residual Networks: ResNet, ResNeXt, and DenseNet
 :label:`sec_resnet`
 
-As we design ever deeper networks it becomes imperative to understand how adding layers can increase the complexity and expressiveness of the network.
-Even more important is the ability to design networks where adding layers
-preserves every function the shallower network could represent, while making
-additional functions available.
-To make some progress we need a bit of mathematics.
+Adding layers should enlarge a model's function class without making the
+shallower solution difficult to recover. Residual networks achieve this by
+parameterizing each block as a change to the identity map. We first formalize
+this inclusion of function classes and then implement residual blocks, ResNet,
+ResNeXt, and DenseNet.
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab mxnet
@@ -44,34 +44,24 @@ import jax
 
 ## Function Classes
 
-Consider $\mathcal{F}$, the class of functions represented by a network
-architecture as its weights and biases vary. This definition concerns the
-parameterization; which members an optimizer can reach is a separate question.
-Let's assume that $f^*$ is the "truth" function that we really would like to find.
-If it is in $\mathcal{F}$, we are in good shape but typically we will not be quite so lucky.
-Instead, we will try to find some $f^*_\mathcal{F}$ which is our best bet within $\mathcal{F}$.
-For instance,
-given a dataset with features $\mathbf{X}$
-and labels $\mathbf{y}$,
-we might try finding it by solving the following optimization problem:
+Let $\mathcal{F}$ be the class of functions represented by an architecture as
+its parameters vary. Given training data $(\mathbf{X},\mathbf{y})$, define the
+best empirical-loss value available in this class by
 
-$$f^*_\mathcal{F} \stackrel{\textrm{def}}{=} \mathop{\mathrm{argmin}}_f L(\mathbf{X}, \mathbf{y}, f) \textrm{ subject to } f \in \mathcal{F}.$$
+$$L^*_{\mathcal{F}} \stackrel{\textrm{def}}{=}
+\inf_{f\in\mathcal{F}} L(\mathbf{X},\mathbf{y},f).$$
 
-We know that regularization :cite:`tikhonov1977solutions,morozov2012methods` may control complexity of $\mathcal{F}$
-and achieve consistency, so a larger size of training data
-generally leads to better $f^*_\mathcal{F}$.
-It is only reasonable to assume that if we design a different and more powerful architecture $\mathcal{F}'$ we should arrive at a better outcome. In other words, we would expect that $f^*_{\mathcal{F}'}$ is "better" than $f^*_{\mathcal{F}}$. However, if $\mathcal{F} \not\subseteq \mathcal{F}'$ there is no guarantee that this should even happen. In fact, $f^*_{\mathcal{F}'}$ might well be worse.
-As illustrated by :numref:`fig_functionclasses`,
-for non-nested function classes, a larger function class does not always move closer to the "truth" function $f^*$. For instance,
-on the left of :numref:`fig_functionclasses`,
-though $\mathcal{F}_3$ is closer to $f^*$ than $\mathcal{F}_1$, $\mathcal{F}_6$ moves away and there is no guarantee that further increasing the complexity can reduce the distance from $f^*$.
-With nested function classes
-where $\mathcal{F}_1 \subseteq \cdots \subseteq \mathcal{F}_6$
-on the right of :numref:`fig_functionclasses`,
-we can avoid the aforementioned issue from the non-nested function classes.
+If $\mathcal{F}\subseteq\mathcal{F}'$, then
+$L^*_{\mathcal{F}'}\leq L^*_{\mathcal{F}}$: the larger class can always reuse
+the best function available to the smaller one. This is a statement about
+representational capacity and the optimal training loss. It does not guarantee
+that an optimizer will find that function or that the resulting model will
+generalize better. For non-nested classes, even the empirical optima have no
+such ordering. :numref:`fig_functionclasses` illustrates containment rather
+than a distance to an undefined target function.
 
 
-![For non-nested function classes, a larger (indicated by area) function class does not guarantee we will get closer to the "truth" function ($\mathit{f}^*$). This does not happen in nested function classes.](../img/functionclasses.svg)
+![Non-nested function classes do not order their attainable solutions. Nested classes preserve every function represented by the preceding class, so their optimal empirical loss cannot increase; this containment does not guarantee easier optimization or better generalization.](../img/functionclasses.svg)
 :label:`fig_functionclasses`
 
 Thus, if larger function classes contain the smaller ones, increasing capacity
@@ -83,11 +73,9 @@ $f(\mathbf{x}) = \mathbf{x}$, the deeper model contains the shallower one as a
 special case. This protects representation capacity; it does not guarantee
 that optimization will find the best member of the larger class.
 
-This is the question that :citet:`He.Zhang.Ren.ea.2016` considered when working on very deep computer vision models.
-At the heart of their proposed *residual network* (*ResNet*) is the idea that every additional layer should
-more easily
-contain the identity function as one of its elements.
-These considerations led to a simple solution, a *residual block*.
+ResNet :cite:`He.Zhang.Ren.ea.2016` makes this containment easy to express:
+each added block can represent the identity mapping by setting its residual
+branch to zero. The resulting component is a *residual block*.
 With it, ResNet won the ImageNet Large Scale Visual Recognition Challenge in 2015. The design influenced how to
 build deep neural networks. For instance, residual blocks have been added to recurrent networks :cite:`prakash2016neural,kim2017residual`. Likewise, Transformers :cite:`Vaswani.Shazeer.Parmar.ea.2017` use them to stack many layers of networks efficiently. It is also used in graph neural networks :cite:`Kipf.Welling.2016` and, as a basic concept, it has been used extensively in computer vision :cite:`Redmon.Farhadi.2018,Ren.He.Girshick.ea.2015`. 
 Highway networks :cite:`srivastava2015highway` predate ResNet and share some
@@ -97,7 +85,7 @@ of its motivation, using learned gates rather than a direct identity shortcut.
 ## Residual Blocks
 :label:`subsec_residual-blks`
 
-Let's focus on a local part of a neural network, as depicted in :numref:`fig_residual_block`. Denote the input by $\mathbf{x}$.
+Consider the part of a neural network depicted in :numref:`fig_residual_block`. Denote the input by $\mathbf{x}$.
 We assume that $f(\mathbf{x})$, the desired underlying mapping we want to obtain by learning, is to be used as input to the activation function on the top.
 On the left,
 the portion within the dotted-line box
@@ -140,7 +128,7 @@ post-activation block is exactly the identity only on inputs that are already
 nonnegative. The pre-activation variant discussed in the exercises places the
 activation inside the residual branch and permits an exact identity on
 arbitrary inputs.
-This kind of design requires that the output of the two convolutional layers has to be of the same shape as the input, so that they can be added together. If we want to change the number of channels, we need to introduce an additional $1\times 1$ convolutional layer to transform the input into the desired shape for the addition operation. Let's have a look at the code below.
+This kind of design requires that the output of the two convolutional layers has to be of the same shape as the input, so that they can be added together. If we want to change the number of channels, we need to introduce an additional $1\times 1$ convolutional layer to transform the input into the desired shape for the addition operation. The code below implements both cases.
 
 ```{.python .input #resnet-residual-blocks-1}
 %%tab mxnet
@@ -258,7 +246,7 @@ This code generates two types of networks: one where we add the input directly t
 ![The two ResNet block variants side by side: with an identity skip when input and output shapes match (left), and with a $1 \times 1$ convolution on the skip path that adjusts channels and resolution so the addition is well defined (right).](../img/arch-resnet-block.svg)
 :label:`fig_resnet_block`
 
-Now let's look at a situation where the input and output are of the same shape, where $1 \times 1$ convolution is not needed.
+We first consider matching input and output shapes, for which the $1 \times 1$ convolution is unnecessary.
 
 ```{.python .input #resnet-residual-blocks-2}
 %%tab mxnet
@@ -435,7 +423,7 @@ def block(self, num_residuals, num_channels, in_channels,
     return nnx.Sequential(*blk)
 ```
 
-Then, we add all the modules to ResNet. Here, two residual blocks are used for each module. Lastly, just like GoogLeNet, we add a global average pooling layer, followed by the fully connected layer output.
+We assemble the modules into ResNet, using two residual blocks per module. As in GoogLeNet, global average pooling precedes the fully connected output layer.
 
 ```{.python .input #resnet-resnet-model-3}
 %%tab pytorch
@@ -537,7 +525,11 @@ ResNet18().layer_summary((1, 96, 96, 1))
 
 ## Training
 
-We train ResNet on the Fashion-MNIST dataset, just like before. ResNet is quite a powerful and flexible architecture. The plot capturing training and validation loss illustrates a significant gap between both graphs, with the training loss being considerably lower. For a network of this flexibility, more training data would offer distinct benefit in closing the gap and improving accuracy.
+We train ResNet on Fashion-MNIST under the same protocol as the preceding
+models. In this run the training loss falls below the validation loss, which
+indicates a generalization gap. Additional data, stronger augmentation,
+regularization, and a smaller model are distinct possible responses; this
+single curve does not identify which would help most.
 
 ```{.python .input #resnet-training}
 %%tab mxnet
@@ -1025,10 +1017,10 @@ A full DenseNet alternates four dense blocks with transition layers, mirroring
 the four-stage layout of ResNet-18; assembling and training one is a
 straightforward variation on the ResNet code above. Feature reuse makes
 DenseNet parameter-efficient: it reached ResNet-level ImageNet accuracy with
-fewer parameters. Concatenation carries a cost that addition does not. The
-unique feature maps grow linearly with depth, but a naive implementation
-repeatedly materializes ever-wider concatenations and temporary normalized
-outputs, producing quadratic memory growth inside a dense block.
+fewer parameters. Concatenation nevertheless carries a cost that addition does
+not. The unique feature maps grow linearly with depth, but a naive
+implementation repeatedly materializes ever-wider concatenations and temporary
+normalized outputs, producing quadratic memory growth inside a dense block.
 Memory-efficient implementations recompute those temporaries during
 backpropagation :cite:`pleiss2017memory`. The remaining activation traffic
 helped residual addition become the more common choice at scale.
@@ -1086,7 +1078,7 @@ A common feature of the designs we have discussed so far is that the network des
 1. Refer to Table 1 in the ResNet paper :cite:`He.Zhang.Ren.ea.2016` to implement different variants of the network. 
 1. For deeper networks, ResNet introduces a "bottleneck" architecture to reduce model complexity. Try to implement it.
 1. In subsequent versions of ResNet, the authors changed the "convolution, batch normalization, and activation" structure to the "batch normalization, activation, and convolution" structure. Make this improvement yourself. See Figure 1 in :citet:`He.Zhang.Ren.ea.2016*1` for details. This ordering is essentially what ConvNeXt adopts (:numref:`sec_convnext`).
-1. Why can't we just increase the complexity of functions without bound, even if the function classes are nested?
+1. Why can increasing function-class complexity without bound still be undesirable when the classes are nested?
 1. One of the advantages claimed in the DenseNet paper :cite:`Huang.Liu.Van-Der-Maaten.ea.2017` is that its models have fewer parameters than comparable ResNets. Why is this the case? Consider which computations a concatenated feature saves relative to recomputing it.
 1. For a dense block whose $k$ convolutions each emit $g$ channels (the growth rate) on an input with $c$ channels, how many channels does the $i$-th convolution consume? Sum these to compare the activation memory of the dense block with that of $k$ residual blocks of constant width $c$, and relate your answer to the memory-efficient implementations of :citet:`pleiss2017memory`.
 

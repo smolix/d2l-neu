@@ -1,26 +1,19 @@
-# DeltaNet: Memory That Edits
+# DeltaNet and Corrective Memory Updates
 :label:`sec_deltanet`
 
-Read down the write column of :numref:`tab_ms-family` one more time. Seven
-models, three research lineages, and every write is an addition: whatever
-$\mathbf{k}_t \mathbf{v}_t^\top$ says, the memory takes it on top of what is
-already there. The previous section measured what crowding does to such a
-memory and built the decay ladder to manage it, but decay is indiscriminate:
-to weaken one stale entry, the model must weaken everything. This section
-changes the write rule instead. The fix, proposed for exactly this failure
-by :citet:`Schlag.Irie.Schmidhuber.2021`, is to *read before writing*: look
-up what the memory currently returns for $\mathbf{k}_t$, subtract it, and
-write only the correction. We first isolate the failure the additive write
-cannot escape, with a memory whose entries are *overwritten* rather than
-merely accumulated. We then derive the corrective write, the *delta rule*,
-and find that it is one step of gradient descent on a recall loss, taken
-inside the forward pass. A memory whose transition is no longer diagonal
-resists the chunked training schedule of :numref:`subsec_ms-chunked`, so we
-rebuild that schedule around a triangular solve; with a decay gate added
-back we arrive at Gated DeltaNet, the cell inside several current
-production models, and train it on our language-modeling scoreboard.
-Finally we ask what the new transition can *compute*, and meet a capability
-that no model of :numref:`sec_matrix-state` has: state tracking.
+The matrix memories in :numref:`sec_matrix-state` update their state by
+addition. If a key is used more than once, its old and new values are
+superposed. Decay reduces old contributions by age, but cannot selectively
+replace the value associated with one key. DeltaNet addresses this problem
+by reading the current value before writing and storing only the correction
+:cite:`Schlag.Irie.Schmidhuber.2021`.
+
+We first demonstrate the failure of additive writes on an overwrite task.
+We then derive the delta rule as one gradient step on a recall loss. Its
+non-diagonal transition requires a different chunked implementation, which
+we obtain from a triangular solve. Adding a decay gate gives Gated DeltaNet.
+The final section studies the additional state-tracking computations allowed
+by this transition.
 
 *Prerequisites: the matrix-state recurrence and its capacity law
 (:numref:`sec_matrix-state`, :eqref:`eq_ms-retrieval-error`), the chunked
@@ -53,12 +46,12 @@ import optax
 import time
 ```
 
-## The Trouble with Adding
+## Limitations of Additive Writes
 :label:`subsec_dn-overwrite`
 
-The capacity law of :numref:`subsec_ms-capacity` blamed *crowding*: store
-more unit-norm pairs than the key dimension and reads drown in the
-interference term of :eqref:`eq_ms-retrieval-error`. There is a second
+The capacity law of :numref:`subsec_ms-capacity` describes *crowding*: storing
+more unit-norm pairs than the key dimension increases the interference term
+in :eqref:`eq_ms-retrieval-error`. There is a second
 failure, and it survives even when crowding is engineered away. Suppose the
 keys are few and mutually orthogonal, so that interference between
 *different* keys is exactly zero, but the stream keeps *re-binding* old
@@ -72,14 +65,13 @@ $$
 = \mathbf{v}^{(1)} + \mathbf{v}^{(2)} + \cdots + \mathbf{v}^{(R)}:
 $$
 
-every value ever filed under $\mathbf{k}$, superposed, with the current one
-enjoying no privilege over the stale ones. A reader who wants the *latest*
-binding is reduced to guessing among $R$ candidates.
+all values written under $\mathbf{k}$ are superposed, so the current value
+receives the same weight as the stale values. Retrieving the *latest* binding
+then requires distinguishing it among $R$ candidates.
 
 The corrective write repairs exactly this. Before writing, retrieve what
-the memory currently returns for the key; subtract it; then write. For
-now we state the repair operationally, with everything it does visible in
-the code below, and derive it properly in the next section:
+the memory currently returns for the key; subtract it; then write. We first
+state the corrective update and derive it in the next section:
 
 $$
 \mathbf{S}_t
@@ -152,13 +144,13 @@ orthogonal keys there is no crowding, so the decay ladder of
 :numref:`subsec_ms-decay-ladder` would not help here. Decay discounts by
 *age*; the failure is indexed by *key*.
 
-### Trained Models Hit the Same Ceiling
+### End-to-End Training on the Overwrite Task
 :label:`subsec_dn-trained`
 
-A fair objection: no trained model is forced to use its memory the way we
-just hand-operated it. Perhaps gradient descent, given an additive memory
-and a task full of re-bindings, finds some encoding that sidesteps
-superposition. So we let it try. The task generator below emits sequences
+A trained model need not use its memory in the prescribed way above.
+Gradient descent might find an encoding that lets an additive memory avoid
+superposition, so we test this possibility with end-to-end training. The
+task generator below emits sequences
 with a write phase, $R$ re-bindings of each of $8$ keys in shuffled order,
 followed by a query phase asking for each key's latest value; the model is
 trained end-to-end on cross-entropy over its answers.
@@ -187,16 +179,16 @@ def make_task(num_seqs, num_keys=8, num_values=16, R=4, seed=0):
 ```
 
 The model is deliberately small: one matrix-memory layer, one MLP block, a
-classification head. One design decision is load-bearing, and we learned it
-the hard way. The write *address*, the projections producing
-$\mathbf{q}_t$, $\mathbf{k}_t$, and $\beta_t$, must be computed from the
-key token alone, and the *content* $\mathbf{v}_t$ from the value token
-alone. Give the address projection access to the value token and a trained
+classification head. One design decision is necessary for the comparison.
+The projections that produce $\mathbf{q}_t$,
+$\mathbf{k}_t$, and $\beta_t$ form the write *address*, and they must see
+the key token alone, while the *content* $\mathbf{v}_t$ must come from the
+value token alone. Give the address projection access to the value token and a trained
 Hebbian model escapes superposition entirely, by assigning every
 (key, value) *pair* its own private address so that no two writes ever
 collide; recall stops distinguishing the two rules. That escape is itself
-instructive, superposition only binds when addresses are reused, but it
-dodges the question we are asking. Real linear-attention layers offer no
+instructive, since superposition only binds when addresses are reused,
+but it dodges the question we are asking. Real linear-attention layers offer no
 such dodge at this task's scale: $\mathbf{q}$, $\mathbf{k}$, $\mathbf{v}$
 are all projections of the same token embedding, so a model that answers
 "what is ticker X now" must address by the ticker. Our split enforces the
@@ -358,23 +350,24 @@ assert final[6][1] > 0.95, 'trained delta must keep near-perfect recall'
 assert final[6][0] < 0.5, 'trained Hebbian must collapse under overwrites'
 ```
 
-Training does not rescue the additive write. The trained Hebbian model
-tracks the mechanistic collapse, near $0.5$ at two writes per key and
+Training does not remove the additive write's limitation in this setup.
+The trained Hebbian model follows the mechanistic result, reaching about
+$0.5$ accuracy at two writes per key and
 roughly $0.25$--$0.35$ by four to six, while the delta model learns a
 perfect overwriting memory and stays at $1.000$ throughout. Both models
 have identical parameter counts and see identical data; the entire gap is
 the write rule. This synthetic failure has a production-scale echo:
-*multi-query associative recall*, essentially this task embedded in
-natural text, is the single synthetic that best predicts which efficient
-architectures close the quality gap to attention, a diagnosis
+*multi-query associative recall* is essentially this task embedded in
+natural text, and it is the single synthetic that best predicts which
+efficient architectures close the quality gap to attention, a diagnosis
 :numref:`sec_hybrids` takes up in earnest.
 
 ## The Delta Rule
 :label:`subsec_dn-delta`
 
-Time to earn :eqref:`eq_dn-repair` rather than assert it. The memory's job,
-when token $t$ arrives, is to associate $\mathbf{k}_t$ with
-$\mathbf{v}_t$. Phrase that as an objective: the state
+Equation :eqref:`eq_dn-repair` follows from a recall objective. When token
+$t$ arrives, the memory should associate $\mathbf{k}_t$ with
+$\mathbf{v}_t$: the state
 $\mathbf{S}$ should make the momentary *recall loss*
 
 $$
@@ -424,22 +417,22 @@ $$
 $$
 :eqlabel:`eq_dn-matrix-form`
 
-The two readings teach different things. The error form
+The two forms emphasize different properties. The error form
 :eqref:`eq_dn-error-form` is the algorithm, four lines below, and the
 cheap one to run: two matrix--vector products per token, never a
 $d_k \times d_k$ matrix in sight. The matrix form
 :eqref:`eq_dn-matrix-form` slots DeltaNet into the family template: the
 transition $\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top$ is no
-longer diagonal, and this section's closing pages are about what that
-buys. For a unit-norm key, the update interpolates: the value stored at
+longer diagonal, and the closing analysis examines the resulting dynamical expressivity.
+For a unit-norm key, the update interpolates: the value stored at
 $\mathbf{k}_t$ moves to $(1 - \beta_t)\,\mathbf{v}_{\textrm{old}} +
-\beta_t\, \mathbf{v}_t$, so $\beta_t$, produced by a sigmoid from the
-token, is a learned *write strength*, $\beta_t \approx 0$ preserving the
-old binding and $\beta_t \approx 1$ replacing it, the input gate of
+\beta_t\, \mathbf{v}_t$, so $\beta_t$ is a learned *write strength*,
+produced by a sigmoid from the token, with $\beta_t \approx 0$ preserving
+the old binding and $\beta_t \approx 1$ replacing it, the input gate of
 :numref:`sec_lstm` reborn as a per-token learning rate.
 
-That last phrase is worth dwelling on, because it reframes the whole
-family. Compare the Hebbian write under the same lens: adding
+The learning-rate interpretation also relates the two write rules. Compare
+the Hebbian write under the same lens: adding
 $\beta_t \mathbf{k}_t \mathbf{v}_t^\top$ is one gradient step on the
 *alignment* objective $-\langle \mathbf{S}^\top \mathbf{k}_t,
 \mathbf{v}_t\rangle$, a loss that only ever asks the read-out to grow
@@ -448,10 +441,9 @@ without feedback. The delta rule optimizes recall error and gets
 error-correction; linear attention optimizes alignment and gets
 superposition. Both are online learners running *inside* the forward pass,
 at test time, with no autograd involved; they differ only in their loss.
-Once seen this way, the natural question is what other optimizers one
-could run in that inner loop, and :numref:`sec_test-time-regression`
-develops exactly that view, with the delta rule as one point, one
-plain-SGD step on a least-squares loss, in a family of solvers.
+This interpretation allows other optimizers in the inner loop.
+:numref:`sec_test-time-regression` develops that view and identifies the
+delta rule as one plain-SGD step on a least-squares loss.
 
 One practical note before the code: all delta-rule implementations in this
 chapter $L2$-normalize keys (and queries), as shipped DeltaNet variants
@@ -534,12 +526,12 @@ with jax.default_matmul_precision('highest'):
     assert err < 1e-5              # One rule, two readings
 ```
 
-## Training It: the WY Trick
+## Chunked Training with the WY Representation
 :label:`subsec_dn-wy`
 
 The recurrence above is fine for generation, one token, constant memory,
 but training wants the whole sequence at once, and here DeltaNet is
-genuinely harder than everything in :numref:`sec_matrix-state`. The
+more involved than the scalar transition in :numref:`sec_matrix-state`. The
 chunked schedule of :numref:`subsec_ms-chunked` leaned on the transition
 being a scalar: products of decays collapse into `segsum`, an elementwise
 log-space cumulative sum. DeltaNet's transitions are the matrices
@@ -548,7 +540,8 @@ those is not elementwise anything; materializing the cumulative products
 would cost a $d_k \times d_k$ matrix multiply per token, exactly the
 parallelism-killing serial chain we are trying to avoid.
 
-The escape is to look at *what the updates share*. Write the state at the
+The shared structure of the updates provides a parallel formulation. Write
+the state at the
 end of a chunk of $C$ tokens, entered with state $\mathbf{S}$, in the
 error form: each token contributes a rank-one write
 $\mathbf{k}_t \mathbf{u}_t^\top$ with update vector
@@ -584,8 +577,8 @@ $$
 
 solved by forward substitution, one triangular solve per chunk. The
 widths matter in the accounting: forming the coupling matrix $\mathbf{A}$
-is a $\mathcal{O}(C^2 d_k)$ matmul, and the forward substitution, whose
-right-hand side has $d_v$ columns, costs $\mathcal{O}(C^2 d_v)$ — the
+is a $\mathcal{O}(C^2 d_k)$ matmul, and the forward substitution costs
+$\mathcal{O}(C^2 d_v)$, its right-hand side having $d_v$ columns — the
 same order as the attention-shaped matmuls around it, not free.
 (Numerical linear algebra veterans will recognize the
 maneuver: expressing a product of rank-one modifications,
@@ -600,8 +593,8 @@ updates,
 $\mathbf{Y} = \mathbf{Q}\mathbf{S} +
 \mathrm{tril}(\mathbf{Q}\mathbf{K}^\top)\,\mathbf{U}$,
 and the state advances by $\mathbf{S} \leftarrow \mathbf{S} +
-\mathbf{K}^\top \mathbf{U}$. Attention inside, recurrence across, plus
-one small solve:
+\mathbf{K}^\top \mathbf{U}$. The resulting schedule uses attention within each chunk, recurrence
+across chunks, and one triangular solve:
 
 ```{.python .input #deltanet-training-it-the-wy-trick}
 %%tab pytorch
@@ -668,23 +661,22 @@ side $\mathrm{diag}(\boldsymbol{\beta})(\mathbf{V} - \mathbf{K}
 $(\mathbf{I} + \mathbf{A})^{-1}$ first and multiplying would give the
 same answer at $\mathcal{O}(C^3)$ plus a stored matrix nobody needs;
 solving against the right-hand side is both the cheaper and the more
-numerically well-behaved habit. This is teaching
-altitude, deliberately: the production kernels add head batching, gating,
-tensor-core-aware tiling of the solve, and numerical care in low
-precision, and live in the open-source `flash-linear-attention` library
-that also serves as the reference implementation for most of the model
-family of this chapter. The algorithm is the one you just verified.
+numerically well-behaved habit. This implementation omits head batching,
+gating, tensor-core-aware
+tiling, and low-precision safeguards used by production kernels. The
+open-source `flash-linear-attention` library implements these extensions and
+serves as a reference for most models in this family.
 
 ## Gating and the Modern Cell
 :label:`subsec_dn-gated`
 
 DeltaNet edits the row it writes; every other row it preserves *exactly*,
-since the transition acts as the identity off $\mathbf{k}_t$. That is the
-opposite failure from the decay ladder: a pure-decay model forgets
-everything indiscriminately, a pure-delta model forgets nothing unless a
-new write happens to land on the same key direction. A season of
-tickers never queried again would sit in a DeltaNet state forever,
-crowding the geometry for no benefit. The modern cell therefore uses both
+since the transition acts as the identity off $\mathbf{k}_t$. This produces
+the complementary limitation to pure decay: a pure-decay
+model forgets all directions, whereas a pure-delta model forgets a direction
+only when a new write overlaps its key. Values associated with keys that are
+never queried again therefore remain in the state and contribute to
+crowding. The modern cell therefore uses both
 knobs, a scalar decay *and* the delta write
 :cite:`Yang.Kautz.Hatamizadeh.2024`:
 
@@ -702,9 +694,9 @@ online-learner reading, $\beta_t$ is a learning rate and $\alpha_t$ is
 weight decay, and :eqref:`eq_dn-gated` applies them *decoupled*: the decay
 shrinks the whole state first, and the gradient step is taken at its own,
 independently controlled strength, the same fix that distinguishes
-AdamW from Adam-with-$L2$ in :numref:`sec_adamw`. The analogy is worth
-its keep on exactly that one axis — forget at one rate, learn at
-another, let the model set each per token — and it ends there: there are
+AdamW from Adam-with-$L2$ in :numref:`sec_adamw`. The analogy applies only
+to the separation of the two rates: the model can
+set forgetting and learning independently at each token. There are
 no gradient moments or bias corrections in :eqref:`eq_dn-gated`, only
 AdamW's decoupling of decay from step. On the ladder of
 :numref:`fig_ms-decay-ladder`, this is the dashed rung, one step past the
@@ -726,8 +718,8 @@ a design axis :numref:`sec_hybrids` will price.
 
 Every architecture this chapter takes seriously must face the scoreboard
 of :numref:`subsec_capstone`. The block below wraps the gated delta
-recurrence in the now-routine production dressing, and nothing in it is
-new to you: pre-norm residuals, two heads with per-head states
+recurrence with the standard components used by the preceding language
+models: pre-norm residuals, two heads with per-head states
 ($\mathbf{q}, \mathbf{k}$ normalized per head, matching the unit-key
 convention above), an output RMSNorm and a SiLU gate on the read-out
 (this family normalizes the *output* rather than carrying a normalizer
@@ -922,8 +914,8 @@ perplexity depending on framework and seed, at a comparable parameter
 count, without touching that scoreboard's recipe beyond what its Mamba
 row already used. At this corpus size that is all the claim we make: the
 gated delta cell is *competitive as a language model* while carrying the
-overwriting memory the additive family lacks. The published version of
-the same comparison, at 1.3B parameters and real token budgets, has
+overwriting memory the additive family lacks. At 1.3B parameters and
+real token budgets, the published version of the same comparison has
 Gated DeltaNet beating Mamba-2 and DeltaNet individually on perplexity
 and recall-heavy evaluations :cite:`Yang.Kautz.Hatamizadeh.2024`, with
 the two mechanisms' contributions cleanly ablatable: decay without delta
@@ -955,8 +947,8 @@ $\hat{\boldsymbol{\kappa}}_t$ is a *removal key* that need not equal the
 write key $\tilde{\mathbf{k}}_t$, and $\mathbf{a}_t$ is a per-channel
 in-context learning rate. The model can erase one address while writing
 another, decay each coordinate at its own rate, and modulate the erase
-per channel. Set all three to the delta-rule tying, no decay, removal
-key equal to write key, uniform rate $\beta$, and the update collapses
+per channel. Set all three to the delta-rule tying (no decay, removal
+key equal to write key, uniform rate $\beta$) and the update collapses
 back to DeltaNet; the cell below asserts as much, which is also a
 useful check that :eqref:`eq_dn-rwkv7` (stated here in this chapter's
 convention; see the margin note of :numref:`subsec_ms-family`) is the
@@ -983,19 +975,19 @@ print(f'RWKV-7, delta-rule setting: max deviation '
 assert np.abs(S_rwkv - S_delta).max() < 1e-12
 ```
 
-Two shipped families, Gated DeltaNet in Qwen3-Next and KDA in Kimi
-Linear :cite:`Kimi.Team.2025b`, plus RWKV-7's own model line, all sit
-within a couple of parameter-tying choices of :eqref:`eq_dn-gated`. What
+Two shipped families sit within a couple of parameter-tying choices of
+:eqref:`eq_dn-gated`, Gated DeltaNet in Qwen3-Next and KDA in Kimi
+Linear :cite:`Kimi.Team.2025b`, and so does RWKV-7's own model line. What
 in :numref:`sec_matrix-state` was a table of independent-looking models
 has become, one write rule later, a family with two parents: choose the
 decay structure (scalar, diagonal), choose the write rule (additive,
 delta, generalized delta), and the model largely follows.
 
-## What the Transition Can Compute
+## Computational Properties of the Transition
 :label:`subsec_dn-expressivity`
 
-The memory story is done; a computational story has been hiding inside
-it. Look at :eqref:`eq_dn-matrix-form` once more, not as a write to a
+The same transition also determines which state dynamics the model can
+represent. Look at :eqref:`eq_dn-matrix-form` once more, not as a write to a
 memory but as a *linear dynamical system*: DeltaNet's transition
 $\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top$ is the first
 transition in this chapter that is not diagonal. Its spectrum is easy to
@@ -1006,16 +998,16 @@ decays in $(0, 1)$ can shrink a state coordinate, but can never flip its
 sign. Does that limit what these models can compute, as opposed to
 remember?
 
-It does, and the cleanest witness is the humblest function in this book:
-*parity*. Read a bit stream and answer whether the number of ones so far
-is even. A one-dimensional recurrence solves it exactly, multiply the
+Parity provides a minimal example of this limitation. Read a bit stream and
+answer whether the number of ones so far
+is even. A one-dimensional recurrence solves it exactly: multiply the
 state by $-1$ on every one-bit, and the sign of the state *is* the
-answer, but that solution needs a transition value of $-1$. A model whose
+answer. But that solution needs a transition value of $-1$. A model whose
 transitions are confined to $[0, 1]$ can represent parity of the count
 only through precision tricks, and finite-precision analysis says
 essentially not at all :cite:`Grazzi.Siems.Franke.ea.2025`. The
-experiment below stages exactly this boundary, and two design choices,
-both discovered by breaking the experiment first, matter. First, the
+experiment below isolates this boundary and depends on two design choices.
+First, the
 recurrence is *purely multiplicative*, $\mathbf{h}_t = \mathbf{a}_t
 \odot \mathbf{h}_{t-1}$ from a nonzero learned $\mathbf{h}_0$, with no
 input drive: parity lives in sign flips, and an additive drive hands the
@@ -1127,8 +1119,8 @@ for T in [8, 16, 24]:
         print(f'T={T:2d}  {name}: ' + '  '.join(f'{a:.3f}' for a in accs))
 ```
 
-The separation is stark. The non-negative model solves parity in none of
-our runs: its best seeds reach only the $0.6$--$0.7$ range, at $T = 8$,
+The two transition ranges produce distinct results. The non-negative model
+solves parity in no run: its best seeds reach only the $0.6$--$0.7$ range, at $T = 8$,
 where magnitudes can weakly encode the count, and from $T = 16$ on every
 run sits at chance; more data or more epochs cannot supply what the
 dynamics lacks, a way to flip a sign. The $(-1, 1)$ model solves parity
@@ -1137,7 +1129,7 @@ wall: optimization grows less reliable with length. In our runs, failing
 seeds appear from $T = 16$ in one framework and by $T = 24$ in both,
 each failed seed at chance while the surviving seeds still find the
 sign-flip solution; which seeds fail moves between frameworks and
-re-runs, and only the pattern, reliability decaying with $T$, is stable.
+re-runs, and only the pattern is stable, reliability decaying with $T$.
 Keep the two walls distinct, because they have different remedies. The
 sigmoid model fails for *representational* reasons: by the
 finite-precision result cited below, no parameter setting of a
@@ -1165,8 +1157,8 @@ all, a delta cell whose weights we set by hand: state initialized to
 $\mathbf{k}$, transition applied on every one-bit, parity read from the
 sign of $\mathbf{k}^\top \mathbf{h}_T$. One caution from our own
 attempts: this *must* be a hand-set demonstration. The trained analogue
-with a single learnable reflection axis is an optimization trap, it can
-represent parity but in our runs never learned it at any $T$, so we
+with a single learnable reflection axis is an optimization trap: it can
+represent parity, but in our runs it never learned it at any $T$, so we
 teach the mechanism mechanistically and let the diagonal experiment
 above carry the trained evidence.
 
@@ -1194,9 +1186,9 @@ for T in [8, 24, 64]:
 The projection erases the very component that counts, accuracy at
 chance at every length, while the reflection computes parity *exactly*
 at $T = 64$ as easily as at $T = 8$: no optimization horizon, because
-nothing was optimized. This one eigenvalue is the entire content of a
+nothing was optimized. This eigenvalue determines the alternating
 design flag you will meet in production DeltaNet code, `allow_neg_eigval`,
-which simply doubles the gate to $\beta_t = 2\,\sigma(\cdot) \in (0, 2)$.
+which doubles the gate to $\beta_t = 2\,\sigma(\cdot) \in (0, 2)$.
 Note that the interval is open: for finite logits $2\sigma(\cdot)$
 approaches but never reaches $2$, so the exact reflection we just ran by
 hand is a *boundary construction*, the limit of the trainable family
@@ -1210,13 +1202,13 @@ trained DeltaNet variants jump from near-zero length generalization on
 parity to essentially perfect once $\beta$ may exceed $1$, with modular
 arithmetic improving in step.
 
-### The Ladder, and Its Ceiling
+### Expressivity and Its Limits
 :label:`subsec_dn-ladder`
 
-Climbing one more rung: a reflection along one axis per token buys
-sign-flip state, but composing *rotations*, tracking a permutation as it
-composes, say the word problem of the symmetric group $S_3$, needs
-transitions that mix several directions at once. DeltaProduct
+Adding a reflection along one axis per token permits
+sign-flip state, but composing *rotations* needs transitions that mix
+several directions at once: tracking a permutation as it composes, say
+the word problem of the symmetric group $S_3$. DeltaProduct
 :cite:`Siems.Carstensen.Zela.ea.2025` gets there by taking $n_h$ delta
 micro-steps per token, making the transition a product of $n_h$
 Householder-like factors, rank-$n_h$ beyond diagonal, which
@@ -1227,15 +1219,15 @@ $n_h$ times the write cost. And there, as of the 2024--2025 results
 cited here, the ladder stops.
 :citet:`Merrill.Petty.Sabharwal.2024` place fixed-depth, log-precision
 transformers, S4, and Mamba in the complexity class $\mathsf{TC}^0$:
-under standard conjectures, no such model, and no diagonal-transition
-recurrence under the same assumptions, solves the word problem of $S_5$
-at arbitrary length. That group is the algebra those authors put forward
+under standard conjectures, no such model solves the word problem of
+$S_5$ at arbitrary length, and no diagonal-transition recurrence does
+either under the same assumptions. That group is the algebra those authors put forward
 as the shared kernel of state tracking, tasks like following chess
 positions, evaluating code, or tracking entities — a motivation drawn
 from the cited work, not a proved reduction of any of those full tasks.
-A plain nonlinear RNN, paying the sequential price this
-chapter has been trying to avoid, solves the $S_5$ word problem with one
-layer. Their phrase for the diagonal families' predicament: an
+A plain nonlinear RNN solves the $S_5$ word problem with one layer,
+paying the sequential price this chapter has been trying to
+avoid. Their phrase for the diagonal families' predicament: an
 *illusion of state*,
 a recurrence that carries a state but cannot compose with it. The
 delta-rule rungs recover a real, if bounded, slice of that power
@@ -1244,33 +1236,32 @@ published rung climbs higher without giving up the parallel schedule.
 :numref:`tab_dn-ladder` summarizes the ladder with
 the evidence this section put on the table.
 
-:What a transition can track. Each rung adds structure to $\mathbf{D}_t$ in :eqref:`eq_ms-recurrence`; the right column names the cheapest capability the rung unlocks, per this section's experiments and the cited theory.
+:What a transition can track. Each row adds structure to $\mathbf{D}_t$ in :eqref:`eq_ms-recurrence`; the right column names a capability supported by this section's diagnostics or by the cited theory.
 :label:`tab_dn-ladder`
 
-| transition $\mathbf{D}_t$ | eigenvalues | models | unlocks |
+| transition $\mathbf{D}_t$ | eigenvalues | models | demonstrated capability |
 |:--|:--|:--|:--|
 | $\mathbf{I}$ | all $1$ | linear attention | accumulation only |
 | scalar or diagonal, $(0, 1)$ | non-negative | RetNet, Mamba-2, GLA | forgetting; parity out of reach (fixed state, finite precision, arbitrary length) |
 | diagonal, $(-1, 1)$ | signed | negative-eigenvalue variants | parity, via sign flips |
-| $\alpha_t(\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top)$, $\beta_t \in (0, 1)$ | non-negative | DeltaNet, Gated DeltaNet | targeted erasure (this section's memory story) |
+| $\alpha_t(\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top)$, $\beta_t \in (0, 1)$ | non-negative | DeltaNet, Gated DeltaNet | targeted erasure (demonstrated in this section) |
 | same, $\beta_t \in (0, 2)$ | signed | `allow_neg_eigval` variants, RWKV-7 | sign flips: parity (exact reflection at the $\beta = 2$ boundary) |
 | product of $n_h$ Householders | signed, rank-$n_h$ | DeltaProduct | composing reflections: group word problems ($S_3$, $S_4$) |
 | dense nonlinear | unrestricted | plain RNN (:numref:`chap_rnn`) | $S_5$ and beyond, at sequential cost |
 
-Where does this leave the family? With a memory that can edit, a decay
-that can forget, a training schedule that runs on matmuls, and a
-transition that computes more than any diagonal model, yet still a
-fixed-size state with the capacity ceiling measured in
-:numref:`subsec_ms-capacity`, and still, under $\mathsf{TC}^0$, shy of
-what a true recurrent state can track. Both residual gaps point to the
+The family combines corrective writes, learned decay, and matmul-based
+training with transitions more expressive than diagonal dynamics. It still
+uses a fixed-size state subject to the capacity ceiling measured in
+:numref:`subsec_ms-capacity`, and its $\mathsf{TC}^0$ limit excludes some
+dynamics that a nonlinear recurrent state can track. Both residual gaps
+point to the
 same production answer, pairing these layers with a few attention
 layers, and that is :numref:`sec_hybrids`. Before the hybrids, though,
-one more unification is owed: the delta rule arrived here as *one* SGD
-step on *one* loss. :numref:`sec_test-time-regression` asks the general
-question, what if a sequence layer is an optimizer, full stop, and
-re-derives this whole chapter from it.
+one further generalization remains: the delta rule is *one* SGD step on
+*one* loss. :numref:`sec_test-time-regression` treats the sequence layer as
+an optimizer and derives the preceding updates from this perspective.
 
-**What this section's experiments do and do not show.** The overwrite
+**Experimental scope.** The overwrite
 cells are diagnostics under a stated restriction, write addresses
 computed from the key token alone, and show that within it the additive
 write superposes and the delta write does not, both mechanistically and
@@ -1289,7 +1280,7 @@ not a trained result.
 
 An additive matrix memory cannot re-bind a key: after $R$ writes to the
 same key it returns the superposition of all $R$ values, and recall of
-the latest collapses like guesswork, a failure that survives end-to-end
+latest approaches chance accuracy, a failure that persists under end-to-end
 training whenever write addresses must be reused (and one that decay
 cannot fix, since decay discounts by age, not by key). The delta rule
 reads before writing and stores only the correction,
@@ -1374,7 +1365,7 @@ DeltaNet<br>
 :::
 :::
 
-::: {.slide title="The write column, revisited"}
+::: {.slide title="Additive Write Rules"}
 Last section's family table: seven models, three lineages — and **every
 write is an addition**.
 
@@ -1386,7 +1377,7 @@ write is an addition**.
 
 After $R$ writes to one key:
 $\mathbf{S}^\top \mathbf{k} = \mathbf{v}^{(1)} + \cdots + \mathbf{v}^{(R)}$
-— the current binding enjoys no privilege over the stale ones.
+— the current and stale bindings receive the same weight.
 :::
 
 ::: {.slide title="Overwriting, measured"}
@@ -1413,8 +1404,8 @@ and a Hebbian model escapes by assigning every pair its own address.
 :::
 
 ::: {.slide title="The delta rule"}
-Ask the state to be *correct*, not just aligned — one SGD step on the
-recall loss, inside the forward pass:
+One SGD step on the recall loss makes the state predict the target value,
+rather than only increasing alignment:
 
 $$\ell_t(\mathbf{S}) = \tfrac{1}{2}\|\mathbf{S}^\top \mathbf{k}_t - \mathbf{v}_t\|^2, \qquad \mathbf{S}_t = \mathbf{S}_{t-1} - \beta_t\, \mathbf{k}_t (\mathbf{k}_t^\top \mathbf{S}_{t-1} - \mathbf{v}_t^\top)$$
 
@@ -1498,7 +1489,7 @@ Purely multiplicative recurrence $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{
   *optimization* horizon, failing seeds from $T=16$ on.
 :::
 
-::: {.slide title="The reflection hiding in the delta rule"}
+::: {.slide title="The Reflection in the Delta Rule"}
 $\mathbf{I} - \beta\,\mathbf{k}\mathbf{k}^\top$ has eigenvalue
 $1 - \beta$ along $\mathbf{k}$:
 
@@ -1511,7 +1502,7 @@ $1 - \beta$ along $\mathbf{k}$:
   $\beta = 2$ itself is the boundary construction.
 :::
 
-::: {.slide title="The ladder, and its ceiling"}
+::: {.slide title="Transition Structure Determines Representable Dynamics"}
 | transition | unlocks |
 |:--|:--|
 | scalar / diagonal $(0,1)$ | forgetting; parity out of reach |
@@ -1525,7 +1516,7 @@ $1 - \beta$ along $\mathbf{k}$:
 
 . . .
 
-Still a fixed-size state; still short of a true recurrence. Both gaps →
-**hybrids** (two sections ahead). First: what if a layer is an
-*optimizer, full stop* — next section.
+The state remains fixed-size and less expressive than a nonlinear
+recurrence. Hybrid architectures address the capacity gap. The next section
+first interprets a sequence layer as an optimizer.
 :::

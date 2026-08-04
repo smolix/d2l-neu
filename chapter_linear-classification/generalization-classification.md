@@ -9,30 +9,18 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 
 
-So far, we have focused on how to tackle multiclass classification problems
-by training (linear) neural networks with multiple outputs and softmax functions.
-Interpreting our model's outputs as probabilistic predictions,
-we motivated and derived the cross-entropy loss function,
-which calculates the negative log likelihood
-that our model (for a fixed set of parameters)
-assigns to the actual labels.
-And finally, we put these tools into practice
-by fitting our model to the training set.
-However, as always, our goal is to learn *general patterns*,
-as assessed empirically on previously unseen data (the test set).
-High accuracy on the training set means nothing.
-Whenever each of our inputs is unique
-(and indeed this is true for most high-dimensional datasets),
-we can attain perfect accuracy on the training set
-by just memorizing the dataset on the first training epoch,
-and subsequently looking up the label whenever we see a new image.
+The preceding sections fitted a softmax classifier by minimizing
+cross-entropy on a training set. The purpose of the fitted model is to
+classify new examples, so training accuracy alone is insufficient.
+A sufficiently expressive model can attain perfect training accuracy by
+memorizing the label associated with each distinct training input and returning
+that label whenever the same input appears again.
 And yet, memorizing the exact labels
 associated with the exact training examples
 does not tell us how to classify new examples.
-Absent further guidance, we might have to fall back
-on random guessing whenever we encounter new examples.
+Memorization alone provides no rule for a genuinely new input.
 
-A number of burning questions demand immediate attention:
+This raises three questions:
 
 1. How many test examples do we need to give a good estimate of the accuracy of our classifiers on the underlying population?
 1. What happens if we keep evaluating models on the same test repeatedly?
@@ -41,10 +29,9 @@ A number of burning questions demand immediate attention:
 
 
 Whereas :numref:`sec_generalization_basics` introduced
-the basics of overfitting and generalization
+overfitting and generalization
 in the context of linear regression,
-this chapter will go a little deeper,
-introducing some of the foundational ideas
+this section introduces foundational ideas
 of statistical learning theory.
 It turns out that we often can guarantee generalization *a priori*:
 for many models,
@@ -55,16 +42,13 @@ such that if our training set contains at least $n$
 samples, our empirical error will lie
 within $t$ of the true error,
 *for any data generating distribution*.
-Unfortunately, it also turns out
-that while these sorts of guarantees provide
-a set of intellectual building blocks,
-they are of limited practical utility
-to the deep learning practitioner.
+These guarantees provide important theoretical foundations but can be too loose
+to guide the sample sizes used for deep networks.
 In short, these guarantees suggest
 that ensuring generalization
 of deep neural networks *a priori*
-requires an absurd number of examples
-(perhaps trillions or more),
+can require sample counts far beyond those used in practice
+(in some calculations, trillions or more),
 even when we find that, on the tasks we care about,
 deep neural networks typically generalize
 well with far fewer examples (thousands).
@@ -84,18 +68,14 @@ to explain why deep neural networks generalize in practice.
 
 ## The Test Set
 
-Since we have already begun to rely on test sets
-as the gold standard method
-for assessing generalization error,
-let's get started by discussing
-the properties of such error estimates.
-Let's focus on a fixed classifier $f$,
+Since we have already begun to rely on test sets to assess generalization error, we begin with the statistical
+properties of their estimates. Consider a fixed classifier $f$,
 without worrying about how it was obtained.
 Moreover suppose that we possess
 a *fresh* dataset of examples $\mathcal{D} = {(\mathbf{x}^{(i)},y^{(i)})}_{i=1}^n$
 that were not used to train the classifier $f$.
 The *empirical error* of our classifier $f$ on $\mathcal{D}$
-is simply the fraction of instances
+is the fraction of instances
 for which the prediction $f(\mathbf{x}^{(i)})$
 disagrees with the true label $y^{(i)}$,
 and is given by the following expression:
@@ -129,7 +109,7 @@ is an expectation (of the random variable $\mathbf{1}(f(X) \neq Y)$)
 and the corresponding estimator $\epsilon_\mathcal{D}(f)$
 is the sample average,
 estimating the population error
-is simply the classic problem of mean estimation,
+is the classical problem of mean estimation,
 which you may recall from :numref:`sec_prob`.
 
 An important classical result from probability theory
@@ -140,7 +120,7 @@ then, as the number of samples $n$ approaches infinity,
 the sample average $\hat{\mu}$ approximately
 tends towards a normal distribution centered
 at the true mean and with standard deviation $\sigma/\sqrt{n}$.
-Already, this tells us something important:
+Consequently,
 as the number of examples grows large,
 our test error $\epsilon_\mathcal{D}(f)$
 should approach the true error $\epsilon(f)$
@@ -169,8 +149,7 @@ is actually the true error rate $\epsilon(f)$.
 The variance $\sigma^2$ of a Bernoulli
 depends on its parameter (here, $\epsilon(f)$)
 according to the expression $\epsilon(f)(1-\epsilon(f))$.
-A little investigation of this function
-reveals that our variance is highest
+This function is largest
 when the true error rate is close to $0.5$
 and can be far lower when it is
 close to $0$ or close to $1$.
@@ -194,19 +173,16 @@ then we will need 10,000 samples!
 
 This turns out to be the size of the test sets
 for many popular benchmarks in machine learning.
-You might be surprised to find out that thousands
-of applied deep learning papers get published every year
-making a big deal out of error rate improvements of $0.01$ or less.
+Improvements of $0.01$ or less should therefore be interpreted together with
+the test-set size and uncertainty of the estimate.
 Of course, when the error rates are much closer to $0$,
 then an improvement of $0.01$ can indeed be a big deal.
 
 
-One pesky feature of our analysis thus far
-is that it really only tells us about asymptotics,
+The preceding analysis is asymptotic:
 i.e., how the relationship between $\epsilon_\mathcal{D}$ and $\epsilon$
 evolves as our sample size goes to infinity.
-Fortunately, because our random variable is bounded,
-we can obtain valid finite sample bounds
+Because the random variable is bounded, we can also obtain finite-sample bounds
 by applying an inequality due to :citet:`Hoeffding.1963`,
 proved in :numref:`sec_mdl-concentration-generalization`:
 
@@ -223,14 +199,9 @@ as compared with the 10,000 examples suggested
 by the asymptotic analysis above.
 If you go deeper into statistics
 you will find that this trend holds generally.
-Guarantees that hold even in finite samples
-are typically slightly more conservative.
-Note that in the scheme of things,
-these numbers are not so far apart,
-reflecting the general usefulness
-of asymptotic analysis for giving
-us ballpark figures even if they are not
-guarantees we can take to court.
+Finite-sample guarantees are typically more conservative. The comparable order
+of magnitude here also shows why asymptotic calculations can provide useful
+approximations even when they are not finite-sample guarantees.
 
 All of the above is pencil-and-paper reasoning,
 but it is also one short simulation away from being visible.
@@ -297,106 +268,21 @@ rather than only asymptotically.
 
 ## Test Set Reuse
 
-In some sense, you are now set up to succeed
-at conducting empirical machine learning research.
-Nearly all practical models are developed
-and validated based on test set performance
-and you are now a master of the test set.
-For any fixed classifier $f$,
-you know how to evaluate its test error $\epsilon_\mathcal{D}(f)$,
-and know precisely what can (and cannot)
-be said about its population error $\epsilon(f)$.
+The guarantee above applies to a classifier fixed independently of the test
+set. Reusing one test set creates two distinct problems. First, evaluating
+$k$ prespecified classifiers introduces multiplicity: even when every reported
+interval has 95% coverage on its own, the probability that at least one interval
+misses its target grows with $k$. Simultaneous guarantees must account for this
+collection of comparisons.
 
-So let's say that you take this knowledge
-and prepare to train your first model $f_1$.
-Knowing just how confident you need to be
-in the performance of your classifier's error rate
-you apply our analysis above to determine
-an appropriate number of examples
-to set aside for the test set.
-Moreover, let's assume that you took the lessons from
-:numref:`sec_generalization_basics` to heart
-and made sure to preserve the sanctity of the test set
-by conducting all of your preliminary analysis,
-hyperparameter tuning, and even selection
-among multiple competing model architectures
-on a validation set.
-Finally you evaluate your model $f_1$
-on the test set and report an unbiased
-estimate of the population error
-with an associated confidence interval.
-
-So far everything seems to be going well.
-However, that night you wake up at 3am
-with a brilliant idea for a new modeling approach.
-The next day, you code up your new model,
-tune its hyperparameters on the validation set
-and get your new model $f_2$ working;
-its error rate appears to be much lower than $f_1$'s.
-However, the thrill of discovery suddenly fades
-as you prepare for the final evaluation.
-You do not have a test set!
-
-Even though the original test set $\mathcal{D}$
-is still sitting on your server,
-you now face two formidable problems.
-First, when you collected your test set,
-you determined the required level of precision
-under the assumption that you were evaluating
-a single classifier $f$.
-However, if you get into the business
-of evaluating multiple classifiers $f_1, ..., f_k$
-on the same test set,
-you must consider the problem of false discovery.
-Before, you might have been 95% sure
-that $\epsilon_\mathcal{D}(f) \in \epsilon(f) \pm 0.01$
-for a single classifier $f$
-and thus the probability of a misleading result
-was a mere 5%.
-With $k$ classifiers in the mix,
-it can be hard to guarantee
-that there is not even one among them
-whose test set performance is misleading.
-With 20 classifiers under consideration,
-you might have no power at all
-to rule out the possibility
-that at least one among them
-received a misleading score.
-This problem relates to multiple hypothesis testing,
-which despite a vast literature in statistics,
-remains a persistent problem plaguing scientific research.
-
-
-If that is not enough to worry you,
-there is a special reason to distrust
-the results that you get on subsequent evaluations.
-Recall that our analysis of test set performance
-rested on the assumption that the classifier
-was chosen absent any contact with the test set
-and thus we could view the test set
-as drawn randomly from the underlying population.
-Here you are testing multiple functions, and
-the subsequent function $f_2$ was chosen
-after you observed the test set performance of $f_1$.
-Once information from the test set has leaked to the modeler,
-it can never be a true test set again in the strictest sense.
-This problem is called *adaptive overfitting* and has recently emerged
-as a topic of intense interest to learning theorists and statisticians
-:cite:`dwork2015preserving`.
-Fortunately, while it is possible
-to leak all information out of a holdout set,
-and the theoretical worst case scenarios are bleak,
-these analyses may be too conservative.
-In practice, take care to create real test sets,
-to consult them as infrequently as possible,
-to account for multiple hypothesis testing
-when reporting confidence intervals,
-and to dial up your vigilance more aggressively
-when the stakes are high and your dataset size is small.
-When running a series of benchmark challenges,
-it is often good practice to maintain
-several test sets so that after each round,
-the old test set can be demoted to a validation set.
+Second, model development is usually adaptive. If $f_2$ is selected after
+observing the test performance of $f_1$, then $f_2$ is no longer independent of
+the test set. Repeated feedback can therefore overfit the holdout itself, a
+phenomenon called *adaptive overfitting* :cite:`dwork2015preserving`. A validation
+set should absorb model selection and hyperparameter tuning, while the test set
+is reserved for a small number of final evaluations. Reports should disclose
+the number and adaptivity of comparisons; long-running benchmarks should
+periodically replace their hidden test data.
 
 How bad can it get? A simulation makes the false-discovery half of the problem
 concrete in its purest form. Take one binary test set of $n = 1000$ examples
@@ -414,13 +300,12 @@ d2l.plot(np.arange(1, k + 1), best, 'number of models evaluated',
 ```
 
 The best apparent accuracy climbs steadily, exceeding $0.56$ after ten
-thousand tries, even though *nothing was learned*: the models are coin flips,
-and the climb (which grows like $\sqrt{\log(k)/(2n)}$, by the same Hoeffding
-bound applied to $k$ events at once) is pure selection. Whenever you pick the
+thousand tries, even though the classifiers contain no learned signal: the models are coin flips,
+and the climb is pure selection, growing like $\sqrt{\log(k)/(2n)}$ by the
+same Hoeffding bound applied to $k$ events at once. Whenever you pick the
 best of many models by their score on one shared test set, some of the
-apparent improvement is exactly this effect; and an adaptive modeler, who
-steers each new model *toward* what scored well before, can climb faster
-still.
+apparent improvement is exactly this effect; and an adaptive modeler can climb
+faster still, steering each new model *toward* what scored well before.
 
 
 
@@ -428,35 +313,11 @@ still.
 
 ## Statistical Learning Theory
 
-Put simply, *test sets are all that we really have*,
-and yet this fact seems strangely unsatisfying.
-First, we seldom possess a *true test set*: unless
-we are the ones creating the dataset,
-someone else has probably already evaluated
-their own classifier on our ostensible "test set".
-And even when we have first dibs,
-we soon find ourselves frustrated, wishing we could
-evaluate our subsequent modeling attempts
-without the gnawing feeling
-that we cannot trust our numbers.
-Moreover, even a true test set can only tell us *post hoc*
-whether a classifier has in fact generalized to the population,
-not whether we have any reason to expect *a priori*
-that it should generalize.
-
-With these misgivings in mind,
-you might now be sufficiently primed
-to see the appeal of *statistical learning theory*,
-the mathematical subfield of machine learning
-whose practitioners aim to elucidate the
-fundamental principles that explain
-why/when models trained on empirical data
-can/will generalize to unseen data.
-One of the primary aims
-of statistical learning researchers
-has been to bound the generalization gap,
-relating the properties of the model class
-to the number of samples in the dataset.
+A test set provides a post hoc estimate for a particular trained classifier.
+It does not, by itself, explain why a learning procedure should generalize or
+how much data a model class requires. *Statistical learning theory* addresses
+the complementary, a priori question. Its bounds relate the generalization gap
+to properties of the hypothesis class, the learning rule, and the sample size.
 
 Learning theorists aim to bound the difference
 between the *empirical error* $\epsilon_\mathcal{S}(f_\mathcal{S})$
@@ -484,8 +345,7 @@ from some pre-specified set of functions $\mathcal{F}$.
 Recall from our discussion of test sets
 that while it is easy to estimate
 the error of a single classifier,
-things get hairy when we begin
-to consider collections of classifiers.
+collections of classifiers require simultaneous control.
 Even if the empirical error
 of any one (fixed) classifier
 will be close to its true error
@@ -575,14 +435,14 @@ As :numref:`fig_mdl-clf-shattering` illustrates,
 a line in the plane can realize *every* labeling
 of three points in general position,
 while no line can realize the XOR labeling of four points,
-which already shows that lines cannot shatter *these* four points;
-the general upper bound, and hence a VC dimension of exactly $3$
-for two-dimensional linear classifiers (matching $d+1$ with $d=2$),
-comes from Radon's theorem below.
+which already shows that lines cannot shatter *these* four points.
+Radon's theorem below supplies the general upper bound, and hence
+a VC dimension of exactly $3$ for two-dimensional linear classifiers
+(matching $d+1$ with $d=2$).
 The general statement holds in both directions, and neither is deep.
 For the lower bound, the $d+1$ points
 $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
-can be shattered by weights that are simply *read off* the desired labels;
+can be shattered by weights constructed directly from the desired labels;
 exercise 5 walks you through it.
 For the upper bound, *no* set of $d+2$ points can be shattered:
 by Radon's theorem :cite:`Radon.1921`, any $d+2$ points in $\mathbb{R}^d$
@@ -592,8 +452,7 @@ and no halfspace can put two intersecting hulls on opposite sides.
 ![A linear classifier in two dimensions shatters any 3 points in general position (all $2^3$ labelings are realizable by a halfplane) but cannot shatter 4 points (the XOR labeling, with one class on each diagonal, has no linear separator). Hence the VC dimension of lines in the plane is 3.](../img/mdl-clf-shattering.svg)
 :label:`fig_mdl-clf-shattering`
 
-Unfortunately, the theory tends to be
-overly pessimistic for more complex models
+For complex models, the resulting bound is often pessimistic
 and obtaining this guarantee typically requires
 far more examples than are actually needed
 to achieve the desired error rate.
@@ -662,20 +521,16 @@ each facilitating an analogous generalization guarantee.
 One such measure, *Rademacher complexity*, is developed in full
 in :numref:`sec_mdl-concentration-generalization`,
 which also reproduces from scratch (as *double descent*)
-the surprisingly benign behavior of overparametrized models
+the empirical behavior of overparameterized models
 that we are about to describe.
 See :citet:`boucheron2005theory` for a detailed discussion
 of several advanced ways of measuring function complexity.
-Unfortunately, while these complexity measures
-have become broadly useful tools in statistical theory,
-they turn out to be powerless
-(as straightforwardly applied)
-for explaining why deep neural networks generalize :cite:`zhang2021understanding`.
+These complexity measures are broadly useful in statistical theory, but their
+direct application does not explain why deep neural networks generalize :cite:`zhang2021understanding`.
 Deep neural networks often have millions of parameters (or more),
 and can easily assign random labels to large collections of points.
 Nevertheless, they generalize well on practical problems
-and, surprisingly, they often generalize better,
-when they are larger and deeper,
+and on some tasks they generalize better when they are larger and deeper,
 despite incurring higher VC dimensions.
 We revisit generalization in the context of deep learning
 in :numref:`sec_generalization_deep`.
@@ -730,8 +585,8 @@ in :numref:`sec_generalization_deep`.
 
 ::: {.cols .vc}
 ::: {.col}
-Train accuracy is **free**: on distinct inputs a model can memorize every
-label on epoch one, then look them up.
+A sufficiently expressive model can memorize distinct training inputs and attain
+zero training error without defining useful predictions for new inputs.
 
 The score we care about is the **population error**, on data we never
 trained on. Three questions stand between us and trusting it:
@@ -739,7 +594,7 @@ trained on. Three questions stand between us and trusting it:
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-1. How many test points pin down the error?
+1. How many test points estimate the error precisely?
 2. What if we reuse the same test set?
 3. Why expect a *trained* model to beat memorizing at all?
 :::
@@ -786,7 +641,7 @@ $$\epsilon_\mathcal{D}(f) \approx \epsilon(f) \pm \mathcal{O}(1/\sqrt{n}).$$
 . . .
 
 ::: {.d2l-note .rule}
-The $\sqrt{n}$ tax: **2× the precision costs 4× the data**; 10× the
+The $\sqrt{n}$ rate implies that **2× the precision costs 4× the data**; 10× the
 precision costs 100×. This rate is usually the best statistics can offer.
 :::
 :::
@@ -807,8 +662,8 @@ $$2\sqrt{0.25/n}\le 0.01 \;\Longrightarrow\; n\approx 10{,}000.$$
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-This is *exactly* the test-set size of many famous benchmarks, and why a
-$0.01$ improvement can be a real result.
+Many benchmarks use test sets of this order. The uncertainty calculation is
+necessary when interpreting an improvement of $0.01$.
 :::
 :::
 :::
@@ -865,7 +720,7 @@ a Bernoulli$(0.1)$ coin, so the estimate is $\mathrm{Binomial}(n, 0.1)/n$.
 On log–log axes the measured spread, the CLT prediction
 $\sqrt{\epsilon(1-\epsilon)/n}$, and the 95% Hoeffding radius
 $\sqrt{\log(2/0.05)/(2n)}$ are three **parallel lines of slope
-$-\tfrac{1}{2}$**: the $\sqrt{n}$ law in the flesh.
+$-\tfrac{1}{2}$**: consistent with the $\sqrt{n}$ rate.
 
 ::: {.d2l-note}
 The simulated spread sits **on** the CLT line; the Hoeffding envelope runs
@@ -879,17 +734,17 @@ a constant factor above it, the price of a guarantee at every finite $n$.
 
 [Reusing the Test Set]{.dtitle}
 
-[why a held-out set decays the moment you peek twice]{.dsub}
+[multiple comparisons and adaptive overfitting]{.dsub}
 :::
 :::
 
-::: {.slide title="The 3am idea"}
+::: {.slide title="Reusing a test set for model selection"}
 [Test-Set Reuse]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 You evaluate model $f_1$ once, by the book, and report a confidence
-interval. That night you dream up $f_2$, tune it, and it *looks* better.
+interval. You then develop $f_2$, tune it, and observe a better test score.
 
 Now you reach for the final evaluation, and realize: you **no longer have a
 test set**. The data is still on disk, but it is no longer unseen.
@@ -897,14 +752,14 @@ test set**. The data is still on disk, but it is no longer unseen.
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Every score you read off a held-out set leaks a little of it. Read it
-enough times and nothing is held out.
+Each test score used to guide development makes subsequent choices depend on
+the test set, weakening its independence as a final evaluation.
 :::
 :::
 :::
 :::
 
-::: {.slide title="Two ways reuse betrays you"}
+::: {.slide title="Two consequences of test-set reuse"}
 [Test-Set Reuse]{.kicker}
 
 ::: {.cols}
@@ -922,7 +777,7 @@ the modeler, it is no longer a true test set.
 :::
 :::
 
-::: {.slide title="Nothing learned, score climbs anyway" only="pytorch"}
+::: {.slide title="Selection alone raises the reported score" only="pytorch"}
 [Test-Set Reuse]{.kicker}
 
 ::: {.cols .vc}
@@ -933,8 +788,8 @@ past $0.56$ after ten thousand tries, by pure selection.
 
 ::: {.d2l-note .warn}
 The climb grows like $\sqrt{\log(k)/(2n)}$, Hoeffding over $k$ events
-at once. Best-of-many on a shared test set *always* buys some of its
-improvement this way.
+at once. Best-of-many selection on a shared test set includes a selection effect of this
+kind.
 :::
 :::
 
@@ -944,7 +799,7 @@ improvement this way.
 :::
 :::
 
-::: {.slide title="Nothing learned, score climbs anyway" except="pytorch"}
+::: {.slide title="Selection alone raises the reported score" except="pytorch"}
 [Test-Set Reuse]{.kicker}
 
 Evaluate $k$ **coin-flip** classifiers (true accuracy exactly $0.5$,
@@ -958,16 +813,15 @@ thousand tries, by pure selection: the best of many lucky coin flips.
 
 ::: {.d2l-note .warn}
 The climb grows like $\sqrt{\log(k)/(2n)}$, Hoeffding over $k$ events at
-once. Best-of-many on a shared test set *always* buys some of its
-improvement this way, and an adaptive modeler, steering each model toward
-what scored well before, climbs faster still.
+once. Best-of-many selection includes this effect. Adaptive choices can introduce
+additional dependence by using earlier scores to guide later models.
 :::
 :::
 
-::: {.slide title="Treat a test set as a scarce resource"}
+::: {.slide title="Limit access to the test set"}
 [Test-Set Reuse · in practice]{.kicker}
 
-The worst-case theory is bleak, but real life is usually kinder. In
+The worst-case theory motivates conservative test-set practice. In
 practice:
 
 ::: {.d2l-note .rule}
@@ -988,18 +842,18 @@ practice:
 :::
 :::
 
-::: {.slide title="The a-priori dream: uniform convergence"}
+::: {.slide title="Uniform convergence over a model class"}
 [Learning Theory]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A test set is *post hoc*: it tells you a model generalized, never that it
-*should*. Learning theory wants a guarantee from the **model class**
+A test set provides a *post hoc* estimate for one fitted model; it does not
+explain why a learning procedure generalizes. Learning theory wants a guarantee from the **model class**
 $\mathcal{F}$ alone.
 
-The dream is **uniform convergence**: with probability $\ge 1-\delta$,
+Under **uniform convergence**, with probability $\ge 1-\delta$,
 *every* $f\in\mathcal{F}$ has its empirical error close to its true error at
-once. Then minimizing training error is safe.
+once. Then the selected empirical-risk minimizer inherits the uniform bound.
 :::
 
 ::: {.col .narrow}
@@ -1023,7 +877,7 @@ $\mathcal{F}$ is:
 ::: {.col}
 ::: {.d2l-note .warn}
 **Memorizers** are *too flexible*: zero training error, no generalization.
-No uniform-convergence result can save them.
+Their training fit alone yields no useful uniform-convergence guarantee.
 :::
 :::
 
@@ -1046,7 +900,7 @@ the **XOR** labeling of **4**.
 ![All $2^3=8$ labelings of 3 points are linearly separable (left); the XOR labeling of 4 points is not (right). So plane lines shatter 3 points but not 4.](../img/mdl-clf-shattering.svg){width=82%}
 :::
 
-::: {.slide title="VC of linear models: d+1, and neither direction is deep"}
+::: {.slide title="The VC dimension of linear models is d+1"}
 [Learning Theory · the bound]{.kicker}
 
 ::: {.cols .vc}
@@ -1080,13 +934,13 @@ now for the *learned* model.
 ::: {.slide title="Why this breaks for deep networks"}
 [Learning Theory · the paradox]{.kicker}
 
-VC bounds are exact for linear models, but for deep nets they are essentially
-**vacuous**: they demand absurd sample counts (perhaps trillions).
+VC dimension is exact for linear model classes, but the resulting generalization
+bounds for deep networks can be **vacuous**, requiring sample counts (perhaps trillions).
 
 ::: {.d2l-note .warn}
 A deep net can fit **random labels**, so its VC dimension is enormous, yet it
 generalizes well on real data, and often *better* as it gets larger and
-deeper. Classical complexity measures do not explain this.
+deeper. These classical capacity bounds do not explain this empirical behavior.
 :::
 
 The modern road, **Rademacher complexity** and the double-descent behavior
@@ -1104,7 +958,7 @@ in the generalization-in-deep-learning section.
   $\mathcal{O}(1/\sqrt{n})$. About **10k** points give $\pm 0.01$ at 95%.
 - **Asymptotic vs finite:** Hoeffding is valid at any $n$, and a little more
   conservative (~18.5k).
-- **Reuse decays it:** false discovery + adaptive overfitting. Treat a test
+- **Reuse affects validity:** false discovery + adaptive overfitting. Treat a test
   set as scarce.
 :::
 
@@ -1114,7 +968,7 @@ in the generalization-in-deep-learning section.
 - **VC dimension** = largest shatterable set; for linear models exactly
   $d+1$ (labels read off / Radon); it bounds the gap at
   $\mathcal{O}(1/\sqrt{n})$.
-- **Deep nets** defy these bounds, generalizing despite huge capacity:
+- **Deep nets** are not explained by these bounds, generalizing despite huge capacity:
   the puzzle of the generalization-in-deep-learning section, with the modern
   tools in the concentration-and-generalization section.
 :::

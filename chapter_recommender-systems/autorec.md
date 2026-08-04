@@ -1,31 +1,56 @@
 # AutoRec: Rating Prediction with Autoencoders
 
-Although the matrix factorization model achieves decent performance on the rating prediction task, it is essentially a linear model. Thus, such models are not capable of capturing complex nonlinear and intricate relationships that may be predictive of users' preferences. In this section, we introduce a nonlinear neural network collaborative filtering model, AutoRec :cite:`Sedhain.Menon.Sanner.ea.2015`. It identifies collaborative filtering (CF) with an autoencoder architecture and aims to integrate nonlinear transformations into CF on the basis of explicit feedback. Neural networks have been proven to be capable of approximating any continuous function, making it suitable to address the limitation of matrix factorization and enrich the expressiveness of matrix factorization.
+Matrix factorization assigns each user and item a vector and scores their
+interaction with a bilinear function. AutoRec replaces that score with a
+nonlinear reconstruction map :cite:`Sedhain.Menon.Sanner.ea.2015`. Its input is
+a partially observed row or column of the rating matrix, and its output predicts
+ratings for the same user or item. The observation mask, rather than the filler
+value used for missing entries, determines which reconstruction errors enter the
+loss.
 
-On the one hand, AutoRec has the same structure as an autoencoder which consists of an input layer, a hidden layer, and a reconstruction (output) layer.  An autoencoder is a neural network that learns to copy its input to its output in order to code the inputs into the hidden (and usually low-dimensional) representations. In AutoRec, instead of explicitly embedding users/items into low-dimensional space, it uses the column/row of the interaction matrix as input, then reconstructs the interaction matrix in the output layer.
+Like an ordinary autoencoder, AutoRec contains an encoder, a hidden
+representation, and a decoder. Its distinctive feature is the data it
+reconstructs: a sparse vector of ratings rather than a fully observed example.
+The hidden representation and decoder are learned jointly from errors on the
+observed output coordinates; predictions at unobserved coordinates supply the
+recommendations.
 
-On the other hand, AutoRec differs from a traditional autoencoder: rather than learning the hidden representations, AutoRec focuses on learning/reconstructing the output layer. It uses a partially observed interaction matrix as input, aiming to reconstruct a completed rating matrix. In the meantime, the missing entries of the input are filled in the output layer via reconstruction for the purpose of recommendation.
-
-There are two variants of AutoRec: user-based and item-based. For brevity, here we only introduce the item-based AutoRec. User-based AutoRec can be derived accordingly.
+An item-based AutoRec reconstructs one item column across users. A user-based
+variant applies the same construction to user rows. We develop the item-based
+version.
 
 
 ## Model
 
-Let $\mathbf{R}_{*i}$ denote the $i^\textrm{th}$ column of the rating matrix, where unknown ratings are set to zeros by default. The neural architecture is defined as:
+Let $\mathbf R\in\mathbb R^{m\times n}$ contain ratings from $m$ users for
+$n$ items, and let $M_{ui}=1$ when $R_{ui}$ is observed and $0$ otherwise.
+For item $i$, the network input is the filled vector
+$\mathbf x_i=\mathbf M_{*i}\odot\mathbf R_{*i}\in\mathbb R^m$. Zero is only a
+computational filler; $\mathbf M$ determines which entries are missing. With a
+hidden width $h$, item-based AutoRec computes
 
 $$
-h(\mathbf{R}_{*i}) = f(\mathbf{W} \cdot g(\mathbf{V} \mathbf{R}_{*i} + \mu) + b)
+h_\theta(\mathbf x_i)
+=f\!\left(\mathbf Wg(\mathbf V\mathbf x_i+\boldsymbol\mu)+\mathbf b\right),
 $$
 
-where $f(\cdot)$ and $g(\cdot)$ represent activation functions, $\mathbf{W}$ and $\mathbf{V}$ are weight matrices, $\mu$ and $b$ are biases. Let $h( \cdot )$ denote the whole network of AutoRec. The output $h(\mathbf{R}_{*i})$ is the reconstruction of the $i^\textrm{th}$ column of the rating matrix.
+where $\mathbf V\in\mathbb R^{h\times m}$,
+$\boldsymbol\mu\in\mathbb R^h$, $\mathbf W\in\mathbb R^{m\times h}$, and
+$\mathbf b\in\mathbb R^m$. The output contains one reconstructed rating per
+user.
 
-The following objective function aims to minimize the reconstruction error:
+The observation mask is applied to the output error:
 
 $$
-\underset{\mathbf{W},\mathbf{V},\mu, b}{\mathrm{argmin}} \sum_{i=1}^M{\parallel \mathbf{R}_{*i} - h(\mathbf{R}_{*i})\parallel_{\mathcal{O}}^2} +\lambda(\| \mathbf{W} \|_F^2 + \| \mathbf{V}\|_F^2)
+\underset{\theta}{\operatorname{minimize}}\quad
+\sum_{i=1}^n\sum_{u=1}^m
+M_{ui}\big(R_{ui}-h_\theta(\mathbf x_i)_u\big)^2
++\lambda\big(\|\mathbf W\|_F^2+\|\mathbf V\|_F^2\big).
 $$
 
-where $\| \cdot \|_{\mathcal{O}}$ means only the contribution of observed ratings are considered, that is, only weights that are associated with observed inputs are updated during back-propagation.
+Masking removes loss terms for unobserved *outputs*. It does not restrict an
+update to a subset of parameters: every encoder or decoder parameter that
+influences an observed reconstruction may receive a gradient.
 
 ```{.python .input #autorec-model  n=3}
 #@tab mxnet
@@ -47,7 +72,12 @@ import numpy as np
 
 ## Implementing the Model
 
-A typical autoencoder consists of an encoder and a decoder. The encoder projects the input to hidden representations and the decoder maps the hidden layer to the reconstruction layer. We follow this practice and create the encoder and decoder with fully connected layers. The activation of encoder is set to `sigmoid` by default and no activation is applied for decoder. Dropout is included after the encoding transformation to reduce over-fitting. The gradients of unobserved inputs are masked out to ensure that only observed ratings contribute to the model learning process.
+The implementation uses a sigmoid encoder, a linear decoder, and dropout on the
+hidden representation. During training, multiplying the predictions by the
+binary observation mask makes the squared loss equivalent to the elementwise
+objective above. During evaluation, the unmasked output is needed because its
+unobserved coordinates are the predictions of interest. This code assumes all
+recorded ratings are positive, so `sign(input)` is the binary mask.
 
 ```{.python .input #autorec-implementing-the-model  n=2}
 #@tab mxnet
@@ -62,7 +92,7 @@ class AutoRec(nn.Block):
     def forward(self, input):
         hidden = self.dropout(self.encoder(input))
         pred = self.decoder(hidden)
-        if autograd.is_training():  # Mask the gradient during training
+        if autograd.is_training():  # Mask unobserved output errors
             return pred * np.sign(input)
         else:
             return pred
@@ -80,7 +110,7 @@ class AutoRec(nn.Module):
     def forward(self, input):
         hidden = self.dropout(torch.sigmoid(self.encoder(input)))
         pred = self.decoder(hidden)
-        if self.training:  # Mask the gradient during training
+        if self.training:  # Mask unobserved output errors
             return pred * torch.sign(input)
         else:
             return pred
@@ -123,7 +153,7 @@ def evaluator(network, inter_matrix, test_data, devices):
 
 ## Training and Evaluating the Model
 
-Now, let's train and evaluate AutoRec on the MovieLens dataset. We can clearly see that the test RMSE is lower than the matrix factorization model, confirming the effectiveness of neural networks in the rating prediction task.
+We train AutoRec on the MovieLens split defined earlier and report RMSE over held-out observed ratings. In this run its RMSE can be compared with the matrix-factorization run only as a local result: the architectures, tuning budgets, and random variation have not been controlled well enough to attribute the difference to nonlinearity alone.
 
 ```{.python .input #autorec-training-and-evaluating-the-model  n=4}
 #@tab mxnet
@@ -207,8 +237,12 @@ print(f'train loss {total_loss / n:.3f}, test RMSE {test_rmse:.3f}')
 
 ## Summary
 
-* We can frame the matrix factorization algorithm with autoencoders, while integrating non-linear layers and dropout regularization.
-* Experiments on the MovieLens 100K dataset show that AutoRec achieves superior performance than matrix factorization.
+* AutoRec learns a nonlinear map from a partially observed rating vector to its
+  reconstruction; an observation mask restricts the training error to known
+  ratings.
+* On the MovieLens split and hyperparameters used here, AutoRec obtains a lower
+  test RMSE than the matrix-factorization run. This local comparison is not a
+  general ranking of the two model classes.
 
 
 
@@ -246,7 +280,7 @@ Adds the nonlinearity that pure MF lacks. Two variants:
 deck implements item-based.
 :::
 
-::: {.slide title="Setup Imports"}
+::: {.slide title="The observation mask separates missing from zero"}
 The setup cell selects the backend-specific `d2l` package and
 tensor library. The model itself is the same idea in both tabs:
 reconstruct an item rating vector with a masked loss.
@@ -254,7 +288,7 @@ reconstruct an item rating vector with a masked loss.
 @autorec-model
 :::
 
-::: {.slide title="The model"}
+::: {.slide title="AutoRec reconstructs a sparse rating vector"}
 Encoder: linear -> activation -> bottleneck. Decoder: linear
 -> ratings. During training, the forward pass masks unobserved
 entries so gradients come only from known ratings:
@@ -268,7 +302,7 @@ RMSE only over observed positions (mask out the zeros):
 @autorec-reimplementing-the-evaluator
 :::
 
-::: {.slide title="Training"}
+::: {.slide title="Only observed ratings contribute to reconstruction error"}
 Standard SGD; the masked loss is the trick that turns
 autoencoder loss into a recommender:
 
@@ -279,7 +313,7 @@ test RMSE should stabilize rather than diverge. Overfitting shows
 up when reconstruction keeps improving but held-out RMSE worsens.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="AutoRec replaces a bilinear score with nonlinear reconstruction"}
 - AutoRec = rating-vector autoencoder with masked loss.
 - One nonlinearity bridge between matrix factorization and
   full neural CF.

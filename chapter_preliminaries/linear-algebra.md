@@ -9,12 +9,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 By now, we can load datasets into tensors
 and manipulate these tensors
 with basic mathematical operations.
-To start building sophisticated models,
-we will also need a few tools from linear algebra.
-This section offers a gentle introduction
-to the most essential concepts,
-starting from scalar arithmetic
-and ramping up to matrix multiplication.
+Building models also requires several tools from linear algebra. This section
+introduces the necessary concepts, from scalar arithmetic through matrix
+multiplication, norms, and eigenvalues.
 The notation introduced here is collected,
 together with the rest of the book's notation,
 in :numref:`chap_notation`.
@@ -54,7 +51,7 @@ consists of manipulating
 numbers one at a time.
 Formally, we call these values *scalars*.
 For example, the temperature in Palo Alto
-is a balmy $72$ degrees Fahrenheit.
+might be $72$ degrees Fahrenheit.
 If you wanted to convert the temperature to Celsius
 you would evaluate the expression
 $c = \frac{5}{9}(f - 32)$, setting $f$ to $72$.
@@ -68,10 +65,8 @@ by ordinary lower-cased letters
 (e.g., $x$, $y$, and $z$)
 and the space of all (continuous)
 *real-valued* scalars by $\mathbb{R}$.
-For expedience, we will skip past
-rigorous definitions of *spaces*:
-just remember that the expression $x \in \mathbb{R}$
-is a formal way to say that $x$ is a real-valued scalar.
+We defer rigorous definitions of *spaces*. The expression
+$x \in \mathbb{R}$ states that $x$ is a real-valued scalar.
 The symbol $\in$ (pronounced "in")
 denotes membership in a set.
 For example, $x, y \in \{0, 1\}$
@@ -200,7 +195,7 @@ len(x)
 
 We can also access the length via the `shape` attribute.
 The shape is a tuple that indicates a tensor's length along each axis.
-Tensors with just one axis have shapes with just one element.
+Tensors with one axis have shapes with one element.
 
 ```{.python .input #linear-algebra-vectors-4}
 x.shape
@@ -221,7 +216,7 @@ independent rows or columns; see :numref:`sec_mdl-geometry-linear-algebraic-ops`
 
 ### Matrices
 
-Just as scalars are $0^{\textrm{th}}$-order tensors
+As scalars are $0^{\textrm{th}}$-order tensors
 and vectors are $1^{\textrm{st}}$-order tensors,
 matrices are $2^{\textrm{nd}}$-order tensors.
 We denote matrices by bold capital letters
@@ -522,7 +517,7 @@ x, x.sum()
 ```
 
 To express sums over the elements of tensors of arbitrary shape,
-we simply sum over all its axes.
+we sum over all its axes.
 For example, the sum of the elements
 of an $m \times n$ matrix $\mathbf{A}$
 could be written $\sum_{i=1}^{m} \sum_{j=1}^{n} a_{ij}$.
@@ -669,7 +664,7 @@ and matrix--matrix multiplication.
 
 ### Dot Products
 
-One of the most fundamental operations is the dot product.
+One central operation is the dot product.
 Given two vectors $\mathbf{x}, \mathbf{y} \in \mathbb{R}^d$,
 their *dot product* $\mathbf{x}^\top \mathbf{y}$ (also known as *inner product*, $\langle \mathbf{x}, \mathbf{y}  \rangle$)
 is a sum over the products of the elements at the same position:
@@ -815,7 +810,7 @@ is a row vector representing the $i^\textrm{th}$ row
 of the matrix $\mathbf{A}$.
 
 The matrix--vector product $\mathbf{A}\mathbf{x}$
-is simply a column vector of length $m$,
+is a column vector of length $m$,
 whose $i^\textrm{th}$ element is the dot product
 $\mathbf{a}^\top_i \mathbf{x}$:
 
@@ -850,7 +845,9 @@ from $\mathbb{R}^{n}$ to $\mathbb{R}^{m}$
 For example, we can represent rotations
 as multiplications by certain square matrices:
 multiplying by
-$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$
+
+$$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$$
+
 rotates any vector in the plane by the angle $\theta$.
 For $\theta = 90°$ the matrix is simple,
 and we can watch it turn one axis unit vector into the other:
@@ -889,7 +886,7 @@ To express a matrix--vector product in code,
 we use the same `dot` function.
 The operation is inferred
 based on the type of the arguments.
-Note that the column dimension of `A`
+The column dimension of `A`
 (its length along axis 1)
 must be the same as the dimension of `x` (its length).
 :end_tab:
@@ -897,7 +894,7 @@ must be the same as the dimension of `x` (its length).
 :begin_tab:`pytorch`
 To express a matrix--vector product in code,
 we use the `mv` function.
-Note that the column dimension of `A`
+The column dimension of `A`
 (its length along axis 1)
 must be the same as the dimension of `x` (its length).
 Python has a convenience operator `@`
@@ -910,7 +907,7 @@ Thus we can write `A@x`.
 :begin_tab:`tensorflow`
 To express a matrix--vector product in code,
 we use the `matvec` function.
-Note that the column dimension of `A`
+The column dimension of `A`
 (its length along axis 1)
 must be the same as the dimension of `x` (its length).
 :end_tab:
@@ -937,8 +934,7 @@ A.shape, x.shape, jnp.matmul(A, x)
 
 ### Matrix--Matrix Multiplication
 
-Once you have gotten the hang of dot products and matrix--vector products,
-then *matrix--matrix multiplication* should be straightforward.
+Matrix--matrix multiplication extends the same dot-product construction.
 
 Say that we have two matrices
 $\mathbf{A} \in \mathbb{R}^{n \times k}$
@@ -979,7 +975,7 @@ $$
 
 
 To form the matrix product $\mathbf{C} \in \mathbb{R}^{n \times m}$,
-we simply compute each element $c_{ij}$
+we compute each element $c_{ij}$
 as the dot product between
 the $i^{\textrm{th}}$ row of $\mathbf{A}$
 and the $j^{\textrm{th}}$ column of $\mathbf{B}$,
@@ -1262,7 +1258,7 @@ Along such a direction, multiplying by $\mathbf{A}$
 reduces to multiplying by the scalar $\lambda$:
 the vector is stretched (if $|\lambda| > 1$),
 shrunk (if $|\lambda| < 1$), or flipped (if $\lambda < 0$),
-but never rotated.
+while preserving its span (a negative value reverses its orientation).
 The library computes eigenvalues directly.
 Here we apply this to the symmetric matrix we met
 when discussing transposes;
@@ -1285,7 +1281,7 @@ torch.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
 ```{.python .input #linear-algebra-eigenvalues-1}
 %%tab tensorflow
 S = tf.constant([[1.0, 2, 3], [2, 0, 4], [3, 4, 5]])
-tf.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
+tf.linalg.eigvalsh(S).numpy()  # Eigenvalues of a symmetric matrix are real
 ```
 
 ```{.python .input #linear-algebra-eigenvalues-1}
@@ -1342,33 +1338,28 @@ jnp.linalg.norm(v) / jnp.linalg.norm(prev)
 ```
 
 Deep networks multiply by many matrices in succession,
-so whether signals (and gradients) explode or vanish
-is governed by exactly this effect,
-as we will see when we analyze numerical stability
-in :numref:`sec_numerical_stability`.
+so repeated linear transformations contribute to exploding or vanishing
+signals and gradients. This behavior is analyzed in
+:numref:`sec_numerical_stability`.
 The full story (eigendecompositions, their computation,
 and their uses) is developed in :numref:`sec_mdl-eigendecompositions`.
 
 
 ## Discussion
 
-In this section, we have reviewed all the linear algebra
-that you will need to understand
-a significant chunk of modern deep learning.
-There is a lot more to it: matrix decompositions, for example,
+This section introduced the tensor shapes, products, reductions, and norms used
+in the next modeling chapters.
+The subject also includes matrix decompositions, which
 reveal low-dimensional structure in real-world datasets
 and power entire subfields of machine learning.
-But the best time to learn more mathematics
-is once you have gotten your hands dirty
-applying machine learning to real data,
-so we wrap up here.
+The later mathematics chapters develop these topics when they become relevant
+to specific learning problems.
 
-If you are eager to learn more linear algebra,
-start with :numref:`chap_mdl-linear-algebra`,
+For the eigendecompositions, singular value decomposition, and geometric
+structure deferred here, continue with :numref:`chap_mdl-linear-algebra`,
 which develops eigendecompositions, the singular value decomposition,
 and their use in machine learning in full.
-For further reading, there are many excellent books and online resources;
-consider the crash courses by
+For further reading, consider the treatments by
 :citet:`Strang.1993`, :citet:`Kolter.2008`, and :citet:`Petersen.Pedersen.ea.2008`.
 
 To recap:
@@ -1436,23 +1427,24 @@ To recap:
 ::: {.cover}
 [Dive into Deep Learning · §2.3]{.kicker}
 
-Every model in this book compiles down to a short list of operations<br>**vectors · matrices · products · norms · eigenvalues**.
+Linear-algebra operations used throughout this book<br>**vectors · matrices · products · norms · eigenvalues**.
 :::
 :::
 
-::: {.slide title="Five ideas carry every later chapter"}
+::: {.slide title="Five recurring ideas"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Objects**: scalars, vectors, matrices, tensors (ranks $0, 1, 2, n$).
+- **Objects**: scalars, vectors, matrices, tensors (orders $0, 1, 2, n$).
 - **Arithmetic**: element-wise, plus scalar broadcasting.
 - **Reductions**: `sum` and `mean`, along chosen axes.
 - **Products**: dot, matrix–vector, matrix–matrix.
 - **Norms & eigenvalues**: how big, and which directions survive.
 
 ::: {.d2l-note}
-**Rank** = number of axes; **shape** = size per axis.
+**Order** = number of axes; **shape** = size per axis. Matrix rank is a
+different concept.
 :::
 :::
 
@@ -1477,7 +1469,7 @@ Every model in this book compiles down to a short list of operations<br>**vector
 
 ::: {.cols .vc}
 ::: {.col}
-A **scalar** is a rank-0 tensor: one number. Stack $n$ of them and you
+A **scalar** is an order-0 tensor: one number. Stack $n$ of them and you
 get a **vector**: a data record *and* an arrow in $\mathbb{R}^n$, with a
 length and a direction:
 
@@ -1504,7 +1496,7 @@ direction a training step moves the weights.
 
 . . .
 
-`.shape` works at **every** rank, one size per axis:
+`.shape` works at **every** order, one size per axis:
 
 @linear-algebra-vectors-4
 :::
@@ -1514,7 +1506,7 @@ direction a training step moves the weights.
 
 ::: {.cols .vc}
 ::: {.col}
-A **matrix** is a rank-2 tensor, $m$ rows $\times$ $n$ columns:
+A **matrix** is an order-2 tensor, $m$ rows $\times$ $n$ columns:
 
 @linear-algebra-matrices-1
 
@@ -1551,12 +1543,12 @@ Covariance and Gram matrices are symmetric, a structure that many methods
 :::
 :::
 
-::: {.slide title="Rank *n* is just *n* axes"}
+::: {.slide title="An order-*n* tensor has *n* axes"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-Stack matrices and the naming continues. A batch of images is rank-4
+Stack matrices and the naming continues. A batch of images is order 4
 (`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
 
 @-linear-algebra-tensors
@@ -1611,7 +1603,7 @@ shape alone:
 
 . . .
 
-`mean()` is the same fold, divided by the count:
+`mean()` is the corresponding reduction divided by the count:
 
 @linear-algebra-reduction-6
 :::
@@ -1691,22 +1683,23 @@ $$\cos\theta = \frac{\mathbf{x}^\top\mathbf{y}}{\|\mathbf{x}\|\,\|\mathbf{y}\|}.
 
 ![](../img/mdl-prelim-cosine.svg)
 
-$+1$ aligned · $0$ perpendicular · $-1$ opposed: the dot product is
-deep learning's favorite **similarity measure**.
+$+1$ aligned · $0$ perpendicular · $-1$ opposed: the normalized dot
+product is a common **similarity measure**.
 :::
 
 ::: {.slide title="Cauchy–Schwarz keeps the ratio in [−1, 1]"}
 [Products · geometry]{.kicker}
 
-Why can $\cos\theta$ never escape $[-1, 1]$? That is the
-**Cauchy–Schwarz inequality**
+The **Cauchy–Schwarz inequality** explains why $\cos\theta$ remains
+in $[-1, 1]$:
 $|\mathbf{x}^\top\mathbf{y}| \le \|\mathbf{x}\|\,\|\mathbf{y}\|$
 (proved in the geometry-and-linear-algebraic-operations section). One
 random pair checks both facts at once:
 
 @linear-algebra-dot-products-3
 
-An angle in $[0, \pi]$, and the inequality holds on every draw.
+The computed angle lies in $[0, \pi]$, and the result verifies the inequality
+for one random pair.
 :::
 
 ::: {.slide title="Ax takes one dot product per row"}
@@ -1720,8 +1713,8 @@ $2\times3$ matrix maps a length-3 vector to a length-2 vector:
 @linear-algebra-matrix-vector-products
 
 ::: {.d2l-note}
-Every fully-connected layer computes exactly this (plus a
-nonlinearity); much more on that later.
+A fully connected layer applies this operation, adds a bias, and may
+then apply a nonlinearity.
 :::
 :::
 
@@ -1743,7 +1736,7 @@ $\mathbf{e}_1 \mapsto \mathbf{e}_2$ and $\mathbf{e}_2 \mapsto -\mathbf{e}_1$:
 @linear-algebra-matrix-vector-products-2
 :::
 
-::: {.slide title="AB stitches m×n dot products into a matrix"}
+::: {.slide title="AB collects m×n dot products in a matrix"}
 [Products]{.kicker}
 
 ::: {.cols .vc}
@@ -1837,8 +1830,8 @@ approximation section.
 $$\mathbf{A}\mathbf{v} = \lambda\mathbf{v}.$$
 
 Along an eigenvector, the matrix acts like a **scalar**: stretch
-($|\lambda|>1$), shrink ($|\lambda|<1$), flip ($\lambda<0$), but never
-turn.
+($|\lambda|>1$), shrink ($|\lambda|<1$), or reverse orientation
+($\lambda<0$), while preserving its span.
 :::
 
 ::: {.col}
@@ -1852,23 +1845,23 @@ Keep $8.8612$ in mind.
 :::
 :::
 
-::: {.slide title="Ten multiplications of a random vector find 8.8612"}
-[Eigenvalues · payoff]{.kicker}
+::: {.slide title="Repeated multiplication reveals 8.8612"}
+[Eigenvalues]{.kicker}
 
 Multiply a random vector by $\mathbf{S}$ ten times and measure how much
 the norm grows per step:
 
 @linear-algebra-eigenvalues-2
 
-The growth factor converges to $\max_i |\lambda_i| = 8.8612$: whatever
-vector you start from, the largest eigenvalue soon dominates.
+For a generic starting vector, the growth factor converges to
+$\max_i |\lambda_i| = 8.8612$ as the dominant eigenvalue takes over.
 
 . . .
 
 ::: {.d2l-note .rule}
-Deep networks multiply by dozens of matrices in a row. Whether signals
-and gradients **explode or vanish** is this experiment at scale; the
-analysis returns in the numerical-stability section.
+Products of many matrices can cause signals and gradients to **explode
+or vanish**. The spectra of those matrices contribute to this behavior;
+the numerical-stability section develops the analysis.
 :::
 :::
 
@@ -1877,7 +1870,7 @@ analysis returns in the numerical-stability section.
 
 ::: {.cols}
 ::: {.col}
-- **Objects:** ranks $0$–$n$; the transpose; symmetry.
+- **Objects:** orders $0$–$n$; the transpose; symmetry.
 - **Element-wise** ops + scalar broadcasting; Hadamard $\odot$.
 - **Reductions:** `sum`/`mean` with `axis=`; `keepdims=` stays
   broadcastable.

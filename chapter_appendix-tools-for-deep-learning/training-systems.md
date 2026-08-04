@@ -1,18 +1,14 @@
-# Model Training
+# Distributed Model Training
 :label:`sec_training_systems`
 
-Throughout this book we trained on a single device, occasionally two. Real
-budgets are larger: a LoRA fine-tune fits on one consumer GPU, a full
-fine-tune of a 7B model wants a node of them, and pretraining anything
-competitive occupies hundreds to hundreds of thousands of accelerators for
-weeks. This section is a practical map of that territory: the parallelism
-concepts you need in order to read any framework's documentation, the
-actual libraries people use in 2026, and which tool fits which scale.
-Distributed training is not a switch that makes a program faster — it
-divides model state and work, adds communication, and changes failure
-recovery — so the golden rule is to start from a measured single-GPU
-baseline and add the *simplest* technique that removes a demonstrated
-constraint.
+Most examples in this book train on one device. Larger workloads may require
+several devices because model state does not fit on one accelerator or
+because a single-device run would take too long. This section introduces the
+main forms of parallelism, the software layers available in mid-2026, and the
+scale at which each becomes relevant. Distributed training partitions or
+replicates state and work, adds communication, and complicates recovery.
+Begin with a measured single-device baseline, then add the simplest technique
+that removes an observed memory or throughput constraint.
 
 ## From One GPU to Many
 
@@ -29,8 +25,9 @@ constraint.
    optimizer state fit on one device.
 1. **Fully sharded data parallelism (FSDP)** shards parameters, gradients,
    and optimizer state across GPUs and gathers each layer only while it is
-   being used. Same idea as DeepSpeed's ZeRO stage 3; it buys roughly a
-   world-size reduction in state memory at the price of all-gather traffic.
+   being used. It is related to DeepSpeed's ZeRO stage 3 and can reduce per-device state
+   memory approximately in proportion to world size, while adding all-gather
+   traffic.
 1. **Tensor, pipeline, context, and expert parallelism** split individual
    layers, layer groups, the sequence dimension, and mixture-of-experts
    experts, respectively. Large systems compose several of these because no
@@ -94,29 +91,32 @@ for label, cfg in [("1 GPU, plain", (1, False, False)),
 
 Plain training does not fit any single GPU; DDP does not help, because it
 replicates state; FSDP brings the same model under 25 GiB per device. Each
-standard memory technique attacks one term and charges a different price:
-**mixed precision** (BF16 compute, FP8 on recent hardware) halves compute
-bytes; **gradient accumulation** shrinks activation memory but not state;
-**activation checkpointing** trades ~30% recomputation for most of the
-activation term; **CPU/NVMe offload** (DeepSpeed's ZeRO-Offload and
-descendants) trades transfer latency for capacity; **LoRA and QLoRA**
-sidestep the problem by making the optimizer state tiny — which is why a
-7B fine-tune fits on a 16 GB card. Combine techniques deliberately: four
+standard memory technique changes a different term and introduces a
+different cost. **Mixed precision** reduces the bytes used by selected tensors
+and operations. **Gradient accumulation** permits a smaller per-step
+microbatch while preserving a larger effective batch, reducing activation
+memory but not model state. **Activation checkpointing** recomputes selected
+activations during backpropagation; its memory savings and compute overhead
+depend on the partition. **CPU/NVMe offload** (including DeepSpeed's
+ZeRO-Offload) exchanges transfer latency for device capacity. **LoRA and
+QLoRA** reduce trainable parameters and optimizer state; with compatible
+quantization and sequence settings, a 7B fine-tune can fit on a 16 GB card.
+Combine techniques deliberately: four
 individually sensible optimizations can interfere with compilation,
 overlap, or numerics.
 
-Two topology rules from the Hugging Face *Ultra-Scale Playbook* (a free,
-experiment-backed guide distilled from 4,000+ runs on up to 512 GPUs, and
-the best single thing to read after this section) compress a lot of
-practice: keep tensor parallelism *inside* a node, where NVLink can carry
+Two topology guidelines from the Hugging Face *Ultra-Scale Playbook*, based
+on more than 4,000 runs on up to 512 GPUs, summarize its measurements: keep
+tensor parallelism *inside* a node, where NVLink can carry
 its dense traffic — letting TP cross nodes loses several times as much
 throughput as letting pipeline parallelism cross — and map the
 highest-volume collectives to the fastest links available.
 
 ## The Library Landscape
 
-What should you actually type? As of mid-2026 the ecosystem has settled
-into layers.
+As of mid-2026, the software ecosystem can be organized into several
+layers. These assignments are dated because APIs and project activity change
+quickly.
 
 **PyTorch built-ins.** `torchrun` + DDP for replication; `fully_shard`
 (FSDP2) for sharding; `DTensor` underneath as the common abstraction for
@@ -127,31 +127,31 @@ tools now generate.
 **Hugging Face stack.** `accelerate` launches the same script on DDP,
 FSDP2, or DeepSpeed with a config file rather than code changes;
 `transformers.Trainer` sits on top of it; `peft` implements LoRA/QLoRA;
-and `trl` provides post-training — supervised fine-tuning, DPO, and the
-GRPO family of reinforcement-learning trainers that took off when
-DeepSeek-R1 showed pure RL could buy reasoning. For models up to roughly
-30B parameters on a handful of nodes, this stack is the default answer.
+and `trl` provides supervised fine-tuning, DPO, and GRPO-family
+reinforcement-learning trainers. DeepSeek-R1-Zero demonstrated that
+reinforcement learning alone could elicit some reasoning behaviors, while
+the released DeepSeek-R1 training pipeline also included supervised stages.
+This stack supports many fine-tuning jobs on one node or a small cluster.
 
 **DeepSpeed.** ZeRO stages 1–3 (optimizer, gradient, parameter sharding)
-plus CPU/NVMe offload. It pioneered the sharding ideas that FSDP absorbed
-and remains actively maintained, but for new PyTorch projects it has
-ceded the default slot to FSDP2; reach for it when you need its offload
-machinery to squeeze a large model onto scarce memory, or because a tool
-you use (notably several RLHF frameworks) builds on it.
+plus CPU/NVMe offload. It introduced sharding techniques related to those in FSDP and remains
+maintained. FSDP2 provides a native PyTorch alternative. DeepSpeed remains
+relevant when CPU or NVMe offload is required, or when another framework
+depends on it.
 
-**Megatron-Core and TorchTitan.** The serious pretraining tier. NVIDIA's
+**Megatron-Core and TorchTitan.** Frameworks for large-scale pretraining. NVIDIA's
 Megatron-Core implements tensor/pipeline/sequence/expert parallelism with
 FP8 support and powers many industrial labs (and NVIDIA's own NeMo
 framework and Nemotron models). TorchTitan is the PyTorch-native
 equivalent: a clean reference stack composing FSDP, tensor, pipeline, and
 context parallelism plus expert parallelism for MoE, demonstrated at
-1,000-GPU scale on models from Llama 3 405B to DeepSeek-V3. Choose this
-tier only when you are genuinely pretraining — the configuration surface
-is proportional to its power.
+1,000-GPU scale on models from Llama 3 405B to DeepSeek-V3. These systems
+expose many configuration choices and are most appropriate when
+model scale requires several forms of parallelism.
 
-**Fine-tuning frontends.** Unsloth owns the single-GPU niche with fused
-kernels and quantized training (roughly 2× speed and large memory savings
-for LoRA/QLoRA work). Axolotl drives full and parameter-efficient
+**Fine-tuning frontends.** Unsloth targets single-GPU LoRA and QLoRA with
+fused kernels and quantized training; its speed and memory gains depend on
+model, sequence length, and hardware. Axolotl drives full and parameter-efficient
 fine-tunes across a node or several from one YAML file, with FSDP2 and
 DeepSpeed backends. LLaMA-Factory covers a similar space with a GUI and
 very broad model support. (Its former peer `torchtune` wound down in 2025
@@ -159,15 +159,14 @@ very broad model support. (Its former peer `torchtune` wound down in 2025
 
 **JAX.** MaxText is the reference for TPU (and GPU) pretraining and now
 post-training; Levanter/Marin demonstrated fully reproducible open
-pretraining. On TPUs the XLA compiler handles the parallelism that the
-PyTorch world configures by hand — the trade is less knob-turning for
-less low-level control.
+pretraining. On TPUs, XLA compiles array-sharding specifications into communication
+operations. This moves some parallelism decisions from framework wrappers
+into array layouts and compiler configuration.
 
-**RL post-training at scale.** Beyond TRL's single-node comfort zone, veRL
-is the most widely adopted open framework (FSDP or Megatron for training,
-vLLM or SGLang for rollouts), with OpenRLHF as a leaner Ray+DeepSpeed
-alternative. This corner moves fastest of all; expect its details to age
-first.
+**RL post-training at scale.** veRL combines FSDP or Megatron training with
+vLLM or SGLang rollouts; OpenRLHF provides a Ray and DeepSpeed alternative.
+Project adoption and APIs in this area change rapidly, so verify current
+documentation before selecting a stack.
 
 ### What to Use at Which Scale
 
@@ -182,16 +181,15 @@ first.
 | many nodes | serious pretraining, MoE | Megatron-Core, TorchTitan, MaxText |
 | RL post-training | GRPO/DPO pipelines | TRL (small), veRL/OpenRLHF (large) |
 
-The table is a starting point, not a verdict — but note its shape: you buy
-generality with configuration burden as you move down, and most projects
-live in the first two rows. If a workload fits a simpler row, use the
-simpler row.
+The table is a starting point rather than a prescription. Tools lower in the
+table support more forms of parallelism but require more configuration. Use
+the least complex row that satisfies the measured constraints.
 
 ## Keeping a Long Run Alive
 
-Everything above buys throughput; what turns throughput into results is
-operational discipline, because at scale *something* fails every few
-hours.
+Throughput alone does not complete a long run. As worker count and duration
+increase, hardware, network, and software failures become more likely, so
+recovery must be designed and tested.
 
 * **Checkpoint completely and atomically.** A resumable checkpoint holds
   model and optimizer state, the learning-rate schedule and step count,
@@ -202,13 +200,14 @@ hours.
   host's memory.
 * **Drill the recovery.** Kill the job deliberately, restore on fresh
   workers, and check that loss, step count, and data position continue as
-  if nothing happened. Untested recovery is a rumor, and spot-priced
-  training (:numref:`sec_cloud_instances`) is only cheap if recovery
-  actually works.
+  if nothing happened. Test recovery before relying on spot-priced training
+  (:numref:`sec_cloud_instances`), whose savings depend on successful
+  resumption after interruption.
 * **Feed the accelerators.** Profile data loading separately from compute:
   storage reads, decoding and augmentation, tokenization, and host-to-
-  device transfer. A starved GPU shows high nominal utilization and low
-  throughput; adding more GPUs to a data-bound job makes it *worse*.
+  device transfer. A starved GPU spends time waiting for input and delivers low throughput;
+  adding more GPUs can increase contention without improving a data-bound
+  job.
 * **Watch convergence, not just speed.** Tokens per second without a loss
   curve rewards fast wrong runs. Log both, plus time spent in collectives
   and checkpoint duration; debug distributed failures by reproducing on
@@ -218,17 +217,17 @@ hours.
 ## Summary
 
 * Scale in order — DDP while state fits, FSDP2/ZeRO when it does not,
-  tensor/pipeline/expert parallelism only for genuine pretraining — from a
+  tensor, pipeline, or expert parallelism only when model scale requires it — from a
   measured single-GPU baseline.
 * Peak memory is a sum of terms; each technique (sharding, checkpointing,
   accumulation, offload, LoRA) removes one term at a known price.
-* In 2026 the default stacks are: Unsloth/PEFT on one GPU, Accelerate or
-  Axolotl with FSDP2 on a node, Megatron-Core/TorchTitan/MaxText for
-  pretraining, TRL then veRL for RL post-training.
+* The mid-2026 examples are Unsloth or PEFT on one GPU, Accelerate or Axolotl
+  with FSDP2 on a node, Megatron-Core, TorchTitan, or MaxText for pretraining,
+  and TRL or veRL for RL post-training; verify current project status.
 * Keep tensor parallelism inside a node; map heavy collectives to fast
   links.
 * Long runs survive on atomic checkpoints, tested recovery, a fed input
-  pipeline, and convergence metrics — not on optimism.
+  pipeline, and convergence metrics — and explicit convergence monitoring.
 
 ## Exercises
 

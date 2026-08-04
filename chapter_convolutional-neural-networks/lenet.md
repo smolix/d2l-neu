@@ -6,23 +6,19 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutional Neural Networks (LeNet)
 :label:`sec_lenet`
 
-We now have all the ingredients required to assemble
-a fully-functional CNN.
-In our earlier encounter with image data, we applied
+We can now combine convolution, pooling, and fully connected layers into a
+complete image classifier. In our earlier experiments with image data, we applied
 a linear model with softmax regression (:numref:`sec_softmax_scratch`)
 and an MLP (:numref:`sec_mlp-implementation`)
 to pictures of clothing in the Fashion-MNIST dataset.
 To make such data amenable we first flattened each image from a $28\times28$ matrix
 into a fixed-length $784$-dimensional vector,
 and thereafter processed them in fully connected layers.
-Now that we have a handle on convolutional layers,
-we can retain the spatial structure in our images.
-As an additional benefit of replacing fully connected layers with convolutional layers,
-we will enjoy more parsimonious models that require far fewer parameters.
+Convolutional layers preserve this spatial organization and share parameters
+across locations, reducing the number of parameters.
 
-In this section, we will introduce *LeNet*,
-among the first published CNNs
-to capture wide attention for its performance on computer vision tasks.
+This section introduces *LeNet*, one of the early CNNs to demonstrate strong
+performance on a practical computer vision task.
 The model was introduced by (and named for) Yann LeCun,
 then a researcher at AT&T Bell Labs,
 for the purpose of recognizing handwritten digits in images :cite:`LeCun.Bottou.Bengio.ea.1998`.
@@ -31,13 +27,11 @@ of a decade of research developing the technology;
 LeCun's team published the first study to successfully
 train CNNs via backpropagation :cite:`LeCun.Boser.Denker.ea.1989`.
 
-At the time LeNet achieved outstanding results
-matching the performance of support vector machines,
-then a dominant approach in supervised learning, achieving an error rate of less than 1% per digit.
-LeNet was eventually adapted to recognize digits
-for processing deposits in ATM machines.
-To this day, some ATMs still run the code
-that Yann LeCun and his colleague Leon Bottou wrote in the 1990s!
+LeNet matched the performance of support vector machines, then a dominant
+approach to handwritten-digit recognition, with an error rate below 1% per
+digit. Variants were deployed to read handwritten amounts on bank checks and
+deposit slips. The deployment demonstrated that a trained convolutional model
+could replace a substantial hand-engineered recognition pipeline.
 
 ```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab mxnet
@@ -95,28 +89,18 @@ The convolutional block emits an output with shape (batch size, number
 of channels, height, width) in the PyTorch/MXNet convention; TensorFlow
 and JAX use the channels-last layout (batch, height, width, channels).
 
-In order to pass output from the convolutional block
-to the dense block,
-we must flatten each example in the minibatch.
-In other words, we take this four-dimensional input and transform it
-into the two-dimensional input expected by fully connected layers:
-as a reminder, the two-dimensional representation that we desire uses the first dimension to index examples in the minibatch
-and the second to give the flat vector representation of each example.
+To pass the convolutional block's output to the dense block, we flatten each
+example. This transforms the four-dimensional tensor into a matrix whose first
+axis indexes examples and whose second axis contains the flattened features.
 LeNet's dense block has three fully connected layers,
 with 120, 84, and 10 outputs, respectively.
 Because we are still performing classification,
 the 10-dimensional output layer corresponds
 to the number of possible output classes.
 
-While getting to the point where you truly understand
-what is going on inside LeNet may have taken a bit of work,
-we hope that the following code snippet will convince you
-that implementing such models with modern deep learning frameworks
-is remarkably simple.
-We need only to instantiate a `Sequential` block
-and chain together the appropriate layers,
-using Xavier initialization as
-introduced in :numref:`subsec_xavier`.
+Modern frameworks express LeNet as a `Sequential` block containing the layers
+described above. We use Xavier initialization, introduced in
+:numref:`subsec_xavier`.
 
 ```{.python .input #lenet-1}
 %%tab pytorch
@@ -222,7 +206,7 @@ the 6--16--120--84 channel/hidden dimensions while making every component
 recognizable in a modern library.
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-Let's see what happens inside the network. By passing a
+We inspect the network by passing a
 single-channel (black and white)
 $28 \times 28$ image through the network
 and printing the output shape at each layer,
@@ -232,7 +216,7 @@ what we expect from :numref:`img_lenet_vert`.
 :end_tab:
 
 :begin_tab:`jax`
-Let's see what happens inside the network. By passing a
+We inspect the network by passing a
 single-channel (black and white)
 $28 \times 28$ image through the network
 and printing the output shape at each layer,
@@ -286,7 +270,7 @@ model = LeNet()
 model.layer_summary((1, 28, 28, 1))
 ```
 
-Note that the height and width of the representation
+The height and width of the representation
 at each layer throughout the convolutional block
 is reduced (compared with the previous layer).
 The first convolutional layer uses two pixels of padding
@@ -305,27 +289,24 @@ from 1 in the input to 6 after the first convolutional layer
 and 16 after the second convolutional layer.
 However, each pooling layer halves the height and width.
 Finally, each fully connected layer reduces dimensionality,
-finally emitting an output whose dimension
+ultimately emitting an output whose dimension
 matches the number of classes.
 
 
 ## Training
 
-Now that we have implemented the model,
-let's run an experiment to see how the LeNet-5 model fares on Fashion-MNIST.
+We now train the LeNet variant on Fashion-MNIST.
 
 While CNNs have fewer parameters,
 they can still be more expensive to compute
 than similarly deep MLPs
 because each parameter participates in many more
 multiplications.
-If you have access to a GPU, this might be a good time
-to put it into action to speed up training.
-Note that
-the `d2l.Trainer` class takes care of all details.
+Using a GPU can accelerate training. The `d2l.Trainer` class manages device
+placement and the training loop.
 By default, it initializes the model parameters on the
 available devices.
-Just as with MLPs, our loss function is cross-entropy,
+As with MLPs, the loss function is cross-entropy,
 and we minimize it via minibatch stochastic gradient descent.
 
 ```{.python .input #lenet-training}
@@ -364,28 +345,36 @@ with d2l.try_gpu():
 
 ## Summary
 
-We have made significant progress in this chapter. We moved from the MLPs of the 1980s to the CNNs of the 1990s and early 2000s. The architectures proposed, e.g., in the form of LeNet-5 remain meaningful, even to this day. Compare the error rates on Fashion-MNIST achievable with LeNet-5 both to the very best possible with MLPs (:numref:`sec_mlp-implementation`) and to those of significantly more advanced architectures such as ResNet (:numref:`sec_resnet`). LeNet is much more similar to the latter than to the former. One of the primary differences, as we shall see, is that greater amounts of computation enabled significantly more complex architectures.
+LeNet combines a convolutional encoder with a small classification head. Its
+performance on Fashion-MNIST illustrates the advantage of using image
+structure rather than flattening every input. Modern frameworks also make its
+implementation substantially shorter than the specialized systems required
+for the original experiments :cite:`Bottou.Le-Cun.1988`.
 
-A second difference is the relative ease with which we were able to implement LeNet. What used to be an engineering challenge worth months of C++ and assembly code, engineering to improve SN (Simulateur Neuristique), an early Lisp-based deep learning tool :cite:`Bottou.Le-Cun.1988`, and finally experimentation with models can now be accomplished in minutes. It is this incredible productivity boost that has democratized deep learning model development tremendously.
-
-A third way to read LeNet is as a checklist of what thirty years of progress replaced. The skeleton, a convolutional encoder feeding a small classification head, is the one part that has not changed. Every component inside it has:
+The overall encoder--classifier organization remains common, although modern
+networks replace most of LeNet's individual components:
 
 | LeNet (1998) | Modern (2020s) | What the change buys |
 |:--|:--|:--|
 | sigmoid activation | ReLU or GELU | gradients that survive depth instead of saturating |
-| average pooling | max-pooling or strided convolution | keeps the strongest local response rather than diluting it |
+| average pooling | max-pooling or strided convolution | provides selective or learned local downsampling |
 | no normalization | batch or layer normalization | stable activation scales, so much deeper stacks train |
 | dense head on flattened features | global average pooling plus one linear layer | removes most of the parameters (the $400 \times 120$ block here) |
 | Xavier initialization | He initialization | variance matched to ReLU rather than to sigmoid |
 
-Each row except the last is a section of :numref:`chap_modern_cnn`: ReLU and max-pooling arrive with AlexNet (:numref:`sec_alexnet`), the global-average-pooling head with NiN (:numref:`sec_nin`), batch normalization in :numref:`sec_batch_norm`, and strided-convolution downsampling with ResNet (:numref:`sec_resnet`). He initialization you have already met in :numref:`sec_init_param`; it exists because of the switch to ReLU. The next chapter walks through this table row by row while keeping LeNet's skeleton fixed.
+The next chapter examines these changes through AlexNet
+(:numref:`sec_alexnet`), NiN (:numref:`sec_nin`), batch normalization
+(:numref:`sec_batch_norm`), and ResNet (:numref:`sec_resnet`). He
+initialization, introduced in :numref:`sec_init_param`, accompanies the use of
+ReLU activations.
 
 ## Exercises
 
-1. Let's modernize LeNet. Implement and test the following changes:
+1. Modernize LeNet by implementing and testing the following changes:
     1. Replace average pooling with max-pooling.
     1. Replace the sigmoid activations with ReLU.
-1. Try to change the size of the LeNet style network to improve its accuracy in addition to max-pooling and ReLU.
+1. Change the size of the LeNet-style network and determine whether accuracy
+   improves beyond the effects of max-pooling and ReLU.
     1. Adjust the convolution window size.
     1. Adjust the number of output channels.
     1. Adjust the number of convolution layers.
@@ -414,15 +403,12 @@ Each row except the last is a section of :numref:`chap_modern_cnn`: ReLU and max
 <!-- slides -->
 
 ::: {.slide title="LeNet sets the CNN template"}
-**LeNet-5** (Yann LeCun et al., 1989; productionized 1998)
-was the first convolutional neural network at production
-scale: handwritten digits on U.S. bank checks. Some ATMs
-*still* run derivatives of the original C++ today.
+**LeNet-5** (Yann LeCun et al., 1989; deployed in the 1990s) recognized
+handwritten digits on bank checks.
 
-It defined the architectural template every later CNN
-refines: a **convolutional encoder** (spatial dims shrink,
-channels grow) feeding a **dense head**. ResNet,
-EfficientNet, ViT: same skeleton, different components.
+Its organization—a **convolutional encoder** in which spatial dimensions
+shrink and channels grow, followed by a **dense head**—influenced many later
+CNN architectures.
 :::
 
 ::: {.slide title="LeNet-5 architecture"}
@@ -446,9 +432,8 @@ Same network, vertical schematic (the textbook version):
 :::
 
 ::: {.slide title="Two takeaways"}
-- **Pyramid shape:** spatial halves at each pool;
-  channels roughly double. Every successor architecture
-  preserves this.
+- **Pyramid shape:** spatial dimensions halve at each pooling layer while the
+  number of channels increases. Many later CNNs retain this pattern.
 - **The bottleneck is the flatten:** `400 × 120 = 48000`
   weights from conv block to first dense layer. Modern
   CNNs replace the dense stack with *global average
@@ -456,8 +441,8 @@ Same network, vertical schematic (the textbook version):
 :::
 
 ::: {.slide title="Implementation setup"}
-Almost mechanical translation from the figure to a
-`Sequential`. Xavier init keeps the sigmoid layers from
+The figure translates directly to a `Sequential` model. Xavier initialization
+helps keep the sigmoid layers from
 saturating early in training:
 
 @lenet-convolutional-neural-networks-lenet
@@ -472,15 +457,15 @@ saturating early in training:
 :::
 
 ::: {.slide title="Tracing shapes through the network"}
-Critical debugging tool: walk a dummy `(1, 1, 28, 28)`
+To check tensor shapes, pass a dummy `(1, 1, 28, 28)`
 input through the layers and print the shape after each.
 Match this against the figure to verify the architecture
 is wired correctly:
 
 @lenet-3
 
-Confirms 28→28→14→10→5→flatten→120→84→10: exactly the
-pyramid in the diagram.
+The output confirms 28→28→14→10→5→flatten→120→84→10, matching the
+diagram.
 :::
 
 ::: {.slide title="Training on Fashion-MNIST"}
@@ -489,9 +474,8 @@ as every previous chapter; only the model changes:
 
 @lenet-training
 
-LeNet's convolutional inductive bias clearly beats the
-dense MLP from the previous chapter on the same data,
-even with 1990s components (sigmoid, average pooling).
+Compare the result with the dense MLP from the previous chapter to assess the
+effect of LeNet's convolutional inductive bias.
 :::
 
 ::: {.slide title="What 30 years of progress changed"}
@@ -507,18 +491,16 @@ LeNet's 1998 architecture vs. modern best practice:
 | 5 layers, ~60k params | 50+ layers, millions of params |
 
 Each substitution is a section of the next chapter, Modern
-CNNs (He init we met in the builder's guide). The skeleton,
-*conv encoder + head*, is unchanged.
+CNNs (He initialization was introduced in the builder's guide). The overall
+*convolutional encoder + head* organization is retained.
 :::
 
 ::: {.slide title="Recap"}
-- LeNet-5 = first CNN that worked at production scale.
+- LeNet-5 demonstrated a CNN in a deployed recognition system.
 - Architectural template: conv encoder (spatial ↓, channels ↑)
   → flatten → dense head.
-- Same template scales up to ResNet, EfficientNet, ViT:
-  the modern variants change *components*, not the shape.
-- Beats MLPs on the same data: convolutional inductive bias
-  is a real win.
+- Later CNNs such as ResNet and EfficientNet retain the encoder--head
+  organization while changing its components and scale.
 - The next chapter swaps every component for its modern
   equivalent and goes much deeper.
 :::

@@ -9,23 +9,23 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:6acee91e29ea8d5b08e5396152fd5e2c5c845b71ec8787c96d405351780a6376",
+      "code_fingerprint": "sha256:95c27b6cb1a869428fa6a0dbf237557d8aea1d40cdeaa9cd12eca4668f791f25",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:14a76ed74aee2db023490a356bafa1539e60627833339f39f9304a9750c1360a",
+      "code_fingerprint": "sha256:76a6b07dcfdcc495b70542b5b71215d1ac9de21b8179b570e93a52117d955736",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['beta', 'chisquare', 'choice', 'exponential', 'f', 'gamma', 'gumbel', 'integer_types', 'laplace', 'logistic', 'lognormal', 'multinomial', 'multivariate_normal', 'normal', 'pareto', 'power', 'rand', 'randint', 'randn', 'rayleigh']\n"
+          "text": "['beta', 'chisquare', 'choice', 'exponential', 'f', 'gamma', 'gumbel',\n 'integer_types', 'laplace', 'logistic', 'lognormal', 'multinomial',\n 'multivariate_normal', 'normal', 'pareto', 'power', 'rand', 'randint', 'randn',\n 'rayleigh']\n"
         }
       ]
     },
     "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:e85c741f6a43c1fdccadd581cf6bce5f7c731feb13bbbdc8a0492c483afd1a9a",
+      "code_fingerprint": "sha256:6785b2fe502d86bd6723ec7cbac1fea99dc9611bcb824eb97ff6459ac974c4f7",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:2387e880d690eb0f2d935fdcd0722d708c259bceca74c7164efc0b7420d65921",
+      "code_fingerprint": "sha256:a30430d0b5be818e92037643656ab8858d8668f57ca1f13ae783fadd7e99f588",
       "kind": "text",
       "outputs": [
         {

@@ -9,12 +9,12 @@
   },
   "cells": {
     "subword-embedding-byte-pair-encoding-1": {
-      "code_fingerprint": "sha256:7c0b3fce6bc6d7e99e99c80e4b1746ccd585c695e2ad5f596b83ea9286ddd438",
+      "code_fingerprint": "sha256:4db1c57cac9f75a6109409b0f1dc912a8ecb8065ab715c2ac8c99530e4e6672b",
       "kind": "text",
       "outputs": []
     },
     "subword-embedding-byte-pair-encoding-2": {
-      "code_fingerprint": "sha256:12c058681b3266936945c3729f8a6e5f20231f67ee270c13fb5407aae1c70554",
+      "code_fingerprint": "sha256:1813b29c904fec8811d354688007ef8e10df9543319a0997959b21662fe5b4da",
       "kind": "text",
       "outputs": [
         {
@@ -24,17 +24,17 @@
       ]
     },
     "subword-embedding-byte-pair-encoding-3": {
-      "code_fingerprint": "sha256:869aae58bea51545b88be5c51c27ad708d233af11d63de6bf5c1edaf48b050e8",
+      "code_fingerprint": "sha256:ecc184a3498d578ef3c5b8c89cfc1e736780615534743ea6a4506c4415ddf39a",
       "kind": "text",
       "outputs": []
     },
     "subword-embedding-byte-pair-encoding-4": {
-      "code_fingerprint": "sha256:f7e575a536c47a1199d953bf20d6a0bdf82fa5c68be5cf5781471eaffd830855",
+      "code_fingerprint": "sha256:ddc720ad6557193033aa91d4e524252ec70b24295e2c5bb122e5751923b54ef5",
       "kind": "text",
       "outputs": []
     },
     "subword-embedding-byte-pair-encoding-5": {
-      "code_fingerprint": "sha256:12d2f1b5d9b963c185149178dfd9f0cc494902b19567aba7d18815d2d65fba00",
+      "code_fingerprint": "sha256:3f3b5337ace806dac447ebb32cda95c5b51d1d0cd2513234d099317d6bbe3c41",
       "kind": "text",
       "outputs": [
         {
@@ -45,18 +45,18 @@
       ]
     },
     "subword-embedding-byte-pair-encoding-6": {
-      "code_fingerprint": "sha256:9e90aedcb6130a12b54d1e0d09a543576cd5af8595107b4410ee7ddd830d0a87",
+      "code_fingerprint": "sha256:4b6c6349a6626ff8cca2082619c43595ac306df336418ffaaed7b683ad1ac7e1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_', '[UNK]', 'ta', 'tal', 'tall', 'fa', 'fas', 'fast', 'er', 'er_', 'tall_', 'fast_']\n"
+          "text": "['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',\n 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_', '[UNK]', 'ta', 'tal',\n 'tall', 'fa', 'fas', 'fast', 'er', 'er_', 'tall_', 'fast_']\n"
         }
       ]
     },
     "subword-embedding-byte-pair-encoding-7": {
-      "code_fingerprint": "sha256:1032b1b1af1d9f3b66b1abd5c2a3c8b773587942b9d832df4e6b37ddb2ae6ff3",
+      "code_fingerprint": "sha256:e82c1d369c9c0a5a86c746b0bfcc33491be98f540a1ce8d4e991bf71596a42b0",
       "kind": "text",
       "outputs": [
         {
@@ -67,12 +67,12 @@
       ]
     },
     "subword-embedding-byte-pair-encoding-8": {
-      "code_fingerprint": "sha256:2dc20363e316f175b6ff792a8060b2de41ea6747890da7195bd0501ec1692a71",
+      "code_fingerprint": "sha256:7edcdccd8c09b35fa91d437ef098c48c9a158be6b563cd2203f4dbc6f371bd24",
       "kind": "text",
       "outputs": []
     },
     "subword-embedding-byte-pair-encoding-9": {
-      "code_fingerprint": "sha256:b69bfb53f9563681fe185a6e8d84cb718bf9ff56df194f5a66d20568c209c2a7",
+      "code_fingerprint": "sha256:bc28980bdb040714577c44716b009392f4debfd9f762e2598b39fc33c0d16350",
       "kind": "text",
       "outputs": [
         {

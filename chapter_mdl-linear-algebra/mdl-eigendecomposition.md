@@ -1,18 +1,14 @@
 # Eigendecompositions
 :label:`sec_mdl-eigendecompositions`
 
-In :numref:`sec_mdl-geometry-linear-algebraic-ops` we saw a matrix as a
-*geometric distortion* of space: it skews, rotates, and rescales the grid, and
-the determinant records the net volume factor. Eigenvalues refine that picture.
-For a well-behaved square matrix there is a special set of directions, the
-*eigenvectors*, along which the distortion is a pure stretch, and an
-*eigenbasis* in which the whole map decouples into independent one-dimensional
-stretches. This single observation is what makes stability analysis, PCA, and
-the curvature story of optimization tractable. The goal of this section is to
-convey, with both pictures and proofs, why eigenvalues are so central. Our
-running example is an *iterated map*: repeatedly applying the same matrix, as a
-deep *linear* network (one with the nonlinearities stripped away) does, makes
-the role of the largest eigenvalue unmistakable.
+In :numref:`sec_mdl-geometry-linear-algebraic-ops`, a matrix was interpreted as
+a linear transformation that rotates, skews, and rescales space. Eigenvalues
+identify directions, called *eigenvectors*, along which this transformation is
+pure scaling. When the eigenvectors form a basis, the transformation separates
+into independent one-dimensional scalings. This representation is useful for
+stability analysis, PCA, and loss curvature. We develop it through geometric
+examples and algebraic results, using iterated linear maps to show how repeated
+matrix application depends on the spectrum.
 
 The numerical checks in this section use small dense matrices.
 
@@ -86,17 +82,16 @@ signals a non-invertible matrix.) For a fixed eigenvalue $\lambda$, the set of
 all vectors satisfying $\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$, together with
 $\mathbf 0$, forms a subspace, the *eigenspace* of $\lambda$.
 
-To picture eigenvectors, ask what a matrix does to the
-*unit circle*, the set of all unit vectors. A full-rank matrix maps it to an
-ellipse (a singular matrix flattens the ellipse further, into a segment or a
-point), and for a *symmetric* matrix the axes of that ellipse lie exactly along
-the eigenvectors, with half-lengths $|\lambda_i|$ (an axis flips when
-$\lambda_i<0$). :numref:`fig_mdl-la-eig-ellipse` draws this for our
-$\operatorname{diag}(2,-1)$ above and for the symmetric
-$[[2,1],[1,2]]$ that we revisit in the exercises. This is the same "circle becomes an ellipse"
-picture that the singular value decomposition will generalize to *every* matrix
-in :numref:`sec_mdl-svd-low-rank`; here the special feature is that one set of
-axes does the whole job.
+The image of the unit circle is an ellipse, or a lower-dimensional segment or
+point when the matrix is singular. For a general matrix, however, the input
+directions and output axes of this ellipse are its right and left singular
+vectors, not necessarily its eigenvectors. The two coincide for the symmetric
+examples below: their ellipse axes lie along orthonormal eigenvectors, with
+half-lengths $|\lambda_i|$ and an orientation reversal when $\lambda_i<0$.
+:numref:`fig_mdl-la-eig-ellipse` draws $\operatorname{diag}(2,-1)$ and
+$[[2,1],[1,2]]$. The SVD in :numref:`sec_mdl-svd-low-rank` retains this
+picture for every matrix by allowing distinct orthonormal bases for the input
+and output spaces.
 
 ![The unit circle maps to an ellipse. For a symmetric matrix the ellipse axes lie along the eigenvectors (green), with images scaled by the eigenvalues (red). Left: $\operatorname{diag}(2,-1)$, axes along the coordinate directions. Right: the symmetric $\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$, axes along the diagonal directions.](../img/mdl-la-eig-ellipse.svg)
 :label:`fig_mdl-la-eig-ellipse`
@@ -109,23 +104,20 @@ $[1,1]^\top/\sqrt2$ (scaled by $3$) and $[1,-1]^\top/\sqrt2$ (scaled by $1$).
 
 ### Finding Eigenvalues
 :label:`subsec_mdl-finding-eigenvalues`
-Let's figure out how to find them. By subtracting off the $\lambda \mathbf{v}$ from both sides,
-and then factoring out the vector,
-we see the above is equivalent to:
+To find the eigenvalues, subtract $\lambda\mathbf v$ from both sides of
+:eqref:`eq_mdl-eigpair` and factor out the vector. This gives
 
 $$(\mathbf{A} - \lambda \mathbf{I})\mathbf{v} = 0.$$
 :eqlabel:`eq_mdl-eigvalue_der`
 
-For :eqref:`eq_mdl-eigvalue_der` to happen, we see that $(\mathbf{A} - \lambda \mathbf{I})$
-must compress some direction down to zero,
-hence it is not invertible, and thus the determinant is zero.
-Thus, we can find the *eigenvalues*
-by finding for what $\lambda$ is $\det(\mathbf{A}-\lambda \mathbf{I}) = 0$.
-Once we find the eigenvalues, we can solve
-$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$
-to find the associated *eigenvector(s)*.
+Because $\mathbf v$ must be nonzero, this equation has a solution precisely when
+$\mathbf{A}-\lambda\mathbf I$ has a nontrivial null space. Equivalently, the
+matrix is singular and $\det(\mathbf{A}-\lambda\mathbf I)=0$. The eigenvalues
+are the roots of this equation. For each root, solving
+$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$ gives the corresponding
+eigenspace.
 
-Let's see this with a more challenging matrix
+Consider the matrix
 
 $$
 \mathbf{A} = \begin{bmatrix}
@@ -134,8 +126,8 @@ $$
 \end{bmatrix}.
 $$
 
-If we consider $\det(\mathbf{A}-\lambda \mathbf{I}) = 0$,
-we see this is equivalent to a polynomial equation in $\lambda$: the
+The equation $\det(\mathbf{A}-\lambda \mathbf{I}) = 0$ is a polynomial
+equation in $\lambda$: the
 *characteristic polynomial* $p(\lambda) = \det(\mathbf{A}-\lambda\mathbf{I})$,
 here $(2-\lambda)(3-\lambda)-2 = (4-\lambda)(1-\lambda)$.
 Thus the two eigenvalues are $\lambda = 1$ and $\lambda = 4$.
@@ -173,13 +165,13 @@ spectrum is complex, as it is for some matrices later in this section; we
 therefore use plain NumPy for eigenvalue computations here.
 :end_tab:
 
-Note that the library normalizes the eigenvectors to be of length one,
+The library normalizes the eigenvectors to have length one,
 whereas we took ours to be of arbitrary length.
 Additionally, the choice of sign is arbitrary.
 However, the vectors computed are parallel
 to the ones we found by hand with the same eigenvalues.
 
-What did `eig` actually do? For $n\ge5$ there is no
+What does `eig` compute? For $n\ge5$ there is no
 formula in radicals for the roots of the characteristic polynomial, and
 practical libraries never form that polynomial anyway. They instead reduce
 $\mathbf{A}$ to a nearly-triangular *Hessenberg* form and run the shifted *QR
@@ -196,7 +188,7 @@ affordable.
 
 ### Eigendecomposition and What It Computes
 
-Let's continue the previous example one step further.  Let
+Continue the preceding example. Let
 
 $$
 \mathbf{W} = \begin{bmatrix}
@@ -205,7 +197,7 @@ $$
 \end{bmatrix},
 $$
 
-be the matrix where the columns are the eigenvectors of the matrix $\mathbf{A}$. Let
+whose columns are the two eigenvectors of $\mathbf A$. Let
 
 $$
 \boldsymbol{\Lambda} = \begin{bmatrix}
@@ -214,23 +206,21 @@ $$
 \end{bmatrix},
 $$
 
-be the matrix with the associated eigenvalues on the diagonal.
-Then the definition of eigenvalues and eigenvectors tells us that
+whose diagonal entries are the associated eigenvalues. The two eigenvector
+equations can then be written together as
 
 $$
 \mathbf{A}\mathbf{W} =\mathbf{W} \boldsymbol{\Lambda} .
 $$
 
-The matrix $\mathbf{W}$ is invertible, so we may multiply both sides by $\mathbf{W}^{-1}$ on the right,
-we see that we may write
+Because the eigenvectors are linearly independent, $\mathbf W$ is invertible.
+Multiplying on the right by $\mathbf W^{-1}$ gives
 
 $$\mathbf{A} = \mathbf{W} \boldsymbol{\Lambda} \mathbf{W}^{-1}.$$
 :eqlabel:`eq_mdl-eig_decomp`
 
-Below we will see some nice consequences of this,
-but for now we need only know that such a decomposition
-will exist as long as we can find a full collection
-of linearly independent eigenvectors (so that $\mathbf{W}$ is invertible).
+This decomposition exists whenever the matrix has a full collection of
+linearly independent eigenvectors, so that $\mathbf{W}$ is invertible.
 A matrix that admits such a decomposition is called *diagonalizable*.
 
 The eigendecomposition :eqref:`eq_mdl-eig_decomp` turns many matrix operations
@@ -240,8 +230,8 @@ $$
 \mathbf{A}^n = \overbrace{\mathbf{A}\cdots \mathbf{A}}^{\textrm{$n$ times}} = \overbrace{(\mathbf{W}\boldsymbol{\Lambda} \mathbf{W}^{-1})\cdots(\mathbf{W}\boldsymbol{\Lambda} \mathbf{W}^{-1})}^{\textrm{$n$ times}} =  \mathbf{W}\overbrace{\boldsymbol{\Lambda}\cdots\boldsymbol{\Lambda}}^{\textrm{$n$ times}}\mathbf{W}^{-1} = \mathbf{W}\boldsymbol{\Lambda}^n \mathbf{W}^{-1}.
 $$
 
-This tells us that for any positive power of a matrix,
-the eigendecomposition is obtained by just raising the eigenvalues to the same power.
+Thus, positive powers of the matrix are obtained by raising each eigenvalue to
+the same power.
 The same can be shown for negative powers,
 so if we want to invert a matrix we need only consider
 
@@ -249,9 +239,9 @@ $$
 \mathbf{A}^{-1} = \mathbf{W}\boldsymbol{\Lambda}^{-1} \mathbf{W}^{-1},
 $$
 
-or in other words, just invert each eigenvalue.
-This will work as long as each eigenvalue is non-zero,
-so we see that invertible is the same as having no zero eigenvalues.
+That is, invert each eigenvalue. This works when every eigenvalue is nonzero,
+so a diagonalizable matrix is invertible exactly when it has no zero
+eigenvalues.
 The same recipe defines the *matrix exponential*
 $e^{\mathbf{A}t}=\mathbf{W}e^{\boldsymbol{\Lambda}t}\mathbf{W}^{-1}$, which
 solves the linear differential equation $\dot{\mathbf{x}}=\mathbf{A}\mathbf{x}$;
@@ -391,7 +381,7 @@ matrix with this shortfall is called *defective*.
 slides every horizontal layer of the grid sideways, and the horizontal axis is
 the *only* line through the origin left pointing where it started. A
 diagonalizable $2\times2$ matrix would exhibit two independent such lines; the
-shear has just one, and no change of basis can conjure a second.
+shear has only one, and no change of basis can produce a second.
 
 ![The defective shear acting on the plane. Every horizontal line slides rigidly to the right by an amount proportional to its height, so the grid tilts, but the $x$-axis (green) is carried to itself: $\mathbf{A}\mathbf{e}_1=\mathbf{e}_1$, the sole eigendirection, with $\lambda=1$. The other basis vector picks up a horizontal component, $\mathbf{A}\mathbf{e}_2=(1,1)^\top$, and *no* second direction is preserved: geometric multiplicity $1$ against algebraic multiplicity $2$.](../img/mdl-la-defective-shear.svg)
 :label:`fig_mdl-la-defective-shear`
@@ -536,7 +526,7 @@ $$
 
 In the basis $(\mathbf{v},\mathbf{u})$ of its invariant plane, $\mathbf{A}$
 *is* the rotation--scaling block: scale by the modulus, rotate by the
-argument. The dictionary reads just as easily right to left. Identify
+argument. The dictionary also reads from right to left. Identify
 $(x,y)^\top\in\mathbb{R}^2$ with the complex number $x+iy$; then the block acts
 as $(x,y)^\top\mapsto(ax-by,\,bx+ay)^\top$, which is precisely multiplication
 by $a+ib$, and its eigenvalues are $a\pm ib$ with eigenvectors
@@ -547,8 +537,8 @@ flips the sign of $b$, giving the same plane traversed in the opposite
 orientation; and replacing $\mathbf{w}$ by any nonzero complex multiple changes
 $\mathbf{P}$ but not the block, since the derivation used only
 $\mathbf{A}\mathbf{w}=\lambda\mathbf{w}$. So the block is well defined even
-though `eig` normalizes eigenvectors with an arbitrary phase. Let's verify the
-dictionary on a matrix with no visible rotation in it.
+though `eig` normalizes eigenvectors with an arbitrary phase. The following
+calculation verifies the dictionary on a matrix with no visible rotation.
 
 ```{.python .input #mdl-eigendecomposition-complex-eigenvalues-are-rotations-1}
 A = np.array([[0.5, -1.2], [0.9, 0.3]])
@@ -563,7 +553,7 @@ print('r * R(theta) =\n', np.round(r * np.array(
     [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]), 4))
 ```
 
-Nothing about the entries of $\mathbf{A}$ advertises a rotation, yet in the
+The entries of $\mathbf{A}$ do not make the rotation apparent, yet in the
 basis read off from its eigenvector the map is exactly scale-by-$r$,
 rotate-by-$\theta$. Allowing such rotation--scaling blocks alongside
 the Jordan blocks of :numref:`subsec_mdl-jordan` gives the *real Jordan form*
@@ -572,7 +562,7 @@ map can do over the reals: every square matrix decomposes into pure stretch
 directions (real eigenvalues with a full set of eigenvectors), shear-like
 Jordan blocks (repeated eigenvalues with too few eigenvectors), and
 rotation--scaling planes (complex-conjugate pairs). The inventory also predicts
-how iterating a matrix can misbehave: a dominant rotating pair keeps the
+how matrix iteration can behave: a dominant rotating pair keeps the
 iterate spinning forever instead of settling on a direction, and a dominant
 defective block converges with a polynomial drag. Both reappear when we develop
 *power iteration* later in this section. The dictionary itself returns in
@@ -587,8 +577,8 @@ growth or decay and the imaginary part $b$ the angular velocity.
 The Jordan example showed that eigenvalues can miss a large temporary excursion.
 Defectiveness is the sharpest version of the problem, but it is not the whole
 problem: a matrix can have distinct eigenvalues, be diagonalizable, and still
-amplify some inputs dramatically before its asymptotic decay becomes visible.
-The property separating the clean case from this behavior is **normality**.
+amplify some inputs substantially before its asymptotic decay becomes visible.
+**Normality** is the property that separates the clean case from this behavior.
 
 ### Normality: When Eigenvalues Control Norms
 
@@ -599,7 +589,7 @@ $$
 \mathbf A^*\mathbf A=\mathbf A\mathbf A^*.
 $$
 
-For a real matrix, $\mathbf A^*$ is simply $\mathbf A^\top$. Symmetric,
+For a real matrix, $\mathbf A^*$ equals $\mathbf A^\top$. Symmetric,
 orthogonal, and unitary matrices are normal, as are planar rotation--scaling
 blocks. The complex spectral theorem says that a matrix is normal if and only
 if it has an orthonormal eigenbasis over $\mathbb C$:
@@ -684,10 +674,11 @@ The normal matrix contracts from the first step. The non-normal matrix has the
 same spectral radius but amplifies a suitably chosen input by more than an
 order of magnitude before decay wins. This is **transient amplification**:
 stability as $k\to\infty$ coexisting with substantial finite-time growth.
-:numref:`fig_mdl-la-transient-growth` draws the whole story: on a log scale
-the two norm curves share the same asymptotic slope — that is the common
-spectral radius — but only after the non-normal matrix has climbed through a
-ten-fold excursion that eigenvalues alone gave no hint of.
+:numref:`fig_mdl-la-transient-growth` compares the two cases. On a logarithmic
+scale, the norm curves eventually have the same slope, as implied by their
+common spectral radius. Before reaching that regime, the non-normal matrix
+amplifies its input by about a factor of ten, behavior not determined by its
+eigenvalues alone.
 
 ![Two matrices with identical eigenvalues, radically different finite-time behavior. Left: the spectral norm of the powers of the non-normal matrix climbs by an order of magnitude before the asymptotic decay — the same log-slope as its normal twin — takes over. Right: the reason, seen through pseudospectra; perturbations of size $\varepsilon$ can move the non-normal matrix's eigenvalues far outside the unit circle, while the normal matrix's stay in tight disks.](../img/mdl-la-transient-growth.svg)
 :label:`fig_mdl-la-transient-growth`
@@ -736,8 +727,8 @@ $$
 
 Even if every factor has eigenvalues inside the unit circle, the factors need
 not share eigenvectors and their expanding singular directions can rotate into
-one another. There is therefore no rule that obtains the product's norm by
-multiplying the factors' spectral radii. Singular values give finite-horizon
+one another. The product's norm therefore cannot be obtained by multiplying
+the factors' spectral radii. Singular values give finite-horizon
 bounds,
 $\|\mathbf J_T\cdots\mathbf J_1\|_2\le\prod_t\sigma_{\max}(\mathbf J_t)$;
 long-run average logarithmic growth is summarized by **Lyapunov exponents**.
@@ -753,7 +744,7 @@ changing maps.
 
 Shears and rotations tell us what can go wrong. We now restrict attention to
 the family of matrices for which a full set of orthonormal eigenvectors is
-*guaranteed*. The most commonly encountered such family are the
+*guaranteed*. The most commonly encountered are the
 *symmetric matrices*, those with $\mathbf{A}=\mathbf{A}^\top$. Their guarantee has
 a name.
 
@@ -805,7 +796,7 @@ $\lambda\neq\mu$, we conclude $\langle\mathbf{u},\mathbf{v}\rangle=0$: the
 eigenvectors are orthogonal. $\blacksquare$
 
 **Proof, part (iii): a full orthonormal basis (induction on the orthogonal complement).** We induct on
-$n$. For $n=1$ the claim is trivial. For $n>1$, part (i) gives a real eigenpair
+$n$. For $n=1$ the claim follows directly. For $n>1$, part (i) gives a real eigenpair
 $(\lambda_1,\mathbf{w}_1)$ with $\|\mathbf{w}_1\|=1$. Let
 $U=\mathbf{w}_1^{\perp}$ be its orthogonal complement (dimension $n-1$). This
 subspace is *$\mathbf{A}$-invariant*: for any $\mathbf{x}\in U$,
@@ -838,12 +829,13 @@ coordinate axes, $\boldsymbol{\Lambda}$ stretches independently along each axis,
 and $\mathbf{W}$ rotates back. This is precisely the "circle becomes an ellipse
 with axes along the eigenvectors" picture we drew above, now justified.
 
-The defective shear :eqref:`eq_mdl-defective-shear` shows that the
-eigendecomposition is *picky*: it needs a square matrix, and to be fully
-well-behaved it really wants a symmetric one. The fix that works for *every*
-matrix $\mathbf{A}$ rests on a single observation we will use repeatedly: the
-matrix $\mathbf{A}^\top\mathbf{A}$ is always **symmetric** ($(\mathbf A^\top\mathbf
-A)^\top=\mathbf A^\top\mathbf A$) and **positive semidefinite**, because
+The defective shear :eqref:`eq_mdl-defective-shear` also shows the limits of
+eigendecomposition: it applies only to square matrices, and a general square
+matrix need not have an eigenbasis. The singular value decomposition avoids
+both restrictions by applying the spectral theorem to
+$\mathbf{A}^\top\mathbf{A}$. This matrix is always **symmetric**
+($(\mathbf A^\top\mathbf A)^\top=\mathbf A^\top\mathbf A$) and **positive
+semidefinite**, because
 
 $$
 \mathbf{x}^\top(\mathbf{A}^\top\mathbf{A})\mathbf{x} = \|\mathbf{A}\mathbf{x}\|^2 \ge 0 .
@@ -851,13 +843,12 @@ $$
 
 The spectral theorem therefore applies to $\mathbf{A}^\top\mathbf{A}$, and feeding
 its orthonormal eigenvectors and (non-negative) eigenvalues through $\mathbf{A}$
-manufactures the singular value decomposition
-$\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$: in short, **the SVD is
-the eigendecomposition of $\mathbf{A}^\top\mathbf{A}$ in disguise**, with singular
-values $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$. We carry out the
-construction, and give the defective shear its SVD, in
-:numref:`sec_mdl-svd-low-rank`. Positive semidefiniteness, the property doing
-the work here, is what we take up next.
+yields the singular value decomposition
+$\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$, with singular values
+$\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$. We derive this
+construction and compute the SVD of the defective shear in
+:numref:`sec_mdl-svd-low-rank`. We first study positive semidefiniteness, the
+property that guarantees the eigenvalues are non-negative.
 
 ### Positive (Semi)Definiteness
 :label:`subsec_mdl-psd`
@@ -889,7 +880,7 @@ $$
 **Proof.** Use the spectral theorem
 $\mathbf{A}=\mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^\top$ and the change of
 variables $\mathbf{y}=\mathbf{W}^\top\mathbf{x}$. Since $\mathbf{W}$ is
-orthogonal this is just a rotation, and
+orthogonal this is a rotation, and
 
 $$
 \mathbf{x}^\top\mathbf{A}\mathbf{x}
@@ -936,8 +927,9 @@ $\mathbf{A}=\mathbf{L}\mathbf{L}^\top$ for a lower-triangular $\mathbf{L}$ with
 positive diagonal (one direction is immediate: such an $\mathbf{L}$ is
 invertible, so
 $\mathbf{x}^\top\mathbf{A}\mathbf{x}=\|\mathbf{L}^\top\mathbf{x}\|^2>0$ for
-$\mathbf{x}\neq\mathbf 0$). Attempting the factorization, far cheaper than an
-eigendecomposition, is the standard numerical test for definiteness. The same
+$\mathbf{x}\neq\mathbf 0$). Attempting the factorization is the standard
+numerical test for definiteness, and it is far cheaper than an
+eigendecomposition. The same
 factorization is how multivariate Gaussians are sampled, an application we
 develop in :numref:`sec_mdl-distributions`.
 
@@ -1002,9 +994,8 @@ $\lambda_n\le R(\mathbf x)\le\lambda_1$; the bounds are achieved by putting all
 weight on a single coordinate, i.e. $\mathbf x=\mathbf w_1$ or
 $\mathbf x=\mathbf w_n$. $\blacksquare$
 
-The proposition is easy to *watch*: sweep a unit vector once around the circle,
-record $R(\mathbf{x})$ at each angle, and compare the extremes of the sweep to
-the eigenvalues.
+The following example sweeps a unit vector around the circle, records
+$R(\mathbf{x})$ at each angle, and compares the extrema with the eigenvalues.
 
 ```{.python .input #mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches}
 A = np.array([[3., 1.], [1., 2.]])
@@ -1053,7 +1044,7 @@ $\mathcal{D}_i$ be the disc in the complex plane centered at $a_{ii}$ with radiu
 $r_i$. Then every eigenvalue of $\mathbf{A}$ lies in the union
 $\bigcup_i\mathcal{D}_i$.*
 
-**Proof (one line, once you spot the trick).** Let
+**Proof.** Let
 $\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$ with $\mathbf{v}\neq\mathbf 0$, and pick
 the index $i$ of the entry of *largest magnitude*, so $|v_i|\ge|v_j|$ for all
 $j$ (and $v_i\neq0$). Reading off row $i$ of $\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$,
@@ -1083,8 +1074,7 @@ definite, hence invertible (:numref:`subsec_mdl-psd`). Localization thus gives a
 no-computation proof of invertibility, which is exactly the property one needs to
 guarantee numerical solvers will succeed.
 
-Let's look at an example.
-Consider the matrix:
+Consider the matrix
 
 $$
 \mathbf{A} = \begin{bmatrix}
@@ -1108,8 +1098,8 @@ $$[a_{33}-r_3, a_{33}+r_3] = [4.2, 5.8], $$
 $$[a_{44}-r_4, a_{44}+r_4] = [8.1, 9.9]. $$
 
 
-Performing the numerical computation shows
-that the eigenvalues are approximately $0.99$, $2.97$, $4.95$, $9.08$,
+Numerical computation gives eigenvalues of approximately $0.99$, $2.97$,
+$4.95$, and $9.08$,
 all comfortably inside the ranges provided.
 
 ```{.python .input #eigendecomposition-gershgorin-circle-theorem}
@@ -1130,42 +1120,30 @@ landing inside its disc.
 ![The four Gershgorin discs for the matrix above, centered at the diagonal entries with radii the off-diagonal row sums. The true eigenvalues (crosses) each land inside a disc, exactly as the theorem guarantees.](../img/mdl-la-gershgorin.svg)
 :label:`fig_mdl-la-gershgorin`
 
-In this way, eigenvalues can be approximated,
-and the approximations will be fairly accurate
-when the diagonal is
-significantly larger than all the other elements.
+The discs localize the eigenvalues most tightly when the diagonal entries
+dominate the off-diagonal entries.
 
 ### Power Iteration
 
-Now that we understand what eigenvectors are in principle,
-let's see how they can be used to provide a deep understanding
-of a problem central to neural network behavior: proper weight initialization.
+We next use eigenvectors to analyze a simplified version of weight
+initialization in neural networks.
 
-The full mathematical investigation of the initialization
-of deep neural networks is beyond the scope of the text,
-but we can see a toy version here to understand
-how eigenvalues can help us see how these models work.
-As we know, neural networks operate by interspersing layers
-of linear transformations with non-linear operations.
-For simplicity here, we will assume that there is no non-linearity,
-and that the transformation is a single repeated matrix operation $A$,
+Complete initialization theory is beyond the scope of this chapter, so we
+consider a linear model. Neural networks alternate linear transformations and
+nonlinear operations. Here we omit the nonlinearities and repeatedly apply the
+matrix $A$, written below as $\mathbf{A}$,
 so that the output of our model is
 
 $$
 \mathbf{v}_{out} = \mathbf{A}\cdot \mathbf{A}\cdots \mathbf{A} \mathbf{v}_{in} = \mathbf{A}^N \mathbf{v}_{in}.
 $$
 
-For context, let's think of a generic ML problem, where we turn input data, like
-an image, into a prediction, like the probability the image is a picture of a
-cat. If repeated application of $\mathbf{A}$ stretches a random vector out to be
-very long, then small changes in input will be amplified into large changes in
-output: tiny modifications of the input image would lead to vastly different
-predictions. On the flip side, if $\mathbf{A}$ shrinks random vectors, then after
-many layers the vector shrinks to nothing and the output stops depending on the
-input. We need to walk the narrow line between growth and decay. What governs
-which happens? Repeatedly multiplying a random vector by $\mathbf{A}$ and tracking
-its norm reveals that the *ratio of consecutive norms* stabilizes, and the
-eigendecomposition tells us exactly what it stabilizes to.
+In a prediction problem, excessive growth under repeated application of
+$\mathbf{A}$ amplifies small input perturbations, whereas excessive decay
+causes the output to lose dependence on the input. Repeatedly multiplying a
+random vector by $\mathbf{A}$ and tracking its norm reveals that the *ratio of
+consecutive norms* stabilizes under the conditions below. The
+eigendecomposition identifies its limit.
 
 Suppose $\mathbf{A}$ is diagonalizable with a *strictly dominant* eigenvalue,
 $|\lambda_1|>|\lambda_2|\ge\cdots\ge|\lambda_n|$, and eigenvectors
@@ -1197,7 +1175,7 @@ $\mathbf{w}_1$, their *direction* gap closing at the rate
 $|\lambda_2/\lambda_1|=\tfrac{3-\sqrt5}{2}\approx0.382$, while the norm ratio
 flattens to $\lambda_1$ even faster, at the squared rate
 $(\lambda_2/\lambda_1)^2\approx0.146$, because for a symmetric matrix the
-eigenvectors are orthogonal, so the norm is insensitive, to first order, to the
+eigenvectors are orthogonal, so to first order the norm is insensitive to the
 remaining misalignment.
 
 ![Power iteration on the symmetric $\mathbf{B}=\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right)$. Left: the renormalized iterates (lightening arrows) swing onto the principal eigenvector $\mathbf{w}_1$ (orange), the direction gap closing at rate $|\lambda_2/\lambda_1|\approx0.382$. Right: the ratio of consecutive norms converges to $\lambda_1\approx3.618$, its gap closing at the squared rate $(\lambda_2/\lambda_1)^2\approx0.146$.](../img/mdl-la-power-iter.svg)
@@ -1216,9 +1194,9 @@ $\|\mathbf{A}^{k}\mathbf{v}\|^{1/k}\to\max_i|\lambda_i|$. The random matrix in
 the demonstration below happens to draw a real, strictly dominant eigenvalue, so
 even the simple ratio settles.
 
-The payoff is a one-line numerical fact: run a couple hundred iterations on a random
-$5\times5$ matrix, read off the stabilized norm ratio, and compare it to the
-largest eigenvalue modulus. They agree.
+The following numerical example runs 200 iterations on a random $5\times5$
+matrix and compares the stabilized norm ratio with the largest eigenvalue
+modulus.
 
 ```{.python .input #eigendecomposition-power-iteration}
 import numpy as onp
@@ -1245,9 +1223,9 @@ eigenvalue modulus, which we examine next.
 
 #### Aside: PageRank and the Perron--Frobenius Theorem
 
-For an important class of matrices, power iteration is also the algorithm of
-choice for *computing* the dominant eigenvector, and that eigenvector is often
-the whole point. The **Perron--Frobenius theorem** :cite:`Horn.Johnson.2012`
+For non-negative matrices, power iteration is also the algorithm of choice for
+*computing* the dominant eigenvector, and that eigenvector is often the target.
+The **Perron--Frobenius theorem** :cite:`Horn.Johnson.2012`
 says that a matrix with non-negative entries (and a mild connectivity
 condition, *irreducibility*: from every state you can reach every other) has a
 real, positive dominant eigenvalue whose eigenvector can be chosen with all
@@ -1343,9 +1321,9 @@ the *null hypothesis* of spectral data analysis: an eigenvalue inside it is
 indistinguishable from sampling noise, and only eigenvalues that escape *above*
 the bulk edge testify to real structure (the calibration behind the
 singular-value threshold of :numref:`subsec_mdl-eckart-young`). It is also the
-baseline against which the heavy-tailed spectra of *trained* weight matrices,
-which spill far outside any Marchenko--Pastur bulk, are read as evidence of
-learned correlation in :numref:`sec_mdl-svd-low-rank`.
+baseline for the heavy-tailed spectra of *trained* weight matrices, which
+spill far outside any Marchenko--Pastur bulk; :numref:`sec_mdl-svd-low-rank`
+reads that excess as evidence of learned correlation.
 
 The iterated map is exactly what a recurrent network runs. It computes a hidden state
 $\mathbf{h}_t=\phi(\mathbf{W}\mathbf{h}_{t-1}+\cdots)$ by applying (almost) the
@@ -1431,7 +1409,7 @@ $$
 0 & 2
 \end{bmatrix}.
 $$
-1. Without computing the eigenvalues, is it possible that the smallest eigenvalue of the following matrix is less than $0.5$? *Note*: this problem can be done in your head.
+1. Without computing the eigenvalues, determine whether the smallest eigenvalue of the following matrix can be less than $0.5$. Use a bound rather than explicit computation.
 $$
 \mathbf{A} = \begin{bmatrix}
 3.0 & 0.1 & 0.3 & 1.0 \\
@@ -1452,7 +1430,7 @@ $\begin{bmatrix}1&1\\1&1\end{bmatrix}$.
 1. Using $\det\mathbf{A}=\prod_i\lambda_i$ and
    $\operatorname{tr}\mathbf{A}=\sum_i\lambda_i$, find both eigenvalues of
    $\begin{bmatrix}4&1\\1&4\end{bmatrix}$ without forming the characteristic
-   polynomial directly. (*Hint:* you know their sum and product.)
+   polynomial directly. (*Hint:* their sum and product are known.)
 1. Verify the Rayleigh-quotient bounds for
    $\mathbf{A}=\begin{bmatrix}3&1\\1&2\end{bmatrix}$: compute
    $\mathbf{x}^\top\mathbf{A}\mathbf{x}/\mathbf{x}^\top\mathbf{x}$ for several unit
@@ -1495,7 +1473,7 @@ The directions a matrix only *stretches*<br>**eigenvalues, the spectral theorem,
 :::
 :::
 
-::: {.slide title="Why eigenvalues?"}
+::: {.slide title="Eigenvalues and Iterated Linear Maps"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -1598,7 +1576,7 @@ $$\mathbf{A} = \mathbf{W}\boldsymbol{\Lambda}\mathbf{W}^{-1}.$$
 
 . . .
 
-Powers become trivial because the inner factors telescope:
+Powers reduce to scalar powers because the inner factors telescope:
 
 $$\mathbf{A}^n = \mathbf{W}\boldsymbol{\Lambda}^n\mathbf{W}^{-1}
 \quad\Longrightarrow\quad \text{just raise each } \lambda_i \text{ to the } n.$$
@@ -1645,7 +1623,7 @@ carries to itself. **Defective**: there is no second eigendirection to find.
 :::
 :::
 
-::: {.slide title="What remains without an eigenbasis"}
+::: {.slide title="Matrices Without an Eigenbasis"}
 [The objects]{.kicker}
 
 Over $\mathbb{C}$, every square matrix is similar to a block-diagonal matrix of
@@ -1741,7 +1719,7 @@ builds the **SVD** for *every* matrix.
 :::
 :::
 
-::: {.slide title="The sign of λ is the shape"}
+::: {.slide title="Eigenvalue Signs and Quadratic Forms"}
 [Symmetry]{.kicker}
 
 Rotating $\mathbf{x}$ into the eigenbasis turns the quadratic form into a
@@ -1779,8 +1757,8 @@ with the extremes hit at $\mathbf{w}_1$ and $\mathbf{w}_n$.
 
 . . .
 
-Sweep a unit vector once around the circle and watch: the extremes of $R$
-land on `eigvalsh` to the grid's resolution, at exactly the eigenvector angles:
+Sweeping a unit vector around the circle shows that the extrema of $R$
+match `eigvalsh` to the grid's resolution and occur at the eigenvector angles:
 
 @!mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches
 
@@ -1840,7 +1818,7 @@ Every ratio $|\lambda_i/\lambda_1|<1$, so the tail decays: the iterate
 aligns with $\mathbf{w}_1$ and the norm grows like $|\lambda_1|^k$.
 :::
 
-::: {.slide title="Power iteration, watched"}
+::: {.slide title="Convergence of Power Iteration"}
 [Dynamics]{.kicker}
 
 The direction gap closes at rate $|\lambda_2/\lambda_1|$; the norm ratio
@@ -1849,7 +1827,7 @@ settles onto $\lambda_1$ even faster:
 @fig:mdl-la-power-iter
 :::
 
-::: {.slide title="Power iteration, to ten decimals"}
+::: {.slide title="Numerical Accuracy of Power Iteration"}
 [Dynamics]{.kicker}
 
 On a random $5\times5$ matrix, the stabilized norm ratio matches
@@ -1858,7 +1836,7 @@ $\max_i|\lambda_i|$ to ten decimal places:
 @eigendecomposition-power-iteration
 :::
 
-::: {.slide title="Power iteration runs the web"}
+::: {.slide title="Large-Scale Applications of Power Iteration"}
 [Dynamics]{.kicker}
 
 **PageRank** is a dominant eigenvector. The fraction of time a random surfer
@@ -1883,7 +1861,7 @@ iteration converges fast.
 :::
 :::
 
-::: {.slide title="Pure noise has a spectrum too"}
+::: {.slide title="Spectra of Random Matrices"}
 [Random matrices]{.kicker}
 
 Form the sample covariance of **pure noise**: $n$ samples of $d$ independent
@@ -1906,12 +1884,12 @@ escape *above* the edge testify to structure. That is the principled answer to
 :::
 
 ::: {.slide title="Spectral radius & deep networks"}
-[The payoff]{.kicker}
+[Applications]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 The single number governing iterated maps is the **spectral radius**
-$\rho(\mathbf{A})=\max_i|\lambda_i|$, the stretch we just measured.
+$\rho(\mathbf{A})=\max_i|\lambda_i|$, the asymptotic growth factor measured above.
 
 - Backprop-through-time multiplies per-step Jacobians: the gradient scales
   like $\rho^{T}$.
@@ -1930,7 +1908,7 @@ clipping, and LSTM/GRU gating.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Eigenstructure governs repeated square maps"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

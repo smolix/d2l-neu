@@ -1,18 +1,13 @@
 # The Performance Model
 :label:`sec_perf_model`
 
-Run one matrix multiplication at two sizes on the same GPU and time it
-honestly, and you will find that the hardware delivers wildly different
-fractions of its advertised speed: a small multiplication achieves a
-percent or less of the chip's peak, a large one comes close to the
-specification sheet. Same silicon, same operation, same library — a
-difference of roughly two orders of magnitude in *achieved* arithmetic
-throughput. This section
-exists to explain that plot, and to turn the explanation into a working
-method.
+Run one matrix multiplication at two sizes on the same GPU with correct
+synchronization, and the hardware can deliver very different fractions of
+its advertised speed. A small multiplication may achieve one percent of
+peak throughput, whereas a large one can approach the specification. This
+section explains the difference and develops a method for diagnosing it.
 
-The method has four steps, and the rest of this chapter is the method,
-applied: **measure** what your program actually does; **classify** which of
+The method has four steps: **measure** what the program does; **classify** which of
 three resources binds it — arithmetic, memory bandwidth, or per-operation
 overhead; **fix** the binding constraint with the matching technique; then
 **re-measure**, because the fix moves the bottleneck somewhere else. Every
@@ -24,10 +19,10 @@ precision for speed; :numref:`sec_multi_gpu` and
 :numref:`sec_multi_gpu_concise` add devices;
 :numref:`sec_fast_transformer` runs the whole loop on a real Transformer.
 
-Two ideas carry the section. The first is *arithmetic intensity*: how many
+The analysis uses two quantities. The first is *arithmetic intensity*: how many
 floating-point operations a computation performs per byte it moves to and
-from memory. Intensity, compared against a single machine-dependent
-threshold, predicts which regime an operation lands in — before you run
+from memory. Compared against a single machine-dependent threshold,
+intensity predicts which regime an operation lands in — before you run
 anything. The second is that *timing a GPU is easy to get wrong*: the
 frameworks dispatch work asynchronously, so a naive timer measures how fast
 Python can enqueue work, not how fast the GPU can do it. We build the
@@ -90,7 +85,7 @@ $$
 \;\approx\; \frac{2B}{b} \quad \textrm{for } B \ll D, F.
 $$
 
-The approximation is worth memorizing: for a skinny batch pushed through a
+The approximation has a direct scaling consequence: for a skinny batch pushed through a
 wide layer, **intensity grows linearly with the batch size**, because each
 weight fetched from memory is reused across every row of the batch. A
 batch of one reuses nothing — each weight is fetched, used once, and
@@ -103,8 +98,8 @@ performs one FLOP per element while moving $2b$ bytes (read $x_i$, write
 $y_i$), an intensity of $1/(2b)$ — a fraction of a FLOP per byte, no matter
 how large the tensor.
 
-The *roofline model* :cite:`Williams.Waterman.Patterson.2009` turns
-intensity into a performance prediction with one line of arithmetic. An
+The *roofline model* :cite:`Williams.Waterman.Patterson.2009` converts
+arithmetic intensity into an upper bound. An
 operation with intensity $I$ running on a machine with peak compute $P$
 (FLOP/s) and memory bandwidth $\beta$ (bytes/s) can attain at most
 
@@ -113,19 +108,16 @@ $$
 $$
 :eqlabel:`eq_roofline`
 
-Plotted on log–log axes (:numref:`fig_roofline`), the bound is a sloped
-"bandwidth wall" that rises with intensity until it hits the flat "compute
-roof". The corner where they meet is the **ridge point** $I^* = P/\beta$:
+Plotted on log–log axes (:numref:`fig_roofline`), the bandwidth bound rises
+with intensity until it meets the flat compute roof. The intersection is the
+**ridge point** $I^* = P/\beta$:
 operations with intensity below $I^*$ are *bandwidth-bound* — the memory
-system cannot feed the arithmetic units fast enough, and extra arithmetic
-hides under the memory time; operations above it are *compute-bound* — the
+system cannot feed the arithmetic units fast enough. Additional arithmetic
+does not increase elapsed time while memory
+traffic remains limiting; operations above it are *compute-bound* — the
 arithmetic units are saturated, and moving fewer bytes would not help.
 
-![The roofline model, drawn with our build GPU's numbers. Attainable
-throughput is the minimum of the bandwidth wall (slope = memory bandwidth)
-and the compute roof. An elementwise operation lives far down the slope; a
-large matrix multiplication reaches the roof. The ridge point — about 165
-FLOP/byte here — separates the two regimes.](../img/mdl-perf-roofline.svg)
+![Roofline bound using the build GPU's peak compute and memory bandwidth. Attainable throughput is bounded by the smaller of peak compute and arithmetic intensity times bandwidth. The ridge point is about 165 FLOP/byte for this device; operations below it are bandwidth-bound in the model.](../img/mdl-perf-roofline.svg)
 :label:`fig_roofline`
 
 Let's compute the ridge point for the card this book is built on. Peak
@@ -158,16 +150,18 @@ what a neural network does naturally reaches that ratio — which is why
 the rest of this chapter is mostly about bytes, not FLOPs. For the square
 matmul above ($B = D = F = n$, bf16), intensity is $n/3$: *in principle*,
 sizes beyond $n \approx 500$ stop being bandwidth-limited. The measured
-sweep below will show that this number is only half the story.
+sweep below shows that occupancy and launch overhead also
+determine the crossover.
 :numref:`sec_hardware` explains where $P$ and $\beta$ come from
 physically, and why their ratio has climbed, over the long run, from one
 hardware generation to the next.
 
-## Measuring Without Lying
+## Correct GPU Timing
 :label:`subsec_perf-measuring`
 
-Before we can map our GPU against the roofline, we must be able to time it —
-and the obvious way is wrong. Deep learning frameworks dispatch GPU work
+Mapping a GPU against the roofline requires synchronized timing. Timing only
+the asynchronous Python call underestimates execution time. Deep learning
+frameworks dispatch GPU work
 *asynchronously*: when Python executes a tensor operation, the framework
 enqueues a kernel on the device and returns immediately, long before the
 arithmetic happens. Python then races ahead and enqueues more work while
@@ -376,11 +370,11 @@ callable must return what it computes — pure functions returning their
 results is JAX's house style anyway, and :numref:`sec_compilation` will
 make that convention load-bearing.
 
-## The Sweep: Mapping Our GPU
+## Throughput across Matrix Sizes
 :label:`subsec_perf-sweep`
 
-Armed with a synchronized timer, we can produce the plot this section
-opened with: achieved TFLOP/s as a function of matrix size, against the
+A synchronized timer lets us measure the quantity introduced at the start
+of this section: achieved TFLOP/s as a function of matrix size, against the
 roofline's bound. A square bf16 matmul at size $n$ performs $2n^3$ FLOPs;
 its intensity $n/3$ crosses our card's ridge point near $n \approx 500$,
 so the *ceiling* of :eqref:`eq_roofline` rises for small $n$ and flattens
@@ -415,8 +409,8 @@ d2l.plot(sizes, [achieved], 'matrix size $n$', 'achieved TFLOP/s',
 print([f'{n}: {tf:.1f}' for n, tf in zip(sizes, achieved)])
 ```
 
-The JAX tab shows off a genuinely elegant tool: instead of writing the
-$2n^3$ formula by hand, it asks the compiler. Ahead-of-time lowering
+The JAX tab obtains the operation count from the compiler rather than
+substituting the $2n^3$ formula. Ahead-of-time lowering
 (`jit(...).lower(...).compile()`) produces a compiled object whose
 `cost_analysis()` reports the exact analytic FLOP count of the program —
 no execution, no estimation. We will lean on this introspection again in
@@ -429,15 +423,15 @@ per-kernel overhead (a few microseconds to launch work at all — see
 :numref:`sec_hardware`) rivals the arithmetic. More telling is $n = 512$.
 Its nominal intensity ($\approx 171$) already sits *above* the ridge
 point, so the intensity model alone declares it compute-bound — yet the
-card delivers a tenth of peak or less. A $512^2$ output is simply too
+card delivers a tenth of peak or less. A $512^2$ output provides too
 little work to fill 128 streaming multiprocessors, and the launch
 overhead has not yet been amortized away. Through the middle sizes
-throughput therefore climbs steeply — a single doubling of $n$ can buy
+throughput therefore climbs steeply — a single doubling of $n$ can yield
 several times the TFLOP/s — and the curve approaches the specification
 number only around $n \approx 2048$–$4096$, where the tensor cores
 finally saturate and the operation is compute-bound in fact as well as on
-paper. The gap between the nominal crossover ($n \approx 500$) and the
-measured knee ($n \approx 2048$–$4096$, depending on the framework) is
+paper. The nominal crossover sits at $n \approx 500$, the measured knee
+at $n \approx 2048$–$4096$ depending on the framework, and that gap is
 not a failure of the model; it *is*
 a lesson: intensity tells you when an operation stops being
 bandwidth-limited in principle, while utilization and overhead decide how
@@ -447,9 +441,8 @@ what the profiler below is for.
 ## Three Regimes
 :label:`subsec_perf-regimes`
 
-The sweep exposed all three ways a GPU program spends its time, and they
-are worth naming precisely, because the *fix depends on the diagnosis*
-:cite:`He.2022`. A step of any workload divides its wall-clock time among
+The sweep distinguishes three performance regimes. Each regime requires a
+different optimization :cite:`He.2022`. A step of any workload divides its wall-clock time among
 arithmetic, memory traffic, and idle gaps where the device waits for
 Python; whichever dominates names the regime
 (:numref:`fig_regimes`).
@@ -459,28 +452,28 @@ fix applies; misdiagnosing wastes effort — more FLOP/s cannot help a
 bandwidth-bound program.](../img/mdl-perf-regimes.svg)
 :label:`fig_regimes`
 
-**Compute-bound** — the arithmetic units are the constraint. This is the
-regime you *want*: the silicon is earning its price. The remaining levers
-are to buy the arithmetic more cheaply — a lower-precision format doubles
-throughput per halving (:numref:`sec_hardware`,
-:numref:`sec_memory_precision`) — or to buy more silicon
-(:numref:`sec_multi_gpu`).
+**Compute-bound** — arithmetic throughput is the limiting resource.
+Lower-precision formats may raise the applicable compute ceiling
+(:numref:`sec_hardware`, :numref:`sec_memory_precision`), while additional
+devices increase aggregate compute only when the parallel workload can
+use them (:numref:`sec_multi_gpu`).
 
-**Bandwidth-bound** — intensity below the ridge; the compute units starve
-while memory serves bytes. The fix is to *move fewer bytes*: fuse chains
+**Bandwidth-bound** — intensity below the ridge; the compute units remain
+idle while waiting for memory. The fix is to *move fewer bytes*: fuse chains
 of operations so intermediate results never make the round trip to memory
 (:numref:`sec_compilation`), recompute rather than store
 (:numref:`sec_memory_precision`), or restructure the algorithm for reuse —
-the FlashAttention kernel of :numref:`sec_attention-at-scale` is this fix,
-executed by hand at world-class level.
+the FlashAttention kernel of :numref:`sec_attention-at-scale` applies this
+restructuring in a specialized implementation.
 
 **Overhead-bound** — the device finishes each kernel before Python can
 supply the next one; the GPU is idle most of the time. Small models with
-many small layers live here. The fix is to get Python out of the loop:
+many small layers lie in this regime. The corresponding optimization
+removes Python from the launch loop:
 capture the whole graph once and replay it without the interpreter
 (:numref:`sec_compilation`).
 
-Here is a bandwidth-bound specimen, and a first taste of diagnosis. Take
+A large elementwise operation provides a bandwidth-bound example. Take
 one large tensor and apply single elementwise kernels of wildly different
 arithmetic cost — an add, a multiply, and a transcendental:
 
@@ -507,9 +500,9 @@ each kernel's cost is set by the 128 MB it reads and writes, not by what
 it computes on the way through. (In the PyTorch tab the four times are
 all but identical; where they scatter, as in the JAX tab, the spread is
 per-dispatch overhead on these un-jitted calls — a preview of the third
-regime — not the arithmetic.) While bandwidth binds,
-extra arithmetic hides under the memory time — the definition of
-bandwidth-bound. Now chain a few of these operations, the way any
+regime — not the arithmetic.) While bandwidth is limiting, the added arithmetic
+does not increase elapsed time. This is the defining behavior of a
+bandwidth-bound operation. Now chain a few of these operations, as in any
 activation function or normalization layer does:
 
 ```{.python .input #performance-model-three-regimes-2}
@@ -538,12 +531,11 @@ The chain performs a handful of cheap operations, but eager execution runs
 each as its own kernel, and each kernel pays the full memory round trip —
 so the chain costs roughly as many round trips as it has operations,
 despite computing one output from one input. The diagnosis is complete:
-bandwidth-bound, with a factor-of-several overpayment in bytes. We could
-cure it right now by hand-writing one fused kernel; instead we deliberately
-leave it bleeding. :numref:`sec_compilation` will cure it with one line,
-and explain what the compiler saw.
+bandwidth-bound, with several redundant memory round trips.
+:numref:`sec_compilation` shows how compiler fusion replaces the sequence
+with one kernel and verifies both numerical agreement and reduced time.
 
-## The Profiler
+## Profiling Complete Programs
 :label:`subsec_perf-profiler`
 
 Intensity arithmetic classifies a single operation; real training steps mix
@@ -672,7 +664,7 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
 <!-- slides -->
 
 ::: {.slide title="Same Chip, Two Orders of Magnitude Apart"}
-One kernel — a square matmul — timed honestly at two sizes on
+One square matrix multiplication, synchronized and timed at two sizes on
 the same GPU delivers a percent or so of peak at one size and
 nearly the full specification number at the other.
 
@@ -706,7 +698,7 @@ fetched** just to break even. Almost nothing you write naturally
 gets there. Performance work is mostly about bytes.
 :::
 
-::: {.slide title="Timing GPUs: the Trap"}
+::: {.slide title="Correct GPU Timing"}
 Dispatch is asynchronous — Python enqueues, the GPU runs behind.
 
 ![](../img/mdl-perf-async-timeline.svg){width=90%}
@@ -726,20 +718,20 @@ Rule: synchronize once per minibatch at most — and only when the
 host actually needs the value.
 :::
 
-::: {.slide title="A Benchmark That Does Not Lie"}
+::: {.slide title="Synchronized Benchmarking"}
 Warmup (kernel selection, compilation), sync, time, sync:
 
 @performance-model-measuring-without-lying-3
 :::
 
-::: {.slide title="The Sweep: One Kernel, Three Regimes"}
+::: {.slide title="One Kernel across Three Regimes"}
 @performance-model-the-sweep-mapping-our-gpu
 
 . . .
 
-Tiny: overhead-bound (launches rival arithmetic). Middle: a steep
-climb while the kernel learns to fill 128 SMs. Large: flat at the
-roof — compute-bound. The roofline is the *ceiling*; the
+Small matrices are overhead-bound because launch time rivals arithmetic.
+Intermediate matrices use an increasing fraction of the 128 SMs. Large
+matrices approach the compute roof. The roofline is the *ceiling*; the
 measured knee (~2048–4096) sits well past the nominal crossover (~500) —
 that gap is utilization and overhead.
 :::
@@ -749,14 +741,13 @@ that gap is utilization and overhead.
 
 @performance-model-three-regimes-1
 
-sin costs no more than add: below the ridge, **memory traffic sets
-the time and the arithmetic hides under it.**
+Below the ridge, sin and addition take similar time because **memory
+traffic, rather than arithmetic, determines elapsed time.**
 :::
 
 ::: {.slide title="The Method"}
-An unfused elementwise chain pays one memory round trip per op —
-we measured it, we diagnosed it, and we leave it bleeding until
-the compiler section cures it with one line.
+An unfused elementwise chain performs one memory round trip per operation.
+The compiler section measures how fusion removes the redundant traffic.
 
 **measure → classify → fix → re-measure**
 

@@ -59,13 +59,13 @@ Recall from :numref:`sec_depthwise_separable` that a depthwise-separable convolu
 
 ### The Inverted Bottleneck
 
-The bottleneck blocks of ResNet and ResNeXt (:numref:`subsec_resnext`) compress: a $1 \times 1$ convolution reduces a wide representation, the $3 \times 3$ convolution works in the narrow space, and a final $1 \times 1$ convolution expands it back. This is the right trade when the $3 \times 3$ convolution is dense and therefore expensive. Once the spatial convolution is depthwise, however, it is cheap even on wide tensors, and the economics reverse. MobileNetV2 :cite:`sandler2018mobilenetv2` therefore *inverts* the bottleneck: the residual stream stays thin, a $1 \times 1$ convolution expands it (by a factor of 6 in the paper), the depthwise $3 \times 3$ convolution operates in the wide expanded space, and a $1 \times 1$ projection returns to the thin stream. The projection is *linear*: no ReLU follows it, because a ReLU acting on a low-dimensional representation discards information that cannot be recovered, which the paper demonstrates by ablation. The residual connection joins the thin ends, so the tensors that must be kept in memory across blocks are the small ones. That matters on a phone, where activation memory rather than parameter storage is often the binding constraint.
+The bottleneck blocks of ResNet and ResNeXt (:numref:`subsec_resnext`) compress: a $1 \times 1$ convolution reduces a wide representation, the $3 \times 3$ convolution works in the narrow space, and a final $1 \times 1$ convolution expands it back. This is the right trade when the $3 \times 3$ convolution is dense and therefore expensive. Once the spatial convolution is depthwise, however, it is cheap even on wide tensors, and the economics reverse. MobileNetV2 :cite:`sandler2018mobilenetv2` therefore *inverts* the bottleneck: the residual stream stays thin, a $1 \times 1$ convolution expands it (by a factor of 6 in the paper), the depthwise $3 \times 3$ convolution operates in the wide expanded space, and a $1 \times 1$ projection returns to the thin stream. The projection is *linear*: no ReLU follows it, because a ReLU acting on a low-dimensional representation discards information that cannot be recovered; the paper demonstrates this by ablation. The residual connection joins the thin ends, so the tensors that must be kept in memory across blocks are the small ones. That matters on a phone, where activation memory rather than parameter storage is often the binding constraint.
 
 The inverted bottleneck outlived its mobile origins: ConvNeXt (:numref:`sec_convnext`) adopted the same shape for its blocks, with the depthwise convolution enlarged to $7 \times 7$ and moved to the front :cite:`liu2022convnet`. We will meet it again when we discuss design spaces in :numref:`sec_cnn-design`.
 
 ### A Mini-MobileNet
 
-Let's build a small MobileNetV1-style network for Fashion-MNIST. We use the original block rather than the inverted bottleneck: it is the clearest expression of the factorization, and at Fashion-MNIST scale the difference is negligible. Real mobile networks since MobileNetV2 use inverted bottlenecks throughout. The block below is the pair from :numref:`fig_dws_block`; a stride of 2 downsamples.
+We build a small MobileNetV1-style network for Fashion-MNIST. We use the original block rather than the inverted bottleneck: it is the clearest expression of the factorization, and at Fashion-MNIST scale the difference is negligible. Real mobile networks since MobileNetV2 use inverted bottlenecks throughout. The block below is the pair from :numref:`fig_dws_block`; a stride of 2 downsamples.
 
 ```{.python .input #efficient-convnets-a-mini-mobilenet-1}
 %%tab mxnet
@@ -509,7 +509,7 @@ from run to run.
 | VGG-style control | 583,594 | 384.9 million | ≈89.5% | ≈89.5% | ≈92.5% |
 
 The two models have comparable accuracy in this small experiment: every run
-of both architectures lands in a band of roughly 89–93%, and which of the
+of both architectures falls in a band of roughly 89–93%, and which of the
 two comes out ahead varies with the framework and the seed — a difference
 within run-to-run noise, on which no conclusion should be built. The stable
 result is computational. At this parameter budget the separable network
@@ -526,13 +526,16 @@ MobileNet fixes a block and picks channel counts by hand. Two further questions 
 
 EfficientNetV2 :cite:`tan2021efficientnetv2` revised both halves with training cost in the objective. The search rewards training speed alongside inference speed, and the resulting models replace the depthwise blocks in early, high-resolution stages with dense fused blocks: exactly where depthwise convolutions do too little arithmetic per byte of memory traffic to keep an accelerator busy. Training uses *progressive resizing*, starting on small images with weak regularization and growing both together, which shortens training severalfold at equal accuracy. FLOP counts favor depthwise convolutions everywhere; measured throughput does not, and the search follows the measurement.
 
-MobileNetV4 :cite:`qin2024mobilenetv4` pushed the same logic across hardware. Its *universal inverted bottleneck* generalizes the MobileNetV2 block with two optional depthwise convolutions, before the expansion and between expansion and projection; the choices recover the classic inverted bottleneck, a ConvNeXt-like block, a pure feedforward layer, and a new extra-depthwise variant as corners of one searchable space. Searched jointly with a mobile-friendly attention variant, the resulting family is close to Pareto-optimal not on one device but across phone CPUs, DSPs, GPUs, and neural accelerators, whose preferred operations differ. The design lesson of a decade of mobile convnets is that the *block* is a human insight, but the *allocation*, of width, depth, resolution, and block variant per stage, is better treated as an optimization problem against measured latency.
+MobileNetV4 :cite:`qin2024mobilenetv4` pushed the same logic across hardware. Its *universal inverted bottleneck* generalizes the MobileNetV2 block with two optional depthwise convolutions, before the expansion and between expansion and projection; the choices recover the classic inverted bottleneck, a ConvNeXt-like block, a pure feedforward layer, and a new extra-depthwise variant as corners of one searchable space. Searched jointly with a mobile-friendly attention variant, the resulting family is close to Pareto-optimal not on one device but across phone CPUs, DSPs, GPUs, and neural accelerators, whose preferred operations differ. The design lesson of a decade of mobile convnets is that the *block* is a human insight, but the *allocation* of width, depth, resolution, and block variant per stage is better treated as an optimization problem against measured latency.
 
 ## Structural Re-parameterization
 
 ### The RepVGG Block
 
-Multi-branch architectures train better than plain ones; that was the lesson of :numref:`sec_resnet`. At inference time, however, every branch must be computed and its output held in memory until the join, and the many small operations of a branchy block leave accelerator kernels underutilized. A plain stack of $3 \times 3$ convolutions, VGG-style, is the shape inference hardware likes best: one big, regular operation per layer, one activation tensor alive at a time. RepVGG :cite:`ding2021repvgg` obtains both. During training, each layer is a three-branch block, a $3 \times 3$ convolution, a $1 \times 1$ convolution, and an identity path, each with its own batch normalization, summed before the ReLU (:numref:`fig_repvgg_reparam`). For deployment, the three branches are *fused into a single $3 \times 3$ convolution* whose output is identical, not approximately but exactly, because everything involved is linear. The train-time network enjoys residual-style optimization; the deployed network is a plain convolution stack.
+Multi-branch architectures train better than plain ones; that was the lesson of :numref:`sec_resnet`. At inference time, however, every branch must be computed and its output held in memory until the join, and the many small operations of a branchy block leave accelerator kernels underutilized. A VGG-style stack of $3 \times 3$ convolutions maps efficiently to many
+inference accelerators: each layer uses one large, regular operation and
+requires one intermediate activation tensor at a time. RepVGG :cite:`ding2021repvgg` obtains both. During training, each layer is a three-branch block: a $3 \times 3$ convolution, a $1 \times 1$ convolution, and an identity path, each with its own batch normalization, summed before the ReLU (:numref:`fig_repvgg_reparam`). For deployment, the three branches are *fused into a single $3 \times 3$ convolution* whose output is identical, not approximately but exactly, because everything involved is linear. The train-time network retains residual-style paths, whereas the deployed
+network is a plain convolutional stack.
 
 ![Structural re-parameterization. At training time each RepVGG layer sums three branches, a $3 \times 3$ convolution, a $1 \times 1$ convolution, and an identity, each with batch normalization. For inference the branches are folded into one $3 \times 3$ convolution with a bias; the two networks compute the same function.](../img/arch-repvgg-reparam.svg)
 :label:`fig_repvgg_reparam`
@@ -774,7 +777,9 @@ The maximum difference is on the order of $10^{-6}$, single-precision roundoff: 
 
 ### From Paper to Product
 
-Deployment adds a constraint that the fusion algebra does not model. The fused kernel is a *sum* of branches whose scales, after folding batch normalization into them by :eqref:`eq_bn_fold`, can differ by orders of magnitude, so the summed weights and the activations they produce have wide, poorly centered distributions. Naive post-training INT8 quantization, which represents each tensor with 256 evenly spaced values, collapses on such distributions: a fused RepVGG drops from 75.1% to 40.2% top-1 accuracy on ImageNet, where a plain ResNet loses a fraction of a point. Quantization-aware re-parameterization variants restore the lost accuracy by constraining the branch statistics during training :cite:`chu2024qarepvgg`. The episode is a useful corrective to reading papers too literally: "mathematically identical" holds in FP32, and the real world quantizes.
+Deployment adds a constraint that the fusion algebra does not model. The fused kernel is a *sum* of branches whose scales, after folding batch normalization into them by :eqref:`eq_bn_fold`, can differ by orders of magnitude, so the summed weights and the activations they produce have wide, poorly centered distributions. Naive post-training INT8 quantization collapses on such distributions, since it represents each tensor with 256 evenly spaced values: a fused RepVGG drops from 75.1% to 40.2% top-1 accuracy on ImageNet, where a plain ResNet loses a fraction of a point. Quantization-aware re-parameterization variants restore the lost accuracy by constraining the branch statistics during training :cite:`chu2024qarepvgg`. This result distinguishes algebraic equivalence in floating-point arithmetic
+from behavior after quantization: an equivalent FP32 transformation need not
+preserve accuracy under a fixed INT8 quantization scheme.
 
 The idea has since appeared in deployment-oriented architectures. MobileOne
 :cite:`vasu2023mobileone` applies train-time over-parameterization to
@@ -785,16 +790,24 @@ branches that fold away also appear in large-kernel and hybrid architectures.
 
 ## Summary and Discussion
 
-Efficiency turned out to be a design axis of its own, with its own architectures and its own failure modes. Depthwise separability cuts the cost of convolution by roughly $k^2$ at small accuracy cost; the inverted bottleneck arranges the factorized operations so that the expensive tensors are also the transient ones; compound scaling and architecture search allocate a budget across width, depth, and resolution better than manual choice; and structural re-parameterization separates the network you train from the network you ship, connected by exact weight algebra. Twice in this section the correct accounting was memory traffic rather than arithmetic: EfficientNetV2 removed depthwise convolutions from early stages because they starve the accelerator, and RepVGG's whole premise is that fewer, larger operations beat more, smaller ones at equal FLOPs. Operation counts are a proxy, and hardware keeps score in its own currency.
+Efficiency is a separate design objective with its own architectures and
+failure modes. Depthwise separability reduces convolutional arithmetic; inverted
+bottlenecks arrange the factorized operations so that their largest tensors are
+transient; compound scaling and architecture search allocate computation across
+width, depth, and resolution; and structural re-parameterization uses different
+but algebraically equivalent graphs for training and deployment. Arithmetic
+alone is insufficient: EfficientNetV2 avoids depthwise convolutions in early
+stages because of memory traffic, and RepVGG obtains better hardware utilization
+from fewer, larger operations at similar FLOPs.
 
-As of 2026, deployment sorts by that currency. On the cheapest tier,
+As of 2026, deployment choices depend on these measured hardware costs. On the cheapest tier,
 microcontrollers and entry phones, plain depthwise convnets of the MobileNet
 lineage remain the only thing that fits. Flagship phones run
 convolution-attention hybrids such as FastViT and MobileNetV4 variants, using
 convolutions at high resolution and attention where the feature maps are
 small. Pure vision transformers appear where a dedicated neural accelerator
 and its memory budget can be assumed, and in the datacenter. Convnets did not
-lose the efficiency race; they are its incumbent, and the hybrid designs
+become irrelevant to efficient inference; they remain widely used, and hybrid designs
 concede exactly as much of the network to attention as the hardware can
 afford. How to navigate such trade-offs systematically, rather than
 architecture by architecture, is the subject of :numref:`sec_cnn-design`.
@@ -883,7 +896,7 @@ Once the 3×3 is depthwise, wide is cheap and MobileNetV2
 
 . . .
 
-The tensors alive across blocks are the thin ones, so activation
+The tensors retained across blocks are the narrow ones, so activation
 memory stays small. ConvNeXt reused this exact shape with a 7×7
 depthwise convolution.
 :::

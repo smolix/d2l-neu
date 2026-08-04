@@ -49,7 +49,7 @@ from d2l import jax as d2l
 import jax
 ```
 
-Hyperparameters.
+## Hyperparameter Utilities
 
 ```{.python .input #utils-utility-functions-and-classes-2}
 @d2l.add_to_class(d2l.HyperParameters)  #@save
@@ -64,7 +64,7 @@ def save_hyperparameters(self, ignore=None):
         setattr(self, k, v)
 ```
 
-Progress bar.
+## Progress and Plotting
 
 ```{.python .input #utils-utility-functions-and-classes-3  n=22}
 #@save
@@ -206,300 +206,77 @@ def flush(self):
     self._render(thread=False)
 ```
 
-Add FrozenLake environment
-```{.python .input #utils-utility-functions-and-classes-4}
-%%tab pytorch
+## Reinforcement Learning Visualizations
 
-def frozen_lake(seed): #@save
-    # See https://www.gymlibrary.dev/environments/toy_text/frozen_lake/ to learn more about this env
-    # How to process env.P.items is adapted from https://sites.google.com/view/deep-rl-bootcamp/labs
-    import gymnasium as gym
+```{.python .input #utils-utility-functions-and-classes-18}
+%%tab pytorch, jax
 
-    env = gym.make('FrozenLake-v1', is_slippery=False)
-    env.reset(seed=seed)
-    env.action_space.seed(seed)
-    env_info = {}
-    env_info['desc'] = env.unwrapped.desc  # 2D array specifying what each grid item means
-    env_info['num_states'] = env.observation_space.n  # Number of observations/states or obs/state dim
-    env_info['num_actions'] = env.action_space.n  # Number of actions or action dim
-    # Define indices for (transition probability, nextstate, reward, done) tuple
-    env_info['trans_prob_idx'] = 0  # Index of transition probability entry
-    env_info['nextstate_idx'] = 1  # Index of next state entry
-    env_info['reward_idx'] = 2  # Index of reward entry
-    env_info['done_idx'] = 3  # Index of done entry
-    env_info['mdp'] = {}
-    env_info['env'] = env
-
-    for (s, others) in env.unwrapped.P.items():
-        # others(s) = {a0: [ (p(s'|s,a0), s', reward, done),...], a1:[...], ...}
-
-        for (a, pxrds) in others.items():
-            # pxrds is [(p1,next1,r1,d1),(p2,next2,r2,d2),..].
-            # e.g. [(0.3, 0, 0, False), (0.3, 0, 0, False), (0.3, 4, 1, False)]
-            env_info['mdp'][(s,a)] = pxrds
-
-    return env_info
-
-```
-
-Create environment
-```{.python .input #utils-utility-functions-and-classes-5}
-%%tab pytorch
-
-def make_env(name ='', seed=0): #@save
-    # Input parameters:
-    # name: specifies a gym environment.
-    # For Value iteration, only FrozenLake-v1 is supported.
-    if name == 'FrozenLake-v1':
-        return frozen_lake(seed)
-
-    else:
-        raise ValueError(f"{name} env is not supported in this Notebook")
-
-```
-
-Show value function
-```{.python .input #utils-utility-functions-and-classes-6}
-%%tab pytorch
-import matplotlib.pyplot as plt
-import numpy as np
-
-def show_value_function_progress(env_desc, V, pi): #@save
-    # This function visualizes how value and policy changes over time.
-    # V: [num_iters, num_states]
-    # pi: [num_iters, num_states]
-    # How to visualize value function is adapted (but changed) from: https://sites.google.com/view/deep-rl-bootcamp/labs
-
-    num_iters = V.shape[0]
-    fig, ax  = plt.subplots(figsize=(15, 15))
-
-    for k in range(V.shape[0]):
-        plt.subplot(4, 4, k + 1)
-        plt.imshow(V[k].reshape(4,4), cmap="bone")
-        ax = plt.gca()
-        ax.set_xticks(np.arange(0, 5)-.5, minor=True)
-        ax.set_yticks(np.arange(0, 5)-.5, minor=True)
-        ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
-        ax.tick_params(which="minor", bottom=False, left=False)
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-        # LEFT action: 0, DOWN action: 1
-        # RIGHT action: 2, UP action: 3
-        action2dxdy = {0:(-.25, 0),1: (0, .25),
-                       2:(0.25, 0),3: (0, -.25)}
-
-        for y in range(4):
-            for x in range(4):
-                action = pi[k].reshape(4,4)[y, x]
-                dx, dy = action2dxdy[action]
-
-                if env_desc[y,x].decode() == 'H':
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="y",
-                         size=20, fontweight='bold')
-
-                elif env_desc[y,x].decode() == 'G':
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="w",
-                         size=20, fontweight='bold')
-
-                else:
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="g",
-                         size=15, fontweight='bold')
-
-                # No arrow for cells with G and H labels
-                if env_desc[y,x].decode() != 'G' and env_desc[y,x].decode() != 'H':
-                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2, head_length=0.15)
-
-        ax.set_title("Step = "  + str(k + 1), fontsize=20)
-
-    fig.tight_layout()
-    plt.show()
-
-```
-Show Q function
-```{.python .input #utils-utility-functions-and-classes-7}
-%%tab pytorch
-import matplotlib.pyplot as plt
-import numpy as np
-
-def show_Q_function_progress(env_desc, V_all, pi_all): #@save
-    # This function visualizes how value and policy changes over time.
-    # V: [num_iters, num_states]
-    # pi: [num_iters, num_states]
-
-    # We want to only shows few values
-    num_iters_all = V_all.shape[0]
-    num_iters = num_iters_all // 10
-
-    vis_indx = np.arange(0, num_iters_all, num_iters).tolist()
-    vis_indx.append(num_iters_all - 1)
-    V = np.zeros((len(vis_indx), V_all.shape[1]))
-    pi = np.zeros((len(vis_indx), V_all.shape[1]))
-
-    for c, i in enumerate(vis_indx):
-        V[c]  = V_all[i]
-        pi[c] = pi_all[i]
-
-    num_iters = V.shape[0]
-    fig, ax = plt.subplots(figsize=(15, 15))
-
-    for k in range(V.shape[0]):
-        plt.subplot(4, 4, k + 1)
-        plt.imshow(V[k].reshape(4,4), cmap="bone")
-        ax = plt.gca()
-        ax.set_xticks(np.arange(0, 5)-.5, minor=True)
-        ax.set_yticks(np.arange(0, 5)-.5, minor=True)
-        ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
-        ax.tick_params(which="minor", bottom=False, left=False)
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-        # LEFT action: 0, DOWN action: 1
-        # RIGHT action: 2, UP action: 3
-        action2dxdy = {0:(-.25, 0),1:(0, .25),
-                       2:(0.25, 0),3:(0, -.25)}
-
-        for y in range(4):
-            for x in range(4):
-                action = pi[k].reshape(4,4)[y, x]
-                dx, dy = action2dxdy[action]
-
-                if env_desc[y,x].decode() == 'H':
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="y",
-                         size=20, fontweight='bold')
-
-                elif env_desc[y,x].decode() == 'G':
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="w",
-                         size=20, fontweight='bold')
-
-                else:
-                    ax.text(x, y, str(env_desc[y,x].decode()),
-                       ha="center", va="center", color="g",
-                         size=15, fontweight='bold')
-
-                # No arrow for cells with G and H labels
-                if env_desc[y,x].decode() != 'G' and env_desc[y,x].decode() != 'H':
-                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2, head_length=0.15)
-
-        ax.set_title("Step = "  + str(vis_indx[k] + 1), fontsize=20)
-
-    fig.tight_layout()
-    plt.show()
-
-def show_return_curve(episode_returns, window=25): #@save
-    """Plot a moving average of per-episode returns."""
+def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,  #@save
+                ylim=None):
+    """One panel per call. `curves` maps a label to an array of shape
+    [seed, step] (or [step] for a single seed); plots the seed median and
+    a shaded band between the seed min and max. `smooth`, if greater than
+    1, applies a trailing moving average of that many steps before taking
+    the seed statistics. `reference`, if given, draws a dashed horizontal
+    line; `ylim`, if given, fixes the y-axis range."""
     set_figsize((6, 4))
-    moving_avg = np.convolve(np.asarray(episode_returns),
-                             np.ones(window) / window, 'valid')
-    plt.plot(np.arange(window, len(episode_returns) + 1), moving_avg)
-    plt.xlabel('episode')
-    plt.ylabel(f'return (moving average over {window} episodes)')
-
-def show_learning_curves(runs, xlabel, ylabel): #@save
-    """Plot mean learning curves with one-standard-deviation seed bands."""
-    set_figsize((6, 4))
-    for name, r in runs.items():
-        mean, std = r.mean(axis=0), r.std(axis=0)
-        x = np.arange(len(mean))
-        plt.plot(x, mean, label=name)
-        plt.fill_between(x, mean - std, mean + std, alpha=0.2)
+    for name, values in curves.items():
+        values = np.atleast_2d(values)
+        if smooth > 1:
+            kernel = np.ones(smooth) / smooth
+            values = np.stack([np.convolve(v, kernel, 'valid')
+                               for v in values])
+        x = np.arange(values.shape[1])
+        line, = plt.plot(x, np.median(values, axis=0), label=name)
+        if values.shape[0] > 1:
+            plt.fill_between(x, values.min(axis=0), values.max(axis=0),
+                             alpha=0.2, color=line.get_color())
+    if reference is not None:
+        plt.axhline(reference, linestyle='--', color='gray')
+    if ylim is not None:
+        plt.ylim(ylim)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.legend()
 
-def compare_agents(agents, num_seeds, final_window=10): #@save
-    """Train each agent across seeds, print the mean return over the
-    final updates, and plot the learning curves with seed bands."""
-    runs = {}
-    for name, fn in agents.items():
-        runs[name] = np.stack([fn(seed) for seed in range(num_seeds)])
-        print(f'{name}: mean return over the last {final_window} updates = '
-              f'{runs[name][:, -final_window:].mean():.0f}')
-    show_learning_curves(runs, 'update', 'average return of the batch')
-
-def show_value_bars(bars, ticks, ylabel, reference=None): #@save
-    """Grouped bar chart; `bars` maps a label to one height per tick."""
-    set_figsize((5, 3.5))
-    x = np.arange(len(ticks))
-    width = 0.7 / len(bars)
-    for i, (name, heights) in enumerate(bars.items()):
-        plt.bar(x + (i - (len(bars) - 1) / 2) * width, heights, width,
-                label=name)
-    if reference is not None:
-        plt.axhline(reference, linestyle='--', color='gray')
-    plt.xticks(x, ticks)
-    plt.ylabel(ylabel)
-    plt.legend()
-
-def compare_return_curves(agents, num_seeds, window=20): #@save
-    """Train each agent across seeds, smooth the per-episode returns
-    with a moving average, print median best and final values, plot."""
-    runs = {}
-    for name, fn in agents.items():
-        r = np.stack([np.convolve(fn(seed), np.ones(window) / window,
-                                  'valid') for seed in range(num_seeds)])
-        runs[name] = r
-        print(f'{name}: median best {window}-episode average = '
-              f'{np.median(r.max(axis=1)):.0f}, '
-              f'median final {window}-episode average = '
-              f'{np.median(r[:, -1]):.0f}')
-    show_learning_curves(runs, 'episode',
-                         f'return (moving average over {window} episodes)')
-
-def show_clip_ablation(agents, num_seeds, floor=100): #@save
-    """Train each PPO variant across seeds; report seeds that never
-    recover and each variant's clipped-sample fraction, then plot."""
-    runs = {}
-    for name, fn in agents.items():
-        curves, clip_fracs = [], []
-        for seed in range(num_seeds):
-            curve, clip_frac = fn(seed)
-            curves.append(curve)
-            clip_fracs.append(clip_frac)
-        runs[name] = np.stack(curves)
-        dead = [sd for sd, c in enumerate(curves) if c[-10:].mean() < floor]
-        print(f'{name}: seeds that never recover = {dead}')
-        if max(clip_fracs) > 0:
-            print(f'{name}: fraction of samples clipped = '
-                  f'{np.mean(clip_fracs):.3f}')
-    show_learning_curves(runs, 'update', 'average return of the batch')
-
-def compare_success_curves(curves, window=10, threshold=0.9): #@save
-    """Smooth per-update success rates, print the median number of
-    updates each variant needs to reach `threshold`, and plot."""
-    runs = {}
-    for name, cs in curves.items():
-        smoothed = [np.convolve(c, np.ones(window) / window, 'valid')
-                    for c in cs]
-        runs[name] = np.stack(smoothed)
-        m = [int(np.argmax(sc >= threshold)) if (sc >= threshold).any()
-             else len(c) for sc, c in zip(smoothed, cs)]
-        print(f'{name}: median updates to reach '
-              f'{int(threshold * 100)}% success = {int(np.median(m))}')
-    show_learning_curves(runs, 'update', 'batch success rate')
-
-#@save
-def show_value_convergence(values, reference=None, xlabel='iteration',
-                           ylabel='value estimate at the start state',
-                           marker='o'):
-    """Plot a per-update scalar with an optional dashed reference line."""
-    set_figsize((6, 4))
-    plt.plot(np.arange(1, len(values) + 1), values, marker=marker)
-    if reference is not None:
-        plt.axhline(reference, linestyle='--', color='gray')
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-
+def show_grid(desc, values, policy, titles=None):  #@save
+    """The gridworld: cell colour = `values`, arrow = `policy`. The grid
+    shape is read from `desc` (e.g. `env_info['desc']`), so it is not tied
+    to any one map size. `values` and `policy` may each be a single frame,
+    shape (num_states,), or a sequence of frames, shape
+    (num_frames, num_states); `titles`, if given, labels each frame."""
+    h, w = desc.shape
+    values = np.atleast_2d(values).reshape(-1, h, w)
+    policy = np.atleast_2d(policy).reshape(-1, h, w)
+    num_frames = values.shape[0]
+    action2offset = {0: (-.25, 0), 1: (0, .25), 2: (.25, 0), 3: (0, -.25)}
+    fig, axes = plt.subplots(1, num_frames, figsize=(3 * num_frames, 3),
+                             squeeze=False)
+    for k, ax in enumerate(axes[0]):
+        ax.imshow(values[k], cmap='bone')
+        ax.set_xticks(np.arange(-.5, w), minor=True)
+        ax.set_yticks(np.arange(-.5, h), minor=True)
+        ax.grid(which='minor', color='w', linewidth=2)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for y in range(h):
+            for x in range(w):
+                cell = desc[y, x].decode()
+                color = {'H': 'y', 'G': 'w'}.get(cell, 'g')
+                ax.text(x, y, cell, ha='center', va='center', color=color,
+                       fontweight='bold')
+                if cell not in ('H', 'G'):
+                    dx, dy = action2offset[int(policy[k, y, x])]
+                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2,
+                            head_length=0.15)
+        if titles is not None:
+            ax.set_title(titles[k])
+    fig.tight_layout()
 ```
 
-Trainer
+## Training Utilities
 
-Legacy helper functions retained for backward compatibility:
+The following legacy helper functions are retained for backward compatibility:
 
 ```{.python .input #utils-utility-functions-and-classes-8}
 %%tab mxnet
@@ -1233,7 +1010,7 @@ def grad_clipping(grads, theta):  #@save
     return new_grad
 ```
 
-More for the attention chapter.
+## Sequence and Attention Utilities
 
 ```{.python .input #utils-utility-functions-and-classes-16}
 %%tab pytorch, mxnet, tensorflow
@@ -1592,11 +1369,11 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
 The legacy helpers in this section (`evaluate_accuracy`, `train_ch6`,
 `train_seq2seq`, `predict_seq2seq`, `MaskedSoftmaxCELoss`) are kept for
 parity with the original D2L implementation, which predates the unified
-`d2l.Trainer` class introduced in this edition. They are deliberately
-not provided for JAX, and PyTorch only ships the subset that is genuinely
-useful outside of the `Trainer` flow. If you are reading the JAX tab,
+`d2l.Trainer` class introduced in this edition. They are not provided for
+JAX, and the PyTorch module includes only the subset used outside the
+`Trainer` workflow. If you are reading the JAX tab,
 the corresponding chapters use `d2l.Trainer.fit(model, data)` end-to-end;
-the per-batch logic that these helpers spell out lives inside
+the corresponding per-batch logic is implemented in
 `Trainer.fit_epoch` and the `@d2l.add_to_class` extensions defined
 alongside it. The MXNet and TensorFlow tabs additionally retain
 `evaluate_accuracy` because some of their earlier-chapter snippets call
@@ -1610,7 +1387,7 @@ The `d2l` package collects shared utility classes and
 functions reused across the book — `Trainer`, `Module`,
 `DataModule`, `Classifier`, plotting helpers, etc.
 
-This page is the canonical listing of those helpers. Most
+This page lists those helpers and their roles. Most
 chapters subclass and extend them rather than reimplement
 from scratch.
 :::
@@ -1632,8 +1409,7 @@ from scratch.
 - The display helpers are intentionally stateful: they remember
   previous points so chapter code can call `plot` or `add` from
   inside minibatch loops.
-- For lecture slides, the important invariant is not the plotting
-  implementation; it is the API shape: log scalar metrics against
+- The shared API logs scalar metrics against
   an x-axis such as epoch, update count, or wall-clock time.
 :::
 
@@ -1657,13 +1433,12 @@ from scratch.
 :::
 
 ::: {.slide title="Reinforcement learning helpers"}
-- `make_env('FrozenLake-v1', seed)` returns a small tabular MDP
-  with transition tuples $(p, s', r, done)$ for value iteration.
-- `show_value_function_progress` and
-  `show_Q_function_progress` visualize how values and greedy
-  policies evolve over dynamic-programming or TD iterations.
-- These utilities are deliberately tiny: they make the Bellman
-  updates visible before moving to function approximation.
+- `plot_curves` draws seed medians with min-to-max bands: the one
+  entry point for every learning curve in the RL chapters.
+- `show_grid` renders a gridworld's values and greedy policy,
+  reading the map shape from the environment description.
+- These functions only visualize values; the RL chapters compute each
+  reported statistic in a visible notebook cell.
 :::
 
 ::: {.slide title="Sequence-model helpers"}
@@ -1679,7 +1454,7 @@ from scratch.
 ::: {.slide title="Recap"}
 - The `d2l` library provides reusable training, plotting,
   and data primitives so chapter code can focus on the
-  ideas, not boilerplate.
+  chapter-specific concepts.
 - Newer chapters use the `Trainer.fit(model, data)` shape;
   legacy chapters retain framework-specific helpers where
   older examples depend on them.

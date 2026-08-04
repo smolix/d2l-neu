@@ -1,16 +1,14 @@
 # Schedules
 :label:`sec_scheduler`
 
-An optimizer, in the framing of :numref:`sec_optimization-intro`, is three
-decisions: a descent direction, a step size over time, and a way of living
-with gradient noise. The preceding sections spent most of their effort on the
-direction. This section is about the step size over time, which in practice
-is delegated to a *schedule*: a function that maps training time $t$ to the
-learning rate $\eta_t$ used at time $t$. The schedule costs nothing to change
-and touches no other part of the training loop, and few choices in this
-chapter move final accuracy more.
+An optimizer specifies a descent direction, a step size over time, and a
+method for handling gradient noise. This section studies the second choice.
+A learning-rate *schedule* maps training time $t$ to the rate $\eta_t$ used
+at that time. It can be changed independently of the remaining training loop
+and can substantially affect final accuracy.
 
-Two facts, both already on the table, force the schedule to exist. First,
+Two facts force the schedule to exist, and both are already on the table.
+First,
 with a constant learning rate SGD does not converge: it reaches a *noise
 floor* proportional to $\eta$ and rattles there indefinitely
 (:numref:`sec_sgd`). To finish well, the learning rate must come down.
@@ -20,10 +18,10 @@ before learning begins, so the learning rate must first come *up*. Between
 those two constraints — start below the target, end near zero — lies a family
 of shapes.
 
-Theory ranks few of these shapes. The results that do exist (the noise-floor
-computation, the Robbins–Monro conditions, the minimax optimality of a
-well-chosen *constant* rate for a fixed budget) are collected in
-:numref:`subsec_mdl-schedules-warmup`, and none of them separates cosine
+Theory ranks few of these shapes. :numref:`subsec_mdl-schedules-warmup`
+collects the results that do exist: the noise-floor computation, the
+Robbins–Monro conditions, the minimax optimality of a well-chosen
+*constant* rate for a fixed budget. None of them separates cosine
 decay from linear decay on a deep network. So this section proceeds the way
 the field does: empirically. We fix one small network and one dataset, then
 train the same model under one schedule after another: the classical decay
@@ -36,8 +34,8 @@ We need a problem cheap enough to train dozens of times and honest enough to
 show schedule effects. A LeNet-style convolutional network on Fashion-MNIST
 (:numref:`chap_cnn`) fits: a few seconds per epoch, yet real minibatch
 noise, real overfitting, and a real stability ceiling. We apply the small
-standard modernizations — ReLU activations, max-pooling, and batch
-normalization (:numref:`sec_batch_norm`) after every hidden layer — and we
+standard modernizations: ReLU activations, max-pooling, and batch
+normalization (:numref:`sec_batch_norm`) after every hidden layer. We also
 pin the initialization to Xavier (:numref:`subsec_xavier`) in both
 frameworks. Neither choice is
 cosmetic. Without normalization this network's survivable learning-rate
@@ -73,7 +71,7 @@ import optax
 
 The training function takes the scheduler as an argument. At the start of
 every epoch it asks the scheduler for that epoch's learning rate and installs
-it in the optimizer; everything else is the standard classification loop.
+it in the optimizer; the remaining code is the standard classification loop.
 
 Two conventions make the runs below comparable. The training loss and the
 accuracies go on separate panels, since a loss near $0.3$ and an accuracy
@@ -296,8 +294,7 @@ lr, num_epochs = 0.3, 30
 train(net_fn, train_iter, test_iter, num_epochs, lr)
 ```
 
-Two things go wrong, and they are the two failure modes the rest of the
-section addresses. The training loss stays visibly noisy to the end: the
+The baseline exhibits two failure modes addressed by the schedules below. The training loss stays visibly noisy to the end: the
 iterate is riding its noise floor, and no amount of extra training lowers it.
 And while training accuracy keeps climbing, test accuracy stalls after
 roughly ten epochs; the widening gap is overfitting. Both symptoms respond
@@ -385,9 +382,9 @@ d2l.plot(d2l.arange(50), [scheduler(t) for t in range(50)],
 
 The shape differs from square root where it counts: with $\alpha = 0.9$ the
 early decline is gentler, and by epoch 30 the rate has fallen more than
-twentyfold where square root managed fivefold — a hard quench at the end
-instead of a lingering one. The floor guards the other edge: with $\alpha$
-too small the rate collapses before the model has learned anything.
+twentyfold, compared with fivefold under square-root decay. It therefore
+reduces the rate much more strongly near the end. The floor guards the other edge: with $\alpha$
+too small the rate becomes negligible before the model has learned enough.
 
 ```{.python .input #lr-scheduler-multiplicative-decay-2}
 %%tab pytorch
@@ -403,17 +400,17 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
 train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
 
-This time both symptoms respond: the run ends quiet, the test accuracy sits
+Both measured symptoms improve: the final loss fluctuates less, the test accuracy sits
 visibly above the constant baseline's, and the train–test gap narrows. The
 remaining shapes repeat this pattern; what varies is how the high-rate
 budget is spent and how the descent is timed.
 
 ### Piecewise Constant Decay
 
-The workhorse of the ImageNet era holds the rate constant and cuts it by a
-fixed factor at preset epochs. The intuition matches the noise-floor picture
-of :numref:`sec_sgd` step for step: ride the current floor until progress
-stalls, then lower the floor and ride again. Training curves under this
+Piecewise constant decay, widely used in ImageNet training, holds the rate
+constant and reduces it by a fixed factor at preset epochs. This schedule
+matches the noise-floor analysis of :numref:`sec_sgd`: reduce the rate after
+the iterates stop improving at the current noise floor. Training curves under this
 schedule have a characteristic staircase shape, with a visible drop in loss
 right after each cut.
 
@@ -450,9 +447,9 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
 train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
 
-The catch is the milestones themselves: someone has to pick them, and the
-right answer depends on the budget, the dataset, and the architecture. The
-next shape removes that knob.
+The milestones are additional hyperparameters, and their useful values depend
+on the budget, dataset, and architecture. Cosine decay removes these discrete
+transition points.
 
 ### Cosine Decay
 
@@ -525,9 +522,9 @@ any measured superiority, is why it spread.
 
 Every schedule so far answers "how should the rate come down?". Warmup
 answers a different question: how should it come up?
-:numref:`sec_training_recipes` gave the operational answer — a freshly
-initialized network produces large, badly scaled gradients, so ramp gently —
-and you have been warming up ever since. The mechanism deserves a closer
+:numref:`sec_training_recipes` gave the operational answer: a freshly
+initialized network produces large, badly scaled gradients, so ramp gently.
+You have been warming up ever since. The mechanism deserves a closer
 look. At initialization the parameters are random and the loss surface
 around them can be sharply curved in some directions. A learning rate that
 the network would happily accept after a few epochs of training can be fatal
@@ -539,18 +536,17 @@ the target over the first few epochs. Why this works has since been studied
 directly: early training at a growing rate progressively *reduces the
 sharpness* of the loss around the iterate, so the network can tolerate a
 target rate that would have diverged from cold
-:cite:`Kalra.Barkeshli.2024`. Warmup does not make every rate safe — a
-stability ceiling remains — but it moves the ceiling up, and it lets
-training start fast without betting the run on the first step. For adaptive
+:cite:`Kalra.Barkeshli.2024`. Warmup does not make every rate stable, but it can raise the largest usable
+target rate and avoid applying that rate to the poorly scaled initial
+gradients. For adaptive
 methods such as Adam there is a second, independent reason to warm up: the
 preconditioner is estimated from a handful of gradients early on and should
 not be trusted at full step size (:numref:`subsec_mdl-schedules-warmup`).
-Our testbed uses plain SGD, which isolates the curvature story.
+Our testbed uses plain SGD, which isolates the curvature mechanism.
 
-Here is the failure. Our network, thanks to its batch normalization layers,
-shrugs off surprisingly large learning rates from a cold start — but not
-without limit. We train at $\eta = 7.5$, twenty-five times the rate of our
-baseline:
+Batch normalization lets this network tolerate a broad range of initial
+learning rates, but a stability limit remains. We train at $\eta = 7.5$,
+twenty-five times the baseline rate:
 
 ```{.python .input #lr-scheduler-warmup-1}
 %%tab pytorch
@@ -567,12 +563,12 @@ hot_lr = 7.5
 train(net_fn, train_iter, test_iter, 10, hot_lr)
 ```
 
-The run collapses in the first epoch and stays collapsed: the loss hovers
+The run remains at chance accuracy after the first epoch: the loss hovers
 near $\ln 10 \approx 2.3$, the loss of predicting all ten classes uniformly,
 and accuracy never leaves the vicinity of chance. The oversized first steps
 threw the parameters so far from the initialization that no useful signal
-survived. Now the same target rate, reached through a five-epoch linear
-ramp:
+survived. A five-epoch linear ramp reaches the same target rate
+gradually:
 
 ```{.python .input #lr-scheduler-warmup-2}
 def warmup(epoch):
@@ -592,15 +588,15 @@ train(net, train_iter, test_iter, 10, loss, trainer, device, warmup)
 train(net_fn, train_iter, test_iter, 10, hot_lr, warmup)
 ```
 
-With the ramp, the identical network trains at the identical target rate to
-80–90% accuracy in ten epochs. The contrast is reproducible across
-restarts, but it is a band, not a magic trick: cold starts at somewhat lower
-rates survive, and at rates far enough above the ceiling no warmup length
-saves the run. Warmup widens the window of usable peak rates; it does not
-remove the window's edge. :citet:`Gotmare.Keskar.Xiong.ea.2018` probed what warmup does
+With the ramp, this fixed-seed run reaches 80–90% accuracy in ten epochs at
+the same target rate. Cold starts at lower rates can remain stable, while
+rates sufficiently above the stability limit fail even with warmup. Thus the
+experiment shows that warmup widens the usable range for this model; it does
+not remove its upper edge. :citet:`Gotmare.Keskar.Xiong.ea.2018` probed what warmup does
 inside deeper networks and found its main measurable effect is exactly this
 kind of containment: it limits how far the parameters, especially in later
-layers, can diverge while everything is still random.
+layers, can diverge while the parameters and optimizer statistics remain near their
+initial random state.
 
 Combining the ramp with cosine decay gives the schedule that trained most of
 the deep learning models of the late 2010s and remains a strong default:
@@ -634,11 +630,12 @@ baked into the schedule from step one. Every intermediate checkpoint of a
 cosine run is a model whose learning rate was mid-descent: fine to resume,
 useless as a finished product, because its rate never came down. Decide after
 the fact that the model should have trained for twice as long and the
-schedule has nothing left to give; the honest options are to retrain from
+schedule has reached its endpoint; the available options are to retrain from
 scratch or to splice schedules in ways cosine was never designed for. For a
 single fixed-budget run this is no burden. It becomes one when the budget is
-genuinely unknown — data keeps arriving, or the loss is still falling at $T$
-— and it is acute when one training run is supposed to yield *models at
+unknown because data continue to arrive or the loss is still falling at
+$T$. The dependence is especially restrictive when one training run must
+yield models at
 several budgets*, as in a scaling-law study (:numref:`sec_scaling`).
 
 The schedule that large language model training converged on instead is
@@ -646,10 +643,9 @@ The schedule that large language model training converged on instead is
 peak rate *constant* for most of the run, and decay only in a short final
 phase, typically the last 10–20% of the budget. The MiniCPM team popularized
 it, and :citet:`Hagele.Bakouch.Kosson.ea.2024` showed that it matches cosine
-across budgets. The constant plateau is what buys the flexibility: every
-plateau checkpoint is a live, horizon-free starting point, and the decay
-becomes a *harvest step* you can run whenever — and as often as — you want a
-finished model.
+across budgets. The constant plateau provides this flexibility: every
+plateau checkpoint is a horizon-free starting point. A decay phase can be
+branched from such a checkpoint whenever a finished model is needed.
 
 ```{.python .input #lr-scheduler-warmup-stable-decay-1}
 class WSDScheduler:
@@ -696,7 +692,7 @@ train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
 train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
 
-That final cliff is the signature of every published WSD loss curve, and
+This rapid final decrease appears in published WSD loss curves, and
 :citet:`Wen.Li.Wang.ea.2024` give it a useful geometry. Picture the loss
 surface as a *river valley*: steep walls transverse to a floor that winds
 downhill at a gentle slope. At the plateau's high learning rate the iterate
@@ -704,8 +700,8 @@ bounces between the walls while drifting fast along the floor. The bouncing
 inflates the measured loss — the iterate is always partway up a wall — but
 the drift is real progress, covering distance along the valley that small
 steps could not match. The decay quenches the bouncing: the iterate settles
-to the floor it has already reached, and the loss falls in a cliff. On this
-picture the plateau does the traveling and the decay does the landing, which
+to the floor it has already reached, and the loss decreases rapidly. In this interpretation, the plateau phase moves along the shallow direction
+and the decay phase reduces oscillation across the steep direction, which
 is why the plateau can be extended for as long as you keep training and why
 a short decay suffices. It is the noise-ball argument of :numref:`sec_sgd`
 upgraded from a bowl to a winding valley. :numref:`fig_opt_river_valley`
@@ -718,8 +714,8 @@ forever and landing on the floor is what the learning rate does at the end.
 
 ### Branching Off the Plateau
 
-The river-valley picture makes a concrete operational prediction: since a
-plateau checkpoint's only deficit is the bouncing, a decay branched off *any*
+The river-valley interpretation predicts that if transverse oscillation is
+the main deficit of a plateau checkpoint, a decay branched off *any*
 plateau point should land it. We verify the whole WSD workflow, drawing all
 three runs below on one shared pair of axes over absolute epochs 0–36 so
 that the branch point stays visible. First train
@@ -749,8 +745,8 @@ board = SchedulerBoard(xlim=[0, 36])
 train(model_plateau, train_iter, test_iter, 24, lr, stable, animator=board)
 ```
 
-Nothing about this run committed to a horizon, so keep it going: six more
-epochs at the constant peak rate, as if the budget had just been extended.
+Because this run has no fixed horizon, we continue it for six more epochs at
+the constant peak rate.
 
 ```{.python .input #lr-scheduler-branching-off-the-plateau-2}
 %%tab pytorch
@@ -766,8 +762,8 @@ train(model_plateau, train_iter, test_iter, 6, lr, animator=board,
 board.fig
 ```
 
-Now harvest. We clone the live run — it could continue tomorrow — and branch
-a six-epoch decay off the clone, assembling a 36-epoch WSD schedule that
+We then clone the plateau checkpoint and branch a six-epoch decay from the
+clone, assembling a 36-epoch WSD schedule that
 nobody planned when training started:
 
 ```{.python .input #lr-scheduler-branching-off-the-plateau-3}
@@ -789,12 +785,12 @@ train(model_branch, train_iter, test_iter, 6, lr, decay, animator=board,
 board.fig
 ```
 
-The loss cliff lands at epoch 30, exactly where the decay branched off the
+The loss decreases at epoch 30, when the decay branches from the
 plateau, and the branched model reaches the same accuracy range as the full
-cosine and WSD runs — without the horizon having been chosen in advance.
+cosine and WSD runs even though the horizon was not chosen in advance.
 This is the property that spread WSD at the frontier: one long stable run
 plus
-cheap branched decays yields models at many budgets for roughly the price of
+short branched decays yields models at many budgets for roughly the cost of
 one, where cosine would demand a separate full run per budget
 :cite:`Hagele.Bakouch.Kosson.ea.2024`. One practical note: our optimizer is
 plain SGD, which carries no state, so cloning the parameters was enough.
@@ -819,18 +815,18 @@ schedule altogether: keep stepping at a constant rate, and *evaluate* a
 running average of the iterates rather than the latest one. The scheme is
 coupled rather than post-hoc: each gradient is taken at an interpolation
 between the fast iterate and the average, and the average is what you
-evaluate (the exact recurrence is in the exercises). Averaging plays
-the same noise-quenching role as decay — the bounces cancel in the mean — so
-the averaged iterate behaves like an implicitly decayed run whose horizon is
-always "now", the same operational property as WSD's branched decays.
+evaluate (the exact recurrence is in the exercises). Averaging and decay both reduce endpoint variability, but by different
+operations: decay changes subsequent iterates, while averaging cancels some
+fluctuations in the evaluated parameters. The averaged iterate can therefore
+provide a low-variance endpoint whose horizon is always "now", the same operational property as WSD's branched decays.
 :numref:`sec_practice` returns to weight averaging in its more common role
 as a cheap accuracy bump :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`; the
 exercises below have you watch the schedule-free effect on a noisy quadratic.
 
-**Cosine is not dead.** The WSD-versus-cosine question is not settled. The
+The comparison between WSD and cosine is not settled. The
 GLM-4.5 team ablated both at scale and shipped cosine :cite:`Zeng.Lv.Zheng.ea.2025`,
 and at matched tuning the measured differences between modern schedules are
-small — consistently smaller than the gains from tuning the peak rate well.
+small and consistently less than the gains from tuning the peak rate.
 What is settled is operational: plateau checkpoints that can be decayed on
 demand are strictly more flexible than a schedule that commits to its
 horizon at step one, and that, more than any loss-curve gap, is why WSD and
@@ -852,9 +848,10 @@ its relatives became widespread where the training horizon is open-ended.
   sharpness before the full rate arrives. At rates where a cold start dies,
   a short linear ramp trains.
 * Warmup–stable–decay holds the peak rate for most of the run and decays
-  late. Its loss cliff is the noise ball collapsing (the river-valley
+  late. Its rapid final loss decrease follows from reducing stochastic
+  fluctuations (the river-valley
   picture), and its plateau checkpoints can be branched into finished models
-  at any time — the property behind its adoption in large-scale training.
+  at any time, which supports its use in large-scale training.
 * Linear decay to zero is a strong, simple recent default; schedule-free
   averaging replaces decay with iterate averaging; WSD versus cosine remains
   genuinely contested.
@@ -903,14 +900,14 @@ its relatives became widespread where the training horizon is open-ended.
 
 ::: {.slide title="Schedules"}
 An optimizer is three decisions: a **direction**, a **step size over
-time**, and a way of living with **noise**. This section is the second
-decision — the schedule $t \mapsto \eta_t$.
+time**, and a way of living with **noise**. This section studies the second decision, the schedule
+$t \mapsto \eta_t$.
 
 Two facts force it to exist:
 
 - Constant $\eta$: SGD parks on a **noise floor** $\propto \eta$. The rate
   must come *down*.
-- The target rate is often **lethal at initialization**. The rate must
+- The target rate is often **unstable at initialization**. The rate must
   first come *up*.
 
 Theory ranks few shapes (the proofs that exist live in the math
@@ -927,13 +924,12 @@ BatchNorm after every hidden layer, Xavier init pinned in both frameworks
 - The training loop consults it at the start of every epoch and writes the
   rate into the optimizer; nothing else changes.
 - Stateless by design: a pure function of $t$ can be plotted, resumed,
-  and **branched** — that pays off at the end.
+  and branched from a saved checkpoint.
 :::
 
 ::: {.slide title="Baseline: constant $\eta = 0.3$"}
 @!lr-scheduler-a-testbed-3
 
-. . .
 
 Both failure modes on one plot: loss noisy to the end (riding the noise
 floor), and test accuracy stalls while train accuracy climbs —
@@ -941,8 +937,7 @@ overfitting.
 :::
 
 ::: {.slide title="Square-root decay"}
-$\eta_t = \eta_0 (t+1)^{-1/2}$ — the convex-optimal rate from 9.3. A
-scheduler is just a callable:
+$\eta_t = \eta_0 (t+1)^{-1/2}$ — the convex-optimal rate from 9.3. A scheduler is a callable:
 
 @lr-scheduler-square-root-decay-1
 :::
@@ -950,10 +945,9 @@ scheduler is just a callable:
 ::: {.slide title="Square-root decay: training"}
 @!lr-scheduler-square-root-decay-2
 
-. . .
 
-Smoother and quieter — but test accuracy lands *below* the constant
-baseline. Timid at both ends: gives up the high early rate within ~3
+The loss is smoother, but test accuracy remains below the constant
+baseline. The rate is too small at both ends: gives up the high early rate within ~3
 epochs, yet ends with the largest tail $\eta$ of any decay here.
 **Shape matters.**
 :::
@@ -964,10 +958,9 @@ safety net:
 
 @lr-scheduler-multiplicative-decay-1
 
-. . .
 
-Piecewise constant: ride each noise floor until progress stalls, then cut
-the rate — the ImageNet-era staircase:
+Piecewise constant decay reduces the rate after progress stalls at each noise
+floor, producing the ImageNet-era staircase:
 
 @lr-scheduler-piecewise-constant-decay-1
 :::
@@ -999,15 +992,15 @@ run in step one.
   trusted cold.
 :::
 
-::: {.slide title="Warmup: dead vs. alive"}
-Even a BatchNorm net has a ceiling. Cold start at $\eta = 7.5$ (25× the
-baseline) — collapsed to chance within one epoch:
+::: {.slide title="Warmup and initial stability"}
+Even a BatchNorm network has a stability limit. A cold start at $\eta = 7.5$
+(25× the baseline) remains at chance accuracy after one epoch:
 
 @!lr-scheduler-warmup-1
 
-. . .
 
-Same rate through a 5-epoch ramp — trains to 80–90%:
+A five-epoch ramp to the same rate permits training to reach 80--90%
+accuracy:
 
 @!lr-scheduler-warmup-3
 :::
@@ -1018,14 +1011,13 @@ The default recipe of the late 2010s, and still strong:
 @!lr-scheduler-warmup-5
 :::
 
-::: {.slide title="Cosine's hidden defect"}
+::: {.slide title="Dependence of cosine decay on the horizon"}
 The horizon $T$ is baked in from step one.
 
 - Mid-run checkpoints: rate never came down → not finished models.
 - Want 2× the budget after the fact? Retrain.
 - Scaling-law study at 5 budgets? 5 full runs.
 
-. . .
 
 **Warmup–stable–decay** (MiniCPM; Hu et al., 2024): warm up, hold the
 peak **constant** for most of the run, decay in the last 10–20%. Every
@@ -1034,26 +1026,24 @@ plateau checkpoint is horizon-free; the decay is a *harvest step*.
 @!lr-scheduler-warmup-stable-decay-1
 :::
 
-::: {.slide title="WSD: the loss cliff"}
+::: {.slide title="Loss reduction during WSD decay"}
 @!lr-scheduler-warmup-stable-decay-2
 
-. . .
 
-Plateau loss sits *above* cosine's, then drops in a cliff when the decay
+Plateau loss remains *above* cosine's, then decreases rapidly when the decay
 begins. Same final range as cosine at the same budget.
 :::
 
-::: {.slide title="The river valley"}
-Why the cliff (Wen et al., 2024): the loss surface is a winding valley —
+::: {.slide title="A geometric interpretation of WSD"}
+Wen et al. (2024) model the loss surface as a winding valley with
 steep walls, gently sloping floor.
 
 - High constant rate: the iterate **bounces between walls** while drifting
   **fast along the floor**. Measured loss is inflated; progress is real.
-- Decay quenches the bouncing → the iterate settles to the floor it
-  already reached → cliff.
+- Decay reduces the transverse oscillation, so the measured loss approaches
+  that of the valley floor already reached.
 
-The plateau travels, the decay lands. The noise-ball story of 9.3,
-upgraded from a bowl to a valley.
+This extends the noisy-quadratic interpretation of §9.3 to a curved valley.
 :::
 
 ::: {.slide title="Branching off the plateau"}
@@ -1062,11 +1052,10 @@ you like, then *clone and decay* whenever you want a finished model:
 
 @lr-scheduler-branching-off-the-plateau-3
 
-. . .
 
-The branch matches the full cosine run's range — with the horizon chosen
-*after the fact*. One long run + cheap branched decays = models at many
-budgets (Hägele et al., 2024).
+The branch reaches the accuracy range of the full cosine run even though the
+horizon is chosen afterward. One plateau run can therefore supply branched
+decays for several budgets (Hägele et al., 2024).
 
 ::: {.d2l-note}
 Plain SGD carries no state, so cloning parameters sufficed. With momentum
@@ -1074,17 +1063,17 @@ or Adam, branch the optimizer state too.
 :::
 :::
 
-::: {.slide title="State of play"}
+::: {.slide title="Current schedule choices"}
 - **Linear decay to zero** matched or beat cosine and WSD in careful LLM
-  sweeps (Bergsma et al., 2025) — the *final* rate matters most.
+  sweeps (Bergsma et al., 2025), with the final rate accounting for much of
+  the difference.
 - **Schedule-free** (Defazio et al., 2024): constant rate; gradients at an
-  interpolation of iterate and average, evaluate the *average* — decay by
-  averaging, horizon always "now".
+  interpolation of iterate and average, evaluate the *average*. This implements variance reduction without a
+  predetermined horizon.
 - **Not settled**: GLM-4.5 ablated WSD vs. cosine and shipped cosine
   (Zeng et al., 2025). Differences at matched tuning are small.
 
-. . .
 
-What *is* settled: schedules are cheap, they matter, and plateau
-checkpoints you can decay on demand beat a horizon baked in at step one.
+Schedules are inexpensive to evaluate and materially affect training.
+Plateau checkpoints allow the decay horizon to be selected after pretraining.
 :::

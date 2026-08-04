@@ -6,18 +6,18 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Saving, Loading, and Pretrained Weights
 :label:`sec_read_write`
 
-A trained network is two separate things kept in two separate places. The
-*code* is the class you wrote: its layers, its `forward` pass, the config that
-sized it. The *model state* is the tensors that training filled in: weights,
+A trained network consists of code and state stored separately. The *code*
+defines its layers, `forward` pass, and configuration. The *model state*
+contains the tensors produced by training: weights,
 biases, and running statistics. Optimizer moments, random-number streams, and
 the step belong to the wider *training state*. A weight file saves model state;
 a resumable checkpoint saves full training state. The code
-stays in your source repository, under version control, exactly like any other
-Python. To bring a model back you need both halves: run the code to rebuild an
-empty network, then pour the saved state into it.
+stays in your source repository under version control. Restoring a model
+therefore requires rebuilding its structure in code and loading the saved
+state into that structure.
 
-This split explains most of what follows. It is why a checkpoint cannot
-resurrect a model on its own, why the config object from
+This distinction explains why a checkpoint cannot reconstruct an arbitrary
+model on its own, why the config object from
 :numref:`sec_model_construction` belongs *inside* the checkpoint, and why the
 format that stores the state matters once you start sharing files with people who
 do not have your code.
@@ -82,31 +82,26 @@ npx.set_np()
 
 :begin_tab:`pytorch`
 The state of a network is a dictionary from parameter names to tensors, the
-`state_dict` of :numref:`sec_parameters`. Before we save a whole model, the
-warm-up is that the same `save`/`load` calls work on any tensors, and on the
-lists and dicts that hold them.
+`state_dict` of :numref:`sec_parameters`. The same `save` and `load` calls also operate on individual tensors and the
+lists or dictionaries that contain them.
 :end_tab:
 
 :begin_tab:`jax`
 The state of a network is a tree of typed, named variables introduced in
-:numref:`sec_parameters`. Before we save a whole model, the warm-up is that
-`jnp.save` and `jnp.load` work on any array, and, through NumPy's pickle
-fallback, on the dicts that hold them.
+:numref:`sec_parameters`. `jnp.save` and `jnp.load` also operate on individual arrays and, through
+NumPy's pickle fallback, dictionaries that contain them.
 :end_tab:
 
 :begin_tab:`tensorflow`
 The state of a network is a collection of named variables, the weights of
-:numref:`sec_parameters`. Before we save a whole model, the warm-up is that
-`np.save` and `np.load` work on any tensor, and, through NumPy's pickle
-fallback, on the dicts that hold them.
+:numref:`sec_parameters`. `np.save` and `np.load` also operate on individual tensors and, through
+NumPy's pickle fallback, dictionaries that contain them.
 :end_tab:
 
 :begin_tab:`mxnet`
 The state of a network is a dictionary from parameter names to arrays, the
-`collect_params` dictionary of :numref:`sec_parameters`. Before we save a
-whole model, the warm-up is that `npx.save` and `npx.savez` work on any array
-and on named collections of them; `npx.load` hands a saved collection back as
-a dict.
+`collect_params` dictionary of :numref:`sec_parameters`. `npx.save` and `npx.savez` also operate on individual arrays and named
+collections; `npx.load` returns a saved collection as a dictionary.
 :end_tab:
 
 ```{.python .input #saving-loading-state-not-code-1}
@@ -235,9 +230,8 @@ Y = net(X)
 {name: p.shape for name, p in net.collect_params().items()}
 ```
 
-Nothing in this dictionary knows it came from a class called `MLP`. The names
-and shapes refill a network with a compatible architecture and naming
-structure. Renaming an attribute or changing the nesting can break that match
+This dictionary records no `MLP` class identity. Its names and shapes can
+populate a network with a compatible architecture and naming structure. Renaming an attribute or changing the nesting can break that match
 even when the computation is equivalent; the final section shows how to
 migrate such keys explicitly.
 
@@ -245,49 +239,45 @@ migrate such keys explicitly.
 
 :begin_tab:`pytorch`
 `torch.save` writes its files with Python's `pickle`, which does not store data
-so much as a program that *reconstructs* data. Unpickling runs that program. For
-a file you wrote and never let out of your control this is harmless. For a file
-you downloaded it is a remote-code-execution vector: loading the weights can run
-whatever the author's pickle stream tells it to.
+so much as a program that *reconstructs* data. Unpickling runs that program. Loading pickle executes reconstruction code, so use this format only for
+files from a trusted source. A downloaded pickle can execute code selected by
+the file's author during loading.
 :end_tab:
 
 :begin_tab:`jax`
 `jnp.save` writes NumPy's `.npy` format. For a single array that is pure data:
-a small header with the dtype and shape, then the raw bytes. The warm-up dict is
-another matter. NumPy can only store a dict by falling back to Python's
+a small header with the dtype and shape, then the raw bytes. The dictionary example differs. NumPy can only store a dict by falling back to Python's
 `pickle`, which does not store data so much as a program that *reconstructs*
 data, and loading runs that program; that is what `allow_pickle=True` opted
-into. For a file you wrote and never let out of your control this is harmless.
-For a file you downloaded it is a remote-code-execution vector: any object in
-the stream can name a callable for the loader to invoke, which is why NumPy
-refuses pickled contents by default (`allow_pickle=False`).
+into. Loading pickle executes reconstruction code, so use this format only for
+files from a trusted source. An object in a downloaded stream can name a
+callable for the loader to invoke; NumPy therefore rejects pickled contents by
+default (`allow_pickle=False`).
 :end_tab:
 
 :begin_tab:`tensorflow`
 `np.save` writes NumPy's `.npy` format. For a single tensor that is pure data:
-a small header with the dtype and shape, then the raw bytes. The warm-up dict
-is another matter. NumPy can only store a dict by falling back to Python's
+a small header with the dtype and shape, then the raw bytes. The dictionary example differs. NumPy can only store a dict by falling back to Python's
 `pickle`, which does not store data so much as a program that *reconstructs*
 data, and loading runs that program; that is what `allow_pickle=True` opted
-into. For a file you wrote and never let out of your control this is harmless.
-For a file you downloaded it is a remote-code-execution vector: any object in
-the stream can name a callable for the loader to invoke, which is why NumPy
-refuses pickled contents by default (`allow_pickle=False`).
+into. Loading pickle executes reconstruction code, so use this format only for
+files from a trusted source. An object in a downloaded stream can name a
+callable for the loader to invoke; NumPy therefore rejects pickled contents by
+default (`allow_pickle=False`).
 :end_tab:
 
 :begin_tab:`mxnet`
 `npx.savez` writes MXNet's own array format: the saver accepts nothing but
 MXNet arrays, and the file holds only their names, dtypes, shapes, and raw
-bytes. There is no pickle stream and nothing to execute on load, so the
-warm-up file was already safe. The catch is reach rather than safety: hardly
-anything outside MXNet reads such a file, which matters once you hand weights
-to someone who does not run an archived framework.
+bytes. There is no pickle stream or executable reconstruction code in the file.
+Its limitation is interoperability: few tools outside MXNet read this format,
+which matters when recipients do not use the archived framework.
 :end_tab:
 
 :begin_tab:`pytorch`
-The risk is easy to make concrete. An object's `__reduce__` method returns the
-callable and arguments that pickle will invoke on load. Point it at any function
-and that function runs when the file is read.
+The following example demonstrates the risk. An object's `__reduce__` method
+returns the callable and arguments that pickle invokes on load. A function
+specified there executes when the file is read.
 :end_tab:
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-1}
@@ -357,8 +347,8 @@ or restore values against a template instead of using this shortcut.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Here the variable paths do the naming, so the flat mapping is a one-line
-comprehension over `net.weights`. Two quirks of the `tensorflow` binding to
+Here the variable paths provide the names, and a comprehension over
+`net.weights` constructs the flat mapping. Two quirks of the `tensorflow` binding to
 know: it converts through NumPy in both directions, so `load_file` hands back
 constant tensors that you `assign` into a model's variables, and `save_file`
 overwrites the values of the dict you pass it during that conversion, so give
@@ -366,12 +356,11 @@ it a throwaway copy.
 :end_tab:
 
 :begin_tab:`mxnet`
-There is no `safetensors.mxnet` module; the archived framework never grew a
-native binding. That turns out to be the instructive case: because the format
-is just names, dtypes, and bytes, the `safetensors.numpy` binding plus a pair
-of dict comprehensions closes the gap, `.asnumpy()` on the way out and
-`np.array` on the way back. No framework-specific machinery is involved,
-which is the format's framework-neutrality made visible.
+There is no `safetensors.mxnet` module because the archived framework has no
+native binding. The format contains names, dtypes, and bytes, so the
+`safetensors.numpy` binding plus two dictionary comprehensions provides the
+conversion: `.asnumpy()` on the way out and
+`np.array` on the way back. The conversion requires no framework-specific file-format machinery.
 :end_tab:
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-3}
@@ -439,8 +428,8 @@ clone.load_dict({name: np.array(v) for name, v in restored.items()})
 (clone(X) == Y).all()
 ```
 
-Because the header is plain JSON at a known offset, you can read it without the
-library and see there is no magic to the format.
+Because the header is JSON at a known offset, the next cell reads its metadata
+without the safetensors library.
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-4}
 %%tab pytorch
@@ -474,28 +463,11 @@ with open('mlp-mx.safetensors', 'rb') as f:
 header['hidden.weight']
 ```
 
-:begin_tab:`pytorch`
-`torch.save` keeps its place for your own scratch files and for the older code
-you will still meet. safetensors is what you use to hand a model to anyone else.
-:end_tab:
-
-:begin_tab:`jax`
-`jnp.save` keeps its place for your own scratch arrays and quick experiments.
-safetensors is what you use to hand a model to anyone else.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`np.save` and Keras's own `.weights.h5` keep their place for your own scratch
-files and checkpoints. safetensors is what you use to hand a model to anyone
-else.
-:end_tab:
-
-:begin_tab:`mxnet`
-`save_parameters` keeps its place for your own scratch files and checkpoints.
-safetensors is what you use to hand a model to anyone else, and for an
-archived framework it is also the exit route: current safetensors bindings
-outside MXNet can read the file you just wrote.
-:end_tab:
+Interchange files should be non-executable, documented, and accompanied by a
+checksum and a state schema. Safetensors is the data-only example used here;
+framework-native formats remain appropriate when all consumers share a trusted,
+compatible runtime. For archived frameworks, a data-only format also supplies
+an exit path that current tools can read.
 
 ## Checkpointing a Training Run
 
@@ -548,10 +520,10 @@ random stream; the process-global generator is not captured automatically.
 :begin_tab:`mxnet`
 In MXNet the bundle is three files rather than one. `save_parameters` covers
 the model; the optimizer state lives with the `gluon.Trainer`, whose
-`save_states` writes Adam's moments (though not per-parameter attributes such
-as `lr_mult`, which come from your code on rebuild), and writes them with
-pickle, so a trainer-states file deserves the same your-own-disk-only caution
-as any pickle. The step counter and config travel in a JSON sidecar. One
+`save_states` writes Adam's moments with pickle, so a trainer-states file
+deserves the same your-own-disk-only caution as any pickle. It does not write
+per-parameter attributes such as `lr_mult`, which come from your code on
+rebuild. The step counter and config travel in a JSON sidecar. One
 compartment of :numref:`fig_bg_checkpoint_contents` stays empty: MXNet has no
 API to snapshot its random-number generators, only `npx.random.seed` to
 restart them, so a resumed run reseeds rather than continuing the old stream.
@@ -858,16 +830,16 @@ f'perturbed {before:.2f} -> restored {after:.4f}'
 
 Now the reason the optimizer state is in the file. Resume the run two ways from
 the same checkpoint: once restoring the optimizer, once with a fresh one holding
-only the weights. The network is near its minimum, so the correct continuation
-barely moves. A fresh Adam, with its moment estimates reset and its bias
-correction starting over, takes an oversized first step and overshoots.
+only the weights. In this example, the network is near its minimum, so restoring Adam's state
+continues with small updates. A fresh Adam resets its moment estimates and bias
+correction, producing a larger first update that overshoots the local minimum.
 
 :begin_tab:`tensorflow`
-One Keras 3 tripwire sits in the resume path. A freshly constructed Adam owns
+Keras 3 requires an additional step in the resume path. A freshly constructed Adam owns
 no slot variables; the moment estimates are created only when the optimizer is
 built. Restore into a fresh optimizer without building it first and the saved
 moments have no variables to land in, so `assert_consumed()` fails with an
-unresolved `optimizer` object. The fix is one line before the restore:
+unresolved `optimizer` object. Build the optimizer variables before restoring them with
 `opt.build(model.trainable_variables)`.
 :end_tab:
 
@@ -954,9 +926,10 @@ print('full  optimizer:', full)
 print('fresh optimizer:', fresh)
 ```
 
-The full-state run keeps descending; the weights-only run spikes and has to claw
-its way back. That transient is the cost of forgetting the optimizer, and it is
-why "just the weights" is not a resumable checkpoint.
+The full-state loss continues to decrease, whereas the weights-only loss first
+increases and then recovers. The difference results from resetting the
+optimizer state; model weights alone do not form a resumable training
+checkpoint.
 
 :begin_tab:`pytorch`
 For models too large to hold in memory, checkpoints are split across several
@@ -985,17 +958,17 @@ creation time instead of everything materializing up front. Multi-host
 :end_tab:
 
 :begin_tab:`mxnet`
-For models too large to hold in memory, MXNet offers nothing comparable: a
-`.params` file loads whole, and the project was archived before sharded
-checkpoints and memory-mapped loading became routine. Models at that scale
-are where you leave the framework; :numref:`chap_performance` returns to the
-machinery the others provide.
+MXNet provides no comparable sharded-checkpoint or memory-mapped loading API:
+a `.params` file loads as a whole, and the project was archived before those
+features were added. Models that exceed available memory therefore require
+external tooling or another framework; :numref:`chap_performance` discusses
+the mechanisms available elsewhere.
 :end_tab:
 
 ## Loading Weights You Did Not Train
 
 :begin_tab:`pytorch`
-The most common reason to load a `state_dict` is that someone else produced it.
+A common reason to load a `state_dict` is to reuse weights produced elsewhere.
 You take a network trained on a large dataset and adapt it: keep the learned
 feature extractor, replace the final layer for your own labels. The mechanics are
 `state_dict` manipulation. torchvision serves the weights through a `weights=`
@@ -1003,17 +976,17 @@ enum, which also downloads the matching parameters the first time.
 :end_tab:
 
 :begin_tab:`jax`
-The most common reason to load parameters is that someone else produced them.
+A common reason to load parameters is to reuse weights produced elsewhere.
 You take a network trained on a large dataset and adapt it: keep the learned
 feature extractor, replace the final layer for your own labels. The book's NNX
 ResNet-50 loader downloads pinned Microsoft ImageNet safetensors from the
 Hugging Face Hub and maps them into an NNX model. We use that real artifact,
-then reuse the small MLP file to show the key-by-key surgery without burying the
-mechanism under a ResNet-sized state tree.
+then reuse the small MLP file to demonstrate key-by-key mapping changes on a
+compact state tree.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The most common reason to load weights is that someone else produced them. You
+A common reason to load weights is to reuse weights produced elsewhere. You
 take a network trained on a large dataset and adapt it: keep the learned
 feature extractor, replace the final layer for your own labels.
 `keras.applications` is the built-in zoo; `weights='imagenet'` downloads the
@@ -1022,14 +995,13 @@ matching parameters the first time, and `include_top=False` drops the
 :end_tab:
 
 :begin_tab:`mxnet`
-The most common reason to load parameters is that someone else produced them.
+A common reason to load parameters is to reuse weights produced elsewhere.
 You take a network trained on a large dataset and adapt it: keep the learned
 feature extractor, replace the final layer for your own labels.
 `gluon.model_zoo.vision` is the built-in zoo; `pretrained=True` downloads the
 matching parameters the first time. One caveat before you rely on it: the
-download comes from the archived project's file hosting, which still worked
-when this notebook last ran but carries no promise of staying up, so
-re-verify it before building anything on top.
+download comes from the archived project's file hosting, which was available when this notebook last ran but has no continuing
+availability guarantee. Verify it before depending on the download.
 :end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
@@ -1078,8 +1050,9 @@ net.output
 ```
 
 :begin_tab:`pytorch`
-A `state_dict` is an ordinary Python dict, so adapting one is ordinary dict
-surgery. We drop the pretrained 1000-class head (we just replaced it) and, to
+A `state_dict` is an ordinary Python dictionary, so adaptation consists of
+explicit mapping edits. We drop the pretrained 1000-class head (the replaced
+head) and, to
 show what a damaged file looks like, also drop one residual block. Loading with
 `strict=False` then returns a report of what did not line up instead of raising.
 :end_tab:
@@ -1093,8 +1066,8 @@ fill, and *unexpected*, file entries with no home in the model.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras loads weight files whole, so the partial-loading control is a flag rather
-than dict surgery: `load_weights(path, skip_mismatch=True)` fills every
+Keras loads weight files as a unit, so a flag controls partial loading rather
+than explicit mapping edits: `load_weights(path, skip_mismatch=True)` fills every
 variable whose saved shape matches and skips the rest, reporting the skips as a
 warning. To stage a mismatch, save the weights of a donor whose head has 101
 classes, our stand-in for a fine-tuned model someone else published, then load
@@ -1103,12 +1076,10 @@ read it back as a report.
 :end_tab:
 
 :begin_tab:`mxnet`
-The partial-loading flags exist, but they report nothing: `allow_missing=True`
-skips parameters the file did not fill and `ignore_extra=True` skips file
-entries with no home in the model, both silently. So the report is yours to
-compute, the same hand-rolled key-set diff the jax tab writes. Stage a
-damaged file first: take the pretrained parameters, drop the head we just
-replaced and, to show what damage looks like, the deepest residual stage
+The partial-loading flags do not produce a report: `allow_missing=True` skips
+parameters the file did not fill, and `ignore_extra=True` skips file entries
+with no home in the model. The example therefore computes the same explicit
+key-set difference as the JAX tab. It first constructs an incomplete file: take the pretrained parameters, drop the replaced head and the deepest residual stage
 (`features.8`), and save what remains as a plain parameter dict.
 :end_tab:
 
@@ -1177,47 +1148,45 @@ print('unexpected:', sorted(file_keys - model_keys))
 Read this report; do not discard it. We loaded the damaged file into a fresh
 target so every unexplained missing key really remains random. `missing_keys` lists parameters the model
 has but the file did not fill. The two `fc` entries are expected: that head is
-new and meant to start random. The `layer4` entries are a red flag, a whole block
-of the backbone left uninitialized, which here means the incoming file was
-incomplete and would produce nonsense features. `unexpected_keys`, empty here,
+new and meant to start random. The `layer4` entries indicate an unexpected problem: the incoming file omitted
+a whole backbone block, leaving it at random initialization and producing
+untrained features. `unexpected_keys`, empty here,
 would list names in the file with no home in the model, the usual sign of a
-renamed layer. The rule is to name which keys you expect to be missing and treat
-anything else as a bug.
+renamed layer. Specify the keys expected to be missing and treat additional entries as
+load errors.
 :end_tab:
 
 :begin_tab:`jax`
 Read both sets before trusting the merged tree. The two `head` entries under
 *missing* are expected: that layer is new and meant to start random. The two
 `output` entries under *unexpected* are the file's old head, stranded by the
-rename, and a renamed layer is what *unexpected* usually means in practice. The
-lesson is the same as with a built-in report, only stricter, because nothing
-prints it unless you do: name which keys you expect in each set and treat
-anything else as a bug.
+rename, and a renamed layer is what *unexpected* usually means in practice. Because the API does not print these sets, the merge code must report them.
+Specify the keys expected in each set and treat additional entries as load
+errors.
 :end_tab:
 
 :begin_tab:`tensorflow`
 Read the warning; do not silence it. It names exactly one object that could not
 be loaded, the `head` layer, and gives the two shapes that disagree, `(1280,
 10)` against `(1280, 101)`. That is the expected mismatch: the head is new and
-meant to start random. Any other layer in that list would mean the backbones
-disagree, a wrong input shape or a renamed layer, and is a bug rather than
-something to skip. One piece of API drift to know: older tutorials pass
+meant to start random. Any other layer in that list would indicate incompatible backbones, an
+incorrect input shape, or a renamed layer, and should be treated as a load
+error. One piece of API drift to know: older tutorials pass
 `by_name=True` for partial loads, but in Keras 3 that flag only applies to
 legacy `.h5` files and *raises* on the native `.weights.h5` format;
 `skip_mismatch` is the current control.
 :end_tab:
 
 :begin_tab:`mxnet`
-Read the diff; nothing else will print it for you. We used a fresh target so
+Read the explicit key-set difference because the loading API does not report
+it. We used a fresh target so
 unexplained missing keys retain random initialization. The two `output` entries
 under *missing* are expected: that head is new and meant to start random. The
-21 `features.8` entries are a red flag, a whole residual stage the file
-failed to deliver; had this file been your only source, those layers would
-keep whatever values they started with and the features coming out of them
-would be nonsense. *Unexpected*, empty here, would list file entries with no
-home in the model, the usual sign of a renamed layer. The rule is strict
-because the flags stay silent: name
-which keys you expect in each set and treat anything else as a bug.
+21 `features.8` entries indicate an omitted residual stage. If this file were
+the only source, those layers would retain their initial values and produce
+untrained features. *Unexpected*, empty here, would list file entries with no
+home in the model, the usual sign of a renamed layer. Because the flags do not report skipped entries, specify the keys expected in
+each set and treat additional entries as load errors.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1239,8 +1208,9 @@ optimizer discards them.
 :begin_tab:`tensorflow`
 With the backbone loaded, freeze it so training touches only the new head. One
 attribute does it: setting `trainable = False` on the backbone removes its
-variables from `trainable_variables`, and as a Keras convenience also runs its
-BatchNorm layers in inference mode, which is what fine-tuning wants.
+variables from `trainable_variables` and also runs its BatchNorm layers in
+inference mode. This preserves stored BatchNorm statistics while the backbone
+is frozen.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -1321,32 +1291,31 @@ f'{trainable} trainable of {total}'
 ```
 
 :begin_tab:`pytorch`
-torchvision is one source; the Hugging Face Hub is the ecosystem-scale one, and
-it distributes its weights as safetensors, which closes the loop with the format
-of the previous section. This section covers *how* to load and adapt pretrained
+torchvision and the Hugging Face Hub are two sources of pretrained weights.
+Many Hub repositories distribute safetensors files in the format described in
+the previous section. This section covers *how* to load and adapt pretrained
 weights; :numref:`sec_fine_tuning` covers when it helps and how far to unfreeze.
 :end_tab:
 
 :begin_tab:`jax`
-The Hugging Face Hub distributes JAX weights as safetensors, so the flat dict
-you just merged has the same shape as the artifact you will download in
-practice. This section covers *how* to load and adapt pretrained weights;
+The Hugging Face Hub distributes JAX weights as safetensors, whose flat
+mapping has the same structure as the mapping merged above. This section
+covers *how* to load and adapt pretrained weights;
 :numref:`sec_fine_tuning` covers when it helps and how far to unfreeze.
 :end_tab:
 
 :begin_tab:`tensorflow`
-`keras.applications` is one source; the Hugging Face Hub is the ecosystem-scale
-one, and it distributes its weights as safetensors, which closes the loop with
-the format of the previous section. This section covers *how* to load and adapt
+`keras.applications` and the Hugging Face Hub are two sources of pretrained
+weights. Many Hub repositories distribute safetensors files in the format
+described in the previous section. This section covers *how* to load and adapt
 pretrained weights; :numref:`sec_fine_tuning` covers when it helps and how far
 to unfreeze.
 :end_tab:
 
 :begin_tab:`mxnet`
-`gluon.model_zoo` is one source, frozen where the project stopped; the
-Hugging Face Hub is the ecosystem-scale one, and it distributes weights as
-safetensors, which for MXNet means the numpy bridge of the previous section
-is also your import path. This section covers *how* to load and adapt
+`gluon.model_zoo` is one source, frozen where the project stopped. The Hugging
+Face Hub also distributes weights as safetensors. MXNet reads them through the
+NumPy bridge from the previous section. This section covers *how* to load and adapt
 pretrained weights; :numref:`sec_fine_tuning` covers when it helps and how
 far to unfreeze.
 :end_tab:
@@ -1354,55 +1323,50 @@ far to unfreeze.
 ## Summary
 
 :begin_tab:`pytorch`
-A saved model is state, not code: a `state_dict` of tensors that means something
-only once the code that built the network runs again. For your own files
-`torch.save` is fine; for files you share, safetensors stores the same tensors
-with no executable pickle, which is why hubs standardize on it. A resumable
-checkpoint bundles more than weights: optimizer state, RNG state, step, and
-config, written atomically, or a resume restarts the optimizer's momentum from
-zero. Loading someone else's weights is dict surgery plus `strict=False`, and the
-missing/unexpected report is a diagnostic to read rather than a warning to
-silence.
+A saved model is state, not code: a `state_dict` becomes meaningful after the
+network code reconstructs a compatible structure. `torch.save` supports
+trusted local files; safetensors stores shared tensors without executable
+pickle and is supported by many model hubs. A resumable checkpoint adds
+optimizer state, RNG state, step, and configuration, and publishes them
+atomically. Without optimizer state, training resumes with newly initialized
+moments. When adapting external weights, explicit mapping edits and
+`strict=False` produce a missing/unexpected-key report that must be reviewed.
 :end_tab:
 
 :begin_tab:`jax`
-A saved model is state, not code: a pytree of named arrays that means something
-only once the code that built the network runs again. For your own files
-`jnp.save` is fine; for files you share, safetensors stores the same tensors
-behind a plain JSON header, with no pickle to execute, which is why hubs
-standardize on it. A resumable checkpoint contains model state, optimizer
-state, and step in pytrees that Orbax saves atomically in a single call, or a
-resume restarts the optimizer's momentum from zero. Loading someone else's
-weights is pytree surgery, and the missing/unexpected sets you compute are a
-diagnostic to read rather than a formality to skip.
+A saved model is state, not code: a pytree of named arrays becomes meaningful
+after the network code reconstructs a compatible structure. `jnp.save`
+supports trusted local files; safetensors stores shared tensors behind a JSON
+header without executable pickle and is supported by many model hubs. Orbax
+atomically saves model state, optimizer state, and step for resumable training.
+Without optimizer state, training resumes with newly initialized moments. When
+adapting external weights, an explicit pytree merge should report and validate
+its missing and unexpected keys.
 :end_tab:
 
 :begin_tab:`tensorflow`
-A saved model is state, not code: a collection of path-named variables that
-means something only once the code that built the network runs again. For your
-own files `np.save` and `.weights.h5` are fine; for files you share,
-safetensors stores the same tensors behind a plain JSON header, with no pickle
-to execute, which is why hubs standardize on it. A resumable checkpoint is a
-`tf.train.Checkpoint` of model, optimizer, and step saved as one unit, or a
-resume restarts the optimizer's momentum from zero; a fresh optimizer must be
-built before the restore so Adam's moments have somewhere to land. Loading
-someone else's weights is `load_weights` with `skip_mismatch=True`, and the
-skip warning is a diagnostic to read rather than a message to silence.
+A saved model is state, not code: path-named variables become meaningful after
+the network code reconstructs a compatible structure. `np.save` and
+`.weights.h5` support trusted local files; safetensors stores shared tensors
+behind a JSON header without executable pickle and is supported by many model
+hubs. A resumable `tf.train.Checkpoint` saves the model, optimizer, and step as
+one unit. Build a fresh optimizer before restoration so its Adam moment
+variables can receive saved values. For partial external loads,
+`skip_mismatch=True` reports skipped variables, and that report must be
+reviewed.
 :end_tab:
 
 :begin_tab:`mxnet`
-A saved model is state, not code: a dictionary of dotted-path names to arrays
-that means something only once the code that built the network runs again.
-For your own files `save_parameters` is fine, and its format is pure array
-data with no pickle to execute; for files you share, safetensors is broadly
-readable, and the `safetensors.numpy` bridge is all MXNet needs to speak it.
-A resumable checkpoint is three versioned files whose completion should be
-published by one atomic manifest update:
-parameters, trainer states (Adam's moments, stored with pickle, so keep such
-files your own), and a JSON sidecar with the step and config; the RNG stream
-cannot be snapshotted, only reseeded. Loading someone else's weights is dict
-surgery plus `allow_missing`/`ignore_extra`, and because those flags skip
-silently, the missing/unexpected key-set diff is yours to compute and read.
+A saved model is state, not code: a dictionary of dotted-path arrays becomes
+meaningful after the network code reconstructs a compatible structure.
+`save_parameters` stores array data without executable pickle; safetensors is
+more broadly readable through its NumPy bridge. A resumable checkpoint uses
+versioned parameter and trainer-state files plus a JSON sidecar for step and
+configuration. Trainer-state files contain pickle and should remain trusted;
+an atomic manifest update publishes the three files together. MXNet RNG state
+must be reseeded rather than restored. For partial external loads,
+`allow_missing` and `ignore_extra` skip entries without reporting them, so the
+caller must compute and review the missing/unexpected key sets.
 :end_tab:
 
 ## Exercises

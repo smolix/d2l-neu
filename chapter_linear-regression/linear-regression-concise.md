@@ -6,17 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Concise Implementation of Linear Regression
 :label:`sec_linear_concise`
 
-In :numref:`sec_linear_scratch` we implemented every piece of linear regression
-by hand: we initialized the weights, coded the forward pass, wrote out the squared
-error, and ran the parameter update ourselves.
-You *should* know how to do this, and doing it once is instructive.
-But because data iterators, loss functions, optimizers, and neural network layers
-are so common, modern deep learning frameworks package all of them as reusable,
-heavily optimized, well-tested components, freeing us to focus on the model
-rather than on low-level bookkeeping.
-In this section we rebuild the very same model from :numref:`sec_linear_scratch`
-using these high-level APIs, showing exactly which hand-rolled piece each
-framework primitive replaces.
+In :numref:`sec_linear_scratch` we initialized the parameters, defined the
+forward pass and squared loss, and implemented the update explicitly. Modern
+frameworks provide reusable implementations of each of these components. This
+section rebuilds the same model with framework data loaders, layers, losses,
+and optimizers, identifying the primitive that replaces each explicit step.
 
 ```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab mxnet
@@ -56,10 +50,8 @@ Each component from :numref:`sec_linear_scratch` has a direct counterpart here.
 The hand-rolled weight vector $\mathbf{w}$ and bias $b$ are replaced by a single
 *layer*; our manual squared-error computation is replaced by a built-in *loss*;
 and our explicit parameter-update loop is replaced by an *optimizer* object.
-The situation is similar to coding up your own blog from scratch.
-Doing it once or twice is rewarding and instructive,
-but you would be a lousy web developer
-if you spent a month reinventing the wheel.
+Implementing these components once exposes their behavior. For routine work,
+framework components reduce repeated code and provide optimized implementations.
 
 For standard operations,
 we can use a framework's predefined layers,
@@ -92,8 +84,7 @@ We will describe how this works in more detail later.
 :begin_tab:`pytorch`
 In PyTorch, the fully connected layer is defined in `Linear` and `LazyLinear` classes (available since version 1.8.0). 
 The latter
-allows users to specify *merely*
-the output dimension,
+requires only the output dimension,
 while the former
 additionally asks for
 how many inputs go into this layer.
@@ -164,7 +155,7 @@ class LinearRegression(d2l.Module):  #@save
             rngs=rngs)
 ```
 
-In the `forward` method we just invoke the built-in `__call__` method of the predefined layers to compute the outputs.
+The `forward` method invokes the predefined layer's built-in `__call__` method.
 
 ```{.python .input #linear-regression-concise-defining-the-model-2}
 %%tab pytorch, mxnet, tensorflow
@@ -306,18 +297,16 @@ def configure_optimizers(self):
 
 ## Training
 
-You might have noticed that expressing our model through
-high-level APIs of a deep learning framework
-requires fewer lines of code.
+Expressing the model through high-level framework APIs requires fewer lines of
+code.
 We did not have to allocate parameters individually,
 define our loss function, or implement minibatch SGD.
 Once we start working with much more complex models,
 the advantages of the high-level API will grow considerably.
 
-Now that we have all the basic pieces in place,
-the training loop itself is the same
-as the one we implemented from scratch.
-So we just call the `fit` method (introduced in :numref:`oo-design-training`),
+The batch-level computation is now delegated to standard layers, loss, and
+optimizer objects, while the training loop is the same one used from scratch.
+We call the `fit` method (introduced in :numref:`oo-design-training`),
 which relies on the implementation of the `fit_epoch` method
 in :numref:`sec_linear_scratch`,
 to train our model.
@@ -404,27 +393,13 @@ print(f'error in estimating b: {data.b - b}')
 
 ## Summary
 
-This section contains the first
-implementation of a deep network (in this book)
-to tap into the conveniences afforded
-by modern deep learning frameworks,
-such as MXNet :cite:`Chen.Li.Li.ea.2015`, 
-JAX :cite:`Frostig.Johnson.Leary.2018`, 
-PyTorch :cite:`Paszke.Gross.Massa.ea.2019`, 
-and Tensorflow :cite:`Abadi.Barham.Chen.ea.2016`.
-We used framework defaults for loading data, defining a layer,
-a loss function, an optimizer and a training loop.
-Whenever the framework provides all necessary features,
-it is generally a good idea to use them,
-since the library implementations of these components
-tend to be heavily optimized for performance
-and properly tested for reliability.
-At the same time, try not to forget
-that these modules *can* be implemented directly.
-This is especially important for aspiring researchers
-who wish to live on the leading edge of model development,
-where you will be inventing new components
-that cannot possibly exist in any current library.
+MXNet :cite:`Chen.Li.Li.ea.2015`, JAX
+:cite:`Frostig.Johnson.Leary.2018`, PyTorch
+:cite:`Paszke.Gross.Massa.ea.2019`, and TensorFlow
+:cite:`Abadi.Barham.Chen.ea.2016` provide standard implementations of data
+loaders, layers, losses, optimizers, and training utilities. These components
+are concise, tested, and optimized. Direct implementations remain useful when
+a model requires a component that the framework does not provide.
 
 :begin_tab:`mxnet`
 In Gluon, the `data` module provides tools for data processing,
@@ -577,7 +552,7 @@ sequences) where the input size is tedious to work out.
 ::: {.slide title="One layer, not a weight vector" only="mxnet"}
 [The Model]{.kicker}
 
-`Dense(1)` is the whole model. Gluon **infers** the input dimension on
+`Dense(1)` defines the complete linear model. Gluon **infers** the input dimension on
 the first forward pass, so we specify only the single output:
 
 @linear-regression-concise-defining-the-model-1
@@ -590,7 +565,7 @@ Initialize the weights now; storage is allocated lazily at first use.
 ::: {.slide title="One layer, not a weight vector" only="tensorflow"}
 [The Model]{.kicker}
 
-`Dense(1)` is the whole model. Keras **infers** the input dimension on
+`Dense(1)` defines the complete linear model. Keras **infers** the input dimension on
 the first forward pass, so we specify only the single output:
 
 @linear-regression-concise-defining-the-model-1
@@ -604,7 +579,7 @@ first use.
 ::: {.slide title="One layer, with explicit sizes and randomness" only="jax"}
 [The Model]{.kicker}
 
-`nnx.Linear(num_inputs, 1, rngs=rngs)` is the whole model. NNX has no
+`nnx.Linear(num_inputs, 1, rngs=rngs)` defines the complete linear model. NNX has no
 lazy mode, so we state the input width and hand the layer an explicit
 RNG stream — and its parameters exist, on the module, as soon as the
 constructor returns:
@@ -612,12 +587,12 @@ constructor returns:
 @linear-regression-concise-defining-the-model-1
 
 ::: {.d2l-note .rule}
-Two JAX signatures — explicit shapes, explicit randomness. The weights
+The JAX interface makes both shapes and randomness explicit. The weights
 then live on the module, just as in the other frameworks.
 :::
 :::
 
-::: {.slide title="The forward pass is a one-liner"}
+::: {.slide title="The forward pass delegates to the layer"}
 [The Model]{.kicker}
 
 `forward` just calls the layer. All the matrix--vector arithmetic we
@@ -632,7 +607,7 @@ wrote by hand now lives inside it:
 
 [Loss & Optimizer]{.dtitle}
 
-[two more pieces, off the shelf]{.dsub}
+[framework implementations of the remaining components]{.dsub}
 :::
 :::
 
@@ -663,7 +638,7 @@ recover plain MSE before averaging.
 :::
 :::
 
-::: {.slide title="Optimizer: minibatch SGD in one call"}
+::: {.slide title="Configure minibatch SGD with an optimizer object"}
 [Loss & Optimizer]{.kicker}
 
 The update loop becomes a single optimizer object, handed the
@@ -673,7 +648,7 @@ parameters and the learning rate:
 
 ::: {.d2l-note}
 The same `optim`/`Trainer` family also gives momentum, Adam, and more
-by swapping one line.
+by changing the optimizer configuration.
 :::
 :::
 
@@ -683,11 +658,11 @@ by swapping one line.
 
 [Training]{.dtitle}
 
-[the scaffold never changed]{.dsub}
+[the same training interface applies]{.dsub}
 :::
 :::
 
-::: {.slide title="The same Trainer drives it all"}
+::: {.slide title="The Trainer uses the same model interface"}
 [Training]{.kicker}
 
 ::: {.cols .vc}
@@ -714,8 +689,8 @@ linear-regression-from-scratch section:
 
 @-linear-regression-concise-training-1
 
-Nothing about the *training run* can tell the two implementations apart:
-only the amount of code we wrote changed.
+The two implementations use the same model, loss, data, and update rule; only
+the component implementations differ.
 :::
 
 ::: {.col .fig}
@@ -725,10 +700,10 @@ only the amount of code we wrote changed.
 :::
 
 ::: {.slide title="Where the parameters live now"}
-[Training · payoff]{.kicker}
+[Training · parameters]{.kicker}
 
-They no longer hang off our class as `self.w`, `self.b`; they live
-**inside** the layer, so `get_w_b` reaches through `net`:
+The parameters now belong to the layer rather than appearing as `self.w` and
+`self.b`, so `get_w_b` accesses them through `net`:
 
 @linear-regression-concise-training-2
 
@@ -737,10 +712,10 @@ They no longer hang off our class as `self.w`, `self.b`; they live
 @linear-regression-concise-training-3
 
 ::: {.d2l-note}
-Same verdict as the linear-regression-from-scratch section: the true
-$\mathbf{w}^* = [2,-3.4]$, $b^* = 4.2$
-recovered to a few $10^{-4}$. The built-in pieces really do compute the
-same thing our hand-rolled ones did.
+As in the linear-regression-from-scratch section, the generating values are
+$\mathbf{w}^* = [2,-3.4]$ and $b^* = 4.2$. The fitted parameters are within a
+few $10^{-4}$ of them, and the built-in components implement the same
+computations.
 :::
 :::
 
@@ -749,8 +724,7 @@ same thing our hand-rolled ones did.
 
 ::: {.cols}
 ::: {.col}
-- **From scratch** showed *what* happens; **concise** is what we
-  actually use day to day.
+- **From scratch** showed *what* happens; **concise** uses the framework components typical of applications.
 - A single **layer** stands in for `w`, `b`; a built-in **loss** and
   **optimizer** replace the rest.
 :::

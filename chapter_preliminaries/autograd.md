@@ -9,14 +9,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 Recall from :numref:`sec_calculus` 
 that derivatives drive all the optimization algorithms
 that we will use to train deep networks.
-While the calculations are straightforward,
-working them out by hand can be tedious and error-prone, 
-and these issues only grow
-as our models become more complex.
+Even when the individual rules are elementary, applying them by hand becomes
+tedious and error-prone as models grow more complex.
 
-Fortunately all modern deep learning frameworks
-take this work off our plates
-by offering *automatic differentiation*
+Modern deep learning frameworks perform this calculation using
+*automatic differentiation*
 (often shortened to *autograd*). 
 As we pass data through each successive function,
 the framework builds a *computational graph* 
@@ -36,8 +33,8 @@ modern backpropagation, was developed
 by :citet:`Linnainmaa.1970`.
 :numref:`sec_mdl-matrix-calculus-autodiff`
 recounts this history in full.
-Before exploring methods, 
-let's first master the autograd package.
+We begin with the basic automatic-differentiation interface and then examine
+how computational graphs are controlled.
 
 ```{.python .input #autograd-automatic-differentiation}
 %%tab mxnet
@@ -68,8 +65,7 @@ on a scalar-valued function, then on vector-valued ones.
 
 ### A Simple Function
 
-Let's assume that we are interested
-in differentiating the function
+Consider differentiating the function
 $y = 2\mathbf{x}^{\top}\mathbf{x}$
 with respect to the column vector $\mathbf{x}$.
 To start, we assign `x` an initial value.
@@ -108,8 +104,8 @@ because deep learning requires
 successively computing derivatives
 with respect to the same parameters
 a great many times,
-and we might risk running out of memory.
-Note that the gradient of a scalar-valued function
+and repeated allocation would add unnecessary overhead. The gradient of a
+scalar-valued function
 with respect to a vector $\mathbf{x}$
 is vector-valued with 
 the same shape as $\mathbf{x}$.
@@ -181,7 +177,7 @@ graphs and backpropagation in full in :numref:`sec_backprop`,
 and the underlying mathematics (both modes of automatic differentiation
 and their costs) is developed in
 :numref:`sec_mdl-matrix-calculus-autodiff`; for now we
-simply use the resulting gradients.
+use the resulting gradients.
 
 :begin_tab:`mxnet`
 We can now take the gradient of `y`
@@ -264,35 +260,22 @@ x_grad == 4 * x
 ```
 
 :begin_tab:`mxnet`
-Now let's calculate 
-another function of `x`
-and take its gradient. 
-Note that MXNet resets the gradient buffer 
-whenever we record a new gradient. 
+For the new objective $y=\sum_i x_i$, MXNet replaces the recorded gradient
+with the new value.
 :end_tab:
 
 :begin_tab:`pytorch`
-Now let's calculate 
-another function of `x`
-and take its gradient.
-Note that PyTorch does not automatically 
-reset the gradient buffer 
-when we record a new gradient. 
-Instead, the new gradient
-is added to the already-stored gradient.
-This behavior comes in handy
-when we want to optimize the sum 
+For the new objective $y=\sum_i x_i$, PyTorch adds the new derivative to the
+existing gradient buffer unless it is cleared first.
+This behavior supports optimizing the sum
 of multiple objective functions.
 To reset the gradient buffer,
 we can call `x.grad.zero_()` as follows:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Now let's calculate 
-another function of `x`
-and take its gradient.
-Note that TensorFlow resets the gradient buffer 
-whenever we record a new gradient. 
+For the new objective $y=\sum_i x_i$, `GradientTape.gradient` returns a new
+gradient value rather than accumulating into a tensor-owned buffer.
 :end_tab:
 
 ```{.python .input #autograd-a-simple-function-6}
@@ -339,7 +322,7 @@ the result of differentiation could be an even higher-order tensor.
 
 While Jacobians do show up in some
 advanced machine learning techniques,
-more commonly we want to sum up 
+more commonly we sum
 the gradients of each component of `y`
 with respect to the full vector `x`,
 yielding a vector of the same shape as `x`.
@@ -347,7 +330,7 @@ For example, we often have a vector
 representing the value of our loss function
 calculated separately for each example among
 a batch of training examples.
-Here, we just want to sum up the gradients
+Here, we sum the gradients
 computed individually for each example.
 
 :begin_tab:`mxnet`
@@ -436,14 +419,12 @@ for which we do not want to compute a gradient.
 In this case, we need to *detach* 
 the respective computational graph
 from the final result. 
-The following toy example makes this clearer: 
-suppose we have `z = x * y` and `y = x * x` 
+For example, suppose that `z = x * y` and `y = x * x`
 but we want to focus on the *direct* influence of `x` on `z` 
 rather than the influence conveyed via `y`. 
 In this case, we can create a new variable `u`
 that takes the same value as `y` 
-but whose *provenance* (how it was created)
-has been wiped out.
+but whose computational history is not connected to the new graph.
 Thus `u` has no ancestors in the graph
 and gradients do not flow through `u` to `x`.
 Now consider `z = x * u`.
@@ -498,7 +479,7 @@ z = lambda x: u * x
 grad(lambda x: z(x).sum())(x) == u
 ```
 
-Note that while this procedure
+Although this procedure
 detaches `y`'s ancestors
 from the graph leading to `z`, 
 the computational graph leading to `y` 
@@ -554,9 +535,8 @@ any computation outside a tape is already untracked. To pause recording
 :end_tab:
 
 :begin_tab:`jax`
-JAX never records gradients implicitly: nothing is tracked until you apply
-a transform such as `grad`. There is simply nothing to switch off: you
-opt *in* to differentiation rather than out of it.
+JAX never records gradients implicitly: differentiation occurs only after a
+transform such as `grad` is applied. Thus, users opt in to differentiation.
 :end_tab:
 
 ```{.python .input #autograd-turning-off-gradient-tracking-1}
@@ -593,22 +573,19 @@ throughout the rest of the book.
 
 ## Beyond the Basics
 
-Automatic differentiation is more general
-than the fixed formulas we have differentiated so far:
+Automatic differentiation extends beyond the fixed formulas considered so far:
 it handles arbitrary control flow, derivatives of derivatives,
 and even lets us choose the *direction*
 in which the graph is traversed.
 
 ### Gradients and Python Control Flow
 
-So far we reviewed cases where the path from input to output 
-was well defined via a function such as `z = x * x * x`.
-Programming offers us a lot more freedom in how we compute results. 
-For instance, we can make them depend on auxiliary variables 
-or condition choices on intermediate results. 
+The preceding examples used a fixed sequence of operations such as
+`z = x * x * x`. Programs can instead use auxiliary variables and choose
+branches from intermediate results.
 One benefit of using automatic differentiation
 is that even if building the computational graph of 
-a function required passing through a maze of Python control flow
+a function required Python control flow
 (e.g., conditionals, loops, and arbitrary function calls),
 we can still calculate the gradient of the resulting variable.
 To illustrate this, consider the following code snippet where 
@@ -738,12 +715,12 @@ d_grad == d / a
 d_grad == d / a
 ```
 
-Dynamic control flow is very common in deep learning. 
+Dynamic control flow occurs frequently in deep learning.
 For instance, when processing text, the computational graph
 depends on the length of the input. 
-In these cases, automatic differentiation 
-is necessary for statistical modeling 
-since it is impossible to compute the gradient *a priori*. 
+Automatic differentiation records or traces the operations for the realized
+computation rather than requiring a separate derivative for every possible
+execution path.
 
 ### Higher-Order Derivatives
 
@@ -771,7 +748,7 @@ computed under the inner tape.
 :end_tab:
 
 :begin_tab:`jax`
-`grad` returns a function, so we just apply it twice.
+`grad` returns a function, so we apply it twice.
 :end_tab:
 
 ```{.python .input #autograd-higher-order-derivatives-1}
@@ -821,8 +798,8 @@ depending on millions of parameters ($n$ huge),
 so reverse mode delivers the entire gradient
 for the price of roughly one extra forward pass.
 Forward mode wins in the opposite regime
-(few inputs, many outputs), and it is also the tool of choice
-for Hessian--vector products and per-input sensitivities,
+(few inputs, many outputs), is useful for per-input sensitivities, and can
+participate in efficient Hessian--vector-product constructions,
 as in the Julia package ForwardDiff.jl
 :cite:`Revels.Lubin.Papamarkou.2016`.
 The exercises explore this trade-off further, and
@@ -845,7 +822,7 @@ Here, tools from compilers and graph manipulation
 are used to compute results 
 quickly and with modest memory. 
 
-For now, try to remember these basics:
+The basic workflow is:
 (i) attach gradients to those variables with respect to which we desire derivatives;
 (ii) record the computation of the target value;
 (iii) execute the backpropagation function; and
@@ -855,7 +832,8 @@ For now, try to remember these basics:
 ## Exercises
 
 1. Why is the second derivative much more expensive to compute than the first derivative?
-1. After running the function for backpropagation, immediately run it again and see what happens. Investigate.
+1. After running the backpropagation function, run it again. What happens, and
+   how does the behavior differ across frameworks?
 1. In the control flow example where we calculate the derivative of `d` with respect to `a`, what would happen if we changed the variable `a` to a random vector or a matrix? At this point, the result of the calculation `f(a)` is no longer a scalar. What happens to the result? How do we analyze this?
 1. Let $f(x) = \sin(x)$. Plot the graph of $f$ and of its derivative $f'$. Do not exploit the fact that $f'(x) = \cos(x)$ but rather use automatic differentiation to get the result. 
 1. Let $f(x) = ((\log x^2) \cdot \sin x) + x^{-1}$. Write out a dependency graph tracing results from $x$ to $f(x)$. 
@@ -885,7 +863,7 @@ For now, try to remember these basics:
 ::: {.cover}
 [Dive into Deep Learning · §2.5]{.kicker}
 
-From the chain rule to **backpropagation**<br>the engine that differentiates a whole network for you.
+From the chain rule to **backpropagation**<br>automatic differentiation for a complete network.
 :::
 :::
 
@@ -894,14 +872,14 @@ From the chain rule to **backpropagation**<br>the engine that differentiates a w
 
 ::: {.cols .vc}
 ::: {.col}
-Hand-deriving gradients for a million-parameter network is hopeless.
-Instead the framework **records** each operation as you run the forward
-pass, then **replays it in reverse**, applying the chain rule of the
-calculus section mechanically, to get the gradient w.r.t. *every* input
+Deriving a million-parameter network's gradient by hand is impractical.
+Instead, the framework **records** each operation during the forward
+pass, then **replays it in reverse**, systematically applying the chain rule
+from the calculus section to obtain the gradient with respect to *every* input
 at once.
 
 ::: {.d2l-note}
-Every training step in this book is one forward pass and one backward
+Training steps in this book generally include a forward pass and a backward
 pass over this graph.
 :::
 :::
@@ -929,7 +907,7 @@ pass over this graph.
 ::: {.col}
 Differentiate $y = 2\,\mathbf{x}^\top\mathbf{x}$ w.r.t. the vector
 $\mathbf{x}$. The analytic answer, $\nabla_\mathbf{x} y = 4\mathbf{x}$,
-is our sanity check: autograd must reproduce it exactly.
+provides a check for the automatic-differentiation result.
 
 @autograd-a-simple-function-1
 :::
@@ -997,7 +975,8 @@ it (handy for summing losses). So zero it before a fresh computation:
 @autograd-a-simple-function-6
 
 ::: {.d2l-note .warn}
-Forgetting `.zero_()` between iterations is a classic training bug.
+Forgetting `.zero_()` between iterations causes unintended gradient
+accumulation.
 :::
 :::
 
@@ -1042,7 +1021,7 @@ it, so $z = u \cdot x$ differentiates to $u$, **not** to $3x^2$:
 [Gradients]{.kicker}
 
 When we only need the value (prediction, evaluation, manual updates),
-we turn recording off and pay nothing for it. This is the default mode
+we turn recording off and avoid its bookkeeping cost. This is the default mode
 for inference throughout the book:
 
 @autograd-turning-off-gradient-tracking-1
@@ -1063,9 +1042,9 @@ for inference throughout the book:
 
 ::: {.cols .vc}
 ::: {.col}
-Autograd never sees your `if`s and `while`s; it records whichever ops
-*executed*. This function's loop count and branch both depend on its
-input:
+In eager execution, autograd records the operations executed by `if` and
+`while` statements. This function's loop count and branch both depend on its
+input (compiled transformations may impose additional constraints):
 
 @autograd-gradients-and-python-control-flow-1
 :::
@@ -1076,7 +1055,7 @@ input:
 :::
 :::
 
-::: {.slide title="Branch or loop, the gradient is exact: f(a)/a"}
+::: {.slide title="Branch or loop, the derivative is f(a)/a"}
 [Dynamic graphs]{.kicker}
 
 Each call realizes a concrete graph that `backward` can walk. Whichever
@@ -1089,7 +1068,7 @@ and the gradient must equal $f(a)/a$. It does:
 :::
 
 ::: {.slide title="Reverse mode: the whole gradient for one extra pass"}
-[Beyond · payoff]{.kicker}
+[Beyond]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1115,7 +1094,7 @@ many outputs) and Hessian–vector products.
 
 The gradient is itself a function on the graph, so we can differentiate
 *it*. For $f(x) = x^3$ at $x = 2$: $f'(2) = 3x^2 = 12$ and
-$f''(2) = 6x = 12$: the same number, by coincidence, and autograd nails
+$f''(2) = 6x = 12$: the values coincide at this point, and autograd computes
 both:
 
 @autograd-higher-order-derivatives-1

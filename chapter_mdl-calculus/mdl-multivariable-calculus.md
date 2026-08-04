@@ -1,24 +1,21 @@
 # Multivariable Calculus
 :label:`sec_mdl-multivariable_calculus`
 
-A deep network's loss is a function of millions to billions of weights, yet
-training rests on a single question asked over and over: how does the loss
-change when we nudge the parameters? :numref:`sec_mdl-single_variable_calculus`
-answered this for one variable. This section lifts that local-linear picture to
-many variables. The central object is the *gradient*, and we will see three
-things about it that the rest of deep learning leans on: it is the multivariable
-derivative (a first-order approximation), it points in the direction of steepest
-change (which is why we descend along it), and organizing the chain rule around
-it *is* the backpropagation algorithm. We close with the *Hessian*, the
-second-order term that tells a minimum from a saddle.
+A deep network's loss depends on many parameters.
+:numref:`sec_mdl-single_variable_calculus` described the response to a change
+in one variable; here we extend the local linear approximation to several
+variables. The *gradient* represents the first-order derivative and determines
+directions of steepest change. Applying the multivariable chain rule efficiently
+gives backpropagation. We conclude with the *Hessian*, whose second-order
+information distinguishes minima, maxima, and saddle points.
 
 ## From Partial Derivatives to the Gradient
 
 ### Partial Derivatives
 
-The one observation we already have is this: if we change a *single* weight
+If we change a *single* weight
 $w_1$ and freeze the rest, we are back to a function of one variable, and
-:numref:`sec_mdl-single_variable_calculus` applies verbatim:
+:numref:`sec_mdl-single_variable_calculus` applies directly:
 
 $$L(w_1+\epsilon_1, w_2, \ldots, w_N) \approx L(w_1, w_2, \ldots, w_N) + \epsilon_1 \frac{\partial}{\partial w_1} L(w_1, w_2, \ldots, w_N).$$
 :eqlabel:`eq_mdl-part_der`
@@ -29,14 +26,11 @@ happens when we perturb several coordinates at once.
 
 ### The Gradient
 
-Suppose we perturb every coordinate, replacing each $w_i$ by $w_i + \epsilon_i$.
-Apply :eqref:`eq_mdl-part_der` one coordinate at a time. Changing $w_1$
-contributes $\epsilon_1\frac{\partial L}{\partial w_1}$; changing $w_2$
-contributes $\epsilon_2\frac{\partial L}{\partial w_2}$, and so on. The
-corrections that involve *two* perturbations, like
-$\epsilon_1\epsilon_2\frac{\partial^2 L}{\partial w_1 \partial w_2}$, are
-products of small quantities (second order), and we discard them exactly as we
-discarded $\epsilon^2$ in one variable. What survives is a single sum:
+Assume first that $L$ is differentiable at $\mathbf w$. By definition, its change
+under a joint perturbation $\boldsymbol\epsilon$ equals a linear function plus an
+error $o(\|\boldsymbol\epsilon\|)$. In Euclidean coordinates that linear function
+is a dot product with some vector $\mathbf g$. Setting $\boldsymbol\epsilon=h\mathbf e_i$
+identifies $g_i$ with $\partial L/\partial w_i$. Thus differentiability gives
 
 $$
 L(w_1+\epsilon_1, \ldots, w_N+\epsilon_N) \approx L(w_1, \ldots, w_N) + \sum_{i=1}^N \epsilon_i \frac{\partial L}{\partial w_i}.
@@ -66,33 +60,29 @@ treat $\nabla_{\mathbf{w}} L$ as a column vector throughout; the layout
 conventions that make this choice precise are settled in
 :numref:`sec_mdl-matrix-calculus-autodiff`.
 
-The coordinate-at-a-time argument tacitly assumed the partials behave well
-*jointly*. The definition keeps the two ideas separate: $L$ is called
-*differentiable* at $\mathbf{w}$ if the linear approximation
-:eqref:`eq_mdl-nabla_use` holds with an error vanishing faster than
-$\|\boldsymbol{\epsilon}\|$. A sufficient condition, and the one we rely on in
-practice, is that the partials exist and are *continuous* near $\mathbf{w}$.
-Existence of the $N$ partials alone is not enough: $f(x, y) = 2xy/(x^2+y^2)$ with
+This order of reasoning matters. Existence of all partial derivatives does not
+itself imply the joint linear approximation. A convenient sufficient condition
+is that the partials exist and are continuous near $\mathbf w$. For a
+counterexample, $f(x, y) = 2xy/(x^2+y^2)$ with
 $f(0,0) = 0$ has both partials equal to zero at the origin, yet equals $1$
 everywhere on the diagonal $x = y \neq 0$, so no linear approximation can hold
-there. The losses in this book are built from pieces smooth enough that this
-hypothesis costs nothing.
+there.
 
 ### Directional Derivatives
 
 Reading :eqref:`eq_mdl-nabla_use` for a perturbation $\boldsymbol{\epsilon} =
-h\,\mathbf{u}$ of size $h$ along a unit direction $\mathbf{u}$ shows what the
-gradient says about *any* direction at once:
+h\,\mathbf{u}$ of size $h$ along a unit direction $\mathbf{u}$ shows how the
+gradient determines the derivative in *any* direction:
 
 $$
 \frac{L(\mathbf{w} + h\,\mathbf{u}) - L(\mathbf{w})}{h} \;\xrightarrow{\;h\to 0\;}\; \mathbf{u}\cdot\nabla_{\mathbf{w}} L(\mathbf{w}).
 $$
 
-The rate of change of $L$ as we move along $\mathbf{u}$, the *directional
-derivative*, is the projection of the gradient onto $\mathbf{u}$. The single
-vector $\nabla_{\mathbf{w}} L$ thus encodes the slope in every direction
-simultaneously. The next section turns this one identity into the geometry of
-gradient descent.
+The rate of change of $L$ as we move along $\mathbf{u}$ is the projection of
+the gradient onto $\mathbf{u}$, and that rate is the *directional derivative*.
+The single vector $\nabla_{\mathbf{w}} L$ thus encodes the slope in every
+direction simultaneously. The next section turns this one identity into the
+geometry of gradient descent.
 
 First, let us check that :eqref:`eq_mdl-nabla_use` really does approximate $L$.
 
@@ -165,8 +155,8 @@ shrinks a hundredfold. The discarded term has a name and a formula (the Hessian
 quadratic $\tfrac12\boldsymbol{\epsilon}^\top\mathbf{H}f\,\boldsymbol{\epsilon}$),
 which we develop at the end of this section.
 
-The same example models a workflow we will use constantly: whenever we derive a
-gradient by hand, we check it against automatic differentiation. Here
+The same example illustrates a standard verification procedure: compare a
+hand-derived gradient against automatic differentiation. Here
 autograd should reproduce $\nabla f(0, \log 2) = [\tfrac13, \tfrac23]^\top$.
 
 ```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
@@ -220,7 +210,7 @@ content of gradient descent, first introduced in :numref:`sec_linear_regression`
 3. Take a small step that way: $\mathbf{w} \leftarrow \mathbf{w} + \eta\mathbf{v}$.
 4. Repeat.
 
-Everything hinges on step 2. Write the gradient's effect on a unit direction
+To solve step 2, write the gradient's effect on a unit direction
 $\mathbf{v}$ using the geometric form of the dot product from
 :numref:`sec_mdl-geometry-linear-algebraic-ops`,
 
@@ -237,6 +227,9 @@ derivative $\mathbf{v}\cdot\nabla L$ is largest when $\mathbf{v}$ points along
 $+\nabla L$ and smallest when it points along $-\nabla L$. Thus $+\nabla L$ is
 the direction of steepest ascent and $-\nabla L$ the direction of steepest
 descent.*
+
+
+Here “unit” and “steepest” refer to the Euclidean norm and its inner product. With a different norm, the unit ball changes and the minimizing direction is determined by the corresponding dual norm; it need not be the negative Euclidean gradient.
 
 **Proof.** By Cauchy–Schwarz (:eqref:`eq_mdl-cauchy-schwarz`) applied to the
 unit vector $\mathbf{v}$,
@@ -259,10 +252,10 @@ $$
 \mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}} L(\mathbf{w}).
 $$
 
-Every optimizer in this book, from momentum through RMSProp to Adam
-(:numref:`chap_optimization`), modifies *how* the step along the gradient is
-computed, but they all inherit this core idea: read the gradient, move against
-it.
+First-order optimizers use gradient information, but they need not step along
+the current negative gradient. Momentum combines gradients across time, while
+RMSProp and Adam rescale coordinates; :numref:`chap_optimization` develops the
+resulting directions.
 
 ### Gradients and Level Sets
 
@@ -288,20 +281,19 @@ Hence $\mathbf{v}\cdot\nabla L = 0$; by the definition of orthogonality from
 :numref:`sec_mdl-geometry-linear-algebraic-ops`, $\mathbf{v}\perp\nabla L$.
 $\blacksquare$
 
-So on a contour map the gradient is the arrow crossing the contours at right
-angles, pointing toward higher ground, and it is longest where the contours
-bunch together, exactly where $L$ changes fastest, as drawn in
-:numref:`fig_mdl-cal-gradient-field`. Gradient descent slides *downhill across
-the contours*, always perpendicular to them.
+On a contour map, the gradient crosses each contour at a right angle and points
+toward increasing values. Its norm is largest where $L$ changes fastest, as
+shown in :numref:`fig_mdl-cal-gradient-field`. Gradient descent moves in the
+opposite direction, perpendicular to the contours.
 
-![Contours of a scalar field $L$ with its gradient $\nabla L$ drawn at several points: each arrow crosses the contours at a right angle, points toward higher values, and is longest where the contours bunch together, where $L$ changes fastest.](../img/mdl-cal-gradient-field.svg)
+![Contours of a scalar field $L$ with $\nabla L$ at several points. Each gradient is normal to its contour, points toward increasing values, and has greater norm where $L$ changes more rapidly.](../img/mdl-cal-gradient-field.svg)
 :label:`fig_mdl-cal-gradient-field`
 
 ### Tangent Planes and Linearization
 
-The level-set picture lives in the *base plane*, where the gradient is the arrow
-normal to the contours. There is a companion picture one dimension up, on the
-*graph* $z = f(\mathbf{x})$ itself. Reading :eqref:`eq_mdl-nabla_use` as an
+A level-set diagram represents the domain in the *base plane*, with the gradient
+normal to each contour. The *graph* $z = f(\mathbf{x})$ gives a second
+representation one dimension higher. Reading :eqref:`eq_mdl-nabla_use` as an
 equation for the height $z$ rather than as an approximation gives the
 *linearization* of $f$ at $\mathbf{x}_0$,
 
@@ -321,12 +313,11 @@ Rewrite
 this says the augmented vector $[\nabla f(\mathbf{x}_0),\, -1]^\top$ is normal,
 *in graph space*, to the tangent plane; the gradient is normal to the surface
 once we account for the height direction. Drop the height coordinate, projecting
-that normal straight down onto the base plane, and we recover $\nabla f$ crossing
-the level curves at right angles. :numref:`fig_mdl-tangent-plane` shows both at
-once: the tangent plane riding the surface, and the gradient's shadow meeting the
-contours square on.
+that normal onto the base plane, and we recover $\nabla f$ crossing
+the level curves at right angles. :numref:`fig_mdl-tangent-plane` shows the
+tangent plane together with this projected gradient.
 
-![A surface $z = f(\mathbf{x})$ with its tangent plane at a point, and the gradient $\nabla f$ projected onto the base plane, where it crosses the level curves of $f$ at right angles. The tangent plane is the graph-space view of the linearization; the perpendicular crossing is the base-plane view, two faces of the same first-order approximation.](../img/mdl-cal-tangent-plane.svg)
+![A surface $z = f(\mathbf{x})$ with its tangent plane at a point and $\nabla f$ projected onto the base plane. The tangent plane represents the linearization in graph space; the projected gradient is normal to the corresponding level curve of $f$.](../img/mdl-cal-tangent-plane.svg)
 :label:`fig_mdl-tangent-plane`
 
 ### Critical Points and the First-Order Test
@@ -336,8 +327,8 @@ arise in deep learning are far too complex to minimize in closed form. But the
 geometry above gives a cheap, exact *necessary* condition that every minimum
 must satisfy.
 
-Suppose someone hands us a point $\mathbf{x}_0$ and claims it minimizes $L$. Is
-the claim even plausible? Read :eqref:`eq_mdl-nabla_use` at $\mathbf{x}_0$: if
+A necessary condition can reject a proposed minimizer of $L$ at $\mathbf{x}_0$. Applying
+:eqref:`eq_mdl-nabla_use` at $\mathbf{x}_0$, if
 $\nabla L(\mathbf{x}_0) \neq \mathbf{0}$, then stepping along
 $-\nabla L(\mathbf{x}_0)$ strictly decreases $L$, so $\mathbf{x}_0$ cannot be a
 minimum. Contrapositively, **a minimum forces $\nabla L(\mathbf{x}_0) =
@@ -393,12 +384,12 @@ $$
 $$
 :eqlabel:`eq_mdl-lagrange-condition`
 
-for some scalar $\lambda$, the *Lagrange multiplier*. This single picture, the
-contours of $f$ kissing the constraint surface where their gradients align
-(:numref:`fig_mdl-lagrange-tangency`), is
-the first-order condition for constrained optimization, the seed of the KKT
-conditions and of duality. We meet it again in full force in
-:numref:`sec_mdl-constrained-optimization-duality`.
+for some scalar $\lambda$, the *Lagrange multiplier*. This single picture is
+the first-order condition for constrained optimization and a basis for the KKT
+conditions and duality. At the solution, a contour of $f$ is tangent to the
+constraint surface and their gradients align
+(:numref:`fig_mdl-lagrange-tangency`). :numref:`sec_mdl-constrained-optimization-duality`
+develops this condition further.
 
 ![Lagrange multipliers as tangency. At the constrained optimum the level set of $f$ is tangent to the constraint curve $g = c$ and the two gradients align, $\nabla f = \lambda \nabla g$. At a non-optimal feasible point the gradients disagree, so $\nabla f$ keeps a component along the constraint and sliding along it still improves $f$.](../img/mdl-cal-lagrange-tangency.svg)
 :label:`fig_mdl-lagrange-tangency`
@@ -418,10 +409,9 @@ each edge a direct functional dependence.
 ![The function relations of :eqref:`eq_mdl-multi_func_def`, drawn as a graph where nodes are values and edges show direct functional dependence.](../img/mdl-cal-chain-net1.svg)
 :label:`fig_mdl-chain-1`
 
-We *could* substitute everything and differentiate the resulting monster
-directly, but $\frac{\partial f}{\partial w}$ alone expands into a page of
-repeated subexpressions, and $\frac{\partial f}{\partial x}$ would repeat most
-of them again. That waste is precisely what the chain rule organizes away.
+Direct substitution produces long expressions with repeated subexpressions;
+computing another partial derivative repeats much of the same work. The chain
+rule organizes these shared computations.
 
 ### The Rule as a Sum Over Paths
 
@@ -445,7 +435,7 @@ $$
 In words, there are two *pathways* by which $a$
 influences $f$: $a \to u \to f$ and $a \to v \to f$. Each path contributes the
 *product* of the derivatives along its edges, and the total derivative is the
-*sum* over paths. This is the whole rule.
+*sum* over paths.
 
 In general, to differentiate the output with respect to an input we **sum, over
 every directed path from that input to the output, the product of the edge
@@ -486,7 +476,7 @@ block (:numref:`sec_resnet`), shape learning by controlling that gradient flow.
 ### The Backpropagation Algorithm
 
 Return to :eqref:`eq_mdl-multi_func_def` and ask for $\frac{\partial f}{\partial
-w}$. Applying the chain rule the obvious way pushes $w$ forward through the
+w}$. Expanding the chain rule directly pushes $w$ forward through the
 graph,
 
 $$
@@ -526,12 +516,11 @@ df_dw = df_du*du_dw + df_dv*dv_dw
 print(f'df/dw at {w}, {x}, {y}, {z} is {df_dw}')
 ```
 
-This computes one derivative, $\frac{\partial f}{\partial w}$. The trouble is
-that it gives us *no head start* on $\frac{\partial f}{\partial x}$: by keeping
-$\partial w$ in every denominator, we organized the work around "how $w$ affects
-everything." But in deep learning we want the opposite: how *one* loss is
-affected by *every* parameter. So we keep $\partial f$ in every *numerator*
-instead, walking the graph from the output backward:
+This computes $\frac{\partial f}{\partial w}$ but does not reuse the calculation
+for $\frac{\partial f}{\partial x}$. Deep learning instead requires the
+derivative of one loss with respect to every parameter. We therefore keep
+$\partial f$ in each numerator and traverse the graph backward from the
+output:
 
 $$
 \begin{aligned}
@@ -686,15 +675,15 @@ print(f'df/dy at {w}, {x}, {y}, {z} is {y_grad}')
 print(f'df/dz at {w}, {x}, {y}, {z} is {z_grad}')
 ```
 
-The library's answer matches our hand-computed backward pass. Why backprop is
+The library's answer matches our hand-computed backward pass.
+:numref:`sec_mdl-matrix-calculus-autodiff` explains why backprop is
 reverse-mode automatic differentiation, a chain of vector–Jacobian products,
-and when to prefer it over forward mode is the
-subject of :numref:`sec_mdl-matrix-calculus-autodiff`.
+and when to prefer it over forward mode.
 
 ## Second-Order Structure: the Hessian
 
 The gradient is a first-order, linear approximation; to know whether a critical
-point is a minimum we need the *curvature*, which lives in the second
+point is a minimum we need the *curvature*, which is determined by the second
 derivatives. A function of $n$ variables has $n^2$ second partials,
 
 $$
@@ -736,8 +725,7 @@ at another nearby point. Let $h \to 0$: by continuity the two expressions
 converge to the two mixed partials at $\mathbf{x}$, and since they are equal
 for every $h$, the limits agree. $\blacksquare$
 
-Symmetry matters because it puts the Hessian in the world of symmetric matrices,
-where the spectral theorem and positive-definiteness from
+Symmetry allows the spectral theorem and positive-definiteness results from
 :numref:`sec_mdl-eigendecompositions` apply, which is exactly what the
 second-derivative test will use.
 
@@ -795,7 +783,7 @@ gradient, and Hessian at $\mathbf{x}_0 = [-1, 0]^\top$ via
 :eqref:`eq_mdl-second_taylor` gives the approximating quadratic
 $q(x, y) = e^{-1}\bigl(-1 - (x+1) + (x+1)^2 + y^2\bigr)$.
 :numref:`fig_mdl-taylor-quadratic` plots the surface against this quadratic;
-near $[-1, 0]^\top$ they hug each other and peel apart only as we move away.
+near $[-1, 0]^\top$ they are nearly indistinguishable and separate only farther from the base point.
 
 ![The surface $z = xe^{-x^2-y^2}$ (blue) and its second-order Taylor quadratic at the base point $(-1, 0)^\top$ (orange). The two agree in value, slope, and curvature there, so they are nearly indistinguishable in a neighborhood of the base point and separate only farther out.](../img/mdl-cal-taylor-quadratic.svg)
 :label:`fig_mdl-taylor-quadratic`
@@ -826,8 +814,8 @@ variable; :numref:`sec_gd` develops it as a practical optimizer.
 
 ### The Second-Derivative Test
 
-We can now finish the story the first-order test left open: at a critical point,
-the Hessian decides whether we sit at a minimum, a maximum, or a saddle. At a
+At a critical point of a twice continuously differentiable function, a definite
+or indefinite Hessian classifies local behavior; a semidefinite Hessian does not. At a
 critical point $\mathbf{x}_0$ the gradient term in :eqref:`eq_mdl-second_taylor`
 vanishes, so the local picture is purely quadratic,
 
@@ -838,9 +826,9 @@ $$
 Stepping a unit direction $\mathbf{v}$ away from $\mathbf{x}_0$ makes the
 right-hand side $\tfrac12\mathbf{v}^\top\mathbf{H}\mathbf{v}$: the scalar
 $\mathbf{v}^\top\mathbf{H}\mathbf{v}$ is the *second directional derivative* of
-$f$ along $\mathbf{v}$, the second-order analogue of $\mathbf{v}\cdot\nabla f$,
-and at a critical point, where the slope term is gone, it is the curvature of
-$f$ along $\mathbf{v}$. Whether $f$ goes up or down as we leave $\mathbf{x}_0$
+$f$ along $\mathbf{v}$, the second-order analogue of $\mathbf{v}\cdot\nabla f$.
+At a critical point, where the slope term is gone, it is the curvature of $f$
+along $\mathbf{v}$. Whether $f$ goes up or down as we leave $\mathbf{x}_0$
 is governed entirely by the sign of this quadratic form, that is, by the
 *definiteness* of the symmetric matrix $\mathbf{H}$. The classification is read straight off the
 eigenvalues of $\mathbf{H}$ via the PSD/PD criterion of
@@ -916,18 +904,16 @@ saddles too :cite:`Dauphin.Pascanu.Gulcehre.ea.2014`, one reason gradient
 methods fare better in practice than the old fear of "getting stuck in a bad
 local minimum" suggests.
 
-With the Hessian in hand, the one-variable toolkit has been fully lifted:
-gradient for slope, Hessian for curvature, and the chain rule organized
-backward for the computation. What has *not* yet been lifted is the function
-itself: everything above differentiated a *scalar* loss, while real layers map
-vectors to vectors and carry matrix parameters, so the derivative becomes a
-matrix of partials, the *Jacobian*, with the gradient and Hessian as special
-cases. One caution for that road: the Mean Value Theorem of
+The gradient, Hessian, and multivariable chain rule extend the one-variable
+methods to scalar functions of several variables. Neural network layers also
+map vectors to vectors and use matrix parameters. Their derivative is a matrix
+of partial derivatives, the *Jacobian*, with gradients and Hessians as special
+cases. The Mean Value Theorem of
 :numref:`sec_mdl-mvt` does *not* survive the passage to vector-valued maps;
-only an inequality remains, the mean value inequality :cite:`Rudin.1976`. The
-Jacobian machinery, the layout conventions, and how it all yields
-backpropagation as reverse-mode automatic differentiation are the subject of
-:numref:`sec_mdl-matrix-calculus-autodiff`.
+only an inequality remains, the mean value inequality :cite:`Rudin.1976`.
+:numref:`sec_mdl-matrix-calculus-autodiff` develops the Jacobian machinery, the
+layout conventions, and how it all yields backpropagation as reverse-mode
+automatic differentiation.
 
 ## Summary
 
@@ -1004,7 +990,7 @@ Differentiation in many variables<br>**the gradient · its geometry · the chain
 :::
 :::
 
-::: {.slide title="One question, asked billions of times"}
+::: {.slide title="Derivatives with Many Parameters"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -1014,7 +1000,7 @@ rests on a single question: **how does the loss change when we nudge the
 parameters?**
 
 - The **gradient** $\nabla_{\mathbf{w}} L$ is the answer, the derivative in many dimensions.
-- It points the way **downhill**, the engine of every optimizer.
+- Its negative gives the direction of steepest **descent**, which underlies gradient-based optimization.
 - The **chain rule**, organized by the gradient, *is* backpropagation.
 - The **Hessian** tells a minimum from a saddle.
 :::
@@ -1039,7 +1025,7 @@ parameters?**
 [Gradients]{.kicker}
 
 Perturb every coordinate at once and discard the second-order cross terms,
-exactly as in one variable. What survives is a dot product:
+exactly as in one variable. The first-order term is a dot product:
 
 $$L(\mathbf{w} + \boldsymbol{\epsilon}) \approx L(\mathbf{w}) + \boldsymbol{\epsilon}\cdot \nabla_{\mathbf{w}} L(\mathbf{w}), \qquad \nabla_{\mathbf{w}} L = \left[\tfrac{\partial L}{\partial w_1}, \ldots, \tfrac{\partial L}{\partial w_N}\right]^\top.$$
 
@@ -1071,7 +1057,7 @@ Autograd reproduces the hand gradient:
 @!mdl-multivariable-calculus-directional-derivatives-1
 :::
 
-::: {.slide title="Every direction at once"}
+::: {.slide title="Directional Derivatives"}
 [Gradients]{.kicker}
 
 Read the approximation along a unit direction $\mathbf{u}$ and the rate of
@@ -1082,7 +1068,7 @@ $$\frac{L(\mathbf{w} + h\,\mathbf{u}) - L(\mathbf{w})}{h} \;\xrightarrow{\,h\to 
 
 ::: {.d2l-note}
 One vector $\nabla_{\mathbf{w}} L$ encodes the slope in **every** direction
-simultaneously. The rest of the geometry falls out of this single identity.
+simultaneously. The geometric results follow from this identity.
 :::
 :::
 
@@ -1119,7 +1105,7 @@ $\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}} L$.
 :::
 :::
 
-::: {.slide title="Two faces of one approximation"}
+::: {.slide title="Linearization and Gradient Geometry"}
 [Geometry]{.kicker}
 
 ::: {.cols .vc}
@@ -1205,7 +1191,7 @@ A network is a deep composition of simple functions. Drawn out, the
 dependencies form a **graph**: each node a value, each edge a direct
 functional dependence.
 
-Substituting everything and differentiating the monster repeats the same
+Substituting the full composite expression and differentiating it repeats the same
 subexpressions over and over. The chain rule organizes that waste away.
 :::
 
@@ -1237,7 +1223,7 @@ gradient flow.
 :::
 :::
 
-::: {.slide title="Forward sweep: one derivative"}
+::: {.slide title="Forward-Mode Derivative Evaluation"}
 [Chain rule]{.kicker}
 
 Push an input forward through the graph and the single-step partials multiply out. One forward sweep returns only $\partial f/\partial w$, with no head start on the other inputs:
@@ -1245,7 +1231,7 @@ Push an input forward through the graph and the single-step partials multiply ou
 @!multivariable-calculus-the-backpropagation-algorithm-1
 :::
 
-::: {.slide title="Backward sweep: the whole gradient"}
+::: {.slide title="Backward Evaluation of the Gradient"}
 [Chain rule]{.kicker}
 
 Walk the graph from the output **backward**, keeping $\partial f$ in every *numerator*: compute $\tfrac{\partial f}{\partial u}, \tfrac{\partial f}{\partial v}$ once, reuse them, and **all** four input derivatives fall out in a single sweep. This *is* backpropagation.
@@ -1282,7 +1268,7 @@ The one-line autograd call runs exactly this backward pass. The four gradients m
 ::: {.slide title="The Hessian: curvature"}
 [Hessian]{.kicker}
 
-The gradient is first-order; curvature lives in the $n^2$ second partials,
+The gradient is first-order; the $n^2$ second partials determine curvature,
 collected into the **Hessian** $\mathbf{H}_f$.
 
 ::: {.d2l-note .rule}
@@ -1291,8 +1277,8 @@ $\partial^2 f/\partial x_i\partial x_j = \partial^2 f/\partial x_j\partial x_i$,
 so $\mathbf{H}_f = \mathbf{H}_f^\top$.
 :::
 
-Symmetry puts $\mathbf{H}$ in the world of the spectral theorem, exactly
-what the second-derivative test needs.
+Because $\mathbf{H}$ is symmetric, the spectral theorem applies and supports
+the second-derivative test.
 :::
 
 ::: {.slide title="The best-fitting quadratic"}
@@ -1322,15 +1308,15 @@ Stepping from the base point $(-1, 0)$, the gap between $f$ and its Taylor quadr
 
 @!multivariable-calculus-hessians
 
-The gap is **third order** (double the step, eight times the gap), which is what "best quadratic" means. Iterating *fit and jump to the minimum* is Newton's method, met in one variable in the previous section.
+The gap is **third order** (double the step, eight times the gap), which is what the local quadratic guarantee predicts. Newton's method minimizes this model when it is positive definite and safeguards the step otherwise.
 :::
 
 ::: {.slide title="The second-derivative test"}
 [Hessian]{.kicker}
 
 At a critical point the picture is purely quadratic; the curvature
-$\mathbf{v}^\top\mathbf{H}\mathbf{v}$ along $\mathbf{v}$ decides everything,
-through the **definiteness** of $\mathbf{H}$, read off its eigenvalues:
+$\mathbf{v}^\top\mathbf{H}\mathbf{v}$ along $\mathbf{v}$ gives the second-order
+test through the **definiteness** of $\mathbf{H}$, read off its eigenvalues:
 
 ![](../img/mdl-la-psd.svg)
 
@@ -1352,7 +1338,7 @@ The surface $f(x,y) = x\,e^{-x^2-y^2}$ has exactly two critical points, $(\pm 1/
 Differentiate twice, extract eigenvalues, read the signs: all positive is a minimum, all negative a maximum, and a saddle shows one of each.
 :::
 
-::: {.slide title="Why saddles, not bad minima"}
+::: {.slide title="Saddle Points in High Dimensions"}
 [Hessian]{.kicker}
 
 A minimum needs **all** $n$ eigenvalues positive at once. If their signs
@@ -1366,7 +1352,7 @@ So the critical points met while training deep nets are overwhelmingly
 methods do so well in practice.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="The gradient represents Euclidean linear change"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

@@ -14,8 +14,13 @@ In general, the hidden state at any time step $t$ can be computed from both the 
 $$h_t = f(x_{t}, h_{t-1}).$$
 :eqlabel:`eq_ht_xt`
 
-For a sufficiently powerful function $f$ in :eqref:`eq_ht_xt`, the latent variable model is not an approximation at all: $h_t$ might simply store everything it has observed so far.
-Whether that is useful depends on how compactly $f$ can summarize the past, an issue we return to throughout this chapter and the next.
+The approximation becomes exact only when $h_{t-1}$ is a sufficient statistic
+of the prefix for predicting $x_t$:
+$P(x_t\mid x_{<t})=P(x_t\mid h_{t-1})$. An idealized real-valued state could
+encode an arbitrarily long prefix with unbounded precision, but that
+construction is neither robust nor operationally useful. Practical finite
+states impose an information bottleneck, so the model must learn which parts
+of the past matter for prediction.
 
 Recall the hidden layers and hidden units of :numref:`chap_perceptrons`.
 It is worth stressing that hidden layers and hidden states name two very different things.
@@ -174,7 +179,7 @@ Suppose the corpus contains "the time machine by", which the BPE tokenizer split
 The input sequence is `the`, `time`, `mach`, `ine`, and the target sequence is the same stream shifted forward by one token, `time`, `mach`, `ine`, `by`.
 At every step we run a softmax over the output and compute the cross-entropy against the target token, then average the losses over the sequence.
 Because of the recurrence, the output $\mathbf{O}_3$ is determined by the inputs `the`, `time`, `mach`, so its loss measures how well the model predicts the next token `ine` from that prefix.
-Minimizing perplexity (:numref:`sec_language-model`), the exponentiated average cross-entropy, is exactly this objective.
+Minimizing perplexity is exactly this objective, since perplexity (:numref:`sec_language-model`) is the exponentiated average cross-entropy.
 
 ![An RNN language model trained by teacher forcing over subword (BPE) tokens. The target sequence is the input shifted forward by one token, so each step is trained to predict the next token.](../img/mdl-rnn-lm-shift.svg)
 :label:`fig_rnn_train`

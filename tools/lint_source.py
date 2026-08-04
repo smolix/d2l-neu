@@ -177,6 +177,9 @@ def lint_file(path: Path, corpus_labels=None):
     # ── Unknown directives ──
     issues += _check_directives(path, lines)
 
+    # ── Display math: `\\` needs an alignment environment ──
+    issues += _check_display_math(path, lines)
+
     # ── Optional: cross-corpus label uniqueness ──
     if corpus_labels is not None:
         for i, line in enumerate(lines, start=1):
@@ -296,6 +299,68 @@ def _check_placeholders(path, lines, fence_ids):
             if not ok:
                 issues.append(Issue(path, i, 1, 'warning',
                     f'placeholder @{cid}@{forced_fw} has no matching variant'))
+    return issues
+
+
+_MATH_ENVS = ('aligned', 'align', 'alignat', 'split', 'array', 'matrix',
+              'bmatrix', 'pmatrix', 'vmatrix', 'Vmatrix', 'Bmatrix',
+              'smallmatrix', 'psmallmatrix', 'cases', 'gathered', 'gather',
+              'multline', 'substack', 'subarray')
+
+
+def _check_display_math(path, lines):
+    """A `\\\\` row break inside `$$...$$` needs an alignment environment.
+
+    Without one, pandoc emits `\\[a\\\\b\\]` and TeX sets every row on a single
+    line, which silently runs off the right margin in the PDF.
+    """
+    def _flag(start, text):
+        if '\\\\' in text and not any(
+                '\\begin{%s}' % e in text for e in _MATH_ENVS):
+            return [Issue(path, start, 1, 'error',
+                'display math uses `\\\\` without an alignment '
+                'environment; wrap the body in \\begin{aligned}...'
+                '\\end{aligned} or TeX sets it on one long line')]
+        return []
+
+    issues = []
+    in_fence = False
+    in_math = False
+    start = 0
+    body = []
+    for i, line in enumerate(lines, start=1):
+        if _FENCE_OPEN_RE.match(line) and not in_fence and not line.startswith('````'):
+            in_fence = True
+            continue
+        if in_fence and _FENCE_CLOSE_RE.match(line):
+            in_fence = False
+            continue
+        if in_fence:
+            continue
+        stripped = line.strip()
+        # Single-line display: `$$ ... $$` opened and closed on one line.
+        if not in_math and stripped.startswith('$$') and stripped.endswith('$$') \
+                and len(stripped) > 4:
+            issues += _flag(i, stripped[2:-2])
+            continue
+        if stripped == '$$':
+            if not in_math:
+                in_math, start, body = True, i, []
+            else:
+                in_math = False
+                issues += _flag(start, '\n'.join(body))
+            continue
+        # Fenced-off forms where content shares the `$$` line.
+        if not in_math and stripped.startswith('$$'):
+            in_math, start, body = True, i, [stripped[2:]]
+            continue
+        if in_math and stripped.endswith('$$'):
+            in_math = False
+            body.append(stripped[:-2])
+            issues += _flag(start, '\n'.join(body))
+            continue
+        if in_math:
+            body.append(line)
     return issues
 
 

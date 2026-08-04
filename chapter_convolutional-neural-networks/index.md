@@ -1,66 +1,45 @@
 # Convolutional Neural Networks
 :label:`chap_cnn`
 
-Image data is represented as a two-dimensional grid of pixels, be the image
-monochromatic or in color. Accordingly each pixel corresponds to one
-or multiple numerical values respectively. So far we have ignored this rich
-structure and treated images as vectors of numbers by *flattening* them, irrespective of the spatial relation between pixels. This
-deeply unsatisfying approach was necessary in order to feed the
-resulting one-dimensional vectors through a fully connected MLP.
+An image is a two-dimensional grid of pixels, with one or more values at each
+location. The models introduced so far flatten this grid into a vector before
+applying a fully connected layer. Flattening discards the explicit spatial
+relationship between neighboring pixels.
 
 An MLP assigns a separate weight to every input coordinate but has no built-in
 notion that two coordinates are neighbors. If we permute the pixels in every
-image consistently and retrain the MLP, we have merely renamed its input
+image consistently and retrain the MLP, we have only renamed its input
 coordinates; the model class has not changed, even though the spatial layout
 has disappeared. Ideally, we would use our prior knowledge that nearby pixels
 are typically related to each other, to build efficient models for
 learning from image data.
 
 This chapter introduces *convolutional neural networks* (CNNs)
-:cite:`LeCun.Jackel.Bottou.ea.1995`, a powerful family of neural networks that
-are designed for precisely this purpose.
-On the ImageNet collection
-:cite:`Deng.Dong.Socher.ea.2009` it was the use of convolutional neural
-networks, in short CNNs, that provided significant performance
-improvements :cite:`Krizhevsky.Sutskever.Hinton.2012`, and CNN-based
+:cite:`LeCun.Jackel.Bottou.ea.1995`. CNNs preserve spatial organization by
+connecting each output to a local neighborhood and sharing the same weights
+across locations.
+On the ImageNet collection :cite:`Deng.Dong.Socher.ea.2009`, convolutional
+neural networks delivered substantial performance improvements
+:cite:`Krizhevsky.Sutskever.Hinton.2012`, and CNN-based
 architectures dominated computer vision from roughly 2012 to 2021.
 Today they share the field with vision transformers
 (:numref:`chap_transformers`) and remain the default
 where latency, small datasets, or dense prediction dominate.
 
-Modern CNNs, as they are called colloquially, owe their design to
-inspirations from biology, group theory, and a healthy dose of
-experimental tinkering.  In addition to their sample efficiency in
-achieving accurate models, CNNs tend to be computationally efficient,
-both because they require fewer parameters than fully connected
-architectures and because convolutions are easy to parallelize across
-GPU cores :cite:`Chetlur.Woolley.Vandermersch.ea.2014`.  Consequently, practitioners often
-apply CNNs whenever possible, and increasingly they have emerged as
-credible competitors even on tasks with a one-dimensional sequence
-structure, such as audio :cite:`Abdel-Hamid.Mohamed.Jiang.ea.2014`, text
-:cite:`Kalchbrenner.Grefenstette.Blunsom.2014`, and time series analysis
-:cite:`LeCun.Bengio.ea.1995`, where recurrent neural networks are
-conventionally used.  Some clever adaptations of CNNs have also
-brought them to bear on graph-structured data :cite:`Kipf.Welling.2016` and
-in recommender systems.
+These restrictions reduce the parameter count relative to a fully connected
+layer, and convolution kernels can be evaluated in parallel on GPUs
+:cite:`Chetlur.Woolley.Vandermersch.ea.2014`. The same operation also appears
+in models for audio, text, and time series, but this chapter concentrates on
+images, where locality and translation equivariance have a direct spatial
+interpretation.
 
-First, we will examine the motivation for convolutional
-neural networks. This is followed by a walk through the basic operations
-that comprise the backbone of all convolutional networks.
-These include the convolutional layers themselves,
-nitty-gritty details including padding, stride, and dilation,
-the pooling layers used to aggregate information
-across adjacent spatial regions,
-the use of multiple channels at each layer,
-including grouped and depthwise-separable convolutions,
-and a careful discussion of the structure of modern architectures.
-We will conclude the chapter with a full working example of LeNet,
-one of the earliest convolutional networks deployed at scale,
-long before the rise of modern deep learning.
-In the next chapter, we will develop full implementations
-of some popular and comparatively recent CNN architectures
-whose designs represent most of the techniques
-commonly used by modern practitioners.
+We first derive convolution from locality and translation equivariance in
+:numref:`sec_why-conv`. We
+then define the operation and show how padding, stride, dilation, channels,
+and pooling control its shape and information flow. LeNet combines these
+components in a complete image classifier. The next chapter studies the
+architectural and training changes that made substantially deeper CNNs
+practical.
 
 ```toc
 :maxdepth: 2
@@ -82,9 +61,9 @@ All are freely accessible online except where noted.
 
 **Books**
 
-- [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 9 (Convolutional Networks) is the canonical treatment of sparse interactions, parameter sharing, and equivariance — the same three-step argument as :numref:`sec_why-conv`, developed at length.
+- [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 9 develops sparse interactions, parameter sharing, and equivariance in detail.
 - [Understanding Deep Learning — Simon J. D. Prince](https://udlbook.github.io/udlbook/) — free PDF; Chapter 10 covers convolutions, stride, dilation, and receptive fields with unusually good figures.
-- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap6.html) — free online; Chapter 6 introduces convolutional layers, shared weights, and pooling from first principles, a gentle second telling of this chapter.
+- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap6.html) — free online; Chapter 6 introduces convolutional layers, shared weights, and pooling from first principles.
 
 **Courses and video lectures**
 

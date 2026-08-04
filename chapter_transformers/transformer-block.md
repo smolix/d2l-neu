@@ -1,20 +1,17 @@
 # The Transformer Block
 :label:`sec_transformer-block`
 
-The previous chapter built attention: a layer that lets every position read
-from every other, weighted by learned relevance. Attention alone, however, is
-not what anyone deploys. Deployed models stack a composite unit — the
-*transformer block* — in which attention supplies communication between
-positions and a position-wise feed-forward network supplies computation
-within each one, both writing their results into a shared residual stream.
-This section builds that unit. We settle the two design decisions that
-separate a 2017 block from a 2026 one: where the normalization layers go
-(with an experiment at initialization that shows why nearly every modern
-model moved them), and what the feed-forward network computes (with a
-matched-budget race between the classic MLP and its gated successor). The
-product is a single configurable `TransformerBlock` class whose flags span
-a decade of architectures; the next section stacks it into a language model,
-and the rest of the chapter never builds another block.
+The previous chapter developed attention as a layer in which each position
+can read from the others. Deployed models place this layer in a
+*transformer block*. Attention communicates between positions, a
+position-wise feed-forward network transforms each position independently,
+and both add their outputs to a shared residual stream. This section studies
+two design choices that distinguish the original block from current ones:
+the placement of normalization and the form of the feed-forward network.
+Experiments examine signal propagation at initialization and compare a
+standard MLP with its gated successor at matched parameter count. We then
+combine these choices in a configurable `TransformerBlock` class used
+throughout the remainder of the chapter.
 
 ```{.python .input #transformer-block-the-transformer-block}
 %%tab pytorch
@@ -37,9 +34,9 @@ import optax
 import time
 ```
 
-## The Anatomy of a Block
+## Components of a Transformer Block
 
-A transformer block is two sublayers wired to one highway.
+A transformer block contains two sublayers connected by a residual stream.
 :numref:`sec_what-attention-computes` introduced the *residual stream* view:
 each token carries a running vector $\mathbf{x} \in \mathbb{R}^d$ from layer
 to layer, and sublayers do not replace it — they read from it, compute, and
@@ -47,13 +44,12 @@ to layer, and sublayers do not replace it — they read from it, compute, and
 
 - **Attention** is the only place where positions interact. Each token
   queries the others as in :numref:`sec_multihead-attention` and adds the
-  retrieved mixture to its stream. Everything the model knows about
-  *context* enters here.
+  retrieved mixture to its stream. Contextual information enters through
+  this sublayer.
 - The **feed-forward network** (FFN) acts on each position separately: the
-  same two- or three-matrix MLP, applied token by token, with no
-  interaction between positions. Everything the model computes *from* a
-  token's accumulated state — and, as we will see, most of its parameters —
-  lives here.
+  same two- or three-matrix MLP is applied token by token, with no
+  interaction between positions. It transforms each token's accumulated
+  state and contains most of the block's parameters.
 
 Writing $\mathrm{Attn}$ for multi-head self-attention and $\mathrm{Norm}$
 for a normalization layer, the modern (*pre-norm*) block computes
@@ -73,7 +69,7 @@ change that — positional information is the model's job, not the block's,
 a division of responsibilities the next section exploits.
 
 :numref:`fig_transformer-block` shows the wiring, in the two normalization
-arrangements whose difference is our first order of business.
+arrangements compared below.
 
 ![The transformer block: attention and a position-wise FFN read from the residual stream and add their results back. Left, the 2017 arrangement — normalization sits on the stream itself, after each addition. Right, the modern arrangement — normalization moves onto each branch, and the stream runs uninterrupted from input to output.](../img/mdl-transformers-block-anatomy.svg)
 :label:`fig_transformer-block`
@@ -88,8 +84,8 @@ a tuning nightmare. The normalizer of choice is *layer normalization*
 its $d$ features — unlike the batch normalization of
 :numref:`sec_batch_norm`, it involves no batch statistics, so it behaves
 identically in training and inference and is indifferent to sequence
-length. What the 2017 paper fixed, and what a few years of painful
-experience revised, is *where* it goes.
+length. The 2017 paper also fixed *where* it goes, and a few years of
+painful experience revised that answer.
 
 ### Two Arrangements
 
@@ -164,9 +160,9 @@ class MiniBlock(nnx.Module):
 
 Which arrangement is better? We can get a long way without training
 anything. A freshly initialized network is a fixed random function, so we
-can *measure* how it treats signals: stack $N$ blocks, push a random
-sequence through, and watch what survives — deterministically, in seconds,
-with no seed lottery. We initialize every weight matrix as the original
+can *measure* how it treats signals. We stack $N$ blocks, pass a random
+sequence through them, and measure the output without training. Fixing the
+seed makes the experiment deterministic. We initialize every weight matrix as the original
 transformer did (Xavier initialization) and track three quantities: the
 scale of the residual stream, how *distinct* the tokens remain from one
 another, and how much gradient each block's attention receives from a
@@ -289,29 +285,22 @@ then renormalizes, locking in the contraction, and the spread decays
 *geometrically* — by block 32 the tokens are identical to about one part in
 ten thousand. Pre-LN dilutes the same contraction by the growing stream,
 and the spread falls only polynomially, still at $0.4$ after 32 blocks.
-This is the *rank collapse* of :citet:`Dong.Cordonnier.Loukas.2021` caught
-in the act, and the gradients show why it matters for learning: a head
-attending over identical tokens returns the same mixture *whatever its
-query and key weights*, so those weights stop receiving gradient. The
-block-32 norms printed above locate the starvation precisely: post-LN's
-query and key projections receive gradients of order $10^{-9}$, six
-orders of magnitude below their pre-LN counterparts, while its value and
-output projections — which transform the one surviving token rather than
-compare tokens — come in around $0.06$, as healthy as pre-LN's (the FFN
-parameters, fed by the same residual stream, are likewise unaffected). It
-is specifically the query/key pathway, the part that decides *where* to
-attend, that dies; the plot shows the same starvation deepening block by
-block down the post-LN stack, while pre-LN tapers gently. (The effect
-softens under today's smaller initializations — one of several crutches,
-along with learning-rate warmup, that kept deep post-LN models trainable
-:cite:`xiong2020layer`.)
+The decreasing token spread is an initialization-time diagnostic related to
+the rank-collapse phenomenon analyzed by
+:citet:`Dong.Cordonnier.Loukas.2021`; it does not demonstrate collapse during
+training. In this 32-block stack, the post-LN query and key projections receive
+gradients of order $10^{-9}$, about six orders of magnitude below their
+pre-LN counterparts, while the value and output projection norms are near
+$0.06$. Once token representations become nearly identical, the attention
+mixture becomes insensitive to the query and key weights, which explains the
+small gradients in this constructed setting. Different initializations,
+residual scales, optimizers, and training dynamics can change the effect
+:cite:`xiong2020layer`.
 
-The practical verdict matched this picture: post-LN transformers diverge
-without carefully tuned warmup, pre-LN models train without incident at the
-same depth :cite:`xiong2020layer`, and essentially every model since GPT-2
-has been pre-norm :cite:`Radford.Wu.Child.ea.2019`. We make pre-norm our
-default; the next section, which has a trainable model, will show the
-post-LN failure not at initialization but live, during training.
+The experiments of :citet:`xiong2020layer` likewise find that post-LN is more
+sensitive to learning-rate warmup than pre-LN under their training protocols.
+We therefore use pre-norm as the default in the teaching model and test both
+placements during training in :numref:`sec_gpt`.
 
 ### RMSNorm
 
@@ -373,15 +362,13 @@ for name, f in (('LayerNorm', nnx.jit(layernorm)),
     print(f'{name}: {(time.time() - t0) / 200 * 1e3:.3f} ms')
 ```
 
-The timing is close to an anticlimax: on a modern GPU both normalizers are
-memory-bound, and what dropping the mean subtraction saves depends on the
-framework's kernel — nothing measurable in our PyTorch run, roughly a third
-in our JAX run, and either way microseconds in blocks that spend their time
-elsewhere. What RMSNorm actually buys is less machinery — no centering, no
-bias parameter, one statistic instead of two — at comparable quality, which
-is why Llama and most open models since use it :cite:`touvron2023llama`. The
-lesson is about defaults rather than speed: when a component's job is "keep
-the scale near one", the simplest layer that does the job wins.
+In this benchmark, the PyTorch timings are indistinguishable at the displayed
+precision, while the JAX RMSNorm kernel is roughly one third faster. These are
+framework- and device-specific measurements rather than an architectural speed
+guarantee. RMSNorm omits centering and a bias parameter and computes one
+statistic instead of two; its quality must be assessed in the surrounding
+model. Llama is one prominent model family that uses it
+:cite:`touvron2023llama`.
 
 ### Normalizing Queries and Keys
 
@@ -394,18 +381,15 @@ stall — an instability first met at vision-transformer scale, where
 attention entropy was observed collapsing in billion-parameter runs
 :cite:`Dehghani.Djolonga.Mustafa.ea.2023`. *QK-norm*
 :cite:`Henry.Dachapally.Pawar.ea.2020` applies RMSNorm to the queries and
-keys per head, right before the dot product, so the logit scale is pinned
-by construction rather than by hope. It costs two extra norms per layer and
-has become a standard ingredient of 2025-era models (Gemma 3, Qwen3, and
-OLMo 2 all ship it). OLMo 2 is also the one prominent re-litigation of this
-section's verdict: it pairs QK-norm with norms placed *after* each sublayer
-— though still off the stream's identity path, conceding the main lesson of
-the experiment above :cite:`OLMo.2025`. Gemma 3 hedges in the other
-direction and normalizes each branch on both sides, before *and* after the
-sublayer :cite:`Gemma.Team.2025`. :numref:`fig_norm-taxonomy` lays the four
-placements now in circulation side by side; note that only the original
-post-LN interrupts the stream itself, which is why it alone collapses in
-the experiment above. We leave QK-norm as an exercise rather than a flag;
+keys per head, right before the dot product, thereby controlling vector norms
+before scoring. It costs two extra norms per layer. Reports for Gemma 3,
+Qwen3, and OLMo 2 document its use in those model families. OLMo 2 combines
+QK-norm with normalization after each sublayer but outside the residual
+stream's identity path :cite:`OLMo.2025`; Gemma 3 normalizes each branch both
+before and after the sublayer :cite:`Gemma.Team.2025`.
+:numref:`fig_norm-taxonomy` compares these placements. Only original post-LN
+normalizes the residual stream after addition; the signal experiment above
+directly compares that arrangement with pre-LN. We leave QK-norm as an exercise rather than a flag;
 it drops into the block through the `attn_factory` hook introduced below.
 
 ![Four placements of normalization around one sublayer; the FFN sublayer is treated identically, and the residual stream runs bottom to top. Post-LN normalizes the stream itself after each addition; pre-LN normalizes what the branch reads; OLMo 2 normalizes what the branch writes; Gemma 3 normalizes the branch on both sides. Only post-LN touches the stream's identity path.](../img/mdl-transformers-norm-taxonomy.svg)
@@ -424,10 +408,11 @@ $$
 with $\mathbf{W}_1 \in \mathbb{R}^{4d \times d}$ and $\mathbf{W}_2 \in
 \mathbb{R}^{d \times 4d}$ in the classic configuration. The factor-4
 expansion is a convention the field has never found strong reason to
-revisit; what it implies is worth noticing: the FFN holds $8d^2$ parameters
-against attention's $4d^2$, so about two thirds of a block's parameters sit
-in these two matrices. When people say a transformer's knowledge lives
-mostly in its FFNs, this ratio is the accounting behind the claim.
+revisit, and it implies something worth noticing: the FFN holds $8d^2$
+parameters against attention's $4d^2$, so about two thirds of a block's
+parameters sit in these two matrices. When people say a transformer's
+knowledge lives mostly in its FFNs, this ratio is the accounting behind
+the claim.
 
 Two upgrades separate the 2017 FFN from today's. The activation $\phi$
 moved from ReLU to *GELU* :cite:`Hendrycks.Gimpel.2016`, a smoothed relative
@@ -448,9 +433,9 @@ transmitted at full strength wherever the gate is open, rather than bent
 through the activation. The multiplicative interaction is the same trick
 gates played in LSTMs, here compressed into a single layer. A third matrix
 means more parameters at the same width, so fair comparisons shrink the
-hidden width to $\tfrac{8}{3} d$, making three matrices of the gated FFN
-cost the same $8d^2$ as the classic one, up to rounding. Both variants, in
-one class:
+hidden width to $\tfrac{8}{3} d$, making the three matrices of the gated
+FFN cost the same $8d^2$ as the classic one, up to rounding. Both
+variants, in one class:
 
 ```{.python .input #transformer-block-the-feed-forward-network-1}
 %%tab pytorch
@@ -517,14 +502,14 @@ for act in ('gelu', 'swiglu'):
     print(f'{act:>7}: {n} parameters')
 ```
 
-Whether the gate is *worth* anything at equal cost is an empirical
-question, and a matched-budget race settles it — but only once we have a
-model to train. That is the closing experiment of this section.
+Whether the gate improves performance at equal parameter count is an
+empirical question. The final experiment compares the alternatives in a
+small language model.
 
 ## A Configurable Block
 
-We now assemble the block for real, and we build it the way this chapter
-will use it: every design decision above becomes a constructor argument.
+We assemble the block used throughout this chapter. Every design
+decision above becomes a constructor argument.
 `norm` selects LayerNorm or RMSNorm, `act` selects the FFN, `pre_norm`
 selects the arrangement, and two factory hooks let later sections swap
 whole sublayers — a mixture-of-experts FFN, or a cache-friendly
@@ -694,11 +679,11 @@ class CharLM(nnx.Module):
         return self.token_emb.attend(self.norm(H))
 ```
 
-### The Flags at Work: GELU versus SwiGLU
+### Comparing GELU and SwiGLU
 
-Now the promised race. Same data (the character-level Time Machine corpus
-of :numref:`sec_text-sequence`), same model, same seed, same optimizer and
-learning rate, same 600 steps — the only difference is the `act` flag, and
+We compare the two alternatives on the same data (the character-level Time Machine corpus
+of :numref:`sec_text-sequence`), holding the model, seed, optimizer,
+learning rate, and 600-step budget fixed. Only the `act` flag differs, and
 the parameter counts match to a tenth of a percent.
 
 ```{.python .input #transformer-block-the-flags-at-work-gelu-versus-swiglu}
@@ -728,39 +713,36 @@ for act in ('gelu', 'swiglu'):
         f'{sum(losses[k-100:k]) / 100:.2f}' for k in (200, 400, 600)))
 ```
 
-The gated FFN ends more than a tenth of a nat ahead — a margin that holds up
-across seeds (rerunning with seeds 1 and 2 moves each number by a couple of
-hundredths, not the gap) and, more importantly, agrees in direction with
-:citet:`Shazeer.2020`'s systematic sweep and with the consistent choice of
-the major model families since Llama. It is a modest, real improvement of
-the kind that architecture progress is actually made of: no single dramatic
-win, but a percent here and a percent there, at equal cost, compounding.
+The gated FFN ends more than a tenth of a nat ahead. This margin holds
+up across seeds, since rerunning with seeds 1 and 2 moves each number by a
+couple of hundredths, not the gap. More importantly, it agrees in direction
+with :citet:`Shazeer.2020`'s systematic sweep and with the consistent
+choice of the major model families since Llama. It is a modest, real
+improvement at equal parameter count. Such incremental gains can accumulate
+when several architectural choices are combined.
+
+The diagnostics in this section use one initialization, a 32-block synthetic
+stack, and framework-specific normalization kernels. They establish algebraic
+identities and report local signal, gradient, timing, and loss measurements;
+they do not by themselves establish causal explanations or universal model
+rankings. The cited large-scale studies provide separate evidence for the
+training practices discussed above.
 
 ## Summary
 
-A transformer block is two sublayers writing into a residual stream:
-attention communicates between positions, the position-wise FFN computes
-within each one and holds about two thirds of the parameters. Where the
-normalization goes decides how deep stacks behave at initialization: the
-post-LN arrangement of 2017 renormalizes the stream after each addition,
-which pins its scale but lets near-uniform attention collapse the tokens
-geometrically — the query and key projections at the top of a 32-block
-stack receive gradients six orders of magnitude smaller than at the
-bottom, while the value, output, and FFN weights keep ordinary gradients;
-it is the where-to-attend pathway that starves.
-Pre-norm moves the normalizer onto each branch, lets the stream grow like
-the square root of the depth, and keeps every block trainable; it has been
-the default since GPT-2. RMSNorm keeps only the scale statistic (same
-measured cost, less machinery), and QK-norm extends the same discipline to
-the attention logits. In the FFN, SwiGLU replaces the fixed nonlinearity
-with a learned soft gate; at matched parameter count it wins by a small,
-seed-stable margin on our character model, consistent with its
-near-universal adoption. The section's product is `TransformerBlock`:
-normalization,
-activation, and arrangement as flags, attention and FFN as swappable
-factories — the single unit from which this chapter builds a GPT, a
-KV-cached decoder, an encoder, a vision transformer, and a
-mixture-of-experts model.
+A transformer block contains attention and a position-wise FFN connected
+through a residual stream. Attention communicates between positions; the
+FFN transforms each position and contains about two thirds of the
+parameters. In the original post-LN arrangement, normalization fixes the
+scale of the residual stream, but the query and key projections near the top
+of a 32-block stack receive gradients six orders of magnitude smaller than
+those near the bottom. Pre-norm instead normalizes each branch input and
+preserves usable gradients throughout the stack. RMSNorm retains only the
+scale statistic, while QK-norm controls the scale of attention logits.
+Finally, SwiGLU replaces a fixed activation with a learned gate and gives a
+small, seed-stable improvement at matched parameter count in our experiment.
+The resulting `TransformerBlock` exposes normalization, activation, and
+placement as options, with replaceable attention and FFN modules.
 
 ## Exercises
 
@@ -811,7 +793,7 @@ The transformer block<br>
 :::
 :::
 
-::: {.slide title="Anatomy: two sublayers, one highway"}
+::: {.slide title="Components of a transformer block"}
 - **Attention**: the only place positions interact — each token queries
   the others and adds the retrieved mixture to its stream.
 - **FFN**: per-position computation — and about **two thirds of the
@@ -851,39 +833,40 @@ sequence through — deterministic, seconds:
   healthy in both.
 
 ::: {.d2l-note}
-Rank collapse (Dong et al., 2021) caught in the act; why post-LN needed
-warmup (Xiong et al., 2020) and GPT-2 went pre-norm.
+Initialization-time token contraction is related to rank collapse (Dong et
+al., 2021). Xiong et al. (2020) separately analyze post-LN sensitivity to
+warmup.
 :::
 :::
 
-::: {.slide title="RMSNorm: drop what you don't need"}
+::: {.slide title="RMSNorm Omits Mean Centering"}
 $$\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\tfrac{1}{d}\sum_i x_i^2 + \epsilon}} \odot \boldsymbol{\gamma}$$
 
 @!transformer-block-rmsnorm
 
-No centering, no bias, one statistic — comparable quality, less machinery
-(Zhang & Sennrich, 2019; Llama onward).
+No centering, no bias, and one statistic. Quality and speed comparisons depend
+on the model, framework, and kernel (Zhang & Sennrich, 2019).
 :::
 
 ::: {.slide title="Four places for the norm"}
-Post-LN (2017), pre-LN (the default), post-sublayer off-stream (OLMo 2),
+Post-LN (2017), pre-LN, post-sublayer off-stream (OLMo 2),
 pre-and-post (Gemma 3) — only post-LN interrupts the stream's identity
 path:
 
 @fig:mdl-transformers-norm-taxonomy
 :::
 
-::: {.slide title="QK-norm: the same discipline, inside attention"}
-- Nothing above controls the **attention logits**
+::: {.slide title="QK-Norm Controls Query and Key Scale"}
+- The block normalizers do not directly constrain the **attention logits**
   $\mathbf{q}^\top\mathbf{k}/\sqrt{d}$: if training inflates q and k, the
   softmax saturates and its gradient vanishes.
-- QK-norm: RMSNorm on queries and keys, per head, right before the dot
-  product — logit scale pinned by construction.
-- Met at ViT-22B scale; standard in 2025 models (Gemma 3, Qwen3, OLMo 2).
+- QK-norm applies RMSNorm to queries and keys per head before the dot product.
+- ViT-22B reported attention-entropy instability; Gemma 3, Qwen3, and OLMo 2
+  are dated examples that use QK-norm.
 
 ::: {.d2l-note}
-OLMo 2 also re-litigated placement: norms *after* each sublayer — but
-still off the stream's identity path.
+OLMo 2 places norms after each sublayer while leaving the stream's identity
+path unnormalized.
 :::
 :::
 
@@ -912,8 +895,8 @@ Same data, seed, optimizer, 600 steps; parameters matched to 0.1%:
 
 @!transformer-block-the-flags-at-work-gelu-versus-swiglu
 
-More than a tenth of a nat, stable across seeds — the kind of small,
-real, equal-cost win architecture progress is made of.
+Across the tested seeds, SwiGLU improves the loss by more than a tenth of a
+nat at the same parameter cost.
 :::
 
 ::: {.slide title="Recap"}
@@ -925,6 +908,6 @@ real, equal-cost win architecture progress is made of.
   trainable.
 - RMSNorm = the scale statistic only; QK-norm pins the attention logits.
 - SwiGLU beats the matched-budget MLP by a small, seed-stable margin.
-- `TransformerBlock`: a decade of designs as one constructor signature —
-  the chapter never builds another block.
+- `TransformerBlock` expresses the block designs used in this chapter through
+  one constructor signature.
 :::

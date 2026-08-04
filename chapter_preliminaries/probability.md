@@ -6,73 +6,25 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Probability and Statistics
 :label:`sec_prob`
 
-One way or another,
-machine learning is all about uncertainty.
-In supervised learning, we want to predict
-something unknown (the *target*)
-given something known (the *features*).
-Depending on our objective,
-we might attempt to predict
-the most likely value of the target.
-Or we might predict the value with the smallest
-expected distance from the target.
-And sometimes we wish
-to *quantify our uncertainty*
-about the prediction itself.
-For example, given some features
-describing a patient,
-we might want to know *how likely* they are
-to suffer a heart attack in the next year.
-In unsupervised learning,
-we often care about uncertainty.
-To determine whether a set of measurements are anomalous,
-it helps to know how likely one is
-to observe values in a population of interest.
-Furthermore, in reinforcement learning,
-we wish to develop agents
-that act intelligently in various environments.
-This requires reasoning about
-how an environment might be expected to change
-and what rewards one might expect to encounter
-in response to each of the available actions.
+Suppose that a coin is tossed 100 times and produces 56 heads. The count alone
+does not tell us whether the coin is biased: even a fair coin produces unequal
+counts in most finite experiments. We need a language for describing the
+data-generating process, calculating how likely an outcome is under that
+process, and estimating its unknown properties from observations.
 
-*Probability* is the mathematical field
-concerned with reasoning under uncertainty.
-Given a probabilistic model of some process,
-we can reason about the likelihood of various events.
-The use of probabilities to describe
-the frequencies of repeatable events
-(like coin tosses)
-is fairly uncontroversial.
-In fact, *frequentist* scholars adhere
-to an interpretation of probability
-that applies *only* to such repeatable events.
-By contrast *Bayesian* scholars
-use the language of probability more broadly
-to formalize reasoning under uncertainty.
-Bayesian probability is characterized
-by two unique features:
-(i) assigning degrees of belief
-to non-repeatable events,
-e.g., what is the *probability*
-that a dam will collapse?;
-and (ii) subjectivity. While Bayesian
-probability provides unambiguous rules
-for how one should update their beliefs
-in light of new evidence,
-it allows for different individuals
-to start off with different *prior* beliefs.
-*Statistics* helps us to reason backwards,
-starting off with collection and organization of data
-and backing out to what inferences
-we might draw about the process
-that generated the data.
-Whenever we analyze a dataset, hunting for patterns
-that we hope might characterize a broader population,
-we are employing statistical thinking.
-While this section only scratches the surface,
-we will provide the foundation
-that you need to begin building models.
+*Probability* supplies the forward direction: given a model of a random
+process, it assigns probabilities to possible events. *Statistics* supplies
+the inverse direction: given observations, it asks what can be inferred about
+the process that generated them. This pair of questions recurs throughout
+machine learning, from predicting a patient's outcome to deciding whether a
+measurement is anomalous or estimating the return from an action.
+
+This section begins with repeated coin tosses, then introduces random
+variables, joint and conditional distributions, independence, expectation,
+and variance. The same definitions support a worked diagnostic-testing example
+and the probabilistic models used in later chapters. Interpretations of
+probability differ—for example, frequencies of repeatable events versus
+degrees of belief—but the calculation rules developed here are shared.
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab mxnet
@@ -114,9 +66,9 @@ import numpy as np
 
 ## A Simple Example: Tossing Coins
 
-Imagine that we plan to toss a coin
-and want to quantify how likely
-we are to see heads (vs. tails).
+Suppose that we plan to toss a coin
+and want to quantify the chance
+of seeing heads rather than tails.
 If the coin is *fair*,
 then both outcomes
 (heads and tails),
@@ -132,14 +84,13 @@ for every possible outcome
 with $n_\textrm{h}$ heads and $n_\textrm{t} = (n - n_\textrm{h})$ tails,
 there is an equally likely outcome
 with $n_\textrm{t}$ heads and $n_\textrm{h}$ tails.
-Note that this is only possible
-if on average we expect to see
+This symmetry implies that on average we expect to see
 $1/2$ of tosses come up heads
 and $1/2$ come up tails.
-Of course, if you conduct this experiment
+Even if this experiment is repeated
 many times with $n=1000000$ tosses each,
-you might never see a trial
-where $n_\textrm{h} = n_\textrm{t}$ exactly.
+none of the trials need satisfy
+$n_\textrm{h} = n_\textrm{t}$ exactly.
 
 
 Formally, the quantity $1/2$ is called a *probability*
@@ -149,8 +100,8 @@ Probabilities assign scores between $0$ and $1$
 to outcomes of interest, called *events*.
 Here the event of interest is $\textrm{heads}$
 and we denote the corresponding probability $P(\textrm{heads})$.
-A probability of $1$ indicates absolute certainty
-(imagine a trick coin where both sides were heads)
+A probability of $1$ indicates certainty
+(as for heads on a two-headed coin)
 and, for discrete outcomes like these,
 a probability of $0$ indicates impossibility
 (e.g., if both sides were tails).
@@ -162,8 +113,7 @@ Here, the probability $1/2$
 is a property of the coin itself.
 By contrast, statistics are *empirical* quantities
 that are computed as functions of the observed data.
-Our interests in probabilistic and statistical quantities
-are inextricably intertwined.
+Probability and statistics therefore address complementary questions.
 We often design special statistics called *estimators*
 that, given a dataset, produce *estimates*
 of model parameters such as probabilities.
@@ -176,21 +126,19 @@ tell us about the likely statistical properties
 of data from the same population
 that we might encounter in the future.
 
-Suppose that we stumbled upon a real coin
-for which we did not know
+Suppose that we have a coin
+for which we do not know
 the true $P(\textrm{heads})$.
 To investigate this quantity
 with statistical methods,
 we need to (i) collect some data;
 and (ii) design an estimator.
-Data acquisition here is easy;
-we can toss the coin many times
+We can collect data by tossing the coin many times
 and record all the outcomes.
 Formally, drawing realizations
 from some underlying random process
 is called *sampling*.
-As you might have guessed,
-one natural estimator
+A natural estimator
 is the ratio of
 the number of observed *heads*
 to the total number of tosses.
@@ -199,7 +147,7 @@ Now, suppose that the coin was in fact fair,
 i.e., $P(\textrm{heads}) = 0.5$.
 To simulate tosses of a fair coin,
 we can invoke any random number generator.
-There are some easy ways to draw samples
+Several methods can draw samples
 of an event with probability $0.5$.
 For example Python's `random.random`
 yields numbers in the interval $[0,1]$
@@ -275,8 +223,7 @@ seed the generator first (see :numref:`sec_ndarray`).
 Dividing by the number of tosses
 gives us the *frequency*
 of each outcome in our data.
-Note that these frequencies,
-just like the probabilities
+These frequencies, like the probabilities
 that they are intended
 to estimate, sum to $1$.
 
@@ -310,9 +257,9 @@ That is because we only drew a relatively small number of samples.
 If we did not implement the simulation ourselves,
 and only saw the outcome,
 how would we know if the coin were slightly unfair
-or if the possible deviation from $1/2$ was
-just an artifact of the small sample size?
-Let's see what happens when we simulate 10,000 tosses.
+or whether the deviation from $1/2$ resulted
+from the small sample size?
+Increasing the experiment to 10,000 tosses produces a more precise estimate.
 
 ```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab mxnet
@@ -373,8 +320,8 @@ Rather than taking this on faith, we can check it empirically:
 below we estimate $p$ from 1000 independent batches
 of $n$ tosses each, for growing $n$,
 and plot the standard deviation of the estimates on log--log axes.
-It hugs the predicted $0.5/\sqrt{n}$ line,
-a straight line of slope $-\frac{1}{2}$.
+It follows the predicted $0.5/\sqrt{n}$ line,
+whose slope is $-\frac{1}{2}$.
 
 ```{.python .input #probability-a-simple-example-tossing-coins-6}
 %%tab mxnet
@@ -512,26 +459,17 @@ after each group of experiments.
 The dashed black line gives the true underlying probability.
 As we get more data by conducting more experiments,
 the curves converge towards the true probability.
-You might already begin to see the shape
-of some of the more advanced questions
-that preoccupy statisticians:
+This convergence raises the statistical questions developed later in the book:
 How quickly does this convergence happen?
 If we had already tested many coins
 manufactured at the same plant,
 how might we incorporate this information?
 
-## The Formal Language
+## From Counts to Random Variables and Distributions
 
-### A More Formal Treatment
-
-We have already gotten pretty far: posing
-a probabilistic model,
-generating synthetic data,
-running a statistical estimator,
-empirically assessing convergence,
-and reporting error metrics (checking the deviation).
-However, to go much further,
-we will need to be more precise.
+The coin example combined a probabilistic model, synthetic data, a
+statistical estimator, an empirical convergence check, and an error metric.
+We now state these ideas more precisely.
 
 
 When dealing with randomness,
@@ -542,7 +480,9 @@ In the case of tossing a single coin,
 $\mathcal{S} = \{\textrm{heads}, \textrm{tails}\}$.
 For a single die, $\mathcal{S} = \{1, 2, 3, 4, 5, 6\}$.
 When flipping two coins, possible outcomes are
-$\{(\textrm{heads}, \textrm{heads}), (\textrm{heads}, \textrm{tails}), (\textrm{tails}, \textrm{heads}),  (\textrm{tails}, \textrm{tails})\}$.
+
+$$\{(\textrm{heads}, \textrm{heads}), (\textrm{heads}, \textrm{tails}), (\textrm{tails}, \textrm{heads}),  (\textrm{tails}, \textrm{tails})\}.$$
+
 For the finite and countable examples in this chapter, *events* are subsets
 of the sample space. On continuous sample spaces, probabilities are assigned
 to a specified collection of *measurable* subsets; the measure-theoretic
@@ -646,8 +586,8 @@ as shorthand for a statement that holds
 for all of the values the random variables can take.
 For instance, the equation $P(X,Y) = P(X) P(Y)$
 is shorthand for "$P(X=i \textrm{ and } Y=j) = P(X=i)P(Y=j)$
-for all $i,j$", although, as we will see when we discuss
-*independence*, that particular equation holds only in special cases.
+for all $i,j$". This factorization holds only in the special case of
+*independence*.
 Other times, we abuse notation by writing
 $P(v)$ when the random variable is clear from the context.
 Since an event in probability theory is a set of outcomes from the sample space,
@@ -655,7 +595,7 @@ we can specify a range of values for a random variable to take.
 For example, $P(1 \leq X \leq 3)$ denotes the probability of the event $\{1 \leq X \leq 3\}$.
 
 
-Note that there is a subtle difference
+There is an important distinction
 between *discrete* random variables,
 like flips of a coin or tosses of a die,
 and *continuous* ones,
@@ -720,8 +660,8 @@ that the variables can jointly take.
 The probability function that assigns
 probabilities to each of these combinations
 (e.g. $A=a$ and $B=b$)
-is called the *joint probability* function
-and simply returns the probability assigned
+is called the *joint probability* function.
+It returns the probability assigned
 to the intersection of the corresponding subsets
 of the sample space.
 The *joint probability* assigned to the event
@@ -729,8 +669,7 @@ where random variables $A$ and $B$
 take values $a$ and $b$, respectively,
 is denoted $P(A = a, B = b)$,
 where the comma indicates "and".
-Note that for any values $a$ and $b$,
-it follows that
+For any values $a$ and $b$,
 
 $$P(A=a, B=b) \leq P(A=a) \textrm{ and } P(A=a, B=b) \leq P(B = b),$$
 
@@ -742,7 +681,7 @@ random variables in a probabilistic sense,
 and can be used to derive many other
 useful quantities, including recovering the
 individual distributions $P(A)$ and $P(B)$.
-To recover $P(A=a)$ we simply sum up
+To recover $P(A=a)$, sum
 $P(A=a, B=v)$ over all values $v$
 that the random variable $B$ can take:
 $P(A=a) = \sum_v P(A=a, B=v)$.
@@ -764,11 +703,10 @@ of the sample space associated with $A=a$
 and then renormalizing so that
 all probabilities sum to 1.
 
-![The joint distribution $P(A,B)$ determines everything: summing a row or column gives a *marginal* ($P(A)$ or $P(B)$), and renormalizing one row by its sum gives a *conditional* $P(B \mid A=a)$.](../img/probability-joint-grid.svg)
+![For the displayed variables, summing a row or column of the joint distribution $P(A,B)$ gives a marginal, while dividing a row with positive mass by its sum gives the conditional distribution $P(B \mid A=a)$.](../img/probability-joint-grid.svg)
 :label:`fig_prob_joint`
 
-Conditional probabilities
-are in fact just ordinary probabilities
+Conditional probabilities are probabilities
 and thus respect all of the axioms,
 as long as we condition all terms
 on the same event and thus
@@ -818,26 +756,28 @@ Bayes' theorem is then interpreted as telling us
 how to update the initial *prior* $P(H)$
 in light of the available evidence $E$
 to produce *posterior* beliefs
-$P(H \mid E) = \frac{P(E \mid H) P(H)}{P(E)}$.
+
+$$P(H \mid E) = \frac{P(E \mid H) P(H)}{P(E)}.$$
+
 Informally, this can be stated as
 "posterior equals prior times likelihood, divided by the evidence".
-Now, because the evidence $P(E)$ is the same for all hypotheses,
-we can get away with simply normalizing over the hypotheses.
+Because the evidence $P(E)$ is the same for all hypotheses,
+we can normalize over the hypotheses.
 
-Note that $\sum_a P(A=a \mid B) = 1$ also allows us to *marginalize* over random variables. That is, we can drop variables from a joint distribution such as $P(A, B)$. After all, we have that
+The identity $\sum_a P(A=a \mid B) = 1$ also allows us to
+*marginalize* over random variables, dropping variables from a joint
+distribution such as $P(A, B)$:
 
 $$\sum_a P(B \mid A=a) P(A=a) = \sum_a P(B, A=a) = P(B).$$
 
-Independence is another fundamentally important concept
-that forms the backbone of
-many important ideas in statistics.
-In short, two variables are *independent*
-if conditioning on the value of $A$ does not
-cause any change to the probability distribution
-associated with $B$ and vice versa.
-More formally, independence, denoted $A \perp B$,
-requires that $P(A \mid B) = P(A)$ and, consequently,
-that $P(A,B) = P(A \mid B) P(B) = P(A) P(B)$.
+Two random variables are *independent*, denoted $A \perp B$, when their joint
+distribution factorizes:
+
+$$P(A=a,B=b)=P(A=a)P(B=b)$$
+
+for every pair of values $a,b$. Equivalently, conditioning on one variable does
+not change the distribution of the other whenever the conditioning event has
+positive probability: $P(A=a\mid B=b)=P(A=a)$ for $P(B=b)>0$.
 Independence is often an appropriate assumption.
 For example, if the random variable $A$
 represents the outcome from tossing one fair coin
@@ -861,8 +801,8 @@ specifically because we believe
 that diseases and symptoms are *not* independent.
 
 
-Note that because conditional probabilities are proper probabilities,
-the concepts of independence and dependence also apply to them.
+Because conditional probabilities satisfy the probability axioms,
+independence and dependence also apply to them.
 Two random variables $A$ and $B$ are *conditionally independent*
 given a third variable $C$ if and only if $P(A, B \mid C) = P(A \mid C)P(B \mid C)$.
 Two variables can be independent in general
@@ -892,8 +832,8 @@ but this correlation disappears if we condition on age.
 ## Worked Example: HIV Testing
 :label:`subsec_probability_hiv_app`
 
-Let's put our skills to the test.
-Assume that a doctor administers an HIV test to a patient.
+The following diagnostic-testing example applies conditional probability and
+Bayes' rule. Assume that a doctor administers an HIV test to a patient.
 This test is fairly accurate: it has a 1% false-positive rate,
 i.e., healthy patients test positive in 1% of cases.
 Moreover, it never fails to detect HIV if the patient actually has it.
@@ -906,8 +846,8 @@ and $H \in \{0, 1\}$ to denote the HIV status.
 | test positive, $D_1 = 1$ | 1.00 | 0.01 |
 | test negative, $D_1 = 0$ | 0.00 | 0.99 |
 
-Note that the column sums are all 1 (but the row sums do not),
-since they are conditional probabilities.
+The columns sum to 1 (but the rows need not), because each column is a
+conditional distribution.
 Let's compute the probability of the patient having HIV
 if the test comes back positive, i.e., $P(H = 1 \mid D_1 = 1)$.
 Intuitively this is going to depend on how common the disease is,
@@ -928,17 +868,16 @@ This leads us to
 
 $$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = 0.1306.$$
 
-In other words, there is only a 13.06% chance
+Thus, under this model, there is a 13.06% chance
 that the patient actually has HIV,
-despite the test being pretty accurate.
+despite the test's low false-positive rate.
 
 ![The same result in *natural frequencies*. Because the disease is rare, the few true positives are swamped by false positives: of roughly 115 positive tests, only 15 are real, so $P(H=1 \mid D_1=1) \approx 13\%$.](../img/probability-natural-frequencies.svg)
 :label:`fig_prob_natural_freq`
 
-As we can see, probability can be counterintuitive.
-What should a patient do upon receiving such terrifying news?
-Likely, the patient would ask the physician
-to administer another test to get clarity.
+The low posterior after a positive result illustrates the effect of the
+disease's low prevalence. A physician may administer a second test to obtain
+more evidence.
 The second test has different characteristics
 and it is not as good as the first one.
 
@@ -976,9 +915,9 @@ $$P(H = 1 \mid D_1 = 1, D_2 = 1)
 = \frac{P(D_1 = 1, D_2 = 1 \mid H=1) P(H=1)}{P(D_1 = 1, D_2 = 1)}
 = 0.8307.$$
 
-That is, the second test allowed us to gain much higher confidence that not all is well.
-Despite the second test being considerably less accurate than the first one,
-it still significantly improved our estimate.
+The second positive result raises the posterior substantially. Although the
+second test is less accurate than the first, it still contributes independent
+evidence under the assumptions above.
 
 ![Each conditionally independent positive test multiplies the evidence, driving the posterior $P(H=1)$ from a 0.15% prior to 13% and then to 83%.](../img/probability-bayes-update.svg)
 :label:`fig_prob_update`
@@ -1044,7 +983,7 @@ information: dependent test outcomes can still change the posterior, but then
 their joint conditional distribution must be modeled directly. At the other
 extreme, running an identical deterministic test twice reveals nothing beyond
 the first result.
-Notice that the diagnosis behaved like a classifier:
+The diagnosis behaves like a classifier:
 our ability to decide whether a patient is healthy
 increases as we obtain more features (test outcomes).
 
@@ -1110,8 +1049,7 @@ we might also want to measure
 how *risky* an investment is.
 Here, what matters is how much the actual values
 tend to *vary* around the expected value.
-Note that we cannot just take
-the expectation of the difference
+We cannot use the expectation of the difference
 between the actual and expected values.
 This is because the expectation of a difference
 is the difference of the expectations,
@@ -1144,8 +1082,8 @@ $$\textrm{Var}_{x \sim P}[f(x)] = E_{x \sim P}[f^2(x)] - E_{x \sim P}[f(x)]^2.$$
 Returning to our investment example,
 we can now compute the variance of the investment.
 It is given by $0.5 \cdot 0 + 0.4 \cdot 2^2 + 0.1 \cdot 10^2 - 1.8^2 = 8.36$.
-For all intents and purposes this is a risky investment.
-Note that by mathematical convention mean and variance
+Under the stated model, this investment has high variance.
+By convention, mean and variance
 are often referenced as $\mu$ and $\sigma^2$,
 especially when they parametrize
 a Gaussian distribution (:numref:`sec_mdl-distributions`).
@@ -1153,7 +1091,7 @@ a Gaussian distribution (:numref:`sec_mdl-distributions`).
 In the same way as we introduced expectations
 and variance for *scalar* random variables,
 we can do so for vector-valued ones.
-Expectations are easy, since we can apply them elementwise.
+Expectations extend to vectors elementwise.
 For instance, $\boldsymbol{\mu} \stackrel{\textrm{def}}{=} E_{\mathbf{x} \sim P}[\mathbf{x}]$
 has coordinates $\mu_i = E_{\mathbf{x} \sim P}[x_i]$.
 *Covariances* are more complicated.
@@ -1163,7 +1101,7 @@ of the difference between random variables and their mean:
 $$\boldsymbol{\Sigma} \stackrel{\textrm{def}}{=} \textrm{Cov}_{\mathbf{x} \sim P}[\mathbf{x}] = E_{\mathbf{x} \sim P}\left[(\mathbf{x} - \boldsymbol{\mu}) (\mathbf{x} - \boldsymbol{\mu})^\top\right].$$
 
 This matrix $\boldsymbol{\Sigma}$ is referred to as the covariance matrix.
-An easy way to see its effect is to consider some vector $\mathbf{v}$
+To interpret its effect, consider a vector $\mathbf{v}$
 of the same size as $\mathbf{x}$.
 It follows that
 
@@ -1171,7 +1109,7 @@ $$\mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v} = E_{\mathbf{x} \sim P}\left[\m
 
 As such, $\boldsymbol{\Sigma}$ allows us to compute the variance
 for any linear function of $\mathbf{x}$
-by a simple matrix multiplication.
+by a matrix multiplication.
 The off-diagonal elements tell us how the coordinates vary together:
 a value of 0 means no correlation.
 Beware, though, that the magnitude of a covariance is scale-dependent:
@@ -1200,7 +1138,7 @@ the bound is *distribution-free* (:numref:`fig_prob_markov`).
 ![Markov's inequality: for a nonnegative random variable, the probability of exceeding a threshold $a$ is at most the mean divided by $a$, no matter what the distribution looks like.](../img/probability-markov.svg)
 :label:`fig_prob_markov`
 
-The payoff comes from choosing $X$ cleverly.
+Applying the result to a suitable choice of $X$ yields other bounds.
 Applying Markov's inequality to the nonnegative variable
 $(X - \mu)^2$, whose expectation is precisely
 the variance $\sigma^2$, yields *Chebyshev's inequality*:
@@ -1220,13 +1158,12 @@ what such concentration results say about generalization
 in machine learning are developed in
 :numref:`sec_mdl-concentration-generalization`.
 
-## Discussion
+## What the Probability Model Leaves Uncertain
 
-In machine learning, there are many things to be uncertain about!
-We can be uncertain about the value of a label given an input.
-We can be uncertain about the estimated value of a parameter.
-We can even be uncertain about whether data arriving at deployment
-is even from the same distribution as the training data.
+The definitions above distinguish several sources of uncertainty in a learning
+problem. A label may remain random even when the model and its parameters are
+known; a finite dataset also leaves the parameters uncertain; and deployment
+data may come from a different distribution than the training sample.
 
 By *aleatoric uncertainty*, we mean uncertainty
 that is intrinsic to the problem,
@@ -1235,7 +1172,7 @@ unaccounted for by the observed variables.
 By *epistemic uncertainty*, we mean uncertainty
 over a model's parameters, the sort of uncertainty
 that we can hope to reduce by collecting more data.
-We might have epistemic uncertainty
+For example, there is epistemic uncertainty
 concerning the probability
 that a coin turns up heads,
 but even once we know this probability,
@@ -1244,9 +1181,10 @@ about the outcome of any future toss.
 No matter how long we watch someone tossing a fair coin,
 we will never be more or less than 50% certain
 that the next toss will come up heads.
-These terms come from mechanical modeling,
-(see e.g., :citet:`Der-Kiureghian.Ditlevsen.2009` for a review on this aspect of [uncertainty quantification](https://en.wikipedia.org/wiki/Uncertainty_quantification)).
-These terms are, however, a slight abuse of language.
+These terms come from mechanical modeling
+(see :citet:`Der-Kiureghian.Ditlevsen.2009` for a review of this aspect of
+[uncertainty quantification](https://en.wikipedia.org/wiki/Uncertainty_quantification)).
+The terminology is narrower than the philosophical meaning of *epistemic*:
 The term *epistemic* refers to anything concerning *knowledge*
 and thus, in the philosophical sense, all uncertainty is epistemic.
 
@@ -1254,24 +1192,18 @@ and thus, in the philosophical sense, all uncertainty is epistemic.
 We saw that sampling data from some unknown probability distribution
 can provide us with information that can be used to estimate
 the parameters of the data generating distribution.
-That said, the rate at which this is possible can be quite slow.
+The rate at which this is possible can be slow.
 In our coin tossing example (and many others)
 we can do no better than to design estimators
 that converge at a rate of $1/\sqrt{n}$,
 where $n$ is the sample size (e.g., the number of tosses).
-This means that by going from 10 to 1000 observations (usually a very achievable task)
-we see a tenfold reduction of uncertainty,
-whereas the next 1000 observations help comparatively little,
-offering only a 1.41 times reduction.
-This is a persistent feature of machine learning:
-while there are often easy gains, it takes a very large amount of data,
-and often with it an enormous amount of computation, to make further gains.
+Going from 10 to 1000 observations reduces uncertainty tenfold, whereas
+doubling the sample from 1000 to 2000 reduces it by a factor of approximately
+1.41. Consequently, further reductions may require substantially more data
+and computation.
 For an empirical review of this fact for large-scale language models, see :citet:`kaplan2020scaling`.
 
-We also sharpened our language and tools for statistical modeling.
-In the process of that we learned about conditional probabilities
-and about Bayes' theorem.
-It is an effective tool for decoupling information conveyed by data
+Conditional probability and Bayes' theorem separate information conveyed by data
 through a likelihood term $P(B \mid A)$ that addresses
 how well observations $B$ match a choice of parameters $A$,
 and a prior probability $P(A)$ which governs how plausible
@@ -1281,13 +1213,9 @@ to assign probabilities to diagnoses,
 based on the efficacy of the test *and*
 the prevalence of the disease itself (i.e., our prior).
 
-Lastly, we introduced a first set of nontrivial questions
-about the effect of a specific probability distribution,
-namely expectations and variances.
-While there are many more than just linear and quadratic
-expectations for a probability distribution,
-these two already provide a good deal of knowledge
-about the possible behavior of the distribution:
+Expectations and variances summarize two aspects of a probability distribution.
+Many other summaries are possible, but these two already constrain
+the distribution's behavior:
 we used them to derive our first tail bounds,
 Markov's and Chebyshev's inequalities,
 which hold for *every* distribution.
@@ -1328,7 +1256,7 @@ For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
     1. Compute the expected return for a given portfolio $\boldsymbol{\alpha}$.
     1. If you wanted to maximize the return of the portfolio, how should you choose your investment?
     1. Compute the *variance* of the portfolio.
-    1. Formulate an optimization problem of maximizing the return while keeping the variance constrained to an upper bound. This is the Nobel-Prize winning [Markovitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model) :cite:`Mangram.2013`. To solve it you will need a quadratic programming solver, something way beyond the scope of this book.
+    1. Formulate an optimization problem that maximizes the return while constraining the variance to an upper bound. This is the [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model) problem :cite:`Mangram.2013`. Solving it requires a quadratic programming solver, which is beyond the scope of this book.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/36)
@@ -1361,8 +1289,8 @@ Reasoning under uncertainty<br>**sampling · distributions · Bayes · expectati
 
 - A model rarely returns one answer: it returns a **distribution** over
   answers.
-- Training **maximizes likelihood**; most losses are negative
-  log-likelihoods.
+- Many training objectives derive from **likelihoods**, often through a
+  negative log-likelihood.
 - Generalization, regularization, and the Bayesian view all rest on the
   same handful of rules.
 
@@ -1388,8 +1316,8 @@ Reasoning under uncertainty<br>**sampling · distributions · Bayes · expectati
 We find a coin and want $P(\text{heads})$, but nobody tells us its
 value. The plan: **toss it many times and count**.
 
-A single batch of 100 tosses with `random.random()` already lands
-**near** 50/50, but never exactly, because sampling has variance:
+A single batch of 100 tosses with `random.random()` often lands
+**near** 50/50, but need not do so exactly because sampling has variance:
 
 @probability-a-simple-example-tossing-coins-1
 :::
@@ -1397,7 +1325,7 @@ A single batch of 100 tosses with `random.random()` already lands
 ::: {.slide title="Multinomial draws 100 tosses in one call"}
 [Estimating from data]{.kicker}
 
-A cleaner tool: a `Multinomial` over `{heads, tails}` with probabilities
+A `Multinomial` over `{heads, tails}` with probabilities
 `[0.5, 0.5]` returns the **count vector** directly:
 
 @probability-a-simple-example-tossing-coins-2
@@ -1413,7 +1341,7 @@ estimates of $P(\text{heads})$ and $P(\text{tails})$:
 ::: {.slide title="More data, tighter estimate"}
 [Estimating from data]{.kicker}
 
-With **10,000** tosses the frequencies sit far closer to the true
+With **10,000** tosses the frequencies are typically closer to the true
 $\tfrac{1}{2}$:
 
 @probability-a-simple-example-tossing-coins-4
@@ -1478,7 +1406,7 @@ $-\tfrac12$** on log--log axes.
 :::
 :::
 
-::: {.slide title="Three axioms generate every rule"}
+::: {.slide title="Three axioms determine the probability calculus"}
 [Formal treatment]{.kicker}
 
 ::: {.cols .vc}
@@ -1492,7 +1420,7 @@ three rules (Kolmogorov):
 - disjoint events **add**.
 
 ::: {.d2l-note .rule}
-Everything else follows, e.g. inclusion–exclusion:
+Standard identities follow from them; for example, inclusion–exclusion gives
 $P(\mathcal{A}\cup\mathcal{B}) =
 P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
 :::
@@ -1536,7 +1464,7 @@ density.
 :::
 :::
 
-::: {.slide title="One table holds everything"}
+::: {.slide title="A joint table yields marginals and conditionals"}
 [Multiple variables]{.kicker}
 
 ::: {.cols .vc}
@@ -1569,8 +1497,8 @@ $$P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}.$$
 
 . . .
 
-This **flips** a hard direction into an easy one: inferring a cause $A$
-from an effect $B$ when only $P(B \mid A)$ is known.
+This converts $P(B \mid A)$ into the reverse conditional needed to infer
+a cause $A$ from an effect $B$.
 
 ::: {.d2l-note .rule}
 posterior $\propto$ likelihood $\times$ prior:
@@ -1617,8 +1545,8 @@ P(D{=}1 \mid H{=}0) &= 0.01 \\
 \text{prior } P(H{=}1) &= 0.0015
 \end{aligned}$$
 
-We want the posterior $P(H{=}1 \mid D{=}1)$. Intuition says "almost
-certainly sick", but Bayes disagrees. Let us count.
+We want the posterior $P(H{=}1 \mid D{=}1)$. Natural frequencies make
+the effect of the low base rate explicit.
 :::
 
 ::: {.slide title="Of ~115 positives, only 15 are real"}
@@ -1631,7 +1559,7 @@ also test positive:
 
 $$P(H{=}1 \mid D{=}1) \approx \tfrac{15}{115} \approx 13\%.$$
 
-The **base rate** dominates a rare-disease test.
+The low **base rate** keeps the posterior well below the test's sensitivity.
 :::
 
 ::: {.col .fig .big}
@@ -1714,8 +1642,7 @@ Covariance is the expected product of the two centered variables; its
 **sign** says whether they move together (magnitude is scale-dependent;
 rescale by the standard deviations to get the *correlation*). Stacked
 over a vector, it becomes the **covariance matrix**
-$\boldsymbol{\Sigma}$, which is symmetric and used throughout the
-chapters ahead:
+$\boldsymbol{\Sigma}$, which is symmetric and recurs in later chapters:
 
 @fig:probability-covariance
 :::

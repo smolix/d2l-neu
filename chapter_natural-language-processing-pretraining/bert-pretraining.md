@@ -413,7 +413,7 @@ def train_bert(train_iter, net, vocab_size, devices, num_steps, num_micro=2):
     print(f'MLM loss {metric[0] / metric[3]:.3f}, '
           f'NSP loss {metric[1] / metric[3]:.3f}')
     print(f'{metric[2] / timer.sum():.1f} sentence pairs/sec on '
-          f'{str(devices)}')
+          f'{len(devices)} devices')
 ```
 
 We can plot both the masked language modeling loss and the next sentence prediction loss
@@ -534,7 +534,8 @@ encoded_text = get_bert_encoding(net, tokens_a)
 # Tokens: '<cls>', 'a', 'crane', 'is', 'flying', '<sep>'
 encoded_text_cls = encoded_text[:, 0, :]
 encoded_text_crane = encoded_text[:, 2, :]
-encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
+(encoded_text.shape, encoded_text_cls.shape,
+ encoded_text_crane[0][:3].numpy())
 ```
 
 Now consider a sentence pair
@@ -573,7 +574,8 @@ encoded_pair = get_bert_encoding(net, tokens_a, tokens_b)
 # 'left', '<sep>'
 encoded_pair_cls = encoded_pair[:, 0, :]
 encoded_pair_crane = encoded_pair[:, 2, :]
-encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3]
+(encoded_pair.shape, encoded_pair_cls.shape,
+ encoded_pair_crane[0][:3].numpy())
 ```
 
 In :numref:`chap_nlp_app`, we will fine-tune a pretrained BERT model

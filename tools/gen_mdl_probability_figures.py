@@ -240,7 +240,14 @@ def fig_power_curves():
     fig, ax = plt.subplots(figsize=(6.4, 3.9))
     # one curve per effect size, a blue family from dark (delta=1) to light
     deltas = [1.0, 0.5, 0.1, 0.01]
-    blues = ["#114e7c", BLUE, "#5b9bc9", "#9cc2dd"]
+    # a dark->light ramp derived from the blue trio (dark, base, then two
+    # base->tint blend stops)
+    def _mix(c1, c2, t):
+        a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+        b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+        return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(a, b))
+    blues = [fl.T.BLUE.dark, BLUE, _mix(BLUE, fl.T.BLUE.tint, 0.45),
+             _mix(BLUE, fl.T.BLUE.tint, 0.72)]
     label_at = [3.0, 17.0, 300.0, 3.0e4]      # n where each curve label sits
     # each curve is still climbing steeply at its own label's n, so all but
     # the widely-spaced delta=1 label need a much bigger vertical clearance;
@@ -736,9 +743,9 @@ def fig_family_tree():
         ax.annotate("", xy=tuple(c1 - d * 0.30), xytext=tuple(c0 + d * 0.30),
                     arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.5, ls="--"))
     for k, (x, y) in boxes.items():
-        _box(ax, (x, y), w, h, k, fc=("#dbe6f3" if k == "Gaussian" else LIGHT))
+        _box(ax, (x, y), w, h, k, fc=(fl.T.BLUE.tint if k == "Gaussian" else LIGHT))
     for k, (x, y) in priors.items():
-        _box(ax, (x, y), w, h, k, fc="#e7f3e7")        # light green for priors
+        _box(ax, (x, y), w, h, k, fc=fl.T.GREEN.tint)        # light green for priors
     ax.set_xlim(-0.5, 11.9); ax.set_ylim(-2.1, 5.6)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-prob-family-tree")
@@ -892,7 +899,7 @@ def fig_naive_independence():
                         zorder=5)
                 continue
             edge_into_node(ax, ynode, (x, y_bot))
-        node(ax, ynode, r"$y$", fc="#dbe6f3")
+        node(ax, ynode, r"$y$", fc=fl.T.BLUE.tint)
         for x, lab in zip(xs, feat_labels):
             if lab == r"$\cdots$":
                 continue
@@ -1161,8 +1168,8 @@ def fig_elbo():
     ax.plot(th, elbo, color=ORANGE, lw=2.2)
     ax.text(2.45, evid.max() + 0.16, r"$\log p(x;\theta)$", color=BLUE,
             ha="right", va="bottom", fontsize=11)
-    ax.text(2.45, elbo[-1] - 0.10, r"ELBO $\mathcal{L}(q,\theta)$",
-            color=ORANGE, ha="right", va="top", fontsize=11)
+    ax.text(2.45, elbo[-1] + 0.12, r"ELBO $\mathcal{L}(q,\theta)$",
+            color=ORANGE, ha="right", va="bottom", fontsize=11)
 
     # the touch point at theta^(t) and the bound's peak at theta^(t+1)
     y_t = float(log_evidence(np.array([th_t]))[0])

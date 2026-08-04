@@ -31,8 +31,8 @@ from matplotlib.patches import Circle, FancyArrowPatch  # noqa: E402
 
 # Two extra hues (matplotlib tab10) for the six-curve generator gallery; the
 # shared five-color palette is not large enough there.
-RED = "#d62728"
-PURPLE = "#9467bd"
+RED = fl.T.RED.base
+PURPLE = fl.T.PURPLE.base
 
 
 # --------------------------------------------------------------------------- #

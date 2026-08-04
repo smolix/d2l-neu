@@ -44,6 +44,10 @@ ORANGE = _figstyle.ORANGE
 GREEN = _figstyle.GREEN
 GRAY = _figstyle.GRAY
 LIGHT = _figstyle.LIGHT   # faint grids / construction lines
+
+# token-blue sequential ramp for surfaces / iterate fans (replaces viridis)
+from matplotlib.colors import LinearSegmentedColormap as _LSC
+BLUE_CMAP = _LSC.from_list("figblue", [T.BLUE.tint, T.BLUE.base, T.BLUE.dark])
 INK = _figstyle.INK
 
 _figstyle.use_style(hashsalt="mdl-la")
@@ -780,7 +784,7 @@ def fig_psd():
     for i, A in enumerate(specs, 1):
         ax = fig.add_subplot(1, 3, i, projection="3d")
         Z = A[0, 0] * X**2 + (A[0, 1] + A[1, 0]) * X * Y + A[1, 1] * Y**2
-        ax.plot_surface(X, Y, Z, cmap="viridis", linewidth=0, antialiased=True,
+        ax.plot_surface(X, Y, Z, cmap=BLUE_CMAP, linewidth=0, antialiased=True,
                         alpha=0.92, rstride=2, cstride=2)
         ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
         ax.set_xlabel("$x_1$", labelpad=-10, fontsize=13)
@@ -846,7 +850,7 @@ def fig_power_iter():
     v = np.array([0.0, 1.0])  # start far from dominant direction
     v = v / np.linalg.norm(v)
     n_it = 6
-    cmap = plt.cm.viridis(np.linspace(0.15, 0.9, n_it + 1))
+    cmap = BLUE_CMAP(np.linspace(0.10, 0.95, n_it + 1))
     # all the iterates live in the first quadrant -- show only that
     axis_cross(axa, (-0.12, 1.32), (-0.12, 1.32), color=GRAY)
     # dominant eigenvector reference ray (first quadrant only)

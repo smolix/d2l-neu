@@ -1000,7 +1000,7 @@ Q 270.8064 140.1696 270.8064 140.9472
 L 270.8064 166.608 
 Q 270.8064 167.3856 271.584 167.3856 
 z
-" clip-path="url(#pa8d5a8c6c3)" style="fill: #dbe6f3; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#pa8d5a8c6c3)" style="fill: #d6edfc; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_18">
     <path d="M 143.28 214.0416 
@@ -1039,7 +1039,7 @@ Q 126.9504 27.4176 126.9504 28.1952
 L 126.9504 53.856 
 Q 126.9504 54.6336 127.728 54.6336 
 z
-" clip-path="url(#pa8d5a8c6c3)" style="fill: #e7f3e7; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#pa8d5a8c6c3)" style="fill: #ddf0dd; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_21">
     <path d="M 271.584 54.6336 
@@ -1052,7 +1052,7 @@ Q 270.8064 27.4176 270.8064 28.1952
 L 270.8064 53.856 
 Q 270.8064 54.6336 271.584 54.6336 
 z
-" clip-path="url(#pa8d5a8c6c3)" style="fill: #e7f3e7; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#pa8d5a8c6c3)" style="fill: #ddf0dd; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_22">
     <path d="M 271.584 280.1376 
@@ -1065,7 +1065,7 @@ Q 270.8064 252.9216 270.8064 253.6992
 L 270.8064 279.36 
 Q 270.8064 280.1376 271.584 280.1376 
 z
-" clip-path="url(#pa8d5a8c6c3)" style="fill: #e7f3e7; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#pa8d5a8c6c3)" style="fill: #ddf0dd; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="text_7">
     <!-- Bernoulli -->

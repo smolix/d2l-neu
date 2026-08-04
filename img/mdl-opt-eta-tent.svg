@@ -999,13 +999,13 @@ z
     </g>
    </g>
    <g id="patch_2">
-    <path d="M 133.56928 158.68712 
-Q 93.509841 119.150515 53.450402 79.613911 
+    <path d="M 105.556972 158.432221 
+Q 79.345353 119.150597 53.133733 79.868973 
 " style="fill: none; stroke: #2ca02c; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="text_5">
     <!-- both endpoints equal -->
-    <g style="fill: #2ca02c" transform="translate(95.18876 173.091975) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(63.64562 173.091975) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-2a" d="M 1734 -77 
 Q 1357 -77 1027 115 

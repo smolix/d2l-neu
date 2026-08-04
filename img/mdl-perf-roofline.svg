@@ -1959,7 +1959,7 @@ z
    </g>
    <g id="text_15">
     <!-- elementwise op -->
-    <g style="fill: #ff7f0e" transform="translate(121.846082 190.577239) scale(0.13 -0.13)">
+    <g style="fill: #ff7f0e" transform="translate(129.036942 190.577239) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Regular-20"/>
      <use xlink:href="#SourceSans3-Regular-27" transform="translate(49.59375 0)"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(75.09375 0)"/>
@@ -1976,7 +1976,7 @@ z
      <use xlink:href="#SourceSans3-Regular-2b" transform="translate(607.890625 0)"/>
     </g>
     <!-- (intensity $\approx 1$) -->
-    <g style="fill: #ff7f0e" transform="translate(121.846082 207.815239) scale(0.13 -0.13)">
+    <g style="fill: #ff7f0e" transform="translate(129.036942 207.815239) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Regular-5a2" transform="translate(0 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-24" transform="translate(30.299973 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(54.899948 0.796875)"/>

@@ -376,8 +376,8 @@ class Diagram:
 # deliberately do NOT use the gallery accent colors.                         #
 # --------------------------------------------------------------------------- #
 
-FAMILY_BLUE = _T.BLUE.tint     # the family's shaded-cell blue (from conv-pad.svg)
-FAMILY_BLUE_DARK = "#A6CEE9"   # the family's second, stronger shade
+FAMILY_BLUE = "#B2D9FF"        # the ORIGINAL legacy mask blue (conv mechanics only)
+FAMILY_BLUE_DARK = "#8FC3EF"   # the family's second, stronger shade
 GRID_LW = 1.8   # heavier per the 2026-08-03 mobile-legibility review
 GRID_FS = 13.0              # in-cell values and grid titles
 

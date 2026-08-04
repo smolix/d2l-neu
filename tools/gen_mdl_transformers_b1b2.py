@@ -174,7 +174,7 @@ def _mini_panel(ax, order, stream_norm, title):
     if stream_norm:
         ax.add_patch(Circle((MSX, y_add), 0.30, fc="white", ec="black",
                             lw=1.5, zorder=5))
-        n0, n1 = y_add + 0.55, y_add + 1.40
+        n0, n1 = y_add + 0.72, y_add + 1.57
         _stream(ax, 0.0, n0 + 0.10, head=False, x=MSX)
         _box(ax, MSX - NW / 2, MSX + NW / 2, n0, n1, "norm", "white", GRAY)
         _stream(ax, n1 - 0.10, y_top, x=MSX)
@@ -199,11 +199,11 @@ def _mini_panel(ax, order, stream_norm, title):
     _elbow(ax, [(MBC, spans[-1][2]), (MBC, y_add), (MSX + 0.30, y_add)],
            ORANGE)
 
-    ax.text(MSX + 0.42, 0.05, r"$\mathbf{x}$", ha="left", va="bottom",
+    ax.text(MSX + 0.42, -0.16, r"$\mathbf{x}$", ha="left", va="bottom",
             fontsize=14, color="black")
     ax.set_title(title, fontsize=13, color="black")
     ax.set_xlim(-0.5, 8.3)
-    ax.set_ylim(-0.2, 6.6)
+    ax.set_ylim(-0.45, 6.6)
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])

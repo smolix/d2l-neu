@@ -13897,6 +13897,14 @@ L 311.549561 13.782536
 " clip-path="url(#p693132461f)" style="fill: #565d66; fill-opacity: 0.9"/>
    </g>
    <g id="text_13">
+    <g id="patch_5">
+     <path d="M 57.441812 33.961 
+L 158.801813 33.961 
+L 158.801813 11.477 
+L 57.441812 11.477 
+z
+" style="fill: #ffffff; opacity: 0.75"/>
+    </g>
     <!-- $\mathbf{s}(\mathbf{x})=\nabla\log p(\mathbf{x})$ -->
     <g transform="translate(59.401812 27.437) scale(0.14 -0.14)">
      <defs>
@@ -14279,16 +14287,24 @@ z
      <use xlink:href="#m130c0a3510" x="240.274813" y="115.308" style="fill: #ff7f0e; stroke: #ff7f0e"/>
     </g>
    </g>
-   <g id="patch_5">
-    <path d="M 276.152407 197.826468 
-Q 259.409785 159.318437 243.291268 122.245848 
+   <g id="patch_6">
+    <path d="M 276.169786 197.866438 
+Q 259.417958 159.337235 243.290236 122.243474 
 " style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
-    <path d="M 242.956338 128.497873 
-L 243.291268 122.245848 
-L 248.091931 126.265007 
+    <path d="M 242.955306 128.4955 
+L 243.290236 122.243474 
+L 248.090899 126.262634 
 " style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
    </g>
    <g id="text_14">
+    <g id="patch_7">
+     <path d="M 248.674813 222.184 
+L 315.034813 222.184 
+L 315.034813 199.7 
+L 248.674813 199.7 
+z
+" style="fill: #ffffff; opacity: 0.75"/>
+    </g>
     <!-- $\nabla\log p=\mathbf{0}$ -->
     <g transform="translate(250.634813 215.66) scale(0.14 -0.14)">
      <defs>

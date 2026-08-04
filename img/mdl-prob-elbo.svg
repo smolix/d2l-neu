@@ -560,12 +560,12 @@ L 374.629273 222.573187
 " clip-path="url(#p37ace7ded3)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_8">
-    <path d="M 114.905636 222.573187 
+    <path d="M 114.905636 208.020623 
 L 114.905636 57.525268 
 " clip-path="url(#p37ace7ded3)" style="fill: none; stroke-dasharray: 4.07,1.76; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.1"/>
    </g>
    <g id="line2d_9">
-    <path d="M 182.22132 222.573187 
+    <path d="M 182.22132 208.020623 
 L 182.22132 34.557078 
 " clip-path="url(#p37ace7ded3)" style="fill: none; stroke-dasharray: 4.07,1.76; stroke-dashoffset: 0; stroke: #565d66; stroke-width: 1.1"/>
    </g>
@@ -907,7 +907,7 @@ z
    </g>
    <g id="text_9">
     <!-- ELBO $\mathcal{L}(q,\theta)$ -->
-    <g style="fill: #ff7f0e" transform="translate(312.752727 213.850988) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(290.026909 212.994955) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-6" d="M 576 0 
 L 576 4198 
@@ -1129,7 +1129,7 @@ z
    </g>
    <g id="text_10">
     <!-- $\theta^{(t)}$ -->
-    <g style="fill: #565d66" transform="translate(106.655636 237.853353) scale(0.11 -0.11)">
+    <g style="fill: #565d66" transform="translate(106.655636 217.275121) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-30" d="M 397 519 
 Q 397 613 416 697 
@@ -1177,7 +1177,7 @@ z
    </g>
    <g id="text_11">
     <!-- $\theta^{(t+1)}$ -->
-    <g style="fill: #565d66" transform="translate(167.53632 237.853353) scale(0.11 -0.11)">
+    <g style="fill: #565d66" transform="translate(167.53632 217.275121) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-4c" d="M 481 1472 
 Q 428 1472 393 1512 

@@ -1317,17 +1317,17 @@ L 442.304031 251.136
 " style="fill: none; stroke: #15181c; stroke-width: 1.5; stroke-linejoin: miter; stroke-linecap: square"/>
    </g>
    <g id="patch_5">
-    <path d="M 152.484966 229.18348 
-Q 167.90996 220.054863 182.276571 211.552605 
+    <path d="M 189.133756 228.245454 
+Q 187.312661 220.054657 185.758483 213.064382 
 " style="fill: none; stroke: #000000; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 177.815615 211.868636 
-L 182.276571 211.552605 
-L 179.852823 215.310988 
+    <path d="M 184.674294 217.403107 
+L 185.758483 213.064382 
+L 188.57895 216.534968 
 " style="fill: none; stroke: #000000; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_16">
     <!-- $f(1) = 0$ -->
-    <g style="fill: #15181c" transform="translate(118.929557 242.203132) scale(0.1 -0.1)">
+    <g style="fill: #15181c" transform="translate(174.23776 242.203132) scale(0.1 -0.1)">
      <defs>
       <path id="Cmr10-64" d="M 594 0 
 L 594 225 

@@ -61,6 +61,7 @@ def fig_one_head_averages() -> None:
     ax.bar(positions + 0.17, w_head2, width=0.32, color=GREEN,
            label="head 2")
     ax.set_title("two heads: two distributions", fontsize=14, color="black")
+    ax.set_ylim(0, 1.18)          # headroom: the legend clears the bars
     ax.legend(loc="upper center", fontsize=12, ncol=2,
               handlelength=1.2, columnspacing=1.0)
     ax.text(3.5, -0.42,

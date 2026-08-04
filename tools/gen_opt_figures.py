@@ -325,7 +325,7 @@ def fig_inflection():
     ax.plot([-0.8, 0.8], [0, 0], "--", color=GRAY, lw=1.5)   # tangent at 0
     ax.plot(0, 0, "o", color=ORANGE, ms=8, zorder=5)
     ax.annotate("stationary inflection\n" r"$f'(0)=f''(0)=0$", xy=(0, 0),
-                xytext=(-1.95, 3.4), fontsize=12.5, color="black", ha="left",
+                xytext=(-1.45, 3.4), fontsize=12.5, color="black", ha="left",
                 arrowprops=_ANN)
     ax.set_xlim(-2.0, 2.0)
     _fn_axes(ax, r"$x$", r"$f(x)=x^3$")

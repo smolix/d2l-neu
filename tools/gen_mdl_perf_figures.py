@@ -91,7 +91,7 @@ def fig_roofline():
 
     # Two workloads at opposite ends.
     ax.plot([1.0], [bw * 1.0], "o", color=ORANGE, ms=8, zorder=5)
-    ax.text(1.45, 0.95, "elementwise op\n(intensity $\\approx 1$)",
+    ax.text(1.75, 0.95, "elementwise op\n(intensity $\\approx 1$)",
             ha="left", va="center", fontsize=13, color=ORANGE)
     ax.plot([2048], [peak], "o", color=GREEN, ms=8, zorder=5)
     ax.text(2048, peak * 0.42, "large matmul",

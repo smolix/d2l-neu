@@ -784,7 +784,8 @@ def fig_psd():
     for i, A in enumerate(specs, 1):
         ax = fig.add_subplot(1, 3, i, projection="3d")
         Z = A[0, 0] * X**2 + (A[0, 1] + A[1, 0]) * X * Y + A[1, 1] * Y**2
-        ax.plot_surface(X, Y, Z, cmap=BLUE_CMAP, linewidth=0, antialiased=True,
+        # Alex 2026-08-04: the original viridis reads better on 3-D relief
+        ax.plot_surface(X, Y, Z, cmap="viridis", linewidth=0, antialiased=True,
                         alpha=0.92, rstride=2, cstride=2)
         ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
         ax.set_xlabel("$x_1$", labelpad=-10, fontsize=13)

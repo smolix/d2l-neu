@@ -221,7 +221,7 @@ def fig_multi_head() -> None:
         fl.arrow(ax, (cx, y_proj + 0.33), (cx, y_attn - 0.33), color=GRAY,
                  lw=1.7, mut=12)
         _box(ax, cx, y_attn, 2.5, 0.78,
-             "scaled dot-product\nattention", GREEN, fontsize=11.5)
+             "scaled dot-product\nattention", ORANGE, fontsize=11.5)
         ax.text(cx, y_attn - 0.66, rf"head {h}", ha="center", va="top",
                 fontsize=12, color="black")
         # attention -> concat
@@ -236,7 +236,7 @@ def fig_multi_head() -> None:
             ha="center", va="center", fontsize=12.5, color="black")
 
     # --- concat -> output projection -> output ------------------------------ #
-    _box(ax, x_ell, y_cat, 6.0, 0.64, "concatenate head outputs", ORANGE,
+    _box(ax, x_ell, y_cat, 6.0, 0.64, "concatenate head outputs", GRAY,
          fontsize=13)
     fl.arrow(ax, (x_ell, y_cat + 0.32), (x_ell, y_op - 0.33), color=GRAY,
              lw=1.9, mut=13)
@@ -261,7 +261,7 @@ def _seq_nodes(ax, n=5):
     xin = np.arange(n)
     y_in, y_out = 0.0, 2.0
     for x in xin:
-        ax.add_patch(Circle((x, y_out), 0.24, facecolor="#bcd6ef",
+        ax.add_patch(Circle((x, y_out), 0.24, facecolor=fl.T.BLUE.tint,
                             edgecolor="black", lw=1.1, zorder=4))
         ax.add_patch(Circle((x, y_in), 0.24, facecolor="white",
                             edgecolor="black", lw=1.1, zorder=4))

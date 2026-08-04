@@ -193,8 +193,8 @@ def fig_gru_cell():
 
     y_conv, y_head, y_bus = 4.85, 2.45, 0.95
     xR, xZ, xH = 2.75, 4.15, 6.05          # head x-positions
-    x_blend = 7.15                          # (1 - Z) * candidate column
-    bw, bh = 1.25, 0.85
+    x_blend = xH                            # (1 - Z) * candidate column sits
+    bw, bh = 1.25, 0.85                     # directly above the tanh head
     hw, hh = 0.82, 0.72
     r = 0.26
 
@@ -202,25 +202,30 @@ def fig_gru_cell():
     _box(ax, 1.0, y_conv, bw, bh, r"$\mathbf{H}_{t-1}$", TEAL)
     _op(ax, xZ, y_conv, r"$\odot$")
     _op(ax, x_blend, y_conv, r"$+$")
-    _box(ax, 9.55, y_conv, bw, bh, r"$\mathbf{H}_{t}$", TEAL)
+    _box(ax, 8.55, y_conv, bw, bh, r"$\mathbf{H}_{t}$", TEAL)
     fl.arrow(ax, (1.0 + bw / 2, y_conv), (xZ - r, y_conv), color=GRAY)
     fl.arrow(ax, (xZ + r, y_conv), (x_blend - r, y_conv), color=GRAY)
-    fl.arrow(ax, (x_blend + r, y_conv), (9.55 - bw / 2, y_conv), color=GRAY)
+    fl.arrow(ax, (x_blend + r, y_conv), (8.55 - bw / 2, y_conv), color=GRAY)
 
-    # --- input bus: X_t plus a tap of H_{t-1} feed the gate heads -------------
+    # --- input wiring (as in the GRU equations): the X bus feeds all three
+    # heads; H_{t-1} joins only the two GATE risers on its own bus above it
+    # (the candidate tanh sees the previous state only through R_t (x) H).
     _box(ax, 1.0, 0.95, bw, bh, r"$\mathbf{X}_{t}$", BLUE)
     xj = 1.0 + bw / 2
     ax.plot([xj, xH], [y_bus, y_bus], color=GRAY, lw=1.8, zorder=1)
-    # H_{t-1} tap down to the bus (gates read the previous state too)
-    x_tap = 1.95
-    _dot(ax, x_tap, y_conv)
-    ax.plot([x_tap, x_tap], [y_conv, y_bus], color=GRAY, lw=1.8, zorder=1)
-    _dot(ax, x_tap, y_bus)
     for x in (xR, xZ, xH):
         if x != xH:
             _dot(ax, x, y_bus)
         fl.arrow(ax, (x, y_bus), (x, y_head - hh / 2), color=GRAY, lw=1.8,
                  mut=12)
+    # H_{t-1} tap: down from the conveyor, right along its own bus, joining
+    # the R and Z risers at the dots
+    x_tap, y_h = 1.95, 1.55
+    _dot(ax, x_tap, y_conv)
+    ax.plot([x_tap, x_tap], [y_conv, y_h], color=GRAY, lw=1.8, zorder=1)
+    ax.plot([x_tap, xZ], [y_h, y_h], color=GRAY, lw=1.8, zorder=1)
+    _dot(ax, xR, y_h)
+    _dot(ax, xZ, y_h)
 
     # --- heads ----------------------------------------------------------------
     _head(ax, xR, y_head, r"$\sigma$", w=hw, h=hh)
@@ -244,27 +249,28 @@ def fig_gru_cell():
              lw=1.8, mut=12)
 
     # update gate up into the conveyor product, with a branch carrying the
-    # complement (1 - Z) into the blend product
+    # complement (1 - Z) horizontally into the blend product
     fl.arrow(ax, (xZ, y_head + hh / 2), (xZ, y_conv - r), color=GRAY)
     ax.text(xZ - 0.18, 3.9, r"$\mathbf{Z}_t$", ha="right", va="center",
             fontsize=14, color="black")
     y_c = 3.6
     _op(ax, x_blend, y_c, r"$\odot$")
-    _dot(ax, xZ, 4.2)
-    fl.arrow(ax, (xZ, 4.2), (x_blend - r, y_c + 0.04), color=GRAY,
-             lw=1.8, mut=12)
-    ax.text(5.4, 4.14, r"$1-\mathbf{Z}_t$", ha="center", va="center",
-            fontsize=13, color="black")
+    _dot(ax, xZ, y_c)
+    fl.arrow(ax, (xZ, y_c), (x_blend - r, y_c), color=GRAY, lw=1.8, mut=12)
+    ax.text((xZ + x_blend - r) / 2, y_c + 0.23, r"$1-\mathbf{Z}_t$",
+            ha="center", va="bottom", fontsize=13, color="black")
 
-    # candidate into the blend product, then up into the convex combination
-    fl.arrow(ax, (xH + 0.4, y_head + hh / 2),
-             (x_blend - r * 0.6, y_c - r * 0.8), color=GRAY, lw=1.8, mut=12)
+    # candidate straight up into the blend product, then on up into the
+    # convex combination -- one straight column above the tanh head
+    fl.arrow(ax, (xH, y_head + hh / 2), (xH, y_c - r), color=GRAY, lw=1.8,
+             mut=12)
     fl.arrow(ax, (x_blend, y_c + r), (x_blend, y_conv - r), color=GRAY,
              lw=1.8, mut=12)
-    ax.text(7.35, 2.95, r"$\tilde{\mathbf{H}}_t$", ha="left", va="center",
+    ax.text(xH + 0.2, (y_head + hh / 2 + y_c - r) / 2,
+            r"$\tilde{\mathbf{H}}_t$", ha="left", va="center",
             fontsize=14, color="black")
 
-    ax.set_xlim(0.15, 10.35)
+    ax.set_xlim(0.15, 9.35)
     ax.set_ylim(0.3, 5.5)
     fl.save(fig, "mdl-modernrnn-gru-cell")
 

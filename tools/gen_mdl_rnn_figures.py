@@ -759,10 +759,16 @@ def fig_rnn_bptt():
     # ------------------------------------------------------------------ #
     def fanout(box_cx, box_w, col_x, label):
         pbox(box_cx, yp, label, box_w)
-        # straight chained verticals: box -> circle above -> next circle ...
-        sar((col_x, yp + bh / 2), (col_x, ys[0] - r), lw=1.7)
-        for ya, yb in zip(ys, ys[1:]):
-            sar((col_x, ya + r), (col_x, yb - r), lw=1.7)
+        top = yp + bh / 2
+        # the shared weights feed EVERY operator in the column: a straight
+        # vertical to the adjacent circle, arcs (from splayed departure
+        # points) around it to the higher ones
+        sar((col_x, top), (col_x, ys[0] - r), lw=1.7)
+        for dx, y, ang, rad in [(-0.34, ys[1], 235.0, 0.16),
+                                (-0.54, ys[2], 245.0, 0.12)]:
+            q = (col_x + r * np.cos(np.radians(ang)),
+                 y + r * np.sin(np.radians(ang)))
+            car((box_cx + dx, top), q, rad=rad, lw=1.7)
 
     fanout(F, 2.05, F, r"$\mathbf{W}_{hx},\mathbf{W}_{hh}$")
     fanout(G, 1.15, G, r"$\mathbf{W}_{qh}$")

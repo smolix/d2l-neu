@@ -42,7 +42,7 @@ L 86.371614 203.608
 L 86.371614 26.2 
 L 67.679201 26.2 
 z
-" clip-path="url(#p10cf4cef7b)" style="fill: #b45309; opacity: 0.15; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p10cf4cef7b)" style="fill: #ff7f0e; opacity: 0.15; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="matplotlib.axis_1">
     <g id="xtick_1">
@@ -820,7 +820,7 @@ L 133.594551 192.528561
 L 191.639411 192.528561 
 L 192.623223 195.544 
 L 192.623223 195.544 
-" clip-path="url(#p10cf4cef7b)" style="fill: none; stroke: #1565c0; stroke-width: 1.8; stroke-linecap: square"/>
+" clip-path="url(#p10cf4cef7b)" style="fill: none; stroke: #1f77b4; stroke-width: 1.8; stroke-linecap: square"/>
    </g>
    <g id="patch_4">
     <path d="M 61.432 203.608 
@@ -834,7 +834,7 @@ L 198.870424 203.608
    </g>
    <g id="text_12">
     <!-- top-$k$ -->
-    <g style="fill: #b45309" transform="translate(86.371614 46.264) scale(0.12 -0.12)">
+    <g style="fill: #ff7f0e" transform="translate(86.371614 46.264) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-2f" d="M 1504 -58 
 Q 1005 -58 809 227 

@@ -150,7 +150,7 @@ L 155.975059 263.658355
 L 156.282954 258.78086 
 L 156.385646 253.894737 
 L 156.385646 253.894737 
-" clip-path="url(#pfe820945d1)" style="fill: none; stroke: #b45309; stroke-opacity: 0.9; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pfe820945d1)" style="fill: none; stroke: #ff7f0e; stroke-opacity: 0.9; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_3">
     <path d="M 196.332632 253.894737 
@@ -320,11 +320,11 @@ L 278.31119 225.508902
 L 293.492405 227.209502 
 L 295.010526 227.368421 
 L 295.010526 227.368421 
-" clip-path="url(#pfe820945d1)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pfe820945d1)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="text_1">
     <!-- $g(x,y)=c$ -->
-    <g style="fill: #1565c0" transform="translate(91.076211 44.204211) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(91.076211 44.204211) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-2f" d="M 91 -916 
 Q 91 -759 198 -642 
@@ -628,26 +628,26 @@ z
    <g id="patch_5">
     <path d="M 122.324211 171.663158 
 Q 149.943801 144.043567 175.82414 118.163229 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 170.308707 120.001706 
 L 175.82414 118.163229 
 L 173.985662 123.678662 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_6">
     <path d="M 122.324211 171.663158 
 Q 138.3145 155.672868 152.565537 141.421832 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 147.898632 142.977467 
 L 152.565537 141.421832 
 L 151.009902 146.088736 
 z
-" style="fill: #2e7d3e; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_2">
     <!-- $\nabla f\parallel\nabla g$ -->
-    <g style="fill: #b45309" transform="translate(193.043368 120.679579) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(193.043368 120.679579) scale(0.11 -0.11)">
      <defs>
       <path id="Cmsy10-6e" d="M 2503 -141 
 L 300 4300 
@@ -901,16 +901,16 @@ z
    <g id="patch_7">
     <path d="M 221.002105 216.516746 
 Q 245.966616 211.35879 268.741311 206.653274 
-" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: round"/>
     <path d="M 263.554984 205.274139 
 L 268.741311 206.653274 
 L 264.526206 209.974854 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: round"/>
    </g>
    <g id="text_4">
     <!-- $\nabla f$ -->
-    <g style="fill: #b45309" transform="translate(272.171785 196.58228) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(272.171785 196.58228) scale(0.105 -0.105)">
      <use xlink:href="#Cmsy10-6e" transform="translate(0 0.484375)"/>
      <use xlink:href="#Cmmi10-57" transform="translate(83.300781 0.484375)"/>
     </g>
@@ -918,16 +918,16 @@ z
    <g id="patch_8">
     <path d="M 221.002105 216.516746 
 Q 226.160062 191.552235 230.865577 168.777541 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 2; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linecap: round"/>
     <path d="M 227.543997 172.992645 
 L 230.865577 168.777541 
 L 232.244713 173.963868 
 z
-" style="fill: #2e7d3e; stroke: #2e7d3e; stroke-width: 2; stroke-linecap: round"/>
+" style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 2; stroke-linecap: round"/>
    </g>
    <g id="text_5">
     <!-- $\nabla g$ -->
-    <g style="fill: #2e7d3e" transform="translate(237.545072 181.638645) scale(0.105 -0.105)">
+    <g style="fill: #2ca02c" transform="translate(237.545072 181.638645) scale(0.105 -0.105)">
      <use xlink:href="#Cmsy10-6e" transform="translate(0 0.6875)"/>
      <use xlink:href="#Cmmi10-2f" transform="translate(83.300781 0.6875)"/>
     </g>

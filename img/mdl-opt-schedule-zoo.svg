@@ -89,7 +89,7 @@ L 340.032455 201.819571
 L 373.54419 202.899102 
 L 397.535545 203.556404 
 L 397.535545 203.556404 
-" clip-path="url(#pc7e4663ff1)" style="fill: none; stroke: #2e7d3e; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#pc7e4663ff1)" style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_4">
     <path d="M 16.720379 213.4368 
@@ -139,7 +139,7 @@ L 388.776796 213.196373
 L 394.869839 213.41452 
 L 397.535545 213.4368 
 L 397.535545 213.4368 
-" clip-path="url(#pc7e4663ff1)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#pc7e4663ff1)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_5">
     <path d="M 16.720379 213.4368 
@@ -147,7 +147,7 @@ L 35.761137 47.1168
 L 321.372512 47.1168 
 L 397.535545 213.4368 
 L 397.535545 213.4368 
-" clip-path="url(#pc7e4663ff1)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#pc7e4663ff1)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="text_1">
     <!-- constant: noise floor $\propto\eta$ forever -->
@@ -569,11 +569,11 @@ z
    <g id="patch_2">
     <path d="M 112.191904 153.238095 
 Q 105.163582 159.966412 98.13526 166.694728 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_2">
     <!-- $c/k$: reaches the optimum, -->
-    <g style="fill: #2e7d3e" transform="translate(70.024929 131.6804) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(70.024929 131.6804) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-7f" d="M 750 763 
 Q 750 484 892 290 
@@ -824,7 +824,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56c" transform="translate(1082.414001 0)"/>
     </g>
     <!-- if $c$ is large enough -->
-    <g style="fill: #2e7d3e" transform="translate(88.504929 146.2664) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(88.504929 146.2664) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-22" d="M 1574 -1434 
 Q 1005 -1434 646 -1216 
@@ -915,11 +915,11 @@ z
    <g id="patch_3">
     <path d="M 291.765261 165.060223 
 Q 288.149836 169.625561 284.534412 174.190898 
-" style="fill: none; stroke: #1565c0; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_3">
     <!-- cosine: long tail -->
-    <g style="fill: #1565c0" transform="translate(270.366702 143.3228) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(270.366702 143.3228) scale(0.11 -0.11)">
      <use xlink:href="#SourceSans3-Regular-1e"/>
      <use xlink:href="#SourceSans3-Regular-2a" transform="translate(43.5 0)"/>
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(97.703125 0)"/>
@@ -939,7 +939,7 @@ Q 288.149836 169.625561 284.534412 174.190898
      <use xlink:href="#SourceSans3-Regular-27" transform="translate(624.921875 0)"/>
     </g>
     <!-- of small steps -->
-    <g style="fill: #1565c0" transform="translate(274.849202 157.9088) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(274.849202 157.9088) scale(0.11 -0.11)">
      <use xlink:href="#SourceSans3-Regular-2a"/>
      <use xlink:href="#SourceSans3-Regular-21" transform="translate(54.203125 0)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(83.40625 0)"/>
@@ -959,11 +959,11 @@ Q 288.149836 169.625561 284.534412 174.190898
    <g id="patch_4">
     <path d="M 260.571483 84.274063 
 Q 305.25345 98.653337 349.935417 113.032611 
-" style="fill: none; stroke: #b45309; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_4">
     <!-- WSD: hold the plateau, -->
-    <g style="fill: #b45309" transform="translate(155.124603 63.4892) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(155.124603 63.4892) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-18" d="M 1018 0 
 L 147 4198 
@@ -1106,7 +1106,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56c" transform="translate(920.609375 0)"/>
     </g>
     <!-- then pay the ball down -->
-    <g style="fill: #b45309" transform="translate(154.72929 78.0752) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(154.72929 78.0752) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-34" d="M 576 -1338 
 Q 474 -1338 381 -1318 

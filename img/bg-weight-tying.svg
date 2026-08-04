@@ -54,22 +54,22 @@ L 245.26102 100.598571
    <g id="patch_3">
     <path d="M 76.722245 40.907755 
 Q 133.604082 64.784082 188.217942 87.708418 
-" clip-path="url(#pb76fe3654d)" style="fill: none; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: round"/>
+" clip-path="url(#pb76fe3654d)" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 183.555261 82.280766 
 L 188.217942 87.708418 
 L 181.078212 88.181972 
 z
-" clip-path="url(#pb76fe3654d)" style="fill: #2e7d3e; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: round"/>
+" clip-path="url(#pb76fe3654d)" style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
     <path d="M 350.597755 40.907755 
 Q 293.715918 64.784082 239.102058 87.708418 
-" clip-path="url(#pb76fe3654d)" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" clip-path="url(#pb76fe3654d)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 246.241788 88.181972 
 L 239.102058 87.708418 
 L 243.764739 82.280766 
 z
-" clip-path="url(#pb76fe3654d)" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" clip-path="url(#pb76fe3654d)" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- one tensor, two call sites: gradients sum -->
@@ -762,7 +762,7 @@ Q 10.570776 17.944347 10.570776 22.157816
 L 10.570776 59.657694 
 Q 10.570776 63.871163 14.784245 63.871163 
 z
-" clip-path="url(#pb76fe3654d)" style="fill: #2e7d3e; opacity: 0.14; stroke: #2e7d3e; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pb76fe3654d)" style="fill: #2ca02c; opacity: 0.14; stroke: #2ca02c; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 14.784245 63.871163 
@@ -776,7 +776,7 @@ L 10.570776 59.657694
 Q 10.570776 63.871163 14.784245 63.871163 
 L 14.784245 63.871163 
 z
-" clip-path="url(#pb76fe3654d)" style="fill: none; stroke: #2e7d3e; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pb76fe3654d)" style="fill: none; stroke: #2ca02c; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_8">
     <path d="M 288.659755 63.871163 
@@ -802,7 +802,7 @@ Q 284.446286 17.944347 284.446286 22.157816
 L 284.446286 59.657694 
 Q 284.446286 63.871163 288.659755 63.871163 
 z
-" clip-path="url(#pb76fe3654d)" style="fill: #b45309; opacity: 0.14; stroke: #b45309; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pb76fe3654d)" style="fill: #ff7f0e; opacity: 0.14; stroke: #ff7f0e; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_10">
     <path d="M 288.659755 63.871163 
@@ -816,11 +816,11 @@ L 284.446286 59.657694
 Q 284.446286 63.871163 288.659755 63.871163 
 L 288.659755 63.871163 
 z
-" clip-path="url(#pb76fe3654d)" style="fill: none; stroke: #b45309; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pb76fe3654d)" style="fill: none; stroke: #ff7f0e; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="text_4">
     <!-- embedding -->
-    <g style="fill: #2e7d3e" transform="translate(43.013378 38.821041) scale(0.135 -0.135)">
+    <g style="fill: #2ca02c" transform="translate(43.013378 38.821041) scale(0.135 -0.135)">
      <defs>
       <path id="SourceSans3-Bold-20" d="M 1747 2528 
 Q 1562 2528 1386 2403 
@@ -1142,7 +1142,7 @@ z
    </g>
    <g id="text_6">
     <!-- output head -->
-    <g style="fill: #b45309" transform="translate(314.095021 38.821041) scale(0.135 -0.135)">
+    <g style="fill: #ff7f0e" transform="translate(314.095021 38.821041) scale(0.135 -0.135)">
      <defs>
       <path id="SourceSans3-Bold-2a" d="M 1779 -77 
 Q 1376 -77 1021 118 

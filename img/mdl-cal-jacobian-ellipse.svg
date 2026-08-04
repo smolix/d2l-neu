@@ -1013,7 +1013,7 @@ L 179.267514 118.875874
 L 179.534591 114.652103 
 L 179.568 112.536 
 L 179.568 112.536 
-" clip-path="url(#p74d6eeef4b)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p74d6eeef4b)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_16">
     <defs>
@@ -2058,7 +2058,7 @@ L 424.903204 107.776383
 L 432.229517 99.990133 
 L 436.081534 95.694184 
 L 436.081534 95.694184 
-" clip-path="url(#p7ee06f30ce)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p7ee06f30ce)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_32">
     <path d="M 436.081534 103.335378 
@@ -2129,7 +2129,7 @@ L 426.619119 113.438523
 L 432.261622 107.562974 
 L 436.081534 103.335378 
 L 436.081534 103.335378 
-" clip-path="url(#p7ee06f30ce)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 2"/>
+" clip-path="url(#p7ee06f30ce)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
    </g>
    <g id="line2d_33">
     <g clip-path="url(#p7ee06f30ce)">
@@ -2138,7 +2138,7 @@ L 436.081534 103.335378
    </g>
    <g id="text_2">
     <!-- $\mathbf{f}$ -->
-    <g style="fill: #1565c0" transform="translate(459.856498 75.889455) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(459.856498 75.889455) scale(0.12 -0.12)">
      <defs>
       <path id="Cmb10-50" d="M 159 0 
 L 159 325 
@@ -2177,7 +2177,7 @@ z
    </g>
    <g id="text_3">
     <!-- $\mathbf{f}(\mathbf{x}_0)+\mathbf{J}\,\boldsymbol{\delta}$ -->
-    <g style="fill: #b45309" transform="translate(368.179233 200.64365) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(368.179233 200.64365) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-77" d="M 1984 -1588 
 Q 1628 -1306 1370 -942 

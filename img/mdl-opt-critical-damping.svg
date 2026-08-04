@@ -1007,12 +1007,12 @@ L 353.596435 47.347115
 L 370.630119 37.700144 
 L 372.252375 36.794839 
 L 372.252375 36.794839 
-" clip-path="url(#p7af0f0b44f)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p7af0f0b44f)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_13">
     <path d="M 150.566585 214.4085 
 L 150.566585 9.2805 
-" clip-path="url(#p7af0f0b44f)" style="fill: none; stroke-dasharray: 0.8,1.32; stroke-dashoffset: 0; stroke: #1565c0; stroke-opacity: 0.6; stroke-width: 0.8"/>
+" clip-path="url(#p7af0f0b44f)" style="fill: none; stroke-dasharray: 0.8,1.32; stroke-dashoffset: 0; stroke: #1f77b4; stroke-opacity: 0.6; stroke-width: 0.8"/>
    </g>
    <g id="line2d_14">
     <path d="M 48.612375 49.5735 
@@ -1055,12 +1055,12 @@ L 350.351924 49.214922
 L 366.57448 39.973435 
 L 372.252375 36.794839 
 L 372.252375 36.794839 
-" clip-path="url(#p7af0f0b44f)" style="fill: none; stroke-dasharray: 8.14,3.52; stroke-dashoffset: 0; stroke: #2e7d3e; stroke-width: 2.2"/>
+" clip-path="url(#p7af0f0b44f)" style="fill: none; stroke-dasharray: 8.14,3.52; stroke-dashoffset: 0; stroke: #2ca02c; stroke-width: 2.2"/>
    </g>
    <g id="line2d_15">
     <path d="M 249.731748 214.4085 
 L 249.731748 9.2805 
-" clip-path="url(#p7af0f0b44f)" style="fill: none; stroke-dasharray: 0.8,1.32; stroke-dashoffset: 0; stroke: #2e7d3e; stroke-opacity: 0.6; stroke-width: 0.8"/>
+" clip-path="url(#p7af0f0b44f)" style="fill: none; stroke-dasharray: 0.8,1.32; stroke-dashoffset: 0; stroke: #2ca02c; stroke-opacity: 0.6; stroke-width: 0.8"/>
    </g>
    <g id="patch_3">
     <path d="M 48.612375 214.4085 
@@ -1074,7 +1074,7 @@ L 372.252375 214.4085
    </g>
    <g id="text_14">
     <!-- $\beta^{*}$ -->
-    <g style="fill: #1565c0" transform="translate(142.516585 21.2) scale(0.14 -0.14)">
+    <g style="fill: #1f77b4" transform="translate(142.516585 21.2) scale(0.14 -0.14)">
      <defs>
       <path id="Cmsy10-9" d="M 603 813 
 Q 531 813 473 873 
@@ -1124,7 +1124,7 @@ z
    </g>
    <g id="text_15">
     <!-- $\eta\lambda = 0.2$ -->
-    <g style="fill: #1565c0" transform="translate(55.285365 92.2219) scale(0.13 -0.13)">
+    <g style="fill: #1f77b4" transform="translate(55.285365 92.2219) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-5" d="M 684 -72 
 Q 606 -72 550 -22 
@@ -1308,14 +1308,14 @@ z
    </g>
    <g id="text_16">
     <!-- $\beta^{*}$ -->
-    <g style="fill: #2e7d3e" transform="translate(241.681748 21.2) scale(0.14 -0.14)">
+    <g style="fill: #2ca02c" transform="translate(241.681748 21.2) scale(0.14 -0.14)">
      <use xlink:href="#Cmmi10-23" transform="translate(0 0.171703)"/>
      <use xlink:href="#Cmsy10-9" transform="translate(73.283229 41.460938) scale(0.7)"/>
     </g>
    </g>
    <g id="text_17">
     <!-- $\eta\lambda = 0.05$ -->
-    <g style="fill: #2e7d3e" transform="translate(55.285365 37.2769) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(55.285365 37.2769) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-78" d="M 556 728 
 Q 622 541 758 387 
@@ -1641,7 +1641,7 @@ L 338.950932 61.546374
    </g>
    <g id="line2d_16">
     <defs>
-     <path id="mdebb8265aa" d="M 0 3.5 
+     <path id="m7e13a6cba3" d="M 0 3.5 
 C 0.928211 3.5 1.81853 3.131218 2.474874 2.474874 
 C 3.131218 1.81853 3.5 0.928211 3.5 0 
 C 3.5 -0.928211 3.131218 -1.81853 2.474874 -2.474874 
@@ -1651,15 +1651,15 @@ C -3.131218 -1.81853 -3.5 -0.928211 -3.5 0
 C -3.5 0.928211 -3.131218 1.81853 -2.474874 2.474874 
 C -1.81853 3.131218 -0.928211 3.5 0 3.5 
 z
-" style="stroke: #1565c0"/>
+" style="stroke: #1f77b4"/>
     </defs>
     <g clip-path="url(#p7af0f0b44f)">
-     <use xlink:href="#mdebb8265aa" x="150.566585" y="195.07284" style="fill: #1565c0; stroke: #1565c0"/>
+     <use xlink:href="#m7e13a6cba3" x="150.566585" y="195.07284" style="fill: #1f77b4; stroke: #1f77b4"/>
     </g>
    </g>
    <g id="line2d_17">
     <defs>
-     <path id="mbb56c609ad" d="M 0 3.5 
+     <path id="mf82da9deea" d="M 0 3.5 
 C 0.928211 3.5 1.81853 3.131218 2.474874 2.474874 
 C 3.131218 1.81853 3.5 0.928211 3.5 0 
 C 3.5 -0.928211 3.131218 -1.81853 2.474874 -2.474874 
@@ -1669,10 +1669,10 @@ C -3.131218 -1.81853 -3.5 -0.928211 -3.5 0
 C -3.5 0.928211 -3.131218 1.81853 -2.474874 2.474874 
 C -1.81853 3.131218 -0.928211 3.5 0 3.5 
 z
-" style="stroke: #2e7d3e"/>
+" style="stroke: #2ca02c"/>
     </defs>
     <g clip-path="url(#p7af0f0b44f)">
-     <use xlink:href="#mbb56c609ad" x="249.731748" y="113.16567" style="fill: #2e7d3e; stroke: #2e7d3e"/>
+     <use xlink:href="#mf82da9deea" x="249.731748" y="113.16567" style="fill: #2ca02c; stroke: #2ca02c"/>
     </g>
    </g>
   </g>

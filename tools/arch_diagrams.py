@@ -62,7 +62,7 @@ STROKE = 1.2                    # pt — pill borders, arrows, skip lines
 
 # Accent 1 (default): d2l blue.
 ACCENT = _T.BLUE.dark              # saturated tone: numbers, repeat, keywords
-ACCENT_ON_DARK = "#8FC7F5"         # keyword color INSIDE the novelty box
+ACCENT_ON_DARK = "#AEC7E8"         # keyword color INSIDE the novelty box
                                    # (>= 6:1 on NOVELTY_FILL; the dark accent
                                    # vanishes there)
 ACCENT_TINT = _T.BLUE.tint         # repeated-block panel fill (blue on white)
@@ -377,7 +377,7 @@ class Diagram:
 # --------------------------------------------------------------------------- #
 
 FAMILY_BLUE = _T.BLUE.tint     # the family's shaded-cell blue (from conv-pad.svg)
-FAMILY_BLUE_DARK = "#8FC3EF"   # the family's second, stronger shade
+FAMILY_BLUE_DARK = "#A6CEE9"   # the family's second, stronger shade
 GRID_LW = 1.8   # heavier per the 2026-08-03 mobile-legibility review
 GRID_FS = 13.0              # in-cell values and grid titles
 

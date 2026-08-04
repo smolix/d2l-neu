@@ -42,7 +42,7 @@ L 99.687455 223.416
 L 99.687455 144.216 
 L 48.960182 144.216 
 z
-" clip-path="url(#p64f5002889)" style="fill: #1565c0; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #1f77b4; opacity: 0.85"/>
    </g>
    <g id="patch_4">
     <path d="M 112.369273 223.416 
@@ -50,7 +50,7 @@ L 163.096545 223.416
 L 163.096545 144.216 
 L 112.369273 144.216 
 z
-" clip-path="url(#p64f5002889)" style="fill: #1565c0; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #1f77b4; opacity: 0.85"/>
    </g>
    <g id="patch_5">
     <path d="M 175.778364 223.416 
@@ -58,7 +58,7 @@ L 226.505636 223.416
 L 226.505636 144.216 
 L 175.778364 144.216 
 z
-" clip-path="url(#p64f5002889)" style="fill: #1565c0; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #1f77b4; opacity: 0.85"/>
    </g>
    <g id="patch_6">
     <path d="M 239.187455 223.416 
@@ -66,7 +66,7 @@ L 289.914727 223.416
 L 289.914727 144.216 
 L 239.187455 144.216 
 z
-" clip-path="url(#p64f5002889)" style="fill: #1565c0; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #1f77b4; opacity: 0.85"/>
    </g>
    <g id="patch_7">
     <path d="M 302.596545 223.416 
@@ -74,7 +74,7 @@ L 353.323818 223.416
 L 353.323818 144.216 
 L 302.596545 144.216 
 z
-" clip-path="url(#p64f5002889)" style="fill: #1565c0; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #1f77b4; opacity: 0.85"/>
    </g>
    <g id="patch_8">
     <path d="M 48.960182 144.216 
@@ -82,7 +82,7 @@ L 99.687455 144.216
 L 99.687455 17.496 
 L 48.960182 17.496 
 z
-" clip-path="url(#p64f5002889)" style="fill: #b45309; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #ff7f0e; opacity: 0.85"/>
    </g>
    <g id="patch_9">
     <path d="M 112.369273 144.216 
@@ -90,7 +90,7 @@ L 163.096545 144.216
 L 163.096545 87.277034 
 L 112.369273 87.277034 
 z
-" clip-path="url(#p64f5002889)" style="fill: #b45309; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #ff7f0e; opacity: 0.85"/>
    </g>
    <g id="patch_10">
     <path d="M 175.778364 144.216 
@@ -98,7 +98,7 @@ L 226.505636 144.216
 L 226.505636 118.631673 
 L 175.778364 118.631673 
 z
-" clip-path="url(#p64f5002889)" style="fill: #b45309; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #ff7f0e; opacity: 0.85"/>
    </g>
    <g id="patch_11">
     <path d="M 239.187455 144.216 
@@ -106,7 +106,7 @@ L 289.914727 144.216
 L 289.914727 132.720221 
 L 239.187455 132.720221 
 z
-" clip-path="url(#p64f5002889)" style="fill: #b45309; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #ff7f0e; opacity: 0.85"/>
    </g>
    <g id="patch_12">
     <path d="M 302.596545 144.216 
@@ -114,7 +114,7 @@ L 353.323818 144.216
 L 353.323818 139.050614 
 L 302.596545 139.050614 
 z
-" clip-path="url(#p64f5002889)" style="fill: #b45309; opacity: 0.85"/>
+" clip-path="url(#p64f5002889)" style="fill: #ff7f0e; opacity: 0.85"/>
    </g>
    <g id="matplotlib.axis_1">
     <g id="xtick_1">
@@ -973,7 +973,7 @@ L 192.212 28.1
 L 192.212 20.4 
 L 170.212 20.4 
 z
-" style="fill: #1565c0; opacity: 0.85"/>
+" style="fill: #1f77b4; opacity: 0.85"/>
     </g>
     <g id="text_8">
      <!-- $H(\hat p)$  (irreducible floor) -->
@@ -1155,7 +1155,7 @@ L 192.212 48.186
 L 192.212 40.486 
 L 170.212 40.486 
 z
-" style="fill: #b45309; opacity: 0.85"/>
+" style="fill: #ff7f0e; opacity: 0.85"/>
     </g>
     <g id="text_9">
      <!-- $D_{\mathrm{KL}}(\hat p \,\Vert\, p_\theta)$  (removed by training) -->

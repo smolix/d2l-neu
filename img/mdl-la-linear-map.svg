@@ -34,7 +34,7 @@ L 102.037945 182.650198
 L 102.037945 135.231225 
 L 54.618972 135.231225 
 z
-" clip-path="url(#p389f355fd3)" style="fill: #2e7d3e; opacity: 0.3"/>
+" clip-path="url(#p389f355fd3)" style="fill: #2ca02c; opacity: 0.3"/>
    </g>
    <g id="line2d_1">
     <path d="M 54.618972 182.650198 
@@ -87,26 +87,26 @@ L 196.875889 40.393281
    <g id="patch_3">
     <path d="M 54.618972 182.650198 
 Q 78.328458 182.650198 99.131056 182.650198 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: round"/>
     <path d="M 93.531056 179.850198 
 L 99.131056 182.650198 
 L 93.531056 185.450198 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
     <path d="M 54.618972 182.650198 
 Q 54.618972 158.940711 54.618972 138.138114 
-" style="fill: none; stroke: #b45309; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: round"/>
     <path d="M 51.818972 143.738114 
 L 54.618972 138.138114 
 L 57.418972 143.738114 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- $\mathbf{e}_1$ -->
-    <g style="fill: #1565c0" transform="translate(97.048893 207.958166) scale(0.16 -0.16)">
+    <g style="fill: #1f77b4" transform="translate(97.048893 207.958166) scale(0.16 -0.16)">
      <defs>
       <path id="Cmb10-82" d="M 178 1441 
 Q 178 1856 350 2189 
@@ -166,7 +166,7 @@ z
    </g>
    <g id="text_2">
     <!-- $\mathbf{e}_2$ -->
-    <g style="fill: #b45309" transform="translate(24.497866 138.252277) scale(0.16 -0.16)">
+    <g style="fill: #ff7f0e" transform="translate(24.497866 138.252277) scale(0.16 -0.16)">
      <defs>
       <path id="Cmr10-31" d="M 319 0 
 L 319 172 
@@ -222,7 +222,7 @@ L 317.425455 185.51039
 L 352.048831 133.575325 
 L 334.737143 116.263636 
 z
-" clip-path="url(#p5b77323773)" style="fill: #2e7d3e; opacity: 0.3"/>
+" clip-path="url(#p5b77323773)" style="fill: #2ca02c; opacity: 0.3"/>
    </g>
    <g id="line2d_9">
     <path d="M 300.113766 168.198701 
@@ -275,26 +275,26 @@ L 455.918961 64.328571
    <g id="patch_6">
     <path d="M 300.113766 168.198701 
 Q 308.76961 176.854545 315.369974 183.454909 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: round"/>
     <path d="M 313.390075 177.515212 
 L 315.369974 183.454909 
 L 309.430277 181.47501 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: round"/>
    </g>
    <g id="patch_7">
     <path d="M 300.113766 168.198701 
 Q 317.425455 142.231169 333.124691 118.682314 
-" style="fill: none; stroke: #b45309; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: round"/>
     <path d="M 327.688629 121.788635 
 L 333.124691 118.682314 
 L 332.348111 124.894956 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: round"/>
    </g>
    <g id="text_3">
     <!-- $\mathbf{A}\mathbf{e}_1$ -->
-    <g style="fill: #1565c0" transform="translate(316.183636 210.810831) scale(0.16 -0.16)">
+    <g style="fill: #1f77b4" transform="translate(316.183636 210.810831) scale(0.16 -0.16)">
      <defs>
       <path id="Cmb10-56" d="M 225 0 
 L 225 325 
@@ -331,7 +331,7 @@ z
    </g>
    <g id="text_4">
     <!-- $\mathbf{A}\mathbf{e}_2$ -->
-    <g style="fill: #b45309" transform="translate(301.958052 115.596545) scale(0.16 -0.16)">
+    <g style="fill: #ff7f0e" transform="translate(301.958052 115.596545) scale(0.16 -0.16)">
      <use xlink:href="#Cmb10-56" transform="translate(0 0.171875)"/>
      <use xlink:href="#Cmb10-82" transform="translate(75.488281 0.171875)"/>
      <use xlink:href="#Cmr10-31" transform="translate(126.074603 -14.828087) scale(0.7)"/>

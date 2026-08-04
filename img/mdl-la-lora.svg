@@ -62,7 +62,7 @@ L 142.152632 211.452632
 L 142.152632 123.915789 
 L 18.142105 123.915789 
 z
-" clip-path="url(#p04c014b23c)" style="fill: #1565c0; opacity: 0.15; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p04c014b23c)" style="fill: #1f77b4; opacity: 0.15; stroke: #1f77b4; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 215.1 211.452632 
@@ -70,7 +70,7 @@ L 295.342105 211.452632
 L 267.986842 171.331579 
 L 242.455263 171.331579 
 z
-" clip-path="url(#p04c014b23c)" style="fill: #b45309; opacity: 0.18; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p04c014b23c)" style="fill: #ff7f0e; opacity: 0.18; stroke: #ff7f0e; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 242.455263 156.742105 
@@ -78,7 +78,7 @@ L 267.986842 156.742105
 L 295.342105 116.621053 
 L 215.1 116.621053 
 z
-" clip-path="url(#p04c014b23c)" style="fill: #b45309; opacity: 0.18; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p04c014b23c)" style="fill: #ff7f0e; opacity: 0.18; stroke: #ff7f0e; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- $\mathbf{x}$ -->
@@ -334,13 +334,13 @@ z
    </g>
    <g id="text_3">
     <!-- $\mathbf{W}$ -->
-    <g style="fill: #1565c0" transform="translate(71.827368 160.310421) scale(0.16 -0.16)">
+    <g style="fill: #1f77b4" transform="translate(71.827368 160.310421) scale(0.16 -0.16)">
      <use xlink:href="#Cmb10-47" transform="translate(0 0.390625)"/>
     </g>
    </g>
    <g id="text_4">
     <!-- pretrained, frozen -->
-    <g style="fill: #1565c0" transform="translate(40.98729 178.850684) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(40.98729 178.850684) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Regular-2b" d="M 525 -1312 
 L 525 3110 
@@ -638,7 +638,7 @@ z
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(691.203125 0)"/>
     </g>
     <!-- $4096\times4096$ -->
-    <g style="fill: #1565c0" transform="translate(52.952368 192.773684) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(52.952368 192.773684) scale(0.105 -0.105)">
      <defs>
       <path id="Cmr10-3b" d="M 178 1056 
 L 178 1281 
@@ -1157,7 +1157,7 @@ z
    </g>
    <g id="text_6">
     <!-- $\mathbf{A}$ ($r\times n$) -->
-    <g style="fill: #b45309" transform="translate(233.428553 198.914974) scale(0.115 -0.115)">
+    <g style="fill: #ff7f0e" transform="translate(233.428553 198.914974) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Regular-5a2" d="M 1370 -1126 
 Q 973 -480 749 227 
@@ -1234,7 +1234,7 @@ z
    </g>
    <g id="text_7">
     <!-- $\mathbf{B}$ ($m\times r$) -->
-    <g style="fill: #b45309" transform="translate(232.048553 136.909711) scale(0.115 -0.115)">
+    <g style="fill: #ff7f0e" transform="translate(232.048553 136.909711) scale(0.115 -0.115)">
      <use xlink:href="#Cmb10-20" transform="translate(0 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-1" transform="translate(71.09375 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-5a2" transform="translate(91.093735 0.796875)"/>
@@ -1247,16 +1247,16 @@ z
    <g id="patch_6">
     <path d="M 255.221053 171.331579 
 Q 255.221053 164.036842 255.221053 158.754566 
-" style="fill: none; stroke: #b45309; stroke-width: 1.8; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.8; stroke-linecap: round"/>
     <path d="M 253.021053 163.154566 
 L 255.221053 158.754566 
 L 257.421053 163.154566 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 1.8; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="text_8">
     <!-- $r=8$ -->
-    <g style="fill: #b45309" transform="translate(266.892632 167.743842) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(266.892632 167.743842) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-84" transform="translate(0 0.390625)"/>
      <use xlink:href="#Cmr10-29" transform="translate(65.117245 0.390625)"/>
      <use xlink:href="#Cmr10-4d" transform="translate(162.802849 0.390625)"/>

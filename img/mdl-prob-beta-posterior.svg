@@ -38,7 +38,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="m3a659ce35b" d="M 28.454412 -68.991005 
+     <path id="m5747e721f1" d="M 28.454412 -68.991005 
 L 28.454412 -53.502 
 L 28.728343 -53.502 
 L 29.002274 -53.502 
@@ -1244,7 +1244,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#p40642ab05b)">
-     <use xlink:href="#m3a659ce35b" x="0" y="232.566" style="fill: #1565c0; fill-opacity: 0.15"/>
+     <use xlink:href="#m5747e721f1" x="0" y="232.566" style="fill: #1f77b4; fill-opacity: 0.15"/>
     </g>
    </g>
    <g id="matplotlib.axis_1">
@@ -1690,12 +1690,12 @@ z
     <path d="M 28.454412 163.574995 
 L 192.539235 163.574995 
 L 192.539235 163.574995 
-" clip-path="url(#p40642ab05b)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p40642ab05b)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_5">
     <path d="M 143.320353 179.064 
 L 143.320353 7.2 
-" clip-path="url(#p40642ab05b)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.6"/>
+" clip-path="url(#p40642ab05b)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.6"/>
    </g>
    <g id="patch_3">
     <path d="M 28.438 179.064 
@@ -1803,7 +1803,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_2">
     <defs>
-     <path id="m0d442b4829" d="M 225.395588 -53.502 
+     <path id="mcafc8fe0b1" d="M 225.395588 -53.502 
 L 225.395588 -53.502 
 L 225.669519 -53.502 
 L 225.943451 -53.502 
@@ -3009,7 +3009,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#pef1089d8df)">
-     <use xlink:href="#m0d442b4829" x="0" y="232.566" style="fill: #1565c0; fill-opacity: 0.15"/>
+     <use xlink:href="#mcafc8fe0b1" x="0" y="232.566" style="fill: #1f77b4; fill-opacity: 0.15"/>
     </g>
    </g>
    <g id="matplotlib.axis_3">
@@ -3113,12 +3113,12 @@ L 383.453924 178.860679
 L 385.919305 179.035291 
 L 389.480412 179.064 
 L 389.480412 179.064 
-" clip-path="url(#pef1089d8df)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pef1089d8df)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_10">
     <path d="M 340.261529 179.064 
 L 340.261529 7.2 
-" clip-path="url(#pef1089d8df)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.6"/>
+" clip-path="url(#pef1089d8df)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.6"/>
    </g>
    <g id="patch_6">
     <path d="M 225.379176 179.064 
@@ -3298,7 +3298,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_3">
     <defs>
-     <path id="m75ce6f6a89" d="M 422.336765 -53.502 
+     <path id="mb07c2199dd" d="M 422.336765 -53.502 
 L 422.336765 -53.502 
 L 422.610696 -53.502 
 L 422.884627 -53.502 
@@ -4504,7 +4504,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#p4fcc24541e)">
-     <use xlink:href="#m75ce6f6a89" x="0" y="232.566" style="fill: #1565c0; fill-opacity: 0.15"/>
+     <use xlink:href="#mb07c2199dd" x="0" y="232.566" style="fill: #1f77b4; fill-opacity: 0.15"/>
     </g>
    </g>
    <g id="matplotlib.axis_5">
@@ -4610,12 +4610,12 @@ L 560.124187 179.038585
 L 566.972469 179.063988 
 L 586.421588 179.064 
 L 586.421588 179.064 
-" clip-path="url(#p4fcc24541e)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p4fcc24541e)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_15">
     <path d="M 537.202706 179.064 
 L 537.202706 7.2 
-" clip-path="url(#p4fcc24541e)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.6"/>
+" clip-path="url(#p4fcc24541e)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.6"/>
    </g>
    <g id="patch_9">
     <path d="M 422.320353 179.064 

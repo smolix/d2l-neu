@@ -204,31 +204,31 @@ L 95.830285 102.431475
 L 95.150024 102.702114 
 L 94.476189 102.988375 
 L 93.809138 103.290107 
-" clip-path="url(#pb5b64bf7b7)" style="fill: none; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pb5b64bf7b7)" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="patch_3">
     <path d="M 107.218868 132.047365 
 Q 133.110558 112.536577 157.037865 94.506058 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 150.880424 95.640042 
 L 157.037865 94.506058 
 L 154.250588 100.112401 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
     <path d="M 107.218868 132.047365 
 Q 95.558233 107.041054 84.937102 84.263965 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 84.766103 90.522619 
 L 84.937102 84.263965 
 L 89.841426 88.155957 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- $R_{1}\,\mathbf{q}$ -->
-    <g style="fill: #1565c0" transform="translate(161.57886 85.627094) scale(0.15 -0.15)">
+    <g style="fill: #1f77b4" transform="translate(161.57886 85.627094) scale(0.15 -0.15)">
      <defs>
       <path id="Cmmi10-70" d="M 313 0 
 Q 250 0 250 84 
@@ -358,7 +358,7 @@ z
    </g>
    <g id="text_2">
     <!-- $R_{3}\,\mathbf{k}$ -->
-    <g style="fill: #b45309" transform="translate(61.202123 68.335009) scale(0.15 -0.15)">
+    <g style="fill: #ff7f0e" transform="translate(61.202123 68.335009) scale(0.15 -0.15)">
      <defs>
       <path id="Cmr10-6e" d="M 609 494 
 Q 759 275 1012 169 
@@ -470,7 +470,7 @@ z
 " style="fill: #ffffff"/>
     </g>
     <!-- $(j\!-\!i)\,\theta + \varphi$ -->
-    <g style="fill: #2e7d3e" transform="translate(92.626271 59.127061) scale(0.14 -0.14)">
+    <g style="fill: #2ca02c" transform="translate(92.626271 59.127061) scale(0.14 -0.14)">
      <defs>
       <path id="Cmr10-77" d="M 1984 -1588 
 Q 1628 -1306 1370 -942 
@@ -1192,31 +1192,31 @@ L 299.706797 135.382735
 L 299.79215 136.109863 
 L 299.894255 136.834827 
 L 300.01306 137.557243 
-" clip-path="url(#pa064b5993d)" style="fill: none; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pa064b5993d)" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="patch_7">
     <path d="M 331.261132 132.047365 
 Q 319.11642 101.988149 307.893119 74.209504 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 307.394801 80.450632 
 L 307.893119 74.209504 
 L 312.587031 78.352835 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_8">
     <path d="M 331.261132 132.047365 
 Q 304.088896 136.838563 279.338966 141.202644 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 285.340105 142.987676 
 L 279.338966 141.202644 
 L 284.367675 137.472752 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_5">
     <!-- $R_{4}\,\mathbf{q}$ -->
-    <g style="fill: #1565c0" transform="translate(285.269765 57.797199) scale(0.15 -0.15)">
+    <g style="fill: #1f77b4" transform="translate(285.269765 57.797199) scale(0.15 -0.15)">
      <defs>
       <path id="Cmr10-3b" d="M 178 1056 
 L 178 1281 
@@ -1253,7 +1253,7 @@ z
    </g>
    <g id="text_6">
     <!-- $R_{6}\,\mathbf{k}$ -->
-    <g style="fill: #b45309" transform="translate(242.587482 150.278161) scale(0.15 -0.15)">
+    <g style="fill: #ff7f0e" transform="translate(242.587482 150.278161) scale(0.15 -0.15)">
      <defs>
       <path id="Cmr10-45" d="M 1600 -141 
 Q 1203 -141 937 70 
@@ -1331,7 +1331,7 @@ z
 " style="fill: #ffffff"/>
     </g>
     <!-- $(j\!-\!i)\,\theta + \varphi$ -->
-    <g style="fill: #2e7d3e" transform="translate(227.328354 97.973277) scale(0.14 -0.14)">
+    <g style="fill: #2ca02c" transform="translate(227.328354 97.973277) scale(0.14 -0.14)">
      <use xlink:href="#Cmr10-77"/>
      <use xlink:href="#Cmmi10-69" transform="translate(38.818359 0)"/>
      <use xlink:href="#Cmsy10-11" transform="translate(83.26465 0)"/>

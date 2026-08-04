@@ -3,9 +3,9 @@
 export const TOKENS = {
   "accents": {
     "blue": {
-      "base": "#1565C0",
-      "dark": "#094F86",
-      "tint": "#D6EDFC"
+      "base": "#1F77B4",
+      "dark": "#1D70A9",
+      "tint": "#E4EFF6"
     },
     "gold": {
       "base": "#9A7212",
@@ -13,24 +13,24 @@ export const TOKENS = {
       "tint": "#FBF2D4"
     },
     "green": {
-      "base": "#2E7D3E",
-      "dark": "#1F5C2C",
-      "tint": "#DDF0DD"
+      "base": "#2CA02C",
+      "dark": "#227D22",
+      "tint": "#E6F4E6"
     },
     "orange": {
-      "base": "#B45309",
-      "dark": "#7F3B06",
-      "tint": "#FBE8D3"
+      "base": "#FF7F0E",
+      "dark": "#AD560A",
+      "tint": "#FFF0E2"
     },
     "purple": {
-      "base": "#6C51B4",
-      "dark": "#503B8C",
-      "tint": "#EDE9F8"
+      "base": "#9467BD",
+      "dark": "#825BA6",
+      "tint": "#F2EDF7"
     },
     "red": {
-      "base": "#C03B2F",
-      "dark": "#93261C",
-      "tint": "#FBE7E4"
+      "base": "#D62728",
+      "dark": "#C92526",
+      "tint": "#FAE5E5"
     },
     "slate": {
       "base": "#565D66",
@@ -38,18 +38,18 @@ export const TOKENS = {
       "tint": "#F0F2F5"
     },
     "teal": {
-      "base": "#1F7D74",
-      "dark": "#145A53",
-      "tint": "#DEF1EF"
+      "base": "#17BECF",
+      "dark": "#0F7A84",
+      "tint": "#E3F7F9"
     }
   },
   "cycle": [
-    "#1565C0",
-    "#B45309",
-    "#2E7D3E",
-    "#6C51B4",
-    "#C03B2F",
-    "#1F7D74",
+    "#1F77B4",
+    "#FF7F0E",
+    "#2CA02C",
+    "#9467BD",
+    "#D62728",
+    "#17BECF",
     "#9A7212",
     "#565D66"
   ],
@@ -117,9 +117,9 @@ export const TOKENS = {
 
 // Back-compat aliases matching diagrams/engine.mjs's old C object:
 export const C = {
-  blue: '#1565C0', lblue: '#D6EDFC',
-  amber: '#B45309', lamber: '#FBE8D3',
-  green: '#2E7D3E', lgreen: '#DDF0DD',
-  purple: '#6C51B4', gray: '#565D66',
+  blue: '#1F77B4', lblue: '#E4EFF6',
+  amber: '#FF7F0E', lamber: '#FFF0E2',
+  green: '#2CA02C', lgreen: '#E6F4E6',
+  purple: '#9467BD', gray: '#565D66',
   lgray: '#F0F2F5', ink: '#15181C', muted: '#565D66',
 };

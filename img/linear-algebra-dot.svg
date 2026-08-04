@@ -70,22 +70,22 @@ z
    <g id="patch_5">
     <path d="M 25.499326 150.549263 
 Q 97.509034 129.369937 166.729973 109.010837 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: round"/>
     <path d="M 160.127281 107.825739 
 L 166.729973 109.010837 
 L 161.820279 113.581932 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: round"/>
    </g>
    <g id="patch_6">
     <path d="M 25.499326 150.549263 
 Q 57.268315 93.365083 87.625594 38.721981 
-" style="fill: none; stroke: #b45309; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: round"/>
     <path d="M 82.089264 42.509996 
 L 87.625594 38.721981 
 L 87.334208 45.423853 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- $\theta$ -->
@@ -142,7 +142,7 @@ z
    </g>
    <g id="text_2">
     <!-- $\mathbf{a}$ -->
-    <g style="fill: #094f86" transform="translate(174.60178 113.919611) scale(0.17 -0.17)">
+    <g style="fill: #1d70a9" transform="translate(174.60178 113.919611) scale(0.17 -0.17)">
      <defs>
       <path id="Cmb10-73" d="M 178 716 
 Q 178 1081 468 1304 
@@ -195,7 +195,7 @@ z
    </g>
    <g id="text_3">
     <!-- $\mathbf{b}$ -->
-    <g style="fill: #7f3b06" transform="translate(84.277303 21.32) scale(0.17 -0.17)">
+    <g style="fill: #ad560a" transform="translate(84.277303 21.32) scale(0.17 -0.17)">
      <defs>
       <path id="Cmb10-41" d="M 531 0 
 L 531 3884 

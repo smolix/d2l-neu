@@ -39,7 +39,7 @@ Q 7.48 28.7785 7.48 46.7785
 L 7.48 140.7785
 Q 7.48 158.7785 25.48 158.7785
 z
-" clip-path="url(#p0836126f00)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p0836126f00)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 159.48 158.7785
@@ -117,7 +117,7 @@ Q 175.48 179.7785 175.48 189.7785
 L 175.48 203.7785
 Q 175.48 213.7785 185.48 213.7785
 z
-" clip-path="url(#p0836126f00)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p0836126f00)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_9">
     <path d="M 124.48 102.7785
@@ -152,12 +152,12 @@ z
    <g id="patch_12">
     <path d="M 175.48 158.7785
 Q 175.48 169.2785 175.48 178.436859
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 177.68 174.036859
 L 175.48 178.436859
 L 173.28 174.036859
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- Editor -->
@@ -1242,7 +1242,7 @@ z
    </g>
    <g id="text_9">
     <!-- SSH tunnel: localhost:8888 -->
-    <g style="fill: #094f86" transform="translate(212.511406 200.654) scale(0.115 -0.115)">
+    <g style="fill: #1d70a9" transform="translate(212.511406 200.654) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-14" d="M 1766 -77
 Q 1344 -77 944 70
@@ -1492,7 +1492,7 @@ z
    </g>
    <g id="text_10">
     <!-- LOCAL MACHINE -->
-    <g style="fill: #094f86" transform="translate(35.961055 15.98) scale(0.095 -0.095)">
+    <g style="fill: #1d70a9" transform="translate(35.961055 15.98) scale(0.095 -0.095)">
      <defs>
       <path id="SourceSans3-Regular-10" d="M 2125 -77
 Q 1600 -77 1193 192

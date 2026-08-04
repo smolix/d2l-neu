@@ -52,7 +52,7 @@ Q 318.48 6.48 318.48 24.48
 L 318.48 220.48
 Q 318.48 238.48 336.48 238.48
 z
-" clip-path="url(#pd7fe410341)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#pd7fe410341)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="line2d_1">
     <path d="M 278.48 74.48
@@ -119,27 +119,27 @@ Q 16.48 251.48 16.48 261.48
 L 16.48 279.48
 Q 16.48 289.48 26.48 289.48
 z
-" clip-path="url(#pd7fe410341)" style="fill: #fbe8d3; stroke: #b45309; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#pd7fe410341)" style="fill: #fff0e2; stroke: #ff7f0e; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_8">
     <path d="M 346.48 86.48
 Q 346.48 102.48 346.48 117.138359
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 348.68 112.738359
 L 346.48 117.138359
 L 344.28 112.738359
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_9">
     <path d="M 346.48 144.48
 Q 346.48 160.48 346.48 175.138359
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 348.68 170.738359
 L 346.48 175.138359
 L 344.28 170.738359
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_10">
     <path d="M 346.48 84.48
@@ -152,7 +152,7 @@ C 337.533663 69.284201 336.48 71.827969 336.48 74.48
 C 336.48 77.132031 337.533663 79.675799 339.408932 81.551068
 C 341.284201 83.426337 343.827969 84.48 346.48 84.48
 z
-" clip-path="url(#pd7fe410341)" style="fill: #094f86"/>
+" clip-path="url(#pd7fe410341)" style="fill: #1d70a9"/>
    </g>
    <g id="patch_11">
     <path d="M 346.48 142.48
@@ -165,7 +165,7 @@ C 337.533663 127.284201 336.48 129.827969 336.48 132.48
 C 336.48 135.132031 337.533663 137.675799 339.408932 139.551068
 C 341.284201 141.426337 343.827969 142.48 346.48 142.48
 z
-" clip-path="url(#pd7fe410341)" style="fill: #094f86"/>
+" clip-path="url(#pd7fe410341)" style="fill: #1d70a9"/>
    </g>
    <g id="patch_12">
     <path d="M 346.48 200.48
@@ -178,11 +178,11 @@ C 337.533663 185.284201 336.48 187.827969 336.48 190.48
 C 336.48 193.132031 337.533663 195.675799 339.408932 197.551068
 C 341.284201 199.426337 343.827969 200.48 346.48 200.48
 z
-" clip-path="url(#pd7fe410341)" style="fill: #094f86"/>
+" clip-path="url(#pd7fe410341)" style="fill: #1d70a9"/>
    </g>
    <g id="text_1">
     <!-- restart + run all replays reading order and exposes the bug:  NameError: 'data' is not defined -->
-    <g style="fill: #b45309" transform="translate(92.495664 274.0185) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(92.495664 274.0185) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Bold-2d" d="M 416 0
 L 416 3174
@@ -1506,7 +1506,7 @@ z
    </g>
    <g id="text_7">
     <!-- KERNEL SESSION -->
-    <g style="fill: #094f86" transform="translate(426.164219 23.6815) scale(0.095 -0.095)">
+    <g style="fill: #1d70a9" transform="translate(426.164219 23.6815) scale(0.095 -0.095)">
      <defs>
       <path id="SourceSans3-Regular-13" d="M 576 0
 L 576 4198
@@ -1808,7 +1808,7 @@ z
    </g>
    <g id="text_12">
     <!-- ✓ -->
-    <g style="fill: #094f86" transform="translate(576.274297 194.861) scale(0.13 -0.13)">
+    <g style="fill: #1d70a9" transform="translate(576.274297 194.861) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Bold-8bc" d="M 1056 -128
 Q 858 416 621 864

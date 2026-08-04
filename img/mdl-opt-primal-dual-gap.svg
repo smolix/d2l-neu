@@ -30,7 +30,7 @@ z
   <g id="axes_1">
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="m486ba3802a" d="M 33.2 -261.177719 
+     <path id="mf75813ad89" d="M 33.2 -261.177719 
 L 33.2 -261.296519 
 L 33.877483 -259.850693 
 L 34.554966 -258.410676 
@@ -716,7 +716,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#p5935795539)">
-     <use xlink:href="#m486ba3802a" x="0" y="268.377719" style="fill: #1565c0; fill-opacity: 0.08"/>
+     <use xlink:href="#mf75813ad89" x="0" y="268.377719" style="fill: #1f77b4; fill-opacity: 0.08"/>
     </g>
    </g>
    <g id="line2d_1">
@@ -770,12 +770,12 @@ L 254.736873 170.31373
 L 259.479253 167.018888 
 L 262.866667 164.4912 
 L 262.866667 164.4912 
-" clip-path="url(#p5935795539)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p5935795539)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_2">
     <path d="M 67.866667 87.984 
 L 229.933333 265.7088 
-" clip-path="url(#p5935795539)" style="fill: none; stroke: #2e7d3e; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p5935795539)" style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="text_1">
     <!-- $d^\star=p^\star$ -->
@@ -930,7 +930,7 @@ z
    </g>
    <g id="text_2">
     <!-- feasible -->
-    <g style="fill: #b45309" transform="translate(17.130521 107.2076) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(17.130521 107.2076) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-21" d="M 614 0 
 L 614 2682 
@@ -1120,7 +1120,7 @@ z
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(274.09375 0)"/>
     </g>
     <!-- slice $u\leq0$ -->
-    <g style="fill: #b45309" transform="translate(11.118333 121.7936) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(11.118333 121.7936) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-1e" d="M 1760 -77 
 Q 1344 -77 1011 115 
@@ -1272,7 +1272,7 @@ z
    </g>
    <g id="text_3">
     <!-- $G=\{(g(x),f_0(x))\}$ -->
-    <g style="fill: #1565c0" transform="translate(122.466667 115.451) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(122.466667 115.451) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-74" d="M 934 1403 
 Q 934 1006 1092 707 
@@ -1650,7 +1650,7 @@ z
    </g>
    <g id="text_4">
     <!-- slope $-\lambda^\star$ -->
-    <g style="fill: #2e7d3e" transform="translate(205.78026 230.796598) rotate(-329) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(205.78026 230.796598) rotate(-329) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-2a" d="M 1734 -77 
 Q 1357 -77 1027 115 
@@ -2104,7 +2104,7 @@ L 113.14297 137.598541
 L 113.820452 138.359066 
 L 114.497935 139.113784 
 L 115.175418 139.862694 
-" clip-path="url(#p5935795539)" style="fill: none; stroke: #b45309; stroke-width: 3.4; stroke-linecap: square"/>
+" clip-path="url(#p5935795539)" style="fill: none; stroke: #ff7f0e; stroke-width: 3.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_4">
     <defs>
@@ -2128,7 +2128,7 @@ z
   <g id="axes_2">
    <g id="FillBetweenPolyCollection_2">
     <defs>
-     <path id="m696539d6aa" d="M 380.17942 -261.177719 
+     <path id="me179be63f5" d="M 380.17942 -261.177719 
 L 380.17942 -174.402067 
 L 380.667763 -174.400718 
 L 381.156106 -174.396674 
@@ -2734,7 +2734,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#p9d2ee4f8b1)">
-     <use xlink:href="#m696539d6aa" x="0" y="268.377719" style="fill: #1565c0; fill-opacity: 0.09"/>
+     <use xlink:href="#me179be63f5" x="0" y="268.377719" style="fill: #1f77b4; fill-opacity: 0.09"/>
     </g>
    </g>
    <g id="line2d_5">
@@ -2769,12 +2769,12 @@ L 514.473686 195.925927
 L 520.3338 205.017532 
 L 526.193913 214.497391 
 L 526.193913 214.497391 
-" clip-path="url(#p9d2ee4f8b1)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p9d2ee4f8b1)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_6">
     <path d="M 348.056232 67.46087 
 L 567.077971 248.243478 
-" clip-path="url(#p9d2ee4f8b1)" style="fill: none; stroke: #2e7d3e; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p9d2ee4f8b1)" style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="patch_4">
     <path d="M 453.186667 149.226724 
@@ -2933,14 +2933,14 @@ z
    </g>
    <g id="text_9">
     <!-- $d^\star$ -->
-    <g style="fill: #2e7d3e" transform="translate(429.896014 157.943522) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(429.896014 157.943522) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-51" transform="translate(0 0.918578)"/>
      <use xlink:href="#STIXGeneral-Regular-4d9" transform="translate(82.554831 42.207813) scale(0.7)"/>
     </g>
    </g>
    <g id="text_10">
     <!-- feasible slice $u\leq0$ -->
-    <g style="fill: #b45309" transform="translate(329.074348 31.395696) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(329.074348 31.395696) scale(0.11 -0.11)">
      <use xlink:href="#SourceSans3-Regular-21" transform="translate(0 0.59375)"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(29.199966 0.59375)"/>
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(78.799927 0.59375)"/>
@@ -2963,7 +2963,7 @@ z
    </g>
    <g id="text_11">
     <!-- dented $G$ -->
-    <g style="fill: #1565c0" transform="translate(569.998261 239.898304) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(569.998261 239.898304) scale(0.11 -0.11)">
      <use xlink:href="#SourceSans3-Regular-1f" transform="translate(0 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(55.499954 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(105.099915 0.796875)"/>
@@ -2976,7 +2976,7 @@ z
    </g>
    <g id="text_12">
     <!-- slope $-\lambda^\star$ -->
-    <g style="fill: #2e7d3e" transform="translate(468.468875 187.12586) rotate(-323) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(468.468875 187.12586) rotate(-323) scale(0.11 -0.11)">
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(0 0.918578)"/>
      <use xlink:href="#SourceSans3-Regular-27" transform="translate(41.899963 0.918578)"/>
      <use xlink:href="#SourceSans3-Regular-2a" transform="translate(67.399933 0.918578)"/>
@@ -3072,7 +3072,7 @@ L 444.152325 117.110444
 L 449.035753 120.777284 
 L 452.942495 123.904883 
 L 452.942495 123.904883 
-" clip-path="url(#p9d2ee4f8b1)" style="fill: none; stroke: #b45309; stroke-width: 3.4; stroke-linecap: square"/>
+" clip-path="url(#p9d2ee4f8b1)" style="fill: none; stroke: #ff7f0e; stroke-width: 3.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_8">
     <g clip-path="url(#p9d2ee4f8b1)">
@@ -3081,7 +3081,7 @@ L 452.942495 123.904883
    </g>
    <g id="line2d_9">
     <defs>
-     <path id="mbb56c609ad" d="M 0 3.5 
+     <path id="mf82da9deea" d="M 0 3.5 
 C 0.928211 3.5 1.81853 3.131218 2.474874 2.474874 
 C 3.131218 1.81853 3.5 0.928211 3.5 0 
 C 3.5 -0.928211 3.131218 -1.81853 2.474874 -2.474874 
@@ -3091,10 +3091,10 @@ C -3.131218 -1.81853 -3.5 -0.928211 -3.5 0
 C -3.5 0.928211 -3.131218 1.81853 -2.474874 2.474874 
 C -1.81853 3.131218 -0.928211 3.5 0 3.5 
 z
-" style="stroke: #2e7d3e"/>
+" style="stroke: #2ca02c"/>
     </defs>
     <g clip-path="url(#p9d2ee4f8b1)">
-     <use xlink:href="#mbb56c609ad" x="453.186667" y="154.236522" style="fill: #2e7d3e; stroke: #2e7d3e"/>
+     <use xlink:href="#mf82da9deea" x="453.186667" y="154.236522" style="fill: #2ca02c; stroke: #2ca02c"/>
     </g>
    </g>
   </g>

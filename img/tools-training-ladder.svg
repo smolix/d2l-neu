@@ -91,7 +91,7 @@ Q 457.48 29.7785 457.48 39.7785
 L 457.48 63.7785
 Q 457.48 73.7785 467.48 73.7785
 z
-" clip-path="url(#p1871772a82)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p1871772a82)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="line2d_1">
     <path d="M 114.48 239.7785
@@ -117,12 +117,12 @@ L 406.48 116.7785
    <g id="patch_7">
     <path d="M 460.48 91.7785
 Q 460.48 82.7785 460.48 75.120141
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 458.28 79.520141
 L 460.48 75.120141
 L 462.68 79.520141
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- 1 GPU -->
@@ -861,7 +861,7 @@ z
    </g>
    <g id="text_9">
     <!-- Experts / context -->
-    <g style="fill: #094f86" transform="translate(478.142031 55.654) scale(0.115 -0.115)">
+    <g style="fill: #1d70a9" transform="translate(478.142031 55.654) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-6" d="M 493 0
 L 493 4173

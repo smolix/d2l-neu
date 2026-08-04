@@ -42,7 +42,7 @@ L 64.902443 178.015135
 L 64.902443 98.101622 
 L 19.603329 98.101622 
 z
-" clip-path="url(#p31f9371f41)" style="fill: #1565c0; opacity: 0.28"/>
+" clip-path="url(#p31f9371f41)" style="fill: #1f77b4; opacity: 0.28"/>
    </g>
    <g id="patch_4">
     <path d="M 73.530846 184.008649 
@@ -58,7 +58,7 @@ L 118.82996 160.034595
 L 118.82996 98.101622 
 L 73.530846 98.101622 
 z
-" clip-path="url(#p31f9371f41)" style="fill: #1565c0; opacity: 0.28"/>
+" clip-path="url(#p31f9371f41)" style="fill: #1f77b4; opacity: 0.28"/>
    </g>
    <g id="patch_6">
     <path d="M 127.458362 184.008649 
@@ -74,7 +74,7 @@ L 172.757477 136.060541
 L 172.757477 98.101622 
 L 127.458362 98.101622 
 z
-" clip-path="url(#p31f9371f41)" style="fill: #1565c0; opacity: 0.28"/>
+" clip-path="url(#p31f9371f41)" style="fill: #1f77b4; opacity: 0.28"/>
    </g>
    <g id="patch_8">
     <path d="M 181.385879 184.008649 
@@ -700,7 +700,7 @@ z
    </g>
    <g id="text_8">
     <!-- water level $w=1/\mu\approx1.43$ -->
-    <g style="fill: #b45309" transform="translate(289.240913 101.808622) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(289.240913 101.808622) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-32" d="M 1018 0 
 L 154 3110 
@@ -1046,19 +1046,19 @@ z
    <g id="patch_10">
     <path d="M 96.180403 155.569982 
 Q 96.180403 129.066773 96.180403 102.563563 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.4; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.4; stroke-linecap: round"/>
     <path d="M 99.580403 148.769982 
 L 96.180403 155.569982 
 L 92.780403 148.769982 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.4; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.4; stroke-linecap: round"/>
     <path d="M 92.780403 109.363563 
 L 96.180403 102.563563 
 L 99.580403 109.363563 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.4; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.4; stroke-linecap: round"/>
    </g>
    <g id="text_9">
     <!-- $p_2^\star=w-n_2$ -->
-    <g style="fill: #1565c0" transform="translate(103.730255 132.775108) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(103.730255 132.775108) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-80" d="M -159 -1241 
 Q -219 -1241 -219 -1159 
@@ -1418,7 +1418,7 @@ z
    <g id="line2d_7">
     <path d="M 15.289128 98.101622 
 L 284.926711 98.101622 
-" clip-path="url(#p31f9371f41)" style="fill: none; stroke-dasharray: 8.5,5.1; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.7"/>
+" clip-path="url(#p31f9371f41)" style="fill: none; stroke-dasharray: 8.5,5.1; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.7"/>
    </g>
   </g>
  </g>

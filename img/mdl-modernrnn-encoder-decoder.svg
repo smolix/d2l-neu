@@ -66,7 +66,7 @@ Q 100.911808 47.016519 100.911808 51.416135
 L 100.911808 94.972327 
 Q 100.911808 99.371942 105.311423 99.371942 
 z
-" clip-path="url(#pa1f6f516fe)" style="fill: #d6edfc; stroke: #1565c0; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pa1f6f516fe)" style="fill: #e4eff6; stroke: #1f77b4; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 281.296038 99.371942 
@@ -79,7 +79,7 @@ Q 276.896423 47.016519 276.896423 51.416135
 L 276.896423 94.972327 
 Q 276.896423 99.371942 281.296038 99.371942 
 z
-" clip-path="url(#pa1f6f516fe)" style="fill: #fbe8d3; stroke: #b45309; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pa1f6f516fe)" style="fill: #fff0e2; stroke: #ff7f0e; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- "They are -->
@@ -653,7 +653,7 @@ z
    </g>
    <g id="text_5">
     <!-- state -->
-    <g style="fill: #1f7d74" transform="translate(219.29726 47.284154) scale(0.12 -0.12)">
+    <g style="fill: #17becf" transform="translate(219.29726 47.284154) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-It-2e" d="M 1043 -77 
 Q 730 -77 435 80 
@@ -789,7 +789,7 @@ z
    </g>
    <g id="line2d_1">
     <defs>
-     <path id="mfb02741a8b" d="M 0 5 
+     <path id="mc2ecb39c96" d="M 0 5 
 C 1.326016 5 2.597899 4.473168 3.535534 3.535534 
 C 4.473168 2.597899 5 1.326016 5 0 
 C 5 -1.326016 4.473168 -2.597899 3.535534 -3.535534 
@@ -799,10 +799,10 @@ C -4.473168 -2.597899 -5 -1.326016 -5 0
 C -5 1.326016 -4.473168 2.597899 -3.535534 3.535534 
 C -2.597899 4.473168 -1.326016 5 0 5 
 z
-" style="stroke: #1f7d74"/>
+" style="stroke: #17becf"/>
     </defs>
     <g clip-path="url(#pa1f6f516fe)">
-     <use xlink:href="#mfb02741a8b" x="231.580385" y="73.194231" style="fill: #1f7d74; stroke: #1f7d74"/>
+     <use xlink:href="#mc2ecb39c96" x="231.580385" y="73.194231" style="fill: #17becf; stroke: #17becf"/>
     </g>
    </g>
   </g>

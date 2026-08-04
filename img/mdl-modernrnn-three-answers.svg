@@ -39,7 +39,7 @@ Q 16.718824 20.798319 16.718824 29.501244
 L 16.718824 178.538824 
 Q 16.718824 187.241748 25.421748 187.241748 
 z
-" clip-path="url(#p30f19de7e3)" style="fill: #1565c0; opacity: 0.07; stroke: #1565c0; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p30f19de7e3)" style="fill: #1f77b4; opacity: 0.07; stroke: #1f77b4; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 25.421748 187.241748 
@@ -53,7 +53,7 @@ L 16.718824 178.538824
 Q 16.718824 187.241748 25.421748 187.241748 
 L 25.421748 187.241748 
 z
-" clip-path="url(#p30f19de7e3)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p30f19de7e3)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 240.275193 187.241748 
@@ -66,7 +66,7 @@ Q 231.572269 20.798319 231.572269 29.501244
 L 231.572269 178.538824 
 Q 231.572269 187.241748 240.275193 187.241748 
 z
-" clip-path="url(#p30f19de7e3)" style="fill: #2e7d3e; opacity: 0.07; stroke: #2e7d3e; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p30f19de7e3)" style="fill: #2ca02c; opacity: 0.07; stroke: #2ca02c; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
     <path d="M 240.275193 187.241748 
@@ -80,7 +80,7 @@ L 231.572269 178.538824
 Q 231.572269 187.241748 240.275193 187.241748 
 L 240.275193 187.241748 
 z
-" clip-path="url(#p30f19de7e3)" style="fill: none; stroke: #2e7d3e; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p30f19de7e3)" style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 455.128639 187.241748 
@@ -93,7 +93,7 @@ Q 446.425714 20.798319 446.425714 29.501244
 L 446.425714 178.538824 
 Q 446.425714 187.241748 455.128639 187.241748 
 z
-" clip-path="url(#p30f19de7e3)" style="fill: #b45309; opacity: 0.07; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p30f19de7e3)" style="fill: #ff7f0e; opacity: 0.07; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 455.128639 187.241748 
@@ -107,7 +107,7 @@ L 446.425714 178.538824
 Q 446.425714 187.241748 455.128639 187.241748 
 L 455.128639 187.241748 
 z
-" clip-path="url(#p30f19de7e3)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p30f19de7e3)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- 1. Gate it -->
@@ -1205,7 +1205,7 @@ z
    </g>
    <g id="text_5">
     <!-- ✓ -->
-    <g style="fill: #2e7d3e" transform="translate(35.630263 161.706445) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(35.630263 161.706445) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Bold-8bc" d="M 1056 -128 
 Q 858 416 621 864 
@@ -1311,7 +1311,7 @@ z
    </g>
    <g id="text_7">
     <!-- ✗ -->
-    <g style="fill: #c03b2f" transform="translate(36.163466 180.20016) scale(0.13 -0.13)">
+    <g style="fill: #d62728" transform="translate(36.163466 180.20016) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Bold-8be" d="M 864 -250 
 L 192 26 
@@ -1899,7 +1899,7 @@ z
    </g>
    <g id="text_13">
     <!-- ✗ -->
-    <g style="fill: #c03b2f" transform="translate(251.016912 161.706445) scale(0.13 -0.13)">
+    <g style="fill: #d62728" transform="translate(251.016912 161.706445) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Bold-8be"/>
     </g>
    </g>
@@ -1923,7 +1923,7 @@ z
    </g>
    <g id="text_15">
     <!-- ✓ -->
-    <g style="fill: #2e7d3e" transform="translate(250.483709 180.20016) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(250.483709 180.20016) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Bold-8bc"/>
     </g>
    </g>
@@ -2204,7 +2204,7 @@ z
    </g>
    <g id="text_21">
     <!-- ✓ -->
-    <g style="fill: #2e7d3e" transform="translate(465.337154 161.706445) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(465.337154 161.706445) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Bold-8bc"/>
     </g>
    </g>
@@ -2228,7 +2228,7 @@ z
    </g>
    <g id="text_23">
     <!-- ✓ -->
-    <g style="fill: #2e7d3e" transform="translate(465.337154 180.20016) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(465.337154 180.20016) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Bold-8bc"/>
     </g>
    </g>

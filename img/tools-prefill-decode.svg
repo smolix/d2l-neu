@@ -36,12 +36,12 @@ L 546.48 138.48
    <g id="line2d_2">
     <path d="M 6.48 138.48
 L 251.48 138.48
-" clip-path="url(#p5dcb77d580)" style="fill: none; stroke: #094f86; stroke-width: 5; stroke-linecap: square"/>
+" clip-path="url(#p5dcb77d580)" style="fill: none; stroke: #1d70a9; stroke-width: 5; stroke-linecap: square"/>
    </g>
    <g id="line2d_3">
     <path d="M 251.48 138.48
 L 546.48 138.48
-" clip-path="url(#p5dcb77d580)" style="fill: none; stroke: #b45309; stroke-width: 5; stroke-linecap: square"/>
+" clip-path="url(#p5dcb77d580)" style="fill: none; stroke: #ff7f0e; stroke-width: 5; stroke-linecap: square"/>
    </g>
    <g id="patch_2">
     <path d="M 16.48 78.48
@@ -813,7 +813,7 @@ z
    </g>
    <g id="text_6">
     <!-- compute-heavy · drives TTFT -->
-    <g style="fill: #094f86" transform="translate(45.552187 110.187) scale(0.11 -0.11)">
+    <g style="fill: #1d70a9" transform="translate(45.552187 110.187) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-587" d="M 262 1402
 L 262 1805
@@ -924,7 +924,7 @@ z
    </g>
    <g id="text_7">
     <!-- memory-heavy · drives TPOT -->
-    <g style="fill: #b45309" transform="translate(375.683672 110.187) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(375.683672 110.187) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-11" d="M 576 0
 L 576 4198

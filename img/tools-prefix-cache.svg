@@ -39,7 +39,7 @@ Q 6.48 44.7785 6.48 54.7785
 L 6.48 80.7785
 Q 6.48 90.7785 16.48 90.7785
 z
-" clip-path="url(#p14733bae7e)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p14733bae7e)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 16.48 192.7785
@@ -117,17 +117,17 @@ Q 302.48 190.7785 302.48 200.7785
 L 302.48 214.7785
 Q 302.48 224.7785 312.48 224.7785
 z
-" clip-path="url(#p14733bae7e)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p14733bae7e)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_9">
     <path d="M 101.48 90.7785
 Q 101.48 118.7785 101.48 145.436859
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 103.68 141.036859
 L 101.48 145.436859
 L 99.28 141.036859
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="line2d_1">
     <path d="M 196.48 169.7785
@@ -138,12 +138,12 @@ L 347.48 87.7785
    <g id="patch_10">
     <path d="M 347.48 87.7785
 Q 347.48 97.7785 347.48 106.436859
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 349.68 102.036859
 L 347.48 106.436859
 L 345.28 102.036859
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="line2d_2">
     <path d="M 196.48 169.7785
@@ -154,16 +154,16 @@ L 477.48 87.7785
    <g id="patch_11">
     <path d="M 477.48 87.7785
 Q 477.48 97.7785 477.48 106.436859
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 479.68 102.036859
 L 477.48 106.436859
 L 475.28 102.036859
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- shared system prompt -->
-    <g style="fill: #094f86" transform="translate(44.844297 71.654) scale(0.115 -0.115)">
+    <g style="fill: #1d70a9" transform="translate(44.844297 71.654) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-2e" d="M 1350 -77
 Q 1037 -77 707 44
@@ -994,7 +994,7 @@ z
    </g>
    <g id="text_7">
     <!-- reuse prompt work and memory -->
-    <g style="fill: #094f86" transform="translate(330.877617 211.654) scale(0.115 -0.115)">
+    <g style="fill: #1d70a9" transform="translate(330.877617 211.654) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-30" d="M 1370 -77
 Q 851 -77 617 265

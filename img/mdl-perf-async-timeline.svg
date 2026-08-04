@@ -41,12 +41,12 @@ L 490.190164 152.382026
    <g id="line2d_3">
     <path d="M 178.259016 195.696 
 L 178.259016 7.2 
-" clip-path="url(#pecb36ab90d)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.8"/>
+" clip-path="url(#pecb36ab90d)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.8"/>
    </g>
    <g id="line2d_4">
     <path d="M 470.065574 195.696 
 L 470.065574 7.2 
-" clip-path="url(#pecb36ab90d)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #2e7d3e; stroke-width: 1.8"/>
+" clip-path="url(#pecb36ab90d)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #2ca02c; stroke-width: 1.8"/>
    </g>
    <g id="text_1">
     <!-- Python -->
@@ -372,7 +372,7 @@ L 228.570492 149.975694
 L 228.570492 129.120817 
 L 107.822951 129.120817 
 z
-" clip-path="url(#pecb36ab90d)" style="fill: #1565c0"/>
+" clip-path="url(#pecb36ab90d)" style="fill: #1f77b4"/>
    </g>
    <g id="patch_9">
     <path d="M 228.570492 149.975694 
@@ -380,7 +380,7 @@ L 349.318033 149.975694
 L 349.318033 129.120817 
 L 228.570492 129.120817 
 z
-" clip-path="url(#pecb36ab90d)" style="fill: #1565c0"/>
+" clip-path="url(#pecb36ab90d)" style="fill: #1f77b4"/>
    </g>
    <g id="patch_10">
     <path d="M 349.318033 149.975694 
@@ -388,11 +388,11 @@ L 470.065574 149.975694
 L 470.065574 129.120817 
 L 349.318033 129.120817 
 z
-" clip-path="url(#pecb36ab90d)" style="fill: #1565c0"/>
+" clip-path="url(#pecb36ab90d)" style="fill: #1f77b4"/>
    </g>
    <g id="text_3">
     <!-- naive timer stops here: -->
-    <g style="fill: #b45309" transform="translate(186.308852 42.673855) scale(0.13 -0.13)">
+    <g style="fill: #ff7f0e" transform="translate(186.308852 42.673855) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-1c" d="M 1242 -77 
 Q 851 -77 588 153 
@@ -645,7 +645,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56d" transform="translate(922.390625 0)"/>
     </g>
     <!-- work only enqueued -->
-    <g style="fill: #b45309" transform="translate(186.308852 59.911855) scale(0.13 -0.13)">
+    <g style="fill: #ff7f0e" transform="translate(186.308852 59.911855) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-32" d="M 1018 0 
 L 154 3110 
@@ -811,7 +811,7 @@ z
    </g>
    <g id="text_4">
     <!-- synchronize() -->
-    <g style="fill: #2e7d3e" transform="translate(390.94179 42.673855) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(390.94179 42.673855) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-1e" d="M 1760 -77 
 Q 1344 -77 1011 115 
@@ -866,7 +866,7 @@ z
      <use xlink:href="#SourceSans3-Regular-5a3" transform="translate(531.90625 0)"/>
     </g>
     <!-- returns here -->
-    <g style="fill: #2e7d3e" transform="translate(397.843978 59.911855) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(397.843978 59.911855) scale(0.13 -0.13)">
      <use xlink:href="#SourceSans3-Regular-2d"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(33.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-2f" transform="translate(82.296875 0)"/>

@@ -1082,9 +1082,9 @@ L 180.676813 112.465914
 L 198.892813 118.86335 
 L 217.108812 103.936 
 L 235.324813 118.86335 
-" clip-path="url(#p099ae6f662)" style="fill: none; stroke: #1565c0; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#p099ae6f662)" style="fill: none; stroke: #1f77b4; stroke-width: 1.6; stroke-linecap: square"/>
     <defs>
-     <path id="m88ff8f9cd2" d="M 0 1.75 
+     <path id="m88e01eec72" d="M 0 1.75 
 C 0.464105 1.75 0.909265 1.565609 1.237437 1.237437 
 C 1.565609 0.909265 1.75 0.464105 1.75 0 
 C 1.75 -0.464105 1.565609 -0.909265 1.237437 -1.237437 
@@ -1094,20 +1094,20 @@ C -1.565609 -0.909265 -1.75 -0.464105 -1.75 0
 C -1.75 0.464105 -1.565609 0.909265 -1.237437 1.237437 
 C -0.909265 1.565609 -0.464105 1.75 0 1.75 
 z
-" style="stroke: #1565c0"/>
+" style="stroke: #1f77b4"/>
     </defs>
     <g clip-path="url(#p099ae6f662)">
-     <use xlink:href="#m88ff8f9cd2" x="53.164813" y="103.936" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="71.380813" y="97.538564" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="89.596812" y="103.936" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="107.812813" y="110.333436" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="126.028813" y="103.936" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="144.244812" y="106.068479" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="162.460813" y="108.200957" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="180.676813" y="112.465914" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="198.892813" y="118.86335" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="217.108812" y="103.936" style="fill: #1565c0; stroke: #1565c0"/>
-     <use xlink:href="#m88ff8f9cd2" x="235.324813" y="118.86335" style="fill: #1565c0; stroke: #1565c0"/>
+     <use xlink:href="#m88e01eec72" x="53.164813" y="103.936" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="71.380813" y="97.538564" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="89.596812" y="103.936" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="107.812813" y="110.333436" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="126.028813" y="103.936" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="144.244812" y="106.068479" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="162.460813" y="108.200957" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="180.676813" y="112.465914" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="198.892813" y="118.86335" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="217.108812" y="103.936" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m88e01eec72" x="235.324813" y="118.86335" style="fill: #1f77b4; stroke: #1f77b4"/>
     </g>
    </g>
    <g id="text_13">
@@ -2252,7 +2252,7 @@ L 430.236013 120.995829
 L 432.057613 125.260786 
 L 433.879213 125.260786 
 L 435.700813 118.86335 
-" clip-path="url(#pf369bee355)" style="fill: none; stroke: #1565c0; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pf369bee355)" style="fill: none; stroke: #1f77b4; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="text_20">
     <!-- $\Delta t = 0.01$  (100 steps) -->
@@ -3047,7 +3047,7 @@ L 634.619532 123.128307
 L 634.983853 125.260786 
 L 636.076812 118.86335 
 L 636.076812 118.86335 
-" clip-path="url(#p8cc7e551b9)" style="fill: none; stroke: #1565c0; stroke-width: 1.1; stroke-linecap: square"/>
+" clip-path="url(#p8cc7e551b9)" style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: square"/>
    </g>
    <g id="text_27">
     <!-- $\pm 2\sqrt{t}$ -->

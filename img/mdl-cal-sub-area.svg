@@ -38,7 +38,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="mdabeebda13" d="M 74.13632 -150.034643 
+     <path id="mcb454c13de" d="M 74.13632 -150.034643 
 L 74.13632 -30.938 
 L 74.452057 -30.938 
 L 74.767794 -30.938 
@@ -370,7 +370,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#pbee27d9896)">
-     <use xlink:href="#mdabeebda13" x="0" y="204.826" style="fill: #1565c0; fill-opacity: 0.22"/>
+     <use xlink:href="#mcb454c13de" x="0" y="204.826" style="fill: #1f77b4; fill-opacity: 0.22"/>
     </g>
    </g>
    <g id="matplotlib.axis_1">
@@ -562,7 +562,7 @@ L 160.016881 163.13234
 L 162.858517 165.02056 
 L 164.752941 166.122815 
 L 164.752941 166.122815 
-" clip-path="url(#pbee27d9896)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#pbee27d9896)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="text_3">
     <!-- area on $[a,b]$ -->
@@ -762,7 +762,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_2">
     <defs>
-     <path id="m06a1e15e68" d="M 196.263529 -38.703185 
+     <path id="m214a2c3cda" d="M 196.263529 -38.703185 
 L 196.263529 -30.938 
 L 196.579267 -30.938 
 L 196.895004 -30.938 
@@ -1518,7 +1518,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#p74efaa0ffc)">
-     <use xlink:href="#m06a1e15e68" x="0" y="204.826" style="fill: #1565c0; fill-opacity: 0.22"/>
+     <use xlink:href="#m214a2c3cda" x="0" y="204.826" style="fill: #1f77b4; fill-opacity: 0.22"/>
     </g>
    </g>
    <g id="matplotlib.axis_3">
@@ -1618,7 +1618,7 @@ L 349.08041 163.13234
 L 351.922046 165.02056 
 L 353.816471 166.122815 
 L 353.816471 166.122815 
-" clip-path="url(#p74efaa0ffc)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p74efaa0ffc)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="text_6">
     <!-- $F(b)$ -->
@@ -1748,7 +1748,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_3">
     <defs>
-     <path id="m8a04e7a997" d="M 385.327059 -38.703185 
+     <path id="mbd5233ed6d" d="M 385.327059 -38.703185 
 L 385.327059 -30.938 
 L 385.642796 -30.938 
 L 385.958534 -30.938 
@@ -2178,7 +2178,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#p33f7f78fa2)">
-     <use xlink:href="#m8a04e7a997" x="0" y="204.826" style="fill: #1565c0; fill-opacity: 0.22"/>
+     <use xlink:href="#mbd5233ed6d" x="0" y="204.826" style="fill: #1f77b4; fill-opacity: 0.22"/>
     </g>
    </g>
    <g id="matplotlib.axis_5">
@@ -2278,7 +2278,7 @@ L 538.14394 163.13234
 L 540.985576 165.02056 
 L 542.88 166.122815 
 L 542.88 166.122815 
-" clip-path="url(#p33f7f78fa2)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p33f7f78fa2)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="text_9">
     <!-- $F(a)$ -->

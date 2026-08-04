@@ -91,7 +91,7 @@ Q 286.48 155.7785 286.48 165.7785
 L 286.48 181.7785
 Q 286.48 191.7785 296.48 191.7785
 z
-" clip-path="url(#p3ae879e3fe)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p3ae879e3fe)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 128.48 89.7785
@@ -126,12 +126,12 @@ z
    <g id="patch_10">
     <path d="M 377.48 155.7785
 Q 377.48 139.7785 377.48 125.120141
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 375.28 129.520141
 L 377.48 125.120141
 L 379.68 129.520141
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- Book source -->
@@ -1311,7 +1311,7 @@ z
    </g>
    <g id="text_9">
     <!-- manifest.json -->
-    <g style="fill: #094f86" transform="translate(342.647578 177.654) scale(0.115 -0.115)">
+    <g style="fill: #1d70a9" transform="translate(342.647578 177.654) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-28" d="M 416 0
 L 416 3174

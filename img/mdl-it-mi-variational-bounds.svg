@@ -38,7 +38,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="mce88bd3ccd" d="M 53.164813 -57.48 
+     <path id="me9587fd420" d="M 53.164813 -57.48 
 L 53.164813 -57.48 
 L 54.11579 -57.48 
 L 55.066767 -57.48 
@@ -844,7 +844,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#p04423050e7)">
-     <use xlink:href="#mce88bd3ccd" x="0" y="308.616" style="fill: #b45309; fill-opacity: 0.2"/>
+     <use xlink:href="#me9587fd420" x="0" y="308.616" style="fill: #ff7f0e; fill-opacity: 0.2"/>
     </g>
    </g>
    <g id="matplotlib.axis_1">
@@ -1881,12 +1881,12 @@ L 236.703459 137.68013
 L 237.654437 137.329764 
 L 432.604812 137.329764 
 L 432.604812 137.329764 
-" clip-path="url(#p04423050e7)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p04423050e7)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_15">
     <path d="M 53.164813 137.329764 
 L 432.604812 137.329764 
-" clip-path="url(#p04423050e7)" style="fill: none; stroke-dasharray: 0.9,1.485; stroke-dashoffset: 0; stroke: #1565c0; stroke-width: 0.9"/>
+" clip-path="url(#p04423050e7)" style="fill: none; stroke-dasharray: 0.9,1.485; stroke-dashoffset: 0; stroke: #1f77b4; stroke-width: 0.9"/>
    </g>
    <g id="line2d_16">
     <path d="M 53.164813 251.136 
@@ -1909,13 +1909,13 @@ L 396.46767 120.858739
 L 415.487219 119.074836 
 L 432.604812 117.649694 
 L 432.604812 117.649694 
-" clip-path="url(#p04423050e7)" style="fill: none; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p04423050e7)" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_17">
     <path d="M 53.164813 251.136 
 L 432.604812 30.655385 
 L 432.604812 30.655385 
-" clip-path="url(#p04423050e7)" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p04423050e7)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="patch_3">
     <path d="M 53.164813 251.136 
@@ -1929,7 +1929,7 @@ L 432.604812 251.136
    </g>
    <g id="text_15">
     <!-- $\log N$ -->
-    <g style="fill: #1565c0" transform="translate(411.229812 132.825441) scale(0.095 -0.095)">
+    <g style="fill: #1f77b4" transform="translate(411.229812 132.825441) scale(0.095 -0.095)">
      <defs>
       <path id="Cmr10-6a" d="M 197 0 
 L 197 225 
@@ -2102,22 +2102,22 @@ z
    <g id="patch_5">
     <path d="M 370.699719 153.516796 
 Q 373.03318 139.23843 375.168284 126.1738 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 1.1; stroke-linecap: round"/>
     <path d="M 372.811219 129.436352 
 L 375.168284 126.1738 
 L 376.364086 130.016984 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_16">
     <!-- bias -->
-    <g style="fill: #2e7d3e" transform="translate(360.350872 166.490308) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(360.350872 166.490308) scale(0.09 -0.09)">
      <use xlink:href="#SourceSans3-Regular-1d"/>
      <use xlink:href="#SourceSans3-Regular-24" transform="translate(55.296875 0)"/>
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(79.890625 0)"/>
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(130.296875 0)"/>
     </g>
     <!-- (flattens) -->
-    <g style="fill: #2e7d3e" transform="translate(351.239075 178.424308) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(351.239075 178.424308) scale(0.09 -0.09)">
      <use xlink:href="#SourceSans3-Regular-5a2"/>
      <use xlink:href="#SourceSans3-Regular-21" transform="translate(30.296875 0)"/>
      <use xlink:href="#SourceSans3-Regular-27" transform="translate(59.5 0)"/>
@@ -2133,15 +2133,15 @@ L 376.364086 130.016984
    <g id="patch_6">
     <path d="M 201.834948 207.939636 
 Q 268.879473 177.237192 334.805831 147.046803 
-" style="fill: none; stroke: #b45309; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.1; stroke-linecap: round"/>
     <path d="M 330.783263 146.90914 
 L 334.805831 147.046803 
 L 332.282159 150.182259 
-" style="fill: none; stroke: #b45309; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_17">
     <!-- variance -->
-    <g style="fill: #b45309" transform="translate(162.512591 215.746615) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(162.512591 215.746615) scale(0.09 -0.09)">
      <defs>
       <path id="SourceSans3-Regular-31" d="M 1197 0 
 L 77 3110 
@@ -2193,7 +2193,7 @@ z
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(303.015625 0)"/>
     </g>
     <!-- (explodes) -->
-    <g style="fill: #b45309" transform="translate(158.747356 227.680615) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(158.747356 227.680615) scale(0.09 -0.09)">
      <defs>
       <path id="SourceSans3-Regular-33" d="M 90 0 
 L 1107 1626 
@@ -2303,7 +2303,7 @@ L 80.714813 21.925
      <path d="M 61.714813 39.272 
 L 71.214813 39.272 
 L 80.714813 39.272 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_19">
      <!-- InfoNCE (low var., $\leq \log N$) -->
@@ -2498,7 +2498,7 @@ z
      <path d="M 61.714813 56.619 
 L 71.214813 56.619 
 L 80.714813 56.619 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: square"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_20">
      <!-- Barber-Agakov (low var., biased) -->
@@ -2685,7 +2685,7 @@ z
      <path d="M 61.714813 73.966 
 L 71.214813 73.966 
 L 80.714813 73.966 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: square"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_21">
      <!-- NWJ / DV (MINE): high variance -->

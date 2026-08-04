@@ -8408,7 +8408,7 @@ L 214.492812 204.996226
 L 214.492812 7.2 
 L 208.416812 7.2 
 z
-" clip-path="url(#pb55159aee1)" style="fill: #b45309; opacity: 0.3; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#pb55159aee1)" style="fill: #ff7f0e; opacity: 0.3; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="matplotlib.axis_1">
     <g id="xtick_1">
@@ -8742,7 +8742,7 @@ z
    <g id="line2d_15">
     <path d="M 211.454813 204.996226 
 L 211.454813 7.2 
-" clip-path="url(#pb55159aee1)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#pb55159aee1)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="patch_4">
     <path d="M 46.534813 204.996226 
@@ -8757,15 +8757,15 @@ L 359.014813 204.996226
    <g id="patch_6">
     <path d="M 231.361631 42.899896 
 Q 223.909451 44.34006 217.77454 45.525656 
-" style="fill: none; stroke: #b45309; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 222.512044 46.85082 
 L 217.77454 45.525656 
 L 221.677173 42.530751 
-" style="fill: none; stroke: #b45309; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_9">
     <!-- integrate up the strip:  $\int p\,\mathrm{d}y$ -->
-    <g style="fill: #b45309" transform="translate(235.324813 33.361844) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(235.324813 33.361844) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-24" d="M 525 0 
 L 525 3110 
@@ -9289,7 +9289,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="mc8f9107d6a" d="M 46.534812 -51.178698 
+     <path id="me59d675df7" d="M 46.534812 -51.178698 
 L 46.534812 -50.85 
 L 47.741299 -50.85 
 L 48.947785 -50.85 
@@ -9815,7 +9815,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#p7b2c83f56f)">
-     <use xlink:href="#mc8f9107d6a" x="0" y="346.338" style="fill: #1565c0; fill-opacity: 0.18"/>
+     <use xlink:href="#me59d675df7" x="0" y="346.338" style="fill: #1f77b4; fill-opacity: 0.18"/>
     </g>
    </g>
    <g id="matplotlib.axis_3">
@@ -10177,12 +10177,12 @@ L 340.917515 294.8673
 L 350.569407 295.17647 
 L 359.014813 295.324404 
 L 359.014813 295.324404 
-" clip-path="url(#p7b2c83f56f)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p7b2c83f56f)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_24">
     <path d="M 211.454813 295.488 
 L 211.454813 221.314415 
-" clip-path="url(#p7b2c83f56f)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p7b2c83f56f)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="patch_8">
     <path d="M 46.534812 295.488 
@@ -10191,7 +10191,7 @@ L 359.014813 295.488
    </g>
    <g id="line2d_25">
     <defs>
-     <path id="m4e43718e57" d="M 0 3 
+     <path id="m5d3d54e168" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -10201,10 +10201,10 @@ C -2.683901 -1.55874 -3 -0.795609 -3 0
 C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
 C -1.55874 2.683901 -0.795609 3 0 3 
 z
-" style="stroke: #b45309"/>
+" style="stroke: #ff7f0e"/>
     </defs>
     <g clip-path="url(#p7b2c83f56f)">
-     <use xlink:href="#m4e43718e57" x="211.454813" y="239.220093" style="fill: #b45309; stroke: #b45309"/>
+     <use xlink:href="#m5d3d54e168" x="211.454813" y="239.220093" style="fill: #ff7f0e; stroke: #ff7f0e"/>
     </g>
    </g>
   </g>

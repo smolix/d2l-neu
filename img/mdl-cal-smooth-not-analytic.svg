@@ -89,7 +89,7 @@ z
     <path d="M 7.2 205.2 
 L 330.84 205.2 
 L 330.84 205.2 
-" clip-path="url(#p7738b69759)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 2"/>
+" clip-path="url(#p7738b69759)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
    </g>
    <g id="patch_3">
     <path d="M 7.2 228.96 
@@ -161,7 +161,7 @@ L 295.180167 14.593285
 L 299.502571 5.29268 
 L 302.565576 -1 
 L 302.565576 -1 
-" clip-path="url(#p7738b69759)" style="fill: none; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: square"/>
+" clip-path="url(#p7738b69759)" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_5">
     <defs>
@@ -186,7 +186,7 @@ z
      <path d="M 102.14 24.58 
 L 113.14 24.58 
 L 124.14 24.58 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: square"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
     </g>
     <g id="text_2">
      <!-- $f(x)=e^{-1/x^2}$ -->
@@ -515,7 +515,7 @@ z
      <path d="M 102.14 44.666 
 L 113.14 44.666 
 L 124.14 44.666 
-" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 2"/>
+" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
     </g>
     <g id="text_3">
      <!-- Taylor series at $0\ \equiv\ 0$ -->

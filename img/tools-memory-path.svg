@@ -39,7 +39,7 @@ Q 339.48 45.7785 339.48 63.7785
 L 339.48 130.7785
 Q 339.48 148.7785 357.48 148.7785
 z
-" clip-path="url(#p8aaa5d4904)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p8aaa5d4904)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 16.48 109.7785
@@ -104,7 +104,7 @@ Q 154.48 184.7785 154.48 194.7785
 L 154.48 212.7785
 Q 154.48 222.7785 164.48 222.7785
 z
-" clip-path="url(#p8aaa5d4904)" style="fill: #fbe8d3; stroke: #b45309; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p8aaa5d4904)" style="fill: #fff0e2; stroke: #ff7f0e; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_8">
     <path d="M 118.48 85.7785
@@ -468,7 +468,7 @@ z
    </g>
    <g id="text_5">
     <!-- capacity and bandwidth are different constraints -->
-    <g style="fill: #b45309" transform="translate(171.167656 207.654) scale(0.115 -0.115)">
+    <g style="fill: #ff7f0e" transform="translate(171.167656 207.654) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-1e" d="M 1818 -77
 Q 1370 -77 1008 118
@@ -1324,7 +1324,7 @@ z
    </g>
    <g id="text_9">
     <!-- one address space · shared bandwidth -->
-    <g style="fill: #094f86" transform="translate(373.87707 138.98) scale(0.095 -0.095)">
+    <g style="fill: #1d70a9" transform="translate(373.87707 138.98) scale(0.095 -0.095)">
      <defs>
       <path id="SourceSans3-Regular-29" d="M 525 0
 L 525 3110

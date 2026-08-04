@@ -39,7 +39,7 @@ C 41.016668 68.576277 33.274168 87.268326 33.274168 106.755913
 C 33.274168 126.243499 41.016668 144.935548 54.796472 158.715353 
 C 68.576277 172.495158 87.268326 180.237658 106.755913 180.237658 
 z
-" clip-path="url(#p416cd9975f)" style="fill: #1565c0; opacity: 0.18; stroke: #1565c0; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#p416cd9975f)" style="fill: #1f77b4; opacity: 0.18; stroke: #1f77b4; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 180.711734 180.237658 
@@ -52,7 +52,7 @@ C 114.972489 68.576277 107.229989 87.268326 107.229989 106.755913
 C 107.229989 126.243499 114.972489 144.935548 128.752293 158.715353 
 C 142.532098 172.495158 161.224147 180.237658 180.711734 180.237658 
 z
-" clip-path="url(#p416cd9975f)" style="fill: #2e7d3e; opacity: 0.18; stroke: #2e7d3e; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#p416cd9975f)" style="fill: #2ca02c; opacity: 0.18; stroke: #2ca02c; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 106.755913 180.237658 
@@ -65,11 +65,11 @@ C 41.016668 68.576277 33.274168 87.268326 33.274168 106.755913
 C 33.274168 126.243499 41.016668 144.935548 54.796472 158.715353 
 C 68.576277 172.495158 87.268326 180.237658 106.755913 180.237658 
 z
-" clip-path="url(#p9aa86a6c6b)" style="fill: #b45309; opacity: 0.45"/>
+" clip-path="url(#p9aa86a6c6b)" style="fill: #ff7f0e; opacity: 0.45"/>
    </g>
    <g id="text_1">
     <!-- $H(X)$ -->
-    <g style="fill: #1565c0" transform="translate(83.784776 25.329197) scale(0.13 -0.13)">
+    <g style="fill: #1f77b4" transform="translate(83.784776 25.329197) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-49" d="M 300 0 
 Q 238 0 238 84 
@@ -256,7 +256,7 @@ z
    </g>
    <g id="text_2">
     <!-- $H(Y)$ -->
-    <g style="fill: #2e7d3e" transform="translate(173.58787 25.329197) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(173.58787 25.329197) scale(0.13 -0.13)">
      <defs>
       <path id="Cmmi10-56" d="M 569 84 
 Q 572 100 581 137 
@@ -321,7 +321,7 @@ z
    </g>
    <g id="text_3">
     <!-- $H(X\mid Y)$ -->
-    <g style="fill: #1565c0" transform="translate(57.059518 113.170292) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(57.059518 113.170292) scale(0.12 -0.12)">
      <defs>
       <path id="Cmsy10-2f" d="M 763 -1484 
 L 763 4684 
@@ -347,7 +347,7 @@ z
    </g>
    <g id="text_4">
     <!-- $H(Y\mid X)$ -->
-    <g style="fill: #2e7d3e" transform="translate(186.008129 113.170292) scale(0.12 -0.12)">
+    <g style="fill: #2ca02c" transform="translate(186.008129 113.170292) scale(0.12 -0.12)">
      <use xlink:href="#Cmmi10-49"/>
      <use xlink:href="#Cmr10-77" transform="translate(83.105469 0)"/>
      <use xlink:href="#Cmmi10-56" transform="translate(121.923828 0)"/>
@@ -358,7 +358,7 @@ z
    </g>
    <g id="text_5">
     <!-- $I(X;Y)$ -->
-    <g style="fill: #b45309" transform="translate(124.296323 96.746139) scale(0.125 -0.125)">
+    <g style="fill: #ff7f0e" transform="translate(124.296323 96.746139) scale(0.125 -0.125)">
      <defs>
       <path id="Cmmi10-7b" d="M 269 0 
 Q 206 0 206 84 

@@ -156,7 +156,7 @@ z
     <path d="M 14.809091 32.768 
 L 166.990909 204.128 
 L 166.990909 204.128 
-" clip-path="url(#p5de1b62b72)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.6"/>
+" clip-path="url(#p5de1b62b72)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.6"/>
    </g>
    <g id="patch_3">
     <path d="M 7.2 212.696 
@@ -246,7 +246,7 @@ L 165.083869 119.705815
 L 166.228093 115.146246 
 L 166.990909 111.531886 
 L 166.990909 111.531886 
-" clip-path="url(#p5de1b62b72)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p5de1b62b72)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="text_2">
     <!-- zoom $\pm 0.6$ -->
@@ -482,7 +482,7 @@ z
     <path d="M 215.689091 42.958284 
 L 367.870909 204.128 
 L 367.870909 204.128 
-" clip-path="url(#pdf7c7d6d7a)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.6"/>
+" clip-path="url(#pdf7c7d6d7a)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.6"/>
    </g>
    <g id="patch_6">
     <path d="M 208.08 212.696 
@@ -516,7 +516,7 @@ L 359.098524 180.643822
 L 364.438237 183.656933 
 L 367.870909 185.451021 
 L 367.870909 185.451021 
-" clip-path="url(#pdf7c7d6d7a)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pdf7c7d6d7a)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="text_4">
     <!-- zoom $\pm 0.06$ -->
@@ -569,7 +569,7 @@ z
     <path d="M 416.569091 34.214987 
 L 568.750909 204.128 
 L 568.750909 204.128 
-" clip-path="url(#p7aec143f09)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.6"/>
+" clip-path="url(#p7aec143f09)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.6"/>
    </g>
    <g id="patch_9">
     <path d="M 408.96 212.696 
@@ -590,7 +590,7 @@ L 520.312085 149.846234
 L 545.103609 177.002027 
 L 568.750909 202.590872 
 L 568.750909 202.590872 
-" clip-path="url(#p7aec143f09)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p7aec143f09)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="text_6">
     <!-- zoom $\pm 0.006$ -->

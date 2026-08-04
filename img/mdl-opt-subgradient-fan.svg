@@ -31,46 +31,46 @@ z
    <g id="line2d_1">
     <path d="M 37.986207 34.92 
 L 253.489655 228.96 
-" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2e7d3e; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
+" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2ca02c; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_2">
     <path d="M 37.986207 67.26 
 L 253.489655 196.62 
-" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2e7d3e; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
+" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2ca02c; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_3">
     <path d="M 37.986207 99.6 
 L 253.489655 164.28 
-" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2e7d3e; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
+" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2ca02c; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_4">
     <path d="M 37.986207 164.28 
 L 253.489655 99.6 
-" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2e7d3e; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
+" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2ca02c; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_5">
     <path d="M 37.986207 196.62 
 L 253.489655 67.26 
-" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2e7d3e; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
+" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2ca02c; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_6">
     <path d="M 37.986207 228.96 
 L 253.489655 34.92 
-" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2e7d3e; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
+" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #2ca02c; stroke-opacity: 0.55; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_7">
     <path d="M 37.986207 131.94 
 L 253.489655 131.94 
-" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="patch_2">
     <path d="M 263.082318 200.858372 
 Q 246.955292 203.650839 230.828266 206.443305 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 0.9; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- $\partial|x|(0)=[-1,\,1]$: -->
-    <g style="fill: #2e7d3e" transform="translate(276.144828 184.023) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(276.144828 184.023) scale(0.09 -0.09)">
      <defs>
       <path id="STIXGeneral-Regular-415" d="M 1248 4000 
 L 1184 4128 
@@ -388,7 +388,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56d" transform="translate(702.282805 0)"/>
     </g>
     <!-- every slope $g\in[-1,1]$ -->
-    <g style="fill: #2e7d3e" transform="translate(267.054828 195.957) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(267.054828 195.957) scale(0.09 -0.09)">
      <defs>
       <path id="SourceSans3-Regular-20" d="M 1702 2758 
 Q 1510 2758 1328 2665 
@@ -682,7 +682,7 @@ z
      <use xlink:href="#Cmr10-48" transform="translate(901.36301 0)"/>
     </g>
     <!-- supports the graph -->
-    <g style="fill: #2e7d3e" transform="translate(273.276781 207.891) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(273.276781 207.891) scale(0.09 -0.09)">
      <defs>
       <path id="SourceSans3-Regular-30" d="M 1434 -77 
 Q 941 -77 710 233 
@@ -866,7 +866,7 @@ z
    </g>
    <g id="text_2">
     <!-- $0\in\partial f(0)$: -->
-    <g style="fill: #b45309" transform="translate(263.956966 93.638) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(263.956966 93.638) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-57" d="M 622 -1056 
 Q 741 -1147 909 -1147 
@@ -929,7 +929,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56d" transform="translate(380.215309 0)"/>
     </g>
     <!-- the corner is a minimum, -->
-    <g style="fill: #b45309" transform="translate(263.956966 108.224) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(263.956966 108.224) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-1e" d="M 1760 -77 
 Q 1344 -77 1011 115 
@@ -1064,7 +1064,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56c" transform="translate(1013.125 0)"/>
     </g>
     <!-- no gradient required -->
-    <g style="fill: #b45309" transform="translate(263.956966 122.81) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(263.956966 122.81) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-1f" d="M 1587 -77 
 Q 1005 -77 653 348 
@@ -1151,7 +1151,7 @@ z
    </g>
    <g id="text_3">
     <!-- $f(x)=|x|$ -->
-    <g style="fill: #1565c0" transform="translate(40.853793 22.332) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(40.853793 22.332) scale(0.12 -0.12)">
      <use xlink:href="#Cmmi10-57"/>
      <use xlink:href="#Cmr10-77" transform="translate(48.876953 0)"/>
      <use xlink:href="#Cmmi10-3f" transform="translate(87.695312 0)"/>
@@ -1186,7 +1186,7 @@ L 145.305483 131.550622
 L 146.170379 131.550622 
 L 275.04 15.516 
 L 275.04 15.516 
-" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p1e0a9da649)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_9">
     <defs>

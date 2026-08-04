@@ -34,7 +34,7 @@ L 134.48 100.7785
 L 134.48 48.7785
 L 6.48 48.7785
 z
-" clip-path="url(#p1aa4f1c0a7)" style="fill: #094f86; stroke: #ffffff; stroke-width: 1.5; stroke-linejoin: miter"/>
+" clip-path="url(#p1aa4f1c0a7)" style="fill: #1d70a9; stroke: #ffffff; stroke-width: 1.5; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 134.48 100.7785
@@ -58,7 +58,7 @@ L 486.48 100.7785
 L 486.48 48.7785
 L 374.48 48.7785
 z
-" clip-path="url(#p1aa4f1c0a7)" style="fill: #b45309; stroke: #ffffff; stroke-width: 1.5; stroke-linejoin: miter"/>
+" clip-path="url(#p1aa4f1c0a7)" style="fill: #ff7f0e; stroke: #ffffff; stroke-width: 1.5; stroke-linejoin: miter"/>
    </g>
    <g id="line2d_1">
     <path d="M 6.48 118.7785
@@ -602,11 +602,11 @@ Q 139.48 170.7785 139.48 180.7785
 L 139.48 196.7785
 Q 139.48 206.7785 149.48 206.7785
 z
-" clip-path="url(#p1aa4f1c0a7)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p1aa4f1c0a7)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="text_5">
     <!-- must fit with safety margin -->
-    <g style="fill: #094f86" transform="translate(198.035234 192.654) scale(0.115 -0.115)">
+    <g style="fill: #1d70a9" transform="translate(198.035234 192.654) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-28" d="M 416 0
 L 416 3174

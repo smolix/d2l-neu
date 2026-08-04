@@ -39,7 +39,7 @@ C 29.676774 80.671978 21.150985 101.255056 21.150985 122.714153
 C 21.150985 144.173251 29.676774 164.756328 44.850648 179.930201 
 C 60.024521 195.104075 80.607598 203.629864 102.066696 203.629864 
 z
-" clip-path="url(#p78f1173ea3)" style="fill: #1565c0; opacity: 0.13; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p78f1173ea3)" style="fill: #1f77b4; opacity: 0.13; stroke: #1f77b4; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 208.094179 203.629864 
@@ -52,7 +52,7 @@ C 135.704258 80.671978 127.178468 101.255056 127.178468 122.714153
 C 127.178468 144.173251 135.704258 164.756328 150.878131 179.930201 
 C 166.052005 195.104075 186.635082 203.629864 208.094179 203.629864 
 z
-" clip-path="url(#p78f1173ea3)" style="fill: #b45309; opacity: 0.13; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p78f1173ea3)" style="fill: #ff7f0e; opacity: 0.13; stroke: #ff7f0e; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 314.121663 203.629864 
@@ -65,11 +65,11 @@ C 241.731742 80.671978 233.205952 101.255056 233.205952 122.714153
 C 233.205952 144.173251 241.731742 164.756328 256.905615 179.930201 
 C 272.079488 195.104075 292.662566 203.629864 314.121663 203.629864 
 z
-" clip-path="url(#p78f1173ea3)" style="fill: #2e7d3e; opacity: 0.13; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p78f1173ea3)" style="fill: #2ca02c; opacity: 0.13; stroke: #2ca02c; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- f-divergences -->
-    <g style="fill: #1565c0" transform="translate(43.542423 29.10126) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(43.542423 29.10126) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-21" d="M 614 0 
 L 614 2682 
@@ -365,7 +365,7 @@ z
    </g>
    <g id="text_2">
     <!-- integral probability metrics -->
-    <g style="fill: #b45309" transform="translate(140.343867 225.531125) scale(0.12 -0.12)">
+    <g style="fill: #ff7f0e" transform="translate(140.343867 225.531125) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-2f" d="M 1504 -58 
 Q 1005 -58 809 227 
@@ -609,7 +609,7 @@ z
    </g>
    <g id="text_3">
     <!-- optimal transport -->
-    <g style="fill: #2e7d3e" transform="translate(295.042498 29.10126) scale(0.12 -0.12)">
+    <g style="fill: #2ca02c" transform="translate(295.042498 29.10126) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Regular-2a"/>
      <use xlink:href="#SourceSans3-Regular-2b" transform="translate(54.203125 0)"/>
      <use xlink:href="#SourceSans3-Regular-2f" transform="translate(108 0)"/>
@@ -631,7 +631,7 @@ z
    </g>
    <g id="text_4">
     <!-- KL -->
-    <g style="fill: #1565c0" transform="translate(71.363673 80.493423) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(71.363673 80.493423) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Regular-c" d="M 576 0 
 L 576 4198 
@@ -665,7 +665,7 @@ z
    </g>
    <g id="text_5">
     <!-- reverse KL -->
-    <g style="fill: #1565c0" transform="translate(54.275744 103.373038) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(54.275744 103.373038) scale(0.105 -0.105)">
      <use xlink:href="#SourceSans3-Regular-2d"/>
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(33.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-31" transform="translate(83.796875 0)"/>
@@ -680,7 +680,7 @@ z
    </g>
    <g id="text_6">
     <!-- $\chi^2$ -->
-    <g style="fill: #1565c0" transform="translate(70.917423 126.252653) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(70.917423 126.252653) scale(0.105 -0.105)">
      <defs>
       <path id="Cmmi10-11" d="M 275 -1241 
 Q 244 -1241 214 -1214 
@@ -775,7 +775,7 @@ z
    </g>
    <g id="text_7">
     <!-- JS -->
-    <g style="fill: #1565c0" transform="translate(71.631095 149.132268) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(71.631095 149.132268) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Regular-b" d="M 1325 -77 
 Q 557 -77 211 602 
@@ -847,7 +847,7 @@ z
 " style="fill: #ffffff; stroke: #565d66; stroke-width: 0.9; stroke-linejoin: miter"/>
     </g>
     <!-- $H^2$ -->
-    <g style="fill: #1565c0" transform="translate(69.552423 175.360119) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(69.552423 175.360119) scale(0.105 -0.105)">
      <defs>
       <path id="Cmmi10-49" d="M 300 0 
 Q 238 0 238 84 
@@ -1071,7 +1071,7 @@ z
 " style="fill: #ffffff; stroke: #565d66; stroke-width: 0.9; stroke-linejoin: miter"/>
     </g>
     <!-- MMD -->
-    <g style="fill: #b45309" transform="translate(197.231601 95.560487) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(197.231601 95.560487) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Regular-e" d="M 576 0 
 L 576 4198 
@@ -1144,7 +1144,7 @@ z
 " style="fill: #ffffff; stroke: #565d66; stroke-width: 0.9; stroke-linejoin: miter"/>
     </g>
     <!-- $W_2$ -->
-    <g style="fill: #2e7d3e" transform="translate(332.093435 126.252653) scale(0.105 -0.105)">
+    <g style="fill: #2ca02c" transform="translate(332.093435 126.252653) scale(0.105 -0.105)">
      <use xlink:href="#Cmmi10-50" transform="translate(0 0.6875)"/>
      <use xlink:href="#Cmr10-31" transform="translate(94.384766 -14.312462) scale(0.7)"/>
     </g>

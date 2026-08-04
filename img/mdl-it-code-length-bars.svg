@@ -1098,7 +1098,7 @@ L 138.482625 243.535813
 L 138.482625 85.878313 
 L 87.182625 85.878313 
 z
-" clip-path="url(#p44b50bd13b)" style="fill: #1565c0; stroke: #ffffff; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p44b50bd13b)" style="fill: #1f77b4; stroke: #ffffff; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 189.782625 243.535813 
@@ -1106,7 +1106,7 @@ L 241.082625 243.535813
 L 241.082625 85.878313 
 L 189.782625 85.878313 
 z
-" clip-path="url(#p44b50bd13b)" style="fill: #1565c0; stroke: #ffffff; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p44b50bd13b)" style="fill: #1f77b4; stroke: #ffffff; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 189.782625 85.878313 
@@ -1114,7 +1114,7 @@ L 241.082625 85.878313
 L 241.082625 63.355813 
 L 189.782625 63.355813 
 z
-" clip-path="url(#p44b50bd13b)" style="fill: #b45309; stroke: #ffffff; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p44b50bd13b)" style="fill: #ff7f0e; stroke: #ffffff; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="text_9">
     <!-- entropy floor $H(P)=1.75$ -->
@@ -1419,7 +1419,7 @@ z
    </g>
    <g id="text_13">
     <!-- $\mathrm{CE}=2.0$ -->
-    <g style="fill: #1565c0" transform="translate(194.202625 54.364413) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(194.202625 54.364413) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-5d" d="M 1459 684 
 Q 1678 406 2006 245 
@@ -1590,15 +1590,15 @@ z
    <g id="patch_8">
     <path d="M 275.044526 74.617063 
 Q 259.064772 74.617063 244.314855 74.617063 
-" style="fill: none; stroke: #b45309; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.1; stroke-linecap: round"/>
     <path d="M 248.514855 76.717063 
 L 244.314855 74.617063 
 L 248.514855 72.517063 
-" style="fill: none; stroke: #b45309; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_14">
     <!-- extra bits = waste -->
-    <g style="fill: #b45309" transform="translate(279.044625 78.155563) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(279.044625 78.155563) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Regular-877" d="M 218 2599 
 L 218 2995 

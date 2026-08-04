@@ -712,7 +712,7 @@ L 269.626993 167.209308
 L 282.232336 182.142825 
 L 285.533736 186.107739 
 L 285.533736 186.107739 
-" clip-path="url(#p7e6b5822fa)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p7e6b5822fa)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_8">
     <path d="M 45.732083 83.691501 
@@ -770,7 +770,7 @@ L 239.014016 240.154363
 L 244.416306 257.29298 
 L 248.529595 270.808 
 L 248.529595 270.808 
-" clip-path="url(#p7e6b5822fa)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 2"/>
+" clip-path="url(#p7e6b5822fa)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
    </g>
    <g id="patch_3">
     <path d="M 33.742 212.328 
@@ -1052,7 +1052,7 @@ z
    </g>
    <g id="text_10">
     <!-- $\log p(\theta\mid\mathcal{D})$ -->
-    <g style="fill: #1565c0" transform="translate(61.561354 134.658175) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(61.561354 134.658175) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-6a" d="M 197 0 
 L 197 225 
@@ -1340,7 +1340,7 @@ z
    </g>
    <g id="text_11">
     <!-- quadratic fit -->
-    <g style="fill: #b45309" transform="translate(188.668043 172.49732) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(188.668043 172.49732) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-2c" d="M 2496 -1312 
 L 2496 -205 
@@ -1439,7 +1439,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="me2c00654d4" d="M 470.015938 -168.289276 
+     <path id="m14617e0d2f" d="M 470.015938 -168.289276 
 L 470.015938 -184.533079 
 L 470.316066 -183.951392 
 L 470.616193 -183.370251 
@@ -2327,7 +2327,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#pdb8794fc27)">
-     <use xlink:href="#me2c00654d4" x="0" y="269.808" style="fill: #1565c0; fill-opacity: 0.15"/>
+     <use xlink:href="#m14617e0d2f" x="0" y="269.808" style="fill: #1f77b4; fill-opacity: 0.15"/>
     </g>
    </g>
    <g id="matplotlib.axis_3">
@@ -2505,7 +2505,7 @@ L 592.767973 197.333012
 L 599.971027 198.436457 
 L 602.071917 198.718059 
 L 602.071917 198.718059 
-" clip-path="url(#pdb8794fc27)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pdb8794fc27)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_17">
     <path d="M 362.270264 145.161552 
@@ -2574,7 +2574,7 @@ L 573.259704 202.759448
 L 585.865047 202.938555 
 L 602.071917 203.004 
 L 602.071917 203.004 
-" clip-path="url(#pdb8794fc27)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 2"/>
+" clip-path="url(#pdb8794fc27)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
    </g>
    <g id="patch_7">
     <path d="M 350.280182 212.328 
@@ -2588,7 +2588,7 @@ L 614.062 212.328
    </g>
    <g id="text_20">
     <!-- true posterior -->
-    <g style="fill: #1565c0" transform="translate(466.22369 34.603252) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(466.22369 34.603252) scale(0.11 -0.11)">
      <use xlink:href="#SourceSans3-Regular-2f"/>
      <use xlink:href="#SourceSans3-Regular-2d" transform="translate(33.796875 0)"/>
      <use xlink:href="#SourceSans3-Regular-30" transform="translate(68.5 0)"/>
@@ -2607,7 +2607,7 @@ L 614.062 212.328
    </g>
    <g id="text_21">
     <!-- Laplace: -->
-    <g style="fill: #b45309" transform="translate(378.099536 164.805967) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(378.099536 164.805967) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Regular-d" d="M 576 0 
 L 576 4198 
@@ -2650,7 +2650,7 @@ z
      <use xlink:href="#SourceSans3-Regular-56d" transform="translate(323.5 0)"/>
     </g>
     <!-- misses the skew -->
-    <g style="fill: #b45309" transform="translate(378.099536 178.728967) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(378.099536 178.728967) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Regular-26" d="M 525 0 
 L 525 4557 
@@ -2719,7 +2719,7 @@ z
    </g>
    <g id="text_22">
     <!-- tail mass the -->
-    <g style="fill: #1565c0" transform="translate(520.562981 163.160542) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(520.562981 163.160542) scale(0.105 -0.105)">
      <use xlink:href="#SourceSans3-Regular-2f"/>
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(31.703125 0)"/>
      <use xlink:href="#SourceSans3-Regular-24" transform="translate(82.109375 0)"/>
@@ -2735,7 +2735,7 @@ z
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(477.53125 0)"/>
     </g>
     <!-- Gaussian drops -->
-    <g style="fill: #1565c0" transform="translate(520.562981 177.083542) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(520.562981 177.083542) scale(0.105 -0.105)">
      <defs>
       <path id="SourceSans3-Regular-8" d="M 2227 -77 
 Q 1677 -77 1248 182 

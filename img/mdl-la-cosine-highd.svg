@@ -974,7 +974,7 @@ L 363.589926 179.298431
 L 367.442631 179.298431 
 L 367.442631 228.96 
 L 367.442631 228.96 
-" clip-path="url(#pebb0e956c7)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#pebb0e956c7)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 63.078994 228.96 
@@ -1104,7 +1104,7 @@ L 348.179109 228.648751
 L 348.179109 228.925417 
 L 367.442631 228.96 
 L 367.442631 228.96 
-" clip-path="url(#pebb0e956c7)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#pebb0e956c7)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
     <path d="M 63.078994 228.96 
@@ -1134,7 +1134,7 @@ L 236.450686 228.683334
 L 236.450686 228.96 
 L 367.442631 228.96 
 L 367.442631 228.96 
-" clip-path="url(#pebb0e956c7)" style="fill: none; stroke: #2e7d3e; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#pebb0e956c7)" style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="line2d_13">
     <path d="M 215.260813 228.96 
@@ -1327,7 +1327,7 @@ L 79.760813 20.4
 L 57.760813 20.4 
 L 57.760813 28.1 
 z
-" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linejoin: miter"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linejoin: miter"/>
     </g>
     <g id="text_16">
      <!-- $d=2$ -->
@@ -1412,7 +1412,7 @@ L 79.760813 40.486
 L 57.760813 40.486 
 L 57.760813 48.186 
 z
-" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
     </g>
     <g id="text_17">
      <!-- $d=10$ -->
@@ -1462,7 +1462,7 @@ L 79.760813 60.572
 L 57.760813 60.572 
 L 57.760813 68.272 
 z
-" style="fill: none; stroke: #2e7d3e; stroke-width: 2; stroke-linejoin: miter"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linejoin: miter"/>
     </g>
     <g id="text_18">
      <!-- $d=1000$ -->

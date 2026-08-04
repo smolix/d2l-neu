@@ -192,11 +192,11 @@ L 262.175669 10.738586
 L 267.567903 0.221423 
 L 268.176053 -1 
 L 268.176053 -1 
-" clip-path="url(#p9e7a648054)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p9e7a648054)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="text_2">
     <!-- slope $f'(x)$ -->
-    <g style="fill: #b45309" transform="translate(258.208525 127.616) scale(0.12 -0.12)">
+    <g style="fill: #ff7f0e" transform="translate(258.208525 127.616) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-2e" d="M 1338 -77 
 Q 998 -77 697 41 
@@ -519,7 +519,7 @@ z
     <path d="M 7.2 192.616 
 L 314.557377 63.256 
 L 314.557377 63.256 
-" clip-path="url(#p9e7a648054)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 2"/>
+" clip-path="url(#p9e7a648054)" style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
    </g>
    <g id="line2d_10">
     <defs>

@@ -34,7 +34,7 @@ L 300.844807 43.3584
 L 300.844807 20.1456 
 L 119.51026 20.1456 
 z
-" clip-path="url(#p41faf19eb3)" style="fill: #1565c0"/>
+" clip-path="url(#p41faf19eb3)" style="fill: #1f77b4"/>
    </g>
    <g id="patch_3">
     <path d="M 300.844807 43.3584 
@@ -42,7 +42,7 @@ L 329.592967 43.3584
 L 329.592967 20.1456 
 L 300.844807 20.1456 
 z
-" clip-path="url(#p41faf19eb3)" style="fill: #b45309"/>
+" clip-path="url(#p41faf19eb3)" style="fill: #ff7f0e"/>
    </g>
    <g id="patch_4">
     <path d="M 329.592967 43.3584 
@@ -576,7 +576,7 @@ L 159.315404 87.9984
 L 159.315404 64.7856 
 L 119.51026 64.7856 
 z
-" clip-path="url(#p41faf19eb3)" style="fill: #1565c0"/>
+" clip-path="url(#p41faf19eb3)" style="fill: #1f77b4"/>
    </g>
    <g id="patch_6">
     <path d="M 159.315404 87.9984 
@@ -584,7 +584,7 @@ L 318.535983 87.9984
 L 318.535983 64.7856 
 L 159.315404 64.7856 
 z
-" clip-path="url(#p41faf19eb3)" style="fill: #b45309"/>
+" clip-path="url(#p41faf19eb3)" style="fill: #ff7f0e"/>
    </g>
    <g id="patch_7">
     <path d="M 318.535983 87.9984 
@@ -803,7 +803,7 @@ L 141.624229 132.6384
 L 141.624229 109.4256 
 L 119.51026 109.4256 
 z
-" clip-path="url(#p41faf19eb3)" style="fill: #1565c0"/>
+" clip-path="url(#p41faf19eb3)" style="fill: #1f77b4"/>
    </g>
    <g id="patch_9">
     <path d="M 141.624229 132.6384 
@@ -811,7 +811,7 @@ L 168.160992 132.6384
 L 168.160992 109.4256 
 L 141.624229 109.4256 
 z
-" clip-path="url(#p41faf19eb3)" style="fill: #b45309"/>
+" clip-path="url(#p41faf19eb3)" style="fill: #ff7f0e"/>
    </g>
    <g id="patch_10">
     <path d="M 168.160992 132.6384 
@@ -948,7 +948,7 @@ L 130.567244 169.6896
 L 130.567244 157.1904 
 L 119.51026 157.1904 
 z
-" clip-path="url(#p41faf19eb3)" style="fill: #1565c0"/>
+" clip-path="url(#p41faf19eb3)" style="fill: #1f77b4"/>
    </g>
    <g id="text_7">
     <!-- arithmetic -->
@@ -971,7 +971,7 @@ L 220.60269 169.6896
 L 220.60269 157.1904 
 L 209.545706 157.1904 
 z
-" clip-path="url(#p41faf19eb3)" style="fill: #b45309"/>
+" clip-path="url(#p41faf19eb3)" style="fill: #ff7f0e"/>
    </g>
    <g id="text_8">
     <!-- memory traffic -->

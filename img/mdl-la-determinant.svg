@@ -43,27 +43,27 @@ L 137.932584 126.930337
 L 176.764045 36.323596 
 L 73.213483 55.739326 
 z
-" clip-path="url(#p81936673d0)" style="fill: #2e7d3e; opacity: 0.28; stroke: #2e7d3e; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#p81936673d0)" style="fill: #2ca02c; opacity: 0.28; stroke: #2ca02c; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 34.382022 146.346067 
 Q 86.157303 136.638202 135.515038 127.383627 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 129.494946 125.663601 
 L 135.515038 127.383627 
 L 130.526962 131.167685 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_5">
     <path d="M 34.382022 146.346067 
 Q 53.797753 101.042697 72.24457 58.000124 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 67.465016 62.044362 
 L 72.24457 58.000124 
 L 72.612228 64.25031 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- area $=|\det\mathbf{A}|=2.1$ -->
@@ -407,12 +407,12 @@ z
    <g id="patch_6">
     <path d="M 81.853658 135.418831 
 Q 79.32407 109.955609 55.971933 105.362849 
-" clip-path="url(#p81936673d0)" style="fill: none; stroke: #2e7d3e; stroke-width: 1.6; stroke-linecap: round"/>
+" clip-path="url(#p81936673d0)" style="fill: none; stroke: #2ca02c; stroke-width: 1.6; stroke-linecap: round"/>
     <path d="M 60.572449 108.917459 
 L 55.971933 105.362849 
 L 61.57593 103.815202 
 z
-" clip-path="url(#p81936673d0)" style="fill: #2e7d3e; stroke: #2e7d3e; stroke-width: 1.6; stroke-linecap: round"/>
+" clip-path="url(#p81936673d0)" style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 1.6; stroke-linecap: round"/>
    </g>
   </g>
   <g id="axes_2">
@@ -431,27 +431,27 @@ L 241.709663 55.739326
 L 338.788315 23.379775 
 L 312.900674 113.986517 
 z
-" clip-path="url(#pb1e37ceb3f)" style="fill: #b45309; opacity: 0.28; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+" clip-path="url(#pb1e37ceb3f)" style="fill: #ff7f0e; opacity: 0.28; stroke: #ff7f0e; stroke-width: 2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_9">
     <path d="M 215.822022 146.346067 
 Q 228.765843 101.042697 241.033938 58.104362 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 236.803233 62.719677 
 L 241.033938 58.104362 
 L 242.187767 64.258115 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_10">
     <path d="M 215.822022 146.346067 
 Q 264.361348 130.166292 310.567222 114.764334 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 304.369158 113.878897 
 L 310.567222 114.764334 
 L 306.140033 119.191523 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_2">
     <!-- area $=|\det\mathbf{A}|=1.9$ -->
@@ -527,12 +527,12 @@ z
    <g id="patch_11">
     <path d="M 229.727558 104.725917 
 Q 254.049511 105.908185 259.585837 127.779995 
-" clip-path="url(#pb1e37ceb3f)" style="fill: none; stroke: #b45309; stroke-width: 1.6; stroke-linecap: round"/>
+" clip-path="url(#pb1e37ceb3f)" style="fill: none; stroke: #ff7f0e; stroke-width: 1.6; stroke-linecap: round"/>
     <path d="M 260.830331 122.100978 
 L 259.585837 127.779995 
 L 255.78932 123.37699 
 z
-" clip-path="url(#pb1e37ceb3f)" style="fill: #b45309; stroke: #b45309; stroke-width: 1.6; stroke-linecap: round"/>
+" clip-path="url(#pb1e37ceb3f)" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 1.6; stroke-linecap: round"/>
    </g>
   </g>
   <g id="axes_3">
@@ -550,27 +550,27 @@ z
 L 455.509213 68.683146 
 L 494.340674 16.907865 
 L 436.093483 94.570787 
-" clip-path="url(#p2d98c6ebc5)" style="fill: none; stroke: #b45309; stroke-width: 4; stroke-linecap: round"/>
+" clip-path="url(#p2d98c6ebc5)" style="fill: none; stroke: #ff7f0e; stroke-width: 4; stroke-linecap: round"/>
    </g>
    <g id="patch_13">
     <path d="M 397.262022 146.346067 
 Q 426.385618 107.514607 454.033409 70.650886 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 448.433409 73.450886 
 L 454.033409 70.650886 
 L 452.913409 76.810886 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_14">
     <path d="M 397.262022 146.346067 
 Q 416.677753 120.458427 434.617678 96.538526 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 429.017678 99.338526 
 L 434.617678 96.538526 
 L 433.497678 102.698526 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_3">
     <!-- area $=|\det\mathbf{A}|=0$ -->

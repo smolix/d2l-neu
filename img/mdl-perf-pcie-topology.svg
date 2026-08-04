@@ -63,13 +63,13 @@ L 289.6875 67.68
 L 137.98125 142.272 
 L 137.98125 103.968 
 L 226.9125 67.68 
-" clip-path="url(#pd315bc08f5)" style="fill: none; stroke: #b45309; stroke-width: 2.6; stroke-linecap: square"/>
+" clip-path="url(#pd315bc08f5)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_8">
     <path d="M 289.6875 67.68 
 L 378.61875 103.968 
 L 378.61875 142.272 
-" clip-path="url(#pd315bc08f5)" style="fill: none; stroke: #b45309; stroke-width: 2.6; stroke-linecap: square"/>
+" clip-path="url(#pd315bc08f5)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
    <g id="patch_2">
     <path d="M 140.07375 67.428 
@@ -121,7 +121,7 @@ Q 12.692813 187.632 12.692813 190.656
 L 12.692813 237.024 
 Q 12.692813 240.048 15.831563 240.048 
 z
-" clip-path="url(#pd315bc08f5)" style="fill: #d6edfc; stroke: #1565c0; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pd315bc08f5)" style="fill: #e4eff6; stroke: #1f77b4; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 141.381563 240.048 
@@ -134,7 +134,7 @@ Q 138.242813 187.632 138.242813 190.656
 L 138.242813 237.024 
 Q 138.242813 240.048 141.381563 240.048 
 z
-" clip-path="url(#pd315bc08f5)" style="fill: #d6edfc; stroke: #1565c0; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pd315bc08f5)" style="fill: #e4eff6; stroke: #1f77b4; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 277.394063 240.048 
@@ -147,7 +147,7 @@ Q 274.255313 187.632 274.255313 190.656
 L 274.255313 237.024 
 Q 274.255313 240.048 277.394063 240.048 
 z
-" clip-path="url(#pd315bc08f5)" style="fill: #d6edfc; stroke: #1565c0; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pd315bc08f5)" style="fill: #e4eff6; stroke: #1f77b4; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_8">
     <path d="M 402.944062 240.048 
@@ -160,7 +160,7 @@ Q 399.805313 187.632 399.805313 190.656
 L 399.805313 237.024 
 Q 399.805313 240.048 402.944062 240.048 
 z
-" clip-path="url(#pd315bc08f5)" style="fill: #d6edfc; stroke: #1565c0; stroke-width: 1.6; stroke-linejoin: miter"/>
+" clip-path="url(#pd315bc08f5)" style="fill: #e4eff6; stroke: #1f77b4; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- PCIe 4 $\times$16 -->
@@ -366,11 +366,11 @@ z
    <g id="patch_9">
     <path d="M 377.102122 143.572452 
 Q 352.462218 164.700242 330.029039 183.935848 
-" style="fill: none; stroke: #b45309; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: round"/>
     <path d="M 337.404335 182.090581 
 L 330.029039 183.935848 
 L 332.978003 176.928451 
-" style="fill: none; stroke: #b45309; stroke-width: 2.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.6; stroke-linecap: round"/>
    </g>
    <g id="text_2">
     <!-- no P2P, no NVLink: every GPU$\to$GPU byte is staged through host DRAM -->

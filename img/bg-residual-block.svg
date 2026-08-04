@@ -39,7 +39,7 @@ Q 6.48 54.2495 6.48 72.2495
 L 6.48 248.7495 
 Q 6.48 266.7495 24.48 266.7495 
 z
-" clip-path="url(#pecd7ab3a33)" style="fill: #d6edfc"/>
+" clip-path="url(#pecd7ab3a33)" style="fill: #e4eff6"/>
    </g>
    <g id="line2d_1">
     <path d="M 92.48 254.7495 
@@ -1323,7 +1323,7 @@ z
    </g>
    <g id="text_10">
     <!-- body(x) -->
-    <g style="fill: #094f86" transform="translate(277.741719 111.962) scale(0.125 -0.125)">
+    <g style="fill: #1d70a9" transform="translate(277.741719 111.962) scale(0.125 -0.125)">
      <defs>
       <path id="SourceSans3-Bold-5a2" d="M 1306 -1146 
 Q 902 -486 681 224 
@@ -1425,7 +1425,7 @@ z
    </g>
    <g id="text_12">
     <!-- x -->
-    <g style="fill: #094f86" transform="translate(298.329609 127.587) scale(0.125 -0.125)">
+    <g style="fill: #1d70a9" transform="translate(298.329609 127.587) scale(0.125 -0.125)">
      <use xlink:href="#SourceSans3-Bold-33"/>
     </g>
    </g>

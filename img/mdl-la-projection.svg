@@ -31,7 +31,7 @@ z
    <g id="line2d_1">
     <path d="M 26.138182 135.032727 
 L 118.184892 117.773969 
-" clip-path="url(#p08b515975b)" style="fill: none; stroke: #2e7d3e; stroke-width: 5; stroke-linecap: round"/>
+" clip-path="url(#p08b515975b)" style="fill: none; stroke: #2ca02c; stroke-width: 5; stroke-linecap: round"/>
    </g>
    <g id="line2d_2">
     <path d="M 118.184892 117.773969 
@@ -67,26 +67,26 @@ L 29.538182 21.736558
    <g id="patch_4">
     <path d="M 26.138182 135.032727 
 Q 101.890909 120.829091 175.22609 107.078744 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 169.205998 105.358718 
 L 175.22609 107.078744 
 L 170.238014 110.862802 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_5">
     <path d="M 26.138182 135.032727 
 Q 64.014545 82.952727 100.312679 33.042794 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: round"/>
     <path d="M 94.754456 35.924835 
 L 100.312679 33.042794 
 L 99.283378 39.218597 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- $\mathbf{w}$ -->
-    <g style="fill: #b45309" transform="translate(180.010909 122.433455) scale(0.16 -0.16)">
+    <g style="fill: #ff7f0e" transform="translate(180.010909 122.433455) scale(0.16 -0.16)">
      <defs>
       <path id="Cmb10-62" d="M 1356 91 
 L 513 2516 
@@ -128,7 +128,7 @@ z
    </g>
    <g id="text_2">
     <!-- $\mathbf{v}$ -->
-    <g style="fill: #1565c0" transform="translate(91.969455 24.901818) scale(0.16 -0.16)">
+    <g style="fill: #1f77b4" transform="translate(91.969455 24.901818) scale(0.16 -0.16)">
      <defs>
       <path id="Cmb10-25" d="M 1466 91 
 L 544 2516 
@@ -157,7 +157,7 @@ z
    </g>
    <g id="text_3">
     <!-- $\|\mathbf{v}\|\cos\theta$ -->
-    <g style="fill: #2e7d3e" transform="translate(54.561145 116.054774) scale(0.14 -0.14)">
+    <g style="fill: #2ca02c" transform="translate(54.561145 116.054774) scale(0.14 -0.14)">
      <defs>
       <path id="Cmsy10-2c" d="M 850 -1484 
 L 850 4684 
@@ -392,7 +392,7 @@ z
    <g id="line2d_4">
     <path d="M 281.803636 135.032727 
 L 367.635264 102.214752 
-" clip-path="url(#pb5c1b18f74)" style="fill: none; stroke: #2e7d3e; stroke-width: 5; stroke-linecap: round"/>
+" clip-path="url(#pb5c1b18f74)" style="fill: none; stroke: #2ca02c; stroke-width: 5; stroke-linecap: round"/>
    </g>
    <g id="patch_6">
     <path d="M 269.597459 135.032727 
@@ -415,32 +415,32 @@ L 285.203636 21.736558
    <g id="patch_8">
     <path d="M 281.803636 135.032727 
 Q 362.290909 104.258182 440.480718 74.362078 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 434.250043 73.746703 
 L 440.480718 74.362078 
 L 436.250013 78.977393 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_9">
     <path d="M 281.803636 135.032727 
 Q 331.705745 115.952509 379.10153 97.830591 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: round"/>
     <path d="M 372.870855 97.215216 
 L 379.10153 97.830591 
 L 374.870825 102.445906 
 z
-" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: round"/>
+" style="fill: #1f77b4; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: round"/>
    </g>
    <g id="text_5">
     <!-- $\mathbf{w}$ -->
-    <g style="fill: #b45309" transform="translate(445.145455 77.928727) scale(0.16 -0.16)">
+    <g style="fill: #ff7f0e" transform="translate(445.145455 77.928727) scale(0.16 -0.16)">
      <use xlink:href="#Cmb10-62" transform="translate(0 0.609375)"/>
     </g>
    </g>
    <g id="text_6">
     <!-- $\mathbf{v}$ -->
-    <g style="fill: #1565c0" transform="translate(321.784291 105.247055) scale(0.16 -0.16)">
+    <g style="fill: #1f77b4" transform="translate(321.784291 105.247055) scale(0.16 -0.16)">
      <use xlink:href="#Cmb10-25" transform="translate(0 0.609375)"/>
     </g>
    </g>

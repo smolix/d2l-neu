@@ -71,10 +71,19 @@ def main() -> int:
         check(contrast(INK, a.tint) >= 4.5,
               f"INK on {name}.tint: {contrast(INK, a.tint):.2f}")
 
-    print("stroke contrast (>= 3.0:1)")
+    print("stroke contrast (>= 3.0:1; waived accents report only)")
+    # 2026-08-04 palette revision: the corpus uses the original appendix
+    # (matplotlib tab10) bases at Alex's direction.  orange/green/teal sit
+    # below the stroke threshold -- an ACCEPTED trade for the brighter look;
+    # they are reported here but do not fail the check.  Text (dark) rules
+    # above remain fully enforced.
+    WAIVED = {"orange", "green", "teal"}
     for name, a in ACCENTS.items():
-        check(contrast(a.base, PAPER) >= 3.0,
-              f"{name}.base on PAPER: {contrast(a.base, PAPER):.2f}")
+        c = contrast(a.base, PAPER)
+        if name in WAIVED:
+            print(f"  wvd  {name}.base on PAPER: {c:.2f} (waived 2026-08-04)")
+        else:
+            check(c >= 3.0, f"{name}.base on PAPER: {c:.2f}")
 
     print("cycle separability (adjacent CIE76 >= 20)")
     for c1, c2 in zip(CYCLE, CYCLE[1:]):

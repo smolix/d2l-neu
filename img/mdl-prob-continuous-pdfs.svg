@@ -279,7 +279,7 @@ L 285.995058 206.62596
 L 299.502571 206.751951 
 L 330.84 206.783596 
 L 330.84 206.783596 
-" clip-path="url(#pa4dabe222e)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pa4dabe222e)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_8">
     <path d="M 7.2 206.620643 
@@ -364,7 +364,7 @@ L 309.22798 206.363972
 L 328.138497 206.600175 
 L 330.84 206.620643 
 L 330.84 206.620643 
-" clip-path="url(#pa4dabe222e)" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pa4dabe222e)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="patch_3">
     <path d="M 7.2 206.784 
@@ -657,7 +657,7 @@ z
      <path d="M 204.89 44.336 
 L 215.89 44.336 
 L 226.89 44.336 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_7">
      <!-- $\mathcal{N}(0,1)$ -->
@@ -828,7 +828,7 @@ z
      <path d="M 204.89 64.422 
 L 215.89 64.422 
 L 226.89 64.422 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: square"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_8">
      <!-- Laplace, var $1$ -->

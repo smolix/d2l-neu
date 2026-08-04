@@ -38,7 +38,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="me8b88e64dd" d="M 62.971664 -160.723941 
+     <path id="m3c7baa4ea5" d="M 62.971664 -160.723941 
 L 62.971664 -160.722327 
 L 63.210511 -160.722327 
 L 63.449357 -160.722327 
@@ -1041,10 +1041,10 @@ L 63.449357 -160.724593
 L 63.210511 -160.724241 
 L 62.971664 -160.723941 
 z
-" style="stroke: #1565c0; stroke-opacity: 0.3; stroke-width: 2"/>
+" style="stroke: #1f77b4; stroke-opacity: 0.3; stroke-width: 2"/>
     </defs>
     <g clip-path="url(#p99cdbb56d5)">
-     <use xlink:href="#me8b88e64dd" x="0" y="288.186" style="fill: #1565c0; fill-opacity: 0.3; stroke: #1565c0; stroke-opacity: 0.3; stroke-width: 2"/>
+     <use xlink:href="#m3c7baa4ea5" x="0" y="288.186" style="fill: #1f77b4; fill-opacity: 0.3; stroke: #1f77b4; stroke-opacity: 0.3; stroke-width: 2"/>
     </g>
    </g>
    <g id="matplotlib.axis_1"/>
@@ -1135,7 +1135,7 @@ L 174.990582 127.316361
 L 178.095584 127.439428 
 L 182.155971 127.462059 
 L 182.155971 127.462059 
-" clip-path="url(#p99cdbb56d5)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p99cdbb56d5)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="patch_3">
     <path d="M 62.971664 127.463673 
@@ -1488,7 +1488,7 @@ z
    </g>
    <g id="text_2">
     <!-- data $p_0$ -->
-    <g style="fill: #1565c0" transform="translate(105.198818 43.88) scale(0.115 -0.115)">
+    <g style="fill: #1f77b4" transform="translate(105.198818 43.88) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Regular-2f" d="M 1504 -58 
 Q 1005 -58 809 227 
@@ -4867,7 +4867,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_5">
     <defs>
-     <path id="m9ae6747029" d="M 596.917358 -161.014645 
+     <path id="m7359a3330f" d="M 596.917358 -161.014645 
 L 596.917358 -160.722327 
 L 597.156204 -160.722327 
 L 597.39505 -160.722327 
@@ -5870,10 +5870,10 @@ L 597.39505 -161.039443
 L 597.156204 -161.026816 
 L 596.917358 -161.014645 
 z
-" style="stroke: #b45309; stroke-opacity: 0.3; stroke-width: 2"/>
+" style="stroke: #ff7f0e; stroke-opacity: 0.3; stroke-width: 2"/>
     </defs>
     <g clip-path="url(#p28284a5096)">
-     <use xlink:href="#m9ae6747029" x="0" y="288.186" style="fill: #b45309; fill-opacity: 0.3; stroke: #b45309; stroke-opacity: 0.3; stroke-width: 2"/>
+     <use xlink:href="#m7359a3330f" x="0" y="288.186" style="fill: #ff7f0e; fill-opacity: 0.3; stroke: #ff7f0e; stroke-opacity: 0.3; stroke-width: 2"/>
     </g>
    </g>
    <g id="matplotlib.axis_9"/>
@@ -5927,7 +5927,7 @@ L 708.936275 126.538135
 L 712.757816 126.95386 
 L 716.101664 127.171355 
 L 716.101664 127.171355 
-" clip-path="url(#p28284a5096)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p28284a5096)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="patch_11">
     <path d="M 596.917358 127.463673 
@@ -5936,7 +5936,7 @@ L 716.101664 127.463673
    </g>
    <g id="text_3">
     <!-- noise $p_T$ -->
-    <g style="fill: #b45309" transform="translate(636.844511 43.88) scale(0.115 -0.115)">
+    <g style="fill: #ff7f0e" transform="translate(636.844511 43.88) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Regular-20" d="M 1702 2758 
 Q 1510 2758 1328 2665 
@@ -6034,7 +6034,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_6">
     <defs>
-     <path id="mec786fc784" d="M 62.971664 -48.518319 
+     <path id="m42fc8979f0" d="M 62.971664 -48.518319 
 L 62.971664 -48.226 
 L 63.210511 -48.226 
 L 63.449357 -48.226 
@@ -7037,10 +7037,10 @@ L 63.449357 -48.543116
 L 63.210511 -48.53049 
 L 62.971664 -48.518319 
 z
-" style="stroke: #b45309; stroke-opacity: 0.3; stroke-width: 2"/>
+" style="stroke: #ff7f0e; stroke-opacity: 0.3; stroke-width: 2"/>
     </defs>
     <g clip-path="url(#pc030e604f7)">
-     <use xlink:href="#mec786fc784" x="0" y="288.186" style="fill: #b45309; fill-opacity: 0.3; stroke: #b45309; stroke-opacity: 0.3; stroke-width: 2"/>
+     <use xlink:href="#m42fc8979f0" x="0" y="288.186" style="fill: #ff7f0e; fill-opacity: 0.3; stroke: #ff7f0e; stroke-opacity: 0.3; stroke-width: 2"/>
     </g>
    </g>
    <g id="matplotlib.axis_11"/>
@@ -7094,7 +7094,7 @@ L 174.990582 239.034461
 L 178.812123 239.450186 
 L 182.155971 239.667681 
 L 182.155971 239.667681 
-" clip-path="url(#pc030e604f7)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#pc030e604f7)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="patch_13">
     <path d="M 62.971664 239.96 
@@ -7103,7 +7103,7 @@ L 182.155971 239.96
    </g>
    <g id="text_4">
     <!-- reverse -->
-    <g style="fill: #2e7d3e" transform="translate(18.7 218.733515) rotate(-90) scale(0.115 -0.115)">
+    <g style="fill: #2ca02c" transform="translate(18.7 218.733515) rotate(-90) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Regular-31" d="M 1197 0 
 L 77 3110 
@@ -7130,7 +7130,7 @@ z
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(255.890625 0)"/>
     </g>
     <!-- (score) -->
-    <g style="fill: #2e7d3e" transform="translate(33.949 217.469413) rotate(-90) scale(0.115 -0.115)">
+    <g style="fill: #2ca02c" transform="translate(33.949 217.469413) rotate(-90) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Regular-1e" d="M 1760 -77 
 Q 1344 -77 1011 115 
@@ -7168,7 +7168,7 @@ z
    </g>
    <g id="text_5">
     <!-- noise $p_T$ -->
-    <g style="fill: #b45309" transform="translate(102.898818 156.376327) scale(0.115 -0.115)">
+    <g style="fill: #ff7f0e" transform="translate(102.898818 156.376327) scale(0.115 -0.115)">
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(0 0.59375)"/>
      <use xlink:href="#SourceSans3-Regular-2a" transform="translate(54.699951 0.59375)"/>
      <use xlink:href="#SourceSans3-Regular-24" transform="translate(108.899902 0.59375)"/>
@@ -10438,7 +10438,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_10">
     <defs>
-     <path id="mf0f75beb0c" d="M 596.917358 -48.227615 
+     <path id="mb58f25e067" d="M 596.917358 -48.227615 
 L 596.917358 -48.226 
 L 597.156204 -48.226 
 L 597.39505 -48.226 
@@ -11441,10 +11441,10 @@ L 597.39505 -48.228267
 L 597.156204 -48.227915 
 L 596.917358 -48.227615 
 z
-" style="stroke: #1565c0; stroke-opacity: 0.3; stroke-width: 2"/>
+" style="stroke: #1f77b4; stroke-opacity: 0.3; stroke-width: 2"/>
     </defs>
     <g clip-path="url(#p1a02beb598)">
-     <use xlink:href="#mf0f75beb0c" x="0" y="288.186" style="fill: #1565c0; fill-opacity: 0.3; stroke: #1565c0; stroke-opacity: 0.3; stroke-width: 2"/>
+     <use xlink:href="#mb58f25e067" x="0" y="288.186" style="fill: #1f77b4; fill-opacity: 0.3; stroke: #1f77b4; stroke-opacity: 0.3; stroke-width: 2"/>
     </g>
    </g>
    <g id="matplotlib.axis_19"/>
@@ -11535,7 +11535,7 @@ L 708.936275 239.812688
 L 712.041277 239.935755 
 L 716.101664 239.958385 
 L 716.101664 239.958385 
-" clip-path="url(#p1a02beb598)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p1a02beb598)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="patch_21">
     <path d="M 596.917358 239.96 
@@ -11544,7 +11544,7 @@ L 716.101664 239.96
    </g>
    <g id="text_6">
     <!-- data $p_0$ -->
-    <g style="fill: #1565c0" transform="translate(639.144511 156.376327) scale(0.115 -0.115)">
+    <g style="fill: #1f77b4" transform="translate(639.144511 156.376327) scale(0.115 -0.115)">
      <use xlink:href="#SourceSans3-Regular-1f" transform="translate(0 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-1c" transform="translate(55.499954 0.796875)"/>
      <use xlink:href="#SourceSans3-Regular-2f" transform="translate(105.899902 0.796875)"/>
@@ -11595,7 +11595,7 @@ z
   </g>
   <g id="text_8">
    <!-- $\longleftarrow$ denoise with $\nabla\log p_t$ $\longleftarrow$ -->
-   <g style="fill: #2e7d3e" transform="translate(323.626664 277.4) scale(0.11 -0.11)">
+   <g style="fill: #2ca02c" transform="translate(323.626664 277.4) scale(0.11 -0.11)">
     <defs>
      <path id="STIXGeneral-Regular-6a8" d="M 9722 1408 
 L 1549 1408 

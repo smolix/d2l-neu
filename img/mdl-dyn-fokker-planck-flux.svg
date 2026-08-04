@@ -38,7 +38,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="m95ff5dc19d" d="M 56.402625 -57.500033 
+     <path id="m7c657f9573" d="M 56.402625 -57.500033 
 L 56.402625 -57.48 
 L 57.036081 -57.48 
 L 57.669537 -57.48 
@@ -1241,10 +1241,10 @@ L 57.669537 -57.50246
 L 57.036081 -57.501214 
 L 56.402625 -57.500033 
 z
-" style="stroke: #1565c0; stroke-opacity: 0.1; stroke-width: 2"/>
+" style="stroke: #1f77b4; stroke-opacity: 0.1; stroke-width: 2"/>
     </defs>
     <g clip-path="url(#pa80f51e426)">
-     <use xlink:href="#m95ff5dc19d" x="0" y="286.78" style="fill: #1565c0; fill-opacity: 0.1; stroke: #1565c0; stroke-opacity: 0.1; stroke-width: 2"/>
+     <use xlink:href="#m7c657f9573" x="0" y="286.78" style="fill: #1f77b4; fill-opacity: 0.1; stroke: #1f77b4; stroke-opacity: 0.1; stroke-width: 2"/>
     </g>
    </g>
    <g id="matplotlib.axis_1">
@@ -2070,7 +2070,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_2">
     <defs>
-     <path id="m8cae11b83f" d="M 202.09745 -143.896817 
+     <path id="mdf61597c4d" d="M 202.09745 -143.896817 
 L 202.09745 -57.48 
 L 202.730905 -57.48 
 L 203.364361 -57.48 
@@ -2413,10 +2413,10 @@ L 203.364361 -146.569215
 L 202.730905 -145.230846 
 L 202.09745 -143.896817 
 z
-" style="stroke: #b45309; stroke-opacity: 0.22; stroke-width: 2"/>
+" style="stroke: #ff7f0e; stroke-opacity: 0.22; stroke-width: 2"/>
     </defs>
     <g clip-path="url(#pa80f51e426)">
-     <use xlink:href="#m8cae11b83f" x="0" y="286.78" style="fill: #b45309; fill-opacity: 0.22; stroke: #b45309; stroke-opacity: 0.22; stroke-width: 2"/>
+     <use xlink:href="#mdf61597c4d" x="0" y="286.78" style="fill: #ff7f0e; fill-opacity: 0.22; stroke: #ff7f0e; stroke-opacity: 0.22; stroke-width: 2"/>
     </g>
    </g>
    <g id="patch_3">
@@ -2442,26 +2442,26 @@ L 309.362625 7.54
    <g id="patch_5">
     <path d="M 201.854625 106.1 
 Q 215.260083 106.1 225.311439 106.1 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 3; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 3; stroke-linecap: round"/>
     <path d="M 219.711439 103.3 
 L 225.311439 106.1 
 L 219.711439 108.9 
 z
-" style="fill: #2e7d3e; stroke: #2e7d3e; stroke-width: 3; stroke-linecap: round"/>
+" style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 3; stroke-linecap: round"/>
    </g>
    <g id="patch_6">
     <path d="M 309.362625 106.1 
 Q 322.768083 106.1 332.819439 106.1 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 3; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 3; stroke-linecap: round"/>
     <path d="M 327.219439 103.3 
 L 332.819439 106.1 
 L 327.219439 108.9 
 z
-" style="fill: #2e7d3e; stroke: #2e7d3e; stroke-width: 3; stroke-linecap: round"/>
+" style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 3; stroke-linecap: round"/>
    </g>
    <g id="text_17">
     <!-- $j(a)=f\,p(a)$ -->
-    <g style="fill: #2e7d3e" transform="translate(135.305825 109.807) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(135.305825 109.807) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-69" d="M -84 -909 
 Q -84 -753 23 -639 
@@ -2595,7 +2595,7 @@ z
    </g>
    <g id="text_18">
     <!-- $j(b)=f\,p(b)$ -->
-    <g style="fill: #2e7d3e" transform="translate(346.041825 109.807) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(346.041825 109.807) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-69"/>
      <use xlink:href="#Cmr10-77" transform="translate(41.113281 0)"/>
      <use xlink:href="#Cmmi10-4b" transform="translate(79.931641 0)"/>
@@ -2610,7 +2610,7 @@ z
    </g>
    <g id="text_19">
     <!-- mass in $[a,b]$ -->
-    <g style="fill: #b45309" transform="translate(224.788625 202.3755) scale(0.115 -0.115)">
+    <g style="fill: #ff7f0e" transform="translate(224.788625 202.3755) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Regular-28" d="M 525 0 
 L 525 3110 
@@ -3087,7 +3087,7 @@ L 418.105864 228.890243
 L 430.141523 229.137041 
 L 435.842625 229.197101 
 L 435.842625 229.197101 
-" clip-path="url(#pa80f51e426)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pa80f51e426)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
   </g>
  </g>

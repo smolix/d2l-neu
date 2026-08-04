@@ -968,7 +968,7 @@ L 346.562625 63.404753
 L 368.882625 56.943872 
 L 391.202625 56.935098 
 L 413.522625 47.56414 
-" clip-path="url(#pc7925ff986)" style="fill: none; stroke: #1565c0; stroke-opacity: 0.32; stroke-width: 1.7; stroke-linecap: square"/>
+" clip-path="url(#pc7925ff986)" style="fill: none; stroke: #1f77b4; stroke-opacity: 0.32; stroke-width: 1.7; stroke-linecap: square"/>
    </g>
    <g id="line2d_16">
     <path d="M 56.402625 233.966016 
@@ -1208,7 +1208,7 @@ L 410.732625 53.189903
 L 412.127625 53.184793 
 L 413.522625 51.163335 
 L 413.522625 51.163335 
-" clip-path="url(#pc7925ff986)" style="fill: none; stroke: #1565c0; stroke-opacity: 0.62; stroke-width: 1.7; stroke-linecap: square"/>
+" clip-path="url(#pc7925ff986)" style="fill: none; stroke: #1f77b4; stroke-opacity: 0.62; stroke-width: 1.7; stroke-linecap: square"/>
    </g>
    <g id="line2d_18">
     <path d="M 56.402625 233.966016 
@@ -2076,7 +2076,7 @@ L 413.261063 71.938856
 L 413.435438 71.650775 
 L 413.522625 71.643451 
 L 413.522625 71.643451 
-" clip-path="url(#pc7925ff986)" style="fill: none; stroke: #1565c0; stroke-width: 1.7; stroke-linecap: square"/>
+" clip-path="url(#pc7925ff986)" style="fill: none; stroke: #1f77b4; stroke-width: 1.7; stroke-linecap: square"/>
    </g>
    <g id="line2d_20">
     <path d="M 56.402625 233.966016 
@@ -2090,7 +2090,7 @@ L 413.522625 233.168317
    </g>
    <g id="text_16">
     <!-- $\rightarrow t$ -->
-    <g style="fill: #1565c0" transform="translate(417.093825 72.314419) scale(0.115 -0.115)">
+    <g style="fill: #1f77b4" transform="translate(417.093825 72.314419) scale(0.115 -0.115)">
      <defs>
       <path id="Cmsy10-c" d="M 481 1472 
 Q 428 1472 393 1512 
@@ -2281,7 +2281,7 @@ z
      <path d="M 69.452625 71.818016 
 L 83.952625 71.818016 
 L 98.452625 71.818016 
-" style="fill: none; stroke: #1565c0; stroke-opacity: 0.32; stroke-width: 1.7; stroke-linecap: square"/>
+" style="fill: none; stroke: #1f77b4; stroke-opacity: 0.32; stroke-width: 1.7; stroke-linecap: square"/>
     </g>
     <g id="text_19">
      <!-- $\sum(\Delta W_i)^2$, $n=16$ -->
@@ -2918,7 +2918,7 @@ z
      <path d="M 69.452625 127.208016 
 L 83.952625 127.208016 
 L 98.452625 127.208016 
-" style="fill: none; stroke: #1565c0; stroke-opacity: 0.62; stroke-width: 1.7; stroke-linecap: square"/>
+" style="fill: none; stroke: #1f77b4; stroke-opacity: 0.62; stroke-width: 1.7; stroke-linecap: square"/>
     </g>
     <g id="text_21">
      <!-- $\sum(\Delta W_i)^2$, $n=256$ -->
@@ -2998,7 +2998,7 @@ z
      <path d="M 69.452625 154.903016 
 L 83.952625 154.903016 
 L 98.452625 154.903016 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.7; stroke-linecap: square"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.7; stroke-linecap: square"/>
     </g>
     <g id="text_22">
      <!-- $\sum(\Delta W_i)^2$, $n=4096$ -->

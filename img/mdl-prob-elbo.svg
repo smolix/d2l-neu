@@ -492,7 +492,7 @@ L 364.331382 50.988926
 L 369.751325 54.305937 
 L 374.629273 57.525268 
 L 374.629273 57.525268 
-" clip-path="url(#p37ace7ded3)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p37ace7ded3)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_7">
     <path d="M 49.974727 123.267436 
@@ -557,7 +557,7 @@ L 361.079417 197.030752
 L 367.583348 209.058504 
 L 374.629273 222.573187 
 L 374.629273 222.573187 
-" clip-path="url(#p37ace7ded3)" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p37ace7ded3)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_8">
     <path d="M 114.905636 222.573187 
@@ -581,7 +581,7 @@ L 390.862 237.553768
    </g>
    <g id="text_8">
     <!-- $\log p(x;\theta)$ -->
-    <g style="fill: #1565c0" transform="translate(324.742727 18.2) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(324.742727 18.2) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-6a" d="M 197 0 
 L 197 225 
@@ -907,7 +907,7 @@ z
    </g>
    <g id="text_9">
     <!-- ELBO $\mathcal{L}(q,\theta)$ -->
-    <g style="fill: #b45309" transform="translate(312.752727 213.850988) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(312.752727 213.850988) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-6" d="M 576 0 
 L 576 4198 
@@ -1234,19 +1234,19 @@ z
    <g id="patch_5">
     <path d="M 303.205273 105.124091 
 Q 303.205273 69.739852 303.205273 34.355613 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 1.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 1.6; stroke-linecap: round"/>
     <path d="M 306.605273 98.324091 
 L 303.205273 105.124091 
 L 299.805273 98.324091 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 1.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 1.6; stroke-linecap: round"/>
     <path d="M 299.805273 41.155613 
 L 303.205273 34.355613 
 L 306.605273 41.155613 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 1.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 1.6; stroke-linecap: round"/>
    </g>
    <g id="text_12">
     <!-- gap -->
-    <g style="fill: #2e7d3e" transform="translate(312.944909 66.156174) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(312.944909 66.156174) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-22" d="M 1574 -1434 
 Q 1005 -1434 646 -1216 
@@ -1380,7 +1380,7 @@ z
      <use xlink:href="#SourceSans3-Regular-2b" transform="translate(99.21875 0)"/>
     </g>
     <!-- (KL) -->
-    <g style="fill: #2e7d3e" transform="translate(312.944909 80.742174) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(312.944909 80.742174) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-5a2" d="M 1370 -1126 
 Q 973 -480 749 227 

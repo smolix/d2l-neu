@@ -104,7 +104,7 @@ Q 122.48 210.48 122.48 220.48
 L 122.48 234.48
 Q 122.48 244.48 132.48 244.48
 z
-" clip-path="url(#p4886c26371)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p4886c26371)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- Configuration -->
@@ -1097,7 +1097,7 @@ z
    </g>
    <g id="text_9">
     <!-- immutable revision identifier -->
-    <g style="fill: #094f86" transform="translate(162.303203 231.3555) scale(0.115 -0.115)">
+    <g style="fill: #1d70a9" transform="translate(162.303203 231.3555) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-28" d="M 416 0
 L 416 3174

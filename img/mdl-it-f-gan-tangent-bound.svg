@@ -853,7 +853,7 @@ L 410.284813 251.136
    </g>
    <g id="text_16">
     <!-- slope $t$ -->
-    <g style="fill: #b45309" transform="translate(337.185568 92.550223) rotate(-25) scale(0.14 -0.14)">
+    <g style="fill: #ff7f0e" transform="translate(337.185568 92.550223) rotate(-25) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-27" d="M 1082 -58 
 Q 787 -58 656 124 
@@ -949,15 +949,15 @@ z
    <g id="patch_5">
     <path d="M 123.153491 225.213355 
 Q 89.139523 218.053056 56.438421 211.169129 
-" style="fill: none; stroke: #b45309; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 61.34153 215.062653 
 L 56.438421 211.169129 
 L 62.495106 209.582757 
-" style="fill: none; stroke: #b45309; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_17">
     <!-- $-f^*(t) = -e^{\,t-1}$ -->
-    <g style="fill: #b45309" transform="translate(126.969613 241.6244) scale(0.14 -0.14)">
+    <g style="fill: #ff7f0e" transform="translate(126.969613 241.6244) scale(0.14 -0.14)">
      <defs>
       <path id="Cmsy10-11" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -1108,7 +1108,7 @@ z
    </g>
    <g id="text_18">
     <!-- $f$ = sup of its tangents -->
-    <g style="fill: #1565c0" transform="translate(72.211213 41.2592) scale(0.14 -0.14)">
+    <g style="fill: #1f77b4" transform="translate(72.211213 41.2592) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-877" d="M 218 2599 
 L 218 2995 
@@ -1253,7 +1253,7 @@ z
      <use xlink:href="#SourceSans3-Regular-2e" transform="translate(861.476227 0.59375)"/>
     </g>
     <!-- (Fenchel–Young) -->
-    <g style="fill: #1565c0" transform="translate(72.211213 59.8232) scale(0.14 -0.14)">
+    <g style="fill: #1f77b4" transform="translate(72.211213 59.8232) scale(0.14 -0.14)">
      <defs>
       <path id="SourceSans3-Regular-5a2" d="M 1370 -1126 
 Q 973 -480 749 227 
@@ -1383,7 +1383,7 @@ z
    <g id="line2d_18">
     <path d="M 53.164813 210.48 
 L 410.284813 39.058232 
-" clip-path="url(#p928baa3f87)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
+" clip-path="url(#p928baa3f87)" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_19">
     <path d="M 55.545613 152.676944 
@@ -1430,7 +1430,7 @@ L 391.333803 28.908621
 L 407.915936 17.195644 
 L 410.284813 15.500456 
 L 410.284813 15.500456 
-" clip-path="url(#p928baa3f87)" style="fill: none; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: square"/>
+" clip-path="url(#p928baa3f87)" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
    <g id="legend_1">
     <g id="patch_6">
@@ -1450,7 +1450,7 @@ z
      <path d="M 68.857213 75.59092 
 L 78.357213 75.59092 
 L 87.857213 75.59092 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: square"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
     </g>
     <g id="text_19">
      <!-- $f(u) = u\log u$ -->
@@ -1589,7 +1589,7 @@ z
      <path d="M 68.857213 92.93792 
 L 78.357213 92.93792 
 L 87.857213 92.93792 
-" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
     </g>
     <g id="text_20">
      <!-- tangent of slope $t$ -->
@@ -1617,7 +1617,7 @@ L 87.857213 92.93792
    </g>
    <g id="line2d_22">
     <defs>
-     <path id="m4e43718e57" d="M 0 3 
+     <path id="m5d3d54e168" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -1627,15 +1627,15 @@ C -2.683901 -1.55874 -3 -0.795609 -3 0
 C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
 C -1.55874 2.683901 -0.795609 3 0 3 
 z
-" style="stroke: #b45309"/>
+" style="stroke: #ff7f0e"/>
     </defs>
     <g clip-path="url(#p928baa3f87)">
-     <use xlink:href="#m4e43718e57" x="231.724813" y="124.769116" style="fill: #b45309; stroke: #b45309"/>
+     <use xlink:href="#m5d3d54e168" x="231.724813" y="124.769116" style="fill: #ff7f0e; stroke: #ff7f0e"/>
     </g>
    </g>
    <g id="line2d_23">
     <g clip-path="url(#p928baa3f87)">
-     <use xlink:href="#m4e43718e57" x="53.164813" y="210.48" style="fill: #b45309; stroke: #b45309"/>
+     <use xlink:href="#m5d3d54e168" x="53.164813" y="210.48" style="fill: #ff7f0e; stroke: #ff7f0e"/>
     </g>
    </g>
   </g>

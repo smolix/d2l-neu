@@ -1218,7 +1218,7 @@ L 427.358719 46.426444
    </g>
    <g id="text_14">
     <!-- validation -->
-    <g style="fill: #1565c0" transform="translate(238.02918 179.265241) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(238.02918 179.265241) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-31" d="M 1197 0 
 L 77 3110 
@@ -1278,7 +1278,7 @@ z
      <use xlink:href="#SourceSans3-Regular-29" transform="translate(362.296875 0)"/>
     </g>
     <!-- accuracy -->
-    <g style="fill: #1565c0" transform="translate(240.87918 197.484279) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(240.87918 197.484279) scale(0.12 -0.12)">
      <use xlink:href="#SourceSans3-Regular-1c"/>
      <use xlink:href="#SourceSans3-Regular-1e" transform="translate(50.40625 0)"/>
      <use xlink:href="#SourceSans3-Regular-1e" transform="translate(93.90625 0)"/>
@@ -1552,7 +1552,7 @@ L 409.781074 46.993248
 L 418.002876 46.709354 
 L 427.358719 46.554621 
 L 427.358719 46.554621 
-" clip-path="url(#p5765eec8f4)" style="fill: none; stroke: #1565c0; stroke-width: 2.6; stroke-linecap: square"/>
+" clip-path="url(#p5765eec8f4)" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
   </g>
  </g>

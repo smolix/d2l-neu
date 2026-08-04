@@ -42,7 +42,7 @@ z
     <path d="M 189.777429 237.16 
 L 309.04316 -1 
 L 309.04316 -1 
-" clip-path="url(#p7b15c95ea6)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.6"/>
+" clip-path="url(#p7b15c95ea6)" style="fill: none; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.6"/>
    </g>
    <g id="line2d_2">
     <path d="M 274.11 193.019586 
@@ -130,21 +130,21 @@ L 294.618947 24.008777
 L 300.101053 10.761822 
 L 304.790441 -1 
 L 304.790441 -1 
-" clip-path="url(#p7b15c95ea6)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p7b15c95ea6)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="patch_5">
     <path d="M 274.11 193.019586 
 Q 240.909 193.019586 209.944068 193.019586 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 2; stroke-linecap: round"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 2; stroke-linecap: round"/>
     <path d="M 215.144068 195.619586 
 L 209.944068 193.019586 
 L 215.144068 190.419586 
 z
-" style="fill: #2e7d3e; stroke: #2e7d3e; stroke-width: 2; stroke-linecap: round"/>
+" style="fill: #2ca02c; stroke: #2ca02c; stroke-width: 2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- $-\eta f'(x)$ -->
-    <g style="fill: #2e7d3e" transform="translate(221.494 222.372138) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(221.494 222.372138) scale(0.11 -0.11)">
      <defs>
       <path id="Cmsy10-11" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -390,7 +390,7 @@ z
    </g>
    <g id="text_3">
     <!-- $x-\eta f'(x)$ -->
-    <g style="fill: #2e7d3e" transform="translate(153 153.40141) scale(0.11 -0.11)">
+    <g style="fill: #2ca02c" transform="translate(153 153.40141) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-3f" transform="translate(0 0.576391)"/>
      <use xlink:href="#Cmsy10-11" transform="translate(77.080135 0.576391)"/>
      <use xlink:href="#Cmmi10-5" transform="translate(174.765739 0.576391)"/>
@@ -671,7 +671,7 @@ z
    </g>
    <g id="line2d_6">
     <defs>
-     <path id="m3a43423fe2" d="M 0 2.5 
+     <path id="m37bd708bd4" d="M 0 2.5 
 C 0.663008 2.5 1.29895 2.236584 1.767767 1.767767 
 C 2.236584 1.29895 2.5 0.663008 2.5 0 
 C 2.5 -0.663008 2.236584 -1.29895 1.767767 -1.767767 
@@ -681,10 +681,10 @@ C -2.236584 -1.29895 -2.5 -0.663008 -2.5 0
 C -2.5 0.663008 -2.236584 1.29895 -1.767767 1.767767 
 C -1.29895 2.236584 -0.663008 2.5 0 2.5 
 z
-" style="stroke: #2e7d3e"/>
+" style="stroke: #2ca02c"/>
     </defs>
     <g clip-path="url(#p7b15c95ea6)">
-     <use xlink:href="#m3a43423fe2" x="207.708" y="161.575548" style="fill: #2e7d3e; stroke: #2e7d3e"/>
+     <use xlink:href="#m37bd708bd4" x="207.708" y="161.575548" style="fill: #2ca02c; stroke: #2ca02c"/>
     </g>
    </g>
   </g>

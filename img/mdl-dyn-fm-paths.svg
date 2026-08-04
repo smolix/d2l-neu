@@ -677,17 +677,17 @@ z
    <g id="line2d_9">
     <path d="M 63.271982 195.435024 
 L 400.177643 42.096098 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.8"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.8"/>
    </g>
    <g id="line2d_10">
     <path d="M 63.271982 127.28439 
 L 400.177643 212.472683 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.8"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.8"/>
    </g>
    <g id="line2d_11">
     <path d="M 63.271982 59.133756 
 L 400.177643 115.925951 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #b45309; stroke-width: 1.8"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke-dasharray: 6.66,2.88; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 1.8"/>
    </g>
    <g id="patch_3">
     <path d="M 53.164813 243.70839 
@@ -717,7 +717,7 @@ L 190.453869 167.968069
 L 258.677265 185.212429 
 L 400.177643 220.991512 
 L 400.177643 220.991512 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1565c0; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1f77b4; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_13">
     <path d="M 63.271982 186.916195 
@@ -742,7 +742,7 @@ L 214.037265 156.89461
 L 273.83802 172.008244 
 L 400.177643 203.953854 
 L 400.177643 203.953854 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1565c0; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1f77b4; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_14">
     <path d="M 63.271982 135.80322 
@@ -779,7 +779,7 @@ L 310.897643 109.425302
 L 331.111982 112.802451 
 L 400.177643 124.44478 
 L 400.177643 124.44478 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1565c0; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1f77b4; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_15">
     <path d="M 63.271982 118.765561 
@@ -816,7 +816,7 @@ L 336.165567 96.666244
 L 350.484058 99.031261 
 L 400.177643 107.407122 
 L 400.177643 107.407122 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1565c0; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1f77b4; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_16">
     <path d="M 63.271982 67.652585 
@@ -840,7 +840,7 @@ L 335.323303 80.07233
 L 348.799529 73.997456 
 L 400.177643 50.614927 
 L 400.177643 50.614927 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1565c0; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1f77b4; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_17">
     <path d="M 63.271982 50.614927 
@@ -859,11 +859,11 @@ L 308.37085 75.306286
 L 322.689341 68.844075 
 L 400.177643 33.577268 
 L 400.177643 33.577268 
-" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1565c0; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pc43a6618f0)" style="fill: none; stroke: #1f77b4; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="text_11">
     <!-- conditional paths: straight, may cross -->
-    <g style="fill: #b45309" transform="translate(73.379152 25.925829) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(73.379152 25.925829) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-1e" d="M 1760 -77 
 Q 1344 -77 1011 115 
@@ -1166,7 +1166,7 @@ z
    </g>
    <g id="text_12">
     <!-- marginal flow: curved, never crosses -->
-    <g style="fill: #1565c0" transform="translate(223.350004 236.056951) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(223.350004 236.056951) scale(0.11 -0.11)">
      <defs>
       <path id="SourceSans3-Regular-21" d="M 614 0 
 L 614 2682 

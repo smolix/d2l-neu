@@ -39,7 +39,7 @@ Q 11.84256 17.19936 11.84256 20.77056
 L 11.84256 111.12192 
 Q 11.84256 114.69312 15.41376 114.69312 
 z
-" clip-path="url(#p8933855e97)" style="fill: #1565c0; opacity: 0.1; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8933855e97)" style="fill: #1f77b4; opacity: 0.1; stroke: #1f77b4; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 15.41376 114.69312 
@@ -53,7 +53,7 @@ L 11.84256 111.12192
 Q 11.84256 114.69312 15.41376 114.69312 
 L 15.41376 114.69312 
 z
-" clip-path="url(#p8933855e97)" style="fill: none; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8933855e97)" style="fill: none; stroke: #1f77b4; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 386.81856 81.83808 
@@ -66,7 +66,7 @@ Q 383.24736 17.19936 383.24736 20.77056
 L 383.24736 78.26688 
 Q 383.24736 81.83808 386.81856 81.83808 
 z
-" clip-path="url(#p8933855e97)" style="fill: #2e7d3e; opacity: 0.1; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8933855e97)" style="fill: #2ca02c; opacity: 0.1; stroke: #2ca02c; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
     <path d="M 386.81856 81.83808 
@@ -80,7 +80,7 @@ L 383.24736 78.26688
 Q 383.24736 81.83808 386.81856 81.83808 
 L 386.81856 81.83808 
 z
-" clip-path="url(#p8933855e97)" style="fill: none; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8933855e97)" style="fill: none; stroke: #2ca02c; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 201.11616 85.05216 
@@ -93,7 +93,7 @@ Q 197.54496 36.84096 197.54496 40.41216
 L 197.54496 81.48096 
 Q 197.54496 85.05216 201.11616 85.05216 
 z
-" clip-path="url(#p8933855e97)" style="fill: #b45309; opacity: 0.1; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8933855e97)" style="fill: #ff7f0e; opacity: 0.1; stroke: #ff7f0e; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 201.11616 85.05216 
@@ -107,26 +107,26 @@ L 197.54496 81.48096
 Q 197.54496 85.05216 201.11616 85.05216 
 L 201.11616 85.05216 
 z
-" clip-path="url(#p8933855e97)" style="fill: none; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8933855e97)" style="fill: none; stroke: #ff7f0e; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="line2d_1">
     <path d="M 23.2704 40.76928 
 L 155.4048 40.76928 
-" clip-path="url(#p8933855e97)" style="fill: none; stroke: #1565c0; stroke-linecap: square"/>
+" clip-path="url(#p8933855e97)" style="fill: none; stroke: #1f77b4; stroke-linecap: square"/>
    </g>
    <g id="line2d_2">
     <path d="M 394.6752 40.76928 
 L 526.8096 40.76928 
-" clip-path="url(#p8933855e97)" style="fill: none; stroke: #2e7d3e; stroke-linecap: square"/>
+" clip-path="url(#p8933855e97)" style="fill: none; stroke: #2ca02c; stroke-linecap: square"/>
    </g>
    <g id="line2d_3">
     <path d="M 208.9728 60.41088 
 L 341.1072 60.41088 
-" clip-path="url(#p8933855e97)" style="fill: none; stroke: #b45309; stroke-linecap: square"/>
+" clip-path="url(#p8933855e97)" style="fill: none; stroke: #ff7f0e; stroke-linecap: square"/>
    </g>
    <g id="text_1">
     <!-- Module -->
-    <g style="fill: #1565c0" transform="translate(68.950881 35.69666) scale(0.125 -0.125)">
+    <g style="fill: #1f77b4" transform="translate(68.950881 35.69666) scale(0.125 -0.125)">
      <defs>
       <path id="SourceSans3-Bold-e" d="M 493 0 
 L 493 4173 
@@ -915,7 +915,7 @@ z
    </g>
    <g id="text_6">
     <!-- DataModule -->
-    <g style="fill: #2e7d3e" transform="translate(427.642791 35.69666) scale(0.125 -0.125)">
+    <g style="fill: #2ca02c" transform="translate(427.642791 35.69666) scale(0.125 -0.125)">
      <defs>
       <path id="SourceSans3-Bold-5" d="M 493 0 
 L 493 4173 
@@ -1065,7 +1065,7 @@ z
    </g>
    <g id="text_9">
     <!-- Trainer -->
-    <g style="fill: #b45309" transform="translate(255.197227 55.33826) scale(0.125 -0.125)">
+    <g style="fill: #ff7f0e" transform="translate(255.197227 55.33826) scale(0.125 -0.125)">
      <defs>
       <path id="SourceSans3-Bold-15" d="M 1306 0 
 L 1306 3379 

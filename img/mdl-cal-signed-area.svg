@@ -499,7 +499,7 @@ L 58.074592 61.122367
 L 57.747296 61.880534 
 L 57.42 62.644005 
 z
-" clip-path="url(#pfa565af0f2)" style="fill: #1565c0; fill-opacity: 0.25"/>
+" clip-path="url(#pfa565af0f2)" style="fill: #1f77b4; fill-opacity: 0.25"/>
     <path d="M 215.176738 85.920017 
 L 215.176738 86.080104 
 L 215.504034 86.080104 
@@ -939,11 +939,11 @@ L 215.83133 84.910446
 L 215.504034 85.414648 
 L 215.176738 85.920017 
 z
-" clip-path="url(#pfa565af0f2)" style="fill: #1565c0; fill-opacity: 0.25"/>
+" clip-path="url(#pfa565af0f2)" style="fill: #1f77b4; fill-opacity: 0.25"/>
    </g>
    <g id="FillBetweenPolyCollection_2">
     <defs>
-     <path id="m129ce8a0df" d="M 131.716223 -144.293783 
+     <path id="m42f63a5471" d="M 131.716223 -144.293783 
 L 131.716223 -144.535896 
 L 132.043519 -144.535896 
 L 132.370815 -144.535896 
@@ -1459,7 +1459,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#pfa565af0f2)">
-     <use xlink:href="#m129ce8a0df" x="0" y="230.616" style="fill: #b45309; fill-opacity: 0.3"/>
+     <use xlink:href="#m42f63a5471" x="0" y="230.616" style="fill: #ff7f0e; fill-opacity: 0.3"/>
     </g>
    </g>
    <g id="matplotlib.axis_1"/>
@@ -1486,7 +1486,7 @@ L 397.8 223.416
    </g>
    <g id="text_1">
     <!-- $+$ -->
-    <g style="fill: #1565c0" transform="translate(84.27 62.134358) scale(0.17 -0.17)">
+    <g style="fill: #1f77b4" transform="translate(84.27 62.134358) scale(0.17 -0.17)">
      <defs>
       <path id="Cmr10-4c" d="M 481 1472 
 Q 428 1472 393 1512 
@@ -1521,7 +1521,7 @@ z
    </g>
    <g id="text_2">
     <!-- $-$ -->
-    <g style="fill: #b45309" transform="translate(169.83 107.208704) scale(0.17 -0.17)">
+    <g style="fill: #ff7f0e" transform="translate(169.83 107.208704) scale(0.17 -0.17)">
      <defs>
       <path id="Cmsy10-11" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -1542,7 +1542,7 @@ z
    </g>
    <g id="text_3">
     <!-- $+$ -->
-    <g style="fill: #1565c0" transform="translate(251.67 70.585798) scale(0.17 -0.17)">
+    <g style="fill: #1f77b4" transform="translate(251.67 70.585798) scale(0.17 -0.17)">
      <use xlink:href="#Cmr10-4c" transform="translate(0 0.703125)"/>
     </g>
    </g>
@@ -1775,16 +1775,16 @@ z
    <g id="patch_6">
     <path d="M 286.2 193.131674 
 Q 171.81 193.131674 59.208854 193.131674 
-" style="fill: none; stroke: #b45309; stroke-width: 1.6; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.6; stroke-linecap: round"/>
     <path d="M 64.008854 195.531674 
 L 59.208854 193.131674 
 L 64.008854 190.731674 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 1.6; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 1.6; stroke-linecap: round"/>
    </g>
    <g id="text_7">
     <!-- $\int_b^a f = -\int_a^b f$ -->
-    <g style="fill: #b45309" transform="translate(291.78 198.906674) scale(0.11 -0.11)">
+    <g style="fill: #ff7f0e" transform="translate(291.78 198.906674) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-29" d="M 481 850 
 Q 428 850 393 890 
@@ -1916,7 +1916,7 @@ L 288.978026 74.665418
 L 305.837768 94.386862 
 L 308.52 97.222827 
 L 308.52 97.222827 
-" clip-path="url(#pfa565af0f2)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pfa565af0f2)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_5">
     <defs>

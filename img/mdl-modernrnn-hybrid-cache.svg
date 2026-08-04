@@ -1030,7 +1030,7 @@ z
     <path d="M 71.011125 192 
 L 393.885354 44.16 
 L 393.885354 44.16 
-" clip-path="url(#pf11b626902)" style="fill: none; stroke: #b45309; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pf11b626902)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_20">
     <path d="M 71.011125 207.339786 
@@ -1056,13 +1056,13 @@ L 337.098429 124.652482
 L 369.5481 110.195745 
 L 393.885354 99.237963 
 L 393.885354 99.237963 
-" clip-path="url(#pf11b626902)" style="fill: none; stroke: #2e7d3e; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pf11b626902)" style="fill: none; stroke: #2ca02c; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_21">
     <path d="M 71.011125 210.48 
 L 393.885354 210.48 
 L 393.885354 210.48 
-" clip-path="url(#pf11b626902)" style="fill: none; stroke: #1f7d74; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pf11b626902)" style="fill: none; stroke: #17becf; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="patch_3">
     <path d="M 71.011125 228.96 
@@ -1108,7 +1108,7 @@ L 461.611125 228.96
      <path d="M 81.811125 25.8 
 L 93.811125 25.8 
 L 105.811125 25.8 
-" style="fill: none; stroke: #b45309; stroke-width: 2.4; stroke-linecap: square"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.4; stroke-linecap: square"/>
     </g>
     <g id="text_15">
      <!-- pure transformer (32 attention layers) -->
@@ -1253,7 +1253,7 @@ z
      <path d="M 81.811125 47.712 
 L 93.811125 47.712 
 L 105.811125 47.712 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 2.4; stroke-linecap: square"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 2.4; stroke-linecap: square"/>
     </g>
     <g id="text_16">
      <!-- hybrid (4 attention + 28 recurrent) -->
@@ -1395,7 +1395,7 @@ z
      <path d="M 81.811125 69.624 
 L 93.811125 69.624 
 L 105.811125 69.624 
-" style="fill: none; stroke: #1f7d74; stroke-width: 2.4; stroke-linecap: square"/>
+" style="fill: none; stroke: #17becf; stroke-width: 2.4; stroke-linecap: square"/>
     </g>
     <g id="text_17">
      <!-- pure recurrent (32 fixed states) -->

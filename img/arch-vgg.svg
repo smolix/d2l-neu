@@ -65,7 +65,7 @@ Q 459.48 817.286905 459.48 829.286905
 L 459.48 886.286905 
 Q 459.48 898.286905 471.48 898.286905 
 z
-" clip-path="url(#pe33831d066)" style="fill: #d6edfc"/>
+" clip-path="url(#pe33831d066)" style="fill: #e4eff6"/>
    </g>
    <g id="patch_5">
     <path d="M 471.48 803.286905 
@@ -78,7 +78,7 @@ Q 459.48 722.286905 459.48 734.286905
 L 459.48 791.286905 
 Q 459.48 803.286905 471.48 803.286905 
 z
-" clip-path="url(#pe33831d066)" style="fill: #d6edfc"/>
+" clip-path="url(#pe33831d066)" style="fill: #e4eff6"/>
    </g>
    <g id="patch_6">
     <path d="M 471.48 708.286905 
@@ -91,7 +91,7 @@ Q 459.48 586.286905 459.48 598.286905
 L 459.48 696.286905 
 Q 459.48 708.286905 471.48 708.286905 
 z
-" clip-path="url(#pe33831d066)" style="fill: #d6edfc"/>
+" clip-path="url(#pe33831d066)" style="fill: #e4eff6"/>
    </g>
    <g id="patch_7">
     <path d="M 471.48 572.286905 
@@ -104,7 +104,7 @@ Q 459.48 450.286905 459.48 462.286905
 L 459.48 560.286905 
 Q 459.48 572.286905 471.48 572.286905 
 z
-" clip-path="url(#pe33831d066)" style="fill: #d6edfc"/>
+" clip-path="url(#pe33831d066)" style="fill: #e4eff6"/>
    </g>
    <g id="patch_8">
     <path d="M 471.48 436.286905 
@@ -117,7 +117,7 @@ Q 459.48 314.286905 459.48 326.286905
 L 459.48 424.286905 
 Q 459.48 436.286905 471.48 436.286905 
 z
-" clip-path="url(#pe33831d066)" style="fill: #d6edfc"/>
+" clip-path="url(#pe33831d066)" style="fill: #e4eff6"/>
    </g>
    <g id="patch_9">
     <path d="M 156.48 872.286905 
@@ -2007,7 +2007,7 @@ z
    </g>
    <g id="text_15">
     <!-- 3×3 -->
-    <g style="fill: #8fc7f5" transform="translate(500.91125 882.162405) scale(0.115 -0.115)">
+    <g style="fill: #aec7e8" transform="translate(500.91125 882.162405) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-538" d="M 1555 -77 
 Q 1062 -77 713 83 
@@ -3498,7 +3498,7 @@ z
    </g>
    <g id="text_41">
     <!-- block -->
-    <g style="fill: #094f86" transform="translate(731.896016 659.311905) scale(0.125 -0.125)">
+    <g style="fill: #1d70a9" transform="translate(731.896016 659.311905) scale(0.125 -0.125)">
      <defs>
       <path id="SourceSans3-Bold-1d" d="M 2080 -77 
 Q 1869 -77 1654 28 
@@ -3754,7 +3754,7 @@ z
    </g>
    <g id="text_44">
     <!-- 3×3 -->
-    <g style="fill: #094f86" transform="translate(784.530781 548.686905) scale(0.125 -0.125)">
+    <g style="fill: #1d70a9" transform="translate(784.530781 548.686905) scale(0.125 -0.125)">
      <use xlink:href="#SourceSans3-Bold-538"/>
      <use xlink:href="#SourceSans3-Bold-874" transform="translate(52.796875 0)"/>
      <use xlink:href="#SourceSans3-Bold-538" transform="translate(105.59375 0)"/>
@@ -4037,7 +4037,7 @@ z
    </g>
    <g id="text_49">
     <!-- 8 -->
-    <g style="fill: #094f86" transform="translate(70.864766 229.124405) scale(0.125 -0.125)">
+    <g style="fill: #1d70a9" transform="translate(70.864766 229.124405) scale(0.125 -0.125)">
      <defs>
       <path id="SourceSans3-Bold-53d" d="M 1683 -77 
 Q 1280 -77 960 64 
@@ -4200,7 +4200,7 @@ z
    </g>
    <g id="text_51">
     <!-- 5 -->
-    <g style="fill: #b45309" transform="translate(212.962422 229.124405) scale(0.125 -0.125)">
+    <g style="fill: #ff7f0e" transform="translate(212.962422 229.124405) scale(0.125 -0.125)">
      <use xlink:href="#SourceSans3-Bold-53a"/>
     </g>
    </g>

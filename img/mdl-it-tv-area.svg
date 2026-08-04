@@ -38,7 +38,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="me41b3c9879" d="M 56.402625 -93.13728 
+     <path id="m3de720d204" d="M 56.402625 -93.13728 
 L 56.402625 -93.365389 
 L 56.719089 -93.37149 
 L 57.035552 -93.377741 
@@ -2444,7 +2444,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#pb3fa4b8e13)">
-     <use xlink:href="#me41b3c9879" x="0" y="317.428763" style="fill: #b45309; fill-opacity: 0.3"/>
+     <use xlink:href="#m3de720d204" x="0" y="317.428763" style="fill: #ff7f0e; fill-opacity: 0.3"/>
     </g>
    </g>
    <g id="matplotlib.axis_1">
@@ -3122,7 +3122,7 @@ L 373.182808 224.158448
 L 392.487095 224.268996 
 L 435.842625 224.291283 
 L 435.842625 224.291283 
-" clip-path="url(#pb3fa4b8e13)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pb3fa4b8e13)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_14">
     <path d="M 56.402625 224.291483 
@@ -3211,12 +3211,12 @@ L 423.817004 223.719971
 L 431.095669 224.018802 
 L 435.842625 224.127179 
 L 435.842625 224.127179 
-" clip-path="url(#pb3fa4b8e13)" style="fill: none; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pb3fa4b8e13)" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_15">
     <path d="M 56.402625 276.183323 
 L 260.838188 276.183323 
-" style="fill: none; stroke: #1565c0; stroke-width: 4"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 4"/>
    </g>
    <g id="line2d_16">
     <path d="M 260.838188 224.291483 
@@ -3235,7 +3235,7 @@ L 435.842625 224.291483
    </g>
    <g id="text_15">
     <!-- $A^\star = \{p &gt; q\}$ -->
-    <g style="fill: #1565c0" transform="translate(124.410406 306.642763) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(124.410406 306.642763) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-5c" d="M 288 0 
 Q 225 0 225 84 
@@ -3512,11 +3512,11 @@ z
    <g id="patch_5">
     <path d="M 144.119017 25.002618 
 Q 170.26456 97.148931 236.746967 135.038844 
-" style="fill: none; stroke: #b45309; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 234.137805 131.134709 
 L 236.746967 135.038844 
 L 232.058162 134.783693 
-" style="fill: none; stroke: #b45309; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_16">
     <!-- $\mathrm{TV}(P, Q) = \frac{1}{2} \times$ shaded area -->
@@ -3959,7 +3959,7 @@ z
      <path d="M 340.462625 22.800483 
 L 349.962625 22.800483 
 L 359.462625 22.800483 
-" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_17">
      <!-- $p$:  $\mathcal{N}(-1,\, 1)$ -->
@@ -4076,7 +4076,7 @@ z
      <path d="M 340.462625 40.147483 
 L 349.962625 40.147483 
 L 359.462625 40.147483 
-" style="fill: none; stroke: #2e7d3e; stroke-width: 2.2; stroke-linecap: square"/>
+" style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_18">
      <!-- $q$:  $\mathcal{N}(1.2,\, 0.8^2)$ -->

@@ -52,7 +52,7 @@ Q 179.793474 185.7168 179.793474 188.984842
 L 179.793474 209.410105 
 Q 179.793474 212.678147 183.061516 212.678147 
 z
-" clip-path="url(#p820b91ac9d)" style="fill: #1565c0; opacity: 0.25; stroke: #000000; stroke-width: 0.9; stroke-linejoin: miter"/>
+" clip-path="url(#p820b91ac9d)" style="fill: #1f77b4; opacity: 0.25; stroke: #000000; stroke-width: 0.9; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 31.710316 128.934568 
@@ -155,7 +155,7 @@ Q 267.417853 89.718063 267.417853 92.986105
 L 267.417853 125.666526 
 Q 267.417853 128.934568 270.685895 128.934568 
 z
-" clip-path="url(#p820b91ac9d)" style="fill: #b45309; opacity: 0.75; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p820b91ac9d)" style="fill: #ff7f0e; opacity: 0.75; stroke: #000000; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_10">
     <path d="M 318.481011 128.934568 
@@ -1285,12 +1285,12 @@ z
    <g id="patch_13">
     <path d="M 215.333432 184.491284 
 Q 251.179768 157.529937 285.060383 132.047081 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 279.34181 133.094894 
 L 285.060383 132.047081 
 L 282.46749 137.250628 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_11">
     <g id="patch_14">
@@ -1515,12 +1515,12 @@ z
    <g id="patch_15">
     <path d="M 287.026105 88.084042 
 Q 287.026105 70.722568 287.026105 55.82077 
-" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 284.426105 61.02077 
 L 287.026105 55.82077 
 L 289.626105 61.02077 
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="text_14">
     <!-- $\mathbf{y} = p_{6}\,\mathrm{FFN}_{6}(\mathbf{x})$ -->

@@ -38,7 +38,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="m03494cd4fc" d="M 98.238094 -139.417792 
+     <path id="mf4b74fc60b" d="M 98.238094 -139.417792 
 L 98.238094 -30.938 
 L 98.602246 -30.938 
 L 98.966399 -30.938 
@@ -441,10 +441,10 @@ L 98.966399 -135.124102
 L 98.602246 -137.268874 
 L 98.238094 -139.417792 
 z
-" style="stroke: #1565c0; stroke-opacity: 0.32; stroke-width: 2"/>
+" style="stroke: #1f77b4; stroke-opacity: 0.32; stroke-width: 2"/>
     </defs>
     <g clip-path="url(#p366a459c48)">
-     <use xlink:href="#m03494cd4fc" x="0" y="226.634" style="fill: #1565c0; fill-opacity: 0.32; stroke: #1565c0; stroke-opacity: 0.32; stroke-width: 2"/>
+     <use xlink:href="#mf4b74fc60b" x="0" y="226.634" style="fill: #1f77b4; fill-opacity: 0.32; stroke: #1f77b4; stroke-opacity: 0.32; stroke-width: 2"/>
     </g>
    </g>
    <g id="matplotlib.axis_1">
@@ -672,7 +672,7 @@ L 210.032873 195.390083
 L 215.859311 195.590416 
 L 225.327273 195.680945 
 L 225.327273 195.680945 
-" clip-path="url(#p366a459c48)" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#p366a459c48)" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="patch_3">
     <path d="M 7.2 195.696 
@@ -856,7 +856,7 @@ L 464.502553 16.276168
 L 476.519581 16.185782 
 L 487.08 16.176 
 L 487.08 16.176 
-" clip-path="url(#pbad2096608)" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: square"/>
+" clip-path="url(#pbad2096608)" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_9">
     <path d="M 359.839091 195.696 
@@ -881,19 +881,19 @@ L 487.08 195.696
    <g id="patch_8">
     <path d="M 439.819091 70.731045 
 Q 439.819091 47.921244 439.819091 25.111444 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.3; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.3; stroke-linecap: round"/>
     <path d="M 443.219091 63.931045 
 L 439.819091 70.731045 
 L 436.419091 63.931045 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.3; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.3; stroke-linecap: round"/>
     <path d="M 436.419091 31.911444 
 L 439.819091 25.111444 
 L 443.219091 31.911444 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.3; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.3; stroke-linecap: round"/>
    </g>
    <g id="text_7">
     <!-- $F(b)-F(a)$ -->
-    <g style="fill: #1565c0" transform="translate(443.454545 51.626125) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(443.454545 51.626125) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-42" d="M 300 0 
 Q 238 0 238 84 

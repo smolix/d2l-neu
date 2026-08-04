@@ -34,7 +34,7 @@ L 142.472727 169.32
 L 142.472727 84.122575 
 L 115.418182 84.122575 
 z
-" clip-path="url(#pda3e5ae740)" style="fill: #1565c0; opacity: 0.26; stroke: #1565c0; stroke-width: 1.5; stroke-linejoin: miter"/>
+" clip-path="url(#pda3e5ae740)" style="fill: #1f77b4; opacity: 0.26; stroke: #1f77b4; stroke-width: 1.5; stroke-linejoin: miter"/>
    </g>
    <g id="line2d_1">
     <path d="M 44.4 99.85934 
@@ -91,11 +91,11 @@ L 244.257826 105.784421
 L 246.800547 106.998351 
 L 247.309091 107.214612 
 L 247.309091 107.214612 
-" clip-path="url(#pda3e5ae740)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pda3e5ae740)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="text_1">
     <!-- $f(u(x))$ -->
-    <g style="fill: #1565c0" transform="translate(70.374545 130.765287) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(70.374545 130.765287) scale(0.12 -0.12)">
      <defs>
       <path id="Cmmi10-57" d="M 622 -1056 
 Q 741 -1147 909 -1147 
@@ -387,15 +387,15 @@ z
    <g id="patch_5">
     <path d="M 115.418182 87.351827 
 Q 115.418182 126.721898 115.418182 166.091968 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
     <path d="M 112.018182 94.151827 
 L 115.418182 87.351827 
 L 118.818182 94.151827 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
     <path d="M 118.818182 159.291968 
 L 115.418182 166.091968 
 L 112.018182 159.291968 
-" style="fill: none; stroke: #1565c0; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
   </g>
   <g id="axes_2">
@@ -405,7 +405,7 @@ L 402.280909 169.32
 L 402.280909 84.122575 
 L 373.873636 84.122575 
 z
-" clip-path="url(#pa99659e828)" style="fill: #b45309; opacity: 0.3; stroke: #b45309; stroke-width: 1.5; stroke-linejoin: miter"/>
+" clip-path="url(#pa99659e828)" style="fill: #ff7f0e; opacity: 0.3; stroke: #ff7f0e; stroke-width: 1.5; stroke-linejoin: miter"/>
    </g>
    <g id="line2d_2">
     <path d="M 336.589091 99.85934 
@@ -443,11 +443,11 @@ L 525.258947 58.173645
 L 533.395653 62.882779 
 L 539.498182 66.526812 
 L 539.498182 66.526812 
-" clip-path="url(#pa99659e828)" style="fill: none; stroke: #1565c0; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#pa99659e828)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="text_3">
     <!-- $f(y)$ -->
-    <g style="fill: #b45309" transform="translate(345.99 130.765287) scale(0.12 -0.12)">
+    <g style="fill: #ff7f0e" transform="translate(345.99 130.765287) scale(0.12 -0.12)">
      <defs>
       <path id="Cmmi10-72" d="M 538 -916 
 Q 672 -1147 1006 -1147 
@@ -564,15 +564,15 @@ z
    <g id="patch_9">
     <path d="M 373.873636 87.351827 
 Q 373.873636 126.721898 373.873636 166.091968 
-" style="fill: none; stroke: #b45309; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.1; stroke-linecap: round"/>
     <path d="M 370.473636 94.151827 
 L 373.873636 87.351827 
 L 377.273636 94.151827 
-" style="fill: none; stroke: #b45309; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.1; stroke-linecap: round"/>
     <path d="M 377.273636 159.291968 
 L 373.873636 166.091968 
 L 370.473636 159.291968 
-" style="fill: none; stroke: #b45309; stroke-width: 1.1; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
   </g>
   <g id="patch_10">

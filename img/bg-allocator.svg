@@ -66,7 +66,7 @@ Q 66.364657 54.371821 66.364657 59.968478
 L 66.364657 210.278687 
 Q 66.364657 215.875343 71.961313 215.875343 
 z
-" clip-path="url(#pac143103ed)" style="fill: #1565c0; opacity: 0.08; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#pac143103ed)" style="fill: #1f77b4; opacity: 0.08; stroke: #1f77b4; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
     <path d="M 71.961313 215.875343 
@@ -80,7 +80,7 @@ L 66.364657 210.278687
 Q 66.364657 215.875343 71.961313 215.875343 
 L 71.961313 215.875343 
 z
-" clip-path="url(#pac143103ed)" style="fill: none; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#pac143103ed)" style="fill: none; stroke: #1f77b4; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 127.927881 185.893254 
@@ -93,7 +93,7 @@ Q 122.331224 80.356299 122.331224 85.952955
 L 122.331224 180.296597 
 Q 122.331224 185.893254 127.927881 185.893254 
 z
-" clip-path="url(#pac143103ed)" style="fill: #2e7d3e; opacity: 0.14; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#pac143103ed)" style="fill: #2ca02c; opacity: 0.14; stroke: #2ca02c; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 127.927881 185.893254 
@@ -107,7 +107,7 @@ L 122.331224 180.296597
 Q 122.331224 185.893254 127.927881 185.893254 
 L 127.927881 185.893254 
 z
-" clip-path="url(#pac143103ed)" style="fill: none; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#pac143103ed)" style="fill: none; stroke: #2ca02c; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="line2d_1">
     <path d="M 309.019701 171.10209 
@@ -546,7 +546,7 @@ z
    </g>
    <g id="text_2">
     <!-- memory_reserved(): PyTorch cache -->
-    <g style="fill: #1565c0" transform="translate(118.68841 73.206985) scale(0.12 -0.12)">
+    <g style="fill: #1f77b4" transform="translate(118.68841 73.206985) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-28" d="M 525 0 
 L 525 3110 
@@ -952,7 +952,7 @@ z
    </g>
    <g id="text_3">
     <!-- memory_allocated(): -->
-    <g style="fill: #2e7d3e" transform="translate(154.53841 101.190269) scale(0.12 -0.12)">
+    <g style="fill: #2ca02c" transform="translate(154.53841 101.190269) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-27" d="M 1082 -58 
 Q 787 -58 656 124 
@@ -1015,7 +1015,7 @@ z
    </g>
    <g id="text_4">
     <!-- live tensors -->
-    <g style="fill: #2e7d3e" transform="translate(178.581535 116.381194) scale(0.12 -0.12)">
+    <g style="fill: #2ca02c" transform="translate(178.581535 116.381194) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-24" d="M 525 0 
 L 525 3110 

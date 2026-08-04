@@ -65,16 +65,22 @@ class Accent:
 # temperature and saturation logic to the roles the corpus already uses.      #
 # --------------------------------------------------------------------------- #
 
-# Bases sit at >= 5:1 against white (was >= 3:1) after the 2026-08-03 review:
-# figures must stay readable on mobile, where they render at ~50-70% scale.
-BLUE = Accent(tint="#D6EDFC", base="#1565C0", dark="#094F86")     # primary
-# (blue.tint is one step lighter than the gallery's original #CDE8FA so that
-#  blue text clears 4.5:1 on it; visually indistinguishable as a wash.)
-ORANGE = Accent(tint="#FBE8D3", base="#B45309", dark="#7F3B06")   # contrast
-GREEN = Accent(tint="#DDF0DD", base="#2E7D3E", dark="#1F5C2C")    # go/output
-PURPLE = Accent(tint="#EDE9F8", base="#6C51B4", dark="#503B8C")   # memory
-RED = Accent(tint="#FBE7E4", base="#C03B2F", dark="#93261C")      # loss/grad
-TEAL = Accent(tint="#DEF1EF", base="#1F7D74", dark="#145A53")     # state
+# PALETTE REVISION 2026-08-04 (Alex): the corpus moves to the ORIGINAL
+# appendix palette (the matplotlib tab10 hues the pre-restyle mdl-* figures
+# used) — "brighter and more cheerful", applied book-wide for consistency.
+# Bases are tab10 verbatim; tints are a 12% wash of each base over white
+# (matching the old alpha-fill look); darks are the same hue darkened just
+# until colored TEXT clears 4.5:1 on white and on its own tint.
+# CONTRAST WAIVER (recorded deliberately): the orange (2.5:1), green
+# (3.4:1), and teal (2.3:1) bases sit below the 2026-08-03 mobile rule of
+# >= 4.3:1 against white for line work; Alex accepted the trade for the
+# brighter look.  Text remains fully compliant via the dark variants.
+BLUE = Accent(tint="#E4EFF6", base="#1F77B4", dark="#1D70A9")     # primary
+ORANGE = Accent(tint="#FFF0E2", base="#FF7F0E", dark="#AD560A")   # contrast
+GREEN = Accent(tint="#E6F4E6", base="#2CA02C", dark="#227D22")    # go/output
+PURPLE = Accent(tint="#F2EDF7", base="#9467BD", dark="#825BA6")   # memory
+RED = Accent(tint="#FAE5E5", base="#D62728", dark="#C92526")      # loss/grad
+TEAL = Accent(tint="#E3F7F9", base="#17BECF", dark="#0F7A84")     # state
 GOLD = Accent(tint="#FBF2D4", base="#9A7212", dark="#6E5108")     # highlight
 SLATE = Accent(tint=PANEL, base=MUTED, dark=INK)                  # neutral
 

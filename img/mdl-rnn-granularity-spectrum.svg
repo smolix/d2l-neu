@@ -1233,7 +1233,7 @@ z
    </g>
    <g id="FillBetweenPolyCollection_1">
     <defs>
-     <path id="m8dd62b4802" d="M 98.502746 -151.158272 
+     <path id="m62dddc8490" d="M 98.502746 -151.158272 
 L 98.502746 -127.815114 
 L 99.230019 -126.81755 
 L 99.957292 -125.8583 
@@ -1831,7 +1831,7 @@ z
 "/>
     </defs>
     <g clip-path="url(#pb50d88b97d)">
-     <use xlink:href="#m8dd62b4802" x="0" y="279.81" style="fill: #1565c0; fill-opacity: 0.15"/>
+     <use xlink:href="#m62dddc8490" x="0" y="279.81" style="fill: #1f77b4; fill-opacity: 0.15"/>
     </g>
    </g>
    <g id="patch_3">
@@ -1882,7 +1882,7 @@ L 308.684587 191.335589
 L 338.502772 191.789345 
 L 363.230047 192 
 L 363.230047 192 
-" clip-path="url(#pb50d88b97d)" style="fill: none; stroke: #1565c0; stroke-width: 2.5; stroke-linecap: square"/>
+" clip-path="url(#pb50d88b97d)" style="fill: none; stroke: #1f77b4; stroke-width: 2.5; stroke-linecap: square"/>
    </g>
    <g id="text_13">
     <!-- bytes (vocab 256) -->
@@ -2369,7 +2369,7 @@ z
    </g>
    <g id="line2d_45">
     <defs>
-     <path id="mbe4cc9c956" d="M 0 4 
+     <path id="mdae62ac81e" d="M 0 4 
 C 1.060812 4 2.078319 3.578535 2.828427 2.828427 
 C 3.578535 2.078319 4 1.060812 4 0 
 C 4 -1.060812 3.578535 -2.078319 2.828427 -2.828427 
@@ -2379,23 +2379,23 @@ C -3.578535 -2.078319 -4 -1.060812 -4 0
 C -4 1.060812 -3.578535 2.078319 -2.828427 2.828427 
 C -2.078319 3.578535 -1.060812 4 0 4 
 z
-" style="stroke: #1565c0"/>
+" style="stroke: #1f77b4"/>
     </defs>
     <g clip-path="url(#pb50d88b97d)">
-     <use xlink:href="#mbe4cc9c956" x="73.048198" y="34.433684" style="fill: #1565c0; stroke: #1565c0"/>
+     <use xlink:href="#mdae62ac81e" x="73.048198" y="34.433684" style="fill: #1f77b4; stroke: #1f77b4"/>
     </g>
    </g>
    <g id="line2d_46">
     <defs>
-     <path id="m6512929a49" d="M -4 4 
+     <path id="mde1770fa5b" d="M -4 4 
 L 4 4 
 L 4 -4 
 L -4 -4 
 z
-" style="stroke: #b45309; stroke-linejoin: miter"/>
+" style="stroke: #ff7f0e; stroke-linejoin: miter"/>
     </defs>
     <g clip-path="url(#pb50d88b97d)">
-     <use xlink:href="#m6512929a49" x="363.230047" y="192" style="fill: #b45309; stroke: #b45309; stroke-linejoin: miter"/>
+     <use xlink:href="#mde1770fa5b" x="363.230047" y="192" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-linejoin: miter"/>
     </g>
    </g>
   </g>

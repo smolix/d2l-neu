@@ -39,7 +39,7 @@ Q 6.48 6.48 6.48 16.48
 L 6.48 66.48
 Q 6.48 76.48 16.48 76.48
 z
-" clip-path="url(#p9ae6955671)" style="fill: #d6edfc; stroke: #094f86; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p9ae6955671)" style="fill: #e4eff6; stroke: #1d70a9; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 366.48 76.48
@@ -65,7 +65,7 @@ Q 150.48 130.48 150.48 140.48
 L 150.48 168.48
 Q 150.48 178.48 160.48 178.48
 z
-" clip-path="url(#p9ae6955671)" style="fill: #fbe8d3; stroke: #b45309; stroke-width: 1.2; stroke-linejoin: miter"/>
+" clip-path="url(#p9ae6955671)" style="fill: #fff0e2; stroke: #ff7f0e; stroke-width: 1.2; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
     <path d="M 194.48 31.48
@@ -80,26 +80,26 @@ z
    <g id="patch_6">
     <path d="M 356.48 57.48
 Q 275.48 57.48 195.821641 57.48
-" style="fill: none; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 200.221641 59.68
 L 195.821641 57.48
 L 200.221641 55.28
 z
-" style="fill: #094f86; stroke: #094f86; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #1d70a9; stroke: #1d70a9; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_7">
     <path d="M 395.48 130.48
 Q 395.48 106.48 395.48 83.821641
-" style="fill: none; stroke: #b45309; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 393.28 88.221641
 L 395.48 83.821641
 L 397.68 88.221641
 z
-" style="fill: #b45309; stroke: #b45309; stroke-width: 1.2; stroke-linecap: round"/>
+" style="fill: #ff7f0e; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- Persistent artifacts -->
-    <g style="fill: #094f86" transform="translate(52.365977 41.3555) scale(0.115 -0.115)">
+    <g style="fill: #1d70a9" transform="translate(52.365977 41.3555) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-11" d="M 493 0
 L 493 4173
@@ -1065,7 +1065,7 @@ z
    </g>
    <g id="text_5">
     <!-- Disconnect, timeout, or reset -->
-    <g style="fill: #b45309" transform="translate(202.128867 158.3555) scale(0.115 -0.115)">
+    <g style="fill: #ff7f0e" transform="translate(202.128867 158.3555) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-5" d="M 493 0
 L 493 4173
@@ -1195,7 +1195,7 @@ z
    </g>
    <g id="text_7">
     <!-- save selected results -->
-    <g style="fill: #094f86" transform="translate(234.787344 79.6815) scale(0.095 -0.095)">
+    <g style="fill: #1d70a9" transform="translate(234.787344 79.6815) scale(0.095 -0.095)">
      <defs>
       <path id="SourceSans3-Regular-31" d="M 1197 0
 L 77 3110

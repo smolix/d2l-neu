@@ -39,7 +39,7 @@ Q 6.48 35.286905 6.48 53.286905
 L 6.48 224.286905 
 Q 6.48 242.286905 24.48 242.286905 
 z
-" clip-path="url(#pd7746fd773)" style="fill: #d6edfc"/>
+" clip-path="url(#pd7746fd773)" style="fill: #e4eff6"/>
    </g>
    <g id="patch_3">
     <path d="M 560.48 242.286905 
@@ -52,7 +52,7 @@ Q 542.48 35.286905 542.48 53.286905
 L 542.48 224.286905 
 Q 542.48 242.286905 560.48 242.286905 
 z
-" clip-path="url(#pd7746fd773)" style="fill: #d6edfc"/>
+" clip-path="url(#pd7746fd773)" style="fill: #e4eff6"/>
    </g>
    <g id="line2d_1">
     <path d="M 212.48 264.286905 
@@ -905,7 +905,7 @@ z
    </g>
    <g id="text_5">
     <!-- 3×3 Conv -->
-    <g style="fill: #8fc7f5" transform="translate(581.49418 147.662405) scale(0.115 -0.115)">
+    <g style="fill: #aec7e8" transform="translate(581.49418 147.662405) scale(0.115 -0.115)">
      <defs>
       <path id="SourceSans3-Bold-538" d="M 1555 -77 
 Q 1062 -77 713 83 

@@ -43,7 +43,7 @@ L 139.108966 160.2144
 L 139.108966 51.169655 
 L 33.581793 51.169655 
 z
-" clip-path="url(#p229bfb491a)" style="fill: #1565c0; opacity: 0.16"/>
+" clip-path="url(#p229bfb491a)" style="fill: #1f77b4; opacity: 0.16"/>
    </g>
    <g id="patch_4">
     <path d="M 33.581793 227.048276 
@@ -68,7 +68,7 @@ L 402.926897 160.2144
 L 402.926897 51.169655 
 L 297.399724 51.169655 
 z
-" clip-path="url(#p229bfb491a)" style="fill: #2e7d3e; opacity: 0.16"/>
+" clip-path="url(#p229bfb491a)" style="fill: #2ca02c; opacity: 0.16"/>
    </g>
    <g id="patch_7">
     <path d="M 297.399724 227.048276 
@@ -81,11 +81,11 @@ z
    <g id="patch_8">
     <path d="M 141.113686 89.862952 
 Q 218.257501 89.862952 293.165248 89.862952 
-" clip-path="url(#p229bfb491a)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: round"/>
+" clip-path="url(#p229bfb491a)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: round"/>
     <path d="M 286.765248 86.662952 
 L 293.165248 89.862952 
 L 286.765248 93.062952 
-" clip-path="url(#p229bfb491a)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: round"/>
+" clip-path="url(#p229bfb491a)" style="fill: none; stroke: #1f77b4; stroke-width: 2; stroke-linecap: round"/>
    </g>
    <g id="patch_9">
     <path d="M 141.108251 188.405755 
@@ -126,7 +126,7 @@ z
    </g>
    <g id="text_1">
     <!-- row space -->
-    <g style="fill: #1565c0" transform="translate(59.116473 101.454028) scale(0.13 -0.13)">
+    <g style="fill: #1f77b4" transform="translate(59.116473 101.454028) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-2d" d="M 525 0 
 L 525 3110 
@@ -363,7 +363,7 @@ z
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(369.3125 0)"/>
     </g>
     <!-- $\dim r$ -->
-    <g style="fill: #1565c0" transform="translate(71.460379 118.692028) scale(0.13 -0.13)">
+    <g style="fill: #1f77b4" transform="translate(71.460379 118.692028) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-49" d="M 1563 -72 
 Q 1184 -72 871 133 
@@ -740,7 +740,7 @@ z
    </g>
    <g id="text_3">
     <!-- column space -->
-    <g style="fill: #2e7d3e" transform="translate(312.806592 101.454028) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(312.806592 101.454028) scale(0.13 -0.13)">
      <defs>
       <path id="SourceSans3-Regular-28" d="M 525 0 
 L 525 3110 
@@ -786,7 +786,7 @@ z
      <use xlink:href="#SourceSans3-Regular-20" transform="translate(525.125 0)"/>
     </g>
     <!-- $\dim r$ -->
-    <g style="fill: #2e7d3e" transform="translate(335.27831 118.692028) scale(0.13 -0.13)">
+    <g style="fill: #2ca02c" transform="translate(335.27831 118.692028) scale(0.13 -0.13)">
      <use xlink:href="#Cmr10-49" transform="translate(0 0.609375)"/>
      <use xlink:href="#Cmr10-24" transform="translate(55.517578 0.609375)"/>
      <use xlink:href="#Cmr10-38" transform="translate(83.203125 0.609375)"/>
@@ -1158,7 +1158,7 @@ z
    </g>
    <g id="text_7">
     <!-- $\mathbf{v}_i \mapsto \sigma_i\mathbf{u}_i$ -->
-    <g style="fill: #1565c0" transform="translate(192.514345 77.710414) scale(0.13 -0.13)">
+    <g style="fill: #1f77b4" transform="translate(192.514345 77.710414) scale(0.13 -0.13)">
      <defs>
       <path id="Cmb10-25" d="M 1466 91 
 L 544 2516 

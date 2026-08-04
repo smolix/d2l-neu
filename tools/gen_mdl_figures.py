@@ -31,39 +31,26 @@ from matplotlib.patches import Arc, FancyArrowPatch, Polygon, Rectangle
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  (registers 3d projection)
 
 # --------------------------------------------------------------------------- #
-# ONE shared style, applied once.                                             #
+# ONE shared style, applied once — now the unified token layer                #
+# (tools/figstyle/tokens.py; see docs/figure-style-guide.md §9 step 2).       #
+# The legacy names below keep every consumer script working unchanged.       #
 # --------------------------------------------------------------------------- #
 
-# A small, consistent palette reused by name everywhere.
-BLUE = "#1f77b4"
-ORANGE = "#ff7f0e"
-GREEN = "#2ca02c"
-GRAY = "#7f7f7f"
-LIGHT = "#cfcfcf"  # for faint grids / construction lines
+import figstyle.mpl as _figstyle
+from figstyle import tokens as T
 
-plt.rcParams.update(
-    {
-        "figure.dpi": 100,
-        "savefig.dpi": 100,
-        "font.size": 11,
-        "axes.titlesize": 12,
-        "axes.labelsize": 11,
-        "axes.linewidth": 0.8,
-        "axes.grid": False,           # light grid off by default
-        "axes.spines.top": False,     # minimal spines
-        "axes.spines.right": False,
-        "xtick.labelsize": 9,
-        "ytick.labelsize": 9,
-        "legend.fontsize": 9,
-        "legend.frameon": False,
-        "lines.linewidth": 2.0,
-        "mathtext.fontset": "cm",
-        "svg.fonttype": "path",       # embed glyphs as paths (portable rendering)
-        # Fixed hash salt => deterministic clip-path / gradient ids, so re-runs
-        # are byte-for-byte identical (clean git diffs).
-        "svg.hashsalt": "mdl-la",
-    }
-)
+BLUE = _figstyle.BLUE
+ORANGE = _figstyle.ORANGE
+GREEN = _figstyle.GREEN
+GRAY = _figstyle.GRAY
+LIGHT = _figstyle.LIGHT   # faint grids / construction lines
+
+# token-blue sequential ramp for surfaces / iterate fans (replaces viridis)
+from matplotlib.colors import LinearSegmentedColormap as _LSC
+BLUE_CMAP = _LSC.from_list("figblue", [T.BLUE.tint, T.BLUE.base, T.BLUE.dark])
+INK = _figstyle.INK
+
+_figstyle.use_style(hashsalt="mdl-la")
 
 IMG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "img")
 WRITTEN: list[str] = []
@@ -90,13 +77,13 @@ def arrow(ax, tail, tip, color=BLUE, lw=2.0, ls="-", alpha=1.0, mut=14):
         "",
         xy=tip,
         xytext=tail,
-        arrowprops=dict(arrowstyle="->", color=color, lw=lw,
+        arrowprops=dict(arrowstyle="-|>", color=color, lw=lw,
                         linestyle=ls, alpha=alpha,
                         shrinkA=0, shrinkB=0, mutation_scale=mut),
     )
 
 
-def vlabel(ax, pos, text, color="black", **kw):
+def vlabel(ax, pos, text, color=INK, **kw):
     ax.text(pos[0], pos[1], text, color=color,
             ha=kw.pop("ha", "center"), va=kw.pop("va", "center"), **kw)
 
@@ -160,7 +147,7 @@ def fig_vectors():
     XR, YR = (-0.9, 4.3), (-1.2, 3.2)
 
     # (a) point with dashed coordinate drops; black axes for readability
-    axis_cross(axa, XR, YR, color="black")
+    axis_cross(axa, XR, YR, color=GRAY)
     p = np.array([3.0, 2.0])
     axa.plot(*p, "o", color=BLUE, ms=8, zorder=5)
     axa.plot([p[0], p[0]], [0, p[1]], "--", color=LIGHT, lw=1.2)
@@ -174,7 +161,7 @@ def fig_vectors():
     # (b) same vector as a translation-invariant arrow in three places -- one
     # color, since every arrow *is* the same vector.  Bases chosen so all three
     # copies fit the shared box and stay clear of one another.
-    axis_cross(axb, XR, YR, color="black")
+    axis_cross(axb, XR, YR, color=GRAY)
     v = np.array([3.0, 2.0])
     # the third base is nudged right off the line through the other two, so the
     # arrows do not all line up
@@ -197,7 +184,7 @@ def fig_vector_add():
     v = np.array([1.0, 2.0])
     LBL = 16                                  # larger labels, readable at figure size
     LIM = ((-0.5, 4.7), (-0.45, 3.25))        # trimmed box: axes don't overshoot content
-    axis_cross(ax, (-0.4, 4.6), (-0.35, 3.15), color="black")
+    axis_cross(ax, (-0.4, 4.6), (-0.35, 3.15), color=GRAY)
     arrow(ax, (0, 0), u, color=BLUE, lw=2.2)
     arrow(ax, u, u + v, color=ORANGE, lw=2.2)
     arrow(ax, (0, 0), u + v, color=GREEN, lw=2.4)
@@ -234,7 +221,7 @@ def fig_span():
     # (a) span of a single vector: the line {t v}
     v = R @ np.array([2.0, 1.0])
     t0, t1 = -1.6, 2.9
-    axis_cross(axa, XR, YR, color="black")
+    axis_cross(axa, XR, YR, color=GRAY)
     axa.plot([t0 * v[0], t1 * v[0]], [t0 * v[1], t1 * v[1]], "--",
              color=GRAY, lw=1.4)
     arrow(axa, (0, 0), v, color=BLUE, lw=2.4)
@@ -262,7 +249,7 @@ def fig_span():
         p0, p1 = coeffs[0] * u + b * w, coeffs[-1] * u + b * w
         axb.plot([p0[0], p1[0]], [p0[1], p1[1]], color=LIGHT, lw=0.9)
     x = 2 * u + w  # (4.5, 3.5)
-    axis_cross(axb, XR, YR, color="black")
+    axis_cross(axb, XR, YR, color=GRAY)
     # dashed parallelogram construction: 2u -> x and w -> x
     axb.plot([2 * u[0], x[0]], [2 * u[1], x[1]], "--", color=GRAY, lw=1.4)
     axb.plot([w[0], x[0]], [w[1], x[1]], "--", color=GRAY, lw=1.4)
@@ -291,7 +278,7 @@ def fig_angle():
     w = np.array([1.2, 2.6])
     LBL = 17                       # larger vector/angle symbols
     LIM = ((-0.5, 3.9), (-0.6, 3.0))
-    axis_cross(ax, (-0.4, 3.8), (-0.5, 2.9), color="black")
+    axis_cross(ax, (-0.4, 3.8), (-0.5, 2.9), color=GRAY)
     arrow(ax, (0, 0), v, color=BLUE, lw=2.4)
     arrow(ax, (0, 0), w, color=ORANGE, lw=2.4)
     a1 = np.degrees(np.arctan2(v[1], v[0]))
@@ -327,7 +314,7 @@ def fig_projection():
     wn = w / np.linalg.norm(w)
     proj_len = float(v @ wn)
     proj = proj_len * wn
-    axis_cross(axa, XR, YR, color="black")
+    axis_cross(axa, XR, YR, color=GRAY)
     arrow(axa, (0, 0), w, color=ORANGE, lw=2.2)
     arrow(axa, (0, 0), v, color=BLUE, lw=2.4)
     # projection as a thick segment along w
@@ -348,9 +335,9 @@ def fig_projection():
     # (b) equality: v collinear with w, residual vanishes
     w2 = np.array([3.4, 1.3])
     v2 = 0.62 * w2  # collinear
-    axis_cross(axb, XR, YR, color="black")
+    axis_cross(axb, XR, YR, color=GRAY)
     arrow(axb, (0, 0), w2, color=ORANGE, lw=2.2)
-    axb.plot([0, v2[0]], [0, v2[1]], color=GREEN, lw=5, solid_capstyle="round",
+    axb.plot([0, 0.86 * v2[0]], [0, 0.86 * v2[1]], color=GREEN, lw=5, solid_capstyle="round",
              zorder=2)
     arrow(axb, (0, 0), v2, color=BLUE, lw=2.4)
     vlabel(axb, (w2[0] + 0.05, w2[1] + 0.02), r"$\mathbf{w}$", color=ORANGE,
@@ -403,7 +390,7 @@ def fig_hyperplane():
              color=BLUE, fontsize=FML, ha="center", va="center",
              rotation=line_rot, rotation_mode="anchor")
 
-    axis_cross(axa, (-1.9, 3.3), (-1.1, 2.8), color="black")
+    axis_cross(axa, (-1.9, 3.3), (-1.1, 2.8), color=GRAY)
     arrow(axa, (0, 0), w, color=ORANGE, lw=2.4)
     vlabel(axa, (w[0] + 0.20, w[1] + 0.12), r"$\mathbf{w}$", color=ORANGE,
            ha="left", fontsize=LBL)
@@ -437,7 +424,7 @@ def fig_hyperplane():
     axb.set_xlim(0, 1.9); axb.set_ylim(0, 1.9); axb.set_zlim(-0.15, 1.9)
     axb.set_xticks([]); axb.set_yticks([]); axb.set_zticks([])
     for axis in (axb.xaxis, axb.yaxis, axb.zaxis):
-        axis.line.set_color("black")          # blacken the axis lines only
+        axis.line.set_color(INK)          # blacken the axis lines only
     axb.view_init(elev=26, azim=-54)
     try:
         axb.set_box_aspect((1, 1, 1), zoom=1.1)
@@ -460,7 +447,7 @@ def fig_linear_map():
     n = 3
     ts = np.linspace(0, n, 200)
     grid = list(range(n + 1))
-    GRIDC = "black"
+    GRIDC = GRAY
 
     def draw_grid(ax, M, lw=0.8):
         for k in grid:  # images of the lines x=k
@@ -519,7 +506,7 @@ def fig_determinant():
         det = np.linalg.det(A)
         img = A @ unit
         # original unit square (dashed reference)
-        ax.add_patch(Polygon(unit.T, closed=True, fill=False, edgecolor="black",
+        ax.add_patch(Polygon(unit.T, closed=True, fill=False, edgecolor=INK,
                              lw=1.0, ls="--"))
         col = GREEN if det > 0 else ORANGE
         if degenerate:
@@ -545,7 +532,7 @@ def fig_determinant():
         ax.text(0.5, -0.02,
                 rf"area $=|\det\mathbf{{A}}|={area:.2g}$",
                 transform=ax.transAxes, ha="center", va="top", fontsize=14,
-                color="black")
+                color=INK)
         clean_axes(ax, lim=((-0.42, 2.25), (-0.35, 2.15)), hide=True)
 
     show_para(axes[0], np.array([[1.6, 0.6], [0.3, 1.4]]))
@@ -580,10 +567,10 @@ def fig_null_collapse():
     for k in range(-n, n + 1):
         axa.plot([k, k], [-n, n], color=LIGHT, lw=0.9)
         axa.plot([-n, n], [k, k], color=LIGHT, lw=0.9)
-    axis_cross(axa, (-2.3, 2.3), (-2.3, 2.3), color="black")
+    axis_cross(axa, (-2.3, 2.3), (-2.3, 2.3), color=GRAY)
     # null-space line span{(1, 2)} (dashed): inputs sent to the origin
-    axa.plot([-1.15, 1.15], [-2.3, 2.3], "--", color="black", lw=1.6)
-    axa.text(-1.28, -1.62, r"null space", color="black",
+    axa.plot([-1.15, 1.15], [-2.3, 2.3], "--", color=INK, lw=1.6)
+    axa.text(-1.28, -1.62, r"null space", color=INK,
              fontsize=ANN, ha="center", va="center", rotation=rot,
              rotation_mode="anchor")
     offs_a = [(0.30, -0.24), (-0.36, 0.22), (0.42, 0.04)]
@@ -594,13 +581,13 @@ def fig_null_collapse():
     clean_axes(axa, lim=((-2.3, 2.3), (-2.3, 2.3)), hide=True)
 
     # --- (b) image plane: everything lands on the column space y = 2x ---
-    axis_cross(axb, (-4.8, 4.8), (-4.8, 4.8), color="black")
+    axis_cross(axb, (-4.8, 4.8), (-4.8, 4.8), color=GRAY)
     # column space = span of the columns = the line y = 2x
     axb.plot([-2.3, 2.3], [-4.6, 4.6], color=GRAY, lw=5, alpha=0.5,
              solid_capstyle="round", zorder=1)
     # keep the label off the thick line and well below the Bx3=0 marker:
     # sit it lower in the empty lower-right wedge
-    axb.text(-0.35, -3.05, r"column space", color="black",
+    axb.text(-0.35, -3.05, r"column space", color=INK,
              fontsize=ANN, ha="center", va="center", rotation=rot,
              rotation_mode="anchor")
     # the two columns of B, both along the line
@@ -652,7 +639,7 @@ def fig_cosine_highd():
     # spike and the dashed axis
     ax.annotate(r"$\mathrm{std}\approx 1/\sqrt{d}$", xy=(0.0, 0.0),
                 xytext=(0.64, 0.74), textcoords="axes fraction",
-                fontsize=LAB, color="black")
+                fontsize=LAB, color=INK)
     ax.legend(loc="upper left", fontsize=11)
     ax.set_aspect("auto")
     clean_axes(ax, equal=False)
@@ -677,7 +664,7 @@ def fig_eig_ellipse():
     for ax, A in zip(axes, specs):
         ellipse = A @ circle
         w, V = np.linalg.eigh(A)  # symmetric: real eigenpairs, V orthonormal cols
-        ax.plot(circle[0], circle[1], "--", color="black", lw=1.0, alpha=0.5)
+        ax.plot(circle[0], circle[1], "--", color=INK, lw=1.0, alpha=0.5)
         ax.plot(ellipse[0], ellipse[1], color=BLUE, lw=2.4)
         order = np.argsort(-np.abs(w))
         labels = [r"$\lambda_1$", r"$\lambda_2$"]
@@ -712,7 +699,7 @@ def fig_eig_ellipse():
                     ha=ha, va="center")
         m = 3.0
         clean_axes(ax, lim=((-m, m), (-m, m)), hide=True)
-        axis_cross(ax, (-m, m), (-m, m), color="black")
+        axis_cross(ax, (-m, m), (-m, m), color=GRAY)
     save(fig, "mdl-la-eig-ellipse")
 
 
@@ -733,7 +720,7 @@ def fig_defective_shear():
     n = 3
     ts = np.linspace(0, n, 200)
     grid = list(range(n + 1))
-    GRIDC = "black"
+    GRIDC = GRAY
 
     def draw_grid(ax, M):
         for k in grid:  # images of the lines x=k
@@ -797,6 +784,7 @@ def fig_psd():
     for i, A in enumerate(specs, 1):
         ax = fig.add_subplot(1, 3, i, projection="3d")
         Z = A[0, 0] * X**2 + (A[0, 1] + A[1, 0]) * X * Y + A[1, 1] * Y**2
+        # Alex 2026-08-04: the original viridis reads better on 3-D relief
         ax.plot_surface(X, Y, Z, cmap="viridis", linewidth=0, antialiased=True,
                         alpha=0.92, rstride=2, cstride=2)
         ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
@@ -831,9 +819,9 @@ def fig_gershgorin():
                                 edgecolor=col, lw=1.6))
         ax.plot(c, 0, "x", color=col, ms=10, mew=2.2, zorder=5)
     # small black dots so the coloured centre x-marks stay visible underneath
-    ax.plot(eig.real, np.zeros_like(eig.real), "o", color="black", ms=4.5,
+    ax.plot(eig.real, np.zeros_like(eig.real), "o", color=INK, ms=4.5,
             zorder=6, label="true eigenvalues")
-    ax.axhline(0, color="black", lw=0.8)
+    ax.axhline(0, color=INK, lw=0.8)
     ax.set_xlabel("real axis", fontsize=13)
     ax.set_ylabel("imag axis", fontsize=13)
     ax.set_aspect("equal")
@@ -863,12 +851,12 @@ def fig_power_iter():
     v = np.array([0.0, 1.0])  # start far from dominant direction
     v = v / np.linalg.norm(v)
     n_it = 6
-    cmap = plt.cm.viridis(np.linspace(0.15, 0.9, n_it + 1))
+    cmap = BLUE_CMAP(np.linspace(0.10, 0.95, n_it + 1))
     # all the iterates live in the first quadrant -- show only that
-    axis_cross(axa, (-0.12, 1.32), (-0.12, 1.32), color="black")
+    axis_cross(axa, (-0.12, 1.32), (-0.12, 1.32), color=GRAY)
     # dominant eigenvector reference ray (first quadrant only)
     axa.plot([0, 1.28 * dom[0]], [0, 1.28 * dom[1]],
-             color="black", lw=1.0, ls="--")
+             color=INK, lw=1.0, ls="--")
     cur = v.copy()
     for k in range(n_it + 1):
         arrow(axa, (0, 0), cur, color=cmap[k], lw=2.2)
@@ -880,7 +868,7 @@ def fig_power_iter():
     wpos = dom * 1.10 + 0.17 * dperp
     axa.text(wpos[0], wpos[1], r"$\mathbf{w}_1$", color=ORANGE, fontsize=16,
              ha="left", va="bottom")
-    axa.text(0.08, 1.16, r"$\mathbf{x}_0$", color="black", fontsize=15, ha="left")
+    axa.text(0.08, 1.16, r"$\mathbf{x}_0$", color=INK, fontsize=15, ha="left")
     clean_axes(axa, lim=((-0.15, 1.34), (-0.15, 1.34)), hide=True)
 
     # (b) ratio convergence
@@ -895,9 +883,9 @@ def fig_power_iter():
     ratios = norms[1:] / norms[:-1]
     ks = np.arange(1, len(ratios) + 1)
     axb.plot(ks, ratios, "o-", color=BLUE, ms=5)
-    axb.axhline(abs(lam1), color="black", ls="--", lw=1.4)
+    axb.axhline(abs(lam1), color=INK, ls="--", lw=1.4)
     axb.text(ks[-1], abs(lam1) + 0.05, rf"$|\lambda_1|\approx{abs(lam1):.3g}$",
-             ha="right", va="bottom", color="black", fontsize=16)
+             ha="right", va="bottom", color=INK, fontsize=16)
     axb.set_xlabel("iteration $k$", fontsize=15)
     axb.set_ylabel(r"$\|A^{k+1}v\|/\|A^k v\|$", fontsize=15)
     axb.tick_params(labelsize=12)
@@ -906,7 +894,7 @@ def fig_power_iter():
     axb.annotate(rf"gap $\sim(\lambda_2/\lambda_1)^{{2k}}="
                  rf"({(lam2 / lam1) ** 2:.2g})^k$",
                  xy=(0.36, 0.26), xycoords="axes fraction", fontsize=15,
-                 color="black")
+                 color=INK)
     axb.set_aspect("auto")
     clean_axes(axb, equal=False)
     save(fig, "mdl-la-power-iter")
@@ -989,7 +977,7 @@ def fig_svd_action():
 
     for ax in axes:
         clean_axes(ax, lim=lim, hide=True)
-        axis_cross(ax, (-mx, mx), (-my, my), color="black")
+        axis_cross(ax, (-mx, mx), (-my, my), color=GRAY)
     save(fig, "mdl-la-svd-action")
 
 
@@ -1004,7 +992,7 @@ def fig_svd_subspaces():
 
     def box(x, split_frac, top_label, bot_label, top_col, bot_col):
         # full box outline
-        ax.add_patch(Rectangle((x, y0), bw, bh, fill=False, edgecolor="black",
+        ax.add_patch(Rectangle((x, y0), bw, bh, fill=False, edgecolor=INK,
                                lw=1.4))
         sy = y0 + bh * (1 - split_frac)
         # top region
@@ -1013,11 +1001,11 @@ def fig_svd_subspaces():
         # bottom region
         ax.add_patch(Rectangle((x, y0), bw, sy - y0, facecolor=bot_col,
                                alpha=0.16, lw=0))
-        ax.plot([x, x + bw], [sy, sy], color="black", lw=0.9, ls="--")
+        ax.plot([x, x + bw], [sy, sy], color=INK, lw=0.9, ls="--")
         ax.text(x + bw / 2, y0 + bh - (bh - (sy - y0)) / 2, top_label,
                 ha="center", va="center", fontsize=13, color=top_col)
         ax.text(x + bw / 2, y0 + (sy - y0) / 2, bot_label,
-                ha="center", va="center", fontsize=13, color="black")
+                ha="center", va="center", fontsize=13, color=INK)
         return sy
 
     sy_dom = box(dom_x, 0.62, r"row space" + "\n" + r"$\dim r$",
@@ -1046,11 +1034,11 @@ def fig_svd_subspaces():
     ax.add_patch(FancyArrowPatch(p_null, p_zero, arrowstyle="->",
                                  mutation_scale=14, color=GRAY, lw=1.6,
                                  linestyle=(0, (4, 3))))
-    ax.plot(*p_zero, "o", color="black", ms=6)
+    ax.plot(*p_zero, "o", color=INK, ms=6)
     ax.text(p_zero[0], p_zero[1] + 0.32, r"$\mathbf{0}$", ha="center",
             va="bottom", fontsize=13)
     ax.text((p_null[0] + p_zero[0]) / 2, p_null[1] - 0.26, r"$\mapsto \mathbf{0}$",
-            ha="center", va="top", fontsize=12, color="black")
+            ha="center", va="top", fontsize=12, color=INK)
 
     ax.set_xlim(-0.6, cod_x + bw + 0.6)
     ax.set_ylim(-0.8, bh + 1.0)
@@ -1146,10 +1134,10 @@ def fig_lora():
     wire([(xB, 5.0), (xB, ymerge), (5, ymerge), (5, 6.16)])   # B -> +
 
     # input / output nodes
-    ax.plot(5, 0.75, "o", color="black", ms=5, zorder=4)
+    ax.plot(5, 0.75, "o", color=INK, ms=5, zorder=4)
     ax.text(5.3, 0.62, r"$\mathbf{x}$", fontsize=15, ha="left", va="center")
     arrow(ax, (5, 6.66), (5, 7.5), color=GRAY, lw=1.6, mut=12)
-    ax.plot(5, 7.5, "o", color="black", ms=5, zorder=4)
+    ax.plot(5, 7.5, "o", color=INK, ms=5, zorder=4)
     ax.text(5.3, 7.5, r"$\mathbf{h}=\mathbf{W}\mathbf{x}+\mathbf{B}\mathbf{A}\mathbf{x}$",
             fontsize=13, ha="left", va="center")
 
@@ -1161,7 +1149,7 @@ def fig_lora():
     ax.text(xW, 3.2, "pretrained, frozen\n" + r"$4096\times4096$",
             fontsize=10.5, ha="center", va="center", color=BLUE)
     ax.text(xW, 1.32, r"$mn=16.8$M params", fontsize=10.5, ha="center",
-            va="top", color="black")   # below the split rail, clear of wires
+            va="top", color=INK)   # below the split rail, clear of wires
 
     # low-rank bypass (right column): A compresses to r, B expands back
     ax.add_patch(Polygon([(6.3, 2.4), (8.5, 2.4), (7.75, 3.5), (7.05, 3.5)],
@@ -1180,11 +1168,11 @@ def fig_lora():
     # trainable-count note in the free right margin, beside the trapezoids
     ax.text(8.8, 4.35, "trainable:\n" + r"$r(m{+}n)\approx65.5$K"
             + "\n" + r"($0.39\%$)", fontsize=10.5, ha="left", va="center",
-            color="black")
+            color=INK)
 
     # summation node
     ax.add_patch(plt.Circle((5, 6.4), 0.26, facecolor="white",
-                            edgecolor="black", lw=1.4, zorder=5))
+                            edgecolor=INK, lw=1.4, zorder=5))
     ax.text(5, 6.4, "+", fontsize=15, ha="center", va="center", zorder=6)
 
     ax.set_xlim(0.6, 11.4)
@@ -1248,7 +1236,7 @@ def fig_pca():
     fig, ax = plt.subplots(figsize=(5.2, 4.6))
     ax.scatter(data[:, 0], data[:, 1], s=10, color=BLUE, alpha=0.45,
                edgecolors="none")
-    ax.plot(*mean, "o", color="black", ms=5)
+    ax.plot(*mean, "o", color=INK, ms=5)
     for i, (col, lab) in enumerate(zip([ORANGE, GREEN], ["PC1", "PC2"])):
         d = pcs[i]
         if d[np.argmax(np.abs(d))] < 0:
@@ -1292,7 +1280,7 @@ def fig_transient_growth():
                  f"{norm_A[k_peak]:.0f}",
                  xy=(k_peak, norm_A[k_peak]),
                  xytext=(k_peak + 9, norm_A[k_peak] * 1.6),
-                 fontsize=10.5, ha="left", va="center", color="black",
+                 fontsize=10.5, ha="left", va="center", color=INK,
                  arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.2))
     axa.text(51, 0.30, "non-normal $\\mathbf{A}$", color=BLUE, fontsize=11,
              ha="center", zorder=7,
@@ -1327,7 +1315,7 @@ def fig_transient_growth():
                 linewidths=1.3, zorder=4)
     axb.contour(GX, GY, smin_grid(D), levels=levels, colors=[ORANGE],
                 linewidths=1.1, linestyles="--", zorder=3)
-    axb.plot([0.9, 0.8], [0.0, 0.0], "o", color="black", ms=5, zorder=6)
+    axb.plot([0.9, 0.8], [0.0, 0.0], "o", color=INK, ms=5, zorder=6)
     axb.text(1.72, 1.28, "$\\varepsilon$-pseudospectra\nof $\\mathbf{A}$",
              color=BLUE, fontsize=10.5, ha="center", va="center", zorder=7,
              bbox=dict(facecolor="white", edgecolor="none", alpha=0.9,

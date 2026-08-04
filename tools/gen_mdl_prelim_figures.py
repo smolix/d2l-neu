@@ -25,13 +25,20 @@ from __future__ import annotations
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import gen_mdl_figures as fl  # importing applies the shared style + helpers
+import matplotlib
 
-np, plt = fl.np, fl.plt
+matplotlib.use("svg")
+import matplotlib.pyplot as plt
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import figstyle.mpl as fl  # the unified style (docs/figure-style-guide.md)
+
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
 arrow, vlabel, right_angle = fl.arrow, fl.vlabel, fl.right_angle
 clean_axes, axis_cross, save = fl.clean_axes, fl.axis_cross, fl.save
+
+fl.use_style(hashsalt="mdl-la")
 
 from matplotlib.patches import Arc
 
@@ -44,6 +51,9 @@ def fig_cosine():
     """Four panels: unit vectors u (fixed along the x-axis) and v at angle
     theta in {0, 60, 90, 150} degrees, with the dot product u.v = cos(theta)
     annotated under each panel."""
+    # ORIGINAL layout (Alex, ch2 review: "the original layout was
+    # excellent") — full-width panels, full equations above each; only the
+    # colors and line weights come from the unified tokens.
     thetas_deg = [0, 60, 90, 150]
     fig, axes = plt.subplots(1, len(thetas_deg), figsize=(9.6, 2.9))
 
@@ -59,19 +69,19 @@ def fig_cosine():
 
         # the two unit vectors; nudge v slightly upward when theta = 0 so
         # the coinciding arrows stay individually visible
-        arrow(ax, (0, 0), u, color=BLUE, lw=2.2)
+        arrow(ax, (0, 0), u, color=BLUE, lw=2.6)
         if deg == 0:
             eps = 0.055
-            arrow(ax, (0, eps), v + (0, eps), color=ORANGE, lw=2.2)
+            arrow(ax, (0, eps), v + (0, eps), color=ORANGE, lw=2.6)
         else:
-            arrow(ax, (0, 0), v, color=ORANGE, lw=2.2)
+            arrow(ax, (0, 0), v, color=ORANGE, lw=2.6)
         vlabel(ax, (1.14, -0.16 if deg == 0 else 0.0), r"$\mathbf{u}$",
-               color=BLUE, ha="left", fontsize=14)
+               color=fl.T.BLUE.dark, ha="left", fontsize=15)
         voff = v * 1.16
         if deg == 0:
             voff = np.array([1.14, 0.20])
-        vlabel(ax, voff, r"$\mathbf{v}$", color=ORANGE,
-               ha="left" if v[0] >= 0 else "right", fontsize=14)
+        vlabel(ax, voff, r"$\mathbf{v}$", color=fl.T.ORANGE.dark,
+               ha="left" if v[0] >= 0 else "right", fontsize=15)
 
         # the angle arc + right-angle marker at 90 degrees
         if deg == 90:
@@ -85,7 +95,7 @@ def fig_cosine():
             mid = np.deg2rad(deg / 2.0)
             ax.text(0.68 * np.cos(mid), 0.68 * np.sin(mid),
                     rf"${deg}^\circ$", color=GRAY,
-                    ha="center", va="center", fontsize=12)
+                    ha="center", va="center", fontsize=13)
 
         # annotation: the dot product IS the cosine
         val = f"{cos:.2f}".rstrip("0").rstrip(".")
@@ -93,7 +103,7 @@ def fig_cosine():
             val = "0"
         ax.set_title(
             rf"$\mathbf{{u}}^\top \mathbf{{v}} = \cos {deg}^\circ = {val}$",
-            fontsize=13, pad=8)
+            fontsize=13.5, pad=8)
 
         clean_axes(ax, lim=((-1.35, 1.45), (-0.32, 1.3)), hide=True)
 

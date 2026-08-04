@@ -25,7 +25,7 @@ function computeGraph() {
   const cy = 104, h = 58;
   const X = { cx: 78, w: 78 }, A = { cx: 270, w: 110 }, Y = { cx: 488, w: 130 };
 
-  o += tx(W / 2, 30, 'Computational graph for  y = 2 xᵀx', { fs: 15, fw: 700, fill: C.ink });
+  // (no in-figure title — the book caption / slide header carries it)
 
   // forward edges (dark, top) with the op that produced the next node
   o += arrow(X.cx + X.w / 2, cy - 10, A.cx - A.w / 2, cy - 10, C.ink);
@@ -40,14 +40,14 @@ function computeGraph() {
   o += tx((X.cx + A.cx) / 2, cy + 28, '∂a/∂x = 2x', { fs: 12.5, fw: 700, fill: C.blue });
 
   // nodes
-  o += node(X.cx, cy, X.w, h, '#F3E5F5', C.purple, 'x', 'input');
+  o += node(X.cx, cy, X.w, h, '#EDE9F8', C.purple, 'x', 'input');
   o += node(A.cx, cy, A.w, h, C.lblue, C.blue, 'a = xᵀx', 'scalar');
   o += node(Y.cx, cy, Y.w, h, C.lgreen, C.green, 'y = 2a', 'output');
 
   // forward / backward legend + accumulated result
   o += tx(X.cx, 64, 'forward →', { fs: 11.5, fw: 700, fill: C.ink, anchor: 'start' });
   o += tx(Y.cx + Y.w / 2, 64, '← backward', { fs: 11.5, fw: 700, fill: C.blue, anchor: 'end' });
-  o += tx(W / 2, H - 22, 'chain rule:  ∂y/∂x = (∂y/∂a)(∂a/∂x) = 2 · 2x = 4x', { fs: 14, fw: 700, fill: C.ink });
+  o += tx(W / 2, cy + 82, 'chain rule:  ∂y/∂x = (∂y/∂a)(∂a/∂x) = 2 · 2x = 4x', { fs: 14, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -63,7 +63,6 @@ function workflow() {
     ['3', 'backward', 'chain rule, reversed'],
     ['4', 'read .grad', 'use it, then reset'],
   ];
-  o += tx(W / 2, 28, 'The autograd loop', { fs: 15, fw: 700, fill: C.ink });
   steps.forEach((s, i) => {
     const x = xs[i], cxb = x + bw / 2;
     const accent = i === 2 ? C.blue : C.gray;
@@ -88,20 +87,19 @@ function detachGraph() {
   const Wd = 620, H = 258; let o = '';
   const cy = 92, bh = 52;
   const N = { x: { cx: 70, w: 62 }, sq: { cx: 214, w: 78 }, u: { cx: 372, w: 116 }, z: { cx: 532, w: 116 } };
-  o += tx(Wd / 2, 28, 'Detaching freezes a value to a constant', { fs: 15, fw: 700, fill: C.ink });
   // forward (dark, top)
   o += arrow(N.x.cx + N.x.w / 2, cy, N.sq.cx - N.sq.w / 2, cy, C.ink);
   o += tx((N.x.cx + N.sq.cx) / 2, cy - 12, 'square', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
   // sq → u edge is the detach: dashed + a red cut
   o += line(N.sq.cx + N.sq.w / 2, cy, N.u.cx - N.u.w / 2, cy, C.gray, 2, true);
   const mx = (N.sq.cx + N.u.cx) / 2;
-  o += line(mx - 7, cy - 9, mx + 7, cy + 9, '#E53935', 2.4);
-  o += line(mx - 7, cy + 9, mx + 7, cy - 9, '#E53935', 2.4);
-  o += tx(mx, cy - 16, 'detach', { mono: true, fs: 11.5, fw: 700, fill: '#E53935' });
+  o += line(mx - 7, cy - 9, mx + 7, cy + 9, '#C03B2F', 2.4);
+  o += line(mx - 7, cy + 9, mx + 7, cy - 9, '#C03B2F', 2.4);
+  o += tx(mx, cy - 16, 'detach', { mono: true, fs: 11.5, fw: 700, fill: '#93261C' });
   o += arrow(N.u.cx + N.u.w / 2, cy, N.z.cx - N.z.w / 2, cy, C.ink);
   o += tx((N.u.cx + N.z.cx) / 2, cy - 12, '× x', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
   // nodes
-  o += node(N.x.cx, cy, N.x.w, bh, '#F3E5F5', C.purple, 'x', 'input');
+  o += node(N.x.cx, cy, N.x.w, bh, '#EDE9F8', C.purple, 'x', 'input');
   o += node(N.sq.cx, cy, N.sq.w, bh, C.lblue, C.blue, 'x²', null);
   // u: dashed border = treated as constant
   o += `<rect x="${N.u.cx - N.u.w / 2}" y="${cy - bh / 2}" width="${N.u.w}" height="${bh}" rx="10" fill="${C.lgray}" stroke="${C.gray}" stroke-width="2" stroke-dasharray="5 4"/>`;
@@ -120,10 +118,9 @@ function detachGraph() {
 // ── dynamic graphs: control flow realizes a different graph per input ─
 function dynamic() {
   const W = 600, H = 250; let o = '';
-  o += tx(W / 2, 28, 'The graph is built at runtime', { fs: 15, fw: 700, fill: C.ink });
   const doublings = (y, n, inLabel, branch, bcolor) => {
     let s = '', x = 44;
-    s += `<rect x="${x - 22}" y="${y - 17}" width="60" height="34" rx="8" fill="#F3E5F5" stroke="${C.purple}" stroke-width="2"/>`;
+    s += `<rect x="${x - 22}" y="${y - 17}" width="60" height="34" rx="8" fill="#EDE9F8" stroke="${C.purple}" stroke-width="2"/>`;
     s += tx(x + 8, y, inLabel, { mono: true, fs: 12.5, fw: 700, fill: C.purple });
     x += 50;
     for (let i = 0; i < n; i++) {
@@ -155,7 +152,6 @@ function fwdVsRev() {
   const W = 560, H = 250; let o = '';
   const xs = [130, 290, 450];
   const labels = ['x', 'h', 'y'];
-  o += tx(W / 2, 26, 'Two ways to sweep the same graph', { fs: 15, fw: 700, fill: C.ink });
   // forward (top, dark, →)
   const yt = 86;
   o += tx(W / 2, yt - 34, 'forward mode: one input → all outputs', { fs: 12.5, fw: 700, fill: C.ink });

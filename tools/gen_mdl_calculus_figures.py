@@ -936,11 +936,11 @@ def fig_tape_dag():
            "r": (4.4, 2.0), "y": (6.5, 2.0)}
     hw = {"u": 0.42, "v": 0.42, "t": 0.72, "r": 0.8, "y": 0.8}
 
-    def box(k, label, color=LIGHT):
+    def box(k, label, color=LIGHT, ec="black"):
         cx, cy = pos[k]; w = hw[k]
         ax.add_patch(FancyBboxPatch((cx - w, cy - hh), 2 * w, 2 * hh,
                      boxstyle="round,pad=0.02,rounding_size=0.12",
-                     facecolor=color, edgecolor="black", lw=1.2, zorder=3))
+                     facecolor=color, edgecolor=ec, lw=1.2, zorder=3))
         ax.text(cx, cy, label, ha="center", va="center", fontsize=10.5, zorder=4)
 
     def port(k, c):                             # a named point on a box's border
@@ -966,9 +966,10 @@ def fig_tape_dag():
     link(port("r", "SE"), port("y", "SW"))
 
     box("u", "$u$"); box("v", "$v$")
-    box("t", r"$t=uv$", color=BLUE)
-    box("r", r"$r=t+u$", color=BLUE)
-    box("y", r"$y=r\cdot r$", color=ORANGE)
+    # light tint fills (base only on the edge) keep the labels readable
+    box("t", r"$t=uv$", color=fl.T.BLUE.tint, ec=BLUE)
+    box("r", r"$r=t+u$", color=fl.T.BLUE.tint, ec=BLUE)
+    box("y", r"$y=r\cdot r$", color=fl.T.ORANGE.tint, ec=ORANGE)
     ax.text(0.0, 2.66, r"$u$ fans out (diamond)", color=GRAY, fontsize=11,
             ha="center")
     ax.text(5.45, 1.12, r"$\bar r=\bar y\,r+\bar y\,r$  (+= twice)",

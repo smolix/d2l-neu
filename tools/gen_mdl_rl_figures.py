@@ -18,6 +18,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.legend_handler import HandlerTuple
 from matplotlib.patches import (Arc, Circle, FancyArrowPatch, FancyBboxPatch,
                                 Patch, Polygon, Rectangle)
+from matplotlib.ticker import NullFormatter
 from matplotlib.textpath import TextPath
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1207,6 +1208,9 @@ def fig_compounding_error():  # F21 -> mdl-rl-compounding-error
     axb.set_xticklabels(["4", "8", "16", "32", "64"])
     axb.set_yticks([0.05, 0.2, 1.0, 5.0, 20.0])
     axb.set_yticklabels(["0.05", "0.2", "1", "5", "20"])
+    # the fixed ticks above are the whole story: no auto minor labels
+    axb.xaxis.set_minor_formatter(NullFormatter())
+    axb.yaxis.set_minor_formatter(NullFormatter())
     axb.set_xlabel("horizon $T$", fontsize=13)
     axb.set_ylabel("return lost to the expert", fontsize=13)
     _black_axes(axb)
@@ -1450,7 +1454,7 @@ def fig_variance_reduction():  # F9  -> mdl-rl-variance-reduction
         vv = var_x - 2 * bv * cov + bv ** 2
         axc.plot([bv, bv], [0.0, vv], color=color, lw=1.5, ls="--", zorder=2)
         axc.plot([bv], [vv], "o", color=color, ms=7, zorder=4)
-    _leader(axc, "no baseline", (0.0, var_x), (0.30, var_x * 1.10), GRAY,
+    _leader(axc, "no baseline", (0.0, var_x), (0.34, var_x * 1.04), GRAY,
             ha="left", va="bottom")
     axc.set_xticks([0.0, e_r, b_star, 2.0])
     axc.set_xticklabels(["$0$", "$\\bar R$", "$b^\\star$", "$2$"])
@@ -2563,10 +2567,10 @@ def fig_data_rules():         # F19 -> mdl-rl-data-rules
     _arc_arrow(axc, (0.85, 2.48), (1.30, 3.48), 0.42, GRAY, lw=1.6, mut=14)
     axc.text(1.62, 2.96, "sweep", ha="left", va="center", fontsize=11.5,
              color=GRAY)
-    _elbow(axc, [(1.75, 5.92), (1.75, 6.34), (5.90, 6.34)], "black", lw=1.6)
-    axc.text(2.95, 6.44, "deploy", ha="center", va="bottom", fontsize=11.5,
+    _elbow(axc, [(1.75, 5.92), (1.75, 6.44), (5.90, 6.44)], "black", lw=1.6)
+    axc.text(2.95, 6.36, "deploy", ha="center", va="top", fontsize=11.5,
              color="black")
-    axc.text(4.30, 6.42, "?", ha="left", va="bottom", fontsize=15,
+    axc.text(4.30, 6.34, "?", ha="left", va="top", fontsize=15,
              color="black", fontweight="bold")
     axc.text(3.25, 1.15, "errors are never tested: no mistake\n"
                          "the learned policy makes is discovered",

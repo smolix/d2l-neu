@@ -52,7 +52,7 @@ def fig_kernels():
     for ax, (name, y) in zip(axes, kernels):
         ax.plot(x, y, color=BLUE, lw=2.0)
         ax.set_xlim(-2.5, 2.5)
-        ax.set_ylim(-0.06, 1.12)
+        ax.set_ylim(0.0, 1.12)
         ax.set_xticks([-2, -1, 0, 1, 2])
         ax.set_yticks([0, 0.5, 1])
         ax.tick_params(labelsize=10, colors="black")

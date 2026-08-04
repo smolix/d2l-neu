@@ -38,6 +38,10 @@ from matplotlib.spines import Spine
 from matplotlib.textpath import TextPath
 from matplotlib.transforms import Bbox
 
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from figstyle import tokens as _T
+
 # --------------------------------------------------------------------------- #
 # Pinned style constants — never override per figure.                         #
 # --------------------------------------------------------------------------- #
@@ -53,20 +57,23 @@ for _f in ("SourceSans3-Regular.ttf", "SourceSans3-Bold.ttf",
 SANS = "Source Sans 3"
 MONO = "Inconsolata"
 
-INK = "#000000"                 # strokes, arrows, pill borders, labels
+INK = _T.INK                    # strokes, arrows, pill borders, labels
 STROKE = 1.2                    # pt — pill borders, arrows, skip lines
 
 # Accent 1 (default): d2l blue.
-ACCENT = "#0B6BB2"              # saturated tone: numbers, repeat, keywords
-ACCENT_TINT = "#CDE8FA"         # repeated-block panel fill (blue on white)
+ACCENT = _T.BLUE.dark              # saturated tone: numbers, repeat, keywords
+ACCENT_ON_DARK = "#AEC7E8"         # keyword color INSIDE the novelty box
+                                   # (>= 6:1 on NOVELTY_FILL; the dark accent
+                                   # vanishes there)
+ACCENT_TINT = _T.BLUE.tint         # repeated-block panel fill (blue on white)
 # Accent 2 (comparisons only): warm amber.
-ACCENT2 = "#B45309"
-ACCENT2_TINT = "#FBE8D3"
+ACCENT2 = _T.ORANGE.base
+ACCENT2_TINT = _T.ORANGE.tint
 
-NOVELTY_FILL = "#3B3B3B"        # near-black novelty box, white text
-CONTAINER_FILL = "#E4E4E4"      # outermost network container
-INSET_FILL = "#ECECEC"          # dashed inset panels
-GRAY_TEXT = "#6E6E6E"           # shape notes, stage labels, input anchor
+NOVELTY_FILL = _T.NOVELTY_FILL        # near-black novelty box, white text
+CONTAINER_FILL = _T.CONTAINER_FILL      # outermost network container
+INSET_FILL = _T.INSET_FILL          # dashed inset panels
+GRAY_TEXT = _T.MUTED           # shape notes, stage labels, input anchor
 
 PILL_H = 26.0                   # pt — pill height (single-line)
 PILL_GAP = 15.0                 # pt — default vertical gap between spine ops
@@ -229,7 +236,7 @@ class Diagram:
         return PILL_H / 2
 
     def novelty(self, x, y, pre, keyword, post="", w=None, fs=PILL_FS,
-                accent=ACCENT, zorder=6):
+                accent=ACCENT_ON_DARK, zorder=6):
         """The one new-op box: near-black fill, white text, accent keyword."""
         segs = [(pre, "white", False), (keyword, accent, True),
                 (post, "white", False)]
@@ -369,21 +376,24 @@ class Diagram:
 # deliberately do NOT use the gallery accent colors.                         #
 # --------------------------------------------------------------------------- #
 
-FAMILY_BLUE = "#B2D9FF"     # the family's shaded-cell blue (from conv-pad.svg)
-GRID_LW = 1.2
-GRID_FS = 11.0              # in-cell values and grid titles
+FAMILY_BLUE = "#B2D9FF"        # the ORIGINAL legacy mask blue (conv mechanics only)
+FAMILY_BLUE_DARK = "#8FC3EF"   # the family's second, stronger shade
+GRID_LW = 1.8   # heavier per the 2026-08-03 mobile-legibility review
+GRID_FS = 13.0              # in-cell values and grid titles
 
 
 class MechDiagram(Diagram):
     """Canvas for mechanics figures; adds the grid family's primitives."""
 
     def grid(self, x, y, rows, cols, cell=20.0, shaded=(), dashed=False,
-             values=None, title=None, zorder=4):
+             values=None, title=None, zorder=4, frame_only=False,
+             title_y=None, shaded_dark=()):
         """Family grid with lower-left corner at (x, y).  ``shaded`` holds
         (row, col) pairs, row 0 at the TOP (reading order).  ``values`` maps
         (row, col) -> str.  Returns (width, height)."""
         from matplotlib.patches import Rectangle
         shaded = set(shaded)
+        shaded_dark = set(shaded_dark)
         style = dict(edgecolor=INK, linewidth=GRID_LW)
         if dashed:
             style["linestyle"] = (0, (2.0, 2.0))
@@ -392,20 +402,24 @@ class MechDiagram(Diagram):
                 cx, cy = x + c * cell, y + (rows - 1 - r) * cell
                 self.ax.add_patch(Rectangle(
                     (cx, cy), cell, cell, zorder=zorder,
-                    facecolor=FAMILY_BLUE if (r, c) in shaded else "white",
+                    facecolor="none" if frame_only else
+                    (FAMILY_BLUE_DARK if (r, c) in shaded_dark else
+                     FAMILY_BLUE if (r, c) in shaded else "white"),
                     **style))
                 if values and (r, c) in values:
                     self.ax.text(cx + cell / 2, cy + cell / 2, values[(r, c)],
                                  fontsize=GRID_FS, color=INK, family=SANS,
                                  ha="center", va="center", zorder=zorder + 1)
         if title:
-            self.ax.text(x + cols * cell / 2, y + rows * cell + 10, title,
+            ty = title_y if title_y is not None else y + rows * cell + 10
+            self.ax.text(x + cols * cell / 2, ty, title,
                          fontsize=GRID_FS, color=INK, family=SANS,
                          ha="center", va="bottom", zorder=zorder + 1)
         return cols * cell, rows * cell
 
     def grid_stack(self, x, y, n, rows, cols, cell=20.0, offset=7.0,
-                   shaded_front=(), shade_backs=False, title=None, zorder=4):
+                   shaded_front=(), shade_backs=False, title=None, zorder=4,
+                   title_y=None):
         """A stack of ``n`` channel grids, drawn back-to-front with the front
         grid's lower-left at (x, y); deeper channels offset up-right (the
         conv-multi-in.svg convention).  ``shaded_front`` shades cells of the
@@ -421,7 +435,8 @@ class MechDiagram(Diagram):
         tw = cols * cell + (n - 1) * offset
         th = rows * cell + (n - 1) * offset
         if title:
-            self.ax.text(x + tw / 2, y + th + 10, title,
+            ty = title_y if title_y is not None else y + th + 10
+            self.ax.text(x + tw / 2, ty, title,
                          fontsize=GRID_FS, color=INK, family=SANS,
                          ha="center", va="bottom", zorder=zorder + 1)
         return tw, th

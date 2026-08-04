@@ -26,6 +26,7 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+TEAL = fl.T.TEAL.base   # running-state role (guide 4.3)
 Rectangle = fl.Rectangle
 
 WHITE_BOX = dict(facecolor="white", edgecolor="none", alpha=0.85, pad=2.5)
@@ -78,10 +79,10 @@ def fig_online_softmax() -> None:
 
     # --- the running state -------------------------------------------------
     sx = 7.7                            # left edge of the state group
-    ax.add_patch(Rectangle((sx, 0), 0.28, side, facecolor=GREEN,
-                           edgecolor=GREEN, alpha=0.45))
-    ax.add_patch(Rectangle((sx + 0.62, 0), 0.28, side, facecolor=GREEN,
-                           edgecolor=GREEN, alpha=0.45))
+    ax.add_patch(Rectangle((sx, 0), 0.28, side, facecolor=TEAL,
+                           edgecolor=TEAL, alpha=0.45))
+    ax.add_patch(Rectangle((sx + 0.62, 0), 0.28, side, facecolor=TEAL,
+                           edgecolor=TEAL, alpha=0.45))
     ax.add_patch(Rectangle((sx + 1.24, 0), 0.95, side, facecolor=BLUE,
                            edgecolor=BLUE, alpha=0.30))
     ax.text(sx + 0.14, -0.32, r"$\mathbf{m}$", ha="center", va="top",

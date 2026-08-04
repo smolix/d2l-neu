@@ -149,7 +149,7 @@ def fig_eta_tent():
     # short leader that stays under the green curve the whole way and meets
     # it exactly at the left dot -- so the leader only touches the curve at
     # its own target, never crosses it.
-    ax.annotate("both endpoints equal", xy=(lmin, rho), xytext=(2.3, 0.15),
+    ax.annotate("both endpoints equal", xy=(lmin, rho), xytext=(1.35, 0.15),
                 color=GREEN, fontsize=11, ha="left", va="bottom",
                 arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.8))
 

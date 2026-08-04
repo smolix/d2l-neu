@@ -24,16 +24,23 @@ FIGURE_GENERATORS := $(sort \
     $(wildcard tools/gen_mdl_*_figures.py) \
     $(wildcard tools/gen_bg_*_figures.py) \
     $(wildcard tools/gen_arch_*_figures.py) \
+    $(wildcard tools/figstyle/remake_ch*.py) \
     tools/gen_opt_figures.py)
 FIGURE_STAMPS := $(patsubst tools/%.py,.figstamps/%,$(FIGURE_GENERATORS))
 
 # Regenerate one generator's SVGs only when its script (or the shared house
 # style it imports) changed. CPU-only; byte-idempotent.
 .figstamps/%: tools/%.py tools/gen_mdl_figures.py | .venv-pytorch/.synced
-	@mkdir -p .figstamps $(LOGDIR)
+	@mkdir -p $(@D) $(LOGDIR)
 	@echo "=== figures: $* ==="
-	@.venv-pytorch/bin/python tools/$*.py 2>&1 | tee $(LOGDIR)/figures-$*-$(TS).log
+	@.venv-pytorch/bin/python tools/$*.py 2>&1 | tee $(LOGDIR)/figures-$(notdir $*)-$(TS).log
 	@touch $@
+
+# figstyle chapter remakes (docs/figure-style-guide.md §9) depend on the
+# shared token layer + composer, not on gen_mdl_figures.py. fontTools ships
+# with matplotlib, so .venv-pytorch already satisfies them.
+$(patsubst tools/%.py,.figstamps/%,$(wildcard tools/figstyle/remake_ch*.py)): \
+    tools/figstyle/tokens.py tools/figstyle/svg.py tools/figstyle/textmetrics.py tools/figstyle/mpl.py
 
 # Aggregators pull their sub-modules in via import/runpy, so re-fire the whole
 # group when a sub-module changes (the aggregator's own mtime wouldn't).

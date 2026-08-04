@@ -60,7 +60,7 @@ def fig_residual_stream() -> None:
     # The streams: light vertical bands with the identity path inside.
     for cx in xs:
         ax.add_patch(Rectangle((cx - bw / 2, y0), bw, y1 - y0,
-                               facecolor="#e8eef5", edgecolor="none",
+                               facecolor=fl.T.PANEL, edgecolor="none",
                                zorder=0))
         fl.arrow(ax, (cx, y0 + 0.06), (cx, y1 - 0.06), color=BLUE, lw=1.6,
                  mut=12)

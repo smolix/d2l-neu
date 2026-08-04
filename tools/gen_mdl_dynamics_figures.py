@@ -375,9 +375,13 @@ def fig_score_field():
     ax.annotate(r"$\nabla\log p=\mathbf{0}$", xy=tuple(mus[1]),
                 xytext=(2.3, -1.7), color="black", fontsize=14,
                 ha="center", va="center",
+                bbox=dict(facecolor="white", edgecolor="none", alpha=0.75,
+                          pad=2.0),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.4,
                                 shrinkA=2, shrinkB=6), zorder=6)
     ax.text(-m + 0.15, m - 0.15, r"$\mathbf{s}(\mathbf{x})=\nabla\log p(\mathbf{x})$",
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.75,
+                      pad=2.0),
             color="black", fontsize=14, ha="left", va="top")
 
     ax.set_xlabel("$x_1$")
@@ -690,7 +694,9 @@ def fig_qv_convergence():
     ax.set_xlabel("$t$")
     ax.set_ylabel("running sum of squared increments")
     ax.set_xlim(0, 1)
-    ax.legend(loc="upper left")
+    # opaque legend: the rising curves pass underneath, not through the text
+    ax.legend(loc="upper left", fontsize=10, frameon=True, framealpha=1.0,
+              edgecolor="none", facecolor="white")
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
     fl.save(fig, "mdl-dyn-qv-convergence")

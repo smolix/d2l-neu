@@ -82,16 +82,20 @@ def fig_ridge_geometry():
             ax.plot(e[:, 0], e[:, 1], color=LIGHT, lw=1.1)
         e = contour(L(wstar[None])[0])            # the contour that just touches the region
         ax.plot(e[:, 0], e[:, 1], color=ORANGE, lw=1.7)
-        fl.axis_cross(ax, m_x, m_y, color="black", lw=0.8)
+        fl.axis_cross(ax, m_x, m_y, color=fl.GRAY, lw=1.2)
         ax.plot(*bhat, "o", color=GRAY, ms=6)
         ax.text(bhat[0] + 0.08, bhat[1] + 0.30, r"$\hat{\mathbf{w}}$",
                 color=GRAY, ha="center", va="center", fontsize=13)
         ax.plot(*wstar, "o", color=ORANGE, ms=7)
-        ax.text(wstar[0] + 0.12, wstar[1] - 0.42, r"$\mathbf{w}^\star$",
+        # label in the clear annulus between the tangent contour and the
+        # inner faint contours, toward w-hat (up-right of the dot) — nothing
+        # crosses it there (Alex, ch3 review)
+        lab = wstar + 0.30 * (bhat - wstar)
+        ax.text(lab[0], lab[1] + 0.14, r"$\mathbf{w}^\star$",
                 color=ORANGE, ha="center", va="center", fontsize=13)
-        ax.text(m_x[1], -0.26, r"$w_1$", color="black", ha="center",
+        ax.text(m_x[1], -0.26, r"$w_1$", color=fl.INK, ha="center",
                 va="center", fontsize=12)
-        ax.text(0.26, m_y[1], r"$w_2$", color="black", ha="center",
+        ax.text(0.26, m_y[1], r"$w_2$", color=fl.INK, ha="center",
                 va="center", fontsize=12)
         fl.clean_axes(ax, lim=(m_x, m_y), hide=True)
     fig.subplots_adjust(wspace=0.10)

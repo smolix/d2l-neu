@@ -133,9 +133,9 @@ def fig_latent_bottleneck():
                 fc=color, ec="black", lw=0.9, zorder=3))
         return xs
 
-    in_x = token_row(IN_Y, N, 0.0, "#c6dbef")            # light blue inputs
+    in_x = token_row(IN_Y, N, 0.0, fl.T.BLUE.tint)            # light blue inputs
     lat_x = token_row(LAT_Y, M, 4.75, ORANGE, pitch=1.15)
-    out_x = token_row(OUT_Y, M, 4.75, "#a1d99b", pitch=1.15)  # light green
+    out_x = token_row(OUT_Y, M, 4.75, fl.T.GREEN.tint, pitch=1.15)  # light green
 
     # cross-attention fan: every latent reads every input (thin); one latent's
     # fan highlighted; arrows follow the information flow, input -> latent

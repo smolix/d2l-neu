@@ -10,11 +10,10 @@ import { C, tx, arrow, svg } from './engine.mjs';
 
 function discoveryLoop() {
   const W = 748, H = 200; let o = '';
-  o += tx(W / 2, 26, 'Figuring out an unfamiliar API: a repeatable loop', { fs: 15.5, fw: 700, fill: C.ink });
   const steps = [
     { x: 98,  t: 'Discover', s: 'dir() · Tab',     c: C.blue,   cl: C.lblue },
     { x: 282, t: 'Inspect',  s: 'help() · ?',       c: C.amber,  cl: C.lamber },
-    { x: 466, t: 'Read',     s: 'docs · source ??', c: C.purple, cl: '#F3E5F5' },
+    { x: 466, t: 'Read',     s: 'docs · source ??', c: C.purple, cl: '#EDE9F8' },
     { x: 650, t: 'Verify',   s: 'run a quick test', c: C.green,  cl: C.lgreen },
   ];
   const bw = 148, bh = 60, cy = 98;

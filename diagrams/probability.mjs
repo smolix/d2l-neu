@@ -38,22 +38,23 @@ const dot = (x, y, r, fill) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fil
 // ── Bayes in counts: why a positive test is usually a false alarm ───
 function naturalFrequencies() {
   const W = 660, H = 360; let o = '';
-  o += tx(W / 2, 28, 'Bayes in counts: a positive test is usually a false alarm', { fs: 15.5, fw: 700, fill: C.ink });
+  // arrows FIRST: tails start under the (opaque) source boxes and emerge
+  // from behind them; tips land exactly on the target box boundary
+  o += arrow(310, 78, 202, 129, C.gray);
+  o += arrow(350, 78, 458, 129, C.gray);
+  o += arrow(168, 170, 168, 226, C.green);
+  o += arrow(486, 170, 486, 226, C.amber);
+  o += arrow(202, 268, 300, 303, C.gray);
+  o += arrow(452, 268, 360, 303, C.gray);
+  o += tx(230, 104, '0.15%', { fs: 11.5, fw: 700, fill: C.green });
+  o += tx(432, 104, '99.85%', { fs: 11.5, fw: 700, fill: C.muted });
+  // boxes on top
   o += box(330, 66, 162, 46, C.lgray, C.gray, '10,000 people', null);
-  // split by true status
   o += box(168, 154, 158, 50, C.lgreen, C.green, '15 have HIV', 'P(H=1) = 0.0015');
   o += box(486, 154, 170, 50, C.lgray, C.gray, '9,985 healthy', 'P(H=0) = 0.9985');
-  o += arrow(300, 90, 202, 130, C.gray); o += tx(230, 104, '0.15%', { fs: 11.5, fw: 700, fill: C.green });
-  o += arrow(360, 90, 458, 130, C.gray); o += tx(432, 104, '99.85%', { fs: 11.5, fw: 700, fill: C.muted });
-  // test-positive counts
   o += box(168, 250, 158, 48, C.lgreen, C.green, '15 test +', '100% detected');
   o += box(486, 250, 170, 48, C.lamber, C.amber, '≈ 100 test +', '1% false positive');
-  o += arrow(168, 180, 168, 225, C.green);
-  o += arrow(486, 180, 486, 225, C.amber);
-  // verdict
   o += box(330, 326, 476, 46, C.lblue, C.blue, '115 test positive · only 15 truly have HIV', 'P(H=1 | D=1) ≈ 15 / 115 ≈ 13%');
-  o += arrow(202, 274, 300, 305, C.gray);
-  o += arrow(452, 274, 360, 305, C.gray);
   return svg(W, H, o);
 }
 
@@ -61,7 +62,6 @@ function naturalFrequencies() {
 function jointGrid() {
   const W = 384, H = 372; let o = ''; const s = 46, g = 5;
   const x0 = 96, y0 = 102;
-  o += tx(190, 26, 'Joint, marginal, conditional', { fs: 15, fw: 700, fill: C.ink });
   const J = [['.12', '.18', '.10'], ['.20', '.15', '.25']];   // rows A=a1,a2 · cols B=b1,b2,b3
   const hot = (r) => r === 1;   // highlight A=a2
   // caption + column headers, well clear of the title
@@ -91,7 +91,6 @@ function jointGrid() {
 // ── (in)dependence DAGs: conditioning creates or destroys it ────────
 function explainingAway() {
   const W = 660, H = 272; let o = '';
-  o += tx(W / 2, 28, 'Conditioning can create or destroy dependence', { fs: 16, fw: 700, fill: C.ink });
   const node = (x, y, l) =>
     `<circle cx="${x}" cy="${y}" r="20" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`
     + tx(x, y, l, { fs: 16, fw: 700, fill: C.ink });
@@ -100,7 +99,7 @@ function explainingAway() {
   let cx = 110;
   o += node(cx, 80, 'C'); o += node(cx - 46, 160, 'A'); o += node(cx + 46, 160, 'B');
   o += arrow(cx - 10, 96, cx - 40, 144, C.ink); o += arrow(cx + 10, 96, cx + 40, 144, C.ink);
-  o += cap(cx, 'common cause', 'A, B dependent — ⟂ given C');
+  o += cap(cx, 'common cause', 'A, B dependent; ⟂ given C');
   // 2 — chain  A → B → C
   cx = 330;
   o += node(cx - 64, 120, 'A'); o += node(cx, 120, 'B'); o += node(cx + 64, 120, 'C');
@@ -110,14 +109,13 @@ function explainingAway() {
   cx = 552;
   o += node(cx - 46, 80, 'A'); o += node(cx + 46, 80, 'B'); o += node(cx, 160, 'C');
   o += arrow(cx - 40, 96, cx - 10, 144, C.ink); o += arrow(cx + 40, 96, cx + 10, 144, C.ink);
-  o += cap(cx, 'collider (explaining away)', 'A ⟂ B — dependent given C');
+  o += cap(cx, 'collider (explaining away)', 'A ⟂ B; dependent given C');
   return svg(W, H, o);
 }
 
 // ── prior → posterior: evidence accumulates ─────────────────────────
 function bayesUpdate() {
   const W = 560, H = 258; let o = '';
-  o += tx(W / 2, 28, 'Each positive test updates the belief', { fs: 16, fw: 700, fill: C.ink });
   const base = 200, top = 66, scale = (base - top) / 100;   // % → px
   const bars = [
     { x: 132, pct: 0.15, l: 'prior', s: '0.15%', c: C.gray, cl: C.lgray },
@@ -141,7 +139,6 @@ function bayesUpdate() {
 // ── Venn diagram for events in a sample space ───────────────────────
 function venn() {
   const W = 440, H = 300; let o = '';
-  o += tx(W / 2, 26, 'Events in a sample space', { fs: 15, fw: 700, fill: C.ink });
   // sample space S
   o += `<rect x="40" y="52" width="360" height="200" rx="8" fill="${C.lgray}" fill-opacity="0.35" stroke="${C.gray}" stroke-width="1.6"/>`;
   o += tx(58, 70, 'S', { fs: 14, fw: 700, fill: C.muted });
@@ -159,7 +156,6 @@ function venn() {
 // ── discrete PMF (bars) vs continuous PDF (curve + shaded interval) ──
 function density() {
   const W = 700, H = 300; let o = '';
-  o += tx(W / 2, 26, 'Discrete mass vs. continuous density', { fs: 15.5, fw: 700, fill: C.ink });
   const base = 244;
   // left: PMF
   o += tx(180, 58, 'discrete:  P(X = v) is a bar', { fs: 12.5, fw: 700, fill: C.blue });
@@ -210,7 +206,6 @@ function expectation() {
 // ── variance: two distributions, same mean, different spread ────────
 function spread() {
   const W = 600, H = 290; let o = '';
-  o += tx(W / 2, 26, 'Variance: same mean, different spread', { fs: 15.5, fw: 700, fill: C.ink });
   const base = 236, mu = 300;
   o += line(64, base, 536, base, C.gray, 1.6);
   const fW = (x) => base - 66 * gauss(x, mu, 82), fN = (x) => base - 150 * gauss(x, mu, 34);
@@ -245,14 +240,13 @@ function covariance() {
   const neg = pos.map(([dx, dy]) => [dx, -dy]);
   o += panel(140, pos,  C.green, 'Cov > 0', 'move together');
   o += panel(360, zero, C.gray,  'Cov ≈ 0', 'unrelated');
-  o += panel(580, neg,  C.amber, 'Cov &lt; 0', 'move oppositely');
+  o += panel(580, neg,  C.amber, 'Cov < 0', 'move oppositely');
   return svg(W, H, o);
 }
 
 // ── Markov's inequality: a pictorial, distribution-free tail bound ──
 function markov() {
   const W = 640, H = 306; let o = '';
-  o += tx(W / 2, 24, "Markov's inequality: a distribution-free tail bound", { fs: 15, fw: 700, fill: C.ink });
   const base = 224, x0 = 80, x1 = 580, k = 112;
   o += line(x0 - 4, base, x1 + 10, base, C.gray, 1.6);
   const g = (x) => { const t = (x - x0) / k; return base - 380 * t * Math.exp(-t); };
@@ -265,7 +259,7 @@ function markov() {
   o += arrow(478, 160, 456, base - 14, C.amber);
   o += `<rect x="${W / 2 - 160}" y="242" width="320" height="40" rx="9" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`;
   o += tx(W / 2, 265, 'P(X ≥ a)  ≤  E[X] / a', { fs: 16, fw: 700, fill: C.ink });
-  o += tx(W / 2, H - 8, 'distribution-free: Chebyshev applies it to (X−μ)²; Hoeffding &amp; Bernstein sharpen it', { fs: 10.5, fw: 600, fill: C.muted });
+  o += tx(W / 2, H - 8, 'distribution-free: Chebyshev applies it to (X−μ)²; Hoeffding & Bernstein sharpen it', { fs: 10.5, fw: 600, fill: C.muted });
   return svg(W, H, o);
 }
 

@@ -182,10 +182,14 @@ def fig_checkpoint_contents():
     centers = [y_top - row_h / 2 - i * (row_h + gap) for i in range(n)]
 
     for cy, (left_lab, right_lab) in zip(centers, rows):
-        box(ax, x_left, cy, w_left, row_h, left_lab, facecolor=BLUE, ls="-",
-            fontsize=11.5)
-        box(ax, x_right, cy, w_right, row_h, right_lab, facecolor=GREEN, ls="-",
-            fontsize=11.5)
+        # trio style: tint fill + base outline + ink text — never a
+        # saturated slab with light text (guide §2.3)
+        box(ax, x_left, cy, w_left, row_h, left_lab,
+            facecolor=fl.T.BLUE.tint, edgecolor=fl.T.BLUE.base, lw=2.0,
+            ls="-", fontsize=11.5)
+        box(ax, x_right, cy, w_right, row_h, right_lab,
+            facecolor=fl.T.GREEN.tint, edgecolor=fl.T.GREEN.base, lw=2.0,
+            ls="-", fontsize=11.5)
         fl.arrow(ax, (x_left + w_left / 2 + 0.08, cy),
                  (x_right - w_right / 2 - 0.08, cy), color=GRAY, lw=1.6, mut=13)
 

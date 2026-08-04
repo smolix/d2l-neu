@@ -31,8 +31,8 @@ from matplotlib.patches import Circle, FancyArrowPatch  # noqa: E402
 
 # Two extra hues (matplotlib tab10) for the six-curve generator gallery; the
 # shared five-color palette is not large enough there.
-RED = "#d62728"
-PURPLE = "#9467bd"
+RED = fl.T.RED.base
+PURPLE = fl.T.PURPLE.base
 
 
 # --------------------------------------------------------------------------- #
@@ -345,13 +345,18 @@ def fig_kraft_tree():
     fig, ax = plt.subplots(figsize=(5.7, 4.0))
 
     # Explicit node coordinates (x, y); y is depth (0 at the root, downward).
+    # Every left edge and every right edge shares ONE slope (+-1.0 across
+    # a 1.1 level drop -- the angle the c/d edges had), so the tree reads as
+    # straight rays; the levels are a touch further apart to keep the chips
+    # clear of the internal dots.
+    DX, DY = 1.0, 1.1
     root = (3.0, 0.0)
-    nA = (0.6, -1.0)          # leaf, code "0",   depth 1
-    i1 = (3.6, -1.0)          # internal
-    nB = (2.4, -2.0)          # leaf, code "10",  depth 2
-    i2 = (4.8, -2.0)          # internal
-    nC = (3.9, -3.0)          # leaf, code "110", depth 3
-    nD = (5.7, -3.0)          # leaf, code "111", depth 3
+    nA = (root[0] - DX, -DY)            # leaf, code "0",   depth 1
+    i1 = (root[0] + DX, -DY)            # internal
+    nB = (i1[0] - DX, -2 * DY)          # leaf, code "10",  depth 2
+    i2 = (i1[0] + DX, -2 * DY)          # internal
+    nC = (i2[0] - DX, -3 * DY)          # leaf, code "110", depth 3
+    nD = (i2[0] + DX, -3 * DY)          # leaf, code "111", depth 3
 
     def edge(a, b, label, to_leaf=False):
         # Leaf-bound edges stop at the leaf chip's top edge (chips are 0.68
@@ -391,20 +396,20 @@ def fig_kraft_tree():
     # Depth (= code length) guide on the left -- an implicit vertical axis,
     # so its labels are black like any coordinate-axis label.
     for d in (1, 2, 3):
-        ax.text(-0.7, -d, rf"$\ell={d}$", color="black", fontsize=10.5,
+        ax.text(0.85, -d * DY, rf"$\ell={d}$", color="black", fontsize=10.5,
                 ha="right", va="center")
-    ax.text(-0.7, 0.0, "root", color="black", fontsize=10.5, ha="right",
+    ax.text(0.85, 0.0, "root", color="black", fontsize=10.5, ha="right",
             va="center")
 
     # Well below the "p=1/8" leaf labels (which sit at y=-3.52) so the taller,
     # bumped-up equation font never touches them.
-    ax.text(3.0, -4.30, r"$\sum_i 2^{-\ell_i} = "
+    ax.text(3.0, -4.55, r"$\sum_i 2^{-\ell_i} = "
             r"\frac{1}{2}+\frac{1}{4}+\frac{1}{8}+\frac{1}{8} = 1$"
             "   (Kraft, tight)",
             color=BLUE, fontsize=11.5, ha="center", va="center")
 
-    ax.set_xlim(-1.4, 6.6)
-    ax.set_ylim(-4.70, 0.6)
+    ax.set_xlim(-0.2, 6.6)
+    ax.set_ylim(-4.95, 0.6)
     ax.axis("off")
     fl.save(fig, "mdl-it-kraft-tree")
 
@@ -488,7 +493,7 @@ def fig_f_div_generators():
 
     # Every generator touches zero at the no-discrepancy ratio u = 1.
     ax.plot([1.0], [0.0], "o", color="black", ms=6, zorder=6)
-    ax.annotate(r"$f(1) = 0$", xy=(1.0, 0.0), xytext=(0.62, -0.47),
+    ax.annotate(r"$f(1) = 0$", xy=(1.0, 0.0), xytext=(1.05, -0.47),
                 fontsize=10, ha="center",
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.1))
 

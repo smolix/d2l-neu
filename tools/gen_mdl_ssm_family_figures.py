@@ -69,7 +69,7 @@ def fig_decay_ladder():
         ax.text(cx, by - bh / 2 - 0.35, name, ha="center", va="top",
                 fontsize=11, color="black")
     for cx_a, cx_b, step in zip(xs[:-1], xs[1:], steps):
-        fl.arrow(ax, (cx_a + bw / 2 + 0.12, by), (cx_b - bw / 2 - 0.12, by),
+        fl.arrow(ax, (cx_a + bw / 2, by), (cx_b - bw / 2, by),
                  color=GRAY, lw=1.6)
         ax.text((cx_a + cx_b) / 2, by + bh / 2 + 0.32, step, ha="center",
                 va="bottom", fontsize=10.5, color="black")
@@ -77,7 +77,7 @@ def fig_decay_ladder():
     _box(ax, x5, by, 3.4, bh,
          r"$\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^{\top}$",
          ORANGE, ls="--")
-    fl.arrow(ax, (xs[-1] + bw / 2 + 0.12, by), (x5 - 1.7 - 0.12, by),
+    fl.arrow(ax, (xs[-1] + bw / 2, by), (x5 - 1.7, by),
              color=GRAY, lw=1.6, ls="--")
     ax.text((xs[-1] + x5) / 2 - 0.05, by + bh / 2 + 0.32, "+ a write\nthat edits",
             ha="center", va="bottom", fontsize=10.5, color="black")

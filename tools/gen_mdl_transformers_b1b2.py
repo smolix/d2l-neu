@@ -40,9 +40,10 @@ NW = 1.7          # norm box width
 
 
 def _box(ax, x0, x1, y0, y1, text, fc, ec):
+    # zorder above the wires: arrow ends may tuck under the (opaque) box
     ax.add_patch(FancyBboxPatch(
         (x0, y0), x1 - x0, y1 - y0, boxstyle="round,pad=0.10",
-        fc=fc, ec=ec, lw=1.6, zorder=3))
+        fc=fc, ec=ec, lw=1.6, zorder=3.5))
     ax.text((x0 + x1) / 2, (y0 + y1) / 2, text, ha="center", va="center",
             fontsize=13, color="black", zorder=4)
 
@@ -54,8 +55,16 @@ def _add_circle(ax, y):
             color="black", zorder=6)
 
 
-def _stream(ax, y0, y1):
-    fl.arrow(ax, (SX, y0), (SX, y1), color=BLUE, lw=3.0, mut=18)
+def _stream(ax, y0, y1, head=True, x=None):
+    """A stream segment; head=False when the segment runs into a box or an
+    (+) with no room for an arrowhead -- the end tucks under the opaque
+    box instead."""
+    x = SX if x is None else x
+    if head:
+        fl.arrow(ax, (x, y0), (x, y1), color=BLUE, lw=3.0, mut=18)
+    else:
+        ax.plot([x, x], [y0, y1], color=BLUE, lw=3.0, zorder=2,
+                solid_capstyle="round")
 
 
 def _elbow(ax, pts, color, lw=1.8, arrow_end=True):
@@ -71,21 +80,21 @@ def _elbow(ax, pts, color, lw=1.8, arrow_end=True):
 
 def _panel_postln(ax):
     # stream segments (bottom -> top), interrupted by norm boxes on the stream
-    _stream(ax, 0.0, 3.55)
+    _stream(ax, 0.0, 3.65, head=False)
     _box(ax, SX - NW / 2, SX + NW / 2, 3.55, 4.45, "norm", "white", GRAY)
-    _stream(ax, 4.45, 8.05)
+    _stream(ax, 4.35, 8.15, head=False)
     _box(ax, SX - NW / 2, SX + NW / 2, 8.05, 8.95, "norm", "white", GRAY)
-    _stream(ax, 8.95, 10.6)
+    _stream(ax, 8.85, 10.6)
 
     # attention sublayer: read at y=0.9, write into + at y=2.9
-    _box(ax, BX0, BX1, 1.3, 2.5, "multi-head\nattention", "#ffe8d0", ORANGE)
-    _elbow(ax, [(SX, 0.9), (6.9, 0.9), (6.9, 1.3)], ORANGE)
+    _box(ax, BX0, BX1, 1.3, 2.5, "multi-head\nattention", fl.T.ORANGE.tint, ORANGE)
+    _elbow(ax, [(SX, 0.9), (6.9, 0.9), (6.9, 1.2)], ORANGE)
     _elbow(ax, [(6.9, 2.5), (6.9, 2.9), (SX + 0.30, 2.9)], ORANGE)
     _add_circle(ax, 2.9)
 
     # FFN sublayer: read at y=5.4, write into + at y=7.4
-    _box(ax, BX0, BX1, 5.8, 7.0, "feed-forward\nnetwork", "#ddf0dd", GREEN)
-    _elbow(ax, [(SX, 5.4), (6.9, 5.4), (6.9, 5.8)], GREEN)
+    _box(ax, BX0, BX1, 5.8, 7.0, "feed-forward\nnetwork", fl.T.GREEN.tint, GREEN)
+    _elbow(ax, [(SX, 5.4), (6.9, 5.4), (6.9, 5.7)], GREEN)
     _elbow(ax, [(6.9, 7.0), (6.9, 7.4), (SX + 0.30, 7.4)], GREEN)
     _add_circle(ax, 7.4)
 
@@ -98,17 +107,17 @@ def _panel_preln(ax):
 
     # attention sublayer with norm on the branch
     _box(ax, BX0, BX1 - 2.7, 0.5, 1.3, "norm", "white", GRAY)
-    _box(ax, BX0, BX1, 1.9, 3.1, "multi-head\nattention", "#ffe8d0", ORANGE)
-    _elbow(ax, [(SX, 0.9), (BX0, 0.9)], ORANGE)
-    _elbow(ax, [(BX1 - 2.7, 0.9), (6.9, 0.9), (6.9, 1.9)], ORANGE)
+    _box(ax, BX0, BX1, 1.9, 3.1, "multi-head\nattention", fl.T.ORANGE.tint, ORANGE)
+    _elbow(ax, [(SX, 0.9), (BX0 - 0.10, 0.9)], ORANGE)
+    _elbow(ax, [(BX1 - 2.7, 0.9), (6.9, 0.9), (6.9, 1.8)], ORANGE)
     _elbow(ax, [(6.9, 3.1), (6.9, 3.5), (SX + 0.30, 3.5)], ORANGE)
     _add_circle(ax, 3.5)
 
     # FFN sublayer with norm on the branch
     _box(ax, BX0, BX1 - 2.7, 5.0, 5.8, "norm", "white", GRAY)
-    _box(ax, BX0, BX1, 6.4, 7.6, "feed-forward\nnetwork", "#ddf0dd", GREEN)
-    _elbow(ax, [(SX, 5.4), (BX0, 5.4)], GREEN)
-    _elbow(ax, [(BX1 - 2.7, 5.4), (6.9, 5.4), (6.9, 6.4)], GREEN)
+    _box(ax, BX0, BX1, 6.4, 7.6, "feed-forward\nnetwork", fl.T.GREEN.tint, GREEN)
+    _elbow(ax, [(SX, 5.4), (BX0 - 0.10, 5.4)], GREEN)
+    _elbow(ax, [(BX1 - 2.7, 5.4), (6.9, 5.4), (6.9, 6.3)], GREEN)
     _elbow(ax, [(6.9, 7.6), (6.9, 8.0), (SX + 0.30, 8.0)], GREEN)
     _add_circle(ax, 8.0)
 
@@ -165,10 +174,10 @@ def _mini_panel(ax, order, stream_norm, title):
     if stream_norm:
         ax.add_patch(Circle((MSX, y_add), 0.30, fc="white", ec="black",
                             lw=1.5, zorder=5))
-        n0, n1 = y_add + 0.55, y_add + 1.40
-        fl.arrow(ax, (MSX, 0.0), (MSX, n0), color=BLUE, lw=3.0, mut=18)
+        n0, n1 = y_add + 0.72, y_add + 1.57
+        _stream(ax, 0.0, n0 + 0.10, head=False, x=MSX)
         _box(ax, MSX - NW / 2, MSX + NW / 2, n0, n1, "norm", "white", GRAY)
-        fl.arrow(ax, (MSX, n1), (MSX, y_top), color=BLUE, lw=3.0, mut=18)
+        _stream(ax, n1 - 0.10, y_top, x=MSX)
     else:
         ax.add_patch(Circle((MSX, y_add), 0.30, fc="white", ec="black",
                             lw=1.5, zorder=5))
@@ -179,22 +188,22 @@ def _mini_panel(ax, order, stream_norm, title):
     # the branch: read, boxes, write into the +
     ax.plot([MSX, MBC], [y_read, y_read], color=ORANGE, lw=1.8,
             solid_capstyle="round", zorder=2)
-    _elbow(ax, [(MBC, y_read), (MBC, spans[0][1])], ORANGE)
+    _elbow(ax, [(MBC, y_read), (MBC, spans[0][1] - 0.10)], ORANGE)
     for kind, y0, y1 in spans:
         if kind == "attn":
-            _box(ax, MBX0, MBX1, y0, y1, "attention", "#ffe8d0", ORANGE)
+            _box(ax, MBX0, MBX1, y0, y1, "attention", fl.T.ORANGE.tint, ORANGE)
         else:
             _box(ax, MBX0 + 1.1, MBX1 - 1.1, y0, y1, "norm", "white", GRAY)
     for (_, _, top), (_, nxt, _) in zip(spans, spans[1:]):
-        _elbow(ax, [(MBC, top), (MBC, nxt)], ORANGE)
+        _elbow(ax, [(MBC, top), (MBC, nxt - 0.10)], ORANGE)
     _elbow(ax, [(MBC, spans[-1][2]), (MBC, y_add), (MSX + 0.30, y_add)],
            ORANGE)
 
-    ax.text(MSX + 0.42, 0.05, r"$\mathbf{x}$", ha="left", va="bottom",
+    ax.text(MSX + 0.42, -0.16, r"$\mathbf{x}$", ha="left", va="bottom",
             fontsize=14, color="black")
     ax.set_title(title, fontsize=13, color="black")
     ax.set_xlim(-0.5, 8.3)
-    ax.set_ylim(-0.2, 6.6)
+    ax.set_ylim(-0.45, 6.6)
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])

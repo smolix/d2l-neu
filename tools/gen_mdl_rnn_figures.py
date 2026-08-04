@@ -28,6 +28,7 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+TEAL = fl.T.TEAL.base   # hidden-state role (guide §4.3)
 
 from matplotlib.lines import Line2D
 from matplotlib.patches import FancyBboxPatch
@@ -211,7 +212,7 @@ def fig_rnn_granularity_spectrum():
     fl.save(fig, 'mdl-rnn-granularity-spectrum')
 
 
-def _tok_box(ax, x, y, text, w=0.72, h=0.5, fc='#dbe9f6', ec='black',
+def _tok_box(ax, x, y, text, w=0.72, h=0.5, fc=fl.T.BLUE.tint, ec=fl.T.BLUE.base,
              fontsize=14, mono=True):
     """A token box centered at (x, y); returns (x, y) for line anchoring."""
     ax.add_patch(plt.Rectangle((x - w / 2, y - h / 2), w, h, facecolor=fc,
@@ -227,7 +228,7 @@ def fig_rnn_merge_tree():
     Leaves are byte tokens; each internal node carries its merge rank."""
     fig, ax = plt.subplots(figsize=(5.6, 3.6))
 
-    leaf_fc, node_fc = '#dbe9f6', '#fde3c8'   # light blue / light orange
+    leaf_fc, node_fc = fl.T.BLUE.tint, fl.T.ORANGE.tint   # token tints
     # Leaves (byte tokens).
     lx = {'h': 0.0, 'u': 1.0, 'g': 2.0, 'sp': 3.0}
     for name, x in lx.items():
@@ -304,7 +305,7 @@ def fig_rnn_pretokenization_pipeline():
     x = x0
     for chunk, subs in chunks:
         w = len(chunk) * char_w
-        fc = '#fde3c8' if digits(chunk) else '#dbe9f6'
+        fc = fl.T.ORANGE.tint if digits(chunk) else fl.T.BLUE.tint
         shown = chunk.replace(' ', '␣')
         ax.add_patch(plt.Rectangle((x, y2 - h / 2), w, h, facecolor=fc,
                                    edgecolor='black', lw=1.1))
@@ -485,7 +486,7 @@ def fig_unfolded():
     half = bh / 2
     for cx, s in zip(xs, subs):
         _box(ax, cx, y_in, bw, bh, rf"$\mathbf{{X}}_{{{s}}}$", BLUE)
-        _box(ax, cx, y_hid, bw, bh, rf"$\mathbf{{H}}_{{{s}}}$", GREEN)
+        _box(ax, cx, y_hid, bw, bh, rf"$\mathbf{{H}}_{{{s}}}$", TEAL)
         _box(ax, cx, y_out, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", ORANGE)
         # input -> hidden, and hidden -> output (same weights every step)
         fl.arrow(ax, (cx, y_in + half), (cx, y_hid - half), color=GRAY, lw=2.0,
@@ -546,7 +547,7 @@ def fig_lm_shift():
     half = bh / 2
     for i, cx in enumerate(xs):
         _box(ax, cx, y_in, bw, bh, inp[i], BLUE, fontsize=15)
-        _box(ax, cx, y_hid, bw, bh, rf"$\mathbf{{H}}_{{{i+1}}}$", GREEN)
+        _box(ax, cx, y_hid, bw, bh, rf"$\mathbf{{H}}_{{{i+1}}}$", TEAL)
         _box(ax, cx, y_out, bw, bh, rf"$\mathbf{{O}}_{{{i+1}}}$", ORANGE)
         _box(ax, cx, y_tgt, bw, bh, tgt[i], GRAY, fontsize=15)
         fl.arrow(ax, (cx, y_in + half), (cx, y_hid - half), color=GRAY, lw=2.0,
@@ -602,7 +603,7 @@ def _segment(ax, x0, x1, yc, h=0.62):
 def _chain(ax, xs, yc, r=0.085, color=BLUE):
     """Nodes (green hidden states) linked left-to-right by dependency arrows."""
     for x in xs:
-        ax.add_patch(plt.Circle((x, yc), r, facecolor=GREEN, edgecolor="none",
+        ax.add_patch(plt.Circle((x, yc), r, facecolor=TEAL, edgecolor="none",
                                  zorder=3))
     for x0, x1 in zip(xs[:-1], xs[1:]):
         fl.arrow(ax, (x0 + r + 0.02, yc), (x1 - r - 0.02, yc), color=color,
@@ -726,7 +727,7 @@ def fig_rnn_bptt():
     for y, s in zip(ys, subs):
         _box(ax, X, y, bw, bh, rf"$\mathbf{{X}}_{{{s}}}$", BLUE)
         opc(F, y)
-        _box(ax, H, y, bw, bh, rf"$\mathbf{{H}}_{{{s}}}$", GREEN)
+        _box(ax, H, y, bw, bh, rf"$\mathbf{{H}}_{{{s}}}$", TEAL)
         opc(G, y)
         _box(ax, O, y, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", ORANGE)
         sar((X + half, y), (F - r, y))          # X_t -> f
@@ -745,7 +746,7 @@ def fig_rnn_bptt():
     # ------------------------------------------------------------------ #
     # H_0, the initial hidden state, is a variable (green box, not shaded); it
     # sits on the bottom row at the H column and feeds the first hidden operator
-    _box(ax, H, yp, 1.0, bh, r"$\mathbf{H}_0$", GREEN)
+    _box(ax, H, yp, 1.0, bh, r"$\mathbf{H}_0$", TEAL)
     prev = [(H, yp)] + [(H, y) for y in ys[:-1]]     # H_0, H_1, H_2
     for (hx, hy), y in zip(prev, ys):
         start = (hx - 0.30, hy + bh / 2)
@@ -759,11 +760,15 @@ def fig_rnn_bptt():
     def fanout(box_cx, box_w, col_x, label):
         pbox(box_cx, yp, label, box_w)
         top = yp + bh / 2
-        # start x for the arrow to row i: leftmost for the highest circle
-        starts = [box_cx + 0.30, box_cx - box_w * 0.18, box_cx - box_w * 0.40]
-        for sx, y in zip(starts, ys):
-            p = (sx, top)
-            car(p, cb((col_x, y), p), rad=0.0 if y == ys[0] else 0.10, lw=1.7)
+        # the shared weights feed EVERY operator in the column: a straight
+        # vertical to the adjacent circle, arcs (from splayed departure
+        # points) around it to the higher ones
+        sar((col_x, top), (col_x, ys[0] - r), lw=1.7)
+        for dx, y, ang, rad in [(-0.34, ys[1], 235.0, 0.16),
+                                (-0.54, ys[2], 245.0, 0.12)]:
+            q = (col_x + r * np.cos(np.radians(ang)),
+                 y + r * np.sin(np.radians(ang)))
+            car((box_cx + dx, top), q, rad=rad, lw=1.7)
 
     fanout(F, 2.05, F, r"$\mathbf{W}_{hx},\mathbf{W}_{hh}$")
     fanout(G, 1.15, G, r"$\mathbf{W}_{qh}$")

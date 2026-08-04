@@ -325,7 +325,7 @@ def fig_inflection():
     ax.plot([-0.8, 0.8], [0, 0], "--", color=GRAY, lw=1.5)   # tangent at 0
     ax.plot(0, 0, "o", color=ORANGE, ms=8, zorder=5)
     ax.annotate("stationary inflection\n" r"$f'(0)=f''(0)=0$", xy=(0, 0),
-                xytext=(-1.95, 3.4), fontsize=12.5, color="black", ha="left",
+                xytext=(-1.45, 3.4), fontsize=12.5, color="black", ha="left",
                 arrowprops=_ANN)
     ax.set_xlim(-2.0, 2.0)
     _fn_axes(ax, r"$x$", r"$f(x)=x^3$")
@@ -405,10 +405,13 @@ def fig_saddle():
     axs.plot(s, -s ** 2, color=ORANGE, lw=2.6)
     axs.axhline(0.0, color=GRAY, lw=0.8, ls=":")
     axs.plot(0, 0, "o", color="black", ms=7, zorder=6)
-    axs.text(0.72, 0.60, r"$z=x^2$", color=BLUE, fontsize=13, ha="center")
-    axs.text(0.72, -0.62, r"$z=-y^2$", color=ORANGE, fontsize=13, ha="center")
-    axs.text(0.03, 0.14, "minimum", color=BLUE, fontsize=11.5, ha="left")
-    axs.text(0.03, -0.16, "maximum", color=ORANGE, fontsize=11.5, ha="left",
+    # all four labels centred on the saddle, inside the parabola pockets,
+    # clear of both curves
+    axs.text(0.0, 0.62, r"$z=x^2$", color=BLUE, fontsize=13, ha="center")
+    axs.text(0.0, -0.62, r"$z=-y^2$", color=ORANGE, fontsize=13, ha="center",
+             va="top")
+    axs.text(0.0, 0.16, "minimum", color=BLUE, fontsize=11.5, ha="center")
+    axs.text(0.0, -0.16, "maximum", color=ORANGE, fontsize=11.5, ha="center",
              va="top")
     axs.set_xlim(-1.0, 1.0)
     axs.set_ylim(-1.1, 1.1)

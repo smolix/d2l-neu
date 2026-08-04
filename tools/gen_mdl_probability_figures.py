@@ -240,13 +240,21 @@ def fig_power_curves():
     fig, ax = plt.subplots(figsize=(6.4, 3.9))
     # one curve per effect size, a blue family from dark (delta=1) to light
     deltas = [1.0, 0.5, 0.1, 0.01]
-    blues = ["#114e7c", BLUE, "#5b9bc9", "#9cc2dd"]
-    label_at = [3.0, 17.0, 300.0, 3.0e4]      # n where each curve label sits
+    # a dark->light ramp derived from the blue trio (dark, base, then two
+    # base->tint blend stops)
+    def _mix(c1, c2, t):
+        a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+        b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+        return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(a, b))
+    blues = [fl.T.BLUE.dark, BLUE, _mix(BLUE, fl.T.BLUE.tint, 0.45),
+             _mix(BLUE, fl.T.BLUE.tint, 0.72)]
+    label_at = [3.0, 28.0, 300.0, 3.0e4]      # n where each curve label sits
     # each curve is still climbing steeply at its own label's n, so all but
     # the widely-spaced delta=1 label need a much bigger vertical clearance;
     # anchoring at the label's *right* edge (ha="right") also keeps the rest
     # of the text over the curve's lower, already-cleared, left side
-    label_dy = [0.045, 0.16, 0.16, 0.16]
+    label_dy = [0.045, 0.08, 0.16, 0.16]      # delta=0.5 sits in the pocket
+    # between its own curve and the (already saturated) delta=1 curve
     for delta, col, ln, dy in zip(deltas, blues, label_at, label_dy):
         pw = power(delta)
         ax.plot(n, pw, color=col, lw=2.2)
@@ -258,7 +266,9 @@ def fig_power_curves():
     ax.axhline(0.8, color=GRAY, lw=1.1, ls="--")
     ax.text(1.3, 0.825, "target $0.8$", color=GRAY, fontsize=11, va="bottom")
     ax.axhline(0.05, color=GRAY, lw=1.0, ls=":")
-    ax.text(2.1, 0.075, r"$\alpha=0.05$", color=GRAY, fontsize=11, va="bottom")
+    # far right: every power curve is ~1 there, so the label owns the space
+    ax.text(1.5e5, 0.075, r"$\alpha=0.05$", color=GRAY, fontsize=11,
+            va="bottom", ha="right")
 
     # where the extreme curves cross the target (power is increasing in n).
     # n=8's own curve is nearly flat by n=8 (labelled straight above it); the
@@ -298,7 +308,10 @@ def fig_bias_variance_u_curve():
     ax.plot(c, var, color=ORANGE, lw=2.0, label="variance")
     ax.plot(c, mse, color=GREEN, lw=2.6, label="MSE = test error")
 
-    ax.axvline(cstar, color=GRAY, lw=1.0, ls="--")
+    # dashed marker stops AT the minimum — full-height it would cross
+    # the legend text (Alex, ch3 review)
+    ax.plot([cstar, cstar], [0, mse.min()], color=GRAY, lw=1.0, ls="--",
+            zorder=1)
     ax.plot([cstar], [mse.min()], "o", color=GREEN, ms=7, zorder=6)
     ax.annotate("sweet spot", xy=(cstar, mse.min()),
                 xytext=(cstar + 1.05, mse.min() + 1.25), color=GRAY,
@@ -733,9 +746,9 @@ def fig_family_tree():
         ax.annotate("", xy=tuple(c1 - d * 0.30), xytext=tuple(c0 + d * 0.30),
                     arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.5, ls="--"))
     for k, (x, y) in boxes.items():
-        _box(ax, (x, y), w, h, k, fc=("#dbe6f3" if k == "Gaussian" else LIGHT))
+        _box(ax, (x, y), w, h, k, fc=(fl.T.BLUE.tint if k == "Gaussian" else LIGHT))
     for k, (x, y) in priors.items():
-        _box(ax, (x, y), w, h, k, fc="#e7f3e7")        # light green for priors
+        _box(ax, (x, y), w, h, k, fc=fl.T.GREEN.tint)        # light green for priors
     ax.set_xlim(-0.5, 11.9); ax.set_ylim(-2.1, 5.6)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-prob-family-tree")
@@ -889,7 +902,7 @@ def fig_naive_independence():
                         zorder=5)
                 continue
             edge_into_node(ax, ynode, (x, y_bot))
-        node(ax, ynode, r"$y$", fc="#dbe6f3")
+        node(ax, ynode, r"$y$", fc=fl.T.BLUE.tint)
         for x, lab in zip(xs, feat_labels):
             if lab == r"$\cdots$":
                 continue
@@ -1158,20 +1171,23 @@ def fig_elbo():
     ax.plot(th, elbo, color=ORANGE, lw=2.2)
     ax.text(2.45, evid.max() + 0.16, r"$\log p(x;\theta)$", color=BLUE,
             ha="right", va="bottom", fontsize=11)
-    ax.text(2.45, elbo[-1] - 0.10, r"ELBO $\mathcal{L}(q,\theta)$",
-            color=ORANGE, ha="right", va="top", fontsize=11)
+    ax.text(2.10, elbo[-1] + 0.14, r"ELBO $\mathcal{L}(q,\theta)$",
+            color=ORANGE, ha="right", va="bottom", fontsize=11)
 
     # the touch point at theta^(t) and the bound's peak at theta^(t+1)
     y_t = float(log_evidence(np.array([th_t]))[0])
     y_next = elbo.max()
     ymin = elbo.min()
     for tv, yv in ((th_t, y_t), (th_next, y_next)):
-        ax.plot([tv, tv], [ymin, yv], color=GRAY, lw=1.1, ls="--", zorder=2)
+        # the dashed drop stops above the label band, the label floats above
+        # the x-axis: neither the axis nor the dashes touch the text
+        ax.plot([tv, tv], [ymin + 0.34, yv], color=GRAY, lw=1.1, ls="--",
+                zorder=2)
         ax.plot([tv], [yv], "o", color=GRAY, ms=6, zorder=6)
-    ax.text(th_t, ymin - 0.10, r"$\theta^{(t)}$", color=GRAY, ha="center",
-            va="top", fontsize=11)
-    ax.text(th_next, ymin - 0.10, r"$\theta^{(t+1)}$", color=GRAY,
-            ha="center", va="top", fontsize=11)
+    ax.text(th_t, ymin + 0.04, r"$\theta^{(t)}$", color=GRAY, ha="center",
+            va="bottom", fontsize=11)
+    ax.text(th_next, ymin + 0.04, r"$\theta^{(t+1)}$", color=GRAY,
+            ha="center", va="bottom", fontsize=11)
 
     # the gap between the curves at some other theta is the KL divergence
     th_g = 1.4

@@ -110,7 +110,7 @@ function matvec() {
   const ax = 60, ay = 78;
   const Aw = 3 * s + 2 * g, Ah = 2 * s + g;
   o += tx(ax + Aw / 2, ay - 16, 'A  (2×3)', { fs: 13, fw: 700, fill: C.muted });
-  o += grid(A, ax, ay, s, g, { fill: (r) => r === 0 ? [C.lblue, C.blue, false, C.ink] : ['#EEF4FB', '#C2D9F1', false, C.ink] });
+  o += grid(A, ax, ay, s, g, { fill: (r) => r === 0 ? [C.lblue, C.blue, false, C.ink] : ['#F0F2F5', '#C9CFD6', false, '#565D66'] });
   let cx = ax + Aw + 16;
   o += tx(cx, ay + Ah / 2, '·', { fs: 26, fw: 700, fill: C.muted });
   const xx = cx + 16, xy = ay - (s + g) / 2;               // x: 3×1, vertically centered
@@ -141,10 +141,10 @@ function matmul() {
   const cx = bx, cy = ay;                           // C aligns: cols under B, rows beside A
   // B (top)
   o += tx(bx + Bw / 2, by - 14, 'B  (3×4)', { fs: 12.5, fw: 700, fill: C.muted });
-  o += grid(B, bx, by, s, g, { fill: (r, c) => c === 0 ? [C.lblue, C.blue, false, C.ink] : ['#F2F6FB', '#CBDDF0', false, '#6B7280'] });
+  o += grid(B, bx, by, s, g, { fill: (r, c) => c === 0 ? [C.lblue, C.blue, false, C.ink] : ['#F0F2F5', '#C9CFD6', false, '#565D66'] });
   // A (left)
   o += tx(ax + Aw / 2, ay - 14, 'A  (2×3)', { fs: 12.5, fw: 700, fill: C.muted });
-  o += grid(A, ax, ay, s, g, { fill: (r) => r === 0 ? [C.lblue, C.blue, false, C.ink] : ['#F2F6FB', '#CBDDF0', false, '#6B7280'] });
+  o += grid(A, ax, ay, s, g, { fill: (r) => r === 0 ? [C.lblue, C.blue, false, C.ink] : ['#F0F2F5', '#C9CFD6', false, '#565D66'] });
   // C (bottom-right)
   o += tx(cx + 4 * (s + g) - g - 14, cy + Ah + 16, 'C = AB  (2×4)', { fs: 12.5, fw: 700, fill: C.ink, anchor: 'end' });
   o += grid(Cm, cx, cy, s, g, { fill: (r, c) => (r === 0 && c === 0) ? [C.lamber, C.amber, false, C.ink] : [C.lgreen, C.green, false, C.ink] });
@@ -152,7 +152,7 @@ function matmul() {
   // fonts, so it rendered un-subscripted); larger than before.
   const sub = `baseline-shift="sub" font-size="11"`;
   o += `<text x="${bx + Bw + 20}" y="${by + 6}" font-family="${FS}" `
-    + `font-size="15" font-weight="700" fill="#3A4049" text-anchor="start">`
+    + `font-size="15" font-weight="700" fill="#15181C" text-anchor="start">`
     + `C<tspan ${sub}>ij</tspan> = row<tspan ${sub}>i</tspan> · col<tspan ${sub}>j</tspan></text>`;
   return svg(bx + Bw + 168, ay + Ah + 34, o);
 }
@@ -200,7 +200,7 @@ function tensor4d() {
   const fw = 3 * s + 2 * g, fh = 2 * s + g;
   const cube = (x, y) => {
     let c = '';
-    c += grid(face, x + off, y - off, s, g, { showVal: false, fill: () => ['#EAF4FE', '#A9CCEF', false] });
+    c += grid(face, x + off, y - off, s, g, { showVal: false, fill: () => ['#D6EDFC', '#8F98A1', false] });
     // edges from back to front corners
     c += line(x + off, y - off, x, y, C.blue, 1.2);
     c += line(x + off + fw, y - off, x + fw, y, C.blue, 1.2);

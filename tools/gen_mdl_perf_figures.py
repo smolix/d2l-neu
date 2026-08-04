@@ -25,6 +25,7 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+RED = fl.T.RED.base   # loss / gradient role (guide 4.3)
 
 from matplotlib.patches import FancyBboxPatch, Rectangle
 
@@ -90,7 +91,7 @@ def fig_roofline():
 
     # Two workloads at opposite ends.
     ax.plot([1.0], [bw * 1.0], "o", color=ORANGE, ms=8, zorder=5)
-    ax.text(1.45, 0.95, "elementwise op\n(intensity $\\approx 1$)",
+    ax.text(1.75, 0.95, "elementwise op\n(intensity $\\approx 1$)",
             ha="left", va="center", fontsize=13, color=ORANGE)
     ax.plot([2048], [peak], "o", color=GREEN, ms=8, zorder=5)
     ax.text(2048, peak * 0.42, "large matmul",
@@ -447,13 +448,13 @@ def fig_pcie_topology():
     fig, ax = plt.subplots(figsize=(9.0, 5.0))
 
     _box(ax, 5.0, 4.55, 4.6, 0.95, "CPU + host DRAM", GRAY, fontsize=14,
-         fc="#efefef")
+         fc=fl.T.PANEL)
     for cx, lab in ((2.7, "PCIe host bridge"), (7.3, "PCIe host bridge")):
-        _box(ax, cx, 2.95, 2.75, 0.72, lab, GRAY, fontsize=12.5, fc="#f7f7f7")
+        _box(ax, cx, 2.95, 2.75, 0.72, lab, GRAY, fontsize=12.5, fc=fl.T.PANEL)
     gpus = [(1.30, "GPU 0"), (3.70, "GPU 1"), (6.30, "GPU 2"), (8.70, "GPU 3")]
     for cx, lab in gpus:
         _box(ax, cx, 1.15, 1.95, 1.0, f"{lab}\nRTX 4090 · 24 GB", BLUE,
-             fontsize=12, fc="#e8f1f8", tc="black")
+             fontsize=12, fc=fl.T.BLUE.tint, tc="black")
 
     # Gray fabric links: GPU -> its bridge -> CPU.
     for cx in (1.30, 3.70):
@@ -462,12 +463,13 @@ def fig_pcie_topology():
         ax.plot([cx, 7.3], [1.68, 2.57], color=GRAY, lw=1.6, zorder=1)
     ax.plot([2.7, 4.4], [3.33, 4.05], color=GRAY, lw=1.6, zorder=1)
     ax.plot([7.3, 5.6], [3.33, 4.05], color=GRAY, lw=1.6, zorder=1)
-    ax.text(1.70, 2.32, r"PCIe 4.0 $\times$16", ha="right", va="center",
+    ax.text(1.60, 2.20, r"PCIe 4 $\times$16", ha="right", va="center",
             fontsize=11.5, color="black", rotation=33)
 
-    # The staged path GPU0 -> host -> GPU2, highlighted alongside the links.
-    seg = [(1.18, 1.72), (2.55, 2.60), (2.62, 3.34), (4.32, 4.08)]
-    seg2 = [(5.68, 4.08), (7.38, 3.34), (7.45, 2.60), (6.42, 1.94)]
+    # The staged path GPU0 -> host -> GPU2 overlays the gray links exactly
+    # (the opaque bridge boxes hide the pass-through segments).
+    seg = [(1.30, 1.68), (2.7, 2.57), (2.7, 3.33), (4.4, 4.05)]
+    seg2 = [(5.6, 4.05), (7.3, 3.33), (7.3, 2.57), (6.30, 1.68)]
     ax.plot([p[0] for p in seg], [p[1] for p in seg], color=ORANGE, lw=2.6,
             zorder=2)
     ax.plot([p[0] for p in seg2[:-1]], [p[1] for p in seg2[:-1]], color=ORANGE,
@@ -494,7 +496,7 @@ def fig_compute_graph():
     while a compiler sees the whole graph at once."""
     fig, ax = plt.subplots(figsize=(9.6, 3.4))
 
-    OPF, DATF = "#e8f1f8", "#f3f3f3"
+    OPF, DATF = fl.T.BLUE.tint, fl.T.PANEL
     ops = [(2.0, r"matmul"), (3.35, r"add"), (4.7, r"relu"),
            (6.05, r"matmul"), (7.4, r"add"), (8.75, r"loss")]
     y_main, y_par = 1.55, 0.35
@@ -502,7 +504,7 @@ def fig_compute_graph():
          fontsize=13)
     for cx, lab in ops[:-1]:
         _box(ax, cx, y_main, 0.95, 0.55, lab, BLUE, fc=OPF, fontsize=12.5)
-    _box(ax, ops[-1][0], y_main, 0.95, 0.55, ops[-1][1], GREEN, fc="#e9f4e9",
+    _box(ax, ops[-1][0], y_main, 0.95, 0.55, ops[-1][1], RED, fc=fl.T.RED.tint,
          fontsize=12.5)
     params = [(2.0, r"$\mathbf{W}_1$"), (3.35, r"$\mathbf{b}_1$"),
               (6.05, r"$\mathbf{W}_2$"), (7.4, r"$\mathbf{b}_2$"),
@@ -518,11 +520,11 @@ def fig_compute_graph():
                     arrowprops=dict(arrowstyle="->", color="black", lw=1.4))
     # One backward arc above.
     ax.annotate("", xy=(0.85, y_main + 0.45), xytext=(8.65, y_main + 0.45),
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.8,
+                arrowprops=dict(arrowstyle="->", color=RED, lw=1.8,
                                 linestyle="--",
                                 connectionstyle="arc3,rad=0.12"))
     ax.text(4.7, y_main + 1.15, "backward pass: the same graph, walked in "
-            "reverse", ha="center", va="center", fontsize=13, color=ORANGE)
+            "reverse", ha="center", va="center", fontsize=13, color=RED)
     ax.text(4.7, -0.42, "eager execution: every node is a separate kernel "
             "launch and a round trip to memory",
             ha="center", va="center", fontsize=12.5, color="black")
@@ -540,7 +542,7 @@ def fig_compile_pipelines():
     def pipeline(y, stages):
         xs = np.linspace(2.15, 9.25, len(stages))
         for x, s in zip(xs, stages):
-            _box(ax, x, y, 1.48, 0.66, s, BLUE, fc="#f5f8fb", fontsize=11.5)
+            _box(ax, x, y, 1.48, 0.66, s, BLUE, fc=fl.T.BLUE.tint, fontsize=11.5)
         for a, b in zip(xs[:-1], xs[1:]):
             ax.annotate("", xy=(b - 0.77, y), xytext=(a + 0.77, y),
                         arrowprops=dict(arrowstyle="->", color="black",
@@ -711,11 +713,11 @@ def fig_data_parallel():
     fig, ax = plt.subplots(figsize=(8.4, 4.6))
 
     _box(ax, 4.2, 4.35, 3.6, 0.7, "minibatch ($B$ samples)", GRAY,
-         fc="#f3f3f3", fontsize=13)
+         fc=fl.T.PANEL, fontsize=13)
     for cx, lab, half in ((2.0, "GPU 0", "$B/2$"), (6.4, "GPU 1", "$B/2$")):
         _box(ax, cx, 2.55, 3.3, 1.5,
              f"{lab}: full parameter copy\nforward + backward on {half}\n"
-             r"$\rightarrow$ local gradients", BLUE, fc="#e8f1f8",
+             r"$\rightarrow$ local gradients", BLUE, fc=fl.T.BLUE.tint,
              fontsize=12, tc="black")
     ax.annotate("", xy=(2.0, 3.34), xytext=(3.5, 4.0),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.5))
@@ -723,20 +725,25 @@ def fig_data_parallel():
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.5))
 
     _box(ax, 4.2, 0.75, 4.2, 0.7, "allreduce: sum the gradients", ORANGE,
-         fc="#fdf0e3", fontsize=13)
+         fc=fl.T.ORANGE.tint, fontsize=13)
     ax.annotate("", xy=(3.2, 1.14), xytext=(2.0, 1.76),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.5))
     ax.annotate("", xy=(5.2, 1.14), xytext=(6.4, 1.76),
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.5))
-    # Summed gradients flow back up (curved, outside the boxes).
-    ax.annotate("", xy=(0.28, 2.55), xytext=(1.95, 0.68),
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.6,
-                                linestyle="--",
-                                connectionstyle="arc3,rad=-0.4"))
-    ax.annotate("", xy=(8.12, 2.55), xytext=(6.45, 0.68),
-                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.6,
-                                linestyle="--",
-                                connectionstyle="arc3,rad=0.4"))
+    # Summed gradients flow back up: each arc swings outside its replica
+    # and lands on the box FLANK, incoming at 30 degrees (quadratic Bezier;
+    # the control point fixes the terminal tangent).
+    from matplotlib.path import Path as MplPath
+    from matplotlib.patches import FancyArrowPatch
+    for tail, tip, sgn in [((2.1, 0.72), (0.35, 2.55), -1),
+                           ((6.3, 0.72), (8.05, 2.55), +1)]:
+        ctrl = (tip[0] + sgn * 1.6 * 0.866, tip[1] - 1.6 * 0.5)
+        arc = MplPath([tail, ctrl, tip],
+                      [MplPath.MOVETO, MplPath.CURVE3, MplPath.CURVE3])
+        ax.add_patch(FancyArrowPatch(path=arc, arrowstyle="->",
+                                     mutation_scale=14, ls="--",
+                                     color=ORANGE, lw=1.6, fc=ORANGE,
+                                     zorder=2))
     ax.text(4.2, 0.0, "every device applies the identical update "
             r"$\rightarrow$ replicas stay in sync",
             ha="center", va="center", fontsize=12.5, color="black")
@@ -779,7 +786,8 @@ def fig_ring_allreduce():
         done = new
         ag_states.append(done.copy())
 
-    fig, axes = plt.subplots(2, 4, figsize=(10.0, 5.2))
+    fig, axes = plt.subplots(2, 4, figsize=(10.0, 4.7))
+    fig.subplots_adjust(hspace=0.02)
 
     def draw_state(ax, M, title):
         cs = 0.6

@@ -9,7 +9,7 @@
 //
 // Stable ids use the `calculus-<concept>` prefix. Never rename.
 
-import { C, tx, arrow, chip, svg } from './engine.mjs';
+import { C, FS, tx, arrow, chip, svg } from './engine.mjs';
 
 const line = (x1, y1, x2, y2, color, w = 1.5, dash = false) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
@@ -30,7 +30,6 @@ function circleLimit() {
     const a = -Math.PI / 2 + k * 2 * Math.PI / n;
     return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
   });
-  o += tx(W / 2, 32, 'Inscribe polygons with more and more vertices', { fs: 15, fw: 700, fill: C.ink });
   ns.forEach((n, i) => {
     const cx = cxs[i];
     o += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${C.gray}" stroke-width="1.6"/>`;
@@ -79,11 +78,10 @@ function secantTangent() {
   o += line(tL, tanAt(tL), tR, tanAt(tR), C.purple, 2.4);
   // points + labels
   o += dot(Px, Py, 4, C.ink); o += dot(Qx, Qy, 4, C.ink);
-  o += tx(Px - 9, Py + 5, 'P', { fs: 13, fw: 700, fill: C.ink, anchor: 'end' });
-  o += tx(Qx + 8, Qy - 6, 'Q', { fs: 13, fw: 700, fill: C.ink, anchor: 'start' });
-  o += tx(sR - 2, secAt(sR) - 9, 'secant', { fs: 12.5, fw: 700, fill: C.blue, anchor: 'end' });
-  o += tx(tL + 2, tanAt(tL) - 9, 'tangent', { fs: 12.5, fw: 700, fill: C.purple, anchor: 'start' });
-  o += tx(W / 2, 28, 'The derivative is the slope of the tangent', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(Px, Py + 17, 'P', { fs: 13, fw: 700, fill: C.ink });
+  o += tx(Qx + 8, Qy + 16, 'Q', { fs: 13, fw: 700, fill: C.ink, anchor: 'start' });
+  o += `<text x="347" y="162" transform="rotate(-35.9 347 162)" font-family="${FS}" font-size="12.5" font-weight="700" fill="${C.blue}" text-anchor="middle" dominant-baseline="central">secant</text>`;
+  o += `<text x="257" y="241" transform="rotate(-25.8 257 241)" font-family="${FS}" font-size="12.5" font-weight="700" fill="${C.purple}" text-anchor="middle" dominant-baseline="central">tangent</text>`;
   o += tx(W / 2, H - 14, 'as h → 0, the secant through P, Q becomes the tangent at P', { fs: 12.5, fw: 600, fill: C.muted });
   return svg(W, H, o);
 }
@@ -101,7 +99,6 @@ function gradientDescent() {
   for (let i = 0; i < path.length - 1; i++) o += arrow(path[i][0], path[i][1], path[i + 1][0], path[i + 1][1], C.blue);
   path.forEach(p => o += dot(p[0], p[1], 3.2, C.blue));
   o += tx(path[0][0] - 6, path[0][1] - 8, 'θ₀', { mono: true, fs: 13, fw: 700, fill: C.blue, anchor: 'end' });
-  o += tx(W / 2, 26, 'Each step moves downhill, along −∇L', { fs: 14.5, fw: 700, fill: C.ink });
   o += tx(W / 2, H - 14, 'gradient descent on the loss surface', { fs: 12.5, fw: 600, fill: C.muted });
   return svg(W, H, o);
 }
@@ -119,7 +116,7 @@ function partialSlices() {
   for (let i = 0; i < N; i++) {
     const b = i / (N - 1), pa = [], pb = [];
     for (let j = 0; j <= S; j++) { const t = j / S; pa.push(P3(t, b, hf(t, b))); pb.push(P3(b, t, hf(b, t))); }
-    o += plines(pa, '#CBD8E2', 1.1); o += plines(pb, '#CBD8E2', 1.1);
+    o += plines(pa, '#8F98A1', 1.1); o += plines(pb, '#8F98A1', 1.1);
   }
   // axes
   o += arrow(O[0], O[1], O[0] + e1[0] + 24, O[1] + e1[1] + 4, C.gray);
@@ -140,12 +137,11 @@ function partialSlices() {
   const norm = (v, L) => { const m = Math.hypot(v[0], v[1]); return [v[0] / m * L, v[1] / m * L]; };
   const tA = norm([e1[0] + d * ey[0], e1[1] + d * ey[1]], 48);
   const tB = norm([e2[0] + d * ey[0], e2[1] + d * ey[1]], 48);
-  o += line(P[0] - tA[0], P[1] - tA[1], P[0] + tA[0], P[1] + tA[1], '#B26A00', 2.6);
-  o += line(P[0] - tB[0], P[1] - tB[1], P[0] + tB[0], P[1] + tB[1], '#2E7D32', 2.6);
+  o += line(P[0] - tA[0], P[1] - tA[1], P[0] + tA[0], P[1] + tA[1], '#B45309', 2.6);
+  o += line(P[0] - tB[0], P[1] - tB[1], P[0] + tB[0], P[1] + tB[1], '#2E7D3E', 2.6);
   o += dot(P[0], P[1], 4.2, C.ink);
-  o += tx(P[0] + tA[0] + 6, P[1] + tA[1] + 4, '∂f/∂x₁', { fs: 13, fw: 700, fill: '#B26A00', anchor: 'start' });
-  o += tx(P[0] + tB[0] + 6, P[1] + tB[1] - 2, '∂f/∂x₂', { fs: 13, fw: 700, fill: '#2E7D32', anchor: 'start' });
-  o += tx(W / 2, 30, 'Each partial = slope of a 1-D slice', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(P[0] + tA[0] + 6, P[1] + tA[1] + 4, '∂f/∂x₁', { fs: 13, fw: 700, fill: '#7F3B06', anchor: 'start' });
+  o += tx(P[0] + tB[0] + 6, P[1] + tB[1] - 2, '∂f/∂x₂', { fs: 13, fw: 700, fill: '#1F5C2C', anchor: 'start' });
   o += tx(W / 2, H - 14, 'hold the other variable fixed, cut the surface, read the slope', { fs: 12.5, fw: 600, fill: C.muted });
   return svg(W, H, o);
 }
@@ -157,21 +153,20 @@ function gradientField() {
   [1, 0.74, 0.5, 0.28].forEach(s => o += ellipse(cx, cy, a0 * s, b0 * s, C.gray, 1.5));
   o += dot(cx, cy, 3.6, C.green);
   o += tx(cx, cy - 12, 'min', { fs: 11.5, fw: 700, fill: C.green });
-  const a = a0 * 0.74, b = b0 * 0.74, len = 34;
   const angs = [-52, 18, 74, 132, 244].map(d => d * Math.PI / 180);
   angs.forEach((t, i) => {
-    const x = cx + a * Math.cos(t), y = cy + b * Math.sin(t);
-    let nx = Math.cos(t) / a, ny = Math.sin(t) / b; const L = Math.hypot(nx, ny); nx /= L; ny /= L;
-    o += arrow(x, y, x + nx * len, y + ny * len, C.blue);
-    if (i === 0) o += tx(x + nx * len + 5, y + ny * len, '∇f', { fs: 12.5, fw: 700, fill: C.blue, anchor: 'start' });
+    const x = cx + a0 * 0.74 * Math.cos(t), y = cy + b0 * 0.74 * Math.sin(t);
+    const x2 = cx + a0 * Math.cos(t), y2 = cy + b0 * Math.sin(t);
+    o += arrow(x, y, x2, y2, C.blue);
+    if (i === 0) o += tx(x2 + 6, y2 + 2, '∇f', { fs: 12.5, fw: 700, fill: C.blue, anchor: 'start' });
   });
-  // one −∇f (downhill) arrow for contrast
-  const t0 = 200 * Math.PI / 180, x0 = cx + a * Math.cos(t0), y0 = cy + b * Math.sin(t0);
-  let nx = Math.cos(t0) / a, ny = Math.sin(t0) / b; const L = Math.hypot(nx, ny); nx /= L; ny /= L;
-  o += arrow(x0, y0, x0 - nx * len, y0 - ny * len, C.amber);
-  o += tx(x0 - nx * len - 6, y0 - ny * len + 15, '−∇f', { fs: 12.5, fw: 700, fill: C.amber, anchor: 'end' });
-  o += tx(W / 2, 26, '∇f ⟂ contours, pointing uphill', { fs: 14.5, fw: 700, fill: C.ink });
-  o += tx(W / 2, H - 14, 'steepest ascent — −∇f points downhill', { fs: 12.5, fw: 600, fill: C.muted });
+  // one −∇f (downhill) arrow for contrast — it lands on the inner ring
+  const t0 = 200 * Math.PI / 180;
+  const x0 = cx + a0 * 0.74 * Math.cos(t0), y0 = cy + b0 * 0.74 * Math.sin(t0);
+  const xi = cx + a0 * 0.5 * Math.cos(t0), yi = cy + b0 * 0.5 * Math.sin(t0);
+  o += arrow(x0, y0, xi, yi, C.amber);
+  o += tx(x0 - 8, y0 + 14, '−∇f', { fs: 12.5, fw: 700, fill: C.amber, anchor: 'end' });
+  o += tx(W / 2, H - 14, '∇f is the steepest ascent; −∇f points downhill', { fs: 12.5, fw: 600, fill: C.muted });
   return svg(W, H, o);
 }
 
@@ -179,7 +174,6 @@ function gradientField() {
 function chainGraph() {
   const W = 440, H = 238; let o = '';
   const y = 112, xs = [82, 220, 358], labels = ['x', 'u', 'y'];
-  o += tx(W / 2, 26, 'Chain rule: multiply along the path', { fs: 15, fw: 700, fill: C.ink });
   o += tx(W / 2, 48, '▸ forward: evaluate', { fs: 12, fw: 700, fill: C.blue });
   // forward (blue, above)
   o += arrow(xs[0] + 30, y - 8, xs[1] - 30, y - 8, C.blue);

@@ -38,6 +38,10 @@ from matplotlib.spines import Spine
 from matplotlib.textpath import TextPath
 from matplotlib.transforms import Bbox
 
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from figstyle import tokens as _T
+
 # --------------------------------------------------------------------------- #
 # Pinned style constants — never override per figure.                         #
 # --------------------------------------------------------------------------- #
@@ -53,20 +57,20 @@ for _f in ("SourceSans3-Regular.ttf", "SourceSans3-Bold.ttf",
 SANS = "Source Sans 3"
 MONO = "Inconsolata"
 
-INK = "#000000"                 # strokes, arrows, pill borders, labels
+INK = _T.INK                    # strokes, arrows, pill borders, labels
 STROKE = 1.2                    # pt — pill borders, arrows, skip lines
 
 # Accent 1 (default): d2l blue.
-ACCENT = "#0B6BB2"              # saturated tone: numbers, repeat, keywords
-ACCENT_TINT = "#CDE8FA"         # repeated-block panel fill (blue on white)
+ACCENT = _T.BLUE.dark              # saturated tone: numbers, repeat, keywords
+ACCENT_TINT = _T.BLUE.tint         # repeated-block panel fill (blue on white)
 # Accent 2 (comparisons only): warm amber.
-ACCENT2 = "#B45309"
-ACCENT2_TINT = "#FBE8D3"
+ACCENT2 = _T.ORANGE.base
+ACCENT2_TINT = _T.ORANGE.tint
 
-NOVELTY_FILL = "#3B3B3B"        # near-black novelty box, white text
-CONTAINER_FILL = "#E4E4E4"      # outermost network container
-INSET_FILL = "#ECECEC"          # dashed inset panels
-GRAY_TEXT = "#6E6E6E"           # shape notes, stage labels, input anchor
+NOVELTY_FILL = _T.NOVELTY_FILL        # near-black novelty box, white text
+CONTAINER_FILL = _T.CONTAINER_FILL      # outermost network container
+INSET_FILL = _T.INSET_FILL          # dashed inset panels
+GRAY_TEXT = _T.MUTED           # shape notes, stage labels, input anchor
 
 PILL_H = 26.0                   # pt — pill height (single-line)
 PILL_GAP = 15.0                 # pt — default vertical gap between spine ops

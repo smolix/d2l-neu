@@ -80,7 +80,7 @@ L 219.493069 43.409804
    </g>
    <g id="text_1">
     <!-- $\hat{y}^{(i)}$ -->
-    <g style="fill: #15181c" transform="translate(129.018772 63.707182) scale(0.16 -0.16)">
+    <g style="fill: #15181c" transform="translate(143.132673 64.475657) scale(0.16 -0.16)">
      <defs>
       <path id="Cmr10-7c" d="M 863 3444 
 L 738 3578 
@@ -245,7 +245,7 @@ z
    </g>
    <g id="text_2">
     <!-- $y^{(i)}$ -->
-    <g style="fill: #15181c" transform="translate(160.320475 129.878984) scale(0.16 -0.16)">
+    <g style="fill: #15181c" transform="translate(142.572673 136.026786) scale(0.16 -0.16)">
      <use xlink:href="#Cmmi10-72" transform="translate(0 0.210766)"/>
      <use xlink:href="#Cmr10-77" transform="translate(60.283619 41.5) scale(0.7)"/>
      <use xlink:href="#Cmmi10-37" transform="translate(87.456471 41.5) scale(0.7)"/>

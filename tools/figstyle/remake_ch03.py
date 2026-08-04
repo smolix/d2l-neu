@@ -62,10 +62,10 @@ def fig_fit_linreg():
     # labels exactly as in the original: y-hat above the line at the 4th
     # stem's intercept, y at that stem's observation circle
     xi = xs[3]
-    ax.text(xi - 0.08, line(xi) + 0.22, r"$\hat{y}^{(i)}$",
-            color=T.INK, fontsize=16, ha="right", va="bottom")
-    ax.text(xi + 0.16, ys[3] - 0.10, r"$y^{(i)}$", color=T.INK, fontsize=16,
-            ha="left", va="top")
+    ax.text(xi, line(xi) + 0.20, r"$\hat{y}^{(i)}$",
+            color=T.INK, fontsize=16, ha="center", va="bottom")
+    ax.text(xi, ys[3] - 0.26, r"$y^{(i)}$", color=T.INK, fontsize=16,
+            ha="center", va="top")
 
     ax.text(5.15, -0.42, r"$x$", color=T.INK, fontsize=17, ha="center")
     ax.text(-0.42, 4.25, r"$y$", color=T.INK, fontsize=17, va="center")

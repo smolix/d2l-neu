@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="239.04pt" height="303.156pt" viewBox="0 0 239.04 303.156" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="239.04pt" height="313.6392pt" viewBox="0 0 239.04 313.6392" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -20,8 +20,8 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 303.156 
-L 239.04 303.156 
+   <path d="M 0 313.6392 
+L 239.04 313.6392 
 L 239.04 0 
 L 0 0 
 z
@@ -39,7 +39,7 @@ Q 39.3984 23.4864 39.3984 30.2256
 L 39.3984 66.5424 
 Q 39.3984 73.2816 46.1376 73.2816 
 z
-" clip-path="url(#p1f9a40ac47)" style="fill: #1565c0; opacity: 0.12; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8ffa5a1d81)" style="fill: #1565c0; opacity: 0.12; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 46.1376 73.2816 
@@ -53,7 +53,7 @@ L 39.3984 66.5424
 Q 39.3984 73.2816 46.1376 73.2816 
 L 46.1376 73.2816 
 z
-" clip-path="url(#p1f9a40ac47)" style="fill: none; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8ffa5a1d81)" style="fill: none; stroke: #1565c0; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 46.1376 176.2416 
@@ -66,7 +66,7 @@ Q 39.3984 126.4464 39.3984 133.1856
 L 39.3984 169.5024 
 Q 39.3984 176.2416 46.1376 176.2416 
 z
-" clip-path="url(#p1f9a40ac47)" style="fill: #2e7d3e; opacity: 0.12; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8ffa5a1d81)" style="fill: #2e7d3e; opacity: 0.12; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
     <path d="M 46.1376 176.2416 
@@ -80,7 +80,7 @@ L 39.3984 169.5024
 Q 39.3984 176.2416 46.1376 176.2416 
 L 46.1376 176.2416 
 z
-" clip-path="url(#p1f9a40ac47)" style="fill: none; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8ffa5a1d81)" style="fill: none; stroke: #2e7d3e; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 46.1376 279.2016 
@@ -93,7 +93,7 @@ Q 39.3984 229.4064 39.3984 236.1456
 L 39.3984 272.4624 
 Q 39.3984 279.2016 46.1376 279.2016 
 z
-" clip-path="url(#p1f9a40ac47)" style="fill: #b45309; opacity: 0.12; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8ffa5a1d81)" style="fill: #b45309; opacity: 0.12; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
     <path d="M 46.1376 279.2016 
@@ -107,7 +107,7 @@ L 39.3984 272.4624
 Q 39.3984 279.2016 46.1376 279.2016 
 L 46.1376 279.2016 
 z
-" clip-path="url(#p1f9a40ac47)" style="fill: none; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
+" clip-path="url(#p8ffa5a1d81)" style="fill: none; stroke: #b45309; stroke-width: 1.8; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
     <!-- $\mathbf{X}$ -->
@@ -1241,7 +1241,7 @@ z
    </g>
    <g id="text_10">
     <!-- 203,530 parameters ($\mathbf{W}^{(1)}, \mathbf{b}^{(1)}, \mathbf{W}^{(2)}, \mathbf{b}^{(2)}$) -->
-    <g style="fill: #565d66" transform="translate(13.62 292.044) scale(0.12 -0.12)">
+    <g style="fill: #565d66" transform="translate(13.62 302.5272) scale(0.12 -0.12)">
      <defs>
       <path id="SourceSans3-Regular-537" d="M 256 0 
 L 256 320 
@@ -1617,7 +1617,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p1f9a40ac47">
+  <clipPath id="p8ffa5a1d81">
    <rect x="7.2" y="7.2" width="224.64" height="288.288"/>
   </clipPath>
  </defs>

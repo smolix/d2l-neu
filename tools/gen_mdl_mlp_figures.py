@@ -96,7 +96,7 @@ def fig_mlp_arch():
         (r"affine  $256 \to 10$", "black", "normal"),
     ])
 
-    ax.text(cx, 0.2,
+    ax.text(cx, -0.08,
             f"{total:,} parameters "
             r"($\mathbf{W}^{(1)}, \mathbf{b}^{(1)}, "
             r"\mathbf{W}^{(2)}, \mathbf{b}^{(2)}$)",

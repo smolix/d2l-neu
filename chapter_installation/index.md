@@ -18,10 +18,10 @@ We recommend PyTorch if you do not already have a framework preference. The
 first several chapters run comfortably on a CPU. A GPU becomes useful for larger
 convolutional networks, transformers, and the application chapters.
 
-* [PyTorch notebooks](/notebooks/d2l-pytorch.zip)
-* [JAX notebooks](/notebooks/d2l-jax.zip)
-* [TensorFlow notebooks](/notebooks/d2l-tensorflow.zip)
-* [MXNet notebooks](/notebooks/d2l-mxnet.zip)
+* [PyTorch notebooks](https://d2l.smola.org/notebooks/d2l-pytorch.zip)
+* [JAX notebooks](https://d2l.smola.org/notebooks/d2l-jax.zip)
+* [TensorFlow notebooks](https://d2l.smola.org/notebooks/d2l-tensorflow.zip)
+* [MXNet notebooks](https://d2l.smola.org/notebooks/d2l-mxnet.zip)
 
 The published bundles correspond to the version of the book on this website.
 The latest source and development version are available from

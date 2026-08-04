@@ -202,7 +202,10 @@ def fig_multi_head() -> None:
     bus_y = [y_bus + 0.18, y_bus, y_bus - 0.18]
     for (lab, c), xin, by in zip(qkv, x_qkv, bus_y):
         _box(ax, xin, y_in, 0.8, 0.6, rf"$\mathbf{{{lab}}}$", c, fontsize=13)
-        fl.arrow(ax, (xin, y_in + 0.3), (xin, by), color=GRAY, lw=1.5, mut=11)
+        # plain riser joining this stream's bus at a dot (arrowheads are
+        # reserved for wires entering boxes)
+        ax.plot([xin, xin], [y_in + 0.3, by], color=GRAY, lw=1.5, zorder=1)
+        _dot(ax, xin, by, r=0.05)
         # bus spanning both heads at this stream's height
         ax.plot([hx[0] - 0.62, hx[1] + 0.62], [by, by], color=GRAY, lw=1.4,
                 zorder=1)
@@ -212,20 +215,20 @@ def fig_multi_head() -> None:
         # taps from the three buses up into the projection box
         for xin, by in zip([cx - 0.62, cx, cx + 0.62], bus_y):
             _dot(ax, xin, by, r=0.05)
-            fl.arrow(ax, (xin, by), (xin, y_proj - 0.3), color=GRAY, lw=1.4,
+            fl.arrow(ax, (xin, by), (xin, y_proj - 0.33), color=GRAY, lw=1.4,
                      mut=10)
         _box(ax, cx, y_proj, 2.5, 0.66,
              rf"project  $\mathbf{{W}}_{{{h}}}^{{Q}},"
              rf"\mathbf{{W}}_{{{h}}}^{{K}},\mathbf{{W}}_{{{h}}}^{{V}}$",
              BLUE, fontsize=11.5)
-        fl.arrow(ax, (cx, y_proj + 0.33), (cx, y_attn - 0.33), color=GRAY,
+        fl.arrow(ax, (cx, y_proj + 0.33), (cx, y_attn - 0.39), color=GRAY,
                  lw=1.7, mut=12)
         _box(ax, cx, y_attn, 2.5, 0.78,
              "scaled dot-product\nattention", ORANGE, fontsize=11.5)
-        ax.text(cx, y_attn - 0.66, rf"head {h}", ha="center", va="top",
-                fontsize=12, color="black")
+        ax.text(cx - 1.18, (y_proj + 0.33 + y_attn - 0.39) / 2, rf"head {h}",
+                ha="left", va="center", fontsize=12, color="black")
         # attention -> concat
-        fl.arrow(ax, (cx, y_attn + 0.39), (cx, y_cat - 0.33), color=GRAY,
+        fl.arrow(ax, (cx, y_attn + 0.39), (cx, y_cat - 0.32), color=GRAY,
                  lw=1.7, mut=12)
 
     # ellipsis + "h heads" note between the columns (in the clear gap below

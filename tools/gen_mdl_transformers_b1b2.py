@@ -78,13 +78,13 @@ def _panel_postln(ax):
     _stream(ax, 8.95, 10.6)
 
     # attention sublayer: read at y=0.9, write into + at y=2.9
-    _box(ax, BX0, BX1, 1.3, 2.5, "multi-head\nattention", "#ffe8d0", ORANGE)
+    _box(ax, BX0, BX1, 1.3, 2.5, "multi-head\nattention", fl.T.ORANGE.tint, ORANGE)
     _elbow(ax, [(SX, 0.9), (6.9, 0.9), (6.9, 1.3)], ORANGE)
     _elbow(ax, [(6.9, 2.5), (6.9, 2.9), (SX + 0.30, 2.9)], ORANGE)
     _add_circle(ax, 2.9)
 
     # FFN sublayer: read at y=5.4, write into + at y=7.4
-    _box(ax, BX0, BX1, 5.8, 7.0, "feed-forward\nnetwork", "#ddf0dd", GREEN)
+    _box(ax, BX0, BX1, 5.8, 7.0, "feed-forward\nnetwork", fl.T.GREEN.tint, GREEN)
     _elbow(ax, [(SX, 5.4), (6.9, 5.4), (6.9, 5.8)], GREEN)
     _elbow(ax, [(6.9, 7.0), (6.9, 7.4), (SX + 0.30, 7.4)], GREEN)
     _add_circle(ax, 7.4)
@@ -98,7 +98,7 @@ def _panel_preln(ax):
 
     # attention sublayer with norm on the branch
     _box(ax, BX0, BX1 - 2.7, 0.5, 1.3, "norm", "white", GRAY)
-    _box(ax, BX0, BX1, 1.9, 3.1, "multi-head\nattention", "#ffe8d0", ORANGE)
+    _box(ax, BX0, BX1, 1.9, 3.1, "multi-head\nattention", fl.T.ORANGE.tint, ORANGE)
     _elbow(ax, [(SX, 0.9), (BX0, 0.9)], ORANGE)
     _elbow(ax, [(BX1 - 2.7, 0.9), (6.9, 0.9), (6.9, 1.9)], ORANGE)
     _elbow(ax, [(6.9, 3.1), (6.9, 3.5), (SX + 0.30, 3.5)], ORANGE)
@@ -106,7 +106,7 @@ def _panel_preln(ax):
 
     # FFN sublayer with norm on the branch
     _box(ax, BX0, BX1 - 2.7, 5.0, 5.8, "norm", "white", GRAY)
-    _box(ax, BX0, BX1, 6.4, 7.6, "feed-forward\nnetwork", "#ddf0dd", GREEN)
+    _box(ax, BX0, BX1, 6.4, 7.6, "feed-forward\nnetwork", fl.T.GREEN.tint, GREEN)
     _elbow(ax, [(SX, 5.4), (BX0, 5.4)], GREEN)
     _elbow(ax, [(BX1 - 2.7, 5.4), (6.9, 5.4), (6.9, 6.4)], GREEN)
     _elbow(ax, [(6.9, 7.6), (6.9, 8.0), (SX + 0.30, 8.0)], GREEN)
@@ -182,7 +182,7 @@ def _mini_panel(ax, order, stream_norm, title):
     _elbow(ax, [(MBC, y_read), (MBC, spans[0][1])], ORANGE)
     for kind, y0, y1 in spans:
         if kind == "attn":
-            _box(ax, MBX0, MBX1, y0, y1, "attention", "#ffe8d0", ORANGE)
+            _box(ax, MBX0, MBX1, y0, y1, "attention", fl.T.ORANGE.tint, ORANGE)
         else:
             _box(ax, MBX0 + 1.1, MBX1 - 1.1, y0, y1, "norm", "white", GRAY)
     for (_, _, top), (_, nxt, _) in zip(spans, spans[1:]):

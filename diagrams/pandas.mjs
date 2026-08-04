@@ -25,11 +25,10 @@ const box = (cx, cy, w, h, fill, st, label, sub) => {
 // ── the preprocessing pipeline: file → DataFrame → clean → tensor ───
 function pipeline() {
   const W = 720, H = 168; let o = ''; const cy = 92, bh = 58;
-  o += tx(W / 2, 28, 'Preprocessing: from file to tensor', { fs: 15, fw: 700, fill: C.ink });
   const n = [
     { cx: 70,  w: 96,  fill: C.lgray,  st: C.gray,  l: 'house.csv',      s: 'raw file' },
     { cx: 232, w: 112, fill: C.lblue,  st: C.blue,  l: 'DataFrame',      s: 'rows × columns' },
-    { cx: 430, w: 150, fill: C.lamber, st: C.amber, l: 'clean &amp; encode', s: 'impute · one-hot · scale' },
+    { cx: 430, w: 150, fill: C.lamber, st: C.amber, l: 'clean & encode', s: 'impute · one-hot · scale' },
     { cx: 628, w: 104, fill: C.lgreen, st: C.green, l: 'X, y',           s: 'tensors' },
   ];
   const gapmid = (a, b) => (n[a].cx + n[a].w / 2 + n[b].cx - n[b].w / 2) / 2;
@@ -46,7 +45,6 @@ function pipeline() {
 function missing() {
   const W = 580, H = 374; let o = ''; const s = 26, g = 4;
   const blue = () => [C.lblue, C.blue, false, C.ink];
-  o += tx(W / 2, 26, 'Three ways to handle a missing value', { fs: 15, fw: 700, fill: C.ink });
   // the shared "before" column with one gap
   const tcx = W / 2, ty = 50;
   o += tx(tcx, ty - 11, 'one column, one gap', { fs: 11, fill: C.muted });
@@ -62,7 +60,7 @@ function missing() {
     { fill: (r) => r === 1 ? [C.lgreen, C.green, false, C.green] : blue() });
   // C — indicator (value + missing flag)
   o += grid([['3', '0'], ['?', '1'], ['2', '0'], ['4', '0']], cx, ry, s, g,
-    { fill: (r, c, v) => c === 1 ? ['#F3E5F5', C.purple, false, C.purple]
+    { fill: (r, c, v) => c === 1 ? ['#EDE9F8', C.purple, false, '#503B8C']
       : (v === '?' ? [C.lamber, C.amber, false, C.amber] : blue()) });
   // fan arrows
   o += arrow(tcx - 30, topBot, ax + s / 2, ry - 6, C.gray);
@@ -81,7 +79,6 @@ function missing() {
 // ── one-hot encoding a categorical column ───────────────────────────
 function onehot() {
   const W = 560, H = 234; let o = ''; const s = 30, g = 5;
-  o += tx(W / 2, 26, 'One-hot encoding a categorical column', { fs: 15, fw: 700, fill: C.ink });
   // left: the RoofType column (text cells → drawn manually)
   const lw = 70, lh = s, lx = 54, ly = 74;
   const cats = ['Slate', 'Tile', '—', 'Slate'];
@@ -102,7 +99,7 @@ function onehot() {
   const oh = [['1', '0', '0'], ['0', '1', '0'], ['0', '0', '1'], ['1', '0', '0']];
   o += grid(oh, rx, ry, s, g, {
     fill: (r, c, v) => r === 0 ? [C.lgreen, C.green, false, C.ink]
-      : (v === '1' ? [C.lblue, C.blue, false, C.ink] : [C.lgray, '#CBD5DC', false, '#90A4AE'])
+      : (v === '1' ? [C.lblue, C.blue, false, C.ink] : [C.lgray, '#D9DEE4', false, '#565D66'])
   });
   o += tx(W / 2, H - 14, "each category — and “missing” — becomes its own 0/1 column", { fs: 12, fw: 600, fill: C.muted });
   return svg(W, H, o);
@@ -111,7 +108,6 @@ function onehot() {
 // ── why standardize: raw scales are incomparable ────────────────────
 function scale() {
   const W = 540, H = 226; let o = '';
-  o += tx(W / 2, 26, 'Why standardize numerical features', { fs: 15, fw: 700, fill: C.ink });
   // raw axis
   const x0 = 150, x1 = 500, yr = 80;
   const rawX = v => x0 + (v / 2700) * (x1 - x0);

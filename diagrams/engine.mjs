@@ -6,15 +6,12 @@
 // so a diagram looks identical whether inlined in a slide or written to
 // a static file in img/auto/.
 //
-// COLOR TOKENS must stay in sync with _d2l-slides.scss / _d2l-theme.scss.
-// If the book palette changes, change it here too (or, better, generate
-// this object from the scss tokens — see docs/slides-northstar-design.md "Theming").
+// COLOR TOKENS come from the unified figure token layer
+// (tools/figstyle/tokens.py -> `python3 -m figstyle.export` -> tokens.mjs).
+// Do not hardcode hexes here or in the figure modules — import C/TOKENS.
 
-export const C = {
-  blue:'#2196F3', lblue:'#E3F2FD', amber:'#FB8C00', lamber:'#FFE7C7',
-  green:'#43A047', lgreen:'#D7EFD8', purple:'#7D12BA', gray:'#90A4AE',
-  lgray:'#ECEFF1', ink:'#15181C', muted:'#6B7280'
-};
+import { C, TOKENS } from './tokens.mjs';
+export { C, TOKENS };
 
 // Font stacks. Both end in a generic family so a static SVG still reads
 // correctly even where "Source Sans 3" / "JetBrains Mono" aren't loaded
@@ -36,10 +33,15 @@ export function rc(x, y, s, f, st, dash) {
   return `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="6" fill="${f}" stroke="${st}" stroke-width="2"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 }
 
+// XML-escape label text (a bare & / < in a label breaks strict parsers
+// like librsvg, even though browsers tolerate it when inlined in HTML).
+const esc = (t) => String(t)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 // A centered text label. opts: {mono, fs, fw, fill, anchor, base}
 export function tx(x, y, t, o) {
   o = o || {};
-  return `<text x="${x}" y="${y}" font-family="${o.mono ? FM : FS}" font-size="${o.fs || 15}" font-weight="${o.fw || 600}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || 'middle'}" dominant-baseline="${o.base || 'central'}">${t}</text>`;
+  return `<text x="${x}" y="${y}" font-family="${o.mono ? FM : FS}" font-size="${o.fs || 15}" font-weight="${o.fw || 500}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || 'middle'}" dominant-baseline="${o.base || 'central'}">${esc(t)}</text>`;
 }
 
 // A grid of cells. `data` is a 2D array of values (use '' / null for blank).
@@ -62,11 +64,11 @@ export function grid(data, x0, y0, s, gap, opt) {
 // An arrow from (x1,y1) to (x2,y2). Arrowhead is drawn as a filled path,
 // so no <marker>/<defs> id juggling across multiple inlined SVGs.
 export function arrow(x1, y1, x2, y2, color, dash) {
-  const ang = Math.atan2(y2 - y1, x2 - x1), h = 8;
+  const ang = Math.atan2(y2 - y1, x2 - x1), h = 9.5;
   const a1 = ang + Math.PI - 0.42, a2 = ang + Math.PI + 0.42;
   const hx1 = x2 + h * Math.cos(a1), hy1 = y2 + h * Math.sin(a1);
   const hx2 = x2 + h * Math.cos(a2), hy2 = y2 + h * Math.sin(a2);
-  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.3"${dash ? ' stroke-dasharray="5 4"' : ''}/>`
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.5"${dash ? ' stroke-dasharray="5 4"' : ''}/>`
        + `<path d="M${x2},${y2} L${hx1},${hy1} L${hx2},${hy2} Z" fill="${color}"/>`;
 }
 
@@ -77,15 +79,15 @@ export function block(x, y, title, sub, faded, accent) {
   accent = accent || C.blue;
   return `<g opacity="${op}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" fill="#fff" stroke="${accent}" stroke-width="2"/>`
     + `<rect x="${x}" y="${y}" width="6" height="${h}" rx="3" fill="${accent}"/>`
-    + tx(x + w / 2 + 3, y + 19, title, { mono: true, fs: 13.5, fw: 700, fill: '#37474F' })
-    + tx(x + w / 2 + 3, y + 38, sub, { mono: true, fs: 11.5, fw: 500, fill: '#78909C' }) + `</g>`;
+    + tx(x + w / 2 + 3, y + 19, title, { mono: true, fs: 13.5, fw: 700, fill: C.ink })
+    + tx(x + w / 2 + 3, y + 38, sub, { mono: true, fs: 12, fw: 500, fill: C.muted }) + `</g>`;
 }
 
 // A small variable-name chip (rounded square with a monospace letter).
 export function chip(cx, cy, t) {
   const s = 46;
-  return rc(cx - s / 2, cy - s / 2, s, '#F3E5F5', C.purple, false)
-    + tx(cx, cy, t, { mono: true, fs: 20, fw: 700, fill: C.purple });
+  return rc(cx - s / 2, cy - s / 2, s, TOKENS.accents.purple.tint, C.purple, false)
+    + tx(cx, cy, t, { mono: true, fs: 20, fw: 700, fill: TOKENS.accents.purple.dark });
 }
 
 // Wrap inner markup in an <svg> with a viewBox. `class="dgm-svg"` is what

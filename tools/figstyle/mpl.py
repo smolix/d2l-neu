@@ -173,6 +173,12 @@ def panel_label(ax, x, y, text, *, color=T.MUTED):
             ha="left", va="top")
 
 
+def vlabel(ax, pos, text, color=T.INK, **kw):
+    """Centered label at ``pos`` (house-style twin of gen_mdl_figures)."""
+    ax.text(pos[0], pos[1], text, color=color,
+            ha=kw.pop("ha", "center"), va=kw.pop("va", "center"), **kw)
+
+
 def right_angle(ax, corner, d1, d2, *, size=0.18, color=T.MUTED,
                 lw=T.SW_HAIR):
     """Small square marking a right angle at ``corner`` between directions."""

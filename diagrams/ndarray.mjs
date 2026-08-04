@@ -26,7 +26,7 @@ function rank() {
   o += tx(x + mw / 2, base + 28, 'matrix', { fw: 700, fs: 16 });
   o += tx(x + mw / 2, base + 49, '(3, 4)', { mono: true, fs: 12.5, fill: C.muted });
   x = 800; const off = 15;
-  o += grid([['', '', '', ''], ['', '', '', ''], ['', '', '', '']], x + off, base - mh - off, s, g, { showVal: false, fill: () => ['#EAF4FE', '#90CAF9', false] });
+  o += grid([['', '', '', ''], ['', '', '', ''], ['', '', '', '']], x + off, base - mh - off, s, g, { showVal: false, fill: () => ['#D6EDFC', '#8F98A1', false] });
   o += grid([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], x, base - mh, s, g);
   o += tx(x + mw / 2, base + 28, '3-D tensor', { fw: 700, fs: 16 });
   o += tx(x + mw / 2, base + 49, '(2, 3, 4)', { mono: true, fs: 12.5, fill: C.muted });
@@ -94,7 +94,7 @@ function concat() {
   o += tx(W / 2, by + gh + 22, '(6, 4)', { mono: true, fs: 13, fill: C.muted });
   // divider
   let dv = by + gh + 40;
-  o += `<line x1="34" y1="${dv}" x2="${W - 34}" y2="${dv}" stroke="#E0E0E0" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  o += `<line x1="34" y1="${dv}" x2="${W - 34}" y2="${dv}" stroke="#D9DEE4" stroke-width="1.5" stroke-dasharray="4 4"/>`;
   // dim = 1 : X | Y → (3, 8)
   let cy = dv + 36, cx = (W - (2 * gw + g)) / 2;
   o += tx(W / 2, cy - 16, 'dim = 1', { mono: true, fs: 14, fw: 700, fill: C.purple });
@@ -108,8 +108,8 @@ function concat() {
 // ── broadcasting: a(3×1) + b(1×2) → (3×2), ghost-stretched axes ─────
 function broadcasting() {
   const s = 40, g = 6, W = 700, H = 358; let o = '';
-  const sB = [C.lblue, C.blue, false, C.ink], gB = ['#EBF5FE', '#90CAF9', true, '#90A4AE'];
-  const sA = [C.lamber, C.amber, false, C.ink], gA = ['#FFF3E2', '#FFCC80', true, '#B0A48F'];
+  const sB = [C.lblue, C.blue, false, C.ink], gB = ['#fff', '#1565C0', true, '#565D66'];
+  const sA = [C.lamber, C.amber, false, C.ink], gA = ['#fff', '#B45309', true, '#565D66'];
   const sG = [C.lgreen, C.green, false, C.ink];
   const col = 2 * s + g, row3 = 3 * s + 2 * g;
   let ax = 46, ay = 30;
@@ -144,21 +144,21 @@ function broadcasting() {
 function savingMemory() {
   const W = 400, H = 470; let o = '';
   // Panel A — Y = Y + X allocates a fresh buffer
-  o += tx(200, 26, 'Y = Y + X', { mono: true, fs: 16, fw: 700, fill: '#C0341D' });
+  o += tx(200, 26, 'Y = Y + X', { mono: true, fs: 16, fw: 700, fill: '#93261C' });
   o += chip(72, 138, 'Y');
   o += block(150, 80, 'addr #1', 'old buffer', true, C.gray);
   o += block(150, 168, 'addr #2', 'Y + X', false, C.green);
   o += arrow(95, 138, 150, 193, C.purple, false);
-  o += arrow(95, 138, 150, 105, '#C9CDD2', true);
-  o += tx(200, 250, 'id(Y) changed → False', { fs: 13.5, fw: 700, fill: '#C0341D' });
+  o += arrow(95, 138, 150, 105, '#8F98A1', true);
+  o += tx(200, 250, 'id(Y) changed → False', { fs: 13.5, fw: 700, fill: '#93261C' });
   // divider
-  o += `<line x1="40" y1="272" x2="360" y2="272" stroke="#E0E0E0" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  o += `<line x1="40" y1="272" x2="360" y2="272" stroke="#D9DEE4" stroke-width="1.5" stroke-dasharray="4 4"/>`;
   // Panel B — Y[:] = X + Y writes in place
-  o += tx(200, 304, 'Y[:] = X + Y', { mono: true, fs: 16, fw: 700, fill: '#2E7D32' });
+  o += tx(200, 304, 'Y[:] = X + Y', { mono: true, fs: 16, fw: 700, fill: '#1F5C2C' });
   o += chip(72, 392, 'Y');
-  o += block(150, 365, 'addr #1', 'overwritten', false, '#2E7D32');
+  o += block(150, 365, 'addr #1', 'overwritten', false, '#2E7D3E');
   o += arrow(95, 392, 150, 392, C.purple, false);
-  o += tx(200, 452, 'id(Y) same → True', { fs: 13.5, fw: 700, fill: '#2E7D32' });
+  o += tx(200, 452, 'id(Y) same → True', { fs: 13.5, fw: 700, fill: '#1F5C2C' });
   return svg(W, H, o);
 }
 
@@ -171,23 +171,23 @@ function savingMemory() {
 function savingMemoryJax() {
   const W = 400, H = 470; let o = '';
   // Panel A — eager: immutable, returns a new array
-  o += tx(200, 26, 'X.at[:].set(X + Y)', { mono: true, fs: 15, fw: 700, fill: '#C0341D' });
+  o += tx(200, 26, 'X.at[:].set(X + Y)', { mono: true, fs: 15, fw: 700, fill: '#93261C' });
   o += chip(66, 92, 'X');
   o += block(150, 65, 'addr #1', 'X unchanged', false, C.blue);
-  o += arrow(89, 92, 150, 92, '#C9CDD2', false);
+  o += arrow(89, 92, 150, 92, '#8F98A1', false);
   o += chip(66, 180, 'X′');
   o += block(150, 153, 'addr #2', 'new array', false, C.green);
   o += arrow(89, 180, 150, 180, C.purple, false);
-  o += tx(200, 240, 'id(X_new) == id(X) → False', { fs: 13, fw: 700, fill: '#C0341D' });
+  o += tx(200, 240, 'id(X_new) == id(X) → False', { fs: 13, fw: 700, fill: '#93261C' });
   // divider
-  o += `<line x1="40" y1="262" x2="360" y2="262" stroke="#E0E0E0" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  o += `<line x1="40" y1="262" x2="360" y2="262" stroke="#D9DEE4" stroke-width="1.5" stroke-dasharray="4 4"/>`;
   // Panel B — under jit: XLA fuses + donates the buffer
-  o += tx(200, 296, '@jit  ·  donate_argnums', { mono: true, fs: 14, fw: 700, fill: '#2E7D32' });
+  o += tx(200, 296, '@jit  ·  donate_argnums', { mono: true, fs: 14, fw: 700, fill: '#1F5C2C' });
   o += chip(66, 372, 'X');
-  o += block(150, 345, 'addr #1', 'reused (donated)', false, '#2E7D32');
+  o += block(150, 345, 'addr #1', 'reused (donated)', false, '#2E7D3E');
   o += arrow(89, 372, 150, 372, C.purple, false);
   o += tx(200, 424, "XLA fuses & donates X's buffer", { fs: 12.5, fill: C.muted });
-  o += tx(200, 446, 'no extra allocation → in place', { fs: 13, fw: 700, fill: '#2E7D32' });
+  o += tx(200, 446, 'no extra allocation → in place', { fs: 13, fw: 700, fill: '#1F5C2C' });
   return svg(W, H, o);
 }
 
@@ -198,7 +198,7 @@ function numpyShare() {
   o += block(500, 38, 'numpy.ndarray', 'A = X.numpy()', false, C.amber);
   const vals = ['12.', '12.', '12.', '8.', '9.', '10.', '11.', '…'];
   const bw = vals.length * s + (vals.length - 1) * g, bx = (W - bw) / 2, by = 150;
-  o += grid([vals], bx, by, s, g, { fill: () => ['#ECEFF1', '#90A4AE', false, '#37474F'], fs: 12.5 });
+  o += grid([vals], bx, by, s, g, { fill: () => ['#F0F2F5', '#8F98A1', false, '#15181C'], fs: 12.5 });
   o += tx(W / 2, by + s + 24, 'one shared memory buffer', { fs: 14, fw: 700, fill: C.muted });
   o += arrow(207, 94, bx + 58, by - 8, C.blue, false);
   o += arrow(589, 94, bx + bw - 58, by - 8, C.amber, false);

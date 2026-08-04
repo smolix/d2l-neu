@@ -51,8 +51,11 @@ def fig_cosine():
     """Four panels: unit vectors u (fixed along the x-axis) and v at angle
     theta in {0, 60, 90, 150} degrees, with the dot product u.v = cos(theta)
     annotated under each panel."""
+    # ORIGINAL layout (Alex, ch2 review: "the original layout was
+    # excellent") — full-width panels, full equations above each; only the
+    # colors and line weights come from the unified tokens.
     thetas_deg = [0, 60, 90, 150]
-    fig, axes = plt.subplots(1, len(thetas_deg), figsize=(7.2, 2.3))
+    fig, axes = plt.subplots(1, len(thetas_deg), figsize=(9.6, 2.9))
 
     u = np.array([1.0, 0.0])
     for ax, deg in zip(axes, thetas_deg):
@@ -73,12 +76,12 @@ def fig_cosine():
         else:
             arrow(ax, (0, 0), v, color=ORANGE, lw=2.6)
         vlabel(ax, (1.14, -0.16 if deg == 0 else 0.0), r"$\mathbf{u}$",
-               color=fl.T.BLUE.dark, ha="left", fontsize=16)
+               color=fl.T.BLUE.dark, ha="left", fontsize=15)
         voff = v * 1.16
         if deg == 0:
             voff = np.array([1.14, 0.20])
         vlabel(ax, voff, r"$\mathbf{v}$", color=fl.T.ORANGE.dark,
-               ha="left" if v[0] >= 0 else "right", fontsize=16)
+               ha="left" if v[0] >= 0 else "right", fontsize=15)
 
         # the angle arc + right-angle marker at 90 degrees
         if deg == 90:
@@ -98,9 +101,9 @@ def fig_cosine():
         val = f"{cos:.2f}".rstrip("0").rstrip(".")
         if val == "-0":
             val = "0"
-        # short per-panel value only — the caption states u^T v = cos(theta)
-        # once, and full equations would collide at the compact panel width
-        ax.set_title(rf"$\cos {deg}^\circ = {val}$", fontsize=14.5, pad=8)
+        ax.set_title(
+            rf"$\mathbf{{u}}^\top \mathbf{{v}} = \cos {deg}^\circ = {val}$",
+            fontsize=13.5, pad=8)
 
         clean_axes(ax, lim=((-1.35, 1.45), (-0.32, 1.3)), hide=True)
 

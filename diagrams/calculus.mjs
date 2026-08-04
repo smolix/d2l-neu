@@ -9,7 +9,7 @@
 //
 // Stable ids use the `calculus-<concept>` prefix. Never rename.
 
-import { C, tx, arrow, chip, svg } from './engine.mjs';
+import { C, FS, tx, arrow, chip, svg } from './engine.mjs';
 
 const line = (x1, y1, x2, y2, color, w = 1.5, dash = false) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
@@ -78,10 +78,10 @@ function secantTangent() {
   o += line(tL, tanAt(tL), tR, tanAt(tR), C.purple, 2.4);
   // points + labels
   o += dot(Px, Py, 4, C.ink); o += dot(Qx, Qy, 4, C.ink);
-  o += tx(Px - 9, Py + 5, 'P', { fs: 13, fw: 700, fill: C.ink, anchor: 'end' });
-  o += tx(Qx + 14, Qy + 3, 'Q', { fs: 13, fw: 700, fill: C.ink, anchor: 'start' });
-  o += tx(sR - 2, secAt(sR) - 9, 'secant', { fs: 12.5, fw: 700, fill: C.blue, anchor: 'end' });
-  o += tx(tL + 26, tanAt(tL) + 16, 'tangent', { fs: 12.5, fw: 700, fill: C.purple, anchor: 'start' });
+  o += tx(Px, Py + 17, 'P', { fs: 13, fw: 700, fill: C.ink });
+  o += tx(Qx + 8, Qy + 16, 'Q', { fs: 13, fw: 700, fill: C.ink, anchor: 'start' });
+  o += `<text x="347" y="162" transform="rotate(-35.9 347 162)" font-family="${FS}" font-size="12.5" font-weight="700" fill="${C.blue}" text-anchor="middle" dominant-baseline="central">secant</text>`;
+  o += `<text x="257" y="241" transform="rotate(-25.8 257 241)" font-family="${FS}" font-size="12.5" font-weight="700" fill="${C.purple}" text-anchor="middle" dominant-baseline="central">tangent</text>`;
   o += tx(W / 2, H - 14, 'as h → 0, the secant through P, Q becomes the tangent at P', { fs: 12.5, fw: 600, fill: C.muted });
   return svg(W, H, o);
 }
@@ -153,20 +153,20 @@ function gradientField() {
   [1, 0.74, 0.5, 0.28].forEach(s => o += ellipse(cx, cy, a0 * s, b0 * s, C.gray, 1.5));
   o += dot(cx, cy, 3.6, C.green);
   o += tx(cx, cy - 12, 'min', { fs: 11.5, fw: 700, fill: C.green });
-  const a = a0 * 0.74, b = b0 * 0.74, len = 34;
   const angs = [-52, 18, 74, 132, 244].map(d => d * Math.PI / 180);
   angs.forEach((t, i) => {
-    const x = cx + a * Math.cos(t), y = cy + b * Math.sin(t);
-    let nx = Math.cos(t) / a, ny = Math.sin(t) / b; const L = Math.hypot(nx, ny); nx /= L; ny /= L;
-    o += arrow(x, y, x + nx * len, y + ny * len, C.blue);
-    if (i === 0) o += tx(x + nx * len + 5, y + ny * len, '∇f', { fs: 12.5, fw: 700, fill: C.blue, anchor: 'start' });
+    const x = cx + a0 * 0.74 * Math.cos(t), y = cy + b0 * 0.74 * Math.sin(t);
+    const x2 = cx + a0 * Math.cos(t), y2 = cy + b0 * Math.sin(t);
+    o += arrow(x, y, x2, y2, C.blue);
+    if (i === 0) o += tx(x2 + 6, y2 + 2, '∇f', { fs: 12.5, fw: 700, fill: C.blue, anchor: 'start' });
   });
-  // one −∇f (downhill) arrow for contrast
-  const t0 = 200 * Math.PI / 180, x0 = cx + a * Math.cos(t0), y0 = cy + b * Math.sin(t0);
-  let nx = Math.cos(t0) / a, ny = Math.sin(t0) / b; const L = Math.hypot(nx, ny); nx /= L; ny /= L;
-  o += arrow(x0, y0, x0 - nx * len, y0 - ny * len, C.amber);
-  o += tx(x0 - nx * len - 6, y0 - ny * len + 15, '−∇f', { fs: 12.5, fw: 700, fill: C.amber, anchor: 'end' });
-  o += tx(W / 2, H - 14, 'steepest ascent — −∇f points downhill', { fs: 12.5, fw: 600, fill: C.muted });
+  // one −∇f (downhill) arrow for contrast — it lands on the inner ring
+  const t0 = 200 * Math.PI / 180;
+  const x0 = cx + a0 * 0.74 * Math.cos(t0), y0 = cy + b0 * 0.74 * Math.sin(t0);
+  const xi = cx + a0 * 0.5 * Math.cos(t0), yi = cy + b0 * 0.5 * Math.sin(t0);
+  o += arrow(x0, y0, xi, yi, C.amber);
+  o += tx(x0 - 8, y0 + 14, '−∇f', { fs: 12.5, fw: 700, fill: C.amber, anchor: 'end' });
+  o += tx(W / 2, H - 14, '∇f is the steepest ascent; −∇f points downhill', { fs: 12.5, fw: 600, fill: C.muted });
   return svg(W, H, o);
 }
 

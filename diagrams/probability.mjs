@@ -38,21 +38,23 @@ const dot = (x, y, r, fill) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fil
 // ── Bayes in counts: why a positive test is usually a false alarm ───
 function naturalFrequencies() {
   const W = 660, H = 360; let o = '';
+  // arrows FIRST: tails start under the (opaque) source boxes and emerge
+  // from behind them; tips land exactly on the target box boundary
+  o += arrow(310, 78, 202, 129, C.gray);
+  o += arrow(350, 78, 458, 129, C.gray);
+  o += arrow(168, 170, 168, 226, C.green);
+  o += arrow(486, 170, 486, 226, C.amber);
+  o += arrow(202, 268, 300, 303, C.gray);
+  o += arrow(452, 268, 360, 303, C.gray);
+  o += tx(230, 104, '0.15%', { fs: 11.5, fw: 700, fill: C.green });
+  o += tx(432, 104, '99.85%', { fs: 11.5, fw: 700, fill: C.muted });
+  // boxes on top
   o += box(330, 66, 162, 46, C.lgray, C.gray, '10,000 people', null);
-  // split by true status
   o += box(168, 154, 158, 50, C.lgreen, C.green, '15 have HIV', 'P(H=1) = 0.0015');
   o += box(486, 154, 170, 50, C.lgray, C.gray, '9,985 healthy', 'P(H=0) = 0.9985');
-  o += arrow(300, 90, 202, 130, C.gray); o += tx(230, 104, '0.15%', { fs: 11.5, fw: 700, fill: C.green });
-  o += arrow(360, 90, 458, 130, C.gray); o += tx(432, 104, '99.85%', { fs: 11.5, fw: 700, fill: C.muted });
-  // test-positive counts
   o += box(168, 250, 158, 48, C.lgreen, C.green, '15 test +', '100% detected');
   o += box(486, 250, 170, 48, C.lamber, C.amber, '≈ 100 test +', '1% false positive');
-  o += arrow(168, 180, 168, 225, C.green);
-  o += arrow(486, 180, 486, 225, C.amber);
-  // verdict
   o += box(330, 326, 476, 46, C.lblue, C.blue, '115 test positive · only 15 truly have HIV', 'P(H=1 | D=1) ≈ 15 / 115 ≈ 13%');
-  o += arrow(202, 274, 300, 305, C.gray);
-  o += arrow(452, 274, 360, 305, C.gray);
   return svg(W, H, o);
 }
 
@@ -97,7 +99,7 @@ function explainingAway() {
   let cx = 110;
   o += node(cx, 80, 'C'); o += node(cx - 46, 160, 'A'); o += node(cx + 46, 160, 'B');
   o += arrow(cx - 10, 96, cx - 40, 144, C.ink); o += arrow(cx + 10, 96, cx + 40, 144, C.ink);
-  o += cap(cx, 'common cause', 'A, B dependent — ⟂ given C');
+  o += cap(cx, 'common cause', 'A, B dependent; ⟂ given C');
   // 2 — chain  A → B → C
   cx = 330;
   o += node(cx - 64, 120, 'A'); o += node(cx, 120, 'B'); o += node(cx + 64, 120, 'C');
@@ -107,7 +109,7 @@ function explainingAway() {
   cx = 552;
   o += node(cx - 46, 80, 'A'); o += node(cx + 46, 80, 'B'); o += node(cx, 160, 'C');
   o += arrow(cx - 40, 96, cx - 10, 144, C.ink); o += arrow(cx + 40, 96, cx + 10, 144, C.ink);
-  o += cap(cx, 'collider (explaining away)', 'A ⟂ B — dependent given C');
+  o += cap(cx, 'collider (explaining away)', 'A ⟂ B; dependent given C');
   return svg(W, H, o);
 }
 

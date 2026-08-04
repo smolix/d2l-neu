@@ -64,12 +64,15 @@ export function grid(data, x0, y0, s, gap, opt) {
 // An arrow from (x1,y1) to (x2,y2). Arrowhead is drawn as a filled path,
 // so no <marker>/<defs> id juggling across multiple inlined SVGs.
 export function arrow(x1, y1, x2, y2, color, dash) {
-  const ang = Math.atan2(y2 - y1, x2 - x1), h = 9.5;
+  // The SHAFT stops at the head's base — drawing it through to the tip
+  // makes the head look stubby and the line poke past it (Alex, ch2 review).
+  const ang = Math.atan2(y2 - y1, x2 - x1), h = 10.5;
+  const bx = x2 - 0.88 * h * Math.cos(ang), by = y2 - 0.88 * h * Math.sin(ang);
   const a1 = ang + Math.PI - 0.42, a2 = ang + Math.PI + 0.42;
   const hx1 = x2 + h * Math.cos(a1), hy1 = y2 + h * Math.sin(a1);
   const hx2 = x2 + h * Math.cos(a2), hy2 = y2 + h * Math.sin(a2);
-  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.5"${dash ? ' stroke-dasharray="5 4"' : ''}/>`
-       + `<path d="M${x2},${y2} L${hx1},${hy1} L${hx2},${hy2} Z" fill="${color}"/>`;
+  return `<line x1="${x1}" y1="${y1}" x2="${bx.toFixed(2)}" y2="${by.toFixed(2)}" stroke="${color}" stroke-width="2.5"${dash ? ' stroke-dasharray="5 4"' : ''}/>`
+       + `<path d="M${x2},${y2} L${hx1.toFixed(2)},${hy1.toFixed(2)} L${hx2.toFixed(2)},${hy2.toFixed(2)} Z" fill="${color}"/>`;
 }
 
 // A labelled box (variable address / handle). title + sub stacked, with a

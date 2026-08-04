@@ -2075,7 +2075,7 @@ L 584.11516 234.46
    </g>
    <g id="text_36">
     <!-- $z=x^2$ -->
-    <g style="fill: #1565c0" transform="translate(534.677629 63.1) scale(0.13 -0.13)">
+    <g style="fill: #1565c0" transform="translate(453.349694 61.084) scale(0.13 -0.13)">
      <defs>
       <path id="Cmr10-29" d="M 481 850 
 Q 428 850 393 890 
@@ -2152,7 +2152,7 @@ z
    </g>
    <g id="text_37">
     <!-- $z=-y^2$ -->
-    <g style="fill: #b45309" transform="translate(530.192629 186.076) scale(0.13 -0.13)">
+    <g style="fill: #b45309" transform="translate(448.864694 199.076) scale(0.13 -0.13)">
      <defs>
       <path id="Cmsy10-11" d="M 653 1472 
 Q 600 1472 565 1512 

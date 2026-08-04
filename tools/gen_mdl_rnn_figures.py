@@ -759,12 +759,10 @@ def fig_rnn_bptt():
     # ------------------------------------------------------------------ #
     def fanout(box_cx, box_w, col_x, label):
         pbox(box_cx, yp, label, box_w)
-        top = yp + bh / 2
-        # start x for the arrow to row i: leftmost for the highest circle
-        starts = [box_cx + 0.30, box_cx - box_w * 0.18, box_cx - box_w * 0.40]
-        for sx, y in zip(starts, ys):
-            p = (sx, top)
-            car(p, cb((col_x, y), p), rad=0.0 if y == ys[0] else 0.10, lw=1.7)
+        # straight chained verticals: box -> circle above -> next circle ...
+        sar((col_x, yp + bh / 2), (col_x, ys[0] - r), lw=1.7)
+        for ya, yb in zip(ys, ys[1:]):
+            sar((col_x, ya + r), (col_x, yb - r), lw=1.7)
 
     fanout(F, 2.05, F, r"$\mathbf{W}_{hx},\mathbf{W}_{hh}$")
     fanout(G, 1.15, G, r"$\mathbf{W}_{qh}$")

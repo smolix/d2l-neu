@@ -75,8 +75,8 @@ def fig_functionclasses():
     flabel(377.2, 104.5, 1, T.BLUE.dark)
     flabel(377.2, 128.5, 2)
     flabel(377.2, 141.2, 3)
-    for x in (214.0, 373.4):
-        f.text(x * S, 12 * S, [var("f"), Span("*", "r", script=1)],
+    for x in (232.0, 391.5):     # just right of each star (edges at 228/388)
+        f.text(x * S, 14 * S, [var("f"), Span("*", "r", script=1)],
                size=T.FS_LABEL, anchor="start")
     f.text(125 * S, 182 * S, "non-nested function classes",
            size=T.FS_LABEL, color=T.INK)

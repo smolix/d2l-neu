@@ -39,6 +39,7 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+TEAL = fl.T.TEAL.base   # recurrent/state role (guide §4.3), as in ch. 9/10
 
 from matplotlib.patches import Rectangle
 
@@ -71,7 +72,7 @@ def fig_hybrid_cache():
               label="pure transformer (32 attention layers)")
     ax.loglog(T, hybrid, color=GREEN, lw=2.4,
               label="hybrid (4 attention + 28 recurrent)")
-    ax.loglog(T, recurrent, color=BLUE, lw=2.4,
+    ax.loglog(T, recurrent, color=TEAL, lw=2.4,
               label="pure recurrent (32 fixed states)")
 
     # Right-edge value labels, black, offset clear of the curves.
@@ -137,7 +138,7 @@ def fig_hybrid_stacks():
             elif layer in kinds["shared"]:
                 color, hatch = ORANGE, "///"
             else:
-                color, hatch = BLUE, None
+                color, hatch = TEAL, None
             face = color if hatch is None else "none"
             ax.add_patch(Rectangle(
                 (x0, y0), cell_w, 0.86 * unit, facecolor=face,
@@ -156,7 +157,7 @@ def fig_hybrid_stacks():
     # Legend built from proxy patches, outside the stacks on the right; the
     # tight bounding box in save() crops the canvas to the content.
     proxies = [
-        (Rectangle((0, 0), 1, 1, facecolor=BLUE, alpha=0.85), "recurrent"),
+        (Rectangle((0, 0), 1, 1, facecolor=TEAL, alpha=0.85), "recurrent"),
         (Rectangle((0, 0), 1, 1, facecolor=ORANGE, alpha=0.85),
          "full attention"),
         (Rectangle((0, 0), 1, 1, facecolor=GREEN, alpha=0.85),

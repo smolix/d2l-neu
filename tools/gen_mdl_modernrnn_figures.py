@@ -49,7 +49,9 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
-PURPLE = "#9467bd"
+TEAL = fl.T.TEAL.base      # hidden/cell-state role (guide §4.3)
+PURPLE = fl.T.PURPLE.base  # parameter / second-state role
+RED = fl.T.RED.base
 
 from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch
 
@@ -63,8 +65,9 @@ from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch
 # ``img/deep-rnn.svg``, ``img/birnn.svg``) are left untouched.               #
 #                                                                              #
 # Colour code (consistent across the four figures and with the ch. 9         #
-# diagrams): inputs X blue, hidden/cell state boxes green/orange, computation#
-# heads and elementwise ops grey, outputs grey-boxed.                        #
+# diagrams): inputs X blue, hidden states H teal (the state role), the LSTM  #
+# cell state C orange, outputs O orange, computation heads and elementwise   #
+# ops grey.                                                                  #
 # =========================================================================== #
 
 def _box(ax, cx, cy, w, h, text, color, fontsize=14, text_color="black",
@@ -123,7 +126,7 @@ def fig_lstm_cell():
     fl.arrow(ax, (x_prod + r, y_cell), (9.9 - bw / 2, y_cell), color=GRAY)
 
     # --- input bus (bottom): H_{t-1} and X_t feed all four heads -------------
-    _box(ax, 1.05, 1.85, bw, bh, r"$\mathbf{H}_{t-1}$", GREEN)
+    _box(ax, 1.05, 1.85, bw, bh, r"$\mathbf{H}_{t-1}$", TEAL)
     _box(ax, 1.05, 0.55, bw, bh, r"$\mathbf{X}_{t}$", BLUE)
     xj = 2.15                              # bus junction
     fl.arrow(ax, (1.05 + bw / 2, 1.85), (xj - 0.03, y_bus + 0.04), color=GRAY,
@@ -176,7 +179,7 @@ def fig_lstm_cell():
     ax.text((xO + hw / 2 + x_out - r) / 2, y_head - 0.46, r"$\mathbf{O}_t$",
             ha="center", va="center", fontsize=14, color="black")
     fl.arrow(ax, (x_out + r, y_head), (9.9 - bw / 2, y_head), color=GRAY)
-    _box(ax, 9.9, y_head, bw, bh, r"$\mathbf{H}_{t}$", GREEN)
+    _box(ax, 9.9, y_head, bw, bh, r"$\mathbf{H}_{t}$", TEAL)
 
     ax.set_xlim(0.2, 10.75)
     ax.set_ylim(0.0, 5.7)
@@ -196,10 +199,10 @@ def fig_gru_cell():
     r = 0.26
 
     # --- state conveyor (top): H_{t-1} -> (x Z) -> (+) -> H_t -----------------
-    _box(ax, 1.0, y_conv, bw, bh, r"$\mathbf{H}_{t-1}$", GREEN)
+    _box(ax, 1.0, y_conv, bw, bh, r"$\mathbf{H}_{t-1}$", TEAL)
     _op(ax, xZ, y_conv, r"$\odot$")
     _op(ax, x_blend, y_conv, r"$+$")
-    _box(ax, 9.55, y_conv, bw, bh, r"$\mathbf{H}_{t}$", GREEN)
+    _box(ax, 9.55, y_conv, bw, bh, r"$\mathbf{H}_{t}$", TEAL)
     fl.arrow(ax, (1.0 + bw / 2, y_conv), (xZ - r, y_conv), color=GRAY)
     fl.arrow(ax, (xZ + r, y_conv), (x_blend - r, y_conv), color=GRAY)
     fl.arrow(ax, (x_blend + r, y_conv), (9.55 - bw / 2, y_conv), color=GRAY)
@@ -288,8 +291,8 @@ def fig_deep_rnn():
 
     for cx, s in zip(xs, subs):
         _box(ax, cx, y_in, bw, bh, rf"$\mathbf{{X}}_{{{s}}}$", BLUE)
-        _box(ax, cx, y_h1, bw, bh, rf"$\mathbf{{H}}_{{{s}}}^{{(1)}}$", GREEN)
-        _box(ax, cx, y_h2, bw, bh, rf"$\mathbf{{H}}_{{{s}}}^{{(2)}}$", GREEN)
+        _box(ax, cx, y_h1, bw, bh, rf"$\mathbf{{H}}_{{{s}}}^{{(1)}}$", TEAL)
+        _box(ax, cx, y_h2, bw, bh, rf"$\mathbf{{H}}_{{{s}}}^{{(2)}}$", TEAL)
         _box(ax, cx, y_out, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", ORANGE)
         for y0, y1 in [(y_in, y_h1), (y_h1, y_h2), (y_h2, y_out)]:
             fl.arrow(ax, (cx, y0 + half), (cx, y1 - half), color=GRAY, lw=2.0,
@@ -334,10 +337,10 @@ def fig_bi_rnn():
     for cx, s in zip(xs, subs):
         _box(ax, cx, y_in, bw, bh, rf"$\mathbf{{X}}_{{{s}}}$", BLUE)
         _box(ax, cx, y_f, bw, bh,
-             rf"$\overrightarrow{{\mathbf{{H}}}}_{{{s}}}$", GREEN)
+             rf"$\overrightarrow{{\mathbf{{H}}}}_{{{s}}}$", TEAL)
         _box(ax, cx + dx, y_b, bw, bh,
-             rf"$\overleftarrow{{\mathbf{{H}}}}_{{{s}}}$", ORANGE)
-        _box(ax, cx + dx / 2, y_out, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", GRAY)
+             rf"$\overleftarrow{{\mathbf{{H}}}}_{{{s}}}$", PURPLE)
+        _box(ax, cx + dx / 2, y_out, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", ORANGE)
         # input feeds both directions
         fl.arrow(ax, (cx, y_in + half), (cx, y_f - half), color=GRAY, lw=2.0,
                  mut=15)
@@ -415,8 +418,8 @@ def fig_encoder_decoder():
     # source text
     ax.text(0.75, y, '"They are\nwatching ."', ha="center", va="center",
             fontsize=_ED_SMALL, color="black")
-    _ed_box(ax, 3.1, y, 1.9, 1.15, "Encoder", "#eaf2fb", BLUE)
-    _ed_box(ax, 7.1, y, 1.9, 1.15, "Decoder", "#fdefe1", ORANGE)
+    _ed_box(ax, 3.1, y, 1.9, 1.15, "Encoder", fl.T.BLUE.tint, BLUE)
+    _ed_box(ax, 7.1, y, 1.9, 1.15, "Decoder", fl.T.ORANGE.tint, ORANGE)
     ax.text(9.75, y, '"Ils\nregardent ."', ha="center", va="center",
             fontsize=_ED_SMALL, color="black")
 
@@ -426,8 +429,8 @@ def fig_encoder_decoder():
 
     # the fixed-shape state on the middle hand-off
     ax.text(5.1, y + 0.5, "state", ha="center", va="bottom",
-            fontsize=_ED_SMALL, color=GREEN, fontstyle="italic")
-    ax.plot(5.1, y, "o", color=GREEN, ms=10, zorder=4)
+            fontsize=_ED_SMALL, color=TEAL, fontstyle="italic")
+    ax.plot(5.1, y, "o", color=TEAL, ms=10, zorder=4)
 
     fl.save(fig, "mdl-modernrnn-encoder-decoder")
 
@@ -463,7 +466,7 @@ def fig_seq2seq():
 
     # encoder cells + inputs, left-to-right recurrence
     for i, x in enumerate(enc_x):
-        _ed_box(ax, x, yc, cw, ch, "", "#eaf2fb", BLUE)
+        _ed_box(ax, x, yc, cw, ch, "", fl.T.BLUE.tint, BLUE)
         _ed_arrow(ax, (x, 1.55), (x, yc - ch / 2))          # token -> cell
         ax.text(x, 1.35, enc_tokens[i], ha="center", va="top",
                 fontsize=_ED_SMALL, color="black")
@@ -472,14 +475,14 @@ def fig_seq2seq():
 
     # context state c = encoder final state
     xc = xsep
-    ax.plot(xc, yc, "o", color=GREEN, ms=11, zorder=5)
+    ax.plot(xc, yc, "o", color=TEAL, ms=11, zorder=5)
     ax.text(xc, yc + 0.42, r"$\mathbf{c}$", ha="center", va="bottom",
-            fontsize=_ED_TXT + 1, color=GREEN)
-    _ed_arrow(ax, (enc_x[-1] + cw / 2, yc), (xc - 0.16, yc), color=GREEN)
+            fontsize=_ED_TXT + 1, color=TEAL)
+    _ed_arrow(ax, (enc_x[-1] + cw / 2, yc), (xc - 0.16, yc), color=TEAL)
 
     # decoder cells: teacher-forced input below, prediction above, context in
     for i, x in enumerate(dec_x):
-        _ed_box(ax, x, yc, cw, ch, "", "#fdefe1", ORANGE)
+        _ed_box(ax, x, yc, cw, ch, "", fl.T.ORANGE.tint, ORANGE)
         # teacher-forcing input from below
         _ed_arrow(ax, (x, 1.55), (x, yc - ch / 2))
         ax.text(x, 1.35, dec_in[i], ha="center", va="top",
@@ -490,13 +493,13 @@ def fig_seq2seq():
                 fontsize=_ED_SMALL, color="black")
         # recurrent link
         if i == 0:
-            _ed_arrow(ax, (xc + 0.16, yc), (x - cw / 2, yc), color=GREEN)
+            _ed_arrow(ax, (xc + 0.16, yc), (x - cw / 2, yc), color=TEAL)
         else:
             _ed_arrow(ax, (dec_x[i - 1] + cw / 2, yc), (x - cw / 2, yc))
-        # context fed at every decoder step (green, from the state)
+        # context fed at every decoder step (teal, from the state)
         ax.annotate("", xy=(x, yc + ch / 2 - 0.02),
                     xytext=(xc, yc + 0.30),
-                    arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.1,
+                    arrowprops=dict(arrowstyle="->", color=TEAL, lw=1.1,
                                     ls=(0, (3, 3)), shrinkA=2, shrinkB=2,
                                     connectionstyle="arc3,rad=-0.12"),
                     zorder=1)
@@ -551,7 +554,7 @@ def fig_scan_tree():
         for t in range(T):
             lo = lo_of(t)
             done = lo == 1
-            color = BLUE if r == 0 else (GREEN if done else ORANGE)
+            color = BLUE if r == 0 else (TEAL if done else ORANGE)
             _box(ax, xs[t], y, bw, bh, span_label(lo, t + 1), color,
                  fontsize=12, weight="normal")
         if r == 0:
@@ -592,10 +595,10 @@ def fig_ssm_views():
         x[i] = np.exp(a_c * dt) * x[i - 1] + (np.exp(a_c * dt) - 1) / a_c \
             * b_c * u[i]
     ax.plot(t, u, color=BLUE, lw=1.8)
-    ax.plot(t, x, color=GREEN, lw=2.6)
+    ax.plot(t, x, color=TEAL, lw=2.6)
     ax.text(2.7, 1.12, r"input $u(t)$", fontsize=12.5, color=BLUE,
             ha="center", va="bottom")
-    ax.text(5.05, 0.82, r"state $x(t)$", fontsize=12.5, color=GREEN,
+    ax.text(5.05, 0.82, r"state $x(t)$", fontsize=12.5, color=TEAL,
             ha="left", va="bottom")
     ax.text(7.55, 0.52, r"$\dot{x} = Ax + Bu$", fontsize=14, color="black",
             ha="center")
@@ -618,7 +621,7 @@ def fig_ssm_views():
     half = bh / 2
     for cx, s in zip(xs, ["t-1", "t", "t+1"]):
         _box(ax, cx, y_u, bw, bh, rf"$u_{{{s}}}$", BLUE, fontsize=13)
-        _box(ax, cx, y_x, bw, bh, rf"$x_{{{s}}}$", GREEN, fontsize=13)
+        _box(ax, cx, y_x, bw, bh, rf"$x_{{{s}}}$", TEAL, fontsize=13)
         _box(ax, cx, y_y, bw, bh, rf"$y_{{{s}}}$", ORANGE, fontsize=13)
         fl.arrow(ax, (cx, y_u + half), (cx, y_x - half), color=GRAY, lw=1.8,
                  mut=12)
@@ -657,8 +660,8 @@ def fig_ssm_views():
     for i in range(Tc):
         k = Tc - 1 - i               # kernel index applied to input i+1
         ax.plot([xs[i], xs[i]], [y_ker, y_ker + 1.15 * kvals[k]],
-                color=ORANGE, lw=2.4, solid_capstyle="round")
-        ax.plot([xs[i]], [y_ker + 1.15 * kvals[k]], "o", color=ORANGE,
+                color=PURPLE, lw=2.4, solid_capstyle="round")
+        ax.plot([xs[i]], [y_ker + 1.15 * kvals[k]], "o", color=PURPLE,
                 markersize=4)
         fl.arrow(ax, (xs[i], y_u + bh / 2), (xs[i], y_ker - 0.08),
                  color=GRAY, lw=1.2, mut=9)
@@ -669,7 +672,7 @@ def fig_ssm_views():
     ax.text(xs[-1] + 0.28, y_ker + 1.15 * kvals[0], r"$\bar{K}_0$",
             fontsize=11.5, color="black", ha="left", va="center")
     cx_out = xs[-1]
-    _box(ax, cx_out, y_out, 0.85, 0.66, rf"$y_{{{Tc}}}$", GREEN, fontsize=12)
+    _box(ax, cx_out, y_out, 0.85, 0.66, rf"$y_{{{Tc}}}$", ORANGE, fontsize=12)
     fl.arrow(ax, (cx_out, y_ker + 1.15 * kvals[0] + 0.16),
              (cx_out, y_out - 0.4), color=GRAY, lw=1.8, mut=12)
     ax.text(0.35, 4.55, r"$\mathbf{y} = \bar{\mathbf{K}} * \mathbf{u}$",
@@ -693,10 +696,9 @@ def fig_hippo_reconstruction():
     f = np.sin(8 * t) + 0.5 * np.sin(23 * t) + 0.3 * (t > 0.6)
 
     fig, axes = plt.subplots(1, 3, figsize=(11.4, 3.2), sharey=True)
-    Ns = [4, 16, 64]
-    colors = [ORANGE, BLUE, GREEN]
+    Ns = [4, 16, 64]                 # one quantity, one accent, all panels
     dt = t[1] - t[0]
-    for ax, N, color in zip(axes, Ns, colors):
+    for ax, N, color in zip(axes, Ns, [ORANGE] * 3):
         A, B = _hippo_legs(N)
         eye = np.eye(N)
         x = np.zeros(N)
@@ -749,11 +751,11 @@ def fig_ssm_block():
          fontsize=13, weight="normal")
     _box(ax, cx, y_ln1, bw, bh, "LayerNorm", GRAY, fontsize=13,
          weight="normal")
-    _box(ax, cx, y_ssm, 3.5, bh, "diagonal SSM (S4D)", GREEN, fontsize=13,
+    _box(ax, cx, y_ssm, 3.5, bh, "diagonal SSM (S4D)", TEAL, fontsize=13,
          weight="normal")
     _box(ax, cx, y_ln2, bw, bh, "LayerNorm", GRAY, fontsize=13,
          weight="normal")
-    _box(ax, cx, y_mlp, bw, bh, r"gated MLP", ORANGE, fontsize=13,
+    _box(ax, cx, y_mlp, bw, bh, r"gated MLP", GREEN, fontsize=13,
          weight="normal")
     _box(ax, cx, y_out, 4.1, bh, r"output sequence $(T, d)$", BLUE,
          fontsize=13, weight="normal")
@@ -775,7 +777,7 @@ def fig_ssm_block():
                                                    y_add2)]:
         ax.plot([cx, xl], [y0, y0], color=GRAY, lw=1.7)
         ax.plot([xl, xl], [y0, y1], color=GRAY, lw=1.7)
-        fl.arrow(ax, (xl, y1), (cx - 0.30, y1), color=GRAY, lw=1.7, mut=12)
+        fl.arrow(ax, (xl, y1), (cx - 0.26, y1), color=GRAY, lw=1.7, mut=12)
 
     # annotations on the right
     xr = cx + 1.85
@@ -848,7 +850,7 @@ def fig_selective_copy():
     # then drop into the output cell. Lane order (first symbol lowest)
     # makes the wires crossing-free.
     y_top_in = y_in - ch / 2 - 0.02
-    y_top_out = y_out + ch / 2 + 0.06
+    y_top_out = y_out + ch / 2
     for k, ((i, s, c), cxq) in enumerate(zip(marked, xs_q)):
         cxs = xs_ctx[i]
         lane = 1.42 + 0.20 * k
@@ -906,7 +908,7 @@ def fig_mamba_block():
     _box(ax, cx, y_conv, 3.35, bh, "causal conv, width 4", ORANGE,
          fontsize=12, weight="normal")
     _op(ax, cx, y_silu, "SiLU", r=0.40, fontsize=11)
-    _box(ax, cx, y_ssm, bw, bh, "selective SSM", GREEN, fontsize=13,
+    _box(ax, cx, y_ssm, bw, bh, "selective SSM", TEAL, fontsize=13,
          weight="normal")
     _op(ax, gx, y_silu, "SiLU", r=0.40, fontsize=11)
     _op(ax, mid, y_mul, r"$\odot$", r=0.27)
@@ -925,20 +927,20 @@ def fig_mamba_block():
     # fork: projection -> conv (main), projection -> gate SiLU
     fl.arrow(ax, (cx, y_proj + half), (cx, y_conv - half), color=GRAY, lw=1.9,
              mut=13)
-    fl.arrow(ax, (gx, y_proj + half), (gx, y_silu - 0.40 - 0.06), color=GRAY,
+    fl.arrow(ax, (gx, y_proj + half), (gx, y_silu - 0.40), color=GRAY,
              lw=1.9, mut=13)
 
     # main branch: conv -> SiLU -> SSM -> multiply
-    fl.arrow(ax, (cx, y_conv + half), (cx, y_silu - 0.40 - 0.06), color=GRAY,
+    fl.arrow(ax, (cx, y_conv + half), (cx, y_silu - 0.40), color=GRAY,
              lw=1.9, mut=13)
-    fl.arrow(ax, (cx, y_silu + 0.40 + 0.06), (cx, y_ssm - half), color=GRAY,
+    fl.arrow(ax, (cx, y_silu + 0.40), (cx, y_ssm - half), color=GRAY,
              lw=1.9, mut=13)
     ax.plot([cx, cx], [y_ssm + half, y_mul], color=GRAY, lw=1.9)
-    fl.arrow(ax, (cx, y_mul), (mid - 0.31, y_mul), color=GRAY, lw=1.9, mut=13)
+    fl.arrow(ax, (cx, y_mul), (mid - 0.27, y_mul), color=GRAY, lw=1.9, mut=13)
 
     # gate branch: SiLU -> multiply
-    ax.plot([gx, gx], [y_silu + 0.40 + 0.06, y_mul], color=GRAY, lw=1.9)
-    fl.arrow(ax, (gx, y_mul), (mid + 0.31, y_mul), color=GRAY, lw=1.9, mut=13)
+    ax.plot([gx, gx], [y_silu + 0.40, y_mul], color=GRAY, lw=1.9)
+    fl.arrow(ax, (gx, y_mul), (mid + 0.27, y_mul), color=GRAY, lw=1.9, mut=13)
     ax.text(gx + 0.22, (y_silu + y_mul) / 2 + 0.28, "gate", fontsize=13,
             color="black", ha="left", va="center")
 
@@ -955,14 +957,14 @@ def fig_mamba_block():
     y_res0 = (y_in + y_ln) / 2
     ax.plot([mid, xl], [y_res0, y_res0], color=GRAY, lw=1.7)
     ax.plot([xl, xl], [y_res0, y_add], color=GRAY, lw=1.7)
-    fl.arrow(ax, (xl, y_add), (mid - 0.31, y_add), color=GRAY, lw=1.7, mut=12)
+    fl.arrow(ax, (xl, y_add), (mid - 0.27, y_add), color=GRAY, lw=1.7, mut=12)
 
     # Delta_t, B_t, C_t are functions of the SSM input
     ax.text(1.62, y_ssm + 0.86,
             r"$\Delta_t, \mathbf{B}_t, \mathbf{C}_t$" + "\nfrom the input",
             fontsize=12.5, color="black", ha="center", va="center")
-    fl.arrow(ax, (1.80, y_ssm + 0.44), (cx - bw / 2 - 0.06, y_ssm + 0.12),
-             color=GREEN, lw=1.5, mut=11)
+    fl.arrow(ax, (1.80, y_ssm + 0.44), (cx - bw / 2, y_ssm + 0.12),
+             color=TEAL, lw=1.5, mut=11)
 
     # x L bracket on the right
     xb = 8.35
@@ -1024,7 +1026,7 @@ def fig_three_answers():
                 fontsize=11.5, color="black")
         for k, (name, ok) in enumerate(prop):
             mark = "✓" if ok else "✗"
-            mcol = GREEN if ok else ORANGE
+            mcol = GREEN if ok else RED
             yk = y_c - 0.98 - 0.34 * k
             ax.text(cx - 1.38, yk, mark, ha="center", va="center",
                     fontsize=13, color=mcol, fontweight="bold")
@@ -1033,8 +1035,7 @@ def fig_three_answers():
 
     for x0, x1 in [(xs[0] + pw / 2, xs[1] - pw / 2),
                    (xs[1] + pw / 2, xs[2] - pw / 2)]:
-        fl.arrow(ax, (x0 + 0.06, y_c), (x1 - 0.06, y_c), color=GRAY, lw=2.0,
-                 mut=14)
+        fl.arrow(ax, (x0, y_c), (x1, y_c), color=GRAY, lw=2.0, mut=14)
 
     ax.set_xlim(0.0, 11.9)
     ax.set_ylim(-0.15, 3.4)

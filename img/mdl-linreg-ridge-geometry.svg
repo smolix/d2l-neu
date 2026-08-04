@@ -481,21 +481,21 @@ z
    </g>
    <g id="patch_3">
     <path d="M 9.201615 114.083473 
-Q 124.115778 114.083473 238.135514 114.083473 
-" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
-    <path d="M 231.335514 110.683473 
-L 238.135514 114.083473 
-L 231.335514 117.483473 
-" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
+Q 124.115778 114.083473 237.6883 114.083473 
+" style="fill: none; stroke: #565d66; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 230.8883 110.683473 
+L 237.6883 114.083473 
+L 230.8883 117.483473 
+" style="fill: none; stroke: #565d66; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
     <path d="M 83.643956 202.014689 
-Q 83.643956 109.584703 83.643956 18.049145 
-" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
-    <path d="M 80.243956 24.849145 
-L 83.643956 18.049145 
-L 87.043956 24.849145 
-" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
+Q 83.643956 109.584703 83.643956 18.496358 
+" style="fill: none; stroke: #565d66; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 80.243956 25.296358 
+L 83.643956 18.496358 
+L 87.043956 25.296358 
+" style="fill: none; stroke: #565d66; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- $\hat{\mathbf{w}}$ -->
@@ -551,7 +551,7 @@ z
    </g>
    <g id="text_2">
     <!-- $\mathbf{w}^\star$ -->
-    <g style="fill: #b45309" transform="translate(130.970173 123.931211) scale(0.13 -0.13)">
+    <g style="fill: #b45309" transform="translate(144.968863 96.030442) scale(0.13 -0.13)">
      <defs>
       <path id="STIXGeneral-Regular-4d9" d="M 4256 2336 
 L 2810 1459 
@@ -573,7 +573,7 @@ z
    </g>
    <g id="text_3">
     <!-- $w_1$ -->
-    <g transform="translate(234.248571 129.818901) scale(0.12 -0.12)">
+    <g style="fill: #15181c" transform="translate(234.248571 129.818901) scale(0.12 -0.12)">
      <defs>
       <path id="Cmmi10-6a" d="M 691 744 
 Q 691 878 727 1053 
@@ -656,7 +656,7 @@ z
    </g>
    <g id="text_4">
     <!-- $w_2$ -->
-    <g transform="translate(88.555385 19.2) scale(0.12 -0.12)">
+    <g style="fill: #15181c" transform="translate(88.555385 19.2) scale(0.12 -0.12)">
      <defs>
       <path id="Cmr10-31" d="M 319 0 
 L 319 172 
@@ -1084,21 +1084,21 @@ L 405.500715 39.331
    </g>
    <g id="patch_6">
     <path d="M 266.413043 114.083473 
-Q 381.327207 114.083473 495.346943 114.083473 
-" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
-    <path d="M 488.546943 110.683473 
-L 495.346943 114.083473 
-L 488.546943 117.483473 
-" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
+Q 381.327207 114.083473 494.899729 114.083473 
+" style="fill: none; stroke: #565d66; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 488.099729 110.683473 
+L 494.899729 114.083473 
+L 488.099729 117.483473 
+" style="fill: none; stroke: #565d66; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_7">
     <path d="M 340.855385 202.014689 
-Q 340.855385 109.584703 340.855385 18.049145 
-" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
-    <path d="M 337.455385 24.849145 
-L 340.855385 18.049145 
-L 344.255385 24.849145 
-" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
+Q 340.855385 109.584703 340.855385 18.496358 
+" style="fill: none; stroke: #565d66; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 337.455385 25.296358 
+L 340.855385 18.496358 
+L 344.255385 25.296358 
+" style="fill: none; stroke: #565d66; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_5">
     <!-- $\hat{\mathbf{w}}$ -->
@@ -1109,21 +1109,21 @@ L 344.255385 24.849145
    </g>
    <g id="text_6">
     <!-- $\mathbf{w}^\star$ -->
-    <g style="fill: #b45309" transform="translate(389.876868 137.350626) scale(0.13 -0.13)">
+    <g style="fill: #b45309" transform="translate(403.366978 105.424033) scale(0.13 -0.13)">
      <use xlink:href="#Cmb10-62" transform="translate(0 0.918578)"/>
      <use xlink:href="#STIXGeneral-Regular-4d9" transform="translate(90.221128 42.207813) scale(0.7)"/>
     </g>
    </g>
    <g id="text_7">
     <!-- $w_1$ -->
-    <g transform="translate(491.46 129.818901) scale(0.12 -0.12)">
+    <g style="fill: #15181c" transform="translate(491.46 129.818901) scale(0.12 -0.12)">
      <use xlink:href="#Cmmi10-6a" transform="translate(0 0.71875)"/>
      <use xlink:href="#Cmr10-64" transform="translate(71.484375 -14.281212) scale(0.7)"/>
     </g>
    </g>
    <g id="text_8">
     <!-- $w_2$ -->
-    <g transform="translate(345.766813 19.2) scale(0.12 -0.12)">
+    <g style="fill: #15181c" transform="translate(345.766813 19.2) scale(0.12 -0.12)">
      <use xlink:href="#Cmmi10-6a" transform="translate(0 0.71875)"/>
      <use xlink:href="#Cmr10-31" transform="translate(71.484375 -14.281212) scale(0.7)"/>
     </g>

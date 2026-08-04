@@ -225,7 +225,7 @@ def fig_decision_regions():
     # weight vector from a point on the decision boundary
     base = ((np.log(1) - b2) / np.linalg.norm(w2)) * wn + tang * 1.15
     fl.arrow(axr, base, base + wn * 1.1, color=ORANGE, lw=2.2)
-    axr.text(*(base + wn * 1.1 + np.array([0.28, 0.05])), r"$\mathbf{w}$",
+    axr.text(*(base + wn * 1.1 + np.array([-0.02, 0.34])), r"$\mathbf{w}$",
              fontsize=12, color=ORANGE, ha="center", va="center")
     # region labels: placed strictly along +/- wn from the origin (the true
     # high-/low-sigma sides for this w), in the empty corners beyond every

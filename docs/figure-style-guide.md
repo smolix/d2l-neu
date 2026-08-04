@@ -211,6 +211,12 @@ the group-label voice (quiet, structural); it replaces bold group titles.
 | `ARROW_L/W` | 9.5 × 7.8 | filled data-flow head (scales √ with stroke) |
 | `CHEVRON_L` | 7.5 | open annotation chevron |
 
+Arrowhead hygiene (Alex's reviews, chs. 2–3, now rules): the shaft stops at
+the head's base — never runs through to the tip; heavy underlay segments
+(projections, halos) that share an endpoint with an arrow stop short of the
+head; tips land exactly on the boundary they point at (a box edge, a contour
+line), and tails may start under an opaque box so they emerge from its edge.
+
 ## 6. Layout, proportions, sizing
 
 - **Canonical widths** (user units): `W_NARROW 420`, `W_MEDIUM 560`

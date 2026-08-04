@@ -57,11 +57,15 @@ def fig_fit_linreg():
         ax.plot([x, x], [line(x), y], color=T.RED.base, lw=2.0, zorder=2)
     ax.plot(xs, ys, "o", color=T.INK, ms=6.5, zorder=4)
 
-    # label one prediction / observation pair (the third point, largest gap)
-    ax.text(2.5, line(2.35) - 0.34, r"$\hat{y}^{(i)}$", color=T.BLUE.dark,
-            fontsize=16, ha="left", va="top")
-    ax.text(2.5, ys[2] + 0.3, r"$y^{(i)}$", color=T.INK, fontsize=16,
-            ha="left", va="bottom")
+    # label one prediction / observation pair (point 4, below the line):
+    # y-hat sits AT the intercept of its residual with the fitted line
+    # (marked with a blue dot), y at the observation itself
+    xi = xs[3]
+    ax.plot([xi], [line(xi)], "o", color=T.BLUE.base, ms=6.5, zorder=5)
+    ax.text(xi + 0.14, line(xi) + 0.16, r"$\hat{y}^{(i)}$",
+            color=T.BLUE.dark, fontsize=16, ha="left", va="bottom")
+    ax.text(xi - 0.22, ys[3], r"$y^{(i)}$", color=T.INK, fontsize=16,
+            ha="right", va="center")
 
     ax.text(5.15, -0.42, r"$x$", color=T.INK, fontsize=17, ha="center")
     ax.text(-0.42, 4.25, r"$y$", color=T.INK, fontsize=17, va="center")

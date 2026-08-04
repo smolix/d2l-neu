@@ -466,7 +466,7 @@ def mpl_figs():
     v2 = 0.62 * w2
     axis_cross(axb, XR, YR)
     arrow(axb, (0, 0), w2, color=T.ORANGE.base, lw=2.8)
-    axb.plot([0, v2[0]], [0, v2[1]], color=T.GREEN.base, lw=6,
+    axb.plot([0, 0.86 * v2[0]], [0, 0.86 * v2[1]], color=T.GREEN.base, lw=6,
              solid_capstyle="round", zorder=2)
     arrow(axb, (0, 0), v2, color=T.BLUE.base, lw=3.0)
     axb.text(w2[0] + 0.05, w2[1] + 0.02, r"$\mathbf{w}$",

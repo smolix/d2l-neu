@@ -333,7 +333,7 @@ def fig_projection():
     v2 = 0.62 * w2  # collinear
     axis_cross(axb, XR, YR, color=GRAY)
     arrow(axb, (0, 0), w2, color=ORANGE, lw=2.2)
-    axb.plot([0, v2[0]], [0, v2[1]], color=GREEN, lw=5, solid_capstyle="round",
+    axb.plot([0, 0.86 * v2[0]], [0, 0.86 * v2[1]], color=GREEN, lw=5, solid_capstyle="round",
              zorder=2)
     arrow(axb, (0, 0), v2, color=BLUE, lw=2.4)
     vlabel(axb, (w2[0] + 0.05, w2[1] + 0.02), r"$\mathbf{w}$", color=ORANGE,

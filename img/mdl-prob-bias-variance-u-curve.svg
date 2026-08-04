@@ -36,6 +36,11 @@ L 27.112 7.2
 z
 " style="fill: #ffffff"/>
    </g>
+   <g id="line2d_1">
+    <path d="M 192.603688 228.96 
+L 192.603688 198.269802 
+" clip-path="url(#p7dbffeaa2f)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #565d66"/>
+   </g>
    <g id="matplotlib.axis_1">
     <g id="text_1">
      <!-- model complexity -->
@@ -363,7 +368,7 @@ z
      </g>
     </g>
    </g>
-   <g id="line2d_1">
+   <g id="line2d_2">
     <path d="M 42.837455 18.048397 
 L 44.413941 32.868373 
 L 45.990428 45.94056 
@@ -415,7 +420,7 @@ L 357.346545 221.051075
 L 357.346545 221.051075 
 " clip-path="url(#p7dbffeaa2f)" style="fill: none; stroke: #1565c0; stroke-width: 2; stroke-linecap: square"/>
    </g>
-   <g id="line2d_2">
+   <g id="line2d_3">
     <path d="M 42.837455 228.671603 
 L 60.178808 228.189912 
 L 77.520161 227.476313 
@@ -439,7 +444,7 @@ L 357.346545 183.897944
 L 357.346545 183.897944 
 " clip-path="url(#p7dbffeaa2f)" style="fill: none; stroke: #b45309; stroke-width: 2; stroke-linecap: square"/>
    </g>
-   <g id="line2d_3">
+   <g id="line2d_4">
     <path d="M 42.837455 17.76 
 L 44.413941 32.545769 
 L 45.990428 45.581832 
@@ -496,11 +501,6 @@ L 352.617085 177.082685
 L 357.346545 175.989019 
 L 357.346545 175.989019 
 " clip-path="url(#p7dbffeaa2f)" style="fill: none; stroke: #2e7d3e; stroke-width: 2.6; stroke-linecap: square"/>
-   </g>
-   <g id="line2d_4">
-    <path d="M 192.603688 228.96 
-L 192.603688 7.2 
-" clip-path="url(#p7dbffeaa2f)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #565d66"/>
    </g>
    <g id="patch_3">
     <path d="M 27.112 228.96 

@@ -298,7 +298,10 @@ def fig_bias_variance_u_curve():
     ax.plot(c, var, color=ORANGE, lw=2.0, label="variance")
     ax.plot(c, mse, color=GREEN, lw=2.6, label="MSE = test error")
 
-    ax.axvline(cstar, color=GRAY, lw=1.0, ls="--")
+    # dashed marker stops AT the minimum — full-height it would cross
+    # the legend text (Alex, ch3 review)
+    ax.plot([cstar, cstar], [0, mse.min()], color=GRAY, lw=1.0, ls="--",
+            zorder=1)
     ax.plot([cstar], [mse.min()], "o", color=GREEN, ms=7, zorder=6)
     ax.annotate("sweet spot", xy=(cstar, mse.min()),
                 xytext=(cstar + 1.05, mse.min() + 1.25), color=GRAY,

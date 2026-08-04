@@ -62,6 +62,9 @@ STROKE = 1.2                    # pt — pill borders, arrows, skip lines
 
 # Accent 1 (default): d2l blue.
 ACCENT = _T.BLUE.dark              # saturated tone: numbers, repeat, keywords
+ACCENT_ON_DARK = "#8FC7F5"         # keyword color INSIDE the novelty box
+                                   # (>= 6:1 on NOVELTY_FILL; the dark accent
+                                   # vanishes there)
 ACCENT_TINT = _T.BLUE.tint         # repeated-block panel fill (blue on white)
 # Accent 2 (comparisons only): warm amber.
 ACCENT2 = _T.ORANGE.base
@@ -233,7 +236,7 @@ class Diagram:
         return PILL_H / 2
 
     def novelty(self, x, y, pre, keyword, post="", w=None, fs=PILL_FS,
-                accent=ACCENT, zorder=6):
+                accent=ACCENT_ON_DARK, zorder=6):
         """The one new-op box: near-black fill, white text, accent keyword."""
         segs = [(pre, "white", False), (keyword, accent, True),
                 (post, "white", False)]
@@ -374,6 +377,7 @@ class Diagram:
 # --------------------------------------------------------------------------- #
 
 FAMILY_BLUE = _T.BLUE.tint     # the family's shaded-cell blue (from conv-pad.svg)
+FAMILY_BLUE_DARK = "#8FC3EF"   # the family's second, stronger shade
 GRID_LW = 1.8   # heavier per the 2026-08-03 mobile-legibility review
 GRID_FS = 13.0              # in-cell values and grid titles
 
@@ -383,12 +387,13 @@ class MechDiagram(Diagram):
 
     def grid(self, x, y, rows, cols, cell=20.0, shaded=(), dashed=False,
              values=None, title=None, zorder=4, frame_only=False,
-             title_y=None):
+             title_y=None, shaded_dark=()):
         """Family grid with lower-left corner at (x, y).  ``shaded`` holds
         (row, col) pairs, row 0 at the TOP (reading order).  ``values`` maps
         (row, col) -> str.  Returns (width, height)."""
         from matplotlib.patches import Rectangle
         shaded = set(shaded)
+        shaded_dark = set(shaded_dark)
         style = dict(edgecolor=INK, linewidth=GRID_LW)
         if dashed:
             style["linestyle"] = (0, (2.0, 2.0))
@@ -398,7 +403,8 @@ class MechDiagram(Diagram):
                 self.ax.add_patch(Rectangle(
                     (cx, cy), cell, cell, zorder=zorder,
                     facecolor="none" if frame_only else
-                    (FAMILY_BLUE if (r, c) in shaded else "white"),
+                    (FAMILY_BLUE_DARK if (r, c) in shaded_dark else
+                     FAMILY_BLUE if (r, c) in shaded else "white"),
                     **style))
                 if values and (r, c) in values:
                     self.ax.text(cx + cell / 2, cy + cell / 2, values[(r, c)],

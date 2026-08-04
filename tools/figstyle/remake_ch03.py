@@ -44,28 +44,28 @@ def fig_fit_linreg():
     use_style(hashsalt="figstyle-ch03")
     fig, ax = plt.subplots(figsize=(4.6, 3.5))
 
-    # same composition as the original: five points around a line
+    # the ORIGINAL composition, verbatim (Alex: "that one is perfect") —
+    # only the palette changes: ink line, token-blue stems and open circles
     xs = np.array([0.85, 1.5, 2.35, 3.35, 4.35])
     resid = np.array([-0.75, 0.55, 0.95, -0.85, 0.65])
     line = lambda x: 0.52 * x + 0.9
     ys = line(xs) + resid
 
     axis_cross(ax, (-0.25, 5.3), (-0.3, 4.4))
-    ax.plot([0.15, 5.05], [line(0.15), line(5.05)], color=T.BLUE.base,
-            lw=2.8, zorder=3)
-    for x, y in zip(xs, ys):                       # residuals = errors -> red
-        ax.plot([x, x], [line(x), y], color=T.RED.base, lw=2.0, zorder=2)
-    ax.plot(xs, ys, "o", color=T.INK, ms=6.5, zorder=4)
+    ax.plot([0.15, 5.05], [line(0.15), line(5.05)], color=T.INK,
+            lw=2.4, zorder=3)
+    for x, y in zip(xs, ys):
+        ax.plot([x, x], [line(x), y], color=T.BLUE.base, lw=2.4, zorder=2)
+    ax.plot(xs, ys, "o", mfc="white", mec=T.BLUE.base, mew=2.2, ms=7.5,
+            zorder=4)
 
-    # label one prediction / observation pair (point 4, below the line):
-    # y-hat sits AT the intercept of its residual with the fitted line
-    # (marked with a blue dot), y at the observation itself
+    # labels exactly as in the original: y-hat above the line at the 4th
+    # stem's intercept, y at that stem's observation circle
     xi = xs[3]
-    ax.plot([xi], [line(xi)], "o", color=T.BLUE.base, ms=6.5, zorder=5)
-    ax.text(xi + 0.14, line(xi) + 0.16, r"$\hat{y}^{(i)}$",
-            color=T.BLUE.dark, fontsize=16, ha="left", va="bottom")
-    ax.text(xi - 0.22, ys[3], r"$y^{(i)}$", color=T.INK, fontsize=16,
-            ha="right", va="center")
+    ax.text(xi - 0.08, line(xi) + 0.22, r"$\hat{y}^{(i)}$",
+            color=T.INK, fontsize=16, ha="right", va="bottom")
+    ax.text(xi + 0.16, ys[3] - 0.10, r"$y^{(i)}$", color=T.INK, fontsize=16,
+            ha="left", va="top")
 
     ax.text(5.15, -0.42, r"$x$", color=T.INK, fontsize=17, ha="center")
     ax.text(-0.42, 4.25, r"$y$", color=T.INK, fontsize=17, va="center")

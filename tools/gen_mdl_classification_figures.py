@@ -321,7 +321,9 @@ def fig_density_ratio():
     ax2.plot(x, np.minimum(beta, c), color=ORANGE, lw=2.0, ls=(0, (5, 3)))
     ax2.axhline(1.0, color=GRAY, lw=0.9, ls=":")
     ax2.plot([x_eq], [1.0], "o", ms=5, color=GRAY)
-    ax2.text(x_eq - 0.35, 1.35, r"$\beta = 1$", fontsize=11, color="black",
+    # label hugs its dotted line at the far left, where both densities are
+    # flat — at the crossing it collided with the rising target density
+    ax2.text(-2.6, 1.32, r"$\beta = 1$", fontsize=11, color=GRAY,
              ha="center")
     ax2.text(5.05, 7.35, r"$\beta(x) = \dfrac{p(x)}{q(x)}$", fontsize=12,
              color=ORANGE, ha="center")

@@ -194,10 +194,10 @@ def fig_conv_1x1():
 
     # kernel: TWO groups of three 1x1 weights (one group per output channel)
     for i in (2, 1, 0):        # output-channel 1 group (light)
-        d.grid(x + i * OFF, 96 + i * OFF, 1, 1, CELL, shaded={(0, 0)},
+        d.grid(x + i * OFF, 78 + i * OFF, 1, 1, CELL, shaded={(0, 0)},
                zorder=4 - i)
     for i in (2, 1, 0):        # output-channel 2 group (dark)
-        d.grid(x + i * OFF, 34 + i * OFF, 1, 1, CELL,
+        d.grid(x + i * OFF, 26 + i * OFF, 1, 1, CELL,
                shaded_dark={(0, 0)}, zorder=4 - i)
     kw = CELL + 2 * OFF
     d.ax.text(x + kw / 2, TY, "Kernel", fontsize=GRID_FS, color=INK,

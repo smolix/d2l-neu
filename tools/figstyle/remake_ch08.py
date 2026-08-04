@@ -34,63 +34,54 @@ IMG = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
 # promoted verbatim from the pilot batch.                                     #
 # --------------------------------------------------------------------------- #
 
-def star(f, cx, cy, r_out=18.0, r_in=7.2, color=T.GOLD):
-    pts = []
-    for i in range(10):
-        r = r_out if i % 2 == 0 else r_in
-        a = -math.pi / 2 + i * math.pi / 5
-        pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
-    d = "M" + " L".join(f"{x:.2f} {y:.2f}" for x, y in pts) + " Z"
-    f.path(d, cx - r_out, cy - r_out, cx + r_out, cy + r_out,
-           fill=color.tint, stroke=color.base, sw=T.SW_BOX)
-
-
 def fig_functionclasses():
-    """POINT: with non-nested classes, growing capacity does NOT
-    monotonically approach f*; nested classes can only improve."""
+    """The ORIGINAL figure's organic blob shapes, verbatim (extracted from
+    the legacy SVG into _functionclasses_paths.py) — only the fills,
+    strokes, and labels are re-tokenized.  Alex, ch8 review: replicate the
+    original for both panels."""
+    from figstyle._functionclasses_paths import BLOBS, STARS
+
     f = Figure()
-    GRAYS = [T.PAPER, "#F0F2F5", "#E2E6EA", "#D2D8DD", "#C0C7CE"]
+    S = 1.5                                      # original canvas x 1.5
+    FILL = {100: T.PAPER, 80: "#F0F2F5", 60: "#E2E6EA",
+            40: "#D2D8DD", 20: "#C0C7CE", 0: T.BLUE.tint}
+
+    parts = []
+    for lvl, d in BLOBS:
+        stroke = T.BLUE.base if lvl == 0 else T.MUTED
+        sw = 1.35 if lvl == 0 else 1.2           # pre-scale widths
+        parts.append(f'<path d="{d}" fill="{FILL[lvl]}" stroke="{stroke}"'
+                     f' stroke-width="{sw}"/>')
+    for d in STARS:
+        parts.append(f'<path d="{d}" fill="{T.GOLD.tint}"'
+                     f' stroke="{T.GOLD.base}" stroke-width="1.2"/>')
+    f.raw(f'<g transform="scale({S})">' + "".join(parts) + "</g>",
+          0, 0, 465 * S, 191 * S)
 
     def flabel(x, y, n, color=T.INK):
-        f.text(x, y, [Span("F", "i"), sub(str(n))], size=T.FS_LABEL,
-               color=color)
+        f.text(x * S, y * S, [Span("F", "i"), sub(str(n))],
+               size=T.FS_LABEL, color=color)
 
-    star(f, 350, -20)
-    f.text(374, -20, [var("f"), Span("*", "r", script=1)], size=T.FS_LABEL,
-           anchor="start")
-    rects = [(0, 10, 240, 180), (30, 70, 210, 170), (120, -10, 190, 150),
-             (95, 95, 180, 140), (215, 20, 145, 115)]
-    for i, (x, y, w, h) in enumerate(rects):
-        f.rect(x, y, w, h, fill=GRAYS[i], stroke=T.MUTED, sw=T.SW_HAIR, r=26)
-    f.rect(35, 120, 95, 70, fill=T.BLUE.tint, stroke=T.BLUE.base,
-           sw=T.SW_BOX, r=20)
-    flabel(24, 34, 6)
-    flabel(52, 222, 5)
-    flabel(288, 12, 4)
-    flabel(248, 214, 3)
-    flabel(336, 44, 2)
-    flabel(82, 155, 1, T.BLUE.dark)
-    f.text(178, 282, "non-nested function classes", size=T.FS_LABEL,
-           color=T.INK)
-
-    X0 = 520.0
-    nested = [(X0, 0, 300, 230), (X0 + 30, 12, 246, 206),
-              (X0 + 60, 24, 192, 182), (X0 + 90, 36, 138, 158),
-              (X0 + 112, 48, 94, 116)]
-    for i, (x, y, w, h) in enumerate(nested):
-        f.rect(x, y, w, h, fill=GRAYS[i], stroke=T.MUTED, sw=T.SW_HAIR, r=22)
-    f.rect(X0 + 124, 60, 70, 72, fill=T.BLUE.tint, stroke=T.BLUE.base,
-           sw=T.SW_BOX, r=14)
-    for i in range(3):
-        flabel(X0 + 15 + 30 * i, 115, 6 - i)
-    flabel(X0 + 159, 179, 3)
-    flabel(X0 + 159, 148, 2)
-    flabel(X0 + 159, 96, 1, T.BLUE.dark)
-    star(f, X0 + 296, -34)
-    f.text(X0 + 320, -34, [var("f"), Span("*", "r", script=1)],
-           size=T.FS_LABEL, anchor="start")
-    f.text(X0 + 150, 282, "nested function classes", size=T.FS_LABEL,
-           color=T.INK)
+    # label positions read from the original's glyph placements
+    flabel(52.5, 82, 6)
+    flabel(81.6, 82, 5)
+    flabel(116.9, 82, 4)
+    flabel(152.2, 71.8, 3)
+    flabel(182.6, 81.8, 2)
+    flabel(216.2, 103.5, 1, T.BLUE.dark)
+    flabel(289.6, 95.2, 6)
+    flabel(307.8, 95.2, 5)
+    flabel(324.3, 95.2, 4)
+    flabel(377.2, 104.5, 1, T.BLUE.dark)
+    flabel(377.2, 128.5, 2)
+    flabel(377.2, 141.2, 3)
+    for x in (214.0, 373.4):
+        f.text(x * S, 12 * S, [var("f"), Span("*", "r", script=1)],
+               size=T.FS_LABEL, anchor="start")
+    f.text(125 * S, 182 * S, "non-nested function classes",
+           size=T.FS_LABEL, color=T.INK)
+    f.text(371 * S, 182 * S, "nested function classes",
+           size=T.FS_LABEL, color=T.INK)
 
     f.save("functionclasses", out_dir=IMG,
            desc="Non-nested versus nested function classes around f*.")
@@ -115,31 +106,35 @@ def fig_residual_block():
                stroke=T.INK, sw=T.SW_BOX, dash=T.DASH_SOFT)
         for y, lab, a in zip(ys, labels, accents):
             f.block(ox, y, lab, accent=a, min_w=BW)
-        for ya, yb in ((300, 279), (237, 217), (175, 155)):
+        # one CONTIGUOUS arrow from x through the dashed border into the
+        # first block (the border is permeable — it is not a node)
+        f.arrow(ox, 352, ox, 281, stroke=T.INK)
+        for ya, yb in ((237, 217), (175, 155)):
             f.arrow(ox, ya, ox, yb, stroke=T.INK)
-        # exit arrow, labelled f(x) (left) / g(x) (right)
-        f.arrow(ox, 113, ox, 62 if residual else 40, stroke=T.INK)
+        # exit arrow: to the (+) on the right, ONTO the activation box on
+        # the left (it must touch it)
+        f.arrow(ox, 113, ox, 72 if residual else 11, stroke=T.INK)
         f.text(ox - 12, 88, [var("g" if residual else "f"), Span("(", "r"),
                              var("x"), Span(")", "r")],
                size=T.FS_LABEL, anchor="end")
         if residual:
-            f.pill_op(ox, 48, "+")
+            # (+) centered between the dashed box and the activation box
+            f.pill_op(ox, 58, "+")
             # the skip: x routed around the dashed box into the (+)
             f.ortho_arrow([(ox, 330), (ox + BW / 2 + 52, 330),
-                           (ox + BW / 2 + 52, 48), (ox + 15, 48)],
+                           (ox + BW / 2 + 52, 58), (ox + 15, 58)],
                           stroke=T.INK)
-            f.text(ox + BW / 2 + 66, 64, [var("x")], size=T.FS_LABEL,
+            f.text(ox + BW / 2 + 66, 74, [var("x")], size=T.FS_LABEL,
                    anchor="start")
-            f.text(ox + 16, 22, [var("f"), Span("(", "r"), var("x"),
+            f.text(ox + 20, 30, [var("f"), Span("(", "r"), var("x"),
                                  Span(") = ", "r"), var("g"), Span("(", "r"),
                                  var("x"), Span(") + ", "r"), var("x")],
                    size=T.FS_SMALL, anchor="start")
-            f.arrow(ox, 36, ox, 16, stroke=T.INK)
+            f.arrow(ox, 44, ox, 11, stroke=T.INK)
         # the top activation, outside the block
         f.block(ox, -12, "activation function", min_w=BW)
         f.arrow(ox, -34, ox, -54, stroke=T.INK)
         # input
-        f.arrow(ox, 352, ox, 302, stroke=T.INK)
         f.text(ox, 372, [var("x")], size=T.FS_LABEL)
 
     panel(0.0, residual=False)

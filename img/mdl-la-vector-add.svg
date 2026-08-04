@@ -9,7 +9,7 @@
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
-      <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
      </cc:Agent>
     </dc:creator>
    </cc:Work>
@@ -31,53 +31,56 @@ z
    <g id="patch_2">
     <path d="M 14.997302 195.525 
 Q 157.862531 195.525 299.72153 195.525 
-" style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
-    <path d="M 295.32153 193.325 
+" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+    <path d="M 292.92153 192.125 
 L 299.72153 195.525 
-L 295.32153 197.725 
-" style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
+L 292.92153 198.925 
+" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_3">
     <path d="M 36.173077 213.80391 
 Q 36.173077 114.399693 36.173077 16.001708 
-" style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
-    <path d="M 33.973077 20.401708 
+" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
+    <path d="M 32.773077 22.801708 
 L 36.173077 16.001708 
-L 38.373077 20.401708 
-" style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: round"/>
+L 39.573077 22.801708 
+" style="fill: none; stroke: #565d66; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
     <path d="M 36.173077 195.525 
 Q 123.092308 166.551923 207.678086 138.356664 
-" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 201.480022 137.471226 
 L 207.678086 138.356664 
 L 203.250897 142.783852 
-" style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: round"/>
+z
+" style="fill: #1565c0; stroke: #1565c0; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_5">
     <path d="M 210.011538 137.578846 
 Q 238.984615 79.632692 266.857692 23.886538 
-" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
+" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
     <path d="M 261.8489 27.643133 
 L 266.857692 23.886538 
 L 266.857692 30.147529 
-" style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: round"/>
+z
+" style="fill: #b45309; stroke: #b45309; stroke-width: 2.2; stroke-linecap: round"/>
    </g>
    <g id="patch_6">
     <path d="M 36.173077 195.525 
 Q 152.065385 108.605769 265.811067 23.296507 
-" style="fill: none; stroke: #2ca02c; stroke-width: 2.4; stroke-linecap: round"/>
+" style="fill: none; stroke: #2e7d3e; stroke-width: 2.4; stroke-linecap: round"/>
     <path d="M 259.651067 24.416507 
 L 265.811067 23.296507 
 L 263.011067 28.896507 
-" style="fill: none; stroke: #2ca02c; stroke-width: 2.4; stroke-linecap: round"/>
+z
+" style="fill: #2e7d3e; stroke: #2e7d3e; stroke-width: 2.4; stroke-linecap: round"/>
    </g>
    <g id="text_1">
     <!-- $\mathbf{u}$ -->
-    <g style="fill: #1f77b4" transform="translate(118.612308 187.191846) scale(0.16 -0.16)">
+    <g style="fill: #1565c0" transform="translate(118.612308 188.168846) scale(0.16 -0.16)">
      <defs>
-      <path id="Cmb10-75" d="M 581 744 
+      <path id="Cmb10-5a" d="M 581 744 
 L 581 2322 
 Q 581 2503 141 2503 
 L 141 2828 
@@ -106,14 +109,14 @@ Q 581 422 581 744
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmb10-75" transform="translate(0 0.984375)"/>
+     <use xlink:href="#Cmb10-5a" transform="translate(0 0.984375)"/>
     </g>
    </g>
    <g id="text_2">
     <!-- $\mathbf{v}$ -->
-    <g style="fill: #ff7f0e" transform="translate(270.855 92.739615) scale(0.16 -0.16)">
+    <g style="fill: #b45309" transform="translate(270.855 93.716615) scale(0.16 -0.16)">
      <defs>
-      <path id="Cmb10-76" d="M 1466 91 
+      <path id="Cmb10-25" d="M 1466 91 
 L 544 2516 
 L 141 2516 
 L 141 2841 
@@ -135,14 +138,14 @@ Q 1506 -25 1466 91
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmb10-76" transform="translate(0 0.609375)"/>
+     <use xlink:href="#Cmb10-25" transform="translate(0 0.609375)"/>
     </g>
    </g>
    <g id="text_3">
     <!-- $\mathbf{u}+\mathbf{v}$ -->
-    <g style="fill: #2ca02c" transform="translate(108.229615 94.478) scale(0.16 -0.16)">
+    <g style="fill: #2e7d3e" transform="translate(107.909615 95.455) scale(0.16 -0.16)">
      <defs>
-      <path id="Cmr10-2b" d="M 481 1472 
+      <path id="Cmr10-4c" d="M 481 1472 
 Q 428 1472 393 1512 
 Q 359 1553 359 1600 
 Q 359 1647 393 1687 
@@ -170,9 +173,9 @@ L 481 1472
 z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#Cmb10-75" transform="translate(0 0.703125)"/>
-     <use xlink:href="#Cmr10-2b" transform="translate(73.076172 0.703125)"/>
-     <use xlink:href="#Cmb10-76" transform="translate(168.320312 0.703125)"/>
+     <use xlink:href="#Cmb10-5a" transform="translate(0 0.703125)"/>
+     <use xlink:href="#Cmr10-4c" transform="translate(75.517635 0.703125)"/>
+     <use xlink:href="#Cmb10-25" transform="translate(173.203239 0.703125)"/>
     </g>
    </g>
   </g>

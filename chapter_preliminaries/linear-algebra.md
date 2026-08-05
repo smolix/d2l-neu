@@ -1392,18 +1392,60 @@ To recap:
 
 ## Exercises
 
-1. Prove that the transpose of the transpose of a matrix is the matrix itself: $(\mathbf{A}^\top)^\top = \mathbf{A}$.
-1. Given two matrices $\mathbf{A}$ and $\mathbf{B}$, show that sum and transposition commute: $\mathbf{A}^\top + \mathbf{B}^\top = (\mathbf{A} + \mathbf{B})^\top$.
-1. Given any square matrix $\mathbf{A}$, is $\mathbf{A} + \mathbf{A}^\top$ always symmetric? Can you prove the result by using only the results of the previous two exercises?
-1. We defined the tensor `X` of shape (2, 3, 4) in this section. What is the output of `len(X)`? Write your answer without implementing any code, then check your answer using code.
-1. For a tensor `X` of arbitrary shape, does `len(X)` always correspond to the length of a certain axis of `X`? What is that axis?
-1. Run `A / A.sum(axis=1)` and see what happens. Can you analyze the results?
-1. When traveling between two points in downtown Manhattan, what is the distance that you need to cover in terms of the coordinates, i.e., in terms of avenues and streets? Can you travel diagonally?
-1. Consider a tensor of shape (2, 3, 4). What are the shapes of the summation outputs along axes 0, 1, and 2?
-1. Feed a tensor with three or more axes to the `linalg.norm` function and observe its output. What does this function compute for tensors of arbitrary shape?
-1. Consider three large matrices, say $\mathbf{A} \in \mathbb{R}^{2^{10} \times 2^{16}}$, $\mathbf{B} \in \mathbb{R}^{2^{16} \times 2^{5}}$ and $\mathbf{C} \in \mathbb{R}^{2^{5} \times 2^{14}}$, initialized with Gaussian random variables. You want to compute the product $\mathbf{A} \mathbf{B} \mathbf{C}$. Is there any difference in memory footprint and speed, depending on whether you compute $(\mathbf{A} \mathbf{B}) \mathbf{C}$ or $\mathbf{A} (\mathbf{B} \mathbf{C})$? Why?
-1. Consider three large matrices, say $\mathbf{A} \in \mathbb{R}^{2^{10} \times 2^{16}}$, $\mathbf{B} \in \mathbb{R}^{2^{16} \times 2^{5}}$ and $\mathbf{C} \in \mathbb{R}^{2^{5} \times 2^{16}}$. Is there any difference in speed depending on whether you compute $\mathbf{A} \mathbf{B}$ or $\mathbf{A} \mathbf{C}^\top$? Why? What changes if you initialize $\mathbf{C} = \mathbf{B}^\top$ without cloning memory? Why?
-1. Consider three matrices, say $\mathbf{A}, \mathbf{B}, \mathbf{C} \in \mathbb{R}^{100 \times 200}$. Construct a tensor with three axes by stacking $[\mathbf{A}, \mathbf{B}, \mathbf{C}]$. What is the dimensionality? Slice out the second coordinate of the third axis to recover $\mathbf{B}$. Check that your answer is correct.
+1. [conceptual] **Transpose and symmetry.** Prove the following three
+   statements, each building on the previous one.
+    1. The transpose of the transpose of a matrix is the matrix itself:
+       $(\mathbf{A}^\top)^\top = \mathbf{A}$.
+    1. Sum and transposition commute:
+       $\mathbf{A}^\top + \mathbf{B}^\top = (\mathbf{A} + \mathbf{B})^\top$.
+    1. For any square matrix $\mathbf{A}$, the sum
+       $\mathbf{A} + \mathbf{A}^\top$ is symmetric.
+1. [conceptual] **Predicting `len()`.** We defined the tensor `X` of shape
+   (2, 3, 4) in this section. Predict the output of `len(X)` without
+   running any code, then check your answer in code.
+1. [short-code] **A pairwise-obtuse triple.** Determine whether three
+   vectors $\mathbf{u}$, $\mathbf{v}$, $\mathbf{w}$ in the plane can
+   satisfy $\mathbf{u}\cdot\mathbf{v} < 0$,
+   $\mathbf{v}\cdot\mathbf{w} < 0$, and $\mathbf{u}\cdot\mathbf{w} < 0$
+   simultaneously. Give a concrete numeric example or a short argument
+   that none exists, then confirm your answer numerically.
+
+    *Adapted from MIT 18.06,
+    [problem set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf),
+    Section 1.2, Problem 28.*
+1. [conceptual] **Manhattan distance.** When traveling between two points
+   in downtown Manhattan, express the distance you need to cover in terms
+   of the avenue and street coordinates of the two points. State whether
+   you can travel diagonally, and which norm your answer corresponds to.
+1. [short-code] **Norms of higher-order tensors.** Feed a tensor with three
+   or more axes to the `linalg.norm` function and observe its output. State
+   in words what this function computes for tensors of arbitrary shape.
+1. [conceptual] **Matrix-product order and cost.** Consider three large
+   matrices $\mathbf{A} \in \mathbb{R}^{2^{10} \times 2^{16}}$,
+   $\mathbf{B} \in \mathbb{R}^{2^{16} \times 2^{5}}$, and
+   $\mathbf{C} \in \mathbb{R}^{2^{5} \times 2^{14}}$, initialized with
+   Gaussian random variables. You want the product
+   $\mathbf{A} \mathbf{B} \mathbf{C}$. Determine whether memory footprint
+   and speed differ between computing $(\mathbf{A} \mathbf{B}) \mathbf{C}$
+   and $\mathbf{A} (\mathbf{B} \mathbf{C})$, and justify your answer by
+   counting operations and intermediate storage.
+1. [short-code] **Stack and slice.** Given three matrices
+   $\mathbf{A}, \mathbf{B}, \mathbf{C} \in \mathbb{R}^{100 \times 200}$,
+   stack them into a single tensor with three axes and report its
+   dimensionality. Slice out the second coordinate along the stacking axis
+   and confirm that it recovers $\mathbf{B}$ exactly.
+1. [extended] **Watching an eigenvector emerge.** Using the symmetric
+   matrix from this section's eigenvalue discussion, implement power
+   iteration: start from a random vector, repeatedly multiply by the
+   matrix, and renormalize after each step. Track the direction of the
+   iterate rather than only the norm ratio, and report the iteration at
+   which successive directions stabilize, for example when their cosine
+   similarity exceeds 0.999. Compare the converged vector with the top
+   eigenvector returned by `linalg.eigh`.
+
+    *Adapted from MIT 18.06,
+    [problem set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf),
+    Section 2.1, Problems 29–30.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/30)

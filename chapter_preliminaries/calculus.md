@@ -469,33 +469,35 @@ aimed at machine learning.
 
 ## Exercises
 
-1. This section stated the derivative rules without proof. Using the limit
-   definition, prove the rules
-   for (i) $f(x) = c$, (ii) $f(x) = x^n$, (iii) $f(x) = e^x$ and (iv) $f(x) = \log x$.
-1. In the same vein, prove the product, sum, and quotient rule from first principles. 
-1. Prove that the constant multiple rule follows as a special case of the product rule. 
-1. Calculate the derivative of $f(x) = x^x$. 
-1. What does it mean that $f'(x) = 0$ for some $x$? 
-   Give an example of a function $f$ 
-   and a location $x$ for which this might hold. 
-1. Plot the function $y = f(x) = x^3 - \frac{1}{x}$ 
-   and plot its tangent line at $x = 1$.
-1. Find the gradient of the function 
-   $f(\mathbf{x}) = 3x_1^2 + 5e^{x_2}$.
-1. What is the gradient of the function 
-   $f(\mathbf{x}) = \|\mathbf{x}\|_2$? What happens for $\mathbf{x} = \mathbf{0}$?
-1. Can you write out the chain rule for the case 
-   where $u = f(x, y, z)$ and $x = x(a, b)$, $y = y(a, b)$, and $z = z(a, b)$?
-1. Given a function $f(x)$ that is invertible, 
-   compute the derivative of its inverse $f^{-1}(x)$. 
-   Here we have that $f^{-1}(f(x)) = x$ and conversely $f(f^{-1}(y)) = y$. 
-   Hint: use these properties in your derivation. 
-1. Consider the function $f(\mathbf{x}) = \|\mathbf{x}\|_2^2$. 
-   Starting from $\mathbf{x} = [1, 1]^\top$, take a single gradient-descent step 
-   $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$ 
-   with learning rate $\eta = 0.1$ and verify that $f$ decreases. 
-   What happens if you instead pick $\eta = 1$? And $\eta = 2$? 
-   What does this tell you about the role of the learning rate?
+1. [conceptual] **Derivative rules from the limit definition.** This
+   section stated the derivative rules without proof. Using the limit
+   definition, prove the rules for (i) $f(x) = c$, (ii) $f(x) = x^n$,
+   (iii) $f(x) = e^x$, and (iv) $f(x) = \log x$.
+1. [conceptual] **Product, sum, and quotient rules.** Prove the product,
+   sum, and quotient rules from first principles, without citing the rules
+   themselves.
+1. [conceptual] **Derivative of $x^x$.** Calculate the derivative of
+   $f(x) = x^x$.
+1. [short-code] **Tangent line at a point.** Plot the function
+   $y = f(x) = x^3 - \frac{1}{x}$ together with its tangent line at
+   $x = 1$.
+1. [conceptual] **Gradient of a two-variable function.** Find the gradient
+   of the function $f(\mathbf{x}) = 3x_1^2 + 5e^{x_2}$.
+1. [conceptual] **Gradient of the $\ell_2$ norm.** Find the gradient of the
+   function $f(\mathbf{x}) = \|\mathbf{x}\|_2$. State what happens at
+   $\mathbf{x} = \mathbf{0}$ and why.
+1. [conceptual] **Multivariate chain rule.** Write out the chain rule for
+   the case where $u = f(x, y, z)$ and $x = x(a, b)$, $y = y(a, b)$, and
+   $z = z(a, b)$.
+1. [short-code] **Gradient-descent step.** Consider the function
+   $f(\mathbf{x}) = \|\mathbf{x}\|_2^2$. Starting from
+   $\mathbf{x} = [1, 1]^\top$, take a single gradient-descent step
+   $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$ with
+   learning rate $\eta = 0.1$ and verify that $f$ decreases. Repeat with
+   $\eta = 1$ and with $\eta = 2$, and explain what the three outcomes show
+   about the role of the learning rate. Finally, identify the point at
+   which the iteration would stop moving altogether, and relate this to the
+   condition $\nabla f(\mathbf{x}) = \mathbf{0}$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/32)

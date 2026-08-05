@@ -1023,9 +1023,8 @@ Tensors provide a variety of functionalities including construction routines; in
    all three and report the speedup ratios.
 
     *Adapted from
-    [CS231n assignment 1](https://cs231n.github.io/assignments2026/assignment1/),
-    which builds the same computation with two, one, and zero loops, and
-    from lesson 8 of
+    [CS231n assignment 1](https://cs231n.github.io/assignments2026/assignment1/)
+    and from lesson 8 of
     [fast.ai's Deep Learning from the Foundations](https://github.com/fastai/course-v3/blob/master/files/dl-2019/notes/notes-2-8.md).*
 
 :begin_tab:`mxnet`

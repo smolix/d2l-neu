@@ -299,9 +299,9 @@ scaling) and for chaining them into reproducible pipelines, see
     After you have trained your first model in the next chapter, return to
     this exercise and compare the three variants by held-out error instead.
 
-    *Adapted in part from Kaggle Learn's
+    *Adapted from Kaggle Learn's
     [Missing Values](https://www.kaggle.com/code/alexisbcook/missing-values)
-    exercise, which judges the same three strategies by validation error.*
+    exercise.*
 1. [conceptual] **Where leakage hides.** We standardized using statistics
    from the whole dataset. Explain why this is a form of information
    leakage and how the mean and standard deviation should be computed
@@ -318,7 +318,7 @@ scaling) and for chaining them into reproducible pipelines, see
 
     *Adapted from Kaggle Learn's
     [Categorical Variables](https://www.kaggle.com/code/alexisbcook/categorical-variables)
-    exercise, which routes columns by cardinality.*
+    exercise.*
 1. [short-code] **Pandas alternatives, tried once.** Load the same
    `house_tiny` values by saving and reloading them as a NumPy array with
    [`numpy.load`](https://numpy.org/doc/stable/reference/generated/numpy.load.html),

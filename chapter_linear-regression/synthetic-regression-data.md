@@ -394,26 +394,41 @@ we use from here on.
 
 ## Exercises
 
-1. When the number of examples is not divisible by the batch size, the loaders above keep the final partial batch. What does PyTorch's `drop_last` argument (and its TensorFlow counterpart, `batch(..., drop_remainder=...)`) do, and when would you want to enable it?
-1. Suppose that we want to generate a huge dataset, where both the size of the parameter vector `w` and the number of examples `num_examples` are large.
-    1. What happens if we cannot hold all data in memory?
-    1. How would you shuffle the data if it is held on disk? Your task is to design an *efficient* algorithm that does not require too many random reads or writes. Hint: [pseudorandom permutation generators](https://en.wikipedia.org/wiki/Pseudorandom_permutation) allow you to design a reshuffle without the need to store the permutation table explicitly :cite:`Naor.Reingold.1999`. 
-1. Implement a data generator that produces new data on the fly, every time the iterator is called. 
-1. **(Reproducibility.)** How would you design a random data generator that
-   produces the *same* dataset every time it is called? Libraries differ here:
-   some expose a single global seed, while others thread an explicit random
-   state through every draw. For the threaded style, explain why fixing that
-   state up front makes the result reproducible, and why re-using the *same*
-   state for both $\mathbf{X}$ and $\boldsymbol{\epsilon}$ (rather than
-   advancing it between the two draws) would be a bug.
-1. **(Signal-to-noise and recovery.)** Vary the noise standard deviation `noise`
-   over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$. After fitting a linear model on each
-   dataset (using the code from :numref:`sec_linear_scratch` or
-   :numref:`sec_linear_concise`), how closely does the estimate
-   $\hat{\mathbf{w}}$ match the true $\mathbf{w}^* = [2, -3.4]^\top$? Plot the
-   error $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ as a function of $\sigma$. How do
-   you expect it to scale with $\sigma$ and with the number of training examples,
-   and does the experiment agree?
+1. **Partial batches.** When the number of examples is not divisible by the
+   batch size, the loaders above keep the final partial batch. Find the
+   argument in your framework's loader that drops it instead (in PyTorch,
+   `drop_last`; in TensorFlow, `drop_remainder`), state what it does, and
+   give one training scenario where you would enable it and one where you
+   would not.
+1. **Data beyond memory.** ● Suppose that we want to generate a huge
+   dataset, where both the size of the parameter vector `w` and the number
+   of examples `num_examples` are large.
+    1. Name two concrete constraints that arise once the data no longer
+       fits in memory, one affecting minibatch construction and one
+       affecting parameter storage.
+    1. Design an *efficient* algorithm that shuffles data held on disk
+       without requiring too many random reads or writes. Hint:
+       [pseudorandom permutation generators](https://en.wikipedia.org/wiki/Pseudorandom_permutation)
+       allow you to design a reshuffle without the need to store the
+       permutation table explicitly :cite:`Naor.Reingold.1999`.
+1. [code] **On-the-fly generation.** Implement a data generator that
+   produces a fresh minibatch of synthetic data every time the iterator is
+   called, rather than pre-generating and storing the full dataset. Confirm
+   that two successive calls return different data.
+1. **Reproducibility.** Design a random data generator that produces the
+   *same* dataset every time it is called. Libraries differ here: some
+   expose a single global seed, while others thread an explicit random
+   state through every draw. For the threaded style, explain why fixing
+   that state up front makes the result reproducible, and why re-using the
+   *same* state for both $\mathbf{X}$ and $\boldsymbol{\epsilon}$, rather
+   than advancing it between the two draws, would be a bug.
+1. [code] **Recovery under noise.** Vary the noise standard deviation
+   `noise` over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$ and fit a linear model on
+   each dataset, using the code from :numref:`sec_linear_scratch` or
+   :numref:`sec_linear_concise`. Before plotting, state how you expect the
+   error $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ to scale with $\sigma$ and
+   with the number of training examples. Then plot the error against
+   $\sigma$ and say whether the experiment agrees.
 
 
 :begin_tab:`mxnet`

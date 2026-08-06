@@ -222,19 +222,32 @@ APIs change and applies equally to suggestions from search or coding assistants.
 
 ## Exercises
 
-1. Use `dir` on your framework's random-number module to find the routine
-   that samples from a *uniform* distribution. Read its signature with `help`
-   (or `?`), then call it to draw a $3 \times 3$ tensor and confirm the values
-   lie in $[0, 1)$.
-1. You want to reduce a tensor along a single axis but cannot remember the
-   keyword. Look up your framework's `sum` (or `reduce_sum`) with `help`,
-   identify the argument that selects the axis, and verify on a $2 \times 3$
-   tensor that summing over each axis gives the shape you predicted.
-1. Ask a coding assistant "how do I concatenate two tensors along a new axis
-   in my framework?" Then run its answer through the
-   discover&nbsp;&rarr;&nbsp;inspect&nbsp;&rarr;&nbsp;read&nbsp;&rarr;&nbsp;verify
-   loop: does the suggested function exist (`dir`), does its signature match
-   the claim (`help`/`?`), and does a tiny example do what you expect?
+1. [code] **Discovering uniform sampling.** Use `dir` on your framework's
+   random-number module to find the routine that samples from a *uniform*
+   distribution. Read its signature with `help` (or `?`), then call it to
+   draw a $3 \times 3$ tensor and confirm the values lie in $[0, 1)$.
+1. [code] **Reducing along an axis.** You want to reduce a tensor along a
+   single axis but cannot remember the keyword. Look up your framework's
+   `sum` (or `reduce_sum`) with `help`, identify the argument that selects
+   the axis, and verify on a $2 \times 3$ tensor that summing over each
+   axis gives the shape you predicted.
+1. [code] **Checking a coding assistant's answer.** Ask a coding assistant
+   how to concatenate two tensors along a new axis in your framework. Then
+   run its answer through the discover → inspect → read → verify loop:
+   does the suggested function exist (`dir`), does its signature match the
+   claim (`help`/`?`), and does a tiny example do what you expect?
+1. [code] **Reading the source.** Pick a function you have used in this
+   chapter whose docstring does not fully explain its behavior on an edge
+   case you care about, for example what `reshape` does when a dimension
+   does not evenly divide the requested shape. Use `??` or your editor's
+   go-to-definition to read its source, find the line that decides the edge
+   case, and confirm your reading with a small example.
+1. [code] **A confidently wrong assistant.** Ask a coding assistant for a
+   function that performs an operation your framework does not provide
+   under a single name, for example sorting a tensor's axes by size. If it
+   names a function, check with `dir` or `hasattr` whether that function
+   exists. Describe in one or two sentences what about the answer would
+   have fooled you had you skipped the discover step.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/38)

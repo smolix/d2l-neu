@@ -469,27 +469,27 @@ aimed at machine learning.
 
 ## Exercises
 
-1. [conceptual] **Derivative rules from the limit definition.** This
+1. **Derivative rules from the limit definition.** This
    section stated the derivative rules without proof. Using the limit
    definition, prove the rules for (i) $f(x) = c$, (ii) $f(x) = x^n$,
    (iii) $f(x) = e^x$, and (iv) $f(x) = \log x$.
-1. [conceptual] **Product, sum, and quotient rules.** Prove the product,
+1. **Product, sum, and quotient rules.** Prove the product,
    sum, and quotient rules from first principles, without citing the rules
    themselves.
-1. [conceptual] **Derivative of $x^x$.** Calculate the derivative of
+1. **Derivative of $x^x$.** Calculate the derivative of
    $f(x) = x^x$.
-1. [short-code] **Tangent line at a point.** Plot the function
+1. [code] **Tangent line at a point.** Plot the function
    $y = f(x) = x^3 - \frac{1}{x}$ together with its tangent line at
    $x = 1$.
-1. [conceptual] **Gradient of a two-variable function.** Find the gradient
+1. **Gradient of a two-variable function.** Find the gradient
    of the function $f(\mathbf{x}) = 3x_1^2 + 5e^{x_2}$.
-1. [conceptual] **Gradient of the $\ell_2$ norm.** Find the gradient of the
+1. **Gradient of the $\ell_2$ norm.** Find the gradient of the
    function $f(\mathbf{x}) = \|\mathbf{x}\|_2$. State what happens at
    $\mathbf{x} = \mathbf{0}$ and why.
-1. [conceptual] **Multivariate chain rule.** Write out the chain rule for
+1. **Multivariate chain rule.** Write out the chain rule for
    the case where $u = f(x, y, z)$ and $x = x(a, b)$, $y = y(a, b)$, and
    $z = z(a, b)$.
-1. [short-code] **Gradient-descent step.** Consider the function
+1. [code] **Gradient-descent step.** Consider the function
    $f(\mathbf{x}) = \|\mathbf{x}\|_2^2$. Starting from
    $\mathbf{x} = [1, 1]^\top$, take a single gradient-descent step
    $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$ with

@@ -1392,7 +1392,7 @@ To recap:
 
 ## Exercises
 
-1. [conceptual] **Transpose and symmetry.** Prove the following three
+1. **Transpose and symmetry.** Prove the following three
    statements, each building on the previous one.
     1. The transpose of the transpose of a matrix is the matrix itself:
        $(\mathbf{A}^\top)^\top = \mathbf{A}$.
@@ -1400,10 +1400,10 @@ To recap:
        $\mathbf{A}^\top + \mathbf{B}^\top = (\mathbf{A} + \mathbf{B})^\top$.
     1. For any square matrix $\mathbf{A}$, the sum
        $\mathbf{A} + \mathbf{A}^\top$ is symmetric.
-1. [conceptual] **Predicting `len()`.** We defined the tensor `X` of shape
+1. **Predicting `len()`.** We defined the tensor `X` of shape
    (2, 3, 4) in this section. Predict the output of `len(X)` without
    running any code, then check your answer in code.
-1. [short-code] **A pairwise-obtuse triple.** Determine whether three
+1. [code] **A pairwise-obtuse triple.** Determine whether three
    vectors $\mathbf{u}$, $\mathbf{v}$, $\mathbf{w}$ in the plane can
    satisfy $\mathbf{u}\cdot\mathbf{v} < 0$,
    $\mathbf{v}\cdot\mathbf{w} < 0$, and $\mathbf{u}\cdot\mathbf{w} < 0$
@@ -1413,14 +1413,14 @@ To recap:
     *Adapted from MIT 18.06,
     [problem set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf),
     Section 1.2, Problem 28.*
-1. [conceptual] **Manhattan distance.** When traveling between two points
+1. **Manhattan distance.** When traveling between two points
    in downtown Manhattan, express the distance you need to cover in terms
    of the avenue and street coordinates of the two points. State whether
    you can travel diagonally, and which norm your answer corresponds to.
-1. [short-code] **Norms of higher-order tensors.** Feed a tensor with three
+1. [code] **Norms of higher-order tensors.** Feed a tensor with three
    or more axes to the `linalg.norm` function and observe its output. State
    in words what this function computes for tensors of arbitrary shape.
-1. [conceptual] **Matrix-product order and cost.** Consider three large
+1. **Matrix-product order and cost.** Consider three large
    matrices $\mathbf{A} \in \mathbb{R}^{2^{10} \times 2^{16}}$,
    $\mathbf{B} \in \mathbb{R}^{2^{16} \times 2^{5}}$, and
    $\mathbf{C} \in \mathbb{R}^{2^{5} \times 2^{14}}$, initialized with
@@ -1429,7 +1429,7 @@ To recap:
    and speed differ between computing $(\mathbf{A} \mathbf{B}) \mathbf{C}$
    and $\mathbf{A} (\mathbf{B} \mathbf{C})$, and justify your answer by
    counting operations and intermediate storage.
-1. [short-code] **Stack and slice.** Given three matrices
+1. [code] **Stack and slice.** Given three matrices
    $\mathbf{A}, \mathbf{B}, \mathbf{C} \in \mathbb{R}^{100 \times 200}$,
    stack them into a single tensor with three axes and report its
    dimensionality. Slice out the second coordinate along the stacking axis

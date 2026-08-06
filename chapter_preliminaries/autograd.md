@@ -831,17 +831,17 @@ The basic workflow is:
 
 ## Exercises
 
-1. [conceptual] **Cost of the second derivative.** Why is the second
+1. **Cost of the second derivative.** Why is the second
    derivative much more expensive to compute than the first derivative?
-1. [short-code] **Running backward twice.** After running the
+1. [code] **Running backward twice.** After running the
    backpropagation function, run it again on the same graph. What happens,
    and how does the behavior differ across frameworks?
-1. [conceptual] **From scalar to vector input.** In the control flow
+1. **From scalar to vector input.** In the control flow
    example where we calculate the derivative of `d` with respect to `a`,
    what would happen if we changed the variable `a` to a random vector or a
    matrix? The result of `f(a)` is then no longer a scalar. State what
    happens to the gradient computation and how to analyze it.
-1. [conceptual] **Building and tracing the dependency graph.** Let
+1. **Building and tracing the dependency graph.** Let
    $f(x) = ((\log x^2) \cdot \sin x) + x^{-1}$.
     1. Write out a dependency graph tracing results from $x$ to $f(x)$.
     1. Use the chain rule to compute the derivative $\frac{df}{dx}$,
@@ -851,7 +851,7 @@ The basic workflow is:
     1. Count the operations that each mode performs and the intermediate
        values each must store, and describe how the comparison changes for
        a function with many inputs, or with many outputs.
-1. [short-code] **Manual tracing.** For $f(x, y, z) = (x + y) \cdot z$ with
+1. [code] **Manual tracing.** For $f(x, y, z) = (x + y) \cdot z$ with
    $x = -2$, $y = 5$, $z = -4$, compute the forward pass by hand, then
    trace $\partial f/\partial x$, $\partial f/\partial y$, and
    $\partial f/\partial z$ backward through the addition and multiplication
@@ -860,13 +860,13 @@ The basic workflow is:
 
     *Adapted from Stanford CS231n,
     ["An Exercise in Backpropagation"](https://cs231n.stanford.edu/slides/2026/section_2_backprop.pdf).*
-1. [short-code] **Detach and check.** Let `y = x * x`, and let `u` be `y`
+1. [code] **Detach and check.** Let `y = x * x`, and let `u` be `y`
    detached from the graph using your framework's mechanism. For
    `z = x * u`, verify that $\partial z/\partial x$ equals `u`, treating
    `u` as a constant, rather than the $3x^2$ you would get without
    detaching. Confirm that the graph leading to `y` itself is unaffected:
    $\partial y/\partial x$ still equals $2x$.
-1. [short-code] **Turning off gradient tracking.** Wrap a computation in
+1. [code] **Turning off gradient tracking.** Wrap a computation in
    your framework's mechanism for disabling gradient tracking and confirm
    that the result carries no gradient information. Then explain why
    skipping this bookkeeping matters at prediction time for a model with

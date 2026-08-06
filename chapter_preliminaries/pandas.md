@@ -280,17 +280,17 @@ scaling) and for chaining them into reproducible pipelines, see
 
 ## Exercises
 
-1. [short-code] **A messier real dataset.** Load a real dataset, e.g.,
+1. [code] **A messier real dataset.** Load a real dataset, e.g.,
    Abalone from the
    [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets),
    and inspect its properties. Report what fraction of values are missing
    and what fraction of the columns are numerical, categorical, or text.
-1. [short-code] **Indexing by name.** Redo this section's column selection
+1. [code] **Indexing by name.** Redo this section's column selection
    using name-based indexing instead of integer positions. Name the pandas
    indexing method you used; the pandas docs on
    [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html)
    describe the options.
-1. [conceptual] **Imputation strategies.** Compare three treatments of the
+1. **Imputation strategies.** Compare three treatments of the
    missing values in `NumRooms`: mean imputation, median imputation, and a
    "was-missing" indicator column. State what each strategy assumes about
    why the data are missing, and compute how each changes the column's mean
@@ -302,15 +302,15 @@ scaling) and for chaining them into reproducible pipelines, see
     *Adapted from Kaggle Learn's
     [Missing Values](https://www.kaggle.com/code/alexisbcook/missing-values)
     exercise.*
-1. [conceptual] **Where leakage hides.** We standardized using statistics
+1. **Where leakage hides.** We standardized using statistics
    from the whole dataset. Explain why this is a form of information
    leakage and how the mean and standard deviation should be computed
    instead. State what goes wrong if a feature has zero variance.
-1. [conceptual] **Scaling limits.** Estimate how large a dataset you could
+1. **Scaling limits.** Estimate how large a dataset you could
    load this way. Consider read time, in-memory representation, and
    processing. Try it on your laptop, then on a larger machine, and
    identify what breaks first.
-1. [short-code] **High-cardinality categories.** Pick a categorical column
+1. [code] **High-cardinality categories.** Pick a categorical column
    and compute how many new columns one-hot encoding adds as a function of
    the number of unique values. For a column in which every value is
    unique, such as an identifier, decide whether to include it, drop it, or
@@ -319,7 +319,7 @@ scaling) and for chaining them into reproducible pipelines, see
     *Adapted from Kaggle Learn's
     [Categorical Variables](https://www.kaggle.com/code/alexisbcook/categorical-variables)
     exercise.*
-1. [short-code] **Pandas alternatives, tried once.** Load the same
+1. [code] **Pandas alternatives, tried once.** Load the same
    `house_tiny` values by saving and reloading them as a NumPy array with
    [`numpy.load`](https://numpy.org/doc/stable/reference/generated/numpy.load.html),
    and separately load an image file with

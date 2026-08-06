@@ -980,32 +980,32 @@ Tensors provide a variety of functionalities including construction routines; in
 
 ## Exercises
 
-1. [conceptual] **Comparison operator swap.** Run the code in this section
+1. **Comparison operator swap.** Run the code in this section
    with the conditional `X == Y` replaced by `X < Y`, and then by `X > Y`.
    Report the kind of tensor that each comparison produces.
-1. [short-code] **Broadcasting in three dimensions.** Replace the two
+1. [code] **Broadcasting in three dimensions.** Replace the two
    broadcasting operands with 3-dimensional tensors of your choosing.
    Predict the shape of the broadcast result, then run the code and check
    your prediction.
-1. [conceptual] **Inferred reshape axis.** Create the vector
+1. **Inferred reshape axis.** Create the vector
    `x = arange(24)` and reshape it into a $(2, 3, 4)$ tensor, writing `-1`
    for one of the components. State which component the framework infers
    and why at most one `-1` is allowed. Check your answer in code.
-1. [conceptual] **Predict-then-verify reduction shapes.** Build a $(3, 4)$
+1. **Predict-then-verify reduction shapes.** Build a $(3, 4)$
    tensor. Before running any code, predict the shape of its sum along
    `axis=0`, along `axis=1`, and with `keepdims=True`. Check each
    prediction against the code.
-1. [short-code] **Fixing a broadcast mismatch.** Add two tensors of shapes
+1. [code] **Fixing a broadcast mismatch.** Add two tensors of shapes
    $(3, 2)$ and $(2, 3)$ and read the error message. Explain the failure
    using the alignment rule from the broadcasting section. Then find a
    reshape of one operand that makes the addition valid.
-1. [conceptual] **Object identity versus storage.** Use `id()` to verify
+1. **Object identity versus storage.** Use `id()` to verify
    that `X[:] = X + Y` (or `X += Y`) keeps the same Python tensor object
    while `X = X + Y` binds `X` to a new object. Explain why object identity
    alone does not prove that the underlying storage was reused. Where your
    framework exposes a storage or buffer API, test storage identity as
    well.
-1. [short-code] **In-place composition.** Compute `(A + B) * (-A / 2)` for
+1. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for
    two same-shaped tensors without allocating a new array. Write every
    intermediate into a pre-allocated buffer using `Z[:] = ...`, and verify
    with `id()` that no name was rebound. If your framework forbids in-place

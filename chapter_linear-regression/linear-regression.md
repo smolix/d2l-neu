@@ -810,31 +810,73 @@ and ultimately, evaluation on previously unseen data.
 
 ## Exercises
 
-1. Assume that we have some data $x_1, \ldots, x_n \in \mathbb{R}$. Our goal is to find a constant $b$ such that $\sum_i (x_i - b)^2$ is minimized.
+1. **Fitting a constant.** Assume that we have some data
+   $x_1, \ldots, x_n \in \mathbb{R}$. Our goal is to find a constant $b$
+   such that $\sum_i (x_i - b)^2$ is minimized.
     1. Find an analytic solution for the optimal value of $b$.
-    1. How does this problem and its solution relate to the normal distribution?
-    1. What if we change the loss from $\sum_i (x_i - b)^2$ to $\sum_i |x_i-b|$? Can you find the optimal solution for $b$?
-1. Prove that the affine functions that can be expressed by $\mathbf{x}^\top \mathbf{w} + b$ are equivalent to linear functions on $(\mathbf{x}, 1)$.
-1. Assume that you want to find quadratic functions of $\mathbf{x}$, i.e., $f(\mathbf{x}) = b + \sum_i w_i x_i + \sum_{j \leq i} w_{ij} x_{i} x_{j}$. How would you formulate this in a deep network?
-1. Recall that full column rank makes the linear-regression minimizer unique. Suppose instead that $\mathbf{X}^\top \mathbf{X}$ is singular.
-    1. Show that a minimizer still exists and characterize the set of minimizers.
+    1. How does this problem and its solution relate to the normal
+       distribution?
+    1. Change the loss to $\sum_i |x_i-b|$. Find the optimal solution for
+       $b$ and describe what changes relative to the squared loss.
+1. **Affine to linear.** Prove that the affine functions that can be
+   expressed by $\mathbf{x}^\top \mathbf{w} + b$ are equivalent to linear
+   functions on $(\mathbf{x}, 1)$.
+1. **Singular design matrix.** Recall that full column rank makes the
+   linear-regression minimizer unique. Suppose instead that
+   $\mathbf{X}^\top \mathbf{X}$ is singular.
+    1. Show that a minimizer still exists and characterize the set of
+       minimizers.
     1. Which minimizer does the Moore--Penrose pseudoinverse select?
-    1. How could you fix it? What happens if you add a small amount of coordinate-wise independent Gaussian noise to all entries of $\mathbf{X}$?
-    1. What is the expected value of the design matrix $\mathbf{X}^\top \mathbf{X}$ in this case?
-    1. What happens with stochastic gradient descent when $\mathbf{X}^\top \mathbf{X}$ does not have full rank?
-    1. The standard remedy for a (near-)singular $\mathbf{X}^\top \mathbf{X}$ is to add $\lambda \mathbf{I}$ before inverting. Relate this to the $\ell_2$ penalty introduced in :numref:`sec_weight_decay`, and show that the resulting estimator $\mathbf{w}^* = (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$ is well defined for every $\lambda>0$.
-1. Assume that the noise model governing the additive noise $\epsilon$ is the Laplace distribution (see :numref:`sec_mdl-distributions`). That is, $p(\epsilon) = \frac{1}{2} \exp(-|\epsilon|)$.
-    1. Write out the negative log-likelihood of the data under the model $-\log P(\mathbf y \mid \mathbf X)$.
-    1. Can you find a closed form solution?
-    1. Suggest a minibatch stochastic gradient descent algorithm to solve this problem. What could possibly go wrong (hint: what happens near the stationary point as we keep on updating the parameters)? Can you fix this?
-1. Assume that we want to design a neural network with two layers by composing two linear layers. That is, the output of the first layer becomes the input of the second layer. Why would such a naive composition not work?
-1. What happens if you want to use regression for realistic price estimation of houses or stock prices?
-    1. Show that the additive Gaussian noise assumption is not appropriate. Hint: can we have negative prices? What about fluctuations?
-    1. Why would regression to the logarithm of the price be much better, i.e., $y = \log \textrm{price}$?
-    1. What do you need to worry about when dealing with pennystock, i.e., stock with very low prices? Hint: can you trade at all possible prices? Why is this a bigger problem for cheap stock? For more information review the celebrated Black--Scholes model for option pricing :cite:`Black.Scholes.1973`.
-1. Suppose we want to use regression to estimate the *number* of apples sold in a grocery store.
-    1. What are the problems with a Gaussian additive noise model? Hint: you are selling apples, not oil.
-    1. The [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) captures distributions over counts. It is given by $p(k \mid \lambda) = \lambda^k e^{-\lambda}/k!$. Here $\lambda$ is the rate function and $k$ is the number of events you see. Prove that $\lambda$ is the expected value of counts $k$.
+    1. How could you fix it? What happens if you add a small amount of
+       coordinate-wise independent Gaussian noise to all entries of
+       $\mathbf{X}$?
+    1. What is the expected value of the design matrix
+       $\mathbf{X}^\top \mathbf{X}$ in this case?
+    1. What happens with stochastic gradient descent when
+       $\mathbf{X}^\top \mathbf{X}$ does not have full rank?
+    1. The standard remedy for a (near-)singular
+       $\mathbf{X}^\top \mathbf{X}$ is to add $\lambda \mathbf{I}$ before
+       inverting. Relate this to the $\ell_2$ penalty introduced in
+       :numref:`sec_weight_decay`, and show that the resulting estimator
+       $\mathbf{w}^* = (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$
+       is well defined for every $\lambda>0$.
+1. **Laplace noise.** Assume that the noise model governing the additive
+   noise $\epsilon$ is the Laplace distribution (see
+   :numref:`sec_mdl-distributions`). That is,
+   $p(\epsilon) = \frac{1}{2} \exp(-|\epsilon|)$.
+    1. Write out the negative log-likelihood of the data under the model
+       $-\log P(\mathbf y \mid \mathbf X)$.
+    1. Determine whether a closed-form solution exists.
+    1. Suggest a minibatch stochastic gradient descent algorithm to solve
+       this problem. Identify what can go wrong near the stationary point
+       as updates continue, and propose a fix.
+1. **Composing two linear layers.** Assume that we want to design a neural
+   network with two layers by composing two linear layers, so that the
+   output of the first layer becomes the input of the second layer. Explain
+   why such a naive composition collapses to a single linear map, and state
+   what property an intermediate operation must have to prevent the
+   collapse.
+1. **Beyond Gaussian noise.** Suppose you use regression for realistic
+   price estimation of houses or stock prices.
+    1. Show that the additive Gaussian noise assumption is not appropriate.
+       Hint: prices cannot be negative, and fluctuations scale with the
+       price.
+    1. Explain why regression to the logarithm of the price, i.e.,
+       $y = \log \textrm{price}$, is much better.
+    1. Describe what you need to worry about when dealing with pennystock,
+       i.e., stock with very low prices. Hint: trades occur only at
+       discrete prices, which matters more when the price is low. For more
+       information review the celebrated Black--Scholes model for option
+       pricing :cite:`Black.Scholes.1973`.
+1. **Counting apples.** Suppose we want to use regression to estimate the
+   *number* of apples sold in a grocery store.
+    1. Identify the problems with a Gaussian additive noise model. Hint:
+       you are selling apples, not oil.
+    1. The [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution)
+       captures distributions over counts. It is given by
+       $p(k \mid \lambda) = \lambda^k e^{-\lambda}/k!$. Here $\lambda$ is
+       the rate function and $k$ is the number of events you see. Prove
+       that $\lambda$ is the expected value of counts $k$.
     1. Design a loss function associated with the Poisson distribution.
     1. Design a loss function for estimating $\log \lambda$ instead.
 

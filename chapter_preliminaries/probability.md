@@ -1239,24 +1239,85 @@ For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
 
 ## Exercises
 
-1. Give an example where observing more data can reduce the amount of uncertainty about the outcome to an arbitrarily low level.
-1. Give an example where observing more data will only reduce the amount of uncertainty up to a point and then no further. Explain why this is the case and where you expect this point to occur.
-1. We empirically demonstrated convergence to the mean for the toss of a coin. Calculate the variance of the estimate of the probability that we see a head after drawing $n$ samples.
+1. **Uncertainty driven to zero.** Give an example where observing more
+   data can reduce the amount of uncertainty about the outcome to an
+   arbitrarily low level.
+1. **Uncertainty with a floor.** Give an example where observing more data
+   will only reduce the amount of uncertainty up to a point and then no
+   further. Explain why this is the case and where you expect this point to
+   occur.
+1. [code] **Variance of the coin-toss estimator.** We empirically
+   demonstrated convergence to the mean for the toss of a coin. Calculate
+   the variance of the estimate of the probability that we see a head after
+   drawing $n$ samples.
     1. How does the variance scale with the number of observations?
-    1. Use Chebyshev's inequality to bound the deviation from the expectation.
+    1. Use Chebyshev's inequality to bound the deviation from the
+       expectation.
     1. How does it relate to the central limit theorem?
-1. Assume that we draw $m$ samples $x_i$ from a probability distribution with zero mean and unit variance. Compute the averages $z_m \stackrel{\textrm{def}}{=} m^{-1} \sum_{i=1}^m x_i$. Can we apply Chebyshev's inequality for every $z_m$ independently? Why not?
-1. Given two events with probability $P(\mathcal{A})$ and $P(\mathcal{B})$, compute upper and lower bounds on $P(\mathcal{A} \cup \mathcal{B})$ and $P(\mathcal{A} \cap \mathcal{B})$. Hint: graph the situation using a [Venn diagram](https://en.wikipedia.org/wiki/Venn_diagram).
-1. Assume that we have a sequence of random variables, say $A$, $B$, and $C$, where $B$ only depends on $A$, and $C$ only depends on $B$, can you simplify the joint probability $P(A, B, C)$? Hint: this is a [Markov chain](https://en.wikipedia.org/wiki/Markov_chain).
-1. In :numref:`subsec_probability_hiv_app`, assume that the outcomes of the two tests are not independent. In particular assume that either test on its own has a false positive rate of 10% and a false negative rate of 1%. That is, assume that $P(D =1 \mid H=0) = 0.1$ and that $P(D = 0 \mid H=1) = 0.01$. Moreover, assume that for $H = 1$ (infected) the test outcomes are conditionally independent, i.e., that $P(D_1, D_2 \mid H=1) = P(D_1 \mid H=1) P(D_2 \mid H=1)$ but that for healthy patients the outcomes are coupled via $P(D_1 = D_2 = 1 \mid H=0) = 0.02$.
-    1. Work out the joint probability table for $D_1$ and $D_2$, given $H=0$ based on the information you have so far.
-    1. Derive the probability that the patient is diseased ($H=1$) after one test returns positive. You can assume the same baseline probability $P(H=1) = 0.0015$ as before.
-    1. Derive the probability that the patient is diseased ($H=1$) after both tests return positive.
-1. Assume that you are an asset manager for an investment bank and you have a choice of stocks $s_i$ to invest in. Your portfolio needs to add up to $1$ with weights $\alpha_i$ for each stock. The stocks have an average return $\boldsymbol{\mu} = E_{\mathbf{s} \sim P}[\mathbf{s}]$ and covariance $\boldsymbol{\Sigma} = \textrm{Cov}_{\mathbf{s} \sim P}[\mathbf{s}]$.
-    1. Compute the expected return for a given portfolio $\boldsymbol{\alpha}$.
-    1. If you wanted to maximize the return of the portfolio, how should you choose your investment?
+    1. Verify your bound empirically: simulate many repetitions of $n$
+       tosses with this section's sampling code and compare the observed
+       deviation frequencies with Chebyshev's guarantee.
+1. **Chebyshev on a running average.** Assume that we draw $m$ samples
+   $x_i$ from a probability distribution with zero mean and unit variance,
+   and compute the averages
+   $z_m \stackrel{\textrm{def}}{=} m^{-1} \sum_{i=1}^m x_i$. Determine
+   whether Chebyshev's inequality can be applied to every $z_m$
+   independently, and explain why or why not.
+1. **Union and intersection bounds.** Given two events with probability
+   $P(\mathcal{A})$ and $P(\mathcal{B})$, compute upper and lower bounds on
+   $P(\mathcal{A} \cup \mathcal{B})$ and $P(\mathcal{A} \cap \mathcal{B})$.
+   Hint: graph the situation using a
+   [Venn diagram](https://en.wikipedia.org/wiki/Venn_diagram).
+1. **Markov chain factorization.** Assume that we have a sequence of random
+   variables, say $A$, $B$, and $C$, where $B$ only depends on $A$, and $C$
+   only depends on $B$. Simplify the joint probability $P(A, B, C)$. Hint:
+   this is a [Markov chain](https://en.wikipedia.org/wiki/Markov_chain).
+1. **A second, correlated test.** In :numref:`subsec_probability_hiv_app`,
+   assume that the outcomes of the two tests are not independent. In
+   particular, assume that either test on its own has a false positive rate
+   of 10% and a false negative rate of 1%. That is, assume that
+   $P(D =1 \mid H=0) = 0.1$ and that $P(D = 0 \mid H=1) = 0.01$. Moreover,
+   assume that for $H = 1$ (infected) the test outcomes are conditionally
+   independent, i.e., that
+   $P(D_1, D_2 \mid H=1) = P(D_1 \mid H=1) P(D_2 \mid H=1)$, but that for
+   healthy patients the outcomes are coupled via
+   $P(D_1 = D_2 = 1 \mid H=0) = 0.02$.
+    1. Work out the joint probability table for $D_1$ and $D_2$, given
+       $H=0$, based on the information you have so far.
+    1. Derive the probability that the patient is diseased ($H=1$) after
+       one test returns positive. You can assume the same baseline
+       probability $P(H=1) = 0.0015$ as before.
+    1. Derive the probability that the patient is diseased ($H=1$) after
+       both tests return positive.
+1. **Portfolio return and risk.** Assume that you are an asset manager for
+   an investment bank and you have a choice of stocks $s_i$ to invest in.
+   Your portfolio needs to add up to $1$ with weights $\alpha_i$ for each
+   stock. The stocks have an average return
+   $\boldsymbol{\mu} = E_{\mathbf{s} \sim P}[\mathbf{s}]$ and covariance
+   $\boldsymbol{\Sigma} = \textrm{Cov}_{\mathbf{s} \sim P}[\mathbf{s}]$.
+    1. Compute the expected return for a given portfolio
+       $\boldsymbol{\alpha}$.
+    1. If you wanted to maximize the return of the portfolio, how should
+       you choose your investment?
     1. Compute the *variance* of the portfolio.
-    1. Formulate an optimization problem that maximizes the return while constraining the variance to an upper bound. This is the [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model) problem :cite:`Mangram.2013`. Solving it requires a quadratic programming solver, which is beyond the scope of this book.
+    1. Formulate an optimization problem that maximizes the return while
+       constraining the variance to an upper bound. This is the
+       [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model)
+       problem :cite:`Mangram.2013`. Solving it requires a quadratic
+       programming solver, which is beyond the scope of this book.
+1. **The prosecutor's fallacy.** A suspect had a documented history of
+   abusing his now-murdered wife. His lawyer argues that, statistically,
+   only one in a thousand wife-abusers goes on to murder his wife, so the
+   history of abuse is weak evidence and the jury should acquit. Writing
+   $M$ for "the suspect murdered his wife," $K$ for "his wife was killed,"
+   and $B$ for "he had a history of abusing her," express the lawyer's
+   one-in-a-thousand figure and the correct posterior of guilt in these
+   terms, and identify precisely which probability the lawyer has confused
+   with which.
+
+    *Adapted from MIT 18.05,
+    [problem set 7](https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/mit18_05_s22_pset07_sol.pdf),
+    Problem 4.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/36)

@@ -688,28 +688,59 @@ curb overfitting, the first of many regularizers we will meet.
 
 ## Exercises
 
-1. What would happen if we were to initialize the weights to zero. Would the algorithm still work? What if we
-   initialized the parameters with variance $1000$ rather than $0.01$?
-1. Assume that you are [Georg Simon Ohm](https://en.wikipedia.org/wiki/Georg_Ohm) trying to come up
-   with a model for resistance that relates voltage and current. Can you use automatic
-   differentiation to learn the parameters of your model?
-1. Can you use [Planck's Law](https://en.wikipedia.org/wiki/Planck%27s_law) to determine the temperature of an object
-   using spectral energy density? For reference, the spectral density $B$ of radiation emanating from a black body is
-   $B(\lambda, T) = \frac{2 hc^2}{\lambda^5} \cdot \left(\exp \frac{h c}{\lambda k T} - 1\right)^{-1}$. Here
-   $\lambda$ is the wavelength, $T$ is the temperature, $c$ is the speed of light, $h$ is Planck's constant, and $k$ is the
-   Boltzmann constant. You measure the energy for different wavelengths $\lambda$ and you now need to fit the spectral
-   density curve to Planck's law.
-1. What are the problems you might encounter if you wanted to compute the second derivatives of the loss? How would
-   you fix them?
-1. Why is the `reshape` method needed in the `loss` function?
-1. Experiment using different learning rates to find out how quickly the loss function value drops. Can you reduce the
-   error by increasing the number of epochs of training?
-1. Try implementing a different loss function, such as the absolute value loss `(y_hat - d2l.reshape(y, y_hat.shape)).abs().mean()`. (If you *sum* rather than average, the gradient scales with the batch size, so you must lower the learning rate to compensate.)
+1. **Initialization at the extremes.** Predict whether training still
+   succeeds if the weights are initialized to exactly zero, and separately
+   if they are initialized with variance $1000$ rather than $0.01$. Explain
+   both answers, noting that this model is a single linear layer rather
+   than a deep network.
+1. [code] **Ohm's law.** Assume that you are
+   [Georg Simon Ohm](https://en.wikipedia.org/wiki/Georg_Ohm) trying to
+   come up with a model for resistance that relates voltage and current.
+   Treat the resistance as a learnable parameter and fit it to
+   voltage--current pairs using this section's autograd-based training
+   loop.
+1. [code] **Planck's law.** ● Use
+   [Planck's Law](https://en.wikipedia.org/wiki/Planck%27s_law) to
+   determine the temperature of an object from its spectral energy
+   density. For reference, the spectral density $B$ of radiation emanating
+   from a black body is
+
+    $$B(\lambda, T) = \frac{2 hc^2}{\lambda^5} \cdot \left(\exp \frac{h c}{\lambda k T} - 1\right)^{-1},$$
+
+    where $\lambda$ is the wavelength, $T$ is the temperature, $c$ is the
+    speed of light, $h$ is Planck's constant, and $k$ is the Boltzmann
+    constant. Given measured energies at several wavelengths, fit the
+    temperature $T$ as a learnable parameter under this section's training
+    loop.
+1. **Second derivatives.** Identify the problems you would encounter if you
+   wanted to compute the second derivatives of the loss with the tools
+   introduced so far, and propose how to fix them.
+1. **Reshape in the loss.** Explain what silently goes wrong in the loss
+   computation if `y_hat` and `y` have mismatched shapes: the failure comes
+   from broadcasting, not from an error message.
+1. [code] **Learning-rate sweep.** Train the from-scratch model at each
+   learning rate in $\{0.001, 0.01, 0.03, 0.1, 0.3, 1.0\}$ for a fixed 30
+   epochs and plot the training-loss curves. For each rate, report the
+   smallest number of epochs needed to come within 10% of the noise floor
+   $\sigma^2/2$, marking rates that diverge or never reach that band.
+
+    *Adapted from Andrew Ng's Coursera Machine Learning,
+    [exercise 1](https://github.com/dibgerge/ml-coursera-python-assignments/blob/master/Exercise1/exercise1.ipynb).*
+1. [code] **Robust losses.** Implement the absolute value loss
+   `(y_hat - d2l.reshape(y, y_hat.shape)).abs().mean()`. If you *sum*
+   rather than average, the gradient scales with the batch size, so you
+   must lower the learning rate to compensate.
     1. Check what happens for regular data.
-    1. Check whether there is a difference in behavior if you actively perturb some entries, such as $y_5 = 10000$, of $\mathbf{y}$.
-    1. Can you think of a cheap solution for combining the best aspects of squared loss and absolute value loss?
-       Hint: how can you avoid really large gradient values?
-1. Why do we need to reshuffle the dataset? Can you design a case where a maliciously constructed dataset would break the optimization algorithm otherwise?
+    1. Check whether there is a difference in behavior if you actively
+       perturb some entries of $\mathbf{y}$, such as $y_5 = 10000$.
+    1. Design a cheap loss that combines the best aspects of squared loss
+       and absolute value loss, quadratic near zero and linear in the
+       tails. Confirm that it recovers a fit close to the uncorrupted case
+       even after the perturbation.
+1. **Why reshuffle.** Explain why each epoch reshuffles the dataset. Then
+   construct a small dataset ordering, for example sorted by label, that
+   would break minibatch SGD if reshuffling were disabled, and state
+   specifically how it breaks.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/42)

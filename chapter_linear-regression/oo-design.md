@@ -687,12 +687,41 @@ other components.
 
 ## Exercises
 
-1. The `add_to_class` decorator works by calling `setattr(Class, obj.__name__, obj)`. (a) Add a method `greet(self)` to the existing class `A` *after* the instance `a` has been created, using `@add_to_class(A)`, and verify that `a.greet()` works. (b) What happens if you define `greet` *without* the decorator and then call `a.greet()`? Why?
-1. The `Module` class keeps the optimizer in `configure_optimizers`, a *method of the model*, rather than passing it as an argument to `Trainer`. What are the advantages of this design choice? Can you think of a case where putting the optimizer on the model is awkward?
-1. Extend `DataModule` with a `test_dataloader` method and extend `Trainer.fit` to run a final evaluation pass on the test set after training. What invariant must the test loader satisfy that the validation loader need not?
-1. The `save_hyperparameters` implementation uses Python's `inspect` module to capture the caller's local variables. Can you implement a version that does *not* use `inspect`, for example by requiring the caller to pass the local namespace explicitly? What are the trade-offs?
-1. (Advanced) The `ProgressBoard.draw` method is *asynchronous*: it hands values to a background thread rather than plotting immediately. Sketch a synchronous alternative. Under what conditions would the synchronous version be slower? When would the two perform identically?
-1. Remove the `save_hyperparameters` statement in the `B` class. Can you still print `self.a` and `self.b`? Optional: if you have studied the full implementation of the `HyperParameters` class, can you explain why?
+1. [code] **Monkey-patching.** The `add_to_class` decorator works by
+   calling `setattr(Class, obj.__name__, obj)`.
+    1. Add a method `greet(self)` to the existing class `A` *after* the
+       instance `a` has been created, using `@add_to_class(A)`, and verify
+       that `a.greet()` works.
+    1. Define `greet` *without* the decorator and call `a.greet()` again.
+       Explain the outcome from the semantics of `setattr`.
+1. **Optimizer and model.** The `Module` class keeps the optimizer in
+   `configure_optimizers`, a *method of the model*, rather than passing it
+   as an argument to `Trainer`. State the advantages of this design choice,
+   and describe a training setup in which putting the optimizer on the
+   model becomes awkward.
+1. [code] **Test split.** Extend `DataModule` with a `test_dataloader`
+   method and extend `Trainer.fit` to run a final evaluation pass on the
+   test set after training. State the invariant a test loader must satisfy
+   that the validation loader need not. Hint: consider how many times each
+   may be consulted during model development.
+1. [code] **Saving hyperparameters.** The `save_hyperparameters`
+   implementation uses Python's `inspect` module to capture the caller's
+   local variables. Implement a version that does not use `inspect`, for
+   example by requiring the caller to pass the local namespace explicitly,
+   and verify that it reproduces the same attributes on class `B`. State
+   one thing the `inspect`-based version provides that your version gives
+   up.
+1. [code] **Synchronous logs.** ● The `ProgressBoard.draw` method is
+   *asynchronous*: it hands values to a background thread rather than
+   plotting immediately. Implement a synchronous variant that plots on the
+   calling thread. Time both across a training run with frequent `draw`
+   calls, and report under which conditions the synchronous version is
+   measurably slower and when the two are indistinguishable.
+1. **Life without `save_hyperparameters`.** Remove the
+   `save_hyperparameters` statement in the `B` class. Predict whether
+   `self.a` and `self.b` still print correctly, then explain your
+   prediction from how Python resolves attribute lookups on an instance
+   versus a class.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6645)

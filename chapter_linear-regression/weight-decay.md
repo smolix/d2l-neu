@@ -750,12 +750,72 @@ validation data, not from training error alone.
 
 ## Exercises
 
-1. Experiment with the value of $\lambda$ in the estimation problem in this section. Plot training and validation loss as a function of $\lambda$. What do you observe? Hint: expect a U-shaped validation curve, with $\lambda$ (equivalently, $\textrm{df}(\lambda)$) playing the role of the complexity dial (compare :numref:`fig_mdl-bias-variance-u-curve`).
-1. Use a validation set to find the optimal value of $\lambda$. Is it really the optimal value? Does this matter?
-1. What would the update equations look like if instead of $\|\mathbf{w}\|^2$ we used $\sum_i |w_i|$ as our penalty of choice ($\ell_1$ regularization)?
-1. We know that $\|\mathbf{w}\|^2 = \mathbf{w}^\top \mathbf{w}$. Can you find a similar equation for matrices (see the Frobenius norm in :numref:`subsec_lin-algebra-norms`)?
-1. Review the relationship between training error and generalization error. In addition to weight decay, increased training, and the use of a model of suitable complexity, what other ways might help us deal with overfitting?
-1. Make the MAP correspondence of :numref:`fig_wd-map-prior` precise. Starting from the posterior $P(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) \propto P(\mathbf{y} \mid \mathbf{X}, \mathbf{w}) P(\mathbf{w})$ with noise variance $\sigma^2$ and prior $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2 \mathbf{I})$, show that minimizing the negative log-posterior is equivalent to minimizing the *averaged* loss $L(\mathbf{w}, b) + \frac{\lambda}{2}\|\mathbf{w}\|^2$ of this section with $\lambda = \sigma^2 / (n \tau^2)$. Which prior standard deviation $\tau$ corresponds to the $\lambda = 3$ used in the experiments above?
+1. [code] **The $\lambda$ sweep.** Experiment with the value of $\lambda$
+   in the estimation problem in this section. Plot training and validation
+   loss as a function of $\lambda$ and report where the validation curve
+   bottoms out. Hint: expect a U-shaped validation curve, with $\lambda$
+   (equivalently, $\textrm{df}(\lambda)$) playing the role of the
+   complexity dial (compare :numref:`fig_mdl-bias-variance-u-curve`).
+1. [code] **Validation stability.** Use a validation set to find the value
+   of $\lambda$ that minimizes validation loss. Then repeat the search with
+   two more random train/validation splits of the same data. Report whether
+   the selected $\lambda^*$ is stable across the three splits, and by how
+   much the validation loss differs between the winning $\lambda^*$ and its
+   runner-up.
+1. **The $\ell_1$ update.** Derive the update equations for the case where
+   instead of $\|\mathbf{w}\|^2$ we use $\sum_i |w_i|$ as our penalty of
+   choice ($\ell_1$ regularization).
+1. **Frobenius penalty.** We know that
+   $\|\mathbf{w}\|^2 = \mathbf{w}^\top \mathbf{w}$. Find the analogous
+   identity for matrices (see the Frobenius norm in
+   :numref:`subsec_lin-algebra-norms`).
+1. [code] **Early stopping.** Implement early stopping on this section's
+   estimation problem with $\lambda = 0$: track the validation loss after
+   each epoch, stop at its minimum, and report the stopping epoch and the
+   loss achieved. Compare the result against the unregularized
+   full-training run and the $\lambda = 3$ run from this section.
+1. [code] **Ridge as augmented least squares.** Implement ridge regression
+   two ways on this section's dataset.
+    1. Use the closed form
+       $(\mathbf{X}^\top\mathbf{X}+\lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$.
+    1. Run ordinary least squares on $\mathbf{X}$ stacked with
+       $\sqrt{\lambda}\mathbf{I}$ and $\mathbf{y}$ stacked with zeros.
+
+    Confirm that the two give matching $\hat{\mathbf{w}}$ up to numerical
+    precision.
+
+    *Adapted from Hastie, Tibshirani, and Friedman,
+    [The Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/),
+    Exercise 3.12.*
+1. **MAP estimation.** Make the MAP correspondence of
+   :numref:`fig_wd-map-prior` precise. Starting from the posterior
+   $P(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) \propto P(\mathbf{y} \mid \mathbf{X}, \mathbf{w}) P(\mathbf{w})$
+   with noise variance $\sigma^2$ and prior
+   $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2 \mathbf{I})$, show that
+   minimizing the negative log-posterior is equivalent to minimizing the
+   *averaged* loss $L(\mathbf{w}, b) + \frac{\lambda}{2}\|\mathbf{w}\|^2$
+   of this section with $\lambda = \sigma^2 / (n \tau^2)$. Determine the
+   prior standard deviation $\tau$ that corresponds to the $\lambda = 3$
+   used in the experiments above.
+1. **Shrinkage equals penalty.** Show that the multiplicative weight-decay
+   update $\mathbf{w} \leftarrow (1-\eta\lambda)\mathbf{w} - \eta\nabla L$
+   used in this section is algebraically identical to a plain gradient
+   step on the penalized loss $L + \frac{\lambda}{2}\|\mathbf{w}\|^2$. Now
+   suppose that the gradient of $L$ is rescaled coordinate-wise by fixed
+   constants $d_i > 0$ before the step, and compare the two updates
+    1. $w_i \leftarrow (1-\eta\lambda)\, w_i - \eta d_i \,\partial_{w_i} L$,
+       which shrinks first and then steps, and
+    1. $w_i \leftarrow w_i - \eta d_i \left(\partial_{w_i} L + \lambda w_i\right)$,
+       which steps on the penalized gradient.
+
+    Show that the two coincide only when $d_i = 1$, and describe how the
+    effective amount of shrinkage varies across coordinates otherwise. This
+    distinction is the reason for the decoupled weight decay of AdamW
+    (:numref:`sec_adamw`).
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 9.5.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/98)

@@ -548,14 +548,46 @@ principles guide model selection in the settings considered here:
 
 ## Exercises
 
-1. When can you solve the problem of polynomial regression exactly?
-1. Give at least five examples where dependent random variables make treating the problem as IID data inadvisable.
-1. Can you ever expect to see zero training error? Under which circumstances would you see zero generalization error?
-1. Why is $K$-fold cross-validation very expensive to compute?
-1. Why is the $K$-fold cross-validation error estimate biased?
-1. The VC dimension is defined as the maximum number of points that can be classified with arbitrary labels $\{\pm 1\}$ by a function of a class of functions. Why might this not be a good idea for measuring how complex the class of functions is? Hint: consider the magnitude of the functions.
-1. Your manager gives you a difficult dataset on which your current algorithm does not perform so well. How would you justify to him that you need more data? Hint: you cannot increase the data but you can decrease it.
-1. Re-run the polynomial-fitting experiment above with `n_train` set to 10, 40, and 100. At what degree does the test loss start to climb in each case? Relate your finding to the rule of thumb that more complex models require more data.
+1. **Exact polynomial regression.** State the condition under which
+   polynomial regression can be solved exactly. Hint: relate the polynomial
+   degree to the number of distinct data points.
+1. **When IID fails.** Give at least five examples where dependent random
+   variables make treating the problem as IID data inadvisable.
+1. **Two kinds of zero training error.** State whether zero training error
+   is achievable in practice. Under which circumstances would zero
+   generalization error be achievable? Distinguish the two cases clearly.
+1. **The price of $K$-fold.** Explain why $K$-fold cross-validation is very
+   expensive to compute, in terms of the number of models fit relative to a
+   single train/validation split.
+1. **$K$-fold bias.** Explain why the $K$-fold cross-validation error
+   estimate is biased relative to a model trained on the full dataset, and
+   state the direction of the bias.
+1. **VC dimension.** It is defined as the maximum number of points that can
+   be classified with arbitrary labels $\{\pm 1\}$ by a function of a class
+   of functions. Why might this not be a good idea for measuring how
+   complex the class of functions is? Hint: consider the magnitude of the
+   function values, rather than just the signs.
+1. [code] **Learning curve.** Your manager gives you a difficult dataset on
+   which your current algorithm does not perform so well, and you cannot
+   collect more data. Subsample the existing training set at several sizes,
+   for example 20%, 40%, 60%, 80%, and 100%, retrain at each size, and plot
+   validation error against training-set size. How would you use the slope
+   of the resulting curve as evidence whether more data might help?
+1. [code] **Model selection.** Re-run the polynomial-fitting experiment
+   above with `n_train` set to 10, 40, and 100. Report the degree at which
+   the test loss starts to climb in each case, and relate your finding to
+   the rule of thumb that more complex models require more data.
+1. [extended] **Double Descent.** ● Extend this section's polynomial-degree
+   sweep well past the number of training points, for example to degree 60
+   on 20 training points, relying on the minimum-norm behavior of `lstsq`
+   in the rank-deficient regime. Before running it, predict whether the
+   test error keeps rising once the training error reaches zero, or falls
+   again. Then run the sweep, plot the test error across the full range,
+   and relate the outcome to this section's discussion of double descent.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 8.4.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/96)

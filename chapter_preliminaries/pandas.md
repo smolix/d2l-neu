@@ -280,13 +280,62 @@ scaling) and for chaining them into reproducible pipelines, see
 
 ## Exercises
 
-1. Load a real dataset, e.g., Abalone from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets), and inspect its properties. What fraction of values are missing? What fraction of the columns are numerical, categorical, or text?
-1. Select data columns by *name* rather than by integer position. The pandas docs on [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html) describe the options.
-1. Compare imputation strategies on `NumRooms`: mean, median, and adding a "was-missing" indicator column. Which assumptions does each make? When would you prefer one over another?
-1. We standardized using statistics from the whole dataset. Why is that a form of information leakage, and how should you compute the mean and standard deviation instead? What goes wrong if a feature has zero variance?
-1. How large a dataset could you load this way? Consider read time, in-memory representation, and processing. Try it on your laptop, then on a larger machine. What breaks first?
-1. How would you handle a categorical column with a very large number of categories? What if every label is unique: should you include the column at all?
-1. What alternatives to pandas can you think of? Consider [loading NumPy arrays from a file](https://numpy.org/doc/stable/reference/generated/numpy.load.html) and the image library [Pillow](https://python-pillow.org/).
+1. [code] **A messier real dataset.** Load a real dataset, e.g.,
+   Abalone from the
+   [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets),
+   and inspect its properties. Report what fraction of values are missing
+   and what fraction of the columns are numerical, categorical, or text.
+1. [code] **Indexing by name.** Redo this section's column selection
+   using name-based indexing instead of integer positions. Name the pandas
+   indexing method you used; the pandas docs on
+   [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html)
+   describe the options.
+1. **Imputation strategies.** Compare three treatments of the
+   missing values in `NumRooms`: mean imputation, median imputation, and a
+   "was-missing" indicator column. State what each strategy assumes about
+   why the data are missing, and compute how each changes the column's mean
+   and standard deviation.
+
+    After you have trained your first model in the next chapter, return to
+    this exercise and compare the three variants by held-out error instead.
+
+    *Adapted from Kaggle Learn's
+    [Missing Values](https://www.kaggle.com/code/alexisbcook/missing-values)
+    exercise.*
+1. **Where leakage hides.** We standardized using statistics
+   from the whole dataset. Explain why this is a form of information
+   leakage and how the mean and standard deviation should be computed
+   instead. State what goes wrong if a feature has zero variance.
+1. **Scaling limits.** Estimate how large a dataset you could
+   load this way. Consider read time, in-memory representation, and
+   processing. Try it on your laptop, then on a larger machine, and
+   identify what breaks first.
+1. [code] **High-cardinality categories.** Pick a categorical column
+   and compute how many new columns one-hot encoding adds as a function of
+   the number of unique values. For a column in which every value is
+   unique, such as an identifier, decide whether to include it, drop it, or
+   encode it differently, and justify your choice.
+
+    *Adapted from Kaggle Learn's
+    [Categorical Variables](https://www.kaggle.com/code/alexisbcook/categorical-variables)
+    exercise.*
+1. [code] **Pandas alternatives, tried once.** Load the same
+   `house_tiny` values by saving and reloading them as a NumPy array with
+   [`numpy.load`](https://numpy.org/doc/stable/reference/generated/numpy.load.html),
+   and separately load an image file with
+   [Pillow](https://python-pillow.org/). Report one concrete limitation of
+   each route that pandas does not share.
+1. [extended] **A real messy dataset, end to end.** Take a messy public
+   dataset, for example the San Francisco restaurant-inspection data used
+   in Berkeley's Data 100. Run the full pipeline this section teaches:
+   detect a non-standard missing-value sentinel (a value such as `-9999`
+   rather than a blank field), choose and justify a handling strategy,
+   encode at least one categorical column with an explicit cardinality
+   judgment, standardize the numeric columns, and convert the result to a
+   tensor. Report the shape and dtype of the final tensor.
+
+    *Adapted from UC Berkeley Data 100,
+    [homework 2A "Food Safety"](https://github.com/DS-100/sp25-student/blob/main/hw/hw02A/hw02A.ipynb).*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/28)

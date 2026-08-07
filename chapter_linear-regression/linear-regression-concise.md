@@ -437,17 +437,42 @@ Dimensionality and storage for networks are automatically inferred
 
 ## Exercises
 
-1. The framework loss functions used above (e.g., `nn.MSELoss`) return the mean loss over the minibatch by default. How would you need to change the learning rate if instead you replaced this average with the *sum* of the losses over the minibatch (e.g., by passing `reduction='sum'`)?
-1. Review the framework documentation to see which loss functions are provided. In particular,
-   replace the squared loss with Huber's robust loss function. That is, use the loss function
-   $$l(y,y') = \begin{cases}|y-y'| -\frac{\sigma}{2} & \textrm{ if } |y-y'| > \sigma \\ \frac{1}{2 \sigma} (y-y')^2 & \textrm{ otherwise}\end{cases}$$
-   Rerun the outlier demonstration of :numref:`subsec_linear-regression-loss-function` (one corrupted label) with it: does Huber's loss recover the robust estimate, the least-squares one, or something in between? (Compare the penalty curves in :numref:`fig_linreg-loss-menu`.)
-1. How do you access the gradient of the weights of the model?
-1. What is the effect on the solution if you change the learning rate and the number of epochs? Does it keep on improving?
-1. How does the solution change as you vary the amount of data generated?
-    1. Plot the estimation error for $\hat{\mathbf{w}} - \mathbf{w}$ and $\hat{b} - b$ as a function of the amount of data. Hint: increase the amount of data logarithmically rather than linearly, i.e., 5, 10, 20, 50, ..., 10,000 rather than 1000, 2000, ..., 10,000.
-    2. Why is the suggestion in the hint appropriate?
-1. Time the from-scratch implementation of :numref:`sec_linear_scratch` against the concise one here, training each for 10, 100, and 1,000 epochs on the same synthetic dataset. Which is faster, and does the gap grow with the number of epochs? What does this tell you about the overhead of Python-level parameter bookkeeping versus framework-optimized operations?
+1. **Sum versus mean.** The framework loss functions used above return the
+   mean loss over the minibatch by default. State how the learning rate
+   must change if you replace this average with the *sum* of the losses
+   over the minibatch, e.g., by passing `reduction='sum'`, and explain why.
+1. [code] **Huber loss.** Review the framework documentation to see which
+   loss functions are provided. In particular, replace the squared loss
+   with Huber's robust loss function
+
+    $$l(y,y') = \begin{cases}|y-y'| -\frac{\sigma}{2} & \textrm{ if } |y-y'| > \sigma \\ \frac{1}{2 \sigma} (y-y')^2 & \textrm{ otherwise.}\end{cases}$$
+
+    Rerun the outlier demonstration of
+    :numref:`subsec_linear-regression-loss-function` with one corrupted
+    label. Report whether Huber's loss recovers the robust estimate, the
+    least-squares one, or something in between, and relate the outcome to
+    the penalty curves in :numref:`fig_linreg-loss-menu`.
+1. [code] **Reading gradients.** Show how to access the gradient of the
+   model's weights after one backward pass, and confirm that it matches the
+   by-hand gradient formula from :numref:`sec_linear_scratch`.
+1. [code] **Learning-rate and epoch grid.** Train the concise model at each
+   combination of learning rate in $\{0.01, 0.03, 0.1, 0.3\}$ and epoch
+   count in $\{5, 10, 30\}$. Report the final loss for all twelve
+   combinations in a small table, and state which combinations fail to
+   improve on the default configuration.
+1. [code] **Sample-size scaling.** How does the solution change as you vary
+   the amount of data generated?
+    1. Plot the estimation error for $\hat{\mathbf{w}} - \mathbf{w}$ and
+       $\hat{b} - b$ as a function of the amount of data. Hint: increase
+       the amount of data logarithmically rather than linearly, i.e., 5,
+       10, 20, 50, ..., 10,000 rather than 1000, 2000, ..., 10,000.
+    1. Explain why the suggestion in the hint is appropriate.
+1. [code] **Scratch versus concise.** Time the from-scratch implementation
+   of :numref:`sec_linear_scratch` against the concise one here, training
+   each for 10, 100, and 1,000 epochs on the same synthetic dataset. Report
+   which is faster and whether the gap grows with the number of epochs, and
+   state what this shows about the overhead of Python-level parameter
+   bookkeeping versus framework-optimized operations.
 
 
 :begin_tab:`mxnet`

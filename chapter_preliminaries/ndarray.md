@@ -980,12 +980,52 @@ Tensors provide a variety of functionalities including construction routines; in
 
 ## Exercises
 
-1. Run the code in this section. Change the conditional statement `X == Y` to `X < Y` or `X > Y`, and then see what kind of tensor you can get.
-1. Replace the two tensors that operate by element in the broadcasting mechanism with other shapes, e.g., 3-dimensional tensors. Is the result the same as expected?
-1. Create the vector `x = arange(24)` and reshape it into a $(2, 3, 4)$ tensor using `-1` for one of the components. Which component does the framework infer, and why is at most one `-1` allowed?
-1. Build a $(3, 4)$ tensor and predict, *before running*, the shape of its sum along `axis=0`, along `axis=1`, and with `keepdims=True`. Then check each prediction against the code.
-1. Try to add two tensors whose shapes are *not* broadcast-compatible, for example shapes $(3, 2)$ and $(2, 3)$. What error do you get? Use the alignment rule from the broadcasting section to explain it, then find a reshape of one operand that makes the addition valid.
-1. Recall the saving-memory discussion. Use `id()` to verify that `X[:] = X + Y` (or `X += Y`) keeps the same Python tensor object while `X = X + Y` binds `X` to a new object. Why does object identity alone not prove that the underlying storage was reused? Consult your framework's storage or buffer API and test storage identity where such an API exists.
+1. **Comparison operator swap.** Run the code in this section
+   with the conditional `X == Y` replaced by `X < Y`, and then by `X > Y`.
+   Report the kind of tensor that each comparison produces.
+1. [code] **Broadcasting in three dimensions.** Replace the two
+   broadcasting operands with 3-dimensional tensors of your choosing.
+   Predict the shape of the broadcast result, then run the code and check
+   your prediction.
+1. **Inferred reshape axis.** Create the vector
+   `x = arange(24)` and reshape it into a $(2, 3, 4)$ tensor, writing `-1`
+   for one of the components. State which component the framework infers
+   and why at most one `-1` is allowed. Check your answer in code.
+1. **Predict-then-verify reduction shapes.** Build a $(3, 4)$
+   tensor. Before running any code, predict the shape of its sum along
+   `axis=0`, along `axis=1`, and with `keepdims=True`. Check each
+   prediction against the code.
+1. [code] **Fixing a broadcast mismatch.** Add two tensors of shapes
+   $(3, 2)$ and $(2, 3)$ and read the error message. Explain the failure
+   using the alignment rule from the broadcasting section. Then find a
+   reshape of one operand that makes the addition valid.
+1. **Object identity versus storage.** Use `id()` to verify
+   that `X[:] = X + Y` (or `X += Y`) keeps the same Python tensor object
+   while `X = X + Y` binds `X` to a new object. Explain why object identity
+   alone does not prove that the underlying storage was reused. Where your
+   framework exposes a storage or buffer API, test storage identity as
+   well.
+1. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for
+   two same-shaped tensors without allocating a new array. Write every
+   intermediate into a pre-allocated buffer using `Z[:] = ...`, and verify
+   with `id()` that no name was rebound. If your framework forbids in-place
+   writes altogether, express the same computation in its functional idiom
+   instead, and explain what the framework gains by making arrays
+   immutable.
+
+    *Adapted from problem 35 of
+    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
+1. [extended] **Loops, broadcasting, and library primitives.** Compute all
+   pairwise squared Euclidean distances between two sets of 50 vectors in 8
+   dimensions in three ways: two nested Python loops, one loop plus
+   broadcasting, and a fully vectorized version with no explicit loop.
+   Confirm that the three results agree to floating-point tolerance. Time
+   all three and report the speedup ratios.
+
+    *Adapted from
+    [CS231n assignment 1](https://cs231n.github.io/assignments2026/assignment1/)
+    and from lesson 8 of
+    [fast.ai's Deep Learning from the Foundations](https://github.com/fastai/course-v3/blob/master/files/dl-2019/notes/notes-2-8.md).*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/26)

@@ -220,7 +220,16 @@ $$\textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}, \qquad \te
 
 Precision asks: of the examples we *flagged*, how many were real? Recall asks: of the real positives, how many did we *find*? The always-healthy classifier above has recall $0$ (and its precision is undefined, since it never flags anyone), which tells the true story that the 99% accuracy conceals. When a single summary number is needed, the conventional compromise is the *F1 score*, the harmonic mean $2\,\textrm{PR}/(\textrm{P}+\textrm{R})$ of precision and recall, which is high only when both are.
 
-For $q$ classes the same bookkeeping becomes a $q \times q$ *confusion matrix*: entry $(i, j)$ counts the examples of true class $j$ that the model predicted as class $i$, so the diagonal holds the correct decisions and every off-diagonal cell isolates one specific kind of error. A confusion matrix is one useful classification diagnostic; a single accuracy number is its normalized trace (the fraction on the diagonal). We will meet it twice more in this chapter: in :numref:`sec_softmax_scratch` we compute one for our trained Fashion-MNIST classifier to see *which* classes it confuses, and in :numref:`sec_environment-and-distribution-shift` the same matrix becomes the key computational object for correcting label shift.
+For $q$ classes the same bookkeeping becomes a $q \times q$ *confusion
+matrix* $C$ with entries
+
+$$C_{ij} = \sum_{k=1}^n \mathbf{1}(\hat{y}^{(k)} = i)\, \mathbf{1}(y^{(k)} = j),$$
+:eqlabel:`eq_confusion-matrix`
+
+where $y^{(k)}$ and $\hat{y}^{(k)}$ denote the true and predicted class of
+example $k$: entry $(i, j)$ counts the examples of true class $j$ that the
+model predicted as class $i$, so the diagonal holds the correct decisions and
+every off-diagonal cell isolates one specific kind of error. A confusion matrix is one useful classification diagnostic; a single accuracy number is its normalized trace (the fraction on the diagonal). We will meet it twice more in this chapter: in :numref:`sec_softmax_scratch` we compute one for our trained Fashion-MNIST classifier to see *which* classes it confuses, and in :numref:`sec_environment-and-distribution-shift` the same matrix becomes the key computational object for correcting label shift.
 
 ## Summary
 

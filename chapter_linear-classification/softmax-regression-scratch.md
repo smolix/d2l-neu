@@ -460,7 +460,8 @@ data.visualize([X, y], labels=labels)
 ```
 
 The gallery shows *which* images fail; to see *how* they fail in aggregate we
-compute the confusion matrix introduced in :numref:`sec_classification`. We
+compute the confusion matrix :eqref:`eq_confusion-matrix` introduced in
+:numref:`sec_classification`. We
 accumulate a $10\times10$ matrix of counts $C$ over the validation set, with
 entry $(i, j)$ counting how often true class $j$ was predicted as class $i$,
 and then normalize each column,

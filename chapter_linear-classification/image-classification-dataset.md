@@ -309,9 +309,32 @@ system; it is not guaranteed to be faster than training.
 
 ## Exercises
 
-1. Time one full training epoch at `batch_size` of 1, 16, 64, 256, and 1024. Plot throughput (images per second) against `batch_size`. Why does throughput rise with batch size up to a point and then plateau?
-1. Set `num_workers=0` (single-threaded loading) and compare against the default multi-worker setting. Under what conditions does increasing `num_workers` stop helping?
-1. PyTorch stores tensors in channel-first order $(c, h, w)$, while TensorFlow and JAX use channel-last $(h, w, c)$. Read the `get_dataloader` implementations for all four frameworks. Which step introduces the channel dimension, and where does the layout differ?
+1. [code] **Throughput versus batch size.** Time one full training epoch at
+   `batch_size` of 1, 16, 64, 256, and 1024. Plot throughput (images per
+   second) against `batch_size`. Explain why throughput rises with batch
+   size up to a point and then plateaus.
+1. [code] **Worker ablation.** Set `num_workers=0` (single-threaded
+   loading) and compare against the default multi-worker setting. State
+   under what conditions increasing `num_workers` stops helping.
+1. **Channel layout.** PyTorch stores tensors in channel-first order
+   $(c, h, w)$, while TensorFlow and JAX use channel-last $(h, w, c)$. Read
+   the `get_dataloader` implementations for all four frameworks. Identify
+   the step that introduces the channel dimension and the exact place where
+   the layouts diverge.
+1. [code] **Cost of resizing.** Measure the wall-clock and per-image memory
+   cost of the `resize=(32, 32)` step against using the native
+   $28 \times 28$ images. Report whether a simple linear classifier's
+   validation accuracy changes measurably between the two.
+1. **Shuffling and validation.** `get_dataloader` sets `shuffle=train`, so
+   only the training loader reshuffles. Explain what would go wrong with
+   reported validation metrics and with run-to-run comparability if the
+   validation loader were shuffled every epoch as well.
+1. [extended] **Loader or compute.** Sweep a grid of `num_workers` and
+   `batch_size` values, measure loader throughput at each point, and
+   compare it against the forward-pass throughput of the linear classifier
+   of :numref:`sec_softmax_scratch`. Produce a heatmap marking the region
+   where loading rather than compute is the bottleneck, and state the
+   crossover point on your hardware.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/48)

@@ -229,13 +229,80 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 
 ## Exercises
 
-1. Denote by $L_\textrm{v}$ the validation loss, and let $L_\textrm{v}^\textrm{q}$ be its unweighted batch-mean estimate computed by the loss averaging in this section. Lastly, denote by $l_\textrm{v}^\textrm{b}$ the loss on the last minibatch. Express $L_\textrm{v}$ in terms of $L_\textrm{v}^\textrm{q}$, $l_\textrm{v}^\textrm{b}$, and the sample and minibatch sizes.
-1. Show that the unweighted batch-mean estimate $L_\textrm{v}^\textrm{q}$ is unbiased. That is, show that $E[L_\textrm{v}] = E[L_\textrm{v}^\textrm{q}]$. Why would you still want to use $L_\textrm{v}$ instead?
-1. Given a multiclass classification loss, denoting by $l(y,y')$ the penalty of estimating $y'$ when we see $y$ and given a probability $p(y \mid x)$, formulate the rule for an optimal selection of $y'$. Hint: express the expected loss, using $l$ and $p(y \mid x)$.
-1. Suppose two classifiers $A$ and $B$ both achieve 90% accuracy on a ten-class test set, but on the examples they get right, $A$ assigns probability $0.91$ on average to the correct class while $B$ assigns only $0.51$. (i) Compute the average cross-entropy loss each incurs on those examples. (ii) Explain why these averages are insufficient to decide which classifier is safer: what must we know about their probabilities on incorrect predictions, calibration by subgroup, and the costs of their errors? (iii) Construct a simple monotone rescaling of the scores (a temperature) that sharpens $B$'s probabilities without changing any of its $\arg\max$ decisions, and argue why its accuracy is therefore unchanged.
-1. Generalize `accuracy` to *top-$k$ accuracy*, which counts a prediction as correct when the true class is among the $k$ highest-scoring classes. (i) Modify the four-line implementation to take a `k` argument (hint: replace the single `argmax` with the indices of the $k$ largest scores). (ii) On a $q$-class problem, what is top-$q$ accuracy always equal to, and why? (iii) Why is top-5 accuracy a standard companion to top-1 on benchmarks with many fine-grained classes?
-1. In the disease-screening example, suppose we care much more about missing a sick patient than about a false alarm. (i) Modify the cross-entropy loss so that each class $j$ carries a weight $w_j$, multiplying the loss of every example of true class $j$; this is a one-line change to `loss`. (ii) Show that this weighted loss is exactly the weighted empirical risk minimization objective :eqref:`eq_weighted-empirical-risk-min` of :numref:`sec_environment-and-distribution-shift` with weights $\beta_i = w_{y_i}$, and explain why upweighting the rare class shifts the learned decision boundary toward higher recall. (iii) Give a second, data-side intervention with the same effect (hint: sampling).
-1. A binary classifier's score can be thresholded at any $\tau \in (0, 1)$, not just $\frac{1}{2}$: predict positive whenever $\hat{y}_1 > \tau$. Sweep $\tau$ from $1$ down to $0$ for a classifier of your choice (for instance a two-class subset of Fashion-MNIST, such as sneaker versus sandal, once you have trained the model of :numref:`sec_softmax_scratch`). (i) Compute the true-positive rate (recall) and the false-positive rate at each $\tau$ and plot one against the other; this curve is called the *receiver operating characteristic* (ROC). (ii) What do the endpoints $\tau=1$ and $\tau=0$ correspond to? (iii) Argue that a classifier whose scores are a random permutation of the data traces the diagonal in expectation, and that the area under the curve is therefore a threshold-free summary of ranking quality.
+1. **Validation loss vs. batch mean.** Denote by $L_\textrm{v}$ the
+   validation loss, and let $L_\textrm{v}^\textrm{q}$ be its unweighted
+   batch-mean estimate computed by the loss averaging in this section.
+   Lastly, denote by $l_\textrm{v}^\textrm{b}$ the loss on the last
+   minibatch. Express $L_\textrm{v}$ in terms of $L_\textrm{v}^\textrm{q}$,
+   $l_\textrm{v}^\textrm{b}$, and the sample and minibatch sizes.
+1. **Unbiased batch mean.** Show that the unweighted batch-mean estimate
+   $L_\textrm{v}^\textrm{q}$ is unbiased. That is, show that
+   $E[L_\textrm{v}] = E[L_\textrm{v}^\textrm{q}]$. Explain why you would
+   still want to use $L_\textrm{v}$ instead.
+1. **Optimal decisions and rejection.** Consider a multiclass
+   classification loss, denoting by $l(y,y')$ the penalty of estimating
+   $y'$ when we see $y$, and let $p(y \mid x)$ be the class probability.
+    1. Formulate the rule for an optimal selection of $y'$. Hint: express
+       the expected loss, using $l$ and $p(y \mid x)$.
+    1. Now allow the classifier to *abstain* at a fixed cost $\lambda_r$
+       instead of guessing, while a wrong guess costs $\lambda_s$. Derive
+       the threshold on the top-class probability above which guessing
+       beats abstaining.
+
+    *Adapted from Kevin Murphy,
+    [Probabilistic Machine Learning: An Introduction](https://probml.github.io/pml-book/book1.html),
+    Exercise 5.1.*
+1. **Accuracy is not enough.** Suppose two classifiers $A$ and $B$ both
+   achieve 90% accuracy on a ten-class test set, but on the examples they
+   get right, $A$ assigns probability $0.91$ on average to the correct
+   class while $B$ assigns only $0.51$.
+    1. Compute the average cross-entropy loss each incurs on those
+       examples.
+    1. Explain why these averages are insufficient to decide which
+       classifier is safer: what must we know about their probabilities on
+       incorrect predictions, calibration by subgroup, and the costs of
+       their errors?
+    1. Construct a simple monotone rescaling of the scores (a temperature)
+       that sharpens $B$'s probabilities without changing any of its
+       $\arg\max$ decisions, and argue why its accuracy is therefore
+       unchanged.
+1. [code] **Top-$k$ accuracy.** Generalize `accuracy` to *top-$k$
+   accuracy*, which counts a prediction as correct when the true class is
+   among the $k$ highest-scoring classes.
+    1. Modify the four-line implementation to take a `k` argument. Hint:
+       replace the single `argmax` with the indices of the $k$ largest
+       scores.
+    1. For a problem with $k$ classes, calculate the value of the top-$k$
+       accuracy. Use this as a correctness check for the implementation
+       from the previous step.
+    1. Why is top-5 accuracy a standard companion to top-1 on benchmarks
+       with many fine-grained classes?
+1. [code] **Class-weighted loss.** In the disease-screening example,
+   suppose we care much more about missing a sick patient than about a
+   false alarm.
+    1. Modify the cross-entropy loss so that each class $j$ carries a
+       weight $w_j$, multiplying the loss of every example of true class
+       $j$; this is a one-line change to `loss`.
+    1. Show that this weighted loss is exactly the weighted empirical risk
+       minimization objective :eqref:`eq_weighted-empirical-risk-min` of
+       :numref:`sec_environment-and-distribution-shift` with weights
+       $\beta_i = w_{y_i}$, and explain why upweighting the rare class
+       shifts the learned decision boundary toward higher recall.
+    1. Give a second, data-side intervention with the same effect. Hint:
+       sampling.
+1. [code] **ROC curves.** A binary classifier's score can be thresholded at
+   any $\tau \in (0, 1)$, not just $\frac{1}{2}$: predict positive whenever
+   $\hat{y}_1 > \tau$. Sweep $\tau$ from $1$ down to $0$ for a classifier
+   of your choice, for instance a two-class subset of Fashion-MNIST, such
+   as sneaker versus sandal, once you have trained the model of
+   :numref:`sec_softmax_scratch`.
+    1. Compute the true-positive rate (recall) and the false-positive rate
+       at each $\tau$ and plot one against the other; this curve is called
+       the *receiver operating characteristic* (ROC).
+    1. What do the endpoints $\tau=1$ and $\tau=0$ correspond to?
+    1. Argue that a classifier whose scores are a random permutation of the
+       data traces the diagonal in expectation, and that the area under the
+       curve is therefore a threshold-free summary of ranking quality.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6808)

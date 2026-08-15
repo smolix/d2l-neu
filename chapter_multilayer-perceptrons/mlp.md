@@ -695,26 +695,67 @@ remains the sensible default for the models we build next.
 
 ## Exercises
 
-1. Show that adding layers to a *linear* deep network, i.e., a network without
-   nonlinearity $\sigma$ can never increase the expressive power of the network.
-   Give an example where it actively reduces it.
-1. Find weights for a two-hidden-unit ReLU network that computes XOR, and verify
-   them on the four inputs. (You may reuse the construction in
-   :numref:`fig_mdl-mlp-xor`, but try to derive your own first.) Can a *single*
-   ReLU unit compute XOR? Why or why not?
-1. Compute the derivative of the pReLU activation function.
-1. Compute the derivative of the Swish activation function $x \operatorname{sigmoid}(\beta x)$.
-1. Show that an MLP using only ReLU (or pReLU) constructs a
-   continuous piecewise linear function.
-1. Explain intuitively why composing ReLU layers can roughly *double* the number
-   of linear pieces the network represents with each added layer, so that depth
-   can yield exponentially many pieces, whereas width yields only linearly many. (This is
-   the depth-versus-width gap behind the universal-approximation caveat above.)
-1. Sigmoid and tanh are very similar.
+1. **Linear networks.** Show that adding layers to a *linear* deep network,
+   i.e., a network without nonlinearity $\sigma$, can never increase the
+   expressive power of the network. Give an example where it actively
+   reduces it.
+1. **XOR by hand.** Find weights for a two-hidden-unit ReLU network that
+   computes XOR, and verify them on the four inputs. (You may reuse the
+   construction in :numref:`fig_mdl-mlp-xor`, but try to derive your own
+   first.) Can a *single* ReLU unit compute XOR? Why or why not?
+1. **Activation derivatives.** Compute the derivative of each of the
+   following activation functions.
+    1. The pReLU activation function.
+    1. The Swish activation function $x \operatorname{sigmoid}(\beta x)$.
+1. **Piecewise linearity.** Show that an MLP using only ReLU (or pReLU)
+   constructs a continuous piecewise linear function.
+1. **Depth doubles the pieces.** Explain intuitively why composing ReLU
+   layers can roughly *double* the number of linear pieces the network
+   represents with each added layer, so that depth can yield exponentially
+   many pieces, whereas width yields only linearly many. (This is the
+   depth-versus-width gap behind the universal-approximation caveat above.)
+1. **Sigmoid and tanh.** Sigmoid and tanh are very similar.
     1. Show that $\operatorname{tanh}(x) + 1 = 2 \operatorname{sigmoid}(2x)$.
-    1. Prove that the function classes parametrized by both nonlinearities are identical. Hint: affine layers have bias terms, too.
-1. Assume that we have a nonlinearity that applies to one minibatch at a time, such as the batch normalization :cite:`Ioffe.Szegedy.2015` (covered in :numref:`sec_batch_norm`). What kinds of problems do you expect this to cause?
-1. Provide an example where the gradients vanish for the sigmoid activation function.
+    1. Prove that the function classes parametrized by both nonlinearities
+       are identical.
+1. **Batch-wise nonlinearities.** Consider a nonlinearity that applies
+   jointly across a minibatch, such as batch normalization
+   :cite:`Ioffe.Szegedy.2015` (covered in :numref:`sec_batch_norm`).
+   Identify two specific things that break when the same computation is
+   applied naively at inference time: one for a batch of size $1$, and one
+   mismatch between what training and prediction compute.
+1. [code] **Vanishing gradients.** The derivative of the sigmoid satisfies
+   $\sigma'(x) = \sigma(x)(1 - \sigma(x))$. It is *largest* at the origin,
+   where it equals $1/4$, and decays exponentially as $|x|$ grows.
+    1. Plot $\sigma'(x)$ over $[-10, 10]$ and report its value at
+       $x = \pm 10$. Explain why a single *saturated* unit, one operating
+       at large $|x|$, suffices to stall learning for all weights upstream
+       of it.
+    1. Saturation is not the only difficulty: even at the most favorable
+       point $x = 0$, each sigmoid layer scales the backward signal by at
+       most $1/4$. Compute the compounded factor for a chain of $20$ layers
+       operating at the origin, and compare it with the factor for the same
+       chain saturated at $|x| = 5$. State what the two numbers imply for
+       training deep sigmoid networks in either regime.
+1. **One hidden layer suffices.** ● The bump construction sketched in this
+   section localizes a function with two hidden layers: one layer builds
+   hinges, the next combines them into bumps. Show how to collapse this
+   into a *single* hidden layer for a two-input network, so that universal
+   approximation already holds with one hidden layer.
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap4.html),
+    Chapter 4.*
+1. **Folding, exactly.** ● Prove ReLU's non-negative homogeneity,
+   $\operatorname{ReLU}(\alpha z) = \alpha \operatorname{ReLU}(z)$ for
+   $\alpha > 0$. Then construct a one-dimensional example in which
+   composing a second ReLU layer visibly *folds* the graph of an existing
+   piecewise-linear function, turning the "roughly doubles" claim of the
+   earlier exercise into an exact statement for your example.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problems 3.5 and 4.8.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/90)

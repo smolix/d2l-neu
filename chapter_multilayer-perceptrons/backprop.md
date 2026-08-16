@@ -294,6 +294,7 @@ $\phi(z) = \max(0, z)$ and (for clarity) no regularization, $\lambda = 0$. Take
 $$\mathbf{x} = \begin{bmatrix} 1 \\ 2 \end{bmatrix},\quad
   \mathbf{W}^{(1)} = \begin{bmatrix} 1 & -1 \\ 0 & \phantom{-}1 \end{bmatrix},\quad
   \mathbf{W}^{(2)} = \begin{bmatrix} 2 & -1 \end{bmatrix},\quad y = 0,$$
+:eqlabel:`eq_backprop-example`
 
 and squared-error loss $L = \tfrac12 (o - y)^2$. The *forward pass* gives
 $\mathbf{z} = \mathbf{W}^{(1)}\mathbf{x} = [-1,\ 2]^\top$, so
@@ -472,20 +473,102 @@ and training requires significantly more memory than prediction.
 
 ## Exercises
 
-1. Assume that the inputs $\mathbf{X}$ to some scalar function $f$ are $n \times m$ matrices. What is the dimensionality of the gradient of $f$ with respect to $\mathbf{X}$?
-1. Add a bias to the hidden layer of the model described in this section (you do not need to include bias in the regularization term).
+1. **Gradient dimensionality.** Assume that the input $\mathbf{X}$ to some
+   scalar function $f$ is an $n \times m$ matrix. What is the dimensionality
+   of the gradient of $f$ with respect to $\mathbf{X}$?
+1. **Hidden-layer bias.** Add a bias to the hidden layer of the model
+   described in this section (you do not need to include the bias in the
+   regularization term).
     1. Draw the corresponding computational graph.
     1. Derive the forward and backward propagation equations.
-1. Compute the memory footprint for training and prediction in the model described in this section.
-1. Assume that you want to compute second derivatives. What happens to the computational graph? How long do you expect the calculation to take?
-1. Assume that the computational graph is too large for your GPU.
-    1. Can you partition it over more than one GPU?
-    1. What are the advantages and disadvantages over training on a smaller minibatch?
-1. Build a miniature autograd engine and use it to re-derive this section's worked example.
-    1. Write a scalar `Value` class that records, for each result, its inputs and the operation that produced it (the computational graph), supporting `+`, `*`, and `relu`. (*Hint:* implement `__add__` and `__mul__` so that each returns a new `Value` holding references to its parents and a small function that propagates the gradient one step.)
-    1. Implement `backward()`: topologically sort the graph, seed the output's gradient with $1$, and sweep the nodes in reverse order, letting each node pass its gradient to its parents. Make sure gradients *accumulate* (`+=`, not `=`) when a value is used more than once (the fork rule from :eqref:`eq_backprop-J-h`).
-    1. Reproduce the worked example with your engine (unroll the matrix products into scalars) and check all four gradients.
-    1. For a chain of three inputs feeding three outputs feeding one loss, the sum-over-paths view of the chain rule enumerates $3 \times 3 = 9$ paths, yet your engine touches each edge only once. Show that reverse mode computes $(\alpha+\beta+\gamma)(\delta+\epsilon+\zeta)$ instead of expanding all nine products, and explain why this factoring is exactly what makes backpropagation affordable.
+1. **Modified activation.** The first hidden unit of the network in
+   :eqref:`eq_backprop-example` receives the pre-activation $z_1 = -1$, so
+   the ReLU derivative $\phi'(z_1) = 0$ blocks the gradient of every weight
+   feeding this unit. Replace the activation of this unit alone by the leaky
+   variant $\phi(z) = \max(0, z) + 0.1 \min(0, z)$; the second unit keeps its
+   ReLU.
+    1. Which of the backward equations changes, and how must it be evaluated
+       when the hidden units use different activations?
+    1. Recompute $\partial L/\partial \mathbf{z}$ and
+       $\partial L/\partial \mathbf{W}^{(1)}$. Does the first unit still
+       block the gradient?
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap2.html),
+    Chapter 2, and Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 7.10.*
+1. **Memory footprint.** Count the values that must be stored to train the
+   model described in this section and to predict with it, in terms of the
+   input dimension $d$, the number of hidden units $h$, the output dimension
+   $q$, and the minibatch size $n$. Which terms dominate the difference
+   between training and prediction?
+1. **Second derivatives.** Assume that you want to compute second
+   derivatives. What happens to the computational graph? How long do you
+   expect the calculation to take?
+1. **Graph partitioning.** Assume that the computational graph is too large
+   for the memory of a single GPU.
+    1. Propose two different strategies for splitting training across two
+       GPUs. For each, state what every GPU stores and what the two GPUs
+       must communicate.
+    1. For each strategy, name one advantage and one disadvantage relative
+       to training on a single GPU with a smaller minibatch.
+1. [code] **Batched backprop.** This section's forward and backward equations
+   process one example $\mathbf{x}$ at a time.
+    1. Rewrite them to process a minibatch of $n$ examples, stored as the
+       columns of $\mathbf{X} \in \mathbb{R}^{d \times n}$, using matrix
+       operations only, with the loss averaged over the batch. Track the
+       shape of every intermediate quantity.
+    1. Implement the batched equations and verify that the resulting
+       gradients match the average of the $n$ per-example gradients computed
+       by automatic differentiation.
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap2.html),
+    Chapter 2.*
+1. **Forward mode.** Backpropagation seeds $\partial J/\partial J = 1$ at the
+   output and sweeps the graph backward. Forward-mode differentiation instead
+   seeds $\partial w/\partial w = 1$ at one chosen scalar parameter $w$ and
+   sweeps forward: each node computes the derivative of its value with
+   respect to $w$ from the derivatives of its inputs.
+    1. Use forward mode to recompute $\partial L/\partial \mathbf{W}^{(1)}$
+       for the network in :eqref:`eq_backprop-example`, one sweep per entry
+       of $\mathbf{W}^{(1)}$.
+    1. How many sweeps does each mode need to obtain all six parameter
+       gradients of this network?
+    1. Explain why reverse mode is preferred whenever there are many
+       parameters and a single scalar loss, and describe a setting in which
+       forward mode is the better choice.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problems 7.12 and 7.13.*
+1. [extended] **Autograd engine.** ● Build a miniature autograd engine and
+   use it to re-derive the gradients of the network in
+   :eqref:`eq_backprop-example`.
+    1. Write a scalar `Value` class that records, for each result, its
+       inputs and the operation that produced it (the computational graph),
+       supporting `+`, `*`, and `relu`. (*Hint:* implement `__add__` and
+       `__mul__` so that each returns a new `Value` holding references to
+       its parents and a small function that propagates the gradient one
+       step.)
+    1. Implement `backward()`: topologically sort the graph, seed the
+       output's gradient with $1$, and sweep the nodes in reverse order,
+       letting each node pass its gradient to its parents. Make sure
+       gradients *accumulate* (`+=`, not `=`) when a value is used more than
+       once (the fork rule from :eqref:`eq_backprop-J-h`).
+    1. Reproduce the calculation for :eqref:`eq_backprop-example` with your
+       engine (unroll the matrix products into scalars) and check all four
+       gradients.
+    1. Consider the chain in which the input $x$ produces $y_i = f_i(x)$ for
+       $i = 1, 2, 3$, the intermediate value $u = y_1 + y_2 + y_3$, the
+       values $z_k = g_k(u)$ for $k = 1, 2, 3$, and the loss
+       $L = z_1 + z_2 + z_3$. Write $a_i = f_i'(x)$ and $b_k = g_k'(u)$. The
+       sum-over-paths view of the chain rule enumerates $3 \times 3 = 9$
+       paths from $x$ to $L$, each contributing the product $a_i b_k$. Show
+       that your engine instead computes $(a_1 + a_2 + a_3)(b_1 + b_2 + b_3)$
+       by accumulating the gradient at $u$ once, and explain why this
+       sharing is what makes backpropagation affordable in deep networks.
 
 [Discussions](https://d2l.discourse.group/t/102)
 

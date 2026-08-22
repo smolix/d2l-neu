@@ -146,6 +146,7 @@ phenomena; the appendix proves the model-wise case, and the exercises below
 let you produce the epoch-wise one yourself.
 
 ## Inspiration from Nonparametrics
+:label:`subsec_nonparametrics`
 
 Approaching deep learning for the first time,
 it is tempting to think of deep networks as parametric models.
@@ -229,6 +230,7 @@ in understanding the behavior of over-parametrized deep networks.
 
 
 ## Early Stopping
+:label:`subsec_early_stopping`
 
 While deep neural networks are capable of fitting arbitrary labels,
 even when labels are assigned incorrectly or randomly
@@ -308,6 +310,7 @@ even if the theoretical rationale
 for their efficacy may be radically different.
 
 ### Implicit Regularization
+:label:`subsec_implicit_regularization`
 
 A learning algorithm imposes an *implicit bias*: among many interpolating
 parameters, its initialization and update rule make some solutions more likely
@@ -381,13 +384,89 @@ remains an active research problem.
 
 ## Exercises
 
-1. In what sense do traditional complexity-based measures fail to account for generalization of deep neural networks?
-1. Why might *early stopping* be considered a regularization technique?
-1. How do researchers typically determine the stopping criterion?
-1. What important factor seems to differentiate cases when early stopping leads to big improvements in generalization?
-1. Beyond generalization, describe another benefit of early stopping.
-1. *Epoch-wise double descent.* Take the MLP of :numref:`sec_mlp-implementation` on Fashion-MNIST, randomly relabel 15% of the training examples, and train far past convergence (several hundred epochs), recording test error after every epoch. Plot test error against the epoch count on a log axis. Do you observe a second descent after the initial overfitting rise? How does the curve change with the label-noise fraction, and how does the epoch of the peak relate to when the model starts fitting the noisy labels? What does this imply for choosing an early-stopping patience?
-1. (*) *Grokking.* Reproduce the setup of :citet:`Power.Burda.Edwards.ea.2022`: train a small network (they use a two-layer transformer, but a wide MLP on one-hot pairs also works) to predict $c = (a + b) \bmod 97$ from the pair $(a, b)$, using a random 50% of all pairs for training, with weight decay, for $10^5$ or more steps. Plot training and validation accuracy against the logarithm of the step count, and compare with :numref:`fig_grokking`. How does the delay before generalization change with the training fraction and with the weight-decay strength?
+1. **Limits of complexity measures.** In what sense do traditional
+   complexity-based generalization bounds fail to account for the
+   generalization of deep neural networks?
+1. **Early stopping.** Consider the early-stopping rule described in
+   :numref:`subsec_early_stopping`.
+    1. Why can early stopping be considered a regularization technique?
+    1. Which property of the training data does
+       :numref:`subsec_early_stopping` identify as the factor that
+       determines when early stopping yields large gains in generalization?
+    1. Describe one benefit of early stopping beyond improved
+       generalization.
+1. [code] **Patience-based stopping.** Implement a patience rule for the
+   Fashion-MNIST MLP of :numref:`sec_mlp-implementation`: after every epoch,
+   record the validation loss, and stop training once it has failed to
+   improve by more than a margin $\epsilon$ for $n$ consecutive epochs.
+   Choose $n$ and $\epsilon$ explicitly, train on a schedule long enough to
+   overfit, and report the epoch at which the rule stops relative to the
+   epoch of the best validation loss.
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap3.html),
+    Chapter 3.*
+1. [code] **Interpolation threshold.** The one-hidden-layer MLP of
+   :numref:`sec_mlp-implementation` has $795h + 10$ parameters for $h$
+   hidden units.
+    1. Solve for the width $h^\star$ at which the parameter count equals
+       the 60,000 training examples of Fashion-MNIST.
+    1. Train three models, at widths near $h^\star/4$, $h^\star$, and
+       $4h^\star$, long enough to approach zero training error where
+       possible, and plot test error against width. Is the test error
+       non-monotonic near $h^\star$?
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 8.4.*
+1. **Conflicting labels.** Suppose the training set contains two examples
+   with identical pixels but different labels, and consider an MLP with
+   enough capacity to drive the training loss of every other example to
+   zero.
+    1. What prediction on the duplicated input minimizes the training
+       cross-entropy? Can the training loss reach zero?
+    1. Propose one concrete change, to the loss, the architecture, or the
+       training procedure, that handles such conflicting examples more
+       sensibly than pursuing zero training loss.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 8.5.*
+1. **Implicit bias.** ● :numref:`subsec_implicit_regularization` states that
+   for linearly separable data, gradient descent on the logistic loss
+   converges in direction to the $\ell_2$ maximum-margin separator
+   :cite:`Soudry.Hoffer.Nacson.ea.2018`, and notes that this theorem
+   concerns a linear predictor. Give one concrete reason the proof technique
+   does not extend directly to a two-layer ReLU network.
+1. [code] **Neural tangent kernel.** :numref:`subsec_nonparametrics`
+   describes the neural-tangent-kernel limit: as the hidden width grows, the
+   training dynamics of a randomly initialized MLP approach those of a fixed
+   kernel method. Test one consequence of this picture: train the
+   Fashion-MNIST MLP at widths 32, 256, and 2048, holding every other
+   hyperparameter fixed, and record the training-loss curves against the
+   step count. Do the curves of the two widest models resemble each other
+   more than those of the two narrowest? State the measure of similarity you
+   use.
+1. [extended] **Epoch-wise double descent.** ● Take the MLP of
+   :numref:`sec_mlp-implementation` on Fashion-MNIST, randomly relabel 15%
+   of the training examples, and train far past convergence (several hundred
+   epochs), recording test error after every epoch. Plot test error against
+   the epoch count on a log axis.
+    1. Do you observe a second descent after the initial overfitting rise?
+    1. How does the curve change with the label-noise fraction?
+    1. How does the epoch of the peak relate to the point at which the model
+       starts fitting the noisy labels?
+    1. What do these observations imply for choosing an early-stopping
+       patience?
+1. [extended] **Grokking.** ●● Reproduce the setup of
+   :citet:`Power.Burda.Edwards.ea.2022`: train a small network (they use a
+   two-layer transformer, but a wide MLP on one-hot pairs also works) to
+   predict $c = (a + b) \bmod 97$ from the pair $(a, b)$, using a random 50%
+   of all pairs for training, with weight decay, for $10^5$ or more steps.
+   Plot training and validation accuracy against the logarithm of the step
+   count, and compare with :numref:`fig_grokking`. How does the delay before
+   generalization change with the training fraction and with the
+   weight-decay strength?
 
 [Discussions](https://d2l.discourse.group/t/7473)
 

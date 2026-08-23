@@ -537,14 +537,69 @@ methods.
 
 ## Exercises
 
-1. What happens if you change the dropout probabilities for the first and second layers? In particular, what happens if you switch the ones for both layers? Design an experiment to answer these questions, describe your results quantitatively, and summarize the qualitative takeaways.
-1. Train the same architecture without dropout for the same number of epochs. Plot the train and test loss curves for both runs on the same axes. How wide is the train/test gap with and without dropout?
-1. What is the variance of the activations in each hidden layer when dropout is and is not applied? Draw a plot to show how this quantity evolves over time for both models.
-1. Why is dropout not typically used at test time?
-1. *Monte Carlo dropout.* At test time, instead of disabling dropout, keep it on and run $T = 20$ forward passes per example, then average the softmax outputs. Compare the resulting accuracy and the calibration (predicted confidence versus actual accuracy) against the standard single-pass evaluation. How does this procedure relate to ensemble methods? (See :citet:`Gal.Ghahramani.2016`.)
-1. Using the model in this section as an example, compare the effects of using dropout and weight decay. What happens when dropout and weight decay are used at the same time? Are the results additive? Are there diminished returns (or worse)? Do they cancel each other out?
-1. What happens if we apply dropout to the individual weights of the weight matrix rather than the activations? (This variant is known as *DropConnect* :cite:`Wan.Zeiler.Zhang.LeCun.Fung.2013`.) Implement it and compare it against standard dropout on Fashion-MNIST, holding the architecture and training budget fixed.
-1. Invent another technique for injecting random noise at each layer that differs from both dropout and DropConnect, for example adding Gaussian noise to the activations. For a fixed architecture and training budget, can you develop a method that matches or outperforms dropout on Fashion-MNIST?
+1. [code] **Swapping dropout rates.** This section's model drops first-layer
+   activations with probability 0.2 and second-layer activations with
+   probability 0.5. Change these probabilities; in particular, swap them.
+1. [code] **Train/test gap.** Train the same architecture without dropout
+   for the same number of epochs. Plot the train and test loss curves for
+   both runs on the same axes. How wide is the train/test gap with and
+   without dropout?
+1. [code] **Activation variance.** What is the variance of the activations
+   in each hidden layer when dropout is and is not applied? Plot how this
+   quantity evolves over training for both models.
+1. **Dropout at test time.** Why is dropout typically not used at test
+   time?
+1. **Ensemble size.** A hidden layer with $n$ units admits $2^n$ distinct
+   dropout masks.
+    1. How many distinct masks exist across this section's two hidden
+       layers of 256 units each? What is the expected number of retained
+       units per layer under the rates 0.2 and 0.5?
+    1. The ensemble interpretation views each mask as a subnetwork. Explain
+       why the number of masks does not mean that each subnetwork is
+       trained to convergence independently.
+1. [code] **Monte Carlo dropout.** At test time, instead of disabling
+   dropout, keep it on and run $T = 20$ forward passes per example, then
+   average the softmax outputs :cite:`Gal.Ghahramani.2016`. Compare the
+   resulting accuracy and the calibration (predicted confidence versus
+   actual accuracy) against the standard single-pass evaluation. How does
+   this procedure relate to ensemble methods?
+1. [code] **Dropout and weight decay.** Using the model in this section as
+   an example, compare the two regularizers.
+    1. Measure the effects of dropout and of weight decay separately on the
+       generalization performance and the gap between training and test
+       error.
+    1. What happens when both are used at the same time? Are the effects
+       additive, are there diminishing returns, or do they cancel each
+       other out?
+1. [code] **Input dropout.** This section applies dropout only to
+   hidden-layer activations. Add dropout on the input features, before the
+   first linear layer, at a small rate such as $p = 0.1$, keeping the
+   hidden-layer rates unchanged, and compare validation accuracy against
+   the original configuration. Relate the outcome to the redundancy among
+   neighboring pixels.
+1. [code] **DropConnect.** What happens if we apply dropout to the
+   individual weights of the weight matrix rather than to the activations?
+   This variant is known as *DropConnect*
+   :cite:`Wan.Zeiler.Zhang.LeCun.Fung.2013`. Implement it and compare it
+   against standard dropout on Fashion-MNIST, holding the architecture and
+   training budget fixed.
+1. [code] **Visualizing co-adaptation.** Train the dropout model and a
+   no-dropout model of the same architecture, then visualize each
+   first-layer unit's incoming weight vector as a $28 \times 28$ image.
+   Compare at least 16 units side by side for each model. Do the weights
+   trained without dropout look noisier, or more redundant with one
+   another, than the dropout-trained ones?
+
+    *Adapted from Nitish Srivastava et al.,
+    [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](https://jmlr.org/papers/v15/srivastava14a.html),
+    JMLR 2014, Figure 9.*
+1. [code] **Designing a noise injection.** Invent a technique for injecting
+   random noise during training that differs from both dropout and
+   DropConnect, for example additive Gaussian noise on the activations, or
+   randomly rescaling rather than zeroing each unit's output. State the
+   randomization rule and any rescaling needed to preserve the expectation
+   of each activation, implement the method, and train it on Fashion-MNIST
+   with the same architecture and epoch budget as this section's model.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/100)

@@ -542,6 +542,7 @@ Substantial overfitting may indicate that stronger regularization could
 help.
 
 ##  Submitting Predictions on Kaggle
+:label:`subsec_kaggle_submission`
 
 After selecting hyperparameters by cross-validation, we average the
 predictions of the $K$ models on the test set.
@@ -669,13 +670,75 @@ fine-tuning of pretrained models.
 
 ## Exercises
 
-1. Submit your predictions for this section to Kaggle. How good are they?
-1. Is it always a good idea to replace missing values by a mean? Hint: can you construct a situation where the values are not missing at random?
-1. Improve the score by tuning the hyperparameters through $K$-fold cross-validation.
-1. Improve the score by improving the model (e.g., layers, weight decay, and dropout).
-1. What happens if we do not standardize the continuous numerical features as we have done in this section?
-1. Swap the linear model for a gradient-boosted tree model (for example scikit-learn's `GradientBoostingRegressor`, or XGBoost or LightGBM if installed), trained on the same preprocessed features. How does its cross-validated log-RMSE compare? Why might tree ensembles have an edge on data like this?
-1. Revisit the preprocessing choices. How does median imputation compare to mean imputation? What changes if you encode high-cardinality categorical features with target encoding or a learned embedding instead of one-hot vectors? Target encoding uses labels, so implement it out of fold: for each training row, its encoded value must be computed without that row or its validation fold.
+1. [code] **Kaggle submission.** Submit your predictions for this section to
+   Kaggle. Where does your score place on the leaderboard?
+1. **Mean imputation.** Is it always a good idea to replace missing values
+   by the mean of the observed ones?
+    1. Construct a concrete example of a feature in this dataset whose
+       missingness is not random with respect to the sale price.
+    1. Explain what bias mean imputation introduces for that feature, and
+       in which direction it shifts the predictions for the affected
+       houses.
+1. [code] **Hyperparameter tuning.** Improve the score by tuning the
+   hyperparameters through $K$-fold cross-validation.
+1. [code] **Model improvements.** Improve the score by improving the model,
+   for example through additional layers, weight decay, or dropout.
+1. [code] **Skipping standardization.** What happens if we do not
+   standardize the continuous numerical features as we have done in this
+   section?
+1. [code] **Gradient-boosted trees.** Swap the linear model for a
+   gradient-boosted tree model (for example scikit-learn's
+   `GradientBoostingRegressor`, or XGBoost or LightGBM if installed),
+   trained on the same preprocessed features. How does its cross-validated
+   log-RMSE compare? Why might tree ensembles have an edge on data like
+   this?
+1. [code] **Preprocessing choices.** Revisit the preprocessing pipeline of
+   this section.
+    1. How does median imputation compare with mean imputation?
+    1. Among the categorical columns, find the one with the highest
+       cardinality. How many columns does it contribute to the feature
+       matrix under one-hot encoding?
+    1. *Target encoding* replaces each category by the mean label of the
+       training rows in that category, contributing a single column.
+       Encode the high-cardinality columns this way, or with a learned
+       embedding, instead of one-hot vectors, and compare the
+       cross-validated log-RMSE. Because target encoding uses the labels,
+       implement it out of fold: for each training row, compute its
+       encoded value without using that row or its validation fold.
+
+    *Adapted from Kaggle Learn,
+    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
+    Exercise 3.*
+1. [code] **Target leakage.** A feature that is recorded only after, or
+   because of, the event being predicted inflates validation scores without
+   helping a deployed model.
+    1. Identify at least one raw feature in this dataset that could
+       plausibly be filled in only after the sale, and explain why
+       cross-validation does not catch the problem.
+    1. Verify the mechanism empirically: add a synthetic feature equal to
+       the log sale price plus small Gaussian noise, rerun the $K$-fold
+       cross-validation, and report the change in log-RMSE.
+
+    *Adapted from Kaggle Learn,
+    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
+    Exercise 7.*
+1. [code] **Fold ensembling versus refitting.**
+   :numref:`subsec_kaggle_submission` describes two ways of producing a
+   final model after cross-validation: averaging the $K$ fold models'
+   predictions, or refitting one model on the complete training set with
+   the selected hyperparameters. Compare them empirically: sweep at least
+   five values of the hidden-unit count, select the best by cross-validated
+   log-RMSE, produce a submission with each procedure, and report both
+   leaderboard scores. Explain why the training error of the refit model is
+   not a substitute for the cross-validated estimate.
+1. **Geometric averaging.** :numref:`subsec_kaggle_submission` averages the
+   $K$ fold models' log-price predictions before exponentiating and notes
+   that this amounts to a geometric mean in price space.
+    1. Show algebraically that this differs from exponentiating each fold's
+       prediction first and averaging in price space, and determine which
+       of the two is always smaller.
+    1. Which of the two procedures matches what the root-mean-squared log
+       error penalizes?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/106)

@@ -453,6 +453,7 @@ in transformer codebases, adjust what happens in the distribution's tails,
 across depth, and at a block's start.
 
 ### Truncated Normals
+:label:`subsec_truncated_normals`
 
 A Gaussian gets the variance right, but its tails are unbounded. That is
 harmless for one draw, while at scale a far-tail value is a near-certainty:
@@ -1109,22 +1110,70 @@ subclass with a few lines of array code in its `_init_weight`.
 
 ## Exercises
 
-1. Instrument the residual stack: record the standard deviation of the
-   activation after every block (run the stack one block at a time, or
-   capture per-block activations with the tools of :numref:`sec_repro`)
-   for the default and scaled treatments at $N=32$, and plot it against
-   depth. Which curve matches the geometric-growth prediction?
-1. Zero-initialize *all* layers of every block instead of just the output
-   projection. The forward pass still returns the input, but what can the
-   network learn? Work out which parameters receive a nonzero gradient, and
-   relate the answer to the symmetry-breaking argument of
-   :numref:`sec_numerical_stability`.
-1. Write an initializer that fills each parameter from a dictionary keyed by
-   parameter name (walk `net.named_parameters()` in PyTorch, `net.weights`
-   in TensorFlow, `nnx.iter_modules(net)` in JAX, `net.collect_params()`
-   in MXNet). You have re-invented part of checkpoint loading,
+1. [code] **Layer activations across the network.** Instrument the residual
+   stack: record the standard deviation of the activation after every block
+   (run the stack one block at a time, or capture per-block activations with
+   the tools of :numref:`sec_repro`) for the default and scaled treatments
+   at $N=32$, and plot it against depth. Which curve matches the
+   geometric-growth prediction?
+1. **Zero initialization.** Zero-initialize *all* layers of every block
+   instead of just the output projection. The forward pass still returns the
+   input, but what can the network learn? Work out which parameters receive
+   a nonzero gradient, and relate the answer to the symmetry-breaking
+   argument of :numref:`sec_numerical_stability`.
+
+:begin_tab:`pytorch`
+3. [code] **Name-keyed initializer.** Write an initializer that fills each
+   parameter from a dictionary keyed by parameter name, walking
+   `net.named_parameters()`. You have re-invented part of checkpoint
+   loading, which :numref:`sec_read_write` covers.
+:end_tab:
+
+:begin_tab:`jax`
+3. [code] **Name-keyed initializer.** Write an initializer that fills each
+   parameter from a dictionary keyed by parameter name, walking
+   `nnx.iter_modules(net)`. You have re-invented part of checkpoint
+   loading, which :numref:`sec_read_write` covers.
+:end_tab:
+
+:begin_tab:`tensorflow`
+3. [code] **Name-keyed initializer.** Write an initializer that fills each
+   parameter from a dictionary keyed by parameter name, walking
+   `net.weights`. You have re-invented part of checkpoint loading, which
+   :numref:`sec_read_write` covers.
+:end_tab:
+
+:begin_tab:`mxnet`
+3. [code] **Name-keyed initializer.** Write an initializer that fills each
+   parameter from a dictionary keyed by parameter name, walking
+   `net.collect_params()`. You have re-invented part of checkpoint loading,
    which :numref:`sec_read_write` covers.
-1. For a normal distribution truncated at $\pm 2\sigma$: what fraction of
-   draws does the clip discard, and by how much does it shrink the standard
-   deviation? Verify both numbers against the printed output of the truncation
-   demo above.
+:end_tab:
+
+4. **Truncated normal.** For a normal distribution truncated at
+   $\pm 2\sigma$: what fraction of draws does the clip discard, and by how
+   much does it shrink the standard deviation? Neither quantity has an
+   elementary closed form; express both in terms of the standard normal
+   density and distribution function and evaluate them using tabulated
+   values. Verify both numbers against the printed output of the demo in
+   :numref:`subsec_truncated_normals`.
+1. [code] **Kaiming initialization.** Implement the Kaiming (He)
+   initializers of :numref:`subsec_he_init`, uniform and normal, with an
+   explicit `nonlinearity` argument that switches the gain between `'relu'`
+   and `'linear'`. Apply them to the residual stack in place of the default
+   scheme and reproduce the depth-versus-standard-deviation plot of the
+   first exercise. Do they keep the standard deviation flat?
+
+    *Adapted from CMU 10-714, [Homework 2](https://github.com/dlsyscourse/hw2)
+    and [Homework 4](https://github.com/dlsyscourse/hw4).*
+1. [code] **Data-driven calibration.** Initialize the residual stack with
+   any convenient scheme, then calibrate it block by block from the input:
+   run a mini-batch forward to the current block, rescale that block's
+   weights by the reciprocal of its measured output standard deviation, and
+   only then move to the next block. This is a one-pass variant of the
+   layer-sequential unit-variance initialization of
+   :citet:`Mishkin.Matas.2016`.
+    1. Explain why the blocks must be calibrated in order rather than all
+       at once from a single forward pass.
+    1. Compare the resulting depth-versus-standard-deviation curve with the
+       analytic scaled scheme of this section.

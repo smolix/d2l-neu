@@ -386,6 +386,7 @@ because all of its state happens to be trainable. That is not always so.
 :end_tab:
 
 ## Parameters and Buffers
+:label:`subsec_params_buffers`
 
 Some tensors must persist inside a model and follow it from device to device,
 yet should never receive a gradient. The canonical example is batch
@@ -1658,54 +1659,94 @@ not stop running-statistics updates in training mode.
 
 ## Exercises
 
-1. Write a helper that reports the byte cost of fp32 Adam training separately
-   for each top-level block of `net`. Which block
-   dominates, and would that still hold if the residual blocks were 10 times
-   wider?
-1. BatchNorm's running mean and variance are non-trained state. Suppose you
-   made them trainable parameters so that the optimizer updates them. What
-   goes wrong during training, and why does gradient descent on a running
-   average not compute the same thing as the forward-pass update rule it
-   replaces?
+1. [code] **Memory footprint.** Write a helper that reports the byte cost of
+   fp32 Adam training separately for each top-level block of `net`.
+    1. Which block dominates? Would that still hold if the residual blocks
+       were 10 times wider?
+    1. Extend the helper to also report each block's share of the total
+       parameter *count*. Find a block whose rank by count differs from its
+       rank by bytes, and explain the discrepancy from its mix of
+       parameters, buffers, and optimizer state.
+1. **Trainable running statistics.** BatchNorm's running mean and variance
+   are non-trained state. Suppose you made them trainable parameters so that
+   the optimizer updates them. What goes wrong during training, and why does
+   gradient descent on a running average not compute the same thing as the
+   forward-pass update rule it replaces?
 
 :begin_tab:`pytorch`
-3. Tie two layers as in `TinyLM`, then copy the model with
-   `copy.deepcopy`. Is the copy still tied? Check with `is`, and explain how a
-   copy operation can preserve aliasing.
-4. Freeze `lm.emb.weight` in the tied `TinyLM` but leave `lm.head` alone. How
-   many trainable parameters remain? Explain what this teaches about the
-   interaction between tying and freezing.
+3. [code] **Tied Parameters.** Tie two layers as in `TinyLM`, then copy the
+   model with `copy.deepcopy`. Is the copy still tied? Check with `is`, and
+   explain how a copy operation can preserve aliasing.
+4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
+   section.
+    1. Freeze `lm.emb.weight` but leave `lm.head` alone. How many trainable
+       parameters remain? Explain what this teaches about the interaction
+       between tying and freezing.
+    1. Extend `TinyLM` so that the input embedding, a middle projection, and
+       the output head all share one tensor. Measure the parameter-count
+       reduction relative to the untied model.
+    1. Freeze only the shared tensor and verify, by inspecting gradients,
+       that no path feeds it a gradient.
 :end_tab:
 
 :begin_tab:`jax`
-3. Round-trip the tied model's `nnx.state(lm)` through serialization
-   (:numref:`sec_read_write`) and reload it. Where, if anywhere, is the
-   tying recorded? Explain why tying in NNX is a property of the module code
-   rather than of the checkpoint.
-4. In the tied `TinyLM`, try to freeze the embedding while training the head
-   using `optax.multi_transform` labels. What choices do you have, and what
-   does this teach about the interaction between tying and freezing?
+3. [code] **Tied Parameters.** Round-trip the tied model's `nnx.state(lm)`
+   through serialization (:numref:`sec_read_write`) and reload it. Where, if
+   anywhere, is the tying recorded? Explain why tying in NNX is a property
+   of the module code rather than of the checkpoint.
+4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
+   section.
+    1. Try to freeze the embedding while training the head using
+       `optax.multi_transform` labels. What choices do you have, and what
+       does this teach about the interaction between tying and freezing?
+    1. Extend `TinyLM` so that the input embedding, a middle projection, and
+       the output head all share one tensor. Measure the parameter-count
+       reduction relative to the untied model.
+    1. Freeze only the shared tensor and verify, by inspecting gradients,
+       that no path feeds it a gradient.
 :end_tab:
 
 :begin_tab:`tensorflow`
-3. Round-trip the tied model's weights through `get_weights` and
-   `set_weights` (or a checkpoint, :numref:`sec_read_write`) into a second
-   tied instance, then into an untied one. Where, if anywhere, is the tying
-   recorded? Explain why tying in Keras is a property of the layer code
-   rather than of the checkpoint.
-4. In the tied `TinyLM`, set `lm.emb.trainable = False` but leave `lm.head`
-   alone. How many trainable parameters remain, and can the head still
-   adapt? Explain what this teaches about the interaction between tying and
-   freezing.
+3. [code] **Tied Parameters.** Round-trip the tied model's weights through
+   `get_weights` and `set_weights` (or a checkpoint,
+   :numref:`sec_read_write`) into a second tied instance, then into an
+   untied one. Where, if anywhere, is the tying recorded? Explain why tying
+   in Keras is a property of the layer code rather than of the checkpoint.
+4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
+   section.
+    1. Set `lm.emb.trainable = False` but leave `lm.head` alone. How many
+       trainable parameters remain, and can the head still adapt? Explain
+       what this teaches about the interaction between tying and freezing.
+    1. Extend `TinyLM` so that the input embedding, a middle projection, and
+       the output head all share one tensor. Measure the parameter-count
+       reduction relative to the untied model.
+    1. Freeze only the shared tensor and verify, by inspecting gradients,
+       that no path feeds it a gradient.
 :end_tab:
 
 :begin_tab:`mxnet`
-3. Round-trip the tied model through `save_parameters` and `load_parameters`
-   (:numref:`sec_read_write`), once with `deduplicate=False` and once with
-   `deduplicate=True`. Compare the file sizes, and check which of the two
-   files loads into the untied twin. Where, if anywhere, is the tying
-   recorded?
-4. In the tied `TinyLM`, set `lm.emb.weight.grad_req = 'null'`. What happened
-   to the head, and how many trainable parameters remain? Explain what this
-   teaches about the interaction between tying and freezing.
+3. [code] **Tied Parameters.** Round-trip the tied model through
+   `save_parameters` and `load_parameters` (:numref:`sec_read_write`), once
+   with `deduplicate=False` and once with `deduplicate=True`. Compare the
+   file sizes, and check which of the two files loads into the untied twin.
+   Where, if anywhere, is the tying recorded?
+4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
+   section.
+    1. Set `lm.emb.weight.grad_req = 'null'`. What happened to the head, and
+       how many trainable parameters remain? Explain what this teaches about
+       the interaction between tying and freezing.
+    1. Extend `TinyLM` so that the input embedding, a middle projection, and
+       the output head all share one tensor. Measure the parameter-count
+       reduction relative to the untied model.
+    1. Freeze only the shared tensor and verify, by inspecting gradients,
+       that no path feeds it a gradient.
 :end_tab:
+
+5. **State census.** :numref:`subsec_params_buffers` distinguishes trained
+   parameters from non-trained buffers within a model's state.
+    1. State a one-line rule that classifies every entry of the full model
+       state as one or the other, and verify it against the state listing of
+       this section.
+    1. Predict how many entries change during a single inference-mode
+       forward pass with no backward call. Check your prediction by
+       comparing the state before and after the pass.

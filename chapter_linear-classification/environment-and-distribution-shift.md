@@ -673,12 +673,58 @@ on another, so evaluation should represent the deployment shifts of interest.
 
 ## Exercises
 
-1. If you change the behavior of a search engine, how might users respond? How might advertisers respond? Explain why this is an instance of the feedback loop described for the loan/footwear example at the start of the section.
-1. Starting from the risk under the target distribution $p(\mathbf{x}, y)$, derive the covariate-shift reweighting identity :eqref:`eq_covariate-shift-identity` (whose sample version is the weighted objective :eqref:`eq_weighted-empirical-risk-min`), and state precisely the assumption on the supports of $p(\mathbf{x})$ and $q(\mathbf{x})$ under which the importance weights $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$ are finite.
-1. Implement a covariate shift detector. Take any labeled dataset and create a shifted copy of the features (e.g., add Gaussian noise, or subsample by thresholding one feature). Train a logistic-regression classifier to distinguish "original" from "shifted" inputs and report its accuracy. Relate the accuracy to how detectable the shift is, and to the classifier-as-shift-detector idea in :numref:`subsec_covariate-shift-correction`. *Hint: if the classifier cannot beat chance, the two distributions are indistinguishable from these features.*
-1. Implement a covariate shift corrector. Using the classifier from the previous exercise, compute weights $\beta_i=\exp(h(\mathbf{x}_i))$, retrain your downstream model with weighted empirical risk minimization :eqref:`eq_weighted-empirical-risk-min`, and compare its target-domain accuracy with and without reweighting. What happens to the variance of the $\beta_i$ as the shift grows, and how does clipping $\beta_i\leftarrow\min(\beta_i,c)$ help?
-1. You have a $k$-class classifier and its validation confusion matrix $\mathbf{C}$. Show that the linear system $\mathbf{C}\, p(\mathbf{y})=\mu(\hat{\mathbf{y}})$ follows from the law of total probability under the label-shift assumption, and explain why $\mathbf{C}$ must be invertible for the estimate $p(\mathbf{y})=\mathbf{C}^{-1}\mu(\hat{\mathbf{y}})$ to be usable.
-1. Besides distribution shift, what else could make the empirical risk a poor approximation of the risk? *Hint: think about dependence between examples, and about the loss not matching the deployment objective.*
+1. **Feedback loops.** If you change the behavior of a search engine, how
+   might users respond? How might advertisers respond? Explain why this is
+   an instance of the feedback loop described for the loan/footwear example
+   at the start of the section.
+1. **Covariate-shift identity.** Starting from the risk under the target
+   distribution $p(\mathbf{x}, y)$, derive the covariate-shift reweighting
+   identity :eqref:`eq_covariate-shift-identity` (whose sample version is
+   the weighted objective :eqref:`eq_weighted-empirical-risk-min`), and
+   state precisely the assumption on the supports of $p(\mathbf{x})$ and
+   $q(\mathbf{x})$ under which the importance weights
+   $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$ are finite.
+1. [code] **Shift detector.** Implement a covariate shift detector. Take
+   any labeled dataset and create a shifted copy of the features (e.g., add
+   Gaussian noise, or subsample by thresholding one feature). Train a
+   logistic-regression classifier to distinguish "original" from "shifted"
+   inputs and report its accuracy. Relate the accuracy to how detectable
+   the shift is, and to the classifier-as-shift-detector idea in
+   :numref:`subsec_covariate-shift-correction`. Hint: if the classifier
+   cannot beat chance, the two distributions are indistinguishable from
+   these features.
+1. [code] **Shift corrector.** Implement a covariate shift corrector. Using
+   the classifier from the previous exercise, compute weights
+   $\beta_i=\exp(h(\mathbf{x}_i))$, retrain your downstream model with
+   weighted empirical risk minimization
+   :eqref:`eq_weighted-empirical-risk-min`, and compare its target-domain
+   accuracy with and without reweighting. What happens to the variance of
+   the $\beta_i$ as the shift grows, and how does clipping
+   $\beta_i\leftarrow\min(\beta_i,c)$ help?
+1. **Label-shift linear system.** You have a $k$-class classifier and its
+   validation confusion matrix $\mathbf{C}$. Show that the linear system
+   $\mathbf{C}\, p(\mathbf{y})=\mu(\hat{\mathbf{y}})$ follows from the law
+   of total probability under the label-shift assumption, and explain why
+   $\mathbf{C}$ must be invertible for the estimate
+   $p(\mathbf{y})=\mathbf{C}^{-1}\mu(\hat{\mathbf{y}})$ to be usable.
+1. **Beyond distribution shift.** Besides distribution shift, what else
+   could make the empirical risk a poor approximation of the risk?
+1. **Features missing at serving time.** A model predicts daily revenue
+   using "number of customers so far today" as a feature and performs well
+   in offline evaluation. Identify why this feature cannot be used for real
+   predictions, name the general failure mode, and propose a training-time
+   fix that avoids it.
+
+    *Adapted from Google's Machine Learning Crash Course,
+    ["Monitoring pipelines"](https://developers.google.com/machine-learning/crash-course/production-ml-systems/monitoring).*
+1. [extended] **Real-world shifts.** The WILDS benchmark cited in this
+   section's summary catalogs distribution shifts collected in the wild.
+   Pick two of its tasks, for example a hospital-to-hospital or a
+   camera-trap-to-camera-trap shift, and classify each as closer to
+   covariate shift, label shift, or neither, justifying your classification
+   from how the data were collected. If you can download one of the smaller
+   WILDS datasets, train a linear baseline and report its in-distribution
+   versus out-of-distribution accuracy gap.
 
 
 [Discussions](https://d2l.discourse.group/t/105)

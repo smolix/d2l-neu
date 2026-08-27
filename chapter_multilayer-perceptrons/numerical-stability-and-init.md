@@ -65,6 +65,7 @@ we can write the gradient of $\mathbf{o}$ with respect to
 any set of parameters $\mathbf{W}^{(l)}$ as follows:
 
 $$\partial_{\mathbf{W}^{(l)}} \mathbf{o} = \underbrace{\partial_{\mathbf{h}^{(L-1)}} \mathbf{h}^{(L)}}_{ \mathbf{M}^{(L)} \stackrel{\textrm{def}}{=}} \cdots \underbrace{\partial_{\mathbf{h}^{(l)}} \mathbf{h}^{(l+1)}}_{ \mathbf{M}^{(l+1)} \stackrel{\textrm{def}}{=}} \underbrace{\partial_{\mathbf{W}^{(l)}} \mathbf{h}^{(l)}}_{ \mathbf{v}^{(l)} \stackrel{\textrm{def}}{=}}.$$
+:eqlabel:`eq_grad-product`
 
 In other words, this gradient is
 the product of $L-l$ matrices
@@ -422,6 +423,7 @@ in :numref:`chap_computation`.
 
 
 ### Watching the Variance Propagate
+:label:`subsec_variance_propagation`
 
 The preceding matrix product demonstrated growth under an unsuitable scale.
 The following experiment compares three initialization regimes:
@@ -545,12 +547,82 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 
 ## Exercises
 
-1. Can you design other cases where a neural network might exhibit symmetry that needs breaking, besides the permutation symmetry in an MLP's layers?
-1. Can we initialize all weight parameters in linear regression or in softmax regression to the same value?
-1. The Xavier derivation assumed a linear layer. Repeat it for a layer followed by a ReLU: show that, for zero-mean symmetric pre-activations $z$, $E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$, and conclude that preserving forward variance requires $\sigma^2 = 2/n_\textrm{in}$ (He initialization). Where does the factor of two come from intuitively? Why is the analogous statement for variances false? For $z \sim \mathcal{N}(0, \tau^2)$, compute $\textrm{Var}[\textrm{ReLU}(z)]$ explicitly and show that it equals $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\tau^2$, not $\tfrac{1}{2}\tau^2$.
-1. Rerun this section's depth-sweep experiment with the ReLU removed, i.e., for a purely *linear* stack of 50 layers of width 100 under the same three schemes. Which scheme keeps the signal's scale flat now, and why does the winner change relative to the ReLU sweep? What does this predict for activations that are approximately linear around zero, such as tanh?
-1. Look up analytic bounds on the eigenvalues of the product of two matrices. What does this tell you about ensuring that gradients are well conditioned?
-1. If we know that some terms diverge, can we fix this after the fact? Look at the paper on layerwise adaptive rate scaling  for inspiration :cite:`You.Gitman.Ginsburg.2017`.
+1. **Other symmetries.** The permutation symmetry of an MLP's hidden units is
+   not the only symmetry that identical initialization fails to break.
+   Describe another architectural symmetry in a feedforward network: give the
+   specific transformation of the parameters that leaves the network's
+   function unchanged, and state an initialization that breaks it.
+1. **Constant initialization.** Initialize all weights of linear regression,
+   and separately of softmax regression, to the same constant $c$.
+    1. Work through one step of minibatch SGD by hand for each model.
+    1. Does the symmetry-breaking failure that this section describes for
+       hidden units occur here? Explain by identifying which units, if any,
+       receive identical gradients.
+1. **He initialization.** ● The Xavier derivation assumed a linear layer.
+   Repeat it for a layer followed by a ReLU.
+    1. Show that, for zero-mean symmetric pre-activations $z$,
+       $E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$, and conclude that
+       preserving the forward second moment requires
+       $\sigma^2 = 2/n_\textrm{in}$ (He initialization). Where does the
+       factor of two come from?
+    1. The analogous statement for variances is false. For
+       $z \sim \mathcal{N}(0, \tau^2)$, compute $\textrm{Var}[\textrm{ReLU}(z)]$
+       explicitly and show that it equals
+       $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\tau^2$, not
+       $\tfrac{1}{2}\tau^2$.
+1. [code] **Linear depth sweep.** Rerun the depth-sweep experiment of
+   :numref:`subsec_variance_propagation` with the ReLU removed, i.e., for a
+   purely *linear* stack of 50 layers of width 100 under the same three
+   initialization schemes.
+    1. Which scheme keeps the signal's scale flat now, and why does the
+       winner change relative to the ReLU sweep?
+    1. What does the result predict for activations that are approximately
+       linear around zero, such as tanh?
+1. [code] **ReLU homogeneity.** The experiment of
+   :numref:`subsec_variance_propagation` renormalizes the activations after
+   every layer and compensates by tracking the product $m$ of the per-layer
+   gains; the text asserts that this is exact because ReLU is positively
+   homogeneous.
+    1. Prove the identity $\textrm{ReLU}(\alpha x) = \alpha\, \textrm{ReLU}(x)$
+       for $\alpha > 0$, and show that it makes the renormalization exact:
+       propagating the renormalized activations and multiplying by the
+       tracked $m$ recovers the second moment of the un-renormalized
+       activations.
+    1. Verify numerically: propagate the renormalized and the un-renormalized
+       activations through the *same* weight matrices for 15 layers under
+       $\mathcal{N}(0, 1)$ initialization (few enough layers to avoid
+       overflow) and confirm that the un-renormalized second moment equals
+       the tracked product $m$ at every layer.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problems 3.5 and 4.3.*
+1. **Conditioning of matrix products.** The gradient in
+   :eqref:`eq_grad-product` is a product of $L - l$ Jacobians. The spectral
+   norm (the largest singular value) is submultiplicative:
+   $\|\mathbf{A}\mathbf{B}\|_2 \le \|\mathbf{A}\|_2 \|\mathbf{B}\|_2$.
+    1. Prove submultiplicativity from the definition
+       $\|\mathbf{A}\|_2 = \max_{\mathbf{x} \neq 0} \|\mathbf{A}\mathbf{x}\| / \|\mathbf{x}\|$.
+    1. Use it to bound the norm of the gradient product in terms of the
+       per-layer norms $\|\mathbf{M}^{(l)}\|_2$. Which condition on the
+       per-layer norms keeps the bound from growing or shrinking
+       geometrically with depth?
+1. [code] **Layerwise adaptive scaling.** Write
+   $\mathbf{g}^{(l)} = \nabla_{\mathbf{W}^{(l)}} J$ for the gradient of the
+   loss $J$ with respect to the weights of layer $l$. Layerwise adaptive
+   rate scaling :cite:`You.Gitman.Ginsburg.2017` replaces the SGD update
+   $\mathbf{W}^{(l)} \leftarrow \mathbf{W}^{(l)} - \eta\, \mathbf{g}^{(l)}$ by
+
+    $$\mathbf{W}^{(l)} \leftarrow \mathbf{W}^{(l)} - \eta \, \frac{\|\mathbf{W}^{(l)}\|}{\|\mathbf{g}^{(l)}\|} \, \mathbf{g}^{(l)}.$$
+
+    The scaled update has norm $\eta\, \|\mathbf{W}^{(l)}\|$: every layer
+    moves by the same fraction $\eta$ of its weight norm, however large or
+    small its raw gradient. An exploding gradient therefore changes only the
+    direction of the update, not its size.
+    1. Construct a three-layer linear network whose $\mathcal{N}(0, 1)$
+       initialization makes the loss diverge within a few SGD steps.
+    1. Apply the scaled update by hand to the first step and show that it
+       remains bounded where the unscaled update does not.
 
 
 :begin_tab:`mxnet`

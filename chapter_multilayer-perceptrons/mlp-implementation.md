@@ -320,20 +320,91 @@ The following sections address these requirements for reliable training.
 
 ## Exercises
 
-1. Change the number of hidden units `num_hiddens` and plot how its number affects the accuracy of the model. What is the best value of this hyperparameter?
-1. Try adding a hidden layer to see how it affects the results. In particular, add one to the *from-scratch* model while keeping its $\sigma = 0.01$ Gaussian initialization: you may find that the deeper network trains *worse*. Why that happens, and what to do about it, is the subject of :numref:`sec_numerical_stability`.
-1. Why is it a bad idea to insert a hidden layer with a single neuron? What could go wrong?
-1. How does changing the learning rate alter your results? With all other parameters fixed, which learning rate gives you the best results? How does this relate to the number of epochs?
-1. Optimize all hyperparameters jointly: learning rate, number of epochs, number of hidden layers, and number of hidden units per layer.
-    1. What is the best result you can get by optimizing over all of them?
-    1. Why is it much more challenging to tune multiple hyperparameters?
-    1. Describe an efficient strategy for optimizing over multiple parameters jointly.
-1. Compare the speed of the framework and the from-scratch implementation for a challenging problem. How does it change with the complexity of the network?
-1. Measure the speed of tensor--matrix multiplications for well-aligned and misaligned matrices. For instance, test for matrices with dimension 1024, 1025, 1026, 1028, and 1032.
-    1. How does this change between GPUs and CPUs?
+1. [code] **Hidden-layer width.** Vary the number of hidden units `num_hiddens`
+   and plot how the accuracy of the model depends on it. Which value of this
+   hyperparameter gives the best result?
+1. **Parameter count.** The one-hidden-layer model of this section maps 784
+   inputs through $h$ hidden units to 10 outputs.
+    1. Give a closed-form expression for the total number of parameters as a
+       function of $h$.
+    1. At which $h$ does the parameter count equal the number of training
+       examples in Fashion-MNIST (60,000)? Compare this value with the 256
+       units used in this section.
+1. [code] **Adding a layer.** Add a second hidden layer to the *from-scratch*
+   model while keeping its $\sigma = 0.01$ Gaussian initialization and observe
+   how the results change. You may find that the deeper network trains
+   *worse*. Why this happens, and what to do about it, is the subject of
+   :numref:`sec_numerical_stability`.
+1. **Single hidden unit.** Why is it a bad idea to insert a hidden layer with
+   a single neuron? What could go wrong?
+1. [code] **Learning rate.** How does changing the learning rate alter your
+   results?
+    1. With all other hyperparameters fixed, which learning rate gives the
+       best result?
+    1. How does the best learning rate relate to the number of training
+       epochs?
+1. [extended] **Joint hyperparameter search.** Hyperparameters interact: the
+   best value of one depends on the values of the others.
+    1. Train the model over a grid of learning rates $\{0.01, 0.03, 0.1,
+       0.3\}$ and hidden widths $\{32, 64, 128, 256\}$, keeping the number of
+       epochs fixed, and plot the final validation accuracy as a heatmap.
+       Does the best learning rate shift systematically with width?
+    1. Now optimize over all hyperparameters jointly: learning rate, number
+       of epochs, number of hidden layers, and number of hidden units per
+       layer. What is the best result you can achieve?
+    1. Why is tuning several hyperparameters jointly much harder than tuning
+       each one in isolation?
+    1. Describe an efficient strategy for searching over multiple
+       hyperparameters jointly.
+1. [code] **Gradient check.** Approximate the derivative of the loss with
+   respect to each entry $w$ of $\mathbf{W}^{(1)}$ by a central difference,
+
+    $$\frac{\partial \ell}{\partial w} \approx \frac{\ell(w + \epsilon) - \ell(w - \epsilon)}{2\epsilon},$$
+
+    evaluated on a single minibatch, and compare the result with the gradient
+    computed by automatic differentiation. Report the maximum relative error.
+    In double precision a correct implementation stays below $10^{-5}$.
+
+    *Adapted from Stanford CS231n,
+    [Assignment 1](https://cs231n.github.io/assignments2023/assignment1/),
+    two-layer network.*
+1. [code] **Benchmarking implementations.** Compare the speed of the
+   framework and from-scratch implementations on a common benchmark: train
+   both at hidden widths 256, 1024, and 4096 for three epochs each on
+   Fashion-MNIST, recording the wall-clock time per epoch. Plot the ratio of
+   from-scratch to framework time as a function of width. Does the ratio
+   grow, shrink, or stay flat as the network gets larger? Suggest an
+   explanation.
+1. [code] **Memory alignment.** Measure the speed of tensor--matrix
+   multiplications for well-aligned and misaligned matrices, for instance
+   with dimensions 1024, 1025, 1026, 1028, and 1032.
+    1. How do the results differ between GPUs and CPUs?
     1. Determine the memory bus width of your CPU and GPU.
-1. Try out different activation functions. Which one works best on Fashion-MNIST? Compare at least ReLU, tanh, sigmoid, and GELU (`torch.nn.functional.gelu` in PyTorch, `jax.nn.gelu` in JAX). (*Hint:* for sigmoid and tanh you may need to retune the learning rate.) GELU is used in BERT and GPT-2-style Transformers, while many recent language models use gated SiLU/SwiGLU blocks. Does this small image task provide enough evidence to choose among them for a Transformer?
-1. Compare the effect of three initialization scales on training: (a) small Gaussian noise with $\sigma = 0.001$; (b) the value used in this section, $\sigma = 0.01$; (c) large Gaussian noise with $\sigma = 0.1$. Plot the training and validation curves for each. Why does $\sigma$ matter? (*Hint:* consider what happens to the activations on the very first forward pass.) The principled answer is developed in :numref:`sec_numerical_stability`.
+1. [code] **Activation functions.** Try out different activation functions.
+   Which one works best on Fashion-MNIST? Compare at least ReLU, tanh,
+   sigmoid, and GELU; for sigmoid and tanh you may need to retune the
+   learning rate. GELU is used in BERT and GPT-2-style Transformers, while
+   many recent language models use gated SiLU (SwiGLU) blocks. Does this
+   small image task provide enough evidence to choose among them for a
+   Transformer?
+1. [code] **Initialization scale.** The weights are initialized with Gaussian
+   noise of standard deviation $\sigma$.
+    1. Train the one-hidden-layer model with $\sigma = 0.001$, with
+       $\sigma = 0.01$ (the value used in this section), and with
+       $\sigma = 0.1$. Plot the training and validation curves for each. Why
+       does $\sigma$ matter? Consider what happens to the activations on the
+       first forward pass.
+    1. Before running anything, predict which of a two-hidden-layer and a
+       four-hidden-layer version of the from-scratch model (with the same
+       total width) is more sensitive to $\sigma$, and why. Then verify:
+       sweep $\sigma$ over $\{0.001, 0.003, 0.01, 0.03, 0.1\}$ for both
+       depths and report the range of $\sigma$ for which each network reaches
+       at least 70% training accuracy within five epochs. The principled
+       answer is developed in :numref:`sec_numerical_stability`.
+
+    *Adapted from Stanford CS231n,
+    [Assignment 2](https://cs231n.github.io/assignments2023/assignment2/),
+    FullyConnectedNets Inline Question 1.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/92)

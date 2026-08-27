@@ -301,11 +301,35 @@ and which belongs to its implementation.
 
 ## Exercises
 
-1. Deep learning uses many different number formats, including FP64 double precision (used extremely rarely),
-FP32 single precision, BFLOAT16 (good for compressed representations), FP16 (very unstable), TF32 (a new format from NVIDIA), and INT8. Compute the smallest and largest argument of the exponential function for which the result does not lead to numerical underflow or overflow.
-1. INT8 is a very limited format consisting of integers in $[-128, 127]$ (or $[0, 255]$ for the unsigned variant). How could you extend its dynamic range without using more bits? Do standard multiplication and addition still work?
-1. Take the from-scratch `softmax` of :numref:`sec_softmax_scratch` and feed it the logits $\mathbf{o} = (1000, 0, 0)$. What do you get, and why? Now compute the loss for the same logits with the framework's `cross_entropy`, passing the logits directly. Why is it finite? Verify that on *benign* logits, e.g., $\mathbf{o} = (2, 1, 0)$, the two routes agree to floating-point precision.
-1. Show, using the identity $\ell = \log\sum_k \exp(o_k) - o_y$, that adding the same constant $c$ to every logit leaves the loss unchanged. Why does this make subtracting $\bar{o} = \max_k o_k$ a free and safe choice?
+1. **Number formats.** Deep learning uses many different number formats,
+   including FP64 double precision (used extremely rarely), FP32 single
+   precision, BFLOAT16 (good for compressed representations), FP16 (very
+   unstable), TF32 (a format from NVIDIA), and INT8. For each of the six
+   formats, compute the smallest and largest argument of the exponential
+   function for which the result does not lead to numerical underflow or
+   overflow. Present the result as a table with one row per format.
+1. **INT8 dynamic range.** INT8 is a very limited format consisting of
+   integers in $[-128, 127]$ (or $[0, 255]$ for the unsigned variant).
+   Propose a way to extend its dynamic range without using more bits.
+   Determine whether standard multiplication and addition still work
+   unmodified under your proposal.
+1. [code] **Numerical stability of softmax.** Take the from-scratch
+   `softmax` of :numref:`sec_softmax_scratch` and feed it the logits
+   $\mathbf{o} = (1000, 0, 0)$. What do you get, and why? Now compute the
+   loss for the same logits with the framework's `cross_entropy`, passing
+   the logits directly. Why is it finite? Verify that on *benign* logits,
+   e.g., $\mathbf{o} = (2, 1, 0)$, the two routes agree to floating-point
+   precision.
+1. **Shift invariance.** Show, using the identity
+   $\ell = \log\sum_k \exp(o_k) - o_y$, that adding the same constant $c$
+   to every logit leaves the loss unchanged. Explain why this makes
+   subtracting $\bar{o} = \max_k o_k$ a free and safe choice.
+1. [code] **Log-sum-exp bound.** Implement the stable form
+   $\bar{o} + \log\sum_k \exp(o_k - \bar{o})$ from scratch. Over random
+   logit vectors of increasing dimension $q$, confirm empirically that the
+   gap between the log-sum-exp and $\max_k o_k$ never exceeds $\log q$,
+   consistent with the bound you established for RealSoftMax in the
+   exercises of :numref:`sec_softmax`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/52)

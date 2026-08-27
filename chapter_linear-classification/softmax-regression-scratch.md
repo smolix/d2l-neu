@@ -460,12 +460,18 @@ data.visualize([X, y], labels=labels)
 ```
 
 The gallery shows *which* images fail; to see *how* they fail in aggregate we
-compute the confusion matrix introduced in :numref:`sec_classification`. We
-accumulate a $10\times10$ matrix of counts over the validation set, with entry
-$(i, j)$ counting how often true class $j$ was predicted as class $i$, and then
-normalize each column so that column $j$ shows the distribution of predictions
-for class $j$ (classes are indexed in the order of `text_labels`: t-shirt,
-trouser, pullover, dress, coat, sandal, shirt, sneaker, bag, ankle boot).
+compute the confusion matrix :eqref:`eq_confusion-matrix` introduced in
+:numref:`sec_classification`. We
+accumulate a $10\times10$ matrix of counts $C$ over the validation set, with
+entry $(i, j)$ counting how often true class $j$ was predicted as class $i$,
+and then normalize each column,
+
+$$\tilde{C}_{ij} = C_{ij} \Big/ \sum_{i'} C_{i'j},$$
+:eqlabel:`eq_confusion-normalized`
+
+so that column $j$ shows the distribution of predictions for class $j$
+(classes are indexed in the order of `text_labels`: t-shirt, trouser,
+pullover, dress, coat, sandal, shirt, sneaker, bag, ankle boot).
 
 To display that matrix of counts as a grid of colored cells rather than a
 wall of numbers, we define `show_heatmaps`, a display utility we reuse
@@ -640,21 +646,54 @@ implementation applies automatically.
 
 ## Exercises
 
-1. In this section, we directly implemented the softmax function based on the mathematical definition of the softmax operation. As discussed in :numref:`sec_softmax` this can cause numerical instabilities.
-    1. Test whether `softmax` still works correctly if an input has a value of $100$.
-    1. Test whether `softmax` still works correctly if the largest of all inputs is smaller than $-100$.
-    1. Implement a fix by looking at the value relative to the largest entry in the argument.
-1. Implement a `cross_entropy` function that follows the definition of the cross-entropy loss function $-\sum_i y_i \log \hat{y}_i$.
+1. [code] **Numerical stability.** In this section, we directly implemented
+   the softmax function based on the mathematical definition of the softmax
+   operation. As discussed in :numref:`sec_softmax` this can cause
+   numerical instabilities.
+    1. Test whether `softmax` still works correctly if an input has a value
+       of $100$.
+    1. Test whether `softmax` still works correctly if the largest of all
+       inputs is smaller than $-100$.
+    1. Implement a fix by looking at the value relative to the largest
+       entry in the argument.
+1. [code] **Cross-entropy.** Implement a `cross_entropy` function that
+   follows the definition of the cross-entropy loss function
+   $-\sum_i y_i \log \hat{y}_i$.
     1. Try it out in the code example of this section.
-    1. Why do you think it runs more slowly?
-    1. Should you use it? When would it make sense to?
-    1. What do you need to be careful of? Hint: consider the domain of the logarithm.
-1. Is it always a good idea to return the most likely label? For example, would you do this for medical diagnosis? How would you try to address this?
-1. Assume that we want to use softmax regression to predict the next word based on some features. What are some problems that might arise from a large vocabulary?
-1. Experiment with the hyperparameters of the code in this section. In particular:
-    1. Plot how the validation loss changes as you change the learning rate.
-    1. Do the validation and training loss change as you change the minibatch size? How large or small do you need to go before you see an effect?
-1. The diagonal of the (column-normalized) confusion matrix is the *per-class accuracy*. Read it off the matrix computed above. Which class is hardest, and which pairs of classes account for most of the errors? Why would a *linear* model struggle on exactly those pairs, and why should replacing it with a model that can respond to localized shape cues (a collar, a heel) help?
+    1. Explain why it runs more slowly.
+    1. Decide whether you should use it anyway, and describe when the
+       direct form would make sense.
+    1. State what you need to be careful of. Hint: consider the domain of
+       the logarithm.
+1. **When not to report the top label.** Recall the reject-option rule: if
+   abstaining costs $\lambda_r$ and a wrong guess costs $\lambda_s$,
+   guessing is optimal only when the top-class probability satisfies
+   $\max_j p(j \mid x) \geq 1 - \lambda_r/\lambda_s$. Consider medical
+   diagnosis, where deferring to a specialist is cheap relative to a
+   misdiagnosis, say $\lambda_r/\lambda_s = 0.05$. Compute the resulting
+   confidence threshold, state what the classifier should do with a
+   prediction at $0.9$ confidence, and explain when reporting the full
+   distribution serves the physician better than either choice.
+1. **Large vocabularies.** Assume that we want to use softmax regression to
+   predict the next word based on some features, with a vocabulary of size
+   $V$ between $10^5$ and $10^6$. Identify which steps of the softmax and
+   cross-entropy computation scale with $V$, estimate the per-step cost
+   relative to the $V = 10$ of Fashion-MNIST, and name one change to the
+   output layer that avoids paying the full cost.
+1. [code] **Hyperparameter sweep.** Experiment with the hyperparameters of
+   the code in this section. In particular:
+    1. Plot how the validation loss changes as you change the learning
+       rate.
+    1. Do the validation and training loss change as you change the
+       minibatch size? How large or small do you need to go before you see
+       an effect?
+1. **Confusion matrix.** The diagonal of the column-normalized confusion
+   matrix :eqref:`eq_confusion-normalized` is the *per-class accuracy*.
+   Read it off the matrix computed above. Which class is hardest, and which
+   pairs of classes account for most of the errors? Why would a *linear*
+   model struggle on exactly those pairs, and why should replacing it with
+   a model that can respond to localized shape cues (a collar, a heel)
+   help?
 
 
 :begin_tab:`mxnet`

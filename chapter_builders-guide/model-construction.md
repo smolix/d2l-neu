@@ -1641,77 +1641,169 @@ depths plus a `build` function that stacks blocks.
 ## Exercises
 
 :begin_tab:`pytorch`
-1. Take `PlainListMLP` and catalog everything that breaks besides the empty
-   parameter list. Check `net.state_dict()`, the effect of
-   `net.to(torch.float64)` on the hidden layers' dtypes, and whether
-   `net.eval()` reaches the children. Explain how each failure follows from
-   the same missing registration.
-1. Implement a `ParallelBlock` that takes two child modules `net1` and `net2`,
-   runs both on the same input, and concatenates their outputs along the last
-   dimension. What must be true of the two children's outputs for the
-   concatenation to be valid?
-1. Extend `MLPConfig` with an activation switch (for example,
-   `act: str = 'relu'`) and make `build` honor it. Which decisions belong in a
-   config and which belong in code? Where would you put a choice between
-   `ResidualBlock` and a plain feed-forward block?
-1. `ResidualBlock` requires its input and output widths to agree. Suppose you
-   want a block whose output is wider than its input. Give two standard fixes
-   and the cost of each. (:numref:`sec_resnet` uses one of them in ResNet.)
+1. [code] **Unregistered modules.** Take `PlainListMLP` and catalog
+   everything that breaks besides the empty parameter list. Check
+   `net.state_dict()`, the effect of `net.to(torch.float64)` on the hidden
+   layers' dtypes, and whether `net.eval()` reaches the children. Explain how
+   each failure follows from the same missing registration.
+1. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
+   child modules `net1` and `net2`, runs both on the same input, and
+   concatenates their outputs along the last dimension. What must be true of
+   the two children's outputs for the concatenation to be valid?
+1. [code] **Config boundaries.** Extend `MLPConfig` with an activation
+   switch (for example, `act: str = 'relu'`) and make `build` honor it.
+   Which decisions belong in a config and which belong in code? Where would
+   you put a choice between `ResidualBlock` and a plain feed-forward block?
+1. **Widening a residual block.** `ResidualBlock` requires its input and
+   output widths to agree. Suppose you want a block whose output is wider
+   than its input. Give two standard fixes and the cost of each. One of them
+   appears in ResNet (:numref:`sec_resnet`).
+1. [code] **A module from scratch.** In plain Python, without any framework
+   base class, write a minimal `Module` class that supports registering
+   parameters and child modules, and a `parameters()` method that recurses
+   into the children. Wrap two `Linear`-like objects in it as a two-layer
+   MLP and verify that `parameters()` finds every weight.
+
+    *Adapted from CMU 11-785,
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
+1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
+   child module at several sites turns the module tree into a graph. Build a
+   small network that uses the same child at two sites. Predict, then
+   verify: does the shared child's parameter set appear once or twice in the
+   model's parameter listing? What happens to it under a dtype cast, for
+   example to 64-bit floats?
+1. [extended] **Depth family.** Using this section's module system, build
+   variants of the residual MLP with zero, one, and four hidden layers, and
+   train each on a toy regression target. Report a table of parameter count
+   and achieved loss against depth.
+
+    *Adapted from CMU 11-785,
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
 :end_tab:
 
 :begin_tab:`mxnet`
-1. Take `PlainListMLP` and catalog everything that breaks besides the empty
-   parameter dictionary. Check `net.save_parameters(...)`, what
-   `net.initialize()` reaches, and what happens on the first forward pass if
-   you remove the by-hand initialization from the constructor. Explain how
-   each failure follows from the same missing registration, and note where
-   along the way the `collect_params()` warning fires.
-1. Implement a `ParallelBlock` that takes two child blocks `net1` and `net2`,
-   runs both on the same input, and concatenates their outputs along the last
-   dimension. What must be true of the two children's outputs for the
-   concatenation to be valid?
-1. Extend `MLPConfig` with an activation switch (for example,
-   `act: str = 'relu'`) and make `build` honor it. Which decisions belong in a
-   config and which belong in code? Where would you put a choice between
-   `ResidualBlock` and a plain feed-forward block?
-1. `ResidualBlock` requires its input and output widths to agree. Suppose you
-   want a block whose output is wider than its input. Give two standard fixes
-   and the cost of each. (:numref:`sec_resnet` uses one of them in ResNet.)
+1. [code] **Unregistered modules.** Take `PlainListMLP` and catalog
+   everything that breaks besides the empty parameter dictionary. Check
+   `net.save_parameters(...)`, what `net.initialize()` reaches, and what
+   happens on the first forward pass if you remove the by-hand
+   initialization from the constructor. Explain how each failure follows
+   from the same missing registration, and note where along the way the
+   `collect_params()` warning fires.
+1. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
+   child blocks `net1` and `net2`, runs both on the same input, and
+   concatenates their outputs along the last dimension. What must be true of
+   the two children's outputs for the concatenation to be valid?
+1. [code] **Config boundaries.** Extend `MLPConfig` with an activation
+   switch (for example, `act: str = 'relu'`) and make `build` honor it.
+   Which decisions belong in a config and which belong in code? Where would
+   you put a choice between `ResidualBlock` and a plain feed-forward block?
+1. **Widening a residual block.** `ResidualBlock` requires its input and
+   output widths to agree. Suppose you want a block whose output is wider
+   than its input. Give two standard fixes and the cost of each. One of them
+   appears in ResNet (:numref:`sec_resnet`).
+1. [code] **A module from scratch.** In plain Python, without any framework
+   base class, write a minimal `Module` class that supports registering
+   parameters and child modules, and a `parameters()` method that recurses
+   into the children. Wrap two `Linear`-like objects in it as a two-layer
+   MLP and verify that `parameters()` finds every weight.
+
+    *Adapted from CMU 11-785,
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
+1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
+   child module at several sites turns the module tree into a graph. Build a
+   small network that uses the same child at two sites. Predict, then
+   verify: does the shared child's parameter set appear once or twice in the
+   model's parameter listing? What happens to it under a dtype cast, for
+   example to 64-bit floats?
+1. [extended] **Depth family.** Using this section's module system, build
+   variants of the residual MLP with zero, one, and four hidden layers, and
+   train each on a toy regression target. Report a table of parameter count
+   and achieved loss against depth.
+
+    *Adapted from CMU 11-785,
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
 :end_tab:
 
 :begin_tab:`jax`
-1. Extend `ListMLP` with an `nnx.Dict` of submodules and verify that every
-   parameter appears in `nnx.state(net, nnx.Param)`. Then replace it with a
-   plain dictionary holding those modules and describe how NNX reports the
-   invalid graph container.
-1. Implement a `ParallelBlock` that takes two child modules `net1` and `net2`
-   as fields, runs both on the same input, and concatenates their outputs
-   along the last dimension. What must be true of the two children's outputs
-   for the concatenation to be valid?
-1. Extend `MLPConfig` with an activation switch (for example,
-   `act: str = 'relu'`) and make `ResidualMLP` honor it. Which decisions belong
-   in the config and which belong in code? Where would you put a choice between
-   `ResidualBlock` and a plain feed-forward block?
-1. `ResidualBlock` requires its input and output widths to agree. Suppose you
-   want a block whose output is wider than its input. Give two standard fixes
-   and the cost of each. (:numref:`sec_resnet` uses one of them in ResNet.)
+1. [code] **Unregistered containers.** Extend `ListMLP` with an `nnx.Dict`
+   of submodules and verify that every parameter appears in
+   `nnx.state(net, nnx.Param)`. Then replace it with a plain dictionary
+   holding those modules and describe how NNX reports the invalid graph
+   container.
+1. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
+   child modules `net1` and `net2` as fields, runs both on the same input,
+   and concatenates their outputs along the last dimension. What must be
+   true of the two children's outputs for the concatenation to be valid?
+1. [code] **Config boundaries.** Extend `MLPConfig` with an activation
+   switch (for example, `act: str = 'relu'`) and make `ResidualMLP` honor
+   it. Which decisions belong in the config and which belong in code? Where
+   would you put a choice between `ResidualBlock` and a plain feed-forward
+   block?
+1. **Widening a residual block.** `ResidualBlock` requires its input and
+   output widths to agree. Suppose you want a block whose output is wider
+   than its input. Give two standard fixes and the cost of each. One of them
+   appears in ResNet (:numref:`sec_resnet`).
+1. [code] **A module from scratch.** In plain Python, without any framework
+   base class, write a minimal `Module` class that supports registering
+   parameters and child modules, and a `parameters()` method that recurses
+   into the children. Wrap two `Linear`-like objects in it as a two-layer
+   MLP and verify that `parameters()` finds every weight.
+
+    *Adapted from CMU 11-785,
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
+1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
+   child module at several sites turns the module tree into a graph. Build a
+   small network that uses the same child at two sites. Predict, then
+   verify: does the shared child's parameter set appear once or twice in the
+   model's parameter listing? What happens to it under a dtype cast, for
+   example to 64-bit floats?
+1. [extended] **Depth family.** Using this section's module system, build
+   variants of the residual MLP with zero, one, and four hidden layers, and
+   train each on a toy regression target. Report a table of parameter count
+   and achieved loss against depth.
+
+    *Adapted from CMU 11-785,
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. Keras's tracking has one blind spot left: create a `Dense` layer *inside*
-   `call` rather than in the constructor. The model runs without complaint;
-   check `len(net.trainable_variables)` after calling it, explain what an
+1. [code] **Unregistered modules.** Keras's tracking has one blind spot
+   left: create a `Dense` layer *inside* `call` rather than in the
+   constructor. The model runs without complaint; check
+   `len(net.trainable_variables)` after calling it, explain what an
    optimizer would train, and explain what happens to the layer's weights
    between two calls.
-1. Implement a `ParallelBlock` that takes two child modules `net1` and `net2`,
-   runs both on the same input, and concatenates their outputs along the last
-   dimension. What must be true of the two children's outputs for the
-   concatenation to be valid?
-1. Extend `MLPConfig` with an activation switch (for example,
-   `act: str = 'relu'`) and make `build` honor it. Which decisions belong in a
-   config and which belong in code? Where would you put a choice between
-   `ResidualBlock` and a plain feed-forward block?
-1. `ResidualBlock` requires its input and output widths to agree. Suppose you
-   want a block whose output is wider than its input. Give two standard fixes
-   and the cost of each. (:numref:`sec_resnet` uses one of them in ResNet.)
+1. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
+   child modules `net1` and `net2`, runs both on the same input, and
+   concatenates their outputs along the last dimension. What must be true of
+   the two children's outputs for the concatenation to be valid?
+1. [code] **Config boundaries.** Extend `MLPConfig` with an activation
+   switch (for example, `act: str = 'relu'`) and make `build` honor it.
+   Which decisions belong in a config and which belong in code? Where would
+   you put a choice between `ResidualBlock` and a plain feed-forward block?
+1. **Widening a residual block.** `ResidualBlock` requires its input and
+   output widths to agree. Suppose you want a block whose output is wider
+   than its input. Give two standard fixes and the cost of each. One of them
+   appears in ResNet (:numref:`sec_resnet`).
+1. [code] **A module from scratch.** In plain Python, without any framework
+   base class, write a minimal `Module` class that supports registering
+   parameters and child modules, and a `parameters()` method that recurses
+   into the children. Wrap two `Linear`-like objects in it as a two-layer
+   MLP and verify that `parameters()` finds every weight.
+
+    *Adapted from CMU 11-785,
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
+1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
+   child module at several sites turns the module tree into a graph. Build a
+   small network that uses the same child at two sites. Predict, then
+   verify: does the shared child's parameter set appear once or twice in the
+   model's parameter listing? What happens to it under a dtype cast, for
+   example to 64-bit floats?
+1. [extended] **Depth family.** Using this section's module system, build
+   variants of the residual MLP with zero, one, and four hidden layers, and
+   train each on a toy regression target. Report a table of parameter count
+   and achieved loss against depth.
+
+    *Adapted from CMU 11-785,
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
 :end_tab:

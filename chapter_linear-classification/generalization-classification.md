@@ -537,36 +537,60 @@ in :numref:`sec_generalization_deep`.
 
 ## Exercises
 
-1. If we wish to estimate the error of a fixed model $f$
-   to within $0.0001$ with probability greater than 99.9%,
-   how many samples do we need?
-1. Suppose that somebody else possesses a labeled test set
-   $\mathcal{D}$ and only makes available the unlabeled inputs (features).
-   Now suppose that you can only access the test set labels
-   by running a model $f$ (with no restrictions placed on the model class)
-   on each of the unlabeled inputs
-   and receiving the corresponding error $\epsilon_\mathcal{D}(f)$.
-   How many models would you need to evaluate
-   before you leak the entire test set
-   and thus could appear to have error $0$,
-   regardless of your true error?
-1. What is the VC dimension of the class of fifth-order polynomials?
-1. What is the VC dimension of axis-aligned rectangles on two-dimensional data?
-1. Prove the lower bound VC $\geq d+1$ for linear classifiers
-   $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on $\mathbb{R}^d$
-   by shattering the $d+1$ points $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
-   (the origin and the standard unit vectors). Given any desired labels
-   $\sigma_0, \sigma_1, \ldots, \sigma_d \in \{\pm 1\}$, set $b = \sigma_0 / 2$
-   and read the weights off the labels as $w_i = \sigma_i - b$. Verify that
-   $f(\mathbf{0}) = \sigma_0$ and $f(\mathbf{e}_i) = \sigma_i$ for every $i$.
-   Combined with the Radon argument in the text for the upper bound, this
-   proves VC $= d+1$ exactly.
-1. In :numref:`fig_mdl-clf-shattering` the three shattered points are in
-   *general position* (not collinear). Show that three collinear points can
-   *not* be shattered by halfplanes: which labeling is unrealizable? Explain
-   why this does not contradict the VC dimension of lines in the plane being
-   $3$. (Hint: the VC dimension asks whether *some* set of a given size can be
-   shattered, not whether *every* set can.)
+1. **Sample size for a tight estimate.** If we wish to estimate the error
+   of a fixed model $f$ to within $0.0001$ with probability greater than
+   99.9%, how many samples do we need?
+1. **Leaking a test set.** Suppose that somebody else possesses a labeled
+   test set $\mathcal{D}$ and only makes available the unlabeled inputs
+   (features). Now suppose that you can only access the test set labels by
+   running a model $f$ (with no restrictions placed on the model class) on
+   each of the unlabeled inputs and receiving the corresponding error
+   $\epsilon_\mathcal{D}(f)$. How many models would you need to evaluate
+   before you leak the entire test set and thus could appear to have error
+   $0$, regardless of your true error?
+1. **VC dimension of polynomials.** What is the VC dimension of the class
+   of fifth-order polynomials for $x \in \mathbb{R}$? What is it for
+   $x \in \mathbb{R}^d$?
+1. **VC dimension of rectangles.** ● What is the VC dimension of
+   axis-aligned rectangles on two-dimensional data? Then prove the general
+   result: axis-aligned rectangles in $\mathbb{R}^d$ have VC dimension
+   $2d$.
+
+    *Adapted from Shalev-Shwartz and Ben-David,
+    [Understanding Machine Learning](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/understanding-machine-learning-theory-algorithms.pdf),
+    Chapter 6, Exercise 5.*
+1. **Shattering the standard basis.** Prove the lower bound VC $\geq d+1$
+   for linear classifiers
+   $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on
+   $\mathbb{R}^d$ by shattering the $d+1$ points
+   $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$ (the origin and the
+   standard unit vectors). Given any desired labels
+   $\sigma_0, \sigma_1, \ldots, \sigma_d \in \{\pm 1\}$, set
+   $b = \sigma_0 / 2$ and read the weights off the labels as
+   $w_i = \sigma_i - b$. Verify that $f(\mathbf{0}) = \sigma_0$ and
+   $f(\mathbf{e}_i) = \sigma_i$ for every $i$. Combined with the Radon
+   argument in the text for the upper bound, this proves VC $= d+1$
+   exactly.
+1. **Collinear points.** In :numref:`fig_mdl-clf-shattering` the three
+   shattered points are in *general position* (not collinear). Show that
+   three collinear points can *not* be shattered by halfplanes: which
+   labeling is unrealizable? Explain why this does not contradict the VC
+   dimension of lines in the plane being $3$.
+1. **Composing hypothesis classes.** ● Given two hypothesis classes $H_1$
+   and $H_2$ with shattering coefficients $H_1[n]$ and $H_2[n]$, show that
+   the class $H^* = \{h_1 \wedge h_2 : h_1 \in H_1, h_2 \in H_2\}$ of
+   intersections satisfies $H^*[n] \leq H_1[n] \cdot H_2[n]$. Use this
+   bound, together with Sauer's lemma, to bound the VC dimension of
+   intersections of two linear-classifier classes.
+
+    *Adapted from CMU 10-601,
+    [homework 5](https://www.cs.cmu.edu/~ninamf/courses/601sp15/hw/homework5.pdf),
+    Problem 1.*
+1. [code] **Simulating the gap.** Extend this section's CLT-versus-Hoeffding
+   simulation to a second true error rate, for example $\epsilon = 0.3$,
+   and a finer grid of sample sizes $n$. Report whether the simulated
+   spread still tracks the CLT curve, and by what multiple the Hoeffding
+   radius exceeds it across your grid.
 
 [Discussions](https://d2l.discourse.group/t/6829)
 

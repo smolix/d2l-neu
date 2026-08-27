@@ -845,6 +845,7 @@ it we might read the driver's counters before the allocation has happened.
 :end_tab:
 
 ### What Fills Memory During Training
+:label:`subsec_memory_during_training`
 
 In :numref:`sec_parameters` we did the bookkeeping on paper: a model with
 $N$ parameters costs $4N$ bytes for float32 weights, another $4N$ for their
@@ -1507,6 +1508,7 @@ The full treatment of asynchrony, streams, and multi-device parallelism is in
 :end_tab:
 
 ## Device-Aware Trainer
+:label:`subsec_device_aware_trainer`
 
 :begin_tab:`pytorch`
 In :numref:`sec_oo-design` the `Trainer` accepted a `num_gpus` argument and
@@ -1846,19 +1848,42 @@ CPU fallback when no GPU exists.
 
 ## Exercises
 
-1. Using the accounting model of this section, predict the peak memory of the
-   four-plateau cell at batch sizes 64, 256, and 1024, then measure with
-   your framework's peak-memory counter. Where does the prediction break down,
-   and what did it omit?
-1. Increase the batch size in the checkpointing comparison until the
-   non-checkpointed run raises an out-of-memory error. How much further can
-   the checkpointed run go before it does too? Explain the ratio using the
-   sizes of what each variant stores.
-1. Time one epoch of the capstone training run with `print(loss.item())`
-   after every step, and again printing only once per epoch. Explain the
-   difference in terms of synchronization points.
-1. If you have two GPUs, time 1000 matrix products of two $4096 \times 4096$
-   matrices executed on one GPU, then 500 on each of two GPUs issued from the
-   same loop. Measure the scaling, explain how asynchronous dispatch lets
-   Python issue work to both devices, and identify sources of deviation from
-   linear scaling. Guard the experiment with `num_gpus() >= 2`.
+1. [code] **Memory footprint.** Using the accounting model of this section,
+   predict the peak memory footprint of the four-plateau cell of
+   :numref:`subsec_memory_during_training` at batch sizes 64, 256, and 1024,
+   then measure with your framework's peak-memory counter. Where does the
+   prediction break down, and what did it omit?
+1. [code] **Activation checkpointing.** Revisit the checkpointing comparison
+   of this section.
+    1. Increase the batch size until the non-checkpointed run raises an
+       out-of-memory error. How much further can the checkpointed run go
+       before it does too? Explain the ratio using the sizes of what each
+       variant stores.
+    1. Reproduce the four-plateau memory breakdown with checkpointing
+       applied at three granularities: none, per-block, and whole-model.
+       Plot the resulting memory--time tradeoff. Which granularity would
+       you choose here?
+1. [code] **Synchronization points.** Consider the training run of
+   `ResMLPClassifier` in :numref:`subsec_device_aware_trainer`.
+    1. Time one epoch with `print(loss.item())` after every step, and again
+       printing only once per epoch. Explain the difference in terms of
+       synchronization points.
+    1. List every synchronization point in the training loop, not just the
+       loss readout and printing. Classify each as unavoidable for a
+       correct loop or as an avoidable instrumentation artifact, and
+       justify each classification.
+
+    *Adapted from the PyTorch documentation
+    [CUDA semantics](https://docs.pytorch.org/docs/stable/notes/cuda.html).*
+1. [code] **Asynchronous dispatch.** Both halves of this problem use the
+   timing pattern of this section.
+    1. Measure the cost of moving a tensor from CPU to GPU and back against
+       the cost of a computation with an equivalent number of
+       floating-point operations executed on the device. At which tensor
+       size does the transfer first cost more than the compute?
+    1. If you have two GPUs, time 1000 matrix products of two
+       $4096 \times 4096$ matrices executed on one GPU, then 500 on each of
+       two GPUs issued from the same loop. Measure the scaling, explain how
+       asynchronous dispatch lets Python issue work to both devices, and
+       identify sources of deviation from linear scaling. Guard the
+       experiment with `num_gpus() >= 2`.

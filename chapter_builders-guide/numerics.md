@@ -929,6 +929,7 @@ speed argument is a GPU argument.
 :end_tab:
 
 ### Loss Scaling for fp16
+:label:`subsec_loss_scaling`
 
 With bf16, the recipe above is complete. fp16 has one more failure mode, and
 it is the opposite end of the axis from the overflow that opened this section:
@@ -1323,22 +1324,50 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
 
 ## Exercises
 
-1. Redo the memory arithmetic of :numref:`sec_parameters` for
-   mixed-precision training with Adam: fp32 master weights, fp32 gradients,
-   two fp32 moment estimates, and bf16 activations. Which term dominates now,
-   and how does the total compare with all-fp32 training?
-1. Time the fp32 and 16-bit runs of `train` against each other while
-   shrinking the hidden width and the batch size. Find a model small enough
-   that mixed precision is *slower* than fp32, and explain where the
-   crossover comes from.
-1. Print every field of `torch.finfo(torch.float8_e4m3fn)` (in JAX,
-   `jnp.finfo(jnp.float8_e4m3fn)`; in TensorFlow,
-   `ml_dtypes.finfo(ml_dtypes.float8_e4m3fn)`; MXNet has no fp8 dtype, so
-   borrow the standalone `ml_dtypes` package) and compare with fp16 and
-   bf16. Explain
+1. **Mixed-precision arithmetic.** Redo the memory arithmetic of
+   :numref:`sec_parameters` for mixed-precision training with Adam: fp32
+   master weights, fp32 gradients, two fp32 moment estimates, and bf16
+   activations. Which term dominates now, and how does the total compare
+   with all-fp32 training?
+1. [code] **Precision crossover.** Time the fp32 and bf16 runs of `train`
+   against each other.
+    1. Shrink the hidden width and the batch size. Find a model small
+       enough that mixed precision is *slower* than fp32, and explain why
+       this might be the case.
+    1. Holding the model size fixed, sweep the batch size from 8 to 4096
+       and plot the mixed-precision speedup over fp32 against the batch
+       size. Below which batch size does mixed precision stop paying off?
+
+    *Adapted from the PyTorch recipe
+    [Automatic Mixed Precision](https://docs.pytorch.org/tutorials/recipes/recipes/amp_recipe.html).*
+1. [code] **Normalization in fp16.** Under autocast, normalization layers
+   run in fp32. To see why, take the `RMSNorm` layer of
+   :numref:`sec_custom_layer`, feed it inputs with a standard deviation of
+   about 100, and force the computation to fp16. Which intermediate
+   quantity fails first?
+1. **Loss scaling on overflow.** Sketch, in prose or pseudocode, what a
+   training loop must do differently under loss scaling
+   (:numref:`subsec_loss_scaling`) when a NaN or Inf gradient is detected
+   after unscaling: what is skipped, what is not updated, and how the scale
+   factor adapts. Check your sketch against the behavior described there.
+
+:begin_tab:`pytorch`
+5. [code] **The e4m3fn format.** Print every field of
+   `torch.finfo(torch.float8_e4m3fn)` and compare with fp16 and bf16.
+   Explain the name `e4m3fn`, including why its `max` is 448 rather than
+   the value the exponent bits alone would suggest.
+:end_tab:
+
+:begin_tab:`jax`
+5. [code] **The e4m3fn format.** Print every field of
+   `jnp.finfo(jnp.float8_e4m3fn)` and compare with fp16 and bf16. Explain
    the name `e4m3fn`, including why its `max` is 448 rather than the value
    the exponent bits alone would suggest.
-1. Under autocast, normalization layers run in fp32. To see why, take the
-   `RMSNorm` layer of :numref:`sec_custom_layer`, feed it inputs with a
-   standard deviation of about 100, and force the computation to fp16. Which
-   intermediate quantity fails first?
+:end_tab:
+
+:begin_tab:`tensorflow`
+5. [code] **The e4m3fn format.** Print every field of
+   `ml_dtypes.finfo(ml_dtypes.float8_e4m3fn)` and compare with fp16 and
+   bf16. Explain the name `e4m3fn`, including why its `max` is 448 rather
+   than the value the exponent bits alone would suggest.
+:end_tab:

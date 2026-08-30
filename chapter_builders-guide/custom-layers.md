@@ -1081,95 +1081,189 @@ as with RMSNorm, maintain the custom implementation.
 ## Exercises
 
 :begin_tab:`pytorch`
-1. Add an optional learned bias to `RMSNorm` (a shift applied after the
-   scale, restoring part of what LayerNorm had). Verify that the state dict
-   of a model containing it grows by the expected entry, and that a state
-   dict saved without the bias no longer loads with `strict=True`.
-1. Implement `Dropout` from scratch as a custom layer that zeroes each entry
-   with probability $p$ and rescales the survivors during training, but is
-   the identity during evaluation. Where does the `training` flag your
-   `forward` consults live, and how does calling `.eval()` on an enclosing
-   `Sequential` reach your layer?
-1. Implement a clamp with a custom gradient: an `autograd.Function` whose
-   forward is `X.clamp(lo, hi)` and whose backward passes the gradient only
-   where the input lay strictly inside the clamp range. Compare its gradients
-   with those of the native `torch.clamp` for inputs inside, outside, and
-   exactly on the boundary. Which convention does the native operation use at
-   the boundary?
-1. Write a layer that returns the leading half of the Fourier coefficients of
-   its input. It has no parameters, so nothing registers. What do you still
-   gain by wrapping the computation in a module instead of calling the
-   transform inline wherever you need it?
+1. [code] **RMSNorm bias.** Add an optional learned bias to `RMSNorm` (a
+   shift applied after the scale, restoring part of what LayerNorm had).
+   Verify that the state dict of a model containing it grows by the
+   expected entry, and that a state dict saved without the bias no longer
+   loads with `strict=True`.
+1. [code] **Dropout from scratch.** Implement `Dropout` as a custom layer
+   that zeroes each entry with probability $p$ and rescales the survivors
+   during training, but is the identity during evaluation. Where does the
+   `training` flag your `forward` consults live, and how does calling
+   `.eval()` on an enclosing `Sequential` reach your layer?
+1. [code] **Custom gradients.**
+    1. Implement a clamp with a custom gradient: an `autograd.Function`
+       whose forward is `X.clamp(lo, hi)` and whose backward passes the
+       gradient only where the input lay strictly inside the clamp range.
+       Compare its gradients with those of the native `torch.clamp` for
+       inputs inside, outside, and exactly on the boundary. Which
+       convention does the native operation use at the boundary?
+    1. Work out on paper what the second derivative of the clamp would be
+       at the boundary, and explain why your custom backward never forms
+       it, whereas automatic double-backward through a composition full of
+       such boundaries would.
+    1. Implement a second custom operation, GELU or Softplus, with a
+       hand-derived backward. Check it numerically against the automatic
+       derivative of the equivalent built-in expression and report the
+       largest discrepancy.
+
+    *Adapted from the PyTorch tutorial
+    [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
+    and the JAX notebook
+    [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
+1. [code] **Parameterless layers.** Write a layer that returns the leading
+   half of the Fourier coefficients of its input. It has no parameters, so
+   nothing registers. What do you still gain by wrapping the computation in
+   a module instead of calling the transform inline wherever you need it?
+1. [extended] **Bucketing with a straight-through estimator.**
+   :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
+   Extend the idea to a layer that maps a learned score to a
+   non-differentiable integer bucket index in its forward pass and passes
+   the incoming gradient straight through to the score in its backward
+   pass. Train a small model containing the layer and verify that its loss
+   still decreases even though the forward computation is flat almost
+   everywhere.
 :end_tab:
 
 :begin_tab:`jax`
-1. Add an optional learned bias to `RMSNorm` (a shift applied after the
-   scale, restoring part of what LayerNorm had). Verify that the parameter
-   state of a model containing it grows by the expected entry, and observe
-   what `flax.serialization.from_bytes` does when it restores bytes saved
-   without the bias into the new state structure.
-1. Implement `Dropout` from scratch as a custom layer that zeroes each entry
-   with probability $p$ and rescales the survivors during training, but is
-   the identity during evaluation. Store `self.deterministic = False`, give
-   the module an `nnx.Rngs` stream, and implement
-   `set_view(self, *, deterministic)` to update the flag. Verify that
-   `nnx.view(model, deterministic=True)` reaches a dropout layer nested in an
-   `nnx.Sequential`.
-1. Implement a clamp with a custom gradient: a `custom_vjp` function whose
-   forward is `jnp.clip(X, lo, hi)` and whose backward passes the gradient
-   only where the input lay strictly inside the clamp range; the forward rule
-   must save `X` as a residual. Compare its gradients with those of the
-   native `jnp.clip` for inputs inside, outside, and exactly on the boundary.
-   Which convention does the native operation use at the boundary?
-1. Write a layer that returns the leading half of the Fourier coefficients of
-   its input. It has no parameters, so nothing registers. What do you still
-   gain by wrapping the computation in a module instead of calling the
-   transform inline wherever you need it?
+1. [code] **RMSNorm bias.** Add an optional learned bias to `RMSNorm` (a
+   shift applied after the scale, restoring part of what LayerNorm had).
+   Verify that the parameter state of a model containing it grows by the
+   expected entry, and observe what `flax.serialization.from_bytes` does
+   when it restores bytes saved without the bias into the new state
+   structure.
+1. [code] **Dropout from scratch.** Implement `Dropout` as a custom layer
+   that zeroes each entry with probability $p$ and rescales the survivors
+   during training, but is the identity during evaluation. Store
+   `self.deterministic = False`, give the module an `nnx.Rngs` stream, and
+   implement `set_view(self, *, deterministic)` to update the flag. Verify
+   that `nnx.view(model, deterministic=True)` reaches a dropout layer
+   nested in an `nnx.Sequential`.
+1. [code] **Custom gradients.**
+    1. Implement a clamp with a custom gradient: a `custom_vjp` function
+       whose forward is `jnp.clip(X, lo, hi)` and whose backward passes the
+       gradient only where the input lay strictly inside the clamp range;
+       the forward rule must save `X` as a residual. Compare its gradients
+       with those of the native `jnp.clip` for inputs inside, outside, and
+       exactly on the boundary. Which convention does the native operation
+       use at the boundary?
+    1. Work out on paper what the second derivative of the clamp would be
+       at the boundary, and explain why your custom backward never forms
+       it, whereas automatic double-backward through a composition full of
+       such boundaries would.
+    1. Implement a second custom operation, GELU or Softplus, with a
+       hand-derived backward. Check it numerically against the automatic
+       derivative of the equivalent built-in expression and report the
+       largest discrepancy.
+
+    *Adapted from the PyTorch tutorial
+    [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
+    and the JAX notebook
+    [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
+1. [code] **Parameterless layers.** Write a layer that returns the leading
+   half of the Fourier coefficients of its input. It has no parameters, so
+   nothing registers. What do you still gain by wrapping the computation in
+   a module instead of calling the transform inline wherever you need it?
+1. [extended] **Bucketing with a straight-through estimator.**
+   :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
+   Extend the idea to a layer that maps a learned score to a
+   non-differentiable integer bucket index in its forward pass and passes
+   the incoming gradient straight through to the score in its backward
+   pass. Train a small model containing the layer and verify that its loss
+   still decreases even though the forward computation is flat almost
+   everywhere.
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. Add an optional learned bias to `RMSNorm` (a shift applied after the
-   scale, restoring part of what LayerNorm had). Verify that `get_weights` on
-   a model containing it grows by the expected entry, and observe what
-   `set_weights` does when handed a list saved without the bias.
-1. Implement `Dropout` from scratch as a custom layer that zeroes each entry
-   with probability $p$ and rescales the survivors during training, but is
-   the identity during evaluation. Keras passes a `training` argument to
-   `call`; how does calling an enclosing `Sequential` with `training=False`
-   reach your layer?
-1. Implement a clamp with a custom gradient: a `@tf.custom_gradient` function
-   whose forward is `tf.clip_by_value(X, lo, hi)` and whose backward passes
-   the gradient only where the input lay strictly inside the clamp range; the
-   gradient closure must capture `X`. Compare its gradients with those of the
-   native `tf.clip_by_value` for inputs inside, outside, and exactly on the
-   boundary. Which convention does the native operation use at the boundary?
-1. Write a layer that returns the leading half of the Fourier coefficients of
-   its input. It has no parameters, so nothing registers. What do you still
-   gain by wrapping the computation in a module instead of calling the
-   transform inline wherever you need it?
+1. [code] **RMSNorm bias.** Add an optional learned bias to `RMSNorm` (a
+   shift applied after the scale, restoring part of what LayerNorm had).
+   Verify that `get_weights` on a model containing it grows by the expected
+   entry, and observe what `set_weights` does when handed a list saved
+   without the bias.
+1. [code] **Dropout from scratch.** Implement `Dropout` as a custom layer
+   that zeroes each entry with probability $p$ and rescales the survivors
+   during training, but is the identity during evaluation. Keras passes a
+   `training` argument to `call`; how does calling an enclosing
+   `Sequential` with `training=False` reach your layer?
+1. [code] **Custom gradients.**
+    1. Implement a clamp with a custom gradient: a `@tf.custom_gradient`
+       function whose forward is `tf.clip_by_value(X, lo, hi)` and whose
+       backward passes the gradient only where the input lay strictly
+       inside the clamp range; the gradient closure must capture `X`.
+       Compare its gradients with those of the native `tf.clip_by_value`
+       for inputs inside, outside, and exactly on the boundary. Which
+       convention does the native operation use at the boundary?
+    1. Work out on paper what the second derivative of the clamp would be
+       at the boundary, and explain why your custom backward never forms
+       it, whereas automatic double-backward through a composition full of
+       such boundaries would.
+    1. Implement a second custom operation, GELU or Softplus, with a
+       hand-derived backward. Check it numerically against the automatic
+       derivative of the equivalent built-in expression and report the
+       largest discrepancy.
+
+    *Adapted from the PyTorch tutorial
+    [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
+    and the JAX notebook
+    [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
+1. [code] **Parameterless layers.** Write a layer that returns the leading
+   half of the Fourier coefficients of its input. It has no parameters, so
+   nothing registers. What do you still gain by wrapping the computation in
+   a module instead of calling the transform inline wherever you need it?
+1. [extended] **Bucketing with a straight-through estimator.**
+   :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
+   Extend the idea to a layer that maps a learned score to a
+   non-differentiable integer bucket index in its forward pass and passes
+   the incoming gradient straight through to the score in its backward
+   pass. Train a small model containing the layer and verify that its loss
+   still decreases even though the forward computation is flat almost
+   everywhere.
 :end_tab:
 
 :begin_tab:`mxnet`
-1. Add an optional learned bias to `RMSNorm` (a shift applied after the
-   scale, restoring part of what LayerNorm had). Verify that the file written
-   by `save_parameters` for a model containing it grows by the expected
-   entry, and observe what `load_parameters` does when handed a file saved
-   without the bias. Which of its `allow_missing` and `ignore_extra` flags
-   changes the outcome?
-1. Implement `Dropout` from scratch as a custom layer that zeroes each entry
-   with probability $p$ and rescales the survivors during training, but is
-   the identity during evaluation. Gluon has no `.train()`/`.eval()` switch;
-   the flag your `forward` consults is `autograd.is_training()`. What sets
-   that flag, and what does it imply for calling the layer outside
-   `autograd.record()`?
-1. Implement a clamp with a custom gradient: an `autograd.Function` whose
-   forward is `np.clip(X, lo, hi)` and whose backward passes the gradient
-   only where the input lay strictly inside the clamp range; `forward` must
-   stash `X` with `save_for_backward`. Compare its gradients with those of
-   the native `np.clip` for inputs inside, outside, and exactly on the
-   boundary. Which convention does the native operation use at the boundary?
-1. Write a layer that returns the leading half of the Fourier coefficients of
-   its input. It has no parameters, so nothing registers. What do you still
-   gain by wrapping the computation in a module instead of calling the
-   transform inline wherever you need it?
+1. [code] **RMSNorm bias.** Add an optional learned bias to `RMSNorm` (a
+   shift applied after the scale, restoring part of what LayerNorm had).
+   Verify that the file written by `save_parameters` for a model containing
+   it grows by the expected entry, and observe what `load_parameters` does
+   when handed a file saved without the bias. Which of its `allow_missing`
+   and `ignore_extra` flags changes the outcome?
+1. [code] **Dropout from scratch.** Implement `Dropout` as a custom layer
+   that zeroes each entry with probability $p$ and rescales the survivors
+   during training, but is the identity during evaluation. Gluon has no
+   `.train()`/`.eval()` switch; the flag your `forward` consults is
+   `autograd.is_training()`. What sets that flag, and what does it imply
+   for calling the layer outside `autograd.record()`?
+1. [code] **Custom gradients.**
+    1. Implement a clamp with a custom gradient: an `autograd.Function`
+       whose forward is `np.clip(X, lo, hi)` and whose backward passes the
+       gradient only where the input lay strictly inside the clamp range;
+       `forward` must stash `X` with `save_for_backward`. Compare its
+       gradients with those of the native `np.clip` for inputs inside,
+       outside, and exactly on the boundary. Which convention does the
+       native operation use at the boundary?
+    1. Work out on paper what the second derivative of the clamp would be
+       at the boundary, and explain why your custom backward never forms
+       it, whereas automatic double-backward through a composition full of
+       such boundaries would.
+    1. Implement a second custom operation, GELU or Softplus, with a
+       hand-derived backward. Check it numerically against the automatic
+       derivative of the equivalent built-in expression and report the
+       largest discrepancy.
+
+    *Adapted from the PyTorch tutorial
+    [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
+    and the JAX notebook
+    [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
+1. [code] **Parameterless layers.** Write a layer that returns the leading
+   half of the Fourier coefficients of its input. It has no parameters, so
+   nothing registers. What do you still gain by wrapping the computation in
+   a module instead of calling the transform inline wherever you need it?
+1. [extended] **Bucketing with a straight-through estimator.**
+   :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
+   Extend the idea to a layer that maps a learned score to a
+   non-differentiable integer bucket index in its forward pass and passes
+   the incoming gradient straight through to the score in its backward
+   pass. Train a small model containing the layer and verify that its loss
+   still decreases even though the forward computation is flat almost
+   everywhere.
 :end_tab:

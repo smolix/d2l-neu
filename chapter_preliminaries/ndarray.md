@@ -989,7 +989,7 @@ Tensors provide a variety of functionalities including construction routines; in
    your prediction.
 1. **Inferred reshape axis.** Create the vector
    `x = arange(24)` and reshape it into a $(2, 3, 4)$ tensor, writing `-1`
-   for one of the components. State which component the framework infers
+   for one of the components. State which component is inferred
    and why at most one `-1` is allowed. Check your answer in code.
 1. **Predict-then-verify reduction shapes.** Build a $(3, 4)$
    tensor. Before running any code, predict the shape of its sum along
@@ -999,23 +999,68 @@ Tensors provide a variety of functionalities including construction routines; in
    $(3, 2)$ and $(2, 3)$ and read the error message. Explain the failure
    using the alignment rule from the broadcasting section. Then find a
    reshape of one operand that makes the addition valid.
-1. **Object identity versus storage.** Use `id()` to verify
+:begin_tab:`pytorch`
+6. **Object identity versus storage.** Use `id()` to verify
    that `X[:] = X + Y` (or `X += Y`) keeps the same Python tensor object
    while `X = X + Y` binds `X` to a new object. Explain why object identity
-   alone does not prove that the underlying storage was reused. Where your
-   framework exposes a storage or buffer API, test storage identity as
-   well.
-1. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for
+   alone does not prove that the underlying storage was reused, and check
+   storage identity as well by comparing `X.data_ptr()` before and after.
+7. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for
    two same-shaped tensors without allocating a new array. Write every
    intermediate into a pre-allocated buffer using `Z[:] = ...`, and verify
-   with `id()` that no name was rebound. If your framework forbids in-place
-   writes altogether, express the same computation in its functional idiom
-   instead, and explain what the framework gains by making arrays
-   immutable.
+   with `id()` that no name was rebound.
 
     *Adapted from problem 35 of
     [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
-1. [extended] **Loops, broadcasting, and library primitives.** Compute all
+:end_tab:
+
+:begin_tab:`mxnet`
+6. **Object identity versus storage.** Use `id()` to verify
+   that `X[:] = X + Y` (or `X += Y`) keeps the same Python tensor object
+   while `X = X + Y` binds `X` to a new object. Explain why object identity
+   alone does not prove that the underlying storage was reused.
+7. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for
+   two same-shaped tensors without allocating a new array. Write every
+   intermediate into a pre-allocated buffer using `Z[:] = ...`, and verify
+   with `id()` that no name was rebound.
+
+    *Adapted from problem 35 of
+    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
+:end_tab:
+
+:begin_tab:`tensorflow`
+6. **Object identity versus storage.** Ordinary tensors are immutable, so
+   mutation goes through a `Variable`. Use `id()` to verify that
+   `Z.assign(X + Y)` keeps the same `Variable` object while `Z = X + Y`
+   binds `Z` to a new tensor. Explain why object identity alone does not
+   prove that the underlying storage was reused.
+7. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
+   same-shaped tensors without binding any new Python name: write every
+   intermediate into a pre-allocated `tf.Variable` with `assign`, and
+   verify with `id()` that the variable was never rebound. Explain what
+   TensorFlow gains by keeping ordinary tensors immutable, and how
+   `tf.function` recovers allocation reuse.
+
+    *Adapted from problem 35 of
+    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
+:end_tab:
+
+:begin_tab:`jax`
+6. **Object identity versus storage.** JAX arrays are immutable: use `id()`
+   to verify that both `X = X + Y` and `X = X.at[0].set(0)` bind `X` to new
+   array objects. Explain why object identity therefore says nothing about
+   whether storage was reused, and where buffer reuse can still happen.
+7. [code] **In-place composition.** JAX forbids in-place writes: express
+   `(A + B) * (-A / 2)` with functional updates, accumulating the
+   intermediates into a result array with `.at[...].set(...)`. Explain what
+   JAX gains by making arrays immutable and how XLA under `jax.jit`
+   recovers the buffer reuse that in-place writes would otherwise provide.
+
+    *Adapted from problem 35 of
+    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
+:end_tab:
+
+8. [extended] **Loops, broadcasting, and library primitives.** Compute all
    pairwise squared Euclidean distances between two sets of 50 vectors in 8
    dimensions in three ways: two nested Python loops, one loop plus
    broadcasting, and a fully vectorized version with no explicit loop.

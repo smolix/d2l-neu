@@ -316,8 +316,8 @@ and which belongs to its implementation.
 1. [code] **Numerical stability of softmax.** Take the from-scratch
    `softmax` of :numref:`sec_softmax_scratch` and feed it the logits
    $\mathbf{o} = (1000, 0, 0)$. What do you get, and why? Now compute the
-   loss for the same logits with the framework's `cross_entropy`, passing
-   the logits directly. Why is it finite? Verify that on *benign* logits,
+   loss for the same logits with the built-in cross-entropy loss used in
+   this section, passing the logits directly. Why is it finite? Verify that on *benign* logits,
    e.g., $\mathbf{o} = (2, 1, 0)$, the two routes agree to floating-point
    precision.
 1. **Shift invariance.** Show, using the identity

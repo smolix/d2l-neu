@@ -315,19 +315,60 @@ dimensions and channels efficiently.
 
 ## Exercises
 
-1. Assume that the size of the convolution kernel is $\Delta = 0$.
-   Show that in this case the convolution kernel
-   implements an MLP independently for each set of channels. This leads to the Network in Network 
-   architectures :cite:`Lin.Chen.Yan.2013`. 
-1. Audio data is often represented as a one-dimensional sequence. 
-    1. When might you want to impose locality and translation equivariance for audio?
-    1. Derive the convolution operations for audio.
-    1. Can you treat audio using the same tools as computer vision? Hint: use the spectrogram.
-1. Why might translation equivariance not be a good inductive bias? Give an example.
-1. Do you think that convolutional layers might also be applicable for text data?
-   Which problems might you encounter with language?
-1. What happens with convolutions when an object is at the boundary of an image?
-1. Prove that the convolution is symmetric, i.e., $f * g = g * f$.
+1. **Network in Network.** Assume that the size of the convolution kernel
+   is $\Delta = 0$. Show that in this case :eqref:`eq_conv-layer-channels`
+   reduces to an MLP applied independently to the channel vector at each
+   spatial location. This leads to the Network in Network architecture
+   :cite:`Lin.Chen.Yan.2013`.
+1. **Convolution symmetry.** Prove that the convolution is symmetric,
+   i.e., $f * g = g * f$.
+1. [code] **Convolutions for audio.** Audio data is often represented as a
+   one-dimensional sequence.
+    1. State one property of audio for which imposing locality and
+       translation equivariance is a good assumption, and one for which it
+       is not.
+    1. Derive the one-dimensional analog of :eqref:`eq_conv-layer` for
+       audio.
+    1. Compute the spectrogram of a short recording of your choice and
+       treat it as a two-dimensional image whose axes are time and
+       frequency. For each axis, state whether translation equivariance is
+       a reasonable assumption, justifying your answer from how the
+       corresponding physical quantity behaves under a shift.
+1. **Convolutions on text.** A convolutional layer assumes that shifting
+   the input shifts the output identically. Name two structural properties
+   of natural-language text that make this assumption a worse fit for text
+   than for images, and state for each what a one-dimensional convolution
+   over word embeddings would fail to capture.
+1. **Equivariance as a bad bias.** Give an example of a vision task whose
+   correct label changes under translation, and state precisely which of
+   this section's two assumptions the task violates.
+1. **Boundary effects.** For a $\Delta = 1$ kernel applied to an
+   $n \times n$ image with no padding, count how many of the $(n-2)^2$
+   output positions use at least one boundary input pixel, i.e., one with
+   $i \in \{1, n\}$ or $j \in \{1, n\}$. How does the fraction of such
+   positions behave as $n \to \infty$? Connect the answer to why
+   :numref:`sec_padding` is needed.
+1. [code] **Constraining the MLP.** Using only basic tensor indexing,
+   without any convolution primitive, implement a locally connected layer:
+   a linear map from an $n \times n$ input to an $n \times n$ output in
+   which output $(i, j)$ depends only on the $\Delta$-neighborhood of
+   input $(i, j)$, with an independent weight tensor at every output
+   location — the tensor $\mathsf{V}$ of :eqref:`eq_conv-layer` before the
+   equivariance constraint. Then tie the weights across locations and
+   verify numerically, on a small input with a hand-chosen kernel, that
+   the output matches direct two-dimensional cross-correlation.
+
+    *Adapted from CMU 11-785,
+    [Homework 2 Part 1](https://deeplearning.cs.cmu.edu/S21/index.html).*
+1. **Equivariance versus augmentation.** A translation-equivariant model
+   already treats a pattern the same way at every location. Explain why
+   training such a model on translated copies of the same images can
+   nonetheless improve its measured accuracy. Which parts of a typical
+   convolutional classifier break exact translation equivariance?
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
+    Chapter 6.*
 
 [Discussions](https://d2l.discourse.group/t/64)
 

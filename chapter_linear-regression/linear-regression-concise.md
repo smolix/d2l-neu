@@ -437,12 +437,11 @@ Dimensionality and storage for networks are automatically inferred
 
 ## Exercises
 
-1. **Sum versus mean.** The framework loss functions used above return the
+1. **Sum versus mean.** The loss function used above returns the
    mean loss over the minibatch by default. State how the learning rate
    must change if you replace this average with the *sum* of the losses
-   over the minibatch, e.g., by passing `reduction='sum'`, and explain why.
-1. [code] **Huber loss.** Review the framework documentation to see which
-   loss functions are provided. In particular, replace the squared loss
+   over the minibatch, and explain why.
+1. [code] **Huber loss.** Replace the squared loss
    with Huber's robust loss function
 
     $$l(y,y') = \begin{cases}|y-y'| -\frac{\sigma}{2} & \textrm{ if } |y-y'| > \sigma \\ \frac{1}{2 \sigma} (y-y')^2 & \textrm{ otherwise.}\end{cases}$$

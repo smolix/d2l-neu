@@ -833,10 +833,34 @@ The basic workflow is:
 
 1. **Cost of the second derivative.** Why is the second
    derivative much more expensive to compute than the first derivative?
-1. [code] **Running backward twice.** After running the
-   backpropagation function, run it again on the same graph. What happens,
-   and how does the behavior differ across frameworks?
-1. **From scalar to vector input.** In the control flow
+:begin_tab:`mxnet`
+2. [code] **Running backward twice.** After running the backpropagation
+   function, run `y.backward()` again on the same recorded graph. What
+   happens? Look up the `retain_graph` argument of `backward` and explain
+   what it changes.
+:end_tab:
+
+:begin_tab:`pytorch`
+2. [code] **Running backward twice.** After running the backpropagation
+   function, run `y.backward()` again on the same graph. What happens? Look
+   up the `retain_graph` argument of `backward` and explain what it
+   changes.
+:end_tab:
+
+:begin_tab:`tensorflow`
+2. [code] **Running backward twice.** Call `tape.gradient` a second time on
+   the same tape. What happens? Construct the tape with `persistent=True`,
+   repeat, and explain what changes and what the persistent tape costs.
+:end_tab:
+
+:begin_tab:`jax`
+2. [code] **Running backward twice.** Call the function returned by
+   `jax.grad` twice on the same input. Why does the second call behave no
+   differently from the first? What does this tell you about where JAX
+   keeps the information needed for differentiation?
+:end_tab:
+
+3. **From scalar to vector input.** In the control flow
    example where we calculate the derivative of `d` with respect to `a`,
    what would happen if we changed the variable `a` to a random vector or a
    matrix? The result of `f(a)` is then no longer a scalar. State what
@@ -855,22 +879,64 @@ The basic workflow is:
    $x = -2$, $y = 5$, $z = -4$, compute the forward pass by hand, then
    trace $\partial f/\partial x$, $\partial f/\partial y$, and
    $\partial f/\partial z$ backward through the addition and multiplication
-   nodes. Verify every value against your framework's automatic
-   differentiation.
+   nodes. Verify every value using automatic differentiation.
 
     *Adapted from Stanford CS231n,
     ["An Exercise in Backpropagation"](https://cs231n.stanford.edu/slides/2026/section_2_backprop.pdf).*
-1. [code] **Detach and check.** Let `y = x * x`, and let `u` be `y`
-   detached from the graph using your framework's mechanism. For
-   `z = x * u`, verify that $\partial z/\partial x$ equals `u`, treating
-   `u` as a constant, rather than the $3x^2$ you would get without
+
+:begin_tab:`mxnet`
+6. [code] **Detach and check.** Let `y = x * x`, and let `u = y.detach()`
+   inside the recording scope. For `z = x * u`, verify that
+   $\partial z/\partial x$ equals `u`, treating `u` as a constant, rather
+   than the $3x^2$ you would get without detaching. Confirm that the graph
+   leading to `y` itself is unaffected: $\partial y/\partial x$ still
+   equals $2x$.
+7. [code] **Turning off gradient tracking.** Wrap a computation in
+   `autograd.pause()` inside a recording scope and confirm that the result
+   carries no gradient information. Then explain why skipping this
+   bookkeeping matters at prediction time for a model with millions of
+   parameters.
+:end_tab:
+
+:begin_tab:`pytorch`
+6. [code] **Detach and check.** Let `y = x * x`, and let `u = y.detach()`.
+   For `z = x * u`, verify that $\partial z/\partial x$ equals `u`,
+   treating `u` as a constant, rather than the $3x^2$ you would get without
    detaching. Confirm that the graph leading to `y` itself is unaffected:
    $\partial y/\partial x$ still equals $2x$.
-1. [code] **Turning off gradient tracking.** Wrap a computation in
-   your framework's mechanism for disabling gradient tracking and confirm
-   that the result carries no gradient information. Then explain why
-   skipping this bookkeeping matters at prediction time for a model with
-   millions of parameters. 
+7. [code] **Turning off gradient tracking.** Wrap a computation in a
+   `torch.no_grad()` block and confirm that the result carries no gradient
+   information. Then explain why skipping this bookkeeping matters at
+   prediction time for a model with millions of parameters.
+:end_tab:
+
+:begin_tab:`tensorflow`
+6. [code] **Detach and check.** Let `y = x * x`, and let
+   `u = tf.stop_gradient(y)`. For `z = x * u`, verify that
+   $\partial z/\partial x$ equals `u`, treating `u` as a constant, rather
+   than the $3x^2$ you would get without detaching. Confirm that the graph
+   leading to `y` itself is unaffected: $\partial y/\partial x$ still
+   equals $2x$.
+7. [code] **Turning off gradient tracking.** Compute a value outside any
+   `tf.GradientTape` and confirm that the tape records nothing for it;
+   inside a tape, pause recording with `tape.stop_recording()` and confirm
+   the same. Then explain why skipping this bookkeeping matters at
+   prediction time for a model with millions of parameters.
+:end_tab:
+
+:begin_tab:`jax`
+6. [code] **Detach and check.** Let `y = x * x`, and let
+   `u = jax.lax.stop_gradient(y)`. For `z = x * u`, verify that
+   $\partial z/\partial x$ equals `u`, treating `u` as a constant, rather
+   than the $3x^2$ you would get without detaching. Confirm that the graph
+   leading to `y` itself is unaffected: $\partial y/\partial x$ still
+   equals $2x$.
+7. **Opting in to gradient tracking.** JAX records nothing implicitly:
+   differentiation happens only where a transform such as `jax.grad` is
+   applied. Explain why prediction-time code therefore needs no special
+   mechanism, and what bookkeeping a recording-based design has to perform
+   on every forward pass for a model with millions of parameters.
+:end_tab:
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/34)

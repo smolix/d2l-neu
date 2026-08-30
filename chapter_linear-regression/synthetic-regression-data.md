@@ -394,13 +394,40 @@ we use from here on.
 
 ## Exercises
 
+:begin_tab:`mxnet`
 1. **Partial batches.** When the number of examples is not divisible by the
-   batch size, the loaders above keep the final partial batch. Find the
-   argument in your framework's loader that drops it instead (in PyTorch,
-   `drop_last`; in TensorFlow, `drop_remainder`), state what it does, and
+   batch size, the loader above keeps the final partial batch. Find the
+   argument of Gluon's `DataLoader` that discards it instead, state what it
+   does, and give one training scenario where you would enable it and one
+   where you would not.
+:end_tab:
+
+:begin_tab:`pytorch`
+1. **Partial batches.** When the number of examples is not divisible by the
+   batch size, the loader above keeps the final partial batch. Find the
+   argument of `DataLoader` that drops it instead, state what it does, and
    give one training scenario where you would enable it and one where you
    would not.
-1. **Data beyond memory.** ● Suppose that we want to generate a huge
+:end_tab:
+
+:begin_tab:`tensorflow`
+1. **Partial batches.** When the number of examples is not divisible by the
+   batch size, the loader above keeps the final partial batch. Find the
+   argument of `Dataset.batch` that drops it instead, state what it does,
+   and give one training scenario where you would enable it and one where
+   you would not.
+:end_tab:
+
+:begin_tab:`jax`
+1. **Partial batches.** When the number of examples is not divisible by the
+   batch size, a loader can keep or drop the final partial batch. The
+   loader above already passes `drop_remainder=train`. State what it does,
+   explain why dropping the partial batch matters specifically under
+   `@jax.jit`, and give one scenario where you would keep the partial batch
+   instead.
+:end_tab:
+
+2. **Data beyond memory.** ● Suppose that we want to generate a huge
    dataset, where both the size of the parameter vector `w` and the number
    of examples `num_examples` are large.
     1. Name two concrete constraints that arise once the data no longer

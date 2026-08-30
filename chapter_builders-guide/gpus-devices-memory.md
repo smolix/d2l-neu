@@ -1851,7 +1851,8 @@ CPU fallback when no GPU exists.
 1. [code] **Memory footprint.** Using the accounting model of this section,
    predict the peak memory footprint of the four-plateau cell of
    :numref:`subsec_memory_during_training` at batch sizes 64, 256, and 1024,
-   then measure with your framework's peak-memory counter. Where does the
+   then measure with the peak-memory counter used in
+   :numref:`subsec_memory_during_training`. Where does the
    prediction break down, and what did it omit?
 1. [code] **Activation checkpointing.** Revisit the checkpointing comparison
    of this section.

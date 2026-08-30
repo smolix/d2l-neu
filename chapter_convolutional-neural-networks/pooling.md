@@ -403,19 +403,56 @@ between a query and representation vectors rather than by spatial location.
 
 ## Exercises
 
-1. Implement average pooling through a convolution. 
-1. Prove that max-pooling cannot be implemented through a convolution alone. 
-1. Max-pooling can be accomplished using ReLU operations, i.e., $\textrm{ReLU}(x) = \max(0, x)$.
+1. [code] **Average pooling as convolution.** Implement average pooling
+   through a convolution.
+1. **Max-pooling is not a convolution.** Prove that max-pooling cannot be
+   implemented through a convolution alone.
+1. **Max-pooling via ReLU.** Max-pooling can be accomplished using ReLU
+   operations, i.e., $\textrm{ReLU}(x) = \max(0, x)$.
     1. Express $\max (a, b)$ by using only ReLU operations.
-    1. Use this to implement max-pooling by means of convolutions and ReLU layers. 
-    1. How many channels and layers do you need for a $2 \times 2$ convolution? How many for a $3 \times 3$ convolution?
-1. What is the computational cost of the pooling layer? Assume that the input to the pooling layer is of size $c\times h\times w$, the pooling window has a shape of $p_\textrm{h}\times p_\textrm{w}$ with a padding of $(p_\textrm{h}, p_\textrm{w})$ and a stride of $(s_\textrm{h}, s_\textrm{w})$.
-1. Why do you expect max-pooling and average pooling to work differently?
-1. Do we need a separate minimum pooling layer? Can you replace it with another operation?
-1. We could use the softmax operation for pooling. Why might it not be so popular?
-1. Naive stride-2 downsampling keeps every second entry of its input. Apply it to the one-dimensional signals $(1, 0, 1, 0, 1, 0)$ and $(0, 1, 0, 1, 0, 1)$, i.e., the same pattern shifted by one position. 
-    1. Compare the two outputs. Why is this behavior called *aliasing*, and which input frequencies can a stride-2 subsampler represent faithfully?
-    1. Blur-pool counteracts aliasing by applying a small averaging filter before subsampling. Work out what blur-pool with a two-tap box filter $(\tfrac{1}{2}, \tfrac{1}{2})$ computes on the two signals above. Which pooling operation from this section does it coincide with?
+    1. Use this to implement max-pooling by means of convolutions and ReLU
+       layers.
+    1. How many channels and layers do you need for a $2 \times 2$ window?
+       How many for a $3 \times 3$ window?
+1. **Cost of pooling.** What is the computational cost of the pooling
+   layer? Assume that the input is of size $c \times h \times w$, the
+   pooling window has a shape of $k_\textrm{h} \times k_\textrm{w}$, the
+   padding is $(p_\textrm{h}, p_\textrm{w})$, and the stride is
+   $(s_\textrm{h}, s_\textrm{w})$.
+1. [code] **Max versus average pooling.** Construct two synthetic
+   $4 \times 4$ patches with the same mean: one with a single high-value
+   outlier on a uniform background, and one with a smooth gradient. Apply
+   $2 \times 2$ max-pooling and average pooling with stride 2 to both and
+   report all four outputs. Using these numbers, describe one scenario in
+   which max-pooling is preferable and one in which average pooling is
+   preferable.
+1. **Pooling alternatives.**
+    1. Do we need a separate minimum-pooling layer, or can it be expressed
+       through an operation already in this section?
+    1. We could combine the values in a pooling window with a softmax
+       instead of a max or a mean. Give one concrete reason this is not
+       popular in practice.
+1. [code] **Aliasing and blur-pool.** Naive stride-2 downsampling keeps
+   every second entry of its input.
+    1. Apply it to the one-dimensional signals $(1, 0, 1, 0, 1, 0)$ and
+       $(0, 1, 0, 1, 0, 1)$, i.e., the same pattern shifted by one
+       position. Compare the two outputs. Why is this behavior called
+       *aliasing*, and which input frequencies can a stride-2 subsampler
+       represent faithfully?
+    1. Blur-pool :cite:`zhang2019making` counteracts aliasing by applying
+       a small averaging filter before subsampling. Work out what
+       blur-pool with a two-tap box filter
+       $(\tfrac{1}{2}, \tfrac{1}{2})$ computes on the two signals above.
+       Which pooling operation from this section does it coincide with?
+1. [code] **Backward pass of max-pooling.** Implement the backward pass of
+   two-dimensional max-pooling: route the incoming output gradient to the
+   input location that achieved the maximum in each window, and zero
+   elsewhere. Verify against the gradient computed by automatic
+   differentiation on a small random tensor, to a relative error below
+   $10^{-4}$.
+
+    *Adapted from Stanford CS231n,
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/71)

@@ -18,6 +18,14 @@ code, pre, .sourceCode {
   line-height: 1.6;
 }
 
+/* ── Nested ordered lists: letter sub-numbering ────────── */
+
+/* Sub-problems in the exercise sections read as 1a, 1b, ... rather than
+   a second level of arabic numerals. */
+main ol ol {
+  list-style-type: lower-alpha;
+}
+
 /* ── Cell output: wrap, never clip ─────────────────────── */
 
 /* Bootstrap gives `pre` overflow:auto, so an output line wider than the

@@ -787,20 +787,65 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
 
 ## Exercises
 
-1. Compared with AlexNet, VGG is much slower in terms of computation, and it also needs more GPU memory.
+1. **Parameters and FLOPs across architectures.** Compared with AlexNet,
+   VGG is much slower in terms of computation, and it also needs more GPU
+   memory.
     1. Compare the number of parameters needed for AlexNet and VGG.
-    1. Compare the number of floating point operations used in the convolutional layers and in the fully connected layers.
-    1. How could you reduce the computational cost created by the fully connected layers?
-1. When displaying the dimensions associated with the various layers of the VGG network, we only see the information associated with eight blocks (plus some auxiliary transforms), even though the network has 11 layers. Where did the remaining three layers go?
-1. Use Table 1 in the VGG paper :cite:`Simonyan.Zisserman.2014` to construct other common models, such as VGG-16 or VGG-19.
-1. Upsampling the resolution in Fashion-MNIST eight-fold from $28 \times 28$ to $224 \times 224$ dimensions is very wasteful. Try modifying the network architecture and resolution conversion, e.g., to 56 or to 84 dimensions for its input instead. Can you do so without reducing the accuracy of the network? Consult the VGG paper :cite:`Simonyan.Zisserman.2014` for ideas on adding more nonlinearities prior to downsampling.
-1. Why are there two $1\times 1$ convolutional layers per NiN block? Increase their number to three. Reduce their number to one. What changes?
-1. What happens if you replace NiN's global average pooling by a fully connected layer (speed, accuracy, number of parameters)?
-1. What are possible problems with reducing the $384 \times 5 \times 5$ representation to a $10 \times 5 \times 5$ representation in one step, as the final NiN block does?
-1. Add a squeeze-and-excitation gate :cite:`Hu.Shen.Sun.2018` to the Inception block: global-average-pool the block's output to one value per channel, pass it through a two-layer MLP with a sigmoid at the end, and multiply the channels by the result. How many parameters does this add, and how does it change training on Fashion-MNIST?
-1. Replace the Inception block's four branches with a single $7 \times 7$ depthwise convolution followed by a $1 \times 1$ convolution (:numref:`sec_depthwise_separable`). Compare the parameter count and the number of floating point operations with the original block at the same input and output sizes.
-1. What is the minimum image size needed for GoogLeNet to work? Can you design a variant that works on Fashion-MNIST's native resolution of $28 \times 28$ pixels? What would you need to change in the stem, the body, and the head?
-1. Compare the model parameter sizes of AlexNet, VGG, NiN, and GoogLeNet. How do the latter two architectures reduce the model parameter size so dramatically?
+    1. Compare the number of floating point operations used in the
+       convolutional layers and in the fully connected layers.
+    1. How could you reduce the computational cost created by the fully
+       connected layers?
+    1. Extend the accounting to NiN and GoogLeNet. Which specific design
+       choice in each cuts the parameter count so dramatically relative to
+       VGG?
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 10.18.*
+1. **The missing three layers.** When displaying the dimensions associated
+   with the various layers of the VGG network, we only see the information
+   associated with eight blocks (plus some auxiliary transforms), even
+   though the network has 11 layers. Where did the remaining three layers
+   go?
+1. [code] **VGG-16 and VGG-19.** Use Table 1 in the VGG paper
+   :cite:`Simonyan.Zisserman.2014` to construct other common models, such
+   as VGG-16 or VGG-19, as variants of this section's VGG builder. Report
+   their parameter counts against the VGG-11 baseline.
+1. [code] **Resolution conversion.** Upsampling the resolution in
+   Fashion-MNIST eight-fold from $28 \times 28$ to $224 \times 224$
+   dimensions is very wasteful. Resize to $56 \times 56$ and to
+   $84 \times 84$ instead, adjusting the network to match. Report whether
+   each variant stays within one point of the $224 \times 224$ baseline's
+   accuracy; if not, add a nonlinearity before a downsampling step,
+   following the VGG paper's discussion :cite:`Simonyan.Zisserman.2014`,
+   and report again.
+1. [code] **NiN block design.** Why are there two $1\times 1$
+   convolutional layers per NiN block? Increase their number to three,
+   then reduce it to one, and report parameter count, accuracy, and
+   training time for each variant.
+1. [code] **Global average pooling versus dense.** What happens if you
+   replace NiN's global average pooling by a fully connected layer?
+   Compare speed, accuracy, and the number of parameters.
+1. **One-step channel reduction.** What are possible problems with
+   reducing the $384 \times 5 \times 5$ representation to a
+   $10 \times 5 \times 5$ representation in one step, as the final NiN
+   block does?
+1. [code] **Squeeze-and-excitation.** Add a squeeze-and-excitation gate
+   :cite:`Hu.Shen.Sun.2018` to the Inception block: global-average-pool
+   the block's output to one value per channel, pass it through a
+   two-layer MLP with a sigmoid at the end, and multiply the channels by
+   the result. How many parameters does this add, and how does it change
+   training on Fashion-MNIST?
+1. **Depthwise Inception.** Replace the Inception block's four branches
+   with a single $7 \times 7$ depthwise convolution followed by a
+   $1 \times 1$ convolution (:numref:`sec_depthwise_separable`). Compare
+   the parameter count and the number of floating point operations with
+   the original block at the same input and output sizes.
+1. [code] **GoogLeNet at native resolution.** What is the minimum image
+   size needed for GoogLeNet to work? Design a variant that runs directly
+   on Fashion-MNIST's native $28 \times 28$ resolution, report the
+   specific changes made to the stem, the body, and the head, and compare
+   its accuracy against the $224 \times 224$ baseline.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/77)

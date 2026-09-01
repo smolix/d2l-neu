@@ -274,7 +274,11 @@ X = X.at[:, 2:6].set(0)
 X
 ```
 
-Next, we construct a kernel `K` with a height of 1 and a width of 2.
+Next, we construct a kernel `K` with a height of 1 and a width of 2,
+
+$$\mathbf{K} = \begin{bmatrix} 1 & -1 \end{bmatrix}.$$
+:eqlabel:`eq_edge_kernel`
+
 When we perform the cross-correlation operation with the input,
 if the horizontally adjacent elements are the same,
 the output is 0. Otherwise, the output is nonzero.
@@ -311,6 +315,7 @@ corr2d(d2l.transpose(X), K)
 ```
 
 ## Learning a Kernel
+:label:`subsec_learning_kernel`
 
 The finite difference `[1, -1]` works when the desired feature is known in
 advance. For larger kernels and successive convolutional layers, manually
@@ -662,19 +667,64 @@ particular network mirrors the brain.
 
 ## Exercises
 
-1. Construct an image `X` with diagonal edges.
-    1. What happens if you apply the kernel `K` in this section to it?
+1. [code] **Diagonal edges.** Construct an image `X` with diagonal edges.
+    1. What happens if you apply the kernel `K` of :eqref:`eq_edge_kernel`
+       to it?
     1. What happens if you transpose `X`?
     1. What happens if you transpose `K`?
-1. Design some kernels manually.
-    1. Given a directional vector $\mathbf{v} = (v_1, v_2)$, derive an edge-detection kernel that detects
-       edges orthogonal to $\mathbf{v}$, i.e., edges in the direction $(v_2, -v_1)$.
-    1. Derive a finite difference operator for the second derivative. What is the minimum
-       size of the convolutional kernel associated with it? Which structures in images respond most strongly to it?
-    1. How would you design a blur kernel? Why might you want to use such a kernel?
-    1. What is the minimum size of a kernel to obtain a derivative of order $d$?
-1. When you try to automatically find the gradient for the `Conv2D` class we created, what kind of error message do you see?
-1. How do you represent a cross-correlation operation as a matrix multiplication by changing the input and kernel tensors?
+1. [code] **Designing kernels.** Design some kernels manually.
+    1. Given a directional vector $\mathbf{v} = (v_1, v_2)$, derive an
+       edge-detection kernel that detects edges orthogonal to $\mathbf{v}$,
+       i.e., edges in the direction $(v_2, -v_1)$.
+    1. Derive a finite difference operator for the second derivative. What
+       is the minimum size of the convolutional kernel associated with it?
+       Which structures in images respond most strongly to it?
+    1. How would you design a blur kernel? Why might you want to use such
+       a kernel?
+    1. What is the minimum size of a kernel to obtain a derivative of
+       order $d$?
+    1. Load a single image and convert it to one channel. Apply three of
+       your kernels with `corr2d` — the edge detector, the blur kernel,
+       and a sharpening kernel built as twice the identity minus the blur
+       — and display each result next to the original.
+
+    *Adapted from Stanford CS231n,
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
+1. [code] **Autodiff on the custom layer.** When you try to automatically
+   find the gradient for the `Conv2D` class we created, what kind of error
+   message do you see?
+1. [code] **Cross-correlation as matrix multiplication.** Extend this
+   section's im2col construction from the $2 \times 2$ kernel shown to a
+   $3 \times 3$ kernel on a $4 \times 4$ input, and confirm that the
+   matrix product reproduces `corr2d`.
+1. [code] **Backward pass of a convolution.** ● Consider the
+   single-channel convolution of this section with input $\mathbf{X}$,
+   kernel $\mathbf{K}$, and a scalar loss $\ell$.
+    1. Derive $\partial \ell/\partial \mathbf{K}$ and
+       $\partial \ell/\partial \mathbf{X}$ in the style of the
+       backpropagation equations of :numref:`sec_backprop`.
+    1. Check your expression for $\partial \ell/\partial \mathbf{K}$
+       against the kernel updates produced by the experiment of
+       :numref:`subsec_learning_kernel`.
+    1. Implement the gradient of `corr2d(X, K)` with respect to `K`
+       directly, without automatic differentiation, and check it against a
+       finite-difference gradient on a small random `X` and `K` to a
+       relative error below $10^{-4}$.
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
+    Chapter 6, and Stanford CS231n,
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
+1. [extended] **Effective receptive field.** The theoretical receptive
+   field of :eqref:`eq_receptive_field` bounds which inputs *can*
+   influence an output; the effective receptive field measures how much
+   they actually do :cite:`Luo.Li.Urtasun.ea.2016`. Build a stack of three
+   $3 \times 3$ convolutional layers with random weights, stride 1, and no
+   padding on a $32 \times 32$ single-channel input. Backpropagate a unit
+   gradient from one output unit of the last layer to the input and plot
+   the magnitude of the input gradient over the $32 \times 32$ grid.
+   Compare the region of non-negligible magnitude with the $7 \times 7$
+   theoretical receptive field, and describe the shape of the falloff.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/65)

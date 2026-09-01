@@ -1032,21 +1032,57 @@ The practical points are:
 
 ## Exercises
 
-1. Should we remove the bias parameter from the fully connected layer or the convolutional layer before the batch normalization? Why?
-1. Compare the learning rates for LeNet with and without batch normalization.
-    1. Plot the increase in validation accuracy.
-    1. How large can you make the learning rate before the optimization fails in both cases?
-1. Do we need batch normalization in every layer? Experiment with it.
-1. Implement a "lite" version of batch normalization that only removes the mean, or alternatively one that
-   only removes the variance. How does it behave?
-1. Fix the parameters `beta` and `gamma`. Observe and analyze the results.
-1. Can you replace dropout by batch normalization? How does the behavior change?
-1. Research ideas: think of other normalization transforms that you can apply:
-    1. Can you apply the probability integral transform?
-    1. Can you use a full-rank covariance estimate? Why should you probably not do that? 
-    1. Can you use other compact matrix variants (block-diagonal, low-displacement rank, Monarch, etc.)?
-    1. Does a sparsification compression act as a regularizer?
-    1. Are there other projections (e.g., convex cone, symmetry group-specific transforms) that you can use?
+1. **Bias before batch norm.** Should we remove the bias parameter from
+   the fully connected layer or the convolutional layer before the batch
+   normalization? Justify your answer from :eqref:`eq_batchnorm`.
+1. [code] **Learning-rate ceiling.** Compare the learning rates for LeNet
+   with and without batch normalization.
+    1. Plot the increase in validation accuracy at a fixed learning rate.
+    1. Sweep the learning rate upward for both variants. How large can you
+       make it before the optimization fails in each case?
+1. [code] **Leave-one-out ablation.** Do we need batch normalization in
+   every layer? Starting from the network with batch norm after every
+   layer, remove it from exactly one layer at a time and retrain. Report,
+   as a table, the validation-accuracy cost of each removal, and identify
+   the layer whose removal hurts most.
+1. [code] **Batch norm lite.** Implement a version of batch normalization
+   that only removes the mean, and a second variant that only divides by
+   the standard deviation. Compare the training curves and final accuracy
+   of both against full batch normalization.
+1. [code] **Frozen scale and shift.** Fix the parameters `beta` and
+   `gamma`: first to $\beta = 0$, $\gamma = 1$, a no-op affine transform,
+   and separately to $\beta = 1$, $\gamma = 0.1$. Retrain in each case and
+   compare final accuracy and epochs to convergence against the
+   learned-affine baseline. Explain the direction of each effect.
+1. [code] **Replacing dropout.** In the dropout-regularized LeNet variant,
+   replace dropout with batch normalization and retrain. Report the
+   validation accuracy and the gap between training and validation
+   accuracy at a fixed epoch budget for both variants.
+1. [code] **Backward pass of batch norm.** ● The batch statistics in
+   :eqref:`eq_batchnorm` depend on every element of the minibatch, so the
+   backward pass is not elementwise.
+    1. Derive, by hand, the gradient of a scalar loss with respect to each
+       input of the batch-norm layer, working through the forward steps:
+       mean, centering, variance, normalization, and the affine scale and
+       shift.
+    1. Implement your expression and verify it against the gradient
+       computed by automatic differentiation.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 11.5.*
+1. [extended] **Beyond mean and variance.** ●● Normalization need not stop
+   at standardizing each coordinate. For each of the following transforms,
+   describe how it would be applied at a layer and what it costs, and
+   implement at least one of them.
+    1. The probability integral transform.
+    1. A full-rank covariance estimate, i.e., whitening. Why should you
+       probably not do that?
+    1. Compact matrix variants: block-diagonal, low-displacement-rank, or
+       Monarch matrices.
+    1. Sparsification. Does it act as a regularizer?
+    1. Other projections, for example onto a convex cone or a transform
+       specific to a symmetry group.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/83)

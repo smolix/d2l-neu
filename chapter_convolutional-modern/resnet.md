@@ -1074,13 +1074,50 @@ A common feature of the designs we have discussed so far is that the network des
 
 ## Exercises
 
-1. What are the major differences between the Inception block in :numref:`fig_inception` and the residual block? How do they compare in terms of computation, accuracy, and the classes of functions they can describe?
-1. Refer to Table 1 in the ResNet paper :cite:`He.Zhang.Ren.ea.2016` to implement different variants of the network. 
-1. For deeper networks, ResNet introduces a "bottleneck" architecture to reduce model complexity. Try to implement it.
-1. In subsequent versions of ResNet, the authors changed the "convolution, batch normalization, and activation" structure to the "batch normalization, activation, and convolution" structure. Make this improvement yourself. See Figure 1 in :citet:`He.Zhang.Ren.ea.2016*1` for details. This ordering is essentially what ConvNeXt adopts (:numref:`sec_convnext`).
-1. Why can increasing function-class complexity without bound still be undesirable when the classes are nested?
-1. One of the advantages claimed in the DenseNet paper :cite:`Huang.Liu.Van-Der-Maaten.ea.2017` is that its models have fewer parameters than comparable ResNets. Why is this the case? Consider which computations a concatenated feature saves relative to recomputing it.
-1. For a dense block whose $k$ convolutions each emit $g$ channels (the growth rate) on an input with $c$ channels, how many channels does the $i$-th convolution consume? Sum these to compare the activation memory of the dense block with that of $k$ residual blocks of constant width $c$, and relate your answer to the memory-efficient implementations of :citet:`pleiss2017memory`.
+1. **Inception versus residual blocks.** What are the major differences
+   between the Inception block in :numref:`fig_inception` and the residual
+   block? How do they compare in terms of computation, accuracy, and the
+   classes of functions they can describe?
+1. [code] **ResNet variants.** Refer to Table 1 in the ResNet paper
+   :cite:`He.Zhang.Ren.ea.2016` to implement at least two other depth
+   variants of the network.
+1. [code] **The bottleneck block.** For deeper networks, ResNet introduces
+   a "bottleneck" architecture to reduce model complexity. Implement it
+   and compare its parameter count with the basic block at matched depth.
+1. [code] **Pre-activation ordering.** In subsequent versions of ResNet,
+   the authors changed the "convolution, batch normalization, and
+   activation" structure to the "batch normalization, activation, and
+   convolution" structure. Make this improvement yourself (see Figure 1 in
+   :citet:`He.Zhang.Ren.ea.2016*1` for details) and compare the training
+   curves against the original ordering. This ordering is essentially what
+   ConvNeXt adopts (:numref:`sec_convnext`).
+1. **Nested function classes.** Why can increasing function-class
+   complexity without bound still be undesirable when the classes are
+   nested?
+1. **DenseNet's parameter count.** One of the advantages claimed in the
+   DenseNet paper :cite:`Huang.Liu.Van-Der-Maaten.ea.2017` is that its
+   models have fewer parameters than comparable ResNets. Why is this the
+   case? Consider which computations a concatenated feature saves relative
+   to recomputing it.
+1. **Dense block accounting.** For a dense block whose $k$ convolutions
+   each emit $g$ channels (the growth rate) on an input with $c$ channels,
+   how many channels does the $i$-th convolution consume? Sum these to
+   compare the activation memory of the dense block with that of $k$
+   residual blocks of constant width $c$, and relate your answer to the
+   memory-efficient implementations of :citet:`pleiss2017memory`.
+1. **Paths through a residual stack.** A stack of $K$ residual blocks can
+   be unraveled into an ensemble of paths: on each block, the signal
+   either passes through the block's body or skips it
+   :cite:`Veit.Wilber.Belongie.2016`.
+    1. How many end-to-end paths pass through exactly $\ell$ of the $K$
+       bodies? Verify your formula by explicit enumeration for $K = 4$.
+    1. Relate the distribution of path lengths to why very deep residual
+       networks remain trainable where equally deep plain networks are
+       not.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 11.2.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/85)

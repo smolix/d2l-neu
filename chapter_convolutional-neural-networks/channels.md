@@ -404,31 +404,65 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
 
 ## Exercises
 
-1. Assume that we have two convolution kernels of size $k_1$ and $k_2$, respectively 
-   (with no nonlinearity in between).
-    1. Prove that the result of the operation can be expressed by a single convolution.
+1. **Composing convolutions.** Assume that we have two convolution kernels
+   of size $k_1$ and $k_2$, respectively, with no nonlinearity in between.
+    1. Prove that the result of the operation can be expressed by a single
+       convolution.
     1. What is the dimensionality of the equivalent single convolution?
-    1. Is the converse true, i.e., can you always decompose a convolution into two smaller ones?
-1. Assume an input of shape $c_\textrm{i}\times h\times w$ and a convolution kernel of shape 
-   $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$, padding of $(p_\textrm{h}, p_\textrm{w})$, and stride of $(s_\textrm{h}, s_\textrm{w})$.
-    1. What is the computational cost (multiplications and additions) for the forward propagation?
+    1. Is the converse true, i.e., can you always decompose a convolution
+       into two smaller ones?
+1. **Cost and memory accounting.** Assume an input of shape
+   $c_\textrm{i}\times h\times w$ and a convolution kernel of shape
+   $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$,
+   padding of $(p_\textrm{h}, p_\textrm{w})$, and stride of
+   $(s_\textrm{h}, s_\textrm{w})$.
+    1. What is the computational cost (multiplications and additions) for
+       the forward propagation?
     1. What is the memory footprint?
     1. What is the memory footprint for the backward computation?
     1. What is the computational cost for the backpropagation?
-1. By what factor does the number of calculations increase if we double both the number of input channels 
-   $c_\textrm{i}$ and the number of output channels $c_\textrm{o}$? What happens if we double the padding?
-1. Are the variables `Y1` and `Y2` in the final example of this section exactly the same? Why?
-1. Express convolutions as a matrix multiplication, even when the convolution window is not $1 \times 1$. 
-1. Your task is to implement fast convolutions with a $k \times k$ kernel. One of the algorithm candidates 
-   is to scan horizontally across the source, reading a $k$-wide strip and computing the $1$-wide output strip 
-   one value at a time. The alternative is to read a $k + \Delta$ wide strip and compute a $\Delta$-wide 
-   output strip. Why is the latter preferable? Is there a limit to how large you should choose $\Delta$?
-1. A grouped convolution with $g$ groups (:numref:`sec_depthwise_separable`) acts on channels as a block-diagonal matrix with $g$ blocks.
-    1. By what factor does grouping reduce the number of parameters and the computational cost, compared to a dense convolution with the same $c_\textrm{i}$, $c_\textrm{o}$, and kernel size?
-    1. What is the downside of having $g$ groups? How could you fix it, at least partly, without giving up the savings entirely?
-1. Consider a block of two dense $3 \times 3$ convolutions, each with $c$ input and $c$ output channels, the building block of VGG (:numref:`sec_vgg`). Now replace each of the two convolutions by its depthwise-separable counterpart.
-    1. Compute the number of parameters and the number of multiplications on an $h \times w$ input for both variants.
-    1. Which of the two stages, depthwise or pointwise, dominates the cost of the separable block? What does this suggest about where to spend additional capacity?
+1. **Scaling channels and padding.** By what factor does the number of
+   calculations increase if we double both the number of input channels
+   $c_\textrm{i}$ and the number of output channels $c_\textrm{o}$? What
+   happens if we double the padding?
+1. [code] **The $1 \times 1$ equivalence.** Are the variables `Y1` and
+   `Y2` in the last example of :numref:`subsec_1x1` exactly the same?
+   Explain why, referencing the reshape used in
+   `corr2d_multi_in_out_1x1`.
+1. [code] **Multi-channel im2col.** Extend the im2col construction of
+   :numref:`sec_conv_layer` to the multi-input, multi-output setting: for
+   the `X` and `K` used with `corr2d_multi_in_out` in this section, build
+   the patch matrix, whose rows are now flattened
+   $c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}$ patches, and the
+   reshaped kernel matrix, and confirm that their product reproduces
+   `corr2d_multi_in_out`.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problems 10.6 and 10.7.*
+1. **Strip-buffered convolution.** To implement a fast convolution with a
+   $k \times k$ kernel, one candidate scans horizontally across the
+   source, reading a $k$-wide strip and computing the 1-wide output strip
+   one value at a time; the alternative reads a $k + \Delta$-wide strip
+   and computes a $\Delta$-wide output strip. Why is the latter
+   preferable? Is there a limit to how large you should choose $\Delta$?
+1. **Grouped convolutions.** A grouped convolution with $g$ groups
+   (:numref:`sec_depthwise_separable`) acts on channels as a
+   block-diagonal matrix with $g$ blocks.
+    1. By what factor does grouping reduce the number of parameters and
+       the computational cost, compared to a dense convolution with the
+       same $c_\textrm{i}$, $c_\textrm{o}$, and kernel size?
+    1. What is the downside of having $g$ groups? How could you fix it, at
+       least partly, without giving up the savings entirely?
+1. **Depthwise-separable block.** Consider a block of two dense
+   $3 \times 3$ convolutions, each with $c$ input and $c$ output channels,
+   the building block of VGG (:numref:`sec_vgg`). Now replace each of the
+   two convolutions by its depthwise-separable counterpart.
+    1. Compute the number of parameters and the number of multiplications
+       on an $h \times w$ input for both variants.
+    1. Which of the two stages, depthwise or pointwise, dominates the cost
+       of the separable block? What does this suggest about where to spend
+       additional capacity?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/69)

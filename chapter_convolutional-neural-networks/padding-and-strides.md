@@ -230,6 +230,7 @@ comp_conv2d(conv2d, X).shape
 ```
 
 ## Stride
+:label:`subsec_stride`
 
 When computing the cross-correlation,
 we start with the convolution window
@@ -453,14 +454,47 @@ example in image generation.
 
 ## Exercises
 
-1. Given the final code example in this section with kernel size $(3, 5)$, padding $(0, 1)$, and stride $(3, 4)$, 
-   calculate the output shape to check if it is consistent with the experimental result.
-1. For audio signals, what does a stride of 2 correspond to?
-1. Implement mirror padding, where the border values are reflected to extend a tensor.
-1. What are the computational benefits of a stride larger than 1?
-1. What might be statistical benefits of a stride larger than 1?
-1. How would you implement a stride of $\frac{1}{2}$? What does it correspond to? When would this be useful? Compare your answer with the transposed convolutions of :numref:`sec_transposed_conv`.
-1. A network stacks four $3 \times 3$ convolutions with stride 1 and dilations $1, 2, 4, 8$. Use :eqref:`eq_receptive_field` with each kernel replaced by its effective size to compute the receptive field of one output element. Which pixels inside that field does the output actually depend on? When does this *gridding* effect become a problem, and how would you choose a dilation schedule that avoids it?
+1. [code] **Output shapes.**
+    1. For the last example of :numref:`subsec_stride`, with kernel size
+       $(3, 5)$, padding $(0, 1)$, and stride $(3, 4)$, calculate the
+       output shape by hand and check that it is consistent with the
+       experimental result.
+    1. Using the combined padding, stride, and dilation formula of this
+       section, predict the output shape for a $7 \times 7$ kernel with
+       dilation $(3, 3)$, stride $(3, 3)$, and no padding on a
+       $32 \times 32$ input. Verify your prediction with `comp_conv2d`.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problems 10.2 and 10.4.*
+1. [code] **Mirror padding.** Implement mirror padding, where the border
+   values are reflected to extend a tensor, and demonstrate it on a small
+   tensor next to zero padding.
+1. **Benefits of stride.**
+    1. What are the computational benefits of a stride larger than 1?
+    1. What might be the statistical benefits of a stride larger than 1?
+1. **Fractional stride.** How would you implement a stride of
+   $\frac{1}{2}$? What does it correspond to? When would this be useful?
+   Compare your answer with the transposed convolutions of
+   :numref:`sec_transposed_conv`.
+1. **Stride as sampling.** For a length-6 one-dimensional input, write the
+   $4 \times 6$ weight matrix of a stride-1, kernel-3 convolution in the
+   matrix-multiplication style of :numref:`sec_conv_layer`, and the
+   $2 \times 4$ zero--one matrix that keeps every other entry of a
+   length-4 vector. Show that composing the two reproduces the matrix of
+   the stride-2, kernel-3 convolution.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 10.15.*
+1. **Dilation and gridding.** A network stacks four $3 \times 3$
+   convolutions with stride 1 and dilations $1, 2, 4, 8$.
+    1. Use :eqref:`eq_receptive_field`, with each kernel replaced by its
+       effective size, to compute the receptive field of one output
+       element.
+    1. Which pixels inside that field does the output actually depend on?
+    1. When does this *gridding* effect become a problem, and how would
+       you choose a dilation schedule that avoids it?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/67)

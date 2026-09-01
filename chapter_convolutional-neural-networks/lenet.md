@@ -370,19 +370,56 @@ ReLU activations.
 
 ## Exercises
 
-1. Modernize LeNet by implementing and testing the following changes:
+1. [code] **Modernizing LeNet.** Modernize LeNet by implementing and
+   testing the following changes:
     1. Replace average pooling with max-pooling.
     1. Replace the sigmoid activations with ReLU.
-1. Change the size of the LeNet-style network and determine whether accuracy
-   improves beyond the effects of max-pooling and ReLU.
+1. [code] **Architecture sweep.** Change the size of the LeNet-style
+   network and determine whether accuracy improves beyond the effects of
+   max-pooling and ReLU.
     1. Adjust the convolution window size.
     1. Adjust the number of output channels.
     1. Adjust the number of convolution layers.
     1. Adjust the number of fully connected layers.
-    1. Adjust the learning rates and other training details (e.g., initialization and number of epochs).
-1. Try out the improved network on the original MNIST dataset.
-1. Display the activations of the first and second layer of LeNet for different inputs (e.g., sweaters and coats).
-1. What happens to the activations when you feed significantly different images into the network (e.g., cats, cars, or even random noise)?
+    1. Adjust the learning rates and other training details, for example
+       the initialization and the number of epochs.
+1. [code] **Original MNIST.** Try out the improved network on the original
+   MNIST dataset. :citet:`LeCun.Bottou.Bengio.ea.1998` report an error
+   rate below 1% for LeNet-5 on this task; state how your result compares.
+1. [code] **Visualizing activations.** Display the activations of the
+   first and second layer of LeNet for different inputs, for example
+   sweaters and coats.
+1. [code] **Out-of-distribution activations.** Measure the maximum
+   activation magnitude of the first and second convolutional layers
+   separately for in-distribution Fashion-MNIST test images, for
+   out-of-distribution photos such as a cat or a car, and for pure random
+   noise. Do the out-of-distribution and noise magnitudes fall inside or
+   clearly outside the range observed on in-distribution inputs?
+1. [code] **The dense head.** ● The comparison table in the Summary states
+   that replacing the dense head with global average pooling removes most
+   of LeNet's parameters.
+    1. Using the parameter counts of :numref:`sec_channels` and the layer
+       shapes of :numref:`img_lenet_vert`, compute how many parameters
+       live in the two convolutional layers combined and how many in the
+       $400 \times 120$ dense block. Which dominates?
+    1. How would the balance shift under global average pooling in place
+       of the flatten and the first dense layer?
+    1. Now remove the two hidden fully connected layers of widths 120 and
+       84, connecting the flattened convolutional output directly to the
+       ten-way output. Retrain and report the accuracy change relative to
+       the original LeNet. Does the result match your prediction?
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
+    Chapter 6.*
+1. [code] **Overfitting sanity check.** Before trusting a full training
+   run, verify that the modernized LeNet of the first problem can drive
+   training accuracy above 99% on a fixed 50-image subset of Fashion-MNIST
+   within a small number of epochs. If it cannot, diagnose which
+   architectural or optimization choice is responsible.
+
+    *Adapted from Stanford CS231n,
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/73)

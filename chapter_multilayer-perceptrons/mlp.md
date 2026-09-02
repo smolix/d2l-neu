@@ -369,7 +369,7 @@ network would need exponential width, a *deep* one
 can often represent the same function far more compactly, trading width for depth
 :cite:`Montufar.Pascanu.Cho.ea.2014,Telgarsky.2016`. This is one reason practitioners reach for depth
 rather than sheer width. The folding picture sketched above is the heart of
-these depth-separation results; exercise 6 asks you to turn it into an
+these depth-separation results; the exercises ask you to turn it into an
 argument.
 
 
@@ -699,63 +699,85 @@ remains the sensible default for the models we build next.
    i.e., a network without nonlinearity $\sigma$, can never increase the
    expressive power of the network. Give an example where it actively
    reduces it.
-1. **XOR by hand.** Find weights for a two-hidden-unit ReLU network that
-   computes XOR, and verify them on the four inputs. (You may reuse the
-   construction in :numref:`fig_mdl-mlp-xor`, but try to derive your own
-   first.) Can a *single* ReLU unit compute XOR? Why or why not?
+1. **XOR by hand.** :numref:`fig_mdl-mlp-xor` gives one two-hidden-unit ReLU
+   network that computes XOR by folding the two class-1 corners onto the same
+   hidden point.
+    1. Find a different set of weights for a two-hidden-unit ReLU network that
+       also computes XOR but maps the two class-1 corners to *distinct* hidden
+       points, and verify it on the four inputs.
+    1. Show that no network with a single ReLU hidden unit and a linear output
+       can compute XOR.
 1. **Activation derivatives.** Compute the derivative of each of the
    following activation functions.
     1. The pReLU activation function.
     1. The Swish activation function $x \operatorname{sigmoid}(\beta x)$.
 1. **Piecewise linearity.** Show that an MLP using only ReLU (or pReLU)
    constructs a continuous piecewise linear function.
-1. **Depth doubles the pieces.** Explain intuitively why composing ReLU
-   layers can roughly *double* the number of linear pieces the network
-   represents with each added layer, so that depth can yield exponentially
-   many pieces, whereas width yields only linearly many. (This is the
-   depth-versus-width gap behind the universal-approximation caveat above.)
+1. **Depth and linear pieces.** ● A one-hidden-layer ReLU network of width $D$
+   on the real line has at most $D + 1$ linear pieces
+   (:numref:`fig_mdl-mlp-uat-hinges`), so width adds pieces only linearly.
+   This problem makes the multiplicative effect of depth exact for one
+   example.
+    1. Take three hidden units with joints at $x = 1/6$, $2/6$, and $4/6$ and
+       slopes $1$, $1$, and $-1$. Choose output weights and an output bias so
+       that the network's output $g$ on $[0, 1]$ consists of four linear
+       pieces whose values alternate between $0$ and $1$ at the joints, with
+       positive slope on the leftmost piece.
+    1. Count the linear pieces of $g \circ g$ on $[0, 1]$ exactly, and of the
+       $K$-fold composition $g \circ \cdots \circ g$. Explain, in terms of how
+       composing with $g$ *folds* the graph, why each composition multiplies
+       the count rather than adding to it.
+    1. How many hidden units would a single-hidden-layer network need to
+       represent the $K$-fold composition, and how many parameters does each
+       of the two networks have?
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 4.8.*
 1. **Sigmoid and tanh.** Sigmoid and tanh are very similar.
     1. Show that $\operatorname{tanh}(x) + 1 = 2 \operatorname{sigmoid}(2x)$.
     1. Prove that the function classes parametrized by both nonlinearities
        are identical.
-1. **Batch-wise nonlinearities.** Consider a nonlinearity that applies
-   jointly across a minibatch, such as batch normalization
-   :cite:`Ioffe.Szegedy.2015` (covered in :numref:`sec_batch_norm`).
-   Identify two specific things that break when the same computation is
-   applied naively at inference time: one for a batch of size $1$, and one
-   mismatch between what training and prediction compute.
+1. **Batch-wise nonlinearities.** Consider a nonlinearity that acts jointly on
+   a minibatch rather than on each example separately, for instance a layer
+   that subtracts the minibatch mean and divides by the minibatch standard
+   deviation of each hidden unit, as batch normalization does
+   :cite:`Ioffe.Szegedy.2015` (:numref:`sec_batch_norm`). Identify two
+   specific things that break when the same computation is applied naively at
+   prediction time: one for a batch of size $1$, and one mismatch between what
+   training and prediction compute.
 1. [code] **Vanishing gradients.** The derivative of the sigmoid satisfies
    $\sigma'(x) = \sigma(x)(1 - \sigma(x))$. It is *largest* at the origin,
    where it equals $1/4$, and decays exponentially as $|x|$ grows.
     1. Plot $\sigma'(x)$ over $[-10, 10]$ and report its value at
-       $x = \pm 10$. Explain why a single *saturated* unit, one operating
-       at large $|x|$, suffices to stall learning for all weights upstream
-       of it.
+       $x = \pm 10$. Explain why the weights feeding a *saturated* unit, one
+       operating at large $|x|$, receive almost no gradient whatever the
+       loss, and why in a network of width one a single saturated unit stalls
+       every earlier layer as well.
     1. Saturation is not the only difficulty: even at the most favorable
        point $x = 0$, each sigmoid layer scales the backward signal by at
        most $1/4$. Compute the compounded factor for a chain of $20$ layers
        operating at the origin, and compare it with the factor for the same
        chain saturated at $|x| = 5$. State what the two numbers imply for
        training deep sigmoid networks in either regime.
-1. **One hidden layer suffices.** ● The bump construction sketched in this
-   section localizes a function with two hidden layers: one layer builds
-   hinges, the next combines them into bumps. Show how to collapse this
-   into a *single* hidden layer for a two-input network, so that universal
-   approximation already holds with one hidden layer.
+1. **One hidden layer suffices.** ● On the real line,
+   :numref:`fig_mdl-mlp-uat-hinges` approximates a continuous function with a
+   single hidden layer, one hinge per joint. For two inputs, a natural
+   extension uses two hidden layers: the first builds ridges
+   $\operatorname{ReLU}(\mathbf{w}^\top \mathbf{x} + b)$ aligned with the
+   coordinate axes, and the second combines them into localized bumps, which
+   are then summed. Show that the second hidden layer is unnecessary.
+    1. Show that a single hidden layer can build a step of any orientation:
+       a function that is approximately $0$ on one side of an arbitrary line
+       in the plane and approximately $1$ on the other.
+    1. Show that adding many such steps of different orientations, all
+       centered on the same point, approximates a radially symmetric bump.
+    1. Conclude that a single hidden layer approximates any continuous
+       function on a compact subset of the plane.
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap4.html),
     Chapter 4.*
-1. **Folding, exactly.** ● Prove ReLU's non-negative homogeneity,
-   $\operatorname{ReLU}(\alpha z) = \alpha \operatorname{ReLU}(z)$ for
-   $\alpha > 0$. Then construct a one-dimensional example in which
-   composing a second ReLU layer visibly *folds* the graph of an existing
-   piecewise-linear function, turning the "roughly doubles" claim of the
-   earlier exercise into an exact statement for your example.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problems 3.5 and 4.8.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/90)

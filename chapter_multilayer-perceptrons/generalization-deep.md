@@ -99,6 +99,7 @@ uniform convergence, and Rademacher complexity, with proofs) are
 developed in :numref:`sec_mdl-concentration-generalization`.)
 
 ### Double Descent
+:label:`subsec_double_descent`
 
 Double descent is one observed departure from the simplest classical picture.
 Classical theory predicts a *U-shaped* test-error curve:
@@ -387,14 +388,16 @@ remains an active research problem.
 1. **Limits of complexity measures.** In what sense do traditional
    complexity-based generalization bounds fail to account for the
    generalization of deep neural networks?
-1. **Early stopping.** Consider the early-stopping rule described in
-   :numref:`subsec_early_stopping`.
-    1. Why can early stopping be considered a regularization technique?
-    1. Which property of the training data does
-       :numref:`subsec_early_stopping` identify as the factor that
-       determines when early stopping yields large gains in generalization?
-    1. Describe one benefit of early stopping beyond improved
-       generalization.
+1. **Early stopping.** :numref:`subsec_early_stopping` motivates early
+   stopping by the observation that, under label noise, networks fit the
+   correctly labeled examples before the mislabeled ones.
+    1. Explain how this ordering makes stopping early a form of
+       regularization, and identify the quantity that a patience rule
+       implicitly constrains in place of the weights.
+    1. Why should the generalization gain from early stopping shrink as the
+       fraction of mislabeled examples decreases? Give one mechanism other
+       than label noise by which continued training can still raise the
+       validation error.
 1. [code] **Patience-based stopping.** Implement a patience rule for the
    Fashion-MNIST MLP of :numref:`sec_mlp-implementation`: after every epoch,
    record the validation loss, and stop training once it has failed to
@@ -406,15 +409,20 @@ remains an active research problem.
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap3.html),
     Chapter 3.*
-1. [code] **Interpolation threshold.** The one-hidden-layer MLP of
-   :numref:`sec_mlp-implementation` has $795h + 10$ parameters for $h$
-   hidden units.
-    1. Solve for the width $h^\star$ at which the parameter count equals
-       the 60,000 training examples of Fashion-MNIST.
-    1. Train three models, at widths near $h^\star/4$, $h^\star$, and
-       $4h^\star$, long enough to approach zero training error where
-       possible, and plot test error against width. Is the test error
-       non-monotonic near $h^\star$?
+1. [extended] **Interpolation threshold.** The one-hidden-layer `MLP` of
+   :numref:`sec_mlp-implementation` has $795h + 10$ parameters, so its
+   parameter count matches the 60,000 training examples of Fashion-MNIST at
+   $h^\star \approx 75$. Randomly relabel 20% of the training examples, as
+   :citet:`nakkiran2021deep` do, and train models at widths
+   $h \in \{8, 16, 32, 75, 150, 300, 600\}$ until the training error stops
+   decreasing. Plot training and test error against width on a logarithmic
+   axis.
+    1. Does the test error rise and then fall again as the width increases,
+       and where is its peak?
+    1. At which width does the training error reach zero? Compare this width
+       with $h^\star$ and relate the outcome to the caveat in
+       :numref:`subsec_double_descent` that parameter count is not a reliable
+       proxy for the effective capacity of a deep network.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),

@@ -240,6 +240,7 @@ def create_net(self, in_channels, rngs):
 ```
 
 ## Distributions and Parameters of Design Spaces
+:label:`subsec_design_space_distributions`
 
 Parameters of a design space are hyperparameters of networks in that design space. Consider the problem of identifying good parameters in the AnyNet design space. We could try to find the *single best* parameter choice for a given amount of computation (e.g., FLOPs). But even with only *two* possible choices per parameter, we would have to explore $2^{17} = 131072$ combinations. Moreover, exhaustive search provides little guidance about *how* to design a network: add a new stage type or operation and we start from scratch, and training stochasticity (rounding, shuffling) means no two runs produce exactly the same result anyway. A better strategy is to determine general guidelines for how parameter choices should be related, e.g., that the bottleneck ratio, the number of channels, blocks, and groups, or their change between stages, should be governed by a collection of simple rules. The approach in :citet:`radosavovic2019network` relies on the following four assumptions:
 
@@ -255,6 +256,7 @@ $$F(e, p) \stackrel{\textrm{def}}{=} P_{\textrm{net} \sim p} \{e(\textrm{net}) \
 Our goal is to find a distribution $p$ over *networks* such that most networks have a very low error rate and the support of $p$ is concise. Computing $F$ exactly is infeasible, so we resort to a sample of networks $\mathcal{Z} \stackrel{\textrm{def}}{=} \{\textrm{net}_1, \ldots \textrm{net}_n\}$ (with errors $e_1, \ldots, e_n$, respectively) drawn from $p$ and use the empirical CDF $\hat{F}(e, \mathcal{Z})$ instead:
 
 $$\hat{F}(e, \mathcal{Z}) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}(e_i \leq e).$$
+:eqlabel:`eq_edf`
 
 If the empirical CDF for one sampled design space lies above another, a larger
 fraction of its sampled networks achieve any given error threshold. This is an
@@ -276,6 +278,7 @@ protocol. The experiment supports retaining the constraints in this search
 space; it does not prove that every task or block family benefits from them.
 
 ## RegNet
+:label:`subsec_regnet`
 
 The resulting $\textrm{AnyNetX}_E$ design space consists of simple networks
 following easy-to-interpret design principles:
@@ -469,10 +472,109 @@ blocks.
 
 ## Exercises
 
-1. Increase the number of stages to four. Can you design a deeper RegNetX that performs better?
-1. De-ResNeXt-ify RegNets by replacing the ResNeXt block with the ResNet block. How does your new model perform?
-1. Implement multiple instances of a "VioNet" family by *violating* the design principles of RegNetX. How do they perform? Which of ($d_i$, $c_i$, $g_i$, $b_i$) is the most important factor?
-1. The AnyNet experiments used the ResNeXt block throughout. Apply the same methodology to a design space built from ConvNeXt blocks (:numref:`sec_convnext`): sample configurations, compare empirical CDFs, and check which of the RegNet design principles survive the change of block.
+1. [code] **Four stages at matched budget.** `RegNetX32` uses two stages.
+   Extend it to the four stages of :numref:`fig_anynet_full`, keeping widths
+   and depths nondecreasing across stages and the parameter count within 10%
+   of `RegNetX32`. Compare validation accuracy and time per epoch on
+   Fashion-MNIST at $96 \times 96$. Work out the feature-map size at which
+   each stage operates and explain what a $3 \times 3$ convolution computes
+   on the last one.
+1. [code] **ResNet blocks in RegNetX.** Replace `d2l.ResNeXtBlock` in
+   `AnyNet.stage` by the `Residual` block of :numref:`sec_resnet`, keeping
+   the depths and widths of `RegNetX32`. Compare parameter count,
+   multiply-adds, and validation accuracy with the original. Express the
+   per-block parameter count of both blocks as a function of the width $c$
+   and the group width $g$, and check your formula against the measured
+   difference.
+1. [code] **VioNet.** Implement variants of `RegNetX32` that each violate
+   one design principle of $\textrm{AnyNetX}_E$ (:numref:`subsec_regnet`) at
+   roughly matched parameter count: widths that decrease across stages,
+   depths that decrease across stages, group widths that differ between
+   stages, and bottleneck ratios that differ between stages.
+    1. Report validation accuracy for each violation against `RegNetX32`.
+    1. Which of depth $d_i$, width $c_i$, group width $g_i$, and bottleneck
+       ratio $k_i$ matters most here?
+    1. Compare your ranking with :numref:`fig_regnet-fig`. Which violations
+       did the sampled design spaces of
+       :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` also find harmless,
+       and why does one network per violation give weaker evidence than an
+       error CDF?
+1. **Quantized linear widths.** :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
+   turn the observation that width should grow linearly with the block index
+   into a rule with three numbers. For $d$ blocks, the target width of block
+   $j$ is
+   $$u_j = w_0 + w_a\, j, \qquad j = 0, \ldots, d-1,$$
+   and each block is snapped to a geometric grid with ratio $w_m$,
+   $$s_j = \operatorname{round}\left(\frac{\log(u_j / w_0)}{\log w_m}\right), \qquad w_j = w_0\, w_m^{s_j}.$$
+   Blocks with equal $w_j$ form one stage.
+    1. For $d = 13$, $w_0 = 24$, $w_a = 36.44$, and $w_m = 2.49$, compute the
+       number of stages, the depth of each, and the stage widths rounded to
+       the nearest multiple of 8. Compare with the RegNetX-200MF
+       configuration in the paper.
+    1. Explain why the widths cannot follow $u_j$ directly, and describe
+       what happens to the number of stages as $w_m \to 1$ and as $w_m$
+       grows large.
+    1. A shared group width $g$ must divide every stage width. Which of your
+       widths violate this for $g = 8$ and for $g = 16$, and how would you
+       adjust them?
+1. [code] **RegNetY.** RegNetY adds the `SE` gate of :numref:`subsec_se` to
+   every block. Insert `SE` into `d2l.ResNeXtBlock` after its grouped
+   $3 \times 3$ convolution, as :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
+   do, and build a RegNetY32 with the configuration of `RegNetX32`.
+    1. Predict the added parameter count from the estimate of about
+       $2c^2/r$ per gate and verify it against the model.
+    1. Compare validation accuracy and time per epoch with `RegNetX32`.
+       Where does the extra time come from, given that the gate adds almost
+       no floating point operations?
+    1. Sweep the reduction ratio over $r \in \{1, 4, 16\}$. How sensitive
+       are accuracy and parameter count to $r$?
+1. [extended] **Testing the proxies.** The method of
+   :numref:`subsec_design_space_distributions` assumes that accuracy after a
+   few epochs predicts final accuracy and that results at small scale carry
+   over to larger networks. Test both with eight configurations sampled from
+   a two-stage AnyNet space with $d_i \in \{2, 4, 6\}$,
+   $c_i \in \{16, 32, 64, 128\}$ subject to $c_1 \le c_2$, $g \in \{8, 16\}$,
+   and $k = 1$.
+    1. Train each configuration for 10 epochs on Fashion-MNIST at
+       $96 \times 96$, recording validation accuracy after every epoch. Rank
+       the eight networks by accuracy after 1, 2, and 5 epochs and by final
+       accuracy. How well do the early rankings predict the final one?
+       Report the rank correlation, the correlation between the positions in
+       two rankings.
+    1. Repeat the eight runs with every width halved and the input resized
+       to $48 \times 48$. Does the ranking at small scale match the ranking
+       at full scale?
+    1. Relate your findings to the multi-fidelity argument of
+       :citet:`forrester2007multi`, and state which of the two assumptions
+       holds up better in your experiment.
+1. **Design spaces versus architecture search.** Neural architecture search
+   :cite:`zoph2016neural,liu2018darts` selects one network from a search
+   space; the method of :numref:`subsec_design_space_distributions`
+   constrains a distribution over networks.
+    1. Explain why comparing empirical CDFs :eqref:`eq_edf` cannot identify
+       the best network in a space, and why that is not its purpose.
+    1. Of the four assumptions listed in
+       :numref:`subsec_design_space_distributions`, which does a NAS method
+       that trains candidates briefly also rely on, and which are specific
+       to the design-space approach?
+    1. Name one failure mode of each approach: what can go wrong when a
+       single architecture is selected by a proxy score, and what can go
+       wrong when a design space is constrained by rules fitted to a sample?
+1. [extended] **A ConvNeXt design space.** ● The AnyNet experiments used the
+   ResNeXt block throughout, and :numref:`fig_regnet-fig` reports their
+   outcome on ImageNet.
+    1. Reproduce the first comparison at small scale: sample 16 two-stage
+       networks from an AnyNet space with per-stage bottleneck ratios
+       $k_i \in \{1, 2, 4\}$ and 16 from the same space with $k_i = 1$
+       throughout. Train each briefly on Fashion-MNIST and plot the two
+       empirical CDFs :eqref:`eq_edf`. Is the difference resolved at this
+       sample size?
+    1. Build the same design space from ConvNeXt blocks
+       (:numref:`sec_convnext`), with the block's expansion ratio in place
+       of $g_i$ and $k_i$, and repeat the sampling for the constraints that
+       widths and depths increase across stages.
+    1. Which of the RegNet design principles survive the change of block,
+       and which have no counterpart in a ConvNeXt block?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/7462)

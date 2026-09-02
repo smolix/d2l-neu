@@ -280,41 +280,54 @@ scaling) and for chaining them into reproducible pipelines, see
 
 ## Exercises
 
-1. [code] **A messier real dataset.** Load a real dataset, e.g.,
-   Abalone from the
+1. [code] **Inspecting a real dataset.** Load a dataset from the
    [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets),
-   and inspect its properties. Report what fraction of values are missing
-   and what fraction of the columns are numerical, categorical, or text.
-1. [code] **Indexing by name.** Redo this section's column selection
-   using name-based indexing instead of integer positions. Name the pandas
-   indexing method you used; the pandas docs on
+   for example Abalone, and inspect it with `dtypes`, `describe`, and
+   `isna`. Report what fraction of the values are missing and what
+   fraction of the columns are numerical, categorical, or text, and state
+   which of the preprocessing steps of this section the dataset actually
+   needs.
+1. [code] **Indexing by name.** Redo the split of `data` into `inputs`
+   and `targets`, written with `iloc` in the body, using column names
+   instead of integer positions. Name the pandas indexing method you used;
+   the pandas docs on
    [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html)
    describe the options.
-1. **Imputation strategies.** Compare three treatments of the
-   missing values in `NumRooms`: mean imputation, median imputation, and a
-   "was-missing" indicator column. State what each strategy assumes about
-   why the data are missing, and compute how each changes the column's mean
-   and standard deviation.
+1. [code] **Imputation strategies.** Fill the missing values in `NumRooms`
+   in three ways: with the column mean, with the column median, and with
+   the column mean plus a "was-missing" indicator column. For the first
+   two, compute how the column's mean and standard deviation change
+   relative to the observed values and explain the direction of each
+   change. For the third, state what information the indicator preserves
+   that imputation alone discards. State what each treatment assumes about
+   why the values are missing.
 
-    After you have trained your first model in the next chapter, return to
-    this exercise and compare the three variants by held-out error instead.
+    Once you have trained a model in :numref:`sec_linear_regression`,
+    return to this exercise and compare the three variants by their error
+    on rows that were not used for fitting.
 
     *Adapted from Kaggle Learn's
     [Missing Values](https://www.kaggle.com/code/alexisbcook/missing-values)
     exercise.*
-1. **Where leakage hides.** We standardized using statistics
-   from the whole dataset. Explain why this is a form of information
-   leakage and how the mean and standard deviation should be computed
-   instead. State what goes wrong if a feature has zero variance.
+1. [code] **Where leakage hides.** The standardization of
+   `inputs[continuous]` uses the mean and standard deviation of all ten
+   rows. Treat the first eight rows as training data and the last two as
+   test data, recompute the two statistics on the training rows only, and
+   compare the standardized test rows under the two recipes. Explain what
+   the whole-dataset recipe lets the model learn about the test rows that
+   the training-only recipe does not. Then state what happens to the
+   standardized column when a feature has zero variance on the training
+   rows, and propose a fix.
 1. **Scaling limits.** Estimate how large a dataset you could
    load this way. Consider read time, in-memory representation, and
    processing. Try it on your laptop, then on a larger machine, and
    identify what breaks first.
-1. [code] **High-cardinality categories.** Pick a categorical column
-   and compute how many new columns one-hot encoding adds as a function of
-   the number of unique values. For a column in which every value is
-   unique, such as an identifier, decide whether to include it, drop it, or
-   encode it differently, and justify your choice.
+1. [code] **High-cardinality categories.** For a categorical column with
+   $k$ distinct values, state how many columns `pd.get_dummies` produces
+   with and without `dummy_na=True`, and check your answer on `RoofType`.
+   For a column in which every value is unique, such as an identifier,
+   decide whether to include it, drop it, or encode it differently, and
+   justify your choice by what a model could learn from each option.
 
     *Adapted from Kaggle Learn's
     [Categorical Variables](https://www.kaggle.com/code/alexisbcook/categorical-variables)

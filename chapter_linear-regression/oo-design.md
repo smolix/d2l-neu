@@ -687,41 +687,45 @@ other components.
 
 ## Exercises
 
-1. [code] **Monkey-patching.** The `add_to_class` decorator works by
-   calling `setattr(Class, obj.__name__, obj)`.
-    1. Add a method `greet(self)` to the existing class `A` *after* the
-       instance `a` has been created, using `@add_to_class(A)`, and verify
-       that `a.greet()` works.
-    1. Define `greet` *without* the decorator and call `a.greet()` again.
-       Explain the outcome from the semantics of `setattr`.
+1. [code] **Monkey-patching.** The `add_to_class` decorator calls
+   `setattr(Class, obj.__name__, obj)`.
+    1. Register a second `do` method on class `A` with `@add_to_class(A)`,
+       giving it a different body, and call `a.do()` on the instance
+       created earlier. Explain which version runs and why an instance
+       created before either definition is affected.
+    1. Attach a function `greet(self)` to the instance instead, with
+       `setattr(a, 'greet', greet)`, and call `a.greet()`. Explain the
+       difference from registering it on the class.
 1. **Optimizer and model.** The `Module` class keeps the optimizer in
    `configure_optimizers`, a *method of the model*, rather than passing it
    as an argument to `Trainer`. State the advantages of this design choice,
    and describe a training setup in which putting the optimizer on the
    model becomes awkward.
 1. [code] **Test split.** Extend `DataModule` with a `test_dataloader`
-   method and extend `Trainer.fit` to run a final evaluation pass on the
-   test set after training. State the invariant a test loader must satisfy
-   that the validation loader need not. Hint: consider how many times each
-   may be consulted during model development.
-1. [code] **Saving hyperparameters.** The `save_hyperparameters`
-   implementation uses Python's `inspect` module to capture the caller's
-   local variables. Implement a version that does not use `inspect`, for
-   example by requiring the caller to pass the local namespace explicitly,
-   and verify that it reproduces the same attributes on class `B`. State
-   one thing the `inspect`-based version provides that your version gives
-   up.
-1. [code] **Synchronous logs.** ● The `ProgressBoard.draw` method is
-   *asynchronous*: it hands values to a background thread rather than
-   plotting immediately. Implement a synchronous variant that plots on the
-   calling thread. Time both across a training run with frequent `draw`
-   calls, and report under which conditions the synchronous version is
-   measurably slower and when the two are indistinguishable.
-1. **Life without `save_hyperparameters`.** Remove the
-   `save_hyperparameters` statement in the `B` class. Predict whether
-   `self.a` and `self.b` still print correctly, then explain your
-   prediction from how Python resolves attribute lookups on an instance
-   versus a class.
+   method and extend `Trainer.fit` to evaluate on it once, after the last
+   epoch (this can be run once :numref:`sec_linear_scratch` supplies
+   `fit_epoch`). Explain why the test loader is evaluated once at the end
+   rather than after every epoch like the validation loader
+   (:numref:`sec_generalization_basics`).
+1. [code] **Saving hyperparameters.** `save_hyperparameters` is
+   implemented in :numref:`sec_utils` with Python's `inspect` module, which
+   reads the caller's local variables.
+    1. Remove the `save_hyperparameters` call from class `B`. Predict
+       whether `self.a` and `self.b` still print, then explain the outcome
+       from the difference between a local variable of `__init__` and an
+       instance attribute.
+    1. Implement a version of `save_hyperparameters` that does not use
+       `inspect`, and verify that it produces the same attributes on `B`.
+    1. State one thing the `inspect`-based version provides that your
+       version gives up.
+1. [code] **Synchronous logs.** ● `ProgressBoard.draw` is asynchronous: it
+   queues the point for a background thread instead of plotting
+   immediately. Implement a variant that plots on the calling thread. Time
+   both on the `sin`/`cos` loop of :numref:`oo-design-utilities` with the
+   step reduced to $0.001$, then again inside a training run once
+   :numref:`sec_linear_scratch` supplies `fit_epoch`. State under which
+   conditions the synchronous version is measurably slower and when the two
+   are indistinguishable.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6645)

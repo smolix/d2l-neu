@@ -499,9 +499,14 @@ for name, model in (('mini-MobileNet', mobile), ('VGG-style', vgg)):
     print(f'{name}: {count:,} params, val acc {val_acc(model, data):.3f}')
 ```
 
-The table reports one seeded run per framework; accuracies are rounded to
-the half point, which is about the level at which they are reproducible
-from run to run.
+:numref:`tab_dws_vs_dense` reports one seeded run per framework; accuracies
+are rounded to the half point, which is about the level at which they are
+reproducible from run to run.
+
+:Mini-MobileNet against a dense VGG-style network at matched parameter count
+(Fashion-MNIST at $96 \times 96$, 10 epochs; test accuracy, one seeded run
+per framework, rounded).
+:label:`tab_dws_vs_dense`
 
 | Model | Parameters | Multiply-adds | PyTorch | JAX | TensorFlow |
 |---|---:|---:|---:|---:|---:|
@@ -814,11 +819,73 @@ architecture by architecture, is the subject of :numref:`sec_cnn-design`.
 
 ## Exercises
 
-1. Fold a Conv-BN pair by hand: take a single convolution followed by batch normalization, apply :eqref:`eq_bn_fold` to obtain one biased convolution, and verify with `allclose` that the two agree in inference mode. Why must the running statistics, not the batch statistics, be used?
-1. Derive the cost ratio of :eqref:`eq_depthwise_sep_ratio` for $5 \times 5$ kernels. For which output-channel counts is the pointwise term the dominant cost? What does this imply for architectures that enlarge depthwise kernels, such as ConvNeXt?
-1. The mini-MobileNet performs about $7.7\times$ fewer multiply-adds than its VGG-style twin, yet its epochs are not $7.7\times$ faster. Measure the forward-pass time of both networks on a batch of $128$ images. Explain the gap in terms of arithmetic intensity: how many operations does a depthwise convolution perform per weight and per activation it touches, compared to a dense convolution? Relate your answer to EfficientNetV2's fused early stages.
-1. If the fused RepVGG layer computes the same function, why not train the plain $3 \times 3$ stack directly? Build a small network from `RepVGGBlock` layers and an otherwise identical one from plain convolutions, train both on Fashion-MNIST, and compare training curves.
-1. Add a width multiplier $\alpha$ to `MiniMobileNet` that scales every channel count. How do the parameter count and the number of multiply-adds scale with $\alpha$? Verify your prediction at $\alpha = 0.5$.
+:begin_tab:`mxnet`
+The training comparison of :numref:`tab_dws_vs_dense` runs in PyTorch,
+TensorFlow, and JAX. To work the training problems below in Gluon, build
+`VGGSmall` as four stages of two $3 \times 3$ convolutions at widths 32, 64,
+128, and 128, each followed by batch normalization and a ReLU, with
+$2 \times 2$ max-pooling between stages and the global-average-pooling head
+of `MiniMobileNet`, and train both networks with `d2l.Trainer`.
+:end_tab:
+
+1. **Cost ratio for larger kernels.** Evaluate the cost ratio of
+   :eqref:`eq_depthwise_sep_ratio` for $5 \times 5$ and $7 \times 7$
+   kernels. For which output-channel counts $c_\textrm{o}$ does the pointwise
+   term dominate? What does this imply for architectures that enlarge
+   depthwise kernels, such as ConvNeXt (:numref:`sec_convnext`)?
+1. [code] **The inverted bottleneck.** MobileNetV2
+   :cite:`sandler2018mobilenetv2` replaces the block of :numref:`fig_dws_block`
+   by an inverted bottleneck: a $1 \times 1$ expansion by a factor $t$, a
+   depthwise $3 \times 3$ convolution, a linear $1 \times 1$ projection, and
+   a residual connection whenever input and output shapes match.
+    1. Implement the block with $t = 6$ and replace the blocks of
+       `MiniMobileNet` by it, choosing the widths so that the parameter count
+       stays near 542,474. Compare accuracy and time per epoch with
+       :numref:`tab_dws_vs_dense`.
+    1. Add a ReLU after the projection and retrain. Does the ablation of the
+       paper reproduce at this scale?
+    1. For a $96 \times 96$ input, compute for each stage the size of the
+       tensor handed from one block to the next in both networks. Why does
+       the inverted design reduce the memory needed across blocks even
+       though its expanded tensors are six times wider?
+1. [code] **Width multiplier.**
+    1. Add a width multiplier $\alpha$ to `MiniMobileNet` that scales every
+       channel count :cite:`howard2017mobilenet`. Predict how the parameter
+       count and the number of multiply-adds scale with $\alpha$, and verify
+       your prediction at $\alpha = 0.5$.
+    1. Channel pruning offers a second route to the same size: train the
+       full-width network, then delete the channels whose
+       pointwise-convolution weights have the smallest $\ell_1$ norm until
+       the parameter count matches $\alpha = 0.5$, and fine-tune briefly.
+       Compare test accuracy and measured inference time against the network
+       trained at $\alpha = 0.5$ from scratch.
+1. [code] **Arithmetic intensity.** `MiniMobileNet` performs about
+   $7.7\times$ fewer multiply-adds than its VGG-style twin in
+   :numref:`tab_dws_vs_dense`, yet its epochs are only two to three times
+   faster. Measure the forward-pass time of both networks on a batch of 128
+   images. Explain the gap in terms of arithmetic intensity: how many
+   operations does a depthwise convolution perform per weight and per
+   activation it touches, compared with a dense convolution? Relate your
+   answer to the fused early stages of EfficientNetV2
+   :cite:`tan2021efficientnetv2`.
+1. [code] **Folding batch normalization.** Take a single convolution followed
+   by batch normalization, apply :eqref:`eq_bn_fold` to obtain one biased
+   convolution, and verify numerically that the two agree in inference mode.
+   Why must the running statistics, not the batch statistics, be used?
+1. [code] **Training with RepVGG blocks.** If the fused RepVGG layer computes
+   the same function, why not train the plain $3 \times 3$ stack directly?
+    1. Build a small network from `RepVGGBlock` layers and an otherwise
+       identical one from plain $3 \times 3$ convolutions with batch
+       normalization, using stride-2 convolutions without the identity branch
+       for downsampling, as :citet:`ding2021repvgg` do. Train both on
+       Fashion-MNIST and compare the training curves.
+    1. Fuse the trained RepVGG network with `fuse_block` and confirm that its
+       test accuracy is unchanged. Then quantize the weights of both networks
+       to eight bits with a symmetric per-tensor scale,
+       $\hat{w} = s \cdot \mathrm{round}(w / s)$ with $s = \max |w| / 127$,
+       and compare the accuracy drops. Relate the difference to the
+       distribution of the fused weights, as :citet:`chu2024qarepvgg`
+       analyze.
 
 <!-- slides -->
 

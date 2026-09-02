@@ -602,6 +602,7 @@ len(corpus), len(vocab)
 ```
 
 ### Special Tokens
+:label:`subsec_special-tokens`
 
 Training pipelines need a handful of tokens that mean something to the
 *infrastructure* rather than to the text: `<pad>` fills the unused tail of
@@ -726,6 +727,7 @@ context budget*: text that is cheap for one tokenizer can be expensive for
 another, which brings us to the pathologies.
 
 ### Fertility, Digits, and Glitch Tokens
+:label:`subsec_fertility-digits-glitch`
 
 *Fertility*, the average number of tokens per word, measures that mismatch
 across languages. GPT-2's tokenizer was trained on overwhelmingly English
@@ -817,33 +819,61 @@ to model them.
 
 ## Exercises
 
-1. Train `BPETokenizer` on a different text you like (another public
-   domain book, your own notes, source code). Inspect the first 20 and
-   last 20 merges. How many of the late merges would you expect to
-   transfer to a different corpus? Measure compression (bytes per token)
-   of your tokenizer on *The Time Machine* and of `bpe` on your corpus,
-   and compare both to the in-domain numbers.
-1. Retrain the tokenizer with vocabulary sizes 512, 2,048, and 4,096 and
-   keep the resulting corpora of token ids. After you have trained the
-   language model of :numref:`sec_rnn-scratch`, compare the models
-   trained on each corpus. Why is per-token perplexity the wrong metric
-   for this comparison, and what should you report instead?
-1. Ablate pre-tokenization: retrain the 4,096 vocabulary without the
-   GPT-2 pattern and list the 20 longest learned tokens of both runs.
-   Which tokens are compression wins on the training corpus but liabilities
-   on new text, and why? Check whether the unconstrained run compresses
-   the training corpus better, and explain why it must.
-1. Explain how a glitch token such as " SolidGoldMagikarp" comes to
-   exist. Concretely: what property must the tokenizer's training corpus
-   have relative to the model's, and why does BPE's frequency-based merge
-   rule turn that mismatch into a single token rather than several? Why is
-   the embedding of such a token approximately random after training?
-1. Digit chunking. Tokenize the addition prompts "123+456=" and
-   "1234+5678=" with `gpt2` and `o200k_base`, writing out the token
-   boundaries of each number. For three-digit capping, which digit
-   positions of the two summands end up in the same token, and how does
-   that mislead column-wise addition? Propose a pre-tokenization rule that
-   aligns tokens with place value, and state one drawback of your rule.
+1. [code] **Cross-corpus compression.** Train a `BPETokenizer` with a
+   1,024-token vocabulary and `BPETokenizer.GPT2_PATTERN` on a different
+   text of your choice, such as another public-domain book, your own
+   notes, or source code.
+    1. Inspect its first 20 and last 20 merges. How many of the late
+       merges would you expect to transfer to a different corpus?
+    1. Measure bytes per token of your tokenizer on *The Time Machine*
+       and of `bpe` on your corpus, and compare both with the in-domain
+       figures.
+1. [code] **Pre-tokenization ablation.** `big` was trained with a
+   4,096-token vocabulary and no pre-tokenization pattern, `bpe` with a
+   1,024-token vocabulary and the GPT-2 pattern. Train a 4,096-token
+   tokenizer with `BPETokenizer.GPT2_PATTERN` on `raw_text`, so that it
+   differs from `big` only in the pattern.
+    1. List the 20 longest tokens learned by each of the two runs. Which
+       tokens are compression wins on the training corpus but liabilities
+       on new text, and why?
+    1. Measure which of the two compresses the training corpus better,
+       and explain the outcome in terms of the merge rule.
+1. [code] **Special-token round trip.** :numref:`subsec_special-tokens`
+   places special tokens above the BPE id range so that ordinary text can
+   never produce them. Construct a `BPETokenizer` whose `specials` add a
+   document separator to the three defaults and train it on `raw_text`.
+    1. Explain from the id ranges assigned in `BPETokenizer.__init__` why
+       `encode` cannot emit a special id from ordinary text, and check the
+       claim by encoding a string that contains the separator, with and
+       without `allow_special=True`.
+    1. Join two documents with the separator and verify that decoding the
+       ids obtained with `allow_special=True` restores the text exactly,
+       separator included.
+    1. `tiktoken` raises an error when a special string appears in text
+       that is not allowed to contain it, whereas `encode` treats the
+       string as plain bytes. Give one situation in which each policy is
+       preferable.
+
+    *Adapted from Andrej Karpathy,
+    [minbpe](https://github.com/karpathy/minbpe/blob/master/exercise.md),
+    Step 4.*
+1. [code] **Digit chunking.** Tokenize the addition prompts "123+456=" and
+   "1234+5678=" with the `gpt2` and `o200k_base` encodings of `tiktoken`,
+   writing out the token boundaries of each number.
+    1. Under the three-digit cap, which digit positions of the two
+       summands end up in the same token, and how does that misalign the
+       columns of addition?
+    1. Propose a pre-tokenization rule that aligns tokens with place
+       value, and state one drawback of your rule.
+1. **Glitch tokens.** :numref:`subsec_fertility-digits-glitch` attributes
+   a glitch token to a string that was frequent in the tokenizer's
+   training corpus but absent from the language model's.
+    1. Why does the merge rule of `BPETokenizer.train` turn such a string
+       into a single token rather than several fragments, and what role
+       does pre-tokenization play in fixing the token's extent?
+    1. Propose a test that flags glitch tokens given the trained embedding
+       table and the model's training corpus, and state what each of the
+       two inputs contributes.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/117)

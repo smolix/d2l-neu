@@ -603,6 +603,7 @@ model API you will ever call.
 ## Evaluation and Efficiency
 
 ### Evaluating Generated Text
+:label:`subsec_evaluating-generated-text`
 
 How would we decide, beyond eyeballing, which strategy wrote better text?
 Perplexity, our faithful metric so far, is of surprisingly little help. It
@@ -633,6 +634,7 @@ selects the model, while humans, or proxies for them, select the decoding
 strategy.
 
 ### The Cost of Generation
+:label:`subsec_cost-of-generation`
 
 One last practical concern, and a preview. Our `step_fn` re-runs the
 network over the whole prefix for every token generated, so a $T$-token
@@ -672,36 +674,73 @@ token, a property the next chapter's architectures inherit.
 
 ## Exercises
 
-1. Implement a *repetition penalty*: in `sample_next`, divide the
-   probability of every token already present in the generated sequence by
-   a constant $\theta > 1$ before truncation (you will need to thread the
-   generated ids through). Decode greedily with $\theta = 1.2$. Does it
-   cure the loops? What legitimate text does it punish?
-1. In :numref:`fig_beam-search`, could the best candidate after three
-   steps (by cumulative probability) fail to contain the best candidate
-   after two steps as its prefix? Construct explicit probabilities or
-   prove it impossible. What does your answer imply about how beam search
-   can miss the true argmax sequence?
-1. Can exhaustive search be seen as a special case of beam search? For
-   which beam size do the two coincide?
-1. Add an `eos_id` to the beam-search demonstration (for instance the
-   token id of a newline) and vary $\alpha \in \{0, 0.75, 1.5\}$ at
-   $k = 4$. Compare the lengths and scores of the winning candidates and
-   explain the trend using :eqref:`eq_beam-search-score`.
-1. At temperature $T = 1.5$, tune $p$ for top-$p$ and $p_{\min}$ for
-   min-$p$ until each just keeps continuations coherent. Which setting
-   preserves more diversity (distinct-3) at matched coherence? Compare
-   your finding with those of :citet:`Nguyen.Baker.Neo.ea.2025`.
-1. Once you have trained the sequence-to-sequence translation model of the
-   next chapter, decode it with `beam_search` for
-   $k \in \{1, 2, 4, 8, 16\}$. Measure translation quality and decoding
-   time as functions of $k$. Where does quality peak, and why does it not
-   keep improving?
-1. Constrained sampling: ban a set of tokens (say, every token whose text
-   contains the letter "e") by masking their logits to $-\infty$ before
-   calling `sample_next`. Why is banning a *word* harder than banning a
-   token under a subword tokenizer? What can go wrong at the boundary
-   between two tokens?
+1. [code] **Repetition penalty.** A *repetition penalty*
+   :cite:`Keskar.McCann.Varshney.ea.2019` lowers the probability of tokens
+   that already appear in the generated sequence. Add one to
+   `sample_next`: divide the probability of every token already present by
+   a constant $\theta > 1$ before truncation and renormalize, which
+   requires passing the generated ids from `generate` into `sample_next`.
+   Decode greedily with $\theta = 1.2$.
+    1. Does the penalty remove the repeating cycles? Report distinct-3
+       with `distinct` before and after.
+    1. Which legitimate repetitions in English text does it penalize, and
+       what happens as $\theta$ grows large?
+1. **Beam search properties.**
+    1. In :numref:`fig_beam-search`, could the best candidate after three
+       steps, ranked by cumulative probability, fail to contain the best
+       candidate after two steps as its prefix? Construct explicit
+       probabilities or prove it impossible. What does your answer imply
+       about how beam search can miss the argmax sequence?
+    1. For which beam size does beam search over $T$ steps coincide with
+       exhaustive search over all $|\mathcal{V}|^T$ sequences? Count the
+       model evaluations each performs.
+1. [code] **Length normalization.** Add an `eos_id` to the beam search
+   demonstration, for instance the id of the newline character, and vary
+   $\alpha \in \{0, 0.75, 1.5\}$ at $k = 4$. Compare the lengths and
+   scores of the winning candidates and explain the trend using
+   :eqref:`eq_beam-search-score`.
+1. [code] **Top-$p$ versus min-$p$.** At temperature $T = 1.5$, tune $p$
+   for top-$p$ and $p_{\min}$ for min-$p$ until each just keeps the
+   continuations of `generate` coherent. Which setting preserves more
+   diversity, measured by `distinct`, at matched coherence? Compare your
+   finding with those of :citet:`Nguyen.Baker.Neo.ea.2025`.
+1. [code] **Constrained sampling.** Ban a set of tokens, for example every
+   token whose text contains the letter "e", by masking their logits to
+   $-\infty$ before calling `sample_next`.
+    1. Why is banning a *word* harder than banning a token under a subword
+       tokenizer, and what can go wrong at the boundary between two
+       tokens?
+    1. :numref:`sec_beam-search` describes constrained decoding as beam
+       search over the valid continuations. What does beam search add
+       over masking one token at a time when the constraint spans several
+       tokens?
+1. [code] **Failure taxonomy.** Decode 20 continuations of 50 tokens from
+   a fixed set of prefixes with greedy decoding.
+    1. Sort the failures into a taxonomy of your own, with categories such
+       as a repeating cycle or a drift away from the prefix's topic, and
+       report the frequency of each category with one example.
+    1. Which category does the repetition penalty of the first problem
+       target? Raise $\theta$ and report whether that category's
+       frequency falls without another's rising.
+    1. Which of the automated proxies named in
+       :numref:`subsec_evaluating-generated-text` would detect each
+       category, and which categories need a human judge?
+
+    *Adapted from Stanford CS224n,
+    [Assignment 4](https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1234/assignments/a4.pdf),
+    Part 2(b).*
+1. [code] **Constant cost per token.** `step_fn` re-runs the network over
+   the entire prefix for every generated token, so a $T$-token
+   continuation costs $\mathcal{O}(T^2)$ cell updates
+   (:numref:`subsec_cost-of-generation`).
+    1. Write a stateful replacement for `step_fn` that keeps the hidden
+       state of `model.rnn` and consumes only the newest token, so that
+       each call performs one cell update. Verify that `generate` produces
+       the same greedy continuation with both versions.
+    1. Time `generate` for 50, 200, and 800 tokens with both versions and
+       confirm the quadratic and the linear scaling.
+    1. Why does the same replacement not carry over directly to
+       `beam_search`, and what bookkeeping would make it work?
 
 [Discussions](https://d2l.discourse.group/t/338)
 

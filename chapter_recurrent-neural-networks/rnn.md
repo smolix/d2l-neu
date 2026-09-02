@@ -185,6 +185,7 @@ Minimizing perplexity is exactly this objective, since perplexity (:numref:`sec_
 :label:`fig_rnn_train`
 
 ### Teacher Forcing
+:label:`subsec_teacher-forcing`
 
 Notice what the model consumes during training: at each step its input is the *ground-truth* previous token, taken from the corpus, regardless of what the model itself predicted the step before.
 Training a sequence model on the true prefixes in this way is called *teacher forcing*.
@@ -211,12 +212,56 @@ Gating the state, the subject of :numref:`chap_modern_rnn`, is the standard fix.
 
 ## Exercises
 
-1. If we use an RNN to predict the next token in a text sequence, what is the required dimension for any output?
-1. Why can an RNN express the conditional probability of a token at some time step based on all the previous tokens in the sequence?
-1. What happens to the gradient if you backpropagate through a long sequence?
-1. Consider a context of $k$ previous tokens over a vocabulary of size $|\mathcal{V}|$. A $(k+1)$-gram stores a count for every possible context, whereas an RNN with $h$ hidden units and $d$-dimensional token embeddings stores a fixed set of weights. Write down the parameter (or table-entry) count for each, and evaluate both for $|\mathcal{V}| = 10{,}000$, $k = 20$, and $h = d = 256$. Which one grows with $k$, and by how much?
-1. What are some of the problems associated with the language model described in this section, and how might the next chapters address them?
-
+1. **Parameter counts.** Consider next-token prediction over a vocabulary
+   of size $|\mathcal{V}|$ with a context of $k$ previous tokens.
+    1. What is the output dimension $q$ of the output layer of
+       :numref:`subsec_rnn_w_hidden_states` for this task?
+    1. A $(k+1)$-gram stores a count for every possible context and
+       successor, whereas the RNN of :numref:`subsec_rnn_w_hidden_states`
+       with $h$ hidden units and $d$-dimensional embeddings stores a fixed
+       set of weights. Write down the table-entry count of the first and
+       the parameter count of the second, and evaluate both for
+       $|\mathcal{V}| = 10{,}000$, $k = 20$, and $h = d = 256$. Which one
+       grows with $k$, and by how much?
+    1. The neural $n$-gram of :citet:`Bengio.Ducharme.Vincent.ea.2003`
+       feeds the concatenated embeddings of the $k$ context tokens to a
+       hidden layer of width $h$. Count its parameters as a function of
+       $k$ and compare its growth with the other two. What happens when
+       the information needed for a prediction lies more than $k$ tokens
+       back?
+1. **Parity beyond any window.** ● Let $x_1, x_2, \ldots$ be a sequence of
+   bits, and let the desired output at step $t$ be the parity of
+   $x_1 + \cdots + x_t$.
+    1. Show that no model that reads only the last $k$ inputs can produce
+       the correct output at every step of a sequence longer than $k$,
+       whatever the finite $k$.
+    1. Construct an RNN of the form :eqref:`rnn_h_with_state`, with $\phi$
+       a threshold activation and as few hidden units as you can manage,
+       that outputs the parity exactly at every step regardless of the
+       sequence length. Give the weights.
+    1. How many bits does the hidden state of your construction need to
+       retain? Relate this to the description of the state as a lossy
+       fixed-size summary in :numref:`subsec_rnn-constant-memory`.
+1. **Concatenated weight matrices.** Prove the identity demonstrated
+   numerically in :numref:`subsec_rnn_w_hidden_states`: for
+   $\mathbf{X}_t \in \mathbb{R}^{n \times d}$ and
+   $\mathbf{H}_{t-1} \in \mathbb{R}^{n \times h}$,
+   $$\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} = [\mathbf{X}_t, \mathbf{H}_{t-1}] \begin{bmatrix} \mathbf{W}_{\textrm{xh}} \\ \mathbf{W}_{\textrm{hh}} \end{bmatrix}.$$
+   State the shape of each factor. Why do framework implementations
+   prefer the single product over two products and a sum, even though the
+   arithmetic is the same?
+1. **Exposure bias.** Teacher forcing (:numref:`subsec_teacher-forcing`)
+   conditions every training step on the true prefix, whereas generation
+   conditions each step on the model's own earlier outputs. The resulting
+   mismatch is called *exposure bias* :cite:`Ranzato.Chopra.Auli.ea.2016`.
+    1. Suppose the model assigns probability $1 - \epsilon$ to the correct
+       next token whenever its prefix is correct. What is the probability
+       that a greedy generation of $T$ tokens contains no error? Evaluate
+       it for $\epsilon = 0.01$ and $T = 100$.
+    1. In the error recursion $\epsilon_2 = \bar\epsilon + c\,\epsilon_1$
+       of :numref:`sec_sequence`, what plays the role of $c$ for a
+       language model, and why can teacher forcing leave $c$ large even
+       when $\bar\epsilon$ is small?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/337)

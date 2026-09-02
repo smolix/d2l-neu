@@ -791,11 +791,135 @@ appropriate control. And practically, if you have a fixed network and a fixed bu
 
 ## Exercises
 
-1. Ablate the modern recipe one ingredient at a time on `FashionMNIST10k`: (i) remove Mixup, (ii) remove label smoothing, (iii) replace the cosine schedule by a constant rate after warmup, (iv) replace AdamW by SGD with momentum (retune the learning rate!). Which single ingredient contributes the most? Do the contributions add up to the total gap?
-1. Disentangle the optimizer from the schedule: train recipe A's SGD-with-momentum under recipe B's cosine-with-warmup schedule, and AdamW under recipe A's step schedule. How much of the gap in :numref:`tab_recipe_results` is the schedule rather than the optimizer?
-1. :citet:`wightman2021resnet` train with a *binary* cross-entropy loss, treating each class as an independent yes/no target. Why does this pair naturally with Mixup and CutMix? Consider what the "correct" target should be for an image that genuinely contains parts of two classes, and contrast how softmax and sigmoid outputs represent it.
-1. Add the `EMA` class to the modern recipe (update after every optimizer step, evaluate the shadow weights) and sweep the decay over 0.9, 0.99, and 0.999. Relate the best decay to the number of optimizer steps in the schedule's low-learning-rate tail, using the horizon estimate of roughly $1/(1-\beta)$ steps.
-1. Implement CutMix following :eqref:`eq_mixup`: sample a rectangle whose area fraction is $1-\lambda$, paste that region from the shuffled batch, and mix the labels by actual area. Compare against Mixup on `FashionMNIST10k`, then alternate the two.
+:begin_tab:`mxnet`
+The comparison on `FashionMNIST10k` in this section runs in PyTorch and JAX.
+To work the training problems below in Gluon, first assemble the two recipes
+on the ResNet-18 of :numref:`sec_resnet` from the pieces this section
+provides: `mixup`, `smoothed_ce`, `StochasticResidual`, and the `AdamW`
+optimizer with `mx.lr_scheduler.CosineScheduler` from the reduced path.
+Subsample the training set to 10,000 images with a fixed seed.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The comparison on `FashionMNIST10k` in this section runs in PyTorch and JAX.
+To work the training problems below in Keras, first assemble the two recipes
+on the ResNet-18 of :numref:`sec_resnet` from the pieces this section
+provides: `mixup`, `CategoricalCrossentropy` with `label_smoothing`,
+`StochasticResidual`, and the `AdamW` optimizer with the `CosineDecay`
+schedule from the reduced path. Subsample the training set to 10,000 images
+with a fixed seed.
+:end_tab:
+
+1. [code] **Ablating the compact modern recipe.** Starting from the compact
+   modern recipe on `FashionMNIST10k`, remove or replace one ingredient at a
+   time and retrain:
+    1. Remove Mixup.
+    1. Remove label smoothing.
+    1. Replace the cosine decay of :eqref:`eq_cosine_warmup` by a constant
+       learning rate after warmup.
+    1. Replace AdamW by SGD with momentum. Retune the learning rate, since
+       the value that suits AdamW starves SGD.
+
+    Which single ingredient contributes most to the gap in
+    :numref:`tab_recipe_results`? Do the four contributions add up to the
+    total gap?
+1. [code] **Optimizer versus schedule.** Separate the contribution of the
+   optimizer from that of the schedule. Keep recipe A's loss and data
+   pipeline, without Mixup or label smoothing, and train the three missing
+   combinations of optimizer and schedule: SGD with momentum under cosine
+   decay with warmup, AdamW under step decay, and AdamW under cosine decay
+   with warmup. Together with recipe A these fill a $2 \times 2$ table.
+   Retune the learning rate whenever the optimizer changes. How much of the
+   gap in :numref:`tab_recipe_results` do these two ingredients explain on
+   their own, and do their effects interact?
+1. [code] **Weight decay and batch normalization.** ● The training
+   refinements collected by :citet:`He.Zhang.Zhang.ea.2019` apply weight
+   decay (:numref:`sec_weight_decay`) only to the weights of convolutional
+   and linear layers and exempt every bias and every scale
+   $\boldsymbol{\gamma}$ and shift $\boldsymbol{\beta}$ of batch
+   normalization.
+    1. When batch statistics are used, the output of batch normalization
+       applied to a convolution is unchanged if the convolution's weights
+       $\mathbf{W}$ are multiplied by any $c > 0$. What does weight decay on
+       $\mathbf{W}$ then do to the loss, to $\|\mathbf{W}\|$ over the course
+       of training, and to the effective step size of each gradient update?
+    1. Implement both variants, decaying every parameter and decaying only
+       the convolutional and linear weights, on `FashionMNIST10k` under the
+       compact modern recipe. Compare test accuracy and plot the norms of
+       the exempted parameters over training.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 11.7.*
+1. **Binary cross-entropy and Mixup.** :citet:`wightman2021resnet` train
+   with a binary cross-entropy loss that treats each class as an independent
+   yes/no target. Explain why this loss pairs naturally with Mixup and
+   CutMix. Consider an image that genuinely contains parts of two classes,
+   and contrast how softmax and sigmoid outputs can represent it.
+1. [code] **CutMix.** Implement CutMix :cite:`yun2019cutmix` as a variant of
+   `mixup`: sample a rectangle covering a fraction $1 - \lambda$ of the image
+   area, paste that region from the shuffled batch, and mix the labels as in
+   :eqref:`eq_mixup` with $\lambda$ replaced by the fraction of the area
+   actually kept, since a rectangle clipped at the image border covers less
+   than $1-\lambda$. Compare CutMix with Mixup on `FashionMNIST10k`, then
+   alternate the two at random from batch to batch, as modern recipes do.
+1. [code] **Stochastic depth in the recipe.** The compact modern recipe
+   omits stochastic depth. Add it back.
+    1. Extend `StochasticResidual` to the downsampling blocks and build the
+       ResNet-18 of :numref:`sec_resnet` from it, with the drop probability
+       ramped linearly from 0 in the first block to $p_{\max}$ in the last.
+       What is the expected number of residual branches evaluated per
+       training step?
+    1. Sweep $p_{\max}$ over 0.1, 0.2, and 0.5 on `FashionMNIST10k` under
+       the compact modern recipe. How does the best value compare with the
+       range of 0.1 to 0.5 used for much deeper networks?
+    1. The per-sample implementation of `StochasticResidual` computes every
+       branch before masking it. Implement the original per-minibatch
+       variant of :citet:`huang2016stochasticdepth`, which draws one $b$ in
+       :eqref:`eq_stochastic_depth` per block and step and skips the branch
+       entirely when $b = 0$, and measure the training time it saves at
+       $p_{\max} = 0.5$.
+
+:begin_tab:`pytorch`
+7. [code] **Weight averaging horizon.** Add the `EMA` class to
+   `ModernRecipe`: update the shadow copy after every optimizer step and
+   evaluate with the shadow weights. Sweep the decay $\beta$ of
+   :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count the optimizer steps in
+   the low-learning-rate tail of the cosine schedule and relate the best
+   decay to that count through the averaging horizon of roughly
+   $1/(1-\beta)$ steps.
+:end_tab:
+
+:begin_tab:`jax`
+7. [code] **Weight averaging horizon.** Keep an averaged copy of the
+   parameters with `optax.ema`, updated after every optimizer step, and swap
+   it into the model with `nnx.update` before evaluation. Sweep the decay
+   $\beta$ of :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count the optimizer
+   steps in the low-learning-rate tail of `warmup_cosine_decay_schedule` and
+   relate the best decay to that count through the averaging horizon of
+   roughly $1/(1-\beta)$ steps.
+:end_tab:
+
+:begin_tab:`tensorflow`
+7. [code] **Weight averaging horizon.** Keras optimizers maintain the
+   average themselves: construct `AdamW` with `use_ema=True` and sweep
+   `ema_momentum` over 0.9, 0.99, and 0.999, calling
+   `finalize_variable_values` at the end of training so that the averaged
+   weights are the ones evaluated. Count the optimizer steps in the
+   low-learning-rate tail of the `CosineDecay` schedule and relate the best
+   momentum to that count through the averaging horizon of roughly
+   $1/(1-\beta)$ steps.
+:end_tab:
+
+:begin_tab:`mxnet`
+7. [code] **Weight averaging horizon.** Keep a shadow copy of every
+   parameter in `net.collect_params()`, blended with the parameter's
+   `data()` after every `trainer.step` as in :eqref:`eq_ema`, and evaluate
+   with the shadow copy. Sweep the decay $\beta$ over 0.9, 0.99, and 0.999.
+   Count the optimizer steps in the low-learning-rate tail of
+   `CosineScheduler` and relate the best decay to that count through the
+   averaging horizon of roughly $1/(1-\beta)$ steps.
+:end_tab:
 
 <!-- slides -->
 

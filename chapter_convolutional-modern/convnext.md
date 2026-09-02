@@ -630,6 +630,11 @@ for name, acc in scores.items():
 jax_scores
 ```
 
+:The scaled-down ConvNeXt and a parameter-matched ResNet-18 under the compact
+modern recipe (full Fashion-MNIST at $96 \times 96$; test accuracy, one
+seeded run each, rounded).
+:label:`tab_convnext_local`
+
 | Model | Parameters | PyTorch accuracy | JAX accuracy |
 |---|---:|---:|---:|
 | ConvNeXt | 3,376,450 | ≈92% | ≈92% |
@@ -693,11 +698,81 @@ The block itself is a piece of convergent evolution. A depthwise convolution tha
 
 ## Exercises
 
-1. Implement Global Response Normalization. For a channels-last feature map $X$, compute per-channel global norms $g_c = \lVert X_{:,:,c} \rVert_2$, normalize them as $n_c = g_c / \bar{g}$ where $\bar{g}$ is the mean over channels, and return $\gamma \odot (X \cdot n) + \beta + X$ with learnable per-channel $\gamma, \beta$ initialized to zero. Insert it after the GELU in `ConvNeXtBlock` (ConvNeXt V2 also removes layer scale when doing so), retrain, and compare.
-1. Swap the depthwise kernel size: train the model with $3 \times 3$ and with $11 \times 11$ depthwise convolutions (adjust the padding) and compare accuracy, parameter count, and time per epoch against the $7 \times 7$ baseline. Do you see the saturation that :citet:`liu2022convnet` report?
-1. Count where the parameters live: for our ConvNeXt, compute the fraction of parameters in depthwise convolutions, in the $1 \times 1$ expansions and projections, and in the downsampling layers, and compare with the ResNet-18 of :numref:`sec_training_recipes`. Which design decision explains why ConvNeXt is three times smaller at the same depth-times-width feel?
-1. Ablate layer scale: train with $\gamma$ initialized to $10^{-6}$ (the default), to $1$, and with the parameter removed entirely. Relate what you observe to stochastic depth, which also shrinks the effective contribution of each residual branch early in training.
-1. Our run gives the modern recipe to a modern architecture. Complete the other half of the ablation square: train this ConvNeXt with the 2015 recipe of :numref:`sec_training_recipes` (SGD with momentum, step decay, no Mixup or smoothing). How much of the network's quality survives the recipe downgrade?
+:begin_tab:`mxnet`
+The training comparison of :numref:`tab_convnext_local` runs in PyTorch and
+JAX. To work the training problems below in Gluon, add per-sample stochastic
+depth to `ConvNeXtBlock` and reuse the `AdamW` optimizer, `CosineScheduler`,
+`smoothed_ce`, and `mixup` of :numref:`sec_training_recipes`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The training comparison of :numref:`tab_convnext_local` runs in PyTorch and
+JAX. To work the training problems below in Keras, reuse the `AdamW`
+optimizer with the `CosineDecay` schedule, `CategoricalCrossentropy` with
+`label_smoothing`, and `mixup` of :numref:`sec_training_recipes`.
+:end_tab:
+
+1. **Reading the roadmap.** The roadmap in :numref:`tab_convnext_roadmap`
+   applies its changes in one fixed order, and each row's gain is measured
+   with every earlier change in place.
+    1. The "large kernels" row combines two steps: moving the depthwise
+       convolution to the front of the block costs 0.7 points, and enlarging
+       it to $7 \times 7$ recovers them. Explain how the first step made the
+       second affordable under the roadmap's constant-cost constraint, and
+       why the row's net gain of zero understates what the kernel size
+       contributed.
+    1. Choose two rows whose gains you expect to depend on their order, and
+       design the additional runs that would measure the interaction.
+    1. The cost is held near 4.5 GFLOPs throughout. Identify the rows that
+       would have changed the cost substantially on their own and state what
+       compensating adjustment restored the budget.
+1. **Where the parameters live.**
+    1. For the `ConvNeXt` of this section, compute the fraction of
+       parameters in the depthwise convolutions, in the $1 \times 1$
+       expansions and projections, in the downsampling layers, and in the
+       stem and head. Check that the total is 3,376,450.
+    1. Express the parameter count of a ConvNeXt block and of the basic
+       residual block of :numref:`sec_resnet` as functions of the width $c$.
+       Which design decision makes the ConvNeXt block cheaper, and by what
+       factor for large $c$?
+1. [code] **Depthwise kernel size.** Train `ConvNeXt` with $3 \times 3$ and
+   with $11 \times 11$ depthwise convolutions, adjusting the padding so that
+   the feature-map size is unchanged, and compare accuracy, parameter count,
+   and time per epoch against the $7 \times 7$ baseline. Does accuracy
+   saturate at $7 \times 7$ here as :citet:`liu2022convnet` report on
+   ImageNet? How does the change in time per epoch compare with the change
+   in the depthwise term's arithmetic, and why?
+1. [code] **Layer scale.** Train with $\gamma$ initialized to $10^{-6}$ (the
+   default), to $1$, and with the parameter removed entirely, and compare
+   the training curves. Both layer scale at $10^{-6}$ and stochastic depth
+   make the network behave as a shallower one early in training. Explain
+   the two mechanisms and how they differ.
+1. [code] **Global Response Normalization.** ConvNeXt V2
+   :cite:`woo2023convnextv2` inserts GRN after the GELU of the block and
+   removes layer scale. For a feature map $\mathbf{X}$ with $C$ channels,
+   let $g_c$ be the $\ell_2$ norm of channel $c$ over all spatial positions
+   and $\bar{g}$ the mean of $g_1, \ldots, g_C$. GRN rescales each channel
+   by its normalized response and adds a learnable per-channel affine term
+   and a residual,
+   $$\mathrm{GRN}(\mathbf{X})_c = \gamma_c \frac{g_c}{\bar{g}} \mathbf{X}_c + \beta_c + \mathbf{X}_c,$$
+   with $\gamma_c$ and $\beta_c$ initialized to zero so that the layer
+   starts as the identity.
+    1. Implement GRN in about five lines and insert it into `ConvNeXtBlock`
+       after the GELU, dropping layer scale.
+    1. Retrain under the compact modern recipe and compare with
+       :numref:`tab_convnext_local`. Then measure what GRN was designed to
+       prevent: compute the average pairwise cosine similarity between the
+       channels of the last stage's output on the test set, with and without
+       GRN. Does GRN reduce the redundancy between channels here?
+1. [code] **Recipe downgrade.** The comparison in :numref:`tab_convnext_local`
+   trains two architectures under the modern recipe. Complete the ablation
+   square by training both models under recipe A of
+   :numref:`sec_training_recipes`: SGD with momentum, step decay, and neither
+   Mixup nor label smoothing, with the learning rate retuned. How much of
+   each network's accuracy survives the downgrade, and does the recipe help
+   both architectures equally? Compare the size of the effect with the 2.7
+   points the first row of :numref:`tab_convnext_roadmap` attributes to the
+   recipe on ImageNet.
 
 <!-- slides -->
 

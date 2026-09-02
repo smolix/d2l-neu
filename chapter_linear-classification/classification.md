@@ -203,6 +203,7 @@ def parameters(self):
 ```
 
 ## Beyond Accuracy
+:label:`subsec_beyond-accuracy`
 
 Accuracy treats every example, and every kind of mistake, as equally important. Once classes are *imbalanced*, that assumption fails in a way that can make accuracy actively misleading. Consider screening for a disease that affects 1% of the population. A classifier that ignores its input and always predicts *healthy* is right 99% of the time, so its accuracy is 0.99, but it finds not a single sick patient. The counts make this concrete:
 
@@ -238,80 +239,96 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 
 ## Exercises
 
-1. **Validation loss vs. batch mean.** Denote by $L_\textrm{v}$ the
-   validation loss, and let $L_\textrm{v}^\textrm{q}$ be its unweighted
-   batch-mean estimate computed by the loss averaging in this section.
-   Lastly, denote by $l_\textrm{v}^\textrm{b}$ the loss on the last
-   minibatch. Express $L_\textrm{v}$ in terms of $L_\textrm{v}^\textrm{q}$,
-   $l_\textrm{v}^\textrm{b}$, and the sample and minibatch sizes.
-1. **Unbiased batch mean.** Show that the unweighted batch-mean estimate
-   $L_\textrm{v}^\textrm{q}$ is unbiased. That is, show that
-   $E[L_\textrm{v}] = E[L_\textrm{v}^\textrm{q}]$. Explain why you would
-   still want to use $L_\textrm{v}$ instead.
+1. **Batch-mean validation loss.** Let $L_\textrm{v}$ denote the validation
+   loss, the average of the per-example losses over all $n$ validation
+   examples, and let $\bar{L}_\textrm{v}$ denote the unweighted average of
+   the per-batch losses that `validation_step` computes, where every batch
+   has size $b$ except the last, whose size is $r$ with $0 < r \leq b$ and
+   whose loss is $l_\textrm{v}^\textrm{last}$.
+    1. Express $L_\textrm{v}$ in terms of $\bar{L}_\textrm{v}$,
+       $l_\textrm{v}^\textrm{last}$, $n$, $b$, and $r$.
+    1. Treat the validation examples as i.i.d. draws from the data
+       distribution. Show that $L_\textrm{v}$ and $\bar{L}_\textrm{v}$ are
+       both unbiased estimates of the risk, so that
+       $E[L_\textrm{v}] = E[\bar{L}_\textrm{v}]$.
+    1. Compare the variances of the two estimates and explain why
+       $L_\textrm{v}$ is preferable for a final evaluation.
 1. **Optimal decisions and rejection.** Consider a multiclass
-   classification loss, denoting by $l(y,y')$ the penalty of estimating
-   $y'$ when we see $y$, and let $p(y \mid x)$ be the class probability.
+   classification loss, denoting by $l(y,y')$ the penalty of predicting
+   $y'$ when the true class is $y$, and let $p(y \mid x)$ be the class
+   probability.
     1. Formulate the rule for an optimal selection of $y'$. Hint: express
        the expected loss, using $l$ and $p(y \mid x)$.
     1. Now allow the classifier to *abstain* at a fixed cost $\lambda_r$
        instead of guessing, while a wrong guess costs $\lambda_s$. Derive
        the threshold on the top-class probability above which guessing
        beats abstaining.
+    1. In medical diagnosis, deferring to a specialist is cheap relative to
+       a misdiagnosis, say $\lambda_r/\lambda_s = 0.05$. Compute the
+       threshold, state what the classifier should do with a prediction at
+       $0.9$ confidence, and explain when reporting the full distribution
+       $p(y \mid x)$ serves the physician better than either choice.
 
     *Adapted from Kevin Murphy,
     [Probabilistic Machine Learning: An Introduction](https://probml.github.io/pml-book/book1.html),
     Exercise 5.1.*
 1. **Accuracy is not enough.** Suppose two classifiers $A$ and $B$ both
-   achieve 90% accuracy on a ten-class test set, but on the examples they
-   get right, $A$ assigns probability $0.91$ on average to the correct
-   class while $B$ assigns only $0.51$.
+   achieve 90% accuracy on a ten-class test set. On every example it gets
+   right, $A$ assigns probability $0.91$ to the correct class, while $B$
+   assigns $0.51$.
     1. Compute the average cross-entropy loss each incurs on those
-       examples.
-    1. Explain why these averages are insufficient to decide which
-       classifier is safer: what must we know about their probabilities on
-       incorrect predictions, calibration by subgroup, and the costs of
-       their errors?
-    1. Construct a simple monotone rescaling of the scores (a temperature)
-       that sharpens $B$'s probabilities without changing any of its
-       $\arg\max$ decisions, and argue why its accuracy is therefore
-       unchanged.
+       examples. Why would knowing only the *average* correct-class
+       probability not have sufficed to compute it?
+    1. Explain why these numbers do not decide which classifier is safer
+       to deploy, and list the further information about the two
+       classifiers you would need.
+    1. Show that there is a rescaling of $B$'s logits that leaves every one
+       of its decisions unchanged yet lowers its cross-entropy on the
+       correctly classified examples. What does this imply about comparing
+       classifiers by loss alone?
 1. [code] **Top-$k$ accuracy.** Generalize `accuracy` to *top-$k$
    accuracy*, which counts a prediction as correct when the true class is
    among the $k$ highest-scoring classes.
-    1. Modify the four-line implementation to take a `k` argument. Hint:
-       replace the single `argmax` with the indices of the $k$ largest
-       scores.
-    1. For a problem with $k$ classes, calculate the value of the top-$k$
-       accuracy. Use this as a correctness check for the implementation
-       from the previous step.
+    1. Add a `k` argument to `accuracy`, replacing the single `argmax` by
+       the indices of the $k$ largest scores, and check that the result
+       equals $1$ when `k` equals the number of classes.
     1. Why is top-5 accuracy a standard companion to top-1 on benchmarks
        with many fine-grained classes?
-1. [code] **Class-weighted loss.** In the disease-screening example,
-   suppose we care much more about missing a sick patient than about a
-   false alarm.
-    1. Modify the cross-entropy loss so that each class $j$ carries a
-       weight $w_j$, multiplying the loss of every example of true class
-       $j$; this is a one-line change to `loss`.
-    1. Show that this weighted loss is exactly the weighted empirical risk
-       minimization objective :eqref:`eq_weighted-empirical-risk-min` of
-       :numref:`sec_environment-and-distribution-shift` with weights
-       $\beta_i = w_{y_i}$, and explain why upweighting the rare class
-       shifts the learned decision boundary toward higher recall.
-    1. Give a second, data-side intervention with the same effect. Hint:
-       sampling.
+1. **Class-weighted loss.** In the disease-screening example of
+   :numref:`subsec_beyond-accuracy`, suppose we care much more about
+   missing a sick patient than about a false alarm. Give each class $j$ a
+   weight $w_j > 0$ and define the class-weighted cross-entropy as the
+   average over examples of
+   $w_{y_i}\, l(\mathbf{y}^{(i)}, \hat{\mathbf{y}}^{(i)})$.
+    1. Show that this is an instance of weighted empirical risk
+       minimization,
+       $$\mathop{\mathrm{minimize}}_f \frac{1}{n} \sum_{i=1}^n \beta_i\, l(f(\mathbf{x}_i), y_i),$$
+       with $\beta_i = w_{y_i}$. The same objective reappears as
+       :eqref:`eq_weighted-empirical-risk-min` in
+       :numref:`sec_environment-and-distribution-shift`.
+    1. Explain why upweighting the rare class moves the learned decision
+       boundary toward higher recall.
+    1. Give a second intervention, acting on the data rather than on the
+       loss, with the same effect.
 1. [code] **ROC curves.** A binary classifier's score can be thresholded at
    any $\tau \in (0, 1)$, not just $\frac{1}{2}$: predict positive whenever
-   $\hat{y}_1 > \tau$. Sweep $\tau$ from $1$ down to $0$ for a classifier
-   of your choice, for instance a two-class subset of Fashion-MNIST, such
-   as sneaker versus sandal, once you have trained the model of
-   :numref:`sec_softmax_scratch`.
-    1. Compute the true-positive rate (recall) and the false-positive rate
-       at each $\tau$ and plot one against the other; this curve is called
-       the *receiver operating characteristic* (ROC).
+   $\hat{y}_1 > \tau$. After training the model of
+   :numref:`sec_softmax_scratch`, evaluate it on the validation images of
+   two classes, such as sneaker versus sandal, using
+   $\hat{y}_1 = \sigma(o_\textrm{sneaker} - o_\textrm{sandal})$ as the
+   score by :eqref:`eq_softmax_to_sigmoid`, and sweep $\tau$ from $1$ down
+   to $0$.
+    1. At each $\tau$ compute the true-positive rate (recall) and the
+       false-positive rate $\textrm{FP}/(\textrm{FP}+\textrm{TN})$, and plot
+       one against the other; this curve is called the *receiver operating
+       characteristic* (ROC).
     1. What do the endpoints $\tau=1$ and $\tau=0$ correspond to?
-    1. Argue that a classifier whose scores are a random permutation of the
-       data traces the diagonal in expectation, and that the area under the
-       curve is therefore a threshold-free summary of ranking quality.
+    1. Show that a classifier whose scores are independent of the labels
+       traces the diagonal in expectation.
+    1. Show that the area under the ROC curve equals the probability that
+       a randomly chosen positive example receives a higher score than a
+       randomly chosen negative one, which makes it a threshold-free
+       summary of ranking quality.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6808)

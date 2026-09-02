@@ -410,7 +410,7 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 ## Exercises
 
 1. **Memory and compute ledger.** Analyze the computational properties of
-   AlexNet as defined in this section.
+   `AlexNet` as defined in this section.
     1. Tabulate, layer by layer, the parameter count and the number of
        multiplications for the convolutional and the fully connected
        layers. Which layer type dominates each total?
@@ -419,51 +419,57 @@ Although it seems that there are only a few more lines in AlexNet's implementati
     1. How does memory (read and write bandwidth, latency, size) affect
        computation? Is there any difference in its effects between
        training and inference?
+    1. A chip designer must trade off arithmetic throughput against memory
+       bandwidth: a faster chip requires more power and possibly a larger
+       chip area, and more memory bandwidth requires more pins and control
+       logic, thus also more area. Using your ledger, state one concrete
+       design choice and its expected effect on AlexNet training
+       throughput.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.16.*
-1. **Receptive fields of the early layers.** Using the kernel sizes,
-   strides, and paddings of AlexNet's first three convolutional layers as
-   defined in this section, compute the receptive field of a unit in each
-   of the three layers via :eqref:`eq_receptive_field`. How much of the
-   $224 \times 224$ input can each see?
+1. **Receptive fields of the early layers.** Apply
+   :eqref:`eq_receptive_field` to `AlexNet` as defined in this section,
+   counting each max-pooling layer as a layer with its own kernel size and
+   stride, to compute the receptive field of one unit after each of the
+   first three convolutional layers. What fraction of the $224 \times 224$
+   input side does each receptive field span?
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.17.*
-1. **The chip designer's trade-off.** You are a chip designer and need to
-   trade off computation and memory bandwidth. A faster chip requires more
-   power and possibly a larger chip area; more memory bandwidth requires
-   more pins and control logic, thus also more area. Using the ledger of
-   the first problem, how do you optimize? State one concrete design
-   choice and its expected effect on AlexNet training throughput.
 1. **Retired benchmarks.** Why do engineers no longer report performance
    benchmarks on AlexNet? What changed about datasets, architectures, and
    evaluation norms since 2012?
 1. [code] **Training duration versus LeNet.** Train AlexNet for two and
    five times the number of epochs used in this section. Compared with
    LeNet under the same schedules, how do the results differ? Why?
-1. [code] **A network for $28 \times 28$ images.** AlexNet may be too
-   complex for the Fashion-MNIST dataset, in particular due to the low
-   resolution of the initial images.
-    1. Try simplifying the model to make the training faster, while
-       ensuring that the accuracy does not drop significantly.
-    1. Design a better model that works directly on $28 \times 28$ images
-       and reaches, within a stated epoch budget, at least the accuracy of
+1. [code] **A network for $28 \times 28$ images.** AlexNet is oversized for
+   Fashion-MNIST, whose images must be upsampled eightfold to reach the
+   $224 \times 224$ input it expects.
+    1. Simplify `AlexNet` to reduce training time while keeping validation
+       accuracy within one point of the original. Report the time per
+       epoch and the accuracy of both models.
+    1. Design a model that works directly on $28 \times 28$ images and
+       reaches, within a stated epoch budget, at least the accuracy of
        your simplified model.
 1. [code] **Batch size, throughput, and memory.** Sweep the training batch
    size across at least four values and plot throughput (images/s), final
    accuracy, and peak GPU memory against it.
-1. [code] **Regularization ablation.**
-    1. Run a $2 \times 2$ ablation on LeNet-5, with and without dropout
-       crossed with sigmoid versus ReLU, and report test accuracy for all
-       four conditions in a table. Add one named preprocessing step that
-       exploits the invariances inherent in the images as a fifth
-       condition.
-    1. Starting from the trained AlexNet, remove or weaken exactly one
-       regularizing ingredient and report the epoch at which the gap
-       between training and validation accuracy exceeds 10 points.
+1. [code] **Regularization ablation.** AlexNet differs from LeNet in its
+   use of ReLU activations and dropout.
+    1. Starting from `LeNet` (:numref:`sec_lenet`), cross dropout after
+       each hidden fully connected layer (present or absent) with the
+       activation function (sigmoid or ReLU) and report validation
+       accuracy for all four conditions in a table. Add one named
+       preprocessing step that exploits the invariances inherent in the
+       images as a fifth condition.
+    1. Starting from `AlexNet` as defined in this section, remove or
+       weaken exactly one regularizing ingredient and retrain for a fixed
+       epoch budget. Report training and validation accuracy per epoch for
+       both models and the largest gap between them reached within the
+       budget.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/75)

@@ -787,38 +787,40 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
 
 ## Exercises
 
-1. **Parameters and FLOPs across architectures.** Compared with AlexNet,
-   VGG is much slower in terms of computation, and it also needs more GPU
-   memory.
-    1. Compare the number of parameters needed for AlexNet and VGG.
+1. **Parameters and FLOPs across architectures.** Compared with `AlexNet`,
+   VGG-11 is much slower in terms of computation, and it also needs more
+   GPU memory.
+    1. Compare the number of parameters of `AlexNet` and of VGG-11, the
+       `VGG` instance with
+       `arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))`.
     1. Compare the number of floating point operations used in the
-       convolutional layers and in the fully connected layers.
-    1. How could you reduce the computational cost created by the fully
-       connected layers?
-    1. Extend the accounting to NiN and GoogLeNet. Which specific design
-       choice in each cuts the parameter count so dramatically relative to
-       VGG?
+       convolutional layers and in the fully connected layers of each.
+    1. How could the cost of the fully connected layers be reduced?
+       Extend the accounting to `NiN` and `GoogleNet`, and identify the
+       design choice in each that accounts for most of the reduction
+       relative to VGG-11.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.18.*
-1. **The missing three layers.** When displaying the dimensions associated
-   with the various layers of the VGG network, we only see the information
-   associated with eight blocks (plus some auxiliary transforms), even
-   though the network has 11 layers. Where did the remaining three layers
-   go?
-1. [code] **VGG-16 and VGG-19.** Use Table 1 in the VGG paper
-   :cite:`Simonyan.Zisserman.2014` to construct other common models, such
-   as VGG-16 or VGG-19, as variants of this section's VGG builder. Report
-   their parameter counts against the VGG-11 baseline.
-1. [code] **Resolution conversion.** Upsampling the resolution in
-   Fashion-MNIST eight-fold from $28 \times 28$ to $224 \times 224$
-   dimensions is very wasteful. Resize to $56 \times 56$ and to
-   $84 \times 84$ instead, adjusting the network to match. Report whether
-   each variant stays within one point of the $224 \times 224$ baseline's
-   accuracy; if not, add a nonlinearity before a downsampling step,
-   following the VGG paper's discussion :cite:`Simonyan.Zisserman.2014`,
-   and report again.
+1. **The missing three layers.** `layer_summary` lists the convolutional
+   part of VGG-11 as five blocks, and the network has three fully
+   connected layers, eight components in all. Its name counts eleven
+   layers. Where are the remaining three?
+1. [code] **VGG-16 and VGG-19.** Use Table 1 of
+   :citet:`Simonyan.Zisserman.2014` to write the `arch` tuples of VGG-16
+   and VGG-19 and instantiate both with the `VGG` class. Report their
+   parameter counts against VGG-11.
+1. [code] **Resolution conversion.** Upsampling Fashion-MNIST images
+   eightfold, from $28 \times 28$ to $224 \times 224$, spends computation
+   without adding information. Train
+   `VGG(arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128)))` at
+   $56 \times 56$ and at $84 \times 84$ instead and compare validation
+   accuracy and time per epoch with the $224 \times 224$ run. If a variant
+   loses more than one point, add convolutional layers to its early
+   blocks, following the argument of :citet:`Simonyan.Zisserman.2014` for
+   stacking several $3 \times 3$ convolutions between pooling steps, and
+   compare again.
 1. [code] **NiN block design.** Why are there two $1\times 1$
    convolutional layers per NiN block? Increase their number to three,
    then reduce it to one, and report parameter count, accuracy, and
@@ -831,21 +833,35 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
    $10 \times 5 \times 5$ representation in one step, as the final NiN
    block does?
 1. [code] **Squeeze-and-excitation.** Add a squeeze-and-excitation gate
-   :cite:`Hu.Shen.Sun.2018` to the Inception block: global-average-pool
-   the block's output to one value per channel, pass it through a
-   two-layer MLP with a sigmoid at the end, and multiply the channels by
-   the result. How many parameters does this add, and how does it change
-   training on Fashion-MNIST?
-1. **Depthwise Inception.** Replace the Inception block's four branches
-   with a single $7 \times 7$ depthwise convolution followed by a
-   $1 \times 1$ convolution (:numref:`sec_depthwise_separable`). Compare
-   the parameter count and the number of floating point operations with
-   the original block at the same input and output sizes.
-1. [code] **GoogLeNet at native resolution.** What is the minimum image
-   size needed for GoogLeNet to work? Design a variant that runs directly
-   on Fashion-MNIST's native $28 \times 28$ resolution, report the
-   specific changes made to the stem, the body, and the head, and compare
-   its accuracy against the $224 \times 224$ baseline.
+   :cite:`Hu.Shen.Sun.2018` to `Inception`: global-average-pool the
+   block's output to one value per channel, pass the resulting vector
+   through a two-layer MLP whose hidden width is one sixteenth of the
+   channel count and whose output passes through a sigmoid, and multiply
+   each channel by its gate. How many parameters does the gate add to a
+   block with $c$ output channels, and to `GoogleNet` as a whole? Train
+   `GoogleNet` with and without the gates under the procedure used for
+   `NiN` and compare validation accuracy.
+1. **Depthwise Inception.** Suppose the four branches of the first body
+   block of `GoogleNet`, which maps 192 input channels to
+   $64 + 128 + 32 + 32 = 256$ output channels, are replaced by a single
+   $7 \times 7$ depthwise convolution followed by a $1 \times 1$
+   convolution (:numref:`sec_depthwise_separable`). Compare the parameter
+   count and the number of floating point operations of the two blocks at
+   the same input and output sizes.
+1. [code] **GoogLeNet at native resolution.** `GoogleNet` accepts a
+   $28 \times 28$ input as written, because its convolutions and pooling
+   layers pad so that every stride-2 step halves the resolution, rounding
+   up.
+    1. Compute the resolution at which each of the three groups of
+       Inception blocks operates on a $28 \times 28$ input. What do the
+       $3 \times 3$ and $5 \times 5$ branches compute at the smallest of
+       these resolutions?
+    1. Redesign the stem so that the first group of Inception blocks
+       operates on at least a $14 \times 14$ feature map, and adjust the
+       body and head as needed. Report the changes, and compare validation
+       accuracy and time per epoch with `GoogleNet` trained at the
+       $96 \times 96$ resolution of the shape check under the procedure
+       used for `NiN`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/77)

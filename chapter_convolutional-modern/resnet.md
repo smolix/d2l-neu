@@ -1074,37 +1074,56 @@ A common feature of the designs we have discussed so far is that the network des
 
 ## Exercises
 
-1. **Inception versus residual blocks.** What are the major differences
-   between the Inception block in :numref:`fig_inception` and the residual
-   block? How do they compare in terms of computation, accuracy, and the
-   classes of functions they can describe?
-1. [code] **ResNet variants.** Refer to Table 1 in the ResNet paper
-   :cite:`He.Zhang.Ren.ea.2016` to implement at least two other depth
-   variants of the network.
-1. [code] **The bottleneck block.** For deeper networks, ResNet introduces
-   a "bottleneck" architecture to reduce model complexity. Implement it
-   and compare its parameter count with the basic block at matched depth.
-1. [code] **Pre-activation ordering.** In subsequent versions of ResNet,
-   the authors changed the "convolution, batch normalization, and
-   activation" structure to the "batch normalization, activation, and
-   convolution" structure. Make this improvement yourself (see Figure 1 in
-   :citet:`He.Zhang.Ren.ea.2016*1` for details) and compare the training
-   curves against the original ordering. This ordering is essentially what
-   ConvNeXt adopts (:numref:`sec_convnext`).
+1. **Inception versus residual blocks.** Compare the Inception block of
+   :numref:`fig_inception` with the residual block of
+   :numref:`fig_resnet_block`. How do they differ in computation and
+   parameter count at the same input and output width, and in the classes
+   of functions they can represent?
+1. [code] **ResNet variants.** Table 1 of :citet:`He.Zhang.Ren.ea.2016`
+   specifies ResNet-18 to ResNet-152 by the number of blocks per stage and
+   by the block type.
+    1. Build ResNet-34 by passing its block counts as `arch` to `ResNet`
+       and report its parameter count against `ResNet18`.
+    1. ResNet-50 and its deeper relatives use a bottleneck block: a
+       $1 \times 1$ convolution that reduces the width fourfold, a
+       $3 \times 3$ convolution, and a $1 \times 1$ convolution that
+       restores the width. `ResNeXtBlock` with `groups=1` and
+       `bot_mul=0.25` implements this block. Compare its parameter count
+       and multiply-adds with those of `Residual` at the same input and
+       output width.
+    1. Add a `block` method that stacks bottleneck blocks, build
+       ResNet-50, and compare its parameter count with ResNet-34's.
+1. [code] **Pre-activation ordering.** :citet:`He.Zhang.Ren.ea.2016*1`
+   moved batch normalization and the ReLU in front of each convolution of
+   the residual branch and removed the ReLU after the addition (their
+   Figure 1), so that a block computes $\mathbf{x} + g(\mathbf{x})$ with
+   the identity path left untouched. The DenseNet convolution block in
+   :numref:`sec_densenet` uses this "batch normalization, activation,
+   convolution" order, and ConvNeXt (:numref:`sec_convnext`) likewise
+   applies no nonlinearity after the addition.
+    1. Show that setting the residual branch to zero makes the
+       pre-activation block the identity on every input, whereas
+       `Residual` is the identity only on nonnegative inputs.
+    1. Implement a pre-activation variant of `Residual`, build a ResNet-18
+       from it, and compare its training curves with those of `ResNet18`.
 1. **Nested function classes.** Why can increasing function-class
    complexity without bound still be undesirable when the classes are
    nested?
-1. **DenseNet's parameter count.** One of the advantages claimed in the
-   DenseNet paper :cite:`Huang.Liu.Van-Der-Maaten.ea.2017` is that its
-   models have fewer parameters than comparable ResNets. Why is this the
-   case? Consider which computations a concatenated feature saves relative
-   to recomputing it.
-1. **Dense block accounting.** For a dense block whose $k$ convolutions
-   each emit $g$ channels (the growth rate) on an input with $c$ channels,
-   how many channels does the $i$-th convolution consume? Sum these to
-   compare the activation memory of the dense block with that of $k$
-   residual blocks of constant width $c$, and relate your answer to the
-   memory-efficient implementations of :citet:`pleiss2017memory`.
+1. **DenseNet accounting.** :citet:`Huang.Liu.Van-Der-Maaten.ea.2017`
+   report that DenseNets match the accuracy of comparable ResNets with
+   fewer parameters, whereas :citet:`pleiss2017memory` had to devise
+   memory-efficient implementations for them. Consider a dense block whose
+   $n$ convolutions each emit $r$ channels (the growth rate) on an input
+   with $c$ channels.
+    1. How many channels does the $i$-th convolution consume? Sum over the
+       block to obtain its activation memory and compare it with that of
+       $n$ residual blocks of constant width $c$.
+    1. Count the weights of the dense block's $3 \times 3$ convolutions
+       and compare them with those of the $n$ residual blocks. For which
+       growth rates $r$ does the dense block use fewer parameters?
+    1. Reconcile the two comparisons: why can a network that keeps more
+       activations need fewer weights? Relate the activation cost to the
+       recomputation strategy of :citet:`pleiss2017memory`.
 1. **Paths through a residual stack.** A stack of $K$ residual blocks can
    be unraveled into an ensemble of paths: on each block, the signal
    either passes through the block's body or skips it

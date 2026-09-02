@@ -672,17 +672,21 @@ fine-tuning of pretrained models.
 
 1. [code] **Kaggle submission.** Submit your predictions for this section to
    Kaggle. Where does your score place on the leaderboard?
-1. **Mean imputation.** Is it always a good idea to replace missing values
-   by the mean of the observed ones?
-    1. Construct a concrete example of a feature in this dataset whose
-       missingness is not random with respect to the sale price.
-    1. Explain what bias mean imputation introduces for that feature, and
-       in which direction it shifts the predictions for the affected
-       houses.
-1. [code] **Hyperparameter tuning.** Improve the score by tuning the
-   hyperparameters through $K$-fold cross-validation.
-1. [code] **Model improvements.** Improve the score by improving the model,
-   for example through additional layers, weight decay, or dropout.
+1. [code] **Mean imputation.** `fit_preprocess` replaces every missing
+   numerical value by the training-set mean of its column.
+    1. Identify a numerical feature in this dataset whose missingness is not
+       random with respect to the sale price.
+    1. Explain what bias mean imputation introduces for that feature, and in
+       which direction it shifts the predictions for the affected houses.
+    1. Replace mean imputation by median imputation, and separately add a
+       binary missingness indicator column for each imputed feature. Compare
+       the cross-validated log-RMSE of the three variants.
+1. [code] **Improving the score.** Improve the cross-validated log-RMSE, and
+   then the leaderboard score, of the model in this section.
+    1. Tune the learning rate, the number of epochs, and the weight-decay
+       strength by $K$-fold cross-validation, holding the model fixed.
+    1. Change the model: add or widen hidden layers and add dropout. Which
+       change helps most, and does the gain survive on the leaderboard?
 1. [code] **Skipping standardization.** What happens if we do not
    standardize the continuous numerical features as we have done in this
    section?
@@ -692,19 +696,19 @@ fine-tuning of pretrained models.
    trained on the same preprocessed features. How does its cross-validated
    log-RMSE compare? Why might tree ensembles have an edge on data like
    this?
-1. [code] **Preprocessing choices.** Revisit the preprocessing pipeline of
-   this section.
-    1. How does median imputation compare with mean imputation?
+1. [code] **Encoding categorical features.** One-hot encoding in
+   `fit_preprocess` contributes one column per category observed in the
+   training data.
     1. Among the categorical columns, find the one with the highest
        cardinality. How many columns does it contribute to the feature
        matrix under one-hot encoding?
     1. *Target encoding* replaces each category by the mean label of the
-       training rows in that category, contributing a single column.
-       Encode the high-cardinality columns this way, or with a learned
-       embedding, instead of one-hot vectors, and compare the
-       cross-validated log-RMSE. Because target encoding uses the labels,
-       implement it out of fold: for each training row, compute its
-       encoded value without using that row or its validation fold.
+       training rows in that category, contributing a single column. Encode
+       the high-cardinality columns this way, or with a learned embedding,
+       instead of one-hot vectors, and compare the cross-validated log-RMSE.
+       Because target encoding uses the labels, implement it out of fold: for
+       each training row, compute its encoded value without using that row or
+       its validation fold.
 
     *Adapted from Kaggle Learn,
     [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
@@ -726,11 +730,11 @@ fine-tuning of pretrained models.
    :numref:`subsec_kaggle_submission` describes two ways of producing a
    final model after cross-validation: averaging the $K$ fold models'
    predictions, or refitting one model on the complete training set with
-   the selected hyperparameters. Compare them empirically: sweep at least
-   five values of the hidden-unit count, select the best by cross-validated
-   log-RMSE, produce a submission with each procedure, and report both
-   leaderboard scores. Explain why the training error of the refit model is
-   not a substitute for the cross-validated estimate.
+   the selected hyperparameters. Compare them empirically for the model and
+   hyperparameters of this section: produce one submission with each
+   procedure and report both leaderboard scores. Explain why the training
+   error of the refit model is not a substitute for the cross-validated
+   estimate.
 1. **Geometric averaging.** :numref:`subsec_kaggle_submission` averages the
    $K$ fold models' log-price predictions before exponentiating and notes
    that this amounts to a geometric mean in price space.

@@ -767,6 +767,7 @@ except Exception as e:
 ```
 
 ## Saving Memory
+:label:`subsec_saving_memory`
 
 Running operations can cause new memory to be
 allocated to host results.
@@ -983,84 +984,100 @@ Tensors provide a variety of functionalities including construction routines; in
 1. **Comparison operator swap.** Run the code in this section
    with the conditional `X == Y` replaced by `X < Y`, and then by `X > Y`.
    Report the kind of tensor that each comparison produces.
-1. [code] **Broadcasting in three dimensions.** Replace the two
-   broadcasting operands with 3-dimensional tensors of your choosing.
-   Predict the shape of the broadcast result, then run the code and check
-   your prediction.
+1. [code] **Broadcasting shapes.** Broadcasting in
+   :numref:`subsec_broadcasting` aligns two shapes from the right.
+    1. Replace `a` and `b` with two tensors that each have three axes and
+       whose shapes differ on every axis. Predict the shape of `a + b`,
+       then run the code and check your prediction.
+    1. The addition of a $(3, 2)$ tensor and a $(2, 3)$ tensor fails. Find
+       two reshapes of the $(2, 3)$ operand that make the addition valid,
+       one that produces a $(3, 2)$ result and one that produces a result
+       with three axes. Predict each result shape before running the code.
 1. **Inferred reshape axis.** Create the vector
    `x = arange(24)` and reshape it into a $(2, 3, 4)$ tensor, writing `-1`
    for one of the components. State which component is inferred
    and why at most one `-1` is allowed. Check your answer in code.
-1. **Predict-then-verify reduction shapes.** Build a $(3, 4)$
-   tensor. Before running any code, predict the shape of its sum along
-   `axis=0`, along `axis=1`, and with `keepdims=True`. Check each
-   prediction against the code.
-1. [code] **Fixing a broadcast mismatch.** Add two tensors of shapes
-   $(3, 2)$ and $(2, 3)$ and read the error message. Explain the failure
-   using the alignment rule from the broadcasting section. Then find a
-   reshape of one operand that makes the addition valid.
 :begin_tab:`pytorch`
-6. **Object identity versus storage.** Use `id()` to verify
-   that `X[:] = X + Y` (or `X += Y`) keeps the same Python tensor object
-   while `X = X + Y` binds `X` to a new object. Explain why object identity
-   alone does not prove that the underlying storage was reused, and check
-   storage identity as well by comparing `X.data_ptr()` before and after.
-7. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for
-   two same-shaped tensors without allocating a new array. Write every
-   intermediate into a pre-allocated buffer using `Z[:] = ...`, and verify
-   with `id()` that no name was rebound.
+4. [code] **Object identity versus storage.** The cells in
+   :numref:`subsec_saving_memory` compare `id(X)` before and after
+   `X += Y` and `X = X + Y`. Explain why an unchanged `id()` does not by
+   itself show that the underlying storage was reused, and why a changed
+   `id()` does not show that it was not. Then compare `X.data_ptr()`
+   before and after each of `X += Y`, `X = X + Y`, and
+   `X = X.reshape(-1)`, and state what the pair of observations (`id`,
+   `data_ptr`) shows in each case.
+5. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
+   same-shaped tensors without allocating any intermediate tensor, using
+   only in-place methods such as `add_`, `div_`, `neg_`, and `mul_`, or
+   the `out=` argument of the corresponding functions. Confirm that
+   `A.data_ptr()` and `B.data_ptr()` are unchanged and that the result
+   equals the direct expression. Explain why `Z[:] = A + B` would not have
+   met the requirement.
 
     *Adapted from problem 35 of
     [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
 :end_tab:
 
 :begin_tab:`mxnet`
-6. **Object identity versus storage.** Use `id()` to verify
-   that `X[:] = X + Y` (or `X += Y`) keeps the same Python tensor object
-   while `X = X + Y` binds `X` to a new object. Explain why object identity
-   alone does not prove that the underlying storage was reused.
-7. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for
-   two same-shaped tensors without allocating a new array. Write every
-   intermediate into a pre-allocated buffer using `Z[:] = ...`, and verify
-   with `id()` that no name was rebound.
+4. [code] **Object identity versus storage.** The cells in
+   :numref:`subsec_saving_memory` compare `id(X)` before and after
+   `X += Y` and `X = X + Y`. Explain why an unchanged `id()` does not by
+   itself show that the underlying storage was reused, and why a changed
+   `id()` does not show that it was not. Then test storage sharing
+   directly: let `V = X.reshape(-1)`, write `X[0, 0] = 99`, and inspect
+   `V[0]`. State what the `id()` test and the write test show for each of
+   `X += Y`, `X = X + Y`, and `V = X.reshape(-1)`.
+5. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
+   same-shaped tensors without allocating any intermediate tensor, using
+   only the in-place operators `+=`, `*=`, and `/=`. Confirm that the
+   result equals the direct expression and explain why `Z[:] = A + B`
+   would not have met the requirement.
 
     *Adapted from problem 35 of
     [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
 :end_tab:
 
 :begin_tab:`tensorflow`
-6. **Object identity versus storage.** Ordinary tensors are immutable, so
-   mutation goes through a `Variable`. Use `id()` to verify that
-   `Z.assign(X + Y)` keeps the same `Variable` object while `Z = X + Y`
-   binds `Z` to a new tensor. Explain why object identity alone does not
-   prove that the underlying storage was reused.
-7. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
-   same-shaped tensors without binding any new Python name: write every
-   intermediate into a pre-allocated `tf.Variable` with `assign`, and
-   verify with `id()` that the variable was never rebound. Explain what
-   TensorFlow gains by keeping ordinary tensors immutable, and how
-   `tf.function` recovers allocation reuse.
+4. **Object identity versus storage.** The cell in
+   :numref:`subsec_saving_memory` shows that `Z.assign(X + Y)` leaves
+   `id(Z)` unchanged, whereas `Z = X + Y` binds `Z` to a new tensor.
+   Explain why the unchanged `id()` shows only that the same `Variable`
+   object persists, not that its buffer was reused rather than replaced,
+   and why the temporary tensor `X + Y` is allocated in either case.
+5. [code] **In-place composition.** Ordinary tensors are immutable, so
+   every arithmetic operation on them allocates a new tensor. Hold `A` and
+   `B` in `tf.Variable`s and compute `(A + B) * (-A / 2)` so that the
+   result ends up in one of the two variables, using `assign`,
+   `assign_add`, and related methods. Identify which of your steps still
+   allocate a temporary tensor and explain why eager execution cannot
+   avoid them. Then explain what TensorFlow gains from immutable tensors
+   and how `tf.function` recovers allocation reuse.
 
     *Adapted from problem 35 of
     [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
 :end_tab:
 
 :begin_tab:`jax`
-6. **Object identity versus storage.** JAX arrays are immutable: use `id()`
-   to verify that both `X = X + Y` and `X = X.at[0].set(0)` bind `X` to new
-   array objects. Explain why object identity therefore says nothing about
-   whether storage was reused, and where buffer reuse can still happen.
-7. [code] **In-place composition.** JAX forbids in-place writes: express
-   `(A + B) * (-A / 2)` with functional updates, accumulating the
-   intermediates into a result array with `.at[...].set(...)`. Explain what
-   JAX gains by making arrays immutable and how XLA under `jax.jit`
-   recovers the buffer reuse that in-place writes would otherwise provide.
+4. **Object identity versus storage.** The cell in
+   :numref:`subsec_saving_memory` shows that `X.at[:].set(X + Y)` returns
+   an object with a new `id()`. Explain why, for immutable arrays, `id()`
+   carries no information about storage at all, and what `jax.jit` can do
+   with the intermediate `X + Y` in this expression that eager evaluation
+   cannot.
+5. [code] **In-place composition.** JAX arrays are immutable, so
+   `.at[...].set(...)` returns a new array and cannot save memory on its
+   own. Write `(A + B) * (-A / 2)` as a function `f(A, B)`, count the
+   intermediate arrays that eager evaluation creates, and inspect the
+   optimized program of `jax.jit(f)` with
+   `jax.jit(f).lower(A, B).compile().as_text()`. Report how many fused
+   computations remain and explain how XLA recovers the buffer reuse that
+   in-place writes would otherwise provide.
 
     *Adapted from problem 35 of
     [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
 :end_tab:
 
-8. [extended] **Loops, broadcasting, and library primitives.** Compute all
+6. [extended] **Loops, broadcasting, and library primitives.** Compute all
    pairwise squared Euclidean distances between two sets of 50 vectors in 8
    dimensions in three ways: two nested Python loops, one loop plus
    broadcasting, and a fully vectorized version with no explicit loop.

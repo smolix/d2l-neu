@@ -646,54 +646,52 @@ implementation applies automatically.
 
 ## Exercises
 
-1. [code] **Numerical stability.** In this section, we directly implemented
-   the softmax function based on the mathematical definition of the softmax
-   operation. As discussed in :numref:`sec_softmax` this can cause
-   numerical instabilities.
-    1. Test whether `softmax` still works correctly if an input has a value
-       of $100$.
-    1. Test whether `softmax` still works correctly if the largest of all
-       inputs is smaller than $-100$.
-    1. Implement a fix by looking at the value relative to the largest
-       entry in the argument.
-1. [code] **Cross-entropy.** Implement a `cross_entropy` function that
-   follows the definition of the cross-entropy loss function
-   $-\sum_i y_i \log \hat{y}_i$.
-    1. Try it out in the code example of this section.
-    1. Explain why it runs more slowly.
-    1. Decide whether you should use it anyway, and describe when the
-       direct form would make sense.
-    1. State what you need to be careful of. Hint: consider the domain of
-       the logarithm.
-1. **When not to report the top label.** Recall the reject-option rule: if
-   abstaining costs $\lambda_r$ and a wrong guess costs $\lambda_s$,
-   guessing is optimal only when the top-class probability satisfies
-   $\max_j p(j \mid x) \geq 1 - \lambda_r/\lambda_s$. Consider medical
-   diagnosis, where deferring to a specialist is cheap relative to a
-   misdiagnosis, say $\lambda_r/\lambda_s = 0.05$. Compute the resulting
-   confidence threshold, state what the classifier should do with a
-   prediction at $0.9$ confidence, and explain when reporting the full
-   distribution serves the physician better than either choice.
+1. [code] **Numerical stability.** The `softmax` of this section returns
+   `NaN` on the logits $(1000, 0, 0)$ because $\exp(1000)$ overflows.
+    1. Show that it also fails when the largest input is below $-100$, and
+       identify the operation that produces the `NaN` in this case.
+    1. Implement a fix that subtracts the largest entry of each row before
+       exponentiating, and check that it agrees with the framework's
+       softmax on both inputs and on random inputs.
+1. [code] **Cross-entropy from one-hot labels.** The `cross_entropy` of this
+   section selects the correct-class probability by indexing. Implement an
+   alternative that follows the definition $-\sum_j y_j \log \hat{y}_j$
+   literally, by converting `y` to a one-hot matrix and taking row-wise
+   inner products.
+    1. Use it as the `loss` of `SoftmaxRegressionScratch` and confirm that
+       training is unchanged.
+    1. Compare its running time and memory use with the indexing version
+       as the number of classes grows.
+    1. Describe a setting in which the one-hot form is the natural one and
+       the indexing form does not apply.
 1. **Large vocabularies.** Assume that we want to use softmax regression to
    predict the next word based on some features, with a vocabulary of size
    $V$ between $10^5$ and $10^6$. Identify which steps of the softmax and
    cross-entropy computation scale with $V$, estimate the per-step cost
    relative to the $V = 10$ of Fashion-MNIST, and name one change to the
    output layer that avoids paying the full cost.
-1. [code] **Hyperparameter sweep.** Experiment with the hyperparameters of
-   the code in this section. In particular:
-    1. Plot how the validation loss changes as you change the learning
-       rate.
-    1. Do the validation and training loss change as you change the
-       minibatch size? How large or small do you need to go before you see
-       an effect?
-1. **Confusion matrix.** The diagonal of the column-normalized confusion
-   matrix :eqref:`eq_confusion-normalized` is the *per-class accuracy*.
-   Read it off the matrix computed above. Which class is hardest, and which
-   pairs of classes account for most of the errors? Why would a *linear*
-   model struggle on exactly those pairs, and why should replacing it with
-   a model that can respond to localized shape cues (a collar, a heel)
-   help?
+1. [code] **Hyperparameter sweep.** Retrain `SoftmaxRegressionScratch` with
+   `d2l.Trainer(max_epochs=10)`, varying one hyperparameter at a time.
+    1. Plot the final validation loss against the learning rate over
+       $\{0.01, 0.03, 0.1, 0.3, 1\}$.
+    1. Repeat for the minibatch size over $\{8, 32, 256, 2048\}$ at a fixed
+       learning rate. How large or small must the batch be before the
+       training and validation losses change noticeably, and why does the
+       answer depend on whether the number of epochs or the number of
+       parameter updates is held fixed?
+1. [code] **Confusion matrix.** The diagonal of the column-normalized
+   confusion matrix :eqref:`eq_confusion-normalized` holds the per-class
+   recall.
+    1. Compute the row-normalized counterpart, whose diagonal holds the
+       per-class precision. For which classes do precision and recall
+       differ most, and what does the asymmetry say about the direction of
+       the confusions between them?
+    1. Check that the trace of the unnormalized count matrix $C$, divided
+       by the number of validation examples, reproduces the overall
+       validation accuracy.
+    1. Reshape each column of the weight matrix `W` into a $28 \times 28$
+       image and display the ten templates with `show_images`. Relate
+       visually similar templates to the most confused class pairs.
 
 
 :begin_tab:`mxnet`

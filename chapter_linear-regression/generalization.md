@@ -530,7 +530,7 @@ of the cross-validation variance exists :cite:`Bengio.Grandvalet.2004`.
 The standard compromise, $K = 5$ or $K = 10$, keeps the bias modest, averages
 over reasonably distinct training sets, and costs only $5$--$10$ fits, which is
 why these values dominate practice :cite:`Kohavi.1995`.
-(Exercises 4 and 5 ask you to reason through the cost and the bias.)
+(Exercise 4 asks you to reason through the cost and the bias.)
 
 
 ## Summary
@@ -548,42 +548,64 @@ principles guide model selection in the settings considered here:
 
 ## Exercises
 
-1. **Exact polynomial regression.** State the condition under which
-   polynomial regression can be solved exactly. Hint: relate the polynomial
-   degree to the number of distinct data points.
+1. **Exact polynomial regression.** Show that when the $n$ training inputs
+   $x^{(1)}, \ldots, x^{(n)}$ are distinct, a polynomial of degree $n-1$
+   fits the $n$ labels exactly, and explain where distinctness is used.
+   What does least squares return when two inputs coincide but their
+   labels differ?
 1. **When IID fails.** Give at least five examples where dependent random
    variables make treating the problem as IID data inadvisable.
-1. **Two kinds of zero training error.** State whether zero training error
-   is achievable in practice. Under which circumstances would zero
-   generalization error be achievable? Distinguish the two cases clearly.
-1. **The price of $K$-fold.** Explain why $K$-fold cross-validation is very
-   expensive to compute, in terms of the number of models fit relative to a
-   single train/validation split.
-1. **$K$-fold bias.** Explain why the $K$-fold cross-validation error
-   estimate is biased relative to a model trained on the full dataset, and
-   state the direction of the bias.
-1. **VC dimension.** It is defined as the maximum number of points that can
-   be classified with arbitrary labels $\{\pm 1\}$ by a function of a class
-   of functions. Why might this not be a good idea for measuring how
-   complex the class of functions is? Hint: consider the magnitude of the
-   function values, rather than just the signs.
-1. [code] **Learning curve.** Your manager gives you a difficult dataset on
-   which your current algorithm does not perform so well, and you cannot
-   collect more data. Subsample the existing training set at several sizes,
-   for example 20%, 40%, 60%, 80%, and 100%, retrain at each size, and plot
-   validation error against training-set size. How would you use the slope
-   of the resulting curve as evidence whether more data might help?
-1. [code] **Model selection.** Re-run the polynomial-fitting experiment
-   above with `n_train` set to 10, 40, and 100. Report the degree at which
-   the test loss starts to climb in each case, and relate your finding to
-   the rule of thumb that more complex models require more data.
-1. [extended] **Double Descent.** ● Extend this section's polynomial-degree
-   sweep well past the number of training points, for example to degree 60
-   on 20 training points, relying on the minimum-norm behavior of `lstsq`
-   in the rank-deficient regime. Before running it, predict whether the
-   test error keeps rising once the training error reaches zero, or falls
-   again. Then run the sweep, plot the test error across the full range,
-   and relate the outcome to this section's discussion of double descent.
+1. **Two kinds of zero error.** Under which circumstances can the training
+   error be driven to zero? Under which circumstances can the
+   generalization error be zero? Compare the two sets of conditions.
+1. **$K$-fold cross-validation.**
+    1. Suppose you compare $H$ hyperparameter settings. Count the model
+       fits required by $K$-fold cross-validation and by a single
+       train/validation split, and give the ratio for $K = 5$ and for
+       $K = n$.
+    1. Each fold's model trains on a fraction $(K-1)/K$ of the data.
+       Assuming that validation error decreases monotonically with the
+       training-set size, determine whether the cross-validation estimate
+       over- or underestimates the error of the model trained on all $n$
+       examples, and how the discrepancy depends on $K$.
+    1. After selecting a hyperparameter by cross-validation, the final
+       model is retrained on all $n$ examples. Explain why a hyperparameter
+       whose best value depends on the training-set size complicates this
+       step, and give an example.
+1. **VC dimension.** The VC dimension of a class of functions is the
+   largest number of points such that, for every assignment of labels in
+   $\{\pm 1\}$ to those points, some function in the class classifies all
+   of them correctly. Give two classes with the same VC dimension whose
+   members differ greatly in the range of values $f(\mathbf{x})$ they
+   take, and explain why this difference matters for the regression
+   losses of this chapter but is invisible to the VC dimension.
+1. [code] **Learning curve.** Your manager asks whether collecting more
+   data would improve a model that performs poorly, before paying for any.
+   Subsample the existing training set at several sizes, for example 20%,
+   40%, 60%, 80%, and 100%, retrain at each size, and plot validation
+   error against training-set size. Explain how the slope of this curve at
+   100% supports or undermines a request for more data. Demonstrate the
+   procedure on the polynomial data of
+   :numref:`subsec_polynomial-curve-fitting` with `n_train = 100` at
+   degree 3 and at degree 10.
+1. [code] **Model selection.** Re-run the polynomial fit of
+   :numref:`subsec_polynomial-curve-fitting` with `n_train` set to 10,
+   40, and 100. Report the degree at which the test loss starts to climb
+   in each case, and relate your finding to the rule of thumb that more
+   complex models require more data.
+1. [extended] **Double descent.** ● Extend the degree sweep of
+   :numref:`subsec_polynomial-curve-fitting` well past the number of
+   training points, for example to degree 60 on 20 training points,
+   computing the minimum-norm interpolant with `numpy.linalg.pinv` as in
+   :numref:`sec_mdl-concentration-generalization`.
+    1. Run the sweep in the monomial basis $1, x, x^2, \ldots$ used in
+       this section and plot the test error over the full range.
+    1. Repeat with the Legendre polynomials $P_0(x), \ldots, P_d(x)$
+       (`numpy.polynomial.legendre.legvander`), which are orthogonal on
+       $[-1, 1]$.
+    1. Explain the difference between the two curves in terms of the
+       minimum-norm solution, and relate the second curve to this
+       section's discussion of double descent.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),

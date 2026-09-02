@@ -172,6 +172,7 @@ $\ell = \frac{1}{2}(\hat{y} - y)^2$ with $\hat{y} = \mathbf{w}^\top \mathbf{x} +
 and the chain rule gives
 
 $$\frac{\partial \ell}{\partial \mathbf{w}} = (\hat{y} - y)\, \mathbf{x} \qquad \textrm{and} \qquad \frac{\partial \ell}{\partial b} = \hat{y} - y.$$
+:eqlabel:`eq_linreg_grad_by_hand`
 
 Differentiating the square produces the error $\hat{y} - y$, which is then
 multiplied by the derivative of $\hat{y}$ with respect to each parameter:
@@ -688,11 +689,11 @@ curb overfitting, the first of many regularizers we will meet.
 
 ## Exercises
 
-1. **Initialization at the extremes.** Predict whether training still
-   succeeds if the weights are initialized to exactly zero, and separately
-   if they are initialized with variance $1000$ rather than $0.01$. Explain
-   both answers, noting that this model is a single linear layer rather
-   than a deep network.
+1. **Initialization at the extremes.** `LinearRegressionScratch` draws
+   its weights with standard deviation `sigma=0.01`. Predict whether
+   training still reaches the noise floor if the weights are initialized to
+   exactly zero, and separately if `sigma=1000`. Explain both answers, and
+   state how the number of epochs needed changes in the second case.
 1. [code] **Ohm's law.** Assume that you are
    [Georg Simon Ohm](https://en.wikipedia.org/wiki/Georg_Ohm) trying to
    come up with a model for resistance that relates voltage and current.
@@ -700,47 +701,49 @@ curb overfitting, the first of many regularizers we will meet.
    voltage--current pairs using this section's autograd-based training
    loop.
 1. [code] **Planck's law.** ● Use
-   [Planck's Law](https://en.wikipedia.org/wiki/Planck%27s_law) to
-   determine the temperature of an object from its spectral energy
-   density. For reference, the spectral density $B$ of radiation emanating
-   from a black body is
+   [Planck's law](https://en.wikipedia.org/wiki/Planck%27s_law) to
+   determine the temperature of a black body from measurements of its
+   spectral radiance at several wavelengths. The spectral radiance is
 
     $$B(\lambda, T) = \frac{2 hc^2}{\lambda^5} \cdot \left(\exp \frac{h c}{\lambda k T} - 1\right)^{-1},$$
 
     where $\lambda$ is the wavelength, $T$ is the temperature, $c$ is the
     speed of light, $h$ is Planck's constant, and $k$ is the Boltzmann
-    constant. Given measured energies at several wavelengths, fit the
-    temperature $T$ as a learnable parameter under this section's training
-    loop.
-1. **Second derivatives.** Identify the problems you would encounter if you
-   wanted to compute the second derivatives of the loss with the tools
-   introduced so far, and propose how to fix them.
-1. **Reshape in the loss.** Explain what silently goes wrong in the loss
-   computation if `y_hat` and `y` have mismatched shapes: the failure comes
-   from broadcasting, not from an error message.
+    constant. Generate measurements at a known $T$, then write a
+    `d2l.Module` subclass whose `forward` computes $B(\lambda, T)$ with $T$
+    as its only parameter and fit it with `d2l.Trainer`. Choose units in
+    which $B$ and $T$ are of order one before fitting.
+1. [code] **Second derivatives.** Compute by hand the Hessian of the
+   minibatch loss with respect to $(\mathbf{w}, b)$. Then compute it with
+   automatic differentiation for one minibatch of `SyntheticRegressionData`
+   and compare. Identify what the framework needs beyond the single
+   gradient computation used in `fit_epoch`.
+1. **Reshape in the loss.** Suppose the data loader yielded labels `y` of
+   shape $(B,)$ while the predictions `y_hat` have shape $(B, 1)$.
+   Determine the shape and the entries of `y_hat - y`, the value that
+   `loss` then returns, and the effect on training. Would an error be
+   raised?
 1. [code] **Learning-rate sweep.** Train the from-scratch model at each
    learning rate in $\{0.001, 0.01, 0.03, 0.1, 0.3, 1.0\}$ for a fixed 30
    epochs and plot the training-loss curves. For each rate, report the
    smallest number of epochs needed to come within 10% of the noise floor
    $\sigma^2/2$, marking rates that diverge or never reach that band.
 
-    *Adapted from Andrew Ng's Coursera Machine Learning,
-    [exercise 1](https://github.com/dibgerge/ml-coursera-python-assignments/blob/master/Exercise1/exercise1.ipynb).*
-1. [code] **Robust losses.** Implement the absolute value loss
-   `(y_hat - d2l.reshape(y, y_hat.shape)).abs().mean()`. If you *sum*
-   rather than average, the gradient scales with the batch size, so you
-   must lower the learning rate to compensate.
-    1. Check what happens for regular data.
-    1. Check whether there is a difference in behavior if you actively
-       perturb some entries of $\mathbf{y}$, such as $y_5 = 10000$.
-    1. Design a cheap loss that combines the best aspects of squared loss
-       and absolute value loss, quadratic near zero and linear in the
-       tails. Confirm that it recovers a fit close to the uncorrupted case
-       even after the perturbation.
-1. **Why reshuffle.** Explain why each epoch reshuffles the dataset. Then
-   construct a small dataset ordering, for example sorted by label, that
-   would break minibatch SGD if reshuffling were disabled, and state
-   specifically how it breaks.
+    *Adapted from Andrew Ng,
+    [Machine Learning (Coursera)](https://www.coursera.org/learn/machine-learning),
+    Exercise 1.*
+1. [code] **Robust losses.** Replace `loss` in `LinearRegressionScratch`
+   with the mean absolute error
+   `d2l.reduce_mean(d2l.abs(y_hat - d2l.reshape(y, y_hat.shape)))`.
+    1. Train on `SyntheticRegressionData` and compare the recovered
+       parameters and the loss curve with those of the squared loss.
+    1. Set one label to $y^{(5)} = 10000$ and repeat the comparison.
+1. **Why reshuffle.** The training loader draws a fresh random order at
+   every epoch. Explain which property of the minibatch gradient this
+   preserves. Then construct a fixed ordering of the training set, such as
+   sorting by label, under which minibatch SGD without reshuffling behaves
+   differently, and describe the trajectory of $(\mathbf{w}, b)$ within an
+   epoch and across epochs.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/42)

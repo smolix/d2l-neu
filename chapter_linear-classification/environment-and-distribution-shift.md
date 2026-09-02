@@ -485,7 +485,7 @@ above 90% at the cost of a worse source fit, as
 so clipping at $c=5$ reduces the influence of a few source points and happens to
 improve this run slightly. Repeated seeds or confidence intervals are needed
 before treating that last comparison as systematic.
-Exercises 3 and 4 let you probe when this pipeline fails, most instructively
+Exercise 3 lets you probe when this pipeline fails, most instructively
 when the supports stop overlapping.
 
 
@@ -677,54 +677,69 @@ on another, so evaluation should represent the deployment shifts of interest.
    might users respond? How might advertisers respond? Explain why this is
    an instance of the feedback loop described for the loan/footwear example
    at the start of the section.
-1. **Covariate-shift identity.** Starting from the risk under the target
-   distribution $p(\mathbf{x}, y)$, derive the covariate-shift reweighting
-   identity :eqref:`eq_covariate-shift-identity` (whose sample version is
-   the weighted objective :eqref:`eq_weighted-empirical-risk-min`), and
-   state precisely the assumption on the supports of $p(\mathbf{x})$ and
-   $q(\mathbf{x})$ under which the importance weights
-   $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$ are finite.
-1. [code] **Shift detector.** Implement a covariate shift detector. Take
-   any labeled dataset and create a shifted copy of the features (e.g., add
-   Gaussian noise, or subsample by thresholding one feature). Train a
-   logistic-regression classifier to distinguish "original" from "shifted"
-   inputs and report its accuracy. Relate the accuracy to how detectable
-   the shift is, and to the classifier-as-shift-detector idea in
-   :numref:`subsec_covariate-shift-correction`. Hint: if the classifier
-   cannot beat chance, the two distributions are indistinguishable from
-   these features.
-1. [code] **Shift corrector.** Implement a covariate shift corrector. Using
-   the classifier from the previous exercise, compute weights
-   $\beta_i=\exp(h(\mathbf{x}_i))$, retrain your downstream model with
-   weighted empirical risk minimization
-   :eqref:`eq_weighted-empirical-risk-min`, and compare its target-domain
-   accuracy with and without reweighting. What happens to the variance of
-   the $\beta_i$ as the shift grows, and how does clipping
-   $\beta_i\leftarrow\min(\beta_i,c)$ help?
-1. **Label-shift linear system.** You have a $k$-class classifier and its
-   validation confusion matrix $\mathbf{C}$. Show that the linear system
-   $\mathbf{C}\, p(\mathbf{y})=\mu(\hat{\mathbf{y}})$ follows from the law
-   of total probability under the label-shift assumption, and explain why
-   $\mathbf{C}$ must be invertible for the estimate
-   $p(\mathbf{y})=\mathbf{C}^{-1}\mu(\hat{\mathbf{y}})$ to be usable.
+1. **Covariate-shift identity.** The covariate-shift assumption is
+   $p(y \mid \mathbf{x}) = q(y \mid \mathbf{x})$.
+    1. Starting from the risk under the target distribution
+       $p(\mathbf{x}, y)$, derive :eqref:`eq_covariate-shift-identity`,
+       whose sample version is the weighted objective
+       :eqref:`eq_weighted-empirical-risk-min`, and mark the step that
+       uses the assumption.
+    1. State the condition on the supports of $p(\mathbf{x})$ and
+       $q(\mathbf{x})$ under which the weights
+       $\beta_i = p(\mathbf{x}_i)/q(\mathbf{x}_i)$ are finite.
+    1. Suppose $p(\mathbf{x}) > 0$ on a region where $q(\mathbf{x}) = 0$.
+       Which part of the target risk does the reweighted source risk omit,
+       and why can no choice of weights on source examples recover it?
+1. [code] **When reweighting fails.** The pipeline of
+   :numref:`subsec_covariate-shift-correction` (`fit_logreg`, `X_src`,
+   `X_tgt`, `label`) places the target mean at $(2, 0)$. Sweep the target
+   mean over $(s, 0)$ for $s \in \{0, 0.5, 1, 2, 3, 4, 6\}$, keeping
+   $n = 1000$ and the labeling rule fixed.
+    1. For each $s$, report the accuracy of the domain classifier $h$ on
+       held-out pooled data. At which $s$ does it stop beating chance, and
+       at which does it approach $1$? Interpret both ends in terms of how
+       detectable the shift is.
+    1. For each $s$, record the mean and maximum of
+       $\beta_i = \exp(h(\mathbf{x}_i))$ over the source data and the
+       target accuracy of the unweighted, weighted, and clipped ($c = 5$)
+       models. Where does reweighting stop helping, and how do the weight
+       statistics signal this?
+    1. Relate the failure at large $s$ to the support condition of
+       problem 2. Which few source examples carry the weighted objective
+       there, and does clipping repair the problem?
+1. **Label-shift linear system.** A $k$-class classifier has the
+   column-normalized validation confusion matrix $\mathbf{C}$ with entries
+   $c_{ij} = q(\hat{y} = i \mid y = j)$, and its predictions on unlabeled
+   target data have mean $\mu(\hat{\mathbf{y}})$.
+    1. Derive $\mathbf{C}\, p(\mathbf{y}) = \mu(\hat{\mathbf{y}})$ from the
+       law of total probability, and identify the step that uses the
+       label-shift assumption $q(\mathbf{x} \mid y) = p(\mathbf{x} \mid y)$.
+    1. Give an example of a classifier for which $\mathbf{C}$ is singular,
+       and describe what $\mu(\hat{\mathbf{y}})$ can still reveal about
+       $p(\mathbf{y})$ in that case.
+    1. Both $\mathbf{C}$ and $\mu(\hat{\mathbf{y}})$ are estimated from
+       finite samples. Explain how errors in $\mu(\hat{\mathbf{y}})$
+       propagate to $\mathbf{C}^{-1}\mu(\hat{\mathbf{y}})$ when
+       $\mathbf{C}$ is nearly singular.
 1. **Beyond distribution shift.** Besides distribution shift, what else
    could make the empirical risk a poor approximation of the risk?
-1. **Features missing at serving time.** A model predicts daily revenue
-   using "number of customers so far today" as a feature and performs well
-   in offline evaluation. Identify why this feature cannot be used for real
-   predictions, name the general failure mode, and propose a training-time
-   fix that avoids it.
+1. **Features missing at serving time.** A model forecasts a store's daily
+   revenue at the start of each day. It uses "number of customers so far
+   today" as a feature and performs well in offline evaluation on
+   historical records. Identify why this feature is unavailable when the
+   forecast is made, name the general failure mode, and propose a rule for
+   selecting training features that avoids it.
 
     *Adapted from Google's Machine Learning Crash Course,
     ["Monitoring pipelines"](https://developers.google.com/machine-learning/crash-course/production-ml-systems/monitoring).*
-1. [extended] **Real-world shifts.** The WILDS benchmark cited in this
-   section's summary catalogs distribution shifts collected in the wild.
-   Pick two of its tasks, for example a hospital-to-hospital or a
-   camera-trap-to-camera-trap shift, and classify each as closer to
-   covariate shift, label shift, or neither, justifying your classification
-   from how the data were collected. If you can download one of the smaller
-   WILDS datasets, train a linear baseline and report its in-distribution
-   versus out-of-distribution accuracy gap.
+1. [extended] **Real-world shifts.** The WILDS benchmark
+   :cite:`Koh.Sagawa.Marklund.ea.2021` catalogs distribution shifts
+   collected in the wild. Pick two of its tasks, for example a
+   hospital-to-hospital or a camera-trap-to-camera-trap shift, and classify
+   each as closer to covariate shift, label shift, or neither, justifying
+   your classification from how the data were collected. If you can
+   download one of the smaller WILDS datasets, train a linear baseline and
+   report its in-distribution versus out-of-distribution accuracy gap.
 
 
 [Discussions](https://d2l.discourse.group/t/105)

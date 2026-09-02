@@ -549,48 +549,57 @@ in :numref:`sec_generalization_deep`.
    before you leak the entire test set and thus could appear to have error
    $0$, regardless of your true error?
 1. **VC dimension of polynomials.** What is the VC dimension of the class
-   of fifth-order polynomials for $x \in \mathbb{R}$? What is it for
-   $x \in \mathbb{R}^d$?
-1. **VC dimension of rectangles.** ● What is the VC dimension of
-   axis-aligned rectangles on two-dimensional data? Then prove the general
-   result: axis-aligned rectangles in $\mathbb{R}^d$ have VC dimension
-   $2d$.
+   of classifiers $f(x) = \operatorname{sign}(p(x))$ with $p$ a polynomial
+   of degree at most five in $x \in \mathbb{R}$? What is it for
+   $\mathbf{x} \in \mathbb{R}^d$?
+1. **VC dimension of rectangles.** ● Prove that axis-aligned rectangles in
+   $\mathbb{R}^d$ have VC dimension $2d$. Begin with $d = 2$: exhibit four
+   points that rectangles shatter and show that no set of five points can
+   be shattered; then generalize the argument.
 
     *Adapted from Shalev-Shwartz and Ben-David,
     [Understanding Machine Learning](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/understanding-machine-learning-theory-algorithms.pdf),
     Chapter 6, Exercise 5.*
-1. **Shattering the standard basis.** Prove the lower bound VC $\geq d+1$
-   for linear classifiers
+1. **Shattering the standard basis.** Prove the lower bound
+   $\textrm{VC} \geq d+1$ for linear classifiers
    $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on
    $\mathbb{R}^d$ by shattering the $d+1$ points
    $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$ (the origin and the
-   standard unit vectors). Given any desired labels
-   $\sigma_0, \sigma_1, \ldots, \sigma_d \in \{\pm 1\}$, set
-   $b = \sigma_0 / 2$ and read the weights off the labels as
-   $w_i = \sigma_i - b$. Verify that $f(\mathbf{0}) = \sigma_0$ and
-   $f(\mathbf{e}_i) = \sigma_i$ for every $i$. Combined with the Radon
-   argument in the text for the upper bound, this proves VC $= d+1$
-   exactly.
+   standard unit vectors). Given arbitrary labels
+   $\sigma_0, \sigma_1, \ldots, \sigma_d \in \{\pm 1\}$, construct $b$ and
+   $\mathbf{w}$ that realize them. Hint: $f(\mathbf{0})$ depends on $b$
+   alone, so choose $b$ first. Explain how this bound and the Radon
+   argument of the text together give $\textrm{VC} = d+1$.
 1. **Collinear points.** In :numref:`fig_mdl-clf-shattering` the three
    shattered points are in *general position* (not collinear). Show that
    three collinear points can *not* be shattered by halfplanes: which
    labeling is unrealizable? Explain why this does not contradict the VC
    dimension of lines in the plane being $3$.
-1. **Composing hypothesis classes.** ● Given two hypothesis classes $H_1$
-   and $H_2$ with shattering coefficients $H_1[n]$ and $H_2[n]$, show that
-   the class $H^* = \{h_1 \wedge h_2 : h_1 \in H_1, h_2 \in H_2\}$ of
-   intersections satisfies $H^*[n] \leq H_1[n] \cdot H_2[n]$. Use this
-   bound, together with Sauer's lemma, to bound the VC dimension of
-   intersections of two linear-classifier classes.
+1. **Composing hypothesis classes.** ● The *shattering coefficient* (or
+   growth function) $H[n]$ of a hypothesis class $H$ is the largest number
+   of distinct labelings that $H$ can realize on any $n$ points, so that
+   $H[n] = 2^n$ exactly when some $n$ points are shattered. *Sauer's
+   lemma* states that a class of VC dimension $d$ satisfies
+   $H[n] \leq \sum_{i=0}^{d} \binom{n}{i} \leq (en/d)^d$ for $n \geq d$.
+    1. Given two classes $H_1$ and $H_2$, show that the class
+       $H^* = \{h_1 \wedge h_2 : h_1 \in H_1, h_2 \in H_2\}$ of
+       intersections satisfies $H^*[n] \leq H_1[n] \cdot H_2[n]$.
+    1. Use this bound and Sauer's lemma to bound the VC dimension of the
+       intersection of two linear-classifier classes on $\mathbb{R}^d$.
 
     *Adapted from CMU 10-601,
     [homework 5](https://www.cs.cmu.edu/~ninamf/courses/601sp15/hw/homework5.pdf),
     Problem 1.*
-1. [code] **Simulating the gap.** Extend this section's CLT-versus-Hoeffding
-   simulation to a second true error rate, for example $\epsilon = 0.3$,
-   and a finer grid of sample sizes $n$. Report whether the simulated
-   spread still tracks the CLT curve, and by what multiple the Hoeffding
-   radius exceeds it across your grid.
+1. [code] **Simulating the gap.** Rerun the simulation that produces
+   `spread`, `clt`, and `hoeff` for the true error rates $\epsilon = 0.3$
+   and $\epsilon = 0.5$ on a finer grid of sample sizes $n$.
+    1. Does the simulated spread still follow
+       $\sqrt{\epsilon(1-\epsilon)/n}$?
+    1. Show that the ratio of the 95% Hoeffding radius to the 95% CLT
+       radius $1.96\sqrt{\epsilon(1-\epsilon)/n}$ does not depend on $n$,
+       and compute it as a function of $\epsilon$. For which $\epsilon$ is
+       Hoeffding's bound least conservative, and by how much does it then
+       exceed the CLT radius?
 
 [Discussions](https://d2l.discourse.group/t/6829)
 

@@ -1371,53 +1371,27 @@ caller must compute and review the missing/unexpected key sets.
 
 ## Exercises
 
-:begin_tab:`pytorch`
-1. **Checkpointing and atomic writes.** Even if you never deploy to another
-   machine, name two reasons to checkpoint. Moreover, consider atomic
-   writes: if the checkpoint were written straight to its final path
-   (delete the `os.replace` from `save_checkpoint`), describe the failure a
-   crash mid-write now causes, and why the atomic version avoids it.
-:end_tab:
-
-:begin_tab:`jax`
-1. **Checkpointing and atomic writes.** Even if you never deploy to another
-   machine, name two reasons to checkpoint. Moreover, consider atomic
-   writes: orbax renames a finished checkpoint directory into place.
-   Suppose it wrote directly to the final path instead; describe the
-   failure a crash mid-write now causes, and why the rename avoids it.
-:end_tab:
-
-:begin_tab:`tensorflow`
-1. **Checkpointing and atomic writes.** Even if you never deploy to another
-   machine, name two reasons to checkpoint. Moreover, consider atomic
-   writes: `tf.train.Checkpoint.save` writes fresh numbered files rather
-   than overwriting. Suppose it overwrote one fixed path in place; describe
-   the failure a crash mid-write now causes, and why the numbered files
-   avoid it.
-:end_tab:
-
-:begin_tab:`mxnet`
-1. **Checkpointing and atomic writes.** Even if you never deploy to another
-   machine, name two reasons to checkpoint. Moreover, consider atomic
-   writes: if the checkpoint were written straight to its final paths
-   (delete the `os.replace` calls from `save_checkpoint`), describe the
-   failure a crash mid-write now causes, and why the atomic version avoids
-   it.
-:end_tab:
-
-2. [code] **Safetensors header.** Read the first 8 bytes of the safetensors
-   file you wrote for the MLP as a little-endian integer, following the
-   layout in :numref:`fig_bg_safetensors_layout`. How large is the JSON
-   header for the MLP, and how does it grow if you double the hidden width?
-1. [code] **Dtype round trip.** Save the MLP's parameters cast to `bfloat16`
-   and load them back into a `float32` model (:numref:`sec_numerics`). What
-   do we lose? Is this a good idea for inference and how would this affect
-   training from the checkpoint?
-1. [code] **Checkpoint averaging.** Save a checkpoint of the regressor every
-   50 steps. Average the weight tensors of the last $k$ checkpoints into a
-   new parameter set and evaluate it, for $k = 2, 5, 10, 20$. How does the
-   evaluated loss change with $k$? The result previews stochastic weight
-   averaging :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`.
+1. **Reasons to checkpoint.** Name two reasons to checkpoint a run that
+   never leaves the machine it trains on, and state for each which
+   compartments of :numref:`fig_bg_checkpoint_contents` it needs.
+1. [code] **Safetensors header.** The header length of the MLP's
+   safetensors file is the 8-byte little-endian integer at the start of the
+   file (:numref:`fig_bg_safetensors_layout`). Predict, then measure, how
+   that length changes when the hidden width is doubled and when a third
+   layer is added, and explain which parts of the header depend on tensor
+   sizes at all.
+1. [code] **Dtype round trip.** Save the MLP's parameters cast to `float16`
+   and load them back into a `float32` model (:numref:`sec_numerics`).
+   Which bits are lost, and how large are the maximum absolute and relative
+   differences between the restored and the original weights? Is the
+   round trip acceptable for inference, and how would resuming training
+   from such a checkpoint differ from resuming from the fp32 one?
+1. [code] **Checkpoint averaging.** Train the regressor `build(Config())`
+   for 1000 steps with `step`, saving a checkpoint every 50 steps. Average
+   the weight tensors of the last $k$ checkpoints into a new parameter set
+   and evaluate its loss, for $k = 2, 5, 10, 20$. How does the loss change
+   with $k$? The result previews stochastic weight averaging
+   :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`.
 
 :begin_tab:`pytorch`
 5. [code] **Partial loading.** Add one extra layer to the MLP so that the
@@ -1434,9 +1408,10 @@ caller must compute and review the missing/unexpected key sets.
 :begin_tab:`jax`
 5. [code] **Partial loading.** Add one extra layer to the MLP so that the
    saved checkpoint no longer covers the whole model, then load the
-   checkpoint into it by extending this section's hand-written merge.
-   Verify which parameters loaded from the file and which kept their fresh
-   initialization, and report the missing and unexpected key sets.
+   checkpoint into it by extending the key-set merge that loads
+   `mlp-jax.safetensors` into `Classifier`. Verify which parameters loaded
+   from the file and which kept their fresh initialization, and report the
+   missing and unexpected key sets.
 
     *Adapted from the PyTorch tutorial
     [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).*
@@ -1471,9 +1446,14 @@ caller must compute and review the missing/unexpected key sets.
    tensor without reading the rest of the file, and why a pickle-based
    checkpoint cannot offer the same guarantee without deserializing the
    whole object graph.
-1. [extended] **Crash-safe manifest.** Build a utility that writes model
-   state, optimizer state, and a JSON metadata file atomically, as three
-   files plus a final manifest rename. Simulate a crash mid-write, for
-   example by truncating one file, and show that reloading detects and
-   rejects the incomplete checkpoint instead of silently loading stale or
-   corrupt state.
+1. [extended] **Crash-safe manifest.**
+    1. A checkpoint written straight to its final path can be cut short by
+       a crash mid-write. Describe what the next resume sees, and why
+       writing to a temporary path and renaming it into place avoids this
+       failure.
+    1. Build a utility that writes model state, optimizer state, and a JSON
+       metadata file as three files plus a final manifest rename, so that
+       the three are published together or not at all.
+    1. Simulate a crash mid-write, for example by truncating one file, and
+       show that reloading detects and rejects the incomplete checkpoint
+       instead of silently loading stale or corrupt state.

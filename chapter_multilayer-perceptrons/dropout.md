@@ -177,8 +177,8 @@ one element of $h_1, \ldots, h_5$.
 
 Typically, we disable dropout at test time,
 running the full network with no masking and no rescaling.
-(Exercise 5 explores one notable exception, keeping dropout *on* at test time
-to estimate prediction uncertainty.)
+(The exercises explore one notable exception, keeping dropout *on* at test
+time to estimate prediction uncertainty.)
 
 ## Implementation from Scratch
 
@@ -537,40 +537,51 @@ methods.
 
 ## Exercises
 
-1. [code] **Swapping dropout rates.** This section's model drops first-layer
-   activations with probability 0.2 and second-layer activations with
-   probability 0.5. Change these probabilities; in particular, swap them.
-1. [code] **Train/test gap.** Train the same architecture without dropout
-   for the same number of epochs. Plot the train and test loss curves for
-   both runs on the same axes. How wide is the train/test gap with and
-   without dropout?
+1. [code] **Dropout rates and the generalization gap.** `DropoutMLP` drops
+   first-layer activations with probability 0.2 and second-layer activations
+   with probability 0.5.
+    1. Train the same architecture with both rates set to zero for the same
+       number of epochs, and plot the training and validation loss curves of
+       both runs on the same axes. How does the gap between the two curves
+       differ with and without dropout?
+    1. Swap the two rates, and then set both to 0.5. How do the final
+       validation accuracy and the gap change in each case? Which layer
+       tolerates the higher rate?
 1. [code] **Activation variance.** What is the variance of the activations
    in each hidden layer when dropout is and is not applied? Plot how this
    quantity evolves over training for both models.
-1. **Dropout at test time.** Why is dropout typically not used at test
-   time?
 1. **Ensemble size.** A hidden layer with $n$ units admits $2^n$ distinct
-   dropout masks.
-    1. How many distinct masks exist across this section's two hidden
-       layers of 256 units each? What is the expected number of retained
-       units per layer under the rates 0.2 and 0.5?
-    1. The ensemble interpretation views each mask as a subnetwork. Explain
-       why the number of masks does not mean that each subnetwork is
-       trained to convergence independently.
-1. [code] **Monte Carlo dropout.** At test time, instead of disabling
-   dropout, keep it on and run $T = 20$ forward passes per example, then
-   average the softmax outputs :cite:`Gal.Ghahramani.2016`. Compare the
-   resulting accuracy and the calibration (predicted confidence versus
-   actual accuracy) against the standard single-pass evaluation. How does
-   this procedure relate to ensemble methods?
-1. [code] **Dropout and weight decay.** Using the model in this section as
-   an example, compare the two regularizers.
-    1. Measure the effects of dropout and of weight decay separately on the
-       generalization performance and the gap between training and test
-       error.
-    1. What happens when both are used at the same time? Are the effects
-       additive, are there diminishing returns, or do they cancel each
-       other out?
+   dropout masks, and the ensemble interpretation views each mask as a
+   subnetwork.
+    1. How many distinct masks exist across the two hidden layers of 256
+       units each in `DropoutMLP`?
+    1. Training runs for 30 epochs with minibatches of 256 examples, and a
+       fresh mask is drawn for every example. How many masks are sampled per
+       layer during training, and what fraction of all masks is that?
+    1. Using these two numbers, explain in what sense dropout does, and does
+       not, train an ensemble of $2^{512}$ subnetworks.
+1. [code] **Dropout at test time.** Dropout is normally disabled at test
+   time, so the full network runs with no masking and no rescaling.
+    1. Why is the unmasked network used for prediction rather than a single
+       random mask, and in what sense does it approximate the average over
+       all masks?
+    1. Instead of disabling dropout, keep it on and run $T = 20$ forward
+       passes per test example, then average the softmax outputs
+       :cite:`Gal.Ghahramani.2016`. Compare the resulting accuracy and
+       calibration (predicted confidence versus actual accuracy) against the
+       standard single-pass evaluation.
+    1. How does this Monte Carlo procedure relate to ensemble methods, and
+       what does it cost relative to a single pass?
+1. [code] **Dropout and weight decay.** Weight decay
+   (:numref:`sec_weight_decay`) and dropout both regularize `DropoutMLP`, but
+   by different mechanisms.
+    1. With both dropout rates set to zero, add weight decay to the
+       optimizer as in :numref:`sec_weight_decay` at strengths
+       $\lambda \in \{10^{-4}, 10^{-3}, 10^{-2}\}$, and record the validation
+       accuracy and the gap between training and validation loss for each.
+       Compare with the dropout-only run at rates 0.2 and 0.5.
+    1. Enable both regularizers at the same time. Are their effects additive,
+       do they show diminishing returns, or do they cancel each other out?
 1. [code] **Input dropout.** This section applies dropout only to
    hidden-layer activations. Add dropout on the input features, before the
    first linear layer, at a small rate such as $p = 0.1$, keeping the
@@ -592,7 +603,7 @@ methods.
 
     *Adapted from Nitish Srivastava et al.,
     [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](https://jmlr.org/papers/v15/srivastava14a.html),
-    JMLR 2014, Figure 9.*
+    JMLR 2014, Section 7.1, Figure 7.*
 1. [code] **Designing a noise injection.** Invent a technique for injecting
    random noise during training that differs from both dropout and
    DropConnect, for example additive Gaussian noise on the activations, or

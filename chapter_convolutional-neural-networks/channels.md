@@ -418,24 +418,29 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
    $(s_\textrm{h}, s_\textrm{w})$.
     1. What is the computational cost (multiplications and additions) for
        the forward propagation?
+    1. By what factor does this cost increase if both $c_\textrm{i}$ and
+       $c_\textrm{o}$ are doubled? What happens if the padding is doubled?
     1. What is the memory footprint?
     1. What is the memory footprint for the backward computation?
     1. What is the computational cost for the backpropagation?
-1. **Scaling channels and padding.** By what factor does the number of
-   calculations increase if we double both the number of input channels
-   $c_\textrm{i}$ and the number of output channels $c_\textrm{o}$? What
-   happens if we double the padding?
-1. [code] **The $1 \times 1$ equivalence.** Are the variables `Y1` and
-   `Y2` in the last example of :numref:`subsec_1x1` exactly the same?
-   Explain why, referencing the reshape used in
-   `corr2d_multi_in_out_1x1`.
-1. [code] **Multi-channel im2col.** Extend the im2col construction of
-   :numref:`sec_conv_layer` to the multi-input, multi-output setting: for
-   the `X` and `K` used with `corr2d_multi_in_out` in this section, build
-   the patch matrix, whose rows are now flattened
+1. [code] **The $1 \times 1$ equivalence.** The check in
+   :numref:`subsec_1x1` asserts that `Y1` and `Y2` agree to within
+   $10^{-5}$.
+    1. Explain, referencing the two reshapes in `corr2d_multi_in_out_1x1`,
+       why the matrix product computes the same function as
+       `corr2d_multi_in_out` for a $1 \times 1$ kernel.
+    1. Test whether `Y1` and `Y2` are identical elementwise. If they are
+       not, explain where the discrepancy originates.
+1. [code] **Multi-channel im2col.** Extend the patch matrix of
+   :numref:`subsec_conv_matmul` to the multi-input, multi-output setting.
+   For the two-channel `X` of :numref:`fig_conv_multi_in` and the
+   three-output-channel `K` built in
+   :numref:`subsec_multi-output-channels`, build the patch matrix, whose
+   rows are now flattened
    $c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}$ patches, and the
-   reshaped kernel matrix, and confirm that their product reproduces
-   `corr2d_multi_in_out`.
+   $k_\textrm{h} k_\textrm{w} c_\textrm{i} \times c_\textrm{o}$ kernel
+   matrix, and confirm that their product reproduces
+   `corr2d_multi_in_out(X, K)`.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
@@ -443,26 +448,35 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
 1. **Strip-buffered convolution.** To implement a fast convolution with a
    $k \times k$ kernel, one candidate scans horizontally across the
    source, reading a $k$-wide strip and computing the 1-wide output strip
-   one value at a time; the alternative reads a $k + \Delta$-wide strip
-   and computes a $\Delta$-wide output strip. Why is the latter
-   preferable? Is there a limit to how large you should choose $\Delta$?
-1. **Grouped convolutions.** A grouped convolution with $g$ groups
-   (:numref:`sec_depthwise_separable`) acts on channels as a
-   block-diagonal matrix with $g$ blocks.
-    1. By what factor does grouping reduce the number of parameters and
-       the computational cost, compared to a dense convolution with the
-       same $c_\textrm{i}$, $c_\textrm{o}$, and kernel size?
-    1. What is the downside of having $g$ groups? How could you fix it, at
-       least partly, without giving up the savings entirely?
+   one value at a time; the alternative reads a $(k + m)$-wide strip and
+   computes an $m$-wide output strip. Why is the latter preferable? Is
+   there a limit to how large you should choose $m$?
+1. **Grouped convolutions.** A grouped $k \times k$ convolution with $g$
+   groups (:numref:`sec_depthwise_separable`) has
+   $c_\textrm{i} c_\textrm{o} k^2 / g$ weights, but no information flows
+   between groups within the layer.
+    1. Follow the grouped convolution by a dense $1 \times 1$ convolution
+       from $c_\textrm{o}$ to $c_\textrm{o}$ channels. Show that every
+       output channel now depends on every input channel, count the
+       weights of the pair, and determine for which $g$ the pair is
+       cheaper than a single dense $k \times k$ convolution with the same
+       $c_\textrm{i}$ and $c_\textrm{o}$.
+    1. Alternatively, keep every layer grouped and insert a fixed
+       permutation of the channels between consecutive grouped layers.
+       Which permutation makes each output of the second layer depend on
+       all $c_\textrm{i}$ input channels, and how many weights does it
+       add?
 1. **Depthwise-separable block.** Consider a block of two dense
    $3 \times 3$ convolutions, each with $c$ input and $c$ output channels,
    the building block of VGG (:numref:`sec_vgg`). Now replace each of the
    two convolutions by its depthwise-separable counterpart.
     1. Compute the number of parameters and the number of multiplications
-       on an $h \times w$ input for both variants.
-    1. Which of the two stages, depthwise or pointwise, dominates the cost
-       of the separable block? What does this suggest about where to spend
-       additional capacity?
+       on an $h \times w$ input for both variants, and check the ratio
+       against :eqref:`eq_depthwise_sep_ratio`.
+    1. Give the separable block the same parameter budget as the dense
+       block and let it use $c'$ channels instead of $c$. Solve for $c'$
+       and state its limit relative to $c$ as $c$ grows. What does this
+       suggest about how to spend the savings of the factorization?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/69)

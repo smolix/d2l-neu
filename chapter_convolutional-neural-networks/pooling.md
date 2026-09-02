@@ -403,13 +403,17 @@ between a query and representation vectors rather than by spatial location.
 
 ## Exercises
 
-1. [code] **Average pooling as convolution.** Implement average pooling
-   through a convolution.
+1. [code] **Average pooling as convolution.** Express
+   $k_\textrm{h} \times k_\textrm{w}$ average pooling with stride
+   $(s_\textrm{h}, s_\textrm{w})$ as a convolution. Give the kernel, and
+   state how the convolution must be structured across channels so that
+   each channel is pooled separately, as pooling layers do. Verify against
+   `pool2d(X, (2, 2), 'avg')` on the input `X` of :numref:`fig_pooling`.
 1. **Max-pooling is not a convolution.** Prove that max-pooling cannot be
    implemented through a convolution alone.
-1. **Max-pooling via ReLU.** Max-pooling can be accomplished using ReLU
-   operations, i.e., $\textrm{ReLU}(x) = \max(0, x)$.
-    1. Express $\max (a, b)$ by using only ReLU operations.
+1. **Max-pooling via ReLU.** Max-pooling can be built from ReLU
+   activations, $\textrm{ReLU}(x) = \max(0, x)$, and linear layers.
+    1. Express $\max(a, b)$ using ReLU and affine operations only.
     1. Use this to implement max-pooling by means of convolutions and ReLU
        layers.
     1. How many channels and layers do you need for a $2 \times 2$ window?
@@ -444,12 +448,13 @@ between a query and representation vectors rather than by spatial location.
        blur-pool with a two-tap box filter
        $(\tfrac{1}{2}, \tfrac{1}{2})$ computes on the two signals above.
        Which pooling operation from this section does it coincide with?
-1. [code] **Backward pass of max-pooling.** Implement the backward pass of
-   two-dimensional max-pooling: route the incoming output gradient to the
-   input location that achieved the maximum in each window, and zero
-   elsewhere. Verify against the gradient computed by automatic
-   differentiation on a small random tensor, to a relative error below
-   $10^{-4}$.
+1. [code] **Backward pass of max-pooling.** Derive the gradient of
+   two-dimensional max-pooling with respect to its input, for a
+   $k_\textrm{h} \times k_\textrm{w}$ window and stride equal to the
+   window size, and implement it without automatic differentiation.
+   Verify against the gradient that automatic differentiation computes
+   through the built-in max-pooling layer of this section on a small
+   random tensor, to a relative error below $10^{-4}$.
 
     *Adapted from Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*

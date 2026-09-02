@@ -421,6 +421,7 @@ achieving low perplexity on *unseen* text, and perplexity will be our chief
 metric for the neural models of the coming sections.
 
 ### Bits per Byte
+:label:`subsec_bits-per-byte`
 
 One subtlety hides in "per token": perplexity depends on what a token *is*.
 A character model chooses among 27 symbols per step while our word model
@@ -588,31 +589,84 @@ first neural architectures of that lineage.
 
 ## Exercises
 
-1. In `NGramLM.sample` we drew each next token in proportion to its raw
-   count $N$. Add a *temperature* $\tau > 0$ by sampling in proportion to
-   $N^{1/\tau}$, and generate trigram text at $\tau \in \{0.3, 1, 3\}$.
-   Describe what changes. What distribution do you recover as
-   $\tau \to 0$, and as $\tau \to \infty$? Temperature is the first dial of
-   the decoding toolkit we develop later in this chapter.
-1. Consider a 5-gram model over a realistic vocabulary of
-   $|\mathcal{V}| = 50{,}000$ word tokens. How many entries would a dense
-   table of conditional probabilities contain? If you instead store only
-   the 5-grams observed in a trillion-token corpus, at 16 bytes per entry,
-   how much memory do you need at most, and what fraction of all possible
-   5-grams have you covered? What does this imply about querying the table
-   on new text?
-1. Show that a model achieving per-token perplexity $p$ on a text that its
-   tokenizer splits into $T$ tokens and whose size is $B$ UTF-8 bytes
-   attains $\textrm{bpb} = (T/B) \log_2 p$. Verify the formula on the rows
-   of the table in :numref:`subsec_perplexity`. What held-out perplexity
-   would the BPE-level trigram need in order to reach one bit per byte?
-1. Sweep the smoothing constant $\alpha$ over
-   $\{1, 0.1, 0.01, 0.001, 0.0001\}$ for the unigram, bigram, and trigram
-   word models and plot held-out perplexity against $\alpha$ on a log
-   axis. Why does the best $\alpha$ shrink as $n$ grows? Is there any
-   $\alpha$ for which the trigram beats the bigram? Explain your finding
-   using the unseen-$n$-gram rates measured in
-   :numref:`subsec_markov-models-and-n-grams`.
+1. [code] **Temperature sampling.** `NGramLM.sample` draws each next token
+   in proportion to its raw count $N$. Add a temperature $\tau > 0$ by
+   drawing in proportion to $N^{1/\tau}$ instead.
+    1. Generate trigram text from the prefix `['the', 'time']` at
+       $\tau \in \{0.3, 1, 3\}$ and describe what changes.
+    1. Which distribution over successors does the sampler approach as
+       $\tau \to 0$, and which as $\tau \to \infty$? For a context that
+       occurred exactly once in training, what does the temperature
+       change?
+1. **Normalization across lengths.** `NGramLM` has no end-of-sequence
+   token. Take a vocabulary of three symbols, train a
+   bigram `NGramLM` with $\alpha = 1$ on a short string over it, and use
+   `prob` with the chain rule :eqref:`eq_lm_factorization` to compute the
+   total probability the model assigns to all sequences of length 2, and
+   separately to all sequences of length 3.
+    1. What does each total equal, and what does this say about the model
+       as a distribution over sequences whose length is not fixed in
+       advance?
+    1. Add an end-of-sequence token to the training string and count a
+       sequence as complete once it emits this token. Show that the total
+       probability over sequences of all lengths is now at most one, and
+       identify where any remaining probability mass goes.
+
+    *Adapted from Daniel Jurafsky and James H. Martin,
+    [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/),
+    3rd ed. draft, Exercise 3.5.*
+1. **Dense versus sparse storage.** Consider a 5-gram model over a
+   vocabulary of $|\mathcal{V}| = 50{,}000$ word tokens.
+    1. How many entries does a dense table of the conditional
+       probabilities :eqref:`eq_ngram_mle` contain?
+    1. Suppose instead that only the 5-grams observed in a trillion-token
+       corpus are stored, at 16 bytes per entry. How much memory is needed
+       at most, and what fraction of all possible 5-grams is covered?
+    1. What does the coverage imply for queries of the table on new text?
+1. [code] **Smoothing constant.** Sweep $\alpha$ in
+   :eqref:`eq_laplace_smoothing` over $\{1, 0.1, 0.01, 0.001, 0.0001\}$
+   for the unigram, bigram, and trigram word models and plot held-out
+   perplexity against $\alpha$ on a logarithmic axis.
+    1. Why does the best $\alpha$ shrink as $n$ grows?
+    1. Is there any $\alpha$ for which the trigram beats the bigram?
+       Explain your finding using the unseen $n$-gram rates measured in
+       :numref:`subsec_markov-models-and-n-grams`.
+1. **Perplexity under skew.** A training corpus over ten symbols consists
+   of one symbol 91% of the time and each of the other nine 1% of the
+   time.
+    1. Compute the perplexity of the unigram model estimated from this
+       corpus on a long test text drawn from the same distribution. How
+       does it compare with the vocabulary size of ten?
+    1. The word-level unigram model of :numref:`subsec_perplexity` chooses
+       among thousands of word types. Read off its held-out perplexity as
+       an effective number of equally likely choices, and explain with
+       Zipf's law :eqref:`eq_zipf_law` why this number is far below
+       $|\mathcal{V}|$.
+
+    *Adapted from Daniel Jurafsky and James H. Martin,
+    [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/),
+    3rd ed. draft, Exercise 3.12.*
+1. **Bits per byte from perplexity.** A model achieves per-token
+   perplexity $\textrm{ppl}$ on a text that its tokenizer splits into $T$
+   tokens and whose size is $B$ UTF-8 bytes.
+    1. Show that its bits per byte :eqref:`eq_bpb` equals
+       $$\textrm{bpb} = \frac{T}{B} \log_2 \textrm{ppl}.$$
+    1. Verify the formula on the three tokenizations compared in
+       :numref:`subsec_bits-per-byte`.
+    1. What held-out perplexity would the BPE-level trigram need in order
+       to reach one bit per byte?
+1. **Overlapping windows.** `d2l.TimeMachine` forms every window of
+   `num_steps` consecutive tokens, and :numref:`subsec_partitioning-seqs`
+   assigns the first `num_train` windows to training and the next
+   `num_val` to validation.
+    1. With `num_steps=32`, `num_train=10000`, and `num_val=5000`, how
+       many distinct tokens of the corpus do the training windows cover,
+       how many do the validation windows cover, and how many tokens
+       appear in both?
+    1. How many times per epoch does a token in the interior of the
+       training range serve as a target? How many windows would a
+       partition into non-overlapping windows of the same length yield
+       from the entire corpus of about 66,000 tokens?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/117)

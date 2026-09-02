@@ -128,6 +128,7 @@ but the work grows with $t$, and, as the next section shows, those long products
 are exactly where the numbers go wrong.
 
 ## Vanishing and Exploding Gradients
+:label:`subsec_vanishing-exploding`
 
 The numerical difficulty comes from the product of state Jacobians
 $\prod_{j=i+1}^{t} \partial f/\partial h_{j-1}$ in
@@ -299,13 +300,73 @@ activation checkpointing at scale.
 
 ## Exercises
 
-1. Assume that we have a symmetric matrix $\mathbf{M} \in \mathbb{R}^{n \times n}$ with eigenvalues $\lambda_i$ whose corresponding eigenvectors are $\mathbf{v}_i$ ($i = 1, \ldots, n$). Without loss of generality, assume that they are ordered so that $|\lambda_i| \geq |\lambda_{i+1}|$.
-   1. Show that $\mathbf{M}^k$ has eigenvalues $\lambda_i^k$.
-   1. Prove that for a random vector $\mathbf{x} \in \mathbb{R}^n$, with high probability $\mathbf{M}^k \mathbf{x}$ will be very much aligned with the eigenvector $\mathbf{v}_1$ of $\mathbf{M}$. Formalize this statement.
-   1. What does the above result mean for gradients in RNNs?
-1. Rerun the numerical demo with a general (non-symmetric) $\mathbf{W}_\textrm{hh}$, and also with the true product $\partial \mathbf{h}_t/\partial \mathbf{h}_{t-1}$ of a *nonlinear* RNN whose hidden layer applies $\tanh$. How does the nonlinearity change the growth of $\|\mathbf{J}^k\|$, and why can it never make an $|\lambda|>1$ direction stable on its own?
-1. Besides gradient clipping, can you think of any other methods to cope with gradient explosion in recurrent neural networks?
-1. Take the RNN language model you trained in :numref:`sec_rnn-scratch` and, for a fixed input sequence, measure the norm of the gradient of the loss at the final step with respect to the hidden state $k$ steps earlier, as a function of $k$. Plot it. Read off the *effective memory horizon*, the lag beyond which the gradient norm drops below, say, one percent of its value at $k=0$. How does this horizon compare to the truncation length $\tau$ you trained with?
+1. [code] **Backward pass by hand.** One step of `RNNScratch`
+   (:numref:`sec_rnn-scratch`) computes
+   $$\mathbf{H}_t = \tanh(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} + \mathbf{b}_\textrm{h}).$$
+   Let $\mathbf{G}_t = \partial L / \partial \mathbf{H}_t$ be the gradient
+   arriving from later steps and from the output at step $t$.
+    1. Derive the contributions of this step to
+       $\partial L / \partial \mathbf{W}_{\textrm{hh}}$,
+       $\partial L / \partial \mathbf{b}_\textrm{h}$, and
+       $\partial L / \partial \mathbf{H}_{t-1}$ as functions of
+       $\mathbf{G}_t$, $\mathbf{H}_t$, $\mathbf{H}_{t-1}$, and
+       $\mathbf{W}_{\textrm{hh}}$.
+    1. Explain how the contribution to $\partial L / \partial
+       \mathbf{H}_{t-1}$ turns the single-step result into the recursion
+       :eqref:`eq_bptt_partial_L_ht_recur`, and how the parameter
+       gradients accumulate over the $T$ steps of a window.
+    1. Implement the backward pass over a full window with tensor
+       operations only, run it on one minibatch of the trained model, and
+       compare the three parameter gradients with those computed by
+       automatic differentiation.
+
+    *Adapted from CMU 11-785,
+    [Homework 3 Part 1](https://deeplearning.cs.cmu.edu/F22/document/homework/HW3/HW3P1_F22.pdf).*
+1. **Power iteration and alignment.** Let
+   $\mathbf{M} \in \mathbb{R}^{n \times n}$ be symmetric with eigenvalues
+   $\lambda_i$ and eigenvectors $\mathbf{v}_i$ for $i = 1, \ldots, n$,
+   ordered so that $|\lambda_i| \geq |\lambda_{i+1}|$.
+    1. Show that $\mathbf{M}^k$ has eigenvalues $\lambda_i^k$ with the
+       same eigenvectors.
+    1. Show that for a random vector $\mathbf{x} \in \mathbb{R}^n$ with
+       independent standard normal entries, $\mathbf{M}^k \mathbf{x}$
+       becomes aligned with $\mathbf{v}_1$ as $k$ grows. State the
+       condition on the eigenvalues that this requires and the sense in
+       which the alignment holds.
+    1. What does this imply for the gradient :eqref:`eq_bptt_partial_L_ht`
+       of an RNN, beyond the change in its norm?
+1. [code] **Nonlinear Jacobians.** ● Rerun the experiment of
+   :numref:`subsec_vanishing-exploding` in two variants: with a general,
+   non-symmetric $\mathbf{W}_\textrm{hh}$ rescaled to the same three
+   spectral radii, and with the product of the Jacobians
+   $\partial \mathbf{h}_j / \partial \mathbf{h}_{j-1}$ along a trajectory
+   of a $\tanh$ RNN with the same $\mathbf{W}_\textrm{hh}$, driven by
+   random inputs.
+    1. How does the non-symmetric matrix change the curves at small $k$,
+       and does the trend $\rho^k$ still win at large $k$?
+    1. How does the $\tanh$ nonlinearity change the growth of the norm?
+       Explain why a largest singular value of $\mathbf{W}_\textrm{hh}$
+       below one is sufficient for the product to shrink, whereas a
+       largest singular value above one is necessary but not sufficient
+       for it to grow :cite:`bengio1994learning,Pascanu.Mikolov.Bengio.2013`.
+       For the symmetric matrices of :numref:`subsec_vanishing-exploding`
+       the largest singular value equals the spectral radius.
+1. **Beyond clipping.** Propose two methods other than gradient clipping
+   for coping with exploding gradients in recurrent networks. For each,
+   state whether it acts on the parameters, on the optimizer step, or on
+   the architecture, and which property of the Jacobian product in
+   :eqref:`eq_bptt_partial_L_ht` it controls.
+1. [code] **Effective memory horizon.** ● Take the RNN language model
+   trained in :numref:`sec_rnn-scratch` and a fixed input sequence of
+   several hundred tokens. Measure the norm of the gradient of the loss
+   at the final step with respect to the hidden state $k$ steps earlier,
+   as a function of $k$, and plot it.
+    1. Read off the lag beyond which the norm drops below one percent of
+       its value at $k = 0$.
+    1. Compare this horizon with the window length `num_steps` used in
+       training. Could the model have learned to use dependencies longer
+       than the horizon you measured, and would training on longer
+       windows change it?
 
 [Discussions](https://d2l.discourse.group/t/334)
 

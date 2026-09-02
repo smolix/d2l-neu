@@ -360,6 +360,7 @@ of its effective size. Substituting $k'$ into the strided formula above
 gives the general form covering padding, stride, and dilation at once:
 
 $$\lfloor(n_\textrm{h}-d_\textrm{h}(k_\textrm{h}-1)+p_\textrm{h}+s_\textrm{h}-1)/s_\textrm{h}\rfloor \times \lfloor(n_\textrm{w}-d_\textrm{w}(k_\textrm{w}-1)+p_\textrm{w}+s_\textrm{w}-1)/s_\textrm{w}\rfloor.$$
+:eqlabel:`eq_conv_output_shape`
 
 With $d_\textrm{h}=d_\textrm{w}=1$ this reduces to the strided formula,
 and with unit stride and no padding to the $(n-k+1)$ rule we started from.
@@ -456,13 +457,15 @@ example in image generation.
 
 1. [code] **Output shapes.**
     1. For the last example of :numref:`subsec_stride`, with kernel size
-       $(3, 5)$, padding $(0, 1)$, and stride $(3, 4)$, calculate the
-       output shape by hand and check that it is consistent with the
-       experimental result.
-    1. Using the combined padding, stride, and dilation formula of this
-       section, predict the output shape for a $7 \times 7$ kernel with
-       dilation $(3, 3)$, stride $(3, 3)$, and no padding on a
-       $32 \times 32$ input. Verify your prediction with `comp_conv2d`.
+       $(3, 5)$, padding $(0, 1)$, and stride $(3, 4)$ on the $8 \times 8$
+       input, calculate the output shape by hand and check that it is
+       consistent with the experimental result.
+    1. Using :eqref:`eq_conv_output_shape`, predict the output shape for a
+       $7 \times 7$ kernel with dilation $(3, 3)$, stride $(3, 3)$, and no
+       padding on a $32 \times 32$ input. Verify the prediction with
+       `comp_conv2d` in two steps: apply the dilated kernel at stride 1,
+       then keep every third row and column of the result. Explain why
+       this two-step computation equals the strided dilated convolution.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
@@ -479,7 +482,7 @@ example in image generation.
    :numref:`sec_transposed_conv`.
 1. **Stride as sampling.** For a length-6 one-dimensional input, write the
    $4 \times 6$ weight matrix of a stride-1, kernel-3 convolution in the
-   matrix-multiplication style of :numref:`sec_conv_layer`, and the
+   banded-matrix form of :numref:`subsec_conv_matmul`, and the
    $2 \times 4$ zero--one matrix that keeps every other entry of a
    length-4 vector. Show that composing the two reproduces the matrix of
    the stride-2, kernel-3 convolution.
@@ -488,13 +491,18 @@ example in image generation.
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.15.*
 1. **Dilation and gridding.** A network stacks four $3 \times 3$
-   convolutions with stride 1 and dilations $1, 2, 4, 8$.
+   convolutions with stride 1. Compare two dilation schedules,
+   $(1, 2, 4, 8)$ and $(4, 4, 4, 4)$.
     1. Use :eqref:`eq_receptive_field`, with each kernel replaced by its
        effective size, to compute the receptive field of one output
-       element.
-    1. Which pixels inside that field does the output actually depend on?
-    1. When does this *gridding* effect become a problem, and how would
-       you choose a dilation schedule that avoids it?
+       element under each schedule.
+    1. For each schedule, determine which pixels inside the receptive
+       field the output actually depends on, and count them. A schedule
+       whose output depends only on a sparse lattice within its receptive
+       field is said to exhibit *gridding*.
+    1. State a condition on consecutive dilations that guarantees every
+       pixel of the receptive field is used, and give one reason gridding
+       is harmful for dense prediction tasks such as segmentation.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/67)

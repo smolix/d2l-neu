@@ -604,6 +604,7 @@ nonzero*, whereas zero-init makes one layer *exactly zero* so the block starts
 as an exact identity.
 
 ### Measuring Variance across Depth
+:label:`subsec_variance_across_depth`
 
 The following experiment measures variance across depth. We reuse a compact residual
 block (it repeats the one from :numref:`sec_model_construction`) and stack
@@ -1110,12 +1111,13 @@ subclass with a few lines of array code in its `_init_weight`.
 
 ## Exercises
 
-1. [code] **Layer activations across the network.** Instrument the residual
-   stack: record the standard deviation of the activation after every block
-   (run the stack one block at a time, or capture per-block activations with
-   the tools of :numref:`sec_repro`) for the default and scaled treatments
-   at $N=32$, and plot it against depth. Which curve matches the
-   geometric-growth prediction?
+1. [code] **Layer activations across the network.** Instrument the stack
+   that `output_std` builds in :numref:`subsec_variance_across_depth`:
+   record the standard deviation of the activation after every block,
+   either by running the blocks one at a time or with the tools of
+   :numref:`sec_repro`, for the default and scaled treatments at $N=32$,
+   and plot it against depth. Which curve matches the geometric-growth
+   prediction?
 1. **Zero initialization.** Zero-initialize *all* layers of every block
    instead of just the output projection. The forward pass still returns the
    input, but what can the network learn? Work out which parameters receive
@@ -1131,9 +1133,10 @@ subclass with a few lines of array code in its `_init_weight`.
 
 :begin_tab:`jax`
 3. [code] **Name-keyed initializer.** Write an initializer that fills each
-   parameter from a dictionary keyed by parameter name, walking
-   `nnx.iter_modules(net)`. You have re-invented part of checkpoint
-   loading, which :numref:`sec_read_write` covers.
+   parameter from a dictionary keyed by parameter path, walking
+   `nnx.state(net, nnx.Param).flat_state()` and writing the values back
+   with `nnx.update`. You have re-invented part of checkpoint loading,
+   which :numref:`sec_read_write` covers.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1155,24 +1158,30 @@ subclass with a few lines of array code in its `_init_weight`.
    much does it shrink the standard deviation? Neither quantity has an
    elementary closed form; express both in terms of the standard normal
    density and distribution function and evaluate them using tabulated
-   values. Verify both numbers against the printed output of the demo in
-   :numref:`subsec_truncated_normals`.
+   values. Verify the standard deviation against the printed output of the
+   demo in :numref:`subsec_truncated_normals`, and the discarded fraction
+   by counting the entries of the demo's plain normal draw that lie beyond
+   $\pm 2\sigma$.
 1. [code] **Kaiming initialization.** Implement the Kaiming (He)
    initializers of :numref:`subsec_he_init`, uniform and normal, with an
    explicit `nonlinearity` argument that switches the gain between `'relu'`
-   and `'linear'`. Apply them to the residual stack in place of the default
-   scheme and reproduce the depth-versus-standard-deviation plot of the
-   first exercise. Do they keep the standard deviation flat?
+   and `'linear'`, and check them against the library's implementation on a
+   $256 \times 512$ weight by mean, standard deviation, and range. Then
+   apply them to the stack of :numref:`subsec_variance_across_depth` with
+   the `'relu'` gain on each block's first layer and the `'linear'` gain on
+   its output projection, and add the resulting curve to the plot of the
+   first exercise. Does matching the per-layer gain keep the standard
+   deviation flat across depth, and why?
 
     *Adapted from CMU 10-714, [Homework 2](https://github.com/dlsyscourse/hw2)
     and [Homework 4](https://github.com/dlsyscourse/hw4).*
-1. [code] **Data-driven calibration.** Initialize the residual stack with
-   any convenient scheme, then calibrate it block by block from the input:
-   run a mini-batch forward to the current block, rescale that block's
-   weights by the reciprocal of its measured output standard deviation, and
-   only then move to the next block. This is a one-pass variant of the
-   layer-sequential unit-variance initialization of
-   :citet:`Mishkin.Matas.2016`.
+1. [code] **Data-driven calibration.** Initialize the stack of
+   :numref:`subsec_variance_across_depth` with any convenient scheme, then
+   calibrate it block by block from the input: run a mini-batch forward to
+   the current block, rescale that block's weights by the reciprocal of its
+   measured output standard deviation, and only then move to the next
+   block. This is a one-pass variant of the layer-sequential unit-variance
+   initialization of :citet:`Mishkin.Matas.2016`.
     1. Explain why the blocks must be calibrated in order rather than all
        at once from a single forward pass.
     1. Compare the resulting depth-versus-standard-deviation curve with the

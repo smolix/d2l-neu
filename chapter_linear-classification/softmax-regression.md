@@ -465,40 +465,43 @@ for which they are needed.
 
 ## Exercises
 
-1. **Softmax Hessian.** We can explore the connection between exponential
-   families and softmax in some more depth.
-    1. Compute the second derivative of the cross-entropy loss
-       $l(\mathbf{y},\hat{\mathbf{y}})$ for softmax.
-    1. Compute the variance of the distribution given by
-       $\mathrm{softmax}(\mathbf{o})$ and show that it matches the second
-       derivative computed above.
-1. **Softmax and sigmoid.** The softmax has a familiar two-class special
-   case.
-    1. Verify :eqref:`eq_softmax_to_sigmoid`: for $q = 2$ the softmax
-       reduces to the logistic sigmoid of the logit difference,
-       $\hat{y}_1 = \sigma(o_1 - o_2)$, recovering binary logistic
-       regression.
-    1. Show that adding a constant to all logits leaves $\hat{\mathbf{y}}$
-       unchanged. Conclude that softmax regression carries one redundant
-       degree of freedom per example, and that we may fix $o_q \equiv 0$
-       without loss.
-    1. A colleague hands you a fitted binary logistic model with
-       coefficients $\hat\beta_0 = 2$ and $\hat\beta_1 = -1$. Write down
-       two-class softmax coefficients that produce identical predictions,
-       and explain why the answer is not unique.
+1. **Softmax Hessian.** Write the cross-entropy loss as a function of the
+   logits, $l(\mathbf{y}, \mathbf{o}) = g(\mathbf{o}) - \mathbf{y}^\top \mathbf{o}$
+   with $g(\mathbf{o}) = \log \sum_k \exp(o_k)$, as in
+   :numref:`subsec_softmax_and_derivatives`.
+    1. Compute the Hessian $\partial^2_{\mathbf{o}}\, l(\mathbf{y}, \mathbf{o})$
+       and show that it does not depend on $\mathbf{y}$.
+    1. Let $\mathbf{e}_Y$ be the one-hot vector of a class $Y$ drawn from
+       $\mathrm{softmax}(\mathbf{o})$. Compute the covariance matrix of
+       $\mathbf{e}_Y$ and show that it equals the Hessian from the previous
+       step.
+    1. Conclude that $g$ is convex and that the cross-entropy loss is convex
+       in the logits.
+1. **Softmax and sigmoid.** By :eqref:`eq_softmax_to_sigmoid`, binary
+   logistic regression is softmax regression with the redundant logit
+   removed. A colleague hands you a fitted binary logistic model
+   $P(y = 1 \mid x) = \sigma(\hat\beta_0 + \hat\beta_1 x)$ with
+   $\hat\beta_0 = 2$ and $\hat\beta_1 = -1$.
+    1. Write down two-class softmax coefficients $(w_1, b_1)$ and
+       $(w_2, b_2)$ whose predictions coincide with the logistic model for
+       every $x$.
+    1. Characterize all pairs of softmax coefficients that produce these
+       same predictions, and identify the one pair among them with
+       $o_2 \equiv 0$.
 
     *Adapted from James, Witten, Hastie, and Tibshirani,
     [An Introduction to Statistical Learning](https://www.statlearning.com/),
     Exercise 4.12.*
-1. **Coding three classes.** The next two exercises concern coding; see
-   :numref:`sec_mdl-information_theory` for the information-theoretic
-   background. Assume that we have three classes which occur with equal
-   probability, i.e., the probability vector is $(1/3, 1/3, 1/3)$.
-    1. What is the problem if we try to design a binary code for it?
-    1. Design a better code. Hint: encode two independent observations
-       jointly, then $n$ observations. State the rate your code achieves
-       for $n = 2$ and show that the per-symbol rate approaches
-       $\log_2 3$ bits as $n$ grows.
+1. **Coding three classes.** Assume that we have three classes which occur
+   with equal probability, i.e., the probability vector is
+   $(1/3, 1/3, 1/3)$. See :numref:`sec_mdl-information_theory` for the
+   information-theoretic background.
+    1. What is the problem if we try to design a binary code for a single
+       observation?
+    1. Design a better code by encoding $n$ independent observations
+       jointly. Find the smallest $n$ for which your code uses fewer than
+       $2$ bits per observation, and show that the per-observation rate
+       approaches $\log_2 3$ bits as $n$ grows.
 1. **Ternary signaling.** When encoding signals transmitted over a physical
    wire, engineers do not always use binary codes. For instance,
    [PAM-3](https://en.wikipedia.org/wiki/Ternary_signal) uses three signal
@@ -520,28 +523,31 @@ for which they are needed.
 1. **RealSoftMax.** Softmax gets its name from the following mapping:
    $\textrm{RealSoftMax}(a, b) = \log (\exp(a) + \exp(b))$.
     1. Prove that $\textrm{RealSoftMax}(a, b) > \mathrm{max}(a, b)$.
-    1. How small can you make the difference between both functions? Hint:
-       without loss of generality you can set $b = 0$ and $a \geq b$.
-    1. Prove that this holds for
-       $\lambda^{-1} \textrm{RealSoftMax}(\lambda a, \lambda b)$, provided
-       that $\lambda > 0$.
-    1. Show that for $\lambda \to \infty$ we have
-       $\lambda^{-1} \textrm{RealSoftMax}(\lambda a, \lambda b) \to \mathrm{max}(a, b)$.
+    1. Prove that $\textrm{RealSoftMax}(a, b) - \max(a, b) \leq \log 2$,
+       with equality exactly when $a = b$, and show that the gap can be
+       made arbitrarily small. Hint: without loss of generality set
+       $b = 0$ and $a \geq 0$.
+    1. Prove that both bounds hold for
+       $\lambda^{-1} \textrm{RealSoftMax}(\lambda a, \lambda b)$ with the
+       gap bounded by $\lambda^{-1} \log 2$, provided that $\lambda > 0$.
+    1. Conclude that
+       $\lambda^{-1} \textrm{RealSoftMax}(\lambda a, \lambda b) \to \mathrm{max}(a, b)$
+       as $\lambda \to \infty$.
     1. Construct an analogous softmin function.
-    1. Extend this to more than two numbers.
+    1. Extend the definition and both bounds to $q$ numbers, showing that
+       the gap to $\max_i a_i$ is at most $\log q$.
 1. **Log-partition function.** The function
    $g(\mathbf{x}) \stackrel{\textrm{def}}{=} \log \sum_i \exp x_i$ is
    sometimes also referred to as the
    [log-partition function](https://en.wikipedia.org/wiki/Partition_function_(mathematics)).
-    1. Combine the two parts of exercise 1 (the second derivative of $g$ is
-       the variance of the distribution $\mathrm{softmax}(\mathbf{x})$,
-       hence nonnegative) to conclude that $g$ is convex.
     1. Show that $g$ is translation equivariant, i.e.,
        $g(\mathbf{x} + b \mathbf{1}) = b + g(\mathbf{x})$.
-    1. What happens if some of the coordinates $x_i$ are very large? What
-       happens if they're all very small?
-    1. Show that if we choose $b = \mathrm{max}_i x_i$ we end up with a
-       numerically stable implementation.
+    1. What happens numerically if some of the coordinates $x_i$ are very
+       large? What happens if they are all very small?
+    1. Show that evaluating $g(\mathbf{x})$ as
+       $g(\mathbf{x} - \bar{x}\mathbf{1}) + \bar{x}$ with
+       $\bar{x} = \max_i x_i$ neither overflows nor loses the leading term
+       to underflow.
 1. **Temperature.** Recall from :numref:`fig_mdl-clf-temperature` that
    changing the temperature of $P = \mathrm{softmax}(\mathbf{o})$ amounts
    to replacing $\mathrm{softmax}(\mathbf{o})$ by
@@ -551,32 +557,28 @@ for which they are needed.
        Which choice corresponds to halving it?
     1. What happens if we let the temperature approach $0$?
     1. What happens if we let the temperature approach $\infty$?
-    1. Argue that scaling all logits by $1/T$ cannot change the
-       $\operatorname{argmax}$, hence not the accuracy, yet it does change
-       the cross-entropy. Why does this make temperature scaling a useful
-       tool for post-hoc calibration?
+    1. Temperature scaling fits a single $T$ by minimizing the
+       cross-entropy on a held-out set with the classifier's logits held
+       fixed. Show that this cross-entropy is a convex function of
+       $\beta = 1/T$, so that the fit is a one-dimensional convex problem.
+       Hint: use the convexity of the log-partition function $g$ from
+       exercise 1.
 1. [code] **Gumbel-max trick.** ● :numref:`subsec_softmax_operation`
-   modeled an observed label as a *noisy argmax*: perturb each score by
-   independent noise and report the winner,
-   $y = \operatorname*{argmax}_i \, (o_i + \epsilon_i)$. With Gaussian
-   noise this is the probit model, whose class probabilities have no closed
-   form. That section claimed in passing that one noise distribution makes
-   the noisy argmax reproduce the softmax probabilities *exactly*; this
-   exercise proves it. Let $\gamma_1, \ldots, \gamma_q$ be i.i.d. draws
-   from the standard
+   modeled an observed label as a *noisy argmax*,
+   $y = \operatorname*{argmax}_i \, (o_i + \epsilon_i)$. Gaussian noise
+   gives the probit model, whose class probabilities have no closed form;
+   one other noise distribution reproduces the softmax probabilities
+   exactly. Let $\gamma_1, \ldots, \gamma_q$ be i.i.d. draws from the
+   standard
    [Gumbel distribution](https://en.wikipedia.org/wiki/Gumbel_distribution),
    whose CDF is $P(\gamma \leq z) = \exp(-\exp(-z))$.
     1. Show that $P(o_k + \gamma_k \leq z) = \exp(-\exp(o_k)\exp(-z))$.
     1. Show that
-       $P\left(\operatorname{argmax}_i \, (o_i + \gamma_i) = k\right) = \mathrm{softmax}(\mathbf{o})_k$,
-       i.e., the noisy argmax with Gumbel noise *is* the softmax (the
-       *Gumbel-max trick*). Hint: condition on the value $z$ of
-       $o_k + \gamma_k$, multiply the independent probabilities that every
-       other $o_i + \gamma_i$ stays below $z$, and integrate; the
-       substitution $u = \exp(-z)$ makes the integral elementary.
+       $P\left(\operatorname{argmax}_i \, (o_i + \gamma_i) = k\right) = \mathrm{softmax}(\mathbf{o})_k$.
+       Hint: condition on the value of $o_k + \gamma_k$ and use the
+       substitution $u = \exp(-z)$.
     1. Conclude that scaling the noise, $\gamma_i \mapsto T\gamma_i$,
-       samples from $\mathrm{softmax}(\mathbf{o}/T)$, connecting this
-       exercise to the previous one.
+       samples from $\mathrm{softmax}(\mathbf{o}/T)$.
     1. Verify your result numerically: for $\mathbf{o} = (1.0, 2.2, 0.3)$
        and $T \in \{0.25, 1, 4\}$, draw $10^5$ samples of
        $\operatorname{argmax}_i (o_i + T\gamma_i)$ and confirm that the

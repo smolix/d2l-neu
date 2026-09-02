@@ -490,6 +490,7 @@ an entry (or component) of any tensor representing a layer representation or a c
 
 
 ## Convolution as Matrix Multiplication
+:label:`subsec_conv_matmul`
 
 Every output element in :numref:`fig_correlation` is a dot product:
 the kernel, flattened into a vector of length $k_\textrm{h} k_\textrm{w}$,
@@ -684,19 +685,26 @@ particular network mirrors the brain.
     1. What is the minimum size of a kernel to obtain a derivative of
        order $d$?
     1. Load a single image and convert it to one channel. Apply three of
-       your kernels with `corr2d` — the edge detector, the blur kernel,
-       and a sharpening kernel built as twice the identity minus the blur
-       — and display each result next to the original.
+       your kernels with `corr2d`: the edge detector, the blur kernel,
+       and a sharpening kernel defined as twice the identity minus the
+       blur. Display each result next to the original.
 
     *Adapted from Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
-1. [code] **Autodiff on the custom layer.** When you try to automatically
-   find the gradient for the `Conv2D` class we created, what kind of error
-   message do you see?
-1. [code] **Cross-correlation as matrix multiplication.** Extend this
-   section's im2col construction from the $2 \times 2$ kernel shown to a
-   $3 \times 3$ kernel on a $4 \times 4$ input, and confirm that the
-   matrix product reproduces `corr2d`.
+1. [code] **Convolution as a banded matrix.** The patch matrix of
+   :numref:`subsec_conv_matmul` unfolds the input. The opposite
+   construction unrolls the kernel. Let $\mathbf{X}$ be a $4 \times 4$
+   input, $\mathbf{K}$ a $3 \times 3$ kernel, and $\textrm{vec}(\cdot)$
+   the row-by-row flattening.
+    1. Construct the $4 \times 16$ matrix $\mathbf{W}$ with
+       $\mathbf{W}\,\textrm{vec}(\mathbf{X}) = \textrm{vec}(\mathbf{Y})$,
+       where $\mathbf{Y}$ is the cross-correlation of $\mathbf{X}$ with
+       $\mathbf{K}$. How many nonzero entries does each row have, and how
+       many distinct values appear in $\mathbf{W}$?
+    1. Build $\mathbf{W}$ in code from `K` and confirm that the product
+       reproduces `corr2d(X, K)`.
+    1. How does the memory needed to store $\mathbf{W}$ compare with that
+       of the patch matrix as the input grows?
 1. [code] **Backward pass of a convolution.** ● Consider the
    single-channel convolution of this section with input $\mathbf{X}$,
    kernel $\mathbf{K}$, and a scalar loss $\ell$.
@@ -715,7 +723,7 @@ particular network mirrors the brain.
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
     Chapter 6, and Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
-1. [extended] **Effective receptive field.** The theoretical receptive
+1. [code] **Effective receptive field.** The theoretical receptive
    field of :eqref:`eq_receptive_field` bounds which inputs *can*
    influence an output; the effective receptive field measures how much
    they actually do :cite:`Luo.Li.Urtasun.ea.2016`. Build a stack of three
@@ -725,6 +733,46 @@ particular network mirrors the brain.
    the magnitude of the input gradient over the $32 \times 32$ grid.
    Compare the region of non-negligible magnitude with the $7 \times 7$
    theoretical receptive field, and describe the shape of the falloff.
+
+:begin_tab:`pytorch`
+6. [code] **Autodiff on the custom layer.** `corr2d` fills its output with
+   the in-place assignment `Y[i, j] = ...`. Create `K` with
+   `requires_grad=True`, run `corr2d(X, K).sum().backward()`, and inspect
+   the `grad_fn` of the output. Does writing into a tensor that does not
+   itself require gradients block differentiation? Explain what autograd
+   records for such an assignment, and confirm that `Conv2D` learns the
+   kernel of :eqref:`eq_edge_kernel` from `X` and `Y` by plain gradient
+   descent.
+:end_tab:
+
+:begin_tab:`jax`
+6. [code] **Autodiff on the custom layer.** `corr2d` builds its output
+   with the functional update `Y.at[i, j].set(...)`. Compute
+   `jax.grad(lambda K: corr2d(X, K).sum())(K)` and explain why this update
+   poses no obstacle to differentiation. Then wrap `corr2d` in `jax.jit`
+   and compare the compile time for a $6 \times 8$ and a $28 \times 28$
+   input. Why does the Python loop make the compiled program grow with
+   the input size?
+:end_tab:
+
+:begin_tab:`tensorflow`
+6. [code] **Autodiff on the custom layer.** `corr2d` writes its output into
+   a `tf.Variable` with `Y[i, j].assign(...)`. Watch `K` on a
+   `tf.GradientTape`, evaluate `corr2d(X, K)`, and request the gradient of
+   its sum with respect to `K`. What does the tape return, and why does a
+   variable assignment break the chain from `K` to the output? Rewrite
+   `corr2d` so that it collects the window sums in a Python list and
+   assembles the output with `tf.stack`, and verify that the gradient is
+   now defined.
+:end_tab:
+
+:begin_tab:`mxnet`
+6. [code] **Autodiff on the custom layer.** Call `K.attach_grad()`,
+   evaluate `corr2d(X, K)` inside `autograd.record()`, and call
+   `backward()`. What error message do you see, and which line of
+   `corr2d` triggers it? Rewrite `corr2d` without in-place assignment so
+   that the gradient with respect to `K` can be computed.
+:end_tab:
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/65)

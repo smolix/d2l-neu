@@ -232,11 +232,17 @@ APIs change and applies equally to suggestions from search or coding assistants.
    with `help`, identify the argument that selects
    the axis, and verify on a $2 \times 3$ tensor that summing over each
    axis gives the shape you predicted.
-1. [code] **Checking a coding assistant's answer.** Ask a coding assistant
-   how to concatenate two MXNet tensors along a new axis. Then
-   run its answer through the discover → inspect → read → verify loop:
-   does the suggested function exist (`dir`), does its signature match the
-   claim (`help`/`?`), and does a tiny example do what you expect?
+1. [code] **Checking a coding assistant's answer.** Run two answers from a
+   coding assistant through the discover → inspect → read → verify loop:
+   check with `dir` or `hasattr` that the suggested function exists, with
+   `help` or `?` that its signature matches the claim, and with a tiny
+   example that it does what you expect.
+    1. Ask how to concatenate two MXNet tensors along a new axis.
+    1. Ask for a function that performs an operation no single library
+       function provides, for example sorting a tensor's axes by size. If
+       the assistant names a function, check whether it exists, and
+       describe in one or two sentences what about the answer would have
+       fooled you had you skipped the discover step.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -249,11 +255,17 @@ APIs change and applies equally to suggestions from search or coding assistants.
    with `help`, identify the argument that selects
    the axis, and verify on a $2 \times 3$ tensor that summing over each
    axis gives the shape you predicted.
-1. [code] **Checking a coding assistant's answer.** Ask a coding assistant
-   how to concatenate two PyTorch tensors along a new axis. Then
-   run its answer through the discover → inspect → read → verify loop:
-   does the suggested function exist (`dir`), does its signature match the
-   claim (`help`/`?`), and does a tiny example do what you expect?
+1. [code] **Checking a coding assistant's answer.** Run two answers from a
+   coding assistant through the discover → inspect → read → verify loop:
+   check with `dir` or `hasattr` that the suggested function exists, with
+   `help` or `?` that its signature matches the claim, and with a tiny
+   example that it does what you expect.
+    1. Ask how to concatenate two PyTorch tensors along a new axis.
+    1. Ask for a function that performs an operation no single library
+       function provides, for example sorting a tensor's axes by size. If
+       the assistant names a function, check whether it exists, and
+       describe in one or two sentences what about the answer would have
+       fooled you had you skipped the discover step.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -266,11 +278,17 @@ APIs change and applies equally to suggestions from search or coding assistants.
    with `help`, identify the argument that selects
    the axis, and verify on a $2 \times 3$ tensor that summing over each
    axis gives the shape you predicted.
-1. [code] **Checking a coding assistant's answer.** Ask a coding assistant
-   how to concatenate two TensorFlow tensors along a new axis. Then
-   run its answer through the discover → inspect → read → verify loop:
-   does the suggested function exist (`dir`), does its signature match the
-   claim (`help`/`?`), and does a tiny example do what you expect?
+1. [code] **Checking a coding assistant's answer.** Run two answers from a
+   coding assistant through the discover → inspect → read → verify loop:
+   check with `dir` or `hasattr` that the suggested function exists, with
+   `help` or `?` that its signature matches the claim, and with a tiny
+   example that it does what you expect.
+    1. Ask how to concatenate two TensorFlow tensors along a new axis.
+    1. Ask for a function that performs an operation no single library
+       function provides, for example sorting a tensor's axes by size. If
+       the assistant names a function, check whether it exists, and
+       describe in one or two sentences what about the answer would have
+       fooled you had you skipped the discover step.
 :end_tab:
 
 :begin_tab:`jax`
@@ -284,25 +302,25 @@ APIs change and applies equally to suggestions from search or coding assistants.
    with `help`, identify the argument that selects
    the axis, and verify on a $2 \times 3$ array that summing over each
    axis gives the shape you predicted.
-1. [code] **Checking a coding assistant's answer.** Ask a coding assistant
-   how to concatenate two JAX arrays along a new axis. Then
-   run its answer through the discover → inspect → read → verify loop:
-   does the suggested function exist (`dir`), does its signature match the
-   claim (`help`/`?`), and does a tiny example do what you expect?
+1. [code] **Checking a coding assistant's answer.** Run two answers from a
+   coding assistant through the discover → inspect → read → verify loop:
+   check with `dir` or `hasattr` that the suggested function exists, with
+   `help` or `?` that its signature matches the claim, and with a tiny
+   example that it does what you expect.
+    1. Ask how to concatenate two JAX arrays along a new axis.
+    1. Ask for a function that performs an operation no single library
+       function provides, for example sorting a tensor's axes by size. If
+       the assistant names a function, check whether it exists, and
+       describe in one or two sentences what about the answer would have
+       fooled you had you skipped the discover step.
 :end_tab:
 
 4. [code] **Reading the source.** Pick a function you have used in this
    chapter whose docstring does not fully explain its behavior on an edge
-   case you care about, for example what `reshape` does when a dimension
-   does not evenly divide the requested shape. Use `??` or your editor's
-   go-to-definition to read its source, find the line that decides the edge
-   case, and confirm your reading with a small example.
-1. [code] **A confidently wrong assistant.** Ask a coding assistant for a
-   function that performs an operation that no single library function
-   provides, for example sorting a tensor's axes by size. If it
-   names a function, check with `dir` or `hasattr` whether that function
-   exists. Describe in one or two sentences what about the answer would
-   have fooled you had you skipped the discover step.
+   case you care about, for example how `d2l.plot` decides whether a single
+   `X` is reused for several curves in `Y`. Use `??` or your editor's
+   go-to-definition to read its source, find the line that decides the
+   edge case, and confirm your reading with a small example.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/38)

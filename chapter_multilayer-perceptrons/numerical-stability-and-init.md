@@ -523,7 +523,7 @@ around those expectation-level factors; repeated seeds would reveal their
 dispersion. A related backward calculation gives the same scaling under
 additional mean-field independence assumptions. Both are initialization-time
 approximations, not exact statements about gradients during training. The
-exercises repeat the sweep without ReLU, where Xavier has expected gain one.
+exercises repeat the sweep without ReLU.
 
 ### Scope of the Initialization Rules
 
@@ -558,26 +558,31 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
     1. Does the symmetry-breaking failure that this section describes for
        hidden units occur here? Explain by identifying which units, if any,
        receive identical gradients.
-1. **He initialization.** ● The Xavier derivation assumed a linear layer.
-   Repeat it for a layer followed by a ReLU.
-    1. Show that, for zero-mean symmetric pre-activations $z$,
-       $E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$, and conclude that
-       preserving the forward second moment requires
-       $\sigma^2 = 2/n_\textrm{in}$ (He initialization). Where does the
-       factor of two come from?
-    1. The analogous statement for variances is false. For
-       $z \sim \mathcal{N}(0, \tau^2)$, compute $\textrm{Var}[\textrm{ReLU}(z)]$
-       explicitly and show that it equals
-       $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\tau^2$, not
-       $\tfrac{1}{2}\tau^2$.
+1. **Variance under ReLU.** ● The derivation in :numref:`subsec_he_init`
+   tracks the second moment $E[\textrm{ReLU}(z)^2]$ rather than the variance,
+   because the next layer's pre-activation $o = \sum_j w_j h_j$ with
+   independent zero-mean weights has
+   $\textrm{Var}[o] = n_\textrm{in}\sigma^2 E[h_j^2]$ whatever the mean of
+   $h_j$.
+    1. For $z \sim \mathcal{N}(0, \tau^2)$, compute $E[\textrm{ReLU}(z)]$ and
+       $\textrm{Var}[\textrm{ReLU}(z)]$ explicitly, and show that the
+       variance equals $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\tau^2$
+       rather than $\tfrac{1}{2}\tau^2$.
+    1. A tempting shortcut substitutes $\textrm{Var}[h_j]$ for $E[h_j^2]$ in
+       the Xavier computation. Show that this shortcut prescribes
+       $\sigma^2 = 2 / \bigl(n_\textrm{in}(1 - 1/\pi)\bigr)$ instead of
+       $2/n_\textrm{in}$, and identify the step at which it goes wrong.
 1. [code] **Linear depth sweep.** Rerun the depth-sweep experiment of
    :numref:`subsec_variance_propagation` with the ReLU removed, i.e., for a
    purely *linear* stack of 50 layers of width 100 under the same three
    initialization schemes.
-    1. Which scheme keeps the signal's scale flat now, and why does the
-       winner change relative to the ReLU sweep?
-    1. What does the result predict for activations that are approximately
-       linear around zero, such as tanh?
+    1. For a linear layer with $n_\textrm{in} = n_\textrm{out} = 100$, compute
+       the expected per-layer factor $n_\textrm{in}\sigma^2$ on the second
+       moment under each of the three weight scales, and check the three
+       factors against the slopes of the plotted curves.
+    1. Compare the ranking of the three schemes with the ranking in the ReLU
+       sweep and explain the difference. What does the result predict for
+       activations that are approximately linear around zero, such as tanh?
 1. [code] **ReLU homogeneity.** The experiment of
    :numref:`subsec_variance_propagation` renormalizes the activations after
    every layer and compensates by tracking the product $m$ of the per-layer
@@ -597,16 +602,20 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 3.5 and 4.3.*
-1. **Conditioning of matrix products.** The gradient in
-   :eqref:`eq_grad-product` is a product of $L - l$ Jacobians. The spectral
-   norm (the largest singular value) is submultiplicative:
+1. **Spectral norm bounds.** The gradient in :eqref:`eq_grad-product` is a
+   product of $L - l$ Jacobians. The spectral norm (the largest singular
+   value) is submultiplicative:
    $\|\mathbf{A}\mathbf{B}\|_2 \le \|\mathbf{A}\|_2 \|\mathbf{B}\|_2$.
     1. Prove submultiplicativity from the definition
        $\|\mathbf{A}\|_2 = \max_{\mathbf{x} \neq 0} \|\mathbf{A}\mathbf{x}\| / \|\mathbf{x}\|$.
     1. Use it to bound the norm of the gradient product in terms of the
        per-layer norms $\|\mathbf{M}^{(l)}\|_2$. Which condition on the
-       per-layer norms keeps the bound from growing or shrinking
-       geometrically with depth?
+       per-layer norms keeps this bound from growing geometrically with
+       depth?
+    1. The result is an upper bound. Explain why per-layer norms of one rule
+       out exploding gradients but not vanishing ones, and give two
+       $2 \times 2$ matrices of unit spectral norm whose product has norm
+       strictly smaller than one.
 1. [code] **Layerwise adaptive scaling.** Write
    $\mathbf{g}^{(l)} = \nabla_{\mathbf{W}^{(l)}} J$ for the gradient of the
    loss $J$ with respect to the weights of layer $l$. Layerwise adaptive
@@ -619,10 +628,14 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
     moves by the same fraction $\eta$ of its weight norm, however large or
     small its raw gradient. An exploding gradient therefore changes only the
     direction of the update, not its size.
-    1. Construct a three-layer linear network whose $\mathcal{N}(0, 1)$
-       initialization makes the loss diverge within a few SGD steps.
-    1. Apply the scaled update by hand to the first step and show that it
-       remains bounded where the unscaled update does not.
+    1. Build a three-layer linear network of width 100 with
+       $\mathcal{N}(0, 1)$ weights and train it with plain SGD at
+       $\eta = 0.1$ on the squared loss for random Gaussian inputs and
+       targets. Record the loss and $\|\mathbf{g}^{(1)}\|$ over the first ten
+       steps and show that both diverge.
+    1. Replace the update by the scaled one, with the same $\eta$, and repeat
+       the ten steps. Does the loss decrease? Relate the outcome to the
+       forward-pass scale of the network at this initialization.
 
 
 :begin_tab:`mxnet`

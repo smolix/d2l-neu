@@ -1400,9 +1400,12 @@ To recap:
        $\mathbf{A}^\top + \mathbf{B}^\top = (\mathbf{A} + \mathbf{B})^\top$.
     1. For any square matrix $\mathbf{A}$, the sum
        $\mathbf{A} + \mathbf{A}^\top$ is symmetric.
-1. **Predicting `len()`.** We defined the tensor `X` of shape
-   (2, 3, 4) in this section. Predict the output of `len(X)` without
-   running any code, then check your answer in code.
+1. **Shape prediction.** The tensor `X` defined in this section has shape
+   $(2, 3, 4)$. Without running code, predict each of the following, then
+   check your answers.
+    1. `len(X)`, and which axis `len` reports for a tensor of any shape.
+    1. The shape of the sum of `X` along `axis=1`, along `axis=1` with
+       `keepdims=True`, and along both `axis=0` and `axis=2`.
 1. [code] **A pairwise-obtuse triple.** Determine whether three
    vectors $\mathbf{u}$, $\mathbf{v}$, $\mathbf{w}$ in the plane can
    satisfy $\mathbf{u}\cdot\mathbf{v} < 0$,
@@ -1431,17 +1434,18 @@ To recap:
    counting operations and intermediate storage.
 1. [code] **Stack and slice.** Given three matrices
    $\mathbf{A}, \mathbf{B}, \mathbf{C} \in \mathbb{R}^{100 \times 200}$,
-   stack them into a single tensor with three axes and report its
-   dimensionality. Slice out the second coordinate along the stacking axis
-   and confirm that it recovers $\mathbf{B}$ exactly.
+   stack them along a new axis into a single tensor with three axes and
+   report its shape. Slice out index $1$ along the stacking axis and
+   confirm that it recovers $\mathbf{B}$ exactly.
 1. [extended] **Watching an eigenvector emerge.** Using the symmetric
-   matrix from this section's eigenvalue discussion, implement power
-   iteration: start from a random vector, repeatedly multiply by the
-   matrix, and renormalize after each step. Track the direction of the
-   iterate rather than only the norm ratio, and report the iteration at
-   which successive directions stabilize, for example when their cosine
-   similarity exceeds 0.999. Compare the converged vector with the top
-   eigenvector returned by `linalg.eigh`.
+   matrix `S` from this section, implement power iteration: start from a
+   random vector, repeatedly multiply by `S`, and renormalize after each
+   step. Track the direction of the iterate rather than only the norm
+   ratio, and report the iteration at which successive directions
+   stabilize, for example when the cosine of the angle between them
+   exceeds 0.999. Compare the converged vector, up to sign, with the
+   eigenvector of the largest eigenvalue returned by `linalg.eigh`, and
+   explain why the sign is not determined.
 
     *Adapted from MIT 18.06,
     [problem set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf),

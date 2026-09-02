@@ -721,9 +721,9 @@ assumptions yield other losses:
 | Output type | Noise model | Loss (negative log-likelihood) |
 |:--|:--|:--|
 | real-valued, well-behaved noise | Gaussian | squared error (this section) |
-| real-valued, outliers or heavy tails | Laplace | absolute error (exercise 5) |
-| positive, multiplicative fluctuations (prices) | Gaussian on $\log y$ | squared error on $\log y$ (exercise 7) |
-| counts (sales, arrivals) | Poisson | $\lambda(\mathbf{x}) - k \log \lambda(\mathbf{x})$ (exercise 8) |
+| real-valued, outliers or heavy tails | Laplace | absolute error (exercise 4) |
+| positive, multiplicative fluctuations (prices) | Gaussian on $\log y$ | squared error on $\log y$ (exercise 6) |
+| counts (sales, arrivals) | Poisson | $\lambda(\mathbf{x}) - k \log \lambda(\mathbf{x})$ (exercise 7) |
 
 :numref:`fig_linreg-loss-menu` shows why the first two rows differ: the
 Laplace density places far more mass in its tails than a Gaussian of equal
@@ -814,32 +814,37 @@ and ultimately, evaluation on previously unseen data.
    $x_1, \ldots, x_n \in \mathbb{R}$. Our goal is to find a constant $b$
    such that $\sum_i (x_i - b)^2$ is minimized.
     1. Find an analytic solution for the optimal value of $b$.
-    1. How does this problem and its solution relate to the normal
-       distribution?
+    1. Show that the same $b$ is the maximum likelihood estimate of the mean
+       of a normal distribution $\mathcal{N}(b, \sigma^2)$ fitted to
+       $x_1, \ldots, x_n$, for every fixed $\sigma$.
     1. Change the loss to $\sum_i |x_i-b|$. Find the optimal solution for
        $b$ and describe what changes relative to the squared loss.
 1. **Affine to linear.** Prove that the affine functions that can be
    expressed by $\mathbf{x}^\top \mathbf{w} + b$ are equivalent to linear
    functions on $(\mathbf{x}, 1)$.
-1. **Singular design matrix.** Recall that full column rank makes the
-   linear-regression minimizer unique. Suppose instead that
-   $\mathbf{X}^\top \mathbf{X}$ is singular.
-    1. Show that a minimizer still exists and characterize the set of
-       minimizers.
-    1. Which minimizer does the Moore--Penrose pseudoinverse select?
-    1. How could you fix it? What happens if you add a small amount of
-       coordinate-wise independent Gaussian noise to all entries of
-       $\mathbf{X}$?
-    1. What is the expected value of the design matrix
-       $\mathbf{X}^\top \mathbf{X}$ in this case?
-    1. What happens with stochastic gradient descent when
-       $\mathbf{X}^\top \mathbf{X}$ does not have full rank?
+1. **Singular design matrix.** Full column rank makes the least-squares
+   minimizer unique. Suppose instead that $\mathbf{X}^\top \mathbf{X}$ is
+   singular.
+    1. Show that a minimizer of $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2$
+       still exists and characterize the set of all minimizers.
+    1. Show that the Moore--Penrose pseudoinverse selects the minimizer of
+       smallest norm within this set.
+    1. Starting from $\mathbf{w} = \mathbf{0}$, which minimizer does
+       gradient descent converge to? State whether the answer changes for
+       minibatch stochastic gradient descent.
+    1. Add independent Gaussian noise of variance $\gamma^2$ to every entry
+       of $\mathbf{X}$. Compute the expected value of the perturbed
+       $\mathbf{X}^\top \mathbf{X}$ and determine whether the perturbed
+       matrix is invertible.
     1. The standard remedy for a (near-)singular
        $\mathbf{X}^\top \mathbf{X}$ is to add $\lambda \mathbf{I}$ before
-       inverting. Relate this to the $\ell_2$ penalty introduced in
-       :numref:`sec_weight_decay`, and show that the resulting estimator
-       $\mathbf{w}^* = (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$
-       is well defined for every $\lambda>0$.
+       inverting. Show that
+       $\mathbf{w}_\lambda = (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$
+       is well defined for every $\lambda>0$ and that it minimizes
+       $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \lambda\|\mathbf{w}\|^2$,
+       the $\ell_2$ penalty studied in :numref:`sec_weight_decay`. Compare
+       its limit as $\lambda \to 0$ with the pseudoinverse solution of
+       sub-problem 2.
 1. **Laplace noise.** Assume that the noise model governing the additive
    noise $\epsilon$ is the Laplace distribution (see
    :numref:`sec_mdl-distributions`). That is,
@@ -850,35 +855,44 @@ and ultimately, evaluation on previously unseen data.
     1. Suggest a minibatch stochastic gradient descent algorithm to solve
        this problem. Identify what can go wrong near the stationary point
        as updates continue, and propose a fix.
-1. **Composing two linear layers.** Assume that we want to design a neural
-   network with two layers by composing two linear layers, so that the
-   output of the first layer becomes the input of the second layer. Explain
-   why such a naive composition collapses to a single linear map, and state
-   what property an intermediate operation must have to prevent the
-   collapse.
-1. **Beyond Gaussian noise.** Suppose you use regression for realistic
-   price estimation of houses or stock prices.
-    1. Show that the additive Gaussian noise assumption is not appropriate.
-       Hint: prices cannot be negative, and fluctuations scale with the
-       price.
-    1. Explain why regression to the logarithm of the price, i.e.,
-       $y = \log \textrm{price}$, is much better.
-    1. Describe what you need to worry about when dealing with pennystock,
-       i.e., stock with very low prices. Hint: trades occur only at
-       discrete prices, which matters more when the price is low. For more
-       information review the celebrated Black--Scholes model for option
+1. **Composing two linear layers.** Suppose a network with two layers is
+   built by feeding the output of one linear layer,
+   $\mathbf{h} = \mathbf{W}_1 \mathbf{x} + \mathbf{b}_1$, into a second,
+   $\hat{y} = \mathbf{w}_2^\top \mathbf{h} + b_2$. Determine the class of
+   functions of $\mathbf{x}$ that this network can represent and compare it
+   with the class represented by a single linear layer. What property must
+   an operation inserted between the two layers have for the composition to
+   represent a strictly larger class?
+1. **Beyond Gaussian noise.** Suppose you use regression to estimate the
+   price of houses or of stocks.
+    1. Identify two properties of prices that the additive Gaussian noise
+       model $y = \mathbf{w}^\top \mathbf{x} + b + \epsilon$ cannot
+       represent.
+    1. Explain what regressing on the logarithm of the price,
+       $y = \log \textrm{price}$, changes about each of these properties.
+       The same modeling choice underlies the Black--Scholes model of option
        pricing :cite:`Black.Scholes.1973`.
+    1. Stock prices are quoted on a discrete grid, for example in whole
+       cents. Explain how this affects the log-price model and for which
+       price range the effect is largest.
 1. **Counting apples.** Suppose we want to use regression to estimate the
    *number* of apples sold in a grocery store.
-    1. Identify the problems with a Gaussian additive noise model. Hint:
-       you are selling apples, not oil.
+    1. Identify the problems with a Gaussian additive noise model for such
+       a target.
     1. The [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution)
-       captures distributions over counts. It is given by
-       $p(k \mid \lambda) = \lambda^k e^{-\lambda}/k!$. Here $\lambda$ is
-       the rate function and $k$ is the number of events you see. Prove
-       that $\lambda$ is the expected value of counts $k$.
-    1. Design a loss function associated with the Poisson distribution.
-    1. Design a loss function for estimating $\log \lambda$ instead.
+       models counts. It is given by
+       $p(k \mid \lambda) = \lambda^k e^{-\lambda}/k!$, where $\lambda > 0$
+       is the rate and $k \in \{0, 1, 2, \ldots\}$ is the observed count.
+       Prove that $E[k] = \lambda$.
+    1. Derive the negative log-likelihood of a count $k$ under a rate
+       $\lambda(\mathbf{x})$ that depends on the features, dropping terms
+       that do not depend on the parameters, and check it against the table
+       in :numref:`subsec_linreg-loss-menu`.
+    1. Compare the parameterizations
+       $\lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$ and
+       $\log \lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$. Which
+       constraint on $\lambda$ does each satisfy automatically? Write the
+       loss of sub-problem 3 in terms of $(\mathbf{w}, b)$ for the second.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/40)

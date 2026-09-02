@@ -396,66 +396,95 @@ we use from here on.
 
 :begin_tab:`mxnet`
 1. **Partial batches.** When the number of examples is not divisible by the
-   batch size, the loader above keeps the final partial batch. Find the
-   argument of Gluon's `DataLoader` that discards it instead, state what it
-   does, and give one training scenario where you would enable it and one
-   where you would not.
+   batch size, `get_tensorloader` keeps the final partial batch. Find the
+   argument of Gluon's `DataLoader` that discards it instead, and give one
+   training scenario where you would enable it and one where you would not.
 :end_tab:
 
 :begin_tab:`pytorch`
 1. **Partial batches.** When the number of examples is not divisible by the
-   batch size, the loader above keeps the final partial batch. Find the
-   argument of `DataLoader` that drops it instead, state what it does, and
-   give one training scenario where you would enable it and one where you
-   would not.
+   batch size, `get_tensorloader` keeps the final partial batch. Find the
+   argument of `DataLoader` that drops it instead, and give one training
+   scenario where you would enable it and one where you would not.
 :end_tab:
 
 :begin_tab:`tensorflow`
 1. **Partial batches.** When the number of examples is not divisible by the
-   batch size, the loader above keeps the final partial batch. Find the
-   argument of `Dataset.batch` that drops it instead, state what it does,
-   and give one training scenario where you would enable it and one where
-   you would not.
+   batch size, `get_tensorloader` keeps the final partial batch. Find the
+   argument of `Dataset.batch` that drops it instead, and give one training
+   scenario where you would enable it and one where you would not.
 :end_tab:
 
 :begin_tab:`jax`
-1. **Partial batches.** When the number of examples is not divisible by the
-   batch size, a loader can keep or drop the final partial batch. The
-   loader above already passes `drop_remainder=train`. State what it does,
-   explain why dropping the partial batch matters specifically under
-   `@jax.jit`, and give one scenario where you would keep the partial batch
-   instead.
+1. **Partial batches.** `get_tensorloader` passes `drop_remainder=train`,
+   so the training loader drops its final partial batch while the
+   validation loader keeps its partial batch of 8 examples. Predict what
+   `len(data.val_dataloader())` returns. State what keeping that batch
+   costs under `@jax.jit`, and whether you would drop it for validation as
+   well.
 :end_tab:
 
 2. **Data beyond memory.** ● Suppose that we want to generate a huge
-   dataset, where both the size of the parameter vector `w` and the number
-   of examples `num_examples` are large.
-    1. Name two concrete constraints that arise once the data no longer
-       fits in memory, one affecting minibatch construction and one
-       affecting parameter storage.
-    1. Design an *efficient* algorithm that shuffles data held on disk
-       without requiring too many random reads or writes. Hint:
-       [pseudorandom permutation generators](https://en.wikipedia.org/wiki/Pseudorandom_permutation)
-       allow you to design a reshuffle without the need to store the
-       permutation table explicitly :cite:`Naor.Reingold.1999`.
-1. [code] **On-the-fly generation.** Implement a data generator that
-   produces a fresh minibatch of synthetic data every time the iterator is
-   called, rather than pre-generating and storing the full dataset. Confirm
-   that two successive calls return different data.
-1. **Reproducibility.** Design a random data generator that produces the
-   *same* dataset every time it is called. Libraries differ here: some
-   expose a single global seed, while others thread an explicit random
-   state through every draw. For the threaded style, explain why fixing
-   that state up front makes the result reproducible, and why re-using the
-   *same* state for both $\mathbf{X}$ and $\boldsymbol{\epsilon}$, rather
-   than advancing it between the two draws, would be a bug.
-1. [code] **Recovery under noise.** Vary the noise standard deviation
-   `noise` over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$ and fit a linear model on
-   each dataset, using the code from :numref:`sec_linear_scratch` or
-   :numref:`sec_linear_concise`. Before plotting, state how you expect the
-   error $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ to scale with $\sigma$ and
-   with the number of training examples. Then plot the error against
-   $\sigma$ and say whether the experiment agrees.
+   dataset, where both the dimension of `w` and the number of examples
+   `num_train + num_val` are large.
+    1. Explain which statements in `SyntheticRegressionData.__init__` and in
+       `get_dataloader` fail once $\mathbf{X}$ no longer fits in memory, and
+       how each would have to change.
+    1. Design an algorithm that visits the examples on disk in a fresh
+       random order every epoch while (i) reading mostly long contiguous
+       blocks rather than individual examples and (ii) never storing a
+       permutation table with one entry per example. Pseudorandom
+       permutations :cite:`Naor.Reingold.1999` address requirement (ii);
+       state what addresses requirement (i).
+1. [code] **On-the-fly generation.** Write a `DataModule` subclass whose
+   `get_dataloader` draws a fresh minibatch of synthetic data on every
+   `next` call instead of storing $\mathbf{X}$ and $\mathbf{y}$ in
+   `__init__`. Confirm that two successive minibatches differ.
+
+:begin_tab:`mxnet`
+4. **Reproducibility.** Two instances of `SyntheticRegressionData` built
+   with the same arguments hold different `X` and `y`. Make them identical
+   by fixing the seed with `npx.random.seed`. State where the call must be
+   placed relative to the draws of `X` and `eps`, and explain why seeding
+   once at the top of a notebook does not make the second instance equal to
+   the first.
+:end_tab:
+
+:begin_tab:`pytorch`
+4. **Reproducibility.** Two instances of `SyntheticRegressionData` built
+   with the same arguments hold different `X` and `y`. Make them identical
+   by fixing the seed with `torch.manual_seed`. State where the call must be
+   placed relative to the draws of `X` and `eps`, and explain why seeding
+   once at the top of a notebook does not make the second instance equal to
+   the first.
+:end_tab:
+
+:begin_tab:`tensorflow`
+4. **Reproducibility.** Two instances of `SyntheticRegressionData` built
+   with the same arguments hold different `X` and `y`. Make them identical
+   by fixing the seed with `tf.random.set_seed`. State where the call must
+   be placed relative to the draws of `X` and `eps`, and explain why seeding
+   once at the top of a notebook does not make the second instance equal to
+   the first.
+:end_tab:
+
+:begin_tab:`jax`
+4. **Reproducibility.** `SyntheticRegressionData` splits its `key` into
+   `key1` for `X` and `key2` for `eps`. Explain why two instances built with
+   the same `key` hold identical data without any global seed. Then predict
+   what `eps` would be, relative to the entries of `X`, if both draws used
+   `key` itself instead of `key1` and `key2`, and check your prediction
+   numerically.
+:end_tab:
+
+5. [code] **Recovery under noise.** Vary the noise standard deviation
+   `noise` over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$ with `num_train=1000` and
+   fit $\hat{\mathbf{w}}$ on each dataset by least squares, using the
+   normal equations of :numref:`sec_linear_regression` or `lstsq`.
+    1. Before running, state how you expect
+       $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ to scale with the noise
+       level.
+    1. Plot the error against the noise level on logarithmic axes.
 
 
 :begin_tab:`mxnet`

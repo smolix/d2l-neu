@@ -1324,32 +1324,42 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
 
 ## Exercises
 
-1. **Mixed-precision arithmetic.** Redo the memory arithmetic of
-   :numref:`sec_parameters` for mixed-precision training with Adam: fp32
-   master weights, fp32 gradients, two fp32 moment estimates, and bf16
-   activations. Which term dominates now, and how does the total compare
-   with all-fp32 training?
-1. [code] **Precision crossover.** Time the fp32 and bf16 runs of `train`
-   against each other.
-    1. Shrink the hidden width and the batch size. Find a model small
-       enough that mixed precision is *slower* than fp32, and explain why
-       this might be the case.
+1. **Mixed-precision arithmetic.** :numref:`sec_parameters` quotes three
+   per-parameter ledgers: 16 bytes for fp32 Adam, 18 bytes when an fp16
+   working copy of the weights is kept, and 16 bytes for the ZeRO
+   convention with fp16 gradients.
+    1. Place the recipe of this section in that list: which of the four
+       terms (master weights, working copy, gradients, moments) does it
+       keep persistently, in which dtype, and how many bytes per parameter
+       does that make? Which term, if any, shrinks relative to all-fp32
+       training?
+    1. The savings of mixed precision are in the activations. For the MLP
+       of `train` at batch size 256, count the activation entries the
+       backward pass stores per example, convert them to bytes in fp32 and
+       in the 16-bit format `train` uses, and compare the saving with the
+       parameter ledger of the same model.
+1. [code] **Precision crossover.** On a GPU (:numref:`sec_use_gpu`), time
+   the fp32 and mixed-precision runs of `train` against each other.
+    1. Shrink the hidden width and the batch size until mixed precision is
+       *slower* than fp32, and explain the reversal.
     1. Holding the model size fixed, sweep the batch size from 8 to 4096
        and plot the mixed-precision speedup over fp32 against the batch
        size. Below which batch size does mixed precision stop paying off?
 
     *Adapted from the PyTorch recipe
     [Automatic Mixed Precision](https://docs.pytorch.org/tutorials/recipes/recipes/amp_recipe.html).*
-1. [code] **Normalization in fp16.** Under autocast, normalization layers
-   run in fp32. To see why, take the `RMSNorm` layer of
+1. [code] **Normalization in fp16.** Mixed-precision recipes run
+   normalization layers in fp32. To see why, take the `RMSNorm` layer of
    :numref:`sec_custom_layer`, feed it inputs with a standard deviation of
    about 100, and force the computation to fp16. Which intermediate
-   quantity fails first?
+   quantity fails first, and at what input scale would the mean of squares
+   itself overflow?
 1. **Loss scaling on overflow.** Sketch, in prose or pseudocode, what a
-   training loop must do differently under loss scaling
-   (:numref:`subsec_loss_scaling`) when a NaN or Inf gradient is detected
-   after unscaling: what is skipped, what is not updated, and how the scale
-   factor adapts. Check your sketch against the behavior described there.
+   training step must do differently under dynamic loss scaling
+   (:numref:`subsec_loss_scaling`) when unscaling reveals an `inf` or NaN
+   gradient: what happens to the optimizer step, to Adam's moment
+   estimates, and to the scale factor. Why must the scale also grow again
+   after a run of clean steps rather than only shrink?
 
 :begin_tab:`pytorch`
 5. [code] **The e4m3fn format.** Print every field of

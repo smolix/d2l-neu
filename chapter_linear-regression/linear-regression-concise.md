@@ -437,41 +437,45 @@ Dimensionality and storage for networks are automatically inferred
 
 ## Exercises
 
-1. **Sum versus mean.** The loss function used above returns the
-   mean loss over the minibatch by default. State how the learning rate
-   must change if you replace this average with the *sum* of the losses
-   over the minibatch, and explain why.
-1. [code] **Huber loss.** Replace the squared loss
-   with Huber's robust loss function
+1. **Loss scaling.** The framework loss in `LinearRegression.loss` averages
+   over the minibatch and omits the $\frac{1}{2}$ of :eqref:`eq_mse`.
+    1. State how the learning rate must change if the average is replaced
+       by the sum over the minibatch, and explain why.
+    1. Predict how the training curve of `LinearRegression` at `lr=0.03`
+       compares with that of `LinearRegressionScratch` at the same learning
+       rate, and determine which learning rate makes the two updates
+       identical. Verify by training both.
+1. [code] **Huber loss.** Replace `LinearRegression.loss` with Huber's
+   robust loss
 
-    $$l(y,y') = \begin{cases}|y-y'| -\frac{\sigma}{2} & \textrm{ if } |y-y'| > \sigma \\ \frac{1}{2 \sigma} (y-y')^2 & \textrm{ otherwise.}\end{cases}$$
+    $$l(y,y') = \begin{cases}|y-y'| -\frac{\delta}{2} & \textrm{ if } |y-y'| > \delta \\ \frac{1}{2 \delta} (y-y')^2 & \textrm{ otherwise,}\end{cases}$$
 
-    Rerun the outlier demonstration of
-    :numref:`subsec_linear-regression-loss-function` with one corrupted
-    label. Report whether Huber's loss recovers the robust estimate, the
-    least-squares one, or something in between, and relate the outcome to
-    the penalty curves in :numref:`fig_linreg-loss-menu`.
-1. [code] **Reading gradients.** Show how to access the gradient of the
-   model's weights after one backward pass, and confirm that it matches the
-   by-hand gradient formula from :numref:`sec_linear_scratch`.
-1. [code] **Learning-rate and epoch grid.** Train the concise model at each
-   combination of learning rate in $\{0.01, 0.03, 0.1, 0.3\}$ and epoch
-   count in $\{5, 10, 30\}$. Report the final loss for all twelve
-   combinations in a small table, and state which combinations fail to
-   improve on the default configuration.
-1. [code] **Sample-size scaling.** How does the solution change as you vary
-   the amount of data generated?
-    1. Plot the estimation error for $\hat{\mathbf{w}} - \mathbf{w}$ and
-       $\hat{b} - b$ as a function of the amount of data. Hint: increase
-       the amount of data logarithmically rather than linearly, i.e., 5,
-       10, 20, 50, ..., 10,000 rather than 1000, 2000, ..., 10,000.
-    1. Explain why the suggestion in the hint is appropriate.
-1. [code] **Scratch versus concise.** Time the from-scratch implementation
-   of :numref:`sec_linear_scratch` against the concise one here, training
-   each for 10, 100, and 1,000 epochs on the same synthetic dataset. Report
-   which is faster and whether the gap grows with the number of epochs, and
-   state what this shows about the overhead of Python-level parameter
-   bookkeeping versus framework-optimized operations.
+    with threshold $\delta > 0$. Corrupt one label of
+    `SyntheticRegressionData` as in the outlier demonstration of
+    :numref:`subsec_linear-regression-loss-function` and train for
+    $\delta \in \{0.01, 1, 100\}$. For each $\delta$, state whether the
+    recovered $\hat{\mathbf{w}}$ is close to the squared-loss fit, to the
+    absolute-error fit, or in between, and relate the pattern to the
+    penalty curves in :numref:`fig_linreg-loss-menu`.
+1. [code] **Reading gradients.** Compute the gradient of the minibatch
+   loss with respect to the weights of `LinearRegression` for a single
+   minibatch of `SyntheticRegressionData`, and compare it with the by-hand
+   formula :eqref:`eq_linreg_grad_by_hand`. Explain any discrepancy.
+1. [code] **Sample-size scaling.** Train `LinearRegression` on
+   `SyntheticRegressionData` with `num_train` set to each of
+   $5, 10, 20, 50, \ldots, 10{,}000$.
+    1. Before running, state how you expect
+       $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ and $|\hat{b} - b^*|$ to
+       scale with `num_train`.
+    1. Plot both errors against `num_train` on logarithmic axes.
+    1. Explain why a logarithmically spaced grid is preferable here to
+       $1000, 2000, \ldots, 10{,}000$.
+1. [code] **Scratch versus concise.** Time `LinearRegressionScratch` and
+   `LinearRegression` on the same `SyntheticRegressionData` for 10, 100,
+   and 1000 epochs, and report the time per epoch for each. Both run the
+   same `fit_epoch`; identify which operations differ between the two runs
+   and determine, by timing those operations in isolation, whether they
+   account for the measured gap.
 
 
 :begin_tab:`mxnet`

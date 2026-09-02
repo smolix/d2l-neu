@@ -1020,6 +1020,7 @@ than `float(loss)`, or a persistent `GradientTape` that remains active.
 :end_tab:
 
 ### Trading Compute for Memory: Activation Checkpointing
+:label:`subsec_activation_checkpointing`
 
 The activation term has a second knob. Backpropagation stores every
 intermediate result only to read each one exactly once, on the way back.
@@ -1281,6 +1282,7 @@ tradeoff can enable training when stored activations would otherwise exceed
 device memory, and it is widely used in large Transformer training runs.
 
 ## Asynchronous Execution and Input Transfer
+:label:`subsec_async_dispatch`
 
 Accelerator work is usually queued asynchronously: Python can return from an
 operation before the device finishes it. Accurate timing therefore requires a
@@ -1848,27 +1850,65 @@ CPU fallback when no GPU exists.
 
 ## Exercises
 
-1. [code] **Memory footprint.** Using the accounting model of this section,
-   predict the peak memory footprint of the four-plateau cell of
-   :numref:`subsec_memory_during_training` at batch sizes 64, 256, and 1024,
-   then measure with the peak-memory counter used in
-   :numref:`subsec_memory_during_training`. Where does the
-   prediction break down, and what did it omit?
-1. [code] **Activation checkpointing.** Revisit the checkpointing comparison
-   of this section.
-    1. Increase the batch size until the non-checkpointed run raises an
-       out-of-memory error. How much further can the checkpointed run go
-       before it does too? Explain the ratio using the sizes of what each
-       variant stores.
-    1. Reproduce the four-plateau memory breakdown with checkpointing
-       applied at three granularities: none, per-block, and whole-model.
-       Plot the resulting memory--time tradeoff. Which granularity would
-       you choose here?
-1. [code] **Synchronization points.** Consider the training run of
+1. [code] **Peak memory.** Take a four-layer MLP with widths 1024, 4096,
+   4096, 4096 and 10 outputs, trained with Adam, as in
+   :numref:`subsec_memory_during_training`. Using the accounting of that
+   subsection, predict the peak memory of one training step at batch sizes
+   64, 256, and 1024, counting weights, gradients, optimizer state, and the
+   activations the backward pass keeps. Then measure the peak on a GPU.
+   Where does the prediction break down, and what did it omit?
+
+:begin_tab:`pytorch`
+2. [code] **Activation checkpointing.** Revisit the comparison of
+   :numref:`subsec_activation_checkpointing`.
+    1. Increase the batch size until the run without checkpointing raises
+       an out-of-memory error. How much further can the checkpointed run go
+       before it does too? Explain the ratio from what each variant stores.
+    1. Run `run_stack` with `segment_size` equal to 1, 4, and the number of
+       blocks, and once without checkpointing. Plot peak memory against
+       step time for the four configurations. Which segment size would you
+       choose here, and why?
+:end_tab:
+
+:begin_tab:`jax`
+2. [code] **Activation checkpointing.** Revisit the comparison of
+   :numref:`subsec_activation_checkpointing`.
+    1. Increase the batch size until the run without checkpointing raises
+       an out-of-memory error. How much further can the checkpointed run go
+       before it does too? Explain the ratio from what each variant stores.
+    1. Run `run_stack` with `segment_size` equal to 1, 4, and the number of
+       blocks, and once without checkpointing. Plot peak memory against
+       step time for the four configurations. Which segment size would you
+       choose here, and why?
+:end_tab:
+
+:begin_tab:`tensorflow`
+2. [code] **Activation checkpointing.** Revisit the comparison of
+   :numref:`subsec_activation_checkpointing`.
+    1. Increase the batch size until the run without checkpointing raises
+       an out-of-memory error. How much further can the checkpointed run go
+       before it does too? Explain the ratio from what each variant stores.
+    1. Run `run_stack` with `segment_size` equal to 1, 4, and the number of
+       blocks, and once without checkpointing. Plot peak memory against
+       step time for the four configurations. Which segment size would you
+       choose here, and why?
+:end_tab:
+
+:begin_tab:`mxnet`
+2. **Checkpointing arithmetic.** MXNet has no recompute-during-backward
+   transform, so work out the schedule of
+   :numref:`fig_bg_activation_checkpoint` on paper for a stack of sixteen
+   `ResidualBlock`s of width 1024 at batch size 8192. Count the activation
+   entries the backward pass must keep per block, then the total stored
+   without checkpointing and with segments of one, four, and eight blocks,
+   and state how much forward computation each schedule repeats.
+:end_tab:
+
+3. [code] **Synchronization points.** Consider the training run of
    `ResMLPClassifier` in :numref:`subsec_device_aware_trainer`.
-    1. Time one epoch with `print(loss.item())` after every step, and again
-       printing only once per epoch. Explain the difference in terms of
-       synchronization points.
+    1. Time one epoch while printing the loss as a Python float after every
+       step, and again while printing it only once per epoch. Explain the
+       difference in terms of synchronization points.
     1. List every synchronization point in the training loop, not just the
        loss readout and printing. Classify each as unavoidable for a
        correct loop or as an avoidable instrumentation artifact, and
@@ -1876,12 +1916,13 @@ CPU fallback when no GPU exists.
 
     *Adapted from the PyTorch documentation
     [CUDA semantics](https://docs.pytorch.org/docs/stable/notes/cuda.html).*
-1. [code] **Asynchronous dispatch.** Both halves of this problem use the
-   timing pattern of this section.
-    1. Measure the cost of moving a tensor from CPU to GPU and back against
-       the cost of a computation with an equivalent number of
-       floating-point operations executed on the device. At which tensor
-       size does the transfer first cost more than the compute?
+1. [code] **Asynchronous dispatch.** Use the warm-up-then-synchronize timing
+   pattern of :numref:`subsec_async_dispatch` for both parts.
+    1. For $n$ from 256 to 8192, time a round trip of an $n \times n$
+       matrix from CPU to GPU and back, and time one $n \times n$ matrix
+       product on the device. Below which $n$ does the round trip cost more
+       than the product? Explain the crossover from how the two costs scale
+       with $n$.
     1. If you have two GPUs, time 1000 matrix products of two
        $4096 \times 4096$ matrices executed on one GPU, then 500 on each of
        two GPUs issued from the same loop. Measure the scaling, explain how

@@ -354,6 +354,9 @@ for the original experiments :cite:`Bottou.Le-Cun.1988`.
 The overall encoder--classifier organization remains common, although modern
 networks replace most of LeNet's individual components:
 
+:Component substitutions from LeNet to modern CNNs.
+:label:`tab_lenet_modern`
+
 | LeNet (1998) | Modern (2020s) | What the change buys |
 |:--|:--|:--|
 | sigmoid activation | ReLU or GELU | gradients that survive depth instead of saturating |
@@ -386,37 +389,42 @@ ReLU activations.
 1. [code] **Original MNIST.** Try out the improved network on the original
    MNIST dataset. :citet:`LeCun.Bottou.Bengio.ea.1998` report an error
    rate below 1% for LeNet-5 on this task; state how your result compares.
-1. [code] **Visualizing activations.** Display the activations of the
-   first and second layer of LeNet for different inputs, for example
-   sweaters and coats.
-1. [code] **Out-of-distribution activations.** Measure the maximum
-   activation magnitude of the first and second convolutional layers
-   separately for in-distribution Fashion-MNIST test images, for
-   out-of-distribution photos such as a cat or a car, and for pure random
-   noise. Do the out-of-distribution and noise magnitudes fall inside or
-   clearly outside the range observed on in-distribution inputs?
-1. [code] **The dense head.** ● The comparison table in the Summary states
-   that replacing the dense head with global average pooling removes most
-   of LeNet's parameters.
-    1. Using the parameter counts of :numref:`sec_channels` and the layer
-       shapes of :numref:`img_lenet_vert`, compute how many parameters
-       live in the two convolutional layers combined and how many in the
-       $400 \times 120$ dense block. Which dominates?
-    1. How would the balance shift under global average pooling in place
-       of the flatten and the first dense layer?
-    1. Now remove the two hidden fully connected layers of widths 120 and
-       84, connecting the flattened convolutional output directly to the
-       ten-way output. Retrain and report the accuracy change relative to
-       the original LeNet. Does the result match your prediction?
+1. [code] **Visualizing activations.** Extract the outputs of the first
+   and second convolutional layers of the trained `LeNet`.
+    1. Display them for inputs from different classes, for example
+       sweaters and coats.
+    1. Measure the maximum activation magnitude of each of the two layers
+       for in-distribution Fashion-MNIST test images, for
+       out-of-distribution photos such as a cat or a car, and for pure
+       random noise. Do the out-of-distribution and noise magnitudes fall
+       inside or clearly outside the range observed on in-distribution
+       inputs?
+1. [code] **The dense head.** ● :numref:`tab_lenet_modern` states that
+   replacing the dense head with global average pooling removes most of
+   LeNet's parameters.
+    1. Using the weight count of :numref:`sec_channels` and the layer
+       shapes of :numref:`img_lenet_vert`, compute the number of
+       parameters in the two convolutional layers combined and in the
+       $400 \times 120$ dense layer. Which dominates?
+    1. Replace the flatten and the two hidden dense layers of widths 120
+       and 84 by global average pooling followed by a single linear layer
+       from 16 to 10 units. How many parameters remain? Before training,
+       predict whether the test accuracy changes by more than one
+       percentage point relative to `LeNet`; then retrain and compare.
+    1. Instead connect the flattened 400-dimensional convolutional output
+       directly to the ten-way output. Retrain, and compare the accuracy
+       of the two reduced heads with each other and with your prediction.
+       What does the comparison say about where LeNet's capacity is used?
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
     Chapter 6.*
 1. [code] **Overfitting sanity check.** Before trusting a full training
    run, verify that the modernized LeNet of the first problem can drive
-   training accuracy above 99% on a fixed 50-image subset of Fashion-MNIST
-   within a small number of epochs. If it cannot, diagnose which
-   architectural or optimization choice is responsible.
+   training accuracy above 99% on a fixed subset of 50 Fashion-MNIST
+   images within 500 gradient steps (with 50 images, one epoch is one
+   minibatch). If it cannot, diagnose which architectural or optimization
+   choice is responsible.
 
     *Adapted from Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*

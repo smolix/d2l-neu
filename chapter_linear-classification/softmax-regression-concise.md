@@ -301,35 +301,34 @@ and which belongs to its implementation.
 
 ## Exercises
 
-1. **Number formats.** Deep learning uses many different number formats,
-   including FP64 double precision (used extremely rarely), FP32 single
-   precision, BFLOAT16 (good for compressed representations), FP16 (very
-   unstable), TF32 (a format from NVIDIA), and INT8. For each of the six
-   formats, compute the smallest and largest argument of the exponential
-   function for which the result does not lead to numerical underflow or
-   overflow. Present the result as a table with one row per format.
+1. **Number formats.** Deep learning uses several number formats: FP64,
+   FP32, TF32, BFLOAT16, FP16, and INT8. For each format, determine the
+   smallest and largest argument of the exponential function for which the
+   result neither underflows to $0$ nor overflows. Present the result as a
+   table with one row per format, and explain which property of a format
+   determines these limits.
 1. **INT8 dynamic range.** INT8 is a very limited format consisting of
    integers in $[-128, 127]$ (or $[0, 255]$ for the unsigned variant).
    Propose a way to extend its dynamic range without using more bits.
    Determine whether standard multiplication and addition still work
    unmodified under your proposal.
-1. [code] **Numerical stability of softmax.** Take the from-scratch
-   `softmax` of :numref:`sec_softmax_scratch` and feed it the logits
-   $\mathbf{o} = (1000, 0, 0)$. What do you get, and why? Now compute the
-   loss for the same logits with the built-in cross-entropy loss used in
-   this section, passing the logits directly. Why is it finite? Verify that on *benign* logits,
-   e.g., $\mathbf{o} = (2, 1, 0)$, the two routes agree to floating-point
-   precision.
-1. **Shift invariance.** Show, using the identity
-   $\ell = \log\sum_k \exp(o_k) - o_y$, that adding the same constant $c$
-   to every logit leaves the loss unchanged. Explain why this makes
-   subtracting $\bar{o} = \max_k o_k$ a free and safe choice.
+1. [code] **Fused loss on extreme logits.** :numref:`sec_softmax_scratch`
+   showed that the from-scratch `softmax` returns `NaN` on the logits
+   $\mathbf{o} = (1000, 0, 0)$. Pass the same logits directly to the `loss`
+   of this section, first with true class $y = 0$ and then with $y = 1$.
+   Explain why both values are finite and check them against
+   $\ell(y, \mathbf{o}) = \log\sum_k \exp(o_k) - o_y$ evaluated by hand.
+   Then verify on benign logits such as $\mathbf{o} = (2, 1, 0)$ that this
+   `loss` and the from-scratch route (`softmax` followed by
+   `cross_entropy`) agree to floating-point precision.
 1. [code] **Log-sum-exp bound.** Implement the stable form
-   $\bar{o} + \log\sum_k \exp(o_k - \bar{o})$ from scratch. Over random
-   logit vectors of increasing dimension $q$, confirm empirically that the
-   gap between the log-sum-exp and $\max_k o_k$ never exceeds $\log q$,
-   consistent with the bound you established for RealSoftMax in the
-   exercises of :numref:`sec_softmax`.
+   $\bar{o} + \log\sum_k \exp(o_k - \bar{o})$ and check it against the
+   naive $\log\sum_k \exp(o_k)$ on logits where both are finite. For
+   standard Gaussian logit vectors of dimension
+   $q \in \{2, 10, 100, 1000\}$, plot the gap between the log-sum-exp and
+   $\max_k o_k$ against $q$ together with the bound $\log q$ from
+   exercise 6 of :numref:`sec_softmax`. Which logit vectors attain the
+   bound, and how does the typical gap of random logits compare with it?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/52)

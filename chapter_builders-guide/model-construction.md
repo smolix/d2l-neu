@@ -1669,13 +1669,13 @@ depths plus a `build` function that stacks blocks.
 1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
    child module at several sites turns the module tree into a graph. Build a
    small network that uses the same child at two sites. Predict, then
-   verify: does the shared child's parameter set appear once or twice in the
-   model's parameter listing? What happens to it under a dtype cast, for
-   example to 64-bit floats?
-1. [extended] **Depth family.** Using this section's module system, build
-   variants of the residual MLP with zero, one, and four hidden layers, and
-   train each on a toy regression target. Report a table of parameter count
-   and achieved loss against depth.
+   verify: does the shared child's parameter set appear once or twice in
+   `net.parameters()`, and once or twice in `net.state_dict()`? After
+   `net.to(torch.float64)`, do both sites still hold one tensor?
+1. [extended] **Depth family.** With `MLPConfig` and `build`, construct the
+   residual MLP with `num_blocks` set to 0, 1, and 4 and `d_out=1`, and
+   train each variant on a toy regression target. Report a table of
+   parameter count and achieved loss against depth.
 
     *Adapted from CMU 11-785,
     [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
@@ -1712,13 +1712,14 @@ depths plus a `build` function that stacks blocks.
 1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
    child module at several sites turns the module tree into a graph. Build a
    small network that uses the same child at two sites. Predict, then
-   verify: does the shared child's parameter set appear once or twice in the
-   model's parameter listing? What happens to it under a dtype cast, for
-   example to 64-bit floats?
-1. [extended] **Depth family.** Using this section's module system, build
-   variants of the residual MLP with zero, one, and four hidden layers, and
-   train each on a toy regression target. Report a table of parameter count
-   and achieved loss against depth.
+   verify: does the shared child's parameter set appear once or twice in
+   `net.collect_params()`, and once or twice after deduplicating by
+   identity? After `net.cast('float64')`, do both names still point at one
+   `Parameter`?
+1. [extended] **Depth family.** With `MLPConfig` and `build`, construct the
+   residual MLP with `num_blocks` set to 0, 1, and 4 and `d_out=1`, and
+   train each variant on a toy regression target. Report a table of
+   parameter count and achieved loss against depth.
 
     *Adapted from CMU 11-785,
     [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
@@ -1754,13 +1755,14 @@ depths plus a `build` function that stacks blocks.
 1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
    child module at several sites turns the module tree into a graph. Build a
    small network that uses the same child at two sites. Predict, then
-   verify: does the shared child's parameter set appear once or twice in the
-   model's parameter listing? What happens to it under a dtype cast, for
-   example to 64-bit floats?
-1. [extended] **Depth family.** Using this section's module system, build
-   variants of the residual MLP with zero, one, and four hidden layers, and
-   train each on a toy regression target. Report a table of parameter count
-   and achieved loss against depth.
+   verify: does the shared child's parameter set appear once or twice in
+   `nnx.state(net, nnx.Param)`? Round-trip the model through `nnx.split`
+   and `nnx.merge`: is the child still one object afterwards, checked with
+   `is`?
+1. [extended] **Depth family.** With `MLPConfig` and `build`, construct the
+   residual MLP with `num_blocks` set to 0, 1, and 4 and `d_out=1`, and
+   train each variant on a toy regression target. Report a table of
+   parameter count and achieved loss against depth.
 
     *Adapted from CMU 11-785,
     [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
@@ -1796,13 +1798,13 @@ depths plus a `build` function that stacks blocks.
 1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
    child module at several sites turns the module tree into a graph. Build a
    small network that uses the same child at two sites. Predict, then
-   verify: does the shared child's parameter set appear once or twice in the
-   model's parameter listing? What happens to it under a dtype cast, for
-   example to 64-bit floats?
-1. [extended] **Depth family.** Using this section's module system, build
-   variants of the residual MLP with zero, one, and four hidden layers, and
-   train each on a toy regression target. Report a table of parameter count
-   and achieved loss against depth.
+   verify: does the shared layer's kernel appear once or twice in
+   `net.weights`, and how many arrays does `get_weights()` return? After
+   `set_weights` with modified values, do both call sites see the change?
+1. [extended] **Depth family.** With `MLPConfig` and `build`, construct the
+   residual MLP with `num_blocks` set to 0, 1, and 4 and `d_out=1`, and
+   train each variant on a toy regression target. Report a table of
+   parameter count and achieved loss against depth.
 
     *Adapted from CMU 11-785,
     [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*

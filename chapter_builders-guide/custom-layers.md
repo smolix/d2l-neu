@@ -1098,10 +1098,6 @@ as with RMSNorm, maintain the custom implementation.
        Compare its gradients with those of the native `torch.clamp` for
        inputs inside, outside, and exactly on the boundary. Which
        convention does the native operation use at the boundary?
-    1. Work out on paper what the second derivative of the clamp would be
-       at the boundary, and explain why your custom backward never forms
-       it, whereas automatic double-backward through a composition full of
-       such boundaries would.
     1. Implement a second custom operation, GELU or Softplus, with a
        hand-derived backward. Check it numerically against the automatic
        derivative of the equivalent built-in expression and report the
@@ -1147,10 +1143,6 @@ as with RMSNorm, maintain the custom implementation.
        with those of the native `jnp.clip` for inputs inside, outside, and
        exactly on the boundary. Which convention does the native operation
        use at the boundary?
-    1. Work out on paper what the second derivative of the clamp would be
-       at the boundary, and explain why your custom backward never forms
-       it, whereas automatic double-backward through a composition full of
-       such boundaries would.
     1. Implement a second custom operation, GELU or Softplus, with a
        hand-derived backward. Check it numerically against the automatic
        derivative of the equivalent built-in expression and report the
@@ -1193,10 +1185,6 @@ as with RMSNorm, maintain the custom implementation.
        Compare its gradients with those of the native `tf.clip_by_value`
        for inputs inside, outside, and exactly on the boundary. Which
        convention does the native operation use at the boundary?
-    1. Work out on paper what the second derivative of the clamp would be
-       at the boundary, and explain why your custom backward never forms
-       it, whereas automatic double-backward through a composition full of
-       such boundaries would.
     1. Implement a second custom operation, GELU or Softplus, with a
        hand-derived backward. Check it numerically against the automatic
        derivative of the equivalent built-in expression and report the
@@ -1241,10 +1229,6 @@ as with RMSNorm, maintain the custom implementation.
        gradients with those of the native `np.clip` for inputs inside,
        outside, and exactly on the boundary. Which convention does the
        native operation use at the boundary?
-    1. Work out on paper what the second derivative of the clamp would be
-       at the boundary, and explain why your custom backward never forms
-       it, whereas automatic double-backward through a composition full of
-       such boundaries would.
     1. Implement a second custom operation, GELU or Softplus, with a
        hand-derived backward. Check it numerically against the automatic
        derivative of the equivalent built-in expression and report the

@@ -779,6 +779,7 @@ dy, d2y
 ```
 
 ### Forward versus Reverse Mode
+:label:`subsec_autograd_fwd_rev`
 
 Automatic differentiation can traverse the computational graph in either
 direction. *Reverse mode*, the variant we have used so far and the engine
@@ -831,8 +832,13 @@ The basic workflow is:
 
 ## Exercises
 
-1. **Cost of the second derivative.** Why is the second
-   derivative much more expensive to compute than the first derivative?
+1. **Cost of second derivatives.** The counting argument in
+   :numref:`subsec_autograd_fwd_rev` prices the gradient of a scalar loss
+   with $n$ parameters at roughly one extra forward pass. Use the same
+   argument to estimate, in units of function evaluations, the cost of the
+   full Hessian (the $n \times n$ matrix of second derivatives) and the
+   cost of a single Hessian--vector product. Explain the difference
+   between the two costs.
 :begin_tab:`mxnet`
 2. [code] **Running backward twice.** After running the backpropagation
    function, run `y.backward()` again on the same recorded graph. What
@@ -885,57 +891,65 @@ The basic workflow is:
     ["An Exercise in Backpropagation"](https://cs231n.stanford.edu/slides/2026/section_2_backprop.pdf).*
 
 :begin_tab:`mxnet`
-6. [code] **Detach and check.** Let `y = x * x`, and let `u = y.detach()`
-   inside the recording scope. For `z = x * u`, verify that
-   $\partial z/\partial x$ equals `u`, treating `u` as a constant, rather
-   than the $3x^2$ you would get without detaching. Confirm that the graph
-   leading to `y` itself is unaffected: $\partial y/\partial x$ still
-   equals $2x$.
-7. [code] **Turning off gradient tracking.** Wrap a computation in
-   `autograd.pause()` inside a recording scope and confirm that the result
-   carries no gradient information. Then explain why skipping this
-   bookkeeping matters at prediction time for a model with millions of
-   parameters.
+6. [code] **Detach and check.** Let `y = x * x` and `u = y.detach()`
+   inside the recording scope. Before running any code, predict `x.grad`
+   after `backward` on each of `z = u * u`, `z = y * u`, and `z = y * y`.
+   Check your predictions, and explain how the first two results would
+   change if `u` were replaced by `y`.
+7. [code] **Updating parameters by hand.** Let `w` be an array with an
+   attached gradient, compute `loss = (w * w).sum()` inside
+   `autograd.record()`, and call `loss.backward()`. Perform the update
+   `w = w - 0.1 * w.grad` outside the recording scope and inspect
+   `w.grad`. Explain what the rebinding has done to the buffer attached by
+   `attach_grad`, and predict what a second recorded forward pass followed
+   by `backward` does. Then perform the update as
+   `w[:] = w - 0.1 * w.grad` instead and compare.
 :end_tab:
 
 :begin_tab:`pytorch`
-6. [code] **Detach and check.** Let `y = x * x`, and let `u = y.detach()`.
-   For `z = x * u`, verify that $\partial z/\partial x$ equals `u`,
-   treating `u` as a constant, rather than the $3x^2$ you would get without
-   detaching. Confirm that the graph leading to `y` itself is unaffected:
-   $\partial y/\partial x$ still equals $2x$.
-7. [code] **Turning off gradient tracking.** Wrap a computation in a
-   `torch.no_grad()` block and confirm that the result carries no gradient
-   information. Then explain why skipping this bookkeeping matters at
-   prediction time for a model with millions of parameters.
+6. [code] **Detach and check.** Let `y = x * x` and `u = y.detach()`.
+   Before running any code, predict `x.grad` for each of `z = u * u`,
+   `z = y * u`, and `z = y * y`, each summed over its components before
+   calling `backward` and with `x.grad` reset between runs. Check your
+   predictions, and explain how the first two results would change if `u`
+   were replaced by `y`.
+7. [code] **Updating parameters by hand.** Let `w` be a tensor with
+   `requires_grad=True`, compute `loss = (w * w).sum()`, and call
+   `loss.backward()`. Perform the update `w = w - 0.1 * w.grad` and
+   inspect `w.requires_grad`, `w.grad_fn`, `w.is_leaf`, and `w.grad`.
+   Explain what the update has done to the graph, predict what a second
+   forward and backward pass leaves in `w.grad`, and check. Then perform
+   the update in place inside a `torch.no_grad()` block and compare.
 :end_tab:
 
 :begin_tab:`tensorflow`
-6. [code] **Detach and check.** Let `y = x * x`, and let
-   `u = tf.stop_gradient(y)`. For `z = x * u`, verify that
-   $\partial z/\partial x$ equals `u`, treating `u` as a constant, rather
-   than the $3x^2$ you would get without detaching. Confirm that the graph
-   leading to `y` itself is unaffected: $\partial y/\partial x$ still
-   equals $2x$.
-7. [code] **Turning off gradient tracking.** Compute a value outside any
-   `tf.GradientTape` and confirm that the tape records nothing for it;
-   inside a tape, pause recording with `tape.stop_recording()` and confirm
-   the same. Then explain why skipping this bookkeeping matters at
-   prediction time for a model with millions of parameters.
+6. [code] **Detach and check.** Let `y = x * x` and
+   `u = tf.stop_gradient(y)` inside a persistent `tf.GradientTape` `t`.
+   Before running any code, predict `t.gradient(z, x)` for each of
+   `z = u * u`, `z = y * u`, and `z = y * y`. Check your predictions, and
+   explain how the first two results would change if `u` were replaced by
+   `y`.
+7. [code] **Updating parameters by hand.** Let `w` be a `tf.Variable`,
+   compute `loss = tf.reduce_sum(w * w)` under a `tf.GradientTape` `t`,
+   and obtain `g = t.gradient(loss, w)`. Perform the update
+   `w = w - 0.1 * g` and inspect `type(w)`. Predict what `t.gradient`
+   returns for a second forward pass under a new tape, and check. Explain
+   why the tape no longer tracks `w` automatically, and redo the update
+   with `w.assign_sub(0.1 * g)`.
 :end_tab:
 
 :begin_tab:`jax`
-6. [code] **Detach and check.** Let `y = x * x`, and let
-   `u = jax.lax.stop_gradient(y)`. For `z = x * u`, verify that
-   $\partial z/\partial x$ equals `u`, treating `u` as a constant, rather
-   than the $3x^2$ you would get without detaching. Confirm that the graph
-   leading to `y` itself is unaffected: $\partial y/\partial x$ still
-   equals $2x$.
-7. **Opting in to gradient tracking.** JAX records nothing implicitly:
-   differentiation happens only where a transform such as `jax.grad` is
-   applied. Explain why prediction-time code therefore needs no special
-   mechanism, and what bookkeeping a recording-based design has to perform
-   on every forward pass for a model with millions of parameters.
+6. [code] **Detach and check.** Let `y = lambda x: x * x` and
+   `u = jax.lax.stop_gradient(y(x))`. Before running any code, predict
+   `grad(lambda x: z(x).sum())(x)` for each of `z = lambda x: u * u`,
+   `z = lambda x: y(x) * u`, and `z = lambda x: y(x) * y(x)`. Check your
+   predictions, and explain how the first two results would change if `u`
+   were replaced by `y(x)`.
+7. **Updating parameters by hand.** Let `f = lambda w: (w * w).sum()` and
+   perform the update `w = w - 0.1 * grad(f)(w)`. Explain what, if
+   anything, this rebinding changes about later calls to `grad(f)(w)`, and
+   why JAX needs no mechanism for turning off gradient tracking at
+   prediction time.
 :end_tab:
 
 :begin_tab:`mxnet`

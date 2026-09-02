@@ -313,6 +313,7 @@ and variances of independent variables add
 while scaling a variable by $1/n$ scales its variance by $1/n^2$; hence
 
 $$\textrm{Var}[\hat{p}] = \frac{p(1-p)}{n},$$
+:eqlabel:`eq_prob_var_phat`
 
 and the typical error (the standard deviation)
 is $\sqrt{p(1-p)/n}$, which shrinks as $1/\sqrt{n}$.
@@ -1239,73 +1240,75 @@ For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
 
 ## Exercises
 
-1. **Uncertainty driven to zero.** Give an example where observing more
-   data can reduce the amount of uncertainty about the outcome to an
-   arbitrarily low level.
-1. **Uncertainty with a floor.** Give an example where observing more data
-   will only reduce the amount of uncertainty up to a point and then no
-   further. Explain why this is the case and where you expect this point to
-   occur.
-1. [code] **Variance of the coin-toss estimator.** We empirically
-   demonstrated convergence to the mean for the toss of a coin. Calculate
-   the variance of the estimate of the probability that we see a head after
-   drawing $n$ samples.
-    1. How does the variance scale with the number of observations?
-    1. Use Chebyshev's inequality to bound the deviation from the
-       expectation.
-    1. How does it relate to the central limit theorem?
-    1. Verify your bound empirically: simulate many repetitions of $n$
-       tosses with this section's sampling code and compare the observed
-       deviation frequencies with Chebyshev's guarantee.
-1. **Chebyshev on a running average.** Assume that we draw $m$ samples
-   $x_i$ from a probability distribution with zero mean and unit variance,
-   and compute the averages
-   $z_m \stackrel{\textrm{def}}{=} m^{-1} \sum_{i=1}^m x_i$. Determine
-   whether Chebyshev's inequality can be applied to every $z_m$
-   independently, and explain why or why not.
-1. **Union and intersection bounds.** Given two events with probability
-   $P(\mathcal{A})$ and $P(\mathcal{B})$, compute upper and lower bounds on
-   $P(\mathcal{A} \cup \mathcal{B})$ and $P(\mathcal{A} \cap \mathcal{B})$.
-   Hint: graph the situation using a
-   [Venn diagram](https://en.wikipedia.org/wiki/Venn_diagram).
-1. **Markov chain factorization.** Assume that we have a sequence of random
-   variables, say $A$, $B$, and $C$, where $B$ only depends on $A$, and $C$
-   only depends on $B$. Simplify the joint probability $P(A, B, C)$. Hint:
-   this is a [Markov chain](https://en.wikipedia.org/wiki/Markov_chain).
+1. **Two kinds of uncertainty.** Give two examples and explain the
+   difference between them.
+    1. An example where observing more data can reduce the uncertainty
+       about the outcome to an arbitrarily low level.
+    1. An example where observing more data reduces the uncertainty only
+       up to a point and then no further. Explain why this is the case
+       and where you expect that point to lie.
+1. [code] **Chebyshev for the coin-toss estimator.**
+   :eqref:`eq_prob_var_phat` gives the variance of the estimate $\hat{p}$
+   of $P(\textrm{heads})$ after $n$ tosses.
+    1. For a fair coin and $n = 100$, use Chebyshev's inequality to bound
+       $P(|\hat{p} - p| \geq 0.1)$.
+    1. Estimate the same probability by simulating 10,000 repetitions of
+       100 tosses, compare it with the bound, and account for the gap.
+    1. Determine how many tosses Chebyshev's inequality requires to
+       guarantee $P(|\hat{p} - p| \geq 0.01) \leq 0.05$ for a fair coin,
+       and compare with the $n$ at which the standard deviation
+       $\sqrt{p(1-p)/n}$ itself equals $0.01$.
+1. **Chebyshev on a running average.** Assume that we draw independent
+   samples $x_i$ from a distribution with zero mean and unit variance and
+   compute the running averages
+   $z_m \stackrel{\textrm{def}}{=} m^{-1} \sum_{i=1}^m x_i$ for
+   $m = 1, \ldots, M$. Chebyshev's inequality bounds
+   $P(|z_m| \geq \epsilon)$ for each fixed $m$. Explain why these bounds
+   cannot be combined as if the events $\{|z_m| \geq \epsilon\}$ for
+   different $m$ were independent, and derive a valid bound on the
+   probability that $|z_m| \geq \epsilon$ for at least one $m \leq M$.
+1. **Union and intersection bounds.** Given two events with probabilities
+   $P(\mathcal{A})$ and $P(\mathcal{B})$, derive the tightest upper and
+   lower bounds on $P(\mathcal{A} \cup \mathcal{B})$ and
+   $P(\mathcal{A} \cap \mathcal{B})$, and describe the configurations in
+   :numref:`fig_prob_venn` for which each bound is attained.
+1. **Markov chain factorization.** Let $A$, $B$, and $C$ be random
+   variables such that $C$ is conditionally independent of $A$ given $B$.
+   Simplify the joint probability $P(A, B, C)$ into a product of factors
+   that each involve at most two of the variables.
 1. **A second, correlated test.** In :numref:`subsec_probability_hiv_app`,
-   assume that the outcomes of the two tests are not independent. In
-   particular, assume that either test on its own has a false positive rate
-   of 10% and a false negative rate of 1%. That is, assume that
-   $P(D =1 \mid H=0) = 0.1$ and that $P(D = 0 \mid H=1) = 0.01$. Moreover,
-   assume that for $H = 1$ (infected) the test outcomes are conditionally
-   independent, i.e., that
-   $P(D_1, D_2 \mid H=1) = P(D_1 \mid H=1) P(D_2 \mid H=1)$, but that for
-   healthy patients the outcomes are coupled via
-   $P(D_1 = D_2 = 1 \mid H=0) = 0.02$.
-    1. Work out the joint probability table for $D_1$ and $D_2$, given
-       $H=0$, based on the information you have so far.
-    1. Derive the probability that the patient is diseased ($H=1$) after
-       one test returns positive. You can assume the same baseline
-       probability $P(H=1) = 0.0015$ as before.
-    1. Derive the probability that the patient is diseased ($H=1$) after
-       both tests return positive.
-1. **Portfolio return and risk.** Assume that you are an asset manager for
-   an investment bank and you have a choice of stocks $s_i$ to invest in.
-   Your portfolio needs to add up to $1$ with weights $\alpha_i$ for each
-   stock. The stocks have an average return
-   $\boldsymbol{\mu} = E_{\mathbf{s} \sim P}[\mathbf{s}]$ and covariance
+   assume that the outcomes of the two tests are not independent. Assume
+   that either test on its own has a false positive rate of 10% and a
+   false negative rate of 1%, that is,
+   $P(D_i = 1 \mid H = 0) = 0.1$ and $P(D_i = 0 \mid H = 1) = 0.01$ for
+   $i = 1, 2$. Assume further that for $H = 1$ the test outcomes are
+   conditionally independent, so that
+   $P(D_1, D_2 \mid H = 1) = P(D_1 \mid H = 1)\, P(D_2 \mid H = 1)$, but
+   that for healthy patients the outcomes are coupled via
+   $P(D_1 = D_2 = 1 \mid H = 0) = 0.02$. Assume the baseline probability
+   $P(H = 1) = 0.0015$ as before.
+    1. Work out the joint probability table for $D_1$ and $D_2$ given
+       $H = 0$.
+    1. Derive the probability that the patient has HIV after one test
+       returns positive.
+    1. Derive the probability that the patient has HIV after both tests
+       return positive.
+1. **Portfolio return and risk.** Assume that you manage a portfolio of
+   $n$ stocks whose returns $\mathbf{s} \in \mathbb{R}^n$ are random with
+   mean $\boldsymbol{\mu} = E_{\mathbf{s} \sim P}[\mathbf{s}]$ and
+   covariance
    $\boldsymbol{\Sigma} = \textrm{Cov}_{\mathbf{s} \sim P}[\mathbf{s}]$.
-    1. Compute the expected return for a given portfolio
-       $\boldsymbol{\alpha}$.
-    1. If you wanted to maximize the return of the portfolio, how should
-       you choose your investment?
-    1. Compute the *variance* of the portfolio.
-    1. Formulate an optimization problem that maximizes the return while
-       constraining the variance to an upper bound. This is the
-       [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model)
-       problem :cite:`Mangram.2013`. Solving it requires a quadratic
+   You invest a fraction $\alpha_i \geq 0$ of your capital in stock $i$,
+   with $\sum_i \alpha_i = 1$.
+    1. Compute the expected return of the portfolio $\boldsymbol{\alpha}$.
+    1. Determine the portfolio that maximizes the expected return.
+    1. Compute the variance of the portfolio's return.
+    1. Formulate an optimization problem that maximizes the expected
+       return while constraining the variance to an upper bound. This is
+       the [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model)
+       problem :cite:`Mangram.2013`; solving it requires a quadratic
        programming solver, which is beyond the scope of this book.
-1. **The prosecutor's fallacy.** A suspect had a documented history of
+1. **A defense lawyer's statistics.** A suspect had a documented history of
    abusing his now-murdered wife. His lawyer argues that, statistically,
    only one in a thousand wife-abusers goes on to murder his wife, so the
    history of abuse is weak evidence and the jury should acquit. Writing

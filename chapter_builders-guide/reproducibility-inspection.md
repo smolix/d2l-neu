@@ -737,6 +737,7 @@ net.initialize(init.Xavier())  # variance-preserving, as in the init chapter
 ```
 
 ### Capturing Activation Statistics
+:label:`subsec_activation_stats`
 
 The initialization experiments of :numref:`sec_init_param` measured the
 standard deviation of activations at every depth. The same measurement
@@ -1035,7 +1036,7 @@ and for most debugging that is enough: after `loss.backward()` every
 parameter's gradient sits in `param.grad()`, so to log per-layer gradient
 norms or catch an explosion you iterate `net.collect_params()` and read
 them like any other array. What post-hoc inspection cannot do is act
-*during* the pass, so per-layer gradient clipping in the style of
+*during* the pass, so per-layer gradient inspection in the style of
 exercise 3 is written into the training step instead; Gluon's `Trainer`
 splits `step` into `allreduce_grads` and `update` precisely so that such
 code can stand between them.
@@ -1140,8 +1141,9 @@ are read after the fact from `param.grad()`.
     1. Predict which of the following a single top-level random seed makes
        reproducible: single-process data order, multi-worker data order,
        NumPy-based augmentation inside `__getitem__`, and nondeterministic
-       GPU reduction order. Verify each prediction against the
-       `train_once` demo of :numref:`subsec_seeds_randomness`.
+       GPU reduction order. Justify each prediction from where that
+       randomness is drawn, starting from `train_once` in
+       :numref:`subsec_seeds_randomness`.
     1. Extend `train_once` to load data through a `DataLoader` with
        `num_workers=4`. Give the dataset its own `np.random.default_rng()`
        object and use it to add noise as each example loads, and check
@@ -1155,8 +1157,8 @@ are read after the fact from `param.grad()`.
 1. [code] **Forward-pass instrumentation.**
     1. Write a forward hook that counts multiply-accumulate operations for
        every linear layer from the shapes of its input and weight, and use
-       it to report per-layer and total FLOPs for the residual stack. Check
-       the total against a hand count.
+       it to report the per-layer and total counts for `net`. Check the
+       total against a hand count.
     1. Turn the overflow check of :numref:`subsec_nan_finder` into a
        per-step training monitor. Train with a learning rate 100 times too
        large and report the first layer, by depth, whose activations
@@ -1167,17 +1169,18 @@ are read after the fact from `param.grad()`.
    norms in the same block. Which one first reveals an exploding backward
    signal?
 1. [code] **Block ablation.** A forward hook that returns a value
-   *replaces* the module's output. Use one to zero out the output of a
-   single residual block's body (turning the block into the identity) and
-   measure how the network's output changes. Which block matters most, and
-   how would you find out with one loop?
-1. [code] **Inspection contracts.** Rebuild the activation-statistics table
-   two more ways: with `register_forward_pre_hook`, recording the standard
-   deviation of each block's *input* (the pre-hook receives the argument
-   tuple, so unpack it), and on a model you did not write, a
-   `torchvision.models` backbone, by attaching hooks through
-   `named_modules()`. What do hooks let you do on a model you own and on
-   one you do not, and what state can a hook accidentally retain?
+   *replaces* the module's output. Use one to zero the output of one
+   residual block's body, which turns the block into the identity, and
+   measure the change in `net`'s output on a fixed batch. Repeat for every
+   block: which block matters most?
+1. [code] **Inspection contracts.** Rebuild the table of
+   :numref:`subsec_activation_stats` two more ways: with
+   `register_forward_pre_hook`, recording the standard deviation of each
+   block's *input* (the pre-hook receives the argument tuple, so unpack
+   it), and on a model you did not write, a `torchvision.models` backbone,
+   by attaching hooks through `named_modules()`. What do hooks let you do
+   on a model you own and on one you do not, and what state can a hook
+   accidentally retain?
 :end_tab:
 
 :begin_tab:`jax`
@@ -1185,8 +1188,9 @@ are read after the fact from `param.grad()`.
     1. Predict which of the following a single top-level random seed makes
        reproducible: single-process data order, multi-worker data order,
        NumPy-based augmentation inside the dataset, and nondeterministic
-       GPU reduction order. Verify each prediction against the
-       `train_once` demo of :numref:`subsec_seeds_randomness`.
+       GPU reduction order. Justify each prediction from where that
+       randomness is drawn, starting from `train_once` in
+       :numref:`subsec_seeds_randomness`.
     1. Add per-example noise inside a four-worker data pipeline. Derive
        each worker's stream by splitting one base key with
        `jax.random.split(key, num_workers)` and refresh the streams each
@@ -1196,8 +1200,8 @@ are read after the fact from `param.grad()`.
 1. [code] **Forward-pass instrumentation.**
     1. Capture every linear layer's input with `nnx.capture` and count
        multiply-accumulate operations from the captured input shapes and
-       the kernel shapes; report per-layer and total FLOPs for the
-       residual stack. Check the total against a hand count.
+       the kernel shapes; report the per-layer and total counts for `net`.
+       Check the total against a hand count.
     1. Turn the overflow check of :numref:`subsec_nan_finder` into a
        per-step training monitor. Train with a learning rate 100 times too
        large and report the first layer, by depth, whose activations
@@ -1209,19 +1213,19 @@ are read after the fact from `param.grad()`.
    Compare the two families of norms. Which one first reveals an exploding
    backward signal?
 1. [code] **Block ablation.** `sow` records intermediates but cannot change
-   them, so an output-replacing hook cannot be written. Zero out the output
-   of a single residual block's body by editing the block's `__call__`
-   (turning the block into the identity) and measure how the network's
-   output changes. Which block matters most, and how would you find out
-   with one loop? Explain in one sentence why the mechanism differs from
-   PyTorch's mutable hooks even though the experiment is identical.
-1. [code] **Inspection contracts.** Rebuild the activation-statistics table
-   by editing `ResidualBlock` to call
+   them, so an output-replacing hook cannot be written. Zero the output of
+   one residual block's body by editing `ResidualBlock.__call__`, which
+   turns the block into the identity, and measure the change in `net`'s
+   output on a fixed batch. Repeat for every block: which block matters
+   most?
+1. [code] **Inspection contracts.** Rebuild the table of
+   :numref:`subsec_activation_stats` by editing `ResidualBlock` to call
    `self.sow(nnx.Intermediate, 'body_out', ...)` on its body's output, then
    collect those values with `nnx.capture(net, nnx.Intermediate)`. Compare
-   capture-all-methods, opt-in `sow`, and PyTorch-style mutable hooks:
-   which requires touching model code, which can retain tensors or hook
-   state, and which is applicable to a model you do not own?
+   three contracts: capturing every method output, opt-in `sow`, and an
+   output-modifying hook as in :numref:`fig_bg_hooks`. Which requires
+   touching model code, which can retain tensors or hook state, and which
+   applies to a model you do not own?
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1229,8 +1233,9 @@ are read after the fact from `param.grad()`.
     1. Predict which of the following a single top-level random seed makes
        reproducible: the shuffle order within one epoch, the shuffle order
        across epochs, NumPy-based augmentation inside a parallel `map`, and
-       nondeterministic GPU reduction order. Verify each prediction against
-       the `train_once` demo of :numref:`subsec_seeds_randomness`.
+       nondeterministic GPU reduction order. Justify each prediction from
+       where that randomness is drawn, starting from `train_once` in
+       :numref:`subsec_seeds_randomness`.
     1. Build the input pipeline with `tf.data`, adding noise in a parallel
        `map`. Compare three configurations: `shuffle(buffer, seed=0)` with
        the default `reshuffle_each_iteration=True`, the same with
@@ -1242,8 +1247,8 @@ are read after the fact from `param.grad()`.
     1. Using a `Checked`-style `call` override or a functional inspection
        model, record every `Dense` layer's input shape, count
        multiply-accumulate operations from it and the kernel shape, and
-       report per-layer and total FLOPs for the residual stack. Check the
-       total against a hand count.
+       report the per-layer and total counts for `net`. Check the total
+       against a hand count.
     1. Turn the overflow check of :numref:`subsec_nan_finder` into a
        per-step training monitor. Train with a learning rate 100 times too
        large and report the first layer, by depth, whose activations
@@ -1254,20 +1259,20 @@ are read after the fact from `param.grad()`.
    activation-gradient norms with the parameter-gradient norms in the same
    block. Which one first reveals an exploding backward signal?
 1. [code] **Block ablation.** Keras has no hook mechanism that could
-   replace a layer's output. Zero out the output of a single residual
-   block's body by editing the block's `call` (turning the block into the
-   identity) and measure how the network's output changes. Which block
-   matters most, and how would you find out with one loop? Explain in one
-   sentence why the mechanism differs from PyTorch's mutable hooks even
-   though the experiment is identical.
-1. [code] **Inspection contracts.** Rebuild the activation-statistics table
-   two more ways: with a `Checked`-style `call` override that stashes
-   `tf.math.reduce_std` of every layer's output, and on a model you did not
-   write, a `tf.keras.applications` backbone, by naming layers with
-   `get_layer`. Compare the three contracts introduced here, functional
-   inspection models, `call` overrides, and PyTorch-style mutable hooks:
-   which requires a symbolic graph, which requires owning the model's code,
-   and which black-box models does each admit?
+   replace a layer's output. Zero the output of one residual block's body
+   by editing the `call` of the `ResidualBlock` used in `Checked`
+   (:numref:`subsec_nan_finder`), which turns the block into the identity,
+   and measure the change in the model's output on a fixed batch. Repeat
+   for every block: which block matters most?
+1. [code] **Inspection contracts.** Rebuild the table of
+   :numref:`subsec_activation_stats` two more ways: with a `Checked`-style
+   `call` override that stashes `tf.math.reduce_std` of every layer's
+   output, and on a model you did not write, a `tf.keras.applications`
+   backbone, by naming layers with `get_layer`. Compare three contracts:
+   functional inspection models, `call` overrides, and an output-modifying
+   hook as in :numref:`fig_bg_hooks`. Which requires a symbolic graph,
+   which requires owning the model's code, and which black-box models does
+   each admit?
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -1275,8 +1280,9 @@ are read after the fact from `param.grad()`.
     1. Predict which of the following a single top-level random seed makes
        reproducible: single-process data order, multi-worker data order,
        NumPy-based augmentation inside `__getitem__`, and nondeterministic
-       GPU reduction order. Verify each prediction against the
-       `train_once` demo of :numref:`subsec_seeds_randomness`.
+       GPU reduction order. Justify each prediction from where that
+       randomness is drawn, starting from `train_once` in
+       :numref:`subsec_seeds_randomness`.
     1. Extend `train_once` to load data through Gluon's `DataLoader` with
        `num_workers=4`. Give the dataset its own `np.random.default_rng()`
        object and use it to add noise as each example loads, and check
@@ -1288,9 +1294,8 @@ are read after the fact from `param.grad()`.
 1. [code] **Forward-pass instrumentation.**
     1. Write a forward hook via `register_forward_hook` that counts
        multiply-accumulate operations for every `Dense` layer from the
-       shapes of its input and weight, and use it to report per-layer and
-       total FLOPs for the residual stack. Check the total against a hand
-       count.
+       shapes of its input and weight, and use it to report the per-layer
+       and total counts for `net`. Check the total against a hand count.
     1. Turn the overflow check of :numref:`subsec_nan_finder` into a
        per-step training monitor. Train with a learning rate 100 times too
        large and report the first layer, by depth, whose activations
@@ -1302,18 +1307,16 @@ are read after the fact from `param.grad()`.
    attaching gradients to the intermediate outputs. Compare the two
    families of norms. Which one first reveals an exploding backward signal?
 1. [code] **Block ablation.** Gluon ignores a hook's return value, so an
-   output-replacing hook cannot be written. Zero out the output of a single
-   residual block's body by editing the block's `forward` (turning the
-   block into the identity) and measure how the network's output changes.
-   Which block matters most, and how would you find out with one loop?
-   Explain in one sentence why the mechanism differs from PyTorch's mutable
-   hooks even though the experiment is identical.
-1. [code] **Inspection contracts.** Rebuild the activation-statistics table
-   two more ways: with `register_forward_pre_hook`, recording the standard
-   deviation of each block's *input* (the pre-hook receives the argument
-   tuple, so unpack it), and by reading the source of `Block.summary()`,
-   which builds its whole table from one forward hook, then calling it on
-   the residual stack. Compare the two contracts, observe-only hooks
-   against PyTorch's mutable ones, for a model you own and for one you do
-   not.
+   output-replacing hook cannot be written. Zero the output of one residual
+   block's body by editing `ResidualBlock.forward`, which turns the block
+   into the identity, and measure the change in `net`'s output on a fixed
+   batch. Repeat for every block: which block matters most?
+1. [code] **Inspection contracts.** Rebuild the table of
+   :numref:`subsec_activation_stats` two more ways: with
+   `register_forward_pre_hook`, recording the standard deviation of each
+   block's *input* (the pre-hook receives the argument tuple, so unpack
+   it), and by reading the source of `Block.summary()`, which builds its
+   whole table from one forward hook, then calling it on `net`. Compare
+   observe-only hooks with the output-modifying hook of
+   :numref:`fig_bg_hooks`, for a model you own and for one you do not.
 :end_tab:

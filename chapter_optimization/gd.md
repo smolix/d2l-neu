@@ -121,6 +121,7 @@ show_trace(gd(1.1, f_grad), f)
 ```
 
 ### Local Minima
+:label:`subsec_gd-local-minima`
 
 On a convex parabola the only risk was the step size. Nonconvex functions add
 another. Consider $f(x) = x \cdot \cos(cx)$, which has infinitely many local
@@ -234,6 +235,7 @@ show_trace_2d(f_2d, train_2d(gd_2d, f_grad=f_2d_grad))
 ```
 
 ## Newton's Method
+:label:`subsec_gd-newton`
 
 The learning-rate experiments in :numref:`subsec_gd-learningrate` showed
 that one step size may be too small or too large, and the multivariate example
@@ -351,12 +353,14 @@ learning as-is; a single line-search trial, for instance, evaluates the
 objective on the entire dataset.
 
 ### Preconditioning
+:label:`subsec_gd-preconditioning`
 
 At large scale, the underlying idea remains useful. Instead of inverting the full
 Hessian, a *preconditioner* rescales the update using an inexpensive
 approximation. The simplest useful choice is the diagonal:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \, \textrm{diag}(\mathbf{H})^{-1} \nabla f(\mathbf{x}).$$
+:eqlabel:`eq_gd-diag-precond`
 
 This amounts to selecting a separate learning rate for every coordinate. To
 see why that matters, imagine a model with one parameter measured in
@@ -383,17 +387,87 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
 
 ## Exercises
 
-1. Experiment with different learning rates and objective functions for gradient descent.
-1. Implement line search to minimize a convex function in the interval $[a, b]$.
-    1. Do you need derivatives for binary search, i.e., to decide whether to pick $[a, (a+b)/2]$ or $[(a+b)/2, b]$.
-    1. How rapid is the rate of convergence for the algorithm?
-    1. Implement the algorithm and apply it to minimizing $\log (\exp(x) + \exp(-2x -3))$.
-1. Design an objective function defined on $\mathbb{R}^2$ where gradient descent is exceedingly slow. Hint: scale different coordinates differently.
-1. Implement the lightweight version of Newton's method using preconditioning:
-    1. Use diagonal Hessian as preconditioner.
-    1. Use the absolute values of that rather than the actual (possibly signed) values.
-    1. Apply this to the problem above.
-1. Apply the algorithm above to a number of objective functions (convex or not). What happens if you rotate coordinates by $45$ degrees?
+1. [code] **Learning-rate sweep.** `gd` runs ten steps from $x_0 = 10$.
+   Extend it to 100 steps with a stopping test and run it on $f(x) = x^2$
+   and on $f(x) = |x|^{1.5}$ at $\eta \in \{0.01, 0.1, 0.5, 0.9, 1.1\}$.
+    1. Tabulate, for each of the ten runs, the number of steps until
+       $|x| < 10^{-3}$, or the fact that the iterates diverged.
+    1. For $f(x) = x^2$, derive the largest learning rate for which the
+       iteration converges from every start and the learning rate that
+       reaches the minimum in one step.
+    1. The second derivative of $|x|^{1.5}$ is unbounded near the origin.
+       Explain what the iterates do close to $0$ at any fixed $\eta$, and
+       why the stopping test is reached late or not at all.
+1. [code] **Bisection line search.** A convex differentiable $f$ on $[a, b]$
+   can be minimized by bisection: evaluate the sign of $f'$ at the midpoint
+   and keep $[a, (a+b)/2]$ or $[(a+b)/2, b]$ accordingly.
+    1. Explain why the sign of $f'$ at one point suffices to choose the
+       half, whereas comparing the values $f(a)$, $f((a+b)/2)$, and $f(b)$
+       does not.
+    1. Derive the number of iterations needed to shrink the interval to a
+       width $\epsilon$.
+    1. Implement the method and apply it to
+       $f(x) = \log(\exp(x) + \exp(-2x - 3))$ on $[-5, 5]$ to an accuracy
+       of $10^{-6}$. Compare the iteration count with that of `gd` at its
+       best learning rate on the same function.
+1. [code] **Newton's method up close.** ● In :numref:`subsec_gd-newton`,
+   `newton` converges in a few steps on $f(x) = \cosh(cx)$ and heads for a
+   maximum of $f(x) = x\cos(cx)$ unless damped.
+    1. On $\cosh(cx)$ from $x_0 = 10$, record $|x_t|$ after every step and
+       verify that the number of correct digits roughly doubles per
+       iteration once the iterate is close to $0$. Where does this phase
+       begin, and what governs the steps before it?
+    1. On $x\cos(cx)$ from $x_0 = 10$, sweep the damping
+       $\eta \in \{0.25, 0.5, 0.75, 1\}$. Which runs end at a minimum, and
+       what is the sign of `f_hess` along the paths of those that do not?
+    1. In $d$ dimensions a Newton step costs a Hessian factorization of
+       about $d^3/3$ operations plus a solve of about $2d^2$. Minimize
+       $f(\mathbf{x}) = \sum_{i=1}^{200} \cosh(c\, \mathbf{a}_i^\top
+       \mathbf{x})$ for $d = 50$ and Gaussian directions $\mathbf{a}_i$,
+       refactoring the Hessian on every step, every 5 steps, and every 20
+       steps while reusing the stale factorization in between. Plot
+       $f(\mathbf{x}_t) - f^\star$ against the cumulative operation count
+       rather than the iteration count. Which variant reaches $10^{-8}$
+       first?
+
+    *Adapted from Stephen Boyd and Lieven Vandenberghe,
+    [Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/),
+    Exercise 9.31(a).*
+1. [code] **Diagonal preconditioning.** The update
+   :eqref:`eq_gd-diag-precond` of :numref:`subsec_gd-preconditioning`
+   gives every coordinate its own learning rate.
+    1. Design an objective on $\mathbb{R}^2$ by scaling the two coordinates
+       of a quadratic bowl so that the condition number of its Hessian is
+       at least $100$. Report the largest stable learning rate of plain
+       gradient descent and the number of steps it needs to reach
+       $\|\mathbf{x}\| < 10^{-3}$ from the starting point of
+       `d2l.train_2d`.
+    1. Implement :eqref:`eq_gd-diag-precond` as a trainer for
+       `d2l.train_2d` and repeat the measurement. Explain why the step count
+       no longer depends on the scaling you chose.
+    1. Replace $\textrm{diag}(\mathbf{H})^{-1}$ by
+       $|\textrm{diag}(\mathbf{H})|^{-1}$ and apply both variants to the
+       nonconvex $f(x_1, x_2) = x_1 \cos(c x_1) + x_2 \cos(c x_2)$ with
+       $c = 0.15\pi$. Which variant can move uphill, and where?
+    1. Rotate the coordinates of your quadratic by $45^\circ$ and rerun
+       plain gradient descent, both preconditioned variants, and Newton's
+       method. Which of the four are unaffected by the rotation? Explain
+       the behavior of the diagonal preconditioner from the entries of the
+       rotated Hessian.
+1. [code] **Counting local minima.** The objective
+   $f(x) = x\cos(cx)$ with $c = 0.15\pi$ of :numref:`subsec_gd-local-minima`
+   traps gradient descent in whichever basin it enters.
+    1. Locate every local minimum of $f$ on $[-20, 20]$ and its value. How
+       does the number of local minima grow as the interval widens?
+    1. Let `gd` take its starting point as an argument. Run 20 steps from
+       $x_0 \in \{-10, 5, 10\}$ at $\eta \in \{0.5, 1, 2\}$ and record
+       the minimum each run ends near. Which combinations reach the lowest
+       minimum on the interval, and why does the largest learning rate
+       change basins?
+    1. Modify $f$ so that its local minima on the interval differ in value
+       by at most $10^{-3}$ except for one. Explain why any method that
+       uses only $f$ and $f'$ at the points it visits must then visit every
+       basin before it can certify the global minimum.
 
 [Discussions](https://d2l.discourse.group/t/351)
 

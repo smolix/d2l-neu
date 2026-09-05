@@ -122,6 +122,7 @@ def clipped(tx, max_norm=1.0):
 ```
 
 ### Preventing a Numerical Failure
+:label:`subsec_practice-nan`
 
 :numref:`sec_adam` swept SGD with momentum on `TinyLM` and found a knife's
 edge: the best learning rate sat one grid point below one that returned
@@ -244,6 +245,7 @@ and it provides an unusually detailed public record of operational
 interventions during a large run :cite:`zhang2022opt`.
 
 ## Weight Averaging
+:label:`subsec_practice-weight-averaging`
 
 The chapter's third recurring decision is living with noise, and it has one
 more tool, one that is nearly free. A constant-rate iterate rattles around its
@@ -472,6 +474,7 @@ application of a denoiser during sampling, but this comparison alone does
 not establish the mechanism.
 
 ## How to Tune
+:label:`subsec_practice-tuning`
 
 Every comparison in this chapter depends on a tuning protocol, which must be
 reported as part of the method. Google's Tuning Playbook
@@ -575,45 +578,62 @@ but this decomposition has remained useful for decades.
 
 ## Exercises
 
-1. Reproduce the tuning protocol with a budget. Using AdamW on `TinyLM`,
-   reach a training loss of 1.1 in as few steps as you can, tuning only the
-   learning rate, with a budget of ten runs. Keep a log: for every run,
-   record the learning rate, the steps taken, the final loss, and the
-   one-sentence conclusion you drew before launching the next run. Report
-   the log, not just the winning configuration.
-1. Change the batch size of the clipping demo's model from 64 to 256 and
-   repeat the four-point learning-rate sweep of :numref:`sec_adam` for
-   AdamW. Where does the optimum move, and how does the shift compare with
-   the square-root and linear scaling rules of :numref:`sec_batch_size`?
-   What would you have concluded had you reused the batch-64 learning rate
-   without re-tuning?
-1. Sweep the clipping threshold $\theta \in \{0.01, 0.1, 0.5, 1, 4,
-   \infty\}$ in the demonstration above, recording the final loss and the
-   fraction of steps on which clipping fired. Identify the three regimes:
-   guard (fires rarely), brake (fires constantly), and absent. Show that
-   when clipping fires on every step, the update of
-   :eqref:`eq_practice_clip` is normalized gradient descent with step size
-   $\eta\theta$, and explain why that is not the same as training at a
-   lower learning rate.
-1. The decay timescale of :numref:`sec_adamw` is $\tau = B/(\eta \lambda D)$
-   epochs for batch size $B$, dataset size $D$ (both in tokens), learning
-   rate $\eta$, and weight decay $\lambda$. Compute $\tau$ for the
-   DeepSeek-V3 and OLMo 2 rows of :numref:`tab_practice_recipes` at their
-   peak learning rates. What fraction of each dataset does the averaging
-   horizon span? Following :citet:`Bergsma.Dey.Gosal.ea.2025b`, what should
-   happen to $\lambda$ if the batch size were doubled and $\tau$ is to be
-   preserved?
-1. Sweep the EMA decay $\alpha \in \{0.9, 0.99, 0.999, 0.9999\}$ in the
-   weight-averaging demonstration. Relate the averaging window
-   $1/(1-\alpha)$ to what you observe at both ends: when does the EMA track
-   the live weights too closely to help, and when does it average in
-   iterates too old to be useful within the 15-epoch budget?
-1. Test the finding of :citet:`Schmidt.Schneider.Hennig.2021` on this
-   chapter's testbed: run SGD with momentum, Adam, and AdamW at their
-   framework default settings on `TinyLM` for 2,000 steps, and compare the
-   best of the three against the grid-tuned Adam of :numref:`sec_adam`.
-   Given a fixed budget of four runs, which strategy would you choose on
-   this problem, and what does the answer depend on?
+1. [code] **A ten-run budget.** Using AdamW on `TinyLM`, reach a training
+   loss of 1.1 in as few steps as you can, tuning only the learning rate,
+   with a budget of ten runs. Keep the log that
+   :numref:`subsec_practice-tuning` asks for: for every run, the learning
+   rate, the steps taken, the final loss, and the one-sentence conclusion
+   you drew before launching the next run. Report the log, not just the
+   winning configuration.
+1. [code] **Batch size and the tuned rate.** Rebuild `data` with a batch
+   size of 256 instead of 64 and run the four-point learning-rate protocol
+   of :numref:`sec_adam` for AdamW at both batch sizes.
+    1. Where does the optimum move, and how does the shift compare with the
+       square-root and linear rules of :eqref:`eq_lr-rules`?
+    1. What would you have concluded about AdamW at batch size 256 had you
+       reused the batch-64 learning rate without retuning?
+1. [code] **Clipping regimes.** The demonstration in
+   :numref:`subsec_practice-nan` clips at $\theta = 1$.
+    1. Implement global-norm clipping :eqref:`eq_practice_clip` yourself as
+       a function that rescales the gradients by
+       $\min(1, \theta / (\|\mathbf{g}\|_2 + 10^{-6}))$ and also returns
+       the norm before clipping. Check that at $\theta = 1$ it reproduces
+       the final loss of the clipped run.
+    1. Sweep $\theta \in \{0.01, 0.1, 0.5, 1, 4, \infty\}$ on the divergent
+       run, recording the final loss and the fraction of steps on which
+       clipping changed the update. Identify the three regimes: guard
+       (fires rarely), brake (fires on most steps), and absent.
+    1. Show that when clipping fires on every step, the update is
+       normalized gradient descent with step size $\eta\theta$, and explain
+       why this differs from training at a lower learning rate.
+
+    *Adapted from Stanford CS336,
+    [Assignment 1](https://github.com/stanford-cs336/spring2024-assignment1-basics),
+    Problem gradient_clipping.*
+1. **The decay timescale.** The horizon of :numref:`subsec_wd-at-scale` is
+   $\tau = B/(\eta\lambda D)$ epochs for batch size $B$ and dataset size
+   $D$, both in tokens. The DeepSeek-V3 and OLMo 2 reports in
+   :numref:`tab_practice_recipes` use sequences of 4,096 tokens and
+   training sets of about 14.8 trillion and 4 trillion tokens.
+    1. Compute $\tau$ for both rows at their peak learning rates. What
+       fraction of each dataset does the averaging horizon span?
+    1. Following :citet:`Bergsma.Dey.Gosal.ea.2025b`, what should happen to
+       $\lambda$ if the batch size were doubled and $\tau$ is to be
+       preserved, and what if instead the dataset were doubled?
+1. [code] **The averaging window.** Sweep the EMA decay
+   $\alpha \in \{0.9, 0.99, 0.999, 0.9999\}$ in the demonstration of
+   :numref:`subsec_practice-weight-averaging` and plot the EMA's test
+   accuracy per epoch for each value. Relate the averaging window
+   $1/(1-\alpha)$ to the behavior at both ends of the sweep within the
+   15-epoch budget of about 3,500 steps.
+1. [code] **Defaults against a small budget.** Test the finding of
+   :citet:`Schmidt.Schneider.Hennig.2021` on this chapter's testbed: run
+   SGD with momentum $0.9$ at $\eta = 0.1$, Adam at $\eta = 10^{-3}$, and
+   AdamW at $\eta = 10^{-3}$, with library defaults for every other
+   hyperparameter, on `TinyLM` for 2,000 steps, and compare the best of the
+   three against the grid-tuned Adam of :numref:`sec_adam`. Given a fixed
+   budget of four runs, which strategy would you choose on this problem,
+   and on what does the answer depend?
 
 <!-- slides -->
 

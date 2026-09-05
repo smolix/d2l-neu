@@ -131,6 +131,7 @@ additional gradient evaluations. Momentum therefore addresses both
 ill-conditioning and sampling noise.
 
 ### The Timescale of $\beta$
+:label:`subsec_momentum-timescale`
 
 How much history does the velocity hold? The weights
 $1, \beta, \beta^2, \ldots$ sum to $\frac{1}{1-\beta}$ in the limit, so a
@@ -387,11 +388,68 @@ momentum appears in most optimizers considered in the rest of this chapter.
 
 ## Exercises
 
-1. Use other combinations of momentum hyperparameters and learning rates and observe and analyze the different experimental results.
-1. Try out gradient descent and momentum for a quadratic problem where you have multiple eigenvalues, i.e., $f(x) = \frac{1}{2} \sum_i \lambda_i x_i^2$, e.g., $\lambda_i = 2^{-i}$. Plot how the values of $x$ decrease for the initialization $x_i = 1$.
-1. PyTorch's `nesterov=True` performs $\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t$ followed by $\mathbf{x}_t = \mathbf{x}_{t-1} - \eta\,(\mathbf{g}_t + \beta \mathbf{v}_t)$, with the gradient taken at $\mathbf{x}_{t-1}$. Show by a change of variables that this generates the same iterates as :eqref:`eq_nesterov`. What point do the framework's parameters correspond to?
-1. For $f(x) = \frac{\lambda}{2} x^2$, sweep $\beta$ over $[0, 1)$ at fixed $\eta$ and measure the number of iterations until $|x_t| \leq 10^{-6} |x_0|$. Where is the minimum, and how does it compare to $\beta^\star$?
-1. What changes when we use momentum with minibatch stochastic gradient descent? What happens as the batch size shrinks? Experiment with the parameters.
+1. [code] **Momentum and learning rate together.** On the valley `f_2d`
+   with `momentum_2d`, run a grid of $\beta \in \{0, 0.25, 0.5, 0.8\}$ and
+   $\eta \in \{0.1, 0.3, 0.6, 1.0\}$ for 100 steps each.
+    1. Record for every cell the number of steps until
+       $\|\mathbf{x}_t\| \leq 10^{-3}$, or the fact that the iterates
+       diverged, and display the grid as a table or heatmap.
+    1. Compare the fastest $\beta$ at each stable $\eta$ with the
+       $\beta^\star$ of :numref:`subsec_momentum_acceleration` for
+       $\kappa = 20$.
+    1. The effective-step reading of :numref:`subsec_momentum-timescale`
+       suggests that raising $\beta$ forces $\eta$ down. Does the largest
+       stable $\eta$ in your grid behave that way? Derive the stability
+       condition of :eqref:`eq_momentum` for a single eigendirection with
+       curvature $\lambda$ and reconcile the two.
+1. [code] **Many eigenvalues.** Consider
+   $f(\mathbf{x}) = \frac{1}{2} \sum_{i=1}^{10} \lambda_i x_i^2$ with
+   $\lambda_i = 2^{-i}$, started from $x_i = 1$.
+    1. Run gradient descent and heavy-ball momentum at the largest stable
+       learning rate of gradient descent and plot $|x_{i,t}|$ for every
+       coordinate on a logarithmic scale.
+    1. Which coordinate limits the convergence of gradient descent, and by
+       what factor does momentum with the $\beta^\star$ of the resulting
+       condition number shorten the time for that coordinate?
+1. **Two forms of Nesterov momentum.** Library implementations of Nesterov
+   momentum evaluate the gradient at the current iterate,
+   $\mathbf{g}_t = \nabla f(\mathbf{x}_{t-1})$, and update
+   $$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t, \qquad
+   \mathbf{x}_t = \mathbf{x}_{t-1} - \eta\,(\mathbf{g}_t + \beta \mathbf{v}_t),$$
+   so that no extra gradient evaluation is needed.
+    1. Show by a change of variables that this recurrence generates the
+       same iterates as :eqref:`eq_nesterov`.
+    1. Identify the point of :eqref:`eq_nesterov` to which the library's
+       parameter vector $\mathbf{x}_t$ corresponds, and state what a
+       checkpoint of those parameters therefore stores.
+1. [code] **Critical damping.** For $f(x) = \frac{\lambda}{2} x^2$ at a
+   fixed learning rate with $\eta\lambda = 0.1$, sweep $\beta$ over
+   $[0, 1)$ in steps of $0.02$ and measure the number of iterations until
+   $|x_t| \leq 10^{-6} |x_0|$.
+    1. Locate the minimizing $\beta$ and compare it with the critical value
+       $\beta^\star = (1 - \sqrt{\eta\lambda})^2$ at which the recurrence
+       :eqref:`eq_momentum` for this mode is critically damped.
+    1. Describe the iterates on either side of $\beta^\star$ and match them
+       with the over-damped and under-damped regimes of
+       :numref:`fig_opt_critical_damping`.
+1. [code] **Momentum under minibatch noise.** With stochastic gradients,
+   the leaky average in :eqref:`eq_momentum` also smooths the sampling
+   noise.
+    1. Let $\mathbf{g}_t = \mathbf{g} + \boldsymbol{\xi}_t$ with
+       independent zero-mean noise of variance $\sigma^2$ per coordinate.
+       Show that the stationary mean of $\mathbf{v}_t$ is
+       $\mathbf{g}/(1-\beta)$ and its stationary variance
+       $\sigma^2/(1-\beta^2)$, so that the noise-to-signal ratio of the
+       velocity is $\sqrt{(1-\beta)/(1+\beta)}$ times that of a single
+       gradient.
+    1. On the airfoil harness, rebuild `data_iter` and `feature_dim` with
+       `d2l.get_data_ch11(batch_size=b)` for $b \in \{1, 10, 100\}$ and
+       run `d2l.train_ch11` with `sgd_momentum` at
+       $\beta \in \{0, 0.9\}$, adjusting $\eta$ so that $\eta/(1-\beta)$
+       stays at $0.05$. Report the final loss of each run and the spread of
+       the recorded losses over its last epoch.
+    1. At which batch size does momentum change the outcome most, and is
+       the size of the change consistent with the ratio of the first item?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1070)

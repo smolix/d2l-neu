@@ -298,6 +298,7 @@ regularization. The preconditioner changes its effect by coordinate, step,
 and problem.
 
 ### A Grid, Twice
+:label:`subsec_adamw-grid`
 
 The claim worth testing is not that coupled decay is too strong; you could
 always compensate with a smaller $\lambda$. It is that the compensation
@@ -474,6 +475,7 @@ which is why the next section can give a sharper answer than "all of them"
 to the question of *which* parameters to decay.
 
 ## What Not to Decay
+:label:`subsec_adamw-what-not-to-decay`
 
 The parameter census of :numref:`subsec_tinylm` sorted `TinyLM` into three
 populations: embeddings, two-dimensional matrices, and one-dimensional
@@ -548,6 +550,7 @@ matrices only, $\lambda$ chosen jointly with the schedule. What remains is
 to ask what it costs.
 
 ## Memory Required for Optimizer State
+:label:`subsec_adamw-memory`
 
 Adam and AdamW carry two extra numbers per parameter, $m$ and $v$. At this
 chapter's scale that is invisible; at language-model scale it decides what
@@ -606,40 +609,66 @@ them optimizer state.
 
 ## Exercises
 
-1. Reproduce the coupled-versus-decoupled disparity on a two-parameter
-   toy: let both coordinates' loss gradients be pure noise,
-   $g_i \sim \mathcal{N}(0, \sigma_i^2)$ with
-   $\sigma = (10, 0.1)$, so that decay is the only systematic force.
-   Track $|x_i|$ over a few thousand steps under Adam-with-$\ell_2$ and
-   under AdamW at the same $(\eta, \lambda)$, and verify AdamW's trajectory
-   against the prediction $(1 - \eta\lambda)^t$. Compare with the
-   experiment in :numref:`subsec_mdl-decoupled-weight-decay`.
-1. Under SGD *with momentum*, is the $\ell_2$ penalty still exactly
-   equivalent to decoupled decay? Trace where $\lambda \mathbf{x}_t$ ends
-   up inside the momentum buffer of :numref:`sec_momentum`, then check
-   your conclusion experimentally on the airfoil harness.
-1. The timescale rule says $\eta$ and $\lambda$ act through their product,
-   with $\tau = B/(\eta\lambda D)$. Fix $\eta\lambda = 3 \times 10^{-3}$
-   and rerun the decoupled sweep along the fixed-product ridge, e.g.
-   $(\eta, \lambda) \in \{(10^{-3}, 3), (3 \times 10^{-3}, 1),
+1. [code] **Coupled and decoupled decay on pure noise.** Consider two
+   parameters whose loss gradients are pure noise,
+   $g_i \sim \mathcal{N}(0, \sigma_i^2)$ with $\sigma = (10, 0.1)$, so
+   that decay is the only systematic force acting on them.
+    1. Track $|x_i|$ over 5,000 steps from $x_i = 1$ under Adam with an
+       $\ell_2$ penalty and under AdamW at the same $(\eta, \lambda)$.
+    1. Verify AdamW's trajectories against the prediction
+       $(1 - \eta\lambda)^t$ and explain the two coupled trajectories with
+       :eqref:`eq_coupled-decay`. Compare with the experiment in
+       :numref:`subsec_mdl-decoupled-weight-decay`.
+1. [code] **Momentum and the penalty.** Under SGD *with momentum*, is the
+   $\ell_2$ penalty still exactly equivalent to decoupled decay? Trace
+   where $\lambda \mathbf{x}_t$ ends up inside the velocity of
+   :eqref:`eq_momentum`, derive the effective per-step shrinkage, and check
+   your conclusion on the airfoil harness of :numref:`sec_minibatch_sgd`
+   with the momentum update of :numref:`sec_momentum`.
+1. [code] **The fixed-product ridge.** In :numref:`subsec_wd-at-scale`,
+   $\eta$ and $\lambda$ act through their product, with timescale
+   $\tau = B/(\eta\lambda D)$. Fix $\eta\lambda = 3 \times 10^{-3}$ and
+   adapt the decoupled `sweep` of :numref:`subsec_adamw-grid` to run along
+   the ridge $(\eta, \lambda) \in \{(10^{-3}, 3), (3 \times 10^{-3}, 1),
    (10^{-2}, 0.3)\}$. How constant is the held-out loss along the ridge,
-   and what breaks the equivalence at the extremes?
-1. Verify the exemptions empirically: rerun the two-group configuration
-   with decay applied to *everything*, and track the norm of a rare
-   token's embedding row over training. Relate what you see to OLMo 2's
-   embedding instability and to the LayerNorm gradient's dependence on
-   $1/\|\mathbf{x}\|$.
-1. Extend the accounting cell to activations: for `TinyLM` with batch
-   size $B$ and sequence length $T$, estimate the bf16 activation memory
-   that must be stored for the backward pass (per block: the two
-   normalization outputs, the attention inputs and outputs, and the MLP
-   hidden layer). At what batch size do activations overtake the
-   optimizer state?
-1. PyTorch and Optax multiply the decay by the full learning rate, so the
-   per-step shrinkage is $\eta\lambda$; :citet:`Loshchilov.Hutter.2019`
-   scale it by the schedule only. Rerun the decoupled grid with the decay
-   applied at a rate $\lambda$ independent of $\eta$ (in PyTorch, pass
-   `weight_decay=wd / lr`). Does the best column stay put?
+   and what breaks the equivalence at its extremes?
+1. [code] **Testing the exemptions.** :numref:`subsec_adamw-what-not-to-decay`
+   attributes OLMo 2's embedding instability to decay shrinking embedding
+   rows until the $1/\|\mathbf{x}\|$ factor in the LayerNorm gradient grows
+   large.
+    1. Rerun the two-group configuration with decay applied to every
+       parameter and, in both runs, track the norm of the rarest and of the
+       most frequent token's embedding row over 2,000 steps.
+    1. Do the two loss curves differ within this budget? Estimate, from the
+       rate at which the rare row shrinks, how many steps the all-decayed
+       run would need before that row's norm falls by a factor of ten.
+1. **Activations and optimizer state.** Extend the accounting of
+   :numref:`subsec_adamw-memory` beyond the `setups` table.
+    1. For `TinyLM` with batch size $B$ and sequence length $T$, estimate
+       the bf16 activation memory that must be stored for the backward pass
+       (per block: the two normalization outputs, the attention inputs and
+       outputs, and the MLP hidden layer). At what batch size do
+       activations overtake the optimizer state?
+    1. Count the floating-point operations of one `adamw` update per
+       parameter and compare them with the roughly $6BT$ operations per
+       parameter of a forward and backward pass over one batch. At which
+       batch size would the optimizer step cost one percent of a training
+       step?
+    1. Repeat the per-parameter byte ledger of `setups` for SGD with
+       momentum and for Adam with an $\ell_2$ penalty. Which totals change
+       relative to AdamW, and which do not?
+
+    *Adapted from Stanford CS336,
+    [Assignment 1](https://github.com/stanford-cs336/spring2024-assignment1-basics),
+    Problem adamwAccounting.*
+1. [code] **Decay independent of the learning rate.** Both library
+   implementations used in this section multiply the decay by the full
+   learning rate, so the per-step shrinkage is $\eta\lambda$, whereas
+   :citet:`Loshchilov.Hutter.2019` scale it by the schedule multiplier
+   only. Rerun the decoupled grid with `sweep`, passing the decay
+   coefficient as `wd / lr` so that the per-step shrinkage is $\lambda$
+   regardless of $\eta$. Does the best column stay put, and what does the
+   answer say about which quantity the grid's decay axis should carry?
 
 [Discussions](https://d2l.discourse.group/)
 

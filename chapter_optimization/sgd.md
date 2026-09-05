@@ -148,6 +148,7 @@ $$
     \eta(t) & = \eta_0 \cdot (\beta t + 1)^{-\alpha} && \textrm{polynomial decay}
 \end{aligned}
 $$
+:eqlabel:`eq_sgd-schedules`
 
 In the *piecewise constant* scenario we drop the learning rate whenever
 progress stalls, lowering the noise floor after the iterates reach it. *Exponential decay* is more aggressive. *Polynomial decay* with
@@ -204,6 +205,7 @@ the expected gradient norm to zero at a noise-controlled rate, the theorem of
 :citet:`Ghadimi.Lan.2013` proved in :numref:`subsec_mdl-nonconvex-sgd`.
 
 ## Gradient Variance and Batch Size
+:label:`subsec_sgd-variance`
 
 So far the noise was ours: we chose $\sigma = 1$. In real training the noise
 comes from *which* examples land in the minibatch, and there we hold a dial —
@@ -322,12 +324,58 @@ Ghadimi–Lan theorem.
 
 ## Exercises
 
-1. Experiment with different learning rate schedules for stochastic gradient descent and with different numbers of iterations. In particular, plot the distance from the optimal solution $(0, 0)$ as a function of the number of iterations.
-1. Prove that for the function $f(x_1, x_2) = x_1^2 + 2 x_2^2$ adding normal noise to the gradient is equivalent to minimizing a loss function $f(\mathbf{x}, \mathbf{w}) = (x_1 - w_1)^2 + 2 (x_2 - w_2)^2$ where $\mathbf{x}$ is drawn from a normal distribution.
-1. Compare convergence of stochastic gradient descent when you sample from $\{(x_1, y_1), \ldots, (x_n, y_n)\}$ with replacement and when you sample without replacement.
-1. How would you change the stochastic gradient descent solver if some gradient (or rather some coordinate associated with it) was consistently larger than all the other gradients?
-1. Assume that $f(x) = x^2 (1 + \sin x)$. How many local minima does $f$ have? Can you change $f$ in such a way that to minimize it one needs to evaluate all the local minima?
-1. Repeat the gradient-variance measurement of this section at the parameters reached *after* training the network (use any optimizer from this chapter). Does the $1/b$ dependence still hold? What changes — the slope or the level — and why?
+1. [code] **Schedules on the noisy quadratic.** `sgd` with `constant_lr`,
+   `exponential_lr`, and `polynomial_lr` implements three of the schedules
+   in :eqref:`eq_sgd-schedules` on $f(x_1, x_2) = x_1^2 + 2x_2^2$.
+    1. Run all three for 1,000 steps from the starting point of
+       `d2l.train_2d` and plot the distance $\|\mathbf{x}_t\|$ to the
+       optimum against $t$ on a logarithmic scale. Which schedule is
+       closest after 50 steps, and which after 1,000?
+    1. The exponential run stops short because its total budget
+       $\sum_t \eta(t)$ is finite. Compute the budget of
+       `exponential_lr`, compare it with the distance the iterate has to
+       travel, then choose a decay constant whose budget suffices and
+       check whether the run now converges.
+    1. Piecewise constant decay with finitely many drops is not covered by
+       the Robbins–Monro conditions. Which of the two conditions does it
+       violate, and why does it nonetheless serve a fixed step budget?
+1. [code] **Noise as a random dataset.** The simulation in `sgd` adds
+   Gaussian noise to the gradient of $f(x_1, x_2) = x_1^2 + 2x_2^2$.
+    1. Prove that this is equivalent to stochastic gradient descent on the
+       per-example losses
+       $f(\mathbf{x}, \mathbf{w}) = (x_1 - w_1)^2 + 2(x_2 - w_2)^2$ with
+       $\mathbf{w}$ drawn from a normal distribution, and state the
+       covariance of $\mathbf{w}$ that reproduces unit-variance noise in
+       both gradient coordinates.
+    1. Draw a dataset of $n = 100$ vectors $\mathbf{w}_i$ and run SGD on
+       the resulting finite sum for 20 epochs at a constant learning rate,
+       once sampling $i$ with replacement and once reshuffling the dataset
+       before each epoch. Compare the distance to the finite-sum minimizer
+       after each epoch, averaged over 20 seeds.
+    1. In the with-replacement run, count the fraction of examples that are
+       not visited during an epoch and compare it with $e^{-1}$.
+1. [code] **Anisotropic noise ball.** The estimate :eqref:`eq_sgd-noise-ball`
+   applies to each coordinate separately, with curvatures $\lambda_1 = 2$
+   and $\lambda_2 = 4$ for the quadratic used in `sgd`.
+    1. Run `sgd` with `constant_lr` at $\eta = 0.1$ for 10,000 steps and
+       estimate the stationary variance of $x_1$ and of $x_2$ from the last
+       5,000 iterates. Compare both with :eqref:`eq_sgd-noise-ball`.
+    1. Give each coordinate its own learning rate $\eta_i = \eta /
+       \lambda_i$. Derive how the contraction factor $1 - \eta_i \lambda_i$
+       and the noise floor $\eta_i \sigma^2 / (2\lambda_i)$ change, and
+       explain why this choice needs information that a gradient alone does
+       not supply.
+    1. Implement the per-coordinate rates in `sgd` and verify both
+       predictions of the previous item numerically.
+1. [code] **Gradient variance after training.** The measurement in
+   :numref:`subsec_sgd-variance` froze the two-layer network at a random
+   initialization. Train it on the airfoil data for ten epochs with any
+   optimizer of this chapter, then recompute `g_full` and the variances at
+   the same batch sizes with `batch_grad`.
+    1. Does the $1/b$ dependence still hold?
+    1. How does the variance at $b = 1$ compare with its value at
+       initialization, and what change in the per-example gradients
+       explains the difference?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/497)

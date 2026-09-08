@@ -15,6 +15,7 @@ update rule. The final experiment compares gradient descent, SGD, and
 minibatch SGD by elapsed time.
 
 ## Vectorization and Caches
+:label:`subsec_minibatch-vectorization`
 
 The bluntest reason to batch is parallel hardware. Training on multiple GPUs
 and multiple servers requires sending at least one example to each device,
@@ -633,11 +634,44 @@ limit known as the critical batch size.
 
 ## Exercises
 
-1. Modify the batch size and learning rate and observe the rate of decline for the value of the objective function and the time consumed in each epoch.
-1. In the blocked matrix multiplication benchmark, vary the block width over $\{1, 4, 16, 64, 256\}$ and time each variant. Where does throughput saturate, and why does it saturate well before the full width of 256? Then repeat the element/column/full comparison with $4096 \times 4096$ matrices on a GPU and explain what changes.
-1. Compare minibatch stochastic gradient descent with a variant that actually *samples with replacement* from the training set. What happens?
-1. An evil genie replicates your dataset without telling you (i.e., each observation occurs twice and your dataset grows to twice its original size, but nobody told you). How does the behavior of stochastic gradient descent, minibatch stochastic gradient descent and that of gradient descent change?
-1. Implement gradient accumulation on top of `train_ch11`: sum gradients over $k$ consecutive batches of size $b$ and update once with their average. Verify that the loss trajectory matches a run with batch size $kb$ when plotted against examples processed, then compare the two against wall-clock time.
+1. [code] **Batch size and learning rate together.** `train_sgd` trains
+   the linear model at a chosen batch size and learning rate and returns
+   the cumulative wall-clock times and the recorded losses.
+    1. Starting from the pair $b = 10$, $\eta = 0.05$, run
+       $b \in \{1, 10, 100, 1000\}$ for two epochs each with the learning
+       rate scaled as $\eta \propto \sqrt{b}$. Report the time per epoch
+       and the lowest loss reached within the first two seconds of each
+       run.
+    1. Repeat with $\eta \propto b$. Which of the two scalings keeps the
+       $b = 1000$ run stable, and which keeps the $b = 1$ run making
+       progress? Relate the answer to the stability limit of gradient
+       descent in :numref:`sec_gd`.
+1. [code] **Block width and throughput.** The blocked computation in
+   :numref:`sec_minibatches` multiplies 64 columns of $\mathbf{C}$ at a
+   time.
+    1. Vary the block width over $\{1, 4, 16, 64, 256\}$ and time each
+       variant with `timer`. Where does throughput saturate, and why does
+       it saturate well before the full width of 256?
+    1. Repeat the column-wise, blocked, and one-call computations of
+       :numref:`subsec_minibatch-vectorization` with $4096 \times 4096$
+       matrices on a GPU. Which ratios between the variants change, and
+       what does the change say about dispatch overhead relative to
+       arithmetic?
+1. **Duplicated data.** Suppose every example in the training set is
+   silently duplicated, so that the dataset doubles in size while its
+   empirical distribution is unchanged. For SGD with $b = 1$, for minibatch
+   SGD at a fixed $b$, and for full-batch gradient descent, state whether
+   the cost per step, the number of steps to reach a given loss, and the
+   variance of the gradient estimate change, and explain each answer.
+1. [code] **Gradient accumulation.** Implement gradient accumulation on top
+   of `train_ch11`: sum the gradients of $k$ consecutive minibatches of
+   size $b$ and update once with their average.
+    1. Verify that the loss trajectory matches a run with batch size $kb$
+       when plotted against the number of examples processed. State which
+       of the conditions listed in :numref:`sec_minibatches` your
+       implementation had to satisfy for the two curves to agree.
+    1. Compare the two runs against wall-clock time. Which costs more per
+       example, and where in the code does the difference arise?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1068)

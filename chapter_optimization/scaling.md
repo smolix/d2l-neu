@@ -179,6 +179,7 @@ def train_mlp(arch, width, lr, num_steps=400, batch_size=512):
 ```
 
 ### Learning-Rate Sweep
+:label:`subsec_scaling-sweep`
 
 We evaluate four widths and eight learning rates spaced by factors of two,
 using one short run per configuration. These 32 runs take about a minute on
@@ -344,6 +345,7 @@ At the base width, $m = 1$ and `MuMLP` is `MLP` exactly — muP changes
 nothing about the model you tune, only about how its siblings scale.
 
 ### The Coordinate Check
+:label:`subsec_scaling-coord-check`
 
 A coordinate check is a low-cost diagnostic for a muP implementation and is
 recommended by the practitioner's guide
@@ -508,6 +510,7 @@ flagged. This is one reason learning rates chosen
 for Muon-family optimizers tend to change less with width.
 
 ## Hyperparameter Transfer in Large Runs
+:label:`subsec_scaling-large-runs`
 
 Proxy-model tuning and transfer are common in large-scale training, but the
 mechanism varies. Cerebras adopted muP directly: the Cerebras-GPT family was
@@ -561,24 +564,48 @@ matched update sizes; the goal of transfer is common to all of them.
 
 ## Exercises
 
-1. Our coordinate check varies width at fixed depth. Generalize `MLP` from
-   its three hidden layers to $L$ of them and run the check across
-   $L \in \{3, 6, 12, 24\}$ at fixed width, under both parametrizations.
-   Does muP's width scaling keep activations flat across depth? What does
-   that tell you about what muP does and does not promise?
-1. Verify transfer directly: under each parametrization, find the best
-   learning rate at width 256 by sweeping, apply it unchanged at width
-   1,024, and compare the loss against the best learning rate found by
-   sweeping at width 1,024. Report all four optima.
-1. Break muP on purpose: delete the $1/m$ logit scaling from `MuMLP` but
-   keep the hidden learning-rate rule, and rerun the coordinate check.
-   Which curve catches the bug? Repeat, this time keeping the multiplier
-   but giving the hidden matrices the full learning rate.
-1. Replace Adam with weight-decayed AdamW (:numref:`sec_adamw`) in the
-   standard-parametrization sweep and train several times longer. Does the
-   optimum drift less? Relate what you see to the argument of
+1. [code] **Depth and the coordinate check.** `coord_check` varies width at
+   a fixed depth of three hidden layers. Generalize `MLP` and `MuMLP` to
+   $L$ hidden layers and run the check across $L \in \{3, 6, 12, 24\}$ at
+   width 512 under both parametrizations.
+    1. Under standard parametrization, how does the growth of the logits
+       with depth compare with their growth with width in
+       :numref:`subsec_scaling-coord-check`?
+    1. Does muP's width scaling keep the activations flat across depth?
+       State what the rules of :numref:`tab_mup-rules` promise and what
+       they do not.
+1. [code] **Transfer, verified directly.** Under each parametrization, find
+   the best learning rate at width 256 by sweeping with `train_mlp`, apply
+   it unchanged at width 1,024, and compare the resulting loss with the
+   best learning rate found by sweeping at width 1,024. Report all four
+   optima and the loss that transfer costs in each parametrization.
+1. [code] **Breaking muP on purpose.** The coordinate check is a test for
+   implementation errors.
+    1. Delete the $1/m$ logit scaling from `MuMLP` but keep the hidden
+       learning-rate rule and rerun `coord_check`. Which curve exposes the
+       bug?
+    1. Restore the multiplier and instead give the hidden matrices the full
+       learning rate. Which curve exposes this bug?
+    1. Repeat both broken variants with `num_steps=10`. Does the longer
+       check expose either bug more clearly, and what feedback from the
+       loss does it add that the one-step check avoids?
+1. [code] **Weight decay and parametrization.** Replace Adam with
+   weight-decayed AdamW (:numref:`sec_adamw`) in the
+   standard-parametrization sweep of :numref:`subsec_scaling-sweep` and
+   train for 4,000 steps instead of 400. Does the optimum drift less with
+   width? Relate what you see to the argument of
    :citet:`Kosson.Welborn.Liu.ea.2025` that weight decay, not
    parametrization, stabilizes long runs.
+1. [code] **Fitting the drift.** :numref:`subsec_scaling-large-runs`
+   reports that DeepSeek fitted power laws for the optimal learning rate as
+   a function of scale instead of removing the drift
+   :cite:`Bi.Chen.Chen.ea.2024`.
+    1. From `sp_loss`, fit a power law $\eta^\star(n) = c\, n^{-\gamma}$ to
+       the best learning rate at each width and report $\gamma$.
+    1. Extrapolate to widths 2,048 and 4,096, then sweep directly at those
+       widths with `train_mlp` and compare. How far does the prediction
+       hold, and which $\gamma$ does the first-step analysis of
+       :eqref:`eq_scaling_first_step` predict?
 
 <!-- slides -->
 

@@ -103,6 +103,7 @@ parameters, at least from a shallow basin — one reason, as we will see
 below, that the noise in minibatch gradients is not purely a nuisance.
 
 ### Saddle Points
+:label:`subsec_opt-intro-saddles`
 
 Besides local minima, *saddle points* make gradients vanish: locations
 where every gradient component is zero but which are neither a minimum nor
@@ -191,6 +192,7 @@ methods in this chapter address one or both of these problems.
 Take the simplest curved objective, a quadratic valley
 
 $$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2,$$
+:eqlabel:`eq_opt-intro-valley`
 
 which curves gently along $x_1$ (second derivative $0.2$) and steeply
 along $x_2$ (second derivative $4$). Gradient descent updates both
@@ -257,6 +259,7 @@ A 25-parameter network demonstrates the phenomenon, and
 :numref:`subsec_mdl-quadratic-model` does exactly that.
 
 ### Noisy Gradients
+:label:`subsec_opt-intro-noise`
 
 The second difficulty is that the gradient we use is an estimate. The loss
 is an average over the training set, so computing its exact gradient costs
@@ -329,40 +332,80 @@ learning-rate schedules, and methods for controlling gradient noise.
 
 ## Exercises
 
-1. Consider a simple MLP with a single hidden layer of, say, $d$
-   dimensions in the hidden layer and a single output. Show that for any
-   local minimum there are at least $d!$ equivalent solutions that behave
-   identically.
-1. Assume that we have a symmetric random matrix $\mathbf{M}$ where the
-   entries $M_{ij} = M_{ji}$ are each drawn from some probability
-   distribution $p_{ij}$. Furthermore assume that $p_{ij}(x) = p_{ij}(-x)$,
-   i.e., that the distribution is symmetric (see e.g.,
-   :citet:`Wigner.1958` for details).
-    1. Prove that the distribution over eigenvalues is also symmetric.
-       That is, for any eigenvector $\mathbf{v}$ the probability that the
-       associated eigenvalue $\lambda$ satisfies
-       $P(\lambda > 0) = P(\lambda < 0)$.
-    1. Why does the above *not* imply $P(\lambda > 0) = 0.5$?
-1. Assume that you want to balance a (real) ball on a (real) saddle.
-    1. Why is this hard?
-    1. Can you exploit this effect also for optimization algorithms?
-1. Consider the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ from this
-   section.
-    1. What is the largest learning rate for which gradient descent still
-       converges? Verify your answer with `d2l.train_2d`.
-    1. At $\eta = 0.45$, by what factor per step do $|x_1|$ and $|x_2|$
-       shrink? Roughly how many steps does it take to reduce $|x_1|$ by a
-       factor of $100$? Check your prediction numerically.
+1. **Permutation-symmetric minima.** Consider a multilayer perceptron with
+   one hidden layer of $d$ units and a single output, and let
+   $\boldsymbol{\theta}^\star$ be a local minimum of its loss at which no
+   two hidden units have identical incoming weights.
+    1. Show that permuting the hidden units yields $d!$ distinct parameter
+       vectors that all compute the same function and are therefore all
+       local minima with the same loss.
+    1. The set of minimizers of a convex function is convex. Explain why
+       the $d!$ copies show that the loss cannot be a convex function of
+       the parameters.
+    1. For the activation $\tanh$, identify a second symmetry of each
+       hidden unit and state the resulting count of equivalent minima.
+1. **Eigenvalues of symmetric random matrices.** Let $\mathbf{M}$ be a
+   symmetric random matrix whose entries $M_{ij} = M_{ji}$ are drawn
+   independently from distributions $p_{ij}$ with $p_{ij}(x) = p_{ij}(-x)$
+   :cite:`Wigner.1958`.
+    1. Prove that the distribution of eigenvalues is symmetric: for any
+       eigenvector $\mathbf{v}$, the associated eigenvalue $\lambda$
+       satisfies $P(\lambda > 0) = P(\lambda < 0)$.
+    1. Explain why this symmetry alone does not determine the fraction of
+       negative eigenvalues in a single realization of $\mathbf{M}$, and
+       what the semicircle law of :citet:`Wigner.1958` says about that
+       fraction for large $k$. Which assumption of the coin-flip heuristic
+       in :numref:`subsec_opt-intro-saddles` does the law replace?
+1. **Classifying stationary points.** Each function in
+   :numref:`subsec_opt-intro-saddles` and its neighbouring subsections has
+   a point at which gradient descent slows or stops: the two local minima
+   of $f(x) = x\cos(\pi x)$ on $[-1, 2]$, the origin of $f(x) = x^3$, the
+   origin of $f(x, y) = x^2 - y^2$, and $x = 4$ for $f(x) = \tanh x$.
+    1. Compute the gradient and the Hessian at each point and classify it
+       by the eigenvalue test of :numref:`subsec_opt-intro-saddles`: local
+       minimum, local maximum, saddle, inconclusive, or not a critical
+       point at all.
+    1. Settle the inconclusive case by a different argument.
+    1. Which of these points does gradient descent from a random nearby
+       start leave with probability one, and at which does it stall for a
+       long time without being trapped?
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 6.6.*
+1. [code] **Escaping a saddle.** Balancing a ball on the saddle
+   $f(x_1, x_2) = x_1^2 - x_2^2$ of :numref:`fig_mdl-opt-saddle` is stable
+   along $x_1$ and unstable along $x_2$. Gradient descent with learning
+   rate $\eta$ started at $(1, \delta)$ behaves the same way.
+    1. Write the iterates in closed form and derive the number of steps
+       until $|x_2| \geq 1$ as a function of $\delta$ and $\eta$. Evaluate
+       it for $\delta \in \{10^{-2}, 10^{-6}\}$ at $\eta = 0.1$, check both
+       counts numerically, and state what happens for $\delta = 0$.
+    1. Add zero-mean Gaussian noise of standard deviation $\sigma$ to every
+       gradient evaluation and measure the escape time from $\delta = 0$
+       for $\sigma \in \{10^{-3}, 10^{-1}\}$. Reconcile the result with
+       the statement in :numref:`subsec_opt-intro-noise` that gradient
+       descent from a random start escapes strict saddles without noise.
+1. [code] **An ill-conditioned valley.** Gradient descent on the valley
+   :eqref:`eq_opt-intro-valley` multiplies $x_1$ by $1 - 0.2\eta$ and
+   $x_2$ by $1 - 4\eta$ on every step, so it is stable for $\eta < 0.5$.
+    1. Modify `gd_valley` so that the learning rate is a parameter and run
+       30 steps at $\eta \in \{0.45, 0.5, 0.55\}$ with `d2l.train_2d`.
+       Describe the three trajectories and account for each with the two
+       factors.
+    1. At $\eta = 0.45$, how many steps does it take until both $|x_1|$ and
+       $|x_2|$ are below $1\%$ of their starting values, and which
+       coordinate sets that count? Check the prediction numerically.
     1. For $f(\mathbf{x}) = \frac{\lambda_{\min}}{2} x_1^2 +
-       \frac{\lambda_{\max}}{2} x_2^2$ with the best stable learning rate,
-       show that the number of steps needed grows linearly with the
-       condition number $\kappa = \lambda_{\max}/\lambda_{\min}$.
-    1. Suppose you were allowed to rescale the coordinate
+       \frac{\lambda_{\max}}{2} x_2^2$ at a learning rate just below the
+       stability limit $2/\lambda_{\max}$, measure the step count of the
+       previous item for $\kappa = \lambda_{\max}/\lambda_{\min} \in
+       \{10, 100, 1000\}$ and compare with the linear growth in $\kappa$
+       that :numref:`subsec_mdl-quadratic-model` derives.
+    1. Suppose the first coordinate is rescaled to
        $\tilde{x}_1 = \alpha x_1$ before optimizing. Which $\alpha$ makes
-       the valley perfectly conditioned? Which sections of this chapter
-       estimate such rescalings automatically, from gradients alone?
-1. What other challenges involved in deep learning optimization can you
-   think of?
+       the valley perfectly conditioned, and how many steps does gradient
+       descent then need to satisfy the criterion of the second item?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/487)

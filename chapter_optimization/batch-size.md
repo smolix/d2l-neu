@@ -74,6 +74,7 @@ large increase in total compute; beyond it, the compute cost should grow
 faster than the reduction in steps. The rest of this section tests that prediction.
 
 ### A Two-Batch Estimator
+:label:`subsec_batch-size-estimator`
 
 Neither $\operatorname{tr} \boldsymbol{\Sigma}$ nor $\|\nabla f\|^2$ is
 observable from a single minibatch, but both fall out of a quantity that is:
@@ -277,6 +278,7 @@ against a few thousand characters here. What transfers is the concept and
 the growth during training, not the number.
 
 ## Steps to a Target
+:label:`subsec_batch-size-steps`
 
 The noise scale makes a falsifiable claim about training speed. To test it
 we use the standard experimental design of the large-batch literature
@@ -676,6 +678,7 @@ full retuning of $\eta$ and training length; the durable cost of a large
 batch is data efficiency, which is what this section measured.
 
 ## Growing the Batch
+:label:`subsec_batch-size-growing`
 
 The noise scale is not a constant of the problem. We measured it growing
 within the first 500 steps (severalfold for the CNN, one to two orders of
@@ -731,38 +734,58 @@ is why serious runs grow their batch during training rather than fixing it.
 
 ## Exercises
 
-1. The noise-scale cell measured `TinyLM` at initialization and after 500
-   steps. Extend it: train for 3,000 steps and measure every 500, then plot
-   the noise scale against the training loss at each checkpoint. If you were
-   scheduling a batch-size ramp by the rule "double $b$ when
-   $b_{\textrm{noise}}$ overtakes it", where would the doublings land?
-1. Extend the `TinyLM` sweep to $b = 1024$ under the square-root rule. You
-   should find that the step count stops falling and may rise outright.
-   Then rerun $b = 1024$ with $\eta$ held at its $b = 256$ value. Explain
-   both observations with :eqref:`eq_steps-examples` and the saturating
-   optimal step size $\eta_{\textrm{opt}}(b)$.
-1. Estimate $b_{\textrm{noise}}$ for `TinyLM` as a run-averaged quantity
-   (for instance, the mean of your checkpoint measurements from the first
-   exercise, up to the target loss) and compare it with the elbow of the
-   steps-to-target curve, i.e., the batch size at which examples-to-target
-   reaches twice its minimum. How close is the factor-of-two prediction of
-   :eqref:`eq_steps-examples`?
-1. The sweeps moved $\eta$ by the square-root rule rather than retuning.
-   Retune properly: for each batch size in the CNN sweep, run a three-point
-   learning-rate grid around the rule's value and keep the best
+1. [code] **The noise scale over training.** `noise_scale` of
+   :numref:`subsec_batch-size-estimator` measured `TinyLM` at
+   initialization and after 500 steps of Adam. Train for 3,000 steps and
+   measure every 500 steps.
+    1. Plot the noise scale against the training loss at each checkpoint.
+       Does the growth continue, slow down, or reverse?
+    1. Under the rule of :numref:`subsec_batch-size-growing`, doubling $b$
+       whenever $b_{\textrm{noise}}$ overtakes it, and starting from
+       $b = 4$, at which steps would the doublings land?
+1. [code] **Past the elbow.** Extend the `TinyLM` sweep of
+   :numref:`subsec_batch-size-steps` to $b = 1024$ under the square-root
+   rule of :eqref:`eq_lr-rules`, then rerun $b = 1024$ with $\eta$ held at
+   its $b = 256$ value.
+    1. How do the step counts of the two $b = 1024$ runs compare with each
+       other and with the $b = 256$ run?
+    1. Explain both observations with :eqref:`eq_steps-examples` and the
+       saturating optimal step size
+       $\eta_{\textrm{opt}}(b) = \eta_{\max} / (1 + b_{\textrm{noise}}/b)$.
+1. [code] **The factor-of-two check.** Equation :eqref:`eq_steps-examples`
+   predicts that examples-to-target reach twice their minimum at
+   $b = b_{\textrm{noise}}$.
+    1. Estimate a run-averaged $b_{\textrm{noise}}$ for `TinyLM` from the
+       checkpoint measurements of the first problem, up to the target loss
+       of $1.5$.
+    1. Read the elbow off `lm_bs` and `lm_steps`, the batch size at which
+       $b\, S(b)$ reaches twice its minimum, and compare. How close is the
+       prediction, and which of the two estimates is noisier?
+1. [code] **Retuning instead of scaling.** The CNN sweep recorded in
+   `cnn_bs` and `cnn_steps` moved $\eta$ by the square-root rule rather than
+   retuning. For each batch size, run a three-point learning-rate grid
+   spaced by factors of two around the rule's value and keep the best
    steps-to-target. Which points of the curve move, and does the elbow?
-1. Suppose one optimizer step at batch size $b$ takes $t(b) = t_0 (1 + b /
-   b_{\textrm{sat}})$ seconds on your hardware, where $b_{\textrm{sat}}$ is
-   the batch size that saturates the device (measure both constants with
-   `d2l.Timer` if you can). Combine $t(b)$ with your measured $S(b)$ to
-   plot time-to-target against compute-to-target across $b$. Identify the
-   time-optimal and the compute-optimal batch size. This two-axis reading
-   is the form in which the batch-size decision reaches a training team.
-1. The census of :numref:`subsec_tinylm` splits `TinyLM`'s parameters into
-   embeddings, matrices, and vectors. Restrict `grad_sq_norm` to each
-   population in turn and measure three separate noise scales. Which
-   population is noisiest, and how does your answer relate to the sparse
-   gradients that motivated AdaGrad in :numref:`sec_adam`?
+1. [extended] **Time-optimal and compute-optimal batch size.** Suppose one
+   optimizer step at batch size $b$ takes
+   $t(b) = t_0 (1 + b / b_{\textrm{sat}})$ seconds, where $b_{\textrm{sat}}$
+   is the batch size that saturates the device.
+    1. Measure $t_0$ and $b_{\textrm{sat}}$ for `TinyLM` on your hardware
+       with `d2l.Timer` by timing steps at several batch sizes.
+    1. Combine $t(b)$ with the measured $S(b)$ in `lm_steps` to plot
+       time-to-target against compute-to-target across $b$. Identify the
+       time-optimal and the compute-optimal batch size and the factor by
+       which the two differ in each of the two costs.
+1. [code] **Which population is noisiest?** The census of
+   :numref:`subsec_tinylm` splits `TinyLM`'s parameters into embeddings,
+   matrices, and vectors. Restrict `grad_sq_norm` to each population in
+   turn and measure three separate noise scales with `noise_scale`, at
+   initialization and after 500 steps.
+    1. Which population is noisiest, and does the ranking change during
+       training?
+    1. Relate the answer to the sparse gradients that motivated AdaGrad in
+       :numref:`sec_adam`, and state what it implies for one global batch
+       size serving all three populations.
 
 [Discussions](https://d2l.discourse.group/)
 

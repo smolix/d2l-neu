@@ -159,6 +159,7 @@ suits a different population of the parameter census.
 :label:`fig_opt_norm_balls`
 
 ## Orthogonalization by Newton--Schulz
+:label:`subsec_muon-newton-schulz`
 
 Equation :eqref:`eq_muon-spectral-step` asks for $\mathbf{U}\mathbf{V}^\top$,
 and computing an SVD for every matrix at every step is out of the question:
@@ -346,6 +347,7 @@ def scratch_muon(learning_rate, momentum=0.95):
 ```
 
 ### Dividing the Census
+:label:`subsec_muon-census`
 
 Muon is an optimizer for hidden matrices only, so a real training run is a
 *hybrid*: the parameter-group mechanism of :numref:`sec_adamw`, with the
@@ -432,6 +434,7 @@ def muon_adamw(lr, exclude=('emb', 'head')):
 ```
 
 ### Comparison on the Language Model
+:label:`subsec_muon-lm-race`
 
 The protocol is the one from :numref:`sec_adam`: same model, same
 initialization, 2,000 steps at a constant learning rate, a four-point
@@ -860,39 +863,83 @@ and suspicion of round numbers.
 
 ## Exercises
 
-1. Derive the sign-descent limit of Adam. Setting $\beta_1 = \beta_2 = 0$ in
-   :eqref:`eq_adam-moments` and :eqref:`eq_adam-update`, show that the
-   update becomes $\eta\, \mathbf{g}_t / (|\mathbf{g}_t| + \epsilon)$ and
-   hence $\eta\, \mathrm{sign}(\mathbf{g}_t)$ as $\epsilon \to 0$. Which
-   norm ball in :eqref:`eq_muon-ball` does this step solve? What do the two
-   moving averages restore that the limit lacks?
-1. Verify the RMS-matching factor. Show that $\|\mathbf{U}\mathbf{V}^\top\|_F
-   = \sqrt{\min(m, n)}$ for an $m \times n$ matrix of rank $\min(m, n)$, so
-   the orthogonalized update has entrywise RMS $1/\sqrt{\max(m, n)}$. Then
-   instrument a short AdamW run of `TinyLM` to measure the actual RMS of its
-   updates, and compare with the constant $0.2$ used in
-   :eqref:`eq_muon-update`.
-1. Rerun the tuned hybrid with `num_iters=1` and `num_iters=10` in
-   `newton_schulz`. Measure final loss and wall-clock time per step. Where
-   does the quality saturate, and why does one iteration already capture
-   part of the benefit? (Plot the quintic $p(x)$ of :eqref:`eq_muon-quintic`
-   to see what a single application does to the spectrum.)
-1. Move the embedding tables and the output head into the Muon group and
-   rerun the sweep. Explain what you observe using the one-hot-input
-   argument: what does orthogonalizing an embedding table's momentum do to
-   the update received by the rows of rare tokens?
-1. Implement Lion :cite:`Chen.Liang.Huang.ea.2023` in about six lines: with
-   buffer $\mathbf{m}_t$, update $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,
-   \mathrm{sign}(\beta_1 \mathbf{m}_{t-1} + (1 - \beta_1)\, \mathbf{g}_t)$
-   followed by $\mathbf{m}_t = \beta_2 \mathbf{m}_{t-1} + (1 - \beta_2)\,
-   \mathbf{g}_t$, with $(\beta_1, \beta_2) = (0.9, 0.99)$. Compare it with
-   AdamW and the hybrid on `TinyLM` at matched four-point tuning (Lion's
-   best learning rate is typically several times smaller than AdamW's).
-   How much optimizer state does each method carry per parameter?
-1. Complete the proof of :eqref:`eq_muon-spectral-step`: show that if
-   $\|\mathbf{A}\|_2 \leq 1$ then every diagonal entry of
-   $\mathbf{U}^\top \mathbf{A} \mathbf{V}$ has absolute value at most $1$,
-   and identify when equality holds simultaneously for all entries.
+1. [code] **Sign descent on the testbed.** With $\beta_1 = \beta_2 = 0$
+   and $\epsilon \to 0$, Adam's update is $\eta\,\mathrm{sign}(\mathbf{g}_t)$,
+   the steepest step under the $\ell_\infty$ ball of :eqref:`eq_muon-ball`,
+   and :citet:`Kunstner.Chen.Lavington.ea.2023` report that Adam's
+   advantage over SGD on language models tracks that of sign descent.
+    1. With $\beta_1 = 0$ but $\beta_2 > 0$ the update is no longer a sign.
+       Show that its magnitude in a coordinate is $|g_t| / \sqrt{\hat{v}_t}$,
+       that its expectation is at most $1$ when $\hat{v}_{t-1}$ equals the
+       stationary mean of the squared gradients, and that no such bound holds
+       for a single step.
+    1. Implement plain sign descent, without a momentum buffer, and run it
+       through `run_lm` on a four-point learning-rate grid. Compare its best
+       curve with the best of `adamw_lm` and with tuned SGD with momentum
+       from :numref:`sec_adam`. Does the ranking support the report?
+1. [code] **The RMS-matching factor.** The update :eqref:`eq_muon-update`
+   rescales the orthogonalized matrix by $0.2\sqrt{\max(m, n)}$ so that
+   its entries have root-mean-square size $0.2\,\eta$.
+    1. `newton_schulz` leaves the singular values in a band around $1$
+       rather than exactly at $1$. Bound the ratio between the Frobenius
+       norm of its output and $\sqrt{\min(m, n)}$ in terms of the band's
+       endpoints, and measure the ratio on the $96 \times 64$ example of
+       :numref:`subsec_muon-newton-schulz`.
+    1. Instrument a short AdamW run of `TinyLM` to measure the entrywise
+       RMS of its actual updates, per parameter tensor, over the first few
+       hundred steps. Does the constant $0.2$ fit the hidden matrices, the
+       embeddings, or both?
+1. [code] **Newton–Schulz iterations.** Rerun the tuned hybrid of
+   :numref:`subsec_muon-lm-race` with `num_iters=1` and `num_iters=10` in
+   `newton_schulz`, measuring the final loss and the wall-clock time per
+   step.
+    1. Where does quality saturate, and how does the time per step grow
+       with the iteration count?
+    1. Plot the quintic $p(x)$ of :eqref:`eq_muon-quintic` on $[0, 1]$ and
+       use it to explain what one iteration does to a spectrum spanning an
+       order of magnitude, and hence how much of the equalization a single
+       iteration achieves.
+1. [code] **Orthogonalizing the embeddings.** The split in
+   :numref:`subsec_muon-census` keeps the embedding tables and the output
+   head with AdamW. Change the parameter assignment that `muon_adamw`
+   receives so that both move into the Muon group, rerun the sweep of
+   :numref:`subsec_muon-lm-race`, and explain what you observe with the
+   one-hot-input argument: what does orthogonalizing an embedding table's
+   momentum do to the update received by the rows of rare tokens?
+1. [code] **Lion.** Implement Lion :cite:`Chen.Liang.Huang.ea.2023` in about
+   six lines: with buffer $\mathbf{m}_t$, update
+   $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\mathrm{sign}(\beta_1 \mathbf{m}_{t-1} + (1 - \beta_1)\, \mathbf{g}_t),
+   \qquad \mathbf{m}_t = \beta_2 \mathbf{m}_{t-1} + (1 - \beta_2)\, \mathbf{g}_t,$$
+   with $(\beta_1, \beta_2) = (0.9, 0.99)$.
+    1. Compare it with AdamW and the hybrid on `TinyLM` at matched
+       four-point tuning, shifting Lion's grid down by a factor of three to
+       ten relative to AdamW's, since every coordinate of its update has
+       magnitude exactly $\eta$.
+    1. How much optimizer state does each of the three methods carry per
+       parameter, and to which ball of :numref:`tab_muon_norms` does Lion
+       belong?
+1. **Completing the spectral-step bound.** The duality argument for
+   :eqref:`eq_muon-spectral-step` uses the claim that no entry of a matrix
+   with unit spectral norm exceeds one in absolute value.
+    1. Show that $\|\mathbf{A}\|_2 \leq 1$ implies
+       $|(\mathbf{U}^\top \mathbf{A} \mathbf{V})_{ii}| \leq 1$ for every
+       $i$.
+    1. Identify when equality holds for all $i$ simultaneously, and hence
+       when the minimizer in :eqref:`eq_muon-spectral-step` is unique.
+1. [code] **How low-rank are the gradients?** ● Equation
+   :eqref:`eq_muon-spectral-step` equalizes singular directions on the
+   grounds that a training gradient's singular values are dominated by a
+   few large ones, the case :citet:`Jordan.Jin.Boza.ea.2024` make for
+   orthogonalizing. Measure it on `TinyLM`.
+    1. For one hidden matrix, record the singular values of the Nesterov
+       blend $\mathbf{G}_t + \mu \mathbf{M}_t$ at initialization, after
+       200 steps, and at the end of a 2,000-step hybrid run. Report the
+       fraction of the squared Frobenius norm carried by the top 10% of
+       singular values at each point.
+    1. Does the concentration grow or shrink over training, and how does
+       the answer bear on the choice of five Newton–Schulz iterations,
+       given that a weak direction grows by at most $3.4$-fold per
+       iteration?
 
 <!-- slides -->
 

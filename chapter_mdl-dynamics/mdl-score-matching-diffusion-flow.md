@@ -1166,7 +1166,7 @@ flow that the network learns is generally **curved**. Two straight segments
 that cross at $(\mathbf{x}, t)$ feed the posterior mean
 :eqref:`eq_mdl-marginal-velocity` two different directions, and the learned
 field (which, like any function, can have only one value there) averages
-them. An ODE's trajectories cannot cross (uniqueness,
+them. An ODE's trajectories cannot meet at the same $(\mathbf{x}, t)$ (uniqueness,
 :numref:`sec_mdl-ode-existence-uniqueness`), so the learned flow bends to
 avoid the collisions that the conditional segments ignore. The independent
 coupling of $\mathbf{x}_0$ and $\mathbf{x}_1$ can produce many crossings and a

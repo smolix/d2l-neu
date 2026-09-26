@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/discrete-diffusion.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:21cb79185821fd278c0cd5d56ef0e62e20c88d7233f41af75104fdbdb6cd0c2d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "discrete-diffusion": {
+      "code_fingerprint": "sha256:c7e49803ad99b6f242f769f72a986c5d683e860486a91ebd1cc929366d0d3fd4",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-experiments-on-the-running-example-1": {
+      "code_fingerprint": "sha256:180f724d691cbd4e50fe9ada31fdb2d99b359ca39d454c8f4084fbcc48fdb81f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "entropy of the table: 4.840 nats; bound of an exact network with T = 32: 4.855 nats\nTV(histogram of 20000 true samples, table): 0.036\nTV(product of the marginals, table): 0.314\n"
+        }
+      ]
+    },
+    "discrete-diffusion-experiments-on-the-running-example-2": {
+      "code_fingerprint": "sha256:d37c0eb1665cab115f3c4c44eb73089017fefc0d42faedeb78387d1be90b76d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-experiments-on-the-running-example-3": {
+      "code_fingerprint": "sha256:867820896e530dbdf4deb263416fa2b79961ccbad4446cdf80727ed0636fe089",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step    0: exact bound 6.918 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 2000: exact bound 4.874 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 4000: exact bound 4.870 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final exact bound 4.864 nats; entropy 4.840 nats\n"
+        }
+      ]
+    },
+    "discrete-diffusion-experiments-on-the-running-example-4": {
+      "code_fingerprint": "sha256:f2d83cfe0e9685baa60d0d7b920cfe6a21dff5e7874e322a510a3bbe53d798e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "steps  TV to table  predicted  TV to product\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   32        0.060      0.010          0.310\n    8        0.079      0.039          0.282\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    2        0.175      0.157          0.163\n    1        0.327      0.314          0.062\n"
+        }
+      ]
+    },
+    "discrete-diffusion-experiments-on-the-running-example-5": {
+      "code_fingerprint": "sha256:6930a9aac730d6a38096a2b8d21e1b87d4f419122a90122a220ea58b17667458",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-experiments-on-the-running-example-5-1.png",
+          "bytes": 13137,
+          "sha256": "sha256:6e62e4b62ef8323f575c231ba3b23b903a64f0ce256f8f018504d5ec4d641bd3"
+        }
+      ]
+    },
+    "discrete-diffusion-images-as-binary-tokens-1": {
+      "code_fingerprint": "sha256:25978951da3c0b51c2efe3df5c914ffa1de64b63cc1d8c03d1876095c9bd301e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step   0: loss 0.789 nats per pixel\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 200: loss 0.162 nats per pixel\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 400: loss 0.141 nats per pixel\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 600: loss 0.148 nats per pixel\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "held-out bound: 0.180 bits per pixel; independent pixels: 0.708 bits per pixel\n"
+        }
+      ]
+    },
+    "discrete-diffusion-images-as-binary-tokens-2": {
+      "code_fingerprint": "sha256:8977e496ed722e2b1876e6e99326621444b592c836de4cdf356675dcaeeea958",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "speckles: training images 0.0037, 100-step samples 0.0077, 4-step samples 0.0263\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-1.png",
+          "bytes": 60449,
+          "sha256": "sha256:1d8bd6c740374e792c0beae7c5819b37324980ddf36f047be59f5eb3c028e091"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-2.png",
+          "bytes": 110081,
+          "sha256": "sha256:5c7905f8c751ad2e01563fa1a099981cb9cfb99750f09c32b0a5d7c77a07411c"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-3.png",
+          "bytes": 114716,
+          "sha256": "sha256:c7d0720a87482068fe3b91d12db1359ac9da1d7783ac35ccfc1b0cd628225508"
+        }
+      ]
+    }
+  }
+}

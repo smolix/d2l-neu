@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/limits.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "limits-the-limits-of-gans-and-energy-based-models": {
+      "code_fingerprint": "sha256:1b8fcf833d0dc762ab8b2e9023826049c328a405c4876b884a695587235b5beb",
+      "kind": "text",
+      "outputs": []
+    },
+    "limits-quadrature-1": {
+      "code_fingerprint": "sha256:dfa6bdad8764f4de9cfa3b457777aa92dbfd55179b2b8e8a133ddbe5cf1389c0",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Z = 10.1219; the normalized density integrates to 1.0000\np(-1)/p(1) from energies alone: 17.8175; from the normalized density: 17.8175\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "limits/limits-quadrature-1-1.png",
+          "bytes": 24535,
+          "sha256": "sha256:1b856c1e57d19e9eb8a556088142df450bf96f7ae6bbcf56c84ce43e2ded46f1"
+        }
+      ]
+    },
+    "limits-quadrature-2": {
+      "code_fingerprint": "sha256:20f05abf332560da49ec79a51d701c8ae4b650d68cc662ec2b7528c96cefe79e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 1:      64 energy evaluations, log Z =   2.315\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 2:    4096 energy evaluations, log Z =   3.643\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 3:  262144 energy evaluations, log Z =   4.184\nd = 10: 64^10 = 10^18 energy evaluations\nd = 784: 64^784 = 10^1416 energy evaluations\n"
+        }
+      ]
+    },
+    "limits-monte-carlo-estimates": {
+      "code_fingerprint": "sha256:cecc0b85b3c91d9814b9a782f99aeaaca867567b1fed08a13b1abb99acee1985",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  d  estimate / Z  predicted rel. std. error  effective samples\n  1         1.000                    0.00415            37568.7\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  2         0.997                    0.00799            14351.7\n  4         0.985                     0.0232             1425.4\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  8         1.003                      0.173              145.8\n 16         1.088                       9.43                6.0\n 32         0.079                   2.81e+04               10.5\n"
+        }
+      ]
+    }
+  }
+}

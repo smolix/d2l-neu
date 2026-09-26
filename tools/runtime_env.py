@@ -27,6 +27,21 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_mdl-information-theory/mdl-divergences-distances.ipynb",
     "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
     "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
+    # Diffusion chapter (ch. 17): every experiment is sized for a laptop CPU
+    # (2-D mixtures in seconds; the small Fashion-MNIST U-Nets in minutes).
+    # Listed explicitly because the keyword scan can otherwise match "GPU"
+    # inside base64 image outputs, making the classification non-deterministic.
+    "chapter_diffusion-models/limits.ipynb",
+    "chapter_diffusion-models/energy-training.ipynb",
+    "chapter_diffusion-models/score-matching.ipynb",
+    "chapter_diffusion-models/denoising.ipynb",
+    "chapter_diffusion-models/langevin.ipynb",
+    "chapter_diffusion-models/annealed-langevin.ipynb",
+    "chapter_diffusion-models/ddpm.ipynb",
+    "chapter_diffusion-models/image-diffusion.ipynb",
+    "chapter_diffusion-models/ddim.ipynb",
+    "chapter_diffusion-models/flow-matching.ipynb",
+    "chapter_diffusion-models/discrete-diffusion.ipynb",
 }
 
 # Per-framework thread-limiting env vars.

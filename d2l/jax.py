@@ -2700,6 +2700,112 @@ def r1_r2_penalty(critic, real, fake):
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
+class GaussianMixture:
+    """A mixture of isotropic Gaussians with closed-form density and score.
+
+    Defined in :numref:`sec_diffusion-ebm-training`"""
+    def __init__(self, means, weights, std):
+        self.means = jnp.asarray(means, dtype=jnp.float32)
+        self.weights = jnp.asarray(weights, dtype=jnp.float32)
+        self.std = std
+
+    def sample(self, key, n):
+        k1, k2 = jax.random.split(key)
+        k = jax.random.choice(k1, len(self.weights), (n,), p=self.weights)
+        return self.means[k] + self.std * jax.random.normal(
+            k2, (n, self.means.shape[1]))
+
+    def log_prob(self, x, scale=1.0, sigma=0.0):
+        """Log density of scale * x0 + sigma * eps, where x0 is a mixture draw."""
+        var = (scale * self.std) ** 2 + sigma ** 2
+        d2 = ((x[:, None, :] - scale * self.means[None]) ** 2).sum(-1)
+        logs = (jnp.log(self.weights)[None] - d2 / (2 * var)
+                - 0.5 * x.shape[-1] * math.log(2 * math.pi * var))
+        return jax.nn.logsumexp(logs, 1)
+
+    def score(self, x, scale=1.0, sigma=0.0):
+        """The gradient of log_prob with respect to x, in closed form."""
+        var = (scale * self.std) ** 2 + sigma ** 2
+        d2 = ((x[:, None, :] - scale * self.means[None]) ** 2).sum(-1)
+        r = jax.nn.softmax(jnp.log(self.weights)[None] - d2 / (2 * var), 1)
+        return (r[:, :, None]
+                * (scale * self.means[None] - x[:, None, :])).sum(1) / var
+
+class ScoreNet(nnx.Module):
+    """A two-dimensional score model: a multilayer perceptron with two outputs.
+
+    Defined in :numref:`sec_diffusion-score-matching`"""
+    def __init__(self, hidden=128, rngs=None):
+        self.h1 = nnx.Linear(2, hidden, rngs=rngs)
+        self.h2 = nnx.Linear(hidden, hidden, rngs=rngs)
+        self.out = nnx.Linear(hidden, 2, rngs=rngs)
+
+    def __call__(self, x):
+        return self.out(nnx.silu(self.h2(nnx.silu(self.h1(x)))))
+
+def sinusoidal_embedding(t, dim):
+    """Map integer steps t (shape (n,)) to sinusoidal features (n, dim).
+
+    Defined in :numref:`sec_diffusion-annealed`"""
+    freqs = jnp.exp(-math.log(10000) * jnp.arange(dim // 2) / (dim // 2))
+    args = t.astype(jnp.float32)[:, None] * freqs[None]
+    return jnp.concatenate([jnp.sin(args), jnp.cos(args)], 1)
+
+class ResBlock(nnx.Module):
+    """Two 3x3 convolutions with group normalization and an added embedding.
+
+    Defined in :numref:`sec_diffusion-annealed`"""
+    def __init__(self, c_in, c_out, emb_dim, rngs):
+        self.norm1 = nnx.GroupNorm(c_in, num_groups=8, rngs=rngs)
+        self.conv1 = nnx.Conv(c_in, c_out, (3, 3), padding='SAME', rngs=rngs)
+        self.emb = nnx.Linear(emb_dim, c_out, rngs=rngs)
+        self.norm2 = nnx.GroupNorm(c_out, num_groups=8, rngs=rngs)
+        self.conv2 = nnx.Conv(c_out, c_out, (3, 3), padding='SAME', rngs=rngs)
+        self.skip = (nnx.Conv(c_in, c_out, (1, 1), rngs=rngs) if c_in != c_out
+                     else None)
+
+    def __call__(self, x, emb):
+        h = self.conv1(nnx.silu(self.norm1(x)))
+        h = h + self.emb(emb)[:, None, None, :]
+        h = self.conv2(nnx.silu(self.norm2(h)))
+        return h + (self.skip(x) if self.skip is not None else x)
+
+class UNet(nnx.Module):
+    """A small U-Net for 28x28 images (NHWC), conditioned on a step index t.
+
+    Defined in :numref:`sec_diffusion-annealed`"""
+    def __init__(self, ch=32, emb_dim=128, in_channels=1, out_channels=1,
+                 rngs=None):
+        self.emb_dim = emb_dim
+        self.emb1 = nnx.Linear(emb_dim, emb_dim, rngs=rngs)
+        self.emb2 = nnx.Linear(emb_dim, emb_dim, rngs=rngs)
+        self.inc = nnx.Conv(in_channels, ch, (3, 3), padding='SAME', rngs=rngs)
+        self.down1 = ResBlock(ch, ch, emb_dim, rngs)                   # 28 x 28
+        self.pool1 = nnx.Conv(ch, ch, (3, 3), strides=2, padding='SAME',
+                              rngs=rngs)                                # -> 14 x 14
+        self.down2 = ResBlock(ch, 2 * ch, emb_dim, rngs)
+        self.pool2 = nnx.Conv(2 * ch, 2 * ch, (3, 3), strides=2,
+                              padding='SAME', rngs=rngs)                # -> 7 x 7
+        self.mid = ResBlock(2 * ch, 2 * ch, emb_dim, rngs)
+        self.up1 = ResBlock(4 * ch, ch, emb_dim, rngs)                 # 14 x 14
+        self.up0 = ResBlock(2 * ch, ch, emb_dim, rngs)                 # 28 x 28
+        self.norm = nnx.GroupNorm(ch, num_groups=8, rngs=rngs)
+        self.outc = nnx.Conv(ch, out_channels, (3, 3), padding='SAME', rngs=rngs)
+
+    def __call__(self, x, t, cond=None):
+        emb = sinusoidal_embedding(t, self.emb_dim)
+        if cond is not None:
+            emb = emb + cond
+        emb = self.emb2(nnx.silu(self.emb1(emb)))
+        h1 = self.down1(self.inc(x), emb)
+        h2 = self.down2(self.pool1(h1), emb)
+        h = self.mid(self.pool2(h2), emb)
+        h = jnp.repeat(jnp.repeat(h, 2, axis=1), 2, axis=2)
+        h = self.up1(jnp.concatenate([h, h2], -1), emb)  # skip connection
+        h = jnp.repeat(jnp.repeat(h, 2, axis=1), 2, axis=2)
+        h = self.up0(jnp.concatenate([h, h1], -1), emb)  # skip connection
+        return self.outc(nnx.silu(self.norm(h)))
+
 class Encoder(nnx.Module):
     """The base encoder interface for the encoder-decoder architecture.
 

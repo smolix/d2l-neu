@@ -194,6 +194,17 @@ book:
         - chapter_generative-adversarial-networks/conditional.qmd
         - chapter_generative-adversarial-networks/adversarial-losses.qmd
         - chapter_diffusion-models/index.qmd
+        - chapter_diffusion-models/limits.qmd
+        - chapter_diffusion-models/energy-training.qmd
+        - chapter_diffusion-models/score-matching.qmd
+        - chapter_diffusion-models/denoising.qmd
+        - chapter_diffusion-models/langevin.qmd
+        - chapter_diffusion-models/annealed-langevin.qmd
+        - chapter_diffusion-models/ddpm.qmd
+        - chapter_diffusion-models/image-diffusion.qmd
+        - chapter_diffusion-models/ddim.qmd
+        - chapter_diffusion-models/flow-matching.qmd
+        - chapter_diffusion-models/discrete-diffusion.qmd
     - part: chapter_language-models/index.qmd
       chapters:
         - chapter_natural-language-processing-pretraining/index.qmd

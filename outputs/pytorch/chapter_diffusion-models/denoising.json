@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/denoising.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:aa351450952c7aa11ae37f2f908891b07c01682baabe875daddcf40b7c245c4f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "denoising-denoising-score-matching": {
+      "code_fingerprint": "sha256:1e23f474261132c9fa835561067fc0e924cb1f1ec6e07b3f17ee78d03d6a6af9",
+      "kind": "text",
+      "outputs": []
+    },
+    "denoising-the-noise-level-trades-bias-against-variance-1": {
+      "code_fingerprint": "sha256:74d81dd453455e82b925c70f057d827b396030327b6df4de4109f7b5beefb551",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma  vs. score of p_sigma  vs. score of the data\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  0.1                 0.269                  0.286\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  0.3                 0.093                  0.375\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  1.0                 0.006                  2.674\n"
+        }
+      ]
+    },
+    "denoising-the-noise-level-trades-bias-against-variance-2": {
+      "code_fingerprint": "sha256:4d45eeeeb7a1523182eed5372de3508a8367cea6dfd0959989e6733f65ad3dd0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "denoising/denoising-the-noise-level-trades-bias-against-variance-2-1.png",
+          "bytes": 134335,
+          "sha256": "sha256:ed071b08133f62b808893815b9a61f0c07353ab948d2d519998c194a29520aa1"
+        }
+      ]
+    },
+    "denoising-denoising-images-1": {
+      "code_fingerprint": "sha256:dc062395e0c6da68d10fe8c88b305e64b7630da21b7c4c790918dd482630df0d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final training loss: 0.061\n"
+        }
+      ]
+    },
+    "denoising-denoising-images-2": {
+      "code_fingerprint": "sha256:b2e7d420c40aac7f03dedd9e51a7fd79c9b66947d4f94ae5e1f51d546d014944",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per-pixel squared error: noisy 0.251, denoised 0.031\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "denoising/denoising-denoising-images-2-1.png",
+          "bytes": 88849,
+          "sha256": "sha256:86c597b4f0fcefcef2a6617ed59b7a35c23260b8d14d479c1af744ae0c6fe054"
+        }
+      ]
+    }
+  }
+}

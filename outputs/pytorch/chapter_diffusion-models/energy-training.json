@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/energy-training.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "energy-training-training-energy-based-models": {
+      "code_fingerprint": "sha256:c7e49803ad99b6f242f769f72a986c5d683e860486a91ebd1cc929366d0d3fd4",
+      "kind": "text",
+      "outputs": []
+    },
+    "energy-training-the-running-example-1": {
+      "code_fingerprint": "sha256:765126c089026989dba9576cdd1615bf464294b94fddc150aef46883731f9126",
+      "kind": "text",
+      "outputs": []
+    },
+    "energy-training-the-running-example-2": {
+      "code_fingerprint": "sha256:d6290d4b2fe3da53b6c2607e9087e9f92316e8dc753f2956c93079cbc23cba17",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test NLL under the true density: 2.506 nats\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "energy-training/energy-training-the-running-example-2-1.svg",
+          "bytes": 223732,
+          "sha256": "sha256:60ec7296b939127fcb179b3b5c8c2bcf7d9803ce77cfe807a177f5da81ec4b7e"
+        }
+      ]
+    },
+    "energy-training-an-exact-reference-in-two-dimensions": {
+      "code_fingerprint": "sha256:0497292e26a9fa2a50716d919c963de2359066f21d9f16194da0fe68c516e6ab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test NLL with the grid normalizer: 2.511 nats\n"
+        }
+      ]
+    },
+    "energy-training-checking-the-gradient-identity": {
+      "code_fingerprint": "sha256:6d348d836e5ffcaac57a9688c6d124e44d52f94c28d5d8c21baf5af33874f796",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   100 model samples: relative error 0.150\n  1000 model samples: relative error 0.060\n 10000 model samples: relative error 0.010\n"
+        }
+      ]
+    },
+    "energy-training-metropolis-hastings": {
+      "code_fingerprint": "sha256:cb64996c33583473b8c9b31de019b9cb3aaf5d426c94c158c51bb061b0264040",
+      "kind": "text",
+      "outputs": []
+    },
+    "energy-training-the-step-size-trades-acceptance-against-mixing": {
+      "code_fingerprint": "sha256:ea10e9388cde07d2bba7e2c28472ebd0a3c8f5c8e1dcf098adcbed1732369492",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true mode weights: [0.5, 0.3, 0.2]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step size 0.25: acceptance 0.76, mode weights [0.339, 0.313, 0.347], within-mode spread 0.50\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step size 1.0: acceptance 0.29, mode weights [0.488, 0.296, 0.216], within-mode spread 0.51\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step size 4.0: acceptance 0.06, mode weights [0.497, 0.288, 0.215], within-mode spread 0.50\n"
+        }
+      ]
+    },
+    "energy-training-contrastive-divergence-1": {
+      "code_fingerprint": "sha256:4b5bbe181a9a2ac86d9b28a00f21a0bbad1fcee5f23c14d9c30006a4802c96b9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test NLL every 500 steps: [2.706, 2.658, 2.546, 2.541, 2.564, 2.523]\nfinal acceptance rate 0.30; mode weights of the chains [0.497, 0.312, 0.19]\n"
+        }
+      ]
+    },
+    "energy-training-contrastive-divergence-2": {
+      "code_fingerprint": "sha256:28cb7fe0160ac81425c3a6f0e3ba7c1e5eadd49bd409c4d007be378ca8b3b361",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "energy-training/energy-training-contrastive-divergence-2-1.svg",
+          "bytes": 320647,
+          "sha256": "sha256:630a41414bd85d0f2f87f5c44606bf2efddea570e9a4a491550b4e4a138a4599"
+        }
+      ]
+    }
+  }
+}

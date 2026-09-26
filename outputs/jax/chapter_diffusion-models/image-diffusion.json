@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/image-diffusion.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:5dfe48984fb929d9984505fe48756ead81ae9a74c51533f3f12da9b8f2342189",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "image-diffusion-diffusion-models-for-images": {
+      "code_fingerprint": "sha256:ee669e02adda009d830c6a969adc7a1a3d494cf2916dc9885cac4a06c1da24e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-diffusion-data-schedule-and-model-1": {
+      "code_fingerprint": "sha256:d35e57439a12fe9229fe85accae02734e2f81342eda8ac74cb283d4847330841",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-diffusion-data-schedule-and-model-2": {
+      "code_fingerprint": "sha256:9fd75a96420a648ed58a9d9bc53bed1717e0beb11bf4e4a3f85008d6b4fdf2f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-diffusion-training": {
+      "code_fingerprint": "sha256:f48b4d69672b1b37a4e78128ce84867b4441c4e3bf6e430860283388d6e56250",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 500: loss 0.047\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 1000: loss 0.063\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 1500: loss 0.053\n"
+        }
+      ]
+    },
+    "image-diffusion-sampling-and-guidance": {
+      "code_fingerprint": "sha256:5a888e22aac5b912dc0ca1d4c0439693362f0807a603d253bdb4bacb7069f154",
+      "kind": "text",
+      "outputs": []
+    },
+    "image-diffusion-unconditional-samples": {
+      "code_fingerprint": "sha256:62f60352defc69ca17ba55457ddf1fe257561d1de10c9d40586dd8b6fbb99a27",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "image-diffusion/image-diffusion-unconditional-samples-1.png",
+          "bytes": 110733,
+          "sha256": "sha256:733334c61f4002b282f11d709cf38655b1b26fcd2ff49198f994edceec1ce2a4"
+        }
+      ]
+    },
+    "image-diffusion-guided-samples-1": {
+      "code_fingerprint": "sha256:b6cf8d951254e221373a312f1cd74ab26c756acf2373a1446a433b93c723d68a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "classifier test accuracy: 0.895\n"
+        }
+      ]
+    },
+    "image-diffusion-guided-samples-2": {
+      "code_fingerprint": "sha256:d9cb81ad638ad0c2d4b99358e2664a20984370d4b268c5bb184dc73fb0f2bf7d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma  class agreement  within-class distance\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  1.0            0.613                  16.46\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  2.0            0.812                  15.24\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  4.0            0.900                  14.47\n"
+        }
+      ]
+    },
+    "image-diffusion-guided-samples-3": {
+      "code_fingerprint": "sha256:b13a55c776b4812c4306483ac8086474eb64d857ec1a1dcdf852e8dd7b55fa3a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first grid: guidance scale 1; second grid: guidance scale 4; columns are the ten classes\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "image-diffusion/image-diffusion-guided-samples-3-1.png",
+          "bytes": 88289,
+          "sha256": "sha256:5544165c2c0715dcbd1cfb9e0902e73ef562a004771d819737dc523c6c3f06f0"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "image-diffusion/image-diffusion-guided-samples-3-2.png",
+          "bytes": 85381,
+          "sha256": "sha256:5b1c7a0ffb332a9b772b85466d5a7c5cf722cabc07e9b9df7a5d61fad1883e21"
+        }
+      ]
+    },
+    "image-diffusion-classifier-guidance-1": {
+      "code_fingerprint": "sha256:c1af5b3f3cbd3fde05b97bf28077ff5d4c9b33c52762a7dbed3c9340bd0bcc90",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "noisy classifier test accuracy: 0.845 at t = 0, 0.582 at t = 500\n"
+        }
+      ]
+    },
+    "image-diffusion-classifier-guidance-2": {
+      "code_fingerprint": "sha256:92296fdfca8e706bd946f2b827af293f4ae310481c10437d5e3ac76090e1d74f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "scale  class agreement  within-class distance\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  1.0            0.512                  18.27\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  4.0            0.825                  16.49\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 10.0            0.925                  16.15\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "image-diffusion/image-diffusion-classifier-guidance-2-1.png",
+          "bytes": 91223,
+          "sha256": "sha256:ae28878edcb34a3575c2c31a7acff60fec10016b06ef9b927cd6c436a7b694f6"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "image-diffusion/image-diffusion-classifier-guidance-2-2.png",
+          "bytes": 80194,
+          "sha256": "sha256:a2316baf4fb52f49ad3157d5bd62208559a59aab5a60a8686bef7059f2d56487"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/discrete-diffusion.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:fca82749abd9f543a459e75bbfddc7a3c23ec5530f9338643f483c29fc810dbf",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "discrete-diffusion": {
+      "code_fingerprint": "sha256:e870e3efabac08b45af6967c1c7aedb09045125ab7a4b6d0321a31115d2b8102",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-experiments-on-the-running-example-1": {
+      "code_fingerprint": "sha256:b8b2829d627a3bce341d0870ad8ed3759c7d87ce5ea97c005225043b17db2713",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "entropy of the table: 4.840 nats; bound of an exact network with T = 32: 4.855 nats\nTV(histogram of 20000 true samples, table): 0.041\nTV(product of the marginals, table): 0.314\n"
+        }
+      ]
+    },
+    "discrete-diffusion-experiments-on-the-running-example-2": {
+      "code_fingerprint": "sha256:50254b1d8e56849bc72f17b1298b65260758898eba4a9cfe1b5563f4a1b0bba3",
+      "kind": "text",
+      "outputs": []
+    },
+    "discrete-diffusion-experiments-on-the-running-example-3": {
+      "code_fingerprint": "sha256:70b4bf04b58babc7cd188241388d38be1a9b510de6c5bdf0746b62982b0013e1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step    0: exact bound 6.876 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 2000: exact bound 4.875 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 4000: exact bound 4.872 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final exact bound 4.864 nats; entropy 4.840 nats\n"
+        }
+      ]
+    },
+    "discrete-diffusion-experiments-on-the-running-example-4": {
+      "code_fingerprint": "sha256:56881697751e81c933e34f9573a88fd15e06729c2ba17e4f29787221c623fa36",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "steps  TV to table  predicted  TV to product\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   32        0.061      0.010          0.311\n    8        0.076      0.039          0.283\n    2        0.165      0.157          0.171\n    1        0.302      0.314          0.057\n"
+        }
+      ]
+    },
+    "discrete-diffusion-experiments-on-the-running-example-5": {
+      "code_fingerprint": "sha256:21e74aaab8b9f0df2450302168256831fc0ff1ba5121da9f817cc797e89ab587",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-experiments-on-the-running-example-5-1.png",
+          "bytes": 12976,
+          "sha256": "sha256:a800f80602e099fbee3356444dbf732325cb175302c7336ad0206e5b3e319cdc"
+        }
+      ]
+    },
+    "discrete-diffusion-images-as-binary-tokens-1": {
+      "code_fingerprint": "sha256:dbea396aa829774affde55b682ebf917dec1c6a4bf97514c1b37113c7a8934d1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step   0: loss 0.672 nats per pixel\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 200: loss 0.165 nats per pixel\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 400: loss 0.148 nats per pixel\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 600: loss 0.127 nats per pixel\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "held-out bound: 0.183 bits per pixel; independent pixels: 0.708 bits per pixel\n"
+        }
+      ]
+    },
+    "discrete-diffusion-images-as-binary-tokens-2": {
+      "code_fingerprint": "sha256:b39005e49dcb2528495d9f217747c55f659028f6c407cc1e0614ffdeaae7472a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "speckles: training images 0.0037, 100-step samples 0.0076, 4-step samples 0.0243\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-1.png",
+          "bytes": 59571,
+          "sha256": "sha256:ceb73847fbc72c95d27627c878f6d6a5e55c4bc9a1c0298f3e6decbe08ee9cfb"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-2.png",
+          "bytes": 108845,
+          "sha256": "sha256:3b2571d523368bba679d114ad2df3dd33b799aa3824ce284f15e1640c774771e"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-3.png",
+          "bytes": 111688,
+          "sha256": "sha256:ad00435095f3d0455f90032753f5c8cda11d9ecaceda7e0ba842b65370ae9935"
+        }
+      ]
+    }
+  }
+}

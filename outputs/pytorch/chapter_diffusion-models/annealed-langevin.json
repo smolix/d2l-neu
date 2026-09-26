@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/annealed-langevin.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:2b0904a3c6c48ac9a86cfbd1e8ac644e35dcbd6c9160539f57fbfb662203c071",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "annealed-langevin-noise-conditional-score-networks-and-annealed-langevin-dynamics": {
+      "code_fingerprint": "sha256:c7e49803ad99b6f242f769f72a986c5d683e860486a91ebd1cc929366d0d3fd4",
+      "kind": "text",
+      "outputs": []
+    },
+    "annealed-langevin-a-ladder-of-noise-levels-1": {
+      "code_fingerprint": "sha256:db55c48a22348394d676d5eeedd2f4fbc1759ff27eff155c2d71cb8b337760be",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "noise levels: [3.0, 1.903, 1.208, 0.766, 0.486, 0.309, 0.196, 0.124, 0.079, 0.05]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final training loss: 0.615\n"
+        }
+      ]
+    },
+    "annealed-langevin-a-ladder-of-noise-levels-2": {
+      "code_fingerprint": "sha256:3868318a707d466502123be4b2323354ced61919ffd1b67b7eea78250c196e45",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " sigma  Fisher divergence  0.5 E||score||^2\n 3.000             0.0011             0.079\n 0.766             0.0412             1.133\n 0.196             0.1244             3.587\n 0.050             1.1162             4.086\n"
+        }
+      ]
+    },
+    "annealed-langevin-annealed-langevin-dynamics-1": {
+      "code_fingerprint": "sha256:44d67b940e5b16ac74821f44d5c621dd191be9f85185b2e55b75fd7ff48d7bbb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "target (2000 samples of the mixture): mode weights [0.5, 0.317, 0.183], spread 0.49, stray 0.012\nannealed,  20 steps per level: mode weights [0.428, 0.314, 0.257], spread 0.75, stray 0.133\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "annealed, 100 steps per level: mode weights [0.497, 0.298, 0.206], spread 0.54, stray 0.019\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "finest level only, 1000 steps:  mode weights [0.343, 0.317, 0.34], spread 1.04, stray 0.469\n"
+        }
+      ]
+    },
+    "annealed-langevin-annealed-langevin-dynamics-2": {
+      "code_fingerprint": "sha256:ffc9056c8c1c87f4f7f2598ea52832af3a43d44c8cc353eba94553dcef72936b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "annealed-langevin/annealed-langevin-annealed-langevin-dynamics-2-1.png",
+          "bytes": 79647,
+          "sha256": "sha256:102b100a3c98e687606b546ebe2773da24996068828c485c645a1a61056f1dce"
+        }
+      ]
+    },
+    "annealed-langevin-a-noise-conditional-network-for-images-1": {
+      "code_fingerprint": "sha256:cb75191c9865cc3c8a7d39683f635083ffe888616769288ded8a042c89cab97f",
+      "kind": "text",
+      "outputs": []
+    },
+    "annealed-langevin-a-noise-conditional-network-for-images-2": {
+      "code_fingerprint": "sha256:48d7c6d206819f9d00eb285941e048da434f8afeb1945d6661066899e5bd5750",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final training loss: 0.116\n"
+        }
+      ]
+    },
+    "annealed-langevin-a-noise-conditional-network-for-images-3": {
+      "code_fingerprint": "sha256:b7595a5c81e0bc24f4d3b9487398def2e0b69ab8946b9011f4d6e810c052cfef",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.09: per-pixel squared error noisy 0.009, denoised 0.002\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.43: per-pixel squared error noisy 0.186, denoised 0.022\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 2.00: per-pixel squared error noisy 4.004, denoised 0.132\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "annealed-langevin/annealed-langevin-a-noise-conditional-network-for-images-3-1.png",
+          "bytes": 138262,
+          "sha256": "sha256:45a00fc6d88ab4458d3a201a9c59021aecbb65ff57742b279a409b4695b97b4d"
+        }
+      ]
+    }
+  }
+}

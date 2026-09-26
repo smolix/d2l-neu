@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/ddim.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:fca82749abd9f543a459e75bbfddc7a3c23ec5530f9338643f483c29fc810dbf",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ddim-denoising-diffusion-implicit-models": {
+      "code_fingerprint": "sha256:ee669e02adda009d830c6a969adc7a1a3d494cf2916dc9885cac4a06c1da24e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "ddim-experiments-on-the-running-example-1": {
+      "code_fingerprint": "sha256:9e6f53d1693a02a45e922cad477edda8ff1f50e8bc47936d3da951684ee1dfa6",
+      "kind": "text",
+      "outputs": []
+    },
+    "ddim-experiments-on-the-running-example-2": {
+      "code_fingerprint": "sha256:6f092a037859610d8ad40ec3d0dc8ddf8e29fa635d0954a23a190b5c524a6be6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "target (2000 samples of the mixture): mode weights [0.517, 0.296, 0.187], spread 0.46, stray 0.011\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DDPM, 200 steps (eta = 1): mode weights [0.51, 0.28, 0.211], spread 0.44, stray 0.024\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DDIM, 200 steps (eta = 0): mode weights [0.521, 0.236, 0.244], spread 0.44, stray 0.067\nDDIM,  50 steps (eta = 0): mode weights [0.529, 0.222, 0.25], spread 0.44, stray 0.069\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DDIM,  20 steps (eta = 0): mode weights [0.553, 0.21, 0.238], spread 0.40, stray 0.080\nDDIM,  10 steps (eta = 0): mode weights [0.59, 0.158, 0.252], spread 0.43, stray 0.105\n"
+        }
+      ]
+    },
+    "ddim-experiments-on-the-running-example-3": {
+      "code_fingerprint": "sha256:98f587d171cbd28bbfb6dd67ebb5badc1a0169e597aa50f7add9b70d769ba1e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact predictor, 200 steps: mode weights [0.488, 0.308, 0.205], spread 0.47, stray 0.009\nexact predictor,  50 steps: mean distance to the 200-step sample 0.034\nexact predictor,  20 steps: mean distance to the 200-step sample 0.107\nexact predictor,  10 steps: mean distance to the 200-step sample 0.232\nexact predictor,   5 steps: mean distance to the 200-step sample 0.550\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "same x_T twice: max difference 0.0e+00\n"
+        }
+      ]
+    },
+    "ddim-experiments-on-the-running-example-4": {
+      "code_fingerprint": "sha256:b181fe787b89f934bbfd3646727c25e2a00b4b6d97ff8ed6949d2e7e9ef86fa7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "ddim/ddim-experiments-on-the-running-example-4-1.png",
+          "bytes": 75158,
+          "sha256": "sha256:6e7261339d85ec8485dcb6ef85a46a49719e4c6b9749a514ac8e0f3be0f2d1f9"
+        }
+      ]
+    },
+    "ddim-fast-sampling-for-images-1": {
+      "code_fingerprint": "sha256:15169bb52a1668559d6e10a0fba0d134062c5fbf4f5bd405cd251f50545a3289",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final training loss: 0.048\n"
+        }
+      ]
+    },
+    "ddim-fast-sampling-for-images-2": {
+      "code_fingerprint": "sha256:48d831dfe1da8b23ceb4bfc71a9b5ea879da7d3d88a143104520bedc8bf4d0a4",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rows: ancestral, 1000 steps | DDIM, 50 steps | DDIM, 10 steps\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "ddim/ddim-fast-sampling-for-images-2-1.png",
+          "bytes": 54546,
+          "sha256": "sha256:2dffd110726929219a6cdd92c7f73dd63b702c3bd476ebfbe095fda1314d7069"
+        }
+      ]
+    },
+    "ddim-fast-sampling-for-images-3": {
+      "code_fingerprint": "sha256:2c4dd0e923a7d38ee80cdffc858cf2786120501da8a3b35d4bfbf7bb92fce4da",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "ddim/ddim-fast-sampling-for-images-3-1.png",
+          "bytes": 17576,
+          "sha256": "sha256:15f2a7bb34072125e774d4217ac302335545a6165c26ecdac85e16625da344a1"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/ddpm.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:d2fa4e4ae1a1b1d3cd188cfd08a8a22a9deb195ff52d862cec357c9fbf7e257b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ddpm-denoising-diffusion-probabilistic-models": {
+      "code_fingerprint": "sha256:8a027398fd34dabc7094253544187816fae82652ef4b22f6ce7f87938ddc5849",
+      "kind": "text",
+      "outputs": []
+    },
+    "ddpm-the-marginal-in-closed-form": {
+      "code_fingerprint": "sha256:baecc796c16645818ce59f2ac63d377cee7cef75d1345ce5fbadb744d51fbacb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "alpha_bar_T = 3.2e-05: after T steps the data are scaled by 0.006\nstep  10: chain: mean [-0.546, -0.751], var 3.761 | one shot: mean [-0.549, -0.758], var 3.775\nstep  50: chain: mean [-0.409, -0.601], var 2.489 | one shot: mean [-0.396, -0.531], var 2.500\nstep 200: chain: mean [-0.005, -0.014], var 1.000 | one shot: mean [-0.001, -0.029], var 0.994\n"
+        }
+      ]
+    },
+    "ddpm-experiments-on-the-running-example": {
+      "code_fingerprint": "sha256:0f1737b6b95bcad1756982b05377c93bba2014aede37e7b653c365a9bde6835b",
+      "kind": "text",
+      "outputs": []
+    },
+    "ddpm-the-learned-predictor-against-the-optimal-one": {
+      "code_fingerprint": "sha256:32c82d459871be014ddf4944a2160e5f124d983951813a635dee54c9c9ed7480",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step  E||eps_theta - eps*||^2  E||eps - eps*||^2  E||eps - eps_theta||^2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  10                    0.058              1.779                   1.838\n  50                    0.049              0.784                   0.831\n 100                    0.010              0.480                   0.492\n 200                    0.006              0.000                   0.007\n"
+        }
+      ]
+    },
+    "ddpm-ancestral-sampling-1": {
+      "code_fingerprint": "sha256:6a33bc8727ebb7902bbfa22c04859db11816da4c543cefede6b872cc272a2e02",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "target (2000 samples of the mixture): mode weights [0.517, 0.296, 0.187], spread 0.46, stray 0.011\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learned predictor: mode weights [0.554, 0.274, 0.173], spread 0.46, stray 0.022\noptimal predictor: mode weights [0.518, 0.286, 0.197], spread 0.49, stray 0.012\n"
+        }
+      ]
+    },
+    "ddpm-ancestral-sampling-2": {
+      "code_fingerprint": "sha256:62f5feba15ab382c421002b427c937c7b27fca85e9b742d338d48b1412467740",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "ddpm/ddpm-ancestral-sampling-2-1.png",
+          "bytes": 134566,
+          "sha256": "sha256:f69ab5008996080eaf259dcb412527c9d77dc2c1f2ac7f6692a97d4a81a3edf4"
+        }
+      ]
+    }
+  }
+}

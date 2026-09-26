@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/flow-matching.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:fca82749abd9f543a459e75bbfddc7a3c23ec5530f9338643f483c29fc810dbf",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "flow-matching-flow-matching-and-its-relation-to-diffusion": {
+      "code_fingerprint": "sha256:ee669e02adda009d830c6a969adc7a1a3d494cf2916dc9885cac4a06c1da24e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "flow-matching-experiments-on-the-running-example": {
+      "code_fingerprint": "sha256:aafc9c0ba690b12e02d315fc376ebc3e8f5d958669f033709429b2228d17a5ab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final training loss: 4.835\n"
+        }
+      ]
+    },
+    "flow-matching-the-dictionary-checked": {
+      "code_fingerprint": "sha256:b9d136361c377529183757785a487fe869f8302ffb395f5462aa2f2970f9e48f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   t  E||v - u||^2  E||u||^2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.2         0.104     1.068\n 0.5         0.169     7.708\n 0.8         0.040     8.038\n0.95         0.130     8.378\n"
+        }
+      ]
+    },
+    "flow-matching-sampling-by-integration-1": {
+      "code_fingerprint": "sha256:ee6e40622480f8c823ea2b46c9d05f406eec40ecf7212ab997aca65302a90d60",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "target (2000 samples of the mixture): mode weights [0.517, 0.296, 0.187], spread 0.46, stray 0.011\nlearned field, 100 Euler steps: mode weights [0.523, 0.291, 0.187], spread 0.47, stray 0.038\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learned field,  10 Euler steps: mode weights [0.543, 0.285, 0.173], spread 0.46, stray 0.068\nlearned field,   4 Euler steps: mode weights [0.617, 0.26, 0.124], spread 0.51, stray 0.153\nlearned field,   2 Euler steps: mode weights [0.78, 0.18, 0.041], spread 0.76, stray 0.278\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact field,   100 Euler steps: mode weights [0.521, 0.276, 0.203], spread 0.47, stray 0.010\ncurvature of the learned flow: 0.200\n"
+        }
+      ]
+    },
+    "flow-matching-sampling-by-integration-2": {
+      "code_fingerprint": "sha256:dee0a5e051d2698df35018cd925e85e59bc5a6bfc67e06a0659fc86cdf449a54",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "curvature of the exact flow, linear path: 0.213\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "curvature of the exact flow, variance-preserving path: 0.105\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "flow-matching/flow-matching-sampling-by-integration-2-1.png",
+          "bytes": 28782,
+          "sha256": "sha256:9793c8491f3dc246a127f4b2730b8d0cafc40118ba74a17ffdb4005c0d340b3a"
+        }
+      ]
+    },
+    "flow-matching-images-with-a-velocity-target": {
+      "code_fingerprint": "sha256:d4126c4f58a2bca2a786a97392fb7e5072253d9ba8d88f3beaa3cc10d710e8f1",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final training loss: 0.273\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "flow-matching/flow-matching-images-with-a-velocity-target-1.png",
+          "bytes": 108331,
+          "sha256": "sha256:91eb9930b8ae43e2a2f60633825e745fe3b4f889ccdaee5332d1789aa81d0e90"
+        }
+      ]
+    }
+  }
+}

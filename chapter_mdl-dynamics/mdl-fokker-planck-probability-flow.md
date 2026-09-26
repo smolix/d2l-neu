@@ -617,8 +617,8 @@ $\blacksquare$
 
 First, *marginals* agree; *paths* do not. An SDE path is jagged, crosses
 itself, and re-randomizes at every instant; an ODE trajectory is smooth and,
-by uniqueness (:numref:`sec_mdl-odes-solvers`), can never cross another
-one. The two processes transport the same crowd in entirely different
+by uniqueness (:numref:`sec_mdl-odes-solvers`), can never meet another
+one at the same point at the same time. The two processes transport the same crowd in entirely different
 ways.
 
 Second, the ODE is invertible under the hypotheses above and has an exact

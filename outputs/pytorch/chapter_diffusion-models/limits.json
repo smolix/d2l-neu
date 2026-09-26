@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/limits.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "limits-the-limits-of-gans-and-energy-based-models": {
+      "code_fingerprint": "sha256:c7e49803ad99b6f242f769f72a986c5d683e860486a91ebd1cc929366d0d3fd4",
+      "kind": "text",
+      "outputs": []
+    },
+    "limits-quadrature-1": {
+      "code_fingerprint": "sha256:ad24e7e4843e9592ca3b67bb074f428fc8b9ef0953eda6ea885a06ecbf456473",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Z = 7.2918; the normalized density integrates to 1.0000\np(-1)/p(1) from energies alone: 1.8250; from the normalized density: 1.8250\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "limits/limits-quadrature-1-1.png",
+          "bytes": 23839,
+          "sha256": "sha256:b54bde9b23868e1bd9decdfbff3459b39c32698a6ac7df487db7fa6d11325f67"
+        }
+      ]
+    },
+    "limits-quadrature-2": {
+      "code_fingerprint": "sha256:cdf2829ca1f9ff07310e927af2712a169f202ce60c4089f7b75269fb3ffa4da2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 1:      64 energy evaluations, log Z =   1.987\nd = 2:    4096 energy evaluations, log Z =   2.772\nd = 3:  262144 energy evaluations, log Z =   3.888\nd = 10: 64^10 = 10^18 energy evaluations\nd = 784: 64^784 = 10^1416 energy evaluations\n"
+        }
+      ]
+    },
+    "limits-monte-carlo-estimates": {
+      "code_fingerprint": "sha256:e13e5d0cb649cb6859323316e323cf6cea8f00fad47c1072884e582d6ac3803b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  d  estimate / Z  predicted rel. std. error  effective samples\n  1         0.999                    0.00415            37155.5\n  2         1.017                    0.00799            12501.1\n  4         1.009                     0.0232             2620.7\n  8         1.038                      0.173              132.1\n 16         0.529                       9.43               72.3\n 32         0.081                   2.81e+04               11.0\n"
+        }
+      ]
+    }
+  }
+}

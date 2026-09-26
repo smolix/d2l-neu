@@ -2504,6 +2504,109 @@ def r1_r2_penalty(critic, real, fake):
 d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
                            'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
+class GaussianMixture:
+    """A mixture of isotropic Gaussians with closed-form density and score.
+
+    Defined in :numref:`sec_diffusion-ebm-training`"""
+    def __init__(self, means, weights, std):
+        self.means = torch.as_tensor(means, dtype=torch.float32)
+        self.weights = torch.as_tensor(weights, dtype=torch.float32)
+        self.std = std
+
+    def sample(self, n):
+        k = torch.multinomial(self.weights, n, replacement=True)
+        return self.means[k] + self.std * torch.randn(n, self.means.shape[1])
+
+    def log_prob(self, x, scale=1.0, sigma=0.0):
+        """Log density of scale * x0 + sigma * eps, where x0 is a mixture draw."""
+        var = (scale * self.std) ** 2 + sigma ** 2
+        d2 = ((x[:, None, :] - scale * self.means[None]) ** 2).sum(-1)
+        logs = (torch.log(self.weights)[None] - d2 / (2 * var)
+                - 0.5 * x.shape[-1] * math.log(2 * math.pi * var))
+        return torch.logsumexp(logs, 1)
+
+    def score(self, x, scale=1.0, sigma=0.0):
+        """The gradient of log_prob with respect to x, in closed form."""
+        var = (scale * self.std) ** 2 + sigma ** 2
+        d2 = ((x[:, None, :] - scale * self.means[None]) ** 2).sum(-1)
+        r = torch.softmax(torch.log(self.weights)[None] - d2 / (2 * var), 1)
+        return (r[:, :, None]
+                * (scale * self.means[None] - x[:, None, :])).sum(1) / var
+
+class ScoreNet(nn.Module):
+    """A two-dimensional score model: a multilayer perceptron with two outputs.
+
+    Defined in :numref:`sec_diffusion-score-matching`"""
+    def __init__(self, hidden=128):
+        super().__init__()
+        self.net = nn.Sequential(nn.Linear(2, hidden), nn.SiLU(),
+                                 nn.Linear(hidden, hidden), nn.SiLU(),
+                                 nn.Linear(hidden, 2))
+
+    def forward(self, x):
+        return self.net(x)
+
+def sinusoidal_embedding(t, dim):
+    """Map integer steps t (shape (n,)) to sinusoidal features (n, dim).
+
+    Defined in :numref:`sec_diffusion-annealed`"""
+    freqs = torch.exp(-math.log(10000) * torch.arange(dim // 2) / (dim // 2))
+    args = t.float()[:, None] * freqs[None]
+    return torch.cat([torch.sin(args), torch.cos(args)], 1)
+
+class ResBlock(nn.Module):
+    """Two 3x3 convolutions with group normalization and an added embedding.
+
+    Defined in :numref:`sec_diffusion-annealed`"""
+    def __init__(self, c_in, c_out, emb_dim):
+        super().__init__()
+        self.norm1 = nn.GroupNorm(8, c_in)
+        self.conv1 = nn.Conv2d(c_in, c_out, 3, padding=1)
+        self.emb = nn.Linear(emb_dim, c_out)
+        self.norm2 = nn.GroupNorm(8, c_out)
+        self.conv2 = nn.Conv2d(c_out, c_out, 3, padding=1)
+        self.skip = nn.Conv2d(c_in, c_out, 1) if c_in != c_out else nn.Identity()
+
+    def forward(self, x, emb):
+        h = self.conv1(nn.functional.silu(self.norm1(x)))
+        h = h + self.emb(emb)[:, :, None, None]
+        h = self.conv2(nn.functional.silu(self.norm2(h)))
+        return h + self.skip(x)
+
+class UNet(nn.Module):
+    """A small U-Net for 28x28 images, conditioned on a step index t.
+
+    Defined in :numref:`sec_diffusion-annealed`"""
+    def __init__(self, ch=32, emb_dim=128, in_channels=1, out_channels=1):
+        super().__init__()
+        self.emb_dim = emb_dim
+        self.emb_mlp = nn.Sequential(nn.Linear(emb_dim, emb_dim), nn.SiLU(),
+                                     nn.Linear(emb_dim, emb_dim))
+        self.inc = nn.Conv2d(in_channels, ch, 3, padding=1)
+        self.down1 = ResBlock(ch, ch, emb_dim)                    # 28 x 28
+        self.pool1 = nn.Conv2d(ch, ch, 3, stride=2, padding=1)    # -> 14 x 14
+        self.down2 = ResBlock(ch, 2 * ch, emb_dim)
+        self.pool2 = nn.Conv2d(2 * ch, 2 * ch, 3, stride=2, padding=1)  # -> 7 x 7
+        self.mid = ResBlock(2 * ch, 2 * ch, emb_dim)
+        self.up1 = ResBlock(4 * ch, ch, emb_dim)                  # 14 x 14
+        self.up0 = ResBlock(2 * ch, ch, emb_dim)                  # 28 x 28
+        self.outc = nn.Sequential(nn.GroupNorm(8, ch), nn.SiLU(),
+                                  nn.Conv2d(ch, out_channels, 3, padding=1))
+
+    def forward(self, x, t, cond=None):
+        emb = sinusoidal_embedding(t, self.emb_dim)
+        if cond is not None:
+            emb = emb + cond
+        emb = self.emb_mlp(emb)
+        h1 = self.down1(self.inc(x), emb)
+        h2 = self.down2(self.pool1(h1), emb)
+        h = self.mid(self.pool2(h2), emb)
+        h = nn.functional.interpolate(h, scale_factor=2, mode='nearest')
+        h = self.up1(torch.cat([h, h2], 1), emb)  # skip connection
+        h = nn.functional.interpolate(h, scale_factor=2, mode='nearest')
+        h = self.up0(torch.cat([h, h1], 1), emb)  # skip connection
+        return self.outc(h)
+
 class Encoder(nn.Module):
     """The base encoder interface for the encoder-decoder architecture.
 

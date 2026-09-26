@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/langevin.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:fe57fd8964087c9113b73852396bfbfc371a44615e9f6e6b388063b7c0c4ab61",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "langevin-sampling-with-langevin-dynamics": {
+      "code_fingerprint": "sha256:ee669e02adda009d830c6a969adc7a1a3d494cf2916dc9885cac4a06c1da24e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "langevin-the-langevin-update": {
+      "code_fingerprint": "sha256:9260857fb7dd7e8dc128495dd544923043c8dc9dc195a026f259c99409518d79",
+      "kind": "text",
+      "outputs": []
+    },
+    "langevin-sampling-with-the-true-score-1": {
+      "code_fingerprint": "sha256:d74b22b006e616ca84303571abf10f4e42a9e1a6cbb6bce99e975610229f22f9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "target (2000 samples of the mixture): mode weights [0.517, 0.296, 0.187], spread 0.46, stray 0.011\ntrue score,  200 steps:   mode weights [0.318, 0.325, 0.358], spread 0.48, stray 0.019\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true score, 2000 steps:   mode weights [0.32, 0.327, 0.354], spread 0.51, stray 0.020\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true score, start in mode 1: mode weights [0.999, 0.001, 0.001], spread 0.50, stray 0.012\n"
+        }
+      ]
+    },
+    "langevin-sampling-with-the-true-score-2": {
+      "code_fingerprint": "sha256:69c2ab9287e19af61542900c4e7e32a419317993a523a1f67a97624f1a679660",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "langevin/langevin-sampling-with-the-true-score-2-1.svg",
+          "bytes": 139766,
+          "sha256": "sha256:835a805a41bd064db3cba49978cb6e40e552fc0419250d96b642eab2b71b4346"
+        }
+      ]
+    },
+    "langevin-sampling-with-a-learned-score": {
+      "code_fingerprint": "sha256:8c7b86437d37b76a1649739b6043fee6c88f4aa2df25c1dc80a5eb74c48d4824",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learned score of the data: mode weights [0.373, 0.318, 0.31], spread 0.47, stray 0.018\n"
+        }
+      ]
+    },
+    "langevin-gaussian-smoothing-and-its-price-1": {
+      "code_fingerprint": "sha256:9407ea5cef8c8faeaf0d9d2b625f7605a5aee0ef57647e219054646f41eca8aa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.3: target (p_sigma samples): mode weights [0.517, 0.296, 0.187], spread 0.60, stray 0.034\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.3: learned score of p_sigma: mode weights [0.405, 0.339, 0.257], spread 0.57, stray 0.036\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.3: true score of p_sigma:    mode weights [0.339, 0.335, 0.327], spread 0.59, stray 0.053\nsigma = 1.0: target (p_sigma samples): mode weights [0.512, 0.291, 0.198], spread 0.95, stray 0.412\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 1.0: learned score of p_sigma: mode weights [0.527, 0.314, 0.16], spread 0.94, stray 0.396\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 1.0: true score of p_sigma:    mode weights [0.47, 0.32, 0.211], spread 0.99, stray 0.411\n"
+        }
+      ]
+    },
+    "langevin-gaussian-smoothing-and-its-price-2": {
+      "code_fingerprint": "sha256:812220b5a720aa684e6fde83bdecac0e2f4e096a4d9808838f9fa0da7f338ccf",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "langevin/langevin-gaussian-smoothing-and-its-price-2-1.svg",
+          "bytes": 353959,
+          "sha256": "sha256:d4275df6b78f370103aab52f33f0eb479712812dbbb81a37ee595340b606f56e"
+        }
+      ]
+    }
+  }
+}

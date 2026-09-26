@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/score-matching.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:d2fa4e4ae1a1b1d3cd188cfd08a8a22a9deb195ff52d862cec357c9fbf7e257b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "score-matching": {
+      "code_fingerprint": "sha256:ee669e02adda009d830c6a969adc7a1a3d494cf2916dc9885cac4a06c1da24e3",
+      "kind": "text",
+      "outputs": []
+    },
+    "score-matching-verifying-the-identity": {
+      "code_fingerprint": "sha256:baf0cf709aadd199c3759bc1681347e37af137f05c56aaf832b293792a4d957b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "objective at the true score: -4.005, constant: 3.994, sum: -0.011\n"
+        }
+      ]
+    },
+    "score-matching-training-by-exact-score-matching": {
+      "code_fingerprint": "sha256:7d3d1131ab7582bf023043de88e0a34f4e5ad3808522454c1210a802a1a929ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact score matching: Fisher divergence on the test points 0.118\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "on 200,000 samples: objective + constant 0.116, direct Fisher divergence 0.125\n"
+        }
+      ]
+    },
+    "score-matching-sliced-score-matching-1": {
+      "code_fingerprint": "sha256:5128810ca51a92719400add733b5fc192cab88b3995a20c33ccada3f0bcbb8a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sliced score matching: Fisher divergence on the test points 0.115\n"
+        }
+      ]
+    },
+    "score-matching-sliced-score-matching-2": {
+      "code_fingerprint": "sha256:cb23bf5f336af34bc4d62a5a763bb2f6ad673ac9a7d7066396cca29751ee2177",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "score-matching/score-matching-sliced-score-matching-2-1.png",
+          "bytes": 138589,
+          "sha256": "sha256:05f19471f68453e651297e7d016602391613829eed8d5fdd8319b7f371125081"
+        }
+      ]
+    },
+    "score-matching-where-the-estimate-is-accurate": {
+      "code_fingerprint": "sha256:6025ebafa0ffe0f74d1d59fcebff67804f2036388934c6b53ffa170884401893",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  log density  grid points  relative score error\n[  -2,    0)           30                 0.068\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[  -4,   -2)          145                 0.024\n[  -8,   -4)          308                 0.034\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[ -16,   -8)          557                 0.154\n[ -40,  -16)          547                 0.134\n"
+        }
+      ]
+    }
+  }
+}

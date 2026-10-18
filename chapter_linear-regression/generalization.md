@@ -530,7 +530,7 @@ of the cross-validation variance exists :cite:`Bengio.Grandvalet.2004`.
 The standard compromise, $K = 5$ or $K = 10$, keeps the bias modest, averages
 over reasonably distinct training sets, and costs only $5$--$10$ fits, which is
 why these values dominate practice :cite:`Kohavi.1995`.
-(Exercise 4 asks you to reason through the cost and the bias.)
+(Exercises 4 and 5 ask you to reason through the bias and the cost.)
 
 
 ## Summary
@@ -553,46 +553,66 @@ principles guide model selection in the settings considered here:
    fits the $n$ labels exactly, and explain where distinctness is used.
    What does least squares return when two inputs coincide but their
    labels differ?
-1. **When IID fails.** Give at least five examples where dependent random
-   variables make treating the problem as IID data inadvisable.
+1. **When IID fails.** Give three examples in which dependent observations
+   make treating a dataset as IID inadvisable. For each, state whether a
+   random train/validation split overestimates or underestimates the
+   generalization error, and describe a split that avoids the problem.
 1. **Two kinds of zero error.** Under which circumstances can the training
    error be driven to zero? Under which circumstances can the
    generalization error be zero? Compare the two sets of conditions.
 1. **$K$-fold cross-validation.**
-    1. Suppose you compare $H$ hyperparameter settings. Count the model
-       fits required by $K$-fold cross-validation and by a single
-       train/validation split, and give the ratio for $K = 5$ and for
-       $K = n$.
-    1. Each fold's model trains on a fraction $(K-1)/K$ of the data.
-       Assuming that validation error decreases monotonically with the
-       training-set size, determine whether the cross-validation estimate
-       over- or underestimates the error of the model trained on all $n$
-       examples, and how the discrepancy depends on $K$.
+    1. Suppose that a model trained on $m$ examples has expected
+       generalization error $R(m) = R_\infty + c/m$ with $c > 0$. Each
+       fold's model trains on $(K-1)n/K$ examples. Compute the bias of the
+       $K$-fold estimate relative to $R(n)$, the error of the model trained
+       on all $n$ examples. Express the bias as a fraction of
+       $R(n) - R_\infty$ and evaluate this fraction for $K = 2$, $5$, $10$,
+       and $n$.
     1. After selecting a hyperparameter by cross-validation, the final
        model is retrained on all $n$ examples. Explain why a hyperparameter
        whose best value depends on the training-set size complicates this
        step, and give an example.
-1. **VC dimension.** The VC dimension of a class of functions is the
-   largest number of points such that, for every assignment of labels in
-   $\{\pm 1\}$ to those points, some function in the class classifies all
-   of them correctly. Give two classes with the same VC dimension whose
-   members differ greatly in the range of values $f(\mathbf{x})$ they
-   take, and explain why this difference matters for the regression
-   losses of this chapter but is invisible to the VC dimension.
-1. [code] **Learning curve.** Your manager asks whether collecting more
-   data would improve a model that performs poorly, before paying for any.
-   Subsample the existing training set at several sizes, for example 20%,
-   40%, 60%, 80%, and 100%, retrain at each size, and plot validation
-   error against training-set size. Explain how the slope of this curve at
-   100% supports or undermines a request for more data. Demonstrate the
-   procedure on the polynomial data of
-   :numref:`subsec_polynomial-curve-fitting` with `n_train = 100` at
-   degree 3 and at degree 10.
-1. [code] **Model selection.** Re-run the polynomial fit of
-   :numref:`subsec_polynomial-curve-fitting` with `n_train` set to 10,
-   40, and 100. Report the degree at which the test loss starts to climb
-   in each case, and relate your finding to the rule of thumb that more
-   complex models require more data.
+1. **Leave-one-out shortcut.** ● Leave-one-out cross-validation requires
+   $n$ model fits for a general learner. Consider least squares with the
+   design matrix $\mathbf{X}$, whose rows are $\mathbf{x}^{(i)\top}$. Let
+   $\mathbf{A} = \mathbf{X}^\top\mathbf{X}$ and assume that it remains
+   invertible when any one row of $\mathbf{X}$ is removed. Let
+   $\hat{y}^{(i)}$ be the prediction at $\mathbf{x}^{(i)}$ of the fit on
+   all $n$ examples, let $\hat{y}^{(-i)}$ be the prediction at
+   $\mathbf{x}^{(i)}$ of the fit that omits example $i$, and let
+   $h_i = \mathbf{x}^{(i)\top}\mathbf{A}^{-1}\mathbf{x}^{(i)}$. Use the
+   Sherman--Morrison identity
+   $$(\mathbf{A} - \mathbf{u}\mathbf{u}^\top)^{-1} = \mathbf{A}^{-1} + \frac{\mathbf{A}^{-1}\mathbf{u}\mathbf{u}^\top\mathbf{A}^{-1}}{1 - \mathbf{u}^\top\mathbf{A}^{-1}\mathbf{u}}$$
+   with $\mathbf{u} = \mathbf{x}^{(i)}$ to show that
+   $$y^{(i)} - \hat{y}^{(-i)} = \frac{y^{(i)} - \hat{y}^{(i)}}{1 - h_i}.$$
+   State what leave-one-out cross-validation then costs for least
+   squares compared with a single fit.
+1. **VC dimension.** A class of real-valued functions classifies a point
+   $\mathbf{x}$ by the sign of $f(\mathbf{x})$. The class *shatters* a set
+   of points if, for every assignment of labels in $\{\pm 1\}$ to those
+   points, some $f$ in the class has $\operatorname{sign} f(\mathbf{x})$
+   equal to the label at every point. The VC dimension of the class is the
+   largest $m$ for which some set of $m$ points is shattered. Give two
+   classes with the same VC dimension whose members differ greatly in the
+   range of values $f(\mathbf{x})$ they take, and explain why this
+   difference matters for the regression losses of this chapter but is
+   invisible to the VC dimension.
+1. [code] **Data size and model complexity.** Regenerate the polynomial data
+   of :numref:`subsec_polynomial-curve-fitting` with `n_test = 1000`, and
+   adapt `fit_degree` so that it can fit on a subset of the training points.
+   Report every test loss as the median over 20 random seeds, because a
+   single draw fluctuates by about as much as the differences measured here.
+    1. Your manager asks whether collecting more data would improve a
+       model that performs poorly, before paying for any. Set
+       `n_train = 100`, fit degrees 1, 3, and 10 on the first 20, 40, 60,
+       80, and 100 training points, and plot the test loss of each degree
+       against training-set size. Explain how the slope of each curve at
+       100 points supports or undermines a request for more data.
+    1. Set `max_degree = 30` and sweep the degree from 1 to 29 with
+       `n_train` set to 10, 40, and 100. For each `n_train`, report the
+       first degree above 3 at which the test loss exceeds twice its value
+       at degree 3. Relate the trend to the rule of thumb that more complex
+       models require more data.
 1. [extended] **Double descent.** ● Extend the degree sweep of
    :numref:`subsec_polynomial-curve-fitting` well past the number of
    training points, for example to degree 60 on 20 training points,
@@ -606,10 +626,6 @@ principles guide model selection in the settings considered here:
     1. Explain the difference between the two curves in terms of the
        minimum-norm solution, and relate the second curve to this
        section's discussion of double descent.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 8.4.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/96)

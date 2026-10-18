@@ -95,7 +95,7 @@ class LinearRegressionScratch(d2l.Module):  #@save
     def __init__(self, num_inputs, lr, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        w = tf.random.normal((num_inputs, 1), mean=0, stddev=0.01)
+        w = tf.random.normal((num_inputs, 1), mean=0, stddev=sigma)
         b = tf.zeros(1)
         self.w = tf.Variable(w, trainable=True)
         self.b = tf.Variable(b, trainable=True)
@@ -691,15 +691,20 @@ curb overfitting, the first of many regularizers we will meet.
 
 1. **Initialization at the extremes.** `LinearRegressionScratch` draws
    its weights with standard deviation `sigma=0.01`. Predict whether
-   training still reaches the noise floor if the weights are initialized to
-   exactly zero, and separately if `sigma=1000`. Explain both answers, and
-   state how the number of epochs needed changes in the second case.
-1. [code] **Ohm's law.** Assume that you are
-   [Georg Simon Ohm](https://en.wikipedia.org/wiki/Georg_Ohm) trying to
-   come up with a model for resistance that relates voltage and current.
-   Treat the resistance as a learnable parameter and fit it to
-   voltage--current pairs using this section's autograd-based training
-   loop.
+   training eventually reaches the noise floor if the weights are
+   initialized to exactly zero, and separately if `sigma=1000`. Explain
+   both answers, and state how the number of epochs needed changes in the
+   second case.
+1. [code] **Ohm's law.**
+   [Georg Simon Ohm](https://en.wikipedia.org/wiki/Georg_Ohm) found that
+   the voltage $V$ across a conductor is proportional to the current $I$
+   through it, $V = RI$, with the resistance $R$ as the constant of
+   proportionality. Generate current--voltage pairs with
+   `SyntheticRegressionData` using the single weight $R = 5$ and bias 0.
+   Write a `d2l.Module` subclass whose only parameter is $R$, train it
+   with this section's `SGD` and `d2l.Trainer`, and compare the fitted $R$
+   with the least-squares estimate
+   $\hat{R} = \sum_i I_i V_i / \sum_i I_i^2$ computed on the training set.
 1. [code] **Planck's law.** ● Use
    [Planck's law](https://en.wikipedia.org/wiki/Planck%27s_law) to
    determine the temperature of a black body from measurements of its
@@ -714,36 +719,70 @@ curb overfitting, the first of many regularizers we will meet.
     as its only parameter and fit it with `d2l.Trainer`. Choose units in
     which $B$ and $T$ are of order one before fitting.
 1. [code] **Second derivatives.** Compute by hand the Hessian of the
-   minibatch loss with respect to $(\mathbf{w}, b)$. Then compute it with
-   automatic differentiation for one minibatch of `SyntheticRegressionData`
-   and compare. Identify what the framework needs beyond the single
-   gradient computation used in `fit_epoch`.
+   minibatch loss with respect to $(\mathbf{w}, b)$, and state which
+   quantities it depends on. Then compute it with automatic
+   differentiation, differentiating through the gradient as in
+   :numref:`sec_autograd`, for one fixed minibatch of
+   `SyntheticRegressionData`, once at initialization and once after
+   training. Compare both results with your formula.
 1. **Reshape in the loss.** Suppose the data loader yielded labels `y` of
-   shape $(B,)$ while the predictions `y_hat` have shape $(B, 1)$.
-   Determine the shape and the entries of `y_hat - y`, the value that
-   `loss` then returns, and the effect on training. Would an error be
-   raised?
-1. [code] **Learning-rate sweep.** Train the from-scratch model at each
-   learning rate in $\{0.001, 0.01, 0.03, 0.1, 0.3, 1.0\}$ for a fixed 30
-   epochs and plot the training-loss curves. For each rate, report the
-   smallest number of epochs needed to come within 10% of the noise floor
-   $\sigma^2/2$, marking rates that diverge or never reach that band.
+   shape $(B,)$ while the predictions `y_hat` have shape $(B, 1)$, and
+   `loss` computed `(y_hat - y) ** 2 / 2` without reshaping `y`.
+   Determine whether an error is raised, the shape and the entries of
+   `y_hat - y`, and the value that `loss` then returns.
+1. **Broadcast loss minimizer.** ● Find the values that $\mathbf{w}$ and
+   $b$ approach when the mismatched loss of problem 5 is used to train
+   `LinearRegressionScratch` on `SyntheticRegressionData`, whose features
+   are standard normal.
+1. [code] **Learning-rate sweep.** The labels of `SyntheticRegressionData`
+   carry Gaussian noise with standard deviation $\sigma = 0.01$, so the
+   expected squared loss on new data cannot fall below the noise floor
+   $\sigma^2/2$. Train `LinearRegressionScratch` at each learning rate in
+   $\{0.001, 0.01, 0.03, 0.1, 0.3, 1, 3\}$ for a fixed 30 epochs and plot
+   the validation-loss curves. For each rate, report the first epoch at
+   which the validation loss lies within 10% of the noise floor, and mark
+   the rates that diverge or never reach that band.
 
     *Adapted from Andrew Ng,
-    [Machine Learning (Coursera)](https://www.coursera.org/learn/machine-learning),
-    Exercise 1.*
-1. [code] **Robust losses.** Replace `loss` in `LinearRegressionScratch`
+    [Supervised Machine Learning: Regression and Classification (Coursera)](https://www.coursera.org/learn/machine-learning),
+    Week 2, "Optional Lab: Feature scaling and learning rate".*
+1. [code] **Robust losses.** ● Replace `loss` in `LinearRegressionScratch`
    with the mean absolute error
    `d2l.reduce_mean(d2l.abs(y_hat - d2l.reshape(y, y_hat.shape)))`.
     1. Train on `SyntheticRegressionData` and compare the recovered
        parameters and the loss curve with those of the squared loss.
-    1. Set one label to $y^{(5)} = 10000$ and repeat the comparison.
+    1. Set one training label to $y^{(5)} = 10000$, the corruption used in
+       :numref:`subsec_linear-regression-loss-function`, and train with
+       both losses. Record $b$ after every minibatch update, plot it
+       against the iteration for both runs, and explain the pattern of the
+       squared-loss curve, including what determines its final value.
+    1. On the corrupted data, replace `loss` with the minibatch average of
+       the Huber loss
+
+        $$l_\delta(y, y') = \begin{cases}\frac{1}{2}(y-y')^2 & \textrm{ if } |y-y'| \leq \delta \\ \delta \left(|y-y'| - \frac{\delta}{2}\right) & \textrm{ otherwise,}\end{cases}$$
+
+        whose quadratic part matches the squared loss of this section.
+        Train for $\delta \in \{1, 10, 100, 1000, 10^4\}$, and plot the
+        distance $|\hat{b} - b^*|$ of the learned bias from the generating
+        bias $b^* = 4.2$ against $\delta$ on logarithmic axes. Explain the
+        shape of the curve from the derivative of $l_\delta$ with respect
+        to $y'$, and relate the result to the penalty curves of
+        :numref:`fig_linreg-loss-menu`.
 1. **Why reshuffle.** The training loader draws a fresh random order at
    every epoch. Explain which property of the minibatch gradient this
    preserves. Then construct a fixed ordering of the training set, such as
    sorting by label, under which minibatch SGD without reshuffling behaves
    differently, and describe the trajectory of $(\mathbf{w}, b)$ within an
    epoch and across epochs.
+1. **Uncleared gradients.** ● Suppose the gradient buffers accumulate and
+   are never cleared, so that the update at step $t$ subtracts
+   $\eta(\mathbf{g}_1 + \cdots + \mathbf{g}_t)$, the sum of all minibatch
+   gradients so far. For the one-dimensional loss
+   $\frac{h}{2}(w - w^*)^2$ with $h > 0$ and exact gradients, derive a
+   recurrence for the error $e_t = w_t - w^*$, and determine for which
+   values of $\eta h$ the error converges to zero. State what this
+   predicts for minibatch SGD on `LinearRegressionScratch` under the same
+   accumulation.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/42)

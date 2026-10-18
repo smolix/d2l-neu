@@ -487,9 +487,9 @@ $$\mathbf{w}^*_{\tilde{\lambda}} = (\mathbf{X}^\top \mathbf{X} + \tilde{\lambda}
 
 which is well defined for every $\tilde{\lambda} > 0$ even when
 $\mathbf{X}^\top \mathbf{X}$ is singular; this is the estimator promised in
-exercise 3.5 of :numref:`sec_linear_regression`. (Because the loss $L$ of this
-section *averages* over the $n$ examples while the objective above sums, the two
-conventions are related by $\tilde{\lambda} = n\lambda$.)
+the last part of exercise 3 of :numref:`sec_linear_regression`. (Because the
+loss $L$ of this section *averages* over the $n$ examples while the objective
+above sums, the two conventions are related by $\tilde{\lambda} = n\lambda$.)
 
 To see what this estimator does, substitute the singular value decomposition
 $\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$
@@ -554,11 +554,11 @@ for lam in (0, 3, 30):
 
 Two things stand out. First, 20 training examples constrain at most 20
 directions of the 200-dimensional weight space:
-$\textrm{rank}(\mathbf{X}) = 20$, so $\textrm{df}(0) = 20$. Gradient descent
-from zero remains in the row space of $\mathbf{X}$ and does not invent
-components in the 180-dimensional nullspace. Overfitting instead comes from
-matching noise along the data-supported directions, especially those with
-small singular values. Second, at the $\lambda = 3$ that lowered the
+$\textrm{rank}(\mathbf{X}) = 20$, so $\textrm{df}(0) = 20$. Every gradient lies
+in the row space of $\mathbf{X}$, so gradient descent never changes the
+component of $\mathbf{w}$ in the 180-dimensional nullspace. Exercise 5
+examines what this implies for the random initialization that
+`WeightDecayScratch` uses. Second, at the $\lambda = 3$ that lowered the
 validation loss above, every shrinkage factor drops below one, the weakest
 directions are damped most, and $\textrm{df}(\lambda)$ falls well below 20: the
 regularized model behaves like one with far fewer parameters than its nominal
@@ -751,32 +751,68 @@ validation data, not from training error alone.
 ## Exercises
 
 1. [code] **The $\lambda$ sweep.** Train `WeightDecayScratch` on `Data`
-   for $\lambda \in \{0, 0.1, 0.3, 1, 3, 10, 30\}$.
-    1. Plot the final training and validation loss against $\lambda$ on a
-       logarithmic $\lambda$ axis and report the $\lambda^*$ with the
+   for $\lambda \in \{0, 0.1, 0.3, 1, 3, 10, 30\}$. The loss that
+   `WeightDecayScratch` reports includes the penalty, so measure the final
+   training and validation losses with the unpenalized squared loss of
+   `d2l.LinearRegressionScratch`.
+    1. Plot both losses against the nonzero values of $\lambda$ on a
+       logarithmic $\lambda$ axis, draw the $\lambda = 0$ losses as
+       horizontal reference lines, and report the $\lambda^*$ with the
        smallest validation loss.
     1. Compute $\textrm{df}(\lambda)$ for the same values with the code of
        :numref:`subsec_wd-shrinkage` and re-plot the validation loss
        against $\textrm{df}(\lambda)$. Compare the shape with
        :numref:`fig_capacity_vs_error`.
-    1. Repeat the search of sub-problem 1 on two more random
-       train/validation splits of the same data (permute the rows of
-       `data.X` and `data.y` with the same permutation). Report whether
-       $\lambda^*$ is stable across the three splits and by how much the
-       validation loss differs between $\lambda^*$ and its runner-up.
-1. **The $\ell_1$ update.** Derive the update equations for the case where
-   instead of $\|\mathbf{w}\|^2$ we use $\sum_i |w_i|$ as our penalty of
-   choice ($\ell_1$ regularization).
-1. **Frobenius penalty.** We know that
-   $\|\mathbf{w}\|^2 = \mathbf{w}^\top \mathbf{w}$. Find the analogous
-   identity for matrices (see the Frobenius norm in
-   :numref:`subsec_lin-algebra-norms`).
+    1. Repeat the search of (a) on two more random train/validation splits
+       of the same data (permute the rows of `data.X` and `data.y` with the
+       same permutation). Report whether $\lambda^*$ is stable across the
+       three splits and by how much the validation loss differs between
+       $\lambda^*$ and its runner-up.
+1. **The $\ell_1$ update.** Replace the penalty
+   $\frac{\lambda}{2}\|\mathbf{w}\|^2$ by $\lambda \sum_i |w_i|$
+   ($\ell_1$ regularization).
+    1. Derive the minibatch SGD update for $\mathbf{w}$, using the
+       subgradient $\operatorname{sign}(w_i)$ of
+       :numref:`sec_linear_regression` in place of the derivative of
+       $|w_i|$.
+    1. Compare the change that the penalty alone makes to $w_i$ in one step
+       of this update with the change it makes in the $\ell_2$ update of
+       this section, once for large and once for small $|w_i|$.
+    1. The update of (a) almost never sets $w_i$ exactly to zero. Split it
+       into a gradient step on $L$ followed by the penalty step, and modify
+       the penalty step so that it sets $w_i$ to zero whenever it would
+       change the sign of $w_i$. Relate the result to the feature selection
+       that lasso performs.
+1. **Frobenius penalty.** Weight decay on a layer with weight matrix
+   $\mathbf{W} \in \mathbb{R}^{q \times d}$ adds
+   $\frac{\lambda}{2}\|\mathbf{W}\|_\textrm{F}^2$ to the loss, with the
+   Frobenius norm of :numref:`subsec_lin-algebra-norms`.
+    1. The trace $\textrm{tr}(\mathbf{A})$ of a square matrix $\mathbf{A}$
+       is the sum of its diagonal entries. Show that
+       $\|\mathbf{W}\|_\textrm{F}^2 = \textrm{tr}(\mathbf{W}^\top \mathbf{W})$,
+       the matrix analogue of $\|\mathbf{w}\|^2 = \mathbf{w}^\top \mathbf{w}$.
+    1. Show that
+       $\|\mathbf{W}\mathbf{v}\| \le \|\mathbf{W}\|_\textrm{F}\,\|\mathbf{v}\|$
+       for every $\mathbf{v} \in \mathbb{R}^d$. Use it to bound the change
+       of the output $\mathbf{W}\mathbf{x}$ when the input $\mathbf{x}$ is
+       perturbed by $\boldsymbol{\delta}$.
 1. [code] **Early stopping.** Train `WeightDecayScratch` with
-   $\lambda = 0$ as in `train_scratch(0)`, recording the validation loss
-   after every epoch, and stop when it has not improved for three
-   consecutive epochs. Report the epoch with the lowest validation loss and
-   that loss, and compare with the 30-epoch runs `train_scratch(0)` and
-   `train_scratch(3)`.
+   $\lambda = 0$ as in `train_scratch(0)` for at most 30 epochs. Record the
+   validation loss after every epoch, and stop when it has not improved for
+   three consecutive epochs. Report the epoch with the lowest validation
+   loss and that loss. Compare it with the final validation losses of
+   `train_scratch(0)` and `train_scratch(3)`, measuring the validation loss
+   of `train_scratch(3)` without its penalty term.
+1. **Decay of the nullspace.** ● Let $\mathbf{X}$ be the $20 \times 200$
+   matrix of training inputs.
+    1. Show that one minibatch SGD step of `WeightDecayScratch` multiplies
+       the component of $\mathbf{w}$ in the nullspace of $\mathbf{X}$ by
+       $1 - \eta\lambda$.
+    1. `WeightDecayScratch` draws its initial weights from
+       $\mathcal{N}(0, 0.01^2)$. Estimate how much the nullspace component
+       of the initial weights adds to the validation loss, and use the
+       estimate with (a) to explain the comparison of the early-stopped run
+       with `train_scratch(3)` in exercise 4.
 1. [code] **Ridge as augmented least squares.** Center the columns of
    `data.X` and the labels `data.y` of the training split so that the
    intercept drops out, and implement ridge regression two ways.
@@ -799,32 +835,35 @@ validation data, not from training error alone.
    $\lambda = \sigma^2/(n\tau^2)$ for the prior
    $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2\mathbf{I})$ and noise
    variance $\sigma^2$.
-    1. For the experiment above ($n = 20$, $\sigma = 0.01$,
-       $\lambda = 3$), compute $\tau$ and compare it with the true weights
-       $w_i = 0.01$ of `Data`. Is the implied prior consistent with the
-       data-generating process? Explain why weight decay lowers the
-       validation loss regardless.
+    1. For `train_scratch(3)` ($n = 20$, $\sigma = 0.01$, $\lambda = 3$),
+       compute $\tau$ and compare it with the true weights $w_i = 0.01$ of
+       `Data`. Is the implied prior consistent with the data-generating
+       process? Then compute the $\lambda$ that a prior with $\tau = 0.01$
+       implies.
     1. Holding $\tau$ and $\sigma$ fixed, describe how $\lambda$ changes as
        $n$ grows and interpret the change in terms of the relative weight of
        prior and likelihood.
     1. The bias $b$ is not penalized. Which prior on $b$ does this
        correspond to?
-1. **Shrinkage equals penalty.** Show that the weight-decay update
-   $\mathbf{w} \leftarrow (1-\eta\lambda)\mathbf{w} - \eta\nabla L$ of this
-   section is identical to a gradient step on the penalized loss
-   $L + \frac{\lambda}{2}\|\mathbf{w}\|^2$. Now suppose that the gradient
-   of $L$ is rescaled coordinate-wise by fixed constants $a_i > 0$ before
-   the step, and compare the two updates
+1. **Shrinkage versus penalty.** Weight decay can be applied by shrinking
+   the weights before the gradient step or by adding
+   $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss $L$.
+    1. Show that the weight-decay update
+       $\mathbf{w} \leftarrow (1-\eta\lambda)\mathbf{w} - \eta\nabla L$ of
+       this section is identical to a gradient step on the penalized loss
+       $L + \frac{\lambda}{2}\|\mathbf{w}\|^2$.
+    1. Suppose that the gradient of $L$ is rescaled coordinate-wise by
+       fixed constants $a_i > 0$ before the step. Shrinking and then
+       stepping gives the first update below, and stepping on the penalized
+       gradient gives the second:
 
-    $$w_i \leftarrow (1-\eta\lambda)\, w_i - \eta a_i \,\partial_{w_i} L
-    \qquad \textrm{and} \qquad
-    w_i \leftarrow w_i - \eta a_i \left(\partial_{w_i} L + \lambda w_i\right),$$
+       $$w_i \leftarrow (1-\eta\lambda)\, w_i - \eta a_i \,\partial_{w_i} L
+       \qquad \textrm{and} \qquad
+       w_i \leftarrow w_i - \eta a_i \left(\partial_{w_i} L + \lambda w_i\right).$$
 
-    the first of which shrinks and then steps while the second steps on
-    the penalized gradient. Determine for which $a_i$ the two coincide and
-    how the effective shrinkage of coordinate $i$ depends on $a_i$ in the
-    second. Relate your finding to the decoupled weight decay of AdamW
-    (:numref:`sec_adamw`).
+       Determine for which $a_i$ the two coincide and the factor by which
+       the second update shrinks coordinate $i$. Relate your finding to the
+       decoupled weight decay of AdamW (:numref:`sec_adamw`).
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),

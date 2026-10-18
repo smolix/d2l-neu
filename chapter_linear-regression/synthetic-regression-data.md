@@ -359,7 +359,7 @@ $\lceil 1000 / 32 \rceil = 32$ batches: 31 full ones and a final
 partial batch of 8 examples.
 Note also that the built-in training loader *reshuffles* the examples at
 the start of every epoch, just as our hand-rolled loader drew a fresh
-random order on each call; exercise 8 of :numref:`sec_linear_scratch`
+random order on each call; exercise 9 of :numref:`sec_linear_scratch`
 asks why this reshuffling matters.
 
 :begin_tab:`jax`
@@ -395,51 +395,95 @@ we use from here on.
 ## Exercises
 
 :begin_tab:`mxnet`
-1. **Partial batches.** When the number of examples is not divisible by the
-   batch size, `get_tensorloader` keeps the final partial batch. Find the
-   argument of Gluon's `DataLoader` that discards it instead, and give one
-   training scenario where you would enable it and one where you would not.
+1. **Partial batches.** With 1000 examples per split and `batch_size=32`,
+   each loader ends a pass with a partial batch of 8 examples. Gluon's
+   `DataLoader` discards that batch when given `last_batch='discard'`.
+    1. The training loader reshuffles every epoch, whereas the validation
+       loader reads in a fixed order. For each loader, state which examples
+       a discarded partial batch leaves out over many epochs, and decide for
+       which loader discarding is acceptable.
+    1. Suppose that the partial batch is kept and that the validation loss
+       is reported as the unweighted mean of the 32 per-batch mean losses.
+       Compute the weight that this mean gives one example of the partial
+       batch and one example of a full batch, and compare both with the
+       weight $1/1000$ in the exact mean over the validation set.
 :end_tab:
 
 :begin_tab:`pytorch`
-1. **Partial batches.** When the number of examples is not divisible by the
-   batch size, `get_tensorloader` keeps the final partial batch. Find the
-   argument of `DataLoader` that drops it instead, and give one training
-   scenario where you would enable it and one where you would not.
+1. **Partial batches.** With 1000 examples per split and `batch_size=32`,
+   each loader ends a pass with a partial batch of 8 examples. `DataLoader`
+   discards that batch when given `drop_last=True`.
+    1. The training loader reshuffles every epoch, whereas the validation
+       loader reads in a fixed order. For each loader, state which examples
+       a discarded partial batch leaves out over many epochs, and decide for
+       which loader discarding is acceptable.
+    1. Suppose that the partial batch is kept and that the validation loss
+       is reported as the unweighted mean of the 32 per-batch mean losses.
+       Compute the weight that this mean gives one example of the partial
+       batch and one example of a full batch, and compare both with the
+       weight $1/1000$ in the exact mean over the validation set.
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. **Partial batches.** When the number of examples is not divisible by the
-   batch size, `get_tensorloader` keeps the final partial batch. Find the
-   argument of `Dataset.batch` that drops it instead, and give one training
-   scenario where you would enable it and one where you would not.
+1. **Partial batches.** With 1000 examples per split and `batch_size=32`,
+   each loader ends a pass with a partial batch of 8 examples.
+   `Dataset.batch` discards that batch when given `drop_remainder=True`.
+    1. The training loader reshuffles every epoch, whereas the validation
+       loader reads in a fixed order. For each loader, state which examples
+       a discarded partial batch leaves out over many epochs, and decide for
+       which loader discarding is acceptable.
+    1. Suppose that the partial batch is kept and that the validation loss
+       is reported as the unweighted mean of the 32 per-batch mean losses.
+       Compute the weight that this mean gives one example of the partial
+       batch and one example of a full batch, and compare both with the
+       weight $1/1000$ in the exact mean over the validation set.
 :end_tab:
 
 :begin_tab:`jax`
-1. **Partial batches.** `get_tensorloader` passes `drop_remainder=train`,
-   so the training loader drops its final partial batch while the
-   validation loader keeps its partial batch of 8 examples. Predict what
-   `len(data.val_dataloader())` returns. State what keeping that batch
-   costs under `@jax.jit`, and whether you would drop it for validation as
-   well.
+1. **Partial batches.** With 1000 examples per split and `batch_size=32`,
+   each loader ends a pass with a partial batch of 8 examples.
+   `get_tensorloader` passes `drop_remainder=train`, so the training loader
+   discards that batch while the validation loader keeps it.
+    1. The training loader reshuffles every epoch, whereas the validation
+       loader reads in a fixed order. State which training examples the
+       discarded batch leaves out over many epochs, and which examples every
+       validation pass would leave out if `drop_remainder=True` were passed
+       for validation as well. Explain why discarding is acceptable for one
+       loader and not for the other.
+    1. Suppose that the validation loss is reported as the unweighted mean
+       of the 32 per-batch mean losses. Compute the weight that this mean
+       gives one example of the partial batch and one example of a full
+       batch, and compare both with the weight $1/1000$ in the exact mean
+       over the validation set.
 :end_tab:
 
-2. **Data beyond memory.** ● Suppose that we want to generate a huge
-   dataset, where both the dimension of `w` and the number of examples
-   `num_train + num_val` are large.
-    1. Explain which statements in `SyntheticRegressionData.__init__` and in
-       `get_dataloader` fail once $\mathbf{X}$ no longer fits in memory, and
-       how each would have to change.
-    1. Design an algorithm that visits the examples on disk in a fresh
-       random order every epoch while (i) reading mostly long contiguous
-       blocks rather than individual examples and (ii) never storing a
-       permutation table with one entry per example. Pseudorandom
-       permutations :cite:`Naor.Reingold.1999` address requirement (ii);
-       state what addresses requirement (i).
-1. [code] **On-the-fly generation.** Write a `DataModule` subclass whose
-   `get_dataloader` draws a fresh minibatch of synthetic data on every
-   `next` call instead of storing $\mathbf{X}$ and $\mathbf{y}$ in
-   `__init__`. Confirm that two successive minibatches differ.
+2. **Data beyond memory.** ● Suppose that `len(w)` and
+   `num_train + num_val` are so large that $\mathbf{X}$ no longer fits in
+   memory, so `__init__` generates it in chunks and writes it to disk.
+    1. Name the statements in `SyntheticRegressionData.__init__` and in the
+       hand-rolled `get_dataloader` whose memory or cost grows with the
+       number of examples, and state which of them writing $\mathbf{X}$ to
+       disk in chunks does not fix.
+    1. Reading single examples from random disk locations is slow, so the
+       training loader should read long contiguous blocks. Design a loader
+       that reads such blocks and still visits the examples in a fresh order
+       every epoch. State in what sense this order falls short of a
+       uniformly random permutation.
+    1. The loader must also avoid storing a permutation table with one
+       entry per example. Explain how a pseudorandom permutation
+       :cite:`Naor.Reingold.1999` meets this requirement while still
+       changing the order every epoch.
+1. [code] **On-the-fly generation.** Write a `DataModule` subclass that
+   stores no $\mathbf{X}$ or $\mathbf{y}$. Its training loader instead draws
+   every minibatch fresh from the data-generating process when the
+   minibatch is requested.
+    1. A stream of fresh minibatches has no natural end, yet
+       `Trainer.prepare_data` in :numref:`oo-design-training` calls `len`
+       on both loaders. Decide how many minibatches one epoch yields, and
+       make `len(data.train_dataloader())` return that number.
+    1. Decide whether the validation loader should also draw fresh examples
+       on every call, and implement your choice. Justify it by what the
+       validation loss is used for.
 
 :begin_tab:`mxnet`
 4. **Reproducibility.** Two instances of `SyntheticRegressionData` built
@@ -470,21 +514,44 @@ we use from here on.
 
 :begin_tab:`jax`
 4. **Reproducibility.** `SyntheticRegressionData` splits its `key` into
-   `key1` for `X` and `key2` for `eps`. Explain why two instances built with
-   the same `key` hold identical data without any global seed. Then predict
-   what `eps` would be, relative to the entries of `X`, if both draws used
-   `key` itself instead of `key1` and `key2`, and check your prediction
-   numerically.
+   `key1` for `X` and `key2` for `eps`.
+    1. Explain why two instances built with the same `key` hold identical
+       data without any global seed.
+    1. Change both draws to use `key` itself instead of `key1` and `key2`,
+       and compare `eps / noise` with the entries of `X` numerically. State
+       what the split guarantees about `X` and `eps` that this version does
+       not.
+    1. Construct five instances whose datasets are independent of each
+       other, as averaging an error over repeated trials requires, and state
+       how you derive their keys.
 :end_tab:
 
-5. [code] **Recovery under noise.** Vary the noise standard deviation
-   `noise` over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$ with `num_train=1000` and
-   fit $\hat{\mathbf{w}}$ on each dataset by least squares, using the
-   normal equations of :numref:`sec_linear_regression` or `lstsq`.
-    1. Before running, state how you expect
-       $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ to scale with the noise
-       level.
-    1. Plot the error against the noise level on logarithmic axes.
+5. [code] **Recovery under noise.** On the training split of
+   `SyntheticRegressionData`, fit $\hat{\mathbf{w}}$ and $\hat{b}$ jointly
+   by least squares, appending a column of ones to $\mathbf{X}$ as in
+   :numref:`subsec_linear-regression-analytic-solution` and solving with
+   the normal equations or `lstsq`. Measure the distance
+   $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ from the generating weights
+   $\mathbf{w}^*$, averaged over 10 independent datasets for each setting.
+    1. Before running, state how you expect this error to scale with the
+       noise standard deviation `noise` and with `num_train`.
+    1. Vary `noise` over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$ with
+       `num_train=1000`, and plot the error against the noise level on
+       logarithmic axes.
+    1. Vary `num_train` over $5, 10, 20, 50, \ldots, 10{,}000$ with
+       `noise=0.01`, and plot the error against `num_train` on logarithmic
+       axes.
+1. **Planted bug.** A faulty variant of the hand-rolled `get_dataloader`
+   shuffles the rows of `X` and the entries of `y` with two independent
+   permutations. We collect the pairs that it yields in one training epoch
+   on `data`, whose parameters are $\mathbf{w}^* = [2, -3.4]^\top$ and
+   $b^* = 4.2$ with noise standard deviation $0.01$. We then fit
+   $\hat{\mathbf{w}}$ and $\hat{b}$ to these pairs by least squares.
+    1. Predict the approximate values of $\hat{\mathbf{w}}$ and $\hat{b}$,
+       and explain your prediction.
+    1. Estimate the mean squared error of this fit on the collected pairs,
+       and compare it with the smallest mean squared error that any
+       predictor can attain on correctly paired data.
 
 
 :begin_tab:`mxnet`

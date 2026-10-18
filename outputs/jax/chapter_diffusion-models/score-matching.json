@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "score-matching/score-matching-sliced-score-matching-2-1.png",
-          "bytes": 138589,
-          "sha256": "sha256:05f19471f68453e651297e7d016602391613829eed8d5fdd8319b7f371125081"
+          "bytes": 193116,
+          "sha256": "sha256:943fa8ee6a188402940913cb8c114c30f2e9dd6ff095bd5e25ed094459cbe5d9"
         }
       ]
     },
@@ -71,17 +71,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  log density  grid points  relative score error\n[  -2,    0)           30                 0.068\n"
+          "text": "  log density  grid points  relative score error\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[  -4,   -2)          145                 0.024\n[  -8,   -4)          308                 0.034\n"
+          "text": "[  -2,    0)           30                 0.068\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[ -16,   -8)          557                 0.154\n[ -40,  -16)          547                 0.134\n"
+          "text": "[  -4,   -2)          145                 0.024\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[  -8,   -4)          308                 0.034\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[ -16,   -8)          557                 0.154\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[ -40,  -16)          547                 0.134\n"
         }
       ]
     }

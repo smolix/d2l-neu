@@ -38,10 +38,28 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_diffusion-models/langevin.ipynb",
     "chapter_diffusion-models/annealed-langevin.ipynb",
     "chapter_diffusion-models/ddpm.ipynb",
-    "chapter_diffusion-models/image-diffusion.ipynb",
     "chapter_diffusion-models/ddim.ipynb",
     "chapter_diffusion-models/flow-matching.ipynb",
     "chapter_diffusion-models/discrete-diffusion.ipynb",
+}
+
+# Notebooks that must run on a GPU no matter what the keyword scan finds. The
+# scan is textual, so it is unreliable in BOTH directions: a notebook that never
+# names a device reads as CPU (JAX places arrays on the default backend
+# implicitly), and a bare "GPU" inside a base64 output blob reads as GPU, which
+# makes the answer depend on whether the notebook has been executed yet. An
+# entry here settles it deterministically.
+GPU_ONLY_NOTEBOOKS = {
+    # ch. 17: three U-Net training loops of 1000-2000 steps, each inside ONE
+    # cell. On CPU the JAX variant blows the 3600 s per-cell timeout (measured
+    # 2026-09-28: FAIL at 3612 s both at 8-way concurrency and standalone); on
+    # a GPU the same notebook finishes in 155 s. JAX is what forces the entry:
+    # it places arrays on the default backend, so it is the only framework here
+    # that actually picks the GPU up. The PyTorch cells never call .to(device),
+    # so that variant stays CPU-bound either way (2068 s with the GPU hidden,
+    # 1846 s with one assigned) and only holds the slot — cheap, and it keeps
+    # both frameworks' numbers coming off the same run configuration.
+    "chapter_diffusion-models/image-diffusion.ipynb",
 }
 
 # Per-framework thread-limiting env vars.
@@ -171,7 +189,6 @@ SHARED_DATA_NOTEBOOKS = {
 MULTI_GPU_NOTEBOOKS = {
     "chapter_builders-guide/gpus-devices-memory.ipynb",
     "chapter_computational-performance/multiple-gpus.ipynb",
-    "chapter_optimization/minibatch-sgd.ipynb",
 }
 
 # Notebooks that need an EXCLUSIVE, whole-box GPU reservation: every GPU the
@@ -247,6 +264,8 @@ def notebook_resource(framework, rel, uses_gpu):
     data-parallel notebooks (MULTI_GPU_NOTEBOOKS) take 2 GPUs at 1 (or 2) each;
     whole-box notebooks (WHOLE_BOX_NOTEBOOKS) take every GPU, fully.
     """
+    if rel in GPU_ONLY_NOTEBOOKS:
+        return ('gpu', 1, 1)
     if rel in CPU_ONLY_NOTEBOOKS:
         return ('cpu',)
     if rel in WHOLE_BOX_NOTEBOOKS:
@@ -277,6 +296,12 @@ def file_uses_gpu(filepath, siblings_root):
     """
     filepath = Path(filepath)
     siblings_root = Path(siblings_root)
+    try:
+        _rel = filepath.relative_to(siblings_root).parts[1:]
+    except ValueError:
+        _rel = ()
+    if _rel and Path(*_rel).as_posix() in GPU_ONLY_NOTEBOOKS:
+        return True
     try:
         text = filepath.read_text(encoding="utf-8")
     except Exception:

@@ -47,7 +47,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target (2000 samples of the mixture): mode weights [0.5, 0.317, 0.183], spread 0.49, stray 0.012\nannealed,  20 steps per level: mode weights [0.428, 0.314, 0.257], spread 0.75, stray 0.133\n"
+          "text": "target (2000 samples of the mixture): mode weights [0.5, 0.317, 0.183], spread 0.49, stray 0.012\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "annealed,  20 steps per level: mode weights [0.428, 0.314, 0.257], spread 0.75, stray 0.133\n"
         },
         {
           "type": "stream",
@@ -69,29 +74,29 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-annealed-langevin-dynamics-2-1.png",
-          "bytes": 79647,
-          "sha256": "sha256:102b100a3c98e687606b546ebe2773da24996068828c485c645a1a61056f1dce"
+          "bytes": 88350,
+          "sha256": "sha256:d9fa1d7f85964884b048df69875978672b7da2a6b377f429714bb67c1cf10464"
         }
       ]
     },
     "annealed-langevin-a-noise-conditional-network-for-images-1": {
-      "code_fingerprint": "sha256:cb75191c9865cc3c8a7d39683f635083ffe888616769288ded8a042c89cab97f",
+      "code_fingerprint": "sha256:8fa1e3be3cc44607d19c9a063ee0a08c7e050da2fb80181d8ce45e0edf9a9f9d",
       "kind": "text",
       "outputs": []
     },
     "annealed-langevin-a-noise-conditional-network-for-images-2": {
-      "code_fingerprint": "sha256:48d7c6d206819f9d00eb285941e048da434f8afeb1945d6661066899e5bd5750",
+      "code_fingerprint": "sha256:76b84f156fe9a00ddff9d886c480ad0c476fb6099c6341f1ea19cfb5e32e0581",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final training loss: 0.116\n"
+          "text": "final training loss: 0.115\n"
         }
       ]
     },
     "annealed-langevin-a-noise-conditional-network-for-images-3": {
-      "code_fingerprint": "sha256:b7595a5c81e0bc24f4d3b9487398def2e0b69ab8946b9011f4d6e810c052cfef",
+      "code_fingerprint": "sha256:19e846ac2709d00545ffef0c3851e3906bca8d10c2d5cce26574a77508e609e6",
       "kind": "mixed",
       "outputs": [
         {
@@ -113,8 +118,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-a-noise-conditional-network-for-images-3-1.png",
-          "bytes": 138262,
-          "sha256": "sha256:45a00fc6d88ab4458d3a201a9c59021aecbb65ff57742b279a409b4695b97b4d"
+          "bytes": 180546,
+          "sha256": "sha256:8703b557acc25558925989740754caa1788d623217db67f13db946153ac6f0ec"
         }
       ]
     }

@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "limits/limits-quadrature-1-1.png",
-          "bytes": 24535,
-          "sha256": "sha256:1b856c1e57d19e9eb8a556088142df450bf96f7ae6bbcf56c84ce43e2ded46f1"
+          "bytes": 26580,
+          "sha256": "sha256:77f394465d4ef5b4d7257bc1515313f5f87678fe91f9545092d28f170065b124"
         }
       ]
     },
@@ -59,17 +59,37 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  d  estimate / Z  predicted rel. std. error  effective samples\n  1         1.000                    0.00415            37568.7\n"
+          "text": "  d  estimate / Z  predicted rel. std. error  effective samples\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2         0.997                    0.00799            14351.7\n  4         0.985                     0.0232             1425.4\n"
+          "text": "  1         1.000                    0.00415            37568.7\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  8         1.003                      0.173              145.8\n 16         1.088                       9.43                6.0\n 32         0.079                   2.81e+04               10.5\n"
+          "text": "  2         0.997                    0.00799            14351.7\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  4         0.985                     0.0232             1425.4\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  8         1.003                      0.173              145.8\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 16         1.088                       9.43                6.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 32         0.079                   2.81e+04               10.5\n"
         }
       ]
     }

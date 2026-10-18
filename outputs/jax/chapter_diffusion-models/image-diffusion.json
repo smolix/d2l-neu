@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-unconditional-samples-1.png",
-          "bytes": 110733,
-          "sha256": "sha256:733334c61f4002b282f11d709cf38655b1b26fcd2ff49198f994edceec1ce2a4"
+          "bytes": 133516,
+          "sha256": "sha256:942f35cf37b51d3622158dad6bbc49888c14fa55db73728f9aab6dbe6db058f4"
         }
       ]
     },
@@ -69,7 +69,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "classifier test accuracy: 0.895\n"
+          "text": "classifier test accuracy: 0.893\n"
         }
       ]
     },
@@ -85,17 +85,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.613                  16.46\n"
+          "text": "  1.0            0.650                  16.46\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2.0            0.812                  15.24\n"
+          "text": "  2.0            0.850                  15.24\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.900                  14.47\n"
+          "text": "  4.0            0.875                  14.47\n"
         }
       ]
     },
@@ -112,15 +112,15 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-1.png",
-          "bytes": 88289,
-          "sha256": "sha256:5544165c2c0715dcbd1cfb9e0902e73ef562a004771d819737dc523c6c3f06f0"
+          "bytes": 105904,
+          "sha256": "sha256:94aa3e42a55f9db3b1fbb50aeb26c4e727cf6c1c431abfcf56ea83854fcad6f7"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-2.png",
-          "bytes": 85381,
-          "sha256": "sha256:5b1c7a0ffb332a9b772b85466d5a7c5cf722cabc07e9b9df7a5d61fad1883e21"
+          "bytes": 103228,
+          "sha256": "sha256:d2ae6fc01626b28b1ec0f32d126a6949b26da69d37dab8f21e3041a55b99f1e0"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noisy classifier test accuracy: 0.845 at t = 0, 0.582 at t = 500\n"
+          "text": "noisy classifier test accuracy: 0.848 at t = 0, 0.581 at t = 500\n"
         }
       ]
     },
@@ -147,31 +147,31 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.512                  18.27\n"
+          "text": "  1.0            0.512                  18.33\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.825                  16.49\n"
+          "text": "  4.0            0.812                  16.65\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10.0            0.925                  16.15\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
+          "text": " 10.0            0.900                  15.96\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-1.png",
-          "bytes": 91223,
-          "sha256": "sha256:ae28878edcb34a3575c2c31a7acff60fec10016b06ef9b927cd6c436a7b694f6"
+          "bytes": 109868,
+          "sha256": "sha256:553ea1528ac67922451854924c1a34d2ee2f94c845c331de3fda4c251aedf04d"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-2.png",
-          "bytes": 80194,
-          "sha256": "sha256:a2316baf4fb52f49ad3157d5bd62208559a59aab5a60a8686bef7059f2d56487"
+          "bytes": 97587,
+          "sha256": "sha256:09a4207ceb09d5c3dc7621f6ac0104d9e29eb1b7bcbc0e5146c757efe9c8831e"
         }
       ]
     }

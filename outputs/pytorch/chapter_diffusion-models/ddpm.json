@@ -47,7 +47,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target (2000 samples of the mixture): mode weights [0.5, 0.317, 0.183], spread 0.49, stray 0.012\nlearned predictor: mode weights [0.498, 0.333, 0.169], spread 0.47, stray 0.024\noptimal predictor: mode weights [0.496, 0.283, 0.22], spread 0.49, stray 0.011\n"
+          "text": "target (2000 samples of the mixture): mode weights [0.5, 0.317, 0.183], spread 0.49, stray 0.012\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learned predictor: mode weights [0.498, 0.333, 0.169], spread 0.47, stray 0.024\noptimal predictor: mode weights [0.496, 0.283, 0.22], spread 0.49, stray 0.011\n"
         }
       ]
     },
@@ -59,8 +64,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddpm/ddpm-ancestral-sampling-2-1.png",
-          "bytes": 136487,
-          "sha256": "sha256:b46a64d0e7229d530898bb3374fc2c883a010f1b7e953359b5a8c795149a107a"
+          "bytes": 152577,
+          "sha256": "sha256:be8105e5c390b61846c8f1e21faa1f33b3956624210cadd09b0ab1309f76b318"
         }
       ]
     }

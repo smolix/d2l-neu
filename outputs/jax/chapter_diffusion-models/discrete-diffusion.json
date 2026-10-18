@@ -20,7 +20,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "entropy of the table: 4.840 nats; bound of an exact network with T = 32: 4.855 nats\nTV(histogram of 20000 true samples, table): 0.041\nTV(product of the marginals, table): 0.314\n"
+          "text": "entropy of the table: 4.840 nats; bound of an exact network with T = 32: 4.855 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "TV(histogram of 20000 true samples, table): 0.041\nTV(product of the marginals, table): 0.314\n"
         }
       ]
     },
@@ -67,7 +72,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   32        0.061      0.010          0.311\n    8        0.076      0.039          0.283\n    2        0.165      0.157          0.171\n    1        0.302      0.314          0.057\n"
+          "text": "   32        0.061      0.010          0.311\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    8        0.076      0.039          0.283\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    2        0.165      0.157          0.171\n    1        0.302      0.314          0.057\n"
         }
       ]
     },
@@ -79,8 +94,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-experiments-on-the-running-example-5-1.png",
-          "bytes": 12976,
-          "sha256": "sha256:a800f80602e099fbee3356444dbf732325cb175302c7336ad0206e5b3e319cdc"
+          "bytes": 14125,
+          "sha256": "sha256:a97c53494b20c190b420587527d6d34d87fee85c213f43d2123a8fefbeeb52ec"
         }
       ]
     },
@@ -128,22 +143,22 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-1.png",
-          "bytes": 59571,
-          "sha256": "sha256:ceb73847fbc72c95d27627c878f6d6a5e55c4bc9a1c0298f3e6decbe08ee9cfb"
+          "bytes": 78968,
+          "sha256": "sha256:3c1d7325c4f68718c06c4964c42a3603b50237cb07d19c09658b8befdabb97ef"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-2.png",
-          "bytes": 108845,
-          "sha256": "sha256:3b2571d523368bba679d114ad2df3dd33b799aa3824ce284f15e1640c774771e"
+          "bytes": 164374,
+          "sha256": "sha256:059e8da23e920971b2c9ad6512fb7d5d1d2990235088d8ebf5a18eab52304266"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-3.png",
-          "bytes": 111688,
-          "sha256": "sha256:ad00435095f3d0455f90032753f5c8cda11d9ecaceda7e0ba842b65370ae9935"
+          "bytes": 158833,
+          "sha256": "sha256:d89629b148176f59451a00eaaa28342f4ae47fba2abcf11364c63d7a716d878a"
         }
       ]
     }

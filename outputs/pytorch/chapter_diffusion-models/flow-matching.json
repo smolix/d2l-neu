@@ -42,7 +42,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target (2000 samples of the mixture): mode weights [0.5, 0.317, 0.183], spread 0.49, stray 0.012\nlearned field, 100 Euler steps: mode weights [0.52, 0.322, 0.159], spread 0.50, stray 0.036\nlearned field,  10 Euler steps: mode weights [0.535, 0.317, 0.148], spread 0.48, stray 0.072\nlearned field,   4 Euler steps: mode weights [0.596, 0.294, 0.11], spread 0.49, stray 0.175\nlearned field,   2 Euler steps: mode weights [0.753, 0.214, 0.032], spread 0.76, stray 0.449\nexact field,   100 Euler steps: mode weights [0.518, 0.292, 0.19], spread 0.48, stray 0.015\ncurvature of the learned flow: 0.219\n"
+          "text": "target (2000 samples of the mixture): mode weights [0.5, 0.317, 0.183], spread 0.49, stray 0.012\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learned field, 100 Euler steps: mode weights [0.52, 0.322, 0.159], spread 0.50, stray 0.036\nlearned field,  10 Euler steps: mode weights [0.535, 0.317, 0.148], spread 0.48, stray 0.072\nlearned field,   4 Euler steps: mode weights [0.596, 0.294, 0.11], spread 0.49, stray 0.175\nlearned field,   2 Euler steps: mode weights [0.753, 0.214, 0.032], spread 0.76, stray 0.449\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact field,   100 Euler steps: mode weights [0.518, 0.292, 0.19], spread 0.48, stray 0.015\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "curvature of the learned flow: 0.219\n"
         }
       ]
     },
@@ -53,14 +68,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "curvature of the exact flow, linear path: 0.213\ncurvature of the exact flow, variance-preserving path: 0.105\n"
+          "text": "curvature of the exact flow, linear path: 0.213\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "curvature of the exact flow, variance-preserving path: 0.105\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-sampling-by-integration-2-1.png",
-          "bytes": 27945,
-          "sha256": "sha256:d81cc4412cb64d66f34e438bba3eb446aa5f6249e913d6bb88380817c4f71339"
+          "bytes": 30000,
+          "sha256": "sha256:90cd290f681274bdbb1762af2c3b85317517d05fd78ff3e387f23a2f6afb96e3"
         }
       ]
     },
@@ -77,8 +97,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-images-with-a-velocity-target-1.png",
-          "bytes": 105329,
-          "sha256": "sha256:7b1e8f785c304b64c527cf5ea450d52eca4dcfb014b81596ab45fb33a545567b"
+          "bytes": 128137,
+          "sha256": "sha256:fbd4570f9b1870b8980476baee17d358c349b965e33d89bc5df2e133b63dc42e"
         }
       ]
     }

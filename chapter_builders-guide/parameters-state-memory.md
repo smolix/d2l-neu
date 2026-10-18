@@ -1660,83 +1660,92 @@ not stop running-statistics updates in training mode.
 
 ## Exercises
 
-1. [code] **Memory footprint.** Write a helper that reports the byte cost of
-   fp32 Adam training separately for each top-level block of `net`.
+1. [code] **Memory footprint.** Write a helper that reports, for each
+   top-level block of `net`, its number of state entries and its bytes
+   under fp32 Adam training with every parameter trained.
     1. Which block dominates? At what output width would the output layer
        overtake one residual block?
-    1. Insert a batch normalization layer into the stack. Its running
-       statistics are state that costs weight bytes but neither gradient
-       nor optimizer bytes. Extend the helper to count that state at 4 bytes
-       per entry and to report each block's share of the total entry count
-       next to its share of the total bytes. For which block do the two
-       shares differ, and why?
-1. **Trainable running statistics.** BatchNorm's running mean and variance
-   are non-trained state. Suppose you made them trainable parameters so that
-   the optimizer updates them. What goes wrong during training, and why does
-   gradient descent on a running average not compute the same thing as the
-   forward-pass update rule it replaces?
+    1. Insert a batch normalization layer over the 64 hidden features
+       between the two residual blocks. Extend the helper so that it costs
+       the layer's running statistics correctly, and report each block's
+       bytes per entry. For which blocks is the share of the total bytes
+       larger than the share of the total entries, and for which is it
+       smaller? Explain both directions.
+1. [code] **Running statistics.** In training mode a batch normalization
+   layer normalizes with the minibatch mean
+   $\hat{\boldsymbol{\mu}}_\mathcal{B}$ and variance, and each training
+   step updates the running mean $\bar{\boldsymbol{\mu}}$ by
+
+   $$\bar{\boldsymbol{\mu}} \leftarrow \rho\, \bar{\boldsymbol{\mu}} + (1 - \rho)\, \hat{\boldsymbol{\mu}}_\mathcal{B}.$$
+
+    1. A fresh layer starts from $\bar{\boldsymbol{\mu}} = \mathbf{0}$.
+       Predict $\bar{\boldsymbol{\mu}}$ after the layer has processed $k$
+       batches in training mode, each with minibatch mean exactly 3 in
+       every feature. Check the prediction for $k = 1, 5, 20$ on a fresh
+       layer over 4 features, without any optimizer step, and read off the
+       value of $\rho$ the layer uses by default.
+    1. Suppose you registered $\bar{\boldsymbol{\mu}}$ as a trainable
+       parameter and removed the update above. What gradient does the
+       training loss send to $\bar{\boldsymbol{\mu}}$? How do the training
+       loss and the evaluation accuracy then compare with those of an
+       unmodified model?
+    1. Find a loss in $\bar{\boldsymbol{\mu}}$ alone whose gradient step
+       with learning rate $\eta$ on each minibatch reproduces the removed
+       update, and state the $\eta$ that matches $\rho$.
 
 :begin_tab:`pytorch`
-3. [code] **Tied parameters.** Tie two layers as in `TinyLM`, then copy the
-   model with `copy.deepcopy`. Is the copy still tied? Check with `is`, and
-   explain how a copy operation can preserve aliasing.
+3. [code] **Tied parameters.** Copy the tied `lm` with `copy.deepcopy`, as
+   `AveragedModel` does when it clones a model for weight averaging. Check
+   with `is` whether the head and the embedding of the copy share one
+   tensor, and whether that tensor is the original's. Explain both results.
+   Then cast the original with `lm.to(torch.float64)` and check again
+   whether its head and embedding share one tensor.
 4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
    section.
     1. Freeze `lm.emb.weight` but leave `lm.head` alone. How many trainable
        parameters remain, and what does this show about the interaction
        between tying and freezing?
-    1. Extend the tying to a third site: replace `body` by a projection
-       whose $d \times d$ weight is the first $d$ rows of the embedding
-       table, so that the embedding, the middle projection, and the head all
-       read one tensor. Measure the parameter count against the untied model
-       and verify that the gradient of the shared table is the sum of the
-       contributions of all three uses.
-    1. In the untied twin, freeze only the embedding and verify that the
-       head still receives a gradient. State in one sentence why the tied
-       model cannot make this distinction.
+    1. Starting from the values of `lm`, build a model whose embedding stays
+       fixed while its head adapts, and verify both properties after one
+       optimizer step. How many parameters does it store and how many does
+       it train, compared with a fully trainable `lm`?
 :end_tab:
 
 :begin_tab:`jax`
-3. [code] **Tied parameters.** Round-trip the tied model's `nnx.state(lm)`
-   through serialization (:numref:`sec_read_write`) and reload it. Where, if
-   anywhere, is the tying recorded? Explain why tying in NNX is a property
-   of the module code rather than of the checkpoint.
+3. [code] **Tied parameters.** Perturb `untied.head.kernel` so that the two
+   tables of the untied twin no longer agree. Then build a tied `TinyLM`
+   and fill it with values from `untied`. Which values must the conversion
+   discard or combine? Compare the logits of the converted model on
+   `tokens` with those of `untied`, and state when the converted model
+   reproduces `untied` exactly.
 4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
    section.
-    1. Try to freeze the embedding while training the head using
-       `optax.multi_transform` labels. What choices do you have, and what
-       does this show about the interaction between tying and freezing?
-    1. Extend the tying to a third site: replace `body` by a projection
-       whose $d \times d$ weight is the first $d$ rows of the embedding
-       table, so that the embedding, the middle projection, and the head all
-       read one tensor. Measure the parameter count against the untied model
-       and verify that the gradient of the shared table is the sum of the
-       contributions of all three uses.
-    1. In the untied twin, label only the embedding `'freeze'` and verify
-       that the head kernel still changes after one update. State in one
-       sentence why the tied model cannot make this distinction.
+    1. Label the embedding table `'freeze'` and every other leaf `'train'`
+       in `optax.multi_transform`. How many parameters are trained, and can
+       the head still adapt? What does this show about the interaction
+       between tying and freezing?
+    1. Starting from the values of `lm`, build a model whose embedding stays
+       fixed while its head adapts, and verify both properties after one
+       update. How many parameters does it store and how many does it
+       train, compared with a fully trainable `lm`?
 :end_tab:
 
 :begin_tab:`tensorflow`
-3. [code] **Tied parameters.** Round-trip the tied model's weights through
-   `get_weights` and `set_weights` (or a checkpoint,
-   :numref:`sec_read_write`) into a second tied instance, then into an
-   untied one. Where, if anywhere, is the tying recorded? Explain why tying
-   in Keras is a property of the layer code rather than of the checkpoint.
+3. [code] **Tied parameters.** Perturb `untied.head.kernel` so that the two
+   tables of the untied twin no longer agree. Then build a tied `TinyLM`
+   and fill it from `untied` with `set_weights`. Which values must the
+   conversion discard or combine? Compare the logits of the converted model
+   on `tokens` with those of `untied`, and state when the converted model
+   reproduces `untied` exactly.
 4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
    section.
     1. Set `lm.emb.trainable = False` but leave `lm.head` alone. How many
        trainable parameters remain, and can the head still adapt? What does
        this show about the interaction between tying and freezing?
-    1. Extend the tying to a third site: replace `body` by a projection
-       whose $d \times d$ weight is the first $d$ rows of the embedding
-       table, so that the embedding, the middle projection, and the head all
-       read one tensor. Measure the parameter count against the untied model
-       and verify that the gradient of the shared table is the sum of the
-       contributions of all three uses.
-    1. In the untied twin, set `emb.trainable = False` and verify that the
-       head's kernel still changes after one update. State in one sentence
-       why the tied model cannot make this distinction.
+    1. Starting from the values of `lm`, build a model whose embedding stays
+       fixed while its head adapts, and verify both properties after one
+       optimizer step. How many parameters does it store and how many does
+       it train, compared with a fully trainable `lm`?
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -1744,30 +1753,22 @@ not stop running-statistics updates in training mode.
    `save_parameters` and `load_parameters` (:numref:`sec_read_write`), once
    with `deduplicate=False` and once with `deduplicate=True`. Compare the
    file sizes, and check which of the two files loads into the untied twin.
-   Where, if anywhere, is the tying recorded?
+   Where, if anywhere, is the tying recorded? Then cast the tied model with
+   `lm.cast('float64')`: do both names still point at one `Parameter`?
 4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
    section.
     1. Set `lm.emb.weight.grad_req = 'null'`. What happened to the head, and
        how many trainable parameters remain? What does this show about the
        interaction between tying and freezing?
-    1. Extend the tying to a third site: replace `body` by a projection
-       whose $d \times d$ weight is the first $d$ rows of the embedding
-       table, so that the embedding, the middle projection, and the head all
-       read one tensor. Measure the parameter count against the untied model
-       and verify that the gradient of the shared table is the sum of the
-       contributions of all three uses.
-    1. In the untied twin, set `emb.weight.grad_req = 'null'` and verify
-       that the head still receives a gradient. State in one sentence why
-       the tied model cannot make this distinction.
+    1. Starting from the values of `lm`, build a model whose embedding stays
+       fixed while its head adapts, and verify both properties after one
+       optimizer step. How many parameters does it store and how many does
+       it train, compared with a fully trainable `lm`?
 :end_tab:
 
 5. **State census.** :numref:`subsec_params_buffers` distinguishes trained
-   parameters from non-trained buffers within a model's state.
-    1. State a one-line rule that classifies every entry of a model's state
-       as one or the other, and check it against the state listing of
-       `whiten` in :numref:`subsec_params_buffers` and against the batch
-       normalization layer `bn` of :numref:`subsec_freezing`.
-    1. For `bn`, predict which entries change during one forward pass in
-       training mode and which during one forward pass in inference mode,
-       with no backward call in either case. Check both predictions by
-       comparing the state before and after each pass.
+   parameters from non-trained buffers within a model's state. State a
+   one-line rule that classifies every entry of a model's state as one or
+   the other, and check it against the state listing of `whiten` in
+   :numref:`subsec_params_buffers` and against the batch normalization
+   layer `bn` of :numref:`subsec_freezing`.

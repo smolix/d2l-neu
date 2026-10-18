@@ -1428,9 +1428,11 @@ whole pipeline this way, once per step, as :numref:`fig_bg_async_queue` lays
 out; worse, the conversion to NumPy holds Python's global interpreter lock
 while it waits. The fix is not to give up monitoring but to move it off the
 hot path: keep running statistics on the device and transfer them once per
-epoch, or hand values to a background consumer, which is exactly what our
-`ProgressBoard` from :numref:`sec_oo-design` does when the `Trainer` plots
-the loss.
+epoch, or hand values to a background consumer. In MXNet, our
+`ProgressBoard` from :numref:`sec_oo-design` can take over only the drawing.
+`Module.plot` still converts the loss to NumPy on the training thread at
+every step, because MXNet's engine is not safe for GPU-to-host transfers
+issued from another thread.
 :end_tab:
 
 ![Python queues kernels k1 through k4 and races ahead while the GPU works through them serially; loss.item() forces a synchronization point where the CPU blocks until the GPU drains its queue, then both resume.](../img/bg-async-queue.svg)
@@ -1877,9 +1879,10 @@ CPU fallback when no GPU exists.
        an out-of-memory error. How much further can the checkpointed run go
        before it does too? Explain the ratio from what each variant stores.
     1. Run `run_stack` with `segment_size` equal to 1, 4, and the number of
-       blocks, and once without checkpointing. Plot peak memory against
-       step time for the four configurations. Which segment size would you
-       choose here, and why?
+       blocks, and once without checkpointing. Run each configuration in a
+       fresh process, because `peak_bytes_in_use` never decreases within
+       one. Plot peak memory against step time for the four
+       configurations. Which segment size would you choose here, and why?
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1898,34 +1901,63 @@ CPU fallback when no GPU exists.
 2. **Checkpointing arithmetic.** MXNet has no recompute-during-backward
    transform, so work out the schedule of
    :numref:`fig_bg_activation_checkpoint` on paper for a stack of sixteen
-   `ResidualBlock`s of width 1024 at batch size 8192. Count the activation
-   entries the backward pass must keep per block, then the total stored
-   without checkpointing and with segments of one, four, and eight blocks,
-   and state how much forward computation each schedule repeats.
+   `ResidualBlock`s of width 1024 at batch size 8192.
+    1. Name the arrays inside one block that the backward pass must keep,
+       and count their entries.
+    1. Compute the activation memory held at the peak of the backward pass
+       without checkpointing and with segments of one, two, four, and eight
+       blocks. State how much forward computation each schedule repeats.
+    1. Which segment size would you choose here, and how does it relate to
+       the rule of segments of about $\sqrt{N}$ layers in
+       :numref:`subsec_activation_checkpointing`?
 :end_tab:
 
-3. [code] **Synchronization points.** Consider the training run of
-   `ResMLPClassifier` in :numref:`subsec_device_aware_trainer`.
-    1. Time one epoch while printing the loss as a Python float after every
-       step, and again while printing it only once per epoch. Explain the
-       difference in terms of synchronization points.
-    1. List every synchronization point in the training loop, not just the
-       loss readout and printing. Classify each as unavoidable for a
-       correct loop or as an avoidable instrumentation artifact, and
-       justify each classification.
+3. [code] **Synchronization points.** ● Consider the training run of
+   `ResMLPClassifier` in :numref:`subsec_device_aware_trainer` on a GPU.
+    1. List every synchronization point in one training step, reading
+       `Trainer.fit_epoch`, `Trainer.prepare_batch`, and `Module.plot` as
+       well as the model code. Classify each as unavoidable for a correct
+       loop or as an avoidable instrumentation artifact, and justify each
+       classification.
+    1. Suppose the loop reads the loss into a Python float after every
+       step. Predict from your list how much this readout slows down the
+       default `ResMLPClassifier` and
+       `ResMLPClassifier(num_hiddens=2048, num_blocks=8)`. Then time one
+       epoch of each model with and without the readout, and explain the
+       four timings.
 
     *Adapted from the PyTorch documentation
     [CUDA semantics](https://docs.pytorch.org/docs/stable/notes/cuda.html).*
-1. [code] **Asynchronous dispatch.** Use the warm-up-then-synchronize timing
-   pattern of :numref:`subsec_async_dispatch` for both parts.
+
+1. [code] **Asynchronous dispatch.** ● Use the warm-up-then-synchronize
+   timing pattern of :numref:`subsec_async_dispatch` for both parts.
     1. For $n$ from 256 to 8192, time a round trip of an $n \times n$
        matrix from CPU to GPU and back, and time one $n \times n$ matrix
-       product on the device. Below which $n$ does the round trip cost more
-       than the product? Explain the crossover from how the two costs scale
-       with $n$.
+       product on the device. Find the $n$ at which the two times are
+       equal, extrapolating from how each time grows with $n$ if they do
+       not cross in this range. Predict this crossover from your GPU's
+       published host-to-device bandwidth and matrix-product throughput,
+       and explain any gap between prediction and measurement.
     1. If you have two GPUs, time 1000 matrix products of two
        $4096 \times 4096$ matrices executed on one GPU, then 500 on each of
        two GPUs issued from the same loop. Measure the scaling, explain how
        asynchronous dispatch lets Python issue work to both devices, and
        identify sources of deviation from linear scaling. Guard the
        experiment with `num_gpus() >= 2`.
+
+1. [code] **Precision crossover.** ● Run the `train` function of
+   :numref:`sec_numerics` on a GPU, with the network, every batch, and the
+   16-bit compute all placed on the device, and give it the hidden width
+   and the batch size as arguments. Time its fp32 and mixed-precision runs
+   with the warm-up-then-synchronize pattern of
+   :numref:`subsec_async_dispatch`: at every setting, run one untimed
+   warm-up step and then time ten steps.
+    1. For hidden widths 256 and 4096, sweep the batch size from 8 to 4096
+       in powers of two and plot the mixed-precision speedup over fp32
+       against the batch size, one curve per width.
+    1. Below which batch size, if any, is mixed precision slower than fp32
+       at each width? Explain the reversal and why the crossover moves with
+       the width.
+
+    *Adapted from the PyTorch recipe
+    [Automatic Mixed Precision](https://docs.pytorch.org/tutorials/recipes/recipes/amp_recipe.html).*

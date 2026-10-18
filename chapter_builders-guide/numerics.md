@@ -1324,60 +1324,94 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
 
 ## Exercises
 
-1. **Mixed-precision arithmetic.** :numref:`sec_parameters` quotes three
+1. **Rounded updates.** A weight $w = 1$ receives 1000 updates of
+   $+10^{-3}$ each and is rounded to its storage dtype after every update.
+    1. Using the `eps` values of this section and round-to-nearest, predict
+       the final value of $w$ to three decimal places when it is stored in
+       fp32, in fp16, and in bf16.
+    1. Now the updates go to an fp32 master copy, and a bf16 working copy
+       is rounded from the master copy after every update. Predict the
+       final values of both copies.
+1. **Mixed-precision memory.** :numref:`sec_parameters` quotes three
    per-parameter ledgers: 16 bytes for fp32 Adam, 18 bytes when an fp16
    working copy of the weights is kept, and 16 bytes for the ZeRO
-   convention with fp16 gradients.
-    1. Place the recipe of this section in that list: which of the four
-       terms (master weights, working copy, gradients, moments) does it
-       keep persistently, in which dtype, and how many bytes per parameter
-       does that make? Which term, if any, shrinks relative to all-fp32
-       training?
-    1. The savings of mixed precision are in the activations. For the MLP
-       of `train` at batch size 256, count the activation entries the
-       backward pass stores per example, convert them to bytes in fp32 and
-       in the 16-bit format `train` uses, and compare the saving with the
-       parameter ledger of the same model.
-1. [code] **Precision crossover.** On a GPU (:numref:`sec_use_gpu`), time
-   the fp32 and mixed-precision runs of `train` against each other.
-    1. Shrink the hidden width and the batch size until mixed precision is
-       *slower* than fp32, and explain the reversal.
-    1. Holding the model size fixed, sweep the batch size from 8 to 4096
-       and plot the mixed-precision speedup over fp32 against the batch
-       size. Below which batch size does mixed precision stop paying off?
-
-    *Adapted from the PyTorch recipe
-    [Automatic Mixed Precision](https://docs.pytorch.org/tutorials/recipes/recipes/amp_recipe.html).*
+   convention with fp16 gradients. The recipe of this section keeps the
+   master weights and Adam's moments in fp32. Suppose that `train` used
+   Adam instead of SGD.
+    1. Does the recipe keep a working copy of the weights between steps,
+       and in which dtype does it store the gradients? Give the total bytes
+       per parameter and name the ledger it matches.
+    1. Count as stored activations the input of each linear layer and the
+       logits. For the MLP of `train`, convert the per-example count to
+       bytes in fp32 and in the 16-bit format `train` uses. At which batch
+       size does the activation saving equal the persistent training state
+       of this MLP?
 1. [code] **Normalization in fp16.** Mixed-precision recipes run
-   normalization layers in fp32. To see why, take the `RMSNorm` layer of
-   :numref:`sec_custom_layer`, feed it inputs with a standard deviation of
-   about 100, and force the computation to fp16. Which intermediate
-   quantity fails first, and at what input scale would the mean of squares
-   itself overflow?
-1. **Loss scaling on overflow.** Sketch, in prose or pseudocode, what a
-   training step must do differently under dynamic loss scaling
-   (:numref:`subsec_loss_scaling`) when unscaling reveals an `inf` or NaN
-   gradient: what happens to the optimizer step, to Adam's moment
-   estimates, and to the scale factor. Why must the scale also grow again
-   after a run of clean steps rather than only shrink?
+   normalization layers in fp32. To see why, consider RMSNorm with its
+   gain set to one (:numref:`sec_custom_layer` implements it as a
+   module). It rescales an input row $\mathbf{x}$ of width $d$ by its root
+   mean square,
+
+   $$\frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^{d} x_i^2 + \epsilon}},$$
+
+   where the small constant $\epsilon$ guards against division by zero.
+   Compute it entirely in fp16 for a batch of 64 rows of width $d = 1024$
+   whose entries have a standard deviation of about 100.
+    1. Which intermediate quantity is the first to become `inf`, and what
+       does the layer return for the affected rows?
+    1. Take the squares as exact. At what input standard deviation does
+       their mean exceed the fp16 maximum, and at what standard deviation
+       does their sum over the $d$ entries exceed it?
+1. **Loss scaling on overflow.** Under dynamic loss scaling
+   (:numref:`subsec_loss_scaling`), a step whose unscaled gradients contain
+   an `inf` or NaN is skipped and the scale is halved. After $N$
+   consecutive clean steps, the scale is doubled.
+    1. A skipped step must leave Adam's moment estimates untouched. Explain
+       what would go wrong if the step instead updated the moments with the
+       non-finite gradient, and what would go wrong if it updated them with
+       the non-finite entries replaced by zeros.
+    1. Explain why the scale must grow again after a run of clean steps
+       instead of only shrinking.
+    1. Suppose that every step overflows when the scale is above a fixed
+       threshold and that no step overflows below it. Once the scale has
+       settled, what fraction of steps is skipped as a function of $N$?
+       Without the assumption of a fixed threshold, what does a larger $N$
+       cost?
 
 :begin_tab:`pytorch`
-5. [code] **The e4m3fn format.** Print every field of
-   `torch.finfo(torch.float8_e4m3fn)` and compare with fp16 and bf16.
-   Explain the name `e4m3fn`, including why its `max` is 448 rather than
-   the value the exponent bits alone would suggest.
+5. [code] **The e4m3fn format.** ● Print `torch.finfo(torch.float8_e4m3fn)`
+   and compare its `max`, `tiny` and `eps` with those of fp16 and bf16.
+   Explain the name `e4m3fn`. A format with a 4-bit exponent and a 3-bit
+   mantissa that followed the IEEE convention would reserve the all-ones
+   exponent for `inf` and NaN. Compute that format's largest finite value,
+   and explain how `e4m3fn` reaches a `max` of 448 instead.
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **The e4m3fn format.** Print every field of
-   `jnp.finfo(jnp.float8_e4m3fn)` and compare with fp16 and bf16. Explain
-   the name `e4m3fn`, including why its `max` is 448 rather than the value
-   the exponent bits alone would suggest.
+5. [code] **The e4m3fn format.** ● Print `jnp.finfo(jnp.float8_e4m3fn)` and
+   compare its `max`, `tiny` and `eps` with those of fp16 and bf16.
+   Explain the name `e4m3fn`. A format with a 4-bit exponent and a 3-bit
+   mantissa that followed the IEEE convention would reserve the all-ones
+   exponent for `inf` and NaN. Compute that format's largest finite value,
+   and explain how `e4m3fn` reaches a `max` of 448 instead.
 :end_tab:
 
 :begin_tab:`tensorflow`
-5. [code] **The e4m3fn format.** Print every field of
-   `ml_dtypes.finfo(ml_dtypes.float8_e4m3fn)` and compare with fp16 and
-   bf16. Explain the name `e4m3fn`, including why its `max` is 448 rather
-   than the value the exponent bits alone would suggest.
+5. [code] **The e4m3fn format.** ● Print
+   `ml_dtypes.finfo(ml_dtypes.float8_e4m3fn)` and compare its `max`,
+   `tiny` and `eps` with those of fp16 and bf16. Explain the name
+   `e4m3fn`. A format with a 4-bit exponent and a 3-bit mantissa that
+   followed the IEEE convention would reserve the all-ones exponent for
+   `inf` and NaN. Compute that format's largest finite value, and explain
+   how `e4m3fn` reaches a `max` of 448 instead.
+:end_tab:
+
+:begin_tab:`mxnet`
+5. **The e4m3fn format.** ● The fp8 format `float8_e4m3fn` has one sign
+   bit, 4 exponent bits with bias 7, and 3 mantissa bits. Derive its
+   `tiny` and `eps` and compare them with those of fp16 and bf16. Explain
+   the name `e4m3fn`. A format with the same bit layout that followed the
+   IEEE convention would reserve the all-ones exponent for `inf` and NaN.
+   Compute that format's largest finite value, and explain how
+   `float8_e4m3fn` reaches a largest finite value of 448 instead.
 :end_tab:

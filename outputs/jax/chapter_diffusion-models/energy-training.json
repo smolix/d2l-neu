@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-the-running-example-2-1.svg",
           "bytes": 223654,
-          "sha256": "sha256:bed587b10a53e687d6e48eef64e4ca0c1a75079bf658f649dbcc343a631b6bcd"
+          "sha256": "sha256:41621384c1710cede4c4b05cc64e58e274a3530116b79b6cbd7e535192cc4281"
         }
       ]
     },
@@ -59,7 +59,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1000 model samples: relative error 0.042\n 10000 model samples: relative error 0.009\n"
+          "text": "  1000 model samples: relative error 0.042\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 10000 model samples: relative error 0.009\n"
         }
       ]
     },
@@ -101,7 +106,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test NLL every 500 steps: [2.632, 2.533, 2.679, 2.509, 2.49, 2.487]\nfinal acceptance rate 0.28; mode weights of the chains [0.532, 0.291, 0.177]\n"
+          "text": "test NLL every 500 steps: [2.632, 2.513, 2.55, 2.539, 2.489, 2.486]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final acceptance rate 0.28; mode weights of the chains [0.529, 0.288, 0.183]\n"
         }
       ]
     },
@@ -113,8 +123,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-contrastive-divergence-2-1.svg",
-          "bytes": 297915,
-          "sha256": "sha256:8f07299faebcbb2597fffd464056524231351480cf8f9030ea1e2c28b01ef3f8"
+          "bytes": 297505,
+          "sha256": "sha256:71d31424e9e615c6ab940db0f0ecd1b171745635baeef7858de93bb6113c9763"
         }
       ]
     }

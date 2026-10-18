@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "denoising/denoising-the-noise-level-trades-bias-against-variance-2-1.png",
-          "bytes": 134335,
-          "sha256": "sha256:ed071b08133f62b808893815b9a61f0c07353ab948d2d519998c194a29520aa1"
+          "bytes": 184625,
+          "sha256": "sha256:daed61b48757f3eeccf0a6fece55971912479448686592472f1d6dfd61835d84"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "denoising/denoising-denoising-images-2-1.png",
-          "bytes": 88849,
-          "sha256": "sha256:86c597b4f0fcefcef2a6617ed59b7a35c23260b8d14d479c1af744ae0c6fe054"
+          "bytes": 110658,
+          "sha256": "sha256:5e967363c690b55591c5aae256511bf6c6387e847cff829238ea93a1cac1b60b"
         }
       ]
     }

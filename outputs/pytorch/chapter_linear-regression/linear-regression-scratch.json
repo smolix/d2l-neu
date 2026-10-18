@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3989c017d4ab4e1533d25578666e2214a4195d77a5a1b16e690449af51a1675c",
+    "d2l_lib_fingerprint": "sha256:a3f459e78fb82fdae2475e16a50aa35c2ebb0ddb0a258c26dd6d7efddf17a65f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -54,7 +54,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<torch._C.Generator at 0x73e1bf9da490>"
+          "text": "<torch._C.Generator at 0x732766f2a550>"
         }
       ]
     },
@@ -67,7 +67,7 @@
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
           "bytes": 19121,
-          "sha256": "sha256:7ddb0ede436c0506f8c745424fa4b356c91eccc0b18162dd7651258b2b1037c7"
+          "sha256": "sha256:46111a0f1610559ad6392ecbf28e45cd81bb8c0bcc7705a17eaeca9834b7ec89"
         }
       ]
     },

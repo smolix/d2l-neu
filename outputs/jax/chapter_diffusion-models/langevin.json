@@ -25,7 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target (2000 samples of the mixture): mode weights [0.517, 0.296, 0.187], spread 0.46, stray 0.011\ntrue score,  200 steps:   mode weights [0.318, 0.325, 0.358], spread 0.48, stray 0.019\n"
+          "text": "target (2000 samples of the mixture): mode weights [0.517, 0.296, 0.187], spread 0.46, stray 0.011\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true score,  200 steps:   mode weights [0.318, 0.325, 0.358], spread 0.48, stray 0.019\n"
         },
         {
           "type": "stream",
@@ -47,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "langevin/langevin-sampling-with-the-true-score-2-1.svg",
-          "bytes": 139766,
-          "sha256": "sha256:835a805a41bd064db3cba49978cb6e40e552fc0419250d96b642eab2b71b4346"
+          "bytes": 139708,
+          "sha256": "sha256:a4b42e4431e7b70adeca2195f48c470f4b6101277583ad9d49ba4b07b718be75"
         }
       ]
     },
@@ -80,7 +85,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.3: true score of p_sigma:    mode weights [0.339, 0.335, 0.327], spread 0.59, stray 0.053\nsigma = 1.0: target (p_sigma samples): mode weights [0.512, 0.291, 0.198], spread 0.95, stray 0.412\n"
+          "text": "sigma = 0.3: true score of p_sigma:    mode weights [0.339, 0.335, 0.327], spread 0.59, stray 0.053\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 1.0: target (p_sigma samples): mode weights [0.512, 0.291, 0.198], spread 0.95, stray 0.412\n"
         },
         {
           "type": "stream",
@@ -102,8 +112,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "langevin/langevin-gaussian-smoothing-and-its-price-2-1.svg",
-          "bytes": 353959,
-          "sha256": "sha256:d4275df6b78f370103aab52f33f0eb479712812dbbb81a37ee595340b606f56e"
+          "bytes": 353952,
+          "sha256": "sha256:0ab7e5a5777aaf83e843fd8d452f4089fe1e21a200a5e7ad4e6a5299125a33e4"
         }
       ]
     }

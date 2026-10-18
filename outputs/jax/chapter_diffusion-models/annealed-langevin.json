@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-annealed-langevin-dynamics-2-1.png",
-          "bytes": 78312,
-          "sha256": "sha256:b08694c66ae674f9df678f136d1956203d5339c1e78ab1eb862ca17416031198"
+          "bytes": 86805,
+          "sha256": "sha256:7e28fd9fc2a77a9020ca655319572be8a1fa71343fd3562437c32f79f0b6cdf4"
         }
       ]
     },
@@ -117,14 +117,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 2.00: per-pixel squared error noisy 4.001, denoised 0.159\n"
+          "text": "sigma = 2.00: per-pixel squared error noisy 4.001, denoised 0.158\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "annealed-langevin/annealed-langevin-a-noise-conditional-network-for-images-3-1.png",
-          "bytes": 137317,
-          "sha256": "sha256:d9db3080e11e3d018c0b59afece7106cc9e92b7aabc5b4e93a5e3e58a618c935"
+          "bytes": 180631,
+          "sha256": "sha256:14b25101c357dc6b12aa100ae63b1af3463ca9d93ee0ab8d3e08b89d70c0e561"
         }
       ]
     }

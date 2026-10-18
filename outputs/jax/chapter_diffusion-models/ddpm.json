@@ -20,7 +20,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "alpha_bar_T = 3.2e-05: after T steps the data are scaled by 0.006\nstep  10: chain: mean [-0.546, -0.751], var 3.761 | one shot: mean [-0.549, -0.758], var 3.775\nstep  50: chain: mean [-0.409, -0.601], var 2.489 | one shot: mean [-0.396, -0.531], var 2.500\nstep 200: chain: mean [-0.005, -0.014], var 1.000 | one shot: mean [-0.001, -0.029], var 0.994\n"
+          "text": "alpha_bar_T = 3.2e-05: after T steps the data are scaled by 0.006\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step  10: chain: mean [-0.546, -0.751], var 3.761 | one shot: mean [-0.549, -0.758], var 3.775\nstep  50: chain: mean [-0.409, -0.601], var 2.489 | one shot: mean [-0.396, -0.531], var 2.500\nstep 200: chain: mean [-0.005, -0.014], var 1.000 | one shot: mean [-0.001, -0.029], var 0.994\n"
         }
       ]
     },
@@ -57,7 +62,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned predictor: mode weights [0.554, 0.274, 0.173], spread 0.46, stray 0.022\noptimal predictor: mode weights [0.518, 0.286, 0.197], spread 0.49, stray 0.012\n"
+          "text": "learned predictor: mode weights [0.554, 0.274, 0.173], spread 0.46, stray 0.022\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "optimal predictor: mode weights [0.518, 0.286, 0.197], spread 0.49, stray 0.012\n"
         }
       ]
     },
@@ -69,8 +79,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddpm/ddpm-ancestral-sampling-2-1.png",
-          "bytes": 134566,
-          "sha256": "sha256:f69ab5008996080eaf259dcb412527c9d77dc2c1f2ac7f6692a97d4a81a3edf4"
+          "bytes": 150524,
+          "sha256": "sha256:c940b873efcf7ef74d3376bb0ab602a908b8fa2746117b74dbf4139db674ff34"
         }
       ]
     }

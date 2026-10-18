@@ -67,12 +67,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   32        0.060      0.010          0.310\n    8        0.079      0.039          0.282\n"
+          "text": "   32        0.060      0.010          0.310\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    2        0.175      0.157          0.163\n    1        0.327      0.314          0.062\n"
+          "text": "    8        0.079      0.039          0.282\n    2        0.175      0.157          0.163\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    1        0.327      0.314          0.062\n"
         }
       ]
     },
@@ -84,8 +89,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-experiments-on-the-running-example-5-1.png",
-          "bytes": 13137,
-          "sha256": "sha256:6e62e4b62ef8323f575c231ba3b23b903a64f0ce256f8f018504d5ec4d641bd3"
+          "bytes": 14285,
+          "sha256": "sha256:a993406d661f110a000288ce0b1ef1c2e69ed1c8f48a2c1d89a676e008699fda"
         }
       ]
     },
@@ -127,28 +132,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: training images 0.0037, 100-step samples 0.0077, 4-step samples 0.0263\n"
+          "text": "speckles: training images 0.0037, 100-step samples 0.0077, 4-step samples 0.0262\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-1.png",
-          "bytes": 60449,
-          "sha256": "sha256:1d8bd6c740374e792c0beae7c5819b37324980ddf36f047be59f5eb3c028e091"
+          "bytes": 80520,
+          "sha256": "sha256:679d435f2831995a6f05c11c8ddd8d8e32b03f27e0386e8e690dcdfa6cf33caf"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-2.png",
-          "bytes": 110081,
-          "sha256": "sha256:5c7905f8c751ad2e01563fa1a099981cb9cfb99750f09c32b0a5d7c77a07411c"
+          "bytes": 166824,
+          "sha256": "sha256:9af7f27415a5f82c91aa619a4fead8269af565029d5e889dd39ea999490acef6"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-2-3.png",
-          "bytes": 114716,
-          "sha256": "sha256:c7d0720a87482068fe3b91d12db1359ac9da1d7783ac35ccfc1b0cd628225508"
+          "bytes": 163237,
+          "sha256": "sha256:e4e3ff0fa0adf163523b7c3de0a71c1a9493a80472773b88648b4277bed7b66d"
         }
       ]
     }

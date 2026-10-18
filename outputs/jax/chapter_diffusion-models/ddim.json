@@ -35,12 +35,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DDIM, 200 steps (eta = 0): mode weights [0.521, 0.236, 0.244], spread 0.44, stray 0.067\nDDIM,  50 steps (eta = 0): mode weights [0.529, 0.222, 0.25], spread 0.44, stray 0.069\n"
+          "text": "DDIM, 200 steps (eta = 0): mode weights [0.521, 0.236, 0.244], spread 0.44, stray 0.067\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DDIM,  20 steps (eta = 0): mode weights [0.553, 0.21, 0.238], spread 0.40, stray 0.080\nDDIM,  10 steps (eta = 0): mode weights [0.59, 0.158, 0.252], spread 0.43, stray 0.105\n"
+          "text": "DDIM,  50 steps (eta = 0): mode weights [0.529, 0.222, 0.25], spread 0.44, stray 0.069\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DDIM,  20 steps (eta = 0): mode weights [0.553, 0.21, 0.238], spread 0.40, stray 0.080\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DDIM,  10 steps (eta = 0): mode weights [0.59, 0.158, 0.252], spread 0.43, stray 0.105\n"
         }
       ]
     },
@@ -51,7 +61,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact predictor, 200 steps: mode weights [0.488, 0.308, 0.205], spread 0.47, stray 0.009\nexact predictor,  50 steps: mean distance to the 200-step sample 0.034\nexact predictor,  20 steps: mean distance to the 200-step sample 0.107\nexact predictor,  10 steps: mean distance to the 200-step sample 0.232\nexact predictor,   5 steps: mean distance to the 200-step sample 0.550\n"
+          "text": "exact predictor, 200 steps: mode weights [0.488, 0.308, 0.205], spread 0.47, stray 0.009\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact predictor,  50 steps: mean distance to the 200-step sample 0.034\nexact predictor,  20 steps: mean distance to the 200-step sample 0.107\nexact predictor,  10 steps: mean distance to the 200-step sample 0.232\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact predictor,   5 steps: mean distance to the 200-step sample 0.550\n"
         },
         {
           "type": "stream",
@@ -68,8 +88,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-experiments-on-the-running-example-4-1.png",
-          "bytes": 75158,
-          "sha256": "sha256:6e7261339d85ec8485dcb6ef85a46a49719e4c6b9749a514ac8e0f3be0f2d1f9"
+          "bytes": 77337,
+          "sha256": "sha256:38ff1fb210f1be725b66a992560e179083cc249b5bf6140af44c0b6a15f01289"
         }
       ]
     },
@@ -97,8 +117,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-fast-sampling-for-images-2-1.png",
-          "bytes": 54546,
-          "sha256": "sha256:2dffd110726929219a6cdd92c7f73dd63b702c3bd476ebfbe095fda1314d7069"
+          "bytes": 65383,
+          "sha256": "sha256:5c8911d8a20301089720919d9632e8c9d11cb29f711ce459a1bdc7b4b1ff7506"
         }
       ]
     },
@@ -110,8 +130,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "ddim/ddim-fast-sampling-for-images-3-1.png",
-          "bytes": 17576,
-          "sha256": "sha256:15f2a7bb34072125e774d4217ac302335545a6165c26ecdac85e16625da344a1"
+          "bytes": 21770,
+          "sha256": "sha256:af3deb550b2ad73c13c2f2a67a7f294840447564bb73bfcec93280fc2ac4f22e"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6689978f52570b15aa592ece642134b1ee57fb39a87cae0ad20fbc29b5419182",
+    "d2l_lib_fingerprint": "sha256:47d00930fb6220d89dba0e5a9e95e04a5849f5523ea2ae29da247e01137bae2e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,17 +14,17 @@
       "outputs": []
     },
     "image-diffusion-data-schedule-and-model-1": {
-      "code_fingerprint": "sha256:bcf07139ce9c440c2c3d7d71ab772bf497be443e27a0d85541d7b269d0814aff",
+      "code_fingerprint": "sha256:da4466ed20ff92179c9dd2312ab5c7a53547308923c6da11c5447f0e81e18edf",
       "kind": "text",
       "outputs": []
     },
     "image-diffusion-data-schedule-and-model-2": {
-      "code_fingerprint": "sha256:85e8db03a1650321ecb09f4a4314014af751c94a746998531eb3748327214ed5",
+      "code_fingerprint": "sha256:f6be707ba151802868fe23f1bd97b63222e73cbf7f123e3f10b1e5512276fe46",
       "kind": "text",
       "outputs": []
     },
     "image-diffusion-training": {
-      "code_fingerprint": "sha256:e7a2ef7a45a54ea43a4397873bda73002809cb52aee79bdec7c7aeea480a787e",
+      "code_fingerprint": "sha256:a8743099fb61741b21cd43f0d39c0ac94033587db66ce87d22d5d5affce94821",
       "kind": "text",
       "outputs": [
         {
@@ -35,46 +35,46 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: loss 0.044\n"
+          "text": "step 1000: loss 0.057\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1500: loss 0.044\n"
+          "text": "step 1500: loss 0.043\n"
         }
       ]
     },
     "image-diffusion-sampling-and-guidance": {
-      "code_fingerprint": "sha256:b4e9c8c0ae2a4ac27d5c835b18f8a473b95e0a8cbfd05bf388a1a0908038c0ee",
+      "code_fingerprint": "sha256:bf74c7b2381a7ea4ceb34815ac8bdf730b73cefa12a45b571daa96fb290d8702",
       "kind": "text",
       "outputs": []
     },
     "image-diffusion-unconditional-samples": {
-      "code_fingerprint": "sha256:e746e61ece3d1beead9bb13422a58e15d019ff4d2d5d7528fec4efbe552964ce",
+      "code_fingerprint": "sha256:3b894ee4c05ca00fce801218a800502adb9340cf84889e09e2231cad08fb70e2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-unconditional-samples-1.png",
-          "bytes": 104324,
-          "sha256": "sha256:51c583a9c2402f1e5fb21f72318b11121a96f8312eda532d50c4169285525c3d"
+          "bytes": 130488,
+          "sha256": "sha256:3c20279f9879e6ce216dcbba1c4e5cff67532cbca60feecd65643fece0dd94cc"
         }
       ]
     },
     "image-diffusion-guided-samples-1": {
-      "code_fingerprint": "sha256:d5ad9905b099bed7e249432304871291d0e8df903fe107178ecaf7e26074fbf3",
+      "code_fingerprint": "sha256:b7fc778dd7db415d3f0ce1de27f4ef3de762413135c37ca859e6c8a7900dcf6b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "classifier test accuracy: 0.878\n"
+          "text": "classifier test accuracy: 0.887\n"
         }
       ]
     },
     "image-diffusion-guided-samples-2": {
-      "code_fingerprint": "sha256:6dfd5bc69d3be8bfbdc3cc7cdf5353d0630eb0128a9b9eea15617f1471197e1e",
+      "code_fingerprint": "sha256:c9f2045f14d5a86dcbcb5cd7e5f0e01c3c1bff9fc20b63ceae8c30df598125bf",
       "kind": "text",
       "outputs": [
         {
@@ -85,22 +85,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.688                  16.96\n"
+          "text": "  1.0            0.625                  16.63\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2.0            0.875                  15.23\n"
+          "text": "  2.0            0.875                  15.33\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.938                  13.65\n"
+          "text": "  4.0            0.950                  13.44\n"
         }
       ]
     },
     "image-diffusion-guided-samples-3": {
-      "code_fingerprint": "sha256:e9c30174652a239822355c9dc57896bccffbd83a29aac3314abcdac86918280f",
+      "code_fingerprint": "sha256:cc0a0e9df4ae82fe59def652ac158e0a821c3017f746341cfc67a7a406c3352c",
       "kind": "mixed",
       "outputs": [
         {
@@ -112,31 +112,31 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-1.png",
-          "bytes": 87021,
-          "sha256": "sha256:373ba3fb590cadabcbd826bb0a21c02331d2f1e7daeb034730860650bcd4548d"
+          "bytes": 98338,
+          "sha256": "sha256:776cceecc2ca0f0a56b90c0fd36e7ed668f08cb0bec4dc223f2b75edcb6a08ea"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-guided-samples-3-2.png",
-          "bytes": 78333,
-          "sha256": "sha256:0e9b2490621b0f0b60f9b849f05d3bbd0cba5604c08e2917e721247367862bb3"
+          "bytes": 93042,
+          "sha256": "sha256:d5c94985480e4a7b8a584f099cd7b7471cf23e3d63a7514433a6d6d5c3e87d3b"
         }
       ]
     },
     "image-diffusion-classifier-guidance-1": {
-      "code_fingerprint": "sha256:a68507cf90af23a33f1116619b7f7123d22e886056d3446cad0c19b6fe63ebb7",
+      "code_fingerprint": "sha256:948af5bee415e1c6e8b134686a97699b077c7d698955922233621f554a551d84",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noisy classifier test accuracy: 0.842 at t = 0, 0.591 at t = 500\n"
+          "text": "noisy classifier test accuracy: 0.853 at t = 0, 0.600 at t = 500\n"
         }
       ]
     },
     "image-diffusion-classifier-guidance-2": {
-      "code_fingerprint": "sha256:df60fc0b54bcd0eae48963bf305ce2e685c3ca7e309f6e63533eb6dcda25b74c",
+      "code_fingerprint": "sha256:5d439175f206690b4a83cb5a8aad58a05ccfe1789af062e9ce2e2c6e76330046",
       "kind": "mixed",
       "outputs": [
         {
@@ -147,31 +147,31 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  1.0            0.463                  19.69\n"
+          "text": "  1.0            0.488                  18.54\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0            0.812                  17.95\n"
+          "text": "  4.0            0.788                  16.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10.0            0.938                  16.91\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
+          "text": " 10.0            0.838                  15.19\nfirst grid: scale 1; second grid: scale 10; columns are the ten classes\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-1.png",
-          "bytes": 87308,
-          "sha256": "sha256:5d53c5d74f539c514499b091eb5ddc13a2e0c1771a8246c0f2aeecf6c4f8656b"
+          "bytes": 107560,
+          "sha256": "sha256:75a6de2891c4fe9822ea1e71c33be0397ef339d2170076c7c1221453e316991a"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "image-diffusion/image-diffusion-classifier-guidance-2-2.png",
-          "bytes": 76754,
-          "sha256": "sha256:8dc6666d89081c89f755691950af32c232280f204d990a1309235c9f0bac9669"
+          "bytes": 88106,
+          "sha256": "sha256:def4175cc19ba915f0486c45bc6008074158667c59c7e2b183026280ad484fa0"
         }
       ]
     }

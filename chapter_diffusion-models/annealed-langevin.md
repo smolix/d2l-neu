@@ -438,7 +438,8 @@ unchanged.
 %%tab pytorch
 def sinusoidal_embedding(t, dim):  #@save
     """Map integer steps t (shape (n,)) to sinusoidal features (n, dim)."""
-    freqs = torch.exp(-math.log(10000) * torch.arange(dim // 2) / (dim // 2))
+    freqs = torch.exp(-math.log(10000)  # on t's device, so the caller may use a GPU
+                      * torch.arange(dim // 2, device=t.device) / (dim // 2))
     args = t.float()[:, None] * freqs[None]
     return torch.cat([torch.sin(args), torch.cos(args)], 1)
 

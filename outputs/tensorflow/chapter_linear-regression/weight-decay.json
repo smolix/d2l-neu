@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:485fc2e5214bc365f15a89bd9b24ed66c54fdb3f1746464636d083904b2d16d9",
+    "d2l_lib_fingerprint": "sha256:3d89098bc8dbd95f24a5c375f3fbf9748028ffbdcb1ef1e42b4b5516b21c39a0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.011500796303153038\n"
+          "text": "L2 norm of w: 0.011104541830718517\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 22837,
-          "sha256": "sha256:bbe877eeb734a8929899786ef81ddb9e30a03486fc7a6c767ff354d08a22d634"
+          "bytes": 21856,
+          "sha256": "sha256:b3c30845b7e070aaf91e1fbf29e0e3021f7862e448a15da42fb7745c0beccdac"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.00036985910264775157\n"
+          "text": "L2 norm of w: 0.0003025034093298018\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 21624,
-          "sha256": "sha256:52510035a0d2c04ce04ef7ca7a583a8bdc26877cac61c33012e14865387aa504"
+          "bytes": 22123,
+          "sha256": "sha256:4c416faafa9633f08118d1d1f13c03b649dcf8f9529905238643c211909eb4f1"
         }
       ]
     },
@@ -76,7 +76,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.0  strongest 0.84  weakest 0.62\nlambda=30  df=  4.8  strongest 0.35  weakest 0.14\n"
+          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.2  strongest 0.85  weakest 0.65\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda=30  df=  5.0  strongest 0.36  weakest 0.16\n"
         }
       ]
     },
@@ -92,14 +97,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.00044962854008190334\n"
+          "text": "L2 norm of w: 0.00038615940138697624\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 23058,
-          "sha256": "sha256:b4e51ae870f0c68140a27561355e3c180122e55ea6eef8fb5e4a2d3e00be26d2"
+          "bytes": 21811,
+          "sha256": "sha256:bfce6d79399ae587160832f32dd8f7d5a52a515f7972491ef8d3e41738aa8984"
         }
       ]
     }

@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "avg_pool3d_backward_cuda does not have a deterministic implementation, but you set 'torch\n"
+          "text": "CUDA error: out of memory\nSearch for `cudaErrorMemoryAllocation' in https://docs\n"
         }
       ]
     },
@@ -85,7 +85,7 @@
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:9c4b83bbccb5869993edd8385b807263508e8624d6a5c90cfb0c3b71890cbada",
+      "code_fingerprint": "sha256:64b82d6113acc6e710163b0e5ed7684cbad03721f4e171c44f4f8d4513c12d68",
       "kind": "text",
       "outputs": [
         {

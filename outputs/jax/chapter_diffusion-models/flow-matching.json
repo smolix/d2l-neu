@@ -47,17 +47,37 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target (2000 samples of the mixture): mode weights [0.517, 0.296, 0.187], spread 0.46, stray 0.011\nlearned field, 100 Euler steps: mode weights [0.523, 0.291, 0.187], spread 0.47, stray 0.038\n"
+          "text": "target (2000 samples of the mixture): mode weights [0.517, 0.296, 0.187], spread 0.46, stray 0.011\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned field,  10 Euler steps: mode weights [0.543, 0.285, 0.173], spread 0.46, stray 0.068\nlearned field,   4 Euler steps: mode weights [0.617, 0.26, 0.124], spread 0.51, stray 0.153\nlearned field,   2 Euler steps: mode weights [0.78, 0.18, 0.041], spread 0.76, stray 0.278\n"
+          "text": "learned field, 100 Euler steps: mode weights [0.523, 0.291, 0.187], spread 0.47, stray 0.038\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact field,   100 Euler steps: mode weights [0.521, 0.276, 0.203], spread 0.47, stray 0.010\ncurvature of the learned flow: 0.200\n"
+          "text": "learned field,  10 Euler steps: mode weights [0.543, 0.285, 0.173], spread 0.46, stray 0.068\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learned field,   4 Euler steps: mode weights [0.617, 0.26, 0.124], spread 0.51, stray 0.153\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learned field,   2 Euler steps: mode weights [0.78, 0.18, 0.041], spread 0.76, stray 0.278\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact field,   100 Euler steps: mode weights [0.521, 0.276, 0.203], spread 0.47, stray 0.010\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "curvature of the learned flow: 0.200\n"
         }
       ]
     },
@@ -79,8 +99,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-sampling-by-integration-2-1.png",
-          "bytes": 28782,
-          "sha256": "sha256:9793c8491f3dc246a127f4b2730b8d0cafc40118ba74a17ffdb4005c0d340b3a"
+          "bytes": 30948,
+          "sha256": "sha256:7a4bbc561eb1fd290ff7d9232ef4a09526cfbc97e7bf5f809b7999eda4b244b3"
         }
       ]
     },
@@ -97,8 +117,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "flow-matching/flow-matching-images-with-a-velocity-target-1.png",
-          "bytes": 108331,
-          "sha256": "sha256:91eb9930b8ae43e2a2f60633825e745fe3b4f889ccdaee5332d1789aa81d0e90"
+          "bytes": 133753,
+          "sha256": "sha256:060d42099a9d3d766850036867d3f12ebf719fdf944fc42377d01aeaa074a298"
         }
       ]
     }

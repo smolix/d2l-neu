@@ -580,14 +580,20 @@ but this decomposition has remained useful for decades.
 
 1. [code] **A ten-run budget.** Using AdamW on `TinyLM`, reach a training
    loss of 1.1 in as few steps as you can, tuning only the learning rate,
-   with a budget of ten runs. Keep the log that
+   with a budget of ten runs. A run reaches the target at the first step
+   at which the mean of its last 100 training losses falls below 1.1. Cap
+   each run at 2,000 steps. Keep the log that
    :numref:`subsec_practice-tuning` asks for: for every run, the learning
    rate, the steps taken, the final loss, and the one-sentence conclusion
    you drew before launching the next run. Report the log, not just the
    winning configuration.
-1. [code] **Batch size and the tuned rate.** Rebuild `data` with a batch
-   size of 256 instead of 64 and run the four-point learning-rate protocol
-   of :numref:`sec_adam` for AdamW at both batch sizes.
+1. [code] **Batch size and the tuned rate.** ● Rebuild `data` with a batch
+   size of 256 instead of 64. At both batch sizes, train AdamW without
+   weight decay on `TinyLM` from the same initialization at a constant
+   learning rate, sweeping
+   $\eta \in \{0.5, 1, 2, 4, 8, 16, 32\} \times 10^{-3}$. Give both batch
+   sizes the same number of training sequences: 2,000 steps at batch size
+   64 and 500 steps at batch size 256.
     1. Where does the optimum move, and how does the shift compare with the
        square-root and linear rules of :eqref:`eq_lr-rules`?
     1. What would you have concluded about AdamW at batch size 256 had you
@@ -601,11 +607,15 @@ but this decomposition has remained useful for decades.
        the final loss of the clipped run.
     1. Sweep $\theta \in \{0.01, 0.1, 0.5, 1, 4, \infty\}$ on the divergent
        run, recording the final loss and the fraction of steps on which
-       clipping changed the update. Identify the three regimes: guard
-       (fires rarely), brake (fires on most steps), and absent.
-    1. Show that when clipping fires on every step, the update is
-       normalized gradient descent with step size $\eta\theta$, and explain
-       why this differs from training at a lower learning rate.
+       clipping changed the update. Classify each threshold as a guard
+       (fires rarely), a brake (fires on most steps), or absent, and relate
+       each class to whether the run diverges and to its final loss.
+    1. Show that for SGD without momentum, clipping that fires on every
+       step turns the update into normalized gradient descent with step
+       size $\eta\theta$. The divergent run uses momentum $\beta = 0.9$ in
+       :eqref:`eq_momentum`. Bound the length of one of its updates when
+       clipping fires on every step. Explain why neither case is the same
+       as training at a lower learning rate.
 
     *Adapted from Stanford CS336,
     [Assignment 1](https://github.com/stanford-cs336/spring2024-assignment1-basics),
@@ -623,17 +633,40 @@ but this decomposition has remained useful for decades.
 1. [code] **The averaging window.** Sweep the EMA decay
    $\alpha \in \{0.9, 0.99, 0.999, 0.9999\}$ in the demonstration of
    :numref:`subsec_practice-weight-averaging` and plot the EMA's test
-   accuracy per epoch for each value. Relate the averaging window
-   $1/(1-\alpha)$ to the behavior at both ends of the sweep within the
-   15-epoch budget of about 3,500 steps.
-1. [code] **Defaults against a small budget.** Test the finding of
-   :citet:`Schmidt.Schneider.Hennig.2021` on this chapter's testbed: run
-   SGD with momentum $0.9$ at $\eta = 0.1$, Adam at $\eta = 10^{-3}$, and
-   AdamW at $\eta = 10^{-3}$, with library defaults for every other
-   hyperparameter, on `TinyLM` for 2,000 steps, and compare the best of the
-   three against the grid-tuned Adam of :numref:`sec_adam`. Given a fixed
-   budget of four runs, which strategy would you choose on this problem,
-   and on what does the answer depend?
+   accuracy per epoch for each value.
+    1. Express each averaging window $1/(1-\alpha)$ in epochs. Derive the
+       total weight that the EMA still places on the initial weights after
+       the $T \approx 3{,}500$ steps of the 15-epoch run, and evaluate it
+       for each $\alpha$.
+    1. Use these numbers to explain the curves at the two ends of the
+       sweep.
+1. **Defaults against a small budget.**
+   :citet:`Schmidt.Schneider.Hennig.2021` found that trying several
+   optimizers at default settings works about as well as tuning a single
+   one. Test this on `TinyLM` with runs that :numref:`sec_adam` and
+   :numref:`sec_muon` already made under the same protocol. As the default
+   runs, take SGD with momentum $0.9$ at $\eta = 0.1$, Adam at
+   $\eta = 10^{-3}$, and `muon_adamw` at $\eta = 10^{-3}$, the rate that
+   RMS matching makes comparable to Adam's default.
+    1. Compare the best of the three default runs with the best point of
+       each of the four grids: SGD and Adam in :numref:`sec_adam`, AdamW
+       and `muon_adamw` in :numref:`sec_muon`. Which optimizers, tuned
+       alone, beat the best default run, and by how much in final loss?
+    1. Given a fixed budget of four runs on an unfamiliar problem, which
+       strategy would you choose, and on what does the answer depend?
+1. **Logit drift.** The z-loss of PaLM :cite:`chowdhery2022palm` adds
+   $\kappa \log^2 Z$ to the cross-entropy, where $Z = \sum_j \exp(o_j)$ is
+   the softmax normalizer of the output logits $\mathbf{o}$ and
+   $\kappa = 10^{-4}$.
+    1. Show that adding the same constant $c$ to every logit leaves the
+       cross-entropy unchanged, and compute how the shift changes $\log Z$
+       and the z-loss.
+    1. Compute the gradient of $\kappa \log^2 Z$ with respect to
+       $\mathbf{o}$. In which direction does a gradient step move the
+       logits when $\log Z$ is large and positive? Show that the gradient
+       of the cross-entropy alone has no component along the all-ones
+       vector, and explain what this implies for the overall level of the
+       logits during training.
 
 <!-- slides -->
 

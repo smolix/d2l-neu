@@ -126,9 +126,10 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d, f_grad=f_2d_grad))
 
 Nothing in :eqref:`eq_momentum` requires the gradient to be exact. With
 minibatch gradients the same leaky average additionally smooths the sampling
-noise across steps. This reduces variance beyond minibatch averaging without
-additional gradient evaluations. Momentum therefore addresses both
-ill-conditioning and sampling noise.
+noise across steps. The velocity is therefore less noisy than a single
+minibatch gradient, at no extra gradient evaluations. Whether the iterates
+become less noisy as well depends on how $\eta$ is adjusted along with
+$\beta$, which Exercise 7 examines.
 
 ### The Timescale of $\beta$
 :label:`subsec_momentum-timescale`
@@ -345,9 +346,9 @@ $\sqrt{\kappa}$ rate with a proof that is not confined to quadratics
 in :numref:`subsec_mdl-momentum-acceleration`.
 
 In frameworks, Nesterov momentum is one flag. Both PyTorch and Optax
-implement an equivalent rewrite of :eqref:`eq_nesterov` that evaluates the
-gradient at the current iterate (the exercises ask you to verify the
-equivalence), so no extra gradient evaluation is needed:
+implement a rewrite of :eqref:`eq_nesterov` that evaluates the gradient at
+the parameters it stores, so no extra gradient evaluation is needed. Exercise 4
+works out how those parameters relate to the iterates of :eqref:`eq_nesterov`:
 
 ```{.python .input #momentum-nesterov-momentum-2}
 %%tab pytorch
@@ -383,73 +384,90 @@ over roughly $\frac{1}{1-\beta}$ recent gradients — and as a damping knob,
 with too large a value producing ringing rather than progress. Nesterov's
 look-ahead variant damps that ringing and carries convergence guarantees
 beyond quadratics, at no extra cost per step. With stochastic gradients the
-same leaky average also smooths sampling noise, which is why some form of
-momentum appears in most optimizers considered in the rest of this chapter.
+same leaky average also smooths the sampling noise in the velocity, which is
+why some form of momentum appears in most optimizers considered in the rest
+of this chapter.
 
 ## Exercises
 
 1. [code] **Momentum and learning rate together.** On the valley `f_2d`
    with `momentum_2d`, run a grid of $\beta \in \{0, 0.25, 0.5, 0.8\}$ and
-   $\eta \in \{0.1, 0.3, 0.6, 1.0\}$ for 100 steps each.
+   $\eta \in \{0.1, 0.3, 0.6, 1.0\}$ for up to 1000 steps each.
     1. Record for every cell the number of steps until
        $\|\mathbf{x}_t\| \leq 10^{-3}$, or the fact that the iterates
        diverged, and display the grid as a table or heatmap.
     1. Compare the fastest $\beta$ at each stable $\eta$ with the
        $\beta^\star$ of :numref:`subsec_momentum_acceleration` for
-       $\kappa = 20$.
-    1. The effective-step reading of :numref:`subsec_momentum-timescale`
-       suggests that raising $\beta$ forces $\eta$ down. Does the largest
-       stable $\eta$ in your grid behave that way? Derive the stability
-       condition of :eqref:`eq_momentum` for a single eigendirection with
-       curvature $\lambda$ and reconcile the two.
-1. [code] **Many eigenvalues.** Consider
+       $\kappa = 20$, and explain each learning rate at which they differ.
+1. **Stability of momentum.** ● The effective-step reading of
+   :numref:`subsec_momentum-timescale` suggests that raising $\beta$ forces
+   $\eta$ down. Does the largest stable $\eta$ in the grid of the previous
+   problem behave that way? Derive the stability condition of
+   :eqref:`eq_momentum` for a single eigendirection with curvature
+   $\lambda$ and reconcile the two.
+1. [code] **Many eigenvalues.** ● Consider
    $f(\mathbf{x}) = \frac{1}{2} \sum_{i=1}^{10} \lambda_i x_i^2$ with
-   $\lambda_i = 2^{-i}$, started from $x_i = 1$.
-    1. Run gradient descent and heavy-ball momentum at the largest stable
-       learning rate of gradient descent and plot $|x_{i,t}|$ for every
+   $\lambda_i = 2^{-i}$, started from $x_i = 1$. Let $L$ and $\mu$ be the
+   largest and the smallest $\lambda_i$, and let $\kappa = L/\mu$.
+    1. Run gradient descent at $\eta = 2/(L + \mu)$, the learning rate that
+       minimizes its worst-case contraction factor
+       $\max_i |1 - \eta\lambda_i|$. Run heavy-ball momentum at
+       $\eta = 4/(\sqrt{L} + \sqrt{\mu})^2$ with the $\beta^\star$ of
+       :numref:`subsec_momentum_acceleration`. Plot $|x_{i,t}|$ for every
        coordinate on a logarithmic scale.
-    1. Which coordinate limits the convergence of gradient descent, and by
-       what factor does momentum with the $\beta^\star$ of the resulting
-       condition number shorten the time for that coordinate?
+    1. Which coordinates limit the convergence of each method? Compare the
+       ratio of the iteration counts until $\|\mathbf{x}_t\| \leq 10^{-6}$
+       with $\sqrt{\kappa}$.
 1. **Two forms of Nesterov momentum.** Library implementations of Nesterov
-   momentum evaluate the gradient at the current iterate,
-   $\mathbf{g}_t = \nabla f(\mathbf{x}_{t-1})$, and update
+   momentum store a parameter vector $\mathbf{y}_t$ and evaluate the
+   gradient there, $\mathbf{g}_t = \nabla f(\mathbf{y}_{t-1})$. Starting
+   from $\mathbf{y}_0 = \mathbf{x}_0$ and $\mathbf{v}_0 = \mathbf{0}$, they
+   update
    $$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t, \qquad
-   \mathbf{x}_t = \mathbf{x}_{t-1} - \eta\,(\mathbf{g}_t + \beta \mathbf{v}_t),$$
+   \mathbf{y}_t = \mathbf{y}_{t-1} - \eta\,(\mathbf{g}_t + \beta \mathbf{v}_t),$$
    so that no extra gradient evaluation is needed.
-    1. Show by a change of variables that this recurrence generates the
-       same iterates as :eqref:`eq_nesterov`.
-    1. Identify the point of :eqref:`eq_nesterov` to which the library's
-       parameter vector $\mathbf{x}_t$ corresponds, and state what a
-       checkpoint of those parameters therefore stores.
+    1. Express $\mathbf{y}_t$ through the $\mathbf{x}_t$ and $\mathbf{v}_t$
+       of :eqref:`eq_nesterov` so that both recurrences produce the same
+       velocities, and prove the relation by induction over $t$.
+    1. A checkpoint saves the library's parameters $\mathbf{y}_t$. Which
+       point of :eqref:`eq_nesterov` does it store, and what else must be
+       saved to recover $\mathbf{x}_t$?
 1. [code] **Critical damping.** For $f(x) = \frac{\lambda}{2} x^2$ at a
    fixed learning rate with $\eta\lambda = 0.1$, sweep $\beta$ over
-   $[0, 1)$ in steps of $0.02$ and measure the number of iterations until
-   $|x_t| \leq 10^{-6} |x_0|$.
+   $[0, 1)$ in steps of $0.02$ and measure the number of iterations after
+   which $|x_t|$ stays at or below $10^{-6} |x_0|$.
     1. Locate the minimizing $\beta$ and compare it with the critical value
        $\beta^\star = (1 - \sqrt{\eta\lambda})^2$ at which the recurrence
        :eqref:`eq_momentum` for this mode is critically damped.
     1. Describe the iterates on either side of $\beta^\star$ and match them
        with the over-damped and under-damped regimes of
        :numref:`fig_opt_critical_damping`.
-1. [code] **Momentum under minibatch noise.** With stochastic gradients,
-   the leaky average in :eqref:`eq_momentum` also smooths the sampling
-   noise.
-    1. Let $\mathbf{g}_t = \mathbf{g} + \boldsymbol{\xi}_t$ with
-       independent zero-mean noise of variance $\sigma^2$ per coordinate.
-       Show that the stationary mean of $\mathbf{v}_t$ is
-       $\mathbf{g}/(1-\beta)$ and its stationary variance
-       $\sigma^2/(1-\beta^2)$, so that the noise-to-signal ratio of the
-       velocity is $\sqrt{(1-\beta)/(1+\beta)}$ times that of a single
-       gradient.
+1. **Velocity noise.** Let
+   $\mathbf{g}_t = \mathbf{g} + \boldsymbol{\xi}_t$, where the noise
+   $\boldsymbol{\xi}_t$ is independent across steps, has zero mean, and has
+   variance $\sigma^2$ per coordinate. Show that the stationary mean of
+   $\mathbf{v}_t$ in :eqref:`eq_momentum` is $\mathbf{g}/(1-\beta)$ and its
+   stationary variance is $\sigma^2/(1-\beta^2)$. Conclude that the
+   noise-to-signal ratio of the velocity is $\sqrt{(1-\beta)/(1+\beta)}$
+   times that of a single gradient.
+1. [code] **Momentum under minibatch noise.** ● Keep the noise model of the
+   previous problem, but let the gradient depend on the iterate: on
+   $f(x) = \frac{\lambda}{2} x^2$, take $g_t = \lambda x_{t-1} + \xi_t$.
+    1. Compare plain SGD at learning rate $\alpha$ with momentum
+       $\beta = 0.9$ at $\eta = \alpha (1-\beta)$, which keeps the
+       effective step $\frac{\eta}{1-\beta}$ equal to $\alpha$. Compute the
+       ratio of the two stationary variances of $x_t$ for
+       $\alpha\lambda \in \{0.05, 0.2\}$, by simulation or by solving for the
+       stationary covariance of $(x_t, v_t)$. Does the reduction of the
+       velocity's noise-to-signal ratio from the previous problem carry over
+       to the iterate? Explain the result.
     1. On the airfoil harness, rebuild `data_iter` and `feature_dim` with
-       `d2l.get_data_ch11(batch_size=b)` for $b \in \{1, 10, 100\}$ and
-       run `d2l.train_ch11` with `sgd_momentum` at
-       $\beta \in \{0, 0.9\}$, adjusting $\eta$ so that $\eta/(1-\beta)$
-       stays at $0.05$. Report the final loss of each run and the spread of
-       the recorded losses over its last epoch.
-    1. At which batch size does momentum change the outcome most, and is
-       the size of the change consistent with the ratio of the first item?
+       `d2l.get_data_ch11(batch_size=b)` for $b \in \{1, 10, 100\}$. Run
+       `d2l.train_ch11` with `sgd_momentum` and `num_epochs=10` at
+       $\beta \in \{0, 0.9\}$, choosing $\eta$ so that
+       $\eta/(1-\beta) = 0.05$. Report the final loss of each run and the
+       spread of the recorded losses over its last epoch, and compare the
+       effect of momentum with the prediction of the first item.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1070)

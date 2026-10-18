@@ -325,41 +325,50 @@ Ghadimi–Lan theorem.
 ## Exercises
 
 1. [code] **Schedules on the noisy quadratic.** `sgd` with `constant_lr`,
-   `exponential_lr`, and `polynomial_lr` implements three of the schedules
-   in :eqref:`eq_sgd-schedules` on $f(x_1, x_2) = x_1^2 + 2x_2^2$.
+   `exponential_lr`, and `polynomial_lr` runs a constant learning rate and
+   two of the schedules in :eqref:`eq_sgd-schedules` on
+   $f(x_1, x_2) = x_1^2 + 2x_2^2$.
     1. Run all three for 1,000 steps from the starting point of
-       `d2l.train_2d` and plot the distance $\|\mathbf{x}_t\|$ to the
-       optimum against $t$ on a logarithmic scale. Which schedule is
-       closest after 50 steps, and which after 1,000?
-    1. The exponential run stops short because its total budget
-       $\sum_t \eta(t)$ is finite. Compute the budget of
-       `exponential_lr`, compare it with the distance the iterate has to
-       travel, then choose a decay constant whose budget suffices and
-       check whether the run now converges.
-    1. Piecewise constant decay with finitely many drops is not covered by
-       the Robbins–Monro conditions. Which of the two conditions does it
-       violate, and why does it nonetheless serve a fixed step budget?
-1. [code] **Noise as a random dataset.** The simulation in `sgd` adds
-   Gaussian noise to the gradient of $f(x_1, x_2) = x_1^2 + 2x_2^2$.
-    1. Prove that this is equivalent to stochastic gradient descent on the
-       per-example losses
-       $f(\mathbf{x}, \mathbf{w}) = (x_1 - w_1)^2 + 2(x_2 - w_2)^2$ with
-       $\mathbf{w}$ drawn from a normal distribution, and state the
-       covariance of $\mathbf{w}$ that reproduces unit-variance noise in
-       both gradient coordinates.
-    1. Draw a dataset of $n = 100$ vectors $\mathbf{w}_i$ and run SGD on
-       the resulting finite sum for 20 epochs at a constant learning rate,
-       once sampling $i$ with replacement and once reshuffling the dataset
-       before each epoch. Compare the distance to the finite-sum minimizer
-       after each epoch, averaged over 20 seeds.
-    1. In the with-replacement run, count the fraction of examples that are
-       not visited during an epoch and compare it with $e^{-1}$.
-1. [code] **Anisotropic noise ball.** The estimate :eqref:`eq_sgd-noise-ball`
-   applies to each coordinate separately, with curvatures $\lambda_1 = 2$
-   and $\lambda_2 = 4$ for the quadratic used in `sgd`.
+       `d2l.train_2d`. Plot the distance $\|\mathbf{x}_t\|$ to the optimum,
+       averaged over 20 runs, against $t$ on a logarithmic scale. Which
+       schedule is closest after 50 steps, and which after 1,000?
+    1. Write $B = \sum_t \eta(t)$ for the total budget, where $\eta(t)$ is
+       the step size `eta * lr()` that `sgd` applies at step $t$. Show that
+       without noise $x_1$ shrinks over the run by a factor of about
+       $e^{-2B}$. Compute $B$ for `exponential_lr` and compare the
+       predicted final $x_1$ with the run. Then choose a decay constant
+       whose predicted final $|x_1|$ is below $0.01$, and compare the final
+       distance of this run with that of `polynomial_lr`, again averaged
+       over 20 runs.
+1. **Piecewise constant decay.** Piecewise constant decay with finitely
+   many drops is not covered by the Robbins–Monro conditions. Which of the
+   two conditions does it violate, and why is it nonetheless a sensible
+   choice when the number of steps is fixed in advance?
+1. **Noise as a random dataset.** The simulation in `sgd` adds Gaussian
+   noise to the gradient of $f(x_1, x_2) = x_1^2 + 2x_2^2$. Prove that this
+   is equivalent to stochastic gradient descent on the per-example losses
+   $f(\mathbf{x}, \mathbf{w}) = (x_1 - w_1)^2 + 2(x_2 - w_2)^2$ with
+   $\mathbf{w}$ drawn from a normal distribution, and state the covariance
+   of $\mathbf{w}$ that reproduces unit-variance noise in both gradient
+   coordinates.
+1. [code] **Reshuffling versus replacement.** ● Draw a dataset of
+   $n = 100$ vectors $\mathbf{w}_i$ from the distribution of the previous
+   problem and run SGD on the resulting finite sum for 20 epochs, once
+   sampling $i$ with replacement and once reshuffling the dataset before
+   each epoch. Record the distance to the finite-sum minimizer after each
+   epoch, averaged over 20 seeds, at the constant learning rates
+   $\eta = 0.1$ and $\eta = 0.01$. At which learning rate does reshuffling
+   make the larger difference, and why?
+1. [code] **Anisotropic noise ball.** ● The estimate
+   :eqref:`eq_sgd-noise-ball` applies to each coordinate separately, with
+   curvatures $\lambda_1 = 2$ and $\lambda_2 = 4$ for the quadratic used in
+   `sgd`.
     1. Run `sgd` with `constant_lr` at $\eta = 0.1$ for 10,000 steps and
        estimate the stationary variance of $x_1$ and of $x_2$ from the last
-       5,000 iterates. Compare both with :eqref:`eq_sgd-noise-ball`.
+       5,000 iterates. Compare both with :eqref:`eq_sgd-noise-ball`. Then
+       derive the exact stationary variance of the recursion
+       $x_{t+1} = x_t - \eta\, (\lambda x_t + \xi_t)$ and explain for which
+       coordinate the approximation is worse.
     1. Give each coordinate its own learning rate $\eta_i = \eta /
        \lambda_i$. Derive how the contraction factor $1 - \eta_i \lambda_i$
        and the noise floor $\eta_i \sigma^2 / (2\lambda_i)$ change, and
@@ -367,15 +376,17 @@ Ghadimi–Lan theorem.
        not supply.
     1. Implement the per-coordinate rates in `sgd` and verify both
        predictions of the previous item numerically.
-1. [code] **Gradient variance after training.** The measurement in
+1. [code] **Gradient variance after training.** ● The measurement in
    :numref:`subsec_sgd-variance` froze the two-layer network at a random
-   initialization. Train it on the airfoil data for ten epochs with any
-   optimizer of this chapter, then recompute `g_full` and the variances at
-   the same batch sizes with `batch_grad`.
-    1. Does the $1/b$ dependence still hold?
-    1. How does the variance at $b = 1$ compare with its value at
-       initialization, and what change in the per-example gradients
-       explains the difference?
+   initialization. Train it on the airfoil data for ten epochs of
+   minibatch SGD with batch size 10 and learning rate 0.05, reshuffling
+   the examples before each epoch. At initialization and again after
+   training, recompute `g_full` with `batch_grad` and compute the
+   single-example gradient variance exactly by averaging the squared
+   deviation over all 1,500 examples. Split this variance into the
+   contributions of `W1`, `b1`, `W2`, and `b2`, and explain the changes
+   in the `b2` and `W1` contributions from the form of the per-example
+   gradient of the squared loss.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/497)

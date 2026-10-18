@@ -865,8 +865,9 @@ division by zero, it is in fact a floor on the denominator of
 :eqref:`eq_adam-update`, and therefore a ceiling of $\eta/\epsilon$ on any
 coordinate's effective step. A small $\epsilon$ says "trust the variance
 estimate, even a tiny one"; a large $\epsilon$ says "do not", and in the
-limit of large $\epsilon$ Adam degrades gracefully into SGD with momentum at
-learning rate $\eta/\epsilon$. Between the extremes lies a real tuning knob:
+limit of large $\epsilon$ Adam degrades gracefully into SGD with momentum
+(:eqref:`eq_momentum` with $\beta = \beta_1$) at learning rate
+$(1 - \beta_1)\eta/\epsilon$. Between the extremes lies a real tuning knob:
 values as large as $10^{-4}$ or even $10^{-2}$ are sometimes used where
 second-moment estimates are unreliable. The exercise below maps the
 interpolation.
@@ -895,11 +896,12 @@ and Yogi are the standard responses.
 1. [code] **Adam's learning rate on the airfoil data.** The from-scratch
    `adam` trains the linear model with `d2l.train_ch11` at $\eta = 0.01$.
     1. Sweep $\eta \in \{10^{-3}, 10^{-2}, 10^{-1}, 1\}$ and report the
-       final loss of each run. Which is the largest rate that does not
-       diverge, and how does the usable range compare with the rates that
-       plain SGD tolerated at batch size 10 in :numref:`sec_minibatch_sgd`?
+       final loss of each run. Copy the `sgd` update function of
+       :numref:`sec_minibatch_sgd` into this notebook, repeat the sweep
+       with it on the same `data_iter`, and compare how the final loss of
+       each method changes as $\eta$ grows past its best value.
     1. Explain from :eqref:`eq_adam-update` why the size of an Adam step in
-       any coordinate is bounded by about $\eta$ once the moment estimates
+       a coordinate is typically about $\eta$ once the moment estimates
        have stabilized, whatever the scale of the gradient, and why this
        makes the usable range of $\eta$ differ from that of SGD.
 1. **Bias correction by initialization.** Instead of the zero
@@ -922,39 +924,62 @@ and Yogi are the standard responses.
    `TinyLM` at the best learning rate of `adam_lm`. Explain the trend at
    both ends of the sweep with the $\eta/\epsilon$ step ceiling of
    :numref:`subsec_adam-variance-estimate`, and identify the $\epsilon$
-   from which the run resembles SGD with momentum at learning rate
-   $\eta/\epsilon$.
+   from which the run resembles SGD with momentum, as in `sgd_lm`, at
+   learning rate $(1 - \beta_1)\eta/\epsilon$.
 1. [code] **Two repairs of the variance estimate.** Adam's second-moment
    update can be written as
-   $\mathbf{v}_t = \mathbf{v}_{t-1} + (1 - \beta_2)(\mathbf{g}_t^2 - \mathbf{v}_{t-1})$,
+   $$\mathbf{v}_t = \mathbf{v}_{t-1} + (1 - \beta_2)(\mathbf{g}_t^2 - \mathbf{v}_{t-1}),$$
    which shrinks $\mathbf{v}_t$ whenever $\mathbf{g}_t^2 < \mathbf{v}_{t-1}$.
-    1. Yogi :cite:`Zaheer.Reddi.Sachan.ea.2018` caps the shrinkage rate by
-       replacing the increment with
-       $(1 - \beta_2)\, \mathbf{g}_t^2 \odot \mathrm{sgn}(\mathbf{g}_t^2 - \mathbf{v}_{t-1})$.
-       Implement Yogi in the from-scratch harness and compare it with
-       `adam` on the airfoil data. Then construct a stream of gradients on
-       which Adam diverges and Yogi converges.
-    1. AMSGrad :cite:`Reddi.Kale.Kumar.2019` carries the running maximum
-       $\hat{\mathbf{v}}_t^{\max} = \max(\hat{\mathbf{v}}_{t-1}^{\max}, \hat{\mathbf{v}}_t)$
-       and uses it in place of $\hat{\mathbf{v}}_t$ in
-       :eqref:`eq_adam-update`. Implement it, verify on the airfoil data
-       that it behaves like `adam`, and test it on the non-convergence
-       construction of :numref:`subsec_mdl-per-coordinate`.
+   Yogi :cite:`Zaheer.Reddi.Sachan.ea.2018` caps the shrinkage rate by
+   replacing the increment with
+   $$(1 - \beta_2)\, \mathbf{g}_t^2 \odot \mathrm{sgn}(\mathbf{g}_t^2 - \mathbf{v}_{t-1}).$$
+   AMSGrad :cite:`Reddi.Kale.Kumar.2019` carries the running maximum
+   $$\hat{\mathbf{v}}_t^{\max} = \max(\hat{\mathbf{v}}_{t-1}^{\max}, \hat{\mathbf{v}}_t)$$
+   and uses it in place of $\hat{\mathbf{v}}_t$ in :eqref:`eq_adam-update`.
+   Implement Yogi and AMSGrad as update functions for `d2l.train_ch11`,
+   following `adam`, and compare both with `adam` on the airfoil data.
+1. [code] **Yogi on the Reddi construction.** ● The function `online` of
+   :numref:`subsec_mdl-per-coordinate` runs Adam and AMSGrad on the losses
+   :eqref:`eq_mdl-opt-reddi`, on which Adam converges to the worst point
+   $x = +1$. Add the Yogi update of problem 5 to it, run it at $C = 4$, and
+   report where its iterate ends. Explain the outcome from how far the
+   $v_t$ of Adam and of Yogi can fall during the two $-1$ gradients of each
+   period.
 1. [code] **Adadelta.** Adadelta :cite:`Zeiler.2012` extends RMSProp with a
    second exponential average, of the squared *updates*, whose square root
    replaces $\eta$, so that the method nominally has no learning rate.
-   Implement it in the from-scratch harness alongside `rmsprop` and
-   compare the two on the airfoil data. Where does the scale of the very
-   first update come from?
+   Implement it as an update function for `d2l.train_ch11`, following
+   `rmsprop`, and compare the two on the airfoil data. Where does the scale
+   of the very first update come from?
 1. [code] **Rotating the coordinates.** Per-coordinate methods are
-   axis-aligned. Rotate the valley by $45^\circ$ to
-   $f(\mathbf{x}) = 0.1 (x_1 + x_2)^2 + 2 (x_1 - x_2)^2$, adapt the
-   gradients in `adagrad_2d` and `rmsprop_2d`, and rerun both with
-   `d2l.train_2d` at $\eta = 0.4$ and $\eta = 2$ for AdaGrad and
-   $\eta = 0.4$ for RMSProp. Compare the step counts to
-   $\|\mathbf{x}\| \leq 10^{-3}$ with those on the unrotated valley and
-   with plain gradient descent at its largest stable rate. How much of the
-   advantage over gradient descent survives the rotation?
+   axis-aligned. Rotating the valley `f_2d` by $45^\circ$ gives
+   $$f(\mathbf{x}) = 0.05 (x_1 + x_2)^2 + (x_1 - x_2)^2,$$
+   whose Hessian has the same eigenvalues as that of `f_2d`, $0.2$ and $4$.
+    1. Adapt the gradients in `adagrad_2d` and `rmsprop_2d` to the rotated
+       valley, and write its gradient function for the `gd_2d` of
+       :numref:`sec_momentum`. On both valleys, run AdaGrad at
+       $\eta = 0.4$ and $\eta = 2$, RMSProp at $\eta = 0.4$, and gradient
+       descent at $\eta = 0.4$ with `d2l.train_2d` and `steps=2000`. For
+       each run, record the first step at which
+       $\|\mathbf{x}\| \leq 10^{-3}$, or that no step within the 2,000
+       reaches it.
+    1. How much of the adaptive methods' advantage over gradient descent
+       survives the rotation? Explain the answer from the Hessian of the
+       rotated valley.
+1. [code] **Per-group learning rates for SGD.** ● The census of
+   :numref:`subsec_tinylm` splits the parameters of `TinyLM` into
+   embeddings, matrices, and vectors, which share one learning rate under
+   SGD with momentum.
+    1. Give each population its own learning rate. Starting from the best
+       rate of `sgd_lm`, scale one population's rate by each factor in
+       $\{1/10, 1/3, 3, 10\}$ while holding the other two fixed, and keep
+       the best factor for each population. Then train once with the three
+       best factors combined.
+    1. How much of the gap between the best runs of `sgd_lm` and `adam_lm`
+       does per-group SGD close? What does the result say about whether
+       Adam's advantage on this model comes from scale differences between
+       the three populations or from differences among the coordinates
+       within each population?
 1. [extended] **Frequent and rare characters.** Following
    :citet:`Kunstner.Yadav.Milligan.ea.2024`, split the vocabulary of
    `data` into a frequent and a rare half by corpus frequency and log the

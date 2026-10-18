@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7693252b8b9745328334724b9d147a322ab1dcbf399402d94e1211f5694dab83",
+    "d2l_lib_fingerprint": "sha256:54669cc00f1708a92d632e68d82084152dd0bdf4ecd7004e3d8a99cf3b145a13",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,23 +24,23 @@
       "outputs": []
     },
     "oo-design-utilities-3": {
-      "code_fingerprint": "sha256:e4defc0e1752c2f95b0ddc62a8c85cbee08a02422e46d43ff5488d0ded7a8c07",
+      "code_fingerprint": "sha256:fa52bdb76ba9bb33dfac743714204d21daccebf79ae2e2104a886783515f9018",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Class attribute \"b\" is 1\n"
+          "text": "Instance attribute \"b\" is 1\n"
         }
       ]
     },
     "oo-design-utilities-4": {
-      "code_fingerprint": "sha256:a48d10ad6772d57e9d899011d0a56fdfcef52d7a5d7eabceb4b4e0ae87130205",
+      "code_fingerprint": "sha256:6c18c347ede85607157110aff82d17a147bb3161468ff1040ca86b4eb69c9302",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-5": {
-      "code_fingerprint": "sha256:fb606e5392509a4c4bcd1b492ee3ff3ae03007c1b8b676712d56659eb610c84b",
+      "code_fingerprint": "sha256:bedd6c01a860affd62f061dd62773fd6b5af3ff43a1b04171783d13dc4edbb40",
       "kind": "text",
       "outputs": [
         {
@@ -51,12 +51,12 @@
       ]
     },
     "oo-design-utilities-6": {
-      "code_fingerprint": "sha256:543c2853de2698b770077260833e6315c68ec8c0ea78639c19526a1b54bfb4d4",
+      "code_fingerprint": "sha256:c930b69a80fa9d6c0931b0a0c65bf14e690d6cb063d4a53fea0233a97e0f8e9b",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-7": {
-      "code_fingerprint": "sha256:96a418ff036836f6a648b54712aaa5cbf780b10e87f94545e91f648c7ed5d183",
+      "code_fingerprint": "sha256:ba06213a0f828c723a0d14d9d381868e268b98cf41d9de8a806239e7a10da4d8",
       "kind": "asset",
       "outputs": [
         {
@@ -64,22 +64,22 @@
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
           "bytes": 17183,
-          "sha256": "sha256:5eaf5d5db3cd127b2e252bc4ac64c74ce45ff60d00fc2ee31ca7be6f2a7156ae"
+          "sha256": "sha256:686b5e1d67d8981cbac39242c2a589fa139bf503b74a4f72e5628bc2a89104b3"
         }
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:6922f53ae9c869b2ad175adaa4d78eafc8c629204157031b7c5de59e30ee747a",
+      "code_fingerprint": "sha256:75a29dd36862532f412c30e8e20d8fb72e2e52ff9efd14c3dbf1700d076436bc",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:a6aff28f3cf5a4cd81d778063deab36fbcedeacac305342af2e2204d737fc98a",
+      "code_fingerprint": "sha256:3e1bf272d9aba0db310bd1c2b5476b497d883efc92f7386c6476d8971278271b",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:b42372323241f7b3c7fcb90f2eaaa30791fee8ee4bd7bbba742540343f5adcbe",
+      "code_fingerprint": "sha256:8042b4402c0f2eda98562ed12e75753b980208bf526b823a1cc3cfc2ff244652",
       "kind": "text",
       "outputs": []
     }

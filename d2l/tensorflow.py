@@ -499,7 +499,7 @@ class LinearRegressionScratch(d2l.Module):
     def __init__(self, num_inputs, lr, sigma=0.01):
         super().__init__()
         self.save_hyperparameters()
-        w = tf.random.normal((num_inputs, 1), mean=0, stddev=0.01)
+        w = tf.random.normal((num_inputs, 1), mean=0, stddev=sigma)
         b = tf.zeros(1)
         self.w = tf.Variable(w, trainable=True)
         self.b = tf.Variable(b, trainable=True)

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:76084a3d79b3a07f9fa1a0eb384da8265a1e3f5194e958b7732594ee9dd928d4",
+    "d2l_lib_fingerprint": "sha256:b468765b7d5b13c0031519bd3c81dedbf1a6bb770235f5a675476eef0fff0b4c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,32 +14,32 @@
       "outputs": []
     },
     "utils-utility-functions-and-classes-2": {
-      "code_fingerprint": "sha256:08c05c8d2d8ae87746ddb859bf14704dfd6de214549a4e8bd36422ca690cc42e",
+      "code_fingerprint": "sha256:11269cc8ce89c0a07692cf325761702619cc9f16ff146b902ba31dae88136a99",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-3": {
-      "code_fingerprint": "sha256:ada532b69338cb174702345623689325292020f8a722ec998c267a2e02e440bb",
+      "code_fingerprint": "sha256:0b820bed23ffb627bc3492c06dc053e803d821e454bbb51573169219b67a0ab5",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-18": {
-      "code_fingerprint": "sha256:43c41787d891286685109f03fe8b48abf1ece1b55205e97bc2c7f49d6c5285b1",
+      "code_fingerprint": "sha256:6b03ae32b88358f7888e107498bb26a9a8543fa18344ff28bfcf3f528101515c",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:518b1a884fcaba338a171a583b1752308098710f4be6577654ef8df1beba0134",
+      "code_fingerprint": "sha256:f9819f4aed2cee13291ba6b253fcd5102c3d3a8fc2a8c07914e036199d088e93",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:178c25d02808461ad482019876e4c1690880e8f0f65d7e7138a96f17bb424e5e",
+      "code_fingerprint": "sha256:ece304724b3860033e82dba2c52bdabbebb10941abb4bd5fe8857a320997a860",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:9f1cc3f747f735aa3d620bfc4fd6a7ab4481ff40d2da17d3367e7a6386906095",
+      "code_fingerprint": "sha256:471a2baf74200653d4c314e31fdfd44604c608f494a8e780739331e3be267669",
       "kind": "text",
       "outputs": []
     }

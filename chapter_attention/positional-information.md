@@ -33,6 +33,7 @@ import optax
 ```
 
 ## Attention Ignores Order
+:label:`subsec_pos-ignores-order`
 
 Let $\mathbf{X} \in \mathbb{R}^{n \times d}$ hold a sequence of $n$ token
 representations. At evaluation time, with dropout disabled and with no mask
@@ -105,6 +106,7 @@ vectors, and the equivariance proof fails at its first step. The two classic
 choices of $\mathbf{P}$ differ in whether the table is designed or learned.
 
 ### Sinusoidal Encodings
+:label:`subsec_pos-sinusoidal`
 
 The designed choice fills row $i$ of $\mathbf{P} \in \mathbb{R}^{n \times d}$
 with sines and cosines of geometrically spaced frequencies,
@@ -208,6 +210,7 @@ rotation directly. RoPE instead applies relative rotations directly to the
 query--key comparison.
 
 ## Rotary Position Embeddings
+:label:`subsec_pos-rope`
 
 This construction is used by many current open-weights language models,
 including Llama, Qwen, and DeepSeek. *Rotary position embeddings* (RoPE) :cite:`Su.Lu.Pan.ea.2021` skip the
@@ -550,6 +553,7 @@ class TinyCharLM(nnx.Module):  #@save
 ```
 
 ### The Experiment
+:label:`subsec_pos-experiment`
 
 We train one fixed-seed copy per scheme on the character-level Time Machine corpus of
 :numref:`sec_text-sequence` at context length 128, using the same fixed-step
@@ -673,6 +677,7 @@ possible behavior of the schemes; they do not establish a stable ranking or
 an estimate of run-to-run variation.
 
 ### Extending a Trained Model's Context
+:label:`subsec_pos-context-extension`
 
 At an unseen offset such as 400, RoPE rotates the high-frequency pairs
 through angles absent from the training data. Because these angles vary
@@ -686,7 +691,7 @@ refines it by rescaling the fast, position-discriminating frequencies
 differently from the slow, content-carrying ones. Many long-context RoPE
 models use schemes from this family. Note
 that the recipe has two halves: rescaling *and* a brief fine-tune at the
-scaled angles. Exercise 3 walks through both halves on our character model;
+scaled angles. Exercise 13 walks through both halves on our character model;
 in our runs, rescaling alone increases perplexity because compressing the
 angle range makes neighboring characters less distinguishable in the
 high-frequency pairs. Rescaling followed by a few hundred fine-tuning steps
@@ -708,37 +713,256 @@ to map longer contexts into the trained range.
 
 ## Exercises
 
-1. Causal attention is not permutation equivariant. Demonstrate this
-   numerically: apply a causal mask to the shuffle experiment of the first
-   section and measure the output difference. Then explain precisely where
-   the equivariance proof breaks, and why the *first* position's output is
-   nevertheless unchanged by any permutation that fixes it.
-2. How much position information leaks through the causal mask? Train a
-   linear probe (one linear layer) to predict the position index $i$ from
-   the final hidden state $\mathbf{h}_i$ of the trained `'none'` model, and
-   compare its accuracy against the same probe on the `'rope'` model.
-3. Implement position interpolation: add a `scale` argument to
-   `TinyCharLM._rope` that multiplies every angle, and re-evaluate the
-   trained `'rope'` model at context 512 with `scale=128/512`. You will
-   find that zero-shot rescaling alone does not help this character-level
-   model — explain why, considering what the fastest frequency pairs are
-   responsible for. Then complete the published recipe: fine-tune for a few
-   hundred steps at context 512 with the scaled angles, re-evaluate, and
-   compare the result against the ALiBi row of the experiment.
-4. The experiment adds the sinusoidal table at its classic full amplitude,
-   while the token embeddings are initialized two orders of magnitude
-   smaller. Scale the table by 0.02 instead, retrain, and evaluate at all
-   three lengths. Explain what the model degenerates into and which row of
-   the results table it now resembles.
-5. RoPE's base constant sets the frequency ladder. Retrain the `'rope'`
-   variant with the base changed from 10000 to 100 and to 1000000, and
-   compare both training-length perplexity and extrapolation. Which
-   frequencies does each change affect, and why does the base matter more
-   at length 512 than at length 128?
-6. Visualize `models['rope'].attention_weights(X)` for a validation batch
-   and compare with the `'none'` model. Which heads attend locally, which
-   uniformly? Reconcile what you see with the two models' perplexity gap at
-   the training length.
+1. [code] **Causal masks and symmetry.** The proposition of
+   :numref:`subsec_pos-ignores-order` assumes that no mask is present.
+   Repeat its numerical check on `d2l.MultiHeadAttention` with the
+   per-query valid lengths $(1, 2, \ldots, 8)$, which implement the causal
+   mask of :numref:`sec_attention-scoring-functions`.
+    1. Measure the maximum output difference as in the unmasked check.
+    1. Identify the step of the proof that fails. Which matrix is not
+       conjugated by $\boldsymbol{\Pi}$ once the mask is present?
+    1. Show that the output at position $t$ is unchanged by any permutation
+       that fixes $t$ and only rearranges the positions before it. What is
+       then the only positional information that the first layer of a NoPE
+       model can carry?
+1. **Biases that keep the symmetry.** ● Suppose that a fixed matrix
+   $\mathbf{B} \in \mathbb{R}^{n \times n}$ is added to the score matrix
+   $\mathbf{S}$ of the proof before the softmax, so that the layer
+   :eqref:`eq_pos-selfattn` computes $\mathrm{softmax}(\mathbf{S} +
+   \mathbf{B})\, \mathbf{X}\mathbf{W}_v$.
+    1. Show that the proposition still holds for every permutation matrix
+       $\boldsymbol{\Pi}$ with $\boldsymbol{\Pi}^\top \mathbf{B}
+       \boldsymbol{\Pi} = \mathbf{B}$.
+    1. Find all matrices $\mathbf{B}$ that satisfy this condition for every
+       permutation, and describe how each of them changes the attention
+       weights.
+    1. Without the causal mask, the ALiBi bias of :eqref:`eq_alibi-def`
+       extends symmetrically to $B_{ij} = -m_h\,|i - j|$. Determine the
+       permutations that preserve this matrix, and state what the result
+       implies for an unmasked layer that receives this bias and no other
+       positional signal. Explain why the causal ALiBi of
+       :eqref:`eq_alibi-def` does not share this symmetry.
+1. **Distinct positions, distinct codes.** Let $\mathbf{p}_i$ be row $i$ of
+   the sinusoidal table :eqref:`eq_sinusoidal-def` of width $d$, with the
+   frequencies $\omega_j = 1/10000^{2j/d}$ of
+   :eqref:`eq_sinusoidal-rotation`.
+    1. Show that
+       $$\mathbf{p}_i^\top \mathbf{p}_{i+\delta} = \sum_{j=0}^{d/2-1} \cos(\delta\,\omega_j),$$
+       derive $\|\mathbf{p}_i - \mathbf{p}_{i+\delta}\|^2$ from it, and
+       conclude that both quantities depend on the offset $\delta$ alone.
+    1. Conclude that $\mathbf{p}_i = \mathbf{p}_{i'}$ only if
+       $(i - i')\,\omega_j$ is a multiple of $2\pi$ for every $j$, and that
+       no two distinct integer positions share a row, whatever the value of
+       `max_len`.
+    1. The fastest pair has period $2\pi$, so it nearly repeats at integer
+       offsets close to multiples of $2\pi$. Find the offset $\delta < 512$
+       at which its angle comes closest to a multiple of $2\pi$, and give
+       the residual angle.
+    1. For $d = 32$, evaluate $\|\mathbf{p}_i - \mathbf{p}_{i+\delta}\|$ at
+       this offset and at $\delta = 1$, and find the offset between $1$ and
+       $511$ at which the distance is smallest. Which pairs keep the two
+       positions of the near repeat apart? Relate the answer to the binary
+       counting of :numref:`subsec_pos-sinusoidal`.
+1. [code] **Untrained rows.** The table `pos_emb` of `models['learned']`
+   has `max_len = 512` rows, of which training at context 128 used only the
+   first 128.
+    1. Explain why rows 128 to 511 of the trained table are bitwise equal to
+       those of a freshly constructed `TinyCharLM` with `pos='learned'` and
+       the seed of :numref:`subsec_pos-experiment`, and check the claim. By
+       what factor would decoupled weight decay with coefficient $0.1$ at
+       the learning rate $10^{-3}$ have shrunk these rows over the 3000
+       training steps?
+    1. Compute the cosine similarities between all 512 rows of the trained
+       table and display them with `d2l.show_heatmaps`. Describe the three
+       blocks of the result: trained rows against trained rows, untrained
+       against untrained, and trained against untrained.
+    1. By problem 3, the dot products of the sinusoidal rows depend only on
+       $i - j$, so the sinusoidal similarity matrix is constant along each
+       diagonal $i - j = \textrm{const}$. For the trained rows 0 to 127,
+       compute the standard deviation of the cosine similarities along each
+       diagonal and average it over the diagonals. Compare the average with
+       the standard deviation of the diagonal means across diagonals, and
+       decide whether training produced a code whose similarities are
+       approximately invariant to shifts.
+1. [code] **Amplitude of the sinusoidal table.** `TinyCharLM` adds the
+   sinusoidal table at full amplitude, while the token embeddings are
+   initialized with standard deviation $0.02$.
+    1. Compute the root-mean-square entry of the table over the first 128
+       positions and its ratio to $0.02$. Which of the two signals dominates
+       the input of the first block at initialization?
+    1. Two outcomes are possible when the table is scaled by $0.02$ instead.
+       The model may use position as well as before, because the
+       projections can amplify a small but structured signal, or it may
+       behave like the `'none'` model. State which perplexity pattern at
+       128 and at 512 distinguishes the two outcomes.
+    1. Retrain the `'sinusoidal'` variant with the scaled table, evaluate at
+       all three context lengths, and decide.
+1. **Additive codes in the score.** With the additive encoding of
+   :numref:`subsec_pos-sinusoidal`, a first-layer head of
+   :eqref:`eq_pos-selfattn` scores the inputs at positions $i$ and $j$ as
+
+   $$\mathrm{score}_{ij} = (\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A}\, (\mathbf{x}_j + \mathbf{p}_j), \qquad \mathbf{A} = \mathbf{W}_q \mathbf{W}_k^\top / \sqrt{d}.$$
+
+    1. Expand the score into its four terms, and state which of them
+       depend on $i$, which on $j$, and which on both.
+    1. Let $\mathbf{J}$ be the rotation of the plane by $\pi/2$. Using
+       :eqref:`eq_sinusoidal-rotation`, show that the position--position
+       term $\mathbf{p}_i^\top \mathbf{A}\, \mathbf{p}_j$ depends only on
+       $j - i$ when $\mathbf{A}$ is block diagonal with $2 \times 2$ blocks
+       $a_m \mathbf{I} + b_m \mathbf{J}$, one per frequency pair. Problem 3
+       treats $\mathbf{A} = \mathbf{I}$. Then show that a single nonzero
+       entry of $\mathbf{A}$ that couples two different frequency pairs
+       destroys this property.
+    1. Determine when the content--position term
+       $\mathbf{x}_i^\top \mathbf{A}\, \mathbf{p}_j$ is unchanged for every
+       shift of $j$. Use the answer to explain the score change of the
+       additive encoding in the shift test of :numref:`subsec_pos-rope`,
+       and why RoPE has no content--position term.
+1. **Offset preference in RoPE.** ● Split a query $\mathbf{q}$ and a key
+   $\mathbf{k}$ into the $d/2$ two-dimensional pairs $\mathbf{q}^{(m)},
+   \mathbf{k}^{(m)} \in \mathbb{R}^2$ on which :eqref:`eq_rope-def` acts,
+   and let $\delta = j - i$ be the offset of the key position $j$ from the
+   query position $i$.
+    1. Show that the RoPE score :eqref:`eq_rope-goal` equals
+       $$\sum_{m=0}^{d/2-1} \|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\| \cos(\delta\,\omega_m - \varphi_m),$$
+       where $\varphi_m$ is the angle from $\mathbf{k}^{(m)}$ to
+       $\mathbf{q}^{(m)}$.
+    1. Choose the angles $\varphi_m$ so that every pair contributes its
+       maximum at the offset $\delta = -1$, the previous token. With all
+       products $\|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\|$ equal to $c$,
+       show that the score, as a function of $\delta$, is $c$ times a
+       shifted copy of the dot product $\mathbf{p}_i^\top
+       \mathbf{p}_{i+\delta}$ of problem 3 for a sinusoidal table of width
+       $d$.
+    1. Take $d = 32$ and the query at position 127, which attends to the
+       offsets $\delta = -127, \ldots, 0$. Let the attention logits equal
+       these scores, with the factor $1/\sqrt{d}$ absorbed into $c$. Find
+       the $c$ at which the offset $-1$ receives half of the softmax
+       weight, and identify the offsets that compete most with it. Which
+       pairs set the gap between the score at $-1$ and the scores at its
+       neighbors?
+1. [code] **RoPE at explicit positions.** `rope` assumes that the rows of
+   its input sit at consecutive positions starting at `offset`.
+   Re-implement it as a class that is constructed with the frequency base
+   `base`, the query width `d_k`, and `max_seq_len`, precomputes the
+   cosine and sine tables once, and applies the rotation at the integer
+   positions given by a `token_positions` array of arbitrary leading batch
+   shape.
+    1. Verify that the class reproduces `rope(x)` on the positions $0,
+       \ldots, T-1$ and `rope(x, offset)` on the positions
+       $\textrm{offset}, \ldots, \textrm{offset} + T - 1$.
+    1. A packed row of :numref:`sec_attention-scoring-functions`
+       concatenates several documents and masks attention between them.
+       Explain why restarting the positions at $0$ for each document leaves
+       every unmasked RoPE score unchanged.
+    1. A row instead holds a shared prefix of 8 tokens followed by two
+       alternative continuations A and B of 4 tokens each, as when several
+       candidate continuations are scored in one pass. Give the tokens of
+       both A and B the positions 8 to 11, and mask attention between A and
+       B. Verify that the scores of the queries of B against the prefix and
+       against B equal those of the row formed by the prefix and B alone,
+       and explain why the consecutive positions $0, \ldots, 15$, which are
+       all that one call of `rope` on the 16-token row can express, do not
+       give this result.
+
+    *Adapted from Stanford CS336,
+    [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
+    Problem (rope).*
+1. [code] **Attention by distance.** For one head of `TinyCharLM`, the
+   *distance profile* is the average attention weight on the key at
+   distance $r = i - j$ from the query, taken over queries and validation
+   sequences. `TinyCharLM.attention_weights` returns the maps from which it
+   is computed.
+    1. At context 128, compute the profiles of the eight heads of
+       `models['rope']` and of `models['none']` over the queries at
+       positions 64 to 127. Summarize each head by its mass on $r \leq 3$
+       and by its mean row entropy. Which heads of the RoPE model attend
+       locally, and what do the heads of the NoPE model do instead?
+    1. Relate the difference to the perplexity gap between the two models
+       at the training length. What does a character model gain from heads
+       that attend to the immediately preceding positions?
+1. [code] **Position through the mask.** ● NoPE receives positional
+   information only through the causal mask. Measure how much of it reaches
+   the representation.
+    1. Collect the final residual vector $\mathbf{h}_i$ that `TinyCharLM`
+       passes to its output head, at every position of the length-128
+       validation sequences, for `models['none']` and for `models['rope']`;
+       the loop in `attention_weights` shows where to read it.
+    1. Train a linear probe that predicts the position index $i$ from
+       $\mathbf{h}_i$ as a 128-way classification, and report its held-out
+       accuracy for both models against the chance level $1/128$. Which
+       positions are predicted best?
+    1. Repeat the probe on an untrained `TinyCharLM` with `pos='none'`.
+       Which positions can it identify, and how does the variance of an
+       average of $i + 1$ random vectors explain the result?
+1. [code] **Where extrapolation fails.** The perplexities of
+   :numref:`subsec_pos-experiment` at context 512 average the loss over all
+   positions of each sequence.
+    1. Show that in each of the five models the logits at positions 0 to
+       127 of a length-512 sequence agree, up to floating-point round-off,
+       with those computed from its first 128 tokens alone. What does this
+       imply about the positions at which the perplexity changes between
+       context 128 and context 512?
+    1. Compute the validation loss at every position of the length-512
+       sequences for the five models, average it over windows of 16
+       positions, and plot it against position. For each scheme, where does
+       the curve leave the level it holds below position 128, and does the
+       loss jump at position 128 or grow gradually?
+    1. Restrict every query of `models['rope']` to the 128 most recent
+       keys, itself included, by adding a band constraint to the causal
+       mask in `_attend`, and repeat the measurement. Compare the windowed
+       curve beyond position 128 with the unwindowed curve below it. Do
+       offsets beyond 127 account for the degradation of RoPE at context
+       512?
+    1. ALiBi stays approximately flat at context 512. For the query at
+       position 511 and equal content scores for all keys, compute the
+       fraction of the weight that each of the slopes of
+       :eqref:`eq_alibi-def` with $H = 4$ leaves on the distances
+       $i - j \geq 128$, none of which occurred in training. Measure the
+       same fraction for the eight heads of `models['alibi']` at context
+       512, and decide whether the stability of ALiBi at that length comes
+       from never attending beyond the training range.
+1. [code] **The RoPE base.** ● In :eqref:`eq_rope-def` the frequencies are
+   $\omega_m = 10000^{-2m/d}$, and the constant $10000$ is a choice.
+    1. For the per-head width 32 of `TinyCharLM`, compute the periods
+       $2\pi/\omega_m$ of the 16 pairs for the bases $100$, $10^4$, and
+       $10^6$, and count the pairs that complete at least one full rotation
+       within 128 positions. Which period does not depend on the base?
+    1. Add a constructor argument `rope_base`, with default $10^4$, to
+       `TinyCharLM`, use it in `_rope`, and retrain the `'rope'` variant
+       with bases $100$ and $10^6$. Use two seeds for each
+       base and one further seed for base $10^4$, so that differences
+       between bases can be compared with the variation across seeds.
+       Compare perplexity at 128, 256, and 512.
+    1. Explain from the counts why the base is expected to matter more at
+       length 512 than at 128, and check the expectation against your
+       results.
+1. [extended] **Position interpolation.** ●
+   :numref:`subsec_pos-context-extension` describes the effect of
+   rescaling the RoPE angles by $128/512$ on `models['rope']` at context
+   512, alone and followed by a brief fine-tune, without giving numbers.
+   Fill them in.
+    1. Show that a pair that completes a full rotation within the training
+       offsets 0 to 127 has already met, to within $\omega_m/2$ modulo
+       $2\pi$, every angle that a longer offset produces. Using the counts
+       of problem 12 for base $10^4$, determine which pairs a uniform
+       rescaling by $128/512$ compresses although they did not need it.
+       Compute the gap of problem 7 between the score at offset $-1$ and
+       the scores at its neighbors for $d = 32$, before and after the
+       rescaling, and for the rescaling of only the pairs whose period
+       exceeds 128 positions.
+    1. Redefine the method `TinyCharLM._rope` so that it multiplies the
+       angle of each pair by the entry of a model attribute `rope_scale`
+       (all ones when the attribute is absent). Set every entry to $128/512$
+       on the trained `models['rope']`, evaluate it at context 512, and
+       compare with its unscaled perplexity at 512 and with the ALiBi result
+       of :numref:`subsec_pos-experiment`.
+    1. Rescale only the pairs whose period exceeds 128 positions and
+       evaluate again without fine-tuning. This is a simplified form of the
+       selective rescaling of YaRN :cite:`Peng.Quesnelle.Fan.ea.2024`.
+    1. Fine-tune for a few hundred steps at context 512 with each of the two
+       rescalings, re-evaluate at 128, 256, and 512, and compare with the
+       ALiBi result.
 
 <!-- slides -->
 

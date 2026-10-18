@@ -410,25 +410,32 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 ## Exercises
 
 1. **Memory and compute ledger.** Analyze the computational properties of
-   `AlexNet` as defined in this section.
+   `AlexNet` as defined in this section for single-channel
+   $224 \times 224$ inputs in 32-bit floating point.
     1. Tabulate, layer by layer, the parameter count and the number of
        multiplications for the convolutional and the fully connected
-       layers. Which layer type dominates each total?
+       layers. The fully connected layers hold almost all of the
+       parameters. Which layer type dominates the multiplications, and by
+       what factor?
     1. Compute the memory footprint of the activations for a single input
        image. Where is it concentrated?
-    1. How does memory (read and write bandwidth, latency, size) affect
-       computation? Is there any difference in its effects between
-       training and inference?
-    1. A chip designer must trade off arithmetic throughput against memory
-       bandwidth: a faster chip requires more power and possibly a larger
-       chip area, and more memory bandwidth requires more pins and control
-       logic, thus also more area. Using your ledger, state one concrete
-       design choice and its expected effect on AlexNet training
-       throughput.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.16.*
+1. **Arithmetic intensity.** ● The *arithmetic intensity* of a layer is
+   the number of multiplications it performs per byte of parameters it
+   reads from memory. Use the ledger of problem 1.
+    1. Compute the arithmetic intensity of every layer of `AlexNet`, once
+       for a batch of 1 image and once for a batch of 128 images, assuming
+       that each parameter is read once per batch.
+    1. Consider a chip that performs 10 multiplications in the time it
+       reads one byte from memory. Assume that each layer takes the longer
+       of its multiplication time and its parameter-reading time. A
+       designer can spend extra chip area on doubling either the
+       arithmetic throughput or the memory bandwidth. Which choice speeds
+       up single-image inference more, and which speeds up training at
+       batch size 128 more?
 1. **Receptive fields of the early layers.** Apply
    :eqref:`eq_receptive_field` to `AlexNet` as defined in this section,
    counting each max-pooling layer as a layer with its own kernel size and
@@ -439,12 +446,20 @@ Although it seems that there are only a few more lines in AlexNet's implementati
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.17.*
-1. **Retired benchmarks.** Why do engineers no longer report performance
-   benchmarks on AlexNet? What changed about datasets, architectures, and
-   evaluation norms since 2012?
-1. [code] **Training duration versus LeNet.** Train AlexNet for two and
-   five times the number of epochs used in this section. Compared with
-   LeNet under the same schedules, how do the results differ? Why?
+1. [code] **Learned first-layer filters.** :numref:`fig_filters` shows the
+   first-layer kernels that AlexNet learned on ImageNet.
+    1. Train `AlexNet` as in this section, keeping a copy of the weights of
+       its first convolutional layer from before training. Display the 96
+       kernels of $11 \times 11$ pixels at initialization, after training,
+       and as the difference between the two.
+    1. Compare the change made by training with :numref:`fig_filters`.
+       Name two visible differences and the property of this section's
+       input images that causes each.
+1. [code] **Training duration versus LeNet.** Train `AlexNet` as in this
+   section and `LeNet` as in :numref:`sec_lenet` for 50 epochs each,
+   keeping each model's own learning rate and batch size. Report the
+   validation accuracy of both models after 10, 20, and 50 epochs. Which
+   model gains more from the longer training, and why?
 1. [code] **A network for $28 \times 28$ images.** AlexNet is oversized for
    Fashion-MNIST, whose images must be upsampled eightfold to reach the
    $224 \times 224$ input it expects.
@@ -454,22 +469,34 @@ Although it seems that there are only a few more lines in AlexNet's implementati
     1. Design a model that works directly on $28 \times 28$ images and
        reaches, within a stated epoch budget, at least the accuracy of
        your simplified model.
-1. [code] **Batch size, throughput, and memory.** Sweep the training batch
-   size across at least four values and plot throughput (images/s), final
-   accuracy, and peak GPU memory against it.
-1. [code] **Regularization ablation.** AlexNet differs from LeNet in its
+1. [code] **Batch size, throughput, and memory.** ● Train `AlexNet` as in
+   this section while varying only the batch size.
+    1. Using the ledger of problem 1, predict the largest training batch
+       size that fits in the memory of your GPU. Count the parameters,
+       their gradients, and the activations stored for the backward pass.
+    1. Starting from a batch size of 32 and doubling it, find the largest
+       batch size that trains without running out of memory. Compare it
+       with your prediction and name the main source of any discrepancy.
+    1. Measure the throughput in images per second over a fixed number of
+       training steps for at least four batch sizes up to that limit.
+       Beyond which batch size does throughput stop growing, and why?
+1. [code] **Regularization ablation.** ● AlexNet differs from LeNet in its
    use of ReLU activations and dropout.
-    1. Starting from `LeNet` (:numref:`sec_lenet`), cross dropout after
-       each hidden fully connected layer (present or absent) with the
-       activation function (sigmoid or ReLU) and report validation
-       accuracy for all four conditions in a table. Add one named
-       preprocessing step that exploits the invariances inherent in the
-       images as a fifth condition.
-    1. Starting from `AlexNet` as defined in this section, remove or
-       weaken exactly one regularizing ingredient and retrain for a fixed
-       epoch budget. Report training and validation accuracy per epoch for
-       both models and the largest gap between them reached within the
-       budget.
+    1. Starting from `LeNet` (:numref:`sec_lenet`), train the four
+       combinations of activation function (sigmoid or ReLU) and dropout
+       with probability 0.5 after each hidden fully connected layer
+       (present or absent). Report validation accuracy for all four
+       conditions in a table.
+    1. Add one data augmentation step to the training images of the most
+       accurate of the four conditions, leaving the validation images
+       unchanged. Name the invariance of Fashion-MNIST images that the
+       step exploits, and report validation accuracy as a fifth row of the
+       table.
+    1. The two dropout layers are the only explicit regularizer in
+       `AlexNet` as defined in this section. Remove them and retrain for
+       the 10 epochs of this section. Report training and validation
+       accuracy per epoch for both models. What is the largest gap between
+       training and validation accuracy that each model reaches?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/75)

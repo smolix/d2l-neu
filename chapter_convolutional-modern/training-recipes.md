@@ -810,28 +810,27 @@ schedule from the reduced path. Subsample the training set to 10,000 images
 with a fixed seed.
 :end_tab:
 
-1. [code] **Ablating the compact modern recipe.** Starting from the compact
-   modern recipe on `FashionMNIST10k`, remove or replace one ingredient at a
-   time and retrain:
-    1. Remove Mixup.
-    1. Remove label smoothing.
-    1. Replace the cosine decay of :eqref:`eq_cosine_warmup` by a constant
-       learning rate after warmup.
-    1. Replace AdamW by SGD with momentum. Retune the learning rate, since
-       the value that suits AdamW starves SGD.
-
-    Which single ingredient contributes most to the gap in
-    :numref:`tab_recipe_results`? Do the four contributions add up to the
-    total gap?
-1. [code] **Optimizer versus schedule.** Separate the contribution of the
-   optimizer from that of the schedule. Keep recipe A's loss and data
-   pipeline, without Mixup or label smoothing, and train the three missing
-   combinations of optimizer and schedule: SGD with momentum under cosine
-   decay with warmup, AdamW under step decay, and AdamW under cosine decay
-   with warmup. Together with recipe A these fill a $2 \times 2$ table.
-   Retune the learning rate whenever the optimizer changes. How much of the
-   gap in :numref:`tab_recipe_results` do these two ingredients explain on
-   their own, and do their effects interact?
+1. [code] **Recipe ablation.** ● In :numref:`tab_recipe_results` the compact
+   modern recipe beats recipe A by about half a point, and a single seeded
+   run reproduces only to about the same half point. Whenever a
+   configuration below changes the optimizer, retune the learning rate,
+   since the value that suits AdamW starves SGD.
+    1. Train both recipes on `FashionMNIST10k` with three seeds each and
+       estimate the standard deviation of test accuracy across seeds. How
+       large must the difference between two configurations be before one
+       run of each resolves it?
+    1. Starting from the compact modern recipe, replace one ingredient at a
+       time by its recipe A counterpart: remove Mixup, remove label
+       smoothing, replace the warmup and cosine decay of
+       :eqref:`eq_cosine_warmup` by recipe A's step decay, replace AdamW by
+       recipe A's SGD with momentum, and shorten the budget from 45 to 30
+       epochs. Which of the five changes in test accuracy exceed the
+       threshold of (a), and do the five add up to the total gap?
+    1. Train the compact modern recipe with both the optimizer and the
+       schedule of recipe A. Together with the compact modern recipe and the
+       optimizer and schedule replacements of (b), this run fills a
+       $2 \times 2$ table of optimizer against schedule. Do the effects of
+       the two ingredients interact?
 1. [code] **Weight decay and batch normalization.** ● The training
    refinements collected by :citet:`He.Zhang.Zhang.ea.2019` apply weight
    decay (:numref:`sec_weight_decay`) only to the weights of convolutional
@@ -856,69 +855,79 @@ with a fixed seed.
    yes/no target. Explain why this loss pairs naturally with Mixup and
    CutMix. Consider an image that genuinely contains parts of two classes,
    and contrast how softmax and sigmoid outputs can represent it.
-1. [code] **CutMix.** Implement CutMix :cite:`yun2019cutmix` as a variant of
-   `mixup`: sample a rectangle covering a fraction $1 - \lambda$ of the image
-   area, paste that region from the shuffled batch, and mix the labels as in
-   :eqref:`eq_mixup` with $\lambda$ replaced by the fraction of the area
-   actually kept, since a rectangle clipped at the image border covers less
-   than $1-\lambda$. Compare CutMix with Mixup on `FashionMNIST10k`, then
-   alternate the two at random from batch to batch, as modern recipes do.
-1. [code] **Stochastic depth in the recipe.** The compact modern recipe
+1. [code] **CutMix.** CutMix :cite:`yun2019cutmix` draws $\lambda$
+   uniformly from $[0, 1]$, that is, from $\mathrm{Beta}(1, 1)$ rather than
+   the $\mathrm{Beta}(0.2, 0.2)$ the compact modern recipe uses for Mixup.
+   It pastes into each image a rectangle from its shuffled partner that
+   covers a fraction $1 - \lambda$ of the image area. Implement CutMix as a
+   variant of `mixup`, and mix the labels as in :eqref:`eq_mixup` with
+   $\lambda$ replaced by the fraction of the area actually kept, since a
+   rectangle clipped at the image border covers less than $1 - \lambda$.
+   Train the compact modern recipe on `FashionMNIST10k` once with CutMix in
+   place of Mixup and once with the two alternating at random from batch to
+   batch, as modern recipes do. Compare the test accuracy of both runs with
+   that of the compact modern recipe, and judge each difference against the
+   half point to which the runs of :numref:`tab_recipe_results` reproduce.
+1. [code] **Stochastic depth in the recipe.** ● The compact modern recipe
    omits stochastic depth. Add it back.
     1. Extend `StochasticResidual` to the downsampling blocks and build the
        ResNet-18 of :numref:`sec_resnet` from it, with the drop probability
        ramped linearly from 0 in the first block to $p_{\max}$ in the last.
-       What is the expected number of residual branches evaluated per
-       training step?
+       What is the expected number of residual branches kept ($b = 1$) for
+       one training example, as a function of $p_{\max}$?
     1. Sweep $p_{\max}$ over 0.1, 0.2, and 0.5 on `FashionMNIST10k` under
-       the compact modern recipe. How does the best value compare with the
-       range of 0.1 to 0.5 used for much deeper networks?
+       the compact modern recipe, which is itself the case $p_{\max} = 0$.
+       Does any value raise test accuracy by more than the half point to
+       which the runs of :numref:`tab_recipe_results` reproduce? How does
+       the best value compare with the range of 0.1 to 0.5 used for much
+       deeper networks?
     1. The per-sample implementation of `StochasticResidual` computes every
        branch before masking it. Implement the original per-minibatch
        variant of :citet:`huang2016stochasticdepth`, which draws one $b$ in
        :eqref:`eq_stochastic_depth` per block and step and skips the branch
-       entirely when $b = 0$, and measure the training time it saves at
-       $p_{\max} = 0.5$.
+       entirely when $b = 0$. Use (a) to predict the fraction of residual
+       branches it skips at $p_{\max} = 0.5$. Then measure the fraction of
+       training time it saves and compare the two.
 
 :begin_tab:`pytorch`
-7. [code] **Weight averaging horizon.** Add the `EMA` class to
+6. [code] **Weight averaging horizon.** Add the `EMA` class to
    `ModernRecipe`: update the shadow copy after every optimizer step and
    evaluate with the shadow weights. Sweep the decay $\beta$ of
-   :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count the optimizer steps in
-   the low-learning-rate tail of the cosine schedule and relate the best
-   decay to that count through the averaging horizon of roughly
-   $1/(1-\beta)$ steps.
-:end_tab:
-
-:begin_tab:`jax`
-7. [code] **Weight averaging horizon.** Keep an averaged copy of the
-   parameters with `optax.ema`, updated after every optimizer step, and swap
-   it into the model with `nnx.update` before evaluation. Sweep the decay
-   $\beta$ of :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count the optimizer
-   steps in the low-learning-rate tail of `warmup_cosine_decay_schedule` and
-   relate the best decay to that count through the averaging horizon of
+   :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count the optimizer steps at
+   which `cosine_warmup` holds the learning rate below a tenth of its peak,
+   and relate the best decay to that count through the averaging horizon of
    roughly $1/(1-\beta)$ steps.
 :end_tab:
 
+:begin_tab:`jax`
+6. [code] **Weight averaging horizon.** Keep an averaged copy of the
+   parameters with `optax.ema`, updated after every optimizer step, and swap
+   it into the model with `nnx.update` before evaluation. Sweep the decay
+   $\beta$ of :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count the optimizer
+   steps at which `warmup_cosine_decay_schedule` holds the learning rate
+   below a tenth of its peak, and relate the best decay to that count
+   through the averaging horizon of roughly $1/(1-\beta)$ steps.
+:end_tab:
+
 :begin_tab:`tensorflow`
-7. [code] **Weight averaging horizon.** Keras optimizers maintain the
+6. [code] **Weight averaging horizon.** Keras optimizers maintain the
    average themselves: construct `AdamW` with `use_ema=True` and sweep
-   `ema_momentum` over 0.9, 0.99, and 0.999, calling
-   `finalize_variable_values` at the end of training so that the averaged
-   weights are the ones evaluated. Count the optimizer steps in the
-   low-learning-rate tail of the `CosineDecay` schedule and relate the best
-   momentum to that count through the averaging horizon of roughly
-   $1/(1-\beta)$ steps.
+   `ema_momentum`, the decay $\beta$ of :eqref:`eq_ema`, over 0.9, 0.99,
+   and 0.999. Call `finalize_variable_values` at the end of training so
+   that the averaged weights are the ones evaluated. Count the optimizer
+   steps at which the `CosineDecay` schedule holds the learning rate below
+   a tenth of its peak, and relate the best decay to that count through the
+   averaging horizon of roughly $1/(1-\beta)$ steps.
 :end_tab:
 
 :begin_tab:`mxnet`
-7. [code] **Weight averaging horizon.** Keep a shadow copy of every
+6. [code] **Weight averaging horizon.** Keep a shadow copy of every
    parameter in `net.collect_params()`, blended with the parameter's
    `data()` after every `trainer.step` as in :eqref:`eq_ema`, and evaluate
    with the shadow copy. Sweep the decay $\beta$ over 0.9, 0.99, and 0.999.
-   Count the optimizer steps in the low-learning-rate tail of
-   `CosineScheduler` and relate the best decay to that count through the
-   averaging horizon of roughly $1/(1-\beta)$ steps.
+   Count the optimizer steps at which `CosineScheduler` holds the learning
+   rate below a tenth of its peak, and relate the best decay to that count
+   through the averaging horizon of roughly $1/(1-\beta)$ steps.
 :end_tab:
 
 <!-- slides -->

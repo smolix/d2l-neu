@@ -407,22 +407,32 @@ between a query and representation vectors rather than by spatial location.
    $k_\textrm{h} \times k_\textrm{w}$ average pooling with stride
    $(s_\textrm{h}, s_\textrm{w})$ as a convolution. Give the kernel, and
    state how the convolution must be structured across channels so that
-   each channel is pooled separately, as pooling layers do. Verify against
-   `pool2d(X, (2, 2), 'avg')` on the input `X` of :numref:`fig_pooling`.
-1. **Max-pooling is not a convolution.** Prove that max-pooling cannot be
-   implemented through a convolution alone.
-1. **Max-pooling via ReLU.** Max-pooling can be built from ReLU
-   activations, $\textrm{ReLU}(x) = \max(0, x)$, and linear layers.
-    1. Express $\max(a, b)$ using ReLU and affine operations only.
-    1. Use this to implement max-pooling by means of convolutions and ReLU
-       layers.
-    1. How many channels and layers do you need for a $2 \times 2$ window?
-       How many for a $3 \times 3$ window?
-1. **Cost of pooling.** What is the computational cost of the pooling
-   layer? Assume that the input is of size $c \times h \times w$, the
-   pooling window has a shape of $k_\textrm{h} \times k_\textrm{w}$, the
-   padding is $(p_\textrm{h}, p_\textrm{w})$, and the stride is
-   $(s_\textrm{h}, s_\textrm{w})$.
+   each channel is pooled separately, as pooling layers do. On the input
+   `X` of :numref:`fig_pooling`, verify that your convolution reproduces
+   `pool2d(X, (2, 2), 'avg')`, where `pool2d` is the function defined at
+   the start of this section.
+1. **Max-pooling via ReLU.** ●
+    1. Prove that max-pooling cannot be implemented by a convolution
+       alone.
+    1. Express $\max(a, b)$ using only affine operations and
+       $\textrm{ReLU}(x) = \max(0, x)$.
+    1. Use this to implement max-pooling as a stack of convolutions and
+       ReLU layers.
+    1. Count the channels per layer and the ReLU layers that your
+       construction uses for a $2 \times 2$ window and for a
+       $3 \times 3$ window. How does the number of ReLU layers grow with
+       the number of entries in the window?
+1. **Cost of pooling.** An input of shape
+   $c \times n_\textrm{h} \times n_\textrm{w}$ is pooled with a
+   $k_\textrm{h} \times k_\textrm{w}$ window, total padding
+   $(p_\textrm{h}, p_\textrm{w})$, and stride $(s_\textrm{h}, s_\textrm{w})$.
+    1. Count the comparisons that max-pooling performs and the additions
+       that average pooling performs. Take the output shape from
+       :eqref:`eq_conv_output_shape` with dilation 1.
+    1. Compare these counts with the number of multiply-adds of a
+       convolution with the same window, padding, and stride and with $c$
+       input and $c$ output channels. By roughly which factor is pooling
+       cheaper?
 1. [code] **Max versus average pooling.** Construct two synthetic
    $4 \times 4$ patches with the same mean: one with a single high-value
    outlier on a uniform background, and one with a smooth gradient. Apply
@@ -433,16 +443,20 @@ between a query and representation vectors rather than by spatial location.
 1. **Pooling alternatives.**
     1. Do we need a separate minimum-pooling layer, or can it be expressed
        through an operation already in this section?
-    1. We could combine the values in a pooling window with a softmax
-       instead of a max or a mean. Give one concrete reason this is not
-       popular in practice.
-1. [code] **Aliasing and blur-pool.** Naive stride-2 downsampling keeps
-   every second entry of its input.
-    1. Apply it to the one-dimensional signals $(1, 0, 1, 0, 1, 0)$ and
-       $(0, 1, 0, 1, 0, 1)$, i.e., the same pattern shifted by one
-       position. Compare the two outputs. Why is this behavior called
-       *aliasing*, and which input frequencies can a stride-2 subsampler
-       represent faithfully?
+    1. *Softmax pooling* with temperature $\tau > 0$ replaces the window
+       entries $x_1, \ldots, x_m$ by their softmax-weighted average
+       $$\sum_{i=1}^m x_i \frac{\exp(x_i / \tau)}{\sum_{j=1}^m \exp(x_j / \tau)}.$$
+       Find its limits as $\tau \to 0$ and as $\tau \to \infty$. Give one
+       cost that softmax pooling adds relative to max-pooling.
+1. **Aliasing and blur-pool.** Naive stride-2 downsampling keeps
+   every second entry of its input. Measure frequency in cycles per input
+   sample, so that the one-dimensional signals $(1, 0, 1, 0, 1, 0)$ and
+   $(0, 1, 0, 1, 0, 1)$ both have frequency $\tfrac{1}{2}$.
+    1. Apply naive stride-2 downsampling to both signals, which differ by
+       a shift of one position, and compare the two outputs. Why is this
+       behavior called *aliasing*?
+    1. Which input frequencies can a stride-2 subsampler represent
+       faithfully?
     1. Blur-pool :cite:`zhang2019making` counteracts aliasing by applying
        a small averaging filter before subsampling. Work out what
        blur-pool with a two-tap box filter
@@ -453,11 +467,12 @@ between a query and representation vectors rather than by spatial location.
    $k_\textrm{h} \times k_\textrm{w}$ window and stride equal to the
    window size, and implement it without automatic differentiation.
    Verify against the gradient that automatic differentiation computes
-   through the built-in max-pooling layer of this section on a small
+   through the built-in max-pooling operation of this section on a small
    random tensor, to a relative error below $10^{-4}$.
 
     *Adapted from Stanford CS231n,
-    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
+    ConvolutionalNetworks, naive max-pooling backward pass.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/71)

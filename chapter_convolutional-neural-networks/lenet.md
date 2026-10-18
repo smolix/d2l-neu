@@ -373,61 +373,99 @@ ReLU activations.
 
 ## Exercises
 
-1. [code] **Modernizing LeNet.** Modernize LeNet by implementing and
-   testing the following changes:
+1. [code] **Modern components.** Retrain `LeNet` with the changes below,
+   using the training settings of this section, and compare the
+   validation accuracy of each variant after 10 epochs with that of
+   `LeNet`.
     1. Replace average pooling with max-pooling.
     1. Replace the sigmoid activations with ReLU.
-1. [code] **Architecture sweep.** Change the size of the LeNet-style
-   network and determine whether accuracy improves beyond the effects of
-   max-pooling and ReLU.
-    1. Adjust the convolution window size.
-    1. Adjust the number of output channels.
-    1. Adjust the number of convolution layers.
-    1. Adjust the number of fully connected layers.
-    1. Adjust the learning rates and other training details, for example
-       the initialization and the number of epochs.
-1. [code] **Original MNIST.** Try out the improved network on the original
-   MNIST dataset. :citet:`LeCun.Bottou.Bengio.ea.1998` report an error
-   rate below 1% for LeNet-5 on this task; state how your result compares.
-1. [code] **Visualizing activations.** Extract the outputs of the first
-   and second convolutional layers of the trained `LeNet`.
-    1. Display them for inputs from different classes, for example
-       sweaters and coats.
-    1. Measure the maximum activation magnitude of each of the two layers
-       for in-distribution Fashion-MNIST test images, for
-       out-of-distribution photos such as a cat or a car, and for pure
-       random noise. Do the out-of-distribution and noise magnitudes fall
-       inside or clearly outside the range observed on in-distribution
-       inputs?
+    1. Make both changes together, and call the result the modernized
+       LeNet. Which of the two changes accounts for most of the difference
+       in accuracy?
+1. [code] **Architecture sweep.** Starting from the modernized LeNet of
+   the first problem, vary one design choice at a time: the convolution
+   window size, the number of output channels of each convolutional
+   layer, and the number of convolutional layers.
+    1. Before training a variant, trace its output shapes with
+       `layer_summary` and count its parameters. Which layer's parameter
+       count changes most, and why?
+    1. Train each variant with the training settings of this section and
+       tabulate its validation accuracy against its parameter count. Does
+       any variant improve on the accuracy of the modernized LeNet?
+1. [code] **Original MNIST.** Write an `MNIST` data class by adapting
+   `d2l.FashionMNIST`, and train both `LeNet` and the modernized LeNet of
+   the first problem on it. :citet:`LeCun.Bottou.Bengio.ea.1998` report a
+   test error rate below 1% for LeNet-5 on MNIST.
+    1. Compare the test error rates of both networks with this figure.
+    1. For each dataset, compute the difference and the ratio of the two
+       networks' test error rates, reusing the Fashion-MNIST runs of the
+       first problem. :numref:`sec_fashion_mnist` states that MNIST makes
+       differences among model classes less visible. Does each of the two
+       measures support this statement?
+1. [code] **Activation maps.** Train the modernized LeNet of the first
+   problem and extract the feature maps of its first and second
+   convolutional layers, each taken after its ReLU.
+    1. Display them for test images from two different classes, for
+       example pullovers and coats.
+    1. Measure the maximum activation of each of the two layers on
+       Fashion-MNIST test images, on out-of-distribution photos such as a
+       cat or a car, and on uniform random noise. Convert each photo to a
+       $28 \times 28$ grayscale image, and keep every input in $[0, 1]$,
+       the pixel range of `d2l.FashionMNIST`. Do the maxima for photos and
+       noise fall inside or clearly outside the range observed on
+       Fashion-MNIST test images?
 1. [code] **The dense head.** ● :numref:`tab_lenet_modern` states that
    replacing the dense head with global average pooling removes most of
    LeNet's parameters.
-    1. Using the weight count of :numref:`sec_channels` and the layer
-       shapes of :numref:`img_lenet_vert`, compute the number of
-       parameters in the two convolutional layers combined and in the
-       $400 \times 120$ dense layer. Which dominates?
-    1. Replace the flatten and the two hidden dense layers of widths 120
-       and 84 by global average pooling followed by a single linear layer
-       from 16 to 10 units. How many parameters remain? Before training,
-       predict whether the test accuracy changes by more than one
-       percentage point relative to `LeNet`; then retrain and compare.
+    1. Using the weight count of :numref:`sec_channels`, one bias per
+       output channel or unit, and the layer shapes of
+       :numref:`img_lenet_vert`, count the parameters of the two
+       convolutional layers combined, of the $400 \times 120$ dense layer,
+       and of all of `LeNet`. What fraction of the total do the
+       convolutional layers account for, and what fraction the
+       $400 \times 120$ layer?
+    1. Replace the entire dense head, from the flatten through the output
+       layer, by global average pooling followed by a single linear layer
+       from 16 to 10 units. How many parameters does the network now
+       have? Before training, predict whether the test accuracy changes
+       by more than one percentage point relative to `LeNet`; then
+       retrain and compare.
     1. Instead connect the flattened 400-dimensional convolutional output
-       directly to the ten-way output. Retrain, and compare the accuracy
-       of the two reduced heads with each other and with your prediction.
-       What does the comparison say about where LeNet's capacity is used?
+       directly to a ten-way linear output layer. Retrain, and compare the
+       accuracy of the two reduced heads with each other and with your
+       prediction. What does the comparison say about where LeNet's
+       capacity is used?
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
     Chapter 6.*
 1. [code] **Overfitting sanity check.** Before trusting a full training
-   run, verify that the modernized LeNet of the first problem can drive
-   training accuracy above 99% on a fixed subset of 50 Fashion-MNIST
-   images within 500 gradient steps (with 50 images, one epoch is one
-   minibatch). If it cannot, diagnose which architectural or optimization
-   choice is responsible.
+   run, check that a network can memorize a small dataset. Fix a subset
+   of 50 Fashion-MNIST training images and train on it with all 50
+   images in one minibatch, for at most 500 gradient steps.
+    1. For both `LeNet` and the modernized LeNet of the first problem,
+       record the number of steps until training accuracy exceeds 99%. If
+       a network does not get there, diagnose which architectural or
+       optimization choice is responsible.
+    1. Name one bug that this check would catch and one that it would
+       miss, and explain why the check cannot detect the second.
 
     *Adapted from Stanford CS231n,
-    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
+    Convolutional Networks notebook.*
+1. **Equivariance versus augmentation.** A stride-1 convolution on an
+   infinite grid is exactly translation equivariant.
+    1. Go through the layers of `LeNet` in order. Name each component that
+       breaks exact translation equivariance of the feature maps, and the
+       components that prevent the final prediction from being
+       translation invariant.
+    1. Explain why training `LeNet` on translated copies of its training
+       images can improve test accuracy even though its convolutional
+       layers share weights across all locations.
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
+    Chapter 6.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/73)

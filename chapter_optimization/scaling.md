@@ -439,8 +439,8 @@ learning — updates shrinking too fast would also read as falling, with the
 layer quietly frozen. This one-figure test can reveal common muP implementation errors, including
 a missing multiplier, a mislabeled layer, or an unintentionally restored
 framework default.
-The exercises introduce these errors and use the coordinate check to detect
-them.
+The exercises break each of the two muP rules in turn and test which errors
+the coordinate check detects.
 
 ### Learning-Rate Transfer
 
@@ -564,21 +564,30 @@ matched update sizes; the goal of transfer is common to all of them.
 
 ## Exercises
 
-1. [code] **Depth and the coordinate check.** `coord_check` varies width at
-   a fixed depth of three hidden layers. Generalize `MLP` and `MuMLP` to
+1. [code] **Depth and the coordinate check.** ● `coord_check` varies width
+   at a fixed depth of three hidden layers. Generalize `MLP` and `MuMLP` to
    $L$ hidden layers and run the check across $L \in \{3, 6, 12, 24\}$ at
-   width 512 under both parametrizations.
+   width 512 under both parametrizations. The variance-$1/\text{fan-in}$
+   initialization of `MLP` halves the second moment of the ReLU
+   activations at every layer (:numref:`subsec_he_init`), so for this
+   problem initialize the input and hidden matrices with variance
+   $2/\text{fan-in}$.
     1. Under standard parametrization, how does the growth of the logits
        with depth compare with their growth with width in
        :numref:`subsec_scaling-coord-check`?
     1. Does muP's width scaling keep the activations flat across depth?
        State what the rules of :numref:`tab_mup-rules` promise and what
        they do not.
-1. [code] **Transfer, verified directly.** Under each parametrization, find
-   the best learning rate at width 256 by sweeping with `train_mlp`, apply
-   it unchanged at width 1,024, and compare the resulting loss with the
-   best learning rate found by sweeping at width 1,024. Report all four
-   optima and the loss that transfer costs in each parametrization.
+1. [code] **Transfer across seeds.** `sp_loss` and `mup_loss` hold one
+   seeded run per width and learning rate, so the transfer cost they show
+   carries no error bar. Add a `seed` argument to `train_mlp` that sets
+   both the initialization and the minibatch indices.
+    1. Under each parametrization, sweep `lrs` at widths 128 and 1,024 for
+       three seeds. For each seed, apply that seed's width-128 optimum at
+       width 1,024 and report, in percent, how far its loss lies above the
+       minimum of the same seed's width-1,024 sweep.
+    1. Is the difference between the two parametrizations' transfer costs
+       larger than the spread of each cost across seeds?
 1. [code] **Breaking muP on purpose.** The coordinate check is a test for
    implementation errors.
     1. Delete the $1/m$ logit scaling from `MuMLP` but keep the hidden
@@ -586,26 +595,57 @@ matched update sizes; the goal of transfer is common to all of them.
        bug?
     1. Restore the multiplier and instead give the hidden matrices the full
        learning rate. Which curve exposes this bug?
-    1. Repeat both broken variants with `num_steps=10`. Does the longer
-       check expose either bug more clearly, and what feedback from the
-       loss does it add that the one-step check avoids?
-1. [code] **Weight decay and parametrization.** Replace Adam with
-   weight-decayed AdamW (:numref:`sec_adamw`) in the
-   standard-parametrization sweep of :numref:`subsec_scaling-sweep` and
-   train for 4,000 steps instead of 400. Does the optimum drift less with
-   width? Relate what you see to the argument of
-   :citet:`Kosson.Welborn.Liu.ea.2025` that weight decay, not
-   parametrization, stabilizes long runs.
+    1. Restore the hidden learning-rate rule, but divide the learning rate
+       by $m^2$ instead of $m$. Does `coord_check` flag this error? Sweep
+       `lrs` at width 1,024 with this variant, and compare its best
+       learning rate and best loss with those of `MuMLP` in `mup_loss`.
+1. **First update in spectral norm.** ● For a single example, Adam's first
+   update of a weight matrix
+   $\mathbf{W} \in \mathbb{R}^{n_{\text{out}} \times n_{\text{in}}}$ is
+   $\Delta\mathbf{W} = -\eta\, \operatorname{sign}(\boldsymbol{\delta})\,
+   \operatorname{sign}(\mathbf{h})^\top$, as in the derivation of
+   :eqref:`eq_scaling_first_step`. Let $k_{\text{out}}$ and $k_{\text{in}}$
+   be the numbers of nonzero entries of $\boldsymbol{\delta}$ and
+   $\mathbf{h}$.
+    1. Compute $\|\Delta\mathbf{W}\|_2$ as a function of $\eta$,
+       $k_{\text{out}}$, and $k_{\text{in}}$.
+    1. Assume that $k_{\text{out}}$ and $k_{\text{in}}$ are fixed fractions
+       of $n_{\text{out}}$ and $n_{\text{in}}$. For the input, hidden, and
+       output matrices of `MLP`, find how $\eta$ must scale with the width
+       $n$ for $\Delta\mathbf{W}$ to satisfy :eqref:`eq_spectral_condition`.
+    1. Show that the learning rates and the logit multiplier of
+       :numref:`tab_mup-rules` give every layer an update at this scale.
+1. [code] **Weight decay and parametrization.** ●
+   :citet:`Kosson.Welborn.Liu.ea.2025` argue that in long runs weight
+   decay, not parametrization, stabilizes the update dynamics across
+   widths. Override `configure_adam` in a subclass of `MLP` to return
+   AdamW (:numref:`sec_adamw`) with decay coefficient
+   $\lambda = 10^{-3}/\eta$, so that every run averages its updates over
+   the horizon $1/(\eta\lambda) = 1{,}000$ steps described in
+   :numref:`subsec_wd-at-scale`.
+    1. Run the standard-parametrization sweep of
+       :numref:`subsec_scaling-sweep` at widths 128 and 1,024 with
+       `num_steps=4000`, once with this AdamW and once with Adam. Report
+       the best learning rate at each width for both optimizers. Does the
+       optimum drift less with width under AdamW?
+    1. `MLP` has no normalization layer. Given the equilibrium argument of
+       :numref:`subsec_wd-at-scale`, state what your result can and cannot
+       say about the cited claim.
 1. [code] **Fitting the drift.** :numref:`subsec_scaling-large-runs`
    reports that DeepSeek fitted power laws for the optimal learning rate as
-   a function of scale instead of removing the drift
-   :cite:`Bi.Chen.Chen.ea.2024`.
+   a function of the compute budget instead of removing the drift
+   :cite:`Bi.Chen.Chen.ea.2024`. In the first-step analysis of
+   :eqref:`eq_scaling_first_step`, the largest stable learning rate scales
+   as $1/n$.
     1. From `sp_loss`, fit a power law $\eta^\star(n) = c\, n^{-\gamma}$ to
-       the best learning rate at each width and report $\gamma$.
-    1. Extrapolate to widths 2,048 and 4,096, then sweep directly at those
-       widths with `train_mlp` and compare. How far does the prediction
-       hold, and which $\gamma$ does the first-step analysis of
-       :eqref:`eq_scaling_first_step` predict?
+       the best learning rate at each width. Since `lrs` is spaced by
+       factors of two, each optimum is resolved only to within a factor of
+       $\sqrt{2}$. Give the range of $\gamma$ consistent with this
+       resolution, and state whether it contains $\gamma = 1$.
+    1. Extrapolate the fit to widths 2,048 and 4,096. Sweep directly at
+       those widths with `train_mlp`, extending `lrs` downward if a
+       prediction falls below its smallest value, and report how many grid
+       steps separate each prediction from the measured optimum.
 
 <!-- slides -->
 

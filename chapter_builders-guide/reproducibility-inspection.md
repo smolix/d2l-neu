@@ -863,6 +863,7 @@ def make_finite_check(name):
 handles = [m.register_forward_hook(make_finite_check(name))
            for name, m in net.named_modules()
            if len(list(m.children())) == 0]
+saved = net[3].body[0].weight[0, 0].item()
 with torch.no_grad():
     net[3].body[0].weight[0, 0] = float('nan')  # sabotage one layer
 try:
@@ -871,6 +872,8 @@ except RuntimeError as e:
     print(e)
 for h in handles:
     h.remove()
+with torch.no_grad():
+    net[3].body[0].weight[0, 0] = saved  # net is shared; undo the sabotage
 ```
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}
@@ -945,6 +948,7 @@ leaves = ([('0', net[0])]
           + [('9', net[9])])
 handles = [blk.register_forward_hook(make_finite_check(name))
            for name, blk in leaves]
+saved = net[3].body[1].weight.data()[0, 0].item()
 net[3].body[1].weight.data()[0, 0] = float('nan')  # sabotage one layer
 try:
     net(np.random.normal(0, 1, (2, 20)))
@@ -952,6 +956,7 @@ except RuntimeError as e:
     print(e)
 for h in handles:
     h.detach()
+net[3].body[1].weight.data()[0, 0] = saved  # net is shared; undo the sabotage
 ```
 
 :begin_tab:`pytorch`
@@ -1037,7 +1042,7 @@ parameter's gradient sits in `param.grad()`, so to log per-layer gradient
 norms or catch an explosion you iterate `net.collect_params()` and read
 them like any other array. What post-hoc inspection cannot do is act
 *during* the pass, so per-layer gradient inspection in the style of
-exercise 3 is written into the training step instead; Gluon's `Trainer`
+exercise 4 is written into the training step instead; Gluon's `Trainer`
 splits `step` into `allreduce_grads` and `update` precisely so that such
 code can stand between them.
 :end_tab:
@@ -1137,186 +1142,271 @@ are read after the fact from `param.grad()`.
 ## Exercises
 
 :begin_tab:`pytorch`
-1. [code] **Seeds and data loading.**
-    1. Predict which of the following a single top-level random seed makes
-       reproducible: single-process data order, multi-worker data order,
-       NumPy-based augmentation inside `__getitem__`, and nondeterministic
-       GPU reduction order. Justify each prediction from where that
-       randomness is drawn, starting from `train_once` in
-       :numref:`subsec_seeds_randomness`.
-    1. Extend `train_once` to load data through a `DataLoader` with
-       `num_workers=4`. Give the dataset its own `np.random.default_rng()`
-       object and use it to add noise as each example loads, and check
-       whether the worker processes copied the same generator state. Extend
-       `seed_worker` to replace the dataset's stashed generator with one
-       derived from the worker's own seed, then verify agreement across two
-       runs.
+1. [code] **Seeds and data loading.** ● Extend `train_once` to load its
+   data through a `DataLoader` with `shuffle=True` and `num_workers=4`,
+   keeping the single `torch.manual_seed(seed)` call at its top. The
+   dataset adds noise to each example inside `__getitem__`, drawn from an
+   `np.random.default_rng()` object created in the dataset's constructor.
+   Run the code as a standalone script, because worker processes started
+   with `spawn`, the default on macOS and Windows, cannot import a dataset
+   class defined in a notebook.
+    1. Predict whether two runs with the same seed agree on the shuffle
+       order and on the noise, and whether the four workers draw the same
+       noise. Justify each prediction from where that randomness is drawn,
+       then verify all three.
+    1. Extend `seed_worker` to replace the dataset's generator with one
+       derived from the worker's own seed, and verify that two runs now
+       agree and that the workers draw different noise.
 
     *Adapted from the PyTorch documentation
     [Multi-process data loading](https://docs.pytorch.org/docs/stable/data.html#randomness-in-multi-process-data-loading).*
-1. [code] **Forward-pass instrumentation.**
-    1. Write a forward hook that counts multiply-accumulate operations for
-       every linear layer from the shapes of its input and weight, and use
-       it to report the per-layer and total counts for `net`. Check the
-       total against a hand count.
-    1. Turn the overflow check of :numref:`subsec_nan_finder` into a
-       per-step training monitor. Train with a learning rate 100 times too
-       large and report the first layer, by depth, whose activations
-       overflow numerically.
-1. [code] **Gradient norms.** Using `register_full_backward_hook`, record
-   the norm of each block's output gradient. After the backward pass,
-   compare these activation-gradient norms with the parameter-gradient
-   norms in the same block. Which one first reveals an exploding backward
-   signal?
+1. [code] **Multiply-accumulate count.** Write a forward hook that counts
+   multiply-accumulate operations for every linear layer from the shapes
+   of its input and weight, and use it to report the per-layer and total
+   counts for `net`. Check the total against a hand count.
+1. [code] **Divergence monitor.** ● Turn the finiteness check of
+   :numref:`subsec_nan_finder` into a per-step training monitor. Rebuild
+   `net` and train it with SGD at learning rate 1 on the mean squared
+   error between its output and standard normal targets, using one fixed
+   batch of 256 standard normal inputs. Report the first step at which a
+   layer's output is non-finite, and the first such layer by depth. Check
+   the loss at every step as well, and report whether it becomes
+   non-finite before any layer output does.
+1. [code] **Gradient norms.** ● Rebuild `net`, multiply the weight of
+   every linear layer inside its residual blocks by 3, and use the mean
+   squared output on a fixed batch as the loss.
+    1. Using `register_full_backward_hook`, record the norm of each block's
+       output gradient. After the backward pass, compute each block's
+       parameter-gradient norm, and plot both families against depth.
+    1. Express the gradient of a linear layer's weight through the layer's
+       input and its output gradient. Use this expression to explain why
+       the two depth profiles differ, and state which family to monitor for
+       an exploding backward signal.
 1. [code] **Block ablation.** A forward hook that returns a value
-   *replaces* the module's output. Use one to zero the output of one
-   residual block's body, which turns the block into the identity, and
-   measure the change in `net`'s output on a fixed batch. Repeat for every
-   block: which block matters most?
-1. [code] **Inspection contracts.** Rebuild the table of
-   :numref:`subsec_activation_stats` two more ways: with
-   `register_forward_pre_hook`, recording the standard deviation of each
-   block's *input* (the pre-hook receives the argument tuple, so unpack
-   it), and on a model you did not write, a `torchvision.models` backbone,
-   by attaching hooks through `named_modules()`. What do hooks let you do
-   on a model you own and on one you do not, and what state can a hook
-   accidentally retain?
+   *replaces* the module's output.
+    1. Use such a hook to zero the output of one residual block's body,
+       which turns the block into the identity, and measure the relative
+       change in `net`'s output on a fixed batch. Repeat for every block,
+       and rank the blocks by this change.
+    1. Rebuild `net` from three other seeds and repeat the ranking. State
+       whether the conclusion "block $k$ matters most" survives the change
+       of seed, and what evidence such a claim would need.
+1. [code] **Residual variance budget.** Let $\mathbf{x}_k$,
+   $\mathbf{b}_k$ and $\mathbf{h}_k$ denote the input, body output and
+   output of block $k$, with each variance taken over all entries. On one
+   batch, record for every `ResidualBlock` the variance of $\mathbf{x}_k$
+   with `register_forward_pre_hook` (the pre-hook receives the argument
+   tuple, so unpack it), of $\mathbf{h}_k$ with a forward hook on the
+   block, and of $\mathbf{b}_k$ with a forward hook on its `body`. The
+   standard deviations in the table of :numref:`subsec_activation_stats`
+   grow because each block adds its body's output to the stream. Measure
+   how closely
+
+   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+
+   holds for every block, and name the term this equation omits.
+1. [code] **Hook coverage.** Attach a forward hook to every leaf module of
+   `torchvision.models.resnet18()` through `named_modules()`, and count
+   how often each hook fires in one forward pass. Explain any module that
+   fires more than once, and name a computation in `BasicBlock.forward`
+   that no module hook observes.
 :end_tab:
 
 :begin_tab:`jax`
-1. [code] **Seeds and data loading.**
-    1. Predict which of the following a single top-level random seed makes
-       reproducible: single-process data order, multi-worker data order,
-       NumPy-based augmentation inside the dataset, and nondeterministic
-       GPU reduction order. Justify each prediction from where that
-       randomness is drawn, starting from `train_once` in
-       :numref:`subsec_seeds_randomness`.
-    1. Add per-example noise inside a four-worker data pipeline. Derive
-       each worker's stream by splitting one base key with
-       `jax.random.split(key, num_workers)` and refresh the streams each
-       epoch with `jax.random.fold_in`. Verify that two runs from the same
-       base key produce identical batches and that no two workers produce
-       the same noise.
-1. [code] **Forward-pass instrumentation.**
-    1. Capture every linear layer's input with `nnx.capture` and count
-       multiply-accumulate operations from the captured input shapes and
-       the kernel shapes; report the per-layer and total counts for `net`.
-       Check the total against a hand count.
-    1. Turn the overflow check of :numref:`subsec_nan_finder` into a
-       per-step training monitor. Train with a learning rate 100 times too
-       large and report the first layer, by depth, whose activations
-       overflow numerically.
-1. [code] **Gradient norms.** `nnx.grad` returns the parameter gradients as
-   a tree; compute per-block parameter-gradient norms from it. To obtain
-   each block's *output* gradient, split the forward computation at that
-   block and differentiate the tail with respect to the block's output.
-   Compare the two families of norms. Which one first reveals an exploding
-   backward signal?
+1. [code] **Seeds and data loading.** ● Simulate a four-worker input
+   pipeline in plain Python: split a dataset of 64 examples with 20
+   features into four shards, one per worker, and let each worker add
+   Gaussian noise to its examples with `jax.random.normal`.
+    1. Derive the noise keys by splitting one base key into per-worker keys
+       with `jax.random.split(key, 4)` and folding the epoch number into
+       each with `jax.random.fold_in`. Verify that two runs from the same
+       base key produce identical noise. Then reduce the number of workers
+       to two and check whether each example still receives the same noise.
+    1. Derive each example's key instead by folding the epoch number into
+       the base key and then folding in the example's index. Repeat both
+       checks, and explain which derivation makes an example's noise
+       independent of how examples are assigned to workers.
+1. [code] **Multiply-accumulate count.** Capture every linear layer's
+   output with `nnx.capture` and count multiply-accumulate operations from
+   the captured output shapes and the kernel shapes; report the per-layer
+   and total counts for `net`. Check the total against a hand count.
+1. [code] **Divergence monitor.** ● Turn the finiteness check of
+   :numref:`subsec_nan_finder` into a per-step training monitor. Rebuild
+   `net` and train it with SGD at learning rate 1 on the mean squared
+   error between its output and standard normal targets, using one fixed
+   batch of 256 standard normal inputs. Report the first step at which a
+   layer's output is non-finite, and the first such layer by depth. Check
+   the loss at every step as well, and report whether it becomes
+   non-finite before any layer output does.
+1. [code] **Gradient norms.** ● Rebuild `net`, multiply the kernel of
+   every linear layer inside its residual blocks by 3, and use the mean
+   squared output on a fixed batch as the loss.
+    1. Compute per-block parameter-gradient norms from the tree that
+       `nnx.grad` returns. To obtain each block's *output* gradient, split
+       the forward computation at that block and differentiate the tail
+       with respect to the block's output. Plot both families of norms
+       against depth.
+    1. Express the gradient of a linear layer's kernel through the layer's
+       input and its output gradient. Use this expression to explain why
+       the two depth profiles differ, and state which family to monitor for
+       an exploding backward signal.
 1. [code] **Block ablation.** `sow` records intermediates but cannot change
-   them, so an output-replacing hook cannot be written. Zero the output of
-   one residual block's body by editing `ResidualBlock.__call__`, which
-   turns the block into the identity, and measure the change in `net`'s
-   output on a fixed batch. Repeat for every block: which block matters
-   most?
-1. [code] **Inspection contracts.** Rebuild the table of
-   :numref:`subsec_activation_stats` by editing `ResidualBlock` to call
-   `self.sow(nnx.Intermediate, 'body_out', ...)` on its body's output, then
-   collect those values with `nnx.capture(net, nnx.Intermediate)`. Compare
-   three contracts: capturing every method output, opt-in `sow`, and an
-   output-modifying hook as in :numref:`fig_bg_hooks`. Which requires
-   touching model code, which can retain tensors or hook state, and which
-   applies to a model you do not own?
+   them, so an output-replacing hook cannot be written.
+    1. Zero the output of one residual block's body by editing
+       `ResidualBlock.__call__`, which turns the block into the identity,
+       and measure the relative change in `net`'s output on a fixed batch.
+       Repeat for every block, and rank the blocks by this change.
+    1. Rebuild `net` from three other seeds and repeat the ranking. State
+       whether the conclusion "block $k$ matters most" survives the change
+       of seed, and what evidence such a claim would need.
+1. [code] **Residual variance budget.** Let $\mathbf{x}_k$,
+   $\mathbf{b}_k$ and $\mathbf{h}_k$ denote the input, body output and
+   output of block $k$, with each variance taken over all entries. Collect
+   every layer's output and every body's output from one call of
+   `nnx.capture` with `method_outputs=nnx.Intermediate`. The input of
+   block $k$ is the output of the layer before it. The standard deviations
+   in the table of :numref:`subsec_activation_stats` grow because each
+   block adds its body's output to the stream. Measure how closely
+
+   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+
+   holds for every block, and name the term this equation omits.
+1. [code] **Capture coverage.** Find the value computed inside each
+   block's `body` that a call of `nnx.capture` with
+   `method_outputs=nnx.Intermediate` does not record, and explain why.
+   Edit `ResidualBlock` so that it records the value with `self.sow`, and
+   collect it with `nnx.capture(net, nnx.Intermediate)`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. [code] **Seeds and data loading.**
-    1. Predict which of the following a single top-level random seed makes
-       reproducible: the shuffle order within one epoch, the shuffle order
-       across epochs, NumPy-based augmentation inside a parallel `map`, and
-       nondeterministic GPU reduction order. Justify each prediction from
-       where that randomness is drawn, starting from `train_once` in
-       :numref:`subsec_seeds_randomness`.
-    1. Build the input pipeline with `tf.data`, adding noise in a parallel
-       `map`. Compare three configurations: `shuffle(buffer, seed=0)` with
-       the default `reshuffle_each_iteration=True`, the same with
-       `reshuffle_each_iteration=False`, and no seed at all. For each,
-       state whether epochs within a run repeat and whether two runs agree,
-       and verify. What does `deterministic=False` on the parallel `map`
-       trade away?
-1. [code] **Forward-pass instrumentation.**
-    1. Using a `Checked`-style `call` override or a functional inspection
-       model, record every `Dense` layer's input shape, count
-       multiply-accumulate operations from it and the kernel shape, and
-       report the per-layer and total counts for `net`. Check the total
-       against a hand count.
-    1. Turn the overflow check of :numref:`subsec_nan_finder` into a
-       per-step training monitor. Train with a learning rate 100 times too
-       large and report the first layer, by depth, whose activations
-       overflow numerically.
-1. [code] **Gradient norms.** Under a `tf.GradientTape`, record each
-   block's output tensor and request the gradient of the loss with respect
-   to those outputs alongside the trainable variables. Compare the
-   activation-gradient norms with the parameter-gradient norms in the same
-   block. Which one first reveals an exploding backward signal?
+1. [code] **Seeds and data loading.** ● Work in a fresh process, since the
+   section has already called `enable_op_determinism`, which cannot be
+   undone. Build a `tf.data` pipeline over `Dataset.range(64)` that
+   shuffles with `shuffle(64, seed=0)` and adds noise to each element in a
+   `map` with `num_parallel_calls=4`, and start every run with
+   `tf.keras.utils.set_random_seed(0)`.
+    1. Draw the noise from NumPy's global generator through
+       `tf.numpy_function`. Predict whether two runs attach the same noise
+       to the same element under the default `deterministic=True`, and
+       justify the prediction from where the randomness is drawn. Verify
+       over five runs.
+    1. Repeat the five runs twice more: once with
+       `tf.config.experimental.enable_op_determinism()` called at program
+       start, and once without it but with the noise drawn by
+       `tf.random.stateless_normal`, seeded from the element's value.
+       Explain each outcome.
+1. [code] **Multiply-accumulate count.** Using a `Checked`-style `call`
+   override or a functional inspection model, record every `Dense` layer's
+   input shape, count multiply-accumulate operations from it and the
+   kernel shape, and report the per-layer and total counts for `net`.
+   Check the total against a hand count.
+1. [code] **Divergence monitor.** ● Turn the finiteness check of
+   :numref:`subsec_nan_finder` into a per-step training monitor. Rebuild
+   the `Checked` model and train it with SGD at learning rate 1 on the
+   mean squared error between its output and standard normal targets,
+   using one fixed batch of 256 standard normal inputs. Report the first
+   step at which a layer's output is non-finite, and the first such layer
+   by depth. Check the loss at every step as well, and report whether it
+   becomes non-finite before any layer output does.
+1. [code] **Gradient norms.** ● Rebuild `net`, multiply the kernel of
+   every `Dense` layer inside its residual blocks by 3, and use the mean
+   squared output on a fixed batch as the loss.
+    1. Under a `tf.GradientTape`, record each block's output tensor and
+       request the gradient of the loss with respect to those outputs
+       alongside the trainable variables. Compute both families of norms
+       per block and plot them against depth.
+    1. Express the gradient of a linear layer's kernel through the layer's
+       input and its output gradient. Use this expression to explain why
+       the two depth profiles differ, and state which family to monitor for
+       an exploding backward signal.
 1. [code] **Block ablation.** Keras has no hook mechanism that could
-   replace a layer's output. Zero the output of one residual block's body
-   by editing the `call` of the `ResidualBlock` used in `Checked`
-   (:numref:`subsec_nan_finder`), which turns the block into the identity,
-   and measure the change in the model's output on a fixed batch. Repeat
-   for every block: which block matters most?
-1. [code] **Inspection contracts.** Rebuild the table of
-   :numref:`subsec_activation_stats` two more ways: with a `Checked`-style
-   `call` override that stashes `tf.math.reduce_std` of every layer's
-   output, and on a model you did not write, a `tf.keras.applications`
-   backbone, by naming layers with `get_layer`. Compare three contracts:
-   functional inspection models, `call` overrides, and an output-modifying
-   hook as in :numref:`fig_bg_hooks`. Which requires a symbolic graph,
-   which requires owning the model's code, and which black-box models does
-   each admit?
+   replace a layer's output.
+    1. Zero the output of one residual block's body by editing the `call`
+       of the `ResidualBlock` used in `Checked`
+       (:numref:`subsec_nan_finder`), which turns the block into the
+       identity, and measure the relative change in the output of a
+       freshly built `Checked` model on a fixed batch. Repeat for every
+       block, and rank the blocks by this change.
+    1. Rebuild the model from three other seeds and repeat the ranking.
+       State whether the conclusion "block $k$ matters most" survives the
+       change of seed, and what evidence such a claim would need.
+1. [code] **Residual variance budget.** Override `call` in the
+   `ResidualBlock` of :numref:`subsec_nan_finder` so that it stashes the
+   variance of its input, of its body's output, and of its own output, and
+   run a freshly built `Checked` model on one batch. Let $\mathbf{x}_k$,
+   $\mathbf{b}_k$ and $\mathbf{h}_k$ denote these three tensors for block
+   $k$, with each variance taken over all entries. The standard deviations
+   in the table of :numref:`subsec_activation_stats` grow because each
+   block adds its body's output to the stream. Measure how closely
+
+   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+
+   holds for every block, and name the term this equation omits.
 :end_tab:
 
 :begin_tab:`mxnet`
-1. [code] **Seeds and data loading.**
-    1. Predict which of the following a single top-level random seed makes
-       reproducible: single-process data order, multi-worker data order,
-       NumPy-based augmentation inside `__getitem__`, and nondeterministic
-       GPU reduction order. Justify each prediction from where that
-       randomness is drawn, starting from `train_once` in
-       :numref:`subsec_seeds_randomness`.
-    1. Extend `train_once` to load data through Gluon's `DataLoader` with
-       `num_workers=4`. Give the dataset its own `np.random.default_rng()`
-       object and use it to add noise as each example loads, and check
-       whether the forked workers copied the same generator state. Gluon
-       has no worker initializer to fix this: instead make the augmentation
-       a deterministic function of the sample by seeding from the sample
-       index inside `__getitem__`, pin the shuffle order with a NumPy seed,
-       and verify agreement across two runs.
-1. [code] **Forward-pass instrumentation.**
-    1. Write a forward hook via `register_forward_hook` that counts
-       multiply-accumulate operations for every `Dense` layer from the
-       shapes of its input and weight, and use it to report the per-layer
-       and total counts for `net`. Check the total against a hand count.
-    1. Turn the overflow check of :numref:`subsec_nan_finder` into a
-       per-step training monitor. Train with a learning rate 100 times too
-       large and report the first layer, by depth, whose activations
-       overflow numerically.
-1. [code] **Gradient norms.** Gluon offers post-hoc inspection only: after
-   `loss.backward()`, read each parameter's gradient through
-   `net.collect_params()` and compute per-block parameter-gradient norms.
-   To obtain a block's output gradient, run the stack one block at a time,
-   attaching gradients to the intermediate outputs. Compare the two
-   families of norms. Which one first reveals an exploding backward signal?
+1. [code] **Seeds and data loading.** ● Extend `train_once` to load its
+   data through Gluon's `DataLoader` with `shuffle=True` and
+   `num_workers=4`, keeping the single `np.random.seed(seed)` call at its
+   top. MXNet's `np` has no generator objects, so import official NumPy as
+   `onp`. The dataset adds noise to each example inside `__getitem__`,
+   drawn from an `onp.random.default_rng()` object created in the
+   dataset's constructor.
+    1. Predict whether two runs with the same seed agree on the shuffle
+       order and on the noise, and whether the four workers draw the same
+       noise. Justify each prediction from where that randomness is drawn,
+       then verify all three.
+    1. Gluon has no worker initializer. Make the noise a deterministic
+       function of the sample by seeding a generator from the sample index
+       inside `__getitem__`, pin the shuffle order, and verify that two runs
+       now agree. Then check whether an example's noise changes from one
+       epoch to the next.
+1. [code] **Multiply-accumulate count.** Write a forward hook via
+   `register_forward_hook` that counts multiply-accumulate operations for
+   every `Dense` layer from the shapes of its input and weight, and use it
+   to report the per-layer and total counts for `net`. Check the total
+   against a hand count.
+1. [code] **Divergence monitor.** ● Turn the finiteness check of
+   :numref:`subsec_nan_finder` into a per-step training monitor. Rebuild
+   `net` and train it with SGD at learning rate 1 on the mean squared
+   error between its output and standard normal targets, using one fixed
+   batch of 256 standard normal inputs. Report the first step at which a
+   layer's output is non-finite, and the first such layer by depth. Check
+   the loss at every step as well, and report whether it becomes
+   non-finite before any layer output does.
+1. [code] **Gradient norms.** ● Rebuild `net`, multiply the weight of
+   every `Dense` layer inside its residual blocks by 3, and use the mean
+   squared output on a fixed batch as the loss.
+    1. After `loss.backward()`, read each parameter's gradient through
+       `net.collect_params()` and compute per-block parameter-gradient
+       norms. To obtain each block's output gradient, run the stack one
+       block at a time, attaching gradients to the intermediate outputs.
+       Plot both families of norms against depth.
+    1. Express the gradient of a linear layer's weight through the layer's
+       input and its output gradient. Use this expression to explain why
+       the two depth profiles differ, and state which family to monitor for
+       an exploding backward signal.
 1. [code] **Block ablation.** Gluon ignores a hook's return value, so an
-   output-replacing hook cannot be written. Zero the output of one residual
-   block's body by editing `ResidualBlock.forward`, which turns the block
-   into the identity, and measure the change in `net`'s output on a fixed
-   batch. Repeat for every block: which block matters most?
-1. [code] **Inspection contracts.** Rebuild the table of
-   :numref:`subsec_activation_stats` two more ways: with
-   `register_forward_pre_hook`, recording the standard deviation of each
-   block's *input* (the pre-hook receives the argument tuple, so unpack
-   it), and by reading the source of `Block.summary()`, which builds its
-   whole table from one forward hook, then calling it on `net`. Compare
-   observe-only hooks with the output-modifying hook of
-   :numref:`fig_bg_hooks`, for a model you own and for one you do not.
+   output-replacing hook cannot be written.
+    1. Zero the output of one residual block's body by editing
+       `ResidualBlock.forward`, which turns the block into the identity,
+       and measure the relative change in `net`'s output on a fixed batch.
+       Repeat for every block, and rank the blocks by this change.
+    1. Rebuild `net` from three other seeds and repeat the ranking. State
+       whether the conclusion "block $k$ matters most" survives the change
+       of seed, and what evidence such a claim would need.
+1. [code] **Residual variance budget.** Let $\mathbf{x}_k$,
+   $\mathbf{b}_k$ and $\mathbf{h}_k$ denote the input, body output and
+   output of block $k$ of `net`, with each variance taken over all
+   entries. On one batch, record for every `ResidualBlock` the variance of
+   $\mathbf{x}_k$ with `register_forward_pre_hook` (the pre-hook receives
+   the argument tuple, so unpack it), of $\mathbf{h}_k$ with
+   `register_forward_hook`, and of $\mathbf{b}_k$ with a forward hook on
+   its `body`. The standard deviations in the table of
+   :numref:`subsec_activation_stats` grow because each block adds its
+   body's output to the stream. Measure how closely
+
+   $$\mathrm{Var}[\mathbf{h}_k] = \mathrm{Var}[\mathbf{x}_k] + \mathrm{Var}[\mathbf{b}_k]$$
+
+   holds for every block, and name the term this equation omits.
 :end_tab:

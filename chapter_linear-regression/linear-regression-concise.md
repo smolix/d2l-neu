@@ -437,39 +437,36 @@ Dimensionality and storage for networks are automatically inferred
 
 ## Exercises
 
-1. **Loss scaling.** The framework loss in `LinearRegression.loss` averages
-   over the minibatch and omits the $\frac{1}{2}$ of :eqref:`eq_mse`.
+1. [code] **Loss scaling.** The framework loss in `LinearRegression.loss`
+   averages over the minibatch and omits the $\frac{1}{2}$ of
+   :eqref:`eq_mse`, so its gradient is twice that of
+   `LinearRegressionScratch.loss`, as
+   :numref:`subsec_linear-regression-loss-function` notes.
     1. State how the learning rate must change if the average is replaced
        by the sum over the minibatch, and explain why.
-    1. Predict how the training curve of `LinearRegression` at `lr=0.03`
-       compares with that of `LinearRegressionScratch` at the same learning
-       rate, and determine which learning rate makes the two updates
-       identical. Verify by training both.
-1. [code] **Huber loss.** Replace `LinearRegression.loss` with Huber's
-   robust loss
-
-    $$l(y,y') = \begin{cases}|y-y'| -\frac{\delta}{2} & \textrm{ if } |y-y'| > \delta \\ \frac{1}{2 \delta} (y-y')^2 & \textrm{ otherwise,}\end{cases}$$
-
-    with threshold $\delta > 0$. Corrupt one label of
-    `SyntheticRegressionData` as in the outlier demonstration of
-    :numref:`subsec_linear-regression-loss-function` and train for
-    $\delta \in \{0.01, 1, 100\}$. For each $\delta$, state whether the
-    recovered $\hat{\mathbf{w}}$ is close to the squared-loss fit, to the
-    absolute-error fit, or in between, and relate the pattern to the
-    penalty curves in :numref:`fig_linreg-loss-menu`.
-1. [code] **Reading gradients.** Compute the gradient of the minibatch
-   loss with respect to the weights of `LinearRegression` for a single
-   minibatch of `SyntheticRegressionData`, and compare it with the by-hand
-   formula :eqref:`eq_linreg_grad_by_hand`. Explain any discrepancy.
-1. [code] **Sample-size scaling.** Train `LinearRegression` on
+    1. For one minibatch of `SyntheticRegressionData`, compute the gradient
+       of `LinearRegression.loss` with respect to the weights by automatic
+       differentiation, and compare it entry by entry with the minibatch
+       average of :eqref:`eq_linreg_grad_by_hand` at the same parameters
+       to check the factor of two.
+    1. Give `LinearRegression` and `LinearRegressionScratch` the same
+       initial parameters and the same minibatch order, and train the
+       first at `lr=0.015` and the second at `lr=0.03`. Confirm that the
+       trained parameters agree, and explain why the two plotted
+       training-loss curves still differ.
+1. [code] **Optimization versus estimation error.** ● Train
+   `LinearRegression` with `lr=0.03` and `max_epochs=10` on
    `SyntheticRegressionData` with `num_train` set to each of
-   $5, 10, 20, 50, \ldots, 10{,}000$.
-    1. Before running, state how you expect
-       $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ and $|\hat{b} - b^*|$ to
-       scale with `num_train`.
-    1. Plot both errors against `num_train` on logarithmic axes.
-    1. Explain why a logarithmically spaced grid is preferable here to
-       $1000, 2000, \ldots, 10{,}000$.
+   $5, 50, 500, 5000$ and `batch_size=min(32, num_train)`. For each run,
+   compare the distance $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ of the
+   trained weights from the generating weights $\mathbf{w}^*$, stored in
+   `data.w`, with the same distance for the least-squares solution on the
+   same training data, computed as in exercise 5 of
+   :numref:`sec_synthetic-regression-data`.
+    1. Count the parameter updates in each run, and explain the ratio of
+       the two errors at each `num_train`.
+    1. Find the number of epochs after which the run with `num_train=5`
+       comes within a factor of two of its least-squares error.
 1. [code] **Scratch versus concise.** Time `LinearRegressionScratch` and
    `LinearRegression` on the same `SyntheticRegressionData` for 10, 100,
    and 1000 epochs, and report the time per epoch for each. Both run the

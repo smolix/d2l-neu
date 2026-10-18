@@ -463,7 +463,7 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
 
 We compare full-batch, single-example, and intermediate updates. First, batch gradient
 descent: a minibatch of 1500 is the whole dataset, so the parameters move
-once per epoch. Progress stalls after roughly six steps — each
+once per epoch. Progress slows after roughly six steps — each
 step is low variance, but only a few occur within the measured time.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-3}
@@ -472,7 +472,7 @@ def train_sgd(lr, batch_size, num_epochs=2):
     return train_ch11(
         sgd, None, {'lr': lr}, data_iter, feature_dim, num_epochs)
 
-gd_res = train_sgd(1, 1500, 10)
+gd_res = train_sgd(0.9, 1500, 10)
 ```
 
 At the opposite extreme, batch size 1 is stochastic gradient descent: 1500
@@ -634,29 +634,40 @@ limit known as the critical batch size.
 
 ## Exercises
 
-1. [code] **Batch size and learning rate together.** `train_sgd` trains
+1. [code] **Batch size and learning rate together.** ● `train_sgd` trains
    the linear model at a chosen batch size and learning rate and returns
-   the cumulative wall-clock times and the recorded losses.
-    1. Starting from the pair $b = 10$, $\eta = 0.05$, run
-       $b \in \{1, 10, 100, 1000\}$ for two epochs each with the learning
-       rate scaled as $\eta \propto \sqrt{b}$. Report the time per epoch
-       and the lowest loss reached within the first two seconds of each
-       run.
-    1. Repeat with $\eta \propto b$. Which of the two scalings keeps the
-       $b = 1000$ run stable, and which keeps the $b = 1$ run making
-       progress? Relate the answer to the stability limit of gradient
-       descent in :numref:`sec_gd`.
+   the cumulative wall-clock times and the recorded losses. Fix
+   $\eta = 0.05$ at $b = 10$ and derive the learning rate for each
+   $b \in \{1, 10, 100, 1000\}$ by two rules, $\eta \propto \sqrt{b}$ and
+   $\eta \propto b$.
+    1. Train each configuration for two epochs. Report the time per epoch
+       and the final loss of each run, and name the runs that diverge.
+    1. The training loss is a quadratic in the weights and the bias. Its
+       Hessian is
+
+       $$\mathbf{H} = \frac{1}{n} \sum_{i=1}^{n} \tilde{\mathbf{x}}_i \tilde{\mathbf{x}}_i^\top,$$
+
+       where $\tilde{\mathbf{x}}_i$ appends a constant $1$ to the features
+       of example $i$ and $n = 1500$. Compute the largest eigenvalue $L$ of
+       $\mathbf{H}$ from the whitened data that `get_data_ch11` loads. Use
+       the condition $0 < \eta < 2/L$ of :numref:`sec_gd` to explain which
+       runs diverge.
+    1. At $b = 1$, which rule reaches the lower final loss? Explain the
+       ordering with :eqref:`eq_sgd-noise-ball`.
 1. [code] **Block width and throughput.** The blocked computation in
    :numref:`sec_minibatches` multiplies 64 columns of $\mathbf{C}$ at a
    time.
-    1. Vary the block width over $\{1, 4, 16, 64, 256\}$ and time each
-       variant with `timer`. Where does throughput saturate, and why does
-       it saturate well before the full width of 256?
-    1. Repeat the column-wise, blocked, and one-call computations of
-       :numref:`subsec_minibatch-vectorization` with $4096 \times 4096$
-       matrices on a GPU. Which ratios between the variants change, and
-       what does the change say about dispatch overhead relative to
-       arithmetic?
+    1. Vary the block width $w$ over $\{1, 4, 16, 64, 256\}$. Time each
+       variant with `timer` after one untimed warm-up run, and report its
+       throughput in gigaflops. Then divide each time by the number of
+       calls, $256/w$. Use the time per call to decide, for each width,
+       whether dispatch overhead or arithmetic dominates.
+    1. Repeat the column-wise and one-call computations of
+       :numref:`subsec_minibatch-vectorization` and the blocked computation
+       with $4096 \times 4096$ matrices on a GPU, waiting for the device to
+       finish before each `timer.stop()`. Which ratios between the variants
+       change, and what does the change say about dispatch overhead
+       relative to arithmetic?
 1. **Duplicated data.** Suppose every example in the training set is
    silently duplicated, so that the dataset doubles in size while its
    empirical distribution is unchanged. For SGD with $b = 1$, for minibatch
@@ -666,12 +677,17 @@ limit known as the critical batch size.
 1. [code] **Gradient accumulation.** Implement gradient accumulation on top
    of `train_ch11`: sum the gradients of $k$ consecutive minibatches of
    size $b$ and update once with their average.
-    1. Verify that the loss trajectory matches a run with batch size $kb$
-       when plotted against the number of examples processed. State which
-       of the conditions listed in :numref:`sec_minibatches` your
-       implementation had to satisfy for the two curves to agree.
-    1. Compare the two runs against wall-clock time. Which costs more per
-       example, and where in the code does the difference arise?
+    1. Take $b = 10$, $k = 10$ and the learning rate $0.05$. Set the same
+       random seed before this run and before a run with batch size
+       $kb = 100$ at the same learning rate, so that both draw the same
+       initial weights and the same example order. Plot both loss
+       trajectories against the number of examples processed and report
+       the largest difference between them.
+    1. Remove the division by $k$, so that the update uses the sum of the
+       $k$ gradients. Which learning rate of the batch-size-100 run does
+       the accumulated run now reproduce?
+    1. Compare the two runs of (a) against wall-clock time. Which costs
+       more per example, and where in the code does the difference arise?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1068)

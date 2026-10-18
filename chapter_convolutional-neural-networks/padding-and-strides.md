@@ -464,22 +464,46 @@ example in image generation.
        $7 \times 7$ kernel with dilation $(3, 3)$, stride $(3, 3)$, and no
        padding on a $32 \times 32$ input. Verify the prediction with
        `comp_conv2d` in two steps: apply the dilated kernel at stride 1,
-       then keep every third row and column of the result. Explain why
-       this two-step computation equals the strided dilated convolution.
+       then keep every third row and column of the result.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 10.2 and 10.4.*
-1. [code] **Mirror padding.** Implement mirror padding, where the border
-   values are reflected to extend a tensor, and demonstrate it on a small
-   tensor next to zero padding.
-1. **Benefits of stride.**
-    1. What are the computational benefits of a stride larger than 1?
-    1. What might be the statistical benefits of a stride larger than 1?
-1. **Fractional stride.** How would you implement a stride of
-   $\frac{1}{2}$? What does it correspond to? When would this be useful?
-   Compare your answer with the transposed convolutions of
-   :numref:`sec_transposed_conv`.
+1. [code] **Mirror padding.** Mirror padding, also called reflect padding,
+   extends a tensor by reflecting its entries about the border without
+   repeating the border entry: padding the vector $(1, 2, 3)$ by one entry
+   on each side gives $(2, 1, 2, 3, 2)$.
+    1. Implement mirror padding by one entry on every side of a
+       two-dimensional tensor, and check the result by hand on a
+       $3 \times 3$ tensor with distinct entries.
+    1. Pad a $5 \times 5$ tensor of ones by one entry on every side, once
+       with zeros and once with mirror padding. Apply `corr2d` from
+       :numref:`sec_conv_layer` to each padded tensor with a $3 \times 3$
+       kernel whose entries all equal $\frac{1}{9}$. Compare the two
+       outputs at the corners, along the edges, and in the interior, and
+       relate the difference to the boundary condition that zero padding
+       imposes.
+1. **Benefits of stride.** A $3 \times 3$ convolution with one pixel of
+   padding on every side is applied to a single-channel $64 \times 64$
+   input.
+    1. Count the multiplications this layer performs at stride 1 and at
+       stride 2. By what factor does stride 2 reduce the cost of a second,
+       stride-1 layer of the same kind placed after this one?
+    1. Four such layers are stacked. Use :eqref:`eq_receptive_field` to
+       compute the receptive field of one output element when all four
+       layers have stride 1 and when the first two have stride 2. Use the
+       comparison to give one statistical benefit of a stride larger
+       than 1.
+1. **Fractional stride.** ● Read a stride of $\frac{1}{2}$ as moving the
+   convolution window by half an input element per output element.
+    1. Evaluate :eqref:`eq_conv_output_shape` at $d_\textrm{h} = 1$,
+       $s_\textrm{h} = \frac{1}{2}$, and $p_\textrm{h} = k_\textrm{h} - 1$.
+       How does the output height compare with the input height?
+    1. Describe how to compute this output with an ordinary stride-1
+       convolution applied to a modified input, and check that your
+       construction gives the same output height.
+    1. Name a task in which a network needs this operation, and say where
+       in the network it would be placed.
 1. **Stride as sampling.** For a length-6 one-dimensional input, write the
    $4 \times 6$ weight matrix of a stride-1, kernel-3 convolution in the
    banded-matrix form of :numref:`subsec_conv_matmul`, and the
@@ -491,18 +515,24 @@ example in image generation.
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.15.*
 1. **Dilation and gridding.** A network stacks four $3 \times 3$
-   convolutions with stride 1. Compare two dilation schedules,
-   $(1, 2, 4, 8)$ and $(4, 4, 4, 4)$.
+   convolutions with stride 1. By :numref:`sec_dilation`, the doubling
+   dilation schedule $(1, 2, 4, 8)$ gives one output element a receptive
+   field of side $31$. Compare it with the constant schedule
+   $(4, 4, 4, 4)$.
     1. Use :eqref:`eq_receptive_field`, with each kernel replaced by its
-       effective size, to compute the receptive field of one output
-       element under each schedule.
+       effective size, to compute the receptive field of the constant
+       schedule.
     1. For each schedule, determine which pixels inside the receptive
        field the output actually depends on, and count them. A schedule
        whose output depends only on a sparse lattice within its receptive
        field is said to exhibit *gridding*.
-    1. State a condition on consecutive dilations that guarantees every
-       pixel of the receptive field is used, and give one reason gridding
-       is harmful for dense prediction tasks such as segmentation.
+    1. Give one reason gridding is harmful for dense prediction tasks such
+       as segmentation.
+1. **Gridding-free dilations.** ● A network stacks $L$ convolutions of
+   size $3 \times 3$ with stride 1 and dilations $d_1, \ldots, d_L$. State
+   a condition on $d_1, \ldots, d_L$ that guarantees the output depends on
+   every pixel of its receptive field, so that the stack does not exhibit
+   gridding, and show that the condition suffices.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/67)

@@ -1641,137 +1641,222 @@ depths plus a `build` function that stacks blocks.
 ## Exercises
 
 :begin_tab:`pytorch`
-1. [code] **Unregistered modules.** Take `PlainListMLP` and catalog
-   everything that breaks besides the empty parameter list. Check
-   `net.state_dict()`, the effect of `net.to(torch.float64)` on the hidden
-   layers' dtypes, and whether `net.eval()` reaches the children. Explain how
-   each failure follows from the same missing registration.
+1. [code] **Unregistered modules.** The plain list in `PlainListMLP` keeps
+   its layers out of `net.parameters()`, `net.to(device)`, and
+   `net.state_dict()`. Predict, then verify, what three further operations
+   do to the model.
+    1. Call `net.apply(init_xavier)` and check whether the weight of
+       `net.layers[0]` changes.
+    1. Add `nn.Dropout(0.5)` after the `nn.ReLU()` in the list, call
+       `net.eval()`, and pass the same input through the model twice.
+    1. The method `load_state_dict` is the inverse of `state_dict`: it
+       copies a dictionary of saved tensors into a model. Call
+       `net.load_state_dict(ModuleListMLP().state_dict())`.
+    1. Which of these failures are silent and which raise an error? Explain
+       all three from the same missing registration.
 1. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
    child modules `net1` and `net2`, runs both on the same input, and
    concatenates their outputs along the last dimension. What must be true of
    the two children's outputs for the concatenation to be valid?
-1. [code] **Config boundaries.** Extend `MLPConfig` with an activation
-   switch (for example, `act: str = 'relu'`) and make `build` honor it.
-   Which decisions belong in a config and which belong in code? Where would
-   you put a choice between `ResidualBlock` and a plain feed-forward block?
+1. [code] **Config boundaries.** Extend `MLPConfig` with a field
+   `act: str = 'relu'` that selects the activation inside every
+   `ResidualBlock`, and make `build` honor it.
+    1. Build one model with `act='tanh'` and one from the default config,
+       and compare their parameter shapes. Could a checkpoint that holds
+       only the weights tell the two models apart? State what the answer
+       implies for the config.
+    1. A plain feed-forward block has the same `body` as `ResidualBlock`
+       but no skip connection. Apply the same test to the choice between
+       the two block types, and decide whether that choice belongs in the
+       config or in code.
 1. **Widening a residual block.** `ResidualBlock` requires its input and
-   output widths to agree. Suppose you want a block whose output is wider
-   than its input. Give two standard fixes and the cost of each. One of them
-   appears in ResNet (:numref:`sec_resnet`).
-1. [code] **A module from scratch.** In plain Python, without any framework
-   base class, write a minimal `Module` class that supports registering
-   parameters and child modules, and a `parameters()` method that recurses
-   into the children. Wrap two `Linear`-like objects in it as a two-layer
-   MLP and verify that `parameters()` finds every weight.
+   output widths to agree. Suppose a block maps width $d$ to a larger width
+   $d'$, so its body ends in a $d'$-wide layer and the skip path must also
+   produce width $d'$. Give one way to build that skip path with
+   parameters and one without. For each, count the extra parameters and
+   state which output coordinates still receive the identity path.
+1. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+   framework base class, write a `Parameter` class that wraps an array and
+   a minimal `Module` class whose `__setattr__` registers every assigned
+   `Parameter` or `Module`. Give `Module` a `parameters()` method that
+   recurses into the registered children. Write a `Linear` subclass of
+   `Module` that holds a weight and a bias, build a two-layer MLP from two
+   instances of it, and verify that `parameters()` returns all four arrays.
+   Then store the two layers in a plain list, check what `parameters()`
+   returns, and extend `Module` so that the list version finds all four
+   arrays as well.
+
+    *Adapted from CMU 10-714,
+    [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
+1. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
+   residual MLP with `d_in=1`, `d_out=1`, and `num_blocks` set to 0, 1,
+   and 4.
+    1. Before training, list the layers that `build` stacks when
+       `num_blocks=0` and state which functions of $x$ that model can
+       represent.
+    1. Train each variant with the squared loss, the same optimizer, and
+       the same number of epochs on 1,000 points $x$ drawn uniformly from
+       $[-3, 3]$ with targets $y = \sin(2x)$. Report a table of parameter
+       count and final training loss against `num_blocks`, and explain the
+       loss of the `num_blocks=0` variant from the first part.
 
     *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
-1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
-   child module at several sites turns the module tree into a graph. Build a
-   small network that uses the same child at two sites. Predict, then
-   verify: does the shared child's parameter set appear once or twice in
-   `net.parameters()`, and once or twice in `net.state_dict()`? After
-   `net.to(torch.float64)`, do both sites still hold one tensor?
-1. [extended] **Depth family.** With `MLPConfig` and `build`, construct the
-   residual MLP with `num_blocks` set to 0, 1, and 4 and `d_out=1`, and
-   train each variant on a toy regression target. Report a table of
-   parameter count and achieved loss against depth.
-
-    *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf),
+    Section 7.*
+1. [code] **Lazy input width.** Build
+   `net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))`
+   and pass a batch with 20 features through it, then a batch with 30
+   features. Explain the outcome from what the first forward pass did to
+   each layer. Then describe a model that accepts inputs of either width
+   while sharing every layer after the first.
 :end_tab:
 
 :begin_tab:`mxnet`
-1. [code] **Unregistered modules.** Take `PlainListMLP` and catalog
-   everything that breaks besides the empty parameter dictionary. Check
-   `net.save_parameters(...)`, what `net.initialize()` reaches, and what
-   happens on the first forward pass if you remove the by-hand
-   initialization from the constructor. Explain how each failure follows
-   from the same missing registration, and note where along the way the
-   `collect_params()` warning fires.
+1. [code] **Unregistered modules.** The plain list in `PlainListMLP` keeps
+   its layers out of `collect_params()`, `initialize()`, and
+   `save_parameters`, and `collect_params()` warns about it. Predict, then
+   verify, what two further operations do to the model.
+    1. Pass a batch through a fresh `PlainListMLP`, call
+       `net.cast('float64')`, check the dtype of
+       `net.layers[0].weight.data()`, and pass a `float64` batch through
+       the model.
+    1. The method `load_parameters` is the inverse of `save_parameters`: it
+       reads a saved parameter file into a model. Run one forward pass
+       through a `RegisteredListMLP`, save it with `save_parameters`, and
+       load the file into a fresh `PlainListMLP` with `load_parameters`.
+    1. Which of these failures are silent and which raise an error? Explain
+       both from the same missing registration.
 1. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
    child blocks `net1` and `net2`, runs both on the same input, and
    concatenates their outputs along the last dimension. What must be true of
    the two children's outputs for the concatenation to be valid?
-1. [code] **Config boundaries.** Extend `MLPConfig` with an activation
-   switch (for example, `act: str = 'relu'`) and make `build` honor it.
-   Which decisions belong in a config and which belong in code? Where would
-   you put a choice between `ResidualBlock` and a plain feed-forward block?
+1. [code] **Config boundaries.** Extend `MLPConfig` with a field
+   `act: str = 'relu'` that selects the activation inside every
+   `ResidualBlock`, and make `build` honor it.
+    1. Build one model with `act='tanh'` and one from the default config,
+       and compare their parameter shapes. Could a checkpoint that holds
+       only the weights tell the two models apart? State what the answer
+       implies for the config.
+    1. A plain feed-forward block has the same `body` as `ResidualBlock`
+       but no skip connection. Apply the same test to the choice between
+       the two block types, and decide whether that choice belongs in the
+       config or in code.
 1. **Widening a residual block.** `ResidualBlock` requires its input and
-   output widths to agree. Suppose you want a block whose output is wider
-   than its input. Give two standard fixes and the cost of each. One of them
-   appears in ResNet (:numref:`sec_resnet`).
-1. [code] **A module from scratch.** In plain Python, without any framework
-   base class, write a minimal `Module` class that supports registering
-   parameters and child modules, and a `parameters()` method that recurses
-   into the children. Wrap two `Linear`-like objects in it as a two-layer
-   MLP and verify that `parameters()` finds every weight.
+   output widths to agree. Suppose a block maps width $d$ to a larger width
+   $d'$, so its body ends in a $d'$-wide layer and the skip path must also
+   produce width $d'$. Give one way to build that skip path with
+   parameters and one without. For each, count the extra parameters and
+   state which output coordinates still receive the identity path.
+1. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+   framework base class, write a `Parameter` class that wraps an array and
+   a minimal `Module` class whose `__setattr__` registers every assigned
+   `Parameter` or `Module`. Give `Module` a `parameters()` method that
+   recurses into the registered children. Write a `Linear` subclass of
+   `Module` that holds a weight and a bias, build a two-layer MLP from two
+   instances of it, and verify that `parameters()` returns all four arrays.
+   Then store the two layers in a plain list, check what `parameters()`
+   returns, and extend `Module` so that the list version finds all four
+   arrays as well.
+
+    *Adapted from CMU 10-714,
+    [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
+1. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
+   residual MLP with `d_in=1`, `d_out=1`, and `num_blocks` set to 0, 1,
+   and 4.
+    1. Before training, list the layers that `build` stacks when
+       `num_blocks=0` and state which functions of $x$ that model can
+       represent.
+    1. Train each variant with the squared loss, the same optimizer, and
+       the same number of epochs on 1,000 points $x$ drawn uniformly from
+       $[-3, 3]$ with targets $y = \sin(2x)$. Report a table of parameter
+       count and final training loss against `num_blocks`, and explain the
+       loss of the `num_blocks=0` variant from the first part.
 
     *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
-1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
-   child module at several sites turns the module tree into a graph. Build a
-   small network that uses the same child at two sites. Predict, then
-   verify: does the shared child's parameter set appear once or twice in
-   `net.collect_params()`, and once or twice after deduplicating by
-   identity? After `net.cast('float64')`, do both names still point at one
-   `Parameter`?
-1. [extended] **Depth family.** With `MLPConfig` and `build`, construct the
-   residual MLP with `num_blocks` set to 0, 1, and 4 and `d_out=1`, and
-   train each variant on a toy regression target. Report a table of
-   parameter count and achieved loss against depth.
-
-    *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf),
+    Section 7.*
+1. [code] **Lazy input width.** Build an `nn.Sequential` holding
+   `nn.Dense(256, activation='relu')` and `nn.Dense(10)`, call
+   `initialize()`, and pass a batch with 20 features through it, then a
+   batch with 30 features. Explain the outcome from what the first forward
+   pass did to each layer. Then describe a model that accepts inputs of
+   either width while sharing every layer after the first.
 :end_tab:
 
 :begin_tab:`jax`
-1. [code] **Unregistered containers.** Extend `ListMLP` with an `nnx.Dict`
-   of submodules and verify that every parameter appears in
-   `nnx.state(net, nnx.Param)`. Then replace it with a plain dictionary
-   holding those modules and describe how NNX reports the invalid graph
-   container.
+1. [code] **Unregistered containers.** NNX rejects a plain Python list that
+   holds modules and names `nnx.List` and `nnx.data` as repairs.
+    1. Rewrite `ListMLP` twice: once with its two layers in an `nnx.Dict`
+       keyed `'hidden'` and `'out'`, and once with the plain list wrapped
+       in `nnx.data`. Verify that all 7946 parameters appear in
+       `nnx.state(net, nnx.Param)` in both versions.
+    1. Compare the parameter paths of the two versions with those of
+       `ListMLP`. A checkpoint stores the state as a mapping from paths to
+       arrays. Which of the two rewrites could restore a checkpoint saved
+       from `ListMLP`, and why?
 1. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
    child modules `net1` and `net2` as fields, runs both on the same input,
    and concatenates their outputs along the last dimension. What must be
    true of the two children's outputs for the concatenation to be valid?
-1. [code] **Config boundaries.** Extend `MLPConfig` with an activation
-   switch (for example, `act: str = 'relu'`) and make `ResidualMLP` honor
-   it. Which decisions belong in the config and which belong in code? Where
-   would you put a choice between `ResidualBlock` and a plain feed-forward
-   block?
+1. [code] **Config boundaries.** Extend `MLPConfig` with a field
+   `act: str = 'relu'` that selects the activation inside every
+   `ResidualBlock`, and make `ResidualMLP` honor it.
+    1. Build one model with `act='tanh'` and one from the default config,
+       and compare their parameter shapes. Could a checkpoint that holds
+       only the weights tell the two models apart? State what the answer
+       implies for the config.
+    1. A plain feed-forward block has the same `body` as `ResidualBlock`
+       but no skip connection. Apply the same test to the choice between
+       the two block types, and decide whether that choice belongs in the
+       config or in code.
 1. **Widening a residual block.** `ResidualBlock` requires its input and
-   output widths to agree. Suppose you want a block whose output is wider
-   than its input. Give two standard fixes and the cost of each. One of them
-   appears in ResNet (:numref:`sec_resnet`).
-1. [code] **A module from scratch.** In plain Python, without any framework
-   base class, write a minimal `Module` class that supports registering
-   parameters and child modules, and a `parameters()` method that recurses
-   into the children. Wrap two `Linear`-like objects in it as a two-layer
-   MLP and verify that `parameters()` finds every weight.
+   output widths to agree. Suppose a block maps width $d$ to a larger width
+   $d'$, so its body ends in a $d'$-wide layer and the skip path must also
+   produce width $d'$. Give one way to build that skip path with
+   parameters and one without. For each, count the extra parameters and
+   state which output coordinates still receive the identity path.
+1. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+   framework base class, write a `Parameter` class that wraps an array and
+   a minimal `Module` class whose `__setattr__` registers every assigned
+   `Parameter` or `Module`. Give `Module` a `parameters()` method that
+   recurses into the registered children. Write a `Linear` subclass of
+   `Module` that holds a weight and a bias, build a two-layer MLP from two
+   instances of it, and verify that `parameters()` returns all four arrays.
+   Then store the two layers in a plain list, check what `parameters()`
+   returns, and extend `Module` so that the list version finds all four
+   arrays as well.
 
-    *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
-1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
-   child module at several sites turns the module tree into a graph. Build a
+    *Adapted from CMU 10-714,
+    [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
+1. [code] **Shared children.** Reusing one child module at several sites
+   turns the module tree of :numref:`fig_blocks` into a graph. Build a
    small network that uses the same child at two sites. Predict, then
    verify: does the shared child's parameter set appear once or twice in
-   `nnx.state(net, nnx.Param)`? Round-trip the model through `nnx.split`
-   and `nnx.merge`: is the child still one object afterwards, checked with
-   `is`?
-1. [extended] **Depth family.** With `MLPConfig` and `build`, construct the
-   residual MLP with `num_blocks` set to 0, 1, and 4 and `d_out=1`, and
-   train each variant on a toy regression target. Report a table of
-   parameter count and achieved loss against depth.
+   `nnx.state(net, nnx.Param)`? The function `nnx.split(net)` separates a
+   module into a static graph definition and its state, and `nnx.merge`
+   rebuilds a module from the two. After such a round trip, are the two
+   sites still one object, checked with `is`?
+1. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
+   residual MLP with `d_in=1`, `d_out=1`, and `num_blocks` set to 0, 1,
+   and 4.
+    1. Before training, list the layers that `build` stacks when
+       `num_blocks=0` and state which functions of $x$ that model can
+       represent.
+    1. Train each variant with the squared loss, the same optimizer, and
+       the same number of epochs on 1,000 points $x$ drawn uniformly from
+       $[-3, 3]$ with targets $y = \sin(2x)$. Report a table of parameter
+       count and final training loss against `num_blocks`, and explain the
+       loss of the `num_blocks=0` variant from the first part.
 
     *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf),
+    Section 7.*
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. [code] **Unregistered modules.** Keras's tracking has one blind spot
-   left: create a `Dense` layer *inside* `call` rather than in the
-   constructor. The model runs without complaint; check
+1. [code] **Unregistered modules.** Keras tracks a layer that the
+   constructor assigns to an attribute, but not a `Dense` layer created
+   *inside* `call`. Such a model runs without complaint. Write one, check
    `len(net.trainable_variables)` after calling it, explain what an
    optimizer would train, and explain what happens to the layer's weights
    between two calls.
@@ -1779,33 +1864,55 @@ depths plus a `build` function that stacks blocks.
    child modules `net1` and `net2`, runs both on the same input, and
    concatenates their outputs along the last dimension. What must be true of
    the two children's outputs for the concatenation to be valid?
-1. [code] **Config boundaries.** Extend `MLPConfig` with an activation
-   switch (for example, `act: str = 'relu'`) and make `build` honor it.
-   Which decisions belong in a config and which belong in code? Where would
-   you put a choice between `ResidualBlock` and a plain feed-forward block?
+1. [code] **Config boundaries.** Extend `MLPConfig` with a field
+   `act: str = 'relu'` that selects the activation inside every
+   `ResidualBlock`, and make `build` honor it.
+    1. Build one model with `act='tanh'` and one from the default config,
+       and compare their parameter shapes. Could a checkpoint that holds
+       only the weights tell the two models apart? State what the answer
+       implies for the config.
+    1. A plain feed-forward block has the same `body` as `ResidualBlock`
+       but no skip connection. Apply the same test to the choice between
+       the two block types, and decide whether that choice belongs in the
+       config or in code.
 1. **Widening a residual block.** `ResidualBlock` requires its input and
-   output widths to agree. Suppose you want a block whose output is wider
-   than its input. Give two standard fixes and the cost of each. One of them
-   appears in ResNet (:numref:`sec_resnet`).
-1. [code] **A module from scratch.** In plain Python, without any framework
-   base class, write a minimal `Module` class that supports registering
-   parameters and child modules, and a `parameters()` method that recurses
-   into the children. Wrap two `Linear`-like objects in it as a two-layer
-   MLP and verify that `parameters()` finds every weight.
+   output widths to agree. Suppose a block maps width $d$ to a larger width
+   $d'$, so its body ends in a $d'$-wide layer and the skip path must also
+   produce width $d'$. Give one way to build that skip path with
+   parameters and one without. For each, count the extra parameters and
+   state which output coordinates still receive the identity path.
+1. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+   framework base class, write a `Parameter` class that wraps an array and
+   a minimal `Module` class whose `__setattr__` registers every assigned
+   `Parameter` or `Module`. Give `Module` a `parameters()` method that
+   recurses into the registered children. Write a `Linear` subclass of
+   `Module` that holds a weight and a bias, build a two-layer MLP from two
+   instances of it, and verify that `parameters()` returns all four arrays.
+   Then store the two layers in a plain list, check what `parameters()`
+   returns, and extend `Module` so that the list version finds all four
+   arrays as well.
+
+    *Adapted from CMU 10-714,
+    [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
+1. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
+   residual MLP with `d_in=1`, `d_out=1`, and `num_blocks` set to 0, 1,
+   and 4.
+    1. Before training, list the layers that `build` stacks when
+       `num_blocks=0` and state which functions of $x$ that model can
+       represent.
+    1. Train each variant with the squared loss, the same optimizer, and
+       the same number of epochs on 1,000 points $x$ drawn uniformly from
+       $[-3, 3]$ with targets $y = \sin(2x)$. Report a table of parameter
+       count and final training loss against `num_blocks`, and explain the
+       loss of the `num_blocks=0` variant from the first part.
 
     *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
-1. [code] **Shared children.** :numref:`fig_blocks` notes that reusing one
-   child module at several sites turns the module tree into a graph. Build a
-   small network that uses the same child at two sites. Predict, then
-   verify: does the shared layer's kernel appear once or twice in
-   `net.weights`, and how many arrays does `get_weights()` return? After
-   `set_weights` with modified values, do both call sites see the change?
-1. [extended] **Depth family.** With `MLPConfig` and `build`, construct the
-   residual MLP with `num_blocks` set to 0, 1, and 4 and `d_out=1`, and
-   train each variant on a toy regression target. Report a table of
-   parameter count and achieved loss against depth.
-
-    *Adapted from CMU 11-785,
-    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf).*
+    [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf),
+    Section 7.*
+1. [code] **Lazy input width.** Build a `tf.keras.Sequential` holding
+   `tf.keras.layers.Dense(256, activation='relu')` and
+   `tf.keras.layers.Dense(10)`, and pass a batch with 20 features through
+   it, then a batch with 30 features. Explain the outcome from what the
+   first forward pass did to each layer. Then describe a model that accepts
+   inputs of either width while sharing every layer after the first.
 :end_tab:

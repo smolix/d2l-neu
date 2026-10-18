@@ -247,6 +247,7 @@ layer.
 
 
 ## Object Edge Detection in Images
+:label:`subsec_edge_detection`
 
 As a first application, we use a convolutional layer to detect an object's
 edge by locating changes in pixel values.
@@ -668,29 +669,39 @@ particular network mirrors the brain.
 
 ## Exercises
 
-1. [code] **Diagonal edges.** Construct an image `X` with diagonal edges.
-    1. What happens if you apply the kernel `K` of :eqref:`eq_edge_kernel`
-       to it?
-    1. What happens if you transpose `X`?
-    1. What happens if you transpose `K`?
-1. [code] **Designing kernels.** Design some kernels manually.
+1. [code] **Diagonal edges.** Construct a $6 \times 6$ image `X` whose
+   entries are $1$ on and below the main diagonal and $0$ above it. Let
+   $\mathbf{K}$ be the kernel of :eqref:`eq_edge_kernel`.
+    1. Apply $\mathbf{K}$ and $\mathbf{K}^\top$ to `X` with `corr2d`.
+       Give the positions and signs of the nonzero entries of each
+       output, and explain them from the pixel differences that each
+       kernel computes.
+    1. Let $\mathbf{A}$ be any input and $\mathbf{B}$ any kernel. Show
+       that cross-correlating $\mathbf{A}^\top$ with $\mathbf{B}$ gives
+       the transpose of cross-correlating $\mathbf{A}$ with
+       $\mathbf{B}^\top$. What does this identity predict for `corr2d`
+       applied to the transpose of `X` with $\mathbf{K}$?
+1. [code] **Hand-designed kernels.** Design some kernels manually.
     1. Given a directional vector $\mathbf{v} = (v_1, v_2)$, derive an
        edge-detection kernel that detects edges orthogonal to $\mathbf{v}$,
        i.e., edges in the direction $(v_2, -v_1)$.
-    1. Derive a finite difference operator for the second derivative. What
-       is the minimum size of the convolutional kernel associated with it?
+    1. Derive a finite difference operator for the second derivative.
        Which structures in images respond most strongly to it?
-    1. How would you design a blur kernel? Why might you want to use such
-       a kernel?
     1. What is the minimum size of a kernel to obtain a derivative of
        order $d$?
-    1. Load a single image and convert it to one channel. Apply three of
-       your kernels with `corr2d`: the edge detector, the blur kernel,
-       and a sharpening kernel defined as twice the identity minus the
-       blur. Display each result next to the original.
+    1. How would you design a blur kernel? Why might you want to use such
+       a kernel?
+    1. Load a single image, convert it to one channel, and downsample it
+       to about $100 \times 100$ pixels, since `corr2d` loops over every
+       output pixel in Python. Apply three kernels with `corr2d`: the edge
+       detector, the blur kernel, and a sharpening kernel defined as twice
+       the identity kernel minus the blur kernel, where the identity
+       kernel has a $1$ at its center and $0$ elsewhere. Display each
+       result next to the original.
 
     *Adapted from Stanford CS231n,
-    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
+    ConvolutionalNetworks notebook.*
 1. [code] **Convolution as a banded matrix.** The patch matrix of
    :numref:`subsec_conv_matmul` unfolds the input. The opposite
    construction unrolls the kernel. Let $\mathbf{X}$ be a $4 \times 4$
@@ -703,50 +714,89 @@ particular network mirrors the brain.
        many distinct values appear in $\mathbf{W}$?
     1. Build $\mathbf{W}$ in code from `K` and confirm that the product
        reproduces `corr2d(X, K)`.
-    1. How does the memory needed to store $\mathbf{W}$ compare with that
-       of the patch matrix as the input grows?
-1. [code] **Backward pass of a convolution.** ● Consider the
-   single-channel convolution of this section with input $\mathbf{X}$,
-   kernel $\mathbf{K}$, and a scalar loss $\ell$.
+    1. For an $n \times n$ input and a $k \times k$ kernel, count the
+       entries of $\mathbf{W}$ stored as a dense array, the nonzero
+       entries of $\mathbf{W}$, and the entries of the patch matrix. How
+       does each count grow with $n$?
+    1. Keep the sparsity pattern of $\mathbf{W}$ but give every row its
+       own $k^2$ values. The result is a locally connected layer: the
+       fourth-order tensor $\mathsf{V}$ of :eqref:`eq_mlp_fourth_order`
+       restricted to a $k \times k$ window of offsets $(a, b)$, before
+       translation equivariance ties the weights. For an $n \times n$
+       input, count the parameters of this layer, of a fully connected
+       layer with the same input and output shapes, and of the
+       convolution.
+
+    *Adapted from CMU 11-785,
+    [Homework 2 Part 1](https://deeplearning.cs.cmu.edu/S21/index.html).*
+1. [code] **Backward pass of a convolution.** ● Let $\mathbf{Y}$ be the
+   single-channel cross-correlation of an input $\mathbf{X}$ with a kernel
+   $\mathbf{K}$, as computed by `corr2d`, and let $\ell$ be a scalar loss
+   that depends on $\mathbf{X}$ and $\mathbf{K}$ only through $\mathbf{Y}$.
     1. Derive $\partial \ell/\partial \mathbf{K}$ and
-       $\partial \ell/\partial \mathbf{X}$ in the style of the
+       $\partial \ell/\partial \mathbf{X}$ in terms of
+       $\partial \ell/\partial \mathbf{Y}$, in the style of the
        backpropagation equations of :numref:`sec_backprop`.
+    1. Implement your expression for $\partial \ell/\partial \mathbf{K}$
+       without automatic differentiation for the loss
+       $\ell = \sum_{i,j} G_{ij} Y_{ij}$, where $\mathbf{G}$ is a fixed
+       random matrix of the shape of $\mathbf{Y}$. Compare it with a
+       centered finite-difference gradient on a small random `X` and `K`
+       in single precision. Report the largest relative error for step
+       sizes $10^{-2}$, $10^{-3}$, and $10^{-4}$, and explain how the
+       error changes with the step size.
     1. Check your expression for $\partial \ell/\partial \mathbf{K}$
-       against the kernel updates produced by the experiment of
-       :numref:`subsec_learning_kernel`.
-    1. Implement the gradient of `corr2d(X, K)` with respect to `K`
-       directly, without automatic differentiation, and check it against a
-       finite-difference gradient on a small random `X` and `K` to a
-       relative error below $10^{-4}$.
+       against the kernel gradient that automatic differentiation
+       computes in the experiment of :numref:`subsec_learning_kernel`.
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
     Chapter 6, and Stanford CS231n,
-    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/).*
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
+    ConvolutionalNetworks notebook.*
 1. [code] **Effective receptive field.** The theoretical receptive
    field of :eqref:`eq_receptive_field` bounds which inputs *can*
    influence an output; the effective receptive field measures how much
-   they actually do :cite:`Luo.Li.Urtasun.ea.2016`. Build a stack of three
-   $3 \times 3$ convolutional layers with random weights, stride 1, and no
-   padding on a $32 \times 32$ single-channel input. Backpropagate a unit
-   gradient from one output unit of the last layer to the input and plot
-   the magnitude of the input gradient over the $32 \times 32$ grid.
-   Compare the region of non-negligible magnitude with the $7 \times 7$
-   theoretical receptive field, and describe the shape of the falloff.
+   they actually do :cite:`Luo.Li.Urtasun.ea.2016`. Build a stack of $L$
+   single-channel $3 \times 3$ convolutional layers with stride 1, no
+   padding, no bias, and no nonlinearity on a $32 \times 32$ input, using
+   the built-in layer of :numref:`subsec_learning_kernel`. Draw every
+   kernel entry independently from a standard normal distribution.
+
+   For $L = 3$ and a single draw of the kernels, backpropagate a unit
+   gradient from an output unit near the center of the last layer to the
+   input and plot the magnitude of the input gradient. Compare its support
+   with the $7 \times 7$ theoretical receptive field, and say where the
+   magnitude is largest.
+1. [code] **Effective width versus depth.** ● Use the stack of $L$ random
+   linear layers of the previous problem.
+    1. Average the squared input gradient over 500 draws of the kernels,
+       for $L = 3$ and for $L = 10$. Sum each averaged map over its rows
+       and normalize the resulting column profile to sum to one. How does
+       the ratio of the profile's standard deviation to the theoretical
+       side length $2L + 1$ change with depth?
+    1. Show that the expected squared input gradient, summed over rows,
+       is proportional to the convolution of $L$ copies of the vector
+       $(1, 1, 1)$. Derive how the standard deviation of the normalized
+       profile grows with $L$.
 
 :begin_tab:`pytorch`
-6. [code] **Autodiff on the custom layer.** `corr2d` fills its output with
-   the in-place assignment `Y[i, j] = ...`. Create `K` with
-   `requires_grad=True`, run `corr2d(X, K).sum().backward()`, and inspect
-   the `grad_fn` of the output. Does writing into a tensor that does not
-   itself require gradients block differentiation? Explain what autograd
-   records for such an assignment, and confirm that `Conv2D` learns the
-   kernel of :eqref:`eq_edge_kernel` from `X` and `Y` by plain gradient
-   descent.
+7. [code] **Autodiff on the custom layer.** `corr2d` fills its output with
+   the in-place assignment `Y[i, j] = ...` into a tensor that does not
+   itself require gradients.
+    1. Create `K` with `requires_grad=True`, run
+       `corr2d(X, K).sum().backward()`, and inspect `K.grad` and the
+       `grad_fn` of the output. Does the assignment block
+       differentiation? Explain what autograd records for it.
+    1. Rebuild, as two-dimensional tensors, the $6 \times 8$ image `X` of
+       :numref:`subsec_edge_detection` and its edge map
+       `Y = corr2d(X, K)` for the kernel `K` of :eqref:`eq_edge_kernel`.
+       Train `Conv2D((1, 2))` on them by plain gradient descent and
+       compare the learned `weight` with `K`.
 :end_tab:
 
 :begin_tab:`jax`
-6. [code] **Autodiff on the custom layer.** `corr2d` builds its output
+7. [code] **Autodiff on the custom layer.** `corr2d` builds its output
    with the functional update `Y.at[i, j].set(...)`. Compute
    `jax.grad(lambda K: corr2d(X, K).sum())(K)` and explain why this update
    poses no obstacle to differentiation. Then wrap `corr2d` in `jax.jit`
@@ -756,7 +806,7 @@ particular network mirrors the brain.
 :end_tab:
 
 :begin_tab:`tensorflow`
-6. [code] **Autodiff on the custom layer.** `corr2d` writes its output into
+7. [code] **Autodiff on the custom layer.** `corr2d` writes its output into
    a `tf.Variable` with `Y[i, j].assign(...)`. Watch `K` on a
    `tf.GradientTape`, evaluate `corr2d(X, K)`, and request the gradient of
    its sum with respect to `K`. What does the tape return, and why does a
@@ -767,7 +817,7 @@ particular network mirrors the brain.
 :end_tab:
 
 :begin_tab:`mxnet`
-6. [code] **Autodiff on the custom layer.** Call `K.attach_grad()`,
+7. [code] **Autodiff on the custom layer.** Call `K.attach_grad()`,
    evaluate `corr2d(X, K)` inside `autograd.record()`, and call
    `backward()`. What error message do you see, and which line of
    `corr2d` triggers it? Rewrite `corr2d` without in-place assignment so

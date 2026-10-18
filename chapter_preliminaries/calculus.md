@@ -470,43 +470,58 @@ aimed at machine learning.
 ## Exercises
 
 1. **Derivatives from first principles.** The derivatives and rules listed
-   after :eqref:`eq_derivative` were stated without proof. Prove them from
-   the limit definition.
+   after :eqref:`eq_derivative` were stated without proof. Prove the
+   following from the limit definition.
     1. $f(x) = C$ for a constant $C$, and $f(x) = x^n$ for a positive
        integer $n$.
     1. $f(x) = e^x$ and $f(x) = \ln x$. Identify the limit involving $e$
        on which both proofs rely.
     1. The sum, product, and quotient rules for differentiable $f$ and
-       $g$, without citing the rules themselves.
+       $g$, assuming $g(x) \neq 0$ for the quotient rule.
 1. **Derivative of $x^x$.** Calculate the derivative of
    $f(x) = x^x$.
 1. [code] **Tangent line at a point.** Plot the function
    $y = f(x) = x^3 - \frac{1}{x}$ together with its tangent line at
    $x = 1$.
-1. [code] **Finite-difference error.** For $f(x) = 3x^2 - 4x$ at $x = 1$,
-   compute the error $\left|\frac{f(1+h) - f(1)}{h} - 2\right|$ for
-   $h = 10^{-1}, 10^{-2}, \ldots, 10^{-16}$ and plot it against $h$ on
-   log--log axes with `d2l.plot`. Identify the $h$ with the smallest error
-   and explain the slope of each of the two branches of the curve. Then
-   repeat with the central difference $\frac{f(1+h) - f(1-h)}{2h}$ and
-   account for the change in the curve.
+1. [code] **Finite-difference error.** ● Use
+   $h = 10^{-1}, 10^{-2}, \ldots, 10^{-16}$ throughout, and plot each error
+   against $h$ on log--log axes with `d2l.plot`.
+    1. For $f(x) = 3x^2 - 4x$ at $x = 1$, compute the error
+       $\left|\frac{f(1+h) - f(1)}{h} - 2\right|$ of the forward
+       difference. Identify the $h$ with the smallest error and explain the
+       slope of each of the two branches of the curve.
+    1. Repeat the computation with the central difference
+       $\frac{f(1+h) - f(1-h)}{2h}$, plot both error curves in one figure,
+       and explain the shape of the new curve.
+    1. Repeat both computations for $f(x) = e^x$ at $x = 0$, where
+       $f'(0) = 1$. Compare the slopes of the large-$h$ branches of the two
+       curves and the $h$ at which each difference quotient is most
+       accurate.
 1. **Gradient of a two-variable function.** Find the gradient
    of the function $f(\mathbf{x}) = 3x_1^2 + 5e^{x_2}$.
 1. **Gradient of the $\ell_2$ norm.** Find the gradient of the
    function $f(\mathbf{x}) = \|\mathbf{x}\|_2$. State what happens at
    $\mathbf{x} = \mathbf{0}$ and why.
-1. **Multivariate chain rule.** Write out the chain rule for
-   the case where $u = f(x, y, z)$ and $x = x(a, b)$, $y = y(a, b)$, and
-   $z = z(a, b)$.
-1. [code] **Gradient-descent step.** Consider
-   $f(\mathbf{x}) = \|\mathbf{x}\|_2^2$. Starting from
-   $\mathbf{x} = [1, 1]^\top$, take one gradient-descent step with
-   learning rate $\eta$,
-    $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}),$$
-   for $\eta = 0.1$, $\eta = 1$, and $\eta = 2$. Compute $f$ before and
-   after each step and explain what the three outcomes show about the
-   role of the learning rate. Then characterize the points at which a step
-   leaves $\mathbf{x}$ unchanged.
+1. **Multivariate chain rule.** Let $y = u_1 u_2 u_3$, where
+   $u_1 = x_1 + x_2$, $u_2 = x_1 - x_2$, and $u_3 = x_1 x_2$.
+    1. Compute $\nabla_{\mathbf{u}} y$ and the matrix $\mathbf{A}$ with
+       entries $A_{ij} = \partial u_j / \partial x_i$, and obtain
+       $\nabla_{\mathbf{x}} y$ as the product $\mathbf{A} \nabla_{\mathbf{u}} y$.
+    1. Substitute $u_1$, $u_2$, and $u_3$ into $y$, differentiate the
+       result with respect to $x_1$ and $x_2$ directly, and compare with
+       the product.
+1. **Gradient-descent step.** Consider $f(\mathbf{x}) = \|\mathbf{x}\|_2^2$
+   and the gradient-descent step with learning rate $\eta > 0$,
+   $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
+    1. Starting from $\mathbf{x} = [1, 1]^\top$, take one step for each of
+       $\eta = 0.1$, $\eta = 1$, and $\eta = 2$, and compute $f$ before
+       and after the step.
+    1. Write the step for this $f$ in closed form for arbitrary
+       $\mathbf{x}$ and $\eta$. Find the range of $\eta$ for which a step
+       decreases $f$ at every $\mathbf{x} \neq \mathbf{0}$, and the value
+       of $\eta$ that reaches the minimizer in one step.
+    1. Characterize the points at which a step leaves $\mathbf{x}$
+       unchanged, for this $f$ and for a general differentiable $f$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/32)

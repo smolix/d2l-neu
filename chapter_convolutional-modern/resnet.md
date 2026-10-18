@@ -1074,12 +1074,21 @@ A common feature of the designs we have discussed so far is that the network des
 
 ## Exercises
 
-1. **Inception versus residual blocks.** Compare the Inception block of
-   :numref:`fig_inception` with the residual block of
-   :numref:`fig_resnet_block`. How do they differ in computation and
-   parameter count at the same input and output width, and in the classes
-   of functions they can represent?
-1. [code] **ResNet variants.** Table 1 of :citet:`He.Zhang.Ren.ea.2016`
+1. **Inception versus residual blocks.** In the `arch` of GoogLeNet
+   (:numref:`sec_googlenet`), the second block of the middle group has
+   branch widths $c_1 = 160$, $c_2 = (112, 224)$, $c_3 = (24, 64)$, and
+   $c_4 = 64$, and it maps 512 input channels to 512 output channels.
+   Compare it with a 512-channel `Residual` block that uses an identity
+   shortcut.
+    1. Count the convolution weights and the multiply-adds per output
+       pixel of both blocks, ignoring biases and normalization
+       parameters.
+    1. A `Residual` block whose residual branch outputs zero is the
+       identity on nonnegative inputs. Determine whether any choice of
+       parameters makes the Inception block the identity on nonnegative
+       inputs, and state what the answer implies for deepening GoogLeNet
+       by inserting Inception blocks.
+1. [code] **ResNet variants.** ● Table 1 of :citet:`He.Zhang.Ren.ea.2016`
    specifies ResNet-18 to ResNet-152 by the number of blocks per stage and
    by the block type.
     1. Build ResNet-34 by passing its block counts as `arch` to `ResNet`
@@ -1090,40 +1099,71 @@ A common feature of the designs we have discussed so far is that the network des
        restores the width. `ResNeXtBlock` with `groups=1` and
        `bot_mul=0.25` implements this block. Compare its parameter count
        and multiply-adds with those of `Residual` at the same input and
-       output width.
-    1. Add a `block` method that stacks bottleneck blocks, build
-       ResNet-50, and compare its parameter count with ResNet-34's.
-1. [code] **Pre-activation ordering.** :citet:`He.Zhang.Ren.ea.2016*1`
+       output width, and with those of `Residual` at a quarter of that
+       width, which is the width of the matching ResNet-34 stage.
+    1. Override `block` in a subclass of `ResNet` so that it stacks
+       bottleneck blocks, build ResNet-50, and compare its parameter count
+       with ResNet-34's.
+1. **Pre-activation ordering.** :citet:`He.Zhang.Ren.ea.2016*1`
    moved batch normalization and the ReLU in front of each convolution of
    the residual branch and removed the ReLU after the addition (their
    Figure 1), so that a block computes $\mathbf{x} + g(\mathbf{x})$ with
    the identity path left untouched. The DenseNet convolution block in
    :numref:`sec_densenet` uses this "batch normalization, activation,
-   convolution" order, and ConvNeXt (:numref:`sec_convnext`) likewise
-   applies no nonlinearity after the addition.
-    1. Show that setting the residual branch to zero makes the
-       pre-activation block the identity on every input, whereas
-       `Residual` is the identity only on nonnegative inputs.
-    1. Implement a pre-activation variant of `Residual`, build a ResNet-18
-       from it, and compare its training curves with those of `ResNet18`.
-1. **Nested function classes.** Why can increasing function-class
-   complexity without bound still be undesirable when the classes are
-   nested?
-1. **DenseNet accounting.** :citet:`Huang.Liu.Van-Der-Maaten.ea.2017`
+   convolution" order.
+    1. Stack $K$ pre-activation blocks,
+       $\mathbf{x}_k = \mathbf{x}_{k-1} + g_k(\mathbf{x}_{k-1})$ for
+       $k = 1, \ldots, K$. Write $\mathbf{x}_K$ in terms of
+       $\mathbf{x}_0$ and the branch outputs, and show that the Jacobian
+       $\partial \mathbf{x}_K / \partial \mathbf{x}_0$ contains the
+       identity matrix as an additive term.
+    1. Now stack $K$ `Residual` blocks with identity shortcuts, each of
+       which applies a ReLU after the addition. Which factor takes the
+       place of the identity term in
+       $\partial \mathbf{x}_K / \partial \mathbf{x}_0$, and what does it
+       imply for the gradient that reaches the first block through the
+       shortcuts?
+1. [code] **Pre-activation ResNet-18.** ● Implement the pre-activation
+   block of :citet:`He.Zhang.Ren.ea.2016*1` as a variant of `Residual`,
+   override `block` in a subclass of `ResNet` so that it stacks the new
+   block, and compare the training curves of the resulting ResNet-18 with
+   those of `ResNet18`.
+1. **Nested function classes.** The containment argument of
+   :numref:`fig_functionclasses` applies to a deeper network when each
+   added block can represent the identity on every input it receives.
+   Every `Residual` block in `ResNet18` receives nonnegative inputs.
+    1. Set the weights and bias of `conv2` in a `Residual` block with an
+       identity shortcut to zero. Determine the output of `bn2` in
+       training mode and in evaluation mode, and decide in each mode
+       whether the block is then the identity on nonnegative inputs.
+       Name parameter values of `bn2` that make the block the identity
+       in both modes.
+    1. ResNet-34 (Table 1 of :citet:`He.Zhang.Ren.ea.2016`) has the same
+       stage widths as `ResNet18` and more blocks per stage. Decide
+       whether ResNet-34 represents every function that `ResNet18`
+       represents, and justify the answer block by block.
+1. **DenseNet accounting.** ● :citet:`Huang.Liu.Van-Der-Maaten.ea.2017`
    report that DenseNets match the accuracy of comparable ResNets with
    fewer parameters, whereas :citet:`pleiss2017memory` had to devise
    memory-efficient implementations for them. Consider a dense block whose
    $n$ convolutions each emit $r$ channels (the growth rate) on an input
-   with $c$ channels.
-    1. How many channels does the $i$-th convolution consume? Sum over the
-       block to obtain its activation memory and compare it with that of
-       $n$ residual blocks of constant width $c$.
+   with $c$ channels, and compare it with $n$ `Residual` blocks of
+   constant width $c$. Ignore biases and batch normalization parameters.
+    1. `DenseBlock` builds the input of each convolution as a new
+       concatenated tensor, and a naive implementation keeps all of these
+       inputs for the backward pass. How many channels does the $i$-th
+       convolution consume? Sum them over the block and compare the sum
+       with the $2n$ inputs of width $c$ that the $3 \times 3$
+       convolutions of the residual blocks keep.
     1. Count the weights of the dense block's $3 \times 3$ convolutions
        and compare them with those of the $n$ residual blocks. For which
        growth rates $r$ does the dense block use fewer parameters?
-    1. Reconcile the two comparisons: why can a network that keeps more
-       activations need fewer weights? Relate the activation cost to the
-       recomputation strategy of :citet:`pleiss2017memory`.
+    1. :citet:`pleiss2017memory` store only the $c + nr$ channels of
+       distinct feature maps and discard each concatenated tensor and its
+       normalized version after use. For $c = 64$, $r = 32$, and $n = 6$,
+       compare this storage with your sum from the first part. Explain
+       why the backward pass must then recompute concatenations, batch
+       normalizations, and ReLUs, but no convolution.
 1. **Paths through a residual stack.** A stack of $K$ residual blocks can
    be unraveled into an ensemble of paths: on each block, the signal
    either passes through the block's body or skips it

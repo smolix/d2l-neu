@@ -863,20 +863,30 @@ and suspicion of round numbers.
 
 ## Exercises
 
-1. [code] **Sign descent on the testbed.** With $\beta_1 = \beta_2 = 0$
-   and $\epsilon \to 0$, Adam's update is $\eta\,\mathrm{sign}(\mathbf{g}_t)$,
-   the steepest step under the $\ell_\infty$ ball of :eqref:`eq_muon-ball`,
-   and :citet:`Kunstner.Chen.Lavington.ea.2023` report that Adam's
-   advantage over SGD on language models tracks that of sign descent.
-    1. With $\beta_1 = 0$ but $\beta_2 > 0$ the update is no longer a sign.
-       Show that its magnitude in a coordinate is $|g_t| / \sqrt{\hat{v}_t}$,
-       that its expectation is at most $1$ when $\hat{v}_{t-1}$ equals the
-       stationary mean of the squared gradients, and that no such bound holds
-       for a single step.
-    1. Implement plain sign descent, without a momentum buffer, and run it
-       through `run_lm` on a four-point learning-rate grid. Compare its best
-       curve with the best of `adamw_lm` and with tuned SGD with momentum
-       from :numref:`sec_adam`. Does the ranking support the report?
+1. **Adam without momentum.** ● With $\beta_1 = \beta_2 = 0$ and
+   $\epsilon \to 0$, Adam's update is $\eta\,\mathrm{sign}(\mathbf{g}_t)$,
+   the steepest step under the $\ell_\infty$ ball of :eqref:`eq_muon-ball`.
+   With $\beta_1 = 0$ but $\beta_2 > 0$ the update is no longer a sign.
+   Show that its magnitude in a coordinate is
+   $\eta\,|g_t| / \sqrt{\hat{v}_t}$. Show further that its expectation is
+   at most $\eta$ when $\hat{v}_{t-1}$ equals the stationary mean of the
+   squared gradients, and find how large a single step can become.
+1. [code] **Sign descent on the testbed.** ● Sign descent is the limit of
+   Adam with $\beta_1 = \beta_2 = 0$ and $\epsilon \to 0$.
+   :citet:`Kunstner.Chen.Lavington.ea.2023` report that on language models
+   Adam's advantage over SGD grows with the batch size, and that at large
+   batch sizes Adam behaves like sign descent with momentum.
+    1. Implement plain sign descent, which steps along
+       $-\mathrm{sign}(\mathbf{g}_t)$, and sign descent with momentum, which
+       steps along $-\mathrm{sign}(\mathbf{m}_t)$ with
+       $\mathbf{m}_t = 0.9\,\mathbf{m}_{t-1} + \mathbf{g}_t$. Run both
+       through `run_lm` on a four-point learning-rate grid, and rank their
+       best final losses against those of `adamw_lm` and of the `sgd_lm`
+       sweep of :numref:`sec_adam`.
+    1. `data` draws batches of 64 sequences. Rebuild it with
+       `batch_size=512` and repeat all four sweeps for the same 2,000
+       steps. State which gaps in the ranking change, and whether the two
+       rankings support the report.
 1. [code] **The RMS-matching factor.** The update :eqref:`eq_muon-update`
    rescales the orthogonalized matrix by $0.2\sqrt{\max(m, n)}$ so that
    its entries have root-mean-square size $0.2\,\eta$.
@@ -895,17 +905,28 @@ and suspicion of round numbers.
    step.
     1. Where does quality saturate, and how does the time per step grow
        with the iteration count?
-    1. Plot the quintic $p(x)$ of :eqref:`eq_muon-quintic` on $[0, 1]$ and
-       use it to explain what one iteration does to a spectrum spanning an
-       order of magnitude, and hence how much of the equalization a single
-       iteration achieves.
-1. [code] **Orthogonalizing the embeddings.** The split in
-   :numref:`subsec_muon-census` keeps the embedding tables and the output
-   head with AdamW. Change the parameter assignment that `muon_adamw`
-   receives so that both move into the Muon group, rerun the sweep of
-   :numref:`subsec_muon-lm-race`, and explain what you observe with the
-   one-hot-input argument: what does orthogonalizing an embedding table's
-   momentum do to the update received by the rows of rare tokens?
+    1. Plot the quintic $p(x)$ of :eqref:`eq_muon-quintic` on $[0, 1]$.
+       After normalization, the singular values of the $96 \times 64$
+       example of :numref:`subsec_muon-newton-schulz` lie between about
+       $0.03$ and $0.23$. Use the plot to explain what one iteration does
+       to this spectrum, and how many iterations a normalized singular
+       value of $0.01$ needs to exceed $0.7$, the lower edge of the band
+       that five iterations reach.
+1. [code] **Embeddings in the Muon group.** The split in
+   :numref:`subsec_muon-census` keeps the token embedding table
+   `token_emb` with AdamW. Its input is one-hot, so row $i$ of its
+   gradient collects contributions only from the positions where token $i$
+   occurs.
+    1. Let $\mathbf{M}$ be a matrix with fewer rows than columns and full
+       row rank. Show that every row of its orthogonalization
+       $\mathbf{U}\mathbf{V}^\top$ has unit Euclidean norm. What does this
+       do to the update of a rare token's row of `token_emb`, compared
+       with that of a frequent token's row?
+    1. Move `token_emb` into the Muon group, keeping `pos_emb` and the
+       output head with AdamW, and rerun the sweep of
+       :numref:`subsec_muon-lm-race`. Compare the best final loss with that
+       of `muon_lm`, and explain the difference with your answer to the
+       previous sub-item.
 1. [code] **Lion.** Implement Lion :cite:`Chen.Liang.Huang.ea.2023` in about
    six lines: with buffer $\mathbf{m}_t$, update
    $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\mathrm{sign}(\beta_1 \mathbf{m}_{t-1} + (1 - \beta_1)\, \mathbf{g}_t),
@@ -915,10 +936,14 @@ and suspicion of round numbers.
        four-point tuning, shifting Lion's grid down by a factor of three to
        ten relative to AdamW's, since every coordinate of its update has
        magnitude exactly $\eta$.
-    1. How much optimizer state does each of the three methods carry per
-       parameter, and to which ball of :numref:`tab_muon_norms` does Lion
-       belong?
-1. **Completing the spectral-step bound.** The duality argument for
+    1. Lion takes the sign of an interpolation weighted by $\beta_1$, not
+       of its buffer $\mathbf{m}_t$. Show that the two coincide when
+       $\beta_1 = \beta_2$. For $(\beta_1, \beta_2) = (0.9, 0.99)$, find the
+       weight that each of them places on $\mathbf{g}_t$ and on
+       $\mathbf{g}_{t-k}$ for $k \geq 1$, and explain how the choice
+       $\beta_1 < \beta_2$ changes how quickly the update direction follows
+       a change in the gradient.
+1. **Diagonal-entry bound.** The duality argument for
    :eqref:`eq_muon-spectral-step` uses the claim that no entry of a matrix
    with unit spectral norm exceeds one in absolute value.
     1. Show that $\|\mathbf{A}\|_2 \leq 1$ implies
@@ -926,20 +951,35 @@ and suspicion of round numbers.
        $i$.
     1. Identify when equality holds for all $i$ simultaneously, and hence
        when the minimizer in :eqref:`eq_muon-spectral-step` is unique.
-1. [code] **How low-rank are the gradients?** ● Equation
+1. [code] **Spectral concentration of gradients.** ● Equation
    :eqref:`eq_muon-spectral-step` equalizes singular directions on the
    grounds that a training gradient's singular values are dominated by a
    few large ones, the case :citet:`Jordan.Jin.Boza.ea.2024` make for
-   orthogonalizing. Measure it on `TinyLM`.
+   orthogonalizing. Measure this concentration on `TinyLM`.
     1. For one hidden matrix, record the singular values of the Nesterov
        blend $\mathbf{G}_t + \mu \mathbf{M}_t$ at initialization, after
        200 steps, and at the end of a 2,000-step hybrid run. Report the
        fraction of the squared Frobenius norm carried by the top 10% of
        singular values at each point.
-    1. Does the concentration grow or shrink over training, and how does
-       the answer bear on the choice of five Newton–Schulz iterations,
-       given that a weak direction grows by at most $3.4$-fold per
-       iteration?
+    1. Compare your three fractions with the same fraction for an
+       orthogonalized matrix and for a Gaussian random matrix of the same
+       shape. Does the concentration grow or shrink over training, and do
+       your measurements support the premise that a few large singular
+       values dominate?
+1. **Damped orthogonalization.** The derivation of
+   :eqref:`eq_muon-shampoo` keeps only the current gradient $\mathbf{G}$.
+   Let $\mathbf{G}$ be $m \times n$ with $m > n$ and rank $n$. Then
+   $\mathbf{G}\mathbf{G}^\top$ is singular, and its inverse fourth root
+   exists only as a pseudo-inverse. Shampoo :cite:`Gupta.Koren.Singer.2018`
+   starts both accumulators at $\epsilon \mathbf{I}$ with $\epsilon > 0$,
+   so without memory its update direction becomes
+   $$(\mathbf{G}\mathbf{G}^\top + \epsilon \mathbf{I})^{-1/4}\, \mathbf{G}\, (\mathbf{G}^\top\mathbf{G} + \epsilon \mathbf{I})^{-1/4}.$$
+    1. Show that this matrix has the singular vectors of $\mathbf{G}$, and
+       find the function that it applies to each singular value $\sigma$.
+    1. Unlike $\mathbf{U}\mathbf{V}^\top$, this update changes when
+       $\mathbf{G}$ is multiplied by a positive constant. Find the singular
+       values that it maps to within 1% of $1$, and compare the role of
+       $\epsilon$ with that of Adam's $\epsilon$ in :eqref:`eq_adam-update`.
 
 <!-- slides -->
 

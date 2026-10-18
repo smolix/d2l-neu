@@ -1051,18 +1051,41 @@ The practical points are:
    that only removes the mean, and a second variant that only divides by
    the standard deviation. Compare the training curves and final accuracy
    of both against full batch normalization.
-1. [code] **Frozen scale and shift.** Fix the parameters `beta` and
-   `gamma`: first to $\beta = 0$, $\gamma = 1$, a no-op affine transform,
-   and separately to $\beta = 1$, $\gamma = 0.1$. Retrain in each case and
-   compare final accuracy and epochs to convergence against the
-   learned-affine baseline. Explain the direction of each effect.
+1. [code] **Frozen scale and shift.** In every `BatchNorm` layer of
+   `BNLeNetScratch`, hold the scale `gamma` and the shift `beta` constant
+   instead of learning them. Retrain twice: once with every entry of
+   $\boldsymbol{\gamma}$ equal to 1 and of $\boldsymbol{\beta}$ equal to 0,
+   which makes the affine map the identity, and once with every entry of
+   $\boldsymbol{\gamma}$ equal to 0.1 and of $\boldsymbol{\beta}$ equal
+   to 1. Compare the training-loss curves and the final validation
+   accuracy of both runs with those of `BNLeNetScratch` with learned
+   `gamma` and `beta`. Explain each difference you observe, or why none
+   appears.
 1. [code] **Replacing dropout.** `LeNet` (:numref:`sec_lenet`) uses
-   neither dropout nor batch normalization. Add dropout with rate 0.5
-   after each of its two hidden fully connected layers to obtain a
-   dropout-regularized variant, and compare it with `BNLeNet`, which
-   inserts batch normalization instead. Report the validation accuracy and
-   the gap between training and validation accuracy at a fixed epoch
-   budget for both variants.
+   neither dropout nor batch normalization. Build a dropout variant of
+   `LeNet` that adds dropout with rate 0.5 after each of its two hidden
+   fully connected layers. Train `LeNet`, the dropout variant, and
+   `BNLeNet`, which inserts batch normalization instead, for the same
+   number of epochs. Report the validation accuracy of each network and
+   the gap between its training and validation accuracy. Does each
+   addition narrow or widen the gap of `LeNet`? Explain the result for
+   `BNLeNet`.
+1. [code] **Minibatch coupling.** The output of batch normalization for
+   one example depends on the other examples in its minibatch. Train
+   `BNLeNetScratch` as in this section. Measure its validation accuracy in
+   prediction mode, then in training mode with validation batches of 128
+   images, and then in training mode with validation batches of one image.
+   Measure in prediction mode first, since every training-mode forward
+   pass updates the moving averages. Explain the three accuracies.
+1. [code] **Small-batch training.** ● Build a variant of `BNLeNet` that
+   uses group normalization with two groups after each convolutional layer
+   and layer normalization (:numref:`subsec_layer-normalization-in-bn`)
+   after each hidden fully connected layer, in place of batch
+   normalization. Train `BNLeNet` and the variant for two epochs at batch
+   size 4 and again at batch size 128, keeping the other hyperparameters
+   of this section. Report the validation accuracy of all four runs. How
+   does the accuracy of each network change when the batch size drops from
+   128 to 4, and why?
 1. [code] **Backward pass of batch norm.** ● The batch statistics in
    :eqref:`eq_batchnorm` depend on every element of the minibatch, so the
    backward pass is not elementwise.
@@ -1079,17 +1102,14 @@ The practical points are:
 1. [extended] **Beyond mean and variance.** ●● Batch normalization
    standardizes each channel separately. For each of the following
    alternatives, describe how it would be applied at a layer and what it
-   costs in computation, parameters, and estimation variance, and
-   implement at least one of them.
+   costs in computation, parameters, and estimation variance. Implement
+   at least one of them in place of `BatchNorm` in `BNLeNetScratch` and
+   compare its validation accuracy with that of batch normalization.
     1. The probability integral transform, which maps each channel through
        its empirical cumulative distribution function.
     1. Whitening with a full covariance estimate across the $c$ channels.
     1. Whitening with a structured covariance estimate, for example a
        block-diagonal or a low-rank-plus-diagonal matrix.
-    1. Sparsifying the normalized activations. How does the sparsification
-       affect generalization?
-    1. Projection onto a constraint set, for example a convex cone, or a
-       transform adapted to a symmetry group of the data.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/83)

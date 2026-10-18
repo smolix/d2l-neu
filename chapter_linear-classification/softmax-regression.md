@@ -482,56 +482,77 @@ for which they are needed.
    removed. A colleague hands you a fitted binary logistic model
    $P(y = 1 \mid x) = \sigma(\hat\beta_0 + \hat\beta_1 x)$ with
    $\hat\beta_0 = 2$ and $\hat\beta_1 = -1$.
-    1. Write down two-class softmax coefficients $(w_1, b_1)$ and
+    1. Characterize all two-class softmax coefficients $(w_1, b_1)$ and
        $(w_2, b_2)$ whose predictions coincide with the logistic model for
-       every $x$.
-    1. Characterize all pairs of softmax coefficients that produce these
-       same predictions, and identify the one pair among them with
-       $o_2 \equiv 0$.
+       every $x$, and identify the pair with $o_2 \equiv 0$.
+    1. Show that gradient descent on the cross-entropy loss of the
+       two-class softmax model never changes $w_1 + w_2$ or $b_1 + b_2$.
+       Suppose that gradient descent starts from
+       $w_1 = w_2 = b_1 = b_2 = 0$ on the colleague's training data and
+       converges to coefficients that reproduce the logistic model.
+       Determine which pair it reaches.
 
     *Adapted from James, Witten, Hastie, and Tibshirani,
     [An Introduction to Statistical Learning](https://www.statlearning.com/),
     Exercise 4.12.*
 1. **Coding three classes.** Assume that we have three classes which occur
    with equal probability, i.e., the probability vector is
-   $(1/3, 1/3, 1/3)$. See :numref:`sec_mdl-information_theory` for the
-   information-theoretic background.
-    1. What is the problem if we try to design a binary code for a single
-       observation?
-    1. Design a better code by encoding $n$ independent observations
-       jointly. Find the smallest $n$ for which your code uses fewer than
-       $2$ bits per observation, and show that the per-observation rate
-       approaches $\log_2 3$ bits as $n$ grows.
-1. **Ternary signaling.** When encoding signals transmitted over a physical
-   wire, engineers do not always use binary codes. For instance,
-   [PAM-3](https://en.wikipedia.org/wiki/Ternary_signal) uses three signal
-   levels $\{-1, 0, 1\}$ as opposed to two levels $\{0, 1\}$. How many
-   ternary units do you need to transmit an integer in the range
-   $\{0, \ldots, 7\}$? Why might this be a better idea in terms of
-   electronics?
+   $P = (1/3, 1/3, 1/3)$, whose entropy is $\log_2 3 \approx 1.585$ bits.
+   See :numref:`sec_mdl-information_theory` for the information-theoretic
+   background.
+    1. A fixed-length binary code, in which every codeword has the same
+       number of bits, needs $2$ bits for a single observation. Design a
+       fixed-length binary code for blocks of $n$ independent observations.
+       Find the smallest $n$ for which it uses fewer than $2$ bits per
+       observation, and show that the per-observation rate approaches
+       $\log_2 3$ bits as $n$ grows.
+    1. The variable-length code $\{0, 10, 11\}$ for a single observation
+       is optimal for the distribution $Q = (1/2, 1/4, 1/4)$. Compute its
+       expected length in bits when observations are drawn from $P$, and
+       compare it with the entropy of $P$ and with the cross-entropy
+       $H(P, Q)$ in bits.
+1. **Separable data.** ● Suppose that some parameters
+   $(\mathbf{W}, \mathbf{b})$ classify every training example correctly and
+   without ties: on each example, the logit of the true class strictly
+   exceeds every other logit. Consider the scaled parameters $(c\mathbf{W}, c\mathbf{b})$ for
+   $c > 0$.
+    1. Show that the cross-entropy loss of every training example strictly
+       decreases as $c$ grows and tends to $0$ as $c \to \infty$.
+    1. Conclude that the training loss has no minimizer and that every
+       sequence of parameters whose training loss tends to $0$ has
+       unbounded norm.
+    1. Add the weight decay penalty of :numref:`sec_weight_decay`, applied
+       to both weights and biases,
+       $\frac{\lambda}{2}(\|\mathbf{W}\|^2 + \|\mathbf{b}\|^2)$ with
+       $\lambda > 0$, to the training loss. Show that the penalized loss
+       has a minimizer.
 1. **Bradley--Terry model.** The
    [Bradley--Terry model](https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model)
-   uses a logistic model to capture preferences. For a user to choose
-   between apples and oranges one assumes scores $o_{\textrm{apple}}$ and
-   $o_{\textrm{orange}}$. Our requirements are that larger scores should
-   lead to a higher likelihood in choosing the associated item and that the
-   item with the largest score is the most likely one to be chosen
-   :cite:`Bradley.Terry.1952`.
-    1. Prove that softmax satisfies this requirement.
-    1. What happens if you want to allow for a default option of choosing
-       neither apples nor oranges? Hint: now the user has three choices.
-1. **RealSoftMax.** Softmax gets its name from the following mapping:
-   $\textrm{RealSoftMax}(a, b) = \log (\exp(a) + \exp(b))$.
-    1. Prove that $\textrm{RealSoftMax}(a, b) > \mathrm{max}(a, b)$.
-    1. Prove that $\textrm{RealSoftMax}(a, b) - \max(a, b) \leq \log 2$,
-       with equality exactly when $a = b$, and show that the gap can be
-       made arbitrarily small. Hint: without loss of generality set
-       $b = 0$ and $a \geq 0$.
-    1. Prove that both bounds hold for
-       $\lambda^{-1} \textrm{RealSoftMax}(\lambda a, \lambda b)$ with the
-       gap bounded by $\lambda^{-1} \log 2$, provided that $\lambda > 0$.
-    1. Conclude that
-       $\lambda^{-1} \textrm{RealSoftMax}(\lambda a, \lambda b) \to \mathrm{max}(a, b)$
+   :cite:`Bradley.Terry.1952` uses a logistic model to capture preferences.
+   A user who chooses between apples and oranges picks each item with the
+   probability given by the softmax of two scores, $o_{\textrm{apple}}$ and
+   $o_{\textrm{orange}}$. Now add a default option of choosing neither,
+   with a fixed score $o_{\textrm{none}} = 0$.
+    1. Determine whether adding the same constant to $o_{\textrm{apple}}$
+       and $o_{\textrm{orange}}$ changes the choice probabilities, first
+       without and then with the default option. Conclude which scores the
+       observed choices can determine in each model.
+    1. Compare the ratio $P(\textrm{apple}) / P(\textrm{orange})$ with and
+       without the default option. Describe a choice situation in which
+       real users would not keep this ratio fixed.
+1. **RealSoftMax.** The log-sum-exp function
+   $\textrm{RealSoftMax}(a, b) = \log (\exp(a) + \exp(b))$ is the
+   log-partition function $g$ of :numref:`subsec_softmax_and_derivatives`
+   in two arguments, so its gradient is the softmax of $(a, b)$.
+    1. Prove that
+       $$\max(a, b) < \textrm{RealSoftMax}(a, b) \leq \max(a, b) + \log 2,$$
+       with equality on the right exactly when $a = b$, and show that the
+       gap to $\max(a, b)$ can be made arbitrarily small. Hint: without
+       loss of generality set $b = 0$ and $a \geq 0$.
+    1. Prove that for every $\lambda > 0$
+       $$\max(a, b) < \lambda^{-1} \textrm{RealSoftMax}(\lambda a, \lambda b) \leq \max(a, b) + \lambda^{-1} \log 2,$$
+       and conclude that
+       $\lambda^{-1} \textrm{RealSoftMax}(\lambda a, \lambda b) \to \max(a, b)$
        as $\lambda \to \infty$.
     1. Construct an analogous softmin function.
     1. Extend the definition and both bounds to $q$ numbers, showing that
@@ -540,10 +561,11 @@ for which they are needed.
    $g(\mathbf{x}) \stackrel{\textrm{def}}{=} \log \sum_i \exp x_i$ is
    sometimes also referred to as the
    [log-partition function](https://en.wikipedia.org/wiki/Partition_function_(mathematics)).
+   Evaluated as written, $g$ overflows when some $x_i$ is large, and it
+   returns $\log 0 = -\infty$ when all $x_i$ are strongly negative, because
+   every $\exp x_i$ underflows to $0$.
     1. Show that $g$ is translation equivariant, i.e.,
        $g(\mathbf{x} + b \mathbf{1}) = b + g(\mathbf{x})$.
-    1. What happens numerically if some of the coordinates $x_i$ are very
-       large? What happens if they are all very small?
     1. Show that evaluating $g(\mathbf{x})$ as
        $g(\mathbf{x} - \bar{x}\mathbf{1}) + \bar{x}$ with
        $\bar{x} = \max_i x_i$ neither overflows nor loses the leading term
@@ -555,8 +577,11 @@ for which they are needed.
    $Q$ with $Q(i) \propto P(i)^\alpha$ for $\alpha > 0$.
     1. Which choice of $\alpha$ corresponds to doubling the temperature?
        Which choice corresponds to halving it?
-    1. What happens if we let the temperature approach $0$?
-    1. What happens if we let the temperature approach $\infty$?
+    1. Suppose that exactly $m$ of the $q$ logits attain the largest value.
+       Find the limit of $\mathrm{softmax}(\mathbf{o}/T)$ as $T \to 0$.
+    1. Let $\bar{o} = \frac{1}{q}\sum_j o_j$ be the mean logit. Show that
+       for large $T$
+       $$\mathrm{softmax}(\mathbf{o}/T)_i = \frac{1}{q} + \frac{o_i - \bar{o}}{qT} + O(T^{-2}).$$
     1. Temperature scaling fits a single $T$ by minimizing the
        cross-entropy on a held-out set with the classifier's logits held
        fixed. Show that this cross-entropy is a convex function of

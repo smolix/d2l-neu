@@ -1376,84 +1376,119 @@ caller must compute and review the missing/unexpected key sets.
    compartments of :numref:`fig_bg_checkpoint_contents` it needs.
 1. [code] **Safetensors header.** The header length of the MLP's
    safetensors file is the 8-byte little-endian integer at the start of the
-   file (:numref:`fig_bg_safetensors_layout`). Predict, then measure, how
-   that length changes when the hidden width is doubled and when a third
-   layer is added, and explain which parts of the header depend on tensor
-   sizes at all.
-1. [code] **Dtype round trip.** Save the MLP's parameters cast to `float16`
-   and load them back into a `float32` model (:numref:`sec_numerics`).
-   Which bits are lost, and how large are the maximum absolute and relative
-   differences between the restored and the original weights? Is the
-   round trip acceptable for inference, and how would resuming training
-   from such a checkpoint differ from resuming from the fp32 one?
-1. [code] **Checkpoint averaging.** Train the regressor `build(Config())`
-   for 1000 steps with `step`, saving a checkpoint every 50 steps. Average
-   the weight tensors of the last $k$ checkpoints into a new parameter set
-   and evaluate its loss, for $k = 2, 5, 10, 20$. How does the loss change
-   with $k$? The result previews stochastic weight averaging
-   :cite:`Izmailov.Podoprikhin.Garipov.ea.2018`.
+   file (:numref:`fig_bg_safetensors_layout`).
+    1. Predict, then measure, how that length changes when the hidden width
+       is doubled and when a third layer is added. Explain which parts of
+       the header depend on tensor sizes at all.
+    1. Read the hidden layer's bias from the file using only the header and
+       file seeks, without the safetensors library. Decode the bytes with
+       the dtype and shape that the header records, and check that the
+       result equals the tensor that `load_file` returns.
+    1. Explain why a pickle-based checkpoint cannot offer the same
+       single-tensor read without deserializing the whole object graph.
+1. [code] **Dtype round trip.** ● A `float16` number stores 5 exponent bits
+   and 10 mantissa bits, against 8 and 23 in `float32`
+   (:numref:`sec_numerics`). Cast the parameters of an `MLP` to `float16`,
+   save them, and load them back into a `float32` `MLP`.
+    1. Predict the largest relative error of a restored parameter from the
+       mantissa width. Measure the maximum absolute difference and, over
+       the nonzero parameters, the maximum relative difference between the
+       restored and the original values. Explain any parameter whose
+       relative error exceeds the prediction.
+    1. Compare the outputs of the original and the restored `MLP` on `X`,
+       and decide whether the round trip is acceptable for inference.
+    1. Adam's second moment is a running average of squared gradients.
+       Compute what `float16` stores for the square of a gradient entry of
+       $10^{-4}$, and explain why a resumable checkpoint keeps the
+       optimizer state in `float32`.
+1. [code] **Checkpoint averaging.** ● Train the regressor `build(Config())`
+   for 1000 steps with `step`, saving a checkpoint every 50 steps. For
+   $k = 1, 2, 5, 10, 20$, average the weight tensors of the last $k$
+   checkpoints into a new parameter set.
+    1. Evaluate the training loss of each average. Explain the trend from
+       how the loss of the individual checkpoints evolves over the run.
+    1. Repeat the run with a `step` that computes each gradient on a random
+       minibatch of 32 rows drawn from the first 200 rows of `data` and
+       `target`, and evaluate each average on the remaining 56 rows.
+       Compare this trend with the full-batch one, and explain which
+       property of the minibatch iterates stochastic weight averaging
+       :cite:`Izmailov.Podoprikhin.Garipov.ea.2018` exploits.
 
 :begin_tab:`pytorch`
-5. [code] **Partial loading.** Add one extra layer to the MLP so that the
-   saved checkpoint no longer covers the whole model, then load the
-   checkpoint into it with `load_state_dict(..., strict=False)`. Verify
-   which parameters loaded from the file and which kept their fresh
-   initialization, read the returned report, and state the error
-   `strict=True` would have raised.
+5. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+   a second hidden layer `hidden2` of width 256 before the output layer and
+   renames the attribute `output` to `head`.
+    1. Load `mlp.safetensors` into `MLP2` with
+       `load_state_dict(..., strict=False)`. Read the returned report and
+       explain each missing and each unexpected key.
+    1. Rename the file's keys to the names that `MLP2` uses before loading.
+       Confirm that only `hidden2` keeps its fresh initialization, and make
+       the load raise on any unexpected key and on any missing key outside
+       `hidden2`.
 
-    *Adapted from the PyTorch tutorial
-    [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).*
+    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **Partial loading.** Add one extra layer to the MLP so that the
-   saved checkpoint no longer covers the whole model, then load the
-   checkpoint into it by extending the key-set merge that loads
-   `mlp-jax.safetensors` into `Classifier`. Verify which parameters loaded
-   from the file and which kept their fresh initialization, and report the
-   missing and unexpected key sets.
+5. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+   a second hidden layer `hidden2` of width 256 before the output layer and
+   renames the attribute `output` to `head`.
+    1. Load `mlp-jax.safetensors` into `MLP2` with the key-set merge that
+       loads it into `Classifier`. Report the missing and unexpected key
+       sets, and explain each entry.
+    1. Rename the file's keys to the names that `MLP2` uses before the
+       merge. Confirm that only `hidden2` keeps its fresh initialization,
+       and make the merge raise on any unexpected key and on any missing
+       key outside `hidden2`.
 
-    *Adapted from the PyTorch tutorial
-    [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).*
+    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
 :end_tab:
 
 :begin_tab:`tensorflow`
-5. [code] **Partial loading.** Add one extra layer to the MLP so that the
-   saved checkpoint no longer covers the whole model, then load the
-   checkpoint into it with `load_weights(..., skip_mismatch=True)`. Verify
-   which variables loaded from the file and which kept their fresh
-   initialization, read the recorded warning, and state what the call
-   raises without the flag.
+5. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+   a second hidden layer named `hidden2` of width 256 before the output
+   layer and names the output layer `head` instead of `output`.
+    1. Load `mlp-tf.safetensors` into `MLP2` by assigning each variable
+       whose `path` appears in the file. List the variables that keep their
+       fresh initialization and the file entries that find no variable, and
+       explain each.
+    1. Rename the file's keys to the paths that `MLP2` uses before
+       assigning. Confirm that only `hidden2` keeps its fresh
+       initialization, and make the load raise on any unexpected key and on
+       any missing path outside `hidden2`.
 
-    *Adapted from the PyTorch tutorial
-    [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).*
+    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
 :end_tab:
 
 :begin_tab:`mxnet`
-5. [code] **Partial loading.** Add one extra layer to the MLP so that the
-   saved checkpoint no longer covers the whole model, then load the
-   checkpoint into it with `allow_missing=True` and `ignore_extra=True`.
-   Verify which parameters loaded from the file and which kept their fresh
-   initialization by computing the key-set differences, and state the error
-   the call raises without the flags.
+5. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+   a second hidden layer `hidden2` of width 256 before the output layer and
+   renames the attribute `output` to `head`.
+    1. Load `mlp-mx.safetensors` into `MLP2` with
+       `load_dict(..., allow_missing=True, ignore_extra=True)`. Compute the
+       missing and unexpected key sets, and explain each entry.
+    1. Rename the file's keys to the names that `MLP2` uses before loading.
+       Confirm that only `hidden2` keeps its fresh initialization, and make
+       the load raise on any unexpected key and on any missing key outside
+       `hidden2`.
 
-    *Adapted from the PyTorch tutorial
-    [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).*
+    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
 :end_tab:
 
-6. **Partial reads.** Explain why the safetensors layout of
-   :numref:`fig_bg_safetensors_layout` lets a reader load a single named
-   tensor without reading the rest of the file, and why a pickle-based
-   checkpoint cannot offer the same guarantee without deserializing the
-   whole object graph.
-1. [extended] **Crash-safe manifest.**
-    1. A checkpoint written straight to its final path can be cut short by
-       a crash mid-write. Describe what the next resume sees, and why
-       writing to a temporary path and renaming it into place avoids this
-       failure.
+6. [extended] **Crash-safe manifest.** ●
     1. Build a utility that writes model state, optimizer state, and a JSON
-       metadata file as three files plus a final manifest rename, so that
-       the three are published together or not at all.
-    1. Simulate a crash mid-write, for example by truncating one file, and
-       show that reloading detects and rejects the incomplete checkpoint
-       instead of silently loading stale or corrupt state.
+       metadata file under a fresh step-numbered prefix, then publishes the
+       three by renaming into place one manifest that records each file's
+       name, size, and checksum.
+    1. Simulate two failures: a crash after the three files are written but
+       before the manifest rename, and the truncation of one file of a
+       published checkpoint. Show that reloading resumes from the previous
+       complete checkpoint in the first case and rejects the corrupt
+       checkpoint in the second.
+    1. A rename is atomic, so a reader sees either the old manifest or the
+       new one. POSIX does not require the data of the renamed files to
+       reach the disk before the rename does. `os.fsync` forces the
+       buffered writes of a file, or of a directory's entries, to disk.
+       State where the utility must call `os.fsync` so that a power loss
+       leaves either the previous checkpoint or the new one intact, and
+       explain each call.

@@ -223,104 +223,134 @@ APIs change and applies equally to suggestions from search or coding assistants.
 ## Exercises
 
 :begin_tab:`mxnet`
-1. [code] **Discovering uniform sampling.** Use `dir` on `np.random`
-   to find the routine that samples from a *uniform*
-   distribution. Read its signature with `help` (or `?`), then call it to
-   draw a $3 \times 3$ tensor and confirm the values lie in $[0, 1)$.
-1. [code] **Reducing along an axis.** You want to reduce a tensor along a
-   single axis but cannot remember the keyword. Look up `np.sum`
-   with `help`, identify the argument that selects
-   the axis, and verify on a $2 \times 3$ tensor that summing over each
-   axis gives the shape you predicted.
-1. [code] **Checking a coding assistant's answer.** Run two answers from a
-   coding assistant through the discover → inspect → read → verify loop:
-   check with `dir` or `hasattr` that the suggested function exists, with
-   `help` or `?` that its signature matches the claim, and with a tiny
-   example that it does what you expect.
-    1. Ask how to concatenate two MXNet tensors along a new axis.
-    1. Ask for a function that performs an operation no single library
-       function provides, for example sorting a tensor's axes by size. If
-       the assistant names a function, check whether it exists, and
-       describe in one or two sentences what about the answer would have
-       fooled you had you skipped the discover step.
+1. [code] **Scale versus rate.** The gamma distribution with shape
+   $k = 2$ and rate $\beta = 3$ has mean $k/\beta = 2/3$ and variance
+   $k/\beta^2 = 2/9$. Use `dir` on `np.random` to find its sampler and
+   read the signature with `help` (or `?`) to find out how the sampler is
+   parameterized. Draw 10,000 samples with $k = 2$ and $\beta = 3$ and
+   confirm the mean and variance from the samples.
+1. [code] **Standard-deviation conventions.** For $n$ numbers whose
+   squared deviations from their mean sum to $S$, a library computes the
+   standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
+   :numref:`sec_pandas` standardized columns with the pandas method `std`.
+   Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
+   once with `pd.Series.std` and once with `np.std` on an MXNet array.
+   Use `help` on both functions to find out how each one sets the
+   divisor, state the default divisor of each, and check both results
+   against a hand computation. Then make the two results agree.
+1. [code] **Checking a coding assistant's answer.** Ask a coding
+   assistant the two questions below. Check each function it names in
+   three steps: `dir` or `hasattr` shows that the name exists, `help` or
+   `?` shows that the signature fits the suggested call, and a tiny
+   example shows the claimed behavior.
+    1. Ask how to split an MXNet tensor into three equal parts along an
+       axis.
+    1. Ask for a single MXNet function that reorders the axes of a tensor
+       so that their lengths increase, an operation no library function
+       provides. State which of the three checks, if any, each named
+       function fails. Then build the operation from functions that pass
+       all three checks and test it on a tensor of shape $(4, 2, 3)$.
 :end_tab:
 
 :begin_tab:`pytorch`
-1. [code] **Discovering uniform sampling.** Use `dir` on
-   `torch.distributions` to find the class that samples from a *uniform*
-   distribution. Read its signature with `help` (or `?`), then use it to
-   draw a $3 \times 3$ tensor and confirm the values lie in $[0, 1)$.
-1. [code] **Reducing along an axis.** You want to reduce a tensor along a
-   single axis but cannot remember the keyword. Look up `torch.sum`
-   with `help`, identify the argument that selects
-   the axis, and verify on a $2 \times 3$ tensor that summing over each
-   axis gives the shape you predicted.
-1. [code] **Checking a coding assistant's answer.** Run two answers from a
-   coding assistant through the discover → inspect → read → verify loop:
-   check with `dir` or `hasattr` that the suggested function exists, with
-   `help` or `?` that its signature matches the claim, and with a tiny
-   example that it does what you expect.
-    1. Ask how to concatenate two PyTorch tensors along a new axis.
-    1. Ask for a function that performs an operation no single library
-       function provides, for example sorting a tensor's axes by size. If
-       the assistant names a function, check whether it exists, and
-       describe in one or two sentences what about the answer would have
-       fooled you had you skipped the discover step.
+1. [code] **Scale versus rate.** The gamma distribution with shape
+   $k = 2$ and rate $\beta = 3$ has mean $k/\beta = 2/3$ and variance
+   $k/\beta^2 = 2/9$. Use `dir` on `torch.distributions` to find its class
+   and read the signature with `help` (or `?`) to find out how the class is
+   parameterized. Draw 10,000 samples with $k = 2$ and $\beta = 3$ and
+   confirm the mean and variance from the samples.
+1. [code] **Standard-deviation conventions.** For $n$ numbers whose
+   squared deviations from their mean sum to $S$, a library computes the
+   standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
+   :numref:`sec_pandas` standardized columns with the pandas method `std`.
+   Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
+   with `pd.Series.std`, with `torch.std`, and with `numpy.std`. Use
+   `help` on each function to find out how it sets the divisor, state the
+   default divisor of each, and check the three results against a hand
+   computation. Then make all three results agree.
+1. [code] **Checking a coding assistant's answer.** Ask a coding
+   assistant the two questions below. Check each function it names in
+   three steps: `dir` or `hasattr` shows that the name exists, `help` or
+   `?` shows that the signature fits the suggested call, and a tiny
+   example shows the claimed behavior.
+    1. Ask how to split a PyTorch tensor into three equal parts along an
+       axis.
+    1. Ask for a single PyTorch function that reorders the axes of a
+       tensor so that their lengths increase, an operation no library
+       function provides. State which of the three checks, if any, each
+       named function fails. Then build the operation from functions
+       that pass all three checks and test it on a tensor of shape
+       $(4, 2, 3)$.
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. [code] **Discovering uniform sampling.** Use `dir` on `tf.random`
-   to find the routine that samples from a *uniform*
-   distribution. Read its signature with `help` (or `?`), then call it to
-   draw a $3 \times 3$ tensor and confirm the values lie in $[0, 1)$.
-1. [code] **Reducing along an axis.** You want to reduce a tensor along a
-   single axis but cannot remember the keyword. Look up `tf.reduce_sum`
-   with `help`, identify the argument that selects
-   the axis, and verify on a $2 \times 3$ tensor that summing over each
-   axis gives the shape you predicted.
-1. [code] **Checking a coding assistant's answer.** Run two answers from a
-   coding assistant through the discover → inspect → read → verify loop:
-   check with `dir` or `hasattr` that the suggested function exists, with
-   `help` or `?` that its signature matches the claim, and with a tiny
-   example that it does what you expect.
-    1. Ask how to concatenate two TensorFlow tensors along a new axis.
-    1. Ask for a function that performs an operation no single library
-       function provides, for example sorting a tensor's axes by size. If
-       the assistant names a function, check whether it exists, and
-       describe in one or two sentences what about the answer would have
-       fooled you had you skipped the discover step.
+1. [code] **Scale versus rate.** The gamma distribution with shape
+   $k = 2$ and rate $\beta = 3$ has mean $k/\beta = 2/3$ and variance
+   $k/\beta^2 = 2/9$. Use `dir` on `tf.random` to find its sampler and
+   read the signature with `help` (or `?`) to find out how the sampler is
+   parameterized. Draw 10,000 samples with $k = 2$ and $\beta = 3$ and
+   confirm the mean and variance from the samples.
+1. [code] **Standard-deviation conventions.** For $n$ numbers whose
+   squared deviations from their mean sum to $S$, a library computes the
+   standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
+   :numref:`sec_pandas` standardized columns with the pandas method `std`.
+   Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
+   once with `pd.Series.std` and once with `tf.math.reduce_std`. Use
+   `help` on both functions to find out how each one sets the divisor,
+   state the default divisor of each, and check both results against a
+   hand computation. Then make the two results agree.
+1. [code] **Checking a coding assistant's answer.** Ask a coding
+   assistant the two questions below. Check each function it names in
+   three steps: `dir` or `hasattr` shows that the name exists, `help` or
+   `?` shows that the signature fits the suggested call, and a tiny
+   example shows the claimed behavior.
+    1. Ask how to split a TensorFlow tensor into three equal parts along an
+       axis.
+    1. Ask for a single TensorFlow function that reorders the axes of a
+       tensor so that their lengths increase, an operation no library
+       function provides. State which of the three checks, if any, each
+       named function fails. Then build the operation from functions
+       that pass all three checks and test it on a tensor of shape
+       $(4, 2, 3)$.
 :end_tab:
 
 :begin_tab:`jax`
-1. [code] **Discovering uniform sampling.** Use `dir` on `jax.random`
-   to find the routine that samples from a *uniform* distribution. Read its
-   signature with `help` (or `?`), then call it, remembering that every JAX
-   sampler takes an explicit key, to draw a $3 \times 3$ array and confirm
-   the values lie in $[0, 1)$.
-1. [code] **Reducing along an axis.** You want to reduce an array along a
-   single axis but cannot remember the keyword. Look up `jnp.sum`
-   with `help`, identify the argument that selects
-   the axis, and verify on a $2 \times 3$ array that summing over each
-   axis gives the shape you predicted.
-1. [code] **Checking a coding assistant's answer.** Run two answers from a
-   coding assistant through the discover → inspect → read → verify loop:
-   check with `dir` or `hasattr` that the suggested function exists, with
-   `help` or `?` that its signature matches the claim, and with a tiny
-   example that it does what you expect.
-    1. Ask how to concatenate two JAX arrays along a new axis.
-    1. Ask for a function that performs an operation no single library
-       function provides, for example sorting a tensor's axes by size. If
-       the assistant names a function, check whether it exists, and
-       describe in one or two sentences what about the answer would have
-       fooled you had you skipped the discover step.
+1. [code] **Scale versus rate.** The gamma distribution with shape
+   $k = 2$ and rate $\beta = 3$ has mean $k/\beta = 2/3$ and variance
+   $k/\beta^2 = 2/9$. Use `dir` on `jax.random` to find its sampler and
+   read the signature with `help` (or `?`) to find out how the sampler is
+   parameterized. Draw 10,000 samples with $k = 2$ and $\beta = 3$, using
+   an explicit key, and confirm the mean and variance from the samples.
+1. [code] **Standard-deviation conventions.** For $n$ numbers whose
+   squared deviations from their mean sum to $S$, a library computes the
+   standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
+   :numref:`sec_pandas` standardized columns with the pandas method `std`.
+   Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
+   once with `pd.Series.std` and once with `jax.numpy.std`. Use `help` on
+   both functions to find out how each one sets the divisor, state the
+   default divisor of each, and check both results against a hand
+   computation. Then make the two results agree.
+1. [code] **Checking a coding assistant's answer.** Ask a coding
+   assistant the two questions below. Check each function it names in
+   three steps: `dir` or `hasattr` shows that the name exists, `help` or
+   `?` shows that the signature fits the suggested call, and a tiny
+   example shows the claimed behavior.
+    1. Ask how to split a JAX array into three equal parts along an axis.
+    1. Ask for a single JAX function that reorders the axes of an array
+       so that their lengths increase, an operation no library function
+       provides. State which of the three checks, if any, each named
+       function fails. Then build the operation from functions that pass
+       all three checks and test it on an array of shape $(4, 2, 3)$.
 :end_tab:
 
-4. [code] **Reading the source.** Pick a function you have used in this
-   chapter whose docstring does not fully explain its behavior on an edge
-   case you care about, for example how `d2l.plot` decides whether a single
-   `X` is reused for several curves in `Y`. Use `??` or your editor's
-   go-to-definition to read its source, find the line that decides the
-   edge case, and confirm your reading with a small example.
+4. [code] **Reading the source.** The docstring of `d2l.plot`, defined in
+   :numref:`sec_calculus`, describes the function only as "Plot data
+   points." After importing `d2l` as in that section, predict how many
+   curves `d2l.plot(x, Y)` draws when `x` is a 1-D tensor of length 50 and
+   `Y` is a list of five tensors of the same length. Read the source with
+   `d2l.plot??` or your editor's go-to-definition, find the line that
+   decides the number of curves, and confirm your reading with the call.
+   Then pass an argument that makes all five curves appear.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/38)

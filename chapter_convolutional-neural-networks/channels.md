@@ -404,75 +404,95 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
 
 ## Exercises
 
-1. **Composing convolutions.** Assume that we have two convolution kernels
-   of size $k_1$ and $k_2$, respectively, with no nonlinearity in between.
-    1. Prove that the result of the operation can be expressed by a single
-       convolution.
-    1. What is the dimensionality of the equivalent single convolution?
-    1. Is the converse true, i.e., can you always decompose a convolution
-       into two smaller ones?
-1. **Cost and memory accounting.** Assume an input of shape
-   $c_\textrm{i}\times h\times w$ and a convolution kernel of shape
+1. **Composition of convolutions.** Two convolutional layers with stride
+   1, no padding, and no nonlinearity in between have kernels of shape
+   $c_\textrm{m} \times c_\textrm{i} \times k_1 \times k_1$ and
+   $c_\textrm{o} \times c_\textrm{m} \times k_2 \times k_2$.
+    1. Prove that their composition is a single convolution, and give the
+       shape of its kernel.
+    1. Compare the number of weights of the pair with that of the single
+       convolution. For which intermediate width $c_\textrm{m}$ is the
+       pair cheaper?
+    1. By :eqref:`eq_receptive_field`, three stacked single-channel
+       $3 \times 3$ kernels have a $7 \times 7$ receptive field. Decide
+       whether every single-channel $7 \times 7$ kernel is the composition
+       of three $3 \times 3$ kernels, and justify the answer.
+1. **Cost and memory accounting.** A convolution with kernel shape
    $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$,
-   padding of $(p_\textrm{h}, p_\textrm{w})$, and stride of
-   $(s_\textrm{h}, s_\textrm{w})$.
-    1. What is the computational cost (multiplications and additions) for
-       the forward propagation?
-    1. By what factor does this cost increase if both $c_\textrm{i}$ and
-       $c_\textrm{o}$ are doubled? What happens if the padding is doubled?
-    1. What is the memory footprint?
-    1. What is the memory footprint for the backward computation?
-    1. What is the computational cost for the backpropagation?
+   total padding $(p_\textrm{h}, p_\textrm{w})$, and stride
+   $(s_\textrm{h}, s_\textrm{w})$ is applied to an input of shape
+   $c_\textrm{i}\times h\times w$. Let $h_\textrm{o}\times w_\textrm{o}$
+   be the output shape given by :eqref:`eq_conv_output_shape` with
+   $n_\textrm{h} = h$, $n_\textrm{w} = w$, and dilation 1.
+    1. Count the multiplications and additions of the forward
+       propagation in terms of $h_\textrm{o}$ and $w_\textrm{o}$. How
+       does the count change when the padding is doubled?
+    1. How many values do the input, the kernel, and the output occupy?
+       Which of these tensors must the forward propagation keep for the
+       backward propagation?
+    1. Count the multiplications needed for the gradients with respect
+       to the kernel and with respect to the input, and give the number
+       of values these gradients occupy.
 1. [code] **The $1 \times 1$ equivalence.** The check in
-   :numref:`subsec_1x1` asserts that `Y1` and `Y2` agree to within
-   $10^{-5}$.
-    1. Explain, referencing the two reshapes in `corr2d_multi_in_out_1x1`,
-       why the matrix product computes the same function as
-       `corr2d_multi_in_out` for a $1 \times 1$ kernel.
-    1. Test whether `Y1` and `Y2` are identical elementwise. If they are
-       not, explain where the discrepancy originates.
+   :numref:`subsec_1x1` asserts that the summed absolute difference
+   between `Y1` and `Y2` is below $10^{-5}$. Test whether `Y1` and `Y2`
+   are identical elementwise. If they are not, explain where the
+   discrepancy originates.
 1. [code] **Multi-channel im2col.** Extend the patch matrix of
-   :numref:`subsec_conv_matmul` to the multi-input, multi-output setting.
-   For the two-channel `X` of :numref:`fig_conv_multi_in` and the
-   three-output-channel `K` built in
-   :numref:`subsec_multi-output-channels`, build the patch matrix, whose
-   rows are now flattened
-   $c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}$ patches, and the
-   $k_\textrm{h} k_\textrm{w} c_\textrm{i} \times c_\textrm{o}$ kernel
-   matrix, and confirm that their product reproduces
+   :numref:`subsec_conv_matmul` to several input and output channels.
+   Rebuild the two-channel `X` of :numref:`fig_conv_multi_in` and the
+   three-output-channel `K` of :numref:`subsec_multi-output-channels`,
+   since later cells of this section overwrite both. Build the patch
+   matrix, whose rows are input patches of shape
+   $c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}$ flattened in
+   that order, and arrange `K` into a
+   $c_\textrm{i} k_\textrm{h} k_\textrm{w} \times c_\textrm{o}$ kernel
+   matrix whose rows follow the same order. Confirm that their product,
+   rearranged into the shape of the output, reproduces
    `corr2d_multi_in_out(X, K)`.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 10.6 and 10.7.*
-1. **Strip-buffered convolution.** To implement a fast convolution with a
-   $k \times k$ kernel, one candidate scans horizontally across the
-   source, reading a $k$-wide strip and computing the 1-wide output strip
-   one value at a time; the alternative reads a $(k + m)$-wide strip and
-   computes an $m$-wide output strip. Why is the latter preferable? Is
-   there a limit to how large you should choose $m$?
+1. **Strip-buffered convolution.** A fast implementation of a stride-1
+   $k \times k$ convolution copies a strip of input columns, spanning all
+   $c_\textrm{i}$ channels and the full height, into fast memory. It
+   computes output columns from the strip and then moves the strip right
+   by as many columns as it computed. One scheme loads $k$ columns and
+   computes one output column. The alternative loads $k + m - 1$ columns
+   and computes $m$ output columns. Both schemes load their whole strip
+   anew at every step.
+    1. On average, how many times is each input column loaded under each
+       scheme?
+    1. What limits how large $m$ can be, and how does the load count of
+       the previous sub-item change as $m$ grows?
 1. **Grouped convolutions.** A grouped $k \times k$ convolution with $g$
    groups (:numref:`sec_depthwise_separable`) has
    $c_\textrm{i} c_\textrm{o} k^2 / g$ weights, but no information flows
-   between groups within the layer.
-    1. Follow the grouped convolution by a dense $1 \times 1$ convolution
-       from $c_\textrm{o}$ to $c_\textrm{o}$ channels. Show that every
-       output channel now depends on every input channel, count the
-       weights of the pair, and determine for which $g$ the pair is
-       cheaper than a single dense $k \times k$ convolution with the same
-       $c_\textrm{i}$ and $c_\textrm{o}$.
-    1. Alternatively, keep every layer grouped and insert a fixed
-       permutation of the channels between consecutive grouped layers.
-       Which permutation makes each output of the second layer depend on
-       all $c_\textrm{i}$ input channels, and how many weights does it
-       add?
+   between groups within the layer. Follow the grouped convolution by a
+   dense $1 \times 1$ convolution from $c_\textrm{o}$ to $c_\textrm{o}$
+   channels. Show that every output channel now depends on every input
+   channel, count the weights of the pair, and determine for which $g$ the
+   pair is cheaper than a single dense $k \times k$ convolution with the
+   same $c_\textrm{i}$ and $c_\textrm{o}$.
+1. **Channel permutation between groups.** ● Grouped layers can also be
+   mixed without dense weights. Follow a grouped $k \times k$ convolution
+   from $c_\textrm{i}$ to $c_\textrm{o}$ channels with $g$ groups by a
+   second grouped convolution from $c_\textrm{o}$ to $c_\textrm{o}$
+   channels with $g$ groups, and insert a fixed permutation of the
+   $c_\textrm{o}$ intermediate channels between the two layers. Find the
+   condition on $g$ and $c_\textrm{o}$ under which some permutation makes
+   each output of the second layer depend on all $c_\textrm{i}$ input
+   channels, and construct such a permutation when the condition holds.
 1. **Depthwise-separable block.** Consider a block of two dense
    $3 \times 3$ convolutions, each with $c$ input and $c$ output channels,
    the building block of VGG (:numref:`sec_vgg`). Now replace each of the
-   two convolutions by its depthwise-separable counterpart.
+   two convolutions by its depthwise-separable counterpart. Use no biases
+   and padding that preserves the spatial size.
     1. Compute the number of parameters and the number of multiplications
-       on an $h \times w$ input for both variants, and check the ratio
-       against :eqref:`eq_depthwise_sep_ratio`.
+       on an $h \times w$ input for both variants. Which stage of the
+       separable block, depthwise or pointwise, accounts for most of these
+       counts, and from which $c$ on?
     1. Give the separable block the same parameter budget as the dense
        block and let it use $c'$ channels instead of $c$. Solve for $c'$
        and state its limit relative to $c$ as $c$ grows. What does this

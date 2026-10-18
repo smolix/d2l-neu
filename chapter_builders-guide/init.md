@@ -1112,12 +1112,19 @@ subclass with a few lines of array code in its `_init_weight`.
 ## Exercises
 
 1. [code] **Layer activations across the network.** Instrument the stack
-   that `output_std` builds in :numref:`subsec_variance_across_depth`:
-   record the standard deviation of the activation after every block,
-   either by running the blocks one at a time or with the tools of
-   :numref:`sec_repro`, for the default and scaled treatments at $N=32$,
-   and plot it against depth. Which curve matches the geometric-growth
-   prediction?
+   that `output_std` builds in :numref:`subsec_variance_across_depth` so
+   that it records the standard deviation of the activation after every
+   block, by running the blocks one at a time. Plot the recorded standard
+   deviation against depth on a logarithmic axis for the default and scaled
+   treatments at $N=32$.
+1. **Growth per block.** ● Assume that each block's branch output is
+   uncorrelated with the block's input.
+    1. Use the second-moment argument of :numref:`subsec_he_init` to derive
+       the factor by which one block of the default treatment multiplies
+       the standard deviation of the stream, and compare it with the slope
+       of the default curve from the first exercise.
+    1. Derive the standard deviation at the end of the scaled stack as a
+       function of $N$, and its limit as $N \to \infty$.
 1. **Zero initialization.** Zero-initialize *all* layers of every block
    instead of just the output projection. The forward pass still returns the
    input, but what can the network learn? Work out which parameters receive
@@ -1125,35 +1132,64 @@ subclass with a few lines of array code in its `_init_weight`.
    argument of :numref:`sec_numerical_stability`.
 
 :begin_tab:`pytorch`
-3. [code] **Name-keyed initializer.** Write an initializer that fills each
-   parameter from a dictionary keyed by parameter name, walking
-   `net.named_parameters()`. You have re-invented part of checkpoint
-   loading, which :numref:`sec_read_write` covers.
+4. [code] **Default scale.** PyTorch draws both the weight and the bias of
+   an `nn.Linear` from $U(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$.
+    1. With the biases set to zero, compute the factor by which one such
+       layer followed by a ReLU multiplies the second moment of its input,
+       and compare it with the factor of one that He initialization
+       achieves (:numref:`subsec_he_init`).
+    1. Stack ten `nn.Linear(512, 512)` layers, each followed by a ReLU,
+       keep the default weights, zero the biases, and push unit-variance
+       inputs through. Compare the second moment of the output, the mean
+       of its squared entries, with your prediction.
+    1. Restore the default biases and repeat the measurement. Explain why
+       the second moment stops shrinking after a few layers, and predict
+       the value at which it levels off.
 :end_tab:
 
 :begin_tab:`jax`
-3. [code] **Name-keyed initializer.** Write an initializer that fills each
-   parameter from a dictionary keyed by parameter path, walking
-   `nnx.state(net, nnx.Param).flat_state()` and writing the values back
-   with `nnx.update`. You have re-invented part of checkpoint loading,
-   which :numref:`sec_read_write` covers.
+4. [code] **Default scale.** NNX draws the kernel of an `nnx.Linear` from
+   LeCun normal, a truncated normal rescaled to standard deviation
+   $1/\sqrt{n_\textrm{in}}$, and starts the bias at zero.
+    1. Compute the factor by which one such layer followed by a ReLU
+       multiplies the second moment of its input, and compare it with the
+       factor of one that He initialization achieves
+       (:numref:`subsec_he_init`).
+    1. Stack ten `nnx.Linear(512, 512)` layers, each followed by a ReLU,
+       with their default initialization, and push unit-variance inputs
+       through. Compare the second moment of the output, the mean of its
+       squared entries, with your prediction.
 :end_tab:
 
 :begin_tab:`tensorflow`
-3. [code] **Name-keyed initializer.** Write an initializer that fills each
-   parameter from a dictionary keyed by parameter name, walking
-   `net.weights`. You have re-invented part of checkpoint loading, which
-   :numref:`sec_read_write` covers.
+4. [code] **Default scale.** Keras draws the kernel of a `Dense` layer
+   from Glorot uniform, $U(\pm\sqrt{6/(n_\textrm{in} + n_\textrm{out})})$,
+   and starts the bias at zero.
+    1. For a layer with $n_\textrm{in} = n_\textrm{out}$, compute the
+       factor by which the layer followed by a ReLU multiplies the second
+       moment of its input, and compare it with the factor of one that He
+       initialization achieves (:numref:`subsec_he_init`).
+    1. Stack ten `Dense(512)` layers, each followed by a ReLU, with their
+       default initialization, and push unit-variance inputs of width 512
+       through. Compare the second moment of the output, the mean of its
+       squared entries, with your prediction.
 :end_tab:
 
 :begin_tab:`mxnet`
-3. [code] **Name-keyed initializer.** Write an initializer that fills each
-   parameter from a dictionary keyed by parameter name, walking
-   `net.collect_params()`. You have re-invented part of checkpoint loading,
-   which :numref:`sec_read_write` covers.
+4. [code] **Default scale.** Gluon draws every `Dense` weight from
+   $U(-0.07, 0.07)$, whatever the layer's shape, and starts the bias at
+   zero.
+    1. Compute, as a function of the width $n$, the factor by which an
+       $n \times n$ layer followed by a ReLU multiplies the second moment
+       of its input. At which width does it equal the factor of one that He
+       initialization achieves (:numref:`subsec_he_init`)?
+    1. Stack ten `nn.Dense(n, activation='relu')` layers, keep the default
+       initialization, and push unit-variance inputs through, once for
+       $n = 512$ and once for $n = 4096$. Compare the second moment of the
+       output, the mean of its squared entries, with your predictions.
 :end_tab:
 
-4. **Truncated normal.** For a normal distribution truncated at
+5. **Truncated normal.** For a normal distribution truncated at
    $\pm 2\sigma$: what fraction of draws does the clip discard, and by how
    much does it shrink the standard deviation? Neither quantity has an
    elementary closed form; express both in terms of the standard normal
@@ -1165,24 +1201,34 @@ subclass with a few lines of array code in its `_init_weight`.
 1. [code] **Kaiming initialization.** Implement the Kaiming (He)
    initializers of :numref:`subsec_he_init`, uniform and normal, with an
    explicit `nonlinearity` argument that switches the gain between `'relu'`
-   and `'linear'`, and check them against the library's implementation on a
-   $256 \times 512$ weight by mean, standard deviation, and range. Then
-   apply them to the stack of :numref:`subsec_variance_across_depth` with
-   the `'relu'` gain on each block's first layer and the `'linear'` gain on
-   its output projection, and add the resulting curve to the plot of the
-   first exercise. Does matching the per-layer gain keep the standard
-   deviation flat across depth, and why?
+   and `'linear'`.
+    1. Check both on a $256 \times 512$ weight by mean, standard deviation,
+       and range: the normal initializer against the library's He normal
+       initializer used in :numref:`subsec_variance_across_depth`, and the
+       uniform initializer against its predicted bound and standard
+       deviation. Explain any difference in range.
+    1. Apply your normal initializer to the stack of
+       :numref:`subsec_variance_across_depth`, with the `'relu'` gain on
+       each block's first layer and the `'linear'` gain on its output
+       projection, and add the resulting curve to the plot of the first
+       exercise. Does matching the per-layer gain keep the standard
+       deviation flat across depth, and why?
 
     *Adapted from CMU 10-714, [Homework 2](https://github.com/dlsyscourse/hw2)
     and [Homework 4](https://github.com/dlsyscourse/hw4).*
-1. [code] **Data-driven calibration.** Initialize the stack of
-   :numref:`subsec_variance_across_depth` with any convenient scheme, then
-   calibrate it block by block from the input: run a mini-batch forward to
-   the current block, rescale that block's weights by the reciprocal of its
-   measured output standard deviation, and only then move to the next
-   block. This is a one-pass variant of the layer-sequential unit-variance
-   initialization of :citet:`Mishkin.Matas.2016`.
+1. [code] **Data-driven calibration.** ● Initialize the stack of
+   :numref:`subsec_variance_across_depth` with the default treatment, then
+   calibrate it block by block on one mini-batch of unit-variance inputs.
+   For each block in turn, run the mini-batch forward to that block,
+   measure the standard deviation of its branch output
+   $f_k(\mathbf{x}_k)$, and rescale the block's output projection so that
+   this standard deviation becomes $1/\sqrt{N}$. This adapts the
+   layer-sequential unit-variance initialization of
+   :citet:`Mishkin.Matas.2016` to a residual stack.
     1. Explain why the blocks must be calibrated in order rather than all
        at once from a single forward pass.
-    1. Compare the resulting depth-versus-standard-deviation curve with the
-       analytic scaled scheme of this section.
+    1. Explain why the calibration targets the branch output rather than
+       the block output $\mathbf{x}_k + f_k(\mathbf{x}_k)$.
+    1. Predict the standard deviation at the end of the calibrated stack.
+       Plot the calibrated depth-versus-standard-deviation curve next to
+       that of the scaled treatment, and explain the difference.

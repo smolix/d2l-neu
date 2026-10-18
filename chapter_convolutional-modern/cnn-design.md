@@ -66,7 +66,7 @@ Since the network is designed for ImageNet images of shape $224 \times 224 \time
 
 Most of the design decisions live in the body. Each stage begins with a block that halves the resolution using a stride of $2$ (the rightmost in :numref:`fig_anynet_full`); to match shapes, its residual branch passes through a $1 \times 1$ convolution. This block is followed by a variable number of ResNeXt blocks that leave both resolution and channel count unchanged. Each block may narrow its internal channels by a bottleneck ratio $k_i \geq 1$, affording $c_i/k_i$ channels inside the block for stage $i$ (as the experiments will show, this is not really effective and should be skipped). Since we use ResNeXt blocks, we must also pick the number of groups $g_i$ for grouped convolutions at stage $i$.
 
-This seemingly generic design space still leaves many parameters: block widths $c_0, \ldots c_4$, depths per stage $d_1, \ldots d_4$, bottleneck ratios $k_1, \ldots k_4$, and group widths $g_1, \ldots g_4$, a total of 17 parameters and an unreasonably large number of configurations to explore. We will need tools to reduce this design space effectively. But first, let's implement the generic design.
+This seemingly generic design space still leaves many parameters: block widths $c_0, \ldots c_4$, depths per stage $d_1, \ldots d_4$, bottleneck ratios $k_1, \ldots k_4$, and numbers of groups $g_1, \ldots g_4$, a total of 17 parameters and an unreasonably large number of configurations to explore. We will need tools to reduce this design space effectively. But first, let's implement the generic design.
 
 ```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab mxnet
@@ -264,7 +264,8 @@ estimate of first-order stochastic dominance under the paper's sampling and
 training protocol, not a universal ranking of architectures. Under that
 protocol, tying the bottleneck ratios $k_i=k$ produces a CDF nearly
 indistinguishable from the original space (first panel of
-:numref:`fig_regnet-fig`). Tying group widths $g_i=g$ has similarly little
+:numref:`fig_regnet-fig`). Tying the group widths, the number of channels per
+group, across stages has similarly little
 visible effect in the second panel. Together these constraints remove six
 parameters from the design space.
 
@@ -284,13 +285,16 @@ The resulting $\textrm{AnyNetX}_E$ design space consists of simple networks
 following easy-to-interpret design principles:
 
 * Share the bottleneck ratio $k_i = k$ for all stages $i$;
-* Share the group width $g_i = g$ for all stages $i$;
+* Share the group width, the number of channels per group, across all stages;
 * Increase network width across stages: $c_{i} \leq c_{i+1}$;
 * Increase network depth across stages: $d_{i} \leq d_{i+1}$.
 
+The `RegNetX32` implementation below simplifies the second principle: it
+shares the number of groups across stages rather than the group width.
+
 It remains to pick specific values for the parameters of the $\textrm{AnyNetX}_E$ design space. Studying the best-performing networks from its distribution shows that network width ideally increases linearly with the block index $j$ across the network, i.e., $c_j \approx c_0 + c_a j$ with slope $c_a > 0$; since block width can only change per stage, we arrive at a piecewise constant function engineered to match this dependence. Experiments also show that a bottleneck ratio of $k = 1$ performs best, i.e., we are advised not to use bottlenecks at all.
 
-We refer the interested reader to :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` for the design of specific networks at different amounts of computation. For instance, an effective 32-layer RegNetX variant is given by $k = 1$ (no bottleneck), $g = 16$ (group width 16), with $c_1 = 32$ and $c_2 = 80$ channels for the first and second stage, respectively, chosen to be $d_1=4$ and $d_2=6$ blocks deep. These design principles continue to hold at larger scale, and they carry over to the Squeeze-and-Excitation variant (RegNetY) that adds a global channel activation :cite:`Hu.Shen.Sun.2018`, which we describe below.
+We refer the interested reader to :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` for the design of specific networks at different amounts of computation. For instance, an effective 32-layer RegNetX variant is given by $k = 1$ (no bottleneck), $g = 16$ groups in every grouped convolution (group widths 2 and 5), with $c_1 = 32$ and $c_2 = 80$ channels for the first and second stage, respectively, chosen to be $d_1=4$ and $d_2=6$ blocks deep. These design principles continue to hold at larger scale, and they carry over to the Squeeze-and-Excitation variant (RegNetY) that adds a global channel activation :cite:`Hu.Shen.Sun.2018`, which we describe below.
 
 ```{.python .input #cnn-design-regnet-1}
 %%tab pytorch, mxnet, tensorflow
@@ -482,18 +486,23 @@ blocks.
 1. [code] **ResNet blocks in RegNetX.** Replace `d2l.ResNeXtBlock` in
    `AnyNet.stage` by the `Residual` block of :numref:`sec_resnet`, keeping
    the depths and widths of `RegNetX32`. Compare parameter count,
-   multiply-adds, and validation accuracy with the original. Express the
-   per-block parameter count of both blocks as a function of the width $c$
-   and the group width $g$, and check your formula against the measured
-   difference.
-1. [code] **VioNet.** Implement variants of `RegNetX32` that each violate
-   one design principle of $\textrm{AnyNetX}_E$ (:numref:`subsec_regnet`) at
-   roughly matched parameter count: widths that decrease across stages,
-   depths that decrease across stages, group widths that differ between
-   stages, and bottleneck ratios that differ between stages.
-    1. Report validation accuracy for each violation against `RegNetX32`.
-    1. Which of depth $d_i$, width $c_i$, group width $g_i$, and bottleneck
-       ratio $k_i$ matters most here?
+   multiply-adds, and validation accuracy with the original. For a block
+   that keeps its width $c$, express the parameter count of both block types
+   as a function of $c$ and the number of groups $g$, the `groups` argument
+   of `d2l.ResNeXtBlock`. Check both formulas against the parameters of one
+   such block in each model.
+1. [code] **VioNet.** ● `RegNetX32` passes `groups=16`, the number of
+   groups, to stages of width 32 and 80, so its group widths, the channels
+   per group, are 2 and 5. Build a baseline with the depths and widths of
+   `RegNetX32` and one group width of 16 shared by both stages. Then
+   implement variants of the baseline that each violate one design
+   principle of $\textrm{AnyNetX}_E$ (:numref:`subsec_regnet`) at roughly
+   matched parameter count: widths that decrease across stages, depths
+   that decrease across stages, group widths that differ between stages,
+   and bottleneck ratios that differ between stages.
+    1. Report validation accuracy for each violation against the baseline.
+    1. Which of depth $d_i$, width $c_i$, group width, and bottleneck ratio
+       $k_i$ matters most here?
     1. Compare your ranking with :numref:`fig_regnet-fig`. Which violations
        did the sampled design spaces of
        :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` also find harmless,
@@ -504,19 +513,20 @@ blocks.
    into a rule with three numbers. For $d$ blocks, the target width of block
    $j$ is
    $$u_j = w_0 + w_a\, j, \qquad j = 0, \ldots, d-1,$$
-   and each block is snapped to a geometric grid with ratio $w_m$,
+   the linear rule $c_j \approx c_0 + c_a j$ of :numref:`subsec_regnet` with
+   intercept $w_0$ and slope $w_a$. Each block is snapped to a geometric grid
+   with ratio $w_m$,
    $$s_j = \operatorname{round}\left(\frac{\log(u_j / w_0)}{\log w_m}\right), \qquad w_j = w_0\, w_m^{s_j}.$$
    Blocks with equal $w_j$ form one stage.
     1. For $d = 13$, $w_0 = 24$, $w_a = 36.44$, and $w_m = 2.49$, compute the
        number of stages, the depth of each, and the stage widths rounded to
        the nearest multiple of 8. Compare with the RegNetX-200MF
        configuration in the paper.
-    1. Explain why the widths cannot follow $u_j$ directly, and describe
-       what happens to the number of stages as $w_m \to 1$ and as $w_m$
-       grows large.
-    1. A shared group width $g$ must divide every stage width. Which of your
-       widths violate this for $g = 8$ and for $g = 16$, and how would you
-       adjust them?
+    1. Describe how the number of stages, and how closely $w_j$ tracks
+       $u_j$, change as $w_m \to 1$ and as $w_m$ grows large.
+    1. A shared group width, the number of channels per group, must divide
+       every stage width. Which of your widths violate this for a group
+       width of 16, and how would you adjust them?
 1. [code] **RegNetY.** RegNetY adds the `SE` gate of :numref:`subsec_se` to
    every block. Insert `SE` into `d2l.ResNeXtBlock` after its grouped
    $3 \times 3$ convolution, as :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
@@ -528,25 +538,25 @@ blocks.
        no floating point operations?
     1. Sweep the reduction ratio over $r \in \{1, 4, 16\}$. How sensitive
        are accuracy and parameter count to $r$?
-1. [extended] **Testing the proxies.** The method of
+1. [extended] **Proxy reliability.** ● The method of
    :numref:`subsec_design_space_distributions` assumes that accuracy after a
    few epochs predicts final accuracy and that results at small scale carry
    over to larger networks. Test both with eight configurations sampled from
    a two-stage AnyNet space with $d_i \in \{2, 4, 6\}$,
-   $c_i \in \{16, 32, 64, 128\}$ subject to $c_1 \le c_2$, $g \in \{8, 16\}$,
-   and $k = 1$.
+   $c_i \in \{16, 32, 64, 128\}$ subject to $c_1 \le c_2$, a number of groups
+   $g \in \{4, 8\}$ shared by both stages (the `groups` argument of
+   `d2l.ResNeXtBlock`), and $k = 1$. The *rank correlation* of two rankings
+   is the correlation between the positions the networks occupy in them.
     1. Train each configuration for 10 epochs on Fashion-MNIST at
-       $96 \times 96$, recording validation accuracy after every epoch. Rank
-       the eight networks by accuracy after 1, 2, and 5 epochs and by final
-       accuracy. How well do the early rankings predict the final one?
-       Report the rank correlation, the correlation between the positions in
-       two rankings.
+       $96 \times 96$, recording validation accuracy after every epoch.
+       Compute the rank correlation between the ranking after 1, 2, and 5
+       epochs and the ranking after 10 epochs.
     1. Repeat the eight runs with every width halved and the input resized
-       to $48 \times 48$. Does the ranking at small scale match the ranking
-       at full scale?
-    1. Relate your findings to the multi-fidelity argument of
-       :citet:`forrester2007multi`, and state which of the two assumptions
-       holds up better in your experiment.
+       to $48 \times 48$. Compute the rank correlation between the final
+       rankings at small and at full scale.
+    1. Which of the two assumptions holds up better in your experiment? What
+       would a failure of the weaker one do to conclusions drawn from short,
+       small-scale runs such as those behind :numref:`fig_regnet-fig`?
 1. **Design spaces versus architecture search.** Neural architecture search
    :cite:`zoph2016neural,liu2018darts` selects one network from a search
    space; the method of :numref:`subsec_design_space_distributions`
@@ -560,21 +570,21 @@ blocks.
     1. Name one failure mode of each approach: what can go wrong when a
        single architecture is selected by a proxy score, and what can go
        wrong when a design space is constrained by rules fitted to a sample?
-1. [extended] **A ConvNeXt design space.** ● The AnyNet experiments used the
-   ResNeXt block throughout, and :numref:`fig_regnet-fig` reports their
-   outcome on ImageNet.
-    1. Reproduce the first comparison at small scale: sample 16 two-stage
-       networks from an AnyNet space with per-stage bottleneck ratios
-       $k_i \in \{1, 2, 4\}$ and 16 from the same space with $k_i = 1$
-       throughout. Train each briefly on Fashion-MNIST and plot the two
-       empirical CDFs :eqref:`eq_edf`. Is the difference resolved at this
-       sample size?
-    1. Build the same design space from ConvNeXt blocks
-       (:numref:`sec_convnext`), with the block's expansion ratio in place
-       of $g_i$ and $k_i$, and repeat the sampling for the constraints that
-       widths and depths increase across stages.
-    1. Which of the RegNet design principles survive the change of block,
-       and which have no counterpart in a ConvNeXt block?
+1. [extended] **A ConvNeXt design space.** ● The design spaces of
+   :numref:`fig_regnet-fig` were built from ResNeXt blocks. Build a
+   two-stage AnyNet space from the `ConvNeXtBlock` of :numref:`sec_convnext`
+   instead, with the stem and downsampling layer of `ConvNeXt`. Stage $i$
+   has depth $d_i \in \{1, 2, 4\}$, width $c_i \in \{32, 64, 128\}$, and an
+   expansion ratio in $\{2, 4\}$. `ConvNeXtBlock` fixes the expansion ratio
+   at 4, so add it as an argument.
+    1. Which of the AnyNet parameters $d_i$, $c_i$, $g_i$, and $k_i$ have a
+       counterpart in this space, and which does the block fix?
+    1. Sample 16 networks from the unconstrained space, 16 with one
+       expansion ratio shared by both stages, and 16 with $c_1 \le c_2$ and
+       $d_1 \le d_2$. Train each for two epochs on Fashion-MNIST at
+       $96 \times 96$ and plot the three empirical CDFs :eqref:`eq_edf`.
+       Which differences are resolved at 16 samples per space?
+    1. Which of the RegNet design principles survive the change of block?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/7462)

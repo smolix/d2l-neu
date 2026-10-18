@@ -54,7 +54,7 @@ import jax
 ```{.python .input #utils-utility-functions-and-classes-2}
 @d2l.add_to_class(d2l.HyperParameters)  #@save
 def save_hyperparameters(self, ignore=None):
-    """Save function arguments into class attributes."""
+    """Save function arguments into instance attributes."""
     ignore = [] if ignore is None else ignore
     frame = inspect.currentframe().f_back
     _, _, _, local_vars = inspect.getargvalues(frame)

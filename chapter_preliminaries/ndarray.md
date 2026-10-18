@@ -981,31 +981,53 @@ Tensors provide a variety of functionalities including construction routines; in
 
 ## Exercises
 
-1. **Comparison operator swap.** Run the code in this section
-   with the conditional `X == Y` replaced by `X < Y`, and then by `X > Y`.
-   Report the kind of tensor that each comparison produces.
+1. **Comparison masks.** The comparison `X == Y` in this section uses
+   the tensor `X` obtained by reshaping `arange(12)` to $(3, 4)$ and the
+   $(3, 4)$ tensor `Y` with rows $(2, 1, 4, 3)$, $(1, 2, 3, 4)$, and
+   $(4, 3, 2, 1)$. Form the masks `X < Y`, `X == Y`, and `X > Y` from
+   these two tensors.
+    1. Predict the number of `True` entries in each mask before running
+       the code. Explain why the three counts add up to the number of
+       elements of `X`.
+    1. Let `N = X / X`. Its first entry is the floating-point value NaN
+       (not a number), because `X[0, 0]` is zero. Repeat the three counts
+       with `N` in place of `X` and explain how their sum changes. Then
+       evaluate `N == N` and explain its first entry.
 1. [code] **Broadcasting shapes.** Broadcasting in
    :numref:`subsec_broadcasting` aligns two shapes from the right.
     1. Replace `a` and `b` with two tensors that each have three axes and
        whose shapes differ on every axis. Predict the shape of `a + b`,
        then run the code and check your prediction.
-    1. The addition of a $(3, 2)$ tensor and a $(2, 3)$ tensor fails. Find
-       two reshapes of the $(2, 3)$ operand that make the addition valid,
-       one that produces a $(3, 2)$ result and one that produces a result
-       with three axes. Predict each result shape before running the code.
-1. **Inferred reshape axis.** Create the vector
-   `x = arange(24)` and reshape it into a $(2, 3, 4)$ tensor, writing `-1`
-   for one of the components. State which component is inferred
-   and why at most one `-1` is allowed. Check your answer in code.
+    1. A model returns predictions `y_hat` of shape $(5, 1)$ for five
+       examples whose labels `y` form a vector of shape $(5,)$. Predict the
+       shape of `y_hat - y`. Then let `y` hold the labels $0, 1, 2, 3, 4$
+       as floating-point numbers and set `y_hat` to `y` reshaped to
+       $(5, 1)$, so that every prediction equals its label. Compute the
+       mean of the squared entries of `y_hat - y`, explain the value, and
+       give the reshape of `y` that pairs each prediction with its own
+       label.
+1. **Inferred reshape axis.** A batch of $n$ grayscale images of
+   $28 \times 28$ pixels arrives as a tensor of shape $(n, 1, 28, 28)$.
+   Each image must be flattened into a row of 784 values. Check every
+   prediction below in code.
+    1. Predict the result of reshaping the batch to $(-1, 784)$ and to
+       $(256, -1)$, once for a full batch of $n = 256$ images and once for
+       a final batch of $n = 100$ images. State which of the two targets
+       works for every batch size.
+    1. Suppose the images were loaded with three color channels by
+       mistake, so that the batch has shape $(n, 3, 28, 28)$. Predict the
+       result of the reshape to $(-1, 784)$, and state whether this step
+       detects the mistake.
 :begin_tab:`pytorch`
 4. [code] **Object identity versus storage.** The cells in
-   :numref:`subsec_saving_memory` compare `id(X)` before and after
-   `X += Y` and `X = X + Y`. Explain why an unchanged `id()` does not by
-   itself show that the underlying storage was reused, and why a changed
-   `id()` does not show that it was not. Then compare `X.data_ptr()`
-   before and after each of `X += Y`, `X = X + Y`, and
-   `X = X.reshape(-1)`, and state what the pair of observations (`id`,
-   `data_ptr`) shows in each case.
+   :numref:`subsec_saving_memory` compare `id(Y)` before and after
+   `Y = Y + X`, and `id(X)` before and after `X += Y`. The method
+   `X.data_ptr()` returns the memory address of the first element of `X`.
+    1. Record whether `id(X)` changes and whether `X.data_ptr()` changes
+       under each of `X += Y`, `X = X + Y`, and `X = X.reshape(-1)`.
+    1. Use these observations to explain why a changed `id()` does not
+       show that new storage was allocated. Then explain why an unchanged
+       `id()` does not by itself show that the old storage was reused.
 5. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
    same-shaped tensors without allocating any intermediate tensor, using
    only in-place methods such as `add_`, `div_`, `neg_`, and `mul_`, or
@@ -1014,80 +1036,101 @@ Tensors provide a variety of functionalities including construction routines; in
    equals the direct expression. Explain why `Z[:] = A + B` would not have
    met the requirement.
 
-    *Adapted from problem 35 of
-    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
+    *Adapted from Nicolas P. Rougier,
+    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md),
+    problem 35.*
 :end_tab:
 
 :begin_tab:`mxnet`
 4. [code] **Object identity versus storage.** The cells in
-   :numref:`subsec_saving_memory` compare `id(X)` before and after
-   `X += Y` and `X = X + Y`. Explain why an unchanged `id()` does not by
-   itself show that the underlying storage was reused, and why a changed
-   `id()` does not show that it was not. Then test storage sharing
-   directly: let `V = X.reshape(-1)`, write `X[0, 0] = 99`, and inspect
-   `V[0]`. State what the `id()` test and the write test show for each of
-   `X += Y`, `X = X + Y`, and `V = X.reshape(-1)`.
+   :numref:`subsec_saving_memory` compare `id(Y)` before and after
+   `Y = Y + X`, and `id(X)` before and after `X += Y`.
+    1. Let `V = X.reshape(-1)` and compare `id(V)` with `id(X)`. Then
+       write `X[0, 0] = 99` and inspect `V[0]`. State what each of the two
+       tests shows about whether `V` and `X` share storage.
+    1. Explain why a changed `id()` does not by itself show that new
+       storage was allocated, and why an unchanged `id()`, as after
+       `X += Y`, does not by itself show that the old storage was reused.
 5. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
    same-shaped tensors without allocating any intermediate tensor, using
    only the in-place operators `+=`, `*=`, and `/=`. Confirm that the
    result equals the direct expression and explain why `Z[:] = A + B`
    would not have met the requirement.
 
-    *Adapted from problem 35 of
-    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
+    *Adapted from Nicolas P. Rougier,
+    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md),
+    problem 35.*
 :end_tab:
 
 :begin_tab:`tensorflow`
 4. **Object identity versus storage.** The cell in
    :numref:`subsec_saving_memory` shows that `Z.assign(X + Y)` leaves
-   `id(Z)` unchanged, whereas `Z = X + Y` binds `Z` to a new tensor.
-   Explain why the unchanged `id()` shows only that the same `Variable`
-   object persists, not that its buffer was reused rather than replaced,
-   and why the temporary tensor `X + Y` is allocated in either case.
-5. [code] **In-place composition.** Ordinary tensors are immutable, so
+   `id(Z)` unchanged, whereas the earlier `Y = Y + X` changes `id(Y)`.
+   State what the unchanged `id(Z)` establishes about `Z`, and what it
+   leaves undetermined about the memory that holds the values of `Z`.
+5. [code] **In-place composition.** ● Ordinary tensors are immutable, so
    every arithmetic operation on them allocates a new tensor. Hold `A` and
    `B` in `tf.Variable`s and compute `(A + B) * (-A / 2)` so that the
    result ends up in one of the two variables, using `assign`,
-   `assign_add`, and related methods. Identify which of your steps still
-   allocate a temporary tensor and explain why eager execution cannot
-   avoid them. Then explain what TensorFlow gains from immutable tensors
-   and how `tf.function` recovers allocation reuse.
+   `assign_add`, and related methods.
+    1. List the steps of your solution, mark each step that still
+       allocates a temporary tensor, and explain why eager execution
+       cannot avoid these temporaries.
+    1. Explain how wrapping the computation in `tf.function` lets
+       TensorFlow reuse the memory of these temporaries.
 
-    *Adapted from problem 35 of
-    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
+    *Adapted from Nicolas P. Rougier,
+    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md),
+    problem 35.*
 :end_tab:
 
 :begin_tab:`jax`
 4. **Object identity versus storage.** The cell in
    :numref:`subsec_saving_memory` shows that `X.at[:].set(X + Y)` returns
-   an object with a new `id()`. Explain why, for immutable arrays, `id()`
-   carries no information about storage at all, and what `jax.jit` can do
-   with the intermediate `X + Y` in this expression that eager evaluation
-   cannot.
-5. [code] **In-place composition.** JAX arrays are immutable, so
+   an object with a new `id()`. Explain why the new `id()` does not show
+   whether the result occupies fresh memory. Then explain why, for
+   immutable arrays, whether two arrays share a buffer cannot change any
+   value the program computes.
+5. [code] **In-place composition.** ● JAX arrays are immutable, so
    `.at[...].set(...)` returns a new array and cannot save memory on its
    own. Write `(A + B) * (-A / 2)` as a function `f(A, B)`, count the
    intermediate arrays that eager evaluation creates, and inspect the
    optimized program of `jax.jit(f)` with
    `jax.jit(f).lower(A, B).compile().as_text()`. Report how many fused
-   computations remain and explain how XLA recovers the buffer reuse that
-   in-place writes would otherwise provide.
+   computations remain. An in-place implementation, as in NumPy, writes
+   the result into the buffer of `A` and allocates no new array. State
+   which of the eager allocations the compiled program removes, and
+   whether it still allocates an array that the in-place implementation
+   avoids.
 
-    *Adapted from problem 35 of
-    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md).*
+    *Adapted from Nicolas P. Rougier,
+    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md),
+    problem 35.*
 :end_tab:
 
-6. [extended] **Loops, broadcasting, and library primitives.** Compute all
+6. [extended] **Loops, broadcasting, and library primitives.** ● Compute all
    pairwise squared Euclidean distances between two sets of 50 vectors in 8
    dimensions in three ways: two nested Python loops, one loop plus
    broadcasting, and a fully vectorized version with no explicit loop.
-   Confirm that the three results agree to floating-point tolerance. Time
-   all three and report the speedup ratios.
+   Both vectorized versions need a sum along a single axis. Passing
+   `axis=k` to the sum reduces only axis $k$ and drops it from the result
+   shape, as :numref:`subsec_lin-alg-reduction` shows. Confirm that the
+   three results agree to floating-point tolerance. Time all three and
+   report the speedup ratios.
 
-    *Adapted from
-    [CS231n assignment 1](https://cs231n.github.io/assignments2026/assignment1/)
-    and from lesson 8 of
-    [fast.ai's Deep Learning from the Foundations](https://github.com/fastai/course-v3/blob/master/files/dl-2019/notes/notes-2-8.md).*
+    *Adapted from Stanford CS231n,
+    [Assignment 1](https://cs231n.github.io/assignments2026/assignment1/),
+    k-nearest-neighbor distances, and fast.ai,
+    [Deep Learning from the Foundations](https://github.com/fastai/course-v3/blob/master/files/dl-2019/notes/notes-2-8.md),
+    Lesson 8.*
+1. **Shifted slices.** A tensor `T` of shape $(4, 11)$ holds four token
+   sequences, one per row. A model reads the first 10 tokens of each row
+   and predicts, at every position, the token that follows. Write slice
+   expressions for the input tensor and the target tensor, each of shape
+   $(4, 10)$, so that the target at position $t$ is the token that
+   follows the input at position $t$. Then give expressions for both
+   tensors that stay correct without change when each row holds $L + 1$
+   tokens and the model reads the first $L$, for every $L \geq 1$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/26)

@@ -485,8 +485,8 @@ above 90% at the cost of a worse source fit, as
 so clipping at $c=5$ reduces the influence of a few source points and happens to
 improve this run slightly. Repeated seeds or confidence intervals are needed
 before treating that last comparison as systematic.
-Exercise 3 lets you probe when this pipeline fails, most instructively
-when the supports stop overlapping.
+Exercises 3 and 4 probe when this pipeline fails as the target moves away
+from the source, although the supports of the two Gaussians always overlap.
 
 
 
@@ -673,20 +673,23 @@ on another, so evaluation should represent the deployment shifts of interest.
 
 ## Exercises
 
-1. **Feedback loops.** If you change the behavior of a search engine, how
-   might users respond? How might advertisers respond? Explain why this is
-   an instance of the feedback loop described for the loan/footwear example
-   at the start of the section.
+1. **Feedback loops.** A search engine changes how it ranks results. It
+   then retrains its ranker on the clicks logged under the new ranking,
+   with a query-document pair as the input $\mathbf{x}$ and a click as the
+   label $y$.
+    1. Describe one way users and one way advertisers might respond to
+       the new ranking.
+    1. For each response, state whether it changes $p(\mathbf{x})$,
+       $p(y \mid \mathbf{x})$, or both in the next training set. Then
+       decide whether the response is an instance of Goodhart's law.
 1. **Covariate-shift identity.** The covariate-shift assumption is
    $p(y \mid \mathbf{x}) = q(y \mid \mathbf{x})$.
     1. Starting from the risk under the target distribution
        $p(\mathbf{x}, y)$, derive :eqref:`eq_covariate-shift-identity`,
        whose sample version is the weighted objective
-       :eqref:`eq_weighted-empirical-risk-min`, and mark the step that
-       uses the assumption.
-    1. State the condition on the supports of $p(\mathbf{x})$ and
-       $q(\mathbf{x})$ under which the weights
-       $\beta_i = p(\mathbf{x}_i)/q(\mathbf{x}_i)$ are finite.
+       :eqref:`eq_weighted-empirical-risk-min`. Mark the step that uses
+       the assumption and the step that requires $q(\mathbf{x}) > 0$
+       wherever $p(\mathbf{x}) > 0$.
     1. Suppose $p(\mathbf{x}) > 0$ on a region where $q(\mathbf{x}) = 0$.
        Which part of the target risk does the reweighted source risk omit,
        and why can no choice of weights on source examples recover it?
@@ -696,17 +699,29 @@ on another, so evaluation should represent the deployment shifts of interest.
    mean over $(s, 0)$ for $s \in \{0, 0.5, 1, 2, 3, 4, 6\}$, keeping
    $n = 1000$ and the labeling rule fixed.
     1. For each $s$, report the accuracy of the domain classifier $h$ on
-       held-out pooled data. At which $s$ does it stop beating chance, and
-       at which does it approach $1$? Interpret both ends in terms of how
-       detectable the shift is.
-    1. For each $s$, record the mean and maximum of
-       $\beta_i = \exp(h(\mathbf{x}_i))$ over the source data and the
-       target accuracy of the unweighted, weighted, and clipped ($c = 5$)
-       models. Where does reweighting stop helping, and how do the weight
-       statistics signal this?
-    1. Relate the failure at large $s$ to the support condition of
-       problem 2. Which few source examples carry the weighted objective
-       there, and does clipping repair the problem?
+       held-out pooled data, and interpret its growth with $s$ in terms of
+       how detectable the shift is.
+    1. For each $s$, record the target accuracy of the unweighted,
+       weighted, and clipped ($c = 5$) models, and of the constant
+       predictor that outputs the majority class of `y_tgt`. Explain why
+       target accuracy alone cannot show whether reweighting worked at
+       large $s$.
+1. [code] **Learned versus true weights.** ● Reuse the sweep of exercise 3
+   over target means $(s, 0)$.
+    1. Derive the true log-ratio $\log(p(\mathbf{x})/q(\mathbf{x}))$ as a
+       function of $s$, and compare it with the learned $h$ at each $s$.
+       Explain how the domain classifier can reach high accuracy at large
+       $s$ while $h$ is far from the true log-ratio.
+    1. Both input distributions are Gaussian, so $q(\mathbf{x}) > 0$
+       wherever $p(\mathbf{x}) > 0$ for every $s$. For each $s$, compute
+       the effective sample size $(\sum_i \beta_i)^2 / \sum_i \beta_i^2$
+       of the source data under the learned weights
+       $\beta_i = \exp(h(\mathbf{x}_i))$ and under the true weights
+       $p(\mathbf{x}_i)/q(\mathbf{x}_i)$. Explain why the true weights
+       leave only a few effective source examples at large $s$ although no
+       weight is infinite. Relate the difference between the two effective
+       sample sizes to the gap between $h$ and the true log-ratio, and say
+       whether clipping at $c = 5$ repairs the shortage.
 1. **Label-shift linear system.** A $k$-class classifier has the
    column-normalized validation confusion matrix $\mathbf{C}$ with entries
    $c_{ij} = q(\hat{y} = i \mid y = j)$, and its predictions on unlabeled
@@ -721,14 +736,35 @@ on another, so evaluation should represent the deployment shifts of interest.
        finite samples. Explain how errors in $\mu(\hat{\mathbf{y}})$
        propagate to $\mathbf{C}^{-1}\mu(\hat{\mathbf{y}})$ when
        $\mathbf{C}$ is nearly singular.
-1. **Beyond distribution shift.** Besides distribution shift, what else
-   could make the empirical risk a poor approximation of the risk?
+1. **Shift assumptions from unlabeled data.** ● In a binary source domain,
+   $q(y = 1) = q(y = 0) = 1/2$, and the scalar input satisfies
+   $x \mid y = 1 \sim \mathcal{N}(1, 1)$ and
+   $x \mid y = 0 \sim \mathcal{N}(-1, 1)$. Hence
+   $q(y = 1 \mid x) = 1/(1 + \exp(-2x))$. Unlabeled target inputs follow
+   the mixture
+
+   $$p(x) = 0.8\, \mathcal{N}(x; 1, 1) + 0.2\, \mathcal{N}(x; -1, 1).$$
+
+    1. Assume label shift. Give $p(y = 1)$ and the threshold on $x$ of
+       the Bayes-optimal target classifier.
+    1. Assume instead covariate shift with the same $p(x)$. Compute
+       $p(y = 1)$ numerically and give the Bayes-optimal threshold.
+    1. Use your results to explain why no statistic of the unlabeled
+       target sample can decide which of the two corrections of this
+       section applies.
 1. **Features missing at serving time.** A model forecasts a store's daily
-   revenue at the start of each day. It uses "number of customers so far
-   today" as a feature and performs well in offline evaluation on
-   historical records. Identify why this feature is unavailable when the
-   forecast is made, name the general failure mode, and propose a rule for
-   selecting training features that avoids it.
+   revenue at the start of each day. Its training records hold each past
+   day's final customer count as a feature, and the model performs well in
+   offline evaluation on held-out records. At serving time the pipeline
+   fills this feature with the number of customers counted so far that day.
+    1. Compare the distribution of this feature, and its relation to
+       revenue, in the training records and at serving time. State which
+       of the section's shift assumptions, if any, holds between the two.
+    1. Explain why the offline evaluation could not reveal this mismatch,
+       and why the reweighting of
+       :numref:`subsec_covariate-shift-correction` cannot repair it.
+    1. Propose a rule for selecting training features that avoids this
+       failure.
 
     *Adapted from Google's Machine Learning Crash Course,
     ["Monitoring pipelines"](https://developers.google.com/machine-learning/crash-course/production-ml-systems/monitoring).*

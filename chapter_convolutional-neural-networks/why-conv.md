@@ -326,39 +326,58 @@ dimensions and channels efficiently.
     1. Stack several such layers with nonlinearities in between. Which
        model does each spatial location now pass through, and how many
        parameters does the stack have as a function of the channel
-       widths? This is the Network in Network architecture
-       :cite:`Lin.Chen.Yan.2013`.
+       widths? The Network in Network architecture
+       :cite:`Lin.Chen.Yan.2013` places such a stack after each
+       convolution with $\Delta \geq 1$.
 1. **Commutativity of convolution.**
     1. Prove that the convolution of :eqref:`eq_2d-conv-discrete` is
        commutative, i.e., $f * g = g * f$.
     1. Define the cross-correlation
        $(f \star g)(i, j) = \sum_a \sum_b f(a, b)\, g(i+a, j+b)$, the
-       operation of :eqref:`eq_conv-layer`. Is it commutative? If not,
-       express $g \star f$ in terms of $f \star g$.
+       operation of :eqref:`eq_conv-layer`. Express $(g \star f)(i, j)$
+       through values of $f \star g$, and decide from this expression
+       whether cross-correlation is commutative.
 1. **Convolutions for audio.** Audio data is often represented as a
    one-dimensional sequence of samples.
-    1. State one property of audio for which locality and translation
-       equivariance are good assumptions, and one for which they are not.
     1. Derive the one-dimensional analog of :eqref:`eq_conv-layer`.
+    1. Name one audio task for which a layer that is local and
+       translation equivariant in time is a good fit, and one for which
+       it is not. Justify each choice.
     1. A spectrogram represents a recording as a two-dimensional array
-       whose axes are time and frequency. For each axis, state whether
-       translation equivariance is a reasonable assumption, and justify
-       your answer from what a shift along that axis does to the sound.
-1. **Convolutions on text.** A convolutional layer assumes that shifting
-   the input shifts the output identically. Represent a sentence as a
-   sequence of vectors, one per word. Name two structural properties of
-   natural-language text that make this assumption a worse fit for text
-   than for images, and state for each what a one-dimensional convolution
-   over the word vectors would fail to capture.
-1. **Equivariance versus invariance.** Give an example of a vision task
-   whose correct label changes when the object is translated.
-    1. Using the definitions in :eqref:`eq_equivariance_invariance`, state
-       which of the two properties, translation equivariance of the
-       features or translation invariance of the prediction, is
-       incompatible with this task.
-    1. Can a network built from the convolutional layers of
-       :eqref:`eq_conv-layer` still solve the task? If so, which part of
-       the network must carry the position information?
+       whose axes are time and frequency, with frequency on a linear
+       scale in hertz. For each axis, state whether translation
+       equivariance is a reasonable assumption, and justify your answer
+       from what a shift along that axis does to the sound. Then answer
+       the same question for a frequency axis on a logarithmic scale.
+1. **Convolutions on text.** Represent a sentence as a sequence of word
+   vectors, so that each word occupies one position and the entries of
+   its vector act as channels. Apply one-dimensional convolutional
+   layers, the analog of :eqref:`eq_conv-layer-channels`, with
+   nonlinearities in between.
+    1. Take $\Delta = 1$. In the sentence "The movie that my friends
+       recommended last week was not good," the verb "was" agrees with
+       "movie." How many stacked layers are needed before a single output
+       depends on both words? How does this number grow with the distance
+       between two words?
+    1. Apply a single layer followed by a ReLU and sum its output over
+       all positions to obtain a sentence representation. State whether
+       "the dog bit the man" and "the man bit the dog" receive the same
+       representation for $\Delta = 0$ and for $\Delta = 1$. Which
+       word-order information does this representation keep, and which
+       does it discard?
+1. **Equivariance versus invariance.** A convolutional classifier computes
+   feature maps $h(\mathsf{X})$ with stacked layers of
+   :eqref:`eq_conv-layer-channels` and nonlinearities in between, and then
+   a prediction $g(h(\mathsf{X}))$ with a head $g$.
+    1. Assume a periodically extended grid, so that $h$ is translation
+       equivariant, and let $g$ average each channel of $h(\mathsf{X})$
+       over all locations. Using :eqref:`eq_equivariance_invariance`,
+       show that the prediction is translation invariant.
+    1. An image shows a single digit in one of the nine cells of a
+       $3 \times 3$ grid, and the task is to name the cell. Explain why
+       the classifier of the first part cannot solve this task. Describe
+       a head $g$ that solves it from the same feature maps
+       $h(\mathsf{X})$.
 1. **Boundary effects.** A $\Delta = 1$ kernel, i.e., a $3 \times 3$
    kernel, is applied to an $n \times n$ image with no padding, so the
    output has $(n-2)^2$ positions.
@@ -366,38 +385,28 @@ dimensions and channels efficiently.
        pixel, i.e., a pixel with $i \in \{1, n\}$ or $j \in \{1, n\}$.
        Evaluate the fraction of all output positions for $n = 28$ and
        $n = 5$, and state its limit as $n \to \infty$.
-    1. Count the output positions to which a corner pixel, a non-corner
-       boundary pixel, and an interior pixel of the input each contribute.
-    1. Which of the two counts motivates the padding introduced in
-       :numref:`sec_padding`, and why does the argument strengthen when
-       several convolutional layers are stacked?
-1. [code] **Constraining the MLP.** Using only basic tensor indexing,
-   without any convolution primitive, implement a locally connected
-   layer: a linear map from an $n \times n$ input to an
-   $(n - 2\Delta) \times (n - 2\Delta)$ output in which output $(i, j)$
-   depends only on the $\Delta$-neighborhood of input $(i, j)$ and has its
-   own weights. This is the fourth-order tensor $\mathsf{V}$ of
-   :eqref:`eq_mlp_fourth_order` restricted to $|a|, |b| \leq \Delta$,
-   before translation equivariance ties the weights. Then tie the weights
-   across locations and verify numerically, on a small input with a
-   hand-chosen kernel, that the output equals the cross-correlation
-   `corr2d` of :numref:`sec_conv_layer`.
+    1. Count the output positions to which each of three input pixels
+       contributes: the corner pixel $(1, 1)$, a boundary pixel $(1, j)$
+       with $3 \leq j \leq n-2$, and an interior pixel $(i, j)$ with
+       $3 \leq i, j \leq n-2$.
+    1. Stack $L$ such layers on an image with odd $n \geq 4L + 1$. To how
+       many outputs of the last layer does a corner pixel of the input
+       contribute, and to how many does the center pixel contribute?
+1. **Weight sharing from equivariance.** ● Take the layer of
+   :eqref:`eq_mlp_fourth_order` on an $n \times n$ grid with periodic
+   extension, so that all indices are taken modulo $n$, and let $T_v$ be
+   the translation of :eqref:`eq_equivariance_invariance`.
+    1. Show that the layer is translation equivariant if
+       $[\mathsf{V}]_{i, j, a, b} = [\mathbf{V}]_{a, b}$ and
+       $[\mathbf{U}]_{i, j} = u$ for all $(i, j)$.
+    1. Conversely, assume that the layer is translation equivariant for
+       every offset $v$ and every input $\mathbf{X}$. Show that
+       $\mathbf{U}$ is constant and that $[\mathsf{V}]_{i, j, a, b}$
+       does not depend on $(i, j)$.
 
-    *Adapted from CMU 11-785,
-    [Homework 2 Part 1](https://deeplearning.cs.cmu.edu/S21/index.html).*
-1. **Equivariance versus augmentation.** A stride-1 convolution on an
-   infinite grid is exactly translation equivariant.
-    1. Which components of a convolutional classifier such as LeNet
-       (:numref:`sec_lenet`) break exact equivariance of the feature
-       maps, and which prevent the final prediction from being
-       translation invariant?
-    1. Explain why training such a classifier on translated copies of
-       its training images can improve test accuracy even though its
-       convolutional layers share weights across all locations.
-
-    *Adapted from Michael Nielsen,
-    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
-    Chapter 6.*
+    *Adapted from Simon J. D. Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 10.1.*
 
 [Discussions](https://d2l.discourse.group/t/64)
 

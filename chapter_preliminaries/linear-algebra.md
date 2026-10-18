@@ -1393,7 +1393,7 @@ To recap:
 ## Exercises
 
 1. **Transpose and symmetry.** Prove the following three
-   statements, each building on the previous one.
+   statements. The third follows from the first two.
     1. The transpose of the transpose of a matrix is the matrix itself:
        $(\mathbf{A}^\top)^\top = \mathbf{A}$.
     1. Sum and transposition commute:
@@ -1406,23 +1406,55 @@ To recap:
     1. `len(X)`, and which axis `len` reports for a tensor of any shape.
     1. The shape of the sum of `X` along `axis=1`, along `axis=1` with
        `keepdims=True`, and along both `axis=0` and `axis=2`.
-1. [code] **A pairwise-obtuse triple.** Determine whether three
-   vectors $\mathbf{u}$, $\mathbf{v}$, $\mathbf{w}$ in the plane can
-   satisfy $\mathbf{u}\cdot\mathbf{v} < 0$,
-   $\mathbf{v}\cdot\mathbf{w} < 0$, and $\mathbf{u}\cdot\mathbf{w} < 0$
-   simultaneously. Give a concrete numeric example or a short argument
-   that none exists, then confirm your answer numerically.
+    1. The outcome of dividing the matrix `A` from
+       :numref:`subsec_lin-alg-non-reduction` by its row sums computed
+       without `keepdims=True`, and the outcome of the same operation on
+       the symmetric matrix `S` from this section. State whether the rows
+       of the second result sum to $1$, and why.
+1. **A pairwise-obtuse triple.** The following questions ask how
+   negative the pairwise dot products of several vectors can be.
+    1. Determine whether three vectors $\mathbf{u}$, $\mathbf{v}$,
+       $\mathbf{w}$ in the plane can satisfy
+       $\mathbf{u}\cdot\mathbf{v} < 0$, $\mathbf{v}\cdot\mathbf{w} < 0$,
+       and $\mathbf{u}\cdot\mathbf{w} < 0$ simultaneously. Give a
+       concrete numeric example or a short argument that none exists.
+    1. Suppose $k \geq 2$ unit vectors
+       $\mathbf{u}_1, \ldots, \mathbf{u}_k$ have the same dot product $c$
+       for every pair. Expand
+       $\|\mathbf{u}_1 + \cdots + \mathbf{u}_k\|_2^2$ to show that
+       $c \geq -1/(k-1)$.
 
     *Adapted from MIT 18.06,
     [problem set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf),
     Section 1.2, Problem 28.*
-1. **Manhattan distance.** When traveling between two points
-   in downtown Manhattan, express the distance you need to cover in terms
-   of the avenue and street coordinates of the two points. State whether
-   you can travel diagonally, and which norm your answer corresponds to.
-1. [code] **Norms of higher-order tensors.** Feed a tensor with three
-   or more axes to the `linalg.norm` function and observe its output. State
-   in words what this function computes for tensors of arbitrary shape.
+1. **Manhattan distance.** In midtown Manhattan, avenues and streets
+   form a rectangular grid, and a pedestrian can walk only along them.
+   Adjacent avenues lie about 250 m apart and adjacent streets about
+   80 m apart.
+    1. Two intersections differ by $\Delta a$ avenues and $\Delta s$
+       streets. Write the length of the shortest walk between them and
+       the straight-line distance between them as two norms of one
+       displacement vector measured in meters.
+    1. Prove that, for every $\mathbf{x} \in \mathbb{R}^n$,
+
+       $$\|\mathbf{x}\|_2 \leq \|\mathbf{x}\|_1 \leq \sqrt{n}\, \|\mathbf{x}\|_2,$$
+
+       and identify the vectors for which each bound holds with equality.
+    1. Find the largest factor by which the shortest walk can exceed the
+       straight-line distance, and the ratio $\Delta s / \Delta a$ at
+       which this factor is attained.
+1. [code] **Norms of higher-order tensors.** The function `norm` from
+   :numref:`subsec_lin-algebra-norms` also accepts tensors with three or
+   more axes.
+    1. Call `norm` with its default arguments on a tensor with three
+       axes. State in words what it computes, and confirm your statement
+       by computing the same number directly from the tensor's entries.
+    1. A model stores its parameters in several tensors of different
+       shapes. Flatten each tensor and concatenate the results into one
+       vector. Express the $\ell_2$ norm of that vector in terms of the
+       norms of the individual tensors, and confirm the formula
+       numerically for tensors of shapes $(3, 4)$, $(4,)$, and
+       $(2, 3, 5)$.
 1. **Matrix-product order and cost.** Consider three large
    matrices $\mathbf{A} \in \mathbb{R}^{2^{10} \times 2^{16}}$,
    $\mathbf{B} \in \mathbb{R}^{2^{16} \times 2^{5}}$, and
@@ -1432,24 +1464,39 @@ To recap:
    and speed differ between computing $(\mathbf{A} \mathbf{B}) \mathbf{C}$
    and $\mathbf{A} (\mathbf{B} \mathbf{C})$, and justify your answer by
    counting operations and intermediate storage.
-1. [code] **Stack and slice.** Given three matrices
-   $\mathbf{A}, \mathbf{B}, \mathbf{C} \in \mathbb{R}^{100 \times 200}$,
-   stack them along a new axis into a single tensor with three axes and
-   report its shape. Slice out index $1$ along the stacking axis and
-   confirm that it recovers $\mathbf{B}$ exactly.
-1. [extended] **Watching an eigenvector emerge.** Using the symmetric
-   matrix `S` from this section, implement power iteration: start from a
-   random vector, repeatedly multiply by `S`, and renormalize after each
-   step. Track the direction of the iterate rather than only the norm
-   ratio, and report the iteration at which successive directions
-   stabilize, for example when the cosine of the angle between them
-   exceeds 0.999. Compare the converged vector, up to sign, with the
-   eigenvector of the largest eigenvalue returned by `linalg.eigh`, and
-   explain why the sign is not determined.
+1. **Rotation matrices.** For an angle $\theta$, consider the rotation
+   matrix
+
+   $$\mathbf{R}_\theta = \begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}.$$
+
+    1. Show that
+       $\mathbf{R}_\alpha \mathbf{R}_\beta = \mathbf{R}_{\alpha + \beta}$,
+       and interpret this identity as one rotation applied after another.
+    1. Show that $\|\mathbf{R}_\theta \mathbf{x}\|_2 = \|\mathbf{x}\|_2$
+       for every $\mathbf{x} \in \mathbb{R}^2$. State how the norm of
+       $\mathbf{R}_\theta^k \mathbf{x}$ depends on $k$, and contrast this
+       with repeated multiplication by the matrix `S` from this section.
+    1. Show that $\mathbf{R}_\theta$ for $\theta = 90°$ has no real
+       eigenvalue.
+1. [code] **Watching an eigenvector emerge.** Power iteration starts from
+   a random vector, repeatedly multiplies it by a matrix, and
+   renormalizes the result to unit length after each step. Implement it
+   for the symmetric matrix `S` from this section.
+    1. Report the first iteration at which the cosine of the angle
+       between successive iterates exceeds $0.999$.
+    1. Compare the converged vector with the eigenvector of the largest
+       eigenvalue returned by `linalg.eigh`, and explain why the two may
+       differ in sign.
 
     *Adapted from MIT 18.06,
     [problem set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf),
     Section 2.1, Problems 29–30.*
+1. [code] **Power-iteration convergence rate.** ● Run the power iteration
+   from the previous problem on `S` and measure the factor by which the
+   sine of the angle between the iterate and the eigenvector of the
+   largest eigenvalue shrinks per step. Express this factor in terms of
+   the eigenvalues of `S`, and use it to explain the iteration count at
+   which the cosine between successive iterates first exceeds $0.999$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/30)

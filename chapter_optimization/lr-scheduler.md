@@ -870,74 +870,92 @@ its relatives became widespread where the training horizon is open-ended.
        does each run's test accuracy stop improving?
     1. How does the train–test gap at epoch 30 change as $\eta$ shrinks?
        Relate the trend to the noise floor of :eqref:`eq_sgd-noise-ball`.
-1. [code] **Polynomial decay.** Implement the scheduler
-   $\eta_t = \eta_0 (\beta t + 1)^{-\alpha}$ as a callable in the style of
-   `SquareRootScheduler`, which is the case $\alpha = 0.5$, $\beta = 1$.
+1. [code] **Polynomial decay.** Implement the polynomial decay
+   $\eta_t = \eta_0 (\beta t + 1)^{-\alpha}$ of :eqref:`eq_sgd-schedules`
+   as a callable in the style of `SquareRootScheduler`, which is the case
+   $\alpha = 0.5$, $\beta = 1$.
     1. Train with $\alpha \in \{0.25, 1, 2\}$ at $\eta_0 = 0.3$ and
-       $\beta = 1$ and compare with the square-root run. Describe how
-       $\alpha$ trades early progress against late noise.
-    1. Which values of $\alpha$ satisfy both Robbins–Monro conditions of
-       :numref:`sec_sgd`, and does the best $\alpha$ on this testbed lie
-       inside that range?
-1. [code] **Warmup length and the stability ceiling.** The cold start at
-   `hot_lr` in :numref:`subsec_scheduler-warmup` fails, while a five-epoch
-   ramp trains.
-    1. Vary the length of the ramp in `warmup` from 1 to 10 epochs at the
-       same target rate and report the test accuracy after ten epochs for
-       each. What is the shortest ramp that trains?
-    1. Raise the target rate by factors of two until no ramp length up to
-       10 epochs produces a run that leaves chance accuracy. Report the
-       largest rate that trains with some ramp and compare it with the
-       largest rate that trains from a cold start.
-1. [code] **Branching at several budgets.** Extend the plateau run of
-   :numref:`subsec_scheduler-branching` to 60 epochs and branch six-epoch
-   decays at epochs 30, 40, and 50.
-    1. Plot the final test accuracy of each branch against its branch
-       point. This is the design of :citet:`Hagele.Bakouch.Kosson.ea.2024`:
-       one plateau run yields finished models at several budgets.
+       $\beta = 1$ and compare with the `SquareRootScheduler` run. Describe
+       how $\alpha$ trades early progress against late noise.
+    1. Polynomial decay satisfies both Robbins–Monro conditions of
+       :numref:`sec_sgd` exactly when $\alpha \in (1/2, 1]$. Does the best
+       $\alpha$ on this testbed lie in that window? Compute the total rate
+       $\sum_{t=0}^{29} \eta_t$ of each of the four runs and relate it to
+       the ranking you measured. How far do conditions on infinite sums
+       constrain a 30-epoch run?
+1. [code] **Warmup length and the stability ceiling.** ● The cold start
+   at `hot_lr` in :numref:`subsec_scheduler-warmup` fails, while a
+   five-epoch ramp trains. Count a run as trained when its test accuracy
+   after ten epochs exceeds 50%. A ramp of length 1 in `warmup` is a cold
+   start.
+    1. Vary the length of the ramp in `warmup` from 1 to 10 epochs at
+       `hot_lr` and report the test accuracy after ten epochs for each.
+       What is the shortest ramp that trains?
+    1. Keep the five-epoch ramp. Double the target rate from `hot_lr`
+       until the ramped run no longer trains, and halve it from `hot_lr`
+       until a cold start trains. By what factor does the ramp raise the
+       largest rate that trains? Compare that factor with the factor of 5
+       by which the ramp lowers the rate of its first epoch.
+1. [code] **Branching at several budgets.** ● Continue the plateau run
+   of :numref:`subsec_scheduler-branching` at the peak rate to epoch 50,
+   and branch a six-epoch decay off it at each of epochs 30, 40, and 50.
+   This is the design of :citet:`Hagele.Bakouch.Kosson.ea.2024`.
+    1. For each branch point, record the test accuracy of the plateau
+       checkpoint and of the branch after its decay, and plot both against
+       the branch point. Does the gain from the decay grow, shrink, or stay
+       constant as the branch point moves later?
     1. For the branch at epoch 40, train a fresh warmup-plus-cosine run with
        `CosineScheduler` over the same 46 epochs at the same peak rate.
-       Does the branched model match it, and how many total epochs would
-       cosine runs at all three budgets have cost?
+       Does the branched model match it? Compare the epochs spent on the
+       plateau run and its three branches with the epochs of three separate
+       cosine runs at the same budgets.
 1. [code] **Schedule-free SGD.** :citet:`Defazio.Yang.Mehta.ea.2024`
    replace decay by averaging. With interpolation weight $\beta = 0.9$ and
    averaging weights $c_{t+1} = 1/(t+1)$, the iteration is
    $$\mathbf{y}_t = (1-\beta)\mathbf{z}_t + \beta \mathbf{x}_t, \qquad
    \mathbf{z}_{t+1} = \mathbf{z}_t - \eta \nabla f(\mathbf{y}_t), \qquad
    \mathbf{x}_{t+1} = (1 - c_{t+1})\mathbf{x}_t + c_{t+1}\mathbf{z}_{t+1}.$$
-    1. Implement it on the noisy quadratic
-       $f(\mathbf{x}) = \frac{1}{2}\mathbf{x}^\top \mathrm{diag}(1, 10)\,
-       \mathbf{x}$ with Gaussian gradient noise and plot $f(\mathbf{z}_t)$
-       and $f(\mathbf{x}_t)$ over 500 steps at a constant $\eta$.
+    1. Implement it on the objective
+       $f(\mathbf{x}) = \mathbf{x}^\top \mathrm{diag}(1, 2)\, \mathbf{x}$ of
+       :numref:`sec_sgd` with the same unit-variance Gaussian gradient
+       noise, and plot $f(\mathbf{z}_t)$ and $f(\mathbf{x}_t)$ over 500
+       steps at a constant $\eta$.
     1. Explain the difference between the two curves with the noise-ball
        argument of :numref:`sec_sgd`, and state which quantity in the
        iteration plays the role of a decaying learning rate.
-1. **From noise floor to sampler.** Constant-rate SGD does not converge,
-   but :citet:`Welling.Teh.2011` turn its stationary fluctuation into a
-   sampler. Stochastic gradient Langevin dynamics injects noise into every
-   step,
+1. **From noise floor to sampler.** ● Constant-rate SGD does not
+   converge; its iterates fluctuate in the noise ball of
+   :eqref:`eq_sgd-noise-ball`. Stochastic gradient Langevin dynamics
+   :cite:`Welling.Teh.2011` adds Gaussian noise to every step so that the
+   iterates approximately sample the density proportional to $e^{-f}$:
    $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, \mathbf{g}_t + \sqrt{2\eta}\,
-   \boldsymbol{\xi}_t, \qquad \boldsymbol{\xi}_t \sim \mathcal{N}(\mathbf{0}, \mathbf{I}),$$
+   \boldsymbol{\zeta}_t, \qquad \boldsymbol{\zeta}_t \sim \mathcal{N}(\mathbf{0}, \mathbf{I}),$$
    where $\mathbf{g}_t$ is a stochastic gradient of $f$.
     1. For $f(x) = \frac{\lambda}{2}x^2$ with the exact gradient, derive
        the stationary variance of $x_t$ and compare it with the variance
        $1/\lambda$ of the density proportional to $e^{-f(x)}$.
-    1. Compare the injected noise with the gradient-noise term
-       $\eta\, \xi_t$ in the model behind :eqref:`eq_sgd-noise-ball`. For
-       which gradient-noise variance $\sigma^2$ do the two contributions
-       have equal size, and which of them dominates as $\eta$ decays?
-1. [code] **Linear decay to zero.** :numref:`subsec_scheduler-frontier`
-   reports that warmup followed by linear decay to exactly zero matched or
-   beat cosine and WSD in large sweeps, and that the final rate matters
-   more than the path to it
+    1. Compare the injected noise $\sqrt{2\eta}\, \zeta_t$ with the
+       gradient-noise term $\eta\, \xi_t$ in the model behind
+       :eqref:`eq_sgd-noise-ball`. For which gradient-noise variance
+       $\sigma^2$ do the two contributions have equal variance, and which
+       of them dominates as $\eta$ decays?
+1. [code] **Linear decay to zero.** ●
+   :numref:`subsec_scheduler-frontier` reports that warmup followed by
+   linear decay to exactly zero matched or beat cosine and WSD in large
+   sweeps, and that the final rate matters more than the path to it
    :cite:`Defazio.Cutkosky.Mehta.ea.2023,Bergsma.Dey.Gosal.ea.2025`.
-    1. Implement warmup plus linear decay to zero as a callable and train it
-       at the 30-epoch budget and peak rate of the warmup-plus-cosine run.
-       Compare the final test accuracy with the cosine and WSD runs.
+    1. Choose the arguments of `WSDScheduler` that turn it into a
+       five-epoch warmup to $\eta = 0.3$ followed by linear decay to zero
+       over a 30-epoch budget, with no stable phase. Train with it and
+       compare the final test accuracy with the 30-epoch `CosineScheduler`
+       and `WSDScheduler` runs, which use the same warmup and peak rate.
     1. Vary the final rate $\eta_T$ of :eqref:`eq_scheduler-cosine` over
-       $\{0.03, 0.01, 0\}$ at the same budget. Is the final rate or the
-       shape the larger effect on this testbed, and how far can single runs
-       distinguish the two?
+       $\{0.03, 0.01, 0\}$ at the same budget, and repeat the cosine run
+       at $\eta_T = 0$ with two more seeds. Measure the effect of the final
+       rate by the spread of the three cosine runs and the effect of the
+       shape by the gap between the cosine run at $\eta_T = 0$ and the
+       linear decay to zero. Which effect is larger on this testbed, and
+       does either exceed the spread across seeds?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1080)

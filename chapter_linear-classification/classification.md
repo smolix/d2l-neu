@@ -239,12 +239,13 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 
 ## Exercises
 
-1. **Batch-mean validation loss.** Let $L_\textrm{v}$ denote the validation
-   loss, the average of the per-example losses over all $n$ validation
-   examples, and let $\bar{L}_\textrm{v}$ denote the unweighted average of
-   the per-batch losses that `validation_step` computes, where every batch
-   has size $b$ except the last, whose size is $r$ with $0 < r \leq b$ and
-   whose loss is $l_\textrm{v}^\textrm{last}$.
+1. **Batch-mean validation loss.** The $n$ validation examples are split
+   into batches of size $b$, except the last batch, whose size is $r$ with
+   $0 < r \leq b$. Let $L_\textrm{v}$ be the validation loss, the average of
+   the per-example losses over all $n$ examples. Let $\bar{L}_\textrm{v}$ be
+   the unweighted average of the per-batch mean losses that
+   `validation_step` computes, and let $l_\textrm{v}^\textrm{last}$ be the
+   mean loss of the last batch.
     1. Express $L_\textrm{v}$ in terms of $\bar{L}_\textrm{v}$,
        $l_\textrm{v}^\textrm{last}$, $n$, $b$, and $r$.
     1. Treat the validation examples as i.i.d. draws from the data
@@ -253,38 +254,44 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
        $E[L_\textrm{v}] = E[\bar{L}_\textrm{v}]$.
     1. Compare the variances of the two estimates and explain why
        $L_\textrm{v}$ is preferable for a final evaluation.
-1. **Optimal decisions and rejection.** Consider a multiclass
-   classification loss, denoting by $l(y,y')$ the penalty of predicting
-   $y'$ when the true class is $y$, and let $p(y \mid x)$ be the class
-   probability.
-    1. Formulate the rule for an optimal selection of $y'$. Hint: express
-       the expected loss, using $l$ and $p(y \mid x)$.
-    1. Now allow the classifier to *abstain* at a fixed cost $\lambda_r$
-       instead of guessing, while a wrong guess costs $\lambda_s$. Derive
-       the threshold on the top-class probability above which guessing
-       beats abstaining.
+1. **Optimal decisions and rejection.** In a multiclass problem, let
+   $l(y, y')$ be the penalty for predicting $y'$ when the true class is
+   $y$, and let $p(y \mid x)$ be the probability of class $y$ given the
+   input $x$.
+    1. Write the expected loss of predicting $y'$ in terms of $l$ and
+       $p(y \mid x)$, and state the rule that selects the optimal $y'$.
+    1. Let a correct guess cost $0$ and a wrong guess cost $\lambda_s$,
+       and allow the classifier to *abstain* instead of guessing, at a
+       fixed cost $\lambda_r < \lambda_s$. Derive the threshold on the
+       top-class probability above which guessing beats abstaining.
     1. In medical diagnosis, deferring to a specialist is cheap relative to
        a misdiagnosis, say $\lambda_r/\lambda_s = 0.05$. Compute the
-       threshold, state what the classifier should do with a prediction at
-       $0.9$ confidence, and explain when reporting the full distribution
-       $p(y \mid x)$ serves the physician better than either choice.
+       threshold and state what the classifier should do with a prediction
+       at $0.9$ confidence. Then describe a case in which reporting the
+       full distribution $p(y \mid x)$ serves the physician better than
+       either guessing or abstaining.
 
     *Adapted from Kevin Murphy,
     [Probabilistic Machine Learning: An Introduction](https://probml.github.io/pml-book/book1.html),
     Exercise 5.1.*
-1. **Accuracy is not enough.** Suppose two classifiers $A$ and $B$ both
-   achieve 90% accuracy on a ten-class test set. On every example it gets
-   right, $A$ assigns probability $0.91$ to the correct class, while $B$
-   assigns $0.51$.
-    1. Compute the average cross-entropy loss each incurs on those
-       examples. Why would knowing only the *average* correct-class
-       probability not have sufficed to compute it?
+1. **Loss at equal accuracy.** Two classifiers $A$ and $B$ both achieve
+   90% accuracy on a ten-class test set. On every example that $A$
+   classifies correctly, it assigns probability $0.91$ to the correct
+   class. On every example that $B$ classifies correctly, it assigns
+   $0.51$.
+    1. Compute the average cross-entropy loss of each classifier on its
+       correctly classified examples. Why would knowing only that $B$'s
+       *average* correct-class probability is $0.51$ not have sufficed to
+       compute $B$'s loss?
     1. Explain why these numbers do not decide which classifier is safer
        to deploy, and list the further information about the two
        classifiers you would need.
-    1. Show that there is a rescaling of $B$'s logits that leaves every one
-       of its decisions unchanged yet lowers its cross-entropy on the
-       correctly classified examples. What does this imply about comparing
+    1. Temperature scaling (exercise 8 of :numref:`sec_softmax`) divides
+       $B$'s logits by $T > 0$ and leaves every one of its decisions
+       unchanged. Assume that on every example the largest logit of $B$ is
+       unique. Show that as $T \to 0$ the cross-entropy of $B$ tends to $0$
+       on the correctly classified examples and to $\infty$ on the
+       misclassified ones. What does this imply about comparing
        classifiers by loss alone?
 1. [code] **Top-$k$ accuracy.** Generalize `accuracy` to *top-$k$
    accuracy*, which counts a prediction as correct when the true class is
@@ -295,40 +302,57 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
     1. Why is top-5 accuracy a standard companion to top-1 on benchmarks
        with many fine-grained classes?
 1. **Class-weighted loss.** In the disease-screening example of
-   :numref:`subsec_beyond-accuracy`, suppose we care much more about
-   missing a sick patient than about a false alarm. Give each class $j$ a
-   weight $w_j > 0$ and define the class-weighted cross-entropy as the
-   average over examples of
-   $w_{y_i}\, l(\mathbf{y}^{(i)}, \hat{\mathbf{y}}^{(i)})$.
-    1. Show that this is an instance of weighted empirical risk
-       minimization,
-       $$\mathop{\mathrm{minimize}}_f \frac{1}{n} \sum_{i=1}^n \beta_i\, l(f(\mathbf{x}_i), y_i),$$
-       with $\beta_i = w_{y_i}$. The same objective reappears as
-       :eqref:`eq_weighted-empirical-risk-min` in
-       :numref:`sec_environment-and-distribution-shift`.
-    1. Explain why upweighting the rare class moves the learned decision
-       boundary toward higher recall.
-    1. Give a second intervention, acting on the data rather than on the
-       loss, with the same effect.
-1. [code] **ROC curves.** A binary classifier's score can be thresholded at
-   any $\tau \in (0, 1)$, not just $\frac{1}{2}$: predict positive whenever
-   $\hat{y}_1 > \tau$. After training the model of
-   :numref:`sec_softmax_scratch`, evaluate it on the validation images of
-   two classes, such as sneaker versus sandal, using
-   $\hat{y}_1 = \sigma(o_\textrm{sneaker} - o_\textrm{sandal})$ as the
-   score by :eqref:`eq_softmax_to_sigmoid`, and sweep $\tau$ from $1$ down
-   to $0$.
-    1. At each $\tau$ compute the true-positive rate (recall) and the
-       false-positive rate $\textrm{FP}/(\textrm{FP}+\textrm{TN})$, and plot
-       one against the other; this curve is called the *receiver operating
-       characteristic* (ROC).
-    1. What do the endpoints $\tau=1$ and $\tau=0$ correspond to?
+   :numref:`subsec_beyond-accuracy`, missing a sick patient costs much
+   more than a false alarm. Give each class $j$ a weight $w_j > 0$ and
+   train $f$ on the class-weighted empirical risk
+
+   $$\frac{1}{n} \sum_{i=1}^n w_{y_i}\, l(f(\mathbf{x}_i), y_i),$$
+
+   where $l$ is the cross-entropy loss and $y_i$ is the class of example
+   $i$. This is the weighted empirical risk minimization
+   :eqref:`eq_weighted-empirical-risk-min` of
+   :numref:`sec_environment-and-distribution-shift` with
+   $\beta_i = w_{y_i}$.
+    1. Let the training examples be drawn with class prior $p(y)$ and
+       class-conditional densities $p(\mathbf{x} \mid y)$. Show that the
+       expected class-weighted loss is proportional to the expected
+       unweighted loss under the distribution with the same
+       class-conditionals and class prior proportional to $w_y\, p(y)$.
+       Name the change to the training data, rather than to the loss,
+       that has the same effect.
+    1. Fix an input $\mathbf{x}$ with class probabilities
+       $p(j \mid \mathbf{x})$, and suppose the model can output any
+       distribution $\hat{\mathbf{y}}$. Show that the expected weighted loss
+       $$-\sum_j w_j\, p(j \mid \mathbf{x}) \log \hat{y}_j$$
+       is minimized by $\hat{y}_j \propto w_j\, p(j \mid \mathbf{x})$.
+    1. For the two classes healthy and sick, find the threshold on
+       $p(\textrm{sick} \mid \mathbf{x})$ above which the $\arg\max$ of
+       this $\hat{\mathbf{y}}$ is sick. Explain why choosing
+       $w_\textrm{sick} > w_\textrm{healthy}$ raises recall, and what it
+       does to the number of false positives.
+1. [code] **ROC curves.** A binary classifier that outputs a score
+   $s \in (0, 1)$ for the positive class can be thresholded at any
+   $\tau \in [0, 1]$, not just $\frac{1}{2}$: predict positive whenever
+   $s > \tau$. The *receiver operating characteristic* (ROC) curve plots
+   the true-positive rate (recall) against the false-positive rate
+   $\textrm{FP}/(\textrm{FP}+\textrm{TN})$ as $\tau$ sweeps from $1$ down
+   to $0$. Simulate $1000$ positive and $1000$ negative examples with
+   scores $s = \sigma(z)$, where $\sigma$ is the sigmoid of
+   :eqref:`eq_softmax_to_sigmoid`, $z \sim \mathcal{N}(\mu, 1)$ for
+   positives, and $z \sim \mathcal{N}(0, 1)$ for negatives.
+    1. Compute and plot the ROC curve for $\mu \in \{0, 1, 2\}$, and state
+       which points of the plot the endpoints $\tau = 1$ and $\tau = 0$
+       give.
     1. Show that a classifier whose scores are independent of the labels
        traces the diagonal in expectation.
-    1. Show that the area under the ROC curve equals the probability that
-       a randomly chosen positive example receives a higher score than a
-       randomly chosen negative one, which makes it a threshold-free
-       summary of ranking quality.
+1. [code] **AUC as ranking probability.** ● This problem uses the ROC
+   curves and simulated scores of the previous problem.
+    1. Show that, when no two scores tie, the area under the ROC curve
+       equals the probability that a randomly chosen positive example
+       receives a higher score than a randomly chosen negative one, which
+       makes it a threshold-free summary of ranking quality.
+    1. Compute this probability in closed form for the simulated scores
+       and compare it with the trapezoidal area under each of the curves.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6808)

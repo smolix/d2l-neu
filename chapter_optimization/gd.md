@@ -388,11 +388,13 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
 ## Exercises
 
 1. [code] **Learning-rate sweep.** `gd` runs ten steps from $x_0 = 10$.
-   Extend it to 100 steps with a stopping test and run it on $f(x) = x^2$
-   and on $f(x) = |x|^{1.5}$ at $\eta \in \{0.01, 0.1, 0.5, 0.9, 1.1\}$.
-    1. Tabulate, for each of the ten runs, the number of steps until
-       $|x| < 10^{-3}$, or the fact that the iterates diverged.
-    1. For $f(x) = x^2$, derive the largest learning rate for which the
+   Extend it to run at most 100 steps and to stop as soon as
+   $|x| < 10^{-3}$. Run it on $f(x) = x^2$ and on $f(x) = |x|^{1.5}$ at
+   $\eta \in \{0.01, 0.1, 0.5, 0.9, 1.1\}$.
+    1. Tabulate, for each of the ten runs, the number of steps until the
+       stopping test holds, or, for a run that misses the test within 100
+       steps, whether $|x|$ grew without bound or stayed bounded.
+    1. For $f(x) = x^2$, derive the range of learning rates for which the
        iteration converges from every start and the learning rate that
        reaches the minimum in one step.
     1. The second derivative of $|x|^{1.5}$ is unbounded near the origin.
@@ -407,28 +409,39 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
     1. Derive the number of iterations needed to shrink the interval to a
        width $\epsilon$.
     1. Implement the method and apply it to
-       $f(x) = \log(\exp(x) + \exp(-2x - 3))$ on $[-5, 5]$ to an accuracy
-       of $10^{-6}$. Compare the iteration count with that of `gd` at its
-       best learning rate on the same function.
-1. [code] **Newton's method up close.** ● In :numref:`subsec_gd-newton`,
-   `newton` converges in a few steps on $f(x) = \cosh(cx)$ and heads for a
-   maximum of $f(x) = x\cos(cx)$ unless damped.
-    1. On $\cosh(cx)$ from $x_0 = 10$, record $|x_t|$ after every step and
-       verify that the number of correct digits roughly doubles per
-       iteration once the iterate is close to $0$. Where does this phase
-       begin, and what governs the steps before it?
-    1. On $x\cos(cx)$ from $x_0 = 10$, sweep the damping
-       $\eta \in \{0.25, 0.5, 0.75, 1\}$. Which runs end at a minimum, and
-       what is the sign of `f_hess` along the paths of those that do not?
-    1. In $d$ dimensions a Newton step costs a Hessian factorization of
-       about $d^3/3$ operations plus a solve of about $2d^2$. Minimize
-       $f(\mathbf{x}) = \sum_{i=1}^{200} \cosh(c\, \mathbf{a}_i^\top
-       \mathbf{x})$ for $d = 50$ and Gaussian directions $\mathbf{a}_i$,
-       refactoring the Hessian on every step, every 5 steps, and every 20
-       steps while reusing the stale factorization in between. Plot
-       $f(\mathbf{x}_t) - f^\star$ against the cumulative operation count
-       rather than the iteration count. Which variant reaches $10^{-8}$
-       first?
+       $f(x) = \log(\exp(x) + \exp(-2x - 3))$ on $[-5, 5]$ until the
+       interval is narrower than $10^{-6}$. Modify `gd` to start at
+       $x_0 = 5$ and to stop once $|f'(x)| < 10^{-6}$, find the fixed
+       learning rate that minimizes its step count on the same function,
+       and compare that count with the bisection count.
+1. [code] **Newton's convergence order.** ● In :numref:`subsec_gd-newton`,
+   `newton` converges in a few steps on $f(x) = \cosh(cx)$. Run it with
+   $c = 0.5$ from $x_0 = 10$ and record $|x_t|$ after every step.
+    1. From the last steps before $x_t$ reaches $0$ in floating point,
+       estimate the order $p$ in $|x_{t+1}| \approx C |x_t|^p$. Where does
+       this fast phase begin, and what governs the steps before it?
+    1. Derive $p$ and $C$ from the Taylor expansion of the update
+       $x - \tanh(cx)/c$ around $0$, and reconcile $p$ with the quadratic
+       rate stated in :numref:`subsec_mdl-why-not-newton`.
+1. [code] **Damped Newton steps.** In :numref:`subsec_gd-newton`, `newton`
+   heads for a maximum of $f(x) = x\cos(cx)$ unless damped. On
+   $x\cos(cx)$ from $x_0 = 10$, sweep the damping
+   $\eta \in \{0.25, 0.5, 0.75, 1\}$. Which runs end at a minimum, and what
+   is the sign of `f_hess` along the paths of those that do not?
+1. [code] **Stale Hessian factorizations.** ● A Newton step in $d$
+   dimensions can reuse the Hessian factorization of an earlier step.
+   Minimize
+   $f(\mathbf{x}) = \sum_{i=1}^{n} \cosh(c\, \mathbf{a}_i^\top \mathbf{x})$
+   with $n = 200$, $d = 50$, $c = 0.5$, directions $\mathbf{a}_i$ with
+   independent standard Gaussian entries, and $\mathbf{x}_0 = \mathbf{1}$.
+   Its minimum is $f^\star = n$ at $\mathbf{x} = \mathbf{0}$. Charge $4nd$
+   operations per gradient, $nd^2$ per Hessian evaluation, $d^3/3$ per
+   Cholesky factorization, and $2d^2$ per pair of triangular solves.
+   Evaluate and factor the Hessian on every step, every 5 steps, and every
+   20 steps, reusing the stale factorization in between. Plot
+   $f(\mathbf{x}_t) - f^\star$ against the cumulative operation count
+   rather than the iteration count. Which variant reaches $10^{-8}$ first,
+   and which of the four costs dominates its total?
 
     *Adapted from Stephen Boyd and Lieven Vandenberghe,
     [Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/),
@@ -438,36 +451,45 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
    gives every coordinate its own learning rate.
     1. Design an objective on $\mathbb{R}^2$ by scaling the two coordinates
        of a quadratic bowl so that the condition number of its Hessian is
-       at least $100$. Report the largest stable learning rate of plain
-       gradient descent and the number of steps it needs to reach
+       at least $100$. Derive the range of learning rates for which plain
+       gradient descent converges and the learning rate that minimizes the
+       larger of the two per-coordinate contraction factors. Report the
+       number of steps gradient descent needs at that rate to reach
        $\|\mathbf{x}\| < 10^{-3}$ from the starting point of
        `d2l.train_2d`.
     1. Implement :eqref:`eq_gd-diag-precond` as a trainer for
-       `d2l.train_2d` and repeat the measurement. Explain why the step count
-       no longer depends on the scaling you chose.
-    1. Replace $\textrm{diag}(\mathbf{H})^{-1}$ by
-       $|\textrm{diag}(\mathbf{H})|^{-1}$ and apply both variants to the
-       nonconvex $f(x_1, x_2) = x_1 \cos(c x_1) + x_2 \cos(c x_2)$ with
-       $c = 0.15\pi$. Which variant can move uphill, and where?
+       `d2l.train_2d` and repeat the measurement at $\eta = 1$ and at
+       $\eta = 0.5$. Explain why the step count no longer depends on the
+       scaling you chose.
     1. Rotate the coordinates of your quadratic by $45^\circ$ and rerun
-       plain gradient descent, both preconditioned variants, and Newton's
-       method. Which of the four are unaffected by the rotation? Explain
+       plain gradient descent, the preconditioned trainer, and Newton's
+       method. Which of the three are unaffected by the rotation? Explain
        the behavior of the diagonal preconditioner from the entries of the
        rotated Hessian.
+1. [code] **Absolute-curvature preconditioning.** Replace
+   $\textrm{diag}(\mathbf{H})^{-1}$ in :eqref:`eq_gd-diag-precond` by
+   $|\textrm{diag}(\mathbf{H})|^{-1}$ and run this variant at $\eta = 1$ on
+   the nonconvex $f(x_1, x_2) = x_1 \cos(c x_1) + x_2 \cos(c x_2)$ with
+   $c = 0.15\pi$ from the starting point of `d2l.train_2d`. Show that every
+   update direction is a descent direction. Does every step decrease $f$?
+   Explain the size of the largest step of the run.
 1. [code] **Counting local minima.** The objective
    $f(x) = x\cos(cx)$ with $c = 0.15\pi$ of :numref:`subsec_gd-local-minima`
-   traps gradient descent in whichever basin it enters.
-    1. Locate every local minimum of $f$ on $[-20, 20]$ and its value. How
-       does the number of local minima grow as the interval widens?
+   has many local minima, each with its own basin of attraction.
+    1. Locate every local minimum of $f$ in the open interval $(-20, 20)$
+       and its value. How does the number of local minima grow as the
+       interval widens?
     1. Let `gd` take its starting point as an argument. Run 20 steps from
        $x_0 \in \{-10, 5, 10\}$ at $\eta \in \{0.5, 1, 2\}$ and record
-       the minimum each run ends near. Which combinations reach the lowest
-       minimum on the interval, and why does the largest learning rate
-       change basins?
-    1. Modify $f$ so that its local minima on the interval differ in value
-       by at most $10^{-3}$ except for one. Explain why any method that
-       uses only $f$ and $f'$ at the points it visits must then visit every
-       basin before it can certify the global minimum.
+       the minimum each run ends near, if any. Which combinations reach the
+       lowest local minimum in $(-20, 20)$, and why does the largest
+       learning rate change basins?
+1. **Certifying the lowest minimum.** ● Modify the objective
+   $f(x) = x\cos(cx)$ with $c = 0.15\pi$ of :numref:`subsec_gd-local-minima`
+   so that its local minima in $(-20, 20)$ differ in value by at most
+   $10^{-3}$ except for one. Explain why any method that uses only $f$ and
+   $f'$ at the points it visits must then visit every basin before it can
+   certify which local minimum is lowest.
 
 [Discussions](https://d2l.discourse.group/t/351)
 

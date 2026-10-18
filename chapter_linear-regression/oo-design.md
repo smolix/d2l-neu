@@ -98,12 +98,12 @@ We define `do` outside the original class block and decorate it with `add_to_cla
 ```{.python .input #oo-design-utilities-3}
 @add_to_class(A)
 def do(self):
-    print('Class attribute "b" is', self.b)
+    print('Instance attribute "b" is', self.b)
 
 a.do()
 ```
 
-The second one is a utility class that saves all arguments in a class's `__init__` method as class attributes. This allows us to extend constructor call signatures implicitly without additional code.
+The second one is a utility class that saves all arguments in a class's `__init__` method as instance attributes. This allows us to extend constructor call signatures implicitly without additional code.
 
 ```{.python .input #oo-design-utilities-4}
 class HyperParameters:  #@save
@@ -701,31 +701,33 @@ other components.
    as an argument to `Trainer`. State the advantages of this design choice,
    and describe a training setup in which putting the optimizer on the
    model becomes awkward.
-1. [code] **Test split.** Extend `DataModule` with a `test_dataloader`
-   method and extend `Trainer.fit` to evaluate on it once, after the last
-   epoch (this can be run once :numref:`sec_linear_scratch` supplies
-   `fit_epoch`). Explain why the test loader is evaluated once at the end
-   rather than after every epoch like the validation loader
-   (:numref:`sec_generalization_basics`).
 1. [code] **Saving hyperparameters.** `save_hyperparameters` is
    implemented in :numref:`sec_utils` with Python's `inspect` module, which
-   reads the caller's local variables.
-    1. Remove the `save_hyperparameters` call from class `B`. Predict
-       whether `self.a` and `self.b` still print, then explain the outcome
-       from the difference between a local variable of `__init__` and an
-       instance attribute.
-    1. Implement a version of `save_hyperparameters` that does not use
-       `inspect`, and verify that it produces the same attributes on `B`.
+   gives it access to the stack frame of the method that calls it.
+    1. Remove the `save_hyperparameters` call from class `B`, instantiate
+       `B` again, and explain the outcome. Then restore the call, insert
+       the line `d = 4` before it in `__init__`, and state whether `self.d`
+       exists after construction.
+    1. Implement a version of `save_hyperparameters` that receives the
+       values to store as explicit arguments instead of reading the
+       caller's stack frame. Change the call in `B` to use it, and verify
+       that `self.a` and `self.b` exist and `self.c` does not.
     1. State one thing the `inspect`-based version provides that your
        version gives up.
 1. [code] **Synchronous logs.** ● `ProgressBoard.draw` is asynchronous: it
-   queues the point for a background thread instead of plotting
-   immediately. Implement a variant that plots on the calling thread. Time
-   both on the `sin`/`cos` loop of :numref:`oo-design-utilities` with the
-   step reduced to $0.001$, then again inside a training run once
-   :numref:`sec_linear_scratch` supplies `fit_epoch`. State under which
-   conditions the synchronous version is measurably slower and when the two
-   are indistinguishable.
+   queues the point for a background thread, which converts it to a number
+   and redraws the figure at most once every $0.1$ s. Starting from the
+   implementation in :numref:`sec_utils`, implement a variant whose `draw`
+   converts the point and redraws on the calling thread, with the same
+   limit of one redraw per $0.1$ s.
+    1. Time both boards on the `sin`/`cos` loop of
+       :numref:`oo-design-utilities` with the step reduced to $0.001$.
+       Count the points each board ends up plotting, and explain any
+       difference.
+    1. Time both boards again inside a training run once
+       :numref:`sec_linear_scratch` supplies `fit_epoch`. State under which
+       conditions the synchronous version is measurably slower and when the
+       two are indistinguishable.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6645)

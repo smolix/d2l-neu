@@ -297,6 +297,7 @@ choices in :numref:`subsec_normal_distribution_and_squared_loss`; for now, the
 squared loss supplies the objective whose optimization we study.
 
 ### Analytic Solution
+:label:`subsec_linear-regression-analytic-solution`
 
 Unlike most of the models that we will cover,
 linear regression has an analytic solution for the optimal training-set
@@ -731,8 +732,9 @@ variance, so the Laplace model assigns a large residual more probability and
 its loss penalizes that residual only linearly, exactly the robustness we observed in
 the outlier demonstration above. The figure also marks the *Huber* loss, a
 compromise that is quadratic near zero (like squared error) but linear in the
-tails (like absolute error). Each of these losses is explored in the
-exercises; the same principle extends to *heteroscedastic* regression, where the
+tails (like absolute error). The exercises of this section explore the
+losses in the table, and exercise 8 of :numref:`sec_linear_scratch` explores
+the Huber loss; the same principle extends to *heteroscedastic* regression, where the
 noise level itself depends on the input and we predict $\sigma(\mathbf{x})$
 alongside the mean. We apply this principle again when deriving the loss
 for classification in the next chapter.
@@ -810,41 +812,63 @@ and ultimately, evaluation on previously unseen data.
 
 ## Exercises
 
-1. **Fitting a constant.** Assume that we have some data
-   $x_1, \ldots, x_n \in \mathbb{R}$. Our goal is to find a constant $b$
-   such that $\sum_i (x_i - b)^2$ is minimized.
+1. **Fitting a constant.** Consider a model without features that
+   predicts the same value $b$ for every example. Fit it to labels
+   $y^{(1)}, \ldots, y^{(n)} \in \mathbb{R}$ by minimizing
+   $\sum_i (y^{(i)} - b)^2$.
     1. Find an analytic solution for the optimal value of $b$.
-    1. Show that the same $b$ is the maximum likelihood estimate of the mean
-       of a normal distribution $\mathcal{N}(b, \sigma^2)$ fitted to
-       $x_1, \ldots, x_n$, for every fixed $\sigma$.
-    1. Change the loss to $\sum_i |x_i-b|$. Find the optimal solution for
-       $b$ and describe what changes relative to the squared loss.
-1. **Affine to linear.** Prove that the affine functions that can be
-   expressed by $\mathbf{x}^\top \mathbf{w} + b$ are equivalent to linear
-   functions on $(\mathbf{x}, 1)$.
-1. **Singular design matrix.** Full column rank makes the least-squares
+    1. Fit a normal distribution $\mathcal{N}(b, \sigma^2)$ to
+       $y^{(1)}, \ldots, y^{(n)}$ by maximum likelihood in both $b$ and
+       $\sigma^2$. Show that the estimate of $b$ is the solution of part (a)
+       and find the estimate of $\sigma^2$.
+    1. Change the loss to $\sum_i |y^{(i)} - b|$ and find all of its
+       minimizers. Then replace a single label by an arbitrary value and
+       determine how far the minimizers of each of the two losses can move.
+1. **Intercept and centering.** Appending a constant feature $1$ to every
+   input turns the affine model $\mathbf{w}^\top \mathbf{x} + b$ into a
+   linear model in $(\mathbf{x}, 1)$. Centering the data removes the bias
+   in a different way. Let $\bar{\mathbf{x}}$ and $\bar{y}$ be the averages
+   of the features and of the labels over the training set.
+    1. Show that every minimizer $(\mathbf{w}^*, b^*)$ of the squared loss
+       satisfies $b^* = \bar{y} - \mathbf{w}^{*\top} \bar{\mathbf{x}}$.
+    1. Show that $\mathbf{w}^*$ is a least-squares fit without bias to the
+       centered data $(\mathbf{x}^{(i)} - \bar{\mathbf{x}},\, y^{(i)} - \bar{y})$.
+1. **Singular design matrix.** ● Full column rank makes the least-squares
    minimizer unique. Suppose instead that $\mathbf{X}^\top \mathbf{X}$ is
    singular.
     1. Show that a minimizer of $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2$
        still exists and characterize the set of all minimizers.
-    1. Show that the Moore--Penrose pseudoinverse selects the minimizer of
-       smallest norm within this set.
+    1. Write the singular value decomposition as
+       $\mathbf{X} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ with
+       orthogonal $\mathbf{U}$ and $\mathbf{V}$ and a rectangular diagonal
+       $\boldsymbol{\Sigma}$ of nonnegative singular values. The
+       Moore--Penrose pseudoinverse is
+       $$\mathbf{X}^{\dagger} = \mathbf{V}\boldsymbol{\Sigma}^{\dagger}\mathbf{U}^\top,$$
+       where $\boldsymbol{\Sigma}^{\dagger}$ transposes
+       $\boldsymbol{\Sigma}$ and inverts its nonzero entries. Show that
+       $\mathbf{X}^{\dagger}\mathbf{y}$ is the minimizer of smallest norm
+       within the set of part (a).
     1. Starting from $\mathbf{w} = \mathbf{0}$, which minimizer does
        gradient descent converge to? State whether the answer changes for
        minibatch stochastic gradient descent.
-    1. Add independent Gaussian noise of variance $\gamma^2$ to every entry
-       of $\mathbf{X}$. Compute the expected value of the perturbed
-       $\mathbf{X}^\top \mathbf{X}$ and determine whether the perturbed
-       matrix is invertible.
+    1. Replace $\mathbf{X}$ by $\tilde{\mathbf{X}} = \mathbf{X} + \mathbf{Z}$,
+       where the entries of $\mathbf{Z}$ are independent draws from
+       $\mathcal{N}(0, \gamma^2)$. Compute
+       $E[\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}]$ and determine whether
+       it is invertible. Express the expected loss
+       $E\|\mathbf{y} - \tilde{\mathbf{X}}\mathbf{w}\|^2$ in terms of
+       $\mathbf{X}$, $\mathbf{y}$, $\mathbf{w}$ and $\gamma$.
     1. The standard remedy for a (near-)singular
-       $\mathbf{X}^\top \mathbf{X}$ is to add $\lambda \mathbf{I}$ before
-       inverting. Show that
-       $\mathbf{w}_\lambda = (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$
-       is well defined for every $\lambda>0$ and that it minimizes
-       $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \lambda\|\mathbf{w}\|^2$,
-       the $\ell_2$ penalty studied in :numref:`sec_weight_decay`. Compare
-       its limit as $\lambda \to 0$ with the pseudoinverse solution of
-       sub-problem 2.
+       $\mathbf{X}^\top \mathbf{X}$ is to add $\tilde{\lambda} \mathbf{I}$
+       before inverting. Show that
+       $$\mathbf{w}_{\tilde{\lambda}} = (\mathbf{X}^\top\mathbf{X} + \tilde{\lambda}\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$$
+       is well defined for every $\tilde{\lambda}>0$ and that it minimizes
+       $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \tilde{\lambda}\|\mathbf{w}\|^2$,
+       the $\ell_2$ penalty of :numref:`sec_weight_decay` written for the
+       summed loss. Find the $\tilde{\lambda}$ for which this objective
+       equals the expected loss of part (d). Compare the limit of
+       $\mathbf{w}_{\tilde{\lambda}}$ as $\tilde{\lambda} \to 0$ with
+       $\mathbf{X}^{\dagger}\mathbf{y}$ from part (b).
 1. **Laplace noise.** Assume that the noise model governing the additive
    noise $\epsilon$ is the Laplace distribution (see
    :numref:`sec_mdl-distributions`). That is,
@@ -852,9 +876,20 @@ and ultimately, evaluation on previously unseen data.
     1. Write out the negative log-likelihood of the data under the model
        $-\log P(\mathbf y \mid \mathbf X)$.
     1. Determine whether a closed-form solution exists.
-    1. Suggest a minibatch stochastic gradient descent algorithm to solve
-       this problem. Identify what can go wrong near the stationary point
-       as updates continue, and propose a fix.
+    1. Write the minibatch stochastic gradient descent update for
+       $(\mathbf{w}, b)$ under this loss in the form of
+       :eqref:`eq_linreg_batch_update`, using the subgradient
+       $\operatorname{sign}(\cdot)$ of
+       :numref:`subsec_linear-regression-loss-function`. Compare how the
+       size of each example's contribution depends on its residual under
+       this loss and under the squared loss.
+    1. The outlier demonstration in
+       :numref:`subsec_linear-regression-loss-function` applies this update
+       to a line through the origin, using the full dataset in every step
+       and a constant learning rate. On its data the minimizer of the
+       absolute error is exactly $w = 2$, yet the code prints $2.02$.
+       Explain why the iterates do not settle at the minimizer, and propose
+       a fix.
 1. **Composing two linear layers.** Suppose a network with two layers is
    built by feeding the output of one linear layer,
    $\mathbf{h} = \mathbf{W}_1 \mathbf{x} + \mathbf{b}_1$, into a second,
@@ -865,13 +900,21 @@ and ultimately, evaluation on previously unseen data.
    represent a strictly larger class?
 1. **Beyond Gaussian noise.** Suppose you use regression to estimate the
    price of houses or of stocks.
-    1. Identify two properties of prices that the additive Gaussian noise
-       model $y = \mathbf{w}^\top \mathbf{x} + b + \epsilon$ cannot
-       represent.
-    1. Explain what regressing on the logarithm of the price,
-       $y = \log \textrm{price}$, changes about each of these properties.
-       The same modeling choice underlies the Black--Scholes model of option
-       pricing :cite:`Black.Scholes.1973`.
+    1. Model the price directly as
+       $y = \mathbf{w}^\top \mathbf{x} + b + \epsilon$ with
+       $\epsilon \sim \mathcal{N}(0, \sigma^2)$, and take
+       $\sigma = 100{,}000$ dollars. Compute the probability that the model
+       assigns to a negative price for a house whose predicted price is
+       $50{,}000$ dollars. Explain why no single $\sigma$ suits both this
+       house and a house whose predicted price is $5{,}000{,}000$ dollars.
+    1. Now regress on the logarithm of the price,
+       $\log \textrm{price} = \mathbf{w}^\top \mathbf{x} + b + \epsilon$,
+       where $\epsilon \sim \mathcal{N}(0, \sigma^2)$ now acts on the log
+       scale. Compute the conditional mean and standard deviation of the
+       price and show that their ratio does not depend on $\mathbf{x}$.
+       Determine whether $\exp(\mathbf{w}^\top \mathbf{x} + b)$ is an
+       unbiased prediction of the price. The same modeling choice underlies
+       the Black--Scholes model of option pricing :cite:`Black.Scholes.1973`.
     1. Stock prices are quoted on a discrete grid, for example in whole
        cents. Explain how this affects the log-price model and for which
        price range the effect is largest.
@@ -890,9 +933,11 @@ and ultimately, evaluation on previously unseen data.
        in :numref:`subsec_linreg-loss-menu`.
     1. Compare the parameterizations
        $\lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$ and
-       $\log \lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$. Which
-       constraint on $\lambda$ does each satisfy automatically? Write the
-       loss of sub-problem 3 in terms of $(\mathbf{w}, b)$ for the second.
+       $\log \lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$.
+       Determine for each whether $\lambda(\mathbf{x}) > 0$ holds for all
+       inputs and parameters, and state the consequence for the loss of
+       part (c). Write that loss in terms of $(\mathbf{w}, b)$ for the
+       second parameterization.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/40)

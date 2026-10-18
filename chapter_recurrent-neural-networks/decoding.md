@@ -359,10 +359,14 @@ blind spots.
 Where does beam search live today? Exactly where its assumptions hold:
 speech recognition and machine translation systems
 :cite:`Sutskever.Vinyals.Le.2014,Wu.Schuster.Chen.ea.2016` still
-beam-decode, and *constrained* decoding is beam search over the valid
-continuations, forcing the output to obey a grammar, a JSON schema, or an
-API signature. Your chat assistant, however, does not use it: open-ended
-dialogue sits firmly in the second family, to which we now turn.
+beam-decode, and *lexically constrained* decoding, which forces given
+words or phrases into the output, runs beam search over the continuations
+that make progress on those constraints. Constraints on the output's form,
+such as a grammar, a JSON schema, or an API signature, are usually enforced
+instead by masking, at every step, the tokens that would make the output
+invalid, which works with any decoder. Your chat assistant, however, does
+not use beam search: open-ended dialogue sits firmly in the second
+family, to which we now turn.
 
 ## Sampling and Its Dials
 
@@ -674,54 +678,85 @@ token, a property the next chapter's architectures inherit.
 
 ## Exercises
 
-1. [code] **Repetition penalty.** A *repetition penalty*
-   :cite:`Keskar.McCann.Varshney.ea.2019` lowers the probability of tokens
-   that already appear in the generated sequence. Add one to
-   `sample_next`: divide the probability of every token already present by
-   a constant $\theta > 1$ before truncation and renormalize, which
-   requires passing the generated ids from `generate` into `sample_next`.
-   Decode greedily with $\theta = 1.2$.
-    1. Does the penalty remove the repeating cycles? Report distinct-3
-       with `distinct` before and after.
-    1. Which legitimate repetitions in English text does it penalize, and
-       what happens as $\theta$ grows large?
+1. [code] **Repetition penalty.** The *repetition penalty* of
+   :citet:`Keskar.McCann.Varshney.ea.2019` discourages tokens that already
+   appear in the sequence by dividing each such token's logit by a constant
+   $\theta > 1$. Add it to `sample_next` so that it acts on the logits
+   before both the greedy argmax and the temperature scaling. `generate`
+   then has to pass the ids so far to `sample_next`. Decode
+   `'the time traveller'` and `'it seemed to me that'` greedily with
+   $\theta = 1.2$.
+    1. Does the penalty remove the repeating cycles? Report the distinct-3
+       of each continuation, computed with `distinct`, with and without
+       the penalty.
+    1. Adding the same constant to every logit leaves the softmax
+       unchanged. Does it leave the penalized distribution unchanged? Work
+       out what the penalty does to a token whose logit is negative.
+    1. Which legitimate repetitions in English text does the penalty
+       discourage, and what happens as $\theta$ grows large?
 1. **Beam search properties.**
-    1. In :numref:`fig_beam-search`, could the best candidate after three
-       steps, ranked by cumulative probability, fail to contain the best
-       candidate after two steps as its prefix? Construct explicit
-       probabilities or prove it impossible. What does your answer imply
-       about how beam search can miss the argmax sequence?
-    1. For which beam size does beam search over $T$ steps coincide with
-       exhaustive search over all $|\mathcal{V}|^T$ sequences? Count the
-       model evaluations each performs.
-1. [code] **Length normalization.** Add an `eos_id` to the beam search
-   demonstration, for instance the id of the newline character, and vary
-   $\alpha \in \{0, 0.75, 1.5\}$ at $k = 4$. Compare the lengths and
-   scores of the winning candidates and explain the trend using
-   :eqref:`eq_beam-search-score`.
-1. [code] **Top-$p$ versus min-$p$.** At temperature $T = 1.5$, tune $p$
-   for top-$p$ and $p_{\min}$ for min-$p$ until each just keeps the
-   continuations of `generate` coherent. Which setting preserves more
-   diversity, measured by `distinct`, at matched coherence? Compare your
-   finding with those of :citet:`Nguyen.Baker.Neo.ea.2025`.
-1. [code] **Constrained sampling.** Ban a set of tokens, for example every
-   token whose text contains the letter "e", by masking their logits to
-   $-\infty$ before calling `sample_next`.
+    1. Take beam size 2, the five-token vocabulary of
+       :numref:`fig_beam-search`, and three steps. Assign conditional
+       probabilities for which beam search does not return the most
+       probable three-token sequence, and compute the probabilities of
+       both sequences. What does your construction imply about how beam
+       search can miss the argmax sequence?
+    1. What is the smallest beam size that guarantees that beam search
+       over $T$ steps returns the most probable of all
+       $|\mathcal{V}|^T$ sequences, whatever the model?
+    1. Let $k \leq |\mathcal{V}|$, and assume that no end-of-sequence
+       token occurs. Count the calls to `step_fn` that `beam_search`
+       makes over $T$ steps. Count also the calls that exhaustive search
+       makes when it evaluates every prefix once. Evaluate both counts
+       for $|\mathcal{V}| = 1024$, $T = 50$, and $k = 4$.
+1. [code] **Length normalization.** Run `beam_search` at $k = 4$ for up to
+   40 tokens after `'the time traveller'` and `'it seemed to me that'`.
+   Pass the id of the newline character, `data.tokenizer.encode('\n')[0]`,
+   as `eos_id`, and vary $\alpha \in \{0, 0.75, 1.5\}$. Compare the lengths
+   and the total log-probabilities of the winning candidates, and explain
+   the trend using :eqref:`eq_beam-search-score`.
+1. **Truncation under temperature.** `sample_next` applies every
+   truncation rule to the temperature-scaled distribution $P_T$ of
+   :eqref:`eq_temperature`. Write the min-$p$ condition
+   $P_T(x \mid x_{<t}) \geq p_{\min} \max_{x'} P_T(x' \mid x_{<t})$ as a
+   condition on the untempered probabilities. For the five-token
+   distribution 0.45, 0.25, 0.15, 0.10, 0.05, compute the sets that
+   top-$k$ with $k = 2$, top-$p$ with $p = 0.85$, and min-$p$ with
+   $p_{\min} = 0.5$ keep at $T = 2$. Which of the three rules keeps the
+   same set at every temperature?
+1. [code] **Top-$p$ versus min-$p$.** ● At $T = 1.5$, sweep $p$ for
+   top-$p$ and $p_{\min}$ for min-$p$ over a grid of values. For each
+   setting, generate 50-token continuations of five prefixes of your
+   choice and record two averages over the generated tokens: the number
+   of tokens the rule keeps, and the log-probability of the drawn token
+   under the untempered model. Plot the second average against the
+   first, one curve per rule. Which rule draws more probable tokens at
+   the same average number of kept tokens? Compare your finding with
+   those of :citet:`Nguyen.Baker.Neo.ea.2025`.
+1. [code] **Constrained sampling.** Ban every token whose text contains the
+   letter "e" by setting its logit to $-\infty$ in a wrapper around
+   `step_fn`. Generate 50 tokens greedily after `'the time traveller'`
+   with and without the ban. Report the probability mass that the ban
+   removes, averaged over the steps of the banned continuation, and
+   describe how the two continuations differ.
     1. Why is banning a *word* harder than banning a token under a subword
        tokenizer, and what can go wrong at the boundary between two
        tokens?
-    1. :numref:`sec_beam-search` describes constrained decoding as beam
-       search over the valid continuations. What does beam search add
-       over masking one token at a time when the constraint spans several
-       tokens?
-1. [code] **Failure taxonomy.** Decode 20 continuations of 50 tokens from
-   a fixed set of prefixes with greedy decoding.
+    1. Grammar and schema constraints are usually enforced by this same
+       per-step masking, with a parser deciding at each step which tokens
+       keep the output valid. Some constraints span several tokens, such
+       as forcing a given phrase to appear somewhere in the output. What
+       does keeping several prefixes alive, as beam search does, add over
+       masking one token at a time for such a constraint?
+1. [code] **Failure taxonomy.** ● Choose 20 prefixes and decode a 50-token
+   greedy continuation of each.
     1. Sort the failures into a taxonomy of your own, with categories such
        as a repeating cycle or a drift away from the prefix's topic, and
        report the frequency of each category with one example.
-    1. Which category does the repetition penalty of the first problem
-       target? Raise $\theta$ and report whether that category's
-       frequency falls without another's rising.
+    1. Decode one continuation of each prefix with min-$p$ sampling at
+       $p_{\min} = 0.05$ and classify its failures with the same
+       taxonomy, adding categories where needed. Which categories does
+       sampling remove, and which does it introduce?
     1. Which of the automated proxies named in
        :numref:`subsec_evaluating-generated-text` would detect each
        category, and which categories need a human judge?
@@ -729,7 +764,7 @@ token, a property the next chapter's architectures inherit.
     *Adapted from Stanford CS224n,
     [Assignment 4](https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1234/assignments/a4.pdf),
     Part 2(b).*
-1. [code] **Constant cost per token.** `step_fn` re-runs the network over
+1. [code] **Constant cost per token.** ● `step_fn` re-runs the network over
    the entire prefix for every generated token, so a $T$-token
    continuation costs $\mathcal{O}(T^2)$ cell updates
    (:numref:`subsec_cost-of-generation`).
@@ -737,8 +772,10 @@ token, a property the next chapter's architectures inherit.
        state of `model.rnn` and consumes only the newest token, so that
        each call performs one cell update. Verify that `generate` produces
        the same greedy continuation with both versions.
-    1. Time `generate` for 50, 200, and 800 tokens with both versions and
-       confirm the quadratic and the linear scaling.
+    1. Time `generate` for 50, 200, and 800 tokens with both versions.
+       Estimate from the ratios how each time grows with the number of
+       tokens, and explain any departure from the quadratic and linear
+       growth that the count of cell updates predicts.
     1. Why does the same replacement not carry over directly to
        `beam_search`, and what bookkeeping would make it work?
 

@@ -173,7 +173,7 @@ already-imputed numerical columns pass through untouched. Every column is
 now numeric.
 
 One caveat: one-hot encoding a *high-cardinality* column (thousands of
-distinct values, or an identifier unique to each row) explodes the
+distinct values, such as ZIP codes) explodes the
 feature count and is rarely useful. Such columns call for embeddings,
 which we meet in :numref:`sec_word2vec_pretraining`.
 
@@ -287,57 +287,88 @@ scaling) and for chaining them into reproducible pipelines, see
    fraction of the columns are numerical, categorical, or text, and state
    which of the preprocessing steps of this section the dataset actually
    needs.
-1. [code] **Indexing by name.** Redo the split of `data` into `inputs`
-   and `targets`, written with `iloc` in the body, using column names
-   instead of integer positions. Name the pandas indexing method you used;
-   the pandas docs on
-   [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html)
-   describe the options.
+1. [code] **Indexing by name.** This section splits `data` by position
+   with `data.iloc[:, :3]` and `data.iloc[:, 3]`. Suppose a new version of
+   `house_tiny.csv` adds a column `YearBuilt` between `Area` and `Price`.
+    1. State what the positional split then puts into `inputs` and
+       `targets`, and whether any later line of the section's code raises
+       an error.
+    1. Rewrite the split with column names so that `targets` holds `Price`
+       and `inputs` holds every other column, for the new file and for the
+       original one. The pandas user guide on
+       [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html)
+       lists the options.
 1. [code] **Imputation strategies.** Fill the missing values in `NumRooms`
    in three ways: with the column mean, with the column median, and with
-   the column mean plus a "was-missing" indicator column. For the first
-   two, compute how the column's mean and standard deviation change
-   relative to the observed values and explain the direction of each
-   change. For the third, state what information the indicator preserves
-   that imputation alone discards. State what each treatment assumes about
-   why the values are missing.
+   the column mean plus a "was-missing" indicator column.
+    1. For the mean fill and the median fill, compute the mean and the
+       standard deviation of the filled column, compare them with those of
+       the observed values, and explain the direction of each change.
+    1. Suppose that in a larger dataset `NumRooms` is missing mostly for
+       large homes. State what a model sees for those homes after mean
+       imputation alone. Then explain how a model that predicts the price
+       as a weighted sum of its features plus a constant can use the
+       indicator column to correct its predictions for them.
+    1. State what each of the three treatments assumes about why the values
+       are missing.
 
-    Once you have trained a model in :numref:`sec_linear_regression`,
-    return to this exercise and compare the three variants by their error
-    on rows that were not used for fitting.
+    *Adapted from Kaggle Learn,
+    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
+    Exercise 2.*
+1. [code] **Where leakage hides.** This section fills the missing
+   `NumRooms` entries with the mean of all observed values and
+   standardizes `NumRooms` and `Area` with the mean and standard deviation
+   of all ten rows. Treat the first eight rows of `data` as training data
+   and the last two as test data.
+    1. Redo the imputation and the standardization with statistics
+       computed on the training rows only and applied unchanged to the test
+       rows. Compare the standardized test rows with those of the
+       whole-dataset recipe.
+    1. Explain what the whole-dataset recipe lets the model learn about the
+       test rows that the training-only recipe does not.
+    1. Suppose a feature is constant on the training rows but not on the
+       test rows. State what the training-only recipe produces for that
+       feature on each split, and propose a fix.
+1. [code] **Memory per row.** Use `data.memory_usage(deep=True)` to find
+   how many bytes per row the `RoofType` column and the `Area` column of
+   `data` occupy in memory. Compare each with the average number of bytes
+   the same field takes in `house_tiny.csv`.
+1. [code] **Scaling limits.** ● Estimate how many rows of a table with the
+   columns of `house_tiny.csv` you can load with `pd.read_csv` on your
+   machine. Write synthetic CSV files with the four columns of
+   `house_tiny.csv` and $10^5$, $10^6$, and $10^7$ random rows. For each
+   file, time `pd.read_csv` and record the memory of the resulting
+   DataFrame. Extrapolate both measurements linearly. Find the number of
+   rows at which the DataFrame would fill your machine's memory and the
+   number at which loading would take ten minutes, and state which limit
+   comes first.
+1. **High-cardinality categories.** One-hot encoding turns a categorical
+   column with $k$ distinct values into $k$ columns, plus one more with
+   `dummy_na=True`.
+    1. A table of $n = 10^6$ homes has a `ZipCode` column with no missing
+       entries and $k = 10^4$ distinct values. Compute how many bytes its
+       one-hot columns occupy when stored densely as `float64`, and how many
+       of their entries are nonzero.
+    1. A column `ListingID` holds a value unique to each row. Consider three
+       treatments: one-hot encoding, an embedding (a learned vector for each
+       distinct value), and dropping the column. For each, state what a
+       model could learn about a home whose `ListingID` does not occur in
+       the training data, and choose one treatment.
 
-    *Adapted from Kaggle Learn's
-    [Missing Values](https://www.kaggle.com/code/alexisbcook/missing-values)
-    exercise.*
-1. [code] **Where leakage hides.** The standardization of
-   `inputs[continuous]` uses the mean and standard deviation of all ten
-   rows. Treat the first eight rows as training data and the last two as
-   test data, recompute the two statistics on the training rows only, and
-   compare the standardized test rows under the two recipes. Explain what
-   the whole-dataset recipe lets the model learn about the test rows that
-   the training-only recipe does not. Then state what happens to the
-   standardized column when a feature has zero variance on the training
-   rows, and propose a fix.
-1. **Scaling limits.** Estimate how large a dataset you could
-   load this way. Consider read time, in-memory representation, and
-   processing. Try it on your laptop, then on a larger machine, and
-   identify what breaks first.
-1. [code] **High-cardinality categories.** For a categorical column with
-   $k$ distinct values, state how many columns `pd.get_dummies` produces
-   with and without `dummy_na=True`, and check your answer on `RoofType`.
-   For a column in which every value is unique, such as an identifier,
-   decide whether to include it, drop it, or encode it differently, and
-   justify your choice by what a model could learn from each option.
-
-    *Adapted from Kaggle Learn's
-    [Categorical Variables](https://www.kaggle.com/code/alexisbcook/categorical-variables)
-    exercise.*
-1. [code] **Pandas alternatives, tried once.** Load the same
-   `house_tiny` values by saving and reloading them as a NumPy array with
-   [`numpy.load`](https://numpy.org/doc/stable/reference/generated/numpy.load.html),
-   and separately load an image file with
-   [Pillow](https://python-pillow.org/). Report one concrete limitation of
-   each route that pandas does not share.
+    *Adapted from Kaggle Learn,
+    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
+    Exercise 3.*
+1. [code] **Pandas alternatives, tried once.** NumPy and Pillow load data
+   without pandas.
+    1. Save `data` with `numpy.save` and reload it with
+       [`numpy.load`](https://numpy.org/doc/stable/reference/generated/numpy.load.html).
+       Report what happens when `numpy.load` runs with its default
+       arguments, the dtype of the array once it loads, and which
+       information in `data` the array no longer carries.
+    1. Load a photograph with [Pillow](https://python-pillow.org/), convert
+       it with `numpy.asarray`, and report the shape and dtype of the
+       result. Explain why a DataFrame of rows and named columns is a poor
+       container for this array.
 1. [extended] **A real messy dataset, end to end.** Take a messy public
    dataset, for example the San Francisco restaurant-inspection data used
    in Berkeley's Data 100. Run the full pipeline this section teaches:

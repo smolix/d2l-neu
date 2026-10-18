@@ -1081,11 +1081,13 @@ as with RMSNorm, maintain the custom implementation.
 ## Exercises
 
 :begin_tab:`pytorch`
-1. [code] **RMSNorm bias.** Add an optional learned bias to `RMSNorm` (a
-   shift applied after the scale, restoring part of what LayerNorm had).
-   Verify that the state dict of a model containing it grows by the
-   expected entry, and that a state dict saved without the bias no longer
-   loads with `strict=True`.
+1. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+   `RMSNorm` (a shift applied after the scale, restoring part of what
+   LayerNorm had), and verify that the state dict of a model containing it
+   grows by the expected entry. Then place the layer directly before a
+   linear layer with weight $\mathbf{W}$ and bias $\mathbf{c}$, and show
+   that $\mathbf{b}$ can be folded into $\mathbf{c}$ without changing the
+   outputs. What is the folded bias?
 1. [code] **Dropout from scratch.** Implement `Dropout` as a custom layer
    that zeroes each entry with probability $p$ and rescales the survivors
    during training, but is the identity during evaluation. Where does the
@@ -1107,34 +1109,43 @@ as with RMSNorm, maintain the custom implementation.
     [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
     and the JAX notebook
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
-1. [code] **Parameterless layers.** Write a layer that returns the leading
-   half of the Fourier coefficients of its input. It has no parameters, so
-   nothing registers. What do you still gain by wrapping the computation in
-   a module instead of calling the transform inline wherever you need it?
-1. [extended] **Bucketing with a straight-through estimator.**
+1. [code] **Offset causal mask.** During cached decoding, the score matrix
+   has shape $T_q \times T_k$ with $T_q \le T_k$, and the $T_q$ queries
+   occupy the last $T_q$ of the $T_k$ key positions. Generalize
+   `CausalMask` to such score matrices while it still slices its single
+   precomputed `max_len` $\times$ `max_len` table. Check that the result
+   agrees with the original layer when $T_q = T_k$, state which entries it
+   masks when $T_q = 1$, and state what happens when $T_k$ exceeds
+   `max_len`.
+1. [extended] **Bucketing with a straight-through estimator.** ●
    :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
-   Extend the idea to a layer that maps a learned score to a
-   non-differentiable integer bucket index in its forward pass and passes
-   the incoming gradient straight through to the score in its backward
-   pass. Train a small model containing the layer and verify that its loss
-   still decreases even though the forward computation is flat almost
-   everywhere.
+   Extend the idea to a layer whose forward pass maps a score $s$ to the
+   bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
+   the floor as the identity. Return the index as a floating-point tensor so
+   that gradients can reach $s$. Place the layer with $K = 4$ between two
+   linear layers of output width one, and train the network on inputs
+   $\mathbf{x} \in \mathbb{R}^{10}$ with targets
+   $y = \lfloor 4\sigma(\mathbf{w}^\top \mathbf{x}) \rfloor$ for a fixed
+   random $\mathbf{w}$. Compare the final training loss with that of the
+   same network in which the floor keeps its true gradient, and explain
+   which parameters learn in each case.
 :end_tab:
 
 :begin_tab:`jax`
-1. [code] **RMSNorm bias.** Add an optional learned bias to `RMSNorm` (a
-   shift applied after the scale, restoring part of what LayerNorm had).
-   Verify that the parameter state of a model containing it grows by the
-   expected entry, and observe what `flax.serialization.from_bytes` does
-   when it restores bytes saved without the bias into the new state
-   structure.
+1. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+   `RMSNorm` (a shift applied after the scale, restoring part of what
+   LayerNorm had), and verify that the parameter state of a model
+   containing it grows by the expected entry. Then place the layer directly
+   before a linear layer with weight $\mathbf{W}$ and bias $\mathbf{c}$,
+   and show that $\mathbf{b}$ can be folded into $\mathbf{c}$ without
+   changing the outputs. What is the folded bias?
 1. [code] **Dropout from scratch.** Implement `Dropout` as a custom layer
    that zeroes each entry with probability $p$ and rescales the survivors
-   during training, but is the identity during evaluation. Store
-   `self.deterministic = False`, give the module an `nnx.Rngs` stream, and
-   implement `set_view(self, *, deterministic)` to update the flag. Verify
-   that `nnx.view(model, deterministic=True)` reaches a dropout layer
-   nested in an `nnx.Sequential`.
+   during training, but is the identity during evaluation. Give it the
+   `deterministic` flag, the RNG stream, and the `set_view` method of
+   `DropoutMLPScratch` (:numref:`sec_dropout`). How does calling
+   `nnx.view` with `deterministic=True` on an enclosing `nnx.Sequential`
+   reach your layer?
 1. [code] **Custom gradients.**
     1. Implement a clamp with a custom gradient: a `custom_vjp` function
        whose forward is `jnp.clip(X, lo, hi)` and whose backward passes the
@@ -1152,26 +1163,36 @@ as with RMSNorm, maintain the custom implementation.
     [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
     and the JAX notebook
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
-1. [code] **Parameterless layers.** Write a layer that returns the leading
-   half of the Fourier coefficients of its input. It has no parameters, so
-   nothing registers. What do you still gain by wrapping the computation in
-   a module instead of calling the transform inline wherever you need it?
-1. [extended] **Bucketing with a straight-through estimator.**
+1. [code] **Offset causal mask.** During cached decoding, the score matrix
+   has shape $T_q \times T_k$ with $T_q \le T_k$, and the $T_q$ queries
+   occupy the last $T_q$ of the $T_k$ key positions. Generalize
+   `CausalMask` to such score matrices while it still slices its single
+   precomputed `max_len` $\times$ `max_len` table. Check that the result
+   agrees with the original layer when $T_q = T_k$, state which entries it
+   masks when $T_q = 1$, and state what happens when $T_k$ exceeds
+   `max_len`.
+1. [extended] **Bucketing with a straight-through estimator.** ●
    :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
-   Extend the idea to a layer that maps a learned score to a
-   non-differentiable integer bucket index in its forward pass and passes
-   the incoming gradient straight through to the score in its backward
-   pass. Train a small model containing the layer and verify that its loss
-   still decreases even though the forward computation is flat almost
-   everywhere.
+   Extend the idea to a layer whose forward pass maps a score $s$ to the
+   bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
+   the floor as the identity. Return the index as a floating-point tensor so
+   that gradients can reach $s$. Place the layer with $K = 4$ between two
+   linear layers of output width one, and train the network on inputs
+   $\mathbf{x} \in \mathbb{R}^{10}$ with targets
+   $y = \lfloor 4\sigma(\mathbf{w}^\top \mathbf{x}) \rfloor$ for a fixed
+   random $\mathbf{w}$. Compare the final training loss with that of the
+   same network in which the floor keeps its true gradient, and explain
+   which parameters learn in each case.
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. [code] **RMSNorm bias.** Add an optional learned bias to `RMSNorm` (a
-   shift applied after the scale, restoring part of what LayerNorm had).
-   Verify that `get_weights` on a model containing it grows by the expected
-   entry, and observe what `set_weights` does when handed a list saved
-   without the bias.
+1. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+   `RMSNorm` (a shift applied after the scale, restoring part of what
+   LayerNorm had), and verify that `get_weights` on a model containing it
+   grows by the expected entry. Then place the layer directly before a
+   linear layer with weight $\mathbf{W}$ and bias $\mathbf{c}$, and show
+   that $\mathbf{b}$ can be folded into $\mathbf{c}$ without changing the
+   outputs. What is the folded bias?
 1. [code] **Dropout from scratch.** Implement `Dropout` as a custom layer
    that zeroes each entry with probability $p$ and rescales the survivors
    during training, but is the identity during evaluation. Keras passes a
@@ -1194,33 +1215,45 @@ as with RMSNorm, maintain the custom implementation.
     [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
     and the JAX notebook
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
-1. [code] **Parameterless layers.** Write a layer that returns the leading
-   half of the Fourier coefficients of its input. It has no parameters, so
-   nothing registers. What do you still gain by wrapping the computation in
-   a module instead of calling the transform inline wherever you need it?
-1. [extended] **Bucketing with a straight-through estimator.**
+1. [code] **Offset causal mask.** During cached decoding, the score matrix
+   has shape $T_q \times T_k$ with $T_q \le T_k$, and the $T_q$ queries
+   occupy the last $T_q$ of the $T_k$ key positions. Generalize
+   `CausalMask` to such score matrices while it still slices its single
+   precomputed `max_len` $\times$ `max_len` table. Check that the result
+   agrees with the original layer when $T_q = T_k$, state which entries it
+   masks when $T_q = 1$, and state what happens when $T_k$ exceeds
+   `max_len`.
+1. [extended] **Bucketing with a straight-through estimator.** ●
    :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
-   Extend the idea to a layer that maps a learned score to a
-   non-differentiable integer bucket index in its forward pass and passes
-   the incoming gradient straight through to the score in its backward
-   pass. Train a small model containing the layer and verify that its loss
-   still decreases even though the forward computation is flat almost
-   everywhere.
+   Extend the idea to a layer whose forward pass maps a score $s$ to the
+   bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
+   the floor as the identity. Return the index as a floating-point tensor so
+   that gradients can reach $s$. Place the layer with $K = 4$ between two
+   linear layers of output width one, and train the network on inputs
+   $\mathbf{x} \in \mathbb{R}^{10}$ with targets
+   $y = \lfloor 4\sigma(\mathbf{w}^\top \mathbf{x}) \rfloor$ for a fixed
+   random $\mathbf{w}$. Compare the final training loss with that of the
+   same network in which the floor keeps its true gradient, and explain
+   which parameters learn in each case.
 :end_tab:
 
 :begin_tab:`mxnet`
-1. [code] **RMSNorm bias.** Add an optional learned bias to `RMSNorm` (a
-   shift applied after the scale, restoring part of what LayerNorm had).
-   Verify that the file written by `save_parameters` for a model containing
-   it grows by the expected entry, and observe what `load_parameters` does
-   when handed a file saved without the bias. Which of its `allow_missing`
-   and `ignore_extra` flags changes the outcome?
+1. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+   `RMSNorm` (a shift applied after the scale, restoring part of what
+   LayerNorm had), and verify that the file written by `save_parameters`
+   for a model containing it grows by the expected entry. Then place the
+   layer directly before a linear layer with weight $\mathbf{W}$ and bias
+   $\mathbf{c}$, and show that $\mathbf{b}$ can be folded into $\mathbf{c}$
+   without changing the outputs. What is the folded bias?
 1. [code] **Dropout from scratch.** Implement `Dropout` as a custom layer
    that zeroes each entry with probability $p$ and rescales the survivors
-   during training, but is the identity during evaluation. Gluon has no
-   `.train()`/`.eval()` switch; the flag your `forward` consults is
-   `autograd.is_training()`. What sets that flag, and what does it imply
-   for calling the layer outside `autograd.record()`?
+   during training, but is the identity during evaluation. Its `forward`
+   consults `autograd.is_training()`, which `autograd.record()` switches on
+   together with recording (:numref:`sec_parameters`). Run the layer under
+   all four combinations of recording and training mode, using
+   `autograd.record(train_mode=False)` and `autograd.train_mode()` for the
+   mixed cases. For each combination, report whether entries are dropped
+   and whether a gradient reaches the input.
 1. [code] **Custom gradients.**
     1. Implement a clamp with a custom gradient: an `autograd.Function`
        whose forward is `np.clip(X, lo, hi)` and whose backward passes the
@@ -1238,16 +1271,24 @@ as with RMSNorm, maintain the custom implementation.
     [Learning PyTorch with Examples](https://docs.pytorch.org/tutorials/beginner/pytorch_with_examples.html)
     and the JAX notebook
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
-1. [code] **Parameterless layers.** Write a layer that returns the leading
-   half of the Fourier coefficients of its input. It has no parameters, so
-   nothing registers. What do you still gain by wrapping the computation in
-   a module instead of calling the transform inline wherever you need it?
-1. [extended] **Bucketing with a straight-through estimator.**
+1. [code] **Offset causal mask.** During cached decoding, the score matrix
+   has shape $T_q \times T_k$ with $T_q \le T_k$, and the $T_q$ queries
+   occupy the last $T_q$ of the $T_k$ key positions. Generalize
+   `CausalMask` to such score matrices while it still slices its single
+   precomputed `max_len` $\times$ `max_len` table. Check that the result
+   agrees with the original layer when $T_q = T_k$, state which entries it
+   masks when $T_q = 1$, and state what happens when $T_k$ exceeds
+   `max_len`.
+1. [extended] **Bucketing with a straight-through estimator.** ●
    :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
-   Extend the idea to a layer that maps a learned score to a
-   non-differentiable integer bucket index in its forward pass and passes
-   the incoming gradient straight through to the score in its backward
-   pass. Train a small model containing the layer and verify that its loss
-   still decreases even though the forward computation is flat almost
-   everywhere.
+   Extend the idea to a layer whose forward pass maps a score $s$ to the
+   bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
+   the floor as the identity. Return the index as a floating-point tensor so
+   that gradients can reach $s$. Place the layer with $K = 4$ between two
+   linear layers of output width one, and train the network on inputs
+   $\mathbf{x} \in \mathbb{R}^{10}$ with targets
+   $y = \lfloor 4\sigma(\mathbf{w}^\top \mathbf{x}) \rfloor$ for a fixed
+   random $\mathbf{w}$. Compare the final training loss with that of the
+   same network in which the floor keeps its true gradient, and explain
+   which parameters learn in each case.
 :end_tab:

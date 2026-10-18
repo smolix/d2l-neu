@@ -609,29 +609,81 @@ them optimizer state.
 
 ## Exercises
 
-1. [code] **Coupled and decoupled decay on pure noise.** Consider two
-   parameters whose loss gradients are pure noise,
-   $g_i \sim \mathcal{N}(0, \sigma_i^2)$ with $\sigma = (10, 0.1)$, so
-   that decay is the only systematic force acting on them.
-    1. Track $|x_i|$ over 5,000 steps from $x_i = 1$ under Adam with an
-       $\ell_2$ penalty and under AdamW at the same $(\eta, \lambda)$.
-    1. Verify AdamW's trajectories against the prediction
-       $(1 - \eta\lambda)^t$ and explain the two coupled trajectories with
-       :eqref:`eq_coupled-decay`. Compare with the experiment in
-       :numref:`subsec_mdl-decoupled-weight-decay`.
-1. [code] **Momentum and the penalty.** Under SGD *with momentum*, is the
-   $\ell_2$ penalty still exactly equivalent to decoupled decay? Trace
-   where $\lambda \mathbf{x}_t$ ends up inside the velocity of
-   :eqref:`eq_momentum`, derive the effective per-step shrinkage, and check
-   your conclusion on the airfoil harness of :numref:`sec_minibatch_sgd`
-   with the momentum update of :numref:`sec_momentum`.
-1. [code] **The fixed-product ridge.** In :numref:`subsec_wd-at-scale`,
-   $\eta$ and $\lambda$ act through their product, with timescale
-   $\tau = B/(\eta\lambda D)$. Fix $\eta\lambda = 3 \times 10^{-3}$ and
-   adapt the decoupled `sweep` of :numref:`subsec_adamw-grid` to run along
-   the ridge $(\eta, \lambda) \in \{(10^{-3}, 3), (3 \times 10^{-3}, 1),
-   (10^{-2}, 0.3)\}$. How constant is the held-out loss along the ridge,
-   and what breaks the equivalence at its extremes?
+1. [code] **Saturation of coupled decay.** The experiment of
+   :numref:`subsec_mdl-decoupled-weight-decay` starts two parameters at
+   $x_i = 1$ and gives them pure-noise loss gradients
+   $g_i \sim \mathcal{N}(0, \sigma_i^2)$ with $\sigma = (10, 0.1)$. At
+   $\eta = 10^{-3}$ and $\lambda = 0.1$, Adam with an $\ell_2$ penalty
+   decays them at the rates $\eta\lambda/\sigma_i$ that
+   :eqref:`eq_coupled-decay` predicts.
+    1. In the opposite limit $\sigma_i = 0$, the penalized gradient is
+       $\lambda x_{t,i}$ alone. Show that for $\epsilon = 0$ the trajectory
+       of $x_{t,i}$ under Adam with an $\ell_2$ penalty does not depend on
+       $\lambda > 0$.
+    1. Extend the experiment to
+       $\sigma_i \in \{10, 1, 0.1, 0.01, 0.001\}$ at $\eta = 10^{-3}$ and
+       record $|x_i|$ after 1,000 steps of Adam with an $\ell_2$ penalty
+       for each $\lambda \in \{0.1, 1, 10\}$. Which coordinates no longer
+       respond to $\lambda$, and how does the transition between the two
+       regimes depend on $\sigma_i$ and $\lambda$?
+1. [code] **Momentum and the penalty.** ● Under SGD with momentum, an
+   $\ell_2$ penalty adds $\lambda \mathbf{x}_{t-1}$ to the gradient
+   $\mathbf{g}_t$ in the velocity of :eqref:`eq_momentum`. Decoupled decay
+   leaves the velocity alone and shrinks the weights directly:
+   $$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t, \qquad
+   \mathbf{x}_t = (1 - \eta\lambda)\,\mathbf{x}_{t-1} - \eta\,\mathbf{v}_t.$$
+    1. Unroll the coupled velocity and compute the total shrinkage that the
+       penalty term $\lambda \mathbf{x}_{t-1}$ of one step applies to the
+       weights over all later steps. Are the two updates equivalent at the
+       same $\lambda$? Does their difference depend on the coordinate, as
+       it does under Adam?
+    1. Modify `sgd_momentum` of :numref:`sec_momentum` to implement both
+       updates, and train each with `d2l.train_ch11` on the airfoil data at
+       `lr=0.02` and `momentum=0.9`. Run the coupled update at
+       $\lambda = 1$ and the decoupled update at
+       $\lambda \in \{1, 3, 10, 30\}$. Which decoupled coefficient comes
+       closest to the coupled run's final training loss, and how does it
+       compare with your answer to the first part?
+1. [code] **The fixed-product ridge.** ● Both library implementations
+   used in this section multiply the decay by the full learning rate, so
+   the per-step shrinkage is $s = \eta\lambda$. :numref:`subsec_wd-at-scale`
+   argues that at scale $\eta$ and $\lambda$ act through this product,
+   which sets an averaging horizon of $1/s$ steps.
+   :citet:`Loshchilov.Hutter.2019` instead scale the decay by the schedule
+   multiplier only, so that under a constant schedule their decay
+   coefficient is $s$ itself.
+    1. Each column of a grid can fix $s$ instead of $\lambda$. Use
+       `decoupled_tbl` to predict where the best entry of each row falls on
+       the shrinkage axis `[1e-3, 3e-3, 1e-2, 3e-2]`. Then rerun the
+       decoupled grid of :numref:`subsec_adamw-grid` with `sweep` on this
+       axis, passing the decay coefficient to the optimizer as `wd / lr`.
+       Does the best column stay put?
+    1. How constant is the held-out loss down the column
+       $s = 3 \times 10^{-3}$? Reconcile the answer with the argument of
+       :numref:`subsec_wd-at-scale`, and state which quantity, $\lambda$ or
+       $s$, the decay axis of a grid should carry when the learning rate is
+       retuned in this setting.
+1. [code] **Rotational equilibrium.** ● Following
+   :citet:`Kosson.Messmer.Jaggi.2024`, let $\mathbf{x} \in \mathbb{R}^d$
+   be a scale-invariant weight vector in the sense of
+   :numref:`subsec_wd-at-scale`, trained by AdamW with $\beta_1 = 0$:
+   $$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t - \eta\,\mathbf{u}_t,
+   \qquad \mathbf{u}_t = \frac{\mathbf{g}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}.$$
+    1. Show that the loss gradient of a scale-invariant weight vector is
+       orthogonal to $\mathbf{x}$. Assume from here on that $\mathbf{u}_t$
+       is orthogonal to $\mathbf{x}_t$ as well and that
+       $\|\mathbf{u}_t\|^2 \approx d$. Derive, to first order in
+       $\eta\lambda$, the equilibrium norm at which decay balances the
+       growth caused by the updates.
+    1. Derive the angle through which $\mathbf{x}$ turns per step at
+       equilibrium. How do the equilibrium norm and the angle each depend
+       on $\eta$ and $\lambda$? Relate the result to the claim of
+       :numref:`subsec_wd-at-scale` that $\eta$ and $\lambda$ act through
+       their product.
+    1. Check both predictions in numpy with $d = 1{,}000$ over 20,000
+       steps from a random unit vector, using pure-noise gradients
+       projected orthogonal to $\mathbf{x}_t$, at $(\eta, \lambda) \in
+       \{(10^{-3}, 0.1), (3 \times 10^{-3}, 0.1), (10^{-3}, 0.3)\}$.
 1. [code] **Testing the exemptions.** :numref:`subsec_adamw-what-not-to-decay`
    attributes OLMo 2's embedding instability to decay shrinking embedding
    rows until the $1/\|\mathbf{x}\|$ factor in the LayerNorm gradient grows
@@ -654,21 +706,10 @@ them optimizer state.
        parameter of a forward and backward pass over one batch. At which
        batch size would the optimizer step cost one percent of a training
        step?
-    1. Repeat the per-parameter byte ledger of `setups` for SGD with
-       momentum and for Adam with an $\ell_2$ penalty. Which totals change
-       relative to AdamW, and which do not?
 
     *Adapted from Stanford CS336,
     [Assignment 1](https://github.com/stanford-cs336/spring2024-assignment1-basics),
     Problem adamwAccounting.*
-1. [code] **Decay independent of the learning rate.** Both library
-   implementations used in this section multiply the decay by the full
-   learning rate, so the per-step shrinkage is $\eta\lambda$, whereas
-   :citet:`Loshchilov.Hutter.2019` scale it by the schedule multiplier
-   only. Rerun the decoupled grid with `sweep`, passing the decay
-   coefficient as `wd / lr` so that the per-step shrinkage is $\lambda$
-   regardless of $\eta$. Does the best column stay put, and what does the
-   answer say about which quantity the grid's decay axis should carry?
 
 [Discussions](https://d2l.discourse.group/)
 

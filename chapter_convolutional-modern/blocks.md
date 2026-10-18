@@ -787,81 +787,88 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
 
 ## Exercises
 
-1. **Parameters and FLOPs across architectures.** Compared with `AlexNet`,
-   VGG-11 is much slower in terms of computation, and it also needs more
-   GPU memory.
-    1. Compare the number of parameters of `AlexNet` and of VGG-11, the
-       `VGG` instance with
-       `arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))`.
-    1. Compare the number of floating point operations used in the
-       convolutional layers and in the fully connected layers of each.
-    1. How could the cost of the fully connected layers be reduced?
-       Extend the accounting to `NiN` and `GoogleNet`, and identify the
-       design choice in each that accounts for most of the reduction
-       relative to VGG-11.
+1. [code] **Parameters and FLOPs across architectures.** ● VGG-11, the `VGG`
+   instance with `arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))`,
+   is much slower than `AlexNet` from :numref:`sec_alexnet` and needs more
+   GPU memory. Count every network on a $224 \times 224$ Fashion-MNIST
+   image.
+    1. Tabulate the parameter count and the number of multiplications of
+       VGG-11, separately for its convolutional and its fully connected
+       layers. Compare each total with the corresponding total of the
+       `AlexNet` ledger in the "Memory and compute ledger" exercise of
+       :numref:`sec_alexnet`.
+    1. Repeat the count for `NiN` and `GoogleNet`. For each network,
+       determine whether the classification head or the convolutional
+       layers account for most of its reduction relative to VGG-11,
+       separately for parameters and for multiplications, and name the
+       design choice responsible.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.18.*
-1. **The missing three layers.** `layer_summary` lists the convolutional
-   part of VGG-11 as five blocks, and the network has three fully
-   connected layers, eight components in all. Its name counts eleven
-   layers. Where are the remaining three?
-1. [code] **VGG-16 and VGG-19.** Use Table 1 of
-   :citet:`Simonyan.Zisserman.2014` to write the `arch` tuples of VGG-16
-   and VGG-19 and instantiate both with the `VGG` class. Report their
-   parameter counts against VGG-11.
-1. [code] **Resolution conversion.** Upsampling Fashion-MNIST images
-   eightfold, from $28 \times 28$ to $224 \times 224$, spends computation
-   without adding information. Train
-   `VGG(arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128)))` at
-   $56 \times 56$ and at $84 \times 84$ instead and compare validation
-   accuracy and time per epoch with the $224 \times 224$ run. If a variant
-   loses more than one point, add convolutional layers to its early
-   blocks, following the argument of :citet:`Simonyan.Zisserman.2014` for
-   stacking several $3 \times 3$ convolutions between pooling steps, and
-   compare again.
-1. [code] **NiN block design.** Why are there two $1\times 1$
-   convolutional layers per NiN block? Increase their number to three,
-   then reduce it to one, and report parameter count, accuracy, and
-   training time for each variant.
-1. [code] **Global average pooling versus dense.** What happens if you
-   replace NiN's global average pooling by a fully connected layer?
-   Compare speed, accuracy, and the number of parameters.
+1. [code] **VGG-16 and VGG-19.** Configurations D and E in Table 1 of
+   :citet:`Simonyan.Zisserman.2014` are the networks known as VGG-16 and
+   VGG-19. Write their `arch` tuples, instantiate both with the `VGG`
+   class, and report their parameter counts against VGG-11.
+1. [code] **NiN block design.** Each NiN block follows its spatial
+   convolution with two $1\times 1$ convolutions. Build variants of `NiN`
+   with three and with one $1 \times 1$ convolution per block, and report
+   the parameter count, validation accuracy, and training time of all
+   three networks. Which count would you choose, and which measurement
+   decides the choice?
+1. [code] **Global average pooling versus dense.** Replace the global
+   average pooling of `NiN` by a fully connected layer that maps the
+   flattened $10 \times 5 \times 5$ output of the last `nin_block` to the
+   10 logits.
+    1. Compare the number of parameters, validation accuracy, and time per
+       epoch with those of `NiN`.
+    1. Shift every resized $224 \times 224$ validation image horizontally
+       by 32 pixels, filling with zeros, and compare how much the
+       validation accuracy of each network drops.
 1. **One-step channel reduction.** What are possible problems with
    reducing the $384 \times 5 \times 5$ representation to a
    $10 \times 5 \times 5$ representation in one step, as the final NiN
    block does?
-1. [code] **Squeeze-and-excitation.** Add a squeeze-and-excitation gate
-   :cite:`Hu.Shen.Sun.2018` to `Inception`: global-average-pool the
-   block's output to one value per channel, pass the resulting vector
-   through a two-layer MLP whose hidden width is one sixteenth of the
-   channel count and whose output passes through a sigmoid, and multiply
-   each channel by its gate. How many parameters does the gate add to a
-   block with $c$ output channels, and to `GoogleNet` as a whole? Train
-   `GoogleNet` with and without the gates under the procedure used for
-   `NiN` and compare validation accuracy.
+1. [code] **Single-branch ablation.** ● Build a variant of `GoogleNet` whose
+   Inception blocks keep only the $3 \times 3$ branch with its
+   $1 \times 1$ reduction. Let the $3 \times 3$ convolution emit as many
+   channels as the original block, and choose the width of the
+   $1 \times 1$ reduction so that each block's parameter count stays
+   within 10% of the original. Train both networks on $96 \times 96$
+   inputs under the procedure used for `NiN` and compare validation
+   accuracy. What does the result say about the value of mixing kernel
+   sizes within one block?
 1. **Depthwise Inception.** Suppose the four branches of the first body
    block of `GoogleNet`, which maps 192 input channels to
    $64 + 128 + 32 + 32 = 256$ output channels, are replaced by a single
    $7 \times 7$ depthwise convolution followed by a $1 \times 1$
    convolution (:numref:`sec_depthwise_separable`). Compare the parameter
-   count and the number of floating point operations of the two blocks at
+   count and the number of multiplications of the two blocks at
    the same input and output sizes.
-1. [code] **GoogLeNet at native resolution.** `GoogleNet` accepts a
-   $28 \times 28$ input as written, because its convolutions and pooling
-   layers pad so that every stride-2 step halves the resolution, rounding
-   up.
-    1. Compute the resolution at which each of the three groups of
-       Inception blocks operates on a $28 \times 28$ input. What do the
-       $3 \times 3$ and $5 \times 5$ branches compute at the smallest of
-       these resolutions?
-    1. Redesign the stem so that the first group of Inception blocks
-       operates on at least a $14 \times 14$ feature map, and adjust the
-       body and head as needed. Report the changes, and compare validation
-       accuracy and time per epoch with `GoogleNet` trained at the
-       $96 \times 96$ resolution of the shape check under the procedure
-       used for `NiN`.
+1. [code] **Native resolution.** Fashion-MNIST images are
+   $28 \times 28$, and the training runs of this section upsample them
+   eightfold to $224 \times 224$, which spends computation without adding
+   information.
+    1. Train `VGG` with
+       `arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128))` and
+       `lr=0.01` on images resized to $56 \times 56$ and to $84 \times 84$.
+       Compare validation accuracy and time per epoch with the same model
+       trained at $224 \times 224$, and give the spatial size of the
+       feature map that enters the fully connected layers at each of the
+       three resolutions.
+    1. `GoogleNet` accepts a $28 \times 28$ input as written, because its
+       convolutions and pooling layers pad so that every stride-2 step
+       halves the resolution, rounding up. Compute the resolution at which
+       each of the three groups of Inception blocks operates on a
+       $28 \times 28$ input. What do the $3 \times 3$ and $5 \times 5$
+       branches compute at the smallest of these resolutions?
+1. [code] **GoogLeNet stem redesign.** ● Redesign the stem of `GoogleNet`
+   so that the first group of Inception blocks operates on at least a
+   $14 \times 14$ feature map of a $28 \times 28$ input, and adjust the
+   body and head as needed. Train the redesigned network on
+   $28 \times 28$ inputs and `GoogleNet` on $96 \times 96$ inputs, both
+   under the procedure used for `NiN`, report the changes, and compare
+   validation accuracy and time per epoch.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/77)

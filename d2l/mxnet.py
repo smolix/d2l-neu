@@ -162,7 +162,7 @@ class HyperParameters:
     Defined in :numref:`sec_oo-design`"""
 
     def save_hyperparameters(self, ignore=None):
-        """Save function arguments into class attributes.
+        """Save function arguments into instance attributes.
 
         Defined in :numref:`sec_utils`"""
         ignore = [] if ignore is None else ignore

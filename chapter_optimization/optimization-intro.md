@@ -332,48 +332,67 @@ learning-rate schedules, and methods for controlling gradient noise.
 
 ## Exercises
 
-1. **Permutation-symmetric minima.** Consider a multilayer perceptron with
-   one hidden layer of $d$ units and a single output, and let
+1. **Permutation-symmetric minima.** ● Consider a multilayer perceptron with
+   one hidden layer of $d \geq 2$ units and a single output, and let
    $\boldsymbol{\theta}^\star$ be a local minimum of its loss at which no
    two hidden units have identical incoming weights.
     1. Show that permuting the hidden units yields $d!$ distinct parameter
        vectors that all compute the same function and are therefore all
        local minima with the same loss.
-    1. The set of minimizers of a convex function is convex. Explain why
-       the $d!$ copies show that the loss cannot be a convex function of
-       the parameters.
+    1. Suppose the loss were a convex function of the parameters. Show
+       that the average of the $d!$ copies would then also be a global
+       minimizer and that it computes the same function as a network with
+       one hidden unit. Conclude that the loss is not convex whenever
+       every network with one hidden unit has a higher loss than
+       $\boldsymbol{\theta}^\star$.
     1. For the activation $\tanh$, identify a second symmetry of each
-       hidden unit and state the resulting count of equivalent minima.
-1. **Eigenvalues of symmetric random matrices.** Let $\mathbf{M}$ be a
-   symmetric random matrix whose entries $M_{ij} = M_{ji}$ are drawn
-   independently from distributions $p_{ij}$ with $p_{ij}(x) = p_{ij}(-x)$
-   :cite:`Wigner.1958`.
-    1. Prove that the distribution of eigenvalues is symmetric: for any
-       eigenvector $\mathbf{v}$, the associated eigenvalue $\lambda$
-       satisfies $P(\lambda > 0) = P(\lambda < 0)$.
+       hidden unit, state the resulting count of equivalent minima, and
+       give a condition on $\boldsymbol{\theta}^\star$ under which all of
+       them are distinct.
+1. **Eigenvalues of symmetric random matrices.** ● Let $\mathbf{M}$ be a
+   random symmetric $k \times k$ matrix whose entries $M_{ij} = M_{ji}$,
+   $i \leq j$, are drawn independently from distributions $p_{ij}$ with
+   $p_{ij}(x) = p_{ij}(-x)$ :cite:`Wigner.1958`.
+    1. Prove that an eigenvalue $\lambda$ drawn uniformly at random from
+       the $k$ eigenvalues of $\mathbf{M}$ satisfies
+       $P(\lambda > 0) = P(\lambda < 0)$.
     1. Explain why this symmetry alone does not determine the fraction of
-       negative eigenvalues in a single realization of $\mathbf{M}$, and
+       negative eigenvalues in a single realization of $\mathbf{M}$. State
        what the semicircle law of :citet:`Wigner.1958` says about that
-       fraction for large $k$. Which assumption of the coin-flip heuristic
-       in :numref:`subsec_opt-intro-saddles` does the law replace?
-1. **Classifying stationary points.** Each function in
-   :numref:`subsec_opt-intro-saddles` and its neighbouring subsections has
-   a point at which gradient descent slows or stops: the two local minima
-   of $f(x) = x\cos(\pi x)$ on $[-1, 2]$, the origin of $f(x) = x^3$, the
-   origin of $f(x, y) = x^2 - y^2$, and $x = 4$ for $f(x) = \tanh x$.
-    1. Compute the gradient and the Hessian at each point and classify it
-       by the eigenvalue test of :numref:`subsec_opt-intro-saddles`: local
-       minimum, local maximum, saddle, inconclusive, or not a critical
-       point at all.
-    1. Settle the inconclusive case by a different argument.
-    1. Which of these points does gradient descent from a random nearby
-       start leave with probability one, and at which does it stall for a
-       long time without being trapped?
+       fraction for large $k$ when the off-diagonal entries are
+       identically distributed with finite variance.
+    1. The coin-flip heuristic of :numref:`subsec_opt-intro-saddles`
+       treats the $k$ signs as independent, so all of them are positive
+       with probability $2^{-k}$. For $k = 2$, draw the diagonal entries
+       from $\mathcal{N}(0, 1)$ and the off-diagonal entry from
+       $\mathcal{N}(0, 1/2)$. Compute the probability that both
+       eigenvalues are positive, compare it with $2^{-2}$, and state what
+       the gap says about the independence assumption.
+1. **Critical points and plateaus.** Gradient descent slows or stops at
+   each of the following points: the critical points of
+   $f(x) = x\cos(\pi x)$ in the interior of $[-1, 2]$, the origin of
+   $f(x) = x^3$, the origin of $f(x, y) = x^2 - y^2$, and $x = 4$ for
+   $f(x) = \tanh x$.
+    1. Compute the gradient and the Hessian at each point, locating the
+       critical points of $x\cos(\pi x)$ numerically. Classify each point
+       by the eigenvalue test of :numref:`subsec_opt-intro-saddles` as a
+       local minimum, local maximum, saddle, inconclusive case, or
+       non-critical point.
+    1. Gradient descent with learning rate $\eta$ on $f(x) = x^3$ starts
+       at $x_0 = \epsilon$ or at $x_0 = -\epsilon$ for a small
+       $\epsilon > 0$. For each sign, determine whether the iterates
+       approach $0$ or move away, and find the rate at which $x_t$ decays
+       on the side that approaches. Explain why the escape of strict
+       saddles stated in :numref:`subsec_opt-intro-noise` does not apply
+       to this point.
+    1. Using $1 - \tanh^2 x \approx 4e^{-2x}$ for large $x$, estimate how
+       many steps gradient descent at $\eta = 1$ needs to move from $x = 4$
+       to $x = 2$ on $f(x) = \tanh x$.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 6.6.*
-1. [code] **Escaping a saddle.** Balancing a ball on the saddle
+1. [code] **Saddle escape time.** Balancing a ball on the saddle
    $f(x_1, x_2) = x_1^2 - x_2^2$ of :numref:`fig_mdl-opt-saddle` is stable
    along $x_1$ and unstable along $x_2$. Gradient descent with learning
    rate $\eta$ started at $(1, \delta)$ behaves the same way.
@@ -389,23 +408,37 @@ learning-rate schedules, and methods for controlling gradient noise.
 1. [code] **An ill-conditioned valley.** Gradient descent on the valley
    :eqref:`eq_opt-intro-valley` multiplies $x_1$ by $1 - 0.2\eta$ and
    $x_2$ by $1 - 4\eta$ on every step, so it is stable for $\eta < 0.5$.
+   The *step count* is the number of steps until both $|x_1|$ and $|x_2|$
+   are below $1\%$ of their starting values.
     1. Modify `gd_valley` so that the learning rate is a parameter and run
        30 steps at $\eta \in \{0.45, 0.5, 0.55\}$ with `d2l.train_2d`.
        Describe the three trajectories and account for each with the two
        factors.
-    1. At $\eta = 0.45$, how many steps does it take until both $|x_1|$ and
-       $|x_2|$ are below $1\%$ of their starting values, and which
-       coordinate sets that count? Check the prediction numerically.
     1. For $f(\mathbf{x}) = \frac{\lambda_{\min}}{2} x_1^2 +
-       \frac{\lambda_{\max}}{2} x_2^2$ at a learning rate just below the
-       stability limit $2/\lambda_{\max}$, measure the step count of the
-       previous item for $\kappa = \lambda_{\max}/\lambda_{\min} \in
-       \{10, 100, 1000\}$ and compare with the linear growth in $\kappa$
-       that :numref:`subsec_mdl-quadratic-model` derives.
-    1. Suppose the first coordinate is rescaled to
+       \frac{\lambda_{\max}}{2} x_2^2$, set $\eta = 1.8/\lambda_{\max}$,
+       the same fraction of the stability limit $2/\lambda_{\max}$ as
+       $\eta = 0.45$ is of $0.5$. Predict the step count from the two
+       factors for $\kappa = \lambda_{\max}/\lambda_{\min} \in
+       \{10, 100, 1000\}$, check it numerically, and compare with the
+       linear growth in $\kappa$ that :numref:`subsec_mdl-quadratic-model`
+       derives.
+    1. Suppose the first coordinate of the valley is rescaled to
        $\tilde{x}_1 = \alpha x_1$ before optimizing. Which $\alpha$ makes
-       the valley perfectly conditioned, and how many steps does gradient
-       descent then need to satisfy the criterion of the second item?
+       the valley perfectly conditioned? Give the step count at
+       $\eta = 0.45$ and the smallest step count that any learning rate
+       achieves after the rescaling.
+1. [code] **Learning rate and sharpness.** A two-layer scalar linear
+   network $\hat{y} = abx$ is fit to the single example $(x, y) = (1, 1)$
+   with the loss $\ell(a, b) = \frac{1}{2}(ab - 1)^2$. Every point of the
+   curve $ab = 1$ is a minimizer.
+    1. Show that the Hessian at a minimizer $(a, b)$ has largest
+       eigenvalue $\lambda_{\max} = a^2 + b^2$. Which minimizers are
+       flattest?
+    1. Run 200 steps of gradient descent from $(a, b) = (4, 0.1)$ at
+       $\eta \in \{0.05, 0.1, 0.15, 0.2\}$. For each run, report the
+       $\lambda_{\max}$ of the minimizer it reaches next to $2/\eta$.
+    1. Explain the pattern with the stability condition
+       $\eta < 2/\lambda_{\max}$.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/487)

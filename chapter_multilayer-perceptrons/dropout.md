@@ -542,46 +542,72 @@ methods.
    with probability 0.5.
     1. Train the same architecture with both rates set to zero for the same
        number of epochs, and plot the training and validation loss curves of
-       both runs on the same axes. How does the gap between the two curves
-       differ with and without dropout?
+       both runs on the same axes. How does the gap between training and
+       validation loss differ with and without dropout?
+    1. `Trainer` computes the plotted training loss with the dropout masks
+       active. After training, evaluate the loss of the trained `DropoutMLP`
+       on the training set with dropout disabled. Compare the resulting gap
+       with the two gaps from (a).
     1. Swap the two rates, and then set both to 0.5. How do the final
-       validation accuracy and the gap change in each case? Which layer
-       tolerates the higher rate?
-1. [code] **Activation variance.** What is the variance of the activations
-   in each hidden layer when dropout is and is not applied? Plot how this
-   quantity evolves over training for both models.
+       validation accuracy and the gap, measured as in (b), change in each
+       case? Which layer tolerates the higher rate?
+1. [code] **Activation variance.** Let $h$ be a hidden activation of
+   `DropoutMLPScratch` and $h'$ its value after `dropout_layer` with dropout
+   probability $p$.
+    1. For a fixed $h$, compute the variance of $h'$ over the dropout mask.
+       Then let $h$ vary across the units and examples of a minibatch with
+       mean $\mu_h$ and variance $\sigma_h^2$, and express the variance of
+       $h'$ in terms of $p$, $\mu_h$ and $\sigma_h^2$.
+    1. Train `DropoutMLPScratch(**hparams)`. After every epoch, pass one
+       fixed validation minibatch through the model with dropout active.
+       For each hidden layer, record the mean and variance of the
+       activations before `dropout_layer` and their variance after it. Plot
+       the variances against epochs, and compare the measured ratio of the
+       two variances with your expression from (a).
 1. **Ensemble size.** A hidden layer with $n$ units admits $2^n$ distinct
    dropout masks, and the ensemble interpretation views each mask as a
    subnetwork.
-    1. How many distinct masks exist across the two hidden layers of 256
-       units each in `DropoutMLP`?
-    1. Training runs for 30 epochs with minibatches of 256 examples, and a
-       fresh mask is drawn for every example. How many masks are sampled per
-       layer during training, and what fraction of all masks is that?
+    1. How many distinct joint masks exist across the two hidden layers of
+       256 units each in `DropoutMLP`?
+    1. Training runs for 30 epochs over the 60,000 Fashion-MNIST training
+       images, and a fresh mask is drawn for every example. How many joint
+       masks are sampled during training, and what fraction of all joint
+       masks is that?
     1. Using these two numbers, explain in what sense dropout does, and does
-       not, train an ensemble of $2^{512}$ subnetworks.
-1. [code] **Dropout at test time.** Dropout is normally disabled at test
-   time, so the full network runs with no masking and no rescaling.
-    1. Why is the unmasked network used for prediction rather than a single
-       random mask, and in what sense does it approximate the average over
-       all masks?
-    1. Instead of disabling dropout, keep it on and run $T = 20$ forward
-       passes per test example, then average the softmax outputs
-       :cite:`Gal.Ghahramani.2016`. Compare the resulting accuracy and
-       calibration (predicted confidence versus actual accuracy) against the
-       standard single-pass evaluation.
-    1. How does this Monte Carlo procedure relate to ensemble methods, and
-       what does it cost relative to a single pass?
+       not, train an ensemble of all these subnetworks.
+1. **Dropout at test time.** ● Dropout is normally disabled at test time,
+   so the full network runs with no masking and no rescaling. Set
+   `dropout_1` to zero in `DropoutMLP`, so that only the second hidden layer
+   is masked. Let $\mathbf{o}(\mathbf{m})$ and $\hat{\mathbf{y}}(\mathbf{m})$
+   be the logits and the softmax output under mask $\mathbf{m}$, which
+   occurs with probability $P(\mathbf{m})$. Show that the logits of the
+   unmasked network equal
+   $\sum_{\mathbf{m}} P(\mathbf{m})\, \mathbf{o}(\mathbf{m})$. Show further
+   that its softmax output equals the normalized weighted geometric mean
+
+    $$\tilde{y}_j = \frac{\prod_{\mathbf{m}} \hat{y}_j(\mathbf{m})^{P(\mathbf{m})}}{\sum_k \prod_{\mathbf{m}} \hat{y}_k(\mathbf{m})^{P(\mathbf{m})}}.$$
+
+    Explain why neither equality holds in general once `dropout_1` is
+    nonzero.
+1. [code] **Monte Carlo dropout.** Instead of disabling dropout at test
+   time, keep it on in the trained `DropoutMLP` and run $T = 20$ forward
+   passes per test example, then average the softmax outputs
+   :cite:`Gal.Ghahramani.2016`. Compare the resulting accuracy and
+   calibration (the mean largest softmax probability versus the accuracy)
+   against the standard single-pass evaluation.
 1. [code] **Dropout and weight decay.** Weight decay
    (:numref:`sec_weight_decay`) and dropout both regularize `DropoutMLP`, but
-   by different mechanisms.
-    1. With both dropout rates set to zero, add weight decay to the
-       optimizer as in :numref:`sec_weight_decay` at strengths
-       $\lambda \in \{10^{-4}, 10^{-3}, 10^{-2}\}$, and record the validation
-       accuracy and the gap between training and validation loss for each.
-       Compare with the dropout-only run at rates 0.2 and 0.5.
-    1. Enable both regularizers at the same time. Are their effects additive,
-       do they show diminishing returns, or do they cancel each other out?
+   by different mechanisms. Measure each run by its validation accuracy and
+   by the gap between training and validation loss, with both losses
+   evaluated with dropout disabled.
+    1. With both dropout rates set to zero, add weight decay as in
+       :numref:`sec_weight_decay` at strengths
+       $\lambda \in \{0, 10^{-4}, 10^{-3}, 10^{-2}\}$. Compare these runs
+       with the dropout-only run at rates 0.2 and 0.5.
+    1. Keep the dropout rates at 0.2 and 0.5, and add weight decay at each
+       nonzero strength from (a). Are the effects of the two regularizers
+       additive, do they show diminishing returns, or do they cancel each
+       other out?
 1. [code] **Input dropout.** This section applies dropout only to
    hidden-layer activations. Add dropout on the input features, before the
    first linear layer, at a small rate such as $p = 0.1$, keeping the
@@ -594,23 +620,23 @@ methods.
    :cite:`Wan.Zeiler.Zhang.LeCun.Fung.2013`. Implement it and compare it
    against standard dropout on Fashion-MNIST, holding the architecture and
    training budget fixed.
-1. [code] **Visualizing co-adaptation.** Train the dropout model and a
-   no-dropout model of the same architecture, then visualize each
-   first-layer unit's incoming weight vector as a $28 \times 28$ image.
-   Compare at least 16 units side by side for each model. Do the weights
-   trained without dropout look noisier, or more redundant with one
-   another, than the dropout-trained ones?
-
-    *Adapted from Nitish Srivastava et al.,
-    [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](https://jmlr.org/papers/v15/srivastava14a.html),
-    JMLR 2014, Section 7.1, Figure 7.*
-1. [code] **Designing a noise injection.** Invent a technique for injecting
+1. [code] **First-layer features.** Train `DropoutMLP` and a copy with both
+   dropout rates set to zero, then visualize each first-layer unit's
+   incoming weight vector as a $28 \times 28$ image. Compare at least 16
+   units side by side for each model, as Figure 7 of
+   :citet:`Srivastava.Hinton.Krizhevsky.ea.2014` does for an autoencoder
+   on MNIST. Describe how the two sets of images differ in noise and in
+   redundancy across units.
+1. [code] **Custom noise injection.** ● Invent a technique for injecting
    random noise during training that differs from both dropout and
    DropConnect, for example additive Gaussian noise on the activations, or
    randomly rescaling rather than zeroing each unit's output. State the
    randomization rule and any rescaling needed to preserve the expectation
-   of each activation, implement the method, and train it on Fashion-MNIST
-   with the same architecture and epoch budget as this section's model.
+   of each activation. Implement the method and train it at two or three
+   noise levels on Fashion-MNIST, with the same architecture and epoch
+   budget as `DropoutMLP`. Compare the validation accuracy and the gap
+   between training and validation loss at each noise level with those of
+   `DropoutMLP`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/100)

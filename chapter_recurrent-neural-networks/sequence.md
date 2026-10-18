@@ -487,55 +487,59 @@ and expect extrapolation to be much harder than interpolation.
 
 ## Exercises
 
-1. [code] **Window length and model class.** `Data` supplies `tau=4` lag
-   features and `d2l.LinearRegression` fits them.
+1. [code] **Window length.** `Data` supplies `tau=4` lag features and
+   `d2l.LinearRegression` fits them.
     1. Increase `tau` and retrain. How many past observations are needed
        before the validation error stops improving?
     1. Suppose the noise term in `Data` were removed. How many past
        observations then suffice for exact prediction, and why?
-    1. Incorporate observations older than $\tau$ steps while keeping the
-       number of features at four. Does accuracy improve? Why?
-    1. Replace the linear model with a small MLP and retrain, possibly for
-       more epochs. How do the one-step and the multistep predictions
-       change?
-1. [code] **Error growth with the horizon.** `k_step_pred` returns the
-   $k$-step-ahead predictions for every position of the series.
-    1. For $k \in \{1, 2, 4, 8, 16\}$, plot the mean squared $k$-step
-       error against $k$ on a logarithmic axis. Where does the curve bend,
-       and how does the bend relate to the damping visible in the plots
-       for $k = 1, 4, 16, 64$?
+1. [code] **Dilated and averaged lags.** ● Keep four features for
+   `d2l.LinearRegression` but let them reach further back: once as the
+   lags $x_{t-1}, x_{t-2}, x_{t-4}, x_{t-8}$, and once as the four block
+   means $\frac{1}{4}\sum_{i=0}^{3} x_{t-4j+i}$ for $j = 1, \ldots, 4$.
+   Compare their validation errors with those for $\tau = 4$ and
+   $\tau = 16$. Which construction helps, and why?
+1. [code] **Nonlinear autoregressor.** Replace `d2l.LinearRegression` by a
+   small MLP on the same four lag features and retrain, possibly for more
+   epochs. How do the one-step and the multistep predictions change?
+1. [code] **Error growth with the horizon.** For each $k$, the last entry
+   of the list that `k_step_pred(k)` returns holds the $k$-step-ahead
+   predictions of `data.x[data.tau+k-1:]`.
+    1. For $k \in \{1, 2, 4, \ldots, 256\}$, plot the mean squared
+       $k$-step error against $k$ on a logarithmic axis. Where does the
+       curve bend upward, and how does the bend relate to the damping of
+       the 16-step and 64-step forecasts?
     1. The variance of the series is the mean squared error of a forecast
        that always predicts the series mean. Find the smallest $k$ at
        which the mean squared $k$-step error exceeds this variance. What
        does a forecast beyond this horizon offer over the constant
        forecast?
-1. [code] **Regime switching.** Replace the single sine in `Data` by a
-   series that splices together two sines of different frequencies. The
-   spliced series violates the stationarity assumption of
+1. [code] **Regime switching.** ● Replace the single sine in `Data` by a
+   series that alternates between $\sin(0.01\,t)$ and $\sin(0.05\,t)$
+   every 200 time steps, and keep the additive noise. Both regimes then
+   occur among the training examples and among the validation examples.
+   The switching series violates the stationarity assumption of
    :numref:`subsec_stationarity`. Does one linear model with $\tau = 4$
-   nevertheless fit both regimes? Report training and validation error
-   for each regime separately and locate the positions along the series
-   where the fit is worst.
+   nevertheless fit both regimes, and why? Report training and validation
+   error for each regime separately and locate the positions along the
+   series where the fit is worst.
 1. [code] **Scheduled sampling.** ● :numref:`subsec_error-accumulation`
    states that exposing a model to its own predictions during training
    narrows the gap between one-step training and multistep use. Test the
    claim with a variant of *scheduled sampling*
-   :cite:`Bengio.Vinyals.Jaitly.ea.2015`: retrain the linear model with
-   $\tau = 4$ so that each lag feature is replaced, with probability
-   $\epsilon$, by the model's own one-step prediction for that position,
-   and sweep $\epsilon$ over $\{0, 0.25, 0.5, 1\}$. For each $\epsilon$,
-   measure the one-step error and the 64-step rollout error. Does any
-   $\epsilon$ lower the rollout error below its value at $\epsilon = 0$,
-   and at what cost in one-step error?
+   :cite:`Bengio.Vinyals.Jaitly.ea.2015` for the linear model with
+   $\tau = 4$. In every minibatch, replace each lag feature with
+   probability $\epsilon$ by the model's current one-step prediction of
+   that observation. Train one model for each
+   $\epsilon \in \{0, 0.25, 0.5, 1\}$. For each model, measure the
+   one-step validation error and the mean squared error of the last entry
+   of `k_step_pred(64)`. Does any $\epsilon > 0$ lower the 64-step error
+   below its value at $\epsilon = 0$? How does the one-step error change?
 1. **Momentum strategies.** An investor selects stocks by their own past
    returns, expecting those that rose to keep rising. State the assumption
    about the return series that this strategy requires, in the terms of
    :numref:`subsec_markov-models` and :numref:`subsec_stationarity`, and
    describe one mechanism by which the assumption fails.
-1. **A case for latent state.** Describe a sequence for which no fixed
-   window of past observations suffices to predict the next entry, so
-   that a latent autoregressive model is required. Explain why no finite
-   $\tau$ works.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/113)

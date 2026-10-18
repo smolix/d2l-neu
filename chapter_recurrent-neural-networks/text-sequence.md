@@ -819,36 +819,52 @@ to model them.
 
 ## Exercises
 
+1. **Encoding by rank.** Suppose a `BPETokenizer` with `vocab_size=258`
+   has learned exactly two merges: (`b`, `c`) with id 256, and then
+   (`a`, `b`) with id 257. The *rank rule* of `_encode_chunk` always
+   applies the lowest-ranked applicable merge. The *leftmost rule* always
+   merges the leftmost adjacent pair that appears in the merge table.
+    1. Segment the string "abc" under each of the two rules.
+    1. Give the segmentation that every occurrence of "abc" in the
+       training corpus had at the end of training, and say which rule
+       agrees with it.
+1. **Rank replay.** ● Argue that, for any merge table learned by
+   `BPETokenizer.train`, the rank rule of `_encode_chunk` reproduces the
+   end-of-training segmentation of every chunk of the training corpus.
 1. [code] **Cross-corpus compression.** Train a `BPETokenizer` with a
    1,024-token vocabulary and `BPETokenizer.GPT2_PATTERN` on a different
    text of your choice, such as another public-domain book, your own
    notes, or source code.
-    1. Inspect its first 20 and last 20 merges. How many of the late
-       merges would you expect to transfer to a different corpus?
+    1. Compute the fraction of its first 100 merged tokens, and of its
+       last 100, that are also tokens of `bpe`. Explain the difference
+       between the two fractions.
     1. Measure bytes per token of your tokenizer on *The Time Machine*
        and of `bpe` on your corpus, and compare both with the in-domain
        figures.
-1. [code] **Pre-tokenization ablation.** `big` was trained with a
-   4,096-token vocabulary and no pre-tokenization pattern, `bpe` with a
-   1,024-token vocabulary and the GPT-2 pattern. Train a 4,096-token
-   tokenizer with `BPETokenizer.GPT2_PATTERN` on `raw_text`, so that it
-   differs from `big` only in the pattern.
-    1. List the 20 longest tokens learned by each of the two runs. Which
-       tokens are compression wins on the training corpus but liabilities
-       on new text, and why?
-    1. Measure which of the two compresses the training corpus better,
-       and explain the outcome in terms of the merge rule.
+1. [code] **Pre-tokenization ablation.** ● Split `raw_text` into its first
+   90% and its last 10%. On the first part, train two 4,096-token
+   tokenizers that differ only in the pattern: one without a pattern, as
+   `big` was trained, and one with `BPETokenizer.GPT2_PATTERN`.
+    1. List the 20 longest tokens learned by each tokenizer, and mark
+       those that span more than one word.
+    1. Measure which of the two compresses the first part better, and
+       explain the outcome in terms of the merge rule.
+    1. Measure bytes per token of both tokenizers on the last 10%. Which
+       tokenizer loses the larger fraction of its compression on this
+       held-out text, and which compresses it better? Relate both answers
+       to the tokens you listed.
 1. [code] **Special-token round trip.** :numref:`subsec_special-tokens`
    places special tokens above the BPE id range so that ordinary text can
    never produce them. Construct a `BPETokenizer` whose `specials` add a
-   document separator to the three defaults and train it on `raw_text`.
-    1. Explain from the id ranges assigned in `BPETokenizer.__init__` why
-       `encode` cannot emit a special id from ordinary text, and check the
-       claim by encoding a string that contains the separator, with and
-       without `allow_special=True`.
-    1. Join two documents with the separator and verify that decoding the
-       ids obtained with `allow_special=True` restores the text exactly,
-       separator included.
+   document separator `<sep>` to the three defaults, and train it on
+   `raw_text`. Let `x` be two short documents joined by `<sep>`.
+    1. Encode `x` once with and once without `allow_special=True`, and
+       check that both id sequences decode to `x`.
+    1. Re-encode the decoded text once with `allow_special=True` and once
+       without it. Which of the two id sequences from the previous
+       sub-problem does each re-encoding reproduce? State what this
+       implies for a pipeline that decodes a model's output and later
+       feeds the text back in as input.
     1. `tiktoken` raises an error when a special string appears in text
        that is not allowed to contain it, whereas `encode` treats the
        string as plain bytes. Give one situation in which each policy is
@@ -857,12 +873,16 @@ to model them.
     *Adapted from Andrej Karpathy,
     [minbpe](https://github.com/karpathy/minbpe/blob/master/exercise.md),
     Step 4.*
-1. [code] **Digit chunking.** Tokenize the addition prompts "123+456=" and
-   "1234+5678=" with the `gpt2` and `o200k_base` encodings of `tiktoken`,
-   writing out the token boundaries of each number.
-    1. Under the three-digit cap, which digit positions of the two
-       summands end up in the same token, and how does that misalign the
-       columns of addition?
+1. [code] **Digit chunking.** Tokenize the addition prompts "1234+5678=",
+   "1234+567=" and "567+678=" and their sums "6912", "1801" and "1245"
+   with the `gpt2` and `o200k_base` encodings of `tiktoken`, writing out
+   the token boundaries of each number.
+    1. Under the three-digit cap of `o200k_base`, label each digit token
+       with the place values (ones, tens, hundreds, thousands) it covers.
+       For each prompt, state whether the tokens at matching positions of
+       the two summands and of the sum cover the same place values.
+       Explain what goes wrong for a model that adds token by token when
+       they do not.
     1. Propose a pre-tokenization rule that aligns tokens with place
        value, and state one drawback of your rule.
 1. **Glitch tokens.** :numref:`subsec_fertility-digits-glitch` attributes

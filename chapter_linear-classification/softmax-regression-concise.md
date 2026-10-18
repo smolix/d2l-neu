@@ -301,34 +301,53 @@ and which belongs to its implementation.
 
 ## Exercises
 
-1. **Number formats.** Deep learning uses several number formats: FP64,
-   FP32, TF32, BFLOAT16, FP16, and INT8. For each format, determine the
-   smallest and largest argument of the exponential function for which the
-   result neither underflows to $0$ nor overflows. Present the result as a
-   table with one row per format, and explain which property of a format
-   determines these limits.
-1. **INT8 dynamic range.** INT8 is a very limited format consisting of
-   integers in $[-128, 127]$ (or $[0, 255]$ for the unsigned variant).
-   Propose a way to extend its dynamic range without using more bits.
-   Determine whether standard multiplication and addition still work
-   unmodified under your proposal.
+1. **Number formats.** ● Deep learning uses several floating-point formats.
+   Each consists of one sign bit, an exponent field and a mantissa field.
+   The exponent and mantissa fields have 11 and 52 bits in FP64, 8 and 23
+   bits in FP32, 8 and 10 bits in TF32, 8 and 7 bits in BFLOAT16, and 5
+   and 10 bits in FP16. Assume that every format represents subnormal
+   numbers as FP32 does. For each format, determine the smallest and
+   largest argument of the exponential function for which the result
+   neither underflows to $0$ nor overflows. Present the result as a table
+   with one row per format, and explain how each limit depends on the
+   numbers of exponent and mantissa bits.
+1. [code] **Double softmax.** The `loss` of this section expects logits.
+   Suppose that a model's `forward` mistakenly ends with a softmax. The
+   loss then receives a probability vector $\mathbf{p}$ in place of the
+   logits and evaluates $-\log \mathrm{softmax}(\mathbf{p})_y$.
+    1. Find the smallest value this loss can take over all probability
+       vectors $\mathbf{p}$ and labels $y$, as a function of the number of
+       classes $q$. Evaluate it for $q = 10$.
+    1. Copy the from-scratch `softmax` of :numref:`sec_softmax_scratch`,
+       which is not part of the `d2l` package. Subclass
+       `SoftmaxRegression` so that `forward` applies this `softmax` to the
+       logits. Train it with `lr=0.1`, `d2l.FashionMNIST(batch_size=256)`,
+       and `d2l.Trainer(max_epochs=10)`. Compare its training loss and
+       validation accuracy with those of `SoftmaxRegression`, and relate
+       the final training loss to the value from the previous step.
 1. [code] **Fused loss on extreme logits.** :numref:`sec_softmax_scratch`
    showed that the from-scratch `softmax` returns `NaN` on the logits
-   $\mathbf{o} = (1000, 0, 0)$. Pass the same logits directly to the `loss`
-   of this section, first with true class $y = 0$ and then with $y = 1$.
-   Explain why both values are finite and check them against
-   $\ell(y, \mathbf{o}) = \log\sum_k \exp(o_k) - o_y$ evaluated by hand.
-   Then verify on benign logits such as $\mathbf{o} = (2, 1, 0)$ that this
-   `loss` and the from-scratch route (`softmax` followed by
-   `cross_entropy`) agree to floating-point precision.
-1. [code] **Log-sum-exp bound.** Implement the stable form
-   $\bar{o} + \log\sum_k \exp(o_k - \bar{o})$ and check it against the
-   naive $\log\sum_k \exp(o_k)$ on logits where both are finite. For
-   standard Gaussian logit vectors of dimension
-   $q \in \{2, 10, 100, 1000\}$, plot the gap between the log-sum-exp and
-   $\max_k o_k$ against $q$ together with the bound $\log q$ from
-   exercise 6 of :numref:`sec_softmax`. Which logit vectors attain the
-   bound, and how does the typical gap of random logits compare with it?
+   $\mathbf{o} = (1000, 0, 0)$. That `softmax` is not part of the `d2l`
+   package, so copy it, and store $\mathbf{o}$ as a $1 \times 3$ matrix.
+    1. Pass $\mathbf{o}$ to the `loss` of this section, first with true
+       class $y = 0$ and then with $y = 1$. Check both values against
+       $\ell(y, \mathbf{o}) = \log\sum_k \exp(o_k) - o_y$ evaluated by
+       hand.
+    1. Compute the same two losses by the from-scratch route, `softmax`
+       followed by `d2l.cross_entropy`. Explain each value it returns, and
+       determine the largest finite loss this route can return.
+    1. Verify on benign logits such as $\mathbf{o} = (2, 1, 0)$ that the
+       two routes agree to floating-point precision.
+1. [code] **Log-sum-exp bound.** Write
+   $\mathrm{lse}(\mathbf{o}) = \log\sum_k \exp(o_k)$ for logits
+   $\mathbf{o} \in \mathbb{R}^q$. By exercise 6 of :numref:`sec_softmax`,
+   the gap $\mathrm{lse}(\mathbf{o}) - \max_k o_k$ is at most $\log q$.
+    1. Show that the gap equals
+       $-\log \max_j \mathrm{softmax}(\mathbf{o})_j$.
+    1. For each $q \in \{2, 10, 100, 1000\}$, draw $1000$ standard
+       Gaussian logit vectors. Plot the mean gap against $q$ together with
+       the bound $\log q$, and report the ratio of the two for each $q$.
+       How does this ratio change as $q$ grows?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/52)

@@ -473,9 +473,18 @@ and training requires significantly more memory than prediction.
 
 ## Exercises
 
-1. **Gradient dimensionality.** Assume that the input $\mathbf{X}$ to some
-   scalar function $f$ is an $n \times m$ matrix. What is the dimensionality
-   of the gradient of $f$ with respect to $\mathbf{X}$?
+1. **Jacobian of a layer.** The gradient of the scalar $J$ with respect to
+   $\mathbf{W}^{(2)} \in \mathbb{R}^{q \times h}$ has the shape of
+   $\mathbf{W}^{(2)}$. The derivative of the vector
+   $\mathbf{o} = \mathbf{W}^{(2)} \mathbf{h} \in \mathbb{R}^q$ with respect
+   to $\mathbf{W}^{(2)}$ is a larger object.
+    1. Give the shape of $\partial \mathbf{o}/\partial \mathbf{W}^{(2)}$
+       and the largest number of nonzero entries it can have.
+    1. Evaluate $\textrm{prod}(\partial J/\partial \mathbf{o},
+       \partial \mathbf{o}/\partial \mathbf{W}^{(2)})$ entry by entry to
+       recover the term $(\partial J/\partial \mathbf{o})\mathbf{h}^\top$ of
+       :eqref:`eq_backprop-J-h`. Explain why backpropagation never needs to
+       store $\partial \mathbf{o}/\partial \mathbf{W}^{(2)}$.
 1. **Hidden-layer bias.** Add a bias to the hidden layer of the model
    described in this section (you do not need to include the bias in the
    regularization term).
@@ -485,27 +494,44 @@ and training requires significantly more memory than prediction.
    :eqref:`eq_backprop-example` receives the pre-activation $z_1 = -1$, so
    the ReLU derivative $\phi'(z_1) = 0$ blocks the gradient of every weight
    feeding this unit. Replace the activation of this unit alone by the leaky
-   variant $\phi(z) = \max(0, z) + 0.1 \min(0, z)$; the second unit keeps its
-   ReLU.
-    1. Which of the backward equations changes, and how must it be evaluated
-       when the hidden units use different activations?
-    1. Recompute $\partial L/\partial \mathbf{z}$ and
-       $\partial L/\partial \mathbf{W}^{(1)}$. Does the first unit still
-       block the gradient?
+   variant $\phi_1(z) = \max(0, z) + 0.1 \min(0, z)$; the second unit keeps
+   its ReLU.
+    1. Write the backward equation for $\partial J/\partial \mathbf{z}$ when
+       hidden unit $i$ has its own activation $\phi_i$.
+    1. Redo the forward and backward passes, and give
+       $\partial L/\partial \mathbf{W}^{(2)}$,
+       $\partial L/\partial \mathbf{z}$, and
+       $\partial L/\partial \mathbf{W}^{(1)}$. Which of these gradients
+       differ from the all-ReLU case even though the equations that produce
+       them are unchanged, and why?
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap2.html),
     Chapter 2, and Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 7.10.*
-1. **Memory footprint.** Count the values that must be stored to train the
-   model described in this section and to predict with it, in terms of the
-   input dimension $d$, the number of hidden units $h$, the output dimension
-   $q$, and the minibatch size $n$. Which terms dominate the difference
-   between training and prediction?
-1. **Second derivatives.** Assume that you want to compute second
-   derivatives. What happens to the computational graph? How long do you
-   expect the calculation to take?
+1. **Memory footprint.** Train the model described in this section by
+   minibatch stochastic gradient descent on minibatches of $n$ examples,
+   with input dimension $d$, $h$ hidden units, and output dimension $q$.
+    1. List the forward-pass quantities that a training step must keep until
+       the backward pass has used them. Count their values together with
+       the values of the parameters and of their gradients.
+    1. Prediction can discard each intermediate value as soon as the next
+       operation has consumed it. Count the largest number of values that
+       prediction on the same minibatch holds at any moment.
+    1. For which minibatch sizes $n$ do the kept forward-pass quantities
+       outnumber the parameters and their gradients together?
+1. **Second derivatives.** Automatic differentiation obtains second
+   derivatives by differentiating the backward pass, so the operations of
+   the backward pass become nodes of a larger computational graph. Extend
+   :numref:`fig_forward` with the backward-pass nodes that compute
+   $\partial J/\partial \mathbf{W}^{(1)}$, and mark which forward-pass
+   variables each new node reads.
+1. **Hessian of a ReLU network.** ● ReLU has $\phi''(z) = 0$ for
+   $z \neq 0$. For the network in :eqref:`eq_backprop-example`, derive the
+   $4 \times 4$ Hessian of $L$ with respect to the entries of
+   $\mathbf{W}^{(1)}$, show that it has rank at most one, and evaluate it at
+   the given values.
 1. **Graph partitioning.** Assume that the computational graph is too large
    for the memory of a single GPU.
     1. Propose two different strategies for splitting training across two
@@ -535,10 +561,8 @@ and training requires significantly more memory than prediction.
        for the network in :eqref:`eq_backprop-example`, one sweep per entry
        of $\mathbf{W}^{(1)}$.
     1. How many sweeps does each mode need to obtain all six parameter
-       gradients of this network?
-    1. Explain why reverse mode is preferred whenever there are many
-       parameters and a single scalar loss, and describe a setting in which
-       forward mode is the better choice.
+       gradients of this network? Which factors does forward mode multiply
+       again in every sweep that reverse mode multiplies only once?
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
@@ -558,8 +582,11 @@ and training requires significantly more memory than prediction.
        gradients *accumulate* (`+=`, not `=`) when a value is used more than
        once (the fork rule from :eqref:`eq_backprop-J-h`).
     1. Reproduce the calculation for :eqref:`eq_backprop-example` with your
-       engine (unroll the matrix products into scalars) and check all four
-       gradients.
+       engine (unroll the matrix products into scalars), and compare its
+       values of $\partial L/\partial \mathbf{W}^{(2)}$,
+       $\partial L/\partial \mathbf{h}$, $\partial L/\partial \mathbf{z}$,
+       and $\partial L/\partial \mathbf{W}^{(1)}$ with those derived in this
+       section.
     1. Consider the chain in which the input $x$ produces $y_i = f_i(x)$ for
        $i = 1, 2, 3$, the intermediate value $u = y_1 + y_2 + y_3$, the
        values $z_k = g_k(u)$ for $k = 1, 2, 3$, and the loss
@@ -569,6 +596,10 @@ and training requires significantly more memory than prediction.
        that your engine instead computes $(a_1 + a_2 + a_3)(b_1 + b_2 + b_3)$
        by accumulating the gradient at $u$ once, and explain why this
        sharing is what makes backpropagation affordable in deep networks.
+
+    *Adapted from Andrej Karpathy,
+    [micrograd](https://github.com/karpathy/micrograd),
+    `micrograd/engine.py`.*
 
 [Discussions](https://d2l.discourse.group/t/102)
 

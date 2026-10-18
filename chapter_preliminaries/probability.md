@@ -1240,13 +1240,14 @@ For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
 
 ## Exercises
 
-1. **Two kinds of uncertainty.** Give two examples and explain the
-   difference between them.
-    1. An example where observing more data can reduce the uncertainty
-       about the outcome to an arbitrarily low level.
-    1. An example where observing more data reduces the uncertainty only
-       up to a point and then no further. Explain why this is the case
-       and where you expect that point to lie.
+1. **Two kinds of uncertainty.** Give two examples of prediction tasks other
+   than coin tossing. For each, state which part of the uncertainty about the
+   outcome is aleatoric and which is epistemic.
+    1. In the first example, more data can reduce the uncertainty about the
+       outcome to an arbitrarily low level.
+    1. In the second example, more data reduces the uncertainty about the
+       outcome only down to a floor. Explain why the floor exists and what
+       determines its level.
 1. [code] **Chebyshev for the coin-toss estimator.**
    :eqref:`eq_prob_var_phat` gives the variance of the estimate $\hat{p}$
    of $P(\textrm{heads})$ after $n$ tosses.
@@ -1276,23 +1277,35 @@ For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
    variables such that $C$ is conditionally independent of $A$ given $B$.
    Simplify the joint probability $P(A, B, C)$ into a product of factors
    that each involve at most two of the variables.
-1. **A second, correlated test.** In :numref:`subsec_probability_hiv_app`,
-   assume that the outcomes of the two tests are not independent. Assume
-   that either test on its own has a false positive rate of 10% and a
-   false negative rate of 1%, that is,
-   $P(D_i = 1 \mid H = 0) = 0.1$ and $P(D_i = 0 \mid H = 1) = 0.01$ for
-   $i = 1, 2$. Assume further that for $H = 1$ the test outcomes are
-   conditionally independent, so that
-   $P(D_1, D_2 \mid H = 1) = P(D_1 \mid H = 1)\, P(D_2 \mid H = 1)$, but
-   that for healthy patients the outcomes are coupled via
-   $P(D_1 = D_2 = 1 \mid H = 0) = 0.02$. Assume the baseline probability
+1. **Conditioning on a common effect.** Toss two independent fair coins, and
+   let $A, B \in \{0, 1\}$ indicate heads on each. Let $C = \max(A, B)$
+   indicate that at least one coin came up heads. Compute $P(A = 1)$,
+   $P(A = 1 \mid C = 1)$, and $P(A = 1 \mid C = 1, B = 1)$. Use these values
+   to decide whether $A$ and $B$ are conditionally independent given
+   $C = 1$, and relate the change from the second value to the third to
+   :numref:`fig_prob_explaining_away`.
+1. **A second, correlated test.** Revisit
+   :numref:`subsec_probability_hiv_app` with two new tests whose outcomes
+   are conditionally independent for patients with HIV but not for
+   healthy patients. Either test on its own has a false positive rate of
+   10% and a false negative rate of 1%:
+
+   $$P(D_i = 1 \mid H = 0) = 0.1, \quad P(D_i = 0 \mid H = 1) = 0.01 \quad \textrm{for } i = 1, 2.$$
+
+   For $H = 1$, the joint distribution factorizes as
+   $P(D_1, D_2 \mid H = 1) = P(D_1 \mid H = 1)\, P(D_2 \mid H = 1)$. For
+   $H = 0$, the outcomes are coupled through
+   $P(D_1 = D_2 = 1 \mid H = 0) = 0.02$. The baseline probability is
    $P(H = 1) = 0.0015$ as before.
     1. Work out the joint probability table for $D_1$ and $D_2$ given
        $H = 0$.
-    1. Derive the probability that the patient has HIV after one test
-       returns positive.
+    1. Derive the probability that the patient has HIV after the first
+       test returns positive, before the second test is run.
     1. Derive the probability that the patient has HIV after both tests
        return positive.
+    1. Repeat the previous calculation for tests that are conditionally
+       independent given $H = 0$ as well, and explain why the two
+       posteriors differ.
 1. **Portfolio return and risk.** Assume that you manage a portfolio of
    $n$ stocks whose returns $\mathbf{s} \in \mathbb{R}^n$ are random with
    mean $\boldsymbol{\mu} = E_{\mathbf{s} \sim P}[\mathbf{s}]$ and
@@ -1300,23 +1313,32 @@ For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
    $\boldsymbol{\Sigma} = \textrm{Cov}_{\mathbf{s} \sim P}[\mathbf{s}]$.
    You invest a fraction $\alpha_i \geq 0$ of your capital in stock $i$,
    with $\sum_i \alpha_i = 1$.
-    1. Compute the expected return of the portfolio $\boldsymbol{\alpha}$.
-    1. Determine the portfolio that maximizes the expected return.
-    1. Compute the variance of the portfolio's return.
+    1. Compute the expected return and the variance of the return of the
+       portfolio $\boldsymbol{\alpha}$.
+    1. Assume that every stock has variance $\sigma^2$ and that every pair
+       of distinct stocks has correlation $\rho \geq 0$. Compute the
+       variance of the equally weighted portfolio $\alpha_i = 1/n$ and its
+       limit as $n \to \infty$. Compare the case $\rho = 0$ with
+       :eqref:`eq_prob_var_phat`.
     1. Formulate an optimization problem that maximizes the expected
        return while constraining the variance to an upper bound. This is
        the [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model)
-       problem :cite:`Mangram.2013`; solving it requires a quadratic
-       programming solver, which is beyond the scope of this book.
+       problem :cite:`Mangram.2013`. Methods for constrained problems of
+       this kind are developed in
+       :numref:`sec_mdl-constrained-optimization-duality`.
 1. **A defense lawyer's statistics.** A suspect had a documented history of
    abusing his now-murdered wife. His lawyer argues that, statistically,
    only one in a thousand wife-abusers goes on to murder his wife, so the
-   history of abuse is weak evidence and the jury should acquit. Writing
+   history of abuse is weak evidence and the jury should acquit. Write
    $M$ for "the suspect murdered his wife," $K$ for "his wife was killed,"
-   and $B$ for "he had a history of abusing her," express the lawyer's
-   one-in-a-thousand figure and the correct posterior of guilt in these
-   terms, and identify precisely which probability the lawyer has confused
-   with which.
+   and $B$ for "he had a history of abusing her."
+    1. Express the lawyer's one-in-a-thousand figure and the posterior
+       probability of guilt in these terms, and identify which probability
+       the lawyer has confused with which.
+    1. Assume that, over the time span the lawyer's statistic refers to, an
+       abused wife is murdered by someone other than her husband with
+       probability $10^{-5}$. Compute the posterior probability of guilt and
+       compare it with the lawyer's figure.
 
     *Adapted from MIT 18.05,
     [problem set 7](https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/mit18_05_s22_pset07_sol.pdf),

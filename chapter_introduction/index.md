@@ -1213,7 +1213,7 @@ The trend is summarized in :numref:`tab_intro_decade`.
 
 
 Random-access memory has not kept pace with the growth in data.
-At the same time, increases in computational power
+Since 2000, increases in computational power
 have outpaced the growth in datasets.
 This means that statistical models
 need to become more memory efficient,
@@ -1580,14 +1580,75 @@ and this is a key component in obtaining high performance.
 
 ## Exercises
 
-1. Which parts of code that you currently write could be "learned", i.e.,
-   improved by determining design choices automatically from data?
-   Does your code include heuristic design choices?
-   What data might you need to learn the desired behavior?
-1. Which problems that you encounter have many examples of successful
-   solutions but no explicit procedure for automating them? Which might be
-   suitable for deep learning?
-1. Describe the relationships between algorithms, data, and computation. How do characteristics of the data and the current available computational resources influence the appropriateness of various algorithms?
-1. Name some settings where end-to-end training is not currently the default approach but where it might be useful.
+1. **Rules versus learning.** Programs often make decisions through
+   heuristics, such as a hand-tuned threshold or a fixed priority rule.
+   Choose such a heuristic from a program that you have written or used.
+   The decision it makes should have many recorded examples of correct
+   outcomes, and no known rule should be correct in every case.
+    1. State the decision as a mapping from inputs to outputs, and
+       describe one input on which the heuristic fails.
+    1. Describe how a model could learn this mapping instead. Name the
+       data and labels you would collect, the objective function you
+       would minimize during training, and the held-out data on which
+       you would compare the trained model with the heuristic.
+1. **Problem formulations.** Assign each task below one of the
+   formulations of this chapter: regression, classification, multi-label
+   classification, sequence-to-sequence learning, clustering, or
+   reinforcement learning. State what the model learns from: a label, a
+   reward, or neither. For each reinforcement learning task, also state
+   whether it is a contextual bandit problem.
+    1. Estimating the resale price of a used car from its age, mileage,
+       and model.
+    1. Assigning to each incoming support email every product area, from
+       a fixed list, that the email concerns.
+    1. Writing a one-paragraph summary of a news article.
+    1. Grouping genes by their expression patterns across many
+       experiments when no groups are defined in advance.
+    1. Choosing which of five discount offers to show each visitor to an
+       online shop, when the only feedback is whether that visitor buys.
+    1. Adjusting a building's heating every ten minutes to reduce energy
+       use while keeping rooms comfortable, learning only from the energy
+       readings and comfort complaints that follow each adjustment.
+1. **Decision threshold.** A classifier outputs the probability $p$ that
+   a mushroom is a death cap. Eating a death cap incurs a loss of $L > 0$,
+   and discarding an edible mushroom incurs a loss of $1$. Eating an
+   edible mushroom and discarding a death cap incur no loss.
+    1. Derive, as a function of $L$, the threshold on $p$ above which
+       discarding the mushroom has a lower expected loss than eating it.
+    1. Evaluate the threshold for $L = 1$ and for $L = 1000$. Compare each
+       threshold with the rule that picks the more probable class.
+1. **Data, memory, and compute.** :numref:`tab_intro_decade` lists, for
+   each decade, a typical dataset size $n$, a memory capacity, and a
+   floating-point throughput. Treat $n$ as a number of examples, memory
+   as a number of bytes, and throughput as operations per second. Read
+   the prefixes K, M, G, T and P as $10^3$, $10^6$, $10^9$, $10^{12}$ and
+   $10^{15}$.
+    1. For each decade, compute the memory per example and the throughput
+       per example. Name the intervals between consecutive decades in
+       which the memory per example fell, and those in which the
+       throughput per example rose.
+    1. A method that compares every pair of training examples, as some
+       kernel methods do, needs about $n^2$ operations per pass over the
+       data. A method that spends a fixed $10^6$ operations per example,
+       as gradient descent on a network of fixed size does, needs about
+       $10^6 n$. For each decade, compute the time that one pass of each
+       method takes at the listed throughput.
+    1. Identify the first decade in which one pass of the pairwise method
+       takes longer than one day. Explain which of the two methods the
+       trends in :numref:`tab_intro_decade` favor.
+1. **End-to-end training.** A driver-assistance system has three stages.
+   A perception network labels each pixel of a camera image as vehicle,
+   pedestrian, or background. It is trained on annotated images, and its
+   quality is measured by the fraction of mislabeled pixels. A planner
+   then chooses a trajectory from the detected objects, and a controller
+   converts the trajectory into steering and braking commands. Engineers
+   tune the planner and the controller by hand.
+    1. Describe an error of the perception network that barely changes
+       the fraction of mislabeled pixels but leads the planner to a
+       dangerous trajectory.
+    1. Suppose that the planner and the controller were also networks,
+       trained jointly with the perception network. State the data and
+       the single objective that this end-to-end training would require,
+       and give one reason why engineers might keep the stages separate.
 
 [Discussions](https://d2l.discourse.group/t/22)

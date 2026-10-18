@@ -38,6 +38,7 @@ exponentiation:
 $$
 a(\mathbf{q}, \mathbf{k}_i) = -\frac{1}{2} \|\mathbf{q} - \mathbf{k}_i\|^2  = \mathbf{q}^\top \mathbf{k}_i -\frac{1}{2} \|\mathbf{k}_i\|^2  -\frac{1}{2} \|\mathbf{q}\|^2.
 $$
+:eqlabel:`eq_gaussian-expansion`
 
 First, the final term depends on $\mathbf{q}$ only, so it is identical for
 all keys, and the softmax normalization :eqref:`eq_softmax_attention`
@@ -79,6 +80,7 @@ with them, because the Jacobian of the softmax is
 $$
 \frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha} \boldsymbol{\alpha}^\top,
 $$
+:eqlabel:`eq_softmax-jacobian`
 
 and this tends to the zero matrix as $\boldsymbol{\alpha}$ approaches a
 one-hot vector, so the queries and keys behind those scores stop being
@@ -324,6 +326,7 @@ shifted next-token objective and a decoding loop. The mask will accompany us thr
 every decoder in the chapters ahead.
 
 ### Composing Masks
+:label:`subsec_composing-masks`
 
 `valid_lens` describes prefixes, which cover the two cases above, but the
 general interface is a boolean tensor: entry $(i, j)$ says whether query $i$
@@ -411,6 +414,7 @@ d2l.check_shape(jax.lax.batch_matmul(Q, K), (2, 3, 6))
 ```
 
 ### The DotProductAttention Class
+:label:`subsec_dot-product-attention-class`
 
 Scaled dot-product attention can now be written in its matrix form. For $n$ queries and $m$ key--value pairs, with queries
 and keys of length $d$ and values of length $v$, stack the queries into
@@ -519,6 +523,7 @@ d2l.show_heatmaps(attention_weights.reshape((1, 1, 2, 10)),
 ```
 
 ## Attention as Learned Alignment
+:label:`subsec_learned-alignment`
 
 Learned attention first became prominent in neural machine translation.
 Around 2014, the leading neural approach encoded a source
@@ -622,31 +627,257 @@ form used in the original neural alignment model.
 
 ## Exercises
 
-1. Implement distance-based attention by modifying the
-   `DotProductAttention` code. You only need the squared norms of the keys
-   $\|\mathbf{k}_i\|^2$ for an efficient implementation.
-1. Modify dot-product attention to allow for queries and keys of different
-   dimensionalities by employing a matrix $\mathbf{M}$ to adjust dimensions,
-   scoring with $\mathbf{q}^\top \mathbf{M} \mathbf{k}$.
-1. How does the computational cost of :eqref:`eq_softmax_QK_V` scale with
-   the dimensionality of keys, queries, and values, and with their number?
-   What about the memory bandwidth requirements?
-1. Derive the softmax Jacobian $\mathrm{diag}(\boldsymbol{\alpha}) -
-   \boldsymbol{\alpha}\boldsymbol{\alpha}^\top$ and verify it numerically
-   against automatic differentiation on a random score vector. Compute its
-   Frobenius norm when $\boldsymbol{\alpha}$ is one-hot and when it is
-   uniform over $m$ keys. Which regime does the saturation experiment
-   approach as $d$ grows without scaling?
-1. What does `masked_softmax` return for a query whose valid length is $0$?
-   Compare the behavior of masking with the most negative finite value
-   against masking with literal $-\infty$. In what situations can a fully
-   masked query arise in practice, and what would you do about it?
-1. Count the parameters and floating-point operations needed to score $n$
-   queries against $m$ keys with additive attention (hidden size $h$) and
-   with scaled dot-product attention (shared dimension $d$). Implement a
-   batched version of the additive score and time both variants for
-   $d = h = 64$ and $d = h = 256$. Which is faster on your hardware, and
-   why?
+1. **Invariances of the score.** The Gaussian score
+   :eqref:`eq_gaussian-expansion` and the scaled dot product
+   :eqref:`eq_dot_product_attention` both define attention weights through
+   the softmax :eqref:`eq_attn-scoring-alpha`.
+    1. For each of the two scores, determine which of the following
+       transformations leaves the weights unchanged: adding one vector
+       $\mathbf{c}$ to every key; adding $\mathbf{c}$ to the query and to
+       every key; multiplying the query and every key by one orthogonal
+       matrix.
+    1. Queries and keys are usually computed from inputs by affine maps,
+       $\mathbf{q} = \mathbf{W}_q \mathbf{x} + \mathbf{b}_q$ and
+       $\mathbf{k}_i = \mathbf{W}_k \mathbf{y}_i + \mathbf{b}_k$. Expand
+       $\mathbf{q}^\top \mathbf{k}_i$ into four terms and show that the
+       weights do not depend on $\mathbf{b}_k$. What is the gradient of the
+       loss with respect to $\mathbf{b}_k$?
+    1. Through which of the four terms does $\mathbf{b}_q$ affect the
+       weights, and what preference over the keys can it express that the
+       bias-free score cannot?
+1. [code] **Distance-based attention.** Equation
+   :eqref:`eq_gaussian-expansion` writes the Gaussian score as a dot product
+   minus two squared norms, and the section drops the key-norm term to
+   arrive at :eqref:`eq_dot_product_attention`.
+    1. Modify `DotProductAttention` so that it keeps the term
+       $-\tfrac{1}{2}\|\mathbf{k}_i\|^2$, using one batch matrix
+       multiplication for the dot products and a broadcast of the $m$
+       squared key norms, without forming the $n \times m \times d$ tensor
+       of differences $\mathbf{q} - \mathbf{k}_i$. Apply the $1/\sqrt{d}$
+       scaling to both terms.
+    1. Verify on random inputs that the resulting weights equal those of a
+       direct evaluation of $\exp(-\|\mathbf{q} - \mathbf{k}_i\|^2 /
+       (2\sqrt{d}))$ normalized over the keys.
+    1. Compare the weights of the two scoring rules on the inputs of
+       :numref:`subsec_dot-product-attention-class`, ten random
+       two-dimensional keys per example. For which keys do the rules
+       disagree most, and why?
+1. **Entropy of random scores.** ● The scaled curve of `attention_stats`
+   stays near $3.7$ nats, below the uniform value $\ln 64 \approx 4.16$.
+   Fix one query $\mathbf{q} \in \mathbb{R}^d$ and draw $m$ keys with
+   independent standard normal coordinates, as `attention_stats` does.
+    1. Show that the scaled scores $a_i = \mathbf{q}^\top \mathbf{k}_i /
+       \sqrt{d}$ are independent normal variables with mean $0$ and variance
+       $s^2 = \|\mathbf{q}\|^2 / d$, and compute the expected value of $s^2$
+       when $\mathbf{q}$ is drawn as in `attention_stats`.
+    1. The entropy of the weights is $H = \ln Z - \sum_i \alpha_i a_i$ with
+       $Z = \sum_j \exp(a_j)$. For large $m$, replace $Z/m$ and
+       $\sum_i \exp(a_i)\, a_i / m$ by their expected values and derive
+       $$H \approx \ln m - \frac{s^2}{2}.$$
+       Evaluate the approximation for $m = 64$ and $s = 1$.
+    1. The approximation needs $Z$ to concentrate around its mean. Compute
+       the relative standard deviation of $Z$ as a function of $s$ and $m$,
+       and derive from it a condition on $s^2$ under which the approximation
+       holds. Unscaled scores have $s^2 = \|\mathbf{q}\|^2$, whose expected
+       value is $d$. Evaluate the relative standard deviation for $m = 64$
+       at $s^2 = 4$ and $s^2 = 8$, and compare the approximation with the
+       unscaled entropies that `attention_stats` returns for $d = 4$ and
+       $d = 8$.
+1. [code] **The softmax Jacobian.** `attention_stats` measures the
+   Frobenius norm of the Jacobian :eqref:`eq_softmax-jacobian`.
+    1. Derive :eqref:`eq_softmax-jacobian` from
+       :eqref:`eq_attn-scoring-alpha`, show that for finite scores its null
+       space is spanned by the all-ones vector, and check the formula
+       against automatic differentiation on a random score vector.
+    1. Compute the Frobenius norm when $\boldsymbol{\alpha}$ is one-hot and
+       when it is uniform over $m$ keys, and evaluate the uniform case for
+       $m = 64$. Show that the squared norm is close to $\sum_i \alpha_i^2$
+       when every weight is small, and use this to explain why the scaled
+       norms printed for $d \in \{4, 64, 512\}$ exceed the uniform value.
+    1. Compute the norm for weights spread uniformly over $k$ of the $m$
+       keys, find the $k$ that maximizes it, and confirm by sampling random
+       weight vectors that none exceeds this maximum. Use the result to
+       explain why the unscaled norm printed for $d = 4$ exceeds the scaled
+       one.
+1. **Fully masked rows.** `masked_softmax` overwrites excluded scores with
+   the most negative finite value of the dtype and then zeroes the rows of
+   queries that have no valid key.
+    1. Explain why, without the final zeroing, a fully masked row returns
+       the uniform distribution, and why the same row returns NaN when the
+       scores are overwritten with $-\infty$ instead. Trace both cases
+       through the subtraction of the row maximum that a numerically stable
+       softmax performs.
+    1. An older codebase overwrites excluded scores with the constant
+       $-10^6$ and computes its scores in float16, whose largest finite
+       magnitude is about $6.55 \times 10^4$. Determine the value that the
+       constant takes when it is rounded to float16, and state what the
+       softmax of such a codebase returns for a fully masked row and for a
+       row with at least one valid key.
+    1. In a self-attention layer, whose queries, keys, and values all come
+       from the same sequence, let a query at a padding position have no
+       valid key, as the composite masks of :numref:`subsec_composing-masks`
+       can arrange, and let the excluded scores be overwritten with
+       $-\infty$, so that the output at that position is NaN. That output
+       is discarded, and in the next attention layer every valid query
+       excludes the padding position as a key. Explain why the NaN
+       nevertheless corrupts the outputs of all valid positions of that
+       sequence in the next layer.
+1. **Composite masks.** :numref:`subsec_composing-masks` combines masks by
+   logical AND and warns that masks that are harmless alone can leave a
+   query with no valid key. A causal sliding window of width $w$ lets the
+   query at position $t$ attend to the keys at positions $t - w + 1, \ldots,
+   t$.
+    1. For a sequence of length $6$ with valid length $3$, write the padding
+       mask and the causal sliding window of width $2$ as $6 \times 6$
+       boolean matrices. Check that each leaves every query at least one
+       key, and find the queries whose row of the AND is empty.
+    1. Show that an AND of masks has no empty row if every mask allows each
+       query to attend to its own position. Which of the padding, causal,
+       sliding-window, and packed-sequence masks satisfy this condition, and
+       what does the answer say about the empty rows you found?
+    1. Some implementations add a bias matrix with entries $0$ for allowed
+       pairs and $c < 0$ for excluded pairs, and compose masks by adding
+       their biases. Take for $c$ the most negative finite single-precision
+       value, about $-3.4 \times 10^{38}$. Compute the sum of two such
+       biases in single precision, and determine what the softmax returns
+       for a row in which every key is excluded by both masks and for a row
+       in which every key is excluded but some keys by only one mask.
+1. [code] **Two masking conventions.** `masked_softmax` describes the valid
+   keys of a query by a prefix length, whereas the masks of
+   :numref:`subsec_composing-masks` and many libraries use a boolean tensor
+   in which `True` marks a pair the query may attend to.
+    1. Write a converter from `valid_lens` of shape (batch size,) or (batch
+       size, number of queries) to a boolean mask of shape (batch size,
+       number of queries, number of keys), and a variant of `masked_softmax`
+       that takes such a mask.
+    1. Verify on ten random padding and causal configurations that both
+       routes produce identical weights, including for fully masked rows.
+    1. Pack two documents of lengths $4$ and $2$ into one row of length
+       $6$. Build the boolean mask that combines the causal mask with the
+       block-diagonal mask of document indices, and verify that attention
+       with your variant gives each document the outputs it receives when
+       it is processed alone with a causal mask.
+    1. Which of the following masks can be expressed by one prefix length
+       per query: padding, causal, padding combined with causal, the packed
+       mask, and a causal sliding window? State what the boolean interface
+       costs in memory for $B$ sequences of length $n$ relative to
+       `valid_lens`.
+
+    *Adapted from Stanford CS336,
+    [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
+    Problem (scaled_dot_product_attention).*
+1. [code] **Attention dropout.** `DotProductAttention` applies dropout with
+   rate $p$ to the attention weights, and the weights it exposes for
+   visualization are those before dropout. Dropout multiplies each kept
+   weight by $1/(1 - p)$ and sets the others to zero, so a row of weights
+   no longer sums to $1$.
+    1. Show that the row sum after dropout has expectation $1$ and variance
+       $\frac{p}{1-p} \sum_i \alpha_i^2$, and evaluate the variance for a
+       row that is uniform over $l$ keys and for a one-hot row. What is the
+       output of a one-hot row in the draws in which dropout removes the
+       attended weight?
+    1. Use the inputs of :numref:`subsec_dot-product-attention-class` with
+       dropout $0.5$ active, and pass as values a batch of $10 \times 10$
+       identity matrices, so that each output row equals the weights after
+       dropout. Compare the mean and the variance of the row sums over many
+       draws with the prediction computed from the weights before dropout.
+1. [code] **Keys of a different width.**
+   :numref:`subsec_dot-product-attention-class` notes that a matrix
+   $\mathbf{M} \in \mathbb{R}^{d_q \times d_k}$ turns the dot product into
+   the score $\mathbf{q}^\top \mathbf{M} \mathbf{k}$ for queries
+   $\mathbf{q} \in \mathbb{R}^{d_q}$ and keys $\mathbf{k} \in
+   \mathbb{R}^{d_k}$.
+    1. Implement this score for a batch of $n$ queries and $m$ keys with a
+       learnable $\mathbf{M}$, and test it on three $20$-dimensional queries
+       against six $2$-dimensional keys, the dimensions used in
+       :numref:`subsec_learned-alignment`. Count the floating-point
+       operations of the two evaluation orders
+       $(\mathbf{Q}\mathbf{M})\mathbf{K}^\top$ and
+       $\mathbf{Q}(\mathbf{M}\mathbf{K}^\top)$ for these dimensions, and
+       state the rule that decides between them.
+    1. The factorization $\mathbf{M} = \mathbf{W}_q^\top \mathbf{W}_k$ with
+       $\mathbf{W}_q \in \mathbb{R}^{r \times d_q}$ and $\mathbf{W}_k \in
+       \mathbb{R}^{r \times d_k}$ turns the score into a dot product of two
+       projected vectors. Count the parameters of both parameterizations,
+       find the values of $r$ for which the factored form has fewer, and
+       state the constraint it places on $\mathbf{M}$.
+    1. Let $\mathbf{q}$ and $\mathbf{k}$ have independent zero-mean,
+       unit-variance coordinates, and let $\mathbf{W}_q$ and $\mathbf{W}_k$
+       have independent zero-mean entries of variance $1/d_q$ and $1/d_k$,
+       as `W_q` and `W_k` in :numref:`subsec_learned-alignment` do. Compute
+       the variance of the factored score, and state the factor that
+       replaces $1/\sqrt{d}$.
+1. **Arithmetic intensity of attention.** For $n$ queries and $m$ keys,
+   with queries and keys of width $d$ and values of width $v$, the two
+   matrix products of :eqref:`eq_softmax_QK_V` cost $2nmd$ and $2nmv$
+   floating-point operations, and the softmax costs a few operations per
+   score.
+    1. Suppose that the score matrix is written to memory once and read
+       once by the softmax, whose output is written once and read once by
+       the value product, all in single precision. Count the bytes moved by
+       these four passes, and by reading $\mathbf{Q}$, $\mathbf{K}$,
+       $\mathbf{V}$ and writing the output.
+    1. Neglecting the softmax arithmetic, form the ratio of operations to
+       bytes and let $n, m \to \infty$ at fixed $d$ and $v$. Show that the
+       limit is $(d + v)/8$, and state how the softmax arithmetic changes
+       it.
+    1. Look up the peak arithmetic throughput and the memory bandwidth of
+       one accelerator, compute its ratio of operations per byte, and decide
+       whether attention with $d = v = 64$ is limited by arithmetic or by
+       memory traffic on it.
+1. [code] **Additive scores near zero.** ● The additive score
+   :eqref:`eq_additive-attn` adds the projected query and the projected key
+   inside a $\tanh$.
+    1. Replace $\tanh$ by the identity and show that the attention weights
+       then do not depend on the query.
+    1. Expand $\tanh$ to third order around zero, identify the lowest-order
+       terms through which the weights depend on the query, and state how
+       this dependence scales when $\mathbf{W}_q$ and $\mathbf{W}_k$ are
+       both multiplied by a small factor $\epsilon$.
+    1. Multiply `W_q` and `W_k` in the code of
+       :numref:`subsec_learned-alignment` by $\epsilon \in \{1, 0.3, 0.1,
+       0.03\}$, and measure the largest difference between the weight rows
+       of the three queries. Check the scaling you derived, and state what
+       the result for $\epsilon = 1$ implies for additive attention at
+       initialization.
+1. [code] **Additive versus dot-product cost.** ● Score $n$ queries of
+   width $d_q$ against $m$ keys of width $d_k$ with the additive rule
+   :eqref:`eq_additive-attn` of hidden size $h$, and $n$ queries against
+   $m$ keys of a shared width $d$ with :eqref:`eq_dot_product_attention`.
+    1. Count the parameters, the floating-point operations, and the size of
+       the largest intermediate tensor for each rule.
+    1. Implement a batched version of :eqref:`eq_additive-attn` that
+       produces weights of shape (batch size, $n$, $m$), and check it
+       against the unbatched code of :numref:`subsec_learned-alignment`.
+    1. Time both rules for a batch of $4$ sequences with $n = m = 512$ at
+       $d_q = d_k = d = h = 64$ and at $d_q = d_k = d = h = 256$. Relate
+       the ratio of the two times
+       to your counts of operations and of intermediate memory.
+1. [extended] **A learned alignment.** ●
+   :citet:`Bahdanau.Cho.Bengio.2014` observed that attention weights trained
+   only for translation behave like alignments (:numref:`fig_alignment`).
+   The same effect appears in a toy model without recurrent networks. Draw
+   source sequences of $8$ tokens uniformly from a vocabulary of $16$, and
+   let the target at output position $j$ be the source token at position
+   $\pi(j)$ for a fixed permutation $\pi$ of the positions. Score one
+   learned query per output position against keys that a learned linear map
+   computes from the concatenated one-hot token and one-hot position of each
+   source token, use the one-hot source tokens as values, and train on the
+   negative logarithm of the output entry that belongs to the target token.
+    1. Implement the model with `DotProductAttention`, train it, and plot
+       the attention weights of one sequence with `d2l.show_heatmaps`.
+       Compare the map with $\pi$.
+    1. Replace the score by the additive rule :eqref:`eq_additive-attn` and
+       compare the number of steps that each model needs to reach $99\%$
+       accuracy.
+    1. Give queries and keys the width $d \in \{16, 256, 1024\}$ with
+       standard normal initialization, and train with and without the
+       factor $1/\sqrt{d}$. Relate the training curves to the entropy of the
+       weights at initialization.
+    1. Explain why a fixed query per output position cannot learn a
+       reordering that depends on the tokens, such as swapping two
+       neighbors only when the first belongs to a designated subset of the
+       vocabulary, and state what the query would have to depend on.
 
 <!-- slides -->
 

@@ -328,6 +328,7 @@ def eval_copy(model, Lmin, Lmax, batch_size=256, vocab=64):
 ```
 
 ### A Fixed-Offset Solution
+:label:`subsec_fixed-offset-shortcut`
 
 We first concatenate each length-32 pattern with itself to obtain a
 64-token sequence. Although the preceding analysis rules out a one-layer
@@ -404,6 +405,7 @@ then suffices, and prediction requires content-based matching to a previous
 occurrence.
 
 ### A Two-Block Induction Circuit
+:label:`subsec_two-block-induction`
 
 With variable pattern lengths, we train for 2,000 steps both the two-block
 model, the smallest model in our analysis that can express induction, and a
@@ -561,6 +563,7 @@ the loss transition recurs across training runs.
 ## In-Context Learning as Pattern Completion
 
 ### Generalization to Unseen Patterns
+:label:`subsec_unseen-patterns`
 
 Every test sequence is freshly sampled at evaluation time: the pattern it completes, and every
 adjacent pair inside that pattern, has never occurred in training. The parameters therefore cannot store a stable association between token
@@ -713,13 +716,16 @@ a positional shortcut; only a targeted head or path ablation, followed by the
 predicted loss change, provides a causal intervention on the proposed circuit.
 Attention maps therefore locate candidates rather than establish their role.
 
+:Evidence for the induction-head interpretation, by level.
+:label:`tab_induction-evidence`
+
 | check in this section | evidence level | supported conclusion | remaining limitation |
 |:--|:--|:--|:--|
 | second-copy loss | behavioral | the deeper model fits the repeated-token task | does not identify a head |
 | attention pattern | activation | a head attends with the predicted offset pattern | attention alone omits the value transformation |
 | OV diagonal | weight-level | the candidate head contains a copy-compatible map | compatibility does not show necessity |
 | input-period change | input intervention | separates content matching from a fixed-offset shortcut | changes the task as well as the input |
-| targeted head/path ablation | component intervention | would test whether the proposed component is necessary | left as Exercise 2 rather than established here |
+| targeted head/path ablation | component intervention | would test whether the proposed component is necessary | left as Exercise 13 rather than established here |
 
 These checks are comparatively direct in the attention-only model because
 the residual update becomes linear after fixing the patterns. Feed-forward
@@ -754,53 +760,310 @@ probes, and weight-level checks in addition to attention maps.
 
 ## Exercises
 
-1. Build a copying head by hand — the skip-trigram
-   "$[\mathrm{A}] \ldots [\mathrm{A}] \to [\mathrm{A}]$" — with no training
-   at all. Instantiate `TinyCharLM(64, num_blks=1, pos='none')`, pick head
-   0, and overwrite its slices of the fused `qkv` weight: set the query and
-   key maps to the *same* random $d_h \times d$ matrix scaled by a large
-   constant (so that the score $\mathbf{e}_a^\top \mathbf{W}_{\mathrm{QK}}
-   \mathbf{e}_b$ is large precisely when $a = b$), set the value map to
-   another random matrix and the head's output columns to its transpose,
-   and zero the output columns of the remaining heads. Verify on random
-   sequences that the tokens with the most-boosted logits are those present
-   in the context. Why does a *random* projection preserve the matching
-   structure? (Recall the near-orthogonality of random high-dimensional
-   vectors, :numref:`sec_mdl-geometry-linear-algebraic-ops`.) Explain why
-   this construction, whatever the constants, cannot beat the one-block
-   plateau of the variable-period experiment.
-2. Ablate the circuit. Zero out each block-2 head of `model_two` in turn
-   (its columns of `proj` suffice — why?) and measure the second-copy loss;
-   then ablate the two strongest heads together. How much of the ability
-   survives single-head ablation, and what does that say about
-   redundancy? Compare with ablating block-1 heads.
-3. Retrain the variable-period experiment with `pos='none'` and
-   `pos='alibi'`. Which schemes still develop induction heads, and how does
-   the phase change move? Before running, predict: the circuit needs a
-   previous-token head in block 1 — which positional schemes make attending
-   to a fixed offset of $-1$ easy, and what does ALiBi's recency bias do to
-   the long-range match in block 2?
-4. Complete the weight-level analysis with *K-composition*. The induction
-   head's match works because block 2's QK circuit reads what block 1's OV
-   circuit wrote: for candidate head pairs, compute the $64 \times 64$
-   matrix $\mathbf{E} \mathbf{W}_{q}^\top \mathbf{W}_{k}
-   \mathbf{W}_{\mathrm{OV}}^{(1)} \mathbf{E}^\top$ (block-2 query/key maps,
-   block-1 OV circuit) and compare its diagonal concentration against the
-   direct path $\mathbf{E} \mathbf{W}_{q}^\top \mathbf{W}_{k}
-   \mathbf{E}^\top$. Which pairs of heads carry the match, and do they
-   agree with the attention-based scores of `head_scores`?
-5. Evaluate `model_two` on sequences that repeat a length-21 pattern three
-   times. Is the third copy predicted better than the second? Connect your
-   answer to the ambiguity discussed under pattern completion: what does a
-   second previous occurrence do to a single-token match?
-6. Retrain `model_two` drawing training patterns only from tokens 0–47,
-   then evaluate on patterns drawn from tokens 48–63. Completion fails
-   badly. Explain why, tracing the failure through
-   :eqref:`eq_qkov` and :eqref:`eq_copy-matrix`: which matrices in the
-   matching and copying paths involve embeddings that never received a
-   gradient? Large models' induction heads generalize to arbitrary tokens —
-   what do their inputs pass through before reaching the heads that our
-   model lacks?
+1. **Tied bigrams.** With zero blocks, the logit of token $b$ after token
+   $a$ is $\mathbf{e}_b^\top \mathbf{e}_a$, so the geometry of the
+   embeddings alone fixes which successor the model prefers. Call $b$ the
+   *top successor* of $a$ when $\mathbf{e}_b^\top \mathbf{e}_a$ is the
+   largest logit of that row, and assume that there are no ties.
+    1. Show that if all embeddings have the same norm, the top successor of
+       every token is the token itself.
+    1. Drop the equal-norm assumption. Show that a token $b \neq a$ can be
+       the top successor of $a$ only if $\|\mathbf{e}_b\| >
+       \|\mathbf{e}_a\|$, and conclude that the top successors cannot form a
+       cycle $a_1 \to a_2 \to \cdots \to a_k \to a_1$ with $k \geq 2$.
+    1. Suppose that in a corpus the most frequent successor of the
+       character `t` is `h`, that of `h` is `e`, that of `e` is the space,
+       and that of the space is `t`. Show that no zero-block model
+       reproduces all four as top successors, however long it is trained.
+    1. In a one-block model, every head at the first position attends only
+       to that position. Write the logits there as $\mathbf{E}\mathbf{M}
+       \mathbf{e}_{x_0}$ for a matrix $\mathbf{M}$ built from the OV
+       circuits, and explain why neither constraint of the previous parts
+       applies to $\mathbf{E}\mathbf{M}\mathbf{E}^\top$.
+1. **Head reparameterization.** Replacing $\mathbf{W}_q$ by
+   $\mathbf{A}\mathbf{W}_q$ and $\mathbf{W}_k$ by
+   $\mathbf{A}^{-\top}\mathbf{W}_k$, for an invertible $\mathbf{A} \in
+   \mathbb{R}^{d_h \times d_h}$, leaves $\mathbf{W}_{\mathrm{QK}}$ and
+   therefore every score of :eqref:`eq_qkov` unchanged.
+    1. Give the analogous substitution of $\mathbf{W}_v$ and $\mathbf{W}_o$
+       that leaves $\mathbf{W}_{\mathrm{OV}}$ unchanged.
+    1. The $d \times d$ matrices of rank at most $d_h$ form a set of
+       dimension $d_h(2d - d_h)$. For $d = 128$ and $d_h = 32$, count the
+       parameters of one head of a `TinyCharLM` with `pos='none'` and the
+       dimensions of its two circuits, and give the fraction of the
+       parameters that the two substitutions make redundant.
+    1. Two training runs from different seeds yield layers that compute the
+       same function. Which of $\mathbf{W}_q$, $\mathbf{W}_k$,
+       $\mathbf{W}_{\mathrm{QK}}$, $\mathbf{W}_{\mathrm{OV}}$, and the
+       singular values of $\mathbf{W}_{\mathrm{OV}}$ can be compared
+       directly between the runs? Which further symmetry of a layer with $H$
+       heads must the comparison account for?
+1. **The QK circuit under RoPE.** ● With RoPE, :eqref:`eq_rope-goal` turns
+   the score of :eqref:`eq_qkov` at offset $\delta = j - i$ into
+   $\mathbf{h}_i^\top \mathbf{W}_q^\top \mathbf{R}_\delta \mathbf{W}_k
+   \mathbf{h}_j / \sqrt{d_h}$, where $\mathbf{R}_\delta$ is the rotation of
+   :eqref:`eq_rope-def` acting on the $d_h$ coordinates of the head. Assume
+   that $\mathbf{W}_q$ and $\mathbf{W}_k$ have rank $d_h$.
+    1. Show that the substitution $\mathbf{W}_q \to \mathbf{A}\mathbf{W}_q$,
+       $\mathbf{W}_k \to \mathbf{A}^{-\top}\mathbf{W}_k$ preserves the
+       scores at every offset if and only if $\mathbf{A}$ commutes with every
+       $\mathbf{R}_\delta$.
+    1. Let $\mathbf{J}$ be the rotation of the plane by $\pi/2$. A matrix
+       that is block-diagonal with one $2 \times 2$ block $a_m \mathbf{I} +
+       b_m \mathbf{J}$ per rotation pair commutes with every
+       $\mathbf{R}_\delta$, since each block scales and rotates its own
+       plane. For $d_h = 32$ the frequencies $\omega_m$ are distinct and lie
+       in $(0, \pi)$. Show that no other matrix commutes with every
+       $\mathbf{R}_\delta$, and compare the dimension of this set with the
+       $d_h^2$ dimensions of the substitutions available without RoPE.
+    1. Show that an orthogonal $\mathbf{A}$ that does not commute with
+       $\mathbf{R}_1$ leaves $\mathbf{W}_{\mathrm{QK}}$ unchanged but changes
+       the scores at nonzero offsets. Which object must a weight-level
+       analysis of a RoPE head inspect in place of
+       $\mathbf{W}_{\mathrm{QK}}$?
+1. **Paths through two blocks.** Fix the attention patterns of a model with
+   $L$ blocks of $H$ heads on a sequence of $T$ tokens, and write
+   $\mathbf{A}^{\ell h}$ for the $T \times T$ matrix with entries
+   $\alpha_{ij}^{\ell h}$.
+    1. Expand the logits of :eqref:`eq_stream-update` for $L = 2$ into a
+       sum of path terms. Show that the path through head $h$ of block 1 and
+       head $h'$ of block 2 acts like a single head with pattern
+       $\mathbf{A}^{2h'}\mathbf{A}^{1h}$ and OV circuit
+       $\mathbf{W}_{\mathrm{OV}}^{2h'}\mathbf{W}_{\mathrm{OV}}^{1h}$, and
+       bound the rank of that circuit.
+    1. Count the path terms for $L$ blocks, and evaluate the count for
+       `model_two`.
+    1. In a trained model the patterns of block 2 are not fixed: they depend
+       on $\mathbf{h}^{(1)}$ through the QK circuit of block 2. Substitute
+       $\mathbf{h}_i^{(1)}$ and $\mathbf{h}_j^{(1)}$ into the score of
+       :eqref:`eq_qkov` and sort the terms by whether the query side, the
+       key side, or both contain the output of a block-1 head. These terms
+       are called *Q-composition* and *K-composition*, and the path of the
+       first part is *V-composition* :cite:`Elhage.Nanda.Olsson.ea.2021`.
+       Which kind of term does the induction circuit of
+       :numref:`fig_induction-circuit` rely on?
+    1. Show that two blocks can match on the two-token prefix
+       $(x_{i-1}, x_i)$ when block 1 contains heads that attend to offsets
+       $-1$ and $-2$, and name the composition term that carries each half
+       of the match.
+1. [code] **A copying head by hand.** The skip-trigram
+   "$[\mathrm{A}] \ldots [\mathrm{A}] \to [\mathrm{A}]$" of
+   :eqref:`eq_one-layer-paths` can be built without training. Instantiate
+   `d2l.TinyCharLM(64, num_blks=1, pos='none')` and overwrite the slices of
+   head 0 in the fused `qkv` weight and in `proj`: set both the query and
+   the key map to $c\mathbf{Q}$ for a random $d_h \times d$ matrix
+   $\mathbf{Q}$ and a constant $c$, set the value map to a second random
+   matrix $\mathbf{V}$ and the head's output map to $\mathbf{V}^\top$, and
+   zero the output maps of the other heads.
+    1. Explain why the score $\mathbf{e}_a^\top \mathbf{W}_{\mathrm{QK}}
+       \mathbf{e}_b$ is large exactly when $a = b$, and why
+       $\mathbf{W}_{\mathrm{OV}} = \mathbf{V}^\top \mathbf{V}$ raises the
+       logit of the attended token more than any other logit.
+    1. Choose $c$ so that the keys holding the query's token receive more
+       than $0.9$ of the weight at every position of random 63-token
+       sequences, and verify that the head's contribution to the logits is
+       largest at the current token.
+    1. Predict the later-copy accuracy of this head on the
+       repeated-sequence task, then measure it with `eval_copy`.
+    1. With $c = 0$ the head weights all positions $j \leq i$ equally, so
+       it raises the logit of each context token roughly in proportion to
+       the token's count. As a reference for this behavior, compute the
+       later-copy loss and accuracy of a predictor proportional to the token
+       counts of the context, pooled over pattern lengths uniform in 16 to
+       32 as `split_losses` pools them. Compare both numbers with
+       `eval_copy` of `model_one`, and name the information that the trained
+       one-block RoPE model can use and this head cannot.
+1. [code] **An offset head by hand.** ● A one-block model with biases
+   solves the fixed-period task of :numref:`subsec_fixed-offset-shortcut`
+   with a head that ignores token content. Let the query and key maps of
+   one RoPE head be zero, so that every query equals the bias
+   $\mathbf{b}_q \in \mathbb{R}^{d_h}$ and every key equals
+   $\mathbf{b}_k$. By :eqref:`eq_rope-goal` the score at offset
+   $\delta = j - i$ is
+   $$s(\delta) = \frac{\mathbf{b}_q^\top \mathbf{R}_\delta \mathbf{b}_k}{\sqrt{d_h}}.$$
+    1. Show that $\mathbf{b}_k = \mathbf{R}_{31}\mathbf{b}_q$ makes
+       $s(\delta)$ maximal at $\delta = -31$, and write $s(\delta)$ as a sum
+       over the 16 rotation pairs of :eqref:`eq_rope-def`, with the
+       frequencies $\omega_m = 10000^{-2m/d_h}$ that `TinyCharLM` uses.
+    1. Spread $\|\mathbf{b}_q\|^2$ equally over the pairs, and find the
+       $\|\mathbf{b}_q\|^2$ at which the query at position 62 places $0.9$
+       of its weight on offset $-31$.
+    1. Repeat the last computation with all of $\|\mathbf{b}_q\|^2$ in the
+       fastest pair, and find the offsets that then compete with $-31$.
+       Find an allocation over the pairs that needs a smaller norm than
+       equal spreading, and explain the result through the periods
+       $2\pi/\omega_m$ relative to the 63 offsets a query can see.
+    1. For which pattern lengths does a head that always copies the token
+       at offset $-31$ predict every target at position 32 or later
+       correctly?
+1. [code] **The Bayes-optimal predictor.** ● In the task of
+   :numref:`subsec_two-block-induction`, the pattern length $L$ is uniform
+   on $\{16, \ldots, 32\}$ and the pattern tokens are uniform over 64
+   values. The Bayes-optimal prediction of $x_t$ from $x_0, \ldots,
+   x_{t-1}$ averages the predictions of all pattern lengths $L'$, weighted
+   by their posterior probabilities, and no model achieves a lower
+   expected loss.
+    1. Show that the prefix $x_0, \ldots, x_{t-1}$ has probability
+       $64^{-\min(L', t)}$ under every length $L'$ with which it is
+       consistent. Neglecting shorter lengths that are consistent by chance,
+       derive the posterior weight of the true length at $t = L$ and at
+       $t = L + 1$.
+    1. At $16 \leq t < L$ the true distribution of $x_t$ is uniform. Show
+       that the predictor's distribution there is not, and conclude that its
+       first-copy loss exceeds $\ln 64$.
+    1. Simulate the predictor and report its first-copy loss, later-copy
+       loss, and later-copy accuracy, pooled over positions as
+       `split_losses` and `eval_copy` pool them. Compare the results with
+       `model_two`.
+    1. :numref:`subsec_unseen-patterns` states that the restart at position
+       24 of a period-24 pattern is unpredictable in principle. Compute the
+       probability that the Bayes-optimal predictor assigns to the correct
+       token there, and determine whether its most probable token is
+       correct. In which sense does the statement hold?
+1. [code] **Positional schemes and induction.** ● The induction circuit
+   needs a previous-token head in block 1 and, in block 2, a match with a
+   key 15 to 31 positions back.
+    1. In a `pos='none'` model, permuting $x_0, \ldots, x_{i-1}$ leaves the
+       output of block 1 at position $i$ unchanged, because the causal mask
+       treats all earlier keys alike. Conclude that no block-1 head of such
+       a model can be a previous-token head.
+    1. The ALiBi bias of :eqref:`eq_alibi-def` is largest at offset $0$.
+       Show that a content score with a large penalty on keys holding the
+       query's own token moves the peak of a block-1 ALiBi head to offset
+       $-1$, and compute the weight it then places on offset $-1$ on long
+       random sequences for each of the four slopes. Which of the four
+       heads, if any, is a previous-token head? Then compute the penalty
+       that each head pays in block 2 for a match at distance 15 to 31.
+    1. The timing of the loss transition varies across seeds. Retrain the
+       `'rope'` model of :numref:`subsec_two-block-induction` with three
+       further seeds and record the step at which the smoothed later-copy
+       loss first falls below 2 nats.
+    1. Retrain with `pos='none'` and with `pos='alibi'`, report `eval_copy`
+       and `head_scores`, and compare the transition steps with the seed
+       spread of the previous part. Which schemes develop induction heads,
+       and which heads of the ALiBi model carry the match?
+1. [code] **Repeated tokens within a pattern.** ●
+   :numref:`subsec_unseen-patterns` attributes the remaining errors of
+   `model_two` to tokens that occur more than once in a pattern with
+   different successors, which a match on a single token cannot tell
+   apart.
+    1. For a pattern of $L$ tokens drawn uniformly from 64 values, compute
+       the probability that the token at a given position occurs elsewhere
+       in the pattern. A circuit that picks one of the $K$ successors of the
+       current token uniformly, when that token occurs $K$ times in the
+       pattern, is correct with probability $1/K$. Compute its expected
+       accuracy $\mathbb{E}[1/K]$ in closed form, and evaluate both
+       quantities for $L = 21$.
+    1. Evaluate `model_two` on patterns of length 21, which
+       `repeated_batch` tiles to three copies within 64 tokens. Split the
+       later-copy targets by whether the current token is unique in the
+       pattern, and report the accuracy of each group on the second and on
+       the third copy. Compare the overall accuracy with
+       $\mathbb{E}[1/K]$.
+    1. Explain the results through the single-token match. What does an
+       additional earlier occurrence with the same successor do to the
+       attention pattern and to the output, and what does one with a
+       different successor do?
+    1. Two blocks can match on the two-token prefix $(x_{i-1}, x_i)$ when
+       block 1 contains heads that attend to offsets $-1$ and $-2$. Measure
+       the attention mass that each block-1 head of `model_two` places at
+       offset $-2$, and decide from this and your earlier measurements
+       whether `model_two` matches on more than one token.
+1. [code] **A vocabulary split.** ● Every test pattern of
+   :numref:`subsec_unseen-patterns` is new, but each of its tokens has
+   occurred as an input during training. Retrain the two-block model of
+   :numref:`subsec_two-block-induction` with `train_repeat` and
+   `vocab=48`, so that training patterns use only tokens 0 to 47 while the
+   model keeps all 64 embeddings.
+    1. Report the later-copy loss and accuracy on patterns drawn from
+       tokens 48 to 63 and, as a control with a vocabulary of the same size,
+       on patterns drawn from tokens 0 to 15.
+    1. The held-out tokens never appear as inputs or as targets, but
+       through the tied output head their embeddings still receive a
+       gradient at every training position. Find the direction in which
+       these gradients move their embeddings.
+    1. The copy matrix :eqref:`eq_copy-matrix` of a held-out token applies
+       an OV circuit trained only on streams of tokens 0 to 47 to an
+       embedding shaped only by its initialization and the gradients of the
+       previous part. Compute the copy matrix restricted to the held-out
+       tokens and restricted to tokens 0 to 15, compare their diagonal
+       fractions, and relate the difference to the accuracies of the first
+       part.
+1. [code] **K-composition in the weights.** ● The match of the induction
+   head works because the QK circuit of block 2 reads what the OV circuit
+   of block 1 wrote into the stream.
+    1. For every pair of head $h$ of block 1 and head $h'$ of block 2 of
+       `model_two`, compute the $64 \times 64$ matrix
+       $$\mathbf{E}\, \mathbf{W}_{\mathrm{QK}}^{2h'}\, \mathbf{W}_{\mathrm{OV}}^{1h}\, \mathbf{E}^\top,$$
+       whose entry $(a, b)$ scores a query token $a$ against a key whose
+       predecessor was $b$. Measure the fraction of rows whose largest
+       entry lies on the diagonal, as the copy test of
+       :eqref:`eq_copy-matrix` does for copying.
+    1. Compare with the direct path $\mathbf{E}\,
+       \mathbf{W}_{\mathrm{QK}}^{2h'}\, \mathbf{E}^\top$ of the same block-2
+       heads. Which pairs of heads carry the match, and do they agree with
+       the attention-based scores of `head_scores`?
+    1. The computation ignores the rotation that RoPE applies inside the QK
+       circuit. Include it for a fixed offset with :eqref:`eq_rope-goal`,
+       and check whether doing so at offset $-23$ changes the ranking of the
+       pairs.
+1. **Weights that change nothing.** The output of a head at query $i$ is
+   $\mathbf{W}_{\mathrm{OV}} \sum_j \alpha_{ij}\, \mathbf{h}_j$ by
+   :eqref:`eq_stream-update`, and the softmax makes every weight
+   $\alpha_{ij}$ on an unmasked key positive.
+    1. Show that the attention distributions over $n$ keys that give the
+       same head output as $\boldsymbol{\alpha}_i$ contain, around
+       $\boldsymbol{\alpha}_i$, a piece of an affine subspace of dimension
+       at least $n - 1 - d_h$. Evaluate the bound for the last query of a
+       63-token input to `model_two`.
+    1. The alternatives of the first part are constructed for one input at
+       a time, as are those of :citet:`Jain.Wallace.2019`. State the
+       condition under which a family of alternatives can be the attention
+       patterns of one head with other QK weights on every input at once.
+       Explain why this condition, raised by
+       :citet:`Wiegreffe.Pinter.2019`, weakens the argument that the
+       existence of alternative distributions disqualifies attention
+       weights as explanations.
+1. [code] **Circuit ablation.** The last row of
+   :numref:`tab_induction-evidence` leaves the component intervention to
+   this problem.
+    1. Explain why zeroing a head's slice of `proj` removes exactly that
+       head's contribution to the residual stream, and which attention
+       patterns this intervention leaves unchanged and which it can alter.
+    1. Zero each block-2 head of `model_two` in turn and measure the
+       later-copy loss and accuracy with `eval_copy`; then do the same for
+       each block-1 head.
+    1. Ablate together the two block-2 heads with the highest
+       induction-target scores in `head_scores`. Does the sum of the two
+       single-head loss increases predict the joint increase, and what does
+       the comparison say about redundancy between the heads?
+    1. Which of the remaining limitations listed in
+       :numref:`tab_induction-evidence` does this experiment remove, and
+       which does it leave?
+1. [extended] **Induction heads in text.** ●
+   :citet:`Olsson.Elhage.Nanda.ea.2022` tie the formation of induction
+   heads in language models to an abrupt gain in in-context learning,
+   measured as the drop in loss from early to late positions of the
+   context. Test this on the character-level model of
+   :numref:`subsec_pos-experiment`.
+    1. Train `d2l.TinyCharLM` with `pos='rope'` on the character-level Time
+       Machine data of :numref:`subsec_pos-experiment` in 30 rounds of 100
+       steps of `d2l.train_lm`. After each round, record two quantities. The
+       first is the largest induction-target score of a block-2 head on
+       repeated random sequences over the text vocabulary with pattern
+       lengths 16 to 32, computed with a variant of `head_scores` that
+       returns its scores. The second is the in-context gain, the
+       validation loss at target positions 0 to 15 minus that at positions
+       96 to 127.
+    1. Plot both quantities against the training step. Do the induction
+       score and the in-context gain rise in the same window?
+    1. After training, zero the block-2 heads with the highest induction
+       scores and measure the in-context gain and the validation loss again.
+       How much of the gain do these heads carry?
+    1. The repeated random sequences contain no structure besides
+       repetition, while text repeats words and phrases at irregular
+       distances. Which of your results would change if the text contained
+       no repeated words, and why?
 
 <!-- slides -->
 

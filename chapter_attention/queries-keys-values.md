@@ -133,6 +133,7 @@ $$
 \alpha(\mathbf{q}, \mathbf{k}) & = \mathop{\mathrm{max}}\left(0, 1 - \|\mathbf{q} - \mathbf{k}\|\right) && \textrm{triangular,}
 \end{aligned}
 $$
+:eqlabel:`eq_similarity-kernels`
 
 plus the degenerate constant kernel $\alpha(\mathbf{q}, \mathbf{k}) = 1$
 that ignores the query entirely. :numref:`fig_attention_kernels` shows their
@@ -267,28 +268,182 @@ representations of queries and keys.
 
 ## Exercises
 
-1. Suppose that you wanted to reimplement approximate (key, query) matches
-   as used in classical databases, which attention function would you pick?
-1. Suppose that the attention function is given by $a(\mathbf{q},
+1. **A two-entry database.** Consider the database $\mathcal{D} =
+   \{(2, 10), (5, 20)\}$ of scalar keys and values, with the score
+   $a(q, k) = -(q - k)^2$ normalized by :eqref:`eq_softmax_attention`.
+    1. Compute the two weights and the output for the query $q = 4$.
+    1. Express the output as a function of $q$. Which query returns $15$,
+       and which outputs do the queries $q \in \mathbb{R}$ reach?
+    1. Replace the score by $a(q, k) = -(q - k)^2 / (2\sigma^2)$. Describe
+       the output as a function of $q$ in the limits $\sigma \to 0$ and
+       $\sigma \to \infty$, and state which lookup each limit performs.
+1. **A fixed parameter budget.** A database holds $m$ key--value pairs
+   with $\mathbf{k}_i \in \mathbb{R}^{d_k}$ and
+   $\mathbf{v}_i \in \mathbb{R}^{d_v}$, and the lookup :eqref:`eq_attention_pooling` scores them with a learned
+   bilinear form $a(\mathbf{q}, \mathbf{k}) = \mathbf{q}^\top \mathbf{M}
+   \mathbf{k}$, $\mathbf{M} \in \mathbb{R}^{d_k \times d_k}$.
+    1. Count the parameters of this lookup and the number of scores it
+       evaluates for one query.
+    1. A fully connected layer instead maps the concatenation of the query
+       and all $m$ pairs, a vector of length $d_k + m(d_k + d_v)$, to an
+       output in $\mathbb{R}^{d_v}$. Count its parameters as a function of
+       $m$.
+    1. The pairs of a database carry no order. Determine how the output of
+       each of the two maps changes when the $m$ pairs are permuted.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 12.1.*
+1. **An average of two values.** Let the keys $\mathbf{k}_1, \ldots,
+   \mathbf{k}_m$ be orthonormal and let the score be $a(\mathbf{q},
+   \mathbf{k}) = \mathbf{q}^\top \mathbf{k}$ with the weights of
+   :eqref:`eq_softmax_attention`.
+    1. For the query $\mathbf{q} = c\,(\mathbf{k}_a + \mathbf{k}_b)$ with
+       $c > 0$, compute all $m$ weights and show that the output tends to
+       $\tfrac{1}{2}(\mathbf{v}_a + \mathbf{v}_b)$ as $c \to \infty$.
+    1. How large must $c$ be for the two selected keys to receive at least
+       99% of the total weight when $m = 10$?
+    1. Now let the keys be orthogonal with $\|\mathbf{k}_b\| =
+       2\,\|\mathbf{k}_a\|$. Find a query that again averages
+       $\mathbf{v}_a$ and $\mathbf{v}_b$, and state what
+       $\mathbf{q} = c\,(\mathbf{k}_a + \mathbf{k}_b)$ returns instead as
+       $c \to \infty$.
+
+    *Adapted from Stanford CS224N,
+    [Assignment 4](https://web.stanford.edu/class/cs224n/assignments_w25/a4.pdf),
+    Problem 1(b).*
+1. [code] **The gradient of attention.** ● Suppose that $a(\mathbf{q},
    \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$ and that $\mathbf{k}_i =
    \mathbf{v}_i$ for $i = 1, \ldots, m$. Denote by $p(\mathbf{k}_i;
-   \mathbf{q})$ the probability distribution over keys when using the
-   softmax normalization in :eqref:`eq_softmax_attention`. Prove that
-   $\nabla_{\mathbf{q}} \mathop{\textrm{Attention}}(\mathbf{q}, \mathcal{D})
-   = \textrm{Cov}_{p(\mathbf{k}_i; \mathbf{q})}[\mathbf{k}_i]$.
-1. Design a differentiable search engine using the attention mechanism.
-1. Review the design of the Squeeze and Excitation Networks
-   :cite:`Hu.Shen.Sun.2018` and interpret them through the lens of the
-   attention mechanism.
-1. Assume that all keys and queries lie on the unit sphere, i.e., $\|\mathbf{x}\| = 1$.
-   Simplify the $\|\mathbf{q} - \mathbf{k}\|^2$ term in the exponential of the
-   Gaussian kernel. What does the resulting similarity measure look like?
-   Keep your answer in mind for the next section.
-1. Use stochastic gradient descent to learn a good bandwidth for
-   Nadaraya--Watson regression on the data above. What happens if you
-   minimize the training error $(f(x_i) - y_i)^2$ directly, given that $y_i$
-   enters the computation of $f(x_i)$? Exclude $(x_i, y_i)$ from the
-   estimate at $x_i$ and try again.
+   \mathbf{q})$ the distribution over keys defined by the softmax
+   normalization :eqref:`eq_softmax_attention`.
+    1. Prove that
+       $$\nabla_{\mathbf{q}} \mathop{\textrm{Attention}}(\mathbf{q}, \mathcal{D}) = \textrm{Cov}_{p(\mathbf{k}_i; \mathbf{q})}[\mathbf{k}_i].$$
+    1. Conclude that this Jacobian is positive semidefinite, and determine
+       for which databases it is the zero matrix.
+    1. Let $\mathbf{q} = c\,\mathbf{u}$ for a fixed direction $\mathbf{u}$
+       for which exactly one key attains the largest score
+       $\mathbf{u}^\top \mathbf{k}_i$. Find the limit of the Jacobian as
+       $c \to \infty$, and state what it implies for training the query by
+       gradient descent.
+    1. Verify the identity and the limit with automatic differentiation on
+       a random database with $m = 8$ and $d_k = 4$.
+1. [code] **Soft lookup as retrieval.** ● Build a database of $m$ keys
+   drawn uniformly from the unit sphere in $\mathbb{R}^{16}$, with value
+   $\mathbf{v}_i$ the one-hot indicator of index $i$, and weight them with
+   the Gaussian kernel of bandwidth $\sigma$ normalized as in
+   :eqref:`eq_nadaraya-watson`. A query $\mathbf{q} = \mathbf{k}_i +
+   \boldsymbol{\epsilon}$ with $\boldsymbol{\epsilon} \sim
+   \mathcal{N}(\mathbf{0}, \tau^2 \mathbf{I})$ is retrieved correctly when
+   the largest entry of the output is entry $i$.
+    1. Show that the retrieved index is the index of the nearest key for
+       every $\sigma > 0$, so the bandwidth does not affect which index is
+       retrieved.
+    1. Without noise, the weight on the correct key is
+       $$\alpha_i = \frac{1}{1 + \sum_{j \neq i} \exp\big(-\|\mathbf{k}_i - \mathbf{k}_j\|^2 / 2\sigma^2\big)}.$$
+       Approximate $\mathbf{k}_i^\top \mathbf{k}_j \approx 0$ for random
+       unit vectors, so that $\|\mathbf{k}_i - \mathbf{k}_j\|^2 \approx 2$,
+       and derive the bandwidth at which $\alpha_i$ falls to $0.9$ for
+       $m = 20$ and for $m = 200$. How must $\sigma$ shrink as $m$ grows?
+    1. Measure $\alpha_i$ at these two bandwidths, averaged over random
+       databases, and explain the direction of its discrepancy from $0.9$.
+    1. Sweep $\tau$ from $0$ to $1$ at $m = 20$ and $m = 200$, with the
+       bandwidth from (b) for each $m$, and plot the retrieval accuracy
+       against $\tau$. Compute the weights as the softmax
+       :eqref:`eq_softmax_attention` of the scores
+       $-\|\mathbf{q} - \mathbf{k}_j\|^2 / 2\sigma^2$. Explain why a larger
+       $m$ lowers the accuracy at fixed $\tau$ although the distance from
+       the query to the correct key is unchanged.
+1. [code] **Effective number of keys.** For the weights $\alpha_i(q)$ of
+   one query, define the effective number of keys
+   $n_{\textrm{eff}}(q) = 1 / \sum_i \alpha_i(q)^2$.
+    1. Show that $1 \leq n_{\textrm{eff}}(q) \leq m$ for $m$ nonnegative
+       weights that sum to one, and identify the weights that attain each
+       bound.
+    1. Let the values be $y_i = g(x_i) + \epsilon_i$ with independent noise
+       of variance $s^2$, and hold the keys fixed. Show that the variance of
+       the estimate :eqref:`eq_nadaraya-watson` at $q$ is
+       $s^2 / n_{\textrm{eff}}(q)$.
+    1. Compute $n_{\textrm{eff}}$ at every query in `x_val` from the weights
+       that `nadaraya_watson` returns, for each bandwidth in `sigmas`, and
+       plot the three curves. Then redraw the noise in `y_train` 200 times
+       with `x_train` fixed, and compare the standard deviation of the
+       estimate at each query with $1 / \sqrt{n_{\textrm{eff}}(q)}$.
+1. [code] **Boxcar and triangular kernels.** The section states that for
+   the data `x_train` and `y_train` the bandwidth affects the estimate more
+   than the choice among the kernel shapes of :eqref:`eq_similarity-kernels`
+   does, and then varies only $\sigma$. Test the claim.
+    1. Extend `nadaraya_watson` with the boxcar and triangular kernels, each
+       with a radius $h$ in place of the unit distance. Display the weights
+       of the Gaussian kernel at $\sigma = 0.5$ and of the other two kernels
+       at $h = 0.5$ side by side with `d2l.show_heatmaps`, and describe how
+       the rows of the three matrices differ.
+    1. Which of the kernels can leave a query with all-zero weights? Count
+       the queries in `x_val` that this affects at $h = 0.05$, and define
+       the estimate at those queries.
+    1. For each kernel, sweep the bandwidth $\sigma$ or the radius $h$ over
+       20 values between $0.05$ and $3$, record the mean squared error
+       against `y_val`, and plot the three error curves.
+    1. Compare the spread of the error across the three kernels at their
+       best bandwidths with the spread across bandwidths for one kernel.
+       Does the comparison support the claim? Redraw the training noise
+       five times. Is the ranking of the kernels at their best bandwidths
+       stable?
+1. [code] **Queries beyond the data.** The estimate
+   :eqref:`eq_nadaraya-watson` is a convex combination of the values, and
+   the inputs `x_train` lie in the interval $[0, 5)$.
+    1. For distinct scalar keys and a Gaussian kernel of fixed bandwidth,
+       find the limit of the estimate as $q \to \infty$. Find the same limit
+       for the constant kernel.
+    1. Evaluate `nadaraya_watson` with $\sigma = 0.5$ at the queries $5,
+       5.5, \ldots, 10$ and plot the estimate against $y = 2\sin(x) + x$.
+       Explain why no nonnegative kernel and no bandwidth let the estimate
+       follow the trend of the truth.
+    1. With $\sigma = 0.5$, `nadaraya_watson` returns NaN at the query
+       $q = 15$. Explain why in single precision, and compute the weights
+       instead as the softmax :eqref:`eq_softmax_attention` of the scores
+       $-(q - x_i)^2 / (2\sigma^2)$, so that the estimate is finite at
+       every query and every bandwidth.
+1. [code] **A learned bandwidth.** Treat $\sigma$ in `nadaraya_watson`
+   as a parameter and fit it by gradient descent on `x_train` and
+   `y_train`.
+    1. Before running, predict the minimizer of the training error
+       $\sum_i (f(x_i) - y_i)^2$, given that $y_i$ enters the computation of
+       $f(x_i)$ through its own kernel weight.
+    1. Run the optimization from $\sigma = 1$, report where $\sigma$ goes,
+       and compare the fitted curve with the estimates for the bandwidths in
+       `sigmas`.
+    1. Exclude $(x_i, y_i)$ from the estimate at $x_i$ by zeroing the
+       diagonal of the kernel matrix and refit. Compare the learned
+       $\sigma$ with $\sigma = 0.5$, the best of the bandwidths in `sigmas`,
+       and compute the mean squared error against `y_val` for both.
+1. [extended] **A learned metric.** ● Kernel regression with a learned
+   distance :cite:`Weinberger.Tesauro.2007` replaces the fixed similarity
+   of :eqref:`eq_nadaraya-watson` by a learned one. Draw $n = 200$ inputs
+   $\mathbf{x}_i$ uniformly from $[0, 5]^5$ and labels $y_i =
+   2\sin(x_{i1}) + x_{i1} + \epsilon_i$ with standard Gaussian noise, so
+   that only the first coordinate matters. Score a query against a key by
+   $$a(\mathbf{q}, \mathbf{k}) = -\tfrac{1}{2} \|\mathbf{W}(\mathbf{q} - \mathbf{k})\|^2, \qquad \mathbf{W} = \textrm{diag}(w_1, \ldots, w_5),$$
+   normalize as in :eqref:`eq_softmax_attention`, and fit $\mathbf{W}$ to
+   the leave-one-out error, in which the estimate at $\mathbf{x}_i$
+   excludes the pair $(\mathbf{x}_i, y_i)$. Measure the test error on
+   $1000$ fresh inputs against the noise-free function.
+    1. Fit the isotropic kernel $w_1 = \cdots = w_5 = 1/\sigma$ by a grid
+       search over $\sigma$.
+    1. Starting from the isotropic solution, fit the five scales by gradient
+       descent. Compare the learned scales with the relevance of each
+       coordinate, and the test error with that of the isotropic kernel and
+       of an oracle that uses only the first coordinate at its best
+       bandwidth.
+    1. Compare the leave-one-out errors of the learned and the oracle
+       metrics with their test errors, and repeat the comparison at
+       $n = 1000$. What does the result say about learning a similarity from
+       a finite sample?
+    1. A full matrix $\mathbf{W} \in \mathbb{R}^{5 \times 5}$ maps queries
+       and keys by the same linear map, whereas learned attention maps them
+       by separate matrices $\mathbf{W}_q$ and $\mathbf{W}_k$. State two
+       properties of the score $a$ that the shared map guarantees and
+       separate maps lose.
 
 <!-- slides -->
 

@@ -120,6 +120,7 @@ longest-context configurations sit one to two orders of magnitude past the
 crossover.
 
 ### Counting Memory
+:label:`subsec_attn-counting-memory`
 
 Arithmetic is only one part of the cost, and at inference time memory is
 often more important. A naive implementation materializes the score matrix
@@ -284,6 +285,7 @@ running state of size $\mathcal{O}(nd)$
 :label:`fig_online-softmax`
 
 ### A Chunked Implementation
+:label:`subsec_attn-chunked`
 
 From here on we work in the causal setting of a language model, masking with
 the dtype-safe idiom of :numref:`sec_attention-scoring-functions`. We first implement a naive reference and then a chunked version.
@@ -533,6 +535,7 @@ d2l.show_heatmaps(jax.nn.softmax(scores, axis=-1)[None, None],
 ```
 
 ### Receptive Field Growth with Depth
+:label:`subsec_attn-receptive-field`
 
 A window of width $w$ excludes direct interactions beyond $w$ tokens, but
 depth increases the receptive field as in CNNs (:numref:`chap_cnn`). A query
@@ -980,50 +983,265 @@ models of :numref:`sec_ssm`.
 
 ## Exercises
 
-1. A full multi-head attention layer costs $8nd^2 + 4n^2d$ FLOPs
-   (:eqref:`eq_multihead-flops`, :eqref:`eq_attn-layer-flops`). Derive the
-   sequence length at which the quadratic term accounts for 90% of the
-   layer's FLOPs, as a function of $d$. Now replace dense attention by a
-   sliding window of width $w$: show that the attention term becomes
-   $\mathcal{O}(nwd)$ and derive the ratio of dense to windowed layer
-   FLOPs as $n \to \infty$. For $d = 128$ and $w = 4096$, at what $n$ does
-   the windowed layer do half the work of the dense one?
-1. Derive the peak-memory formula for `chunked_attention` as a function of
-   $n$, the chunk size $c$, and $d$: which tensors are alive
-   simultaneously? For $n = 65{,}536$ and $d = 64$, what is the largest
-   $c$ that keeps the peak under 100 MB in fp32? What goes wrong with very
-   small $c$—which resource does the loop then waste?
-1. Remove the running maximum from `chunked_attention` (accumulate plain
-   sums of $e^{a_j}$), and run it in float16 on scores scaled up by a
-   factor of 10. What happens, and at which operation? Explain why
-   carrying $m$ makes the computation safe at any score magnitude, and
-   connect this to the dtype-safe masking idiom of
-   :numref:`sec_attention-scoring-functions`.
-1. Longformer combines its sliding window with *dilation*: a layer may
-   attend to every $r$-th position within a wider span. Implement a dilated
-   band mask, and recompute the receptive-field growth of the
-   depth experiment for a stack that alternates a plain window ($w = 8$)
-   with a dilated one ($w = 8$, $r = 4$). How much faster does the reach
-   grow, and what is the analogue in dilated convolutions
-   (:numref:`chap_cnn`)?
-1. The feature map $\phi(x) = \mathrm{elu}(x) + 1$ is one choice among
-   many. Compare it against $\phi(x) = \mathrm{relu}(x)$ and
-   $\phi(x) = \exp(x)$ on random queries and keys: for each, compute the
-   linear-attention weight matrix
-   $\phi(\mathbf{q}_t)^\top\phi(\mathbf{k}_s) / \sum_s \phi(\mathbf{q}_t)^\top\phi(\mathbf{k}_s)$
-   and measure how far it sits from the softmax attention weights (e.g.,
-   maximum absolute difference, and the entropy of each row). Which
-   properties of $\phi$ are essential for the weights to be well defined,
-   and which merely change their sharpness?
-1. Give the state of :eqref:`eq_linear-attn-recurrence` a scalar decay,
-   $\mathbf{S}_t = \gamma\, \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\mathbf{v}_t^\top$
-   with $\gamma \in (0, 1)$. Show that the parallel form now weights past
-   values by $\gamma^{t-s}$, implement it with cumulative sums (rescale by
-   powers of $\gamma$, or reuse the associative scan of
-   :numref:`subsec_parallel-scans`), and verify parallel–recurrent
-   agreement as above. What memory horizon does $\gamma$ set, and why is a
-   *learned, input-dependent* decay the natural next step
-   (:numref:`sec_mamba`)?
+1. **Reaching across the sequence.** :numref:`tab_cnn-rnn-attn` compares
+   layers one at a time, but connecting two distant tokens may take many
+   layers. Count one multiply--add as two FLOPs, so that a convolution
+   layer with kernel $k$ costs $2knd^2$, an RNN layer $4nd^2$, and a
+   self-attention layer $8nd^2 + 4n^2d$. Let $n = 4096$, $d = 512$, and
+   $k = 3$.
+    1. A stack of plain convolutions must connect the first token with the
+       last. Find the number of layers it needs and its total FLOPs, show
+       that this total grows quadratically in $n$, as the cost of one
+       attention layer does, and compare the two totals numerically.
+    1. Dilated convolutions (:numref:`sec_dilation`) with dilation
+       $k^{l-1}$ in layer $l$ grow the receptive field geometrically. Find
+       the receptive field after $L$ layers, the depth needed to connect
+       the two tokens, and the total FLOPs of that stack.
+    1. Rank the four designs, namely one attention layer, the two
+       convolution stacks, and one RNN layer, by total FLOPs and by
+       sequential steps, counting each layer of a stack as one step and
+       each token of the RNN as one step. Which resource does each design
+       spend to connect the two tokens?
+1. **The quadratic crossover.** A multi-head layer costs
+   $8nd^2 + 4n^2 d$ FLOPs (:eqref:`eq_multihead-flops`,
+   :eqref:`eq_attn-layer-flops`), and its two terms are equal at
+   $n = 2d$.
+    1. Derive the sequence length at which the quadratic term accounts for
+       90% of the layer's FLOPs, as a function of $d$.
+    1. Replace dense attention by a sliding window of width $w$, and count
+       every query as scoring $w$ keys, as :eqref:`eq_attn-layer-flops`
+       counts every query as scoring all $n$ keys. Show that the attention
+       term becomes $4nwd$, derive the ratio of dense to windowed layer
+       FLOPs, and find for
+       $d = 128$ and $w = 4096$ the $n$ at which the windowed layer does
+       half the work of the dense one.
+    1. `windowed_attention` scores a $w \times 2w$ tile for every block of
+       $w$ queries. Compute the fraction of these scores that the mask
+       `valid` keeps. Generalize to blocks of $b \leq w$ queries, each
+       scored against the $b + w - 1$ keys that its queries can reach, and
+       explain what limits how small $b$ can be chosen in practice.
+1. [code] **The running maximum.** Remove the running maximum from
+   `chunked_attention`, so that the state accumulates plain sums of
+   $e^{a_j}$. Run the result with $\mathbf{Q}$, $\mathbf{K}$, $\mathbf{V}$
+   and the state $s$, $\mathbf{O}$ in float16, on queries scaled up by a
+   factor of $10$.
+    1. Before running, compute the largest exponent $x$ for which $e^x$ is
+       finite in float16, and estimate the fraction of scaled scores that
+       exceed it when queries and keys of width $64$ have independent
+       standard normal entries.
+    1. Run the modified function, and report at which operation the first
+       infinite or undefined value appears.
+    1. Explain why carrying $m$ bounds every exponent by zero. A term
+       $e^{a_j - m'}$ that is smaller than the smallest positive float16
+       number rounds to zero. Bound the total contribution of such terms to
+       $s$, relative to the term of the largest score, for a row of $n$
+       keys.
+    1. `chunked_attention` initializes $m$ with the most negative finite
+       value of the dtype and masks scores with the same value, the idiom
+       of :numref:`sec_attention-scoring-functions`. Take $n = 2c$ for
+       blocks of $c$ keys, and let the loop visit the two key blocks in
+       reverse order, so that every score of the first visited block is
+       masked for a query in the first block. Trace $m$, $s$, and
+       $\mathbf{O}$ for that query through both iterations, and show that
+       the final output is still exact.
+1. **Merging partial states.** Fix one query with scores $a_j$ and values
+   $\mathbf{v}_j$. For a set $B$ of keys, call the triple $(m_B, s_B,
+   \mathbf{o}_B)$ that :eqref:`eq_online-softmax` produces from the keys in
+   $B$ alone the partial state of $B$, so that $\mathbf{o}_B / s_B$ is the
+   attention output restricted to $B$.
+    1. Derive the partial state of $B \cup B'$ for disjoint sets $B$ and
+       $B'$ from the two partial states, and show that
+       :eqref:`eq_online-softmax` is the special case in which $B'$ is a
+       single block.
+    1. Show that this merge is associative and commutative. Conclude that
+       the key blocks can be processed in any order, or in parallel and
+       merged in a tree of depth $\lceil \log_2 (n/c) \rceil$ for blocks of
+       $c$ keys, and explain why this matters when a single query attends
+       to a long cache during generation.
+    1. Replace the pair $(m_B, s_B)$ by the single number $\ell_B = m_B +
+       \log s_B$ and the triple by $(\ell_B, \bar{\mathbf{o}}_B)$ with
+       $\bar{\mathbf{o}}_B = \mathbf{o}_B / s_B$. Express the merged
+       $\ell$ and $\bar{\mathbf{o}}$ in these terms, and show that
+       $\bar{\mathbf{o}}$ is a convex combination of
+       $\bar{\mathbf{o}}_B$ and $\bar{\mathbf{o}}_{B'}$ whose weights
+       depend only on $\ell_B$ and $\ell_{B'}$.
+1. **Memory of chunked attention.** `chunked_attention` keeps one
+   $n \times c$ stripe of scores in memory at a time during the forward
+   pass.
+    1. Assume that every operation in the loop body writes a fresh array
+       and that an array is freed once no variable refers to it. List the
+       arrays alive at the peak of one iteration, and express the memory
+       beyond the inputs as $\alpha\, nd + \beta\, nc$ floats with your
+       values of $\alpha$ and $\beta$.
+    1. Evaluate your formula for $n = 16{,}384$, $d = 64$, and $c = 512$
+       in single precision, and compare it with the measurement in
+       :numref:`subsec_attn-chunked`.
+1. [code] **Backward memory of chunked attention.** ● Training also needs
+   the backward pass of `causal_attention` and `chunked_attention`.
+    1. For each of the two functions separately, differentiate the sum of
+       its outputs with respect to $\mathbf{Q}$, $\mathbf{K}$, and
+       $\mathbf{V}$ by automatic differentiation. From the arrays that the
+       backward pass of each operation needs, predict how much memory
+       automatic differentiation keeps for `chunked_attention` as a
+       function of $n$, $c$, and $d$. Then measure the peak memory of the
+       forward and backward computation of both functions for
+       $n \in \{2048, 4096, 8192, 16384\}$ as in
+       :numref:`subsec_attn-counting-memory`.
+    1. Activation checkpointing (:numref:`subsec_activation_checkpointing`)
+       of each iteration keeps only the inputs of every iteration. Count
+       what it keeps over all $n/c$ iterations. FlashAttention instead
+       keeps only the output and the two statistics $m_i$ and $s_i$ of
+       every query :cite:`Dao.Fu.Ermon.ea.2022`. Show that every attention
+       weight can be recomputed from its score and the single number
+       $\ell_i = m_i + \log s_i$. Compare the floats stored by the three
+       strategies at $n = 16{,}384$, with FlashAttention keeping $\ell_i$
+       in place of the two statistics.
+1. **Traffic of a tiled schedule.** ● Take the off-chip memory traffic of
+   the naive layer to be $4n^2$ floats, since the score matrix and the
+   weight matrix are each written once and read once. Ignore all traffic
+   that is linear in $n$.
+    1. Suppose that `chunked_attention` runs one operation at a time, each
+       reading its inputs from off-chip memory and writing its output
+       back. Count, as functions of $n$, $c$, and $d$, the floats moved for
+       the score stripes, the floats moved for $\mathbf{Q}$ and the
+       accumulator $\mathbf{O}$, and the number of operations launched.
+       Which of these quantities does chunking reduce relative to the
+       naive layer?
+    1. A fused kernel instead holds a tile of $b$ queries, their output
+       accumulator, and one tile each of $b$ keys and $b$ values in an
+       on-chip memory of $M$ floats, so that $4bd \leq M$; scores and
+       per-row statistics stay in registers. It loads each query tile once,
+       streams all key and value tiles past it, and writes each output tile
+       once. Show that its traffic beyond the linear terms is
+       $2n^2 d / b$ floats and that the largest admissible tile gives
+       $\Theta(n^2 d^2 / M)$, the bound that
+       :citet:`Dao.Fu.Ermon.ea.2022` prove for FlashAttention.
+    1. Compute the ratio of the fused traffic to the naive traffic for
+       $d \in \{64, 128, 256\}$ with $M = 2^{16}$, and state how the head
+       width limits the benefit of tiling.
+1. [code] **Dilated windows.** Longformer :cite:`beltagy2020longformer`
+   combines its sliding window with *dilation*: a layer attends to the $w$
+   positions $t, t - r, \ldots, t - (w-1)r$, spaced $r$ apart, as dilated
+   convolutions do (:numref:`sec_dilation`).
+    1. Build the dilated band mask, and recompute the receptive-field growth
+       of :numref:`subsec_attn-receptive-field` with $n = 256$ and
+       $L = 1, \ldots, 6$ for a stack that starts with a plain window
+       ($w = 8$) and alternates it with a dilated one ($w = 8$, $r = 4$).
+       Derive the closed form of the reach after $L$
+       layers of this alternation.
+    1. Repeat the computation for a stack of dilated layers only. Which
+       offsets does it never reach, and why does alternating with a plain
+       window fill the gaps?
+    1. Compare the FLOP count of the alternating stack with that of a stack
+       of plain windows that achieves the same reach.
+1. **The cost of one more token.** During generation, dense causal
+   attention appends the new key and value to a cache of $t$ past pairs,
+   whereas `linear_attention_recurrent` updates a state of fixed size.
+   Consider one head of width $d$ in single precision.
+    1. Count the FLOPs and the bytes read from the cache to produce the
+       output at position $t + 1$ under dense attention.
+    1. Count the FLOPs and the bytes of state read and written for the same
+       step under :eqref:`eq_linear-attn-recurrence`.
+    1. Find the $t$ beyond which the dense cache traffic per token exceeds
+       the state traffic of the linear form for $d = 64$. Compute the ratio
+       of the two traffics at $t = 8192$, and compare it with the ratio of
+       the two memory sizes at that length, a 16 KiB state against a 4 MiB
+       cache.
+    1. A sliding-window head of width $w$ keeps only the last $w$ keys and
+       values. Compare its per-token cache traffic with the state traffic
+       of the linear form for $d = 128$ and $w = 4096$, and state what each
+       of the two fixed-size memories retains about the tokens before
+       position $t - w$.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problems 12.7 and 12.10.*
+1. [code] **The feature map.** The feature map $\phi(x) =
+   \mathrm{elu}(x) + 1$ in `phi` is one choice among many. Compare it with
+   $\phi(x) = \mathrm{relu}(x)$ and $\phi(x) = \exp(x)$, both applied
+   elementwise, on $n = 512$ random queries and keys of width `d_h`.
+    1. For each map, compute the causal linear-attention weight matrix
+       with entries
+       $$\frac{\phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_s)}{\sum_{s' \leq t} \phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_{s'})}, \qquad s \leq t,$$
+       and measure its maximum absolute difference from the causal softmax
+       weight matrix, which `causal_attention` forms before multiplying by
+       $\mathbf{V}$, and the mean entropy of its rows.
+    1. Under which condition on $\mathbf{q}_t$ and the keys
+       $\mathbf{k}_1, \ldots, \mathbf{k}_t$ does the ReLU map produce an
+       undefined row? Derive the probability of this event for row $t$
+       when all entries are independent standard normal, and evaluate it
+       for $t = 1$ at width $64$ and at width $4$.
+    1. Multiply the queries by $\beta \in \{1, 4, 16\}$, and recompute the
+       mean row entropy for the three maps and for the softmax weights.
+       Explain from a property of each $\phi$ which maps cannot sharpen
+       their weights in this way, and what this implies for approximating
+       a softmax row that is nearly one-hot.
+1. **An exact feature map.** ● The softmax kernel $\kappa(\mathbf{q},
+   \mathbf{k}) = \exp(\mathbf{q}^\top \mathbf{k} / \sqrt{d})$ also
+   factorizes, but only with infinitely many features.
+    1. Expand $\kappa$ in its Taylor series, and show that the degree-$m$
+       term equals $\phi_m(\mathbf{q})^\top \phi_m(\mathbf{k})$ for a
+       feature map $\phi_m$ of dimension $d^m$ built from the $m$-fold
+       tensor product of its argument.
+    1. Truncate the series after degree $2$. Show that the truncated kernel
+       is positive for every pair of $\mathbf{q}$ and $\mathbf{k}$, so the
+       normalizer of :eqref:`eq_linear-attn` cannot vanish, and give the
+       dimension of the feature map that concatenates $\phi_0$, $\phi_1$,
+       and $\phi_2$. For $d = 64$ and values of width $64$, compute the
+       size of the state $(\mathbf{S}, \mathbf{z})$ in single precision and
+       the length $n$ at which the key--value cache of a softmax head
+       reaches the same size. A truncation of this kind is the feature map
+       of Based :cite:`Arora.Eyuboglu.Zhang.ea.2024`.
+    1. Take as given that the $n \times n$ matrix with entries
+       $\kappa(\mathbf{x}_i, \mathbf{x}_j)$ is positive definite for
+       distinct $\mathbf{x}_1, \ldots, \mathbf{x}_n$. Show that no feature
+       map of dimension $D < n$ reproduces $\kappa$ exactly on these points
+       when queries and keys coincide.
+1. [extended] **Attention variants in a language model.** ● Whether the
+   quality gap between exact and linear attention matters depends on the
+   task. Measure it on `TinyCharLM` of
+   :numref:`sec_positional-information`, with `pos='learned'` for every
+   variant so that position enters the same way.
+    1. Subclass `TinyCharLM` and override `_attend` twice: once with a
+       causal band mask of width $w$ in place of the causal mask, and once
+       with the causal linear-attention weights of :eqref:`eq_linear-attn`
+       for $\phi(x) = \mathrm{elu}(x) + 1$, computed explicitly as a
+       $T \times T$ matrix so that the method still returns its weights.
+    1. Train dense attention, windows of width $w \in \{4, 16, 64\}$, and
+       linear attention with the protocol of
+       :numref:`subsec_pos-experiment`, and report validation perplexity at
+       context $128$. Relate the window results to the reach $1 + 2(w-1)$
+       of the two-block model.
+    1. Build validation sequences of $128$ characters, each a random
+       $64$-character excerpt of the validation text followed by the same
+       excerpt again, and compare the mean loss on the second half with
+       that on the first half for every variant. Which variants exploit the
+       repetition, and how does the answer relate to the reach of the
+       windowed models and to the fixed-size state of linear attention?
+1. [code] **A decaying state.** ● Give the state of
+   :eqref:`eq_linear-attn-recurrence` a scalar decay $\gamma \in (0, 1)$,
+   $$\mathbf{S}_t = \gamma\, \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top, \qquad \mathbf{z}_t = \gamma\, \mathbf{z}_{t-1} + \phi(\mathbf{k}_t).$$
+    1. Show that the parallel form now weights the contribution of position
+       $s$ to the output at $t$ by $\gamma^{t-s}$, and implement it by
+       rescaling the cumulative sums of `linear_attention_parallel` with
+       powers of $\gamma$.
+    1. Add the decay to `linear_attention_recurrent`, and verify that the
+       two forms agree for $n = 512$ and $\gamma = 0.99$.
+    1. The rescaling multiplies position $s$ by $\gamma^{-s}$ before the
+       cumulative sum. For which $n$ does this overflow single precision at
+       $\gamma = 0.9$ and at $\gamma = 0.5$?
+    1. Split the sequence into chunks of $c$ positions, rescale each
+       position relative to the start of its chunk, and carry the state
+       from one chunk to the next with the decayed recurrence. Show that no
+       factor larger than $\gamma^{-c}$ appears, implement this chunked
+       form for $\gamma = 0.5$, $n = 512$, and $c = 64$, and compare it
+       with the recurrent form.
+    1. Compute the lag at which the weight $\gamma^{t-s}$ falls below
+       $0.01$ for $\gamma = 0.99$. A task requires recalling one token
+       from $2000$ positions back, while the tokens in between are filler.
+       Explain why no fixed $\gamma$ serves both that token and the
+       filler, and what a decay computed from each token's own input could
+       do instead.
 
 <!-- slides -->
 

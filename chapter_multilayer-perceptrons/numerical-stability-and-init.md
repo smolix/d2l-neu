@@ -160,9 +160,9 @@ Moreover, the sigmoid's derivative *never exceeds* $0.25$
 (its peak, attained at zero),
 so even in the Goldilocks zone,
 where the inputs to many of the sigmoids are close to zero,
-each layer attenuates the backward signal by at least a factor of four:
-after only ten sigmoid layers the gradient has shrunk
-by $0.25^{10} \approx 10^{-6}$.
+each sigmoid contributes a factor of at most $1/4$,
+and with weights of unit scale ten sigmoid layers
+shrink the gradient by $0.25^{10} \approx 10^{-6}$.
 Away from that zone the situation is far worse,
 and the gradients of the overall product vanish outright.
 When our network has many layers,
@@ -547,17 +547,52 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 
 ## Exercises
 
-1. **Other symmetries.** The permutation symmetry of an MLP's hidden units is
-   not the only symmetry that identical initialization fails to break.
-   Describe another architectural symmetry in a feedforward network: give the
-   specific transformation of the parameters that leaves the network's
-   function unchanged, and state an initialization that breaks it.
+1. **Other symmetries.** Permuting the hidden units is not the only change
+   of parameters that leaves an MLP's function unchanged. Consider a
+   one-hidden-layer MLP in which hidden unit $j$ has incoming weights
+   $\mathbf{w}_j$, bias $b_j$, and outgoing weights $\mathbf{v}_j$.
+    1. Prove that $\textrm{ReLU}(\alpha z) = \alpha\, \textrm{ReLU}(z)$ for
+       $\alpha > 0$. Use this identity to show that replacing
+       $(\mathbf{w}_j, b_j, \mathbf{v}_j)$ by
+       $(\alpha \mathbf{w}_j, \alpha b_j, \mathbf{v}_j / \alpha)$ leaves the
+       function of a ReLU network unchanged.
+    1. Find a transformation of the parameters of a single hidden unit that
+       leaves the function of a $\tanh$ network unchanged.
+    1. Identical hidden units are a fixed point of the permutation, and
+       gradient descent started at that fixed point stays there. Find the
+       parameters of a unit that the transformation of the previous part
+       leaves unchanged. Then show that if all weights and biases of a
+       $\tanh$ network are initialized to zero, gradient descent changes
+       only the output bias, at every step.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problems 3.5, 4.3, and 7.15.*
 1. **Constant initialization.** Initialize all weights of linear regression,
-   and separately of softmax regression, to the same constant $c$.
-    1. Work through one step of minibatch SGD by hand for each model.
-    1. Does the symmetry-breaking failure that this section describes for
-       hidden units occur here? Explain by identifying which units, if any,
-       receive identical gradients.
+   and separately of softmax regression, to the same constant $c$, and all
+   biases to zero.
+    1. For each model, write the gradient of the minibatch loss with respect
+       to each weight at this initialization.
+    1. Which weights, if any, receive identical gradients? Does the
+       symmetry-breaking failure that this section describes for hidden
+       units occur in either model?
+1. **Fan-in versus averaged fans.** Following
+   :citet:`He.Zhang.Ren.ea.2015`, consider a linear network with $L$ layers
+   in which layer $l$ maps $n_{l-1}$ inputs to $n_l$ outputs and draws its
+   weights with variance $\sigma_l^2$. By the computation of
+   :numref:`subsec_xavier`, layer $l$ multiplies the second moment of the
+   forward signal by $n_{l-1}\sigma_l^2$ and that of the backward signal by
+   $n_l\sigma_l^2$.
+    1. Set $\sigma_l^2 = 1/n_{l-1}$ in every layer. Show that the forward
+       second moment is preserved and that the backward second moment
+       changes by the total factor $n_L / n_0$, whatever the depth.
+    1. Let the widths alternate as $100, 400, 100, 400, \ldots$, and use
+       Xavier initialization in every layer. Compute the factor by which
+       one $100 \to 400 \to 100$ pair of layers multiplies the forward
+       second moment, and the factor after 50 such pairs.
+    1. Which of the two rules keeps both second moments within a
+       depth-independent factor of their initial values for every sequence
+       of widths?
 1. **Variance under ReLU.** ● The derivation in :numref:`subsec_he_init`
    tracks the second moment $E[\textrm{ReLU}(z)^2]$ rather than the variance,
    because the next layer's pre-activation $o = \sum_j w_j h_j$ with
@@ -571,7 +606,10 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
     1. A tempting shortcut substitutes $\textrm{Var}[h_j]$ for $E[h_j^2]$ in
        the Xavier computation. Show that this shortcut prescribes
        $\sigma^2 = 2 / \bigl(n_\textrm{in}(1 - 1/\pi)\bigr)$ instead of
-       $2/n_\textrm{in}$, and identify the step at which it goes wrong.
+       $2/n_\textrm{in}$. Compute the factor by which each ReLU layer
+       initialized this way actually multiplies the second moment, and the
+       total factor over the 50 layers of the sweep in
+       :numref:`subsec_variance_propagation`.
 1. [code] **Linear depth sweep.** Rerun the depth-sweep experiment of
    :numref:`subsec_variance_propagation` with the ReLU removed, i.e., for a
    purely *linear* stack of 50 layers of width 100 under the same three
@@ -581,27 +619,16 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
        moment under each of the three weight scales, and check the three
        factors against the slopes of the plotted curves.
     1. Compare the ranking of the three schemes with the ranking in the ReLU
-       sweep and explain the difference. What does the result predict for
-       activations that are approximately linear around zero, such as tanh?
-1. [code] **ReLU homogeneity.** The experiment of
-   :numref:`subsec_variance_propagation` renormalizes the activations after
-   every layer and compensates by tracking the product $m$ of the per-layer
-   gains; the text asserts that this is exact because ReLU is positively
-   homogeneous.
-    1. Prove the identity $\textrm{ReLU}(\alpha x) = \alpha\, \textrm{ReLU}(x)$
-       for $\alpha > 0$, and show that it makes the renormalization exact:
-       propagating the renormalized activations and multiplying by the
-       tracked $m$ recovers the second moment of the un-renormalized
-       activations.
-    1. Verify numerically: propagate the renormalized and the un-renormalized
-       activations through the *same* weight matrices for 15 layers under
-       $\mathcal{N}(0, 1)$ initialization (few enough layers to avoid
-       overflow) and confirm that the un-renormalized second moment equals
-       the tracked product $m$ at every layer.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problems 3.5 and 4.3.*
+       sweep and explain the difference.
+1. [code] **Tanh depth sweep.** ● Rerun the depth-sweep experiment of
+   :numref:`subsec_variance_propagation` with $\tanh$ in place of ReLU and
+   with Xavier weights. A layer then maps the second moment $q$ of its input to
+   $q' = E[\tanh(z)^2]$, where $z$ is approximately $\mathcal{N}(0, q)$.
+    1. Use $\tanh(z)^2 \approx z^2 - \tfrac{2}{3}z^4$ for small $z$ to show
+       that $q' \approx q - 2q^2$. Over many layers, does the second moment
+       stay constant, decay geometrically, or decay more slowly?
+    1. Check the prediction by running the sweep without the renormalization
+       step, and explain why that step is exact for ReLU but not for $\tanh$.
 1. **Spectral norm bounds.** The gradient in :eqref:`eq_grad-product` is a
    product of $L - l$ Jacobians. The spectral norm (the largest singular
    value) is submultiplicative:
@@ -612,27 +639,30 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
        per-layer norms $\|\mathbf{M}^{(l)}\|_2$. Which condition on the
        per-layer norms keeps this bound from growing geometrically with
        depth?
-    1. The result is an upper bound. Explain why per-layer norms of one rule
-       out exploding gradients but not vanishing ones, and give two
-       $2 \times 2$ matrices of unit spectral norm whose product has norm
-       strictly smaller than one.
-1. [code] **Layerwise adaptive scaling.** Write
+    1. This bound is only an upper bound. Explain why the condition of the
+       previous part rules out exploding gradients but not vanishing ones,
+       and give two $2 \times 2$ matrices that satisfy the condition with
+       equality but whose product has spectral norm strictly smaller than
+       one.
+1. [code] **Layerwise adaptive scaling.** ● Write
    $\mathbf{g}^{(l)} = \nabla_{\mathbf{W}^{(l)}} J$ for the gradient of the
    loss $J$ with respect to the weights of layer $l$. Layerwise adaptive
    rate scaling :cite:`You.Gitman.Ginsburg.2017` replaces the SGD update
    $\mathbf{W}^{(l)} \leftarrow \mathbf{W}^{(l)} - \eta\, \mathbf{g}^{(l)}$ by
 
-    $$\mathbf{W}^{(l)} \leftarrow \mathbf{W}^{(l)} - \eta \, \frac{\|\mathbf{W}^{(l)}\|}{\|\mathbf{g}^{(l)}\|} \, \mathbf{g}^{(l)}.$$
+    $$\mathbf{W}^{(l)} \leftarrow \mathbf{W}^{(l)} - \eta \, \frac{\|\mathbf{W}^{(l)}\|}{\|\mathbf{g}^{(l)}\|} \, \mathbf{g}^{(l)},$$
 
-    The scaled update has norm $\eta\, \|\mathbf{W}^{(l)}\|$: every layer
-    moves by the same fraction $\eta$ of its weight norm, however large or
-    small its raw gradient. An exploding gradient therefore changes only the
-    direction of the update, not its size.
+    where $\|\cdot\|$ is the Frobenius norm. The scaled update has norm
+    $\eta\, \|\mathbf{W}^{(l)}\|$: every layer moves by the same fraction
+    $\eta$ of its weight norm, however large or small its raw gradient. An
+    exploding gradient therefore changes only the direction of the update,
+    not its size.
     1. Build a three-layer linear network of width 100 with
-       $\mathcal{N}(0, 1)$ weights and train it with plain SGD at
-       $\eta = 0.1$ on the squared loss for random Gaussian inputs and
-       targets. Record the loss and $\|\mathbf{g}^{(1)}\|$ over the first ten
-       steps and show that both diverge.
+       $\mathcal{N}(0, 1)$ weights. Draw one fixed batch of 256 inputs and
+       256 targets in $\mathbb{R}^{100}$ from $\mathcal{N}(0, \mathbf{I})$,
+       and let $J$ be the mean squared error over this batch. Train with
+       plain SGD at $\eta = 0.1$, record $J$ and $\|\mathbf{g}^{(1)}\|$ over
+       the first ten steps, and show that both diverge.
     1. Replace the update by the scaled one, with the same $\eta$, and repeat
        the ten steps. Does the loss decrease? Relate the outcome to the
        forward-pass scale of the network at this initialization.

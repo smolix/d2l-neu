@@ -695,10 +695,15 @@ remains the sensible default for the models we build next.
 
 ## Exercises
 
-1. **Linear networks.** Show that adding layers to a *linear* deep network,
-   i.e., a network without nonlinearity $\sigma$, can never increase the
-   expressive power of the network. Give an example where it actively
-   reduces it.
+1. **Linear networks.** Stacking layers without a nonlinearity $\sigma$
+   composes affine maps into another affine map, so depth never enlarges the
+   function class of a linear network. Consider a linear network with input
+   dimension $d$, output dimension $q$, and hidden widths
+   $h_1, \ldots, h_{L-1}$. Show that it represents exactly the affine maps
+   $\mathbf{X}\mathbf{W} + \mathbf{b}$ whose weight matrix $\mathbf{W}$ has
+   rank at most $\min(h_1, \ldots, h_{L-1})$. Use this result to give an
+   example in which adding a hidden layer to a linear model strictly shrinks
+   its function class.
 1. **XOR by hand.** :numref:`fig_mdl-mlp-xor` gives one two-hidden-unit ReLU
    network that computes XOR by folding the two class-1 corners onto the same
    hidden point.
@@ -707,10 +712,14 @@ remains the sensible default for the models we build next.
        points, and verify it on the four inputs.
     1. Show that no network with a single ReLU hidden unit and a linear output
        can compute XOR.
-1. **Activation derivatives.** Compute the derivative of each of the
-   following activation functions.
-    1. The pReLU activation function.
-    1. The Swish activation function $x \operatorname{sigmoid}(\beta x)$.
+1. **Activation derivatives.** Compute the following derivatives.
+    1. The derivatives of the pReLU activation function with respect to its
+       input $x$ and with respect to its slope $\alpha$, for $x \neq 0$.
+    1. The derivative of the Swish activation function
+       $x \operatorname{sigmoid}(\beta x)$ with respect to $x$. For fixed
+       $x \neq 0$, find its limits as $\beta \to 0$ and as
+       $\beta \to \infty$, and identify the function that Swish approaches
+       in each limit.
 1. **Piecewise linearity.** Show that an MLP using only ReLU (or pReLU)
    constructs a continuous piecewise linear function.
 1. **Depth and linear pieces.** ● A one-hidden-layer ReLU network of width $D$
@@ -718,60 +727,93 @@ remains the sensible default for the models we build next.
    (:numref:`fig_mdl-mlp-uat-hinges`), so width adds pieces only linearly.
    This problem makes the multiplicative effect of depth exact for one
    example.
-    1. Take three hidden units with joints at $x = 1/6$, $2/6$, and $4/6$ and
-       slopes $1$, $1$, and $-1$. Choose output weights and an output bias so
-       that the network's output $g$ on $[0, 1]$ consists of four linear
-       pieces whose values alternate between $0$ and $1$ at the joints, with
-       positive slope on the leftmost piece.
+    1. Take three hidden units $\operatorname{ReLU}(w_k x + b_k)$ with input
+       weights $w_1 = w_2 = 1$ and $w_3 = -1$ and with joints $-b_k/w_k$ at
+       $1/6$, $2/6$, and $4/6$. Choose output weights and an output bias so
+       that the network's output $g$ takes the values $0, 1, 0, 1, 0$ at
+       $x = 0, 1/6, 2/6, 4/6, 1$.
     1. Count the linear pieces of $g \circ g$ on $[0, 1]$ exactly, and of the
        $K$-fold composition $g \circ \cdots \circ g$. Explain, in terms of how
        composing with $g$ *folds* the graph, why each composition multiplies
        the count rather than adding to it.
-    1. How many hidden units would a single-hidden-layer network need to
-       represent the $K$-fold composition, and how many parameters does each
-       of the two networks have?
+    1. The $K$-fold composition is computed by a network with $K$ hidden
+       layers of three units each. How many hidden units would a
+       single-hidden-layer network need to represent the same function?
+       Compare the parameter counts of the two networks.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 4.8.*
 1. **Sigmoid and tanh.** Sigmoid and tanh are very similar.
     1. Show that $\operatorname{tanh}(x) + 1 = 2 \operatorname{sigmoid}(2x)$.
-    1. Prove that the function classes parametrized by both nonlinearities
-       are identical.
-1. **Batch-wise nonlinearities.** Consider a nonlinearity that acts jointly on
-   a minibatch rather than on each example separately, for instance a layer
-   that subtracts the minibatch mean and divides by the minibatch standard
-   deviation of each hidden unit, as batch normalization does
-   :cite:`Ioffe.Szegedy.2015` (:numref:`sec_batch_norm`). Identify two
-   specific things that break when the same computation is applied naively at
-   prediction time: one for a batch of size $1$, and one mismatch between what
-   training and prediction compute.
-1. [code] **Vanishing gradients.** The derivative of the sigmoid satisfies
-   $\sigma'(x) = \sigma(x)(1 - \sigma(x))$. It is *largest* at the origin,
-   where it equals $1/4$, and decays exponentially as $|x|$ grows.
-    1. Plot $\sigma'(x)$ over $[-10, 10]$ and report its value at
-       $x = \pm 10$. Explain why the weights feeding a *saturated* unit, one
-       operating at large $|x|$, receive almost no gradient whatever the
-       loss, and why in a network of width one a single saturated unit stalls
-       every earlier layer as well.
-    1. Saturation is not the only difficulty: even at the most favorable
-       point $x = 0$, each sigmoid layer scales the backward signal by at
-       most $1/4$. Compute the compounded factor for a chain of $20$ layers
-       operating at the origin, and compare it with the factor for the same
-       chain saturated at $|x| = 5$. State what the two numbers imply for
-       training deep sigmoid networks in either regime.
+    1. Show that for every MLP with tanh hidden activations there is an MLP
+       of the same architecture with sigmoid hidden activations that computes
+       the same function, and conversely. State how the weights and biases
+       change.
+1. **Batch-wise nonlinearities.** Consider a nonlinearity that acts jointly
+   on a minibatch rather than on each example separately: for each hidden
+   unit, it subtracts the minibatch mean and divides by the minibatch
+   standard deviation. Batch normalization :cite:`Ioffe.Szegedy.2015` builds
+   on this operation (:numref:`sec_batch_norm`). Suppose that prediction
+   applies the same computation unchanged.
+    1. Determine what the nonlinearity outputs for a batch of size $1$.
+    1. A test example is classified twice: once in a batch of examples drawn
+       at random from the test set, and once in a batch whose other examples
+       all belong to a single class. Compare the two predictions, and explain
+       what the comparison implies for deploying the model.
+1. [code] **Vanishing gradients.** Consider a chain of $L$ sigmoid units of
+   width one, $h_l = \operatorname{sigmoid}(z_l)$ with pre-activation
+   $z_l = w_l h_{l-1} + b_l$. By the chain rule,
+
+    $$\frac{\partial h_L}{\partial h_0} = \prod_{l=1}^{L} w_l \operatorname{sigmoid}'(z_l).$$
+
+    1. Explain why the weight feeding a *saturated* unit, one operating at
+       large $|z_l|$, receives almost no gradient whatever the loss, and why
+       a single saturated unit also stalls every earlier layer of the chain.
+    1. Choose the biases so that every pre-activation equals $0$, where
+       $\operatorname{sigmoid}'$ attains its maximum $1/4$. Compute the
+       product for $L = 1, \ldots, 20$, once with every $w_l = 1$ and once
+       with every $w_l = 4$, and plot both curves on a logarithmic vertical
+       axis.
+    1. Repeat with every pre-activation equal to $5$ and every $w_l = 1$.
+       Find the weight $w$ for which $w \operatorname{sigmoid}'(5) = 1$, and
+       compare it with the weight that keeps the product constant at the
+       origin. State what the comparison implies for training deep sigmoid
+       networks in either regime.
+1. [code] **Weight scale and saturation.** ● Take the chain of Exercise 8
+   with $L = 20$, every weight $w_l = w$, and every bias $b_l = -w/2$, so
+   that the input $h_0 = 1/2$ gives $z_l = 0$ at every layer.
+    1. Express $\partial h_L / \partial h_0$ as a function of $w$ for the
+       input $h_0 = 1/2$. For which $w$ does it not vanish as $L$ grows?
+    1. Implement the chain and run it from $h_0 = 0.6$ with $w = 4$ and with
+       $w = 8$. Report $h_{20}$ and $\partial h_{20} / \partial h_0$ in each
+       case.
+    1. Treat the map $h_{l-1} \mapsto h_l$ as a one-dimensional iteration
+       with fixed point $1/2$, and use its slope there to explain the
+       difference between the two runs. State what the result implies for
+       countering vanishing gradients in a sigmoid network by scaling up its
+       weights.
 1. **One hidden layer suffices.** ● On the real line,
    :numref:`fig_mdl-mlp-uat-hinges` approximates a continuous function with a
    single hidden layer, one hinge per joint. For two inputs, a natural
-   extension uses two hidden layers: the first builds ridges
-   $\operatorname{ReLU}(\mathbf{w}^\top \mathbf{x} + b)$ aligned with the
-   coordinate axes, and the second combines them into localized bumps, which
-   are then summed. Show that the second hidden layer is unnecessary.
-    1. Show that a single hidden layer can build a step of any orientation:
-       a function that is approximately $0$ on one side of an arbitrary line
-       in the plane and approximately $1$ on the other.
-    1. Show that adding many such steps of different orientations, all
-       centered on the same point, approximates a radially symmetric bump.
+   extension uses two hidden layers: the first builds steps along the
+   coordinate axes from pairs of ReLU units, and the second combines them
+   into localized bumps, which are then summed. Show that the second hidden
+   layer is unnecessary.
+    1. Let $\phi$ be continuous on $\mathbb{R}$ and let
+       $\mathbf{w} \in \mathbb{R}^2$. Show that a single hidden layer
+       approximates the *ridge function* $\phi(\mathbf{w}^\top \mathbf{x})$,
+       which is constant along every line orthogonal to $\mathbf{w}$,
+       uniformly on any compact subset of the plane.
+    1. The Stone–Weierstrass theorem states the following. Let a set of
+       continuous functions on a compact set be closed under sums, products,
+       and scalar multiples, contain the constants, and contain, for any two
+       distinct points, a function that takes different values at them. Then
+       every continuous function on the compact set is a uniform limit of
+       functions in the set. Show that the finite linear combinations of
+       $\cos(\boldsymbol{\omega}^\top \mathbf{x})$ and
+       $\sin(\boldsymbol{\omega}^\top \mathbf{x})$, with
+       $\boldsymbol{\omega} \in \mathbb{R}^2$, form such a set.
     1. Conclude that a single hidden layer approximates any continuous
        function on a compact subset of the plane.
 

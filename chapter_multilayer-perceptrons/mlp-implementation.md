@@ -337,26 +337,58 @@ The following sections address these requirements for reliable training.
     1. At which $h$ does the parameter count equal the number of training
        examples in Fashion-MNIST (60,000)? Compare this value with the 256
        units used in this section.
-1. **Single hidden unit.** Why is it a bad idea to insert a hidden layer with
-   a single neuron? What could go wrong?
-1. [extended] **Joint hyperparameter search.** Hyperparameters interact: the
-   best value of one depends on the values of the others.
-    1. Optimize over all hyperparameters jointly: learning rate, number of
-       epochs, number of hidden layers, and number of hidden units per layer.
-       What is the best result you can achieve?
-    1. Why is tuning several hyperparameters jointly much harder than tuning
-       each one in isolation?
-    1. Describe an efficient strategy for searching over multiple
-       hyperparameters jointly.
-1. [code] **Gradient check.** Approximate the derivative of the loss with
-   respect to an entry $w$ of `W1` in `MLPScratch` by a central difference,
+1. [code] **Single hidden unit.** Set `num_hiddens=1` in `MLP`, so that its
+   hidden layer has a single ReLU unit with weights
+   $\mathbf{w}^{(1)} \in \mathbb{R}^{784 \times 1}$ and bias
+   $b^{(1)} \in \mathbb{R}$. Each input $\mathbf{x} \in \mathbb{R}^{1 \times 784}$
+   is then reduced to the scalar
+   $t = \operatorname{ReLU}(\mathbf{x}\mathbf{w}^{(1)} + b^{(1)}) \geq 0$,
+   and the logits are $\mathbf{o} = t\, \mathbf{w}^{(2)} + \mathbf{b}^{(2)}$
+   with $\mathbf{w}^{(2)}, \mathbf{b}^{(2)} \in \mathbb{R}^{1 \times 10}$.
+    1. Show that each class is predicted on at most one interval of $t$, and
+       that the order of these intervals along the $t$ axis is fixed by the
+       entries of $\mathbf{w}^{(2)}$. Describe the regions of input space
+       that the model assigns to the classes, and state what they imply for
+       separating the ten Fashion-MNIST classes.
+    1. Suppose that after some update
+       $\mathbf{x}\mathbf{w}^{(1)} + b^{(1)} < 0$ for every training
+       example. Which parameters receive nonzero gradients from then on, and
+       what does the network predict? Why does the same event do little
+       harm when it hits one of the 256 hidden units of this section?
+    1. Train the model five times from different random initializations, and
+       report for each run the validation accuracy and the fraction of
+       validation examples on which $t > 0$. Compare any run in which this
+       fraction is zero with your answer to (b).
+1. [extended] **Joint hyperparameter search.** ● Extend `MLP` so that the
+   number of hidden layers is a constructor argument. Treat the learning
+   rate, the number of epochs, the number of hidden layers, and the number
+   of hidden units per layer as four hyperparameters with four candidate
+   values each.
+    1. How many training runs does a full grid over these values need? How
+       many does tuning one hyperparameter at a time need, sweeping it over
+       its four values while the others stay fixed? Use the heatmap of
+       Exercise 1 to explain when the cheaper procedure misses the best
+       configuration.
+    1. Describe a search strategy that covers all four hyperparameters at a
+       small fraction of the grid's cost. Use it to find the best validation
+       accuracy you can reach, and report the configuration that achieves
+       it.
+1. [code] **Gradient check.** ● Cast the parameters of `MLPScratch` and one
+   minibatch of Fashion-MNIST to double precision. For an entry $w$ of `W1`,
+   the central difference
 
-    $$\frac{\partial \ell}{\partial w} \approx \frac{\ell(w + \epsilon) - \ell(w - \epsilon)}{2\epsilon},$$
+    $$\hat{g} = \frac{\ell(w + \epsilon) - \ell(w - \epsilon)}{2\epsilon}$$
 
-    evaluated on a single minibatch, and compare the result with the gradient
-    computed by automatic differentiation. Do this for a random sample of 50
-    entries of `W1` and report the maximum relative error over the sample. In
-    double precision a correct implementation stays below $10^{-5}$.
+    approximates the derivative $g = \partial \ell / \partial w$ of the
+    minibatch loss $\ell$. Compute $\hat{g}$ and the gradient $g$ from
+    automatic differentiation for 50 randomly chosen entries of `W1`.
+    1. For some entries both $g$ and $\hat{g}$ are exactly zero. Explain how
+       this happens in this network, and exclude these entries below.
+    1. Plot the maximum over the sample of the relative error
+       $|g - \hat{g}| / \max(|g|, |\hat{g}|)$ against $\epsilon$ for
+       $\epsilon = 10^{-1}, 10^{-2}, \ldots, 10^{-9}$. Inspect the entries
+       that attain the maximum, and explain why the error grows at both
+       ends of this range.
 
     *Adapted from Stanford CS231n,
     [Assignment 1](https://cs231n.github.io/assignments2023/assignment1/),
@@ -367,33 +399,43 @@ The following sections address these requirements for reliable training.
    Plot the ratio of `MLPScratch` time to `MLP` time as a function of width.
    Does the ratio grow, shrink, or stay flat as the network gets larger?
    Suggest an explanation.
-1. [code] **Memory alignment.** Measure the speed of tensor--matrix
-   multiplications for well-aligned and misaligned matrices, for instance
-   with dimensions 1024, 1025, 1026, 1028, and 1032.
-    1. How do the results differ between GPUs and CPUs?
-    1. Determine the memory bus width of your CPU and GPU.
-1. [code] **Activation functions.** Compare at least ReLU, tanh, sigmoid, and
-   GELU as the hidden activation of `MLP` on Fashion-MNIST, retuning the
-   learning rate for sigmoid and tanh. Which works best, and by how much?
-   GELU is used in BERT and GPT-2-style Transformers, while many recent
-   language models use gated SiLU (SwiGLU) blocks. State what a comparison
-   would have to control for before its result could guide the choice of
-   activation in a Transformer.
-1. [code] **Initialization scale and depth.** `MLPScratch` initializes its
+1. [code] **Memory alignment.** Time the product of two $n \times n$
+   matrices for $n \in \{1024, 1025, 1026, 1028, 1032\}$. Divide the $2n^3$
+   floating-point operations of each product by its time to obtain the
+   throughput. Measure the throughput on a CPU in single precision and on a
+   GPU in single and half precision. For which $n$ does the throughput drop
+   on each device and precision, and by how much?
+1. **Arithmetic intensity.** ● The matrix product of Exercise 7 reads two
+   $n \times n$ matrices and writes one, so it performs $2n^3$ operations on
+   $3n^2$ numbers. Compare this ratio, in operations per byte at $n = 1024$
+   in single precision (4 bytes per number),
+   with the ratio of your device's peak arithmetic rate to its memory
+   bandwidth. Does memory bandwidth or arithmetic limit the speed? Which
+   property of the hardware or of its matrix-multiplication kernels makes
+   some $n$ faster than others?
+1. [code] **Activation functions.** Replace the ReLU in `MLP` by tanh,
+   sigmoid, and GELU in turn, and train each of the four versions on
+   Fashion-MNIST for 10 epochs.
+    1. For each activation, pick the best learning rate from
+       $\{0.03, 0.1, 0.3, 1\}$. Which activation reaches the highest
+       validation accuracy, and by how much does it beat the worst?
+    1. Repeat the comparison with three hidden layers of width 256. Does the
+       ranking change? Relate the result to the derivative of each
+       activation.
+1. [code] **Initialization scale and depth.** ● `MLPScratch` initializes its
    weights with Gaussian noise of standard deviation $\sigma = 0.01$.
     1. Train the one-hidden-layer model with $\sigma = 0.001$, $0.01$, and
-       $0.1$, and plot the training and validation curves for each. Why does
-       $\sigma$ matter? Consider what happens to the activations on the first
-       forward pass.
-    1. Add a second hidden layer of width 256, keeping $\sigma = 0.01$, and
-       compare its training curve with that of the one-hidden-layer model.
-    1. Before running anything, predict which of a two-hidden-layer and a
-       four-hidden-layer version, each hidden layer of width 256, is more
-       sensitive to $\sigma$, and why. Then verify: sweep $\sigma$ over
-       $\{0.001, 0.003, 0.01, 0.03, 0.1\}$ for both depths and report the
-       range of $\sigma$ for which each network reaches at least 70% training
-       accuracy within five epochs. :numref:`sec_numerical_stability`
-       develops the principled answer.
+       $0.1$, and plot the training and validation curves for each. How
+       much do the curves differ, and does the difference persist as
+       training continues? Relate your observation to the scale of the
+       hidden activations and the logits on the first forward pass.
+    1. Extend `MLPScratch` to two and to four hidden layers, each of width
+       256. Before running anything, predict which depth is more sensitive
+       to $\sigma$, and why.
+    1. Sweep $\sigma$ over $\{0.001, 0.003, 0.01, 0.03, 0.1\}$ for both
+       depths. For each depth, report the range of $\sigma$ for which the
+       network reaches at least 70% validation accuracy within five epochs.
+       :numref:`sec_numerical_stability` develops the principled answer.
 
     *Adapted from Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2023/assignment2/),

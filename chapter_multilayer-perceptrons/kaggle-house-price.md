@@ -670,49 +670,93 @@ fine-tuning of pretrained models.
 
 ## Exercises
 
-1. [code] **Kaggle submission.** Submit your predictions for this section to
-   Kaggle. Where does your score place on the leaderboard?
+1. [code] **Fold ensembling versus refitting.**
+   :numref:`subsec_kaggle_submission` describes two ways of producing a
+   final model after cross-validation: averaging the $K$ fold models'
+   predictions, or refitting one model on the complete training set with
+   the selected hyperparameters.
+    1. Submit the `submission.csv` that this section writes, which holds the
+       fold ensemble's predictions, to Kaggle. The leaderboard reports the
+       root-mean-squared log error, whereas `k_fold` prints the mean squared
+       error of the log prices. Convert the mean that `k_fold` prints to the
+       leaderboard's scale and compare it with your score.
+    1. Refit one model on the complete training set with the same
+       hyperparameters, submit its predictions, and compare the two
+       leaderboard scores.
+    1. Explain why the training error of the refit model is not a
+       substitute for the cross-validated estimate.
 1. [code] **Mean imputation.** `fit_preprocess` replaces every missing
-   numerical value by the training-set mean of its column.
+   numerical value by the training-set mean of its column. Its call to
+   `pd.get_dummies` with `dummy_na=True` also adds a missing-value
+   indicator column for every categorical feature.
     1. Identify a numerical feature in this dataset whose missingness is not
        random with respect to the sale price.
-    1. Explain what bias mean imputation introduces for that feature, and in
-       which direction it shifts the predictions for the affected houses.
+    1. Explain what bias mean imputation alone would introduce for that
+       feature, and in which direction it would shift the predictions for
+       the affected houses. Then determine whether the indicator columns
+       that `fit_preprocess` already creates let a linear model remove this
+       bias.
     1. Replace mean imputation by median imputation, and separately add a
        binary missingness indicator column for each imputed feature. Compare
-       the cross-validated log-RMSE of the three variants.
-1. [code] **Improving the score.** Improve the cross-validated log-RMSE, and
-   then the leaderboard score, of the model in this section.
-    1. Tune the learning rate, the number of epochs, and the weight-decay
-       strength by $K$-fold cross-validation, holding the model fixed.
-    1. Change the model: add or widen hidden layers and add dropout. Which
-       change helps most, and does the gain survive on the leaderboard?
-1. [code] **Skipping standardization.** What happens if we do not
-   standardize the continuous numerical features as we have done in this
-   section?
-1. [code] **Gradient-boosted trees.** Swap the linear model for a
-   gradient-boosted tree model (for example scikit-learn's
-   `GradientBoostingRegressor`, or XGBoost or LightGBM if installed),
-   trained on the same preprocessed features. How does its cross-validated
-   log-RMSE compare? Why might tree ensembles have an edge on data like
-   this?
-1. [code] **Encoding categorical features.** One-hot encoding in
-   `fit_preprocess` contributes one column per category observed in the
-   training data.
-    1. Among the categorical columns, find the one with the highest
-       cardinality. How many columns does it contribute to the feature
-       matrix under one-hot encoding?
-    1. *Target encoding* replaces each category by the mean label of the
-       training rows in that category, contributing a single column. Encode
-       the high-cardinality columns this way, or with a learned embedding,
-       instead of one-hot vectors, and compare the cross-validated log-RMSE.
-       Because target encoding uses the labels, implement it out of fold: for
-       each training row, compute its encoded value without using that row or
-       its validation fold.
+       the cross-validated errors of the three variants.
+
+    *Adapted from Kaggle Learn,
+    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
+    Exercise 2.*
+1. [code] **Improving the score.** ● Start from the linear model
+   `d2l.LinearRegression` with learning rate $0.03$ that this section
+   cross-validates. Lower its cross-validated error, and then the
+   leaderboard score.
+    1. Holding the model fixed, tune the learning rate, the number of
+       epochs, and the strength of an $L_2$ weight-decay penalty, added as
+       in :numref:`sec_weight_decay`, by $K$-fold cross-validation.
+    1. Replace the linear model by an MLP, and vary the number and width of
+       its hidden layers and its dropout rate. Which change helps most, and
+       does the gain survive on the leaderboard?
+1. [code] **Skipping standardization.** Remove the standardization from
+   `fit_preprocess`. Because `fillna(0)` imputes the column mean only for
+   standardized columns, fill missing numerical values with the
+   training-set column means explicitly instead.
+    1. Rerun the $K$-fold cross-validation of the linear model at the
+       section's learning rate of $0.03$, and describe the training loss.
+    1. Find, to within a factor of ten, the largest learning rate at which
+       the unstandardized linear model trains without diverging. Compare
+       its cross-validated error after $100$ epochs with that of the
+       standardized pipeline, and explain both observations.
+1. [code] **Gradient-boosted trees.** Fit a gradient-boosted tree model
+   (for example scikit-learn's `GradientBoostingRegressor`, or XGBoost or
+   LightGBM if installed) to the log sale price, using the preprocessed
+   training rows of each fold that `k_fold_data(data, 5)` returns. Score it
+   on each validation fold by the mean squared error of the log price, the
+   quantity that `k_fold` prints, and compare the mean over folds with that
+   of the models trained in this section. Why might tree ensembles have an
+   edge on data like this?
+1. [code] **Encoding categorical features.** `fit_preprocess` one-hot
+   encodes every categorical column by calling `pd.get_dummies` with
+   `dummy_na=True`. Find the categorical column with the most distinct
+   values in the training data, and determine how many columns of the
+   feature matrix its one-hot encoding occupies.
 
     *Adapted from Kaggle Learn,
     [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
     Exercise 3.*
+1. [code] **Target encoding.** ● *Target encoding* replaces each category
+   of a categorical column by the mean log sale price of the training rows
+   in that category, so that the feature occupies a single column instead
+   of the one column per category that `fit_preprocess` creates.
+    1. Target-encode every categorical column with more than ten categories
+       instead of one-hot encoding it, computing the category means from
+       the training rows of each fold. Give a category that does not occur
+       in those rows the overall mean, and standardize the encoded columns
+       like the numerical features. Compare the cross-validated error with
+       that of one-hot encoding.
+    1. The encoding above computes each training row's value from a mean
+       that includes that row's own label. Encode the training rows out of
+       fold instead: split the training rows of each fold into five parts,
+       and encode each part with category means computed from the other four
+       parts. Compare the cross-validated error with that of the in-sample
+       encoding, and explain how the size of a category affects the
+       difference between the two encodings.
 1. [code] **Target leakage.** A feature that is recorded only after, or
    because of, the event being predicted inflates validation scores without
    helping a deployed model.
@@ -721,28 +765,25 @@ fine-tuning of pretrained models.
        cross-validation does not catch the problem.
     1. Verify the mechanism empirically: add a synthetic feature equal to
        the log sale price plus small Gaussian noise, rerun the $K$-fold
-       cross-validation, and report the change in log-RMSE.
+       cross-validation, and report the change in the error that `k_fold`
+       prints.
 
     *Adapted from Kaggle Learn,
     [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
     Exercise 7.*
-1. [code] **Fold ensembling versus refitting.**
-   :numref:`subsec_kaggle_submission` describes two ways of producing a
-   final model after cross-validation: averaging the $K$ fold models'
-   predictions, or refitting one model on the complete training set with
-   the selected hyperparameters. Compare them empirically for the model and
-   hyperparameters of this section: produce one submission with each
-   procedure and report both leaderboard scores. Explain why the training
-   error of the refit model is not a substitute for the cross-validated
-   estimate.
-1. **Geometric averaging.** :numref:`subsec_kaggle_submission` averages the
-   $K$ fold models' log-price predictions before exponentiating and notes
-   that this amounts to a geometric mean in price space.
-    1. Show algebraically that this differs from exponentiating each fold's
-       prediction first and averaging in price space, and determine which
-       of the two is always smaller.
-    1. Which of the two procedures matches what the root-mean-squared log
-       error penalizes?
+1. **Geometric averaging.** ● :numref:`subsec_kaggle_submission` averages the
+   $K$ fold models' log-price predictions $z_1, \ldots, z_K$ for a house
+   before exponentiating, which amounts to a geometric mean in price space.
+    1. Compare $\exp\bigl(\frac{1}{K}\sum_{k=1}^K z_k\bigr)$ with the
+       price-space average $\frac{1}{K}\sum_{k=1}^K e^{z_k}$. Show which of
+       the two never exceeds the other, and state when they coincide.
+    1. Let $\log y$ be the true log price of the house. Show that the
+       log-space average satisfies
+
+       $$\Bigl(\log y - \frac{1}{K}\sum_{k=1}^K z_k\Bigr)^2 \leq \frac{1}{K}\sum_{k=1}^K \left(\log y - z_k\right)^2.$$
+
+       Determine whether the logarithm of the price-space average satisfies
+       the same bound for all predictions $z_1, \ldots, z_K$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/106)

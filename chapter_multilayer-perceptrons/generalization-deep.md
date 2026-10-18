@@ -385,42 +385,79 @@ remains an active research problem.
 
 ## Exercises
 
-1. **Limits of complexity measures.** In what sense do traditional
-   complexity-based generalization bounds fail to account for the
-   generalization of deep neural networks?
-1. **Early stopping.** :numref:`subsec_early_stopping` motivates early
-   stopping by the observation that, under label noise, networks fit the
-   correctly labeled examples before the mislabeled ones.
-    1. Explain how this ordering makes stopping early a form of
-       regularization, and identify the quantity that a patience rule
-       implicitly constrains in place of the weights.
-    1. Why should the generalization gain from early stopping shrink as the
-       fraction of mislabeled examples decreases? Give one mechanism other
-       than label noise by which continued training can still raise the
-       validation error.
-1. [code] **Patience-based stopping.** Implement a patience rule for the
-   Fashion-MNIST MLP of :numref:`sec_mlp-implementation`: after every epoch,
-   record the validation loss, and stop training once it has failed to
-   improve by more than a margin $\epsilon$ for $n$ consecutive epochs.
-   Choose $n$ and $\epsilon$ explicitly, train on a schedule long enough to
-   overfit, and report the epoch at which the rule stops relative to the
-   epoch of the best validation loss.
+1. **Limits of complexity measures.** Consider a generalization bound that
+   holds for every data distribution: with probability at least
+   $1 - \delta$ over the draw of $n$ training examples, every classifier
+   $f$ in a class $\mathcal{F}$ satisfies
+
+    $$\epsilon(f) \leq \epsilon_\mathcal{S}(f) + B(\mathcal{F}, n, \delta).$$
+
+    Here $\epsilon(f)$ is the population error, $\epsilon_\mathcal{S}(f)$ is
+    the training error, and the term $B$ depends only on $\mathcal{F}$, $n$,
+    and $\delta$, as the gap $\alpha$ of the VC bound in
+    :numref:`chap_classification_generalization` does. Suppose that training
+    finds a member of an MLP class $\mathcal{F}$ with zero training error on
+    the 60,000 Fashion-MNIST training images, both with the true labels and
+    with labels drawn uniformly at random from the 10 classes, independently
+    of the images, as :citet:`zhang2021understanding` observed for image
+    classifiers.
+    1. What population error does every classifier have on the random-label
+       data? What lower bound on $B(\mathcal{F}, n, \delta)$ follows?
+    1. What does the bound then guarantee about the population error of the
+       network trained on the true labels?
+1. **Early stopping.** ● :numref:`subsec_early_stopping` describes early
+   stopping as a constraint on the number of training epochs in place of a
+   constraint on the weights. Linear least squares makes this precise. Let
+   $\mathbf{X}^\top\mathbf{X}/n$ have eigenvalues $\mu_i > 0$, let
+   $\mathbf{w}^*$ minimize
+   $L(\mathbf{w}) = \frac{1}{2n}\|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$, and
+   run gradient descent on $L$ from $\mathbf{w}_0 = \mathbf{0}$ with learning
+   rate $\eta < 1/\max_i \mu_i$.
+    1. Show that after $t$ steps the coordinate of $\mathbf{w}_t$ along the
+       $i$-th eigenvector equals $1 - (1 - \eta\mu_i)^t$ times that of
+       $\mathbf{w}^*$.
+    1. The minimizer of $L(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}\|^2$
+       scales the same coordinate by $\mu_i/(\mu_i + \lambda)$
+       (:numref:`subsec_wd-shrinkage`). For which $\lambda$, as a function
+       of $\eta$ and $t$, do the two factors approximately agree both in the
+       directions with $\eta\mu_i t \ll 1$ and in those with
+       $\eta\mu_i t \gg 1$?
+
+    *Adapted from Ian Goodfellow, Yoshua Bengio, and Aaron Courville,
+    [Deep Learning](https://www.deeplearningbook.org/contents/regularization.html),
+    Section 7.8.*
+1. [code] **Patience-based stopping.** `FashionMNIST` uses the Fashion-MNIST
+   test set as its validation data, so hold out 10,000 training images as a
+   validation set instead. Train the `MLP` of
+   :numref:`sec_mlp-implementation` on the remaining images for a fixed
+   number of epochs large enough to overfit, and record the validation loss
+   and the test accuracy after every epoch. A patience rule with margin
+   $\epsilon$ and patience $n$ stops once the validation loss has failed to
+   improve on its best value by more than $\epsilon$ for $n$ consecutive
+   epochs. It then retains the parameters of the epoch with the lowest
+   validation loss so far.
+    1. Fix $\epsilon$ and apply the rule to the recorded curves for
+       $n \in \{1, 5, 20\}$. For each $n$, report the stopping epoch, the
+       retained epoch, and the test accuracy at both.
+    1. How does the test accuracy at the retained epoch depend on $n$?
+       Relate the dependence to the epoch-to-epoch fluctuation of the
+       validation loss.
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap3.html),
     Chapter 3.*
-1. [extended] **Interpolation threshold.** The one-hidden-layer `MLP` of
+1. [extended] **Interpolation threshold.** ● The one-hidden-layer `MLP` of
    :numref:`sec_mlp-implementation` has $795h + 10$ parameters, so its
    parameter count matches the 60,000 training examples of Fashion-MNIST at
    $h^\star \approx 75$. Randomly relabel 20% of the training examples, as
    :citet:`nakkiran2021deep` do, and train models at widths
-   $h \in \{8, 16, 32, 75, 150, 300, 600\}$ until the training error stops
-   decreasing. Plot training and test error against width on a logarithmic
-   axis.
+   $h \in \{8, 16, 32, 75, 150, 300, 600, 1200\}$ until the training error
+   stops decreasing. Plot training and test error against width on a
+   logarithmic axis.
     1. Does the test error rise and then fall again as the width increases,
        and where is its peak?
-    1. At which width does the training error reach zero? Compare this width
-       with $h^\star$ and relate the outcome to the caveat in
+    1. At which width, if any, does the training error reach zero? Compare
+       this width with $h^\star$ and relate the outcome to the caveat in
        :numref:`subsec_double_descent` that parameter count is not a reliable
        proxy for the effective capacity of a deep network.
 
@@ -433,9 +470,12 @@ remains an active research problem.
    zero.
     1. What prediction on the duplicated input minimizes the training
        cross-entropy? Can the training loss reach zero?
-    1. Propose one concrete change, to the loss, the architecture, or the
-       training procedure, that handles such conflicting examples more
-       sensibly than pursuing zero training loss.
+    1. Now let the two inputs differ in a single pixel. What training loss
+       can the MLP reach on this pair, and what does it predict for test
+       inputs close to both examples?
+    1. Propose one concrete change, to the loss, the data, or the training
+       procedure, that brings the predictions near this pair closer to the
+       prediction on the identical pair.
 
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
@@ -443,29 +483,53 @@ remains an active research problem.
 1. **Implicit bias.** ● :numref:`subsec_implicit_regularization` states that
    for linearly separable data, gradient descent on the logistic loss
    converges in direction to the $\ell_2$ maximum-margin separator
-   :cite:`Soudry.Hoffer.Nacson.ea.2018`, and notes that this theorem
-   concerns a linear predictor. Give one concrete reason the proof technique
-   does not extend directly to a two-layer ReLU network.
-1. [code] **Neural tangent kernel.** :numref:`subsec_nonparametrics`
-   describes the neural-tangent-kernel limit: as the hidden width grows, the
-   training dynamics of a randomly initialized MLP approach those of a fixed
-   kernel method. Test one consequence of this picture: train the
-   Fashion-MNIST MLP at widths 32, 256, and 2048, holding every other
-   hyperparameter fixed, and record the training-loss curves against the
-   step count. Do the curves of the two widest models resemble each other
-   more than those of the two narrowest? State the measure of similarity you
-   use.
-1. [extended] **Epoch-wise double descent.** ● Take the MLP of
-   :numref:`sec_mlp-implementation` on Fashion-MNIST, randomly relabel 15%
-   of the training examples, and train far past convergence (several hundred
-   epochs), recording test error after every epoch. Plot test error against
-   the epoch count on a log axis.
-    1. Do you observe a second descent after the initial overfitting rise?
-    1. How does the curve change with the label-noise fraction?
-    1. How does the epoch of the peak relate to the point at which the model
-       starts fitting the noisy labels?
-    1. What do these observations imply for choosing an early-stopping
-       patience?
+   :cite:`Soudry.Hoffer.Nacson.ea.2018`. Take labels $y_i \in \{-1, +1\}$.
+    1. For a linear predictor $f(\mathbf{x}) = \mathbf{w}^\top\mathbf{x}$,
+       show that on separable data the loss
+       $\sum_i \log\left(1 + \exp(-y_i \mathbf{w}^\top\mathbf{x}_i)\right)$
+       is positive for every $\mathbf{w}$ but has infimum zero. Conclude that
+       $\|\mathbf{w}_t\|$ grows without bound when gradient descent drives
+       the loss to zero, so that only the direction
+       $\mathbf{w}_t/\|\mathbf{w}_t\|$ can converge.
+    1. For a two-layer ReLU network
+       $f(\mathbf{x}) = \sum_j v_j \max(0, \mathbf{w}_j^\top\mathbf{x})$,
+       show that replacing $(\mathbf{w}_j, v_j)$ by
+       $(c_j\mathbf{w}_j, v_j/c_j)$ with $c_j > 0$ leaves $f$ unchanged. Find
+       the smallest value of $\sum_j (\|\mathbf{w}_j\|^2 + v_j^2)$ over these
+       rescalings. Explain why a margin measured with the parameter norm of
+       the network, unlike one measured with $\|\mathbf{w}\|$ for the linear
+       predictor, is not a property of the function $f$ alone.
+1. [code] **Neural tangent kernel.** ● :numref:`subsec_nonparametrics`
+   describes the neural-tangent-kernel limit, in which a wide MLP trains
+   like a kernel method with a fixed kernel. In this limit every weight
+   matrix $\mathbf{W}$ stays close to its initial value $\mathbf{W}_0$: the
+   relative change $\|\mathbf{W}_T - \mathbf{W}_0\|_F / \|\mathbf{W}_0\|_F$
+   after $T$ steps shrinks as the width grows. Train the `MLP` of
+   :numref:`sec_mlp-implementation` on Fashion-MNIST with `num_hiddens` set
+   to $h \in \{32, 256, 2048\}$. Draw every weight from
+   $\mathcal{N}(0, 2/n_\textrm{in})$ (:numref:`subsec_he_init`) and train
+   every width for the same number of steps.
+    1. Use the learning rate $0.1$ for every width. Compute the relative
+       change of the hidden-layer and of the output-layer weights, plot both
+       against $h$ on log-log axes, and estimate their slopes. Which layer
+       behaves as the kernel limit requires?
+    1. Repeat with the learning rate $0.1 \cdot 32/h$. How do the relative
+       changes and the final training loss now depend on $h$?
+1. [extended] **Epoch-wise double descent.** ● Take the `MLP` of
+   :numref:`sec_mlp-implementation` on Fashion-MNIST and randomly relabel
+   15% of the training examples. Train far past convergence (several hundred
+   epochs). After every epoch, record the test error and the training
+   accuracy on the relabeled examples, measured against their new labels.
+   Plot both against the epoch count on a log axis.
+    1. Does the test error descend a second time after the initial rise?
+    1. At which epoch does the test error peak, and what fraction of the
+       relabeled examples has the network fitted by then?
+    1. Repeat with 5% and 30% of the examples relabeled. How do the height
+       and the epoch of the peak change?
+    1. Suppose a patience rule with $n = 20$ and $\epsilon = 0$ monitored the
+       test-error curve of the 15% run as if it were a validation curve. At
+       which epoch would the rule stop, and how does the test error there
+       compare with the test error at the end of training?
 1. [extended] **Grokking.** ●● Reproduce the setup of
    :citet:`Power.Burda.Edwards.ea.2022`: train a small network (they use a
    two-layer transformer, but a wide MLP on one-hot pairs also works) to

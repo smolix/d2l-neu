@@ -647,12 +647,13 @@ implementation applies automatically.
 ## Exercises
 
 1. [code] **Numerical stability.** The `softmax` of this section returns
-   `NaN` on the logits $(1000, 0, 0)$ because $\exp(1000)$ overflows.
-    1. Show that it also fails when the largest input is below $-100$, and
-       identify the operation that produces the `NaN` in this case.
+   `NaN` on a matrix whose single row is the logits $(1000, 0, 0)$, because
+   $\exp(1000)$ overflows.
+    1. Show that it also returns `NaN` on the row $(-1000, -1000, -1000)$,
+       and identify the operation that produces the `NaN` in this case.
     1. Implement a fix that subtracts the largest entry of each row before
-       exponentiating, and check that it agrees with the framework's
-       softmax on both inputs and on random inputs.
+       exponentiating, and check that it agrees with the built-in softmax
+       on both rows and on random inputs.
 1. [code] **Cross-entropy from one-hot labels.** The `cross_entropy` of this
    section selects the correct-class probability by indexing. Implement an
    alternative that follows the definition $-\sum_j y_j \log \hat{y}_j$
@@ -660,38 +661,61 @@ implementation applies automatically.
    inner products.
     1. Use it as the `loss` of `SoftmaxRegressionScratch` and confirm that
        training is unchanged.
-    1. Compare its running time and memory use with the indexing version
-       as the number of classes grows.
-    1. Describe a setting in which the one-hot form is the natural one and
-       the indexing form does not apply.
-1. **Large vocabularies.** Assume that we want to use softmax regression to
-   predict the next word based on some features, with a vocabulary of size
-   $V$ between $10^5$ and $10^6$. Identify which steps of the softmax and
-   cross-entropy computation scale with $V$, estimate the per-step cost
-   relative to the $V = 10$ of Fashion-MNIST, and name one change to the
-   output layer that avoids paying the full cost.
+    1. Time both versions on random probability matrices with $256$ rows
+       and $q \in \{10, 10^3, 10^5\}$ columns, and state how the memory
+       that each version allocates grows with $q$.
+    1. Describe a setting in which the inner-product form applies but the
+       indexing form does not.
+1. **Large vocabularies.** Suppose that softmax regression predicts the
+   next word from a feature vector of dimension $d = 1024$. The vocabulary
+   has $V = 10^6$ words, and each minibatch holds $n = 256$ examples.
+   List the operations of `forward` and `cross_entropy` whose cost grows
+   with $V$. Compute the multiply-adds of the matrix product, the float32
+   memory of `W`, and the float32 memory of the $n \times V$ matrix of
+   probabilities, and compare each number with the Fashion-MNIST model of
+   this section.
+1. **Output-layer gradients.** ● Consider softmax regression that predicts
+   the next word from a vocabulary of $V = 10^6$ words. By
+   :numref:`subsec_softmax_and_derivatives`, the derivative of the loss
+   with respect to the logit $o_j$ is $\hat{y}_j - y_j$. Explain why a
+   single example produces a nonzero gradient for every column of `W`, and
+   propose a change to the output layer that updates only a few columns
+   per example.
 1. [code] **Hyperparameter sweep.** Retrain `SoftmaxRegressionScratch` with
    `d2l.Trainer(max_epochs=10)`, varying one hyperparameter at a time.
     1. Plot the final validation loss against the learning rate over
        $\{0.01, 0.03, 0.1, 0.3, 1\}$.
-    1. Repeat for the minibatch size over $\{8, 32, 256, 2048\}$ at a fixed
-       learning rate. How large or small must the batch be before the
-       training and validation losses change noticeably, and why does the
-       answer depend on whether the number of epochs or the number of
-       parameter updates is held fixed?
+    1. Plot the final training and validation losses against the minibatch
+       size over $\{8, 32, 256, 2048\}$ at learning rate $0.1$.
+    1. Compute the number of parameter updates that ten epochs over the
+       60,000 training images take at each batch size. Use these counts to
+       explain the trend in the previous plot, and predict how the
+       comparison changes when every run takes the same number of updates.
 1. [code] **Confusion matrix.** The diagonal of the column-normalized
    confusion matrix :eqref:`eq_confusion-normalized` holds the per-class
    recall.
     1. Compute the row-normalized counterpart, whose diagonal holds the
-       per-class precision. For which classes do precision and recall
-       differ most, and what does the asymmetry say about the direction of
-       the confusions between them?
-    1. Check that the trace of the unnormalized count matrix $C$, divided
-       by the number of validation examples, reproduces the overall
-       validation accuracy.
+       per-class precision. Find the class whose precision and recall
+       differ most, and state whether the model predicts that class more
+       often or less often than it occurs.
     1. Reshape each column of the weight matrix `W` into a $28 \times 28$
        image and display the ten templates with `show_images`. Relate
        visually similar templates to the most confused class pairs.
+1. [code] **ROC of the trained model.** Exercises 6 and 7 of
+   :numref:`sec_classification` define the ROC curve and the area under
+   it (AUC) on simulated scores. Apply them to the trained
+   `SoftmaxRegressionScratch` on the validation images of two classes $a$
+   and $b$, with $a$ as the positive class. Because `forward` returns
+   probabilities rather than logits, use the score
+
+   $$s = \frac{\hat{y}_a}{\hat{y}_a + \hat{y}_b},$$
+
+   which equals $\sigma(o_a - o_b)$ by :eqref:`eq_softmax_to_sigmoid`.
+    1. Plot the ROC curves and compute the AUCs for sneaker versus sandal
+       and for shirt versus t-shirt.
+    1. Compare the ordering of the two AUCs with the off-diagonal entries
+       of the confusion matrix $C$ for the same pairs, and explain why the
+       two diagnostics need not agree.
 
 
 :begin_tab:`mxnet`

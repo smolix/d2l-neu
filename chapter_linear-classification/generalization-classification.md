@@ -153,7 +153,7 @@ This function is largest
 when the true error rate is close to $0.5$
 and can be far lower when it is
 close to $0$ or close to $1$.
-This tells us that the asymptotic standard deviation
+This tells us that the standard deviation
 of our estimate $\epsilon_\mathcal{D}(f)$ of the error $\epsilon(f)$
 (over the choice of the $n$ test samples)
 cannot be any greater than $\sqrt{0.25/n}$.
@@ -537,17 +537,29 @@ in :numref:`sec_generalization_deep`.
 
 ## Exercises
 
-1. **Sample size for a tight estimate.** If we wish to estimate the error
-   of a fixed model $f$ to within $0.0001$ with probability greater than
-   99.9%, how many samples do we need?
-1. **Leaking a test set.** Suppose that somebody else possesses a labeled
-   test set $\mathcal{D}$ and only makes available the unlabeled inputs
-   (features). Now suppose that you can only access the test set labels by
-   running a model $f$ (with no restrictions placed on the model class) on
-   each of the unlabeled inputs and receiving the corresponding error
-   $\epsilon_\mathcal{D}(f)$. How many models would you need to evaluate
-   before you leak the entire test set and thus could appear to have error
-   $0$, regardless of your true error?
+1. **Sample size for a tight estimate.** We wish to estimate the error of
+   a fixed model $f$ to within $t = 0.0001$ with probability at least
+   99.9%.
+    1. How many test examples does Hoeffding's inequality require? How
+       many does the CLT approximation require with the worst-case
+       standard deviation $\sqrt{0.25/n}$?
+    1. The same test set must now certify $k = 10^4$ models, all fixed
+       before the test set is seen. With probability at least 99.9%, all
+       $k$ test errors must lie within $t$ of their population errors at
+       once. The probability that at least one of $k$ events occurs is at
+       most the sum of their probabilities. Use this fact with Hoeffding's
+       inequality to find the required test-set size, and state how it
+       grows with $k$.
+1. **Leaking a test set.** Somebody else holds a test set $\mathcal{D}$ of
+   $n$ examples with binary labels and releases only the inputs. You may
+   submit any model $f$, with no restriction on the model class, and you
+   receive only its test error $\epsilon_\mathcal{D}(f)$.
+    1. Give a strategy that recovers every test label, and hence a model
+       with test error $0$ whatever its population error, and count the
+       submissions it uses.
+    1. Each answer $\epsilon_\mathcal{D}(f)$ takes one of $n+1$ values.
+       Use this to lower-bound the number of submissions that any
+       strategy needs to distinguish all $2^n$ labelings.
 1. **VC dimension of polynomials.** What is the VC dimension of the class
    of classifiers $f(x) = \operatorname{sign}(p(x))$ with $p$ a polynomial
    of degree at most five in $x \in \mathbb{R}$? What is it for
@@ -568,8 +580,7 @@ in :numref:`sec_generalization_deep`.
    standard unit vectors). Given arbitrary labels
    $\sigma_0, \sigma_1, \ldots, \sigma_d \in \{\pm 1\}$, construct $b$ and
    $\mathbf{w}$ that realize them. Hint: $f(\mathbf{0})$ depends on $b$
-   alone, so choose $b$ first. Explain how this bound and the Radon
-   argument of the text together give $\textrm{VC} = d+1$.
+   alone, so choose $b$ first.
 1. **Collinear points.** In :numref:`fig_mdl-clf-shattering` the three
    shattered points are in *general position* (not collinear). Show that
    three collinear points can *not* be shattered by halfplanes: which
@@ -579,27 +590,43 @@ in :numref:`sec_generalization_deep`.
    growth function) $H[n]$ of a hypothesis class $H$ is the largest number
    of distinct labelings that $H$ can realize on any $n$ points, so that
    $H[n] = 2^n$ exactly when some $n$ points are shattered. *Sauer's
-   lemma* states that a class of VC dimension $d$ satisfies
-   $H[n] \leq \sum_{i=0}^{d} \binom{n}{i} \leq (en/d)^d$ for $n \geq d$.
-    1. Given two classes $H_1$ and $H_2$, show that the class
-       $H^* = \{h_1 \wedge h_2 : h_1 \in H_1, h_2 \in H_2\}$ of
-       intersections satisfies $H^*[n] \leq H_1[n] \cdot H_2[n]$.
-    1. Use this bound and Sauer's lemma to bound the VC dimension of the
-       intersection of two linear-classifier classes on $\mathbb{R}^d$.
+   lemma* states that a class of VC dimension $v$ satisfies
+   $H[n] \leq \sum_{i=0}^{v} \binom{n}{i} \leq (en/v)^v$ for $n \geq v$.
+    1. For two classifiers $h_1$ and $h_2$, let $h_1 \wedge h_2$ output
+       $+1$ on a point exactly when both $h_1$ and $h_2$ output $+1$
+       there. Show that for any two classes $H_1$ and $H_2$ the class
+       $H^* = \{h_1 \wedge h_2 : h_1 \in H_1, h_2 \in H_2\}$ satisfies
+       $H^*[n] \leq H_1[n] \cdot H_2[n]$.
+    1. Let $H_1 = H_2$ be the linear classifiers on $\mathbb{R}^d$, whose
+       VC dimension is $d+1$. Use part (a) and Sauer's lemma to bound the
+       VC dimension of $H^*$ as a function of $d$.
 
     *Adapted from CMU 10-601,
     [homework 5](https://www.cs.cmu.edu/~ninamf/courses/601sp15/hw/homework5.pdf),
     Problem 1.*
-1. [code] **Simulating the gap.** Rerun the simulation that produces
-   `spread`, `clt`, and `hoeff` for the true error rates $\epsilon = 0.3$
-   and $\epsilon = 0.5$ on a finer grid of sample sizes $n$.
-    1. Does the simulated spread still follow
-       $\sqrt{\epsilon(1-\epsilon)/n}$?
-    1. Show that the ratio of the 95% Hoeffding radius to the 95% CLT
-       radius $1.96\sqrt{\epsilon(1-\epsilon)/n}$ does not depend on $n$,
-       and compute it as a function of $\epsilon$. For which $\epsilon$ is
-       Hoeffding's bound least conservative, and by how much does it then
-       exceed the CLT radius?
+1. **Two confidence radii.** Two radii $r$ are meant to make the
+   interval $\epsilon_\mathcal{D}(f) \pm r$ contain the true error
+   $\epsilon$ of a classifier with probability 95%: the CLT radius
+   $1.96\sqrt{\epsilon(1-\epsilon)/n}$ and the Hoeffding radius
+   $\sqrt{\log(2/0.05)/(2n)}$.
+    1. Show that the standard deviation of $\epsilon_\mathcal{D}(f)$
+       equals $\sqrt{\epsilon(1-\epsilon)/n}$ exactly, for every $n$.
+       Which ingredient of the CLT interval is then only an asymptotic
+       approximation?
+    1. Show that the ratio of the Hoeffding radius to the CLT radius does
+       not depend on $n$, and compute it as a function of $\epsilon$. For
+       which $\epsilon$ is Hoeffding's bound least conservative, and by how
+       much does it then exceed the CLT radius?
+1. [code] **Simulating the gap.** Take a classifier with true error
+   $\epsilon = 0.01$. Adapt the simulation that produces `spread` to
+   estimate, for $n \in \{100, 300, 1000\}$, the fraction of simulated test
+   sets whose interval $\epsilon_\mathcal{D}(f) \pm r$ contains $\epsilon$.
+   Do this once with the CLT radius $r = 1.96\sqrt{\epsilon(1-\epsilon)/n}$
+   and once with the Hoeffding radius $r = \sqrt{\log(2/0.05)/(2n)}$. Repeat
+   with $\epsilon$ replaced by $\epsilon_\mathcal{D}(f)$ inside the CLT
+   radius, as one must when $\epsilon$ is unknown. Which intervals fall
+   short of 95%? What does this plug-in interval report for a test set with
+   no errors?
 
 [Discussions](https://d2l.discourse.group/t/6829)
 

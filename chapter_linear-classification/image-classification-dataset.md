@@ -127,8 +127,8 @@ examples; interpolation changes the pixels and increases per-image storage and
 compute, but not the labels. Each image is delivered as a single-channel tensor
 of spatial size $32 \times 32$. One subtlety matters here: where the channel
 axis lives. There are two conventions, *channel-first* $c \times h \times w$
-and *channel-last* $h \times w \times c$. The `get_dataloader` method below
-produces the appropriate layout, which we confirm after constructing the loader.
+and *channel-last* $h \times w \times c$. The data pipeline produces the
+appropriate layout, which we confirm after constructing the loader.
 Here $c = 1$ because the images are grayscale; most photographs have $c = 3$.
 
 
@@ -314,34 +314,51 @@ system; it is not guaranteed to be faster than training.
    with `batch_size` of 1, 16, 64, 256, and 1024. Plot throughput (images
    per second) against `batch_size` and explain the shape of the curve in
    terms of per-batch overhead and per-image work.
-1. **Channel layout.** PyTorch stores tensors in channel-first order
-   $(c, h, w)$, while TensorFlow and JAX use channel-last $(h, w, c)$. Read
-   the `get_dataloader` implementations for all four frameworks. Identify
-   the step that introduces the channel dimension and the exact place where
-   the layouts diverge.
-1. [code] **Cost of resizing.** Measure the wall-clock cost of one pass of
-   `train_dataloader` and the per-image memory with `resize=(32, 32)`
-   against the native `resize=(28, 28)`. After training the model of
-   :numref:`sec_softmax_scratch`, compare its validation accuracy at the
-   two resolutions.
-1. **Shuffling and validation.** `get_dataloader` sets `shuffle=train`, so
-   only the training loader reshuffles. Suppose the validation loader were
-   shuffled every epoch as well. Which of the following would change, and
-   why: the validation loss and accuracy averaged over the whole validation
-   set; the per-batch values plotted during an epoch; and the examples
-   shown by `visualize` for the first validation batch? Explain why the
-   training loader is shuffled nonetheless.
+1. **Channel layout.** The PyTorch and MXNet loaders deliver images
+   channel-first, $(c, h, w)$, while the TensorFlow and JAX loaders deliver
+   them channel-last, $(h, w, c)$. Read the `FashionMNIST` constructor and
+   `get_dataloader` in all four frameworks. For each framework, identify the
+   operation that determines where the channel axis ends up, and locate the
+   exact place where the layouts diverge.
+1. [code] **Cost of resizing.** The section resizes the native $28 \times 28$
+   images to $32 \times 32$. Compute the float32 storage per image at both
+   resolutions, and time one pass of `train_dataloader` with
+   `resize=(28, 28)` and with `resize=(32, 32)`.
+1. [code] **Upsampling and linear models.** ● Treat the resizing from
+   $28 \times 28$ to $32 \times 32$ as a linear map
+   $\mathbf{x}' = \mathbf{A}\mathbf{x}$ from the 784 original pixels to the
+   1024 resized ones, where the columns of
+   $\mathbf{A} \in \mathbb{R}^{1024 \times 784}$ are linearly independent.
+    1. Show that softmax regression on $\mathbf{x}'$ can represent exactly
+       the classifiers that softmax regression on $\mathbf{x}$ can.
+    1. After :numref:`sec_softmax_scratch`, train `SoftmaxRegressionScratch`
+       at both resolutions, with `num_inputs` set to the number of pixels
+       per image. Compare the validation accuracies and explain any
+       difference in light of the previous part.
+1. **Shuffling and validation.** `get_dataloader` reshuffles the training
+   split every epoch and reads the validation split in the same order every
+   epoch. Suppose the validation loader, with the default `batch_size=64`,
+   were reshuffled every epoch as well.
+    1. Explain whether the validation loss and accuracy, averaged over all
+       10,000 validation examples, would change.
+    1. `Module.plot` draws one validation point per epoch, the unweighted
+       mean of the per-batch values. Explain whether this point would
+       change.
+    1. Explain whether the images that `visualize` shows for the first
+       validation batch would change.
+    1. Explain why the training loader is shuffled nonetheless.
 
 :begin_tab:`pytorch`
-5. [code] **Worker ablation.** `get_dataloader` passes `num_workers` to the
-   framework's data loader. Time one pass of `train_dataloader` with
-   `FashionMNIST(num_workers=0)`, which loads in the main process, and
-   with the default `num_workers=4`. State under what conditions
+6. [code] **Worker ablation.** `get_dataloader` passes the `num_workers`
+   attribute, which `DataModule` sets to 4 by default, to
+   `torch.utils.data.DataLoader`. For `data = FashionMNIST()`, time one pass
+   of `data.train_dataloader()` with `data.num_workers` set to 0, 1, 2, 4,
+   and 8, where 0 loads in the main process. State under what conditions
    increasing `num_workers` stops helping.
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **Parallel loading.** The `tf.data` pipeline in `get_dataloader`
+6. [code] **Parallel loading.** The `tf.data` pipeline in `get_dataloader`
    does not use the `num_workers` attribute of `DataModule`; its
    parallelism is set per stage. Time one pass of `train_dataloader` as
    written, then with `num_parallel_calls=tf.data.AUTOTUNE` in the `map`
@@ -350,7 +367,7 @@ system; it is not guaranteed to be faster than training.
 :end_tab:
 
 :begin_tab:`tensorflow`
-5. [code] **Parallel loading.** The `tf.data` pipeline in `get_dataloader`
+6. [code] **Parallel loading.** The `tf.data` pipeline in `get_dataloader`
    does not use the `num_workers` attribute of `DataModule`; its
    parallelism is set per stage. Time one pass of `train_dataloader` as
    written, then with `num_parallel_calls=tf.data.AUTOTUNE` in the `map`
@@ -359,20 +376,23 @@ system; it is not guaranteed to be faster than training.
 :end_tab:
 
 :begin_tab:`mxnet`
-5. [code] **Worker ablation.** `get_dataloader` passes `num_workers` to the
-   framework's data loader. Time one pass of `train_dataloader` with
-   `FashionMNIST(num_workers=0)`, which loads in the main process, and
-   with the default `num_workers=4`. State under what conditions
+6. [code] **Worker ablation.** `get_dataloader` passes the `num_workers`
+   attribute, which `DataModule` sets to 4 by default, to
+   `gluon.data.DataLoader`. For `data = FashionMNIST()`, time one pass of
+   `data.train_dataloader()` with `data.num_workers` set to 0, 1, 2, 4,
+   and 8, where 0 loads in the main process. State under what conditions
    increasing `num_workers` stops helping.
 :end_tab:
 
-6. [extended] **Loader or compute.** Combine the two sweeps of problems 1
-   and 5 into a grid of batch sizes and loader-parallelism settings,
-   measuring loader throughput at each point. After
-   :numref:`sec_softmax_scratch`, measure the forward-pass throughput of
-   `SoftmaxRegressionScratch` at the same batch sizes and produce a heatmap
-   marking the region where loading rather than compute is the bottleneck.
-   State the crossover point on your hardware.
+7. [extended] **Loader or compute.** ● Combine the two sweeps of problems 1
+   and 6 into a grid of batch sizes and loader-parallelism settings, and
+   measure loader throughput in images per second at each point. After
+   :numref:`sec_softmax_scratch`, measure the throughput of a full training
+   step of `SoftmaxRegressionScratch` (forward pass, loss, gradient, and
+   parameter update) on a minibatch held in memory, at the same batch sizes.
+   Draw a heatmap of the ratio of loader throughput to training throughput
+   over the grid. Identify the region of the grid in which loading is the
+   bottleneck, and state whether a crossover exists on your hardware.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/48)

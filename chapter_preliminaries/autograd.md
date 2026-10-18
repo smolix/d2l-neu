@@ -579,6 +579,7 @@ and even lets us choose the *direction*
 in which the graph is traversed.
 
 ### Gradients and Python Control Flow
+:label:`subsec_autograd_control_flow`
 
 The preceding examples used a fixed sequence of operations such as
 `z = x * x * x`. Programs can instead use auxiliary variables and choose
@@ -832,71 +833,86 @@ The basic workflow is:
 
 ## Exercises
 
-1. **Cost of second derivatives.** The counting argument in
+1. **Cost of second derivatives.** ● The counting argument in
    :numref:`subsec_autograd_fwd_rev` prices the gradient of a scalar loss
    with $n$ parameters at roughly one extra forward pass. Use the same
    argument to estimate, in units of function evaluations, the cost of the
    full Hessian (the $n \times n$ matrix of second derivatives) and the
    cost of a single Hessian--vector product. Explain the difference
    between the two costs.
+
 :begin_tab:`mxnet`
-2. [code] **Running backward twice.** After running the backpropagation
-   function, run `y.backward()` again on the same recorded graph. What
-   happens? Look up the `retain_graph` argument of `backward` and explain
-   what it changes.
+2. [code] **Repeated backward passes.** For an `x` with an attached
+   gradient, compute `y = 2 * np.dot(x, x)` inside `autograd.record()`,
+   call `y.backward()`, and then call `y.backward()` a second time. What
+   happens? Record `y` again and repeat both calls, this time passing
+   `retain_graph=True` to the first one. Explain what the backward pass
+   discards by default and why, and what the second call leaves in
+   `x.grad`.
 :end_tab:
 
 :begin_tab:`pytorch`
-2. [code] **Running backward twice.** After running the backpropagation
-   function, run `y.backward()` again on the same graph. What happens? Look
-   up the `retain_graph` argument of `backward` and explain what it
-   changes.
+2. [code] **Repeated backward passes.** For an `x` with
+   `requires_grad=True`, compute `y = 2 * torch.dot(x, x)`, call
+   `y.backward()`, and then call `y.backward()` a second time. What
+   happens? Reset `x.grad`, recompute `y`, and repeat both calls, this
+   time passing `retain_graph=True` to the first one. Explain what the
+   backward pass discards by default and why, and what the second call
+   leaves in `x.grad`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-2. [code] **Running backward twice.** Call `tape.gradient` a second time on
-   the same tape. What happens? Construct the tape with `persistent=True`,
-   repeat, and explain what changes and what the persistent tape costs.
+2. [code] **Repeated backward passes.** Record
+   `y = 2 * tf.tensordot(x, x, axes=1)` under
+   `with tf.GradientTape() as t:`, call `t.gradient(y, x)`, and then call
+   it a second time. What happens? A tape constructed with
+   `persistent=True` keeps its recorded operations so that `t.gradient`
+   can be called repeatedly. Explain what this costs in memory during
+   training, and when the memory held by a persistent tape is released.
 :end_tab:
 
 :begin_tab:`jax`
-2. [code] **Running backward twice.** Call the function returned by
+2. [code] **Repeated backward passes.** Call the function returned by
    `jax.grad` twice on the same input. Why does the second call behave no
    differently from the first? What does this tell you about where JAX
    keeps the information needed for differentiation?
 :end_tab:
 
-3. **From scalar to vector input.** In the control flow
-   example where we calculate the derivative of `d` with respect to `a`,
-   what would happen if we changed the variable `a` to a random vector or a
-   matrix? The result of `f(a)` is then no longer a scalar. State what
-   happens to the gradient computation and how to analyze it.
-1. **Building and tracing the dependency graph.** Let
-   $f(x) = ((\log x^2) \cdot \sin x) + x^{-1}$.
-    1. Write out a dependency graph tracing results from $x$ to $f(x)$.
-    1. Use the chain rule to compute the derivative $\frac{df}{dx}$,
-       placing each term on the dependency graph.
-    1. Evaluate the result once sweeping from $x$ to $f$ (forward mode) and
-       once tracing back from $f$ to $x$ (reverse mode).
-    1. Count the operations that each mode performs and the intermediate
-       values each must store, and describe how the comparison changes for
-       a function with many inputs, or with many outputs.
-1. [code] **Manual tracing.** For $f(x, y, z) = (x + y) \cdot z$ with
-   $x = -2$, $y = 5$, $z = -4$, compute the forward pass by hand, then
-   trace $\partial f/\partial x$, $\partial f/\partial y$, and
-   $\partial f/\partial z$ backward through the addition and multiplication
-   nodes. Verify every value using automatic differentiation.
+3. [code] **From scalar to vector input.** Replace the scalar input `a` of
+   the function `f` defined in :numref:`subsec_autograd_control_flow` by a
+   random vector of length 5, and differentiate the sum of the entries of
+   `d = f(a)` with respect to `a`.
+    1. Express `f(a)` in terms of `a`, and give the Jacobian of `f` at `a`
+       and the gradient of the sum of the entries of `d`.
+    1. Compute this gradient with automatic differentiation and check
+       whether it still equals `d / a` elementwise.
+    1. Identify the inputs `a` at which `f` jumps, and state what automatic
+       differentiation returns at an input next to such a point.
+1. [code] **Manual tracing.** Let $f(x, y, z) = (x + y) \cdot z$ with
+   $x = -2$, $y = 5$, and $z = -4$.
+    1. Draw the computational graph of $f$ with one node per operation,
+       compute the forward pass by hand, and trace
+       $\partial f/\partial x$, $\partial f/\partial y$, and
+       $\partial f/\partial z$ backward from $f$ through the multiplication
+       and addition nodes (reverse mode).
+    1. Compute the same three derivatives in forward mode, propagating the
+       derivative with respect to one input at a time from the inputs to
+       $f$. Compare the number of sweeps each mode needs and the
+       intermediate values each must keep in memory.
+    1. Verify every value using automatic differentiation.
 
     *Adapted from Stanford CS231n,
     ["An Exercise in Backpropagation"](https://cs231n.stanford.edu/slides/2026/section_2_backprop.pdf).*
 
 :begin_tab:`mxnet`
-6. [code] **Detach and check.** Let `y = x * x` and `u = y.detach()`
-   inside the recording scope. Before running any code, predict `x.grad`
-   after `backward` on each of `z = u * u`, `z = y * u`, and `z = y * y`.
-   Check your predictions, and explain how the first two results would
-   change if `u` were replaced by `y`.
-7. [code] **Updating parameters by hand.** Let `w` be an array with an
+5. [code] **Detached intermediates.** Let `y = x * x` and
+   `u = y.detach()`, and consider `z = u * u`, `z = y * u`, and
+   `z = y * y`. For each `z`, compute `y`, `u`, and `z` afresh inside an
+   `autograd.record()` scope and call `z.backward()`. Before running any
+   code, predict the outcome of each call, including the resulting
+   `x.grad`. Check your predictions, and explain the ratio between the
+   gradients for `z = y * u` and `z = y * y`.
+6. [code] **Manual parameter updates.** Let `w` be an array with an
    attached gradient, compute `loss = (w * w).sum()` inside
    `autograd.record()`, and call `loss.backward()`. Perform the update
    `w = w - 0.1 * w.grad` outside the recording scope and inspect
@@ -907,13 +923,14 @@ The basic workflow is:
 :end_tab:
 
 :begin_tab:`pytorch`
-6. [code] **Detach and check.** Let `y = x * x` and `u = y.detach()`.
-   Before running any code, predict `x.grad` for each of `z = u * u`,
-   `z = y * u`, and `z = y * y`, each summed over its components before
-   calling `backward` and with `x.grad` reset between runs. Check your
-   predictions, and explain how the first two results would change if `u`
-   were replaced by `y`.
-7. [code] **Updating parameters by hand.** Let `w` be a tensor with
+5. [code] **Detached intermediates.** Let `y = x * x` and
+   `u = y.detach()`, and consider `z = u * u`, `z = y * u`, and
+   `z = y * y`. For each `z`, recompute `y` and `u`, reset `x.grad`, and
+   call `backward` on the sum of the components of `z`. Before running any
+   code, predict the outcome of each call, including the resulting
+   `x.grad`. Check your predictions, and explain the ratio between the
+   gradients for `z = y * u` and `z = y * y`.
+6. [code] **Manual parameter updates.** Let `w` be a tensor with
    `requires_grad=True`, compute `loss = (w * w).sum()`, and call
    `loss.backward()`. Perform the update `w = w - 0.1 * w.grad` and
    inspect `w.requires_grad`, `w.grad_fn`, `w.is_leaf`, and `w.grad`.
@@ -923,33 +940,38 @@ The basic workflow is:
 :end_tab:
 
 :begin_tab:`tensorflow`
-6. [code] **Detach and check.** Let `y = x * x` and
+5. [code] **Detached intermediates.** Let `y = x * x` and
    `u = tf.stop_gradient(y)` inside a persistent `tf.GradientTape` `t`.
    Before running any code, predict `t.gradient(z, x)` for each of
-   `z = u * u`, `z = y * u`, and `z = y * y`. Check your predictions, and
-   explain how the first two results would change if `u` were replaced by
-   `y`.
-7. [code] **Updating parameters by hand.** Let `w` be a `tf.Variable`,
+   `z = u * u`, `z = y * u`, and `z = y * y`, all computed inside `t`.
+   Check your predictions, and explain the ratio between the results for
+   `z = y * u` and `z = y * y`.
+6. [code] **Manual parameter updates.** Let `w` be a `tf.Variable`,
    compute `loss = tf.reduce_sum(w * w)` under a `tf.GradientTape` `t`,
-   and obtain `g = t.gradient(loss, w)`. Perform the update
-   `w = w - 0.1 * g` and inspect `type(w)`. Predict what `t.gradient`
-   returns for a second forward pass under a new tape, and check. Explain
-   why the tape no longer tracks `w` automatically, and redo the update
-   with `w.assign_sub(0.1 * g)`.
+   and obtain `g = t.gradient(loss, w)`.
+    1. Perform the update `w = w - 0.1 * g` and inspect `type(w)`. Predict
+       what `gradient` returns for a second forward pass under a new tape,
+       check, and explain the result.
+    1. Start again from a `tf.Variable`, perform the update with
+       `w.assign_sub(0.1 * g)`, and repeat the second forward pass. Explain
+       why a training loop updates variables this way.
 :end_tab:
 
 :begin_tab:`jax`
-6. [code] **Detach and check.** Let `y = lambda x: x * x` and
+5. [code] **Detached intermediates.** Let `y = lambda x: x * x` and
    `u = jax.lax.stop_gradient(y(x))`. Before running any code, predict
    `grad(lambda x: z(x).sum())(x)` for each of `z = lambda x: u * u`,
    `z = lambda x: y(x) * u`, and `z = lambda x: y(x) * y(x)`. Check your
-   predictions, and explain how the first two results would change if `u`
-   were replaced by `y(x)`.
-7. **Updating parameters by hand.** Let `f = lambda w: (w * w).sum()` and
-   perform the update `w = w - 0.1 * grad(f)(w)`. Explain what, if
-   anything, this rebinding changes about later calls to `grad(f)(w)`, and
-   why JAX needs no mechanism for turning off gradient tracking at
-   prediction time.
+   predictions, and explain the ratio between the results for
+   `z = lambda x: y(x) * u` and `z = lambda x: y(x) * y(x)`.
+6. [code] **Manual parameter updates.** Let `w = jnp.arange(4.0)` and
+   `g = lambda x: (w * x).sum()`, which reads `w` from the enclosing
+   scope. Predict `grad(g)(x)`, check, and state with respect to which
+   array `grad` differentiates. Then rewrite `g` so that `grad` returns
+   the gradient of `(w * x).sum()` with respect to `w`, use it for one
+   update of `w` with learning rate 0.1, and explain what this implies
+   for how a JAX training loop must pass the parameters to the loss
+   function.
 :end_tab:
 
 :begin_tab:`mxnet`

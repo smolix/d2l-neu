@@ -29,6 +29,7 @@ from jax import numpy as jnp
 ```
 
 ## A One-Mixture Bottleneck with Position-Only Keys
+:label:`subsec_one-mixture-bottleneck`
 
 Consider a task that exposes this limitation. Two source positions
 hold value vectors $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^d$, drawn
@@ -477,6 +478,7 @@ d2l.check_shape(nnx.view(attention, deterministic=True)(
 ```
 
 ### Visualizing Cross-Attention Alignment
+:label:`subsec_cross-attention-alignment`
 
 To visualize cross-attention, assign every letter of the alphabet a random embedding,
 and let the letters of one word query the letters of another through plain
@@ -540,36 +542,259 @@ from another, with output length equal to the query length.
 
 ## Exercises
 
-1. In the copy-both construction, the best *linear* readout loses half the
-   variance. Does a nonlinear readout help? For Gaussian values the
-   conditional mean is linear, so it cannot; check this numerically by
-   training a small MLP readout on $\mathbf{m}$ with weights $(0.5, 0.5)$.
-   Then repeat with values drawn uniformly from $\{-1, +1\}^d$ — explain
-   what changes and why.
-2. Two heads with weights $(0.5 + \epsilon, 0.5 - \epsilon)$ and
-   $(0.5 - \epsilon, 0.5 + \epsilon)$ still invert exactly in theory. Add
-   Gaussian noise of standard deviation $0.01$ to the mixtures and measure
-   the readout error as $\epsilon \to 0$. Relate what you see to the
-   condition number of the $2 \times 2$ mixing matrix.
-3. Feed the letter-alignment example through a freshly initialized
-   `MultiHeadAttention` with 4 heads instead of plain dot product attention,
-   and plot each head's attention map. Are the maps still readable? What
-   does this suggest about interpreting the attention maps of a network
-   whose projections you have not inspected?
-4. Derive :eqref:`eq_multihead-flops` by counting the matrix
-   multiplications in `MultiHeadAttention`. For $d = 512$, at which sequence
-   length $n$ does the quadratic score-and-mix term overtake the projection
-   term? Later sections of this chapter take this crossover as their
-   starting point.
-5. Multi-query attention shares a single key and value head across all $h$
-   query heads, and grouped-query attention shares them within groups. How
-   do the parameter count and the FLOPs count of
-   :eqref:`eq_multihead-flops` change under each scheme? Why is the saving
-   most valuable during autoregressive generation?
-6. Suppose you want to prune the least important heads of a trained
-   multi-head attention layer to speed up inference. Design an experiment to
-   measure how much each head matters. How would you guard against two
-   heads that are individually prunable but not jointly?
+1. [code] **Nonlinear readouts.** ● For Gaussian values, the proof of the
+   proposition in :numref:`subsec_one-mixture-bottleneck` shows that the
+   conditional mean $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}]$ is linear in
+   the mixture. Hence no readout, linear or not, improves on the relative
+   error $\sqrt{1/2}$ that `readout_error` measures.
+    1. Train a small multilayer perceptron to predict `target` from the
+       mixture $\mathbf{m} = a\,\mathbf{v}_1 + (1 - a)\,\mathbf{v}_2$
+       formed from `V1` and `V2`, for $a = 0.5$ and $a = 0.7$. Compare its
+       relative error on held-out samples with that of the linear readout.
+    1. Now draw the values uniformly from $\{-1, +1\}^d$. For $a = 0.5$,
+       compute $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}]$ coordinate by
+       coordinate, show that it is again linear in $\mathbf{m}$, and
+       conclude that the error stays at $\sqrt{1/2}$ for every readout.
+    1. For $a = 0.7$ and the same discrete values, show that the map
+       $(v_{1j}, v_{2j}) \mapsto m_j$ is injective. Train the perceptron
+       again and report its held-out error. Explain why this escape from
+       the bound does not contradict the proposition.
+1. [code] **Nearly identical heads.** ● Two heads with weights
+   $(0.5 + \epsilon, 0.5 - \epsilon)$ and $(0.5 - \epsilon, 0.5 +
+   \epsilon)$ supply two distinct mixtures, so the linear readout inverts
+   them exactly for every $\epsilon > 0$.
+    1. Write the $2 \times 2$ mixing matrix, compute its eigenvalues and
+       eigenvectors, and express its condition number as a function of
+       $\epsilon$.
+    1. Add independent Gaussian noise of standard deviation $\sigma = 0.01$
+       to both mixtures and measure the error with `readout_error` for
+       $\epsilon \in \{0.4, 0.1, 0.03, 0.01, 0.003, 0.001\}$. Plot the
+       error against $\epsilon$ on logarithmic axes and read off the slope
+       where the curve is straight.
+    1. Rewrite the two noisy mixtures as noisy observations of
+       $\mathbf{v}_1 + \mathbf{v}_2$ and of $\mathbf{v}_1 - \mathbf{v}_2$.
+       Use this to explain the slope, to locate the $\epsilon$ below which
+       the second head stops helping, and to predict how that point moves
+       with $\sigma$. Check the prediction by repeating the sweep at
+       $\sigma = 0.001$, extended down to $\epsilon = 10^{-5}$.
+1. **What the bound counts.** ● The proposition of
+   :numref:`subsec_one-mixture-bottleneck` fixes the softmax weights, but
+   its error bound rests on a weaker fact: the readout receives a single
+   vector $\mathbf{m} \in \mathbb{R}^d$ and must produce the target
+   $\mathbf{t} \in \mathbb{R}^{2d}$.
+    1. Let $\mathbf{m} \in \mathbb{R}^d$ be any function of $\mathbf{v}_1$
+       and $\mathbf{v}_2$, including a mixture whose weights depend on the
+       values, and let $\mathbf{W}_o \in \mathbb{R}^{2d \times d}$ be any
+       matrix. Show that
+       $$\mathbb{E}\,\|\mathbf{W}_o \mathbf{m} - \mathbf{t}\|^2 \geq \tfrac{1}{2}\, \mathbb{E}\,\|\mathbf{t}\|^2.$$
+    1. The two-head construction of :numref:`fig_one-head-averages`
+       concatenates two mixtures, so its readout receives $2d$ numbers. A
+       multi-head layer instead returns a vector of width $d$, by
+       :eqref:`eq_multihead-output`. Show that no number of heads lets such
+       a layer, followed by a linear readout, solve the copy-both task with
+       values in $\mathbb{R}^d$.
+    1. Now let $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^c$ with $c < d$,
+       padded with zeros to width $d$ before they enter the layer. Find the
+       largest $c$ for which a layer with two heads of width $p = d/2$
+       solves the task exactly. Give the attention weights of each head,
+       value projections $\mathbf{W}_i^{(v)}$, and an output projection
+       $\mathbf{W}_o$ that do so.
+    1. Generalize the proposition to $k$ source positions with independent
+       isotropic Gaussian values $\mathbf{v}_1, \ldots, \mathbf{v}_k \in
+       \mathbb{R}^c$ and the target $[\mathbf{v}_1; \ldots;
+       \mathbf{v}_k]$. Each of $h$ heads applies fixed weights to the
+       values, the weights of head $i$ form row $i$ of a matrix
+       $\mathbf{A} \in \mathbb{R}^{h \times k}$, and a linear readout sees
+       all $h$ mixtures. Show that the best relative squared error is
+       $$1 - \frac{\operatorname{rank}(\mathbf{A})}{k},$$
+       and that softmax weights, whose entries are all positive, can attain
+       $\operatorname{rank}(\mathbf{A}) = \min(h, k)$.
+1. [code] **Averages under key noise.** ● Let $m = 4$ keys
+   $\mathbf{k}_i \in \mathbb{R}^8$ be drawn as $\mathbf{k}_i \sim
+   \mathcal{N}(\boldsymbol{\mu}_i, \boldsymbol{\Sigma}_i)$ with orthonormal
+   means $\boldsymbol{\mu}_i$, let the values $\mathbf{v}_1, \ldots,
+   \mathbf{v}_4$ be the standard basis vectors of $\mathbb{R}^4$, and let
+   the score be $\mathbf{q}^\top \mathbf{k}_i$. When every covariance is
+   $\beta \mathbf{I}$ with vanishingly small $\beta$, the query
+   $c\,(\boldsymbol{\mu}_a + \boldsymbol{\mu}_b)$ with a large scale $c$
+   returns an output $\mathbf{o}$ close to $\tfrac{1}{2}(\mathbf{v}_a +
+   \mathbf{v}_b)$.
+    1. Now let $\boldsymbol{\Sigma}_a = \beta \mathbf{I} + \tfrac{1}{2}
+       \boldsymbol{\mu}_a \boldsymbol{\mu}_a^\top$, so that
+       $\mathbf{k}_a \approx (1 + \gamma)\, \boldsymbol{\mu}_a$ with
+       $\gamma \sim \mathcal{N}(0, \tfrac{1}{2})$, and leave the other
+       covariances at $\beta \mathbf{I}$. Write the ratio of the weights on
+       $\mathbf{k}_a$ and $\mathbf{k}_b$ as a function of $\gamma$, and
+       describe the distribution of $\mathbf{o}$ across resamples of the
+       keys.
+    1. Replace the single query by two queries $\mathbf{q}_1$ and
+       $\mathbf{q}_2$, each with its own softmax and output
+       $\mathbf{o}_1$ or $\mathbf{o}_2$, and return $\tfrac{1}{2}
+       (\mathbf{o}_1 + \mathbf{o}_2)$. Choose the queries so that the
+       output tends to $\tfrac{1}{2}(\mathbf{v}_a + \mathbf{v}_b)$ as
+       $c \to \infty$ for most values of $\gamma$, and identify the values
+       of $\gamma$ for which it does not.
+    1. Simulate three settings: isotropic covariances with the query
+       $c\,(\boldsymbol{\mu}_a + \boldsymbol{\mu}_b)$, the anisotropic
+       $\mathbf{k}_a$ with that query, and the anisotropic $\mathbf{k}_a$
+       with the two queries. Use $\beta = 10^{-4}$,
+       $c \in \{10, 100\}$, and $1000$ resamples of the keys. Report the
+       median of $\|\mathbf{o} - \tfrac{1}{2}(\mathbf{v}_a +
+       \mathbf{v}_b)\|$ and the fraction of resamples on which it exceeds
+       $0.1$. Explain why raising $c$ from $10$ to $100$ hurts the single
+       query even when the covariances are isotropic.
+    1. Repeat the two single-query settings with the query
+       $-c \sum_{i \notin \{a, b\}} \boldsymbol{\mu}_i$, which lowers the
+       scores of the other keys instead of raising those of $\mathbf{k}_a$
+       and $\mathbf{k}_b$. Show that its output does not depend on
+       $\gamma$, and determine which failure of the query
+       $c\,(\boldsymbol{\mu}_a + \boldsymbol{\mu}_b)$ remains. Explain why
+       the two queries avoid it.
+
+    *Adapted from Stanford CS224N,
+    [Assignment 4](https://web.stanford.edu/class/cs224n/assignments_w25/a4.pdf),
+    Problem 1(c) and 1(d).*
+1. [code] **Head pruning.** Removing heads from a trained layer at
+   inference time :cite:`Michel.Levy.Neubig.2019` requires a measure of
+   each head's importance. The copy-both task supplies a case in which
+   importance is not additive.
+    1. Form three heads with weights $(1, 0)$, $(0.88, 0.12)$, and again
+       $(0.88, 0.12)$, concatenate their mixtures, and evaluate
+       `readout_error` after removing each single head and after removing
+       each pair of heads.
+    1. Define a head's importance as the increase in error when it alone is
+       removed. A one-shot procedure computes every importance once and
+       removes all heads whose importance is below the tolerance
+       $\tau = 0.01$. Which heads does it remove, and which error results?
+    1. A greedy procedure instead removes the least important head,
+       re-estimates the importance of the remaining heads, and repeats
+       until every remaining head has an importance of at least $\tau$.
+       Find the heads it keeps and the resulting error. Without the
+       stopping rule, count the evaluations of `readout_error` that it
+       needs to prune $h$ heads down to one, and compare the count with
+       the number that the one-shot procedure needs.
+1. [code] **Narrow heads.** With $p = d/h$, the leading count of
+   :eqref:`eq_multihead-flops` does not depend on $h$, so the head count
+   looks free up to $h = d$. Consider one head with scores
+   $\mathbf{q}^\top \mathbf{k}_j / \sqrt{p}$ over keys $\mathbf{k}_1,
+   \ldots, \mathbf{k}_m \in \mathbb{R}^p$ and no mask. Call a query sharp
+   on key $j$ when its weights concentrate on $\mathbf{k}_j$ as the query
+   is scaled by a factor that grows without bound.
+    1. For $p = 1$ and distinct scalar keys, show that every query's weights
+       are monotone in $k_j$. Conclude that the queries of such a head can
+       be sharp only on the largest or the smallest key.
+    1. Show that for $p = 2$ the keys and queries can be chosen so that
+       each of $n$ queries is sharp on a key of its own choosing, for every
+       assignment of queries to keys.
+    1. Use these two results to state which attention patterns a layer
+       gives up as $h$ approaches $d$.
+    1. Time the forward pass of `MultiHeadAttention` with dropout 0 for
+       self-attention with $d = 256$ and $n = 512$ on a batch of $8$
+       sequences for $h \in \{1, 2, 4, 8, 16, 32, 64\}$. Make a warm-up
+       call first and wait for the result before stopping the clock.
+       Report the ratio of the slowest to the fastest configuration.
+       Identify the cost that grows with $h$ and that
+       :eqref:`eq_multihead-flops` leaves out, and check that it accounts
+       for the trend.
+1. **Cost of cross-attention.** :eqref:`eq_multihead-flops` counts
+   self-attention over $n$ tokens.
+    1. Redo the count for cross-attention with $n$ queries from
+       $\mathbf{A}$ and $m$ keys and values from $\mathbf{B}$. Identify
+       which terms grow with $n$, which with $m$, and which with $nm$.
+    1. A decoder generates its output one token at a time and
+       cross-attends from each new token to a fixed source of $m$ tokens.
+       Count the FLOPs per generated token when the projected source keys
+       and values are recomputed at every step and when they are computed
+       once and stored. Give the ratio for $d = 512$ and $m = 1000$.
+1. **Multi-query and grouped-query attention.** Multi-query attention
+   :cite:`Shazeer.2019` shares one key head and one value head of width
+   $p = d/h$ across all $h$ query heads. Grouped-query attention
+   :cite:`Ainslie.Lee-Thorp.Jong.ea.2023` shares them within each of $g$
+   groups of $h/g$ query heads.
+    1. Redo the parameter count and the FLOP count of
+       :eqref:`eq_multihead-flops` for both schemes. Which of the two terms
+       changes, and by what factor?
+    1. During autoregressive generation every past key and value is cached.
+       Compute the cache size per token and per layer in bytes for
+       $d = 4096$, $h = 32$, and 16-bit numbers under the three schemes,
+       with $g = 8$ for grouped-query attention.
+    1. Show that two query heads that share one key head and one value head
+       can still produce two distinct mixtures of the same projected
+       values, as the copy-both construction requires. Then state the
+       limit that sharing places on the information the layer can move
+       from each source token to its output.
+1. [code] **Heads as slices.** `MultiHeadAttention` computes one projection
+   of width $d$ for each of the queries, keys, and values and splits it
+   into heads with `transpose_qkv`.
+    1. Determine from `transpose_qkv` which output features of `W_q`,
+       `W_k`, and `W_v` feed head $i$, and which input features of `W_o`
+       receive that head's output. Write a forward pass that loops over the
+       heads, applies the sliced projections, and calls
+       `d2l.DotProductAttention` once per head. Verify on random inputs
+       with `valid_lens` that it matches `MultiHeadAttention` with
+       dropout 0.
+    1. Replace the repetition of `valid_lens` in the forward pass of
+       `MultiHeadAttention` with a tiling that copies the whole vector
+       `num_heads` times. Find inputs for which the output changes, and
+       explain which mask each head of each sequence receives. Characterize
+       the `valid_lens` for which no test can detect the change.
+1. **Permuting the source.** In cross-attention, the queries come from
+   $\mathbf{A} \in \mathbb{R}^{n \times d}$ and the keys and values from
+   $\mathbf{B} \in \mathbb{R}^{m \times d}$, neither carrying positional
+   information. Let $\boldsymbol{\Pi}$ be an $m \times m$ permutation
+   matrix.
+    1. Show that replacing $\mathbf{B}$ by $\boldsymbol{\Pi}\mathbf{B}$ in
+       both the key and the value argument leaves the output of
+       `MultiHeadAttention` unchanged when no mask is applied, and that
+       replacing it in the key argument alone changes the output in general.
+    1. Now let `valid_lens` mark only the first $\ell$ rows of
+       $\mathbf{B}$ as valid. Which permutations leave the output unchanged
+       when `valid_lens` stays fixed?
+    1. Self-attention without positional information is permutation
+       equivariant: permuting the rows of its input permutes the rows of
+       its output in the same way. A translation decoder cross-attends to
+       the output of an encoder built from such self-attention layers.
+       Show that the decoder's outputs are identical for the source
+       sentences "dog bites man" and "man bites dog", and state where word
+       order must enter the model for cross-attention to use it.
+1. [code] **Random projections and readable maps.** The alignment of
+   :numref:`subsec_cross-attention-alignment` uses shared random embeddings
+   and no learned projections.
+    1. Pass the letter embeddings of the two words as queries, keys, and
+       values through a freshly initialized `MultiHeadAttention` with 4
+       heads, 32 hidden units, and dropout 0, and plot the attention
+       weights of each head.
+    1. Which properties of the plain map hold in every head, whatever the
+       projections, and which are lost? Explain both from the score that
+       head $i$ assigns to a query letter with embedding $\mathbf{e}$ and a
+       key letter with embedding $\mathbf{e}'$,
+       $$\mathbf{e}^\top \mathbf{W}_i^{(q)\top} \mathbf{W}_i^{(k)} \mathbf{e}' / \sqrt{p}.$$
+    1. State what this implies for reading the attention maps of a trained
+       network whose projections have not been inspected.
+1. [extended] **Learned copy-both heads.** ● Train `MultiHeadAttention`
+   with 16 hidden units and dropout 0 on a copy-both task whose target
+   fits the layer's width. Each example has one query and two key--value
+   pairs, all vectors in $\mathbb{R}^{16}$. The values are
+   $[\mathbf{v}_1; \mathbf{0}]$ and $[\mathbf{v}_2; \mathbf{0}]$, with
+   $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^4$ drawn independently from
+   $\mathcal{N}(\mathbf{0}, \mathbf{I})$ for every example. The two keys
+   are the first two standard basis vectors, so they mark position only,
+   and the query is the third standard basis vector in every example. The
+   prediction is the first 8 coordinates of the layer's output, and the
+   target is $[\mathbf{v}_1; \mathbf{v}_2]$. By the proposition of
+   :numref:`subsec_one-mixture-bottleneck`, one head cannot bring the
+   relative error below $\sqrt{1/2}$ on this task, whereas two heads with
+   suitable projections bring it to zero.
+    1. Train the layer with Adam on the squared error for
+       $h \in \{1, 2, 4, 8\}$, and report the relative error on held-out
+       examples.
+    1. Plot the attention weights of each head after training, and sort
+       the heads into those that end near one-hot, those that are soft but
+       distinct from all others, and those that nearly duplicate another
+       head. Every head starts with weights close to $(0.5, 0.5)$, where
+       the mixing matrix of any two heads is nearly singular. Explain what
+       this start implies for the early phase of training and for the
+       duplicates you observe.
 
 <!-- slides -->
 

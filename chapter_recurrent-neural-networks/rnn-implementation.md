@@ -1162,24 +1162,23 @@ meaningfully better speed.
 1. [code] **Gradient clipping ablation.** `d2l.Trainer` applies the
    projection :eqref:`eq_grad_clipping` whenever `gradient_clip_val` is
    positive.
-    1. Train `RNNLMScratch` with `gradient_clip_val=0`. What happens, and
-       at which point of training?
+    1. Train `RNNLMScratch` with `gradient_clip_val=0` at `lr=4`. Then
+       halve the learning rate until the unclipped run no longer
+       diverges. How does the validation perplexity of that run after ten
+       epochs compare with that of the clipped run at `lr=4`?
     1. Replace $\tanh$ by ReLU in `RNNScratch` and train again, with and
        without clipping. Is clipping still needed? Explain the difference
        from the $\tanh$ cell in terms of the range of the hidden state.
 1. [code] **Usable history.** Every training window starts from a zero
    state, so the model is never trained to use more than `num_steps`
    tokens of context. `predict`, by contrast, carries the state across
-   the whole prefix and every generated token.
-    1. Can the trained model condition on tokens further back than
-       `num_steps` at generation time? Has it ever encountered such a
-       state during training?
-    1. Evaluate the trained model on 512 consecutive validation tokens in
-       two ways: resetting the state to zero every 32 tokens as in
-       training, and carrying the state across all 512 tokens. Compare
-       the average cross-entropy of the two. Does the carried state help,
-       hurt, or make no difference, and what does the answer say about
-       the states the model reaches beyond its training horizon?
+   the whole prefix and every generated token. Evaluate the trained model
+   on 512 consecutive validation tokens in two ways: resetting the state
+   to zero every 32 tokens as in training, and carrying the state across
+   all 512 tokens. Compare the average cross-entropy of the two. Does the
+   carried state help, hurt, or make no difference, and what does the
+   answer say about the states the model reaches beyond its training
+   horizon?
 1. [code] **Hyperparameters and data budget.**
     1. Adjust the number of epochs, hidden units, embedding dimension,
        `num_steps`, and learning rate to lower the validation perplexity.
@@ -1191,40 +1190,56 @@ meaningfully better speed.
        explain what you see. Consecutive windows overlap by 31 tokens, so
        how many parameters does the model have per distinct training
        token in this regime?
-1. [code] **Vocabulary size and bits per byte.** Rebuild the dataset with
-   `vocab_size` set to 512, 2,048, and 4,096 in `d2l.TimeMachine` and
-   retrain with the same architecture and training procedure. The
-   per-token perplexities of these models are not comparable, so compare
-   them by bits per byte.
+1. [code] **Vocabulary size and bits per byte.** ● Rebuild the dataset with
+   `vocab_size` set to 512, 1,024, 2,048, and 4,096 in `d2l.TimeMachine`
+   and retrain with the same architecture and training procedure. The
+   number of windows `len(data.X)` depends on the vocabulary size, so
+   replace the fixed split of 50,000 training and 5,000 validation windows
+   by a fractional one. After building each dataset, set `data.num_train`
+   to `int(0.8 * len(data.X))` and `data.num_val` to
+   `len(data.X) - data.num_train`. Every model then trains and validates
+   on about the same stretch of text. The per-token perplexities of these
+   models are not comparable, so compare them by bits per byte.
     1. Which vocabulary size gives the lowest bits per byte?
     1. How do the parameter counts of the embedding table and the output
        layer, and the length of the corpus in tokens, change with the
        vocabulary size? Which of these effects best explains the trend
        you measured?
-1. [code] **Weight tying.** Set the embedding dimension equal to the
-   number of hidden units and use $\mathbf{W}_\textrm{e}^\top$ as the
-   output projection in place of $\mathbf{W}_{\textrm{hq}}$
-   :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`.
-    1. How many parameters does tying save at $|\mathcal{V}| = 1{,}024$,
-       and how many would it save at GPT-2's $|\mathcal{V}| = 50{,}257$?
+1. **Weight tying savings.** Weight tying sets the embedding dimension
+   equal to the number of hidden units and uses $\mathbf{W}_\textrm{e}^\top$
+   as the output projection in place of $\mathbf{W}_{\textrm{hq}}$
+   :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`. How many parameters
+   does tying save at $|\mathcal{V}| = 1{,}024$ with 128 hidden units?
+   GPT-2 small ties its $50{,}257 \times 768$ token embedding to its
+   output layer. How many parameters would untying add there, and what
+   fraction of the model's roughly 124 million parameters is that?
+1. [code] **Weight tying.** ● Set the embedding dimension equal to the
+   number of hidden units, 128, and use $\mathbf{W}_\textrm{e}^\top$ as
+   the output projection in place of $\mathbf{W}_{\textrm{hq}}$ in
+   `RNNLMScratch`.
     1. `RNNLMScratch` initializes $\mathbf{W}_\textrm{e}$ at unit scale
        and $\mathbf{W}_{\textrm{hq}}$ at scale `sigma`. What happens to
        the initial perplexity once the two are tied, and how do you
        restore a near-uniform initial prediction?
-    1. Train the tied model and compare validation perplexity and bits
-       per byte with the untied model of the same size.
-1. [code] **Cross-book generalization.** Subclass `d2l.TimeMachine` and
+    1. Train the tied model and an untied model with a 128-dimensional
+       embedding and 128 hidden units, and compare their validation
+       perplexities.
+1. [code] **Cross-book generalization.** ● Subclass `d2l.TimeMachine` and
    override `_download` to return the text of a different H. G. Wells
    novel, such as *The War of the Worlds* (Project Gutenberg ebook 36).
    Train the tokenizer and the model on it.
     1. Evaluate the model on held-out text of its own novel and on *The
-       Time Machine*, encoding both with the tokenizer trained on the
-       other novel. Report perplexity and bits per byte for both.
-    1. Bits per byte divides $\log_2$ of the perplexity by the bytes per
-       token of the evaluated text. Separate the gap between the two
-       evaluations into the part contributed by the tokenizer, whose
-       compression of unfamiliar text differs, and the part contributed
-       by the model's predictions. Which part dominates?
+       Time Machine*, encoding both with the new novel's tokenizer.
+       Report perplexity and bits per byte for both.
+    1. Write $s = \log_2(\textrm{ppl})$ for the per-token surprisal and
+       $b$ for the bytes per token of an evaluated text, so that bits per
+       byte is $s / b$. The ratio of bits per byte on *The Time Machine*
+       (TM) to bits per byte on the held-out text of the new novel (own)
+       factors as
+       $$\frac{s_\textrm{TM}}{s_\textrm{own}} \cdot \frac{b_\textrm{own}}{b_\textrm{TM}}.$$
+       The first factor reflects the model's predictions and the second
+       the tokenizer's compression. Measure both factors. Which lies
+       further from one?
 1. [code] **Scratch versus concise timing.** `t_scratch` and `t_concise`
    time ten epochs of `RNNLMScratch` and `RNNLM` with 128 hidden units,
    32-token windows, and a batch size of 1,024.

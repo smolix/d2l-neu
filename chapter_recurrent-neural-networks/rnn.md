@@ -148,8 +148,6 @@ Multiplying these two concatenated matrices yields the same matrix of shape (3, 
 d2l.matmul(d2l.concat((X, H), 1), d2l.concat((W_xh, W_hh), 0))
 ```
 
-This concatenate-then-multiply form is what most framework RNN implementations use in practice.
-
 ### Constant Memory per Step
 :label:`subsec_rnn-constant-memory`
 
@@ -213,50 +211,63 @@ Gating the state, the subject of :numref:`chap_modern_rnn`, is the standard fix.
 ## Exercises
 
 1. **Parameter counts.** Consider next-token prediction over a vocabulary
-   of size $|\mathcal{V}|$ with a context of $k$ previous tokens.
-    1. What is the output dimension $q$ of the output layer of
-       :numref:`subsec_rnn_w_hidden_states` for this task?
+   $\mathcal{V}$ from a context of $k$ previous tokens. Evaluate every
+   count below for $|\mathcal{V}| = 10{,}000$, $k = 20$, and
+   $h = d = 256$.
     1. A $(k+1)$-gram stores a count for every possible context and
-       successor, whereas the RNN of :numref:`subsec_rnn_w_hidden_states`
-       with $h$ hidden units and $d$-dimensional embeddings stores a fixed
-       set of weights. Write down the table-entry count of the first and
-       the parameter count of the second, and evaluate both for
-       $|\mathcal{V}| = 10{,}000$, $k = 20$, and $h = d = 256$. Which one
-       grows with $k$, and by how much?
+       successor. How many entries does its table hold, and by what
+       factor does that number grow when $k$ increases by one?
+    1. The RNN of :numref:`subsec_rnn_w_hidden_states` has $h$ hidden
+       units, an embedding table of $d$-dimensional vectors, and an
+       output layer with one logit per vocabulary token. Count its
+       parameters, embedding table included. How does the count depend
+       on $k$?
     1. The neural $n$-gram of :citet:`Bengio.Ducharme.Vincent.ea.2003`
        feeds the concatenated embeddings of the $k$ context tokens to a
-       hidden layer of width $h$. Count its parameters as a function of
-       $k$ and compare its growth with the other two. What happens when
-       the information needed for a prediction lies more than $k$ tokens
-       back?
+       hidden layer of width $h$, followed by the same output layer.
+       Count its parameters as a function of $k$, embedding table
+       included, and state how many parameters each additional context
+       token adds. Compare the growth in $k$ of the three models.
 1. **Parity beyond any window.** ● Let $x_1, x_2, \ldots$ be a sequence of
    bits, and let the desired output at step $t$ be the parity of
    $x_1 + \cdots + x_t$.
     1. Show that no model that reads only the last $k$ inputs can produce
        the correct output at every step of a sequence longer than $k$,
        whatever the finite $k$.
-    1. Construct an RNN of the form :eqref:`rnn_h_with_state`, with $\phi$
-       a threshold activation and as few hidden units as you can manage,
-       that outputs the parity exactly at every step regardless of the
-       sequence length. Give the weights.
-    1. How many bits does the hidden state of your construction need to
-       retain? Relate this to the description of the state as a lossy
+    1. Let $\phi$ be a threshold activation. Construct an RNN of the form
+       :eqref:`rnn_h_with_state` with two hidden units whose output
+       equals the parity at every step, for any sequence length. Give
+       the weights, and show that one hidden unit does not suffice.
+    1. How many bits of information about $x_1, \ldots, x_t$ must the
+       hidden state retain for the outputs at all later steps to be
+       correct? Relate this to the description of the state as a lossy
        fixed-size summary in :numref:`subsec_rnn-constant-memory`.
-1. **Concatenated weight matrices.** Prove the identity demonstrated
-   numerically in :numref:`subsec_rnn_w_hidden_states`: for
+1. **Concatenated weight matrices.** Let
    $\mathbf{X}_t \in \mathbb{R}^{n \times d}$ and
-   $\mathbf{H}_{t-1} \in \mathbb{R}^{n \times h}$,
-   $$\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} = [\mathbf{X}_t, \mathbf{H}_{t-1}] \begin{bmatrix} \mathbf{W}_{\textrm{xh}} \\ \mathbf{W}_{\textrm{hh}} \end{bmatrix}.$$
-   State the shape of each factor. Why do framework implementations
-   prefer the single product over two products and a sum, even though the
-   arithmetic is the same?
+   $\mathbf{H}_{t-1} \in \mathbb{R}^{n \times h}$ be as in
+   :eqref:`rnn_h_with_state`.
+    1. Prove the identity demonstrated numerically in
+       :numref:`subsec_rnn_w_hidden_states`,
+       $$\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} = [\mathbf{X}_t, \mathbf{H}_{t-1}] \begin{bmatrix} \mathbf{W}_{\textrm{xh}} \\ \mathbf{W}_{\textrm{hh}} \end{bmatrix},$$
+       and state the shape of each factor on the right.
+    1. During training, the inputs $\mathbf{X}_1, \ldots, \mathbf{X}_T$
+       of a window are all known before the first time step is computed.
+       Which of the two products on the left can be computed for all $T$
+       steps in a single matrix multiplication, and what are the shapes
+       of its factors? Which product must stay inside the sequential loop
+       over time steps, and why?
+    1. Compare the work per step left inside the loop with the work per
+       step of the concatenated form. During generation, the input at
+       step $t$ is the token generated at step $t-1$. Does the advantage
+       of the separate form survive there?
 1. **Exposure bias.** Teacher forcing (:numref:`subsec_teacher-forcing`)
    conditions every training step on the true prefix, whereas generation
    conditions each step on the model's own earlier outputs. The resulting
    mismatch is called *exposure bias* :cite:`Ranzato.Chopra.Auli.ea.2016`.
-    1. Suppose the model assigns probability $1 - \epsilon$ to the correct
-       next token whenever its prefix is correct. What is the probability
-       that a greedy generation of $T$ tokens contains no error? Evaluate
+    1. Suppose generation samples each token from the model's next-token
+       distribution, and the model assigns probability $1 - \epsilon$ to
+       the correct next token whenever its prefix is correct. What is the
+       probability that $T$ generated tokens contain no error? Evaluate
        it for $\epsilon = 0.01$ and $T = 100$.
     1. In the error recursion $\epsilon_2 = \bar\epsilon + c\,\epsilon_1$
        of :numref:`sec_sequence`, what plays the role of $c$ for a

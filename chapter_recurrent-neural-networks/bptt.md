@@ -267,8 +267,10 @@ simpler, more stable, better-generalizing models, a mild regularizer. But it is 
 genuine ceiling on the memory the model can be trained to use, and it is one of
 the reasons we reach for the architectures above. In code, truncation is not a
 change to the loss but the one-line *detach-state* idiom: detach the hidden state
-from the graph at each chunk boundary before continuing the forward pass. We put
-it to work when we train an RNN language model in :numref:`sec_rnn-scratch`. One
+from the graph at each chunk boundary before continuing the forward pass. The
+language model of :numref:`sec_rnn-scratch` needs no detach, because each of
+its windows starts from a zero state; the idiom matters once the state is
+carried across consecutive chunks. One
 can instead truncate at *random* lengths chosen so the estimator stays unbiased
 in expectation :cite:`Tallec.Ollivier.2017`, but the extra variance rarely pays
 for itself and regular truncation remains the default.
@@ -300,25 +302,38 @@ activation checkpointing at scale.
 
 ## Exercises
 
-1. [code] **Backward pass by hand.** One step of `RNNScratch`
+1. **Backward pass by hand.** One step of `RNNScratch`
    (:numref:`sec_rnn-scratch`) computes
    $$\mathbf{H}_t = \tanh(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} + \mathbf{b}_\textrm{h}).$$
    Let $\mathbf{G}_t = \partial L / \partial \mathbf{H}_t$ be the gradient
    arriving from later steps and from the output at step $t$.
     1. Derive the contributions of this step to
+       $\partial L / \partial \mathbf{W}_{\textrm{xh}}$,
        $\partial L / \partial \mathbf{W}_{\textrm{hh}}$,
        $\partial L / \partial \mathbf{b}_\textrm{h}$, and
        $\partial L / \partial \mathbf{H}_{t-1}$ as functions of
-       $\mathbf{G}_t$, $\mathbf{H}_t$, $\mathbf{H}_{t-1}$, and
-       $\mathbf{W}_{\textrm{hh}}$.
-    1. Explain how the contribution to $\partial L / \partial
-       \mathbf{H}_{t-1}$ turns the single-step result into the recursion
-       :eqref:`eq_bptt_partial_L_ht_recur`, and how the parameter
-       gradients accumulate over the $T$ steps of a window.
-    1. Implement the backward pass over a full window with tensor
-       operations only, run it on one minibatch of the trained model, and
-       compare the three parameter gradients with those computed by
-       automatic differentiation.
+       $\mathbf{G}_t$, $\mathbf{X}_t$, $\mathbf{H}_t$, $\mathbf{H}_{t-1}$,
+       and $\mathbf{W}_{\textrm{hh}}$.
+    1. Adding the output contribution at step $t-1$ to the contribution
+       to $\partial L / \partial \mathbf{H}_{t-1}$ gives a recursion for
+       $\mathbf{G}_{t-1}$. Equation :eqref:`eq_bptt_partial_L_ht_recur`
+       uses column vectors, so its $\mathbf{W}_\textrm{hh}$ is the
+       transpose of `W_hh` in `RNNScratch`. Show that the recursion
+       reduces to that equation when the $\tanh$ is dropped, and name the
+       factor that the $\tanh$ adds at every step. Explain also how the
+       parameter gradients accumulate over the $T$ steps of a window.
+
+    *Adapted from CMU 11-785,
+    [Homework 3 Part 1](https://deeplearning.cs.cmu.edu/F22/document/homework/HW3/HW3P1_F22.pdf).*
+1. [code] **Backward pass in code.** ● Train `d2l.RNNLMScratch` on
+   `d2l.TimeMachine` as in :numref:`sec_rnn-scratch`. Using the
+   single-step gradients and the recursion of the previous problem,
+   implement the backward pass of its `RNNScratch` cell over a full
+   window with tensor operations only, starting from the gradient of the
+   loss with respect to the logits
+   (:numref:`subsec_softmax_and_derivatives`). Run it on one training
+   minibatch, and compare your gradients of `W_xh`, `W_hh`, and `b_h`
+   with those computed by automatic differentiation.
 
     *Adapted from CMU 11-785,
     [Homework 3 Part 1](https://deeplearning.cs.cmu.edu/F22/document/homework/HW3/HW3P1_F22.pdf).*
@@ -336,26 +351,38 @@ activation checkpointing at scale.
     1. What does this imply for the gradient :eqref:`eq_bptt_partial_L_ht`
        of an RNN, beyond the change in its norm?
 1. [code] **Nonlinear Jacobians.** ● Rerun the experiment of
-   :numref:`subsec_vanishing-exploding` in two variants: with a general,
-   non-symmetric $\mathbf{W}_\textrm{hh}$ rescaled to the same three
-   spectral radii, and with the product of the Jacobians
-   $\partial \mathbf{h}_j / \partial \mathbf{h}_{j-1}$ along a trajectory
-   of a $\tanh$ RNN with the same $\mathbf{W}_\textrm{hh}$, driven by
-   random inputs.
-    1. How does the non-symmetric matrix change the curves at small $k$,
-       and does the trend $\rho^k$ still win at large $k$?
-    1. How does the $\tanh$ nonlinearity change the growth of the norm?
-       Explain why a largest singular value of $\mathbf{W}_\textrm{hh}$
+   :numref:`subsec_vanishing-exploding` at the same three spectral radii
+   with two changes.
+    1. Replace the symmetric matrix by a general, non-symmetric
+       $\mathbf{W}_\textrm{hh}$ rescaled to each radius, and plot
+       $\|\mathbf{J}^k\|$ against $k$. Report the largest value of
+       $\|\mathbf{J}^k\|$ at $\rho = 0.9$ and the lag at which it occurs.
+       Explain why the ratio $\|\mathbf{J}^k\| / \rho^k$ can exceed one
+       and why it stays bounded as $k$ grows.
+    1. Return to the symmetric $\mathbf{W}_\textrm{hh}$ and run the
+       $\tanh$ RNN
+       $$\mathbf{h}_t = \tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \mathbf{x}_t), \qquad \mathbf{h}_0 = \mathbf{0},$$
+       with inputs $\mathbf{x}_t \sim \mathcal{N}(\mathbf{0}, s^2\mathbf{I})$.
+       Plot the norm of the product of the Jacobians
+       $\partial \mathbf{h}_j / \partial \mathbf{h}_{j-1}$ along the
+       trajectory for $s = 0.1$ and $s = 1$. How do the nonlinearity and
+       the input scale change the growth of the norm, and why?
+    1. Explain why a largest singular value of $\mathbf{W}_\textrm{hh}$
        below one is sufficient for the product to shrink, whereas a
        largest singular value above one is necessary but not sufficient
        for it to grow :cite:`bengio1994learning,Pascanu.Mikolov.Bengio.2013`.
-       For the symmetric matrices of :numref:`subsec_vanishing-exploding`
-       the largest singular value equals the spectral radius.
-1. **Beyond clipping.** Propose two methods other than gradient clipping
-   for coping with exploding gradients in recurrent networks. For each,
-   state whether it acts on the parameters, on the optimizer step, or on
-   the architecture, and which property of the Jacobian product in
-   :eqref:`eq_bptt_partial_L_ht` it controls.
+       Relate the argument to your $\tanh$ curves at $\rho = 0.9$ and
+       $\rho = 1.1$.
+1. **Beyond clipping.** Propose two methods for coping with exploding
+   gradients in a vanilla RNN other than clipping, truncation, and the
+   two architectural remedies of
+   :numref:`subsec_bptt-gradient-pathologies`. One method should act on
+   the parameters and the other on the optimizer step. For each, state
+   whether it changes the Jacobian product in
+   :eqref:`eq_bptt_partial_L_ht` or only limits what a large gradient
+   does to the update, and whether it also helps against vanishing
+   gradients. If it changes the product, name the property of the
+   product that it controls.
 1. [code] **Effective memory horizon.** ● Take the RNN language model
    trained in :numref:`sec_rnn-scratch` and a fixed input sequence of
    several hundred tokens. Measure the norm of the gradient of the loss
@@ -364,9 +391,12 @@ activation checkpointing at scale.
     1. Read off the lag beyond which the norm drops below one percent of
        its value at $k = 0$.
     1. Compare this horizon with the window length `num_steps` used in
-       training. Could the model have learned to use dependencies longer
-       than the horizon you measured, and would training on longer
-       windows change it?
+       training. Which of the two, the truncation at `num_steps` or the
+       decay of the gradient, limits the longest dependency the model
+       could have learned?
+    1. Retrain with `num_steps` set to 128, measure the horizon again,
+       and explain the change or its absence in terms of the product of
+       state Jacobians in :eqref:`eq_bptt_partial_ht_wh_gen`.
 
 [Discussions](https://d2l.discourse.group/t/334)
 

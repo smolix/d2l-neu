@@ -291,9 +291,11 @@ Apply the same calculation to the preceding network, reduced to
 $d = h = 2$ inputs and hidden units, $q = 1$ output, with ReLU activation
 $\phi(z) = \max(0, z)$ and (for clarity) no regularization, $\lambda = 0$. Take
 
-$$\mathbf{x} = \begin{bmatrix} 1 \\ 2 \end{bmatrix},\quad
+$$
+\mathbf{x} = \begin{bmatrix} 1 \\ 2 \end{bmatrix},\quad
   \mathbf{W}^{(1)} = \begin{bmatrix} 1 & -1 \\ 0 & \phantom{-}1 \end{bmatrix},\quad
-  \mathbf{W}^{(2)} = \begin{bmatrix} 2 & -1 \end{bmatrix},\quad y = 0,$$
+  \mathbf{W}^{(2)} = \begin{bmatrix} 2 & -1 \end{bmatrix},\quad y = 0,
+$$
 :eqlabel:`eq_backprop-example`
 
 and squared-error loss $L = \tfrac12 (o - y)^2$. The *forward pass* gives

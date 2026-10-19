@@ -437,6 +437,7 @@ $$
 \frac{\beta}{\textrm{bytes per token}} \;=\;
 \frac{\beta}{2N + \textrm{KV bytes}}.
 $$
+:eqlabel:`eq_hw_decode_bound`
 
 An 8-billion-parameter model in bf16 reads at least 16 GB per generated
 token; on our 1 TB/s card that caps generation near sixty tokens per
@@ -495,40 +496,204 @@ The following table summarizes the characteristic performance scales:
 
 ## Exercises
 
-1. Compute the ridge point for each GPU in :numref:`tab_gpu_specs` at
-   bf16 and at fp8. Which direction did it move from the H100 to the
-   B200, and from the RTX 4090 to the RTX 5090? Reconcile what you find
-   with the shoreline argument of :numref:`subsec_hw-shoreline`: what did
-   each step's packaging buy, and why does the *long-run* direction still
-   differ from these two steps?
-1. Take the GPT of :numref:`sec_gpt` (count its parameters) and your own
-   GPU's specifications. Estimate (a) the prefill arithmetic intensity at
-   context length 128 and (b) the decode tokens-per-second bound. Which
-   regime is each in?
-1. Using :numref:`fig_energy_ladder`, estimate the energy spent on DRAM
-   traffic alone in one epoch of the Fashion-MNIST training loop of
-   :numref:`sec_lenet` (count the bytes your activations and weights
-   move). At $0.30/kWh, what does the epoch's memory traffic cost?
-1. Measure the cache cliff on your GPU: time `x * 2.0` for tensor sizes
-   from 1 MB to 2 GB and plot achieved bandwidth against size. Where do
-   the level transitions of :numref:`fig_memory_hierarchy` appear?
-1. Why is HBM placed on a silicon interposer rather than on the
-   motherboard next to the CPU's DRAM slots? Answer using the shoreline
-   argument, then check: how many signal wires does a DIMM socket carry,
-   versus an HBM stack's interface?
-1. Burst versus random access: allocate a large tensor and compare
-   summing it in natural order against summing it through a random
-   permutation of indices. Explain the ratio using the
-   address-setup-versus-streaming model of
-   :numref:`subsec_hw-bytes`.
-1. (False sharing.) Write a two-thread CPU program in which each thread
-   increments its own counter, first with the counters adjacent in
-   memory, then padded to separate cache lines. Measure, and explain why
-   the "shared-nothing" version can be many times faster despite
-   identical arithmetic.
-1. Your DataLoader delivers batches at 300 MB/s from NVMe while your GPU
-   consumes them at 2 GB/s. Using the comparisons in this section, list the
-   three cheapest interventions in order of expected payoff.
+1. **Shoreline countermeasures.** :numref:`subsec_hw-shoreline` names two
+   countermeasures to the shoreline problem: wider memory interfaces and
+   more dies per package.
+    1. A DDR5-6400 DIMM has 64 data wires, each carrying 6.4 Gb/s. An
+       HBM3e stack has a data interface of 1,024 wires, and a B200 carries
+       eight stacks. Compute the bandwidth of one DIMM, the number of
+       DIMMs that supply the 0.5 TB/s of a CPU socket, and the rate per
+       wire that the B200's 7.7 TB/s in :numref:`tab_gpu_specs` implies.
+       Which factor accounts for the gap between the socket and the B200,
+       the number of wires or the rate per wire?
+    1. A B200 consists of two dies at the reticle limit of
+       $858\,\textrm{mm}^2$. Treat every die as a square. Compare the
+       total edge length of the two dies, after setting aside one edge of
+       each for the bridge that joins them, with the edge length of a
+       hypothetical single die of twice the area. Then show that $n$ dies
+       of a fixed area offer an edge length per unit area that does not
+       depend on $n$.
+    1. The two dies of a B200 act as one GPU. Which traffic does the split
+       move across a chip boundary that a single die would keep on-die?
+       What bandwidth must the bridge carry, compared with the 7.7 TB/s of
+       HBM? Use the physical reason behind the chip-boundary rule of
+       :numref:`subsec_hw-bytes` to explain how an on-package bridge can
+       meet this requirement.
+1. **Memory sweep time.** The *sweep time* $C/\beta$ of an accelerator
+   with memory capacity $C$ and bandwidth $\beta$ is the time it takes to
+   read every byte of its memory once.
+    1. Compute the sweep time of each GPU in :numref:`tab_gpu_specs`.
+    1. A model in bf16 fills a fraction $f$ of the memory with its
+       weights. Ignore the KV cache, and use :eqref:`eq_hw_decode_bound` to
+       bound the single-stream decode rate in terms of $f$ and the sweep
+       time. Which rate does the bound allow for the largest model that
+       each GPU can hold?
+    1. Under the long-run growth rates of :numref:`subsec_hw-shoreline`,
+       by what factor does the sweep time change per hardware generation?
+       What does this factor imply for the decode rate of the largest
+       model that fits on each new generation?
+1. **Format halving on the roofline.** Model the step from one format to
+   a format of half its width, as :numref:`subsec_hw-gpu` describes, by a
+   doubling of the peak arithmetic $P$ and a halving of the bytes that
+   every operation moves.
+    1. Use :eqref:`eq_roofline` to compute the speedup of an operation of
+       intensity $I$, and show that it does not depend on $I$.
+    1. For a skinny matrix product with batch size $B$ and $b$ bytes per
+       element, :eqref:`eq_matmul_intensity` approximates the intensity by
+       $2B/b$. Using :numref:`tab_gpu_specs`, find the batch size at which
+       this product becomes compute-bound on the B200 in bf16, fp8, and
+       fp4, and on the RTX 5090 in the same three formats.
+    1. Use the result of the first sub-problem to explain the pattern in
+       the batch sizes of the previous sub-problem, and identify the entry
+       of :numref:`tab_gpu_specs` that breaks the pattern. What does that
+       format step buy a bandwidth-bound operation, and what does it buy a
+       compute-bound one?
+1. **Latency hiding.** ● Little's law :cite:`Little.1961` states that in
+   a steady state the average number of requests in flight equals the
+   throughput times the average latency of one request. For a memory
+   system, the bytes in flight therefore equal the bandwidth times the
+   latency.
+    1. Take the HBM access latency of :numref:`fig_latency_ladder`,
+       300 ns, as the latency of a load on the RTX 4090, with its 1.0 TB/s
+       and 128 SMs. How many bytes must be in flight to sustain the rated
+       bandwidth? If every thread has one 4-byte load outstanding, how
+       many warps per SM must be waiting on memory at any moment?
+    1. Repeat the byte count for the B200 at the same latency. Bandwidth
+       grows about $2\times$ per generation, while DRAM latency has
+       stayed nearly constant for decades. What does this imply for the
+       parallelism that a kernel must expose on each new generation?
+    1. In pointer chasing, the address of every load comes from the
+       previous load, so a chain of loads has one request in flight. A CPU
+       has the DDR5 access latency of :numref:`fig_latency_ladder`, 90 ns,
+       and fetches 64-byte cache lines. Compute the bandwidth of one chain
+       and the number of independent chains that would saturate a socket
+       with 0.5 TB/s.
+1. **Starved input pipeline.** The compute of a training job alone would
+   process 2 GB/s of decoded images. One worker process prepares batches
+   by running two stages in sequence. It reads compressed JPEG files from
+   NVMe in shuffled order at 1 GB/s of compressed data, and it decodes
+   them on one CPU core at 0.3 GB/s of decoded output. Decoding expands
+   the data eightfold. The training loop then copies each decoded batch
+   from pageable host memory to the GPU at 12 GB/s before it computes on
+   the batch.
+    1. At what rate, in decoded bytes, does one worker deliver batches?
+       Which stage binds, and what would a drive with twice the read rate
+       change?
+    1. Workers run in parallel on separate cores. How many workers keep
+       the GPU fed?
+    1. With enough workers, the synchronous copy still lengthens every
+       training step. By what fraction does it lengthen the step, and by
+       what fraction after a switch to pinned memory at twice the pageable
+       rate? What does an asynchronous copy change?
+1. **Ridge point of a link.** The ridge point $P/\beta$ of
+   :numref:`subsec_perf-counting` applies to any data path, with $\beta$
+   the bandwidth of that path: it counts the FLOPs that a device performs
+   in the time one byte crosses the path.
+    1. Compute $P/\beta$ in bf16 for an RTX 4090 against its own memory
+       and against the host-staged GPU-to-GPU path of
+       :numref:`subsec_hw-interconnects` at 20 GB/s. Compute it for a B200
+       against its HBM and against NVLink at 1.8 TB/s.
+    1. In data-parallel training (:numref:`sec_multi_gpu`), every GPU
+       holds a copy of a model with $N$ parameters and processes $T$
+       tokens per step at about $6N$ FLOPs per token. The GPUs then sum
+       their bf16 gradients with an *allreduce*, a collective operation
+       that sends about twice the gradient bytes from every GPU. Assume
+       that compute runs at peak and does not overlap communication. Show
+       that communication takes no longer than compute exactly when $T$
+       exceeds a threshold proportional to the ridge point of the link,
+       and that the threshold does not depend on $N$.
+    1. Evaluate the threshold for the host-staged path, for NVLink, and for
+       an effective 2 GB/s, the rate that NCCL reaches on the staged path
+       of :numref:`fig_pcie_topology` at its default settings. By what
+       factor does the ridge point of each of these links exceed the memory
+       ridge point of the same GPU? Relate the factors to the chip-boundary
+       rule of :numref:`subsec_hw-bytes`.
+1. **Energy per byte.** Use the energies of :numref:`fig_energy_ladder`,
+   and charge every FLOP the energy of one fp32 multiply.
+    1. Find the arithmetic intensity at which the energy of the arithmetic
+       equals the energy of reading its operands from DRAM, and compare it
+       with the ridge point of the RTX 4090. What limits the time of an
+       operation with an intensity of 100 FLOP/byte, and what dominates
+       its energy?
+    1. A B200 is rated at 1,000 W and streams 7.7 TB/s from HBM. Compute
+       the power that this traffic would draw at the DRAM energy of
+       :numref:`fig_energy_ladder`, and the largest energy per byte that
+       the power rating allows. Explain the discrepancy with the packaging
+       of :numref:`subsec_hw-shoreline`.
+    1. An 8-billion-parameter model in bf16 decodes on a B200 at the bound
+       of :eqref:`eq_hw_decode_bound`, ignoring the KV cache, while the
+       card draws its full 1,000 W. Compute the energy per generated token
+       and the electricity cost of one million tokens at 0.30 US dollars
+       per kWh. Repeat for 64 streams that share every weight read, after
+       checking that the batched step is still bandwidth-bound.
+1. **Launch-bound decode.** In eager single-stream decode, the CPU
+   launches every kernel of every block for every token, while the GPU
+   reads the weights of every block. Consider a GPT whose $L$ blocks of
+   width $d$ each hold about $12d^2$ weights in bf16 and launch $K = 12$
+   kernels per token. Take 8 µs per launch, from the range of
+   :numref:`fig_latency_ladder`. Launches are asynchronous, so a decode
+   step takes at least the larger of the total launch time and the time to
+   read the weights. Ignore the embedding table and the KV cache.
+    1. Show that which of the two times is larger does not depend on $L$,
+       and find the width $d^*$ at which they are equal on the RTX 4090 and
+       on the B200.
+    1. Evaluate both bounds on the decode rate of the GPT-2 configuration
+       of :numref:`subsec_gpt-loading`, with $d = 768$ and 12 blocks, on
+       the RTX 4090. Which bound binds?
+    1. What does the change of $d^*$ from the RTX 4090 to the B200 imply
+       for the payoff of the capture-and-replay of
+       :numref:`sec_compilation` on faster GPUs?
+1. [code] **Latency and bandwidth, measured.** A transfer of $n$ bytes
+   over a path with latency $\alpha$ and bandwidth $\beta$ takes about
+
+   $$t(n) = \alpha + \frac{n}{\beta},$$
+
+   so it reaches half the bandwidth at $n_{1/2} = \alpha\beta$. The model
+   describes a call that is timed to completion on its own, so every
+   measurement below waits for the device after each call.
+    1. Predict $n_{1/2}$ for the elementwise kernel `x * 2.0` of
+       :numref:`subsec_hw-bytes`, counting the bytes it reads and writes,
+       with $\alpha$ the kernel-launch latency of
+       :numref:`fig_latency_ladder` and $\beta$ the bandwidth that the
+       code of that subsection measures on your GPU.
+    1. Time `x * 2.0` for tensors from 1 MB to 2 GB, and plot the
+       achieved bandwidth against the size on logarithmic axes. Identify
+       the regimes that the curve passes through, and relate the sizes at
+       which it changes regime to :numref:`fig_latency_ladder` and to the
+       on-die capacity in :numref:`fig_memory_hierarchy`. In which regime
+       does the curve depart from $t(n)$, and why?
+    1. Repeat the host-to-device measurement of :numref:`subsec_hw-cpu`
+       for transfers from 4 KB to 256 MB, and fit $\alpha$ and $\beta$.
+       Where does the fitted $\alpha$ fall on :numref:`fig_latency_ladder`?
+1. [code] **Burst versus random access.** ● Let `x` be the 1 GB vector
+   of :numref:`subsec_hw-bytes`, and gather it through an index vector
+   `idx` of the same length, as `x[idx]`.
+    1. Time the gather with `idx` a random permutation and with `idx` the
+       identity permutation, which request the same elements in a
+       different order. Report the achieved bandwidth of each, counting
+       the index, the gathered elements, and the output, and the ratio of
+       the two.
+    1. Compare the ratio with the cost that the address-setup model of
+       :numref:`subsec_hw-bytes` assigns to a random read. Explain the
+       difference with the resident warps of :numref:`subsec_hw-gpu`.
+    1. Permute blocks of $k$ consecutive elements instead of single
+       elements, for $k$ from 1 to 1,024, and plot the bandwidth against
+       the block size in bytes. At what block size does the shuffled gather
+       approach the identity gather? What does this size imply for the
+       granularity of shuffled reads from a dataset?
+1. [code] **False sharing.** ● CPUs keep their private caches coherent at
+   the granularity of a cache line: before a core writes to a line, the
+   copies of that line in the caches of other cores are invalidated. Write
+   a C program in which two POSIX threads each increment their own 64-bit
+   counter $10^8$ times with a relaxed atomic add
+   (`atomic_fetch_add_explicit` from `stdatomic.h`). Place the two
+   counters $s$ bytes apart in one array whose start is aligned to 256
+   bytes (`_Alignas(256)`), so that the first counter begins a cache line.
+    1. Time the program for $s = 8$ and $s = 256$, and explain the ratio
+       with the coherence rule.
+    1. Sweep $s$ from 8 to 256 bytes. At which separation does the
+       slowdown disappear? Compare it with the cache-line size that the
+       operating system reports for your CPU.
 
 <!-- slides -->
 

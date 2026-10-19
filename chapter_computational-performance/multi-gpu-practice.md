@@ -764,35 +764,400 @@ that turn a synchronous step into a queueing problem.
 
 ## Exercises
 
-1. Vary DDP's `bucket_cap_mb` (the gradient bucket size) and measure
-   throughput at $k = 2$. Why is there an optimum — what does a too-small
-   bucket cost, and a too-large one?
-1. Extend the `no_sync()` measurement to $k = 4$. How much does the
-   per-step communication time grow from $k=2$? Compare against
-   :eqref:`eq_ring_traffic`'s $2(k-1)/k$ growth and the flat $2N/\beta$
-   of :eqref:`eq_dp_cost` — which fits better, and what does that tell
-   you about how NCCL schedules the transfer on this P2P-less box?
-1. Reproduce both fabric-configuration behaviors. First extend
-   the bare-collective comparison across payloads from 1 MB to 256 MB:
-   where does each transport's effective bandwidth saturate, and does
-   the five-fold gap persist? Then set `NCCL_SHM_USE_CUDA_MEMCPY=1`
-   inside `train_ddp.py` itself and relaunch the $k=2$ sweep — on our
-   box the run wedges within seconds (be ready to kill the launcher).
-   What does the pair teach about trusting a library's defaults on a
-   topology it was not tuned for — and about trusting a workaround
-   anywhere you have not re-validated it, workload and all?
-1. Write the `PartitionSpec` that shards a weight matrix's *output*
-   features across the mesh (tensor parallelism) and
-   `visualize_array_sharding` the result. How does the communication
-   pattern differ from the batch-sharded (data-parallel) case?
-1. Size ZeRO stage 3 (parameters, gradients, and optimizer states all
-   sharded) for a 7-billion-parameter model on 8 GPUs with 80 GB each:
-   what is the per-GPU training footprint, and does it fit? Redo the
-   arithmetic for DDP (no sharding) and explain the difference.
-1. The weak-scaling efficiency in the DDP sweep fell from 88% at $k=2$ to
-   82% at $k=4$. Using :eqref:`eq_dp_cost`, predict the efficiency at
-   $k=8$ on the same fabric, and state the assumption your prediction
-   makes about how $t_{\text{comm}}$ grows.
+1. **Weak-scaling extrapolation.** The DDP sweep of
+   :numref:`subsec_mgp-ddp` reports weak-scaling efficiencies of 88% at
+   $k = 2$ and 82% at $k = 4$. Suppose that a step on $k$ GPUs takes the
+   single-GPU step time $t_1$ plus an exposed communication time, and that
+   this exposed time is proportional to the per-device ring traffic of
+   :eqref:`eq_ring_traffic`.
+    1. Express the efficiency $E(k)$ through a single constant, fit the
+       constant to the measurement at $k = 2$, and predict $E(4)$. Compare
+       your prediction with the measured 82% and with the prediction of a
+       model in which the exposed time is the same for every $k \geq 2$.
+    1. Predict $E(8)$ for an eight-GPU machine of the same design as the
+       four-GPU build machine, on which every inter-GPU transfer is staged
+       through host memory (:numref:`subsec_hw-interconnects`). How does the
+       total ring traffic through host memory grow with $k$, and in which
+       direction should this move a measured $E(8)$ relative to your
+       prediction?
+    1. With gradient accumulation (:numref:`subsec_mp-accumulation`), each
+       rank runs $a$ micro-batches of 256 examples per optimizer step and
+       synchronizes only after the last one. Starting from the measured 82%,
+       find the smallest $a$ that raises the efficiency at $k = 4$ to 95%.
+       What happens to the global batch, and why does that matter
+       (:numref:`sec_batch_size`)?
+
+1. **Strong versus weak efficiency.** Model the forward and backward time
+   of one device at per-device batch $b$ as
+   $t_{\text{compute}}(b) = t_0 + c\,b$, where $t_0$ is a fixed cost per
+   step that does not shrink with the batch and $c$ is the time per
+   example. Let the communication of a step on $k > 1$ devices take
+   $(1 - 1/k)\,\tau$ with $\tau = 2N/\beta$, the ring traffic of
+   :eqref:`eq_ring_traffic` at the bandwidth of :eqref:`eq_dp_cost`,
+   without overlap. Let $E_{\text{weak}}(k; b)$ be the
+   weak-scaling efficiency at per-device batch $b$, and
+   $E_{\text{strong}}(k)$ the strong-scaling efficiency at global batch $B$.
+    1. Show that
+
+        $$E_{\text{strong}}(k) = E_{\text{weak}}(k; B/k)\,
+        \frac{t_0 + c B}{k\, t_0 + c B}.$$
+
+       What does this identity say about the gap between the weak and the
+       strong sweeps of :numref:`subsec_mgp-ddp` at equal per-device batch?
+    1. :numref:`subsec_mgp-ddp` reports that an RTX 4090 is about equally
+       saturated by per-rank batches of 256 and 512 for ResNet-18. What
+       does that say about $t_0$ for this model? For the
+       LeNet of :numref:`sec_multi_gpu`,
+       $t_{\text{compute}}(B/2) \approx t_{\text{compute}}(B)$; what bound
+       does the identity then place on $E_{\text{strong}}(2)$?
+
+1. **ZeRO memory budget.** A model with 7 billion parameters is to be
+   trained with Adam on 8 GPUs with 80 GB each. Use the anatomy of
+   :numref:`subsec_mp-anatomy` (16 bytes per parameter before activations)
+   and ignore activations. ZeRO :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`
+   shards the optimizer states across the GPUs in stage 1, also the
+   gradients in stage 2, and also the parameters in stage 3
+   (:numref:`subsec_mgp-fsdp`).
+    1. Compute the per-GPU training state under DDP and under each of the
+       three stages. Which configurations fit, and how much memory does
+       each leave for activations?
+    1. For each configuration, find the largest model whose training state
+       fits on these 8 GPUs. How does this limit grow as more GPUs join,
+       and what caps it for DDP and for stages 1 and 2?
+
+1. **Cost of sharding.** Count the communication per device and step in
+   units of $N$, the bytes of one full set of gradients, and assume that
+   parameters are communicated in the same precision, so that a full set
+   of parameters also occupies $N$ bytes. With the ring algorithm of
+   :numref:`subsec_mg-ring`, an allreduce moves $2(k-1)N/k$ bytes per
+   device, and each of its two phases, a reduce-scatter and an all-gather,
+   moves $(k-1)N/k$.
+    1. In ZeRO stages 1 and 2 :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`,
+       each rank updates only its own shard of the parameters, and every
+       rank needs the full parameters again before the next forward pass.
+       Name the collectives that one step of each stage needs, and compare
+       their volume with the allreduce of DDP.
+    1. In stage 3, the FSDP lifecycle of :numref:`fig_fsdp_lifecycle`
+       gathers each block's parameters for its forward pass, frees them,
+       and gathers them again for its backward pass. Count the collectives
+       of one step and compare their volume with DDP.
+    1. A variant keeps every gathered block from its forward pass until its
+       backward pass. Which collective does this remove, and how much of
+       the memory saving of stage 3 does it give up, in terms of the
+       16-byte anatomy of :numref:`subsec_mp-anatomy`?
+
+:begin_tab:`pytorch`
+5. [code] **Splitting the data.** `train_ddp.py` gives each rank a disjoint
+   shard of Fashion-MNIST through a `DistributedSampler` and reshuffles the
+   shards every epoch with `sampler.set_epoch`.
+    1. Remove the sampler, so that every rank builds the same `DataLoader`
+       over the full dataset. Predict, for $k = 2$, the aggregate throughput
+       that `ddp_throughput` reports relative to the correct script, the
+       time an epoch takes, and the global batch that the averaged gradient
+       corresponds to. Then run it, with each rank printing a checksum of
+       its first batch.
+    1. Restore the sampler and remove only the call to `set_epoch`. What
+       changes from one epoch to the next, and what stays the same?
+    1. Name a check that catches both mistakes and is cheap enough to run
+       on every launch.
+:end_tab:
+
+:begin_tab:`jax`
+5. [code] **Splitting the data.** `shard_batch` places the batch with
+   `PartitionSpec('data')`, which splits its leading axis across the mesh.
+    1. Change `shard_batch` to place the batch with `PartitionSpec()`, which
+       replicates it on every device. Predict which collectives the
+       compiled `train_step` contains and how the throughput of
+       `jax_throughput(2)` compares with that of `jax_throughput(1)`, then
+       check both.
+    1. Place the images with `PartitionSpec(None, 'data')`, which splits
+       the height of every image across the devices, and keep the labels
+       replicated. Which values must neighboring devices exchange for a
+       $3 \times 3$ convolution, and which collective does that take? Find
+       it in the compiled `train_step`.
+:end_tab:
+
+:begin_tab:`pytorch`
+6. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
+   as follows. The backward pass takes time $t_b$ and releases the
+   gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
+   The allreduces of the buckets run one at a time and in order, and each
+   takes $\alpha + \tau/n$, where $\tau = 2N/\beta$ is the communication
+   time of :eqref:`eq_dp_cost` and $\alpha$ is a fixed cost per
+   collective. The exposed communication is the time from the end of the
+   backward pass to the end of the last allreduce.
+    1. Show that the exposed communication is
+
+        $$t_{\text{exposed}}(n) = \max\Bigl(\alpha + \frac{\tau}{n},\;
+        n\alpha + \tau - \frac{n-1}{n}\,t_b\Bigr).$$
+
+    1. Find the $n$ that minimizes $t_{\text{exposed}}$ when $\tau$ is well
+       below $t_b$, and again when $\tau > t_b$. What does a bucket that is
+       too small cost, and what does one that is too large cost?
+    1. Pass `bucket_cap_mb` to `DDP` in `train_ddp.py`, sweep it from 1 MB
+       to 100 MB at $k = 2$ with `ddp_throughput`, and plot the throughput
+       against the bucket size. The `no_sync` step time of `comm_probe.py`
+       covers the forward and the backward pass; estimate $t_b$ from it by
+       taking the backward pass as twice the cost of the forward pass, and
+       $\tau$ as $2N/\beta$. Is the measured optimum consistent with your
+       model, and which $\alpha$ does it imply?
+:end_tab:
+
+:begin_tab:`jax`
+6. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
+   as follows. The backward pass takes time $t_b$ and releases the
+   gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
+   The allreduces of the buckets run one at a time and in order, and each
+   takes $\alpha + \tau/n$, where $\tau = 2N/\beta$ is the communication
+   time of :eqref:`eq_dp_cost` and $\alpha$ is a fixed cost per
+   collective. The exposed communication is the time from the end of the
+   backward pass to the end of the last allreduce.
+    1. Show that the exposed communication is
+
+        $$t_{\text{exposed}}(n) = \max\Bigl(\alpha + \frac{\tau}{n},\;
+        n\alpha + \tau - \frac{n-1}{n}\,t_b\Bigr).$$
+
+    1. Find the $n$ that minimizes $t_{\text{exposed}}$ when $\tau$ is well
+       below $t_b$, and again when $\tau > t_b$. What does a bucket that is
+       too small cost, and what does one that is too large cost?
+    1. XLA fuses gradient allreduces up to a byte threshold, which the
+       flag `--xla_gpu_all_reduce_combine_threshold_bytes` sets. In fresh
+       processes, with `XLA_FLAGS` set before JAX initializes its backend,
+       sweep the threshold from 1 MB to 100 MB. For each value, count the
+       gradient allreduces in the compiled `train_step` and measure
+       `jax_throughput(2)`. Estimate $t_b$ from the single-device step
+       time, 256 examples divided by `jax_throughput(1)`, by taking the
+       backward pass as twice the cost of the forward pass, and $\tau$ as
+       $2N/\beta$ with the $\beta$ that the `psum` of
+       :numref:`subsec_mg-accounting` measures. Is the measured optimum
+       consistent with your model, and which $\alpha$ does it imply?
+:end_tab:
+
+:begin_tab:`pytorch`
+7. [code] **Transport configuration.** ● `bare_allreduce_gbs` compares
+   the default NCCL transport with the copy-engine transport that
+   `NCCL_SHM_USE_CUDA_MEMCPY=1` selects, at a single payload of 64 MB. The
+   variable affects only NCCL's shared-memory transport, which NCCL uses
+   between GPUs that lack peer-to-peer access
+   (:numref:`subsec_hw-interconnects`).
+    1. Launch `allreduce_bench.py` once with `NCCL_DEBUG=INFO` and find the
+       transport that NCCL reports for each channel. Predict whether the
+       variable can change anything on your machine.
+    1. Extend the comparison to payloads from 1 MB to 256 MB and plot the
+       effective bandwidth of both transports against the payload. Where
+       does each saturate, and does the five-fold gap hold at every size?
+    1. :numref:`subsec_mgp-ddp` reports that training with the variable
+       set hangs within seconds on the build machine. Rerun
+       `ddp_throughput` at $k = 2$ with the variable set, once with the
+       default buckets and once with `bucket_cap_mb` large enough that all
+       gradients form a single bucket, each launch under a time limit that
+       also terminates the rank processes. Does the hang depend on the
+       overlap of communication with the backward pass, and what does the
+       outcome tell you about which workloads the bare benchmark
+       validates?
+:end_tab:
+
+:begin_tab:`jax`
+7. [code] **Transport configuration.** ● XLA runs its collectives through
+   NCCL, so the switch `NCCL_SHM_USE_CUDA_MEMCPY=1` of
+   :numref:`subsec_mgp-ddp` applies to JAX programs as well. The switch
+   affects only NCCL's shared-memory transport, which NCCL uses between
+   GPUs that lack peer-to-peer access (:numref:`subsec_hw-interconnects`).
+   NCCL reads its environment when it sets up communication, so compare the
+   two settings in separate fresh processes and set the variable with
+   `os.environ` before the first collective, the way this section sets
+   `NCCL_LOCAL_REGISTER`.
+    1. Run the `psum` of :numref:`subsec_mg-accounting` once with
+       `NCCL_DEBUG=INFO`, find the transport that NCCL reports for each
+       channel, and predict whether the switch can change anything on your
+       machine.
+    1. Time the `psum` for payloads from 1 MB to 256 MB under both settings
+       and plot the effective bandwidth against the payload. Where does
+       each saturate, and how does the gap compare with the factor of five
+       reported in :numref:`subsec_mgp-ddp`?
+    1. Run `jax_throughput(2)` with the switch set, under a time limit.
+       Does training complete, and at what throughput relative to the
+       default transport?
+    1. Read the payload sizes of the allreduces in the compiled
+       `train_step`. At which of them does the switch change the bandwidth?
+:end_tab:
+
+:begin_tab:`pytorch`
+8. [code] **Batch-norm statistics.** ● `resnet18` normalizes with batch
+   normalization (:numref:`sec_batch_norm`), and under DDP each replica
+   computes its statistics over its own shard of the batch.
+    1. Write the one-step parity check of :numref:`subsec_mg-byhand` for
+       DDP as a script launched with `torchrun`: one step at $k = 2$ on two
+       shards of 128 examples against one single-GPU step on all 256 from
+       the same initialization. Rank 0 keeps a `copy.deepcopy` of the
+       materialized model as the reference, and every rank draws the same
+       256 examples from a fixed seed. Report the largest update difference
+       and the largest update, and explain their ratio.
+    1. Convert the model with `nn.SyncBatchNorm.convert_sync_batchnorm`
+       between materializing its parameters and wrapping it in `DDP`, and
+       repeat the check. How many collectives per step does the conversion
+       add to `resnet18`? Measure the throughput of the converted model at
+       $k = 2$ and $k = 4$ under the weak-scaling convention, and compare
+       the cost with the time that the added bytes take at the bandwidth
+       of :eqref:`eq_dp_cost`. Which properties of these collectives,
+       other than their size, set their cost?
+:end_tab:
+
+:begin_tab:`jax`
+8. [code] **Batch-norm statistics.** ● `ResNet18` normalizes with batch
+   normalization (:numref:`sec_batch_norm`). Under `jit` with a sharded
+   batch the compiler computes its statistics over the global batch
+   (:numref:`subsec_mgp-jax`), exactly as a single device would.
+    1. Count the small allreduces in the compiled `train_step`, and
+       account for their number from the `BatchNorm` layers of `ResNet18`
+       and the passes in which their statistics are needed. What does each
+       of them carry?
+    1. Call `model.eval()` before compiling, so that every `BatchNorm`
+       normalizes with its running averages, and count the allreduces
+       again. Measure `jax_throughput` with and without this change at
+       $k = 1$, $k = 2$ and $k = 4$. Separate what making the statistics
+       global costs per step from what computing batch statistics costs on
+       a single device, and compare the cost of global statistics with the
+       time that the added bytes take at the bandwidth of
+       :eqref:`eq_dp_cost`. Which properties of these collectives, other
+       than their size, set their cost?
+:end_tab:
+
+:begin_tab:`pytorch`
+9. [code] **Tensor versus data parallelism.** ● Consider the MLP block
+   $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
+   $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
+   step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
+   $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$, and an elementwise
+   activation $\phi$, on $k$ devices. Tensor parallelism
+   (:numref:`fig_splitting`) splits $\mathbf{W}_1$ by columns and
+   $\mathbf{W}_2$ by rows :cite:`shoeybi2019megatron`.
+    1. Show that each device can compute, without communication, an
+       $n \times d$ partial result from its columns of $\mathbf{W}_1$ and
+       its rows of $\mathbf{W}_2$, and that $\mathbf{Y}$ is the sum of the
+       $k$ partial results. Which collective forms that sum, and which
+       collective does the backward pass need for the gradient with
+       respect to $\mathbf{X}$?
+    1. Data parallelism on the same $k$ devices allreduces the gradients
+       of $\mathbf{W}_1$ and $\mathbf{W}_2$ once per step. Count the values
+       that each scheme sends per device and step, and find the number of
+       tokens $n$ below which tensor parallelism sends less.
+    1. Tensor parallelism is in practice confined to the GPUs of one NVLink
+       domain even where it sends less. Explain why, using when each
+       scheme's communication happens relative to the computation that
+       needs its result.
+    1. In a script launched with `torchrun`, apply `parallelize_module` to
+       `nn.Sequential(nn.Linear(d, 4 * d), nn.GELU(), nn.Linear(4 * d, d))`
+       on `init_device_mesh("cuda", (k,))`, with `ColwiseParallel()` for
+       submodule `"0"` and `RowwiseParallel()` for submodule `"2"`. Count
+       the collectives of the forward and the backward pass with
+       `CommDebugMode` from `torch.distributed.tensor.debug`, once for an
+       input with `requires_grad=True` and once without, and explain the
+       difference.
+
+    *Adapted from Stanford CS336,
+    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
+    Problems data_parallel_calcs and tp_calcs.*
+:end_tab:
+
+:begin_tab:`jax`
+9. [code] **Tensor versus data parallelism.** ● Consider the MLP block
+   $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
+   $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
+   step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
+   $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$, and an elementwise
+   activation $\phi$, on $k$ devices. Tensor parallelism
+   (:numref:`fig_splitting`) splits $\mathbf{W}_1$ by columns and
+   $\mathbf{W}_2$ by rows :cite:`shoeybi2019megatron`.
+    1. Show that each device can compute, without communication, an
+       $n \times d$ partial result from its columns of $\mathbf{W}_1$ and
+       its rows of $\mathbf{W}_2$, and that $\mathbf{Y}$ is the sum of the
+       $k$ partial results. Which collective forms that sum, and which
+       collective does the backward pass need for the gradient with
+       respect to $\mathbf{X}$?
+    1. Data parallelism on the same $k$ devices allreduces the gradients
+       of $\mathbf{W}_1$ and $\mathbf{W}_2$ once per step. Count the values
+       that each scheme sends per device and step, and find the number of
+       tokens $n$ below which tensor parallelism sends less.
+    1. Tensor parallelism is in practice confined to the GPUs of one NVLink
+       domain even where it sends less. Explain why, using when each
+       scheme's communication happens relative to the computation that
+       needs its result.
+    1. Build the mesh with `jax.make_mesh` and
+       `axis_types=(jax.sharding.AxisType.Auto,)`, so that the compiler
+       chooses the layout of each product. Place $\mathbf{W}_1$ with
+       `PartitionSpec(None, 'data')`, $\mathbf{W}_2$ with
+       `PartitionSpec('data', None)`, and $\mathbf{X}$ replicated, and show
+       the layout of $\mathbf{W}_1$ with `visualize_array_sharding`. Then
+       `jit` the block and its gradient with respect to all three inputs,
+       and find the collectives of the first sub-problem in the compiled
+       programs.
+
+    *Adapted from Stanford CS336,
+    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
+    Problems data_parallel_calcs and tp_calcs.*
+:end_tab:
+
+:begin_tab:`pytorch`
+10. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
+    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` by hand and measure what it
+    saves. Start from `train_ddp.py` with `torch.optim.Adam` in place of
+    SGD.
+    1. Assign every parameter tensor to one owner rank, so that the ranks
+       own nearly equal numbers of values, and give each rank an Adam
+       optimizer over its own tensors only. After the backward pass and the
+       owners' steps, send each tensor from its owner to all ranks with
+       `dist.broadcast`. Check that after a few steps the parameters match
+       those of DDP with a full Adam from the same initialization, and
+       compare with `torch.distributed.optim.ZeroRedundancyOptimizer`.
+    1. Read `torch.cuda.memory_allocated` after initialization, before the
+       first optimizer step, and after it, with and without sharding at
+       $k = 2$ and $k = 4$. Account for the differences with the anatomy
+       of :numref:`subsec_mp-anatomy`. Then read
+       `torch.cuda.max_memory_allocated` after the second step and compare
+       its change under sharding with the change in live memory.
+    1. Measure the step time with and without sharding. DDP's allreduce
+       hands every rank the full summed gradient, of which stage 1 uses
+       only the part that the rank owns. Count the bytes per device that
+       the allreduce and the broadcasts of your implementation send
+       together, and compare them with the volume of stage 1 found in
+       Problem 4.
+
+    *Adapted from Stanford CS336,
+    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
+    Problems optimizer_state_sharding and
+    optimizer_state_sharding_accounting.*
+:end_tab:
+
+:begin_tab:`jax`
+10. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
+    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` declaratively and measure
+    what it saves. Use `optax.adam` in `nnx.Optimizer` instead of SGD, keep
+    the model replicated, and place every leaf of `nnx.state(opt)` with a
+    `NamedSharding` that splits the first of its axes whose length is
+    divisible by $k$, replicating the leaves that have no such axis.
+    1. Run `train_step` once and show the layout of a weight afterwards.
+       Stage 1 needs replicated parameters at the start of every step; if
+       the compiler did not keep them replicated, restore the layout inside
+       the step with `jax.sharding.reshard` and a replicated
+       `NamedSharding`. Check that after a few steps the parameters match
+       those of replicated Adam from the same initialization.
+    1. Read the collectives of the compiled step. Which collective is new
+       compared with the replicated step, and is the gradient sum an
+       allreduce or a reduce-scatter? Compare the bytes per device of the
+       compiled step with the volume of stage 1 found in Problem 4.
+    1. In fresh processes, read `'bytes_in_use'` and `'peak_bytes_in_use'`
+       from `jax.devices()[0].memory_stats()` after a completed step, and
+       measure the step time, with and without sharding at $k = 2$ and
+       $k = 4$. Account for the differences in live memory with the anatomy
+       of :numref:`subsec_mp-anatomy`, and compare them with the change in
+       the peak.
+
+    *Adapted from Stanford CS336,
+    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
+    Problems optimizer_state_sharding and
+    optimizer_state_sharding_accounting.*
+:end_tab:
 
 <!-- slides -->
 

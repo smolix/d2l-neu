@@ -430,29 +430,215 @@ belong to deployment rather than training.
 
 ## Exercises
 
-1. Introduce a data-dependent `if` into a `torch.compile`d function, find
-   the break with `torch._dynamo.explain`, then rewrite the control flow
-   with `torch.where` and confirm the break count drops to zero. What
-   happened to the steady-state time?
-1. Force a `jax.jit` retrace by calling a jitted function with three
-   different input lengths in a loop, and time it. Fix it by padding
-   every input to a common length (mask the padding out of the result)
-   and confirm the recompiles stop. Then explain why `static_argnums` is
-   *not* a fix here: a static argument becomes part of the compilation
-   cache key, so every new value triggers a fresh trace-and-compile —
-   verify this by putting a counter in the function and watching it tick.
-   When *is* `static_argnums` the right tool?
-1. Sweep the depth of the thin-layer stack from 10 to 200 at fixed width
-   256 and plot eager time and `reduce-overhead` time against depth. At
-   what depth does capture-and-replay start to win, and why does the
-   crossover exist?
-1. Compile the matmul sweep of :numref:`subsec_perf-sweep`. For which
-   sizes does the compiled time equal the eager time, and why? (Hint:
-   what is a single large matmul already?)
-1. Time the *first* call and the tenth call of a compiled mid-sized
-   training step. How many steps of steady-state savings are needed to
-   repay the first-call compile cost? Relate the answer to the "when
-   compilation hurts" checklist.
+1. **Counting round trips.** In eager execution, every operation of
+   `gelu_ish` in :numref:`subsec_comp-fusion` runs as its own kernel, which
+   reads its input arrays from memory and writes its output array back.
+    1. List the kernels that eager execution launches for `gelu_ish`, in
+       the order in which Python evaluates the expression, and count the
+       arrays of the size of `x` that each kernel reads and writes. How
+       many array-sized transfers does the chain make in total, and how
+       many does a single fused kernel make?
+    1. Predict the eager and the fused time for the $4000 \times 4000$
+       fp32 input from these transfer counts and the memory bandwidth of
+       your GPU, which is about 1.0 TB/s for the build GPU of
+       :numref:`subsec_perf-counting`. Compare both predictions and their
+       ratio with the times that the code of :numref:`subsec_comp-fusion`
+       measures, and account for the differences.
+1. [code] **Fusion behind a matmul.** ● Compilation leaves a large matrix
+   product unchanged but fuses the elementwise chain that follows it.
+   Consider `gelu_ish(a @ a)` for an $n \times n$ matrix `a` in bf16 on a
+   GPU with peak compute $P$, bandwidth $\beta$, and ridge point
+   $I^* = P/\beta$ (:numref:`subsec_perf-counting`). Model the product as
+   compute-bound, taking $2n^3/P$ seconds. Model the chain as
+   bandwidth-bound: eager execution moves $m$ arrays of $n^2$ elements of
+   $b$ bytes each through memory, and the fused kernel moves two such
+   arrays.
+    1. Derive the speedup bound $S(n)$ of the compiled over the eager
+       computation in terms of $n$, $m$, $b$, and $I^*$, and show that it
+       tends to 1 as $n$ grows. With $m$ counted for `gelu_ish`, evaluate
+       $S(n)$ for bf16 on the build GPU at $n = 1024$, $4096$, and $16384$,
+       and find the $n$ at which $S(n)$ falls to $1.1$.
+    1. Measure the eager and the compiled time of `gelu_ish(a @ a)` with
+       `d2l.Benchmark` for the sizes of :numref:`subsec_perf-sweep`. Plot
+       the measured speedup together with $S(n)$, and explain where and
+       why the two differ.
+1. **Fusing a reduction.** ● A numerically safe softmax over each row of an
+   $R \times d$ fp32 matrix can be written as five eager operations: the
+   row maximum, the subtraction of that maximum, the exponential, the row
+   sum, and the division by that sum.
+    1. Count the elements that the five eager kernels read from and write
+       to memory, keeping only terms proportional to $Rd$. Count the same
+       for a single fused kernel that holds each row in on-chip memory, and
+       state the speedup bound for a bandwidth-bound softmax.
+    1. A row longer than the on-chip memory must be read from memory more
+       than once. Find the smallest number of passes over a row, and the
+       resulting traffic, for a fused kernel that computes the maximum and
+       the sum in separate passes, and for one that maintains both online
+       as in :eqref:`eq_online-softmax`.
+1. [code] **Overhead crossover.** ● Use the stack of 60 layers of width
+   256 at batch size 64 from :numref:`subsec_comp-overhead`, with its eager
+   and its compiled version. Compilation removes the per-kernel launch
+   latency of :numref:`fig_latency_ladder` from the critical path, but not
+   the time each kernel takes to execute.
+    1. Time both versions for depths $L$ from 10 to 200 at width 256, and
+       fit each time as $t(L) = c + sL$. Compare the eager slope per kernel
+       with the launch latency of :numref:`fig_latency_ladder`, and explain
+       the compiled slope.
+    1. Predict, from :eqref:`eq_roofline` and that launch latency, the
+       width at which the matrix product of one layer takes as long to
+       execute as to launch. Then time both versions at depth 60 for widths
+       from 64 to 4096, plot the ratio of eager to compiled time against
+       the width, and compare the width at which the ratio approaches 1
+       with your prediction.
+1. [code] **Break-even step count.** The compiled training step of
+   :numref:`subsec_comp-wholestep` costs a one-time compilation time $t_0$
+   and lowers the steady-state time per step from $t_e$ to $t_c$.
+    1. Derive the number of steps $N^*$ after which compilation has saved
+       more time than it cost. Measure $t_0$, $t_e$, and $t_c$ with the
+       section's code, making sure that $t_0$ excludes the execution of the
+       step itself, and evaluate $N^*$.
+    1. Repeat the measurement of $t_0$ in a fresh Python process without
+       changing the code, and explain any change.
+1. **Padding buckets.** A compiled step that is specialized to static
+   shapes (:numref:`subsec_comp-capture`) compiles once for every distinct
+   input shape it sees. Consider a training run of $10^5$ steps in which
+   every batch holds sequences of one length $\ell$, drawn uniformly from
+   $\{1, \ldots, 512\}$, and is padded to a length $\ell' \geq \ell$. One
+   compilation costs 20 s, and a step at padded length $\ell'$ costs
+   $50\,\textrm{ms} \cdot \ell'/512$.
+    1. Pad every batch to the next multiple of $w$, for $w$ dividing 512.
+       Find the number of compilations and the expected padded length as
+       functions of $w$, and write the total run time $T(w)$.
+    1. Minimize $T(w)$ over $w$ treated as a continuous variable, and state
+       how the optimal $w$ scales with the compilation cost and with the
+       number of steps. Compare $T$ at $w = 1$, at the two powers of two
+       nearest the optimum, and at $w = 512$.
+    1. Padding to the next power of two compiles ten shapes. Compute its
+       expected padded length and total run time, and compare them with
+       those of $w = 64$. For which distribution of lengths would powers
+       of two be the better choice?
+1. [extended] **A tracer of your own.** ● Build a miniature tracing
+   compiler in plain Python, with NumPy arrays as the values on which the
+   captured program finally runs.
+    1. Write a class `Tracer` whose instances carry a `shape` but no
+       values, and functions `tanh`, `exp`, and `relu` that take a
+       `Tracer`. Each operation on a `Tracer` appends a node to a shared
+       graph and returns a new `Tracer`. A node holds the operation, its
+       inputs, and the shape of its result. Support the arithmetic
+       operators, the matrix product `@`, the comparison `>`, the methods
+       `sum` and `max` with `axis` and `keepdims` arguments, and the three
+       functions. Trace a copy of `gelu_ish` that calls your `tanh` on a
+       placeholder of a given shape, and print the graph one node per line.
+    1. Make `Tracer.__bool__` raise an error. Trace a function that
+       returns `x + 1` when `x.shape[0] > 4` and `x - 1` otherwise, and a
+       second function that branches the same way on `x.sum() > 0`.
+       Explain which of the two your tracer can record, and what the
+       recorded graph keeps of the branch.
+    1. Write an interpreter that executes a graph node by node on NumPy
+       arrays, and check its result against a direct NumPy evaluation of
+       `gelu_ish`.
+    1. Write a pass that partitions the graph into fused kernels under the
+       rule that an elementwise node may join the kernel of its inputs, a
+       matrix product forms a kernel of its own, and a reduction ends the
+       kernel it belongs to. State how your pass treats a node whose inputs
+       come from different kernels. For `gelu_ish`, for the five-operation
+       softmax, and for the two-layer network
+       `relu(x @ W1 + b1) @ W2 + b2`, count the kernel launches and the
+       array elements moved through memory under one kernel per node and
+       under your partition.
+
+:begin_tab:`pytorch`
+8. [code] **Value-dependent branches.** The function `f` of
+   :numref:`subsec_comp-capture` breaks the graph at its `if`.
+    1. Read the break reason in the output of `torch._dynamo.explain(f)`.
+       Rewrite `f` with `torch.where` so that `explain` reports no break,
+       and check that both versions return the same values.
+    1. Time the compiled original and the compiled rewrite with
+       `d2l.Benchmark`, once on the 8-element input of
+       :numref:`subsec_comp-capture` and once on a $4000 \times 4000$
+       input. Explain the time difference at each size.
+    1. `torch.where` evaluates both branches. Describe a pair of branches
+       for which this costs more than the graph break saves.
+9. [code] **Shape changes.** `torch.compile` guards on the shapes of its
+   inputs and recompiles when a guard fails
+   (:numref:`subsec_comp-capture`).
+    1. Compile a function that computes `torch.tanh(x) * 2 + 1`, and call
+       it on vectors of lengths 8, 16, 32, and so on up to 8192. Predict
+       the number of compilations from the guard rule. Then count them,
+       with `torch._logging.set_logs(recompiles=True)` and with a `backend`
+       function for `torch.compile` that increments a counter, prints
+       `gm.code`, and returns `gm.forward`. Explain the count from the log
+       and from the printed graphs.
+    1. Repeat with `torch.compile(..., dynamic=False)`. How many
+       compilations happen now, and what do the calls after the last
+       compilation run?
+10. [code] **Compiling the optimizer.** ● `torch.compile(net)` in
+    :numref:`subsec_comp-wholestep` compiles the forward and the backward
+    pass but leaves `opt.step()` eager.
+    1. Apply `torch._dynamo.explain` to `train_step` itself, called with
+       the eager `net`. How many graphs does it capture, where does it
+       break, and which parts of the step fall into which graph?
+    1. Count the parameter-sized arrays that one update must read and
+       write at minimum, for plain SGD and for Adam (:numref:`sec_adam`).
+       Then time `train_step(cnet)` against
+       `torch.compile(train_step)(net)`, once with `torch.optim.SGD` and
+       once with `torch.optim.Adam`. For which optimizer does compiling the
+       update pay, and why?
+
+    *Adapted from Michael Lazos,
+    [Compiling the optimizer with torch.compile](https://docs.pytorch.org/tutorials/recipes/compiling_optimizer.html),
+    PyTorch recipe.*
+:end_tab:
+
+:begin_tab:`jax`
+8. [code] **Value-dependent branches.** Tracing replaces the values of the
+   arguments by placeholders (:numref:`subsec_comp-capture`).
+    1. Write a function that doubles `x` and then returns `x + 1` when
+       `x.sum() > 0` and `x - 1` otherwise, and apply `jax.jit` to it.
+       Explain the error it raises.
+    1. Rewrite the branch once with `jnp.where` and once with
+       `jax.lax.cond`, and print both jaxprs with `jax.make_jaxpr`. Which
+       operations does each version execute at run time?
+    1. Apply `jax.vmap` to the `jax.lax.cond` version over a batch of
+       vectors and print its jaxpr. Explain what became of the conditional,
+       and why.
+9. [code] **Shape changes.** A jitted function is specialized to the shapes
+   of its arguments (:numref:`subsec_comp-capture`).
+    1. Jit a function that returns the mean of `jnp.tanh(x)` over a vector
+       `x`, and let its Python body increment a global counter. Call it in
+       a loop on vectors of lengths 100, 200, and 300, three times each.
+       Count the traces, and time the first and the later calls at each
+       length.
+    1. Pad every input to length 512 and pass the function what it needs
+       to exclude the padding from the mean, so that one trace serves all
+       three lengths. Check the results against the unpadded version.
+    1. Instead, pass the padded vector together with its length, mark the
+       length with `static_argnums`, and slice inside the function. Count
+       the traces and explain the count. Name an argument of a training
+       step for which `static_argnums` is the right tool.
+10. [code] **Trace-time constants.** The Python body of a jitted function
+    runs only while it is traced (:numref:`subsec_comp-capture`).
+    1. Jit a function that returns `x + np.random.randn()`, call it twice,
+       and print its jaxpr. Explain the two outputs.
+    1. A dropout function draws its mask with `jax.random.bernoulli` from
+       a key held in a global variable. Jit it, call it, assign a new key
+       to the global variable, and call it again. Explain the result, and
+       rewrite the function so that every step draws a fresh mask.
+11. [code] **Unrolled loops.** ● `deep_fwd` of
+    :numref:`subsec_comp-overhead` loops over a Python list of weight
+    matrices, so tracing unrolls the loop into one long sequence of
+    operations.
+    1. For depths from 10 to 400, count the equations of the jaxpr of
+       `deep_fwd` and time its ahead-of-time compilation with
+       `jax.jit(deep_fwd).lower(deep_params, x).compile()`. Repeat for the
+       gradient of `deep_fwd(deep_params, x).sum()` with respect to the
+       weights. How do the count and the compile time grow with depth?
+    1. Stack the weights into one array of shape $(L, 256, 256)$ for depth
+       $L$, and rewrite the loop with `jax.lax.scan`. Repeat the
+       measurements, check that both versions agree, and compare their
+       steady-state times at depths 60 and 400. What does each version
+       give up?
+:end_tab:
 
 <!-- slides -->
 

@@ -328,6 +328,7 @@ exercises invite you to try the averaging variant.
 ## Training and What the Model Learns
 
 ### A First Run
+:label:`subsec_vit-first-run`
 
 We train a small ViT on Fashion-MNIST, resized to $96 \times 96$ so that a
 $16 \times 16$ patch size yields $6 \times 6 = 36$ patch tokens. The recipe
@@ -364,6 +365,7 @@ Keep that number in mind; we will shortly see what a CNN of the same size
 does with the same ten epochs.
 
 ### Do the Position Embeddings Discover the Grid?
+:label:`subsec_vit-pos-grid`
 
 First, though, let us look inside. The position embeddings started as noise,
 and nothing in the training signal ever named a row or a column. In fully
@@ -423,6 +425,7 @@ encoded at initialization. The next comparison uses an architecture that
 encodes this geometry directly.
 
 ### A Convolutional Baseline at the Same Budget
+:label:`subsec_vit-cnn-baseline`
 
 The ViT above has about 6.5 million parameters. To make the inductive-bias
 comparison fair we build a CNN with the same budget, from the `Residual`
@@ -541,26 +544,279 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
 
 ## Exercises
 
-1. How does the value of `img_size` affect training time? Predict what
-   halving `patch_size` to 8 does to the sequence length and to the cost of
-   an attention layer (:numref:`sec_attention-at-scale`), then measure the
-   time per epoch.
-1. Instead of projecting the “&lt;cls&gt;” token representation to the
-   output, project the averaged patch representations. Implement this change
-   and see how it affects the accuracy.
-1. Add data augmentation — random horizontal flips and random crops — to the
-   training pipeline and retrain both the ViT and the CNN. Does the gap
-   between them shrink? Relate what you find to the DeiT recipe.
-1. Apply a fixed random permutation to the 36 patch tokens at test time
-   (after patch embedding, leaving the position embeddings in place) and
-   measure the accuracy of the trained ViT. What does the size of the drop
-   tell you about how much the model relies on its position embeddings?
-1. To fine-tune a trained ViT at a higher resolution, the standard trick is
-   to interpolate its position embeddings: reshape the $36$ patch embeddings
-   to $6 \times 6 \times d$, resize spatially to the new grid, and flatten
-   back. Implement this for $144 \times 144$ inputs (a $9 \times 9$ grid)
-   and verify that the model still classifies far better than chance
-   without any retraining.
+1. **Parameters versus compute.** The ViT of :numref:`subsec_vit-first-run`
+   reads grayscale images of $h = w = 96$ pixels with $c = 1$ channel
+   through patches of side $p = 16$. It has width $d = 512$, MLP width $4d$,
+   and two blocks. Count one multiply--add as two FLOPs, as
+   :eqref:`eq_multihead-flops` does, and write $n = m + 1$ for the number of
+   tokens.
+    1. Express the parameter counts of `PatchEmbedding` and of the position
+       embeddings as functions of $p$. By how many parameters does the model
+       change when $p$ is halved to 8, and what fraction of its 6.5 million
+       parameters is this change?
+    1. Show that the stem costs the same number of FLOPs per image for every
+       $p$. Derive the FLOPs of one `ViTBlock` as a function of $n$ and $d$,
+       and compute the factor by which the forward FLOPs of the model grow
+       when $p$ is halved to 8.
+    1. Find the number of tokens at which the term of your block count that
+       is quadratic in $n$ equals the remaining terms. Which patch sizes put
+       this model beyond that point, and how far below it does ViT-B/16
+       operate, with $d = 768$ at a resolution of $224 \times 224$?
+    1. `CompactResNet` was matched to the ViT by parameter count. Count its
+       convolution FLOPs per image, ignoring normalization, activations, and
+       pooling, and compare them with those of the ViT. Is the comparison of
+       :numref:`subsec_vit-cnn-baseline` also matched in compute?
+1. [code] **Patchify as convolution.** `PatchEmbedding` replaces cutting
+   an image into patches and projecting each flattened patch by a single
+   convolution whose kernel size and stride equal the patch size. Check
+   this on `patch_emb` with a batch of random images of its input shape.
+   Cut the images into non-overlapping $16 \times 16$ patches with reshapes
+   and transpositions alone, flatten each patch, and apply the
+   convolution's kernel and bias, rearranged into a matrix and a vector.
+   Verify that the result agrees with the output of `patch_emb` up to
+   floating-point round-off. In which order must the entries of a
+   flattened patch appear, and in which order must the patches be
+   enumerated?
+1. [code] **Choice of readout.** `ViT` classifies from the final
+   representation of the “&lt;cls&gt;” token.
+    1. Under this readout, part of the computation of the last `ViTBlock`
+       cannot influence the logits. Identify it, and compute the fraction of
+       the FLOPs of that block that inference could skip in the
+       configuration of :numref:`subsec_vit-first-run`, counting as in
+       problem 1.
+    1. Implement the alternative readout that averages the final
+       representations of the 36 patches, and remove the “&lt;cls&gt;” token
+       together with its position embedding. Train the model with the
+       protocol of :numref:`subsec_vit-first-run`, and compare its
+       validation accuracy with `vit_acc`.
+    1. :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` report that the two
+       readouts work about equally well but need different learning rates.
+       Train both readouts at the learning rates $0.03$ and $0.3$ as well.
+       Does the ranking of the two readouts depend on the learning rate?
+1. [code] **Position information.** By the proposition of
+   :numref:`subsec_pos-ignores-order`, self-attention without positional
+   information is equivariant to permutations of its input tokens.
+    1. Suppose that the 36 patch position embeddings of a `ViT` are all
+       equal. Show that its logits are then unchanged when the patch tokens
+       are permuted, and that permuting the $16 \times 16$ pixel blocks of
+       the input image has the same effect as permuting the tokens.
+    1. Write a variant of `ViT.forward` that applies a fixed permutation to
+       the tokens produced by `PatchEmbedding`, before the position
+       embeddings are added. Measure the validation accuracy of the trained
+       `model` under five random permutations.
+    1. Train a `ViT` whose position embeddings are fixed at zero, with the
+       protocol of :numref:`subsec_vit-first-run`. Compare its validation
+       accuracy with `vit_acc`, and confirm that the five permutations leave
+       its predictions unchanged.
+    1. Compare the accuracy drop under permutation with the gap between the
+       two trained models. What does each of the two numbers measure?
+1. [code] **Grid permutation test.** The two means printed in
+   :numref:`subsec_vit-pos-grid` compare the cosine similarity of the
+   position embeddings of grid neighbors with that of distant positions.
+   Let $\Delta$ be their difference. Row $k$ of `coords` holds the grid
+   cell of the position embedding in row $k$ of `P`.
+    1. Pair the rows of `P` with the rows of `coords` through a random
+       permutation, recompute $\Delta$, and repeat 1,000 times. In what
+       fraction of the permutations is $\Delta$ at least as large as for
+       the trained `model`? What does this fraction say about the evidence
+       for grid structure after ten epochs?
+    1. Train a `ViT` with the protocol of :numref:`subsec_vit-first-run`
+       for 30 epochs instead of 10, and repeat the test. How do $\Delta$
+       and its position within the permutation distribution change with
+       longer training?
+1. **Shift equivariance.** Shift a $96 \times 96$ image by $s$ pixels to
+   the right, and fill the vacated columns with zeros. Suppose that the $s$
+   rightmost columns of the original image are zero.
+    1. For $s = 16$, describe the tokens that `PatchEmbedding` produces for
+       the shifted image, and show that they are a rearrangement of those of
+       the original image. Give an image for which this fails at $s = 8$.
+    1. Use this and problem 4 to show that a `ViT` whose patch position
+       embeddings are all equal assigns the same logits to both images when
+       $s = 16$. Why does the argument not extend to the trained `model`?
+    1. Compute the stride of the final feature map of `CompactResNet`
+       relative to its input. Show that, for cells whose receptive field
+       lies inside the image, a shift of the input by a multiple of this
+       stride moves the final feature map by whole cells, and explain why
+       no such statement holds for a shift by fewer pixels. Compute the
+       side length of the receptive field of a cell of the final feature
+       map with :eqref:`eq_receptive_field`. Does any cell of the final
+       feature map of a $96 \times 96$ input meet the condition?
+    1. Neither model is therefore built to be invariant to a shift by one
+       pixel. Name a property that every convolution of `CompactResNet`
+       builds in and the attention layers of the ViT lack, and a property
+       that both models share.
+1. [code] **Higher resolution.** ● Fine-tuning at a higher resolution than
+   in pretraining keeps the patch size, so the grid of patches grows.
+   :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` therefore interpolate the
+   pretrained position embeddings in two dimensions to fit the new grid.
+    1. Which parameters of `ViT` depend on `img_size`? Explain why all
+       others can be reused unchanged at a resolution of $144 \times 144$.
+    1. Build a `ViT` for $144 \times 144$ inputs and copy into it every
+       parameter of the trained `model` except the position embeddings.
+       Keep the “&lt;cls&gt;” slot, and obtain the 81 patch position
+       embeddings by reshaping the 36 trained ones into a
+       $6 \times 6 \times d$ array,
+       resizing it bilinearly to $9 \times 9 \times d$, and flattening it.
+       Without further training, measure the validation accuracy on
+       Fashion-MNIST resized to $144 \times 144$. Compare it with `vit_acc`
+       and with the accuracy of the same model when all 81 patch
+       embeddings equal the mean of the 36 trained ones.
+    1. Fine-tune the interpolated model for one epoch at $144 \times 144$
+       with learning rate $0.01$, and measure the time per epoch at both
+       resolutions. Train a $144 \times 144$ `ViT` from scratch with the
+       protocol of :numref:`subsec_vit-first-run` for as many whole epochs
+       as fit into the time of the ten epochs at $96 \times 96$ plus the
+       fine-tuning epoch. Compare the two accuracies. What does the
+       comparison say about pretraining at low resolution?
+1. [code] **Recipe confound.** ● :numref:`subsec_vit-first-run` trains the
+   ViT with the recipe of the convolutional networks of
+   :numref:`chap_modern_cnn`, plain SGD at a constant learning rate.
+   :citet:`touvron2021training` train ViTs on ImageNet-1k alone for 300
+   epochs, with AdamW, a cosine schedule, label smoothing, Mixup, and
+   stronger augmentation.
+    1. Retrain the ViT for 10 epochs with AdamW at weight decay $0.05$ and
+       the cosine schedule with warmup of :eqref:`eq_cosine_warmup`, using
+       two warmup epochs and the base learning rates $3 \times 10^{-4}$ and
+       $10^{-3}$. Compare the better of the two runs with `vit_acc` and
+       `cnn_acc`.
+    1. Train the ViT with the better of the two settings, and
+       `CompactResNet` with the optimizer of
+       :numref:`subsec_vit-cnn-baseline`, for 30 epochs each, once plainly
+       and once with Mixup at $\alpha = 0.2$ (:eqref:`eq_mixup`) and label
+       smoothing at $\epsilon = 0.1$ (:eqref:`eq_label_smoothing`).
+       Tabulate the four validation accuracies.
+    1. The runs of the first two parts change three things in turn: the
+       optimizer and schedule of the ViT, the training length from 10 to 30
+       epochs, and Mixup with label smoothing. Starting from the gap of
+       :numref:`subsec_vit-cnn-baseline`, compute the gap between
+       `CompactResNet` and the ViT after each change. How much of the gap
+       does each change close, and how large is the part that remains
+       attributable to the architecture under the final protocol?
+1. **Shifted windows.** ● Swin transformers :cite:`liu2021swin` restrict
+   attention to non-overlapping windows of $M \times M$ patches. Successive
+   blocks alternate between a regular partition of the patch grid into
+   windows and a partition displaced by $\lfloor M/2 \rfloor$ patches along
+   both axes. Normalization and MLPs act on each token separately. Call
+   the set of input patches that can influence the output of a token after
+   $L$ blocks its *reach*. A window is the product of a row interval and a
+   column interval, so the reach is the product of its one-dimensional
+   counterparts, and it suffices to study one row of patches far from the
+   border of the grid.
+    1. Show that without the displaced partition, the reach of every token
+       remains its own window at every depth.
+    1. Show that with the alternation, the reach after $L$ blocks is an
+       interval of $ML$ patches. Compare this growth with that of a stack
+       of $3 \times 3$ convolutions of stride 1 and with a single layer of
+       global attention. On a $56 \times 56$ grid with $M = 7$, after how
+       many blocks can the token in row 28 and column 28, counting from 0,
+       be influenced by every patch?
+    1. Show that the length $ML$ stays the same for every displacement
+       $s$ with $0 < s < M$. After two blocks, let $g(s)$ be the smallest
+       distance from a token to the nearer end of its reach, taken over all
+       tokens. Compute $g(s)$, and show that $s = \lfloor M/2 \rfloor$
+       maximizes it.
+1. [extended] **Distillation from the CNN.** ● Knowledge distillation trains
+   a student model to match the predictions of a trained teacher model as
+   well as the labels :cite:`Hinton.Vinyals.Dean.2015`.
+   :citet:`touvron2021training` find that ViTs distilled from a
+   convolutional teacher outperform ViTs distilled from a transformer
+   teacher, and suggest that the student inherits the inductive bias of
+   the teacher. Use the trained `cnn` as the teacher and a fresh `ViT` as the
+   student. Let $\mathbf{z}_s$ and $\mathbf{z}_t$ be the logits of student
+   and teacher for an image with label $y$, let $\mathrm{CE}$ be the
+   cross-entropy of the softmax of its first argument, and let $y_t$ be the
+   class with the largest teacher logit. Hard-label distillation minimizes
+
+   $$\mathcal{L}_\textrm{hard} = \tfrac{1}{2}\,\mathrm{CE}(\mathbf{z}_s, y) + \tfrac{1}{2}\,\mathrm{CE}(\mathbf{z}_s, y_t),$$
+
+   and soft distillation at temperature $\tau$ and weight $\lambda$
+   minimizes
+
+   $$\mathcal{L}_\textrm{soft} = (1 - \lambda)\,\mathrm{CE}(\mathbf{z}_s, y) + \lambda \tau^2\, \mathrm{KL}\big(\mathrm{softmax}(\mathbf{z}_t / \tau) \,\|\, \mathrm{softmax}(\mathbf{z}_s / \tau)\big).$$
+
+    1. Compute the teacher's logits on all training images once, and
+       deliver them with each minibatch, so that the training step of the
+       student needs no forward pass of the teacher. On what fraction of
+       the training images is $y_t \neq y$? Explain what this fraction
+       implies for the difference between $\mathcal{L}_\textrm{hard}$ and
+       plain cross-entropy in this setting, and why the implication does
+       not carry over to the augmented training of
+       :citet:`touvron2021training`.
+    1. Override `training_step` of `ViT` to minimize
+       $\mathcal{L}_\textrm{hard}$, and train with the protocol of
+       :numref:`subsec_vit-first-run`. Train again with
+       $\mathcal{L}_\textrm{soft}$ at $\tau = 3$ for
+       $\lambda \in \{0.1, 0.5\}$, and compare the three students with
+       `vit_acc`.
+    1. For the undistilled `model` and for each student, compute the
+       fraction of validation images on which its prediction differs from
+       the teacher's, as in the disagreement analysis of
+       :citet:`touvron2021training`. Among the validation images that it
+       misclassifies, compute also the fraction on which it predicts the
+       same wrong class as the teacher. Which of the two numbers separates
+       resemblance to the teacher from accuracy?
+    1. The teacher is both more accurate than the student and
+       convolutional, so a gain from distillation does not by itself show
+       that an inductive bias was transferred. Construct a control that
+       separates the two explanations, run it, and state which outcome
+       would favor the inductive-bias explanation.
+
+:begin_tab:`pytorch`
+11. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
+    the attention weight of query patch $i$ on key patch $j$ in an image, and
+    let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
+    The *mean attention distance* of the head
+    :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` averages
+
+    $$\bar{r} = \frac{1}{36} \sum_{i=1}^{36} \sum_{j=1}^{36} \frac{\alpha_{ij}}{\sum_{k=1}^{36} \alpha_{ik}}\, \|\mathbf{u}_i - \mathbf{u}_j\|$$
+
+    over images, with the “&lt;cls&gt;” token excluded as query and key.
+    In large pretrained ViTs, some heads of the lowest layers attend
+    locally while others attend across the whole image, and the distance
+    grows with depth.
+    1. Evaluate $\bar{r}$ for a head that attends uniformly to all 36
+       patches, as a reference value.
+    1. After a forward pass of the trained `model` in evaluation mode,
+       `blk.attention.attention.attention_weights` holds the attention
+       weights of block `blk`, of shape (batch size $\times$ 8, 37, 37),
+       with the eight heads of each image adjacent. Compute $\bar{r}$ for
+       each of the 16 heads on 512 validation images, and plot it against
+       the block index. Do the two blocks show either pattern of the
+       pretrained ViTs?
+    1. Repeat the measurement for the ViT of problem 4 whose position
+       embeddings are fixed at zero. What other than position embeddings
+       can make a head attend to nearby patches, and how do the results of
+       the two models separate the two causes?
+:end_tab:
+
+:begin_tab:`jax`
+11. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
+    the attention weight of query patch $i$ on key patch $j$ in an image, and
+    let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
+    The *mean attention distance* of the head
+    :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` averages
+
+    $$\bar{r} = \frac{1}{36} \sum_{i=1}^{36} \sum_{j=1}^{36} \frac{\alpha_{ij}}{\sum_{k=1}^{36} \alpha_{ik}}\, \|\mathbf{u}_i - \mathbf{u}_j\|$$
+
+    over images, with the “&lt;cls&gt;” token excluded as query and key.
+    In large pretrained ViTs, some heads of the lowest layers attend
+    locally while others attend across the whole image, and the distance
+    grows with depth.
+    1. Evaluate $\bar{r}$ for a head that attends uniformly to all 36
+       patches, as a reference value.
+    1. `ViTBlock.__call__` discards the attention weights that
+       `d2l.MultiHeadAttention` returns as its second output. Write a
+       function that runs the trained `model` as `ViT.forward` does, in
+       deterministic mode, and also returns the weights of each block, of
+       shape (batch size $\times$ 8, 37, 37), with the eight heads of each
+       image adjacent. Compute $\bar{r}$ for each of the 16 heads on 512
+       validation images, and plot it against the block index. Do the two
+       blocks show either pattern of the pretrained ViTs?
+    1. Repeat the measurement for the ViT of problem 4 whose position
+       embeddings are fixed at zero. What other than position embeddings
+       can make a head attend to nearby patches, and how do the results of
+       the two models separate the two causes?
+:end_tab:
 
 <!-- slides -->
 

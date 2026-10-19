@@ -322,6 +322,13 @@ number-sections: true
 crossref:
   chapters: true
 
+# Pandoc's example_lists reads a line that starts with "@label." or "@label)"
+# as a numbered example item, and that label then shadows the crossref: every
+# @eq-x in the page renders as a bare number with no link and no warning. A
+# wrapped exercise line like "   @eq-temperature. Write ..." triggers it. The
+# book uses no example lists, so turn the extension off.
+from: markdown-example_lists
+
 filters:
   - _svg-to-pdf.lua
 

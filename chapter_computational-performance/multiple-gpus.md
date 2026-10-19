@@ -639,25 +639,230 @@ production map is :numref:`sec_training_systems`.
 
 ## Exercises
 
-1. Extend the hand-rolled version to $k = 4$ (guard with `d2l.num_gpus()`)
-   and measure `sec/epoch` at $k \in \{1, 2, 4\}$. Does the slowdown grow,
-   shrink, or hold? Explain using :eqref:`eq_dp_cost`.
-1. Implement ring allreduce with explicit `.to()` copies (reduce-scatter
-   then all-gather) and test whether it beats the star `allreduce` on our
-   host-staged box. It barely can — explain why in terms of
-   :numref:`subsec_hw-interconnects`.
-1. Compute the ring's per-device traffic (:eqref:`eq_ring_traffic`) for
-   ResNet-18's ~11M parameters in fp32, and, using your measured $\beta$,
-   predict $t_{\text{comm}}$ per step. :numref:`sec_multi_gpu_concise`
-   will measure the real thing — how close is your prediction?
-1. A thought experiment: sending gradients in bf16 instead of fp32 halves
-   $N$ and hence $t_{\text{comm}}$. What could break, and which term of
-   :eqref:`eq_dp_cost` does it help — the one that shrinks with $k$ or the
-   one that does not?
-1. Scale the batch size with $k$ (from $B$ to $kB$) so each device keeps a
-   full $B$-sized shard. Now which term of :eqref:`eq_dp_cost` dominates,
-   and does the second GPU pay? Relate your answer to the batch-size
-   discussion of :numref:`sec_batch_size`.
+1. **Data versus pipeline parallelism.** Consider a stack of $L$ fully
+   connected layers of width $d$, with fp32 weights and no biases, trained
+   on two GPUs with minibatch size $B$. Data parallelism allreduces the
+   gradients of all weights. Two-stage pipeline parallelism
+   (:numref:`fig_splitting`) places the first $L/2$ layers on one GPU and
+   the rest on the other, so the forward pass sends the $B \times d$
+   activations at the cut to the second GPU and the backward pass returns
+   their gradient.
+    1. Count the bytes that cross between the two GPUs per step in each
+       scheme, and evaluate both for $L = 32$, $d = 4096$, and $B = 256$.
+       For which relation between $B$, $L$, and $d$ does data parallelism
+       move fewer bytes?
+    1. In the pipeline, each GPU idles while the other computes. To
+       shorten the idle time, split the minibatch into $m$ micro-batches
+       :cite:`Huang.Cheng.Bapna.ea.2019`. In the forward phase, the first
+       GPU hands each micro-batch to the second as soon as it is done, so
+       that the second GPU works on micro-batch $j$ while the first works
+       on micro-batch $j+1$. The backward phase starts after the last
+       forward pass and runs the same schedule from the second GPU to the
+       first. Assume that every micro-batch takes the same time on each
+       stage. Derive the fraction of the step during which each GPU idles,
+       and evaluate it for $m = 1$ and $m = 8$.
+1. **Gradient normalization.** Two recipes compute a data-parallel
+   gradient from $k$ shards of a minibatch of $B$ examples. In recipe A,
+   each device sums its per-example losses, the devices sum their
+   gradients, and the update divides by $B$. In recipe B, each device
+   averages its per-example losses, and the devices average their
+   gradients.
+    1. Show that both recipes yield the gradient of the full-batch mean
+       loss when every shard holds $B/k$ examples.
+    1. A language model averages its loss over tokens. Two shards with the
+       same number of sequences hold 3000 and 1000 tokens. Find the weight
+       that recipe B gives a token on each shard, relative to the weight
+       the token has in the full-batch token mean.
+    1. Modify recipe B so that it is exact for any shard sizes, and
+       identify the extra quantity that the devices must communicate
+       before the update.
+1. **Batch normalization across shards.** Suppose that `lenet` applied
+   batch normalization (:numref:`sec_batch_norm`) in training mode after
+   each of its two convolutions and after its hidden dense layer, and that
+   each device normalized with the statistics of its own shard.
+    1. Decide whether the parity check of :numref:`subsec_mg-byhand` would
+       still pass. Justify the decision by listing the quantities that each
+       device computes from its own shard and checking for each of them
+       whether the two-device step reproduces its one-device value.
+    1. Find the per-channel quantities that the devices must exchange in
+       the forward pass to reproduce the one-device statistics exactly.
+       Count their bytes per step and compare them with the 0.5 MB of
+       LeNet's gradients.
+1. **Latency in the allreduce.** ● The byte count of
+   :eqref:`eq_ring_traffic` ignores the fixed cost of starting a transfer.
+   Let one transfer of $m$ bytes over a link take $\alpha + m/\beta$.
+    1. Derive the time $t_{\text{ring}}$ of a ring allreduce of $N$ bytes
+       on $k$ devices, and describe how each of its two terms behaves as
+       $k$ grows.
+    1. A binary-tree allreduce sums up the tree and broadcasts back down.
+       It takes $2\log_2 k$ steps, each of which sends the full $N$ bytes,
+       so
+       $$t_{\text{tree}} = 2\log_2 k \left(\alpha + \frac{N}{\beta}\right).$$
+       For $k = 8$, $\alpha = 10\ \mu\textrm{s}$, and
+       $\beta = 20$ GB/s, find the message size below which the tree is
+       faster than the ring.
+    1. A data-parallel LeNet step that allreduces each of its eight
+       parameter tensors separately, with the star pattern at $k = 2$,
+       makes 16 transfers. With the same $\alpha$ and $\beta$, estimate its
+       communication time per step and the share of that time due to
+       $\alpha$. Repeat the estimate for a single allreduce of all
+       gradients concatenated into one buffer.
+1. **Parameter servers and the ring.** In the parameter-server design
+   described at the end of :numref:`subsec_mg-accounting`, $s$ server
+   nodes each hold $N/s$ bytes of the parameters
+   :cite:`Li.Andersen.Park.ea.2014`. In every step, each of $k$ workers
+   pushes its gradient for each slice to that slice's server and then
+   pulls the updated slice back.
+    1. Count the bytes that each worker and each server send and receive
+       per step. Find the number of servers at which a server's link is no
+       busier than a worker's.
+    1. Now let the $k$ workers act as the servers, each holding $1/k$ of
+       the parameters. Show that the traffic of each device equals
+       :eqref:`eq_ring_traffic`, and match the push and pull phases to the
+       two phases of ring allreduce.
+1. **Bandwidth conventions.** The measurement in
+   :numref:`subsec_mg-accounting` reports $2N/t$ for an allreduce of $N$
+   bytes per device that takes time $t$. The NCCL benchmarks report the
+   algorithm bandwidth $S/t$ for a message of $S$ bytes and the bus
+   bandwidth
+   $$\textrm{busbw} = \frac{S}{t} \cdot \frac{2(k-1)}{k}.$$
+    1. List the copies that the star pattern makes at $k = 2$, and explain
+       why $2N/t$ is then the rate at which bytes cross the link.
+    1. Express $2N/t$ in terms of busbw, for $k = 2$ and for general $k$.
+    1. A benchmark reports a busbw of 400 GB/s for an allreduce on eight
+       GPUs. Predict the time to allreduce 1 GB of gradients, and find the
+       relative error made by inserting the busbw as $\beta$ into
+       :eqref:`eq_dp_cost`.
+
+    *Adapted from NVIDIA, [Performance reported by NCCL tests](https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md), section "Bus bandwidth".*
+
+1. **Strong-scaling speedup.** Model the compute time of a shard of $b$
+   examples as $t_{\text{compute}}(b) = t_0 + c\,b$, where $t_0$ does not
+   shrink with the shard. Let each device send at bandwidth $\beta$, so
+   that by :eqref:`eq_ring_traffic` one step at a fixed global batch $B$
+   takes
+   $$t_{\text{step}}(k) = t_0 + \frac{c\,B}{k} + \frac{2(k-1)}{k}\,\frac{N}{\beta},$$
+   with no communication at $k = 1$. The strong-scaling speedup is
+   $S(k) = t_{\text{step}}(1) / t_{\text{step}}(k)$.
+    1. Show that $S(k) > 1$ holds for one $k > 1$ exactly when it holds
+       for every $k > 1$, and find the condition. Find the limit of $S(k)$
+       as $k \to \infty$.
+    1. A model with 11.2 million fp32 parameters has $t_0 = 2$ ms and
+       $c = 0.2$ ms per example, and it is trained with $B = 256$. Compute
+       $S(2)$, $S(4)$, and the limit for $\beta = 20$ GB/s and for
+       $\beta = 5$ GB/s. Find the bandwidth below which no number of GPUs
+       speeds up this model.
+    1. Sending the gradients in bf16 instead of fp32 halves $N$. For
+       $\beta = 5$ GB/s, recompute $S(4)$ and the limit of $S(k)$, and
+       state which of the two gains more from the halving.
+1. [code] **Gradients in bf16.** ● Sending gradients in bf16
+   halves their bytes but rounds them. In a ring, each reduce-scatter hop
+   adds the incoming partial sum to the local chunk, so a bf16 ring
+   rounds the partial sum to bf16 once per hop.
+    1. At the parameters returned by `new_params`, compute the gradients
+       of `lenet` on $k$ disjoint Fashion-MNIST shards of 128 examples
+       each, and flatten each shard's gradients into one vector. Add the
+       vectors one after another, rounding to bf16 after every
+       addition, and measure the relative error of the result against an
+       fp32 sum for $k \in \{2, 8, 64\}$. Repeat with each vector rounded
+       to bf16 once and the sum accumulated in fp32. Explain how each
+       error depends on $k$.
+    1. Compare the error at $k = 8$ with the relative difference between
+       the gradients of two shards, and decide whether the rounding matters
+       for SGD.
+1. [code] **Strong and weak scaling of LeNet.** ●
+   :numref:`subsec_mg-accounting` attributes LeNet's missing speedup to
+   $t_{\text{compute}}(B/k)$ not falling with $k$. Run this problem on a
+   machine with four GPUs.
+    1. Time one forward and backward pass of `lenet` on one GPU with
+       `d2l.Benchmark` for shard sizes $b \in \{32, 64, \ldots, 1024\}$,
+       and fit $t_{\text{compute}}(b) \approx t_0 + c\,b$.
+    1. From the fit and :eqref:`eq_dp_cost`, with the communication term
+       neglected, predict the epoch time of `train` at $k \in \{1, 2, 4\}$
+       with global batch 256. Measure it, and identify what the prediction
+       omits where the two disagree.
+    1. Repeat the prediction and the measurement with the global batch
+       growing as $256k$, so that every shard keeps 256 examples. Compare
+       the test accuracies at learning rate 0.2 and at the rate that the
+       linear rule of :eqref:`eq_lr-rules` prescribes, and explain the
+       difference.
+1. [extended] **Where data parallelism pays.** ● LeNet is too small for a
+   second GPU to help. Widen it, using the timing method of the previous
+   problem, and find out which terms of :eqref:`eq_dp_cost` the width
+   changes.
+    1. Generalize `new_params` and `lenet` so that the channel counts of
+       both convolutions and the width of the hidden dense layer scale with
+       a factor $w$. Compute the gradient bytes $N(w)$ and the forward-pass
+       multiply-adds per example, and show how their ratio depends on $w$.
+    1. For $w \in \{1, 2, 4, 8, 16\}$, measure the epoch time of `train`
+       at $k = 1$ and $k = 2$ with global batch 256, and plot the speedup
+       against $w$.
+    1. Overlay the speedup that :eqref:`eq_dp_cost` predicts from your
+       measured $t_{\text{compute}}(b)$ at $b = 128$ and $b = 256$ and from
+       the bandwidth measured in :numref:`subsec_mg-accounting`. Find the
+       speedup that the prediction approaches as $w$ grows. Find the
+       achieved compute rate in FLOP/s below which the second GPU pays at
+       large $w$.
+    1. Repeat the prediction and the measurement at $w = 16$ with global
+       batch 1024, and explain why the batch size raises the limit of the
+       previous part while the width does not.
+
+:begin_tab:`pytorch`
+11. [code] **Ring allreduce by hand.** ● The star pattern routes all
+    traffic through device 0, while the ring of
+    :numref:`fig_ring_allreduce` spreads it over all $k$ devices.
+    1. For $k$ devices holding $N$ bytes each, count the bytes that the
+       star and the ring move in total, and the bytes that the busiest
+       device sends and receives. The star starts its broadcast only after
+       its sum is complete. Predict the ratio of their times under two
+       assumptions. In the first, each device has one link that carries
+       $\beta$ in each direction at the same time, and all links work
+       concurrently. In the second, the machine runs one transfer at a time
+       at bandwidth $\beta$.
+    1. Write `ring_allreduce(data)` with the interface of `allreduce`:
+       split each tensor into $k$ chunks with `chunk`, and implement
+       reduce-scatter and all-gather with explicit `.to()` copies. Check it
+       against `allreduce` for $k \in \{2, 3, 4\}$, guarding with
+       `d2l.num_gpus()`.
+    1. Time both functions with `d2l.Benchmark` on 64M floats per device
+       at $k = 2$ and $k = 4$, and decide which assumption of the first
+       part describes your machine.
+:end_tab:
+
+:begin_tab:`jax`
+11. [code] **Ring allreduce by hand.** ● The star pattern routes all
+    traffic through device 0, while the ring of
+    :numref:`fig_ring_allreduce` spreads it over all $k$ devices.
+    1. For $k$ devices holding $N$ bytes each, count the bytes that the
+       star and the ring move in total, and the bytes that the busiest
+       device sends and receives. The star starts its broadcast only after
+       its sum is complete. Predict the ratio of their times under two
+       assumptions. In the first, each device has one link that carries
+       $\beta$ in each direction at the same time, and all links work
+       concurrently. In the second, the machine runs one transfer at a time
+       at bandwidth $\beta$.
+    1. Write `ring_allreduce` as a function under `jax.shard_map` that
+       passes chunks to the neighboring device with `jax.lax.ppermute` and
+       selects them with `jax.lax.axis_index`. Check it against
+       `jax.lax.psum` for $k \in \{2, 4\}$, and count the
+       collective-permute operations in its compiled HLO.
+    1. Time it on 64M floats per device at $k = 2$ and $k = 4$. Predict
+       the ratio of the two times under each assumption of the first part,
+       decide which assumption describes your machine, and compare both
+       times with those of the `psum` of :numref:`subsec_mg-accounting`.
+12. [code] **Autodiff across replicas.** The parameters enter
+    `train_step` replicated, and the transpose of a broadcast to every
+    device is a sum over the devices.
+    1. Delete the `jax.lax.pcast` line, so that `jax.grad` differentiates
+       the replicated parameters directly. Predict the factor by which the
+       $k$-device update then differs from the one-device update, and
+       check the prediction with the parity check of
+       :numref:`subsec_mg-byhand` at $k = 2$ and $k = 4$.
+    1. Write a version of `per_device` with neither `pcast` nor an
+       explicit collective that passes the parity check. Find the
+       allreduce in its compiled HLO, obtained with
+       `train_step.lower(...).compile().as_text()`.
+:end_tab:
 
 <!-- slides -->
 

@@ -218,6 +218,11 @@ figure, or equation.
 
 **Occurrences:** 487. **Translated to:** `{#sec-linear-regression}` (Quarto ID).
 
+A figure caption may hold one level of balanced brackets (`$E[R]$`,
+`$[a,b]$`). An unbalanced `]` or nested `[[…]]` stops the caption match, and
+the label prints as literal `{#fig-…}` text. A `:label:` placed after a code
+cell does not attach to that cell's output figure.
+
 
 ### `:numref:` — Numbered Reference
 
@@ -261,6 +266,17 @@ See :ref:`sec_installation` for setup.
 ```
 
 **Occurrences:** 10. **Translated to:** `@sec-installation`.
+
+**A reference may start a line.** Wrapped prose often puts a reference first
+on a line followed by a period (`   :eqref:`eq_temperature`. Write …` →
+`   @eq-temperature. Write …`). Pandoc's `example_lists` extension reads
+`@label.` / `@label)` at the start of a line as a numbered example item, and
+that label then shadows the crossref: every reference to it in the page
+renders as a bare number ("1"), unlinked and with no warning. The book turns
+the extension off (`from: markdown-example_lists` in `_quarto.yml` and in the
+PDF `_quarto.yml` that `gen_pdf.py` writes), so no rewrapping is needed.
+Before that fix, 189 such lines broke 29 equation, 6 figure, and 3 table
+references.
 
 
 ### `:cite:` — Parenthetical Citation

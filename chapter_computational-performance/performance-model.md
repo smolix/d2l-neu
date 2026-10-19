@@ -84,6 +84,7 @@ $$
 \;=\; \frac{2}{b}\left(\frac{1}{F} + \frac{1}{B} + \frac{1}{D}\right)^{-1}
 \;\approx\; \frac{2B}{b} \quad \textrm{for } B \ll D, F.
 $$
+:eqlabel:`eq_matmul_intensity`
 
 The approximation has a direct scaling consequence: for a skinny batch pushed through a
 wide layer, **intensity grows linearly with the batch size**, because each
@@ -639,27 +640,206 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
 
 ## Exercises
 
-1. Compute the ridge point of the GPU you are actually running on, from
-   its specification sheet, and compare it against your own sweep: at what
-   matrix size does the measured curve leave the bandwidth wall? How does
-   the answer change if you sweep fp32 matmuls instead of bf16?
-1. For the batched product $\mathbf{X}\mathbf{W}$ with
-   $\mathbf{X} \in \mathbb{R}^{B \times 4096}$ and
-   $\mathbf{W} \in \mathbb{R}^{4096 \times 4096}$ in bf16, the intensity
-   is approximately $B$ for small $B$. Predict the batch size at which the
-   operation crosses your card's ridge point, then measure achieved
-   TFLOP/s for $B \in \{1, 8, 64, 512, 4096\}$ and check.
-1. Take the training loop of :numref:`sec_linear_concise` and add a
-   `print(loss)` on every iteration. Measure the slowdown per step as a
-   function of batch size. Why does the *relative* damage shrink as the
-   batch grows?
-1. Profile a training step whose `DataLoader` uses `num_workers=0` on a
-   small model, and classify the program using the CPU-versus-device-time
-   rule. Which of the three regimes is it in — and is that a GPU problem
-   at all?
-1. `x.nonzero()` forces a synchronization in PyTorch but `x + 1` does
-   not, even though both launch kernels. Explain the difference in one
-   sentence, and find one more operation with the same property.
+1. **The smallest dimension.** The exact expression for the intensity of
+   the product $\mathbf{X}\mathbf{W}$ in :eqref:`eq_matmul_intensity`, the
+   one before the approximation, holds for all shapes, not only for
+   $B \ll D, F$. Let $m = \min(B, D, F)$.
+    1. Show that the intensity lies between $2m/(3b)$ and $2m/b$. Conclude
+       that in bf16, on a GPU whose ridge point is 165 FLOP/byte, every
+       matrix product with a dimension below 165 is bandwidth-bound in the
+       roofline model.
+    1. Apply the bound to three bf16 products: the final layer of the MLP
+       of :numref:`subsec_perf-profiler`, which maps width 1024 to ten
+       outputs, on a batch of 4096 examples; the attention scores
+       $\mathbf{Q}\mathbf{K}^\top$ of one head with
+       $\mathbf{Q}, \mathbf{K} \in \mathbb{R}^{T \times 64}$ for a context of
+       $T$ tokens; and a $1 \times 1$ convolution (:numref:`subsec_1x1`) from
+       64 to 64 channels on a batch of 128 images of $32 \times 32$ pixels.
+       For each product, name the dimensions that would have to grow for
+       it to reach the ridge point, and state whether a practitioner
+       controls them.
+    1. A multi-head attention layer computes the scores of all its heads in
+       one batched kernel. Does batching the heads change the intensity of
+       the scores? State what your answer implies for an attention
+       implementation that writes the $T \times T$ scores to memory.
+1. **Diagnosis from timings.** Suppose that `Benchmark` reports the
+   following times per call for four operations of a bf16 program on the
+   RTX 4090 ($P = 165$ TFLOP/s, $\beta = 1.008$ TB/s). Operation A
+   multiplies two $8192 \times 8192$ matrices in 7.4 ms. Operation B
+   applies a softmax to the rows of an $8192 \times 8192$ matrix in
+   0.30 ms; it reads and writes the matrix once and performs about five
+   FLOPs per element. Operation C multiplies two $256 \times 256$ matrices
+   in 10 µs. Operation D multiplies two $1024 \times 1024$ matrices in
+   40 µs.
+    1. For each operation, compute its arithmetic intensity and the
+       fractions of $P$ and of $\beta$ that it achieves. Classify each
+       operation twice: once by comparing its intensity with the ridge
+       point, and once by the roof that it is close to. On which operations
+       do the two classifications disagree?
+    1. For each operation that is close to neither roof, name the most
+       likely of the causes given in :numref:`subsec_perf-sweep`, and
+       describe what a profiler timeline of the repeated calls would show
+       that confirms it.
+1. **Idle time in a profile.** Suppose that two programs keep the GPU busy
+   for only a fifth of their wall-clock time. Program A trains a small MLP
+   with many narrow layers and launches every operation from Python.
+   Program B trains a large convolutional network, and its data loader
+   decodes and resizes every image in the main Python process.
+    1. Describe where the idle gaps of each program appear in a timeline.
+       For each program, state whether one of the fixes of the method at the
+       end of :numref:`subsec_perf-profiler` removes its gaps, and name that
+       fix where one does.
+    1. Describe an experiment that confirms the diagnosis of program B
+       without a profiler.
+    1. A third program keeps the GPU busy with large matrix products but
+       converts its loss to a Python float after every step, and its
+       profile attributes most of the host time to that conversion. Explain
+       what the host does during that time, and why the CPU-versus-device
+       comparison of :numref:`subsec_perf-profiler` must not count that time
+       as overhead.
+1. **Intensity of a fused chain.** :numref:`subsec_comp-fusion` fuses the
+   function `gelu_ish` of :numref:`subsec_perf-regimes` into one kernel
+   that reads the fp32 tensor `x` once and writes the result once. The
+   elementwise arithmetic of that kernel runs on the ordinary fp32 units of
+   the RTX 4090, at 82.6 TFLOP/s against a bandwidth of 1.008 TB/s.
+    1. Count the FLOPs per element of `gelu_ish`, charging the hyperbolic
+       tangent a few tens of FLOPs. Compute the arithmetic intensity of the
+       fused kernel, compare it with the fp32 ridge point, and decide
+       whether fusion moves the chain out of the bandwidth-bound regime.
+    1. Find the number of FLOPs per element at which a fused fp32
+       elementwise kernel with one input and one output becomes
+       compute-bound on this GPU. What does the result imply for the speed
+       of a fused activation function when its hyperbolic tangent is
+       replaced by a cheaper approximation?
+1. [code] **Your GPU's roofline.** The sweep of :numref:`subsec_perf-sweep`
+   measures square bf16 matmuls on whatever GPU runs it.
+    1. Take the dense bf16 peak and the memory bandwidth of your GPU from
+       its specification sheet, compute its ridge point, and compute the
+       matrix size at which the intensity $n/3$ crosses it. Add the ceiling
+       of :eqref:`eq_roofline` to the plot of the sweep, and find the
+       smallest swept size whose measured throughput reaches half of the
+       ceiling.
+    1. Recent NVIDIA tensor cores run fp32 matrix products in the tf32
+       format at half the bf16 rate. Show that the nominal crossover of the
+       square fp32 matmul then equals that of bf16. Rerun the sweep in fp32,
+       and compare the sizes at which the two measured curves reach half of
+       their ceilings.
+1. [code] **Tiles and waves.** ● Model a matmul kernel on a GPU with $S$
+   streaming multiprocessors (SMs, :numref:`subsec_hw-gpu`) as follows;
+   the RTX 4090 has $S = 128$. The kernel splits the $n \times n$ output
+   into $128 \times 128$ tiles. Each SM computes one tile at a time at
+   $1/S$ of the peak, and the tiles run in waves of at most $S$.
+    1. Derive the fraction of the peak that this model allows as a function
+       of $n$ and $S$, and evaluate it with the $S$ of your GPU for the
+       sizes of the sweep in :numref:`subsec_perf-sweep`. Compare the result
+       with the fractions of the peak that your run of the sweep measures.
+    1. Predict the fraction for $n = 2176$, 2304, 2432, and 2560, all
+       multiples of 128, relative to the fraction at $n = 2048$. Measure the
+       five sizes with `Benchmark`, and explain where the measured pattern
+       departs from the predicted one.
+    1. Describe two ways in which a kernel can split the product at
+       $n = 512$ into more pieces of work, so that all SMs take part, and
+       state the cost that each way adds.
+
+    *Adapted from NVIDIA, [Matrix Multiplication Background User's
+    Guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html),
+    Section 3.2, Wave Quantization.*
+1. [code] **Batch size and the ridge.** Consider the product
+   $\mathbf{X}\mathbf{W}$ with $\mathbf{X} \in \mathbb{R}^{B \times 8192}$
+   and $\mathbf{W} \in \mathbb{R}^{8192 \times 8192}$ in bf16.
+    1. Using :eqref:`eq_matmul_intensity` without the approximation, find
+       the batch size at which the product reaches the ridge point of your
+       GPU. Compare it with the batch size that the approximation gives.
+    1. Predict the roofline bound on the throughput for
+       $B \in \{1, 8, 64, 512, 4096\}$. Measure the achieved TFLOP/s with
+       `Benchmark`, and plot the bound and the measurements against $B$ on
+       log-log axes. At $B = 1$, also convert the measured time into an
+       achieved memory bandwidth, and compare it with the specification.
+    1. When a language model generates text one token at a time, each of
+       its linear layers runs a product of this kind with $B$ equal to the
+       number of sequences served together. What does your plot imply about
+       the time per step of serving 64 sequences instead of one?
+1. [code] **A pipeline model of dispatch.** ● Model one call of a GPU
+   operation by three durations: the host needs $h$ to enqueue the call,
+   the device needs $d$ to execute it, and a barrier adds a latency
+   $\sigma$ after the queue drains. The device executes calls in the order
+   in which they were enqueued, and it is idle when the first call is
+   enqueued.
+    1. Show that $R$ calls enqueued back to back and followed by one barrier
+       take
+
+        $$R \max(h, d) + \min(h, d) + \sigma.$$
+
+       What does `Benchmark` therefore report for an operation with
+       $d < h$? Explain why its result for `x + 1` on a $256 \times 256$
+       tensor says nothing about the memory bandwidth of the kernel.
+    1. Treat one step of the loops of :numref:`subsec_perf-measuring` as one
+       call. The loop that reads `y` on every step waits at a barrier after
+       each step. Express the ratio of its time to the time of the loop that
+       accumulates `s` on the device in terms of $h$, $d$, and $\sigma$.
+    1. Run both loops with `x` of side 256, 1024, 4096, and 8192. From the
+       eight timings, estimate $h$ and $\sigma$, which do not depend on the
+       size, and $d$ for each size, and check that the model reproduces the
+       measured ratios. Above which device time per step does reading a
+       value on every step cost less than ten percent?
+1. [code] **Bound versus measurement.** The training step of
+   :numref:`subsec_perf-profiler` runs a three-layer MLP of width 1024 with
+   ten outputs on a batch of 64 examples in fp32.
+    1. Count the FLOPs that the matrix products of one training step
+       perform, forward and backward, and the bytes that the step moves to
+       read the weight matrices and write their gradients. Combine the two
+       counts into a roofline lower bound on the device time of the step,
+       taking the fp32 peak as the tf32 rate, half the bf16 peak.
+    1. Time the step with `Benchmark`, compare the result with the bound,
+       and name the regime of the step.
+1. [extended] **Roofline of a ResNet step.** ● Train `ResNet18` of
+   :numref:`sec_resnet` on Fashion-MNIST at $96 \times 96$ pixels with batch
+   size 128, as in that section, and map one training step onto the
+   roofline of your GPU.
+    1. For every convolution of the forward pass and for the final dense
+       layer, compute the FLOPs and the bytes, counting the input, the
+       weights, and the output once each. Do the same for one batch
+       normalization and one ReLU of each stage. Mark every operation at its
+       intensity on a roofline plot of your GPU.
+    1. Profile one training step. Split its device time among convolutions,
+       normalizations and activations, and all other kernels, add the idle
+       time between kernels, and report the share of each in the
+       wall-clock time of the step.
+    1. Apply the fix of the method that targets the largest share outside
+       the compute-bound regime, measure again, and report which share
+       dominates afterward.
+
+:begin_tab:`pytorch`
+11. [code] **Hidden barriers.** Each of the following lines runs once per
+    step of a training loop, where `x` and `g` are tensors on the GPU and
+    `c` is a Python float: `x[x > 0].sum()`, `print(x.shape)`,
+    `x.argmax()`, `if g.norm() > c: g *= c / g.norm()`, and
+    `x * torch.tensor(0.5, device=x.device)`.
+    1. Decide which of the lines make the host wait for the device, and
+       justify each decision.
+    1. Rewrite every line that waits so that it computes the same result
+       without a barrier.
+    1. Call `torch.cuda.set_sync_debug_mode('warn')` before the loop, which
+       makes PyTorch warn at every operation that synchronizes with the
+       device, and check both answers.
+:end_tab:
+
+:begin_tab:`jax`
+11. [code] **Hidden barriers.** Each of the following lines runs once per
+    step of a training loop, where `x` and `g` are arrays on the GPU and `c`
+    is a Python float: `x[x > 0].sum()`, `print(x.shape)`,
+    `jnp.argmax(x)`,
+    `if jnp.linalg.norm(g) > c: g = g * c / jnp.linalg.norm(g)`, and
+    `x * jnp.asarray(0.5)`.
+    1. Decide which of the lines make the host wait for the device, and
+       justify each decision.
+    1. Rewrite every line that waits so that it computes the same result
+       without a barrier.
+    1. Run the loop inside
+       `with jax.transfer_guard_device_to_host('disallow'):`, which raises
+       an error at every implicit transfer of a value from the device to the
+       host, and check both answers.
+:end_tab:
 
 <!-- slides -->
 

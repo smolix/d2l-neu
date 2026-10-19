@@ -384,7 +384,7 @@ through the fast weight programmers
 One further solver maintains the exact solution of
 :eqref:`eq_ttr-least-squares` with a rank-one update per token: recursive
 least squares. It costs more state and more arithmetic than any row
-above, and the first exercise places it on the table.
+above, and one of the exercises places it on the table.
 
 ### Two Loops: What Learns When
 :label:`subsec_ttr-two-loops`
@@ -1129,51 +1129,243 @@ attention a model must keep.
 
 ## Exercises
 
-1. **[short-code]** **Recursive least squares joins the table.** The
-   exact solution
-   :eqref:`eq_ttr-least-squares` can be maintained online: with
+1. [code] **Leave-one-out from one fit.** Let $a_{ij}$ be the weight that
+   `nadaraya_watson(x_train, y_train, x_train, sigma)` assigns to the key
+   $x_i$ for the query $x_j$, so that the fit with every pair included is
+   $f(x_j) = \sum_i a_{ij} y_i$. Write $f_{-j}(x_j)$ for the leave-one-out
+   prediction of :numref:`subsec_ttr-bandwidth`, which renormalizes the
+   weights after removing the pair $(x_j, y_j)$.
+    1. Show that
+       $$y_j - f_{-j}(x_j) = \frac{y_j - f(x_j)}{1 - a_{jj}}.$$
+    1. Let the inputs be distinct. Find the limits as $w \to \infty$ of
+       $a_{jj}$, of the training error of $f$, and of the leave-one-out
+       loss, and explain with the identity why the training error vanishes
+       in this limit while the leave-one-out loss does not.
+    1. Use the identity to evaluate the leave-one-out loss from the full
+       weight matrix on a grid of 50 bandwidths between $0.1$ and $2$,
+       and check it against the `keys` and `values` construction at one
+       bandwidth. Locate the minimizer, compare it with the bandwidth
+       $1/w$ that five epochs of gradient descent reach, and find the
+       number of epochs of the same update after which $1/w$ stays
+       within $0.01$ of the minimizer. Explain why the identity can break
+       down in single precision at bandwidths well below $0.1$.
+    1. In an autoregressive layer the memory $m_t$ of
+       :eqref:`eq_ttr-memorize` includes the pair $(\mathbf{k}_t,
+       \mathbf{v}_t)$ computed from token $t$, and the readout
+       $\mathbf{o}_t$ is used to predict token $t + 1$. Explain why such a
+       layer needs no leave-one-out construction, and give a training
+       target for $\mathbf{o}_t$ that would leak in the same way as the
+       training error of the second part.
+1. [code] **Least squares under correlated keys.** The capacity
+   measurement of :numref:`subsec_ms-capacity` stores $n$ pairs in the
+   Hebbian memory $\mathbf{S} = \sum_i \mathbf{k}_i \mathbf{v}_i^\top$ and
+   finds that mixing a shared direction into every key degrades recall well
+   before $n = d_k$. The least-squares memory $\mathbf{S}_n^\star =
+   \mathbf{K}_n^{+} \mathbf{V}_n$ of :eqref:`eq_ttr-least-squares`, with
+   $t = n$ stored pairs, keeps the key covariance that the Hebbian memory
+   deletes.
+    1. Show that the read-outs of $\mathbf{S}_n^\star$ at the stored keys,
+       the rows of $\mathbf{K}_n \mathbf{S}_n^\star$, equal
+       $\mathbf{H}\mathbf{V}_n$, where $\mathbf{H}$ is the orthogonal
+       projection of $\mathbb{R}^n$ onto the column space of
+       $\mathbf{K}_n$. Show further that these read-outs do not change
+       when every key is mapped by the same invertible matrix, and contrast
+       this with the read-outs of the Hebbian memory.
+    1. Let $n > d_k$, let every $d_k$ of the keys be linearly independent,
+       and let the values be independent unit vectors with mean zero,
+       drawn independently of the keys. Show that the squared read error,
+       averaged over the stored keys, has expectation $(n - d_k)/n$, and
+       compare it with the $(n - 1)/d_k$ of the Hebbian memory.
+    1. Rebuild the key construction of `hebbian_memory`, with $\rho = 0$
+       and $\rho = 0.5$, at $d_k = 64$ and $n \in \{16, 32, 64, 128,
+       256\}$, and measure the read error and the recall of both memories.
+       Compute $\mathbf{S}^\star$ by a linear solve with a ridge of
+       $10^{-6}$.
+1. [code] **Recursive least squares.** ● The ridge memory
+   $\mathbf{S}_t = \mathbf{P}_t \mathbf{K}_t^\top \mathbf{V}_t$ with
    $\mathbf{P}_t = (\mathbf{K}_t^\top \mathbf{K}_t + \lambda
-   \mathbf{I})^{-1}$, use the Sherman--Morrison identity to derive the
-   rank-one update of $\mathbf{P}_t$ and of the memory when
-   $(\mathbf{k}_t, \mathbf{v}_t)$ arrives. Implement it on the spectrum
-   problem of :numref:`subsec_ttr-spectrum` and verify that after one
-   pass it matches the batch ridge fit to numerical precision. What does
-   it cost per token in memory and arithmetic compared with the delta
-   rule, and where does it sit in :numref:`tab_ttr-recipe`?
-1. **[conceptual]** Derive :eqref:`eq_ttr-longhorn-gate` yourself: write
-   the stationarity
-   condition of :eqref:`eq_ttr-longhorn-objective`, apply
-   Sherman--Morrison, and check the two limits $\beta_t \to 0$ (explicit
-   gradient step) and $\beta_t \to \infty$ (exact interpolation of the
-   newest pair). For unit-norm keys, what range does $\Delta_t$ cover?
-1. **[short-code]** In :numref:`subsec_ttr-bandwidth`, remove the
-   leave-one-out masking
-   and train $w$ on the plain training error. Report where $w$ goes and
-   what the fit looks like, then explain why a *causal* memory, which can
-   only regress pairs from strictly earlier steps, gets the exclusion for
-   free.
-1. **[conceptual]** With unit-norm keys and queries, expand $\|\mathbf{q} -
-   \mathbf{k}\|^2$ to show the Gaussian kernel of
-   :eqref:`eq_ttr-parametric-nw` equals $\exp(\mathbf{q}^\top
-   \mathbf{k}\, w^2)$ up to query-independent factors, so the learned
-   bandwidth is a learned softmax temperature. Which normalization
-   schemes in modern attention stacks make this correspondence exact?
-1. **[short-code]** On the drifting stream of
-   :numref:`subsec_ttr-tracking`, add momentum
-   to the implicit tracker as in :eqref:`eq_ttr-titans`. Sweep $\eta \in
-   \{0, 0.5, 0.9\}$ under (a) the random-walk drift above and (b) a
-   *consistent* drift that rotates $\mathbf{w}^*_t$ steadily in a fixed
-   plane. When does past surprise help, and why?
-1. **[short-code]** In the spectrum experiment, the thirty-pass fit's
-   distance to the batch solution is small but not zero. Explain the two
-   remaining causes (the fixed step size $\beta$ and the finite number
-   of passes over one fixed ordering of the stream) and check both by
-   shrinking $\beta$ while increasing the passes. Then remove the $L2$
-   term from the online steps only and rerun: the distance now stalls at
-   a floor that no number of passes removes, because the online and
-   batch solvers no longer share an objective. Which solution does plain
-   online gradient descent from $\mathbf{w} = \mathbf{0}$ approach
-   instead?
+   \mathbf{I})^{-1}$ can be maintained online, one pair at a time.
+    1. Use the Sherman--Morrison identity to derive the rank-one update of
+       $\mathbf{P}_t$ when $(\mathbf{k}_t, \mathbf{v}_t)$ arrives. Show
+       that the memory update has the form of the delta rule with the
+       scalar step size $\beta_t$ replaced by a matrix, and identify that
+       matrix.
+    1. Show that each column of $\mathbf{S}_t$ minimizes
+       :eqref:`eq_ttr-longhorn-objective` with $\beta_t = 1$ once the
+       proximity term $\|\mathbf{s} - \mathbf{s}_{t-1}\|^2$ is replaced by
+       $(\mathbf{s} - \mathbf{s}_{t-1})^\top \mathbf{P}_{t-1}^{-1}
+       (\mathbf{s} - \mathbf{s}_{t-1})$.
+    1. Implement the update on the stream of
+       :numref:`subsec_ttr-spectrum`, using `feats`, `y_ctx`, and `lam`
+       and starting from $\mathbf{P}_0 = \mathbf{I}/\lambda$, and compare
+       the memory after one pass with `w_batch`. Count the memory and the
+       arithmetic per token for $d_k$ features and $d_v$ value channels,
+       compare both with the delta rule, and write the row of
+       :numref:`tab_ttr-recipe` for this solver.
+    1. Discounting the evidence by $\gamma$ per step replaces the
+       recursion of $\mathbf{P}_t^{-1}$ by $\mathbf{P}_t^{-1} = \gamma
+       \mathbf{P}_{t-1}^{-1} + \mathbf{k}_t \mathbf{k}_t^\top$. Derive the
+       corresponding update of $\mathbf{P}_t$, run it from
+       $\mathbf{P}_0 = 10^6\, \mathbf{I}$ on the stream of
+       :numref:`subsec_ttr-tracking`, and compare its estimate with the
+       linear solve on `stats_g` after the first few dozen steps. What
+       does each method cost per step?
+1. [code] **Step size versus passes.** ● In :numref:`subsec_ttr-spectrum`
+   thirty passes of `online_gd` leave a nonzero distance to `f_batch`.
+   Let $\mu_1 \ge \mu_2 \ge \cdots$ be the eigenvalues of
+   $\boldsymbol{\Phi}^\top \boldsymbol{\Phi}$, where the rows of
+   $\boldsymbol{\Phi}$ are the rows of `feats`.
+    1. Compute the eigenvalues and count how many exceed `lam`. Explain why
+       128 random Fourier features of a scalar input span so few
+       directions of non-negligible eigenvalue.
+    1. Run `online_gd` for 30, 300, and 3000 passes with $\beta \in \{0.06,
+       0.02, 0.006\}$, and record the distance to `f_batch`. Expand the
+       final iterates and `w_batch` in the eigenvectors and compare their
+       coefficients direction by direction. Which directions remain far
+       from `w_batch` at $\beta = 0.06$, and how does the answer change as
+       $\beta$ shrinks?
+    1. Explain why a constant step size cannot settle at `w_batch`,
+       although the steps descend the terms of the objective that
+       `w_batch` minimizes, and estimate how many passes a direction with
+       a small eigenvalue $\mu_j$ needs. Which of the two effects dominates
+       for a recurrent layer, which gets a single pass?
+1. **Stability versus sign flips.** By :eqref:`eq_ttr-longhorn-gate`,
+   Longhorn's transition has the eigenvalue $1 - \Delta_t
+   \|\mathbf{k}_t\|^2 = 1/(1 + \beta_t \|\mathbf{k}_t\|^2)$ along
+   $\mathbf{k}_t$ and the eigenvalue $1$ orthogonal to it.
+    1. Allow $\beta_t < 0$. For which values of $\beta_t$ does
+       :eqref:`eq_ttr-longhorn-objective` still have a unique minimizer,
+       and which eigenvalues along $\mathbf{k}_t$ does the transition then
+       reach? Conclude whether any implicit step of this form has a
+       negative eigenvalue, and place Longhorn's transition in a row of
+       :numref:`tab_dn-ladder`.
+    1. The explicit step $\mathbf{s}_t = (\mathbf{I} - b\, \mathbf{k}_t
+       \mathbf{k}_t^\top)\, \mathbf{s}_{t-1} + b\, v_t \mathbf{k}_t$ with
+       $b \|\mathbf{k}_t\|^2 = 2$ reflects the state along $\mathbf{k}_t$,
+       which is the eigenvalue $-1$ that the parity construction of
+       :numref:`subsec_dn-reflection` needs. Find the coefficient
+       $\beta_t$ for which setting the gradient of
+       :eqref:`eq_ttr-longhorn-objective` to zero yields this step, and
+       determine what kind of stationary point the step then lands on.
+1. **Gradients through the inner loop.** Let the implicit tracker of
+   :numref:`subsec_ttr-tracking` use one coefficient $\beta$ at every
+   step, and let the outer loss be the one-step-ahead prediction error
+   $L = \frac{1}{T} \sum_t e_t^2$ with $e_t = v_t - \mathbf{s}_{t-1}^\top
+   \mathbf{k}_t$. Write $\mathbf{g}_t = \partial \mathbf{s}_t /
+   \partial \beta$.
+    1. Derive a recursion for $\mathbf{g}_t$, identify the matrix that
+       multiplies $\mathbf{g}_{t-1}$, and express $dL/d\beta$ through the
+       $\mathbf{g}_t$.
+    1. Show that $\|\mathbf{g}_t\| \le \|\mathbf{g}_{t-1}\| + c_t$, with
+       $c_t$ independent of $\mathbf{g}_{t-1}$, for every $\beta \ge 0$.
+       Repeat the derivation for the explicit step $\mathbf{s}_t =
+       \mathbf{s}_{t-1} + \beta e_t \mathbf{k}_t$, and give a condition on
+       $\beta$ and the keys under which $\mathbf{g}_t$ can grow
+       exponentially.
+    1. Forward-mode differentiation carries $\mathbf{g}_t$ along with
+       $\mathbf{s}_t$ and obtains $dL/d\beta$ in the same pass. Compare its
+       memory with that of backpropagation through all $T$ updates for a
+       state of size $d$, and explain how the cost of the forward approach
+       scales when the layer has $P$ outer parameters instead of one.
+1. [code] **Momentum or forgetting.** `titans_linear` applies momentum
+   ($\eta = 0.9$) and forgetting ($\alpha = 0.1$) together, and recall of
+   the latest value collapses by four overwrites per key.
+    1. Before running anything, predict the recall for every $R$ at
+       $\eta = \alpha = 0$ and the cell's learning rate, using the
+       correspondence between :eqref:`eq_ttr-titans` and the delta rule.
+    1. Rerun the overwrite sweep for $(\eta, \alpha) \in \{(0, 0), (0.9,
+       0), (0, 0.1), (0.9, 0.1)\}$, and attribute the collapse to one or
+       both coefficients.
+    1. Explain the recall you measured at $(\eta, \alpha) = (0, 0.1)$,
+       given that forgetting shrinks every binding at each step, and
+       describe a change to the protocol under which the same $\alpha$
+       would change that recall.
+1. [code] **Width of a deep memory.** ● The capacity law of
+   :numref:`subsec_ms-capacity` limits a linear memory, and
+   :numref:`subsec_ttr-titans-deep` motivates the MLP memory by that
+   limit. Let $\mathbf{a}$ denote the hidden activation of the memory at
+   the current key.
+    1. Show that one gradient step on the output layer's weight and bias,
+       without momentum, moves the retrieval at the current key by
+       $-2\theta(\|\mathbf{a}\|^2 + 1)$ times the retrieval error. Estimate
+       $\|\mathbf{a}\|^2$ as a function of `h_mem` at the section's
+       initialization. At $\theta = 0.005$, find the width beyond which
+       this step overshoots the target at the current key, and the width
+       beyond which it enlarges the retrieval error there.
+    1. Rerun the cell for `h_mem` $\in \{128, 256, 384, 512\}$, once with
+       the cell's $\eta = 0.5$ and once with $\eta = 0$, and state which of
+       the two widths each setting follows.
+    1. Set $\theta = 0.64 / h_\textrm{mem}$, raise the four repetitions of
+       each pair in `order` to sixteen, and measure `retrieval_mse` after
+       the stream for `h_mem` $\in \{32, 128, 512\}$ and `num_pairs` $\in
+       \{32, 64, 128\}$. Compare with a linear memory $\mathbf{S}^\top
+       \mathbf{k}$ that starts at $\mathbf{S} = \mathbf{0}$ and is trained
+       by the same loop with its own tuned $\theta$, and with the
+       empty-memory error.
+    1. Freeze the first layer, so that only the output layer adapts, and
+       repeat the measurement at `h_mem = 512`. What does the result say
+       about the source of the capacity, and how would you state the
+       capacity law for this memory?
+1. [code] **Window length under drift.** ● In the stream of
+   :numref:`subsec_ttr-tracking`, the keys are $\mathbf{k}_t \sim
+   \mathcal{N}(\mathbf{0}, \mathbf{I}/d)$, the noise has standard
+   deviation $\sigma_\epsilon = 0.1$, and the target takes the step
+   $\mathbf{w}^*_t = \mathbf{w}^*_{t-1} + \kappa \mathbf{z}_t$ with
+   $\mathbf{z}_t \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ and $\kappa =
+   0.03$ before it is renormalized. Decayed least squares with discount
+   $\gamma$ averages over about $n_\gamma = 1/(1 - \gamma)$ observations.
+    1. Assume $n_\gamma \gg d$, so that $\sum_{i \le t} \gamma^{t-i}
+       \mathbf{k}_i \mathbf{k}_i^\top \approx (n_\gamma / d)\,\mathbf{I}$,
+       and ignore the renormalization. Show that the noise and the lag
+       behind the moving target contribute approximately
+       $$\mathbb{E}\,\|\hat{\mathbf{w}}_t - \mathbf{w}^*_t\|^2 \approx \frac{\sigma_\epsilon^2 d^2}{2 n_\gamma} + \frac{d \kappa^2 n_\gamma}{2}.$$
+    1. Find the window $n_\gamma$ that minimizes this error, the resulting
+       error, and the optimal $\gamma$ for the parameters of the cell.
+       How does the optimal window scale with the drift speed $\kappa$?
+    1. Sweep $\gamma$ in the cell for $\kappa \in \{0.003, 0.01, 0.03,
+       0.1\}$, recording the mean squared tracking error over the last 500
+       steps, and compare the best $\gamma$ with the prediction. At which
+       $\kappa$ does the prediction fail, and which assumption breaks
+       there?
+1. [code] **Momentum on a drifting target.** Give the implicit tracker of
+   :numref:`subsec_ttr-tracking` a velocity, as in :eqref:`eq_ttr-titans`
+   with $\alpha = 0$:
+   $$\mathbf{u}_t = \eta\, \mathbf{u}_{t-1} + \Delta_t \big(v_t - \mathbf{s}_{t-1}^\top \mathbf{k}_t\big) \mathbf{k}_t, \qquad \mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{u}_t.$$
+   Besides the random walk of the cell, use a consistent drift
+   $\mathbf{w}^*_t = \cos(\omega t)\, \mathbf{a} + \sin(\omega t)\,
+   \mathbf{b}$ with orthonormal $\mathbf{a}, \mathbf{b}$ and $\omega =
+   0.01$.
+    1. Suppose the correction $\Delta_t (v_t - \mathbf{s}_{t-1}^\top
+       \mathbf{k}_t) \mathbf{k}_t$ equals the same vector at every step.
+       Find the limit of $\mathbf{u}_t$, and state what momentum does to
+       the effective step size.
+    1. At $\beta = 1$, compare the tail tracking errors for $\eta \in \{0,
+       0.5, 0.9\}$ under both drifts. Explain the behavior at
+       $\eta = 0.9$, and name the guarantee of
+       :eqref:`eq_ttr-longhorn-gate` that momentum gives up.
+    1. Tune $\beta$ on a grid separately for each $\eta \in \{0, 0.5,
+       0.8\}$ and compare the best errors under both drifts. Does past
+       surprise improve tracking of the consistent drift once the step size
+       is tuned?
+1. [extended] **Abrupt regime changes.** ● Replace the random walk of
+   :numref:`subsec_ttr-tracking` by abrupt switches: at each step, with
+   probability $1/200$, $\mathbf{w}^*_t$ is replaced by a fresh random
+   unit vector, and otherwise it stays fixed.
+    1. Sweep a fixed discount $\gamma$ for decayed least squares and find
+       the best one. Plot the squared tracking error as a function of the
+       time since the most recent switch, averaged over all switches.
+    1. Design a gate $\gamma_t$ computed from the one-step-ahead residual
+       $v_t - \hat{\mathbf{w}}_{t-1}^\top \mathbf{k}_t$, which is
+       available before the update just as the input-dependent gates of
+       this chapter are, and compare it with the best fixed $\gamma$.
+    1. Fit the coefficients of your gate on a set of training streams and
+       evaluate it on fresh streams. Identify the inner and the outer loop
+       of :numref:`subsec_ttr-two-loops` in this procedure, and check
+       whether the gain survives on the fresh streams.
+    1. Explain why no tracker of this kind can bring the error down
+       within fewer than about $d$ steps after a switch, and use this to
+       bound the gain that any gate can achieve over the best fixed
+       $\gamma$.
 
 [Discussions](https://d2l.discourse.group/)
 

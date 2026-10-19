@@ -79,6 +79,7 @@ token, about $2N$ operations, independent of $t$.
 :label:`fig_kv-cache`
 
 ### The Cached Forward Pass
+:label:`subsec_kv-cache-cached-forward`
 
 Two details need care. First, positions: RoPE rotates queries and keys by
 their *absolute* position, so the attention step must know where in the
@@ -265,6 +266,7 @@ def generate_cached(self, prefix, num_tokens, seed=0, temperature=1.0,
 ```
 
 ### Same Logits, Measured
+:label:`subsec_kv-cache-same-logits`
 
 Caching should preserve the model's logits. We compare the cached path against
 the full forward pass
@@ -452,6 +454,7 @@ is the cached decode loop.
 :end_tab:
 
 ## Memory Required by the KV Cache
+:label:`subsec_kv-cache-memory`
 
 The cache consumes GPU memory. Each of the $n_\textrm{layers}$ layers stores one key and one value
 vector of dimension $n_\textrm{kv} \cdot d_\textrm{head}$ per token, so a
@@ -518,6 +521,7 @@ configuration that does not fit fails at initialization, not mid-request.
 :end_tab:
 
 ### Prefill Is Compute-Bound, Decode Is Memory-Bound
+:label:`subsec_kv-cache-prefill-decode`
 
 Why obsess over the size of a buffer that merely *sits* in memory?
 Because at generation time it does not sit — it moves. Every decoded
@@ -779,6 +783,7 @@ for G in (8, 4, 2, 1):
 ```
 
 ### GQA Cache Size and Validation Loss
+:label:`subsec_kv-cache-gqa-quality`
 
 What does the sharing cost in modeling power? We train the
 :numref:`sec_gpt` configuration on the character-level Time Machine at
@@ -1038,6 +1043,7 @@ print(f'full attention: loss {full:.2f}, perplexity {jnp.exp(full):.0f}')
 ```
 
 ### Low-Rank Keys and Values
+:label:`subsec_kv-cache-low-rank`
 
 GQA shrinks the cache by storing fewer key-value heads. A different bet:
 keep all heads, but suppose that a token's concatenated key and value
@@ -1112,6 +1118,7 @@ for this passage admits a low-rank approximation. MLA instead learns a shared
 projection during training and retains a separate rotary component.
 
 ### Sliding Windows and Attention Sinks
+:label:`subsec_kv-cache-sinks`
 
 The remaining lever is length: cap the cache at the last $w$ tokens,
 evicting the oldest as generation proceeds, and memory is bounded
@@ -1271,39 +1278,232 @@ hybrid architectures provide further alternatives.
 
 ## Exercises
 
-1. Work out the KV cache of Llama-2-70B, which uses 80 layers, 64 query
-   heads of dimension 128, and GQA with 8 key-value heads, storing the
-   cache in 16-bit precision. How many bytes per token? At what context
-   length does a single sequence's cache reach the size of the weights
-   (140 GB in fp16)? Redo both numbers for the same model without GQA
-   (64 key-value heads) and for MQA (1 key-value head).
-2. Break the cache deliberately: remove the `offset` from the cached
-   RoPE path, so decoded tokens are rotated as if they sat at position
-   zero, and rerun the correctness check. How large is the logit
-   deviation, and why does it grow with the length of the prefix? What
-   is the corresponding bug for the `pos='learned'` scheme?
-3. Our decode measurement ran a batch of one. Extend `generate_cached`
-   to a batch of prompts of equal length and measure tokens per second
-   at batch sizes 1, 4, 16, and 64 at a fixed context. Explain the shape
-   of the curve with the arithmetic-intensity argument: which bytes are
-   read once per *step* and which once per *sequence*?
-4. The PyTorch implementation grows the cache by `torch.cat`, copying
-   the whole buffer every step; the JAX one preallocates and writes into
-   slots, but hands the jitted function fresh buffer copies unless the
-   arguments are donated. Fix either one: preallocate in PyTorch (write
-   into a slice of a `max_len` buffer), or pass `donate_argnums` for the
-   cache arguments in JAX. Measure the per-step latency at context 4096
-   before and after your fix.
-5. Give `GQAAttention` a `forward_step` in the style of this section, so
-   that the cache stores only the $H_{kv}$ key-value heads. Verify
-   correctness against the full forward pass, and confirm that measured
-   cache memory shrinks by $H / H_{kv}$.
-6. Implement a true rolling buffer: cap the per-layer cache at the 4
-   sink entries plus the most recent $w - 4$, evicting the rest as
-   generation proceeds past $w$ tokens. Decide what position index a
-   retained entry should keep (consider both the `'rope'` and
-   `'learned'` schemes), state your choice, and check the model's loss
-   on a long passage against the mask-based experiment of this section.
+1. **Cost of generation.** A model with $N$ parameters reads a prompt of
+   $P$ tokens and then generates $T$ tokens. Count $2N$ dense-layer FLOPs
+   per token of a forward pass.
+    1. Count the dense-layer FLOPs of a naive schedule that runs a forward
+       pass over the whole history before every new token, and of
+       `generate_cached`, which runs one prefill over the prompt and then
+       single-token steps. Evaluate the ratio of the two counts for the
+       end-to-end run of :numref:`subsec_kv-cache-same-logits`, with
+       $P = 3584$ and $T = 256$.
+    1. The end-to-end run is only a few times faster with the cache, far
+       less than this ratio of FLOPs. Explain the difference with the
+       arithmetic intensities of the two kinds of forward pass in
+       :numref:`subsec_kv-cache-prefill-decode`.
+1. [code] **A missing position offset.** The cached step of
+   :numref:`subsec_kv-cache-cached-forward` rotates the queries and keys of
+   new tokens by their absolute positions.
+    1. Drop the offset from the RoPE rotation of the cached step, so that
+       every decoded token is rotated as if it sat at position 0, and rerun
+       the check of :numref:`subsec_kv-cache-same-logits` for
+       `pos='rope'`. Compare the deviation with that of the correct cache.
+    1. Take a decoded query at true position $t$. Determine the relative
+       offset that the faulty cache uses against a prefix key at position
+       $j$ and against the key of an earlier decoded token. Which
+       information about the decoded tokens does the model lose entirely?
+    1. Make the corresponding mistake for learned positions, so that every
+       decoded token receives the embedding of position 0. Prefill GPT-2
+       with the first 512 tokens of the passage `x`, decode the remaining
+       tokens one at a time, and compare the loss on positions 512 onward,
+       the loss that `tail_loss` measures, for the faulty and the correct
+       cache.
+1. **Cache of a 70B model.** Llama-2-70B :cite:`touvron2023llama2` has 80
+   layers and 64 query heads of dimension 128, and it uses GQA with 8
+   key-value heads. Its weights occupy about 140 GB in 16-bit precision,
+   and its cache is stored in 16-bit precision as well.
+    1. Use :eqref:`eq_kv-cache-bytes` to compute the cache bytes per
+       token, and the context length at which the cache of a single
+       sequence reaches the size of the weights.
+    1. Repeat both computations for the same model with 64 key-value
+       heads, that is, without sharing, and with a single key-value head
+       (MQA).
+    1. The weights are split across two GPUs with 80 GB each. For each of
+       the three configurations, find how many sequences of 4096 tokens fit
+       into the memory that the weights leave free, ignoring activations.
+1. **Shared weight reads.** ● Use the roofline model of
+   :numref:`subsec_kv-cache-prefill-decode`: a forward pass takes at least
+   its FLOPs divided by the peak rate of 83 TFLOP/s and at least its bytes
+   moved divided by the bandwidth of 1 TB/s. The weights of `model` are
+   stored in fp32.
+    1. Ignore the cache. A forward pass of `model` over $m$ new tokens
+       reads every weight once, whether the tokens belong to $m$ sequences
+       of a batch or are $m$ drafted tokens of one sequence. Find the
+       largest $m$ for which the pass takes no longer than a single-token
+       step. Explain why this bound makes it cheap to check several drafted
+       tokens in one pass, as speculative decoding does
+       :cite:`Leviathan.Kalman.Matias.2023`.
+    1. Now include the cache, which each of $b$ sequences at context $n$
+       reads separately. Derive the arithmetic intensity of one decode step
+       of `model`, counting the attention FLOPs and the cache bytes.
+       Evaluate it at $n = 2048$ for $b = 1$ and in the limit
+       $b \to \infty$, and compare both values with the ridge of about 80
+       FLOPs per byte. How does the limit change when the $H$ query heads
+       share $H_{kv}$ key-value heads?
+1. [code] **A cached GQA step.** Extend the cached forward pass of
+   :numref:`subsec_kv-cache-cached-forward` to a `d2l.GPT` whose blocks
+   hold `GQAAttention` with `rope=True`, built as in
+   :numref:`subsec_kv-cache-gqa-quality`, so that the cache stores only the
+   $H_{kv}$ key-value heads. Verify for $H_{kv} = 2$ that the cached logits
+   agree with those of the full forward pass, as in
+   :numref:`subsec_kv-cache-same-logits`.
+1. [code] **Uptraining to GQA.** ● :citet:`Ainslie.Lee-Thorp.Jong.ea.2023`
+   convert a multi-head checkpoint into a grouped one by mean-pooling the
+   key and value projections of the heads in each group, and then continue
+   training for 5 percent of the original number of steps. Apply this
+   recipe to the character model of
+   :numref:`subsec_kv-cache-gqa-quality`.
+    1. Train the $H_{kv} = 8$ configuration for 300 steps. Convert it to
+       $H_{kv} = 2$ by averaging the key and value projections over each
+       group of four consecutive heads, the grouping that `GQAAttention`
+       uses, and measure the validation loss without further training.
+       Repeat the conversion with the first head of each group in place of
+       the average.
+    1. Continue training the mean-pooled model for 15 steps. Compare its
+       validation loss with that of the $H_{kv} = 8$ model after 300 steps
+       and with that of an $H_{kv} = 2$ model trained from scratch for 315
+       steps.
+1. **Absorbed projections.** ● In MLA, every token $j$ of a layer caches
+   one latent vector $\mathbf{c}_j \in \mathbb{R}^r$, and head $h$
+   reconstructs its key and value as $\mathbf{k}^{(h)}_j =
+   \mathbf{U}^{(h)}_K \mathbf{c}_j$ and $\mathbf{v}^{(h)}_j =
+   \mathbf{U}^{(h)}_V \mathbf{c}_j$, with up-projections
+   $\mathbf{U}^{(h)}_K, \mathbf{U}^{(h)}_V \in \mathbb{R}^{d_h \times r}$
+   :cite:`DeepSeek-AI.2024`. Head $h$ has the query $\mathbf{q}^{(h)}_t$ at
+   position $t$ and the attention output $\mathbf{o}^{(h)}_t$, and the
+   layer returns $\sum_h \mathbf{W}^{(h)}_O \mathbf{o}^{(h)}_t$ with
+   $\mathbf{W}^{(h)}_O \in \mathbb{R}^{d \times d_h}$. Ignore the
+   $1/\sqrt{d_h}$ scaling of the scores.
+    1. Show that a decode step can compute every score and the layer output
+       from the cached latents alone, without forming any key or value, by
+       folding $\mathbf{U}^{(h)}_K$ into the query and $\mathbf{U}^{(h)}_V$
+       into the output projection.
+    1. With RoPE, in the notation of :numref:`sec_positional-information`,
+       the score becomes
+       $(\mathbf{R}_t \mathbf{q}^{(h)}_t)^\top \mathbf{R}_j
+       \mathbf{U}^{(h)}_K \mathbf{c}_j$. Show that folding no longer
+       produces a matrix that is independent of $j$. MLA therefore appends
+       to every key a rotary part $\mathbf{R}_j \mathbf{k}^R_j$, where
+       $\mathbf{k}^R_j \in \mathbb{R}^{d_R}$ is shared by all heads and
+       cached next to $\mathbf{c}_j$, and it appends a rotary part to every
+       query. Show that the score then splits into a term that admits the
+       folding and a term computed from the cached $\mathbf{k}^R_j$.
+    1. DeepSeek-V2 uses $H = 128$ heads with $d_h = 128$, $r = 512$, and
+       $d_R = 64$. For one layer and one cached token, compare the number
+       of cached elements and the FLOPs of the scores and weighted sums of
+       a decode step under multi-head attention with cached keys and values
+       and under MLA with folded projections. How many key-value heads
+       would GQA need for a cache of the same size? What does the ratio of
+       FLOPs to cached elements imply for the decode step of
+       :numref:`subsec_kv-cache-prefill-decode`?
+1. [code] **A fixed low-rank basis.** `lowrank_kv` fits its rank-$r$ basis
+   to the passage that it evaluates, so the experiment of
+   :numref:`subsec_kv-cache-low-rank` uses an oracle. A cache that stores
+   $r$ numbers per token and layer needs a basis that is fixed in advance.
+    1. Encode the 1024 tokens of *The Time Machine* that follow the
+       evaluation passage. Run GPT-2 on this calibration passage, and store
+       for every layer the top $r$ right singular vectors of the
+       concatenated key--value matrix, computed as in `lowrank_kv`.
+    1. Evaluate `tail_loss` on the passage `x` with the keys and values of
+       every layer replaced by their projections onto the stored basis,
+       for $r \in \{512, 256, 128\}$. Compare the losses with those of
+       the oracle at the same ranks.
+1. [code] **Sinks as no-ops.** :citet:`Xiao.Tian.Chen.ea.2024` interpret a
+   sink as the position where a head places attention it does not need.
+   gpt-oss makes this role explicit by giving every head a learned logit
+   $a_\textrm{sink}$ in the denominator of its softmax
+   :cite:`OpenAI.2025`. For the query at position $t$ with scores
+   $a_{t,0}, \ldots, a_{t,t}$ on the tokens at positions $0, \ldots, t$,
+   the weight on token $j$ is
+   $$\alpha_{t,j} = \frac{\exp(a_{t,j})}{\exp(a_\textrm{sink}) + \sum_{i=0}^{t} \exp(a_{t,i})}.$$
+    1. Show that such a head computes the output of ordinary softmax
+       attention over the $t + 1$ tokens plus one extra key, whose score is
+       $a_\textrm{sink}$ for every query and whose value is the zero
+       vector. Which values can the total weight on the $t + 1$ tokens
+       take?
+    1. GPT-2 has no sink logit, so its weights are those of the formula
+       with $a_\textrm{sink} = -\infty$. Extend `watch` to record, in every
+       layer, the norm of the value vector $\mathbf{v}_0$ of token 0
+       divided by the mean value norm of the other tokens. Record also the
+       norm of $\alpha_{t,0}\, \mathbf{v}_0$ divided by the norm of the head
+       output at position $t$, averaged over heads and over the queries
+       from position 64 on. In which layers does token 0 behave like the
+       zero-value key of the previous sub-item?
+    1. Repeat the measurement of attention mass on a 1024-token passage
+       that starts 100 tokens later in the book, so that a different token
+       sits at position 0. Does the high mass stay at position 0?
+1. [extended] **A streaming cache.** ● The mask-based experiment of
+   :numref:`subsec_kv-cache-sinks` restricts attention without evicting any
+   entry, and it keeps the original position of every token.
+    1. Change the cached forward pass so that the cache of each layer is a
+       rolling buffer. It holds the first $s$ entries and the most recent
+       $w$ entries, the current token included, and evicts the oldest of
+       the remaining entries. Prefill GPT-2 with the first 256 tokens of
+       the passage `x`, decode the remaining tokens one at a time with
+       $w = 256$ and $s = 4$, and confirm that the loss on positions 512
+       onward matches the mask-based result.
+    1. GPT-2 cannot decode beyond position 1023, where its position table
+       ends. A RoPE model can stream indefinitely if the positions of the
+       cached entries are reassigned. Decide what the buffer must store for
+       each entry and which positions the rotation should use, so that
+       every query--key offset stays below $s + w$. Explain why learned
+       position embeddings do not admit the same reassignment.
+    1. Train a character-level `d2l.GPT` with its default RoPE attention
+       for 300 steps on `data` of :numref:`subsec_kv-cache-gqa-quality`,
+       at context 128. Encode the raw text with `data.build`, and stream
+       characters 110,000 to 119,999, which no training or validation
+       window covers, through your buffer with $s + w = 128$. Compare the
+       mean loss for $s = 4$ and for $s = 0$ with that of a full forward
+       pass over the most recent 128 characters at every step.
+
+:begin_tab:`pytorch`
+11. [code] **Cache buffers.** ● `forward_step` stores `contiguous()`
+    copies of the new keys and values, and it grows the cache with
+    `torch.cat`.
+    1. Without the `contiguous()` call, the allocator growth after the
+       prefill of :numref:`subsec_kv-cache-memory` is twice
+       :eqref:`eq_kv-cache-bytes` for `model`, which uses RoPE, although a
+       cached view keeps alive a fused QKV buffer three times as wide as
+       the keys. Explain the factor of two, and predict the factor for a
+       model built with the arguments of `model` plus `pos='learned'`.
+       Remove the call, measure both factors, and explain what happens to
+       the excess after the first decode step.
+    1. Time one decode step of `model` at context 2048 for
+       $b \in \{1, 4, 16, 32\}$ sequences, with caches of the right shape
+       filled with arbitrary values, since the cost of a step does not
+       depend on them. Fit the step time as $t(b) = t_0 + b\, t_1$. Compare
+       $t_0$ with the time to read the weights at 1 TB/s and $t_1$ with the
+       time to read the cache of one sequence, and account for the
+       differences.
+    1. Replace `torch.cat` by writes into slices of buffers that are
+       allocated once for `max_len` positions, and let attention read only
+       the filled slice. Count the bytes per step that the change saves,
+       repeat the fit of the previous sub-item, and compare the new $t_1$
+       with the old one.
+:end_tab:
+
+:begin_tab:`jax`
+11. [code] **Cache buffers.** ● `cached_forward` writes into preallocated
+    buffers with `dynamic_update_slice`, but its cache arguments are not
+    donated, so XLA returns the updated cache in fresh buffers.
+    1. Predict the peak device memory of one decode step of `model` at
+       context 4096 for a batch of 16 sequences, with and without donating
+       `ks` and `vs` through the `donate_argnums` option of `nnx.jit`.
+       Measure both with `jax.local_devices()[0].memory_stats()`, and run
+       each configuration in a fresh process, because `peak_bytes_in_use`
+       never decreases within one.
+    1. Time one decode step of `model` at context 2048 for
+       $b \in \{1, 4, 16, 32\}$ sequences, with buffers from `init_cache`
+       for 2048 positions, since the cost of a step does not depend on
+       their contents. Fit the step time as $t(b) = t_0 + b\, t_1$. Compare
+       $t_0$ with the time to read the weights at 1 TB/s and $t_1$ with the
+       time to read the cache of one sequence, and account for the
+       differences.
+    1. Count the bytes per step that donation saves. Repeat the fit of the
+       previous sub-item with `ks` and `vs` donated, and compare the new
+       $t_1$ with the old one. A donated buffer cannot be used again, so
+       pass the returned buffers to the next call.
+:end_tab:
 
 <!-- slides -->
 

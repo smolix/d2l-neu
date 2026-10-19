@@ -37,6 +37,7 @@ from tiktoken.load import data_gym_to_mergeable_bpe_ranks
 ```
 
 ## From Blocks to a Language Model
+:label:`subsec_gpt-blocks-to-lm`
 
 Four ingredients turn a stack of transformer blocks into a GPT-style
 language model.
@@ -235,6 +236,7 @@ statistics dense, the vocabulary trivial, and the comparison fair against
 the character-level models of previous chapters.
 
 ## Training a Pre-Norm RMSNorm Configuration
+:label:`subsec_gpt-training`
 
 We train the default configuration on the character-level Time Machine
 corpus. Its pre-norm, RMSNorm, SwiGLU, and RoPE settings also appear in the
@@ -348,6 +350,7 @@ pipelines, custom kernels, and the parallelism of
 training system changes with scale.
 
 ### Effect of Normalization Placement
+:label:`subsec_gpt-norm-placement`
 
 :numref:`sec_transformer-block` predicted, from initialization statistics
 alone, that the post-LN arrangement reduces the gradients received by its
@@ -396,6 +399,7 @@ field, and that is one reason its 48-block variant was trainable at all
 in 2019 :cite:`Radford.Wu.Child.ea.2019`.
 
 ## Sampling from the Model
+:label:`subsec_gpt-sampling`
 
 A language model outputs a distribution; text comes from *decoding* it.
 :numref:`sec_decoding` covered the search view — greedy, beam,
@@ -497,6 +501,7 @@ the model is genuinely uncertain. We need a model whose uncertainty is
 real — so let's load one.
 
 ## Loading GPT-2
+:label:`subsec_gpt-loading`
 
 GPT-2 is the type specimen of this section's class: 12 blocks, 768 hidden
 units, 12 heads, LayerNorm (with biases), GELU, learned positions, tied
@@ -715,44 +720,246 @@ produces coherent completions for the example prompts.
 
 ## Exercises
 
-1. Account for every one of GPT-2's 124.4M parameters using the block
-   census of :numref:`sec_transformer-block` plus the embeddings: 12
-   blocks of roughly $12d^2$ at $d = 768$ (plus biases), a
-   $50257 \times 768$ token table, a $1024 \times 768$ position table,
-   and the final norm. What fraction sits in the embeddings, and why does
-   weight tying make the "124M parameters" figure slightly generous as a
-   measure of the transformer proper?
-2. Instantiate the GPT-2 configuration with one flag changed to
-   `norm='rms'` and attempt the weight-loading cell. Which line fails,
-   and why must it fail rather than load silently? List every tensor in
-   the checkpoint that would have no destination (and every module
-   parameter with no source) under the modern flags
-   `pos='rope', act='swiglu'`.
-3. Add nucleus (top-$p$) sampling :cite:`Holtzman.Buys.Du.ea.2020` to
-   `generate`: keep the smallest set of tokens whose probabilities sum to
-   at least $p$. On the GPT-2 model, fix the seed and compare
-   continuations under top-$k = 50$ and $p = 0.9$ for a prompt where the
-   model is confident and one where it is not. Which truncation adapts
-   its cutoff to the model's uncertainty, and how?
-4. Show that as $\tau \to 0$, sampling with temperature $\tau$ becomes
-   greedy decoding, and as $\tau \to \infty$ it converges to the uniform
-   distribution over the vocabulary. Then measure the empirical entropy
-   of 200-character samples from the char model at
-   $\tau \in \{0.5, 1, 2, 4\}$ and plot it against these two limits.
-5. Our char model trained with RoPE at context 128 but `max_len` allows
-   evaluation at 512. Measure its validation loss at contexts 128, 256,
-   and 512 (build the longer-context dataloaders as in
-   :numref:`sec_positional-information`). Does the failure of naive RoPE
-   extrapolation that section demonstrated reappear inside a full
-   transformer? Apply position interpolation — scale every angle by
-   $128/512$ — and report what changes.
-6. Compare GPT-2 and our char model on the same text on equal footing:
-   convert each model's mean loss on a held-out Time Machine passage to
-   *bits per character* (GPT-2's per-token loss must be divided by the
-   average characters per token of its tokenization). Which model wins,
-   by how much, and what does each side of the comparison pay for — a
-   28-symbol character vocabulary against 50,257 subwords, and 40 GB of
-   WebText against none?
+1. **Parameter census.** The loading code of :numref:`subsec_gpt-loading`
+   reports 124.4M parameters for the GPT-2 configuration, which has width
+   $d = 768$, 12 blocks, a vocabulary of $V = 50{,}257$ tokens, and 1,024
+   positions.
+    1. Count the parameters of one block exactly, including the biases of
+       its four linear layers and the gains and shifts of its two
+       LayerNorms. Add the token table, the position table, and the final
+       normalization, and verify that the total is $124{,}439{,}808$.
+    1. Exercise 8 of :numref:`sec_transformer-block` gives the exact
+       parameter count of the default `TransformerBlock`, which `GPT`
+       builds with its default flags. Use it to count the parameters of
+       `GPT(vocab_size=28)`, with $d = 256$ and six blocks, and check the
+       total against the count printed in
+       :numref:`subsec_gpt-blocks-to-lm`. What fraction of the parameters
+       sits in the embedding tables of each of the two models?
+    1. Without tying, the output head would be a separate $V \times d$
+       matrix. How many parameters would GPT-2 then have? A product of a
+       $d_\textrm{out} \times d_\textrm{in}$ matrix with a vector costs
+       about $2 d_\textrm{out} d_\textrm{in}$ floating-point operations,
+       and a table lookup costs none. Estimate the share of GPT-2's
+       per-token matrix work that the head accounts for at short contexts,
+       where the attention scores are negligible, and compare it with the
+       share of the parameters that the shared table holds.
+1. [code] **Unmasked attention.** In `GPT`, the flag `is_causal=True` of
+   the attention call in `CausalAttention` is the only mechanism that keeps
+   position $t$ from attending to later positions.
+    1. Take one validation sequence of 128 characters and replace its
+       character at position 64 by a different one. For every position,
+       compute the largest absolute change of the logits of the trained
+       `model`, and plot the change against position.
+    1. Subclass `GPT` with a nested `CausalAttention` whose attention call
+       passes `is_causal=False`. Train it with the settings of
+       :numref:`subsec_gpt-training` for 200 steps. Compare its training
+       and validation losses with those that the training of `model`
+       records at step 200, and explain the numbers.
+    1. Sample 100 characters from the unmasked model with the prefix
+       `'the time traveller '`. Explain why the validation loss of the
+       previous sub-problem and this sample judge the unmasked model so
+       differently.
+1. [code] **Loss baselines.** Simple predictors give reference levels for
+   the losses of :numref:`subsec_gpt-training`. Let the *training text* be
+   the first 100,128 characters of the preprocessed corpus
+   `data._preprocess(data._download())`, which are the characters that the
+   training windows cover. Compute three cross-entropies on the training
+   text in nats per character: that of the uniform distribution over the 28
+   vocabulary entries, that of the unigram distribution of the training
+   text, and that of the bigram model, which predicts each character from
+   the previous one with the conditional frequencies of the training text.
+   Check the unigram value against the 2.83 nats quoted in
+   :numref:`subsec_gpt-norm-placement`.
+1. [code] **Tied head without blocks.** ● Consider `GPT` with
+   `num_blks=0` and its defaults `pos='rope'` and `norm='rms'`. Let
+   $\mathbf{e}_1, \ldots, \mathbf{e}_V \in \mathbb{R}^d$ be the rows of
+   the token table, let $\boldsymbol{\gamma}$ be the gain of the final
+   RMSNorm :eqref:`eq_rmsnorm`, and let $z_{ij}$ be the logit of token $j$
+   when the current token is $i$.
+    1. Show that $z_{ij} = s_i M_{ij}$ with scalars $s_i > 0$ and a
+       symmetric matrix $\mathbf{M}$, and express $s_i$ and $\mathbf{M}$
+       in terms of the table and $\boldsymbol{\gamma}$.
+    1. For three distinct tokens $i$, $j$, and $k$, show that
+
+       $$\frac{z_{ij} - z_{ik}}{s_i} + \frac{z_{jk} - z_{ji}}{s_j} + \frac{z_{ki} - z_{kj}}{s_k} = 0.$$
+
+       Conclude that on the periodic text $ijk\,ijk\,ijk \ldots$ the model
+       assigns the correct next token a probability of at most $1/2$ in at
+       least one of the three contexts, so that its average loss exceeds
+       $(\ln 2)/3$ nats per token. Which loss can a model with an untied
+       head reach on this text?
+    1. Show that losses arbitrarily close to $(\ln 2)/3$ are attainable.
+    1. Train `GPT(len(data.vocab), num_blks=0)` for 2,000 steps with the
+       optimizer of :numref:`subsec_gpt-training` at learning rate
+       $10^{-2}$, and compare its final training loss with the bigram
+       cross-entropy of problem 3. Use the first sub-problem to explain the
+       difference.
+1. [code] **Verbatim recall.** :numref:`subsec_gpt-sampling` attributes
+   much of the fluency of the samples of `model` to memorization. A sample
+   that copies its training text contains long strings that occur in that
+   text verbatim. Let the training text be as in problem 3.
+    1. Draw ten samples of 100 characters from `model` at temperature 1
+       without truncation, with the prefix `'the time traveller '` and ten
+       different seeds. Compute the *verbatim fraction* of each sample, the
+       fraction of its 20-character windows that occur verbatim in the
+       training text. As a reference, compute the same fraction for the
+       2,000 characters of the preprocessed corpus from position 103,128 on,
+       which lie beyond both the training and the validation windows.
+    1. Retrain the model with the settings of
+       :numref:`subsec_gpt-training`, stop at the step at which the
+       validation loss was lowest, and repeat the measurement.
+    1. Retrain with `dropout=0.3` for the full 2,000 steps. Compare its
+       lowest validation loss, the step at which that loss occurs, and its
+       verbatim fraction at the end of training with those of the two
+       previous models.
+1. [code] **Post-norm plateau.** ● :numref:`subsec_gpt-norm-placement`
+   reads the post-norm loss of about 2.8 nats as the loss of a model whose
+   attention has learned nothing.
+    1. Suppose that every attention sublayer of the post-norm model outputs
+       zero, while its FFN sublayers still act on every position. Which of
+       the losses of problem 3 can such a model still reach? What does a
+       plateau at the unigram entropy imply about how the predictions
+       depend on the current character?
+    1. Train the post-norm ablation for 800 steps at learning rate
+       $3 \times 10^{-3}$. On a validation batch, measure the mean KL
+       divergence of its predictive distributions from the unigram
+       distribution of the training text. Then apply `token_emb` and the
+       blocks of `blks` one at a time, and record after each block the
+       token spread $\|\mathbf{H} - \bar{\mathbf{H}}\| / \|\mathbf{H}\|$ of
+       :numref:`subsec_signal-propagation`, averaged over the sequences of
+       the batch, both for the trained model and for a freshly initialized
+       post-norm model. After which block, if any, have the tokens of the
+       trained model collapsed, and how did training change the profile of
+       the initialized model?
+    1. Add a linear warmup of the learning rate from 0 to
+       $3 \times 10^{-3}$ over the first 200 steps and repeat the 800-step
+       run. Does the post-norm model leave the plateau, and how does its
+       loss at step 800 compare with that of the pre-norm run of
+       :numref:`subsec_gpt-norm-placement`?
+1. [code] **Temperature limits.** `generate` divides the logits
+   $\mathbf{z}$ by the temperature $\tau$ before the softmax.
+    1. Show that as $\tau \to 0$ the sampling distribution converges to the
+       one-hot vector on the largest logit, assuming that this logit is
+       unique, and that as $\tau \to \infty$ it converges to the uniform
+       distribution over the vocabulary.
+    1. For the trained `model`, sample 100 characters with the prefix
+       `'the time traveller '` at each $\tau \in \{0.5, 1, 2, 4\}$ without
+       truncation. At every generated position, compute the entropy of the
+       tempered distribution $\mathrm{softmax}(\mathbf{z}/\tau)$, and
+       average over positions. Plot the averages against $\tau$ together
+       with the limits $0$ and $\ln 28$, and relate the result to the
+       observation of :numref:`subsec_gpt-sampling` that the temperature
+       changes the early tokens of the samples little.
+1. [code] **Nucleus sampling.** Nucleus or top-$p$ sampling
+   :cite:`Holtzman.Buys.Du.ea.2020` keeps the smallest set of most probable
+   tokens whose probabilities sum to at least $p$, renormalizes the
+   probabilities over this set, and samples from it. `sample_next` of
+   :numref:`sec_decoding` implements it, and that section argues that it
+   adapts to the confidence of the model while top-$k$ does not.
+    1. Add an argument `top_p` to `generate` that applies this rule after
+       the temperature. Check that `top_p=1` leaves the sampling
+       distribution unchanged and that a very small `top_p` reproduces
+       greedy decoding.
+    1. With `gpt2`, generate 40 tokens with `top_k=50` and, under the same
+       seed, with `top_p=0.9`. Do so once for a prompt whose continuation
+       is nearly determined, such as the opening words of a well-known
+       quotation, and once for an open-ended prompt. At every step, record
+       the entropy of the model's distribution, the number of tokens that
+       the nucleus keeps, and the probability mass that top-$k$ discards.
+       Plot the last two quantities against the entropy. Below which
+       entropy does the nucleus keep fewer than 5 of the 50 tokens that
+       top-$k$ admits, and above which entropy does top-$k$ discard more
+       than a tenth of the mass?
+
+    *Adapted from Stanford CS336,
+    [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
+    Problem (decoding).*
+1. [code] **Checkpoint mismatches.** The GPT-2 checkpoint holds 160 tensors
+   with 137,022,720 numbers in all, while `gpt2` has 124,439,808
+   parameters.
+    1. Identify the checkpoint tensors that the loading code of
+       :numref:`subsec_gpt-loading` never reads, and explain why `GPT`
+       needs no counterpart for them.
+    1. Construct the GPT-2 configuration with `norm='rms'` and run the
+       loading code. Which line fails, and why can no mapping of the
+       checkpoint onto this configuration reproduce GPT-2? Then list, for
+       the GPT-2 configuration with `pos='rope'` and `act='swiglu'`, every
+       checkpoint tensor without a destination and every model parameter
+       without a source.
+    1. Some mistakes load without any error. Introduce three of them, one
+       at a time: skip every copy of a normalization shift and load the
+       rest into the `norm='rms'` model; load the `attn.c_proj` matrix
+       of every block in the wrong orientation, which no shape check
+       detects because the matrix is square; and swap the query and key
+       thirds of every `c_attn` weight and bias. For each mistake, report
+       the perplexity of the sentence that :numref:`subsec_gpt-loading`
+       scores and the greedy continuation of the prompt
+       `'Alan Turing theorized that computers would one day become'`.
+       Which mistake does the perplexity check flag most clearly, and which
+       least?
+1. [code] **Learned position table.** The rows $\mathbf{p}_0, \ldots,
+   \mathbf{p}_{1023}$ of `gpt2.pos_emb` were learned freely, without the
+   structure of the sinusoidal table :eqref:`eq_sinusoidal-def`.
+    1. Compute the norm of every row and plot it against position. Which
+       rows stand out? What distinguishes position 0 from every other
+       position in a causal model?
+    1. Exercise 4 of :numref:`sec_positional-information` tested the
+       trained table of `TinyCharLM` for shift invariance by comparing the
+       spread of the cosine similarities along each diagonal
+       $i - j = \textrm{const}$ with the spread of the diagonal means.
+       Display the cosine similarities between all rows of `gpt2.pos_emb`
+       with `d2l.show_heatmaps`, apply the same test, and compare the
+       outcome with that of the 128 rows trained at context 128 there.
+    1. Center the table and compute its singular value decomposition. What
+       fraction of the variance do the top three singular directions
+       capture? Plot the projections of the rows onto these directions
+       against position, and describe the curve that the rows trace in this
+       three-dimensional subspace. Which features of a sinusoidal table
+       does it share?
+1. [code] **Bits per character.** ● GPT-2 and `model` use different
+   tokens, so their per-token losses are not comparable. A loss of $\ell$
+   nats per token at $c$ characters per token corresponds to
+
+   $$\frac{\ell}{c \ln 2} \textrm{ bits per character}.$$
+
+   Take as held-out passage the last 20,000 characters of the raw text
+   `data._download()`. After preprocessing, they lie beyond the validation
+   windows.
+    1. Compute the bits per character of `model` on the preprocessed
+       passage, in non-overlapping windows of 128 characters.
+    1. Compute the bits per character of `gpt2` on the same preprocessed
+       passage in chunks of 1,024 tokens. Repeat on the raw passage, with
+       its capitalization, punctuation, and line breaks.
+    1. Which of the two GPT-2 figures should be compared with that of
+       `model`? Discuss what each side brings to the passage: `model` was
+       trained on the same novel, sees 128 characters of context, and
+       predicts 28 symbols, whereas GPT-2 was trained on 40 GB of WebText,
+       sees up to 1,024 tokens, and predicts 50,257 symbols.
+1. [extended] **Subwords at small scale.** ●
+   :numref:`subsec_gpt-blocks-to-lm` trains on characters because, on a
+   180 KB novel, a subword vocabulary would leave each token type a handful
+   of training examples. `d2l.TimeMachine` with `tokenization='bpe'` and a
+   given `vocab_size` trains a `BPETokenizer` on the text and tokenizes
+   with it. Test the argument.
+    1. Subclass `d2l.TimeMachine` so that `_download` returns the
+       preprocessed text, which gives both tokenizations the same
+       characters. Choose `num_train` and `num_val` so that the training
+       and validation windows cover the same characters as those of
+       :numref:`subsec_gpt-training`. With `vocab_size=256` the tokenizer
+       learns no merges; check that `GPT` then reaches validation losses
+       close to those of `model` at the same steps.
+    1. For each of the vocabulary sizes 512, 1,024, and 2,048, choose
+       `num_train` and `num_val` as in the previous sub-problem, and train
+       `GPT` with the other settings of :numref:`subsec_gpt-training`.
+       Convert the lowest validation loss of each run to bits per character
+       as in problem 11. Record also how often the median token type of
+       each vocabulary occurs in the tokenized training text, counting only
+       the types that occur at least once.
+    1. With `num_steps=128`, a larger vocabulary also gives the model more
+       characters of context. Repeat the best vocabulary size with a
+       `num_steps` at which a window covers about 128 characters, and
+       decide whether the argument of :numref:`subsec_gpt-blocks-to-lm`
+       holds at this corpus size.
 
 <!-- slides -->
 

@@ -243,6 +243,7 @@ of $2.83$ nats for the 28-way vocabulary. The loss by position shows how
 available context contributes to this average.
 
 ### Loss by Available Context
+:label:`subsec_mlm-loss-by-position`
 
 Our windows are 64 characters long, and that finiteness builds a
 comparison into every batch: a masked character in the interior has
@@ -365,6 +366,7 @@ of choice for retrieval and classification at small model sizes
 ## An Encoder--Decoder: Cross-Attention at Work
 
 ### A Task Whose Alignment We Know
+:label:`subsec_reversal-task`
 
 An encoder--decoder is useful when the input and output are different
 sequences. Its signature component, cross-attention, is usually
@@ -551,6 +553,7 @@ class EncoderDecoder(nnx.Module):
 ```
 
 ### Assembling the Masks
+:label:`subsec_encdec-masks`
 
 Our reversal task ducks one bookkeeping question by construction: every
 string has the same length, so nothing is padding, and the only mask in
@@ -717,6 +720,7 @@ before $t$.
 :end_tab:
 
 ### Reading the Alignment
+:label:`subsec_reading-alignment`
 
 We run a batch through the model, extract the cross-attention weights from
 the decoder block, and compare each target
@@ -859,6 +863,7 @@ point is indifference to what the input is — text, audio frames, image
 pixels, or a concatenation of all three.
 
 ### The Cost Curve
+:label:`subsec_perceiver-cost-curve`
 
 The claim to verify is the shape of the cost. We time the Perceiver
 against the direct alternative (the same two transformer blocks applied
@@ -1030,35 +1035,211 @@ and decoder-only models for general autoregressive generation.
 
 ## Exercises
 
-1. Our masking always writes `<mask>`. BERT instead replaces the chosen
-   position with `<mask>` 80% of the time, a random token 10%, and the
-   original token 10% :cite:`Devlin.Chang.Lee.ea.2018` — partly because
-   `<mask>` never appears when the pretrained encoder is used on real
-   text. Implement the 80/10/10 rule and compare masked accuracy and the
-   loss on inputs containing no `<mask>` at all.
-2. Mask two *adjacent* characters instead of one and evaluate the loss at
-   both positions. Explain the change using the per-position analysis of
-   this section: what context did each masked character lose?
-3. Widen the encoder--decoder to `num_blks=2` and rerun the alignment
-   check and the heatmaps. The task remains solved; what happens to the
-   argmax hit rate and the attention mass on the true source position?
-   Reconcile this with the warnings about reading attention maps in
-   :numref:`sec_multihead-attention`.
-4. Change one line of `sample_batch` to make the task *copy* instead of
-   reverse, and predict the heatmap before rerunning. Then try
-   reverse-then-copy with `T` even: target = reversed source for the
-   first half's length, then the source itself. What alignment do you
-   expect in each half of the map?
-5. Sweep the number of latents $M \in \{16, 64, 256\}$ in the cost-curve
-   experiment. Where does the crossover with full self-attention move,
-   and why? Derive the FLOP count of `PerceiverEncoder.forward` as a
-   function of $M$, $N$, and $d$, and check which term dominates at each
-   $M$.
-6. Build a minimal Perceiver IO head: a second learned query array of
-   length $K$ that cross-attends into the latent summary and produces
-   output shape $(B, K, d)$. Verify the shape, then argue the total cost
-   is $O(MN + M^2 + KM)$ and state when this beats attaching the output
-   queries to the input directly.
+1. **Prefix language model.** A *prefix language model* wires a single
+   stack in a fourth way. The first $m$ positions, which hold the source,
+   attend to one another bidirectionally, and each of the $n$ target
+   positions that follow attends to the whole source and causally to the
+   target positions up to itself. :citet:`raffel2020exploring` compare this
+   wiring with the encoder--decoder.
+    1. Draw its attention pattern for $m = 3$ and $n = 3$ in the convention
+       of :numref:`fig_three-wirings`. Give the `valid_lens` of shape
+       (batch size, number of queries) that makes `d2l.MultiHeadAttention`
+       apply this pattern, as a formula in the query position $t$ and $m$.
+    1. In the encoder--decoder, the cross-attention of every decoder block
+       reads the output of the last encoder block. Which representations of
+       the source does a target token read in block $l$ of a prefix
+       language model? On which tokens can a source token's representation
+       depend in each design?
+    1. Let every block have $c$ parameters, each applied once to every token
+       that the block processes, and ignore the cross-attention sublayer and
+       the attention scores. Compare the parameter count and the training
+       FLOPs per example of an encoder--decoder with $L$ encoder blocks and
+       $L$ decoder blocks against prefix language models with $L$ blocks and
+       with $2L$ blocks. Which prefix model matches the encoder--decoder in
+       parameters, and which in compute?
+1. [code] **A leaky objective.** Without a mask, next-token prediction is a
+   copying exercise for an encoder, because position $t$ can read token
+   $t + 1$ directly. Train `TransformerEncoder` on next-token prediction
+   anyway: feed it the unmodified windows `X`, score its predictions at
+   every position against the shifted targets `Y` that the data loader
+   returns, and train for 2000 steps with the optimizer settings used for
+   `model`.
+    1. Predict the validation loss at each position before training. Then
+       plot the measured loss by position as in
+       :numref:`subsec_mlm-loss-by-position`.
+    1. Compare the loss at position 63 with the loss of `model` at the same
+       position. For each of the two models, count the training targets per
+       window that cannot be read off the input, at position 63 and in
+       total, and explain the difference.
+1. **Time's arrow.** ● The masked loss of
+   :numref:`subsec_mlm-loss-by-position` takes nearly equal values at the two
+   edges of the window, although position 0 sees only what follows it and
+   position 63 only what precedes it. The conditional entropy
+   $H(A \mid B) = -\mathbb{E}\left[\log p(A \mid B)\right]$ is the
+   expected loss, in nats, of the best predictor of $A$ from $B$.
+    1. Let $X_1, X_2, \ldots$ be a stationary process, so that the joint
+       distribution of any $k$ consecutive variables does not depend on
+       where the block starts. Show that
+       $$H(X_1 \mid X_2, \ldots, X_{k+1}) = H(X_{k+1} \mid X_1, \ldots, X_k).$$
+    1. A stationary Markov chain on the states $\{0, 1, 2\}$ moves from
+       state $i$ to state $i + 1 \bmod 3$ with probability $0.9$ and stays
+       with probability $0.1$. Compute both sides of the identity for
+       $k = 1$ in nats. Find the transition matrix of the time-reversed
+       chain, and decide whether a long sample path reveals the direction
+       of time.
+    1. State what the identity predicts for the two edge losses of a model
+       whose masked-token predictions equal the true conditional
+       distributions. Which differences between the experiment and the
+       assumptions of the identity allow the two measured edge losses to
+       differ?
+1. [code] **The masking recipe.** `mask_tokens` masks 15% of the characters
+   and writes `<mask>` at every masked position. Evaluate every variant below
+   with the evaluation of :numref:`subsec_mlm-loss-by-position`, so that only
+   the training recipe changes.
+    1. BERT replaces a chosen token with `<mask>` 80% of the time, with a
+       random token 10% of the time, and leaves it unchanged 10% of the time
+       :cite:`Devlin.Chang.Lee.ea.2018`, in part because `<mask>` never
+       appears when the pretrained encoder reads real text. Implement this
+       rule, retrain, and compare the masked accuracy with that of the
+       original recipe. Then feed both encoders unmodified validation
+       windows and measure the loss of predicting each input character at
+       its own position. Explain what each of the two 10% cases teaches the
+       model.
+    1. :citet:`Wettig.Gao.Zhong.ea.2023` find that masking rates well above
+       15% can work better for large models. Retrain with the rates
+       $p \in \{0.05, 0.15, 0.4\}$ for the same number of steps and compare
+       the masked loss at evaluation. Explain the result by what a higher
+       rate adds to each training window and what it removes.
+1. [code] **Several masks at once.** ● The objective
+   :eqref:`eq_mlm` scores each masked position separately, so the encoder
+   returns one distribution per masked position, conditioned only on the
+   characters that remain visible. Filling all masked positions from one
+   forward pass therefore chooses each character independently of the
+   others. Iterative schemes such as Mask-Predict
+   :cite:`Ghazvininejad.Levy.Liu.ea.2019` keep only their most confident
+   predictions and predict the remaining positions again.
+    1. Construct a distribution over the two-character fills of a gap for
+       which the pair of per-position argmaxes has probability zero. Show
+       that filling the more confident position first and then filling the
+       other from its exact conditional distribution always yields a pair
+       of positive probability.
+    1. In each validation window, mask one run of $k$ adjacent characters,
+       placed at random with at least 8 unmasked characters on either side,
+       and nothing else. For $k \in \{1, 2, 4, 8\}$, measure the character
+       accuracy of the parallel fill and of an iterative fill that commits
+       one character per forward pass, always at the masked position whose
+       top probability is largest.
+    1. Plot the accuracy of both fills against the offset within the run.
+       Explain the shape of the curves by the context that each masked
+       character has lost, and explain where the two fills differ.
+1. **Padding masks of a ragged batch.** The cell of
+   :numref:`subsec_encdec-masks` builds the three masks for a toy batch with
+   source lengths $(3, 5)$ and target lengths $(3, 4)$, padded on the right.
+    1. Compare `dec_self` with the causal triangle alone and name the rows
+       that differ. Would replacing `dec_self` by the causal triangle change
+       the training loss of a decoder with any number of blocks? Explain.
+       Then decide whether the encoder output at a padded source position
+       can reach the loss.
+    1. Now pad the batch on the left, so that every sequence ends at the
+       last position. Which of the three masks change, and does the causal
+       triangle still suffice for decoder self-attention? Which of the three
+       masks can the `valid_lens` argument of `d2l.MultiHeadAttention`
+       still express?
+    1. What goes wrong with the learned position tables of `EncoderDecoder`
+       under left padding unless the position indices change as well?
+1. [code] **Where position enters.** ● Cross-attention without a mask is
+   invariant to a joint permutation of its keys and values, so the reversal
+   task of :numref:`subsec_reversal-task` is solvable only because the
+   source representations carry position. `EncoderDecoder` supplies
+   position to both streams through learned tables.
+    1. Remove the position embedding from the encoder, retrain on reversal,
+       and measure the accuracy of the teacher-forced predictions
+       `seq2seq(src, dec_in)` at each target position on fresh strings.
+    1. Without position, the encoder output determines at most the multiset
+       of source letters. For 16 letters and strings of length 12, compute
+       the best accuracy at each target position that a predictor can reach
+       when it knows this multiset and the correct target prefix. Compare
+       it with your measurement.
+    1. Restore the encoder's position table and remove the decoder's
+       instead. Measure the exact match after greedy decoding, and explain
+       from which part of the decoder its position information can come.
+1. [code] **Depth, heads, and readable maps.** The alignment check of
+   :numref:`subsec_reading-alignment` reads one decoder block with four
+   heads.
+    1. Retrain `EncoderDecoder` once with `num_blks=2` and once with
+       `num_heads=8`, in each case until the exact match on 1000 fresh
+       strings exceeds 0.99. Rerun the alignment check for every decoder
+       block, and plot the map of every head.
+    1. Give `EncoderDecoder` separate depths for its encoder and its
+       decoder. Repeat the check with two encoder blocks and one decoder
+       block, and with one encoder block and two decoder blocks. Compare
+       the maps of both models with those of the one-block model.
+    1. Explain how a model can solve reversal while its cross-attention puts
+       little weight on source position $n - 1 - t$. Reconcile your
+       findings with the cautions about reading attention maps in
+       :numref:`sec_multihead-attention`.
+1. [code] **Content-addressed alignment.** ● In reversal, target position
+   $t$ copies the same source position for every string. Change the line of
+   `sample_batch` that builds the target so that the target is the source
+   sorted in increasing order.
+    1. For one string with a repeated letter, list the source positions that
+       each target position may copy. Redefine the hit rate of
+       :numref:`subsec_reading-alignment` so that every correct choice
+       counts.
+    1. Train `EncoderDecoder` on sorting with one block and with two
+       blocks, for as many steps as the exact match on fresh strings
+       requires or until it stops improving. Report the exact match and
+       your hit rate.
+    1. Plot the maps for two strings. Describe what the decoder's query at
+       step $t$ must encode for sorting, compared with reversal, and which
+       information the encoder must supply when a letter occurs more than
+       once.
+1. [code] **FLOPs versus time.** ● The caption of
+   :numref:`fig_latent-bottleneck` counts only the attention mixing, whereas
+   the cost curve of :numref:`subsec_perceiver-cost-curve` times whole
+   forward passes.
+    1. Count the FLOPs of one forward pass of `PerceiverEncoder` and of
+       `SelfAttentionEncoder` on a batch of one, as functions of $N$, $M$,
+       $d$, and the number of blocks $L$, with one multiply--add counted as
+       two FLOPs as in :eqref:`eq_multihead-flops`. Include the query,
+       key, value, and output projections and the SwiGLU FFN of
+       `d2l.FeedForward`. Evaluate both counts for $d = 256$, $L = 2$, and
+       $M = 64$ at the four input lengths of the cost curve. Which term
+       dominates the Perceiver's count?
+    1. Compare the ratio of the two counts at each $N$ with the ratio of
+       your measured times. Where do the two ratios disagree most, and which
+       part of the running time does a count of arithmetic leave out?
+    1. Repeat the timing for $M \in \{16, 64, 256\}$ at the input lengths
+       $N \in \{128, 256, \ldots, 8192\}$. How does the input length at which
+       the Perceiver becomes the faster model move with $M$, and does your
+       count explain the movement?
+    1. Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2022` adds $K$ learned
+       output queries that cross-attend into the $M$ latents. Add their cost
+       to your count. For one output per input element, $K = N$, as in
+       optical flow, state how the total grows with $N$ and compare it with
+       the count of `SelfAttentionEncoder`.
+1. [extended] **A Perceiver for reversal.** ● Perceiver IO produces its
+   outputs through learned output queries rather than an autoregressive
+   decoder. Solve the reversal task of :numref:`subsec_reversal-task` in
+   this way, with `num_hiddens=128` throughout.
+    1. Embed the source with learned letter and position tables and read it
+       with `PerceiverEncoder` into $M$ latents. Let 12 learned output
+       queries, one per target position, cross-attend into the latent
+       summary, and add each result to its query. Apply `d2l.FeedForward`
+       with a second residual connection, and map the result linearly onto
+       the 16 letters. Train all outputs in parallel with the cross-entropy
+       loss on fresh batches from `sample_batch`, with no decoder input.
+    1. Train with $M \in \{1, 2, 4, 12\}$ for a fixed number of steps and
+       report the exact match on 1000 fresh strings. Find the smallest $M$
+       that solves the task. For a smaller $M$, decide whether the latents'
+       read of the source or the output queries' read of the latents limits
+       the model.
+    1. Plot the latents' cross-attention over the source and the output
+       queries' attention over the latents. Describe how the model divides
+       the string among the latents.
+    1. Explain why predicting all target positions independently given the
+       latents is no restriction for reversal, and name a sequence task for
+       which it would be one.
 
 <!-- slides -->
 

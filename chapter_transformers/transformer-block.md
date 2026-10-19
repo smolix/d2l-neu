@@ -157,6 +157,7 @@ class MiniBlock(nnx.Module):
 ```
 
 ### Signal Propagation at Initialization
+:label:`subsec_signal-propagation`
 
 Which arrangement is better? We can get a long way without training
 anything. A freshly initialized network is a fixed random function, so we
@@ -303,6 +304,7 @@ We therefore use pre-norm as the default in the teaching model and test both
 placements during training in :numref:`sec_gpt`.
 
 ### RMSNorm
+:label:`subsec_rmsnorm`
 
 Modern models also simplified the normalizer itself. LayerNorm standardizes
 each token vector by subtracting its mean and dividing by its standard
@@ -371,6 +373,7 @@ model. Llama is one prominent model family that uses it
 :cite:`touvron2023llama`.
 
 ### Normalizing Queries and Keys
+:label:`subsec_qk-norm`
 
 One more normalization migrated *inside* attention. Nothing in the block
 above controls the size of the attention logits
@@ -680,6 +683,7 @@ class CharLM(nnx.Module):
 ```
 
 ### Comparing GELU and SwiGLU
+:label:`subsec_gelu-vs-swiglu`
 
 We compare the two alternatives on the same data (the character-level Time Machine corpus
 of :numref:`sec_text-sequence`), holding the model, seed, optimizer,
@@ -746,41 +750,230 @@ placement as options, with replaceable attention and FFN modules.
 
 ## Exercises
 
-1. At initialization the block outputs are nearly independent, so the
-   pre-norm stream RMS should grow like $\sqrt{1 + 2N}$ after $N$ blocks
-   with two sublayers each — up to the sublayers' output scale. Extend the
-   signal-propagation experiment to fit the growth exponent from a log-log
-   plot. How close is it to $1/2$, and why does the attention sublayer
-   contribute less than the FFN sublayer early in the stack?
-2. OLMo 2 places the normalization *after* each sublayer but *off* the
-   stream: $\mathbf{h} = \mathbf{x} +
-   \mathrm{Norm}(\mathrm{Attn}(\mathbf{x}))$. Add this third arrangement to
-   `MiniBlock` and rerun the experiment. Which of post-LN's pathologies
-   does it avoid, which of pre-LN's properties does it give up, and what
-   happens to the stream RMS?
-3. The signal-propagation experiment uses the 2017 Xavier initialization.
-   Rerun it with each framework's default initialization and with all
-   weights scaled by an extra factor of $0.5$. How does the collapse depth
-   change? Relate your observations to why post-LN models of GPT-1's era
-   (12 blocks) were trainable at all.
-4. Implement two more of :citet:`Shazeer.2020`'s gated variants by changing
-   one line of `FeedForward`: ReGLU (ReLU gate) and GEGLU (GELU gate). Race
-   all four at matched parameters on `CharLM`. Do your rankings agree with
-   the paper's? What does the spread between the gated variants, compared
-   with the gap to the ungated MLP, tell you about *which* design choice
-   carries the improvement?
-5. Work out the exact parameter count of `TransformerBlock(d, h)` for both
-   `act` settings, including normalization weights, and check it against
-   the census cell. Real models round the SwiGLU width up to a multiple of
-   256 for hardware efficiency; how far from $8d^2$ does the Llama-7B
-   configuration ($d = 4096$, FFN width $11008$) land?
-6. Implement QK-norm as an `attn_factory`: wrap `d2l.MultiHeadAttention`
-   so that queries and keys pass through an RMSNorm (one per head
-   dimension) before the dot product. At initialization, measure the
-   standard deviation of the attention logits with and without it as you
-   scale `num_hiddens` from 64 to 1024. Which curve does
-   :eqref:`eq_dot_product_attention`'s $1/\sqrt{d}$ scaling predict, and
-   which do you observe?
+1. **Scale invariance.** Let RMSNorm act as in :eqref:`eq_rmsnorm` with
+   $\boldsymbol{\gamma} = \mathbf{1}$ and $\epsilon = 0$, and write
+   $r(\mathbf{x}) = (\tfrac{1}{d} \sum_i x_i^2)^{1/2}$ for the root mean
+   square of $\mathbf{x} \in \mathbb{R}^d$.
+    1. Show that $\mathrm{RMSNorm}(\alpha \mathbf{x}) =
+       \mathrm{RMSNorm}(\mathbf{x})$ for every $\alpha > 0$, and that
+       LayerNorm with unit gain and zero shift is also unchanged when the
+       same constant is added to every coordinate. Describe the set of
+       inputs that each normalizer maps to a given output.
+    1. Show that the Jacobian of RMSNorm at $\mathbf{x}$ is
+       $r(\mathbf{x})^{-1} (\mathbf{I} - \hat{\mathbf{x}}
+       \hat{\mathbf{x}}^\top)$ with $\hat{\mathbf{x}} = \mathbf{x} /
+       \|\mathbf{x}\|$. Conclude that the gradient
+       $\nabla_{\mathbf{x}} \ell$ is orthogonal to $\mathbf{x}$ for every
+       loss $\ell$ that depends on $\mathbf{x}$ only through
+       $\mathrm{RMSNorm}(\mathbf{x})$.
+1. **Scale-invariant weights.** ● Let the loss be invariant to the scale
+   of a parameter matrix, $\ell(\alpha \mathbf{W}) = \ell(\mathbf{W})$ for
+   all $\alpha > 0$. Under QK-norm with $\epsilon = 0$ and without a query
+   bias, this holds for the rows of $\mathbf{W}_q$ that produce the queries
+   of one head.
+    1. Show that $\langle \mathbf{W}, \nabla_{\mathbf{W}} \ell \rangle = 0$
+       and that a gradient-descent step never decreases
+       $\|\mathbf{W}\|_F$.
+    1. Show that the gradient at $\alpha \mathbf{W}$ is $\alpha^{-1}$ times
+       the gradient at $\mathbf{W}$. Explain how the angle through which
+       one step turns $\mathbf{W}$ changes as its norm grows during
+       training.
+1. **Unrolled residual stream.** Number the $2N$ sublayers of an
+   $N$-block stack by $j = 1, \ldots, 2N$, write $F_j$ for the $j$-th
+   sublayer (attention or FFN) and $\mathrm{Norm}_j$ for its
+   normalization, and let $\mathbf{x}_j$ be the residual stream after
+   sublayer $j$, so that $\mathbf{x}_0$ is the input.
+    1. For the pre-LN arrangement :eqref:`eq_preln-block`, write
+       $\mathbf{x}_{2N}$ as $\mathbf{x}_0$ plus a sum of $2N$ branch
+       outputs. Write the Jacobian $\partial \mathbf{x}_{2N} / \partial
+       \mathbf{x}_0$ as a product over sublayers, expand the product, and
+       identify the term that passes a gradient from the output to the
+       input unchanged.
+    1. For the post-LN arrangement :eqref:`eq_postln-block`, the stream is
+       $\mathbf{x}_j = \mathrm{Norm}_j(\mathbf{u}_j)$ with $\mathbf{u}_j =
+       \mathbf{x}_{j-1} + F_j(\mathbf{x}_{j-1})$. Model every normalization
+       as RMSNorm with unit gain and $\epsilon = 0$. Assume that the input
+       $\mathbf{x}_0$ has unit root mean square and that each branch output
+       is uncorrelated with the stream it is added to. The product of the
+       normalization Jacobians alone takes the place of the identity term
+       of the pre-LN expansion. Show that this product scales a vector
+       orthogonal to every $\mathbf{u}_j$ by $\prod_j r(\mathbf{u}_j)^{-1}$,
+       and write this factor as a function of the mean squares
+       $c_1, \ldots, c_{2N}$ of the branch outputs. Evaluate it for a
+       common mean square $c_j = c$, and compare its dependence on $N$
+       with that of the identity term of the pre-LN expansion.
+    1. `CharLM` applies a final RMSNorm, `norm`, before its tied output
+       head. Describe what the head would receive without it as a pre-LN
+       stack grows deeper, and explain why a post-LN stack needs no final
+       normalization.
+1. [code] **Stream variance budget.** ● In the pre-LN arrangement every
+   branch reads a normalized input. If each branch output is uncorrelated
+   with the stream it is added to, the mean square of the stream after $k$
+   blocks is
+   $$1 + \sum_{i=1}^{k} \big(c^\textrm{attn}_i + c^\textrm{ffn}_i\big),$$
+   where $c^\textrm{attn}_i$ and $c^\textrm{ffn}_i$ are the mean squares of
+   the attention and FFN outputs of block $i$. Use `MiniBlock` with the
+   Xavier initialization of `signal_stats` at $d = 256$.
+    1. Predict $c^\textrm{ffn}_1$. Compute the variance of the hidden
+       pre-activations of the FFN, and evaluate the second moment of GELU
+       at that variance numerically.
+    1. Predict $c^\textrm{attn}_1$. Treat the $n = 64$ input tokens as
+       independent, and treat the attention logits of one query as
+       independent Gaussians with the variance that the initialization
+       implies.
+    1. Record the mean square of each branch output in `signal_stats` and
+       plot $c^\textrm{attn}_k$ and $c^\textrm{ffn}_k$ against $k$.
+       Compare block 1 with your predictions, and explain the trend of
+       $c^\textrm{attn}_k$ using the token spread.
+    1. Fit a power law to the stream RMS, once over blocks 1 to 32 and once
+       over blocks 8 to 32. Compare both exponents with $1/2$, explain the
+       comparison with the variance budget, and state the regime in which
+       the square-root growth stated in :numref:`subsec_signal-propagation`
+       holds.
+1. [code] **Rate of token collapse.** ● Write the tokens of one sequence
+   as $\mathbf{x}_i = \boldsymbol{\mu} + \boldsymbol{\delta}_i$ for
+   $i = 1, \ldots, n$, where $\boldsymbol{\mu}$ is the mean token and
+   $\sum_i \boldsymbol{\delta}_i = \mathbf{0}$. With the ratio of common
+   to deviation energy
+   $$\rho = \frac{n \|\boldsymbol{\mu}\|^2}{\sum_i \|\boldsymbol{\delta}_i\|^2},$$
+   the token spread of `signal_stats` equals $(1 + \rho)^{-1/2}$. At
+   initialization the attention weights are nearly uniform, so a post-LN
+   attention sublayer adds approximately the same vector
+   $\mathbf{W}_o \mathbf{W}_v \boldsymbol{\mu}$ to every token, where
+   $\mathbf{W}_v, \mathbf{W}_o \in \mathbb{R}^{d \times d}$ are the value
+   and output projections.
+    1. Let the entries of $\mathbf{W}_v$ and $\mathbf{W}_o$ be independent
+       with mean zero and variance $\alpha^2 / d$, so that $\alpha = 1$ is
+       Xavier initialization of a square matrix. Treat the normalization as
+       a rescaling common to all tokens. Show that one attention sublayer
+       and its normalization multiply $\rho$ by about $1 + \alpha^4$, and
+       derive the spread after $k$ blocks for an input of $n$ independent
+       random tokens, ignoring the FFN sublayers.
+    1. Rerun `signal_stats` for post-LN with all Xavier weights multiplied
+       by $\alpha \in \{1, 0.7, 0.5\}$, once with the full `MiniBlock` and
+       once with its FFN sublayer removed. Compare both with your formula
+       at blocks 8, 16, and 32, and explain the remaining gap of the full
+       block.
+    1. GPT-1 stacked 12 post-LN blocks of width $d = 768$ and drew every
+       weight from $\mathcal{N}(0, 0.02^2)$
+       :cite:`Radford.Narasimhan.Salimans.ea.2018`. Compute $\alpha$ for its
+       attention projections, and predict the spread after 12 blocks for
+       $n = 64$, both for this initialization and for Xavier
+       initialization at the same width. Check both predictions with
+       `signal_stats`.
+1. [code] **QK-norm as a factory.** QK-norm
+   (:numref:`subsec_qk-norm`) applies RMSNorm over the head dimension
+   $p = d/h$ to every query and key just before the scores are computed.
+    1. Write `QKNormAttention`, a subclass of `d2l.MultiHeadAttention` in
+       which the queries and the keys returned by `transpose_qkv` each pass
+       through their own RMSNorm before the dot product. Build a
+       `TransformerBlock` with it through `attn_factory` and check the
+       output shape.
+    1. Show that with unit gains every scaled logit
+       $\hat{\mathbf{q}}^\top \hat{\mathbf{k}} / \sqrt{p}$ lies in
+       $[-\sqrt{p}, \sqrt{p}]$, and generalize the bound to learned gains
+       $\boldsymbol{\gamma}_q$ and $\boldsymbol{\gamma}_k$. Compute the
+       largest possible ratio between two attention weights of one query
+       for $p = 64$ and unit gains.
+    1. Training can inflate the query and key weights. Mimic this at
+       initialization: multiply the weights of `W_q` and `W_k` of a
+       freshly initialized layer with $d = 256$ and $h = 4$ by
+       $\lambda \in \{1, 2, 4, 8\}$, and feed it 64 standard normal
+       tokens. Measure the standard deviation of the logits and the mean
+       entropy of the attention weights, with and without QK-norm. Compare
+       the entropies with $\log 64$, and explain the shape of each curve.
+1. [code] **Off-stream normalization.** ● OLMo 2 normalizes the output
+   of each branch instead of its input :cite:`OLMo.2025`,
+   $$\mathbf{h} = \mathbf{x} + \mathrm{Norm}(\mathrm{Attn}(\mathbf{x})),$$
+   and Gemma 3 normalizes both the input and the output of each branch
+   :cite:`Gemma.Team.2025`,
+   $$\mathbf{h} = \mathbf{x} + \mathrm{Norm}'(\mathrm{Attn}(\mathrm{Norm}(\mathbf{x}))),$$
+   with the FFN sublayer treated identically in both.
+   :numref:`fig_norm-taxonomy` draws these two placements next to
+   post-LN and pre-LN.
+    1. Predict the stream RMS after $N$ blocks at initialization for both
+       arrangements.
+    1. Replace the `pre_norm` flag of `MiniBlock` by a string that selects
+       one of the four arrangements, and extend `signal_stats` to record
+       the mean entropy of the attention weights of each block. Compare
+       the stream RMS, the token spread, the query-projection gradient
+       norms, and the entropies of all four arrangements.
+    1. Explain the entropies that you measure in the upper blocks of the
+       OLMo 2 stack, and name the failure that takes the place of the
+       token collapse of post-LN.
+    1. Replace the attention of the OLMo 2 arrangement and of the post-LN
+       arrangement by `QKNormAttention` and rerun the experiment. Compare
+       the effect of QK-norm on the entropies and the token spread of both
+       arrangements, and relate each effect to the cause of that
+       arrangement's failure.
+1. **FFN width rounding.** `FeedForward` sets the SwiGLU width to
+   $\mathrm{round}(8d/3)$.
+    1. Write the exact parameter count of the default
+       `TransformerBlock(d, h)` as a function of $d$, and bound the
+       relative deviation of its FFN from $8d^2$.
+    1. The released 7B configuration of Llama :cite:`touvron2023llama` has
+       $d = 4096$ and SwiGLU width $11008$, the smallest multiple of 256
+       that is at least $\lfloor 8d/3 \rfloor$. Compute the relative excess
+       of its FFN parameters over $8d^2$, and the excess that the same
+       rule gives at $d = 256$ and at $d = 128$, the default `num_hiddens`
+       of `CharLM`. Explain what the comparison implies for
+       parameter-matched experiments with small models.
+1. [code] **Normalization cost.** A kernel is *memory-bound* when moving
+   its data between memory and the processor takes longer than its
+   arithmetic, so that its runtime is close to the number of bytes moved
+   divided by the memory bandwidth.
+    1. Recreate the tensor `X` of :numref:`subsec_rmsnorm`, of shape
+       $(64, 512, 1024)$ in 32-bit floats. Count the bytes that LayerNorm
+       and RMSNorm must at least read and write, and the floating-point
+       operations per element of each.
+    1. Time the elementwise map $\mathbf{X} \mapsto 2\mathbf{X}$ in the
+       same way as the two normalizers, and convert all three timings into
+       achieved bandwidths in GB/s.
+    1. Use the achieved bandwidths to estimate how many passes over `X`
+       each normalizer makes. Explain why dropping the centering and one
+       statistic need not change the runtime of a normalizer that reads
+       `X` once, and describe an implementation in which RMSNorm would be
+       measurably faster.
+1. [code] **Gated variants.** :citet:`Shazeer.2020` varies the gate of
+   :eqref:`eq_swiglu`. ReGLU replaces SiLU by ReLU, GEGLU replaces it by
+   GELU, and the bilinear variant drops the activation and multiplies the
+   two linear views $\mathbf{W}_g \mathbf{x}$ and $\mathbf{W}_1
+   \mathbf{x}$ directly.
+    1. Extend `FeedForward` with these three settings of `act` at width
+       $\mathrm{round}(8d/3)$, and check that all gated settings have the
+       same parameter count.
+    1. Train `CharLM` with each of the five settings for three seeds under
+       the protocol of :numref:`subsec_gelu-vs-swiglu`. Report the mean and
+       the standard deviation over seeds of the loss averaged over the last
+       100 steps.
+    1. Compare your ranking with Table 1 of :citet:`Shazeer.2020`. Compare
+       the gap between the bilinear variant and the GELU MLP with the
+       spread among the four gated variants, and state which ingredient of
+       SwiGLU the comparison credits with its improvement.
+1. [extended] **Learning-rate sensitivity.** ●
+   :citet:`Wortsman.Liu.Xiao.ea.2024` reproduce the growth of attention
+   logits reported for large training runs (:numref:`subsec_qk-norm`) in
+   small models trained at high learning rates, and find that QK-norm
+   removes it. They summarize the final loss $\ell(\eta)$ as a function of
+   the learning rate $\eta$ by the *learning-rate sensitivity*
+   $$\mathbb{E}_{\eta}\big[\min(\ell(\eta), \ell_0) - \ell^*\big],$$
+   where $\ell_0$ is the loss at initialization, $\ell^*$ is the best final
+   loss over the learning rates tried, and the average runs over learning
+   rates spanning three orders of magnitude.
+    1. Give `CharLM` an option that builds its blocks with
+       `QKNormAttention` through `attn_factory`. With `num_hiddens=256` and
+       `num_blks=6`, train it with and without QK-norm for 1000 steps at
+       each learning rate in $\{10^{-4}, 10^{-3.5}, \ldots, 10^{-1}\}$,
+       otherwise under the protocol of :numref:`subsec_gelu-vs-swiglu`.
+    1. Every 100 steps, record the training loss and the largest absolute
+       attention logit on a fixed batch. Plot the final loss against
+       $\eta$ for both models, and compute the learning-rate sensitivity
+       of each curve.
+    1. For every learning rate at which the model without QK-norm ends
+       worse than the model with it, decide from the recorded attention
+       logits whether attention-logit growth explains the gap. If it does
+       not, record the largest absolute output logit of both models at the
+       same steps, and decide whether its growth explains the gap.
 
 <!-- slides -->
 

@@ -136,6 +136,7 @@ the teaching run of :numref:`sec_gpt` near $5\times10^{14}$ FLOPs under this
 accounting convention; profiler comparisons below quantify the discrepancy.
 
 ### Checking the Arithmetic
+:label:`subsec_scaling-laws-checking`
 
 We compare the approximation with framework operation counts.
 
@@ -332,6 +333,7 @@ show where validation improvements may diminish; it is not derived from a
 universal tokens-per-parameter rule.
 
 ### Comparing Five Model Sizes
+:label:`subsec_scaling-laws-five-sizes`
 
 The design: hold the data fixed and move only the model. Five sizes of
 `d2l.GPT`, widths 96 to 384 and depths 3 to 8 grown together the way real
@@ -449,7 +451,7 @@ passes depends on repetition count and data conditions
 Two footnotes before trusting the plot. First, a scaling study is only as
 good as the tuning of each point: had we frozen the learning rate across
 widths, part of our "bend" would have been a tuning artifact
-(:numref:`sec_scaling`; exercise 5 has you produce this artifact
+(:numref:`sec_scaling`; exercise 9 has you produce this artifact
 deliberately). Second, loss is the quantity that scales smoothly;
 downstream abilities can surface abruptly as loss creeps down, which is
 why small differences on this axis are worth more than they look
@@ -480,6 +482,7 @@ set the derivative in $N$ to zero: the optimum satisfies
 $$
 \alpha \frac{A}{N^{\alpha}} = \beta \frac{B}{D^{\beta}},
 $$
+:eqlabel:`eq_chinchilla_optimum`
 
 i.e., spend until the two shrinkable terms are shrinking at equal
 marginal rates. Solving gives $N^* \propto C^{\beta/(\alpha+\beta)}$ and
@@ -668,44 +671,192 @@ settings of a shared collection of architectural components.
 
 ## Exercises
 
-1. Derive the six in :eqref:`eq_six_nd` for our default configuration
-   exactly. Write the per-block matmul parameter count for width 256
-   (fused QKV, output projection, and the three SwiGLU matrices), add the
-   tied head, and multiply out $6ND$ for one batch. Compare against the
-   profiler cell's analytic line. Then add the attention-score term: at
-   what context length $n$ would the score work equal the linear-layer
-   work for this width?
-2. Run the Chinchilla sanity check on our study. At twenty tokens per
-   parameter, how many tokens would each of our five sizes want, and how
-   many *unique* characters does our corpus provide? Which sizes exceed
-   the ratio, and how does that align with where the measured curve
-   bends? Our budget shows each character about three times; using the
-   findings of :citet:`Muennighoff.Rush.Barak.ea.2023`, argue whether
-   doubling the number of passes would rescue the largest model.
-3. Add a row to :numref:`tab_modern-recipe`. Pick an open-weights model
-   this section does not cover — Kimi K2 :cite:`Kimi.Team.2025` is a good
-   subject — read the architecture section of its report, and fill in
-   every column. Which cells map onto `d2l.GPT` constructor flags, which
-   need the `attn_factory`/`ffn_factory` seams, and which would need
-   machinery this chapter has not built?
-4. The census showed GPT-2's embedding at roughly a third of its
-   parameters. Derive the condition on $V$, $d$, and $L$ under which the
-   embedding holds at least half of all parameters, and check it against
-   GPT-2's numbers. Why do scaling-law fits improve when embedding
-   parameters are excluded from $N$?
-5. Rerun the sweep with the learning rate frozen at $10^{-3}$ for every
-   size. Which points move, and in which direction? Explain each
-   movement using the width-dependence of the tuned optimum from
-   :numref:`sec_scaling`, and state what a naive reader of the resulting
-   plot would conclude that the properly tuned plot does not support.
-6. Extend the sweep one size upward: width 512, ten blocks, about 31M
-   non-embedding parameters. Before running it, predict its validation
-   loss twice — once by extending the straight line through the small
-   sizes, once by assuming the corpus is fully saturated (no improvement
-   over the largest measured size) — and estimate the run's cost in
-   FLOPs via :eqref:`eq_six_nd`. Then run it. Which prediction was
-   closer, and what does the answer say about how much headroom three
-   passes over 5.1M characters leave?
+1. **Attention-score correction.** :eqref:`eq_six_nd` omits the
+   attention-score and value-mixing work, about $4nd$ FLOPs per token and
+   block in the forward pass for a context of $n$ tokens, against about
+   $24d^2$ for the block's linear maps.
+    1. For the batch of :numref:`subsec_scaling-laws-checking`
+       ($n = 128$, $d = 256$, six blocks, eight heads, $64 \times 128$
+       tokens), XLA reports $8.480 \times 10^{10}$ forward FLOPs for the
+       GELU configuration that the JAX cell lowers, against a $2ND$ of
+       $7.743 \times 10^{10}$. Subtract the score term and express the
+       remainder in FLOPs per token and block. Then estimate the
+       elementwise work of one block (the RoPE rotation of queries and
+       keys, the attention softmax, the GELU of the $4d$-wide hidden
+       layer, two RMSNorms, and two residual additions) at a few FLOPs per
+       element, and check whether it accounts for the remainder to within
+       a factor of two.
+    1. A fused causal kernel skips the masked half of the score matrix.
+       Llama 3 8B has width $d = 4096$, was pretrained at context 8,192,
+       and was later extended to 131,072
+       :cite:`Grattafiori.Dubey.Jauhri.ea.2024`. Treat each of its blocks
+       as $12d^2$ parameters. By what factor does $6ND$ underestimate the
+       training cost per token at each context length, with and without
+       causal skipping?
+1. **Variations on six.** The factor $6 = 2 + 4$ in :eqref:`eq_six_nd`
+   assumes that every linear layer computes its forward product, the
+   gradient with respect to its input, and the gradient with respect to
+   its weights, each once. Ignore the embedding and the output head, and
+   give the training cost per token in multiples of $N$ for each of the
+   following variants.
+    1. Activation checkpointing (:numref:`subsec_activation_checkpointing`)
+       stores only each block's input and recomputes the block's forward
+       pass during the backward pass.
+    1. The bottom half of the blocks is frozen, and only the top half is
+       trained.
+    1. The top half of the blocks is frozen, and only the bottom half is
+       trained. Explain why this answer differs from the previous one.
+1. **Total versus non-embedding parameters.** Suppose that each model in
+   `sizes` had used GPT-2's vocabulary of $V = 50{,}257$ tokens with tied
+   embeddings and had reached the validation losses it reached with the
+   28-symbol vocabulary.
+    1. Compute the total parameter count of each model and the ratio
+       between the largest and the smallest. Compare this ratio with the
+       one for the non-embedding counts in `Ns`.
+    1. Take two models with non-embedding counts $N_1 < N_2$ and total
+       counts $T_1 < T_2$. Show that the log--log slope of loss against
+       total count equals the slope against non-embedding count multiplied
+       by $\ln(N_2/N_1) / \ln(T_2/T_1)$, and evaluate this factor for the
+       smallest and the third-smallest model.
+    1. Repeat the evaluation for Llama 3's vocabulary of 128,256 tokens.
+       Which of the three exponents would you use to predict the loss of a
+       much larger model, one whose embedding is a negligible share of its
+       parameters, and why do the other two mislead?
+1. **Pricing a mixture-of-experts run.** DeepSeek-V3
+   :cite:`Liu.Feng.Xue.ea.2024` has 671B parameters, of which 37B are
+   active for each token, and was pretrained on 14.8T tokens in 2.664M
+   H800 GPU hours. Take the H800's dense peak as about 990 TFLOP/s in
+   BF16 and twice that in FP8, the precision in which the run executes
+   the matrix multiplications of its linear layers.
+    1. Which of the two parameter counts belongs in :eqref:`eq_six_nd`,
+       and why? Estimate the pretraining FLOPs, and compare them with those
+       of a dense 671B model trained on the same tokens.
+    1. Compute the utilization implied by your estimate against each peak.
+       Name two kinds of work in this run that the estimate omits, so that
+       the true utilization is higher.
+1. **Twenty tokens per parameter.** ● The sweep of
+   :numref:`subsec_scaling-laws-five-sizes` gives every model 16.4M
+   training tokens drawn from 5.1M unique characters.
+    1. At twenty tokens per parameter, how many tokens would each model in
+       `Ns` want? Which models receive fewer, and which want more than the
+       corpus holds?
+    1. Validation loss falls at every step up in size, including the steps
+       between models that by your count receive too few tokens. Use
+       :eqref:`eq_chinchilla_law` with $D$ fixed to explain why a model
+       below twenty tokens per parameter still gains from more parameters,
+       and state what the ratio of :citet:`hoffmann2022training` does
+       determine.
+    1. :citet:`Muennighoff.Rush.Barak.ea.2023` find that up to about four
+       epochs of repeated data are nearly as valuable as unique data. The
+       largest model in `sizes` shows a train--validation gap after about
+       three passes. Compare its number of unique tokens per parameter
+       with the regime that study examined, and argue whether doubling the
+       number of passes would help the largest model.
+1. **Allocation from the fitted law.** ● Under the budget $C = 6ND$, the
+   minimizer of :eqref:`eq_chinchilla_law` satisfies
+   :eqref:`eq_chinchilla_optimum`.
+    1. Solve the two conditions for $N^*(C)$ and $D^*(C)$, constant
+       factors included, and show that
+
+        $$\frac{D^*}{N^*} \propto C^{(\alpha - \beta)/(\alpha + \beta)}.$$
+
+    1. :citet:`hoffmann2022training` report the fit $E = 1.69$,
+       $A = 406.4$, $B = 410.7$, $\alpha = 0.34$, $\beta = 0.28$. Evaluate
+       $D^*/N^*$ at $C = 10^{21}$ FLOPs and at Chinchilla's own budget of
+       $6 \times 70 \times 10^{9} \times 1.4 \times 10^{12}$ FLOPs, and
+       compare both values with the twenty tokens per parameter on which
+       Chinchilla was trained.
+    1. :citet:`Besiroglu.Erdil.Barnett.ea.2024` refit the same form to
+       data reconstructed from the paper's figures and obtain $E = 1.82$,
+       $A = 482.0$, $B = 2085.4$, $\alpha = 0.348$, $\beta = 0.366$.
+       Repeat the evaluation. What do the two results say about how
+       precisely a fit of :eqref:`eq_chinchilla_law` determines the
+       token--parameter ratio?
+1. **Training for inference.** ● A model that serves $D_{\textrm{inf}}$
+   tokens after training costs about
+
+   $$C_{\textrm{life}} = 6ND + 2N D_{\textrm{inf}}$$
+
+   FLOPs over its lifetime, since generating a token costs about $2N$
+   (:numref:`sec_kv-cache`). :citet:`Sardana.Portes.Doubov.ea.2024`
+   minimize this cost at a fixed target loss instead of minimizing the
+   loss at a fixed training budget.
+    1. Minimize $C_{\textrm{life}}$ subject to $L(N, D) = \ell$ under
+       :eqref:`eq_chinchilla_law`. Derive the optimality condition that
+       replaces :eqref:`eq_chinchilla_optimum`, and show that the optimum
+       moves to smaller $N$ and larger $D$ as $D_{\textrm{inf}}$ grows.
+    1. Llama 3 8B was pretrained on about 15T tokens. Take the refit
+       $E = 1.82$, $A = 482.0$, $B = 2085.4$, $\alpha = 0.348$,
+       $\beta = 0.366$ of :citet:`Besiroglu.Erdil.Barnett.ea.2024` at
+       face value and compute the predicted loss of $N = 8 \times 10^9$,
+       $D = 1.5 \times 10^{13}$. Find the compute-optimal model with the
+       same predicted loss, the ratio of the two training costs, and the
+       number of inference tokens at which the two lifetime costs are
+       equal.
+1. **A row for the recipe table.** Choose an open-weights model that
+   :numref:`tab_modern-recipe` does not cover, for example Kimi K2
+   :cite:`Kimi.Team.2025`, and fill in every column of the table from the
+   architecture section of its report. Which cells map onto `d2l.GPT`
+   constructor flags, which need the `attn_factory` or `ffn_factory`
+   arguments of `d2l.TransformerBlock`, and which need machinery this
+   chapter has not built?
+1. [code] **Frozen learning rate.** The sweep of
+   :numref:`subsec_scaling-laws-five-sizes` scales the learning rate as
+   $10^{-3} \cdot 256/d$.
+    1. Using the width dependence of the tuned learning rate in
+       :numref:`sec_scaling`, predict which points of the sweep move, and
+       in which direction, when every model uses $10^{-3}$. Then rerun the
+       sweep with this rate.
+    1. By how much does the frozen rate change the validation loss of each
+       model? Compare these changes with the seed-to-seed variation stated
+       in :numref:`subsec_scaling-laws-five-sizes`, and decide which part
+       of the shape of the frozen-rate curve is a tuning artifact.
+1. [code] **A sixth size.** ● A sixth model for the sweep of
+   :numref:`subsec_scaling-laws-five-sizes` has width 512, ten blocks, and
+   eight heads, about 31.5M non-embedding parameters.
+    1. Fit a line on log--log axes to the three smallest entries of `Ns`
+       and `curves['validation']`, and compare its predictions for the two
+       larger models with their measured losses.
+    1. Before training the new model, predict its validation loss twice:
+       by extending the line, and by assuming that the corpus allows no
+       improvement over the largest measured model. Estimate the run's
+       cost with :eqref:`eq_six_nd`.
+    1. Train it with the same recipe. Which prediction was closer, and
+       what does the result say about the headroom that about three passes
+       over 5.1M characters leave?
+1. [code] **Irreducible loss from three points.** ● Fit
+   $E + A N^{-\alpha}$ exactly through the three smallest entries of `Ns`
+   and `curves['validation']` from
+   :numref:`subsec_scaling-laws-five-sizes`. Then shift each of the three
+   losses by $\pm 0.005$, the rounding of a two-decimal printout, and
+   report the range of $E$ and $\alpha$ over the perturbations that admit
+   an exact fit with $\alpha > 0$. What does the range say about
+   estimating an irreducible loss from this sweep?
+1. [extended] **IsoFLOP profiles.** ● The sweep of
+   :numref:`subsec_scaling-laws-five-sizes` fixes the data and varies the
+   model, so each model receives a different compute budget.
+   :citet:`hoffmann2022training` instead fix the budget $C$ and trade $N$
+   against $D = C/(6N)$.
+    1. For each budget
+       $C \in \{3 \times 10^{13}, 10^{14}, 3 \times 10^{14}\}$ FLOPs and
+       each model in `sizes`, train for
+       $C / (6N \cdot 64 \cdot 128)$ steps, rounded, with the learning
+       rate of the sweep, and record the validation loss with `val_loss`.
+       Plot validation loss against $N$, one curve per budget.
+    1. Take the lowest-loss model of each budget as $N_{\textrm{opt}}(C)$,
+       and refine it by fitting a parabola in $\log N$ to the points
+       around the minimum. Fit $N_{\textrm{opt}} \propto C^{a}$ and
+       compare $a$ with $\beta / (\alpha + \beta)$ for the exponents of
+       :citet:`hoffmann2022training` ($\alpha = 0.34$, $\beta = 0.28$) and
+       for those of :citet:`Besiroglu.Erdil.Barnett.ea.2024`
+       ($\alpha = 0.348$, $\beta = 0.366$).
+    1. Count how many passes over the corpus each run makes. In which
+       direction does repetition bias $N_{\textrm{opt}}$ at the largest
+       budget?
+
+    *Adapted from Stanford CS336,
+    [Assignment 3](https://github.com/stanford-cs336/assignment3-scaling/blob/main/cs336_assignment3_scaling.pdf),
+    Problem (chinchilla_isoflops).*
 
 <!-- slides -->
 

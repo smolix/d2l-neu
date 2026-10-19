@@ -1308,49 +1308,214 @@ parallel-trainable recurrences still end.
 
 ## Exercises
 
-1. **[short-code]** In the trained overwrite experiment of
-   :numref:`subsec_dn-trained`,
-   change the write-strength gate from $\sigma(\cdot)$ to
-   $2\sigma(\cdot)$, so that $\beta_t \in (0, 2)$, and rerun the delta
-   sweep. Does recall change? Explain why the overwrite task gives the
-   model no reason to use $\beta > 1$, and predict, before running
-   anything, a task from this section that would.
-1. **[short-code]** The mechanistic experiment of
-   :numref:`subsec_dn-overwrite` uses
-   orthonormal keys. Re-run it with random unit-norm keys (skip the QR
-   step) and measure, separately, recall of keys that were just
-   overwritten and recall of the *other* keys. Use
-   :eqref:`eq_ms-retrieval-error` to explain why the delta write now
-   damages neighboring bindings, and why the damage grows with key
-   overlap.
-1. **[short-code]** Repeat the capacity sweep of
-   :numref:`subsec_ms-capacity` with the
-   delta write, storing $n$ pairs under $n$ *distinct* random keys. Show
-   that the delta rule obeys essentially the same $(n-1)/d_k$ error law.
-   Reconcile this with this section: which failure does the delta rule
-   fix, crowding or staleness?
-1. **[short-code]** Replace `solve_triangular` in `delta_chunked` with
-   an explicit forward-substitution loop over the chunk and verify
-   agreement. Count
-   the FLOPs of the solve against the two matmuls that surround it, at
-   chunk size $C$ and dimensions $d_k = d_v = d$: for which $C/d$ ratio
-   does the solve stop being negligible?
-1. **[extended]** Extend `delta_chunked` to the gated update
-   :eqref:`eq_dn-gated`.
-   Hint: fold the running product of decays $\alpha$ into the keys and
-   values entering each chunk, in log space as in
-   :numref:`subsec_ms-chunked`, and rescale the carried state at the
-   boundary; verify against a token loop.
-1. **[extended]** Two reflections compose into a rotation: taking
-   $n_h = 2$ delta
-   micro-steps per token yields transitions that can rotate a plane by
-   an input-dependent angle, which is enough to track the word problem
-   of $S_3$ (three-element permutation composition). Following
-   :numref:`subsec_dn-reflection`, hand-set a two-step cell whose two
-   reflection axes realize each generator of $S_3$ and verify perfect
-   tracking on random words of length up to $64$. What does your
-   construction need that a single micro-step ($n_h = 1$) cannot
-   provide?
+1. **Order invariance.** In `MemoryModel` with `rule='hebbian'`, the state
+   at a position is the sum of the outer products written so far, and the
+   output at that position depends only on this state and on the key and
+   value tokens at the position.
+    1. Show that the outputs at the query positions of a sequence from
+       `make_task` do not change when its write phase is permuted. Show
+       that this remains true for any functions of the two tokens at a
+       position that produce $\mathbf{q}_t$, $\mathbf{k}_t$, and
+       $\mathbf{v}_t$, including address projections that also see the
+       value token.
+    1. Deduce the highest accuracy on latest-value recall that any such
+       model can reach, trained or not, and compute it for $16$ values and
+       $R \in \{2, 4, 6\}$ writes per key. Compare it with the trained
+       Hebbian accuracies reported in :numref:`subsec_dn-trained`.
+    1. Which property of the corrective write :eqref:`eq_dn-repair`
+       breaks the invariance?
+1. [code] **Decay on the overwrite stream.** Give the Hebbian branch of
+   `overwrite_recall` a scalar decay,
+   $\mathbf{S} \leftarrow \gamma \mathbf{S} + \mathbf{k}\mathbf{v}^\top$,
+   the first rung of :eqref:`eq_ms-decay-ladder`.
+    1. Measure the recall of the latest value for
+       $\gamma \in \{0.9, 0.5\}$ at the overwrite counts in `reps`, and
+       explain the result from the ages of the writes to a single key.
+    1. Replace the orthonormal keys by independent random unit keys
+       (normalize the rows of the Gaussian matrix instead of applying the
+       QR step) and repeat for $\gamma \in \{1, 0.9, 0.5\}$ and for the
+       delta write. Explain how the best $\gamma$ changes, using
+       :eqref:`eq_ms-retrieval-error`, and compare with the delta write.
+1. [code] **Writes at query time.** ● In `MemoryModel` every position writes
+   to the state, including the query positions, whose value token is the
+   reserved query token, and each position reads the state after its own
+   write.
+    1. For the delta rule, express the output
+       $\mathbf{o}_t = \mathbf{S}_t^\top \mathbf{q}_t$ at a query position
+       in terms of $\mathbf{S}_{t-1}$, $\mathbf{q}_t$, $\mathbf{k}_t$,
+       $\beta_t$, and the content $\mathbf{v}_t$ produced by the query
+       token. Simplify the result for a unit-norm key with
+       $\mathbf{q}_t = \mathbf{k}_t$.
+    1. The projections that produce $\mathbf{q}_t$, $\mathbf{k}_t$, and
+       $\beta_t$ see the key token only, so a key receives the same write
+       strength when it is written and when it is queried. What does the
+       first part imply for the write strengths that serve both phases?
+    1. Modify `MemoryModel` to also return $\beta_t$, $\mathbf{q}_t$,
+       $\mathbf{k}_t$, and $\mathbf{v}_t$, and `train_recall` to return the
+       trained model. Train the delta model at $R = 6$ and report the
+       learned $\beta$ of each key, $\mathbf{q}_t^\top \mathbf{k}_t$, and the
+       norm of $\mathbf{v}_t$ at query positions relative to write
+       positions. How does the trained model reach its recall?
+1. [code] **Step size and key norm.** The delta rule is one gradient step on
+   the recall loss :eqref:`eq_dn-recall-loss`, so its write strength
+   $\beta_t$ is a step size.
+    1. A memory whose read at the unit-norm key $\mathbf{k}$ is
+       $\mathbf{s}_0 = \mathbf{S}^\top \mathbf{k}$ receives the same pair
+       $(\mathbf{k}, \mathbf{v})$ $n$ times in a row. Give the read at
+       $\mathbf{k}$ after the $n$ writes under the Hebbian write and under
+       the delta rule with strength $\beta$. For which $\beta$ does the
+       delta read converge to $\mathbf{v}$, and how does it approach
+       $\mathbf{v}$ when $\beta \in (1, 2)$?
+    1. Repeat the calculation for a key of norm $\rho$. Which $\beta$
+       replaces the stored value in one write, and how does the condition
+       for convergence compare with the condition $0 < \eta < 2/L$ of
+       :numref:`sec_gd`?
+    1. Run `delta_recurrent` on keys drawn as in :numref:`subsec_dn-delta`
+       but not normalized, and track the largest output magnitude over
+       $t$. Then divide each $\beta_t$ by $\|\mathbf{k}_t\|^2$, the step
+       size of the normalized least-mean-squares filter of adaptive
+       filtering, and rerun. Explain both runs with the second part.
+1. [code] **Implicit forgetting.** ● The capacity law of
+   :numref:`subsec_ms-capacity` holds for the Hebbian write. Store $n$
+   pairs under $n$ distinct independent random unit keys in $d_k = 64$
+   dimensions, with values drawn from a codebook of $256$ unit vectors as in
+   that section, and write them with the delta rule at $\beta = 1$.
+    1. Sweep $n \in \{16, 32, 64, 128, 256, 512\}$ and report the squared
+       read error and the nearest-codebook recall separately for the oldest
+       and the newest quarter of the pairs, next to the same measurements
+       for the Hebbian write.
+    1. At $\beta = 1$ the update is
+       $\mathbf{S}_i = \mathbf{P}_i \mathbf{S}_{i-1} + \mathbf{k}_i
+       \mathbf{v}_i^\top$ with $\mathbf{P}_i = \mathbf{I} - \mathbf{k}_i
+       \mathbf{k}_i^\top$. Write the final state as a sum over the writes,
+       and show that the expected coefficient of $\mathbf{v}_j$ in the read
+       at $\mathbf{k}_j$, after $m$ further writes under independent random
+       unit keys, is $(1 - 1/d_k)^m$.
+    1. Use the second part to explain the recency profile of the first,
+       and why the total recall of the delta write at $n = 4 d_k$ falls
+       below that of the Hebbian write. Which of the two failures
+       discussed in :numref:`subsec_dn-overwrite`, crowding or staleness,
+       does the delta rule remove?
+1. [code] **Hoisted triangular solve.** ● In `delta_chunked`, each
+   triangular solve sits inside the loop over chunk boundaries, because its
+   right-hand side contains the carried state $\mathbf{S}$. Take
+   $d_k = d_v = d$ and count a multiply-add as two FLOPs.
+    1. Count the FLOPs of each operation of one chunk, with forward
+       substitution for :eqref:`eq_dn-wy-system`, and compare the total with
+       the error form :eqref:`eq_dn-error-form` run over the same $C$
+       tokens. What fraction of a chunk's FLOPs does the solve take, as a
+       function of $C/d$? How many dependent steps does the whole sequence
+       take when forward substitution proceeds row by row?
+    1. Write $\mathbf{U} = \tilde{\mathbf{U}} - \mathbf{W}\mathbf{S}$ with
+       $\tilde{\mathbf{U}}$ and $\mathbf{W}$ independent of $\mathbf{S}$,
+       and rewrite the chunk's outputs and state update in terms of them.
+       Show that the matrix that multiplies $\mathbf{S}$ in the state
+       update equals the product of the chunk's transitions
+       $\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top$. This is the
+       WY representation that gives the algorithm its name.
+    1. Implement a variant of `delta_chunked` that computes
+       $\tilde{\mathbf{U}}$ and $\mathbf{W}$ for all chunks before the
+       loop, so that only matrix products remain inside it, and verify it
+       against `delta_recurrent` at chunk sizes $16$, $64$, and $256$.
+1. **Decay before the error.** Multiplying out :eqref:`eq_dn-gated` gives an
+   error form in which the correction is computed against the decayed
+   state,
+   $$\mathbf{S}_t = \alpha_t \mathbf{S}_{t-1} + \beta_t \mathbf{k}_t \big(\mathbf{v}_t - \alpha_t \mathbf{S}_{t-1}^\top \mathbf{k}_t\big)^\top.$$
+   An alternative cell computes the correction against the undecayed state,
+   $$\mathbf{S}_t = \alpha_t \mathbf{S}_{t-1} + \beta_t \mathbf{k}_t \big(\mathbf{v}_t - \mathbf{S}_{t-1}^\top \mathbf{k}_t\big)^\top.$$
+    1. For a unit-norm key, compute the read
+       $\mathbf{S}_t^\top \mathbf{k}_t$ after the write under each cell.
+       Under which cell does $\beta_t = 1$ replace the stored value for
+       every $\alpha_t$? What happens to the coefficient of the old value
+       under the other cell when $\alpha_t < \beta_t$?
+    1. AdamW's update :eqref:`eq_adamw` evaluates the gradient at the
+       undecayed iterate. Which of the two cells has this shape, and what
+       would Gated DeltaNet lose by adopting it?
+1. [code] **Chunked Gated DeltaNet.** ● Extend `delta_chunked` to the gated
+   update :eqref:`eq_dn-gated`. Within a chunk entered with state
+   $\mathbf{S}$, let $\gamma_t = \alpha_1 \alpha_2 \cdots \alpha_t$ be the
+   decay accumulated since the chunk's start.
+    1. Show that $\tilde{\mathbf{S}}_t = \mathbf{S}_t / \gamma_t$ follows an
+       ungated delta rule and identify its values and the queries that read
+       it. Transform the resulting system :eqref:`eq_dn-wy-system`, the
+       chunk's outputs, and its carried state so that the decays enter only
+       through ratios $\gamma_t / \gamma_s$ with $s \le t$.
+    1. Implement the result, forming the ratios with a copy of the
+       `segsum` helper of :numref:`subsec_ms-chunked`, and verify it
+       against a token loop of :eqref:`eq_dn-gated` with $\alpha_t$ drawn
+       uniformly from $(0.65, 0.95)$, at chunk sizes $16$, $64$, and $256$.
+1. [extended] **Gated cell ablation.** Fixing $\alpha_t = 1$ in
+   :eqref:`eq_dn-gated` gives pure DeltaNet, and striking the erase term
+   gives the decay-plus-write cell of Mamba-2. Build both variants by
+   editing the token loop of `GatedDeltaNetBlock`, train them and the
+   unchanged `GatedDeltaNet` with the recipe of :numref:`subsec_dn-lm` for
+   two seeds each, and compare validation perplexities. Is the gap between
+   variants larger than the spread between seeds? Does the ranking agree
+   with the one :citet:`Yang.Kautz.Hatamizadeh.2024` report at 1.3B
+   parameters, and which property of the training windows could explain a
+   disagreement?
+1. **Non-normal transitions.** ● Set the decay of the RWKV-7 update
+   :eqref:`eq_dn-rwkv7` to $\mathbf{w}_t = \mathbf{1}$ and take per-channel
+   rates $\mathbf{a}_t \in [0, 1]^{d_k}$, so that the transition is
+   $\mathbf{M}_t = \mathbf{I} - (\mathbf{a}_t \odot
+   \hat{\boldsymbol{\kappa}}_t) \hat{\boldsymbol{\kappa}}_t^\top$.
+    1. Show that $\mathbf{M}_t$ has the eigenvalue
+       $1 - \sum_i a_{t,i} \hat{\kappa}_{t,i}^2$ and $d_k - 1$ eigenvalues
+       equal to $1$, so that all its eigenvalues lie in $[0, 1]$.
+    1. For $d_k = 2$, $\hat{\boldsymbol{\kappa}} = (1, 1)/\sqrt{2}$, and
+       $\mathbf{a} = (1, 0)$, compute $\mathbf{M}$ and its spectral norm.
+       Why can the spectral norm exceed the largest eigenvalue here but not
+       for the delta-rule transition of :eqref:`eq_dn-matrix-form` with
+       $\beta_t \in (0, 2)$?
+    1. A second token has $\hat{\boldsymbol{\kappa}}' = (2, 1)/\sqrt{5}$ and
+       $\mathbf{a}' = (0, 1)$. Compute the spectral radius of the product
+       of the two transitions. What happens to the state over a stream
+       that alternates the two tokens with no writes, and what does this
+       imply for judging the stability of :eqref:`eq_dn-rwkv7` one
+       transition at a time?
+1. [code] **Parity at longer lengths.** ● The transition $\mathbf{a}_t$ of
+   `MultiplicativeRNN` is computed from the current bit alone, so a trained
+   model holds two transition vectors, $\mathbf{a}(0)$ for zero-bits and
+   $\mathbf{a}(1)$ for one-bits.
+    1. Modify `train_parity` to return the trained model, train the tanh
+       variant at $T = 8$ for seeds $0$, $1$, and $2$, and evaluate every
+       model on fresh bit strings of length $16$, $32$, $64$, and $128$.
+    1. For a seed that solves $T = 8$, print $\mathbf{a}(0)$ and
+       $\mathbf{a}(1)$ and find the channels in which they have opposite
+       signs. Explain why a channel that is negative on zero-bits tracks
+       parity as well as one that is negative on one-bits at every length
+       used here. From the magnitudes of these channels and from the
+       weights and bias of `head`, predict whether and at which length the
+       model stops tracking parity, and compare the prediction with the
+       measurement.
+    1. Relate the result to the open range of the gate $2\sigma(\cdot)$
+       discussed in :numref:`subsec_dn-reflection`.
+1. [code] **Reflections and permutations.** ● A DeltaProduct cell
+   :cite:`Siems.Carstensen.Zela.ea.2025` applies $n_h$ transitions
+   $\mathbf{H}_{t, i} = \mathbf{I} - \beta_{t, i} \mathbf{k}_{t, i}
+   \mathbf{k}_{t, i}^\top$ per token, each with its own unit key
+   $\mathbf{k}_{t, i}$. Consider hand-set cells with no writes,
+   $\mathbf{h}_t = \mathbf{H}_{t, n_h} \cdots \mathbf{H}_{t, 1}
+   \mathbf{h}_{t-1}$, where every factor has $\beta_{t, i} \in \{0, 2\}$.
+    1. Let $\mathbf{k}_1, \mathbf{k}_2$ be unit vectors at angle $\theta$.
+       Show that $(\mathbf{I} - 2\mathbf{k}_2\mathbf{k}_2^\top)
+       (\mathbf{I} - 2\mathbf{k}_1\mathbf{k}_1^\top)$ rotates the plane
+       spanned by $\mathbf{k}_1, \mathbf{k}_2$ by $2\theta$ and fixes its
+       orthogonal complement. Why can no single factor
+       $\mathbf{I} - \beta \mathbf{k}\mathbf{k}^\top$ act as a cyclic
+       permutation of the three coordinates of $\mathbb{R}^3$?
+    1. The group $S_3$ acts on $\mathbb{R}^3$ by permuting coordinates.
+       Find the reflection axis that swaps two coordinates. Then hand-set a
+       cell with $n_h = 2$ in which each token, an element of $S_3$,
+       applies its permutation. Start from an $\mathbf{h}_0$ with distinct
+       coordinates, and verify on random sequences of up to $1000$ tokens
+       that the composed permutation can be read off $\mathbf{h}_T$.
+    1. Generalize the construction to $S_n$ acting on $\mathbb{R}^n$. How
+       many factors per token does it need, and how does this compare with
+       Theorem 1 of :citet:`Siems.Carstensen.Zela.ea.2025`? Which
+       assumption of the $\mathsf{TC}^0$ result of
+       :citet:`Merrill.Petty.Sabharwal.2024` does the cell for $S_5$
+       violate?
 
 [Discussions](https://d2l.discourse.group/)
 

@@ -202,6 +202,7 @@ single mid-stack attention layer should restore it, and language-model
 loss should barely notice any of it.
 
 ### Three Matched Models
+:label:`subsec_hy-matched`
 
 The task generator is the one from :numref:`subsec_dn-trained` with the
 re-binding knob removed and the *load* knob exposed: each sequence
@@ -355,7 +356,7 @@ identical across the three models; the key and value channels are
 embedded separately and summed, as in :numref:`subsec_dn-trained`, plus
 a learned position embedding shared by all three (a `pos=False` switch
 drops it, and a guard in `forward` refuses sequences longer than the
-table — the first exercise relies on both).
+table — the exercise on attention placement relies on both).
 
 ```{.python .input #hybrids-three-matched-models-4}
 %%tab pytorch
@@ -450,6 +451,7 @@ crudest confound: none of the recall differences below can come from
 a larger model.
 
 ### The Recall Sweep
+:label:`subsec_hy-recall-sweep`
 
 Width is the experiment's one carefully chosen number. At
 `num_hiddens=32` with four heads, each head's state is $8 \times 8$.
@@ -580,6 +582,7 @@ points while moving reasoning benchmarks by single digits
 :cite:`Lee.Yu.Zhang.ea.2025`.
 
 ### The Language-Modeling Panel
+:label:`subsec_hy-lm-panel`
 
 Pure recurrent language models can remain competitive because average
 language-modeling loss is insensitive to this recall deficit. We train the
@@ -1050,63 +1053,233 @@ before it joins the residual stream.
 
 ## Exercises
 
-1. *Placement, self-discovered.* [extended] Rerun the recall sweep
-   with the
-   attention layer first (`'AGGG'`) and last (`'GGGA'`) instead of
-   mid-stack. Then probe length generalization — carefully, because
-   `RecallModel`'s learned position table is a confound: it is built
-   with `max_len = 2 * num_pairs`, so a longer evaluation sequence
-   would index past it (the guard in `forward` stops you), and even a
-   longer table leaves the extra rows untrained at evaluation time.
-   Remove the confound by dropping absolute positions: adapt
-   `train_recall` to build its models with `pos=False` — the recall
-   task is content-addressed, so none of the three mixers needs the
-   position table; verify this first by reproducing the sweep's
-   accuracy at `num_pairs=32`. Then extend `make_recall` to insert
-   filler tokens between the write and query phases (reserve one extra
-   key index for the filler and pass `num_keys=65`), train at zero
-   padding, and evaluate the same models on sequences padded by 32.
-   Which placement degrades, and does your
-   result match Samba's report that a single *front* attention layer
-   breaks length extrapolation :cite:`Ren.Liu.Lu.ea.2024`?
-1. *Price a million tokens.* [conceptual] Using
-   :eqref:`eq_kv-cache-bytes`, compute
-   the persistent decode state at a 1M-token context, batch of one,
-   16-bit,
-   for three 48-layer models with $n_\textrm{kv} = 8$ and
-   $d_\textrm{head} = 128$: a pure transformer, a pure recurrent stack
-   whose per-layer state matches Mamba-2 at $d_\textrm{model} = 4096$
-   (expansion two, $d_\textrm{state} = 128$: $2 \cdot 4096 \cdot 128$
-   elements per :eqref:`eq_ms-state-bytes`, ignoring the small
-   convolution buffer), and
-   a 12.5%
-   hybrid. How many concurrent 1M-token users fit in 80 GB of spare
-   HBM under each design? Compare your hybrid figure against Jamba's
-   published 4 GB at 256K.
-1. *The ratio axis.* [short-code] Sweep the attention fraction at
-   fixed depth:
-   layouts `'GGGG'`, `'GGAG'`, `'GAGA'`, `'AAAA'`. Plot recall at
-   `num_pairs=64` and decode memory at 64K context (from the
-   memory-panel cell) against the fraction. Where is the knee at this
-   scale, and how does it compare with Kimi Linear's reported 3:1
-   :cite:`Kimi.Team.2025b`?
-1. *A window instead.* [extended] Replace the hybrid's full-attention
-   mixer with
-   sliding-window attention of window 16 (mask scores outside the
-   window before the softmax). At which loads does the windowed hybrid
-   match the full one, and where does it break? Explain both regimes:
-   at what load does every query's answer still sit within the window,
-   and what does this say about Samba's window-only design
-   :cite:`Ren.Liu.Lu.ea.2024`?
-1. *Bit accounting.* [conceptual] The linear stack's total state is
-   $4$ layers
-   $\times\, 4$ heads $\times\, 8 \times 8$ floats. Estimate its
-   capacity in bindings via the crowding heuristic of
-   :numref:`subsec_ms-capacity` (interference $(n-1)/d_k$ per head
-   against unit signal) and via raw bits ($k \log_2 V$ at $V = 32$
-   values against one float carrying, say, 8 useful bits). Where do
-   the two accounts place the cliff, and where did the measured sweep
-   put it?
+1. **Copy bound.** The copy bounds of :numref:`subsec_hy-limits` state
+   that a model that passes its input through a finite state set
+   $\mathcal{S}$ errs with probability at least $1 - |\mathcal{S}|/D^L$
+   when it copies a string drawn uniformly from the $D^L$ strings of
+   length $L$.
+    1. Prove the bound for a model whose output after reading the string
+       is a deterministic function of its state. Then show that the bound
+       still holds when the model samples its output from a distribution
+       that depends only on the state.
+    1. Show that a stack of recurrent layers and sliding-window attention
+       layers with window $w$, without any global attention layer, is a
+       finite-state model at fixed precision, so that the bound applies to
+       it. After fine-tuning at 4K tokens, Samba, a stack of this kind,
+       retrieves a 5-digit passkey hidden at any depth of a 256K-token
+       document almost perfectly :cite:`Ren.Liu.Lu.ea.2024`. Explain why
+       this result does not contradict the bound.
+1. **Repeated n-grams.** The transformer half of the copy bounds in
+   :numref:`subsec_hy-limits` finds each next token by locating the
+   earlier occurrence of the $n$ most recently emitted tokens and reading
+   the token that follows it. The construction is therefore guaranteed to
+   copy correctly whenever no substring of length $n$ occurs twice in the
+   input. Let
+   the input be drawn uniformly from the strings of length $L$ over an
+   alphabet of size $D$.
+    1. Show that the substrings of length $n$ that start at two distinct
+       positions are equal with probability exactly $D^{-n}$, also when
+       they overlap.
+    1. Deduce the expected number of pairs of positions whose substrings of
+       length $n$ are equal, and explain why it bounds the probability that
+       the construction fails. For $D = 32$, find the smallest $n$ that
+       makes this expectation smaller than $0.01$ at $L = 10^3$ and at
+       $L = 10^4$.
+    1. Show that $n \ge 2 \log_D L + \log_D \frac{1}{2\delta}$ keeps the
+       expectation of the previous part below $\delta$ for every $L$, and
+       check this against the two values of $n$ found there for
+       $\delta = 0.01$. How does the width $O(n \log D)$ of the
+       transformer then grow with $L$ at fixed $\delta$, and how does this
+       compare with the number of bits that a fixed state needs in order to
+       copy the same strings?
+1. **Million-token decode state.** Consider 48-layer models that serve a
+   context of $2^{20}$ tokens to a batch of one in 16-bit precision. In
+   :eqref:`eq_kv-cache-bytes`, every attention layer has
+   $n_\textrm{kv} = 8$ key–value heads of dimension
+   $d_\textrm{head} = 128$. Every recurrent
+   layer holds the Mamba-2 state of :numref:`subsec_hy-economics`,
+   $8192 \cdot 128$ numbers per :eqref:`eq_ms-state-bytes`, and
+   the convolution buffer is neglected.
+    1. Find the context length at which the cache of one attention layer
+       equals the state of one recurrent layer.
+    1. Compute the persistent decode state of a pure transformer, of a pure
+       recurrent stack, and of a hybrid with 6 attention layers. How many
+       concurrent users fit into 80 GiB of free accelerator memory under
+       each design? Check the method against Jamba, which has 4 attention
+       layers of this shape and reports a 4 GB cache at 256K tokens
+       :cite:`Lieber.Lenz.Bata.ea.2024`.
+    1. Find the largest number of attention layers that still lets 8 users
+       share the 80 GiB at this context, and compare the resulting
+       attention fraction with the fractions in :numref:`tab_hy-recipe`.
+    1. For each of the following changes to the hybrid, state whether it
+       changes the slope of the persistent decode state as a function of
+       context length, its constant part, or neither: halving
+       $n_\textrm{kv}$; storing the cache in 8 bits; restricting every
+       attention layer to a window of 2048 tokens; storing the recurrent
+       states in 8 bits; and replacing the 6 attention layers by one
+       attention block whose weights are shared across the 6 depths, as in
+       Zamba.
+1. [code] **Gate initialization.** `ScalarGatedMixer` initializes the bias
+   of `W_g` at $-4.5$. Neglect the input-dependent part of the gate, so
+   that a bias $b$ gives the decay $a = \exp(-\textrm{softplus}(b))$.
+    1. For $b \in \{0, -2, -4.5, -8\}$, compute $a$, the half-life of the
+       state in tokens, and the weight $a^{2P-1}$ with which the first
+       binding of a sequence from `make_recall` reaches the last query of
+       that sequence, at `num_pairs` $P \in \{8, 64\}$.
+    1. Give `ScalarGatedMixer` a constructor argument for the bias, pass it
+       through `make_blocks`, `RecallModel`, and `train_recall`, and train
+       `'GGGG'` and `'GGAG'` at `num_pairs` $\in \{8, 32\}$ for each $b$.
+       Predict before training which of the two layouts depends on
+       $b$. Explain the results from the first part and from what the
+       attention layer reads.
+1. **Overflow in the dual.** `ScalarGatedMixer` forms
+   $\textrm{logL}_{ij} = \textrm{cum}_i - \textrm{cum}_j$ with
+   $\textrm{cum}_t = \sum_{r \le t} \log a_r$, replaces the entries above
+   the diagonal by $-\infty$, and then exponentiates. Suppose that it
+   exponentiated first and multiplied by the causal mask afterwards.
+    1. Find the largest entry of $\exp(\textrm{logL})$ above the diagonal
+       for a sequence of length $T$, in terms of the decays. For a constant
+       decay $a$, find the values of $a$ for which this entry overflows
+       float32, whose largest finite value is about $3.4 \times 10^{38}$,
+       at $T = 128$. Compare these values with the decays
+       $a = \exp(-\textrm{softplus}(b))$ for the biases $b = 0$ and
+       $b = -4.5$, which neglect the input-dependent part of the gate. Then
+       use the convexity of softplus to decide in which direction the
+       input-dependent part moves the case $b = 0$, and explain why a head
+       trained only on the recall task is unlikely to overflow.
+    1. Replace the multiplication by a selection that returns $0$ above the
+       diagonal and $\exp(\textrm{logL})$ on and below it. For a decay at
+       which the entry of the first part overflows, show that the forward
+       pass is now finite but that the gradient with respect to the decays
+       is not. Explain why replacing the entries by $-\infty$ before
+       the exponential gives finite gradients.
+1. **Read-out scale.** Before its RMSNorm, `ScalarGatedMixer` reads out
+
+    $$\mathbf{o}_t = \sum_{s \le t} a^{t-s}\, \frac{\mathbf{q}_t^\top \mathbf{k}_s}{\sqrt{d_\textrm{head}}}\, \mathbf{v}_s,$$
+
+    where this problem takes the decay $a$ to be constant. Let all entries
+    of the queries, keys, and values be independent with mean zero and
+    variance one.
+    1. Show that every coordinate of $\mathbf{o}_t$ has variance
+       $(1 - a^{2t})/(1 - a^2)$, read as $t$ when $a = 1$, and evaluate it
+       at $t = 128$ for $a = 0.5$, $a = 0.989$, and $a = 1$.
+    1. Softmax attention reads out
+       $\mathbf{o}_t = \sum_{s \le t} p_{ts} \mathbf{v}_s$ with weights
+       $p_{ts} \ge 0$ that sum to one and are independent of the values.
+       Bound the variance of each coordinate of its read-out. Use both
+       results to explain why the attention mixer needs no read-out
+       normalization, and how the gate initialization of
+       :numref:`subsec_hy-matched` changes the need for it in the
+       scalar-gated mixer.
+1. **Capacity accounts.** The decode state of the stack `'GGGG'` consists
+   of 4 layers with 4 heads each, and every head holds an $8 \times 8$
+   matrix. The recall task of :numref:`subsec_hy-experiment` draws its
+   keys from 64 ids and its values from 32.
+    1. Count the bits of this state in float32 and the bits that an answer
+       to every query requires at `num_pairs=64`. Repeat the count at
+       production scale for a stack of 48 recurrent layers, each holding the
+       Mamba-2 state of :numref:`subsec_hy-economics` ($8192 \cdot 128$
+       numbers in fp16), with a vocabulary of $2^{17}$ tokens: find the
+       smallest length $L$ at which the copy bound of
+       :numref:`subsec_hy-limits` forces an error of at least $1/2$. Does
+       the bound explain the collapse of `'GGGG'` at 64 pairs, or the
+       phone-book failures of the pure Mamba-2 model in
+       :numref:`subsec_hy-limits`?
+    1. Suppose that each head stores its bindings under mutually orthogonal
+       keys. How many bindings can one head hold without interference, how
+       many can one layer hold, and how many can the stack hold if every
+       layer stores different keys?
+    1. Under independent random unit keys, the crowding proposition
+       :eqref:`eq_ms-capacity-law` makes the expected read error of a head
+       equal to its unit signal at some load. Find that load and the load
+       of one layer whose heads split the bindings evenly. Compare the
+       three accounts with the accuracies of `'GGGG'` in
+       :numref:`subsec_hy-recall-sweep`. What does the comparison suggest
+       about the keys that training finds?
+1. [code] **A window instead.** ● Samba replaces global attention by
+   sliding-window attention :cite:`Ren.Liu.Lu.ea.2024`. Test this choice on
+   the recall task with a window of 16 positions, in which each query
+   attends to itself and to the 15 positions before it.
+    1. Write `WindowAttention`, a subclass of `d2l.GPT.CausalAttention`
+       that masks the scores outside the window before the softmax. Check
+       on a random input that the output at position $t$ changes when the
+       input at position $t - 15$ changes, and that it does not change when
+       the input at position $t - 16$ or at any position after $t$ changes.
+    1. Call a query of a sequence from `make_recall` covered if the write
+       of its key lies inside its window. Compute the expected fraction of
+       covered queries as a function of `num_pairs`, and find the largest
+       `num_pairs` at which every query is covered.
+    1. Add a letter `'W'` for the new mixer to `make_blocks`, and run the
+       recall sweep for `'GGWG'`. Compare its accuracy at each load with
+       the covered fraction and with the accuracies of `'GGGG'` and
+       `'GGAG'`. What do the recurrent layers contribute, and what does the
+       result suggest about hybrids without a global attention layer?
+1. [code] **Recall slice.** ● :citet:`Arora.Eyuboglu.Timalsina.ea.2024`
+   found most of the perplexity gap between efficient models and
+   attention on the tokens that require recall. Call a target character
+   of a validation window a repeat if the 8 characters ending at it, the
+   target and its 7 predecessors, also occur in this order earlier in the
+   same window.
+    1. Modify `train_lm` to also return the trained model. For each of the
+       three stacks of :numref:`subsec_hy-lm-panel`, compute the mean
+       validation loss on the repeat targets and on all other targets.
+    1. Measure the fraction of repeat targets. Suppose that a model
+       predicted every repeat target at chance and every other target as
+       well as the best stack. Bound the resulting increase of its average
+       loss, and compare the bound with the spread of 0.15 nats that the
+       assertion of :numref:`subsec_hy-lm-panel` allows.
+    1. Does the repeat slice separate the three stacks where the average
+       loss does not? Explain the result from what each mixer can retrieve
+       from a context of 128 characters.
+1. **Softmax block rank.** ● Split a sequence of length $T$ after
+   position $\tau$. For a causal mixer $\mathbf{Y} = \mathbf{M}\mathbf{V}$,
+   the block $\mathbf{M}_{>\tau, \le \tau}$ carries everything that the
+   outputs after $\tau$ take from the values up to $\tau$. For the
+   scalar-gated mixer, $\mathbf{M} = \mathbf{L} \circ
+   \mathbf{Q}\mathbf{K}^\top$ of :eqref:`eq_ms-semiseparable`, and this
+   block has rank at most $d_k$, because the later outputs see the earlier
+   values only through the state. Softmax attention has
+
+    $$M_{ts} = \frac{\exp(\mathbf{q}_t^\top \mathbf{k}_s / \sqrt{d_k})}{\sum_{r \le t} \exp(\mathbf{q}_t^\top \mathbf{k}_r / \sqrt{d_k})} \quad \textrm{for } s \le t.$$
+
+    1. Let $d_k = 1$, $q_t = t$, and $k_s = s$, and drop the factor
+       $1/\sqrt{d_k}$. Show that the block of the softmax mixing matrix has
+       rank $\min(\tau, T - \tau)$. Conclude that no recurrence whose
+       fixed-size state is linear in the values reproduces a softmax head
+       exactly at every sequence length.
+    1. Expand the exponential in its power series. Show that the term of
+       degree $p$ contributes a block of rank at most
+       $\binom{d_k + p - 1}{p}$, and that truncating the series after
+       degree $p$ gives a linear attention whose feature map has
+       $\sum_{j \le p} \binom{d_k + j - 1}{j}$ coordinates.
+    1. Draw $\mathbf{q}_t, \mathbf{k}_s \in \mathbb{R}^8$ with independent
+       $\mathcal{N}(0, \sigma^2)$ entries, take $T = 256$ and $\tau = 128$,
+       and count the singular values of the softmax block that exceed
+       $10^{-2}$ and $10^{-4}$ times the largest one, for $\sigma = 0.25$
+       and $\sigma = 1$. Compare the counts with the second part and with
+       $d_k = 8$. Which attention heads of a pretrained transformer should
+       a distillation into a hybrid, as in :numref:`subsec_hy-distill`,
+       keep as attention, and why?
+1. [extended] **Placement and length.** ● The hybrid `'GGAG'` puts its
+   attention layer third of four, following the placement rules of
+   :numref:`subsec_hy-design`.
+    1. Run the recall sweep for `'AGGG'` and `'GGGA'`. Explain the result
+       from what an attention layer needs in order to look up a binding.
+    1. `train_recall` builds `RecallModel` with a learned position table of
+       `max_len = 2 * num_pairs` entries, so its models cannot run on
+       longer sequences. Modify `train_recall` to build the models with
+       `pos=False` and to return them. Check at `num_pairs=32` that
+       `'GGGG'`, `'AGGG'`, `'GGAG'`, `'GGGA'`, and `'AAAA'` reach the
+       accuracies they reach with positions.
+    1. Extend `make_recall` to insert $m$ filler tokens between the write
+       phase and the query phase. Give each filler the key id 64, which no
+       binding uses, the value id that queries carry, and the target $-1$,
+       and build the models with `num_keys=65`. Train every layout of the
+       second part at `num_pairs=32` and $m = 0$, and evaluate it at
+       $m \in \{8, 32, 128\}$. Which layouts
+       degrade, and how do the decays and the position of the attention
+       layer explain the differences? Does the outcome support the rule
+       that attention should not come first?
 
 [Discussions](https://d2l.discourse.group/)
 

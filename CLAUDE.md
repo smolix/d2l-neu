@@ -115,7 +115,10 @@ authoring" section below.
 - **Full build:** `make all` (lib → notebooks → run-all-notebooks → slides →
   html → pdfs), or `make clean && make all` for a pristine run (~2–2.5 h on the
   4×GPU box). `make all-quick` skips notebook execution (renders from the
-  committed `outputs/` store — CPU-only, no GPU).
+  committed `outputs/` store — CPU-only, no GPU). Before a full-concurrency
+  execution run, raise the thread limit in that shell: `ulimit -u 8000; make
+  all` (the default soft limit is 4096; 8000 leaves headroom under the 8192
+  hard cap for other work on the account). See `docs/build-system.md` §13.
 
 ## Build dependency notes
 
@@ -351,9 +354,10 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
     kernels and runs on the RTX 4090** — the earlier
     `cudaErrorNoKernelImageForDevice` (error 209) is **resolved**; all MXNet GPU
     notebooks execute. One caveat: MXNet image-dataset notebooks spawn many
-    DataLoader threads, so the Makefile caps MXNet to `MXNET_GPU_SLOTS=2`
-    concurrent jobs to stay under `ulimit -u` (otherwise a starved worker
-    misreports a missing-OpenCV error). See `docs/mxnet-runtime-diagnostics.md`
+    DataLoader threads, so `tools/detect_resources.py` caps concurrent MXNet
+    jobs (`MXNET_GPU_SLOTS`) from the open-file and process ulimits (8 on the
+    4×4090 box at `ulimit -u` 4096; override with `MXNET_GPU_SLOTS=N`) —
+    otherwise a starved worker misreports a missing-OpenCV error. See `docs/mxnet-runtime-diagnostics.md`
     (2026-06-06) and `docs/build-system.md` §6.5/§6.6.
 
 ## Current status
@@ -391,13 +395,13 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   `docs/build-system.md` §4.1).
 - The **"Mathematics for Deep Learning"** part (branch
   `math-for-deep-learning-appendix`) is now the **default math appendix**: a
-  single part of 6 numbered chapters under `chapter_mdl-*` — **23** Linear
-  Algebra, **24** Calculus, **25** Optimization, **26** Probability & Statistical
-  Learning, **27** Information Theory, **28** Dynamics (Tools for Deep Learning is
-  now **29**) — with `mdl-`-prefixed labels. All six chapters are now fully
+  single part of 6 numbered chapters under `chapter_mdl-*` — **24** Linear
+  Algebra, **25** Calculus, **26** Optimization, **27** Probability & Statistical
+  Learning, **28** Information Theory, **29** Dynamics (Tools for Deep Learning is
+  now **30**) — with `mdl-`-prefixed labels. All six chapters are now fully
   written; the appendix gained two new sections (`mdl-adaptive-stochastic-methods`
-  = §24.2, `mdl-concentration-generalization` = §25.5) and ch. 25 was reordered
-  (naive Bayes moved last, §25.6). The branch `math-appendix-polish` carries a
+  = §26.2, `mdl-concentration-generalization` = §27.6) and ch. 27 was reordered
+  (naive Bayes moved last, §27.7). The branch `math-appendix-polish` carries a
   full review-driven quality pass over all six chapters with pytorch-only
   recaptured outputs; the tf/jax/mxnet stores for the edited files still need
   re-execution on the GPU box.

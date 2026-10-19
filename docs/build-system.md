@@ -1412,7 +1412,6 @@ are **CPU-only**, touch no `outputs/`, and commit only source/config.
 ```bash
 # ── one-time prereqs (git-lfs already installed; hooks already wired here) ──
 git lfs install                                    # idempotent
-git add .gitattributes && git commit -m "lfs: track outputs/ image assets"   # BEFORE any asset
 
 # ── execution (GPU, expensive) ──
 make lib                                            # d2l/*.py + d2l/_blocks/ from #@save
@@ -1549,6 +1548,20 @@ outputs store in place:
   packfile permanently. Land `.gitattributes` first (§10 step 1).
 - **A render that "needs torch"** means someone reintroduced an execution
   dependency. The CPU-only CI render (§9.3) is the tripwire.
+- **A full-concurrency run can exhaust the per-user thread limit.** The
+  default shell gets `ulimit -u` soft 4096 / hard 8192, and every
+  JAX/TensorFlow/MXNet job keeps its own thread pools. At ~20-way concurrency
+  (`make all`, `run-all-notebooks`) the scheduler can die with
+  `RuntimeError: can't start new thread` and make with `/bin/bash: Resource
+  temporarily unavailable`; the run summary then tallies the never-started
+  notebooks as FAILED. Run `ulimit -u 8000` in the same shell before the build
+  (8000, not the 8192 cap, leaves headroom for other work on the account).
+  The scheduler pins GPU jobs to a core group as well as CPU jobs, because
+  XLA/oneDNN size their pools from the *visible* core count, not
+  `OMP_NUM_THREADS`; this cut a JAX notebook from ~350 threads to a few dozen,
+  but the limit still applies. Diagnose by counting threads, not processes:
+  `ps -eLf -u $USER | wc -l` against the limit. Recovery is cheap: re-run
+  without `make clean` and only the un-run tail executes.
 - **Stale inline output blocks render by design.** That's not a bug; it's the
   §3.5 guarantee. Re-run + capture the named notebook, or use `render-fresh`.
 - **`GIT_LFS_SKIP_SMUDGE=1`** gives a fast text-only checkout (manifests, no

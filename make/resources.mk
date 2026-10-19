@@ -28,7 +28,7 @@ export GPU_MIB_PER_LIGHT GPU_MIB_PER_jax CPU_PER_LIGHT CPU_PER_jax
 # re-run on *every* reference to the variable — dozens of times during a deep
 # `make -n` graph walk. The ifndef guard means a command-line override (e.g.
 # `make CPU_SLOTS=2`) is already defined, so detection is skipped and the
-# override wins. On the 4×24GB / 64-core box: GPU_SLOTS=12, CPU_SLOTS=6; on a
+# override wins. On the 4×24GB / 64-core box: GPU_SLOTS=12, CPU_SLOTS=8; on a
 # CPU-only laptop: NUM_GPUS=1 (slot→device fallback), GPU_SLOTS=1, CPU_SLOTS=cores/8.
 _DR := python3 tools/detect_resources.py --get
 define _detected

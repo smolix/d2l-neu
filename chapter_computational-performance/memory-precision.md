@@ -478,31 +478,283 @@ are added.
 
 ## Exercises
 
-1. Take the GPT of :numref:`sec_gpt` and, using only the anatomy of
-   :numref:`subsec_mp-anatomy`, compute the largest $(\textrm{width},
-   \textrm{depth})$ trainable in 24 GB under three regimes: fp32 + Adam,
-   bf16 + Adam, bf16 + Adam + checkpointing (assume activations dominate).
-   Then verify one point against `max_memory_allocated`.
-1. Derive the per-token activation bytes of one `TransformerBlock`
-   (:numref:`sec_gpt`) as a function of width and sequence length, and
-   check your formula against the measured peak from the snapshot plot.
-1. Implement "checkpoint every $\sqrt{n}$-th block" for the deep block
-   stack above and measure peak memory and step time. Why is $\sqrt{n}$ the
-   memory-optimal checkpointing interval?
-1. Break fp16 (not bf16) deliberately: construct a step whose gradients
-   are small enough to underflow fp16's subnormal floor (e.g., scale the
-   loss by $10^{-4}$ before calling backward), run it under
-   `torch.autocast(dtype=torch.float16)` without a `GradScaler`, and
-   verify that gradients flush to zero while the same step under bf16
-   survives. Then enable a `GradScaler`, confirm the gradients return,
-   and explain what the scaler did in terms of
-   :numref:`fig_float_formats`. Why does a full training run fail this
-   way only *sometimes* — what makes the failure workload-dependent?
-1. With a fixed global batch of 512, sweep the micro-batch size $\in
-   \{512, 256, 128, 64\}$ (so $k \in \{1, 2, 4, 8\}$), and plot peak
-   memory and wall-clock per optimizer step. Confirm that memory follows
-   the micro-batch while the update is unchanged, and explain the small
-   time overhead of large $k$.
+1. **Where the peak lands.** :numref:`fig_memory_anatomy` places the peak
+   of a training step early in the backward pass. Consider a stack of $n$
+   identical layers. The parameters of each layer occupy $w$ bytes, and its
+   forward pass stores $a$ bytes of activations. Assume that no gradients
+   exist when the backward pass starts, and that the backward pass of a
+   layer frees the activations of that layer and creates its parameter
+   gradient of $w$ bytes. Leave out the parameters and the optimizer
+   states, whose sizes stay constant.
+    1. Write the bytes held by activations and gradients after the backward
+       pass has processed $j$ of the $n$ layers. Show that the peak lies at
+       the start of the backward pass when $a > w$ and at its end when
+       $a < w$.
+    1. Count as activations only the input of each linear layer, and ignore
+       the biases. Which of the two cases holds for the six-layer stack of
+       :numref:`subsec_mp-measuring` at its batch size of 256, and at which
+       batch size does the stack switch to the other case?
+    1. Under gradient accumulation over $k$ micro-batches, the gradients of
+       the first micro-batch stay allocated while the later micro-batches
+       run. Find the peak with accumulation, and the values of $k$ for which
+       accumulation lowers the peak below that of a single step on the full
+       batch.
+1. [code] **Second copy of the weights.** ● Mixed precision keeps some
+   tensors in two formats (:numref:`subsec_mp-anatomy`), and its memory
+   saving rests on the activations being the dominant term.
+    1. For the network of :numref:`subsec_mp-mixed` at its batch size of
+       2048, list the tensors that the backward pass keeps in the tf32
+       configuration and in the bf16 configuration. Decide for each 16-bit
+       copy of a weight matrix whether the backward pass needs it. Predict
+       which configuration has the higher peak, and find the batch size
+       above which the bf16 configuration has the lower one.
+    1. Measure the peak of the computation that :numref:`subsec_mp-mixed`
+       times, in both configurations and at batch sizes 2048 and 16384, and
+       compare the measurements with your predictions.
+    1. A model with $P = 1.3 \times 10^9$ parameters is trained with AdamW
+       on a card with $24 \times 10^9$ bytes of memory. Compare the memory
+       left for activations under fp32 training, at $16P$ bytes, and under
+       mixed precision, at $18P$ bytes. Name two changes to the optimizer
+       or to the storage formats that leave more room for activations, and
+       state what each change gives up.
+1. **Checkpoint placement.** ● Consider a stack of $n$ identical residual
+   blocks, and measure memory in units of the input of one block. The
+   backward pass of one block needs $c$ units of stored tensors, its input
+   included. A schedule with segments of $s$ consecutive blocks stores only
+   the input of each segment during the forward pass. During the backward
+   pass it recomputes one segment at a time, while the stored inputs of the
+   earlier segments remain in memory.
+    1. Derive the peak activation memory as a function of $s$, and the $s$
+       that minimizes it. Count $c$ for the block of
+       :numref:`subsec_mp-checkpointing`, which applies a linear layer, a
+       GELU, and a second linear layer on a residual connection. For its 16
+       blocks, compare storing everything, the per-block checkpointing of
+       that subsection, and the best segment length. Check the saving of
+       per-block checkpointing against the roughly 2 GB that the subsection
+       reports.
+    1. :citet:`Chen.Xu.Zhang.ea.2016` reduce the memory further by
+       recursion. The schedule stores the input of the stack and the input
+       of its second half, processes the second half recursively, and then
+       processes the first half recursively from its stored input. For $n$
+       a power of two, derive the peak memory and the total number of block
+       forward evaluations, the original forward pass included. For
+       $n = 16$ and $n = 1024$, compare both quantities with those of the
+       best segment length.
+1. [code] **Recomputation overhead.** :numref:`subsec_mp-checkpointing`
+   bounds the extra work of per-block checkpointing by one forward pass,
+   and it measures about 15–20% more step time on its 16-block stack.
+    1. Suppose that a backward pass costs twice the FLOPs of the
+       corresponding forward pass and that time is proportional to FLOPs.
+       Predict the time overhead if the recomputation repeats the whole
+       forward pass of every block.
+    1. Time the forward pass of the stack alone and its
+       forward-plus-backward step without checkpointing, and predict the
+       overhead again from the two measured times. Compare both
+       predictions with the measured overhead.
+    1. List the tensors that the backward pass of one block reads, and the
+       operations of the block that are needed to recompute them. Predict
+       the overhead from this count, and explain the measured overhead.
+1. **Clipping under accumulation.** Gradient clipping to norm $\tau$
+   replaces a gradient $\mathbf{g}$ by
+   $\mathbf{g} \min(1, \tau / \|\mathbf{g}\|)$. Let
+   $\mathbf{g}_1, \ldots, \mathbf{g}_k$ be the micro-batch gradients
+   after the scaling by $1/k$ of :numref:`subsec_mp-accumulation`, so that
+   their sum $\mathbf{g}$ is the full-batch gradient.
+    1. A training loop clips each $\mathbf{g}_i$ before adding it to the
+       accumulator. Find the largest norm that the accumulated gradient can
+       reach, and a condition under which the loop gives the same result as
+       clipping $\mathbf{g}$ once before the optimizer step.
+    1. Under fp16 loss scaling with factor $S$, the accumulator holds
+       $S \mathbf{g}$ once the last micro-batch has been added. In which
+       order must the loop divide by $S$, clip, and step? What goes wrong
+       if it clips before dividing, and what goes wrong if $S$ changes
+       before the last micro-batch has been added?
+
+    *Adapted from the PyTorch documentation,
+    [Automatic Mixed Precision examples](https://docs.pytorch.org/docs/stable/notes/amp_examples.html),
+    sections "Gradient clipping" and "Gradient accumulation".*
+1. [code] **Cost of accumulation.** ● Split the global batch of 2048
+   examples of the bf16 configuration of :numref:`subsec_mp-mixed` into $k$
+   equal micro-batches, and accumulate their gradients, for
+   $k = 1, 2, 4, \ldots, 64$.
+    1. Let the network have $P$ parameters. A micro-batch of
+       $B_{\textrm{micro}}$ examples performs about
+       $6 P B_{\textrm{micro}}$ FLOPs in its forward and backward passes,
+       and it moves at least $12P$ bytes: it reads the bf16 weights in each
+       of the two passes, and it reads and writes the fp32 gradient
+       accumulator. Ignore the activations. Write the peak compute of
+       :eqref:`eq_roofline` as $F$ here, because $P$ counts parameters, and
+       take $F$ and $\beta$ from the RTX 4090 column of
+       :numref:`tab_gpu_specs`. Predict the time per global batch as a
+       function of $k$, and find the $k$ beyond which the micro-batches are
+       bandwidth-bound.
+    1. Measure the time per global batch for every $k$, and plot it
+       together with the prediction. Identify the weight and gradient
+       traffic of the bf16 configuration that the count of $12P$ bytes
+       leaves out.
+    1. Suppose that activation checkpointing let each micro-batch hold four
+       times as many examples, at the price of a third more FLOPs. Under the
+       model of the first sub-problem, for which $k \geq 4$ of the sweep
+       does accumulation over $k/4$ checkpointed micro-batches take less
+       time than accumulation over $k$ plain ones?
+1. [extended] **GPT-2 on one card.** ● The GPT-2 configuration of
+   :numref:`subsec_gpt-loading` has width $d = 768$, 12 blocks with
+   $n_h = 12$ attention heads, a vocabulary of $V = 50{,}257$ tokens, and
+   $P = 124.4$ million parameters. It is trained with AdamW on sequences of
+   $T = 1024$ tokens, on a card with $24 \times 10^9$ bytes of memory.
+   Following the count of :citet:`Korthikanti.Casper.Lym.ea.2022`, a block
+   without dropout stores $16d$ values per token, and an attention that
+   materializes its score matrices stores another $n_h T$ values per token.
+   These values take 4 bytes each in fp32 training and 2 bytes each under
+   mixed precision. In both regimes the cross-entropy loss stores the
+   logits as $V$ fp32 values per token.
+    1. Compute the activation bytes per sequence of the 12 blocks, with a
+       fused and with a materializing attention, in both regimes, and the
+       bytes per sequence of the logits. Korthikanti et al. neglect the
+       logits for models with tens of billions of parameters. What share of
+       the activations do the logits take here, with a fused attention?
+    1. Take $16P$ persistent bytes for fp32 training and $18P$ for mixed
+       precision, and assume a fused attention. Predict the largest
+       micro-batch, in sequences, for fp32 training, for mixed precision,
+       and for mixed precision with per-block checkpointing. Per-block
+       checkpointing keeps $d$ values per token for each block, plus the
+       activations of one block during its recomputation. Which term limits
+       the last configuration?
+    1. Build `GPT` in this configuration with random weights, and measure
+       the peak memory of fp32 training steps at micro-batches of 2, 4, and
+       8 sequences. Fit the peak as a linear function of the micro-batch.
+       At the start of the backward pass, the cross-entropy creates
+       logits-sized gradients while the stored logits are still allocated.
+       Count them for your training step, and add them to the bytes per
+       sequence of the first sub-problem. Compare the slope with this count
+       and the intercept with $16P$, and decide whether the attention
+       stores its score matrices.
+    1. Compute the output head and the loss in chunks of tokens, and
+       checkpoint each chunk so that the logits of only one chunk exist at
+       a time. With per-block checkpointing in both runs, find the largest
+       fp32 micro-batch with the chunked loss and with the unchunked loss.
+       For each run, split a global batch of 512 sequences into equal
+       micro-batches no larger than its largest one, and measure the tokens
+       per second of both schedules.
+
+:begin_tab:`pytorch`
+8. [code] **Optimizer-step memory.** :numref:`subsec_mp-measuring`
+   attributes part of the 30% gap between the measured peak and $16P$ to
+   temporaries of the optimizer update. Rebuild `net`, `X`, and `opt` of
+   that subsection three times: with `torch.optim.Adam(net.parameters(),
+   foreach=False)`, with the default arguments, and with `fused=True`.
+    1. Run two training steps with each optimizer. On the second step,
+       record `torch.cuda.memory_allocated()` just before `opt.step()`,
+       reset the peak statistics, and record
+       `torch.cuda.max_memory_allocated()` after `opt.step()`. Express the
+       extra bytes of each update in units of the gradient size $4P$.
+    1. The three implementations update one parameter tensor at a time,
+       apply each elementwise operation to all parameter tensors at once,
+       or run the whole update in one kernel per group of tensors. Explain
+       the three measurements from this difference, and state which part of
+       the 30% gap they account for.
+9. [code] **fp16 gradient window.** ● The 5-bit exponent of fp16
+   (:numref:`fig_float_formats`) gives it normal numbers from $2^{-14}$ to
+   65,504 and subnormal numbers down to $2^{-24}$. Loss scaling
+   :cite:`Micikevicius.Narang.Alben.ea.2018` multiplies the loss by a
+   factor $S$ before the backward pass and divides the gradients by $S$
+   afterwards. Use `net`, `X`, `y`, and `loss` as defined in
+   :numref:`subsec_mp-mixed`, and take as reference the fp32 parameter
+   gradients computed under `torch.set_float32_matmul_precision('highest')`.
+    1. Plot a histogram of $\log_2 |g|$ over the nonzero entries $g$ of
+       the reference gradients. Which fractions of the entries lie below
+       $2^{-14}$ and below $2^{-24}$, and which factors $S$ place 99.9% of
+       the scaled entries $S g$ in the normal range of fp16?
+    1. For $S = 2^0, 2^2, \ldots, 2^{24}$, compute the gradients of $S$
+       times the loss under `torch.autocast('cuda', dtype=torch.float16)`,
+       divide them by $S$, and plot their relative error
+       $\|\hat{\mathbf{g}} - \mathbf{g}\| / \|\mathbf{g}\|$ with respect
+       to the reference $\mathbf{g}$, marking the runs with non-finite
+       entries. Repeat the sweep with `torch.bfloat16`. In which range of
+       $S$ is fp16 more accurate than bf16, and why is that possible?
+    1. `torch.amp.GradScaler` starts at $S = 2^{16}$. Where does this
+       factor lie in the window of the previous sub-problem? The gradient
+       of the loss with respect to a logit is the difference between the
+       predicted and the target probability, divided by the batch size of
+       2048. How does the window move if the batch grows to 32,768
+       examples? Explain why a static loss scale that works for one
+       workload can fail for another.
+10. [code] **Selective recomputation.** ● Per-block checkpointing
+    stores only the input of each block. The function
+    `torch.utils.checkpoint.create_selective_checkpoint_contexts`, passed
+    to `checkpoint` through its `context_fn` argument, instead caches the
+    outputs of chosen operations during the forward pass and recomputes
+    the remaining operations. Its policy function receives each operation
+    together with its arguments. Each `nn.Linear` of `Block` dispatches to
+    `torch.ops.aten.addmm.default`.
+    1. For one `Block`, list the tensors stored between the forward and
+       the backward pass, and the matrix multiplications that the backward
+       pass recomputes, under four policies: no checkpointing, per-block
+       checkpointing, caching the outputs of every `addmm`, and caching
+       only the output of the first `addmm`.
+    1. Implement the last two policies for the 16-block stack of
+       :numref:`subsec_mp-checkpointing`, measure peak memory and step time
+       as that subsection does, and compare all four policies with your
+       predictions.
+:end_tab:
+
+:begin_tab:`jax`
+8. [code] **Optimizer-step memory.** A JAX training step returns new
+   parameters and optimizer states instead of updating them in place.
+   Extend the compiled gradient of :numref:`subsec_mp-measuring` into a
+   full Adam step, a function of `params`, the optimizer state, and `X`
+   that returns the updated parameters and the updated optimizer state.
+    1. Compile the step and report `argument_size_in_bytes`,
+       `output_size_in_bytes`, and `temp_size_in_bytes` of its
+       `memory_analysis()` in units of the parameter size $4P$. Estimate
+       the peak memory of one step from these numbers.
+    1. Compile the step again with `donate_argnums` covering the
+       parameters and the optimizer state, and report
+       `alias_size_in_bytes` as well. How does the estimated peak change,
+       and how does it compare with $16P$?
+9. [code] **fp16 gradient window.** ● The 5-bit exponent of fp16
+   (:numref:`fig_float_formats`) gives it normal numbers from $2^{-14}$ to
+   65,504 and subnormal numbers down to $2^{-24}$. Loss scaling
+   :cite:`Micikevicius.Narang.Alben.ea.2018` multiplies the loss by a
+   factor $S$ before the backward pass and divides the gradients by $S$
+   afterwards. Use `params`, `X`, and `net_fn` as defined in
+   :numref:`subsec_mp-mixed`, and draw random integer labels for the 10
+   outputs. Replace the loss by $S$ times the mean cross-entropy of the
+   logits cast to fp32, as computed by
+   `optax.softmax_cross_entropy_with_integer_labels`. Take as reference the
+   fp32 gradients computed under `jax.default_matmul_precision('highest')`.
+    1. Plot a histogram of $\log_2 |g|$ over the nonzero entries $g$ of
+       the reference gradients. Which fractions of the entries lie below
+       $2^{-14}$ and below $2^{-24}$, and which factors $S$ place 99.9% of
+       the scaled entries $S g$ in the normal range of fp16?
+    1. For $S = 2^0, 2^2, \ldots, 2^{24}$, compute the gradients with
+       `jnp.float16` as the dtype of `net_fn`, divide them by $S$, and plot
+       their relative error
+       $\|\hat{\mathbf{g}} - \mathbf{g}\| / \|\mathbf{g}\|$ with respect
+       to the reference $\mathbf{g}$, marking the runs with non-finite
+       entries. Repeat the sweep with `jnp.bfloat16`. In which range of $S$
+       is fp16 more accurate than bf16, and why is that possible?
+    1. optax ships no automatic loss scaler. Choose a static factor $S$
+       from the window of the previous sub-problem, and justify the choice.
+       The gradient of the loss with respect to a logit is the difference
+       between the predicted and the target probability, divided by the
+       batch size of 2048. How does the window move if the batch grows to
+       32,768 examples? Explain why a static loss scale that works for one
+       workload can fail for another.
+10. [code] **Selective recomputation.** ● `jax.checkpoint` accepts a
+    `policy` argument that names the intermediate values it may save, and
+    `jax.checkpoint_policies.checkpoint_dots` saves the outputs of matrix
+    multiplications and recomputes everything else.
+    1. For one call of `block`, list the values stored between the forward
+       and the backward pass, and the matrix multiplications that the
+       backward pass recomputes, under three configurations: `block`
+       itself, `jax.checkpoint(block)`, and `jax.checkpoint(block,
+       policy=jax.checkpoint_policies.checkpoint_dots)`.
+    1. Add the third configuration to the measurement of
+       :numref:`subsec_mp-checkpointing`, and compare the compiler temp
+       memory and the step time of all three configurations with your
+       predictions.
+:end_tab:
 
 <!-- slides -->
 

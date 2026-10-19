@@ -114,7 +114,6 @@ ax[1].set_xlabel("x")
 d2l.plt.tight_layout()
 d2l.plt.show()
 ```
-:label:`fig_gp_priors_rbf_basis`
 
 We can recognize $f(x)$ as having the form $w^{\top} \phi(x)$, where $w = (w_1,\dots,w_J)^{\top}$ and $\phi(x)$ is a vector containing each of the radial basis functions. The covariance function of this Gaussian process is then
 

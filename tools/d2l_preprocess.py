@@ -324,11 +324,14 @@ def translate_directives(text):
         lambda m: f'{m.group(1)} {{#{convert_label_id(m.group(2))}}}',
         text, flags=re.MULTILINE)
 
+    # Captions may hold one level of balanced brackets (math like $E[R]$ or
+    # $[a,b]$); a caption regex that stopped at the first ']' left the label
+    # detached, printed as literal '{#fig-…}' text on the page.
     # ── Figure + width + label ──
     # ![caption](path)\n:width:`Npx`\n:label:`fig_foo`
     #   → ![caption](path){#fig-foo width="Npx"}
     text = re.sub(
-        r'^(!\[[^\]]*\]\([^)]+\))\s*\n:width:`([^`]+)`\s*\n:label:`([^`]+)`',
+        r'^(!\[(?:[^\[\]]|\[[^\[\]]*\])*\]\([^)]+\))\s*\n:width:`([^`]+)`\s*\n:label:`([^`]+)`',
         lambda m: (f'{m.group(1)}'
                    f'{{#{convert_label_id(m.group(3))} width="{m.group(2)}"}}'),
         text, flags=re.MULTILINE)
@@ -336,7 +339,7 @@ def translate_directives(text):
     # ── Figure + label (no width) ──
     # ![caption](path)\n:label:`fig_foo`  →  ![caption](path){#fig-foo}
     text = re.sub(
-        r'^(!\[[^\]]*\]\([^)]+\))\s*\n:label:`([^`]+)`',
+        r'^(!\[(?:[^\[\]]|\[[^\[\]]*\])*\]\([^)]+\))\s*\n:label:`([^`]+)`',
         lambda m: f'{m.group(1)}{{#{convert_label_id(m.group(2))}}}',
         text, flags=re.MULTILINE)
 

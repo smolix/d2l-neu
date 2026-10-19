@@ -259,8 +259,10 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
   rewritten automatically by `gen_slides.py` from `CHAPTER_NUMBERING`.
 - **Gotchas.** Multi-line display equations: put `$$` alone on its own opening
   and closing lines with `:eqlabel:` on the next line, or the label fails to
-  attach. Never put a `]` in an image caption (it truncates the alt-text); write
-  matrices in captions with `\begin{smallmatrix}…\end{smallmatrix}`, not `[[…]]`.
+  attach. Image captions may hold one level of balanced brackets (`$E[R]$`,
+  `$[a,b]$`), but never an unbalanced `]` or nested `[[…]]` — the figure's
+  `:label:` then detaches and prints as literal `{#fig-…}` text; write matrices
+  in captions with `\begin{smallmatrix}…\end{smallmatrix}`.
   **A closing `$` must not be followed by a digit** — pandoc's "don't make
   `$5 … $10` math" rule means `$x$2` won't close, mangling the math and breaking
   the PDF (`\symcal allowed only in math mode`); keep the digit inside the span

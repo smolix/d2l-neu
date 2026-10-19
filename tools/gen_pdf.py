@@ -388,6 +388,10 @@ number-sections: true
 crossref:
   chapters: true
 
+# Same as the HTML _quarto.yml: a line starting "@label." is otherwise an
+# example-list item whose label shadows the crossref.
+from: markdown-example_lists
+
 filters:
   - _svg-to-pdf.lua
 

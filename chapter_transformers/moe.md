@@ -42,6 +42,7 @@ import optax
 ```
 
 ## Conditional Computation
+:label:`subsec_moe-conditional`
 
 MoE assumes that a language model need not use every FFN parameter for every
 token. Predicting the next token after "the
@@ -287,6 +288,7 @@ measured load.
 | $b_i$ | non-gradient selection bias used by the auxiliary-loss-free controller |
 
 ### Positive Feedback in Routing
+:label:`subsec_moe-feedback`
 
 Follow the feedback loop. Early in training, random initialization may cause
 some expert is slightly better than its peers on the tokens it happens to
@@ -358,6 +360,7 @@ only the selection bias — the mechanism :citet:`Wang.Gao.Zeng.ea.2024`
 isolate.
 
 ### Comparing Balancing Methods at Fixed Compute
+:label:`subsec_moe-balance-comparison`
 
 Both repairs slot into an ordinary training loop. The trainer below is
 `d2l.train_lm` (:numref:`sec_gpt`) plus the two mechanisms, each
@@ -610,6 +613,7 @@ quality ranking. The large-scale motivation for the bias controller comes
 from the separate experiments of :citet:`Wang.Gao.Zeng.ea.2024`.
 
 ## Fine-Grained and Shared Experts
+:label:`subsec_moe-fine-grained`
 
 Mixtral's experts are full-width FFNs, eight complete copies with two
 active: big specialists, coarsely chosen. The DeepSeek line of models
@@ -634,7 +638,7 @@ $k$ routed choices: the common knowledge lives once, in the always-on
 path, and the routed experts spend their entire width on what actually
 distinguishes them. Neither refinement changes a line of our layer's
 logic — narrower experts change a constructor argument, and the shared
-expert is one more FFN added outside the router (the final exercise builds
+expert is one more FFN added outside the router (an exercise builds
 it). We do not compare granularities in the teaching experiment. Evidence for
 the refinement comes from the large-scale ablations of
 :citet:`Dai.Deng.Zhao.ea.2024`. The following reported configurations show
@@ -656,6 +660,7 @@ V2 :cite:`DeepSeek-AI.2024`, whereas Qwen3 does not. These rows illustrate
 design variation rather than a universal progression.
 
 ## A Mixture-of-Experts GPT
+:label:`subsec_moe-gpt`
 
 We train two models on the same data for the same 600
 steps: the dense `d2l.GPT` of :numref:`sec_gpt` at width 256 with four
@@ -763,49 +768,238 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
 
 ## Exercises
 
-1. The top-$k$ selection is an argmax and has no gradient, yet the
-   router trains. Write the layer's output for a single token as
+1. **Router gradient.** The top-$k$ selection in :eqref:`eq_moe-layer` has
+   no gradient, yet the router trains. Consider one token with router logits
+   $\mathbf{z} = \mathbf{W}_r \mathbf{x}$, so that
+   $\mathbf{p} = \mathrm{softmax}(\mathbf{z})$, and treat the selected set
+   $\mathcal{E}_k$ as a constant. Write the layer output as
    $\mathbf{y} = \sum_{i \in \mathcal{E}_k} p_i\, \mathrm{FFN}_i(\mathbf{x})$
-   and derive
-   $\partial \mathcal{L} / \partial z_j$ for the router logits
-   $\mathbf{z} = \mathbf{W}_r \mathbf{x}$, treating $\mathcal{E}_k$ as
-   constant. Which experts receive routing gradient? Now suppose the
-   gate weights are renormalized over the selected set,
-   $g_i = p_i / \sum_{j \in \mathcal{E}_k} p_j$, as Mixtral does. Show
-   that for $k = 1$ the router's gradient vanishes identically — and
-   explain why Mixtral's $k = 2$ escapes this trap.
-2. Production MoE systems give each expert a fixed token buffer of
-   capacity $c \cdot N k / E$ for a batch of $N$ tokens (the *capacity
-   factor* $c$); tokens routed to a full expert are *dropped* — they
-   skip the FFN and ride the residual stream unchanged
-   :cite:`Lepikhin.Lee.Xu.ea.2021,fedus2022switch`. Explain why static
-   buffers are needed at all (consider batching across devices), what
-   happens to dropped tokens' representations, and why a *batch-level*
-   balance objective matters for hardware efficiency even if the model
-   could tolerate statistical imbalance. What does $c = 1$ force the
-   router to be? What does large $c$ cost?
-3. Rerun the triptych with `num_active=2`. Does the unbalanced run
-   still collapse, and as hard? Explain the difference using the
-   feedback-loop argument: how does a second active expert change the
-   gradient received by the runners-up?
-4. Sweep the auxiliary-loss weight $\alpha$ over
-   $\{0, 10^{-3}, 10^{-2}, 10^{-1}, 1\}$. Plot final training loss and
-   the number of dead experts against $\alpha$. Where does balancing
-   stop improving and interference start hurting? Then sweep the bias
-   update speed $u$ over the same grid: which failure mode appears at
-   large $u$, and why is it gentler than large $\alpha$?
-5. Our layer computes every expert densely and masks. Implement the
-   gathered alternative in PyTorch: for each expert, `torch.where` the
-   indices of its assigned tokens, run the expert on just those rows,
-   and scatter the results back. Verify it matches the dense layer's
-   output, then measure at what expert count the gathered version
-   becomes faster on your hardware.
-6. Add a DeepSeek-style shared expert: one additional `FeedForward`
-   applied to every token, its output added to the routed mixture
-   (no gate). Compare against the plain layer at matched *active*
-   parameters (shrink $k$ or the widths accordingly) on the triptych
-   task. Does the shared expert change how quickly the routed experts
-   specialize — measure usage entropy over training?
+   and let
+   $s_i = (\partial \mathcal{L} / \partial \mathbf{y})^\top \mathrm{FFN}_i(\mathbf{x})$
+   be the sensitivity of the loss to expert $i$'s output.
+    1. Derive $\partial \mathcal{L} / \partial z_j$ for every expert $j$ in
+       terms of $\mathbf{p}$ and the $s_i$. Which logits receive a nonzero
+       gradient, and on which experts' outputs does the gradient of an
+       unselected logit depend?
+    1. Mixtral weights the selected experts by renormalized probabilities
+       :cite:`Jiang.Sablayrolles.Roux.ea.2024`,
+
+       $$\tilde{p}_i = \frac{p_i}{\sum_{j \in \mathcal{E}_k} p_j}, \qquad i \in \mathcal{E}_k.$$
+
+       Show that for $k = 1$ the router receives no gradient from the
+       language-modeling loss.
+    1. Show that for $k = 2$ with renormalization the output depends on
+       the logits only through the difference $z_a - z_b$ of the two
+       selected experts $a$ and $b$. Which routing decision can the router
+       learn from the loss in this case, and which can it not?
+1. **Balancing-loss gradient.** The gradient of :eqref:`eq_moe-aux` flows
+   through $\bar{p}_i$ only, because $f_i$ is a count. Consider a batch of
+   $N$ tokens, and write $\mathbf{z}(\mathbf{x})$ for the router logits of
+   token $\mathbf{x}$.
+    1. Derive
+       $\partial \mathcal{L}_{\mathrm{balance}} / \partial z_j(\mathbf{x})$.
+       For which experts $j$ does the gradient step lower the logit of
+       token $\mathbf{x}$, and for which does it raise it?
+    1. Show that the gradient vanishes for every token whenever the batch
+       load is uniform, $f_i = 1/E$, whatever the individual distributions
+       $\mathbf{p}(\mathbf{x})$ are. Which property of the router does the
+       loss therefore leave unconstrained?
+    1. Show that the gradient for a token tends to zero as its router
+       distribution approaches a one-hot vector. What does this imply for
+       the ability of the loss to repair a collapse in which the router
+       has become confident?
+1. **Serving arithmetic.** Qwen3-235B-A22B :cite:`Yang.Li.Yang.ea.2025`
+   has $d = 4096$ and 94 layers. Every layer holds 128 SwiGLU experts of
+   width 1536, of which each token activates 8, and no shared expert. Its
+   attention has 64 query heads and 4 key-value heads, each of dimension
+   128, and its untied embedding and output matrices cover a vocabulary of
+   151,936 tokens.
+    1. Use `moe_accounting` for the experts and the router, and add the
+       attention and embedding parameters as
+       :numref:`subsec_moe-conditional` does for Mixtral. Reproduce the
+       235B stored and 22B active parameters of the model's name, ignoring
+       normalization weights.
+    1. How much accelerator memory do the weights need in 16-bit
+       precision? Compare it with the memory of a dense model that has the
+       same per-token computation.
+    1. Decoding a batch of $B$ sequences sends one token per sequence
+       through every layer, and its speed is set by the bytes of weights
+       read per step (:numref:`sec_kv-cache`). Assume that each token
+       selects a uniformly random set of 8 experts, independently of the
+       other tokens. Derive the expected number of distinct experts that a
+       layer reads, and evaluate it for $B = 1$, 8, and 64. Above which
+       batch size does a step read 90% of the expert weights, and which
+       dense model then reads the same number of bytes per step?
+1. **Capacity factor.** ● Production MoE systems give each expert a
+   buffer of fixed size for a batch of $N$ tokens, commonly
+
+   $$C = c\, \frac{N k}{E},$$
+
+   where $c$ is the *capacity factor*
+   :cite:`Lepikhin.Lee.Xu.ea.2021,fedus2022switch`. Tokens routed to a
+   full expert are dropped: they skip the layer and continue on the
+   residual stream unchanged.
+    1. Explain why the buffer size must be fixed in advance rather than
+       set by each batch's routing, when the experts live on different
+       devices.
+    1. Take $k = 1$, $N = 4096$, and a router that sends each token to a
+       uniformly random expert, independently of the other tokens. The
+       load of one expert is then binomial with mean $N/E$. Use a normal
+       approximation, together with $\mathbb{E}[\max(Z, 0)] = 1/\sqrt{2\pi}$
+       for a standard normal $Z$, to estimate the fraction of tokens
+       dropped at $c = 1$ for $E = 8$ and for $E = 64$. How does the
+       fraction scale with $E$ and $N$, and what does $c = 1.25$ change?
+    1. What does a large $c$ cost in memory and in arithmetic when the
+       routing is balanced?
+1. **Expert-choice routing.** In *expert-choice* routing
+   :cite:`Zhou.Lei.Liu.ea.2022`, the selection runs the other way: each
+   expert takes the $C = cN/E$ tokens of the batch that assign it the
+   highest router probability, and a token is processed by every expert
+   that took it.
+    1. Every expert processes exactly $C$ tokens, so the load is balanced
+       by construction. What is the average number of experts per token,
+       and what are the smallest and largest numbers of experts a single
+       token can receive?
+    1. Explain why this rule cannot be used as is to train a causal
+       language model that later decodes one token at a time. Consider
+       which positions influence whether a given token is selected.
+    1. A capacity-limited token-choice layer fills each expert's buffer in
+       batch order and drops the overflow. Which tokens of the batch can
+       decide whether a given token is processed, and how does the order
+       in which the buffers are filled matter for a causal model?
+1. [code] **Feedback-loop ablations.** The argument of
+   :numref:`subsec_moe-feedback` names two reinforcing effects: a
+   frequently selected expert improves on its tokens, and the router
+   gradient raises its selection probability.
+    1. Stop the gradient at the router logits inside `MoELayer`, so that
+       $\mathbf{W}_r$ keeps its initial values while every other parameter
+       trains. Predict whether the no-balancing run of
+       :numref:`subsec_moe-balance-comparison` still collapses, then rerun
+       it and count the experts under 2% usage. What still changes the
+       routing when $\mathbf{W}_r$ is fixed?
+    1. Restore the router gradient and rerun the three runs with
+       `num_active=2`. Does the unbalanced run still collapse, and as
+       strongly? Use the router gradient of problem 1 to explain how a
+       second active expert changes the signal that the runner-up
+       receives.
+1. [code] **Bias controller in isolation.** The controller of
+   :eqref:`eq_moe-bias` can be studied without training. Build
+   `MoELayer(256, num_experts=8, num_active=1)`, draw a fixed batch of
+   shape $(4, 256, 256)$, that is, 1024 standard-normal tokens in four
+   sequences, and add one fixed standard-normal vector
+   $\boldsymbol{\mu} \in \mathbb{R}^{256}$ to every token, which skews the
+   untrained router toward a few experts. Then repeat 500 times: run the
+   layer on the batch, apply the bias update of `train_moe_lm`, and reset
+   `usage`.
+    1. For $u \in \{0.001, 0.01, 0.1\}$, plot the largest load
+       $\max_i f_i$ against the iteration. How does the number of
+       iterations needed to bring it below $1.5/E$ scale with $u$, and how
+       does the load behave afterwards?
+    1. After the last iteration, measure the fraction of tokens whose
+       selected expert differs from the expert with the largest
+       $p_i(\mathbf{x})$. What determines this fraction, and how does it
+       depend on $u$?
+    1. Replace the sign in :eqref:`eq_moe-bias` by the raw difference,
+       $b_i \leftarrow b_i + u' (\bar{f} - f_i)$, with $u'$ chosen so that
+       the largest first step equals that of $u = 0.01$. Which behavior
+       from the first sub-problem changes?
+1. [code] **Auxiliary-loss weight.** ● The comparison of
+   :numref:`subsec_moe-balance-comparison` fixes $\alpha = 0.01$ and runs
+   one seed per method.
+    1. Run the auxiliary-loss configuration with
+       $\alpha \in \{0, 10^{-3}, 10^{-2}, 10^{-1}, 1\}$, and the bias
+       configuration with $u = 0.01$, each for seeds 0, 1, and 2. Plot the
+       final training loss and the number of experts under 2% usage
+       against $\alpha$ with their spread over seeds, and draw the bias
+       runs as a reference.
+    1. Does the unbalanced run ($\alpha = 0$) collapse for every seed?
+       Describe how the training loss depends on $\alpha$, and explain its
+       behavior at small and at large $\alpha$ from the two terms of the
+       training objective.
+    1. At $\alpha = 0.01$, is the difference in training loss between the
+       auxiliary loss and the bias controller larger than the spread over
+       seeds?
+1. [code] **Shared expert.** ● Write `SharedMoELayer`, a subclass of
+   `MoELayer` that adds the output of one extra `d2l.FeedForward`, applied
+   to every token with weight one, to the routed mixture
+   (:numref:`subsec_moe-fine-grained`). Compare two models in the setup of
+   :numref:`subsec_moe-balance-comparison`, both balanced by the bias
+   controller: `MoELayer` with $E = 8$ and $k = 2$, and `SharedMoELayer`
+   with 7 routed experts and $k = 1$. Both store eight experts per layer
+   and activate two per token.
+    1. Train both for seeds 0, 1, and 2, and compare their best validation
+       losses, evaluated every 100 steps as in :numref:`subsec_moe-gpt`.
+    1. :citet:`Dai.Deng.Zhao.ea.2024` test whether a shared expert holds
+       processing that the routed experts lack: they disable it and
+       activate one more routed expert, which keeps the per-token
+       computation fixed. Repeat this test on a trained `SharedMoELayer`
+       model. Remove the shared path, set `num_active` to 2 in every layer,
+       and compare the validation loss with that of the intact model. What
+       does the result say about the division of labor? Why does removing
+       the shared path without the replacement say little about it?
+1. [extended] **Expert granularity.** ● :numref:`subsec_moe-fine-grained`
+   cites large-scale evidence that narrower, more numerous experts help at
+   a fixed budget, and this section does not test it. In the setup of
+   :numref:`subsec_moe-balance-comparison`, an expert at $d = 128$ has
+   SwiGLU width 341. Give `MoELayer` experts of configurable width, and
+   compare $(E, k) \in \{(8, 1), (16, 2), (32, 4), (64, 8)\}$ with expert
+   widths 341, 171, 85, and 43, all balanced by the bias controller. These
+   configurations store and activate the same expert parameters as
+   $(8, 1)$ to within 1%, while the number of expert combinations
+   available to a token grows from 8 to about $4.4 \times 10^9$.
+    1. Train each configuration for seeds 0, 1, and 2 and compare the best
+       validation losses. Does finer granularity help at this scale by more
+       than the spread over seeds? Relate the outcome to the ablations of
+       :citet:`Dai.Deng.Zhao.ea.2024`.
+    1. The composability argument of :numref:`subsec_moe-fine-grained`
+       assumes that tokens use many different combinations. In one layer of
+       each trained model, record the selected expert set of every token in
+       a fixed set of validation batches, and count the distinct sets that
+       occur. Compare the count with the number of tokens and with the
+       number of available combinations. How much of the added flexibility
+       does the model use?
+
+:begin_tab:`pytorch`
+11. [code] **Sparse dispatch.** ● `MoELayer` evaluates every expert on
+    every token and masks the result, so its arithmetic grows with $E$
+    rather than with $k$. Write a function `gathered_moe(layer, X)` that
+    returns `layer(X)` for a `MoELayer` with `num_active=1` while
+    evaluating each expert only on its own tokens: flatten `X` to shape
+    $(BT, d)$, find the rows routed to each expert with `torch.nonzero`,
+    apply the expert to those rows, and accumulate the gated outputs with
+    `index_add_`.
+    1. Check on random input that `gathered_moe(layer, X)` agrees with
+       `layer(X)` up to floating-point error.
+    1. Time both on an input of shape $(4, 512, 256)$ for
+       $E \in \{2, 4, 8, 16, 32\}$. From which $E$ on is the gathered
+       version faster on your hardware? Count the expert FLOPs of each
+       version as a function of $E$, compare the measured ratio of run
+       times with the ratio of FLOPs, and name the operations of the
+       gathered version that account for the difference.
+:end_tab:
+
+:begin_tab:`jax`
+11. [code] **Capacity-limited dispatch.** ● `MoELayer` evaluates every
+    expert on every token and masks the result, so its arithmetic grows
+    with $E$ rather than with $k$. A jitted alternative must keep its
+    shapes static, so each expert receives a buffer of
+    $C = \lceil cN/E \rceil$ slots for $N$ tokens. Write a function
+    `capacity_moe(layer, X, c)` for a `MoELayer` with `num_active=1`:
+    flatten `X` to shape $(N, d)$, compute each token's slot in its
+    expert's buffer with `jnp.cumsum` over the one-hot selection mask, drop
+    the tokens whose slot is at least $C$, build a dispatch tensor of shape
+    $(N, E, C)$ with `jax.nn.one_hot`, gather the expert inputs into shape
+    $(E, C, d)$ with `jnp.einsum`, apply each expert to its buffer, and
+    combine the outputs with the gates.
+    1. Check on random input that `capacity_moe(layer, X, c)` with $c = E$,
+       where nothing is dropped, agrees with `layer(X)` up to
+       floating-point error.
+    1. Jit both and time them at $c = 1.25$ on an input of shape
+       $(4, 512, 256)$ for $E \in \{2, 4, 8, 16, 32\}$. From which $E$ on
+       is the dispatch version faster on your hardware? Express the FLOPs
+       of each of its steps in terms of $N$, $E$, $c$, and $d$, and identify
+       the step that dominates as $N$ grows at fixed $E$ and $c$.
+:end_tab:
 
 <!-- slides -->
 

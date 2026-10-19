@@ -115,6 +115,7 @@ $$
 \mathbb{E}\,\big\| \mathbf{S}^\top \mathbf{k}_j - \mathbf{v}_j \big\|^2
 = \frac{n-1}{d_k},
 $$
+:eqlabel:`eq_ms-capacity-law`
 
 where the expectation is over the keys and the squared norm sums over
 all $d_v$ coordinates of the read-out; coordinate $c$ alone contributes
@@ -648,10 +649,11 @@ memory column and grow fourfold with every doubling of $T$. With chunks of
 a few hundred tokens, the chunked schedule runs within a
 small factor of the dual's speed, and sometimes faster in these runs, while
 using an order of magnitude less memory. Its principal operations are dense
-matmuls that use the accelerator efficiently. The FLOP-optimal
-chunk size sits near $C \approx d_k$, as an exercise asks you to derive;
-the measured optimum drifts higher because
-kernel-launch overhead penalizes many small chunks.
+matmuls that use the accelerator efficiently. Chunks up to
+$C \approx d_k$ keep the arithmetic within a small factor of the
+recurrence's, as an exercise asks you to derive; the measured optimum
+sits at larger chunks because kernel-launch overhead penalizes many small
+ones.
 
 ### Measured Performance
 :label:`subsec_ms-hardware`
@@ -978,46 +980,259 @@ asymptotic shapes that do not.
 
 ## Exercises
 
-1. [conceptual] Count FLOPs for the three schedules of :eqref:`eq_ms-semiseparable` at
-   sequence length $T$, chunk size $C$, and $d_k = d_v = d$: the token
-   recurrence, the quadratic dual, and the chunked form (diagonal blocks
-   plus state passing). Show that the chunked total is minimized near
-   $C \approx d$ and find the ratio of chunked to dual FLOPs at
-   $T = 4096$, $d = 64$, $C = 256$. Then reconcile your formula with the
-   measured table: why does the measured optimum sit at a larger $C$ than
-   the FLOP-optimal one?
-1. [short-code] Extend the capacity sweep to the decayed write
-   $\mathbf{S}_t = \gamma \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top$.
-   Store $n$ pairs sequentially, then query all of them, plotting recall
-   separately for the oldest and newest quarter of the pairs as $\gamma$
-   varies over $\{1, 0.99, 0.95, 0.9\}$. What does decay buy the newest
-   items, what does it cost the oldest, and why does no value of $\gamma$
-   raise the total number of pairs recallable at once above the
-   $\mathcal{O}(d_k)$ ceiling?
-1. [short-code] Restore the construction of :numref:`chap_attention` inside the dual form: apply
-   $\phi = \mathrm{elu} + 1$ to queries and keys, add a normalizer row to
-   the computation, and verify that with $a_t = 1$ your result matches the
-   `linear_attention_parallel` of :numref:`sec_attention-at-scale`
-   to float tolerance. Which of the two changes (feature map, normalizer) alters the
-   attention pattern, and which only rescales it?
-1. [short-code] In the chunked form, replace the scalar decay $a_t$ by a per-coordinate
-   vector gate $\boldsymbol{\alpha}_t \in (0,1)^{d_k}$ (the GLA rung of
-   the ladder). Which of `segsum`, the diagonal-block product, and the
-   boundary recurrence change, and to what shapes? Implement it and verify
-   against a per-coordinate token loop.
-1. [short-code] The mLSTM demonstration used forget pre-activations around $+2$.
-   Compute analytically at which step the unstabilized float32 recurrence
-   must overflow as a function of the mean of $\tilde{f}_t$, and check
-   your prediction by varying the mean over $\{1, 2, 4\}$. What changes
-   when $f_t = \sigma(\tilde{f}_t)$ instead, and why does the stabilizer
-   still matter then?
-1. [conceptual] RetNet fixes per-head decays $\gamma_h = 1 - 2^{-5-h}$ for heads
-   $h = 0, 1, \ldots$ Using the effective-horizon definition of
-   :numref:`sec_ssm`'s exercises (the lag at which influence drops below
-   $0.01$), compute each head's memory horizon for eight heads. Why might
-   fixed, staggered horizons be preferable to learned ones at small scale,
-   and what does the model lose relative to the input-dependent rungs of
-   the ladder?
+1. **Correlated keys.** ● The call of `hebbian_memory` with `rho=0.5` in
+   :numref:`subsec_ms-capacity` builds each key by normalizing
+   $\sqrt{1-\rho^2}\, \mathbf{g}_i + \rho\, \mathbf{c}$, where the
+   $\mathbf{g}_i$ are independent isotropic unit vectors and $\mathbf{c}$
+   is one shared unit vector. Model the overlap of two distinct keys as
+   $\mathbf{k}_i^\top \mathbf{k}_j = \rho^2 + \epsilon_{ij}$. For fixed
+   $j$, let the $\epsilon_{ij}$ with $i \neq j$ be independent of each
+   other and of the values, with mean zero and variance
+   $\sigma^2 = (1-\rho^2)^2 / d_k$. This model keeps the shared
+   component and the term $(1-\rho^2)\, \mathbf{g}_i^\top \mathbf{g}_j$,
+   and it neglects the renormalization and the terms linear in $\rho$.
+   The stored values have unit norm and are independent of the keys.
+    1. Assume that the values are also independent of each other with
+       mean zero. Derive the expected squared read error at key $j$, which
+       generalizes :eqref:`eq_ms-capacity-law`, and identify the term
+       that a larger $d_k$ reduces.
+    1. Evaluate the ratio of this error to the independent-key error
+       $(n-1)/d_k$ for $\rho = 0.5$ and $d_k = 64$.
+    1. `hebbian_memory` draws its values from a fixed codebook of 256
+       random unit vectors, so the mean $\bar{\mathbf{v}}$ of the value
+       distribution is not exactly zero. Show that this adds a term
+       proportional to $(n-1)(n-2)\,\|\bar{\mathbf{v}}\|^2$, estimate
+       $\|\bar{\mathbf{v}}\|^2$, and find the $n$ beyond which the new
+       term dominates. Compare the complete prediction with the errors that
+       `hebbian_memory(64, nums, rho=0.5)` returns.
+1. **Horizons and rungs.** RetNet fixes the decay of head $h$ at
+   $\gamma_h = 1 - 2^{-5-h}$ for $h = 0, 1, \ldots$
+   :cite:`Sun.Dong.Huang.ea.2023`. Call the *effective memory horizon*, or
+   horizon, of a decay $\gamma$ the smallest lag $\ell$ with
+   $\gamma^\ell < 0.01$. For $\gamma$ close to one it is about
+   $\ln 100 / (1 - \gamma)$.
+    1. Show that the horizons of successive heads roughly double, and find
+       how many heads the schedule needs before one head's horizon exceeds
+       $10^6$ tokens.
+    1. A head writes the pair $(\mathbf{k}_A, \mathbf{v}_A)$ at step $t_0$
+       and the pair $(\mathbf{k}_B, \mathbf{v}_B)$ at step $t_0 + 1$. The
+       accumulated decay of pair A must stay at least $0.01$ for $10^4$
+       steps, and that of pair B must fall below $0.01$ within $100$ steps.
+       For each rung of :eqref:`eq_ms-decay-ladder`, decide whether a
+       single head can meet both requirements, and for every rung that can,
+       give keys and decay values that do it.
+1. **Mamba as a matrix state.** Channel $h$ of the selective SSM
+   :eqref:`eq_selective_ssm` carries its own state
+   $\mathbf{x}_t^{(h)} \in \mathbb{R}^N$. Stack the $H$ channel states as
+   the columns of $\mathbf{X}_t \in \mathbb{R}^{N \times H}$, and drop the
+   skip term $d_h u_{t,h}$.
+    1. Write the update of $\mathbf{X}_t$ as a transition applied to
+       $\mathbf{X}_{t-1}$ plus an outer-product write, and the output as a
+       read by a query. Identify the key, the value, and the query of
+       :eqref:`eq_ms-recurrence`, and give every entry of the transition.
+    1. Find the condition on $\boldsymbol{\Delta}_t$ under which the
+       transition acts as $\mathbf{X}_{t-1} \mapsto \mathbf{D}_t
+       \mathbf{X}_{t-1}$ for some matrix $\mathbf{D}_t$, and show that
+       $\mathbf{D}_t$ then lies on the diagonal rung of
+       :eqref:`eq_ms-decay-ladder`. Find the further restriction on
+       $\mathbf{A}$ that puts it on the scalar rung of Mamba-2.
+    1. For each of the three transitions, count the distinct decay
+       factors applied to the state per token and the input-dependent
+       numbers that determine them.
+1. **Cross-moment versus least squares.** ● A scalar-decay state stores
+   the weighted cross-moment $\mathbf{K}^\top \mathbf{W} \mathbf{V}$,
+   whereas the read-out $\mathbf{S}^\star$ of
+   :eqref:`eq_ms-wls` also applies the covariance correction. Let
+   $\mathbf{K} \in \mathbb{R}^{n \times d_k}$ hold the keys as rows, and
+   let every weight $w_i$ be positive.
+    1. Let $n \le d_k$ and let the keys be linearly independent. Show that
+       in the limit $\lambda \to 0$, $\mathbf{S}^\star$ reads back every
+       stored value exactly, whatever the weights. Contrast this with what
+       $\mathbf{K}^\top \mathbf{W} \mathbf{V}$ returns at $\mathbf{k}_j$.
+    1. Now let $n > d_k$. Explain what the weights decide about
+       $\mathbf{S}^\star$ in this regime, and state when the decay of a
+       memory that applies the covariance correction affects its read-out
+       at all.
+1. **Rank-one blocks.** Let $p_t = a_1 a_2 \cdots a_t$ be the prefix
+   products of the decays in :eqref:`eq_ms-semiseparable`.
+    1. Express $L_{ts}$ through the $p_t$. Show that every submatrix of
+       $\mathbf{L}$ whose row indices are all at least as large as its
+       column indices has rank one.
+    1. Deduce that every block of $\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top$
+       that couples a chunk to an earlier chunk in
+       :numref:`fig_ms-semiseparable` has rank at most $d_k$. Identify
+       where `matrix_state_chunked` applies the query-side and the
+       key-side decays of such a block.
+    1. On the diagonal rung, each key coordinate $c$ accumulates its own
+       decay, and no single mask $\mathbf{L}$ multiplies
+       $\mathbf{Q}\mathbf{K}^\top$. Write the decayed score of query $t$
+       and key $s$ on this rung, and show that a block coupling two
+       different chunks still has rank at most $d_k$.
+1. **Schedule FLOPs.** Count one multiply-add as two FLOPs, as in
+   :eqref:`eq_attn-layer-flops`, set $d_k = d_v = d$, and keep the
+   leading terms.
+    1. Count the FLOPs of the token recurrence, the quadratic dual, and the
+       chunked form of :eqref:`eq_ms-semiseparable` at sequence length $T$
+       and chunk size $C$. Split the chunked count into the diagonal
+       blocks, the reads and writes of the carried state, and the
+       per-chunk decay of the state.
+    1. Show that the chunked form costs at most a small constant times the
+       recurrence while $C \le d$, and that its cost grows linearly in $C$
+       beyond. Compute the ratio of chunked to dual FLOPs at $T = 4096$,
+       $d = 64$, and $C = 256$.
+    1. :numref:`subsec_ms-chunked` attributes the slowness of the token
+       recurrence and the large optimal chunk size to a fixed overhead per
+       sequential step. Model the run time of a schedule as its FLOPs
+       divided by a throughput $P$, plus $\tau$ times its number of
+       sequential steps, which is $T$ for the recurrence and $T/C$ for the
+       chunked form. Find the chunk size that minimizes the chunked time.
+       Evaluate it, and the ratio of the recurrence's time to the best
+       chunked time, for $T = 4096$, $d = 64$, $P = 10^{12}$ FLOP/s, and
+       $\tau = 5\,\mu\textrm{s}$.
+1. **Decode arithmetic intensity.** At each decoding step, one head of the
+   scalar-decay recurrence reads its $d_k \times d_v$ state from memory,
+   decays it, adds the outer product $\mathbf{k}_t \mathbf{v}_t^\top$,
+   reads it with $\mathbf{q}_t$, and writes it back. Store everything in
+   fp16, take $d_k = d_v = 64$, and suppose that the accelerator performs
+   300 FLOPs in the time it moves one byte.
+    1. Neglect the bytes of keys, values, and queries. Count the FLOPs and
+       the bytes of state moved per step, and compute the fraction of peak
+       arithmetic throughput that the step can use.
+    1. Serving $B$ sequences at once multiplies by $B$ the FLOPs that each
+       projection matmul performs per byte of weights. Explain why
+       batching leaves the arithmetic intensity of the state update
+       unchanged.
+    1. Let each step instead write $\mathbf{K}_t \mathbf{V}_t^\top$ with
+       $\mathbf{K}_t \in \mathbb{R}^{d_k \times r}$ and
+       $\mathbf{V}_t \in \mathbb{R}^{d_v \times r}$, and read with $r$
+       queries at once, as in the multi-input, multi-output form of
+       Mamba-3 :cite:`Lahoti.Li.Chen.ea.2026`. Still neglecting the bytes
+       of $\mathbf{K}_t$, $\mathbf{V}_t$, and the queries, find the
+       arithmetic intensity as a function of $r$ and the $r$ at which the
+       step would become compute bound.
+    1. Now count the bytes of $\mathbf{K}_t$, $\mathbf{V}_t$, the $r$
+       queries, and the $r$ outputs as well. Find the $r$ at which they
+       equal the bytes of state moved, and compare the time of a rank-$r$
+       step with that of the rank-one step at $r = 4$ and at $r = d_k$.
+1. **Targeted forgetting.** Let a state hold
+   $\mathbf{S} = \mathbf{k}\mathbf{v}^\top + \sum_i \mathbf{k}_i
+   \mathbf{v}_i^\top$, where $\mathbf{k}$ has unit norm and every
+   $\mathbf{k}_i$ is orthogonal to $\mathbf{k}$.
+    1. Find every matrix $\mathbf{D}$ with $\mathbf{D}\mathbf{S} =
+       \sum_i \mathbf{k}_i \mathbf{v}_i^\top$ for all such states, that
+       is, for all values and for all keys $\mathbf{k}_i$ orthogonal to
+       $\mathbf{k}$.
+    1. Determine for which keys $\mathbf{k}$ this transition lies on a
+       rung of :eqref:`eq_ms-decay-ladder`, and on which rung.
+    1. Apply this transition and then the additive write
+       $\mathbf{k}\mathbf{v}'^\top$ of a new value $\mathbf{v}'$. Write the
+       combined update in the form of :eqref:`eq_ms-recurrence`, and state
+       which property of its transition places it outside
+       :numref:`tab_ms-family`.
+1. [code] **Decay as a sliding window.** ● Give `hebbian_memory` the
+   decayed write $\mathbf{S}_t = \gamma\,\mathbf{S}_{t-1} + \mathbf{k}_t
+   \mathbf{v}_t^\top$, so that the pair written $m$ steps before the end
+   enters the final state with weight $\gamma^m$. Call $m$ the age of the
+   pair.
+    1. At $d_k = 64$ and $n = 256$, measure recall separately for the
+       oldest and for the newest quarter of the pairs, for
+       $\gamma \in \{1, 0.99, 0.95, 0.9\}$. What does decay buy the newest
+       pairs, and what does it cost the oldest?
+    1. The read at the key of the pair of age $m$ returns
+       $\gamma^m \mathbf{v}$ plus interference. Following the proof of the
+       proposition in :numref:`subsec_ms-capacity`, bound the expected
+       squared interference by $1/\big((1-\gamma^2)\, d_k\big)$. Show that
+       the number of pairs whose squared signal $\gamma^{2m}$ is at least
+       this bound is at most about $d_k/e$ for every $\gamma < 1$, with
+       the maximum near $\gamma = 1 - e/(2 d_k)$. Compare with
+       $\gamma = 1$.
+    1. At $n = 8 d_k$ and the $\gamma$ of the previous part, count the
+       pairs whose measured squared interference is at most $\gamma^{2m}$
+       for $d_k \in \{32, 64, 128\}$, and compare the counts with
+       $d_k/e$.
+1. [code] **Normalizer as a value column.** Give the normalizer of
+   :eqref:`eq_linear-attn-recurrence` the decay of the state,
+   $\mathbf{z}_t = a_t\, \mathbf{z}_{t-1} + \phi(\mathbf{k}_t)$, with
+   $\phi = \mathrm{elu} + 1$. Write the state with $\phi(\mathbf{k}_t)$ in
+   place of $\mathbf{k}_t$, and read
+   $\mathbf{o}_t = \mathbf{S}_t^\top \phi(\mathbf{q}_t) /
+   \phi(\mathbf{q}_t)^\top \mathbf{z}_t$.
+    1. Apply $\phi$ to the queries and keys in
+       :eqref:`eq_ms-semiseparable`, and append a column of ones to
+       $\mathbf{V}$. Show that the last output column equals the
+       denominator $\phi(\mathbf{q}_t)^\top \mathbf{z}_t$.
+    1. Compute the normalized output with a single call of
+       `matrix_state_dual`. Verify it against a token loop that carries
+       $\mathbf{S}_t$ and $\mathbf{z}_t$, once with all $a_t = 1$ and once
+       with decays drawn uniformly from $(0.65, 0.95)$.
+    1. Compared with `matrix_state_dual` on the raw queries and keys,
+       which of the two changes, the feature map or the normalizer, alters
+       the relative weights that a query gives to past positions, and
+       which only rescales each output row?
+1. [code] **Log-space boundary.** The boundary step of
+   `matrix_state_chunked` divides prefix products of the decays within a
+   chunk, $b_C / b_t$, and :numref:`subsec_ms-chunked` reports that these
+   products underflow to zero for $C \ge 512$.
+    1. For decays drawn uniformly from $(0.65, 0.95)$, compute
+       $\mathbb{E}[\log a_t]$. Predict the chunk sizes at which the
+       smallest prefix product $b_C$ falls below the smallest normal
+       float32 number, about $1.2 \times 10^{-38}$, and below the smallest
+       positive one, about $1.4 \times 10^{-45}$.
+    1. Rewrite the boundary step so that it computes each ratio
+       $b_C / b_t$ as the exponential of a difference of cumulative
+       log-decays. Verify at $T = 4096$ that chunk sizes $512$ and $1024$
+       now agree with `matrix_state_dual`.
+    1. The read of the carried state multiplies the queries by $b_t$,
+       which underflows as well. Explain why this underflow does no harm.
+1. [code] **Exponential gates.** The exponential gates of the mLSTM make
+   the unstabilized recurrence :eqref:`eq_ms-mlstm` overflow, and the
+   stabilizer :eqref:`eq_ms-mlstm-stabilizer` prevents it.
+    1. Show by induction that the stabilized recurrence produces the
+       states $e^{-m_t} \mathbf{S}_t$ and $e^{-m_t} \mathbf{z}_t$, where
+       $\mathbf{S}_t$ and $\mathbf{z}_t$ are the states of
+       :eqref:`eq_ms-mlstm`. Conclude that the read-out of
+       `mlstm_stabilized` equals that of :eqref:`eq_ms-mlstm`, and show
+       that $f'_t \le 1$ and $i'_t \le 1$ at every step.
+    1. Predict the step at which the unstabilized float32 recurrence first
+       produces a non-finite output, as a function of the mean $\mu$ of
+       the forget pre-activations $\tilde{f}_t$. Check the prediction with
+       `mlstm_naive` for $\mu \in \{1, 2, 4\}$ on sequences of length
+       $T = 192$. `mlstm_naive` loops over the global `T`, so set
+       `T = 192` before drawing the inputs.
+    1. Pass $\log \sigma(\tilde{f}_t)$ in place of $\tilde{f}_t$ to both
+       functions, which turns the forget gate into $\sigma(\tilde{f}_t)$,
+       and rerun. Find the input pre-activation $\tilde{i}_t$ at which
+       $\exp(\tilde{i}_t)$ alone overflows float32 and float16, and state
+       when the stabilizer is still needed with this forget gate.
+1. [extended] **Per-coordinate gates in chunks.** ● Replace the scalar
+   decay $a_t$ in `matrix_state_chunked` by a gate vector
+   $\boldsymbol{\alpha}_t \in (0,1)^{d_k}$, the diagonal rung of
+   :eqref:`eq_ms-decay-ladder` that GLA uses
+   :cite:`Yang.Wang.Shen.ea.2024`.
+    1. State which of `segsum`, the diagonal-block product, and the
+       boundary step must change, and give the shapes of their new inputs
+       and outputs.
+    1. Implement the per-coordinate chunked form, computing the
+       within-chunk scores from a log-space mask with one entry per query,
+       key, and key coordinate. Verify it against a token loop for chunk
+       sizes $16$, $64$, and $256$ at $T = 512$, with gates drawn
+       uniformly from $(0.65, 0.95)$.
+    1. Factor the within-chunk scores instead as
+       $(\mathbf{Q}_c \circ \mathbf{P}_c)(\mathbf{K}_c \oslash
+       \mathbf{P}_c)^\top$, where row $t$ of $\mathbf{P}_c$ holds the
+       products of the gates of chunk $c$ up to position $t$ and $\oslash$
+       divides elementwise. Compare the memory that the scores of one chunk
+       need in this form and in the log-space mask of the previous part, at
+       $C = 64$ and $d_k = 64$.
+    1. The entries of $\mathbf{K}_c \oslash \mathbf{P}_c$ overflow for long
+       chunks, for the same reason that the prefix products in the boundary
+       step of `matrix_state_chunked` underflow. GLA therefore splits each
+       chunk into sub-chunks, computes the blocks between different
+       sub-chunks with this factorization, with decays measured from the
+       sub-chunk boundaries, and computes only the diagonal sub-blocks in
+       log space :cite:`Yang.Wang.Shen.ea.2024`. Write the factors of a
+       block between two sub-chunks, and show that every decay factor in
+       them is at most one.
 
 [Discussions](https://d2l.discourse.group/)
 

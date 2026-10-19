@@ -342,6 +342,7 @@ token at a time, in constant memory, exactly like any RNN. We make good
 on that claim, with a stopwatch, in :numref:`subsec_ssm-step`.
 
 ### A minGRU Language Model
+:label:`subsec_mingru-lm`
 
 Assembling :eqref:`eq_mingru_heads` through
 :eqref:`eq_affine_recurrence` around the scan yields a drop-in
@@ -574,7 +575,11 @@ hands us here are one object seen through two discretization rules.
 
 ZOH and backward Euler are two entries in a standard menu. The rules
 differ in the transition they produce, in whether they preserve
-stability, and in what happens when the sampling rate changes:
+stability, and in what happens when the sampling rate changes
+(:numref:`tab_ssm-discretization`).
+
+:Four discretization rules for :eqref:`eq_ssm_cont`, compared by transition, image of a stable mode, accuracy, and behavior under a change of step size.
+:label:`tab_ssm-discretization`
 
 | Rule | $\bar{\mathbf{A}}$ | $\mathrm{Re}(a) < 0$ maps to | Accuracy | Changing $\Delta$ |
 | :-- | :-- | :-- | :-- | :-- |
@@ -1038,6 +1043,7 @@ class S4DBlock(nnx.Module):  #@save
 ```
 
 ### Sequential Image Classification
+:label:`subsec_ssm-seq-classification`
 
 Where should a long-memory architecture prove itself? A classic stress
 test is *sequential image classification*: feed a model the
@@ -1486,61 +1492,255 @@ the mercy of its draw, not a general architecture ranking.
 
 ## Exercises
 
-1. [short-code] *Effective memory.* For a scalar recurrence
-   $h_t = \bar{a} h_{t-1} + u_t$, define the effective memory horizon as
-   the lag $k$ at which the influence $\bar{a}^k$ of an input drops below
-   $0.01$. Plot the horizon as a function of $\bar{a} \in (0.9, 0.999)$
-   and as a function of $\Delta$ under $\bar{a} = e^{-\Delta}$. How must
-   $\Delta$ scale for the model to remember 10 times longer, and how does
-   this connect the step-size-as-gate box to the eigenvalue analysis of
-   :numref:`subsec_bptt-gradient-pathologies`?
-1. [short-code] *ZOH versus Euler.* The Euler discretization uses
-   $\bar{\mathbf{A}} = \mathbf{I} + \Delta \mathbf{A}$ and
-   $\bar{\mathbf{B}} = \Delta \mathbf{B}$. For the scalar system
-   $a = -1, b = 1$ driven by $u_t = \sin(0.1 t)$, compare Euler and ZOH
-   outputs against a fine-grained reference solution for
-   $\Delta \in \{0.1, 0.5, 1.0, 2.5\}$. Which discretization degrades
-   gracefully, and what goes visibly wrong with Euler at $\Delta = 2.5$?
-   (Check the eigenvalue $|1 + \Delta a|$ first.)
-1. [short-code] *Kernels as fingerprints.* Materialize and plot the
-   convolution kernel
-   :eqref:`eq_ssm_kernel` for (a) our diagonal initialization
-   $a_n = -(n+1)$ with $\mathbf{B} = \mathbf{1}$ and random $\mathbf{C}$,
-   and (b) the LTI system that S4 initializes, the full (non-diagonal)
-   HiPPO matrix :eqref:`eq_hippo` frozen into :eqref:`eq_ssm_cont`, using
-   matrix powers. How do the kernels differ in shape and in how much mass
-   they place on the distant past?
-1. [extended] *minLSTM.* Apply the minGRU recipe to the LSTM of :numref:`sec_lstm`:
-   make all gates functions of the input only, drop the output gate's
-   dependence on the state, and write the cell update
-   $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t
-   \odot \tilde{\mathbf{C}}_t$ as an affine recurrence
-   :eqref:`eq_affine_recurrence`. Implement it with `associative_scan`
-   and train it with this section's language-modeling recipe. Does the
-   extra gate help? (Compare :citet:`Feng.Tung.Ahmed.ea.2024`, who also
-   normalize the two gates to sum to one.)
-1. [short-code] *The candidate nonlinearity.* Our minGRU keeps a $\tanh$ on the
-   candidate $\tilde{\mathbf{H}}_t$, while :citet:`Feng.Tung.Ahmed.ea.2024`
-   use a purely linear candidate. Remove the $\tanh$ and retrain. What
-   happens to training stability and final perplexity, and why does an
-   unbounded candidate interact badly with a convex-combination update?
-1. [short-code] *Streaming classification.* The stepped path of :numref:`subsec_ssm-step`
-   makes anytime prediction almost free: the classifier head only needs the
-   running mean of the encoder features seen so far, which you can carry as
-   one more piece of constant-size state. Stream validation images pixel by
-   pixel, classify after every step, and plot accuracy as a function of
-   pixels seen. After how many of the 784 pixels does the model commit to
-   its final answer, and does the shape of that curve match what mean
-   pooling would lead you to expect?
-1. [short-code] *State passing.* The scan assumes $\mathbf{h}_0 = \mathbf{0}$, and
-   `MinGRU` folds a carried state into $\mathbf{b}_1$. Use this to process
-   a length-$T$ sequence in $T/\tau$ chunks of length $\tau$, passing the
-   final state of each chunk into the next, and verify that the outputs
-   match the unchunked scan to floating-point tolerance (chunking
-   reassociates the arithmetic, so compare against a tolerance scaled to
-   the dtype, not bitwise). Why might chunking be useful at
-   training time? (Think memory, and recall truncated BPTT from
-   :numref:`sec_bptt`.)
+1. **Closure under composition.** Function composition is always
+   associative, so what a parallel scan needs from a recurrence is closure:
+   the composite of any run of steps must be described by as many numbers as
+   a single step, so that every combine costs the same.
+    1. Generalize :eqref:`eq_scan_combine` to the dense affine recurrence
+       $\mathbf{h}_t = \mathbf{A}_t \mathbf{h}_{t-1} + \mathbf{b}_t$ with
+       $\mathbf{A}_t \in \mathbb{R}^{N \times N}$, keeping the factors of
+       each matrix product in the right order. Count the multiply-adds of
+       one combine and of one sequential step. The doubling scan of
+       :numref:`fig_scan_tree` performs about $T \log_2 T$ combines; compare
+       its total work with that of the sequential loop at $T = 4096$ and
+       $N = 64$. What does the comparison say about the diagonal restriction
+       of :numref:`subsec_zoh`?
+    1. For the scalar nonlinear step $h \mapsto \tanh(w_t h + c_t)$, show
+       that the composite of two steps with $w_1, w_2 \neq 0$ is not of the
+       form $h \mapsto \tanh(w h + c)$ for any $w$ and $c$. What would a
+       scan then have to store to represent the composite of $k$ steps, and
+       how does that storage grow with $k$?
+1. [code] **Candidate nonlinearity.** `MinGRU` keeps a $\tanh$ on the
+   candidate $\tilde{\mathbf{H}}_t$ of :eqref:`eq_mingru_heads`, whereas
+   :citet:`Feng.Tung.Ahmed.ea.2024` use a linear candidate.
+    1. Starting from $\mathbf{H}_0 = \mathbf{0}$, write each coordinate of
+       $\mathbf{H}_t$ as a weighted sum of the candidate values
+       $\tilde{\mathbf{H}}_1, \ldots, \tilde{\mathbf{H}}_t$ in that
+       coordinate. Show that the weights are nonnegative and sum to at most
+       one, and derive a bound on $|\mathbf{H}_t|$ that holds at every
+       sequence length, with and without the $\tanh$.
+    1. Remove the $\tanh$, retrain with the recipe of
+       :numref:`subsec_mingru-lm`, and compare the training curves and the
+       validation perplexity with those of `MinGRU`. Relate what you
+       observe to your bound.
+1. [code] **A minimal LSTM.** Apply the two cuts of :numref:`subsec_mingru`
+   to the LSTM of :numref:`sec_lstm`: compute the gates
+   $\mathbf{I}_t, \mathbf{F}_t, \mathbf{O}_t$ of :eqref:`lstm_gates` and the
+   input node $\tilde{\mathbf{C}}_t$ of :eqref:`lstm_c_tilde` from
+   $\mathbf{X}_t$ alone, and keep the update :eqref:`lstm_update`.
+    1. Show that only the cell state $\mathbf{C}_t$ requires a scan.
+       Implement the cell with the `(inputs, state)` interface of `MinGRU`,
+       carrying $\mathbf{C}_t$ as the state, train it with the recipe of
+       :numref:`subsec_mingru-lm`, and compare its validation perplexity
+       with that of `MinGRU`.
+    1. Unlike the minGRU, this cell does not tie its input gate to its
+       forget gate, so its cell state obeys the same bound as that of the
+       LSTM: if $\mathbf{C}_0 = \mathbf{0}$, $|\tilde{\mathbf{C}}_t| < 1$,
+       and $\mathbf{F}_t \leq f_\textrm{max} < 1$ in every coordinate, every
+       entry of $\mathbf{C}_t$ stays below $1 / (1 - f_\textrm{max})$ in
+       magnitude. Give gate and input-node values under which
+       $|\mathbf{C}_t|$ approaches this bound.
+       :citet:`Feng.Tung.Ahmed.ea.2024` replace the two gates by
+       $\mathbf{F}_t / (\mathbf{F}_t + \mathbf{I}_t)$ and
+       $\mathbf{I}_t / (\mathbf{F}_t + \mathbf{I}_t)$. Which bound holds
+       after this normalization? Retrain with it, and compare the validation
+       perplexity with that of the unnormalized cell.
+1. [code] **State passing.** `associative_scan` starts from
+   $\mathbf{h}_0 = \mathbf{0}$, and `MinGRU` folds a carried-in state into
+   $\mathbf{b}_1$.
+    1. Split a length-$T$ input into chunks of length $\tau$, run `MinGRU`
+       on each chunk with the final state of the previous chunk, and verify
+       that the concatenated outputs match a single call on the whole
+       sequence to a tolerance scaled to the dtype.
+    1. Stop gradients through the carried state at every chunk boundary;
+       the forward outputs stay the same. Which contributions to the
+       gradient of the loss at step $t$ disappear, and which dependencies
+       can the trained model still use at inference? Relate the result to
+       truncated backpropagation through time (:numref:`sec_bptt`).
+    1. Backpropagation through a scan stores its intermediate results.
+       Describe a training loop over the chunks whose activation memory is
+       set by $\tau$ rather than by $T$.
+1. [code] **Discretization rules.** For the scalar mode $a = -1$, $b = 1$,
+   :numref:`subsec_zoh` shows that backward Euler turns the update into
+   $x_t = (1 - z)\, x_{t-1} + z\, u_t$ with the gate $z = \sigma(\theta)$,
+   where $\theta = \log \Delta$. Two other rules of
+   :numref:`tab_ssm-discretization` behave differently on the same mode.
+    1. The bilinear rule takes $\bar{a}$ from
+       :numref:`tab_ssm-discretization` and
+       $\bar{b} = \Delta b / (1 - \Delta a / 2)$. Show that
+       $\bar{a} + \bar{b} = 1$, write the gate $z$ in terms of $\sigma$ and
+       $\theta$, and find its range. Describe what the update does to the
+       state when $\Delta > 2$, and explain how that behavior is consistent
+       with the stability guarantee that
+       :numref:`tab_ssm-discretization` lists for the bilinear rule.
+    1. Forward Euler takes $\bar{\mathbf{A}} = \mathbf{I} + \Delta
+       \mathbf{A}$ and $\bar{\mathbf{B}} = \Delta \mathbf{B}$. Find the
+       step sizes $\Delta$ for which its recurrence is stable on this mode.
+    1. Start from $x(0) = 0$, drive the system with
+       $u(t) = \sin(0.1 t)$ sampled at $t = k\Delta$, and run the
+       forward-Euler and the ZOH recurrences up to $t = 100$ for
+       $\Delta \in \{0.1, 0.5, 1, 2.5\}$. Compare both with the exact
+       solution at the same times. How does the error of each rule grow with
+       $\Delta$? What does the forward-Euler state retain from the past at
+       $\Delta = 1$, and what happens at $\Delta = 2.5$?
+1. **Effective memory horizon.** For the scalar recurrence
+   $h_t = \bar{a}\, h_{t-1} + u_t$ with $0 < \bar{a} < 1$, define the
+   *effective memory horizon* as the smallest lag $k$ at which the influence
+   $\bar{a}^k$ of an input falls below $0.01$.
+    1. Express the horizon in terms of $\bar{a}$, evaluate it for
+       $\bar{a} \in \{0.9, 0.99, 0.999\}$, and derive the approximation that
+       holds as $\bar{a} \to 1$.
+    1. Under the zero-order hold a mode with $a < 0$ has
+       $\bar{a} = e^{\Delta a}$. Express the horizon in terms of $\Delta$
+       and $a$, and state how $\Delta$ must change for the mode to remember
+       ten times longer.
+    1. `S4D` initializes $\Delta$ log-uniformly on $[10^{-3}, 10^{-1}]$ and
+       its modes at $a_n = -(n + 1)$ for $n = 0, \ldots, 3$. Find the range
+       of horizons at initialization and compare it with the 784 steps of
+       the task in :numref:`subsec_ssm-seq-classification`.
+1. [code] **Convolution by FFT.** S4 evaluates the convolution view
+   :eqref:`eq_ssm_kernel` with fast Fourier transforms. Use `u`, `kernel`,
+   and `y_loop` from the code of :numref:`subsec_ssm-conv`, and let $T$ be
+   `num_steps`.
+    1. Compute the convolution as the inverse FFT of the product of the
+       FFTs of `u` and `kernel`, both zero-padded to length $n$, keep the
+       first $T$ outputs, and compare them with `y_loop` for $n = T$ and
+       $n = 2T$.
+    1. Explain the error at $n = T$: which outputs does it corrupt, and
+       which inputs leak into them? Find the smallest $n$ that reproduces
+       the causal convolution exactly.
+1. **Hidden modes.** Consider a diagonal SSM with
+   $\mathbf{A} = \mathrm{diag}(a_1, \ldots, a_N)$, input vector
+   $\mathbf{B} = (b_1, \ldots, b_N)^\top$, and readout
+   $\mathbf{C} = (c_1, \ldots, c_N)$, discretized by
+   :eqref:`eq_zoh_diag`.
+    1. Show that $\mathbf{B}$ and $\mathbf{C}$ enter the kernel
+       :eqref:`eq_ssm_kernel` only through the products $c_n b_n$, and
+       conclude that fixing $\mathbf{B} = \mathbf{1}$, as `S4D` does, loses
+       no kernels. What does a mode with $c_n b_n = 0$ contribute to the
+       kernel?
+    1. Take $N = 2$, $\Delta = 1$, $a = (-1, 0.5)$,
+       $\mathbf{B} = \mathbf{1}$, and $\mathbf{C} = (1, 0)$: the second mode
+       is unstable and unobservable, and the kernel is bounded. Suppose that
+       the recurrence :eqref:`eq_ssm_disc` runs from
+       $\mathbf{x}_0 = \mathbf{0}$ on the constant input $u_t = 1$ in
+       float32, whose largest finite value is about $3.4 \times 10^{38}$.
+       At which step does $y_t$ first fail
+       to be a finite number, and why does the zero entry of $\mathbf{C}$
+       not prevent it? What does the example imply for a parameterization
+       that keeps only the observable modes stable?
+    1. Suppose that $b_n$ and $c_n$ change from step to step, as they will
+       in :numref:`sec_mamba`. Write $y_t$ as a sum over past inputs and
+       explain why $\mathbf{B}$ can no longer be absorbed into $\mathbf{C}$.
+1. [code] **Frozen HiPPO kernels.** ● S4 freezes the LegS matrix
+   :eqref:`eq_hippo` into the time-invariant system :eqref:`eq_ssm_cont`,
+   which leaves the optimality theorem behind
+   (:numref:`subsec_hippo_s4_bridge`).
+   :citet:`Gu.Johnson.Timalsina.ea.2023` showed what the frozen system
+   computes instead. With $P_n$ the Legendre polynomial of degree $n$ on
+   $[-1, 1]$, the impulse response of its state is
+
+    $$(e^{\tau \mathbf{A}} \mathbf{B})_n = \sqrt{2n+1}\; e^{-\tau}\, P_n(2 e^{-\tau} - 1), \qquad \tau \geq 0.$$
+
+    1. Check the formula numerically for $N = 8$ at a few values of $\tau$
+       with the matrix exponential. Expand it to find which exponentials
+       $e^{-k\tau}$ each component contains, and compare the set of kernels
+       that the frozen system produces under a learnable $\mathbf{C}$ with
+       the set produced by the `S4D` initialization $a_n = -(n + 1)$,
+       $\mathbf{B} = \mathbf{1}$.
+    1. Compute the condition number of the Gram matrix of the $N$
+       impulse-response components of each of the two systems on
+       $\tau \in [0, 10]$, for $N \in \{4, 6, 8, 10\}$, and describe how
+       each grows with $N$. What does the difference imply for learning
+       $\mathbf{C}$ by gradient descent?
+1. [code] **Warped Legendre memory.** ● Freeze the LegS matrices of
+   :eqref:`eq_hippo` into the time-invariant system :eqref:`eq_ssm_cont`.
+   With $P_n$ the Legendre polynomial of degree $n$ on $[-1, 1]$, the
+   impulse response of its state is
+   :cite:`Gu.Johnson.Timalsina.ea.2023`
+
+    $$(e^{\tau \mathbf{A}} \mathbf{B})_n = \sqrt{2n+1}\; e^{-\tau}\, P_n(2 e^{-\tau} - 1), \qquad \tau \geq 0.$$
+
+    1. Substitute $s = e^{-\tau}$ in
+       $x_n(t) = \int_0^\infty (e^{\tau \mathbf{A}} \mathbf{B})_n\,
+       u(t - \tau)\, d\tau$ to show that $x_n(t)$ is the coefficient of
+       $\sqrt{2n+1}\, P_n(2s - 1)$ in the orthonormal Legendre expansion on
+       $[0, 1]$ of the warped past $g(s) = u(t + \ln s)$. Derive a formula
+       that reconstructs $u(t - \tau)$ from $\mathbf{x}(t)$.
+    1. Discretize the frozen system by :eqref:`eq_zoh` at $\Delta = 0.01$
+       in double precision, stream $u(t) = \sin 2t + 0.5 \sin 5t$ for 2,000
+       steps, reconstruct the past from the final state, and plot the
+       reconstruction error against the lag $\tau$ for
+       $N \in \{8, 16, 64\}$. Which part of the past does the frozen state
+       remember, and how does that window grow with $N$? Contrast the
+       result with the reconstruction of :numref:`fig_hippo_reconstruction`.
+1. [code] **Prediction from a prefix.** The classifiers `s4d` and
+   `s4d_final` of :numref:`subsec_ssm-seq-classification` read the same
+   kind of encoder through different readouts, `pool='mean'` and
+   `pool='last'`. The encoder is causal, so one call on a full image yields
+   the features of every prefix.
+    1. Run each trained encoder once over the validation images and compute
+       the accuracy that each classifier reaches after seeing the first $t$
+       pixels, for $t = 28, 56, \ldots, 784$: feed the head of `s4d` the
+       mean of the first $t$ outputs and the head of `s4d_final` the output
+       at step $t$. Plot both curves.
+    1. Explain the difference between the two curves from what each readout
+       was trained on. After how many image rows does each model come within
+       one percentage point of its final accuracy?
+1. [extended] **Step-size initialization.** ● `S4D` draws $\log \Delta$
+   uniformly between $\log 10^{-3}$ and $\log 10^{-1}$, so that its
+   channels start as gates of very different speeds. Measure how much of
+   the result of :numref:`subsec_ssm-seq-classification` this
+   initialization explains.
+    1. Consider two alternatives that give every channel the same step
+       size, $\Delta = 10^{-1}$ or $\Delta = 10^{-3}$. Predict from the
+       effective memory horizons of the four modes $a_n = -(n + 1)$,
+       $n = 0, \ldots, 3$, which alternative should hurt which readout.
+    1. For each alternative, build classifiers like `s4d` and `s4d_final`,
+       overwrite every encoder block's `ssm.log_dt` with its value of
+       $\log \Delta$ before training, and train both with
+       `train_and_report`. Compare the four results with those of `s4d` and
+       `s4d_final`.
+    1. Plot the distribution of the learned $\Delta$ in each run. Does
+       training move $\Delta$ toward the default range, and in which runs
+       does it move far from its initial value?
+
+:begin_tab:`pytorch`
+13. [code] **Scan schedules.** ● `associative_scan` implements the
+    doubling schedule of :numref:`fig_scan_tree`. A recursive schedule does
+    less work: combine adjacent pairs, which halves the sequence; scan the
+    half-length sequence recursively, which yields every second prefix;
+    then obtain each remaining prefix with one more combine.
+    1. For $T = 2^k$, count the combines :eqref:`eq_scan_combine` and the
+       rounds of combines performed by each schedule, and compare both
+       counts with the $T - 1$ steps of the sequential loop at
+       $T = 16384$.
+    1. Implement the recursive schedule for any length $T$ with tensor
+       slicing, verify it against `sequential_scan`, and time it against
+       `associative_scan` with `wall_clock` at the lengths of the benchmark
+       in :numref:`subsec_parallel-scans`. Does the measured ratio follow
+       the ratio of combine counts on your hardware, and what could make it
+       deviate?
+:end_tab:
+
+:begin_tab:`jax`
+13. [code] **Scan schedules.** ● `associative_scan` calls
+    `jax.lax.associative_scan`, which uses a recursive schedule: combine
+    adjacent pairs, which halves the sequence; scan the half-length sequence
+    recursively, which yields every second prefix; then obtain each
+    remaining prefix with one more combine. The doubling schedule of
+    :numref:`fig_scan_tree` is the alternative.
+    1. For $T = 2^k$, count the combines :eqref:`eq_scan_combine` and the
+       rounds of combines performed by each schedule, and compare both
+       counts with the $T - 1$ steps of the sequential loop at
+       $T = 16384$.
+    1. Implement the doubling schedule as a Python loop over strides with
+       slicing and `jnp.concatenate`, verify it against `sequential_scan`,
+       and time its jitted version against `parallel_fn` with `wall_clock`
+       at the lengths of the benchmark in :numref:`subsec_parallel-scans`.
+       Does the measured ratio follow the ratio of combine counts on your
+       hardware, and what could make it deviate?
+:end_tab:
 
 [Discussions](https://d2l.discourse.group/)
 

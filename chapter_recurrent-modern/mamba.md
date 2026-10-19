@@ -347,6 +347,7 @@ the state and *which* state coordinates are read out; an
 exercise asks how much they add over selectivity in $\Delta$ alone.
 
 ### Parallel Evaluation with Selectivity
+:label:`subsec_selective-scan`
 
 With time-varying coefficients, the model is no longer LTI and the
 convolutional view of :numref:`subsec_ssm-conv` no longer applies. There
@@ -1012,6 +1013,7 @@ for name, model, fn in [('LSTM', lstm_lm, step_fn),
 ```
 
 ### Selective Copying, Revisited
+:label:`subsec_mamba-copy-revisited`
 
 The language-model comparison evaluates end-to-end quality; the opening
 copying task isolates content-dependent selection. We run the Mamba stack
@@ -1160,43 +1162,249 @@ both frameworks.
 
 ## Exercises
 
-1. [extended] *Selective in $\Delta$ only.* Modify `SelectiveSSM` so that only
-   $\boldsymbol{\Delta}_t$ depends on the input, with
-   $\mathbf{B} = \mathbf{1}$ fixed and $\mathbf{C}$ a plain parameter as
-   in `S4D`, and rerun the selective copying experiment. Then try the
-   converse (input-dependent $\mathbf{B}_t, \mathbf{C}_t$ with a fixed
-   learned $\Delta$). Which ingredient carries the task, and why does
-   that agree with the gate interpretation of :numref:`subsec_zoh`?
-1. [extended] *Finding the capacity cliff.* Fix the Mamba copy model and grow the
-   task: sweep the number of marked symbols (say 4, 8, 16, 32) at
-   `num_states=4`, then repeat with `num_states=16`. Plot final accuracy
-   against the number of symbols for both state sizes. Where does each
-   model break, and how does the break point move with state size? To
-   hold $k$ symbols from an alphabet of $V$, the state must carry
-   $k \log_2 V$ bits: does the cliff you measured sit where this
-   accounting predicts?
-1. [extended] *Ablating the block.* The Mamba block multiplies the SSM output by a
-   SiLU gate branch. Remove the gate (pass the SSM output straight to
-   `W_out`), and separately replace both SiLU activations by ReLU or by
-   the identity. Retrain the capstone language model for each variant.
-   Which change hurts most, and does the gate matter more for perplexity
-   or for the selective-copy task?
-1. [extended] *Bytes instead of BPE.* Rerun the capstone comparison at the byte
-   level by constructing the dataset with
-   `d2l.TimeMachine(..., tokenization='char')` and doubling `num_steps`
-   so each window spans comparable text. Compare LSTM and Mamba by bits
-   per byte, not perplexity. Does Mamba's advantage grow or shrink, and
-   why might a selective state suit long, low-information-density token
-   streams?
-1. [short-code] *Chunked prefill.* Our `stepped_fn` plays the prompt into the state
-   one token at a time, but `Mamba.forward` computes the same states
-   with the parallel scan and then throws them away (it returns `None`).
-   Modify `forward` so it also returns the final `(conv buffer, SSM
-   state)` pair of every block, prefill with one scan over the prompt,
-   hand the result to `step` for decoding, and verify that the generated
-   logits match pure stepping. This scan-prefill-then-step schedule is
-   how production Mamba serving actually processes prompts, and the same
-   division of labor as prefill versus decode in :numref:`sec_kv-cache`.
+1. **Additive scores.** ● Write a selective-copying input of
+   :numref:`subsec_selectivity` as the token ids $s_1, \ldots, s_T$ that
+   precede the query slots. Call a model *additive* at a query slot if its
+   vector of eight symbol logits there has the form
+
+    $$\mathbf{f}(s_1, \ldots, s_T) = \mathbf{c} + \sum_{t=1}^{T} \mathbf{g}_t(s_t),$$
+
+    where $\mathbf{c} \in \mathbb{R}^8$ is a constant and each
+    $\mathbf{g}_t$ is an arbitrary map from token ids to $\mathbb{R}^8$.
+    The model answers correctly if the target symbol has the strictly
+    largest logit.
+    1. Remove the gated MLP from `S4DBlock`, leaving the pre-norm, the
+       `S4D` layer, and the residual connection, and place the result
+       between a token embedding and a linear head. Show that this model is
+       additive at every query slot.
+    1. Let `num_marked` be 1. Give an additive score that answers correctly
+       wherever the single symbol appears.
+    1. Let `num_marked` be 3 and $T = 4$, and let the query slot ask for
+       the second of the three symbols. Prove that no additive score answers
+       correctly on every placement. Restrict to inputs whose symbols are
+       two fixed ids $A$ and $B$, and compare the logits of $A$ and $B$.
+    1. The two-block S4D stack of :numref:`subsec_selectivity` is built
+       from full `S4DBlock`s. Show that a stack of two of the reduced
+       blocks of the first part, with no gated MLP at all, is in general
+       not additive, and name the operation responsible. Name
+       the further operations of the full `S4DBlock` that have the same
+       effect. Finally, explain why a single layer of
+       :eqref:`eq_selective_ssm` is not additive.
+1. **Softplus step, sigmoid gate.** Take one channel of the selective
+   layer before discretization, that is, the continuous system
+   :eqref:`eq_ssm_cont` with a single state ($N = 1$), $a = -1$, and
+   $\mathbf{B}_t = 1$. Let the step size be
+   $\Delta_t = \textrm{softplus}(z_t)$ for a scalar pre-activation $z_t$
+   computed from the input.
+    1. Discretize with the exact zero-order hold :eqref:`eq_zoh_diag`, and
+       show that the update becomes
+       $x_t = (1 - g_t)\, x_{t-1} + g_t\, u_t$ with $g_t = \sigma(z_t)$.
+       This is Theorem 1 of :citet:`Gu.Dao.2023`.
+    1. Repeat the derivation with the first-order input rule
+       $\bar{\mathbf{B}}_t = \Delta_t \mathbf{B}_t$ that `SelectiveSSM`
+       uses. Show that both rules give an input weight of approximately
+       $e^{z_t}$ as $z_t \to -\infty$, and compute the ratio of the two
+       input weights at $z_t \in \{-4, 0, 4\}$.
+    1. For a constant input $u_t = u$, find the fixed point of the state
+       under each rule, and state which rule keeps the state on the scale
+       of the input as $\Delta_t$ grows. Then let $|u_t| \le U$ and
+       $z_t \le z_{\max}$ for all $t$, start from $x_0 = 0$, and bound
+       $|x_t|$ under each rule.
+1. [code] **Selective in $\Delta$ only.** ● The selective layer makes
+   three quantities functions of the input: $\boldsymbol{\Delta}_t$,
+   $\mathbf{B}_t$, and $\mathbf{C}_t$. Measure which of them carries
+   selective copying.
+    1. Write two variants of `SelectiveSSM`. In the first, only
+       $\boldsymbol{\Delta}_t$ depends on the input, while
+       $\mathbf{B} = \mathbf{1}$ is fixed and $\mathbf{C}$ is a learned
+       $(H, N)$ parameter as in `S4D`. In the second, $\Delta$ is a learned
+       per-channel constant as in `S4D`, while $\mathbf{B}_t$ and
+       $\mathbf{C}_t$ remain functions of the input. Before training,
+       predict from the gate interpretation of :numref:`subsec_zoh` and
+       from problem 2 which variant solves the task within the budget of
+       `train_copy`.
+    1. Build the architecture of `mamba_copy`, replace the `ssm` attribute
+       of each `MambaBlock` by a variant, and train each with `train_copy`.
+       Plot the two curves together with those of the S4D, the LSTM, and
+       the full Mamba. Which ingredient carries the task?
+    1. :citet:`Gu.Dao.2023` run the corresponding ablation in a language
+       model and report perplexities of 10.93 with none of the three
+       input-dependent, 10.15 with $\mathbf{B}$ alone, 9.98 with
+       $\mathbf{C}$ alone, 9.81 with $\Delta$ alone, and 8.71 with all
+       three. Which of these settings matches your first variant, and why
+       does none match your second? Is the ingredient that carries
+       selective copying the one that their ablation ranks first among
+       single ingredients?
+1. **Linear or time-invariant.** An LTI system is both linear and time
+   invariant, and :numref:`subsec_selective-scan` states that selectivity
+   removes the convolution view. Consider one `SelectiveSSM` layer as a
+   map from an input sequence $\mathbf{u}_1, \ldots, \mathbf{u}_T$ to an
+   output sequence, started from the zero state.
+    1. Show that prepending $k$ zero vectors to the input prepends $k$ zero
+       vectors to the output and leaves the remaining outputs unchanged.
+    1. Show that the layer is not linear in its input by computing the
+       output at $t = 1$ for the inputs $\mathbf{u}_1$ and
+       $2\mathbf{u}_1$.
+    1. Prove that a causal map that is linear and commutes with the shift
+       of the first part is a convolution
+       $\mathbf{y}_t = \sum_{k \ge 0} \bar{\mathbf{K}}_k \mathbf{u}_{t-k}$.
+    1. Fix one input sequence and treat the $\boldsymbol{\Delta}_t$,
+       $\mathbf{B}_t$, and $\mathbf{C}_t$ it produces as constants. Write
+       the output of channel $h$ as
+       $y_{t,h} = \sum_{s \le t} M_{t,s}\, u_{s,h} + d_h u_{t,h}$, and
+       give $M_{t,s}$. Show that $M_{t,s}$ is in general not a function
+       of $t - s$ alone, and explain why the FFT of
+       :numref:`subsec_ssm-conv` cannot evaluate this sum even after the
+       input, and hence $M$, is known.
+1. **Materialized scan memory.** :numref:`tab_mamba_simplifications`
+   records that our `SelectiveSSM` materializes coefficient tensors of
+   shape $(T, \textrm{batch}, H, N)$. Take one `MambaBlock` of the
+   language model of :numref:`subsec_capstone`: $T = 32$, a batch of 1024
+   windows, model width 128 and hence $H = 256$ after expansion, $N = 4$,
+   and float32 entries.
+    1. Compute the size of one such tensor. Suppose that the scan follows
+       the doubling schedule of :numref:`fig_scan_tree` and that the
+       backward pass keeps the decay and input tensors entering each of the
+       $\lceil \log_2 T \rceil$ rounds, plus the scan output. Compute the
+       memory that the scan keeps per block.
+    1. A fused kernel keeps only $\mathbf{u}_t$ and
+       $\boldsymbol{\Delta}_t$, each of shape $(T, \textrm{batch}, H)$, and
+       $\mathbf{B}_t$ and $\mathbf{C}_t$, each of shape
+       $(T, \textrm{batch}, N)$, and recomputes everything else during the
+       backward pass. Compute its storage and the ratio to the previous
+       part. Express the ratio in terms of $T$, $H$, and $N$, and evaluate
+       it at $N = 16$, $T = 2048$, and $H = 4096$.
+    1. `S4D` passes its decays to the same scan with a batch axis of size
+       one, because they do not depend on the input. Under the assumption
+       of the first part, compute the memory that its scan keeps for the
+       same shapes. Which part of the selective layer's storage is the
+       price of selectivity?
+1. **Block parameter budget.** Let a `MambaBlock` have model width $d$,
+   expansion $E$, $N$ states, convolution width $w$, and a rank-$R$ head
+   for $\boldsymbol{\Delta}_t$, so that its `SelectiveSSM` has width
+   $Ed$.
+    1. Count the parameters of one block, biases and normalization
+       included, as a function of $d$, $E$, $N$, $R$, and $w$. Show that
+       at fixed $R$ the leading term in $d$ is the $3Ed^2$ of
+       :citet:`Gu.Dao.2023`, and identify the matrices that contribute it.
+       `SelectiveSSM` sets $R = Ed/16$; find the quadratic term that the
+       $\boldsymbol{\Delta}_t$ head then adds.
+    1. Evaluate the count for the blocks of `Mamba(num_inputs=128)` in
+       :numref:`subsec_capstone`, where $E = 2$, $N = 4$, $R = 16$, and
+       $w = 4$. Give the fractions of the block held by the two
+       projections and by the selective SSM. Add the embedding and the
+       output layer for the 1024-token vocabulary, compare the total with
+       the parameter count that `benchmark` records in
+       :numref:`subsec_capstone`, and give the share of the model's
+       parameters that lies outside the Mamba blocks.
+    1. A transformer block of width $d$ holds about $12d^2$ parameters
+       (:numref:`sec_transformer-block`). How many Mamba blocks with
+       $E = 2$ match one transformer block, and what does this imply when
+       comparing the depths of the two architectures at equal parameter
+       count?
+1. [code] **Prefill and decode.** ● `stepped_fn` of
+   :numref:`subsec_mamba-step` plays the prompt into the state one token
+   at a time, while the parallel forward pass of `Mamba` computes the same
+   states with the scan and returns `None` as its state.
+    1. Modify the forward passes of `SelectiveSSM`, `MambaBlock`, and
+       `Mamba` so that they also return, for every block, the pair of
+       convolution buffer and SSM state that `MambaBlock.step` holds after
+       the last token, in the layout that `step` expects. Prefill a prompt
+       with one forward pass, decode the continuation with `step`, and
+       verify on the trained `mamba_lm` that the logits agree with pure
+       stepping to float tolerance.
+    1. Time the prefill of prompts of $P \in \{32, 256, 2048\}$ tokens,
+       once with the scan and once by stepping, and time the decoding of
+       each further token. How do the two prefill times scale with $P$, and
+       does the time per decoded token depend on $P$? Relate the result to
+       the split between prefill and decode of :numref:`sec_kv-cache`.
+1. [code] **Interventions on $\Delta$.** ● The step-size measurement of
+   :numref:`subsec_mamba-copy-revisited` shows that $\Delta_t$ separates by
+   token role in the trained `mamba_copy`. A correlation does not show that
+   the model's answers depend on this separation, but an intervention can.
+    1. Extend the measurement code into a forward pass of the trained model
+       in which each block computes its SSM from a step size that you
+       supply. Check that supplying each block's own $\Delta_t$ reproduces
+       the model's validation accuracy.
+    1. In every block, replace $\Delta_t$ at filler positions by the
+       channel's median $\Delta$ over symbol positions, and measure the
+       accuracy. Then replace $\Delta_t$ at symbol positions by the
+       channel's median over filler positions. Predict both accuracies
+       before running, and explain each outcome by what the state does at
+       the affected tokens.
+    1. Apply each intervention to one block at a time. Which block's step
+       size does the answer depend on, and does that agree with the box
+       plots of :numref:`subsec_mamba-copy-revisited`?
+1. [code] **Longer filler runs.** The models `s4d`, `lstm`, and
+   `mamba_copy` were trained on sequences of 256 tokens before the query
+   slots. None of them uses position embeddings, so each runs on sequences
+   of any length.
+    1. Build validation sets with `SelectiveCopy` at
+       `num_steps` $\in \{1024, 4096\}$, use the validation split of
+       `copy_data` for 256, and report the accuracy of the three trained
+       models at each length without retraining. Evaluate in batches of 64
+       sequences, because the scan materializes
+       $(T, \textrm{batch}, H, N)$ tensors.
+    1. Over a run of filler tokens, the decay alone multiplies state
+       coordinate $n$ of a channel by
+       $\exp\bigl(-|a_n| \sum_t \Delta_t\bigr)$, the sum running over the
+       run. From the trained `log_a` and each channel's median $\Delta$ on
+       filler, measured as in :numref:`subsec_mamba-copy-revisited`,
+       compute this factor for each channel's slowest mode over runs of 256
+       and 4096 filler tokens. Use the distribution of the factor over
+       channels to explain the accuracies of the first part.
+    1. :citet:`Gu.Dao.2023` report that a Mamba trained on an
+       induction-head task at length 256 extrapolates to sequences of a
+       million tokens. Which property of the learned $\Delta_t$ would such
+       extrapolation require, and does your measurement show it?
+1. [extended] **Block ablations.** ● Besides the selective SSM, the
+   block of :numref:`fig_mamba_block` has three ingredients: the short
+   causal convolution, the SiLU on the main branch, and the gate branch.
+    1. Build three variants of `MambaBlock`: one without the gate, which
+       passes the SSM output straight to `W_out`; one without the
+       convolution, with `conv_width=1`; and one with the identity in place
+       of the SiLU in front of the SSM.
+    1. Train each variant on selective copying with `train_copy`, and as a
+       two-block stack in the language model of :numref:`subsec_capstone`
+       with `benchmark`, keeping each task's recipe.
+    1. Which change hurts most on each task? For the variant without the
+       convolution, explain from :eqref:`eq_selective_heads` what
+       information $\boldsymbol{\Delta}_t$, $\mathbf{B}_t$, and
+       $\mathbf{C}_t$ lose in the first block, and why later blocks lose
+       less.
+
+:begin_tab:`pytorch`
+11. [code] **Causality test.** A causal sequence model must leave its
+    output at position $s$ unchanged when the input at a later position
+    $t > s$ changes.
+    1. Write a test that perturbs `X[t]` of a random input to
+       `Mamba(num_inputs=32)` and reports which output positions change.
+    1. `MambaBlock.forward` pads both ends of the sequence by
+       `conv_width - 1` and keeps the first `X.shape[0]` outputs of the
+       convolution. Keep the last `X.shape[0]` outputs instead. Before
+       running your test, determine how many future tokens each output now
+       sees, and then confirm it with the test.
+    1. Build the language model of :numref:`subsec_capstone` from the
+       modified `Mamba`, run the step-versus-scan check of
+       :numref:`subsec_mamba-step` on it without training, and explain its
+       result.
+:end_tab:
+
+:begin_tab:`jax`
+11. [code] **Causality test.** A causal sequence model must leave its
+    output at position $s$ unchanged when the input at a later position
+    $t > s$ changes.
+    1. Write a test that perturbs `X[t]` of a random input to
+       `Mamba(num_inputs=32)` and reports which output positions change.
+    1. `MambaBlock` builds its convolution with `padding='CAUSAL'`. Build
+       it with `padding='SAME'` instead. Before running your test,
+       determine how many future tokens each output now sees, and then
+       confirm it with the test.
+    1. Build the language model of :numref:`subsec_capstone` from the
+       modified `Mamba`, run the step-versus-scan check of
+       :numref:`subsec_mamba-step` on it without training, and explain its
+       result.
+:end_tab:
 
 [Discussions](https://d2l.discourse.group/)
 

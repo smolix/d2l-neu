@@ -626,6 +626,35 @@ them optimizer state.
        for each $\lambda \in \{0.1, 1, 10\}$. Which coordinates no longer
        respond to $\lambda$, and how does the transition between the two
        regimes depend on $\sigma_i$ and $\lambda$?
+
+1. [code] **Testing the exemptions.** :numref:`subsec_adamw-what-not-to-decay`
+   attributes OLMo 2's embedding instability to decay shrinking embedding
+   rows until the $1/\|\mathbf{x}\|$ factor in the LayerNorm gradient grows
+   large.
+    1. Rerun the two-group configuration with decay applied to every
+       parameter and, in both runs, track the norm of the rarest and of the
+       most frequent token's embedding row over 2,000 steps.
+    1. Do the two loss curves differ within this budget? Estimate, from the
+       rate at which the rare row shrinks, how many steps the all-decayed
+       run would need before that row's norm falls by a factor of ten.
+
+1. **Activations and optimizer state.** Extend the accounting of
+   :numref:`subsec_adamw-memory` beyond the `setups` table.
+    1. For `TinyLM` with batch size $B$ and sequence length $T$, estimate
+       the bf16 activation memory that must be stored for the backward pass
+       (per block: the two normalization outputs, the attention inputs and
+       outputs, and the MLP hidden layer). At what batch size do
+       activations overtake the optimizer state?
+    1. Count the floating-point operations of one `adamw` update per
+       parameter and compare them with the roughly $6BT$ operations per
+       parameter of a forward and backward pass over one batch. At which
+       batch size would the optimizer step cost one percent of a training
+       step?
+
+    *Adapted from Stanford CS336,
+    [Assignment 1](https://github.com/stanford-cs336/spring2024-assignment1-basics),
+    Problem adamwAccounting.*
+
 1. [code] **Momentum and the penalty.** ● Under SGD with momentum, an
    $\ell_2$ penalty adds $\lambda \mathbf{x}_{t-1}$ to the gradient
    $\mathbf{g}_t$ in the velocity of :eqref:`eq_momentum`. Decoupled decay
@@ -644,6 +673,7 @@ them optimizer state.
        $\lambda \in \{1, 3, 10, 30\}$. Which decoupled coefficient comes
        closest to the coupled run's final training loss, and how does it
        compare with your answer to the first part?
+
 1. [code] **The fixed-product ridge.** ● Both library implementations
    used in this section multiply the decay by the full learning rate, so
    the per-step shrinkage is $s = \eta\lambda$. :numref:`subsec_wd-at-scale`
@@ -663,6 +693,7 @@ them optimizer state.
        :numref:`subsec_wd-at-scale`, and state which quantity, $\lambda$ or
        $s$, the decay axis of a grid should carry when the learning rate is
        retuned in this setting.
+
 1. [code] **Rotational equilibrium.** ● Following
    :citet:`Kosson.Messmer.Jaggi.2024`, let $\mathbf{x} \in \mathbb{R}^d$
    be a scale-invariant weight vector in the sense of
@@ -684,32 +715,6 @@ them optimizer state.
        steps from a random unit vector, using pure-noise gradients
        projected orthogonal to $\mathbf{x}_t$, at $(\eta, \lambda) \in
        \{(10^{-3}, 0.1), (3 \times 10^{-3}, 0.1), (10^{-3}, 0.3)\}$.
-1. [code] **Testing the exemptions.** :numref:`subsec_adamw-what-not-to-decay`
-   attributes OLMo 2's embedding instability to decay shrinking embedding
-   rows until the $1/\|\mathbf{x}\|$ factor in the LayerNorm gradient grows
-   large.
-    1. Rerun the two-group configuration with decay applied to every
-       parameter and, in both runs, track the norm of the rarest and of the
-       most frequent token's embedding row over 2,000 steps.
-    1. Do the two loss curves differ within this budget? Estimate, from the
-       rate at which the rare row shrinks, how many steps the all-decayed
-       run would need before that row's norm falls by a factor of ten.
-1. **Activations and optimizer state.** Extend the accounting of
-   :numref:`subsec_adamw-memory` beyond the `setups` table.
-    1. For `TinyLM` with batch size $B$ and sequence length $T$, estimate
-       the bf16 activation memory that must be stored for the backward pass
-       (per block: the two normalization outputs, the attention inputs and
-       outputs, and the MLP hidden layer). At what batch size do
-       activations overtake the optimizer state?
-    1. Count the floating-point operations of one `adamw` update per
-       parameter and compare them with the roughly $6BT$ operations per
-       parameter of a forward and backward pass over one batch. At which
-       batch size would the optimizer step cost one percent of a training
-       step?
-
-    *Adapted from Stanford CS336,
-    [Assignment 1](https://github.com/stanford-cs336/spring2024-assignment1-basics),
-    Problem adamwAccounting.*
 
 [Discussions](https://d2l.discourse.group/)
 

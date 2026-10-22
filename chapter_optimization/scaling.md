@@ -564,6 +564,45 @@ matched update sizes; the goal of transfer is common to all of them.
 
 ## Exercises
 
+1. [code] **Transfer across seeds.** `sp_loss` and `mup_loss` hold one
+   seeded run per width and learning rate, so the transfer cost they show
+   carries no error bar. Add a `seed` argument to `train_mlp` that sets
+   both the initialization and the minibatch indices.
+    1. Under each parametrization, sweep `lrs` at widths 128 and 1,024 for
+       three seeds. For each seed, apply that seed's width-128 optimum at
+       width 1,024 and report, in percent, how far its loss lies above the
+       minimum of the same seed's width-1,024 sweep.
+    1. Is the difference between the two parametrizations' transfer costs
+       larger than the spread of each cost across seeds?
+
+1. [code] **Breaking muP on purpose.** The coordinate check is a test for
+   implementation errors.
+    1. Delete the $1/m$ logit scaling from `MuMLP` but keep the hidden
+       learning-rate rule and rerun `coord_check`. Which curve exposes the
+       bug?
+    1. Restore the multiplier and instead give the hidden matrices the full
+       learning rate. Which curve exposes this bug?
+    1. Restore the hidden learning-rate rule, but divide the learning rate
+       by $m^2$ instead of $m$. Does `coord_check` flag this error? Sweep
+       `lrs` at width 1,024 with this variant, and compare its best
+       learning rate and best loss with those of `MuMLP` in `mup_loss`.
+
+1. [code] **Fitting the drift.** :numref:`subsec_scaling-large-runs`
+   reports that DeepSeek fitted power laws for the optimal learning rate as
+   a function of the compute budget instead of removing the drift
+   :cite:`Bi.Chen.Chen.ea.2024`. In the first-step analysis of
+   :eqref:`eq_scaling_first_step`, the largest stable learning rate scales
+   as $1/n$.
+    1. From `sp_loss`, fit a power law $\eta^\star(n) = c\, n^{-\gamma}$ to
+       the best learning rate at each width. Since `lrs` is spaced by
+       factors of two, each optimum is resolved only to within a factor of
+       $\sqrt{2}$. Give the range of $\gamma$ consistent with this
+       resolution, and state whether it contains $\gamma = 1$.
+    1. Extrapolate the fit to widths 2,048 and 4,096. Sweep directly at
+       those widths with `train_mlp`, extending `lrs` downward if a
+       prediction falls below its smallest value, and report how many grid
+       steps separate each prediction from the measured optimum.
+
 1. [code] **Depth and the coordinate check.** ● `coord_check` varies width
    at a fixed depth of three hidden layers. Generalize `MLP` and `MuMLP` to
    $L$ hidden layers and run the check across $L \in \{3, 6, 12, 24\}$ at
@@ -578,27 +617,7 @@ matched update sizes; the goal of transfer is common to all of them.
     1. Does muP's width scaling keep the activations flat across depth?
        State what the rules of :numref:`tab_mup-rules` promise and what
        they do not.
-1. [code] **Transfer across seeds.** `sp_loss` and `mup_loss` hold one
-   seeded run per width and learning rate, so the transfer cost they show
-   carries no error bar. Add a `seed` argument to `train_mlp` that sets
-   both the initialization and the minibatch indices.
-    1. Under each parametrization, sweep `lrs` at widths 128 and 1,024 for
-       three seeds. For each seed, apply that seed's width-128 optimum at
-       width 1,024 and report, in percent, how far its loss lies above the
-       minimum of the same seed's width-1,024 sweep.
-    1. Is the difference between the two parametrizations' transfer costs
-       larger than the spread of each cost across seeds?
-1. [code] **Breaking muP on purpose.** The coordinate check is a test for
-   implementation errors.
-    1. Delete the $1/m$ logit scaling from `MuMLP` but keep the hidden
-       learning-rate rule and rerun `coord_check`. Which curve exposes the
-       bug?
-    1. Restore the multiplier and instead give the hidden matrices the full
-       learning rate. Which curve exposes this bug?
-    1. Restore the hidden learning-rate rule, but divide the learning rate
-       by $m^2$ instead of $m$. Does `coord_check` flag this error? Sweep
-       `lrs` at width 1,024 with this variant, and compare its best
-       learning rate and best loss with those of `MuMLP` in `mup_loss`.
+
 1. **First update in spectral norm.** ● For a single example, Adam's first
    update of a weight matrix
    $\mathbf{W} \in \mathbb{R}^{n_{\text{out}} \times n_{\text{in}}}$ is
@@ -615,6 +634,7 @@ matched update sizes; the goal of transfer is common to all of them.
        $n$ for $\Delta\mathbf{W}$ to satisfy :eqref:`eq_spectral_condition`.
     1. Show that the learning rates and the logit multiplier of
        :numref:`tab_mup-rules` give every layer an update at this scale.
+
 1. [code] **Weight decay and parametrization.** ●
    :citet:`Kosson.Welborn.Liu.ea.2025` argue that in long runs weight
    decay, not parametrization, stabilizes the update dynamics across
@@ -631,21 +651,6 @@ matched update sizes; the goal of transfer is common to all of them.
     1. `MLP` has no normalization layer. Given the equilibrium argument of
        :numref:`subsec_wd-at-scale`, state what your result can and cannot
        say about the cited claim.
-1. [code] **Fitting the drift.** :numref:`subsec_scaling-large-runs`
-   reports that DeepSeek fitted power laws for the optimal learning rate as
-   a function of the compute budget instead of removing the drift
-   :cite:`Bi.Chen.Chen.ea.2024`. In the first-step analysis of
-   :eqref:`eq_scaling_first_step`, the largest stable learning rate scales
-   as $1/n$.
-    1. From `sp_loss`, fit a power law $\eta^\star(n) = c\, n^{-\gamma}$ to
-       the best learning rate at each width. Since `lrs` is spaced by
-       factors of two, each optimum is resolved only to within a factor of
-       $\sqrt{2}$. Give the range of $\gamma$ consistent with this
-       resolution, and state whether it contains $\gamma = 1$.
-    1. Extrapolate the fit to widths 2,048 and 4,096. Sweep directly at
-       those widths with `train_mlp`, extending `lrs` downward if a
-       prediction falls below its smallest value, and report how many grid
-       steps separate each prediction from the measured optimum.
 
 <!-- slides -->
 

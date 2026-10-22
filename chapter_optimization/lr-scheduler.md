@@ -843,10 +843,10 @@ its relatives became widespread where the training horizon is open-ended.
   to lower SGD's noise floor (and, empirically, the train–test gap); warmup
   exists because the target rate is often unsafe at initialization.
 * The decay shapes disagree more in their timing than their endpoints.
-  Square-root decay gives up the high early rate and, on our testbed, lands
-  below the constant baseline; multiplicative, piecewise constant, and
-  cosine decay stay high longer, quench harder at the end, improve on the
-  baseline, and are too close to call from single runs. Cosine won on
+  Square-root decay gives up the high early rate and, on our testbed, gains
+  the least over the constant baseline; multiplicative, piecewise constant,
+  and cosine decay stay high longer, quench harder at the end, gain more,
+  and are too close to call from single runs. Cosine won on
   convenience:
   one parameter, no milestones.
 * Warmup raises the stability ceiling by giving the network time to reduce
@@ -870,6 +870,7 @@ its relatives became widespread where the training horizon is open-ended.
        does each run's test accuracy stop improving?
     1. How does the train–test gap at epoch 30 change as $\eta$ shrinks?
        Relate the trend to the noise floor of :eqref:`eq_sgd-noise-ball`.
+
 1. [code] **Polynomial decay.** Implement the polynomial decay
    $\eta_t = \eta_0 (\beta t + 1)^{-\alpha}$ of :eqref:`eq_sgd-schedules`
    as a callable in the style of `SquareRootScheduler`, which is the case
@@ -883,32 +884,7 @@ its relatives became widespread where the training horizon is open-ended.
        $\sum_{t=0}^{29} \eta_t$ of each of the four runs and relate it to
        the ranking you measured. How far do conditions on infinite sums
        constrain a 30-epoch run?
-1. [code] **Warmup length and the stability ceiling.** ● The cold start
-   at `hot_lr` in :numref:`subsec_scheduler-warmup` fails, while a
-   five-epoch ramp trains. Count a run as trained when its test accuracy
-   after ten epochs exceeds 50%. A ramp of length 1 in `warmup` is a cold
-   start.
-    1. Vary the length of the ramp in `warmup` from 1 to 10 epochs at
-       `hot_lr` and report the test accuracy after ten epochs for each.
-       What is the shortest ramp that trains?
-    1. Keep the five-epoch ramp. Double the target rate from `hot_lr`
-       until the ramped run no longer trains, and halve it from `hot_lr`
-       until a cold start trains. By what factor does the ramp raise the
-       largest rate that trains? Compare that factor with the factor of 5
-       by which the ramp lowers the rate of its first epoch.
-1. [code] **Branching at several budgets.** ● Continue the plateau run
-   of :numref:`subsec_scheduler-branching` at the peak rate to epoch 50,
-   and branch a six-epoch decay off it at each of epochs 30, 40, and 50.
-   This is the design of :citet:`Hagele.Bakouch.Kosson.ea.2024`.
-    1. For each branch point, record the test accuracy of the plateau
-       checkpoint and of the branch after its decay, and plot both against
-       the branch point. Does the gain from the decay grow, shrink, or stay
-       constant as the branch point moves later?
-    1. For the branch at epoch 40, train a fresh warmup-plus-cosine run with
-       `CosineScheduler` over the same 46 epochs at the same peak rate.
-       Does the branched model match it? Compare the epochs spent on the
-       plateau run and its three branches with the epochs of three separate
-       cosine runs at the same budgets.
+
 1. [code] **Schedule-free SGD.** :citet:`Defazio.Yang.Mehta.ea.2024`
    replace decay by averaging. With interpolation weight $\beta = 0.9$ and
    averaging weights $c_{t+1} = 1/(t+1)$, the iteration is
@@ -923,6 +899,35 @@ its relatives became widespread where the training horizon is open-ended.
     1. Explain the difference between the two curves with the noise-ball
        argument of :numref:`sec_sgd`, and state which quantity in the
        iteration plays the role of a decaying learning rate.
+
+1. [code] **Warmup length and the stability ceiling.** ● The cold start
+   at `hot_lr` in :numref:`subsec_scheduler-warmup` fails, while a
+   five-epoch ramp trains. Count a run as trained when its test accuracy
+   after ten epochs exceeds 50%. A ramp of length 1 in `warmup` is a cold
+   start.
+    1. Vary the length of the ramp in `warmup` from 1 to 10 epochs at
+       `hot_lr` and report the test accuracy after ten epochs for each.
+       What is the shortest ramp that trains?
+    1. Keep the five-epoch ramp. Double the target rate from `hot_lr`
+       until the ramped run no longer trains, and halve it from `hot_lr`
+       until a cold start trains. By what factor does the ramp raise the
+       largest rate that trains? Compare that factor with the factor of 5
+       by which the ramp lowers the rate of its first epoch.
+
+1. [code] **Branching at several budgets.** ● Continue the plateau run
+   of :numref:`subsec_scheduler-branching` at the peak rate to epoch 50,
+   and branch a six-epoch decay off it at each of epochs 30, 40, and 50.
+   This is the design of :citet:`Hagele.Bakouch.Kosson.ea.2024`.
+    1. For each branch point, record the test accuracy of the plateau
+       checkpoint and of the branch after its decay, and plot both against
+       the branch point. Does the gain from the decay grow, shrink, or stay
+       constant as the branch point moves later?
+    1. For the branch at epoch 40, train a fresh warmup-plus-cosine run with
+       `CosineScheduler` over the same 46 epochs at the same peak rate.
+       Does the branched model match it? Compare the epochs spent on the
+       plateau run and its three branches with the epochs of three separate
+       cosine runs at the same budgets.
+
 1. **From noise floor to sampler.** ● Constant-rate SGD does not
    converge; its iterates fluctuate in the noise ball of
    :eqref:`eq_sgd-noise-ball`. Stochastic gradient Langevin dynamics
@@ -939,6 +944,7 @@ its relatives became widespread where the training horizon is open-ended.
        :eqref:`eq_sgd-noise-ball`. For which gradient-noise variance
        $\sigma^2$ do the two contributions have equal variance, and which
        of them dominates as $\eta$ decays?
+
 1. [code] **Linear decay to zero.** ●
    :numref:`subsec_scheduler-frontier` reports that warmup followed by
    linear decay to exactly zero matched or beat cosine and WSD in large

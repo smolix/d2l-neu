@@ -440,8 +440,8 @@ weights, so its coefficients already sum to one and there is nothing to
 correct — the early average retains substantial weight on old iterates. That
 lag is why
 practical EMAs either warm up the decay or start averaging late. Second, after the window fills, the EMA curve is higher and less variable
-than the live-weight curve in this run. It ends roughly 0.5--1 percentage
-point higher, while reducing sensitivity to the particular stopping epoch.
+than the live-weight curve in this run. It ends roughly one to two percentage
+points higher, while reducing sensitivity to the particular stopping epoch.
 The averaged model
 at a constant rate lands in the range the decayed schedules of
 :numref:`sec_scheduler` reached, consistent with the schedule-free discussion in
@@ -578,26 +578,17 @@ but this decomposition has remained useful for decades.
 
 ## Exercises
 
-1. [code] **A ten-run budget.** Using AdamW on `TinyLM`, reach a training
-   loss of 1.1 in as few steps as you can, tuning only the learning rate,
-   with a budget of ten runs. A run reaches the target at the first step
-   at which the mean of its last 100 training losses falls below 1.1. Cap
-   each run at 2,000 steps. Keep the log that
-   :numref:`subsec_practice-tuning` asks for: for every run, the learning
-   rate, the steps taken, the final loss, and the one-sentence conclusion
-   you drew before launching the next run. Report the log, not just the
-   winning configuration.
-1. [code] **Batch size and the tuned rate.** ● Rebuild `data` with a batch
-   size of 256 instead of 64. At both batch sizes, train AdamW without
-   weight decay on `TinyLM` from the same initialization at a constant
-   learning rate, sweeping
-   $\eta \in \{0.5, 1, 2, 4, 8, 16, 32\} \times 10^{-3}$. Give both batch
-   sizes the same number of training sequences: 2,000 steps at batch size
-   64 and 500 steps at batch size 256.
-    1. Where does the optimum move, and how does the shift compare with the
-       square-root and linear rules of :eqref:`eq_lr-rules`?
-    1. What would you have concluded about AdamW at batch size 256 had you
-       reused the batch-64 learning rate without retuning?
+1. **The decay timescale.** The horizon of :numref:`subsec_wd-at-scale` is
+   $\tau = B/(\eta\lambda D)$ epochs for batch size $B$ and dataset size
+   $D$, both in tokens. The DeepSeek-V3 and OLMo 2 reports in
+   :numref:`tab_practice_recipes` use sequences of 4,096 tokens and
+   training sets of about 14.8 trillion and 4 trillion tokens.
+    1. Compute $\tau$ for both rows at their peak learning rates. What
+       fraction of each dataset does the averaging horizon span?
+    1. Following :citet:`Bergsma.Dey.Gosal.ea.2025b`, what should happen to
+       $\lambda$ if the batch size were doubled and $\tau$ is to be
+       preserved, and what if instead the dataset were doubled?
+
 1. [code] **Clipping regimes.** The demonstration in
    :numref:`subsec_practice-nan` clips at $\theta = 1$.
     1. Implement global-norm clipping :eqref:`eq_practice_clip` yourself as
@@ -620,16 +611,21 @@ but this decomposition has remained useful for decades.
     *Adapted from Stanford CS336,
     [Assignment 1](https://github.com/stanford-cs336/spring2024-assignment1-basics),
     Problem gradient_clipping.*
-1. **The decay timescale.** The horizon of :numref:`subsec_wd-at-scale` is
-   $\tau = B/(\eta\lambda D)$ epochs for batch size $B$ and dataset size
-   $D$, both in tokens. The DeepSeek-V3 and OLMo 2 reports in
-   :numref:`tab_practice_recipes` use sequences of 4,096 tokens and
-   training sets of about 14.8 trillion and 4 trillion tokens.
-    1. Compute $\tau$ for both rows at their peak learning rates. What
-       fraction of each dataset does the averaging horizon span?
-    1. Following :citet:`Bergsma.Dey.Gosal.ea.2025b`, what should happen to
-       $\lambda$ if the batch size were doubled and $\tau$ is to be
-       preserved, and what if instead the dataset were doubled?
+
+1. **Logit drift.** The z-loss of PaLM :cite:`chowdhery2022palm` adds
+   $\kappa \log^2 Z$ to the cross-entropy, where $Z = \sum_j \exp(o_j)$ is
+   the softmax normalizer of the output logits $\mathbf{o}$ and
+   $\kappa = 10^{-4}$.
+    1. Show that adding the same constant $c$ to every logit leaves the
+       cross-entropy unchanged, and compute how the shift changes $\log Z$
+       and the z-loss.
+    1. Compute the gradient of $\kappa \log^2 Z$ with respect to
+       $\mathbf{o}$. In which direction does a gradient step move the
+       logits when $\log Z$ is large and positive? Show that the gradient
+       of the cross-entropy alone has no component along the all-ones
+       vector, and explain what this implies for the overall level of the
+       logits during training.
+
 1. [code] **The averaging window.** Sweep the EMA decay
    $\alpha \in \{0.9, 0.99, 0.999, 0.9999\}$ in the demonstration of
    :numref:`subsec_practice-weight-averaging` and plot the EMA's test
@@ -640,6 +636,17 @@ but this decomposition has remained useful for decades.
        for each $\alpha$.
     1. Use these numbers to explain the curves at the two ends of the
        sweep.
+
+1. [code] **A ten-run budget.** Using AdamW on `TinyLM`, reach a training
+   loss of 1.1 in as few steps as you can, tuning only the learning rate,
+   with a budget of ten runs. A run reaches the target at the first step
+   at which the mean of its last 100 training losses falls below 1.1. Cap
+   each run at 2,000 steps. Keep the log that
+   :numref:`subsec_practice-tuning` asks for: for every run, the learning
+   rate, the steps taken, the final loss, and the one-sentence conclusion
+   you drew before launching the next run. Report the log, not just the
+   winning configuration.
+
 1. **Defaults against a small budget.**
    :citet:`Schmidt.Schneider.Hennig.2021` found that trying several
    optimizers at default settings works about as well as tuning a single
@@ -654,19 +661,18 @@ but this decomposition has remained useful for decades.
        alone, beat the best default run, and by how much in final loss?
     1. Given a fixed budget of four runs on an unfamiliar problem, which
        strategy would you choose, and on what does the answer depend?
-1. **Logit drift.** The z-loss of PaLM :cite:`chowdhery2022palm` adds
-   $\kappa \log^2 Z$ to the cross-entropy, where $Z = \sum_j \exp(o_j)$ is
-   the softmax normalizer of the output logits $\mathbf{o}$ and
-   $\kappa = 10^{-4}$.
-    1. Show that adding the same constant $c$ to every logit leaves the
-       cross-entropy unchanged, and compute how the shift changes $\log Z$
-       and the z-loss.
-    1. Compute the gradient of $\kappa \log^2 Z$ with respect to
-       $\mathbf{o}$. In which direction does a gradient step move the
-       logits when $\log Z$ is large and positive? Show that the gradient
-       of the cross-entropy alone has no component along the all-ones
-       vector, and explain what this implies for the overall level of the
-       logits during training.
+
+1. [code] **Batch size and the tuned rate.** ● Rebuild `data` with a batch
+   size of 256 instead of 64. At both batch sizes, train AdamW without
+   weight decay on `TinyLM` from the same initialization at a constant
+   learning rate, sweeping
+   $\eta \in \{0.5, 1, 2, 4, 8, 16, 32\} \times 10^{-3}$. Give both batch
+   sizes the same number of training sequences: 2,000 steps at batch size
+   64 and 500 steps at batch size 256.
+    1. Where does the optimum move, and how does the shift compare with the
+       square-root and linear rules of :eqref:`eq_lr-rules`?
+    1. What would you have concluded about AdamW at batch size 256 had you
+       reused the batch-64 learning rate without retuning?
 
 <!-- slides -->
 

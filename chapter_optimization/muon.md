@@ -863,30 +863,15 @@ and suspicion of round numbers.
 
 ## Exercises
 
-1. **Adam without momentum.** ● With $\beta_1 = \beta_2 = 0$ and
-   $\epsilon \to 0$, Adam's update is $\eta\,\mathrm{sign}(\mathbf{g}_t)$,
-   the steepest step under the $\ell_\infty$ ball of :eqref:`eq_muon-ball`.
-   With $\beta_1 = 0$ but $\beta_2 > 0$ the update is no longer a sign.
-   Show that its magnitude in a coordinate is
-   $\eta\,|g_t| / \sqrt{\hat{v}_t}$. Show further that its expectation is
-   at most $\eta$ when $\hat{v}_{t-1}$ equals the stationary mean of the
-   squared gradients, and find how large a single step can become.
-1. [code] **Sign descent on the testbed.** ● Sign descent is the limit of
-   Adam with $\beta_1 = \beta_2 = 0$ and $\epsilon \to 0$.
-   :citet:`Kunstner.Chen.Lavington.ea.2023` report that on language models
-   Adam's advantage over SGD grows with the batch size, and that at large
-   batch sizes Adam behaves like sign descent with momentum.
-    1. Implement plain sign descent, which steps along
-       $-\mathrm{sign}(\mathbf{g}_t)$, and sign descent with momentum, which
-       steps along $-\mathrm{sign}(\mathbf{m}_t)$ with
-       $\mathbf{m}_t = 0.9\,\mathbf{m}_{t-1} + \mathbf{g}_t$. Run both
-       through `run_lm` on a four-point learning-rate grid, and rank their
-       best final losses against those of `adamw_lm` and of the `sgd_lm`
-       sweep of :numref:`sec_adam`.
-    1. `data` draws batches of 64 sequences. Rebuild it with
-       `batch_size=512` and repeat all four sweeps for the same 2,000
-       steps. State which gaps in the ranking change, and whether the two
-       rankings support the report.
+1. **Diagonal-entry bound.** The duality argument for
+   :eqref:`eq_muon-spectral-step` uses the claim that no entry of a matrix
+   with unit spectral norm exceeds one in absolute value.
+    1. Show that $\|\mathbf{A}\|_2 \leq 1$ implies
+       $|(\mathbf{U}^\top \mathbf{A} \mathbf{V})_{ii}| \leq 1$ for every
+       $i$.
+    1. Identify when equality holds for all $i$ simultaneously, and hence
+       when the minimizer in :eqref:`eq_muon-spectral-step` is unique.
+
 1. [code] **The RMS-matching factor.** The update :eqref:`eq_muon-update`
    rescales the orthogonalized matrix by $0.2\sqrt{\max(m, n)}$ so that
    its entries have root-mean-square size $0.2\,\eta$.
@@ -899,6 +884,7 @@ and suspicion of round numbers.
        RMS of its actual updates, per parameter tensor, over the first few
        hundred steps. Does the constant $0.2$ fit the hidden matrices, the
        embeddings, or both?
+
 1. [code] **Newton–Schulz iterations.** Rerun the tuned hybrid of
    :numref:`subsec_muon-lm-race` with `num_iters=1` and `num_iters=10` in
    `newton_schulz`, measuring the final loss and the wall-clock time per
@@ -912,6 +898,7 @@ and suspicion of round numbers.
        to this spectrum, and how many iterations a normalized singular
        value of $0.01$ needs to exceed $0.7$, the lower edge of the band
        that five iterations reach.
+
 1. [code] **Embeddings in the Muon group.** The split in
    :numref:`subsec_muon-census` keeps the token embedding table
    `token_emb` with AdamW. Its input is one-hot, so row $i$ of its
@@ -927,6 +914,7 @@ and suspicion of round numbers.
        :numref:`subsec_muon-lm-race`. Compare the best final loss with that
        of `muon_lm`, and explain the difference with your answer to the
        previous sub-item.
+
 1. [code] **Lion.** Implement Lion :cite:`Chen.Liang.Huang.ea.2023` in about
    six lines: with buffer $\mathbf{m}_t$, update
    $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\mathrm{sign}(\beta_1 \mathbf{m}_{t-1} + (1 - \beta_1)\, \mathbf{g}_t),
@@ -943,14 +931,48 @@ and suspicion of round numbers.
        $\mathbf{g}_{t-k}$ for $k \geq 1$, and explain how the choice
        $\beta_1 < \beta_2$ changes how quickly the update direction follows
        a change in the gradient.
-1. **Diagonal-entry bound.** The duality argument for
-   :eqref:`eq_muon-spectral-step` uses the claim that no entry of a matrix
-   with unit spectral norm exceeds one in absolute value.
-    1. Show that $\|\mathbf{A}\|_2 \leq 1$ implies
-       $|(\mathbf{U}^\top \mathbf{A} \mathbf{V})_{ii}| \leq 1$ for every
-       $i$.
-    1. Identify when equality holds for all $i$ simultaneously, and hence
-       when the minimizer in :eqref:`eq_muon-spectral-step` is unique.
+
+1. **Damped orthogonalization.** The derivation of
+   :eqref:`eq_muon-shampoo` keeps only the current gradient $\mathbf{G}$.
+   Let $\mathbf{G}$ be $m \times n$ with $m > n$ and rank $n$. Then
+   $\mathbf{G}\mathbf{G}^\top$ is singular, and its inverse fourth root
+   exists only as a pseudo-inverse. Shampoo :cite:`Gupta.Koren.Singer.2018`
+   starts both accumulators at $\epsilon \mathbf{I}$ with $\epsilon > 0$,
+   so without memory its update direction becomes
+   $$(\mathbf{G}\mathbf{G}^\top + \epsilon \mathbf{I})^{-1/4}\, \mathbf{G}\, (\mathbf{G}^\top\mathbf{G} + \epsilon \mathbf{I})^{-1/4}.$$
+    1. Show that this matrix has the singular vectors of $\mathbf{G}$, and
+       find the function that it applies to each singular value $\sigma$.
+    1. Unlike $\mathbf{U}\mathbf{V}^\top$, this update changes when
+       $\mathbf{G}$ is multiplied by a positive constant. Find the singular
+       values that it maps to within 1% of $1$, and compare the role of
+       $\epsilon$ with that of Adam's $\epsilon$ in :eqref:`eq_adam-update`.
+
+1. **Adam without momentum.** ● With $\beta_1 = \beta_2 = 0$ and
+   $\epsilon \to 0$, Adam's update is $\eta\,\mathrm{sign}(\mathbf{g}_t)$,
+   the steepest step under the $\ell_\infty$ ball of :eqref:`eq_muon-ball`.
+   With $\beta_1 = 0$ but $\beta_2 > 0$ the update is no longer a sign.
+   Show that its magnitude in a coordinate is
+   $\eta\,|g_t| / \sqrt{\hat{v}_t}$. Show further that its expectation is
+   at most $\eta$ when $\hat{v}_{t-1}$ equals the stationary mean of the
+   squared gradients, and find how large a single step can become.
+
+1. [code] **Sign descent on the testbed.** ● Sign descent is the limit of
+   Adam with $\beta_1 = \beta_2 = 0$ and $\epsilon \to 0$.
+   :citet:`Kunstner.Chen.Lavington.ea.2023` report that on language models
+   Adam's advantage over SGD grows with the batch size, and that at large
+   batch sizes Adam behaves like sign descent with momentum.
+    1. Implement plain sign descent, which steps along
+       $-\mathrm{sign}(\mathbf{g}_t)$, and sign descent with momentum, which
+       steps along $-\mathrm{sign}(\mathbf{m}_t)$ with
+       $\mathbf{m}_t = 0.9\,\mathbf{m}_{t-1} + \mathbf{g}_t$. Run both
+       through `run_lm` on a four-point learning-rate grid, and rank their
+       best final losses against those of `adamw_lm` and of the `sgd_lm`
+       sweep of :numref:`sec_adam`.
+    1. `data` draws batches of 64 sequences. Rebuild it with
+       `batch_size=512` and repeat all four sweeps for the same 2,000
+       steps. State which gaps in the ranking change, and whether the two
+       rankings support the report.
+
 1. [code] **Spectral concentration of gradients.** ● Equation
    :eqref:`eq_muon-spectral-step` equalizes singular directions on the
    grounds that a training gradient's singular values are dominated by a
@@ -966,20 +988,6 @@ and suspicion of round numbers.
        shape. Does the concentration grow or shrink over training, and do
        your measurements support the premise that a few large singular
        values dominate?
-1. **Damped orthogonalization.** The derivation of
-   :eqref:`eq_muon-shampoo` keeps only the current gradient $\mathbf{G}$.
-   Let $\mathbf{G}$ be $m \times n$ with $m > n$ and rank $n$. Then
-   $\mathbf{G}\mathbf{G}^\top$ is singular, and its inverse fourth root
-   exists only as a pseudo-inverse. Shampoo :cite:`Gupta.Koren.Singer.2018`
-   starts both accumulators at $\epsilon \mathbf{I}$ with $\epsilon > 0$,
-   so without memory its update direction becomes
-   $$(\mathbf{G}\mathbf{G}^\top + \epsilon \mathbf{I})^{-1/4}\, \mathbf{G}\, (\mathbf{G}^\top\mathbf{G} + \epsilon \mathbf{I})^{-1/4}.$$
-    1. Show that this matrix has the singular vectors of $\mathbf{G}$, and
-       find the function that it applies to each singular value $\sigma$.
-    1. Unlike $\mathbf{U}\mathbf{V}^\top$, this update changes when
-       $\mathbf{G}$ is multiplied by a positive constant. Find the singular
-       values that it maps to within 1% of $1$, and compare the role of
-       $\epsilon$ with that of Adam's $\epsilon$ in :eqref:`eq_adam-update`.
 
 <!-- slides -->
 

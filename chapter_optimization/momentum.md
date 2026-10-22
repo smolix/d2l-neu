@@ -129,7 +129,7 @@ minibatch gradients the same leaky average additionally smooths the sampling
 noise across steps. The velocity is therefore less noisy than a single
 minibatch gradient, at no extra gradient evaluations. Whether the iterates
 become less noisy as well depends on how $\eta$ is adjusted along with
-$\beta$, which Exercise 7 examines.
+$\beta$, which Exercise :exref:`ex_momentum-momentum-under-minibatch-noise` examines.
 
 ### The Timescale of $\beta$
 :label:`subsec_momentum-timescale`
@@ -347,7 +347,7 @@ in :numref:`subsec_mdl-momentum-acceleration`.
 
 In frameworks, Nesterov momentum is one flag. Both PyTorch and Optax
 implement a rewrite of :eqref:`eq_nesterov` that evaluates the gradient at
-the parameters it stores, so no extra gradient evaluation is needed. Exercise 4
+the parameters it stores, so no extra gradient evaluation is needed. Exercise :exref:`ex_momentum-two-forms-nesterov-momentum`
 works out how those parameters relate to the iterates of :eqref:`eq_nesterov`:
 
 ```{.python .input #momentum-nesterov-momentum-2}
@@ -399,25 +399,29 @@ of this chapter.
     1. Compare the fastest $\beta$ at each stable $\eta$ with the
        $\beta^\star$ of :numref:`subsec_momentum_acceleration` for
        $\kappa = 20$, and explain each learning rate at which they differ.
-1. **Stability of momentum.** ● The effective-step reading of
-   :numref:`subsec_momentum-timescale` suggests that raising $\beta$ forces
-   $\eta$ down. Does the largest stable $\eta$ in the grid of the previous
-   problem behave that way? Derive the stability condition of
-   :eqref:`eq_momentum` for a single eigendirection with curvature
-   $\lambda$ and reconcile the two.
-1. [code] **Many eigenvalues.** ● Consider
-   $f(\mathbf{x}) = \frac{1}{2} \sum_{i=1}^{10} \lambda_i x_i^2$ with
-   $\lambda_i = 2^{-i}$, started from $x_i = 1$. Let $L$ and $\mu$ be the
-   largest and the smallest $\lambda_i$, and let $\kappa = L/\mu$.
-    1. Run gradient descent at $\eta = 2/(L + \mu)$, the learning rate that
-       minimizes its worst-case contraction factor
-       $\max_i |1 - \eta\lambda_i|$. Run heavy-ball momentum at
-       $\eta = 4/(\sqrt{L} + \sqrt{\mu})^2$ with the $\beta^\star$ of
-       :numref:`subsec_momentum_acceleration`. Plot $|x_{i,t}|$ for every
-       coordinate on a logarithmic scale.
-    1. Which coordinates limit the convergence of each method? Compare the
-       ratio of the iteration counts until $\|\mathbf{x}_t\| \leq 10^{-6}$
-       with $\sqrt{\kappa}$.
+   :exlabel:`ex_momentum-momentum-learning-rate-together`
+
+1. [code] **Critical damping.** For $f(x) = \frac{\lambda}{2} x^2$ at a
+   fixed learning rate with $\eta\lambda = 0.1$, sweep $\beta$ over
+   $[0, 1)$ in steps of $0.02$ and measure the number of iterations after
+   which $|x_t|$ stays at or below $10^{-6} |x_0|$.
+    1. Locate the minimizing $\beta$ and compare it with the critical value
+       $\beta^\star = (1 - \sqrt{\eta\lambda})^2$ at which the recurrence
+       :eqref:`eq_momentum` for this mode is critically damped.
+    1. Describe the iterates on either side of $\beta^\star$ and match them
+       with the over-damped and under-damped regimes of
+       :numref:`fig_opt_critical_damping`.
+
+1. **Velocity noise.** Let
+   $\mathbf{g}_t = \mathbf{g} + \boldsymbol{\xi}_t$, where the noise
+   $\boldsymbol{\xi}_t$ is independent across steps, has zero mean, and has
+   variance $\sigma^2$ per coordinate. Show that the stationary mean of
+   $\mathbf{v}_t$ in :eqref:`eq_momentum` is $\mathbf{g}/(1-\beta)$ and its
+   stationary variance is $\sigma^2/(1-\beta^2)$. Conclude that the
+   noise-to-signal ratio of the velocity is $\sqrt{(1-\beta)/(1+\beta)}$
+   times that of a single gradient.
+   :exlabel:`ex_momentum-velocity-noise`
+
 1. **Two forms of Nesterov momentum.** Library implementations of Nesterov
    momentum store a parameter vector $\mathbf{y}_t$ and evaluate the
    gradient there, $\mathbf{g}_t = \nabla f(\mathbf{y}_{t-1})$. Starting
@@ -432,26 +436,31 @@ of this chapter.
     1. A checkpoint saves the library's parameters $\mathbf{y}_t$. Which
        point of :eqref:`eq_nesterov` does it store, and what else must be
        saved to recover $\mathbf{x}_t$?
-1. [code] **Critical damping.** For $f(x) = \frac{\lambda}{2} x^2$ at a
-   fixed learning rate with $\eta\lambda = 0.1$, sweep $\beta$ over
-   $[0, 1)$ in steps of $0.02$ and measure the number of iterations after
-   which $|x_t|$ stays at or below $10^{-6} |x_0|$.
-    1. Locate the minimizing $\beta$ and compare it with the critical value
-       $\beta^\star = (1 - \sqrt{\eta\lambda})^2$ at which the recurrence
-       :eqref:`eq_momentum` for this mode is critically damped.
-    1. Describe the iterates on either side of $\beta^\star$ and match them
-       with the over-damped and under-damped regimes of
-       :numref:`fig_opt_critical_damping`.
-1. **Velocity noise.** Let
-   $\mathbf{g}_t = \mathbf{g} + \boldsymbol{\xi}_t$, where the noise
-   $\boldsymbol{\xi}_t$ is independent across steps, has zero mean, and has
-   variance $\sigma^2$ per coordinate. Show that the stationary mean of
-   $\mathbf{v}_t$ in :eqref:`eq_momentum` is $\mathbf{g}/(1-\beta)$ and its
-   stationary variance is $\sigma^2/(1-\beta^2)$. Conclude that the
-   noise-to-signal ratio of the velocity is $\sqrt{(1-\beta)/(1+\beta)}$
-   times that of a single gradient.
-1. [code] **Momentum under minibatch noise.** ● Keep the noise model of the
-   previous problem, but let the gradient depend on the iterate: on
+   :exlabel:`ex_momentum-two-forms-nesterov-momentum`
+
+1. **Stability of momentum.** ● The effective-step reading of
+   :numref:`subsec_momentum-timescale` suggests that raising $\beta$ forces
+   $\eta$ down. Does the largest stable $\eta$ in the grid of
+   problem :exref:`ex_momentum-momentum-learning-rate-together` behave that way? Derive the stability condition of
+   :eqref:`eq_momentum` for a single eigendirection with curvature
+   $\lambda$ and reconcile the two.
+
+1. [code] **Many eigenvalues.** ● Consider
+   $f(\mathbf{x}) = \frac{1}{2} \sum_{i=1}^{10} \lambda_i x_i^2$ with
+   $\lambda_i = 2^{-i}$, started from $x_i = 1$. Let $L$ and $\mu$ be the
+   largest and the smallest $\lambda_i$, and let $\kappa = L/\mu$.
+    1. Run gradient descent at $\eta = 2/(L + \mu)$, the learning rate that
+       minimizes its worst-case contraction factor
+       $\max_i |1 - \eta\lambda_i|$. Run heavy-ball momentum at
+       $\eta = 4/(\sqrt{L} + \sqrt{\mu})^2$ with the $\beta^\star$ of
+       :numref:`subsec_momentum_acceleration`. Plot $|x_{i,t}|$ for every
+       coordinate on a logarithmic scale.
+    1. Which coordinates limit the convergence of each method? Compare the
+       ratio of the iteration counts until $\|\mathbf{x}_t\| \leq 10^{-6}$
+       with $\sqrt{\kappa}$.
+
+1. [code] **Momentum under minibatch noise.** ● Keep the noise model of
+   problem :exref:`ex_momentum-velocity-noise`, but let the gradient depend on the iterate: on
    $f(x) = \frac{\lambda}{2} x^2$, take $g_t = \lambda x_{t-1} + \xi_t$.
     1. Compare plain SGD at learning rate $\alpha$ with momentum
        $\beta = 0.9$ at $\eta = \alpha (1-\beta)$, which keeps the
@@ -459,7 +468,7 @@ of this chapter.
        ratio of the two stationary variances of $x_t$ for
        $\alpha\lambda \in \{0.05, 0.2\}$, by simulation or by solving for the
        stationary covariance of $(x_t, v_t)$. Does the reduction of the
-       velocity's noise-to-signal ratio from the previous problem carry over
+       velocity's noise-to-signal ratio from problem :exref:`ex_momentum-velocity-noise` carry over
        to the iterate? Explain the result.
     1. On the airfoil harness, rebuild `data_iter` and `feature_dim` with
        `d2l.get_data_ch11(batch_size=b)` for $b \in \{1, 10, 100\}$. Run
@@ -468,6 +477,7 @@ of this chapter.
        $\eta/(1-\beta) = 0.05$. Report the final loss of each run and the
        spread of the recorded losses over its last epoch, and compare the
        effect of momentum with the prediction of the first item.
+   :exlabel:`ex_momentum-momentum-under-minibatch-noise`
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1070)

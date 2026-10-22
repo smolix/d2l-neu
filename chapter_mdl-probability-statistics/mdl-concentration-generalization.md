@@ -255,10 +255,11 @@ sub-Gaussian with proxy $(b-a)^2/4$; that is Hoeffding's lemma. And a
 *Rademacher* variable, a uniform random sign $\varepsilon\in\{-1,+1\}$, is
 sub-Gaussian with proxy $1$: $E[e^{\lambda\varepsilon}]=\cosh\lambda\le
 e^{\lambda^2/2}$, a term-by-term comparison of Taylor series left as exercise
-1. Sub-Gaussianity is closed under averaging: if $X_1,\ldots,X_n$ are
-independent with proxy $\sigma^2$, then $\bar X$ is sub-Gaussian with proxy
-$\sigma^2/n$ (the MGF product argument again), so *every* sub-Gaussian
-average concentrates at the Hoeffding rate.
+:exref:`ex_mdl-concentration-generalization-random-signs`. Sub-Gaussianity
+is closed under averaging: if $X_1,\ldots,X_n$ are independent with proxy
+$\sigma^2$, then $\bar X$ is sub-Gaussian with proxy $\sigma^2/n$ (the MGF
+product argument again), so *every* sub-Gaussian average concentrates at the
+Hoeffding rate.
 
 Not everything is sub-Gaussian. The *square* of a Gaussian (a $\chi^2$
 variable, hence squared norms of Gaussian vectors) has a right tail decaying
@@ -272,6 +273,7 @@ $$
 E\bigl[e^{\lambda (X - E[X])}\bigr] \le \exp\!\left(\frac{\lambda^2\nu^2}{2}\right)
 \qquad\textrm{for } |\lambda| \le \frac{1}{\alpha},
 $$
+:eqlabel:`eq_mdl-subexponential`
 
 a Gaussian-type MGF bound restricted to a window of $\lambda$. The Chernoff
 optimization then splits at the window's edge: small deviations use an
@@ -297,6 +299,7 @@ do. We will lean on exactly this small-deviation sharpness when we prove norm
 concentration below.
 
 ### Comparing Tail Bounds Numerically
+:label:`subsec_mdl-tail-bounds-numerical`
 
 For a fair coin, we can compute the
 tail $P(|\hat p - \tfrac12| \ge 0.1)$ *exactly* (a finite binomial
@@ -340,7 +343,7 @@ miss probability of
 $2.5\%$, off by *eight orders of magnitude*; at $n=5{,}000$ the gap has grown
 to about forty-three orders. The log-scale plot makes the geometry plain: the
 exact tail
-and Hoeffding's bound are parallel straight lines (exponential decay;
+and Hoeffding's bound are nearly parallel straight lines (exponential decay;
 Hoeffding's exponent $2t^2=0.02$ is close to the optimal rate,
 which *large-deviations theory* identifies as the Kullback--Leibler divergence
 $\mathrm{KL}(0.6\,\|\,0.5)\approx 0.0201$, an information-theoretic measure of
@@ -380,12 +383,13 @@ directly. They are, however, sub-exponential, precisely the small-$\lambda$
 regime defined above. Its MGF is
 explicit, $E[e^{\lambda(x_i^2-1)}] = e^{-\lambda}/\sqrt{1-2\lambda}$ for
 $\lambda<\tfrac12$. A series comparison
-(see :cite:`Vershynin.2018`, §2.7) shows
+(exercise :exref:`ex_mdl-concentration-generalization-chi-square-tail`) shows
 
 $$
 E\bigl[e^{\lambda (x_i^2 - 1)}\bigr] \le e^{2\lambda^2}
 \qquad\textrm{for } |\lambda| \le \tfrac14 .
 $$
+:eqlabel:`eq_mdl-chi2-mgf`
 
 This is sub-exponentiality with $\nu^2=4$ and $\alpha=4$. Chernoff with this
 bound gives, for any $0<\lambda\le\tfrac14$,
@@ -431,12 +435,13 @@ standard Gaussians (the former are bounded, the latter sub-Gaussian with
 proxy $1$ via :eqref:`eq_mdl-subgaussian`; either property suffices below).
 The inner product $\langle\mathbf x,\mathbf u\rangle=\sum_i
 u_i x_i$ is a sum of independent terms, the $i$-th bounded by $|u_i|$, and the
-general Hoeffding inequality for non-identical ranges (exercise 2) gives
+general Hoeffding inequality for non-identical ranges (exercise :exref:`ex_mdl-concentration-generalization-proof-eqref-eq-mdl`) gives
 
 $$
 P\bigl(|\langle\mathbf x,\mathbf u\rangle| \ge s\bigr)
  \le 2\exp\!\left(-\frac{s^2}{2\sum_i u_i^2}\right) = 2 e^{-s^2/2},
 $$
+:eqlabel:`eq_mdl-inner-product-tail`
 
 since $\sum_i u_i^2=1$. The inner product with any fixed direction is $O(1)$,
 while the unit-variance coordinates pin the norm of $\mathbf x$ to
@@ -454,6 +459,7 @@ $e^{d\varepsilon^2/4}$, so *random directions come nearly orthogonal by
 default, exponentially many at a time*.
 
 ### Three Consequences for Deep Learning
+:label:`subsec_mdl-concentration-dl`
 
 **Initialization scales.** LeCun and He initialization
 :cite:`He.Zhang.Ren.ea.2015` draw the weight rows of
@@ -509,6 +515,7 @@ sphere rather than the chord. The shell is also why the MVN cell of
 measuring means; the cell below measures the *whole distribution*.
 
 ### Measuring the Shell
+:label:`subsec_mdl-measuring-shell`
 
 The distributions chapter verified the *means* of the norm ratio and cosine.
 We now estimate the fraction of the distribution inside the shell
@@ -532,7 +539,7 @@ for d in (2, 20, 200, 2000):
 In $d=2$ the "shell" holds under $15\%$ of the mass: low dimension really is
 a fuzzy ball, and the nearest and farthest of $200$ points differ by a factor
 of $30$. By $d=200$ the same $\pm10\%$ shell already captures $95\%$ of the
-mass, close to what :eqref:`eq_mdl-norm-concentration`'s Gaussian-rate reading
+mass, close to what a Gaussian approximation of the norm
 predicts ($\pm 2$ standard deviations at $\sigma\approx 1/\sqrt{2d}=0.05$),
 and at $d=2000$ all ten thousand sampled points lie within the shell. The
 nearest-neighbor contrast decreases from $29.4$ to $0.08$: in $d=2000$ the
@@ -689,7 +696,9 @@ statement *in expectation* to the high-probability form
 :cite:`McDiarmid.1989`, the extension of
 Hoeffding from sums to any function that no single coordinate can move much
 (here, changing one sample point moves the supremum by at most $1/n$); it is
-stated in exercise 3, where it also puts an error bar on the bootstrap.
+stated in exercise
+:exref:`ex_mdl-concentration-generalization-mcdiarmid-s-inequality`, which
+carries out this step.
 Sanity-check the theorem at its ends. A singleton class has $\widehat{\mathfrak R}=0$ (the expectation of
 $\frac1n\sum\varepsilon_i f(\mathbf x_i)$ is $0$ with nothing to optimize) and
 :eqref:`eq_mdl-rademacher-bound` collapses to one-sided Hoeffding. A finite
@@ -801,6 +810,7 @@ last section studies a smaller random-features model in which solution norm and
 conditioning can be computed directly.
 
 ### Coin Flips in Code
+:label:`subsec_mdl-coin-flips-code`
 
 Both phenomena can be measured. First we estimate
 $\widehat{\mathfrak R}_S$ for the norm-bounded linear class by Monte Carlo:
@@ -841,12 +851,12 @@ fifty unit-norm points can fake a correlation of about $0.14$ with pure noise,
 and no more: its empirical risks are meaningful. The interpolating class, by
 contrast, scores a correlation of exactly $1.0000$ on every one of the two
 thousand sign patterns; it is the all-functions endpoint of the theorem, in
-twenty features and fifty points. The norm it needed is printed next to it:
+a hundred features and fifty points. The norm it needed is printed next to it:
 the
-sign-fitting solutions need norm about $1.0$ on features of norm about $10$,
-so the smallest linear class containing them has capacity bound
-$Br/\sqrt n\approx 1.41 > 1$, vacuous, exactly as the previous subsection
-said it must be. The two prints summarize the section: the capacity that
+sign-fitting solutions need norm about $1.0$ on features of norm about $10$
+(both averaged over fits and rows in the print), so the smallest linear class
+containing them has capacity bound $Br/\sqrt n$ of at least $1.41 > 1$,
+vacuous, exactly as the previous subsection said it must be. The two prints summarize the section: the capacity that
 matters is the norm the fit actually uses on the data.
 
 ## Interpolation and Double Descent
@@ -919,6 +929,7 @@ norm as a diagnostic correlated with test error, not as a complete capacity
 certificate.
 
 ### A Numerical Double-Descent Example
+:label:`subsec_mdl-double-descent-example`
 
 We now compute the complete double-descent curve. We use forty training points
 from a noisy linear teacher in fifteen dimensions; ReLU random features with
@@ -980,6 +991,7 @@ entire experiment is the most overparameterized one, fitting noisy data
 *exactly*, with ten times more parameters than data points.
 
 ### Benign Overfitting
+:label:`subsec_mdl-benign-overfitting`
 
 One puzzle remains inside the mechanism. The $p=400$ model interpolates its
 noisy labels (it reproduces every corrupted $y_i$ exactly), yet its test
@@ -1048,70 +1060,395 @@ predicts a given network's test error from first principles remains open.
 
 ## Exercises
 
-1. Prove that a Rademacher variable is sub-Gaussian with variance proxy $1$:
-   show $\cosh\lambda\le e^{\lambda^2/2}$ by comparing the two Taylor series
-   term by term ($(2k)!\ge 2^k k!$). Conclude via the Chernoff method that an
-   average of $n$ fair random signs satisfies
-   $P(|\bar\varepsilon|\ge t)\le 2e^{-nt^2/2}$.
-2. The proof of :eqref:`eq_mdl-hoeffding` assumed a common range $[a,b]$.
-   Redo it for independent $X_i\in[a_i,b_i]$ to obtain
-   $P(|\bar X-E\bar X|\ge t)\le
-   2\exp\bigl(-2n^2t^2/\sum_i(b_i-a_i)^2\bigr)$, and check that it reduces to
-   :eqref:`eq_mdl-hoeffding` when the ranges agree. This weighted version is
-   the one the near-orthogonality argument used, with weights $u_i$.
-3. **McDiarmid's inequality** :cite:`McDiarmid.1989` extends Hoeffding from
-   sums to arbitrary
-   functions with *bounded differences*: if changing the $i$-th argument of
-   $g(x_1,\ldots,x_n)$ moves its value by at most $c_i$, then
-   $P(|g - E[g]|\ge t)\le 2\exp\bigl(-2t^2/\sum_i c_i^2\bigr)$. Take this
-   statement on faith (its proof needs martingales). (i) Recover Hoeffding's
-   inequality from it. (ii) The bootstrap of :numref:`sec_mdl-statistics`
-   computes a statistic of $n$ data points; argue that if that statistic has
-   bounded differences $c_i=c/n$, the bootstrap's *ideal* target (the
-   statistic's deviation from its mean) already concentrates at rate
-   $e^{-2nt^2/c^2}$, and check the median of a sample does *not* have small
-   bounded differences in general.
-4. Compute the Rademacher complexity of the $\ell_1$-ball class
-   $\mathcal F=\{\mathbf x\mapsto\langle\mathbf w,\mathbf x\rangle:
-   \|\mathbf w\|_1\le B\}$ on data with $\|\mathbf x_i\|_\infty\le r$. The
-   supremum step now uses the duality between the $\ell_1$ and $\ell_\infty$
-   norms, giving $\frac Bn E\|\sum_i\varepsilon_i\mathbf x_i\|_\infty$; bound
-   the expected max of $d$ sub-Gaussian coordinates to conclude
-   $\widehat{\mathfrak R}_S\le Br\sqrt{2\log(2d)/n}$. Why does dimension now
-   enter, and only logarithmically?
-5. Rerun the double-descent sweep with ridge regression,
-   $\mathbf w_\lambda=(\boldsymbol\Phi^\top\boldsymbol\Phi+
-   \lambda\mathbf I)^{-1}\boldsymbol\Phi^\top\mathbf y$, for
-   $\lambda\in\{10^{-8},10^{-4},10^{-2},1\}$. Watch the interpolation peak
-   melt as $\lambda$ grows, and explain why using
-   :numref:`sec_mdl-numerical-stability-conditioning`: the ridge term lifts
-   $\sigma_{\min}^2$ to $\sigma_{\min}^2+\lambda$, capping the noise
-   amplification. Verify numerically that as $\lambda\to0$ the ridge solution
-   converges to the pseudoinverse (minimum-norm) solution.
-6. In the double-descent experiment, vary the label noise
-   ($\textrm{noise}\in\{0,\ 0.1,\ 0.5,\ 1.0\}$) and measure the height and
-   location of the peak. Confirm that the peak stays at $p=n$ (its location
-   is a rank condition, independent of the labels) while its height grows
-   with the noise variance, and explain both observations with the
-   $\sigma_{\min}$ mechanism. What happens to the peak when
-   $\textrm{noise}=0$, and why is it not entirely gone?
-7. Use :eqref:`eq_mdl-norm-concentration` to find the smallest dimension $d$
-   at which the shell $(1\pm 0.01)\sqrt d$ is guaranteed to hold at least
-   $99\%$ of a standard Gaussian's mass, then estimate the true smallest $d$
-   by simulation. How large is the gap, and which side of the story (rate or
-   constant) does it come from?
-8. An analyst fixes a pool of $m$ models *before* seeing the data, evaluates
-   all of them on one validation set of $n$ points
-   (losses in $[0,1]$), and reports the best score. Apply
-   :eqref:`eq_mdl-finite-class` with $\mathcal F$ the pre-registered pool to
-   bound how *optimistic* the reported score can be, and evaluate the bound
-   at $m=10$, $10^3$, and $10^6$ with $n=10{,}000$ and $\delta=0.05$. At what
-   $m$ does the guaranteed accuracy degrade past $\pm 0.02$? Compare with the
-   Bonferroni discussion of multiple testing in :numref:`sec_mdl-statistics`:
-   which bound is doing the same job, and where do the two analyses differ?
-   Finally, explain why none of this applies verbatim when each model is
-   chosen after seeing the previous models' scores
-   :cite:`Dwork.Feldman.Hardt.ea.2015`.
+1. **Hoeffding with unequal ranges.** The proof of :eqref:`eq_mdl-hoeffding`
+   assumed that every $X_i$ takes values in the same interval $[a,b]$.
+    1. Redo the proof for independent $X_i\in[a_i,b_i]$ and show that
+
+       $$P\bigl(|\bar X-E[\bar X]|\ge t\bigr)\le 2\exp\left(-\frac{2n^2t^2}{\sum_{i=1}^n(b_i-a_i)^2}\right).$$
+
+       Check that this bound reduces to :eqref:`eq_mdl-hoeffding` when all
+       ranges agree.
+    1. Let $x_1,\ldots,x_d$ be independent uniform random signs and let
+       $\mathbf u\in\mathbb R^d$ be a unit vector. Apply the bound of (a)
+       to the sum $\sum_i u_i x_i$ and derive
+       :eqref:`eq_mdl-inner-product-tail`.
+   :exlabel:`ex_mdl-concentration-generalization-proof-eqref-eq-mdl`
+
+1. **Sub-Gaussian random signs.** A Rademacher variable $\varepsilon$ takes
+   the values $-1$ and $+1$ with probability $\tfrac12$ each, so that
+   $E[e^{\lambda\varepsilon}]=\cosh\lambda$.
+    1. Show that $\cosh\lambda\le e^{\lambda^2/2}$ for every
+       $\lambda\in\mathbb R$ by comparing the two Taylor series term by term.
+       Use $(2k)!\ge 2^k k!$.
+    1. Conclude with the Chernoff method :eqref:`eq_mdl-chernoff` that the
+       average $\bar\varepsilon$ of $n$ independent random signs satisfies
+       $P(|\bar\varepsilon|\ge t)\le 2e^{-nt^2/2}$.
+    1. Hoeffding's lemma :eqref:`eq_mdl-hoeffding-lemma` with $[a,b]=[-1,1]$
+       also gives a variance proxy for $\varepsilon$. Compare it with (a).
+       Expand $\log\cosh\lambda$ to second order around $\lambda=0$, and
+       explain why no constant smaller than $\tfrac18$ can replace the
+       $\tfrac18$ in :eqref:`eq_mdl-hoeffding-lemma` for all bounded
+       variables.
+   :exlabel:`ex_mdl-concentration-generalization-random-signs`
+
+1. [code] **Bounds for rare errors.** Chebyshev's inequality uses the
+   variance of the summands, Hoeffding's inequality :eqref:`eq_mdl-hoeffding`
+   uses only their range, and Bernstein's inequality :eqref:`eq_mdl-bernstein`
+   uses both. In :numref:`subsec_mdl-tail-bounds-numerical`, Chebyshev's
+   bound is slightly smaller than Hoeffding's for a fair coin at $n=100$.
+    1. For the fair coin, write both bounds on $P(|\hat p-\tfrac12|\ge t)$
+       as functions of $u=nt^2$ alone. Find numerically the value of $u$
+       beyond which Hoeffding's bound is the smaller one, and the common
+       value of the two bounds there. Which bound certifies a miss
+       probability of $0.05$ with fewer flips?
+    1. A classifier has true error rate $p=0.01$, and $\hat p$ is its error
+       rate on $n=1{,}000$ independent test examples. Generalize
+       `exact_tail` to a coin with bias $p$ and compute
+       $P(|\hat p-p|\ge 0.01)$ exactly. Compare it with the bounds of
+       Chebyshev, Hoeffding, and Bernstein, the last with $\sigma^2=p(1-p)$
+       and $M=1-p$.
+    1. How many test examples does each of the three bounds require to
+       guarantee $|\hat p-p|\le 0.005$ with probability at least $0.95$?
+       Bernstein's bound needs the variance $p(1-p)$, which depends on the
+       unknown error rate. Why does it suffice to know that $p\le 0.02$?
+   :exlabel:`ex_mdl-concentration-generalization-rare-errors`
+
+1. [code] **Guaranteed shell mass.** By :eqref:`eq_mdl-norm-concentration`,
+   at least a fraction $1-2e^{-d\varepsilon^2/8}$ of the mass of
+   $\mathcal N(\mathbf 0,\mathbf I_d)$ lies in the shell of radii
+   $(1\pm\varepsilon)\sqrt d$.
+    1. Evaluate this guarantee for $\varepsilon=0.1$ at the dimensions
+       $d\in\{2,20,200,2000\}$ of :numref:`subsec_mdl-measuring-shell` and
+       compare it with the measured shell masses. At which of these
+       dimensions does the bound say anything at all?
+    1. Find the smallest $d$ for which the bound guarantees $99\%$ of the
+       mass in the shell $(1\pm 0.01)\sqrt d$. Estimate the true smallest
+       such $d$ by simulation. Sampling $\|\mathbf x\|^2$ directly from its
+       $\chi^2_d$ distribution with `rng.chisquare` avoids storing
+       $d$-dimensional vectors.
+    1. The standard deviation of $\|\mathbf x\|/\sqrt d$ is close to
+       $1/\sqrt{2d}$. Use it to write a Gaussian approximation of the tail
+       that :eqref:`eq_mdl-norm-concentration` bounds, and compare its
+       exponent with that of the bound. How much of the ratio between the two
+       values of $d$ in (b) does the constant in the exponent explain?
+       What accounts for the rest?
+   :exlabel:`ex_mdl-concentration-generalization-shell-mass`
+
+1. [code] **Distances in structured data.** The nearest-neighbor contrast
+   $(d_{\max}-d_{\min})/d_{\min}$ of $200$ standard Gaussian points around a
+   query collapses as the dimension grows
+   (:numref:`subsec_mdl-measuring-shell`), and
+   :numref:`subsec_mdl-concentration-dl` argues that real embeddings escape
+   this collapse because they lie near a low-dimensional set.
+    1. In ambient dimension $d=2000$, draw $201$ points
+       $\mathbf x=\mathbf A\mathbf z$ with $\mathbf z\sim\mathcal N(\mathbf
+       0,\mathbf I_k)$, where $\mathbf A$ is a $d\times k$ matrix with
+       orthonormal columns, for example from `onp.linalg.qr`. Measure the
+       median contrast over $20$ draws for $k\in\{2,5,20,200,2000\}$ and
+       compare it with the values of :numref:`subsec_mdl-measuring-shell`.
+       Which dimension does the contrast measure?
+    1. Fix $k=5$ and add isotropic noise $\sigma\boldsymbol\xi$ with
+       $\boldsymbol\xi\sim\mathcal N(\mathbf 0,\mathbf I_d)$ to every point,
+       for $\sigma\in\{0.01,0.03,0.1,0.3\}$. Compare the expected squared
+       norms of signal and noise, $k$ and $d\sigma^2$. Near which noise level
+       does the contrast approach that of isotropic data in $d=2000$? What
+       does this imply for nearest-neighbor retrieval with embeddings whose
+       noise is spread over all coordinates?
+   :exlabel:`ex_mdl-concentration-generalization-structured-distances`
+
+1. **Latent interpolation.** A generative model decodes latent codes
+   $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$ with $d=512$. Let
+   $\mathbf z_1,\mathbf z_2$ be two independent codes and
+   $\mathbf z(t)=(1-t)\mathbf z_1+t\mathbf z_2$ for $t\in[0,1]$ their linear
+   interpolation.
+    1. Find the distribution of $\mathbf z(t)$ and the approximate value of
+       $\|\mathbf z(t)\|$. At which $t$ is the norm smallest?
+    1. Use :eqref:`eq_mdl-norm-concentration` to bound the probability that
+       the midpoint $\mathbf z(\tfrac12)$ has norm at least $0.9\sqrt d$,
+       that is, reaches the shell $(1\pm 0.1)\sqrt d$ in which typical codes
+       lie.
+    1. Spherical interpolation :cite:`White.2016` replaces the chord by the
+       arc
+
+       $$\mathbf s(t)=\frac{\sin((1-t)\theta)}{\sin\theta}\,\mathbf z_1+\frac{\sin(t\theta)}{\sin\theta}\,\mathbf z_2,$$
+
+       where $\theta$ is the angle between $\mathbf z_1$ and $\mathbf z_2$.
+       Show that $\|\mathbf s(t)\|=\rho$ for all $t$ when
+       $\|\mathbf z_1\|=\|\mathbf z_2\|=\rho$. Which value does $\theta$
+       take approximately for $d=512$, and why?
+   :exlabel:`ex_mdl-concentration-generalization-latent-interpolation`
+
+1. [code] **Pre-registered model pool.** An analyst fixes $m$ models before
+   the validation data are drawn, evaluates all of them on $n=10{,}000$
+   validation points with losses in $[0,1]$, and reports the smallest
+   validation loss.
+    1. Use :eqref:`eq_mdl-finite-class` with $\delta=0.05$ to bound how far
+       the reported validation loss can lie below the true loss of the
+       reported model. Beyond which $m$ does this bound exceed $0.02$? On the
+       same event, how far can the true loss of the reported model exceed the
+       smallest true loss in the pool?
+    1. Simulate a pool in which each model's errors on the validation points
+       are independent fair coin flips, so that every true loss is
+       $\tfrac12$. For $m\in\{10,10^3,10^4\}$, estimate the $95\%$ quantile
+       of the optimism $\tfrac12-(\textrm{reported loss})$ over $200$
+       repetitions and compare it with the bound of (a) at the same $m$.
+       Drawing each validation loss as `rng.binomial(n, 0.5) / n` avoids
+       storing the predictions.
+    1. Suppose instead that the $m$ models agree with each other on all but
+       $1\%$ of the validation points. Why is the bound of (a) then
+       loose? Which step of the proof of :eqref:`eq_mdl-finite-class` is
+       responsible? Under which name does the same step appear in
+       :numref:`sec_mdl-statistics`?
+   :exlabel:`ex_mdl-concentration-generalization-pre-registered-pool`
+
+1. [code] **Chernoff bound for coins.** ● Let $\hat p$ be the fraction of
+   heads in $n$ independent flips of a coin with bias $p$, and let $a>p$.
+    1. Apply the Chernoff method :eqref:`eq_mdl-chernoff` to $n\hat p$, whose
+       moment generating function is $(1-p+pe^\lambda)^n$. Optimize over
+       $\lambda$ and show that $P(\hat p\ge a)\le e^{-n\,\mathrm{KL}(a\|p)}$,
+       where
+       $\mathrm{KL}(a\|p)=a\log\frac ap+(1-a)\log\frac{1-a}{1-p}$.
+    1. Show that $\mathrm{KL}(a\|p)\ge 2(a-p)^2$ by examining the second
+       derivative in $a$, so that the bound of (a) is never weaker than
+       one side of Hoeffding's bound. Evaluate both exponents for
+       $p=\tfrac12$ and $a=0.6$.
+    1. Add the two-sided bound $2e^{-n\,\mathrm{KL}(0.6\|0.5)}$ as a column
+       to the table of :numref:`subsec_mdl-tail-bounds-numerical`, for
+       $n\in\{10,100,1000,5000\}$. The ratio of the exact tail to this bound
+       still decreases with $n$. How does it scale with $n$, and what does
+       the scaling say about the factor that the Chernoff method loses?
+   :exlabel:`ex_mdl-concentration-generalization-chernoff-coins`
+
+1. **Chi-square tail.** ● The proof of :eqref:`eq_mdl-norm-concentration`
+   rests on the bound :eqref:`eq_mdl-chi2-mgf` for $x^2-1$ with
+   $x\sim\mathcal N(0,1)$, which the proof states without derivation.
+    1. Show that $E[e^{\lambda(x^2-1)}]=e^{-\lambda}/\sqrt{1-2\lambda}$ for
+       $\lambda<\tfrac12$ by completing the square in the Gaussian integral.
+    1. Expand $\log E[e^{\lambda(x^2-1)}]$ into a power series in $2\lambda$
+       and prove :eqref:`eq_mdl-chi2-mgf`. The series starts at the quadratic
+       term.
+    1. The proof of :eqref:`eq_mdl-norm-concentration` takes
+       $\lambda=\varepsilon/4$, which is admissible only for
+       $\varepsilon\le 1$. For $\varepsilon>1$, set $\lambda=\tfrac14$ and
+       bound $P(\|\mathbf x\|^2\ge(1+\varepsilon)d)$. Does the result decay
+       like $e^{-c\varepsilon^2}$ or like $e^{-c\varepsilon}$ in
+       $\varepsilon$, and which regime of :eqref:`eq_mdl-subexponential` does
+       it belong to?
+   :exlabel:`ex_mdl-concentration-generalization-chi-square-tail`
+
+1. [code] **Activation norms through depth.** ● Consider a ReLU network of
+   width $d$ and depth $K$ without biases,
+   $\mathbf h_k=\mathrm{ReLU}(\mathbf W_k\mathbf h_{k-1})$, whose weights are
+   independent draws from $\mathcal N(0,2/d)$ (He initialization,
+   :numref:`sec_numerical_stability`). Let
+   $\rho_k=\|\mathbf h_k\|^2/\|\mathbf h_{k-1}\|^2$. How such norms fluctuate
+   with depth and width was analyzed by :citet:`Hanin.Nica.2020`.
+    1. Show that, given $\mathbf h_{k-1}\ne\mathbf 0$, the ratio $\rho_k$ is
+       distributed as $\frac2d\sum_{j=1}^d\mathrm{ReLU}(g_j)^2$ with
+       independent $g_j\sim\mathcal N(0,1)$, whatever the direction of
+       $\mathbf h_{k-1}$. Conclude that $E[\rho_k]=1$ and
+       $\operatorname{Var}(\rho_k)=5/d$, using $E[g^2]=1$ and $E[g^4]=3$.
+    1. Write $\log(\|\mathbf h_K\|^2/\|\mathbf h_0\|^2)$ as a sum of $K$
+       independent terms. Expand $\log\rho$ to second order around $1$ and
+       predict the mean and variance of this sum in terms of $K/d$.
+    1. Simulate $1{,}000$ networks for each width $d\in\{32,128\}$ and depth
+       $K\in\{1,10,50\}$, each with a fresh standard Gaussian input. Compare
+       the mean and variance of $\log(\|\mathbf h_K\|^2/\|\mathbf h_0\|^2)$
+       with (b), and report the mean and the median of the ratio
+       $\|\mathbf h_K\|^2/\|\mathbf h_0\|^2$ itself. The variance calculation
+       of :numref:`sec_numerical_stability` gives
+       $E[\|\mathbf h_K\|^2/\|\mathbf h_0\|^2]=1$ at every depth. Repeat the
+       run at $K=50$ and $d=32$ with several random seeds. Why does the sample
+       mean over $1{,}000$ networks scatter so widely around $1$? Why does the
+       expectation not describe a typical network there?
+   :exlabel:`ex_mdl-concentration-generalization-depth-norms`
+
+1. **McDiarmid's inequality.** ● The inequality of :citet:`McDiarmid.1989`
+   extends Hoeffding's from sums to functions with *bounded differences*.
+   Suppose that changing only the $i$-th argument of $g(x_1,\ldots,x_n)$
+   moves its value by at most $c_i$, and that $X_1,\ldots,X_n$ are
+   independent. Then
+
+   $$P\bigl(g(X_1,\ldots,X_n)-E[g(X_1,\ldots,X_n)]\ge t\bigr)\le\exp\left(-\frac{2t^2}{\sum_{i=1}^n c_i^2}\right),$$
+
+   and the same bound holds for the lower tail. Take this statement on
+   faith; its proof uses martingales.
+    1. Recover Hoeffding's inequality :eqref:`eq_mdl-hoeffding` from it.
+    1. Let $g(S)=\sup_{f\in\mathcal F}\bigl(R(f)-\hat R_S(f)\bigr)$ for a loss
+       class $\mathcal F$ with values in $[0,1]$. Show that $g$ has bounded
+       differences $c_i=1/n$. Combine McDiarmid's inequality with the
+       symmetrization bound $E_S[g(S)]\le 2\mathfrak R_n(\mathcal F)$ and
+       derive :eqref:`eq_mdl-rademacher-bound`.
+    1. For data in $[0,1]$, the sample mean has bounded differences $1/n$.
+       Construct a sample of odd size $n$ in $[0,1]$ in which changing one
+       point moves the sample median by $1$. What does this imply for using
+       McDiarmid's inequality to put an error bar on the bootstrap estimate
+       of the median in :numref:`sec_mdl-statistics`?
+   :exlabel:`ex_mdl-concentration-generalization-mcdiarmid-s-inequality`
+
+1. **Massart's lemma and $\ell_1$ balls.** ● Massart's lemma for finite
+   classes and the Rademacher complexity of $\ell_1$-bounded linear classes
+   rest on one bound for the expected maximum of sub-Gaussian variables.
+    1. Let $Z_1,\ldots,Z_N$ be centered and sub-Gaussian with variance proxy
+       $\sigma^2$ in the sense of :eqref:`eq_mdl-subgaussian`, not
+       necessarily independent. Show that
+       $E[\max_j Z_j]\le\sigma\sqrt{2\log N}$ by bounding
+       $e^{\lambda E[\max_j Z_j]}$ by $\sum_j E[e^{\lambda Z_j}]$ and
+       optimizing over $\lambda>0$. Deduce Massart's lemma,
+       $\widehat{\mathfrak R}_S(\mathcal F)\le\sqrt{2\log|\mathcal F|/n}$,
+       for a finite class with values in $[-1,1]$.
+    1. Let $\mathcal F=\{\mathbf x\mapsto\langle\mathbf w,\mathbf x\rangle:
+       \|\mathbf w\|_1\le B\}$ and $\|\mathbf x_i\|_\infty\le r$ for all $i$.
+       Follow the proof of :eqref:`eq_mdl-linear-rademacher`, with the
+       duality $\sup_{\|\mathbf w\|_1\le B}\langle\mathbf w,\mathbf
+       v\rangle=B\|\mathbf v\|_\infty$ in place of Cauchy--Schwarz, and show
+       that $\widehat{\mathfrak R}_S(\mathcal F)\le Br\sqrt{2\log(2d)/n}$.
+       Why does the dimension $d$ now enter, and why only logarithmically?
+    1. Let the inputs lie in $\{-1,+1\}^d$ and let the target weight vector
+       have $k$ nonzero entries, each equal to $\pm1$. Compare the bound
+       of (b) with :eqref:`eq_mdl-linear-rademacher`, each with the smallest
+       radius $B$ that contains the target. For which $k$ is the $\ell_1$
+       bound smaller when $d=10^4$?
+   :exlabel:`ex_mdl-concentration-generalization-massart-l1`
+
+1. **Margin bound.** ● Let $\mathcal F=\{\mathbf x\mapsto\langle\mathbf
+   w,\mathbf x\rangle:\|\mathbf w\|_2\le B\}$ with $\|\mathbf x\|_2\le r$,
+   let the labels be $y\in\{-1,+1\}$, and let the ramp loss
+   $\phi_\gamma(u)=\min\{1,\max\{0,1-u/\gamma\}\}$ with a fixed $\gamma>0$
+   act on the margin $u=yf(\mathbf x)$.
+    1. Show that $\phi_\gamma(yf(\mathbf x))$ is at least the 0-1 loss
+       $\mathbf 1\{yf(\mathbf x)\le 0\}$ and that $\phi_\gamma$ is
+       $(1/\gamma)$-Lipschitz. Show that multiplying each prediction
+       $f(\mathbf x_i)$ by a fixed label $y_i$ leaves
+       $\widehat{\mathfrak R}_S(\mathcal F)$ unchanged.
+    1. Combine (a), the contraction principle,
+       :eqref:`eq_mdl-rademacher-bound`, and
+       :eqref:`eq_mdl-linear-rademacher` into a bound on the 0-1 risk of
+       every $f\in\mathcal F$ in terms of its empirical ramp loss. For
+       $n=50{,}000$ and $\delta=0.05$, find the largest ratio $Br/\gamma$ for
+       which the complexity and confidence terms together stay below $0.1$.
+    1. The bound holds for a radius $B$ fixed before the data are drawn,
+       whereas the norm of a trained weight vector is known only afterwards.
+       Apply the bound with radius $B_j=2^j$ and confidence
+       $\delta_j=\delta/(j(j+1))$ for every $j\ge1$, and take a union bound
+       over $j$. Which bound holds for a weight vector with
+       $\|\mathbf w\|>1$ chosen after seeing the data, and what does the
+       freedom to choose the radius cost?
+   :exlabel:`ex_mdl-concentration-generalization-margin-bound`
+
+1. [code] **Fitting random signs.** ● The cell of
+   :numref:`subsec_mdl-coin-flips-code` fits $2{,}000$ sign vectors
+   $\boldsymbol\varepsilon\in\{-1,+1\}^n$ with
+   $\mathbf w=\boldsymbol\Phi^+\boldsymbol\varepsilon$ on $p=2n$ standard
+   Gaussian features and finds the correlation
+   $\frac1n\sum_i\varepsilon_i(\boldsymbol\Phi\mathbf w)_i=1$.
+    1. Let $p<n$ and let $\boldsymbol\Phi$ have full column rank. Show that
+       the correlation has expectation $p/n$ over the signs. The matrix
+       $\boldsymbol\Phi\boldsymbol\Phi^+$ is a projection.
+    1. Let $p>n$, let $r$ be the largest row norm of $\boldsymbol\Phi$, and
+       let $B$ be large enough that the class $\{\|\mathbf w\|\le B\}$
+       contains an interpolant of every sign vector. Explain why
+       $Br/\sqrt n$ cannot then be smaller than $1$. For a standard Gaussian
+       $\boldsymbol\Phi$ with $p>n+1$,
+       $E[(\boldsymbol\Phi\boldsymbol\Phi^\top)^{-1}]=\mathbf I_n/(p-n-1)$.
+       Use this identity to predict the typical $\|\mathbf w\|$, and the
+       typical value of $\|\mathbf w\|$ times a row norm of
+       $\boldsymbol\Phi$ divided by $\sqrt n$, as functions of $p$ and
+       $n$.
+    1. Rerun the cell with $n=50$ for $p\in\{10,25,45,55,100,400,1000\}$
+       and compare the measured correlation, the mean $\|\mathbf w\|$, and
+       the printed capacity bound with (a) and (b). What happens to the
+       capacity bound as $p\to\infty$?
+   :exlabel:`ex_mdl-concentration-generalization-fitting-random-signs`
+
+1. [code] **Anatomy of the peak.** ●
+   :numref:`subsec_mdl-double-descent-example` attributes the test-error
+   peak at $p=n$ to the smallest singular value $\sigma_{\min}$ of the
+   feature matrix $\boldsymbol\Phi_p$, the first $p$ columns of `Phi`.
+    1. Record the median of $\sigma_{\min}(\boldsymbol\Phi_p)$ over the $20$
+       runs for every $p$ in `p_grid`, alongside the test error and
+       $\|\mathbf w\|$. How close to zero does $\sigma_{\min}$ come at $p=n$,
+       and how does $1/\sigma_{\min}^2$ compare with the test error across
+       the grid?
+    1. Rerun the sweep with `noise` in $\{0,0.1,0.5,1.0\}$. Does the location
+       of the peak move, and how does its height grow with the noise level?
+       The peak does not vanish at `noise` $=0$, although the labels then
+       carry no noise. Why not?
+    1. Replace the pseudoinverse by the ridge solution
+       :eqref:`eq_mdl-opt-ridge-solution` with
+       $\mathbf A=\boldsymbol\Phi_p$ and $\mathbf b=\mathbf y$, for
+       $\lambda\in\{10^{-8},10^{-4},10^{-2},1\}$. Write $\mathbf w_\lambda$
+       in terms of the singular value decomposition of $\boldsymbol\Phi_p$
+       and use it to explain how the peak changes with $\lambda$. What does
+       the largest $\lambda$ cost at $p=400$?
+   :exlabel:`ex_mdl-concentration-generalization-interpolation-peak`
+
+1. [code] **Leaderboard attack.** ●● A leaderboard reports the 0-1 loss of
+   each submitted label vector on a holdout set of $n=4{,}000$ examples with
+   labels $\mathbf y\in\{0,1\}^n$. The *boosting attack* of
+   :citet:`Blum.Hardt.2015` uses no knowledge of the task: submit $k$
+   uniformly random label vectors, keep those with reported loss at most
+   $\tfrac12$, and submit their coordinatewise majority vote. On fresh data,
+   the majority vote has loss $\tfrac12$.
+    1. Implement the attack for uniformly random $\mathbf y$ and
+       $k\in\{10,30,100,300,1000,3000\}$, and record the reported loss of
+       the majority vote. Compare its distance from $\tfrac12$ with the
+       deviation that :eqref:`eq_mdl-finite-class` allows for a
+       pre-registered pool of $k+1$ models at $\delta=0.05$. From which $k$
+       on does the attack exceed this deviation, and which hypothesis of the
+       proposition does it violate?
+    1. :citet:`Blum.Hardt.2015` prove that the reported loss is
+       $\tfrac12-\Omega(\sqrt{k/n})$ but do not give the constant. Derive it
+       heuristically with Gaussian approximations: estimate the expected
+       excess agreement with $\mathbf y$ of a kept vector, then the
+       probability that the majority of about $k/2$ such vectors is correct
+       on one coordinate. Compare the constant with the measurements
+       of (a).
+    1. The *Ladder* mechanism of :citet:`Blum.Hardt.2015` releases a new
+       score only when a submission beats the best released score by more
+       than a step $\eta$, rounds it to a multiple of $\eta$, and otherwise
+       repeats the previous score. Against the Ladder, the attacker can only
+       keep the vectors that lowered the released score. Implement both for
+       $\eta\in\{0.005,0.01\}$ and $k\in\{100,1000,3000\}$. How far below
+       $\tfrac12$ does the majority vote now get, and how does this compare
+       with the deviation of (a)?
+   :exlabel:`ex_mdl-concentration-generalization-leaderboard-attack`
+
+1. [extended] **Benign spectra.** ●●
+   :citet:`Bartlett.Long.Lugosi.Tsigler.2020` characterize when the minimum-norm interpolant in linear regression has
+   small excess risk, the mechanism that
+   :numref:`subsec_mdl-benign-overfitting` describes in words. Let
+   $\mathbf x\sim\mathcal N(\mathbf 0,\boldsymbol\Sigma)$ with
+   $\boldsymbol\Sigma=\mathrm{diag}(\lambda_1,\ldots,\lambda_p)$ and
+   $\lambda_1\ge\lambda_2\ge\cdots$, let
+   $y=\langle\boldsymbol\theta^*,\mathbf x\rangle+\xi$ with
+   $\xi\sim\mathcal N(0,\sigma^2)$, stack $n<p$ training inputs into
+   $\mathbf X\in\mathbb R^{n\times p}$, and let
+   $\hat{\boldsymbol\theta}=\mathbf X^+\mathbf y$. The excess risk is
+   $(\hat{\boldsymbol\theta}-\boldsymbol\theta^*)^\top\boldsymbol\Sigma
+   (\hat{\boldsymbol\theta}-\boldsymbol\theta^*)$.
+    1. Show that its expectation over the noise is the sum of a bias term
+       $\boldsymbol\theta^{*\top}(\mathbf I-\mathbf P)\boldsymbol\Sigma
+       (\mathbf I-\mathbf P)\boldsymbol\theta^*$, where
+       $\mathbf P=\mathbf X^+\mathbf X$, and a variance term
+       $\sigma^2\operatorname{tr}\bigl((\mathbf X^+)^\top\boldsymbol\Sigma
+       \mathbf X^+\bigr)$. Implement both terms; no test set is needed.
+    1. The paper's effective ranks are
+       $r_k=\sum_{i>k}\lambda_i/\lambda_{k+1}$ and
+       $R_k=\bigl(\sum_{i>k}\lambda_i\bigr)^2/\sum_{i>k}\lambda_i^2$. With
+       $k^*$ the smallest $k$ such that $r_k\ge bn$, the variance term is of
+       order $\sigma^2(k^*/n+n/R_{k^*})$ up to constants; take $b=1$. Use
+       $n=100$, $\sigma=1$, five strong directions with $\lambda_i=1$ that
+       contain a unit-norm $\boldsymbol\theta^*$, and $q$ weak directions
+       with $\lambda_i=1/q$ each, for $q\in\{100,300,10^3,3\cdot10^3,10^4\}$.
+       Compare the measured variance with $\sigma^2(k^*/n+n/R_{k^*})$. What
+       happens at $q=100$, and why?
+    1. Repeat with power-law spectra $\lambda_i=i^{-\alpha}$ truncated at
+       $p=40n$, for $\alpha\in\{0.5,1,2\}$, $\boldsymbol\theta^*=\mathbf e_1$,
+       and $n\in\{50,100,200,400\}$. For which spectra does the excess risk
+       decrease with $n$? For the others, does the bias or the variance
+       fail, and how do $r_0/n$, $k^*/n$, and $n/R_{k^*}$ show it?
+   :exlabel:`ex_mdl-concentration-generalization-benign-spectra`
 
 [Discussions](https://d2l.discourse.group/t/concentration-and-generalization)
 

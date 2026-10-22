@@ -1324,6 +1324,8 @@ parallel-trainable recurrences still end.
        Hebbian accuracies reported in :numref:`subsec_dn-trained`.
     1. Which property of the corrective write :eqref:`eq_dn-repair`
        breaks the invariance?
+   :exlabel:`ex_deltanet-order-invariance`
+
 1. [code] **Decay on the overwrite stream.** Give the Hebbian branch of
    `overwrite_recall` a scalar decay,
    $\mathbf{S} \leftarrow \gamma \mathbf{S} + \mathbf{k}\mathbf{v}^\top$,
@@ -1336,6 +1338,53 @@ parallel-trainable recurrences still end.
        QR step) and repeat for $\gamma \in \{1, 0.9, 0.5\}$ and for the
        delta write. Explain how the best $\gamma$ changes, using
        :eqref:`eq_ms-retrieval-error`, and compare with the delta write.
+
+1. [code] **Step size and key norm.** The delta rule is one gradient step on
+   the recall loss :eqref:`eq_dn-recall-loss`, so its write strength
+   $\beta_t$ is a step size.
+    1. A memory whose read at the unit-norm key $\mathbf{k}$ is
+       $\mathbf{s}_0 = \mathbf{S}^\top \mathbf{k}$ receives the same pair
+       $(\mathbf{k}, \mathbf{v})$ $n$ times in a row. Give the read at
+       $\mathbf{k}$ after the $n$ writes under the Hebbian write and under
+       the delta rule with strength $\beta$. For which $\beta$ does the
+       delta read converge to $\mathbf{v}$, and how does it approach
+       $\mathbf{v}$ when $\beta \in (1, 2)$?
+    1. Repeat the calculation for a key of norm $\rho$. Which $\beta$
+       replaces the stored value in one write, and how does the condition
+       for convergence compare with the condition $0 < \eta < 2/L$ of
+       :numref:`sec_gd`?
+    1. Run `delta_recurrent` on keys drawn as in :numref:`subsec_dn-delta`
+       but not normalized, and track the largest output magnitude over
+       $t$. Then divide each $\beta_t$ by $\|\mathbf{k}_t\|^2$, the step
+       size of the normalized least-mean-squares filter of adaptive
+       filtering, and rerun. Explain both runs with the second part.
+
+1. **Decay before the error.** Multiplying out :eqref:`eq_dn-gated` gives an
+   error form in which the correction is computed against the decayed
+   state,
+   $$\mathbf{S}_t = \alpha_t \mathbf{S}_{t-1} + \beta_t \mathbf{k}_t \big(\mathbf{v}_t - \alpha_t \mathbf{S}_{t-1}^\top \mathbf{k}_t\big)^\top.$$
+   An alternative cell computes the correction against the undecayed state,
+   $$\mathbf{S}_t = \alpha_t \mathbf{S}_{t-1} + \beta_t \mathbf{k}_t \big(\mathbf{v}_t - \mathbf{S}_{t-1}^\top \mathbf{k}_t\big)^\top.$$
+    1. For a unit-norm key, compute the read
+       $\mathbf{S}_t^\top \mathbf{k}_t$ after the write under each cell.
+       Under which cell does $\beta_t = 1$ replace the stored value for
+       every $\alpha_t$? What happens to the coefficient of the old value
+       under the other cell when $\alpha_t < \beta_t$?
+    1. AdamW's update :eqref:`eq_adamw` evaluates the gradient at the
+       undecayed iterate. Which of the two cells has this shape, and what
+       would Gated DeltaNet lose by adopting it?
+
+1. [extended] **Gated cell ablation.** Fixing $\alpha_t = 1$ in
+   :eqref:`eq_dn-gated` gives pure DeltaNet, and striking the erase term
+   gives the decay-plus-write cell of Mamba-2. Build both variants by
+   editing the token loop of `GatedDeltaNetBlock`, train them and the
+   unchanged `GatedDeltaNet` with the recipe of :numref:`subsec_dn-lm` for
+   two seeds each, and compare validation perplexities. Is the gap between
+   variants larger than the spread between seeds? Does the ranking agree
+   with the one :citet:`Yang.Kautz.Hatamizadeh.2024` report at 1.3B
+   parameters, and which property of the training windows could explain a
+   disagreement?
+
 1. [code] **Writes at query time.** ● In `MemoryModel` every position writes
    to the state, including the query positions, whose value token is the
    reserved query token, and each position reads the state after its own
@@ -1356,25 +1405,7 @@ parallel-trainable recurrences still end.
        learned $\beta$ of each key, $\mathbf{q}_t^\top \mathbf{k}_t$, and the
        norm of $\mathbf{v}_t$ at query positions relative to write
        positions. How does the trained model reach its recall?
-1. [code] **Step size and key norm.** The delta rule is one gradient step on
-   the recall loss :eqref:`eq_dn-recall-loss`, so its write strength
-   $\beta_t$ is a step size.
-    1. A memory whose read at the unit-norm key $\mathbf{k}$ is
-       $\mathbf{s}_0 = \mathbf{S}^\top \mathbf{k}$ receives the same pair
-       $(\mathbf{k}, \mathbf{v})$ $n$ times in a row. Give the read at
-       $\mathbf{k}$ after the $n$ writes under the Hebbian write and under
-       the delta rule with strength $\beta$. For which $\beta$ does the
-       delta read converge to $\mathbf{v}$, and how does it approach
-       $\mathbf{v}$ when $\beta \in (1, 2)$?
-    1. Repeat the calculation for a key of norm $\rho$. Which $\beta$
-       replaces the stored value in one write, and how does the condition
-       for convergence compare with the condition $0 < \eta < 2/L$ of
-       :numref:`sec_gd`?
-    1. Run `delta_recurrent` on keys drawn as in :numref:`subsec_dn-delta`
-       but not normalized, and track the largest output magnitude over
-       $t$. Then divide each $\beta_t$ by $\|\mathbf{k}_t\|^2$, the step
-       size of the normalized least-mean-squares filter of adaptive
-       filtering, and rerun. Explain both runs with the second part.
+
 1. [code] **Implicit forgetting.** ● The capacity law of
    :numref:`subsec_ms-capacity` holds for the Hebbian write. Store $n$
    pairs under $n$ distinct independent random unit keys in $d_k = 64$
@@ -1396,6 +1427,7 @@ parallel-trainable recurrences still end.
        below that of the Hebbian write. Which of the two failures
        discussed in :numref:`subsec_dn-overwrite`, crowding or staleness,
        does the delta rule remove?
+
 1. [code] **Hoisted triangular solve.** ● In `delta_chunked`, each
    triangular solve sits inside the loop over chunk boundaries, because its
    right-hand side contains the carried state $\mathbf{S}$. Take
@@ -1417,20 +1449,7 @@ parallel-trainable recurrences still end.
        $\tilde{\mathbf{U}}$ and $\mathbf{W}$ for all chunks before the
        loop, so that only matrix products remain inside it, and verify it
        against `delta_recurrent` at chunk sizes $16$, $64$, and $256$.
-1. **Decay before the error.** Multiplying out :eqref:`eq_dn-gated` gives an
-   error form in which the correction is computed against the decayed
-   state,
-   $$\mathbf{S}_t = \alpha_t \mathbf{S}_{t-1} + \beta_t \mathbf{k}_t \big(\mathbf{v}_t - \alpha_t \mathbf{S}_{t-1}^\top \mathbf{k}_t\big)^\top.$$
-   An alternative cell computes the correction against the undecayed state,
-   $$\mathbf{S}_t = \alpha_t \mathbf{S}_{t-1} + \beta_t \mathbf{k}_t \big(\mathbf{v}_t - \mathbf{S}_{t-1}^\top \mathbf{k}_t\big)^\top.$$
-    1. For a unit-norm key, compute the read
-       $\mathbf{S}_t^\top \mathbf{k}_t$ after the write under each cell.
-       Under which cell does $\beta_t = 1$ replace the stored value for
-       every $\alpha_t$? What happens to the coefficient of the old value
-       under the other cell when $\alpha_t < \beta_t$?
-    1. AdamW's update :eqref:`eq_adamw` evaluates the gradient at the
-       undecayed iterate. Which of the two cells has this shape, and what
-       would Gated DeltaNet lose by adopting it?
+
 1. [code] **Chunked Gated DeltaNet.** ● Extend `delta_chunked` to the gated
    update :eqref:`eq_dn-gated`. Within a chunk entered with state
    $\mathbf{S}$, let $\gamma_t = \alpha_1 \alpha_2 \cdots \alpha_t$ be the
@@ -1444,16 +1463,7 @@ parallel-trainable recurrences still end.
        `segsum` helper of :numref:`subsec_ms-chunked`, and verify it
        against a token loop of :eqref:`eq_dn-gated` with $\alpha_t$ drawn
        uniformly from $(0.65, 0.95)$, at chunk sizes $16$, $64$, and $256$.
-1. [extended] **Gated cell ablation.** Fixing $\alpha_t = 1$ in
-   :eqref:`eq_dn-gated` gives pure DeltaNet, and striking the erase term
-   gives the decay-plus-write cell of Mamba-2. Build both variants by
-   editing the token loop of `GatedDeltaNetBlock`, train them and the
-   unchanged `GatedDeltaNet` with the recipe of :numref:`subsec_dn-lm` for
-   two seeds each, and compare validation perplexities. Is the gap between
-   variants larger than the spread between seeds? Does the ranking agree
-   with the one :citet:`Yang.Kautz.Hatamizadeh.2024` report at 1.3B
-   parameters, and which property of the training windows could explain a
-   disagreement?
+
 1. **Non-normal transitions.** ● Set the decay of the RWKV-7 update
    :eqref:`eq_dn-rwkv7` to $\mathbf{w}_t = \mathbf{1}$ and take per-channel
    rates $\mathbf{a}_t \in [0, 1]^{d_k}$, so that the transition is
@@ -1473,6 +1483,7 @@ parallel-trainable recurrences still end.
        that alternates the two tokens with no writes, and what does this
        imply for judging the stability of :eqref:`eq_dn-rwkv7` one
        transition at a time?
+
 1. [code] **Parity at longer lengths.** ● The transition $\mathbf{a}_t$ of
    `MultiplicativeRNN` is computed from the current bit alone, so a trained
    model holds two transition vectors, $\mathbf{a}(0)$ for zero-bits and
@@ -1490,6 +1501,7 @@ parallel-trainable recurrences still end.
        measurement.
     1. Relate the result to the open range of the gate $2\sigma(\cdot)$
        discussed in :numref:`subsec_dn-reflection`.
+
 1. [code] **Reflections and permutations.** ● A DeltaProduct cell
    :cite:`Siems.Carstensen.Zela.ea.2025` applies $n_h$ transitions
    $\mathbf{H}_{t, i} = \mathbf{I} - \beta_{t, i} \mathbf{k}_{t, i}

@@ -980,31 +980,6 @@ asymptotic shapes that do not.
 
 ## Exercises
 
-1. **Correlated keys.** ● The call of `hebbian_memory` with `rho=0.5` in
-   :numref:`subsec_ms-capacity` builds each key by normalizing
-   $\sqrt{1-\rho^2}\, \mathbf{g}_i + \rho\, \mathbf{c}$, where the
-   $\mathbf{g}_i$ are independent isotropic unit vectors and $\mathbf{c}$
-   is one shared unit vector. Model the overlap of two distinct keys as
-   $\mathbf{k}_i^\top \mathbf{k}_j = \rho^2 + \epsilon_{ij}$. For fixed
-   $j$, let the $\epsilon_{ij}$ with $i \neq j$ be independent of each
-   other and of the values, with mean zero and variance
-   $\sigma^2 = (1-\rho^2)^2 / d_k$. This model keeps the shared
-   component and the term $(1-\rho^2)\, \mathbf{g}_i^\top \mathbf{g}_j$,
-   and it neglects the renormalization and the terms linear in $\rho$.
-   The stored values have unit norm and are independent of the keys.
-    1. Assume that the values are also independent of each other with
-       mean zero. Derive the expected squared read error at key $j$, which
-       generalizes :eqref:`eq_ms-capacity-law`, and identify the term
-       that a larger $d_k$ reduces.
-    1. Evaluate the ratio of this error to the independent-key error
-       $(n-1)/d_k$ for $\rho = 0.5$ and $d_k = 64$.
-    1. `hebbian_memory` draws its values from a fixed codebook of 256
-       random unit vectors, so the mean $\bar{\mathbf{v}}$ of the value
-       distribution is not exactly zero. Show that this adds a term
-       proportional to $(n-1)(n-2)\,\|\bar{\mathbf{v}}\|^2$, estimate
-       $\|\bar{\mathbf{v}}\|^2$, and find the $n$ beyond which the new
-       term dominates. Compare the complete prediction with the errors that
-       `hebbian_memory(64, nums, rho=0.5)` returns.
 1. **Horizons and rungs.** RetNet fixes the decay of head $h$ at
    $\gamma_h = 1 - 2^{-5-h}$ for $h = 0, 1, \ldots$
    :cite:`Sun.Dong.Huang.ea.2023`. Call the *effective memory horizon*, or
@@ -1021,6 +996,7 @@ asymptotic shapes that do not.
        For each rung of :eqref:`eq_ms-decay-ladder`, decide whether a
        single head can meet both requirements, and for every rung that can,
        give keys and decay values that do it.
+
 1. **Mamba as a matrix state.** Channel $h$ of the selective SSM
    :eqref:`eq_selective_ssm` carries its own state
    $\mathbf{x}_t^{(h)} \in \mathbb{R}^N$. Stack the $H$ channel states as
@@ -1039,20 +1015,7 @@ asymptotic shapes that do not.
     1. For each of the three transitions, count the distinct decay
        factors applied to the state per token and the input-dependent
        numbers that determine them.
-1. **Cross-moment versus least squares.** ● A scalar-decay state stores
-   the weighted cross-moment $\mathbf{K}^\top \mathbf{W} \mathbf{V}$,
-   whereas the read-out $\mathbf{S}^\star$ of
-   :eqref:`eq_ms-wls` also applies the covariance correction. Let
-   $\mathbf{K} \in \mathbb{R}^{n \times d_k}$ hold the keys as rows, and
-   let every weight $w_i$ be positive.
-    1. Let $n \le d_k$ and let the keys be linearly independent. Show that
-       in the limit $\lambda \to 0$, $\mathbf{S}^\star$ reads back every
-       stored value exactly, whatever the weights. Contrast this with what
-       $\mathbf{K}^\top \mathbf{W} \mathbf{V}$ returns at $\mathbf{k}_j$.
-    1. Now let $n > d_k$. Explain what the weights decide about
-       $\mathbf{S}^\star$ in this regime, and state when the decay of a
-       memory that applies the covariance correction affects its read-out
-       at all.
+
 1. **Rank-one blocks.** Let $p_t = a_1 a_2 \cdots a_t$ be the prefix
    products of the decays in :eqref:`eq_ms-semiseparable`.
     1. Express $L_{ts}$ through the $p_t$. Show that every submatrix of
@@ -1068,6 +1031,7 @@ asymptotic shapes that do not.
        $\mathbf{Q}\mathbf{K}^\top$. Write the decayed score of query $t$
        and key $s$ on this rung, and show that a block coupling two
        different chunks still has rank at most $d_k$.
+
 1. **Schedule FLOPs.** Count one multiply-add as two FLOPs, as in
    :eqref:`eq_attn-layer-flops`, set $d_k = d_v = d$, and keep the
    leading terms.
@@ -1089,6 +1053,43 @@ asymptotic shapes that do not.
        Evaluate it, and the ratio of the recurrence's time to the best
        chunked time, for $T = 4096$, $d = 64$, $P = 10^{12}$ FLOP/s, and
        $\tau = 5\,\mu\textrm{s}$.
+
+1. [code] **Log-space boundary.** The boundary step of
+   `matrix_state_chunked` divides prefix products of the decays within a
+   chunk, $b_C / b_t$, and :numref:`subsec_ms-chunked` reports that these
+   products underflow to zero for $C \ge 512$.
+    1. For decays drawn uniformly from $(0.65, 0.95)$, compute
+       $\mathbb{E}[\log a_t]$. Predict the chunk sizes at which the
+       smallest prefix product $b_C$ falls below the smallest normal
+       float32 number, about $1.2 \times 10^{-38}$, and below the smallest
+       positive one, about $1.4 \times 10^{-45}$.
+    1. Rewrite the boundary step so that it computes each ratio
+       $b_C / b_t$ as the exponential of a difference of cumulative
+       log-decays. Verify at $T = 4096$ that chunk sizes $512$ and $1024$
+       now agree with `matrix_state_dual`.
+    1. The read of the carried state multiplies the queries by $b_t$,
+       which underflows as well. Explain why this underflow does no harm.
+
+1. **Decode-memory ledger.** Price one layer of the Mamba-2 2.7B
+   configuration of :eqref:`eq_ms-state-bytes`, with
+   $d_{\textrm{inner}} = 5120$ and $w = 4$, against a grouped-query cache
+   with $h_{\textrm{kv}} = 8$ and $d_{\textrm{head}} = 128$, at the same
+   element size $b$ on both sides.
+    1. Find the number of kept tokens $n$ at which the two sides are equal,
+       as a function of $d_{\textrm{state}}$. Evaluate it at
+       $d_{\textrm{state}} \in \{16, 128, 256\}$, the range of state widths
+       of :numref:`subsec_ms-hardware`. What share of the recurrent side
+       does the convolution buffer take at each width?
+    1. Under independent random unit keys, the capacity law
+       :eqref:`eq_ms-capacity-law` sets how many pairs a $d_k \times d_v$
+       head state holds at an expected squared read error $\epsilon$. At
+       $d_k = d_v = 64$, count the numbers that such a state spends per
+       stored pair, and compare them with the $d_k + d_v$ numbers that a
+       cache spends per token and key–value head. For which $\epsilon$
+       does the state spend fewer? Where, then, do the savings of the
+       constant side of the ledger come from?
+   :exlabel:`ex_matrix-state-decode-memory-ledger`
+
 1. **Decode arithmetic intensity.** At each decoding step, one head of the
    scalar-decay recurrence reads its $d_k \times d_v$ state from memory,
    decays it, adds the outer product $\mathbf{k}_t \mathbf{v}_t^\top$,
@@ -1114,6 +1115,48 @@ asymptotic shapes that do not.
        queries, and the $r$ outputs as well. Find the $r$ at which they
        equal the bytes of state moved, and compare the time of a rank-$r$
        step with that of the rank-one step at $r = 4$ and at $r = d_k$.
+
+1. [code] **Normalizer as a value column.** Give the normalizer of
+   :eqref:`eq_linear-attn-recurrence` the decay of the state,
+   $\mathbf{z}_t = a_t\, \mathbf{z}_{t-1} + \phi(\mathbf{k}_t)$, with
+   $\phi = \mathrm{elu} + 1$. Write the state with $\phi(\mathbf{k}_t)$ in
+   place of $\mathbf{k}_t$, and read
+   $\mathbf{o}_t = \mathbf{S}_t^\top \phi(\mathbf{q}_t) /
+   \phi(\mathbf{q}_t)^\top \mathbf{z}_t$.
+    1. Apply $\phi$ to the queries and keys in
+       :eqref:`eq_ms-semiseparable`, and append a column of ones to
+       $\mathbf{V}$. Show that the last output column equals the
+       denominator $\phi(\mathbf{q}_t)^\top \mathbf{z}_t$.
+    1. Compute the normalized output with a single call of
+       `matrix_state_dual`. Verify it against a token loop that carries
+       $\mathbf{S}_t$ and $\mathbf{z}_t$, once with all $a_t = 1$ and once
+       with decays drawn uniformly from $(0.65, 0.95)$.
+    1. Compared with `matrix_state_dual` on the raw queries and keys,
+       which of the two changes, the feature map or the normalizer, alters
+       the relative weights that a query gives to past positions, and
+       which only rescales each output row?
+
+1. [code] **Exponential gates.** The exponential gates of the mLSTM make
+   the unstabilized recurrence :eqref:`eq_ms-mlstm` overflow, and the
+   stabilizer :eqref:`eq_ms-mlstm-stabilizer` prevents it.
+    1. Show by induction that the stabilized recurrence produces the
+       states $e^{-m_t} \mathbf{S}_t$ and $e^{-m_t} \mathbf{z}_t$, where
+       $\mathbf{S}_t$ and $\mathbf{z}_t$ are the states of
+       :eqref:`eq_ms-mlstm`. Conclude that the read-out of
+       `mlstm_stabilized` equals that of :eqref:`eq_ms-mlstm`, and show
+       that $f'_t \le 1$ and $i'_t \le 1$ at every step.
+    1. Predict the step at which the unstabilized float32 recurrence first
+       produces a non-finite output, as a function of the mean $\mu$ of
+       the forget pre-activations $\tilde{f}_t$. Check the prediction with
+       `mlstm_naive` for $\mu \in \{1, 2, 4\}$ on sequences of length
+       $T = 192$. `mlstm_naive` loops over the global `T`, so set
+       `T = 192` before drawing the inputs.
+    1. Pass $\log \sigma(\tilde{f}_t)$ in place of $\tilde{f}_t$ to both
+       functions, which turns the forget gate into $\sigma(\tilde{f}_t)$,
+       and rerun. Find the input pre-activation $\tilde{i}_t$ at which
+       $\exp(\tilde{i}_t)$ alone overflows float32 and float16, and state
+       when the stabilizer is still needed with this forget gate.
+
 1. **Targeted forgetting.** Let a state hold
    $\mathbf{S} = \mathbf{k}\mathbf{v}^\top + \sum_i \mathbf{k}_i
    \mathbf{v}_i^\top$, where $\mathbf{k}$ has unit norm and every
@@ -1129,6 +1172,48 @@ asymptotic shapes that do not.
        combined update in the form of :eqref:`eq_ms-recurrence`, and state
        which property of its transition places it outside
        :numref:`tab_ms-family`.
+
+1. **Correlated keys.** ● The call of `hebbian_memory` with `rho=0.5` in
+   :numref:`subsec_ms-capacity` builds each key by normalizing
+   $\sqrt{1-\rho^2}\, \mathbf{g}_i + \rho\, \mathbf{c}$, where the
+   $\mathbf{g}_i$ are independent isotropic unit vectors and $\mathbf{c}$
+   is one shared unit vector. Model the overlap of two distinct keys as
+   $\mathbf{k}_i^\top \mathbf{k}_j = \rho^2 + \epsilon_{ij}$. For fixed
+   $j$, let the $\epsilon_{ij}$ with $i \neq j$ be independent of each
+   other and of the values, with mean zero and variance
+   $\sigma^2 = (1-\rho^2)^2 / d_k$. This model keeps the shared
+   component and the term $(1-\rho^2)\, \mathbf{g}_i^\top \mathbf{g}_j$,
+   and it neglects the renormalization and the terms linear in $\rho$.
+   The stored values have unit norm and are independent of the keys.
+    1. Assume that the values are also independent of each other with
+       mean zero. Derive the expected squared read error at key $j$, which
+       generalizes :eqref:`eq_ms-capacity-law`, and identify the term
+       that a larger $d_k$ reduces.
+    1. Evaluate the ratio of this error to the independent-key error
+       $(n-1)/d_k$ for $\rho = 0.5$ and $d_k = 64$.
+    1. `hebbian_memory` draws its values from a fixed codebook of 256
+       random unit vectors, so the mean $\bar{\mathbf{v}}$ of the value
+       distribution is not exactly zero. Show that this adds a term
+       proportional to $(n-1)(n-2)\,\|\bar{\mathbf{v}}\|^2$, estimate
+       $\|\bar{\mathbf{v}}\|^2$, and find the $n$ beyond which the new
+       term dominates. Compare the complete prediction with the errors that
+       `hebbian_memory(64, nums, rho=0.5)` returns.
+
+1. **Cross-moment versus least squares.** ● A scalar-decay state stores
+   the weighted cross-moment $\mathbf{K}^\top \mathbf{W} \mathbf{V}$,
+   whereas the read-out $\mathbf{S}^\star$ of
+   :eqref:`eq_ms-wls` also applies the covariance correction. Let
+   $\mathbf{K} \in \mathbb{R}^{n \times d_k}$ hold the keys as rows, and
+   let every weight $w_i$ be positive.
+    1. Let $n \le d_k$ and let the keys be linearly independent. Show that
+       in the limit $\lambda \to 0$, $\mathbf{S}^\star$ reads back every
+       stored value exactly, whatever the weights. Contrast this with what
+       $\mathbf{K}^\top \mathbf{W} \mathbf{V}$ returns at $\mathbf{k}_j$.
+    1. Now let $n > d_k$. Explain what the weights decide about
+       $\mathbf{S}^\star$ in this regime, and state when the decay of a
+       memory that applies the covariance correction affects its read-out
+       at all.
+
 1. [code] **Decay as a sliding window.** ● Give `hebbian_memory` the
    decayed write $\mathbf{S}_t = \gamma\,\mathbf{S}_{t-1} + \mathbf{k}_t
    \mathbf{v}_t^\top$, so that the pair written $m$ steps before the end
@@ -1150,60 +1235,7 @@ asymptotic shapes that do not.
        pairs whose measured squared interference is at most $\gamma^{2m}$
        for $d_k \in \{32, 64, 128\}$, and compare the counts with
        $d_k/e$.
-1. [code] **Normalizer as a value column.** Give the normalizer of
-   :eqref:`eq_linear-attn-recurrence` the decay of the state,
-   $\mathbf{z}_t = a_t\, \mathbf{z}_{t-1} + \phi(\mathbf{k}_t)$, with
-   $\phi = \mathrm{elu} + 1$. Write the state with $\phi(\mathbf{k}_t)$ in
-   place of $\mathbf{k}_t$, and read
-   $\mathbf{o}_t = \mathbf{S}_t^\top \phi(\mathbf{q}_t) /
-   \phi(\mathbf{q}_t)^\top \mathbf{z}_t$.
-    1. Apply $\phi$ to the queries and keys in
-       :eqref:`eq_ms-semiseparable`, and append a column of ones to
-       $\mathbf{V}$. Show that the last output column equals the
-       denominator $\phi(\mathbf{q}_t)^\top \mathbf{z}_t$.
-    1. Compute the normalized output with a single call of
-       `matrix_state_dual`. Verify it against a token loop that carries
-       $\mathbf{S}_t$ and $\mathbf{z}_t$, once with all $a_t = 1$ and once
-       with decays drawn uniformly from $(0.65, 0.95)$.
-    1. Compared with `matrix_state_dual` on the raw queries and keys,
-       which of the two changes, the feature map or the normalizer, alters
-       the relative weights that a query gives to past positions, and
-       which only rescales each output row?
-1. [code] **Log-space boundary.** The boundary step of
-   `matrix_state_chunked` divides prefix products of the decays within a
-   chunk, $b_C / b_t$, and :numref:`subsec_ms-chunked` reports that these
-   products underflow to zero for $C \ge 512$.
-    1. For decays drawn uniformly from $(0.65, 0.95)$, compute
-       $\mathbb{E}[\log a_t]$. Predict the chunk sizes at which the
-       smallest prefix product $b_C$ falls below the smallest normal
-       float32 number, about $1.2 \times 10^{-38}$, and below the smallest
-       positive one, about $1.4 \times 10^{-45}$.
-    1. Rewrite the boundary step so that it computes each ratio
-       $b_C / b_t$ as the exponential of a difference of cumulative
-       log-decays. Verify at $T = 4096$ that chunk sizes $512$ and $1024$
-       now agree with `matrix_state_dual`.
-    1. The read of the carried state multiplies the queries by $b_t$,
-       which underflows as well. Explain why this underflow does no harm.
-1. [code] **Exponential gates.** The exponential gates of the mLSTM make
-   the unstabilized recurrence :eqref:`eq_ms-mlstm` overflow, and the
-   stabilizer :eqref:`eq_ms-mlstm-stabilizer` prevents it.
-    1. Show by induction that the stabilized recurrence produces the
-       states $e^{-m_t} \mathbf{S}_t$ and $e^{-m_t} \mathbf{z}_t$, where
-       $\mathbf{S}_t$ and $\mathbf{z}_t$ are the states of
-       :eqref:`eq_ms-mlstm`. Conclude that the read-out of
-       `mlstm_stabilized` equals that of :eqref:`eq_ms-mlstm`, and show
-       that $f'_t \le 1$ and $i'_t \le 1$ at every step.
-    1. Predict the step at which the unstabilized float32 recurrence first
-       produces a non-finite output, as a function of the mean $\mu$ of
-       the forget pre-activations $\tilde{f}_t$. Check the prediction with
-       `mlstm_naive` for $\mu \in \{1, 2, 4\}$ on sequences of length
-       $T = 192$. `mlstm_naive` loops over the global `T`, so set
-       `T = 192` before drawing the inputs.
-    1. Pass $\log \sigma(\tilde{f}_t)$ in place of $\tilde{f}_t$ to both
-       functions, which turns the forget gate into $\sigma(\tilde{f}_t)$,
-       and rerun. Find the input pre-activation $\tilde{i}_t$ at which
-       $\exp(\tilde{i}_t)$ alone overflows float32 and float16, and state
-       when the stabilizer is still needed with this forget gate.
+
 1. [extended] **Per-coordinate gates in chunks.** ● Replace the scalar
    decay $a_t$ in `matrix_state_chunked` by a gate vector
    $\boldsymbol{\alpha}_t \in (0,1)^{d_k}$, the diagonal rung of

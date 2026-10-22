@@ -13,6 +13,10 @@ Converts d2l-en markdown files to Quarto .qmd format with:
 
 import re
 import argparse
+try:
+    from exercise_refs import render as render_exercise_refs
+except ImportError:  # imported as tools.d2l_preprocess
+    from tools.exercise_refs import render as render_exercise_refs
 from pathlib import Path
 from typing import Optional
 
@@ -480,6 +484,11 @@ def translate_directives(text):
     return text
 
 
+def _tab_fws(match):
+    """Frameworks named by a :begin_tab: match ("mxnet, pytorch" names two)."""
+    return {f.strip() for f in match.group(1).split(',')}
+
+
 def convert_prose_tabs(text, primary):
     """Convert :begin_tab:/:end_tab: sections to Quarto panel-tabsets.
 
@@ -501,7 +510,10 @@ def convert_prose_tabs(text, primary):
 
     for i in range(1, len(matches)):
         between = text[matches[i-1].end():matches[i].start()]
-        if between.strip() == '':
+        # A framework that repeats starts a new group: otherwise the later
+        # block would be dropped, since each group keeps one block per framework.
+        if between.strip() == '' and not _tab_fws(matches[i]) & set().union(
+                *(_tab_fws(m) for m in current_group)):
             current_group.append(matches[i])
         else:
             groups.append(current_group)
@@ -731,6 +743,9 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
     # Step 0: Strip the trailing `<!-- slides -->` block (and slide divs
     # below it). The book renderer should not see slide-only content.
     text = strip_slide_divs(text)
+
+    # Step 0b: Render exercise-problem labels and references (tools/exercise_refs.py)
+    text = render_exercise_refs(text, src_path, mode='html')
 
     # Step 1: Convert prose tabs on raw text BEFORE block parsing
     text = convert_prose_tabs(text, primary)

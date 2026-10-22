@@ -34,6 +34,11 @@ from build_lib import flatten_tab_branches
 PDF_LINK_COLOR = 'NavyBlue'
 
 
+def _tab_fws(match):
+    """Frameworks named by a :begin_tab: match ("mxnet, pytorch" names two)."""
+    return {f.strip() for f in match.group(1).split(',')}
+
+
 def convert_prose_tabs_single(text, framework):
     """Keep only the target framework's prose tab content."""
     tab_pattern = re.compile(
@@ -47,7 +52,10 @@ def convert_prose_tabs_single(text, framework):
     current_group = [matches[0]]
     for i in range(1, len(matches)):
         between = text[matches[i-1].end():matches[i].start()]
-        if between.strip() == '':
+        # A framework that repeats starts a new group: otherwise the later
+        # block would be dropped, since each group keeps one block per framework.
+        if between.strip() == '' and not _tab_fws(matches[i]) & set().union(
+                *(_tab_fws(m) for m in current_group)):
             current_group.append(matches[i])
         else:
             groups.append(current_group)
@@ -182,6 +190,8 @@ def convert_file_pdf(src_path, framework, chapter_number=None):
     from d2l_preprocess import strip_slide_divs
     text = Path(src_path).read_text(encoding='utf-8')
     text = strip_slide_divs(text)
+    from exercise_refs import render as render_exercise_refs
+    text = render_exercise_refs(text, src_path, mode='plain')
 
     # Localize external images and filter prose tabs
     text = localize_external_images(text)

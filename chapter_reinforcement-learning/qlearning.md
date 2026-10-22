@@ -59,7 +59,7 @@ Suppose $\pi_e$ visits every state--action pair and collects unlimited data. Min
 $$L(Q) = E_{(s, a) \sim \mu} \Big[ \big( Q(s, a) - (TQ)(s, a) \big)^2 \Big] + \gamma^2\, E_{(s, a) \sim \mu} \Big[ \mathrm{Var}_{s' \sim P(\cdot \mid s, a)} \big( \max_{a'} Q(s', a') \big) \Big],$$
 :eqlabel:`eq_double_sampling`
 
-Here $\mu$ is the visitation distribution of $\pi_e$. The first term is the squared Bellman residual and is zero at $Q^*$. The second term depends on $Q$ whenever transitions are stochastic, so the minimizer of $L$ need not be $Q^*$. Exercise 4 gives a three-state counterexample. This is the *double-sampling problem*: an unbiased gradient of the squared Bellman residual requires two independent successors for the same $(s,a)$, which an ordinary environment interaction does not provide. For deterministic transitions the variance term vanishes.
+Here $\mu$ is the visitation distribution of $\pi_e$. The first term is the squared Bellman residual and is zero at $Q^*$. The second term depends on $Q$ whenever transitions are stochastic, so the minimizer of $L$ need not be $Q^*$. Exercise :exref:`ex_qlearning-double-sampling-counterexample` gives a three-state counterexample. This is the *double-sampling problem*: an unbiased gradient of the squared Bellman residual requires two independent successors for the same $(s,a)$, which an ordinary environment interaction does not provide. For deterministic transitions the variance term vanishes.
 
 Convergence instead follows from the expected update. Averaging :eqref:`eq_td_error` over $s'$ gives $E[\delta\mid s,a]=(TQ)(s,a)-Q(s,a)$, which is zero at the unique fixed point $Q^*$. Q-learning is therefore a stochastic approximation to Bellman fixed-point iteration. With the step-size conditions below and infinite visitation of every state-action pair, it converges to $Q^*$ with probability one :cite:`Watkins.Dayan.1992,Jaakkola.Jordan.Singh.1994`. Sampling variance affects the rate, while the behavior policy determines whether the coverage condition holds.
 
@@ -69,7 +69,7 @@ For each state-action pair, the Robbins--Monro conditions are $\sum_k\alpha_k=\i
 
 Panel (c) of :numref:`fig_rl_exploration` measures this coverage for deterministic FrozenLake, where a constant step size of $0.9$ learns quickly within the finite budget.
 
-The conditions are necessary for the guarantee, not sufficient for a budget. The textbook sample-average rule $\alpha = 1/(1 + n(s, a))$, with $n(s, a)$ counting visits to the entry, passes Robbins-Monro but weights early targets computed from an inaccurate zero table as heavily as later, better-informed targets. At the tested finite budget, this slows learning substantially. Our default $\alpha = 1/(1 + 0.1\, n(s, a))$ also passes but stays ten times larger at the same visit count. We compare all three schedules on the same seeds and report their finite-budget value errors and returns.
+The conditions are necessary for the guarantee, not sufficient for a budget. The sample-average rule $\alpha = 1/(1 + n(s, a))$, with $n(s, a)$ counting visits to the entry including the current one, passes Robbins-Monro but weights early targets computed from an inaccurate zero table as heavily as later, better-informed targets. At the tested finite budget, this slows learning substantially. Our default $\alpha = 1/(1 + 0.1\, n(s, a))$ also passes and approaches ten times that step size as the visit count grows. We compare all three schedules on the same seeds and report their finite-budget value errors and returns.
 
 ### Terminal Masking
 
@@ -181,7 +181,7 @@ print(f'median environment steps: {int(np.median(visits.sum(axis=(1, 2))))}')
 
 Across seeds, the learned value functions are within $0.006$ to $0.021$ of $V^*$ in the sup norm. Their greedy policies succeed in $71$ to $74$ percent of evaluation episodes, compared with the optimal value of $73.6$ percent; differences within this range are sampling error. When the optimal policy is forced to select a random action with probability $0.05$, its success rate falls to $54$ percent. The training curve therefore reflects both the learned policy and the continuing exploration of the behavior policy.
 
-The median run used $95{,}569$ environment steps. By comparison, :numref:`sec_valueiter` certified $V^*$ after $164$ sweeps of $64$ exact model backups, or about $10{,}500$ backups. These quantities are not directly interchangeable: a Bellman backup requires the full transition kernel, whereas an environment step provides only one sampled transition. Exercise 5 compares the two methods while keeping these different information requirements explicit.
+The median run used $95{,}569$ environment steps. By comparison, :numref:`sec_valueiter` certified $V^*$ after $164$ sweeps of $64$ exact model backups, or about $10{,}500$ backups. These quantities are not directly interchangeable: a Bellman backup requires the full transition kernel, whereas an environment step provides only one sampled transition. Exercise :exref:`ex_qlearning-like-like-comparison-value` compares the two methods while keeping these different information requirements explicit.
 
 The following panels compare the learned and exact solutions:
 
@@ -307,9 +307,9 @@ for name, r in regret.items():
     print(f'{name:>13}: mean regret after 2000 pulls {r[:, -1].mean():6.1f}')
 ```
 
-The greedy rule is sensitive to its first observations. It incurs little subsequent regret if it identifies the best arm early, but it can remain committed to a suboptimal arm; its mean regret is $824$. With fixed $\epsilon = 0.1$, the best arm is usually identified quickly, but uniform exploration continues throughout the run. For these arms this produces approximately $0.04$ regret per pull and a total of $117$. Annealing $\epsilon$ reduces exploration as the estimates improve and lowers the total regret to $69$.
+The greedy rule is sensitive to its first observations. It incurs little subsequent regret if it identifies the best arm early, but it can remain committed to a suboptimal arm; its mean regret is $824$. With fixed $\epsilon = 0.1$, the best arm is usually identified quickly, but uniform exploration continues throughout the run. For these arms, exploration alone costs approximately $0.04$ regret per pull, and the total after $2000$ pulls is $117$. Annealing $\epsilon$ reduces exploration as the estimates improve and lowers the total regret to $69$.
 
-![Exploration, measured three ways. (a) One row of action values, $\hat Q(s, \cdot) = (0.20, 0.90, 0.55, 0.10)$, converted into greedy, $\epsilon$-greedy with $\epsilon = 0.3$, and softmax policies with temperature $0.3$. (b) Mean cumulative regret over 20 runs on the ten-armed Bernoulli bandit, shown on logarithmic axes. After $2000$ pulls, the regrets are $824$ for greedy, $117$ for fixed $\epsilon = 0.1$, $69$ for annealed $\epsilon$, $37$ for UCB with $\kappa = 0.5$, and $32$ for Thompson sampling. These finite runs do not measure asymptotic rates. The inset shows the UCB radius $\kappa \sqrt{\log t/n}$ at $t = 2000$. (c) Coverage of the 44 nonterminal state-action pairs (solid) and success rate (dashed) under three schedules for tabular Q-learning on deterministic FrozenLake. With random tie-breaking, the greedy policy covers 92 percent of the pairs; $\epsilon = 1$ covers all pairs but does not learn a successful policy.](../img/mdl-rl-exploration.svg)
+![Exploration, measured three ways. (a) One row of action values, $\hat Q(s, \cdot) = (0.20, 0.90, 0.55, 0.10)$, converted into greedy, $\epsilon$-greedy with $\epsilon = 0.3$, and softmax policies with temperature $0.3$. (b) Mean cumulative regret over 20 runs on the ten-armed Bernoulli bandit, shown on logarithmic axes. After $2000$ pulls, the regrets are $824$ for greedy, $117$ for fixed $\epsilon = 0.1$, $69$ for annealed $\epsilon$, $37$ for UCB with $\kappa = 0.5$, and $32$ for Thompson sampling. These finite runs do not measure asymptotic rates. The inset shows the UCB radius $\kappa \sqrt{\log t/n}$ at $t = 2000$. (c) Coverage of the 44 nonterminal state-action pairs (solid) and success rate of the training episodes (dashed) under three schedules for tabular Q-learning on deterministic FrozenLake. With random tie-breaking, the greedy policy covers 92 percent of the pairs; $\epsilon = 1$ covers nearly all pairs, but its training episodes, which never exploit, almost never succeed.](../img/mdl-rl-exploration.svg)
 :label:`fig_rl_exploration`
 
 ### Optimism: UCB and Thompson Sampling
@@ -384,66 +384,304 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
 
 ## Exercises
 
-1. [conceptual] *Why greedy from the start cannot work.* On a zero table
-   every state is a four-way tie. Suppose `epsilon_greedy` always returned
-   action $0$ (*left*) instead of breaking ties at random: describe the
-   resulting trajectory and what the algorithm would report after any number
-   of episodes. With random tie-breaking but $\epsilon = 0$ throughout, what
-   does panel (c) of :numref:`fig_rl_exploration` show about coverage, and
-   why does coverage alone not guarantee a good table?
-1. [short-code] *The exploration schedule.* Predict, then measure. Modify
-   `q_learning` to accept the $\epsilon$ schedule as an argument, and run
-   with $\epsilon$ held at $0$, $0.1$, $0.5$ and $1$, and with the annealed
-   schedule. For each, report the episode of the first success and
-   `d2l.evaluate` of the final greedy policy over $1000$ episodes. Which
-   setting wins on each number, and why is the training return alone a
-   misleading basis for choosing?
-1. [conceptual] *Step sizes under a finite budget.* Which of the three
-   schedules of the section's step-size cell satisfy the Robbins-Monro
-   conditions $\sum_k \alpha_k = \infty$ and $\sum_k \alpha_k^2 < \infty$?
-   Explain why the constant step is nevertheless sound on the calm map
-   (write the noiseless update as $Q \leftarrow (1 - \alpha) Q + \alpha\, TQ$
-   and compute its contraction modulus) and why it cannot settle on ice.
-   Explain the stranding of $1/(1 + n)$ in one sentence about how a sample
-   average weights early targets, then find by experiment a $c$ for which
-   $\alpha = 1/(1 + c\, n)$ beats both decaying schedules at the same budget.
-1. [short-code] *The double-sampling counterexample.* Build the three-state
-   MDP: from state $s$ a single action gives reward $0$ and moves to $u_1$ or $u_2$
-   with probability $1/2$ each; from $u_1$ a single action gives reward $1$ and
-   terminates; from $u_2$, $0$ and terminates. (i) Write down $Q^*$ for all
-   three pairs. (ii) With $\mu$ uniform over the pairs, write the population
-   objective :eqref:`eq_double_sampling` explicitly and minimize it, in
-   closed form or over a grid: at $\gamma = 0.95$ the minimizer assigns
-   roughly $0.845$ and $0.155$ to the two successor pairs whose true values
-   are $1$ and $0$. (iii) Verify that the semi-gradient update
-   :eqref:`eq_td_error`, with each pair visited equally often and a decaying
-   step, converges to $Q^*$ instead. What extra data access would make the
-   argmin of :eqref:`q_learning_optimization_problem` unbiased, and why does
-   the name *double sampling* fit?
-1. [short-code] *A like-for-like comparison with value iteration.* Take $Q^*$ as
-   ground truth. Plot $\|\hat{Q} - Q^*\|_\infty$ for Q-learning against
-   environment steps (the `visits` ledger counts them), and for value
-   iteration, $Q_k = $ `mdp.backup` of $V_k$, against Bellman backups at
-   $64$ per sweep. Which comparison is fair under which assumption, and what
-   resource does each algorithm use?
-1. [short-code] *Regret, measured properly.* Means over $20$ runs can hide
-   tails: re-plot the five rules' cumulative regret on doubly logarithmic
-   axes, per seed rather than averaged. Which rules are sublinear, and which
-   show heavy tails? Then rerun UCB at
-   $\kappa \in \{0.15, 0.3, 0.5, 1.2, 2.4\}$ and at the theorem's $\sqrt{2}$:
-   how sensitive is the mean regret, which failure lives at each end (too
-   small turns the rule greedy and revives the heavy tail; too large causes
-   excessive exploration), and where does UCB fall behind the annealed
-   schedule? Summarize in one sentence what UCB tunes that $\epsilon$-greedy
-   does not.
-1. [extended] *A harder map.* Move to the $8 \times 8$ map,
-   `gym.make('FrozenLake-v1', map_name='8x8', is_slippery=True)`, with the
-   section's code unchanged. With the section's budget the agent may never
-   see the goal at all: report, over ten seeds, how many episodes of uniform
-   random behavior pass before the first success, and reconcile the number
-   with a random-walk hitting-time estimate. Then find a schedule and budget
-   that reliably solve the map, and report the cost in environment steps
-   next to the section's $4 \times 4$ figure. (Budget about five minutes.)
+1. **Batch TD against Monte Carlo.** A Markov reward process is an MDP
+   without actions: each state has a fixed distribution over the reward
+   and the successor state. One such process has two
+   nonterminal states $x$ and $y$, and $\gamma = 1$. A batch holds eight
+   episodes: one moves from $x$ to $y$ with reward $0$ and then terminates
+   with reward $0$; six start in $y$ and terminate with reward $1$; one
+   starts in $y$ and terminates with reward $0$. TD(0) is the state-value
+   form of :eqref:`eq_td_error` without the maximum,
+   $V(s) \leftarrow V(s) + \alpha \big(r + \gamma V(s') - V(s)\big)$.
+    1. Compute the Monte Carlo estimates of $V(x)$ and $V(y)$ from the
+       batch, and the values to which TD(0) converges when it replays the
+       batch many times with a small step size.
+    1. Which pair of estimates has the smaller squared error on the eight
+       observed returns?
+    1. Estimate the transition probabilities and the expected rewards of
+       the process by counting, and solve its Bellman equation exactly.
+       Which of the two pairs of estimates does the solution reproduce?
+    1. Which pair would you expect to predict the returns of future
+       episodes from $x$ better, and under which assumption about the
+       process?
+
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Example 6.4.*
+   :exlabel:`ex_qlearning-batch-td-monte-carlo`
+
+1. **Truncation treated as termination.** A task has one state and one
+   action, pays reward $1$ at every step, and never terminates. A time
+   limit truncates every episode after $H$ steps, as `FrozenLake-v1` does
+   after $100$. A faulty implementation masks the bootstrap with
+   `terminated or truncated` instead of `terminated`.
+    1. With decaying step sizes, the estimate converges to the value at
+       which the expected update over the $H$ transitions of an episode
+       vanishes. Find this value as a function of $\gamma$ and $H$, and
+       compare it with the correct value $1/(1 - \gamma)$ at
+       $\gamma = 0.95$ and $H = 100$. Which discount factor does the
+       faulty implementation effectively use?
+    1. Suppose instead that the time limit is part of the task, so that
+       the return really ends after $H$ steps. Show that no single number
+       is the correct value of the state. Add the number $h$ of remaining
+       steps to the state, as in problem :exref:`ex_mdp-time-limits`b of
+       :numref:`sec_mdp`. Find the value of each state $(s, h)$, and show
+       that the mask `terminated or truncated` is then correct.
+
+1. [code] **The exploration schedule.** On a zero-initialized table,
+   `epsilon_greedy` breaks every tie uniformly at random, and every reward
+   of FrozenLake is nonnegative.
+    1. Show that every entry of the table stays exactly zero until the
+       first successful episode, and that until then every $\epsilon$
+       produces the same behavior. What does this imply for the episode of
+       the first success as a criterion for choosing $\epsilon$?
+    1. After the first success, which entries are positive? Show that an
+       entry, once positive, stays positive, and that the greedy rule,
+       $\epsilon = 0$, never again tries the zero entries of a row that
+       contains a positive entry. Panel (c) of
+       :numref:`fig_rl_exploration` shows this rule covering 92 percent of
+       the nonterminal pairs of the calm lake and learning to succeed
+       there. Predict whether it also learns a good policy on slippery
+       ice.
+    1. Give `q_learning` an argument `epsilon`, a function from the episode
+       index to the exploration rate such as those returned by
+       `linear_schedule`. On the slippery lake, run five seeds each with
+       $\epsilon$ held at $0$, $0.1$, $0.5$ and $1$, and with the schedule
+       `linear_schedule(1.0, 0.05, num_episodes // 2)` that `q_learning`
+       uses in the section. For each setting, report the mean
+       training return, the success rate of the final greedy policy under
+       `d2l.evaluate` over $1000$ episodes, and
+       $\max_s |\max_a \hat{Q}(s, a) - V^*(s)|$.
+    1. Rank the settings by training return and by greedy success rate.
+       Where do the two rankings disagree, and what explains the
+       disagreement?
+   :exlabel:`ex_qlearning-exploration-schedule`
+
+1. [code] **Regret rates of epsilon-greedy.** The expected regret is
+   $\sum_a (\mu^* - \mu_a)\, E[n(a)]$, where $n(a)$ counts the pulls of arm
+   $a$.
+    1. Once the empirical means rank the best arm first, a fixed-$\epsilon$
+       rule pulls an arm chosen uniformly at random with probability
+       $\epsilon$ and the best arm otherwise. Derive its expected regret per
+       pull for `arms` at $\epsilon = 0.1$, and the regret that this
+       exploration alone accumulates in $2000$ and in $20000$ pulls.
+    1. Repeat the calculation for the annealed schedule
+       $\epsilon_t = \max(0.02, 1/\sqrt{t + 1})$ of `rules`. Show that its
+       exploration regret grows like $\sqrt{t}$ until the floor takes
+       over, find the pull at which that happens, and give the regret per
+       pull after it.
+    1. Run the three rules of `rules` for $20000$ pulls, twenty seeds
+       each, and plot the mean cumulative regret on doubly logarithmic
+       axes. Compare the slopes and the levels with your predictions. What
+       accounts for the measured regret in excess of the exploration
+       regret?
+
+1. [code] **The UCB coefficient.** The section chose $\kappa = 0.5$ for
+   these arms. Rerun `ucb` for
+   $\kappa \in \{0.15, 0.3, 0.5, 1, \sqrt{2}, 2.4\}$, twenty seeds each,
+   and report the mean, the median and the maximum over seeds of the
+   regret after $2000$ pulls.
+    1. Which $\kappa$ minimizes the median, and which minimizes the mean?
+       Explain the difference at small $\kappa$ by what the rule does after
+       the best arm loses its first few pulls.
+    1. Which of the three statistics would you use to compare exploration
+       rules, and why?
+    1. Report the same statistics for `thompson`. Which property of the
+       Beta posterior plays the role of the bonus
+       $\kappa \sqrt{\log t / n(a)}$ of :eqref:`eq_ucb`?
+
+1. **Greedy SARSA and Q-learning.** SARSA replaces the maximum in
+   :eqref:`eq_td_error` by the value of the action $a'$ that the behavior
+   policy selects at $s'$, $\delta = r + \gamma Q(s', a') - Q(s, a)$. An
+   implementation selects $a'$ before it updates $Q(s, a)$ and then takes
+   $a'$ at the next step. Suppose that both methods select actions
+   greedily on their current tables and break ties by the same fixed rule.
+   Are SARSA and Q-learning then the same algorithm, making the same action
+   selections and the same updates? If they differ, construct a transition
+   of the calm lake and table values for which the two methods select
+   different actions at the next step.
+
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Exercise 6.12.*
+
+1. [code] **The double-sampling counterexample.** ● Build a three-state
+   MDP with one action per state. From state $s$, the action gives reward
+   $0$ and moves to $u_1$ or $u_2$ with probability $1/2$ each. From $u_1$,
+   it gives reward $1$ and terminates; from $u_2$, it gives reward $0$ and
+   terminates. Write $Q(s)$, $Q(u_1)$ and $Q(u_2)$ for the three entries.
+    1. Differentiate one term of the sampled objective
+       :eqref:`q_learning_optimization_problem` with respect to the table.
+       Which entries have nonzero derivatives, and which of these
+       derivatives does the semi-gradient update :eqref:`eq_td_error` drop?
+    1. Write down $Q^*$ for the three entries.
+    1. With $\mu$ uniform over the three pairs, write the population
+       objective :eqref:`eq_double_sampling` explicitly and minimize it in
+       closed form as a function of $\gamma$. Which entries does the
+       minimizer distort relative to $Q^*$, and in which direction?
+    1. Visit the three pairs equally often and run, with a decaying step
+       size, both the semi-gradient update and stochastic gradient descent
+       on the full derivative of part (a). Confirm that each converges to
+       the point predicted in parts (b) and (c).
+    1. Suppose that the environment can be reset to $s$, so that every
+       visit to $s$ yields two independent successors. Use one of them in
+       the target and the other in the derivative of part (a). Show that
+       the resulting stochastic gradient is unbiased for the gradient of
+       the squared Bellman residual, and confirm by simulation that it
+       converges to $Q^*$.
+   :exlabel:`ex_qlearning-double-sampling-counterexample`
+
+1. [code] **Step sizes under a finite budget.** ● The section compares a
+   constant step size with schedules $\alpha = 1/(1 + c\, n)$ for
+   $c = 0.1$ and $c = 1$, where $n$ counts the visits to the entry,
+   including the current one. For the analysis, treat the targets that
+   one entry receives as independent draws with mean $m$ and variance
+   $\sigma^2$.
+    1. For a constant $\alpha$, find the variance of the estimate after
+       many updates. Evaluate it at $\alpha = 0.9$ for
+       $Q(s_0, \textrm{left})$, taking as targets $r + \gamma V^*(s')$ with
+       $s'$ drawn from `mdp.P[0, a0]` and `V_star` from the section, and
+       compare the resulting standard deviation with the spread of the five
+       final constant-step estimates, $0.06$ to $0.27$ around the exact
+       value $0.180$. Which assumption of the analysis fails for this
+       entry, and where does the rest of the spread come from?
+    1. For $c = 1$, write the estimate after $n$ visits as a weighted sum
+       of the initial value and the $n$ targets. Which weight does the
+       zero initialization receive?
+    1. For general $c$, write the weight of the $k$-th target after $n$
+       visits as a product, and compare the logarithm of the product with
+       an integral to show that the weight grows like $k^{1/c - 1}$ in $k$
+       for large $k \leq n$. How does $c = 0.1$ treat the targets that were
+       computed from the early, inaccurate table?
+    1. Sweep $c \in \{0.01, 0.03, 0.1, 0.3, 1\}$ on the slippery lake,
+       five seeds each, and plot against $c$ both the final error
+       $|\hat{Q}(s_0, \textrm{left}) - Q^*(s_0, \textrm{left})|$ and the
+       sup-norm error $\|\hat{Q} - Q^*\|_\infty$ over all entries. Explain
+       the shape of the curves with parts (a) and (c). Do the two error
+       measures select the same $c$?
+
+1. [code] **Samples against backups.** ● Take `Q_star` as ground truth.
+    1. Record $\|\hat{Q} - Q^*\|_\infty$ after every episode of
+       `q_learning` on the slippery lake and plot it against the number of
+       environment steps, which the `visits` ledger counts. On the same
+       axes, plot the error of value iteration, with $Q_k$ = `mdp.backup`
+       of the $k$-th iterate of `d2l.value_iteration`, against the number
+       of Bellman backups at $64$ per sweep. How many backups does value
+       iteration need to reach the error that Q-learning reaches after
+       $4000$ episodes?
+    1. Add to `q_learning` a count of the observed transitions
+       $(s, a, s')$ and a sum of the observed rewards for each pair. After
+       $100$, $400$, $1000$ and $4000$ episodes, build the estimated model
+       `d2l.TabularMDP(P_hat, r_hat, gamma)`, leaving the rows of unvisited
+       pairs at zero, solve it with `d2l.value_iteration`, and add the
+       error of its action values to the plot at the same environment
+       steps. Which estimate makes better use of the samples, and what
+       does it cost in computation? Relate the result to exercise
+       :exref:`ex_qlearning-batch-td-monte-carlo`.
+    1. Value iteration consumes model backups, Q-learning consumes
+       environment steps, and the estimated model of part (b) consumes
+       both. Suppose that one environment step costs as much computation
+       as $b$ backups. Using your measurements, find for which range of
+       $b$ each of the three methods reaches the error of Q-learning after
+       $4000$ episodes at the lowest total cost. Which of the methods
+       remain available to an agent that cannot read the transition
+       kernel?
+   :exlabel:`ex_qlearning-like-like-comparison-value`
+
+1. [code] **Maximization bias in a two-state task.** ● Every episode
+   starts in state $s_0$, which offers two actions: *right* terminates with
+   reward $0$, and *left* moves to state $s_1$ with reward $0$. In $s_1$,
+   each of $m$ actions terminates with a reward drawn from
+   $\mathcal{N}(-0.1, 1)$, so *left* is a mistake. Use $\gamma = 1$, the
+   constant step size $\alpha = 0.1$, zero initial values, and
+   `epsilon_greedy` with $\epsilon = 0.1$.
+    1. Implement tabular Q-learning for $m = 10$, and plot against the
+       episode index the fraction of runs that take *left* in $s_0$,
+       averaged over $1000$ runs of $300$ episodes. What fraction would an
+       $\epsilon$-greedy agent acting on $Q^*$ show?
+    1. Double Q-learning :cite:`vanHasselt.2010` keeps two tables $Q_1$
+       and $Q_2$, acts $\epsilon$-greedily on $Q_1 + Q_2$, and flips a fair
+       coin at each transition. On heads it updates
+       $$Q_1(s, a) \leftarrow Q_1(s, a) + \alpha \big( r + \gamma\, Q_2(s', \mathrm{argmax}_{a'} Q_1(s', a')) - Q_1(s, a) \big),$$
+       and on tails it applies the same update with the two tables
+       exchanged. Add its curve to the plot.
+    1. Every reward reachable through *left* has a negative mean. Explain
+       how Q-learning's estimate of $Q(s_0, \textrm{left})$ nevertheless
+       becomes positive. Predict how the Q-learning curve changes for
+       $m = 1$ and for $m = 100$, and check. Which part of the effect at
+       $m = 100$ comes from noisy estimates, and which from actions that
+       have never been tried?
+
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Example 6.7.*
+
+1. **Logarithmic regret of UCB.** ●● With $\kappa = \sqrt{2}$, the rule
+   :eqref:`eq_ucb` is UCB1 of :citet:`Auer.CesaBianchi.Fischer.2002`,
+   whose Theorem 1 bounds the expected regret after $t$ pulls of arms with
+   rewards in $[0, 1]$ by
+   $$\sum_{a:\, \Delta_a > 0} \frac{8 \ln t}{\Delta_a} + \Big(1 + \frac{\pi^2}{3}\Big) \sum_a \Delta_a, \qquad \Delta_a = \mu^* - \mu_a.$$
+   Derive this bound. The tool is Hoeffding's inequality: the mean
+   $\hat{\mu}_n$ of $n$ independent rewards in $[0, 1]$ with mean $\mu$
+   satisfies
+   $$P(\hat{\mu}_n \geq \mu + \varepsilon) \leq e^{-2 n \varepsilon^2},$$
+   and likewise for the lower tail.
+    1. Fix a suboptimal arm $a$ and let
+       $\ell = \lceil 8 \ln t / \Delta_a^2 \rceil$. Show that if arm $a$ is
+       pulled at a step $u \leq t$ while $n(a) \geq \ell$, then either the
+       index of the best arm lies at or below $\mu^*$, or the empirical
+       mean of arm $a$ exceeds $\mu_a$ by more than its bonus.
+    1. For fixed pull counts of both arms, bound the probability of each
+       of the two events at step $u$ by $u^{-4}$. Take a union bound over
+       the counts and sum over $u$ to show
+       $E[n(a)] \leq \ell + \pi^2/3$ after $t$ pulls.
+    1. Combine part (b) with the regret decomposition to obtain the
+       theorem. Evaluate the bound for `arms` at $t = 2000$ and compare it
+       with the regret near $200$ that the section reports for
+       $\kappa = \sqrt{2}$. Which step of the proof loses the most?
+    1. Repeat the argument for a general coefficient $\kappa$. For which
+       $\kappa$ does the sum over steps in part (b) still converge, and
+       what does the answer say about the section's choice
+       $\kappa = 0.5$?
+   :exlabel:`ex_qlearning-ucb-logarithmic-regret`
+
+1. [extended] **Deep exploration.** ●● Under undirected exploration, the
+   probability of executing a required sequence of $k$ actions decreases
+   geometrically with $k$. Build a chain on which this decrease can be
+   computed exactly: states
+   $0, \ldots, N-1$, start in state $0$, action $0$ returns to state $0$,
+   action $1$ advances one state, reaching state $N-1$ gives reward $1$
+   and terminates, and episodes are truncated after $2N$ steps. Give the
+   chain the `reset` and `step` interface of Gymnasium so that
+   `q_learning`, with the `epsilon` argument of exercise
+   :exref:`ex_qlearning-exploration-schedule`, runs on it unchanged.
+    1. Show that the uniformly random policy succeeds in one episode with
+       probability at most $2N \cdot 2^{-(N-1)}$, so that the expected
+       number of episodes up to the first success is at least
+       $2^{N-2}/N$. By the argument of problem
+       :exref:`ex_qlearning-exploration-schedule`a, $\epsilon$-greedy
+       Q-learning from a zero table acts uniformly at random until its
+       first success, so the bound holds for it whatever the value of
+       $\epsilon$.
+    1. Measure the episode of the first success for
+       $N \in \{4, 6, \ldots, 20\}$, five seeds each, and plot it against
+       $N$ on a logarithmic axis together with the bound.
+    1. Initialize every entry to $1$, an upper bound on every return, and
+       act greedily with $\epsilon = 0$. Measure the same quantity, and
+       explain its growth with $N$ by tracing which entries the first
+       episodes lower.
+    1. Move both agents to
+       `gym.make('FrozenLake-v1', map_name='8x8', is_slippery=True)`, which
+       also truncates at $100$ steps. Compare the optimistic greedy agent
+       with the zero-initialized agent under the schedule
+       `linear_schedule(1.0, 0.05, num_episodes // 2)` at $4000$ and
+       $20000$ episodes, five seeds each. Report the success rate of the
+       greedy policy under `d2l.evaluate`, the environment steps used,
+       and, as a reference, the success rate of the optimal policy
+       computed by value iteration. Does optimism keep its advantage on a
+       stochastic map, and what does it cost?
+
+   The whole project takes about five minutes of CPU time.
 
 [Discussions](https://d2l.discourse.group/)
 

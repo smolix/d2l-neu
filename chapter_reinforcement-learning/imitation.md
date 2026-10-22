@@ -260,6 +260,7 @@ def policy_step(ac, batch, advantage):  #@save
 The weights are supplied as a NumPy array and therefore cannot contain a gradient graph. Both framework implementations consequently treat them as fixed data without requiring an explicit stop-gradient operation.
 
 ### Distribution Shift between Training and Deployment
+:label:`subsec_il_distribution_shift`
 
 A classifier is evaluated under the distribution on which its error is measured. Behavior cloning instead trains on states visited by the expert and is deployed on states induced by the learned policy. These distributions can differ after the learner's first deviation. We compare training accuracy with deployed performance using the evaluation protocol of :numref:`sec_valueiter`:
 
@@ -291,11 +292,12 @@ for n in [1, 3, 10]:
           f'worst {rates[0]:.0%}, over ten datasets')
 ```
 
-With three demonstration episodes, the median dataset gives a good clone, but some datasets give much lower success. A clone trained on one episode may never reach the goal. More demonstrations reduce the probability of such coverage gaps. The loss caused by an encountered gap, however, can still grow with the task horizon.
+With three or ten demonstration episodes, all ten datasets give clones within a few percentage points of the expert, although the clone `bc` of the three episodes in `demo_s` shows that such a dataset can also miss a state that matters. A clone trained on one episode may never reach the goal. More demonstrations reduce the probability of such coverage gaps. The loss caused by an encountered gap, however, can still grow with the task horizon.
 
 ## Compounding Error
 
 ### The Error Bounds: $\varepsilon T^2$ versus $\varepsilon T$
+:label:`subsec_il_error_bounds`
 
 Supervised learning bounds the probability of an error at one decision. In a sequential task, an early error can affect all later states and rewards. Let $d^\pi_t$ denote the state distribution at time $t$ under policy $\pi$. Demonstrations sample states from $d^{\pi^*}_t$, the expert's state distribution.
 
@@ -323,14 +325,15 @@ print(f'lost return at T={T_max}: cloned {gap_bc[-1]:.2f} '
       f'recovering {gap_rec[-1]:.2f} (eps T = {eps * T_max:.2f})')
 ```
 
-On logarithmic axes, the two measurements follow lines with different slopes: the cloned imitator tracks the quadratic reference and the recovering imitator tracks the linear reference. Their gaps differ by a factor of five at $T = 10$. Panel (b) of :numref:`fig_rl_compounding_error` runs the same simulation at $\varepsilon = 0.01$ out to $T = 64$, where the gap between the rates has grown past thirtyfold.
+On logarithmic axes, the two measurements follow lines with different slopes: the cloned imitator tracks the quadratic reference and the recovering imitator tracks the linear reference. Their gaps differ by a factor of about five at $T = 10$. Panel (b) of :numref:`fig_rl_compounding_error` runs the same simulation at $\varepsilon = 0.01$ out to $T = 64$, where the cloned imitator loses more than 25 times as much return as the recovering one.
 
 ![How per-step imitation errors accumulate over a horizon. (a) The expert's state distribution and the clone's drift apart along the horizon: a clone that errs with probability $\varepsilon = 0.2$ per step on the expert's states, and acts uniformly at random where it has no data, spreads over cells the expert never occupies; after the marked first mistake the classification guarantee says nothing. (b) The return lost to the expert on the chain, simulated at $\varepsilon = 0.01$ with 20,000 rollouts per point: cloning tracks the quadratic reference $\varepsilon T^2/2$ while an imitator that recovers in one step tracks the linear reference $\varepsilon T$.](../img/mdl-rl-compounding-error.svg)
 :label:`fig_rl_compounding_error`
 
 ### The Divergence of the State Distributions
+:label:`subsec_il_state_divergence`
 
-The classifier satisfies its training objective, so the failure need not arise from optimization or model capacity. It arises because the deployed state distribution differs from the demonstration distribution. For FrozenLake, both distributions can be propagated exactly through the transition kernel from the same start state:
+The classifier satisfies its training objective, so the failure need not arise from optimization or model capacity. It arises because the deployed state distribution differs from the demonstration distribution. For FrozenLake, both distributions can be propagated exactly through the transition kernel from the same start state and compared by their *total variation distance* $\frac{1}{2}\sum_s |d^{\pi^*}_t(s) - d^{\hat\pi}_t(s)|$:
 
 ```{.python .input #imitation-why-this-is-not-a-defect-of-the-fit}
 %%tab pytorch, jax
@@ -357,6 +360,7 @@ The distributions are identical for the first three steps because the clone agre
 ## Interactive Data Collection
 
 ### DAgger: Dataset Aggregation
+:label:`subsec_il_dagger`
 
 The linear bound applies when the error is controlled under the learner's state distribution. DAgger obtains training data from that distribution :cite:`Ross.Gordon.Bagnell.2011`: it executes the current learner, asks the expert to label the visited states, adds these pairs to the accumulated dataset, and refits the policy.
 
@@ -387,11 +391,12 @@ for k in range(4):
                     np.concatenate([agg_a, new_a]))
 ```
 
-Round 0 is behavior cloning on the original 96 pairs. After one DAgger round, the learned policy matches the expert in this experiment. The model, loss, and optimizer are unchanged; the improvement comes from collecting labels on the learner's visited states. In particular, the new data include state 13, where the original policy often failed and the expert rarely visited. In this example, these learner-state labels correct an error that additional trajectories from the expert distribution may not cover.
+Round 0 is behavior cloning on the original 96 pairs. After one DAgger round, the learned policy matches the expert in this experiment. The model, loss, and optimizer are unchanged; the improvement comes from collecting labels on the learner's visited states. In particular, the new data include state 13, where the original policy often failed and which the three demonstration episodes happened to miss. In this example, these learner-state labels correct an error that additional trajectories from the expert distribution may not cover.
 
-One successful round on FrozenLake illustrates the mechanism but not the full DAgger guarantee. The theorem in :cite:`Ross.Gordon.Bagnell.2011` assumes repeated data collection, a no-regret learner trained on the accumulated dataset, and, in the original analysis, a mixture of expert and learner policies during collection. It also requires continued access to the expert for labeling learner states. Retaining data from all preceding rounds prevents the fitted policy from depending only on its most recent trajectories. Exercise 4 compares behavior cloning and DAgger under an equal expert-query budget.
+One successful round on FrozenLake illustrates the mechanism but not the full DAgger guarantee. The theorem in :cite:`Ross.Gordon.Bagnell.2011` assumes repeated data collection, a no-regret learner trained on the accumulated dataset, and, in the original analysis, a mixture of expert and learner policies during collection. It also requires continued access to the expert for labeling learner states. Retaining data from all preceding rounds prevents the fitted policy from depending only on its most recent trajectories. Exercise :exref:`ex_imitation-dagger-s-budget` compares behavior cloning and DAgger under an equal expert-query budget.
 
 ### Supervised Fine-Tuning and Offline RL
+:label:`subsec_il_sft`
 
 Supervised fine-tuning of a language model is an instance of behavior cloning: the context is the state, the next token is the action, and curated responses provide demonstrations. At deployment, the model conditions on contexts containing its own previous outputs, so distribution shift can accumulate over a long generation. :numref:`sec_rl_sequences` returns to this setting. Behavior cloning is also a standard baseline in offline reinforcement learning because it can always be applied to a fixed dataset without further interaction; :numref:`sec_offline` compares offline RL methods with this baseline.
 
@@ -411,23 +416,258 @@ DAgger collects states from the learner and obtains expert labels for them, addr
 
 ## Exercises
 
-1. [conceptual] *Where the bound comes from.* Reproduce the $O(\varepsilon T^2)$
-   argument and identify the one step where "the expert's distribution" is
-   replaced by "the learner's".
-1. [short-code] *How many demonstrations.* Return against
-   $N \in \{5, 20, 100, 500\}$; at what $N$ does the clone match the expert on
-   the *expert's* states while still losing return?
-1. [short-code] *Where the errors are.* Plot the clone's per-state error
-   against the expert's state-visitation frequency; explain the shape.
-1. [short-code] *DAgger's budget.* DAgger queries the expert on the learner's
-   states. Count expert queries and compare like for like against BC at the
-   same query budget.
-1. [conceptual] *SFT is behavior cloning.* Write the correspondence for a
-   language model, and say which term of the $O(\varepsilon T^2)$ bound explains
-   why a model that has only ever been fine-tuned on gold responses degrades
-   over long generations.
-1. [extended] *A bad expert.* Corrupt 10% of the demonstrations; does BC or
-   DAgger degrade faster, and why?
+1. [code] **Greedy or sampled actions.** The clone `bc` acts with
+   `act_greedy`, which breaks the four-way tie at an undemonstrated state in
+   favor of action 0, *left*.
+    1. Evaluate `bc` over 1,000 episodes with `bc.act` in place of
+       `bc.act_greedy`, passing `rng=np.random.default_rng(0)` to
+       `d2l.evaluate`, and compare the success rate with that of the greedy
+       rule. Which states account for the difference?
+    1. Draw a larger dataset with `demonstrations(10)`. Replace each expert
+       label independently with probability $\rho$ by an action drawn
+       uniformly at random, refit with `clone`, and evaluate both rules for
+       $\rho \in \{0, 0.1, 0.3\}$. What does the cross-entropy fit converge
+       to at a state with many noisy labels? Explain the success rates of
+       both rules as $\rho$ grows from these fitted probabilities.
+    1. At which states, if any, does the label noise change the greedy
+       action, and what do these states have in common?
+
+1. **The chain in closed form.** In the chain experiment of
+   :numref:`fig_rl_compounding_error`, an imitator disagrees with the expert
+   independently with probability $\varepsilon$ at each step
+   $t = 1, \ldots, T$. The cloned imitator earns the reward of step $t$ only
+   if it has agreed at every step up to $t$. The recovering imitator earns it
+   whenever it agrees at step $t$.
+    1. Derive in closed form the expected return $G(T)$ that the cloned
+       imitator loses to the expert, and show that the recovering imitator
+       loses $\varepsilon T$. Compare both with the values printed for
+       $\varepsilon = 0.05$ and $T = 10$.
+    1. Expand $G(T)$ to leading order in $\varepsilon$ and compare it with
+       the bound $\varepsilon T^2/2$ of the proof in
+       :numref:`subsec_il_error_bounds`. For $\varepsilon = 0.05$, at which
+       horizons does $G(T)$ exceed $\varepsilon T^2/2$? How many rewards does
+       the cloned imitator lose after a first disagreement at step $t$, and
+       how many does the proof count? Which bound does the corrected count
+       give?
+    1. How does $G(T)$ grow once $\varepsilon T \gg 1$, and which condition
+       on $\varepsilon T$ does the quadratic regime therefore require?
+       Compute the ratio of the two losses at $\varepsilon = 0.01$ and
+       $T = 64$, the right end of panel (b), and compare it with the ratio
+       $T/2$ of the two reference lines.
+   :exlabel:`ex_imitation-chain-closed-form`
+
+1. [code] **Where the clone's mass goes.** Extend the propagation of `d_exp`
+   and `d_clo` in :numref:`subsec_il_state_divergence` to the time limit of
+   100 steps.
+    1. Plot the total variation distance against $t$, together with the mass
+       that each distribution places on the goal and on each hole. Which hole
+       accounts for the clone's lost successes?
+    1. Show that $|E_{s \sim d}[f(s)] - E_{s \sim d'}[f(s)]|$ is at most the
+       total variation distance between $d$ and $d'$ for every function $f$
+       with values in $[0, 1]$. Conclude that the two success probabilities
+       differ by at most the total variation distance at $t = 100$, and
+       compare the two numbers. What determines the slack of this bound?
+
+1. **Fine-tuning as behavior cloning.** Supervised fine-tuning trains a
+   language model with the cross-entropy of each token of a curated
+   response, given the prompt and the preceding tokens of that response.
+   :numref:`subsec_il_sft` identifies the context with the state, the next
+   token with the action, and the curated responses with demonstrations.
+    1. What are the transition kernel and the horizon $T$ of this decision
+       process, and which policy plays the role of the expert? Show that,
+       with these identifications, the fine-tuning loss is the negative of
+       the behavior-cloning log-likelihood
+       $\sum_i \log \pi_\theta(a_i \mid s_i)$.
+    1. Which quantity in the proposition of
+       :numref:`subsec_il_error_bounds` grows with the length of the
+       response? Give one kind of wrong token
+       from which the model recovers within a few tokens, so that $u$ stays
+       small, and one from which it does not.
+    1. DAgger needs expert labels at the learner's own states. What would
+       such a label be at a prefix that the model generated itself, and why
+       are human annotators a poor source of these labels? On-policy
+       distillation :cite:`Agarwal.Vieillard.Zhou.ea.2024` is an algorithm
+       of this kind.
+
+1. **Two valid paths.** A robot faces an obstacle. Half of the
+   demonstrations pass it on the left and half on the right. Each maneuver
+   takes several steps, during which the robot's observations of the two
+   maneuvers barely differ.
+    1. A deterministic policy is fitted to the demonstrated steering angles
+       $-\alpha$ and $+\alpha$ by squared error. Which angle does it output in
+       front of the obstacle?
+    1. The steering is discretized into *left*, *straight*, and *right*, and
+       a categorical policy is fitted by cross-entropy, as `clone` does. What
+       does the fit converge to in front of the obstacle, and what does
+       `act_greedy` do there?
+    1. Diffusion policies :cite:`Chi.Feng.Du.ea.2023` sample a sequence of
+       several actions from one observation and execute it before sampling
+       again. Compare this with sampling one action per step with `act`
+       during the maneuver. What can go wrong with the per-step sampler, and
+       what does executing a sequence without replanning cost?
+
+1. [code] **Demonstrations needed for coverage.** ● A clone fitted by
+   `clone` agrees with `pi_star` at every demonstrated state and takes action
+   0 at every other state. The probability that a deterministic policy `pi`
+   reaches the goal within the time limit is the mass at state 15 after
+   propagating the start distribution `np.eye(16)[0]` 100 times through
+   `mdp.P[np.arange(16), pi]`.
+    1. For each nonterminal state $s$, compute the success probability of the
+       policy that follows `pi_star` except at $s$, where it takes action 0.
+       Call $s$ critical if this deviation lowers the success probability to
+       less than half that of `pi_star`. Which states are critical?
+    1. Let $q_s$ be the probability that one expert episode visits $s$.
+       Compute $q_s$ exactly: make $s$ absorbing by replacing row $s$ of the
+       expert's transition matrix with the unit vector at $s$, and propagate
+       for 100 steps. How probable is a dataset of three episodes that,
+       like `demo_s`, never visits state 13?
+    1. Treating the critical states as independent, predict from their $q_s$
+       the probability that $n \in \{1, 3, 10\}$ expert episodes leave some
+       critical state undemonstrated. Check the prediction by counting how
+       often this happens in 200 datasets from `demonstrations(n)` for each
+       $n$. Are the medians and worst cases of the ten-dataset sweep in
+       :numref:`subsec_il_distribution_shift` consistent with it?
+   :exlabel:`ex_imitation-demonstrations-coverage`
+
+1. **Errors on the learner's states.** ● Let $J(\pi)$ be the expected
+   return of $\pi$ over the horizon $T$, with per-step rewards in $[0, 1]$.
+   Let $V^*_k(s)$ be the expected return of the expert over $k$ remaining
+   steps from $s$, and let $Q^*_k(s, a)$ be the same quantity when the first
+   action is $a$.
+    1. Let $\pi_{1:t}$ follow a deterministic policy $\hat\pi$ for the first
+       $t$ steps and the expert afterwards. Telescope over
+       $\pi_{1:0} = \pi^*, \ldots, \pi_{1:T} = \hat\pi$ to show
+       $$J(\pi^*) - J(\hat\pi) = \sum_{t=1}^{T} E_{s \sim d^{\hat\pi}_t}\left[V^*_{T-t+1}(s) - Q^*_{T-t+1}(s, \hat\pi(s))\right],$$
+       and deduce part (ii) of the proposition in
+       :numref:`subsec_il_error_bounds`. The identity is the finite-horizon
+       counterpart of the one in problem
+       :exref:`ex_value-iter-improvement-quantified`a of
+       :numref:`sec_valueiter`.
+    1. Model the chain of problem :exref:`ex_imitation-chain-closed-form` as
+       an MDP whose state records whether the imitator is on the chain. On
+       the chain, the expert's action earns reward 1 and stays on it, and any
+       other action earns 0 and leaves it. Off the chain, the expert's action
+       earns 1 and returns to it, and any other action earns 0 and stays off.
+       The recovering imitator disagrees with probability $\varepsilon$
+       everywhere, and the cloned imitator disagrees with probability
+       $\varepsilon$ on the chain and always off it. Show that $u = 1$,
+       compute the probability $\varepsilon_t$ that each imitator disagrees
+       with the expert at step $t$ under its own state distribution, and
+       evaluate the identity for both imitators.
+    1. Why does part (ii) of the proposition not contradict the quadratic
+       loss of the cloned imitator in part (i)?
+
+1. [code] **DAgger's budget.** ● Every pair in a DAgger dataset, whether it
+   comes from `demonstrations` or from `relabel`, costs one expert query.
+    1. Start DAgger from `demonstrations(3)` and run the loop of
+       :numref:`subsec_il_dagger`. For each round, train a behavior-cloning
+       policy on fresh demonstrations with at least as many pairs as the
+       DAgger dataset of that round, drawing episodes with
+       `demonstrations(1)` until the count is reached. Repeat both methods
+       for ten seeds, evaluating tabulated greedy policies as the loop does,
+       and plot the success rate against the number of expert queries with
+       the spread over seeds.
+    1. A tabular policy needs at most one label per state. Count the
+       distinct states that each method has labeled at each budget, and
+       estimate how many queries DAgger would need if it queried the expert
+       only at states without a label.
+    1. Repeat the comparison on the $8 \times 8$ map,
+       `gym.make('FrozenLake-v1', map_name='8x8', is_slippery=True)`: rebuild
+       `env`, `mdp`, `V_star`, and `pi_star`, and replace the 16 states in
+       `clone` and in the tabulation by 64. An estimate from 1,000 episodes
+       has a standard error of about 1.6 percentage points on this map, so
+       use 30 seeds and compute each success probability exactly, as in
+       problem :exref:`ex_imitation-demonstrations-coverage`: propagate the
+       start distribution 100 times through `mdp.P[np.arange(64), tab]` and
+       read off the mass at the goal, state 63. Which method reaches a given
+       success rate with fewer expert queries on the larger map, and why?
+   :exlabel:`ex_imitation-dagger-s-budget`
+
+1. **DAgger's guarantee.** ● In the analysis of
+   :citet:`Ross.Gordon.Bagnell.2011`, the data-collecting policy $\pi_i$ of
+   iteration $i$ takes the expert's action with probability $\beta_i$ at
+   each step and the action of the current learner $\hat\pi_i$ otherwise.
+   The next learner $\hat\pi_{i+1}$ minimizes the loss on the aggregated data
+   of iterations $1, \ldots, i$, as refitting with `clone` does. Write
+   $d_\pi = \frac{1}{T}\sum_{t=1}^T d^\pi_t$ for the average state
+   distribution of $\pi$, let $\ell(s, \pi) \in [0, \ell_{\max}]$ be a
+   classification loss of $\pi$ at $s$, such as
+   $\mathbf{1}[\pi(s) \neq \pi^*(s)]$, and set
+   $\ell_i(\pi) = E_{s \sim d_{\pi_i}}[\ell(s, \pi)]$.
+    1. Show that $\|d_{\pi_i} - d_{\hat\pi_i}\|_1 \leq 2\min(1, T\beta_i)$.
+    1. Let $\varepsilon_N = \min_\pi \frac{1}{N}\sum_{i=1}^N \ell_i(\pi)$ be
+       the loss of the best policy in hindsight, and suppose that the
+       learners have average regret at most $\delta_N$:
+       $$\frac{1}{N}\sum_{i=1}^N \ell_i(\hat\pi_i) - \varepsilon_N \leq \delta_N.$$
+       Show that some learner $\hat\pi_j$ of the sequence satisfies
+       $$E_{s \sim d_{\hat\pi_j}}[\ell(s, \hat\pi_j)] \leq \varepsilon_N + \delta_N + \frac{2\ell_{\max}}{N}\sum_{i=1}^N \min(1, T\beta_i).$$
+       The proof of Theorem 4.1 of the paper derives this bound before it
+       simplifies the last sum.
+    1. The loop of :numref:`subsec_il_dagger` uses $\beta_1 = 1$ and
+       $\beta_i = 0$ for $i \geq 2$. Specialize the bound to this schedule
+       and to the 0-1 loss, and combine it with part (ii) of the proposition
+       in :numref:`subsec_il_error_bounds`. How must $N$ grow with $T$ for the
+       term that does not involve $\varepsilon_N$ or $\delta_N$ to stay
+       bounded?
+    1. The guarantee concerns the best learner of the sequence, or one drawn
+       uniformly at random from it, rather than the last one. What would
+       identifying the best learner require? Why is deploying the last
+       learner harmless in the run printed in :numref:`subsec_il_dagger`?
+
+1. **Rewards behind demonstrations.** ● Inverse reinforcement learning
+   infers a reward under which the demonstrations are optimal and then plans
+   with that reward.
+    1. By the telescoping argument of :numref:`sec_mdp`, every
+       potential-based shaping :eqref:`eq_mdp_shaping` of $r$ with
+       $\Phi = 0$ at terminal states keeps the expert optimal. Show that the
+       zero reward makes the expert optimal as well. What do the two facts
+       imply about recovering $r$ from demonstrations?
+    1. Maximum-entropy inverse reinforcement learning
+       :cite:`Ziebart.Maas.Bagnell.ea.2008` models the trajectories of a
+       deterministic episodic task with a fixed start state as
+       $P_\theta(\tau) \propto \exp\big(\sum_t r_\theta(s_t, a_t)\big)$ over
+       the feasible trajectories, and fits $\theta$ by maximizing the
+       likelihood of the demonstrations. Why does this criterion reject the
+       zero reward for an expert that reaches the goal? Why can it not
+       distinguish $r$ from its shaping with $\gamma = 1$?
+    1. Suppose that the true reward depends on the state only, $r(s)$.
+       Under deterministic dynamics $s' = f(s, a)$, its shaping with
+       $\gamma = 1$ is the function
+       $\hat r(s, a) = r(s) + \Phi(f(s, a)) - \Phi(s)$ of the state and the
+       action. :citet:`Fu.Luo.Levine.2018` observe that such a
+       reward need not keep the expert optimal when the dynamics change.
+       Construct a three-state example in which planning with $\hat r$ under
+       new dynamics $f'$ selects a different action than planning with $r$.
+       Which restriction on the learned reward rules out this failure?
+
+1. **The missing-mass bound.** ●● Consider a finite MDP with horizon $T$,
+   per-step rewards in $[0, 1]$, and a deterministic expert $\pi^*$. A
+   dataset $\mathcal{D}$ of $N$ expert episodes is drawn, and the clone
+   $\hat\pi$ copies $\pi^*$ at every state in $\mathcal{D}$ and takes a fixed
+   fallback action at every other state. Let $q_s$ be the probability that
+   one expert episode visits $s$, and let $U$ be the set of states outside
+   $\mathcal{D}$ at which the fallback action differs from $\pi^*$.
+    1. Couple a deployment of $\hat\pi$ with an expert episode that uses the
+       same random transitions, and show that for a fixed dataset
+       $$J(\pi^*) - J(\hat\pi) \leq T \cdot P(\textrm{the expert episode visits } U).$$
+    1. Show that the expectation of this probability over $\mathcal{D}$ is at
+       most $\sum_s q_s (1 - q_s)^N \leq |\mathcal{S}|/(eN)$, so that
+       $J(\pi^*) - E_{\mathcal{D}}[J(\hat\pi)] \leq T|\mathcal{S}|/(eN)$.
+    1. Evaluate the sum on FrozenLake for $N \in \{1, 3, 10\}$ with the $q_s$
+       of problem :exref:`ex_imitation-demonstrations-coverage`, keeping
+       only the states at which action 0 differs from `pi_star`. Because the
+       return of a FrozenLake episode is 0 or 1, the factor $T$ can be
+       replaced by 1. Compare the bound with the mean shortfall of the clone
+       over 200 datasets for each $N$.
+    1. :citet:`Rajaraman.Yang.Jiao.ea.2020` prove that behavior cloning
+       loses at most order $|\mathcal{S}|T^2/N$ when the transitions and the
+       policies may depend on $t$. Where does the additional factor $T$ come
+       from?
+    1. The same paper shows that no learner, not even one that queries the
+       expert interactively for $N$ episodes, does better than order
+       $|\mathcal{S}|T^2/N$ on every such MDP. What does this lower bound say
+       about DAgger, and how does it relate to the comparison of problem
+       :exref:`ex_imitation-dagger-s-budget`?
 
 [Discussions](https://d2l.discourse.group/)
 

@@ -85,6 +85,7 @@ $$Q^\pi(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \sum_
 This version is the analog of :eqref:`eq_dynamic_programming_val` for the action value function. These are the *Bellman expectation equations*: for a fixed policy, :eqref:`eq_dynamic_programming_val` is a system of $|\mathcal{S}|$ linear equations in $|\mathcal{S}|$ unknowns. The infinite horizon has disappeared into the recursion.
 
 ### The Optimality Equation
+:label:`subsec_vi_optimality`
 
 An optimal policy maximizes the value function. We may write $\pi^* = \mathrm{argmax}_\pi V^\pi(s_0)$ for a chosen start state. For a discounted finite MDP, however, one stationary deterministic policy is optimal from every state.
 
@@ -109,6 +110,7 @@ $$\pi^*(s) = \underset{a \in \mathcal{A}}{\mathrm{argmax}} \Big[ r(s, a) + \gamm
 For a deterministic policy, the optimal action at state $s$ maximizes its immediate reward $r(s, a)$ plus the discounted expected value over possible next states $s'$. The next state $s'$ is averaged according to the transition model. The action-value version of :eqref:`eq_bellman_optimality` is
 
 $$Q^*(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q^*(s', a'),$$
+:eqlabel:`eq_bellman_optimality_q`
 
 The distinction matters for :numref:`sec_qlearning`: extracting
 $\pi^*(s) = \mathrm{argmax}_a Q^*(s, a)$ from $Q^*$ needs no additional
@@ -127,10 +129,12 @@ The four equations share a common structure: the value at a root is computed fro
 The Bellman optimality equation defines $V^*$ implicitly. To compute it, read :eqref:`eq_bellman_optimality` as a map: the *Bellman optimality operator* $T$ acts on any table $V: \mathcal{S} \to \mathbb{R}$ by
 
 $$(TV)(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V(s') \Big],$$
+:eqlabel:`eq_bellman_operator`
 
 so that :eqref:`eq_bellman_optimality` says exactly $V^* = TV^*$: the optimal value function is a *fixed point* of $T$. The operator $T$ contracts distances in the sup norm.
 
 ### The Contraction Proposition
+:label:`subsec_vi_contraction`
 
 Distance between value functions is measured in the sup norm $\|V\|_\infty = \max_{s} |V(s)|$, the largest disagreement at any state.
 
@@ -154,6 +158,7 @@ $$\|V_k - V^*\|_\infty = \|TV_{k-1} - TV^*\|_\infty \leq \gamma\, \|V_{k-1} - V^
 Thus accuracy $\varepsilon$ is reached after at most $\log(\|V_0-V^*\|_\infty/\varepsilon)/\log(1/\gamma)$ sweeps. For $\gamma$ near one, the denominator is approximately $1-\gamma$, connecting the rate to the effective horizon of :numref:`sec_mdp`. Third, the successive differences provide a computable stopping rule:
 
 $$\|V_k - V^*\|_\infty \leq \frac{\gamma}{1 - \gamma}\, \|V_k - V_{k-1}\|_\infty,$$
+:eqlabel:`eq_vi_certificate`
 
 The right-hand side depends only on consecutive iterates. Fourth, when $\gamma=1$ the operator is no longer a strict contraction, so uniqueness and convergence do not follow from this argument. Some episodic undiscounted problems still converge, but the general guarantee is absent. Replacing the maximum by an expectation under a fixed policy gives the policy-evaluation operator $T^\pi$, which is a contraction by the same proof and has fixed point $V^\pi$ :cite:`Puterman.1994,Bertsekas.2025`.
 
@@ -170,6 +175,7 @@ mdp = d2l.TabularMDP.from_gym(env, gamma)
 ```
 
 ### Value Iteration
+:label:`subsec_vi_value_iteration`
 
 Iterate the operator: initialize $V_0$ arbitrarily (we use zeros) and sweep
 
@@ -217,7 +223,7 @@ d2l.plot_curves({'value iteration': np.log10(err[k]),
                 xlabel='sweep k', ylabel='log10 of sup-norm distance to V*')
 ```
 
-On the logarithmic scale, geometric decay appears as a straight line. The guarantee contracts by $\gamma=0.95$ per sweep, whereas the measured error contracts by about $0.92$. The bound reaches $10^{-6}$ at sweep 263, and the measured error reaches it at sweep 158. Thus the discount factor, through the effective horizon, governs the worst-case sweep count; neither the number of cells nor their distance from the goal appears in the contraction rate. An implementation cannot observe the true error and must instead use a stopping criterion:
+On the logarithmic scale, geometric decay appears as a straight line. The guarantee contracts by $\gamma=0.95$ per sweep, whereas the measured error contracts by about $0.92$. The bound reaches $10^{-6}$ at sweep 264, and the measured error reaches it at sweep 158. Thus the discount factor, through the effective horizon, governs the worst-case sweep count; neither the number of cells nor their distance from the goal appears in the contraction rate. An implementation cannot observe the true error and must instead use a stopping criterion:
 
 ```{.python .input #value-iter-value-iteration-4}
 %%tab pytorch, jax
@@ -241,7 +247,7 @@ Replace the max in :eqref:`eq_value_iteration` by the policy's own average and t
 $$V^\pi_{k+1}(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^\pi_k(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_policy_eval`
 
-This is *policy evaluation*, the fixed-point iteration for $T^\pi$, convergent from any initialization because $T^\pi$ contracts too. With the max gone the equations are linear, so they can also be solved directly, as :numref:`sec_mdp` did with `np.linalg.solve`; the sweep does the same work one contraction at a time, and is the form that generalizes beyond tables.
+This is *policy evaluation*, the fixed-point iteration $V^\pi_{k+1} = T^\pi V^\pi_k$ of the operator $T^\pi$, which maps a table $V$ to the right-hand side of :eqref:`eq_policy_eval` with $V$ in place of $V^\pi_k$. It converges from any initialization because $T^\pi$ contracts too. With the max gone the equations are linear, so they can also be solved directly, as :numref:`sec_mdp` did with `np.linalg.solve`; the sweep does the same work one contraction at a time, and is the form that generalizes beyond tables.
 
 ```{.python .input #value-iter-policy-evaluation}
 %%tab pytorch, jax
@@ -261,6 +267,7 @@ print(f'V(s0) for the uniformly random policy: '
 The uniformly random policy of :numref:`sec_mdp` reaches the goal in very few episodes. Its start-state value is $0.0078$, about four percent of the optimum. Policy evaluation measures performance without improving the policy; learned critics in :numref:`sec_actorcritic` approximate the same value computation from sampled data.
 
 ### Policy Iteration and Generalized Policy Iteration
+:label:`subsec_vi_policy_iteration`
 
 Evaluation plus the greedy step :eqref:`eq_optimal_policy` suggests a different algorithm: evaluate the current policy fully, act greedily on its value function, repeat. The following policy-improvement proposition justifies the greedy step.
 
@@ -268,7 +275,7 @@ Evaluation plus the greedy step :eqref:`eq_optimal_policy` suggests a different 
 
 **Proof.** Greediness says one step of $\pi'$ is at least as good as one step of $\pi$: $T^{\pi'} V^\pi = T V^\pi \geq T^\pi V^\pi = V^\pi$. The operator $T^{\pi'}$ is monotone (its coefficients are probabilities), so $V^\pi \leq T^{\pi'} V^\pi \leq (T^{\pi'})^2 V^\pi \leq \cdots \to V^{\pi'}$, the limit being $T^{\pi'}$'s unique fixed point. If $V^{\pi'} = V^\pi$, the first line reads $TV^\pi = V^\pi$, so $V^\pi$ solves the optimality equation and uniqueness finishes the job. $\blacksquare$
 
-Each round of *policy iteration* therefore strictly improves the policy until it is optimal, and a finite MDP has finitely many deterministic policies, so termination is guaranteed :cite:`Puterman.1994`. The implementation alternates evaluation and improvement until the policy stops changing:
+Each round of *policy iteration* therefore strictly improves the policy until it is optimal, and a finite MDP has finitely many deterministic policies, so an optimal policy is reached after finitely many rounds :cite:`Puterman.1994`. The implementation alternates evaluation and improvement until the policy stops changing:
 
 ```{.python .input #value-iter-policy-iteration-and-generalized-policy-iteration-1}
 %%tab pytorch, jax
@@ -302,6 +309,7 @@ Policy evaluation and improvement need not be completed in separate phases. *Gen
 :label:`fig_rl_gpi`
 
 ### The Optimal Policy on Slippery Ice
+:label:`subsec_vi_slippery_ice`
 
 Although $\pi^*$ maximizes expected return, some of its actions point away from the goal. We evaluate policies by their mean return over sampled episodes without using the transition model:
 
@@ -337,7 +345,7 @@ for name, p in [('slip-aware optimum', pi_star),
     print(f'{name}: reaches the goal in {success:.1%} of 2000 episodes')
 ```
 
-The dynamic-programming policy reaches the goal in about $0.74$ of the episodes, compared with about $0.05$ for the shortest-path policy. These rates count episodes that finish within the environment's 100-step limit; without the limit, the success probability of the optimal policy is about $0.78$. The shortest path places five of its six actions next to holes, where perpendicular slips can terminate the episode. The optimal policy takes a longer route that reduces this risk. The statewise differences are shown below:
+The dynamic-programming policy reaches the goal in about $0.74$ of the episodes, compared with about $0.05$ for the shortest-path policy. These rates count only episodes that reach the goal within the environment's 100-step limit; without the limit, $\pi^*$ reaches the goal with probability about $0.78$. The shortest path places five of its six actions next to holes, where perpendicular slips can terminate the episode. The optimal policy takes a longer route that reduces this risk. The statewise differences are shown below:
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-3}
 %%tab pytorch, jax
@@ -378,56 +386,258 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
 
 ## Exercises
 
-1. [short-code] *Cost of a sweep.* Give the cost of one value iteration sweep
-   :eqref:`eq_value_iteration` in terms of the number of states, the number of
-   actions, and the number of successors per state-action pair, and say which
-   of the three the dense `mdp.backup` of :numref:`sec_mdp` actually computes.
-   Then use $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$ to show
-   that reaching accuracy $\varepsilon$ needs
-   $O(\log(1/\varepsilon) / \log(1/\gamma))$ sweeps. Confirm the per-sweep cost
-   empirically (a few seconds) by timing the $4 \times 4$ map against the
-   $8 \times 8$ map,
-   `d2l.TabularMDP.from_gym(gym.make('FrozenLake-v1', map_name='8x8', is_slippery=True), gamma)`.
-1. [conceptual] *The contraction, verified.* The section's proposition proved
-   $\|TV - TV'\|_\infty \leq \gamma \|V - V'\|_\infty$ using only that a
-   maximum of differences bounds the difference of maxima. Re-derive the
-   stopping rule
-   $\|V_k - V^*\|_\infty \leq \frac{\gamma}{1-\gamma} \|V_k - V_{k-1}\|_\infty$
-   from it by telescoping the tail $\sum_{j \geq k} \|V_{j+1} - V_j\|_\infty$,
-   and turn it into an $\varepsilon$-optimal stopping rule: how small must the
-   sweep-to-sweep change be to guarantee an error below $\varepsilon$? Then walk
-   through the proposition's proof with $\gamma = 1$ and point to the exact
-   step that fails.
-1. [short-code] *Predict, then run.* Before running anything, predict
-   $V^*(s_0)$ on the calm map (`is_slippery=False`) for
-   $\gamma \in \{0, 0.5, 0.9, 0.99\}$, and predict which of the four optimal
-   *policies* differ. Now run value iteration for each and check. Explain in
-   one sentence why the value depends on $\gamma$ and the policy does not, and
-   what is special about $\gamma = 0$.
-1. [short-code] *Let the ice be calm.* The section ran on slippery ice
-   throughout. Switch the slip off, rerun value iteration, and compare the two
-   optimal policies cell by cell. Which arrows change, and why does
-   :eqref:`eq_dynamic_programming_val` stop caring about the holes' neighbors
-   once $P(s' \mid s, a)$ puts all its mass on the intended cell? The section
-   printed $V^*(s_0) = 0.180$ on ice and $0.774$ calm, a ratio of about
-   $4.3$: is that larger or smaller than the naive reading "each commanded
-   move now succeeds with probability $1/3$" suggests, and what does the
-   difference show about how the optimal policy accounts for slips?
-1. [conceptual] *When $\gamma$ equals one.* The contraction proposition needs
-   $\gamma < 1$, yet running the section's code with $\gamma = 1$ on FrozenLake
-   converges. Explain why, using that the goal and the holes are absorbing and
-   all rewards are non-negative, and say what the limit $V_k(s)$ means in that
-   case. Then construct a two-state MDP with a single action on which $V_k$
-   grows without bound at $\gamma = 1$, and verify it in three lines of code.
-1. [extended] *Policy iteration measured in backups.* Policy iteration
-   converged in $2$ rounds against value iteration's $164$ certified sweeps,
-   which suggests a large advantage in outer iterations, but each round contained $800$ evaluation sweeps
-   of :eqref:`eq_policy_eval` before the greedy step :eqref:`eq_optimal_policy`.
-   Measure both algorithms by the number of Bellman backups, and plot the
-   sup-norm error against backups on the $4 \times 4$ and $8 \times 8$ maps
-   (a few seconds each). Which converges in fewer outer iterations, which in
-   fewer backups, and how does the answer move as $\gamma \to 1$? Does
-   truncating the inner evaluation to ten sweeps change your accounting?
+1. [code] **Policy evaluation as a linear system.** For a policy $\pi$, write
+   $P_\pi(s' \mid s) = \sum_a \pi(a \mid s)\, P(s' \mid s, a)$ and
+   $r_\pi(s) = \sum_a \pi(a \mid s)\, r(s, a)$. Then
+   :eqref:`eq_dynamic_programming_val` reads
+   $V^\pi = r_\pi + \gamma P_\pi V^\pi$ in matrix form.
+    1. Show that $I - \gamma P_\pi$ is invertible for $0 \leq \gamma < 1$ and
+       that its inverse $M_\pi = (I - \gamma P_\pi)^{-1}$ equals
+       $\sum_{t \geq 0} \gamma^t P_\pi^t$.
+    1. Interpret the entry $M_\pi(s, s')$ in terms of the visits to $s'$ by an
+       agent that starts at $s$ and follows $\pi$ in the terminating process
+       of problem :exref:`ex_mdp-discount-as-termination`b of
+       :numref:`sec_mdp`. Conclude that every row of $M_\pi$ sums to
+       $1/(1-\gamma)$.
+    1. Compute $M_\pi$ for the policy `uniform` on the slippery lake and check
+       that $M_\pi r_\pi$ reproduces the start-state value $0.0078$ printed by
+       `policy_evaluation`. Episodes of this policy last fewer than eight steps
+       on average, yet the row of the start state sums to $20$. Where does the
+       rest of the mass sit?
+   :exlabel:`ex_value-iter-linear-system`
+1. **Stopping certificate.** The certificate :eqref:`eq_vi_certificate` bounds
+   the unobservable error $\|V_k - V^*\|_\infty$ by the observable change
+   $\|V_k - V_{k-1}\|_\infty$.
+    1. Derive it from the contraction proposition of
+       :numref:`subsec_vi_contraction` by bounding the tail
+       $\sum_{j \geq k} \|V_{j+1} - V_j\|_\infty$ of a telescoping sum. How
+       small must the sweep-to-sweep change be to guarantee an error below
+       $\varepsilon$?
+    1. Derive an a priori bound that fixes the number of sweeps before value
+       iteration starts and uses only $\gamma$, $\varepsilon$ and
+       $\|V_1 - V_0\|_\infty$. Evaluate it for the slippery lake with
+       $V_0 = 0$ and $\varepsilon = 10^{-6}$, and compare it with the $164$
+       sweeps that the certificate needed in
+       :numref:`subsec_vi_value_iteration`.
+1. **The undiscounted lake.** The contraction proposition of
+   :numref:`subsec_vi_contraction` needs $\gamma < 1$, yet value iteration on
+   FrozenLake also converges at $\gamma = 1$. In FrozenLake the holes and the
+   goal are absorbing states with zero reward, and the only nonzero reward,
+   $1$, is collected on entering the goal.
+    1. Repeat the proof of the proposition with $\gamma = 1$. What does it
+       still show? Then show that whenever the operator $T$ of
+       :eqref:`eq_bellman_operator` has a fixed point at $\gamma = 1$, it has
+       infinitely many.
+    1. Show that value iteration from $V_0 = 0$ at $\gamma = 1$ produces a
+       nondecreasing sequence $V_0 \leq V_1 \leq V_2 \leq \cdots$ that is
+       bounded by one, so that it converges. What does $V_k(s)$ measure?
+    1. Construct a two-state MDP with a single action on which $V_k$ grows
+       without bound at $\gamma = 1$. Which property of FrozenLake used in
+       part b does it lack?
+   :exlabel:`ex_value-iter-undiscounted-lake`
+1. [code] **Cost of a sweep.** One sweep of value iteration evaluates the
+   bracket of :eqref:`eq_value_iteration` for every state-action pair.
+    1. Count the multiply-adds of one sweep as `mdp.backup` computes it, in
+       terms of the numbers of states and actions. Count them again for a
+       sweep that sums only over the successors $s'$ with
+       $P(s' \mid s, a) > 0$, of which the slippery lake has at most three per
+       state-action pair: the intended cell and the two perpendicular ones.
+    1. Convert the outcome lists in `env.unwrapped.P` once into arrays of
+       successor indices and probabilities of shape
+       $|\mathcal{S}| \times |\mathcal{A}| \times 3$, padded with zero
+       probabilities, so that the sparse sweep is a vectorized gather rather
+       than a Python loop. Implement this sweep and check that it agrees with
+       `mdp.backup`. Time both on random slippery maps of side
+       $n \in \{8, 16, 32\}$, built with
+       `gym.make('FrozenLake-v1', desc=generate_random_map(size=n, seed=0), is_slippery=True)`
+       after importing `generate_random_map` from
+       `gymnasium.envs.toy_text.frozen_lake`. From which size on do the
+       timings follow your counts?
+    1. The contraction rate does not involve the number of cells. Count the
+       sweeps that the certificate :eqref:`eq_vi_certificate` needs to reach
+       $10^{-6}$ on the $8 \times 8$ map, `map_name='8x8'`, and compare them
+       with the $164$ sweeps on the $4 \times 4$ map. What, then, makes a
+       larger map more expensive to solve?
+1. **Ties in policy iteration.** The policy-iteration loop of
+   :numref:`subsec_vi_policy_iteration` stops when the greedy policy equals
+   the current one, `(new == pi).all()`. On the slippery lake, *left* and
+   *right* are both optimal at state 6. On the $8 \times 8$ map, *left* and
+   *up* are both optimal at state 51, and rounding errors can make the greedy
+   policy of value iteration switch between them long after consecutive
+   iterates differ only in the last digits.
+    1. Explain how ties can keep the loop from terminating. Modify the
+       stopping test so that termination is guaranteed, and justify the
+       modification with the policy-improvement proposition.
+    1. The loop started from `uniform` and stopped after two rounds. What
+       does this imply about the greedy policy of $V^{\textrm{uniform}}$?
+
+    *Adapted from Sutton and Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    2nd edition, Exercise 4.4.*
+1. [code] **Discount on calm and slippery ice.** On calm ice the optimal value
+   is $V^*(s) = \gamma^{d(s)-1}$, as :numref:`fig_rl_value_wavefront` shows.
+    1. Run `value_iteration` on the calm map for
+       $\gamma \in \{0, 0.5, 0.9, 0.99\}$ and compare each greedy policy with
+       `shortest`. Use the closed form to explain why the policy does not
+       depend on $\gamma$ for $\gamma > 0$. What is special about
+       $\gamma = 0$?
+    1. Repeat on the slippery map for $\gamma \in \{0.5, 0.9, 0.99\}$. At
+       which states does the optimal action change? For each of the three
+       optimal policies, compute the probability of eventually reaching the
+       goal. By the argument of problem
+       :exref:`ex_value-iter-undiscounted-lake`b, this probability is the
+       policy's value at $\gamma = 1$, which a few thousand sweeps of
+       `policy_evaluation` on `d2l.TabularMDP.from_gym(env, 1.0)` compute.
+    1. Explain the trend in these probabilities. Why do slips make the
+       optimal policy depend on $\gamma$?
+   :exlabel:`ex_value-iter-discount`
+1. [code] **In-place sweeps.** ● `value_iteration` computes all of $V_{k+1}$
+   from $V_k$. An *in-place* sweep instead visits the states in a fixed order
+   and overwrites $V(s)$ immediately, so that states later in the same sweep
+   already use the new values.
+    1. Show that an in-place sweep is a $\gamma$-contraction in the sup norm
+       for every order of the states, with the same fixed point as $T$ of
+       :eqref:`eq_bellman_operator`. Conclude that the certificate
+       :eqref:`eq_vi_certificate` remains valid for its iterates.
+    1. Implement the in-place sweep and count the sweeps that the certificate
+       needs to reach $10^{-6}$, with the states in ascending and in
+       descending order, on the slippery and the calm $4 \times 4$ and
+       $8 \times 8$ maps. Compare the counts with those of `value_iteration`.
+    1. Why does the order matter much more on calm ice than on slippery ice?
+       Explain the calm-ice counts with :numref:`fig_rl_value_wavefront`.
+
+    *Adapted from Sutton and Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    2nd edition, Sections 4.1 and 4.5.*
+1. [code] **Measured contraction rate.** ● In
+   :numref:`subsec_vi_value_iteration` the error of value iteration shrinks by
+   a factor of about $0.92$ per sweep, faster than the guaranteed
+   $\gamma = 0.95$. From sweep 14 on, the greedy
+   policy of every iterate is `pi_star`.
+    1. Show that from then on the error obeys the linear recursion
+       $V_{k+1} - V^* = \gamma P_{\pi^*} (V_k - V^*)$, with $P_{\pi^*}$ as in
+       problem :exref:`ex_value-iter-linear-system`, and that the error is zero
+       at the holes and the goal. Conclude that the asymptotic rate is the
+       spectral radius $\rho$ of $\gamma P_{\pi^*}$ restricted to the
+       nonterminal states, and compute $\rho$.
+    1. Compute $\rho$ at $\gamma = 0.999$, using the optimal policy at that
+       discount, and predict the number of sweeps that value iteration needs
+       to reach an error of $10^{-6}$. The guarantee
+       $\gamma^k \|V_0 - V^*\|_\infty$ needs more than $13{,}000$ sweeps. Check
+       the prediction with `value_iteration`. Which property of FrozenLake makes
+       $\rho$ smaller than $\gamma$?
+    1. The unadjusted rule $\|V_{k+1} - V_k\|_\infty < 10^{-6}$ of
+       :numref:`subsec_vi_value_iteration` stops at sweep 128. There the true
+       error was $11.7$ times the sweep-to-sweep change, well below
+       the certificate's factor $\gamma/(1-\gamma) = 19$. Show that an error
+       that shrinks geometrically with ratio $\rho$ gives the factor
+       $\rho/(1-\rho)$. Why can the certificate :eqref:`eq_vi_certificate` not
+       use $\rho$ in place of $\gamma$?
+1. [code] **Improvement, quantified.** ● The policy-improvement proposition of
+   :numref:`subsec_vi_policy_iteration` says that a greedy step does not
+   lower the value. The following identity, a matrix form of the performance
+   difference lemma :cite:`Kakade.Langford.2002` that :numref:`sec_ppo` states
+   for trajectories, measures the gain. For a policy $\pi'$, let $T^{\pi'}$
+   be the policy-evaluation operator of :eqref:`eq_policy_eval` for $\pi'$,
+   and let $M_{\pi'}$ be the matrix of problem
+   :exref:`ex_value-iter-linear-system`.
+    1. Show that for any two policies $\pi$ and $\pi'$
+
+       $$V^{\pi'} - V^\pi = M_{\pi'} \big( T^{\pi'} V^\pi - V^\pi \big),$$
+
+       and that $(T^{\pi'} V^\pi - V^\pi)(s) = \sum_a \pi'(a \mid s)\, A^\pi(s, a)$
+       with the advantage of :eqref:`eq_advantage`.
+    1. Use the identity to reprove the policy-improvement proposition. Show
+       that the improvement is strict at every state where the greedy action
+       has positive advantage.
+    1. Apply the identity with $\pi^*$ in the role of $\pi$ to show that
+       $V^{\pi'} \leq V^*$ for every stationary policy $\pi'$, stochastic
+       ones included.
+    1. Check the identity numerically at the start state for $\pi$ =
+       `uniform` and $\pi' = \pi^*$.
+   :exlabel:`ex_value-iter-improvement-quantified`
+1. [code] **When the greedy policy is optimal.** ● In
+   :numref:`subsec_vi_policy_iteration` the greedy policy of value iteration
+   is optimal from sweep 14 on, while the certificate needs 164 sweeps. Let
+   $V$ be any table, let $\varepsilon = \|V - V^*\|_\infty$, and let $\pi$ be
+   greedy with respect to $V$, so that $\pi(s)$ maximizes `mdp.backup(V)[s]`.
+   Write $T^\pi$ for the policy-evaluation operator of :eqref:`eq_policy_eval`.
+    1. Show that $V^\pi(s) \geq V^*(s) - 2\gamma\varepsilon/(1-\gamma)$ at
+       every state :cite:`Singh.Yee.1994`, by inserting $T^{\pi^*} V$ and
+       $T^\pi V$ between $V^* = T^{\pi^*} V^*$ and $V^\pi = T^\pi V^\pi$.
+       Evaluate the bound at sweep 14 on the slippery lake. What does it
+       guarantee there?
+    1. Let the *action gap* $\Delta$ be the smallest difference
+       $V^*(s) - Q^*(s, a)$ over all states $s$ and all actions $a$ that are
+       not optimal at $s$, with $Q^*$ from :eqref:`eq_bellman_optimality_q`.
+       Show that $2\gamma\varepsilon < \Delta$ implies that $\pi$ is optimal.
+    1. Compute $\Delta$ for the slippery lake from `mdp.backup(V_star)`,
+       treating actions within $10^{-9}$ of the maximum as optimal, and find
+       the first sweep at which the condition of part b holds. Compare it with
+       sweep 14. Why can the greedy policy be optimal long before the
+       condition holds?
+1. [code] **The 100-step limit.** ● The success rate of $73.6\%$ that
+   `evaluate` reported for `pi_star` in :numref:`subsec_vi_slippery_ice`
+   counts only episodes that reach the goal within the environment's limit of
+   100 steps.
+    1. Compute the exact probability that `pi_star` reaches the goal within
+       100 steps, using the meaning of $V_k$ from problem
+       :exref:`ex_value-iter-undiscounted-lake`b for a fixed policy. Problem
+       :exref:`ex_mdp-time-limits`a of :numref:`sec_mdp` obtains the same
+       probability by propagating the state distribution forward, since
+       `pi_star` equals `pi_true` of that section. Why do the backward
+       recursion and the forward propagation agree? Is the difference from
+       the Monte Carlo estimate consistent with the standard error of a mean
+       over 2000 episodes?
+    1. Run 100 sweeps of `value_iteration` at $\gamma = 1$. Which success
+       probability does $V_{100}(s_0)$ give? Compare it with the
+       probabilities of reaching the goal within 100 steps under `pi_star`
+       and under the optimal policy at $\gamma = 0.99$ from problem
+       :exref:`ex_value-iter-discount`b. Among all policies, the latter has
+       the largest probability of eventually reaching the goal. How much of
+       the gap between `pi_star` and $V_{100}(s_0)$ is due to the discount,
+       and how much to the time limit?
+    1. Once value iteration at $\gamma = 1$ has converged, all four actions
+       at $s_0$ attain the maximum in :eqref:`eq_optimal_policy`. Why is a
+       policy that is greedy with respect to these values not necessarily
+       optimal?
+    1. With $k$ steps remaining, the best action at a state is the greedy
+       action of $V_{k-1}$, the iterate of part b after $k - 1$ sweeps at
+       $\gamma = 1$. Find the states at which this action changes as
+       $k$ runs from 10 to 100. Why does this not contradict the proposition
+       of :numref:`subsec_vi_optimality` that a stationary deterministic
+       policy is optimal, given the Markov state of problem
+       :exref:`ex_mdp-time-limits`b of :numref:`sec_mdp`?
+1. [extended] **Backup budgets.** ●● Policy iteration in
+   :numref:`subsec_vi_policy_iteration` needed only two rounds, but each round
+   ran 800 evaluation sweeps. Measure cost in *backups* instead: one backup
+   evaluates the bracket of :eqref:`eq_value_iteration` for one state-action
+   pair, so a value-iteration sweep costs $|\mathcal{S}||\mathcal{A}|$
+   backups and an evaluation sweep of a deterministic policy costs
+   $|\mathcal{S}|$. *Modified policy iteration* :cite:`Puterman.1994`
+   interpolates between the two algorithms. It starts from $U_0 = 0$. Round
+   $k$ performs one value-iteration sweep, which also yields the greedy
+   policy $\pi_k$ of $U_k$, followed by $m$ sweeps of :eqref:`eq_policy_eval`
+   for $\pi_k$ that start from the current table. With the operator
+   $T^{\pi_k}$ of :eqref:`eq_policy_eval`, a round reads
+   $U_{k+1} = (T^{\pi_k})^{m+1} U_k$. With $m = 0$ it is value iteration, and
+   as $m \to \infty$ it becomes policy iteration.
+    1. Let $V_k = T^k U_0$ be the iterates of value iteration. Show that
+       $T U_0 \geq U_0$ implies $V_k \leq U_k \leq U_{k+1} \leq V^*$ for
+       every $k$ and every $m$, and check that the premise holds on
+       FrozenLake. Conclude that after the same number of rounds, modified
+       policy iteration is never further from $V^*$ than value iteration.
+    1. Implement modified policy iteration and plot the error
+       $\|U - V^*\|_\infty$ of the current table $U$ after every sweep
+       against the cumulative number of backups for
+       $m \in \{0, 1, 5, 20, 100\}$ on the slippery $4 \times 4$ and
+       $8 \times 8$ maps at $\gamma = 0.95$.
+    1. Explain the shape of the curves for large $m$. Why does the error
+       stall between greedy steps?
+    1. Repeat at $\gamma \in \{0.9, 0.99, 0.999\}$ and tabulate, for each map,
+       discount and $m$, the backups and the rounds needed to reach an error of
+       $10^{-6}$. How does the best $m$ move as $\gamma \to 1$? Does the
+       setting with the fewest rounds also use the fewest backups?
 
 [Discussions](https://d2l.discourse.group/)
 

@@ -670,21 +670,6 @@ fine-tuning of pretrained models.
 
 ## Exercises
 
-1. [code] **Fold ensembling versus refitting.**
-   :numref:`subsec_kaggle_submission` describes two ways of producing a
-   final model after cross-validation: averaging the $K$ fold models'
-   predictions, or refitting one model on the complete training set with
-   the selected hyperparameters.
-    1. Submit the `submission.csv` that this section writes, which holds the
-       fold ensemble's predictions, to Kaggle. The leaderboard reports the
-       root-mean-squared log error, whereas `k_fold` prints the mean squared
-       error of the log prices. Convert the mean that `k_fold` prints to the
-       leaderboard's scale and compare it with your score.
-    1. Refit one model on the complete training set with the same
-       hyperparameters, submit its predictions, and compare the two
-       leaderboard scores.
-    1. Explain why the training error of the refit model is not a
-       substitute for the cross-validated estimate.
 1. [code] **Mean imputation.** `fit_preprocess` replaces every missing
    numerical value by the training-set mean of its column. Its call to
    `pd.get_dummies` with `dummy_na=True` also adds a missing-value
@@ -703,16 +688,6 @@ fine-tuning of pretrained models.
     *Adapted from Kaggle Learn,
     [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
     Exercise 2.*
-1. [code] **Improving the score.** ● Start from the linear model
-   `d2l.LinearRegression` with learning rate $0.03$ that this section
-   cross-validates. Lower its cross-validated error, and then the
-   leaderboard score.
-    1. Holding the model fixed, tune the learning rate, the number of
-       epochs, and the strength of an $L_2$ weight-decay penalty, added as
-       in :numref:`sec_weight_decay`, by $K$-fold cross-validation.
-    1. Replace the linear model by an MLP, and vary the number and width of
-       its hidden layers and its dropout rate. Which change helps most, and
-       does the gain survive on the leaderboard?
 1. [code] **Skipping standardization.** Remove the standardization from
    `fit_preprocess`. Because `fillna(0)` imputes the column mean only for
    standardized columns, fill missing numerical values with the
@@ -723,14 +698,6 @@ fine-tuning of pretrained models.
        the unstandardized linear model trains without diverging. Compare
        its cross-validated error after $100$ epochs with that of the
        standardized pipeline, and explain both observations.
-1. [code] **Gradient-boosted trees.** Fit a gradient-boosted tree model
-   (for example scikit-learn's `GradientBoostingRegressor`, or XGBoost or
-   LightGBM if installed) to the log sale price, using the preprocessed
-   training rows of each fold that `k_fold_data(data, 5)` returns. Score it
-   on each validation fold by the mean squared error of the log price, the
-   quantity that `k_fold` prints, and compare the mean over folds with that
-   of the models trained in this section. Why might tree ensembles have an
-   edge on data like this?
 1. [code] **Encoding categorical features.** `fit_preprocess` one-hot
    encodes every categorical column by calling `pd.get_dummies` with
    `dummy_na=True`. Find the categorical column with the most distinct
@@ -740,6 +707,43 @@ fine-tuning of pretrained models.
     *Adapted from Kaggle Learn,
     [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
     Exercise 3.*
+1. [code] **Gradient-boosted trees.** Fit a gradient-boosted tree model
+   (for example scikit-learn's `GradientBoostingRegressor`, or XGBoost or
+   LightGBM if installed) to the log sale price, using the preprocessed
+   training rows of each fold that `k_fold_data(data, 5)` returns. Score it
+   on each validation fold by the mean squared error of the log price, the
+   quantity that `k_fold` prints, and compare the mean over folds with that
+   of the models trained in this section. Why might tree ensembles have an
+   edge on data like this?
+1. [code] **Target leakage.** A feature that is recorded only after, or
+   because of, the event being predicted inflates validation scores without
+   helping a deployed model.
+    1. Identify at least one raw feature in this dataset that could
+       plausibly be filled in only after the sale, and explain why
+       cross-validation does not catch the problem.
+    1. Verify the mechanism empirically: add a synthetic feature equal to
+       the log sale price plus small Gaussian noise, rerun the $K$-fold
+       cross-validation, and report the change in the error that `k_fold`
+       prints.
+
+    *Adapted from Kaggle Learn,
+    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
+    Exercise 7.*
+1. [code] **Fold ensembling versus refitting.**
+   :numref:`subsec_kaggle_submission` describes two ways of producing a
+   final model after cross-validation: averaging the $K$ fold models'
+   predictions, or refitting one model on the complete training set with
+   the selected hyperparameters.
+    1. Submit the `submission.csv` that this section writes, which holds the
+       fold ensemble's predictions, to Kaggle. The leaderboard reports the
+       root-mean-squared log error, whereas `k_fold` prints the mean squared
+       error of the log prices. Convert the mean that `k_fold` prints to the
+       leaderboard's scale and compare it with your score.
+    1. Refit one model on the complete training set with the same
+       hyperparameters, submit its predictions, and compare the two
+       leaderboard scores.
+    1. Explain why the training error of the refit model is not a
+       substitute for the cross-validated estimate.
 1. [code] **Target encoding.** ● *Target encoding* replaces each category
    of a categorical column by the mean log sale price of the training rows
    in that category, so that the feature occupies a single column instead
@@ -757,20 +761,16 @@ fine-tuning of pretrained models.
        parts. Compare the cross-validated error with that of the in-sample
        encoding, and explain how the size of a category affects the
        difference between the two encodings.
-1. [code] **Target leakage.** A feature that is recorded only after, or
-   because of, the event being predicted inflates validation scores without
-   helping a deployed model.
-    1. Identify at least one raw feature in this dataset that could
-       plausibly be filled in only after the sale, and explain why
-       cross-validation does not catch the problem.
-    1. Verify the mechanism empirically: add a synthetic feature equal to
-       the log sale price plus small Gaussian noise, rerun the $K$-fold
-       cross-validation, and report the change in the error that `k_fold`
-       prints.
-
-    *Adapted from Kaggle Learn,
-    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
-    Exercise 7.*
+1. [code] **Improving the score.** ● Start from the linear model
+   `d2l.LinearRegression` with learning rate $0.03$ that this section
+   cross-validates. Lower its cross-validated error, and then the
+   leaderboard score.
+    1. Holding the model fixed, tune the learning rate, the number of
+       epochs, and the strength of an $L_2$ weight-decay penalty, added as
+       in :numref:`sec_weight_decay`, by $K$-fold cross-validation.
+    1. Replace the linear model by an MLP, and vary the number and width of
+       its hidden layers and its dropout rate. Which change helps most, and
+       does the gain survive on the leaderboard?
 1. **Geometric averaging.** ● :numref:`subsec_kaggle_submission` averages the
    $K$ fold models' log-price predictions $z_1, \ldots, z_K$ for a house
    before exponentiating, which amounts to a geometric mean in price space.

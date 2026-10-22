@@ -722,28 +722,6 @@ remains the sensible default for the models we build next.
        in each limit.
 1. **Piecewise linearity.** Show that an MLP using only ReLU (or pReLU)
    constructs a continuous piecewise linear function.
-1. **Depth and linear pieces.** ● A one-hidden-layer ReLU network of width $D$
-   on the real line has at most $D + 1$ linear pieces
-   (:numref:`fig_mdl-mlp-uat-hinges`), so width adds pieces only linearly.
-   This problem makes the multiplicative effect of depth exact for one
-   example.
-    1. Take three hidden units $\operatorname{ReLU}(w_k x + b_k)$ with input
-       weights $w_1 = w_2 = 1$ and $w_3 = -1$ and with joints $-b_k/w_k$ at
-       $1/6$, $2/6$, and $4/6$. Choose output weights and an output bias so
-       that the network's output $g$ takes the values $0, 1, 0, 1, 0$ at
-       $x = 0, 1/6, 2/6, 4/6, 1$.
-    1. Count the linear pieces of $g \circ g$ on $[0, 1]$ exactly, and of the
-       $K$-fold composition $g \circ \cdots \circ g$. Explain, in terms of how
-       composing with $g$ *folds* the graph, why each composition multiplies
-       the count rather than adding to it.
-    1. The $K$-fold composition is computed by a network with $K$ hidden
-       layers of three units each. How many hidden units would a
-       single-hidden-layer network need to represent the same function?
-       Compare the parameter counts of the two networks.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 4.8.*
 1. **Sigmoid and tanh.** Sigmoid and tanh are very similar.
     1. Show that $\operatorname{tanh}(x) + 1 = 2 \operatorname{sigmoid}(2x)$.
     1. Show that for every MLP with tanh hidden activations there is an MLP
@@ -780,19 +758,29 @@ remains the sensible default for the models we build next.
        compare it with the weight that keeps the product constant at the
        origin. State what the comparison implies for training deep sigmoid
        networks in either regime.
-1. [code] **Weight scale and saturation.** ● Take the chain of Exercise 8
-   with $L = 20$, every weight $w_l = w$, and every bias $b_l = -w/2$, so
-   that the input $h_0 = 1/2$ gives $z_l = 0$ at every layer.
-    1. Express $\partial h_L / \partial h_0$ as a function of $w$ for the
-       input $h_0 = 1/2$. For which $w$ does it not vanish as $L$ grows?
-    1. Implement the chain and run it from $h_0 = 0.6$ with $w = 4$ and with
-       $w = 8$. Report $h_{20}$ and $\partial h_{20} / \partial h_0$ in each
-       case.
-    1. Treat the map $h_{l-1} \mapsto h_l$ as a one-dimensional iteration
-       with fixed point $1/2$, and use its slope there to explain the
-       difference between the two runs. State what the result implies for
-       countering vanishing gradients in a sigmoid network by scaling up its
-       weights.
+   :exlabel:`ex_mlp-vanishing-gradients`
+1. **Depth and linear pieces.** ● A one-hidden-layer ReLU network of width $D$
+   on the real line has at most $D + 1$ linear pieces
+   (:numref:`fig_mdl-mlp-uat-hinges`), so width adds pieces only linearly.
+   This problem makes the multiplicative effect of depth exact for one
+   example.
+    1. Take three hidden units $\operatorname{ReLU}(w_k x + b_k)$ with input
+       weights $w_1 = w_2 = 1$ and $w_3 = -1$ and with joints $-b_k/w_k$ at
+       $1/6$, $2/6$, and $4/6$. Choose output weights and an output bias so
+       that the network's output $g$ takes the values $0, 1, 0, 1, 0$ at
+       $x = 0, 1/6, 2/6, 4/6, 1$.
+    1. Count the linear pieces of $g \circ g$ on $[0, 1]$ exactly, and of the
+       $K$-fold composition $g \circ \cdots \circ g$. Explain, in terms of how
+       composing with $g$ *folds* the graph, why each composition multiplies
+       the count rather than adding to it.
+    1. The $K$-fold composition is computed by a network with $K$ hidden
+       layers of three units each. How many hidden units would a
+       single-hidden-layer network need to represent the same function?
+       Compare the parameter counts of the two networks.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 4.8.*
 1. **One hidden layer suffices.** ● On the real line,
    :numref:`fig_mdl-mlp-uat-hinges` approximates a continuous function with a
    single hidden layer, one hinge per joint. For two inputs, a natural
@@ -820,6 +808,19 @@ remains the sensible default for the models we build next.
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap4.html),
     Chapter 4.*
+1. [code] **Weight scale and saturation.** ● Take the chain of Exercise :exref:`ex_mlp-vanishing-gradients`
+   with $L = 20$, every weight $w_l = w$, and every bias $b_l = -w/2$, so
+   that the input $h_0 = 1/2$ gives $z_l = 0$ at every layer.
+    1. Express $\partial h_L / \partial h_0$ as a function of $w$ for the
+       input $h_0 = 1/2$. For which $w$ does it not vanish as $L$ grows?
+    1. Implement the chain and run it from $h_0 = 0.6$ with $w = 4$ and with
+       $w = 8$. Report $h_{20}$ and $\partial h_{20} / \partial h_0$ in each
+       case.
+    1. Treat the map $h_{l-1} \mapsto h_l$ as a one-dimensional iteration
+       with fixed point $1/2$, and use its slope there to explain the
+       difference between the two runs. State what the result implies for
+       countering vanishing gradients in a sigmoid network by scaling up its
+       weights.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/90)

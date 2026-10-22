@@ -69,7 +69,8 @@ $m = (p_g + p_{\textrm{data}}) / 2$. That divergence is zero only at
 $p_g = p_{\textrm{data}}$, so the fixed point is unchanged; like the reverse
 divergence $\mathrm{KL}(p_g \,\|\, p_{\textrm{data}})$
 (:numref:`sec_mdl-fwd-vs-rev-kl`), however, it penalizes generated samples
-where the data have little mass far more heavily than missing modes. Worse, if the error of an imperfect discriminator is modeled
+where the data have little mass far more heavily, per unit of mass, than
+missing modes. Worse, if the error of an imperfect discriminator is modeled
 as independent Gaussian noise at every point, each coordinate of the
 non-saturating update follows a Cauchy distribution, which has neither a
 finite mean nor a finite variance :cite:`Arjovsky.Bottou.2017`. Both the vanishing of the
@@ -359,6 +360,7 @@ example is two-dimensional: there, and only there, the normalizer of a
 learned energy can be computed by quadrature as a reference.
 
 ### Monte Carlo Estimates
+:label:`subsec_diffusion-limits-monte-carlo`
 
 The alternative to a grid is a random sample. Importance sampling
 (:numref:`sec_mdl-bayes-importance`) draws $\mathbf{x}_1, \ldots,
@@ -391,7 +393,7 @@ proposal $q = \mathcal{N}(\mathbf{0}, I)$. Then $w / Z = \exp(\mathbf{m}^\top
 \mathbf{x} - \|\mathbf{m}\|^2 / 2)$, and because $\mathbf{m}^\top
 \mathbf{x} \sim \mathcal{N}(0, d)$ under $q$, the normalized weight is
 log-normal with $\mathbb{E}_q[w / Z] = 1$ and
-$\mathbb{E}_q[(w / Z)^2] = e^{d}$ (Exercise 4). The relative standard error of
+$\mathbb{E}_q[(w / Z)^2] = e^{d}$ (Exercise :exref:`ex_limits-log-normal-weight`a). The relative standard error of
 the estimate from $n$ samples is therefore $\sqrt{(e^{d} - 1) / n}$, exact
 for every $d$ and $n$. The proposal is only one standard deviation from the
 target in each coordinate. The cell compares this prediction with the
@@ -436,8 +438,8 @@ Up to $d = 8$ the estimate is close to one and the predicted error stays
 below twenty percent.
 At $d = 16$ the predicted relative error is several times the quantity being
 estimated and the effective sample size has dropped to under a hundred
-draws, so whether a particular run lands near one is a matter of luck rather
-than evidence. At $d = 32$ the estimate is typically far below the truth: the
+draws, so whether a particular run lands within ten percent of one is a
+matter of luck rather than evidence. At $d = 32$ the estimate is typically far below the truth: the
 weights that would bring the average up to $Z$ are attached to draws too rare
 to appear among a hundred thousand samples. The average of the weights is
 unbiased only because it is occasionally enormous. A hundred thousand
@@ -472,21 +474,90 @@ evaluations, which passes a quarter of a million at $d = 3$ and has an
 exponent above a thousand for a small image. Importance sampling is unbiased
 but its relative error is $\sqrt{(e^d - 1) / n}$ in a Gaussian example whose
 proposal differs from the target by one standard deviation per coordinate,
-so a hundred thousand draws stop being informative before $d = 16$. The
+so for a hundred thousand draws the relative error exceeds one before
+$d = 16$. The
 chapter therefore proceeds without $Z(\boldsymbol{\theta})$: first by
 estimating its gradient with samples, then by objectives that do not involve
 it at all.
 
 ## Exercises
 
-1. **Which operations need the normalizer.** For an energy-based model
-   :eqref:`eq_diffusion-ebm`, classify each of the following as computable
-   from $E_{\boldsymbol{\theta}}$ alone or as requiring $Z(\boldsymbol{\theta})$:
-   the log-likelihood of a test set; the ratio $p(\mathbf{x}) / p(\mathbf{x}')$;
-   the most probable completion of an image with a missing patch; the
-   probability that a sample falls in a given region; the Kullback--Leibler
-   divergence between two energy-based models with the same energy but
-   different temperatures $E / \tau$. Justify each answer in one sentence.
+1. **The non-saturating divergence.** At an optimal discriminator, the
+   non-saturating generator loss follows the gradient of
+   $\mathrm{KL}(p_g \,\|\, p_{\textrm{data}}) - 2\, \mathrm{JS}(p_g, p_{\textrm{data}})$
+   :cite:`Arjovsky.Bottou.2017`.
+    1. Prove that this difference equals
+       $2\, \mathrm{KL}(m \,\|\, p_{\textrm{data}})$ with
+       $m = (p_g + p_{\textrm{data}}) / 2$.
+    1. Write $2\, \mathrm{KL}(m \,\|\, p_{\textrm{data}})$ as the integral of
+       an integrand that is nonnegative at every point, by adding a term
+       that integrates to zero. Do the same for the forward divergence
+       $\mathrm{KL}(p_{\textrm{data}} \,\|\, p_g)$ that maximum likelihood
+       minimizes. Evaluate both integrands at a point where
+       $p_g = 0 < p_{\textrm{data}}$. How does each behave at a point where
+       $p_g > 0$ as $p_{\textrm{data}} \to 0$?
+    1. Let $p_{\textrm{data}}$ put mass $(1 - \varepsilon) / 2$ on each of two
+       points $a$ and $b$ and mass $\varepsilon$ on a third point $c$, so that
+       the integrals become sums. Generator (i) puts all its mass on $a$ and
+       drops the mode $b$. Generator (ii) puts mass $0.495$ on each of $a$ and
+       $b$ and the remaining $0.01$ on $c$. Compute the divergence of (a) for
+       both generators as a function of $\varepsilon$, find the $\varepsilon$
+       at which the two are equal, and evaluate both at
+       $\varepsilon = e^{-100}$. How does the divergence of generator (ii)
+       grow as $\varepsilon \to 0$? Compute the forward divergence
+       $\mathrm{KL}(p_{\textrm{data}} \,\|\, p_g)$ of both generators. For
+       which $\varepsilon$ does each of the two divergences prefer
+       generator (i)?
+   :exlabel:`ex_limits-nonsaturating-divergence`
+1. [code] **Heavy-tailed updates.** In the model behind Theorem 2.6 of
+   :citet:`Arjovsky.Bottou.2017`, the perfect discriminator is zero near
+   every generated sample, and a trained discriminator $D$ differs from it by
+   an error $\varepsilon$ in its value and an error $\mathbf{r}$ in its input
+   gradient. Both errors are centered Gaussians, independent of each other
+   and across samples. The non-saturating loss $-\log D(\mathbf{x}')$ has the
+   input gradient $-\nabla_{\mathbf{x}'} D / D$, so each coordinate of one
+   sample's contribution to the update is a ratio of two independent
+   centered Gaussians.
+    1. Show that the ratio $r / \varepsilon$ of independent
+       $r \sim \mathcal{N}(0, \sigma_r^2)$ and
+       $\varepsilon \sim \mathcal{N}(0, \sigma_\varepsilon^2)$ has the Cauchy
+       density $\gamma / (\pi (\gamma^2 + u^2))$ with
+       $\gamma = \sigma_r / \sigma_\varepsilon$.
+    1. The characteristic function of this density is $e^{-\gamma |t|}$. Show
+       that the average of $B$ independent such ratios has the same
+       distribution as a single one.
+    1. Simulate minibatch averages of the ratio for $B = 1, 16, 256, 4096$
+       and compare their interquartile range with that of the average of $B$
+       standard Gaussians. Which statistic of a minibatch would concentrate as
+       $B$ grows? What does the result say about a larger batch as a remedy
+       for this instability?
+   :exlabel:`ex_limits-heavy-tailed-updates`
+1. **Discrete samples.** A generator for text ends in a softmax
+   $\boldsymbol{\pi}$ over a vocabulary of $V$ tokens and emits the token
+   $\operatorname{argmax}_j \pi_j$ as a one-hot vector, which the
+   discriminator scores.
+    1. Show that the gradient of the discriminator's score with respect to the
+       generator's parameters is zero wherever it is defined. Does drawing the
+       token from $\boldsymbol{\pi}$ instead of taking the argmax change this?
+    1. Suppose that the generator passes the probability vector
+       $\boldsymbol{\pi}$ to the discriminator instead. Describe a
+       discriminator that separates real from generated inputs perfectly
+       without using any property of language. What would the generator have
+       to do to defeat it? What would then happen to its gradient?
+   :exlabel:`ex_limits-discrete-samples`
+1. **Learning without normalization.** Consider the one-dimensional model
+   $\tilde{p}(x) = \exp(-E(x))$ with $E(x) = (x - \mu)^2 / (2 \sigma^2)$,
+   fit to data $x_1, \ldots, x_n$ that take at least two distinct values.
+    1. Maximize $\sum_i \log \tilde{p}(x_i)$ over $\mu$ and $\sigma$ without
+       normalizing. What does $\tilde{p}$ look like away from the data as the
+       objective approaches its supremum?
+    1. Repeat with the normalized model $\tilde{p} / Z$. Which term of the
+       objective prevents the failure of (a), and what is the maximizer?
+    1. A network energy usually ends in a linear layer with an output bias
+       $c$. Show that the normalized density :eqref:`eq_diffusion-ebm` does
+       not depend on $c$. What does gradient ascent on
+       $-\sum_i E_{\boldsymbol{\theta}}(\mathbf{x}_i)$ alone do to $c$?
+   :exlabel:`ex_limits-learning-without-normalization`
 1. **Integrability.** Let $E_{\boldsymbol{\theta}}$ be a multilayer perceptron
    with ReLU activations and a linear output layer, so that
    $E_{\boldsymbol{\theta}}$ is piecewise linear.
@@ -496,37 +567,195 @@ it at all.
        integral finite.
     1. Does adding $\|\mathbf{x}\|$ instead always suffice? Give a proof or a
        counterexample.
-1. **Products of experts.** Let $p_1 \propto \exp(-E_1)$ and
-   $p_2 \propto \exp(-E_2)$ be two energy-based models on the same space.
-   Show that the model with energy $E_1 + E_2$ has density proportional to
-   $p_1 p_2$, and explain why the same construction is not available for two
-   implicit generators in the sense of :numref:`sec_basic_gan`. Under which
-   condition on $p_1$ and $p_2$ is the product concentrated where neither
-   factor alone is?
-1. **The log-normal weight.** In the Gaussian example of the text, with
-   target $\mathcal{N}(\mathbf{m}, I)$ and proposal $\mathcal{N}(\mathbf{0}, I)$,
-   derive $w / Z = \exp(\mathbf{m}^\top \mathbf{x} - \|\mathbf{m}\|^2 / 2)$
-   and show that $\mathbb{E}_q[w / Z] = 1$ and
-   $\mathbb{E}_q[(w / Z)^2] = \exp(\|\mathbf{m}\|^2)$, using the moment
-   generating function of a Gaussian. Conclude that the relative standard
-   error of the $n$-sample estimate is $\sqrt{(e^{\|\mathbf{m}\|^2} - 1) / n}$.
-   How many samples are needed for a relative error of $0.1$ when
-   $\|\mathbf{m}\|^2 = 20$?
-1. [code] **A better proposal.** Repeat the importance-sampling experiment
-   with the proposal $\mathcal{N}(\mathbf{m}, I)$, which matches the target
-   exactly, and then with $\mathcal{N}(\mathbf{m}, 2 I)$, which matches the
-   mean but not the covariance. Derive the relative variance of the weights
-   in the second case as a function of $d$ and compare it with the measured
-   effective sample size. What does the comparison say about proposals that
-   are broader than the target?
-1. [code] **Quadrature on the running example.** :numref:`sec_diffusion-ebm-training`
-   uses a $100 \times 100$ grid on $[-6, 6]^2$ to normalize a two-dimensional
-   energy. Compute $\log Z$ for the mixture density defined there, which is
-   normalized by construction, on grids with $9$, $13$, $17$, $25$, and
-   $100$ points per axis, in double precision, and report the error of each.
-   At what grid spacing, relative to the component standard deviation, does
-   the quadrature error fall below $10^{-3}$, and why does the error fall so
-   quickly once the spacing is below the standard deviation?
+   :exlabel:`ex_limits-integrability`
+1. **Products and mixtures.** Let $p_1 = \exp(-E_1) / Z_1$ and
+   $p_2 = \exp(-E_2) / Z_2$ be two energy-based models on $\mathbb{R}^d$.
+    1. When $\exp(-E_1 - E_2)$ is integrable, the energy $E_1 + E_2$ defines
+       the density proportional to $p_1 p_2$, the product of experts of
+       :citet:`Hinton.2002`. Compute the product of the one-dimensional
+       experts $\mathcal{N}(-a, 1)$ and $\mathcal{N}(a, 1)$. For large $a$,
+       where does the product place its mass, compared with each expert?
+    1. The mixture $(p_1 + p_2) / 2$ is also an energy-based model. Write its
+       energy in terms of $E_1$, $E_2$, $Z_1$, and $Z_2$. Which mixture weights
+       does the energy $-\log\big(\exp(-E_1) + \exp(-E_2)\big)$ produce
+       instead?
+    1. Now let $p_1$ and $p_2$ each be the distribution of a generator of the
+       kind trained in :numref:`sec_basic_gan`. Which of the two combinations
+       can be sampled directly from the two generators, and which cannot?
+   :exlabel:`ex_limits-products-mixtures`
+1. **Which quantities need the normalizer.** For an energy-based model
+   :eqref:`eq_diffusion-ebm` on $\mathbb{R}^d$, decide for each quantity
+   below whether it follows from $E_{\boldsymbol{\theta}}$ alone, needs only
+   an integral over one coordinate, or needs $Z(\boldsymbol{\theta})$.
+   Justify each answer in one sentence.
+    1. Whether a test point is more probable under the model than under a
+       second energy-based model with a different energy.
+    1. The conditional density $p_{\boldsymbol{\theta}}(x_1 \mid x_2, \ldots, x_d)$
+       of the first coordinate given the others.
+    1. The most probable value of $x_1$ given $x_2, \ldots, x_d$.
+    1. The probability that a sample falls in a given region.
+    1. The divergence
+       $\mathrm{KL}(p_{\boldsymbol{\theta}} \,\|\, p_{\boldsymbol{\theta}}^{(\tau)})$,
+       where $p_{\boldsymbol{\theta}}^{(\tau)}$ has the energy
+       $E_{\boldsymbol{\theta}} / \tau$ for a temperature $\tau > 0$.
+   :exlabel:`ex_limits-which-quantities`
+1. **The log-normal weight.** In the Gaussian example of
+   :numref:`subsec_diffusion-limits-monte-carlo`, the target is
+   $\mathcal{N}(\mathbf{m}, I)$ up to normalization and the proposal is
+   $\mathcal{N}(\mathbf{0}, I)$.
+    1. Derive
+       $w / Z = \exp(\mathbf{m}^\top \mathbf{x} - \|\mathbf{m}\|^2 / 2)$ and
+       show that $\mathbb{E}_q[w / Z] = 1$ and
+       $\mathbb{E}_q[(w / Z)^2] = \exp(\|\mathbf{m}\|^2)$, using the moment
+       generating function of a Gaussian. Conclude that the relative standard
+       error of the $n$-sample estimate is
+       $\sqrt{(e^{\|\mathbf{m}\|^2} - 1) / n}$. How many samples are needed
+       for a relative error of $0.1$ when $\|\mathbf{m}\|^2 = 20$?
+    1. The effective sample size $(\sum_i w_i)^2 / \sum_i w_i^2$ equals $n$
+       times the squared sample mean of the weights divided by their sample
+       second moment. Use (a) to predict its value for large $n$ when
+       $\mathbf{m}$ is the all-ones vector, and compare the prediction with
+       the effective sample sizes printed in
+       :numref:`subsec_diffusion-limits-monte-carlo`. Why do the printed
+       values exceed the prediction from $d = 8$ on? What does this imply for
+       the effective sample size as a diagnostic?
+   :exlabel:`ex_limits-log-normal-weight`
+1. [code] **Broader and narrower proposals.** Keep the target of the Gaussian
+   example of :numref:`subsec_diffusion-limits-monte-carlo` and use the
+   proposal $\mathcal{N}(\mathbf{m}, s^2 I)$, whose mean is right and whose
+   scale is not.
+    1. Show that
+       $\mathbb{E}_q[(w / Z)^2] = \big(s^2 / \sqrt{2 s^2 - 1}\big)^d$ for
+       $s^2 > 1/2$ and that the second moment is infinite for
+       $s^2 \leq 1/2$.
+    1. Repeat the experiment of
+       :numref:`subsec_diffusion-limits-monte-carlo` with $s^2 = 2$ and
+       compare the effective sample size at each $d$ with the prediction
+       $n \big(\sqrt{2 s^2 - 1} / s^2\big)^d$.
+    1. Per coordinate, the shifted proposal $\mathcal{N}(\mathbf{0}, I)$
+       multiplies the second moment by $e$. Compare this factor with the
+       factors for $s^2 = 2$ and $s^2 = 0.6$. What does the comparison say
+       about erring on the broad side rather than on the narrow side?
+   :exlabel:`ex_limits-proposal-width`
+1. [code] **Restricted Boltzmann machines.** ● A restricted Boltzmann machine
+   :cite:`Smolensky.1986,Hinton.2002` has visible units
+   $\mathbf{v} \in \{0, 1\}^m$, hidden units $\mathbf{h} \in \{0, 1\}^k$,
+   and the energy
+   $E(\mathbf{v}, \mathbf{h}) = -\mathbf{b}^\top \mathbf{v} - \mathbf{c}^\top \mathbf{h} - \mathbf{v}^\top W \mathbf{h}$.
+   Let $\mathbf{w}_j$ denote the $j$-th column of $W$.
+    1. Sum out $\mathbf{h}$ and show that $p(\mathbf{v}) \propto \exp(-F(\mathbf{v}))$
+       with the *free energy*
+
+       $$F(\mathbf{v}) = -\mathbf{b}^\top \mathbf{v} - \sum_{j=1}^{k} \log\big(1 + \exp(c_j + \mathbf{v}^\top \mathbf{w}_j)\big).$$
+
+       Show also that the hidden units are independent given $\mathbf{v}$, and
+       compute $p(h_j = 1 \mid \mathbf{v})$.
+    1. The partition function is a sum over $2^{m + k}$ configurations. Show
+       that it can be computed as a sum of $2^{\min(m, k)}$ terms, each costing
+       $O(mk)$ operations.
+    1. For $m = 12$, $k = 6$, and random parameters, compute $\log Z$ by brute
+       force over all $2^{18}$ configurations, as a sum over $\mathbf{v}$, and
+       as a sum over $\mathbf{h}$. Which restricted Boltzmann machines have a
+       tractable likelihood? Why does no comparable reduction exist for an
+       energy given by a deep network on continuous inputs?
+   :exlabel:`ex_limits-rbm`
+1. [code] **Quadrature error.** ● :numref:`sec_diffusion-ebm-training`
+   normalizes two-dimensional energies by the rectangle rule
+   $h^2 \sum_i \exp(-E(\mathbf{x}_i))$ on a grid of $100 \times 100$ points
+   over $[-6, 6]^2$, endpoints included, with spacing $h = 12 / 99$. Test the
+   rule on a density whose integral is known: the data distribution of that
+   section, a mixture of three isotropic Gaussians with standard deviation
+   $s = 0.5$, means $(-2.5, -1.5)$, $(2.5, -1.5)$, and $(0, 2.5)$, and
+   weights $0.5$, $0.3$, and $0.2$.
+    1. Compute $\log Z$ in double precision on grids with
+       $K = 9, 13, 17, 25, 33$, and $100$ points per axis, and report the
+       error of each. At which spacing $h$, relative to $s$, does the error
+       fall below $10^{-3}$?
+    1. The Poisson summation formula states that
+       $h \sum_{j \in \mathbb{Z}} f(hj) = \sum_{k \in \mathbb{Z}} \hat{f}(k / h)$,
+       where $\hat{f}(\xi) = \int f(x)\, e^{-2\pi i \xi x}\, dx$ is the Fourier
+       transform of $f$. Use it to bound the error of the rectangle rule on
+       the whole line for a one-dimensional Gaussian density with standard
+       deviation $s$, on a grid with any offset. Extend the bound to the
+       two-dimensional mixture and compare it with the errors of (a). Why
+       does the error fall so quickly as $h$ decreases?
+    1. On the grids with $33$ and $100$ points per axis, the error is
+       negative and smaller than $10^{-12}$ in magnitude. Which approximation
+       does it measure?
+   :exlabel:`ex_limits-quadrature-running-example`
+1. [code] **Annealing the proposal.** ● The weights of the Gaussian example
+   of :numref:`subsec_diffusion-limits-monte-carlo` degenerate because the
+   target lies at the distance $\|\mathbf{m}\| = \sqrt{d}$ from the proposal.
+   Annealed importance sampling :cite:`Neal.2001` covers this distance in $T$
+   smaller steps. Let
+   $f_t(\mathbf{x}) = \exp\big(-\|\mathbf{x} - (t / T)\, \mathbf{m}\|^2 / 2\big)$
+   for $t = 0, \ldots, T$, so that $f_0$ is the unnormalized proposal, $f_T$
+   the unnormalized target, and every $f_t$ has the normalizer
+   $Z_t = (2\pi)^{d/2}$. One run draws $\mathbf{x}_{t-1}$ from the density
+   proportional to $f_{t-1}$, independently for $t = 1, \ldots, T$, and
+   returns
+
+   $$W = \prod_{t=1}^{T} \frac{f_t(\mathbf{x}_{t-1})}{f_{t-1}(\mathbf{x}_{t-1})}.$$
+
+   The estimate of $Z_T / Z_0$, which equals one here, is the average of $W$
+   over $n$ runs.
+    1. Show that $\mathbb{E}[W] = 1$ and that $\log W$ is Gaussian with
+       variance $d / T$. Conclude that the relative standard error of the
+       estimate is $\sqrt{(e^{d / T} - 1) / n}$, which for $T = 1$ is the
+       relative standard error of
+       :numref:`subsec_diffusion-limits-monte-carlo`.
+    1. A run costs $T$ energy evaluations. For a fixed budget of $N = nT$
+       evaluations, find the limit of the relative variance as $T \to \infty$.
+       Beyond roughly how many stages do further stages stop helping?
+    1. Implement the estimator for $d = 32$ and a budget of
+       $N = 102\,400$ evaluations with $T = 1, 4, 16, 64, 256$, so that
+       $n = N / T$ is an integer, and repeat each estimate $100$ times.
+       Compare the standard deviation of the estimates with the prediction
+       of (a) and with the limit of (b). For which $T$ does the measured
+       standard deviation disagree with (a), and why?
+    1. For a learned energy, the intermediate distributions cannot be sampled
+       exactly. Annealed importance sampling therefore obtains
+       $\mathbf{x}_t$ from $\mathbf{x}_{t-1}$ by a few steps of a Markov chain
+       that leaves the density proportional to $f_t$ invariant, and the
+       estimate stays unbiased. What then determines the variance of $W$?
+       What does a run cost that the exact version did not?
+   :exlabel:`ex_limits-annealing`
+1. [code] **The sample size of importance sampling.** ●● The relative standard
+   error $\sqrt{(e^d - 1) / n}$ of the Gaussian example of
+   :numref:`subsec_diffusion-limits-monte-carlo` is a mean-square criterion,
+   and it asks for about $e^d$ draws. :citet:`Chatterjee.Diaconis.2018`
+   (Theorem 1.1) show that about $\exp(\mathrm{KL}(p \,\|\, q))$ draws are
+   necessary and sufficient for the estimate to be close to $Z$ with high
+   probability, when $\log(p / q)$ concentrates around its mean under the
+   target. Here $p = \mathcal{N}(\mathbf{m}, I)$ is the normalized target and
+   $q = \mathcal{N}(\mathbf{0}, I)$ the proposal.
+    1. Show that the weight depends on $\mathbf{x}$ only through
+       $z = \mathbf{m}^\top \mathbf{x} / \sqrt{d}$, which is
+       $\mathcal{N}(0, 1)$ under $q$ and $\mathcal{N}(\sqrt{d}, 1)$ under
+       $p$. Compute $\mathrm{KL}(p \,\|\, q)$ and the mean and standard
+       deviation of $\log(p / q)$ under $p$.
+    1. The integral $Z = \mathbb{E}_q[w]$ is carried by draws whose $z$ lies
+       near $\sqrt{d}$. Estimate the probability under $q$ that
+       $z \geq \sqrt{d}$, and conclude that an estimate from far fewer than
+       $e^{d/2}$ draws typically falls far below $Z$.
+    1. Near which value of $z$ is the second moment $\mathbb{E}_q[w^2]$
+       carried? How probable is that region under $q$? Use this probability
+       to estimate how many draws the effective sample size of problem
+       :exref:`ex_limits-log-normal-weight`b needs before it approaches its
+       large-$n$ prediction, and check the estimate against the effective
+       sample sizes printed in :numref:`subsec_diffusion-limits-monte-carlo`
+       at $d = 4$ and $d = 8$.
+    1. For $e^{d/2} \ll n \ll e^d$, explain why most estimates land close to
+       $Z$ while the relative standard error is still much larger than one.
+    1. Check this picture for $d = 16$, drawing $z$ directly instead of
+       $\mathbf{x}$. For $n = 10, 10^2, \ldots, 10^7$, repeat the estimate
+       $200$ times ($20$ times for $n \geq 10^6$) and plot, against $\log n$,
+       the median of $\hat{Z} / Z$ and the fractions of estimates within a
+       factor of $2$ and within $10\%$ of $Z$. Mark $\log n = d / 2$ and
+       $\log n = d$. How wide is the transition compared with the standard
+       deviation of (a)? What does this say about the concentration
+       assumption at this $d$?
+   :exlabel:`ex_limits-sample-size`
 
 <!-- slides -->
 

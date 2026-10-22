@@ -388,9 +388,13 @@ The pre-norm model trains normally. The post-norm model does
 not diverge — no NaNs, no explosion — it does something more telling: it
 sticks at about $2.8$ nats and never leaves. That number is exactly the
 unigram entropy of this text ($2.83$ nats: predict letter frequencies,
-ignore all context), and a language model pinned there is a model whose
-attention has learned nothing — the training-time realization of the
-starved query/key gradients we measured at initialization. At the gentler
+ignore all context), and a language model pinned there ignores its input
+altogether, including the current character. Attention that has learned
+nothing would not explain this level by itself: if every attention
+sublayer output zero, the FFN sublayers would still act on the current
+character and could reach the bigram level of $2.28$ nats. The starved
+query/key gradients that we measured at initialization are therefore at
+most part of the explanation. At the gentler
 learning rate of the previous run, post-LN does train, trailing early
 (this is what learning-rate warmup was invented for
 :cite:`xiong2020layer`); at the rate pre-norm shrugs off, it fails
@@ -710,13 +714,15 @@ inside each attention head. Our `GPT` class exposes these choices and inserts
 causal attention through the `attn_factory` interface of
 `d2l.TransformerBlock`. On the 180 KB training text, validation loss reaches
 its minimum within a few hundred steps and then rises as the model memorizes
-the corpus. With post-norm at the same learning rate, training remains near
-the unigram entropy, consistent with the gradient attenuation measured in
-the preceding section. Temperature and truncation control sampling. The
-released 124M-parameter GPT-2 checkpoint loads into the same class through a
-parameter-name mapping, with the Conv1D matrices transposed in PyTorch and
-left unchanged in JAX. The loaded model passes a perplexity check and
-produces coherent completions for the example prompts.
+the corpus. With post-norm at a learning rate that pre-norm tolerates,
+training remains at the unigram entropy, so the predictions ignore even the
+current character. Since the FFN sublayers alone could reach the bigram
+loss, the attenuated query and key gradients measured in the preceding
+section explain at most part of this plateau. Temperature and truncation
+control sampling. The released 124M-parameter GPT-2 checkpoint loads into
+the same class through a parameter-name mapping, with the Conv1D matrices
+transposed in PyTorch and left unchanged in JAX. The loaded model passes a
+perplexity check and produces coherent completions for the example prompts.
 
 ## Exercises
 

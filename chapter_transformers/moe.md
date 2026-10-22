@@ -290,8 +290,8 @@ measured load.
 ### Positive Feedback in Routing
 :label:`subsec_moe-feedback`
 
-Follow the feedback loop. Early in training, random initialization may cause
-some expert is slightly better than its peers on the tokens it happens to
+Follow the feedback loop. Early in training, random initialization may make
+some expert slightly better than its peers on the tokens it happens to
 receive. The loss gradient rewards it twice: its parameters
 improve on those tokens, *and* the router's gradient raises its
 selection probability, because weighting a helpful expert more heavily
@@ -620,8 +620,9 @@ active: big specialists, coarsely chosen. The DeepSeek line of models
 argues for slicing the same budget thinner
 :cite:`Dai.Deng.Zhao.ea.2024`. Hold the stored parameters and the
 active parameters fixed, but make each expert several times narrower
-and multiply the count and $k$ accordingly: instead of choosing 2 of 8
-experts, choose 8 of 64 quarter-width ones. The active-parameter
+and multiply the count and $k$ accordingly: in the example of
+DeepSeekMoE, instead of choosing 2 of 16 full-width experts, a token
+chooses 8 of 64 quarter-width ones. The active-parameter
 accounting is identical; what changes is *composability*. With $k$
 narrow experts a token assembles its FFN from
 $\binom{64}{8} \approx 4 \times 10^{9}$ combinations rather than

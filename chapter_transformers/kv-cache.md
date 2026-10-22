@@ -1226,8 +1226,9 @@ keeps original position indices; a real rolling buffer also has to
 handle positions carefully as entries are evicted, which is an
 exercise.) :citet:`Xiao.Tian.Chen.ea.2024` provide broader experiments on
 attention sinks, and gpt-oss provides one concrete design with an
-explicit learned sink logit per head in its sliding-window layers
-:cite:`OpenAI.2025`, which frees the first token from double duty.
+explicit learned sink logit for every head of every attention layer,
+sliding-window and dense alike :cite:`OpenAI.2025`, which frees the first
+token from double duty.
 
 ### Comparison of Cache-Reduction Methods
 

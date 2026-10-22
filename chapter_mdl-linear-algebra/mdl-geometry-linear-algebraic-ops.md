@@ -654,7 +654,8 @@ $$
 $$
 is the *signed distance* from $\mathbf{x}$ to the hyperplane: positive on the
 side $\mathbf{w}$ points toward, negative on the other, and $0$ exactly on it.
-This signed distance is precisely the *margin* used by linear classifiers. The
+Multiplied by the label $y \in \{-1, +1\}$ of $\mathbf{x}$, this signed
+distance is the *margin* used by linear classifiers. The
 derivation applies the preceding projection result to the displacement of
 $\mathbf{x}$ from any point on the hyperplane. These properties are
 illustrated in :numref:`fig_mdl-la-hyperplane`.
@@ -1004,9 +1005,12 @@ Where do orthonormal columns come from in the first place? Any linearly
 independent collection can be converted into an orthonormal basis of its span
 by the *Gram–Schmidt process*: process the vectors in order, subtract
 from each one its projection :eqref:`eq_mdl-projection` onto each direction
-already produced, and normalize what remains. In matrix form this algorithm is
-the *QR factorization*, the `qr` call that produced the orthonormal basis
-in our subspace-projection demo earlier in this section. We will not need its
+already produced, and normalize what remains. In matrix form the process
+yields the *QR factorization* $\mathbf{A} = \mathbf{Q}\mathbf{R}$, with
+orthonormal columns in $\mathbf{Q}$ and an upper triangular $\mathbf{R}$. The
+`qr` call that produced the orthonormal basis in our subspace-projection demo
+earlier in this section computes the same factorization by a different
+algorithm, Householder reflections. We will not need its
 inner workings in this chapter; it is enough to know that orthonormal bases
 can be computed by standard numerical routines, which makes decompositions
 built from them practical.
@@ -1077,6 +1081,7 @@ the map is injective and its inputs can be recovered
 from outputs in its image. A square such matrix is invertible.
 
 #### Rank
+:label:`subsec_mdl-rank`
 
 For a general $m\times n$ matrix, the *rank* is the dimension of its image.
 Equivalently, the rank of $\mathbf{A}$
@@ -1103,11 +1108,11 @@ $$
 \end{bmatrix},
 $$
 
-and show that $\mathbf{C}$ has rank two since, for instance,
+which has rank two: for instance,
 the first two columns are linearly independent,
-however any of the $\binom{5}{3} = 10$ collections of three columns are
-linearly dependent. (Exercise: verify this, either by hand or with
-`matrix_rank`.)
+while each of the $\binom{5}{3} = 10$ collections of three columns is
+linearly dependent (exercise
+:exref:`ex_mdl-geometry-linear-algebraic-ops-rank-of-c`).
 
 Equivalently, the rank is the *dimension of the column space* we defined
 alongside spans and bases, and a foundational theorem of linear algebra says
@@ -1208,6 +1213,7 @@ M_inv.dot(M)
 ```
 
 #### Numerical Issues
+:label:`subsec_mdl-numerical-issues`
 While the matrix inverse is useful in theory, in practice we rarely want to
 *compute* it. To solve the linear system $\mathbf{A}\mathbf{x} = \mathbf{b}$,
 prefer `linalg.solve(A, b)` to the tempting but inferior `inv(A) @ b`: the
@@ -1386,8 +1392,16 @@ $$
 
 recovering the parallelogram area we computed by hand. In general the
 determinant is a signed sum of the products of the chosen entries, taken over
-all ways of picking one entry from each row and each column; this is the
-permutation formula, and (1)+(2)+(3) leave no other possibility.
+all ways of picking one entry from each row and each column. Writing
+$\sigma(j)$ for the row picked in column $j$, this is the *permutation formula*
+
+$$\det\mathbf{A} = \sum_{\sigma} \operatorname{sgn}(\sigma)\, a_{\sigma(1)1}\, a_{\sigma(2)2} \cdots a_{\sigma(n)n},$$
+:eqlabel:`eq_mdl-det-permutation`
+
+where $\sigma$ runs over the permutations of $\{1, \ldots, n\}$ and
+$\operatorname{sgn}(\sigma) = \det(\mathbf{e}_{\sigma(1)}, \ldots,
+\mathbf{e}_{\sigma(n)}) = \pm 1$. The properties (1)+(2)+(3) leave no other
+possibility.
 
 For hand computation the sum is organized as *cofactor expansion*: expanding
 the first column in the standard basis splits $\det\mathbf{A}$ into $n$
@@ -1695,36 +1709,378 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
 * Einstein notation makes tensor contractions explicit by summing over repeated indices and extends the same bookkeeping from dot products to matrix and tensor products.
 
 ## Exercises
-1. What is the angle between
-$$
-\vec v_1 = \begin{bmatrix}
-1 \\ 0 \\ -1 \\ 2
-\end{bmatrix}, \qquad \vec v_2 = \begin{bmatrix}
-3 \\ 1 \\ 0 \\ 1
-\end{bmatrix}?
-$$
-2. True or false: $\begin{bmatrix}1 & 2\\0&1\end{bmatrix}$ and $\begin{bmatrix}1 & -2\\0&1\end{bmatrix}$ are inverses of one another?
-3. A planar shape has area $100\textrm{m}^2$. What is its area after transformation by the matrix
-$$
-\begin{bmatrix}
-2 & 3\\
-1 & 2
-\end{bmatrix}.
-$$
-4. Which of the following sets of vectors are linearly independent?
- * $\left\{\begin{pmatrix}1\\0\\-1\end{pmatrix}, \begin{pmatrix}2\\1\\-1\end{pmatrix}, \begin{pmatrix}3\\1\\1\end{pmatrix}\right\}$
- * $\left\{\begin{pmatrix}3\\1\\1\end{pmatrix}, \begin{pmatrix}1\\1\\1\end{pmatrix}, \begin{pmatrix}0\\0\\0\end{pmatrix}\right\}$
- * $\left\{\begin{pmatrix}1\\1\\0\end{pmatrix}, \begin{pmatrix}0\\1\\-1\end{pmatrix}, \begin{pmatrix}1\\0\\1\end{pmatrix}\right\}$
-5. Let $A = \begin{bmatrix}c\\d\end{bmatrix}\cdot\begin{bmatrix}a & b\end{bmatrix}$ for scalars $a, b, c$, and $d$. True or false: the determinant of such a matrix is always $0$?
-6. The vectors $e_1 = \begin{bmatrix}1\\0\end{bmatrix}$ and $e_2 = \begin{bmatrix}0\\1\end{bmatrix}$ are orthogonal. What condition on a matrix $A$ ensures that $Ae_1$ and $Ae_2$ are orthogonal?
-7. How can you write $\textrm{tr}(\mathbf{A}^4)$ in Einstein notation for an arbitrary matrix $A$?
-8. Consider the hyperplane $\mathbf{w}\cdot\mathbf{x} = b$ with $\mathbf{w} = [3,4]^\top$ and $b = 10$.  What is the signed distance from the point $\mathbf{x} = [1,1]^\top$ to this hyperplane, and on which side of it does $\mathbf{x}$ lie?
-9. The proof of Cauchy–Schwarz shows that equality holds exactly when one vector is a scalar multiple of the other. Use this to characterize when the triangle inequality $\|\mathbf{v} + \mathbf{w}\| \le \|\mathbf{v}\| + \|\mathbf{w}\|$ holds with equality, and check your characterization on $\mathbf{v} = [1,2]^\top$ paired first with $\mathbf{w} = [2,4]^\top$ and then with $\mathbf{w} = [-1,-2]^\top$.
-10. Compute the projection $\operatorname{proj}_{\mathbf{w}}\mathbf{v}$ of $\mathbf{v} = [1,2,3]^\top$ onto $\mathbf{w} = [1,1,1]^\top$. Verify that the residual is orthogonal to $\mathbf{w}$ and confirm the Pythagorean identity :eqref:`eq_mdl-pythagoras` numerically.
-11. In code: sample $1{,}000$ pairs of random unit vectors in $d = 10{,}000$ dimensions (draw Gaussian vectors and normalize them) and compute the cosine of the angle for each pair. Compare the empirical standard deviation to the predicted $1/\sqrt{d} = 0.01$, and report the largest $|\cos\theta|$ you observe.
-12. Show that an orthogonal matrix $\mathbf{Q}$ preserves angles: for nonzero $\mathbf{x}$ and $\mathbf{y}$, the angle between $\mathbf{Q}\mathbf{x}$ and $\mathbf{Q}\mathbf{y}$ equals the angle between $\mathbf{x}$ and $\mathbf{y}$. Conclude that rotating every embedding vector in a dataset by the same orthogonal matrix leaves all cosine similarities unchanged.
-13. Verify that the $4 \times 5$ matrix $\mathbf{C}$ from the rank subsection has rank two: check that the first two columns are linearly independent, and confirm, by hand or with `matrix_rank`, that every collection of three of its columns is linearly dependent.
-14. Use multilinearity to prove that $\det(c\mathbf{A}) = c^n \det(\mathbf{A})$ for an $n \times n$ matrix $\mathbf{A}$ and a scalar $c$. Check the identity in code for the $3 \times 3$ matrix of :eqref:`eq_mdl-det-3x3` with $c = 2$.
+
+1. **Angle in four dimensions.** Compute the angle between
+   $$\mathbf{v}_1 = [1, 0, -1, 2]^\top \quad\textrm{and}\quad \mathbf{v}_2 = [3, 1, 0, 1]^\top$$
+   with :eqref:`eq_mdl-angle_formula`, in radians and in degrees, and check
+   the result with the function `angle`.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-angle-4d`
+
+1. **Equality in the triangle inequality.** By the Cauchy–Schwarz
+   proposition, $|\mathbf{v}\cdot\mathbf{w}| = \|\mathbf{v}\|\,\|\mathbf{w}\|$
+   holds exactly when $\mathbf{v}$ and $\mathbf{w}$ are collinear. Use the
+   proof of the triangle inequality to characterize all pairs $\mathbf{v},
+   \mathbf{w}$ with $\|\mathbf{v} + \mathbf{w}\| = \|\mathbf{v}\| +
+   \|\mathbf{w}\|$. Check the characterization on $\mathbf{v} = [1, 2]^\top$
+   paired first with $\mathbf{w} = [2, 4]^\top$ and then with
+   $\mathbf{w} = [-1, -2]^\top$.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-triangle-equality`
+
+1. **Linear independence.** Which of the following sets are linearly
+   independent? For each dependent set, give a linear combination with
+   coefficients not all zero that equals $\mathbf{0}$, and state the dimension
+   of the set's span.
+   $$S_1 = \left\{\begin{bmatrix}1\\0\\-1\end{bmatrix}, \begin{bmatrix}2\\1\\-1\end{bmatrix}, \begin{bmatrix}3\\1\\1\end{bmatrix}\right\}, \qquad S_2 = \left\{\begin{bmatrix}3\\1\\1\end{bmatrix}, \begin{bmatrix}1\\1\\1\end{bmatrix}, \begin{bmatrix}0\\0\\0\end{bmatrix}\right\}, \qquad S_3 = \left\{\begin{bmatrix}1\\1\\0\end{bmatrix}, \begin{bmatrix}0\\1\\-1\end{bmatrix}, \begin{bmatrix}1\\0\\1\end{bmatrix}\right\}$$
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-independence`
+
+1. **Fitting a line by projection.** Four measurements
+   $\mathbf{b} = [0, 8, 8, 20]^\top$ are taken at the times
+   $\mathbf{t} = [0, 1, 3, 4]^\top$. Let $\mathbf{1} = [1, 1, 1, 1]^\top$.
+    1. Project $\mathbf{b}$ onto the line through $\mathbf{1}$ with
+       :eqref:`eq_mdl-projection`. Check that the residual is orthogonal to
+       $\mathbf{1}$, confirm :eqref:`eq_mdl-pythagoras`, and find the distance
+       from $\mathbf{b}$ to the line. Which statistic of the measurements is
+       the coefficient of the projection?
+    1. Fit the line $C + Dt$ by least squares :eqref:`eq_mdl-least-squares`,
+       where $\mathbf{A}$ has the columns $\mathbf{1}$ and $\mathbf{t}$. By
+       property (i) of the proposition on projection onto a subspace, the
+       optimal residual is orthogonal to every column of $\mathbf{A}$. Turn
+       this condition into a $2 \times 2$ linear system for $[C, D]^\top$,
+       solve it, and compute the four errors and the sum of their squares.
+       Why does $C$ differ from the coefficient of the first part?
+    1. Suppose the columns of $\mathbf{A}$ are linearly independent, so that
+       the `qr` routine gives $\mathbf{A} = \mathbf{Q}\mathbf{R}$ with
+       $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ and an invertible upper
+       triangular $\mathbf{R}$. Show that $\mathbf{A}^\top\mathbf{A}$ is
+       invertible and that
+       $\mathbf{A}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top =
+       \mathbf{Q}\mathbf{Q}^\top$. The system of the second part therefore
+       yields the projection $\mathbf{P}$ without an orthonormal basis.
+
+   *Adapted from Gilbert Strang,
+   [MIT 18.065 Matrix Methods in Data Analysis, Signal Processing, and Machine Learning, Problem Sets](https://www.ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/cd4c57b7e61b8ca9fdd3511a30aca052_MIT18_065S18PSets.pdf),
+   Problems for Lecture 10, Problems 12 and 17.*
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-least-squares-line`
+
+1. [code] **Cosines between random vectors.**
+    1. Sample $1{,}000$ pairs of independent random unit vectors in
+       $d = 10{,}000$ dimensions by drawing Gaussian vectors and normalizing
+       them, and compute the cosine of each pair. Compare the empirical
+       standard deviation with the prediction $1/\sqrt{d} = 0.01$ of the
+       near-orthogonality proposition, and find the largest $|\cos\theta|$
+       among the pairs.
+    1. A retrieval system compares one query with $n$ keys and returns the
+       key of largest cosine. Let the query and the keys be independent
+       random unit vectors in $d = 256$ dimensions. Compute the largest of
+       the $n$ cosines for $n = 10$, $10^3$, and $10^5$, and compare it with
+       $\sqrt{2\ln n / d}$, the approximate maximum of $n$ independent
+       Gaussian draws with variance $1/d$. Which cosine does an unrelated key
+       reach as the top match among $10^5$ keys? How should a threshold for
+       declaring two embeddings related depend on $n$ and $d$?
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-random-cosines`
+
+1. **Signed distance to a hyperplane.**
+    1. Let $\mathbf{x}_0$ be any point of the hyperplane
+       $\mathbf{w}\cdot\mathbf{x} = b$. Derive the signed distance
+       $(\mathbf{w}\cdot\mathbf{x} - b)/\|\mathbf{w}\|$ of a point
+       $\mathbf{x}$ from the signed length of the projection of
+       $\mathbf{x} - \mathbf{x}_0$ onto $\mathbf{w}$, and find the point of
+       the hyperplane closest to $\mathbf{x}$.
+    1. For $\mathbf{w} = [3, 4]^\top$ and $b = 10$, compute the signed
+       distance of $\mathbf{x} = [1, 1]^\top$, the side of the hyperplane on
+       which $\mathbf{x}$ lies, and the closest point of the hyperplane.
+    1. Replace $(\mathbf{w}, b)$ by $(c\mathbf{w}, cb)$ with $c > 0$. Which
+       of the hyperplane, the score $\mathbf{w}\cdot\mathbf{x} - b$, and the
+       signed distance change? Let training points $\mathbf{x}_i$ with labels
+       $y_i \in \{-1, +1\}$ be separable: some $(\mathbf{w}, b)$ gives
+       $y_i(\mathbf{w}\cdot\mathbf{x}_i - b) > 0$ for every $i$. A classifier
+       chooses $(\mathbf{w}, b)$ to maximize the smallest score
+       $\min_i y_i(\mathbf{w}\cdot\mathbf{x}_i - b)$. Why does this
+       maximization have no solution unless the scale of $\mathbf{w}$ is
+       fixed? Which scale-invariant quantity can be maximized instead?
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-signed-distance`
+
+1. **Nearest centroids.** The array `predictions` assigns a Fashion-MNIST
+   image $\mathbf{x}$ to class $1$ when $\mathbf{w}\cdot\mathbf{x} > b$,
+   where `w` is the normal
+   $\mathbf{w} = \overline{\mathbf{x}}_1 - \overline{\mathbf{x}}_0$ and `b`
+   is the threshold
+   $b = \mathbf{w}\cdot\tfrac12(\overline{\mathbf{x}}_0 + \overline{\mathbf{x}}_1)$.
+    1. Show that $\mathbf{w}\cdot\mathbf{x} > b$ holds exactly when
+       $\|\mathbf{x} - \overline{\mathbf{x}}_1\| <
+       \|\mathbf{x} - \overline{\mathbf{x}}_0\|$.
+    1. Every training and test image is transformed by the same map
+       $\mathbf{x} \mapsto c\mathbf{Q}\mathbf{x} + \mathbf{t}$ with $c > 0$,
+       an orthogonal $\mathbf{Q}$, and a vector $\mathbf{t}$, and the class
+       means and the threshold are recomputed. Show that no prediction
+       changes. How does this extend the scale-equivariance of $b$?
+    1. Standardizing every pixel to unit variance replaces $\mathbf{x}$ by
+       $\mathbf{D}\mathbf{x}$ for a diagonal $\mathbf{D}$ with positive
+       entries. Construct two class means and a point in $\mathbb{R}^2$
+       whose prediction changes under such a $\mathbf{D}$.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-nearest-centroid`
+
+1. **Maps that preserve angles.** Rotating every embedding vector by the same
+   orthogonal matrix leaves all cosine similarities unchanged. This problem
+   finds every linear map with that property.
+    1. Find the condition on the columns of a square matrix $\mathbf{A}$
+       under which $\mathbf{A}\mathbf{e}_1$ and $\mathbf{A}\mathbf{e}_2$ are
+       orthogonal. Show that $\mathbf{A} = \operatorname{diag}(1, 10)$
+       satisfies it but changes the angle between $[1, 1]^\top$ and
+       $[1, -1]^\top$.
+    1. Suppose that an invertible $\mathbf{A}$ preserves the angle between
+       every pair of nonzero vectors. Apply this to the pairs
+       $\mathbf{e}_i, \mathbf{e}_j$ and
+       $\mathbf{e}_i + \mathbf{e}_j, \mathbf{e}_i - \mathbf{e}_j$ for
+       $i \neq j$ to show that $\mathbf{A}^\top\mathbf{A} = c^2\mathbf{I}$ for
+       some $c > 0$, so that $\mathbf{A} = c\mathbf{Q}$ with $\mathbf{Q}$
+       orthogonal. Conversely, show that every such matrix preserves all
+       cosine similarities.
+    1. Suppose instead that $\|\mathbf{A}\mathbf{x}\| = \|\mathbf{x}\|$ for
+       every $\mathbf{x}$. Expand $\|\mathbf{x} + \mathbf{y}\|^2$ and
+       $\|\mathbf{x} - \mathbf{y}\|^2$ to show that $\mathbf{A}$ preserves
+       every dot product, and conclude that $\mathbf{A}$ is orthogonal.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-angle-preserving`
+
+1. **Rank and nullity of C.** The $4 \times 5$ matrix $\mathbf{C}$ of
+   :numref:`subsec_mdl-rank` has rank two. Write $\mathbf{c}_1, \ldots,
+   \mathbf{c}_5$ for its columns.
+    1. Express $\mathbf{c}_2$, $\mathbf{c}_4$, and $\mathbf{c}_5$ as linear
+       combinations of $\mathbf{c}_1$ and $\mathbf{c}_3$, and check that
+       $\mathbf{c}_1$ and $\mathbf{c}_3$ are linearly independent. Why does
+       this show that every collection of three columns is linearly
+       dependent? Confirm the rank with `onp.linalg.matrix_rank`.
+    1. Turn the three relations into three vectors of the null space of
+       $\mathbf{C}$. Show that they are linearly independent, and use
+       rank--nullity to show that they form a basis of the null space.
+    1. Express the third and the fourth row of $\mathbf{C}$ as linear
+       combinations of the first two rows. What is the dimension of the row
+       space?
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-rank-of-c`
+
+1. **Rank of a product.** A linear autoencoder sends a $d$-dimensional input
+   through a hidden layer of width $k < d$,
+   $\mathbf{x} \mapsto \mathbf{W}_2\mathbf{W}_1\mathbf{x}$ with
+   $\mathbf{W}_1 \in \mathbb{R}^{k \times d}$ and
+   $\mathbf{W}_2 \in \mathbb{R}^{d \times k}$.
+    1. Let $\mathbf{A}$ be an $m \times n$ matrix and $\mathbf{B}$ an
+       $n \times p$ matrix. Show that the column space of
+       $\mathbf{A}\mathbf{B}$ lies in the column space of $\mathbf{A}$, and
+       that the null space of $\mathbf{B}$ lies in the null space of
+       $\mathbf{A}\mathbf{B}$. Use the first fact,
+       and rank--nullity with the second, to prove
+       $\operatorname{rank}(\mathbf{A}\mathbf{B}) \le
+       \min(\operatorname{rank}\mathbf{A}, \operatorname{rank}\mathbf{B})$.
+    1. Conclude that $\mathbf{W}_2\mathbf{W}_1$ has rank at most $k$. What
+       is the smallest possible dimension of its null space? What is the
+       largest dimension of a subspace on which the autoencoder reconstructs
+       every input exactly?
+    1. Construct a $2 \times 3$ matrix and a $3 \times 2$ matrix, both of
+       rank two, whose $2 \times 2$ product has rank one.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-rank-of-product`
+
+1. **Integer inverses.**
+    1. Are $\begin{bmatrix}1 & 2\\0 & 1\end{bmatrix}$ and
+       $\begin{bmatrix}1 & -2\\0 & 1\end{bmatrix}$ inverses of one another?
+       What do the two maps do to the unit square?
+    1. A planar shape has area $100\,\textrm{m}^2$. What is its area after
+       the transformation by
+       $\mathbf{M} = \begin{bmatrix}2 & 3\\1 & 2\end{bmatrix}$? Compute
+       $\mathbf{M}^{-1}$.
+    1. Show that a $2 \times 2$ matrix with integer entries has an inverse
+       with integer entries exactly when its determinant is $1$ or $-1$. Use
+       :eqref:`eq_mdl-det-multiplicative` for one direction and the
+       $2 \times 2$ inverse formula for the other.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-integer-inverses`
+
+1. [code] **Determinant and near-singularity.** A square matrix is invertible
+   exactly when its determinant is nonzero. How well does the size of the
+   determinant measure how close a matrix is to being singular?
+    1. Use multilinearity to prove $\det(c\mathbf{A}) = c^n\det\mathbf{A}$
+       for an $n \times n$ matrix $\mathbf{A}$ and a scalar $c$, and check
+       the identity in code for the matrix of :eqref:`eq_mdl-det-3x3` with
+       $c = 2$.
+    1. Compute `onp.linalg.det(0.1 * onp.eye(n))` for $n = 100$, $300$, and
+       $400$, and compare with the exact values. Is $0.1\,\mathbf{I}$ close
+       to singular? What does `onp.linalg.slogdet` return for $n = 400$?
+    1. The shear $\begin{bmatrix}1 & 10^8\\0 & 1\end{bmatrix}$ has
+       determinant $1$. Find the smallest change of a single entry that makes
+       it singular.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-det-near-singular`
+
+1. [code] **Index notation.**
+    1. Write $\textrm{tr}(\mathbf{A}^4)$ in Einstein notation, and check it
+       with `onp.einsum` against the trace of the fourth matrix power of a
+       random $5 \times 5$ matrix.
+    1. Use index notation to show
+       $\textrm{tr}(\mathbf{A}\mathbf{B}\mathbf{C}) =
+       \textrm{tr}(\mathbf{C}\mathbf{A}\mathbf{B})$. Find $2 \times 2$
+       matrices with $\textrm{tr}(\mathbf{A}\mathbf{B}\mathbf{C}) \neq
+       \textrm{tr}(\mathbf{A}\mathbf{C}\mathbf{B})$.
+    1. The contraction $y_i = a_{ij}\,b_{jk}\,v_k$ computes
+       $\mathbf{A}\mathbf{B}\mathbf{v}$ for $n \times n$ matrices. Count the
+       scalar multiplications when the sum runs over all index triples
+       $(i, j, k)$ at once, and when $\mathbf{B}\mathbf{v}$ is formed first.
+       Time `onp.einsum('ij,jk,k->i', A, B, v)` with `optimize=False` and
+       with `optimize=True` for $n = 100$, $200$, and $400$. How does each
+       time scale with $n$?
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-index-notation`
+
+1. **Distribution of the cosine.** ● Let $\mathbf{v}$ be uniform on the unit
+   sphere of $\mathbb{R}^d$ with $d \ge 2$, and let $t = v_1$, the cosine of
+   the angle between $\mathbf{v}$ and $\mathbf{e}_1$.
+    1. The points of the sphere with $v_1 \in [t, t + dt]$ form a thin band.
+       Its cross-section at height $t$ is a sphere of dimension $d - 2$ and
+       radius $\sqrt{1 - t^2}$, whose surface measure is proportional to
+       $(1 - t^2)^{(d-2)/2}$, and the band is $dt/\sqrt{1 - t^2}$ wide along
+       the sphere. Conclude that $t$ has the density
+       $$p_d(t) \propto (1 - t^2)^{(d-3)/2}, \qquad -1 < t < 1.$$
+    1. Identify $p_2$ and $p_3$, and check
+       $\operatorname{Var}(t) = 1/d$ for both. For which $d$ does $p_d$ grow
+       toward $t = \pm 1$, and for which $d$ does it have its maximum at
+       $t = 0$?
+    1. Substitute $t = s/\sqrt{d}$ and show that the density of
+       $s = \sqrt{d}\,t$ approaches the standard normal density as
+       $d \to \infty$. For large $d$, compare the resulting probability of
+       $|t| \ge 3/\sqrt{d}$ with the Chebyshev bound in the proof of the
+       near-orthogonality proposition.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-cosine-density`
+
+1. [code] **Tilting the boundary.** ● The mean-difference normal
+   $\boldsymbol{\Delta} = \overline{\mathbf{x}}_1 - \overline{\mathbf{x}}_0$
+   ignores how the images of each class spread around their mean. Let
+   $\boldsymbol{\Sigma}$ be the average of the two within-class covariance
+   matrices of the training images. Fisher's linear discriminant
+   :cite:`Fisher.1936` chooses the normal $\mathbf{w}$ that maximizes
+   $$J(\mathbf{w}) = \frac{(\mathbf{w}\cdot\boldsymbol{\Delta})^2}{\mathbf{w}^\top\boldsymbol{\Sigma}\mathbf{w}},$$
+   the squared distance between the projected class means relative to the
+   variance of the projections within a class. Its maximizer is
+   $\mathbf{w} \propto \boldsymbol{\Sigma}^{-1}\boldsymbol{\Delta}$.
+    1. Show that $J(c\mathbf{w}) = J(\mathbf{w})$ for every $c \neq 0$. For
+       $\boldsymbol{\Sigma} = s^2\mathbf{I}$, use Cauchy–Schwarz to show that
+       $\boldsymbol{\Delta}$ maximizes $J$.
+    1. Flatten `as_numpy(X_train_0)` and `as_numpy(X_train_1)` into
+       $784$-dimensional rows, compute $\boldsymbol{\Sigma}$, and let
+       $\bar s^2 = \textrm{tr}(\boldsymbol{\Sigma})/784$ be the average pixel
+       variance. For $\gamma \in \{10^{-4}, 10^{-2}, 1, 10^{2}, 10^{4}\}$,
+       take the normal
+       $\mathbf{w}_\gamma = (\boldsymbol{\Sigma} + \gamma\bar s^2\mathbf{I})^{-1}\boldsymbol{\Delta}$,
+       set the threshold at
+       $\mathbf{w}_\gamma\cdot\tfrac12(\overline{\mathbf{x}}_0 + \overline{\mathbf{x}}_1)$,
+       and compute the training and test accuracy. Then hold out $1{,}000$
+       images of each class from the training images, recompute
+       $\boldsymbol{\Sigma}$ and the class means from the rest, and choose
+       $\gamma$ by the accuracy on the held-out images. Redraw the histogram
+       of `proj` with $\mathbf{w}_\gamma$ for that $\gamma$.
+    1. Why does $\mathbf{w}_\gamma$ approach the direction of
+       $\boldsymbol{\Delta}$ as $\gamma \to \infty$? Why does the
+       regularizer scale with $\bar s^2$ rather than use a fixed multiple of
+       $\mathbf{I}$?
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-fisher-direction`
+
+1. [code] **Gram–Schmidt in floating point.** ● The Gram–Schmidt process
+   admits two orderings of the same subtractions. Classical Gram–Schmidt
+   (CGS) forms $\mathbf{q}_j$ by normalizing
+   $\mathbf{a}_j - \sum_{i<j}(\mathbf{q}_i\cdot\mathbf{a}_j)\,\mathbf{q}_i$.
+   Modified Gram–Schmidt (MGS) starts from $\mathbf{v} = \mathbf{a}_j$,
+   replaces $\mathbf{v}$ by $\mathbf{v} - (\mathbf{q}_i\cdot\mathbf{v})\,\mathbf{q}_i$
+   for $i = 1, \ldots, j-1$ in turn, and normalizes the result.
+    1. Show that CGS and MGS produce the same vectors in exact arithmetic.
+    1. Implement both and apply them to the Hilbert matrices $\mathbf{H}_n$
+       with entries $1/(i + j - 1)$ for $n = 4, 6, 8, 10, 12$, whose columns
+       are close to linearly dependent. Plot the Frobenius norm
+       $\|\mathbf{Q}^\top\mathbf{Q} - \mathbf{I}\|_F$ against $n$ for CGS,
+       MGS, and `onp.linalg.qr`. For each method, from which $n$ on is
+       $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$ no longer a projection, as
+       measured by $\|\mathbf{P}^2 - \mathbf{P}\|_F$?
+    1. Run the CGS subtraction twice for every column, the second time on
+       the vector that the first pass left. How close to orthonormal are the
+       resulting columns, compared with one pass of CGS and with MGS? Explain
+       the difference by comparing the size of the components along
+       $\mathbf{q}_1, \ldots, \mathbf{q}_{j-1}$ in the vector that enters the
+       first pass and in the vector that enters the second.
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-gram-schmidt`
+
+1. [code] **Solve versus invert.** ● :numref:`subsec_mdl-numerical-issues`
+   recommends `linalg.solve(A, b)` over `inv(A) @ b` and states that the
+   inverse of a sparse matrix is typically dense.
+    1. Let $\mathbf{T}$ be the $n \times n$ tridiagonal matrix with $2$ on the
+       diagonal and $-1$ directly above and below it. Show that the matrix
+       $\mathbf{F}$ with entries
+       $f_{ij} = \min(i, j)\,\bigl(n + 1 - \max(i, j)\bigr)/(n + 1)$ satisfies
+       $\mathbf{T}\mathbf{F} = \mathbf{I}$. For $n = 1000$, compare the
+       number of nonzero entries of $\mathbf{T}$ and of $\mathbf{T}^{-1}$,
+       and check $\mathbf{F}$ against `onp.linalg.inv(T)`.
+    1. Solve $\mathbf{H}_n\mathbf{x} = \mathbf{b}$ for the Hilbert matrices
+       $\mathbf{H}_n$ with entries $1/(i + j - 1)$, $n = 8, 10, 12$, and
+       $\mathbf{b} = \mathbf{H}_n\mathbf{1}$, once with `onp.linalg.solve`
+       and once with `onp.linalg.inv`. Compare the relative residuals
+       $\|\mathbf{H}_n\hat{\mathbf{x}} - \mathbf{b}\|/\|\mathbf{b}\|$ and the
+       errors $\|\hat{\mathbf{x}} - \mathbf{1}\|$. How does each of the two
+       quantities depend on the method and on $n$? How far does a small
+       residual guarantee an accurate solution?
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-solve-vs-invert`
+
+1. **Determinant of a rank-one update.** ● A *planar flow*
+   :cite:`rezende2015variational` transforms
+   $\mathbf{z} \in \mathbb{R}^d$ by
+   $f(\mathbf{z}) = \mathbf{z} + \mathbf{u}\,h(\mathbf{w}\cdot\mathbf{z} + b)$
+   for vectors $\mathbf{u}, \mathbf{w}$, a scalar $b$, and a scalar
+   nonlinearity $h$. Computing the density of $f(\mathbf{z})$ requires the
+   determinant of the Jacobian
+   $\mathbf{I} + h'(\mathbf{w}\cdot\mathbf{z} + b)\,\mathbf{u}\mathbf{w}^\top$.
+    1. Use multilinearity and the alternating property to show
+       $\det(\mathbf{u}\mathbf{v}^\top) = 0$ for $n \times n$ matrices with
+       $n \ge 2$.
+    1. Verify the two factorizations
+       $$\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{v}^\top & 1\end{bmatrix} = \begin{bmatrix}\mathbf{I} & \mathbf{0}\\ \mathbf{v}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1 + \mathbf{v}\cdot\mathbf{u}\end{bmatrix} = \begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} + \mathbf{u}\mathbf{v}^\top & \mathbf{0}\\ \mathbf{v}^\top & 1\end{bmatrix}.$$
+       Use the permutation formula :eqref:`eq_mdl-det-permutation` to show
+       that a matrix whose last column is $\mathbf{e}_{n+1}$ has the
+       determinant of its upper-left $n \times n$ block. Deduce
+       $\det(\mathbf{I} + \mathbf{u}\mathbf{v}^\top) = 1 + \mathbf{v}\cdot\mathbf{u}$
+       from :eqref:`eq_mdl-det-multiplicative` and the triangular rule.
+    1. Write the logarithm of the absolute Jacobian determinant of a planar
+       flow, and compare the cost of evaluating it with the cost of a
+       general $d \times d$ determinant. For $h = \tanh$, which values of
+       $\mathbf{u}\cdot\mathbf{w}$ keep the Jacobian invertible at every
+       $\mathbf{z}$?
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-det-rank-one-update`
+
+1. [extended] **Packing nearly orthogonal directions.** ●● $\mathbb{R}^d$
+   holds at most $d$ mutually orthogonal directions but many more whose
+   pairwise cosines are small. :citet:`Elhage.Hume.Olsson.ea.2022` use this
+   fact to explain how a layer of width $d$ can represent more than $d$
+   features in *superposition*, as nearly orthogonal directions. Their
+   features are *sparse*: each one is active on a small fraction of the
+   inputs, so few features have to be read out at the same time. Let
+   $\mathbf{u}_1, \ldots, \mathbf{u}_n$ be unit vectors in $\mathbb{R}^d$,
+   stacked as the rows of $\mathbf{U} \in \mathbb{R}^{n \times d}$, and let
+   $\mu = \max_{i \neq j}|\mathbf{u}_i\cdot\mathbf{u}_j|$ be their largest
+   interference.
+    1. Use :eqref:`eq_mdl-trace-cyclic` to show that the squared entries of
+       $\mathbf{U}\mathbf{U}^\top$ and of $\mathbf{U}^\top\mathbf{U}$ have the
+       same sum. Bound the second sum from below by the squared diagonal
+       entries of $\mathbf{U}^\top\mathbf{U}$ and Cauchy–Schwarz, and derive
+       the *Welch bound* :cite:`Welch.1974`
+       $$\mu^2 \ge \frac{n - d}{d\,(n - 1)}.$$
+       Evaluate it for $d = 32$ with $n = 64$ and $n = 512$.
+    1. A union bound over the pairs shows that independent random directions
+       keep $\mu \le \varepsilon$ for $n$ of order $e^{d\varepsilon^2/4}$
+       (:numref:`sec_mdl-concentration-generalization`). For $d = 32$ and
+       $n \in \{64, 128, 256, 512\}$, compute $\mu$ for random unit vectors
+       and compare it with the Welch bound.
+    1. Reduce $\mu$ by optimization: minimize
+       $\sum_{i \neq j}(\mathbf{u}_i\cdot\mathbf{u}_j)^{p}$ for an even power
+       such as $p = 10$ by gradient steps on $\mathbf{U}$, and renormalize
+       every row after each step. For $d \in \{16, 32, 48, 64\}$ and
+       $n \in \{d, 2d, 4d, 8d, 16d\}$, plot $\mu$ against $n$ for random
+       vectors, for optimized vectors, and for the Welch bound.
+    1. Use the curves to estimate, for each $d$, the largest $n$ whose
+       optimized directions keep $\mu \le 0.2$. How does this number grow
+       with $d$, compared with the rate $e^{d\varepsilon^2/4}$ of random
+       directions? Which of your conclusions would change if some features
+       mattered more than others, or if many features were active at once?
+   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-packing-directions`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/410)

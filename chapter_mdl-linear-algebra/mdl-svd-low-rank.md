@@ -398,7 +398,7 @@ $$
 $$
 :eqlabel:`eq_mdl-truncated-svd`
 
-is the best rank-$k$ approximation of $\mathbf{A}$, provably, in both the
+is a best rank-$k$ approximation of $\mathbf{A}$, provably, in both the
 spectral and Frobenius norms. Eckart and Young proved the
 Frobenius case :cite:`Eckart.Young.1936` and Mirsky extended it to every
 *unitarily invariant* norm (one unchanged by orthogonal multiplication on either
@@ -423,7 +423,7 @@ identity :eqref:`eq_mdl-sigma1-variational`,
 $\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$. (And
 $\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$, by the identity
 $\|\mathbf{A}\|_F^2=\operatorname{tr}(\mathbf{A}^\top\mathbf{A})=\sum_i\sigma_i^2$:
-the Frobenius norm is the root-sum-of-squares of the singular values. Exercise 2
+the Frobenius norm is the root-sum-of-squares of the singular values. Exercise :exref:`ex_mdl-svd-low-rank-norms-singular-values`a
 asks you to prove this in two lines.)
 
 *No rank-$k$ matrix does better (the dimension-counting argument).* Let
@@ -480,6 +480,7 @@ $i,j$,*
 $$
 \sigma_{i+j-1}(\mathbf{X}+\mathbf{Y})\le\sigma_i(\mathbf{X})+\sigma_j(\mathbf{Y}) .
 $$
+:eqlabel:`eq_mdl-weyl-singular`
 
 **Proof (Frobenius case).** The lemma
 applied with $\mathbf{X}=\mathbf{A}-\mathbf{B}$, $\mathbf{Y}=\mathbf{B}$ and
@@ -524,11 +525,13 @@ reduce error, but the location of that threshold depends on the model.
 
 Under the square-matrix model with known noise level, Gavish and Donoho derive the
 asymptotically optimal hard threshold
-$\tfrac{4}{\sqrt3}\sqrt n\,\sigma_{\mathrm{noise}}\approx2.309\sqrt n\,\sigma_{\mathrm{noise}}$
+$\tfrac{4}{\sqrt3}\sqrt n\,\sigma_{\text{noise}}\approx2.309\sqrt n\,\sigma_{\text{noise}}$
 :cite:`Gavish.Donoho.2014`. Applying this constant to a different aspect ratio,
 noise distribution, normalization, or unknown-noise setting requires the
-corresponding version of the theory. Exercise 3 illustrates the spectral
-separation; it does not establish the asymptotic result.
+corresponding version of the theory. Exercise :exref:`ex_mdl-svd-low-rank-denoising-truncation` illustrates the spectral
+separation, and exercise :exref:`ex_mdl-svd-low-rank-optimal-hard-threshold`
+derives the constant $4/\sqrt3$ from the asymptotic behavior of a single
+signal component.
 
 The same low-rank premise, with *missing* rather than noisy entries, is *matrix
 completion*: recommender systems fill in a sparsely observed ratings matrix by
@@ -592,9 +595,9 @@ explained-variance ratio is exactly the energy ratio
 projection $\mathbf{z}=\mathbf{V}_k^\top(\mathbf{x}-\bar{\mathbf{x}})$ is the
 *optimal* linear dimensionality reduction: minimizing reconstruction error over
 all rank-$k$ linear maps is Eckart--Young--Frobenius applied to $\tilde{\mathbf{X}}$,
-whose solution is the top-$k$ truncation. **Centering matters**: skip it and the
-first singular vector is dominated by the offset of the cloud from the origin,
-capturing where the data *is* rather than how it *varies*.
+whose solution is the top-$k$ truncation. **Centering matters**: skip it and,
+once the cloud lies far from the origin, the first singular vector is dominated
+by that offset, capturing where the data *is* rather than how it *varies*.
 
 :numref:`fig_mdl-la-pca` draws a 2-D correlated cloud with its two principal axes
 scaled by the per-axis standard deviation $\sigma_i/\sqrt{n}$: the first axis
@@ -768,7 +771,7 @@ $\kappa(\mathbf A)$ while the Hessian condition number that controls gradient
 descent is $\kappa(\mathbf A)^2$.) This is the same picture that ended
 the Rayleigh discussion in :numref:`subsec_mdl-rayleigh`, and it is no coincidence:
 with the best fixed step size, gradient descent's error contracts like
-$(\kappa-1)/(\kappa+1)$ per step on such a bowl. *One number, two consequences*:
+$(\kappa(\mathbf{M})-1)/(\kappa(\mathbf{M})+1)$ per step on such a bowl. *One number, two consequences*:
 error amplification in a solve and slow convergence in optimization. We make this
 precise when we analyze gradient descent in :numref:`sec_mdl-gradient-based-optimization`
 and study numerical conditioning in :numref:`sec_mdl-numerical-stability-conditioning`.
@@ -846,8 +849,8 @@ nonzero $\sigma_i$ toward the fixed point $1$. The Frobenius normalization is
 what makes that convergence guaranteed rather than lucky: it puts every singular
 value into $(0, 1]$, comfortably inside $(0, \sqrt3\,)$, the cubic's basin of
 attraction of $1$. Start a singular value beyond $\sqrt3$ and the cubic maps it
-negative, after which the iterates either stick near the spurious fixed point
-$-1$ or diverge; either way the polar factor is lost. So the iterates converge to
+negative. From there, for most starting values, the iterates converge to the
+spurious fixed point $-1$ or diverge, and the polar factor is lost. So the iterates converge to
 $\mathbf{U}\mathbf{V}^\top$ using nothing but matrix multiplications (in practice
 Muon tunes the polynomial's coefficients so that about five iterations suffice).
 Like the power iteration used for spectral normalization below, this procedure
@@ -883,8 +886,9 @@ This stabilizes training, originally for GAN
 discriminators :cite:`Miyato.Kataoka.Koyama.ea.2018`. $\sigma_1$ is
 estimated by **power iteration on $\mathbf{W}^\top\mathbf{W}$**, the very algorithm
 we analyzed in :numref:`sec_mdl-eigendecompositions`, since
-$\sigma_1=\sqrt{\lambda_1(\mathbf{W}^\top\mathbf{W})}$. A couple of iterations per
-training step suffice.
+$\sigma_1=\sqrt{\lambda_1(\mathbf{W}^\top\mathbf{W})}$. One iteration per
+training step suffices when each step starts from the vector left by the
+previous step.
 
 **Weight and attention spectra.** Plotting the singular values of a trained layer
 (the spectrum panel of :numref:`fig_mdl-la-eckart-young`, applied to $\mathbf{W}$
@@ -967,7 +971,7 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
 * Rank, range, and the four fundamental subspaces read off the spectrum;
   numerical rank thresholds the $\sigma_i$ at
   $\sim\sigma_1\max(m,n)\,\epsilon_{\text{mach}}$.
-* **Eckart--Young--Mirsky:** the top-$k$ truncation $\mathbf{A}_k$ is the optimal
+* **Eckart--Young--Mirsky:** the top-$k$ truncation $\mathbf{A}_k$ is an optimal
   rank-$k$ approximation, with $\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$ and
   $\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$. The retained-energy
   ratio $\sum_{i\leq k}\sigma_i^2/\sum_i\sigma_i^2$ is one minus the squared
@@ -986,59 +990,412 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
 
 ## Exercises
 
-1. Compute the SVD of $\operatorname{diag}(3,1)$ by inspection. Then show the
-   scaled rotation $\begin{bmatrix}0&-2\\1&0\end{bmatrix}$ has singular values
-   $\{2,1\}$ even though its eigenvalue magnitudes are both $\sqrt2$, i.e.
-   $\sigma\neq|\lambda|$ for non-symmetric matrices.
-2. Prove that $\|\mathbf{A}\|_F^2=\sum_i\sigma_i^2$. (*Hint:* first show
-   $\|\mathbf{A}\|_F^2=\operatorname{tr}(\mathbf{A}^\top\mathbf{A})$ directly from
-   the definitions, then evaluate the trace as the sum of the eigenvalues of
-   $\mathbf{A}^\top\mathbf{A}$ using :eqref:`eq_mdl-svd-gram`.) Conclude that
-   multiplying by orthogonal matrices on either side never changes the Frobenius
-   norm.
-3. Generate a rank-5 signal $\mathbf{B}=\mathbf{X}\mathbf{Y}^\top$ with
-   $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{200\times5}$ standard Gaussian, and add
-   noise $\mathbf{N}$ with i.i.d. $\mathcal{N}(0,\sigma_{\text{noise}}^2)$ entries,
-   $\sigma_{\text{noise}}=0.05$. Plot the singular values of
-$\mathbf{B}+\mathbf{N}$ on a log scale and examine the separation between five
-   signal values and a noise floor near
-   $(\sqrt{m}+\sqrt{n})\,\sigma_{\text{noise}}$. Verify that hard-thresholding at
-   the Gavish--Donoho cutoff
-   $\tfrac{4}{\sqrt3}\sqrt{n}\,\sigma_{\text{noise}}$ recovers the true rank, and
-   check numerically whether the rank-5 truncation of $\mathbf{B}+\mathbf{N}$ is
-   closer to $\mathbf{B}$ (in Frobenius norm) than $\mathbf{B}+\mathbf{N}$ itself
-   is. What happens as you keep more components than 5?
-4. Show that the singular values of any orthogonal matrix are all $1$, hence
-   $\kappa=1$. Then prove $\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$
-   and explain why this makes the normal equations numerically inferior.
-5. Show $\mathbf{A}$ and $\mathbf{A}^\top$ have the same nonzero singular values.
-   (*Hint:* relate $\mathbf{A}^\top\mathbf{A}$ and $\mathbf{A}\mathbf{A}^\top$ via
-   :eqref:`eq_mdl-svd-gram`.)
-6. Prove the polar decomposition $\mathbf{A}=\mathbf{Q}\mathbf{P}$ has $\mathbf{Q}$
-   orthogonal and $\mathbf{P}\succeq0$, and that $\mathbf{P}$ is unique while
-   $\mathbf{Q}$ is unique when $\mathbf{A}$ is invertible.
-7. For a given weight matrix, find the LoRA rank achieving 95% spectral energy and
-   compute the resulting parameter saving relative to a full update (the
-   `#svd-weight-spectrum` cell). How does the answer change if the spectrum decays
-   more slowly?
-8. How much can an update $\boldsymbol{\Delta}$ (for instance a rank-$r$ LoRA
-   update $\mathbf{B}\mathbf{A}$) move the singular values of $\mathbf{W}$?
-    1. Derive the *Weyl perturbation bound*
+1. **SVD by hand.** The construction of :numref:`subsec_mdl-svd-via-ata`
+   computes an SVD in three steps: diagonalize $\mathbf{A}^\top\mathbf{A}$,
+   take the square roots of its eigenvalues, and set
+   $\mathbf{u}_i = \mathbf{A}\mathbf{v}_i/\sigma_i$.
+    1. Carry out these steps by hand for
+       $\mathbf{A} = \begin{bmatrix}3&4\\0&5\end{bmatrix}$. Verify
+       $\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ by
+       multiplication and check that $\sigma_1\sigma_2 = |\det\mathbf{A}|$.
+    1. List every SVD of the matrix in (a).
+
+   *Adapted from Gilbert Strang,
+   [MIT 18.065 problem sets](https://www.ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/cd4c57b7e61b8ca9fdd3511a30aca052_MIT18_065S18PSets.pdf),
+   Lecture 6, Problem 6.*
+
+1. **Eigenvalues and singular values.** The scaled rotation
+   $\begin{bmatrix}0&-2\\1&0\end{bmatrix}$ of
+   :numref:`subsec_mdl-svd-via-ata` has eigenvalues of modulus $\sqrt2$,
+   strictly between its singular values $1$ and $2$.
+    1. Exercise :exref:`ex_mdl-eigendecomposition-spectral-radius-norms`a of
+       :numref:`sec_mdl-eigendecompositions` with $k = 1$ gives
+       $|\lambda| \le \|\mathbf{A}\|_2 = \sigma_1$ for every eigenvalue
+       $\lambda$ of a square matrix $\mathbf{A}\in\mathbb{R}^{n\times n}$.
+       Show that every eigenvalue also satisfies $\sigma_n \le |\lambda|$.
+       For a complex eigenvector, write
+       $\mathbf{x} = \mathbf{a} + i\,\mathbf{b}$ with real $\mathbf{a}$ and
+       $\mathbf{b}$.
+    1. Let $\mathbf{A}$ be symmetric with eigendecomposition
+       $\mathbf{A} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^\top$. Construct
+       an SVD of $\mathbf{A}$ from $\mathbf{Q}$ and $\boldsymbol{\Lambda}$, and
+       conclude that the singular values of $\mathbf{A}$ are the $|\lambda_i|$.
+       Apply the construction to $\operatorname{diag}(3,-2)$. Which factor
+       absorbs the minus sign?
+
+1. [code] **Subspaces of a rank-one matrix.** Let
+   $\mathbf{A} = \begin{bmatrix}1&2\\2&4\\3&6\end{bmatrix}$.
+    1. Write $\mathbf{A}$ as an outer product and read off its thin SVD. Give
+       orthonormal bases of the four fundamental subspaces of
+       :numref:`subsec_mdl-svd-subspaces`. Which columns of the full
+       $\mathbf{U}$ does the construction of
+       :numref:`subsec_mdl-svd-via-ata` leave undetermined, and how many
+       full SVDs does $\mathbf{A}$ have?
+    1. For which right-hand sides $\mathbf{b}$ does
+       $\mathbf{A}\mathbf{x} = \mathbf{b}$ have a solution? For
+       $\mathbf{b} = (1, 0, 0)^\top$, compute the minimum-norm least-squares
+       solution $\mathbf{A}^{+}\mathbf{b}$ of
+       :eqref:`eq_mdl-pseudoinverse` and the squared residual.
+    1. Add independent Gaussian noise with standard deviation $10^{-10}$ to
+       every entry of $\mathbf{A}$. Compute the singular values of the result
+       and its rank according to `np.linalg.matrix_rank` with the default
+       tolerance. Explain the reported rank. Which tolerance would you choose
+       if the entries of $\mathbf{A}$ were measured to an accuracy of about
+       $10^{-8}$?
+
+1. **Norms from singular values.** The Frobenius error formula of the
+   Eckart--Young--Mirsky theorem rests on an identity between the Frobenius
+   norm and the singular values.
+    1. Prove that $\|\mathbf{A}\|_F^2 = \sum_i\sigma_i^2$. Conclude that
+       multiplying by orthogonal matrices on either side never changes the
+       Frobenius norm.
+    1. Show that
+       $\|\mathbf{A}\|_2 \le \|\mathbf{A}\|_F \le \sqrt{r}\,\|\mathbf{A}\|_2$
+       with $r = \operatorname{rank}\mathbf{A}$. Which matrices attain
+       equality on each side?
+    1. The ratio $\|\mathbf{A}\|_F^2/\|\mathbf{A}\|_2^2$ is called the *stable
+       rank* of $\mathbf{A}$; by (b) it lies between $1$ and
+       $\operatorname{rank}\mathbf{A}$. Compute it in closed form for the
+       synthetic $256\times512$ weight matrix of
+       :numref:`sec_mdl-svd-modern-dl`, whose singular values are
+       $e^{-i/12}$ for $i = 0, \ldots, 255$, and compare it with the rank $18$
+       that retains 95% of the energy. Why can the stable rank of a matrix be
+       far below its rank?
+   :exlabel:`ex_mdl-svd-low-rank-norms-singular-values`
+
+1. **Best rank-one approximations.** The truncation
+   :eqref:`eq_mdl-truncated-svd` with $k = 1$ is a closest rank-one matrix
+   both in the spectral norm :eqref:`eq_mdl-eckart-young` and in the
+   Frobenius norm.
+    1. Find a closest rank-one approximation $\mathbf{A}_1$ to each of
+       $$
+       \begin{bmatrix}3&0&0\\0&2&0\\0&0&1\end{bmatrix},\qquad
+       \begin{bmatrix}0&3\\2&0\end{bmatrix},\qquad
+       \begin{bmatrix}2&1\\1&2\end{bmatrix},
+       $$
+       and state the errors $\|\mathbf{A}-\mathbf{A}_1\|_2$ and
+       $\|\mathbf{A}-\mathbf{A}_1\|_F$.
+    1. For $\mathbf{A} = \operatorname{diag}(3, 1)$, show that every
+       $\mathbf{B}_t = \operatorname{diag}(3+t, 0)$ with $|t|\le1$ attains the
+       minimal spectral-norm error $\sigma_2$, while only $t = 0$ attains the
+       minimal Frobenius error. Then prove that for every $\mathbf{A}$ with
+       $\sigma_1 > \sigma_2$ the truncation $\mathbf{A}_1$ is the only closest
+       rank-one matrix in the Frobenius norm. Write a rank-one matrix as
+       $s\,\mathbf{x}\mathbf{y}^\top$ with unit vectors $\mathbf{x}$ and
+       $\mathbf{y}$, and minimize over $s$ first.
+    1. Describe all closest rank-one approximations of the $2\times2$
+       identity matrix in the Frobenius norm. What does the answer imply for
+       the first principal direction of a data cloud whose covariance is a
+       multiple of the identity?
+
+   *Adapted from Gilbert Strang,
+   [MIT 18.065 problem sets](https://www.ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/cd4c57b7e61b8ca9fdd3511a30aca052_MIT18_065S18PSets.pdf),
+   Lecture 7, Problem 2.*
+
+1. **Weyl perturbation bound.** An update $\boldsymbol{\Delta}$, for instance
+   a rank-$r$ LoRA update $\mathbf{B}\mathbf{A}$, changes the singular values
+   of a weight matrix $\mathbf{W}$. The Weyl inequality
+   :eqref:`eq_mdl-weyl-singular` limits how far they move.
+    1. Set $j = 1$ in :eqref:`eq_mdl-weyl-singular` and apply the inequality
+       in both directions to derive
        $|\sigma_i(\mathbf{W}+\boldsymbol{\Delta})-\sigma_i(\mathbf{W})|\le\sigma_1(\boldsymbol{\Delta})$
-       for every $i$ and *any* update $\boldsymbol{\Delta}$, by setting $j=1$ in
-       the Weyl inequality lemma of :numref:`subsec_mdl-eckart-young`,
-       $\sigma_{i+j-1}(\mathbf{X}+\mathbf{Y})\le\sigma_i(\mathbf{X})+\sigma_j(\mathbf{Y})$,
-       applied in both directions.
-    1. Can a rank-*one* update move *all* the singular values? Take
-       $\mathbf{W}=\operatorname{diag}(1,2)$ and
-       $\boldsymbol{\Delta}=0.1\,\mathbf{1}\mathbf{1}^\top$, compute the singular
-       values of $\mathbf{W}+\boldsymbol{\Delta}$ numerically, and check that
-       *both* moved, each by less than $\sigma_1(\boldsymbol{\Delta})=0.2$, as the
-       bound demands.
-    1. Reconcile this with the fact that adding a rank-$r$ update changes
-       $\operatorname{rank}\mathbf{W}$ by at most $r$: a low-rank update can nudge
-       *every* singular value a little, but can create or destroy at most $r$
-       nonzero ones.
+       for every $i$.
+    1. Take $\mathbf{W} = \operatorname{diag}(1, 2)$ and
+       $\boldsymbol{\Delta} = 0.1\,\mathbf{1}\mathbf{1}^\top$. Compute the
+       singular values of $\mathbf{W}+\boldsymbol{\Delta}$ and compare each
+       change with $\sigma_1(\boldsymbol{\Delta})$.
+    1. Now let $\operatorname{rank}\boldsymbol{\Delta}\le r$. The Frobenius
+       proof in :numref:`subsec_mdl-eckart-young` applies
+       :eqref:`eq_mdl-weyl-singular` with $j = k+1$ to a matrix of rank at
+       most $k$. The same step with $k = r$ gives the interlacing inequalities
+       $\sigma_{i+r}(\mathbf{W})\le\sigma_i(\mathbf{W}+\boldsymbol{\Delta})$ and
+       $\sigma_{i+r}(\mathbf{W}+\boldsymbol{\Delta})\le\sigma_i(\mathbf{W})$.
+       Use them to show that the ranks of $\mathbf{W}+\boldsymbol{\Delta}$ and
+       $\mathbf{W}$ differ by at most $r$, and that at most $r$ singular values
+       of $\mathbf{W}+\boldsymbol{\Delta}$ exceed $\sigma_1(\mathbf{W})$,
+       however large $\sigma_1(\boldsymbol{\Delta})$ is. Why does the bound of
+       (a) not give these conclusions?
+
+1. [code] **Denoising by truncation.** Generate a rank-5 signal
+   $\mathbf{B}=\mathbf{X}\mathbf{Y}^\top$ with
+   $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{200\times5}$ standard Gaussian, and
+   add noise $\mathbf{N}$ with i.i.d. $\mathcal{N}(0, 1)$ entries. This is
+   the model $\mathbf{A} = \mathbf{B}+\mathbf{N}$ of
+   :numref:`subsec_mdl-eckart-young` with $m = n = 200$ and
+   $\sigma_{\text{noise}} = 1$.
+    1. Plot the singular values of $\mathbf{A}$ on a log scale. Where does the
+       noise bulk end, compared with the edge
+       $(\sqrt{m}+\sqrt{n})\,\sigma_{\text{noise}}$, and how many singular
+       values lie above it?
+    1. Compute $\|\mathbf{A}_k-\mathbf{B}\|_F^2$ for $k = 0, \ldots, 20$, where
+       $\mathbf{A}_k$ is the rank-$k$ truncation of $\mathbf{A}$. Which $k$
+       minimizes the error, and how does the minimum compare with
+       $\|\mathbf{N}\|_F^2$?
+    1. A rank-$r$ matrix of size $m\times n$ has $r(m+n-r)$ degrees of
+       freedom. Compare the minimal error with
+       $\sigma_{\text{noise}}^2\,r(m+n-r)$ for $r = 5$. Why does only this
+       part of the noise survive the truncation? By about how much does each
+       component beyond the fifth increase the error, and which singular value
+       of $\mathbf{A}$ predicts the increase?
+   :exlabel:`ex_mdl-svd-low-rank-denoising-truncation`
+
+1. [code] **Centering in PCA.** Let the rows of
+   $\mathbf{X}\in\mathbb{R}^{n\times d}$ be data points with mean row
+   $\bar{\mathbf{x}}$ and covariance $\mathbf{C}$ as in
+   :numref:`subsec_mdl-pca`.
+    1. Show that
+       $\tfrac1n\mathbf{X}^\top\mathbf{X} = \mathbf{C}+\bar{\mathbf{x}}\bar{\mathbf{x}}^\top$.
+    1. Generate the cloud of :numref:`subsec_mdl-pca` again (300 points from
+       `np.random.default_rng(1)` with standard deviations $3$ and $0.8$,
+       rotated by $\pi/5$) and shift every
+       point by $c\,(1,-1)/\sqrt2$ for $c\in\{0, 1, 3, 10, 30\}$. For each $c$,
+       compute the top right singular vector of the *uncentered* data, its
+       angle to the principal axis $(\cos\frac\pi5, \sin\frac\pi5)$, and the
+       ratio $\sigma_1^2/\sum_i\sigma_i^2$.
+    1. Use (a) to predict, from the eigenvalues of $\mathbf{C}$, the offset at
+       which the top singular vector turns from the principal axis toward the
+       mean.
+    1. Use (a) again to approximate the ratio $\sigma_1^2/\sum_i\sigma_i^2$
+       for large $c$, and find its limit as $c\to\infty$. At $c = 10$ the
+       ratio is close to the centered explained-variance ratio. Does this
+       agreement reflect the data or the chosen offset?
+
+1. [code] **Ridgeless limit and gradient descent.** An overparameterized
+   linear model has more parameters than equations, so least squares has
+   infinitely many minimizers. Let $\mathbf{A}\in\mathbb{R}^{m\times n}$ with
+   $m < n$.
+    1. Use the SVD to show that
+       $(\mathbf{A}^\top\mathbf{A}+\lambda\mathbf{I})^{-1}\mathbf{A}^\top\to\mathbf{A}^{+}$
+       as $\lambda\to0^{+}$, for a matrix $\mathbf{A}$ of any shape and
+       rank. Why does $(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$ not
+       exist here?
+    1. Gradient descent on $\tfrac12\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2$
+       with step size $0 < \eta < 2/\sigma_1^2$ updates
+       $\mathbf{x}_{t+1} = \mathbf{x}_t-\eta\,\mathbf{A}^\top(\mathbf{A}\mathbf{x}_t-\mathbf{b})$.
+       Show that $\mathbf{x}_t-\mathbf{x}_0$ stays in the row space of
+       $\mathbf{A}$ and that $\mathbf{x}_t$ converges to
+       $\mathbf{A}^{+}\mathbf{b}+(\mathbf{I}-\mathbf{A}^{+}\mathbf{A})\mathbf{x}_0$.
+       Which solution does the initialization $\mathbf{x}_0 = \mathbf{0}$
+       select?
+    1. Check (a) and (b) for a $20\times50$ Gaussian $\mathbf{A}$ and a
+       Gaussian $\mathbf{b}$: run gradient descent from $\mathbf{x}_0 = \mathbf{0}$
+       and from a random $\mathbf{x}_0$, and compare both limits and their
+       norms with $\mathbf{A}^{+}\mathbf{b}$.
+   :exlabel:`ex_mdl-svd-low-rank-ridgeless-gradient-descent`
+
+1. [code] **Conditioning of polynomial features.** Polynomial regression on a
+   scalar input $x$ uses the feature matrix $\mathbf{A}$ whose rows are
+   $(1, x, x^2, \ldots, x^d)$, one row per data point.
+    1. For 100 equally spaced points in $[0, 1]$, compute the condition
+       number :eqref:`eq_mdl-condition-number` of $\mathbf{A}$ for
+       $d = 1, \ldots, 10$ and plot $\log_{10}\kappa$ against $d$. By about
+       what factor does each additional degree multiply $\kappa$?
+    1. Repeat with 100 points in $[-1, 1]$, and with the points in $[0, 1]$
+       after standardizing every column except the constant one to mean $0$
+       and variance $1$. Which change helps more? Why does standardizing the
+       columns one at a time leave $\mathbf{A}$ badly conditioned?
+    1. Gradient descent on $\tfrac12\|\mathbf{A}\mathbf{w}-\mathbf{y}\|^2$ has
+       Hessian $\mathbf{A}^\top\mathbf{A}$, so with the best fixed step size
+       its error contracts by $(\kappa(\mathbf{A})^2-1)/(\kappa(\mathbf{A})^2+1)$
+       per step (:numref:`subsec_mdl-condition-number`). Estimate the number of
+       steps that reduce the error by a factor of $10^6$ for $d = 5$, with the
+       points in $[0, 1]$ and in $[-1, 1]$.
+
+1. [code] **Rank budget for LoRA.** The synthetic weight matrix of
+   :numref:`sec_mdl-svd-modern-dl` has size $256\times512$ and singular
+   values $\sigma_i = e^{-i/12}$ for
+   $i = 0, \ldots, 255$. Its rank for 95% of the energy
+   :eqref:`eq_mdl-energy-ratio` is $18$, which gives a LoRA with 10.5% of the
+   parameters of a full update.
+    1. Replace the spectrum by the power laws $\sigma_i = (i+1)^{-\alpha}$ for
+       $\alpha\in\{0.5, 1, 2\}$ and keep the shape. For each $\alpha$, find
+       the rank $r_{95}$ that retains 95% of the energy, the parameter ratio
+       :eqref:`eq_mdl-lora-ratio` at that rank, and the relative Frobenius
+       error of the best rank-8 approximation.
+    1. Above which rank does a LoRA of a $256\times512$ matrix have more
+       parameters than the full matrix? Which spectra of (a) exceed it?
+    1. Repeat (a) for a $256\times512$ matrix $\mathbf{W}$ with i.i.d.
+       standard Gaussian entries, the state of a weight matrix at random
+       initialization. Then add a rank-4 update
+       $\Delta\mathbf{W} = \mathbf{B}\mathbf{A}$ with Gaussian
+       $\mathbf{B}\in\mathbb{R}^{256\times4}$ and
+       $\mathbf{A}\in\mathbb{R}^{4\times512}$, scaled so that
+       $\|\Delta\mathbf{W}\|_F = 0.3\,\|\mathbf{W}\|_F$. Compute $r_{95}$ for
+       $\mathbf{W}+\Delta\mathbf{W}$ and for $\Delta\mathbf{W}$. What does the
+       comparison imply for choosing a LoRA rank from the spectrum of a
+       fine-tuned weight matrix?
+
+1. [code] **Newton--Schulz basin.** The Newton--Schulz iteration
+   $\mathbf{X}\leftarrow\tfrac12(3\mathbf{X}-\mathbf{X}\mathbf{X}^\top\mathbf{X})$
+   of :numref:`sec_mdl-svd-modern-dl` starts from
+   $\mathbf{X} = \mathbf{M}/\|\mathbf{M}\|_F$.
+    1. Let $\mathbf{X} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ be a
+       thin SVD. Show that one step produces
+       $\mathbf{U}\,p(\boldsymbol{\Sigma})\,\mathbf{V}^\top$ with
+       $p(\sigma) = \tfrac12(3\sigma-\sigma^3)$ applied to every diagonal
+       entry.
+    1. Show that $p$ maps $(0, \sqrt3)$ into $(0, 1]$ and that the iterates
+       $p(p(\cdots p(\sigma_0)))$ converge to $1$ for every
+       $\sigma_0\in(0,\sqrt3)$. Expand $p(1-e)$ in powers of $e$. How fast
+       does the distance to $1$ shrink once it is small?
+    1. For the $6\times4$ matrix $\mathbf{M}$ of
+       :numref:`sec_mdl-svd-modern-dl`, drawn from `np.random.default_rng(3)`,
+       count the steps until
+       $\|\mathbf{X}-\mathbf{U}\mathbf{V}^\top\|_F < 10^{-6}$ when the
+       iteration starts from $\mathbf{M}/c$ with $c = \|\mathbf{M}\|_F$ and
+       with $c = \sigma_1(\mathbf{M})$. Why does Muon divide by
+       $\|\mathbf{M}\|_F$ although $\sigma_1(\mathbf{M})$ saves a step?
+    1. Start the iteration from $\mathbf{M}/c$ with
+       $c = \sigma_1(\mathbf{M})/2$ and with $c = \sigma_1(\mathbf{M})/2.5$.
+       What does it converge to in each case? Explain both outcomes with the
+       polynomial $p$ of (b).
+
+1. [code] **Polar factor and Procrustes.** ● The polar decomposition
+   :eqref:`eq_mdl-polar` writes a square matrix as
+   $\mathbf{A} = \mathbf{Q}\mathbf{P}$ with $\mathbf{Q}$ orthogonal and
+   $\mathbf{P}$ symmetric positive semidefinite.
+    1. Show that $\mathbf{P} = (\mathbf{A}^\top\mathbf{A})^{1/2}$ is
+       determined by $\mathbf{A}$, and that $\mathbf{Q}$ is determined by
+       $\mathbf{A}$ when $\mathbf{A}$ is invertible. Give two different polar
+       decompositions of $\operatorname{diag}(1, 0)$.
+    1. Show that $\mathbf{Q} = \mathbf{U}\mathbf{V}^\top$ is an orthogonal
+       matrix closest to $\mathbf{A}$ in the Frobenius norm. Reduce the
+       problem to maximizing $\operatorname{tr}(\mathbf{R}^\top\mathbf{A})$
+       over orthogonal $\mathbf{R}$.
+    1. Two embedding spaces that differ by a rotation can be aligned from
+       paired points $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{d\times N}$ by
+       minimizing $\|\mathbf{R}\mathbf{X}-\mathbf{Y}\|_F$ over orthogonal
+       $\mathbf{R}$. Use (b) to show that the minimizer is the polar factor of
+       $\mathbf{Y}\mathbf{X}^\top$. Test it with $d = 50$, $N = 1000$, a random
+       orthogonal $\mathbf{R}$ (the $\mathbf{Q}$ factor of a QR decomposition
+       of a Gaussian matrix), Gaussian $\mathbf{X}$, and
+       $\mathbf{Y} = \mathbf{R}\mathbf{X}+\mathbf{E}$, where $\mathbf{E}$ has
+       i.i.d. $\mathcal{N}(0, s^2)$ entries for $s\in\{0, 0.1, 1, 3\}$.
+       Compare $\|\hat{\mathbf{R}}-\mathbf{R}\|_F/\sqrt d$ for this estimate
+       and for the unconstrained least-squares estimate
+       $\mathbf{Y}\mathbf{X}^{+}$.
+
+1. [code] **Warm-started power iteration.** ● Spectral normalization divides
+   a weight $\mathbf{W}$ by an estimate of $\sigma_1(\mathbf{W})$ at every
+   training step. One round of the estimator updates
+   $\mathbf{v}\leftarrow\mathbf{W}^\top\mathbf{u}/\|\mathbf{W}^\top\mathbf{u}\|$
+   and $\mathbf{u}\leftarrow\mathbf{W}\mathbf{v}/\|\mathbf{W}\mathbf{v}\|$
+   and reports $\hat\sigma = \mathbf{u}^\top\mathbf{W}\mathbf{v}$.
+   :citet:`Miyato.Kataoka.Koyama.ea.2018` run one round per training step and
+   start it from the $\mathbf{u}$ of the previous step.
+    1. Show that one round performs one step of power iteration on
+       $\mathbf{W}^\top\mathbf{W}$ for $\mathbf{v}$ and that
+       $\hat\sigma = \|\mathbf{W}\mathbf{v}\|$. Why can $\hat\sigma$ never
+       exceed $\sigma_1$?
+    1. For a $256\times512$ matrix with i.i.d. $\mathcal{N}(0, 1/512)$
+       entries, run 200 rounds from a random $\mathbf{u}$. Plot the relative
+       error of $\hat\sigma$ and the squared sine of the angle between
+       $\mathbf{v}$ and $\mathbf{v}_1$ against the round, and compute
+       $\sigma_2/\sigma_1$. Since $\hat\sigma^2$ is the Rayleigh quotient of
+       $\mathbf{W}^\top\mathbf{W}$ at $\mathbf{v}$, problem
+       :exref:`ex_mdl-eigendecomposition-power-iteration-rates`b of
+       :numref:`sec_mdl-eigendecompositions` bounds its error by the order of
+       the squared sine. Why is the relative error of $\hat\sigma$ smaller
+       than the squared sine by a further large factor?
+    1. Simulate training: for 300 steps, add $\epsilon\,\mathbf{G}_k$ to
+       $\mathbf{W}$, with a fresh $\mathbf{G}_k$ of i.i.d.
+       $\mathcal{N}(0, 1/512)$ entries at each step and
+       $\epsilon\in\{10^{-3}, 10^{-2}, 10^{-1}\}$, and run one round per step.
+       Compare the relative error of $\hat\sigma$ when each round starts from
+       the previous $\mathbf{u}$ and when it starts from a fresh random
+       $\mathbf{u}$.
+
+1. [code] **Randomized range finder.** ● The randomized SVD of
+   :numref:`sec_mdl-svd-modern-dl` multiplies $\mathbf{A}$ by a Gaussian
+   $\boldsymbol\Omega\in\mathbb{R}^{n\times(k+p)}$, orthonormalizes
+   $\mathbf{Y} = \mathbf{A}\boldsymbol\Omega$ into $\mathbf{Q}$, and
+   truncates the SVD of $\mathbf{Q}^\top\mathbf{A}$ to rank $k$.
+    1. Implement it. Build $\mathbf{A}\in\mathbb{R}^{1000\times500}$ as
+       $\mathbf{U}\operatorname{diag}(\sigma_1,\ldots,\sigma_{500})\mathbf{V}^\top$
+       with random orthonormal $\mathbf{U}$ and $\mathbf{V}$, once with the
+       fast decay $\sigma_i = e^{-i/5}$ and once with the slow decay
+       $\sigma_i = 1/i$. For $k = 20$ and $p\in\{0, 5, 10\}$, divide the
+       spectral-norm error of the rank-$k$ result by $\sigma_{k+1}$, the
+       minimum of :eqref:`eq_mdl-eckart-young`, and average over 10 draws of
+       $\boldsymbol\Omega$. Why does oversampling alone suffice for one
+       spectrum but not for the other?
+    1. Replace $\mathbf{Y}$ by
+       $(\mathbf{A}\mathbf{A}^\top)^q\mathbf{A}\boldsymbol\Omega$ for
+       $q\in\{1, 2\}$. How do the ratios change for each spectrum? Explain
+       the effect of $q$ with the singular values of
+       $(\mathbf{A}\mathbf{A}^\top)^q\mathbf{A}$. How many products with
+       $\mathbf{A}$ or $\mathbf{A}^\top$ does each variant cost?
+
+1. [code] **Optimal hard threshold.** ●● The threshold
+   $\tfrac{4}{\sqrt3}\sqrt n\,\sigma_{\text{noise}}$ of
+   :citet:`Gavish.Donoho.2014` follows from the behavior of a single signal
+   component. Let $\mathbf{A} = \theta\,\mathbf{u}\mathbf{v}^\top+\mathbf{N}$
+   be $n\times n$, with unit vectors $\mathbf{u},\mathbf{v}$, $\theta > 0$,
+   and $\mathbf{N}$ with i.i.d. Gaussian entries
+   $\mathcal{N}(0, \sigma_{\text{noise}}^2)$. Write $x = \theta/(\sqrt n\,\sigma_{\text{noise}})$
+   and let $(\sigma_1, \hat{\mathbf{u}}, \hat{\mathbf{v}})$ be the top singular
+   triple of $\mathbf{A}$, with the sign of the pair chosen so that
+   $\mathbf{u}^\top\hat{\mathbf{u}}\ge0$. As $n\to\infty$,
+   :citet:`Benaych-Georges.Nadakuditi.2012` show that $\sigma_1$ tends to the
+   bulk edge $2\sqrt n\,\sigma_{\text{noise}}$ and the singular vectors become
+   orthogonal to $\mathbf{u}$ and $\mathbf{v}$ when $x\le1$, and that for
+   $x > 1$
+
+   $$\frac{\sigma_1}{\sqrt n\,\sigma_{\text{noise}}}\to x+\frac1x,\qquad
+   (\mathbf{u}^\top\hat{\mathbf{u}})^2\to1-\frac1{x^2},\qquad
+   (\mathbf{v}^\top\hat{\mathbf{v}})^2\to1-\frac1{x^2}.$$
+
+   The transition at $x = 1$ is the singular-value counterpart of the
+   eigenvalue transition at $\beta = \sqrt\gamma$ in exercise
+   :exref:`ex_mdl-eigendecomposition-spiked-covariance` of
+   :numref:`sec_mdl-eigendecompositions`.
+
+    1. Two estimates of the signal $\theta\,\mathbf{u}\mathbf{v}^\top$ are
+       the rank-one truncation $\sigma_1\hat{\mathbf{u}}\hat{\mathbf{v}}^\top$
+       and the zero matrix. Express the squared Frobenius error of each in
+       terms of $\theta$, $\sigma_1$, $\mathbf{u}^\top\hat{\mathbf{u}}$ and
+       $\mathbf{v}^\top\hat{\mathbf{v}}$.
+    1. Use the limits to show that the truncation has the smaller asymptotic
+       error exactly when $x > \sqrt3$, and that the singular value at
+       $x = \sqrt3$ is $\tfrac{4}{\sqrt3}\sqrt n\,\sigma_{\text{noise}}$. Which
+       signal strengths produce a singular value above the noise edge that
+       should nevertheless be discarded?
+    1. Check (a) and (b) for $n = 500$ and $\sigma_{\text{noise}} = 1/\sqrt n$,
+       with $x\in\{0.5, 1.2, 1.5, \sqrt3, 2, 3\}$ and 10 draws each: compare
+       $\sigma_1$, the squared cosines, and both errors with their limits.
+       How do the results bear on the choice of $k$ in exercise
+       :exref:`ex_mdl-svd-low-rank-denoising-truncation`?
+   :exlabel:`ex_mdl-svd-low-rank-optimal-hard-threshold`
+
+1. [extended] **Matrix completion by soft-thresholding.** ●● Matrix
+   completion recovers a low-rank matrix $\mathbf{B}\in\mathbb{R}^{n\times n}$
+   from its entries in an observed index set $\Omega$ by penalizing the
+   nuclear norm $\|\mathbf{Z}\|_* = \sum_i\sigma_i(\mathbf{Z})$
+   (:numref:`subsec_mdl-eckart-young`). Soft-Impute
+   :cite:`Mazumder.Hastie.Tibshirani.2010` minimizes
+   $\tfrac12\sum_{(i,j)\in\Omega}(Z_{ij}-B_{ij})^2+\lambda\|\mathbf{Z}\|_*$.
+    1. Let $\mathbf{Y} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. Show
+       that $\tfrac12\|\mathbf{Z}-\mathbf{Y}\|_F^2+\lambda\|\mathbf{Z}\|_*$ is
+       minimized by
+       $S_\lambda(\mathbf{Y}) = \mathbf{U}\max(\boldsymbol{\Sigma}-\lambda\mathbf{I}, \mathbf{0})\mathbf{V}^\top$,
+       with the maximum taken entrywise on the diagonal. Use von Neumann's
+       trace inequality
+       $\operatorname{tr}(\mathbf{Z}^\top\mathbf{Y})\le\sum_i\sigma_i(\mathbf{Z})\sigma_i(\mathbf{Y})$
+       :cite:`Horn.Johnson.2012`.
+    1. Let $P_\Omega$ keep the observed entries of a matrix and set the others
+       to zero, and let $P_\Omega^\perp$ do the opposite. Soft-Impute iterates
+       $\mathbf{Z}\leftarrow S_\lambda\bigl(P_\Omega(\mathbf{B})+P_\Omega^\perp(\mathbf{Z})\bigr)$.
+       Implement it for a decreasing sequence of $\lambda$ that ends near
+       $10^{-4}\,\sigma_1(P_\Omega(\mathbf{B}))$, starting each $\lambda$ from
+       the solution for the previous one.
+    1. Take $n = 100$, $\mathbf{B} = \mathbf{X}\mathbf{Y}^\top$ with
+       Gaussian $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{n\times r}$ for
+       $r\in\{2, 5, 10\}$, and observe each entry independently with
+       probability $p\in\{0.1, 0.2, 0.3, 0.4, 0.6\}$. The deliverable is a
+       table of the relative error on the unobserved entries for every
+       $(r, p)$. Compare the boundary between failure and recovery with the
+       $r(2n-r)$ degrees of freedom of a rank-$r$ matrix. Why can no method
+       recover $\mathbf{B}$ from fewer observations than that?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/svd)

@@ -1252,7 +1252,8 @@ underdetermined least squares: started from $\mathbf{w}_0 = \mathbf{0}$, every
 gradient $X^\top(X\mathbf{w} - \mathbf{y})$ lies in the row space of $X$, so
 the iterates never leave it, and the limit is the *minimum-norm* interpolant,
 the same solution the pseudoinverse computes
-(:numref:`sec_mdl-svd-low-rank`; Exercise 8 has you verify it, and Exercise 9
+(exercise :exref:`ex_mdl-svd-low-rank-ridgeless-gradient-descent` of
+:numref:`sec_mdl-svd-low-rank` has you verify it, and Exercise 9
 of :numref:`sec_mdl-gradient-based-optimization` has you derive it). For
 logistic regression on separable data, gradient descent's direction converges
 to the maximum-margin separator :cite:`Soudry.Hoffer.Nacson.ea.2018`, the

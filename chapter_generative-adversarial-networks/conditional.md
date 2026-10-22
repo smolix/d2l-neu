@@ -60,11 +60,11 @@ $$
 
 The conditional game is an average of per-condition games, weighted by how often each condition occurs. Its value reaches the minimum $-2\log 2$ exactly when $q(\cdot \mid c) = p(\cdot \mid c)$ for every condition that $p(c)$ weights: the generator must match the data within every slice.
 
-This requirement is stronger than matching the unconditional distribution. Consider a generator that produces accurate CIFAR-10 images but shifts every label cyclically, so that $q(\cdot \mid c) = p(\cdot \mid c{+}1)$. A request for a bird then produces a cat. Because all ten classes occur equally often, the cyclic shift leaves the mixture over classes unchanged. The unconditional generator distribution equals the data marginal, so the game in :numref:`sec_basic_gan` cannot detect the incorrect labels. By contrast, :eqref:`eq_gan_cond_value` averages divergences between the mismatched class-conditional distributions and is far from its minimum. Exercise 2 verifies this decomposition on a toy example with known densities.
+This requirement is stronger than matching the unconditional distribution. Consider a generator that produces accurate CIFAR-10 images but shifts every label cyclically, so that $q(\cdot \mid c) = p(\cdot \mid c{+}1)$. A request for a bird then produces a cat. Because all ten classes occur equally often, the cyclic shift leaves the mixture over classes unchanged. The unconditional generator distribution equals the data marginal, so the game in :numref:`sec_basic_gan` cannot detect the incorrect labels. By contrast, :eqref:`eq_gan_cond_value` averages divergences between the mismatched class-conditional distributions and is far from its minimum. Exercise :exref:`ex_conditional-verify-decomposition-eqref-eq` verifies this decomposition on a toy example with known densities.
 
 Equations :eqref:`eq_gan_cond_dstar` and :eqref:`eq_gan_cond_value` apply the chapter's unconditional identities separately to each condition. Saturation on disjoint supports, the non-saturating weight in :eqref:`eq_gan_weights`, the pairing objective from :numref:`sec_gan_relativistic`, and the zero-centered penalties from :numref:`sec_gan_convergence` therefore extend in the same way. Conditioning changes the network inputs and the data pipeline, but not these arguments.
 
-The weighting by $p(c)$ has two consequences for imbalanced data. First, a rare condition contributes little to the objective, so the generator can perform poorly on it at a small cost. Second, the cancellation in :eqref:`eq_gan_cond_dstar` assumes that generator conditions are sampled from the data marginal. If the sampling distribution $r(c)$ differs from $p(c)$, the optimal critic gains the offset $\log(p(c)/r(c))$. Reweighting or resampling the real batches to match $r(c)$ removes this offset, as in class-balanced training. Exercise 3 examines both effects.
+The weighting by $p(c)$ has two consequences for imbalanced data. First, a rare condition contributes little to the objective, so the generator can perform poorly on it at a small cost. Second, the cancellation in :eqref:`eq_gan_cond_dstar` assumes that generator conditions are sampled from the data marginal. If the sampling distribution $r(c)$ differs from $p(c)$, the optimal critic gains the offset $\log(p(c)/r(c))$. Reweighting or resampling the real batches to match $r(c)$ removes this offset, as in class-balanced training. Exercise :exref:`ex_conditional-rare-class` examines the first effect, and exercise :exref:`ex_conditional-suppose-label-marginal-is` the second.
 
 ## How the Condition Enters the Networks
 
@@ -91,11 +91,11 @@ D(x, c) \;=\; e_c^\top \varphi(x) + \psi(x) :
 $$
 :eqlabel:`eq_gan_cond_projection`
 
-This expression contains one learned embedding per class, an inner product with the critic features, and an unconditional head. It is the *projection discriminator* of :citet:`Miyato.Koyama.2018`. The bilinear term makes the score depend on the compatibility of the sample and condition. Thus the architecture represents the decomposition in :eqref:`eq_gan_cond_bayes` directly rather than learning it through unrestricted concatenation. Bayes' rule gives an identity, but the log-linear form of both posteriors in a *shared* feature map is a modeling assumption. Learning $\varphi$ makes this restriction more flexible, though one representation must still support both posteriors. Exercise 1 examines the effect of limited capacity. Projection heads are standard in large class-conditional GANs; BigGAN uses one for ImageNet :cite:`Brock.Donahue.Simonyan.2019`.
+This expression contains one learned embedding per class, an inner product with the critic features, and an unconditional head. It is the *projection discriminator* of :citet:`Miyato.Koyama.2018`. The bilinear term makes the score depend on the compatibility of the sample and condition. Thus the architecture represents the decomposition in :eqref:`eq_gan_cond_bayes` directly rather than learning it through unrestricted concatenation. Bayes' rule gives an identity, but the log-linear form of both posteriors in a *shared* feature map is a modeling assumption. Learning $\varphi$ makes this restriction more flexible, though one representation must still support both posteriors. Exercise :exref:`ex_conditional-projection-derivation-modeled-both` examines the effect of limited capacity. Projection heads are standard in large class-conditional GANs; BigGAN uses one for ImageNet :cite:`Brock.Donahue.Simonyan.2019`.
 
 The projection head is not the only compatibility mechanism. The *auxiliary classifier* of :citet:`Odena.Olah.Shlens.2017` adds a classification head and loss to the critic. The critic predicts the condition from its features, and the generator is trained to make its samples receive the requested label. This objective may favor exaggerated class prototypes and reduce within-class diversity, because such samples are easy for the classifier to label. The generator also optimizes the same quantity later used to measure condition alignment, which can make that metric misleading. Text and other structured conditions are commonly incorporated through cross-attention from condition tokens to image features, as in the text-to-image GAN of :citet:`Kang.Zhu.Zhang.ea.2023`. By 2026, diffusion and autoregressive models dominate general text-to-image synthesis; adversarial variants remain useful when single-pass sampling speed is important.
 
-The experiment uses concatenation in the generator and a projection head in the critic. No corresponding identity determines how the generator should transform $c$, so concatenation leaves this interaction flexible. Equation :eqref:`eq_gan_cond_projection` provides a direct structural motivation for the critic's projection head. R3GAN uses the same division in its class-conditional experiments :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Exercise 6 replaces the projection head with concatenation and compares the two critics at the same budget.
+The experiment uses concatenation in the generator and a projection head in the critic. No corresponding identity determines how the generator should transform $c$, so concatenation leaves this interaction flexible. Equation :eqref:`eq_gan_cond_projection` provides a direct structural motivation for the critic's projection head. R3GAN uses the same division in its class-conditional experiments :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Exercise :exref:`ex_conditional-implement-concatenation-critic-one` replaces the projection head with concatenation and compares the two critics at the same budget.
 
 ## Class-Conditional CIFAR-10
 
@@ -662,7 +662,7 @@ print(f'{"overall":12s}{np.mean(align):11.2f}{np.mean(cls_acc):12.2f}')
 
 In each recorded framework run, overall alignment is within a few percentage points of the classifier's accuracy on real test images. The per-class results are less consistent. PyTorch and JAX identify different weak classes, with discrepancies larger than the counting noise expected from 500 samples per class. The two tabs therefore illustrate the measurement but do not establish a shared classwise pattern. The weakest generated rows also score below their visual impression. In the PyTorch run, the cat alignment is about ten points below the classifier's already modest accuracy on real cats; the JAX run shows a similar gap for dogs. In both cases, the classifier's weakest real class is also the generator's weakest measured class.
 
-The difference between alignment and real-image accuracy may be positive or negative. The classifier's real-image accuracy does not cap the alignment score: generated samples that resemble class prototypes can exceed it, as the collapse baseline below demonstrates. In the recorded runs, every generated class remains below its corresponding real-image reference.
+The difference between alignment and real-image accuracy may be positive or negative. The classifier's real-image accuracy does not cap the alignment score: generated samples that resemble class prototypes can exceed it. In the recorded runs, every generated class remains below its corresponding real-image reference.
 
 This comparison is not a calibration. The classifier is evaluated under distribution shift, so its errors on generated and real images need not have the same causes. A zero difference may combine compensating errors, and a positive difference may indicate prototypical artifacts rather than correct conditioning. The real-image reference gives the alignment score useful context, but the result remains a proxy. A stronger classifier may improve the proxy without changing the property it measures.
 
@@ -751,7 +751,7 @@ Two established metrics combine sample quality with conditional information. The
 
 Three inexpensive checks connect the measurements to the preceding analysis. First, we keep the same 1,000 generated images and cyclically shift their *requested* labels. Alignment decreases because the images were generated for different labels, while pooled FD and $\mathrm{MMD}^2$ remain unchanged because neither metric receives a label. This is the counterexample from the opening of the section.
 
-Second, we evaluate real images under their correct labels and under cyclically shifted labels. The difference in mean critic score cancels the unconditional head $\psi$ and the arbitrary score offset, leaving the contribution of the class embeddings. A positive value indicates that the projection head assigns higher compatibility to the correct condition.
+Second, we evaluate real images under their correct labels and under cyclically shifted labels. The difference in mean critic score cancels the unconditional head $\psi$ and any score offset shared by all classes, leaving the contribution of the class embeddings. A class-dependent offset in the scores cancels exactly only when every class occurs equally often among the 1,000 test images. A positive value indicates that the projection head assigns higher compatibility to the correct condition.
 
 Third, we construct a degenerate generator by repeating one fixed held-out image from each class 100 times. The classifier assigns these real images their labels often enough to produce high alignment, but the per-class feature variance is nearly zero. Feature variance, unlike alignment, directly detects this within-class collapse.
 
@@ -809,7 +809,7 @@ Conditional evaluation has three distinct axes: sample fidelity, sample diversit
 
 The repeated-image baseline exposes this limitation. One stored image per class can attain alignment near the real-image reference despite having zero within-class diversity. This *within-class collapse* is mode collapse within a conditional distribution. The objective in :eqref:`eq_gan_cond_value` penalizes it because a point mass differs from $p(\cdot \mid c)$ under the divergences considered here. Alignment cannot detect the collapse, and a marginal feature distance observes it only after mixing the classes. Per-class feature variance provides a more direct diagnostic.
 
-Incorrect labels are not the only conditional failure. A generator may ignore the condition, obey it through shortcuts such as background or palette, collapse within a condition, leak between conditions, neglect rare conditions, or optimize for classifier prototypes. A sound evaluation therefore considers fidelity, diversity, and alignment together. Exercise 4 extends the collapse diagnosis to per-class distribution metrics. Exercise 5 uses the same instruments to measure the truncation trick of :citet:`Brock.Donahue.Simonyan.2019`, which deliberately exchanges diversity for alignment.
+Incorrect labels are not the only conditional failure. A generator may ignore the condition, obey it through shortcuts such as background or palette, collapse within a condition, leak between conditions, neglect rare conditions, or optimize for classifier prototypes. A sound evaluation therefore considers fidelity, diversity, and alignment together. Exercise :exref:`ex_conditional-diagnostics-cell-detects-within` extends the collapse diagnosis to per-class distribution metrics. Exercise :exref:`ex_conditional-biggan-s-truncation-trick` uses the same instruments to measure the truncation trick of :citet:`Brock.Donahue.Simonyan.2019`, which deliberately exchanges sample variety for fidelity.
 
 ## Translation as Conditioning
 
@@ -834,13 +834,302 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
 
 ## Exercises
 
-1. The projection derivation modeled both class posteriors as softmax classifiers over a *shared* feature map $\varphi$. Suppose instead that the two posteriors require different feature maps, $p(c \mid x) \propto \exp(u_c^\top \varphi_p(x))$ and $q(c \mid x) \propto \exp(w_c^\top \varphi_q(x))$ with $\varphi_p \neq \varphi_q$. What form does the critic take in place of :eqref:`eq_gan_cond_projection`? Can this two-map critic be written as a single projection head over the concatenated feature map $(\varphi_p(x), \varphi_q(x))$? What does the answer say about whether the shared-map assumption is a limit on capacity or a constraint on structure, and about when a learned $\varphi$ can absorb it?
-1. Verify the decomposition :eqref:`eq_gan_cond_value` numerically on a toy with known densities. Let $c \in \{1, 2\}$ with equal probability, $p(\cdot \mid 1) = \mathcal{N}(-2, 1)$, $p(\cdot \mid 2) = \mathcal{N}(2, 1)$, and let the generator be right on one slice and wrong on the other: $q(\cdot \mid 1) = \mathcal{N}(0, 1)$, $q(\cdot \mid 2) = \mathcal{N}(2, 1)$. Compute $E_c[2\,\mathrm{JS}] - 2\log 2$ by numerical integration on a grid. Then train a small critic that takes $(x, c)$, with $c$ one-hot, on samples from the two joints, taking the critic loss as the balanced mean of the real and fake cross-entropy terms (the reduction under which the stated relation holds), and compare its converged per-sample loss with your integral, using the relation from :numref:`sec_basic_gan` that the discriminator's minimal per-sample loss is $\log 2 - \mathrm{JS}$, here with the divergence averaged over the two conditions. Confirm that the critic's scores on the matched slice $c = 2$ are near zero while the mismatched slice carries the whole value.
-1. Suppose the label marginal is imbalanced: nine classes share probability $(1 - \epsilon)$ evenly and one rare class has $p(c_{\textrm{rare}}) = \epsilon$. The value :eqref:`eq_gan_cond_value` weights the rare slice's divergence by $\epsilon$, so a generator that serves it arbitrarily badly pays at most $2\epsilon \log 2$. Compare this *across-slice* weighting with the *within-slice* imbalance of :numref:`sec_basic_gan`'s exercises, where unequal priors inside one game produced the divergence $\alpha\, \mathrm{KL}(p \,\|\, m_\alpha) + (1-\alpha)\, \mathrm{KL}(q \,\|\, m_\alpha)$, which we may call an $\alpha$-skewed Jensen--Shannon divergence: which mechanism affects the optimal critic, and which only the value? Predict what happens to the rare class's condition alignment if CIFAR-10 is subsampled so one class is a hundred times rarer; if you have the compute, test the prediction with the code of this section, and a lighter test fits a small budget: keep two classes, subsample one to a few percent of the other, and train at the 4,000-step pilot budget. In either setting compare two remedies: drawing generator conditions from the natural, imbalanced label marginal, versus drawing them uniformly while re-weighting or re-sampling the real batches to match --- the prior-ratio correction from the shared-marginal caveat above.
-1. The diagnostics cell detects within-class collapse through per-class feature variance. Extend the diagnosis to per-class distribution metrics: for each class $c$, embed $n$ generated and $n$ real samples of that class with the feature CNN and compute the per-class $\widehat{\mathrm{MMD}}^2$ of :eqref:`eq_gan_kid`, or per-class precision and recall. Score the trained generator of this section, rank the ten classes by within-class distance, and compare that ranking with the alignment table's: which classes are well aligned yet poorly distributed, or the reverse, and what do their samples look like?
-1. BigGAN's truncation trick :cite:`Brock.Donahue.Simonyan.2019` draws each latent coordinate from a standard Gaussian truncated to $[-\tau, \tau]$, resampling any coordinate that falls outside; in BigGAN this traded diversity for fidelity, a result that depended on that model's training setup. Implement truncation for the trained generator and sweep $\tau \in \{0.5, 1, 2\} \cup \{\infty\}$, where $\tau = \infty$ recovers ordinary sampling, reporting condition alignment and per-class feature variance for each $\tau$. Does alignment rise and within-class variance fall as $\tau$ shrinks here? A flat or reversed outcome for this small generator is a valid finding; report it and explain what it implies about how this generator uses the latent space away from the prior's mode.
-1. Implement the concatenation critic: one-hot encode the label, broadcast it spatially, and append it to the critic's input as ten extra planes (or to an intermediate feature map), leaving the backbone otherwise unchanged. Retrain the game with this critic at a reduced budget of 4,000 steps, retrain the projection version at the same budget, and compare condition alignment and the feature-space distances. The comparison is a diagnostic of what the projection structure provides at a matched small budget, not a quality contest, and either ordering is a reportable result.
-1. For pix2pix and for CycleGAN, list every adversarial loss in the system and classify its critic as conditional (it sees the source alongside the candidate output) or marginal (it sees only samples from the target collection). State, for each system, what carries the input--output relation, and explain how a CycleGAN whose cycle losses are near zero can still pair images in unintended ways.
+1. [code] **Two slices with known densities.** Let $c \in \{1, 2\}$ with
+   equal probability, $p(\cdot \mid 1) = \mathcal{N}(-2, 1)$ and
+   $p(\cdot \mid 2) = \mathcal{N}(2, 1)$. The generator is correct on one
+   slice and wrong on the other: $q(\cdot \mid 1) = \mathcal{N}(0, 1)$ and
+   $q(\cdot \mid 2) = \mathcal{N}(2, 1)$.
+    1. Compute the value :eqref:`eq_gan_cond_value` by numerical
+       integration on a grid.
+    1. Train a small critic that receives $x$ together with a one-hot
+       encoding of $c$ on samples from the two joint distributions, and
+       minimize the balanced loss
+
+       $$\tfrac12\, E_{(x, c) \sim p}\big[\log(1 + e^{-D(x, c)})\big] + \tfrac12\, E_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log(1 + e^{D(x', c)})\big].$$
+
+       Show that the minimum of this loss is $-\tfrac12 \max_D V(D)$ for
+       the game :eqref:`eq_gan_cond_V`, and compare the converged loss with
+       the value from (a).
+    1. Plot the trained critic and the log density ratio
+       :eqref:`eq_gan_cond_dstar` against $x$ for each condition, over the
+       range where that slice's samples lie. How large is the critic on the
+       samples of the matched slice $c = 2$?
+    1. Now let the generator swap the labels, $q(\cdot \mid 1) =
+       \mathcal{N}(2, 1)$ and $q(\cdot \mid 2) = \mathcal{N}(-2, 1)$.
+       Compute the conditional value, and the value of the unconditional
+       game :eqref:`eq_gan_V` on the same samples with their labels
+       discarded. Retrain the critic in both settings and compare the
+       converged losses with your computed values.
+   :exlabel:`ex_conditional-verify-decomposition-eqref-eq`
+1. **Concatenation as a bias.** The mixing convolution `mix` of `Generator`
+   receives the learned constant, the projected latent code, and the class
+   embedding broadcast over the $4 \times 4$ grid, concatenated along the
+   channels. Write $g_c$ for this 64-dimensional embedding of class $c$, to
+   distinguish it from the critic's $e_c$.
+    1. Show that the embedding channels add to the output of `mix` a
+       256-channel $4 \times 4$ map $B_c$ that depends on the class but not
+       on the latent code. The embedding is the same at every position, yet
+       $B_c$ is not. At which of the 16 positions does $B_c$ take the same
+       value, and why does it differ at the others?
+    1. Condition-dependent modulation computes
+       $\gamma(c) \cdot \mathrm{norm}(h) + \beta(c)$. Which of the two
+       coefficients does concatenation into a single convolution reproduce?
+       How does the leaky ReLU after `mix` nevertheless let the class change
+       how later layers respond to the latent code?
+1. **Separate feature maps.** The derivation of
+   :eqref:`eq_gan_cond_projection` modeled both class posteriors with one
+   shared feature map $\varphi$. Suppose instead that the two posteriors
+   require different feature maps,
+   $p(c \mid x) \propto \exp(u_c^\top \varphi_p(x))$ and
+   $q(c \mid x) \propto \exp(w_c^\top \varphi_q(x))$ with
+   $\varphi_p \neq \varphi_q$.
+    1. Derive the critic that takes the place of
+       :eqref:`eq_gan_cond_projection`.
+    1. Show that this critic is a projection head over the concatenated
+       feature map $(\varphi_p(x), \varphi_q(x))$, and give its class
+       embeddings.
+    1. Let there be $K$ classes. Show that every function $D(x, c)$ can be
+       written in the form :eqref:`eq_gan_cond_projection` once $\varphi$
+       has at least $K$ dimensions. How many dimensions does $\varphi$ have
+       in `Discriminator`?
+    1. Given these results, what does the shared-map assumption restrict in
+       the CIFAR-10 experiment? When does the projection form restrict the
+       set of critics?
+   :exlabel:`ex_conditional-projection-derivation-modeled-both`
+1. [code] **The critic as a classifier.** The trained critic `net_D`
+   scores every pair of an image and a class, so it assigns each image ten
+   scores.
+    1. Use :eqref:`eq_gan_cond_bayes` to express
+       $D^\star(x, c) - D^\star(x, c')$ for the optimal critic in terms of
+       the real and the generated label posteriors. Which quantity does the
+       rule $\arg\max_c D^\star(x, c)$ maximize? How does it differ from the
+       rule $\arg\max_c p(c \mid x)$ of a classifier such as `cnn`? What
+       does the difference of scores equal when
+       $q(\cdot \mid c) = p(\cdot \mid c)$ for every $c$?
+    1. The losses of `train_conditional` compare only scores that share a
+       class, so training leaves a class-dependent constant $b(c)$ in
+       $D(x, c)$ undetermined (problem
+       :exref:`ex_conditional-suppose-label-marginal-is`c). Let $m_c$ be the
+       mean score that `net_D` assigns to 500 samples of `ema_G` for class
+       $c$. Classify each CIFAR-10 test image by
+       $\arg\max_c \big(D(x, c) - m_c\big)$ and by the uncorrected
+       $\arg\max_c D(x, c)$. Compare both accuracies with chance and with
+       the accuracy of `cnn`.
+    1. Suppose that after much longer training the printed difference
+       $D(x, y) - D(x, y+1)$ on real images fell to zero. Name two different
+       states of the game that would produce this. Which measurement of
+       this section tells them apart?
+   :exlabel:`ex_conditional-critic-classifier`
+1. [code] **Noise in the collapse baseline.** The collapse baseline repeats
+   the first test image of each class 100 times. In the recorded runs its
+   alignment exceeds the classifier's overall accuracy on real test images,
+   which suggests that the real-image reference is not an upper bound on
+   alignment.
+    1. Which values can the baseline's alignment take? How many independent
+       classifier decisions does it contain?
+    1. Suppose that the stored image of class $c$ is classified correctly
+       with probability equal to the classifier's accuracy on real images of
+       class $c$, independently across classes. Compute the mean and the
+       standard deviation of the baseline's alignment from `cls_acc`. Is the
+       printed excess larger than this noise?
+    1. Repeat the baseline 200 times, each time storing a randomly drawn
+       test image of each class, and plot the distribution of its alignment.
+       Then store, for each class, the test image to which `cnn` assigns the
+       highest probability of that class. What alignment does this baseline
+       reach, and what does it show about alignment measured by the
+       classifier that selected the images?
+1. [code] **Per-class distances.** Per-class feature variance detects
+   within-class collapse but not other differences between a generated
+   class and its real counterpart. The features `f_gen`, `f_real` and
+   `f_real2` hold 100 images of each class, in class order.
+    1. A covariance matrix estimated from 100 samples of the 128-dimensional
+       features of `FeatureCNN` has rank at most 99. How does this affect a
+       per-class Fréchet distance :eqref:`eq_gan_fid`? Why does the unbiased
+       $\mathrm{MMD}^2$ estimator :eqref:`eq_gan_kid` not suffer in the same
+       way?
+    1. For each class, compute $\mathrm{MMD}^2$ between the generated and
+       the real features, and between the two real sets. Rank the classes by
+       the difference of the two values and compare this ranking with the
+       ranking by alignment. If a class is well aligned but far from its real
+       distribution, or the reverse, display its samples.
+    1. Compute the same per-class quantities for the collapse baseline. A
+       conditional generator may ignore the condition, obey it through
+       shortcuts such as background or palette, collapse within a condition,
+       leak between conditions, neglect a rare condition, or optimize for
+       classifier prototypes. Which of these failures does each of the three
+       per-class diagnostics (alignment, feature variance, and
+       $\mathrm{MMD}^2$) detect?
+   :exlabel:`ex_conditional-diagnostics-cell-detects-within`
+1. [code] **Truncated latents.** The truncation trick of
+   :citet:`Brock.Donahue.Simonyan.2019` draws each latent coordinate from a
+   standard Gaussian truncated to $[-\tau, \tau]$, resampling any coordinate
+   that falls outside. Such a coordinate has variance
+   $1 - \sqrt{2/\pi}\,\tau e^{-\tau^2/2} / \operatorname{erf}(\tau/\sqrt{2})$.
+    1. For the 100-dimensional latent code of `Generator` and
+       $\tau \in \{0.5, 1, 2\}$, compute the probability that an untruncated
+       draw lies entirely inside the box $[-\tau, \tau]^{100}$, and the
+       typical norm of a truncated draw. Compare this norm with that of the
+       latent codes seen in training.
+    1. Implement truncated sampling for `ema_G` and sweep
+       $\tau \in \{0.5, 1, 2, \infty\}$, where $\tau = \infty$ is ordinary
+       sampling. For each $\tau$, report the alignment, the per-class
+       feature variance, and the Fréchet distance to `f_real`.
+    1. BigGAN reports that only 16% of its models trained without
+       orthogonal regularization were amenable to truncation, that is, free
+       of saturation artifacts on truncated noise, against 60% with it.
+       `ema_G` was trained without orthogonal regularization. Display its
+       samples at each $\tau$. Compare the $\tau$ at which alignment,
+       feature variance, or appearance changes most with the norms from (a).
+       What do these measurements show about how this generator treats
+       latent codes with norms it did not see in training?
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 15.6.*
+   :exlabel:`ex_conditional-biggan-s-truncation-trick`
+1. **Mismatched label marginals.** ● Suppose that real pairs follow
+   $p(x, c)$, while the generator's conditions are drawn from a distribution
+   $r(c)$ that differs from $p(c)$, so that generated pairs follow
+   $r(c)\, q(x \mid c)$ and the second expectation of
+   :eqref:`eq_gan_cond_V` draws $c$ from $r(c)$. By exercise
+   :exref:`ex_gan-unequal-priors` of :numref:`sec_basic_gan`, in a log-loss
+   game in which a sample is real with prior probability $\alpha$, the
+   optimal critic satisfies
+   $\sigma(D^\star) = \alpha p / (\alpha p + (1 - \alpha) q)$, and the value
+   is, up to constants, the skewed divergence
+
+   $$\alpha\, \mathrm{KL}(p \,\|\, m_\alpha) + (1 - \alpha)\, \mathrm{KL}(q \,\|\, m_\alpha), \qquad m_\alpha = \alpha p + (1 - \alpha) q.$$
+
+    1. Show that the terms of this game with condition $c$ form such a game
+       between $p(\cdot \mid c)$ and $q(\cdot \mid c)$,
+       with prior $\alpha_c = p(c) / (p(c) + r(c))$ and weight
+       $p(c) + r(c)$. Recover the offset $\log(p(c)/r(c))$ of the optimal
+       critic from $\alpha_c$.
+    1. Does the mismatch change the generator's optimum? What does it
+       change instead?
+    1. `train_conditional` conditions each generated batch on the labels of
+       a real batch, and the pairing loss compares the two samples of each
+       pair. Show that the critic loss is unchanged when a class-dependent
+       constant $b(c)$ is added to $D(x, c)$. Which label distribution
+       weights the slices in this scheme?
+   :exlabel:`ex_conditional-suppose-label-marginal-is`
+1. [code] **A rare class.** ● Let one of the ten classes, for instance
+   automobiles, keep only 50 of its 5,000 training images, so that
+   $p(c_{\textrm{rare}}) = \epsilon = 50/45{,}050 \approx 0.0011$, and keep
+   all images of the other classes.
+    1. Under the natural label marginal, show that a generator that serves
+       the rare slice arbitrarily badly raises :eqref:`eq_gan_cond_value` by
+       at most $2 \epsilon \log 2$. Class-balanced sampling of the real
+       batches raises the weight of the slice to $1/10$. Which risk for the
+       rare class does class-balanced sampling introduce, given that its
+       slice contains only 50 real images?
+    1. Train with `train_conditional` at a budget of 4,000 steps under two
+       schemes: real batches drawn uniformly from the reduced training set,
+       and class-balanced real batches, whose labels then condition the
+       generator uniformly. As a reference, train at the same budget on the
+       full training set.
+    1. For the rare class, report the alignment, the per-class
+       $\mathrm{MMD}^2$ of problem
+       :exref:`ex_conditional-diagnostics-cell-detects-within`b, and the
+       feature distances of its generated samples to their nearest neighbors
+       among its 50 training images, as in the memorization check of
+       :numref:`subsec_gan_limited_data`. Which scheme serves the rare class
+       better, and what does it cost the other classes?
+   :exlabel:`ex_conditional-rare-class`
+1. **Auxiliary classifier bias.** ● An auxiliary classifier critic
+   :cite:`Odena.Olah.Shlens.2017` contains a classifier $C(c \mid x)$, and
+   the generator minimizes, in addition to its adversarial loss, the
+   classification loss
+   $E_{c \sim p(c),\, x \sim q(\cdot \mid c)}[-\log C(c \mid x)]$ of its own
+   samples. Write $q(x)$ for the marginal of the generated images and
+   $q(c \mid x)$ for the label posterior of the generated pairs.
+    1. Show that this loss equals
+
+       $$E_{x \sim q}\Big[H\big(q(\cdot \mid x)\big) + \mathrm{KL}\big(q(\cdot \mid x) \,\|\, C(\cdot \mid x)\big)\Big],$$
+
+       where $H$ is the entropy.
+    1. Hold $C$ fixed and set $q(x) = p(x)$. Let $q(\cdot \mid x)$ vary
+       freely at every $x$, ignoring the constraint that the generated labels
+       follow $p(c)$. Which label posterior $q(\cdot \mid x)$ minimizes the
+       loss? Let $C$ be the real posterior $p(c \mid x)$, and let two
+       classes overlap. Show that the generator can lower the loss below its
+       value at $q = p$.
+    1. Take the expectation of the compatibility term
+       $\log [p(c \mid x) / q(c \mid x)]$ of :eqref:`eq_gan_cond_bayes`
+       under the generated pairs. Which term of the loss in (a) does the
+       factor $q(c \mid x)$ cancel?
+    1. :citet:`Gong.Xu.Li.ea.2019` add a second classifier that is trained
+       on generated pairs only. Which quantity must it estimate, and with
+       which sign does its classification loss enter the generator's
+       objective?
+1. [code] **Concatenation critic.** ● Replace the projection head of
+   `Discriminator` by concatenation: one-hot encode the label, broadcast it
+   to ten constant $32 \times 32$ planes, append these planes to the image
+   as extra input channels, and score with the head $\psi$ alone. Leave the
+   backbone otherwise unchanged.
+    1. Add the critic class as an argument of `train_conditional`, and
+       train both critics at a budget of 4,000 steps with two seeds each.
+       Compare the alignment, the feature distances, and the offset-corrected
+       accuracy of the critic as a classifier from problem
+       :exref:`ex_conditional-critic-classifier`b.
+    1. By problem
+       :exref:`ex_conditional-projection-derivation-modeled-both`c, the
+       projection head restricts no critic for ten classes, and a network
+       that receives the label planes as input is unrestricted in principle
+       as well. What can then explain a difference between the two critics
+       at a fixed budget?
+   :exlabel:`ex_conditional-implement-concatenation-critic-one`
+1. **Identifiability in translation.** ● In paired translation the critic
+   sees source--output pairs; in unpaired translation each critic sees only
+   its target collection.
+    1. In the paired setting of pix2pix, replace the conditional critic by a
+       marginal critic that sees only the output, and drop the L1 term. Show
+       that a generator that ignores its input attains the optimum of this
+       game. What do the conditional critic and the L1 term each restore?
+    1. For CycleGAN, suppose that $G: X \to Y$ and $F: Y \to X$ have zero
+       cycle loss, that $G$ maps $p_X$ to $p_Y$, and that $F$ maps $p_Y$ to
+       $p_X$. Let $\pi: Y \to Y$ be an invertible map that leaves $p_Y$
+       unchanged. Show that the pair $(\pi \circ G,\, F \circ \pi^{-1})$
+       also has zero cycle loss and satisfies both marginal critics. Give
+       two such solutions for $p_X = p_Y = \mathcal{N}(0, 1)$ on the real
+       line, and count the solutions when $X$ and $Y$ each consist of $n$
+       equally likely images.
+    1. Suppose that $Y$ carries less information than $X$, as when many
+       aerial photographs share one street map. Why can a pair with
+       near-zero cycle loss on $X \to Y \to X$ not produce maps that depend
+       on the photograph only through its map content? Where must the
+       missing information go, and why does the marginal critic of $Y$ not
+       object? :citet:`Chu.Zhmoginov.Sandler.2017` examine this behavior in
+       a trained CycleGAN.
+   :exlabel:`ex_conditional-translation-identifiability`
+1. [extended] **Cycle-consistency ablation.** ●● This project trains a
+   small CycleGAN :cite:`Zhu.Park.Isola.ea.2017` between two CIFAR-10
+   classes, for instance horses as the collection $X$ and deer as $Y$, and
+   measures what the cycle-consistency loss contributes.
+    1. Build two image-to-image generators $G: X \to Y$ and $F: Y \to X$ at
+       $32 \times 32$, for example two strided convolutions, a few residual
+       blocks, and two upsampling stages. Use two marginal critics, each a
+       `Discriminator` with a single class whose label is always zero.
+       Train them with the pairing losses and both penalties of
+       `train_conditional`, plus the cycle loss
+       $\lambda_{\textrm{cyc}}\big(\|F(G(x)) - x\|_1 + \|G(F(y)) - y\|_1\big)$.
+    1. Train with $\lambda_{\textrm{cyc}} = 0$ and with
+       $\lambda_{\textrm{cyc}} = 10$ at the same budget.
+       For ten held-out horses, display $x$, $G(x)$ and $F(G(x))$ under both
+       settings. For 100 held-out horses, compare the mean squared pixel
+       distance between $G(x)$ and $x$ with that between $G(x)$ and another
+       randomly chosen source. Which setting produces translations that
+       depend on their source?
+    1. For the run with $\lambda_{\textrm{cyc}} = 10$, add Gaussian noise of
+       standard deviation $\sigma \in \{0, 0.01, 0.03, 0.1\}$ to $G(x)$
+       before applying $F$, and plot the round-trip error against $\sigma$. Compare
+       the noise level at which the reconstruction degrades with the pixel
+       range $[-1, 1]$, and relate the result to problem
+       :exref:`ex_conditional-translation-identifiability`c.
+
+    *Adapted from Paul Vicol and Roger Grosse,
+    [CSC321 Programming Assignment 4: CycleGAN](https://www.cs.toronto.edu/~rgrosse/courses/csc321_2018/assignments/a4-handout.pdf),
+    Part 2, CycleGAN Experiments.*
 
 [Discussions](https://d2l.discourse.group/)
 

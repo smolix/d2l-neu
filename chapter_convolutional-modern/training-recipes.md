@@ -731,7 +731,7 @@ optimizer = optax.adamw(learning_rate=schedule, weight_decay=0.05)
 :numref:`tab_recipe_results` reports one seeded run per implementation,
 rounded to the half point — about the level at which these numbers
 reproduce from run to run. In both implementations the compact modern
-recipe gains roughly half a point on the subsampled task; the gain is
+recipe gains about one point on the subsampled task; the gain is
 consistent in direction but modest in size at this scale, and this small
 teaching experiment is not a substitute for the many-seed ImageNet
 evaluation of :citet:`wightman2021resnet`.
@@ -742,8 +742,8 @@ $96 \times 96$; test accuracy, one seeded run each, rounded).
 
 | Implementation | Recipe A (2015, 30 epochs) | Compact modern recipe (45 epochs) |
 |:--|:--|:--|
-| PyTorch | ≈90.5% | ≈91% |
-| JAX | ≈90.5% | ≈91% |
+| PyTorch | ≈90.5% | ≈91.5% |
+| JAX | ≈90% | ≈91% |
 
 Two practical warnings from this experiment. First, the recipes' hyperparameters are not interchangeable: recipe A's learning rate of 0.05 would make AdamW diverge, and recipe B's rate of 0.002 would starve SGD, so ablating one ingredient requires retuning around it (this is why credible recipe ablations, like those of :citet:`wightman2021resnet`, are expensive). Second, the modern recipe's *training* loss stays well above recipe A's, because Mixup and label smoothing make the training targets themselves harder; comparing training losses across recipes tells you nothing about which generalizes better.
 
@@ -783,7 +783,7 @@ stronger augmentation, label smoothing, stochastic depth, longer budgets, and
 EMA evaluation. These choices are a menu rather than a single standard. In
 the cited ResNet-50 study their combined effect is about four ImageNet points.
 Our smaller experiment tests a compact subset of that menu on subsampled
-Fashion-MNIST and reports its seed-to-seed variation.
+Fashion-MNIST with one seeded run per implementation.
 
 That number carries two lessons beyond the ingredients themselves. Methodologically, architecture comparisons require comparable training
 procedures; a strong baseline retrained with the same methods provides the

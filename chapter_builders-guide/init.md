@@ -448,7 +448,12 @@ net.layers[2].kernel[:3]
 
 ## Truncation, Depth Scaling, and Zero Initialization
 
-Xavier and He set the variance of a single layer. The schemes below, standard
+Xavier and He set the variance of a single layer. In its general form, He
+initialization draws weights with standard deviation $g/\sqrt{n_\textrm{in}}$,
+where the *gain* $g$ depends on the nonlinearity after the layer:
+$g = \sqrt{2}$ for a ReLU gives the He variance $2/n_\textrm{in}$, and $g = 1$
+preserves the second moment through a layer that feeds no nonlinearity.
+The schemes below, standard
 in transformer codebases, adjust what happens in the distribution's tails,
 across depth, and at a block's start.
 

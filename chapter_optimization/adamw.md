@@ -158,8 +158,8 @@ d2l.train_ch11(adamw, init_adamw_states(feature_dim),
 ```
 
 The framework implementations follow :eqref:`eq_adamw` up to small
-conventions that differ by framework and version — $\epsilon$ placement,
-optional flags, and whether the decay is scaled by the learning rate.
+conventions that differ by framework and version: $\epsilon$ placement and
+optional flags.
 
 ```{.python .input #adamw-adamw-from-scratch-3}
 %%tab pytorch
@@ -558,8 +558,8 @@ fits on a device, so we do the arithmetic once with real numbers, using
 the parameter total $n$ computed above.
 
 In full fp32 training, a parameter costs 4 bytes each for the weight, the
-gradient, $m$, and $v$: 16 bytes per parameter, three quarters of it the
-optimizer's. Mixed-precision training in bf16 does not make this smaller,
+gradient, $m$, and $v$: 16 bytes per parameter, half of it the optimizer's
+$m$ and $v$. Mixed-precision training in bf16 does not make this smaller,
 it makes it larger: the weights and gradients used in the forward and
 backward pass drop to 2 bytes, but stable training keeps an fp32 *master
 copy* of the weights alongside the optimizer state, and usually an fp32

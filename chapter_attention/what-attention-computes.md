@@ -589,15 +589,17 @@ acc = (model_two(x[:, :-1]).argmax(-1) == x[:, 1:]).mean(0)
 d2l.plot(jnp.arange(1, 64), [acc], 'target position', 'accuracy')
 ```
 
-Accuracy is near zero across the whole first copy, stays low at position 24
-itself — nothing in the context yet announces that repetition has begun, so
-the pattern's restart is unpredictable in principle — and then jumps within
-a couple of positions to near-perfect for the rest of the sequence. One exposure to a pattern suffices for the model to complete the second
+Accuracy is near zero across the whole first copy and stays low at position
+24 itself. Nothing in the context yet announces that repetition has begun, so
+no predictor can be confident of the pattern's restart there, but the low
+accuracy is a shortfall of `model_two` rather than a limit set by the context.
+Accuracy then jumps within a couple of positions to near-perfect for the rest of the sequence. One exposure to a pattern suffices for the model to complete the second
 occurrence from the preceding context. The residual imperfection has an instructive cause:
 when a token happens to occur twice inside one pattern with different
 successors, a single-token match is ambiguous, and our two-layer circuit
 matches on exactly one preceding token. Disambiguating would require
-matching on a longer prefix: deeper composition, more layers.
+matching on a longer prefix, through more block-1 heads at fixed offsets or
+through more layers.
 
 ### Verifying the Circuit in the Weights
 

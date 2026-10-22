@@ -81,7 +81,7 @@ import optax
 | BN $\to$ LN | layer normalization over channels at each position | 81.5% |
 | Separate downsampling | an LN plus $2 \times 2$ stride-2 convolution between stages | 82.0% |
 
-The first row gives the largest single improvement without changing the architecture. The 2.7 points it contributes are the recipe effect of :numref:`sec_training_recipes` (the "ResNet strikes back" study pushed the same network to 80.4% with a still longer 600-epoch procedure :cite:`wightman2021resnet`). Keep this split in mind for everything below: of the 5.9 points separating the 2015 ResNet-50 from ConvNeXt, 2.7 are training and 3.2 are architecture. Papers that compared a well-tuned transformer against a 2015-recipe ResNet were, in large part, comparing recipes.
+The first change, the modern training recipe, gives the largest single improvement without changing the architecture. The 2.7 points it contributes are the recipe effect of :numref:`sec_training_recipes` (the "ResNet strikes back" study pushed the same network to 80.4% with a still longer 600-epoch procedure :cite:`wightman2021resnet`). Keep this split in mind for everything below: of the 5.9 points separating the 2015 ResNet-50 from ConvNeXt, 2.7 are training and 3.2 are architecture. Papers that compared a well-tuned transformer against a 2015-recipe ResNet were, in large part, comparing recipes.
 
 ### Macro design
 
@@ -566,8 +566,8 @@ class CompactResNet18(d2l.Classifier):
 ```
 
 We train for 30 epochs on the full Fashion-MNIST training set at $96 \times
-96$, matching the modern-recipe ResNet-18 run of
-:numref:`sec_training_recipes` epoch for epoch. We set ConvNeXt's stochastic
+96$, rather than on the 10,000-image subset for 45 epochs as in the
+modern-recipe ResNet-18 run of :numref:`sec_training_recipes`. We set ConvNeXt's stochastic
 depth rate to zero in this comparison because the compact ResNet control does
 not use it; the block implementation above still exercises the complete
 stochastic-depth path.
@@ -637,8 +637,8 @@ seeded run each, rounded).
 
 | Model | Parameters | PyTorch accuracy | JAX accuracy |
 |---|---:|---:|---:|
-| ConvNeXt | 3,376,450 | ≈92% | ≈92% |
-| Compact ResNet-18 | 3,348,320 | ≈94% | ≈94.5% |
+| ConvNeXt | 3,376,450 | ≈92.5% | ≈92% |
+| Compact ResNet-18 | 3,348,320 | ≈94.5% | ≈94% |
 
 This comparison asks a narrower question than the earlier run against the
 11.2-million-parameter ResNet-18: at roughly 3.4 million parameters, do the

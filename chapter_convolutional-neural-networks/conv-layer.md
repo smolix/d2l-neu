@@ -283,9 +283,10 @@ $$\mathbf{K} = \begin{bmatrix} 1 & -1 \end{bmatrix}.$$
 When we perform the cross-correlation operation with the input,
 if the horizontally adjacent elements are the same,
 the output is 0. Otherwise, the output is nonzero.
-This kernel is a special case of a finite-difference operator. At location
-$(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, the difference between horizontally
-adjacent pixels. Up to a sign, this is a discrete approximation to the first
+This kernel is a special case of a finite-difference operator. Denote the
+entries of the input by $x_{i,j}$. At location $(i,j)$ the kernel computes
+$x_{i,j} - x_{i,j+1}$, the difference between horizontally adjacent pixels.
+Up to a sign, this is a discrete approximation to the first
 derivative in the horizontal direction. For a function $f(i,j)$, the derivative
 is
 
@@ -496,7 +497,7 @@ an entry (or component) of any tensor representing a layer representation or a c
 Every output element in :numref:`fig_correlation` is a dot product:
 the kernel, flattened into a vector of length $k_\textrm{h} k_\textrm{w}$,
 multiplied with the input patch under the window, flattened the same way.
-For an input of spatial size $h \times w$, the number of such patches depends
+For an input of spatial size $n_\textrm{h} \times n_\textrm{w}$, the number of such patches depends
 on the kernel, padding, and stride.
 If we extract each patch the sliding window visits,
 flatten it into a row, and stack the rows,
@@ -634,9 +635,10 @@ when we analyze modern architectures in :numref:`chap_modern_cnn`.
 Equation :eqref:`eq_receptive_field` gives the *theoretical* receptive field:
 the set of inputs that can affect an activation at all. Their influence is not
 uniform. :citet:`Luo.Li.Urtasun.ea.2016` measured the *effective* receptive
-field through gradients and found that it concentrates near the center of the
-theoretical region, with a roughly Gaussian profile in common randomly
-initialized and trained networks. Depth, dilation, and larger kernels enlarge
+field through gradients and found that, on average over random initializations
+and input images, it concentrates near the center of the theoretical region,
+with a roughly Gaussian profile in common randomly initialized and trained
+networks. Depth, dilation, and larger kernels enlarge
 the set of possible inputs; they do not guarantee that optimization will use
 all of it equally.
 

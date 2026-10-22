@@ -123,7 +123,7 @@ In other words, we set $[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b
 The indices $a$ and $b$ run over both positive and negative offsets,
 covering the entire image.
 For any given location ($i$, $j$) in the hidden representation $[\mathbf{H}]_{i, j}$,
-we compute its value by summing over pixels in $x$,
+we compute its value by summing over pixels in $\mathbf{X}$,
 centered around $(i, j)$ and weighted by $[\mathsf{V}]_{i, j, a, b}$. Mapping
 a $1000 \times 1000$ image (1 megapixel) to a $1000 \times 1000$ hidden
 representation in this parameterization requires $10^{12}$ parameters in a

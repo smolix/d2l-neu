@@ -245,9 +245,9 @@ of computing per-batch normalization statistics.
 For example,
 we might need to apply our model to make one prediction at a time.
 
-Typically, after training, we use the entire dataset
-to compute stable estimates of the variable statistics
-and then hold them fixed at prediction time.
+Typically, the moving averages of the mean and variance accumulated during
+training serve as stable estimates of these statistics
+and are held fixed at prediction time.
 Hence, batch normalization behaves differently during training than at test time.
 Recall that dropout also exhibits this characteristic.
 
@@ -839,8 +839,8 @@ comes from. Two problems recur.
 
 The first is *minibatch coupling*. The estimates $\hat{\boldsymbol{\mu}}_\mathcal{B}$
 and $\hat{\boldsymbol{\sigma}}_\mathcal{B}$ stand and fall with the batch size:
-we saw above that a fully connected layer learns nothing at batch size 1
-and that very small batches make the statistics unreliable.
+we saw above that at batch size 1 the normalized features of a fully
+connected layer carry no input-dependent signal, and that very small batches make the statistics unreliable.
 This bites hardest in dense prediction. Object detection and semantic
 segmentation train on high-resolution images, so memory often limits the batch
 to one or two images per device, exactly where batch statistics are noisiest.
@@ -1026,7 +1026,7 @@ The practical points are:
   for convolutional layers, layer normalization can sometimes be used as an alternative.
 * Like a dropout layer, batch normalization layers have different behaviors
   in training mode than in prediction mode.
-* Batch normalization is useful for regularization and improving convergence in optimization. By contrast,
+* Batch normalization often improves convergence in optimization and can have a regularizing effect. By contrast,
   the original motivation of reducing internal covariate shift seems not to be a valid explanation.
 * For more robust models that are less sensitive to input perturbations, consider removing batch normalization :cite:`wang2022removing`.
 

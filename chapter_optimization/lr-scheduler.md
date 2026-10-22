@@ -348,8 +348,9 @@ train(net_fn, train_iter, test_iter, num_epochs, lr, scheduler)
 ```
 
 The loss curve is smoother and the late-epoch noise reduced, the noise
-floor shrinking as $\eta_t$ falls. But the final test accuracy is no better
-than the constant baseline's, in either framework. The diagnosis is the
+floor shrinking as $\eta_t$ falls. But the final test accuracy gains less
+than a point over the constant baseline's, in either framework, the
+smallest gain of any decay in this section. The diagnosis is the
 *shape*: square-root decay manages to be
 timid at both ends. It halves the rate within the first three epochs,
 giving up the large early steps that do the exploring, yet it ends the run

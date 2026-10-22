@@ -499,9 +499,8 @@ forward by one position, $\mathbf x_{t+1}$: while the model reads $x_t,
 \ldots, x_{t+n-1}$ it is trained to emit $x_{t+1}, \ldots, x_{t+n}$, token
 by token. :numref:`fig_lang_model_data` shows two such (input, target) pairs
 over the actual opening tokens of our corpus. At training time we draw
-minibatches of pairs at random from the full overlapping collection, which
-provides the stochasticity that stochastic gradient descent expects without
-discarding any position in the corpus.
+minibatches of pairs at random from the overlapping collection, which
+provides the stochasticity that stochastic gradient descent expects.
 
 ![Partitioning a stream of BPE token ids into overlapping length-5 input subsequences. The target of each input window is the same window shifted forward by one token; a minibatch gathers windows drawn at random.](../img/mdl-rnn-partitioning.svg)
 :label:`fig_lang_model_data`

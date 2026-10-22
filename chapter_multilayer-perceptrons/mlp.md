@@ -321,9 +321,9 @@ Width increases the number of pieces only *linearly*: one extra unit adds one jo
 Depth is different. A second hidden layer applies its hinges not to $x$ but to
 the piecewise linear output of the first layer, and composing with a hinge
 *folds the graph*: every existing piece that crosses the new joint is split in
-two. Each added layer can therefore roughly *double* the number of linear
-pieces, so $k$ layers of width $D$ can produce on the order of
-$(D+1)\,2^{k-1}$ pieces, a count that a single hidden layer could match only
+two. A layer of width $D$ has $D$ joints, so each added layer can multiply
+the number of linear pieces by up to $D+1$, and $k$ layers of width $D$ can
+produce up to $(D+1)^k$ pieces, a count that a single hidden layer could match only
 with exponentially many units. This multiplicative-versus-additive gap explains why depth can be more
 parameter-efficient than width. Both claims are easy to check numerically:
 below we evaluate randomly initialized ReLU MLPs on a dense one-dimensional

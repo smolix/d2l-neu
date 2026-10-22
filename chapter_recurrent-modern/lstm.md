@@ -108,7 +108,8 @@ along the memory path, while holding the gate near $1$ makes the product,
 and hence the preserved memory, as close to lossless as the task requires.
 In dynamical-systems terms, each unit gets its own learned, input-dependent
 rate of decay in place of one hard-wired global one. Some units learn to
-forget in three steps; others hold a value across an entire sequence.
+forget in three steps; others can learn to hold a value much longer when
+the task rewards a long memory.
 
 ## Long Short-Term Memory
 
@@ -385,7 +386,7 @@ print(f"validation perplexity {ppls['LSTM (scratch)']:.1f}")
 
 Under the identical recipe, the vanilla RNN of :numref:`sec_rnn-scratch`
 reached a validation perplexity in the neighborhood of 90 to 110, and our
-from-scratch LSTM lands in the same range. Two factors limit this run.
+from-scratch LSTM lands in the same range. Two factors could limit this run.
 First, ten epochs is a short budget for a cell whose
 recurrent core has four heads and $4h(d + h + 1)$ weights instead of
 $h(d + h + 1)$: the curves are still moving when the budget ends, so the
@@ -394,8 +395,9 @@ initialization starts every gate half-open: with weights near zero,
 $\sigma(0) = 0.5$, so the untrained forget gate halves the cell state at
 every step, and the carousel only starts carrying once training pushes the
 forget-gate biases up. Practitioners initialize
-$\mathbf{b}_\textrm{f}$ to 1 for exactly this reason, and an exercise asks
-you to try both remedies. Under this section's fixed budget, the
+$\mathbf{b}_\textrm{f}$ to 1 for this reason, and an exercise asks you to
+test whether this remedy, or a longer budget, helps under this recipe.
+Under this section's fixed budget, the
 streamlined GRU below provides the
 clearest comparison with the vanilla RNN.
 
@@ -482,7 +484,7 @@ pairs fan-in-scaled input weights with orthogonal recurrent matrices and
 zero biases. Both are better starting points than our teaching code's
 small Gaussian, and they differ from each other — one reason the
 two tabs' numbers do not match. Note what neither default includes: the
-forget-gate bias of 1 recommended above remains yours to set.
+forget-gate bias of 1 described above remains yours to set.
 At a fixed training budget, how you start matters.
 
 Reading the perplexity off the scoreboard, we let the model continue

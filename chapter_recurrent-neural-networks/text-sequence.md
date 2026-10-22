@@ -478,7 +478,7 @@ print_wrapped(len(crossers), 'tokens cross a word boundary, e.g.',
 ```
 
 Merges like "of the " compress the training corpus, but they are brittle
-composites: they burn vocabulary slots on specific phrase spellings,
+composites: they burn vocabulary slots on specific phrase spellings and
 fragment the counts of the words they contain ("of" now appears in many
 disguises). Every production tokenizer
 therefore adds one ingredient we have so far omitted: *pre-tokenization*.

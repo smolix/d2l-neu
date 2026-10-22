@@ -644,8 +644,8 @@ Take `X == Y` as an example.
 For each position `i, j`, if `X[i, j]` and `Y[i, j]` are equal, 
 then the corresponding entry in the result is `True`,
 otherwise it is `False`.
-(Booleans behave as 1 and 0 in arithmetic, so summing
-such a mask counts the positions where the two tensors agree.)
+(Cast to a numeric type, `True` and `False` become 1 and 0, so the sum
+of such a mask counts the positions where the two tensors agree.)
 
 ```{.python .input #ndarray-operations-4}
 X == Y
@@ -815,9 +815,7 @@ To illustrate this concept,
 we overwrite the values of tensor `Z`,
 after initializing it, using `zeros_like`,
 to have the same shape as `Y`.
-Slice assignment writes through to `Z`'s existing buffer,
-the same storage sharing we saw with `reshape`,
-now working in our favor.
+Slice assignment writes through to `Z`'s existing buffer.
 :end_tab:
 
 :begin_tab:`tensorflow`

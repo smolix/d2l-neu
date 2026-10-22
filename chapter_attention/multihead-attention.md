@@ -141,15 +141,24 @@ exercises probe what happens as they collapse toward each other).
 ![One distribution per query versus several. A single head must serve the copy-both task with one softmax weighting, so its output blends the two requested values; two heads supply two different weightings, and a linear readout recovers both values exactly.](../img/mdl-attention-one-head-averages.svg)
 :label:`fig_one-head-averages`
 
-The bound is a fact about this deliberately restricted interface — one layer,
-with value-blind keys that mark position only — not a universal law: it
-lifts once a one-head model gets content-dependent keys, more depth, or a
-residual connection, and the copy-both separation from two heads narrows
+The bound is not a universal law, but it holds beyond the interface of the
+proposition, which has one layer and value-blind keys that mark position only.
+A linear readout keeps the bound in place even with content-dependent keys,
+more depth, or a residual connection, because it still receives only $d$
+numbers per query. The bound lifts once the readout receives more than $d$
+numbers, or once nonlinear layers before the attention encode the values for
+a nonlinear readout, and the copy-both separation from two heads narrows
 accordingly.
 
 Multi-head attention addresses this limitation by assigning each query several
 independently parameterized attention distributions and recombining their
-outputs with a learned projection.
+outputs with a learned projection, provided that its output is wide enough for
+all requested values. The two-head construction of
+:numref:`fig_one-head-averages` passes $2d$ numbers to the readout. A
+multi-head layer instead returns $d$ numbers per query by
+:eqref:`eq_multihead-output`, so with values in $\mathbb{R}^d$ its linear
+readout still loses half of the copy-both target variance for any number of
+heads.
 
 ## Multi-Head Attention
 

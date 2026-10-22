@@ -1036,7 +1036,8 @@ and hardware; it is not fixed by the asymptotic memory schedule.
 The trade pays off exactly where deep learning spends most of its time: deep
 stacks of identical blocks, such as the residual stack we assembled in
 :numref:`sec_model_construction` and every Transformer you will meet later.
-We rebuild a compact version of that block here.
+We rebuild that block here with one change: a ReLU also follows its second
+linear layer.
 
 ![Standard backpropagation stores every activation (top); checkpointing keeps only segment-boundary activations and recomputes the rest during the backward pass (bottom). For equally sized layers and segments of about $\sqrt{N}$ layers, stored activations fall from $O(N)$ to $O(\sqrt{N})$ while backward execution recomputes omitted forward operations.](../img/bg-activation-checkpoint.svg)
 :label:`fig_bg_activation_checkpoint`
@@ -1674,7 +1675,7 @@ from the next chapter onward relies on this fallback, which is how one
 codebase serves both the laptop you are reading on and a GPU server. As a
 capstone we train a classifier built from residual blocks on Fashion-MNIST;
 since the checkpointing comparison above has no MXNet variant, we define the
-Gluon rendition of :numref:`sec_model_construction`'s block here. The
+Gluon rendition of its block here, with a ReLU after each of the two layers. The
 `Trainer` re-assigns the parameters once, moves each batch, and the memory
 budget of the run follows the accounting from above.
 :end_tab:

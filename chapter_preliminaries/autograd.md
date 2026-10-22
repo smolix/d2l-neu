@@ -193,12 +193,18 @@ with respect to `x` by calling
 its `backward` method.
 Next, we can access the gradient 
 via `x`'s `grad` attribute.
+The `backward` method fills the `grad` attribute only of *leaf* tensors,
+which are created directly, as `x` was,
+rather than computed from tensors that require gradients.
 :end_tab:
 
 :begin_tab:`tensorflow`
 We can now calculate the gradient of `y`
 with respect to `x` by calling 
 the `gradient` method.
+A tape automatically tracks every trainable `tf.Variable`
+that the recorded computation reads, which is why we converted `x` into one.
+An ordinary tensor is tracked only after a call to `t.watch`.
 :end_tab:
 
 :begin_tab:`jax`
@@ -523,8 +529,9 @@ computation already carries no gradient bookkeeping. To suspend tracking
 
 :begin_tab:`pytorch`
 Wrap the computation in a `torch.no_grad()` block (or decorate a function
-with `@torch.no_grad()`). The result still shares data with `x`, but it is
-not attached to the graph, so no gradient can flow through it.
+with `@torch.no_grad()`). Operations inside the block are not recorded, so
+their results are not attached to the graph and no gradient can flow through
+them.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -692,7 +699,7 @@ Even though our function `f` is, for demonstration purposes, a bit contrived,
 its dependence on the input is quite simple: 
 it is a *linear* function of the scalar `a` 
 with piecewise defined scale. 
-As such, `f(a) / a` is a constant 
+As such, `f(a) / a` is constant on each piece
 and, moreover, it needs to match 
 the gradient of `f(a)` with respect to `a`.
 

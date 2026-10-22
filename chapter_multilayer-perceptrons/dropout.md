@@ -409,8 +409,8 @@ trainer.fit(model, data)
 
 ## Concise Implementation
 
-With high-level APIs, we add a `Dropout` layer after each fully connected
-layer and pass the dropout probability to its constructor.
+With high-level APIs, we add a `Dropout` layer after the activation of each
+hidden layer and pass the dropout probability to its constructor.
 During training, the `Dropout` layer will randomly
 drop out outputs of the previous layer
 (or equivalently, the inputs to the subsequent layer)

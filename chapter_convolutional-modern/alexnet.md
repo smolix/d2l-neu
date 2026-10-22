@@ -215,10 +215,10 @@ is always 1 (:numref:`subsec_activation-functions`).
 
 AlexNet controls the model complexity of the fully connected layer
 by dropout (:numref:`sec_dropout`),
-while LeNet only uses weight decay.
-To augment the data even further, the training loop of AlexNet
+whereas the `LeNet` of :numref:`sec_lenet` uses no explicit regularizer.
+The original training loop of AlexNet also
 added a great deal of image augmentation,
-such as flipping, clipping, and color changes.
+such as random crops, horizontal flips, and color changes.
 This exposes the model to many more variants of each image
 and thereby reduces overfitting;
 see :citet:`Buslaev.Iglovikov.Khvedchenya.ea.2020` for an in-depth

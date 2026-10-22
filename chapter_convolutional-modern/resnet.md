@@ -586,8 +586,8 @@ The only challenge in this design is that no information is exchanged between th
 
 The block in :numref:`fig_resnext_block` will also play a major role in the design of generic modern CNNs in :numref:`sec_cnn-design`. Grouped convolutions appeared in AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012`, where most channels were split into two groups so that each GPU could process one group with limited cross-GPU communication.
 
-The following implementation of the `ResNeXtBlock` class takes as argument `groups` ($g$), with 
-`bot_channels` ($b$) intermediate (bottleneck) channels. Lastly, when we need to reduce the height and width of the representation, we add a stride of $2$ by setting `use_1x1conv=True, strides=2`.
+The following implementation of the `ResNeXtBlock` class takes as arguments the number of output channels `num_channels` ($c$), the number of groups `groups` ($g$), and
+`bot_mul`, the ratio $b/c$ of intermediate (bottleneck) channels to output channels. Lastly, when we need to reduce the height and width of the representation, we add a stride of $2$ by setting `use_1x1conv=True, strides=2`.
 
 ```{.python .input #resnet-resnext-1}
 %%tab mxnet
@@ -723,7 +723,7 @@ class ResNeXtBlock(nnx.Module):  #@save
         return nnx.relu(Y + X)
 ```
 
-Its use is entirely analogous to that of the `ResNetBlock` discussed previously. For instance, when using (`use_1x1conv=False, strides=1`), the input and output are of the same shape. Alternatively, setting `use_1x1conv=True, strides=2` halves the output height and width.
+Its use is entirely analogous to that of the `Residual` block discussed previously. For instance, when using (`use_1x1conv=False, strides=1`), the input and output are of the same shape. Alternatively, setting `use_1x1conv=True, strides=2` halves the output height and width.
 
 ```{.python .input #resnet-resnext-2}
 %%tab mxnet

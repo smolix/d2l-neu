@@ -279,7 +279,7 @@ and then normalize them by the sum.
 Note, though, that care must be taken
 to avoid exponentiating and taking logarithms of large numbers,
 since this can cause numerical overflow or underflow:
-$\exp(o_k)$ overflows once $o_k$ is a few hundred, and the small
+$\exp(o_k)$ overflows in single precision once $o_k$ exceeds about $88$, and the small
 probabilities it produces underflow to $0$ before we take their logarithm.
 The standard fix subtracts $\max_k o_k$ before exponentiating and fuses the
 softmax and the logarithm into a single *log-sum-exp* computation; we derive it,
@@ -420,7 +420,7 @@ a commonly used loss for classification problems.
 #### Why "cross-entropy"?
 :label:`subsec_info_theory_basics`
 
-The name comes from information theory. The *entropy* $H[P] = \sum_j -P(j) \log P(j)$ is the expected *surprisal* $-\log P(j)$ of draws from $P$, which Shannon showed is the average number of *nats* (natural-log units) you must spend to encode them when you know $P$ :cite:`Shannon.1948`. The *cross-entropy* $H(P, Q) = \sum_j -P(j) \log Q(j)$ is the cost when you instead encode the same draws under a wrong model $Q$, and it is minimized exactly when $Q = P$. Our loss :eqref:`eq_l_cross_entropy` is precisely $H(\mathbf{y}, \hat{\mathbf{y}})$, so minimizing it does two equivalent things: it maximizes the likelihood of the labels, and it minimizes the excess coding cost of using the predicted distribution rather than the
+The name comes from information theory. The *entropy* $H[P] = \sum_j -P(j) \log P(j)$ is the expected *surprisal* $-\log P(j)$ of draws from $P$, which Shannon showed is the lower limit on the average number of *nats* (natural-log units) per draw needed to encode them when you know $P$; codes approach this limit by encoding many draws jointly :cite:`Shannon.1948`. The *cross-entropy* $H(P, Q) = \sum_j -P(j) \log Q(j)$ is the cost when you instead encode the same draws under a wrong model $Q$, and it is minimized exactly when $Q = P$. Our loss :eqref:`eq_l_cross_entropy` is precisely $H(\mathbf{y}, \hat{\mathbf{y}})$, so minimizing it does two equivalent things: it maximizes the likelihood of the labels, and it minimizes the excess coding cost of using the predicted distribution rather than the
 target distribution. We develop entropy, cross-entropy, and the Kullback--Leibler divergence, together with the coding argument behind the "bits" language, in :numref:`sec_mdl-information_theory`; the classic references are :citet:`Cover.Thomas.1999` and :citet:`mackay2003information`.
 
 **Confidence is not calibrated probability.**

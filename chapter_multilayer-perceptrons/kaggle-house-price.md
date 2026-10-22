@@ -452,7 +452,7 @@ is only meaningful if it is *trained competently*. Plain minibatch SGD on
 these standardized features needs more than a handful of passes to converge,
 so we give the linear model a healthy $100$ epochs at learning rate $0.03$
 (a larger rate diverges on the log-price target). Trained this way the
-linear model already reaches a cross-validated log error well under $0.05$;
+linear model already reaches a cross-validated mean squared log error well under $0.05$;
 stopping at the customary ten epochs would instead leave it badly underfit,
 which would flatter every model we compared against it.
 
@@ -520,10 +520,11 @@ models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
 ```
 
 :begin_tab:`pytorch`
-For the tested configurations, the small MLP has the lower mean
-cross-validated log error: about $0.027$ versus $0.036$ for the linear model.
-The fold-level dispersion printed above is necessary for judging this
-difference. This result applies only to the configurations and training budget
+For the tested configurations, the small MLP does not improve on the linear
+model: in the displayed runs, its mean cross-validated squared log error is
+about $0.036$, against $0.035$ for the linear model.
+The fold-level standard deviations printed above, about $0.015$ and $0.012$,
+are much larger than this difference. This result applies only to the configurations and training budget
 tested here. Preprocessing and regularization make the MLP viable on a dataset
 of barely a thousand rows, and a longer training schedule improves both
 baselines. The preceding caveat motivates measuring a gradient-boosted tree

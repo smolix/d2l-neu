@@ -291,7 +291,8 @@ $b$ passes the noise scale, further variance reduction does not materially
 reduce the step count. It approaches a floor $S_{\min}$ set by the noiseless dynamics, so additional
 examples yield progressively smaller reductions in the step count. A simple model of a noisy quadratic
 :cite:`McCandlish.Kaplan.Amodei.ea.2018` makes the whole trade-off a single
-hyperbola in the run-averaged noise scale:
+hyperbola in the *run-averaged* noise scale, the average of
+$b_{\textrm{noise}}$ over the training steps of the run:
 
 $$
 \frac{S(b)}{S_{\min}} = 1 + \frac{b_{\textrm{noise}}}{b},

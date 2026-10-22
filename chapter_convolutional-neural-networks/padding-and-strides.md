@@ -439,7 +439,7 @@ $(p_\textrm{h}, p_\textrm{w})$ padding. Most commonly we set
 $p_\textrm{h} = p_\textrm{w}$, in which case we say that we choose
 padding $p$.
 
-A similar convention applies to strides. When the vertical stride $s_\textrm{h}$ and horizontal stride $s_\textrm{w}$ match, we refer to stride $s$. A stride of $n > 1$ can reduce each output dimension to $1/n$ of the corresponding input dimension. The same shorthand covers dilation: when $d_\textrm{h} = d_\textrm{w}$, we speak of dilation $d$. Dilation widens the region seen by each output without adding weights or reducing resolution, as required for dense prediction. By default, padding is 0 and stride and dilation are 1.
+A similar convention applies to strides. When the vertical stride $s_\textrm{h}$ and horizontal stride $s_\textrm{w}$ match, we refer to stride $s$. A stride of $s > 1$ can reduce each output dimension to $1/s$ of the corresponding input dimension. The same shorthand covers dilation: when $d_\textrm{h} = d_\textrm{w}$, we speak of dilation $d$. Dilation widens the region seen by each output without adding weights or reducing resolution, as required for dense prediction. By default, padding is 0 and stride and dilation are 1.
 
 The examples above use zero padding. Libraries can implement it without
 allocating a larger tensor, but it imposes a *boundary condition*: values

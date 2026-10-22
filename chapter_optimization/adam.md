@@ -119,8 +119,8 @@ d2l.show_trace_2d(f_2d, d2l.train_2d(adagrad_2d))
 
 The from-scratch implementation for a real model keeps one accumulator per
 parameter. We train it on the airfoil dataset with the harness from
-:numref:`sec_minibatch_sgd`, using a larger learning rate than SGD could
-tolerate there.
+:numref:`sec_minibatch_sgd`, using twice the learning rate that SGD used
+there at the same batch size.
 
 ```{.python .input #adam-per-coordinate-learning-rates-3}
 %%tab pytorch

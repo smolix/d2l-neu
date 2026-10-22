@@ -124,7 +124,9 @@ $$
 
 The first equality uses :eqref:`eq_diffusion-conditional-score` in the form
 $\nabla \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) = \nabla p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) / p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})$
-together with the posterior $p(\mathbf{x} \mid \tilde{\mathbf{x}})$. This is
+together with the posterior $p(\mathbf{x} \mid \tilde{\mathbf{x}})$. Of
+these steps, only the identification of the target with the conditional
+score uses the Gaussian form of the noise kernel. This is
 Vincent's theorem: the denoising objective :eqref:`eq_diffusion-dsm` equals
 the Fisher divergence between the model and $p_\sigma$ up to a constant, so
 the two have the same minimizer and the same gradients. The full statement
@@ -168,6 +170,7 @@ parameterization is the one used for images below and, in
 :numref:`sec_diffusion-ddpm`, by diffusion models.
 
 ## The Noise Level Trades Bias against Variance
+:label:`subsec_diffusion-denoising-noise-level`
 
 The choice of $\sigma$ is a compromise. A small $\sigma$ makes $p_\sigma$
 close to $p$, but the regression target $-\boldsymbol{\epsilon} / \sigma$
@@ -312,6 +315,7 @@ by learning the score at every noise level of a ladder and using each where
 it is reliable.
 
 ## Denoising Images
+:label:`subsec_diffusion-denoising-images`
 
 The denoising objective involves nothing that depends on the dimension of
 the input, so it applies unchanged to images. We use Fashion-MNIST
@@ -484,50 +488,225 @@ combine noise levels so that neither side of the trade-off is lost.
 
 ## Exercises
 
-1. **Gaussian smoothing.** Show that if $p$ is a Gaussian with covariance
-   $\Sigma$, then $p_\sigma$ is Gaussian with covariance $\Sigma + \sigma^2 I$,
-   and write both scores explicitly. For a one-dimensional standard Gaussian,
-   compute the Fisher divergence between the clean and the perturbed score
-   under the clean distribution as a function of $\sigma$, and compare its
-   value at $\sigma = 0.3$ and $\sigma = 1$ with the trend in the second column
-   of the table.
-1. **The regression identity.** Prove that for square-integrable $Y$ and any
-   function $\mathbf{v}$,
-   $\mathbb{E}\|\mathbf{v}(X) - Y\|^2 = \mathbb{E}\|\mathbf{v}(X) - \mathbb{E}[Y \mid X]\|^2 + \mathbb{E}\|Y - \mathbb{E}[Y \mid X]\|^2$,
-   by inserting and removing $\mathbb{E}[Y \mid X]$ and conditioning on $X$.
-   Then explain why the denoising objective cannot reach zero for any data
-   distribution that is not a single point, and, for the two-point data
-   distribution $p = \tfrac12 \delta_{-1} + \tfrac12 \delta_{+1}$ in one
-   dimension at noise level $\sigma$, write its minimum value as a
-   one-dimensional integral and evaluate it numerically.
-1. **Tweedie's formula.** Derive :eqref:`eq_diffusion-tweedie` from
-   :eqref:`eq_diffusion-posterior-mean-score`. Then verify it in closed form
-   for the two-point distribution of the previous exercise: compute the
-   posterior mean $\mathbb{E}[x \mid \tilde{x}]$ directly by Bayes' rule and
-   show that it equals $\tilde{x} + \sigma^2 \frac{d}{d\tilde{x}} \log p_\sigma(\tilde{x})$.
-   What does the denoiser return for $\tilde{x} = 0$, and why is this the
-   correct answer for the squared-error loss even though it is not a possible
-   clean value?
-1. [code] **Estimated versus exact Bayes risk.** For the running example the
-   score of $p_\sigma$ is known, so the minimum of the denoising objective
-   can be estimated by evaluating :eqref:`eq_diffusion-dsm` with the true
-   score of $p_\sigma$ in place of the model. Compute this value for
-   $\sigma \in \{0.1, 0.3, 1.0\}$ on a large sample and compare it with the
-   final training loss of each trained network. How much of each training
-   loss is irreducible?
-1. [code] **Denoising at other noise levels.** Apply the image denoiser trained
-   at $\sigma = 0.5$ to test images corrupted at $\sigma = 0.25$ and
-   $\sigma = 1.0$, using Tweedie's formula with the *training* noise level in
-   both cases. Report the per-pixel squared error and describe the failure in
-   each direction. What would be needed to handle several noise levels with a
-   single network?
-1. [code] **A denoiser as a score.** Train a convolutional network on
-   Fashion-MNIST to predict the clean image directly from the noisy one with
-   a squared-error loss, and convert its output into a score with
-   $\mathbf{s}(\tilde{\mathbf{x}}) = (D(\tilde{\mathbf{x}}) - \tilde{\mathbf{x}}) / \sigma^2$.
-   Compare this score with the one learned by noise prediction on the same
-   noisy test images by the mean squared difference between the two fields.
-   Which parameterization is better conditioned as $\sigma \to 0$, and why?
+1. **Data on a line.** Let the data lie on the first coordinate axis of
+   $\mathbb{R}^2$, $\mathbf{x} = (u, 0)$ with $u \sim q$ for a smooth positive
+   density $q$ on $\mathbb{R}$, so that $p$ has no density on $\mathbb{R}^2$.
+    1. Show that
+       $p_\sigma(\tilde{\mathbf{x}}) = q_\sigma(\tilde{x}_1)\, \mathcal{N}(\tilde{x}_2;\, 0, \sigma^2)$,
+       where $q_\sigma$ is $q$ convolved with $\mathcal{N}(0, \sigma^2)$, and
+       write the score $\nabla \log p_\sigma$.
+    1. Show that the second component of the score has mean square
+       $1 / \sigma^2$ under $p_\sigma$ and slope $-1 / \sigma^2$ in
+       $\tilde{x}_2$. What happens to both as $\sigma \to 0$, and what does
+       this mean for a network that must represent the score at a small noise
+       level?
+    1. Apply Tweedie's formula :eqref:`eq_diffusion-tweedie`. What does the
+       optimal denoiser do to each coordinate of $\tilde{\mathbf{x}}$, and
+       which geometric operation does it perform?
+    1. Let the data lie on a $k$-dimensional linear subspace of
+       $\mathbb{R}^d$ instead. Compute the mean square of the component of the
+       score orthogonal to the subspace.
+   :exlabel:`ex_denoising-data-on-a-line`
+1. [code] **Vincent's theorem in numbers.** By Vincent's theorem, the
+   denoising objective :eqref:`eq_diffusion-dsm` of a model exceeds its value
+   at the exact score of $p_\sigma$ by the Fisher divergence between the model
+   and $p_\sigma$. For `mix` the exact score is
+   `lambda z: mix.score(z, sigma=sigma)`, so the theorem can be checked on the
+   networks in `scores`, trained in
+   :numref:`subsec_diffusion-denoising-noise-level`.
+    1. For each $\sigma \in \{0.1, 0.3, 1.0\}$, draw $2 \times 10^5$ points
+       $\mathbf{x}$ from `mix` and one noise vector $\boldsymbol{\epsilon}$
+       for each point, and evaluate the denoising objective on these pairs,
+       once with the trained network and once with the exact score. Compare
+       the difference with `fisher_divergence` of the network at the noisy
+       points $\mathbf{x} + \sigma \boldsymbol{\epsilon}$.
+    1. Why does the comparison at $\sigma = 0.1$ need the same noise draws
+       for both evaluations?
+    1. What fraction of each network's denoising objective is irreducible?
+       What does the answer imply for judging training progress from the
+       training loss at $\sigma = 0.1$?
+1. **Two-point data.** Let $p = \tfrac12 \delta_{-1} + \tfrac12 \delta_{+1}$
+   in one dimension, perturbed at noise level $\sigma$.
+    1. Compute the posterior mean $\mathbb{E}[x \mid \tilde{x}]$ by Bayes'
+       rule, and show that it equals
+       $\tilde{x} + \sigma^2 \frac{d}{d\tilde{x}} \log p_\sigma(\tilde{x})$,
+       as Tweedie's formula :eqref:`eq_diffusion-tweedie` requires.
+    1. What does the optimal denoiser return for $\tilde{x} = 0$? Why is
+       this the best answer under squared error even though it is not a
+       possible clean value?
+    1. Write the minimum of :eqref:`eq_diffusion-dsm` as
+       $\frac{1}{2 \sigma^4}\, \mathbb{E}\big[\operatorname{tr} \operatorname{Cov}(\mathbf{x} \mid \tilde{\mathbf{x}})\big]$,
+       and show that it is positive for every data distribution that is not
+       concentrated on a single point. Which property of the Gaussian noise
+       kernel does the argument use?
+    1. For the two-point data, write the minimum as a one-dimensional
+       integral over $\tilde{x}$, which has no closed form, and evaluate it by
+       numerical quadrature for $\sigma \in \{0.25, 0.5, 1, 2\}$. Multiply
+       each value by $\sigma^2$ to express it in the units of the
+       noise-prediction loss. Explain why this rescaled floor vanishes as
+       $\sigma \to 0$, and why it also vanishes as $\sigma \to \infty$.
+   :exlabel:`ex_denoising-regression-identity`
+1. **Bias of the smoothed score.** Model each component of `mix` as a
+   separate isotropic Gaussian $\mathcal{N}(\boldsymbol{\mu}, s^2 I)$ in $d$
+   dimensions, which is accurate because the components are far apart
+   compared with their width.
+    1. Show that the Fisher divergence between the perturbed and the clean
+       score under the clean distribution is
+
+       $$\frac12\, \mathbb{E}_{\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}, s^2 I)} \big\| \nabla \log p_\sigma(\mathbf{x}) - \nabla \log p(\mathbf{x}) \big\|^2 = \frac{d\, \sigma^4}{2 s^2 (s^2 + \sigma^2)^2}.$$
+
+    1. Evaluate it for $s = 0.5$, $d = 2$, and
+       $\sigma \in \{0.1, 0.3, 1.0\}$, and compare it with the values of
+       `fisher_divergence(scores[sigma], test)` printed in
+       :numref:`subsec_diffusion-denoising-noise-level`. Which part of each
+       printed value does the bias account for, and what accounts for the
+       rest at $\sigma = 0.1$?
+    1. Divide the bias by
+       $\tfrac12\, \mathbb{E} \|\nabla \log p(\mathbf{x})\|^2 = d / (2 s^2)$,
+       the same expectation for the clean score alone, and show that the
+       ratio depends on $\sigma$ and $s$ only through $\sigma / s$. Its square
+       root is the relative root-mean-square error of the perturbed score.
+       How small must $\sigma / s$ be for this relative error to stay below
+       $10\%$? What does this imply for data concentrated near a
+       low-dimensional set, as in problem
+       :exref:`ex_denoising-data-on-a-line`?
+1. [code] **Mismatched noise levels.** The network `denoiser` was trained at
+   $\sigma = 0.5$; call its output $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$.
+   Corrupt the first $1000$ images of `X_test` at the levels
+   $\sigma_{\textrm{test}} \in \{0.1, 0.25, 0.5, 0.75, 1.0\}$ and denoise
+   them in two ways: with Tweedie's formula at the training level,
+   $\tilde{\mathbf{x}} - 0.5\, \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}})$,
+   and with the test level,
+   $\tilde{\mathbf{x}} - \sigma_{\textrm{test}}\, \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}})$.
+   Plot the per-pixel squared error of both against $\sigma_{\textrm{test}}$,
+   together with the error $\sigma_{\textrm{test}}^2$ of the noisy input.
+   Describe the failure below the training level and above it. What
+   information would a single network need in order to denoise well at every
+   level?
+1. **Laplace noise.** ● The derivation of
+   :eqref:`eq_diffusion-posterior-mean-score` uses the Gaussian form of the
+   noise kernel only to identify the target with the conditional score.
+   Perturb one-dimensional data with Laplace noise,
+   $\tilde{x} = x + z$, where $z$ has density $k(z) = e^{-|z| / b} / (2b)$.
+    1. Compute the conditional score
+       $\frac{d}{d\tilde{x}} \log k(\tilde{x} - x)$ for $\tilde{x} \neq x$.
+       Express the minimizer of the corresponding denoising objective in
+       terms of the posterior probability $P(x < \tilde{x} \mid \tilde{x})$.
+    1. For the two-point data of problem
+       :exref:`ex_denoising-regression-identity`, compute the score of the
+       perturbed density and the posterior mean $\mathbb{E}[x \mid \tilde{x}]$
+       for $|\tilde{x}| < 1$ and for $\tilde{x} > 1$. Show that no relation
+       $\mathbb{E}[x \mid \tilde{x}] = \tilde{x} + c\, \frac{d}{d\tilde{x}} \log p_k(\tilde{x})$
+       with a constant $c$ holds for all $\tilde{x}$, where $p_k$ is the
+       perturbed density.
+    1. Which property of the Gaussian conditional score
+       :eqref:`eq_diffusion-conditional-score` makes Tweedie's formula
+       possible?
+1. [code] **Three parameterizations.** ● Besides the noise predictor
+   $\mathbf{s}_{\boldsymbol{\theta}} = -\boldsymbol{\epsilon}_{\boldsymbol{\theta}} / \sigma$,
+   a model can predict the clean image, with score
+   $\mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) = (D_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) - \tilde{\mathbf{x}}) / \sigma^2$.
+    1. Show that in this parameterization :eqref:`eq_diffusion-dsm` equals
+       $\frac{1}{2 \sigma^4}\, \mathbb{E}\|D_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) - \mathbf{x}\|^2$,
+       so that at a single noise level the score, noise, and clean-image
+       regressions have the same minimizer.
+    1. Suppose the network's output has a root-mean-square error $\delta$
+       per coordinate, whichever quantity it predicts. Compute the resulting
+       root-mean-square error of the score and of the denoised image, for
+       clean-image prediction and for noise prediction. Which
+       parameterization gives the more accurate score as $\sigma \to 0$?
+       Which gives the more accurate denoised image when $\sigma > 1$?
+    1. Train `ConvDenoiser` to predict the clean image, with the optimizer,
+       batch size, and number of updates of
+       :numref:`subsec_diffusion-denoising-images`, and train the noise
+       predictor of that section again, both at
+       $\sigma \in \{0.1, 0.5, 1.0, 2.0\}$. Report the per-pixel squared error
+       of the denoised test images for all eight models, and compare the
+       pattern with your answer to problem
+       :exref:`ex_denoising-three-parameterizations`b.
+   :exlabel:`ex_denoising-three-parameterizations`
+1. [code] **The small-noise limit.** ● The loss that `denoising_loss`
+   averages is, per example,
+   $\ell = \tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x} + \sigma \boldsymbol{\epsilon}) + \boldsymbol{\epsilon} / \sigma\|^2$
+   with $\mathbf{x} \in \mathbb{R}^d$. :citet:`Wang.Cheng.Li.ea.2020`
+   observe that its stochastic estimate degrades as $\sigma \to 0$ and
+   propose a remedy, which this problem derives.
+    1. Expand $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x} + \sigma \boldsymbol{\epsilon})$
+       to first order in $\sigma$, and show that
+       $\mathbb{E}[\ell] - d / (2 \sigma^2)$ converges to the first
+       expectation in Hyvärinen's objective :eqref:`eq_diffusion-hyvarinen`
+       as $\sigma \to 0$.
+    1. Show that the variance of the gradient of $\ell$ with respect to
+       $\boldsymbol{\theta}$ grows like $1 / \sigma^2$, and identify the term
+       of $\ell$ responsible.
+    1. Construct from that term a control variate: a quantity with zero mean
+       for every $\boldsymbol{\theta}$ whose subtraction from $\ell$ removes
+       the divergent variance. What does it cost per example?
+    1. Implement the controlled loss for `d2l.ScoreNet` on `data`. At
+       initialization, estimate the total variance of the minibatch gradient,
+       summed over all parameters, from $200$ minibatches of $256$ points,
+       with and without the control variate, for
+       $\sigma \in \{1, 0.3, 0.1, 0.03, 0.01\}$. Plot both on logarithmic
+       axes and compare the slopes with your derivation.
+1. [code] **The best linear denoiser.** ●
+    1. Let $p = \mathcal{N}(\boldsymbol{\mu}, \Sigma)$. Show that
+       $p_\sigma = \mathcal{N}(\boldsymbol{\mu}, \Sigma + \sigma^2 I)$ and that
+       Tweedie's formula gives the denoiser
+
+       $$D(\tilde{\mathbf{x}}) = \boldsymbol{\mu} + \Sigma (\Sigma + \sigma^2 I)^{-1} (\tilde{\mathbf{x}} - \boldsymbol{\mu}).$$
+
+       By what factor does $D$ scale the component of
+       $\tilde{\mathbf{x}} - \boldsymbol{\mu}$ along an eigenvector of
+       $\Sigma$ with eigenvalue $\lambda$?
+    1. Show that $D$ minimizes
+       $\mathbb{E}\|D(\tilde{\mathbf{x}}) - \mathbf{x}\|^2$ among all affine
+       maps for every data distribution with mean $\boldsymbol{\mu}$ and
+       covariance $\Sigma$, Gaussian or not, and that its per-coordinate
+       squared error is
+       $\frac{1}{d} \sum_i \sigma^2 \lambda_i / (\lambda_i + \sigma^2)$, where
+       $\lambda_1, \ldots, \lambda_d$ are the eigenvalues of $\Sigma$.
+    1. Estimate $\boldsymbol{\mu}$ and $\Sigma$ from the flattened images in
+       `X`, compute the predicted error at $\sigma = 0.5$, and check it on the
+       first $1000$ images of `X_test`. Compare it with the error of the
+       Tweedie denoiser built from `denoiser` in
+       :numref:`subsec_diffusion-denoising-images`. How many eigenvalues of
+       $\Sigma$ exceed $\sigma^2$, and what does this count say about which
+       image features the linear denoiser keeps?
+   :exlabel:`ex_denoising-linear-denoiser`
+1. [extended] **Memorization and locality.** ●● Replace the data
+   distribution by the empirical distribution of the $n$ training images
+   $\mathbf{x}_1, \ldots, \mathbf{x}_n$ in `X`, the distribution that
+   training on a finite set actually sees.
+    1. Show that $p_\sigma$ is then a mixture of Gaussians centered at the
+       training images and that Tweedie's formula gives the optimal denoiser
+       $D(\tilde{\mathbf{x}}) = \sum_i w_i(\tilde{\mathbf{x}})\, \mathbf{x}_i$
+       with weights
+       $w_i(\tilde{\mathbf{x}}) \propto \exp(-\|\tilde{\mathbf{x}} - \mathbf{x}_i\|^2 / (2 \sigma^2))$.
+    1. Evaluate this denoiser on $500$ noisy test images and on $500$ noisy
+       training images at $\sigma \in \{0.1, 0.5, 1\}$. Compare its per-pixel
+       squared error at every level with that of the noisy input and of the
+       linear denoiser of problem :exref:`ex_denoising-linear-denoiser`, and
+       at $\sigma = 0.5$, the level at which `denoiser` was trained, also
+       with that of the Tweedie denoiser built from `denoiser`. What does it
+       return for a noisy test image, and what would a sampler driven by its
+       score produce?
+    1. Restrict the denoiser to the class that `ConvDenoiser` belongs to, up
+       to boundary effects: the output at a pixel depends only on the
+       $9 \times 9$ patch of $\tilde{\mathbf{x}}$ centered there, the
+       receptive field of four $3 \times 3$ convolutions, through the same
+       function at every position. Show that the minimizer of the empirical
+       objective over this class is the posterior mean of the central pixel
+       when the clean patch is drawn uniformly from all positions of all
+       training images. This is the equivariant local score machine of
+       :citet:`Kamb.Ganguli.2025`.
+    1. Implement it with the patches of the first $1000$ training images,
+       padding every image with the background value $-1$, and evaluate it
+       on $10$ test images at $\sigma = 0.5$. Each output pixel is a
+       softmax-weighted average over about $8 \times 10^5$ patches, so
+       process the pixels in chunks. Compare its error with that of the
+       Tweedie denoiser built from `denoiser`, and measure how closely the
+       two outputs agree. What does the comparison suggest about why
+       `denoiser` generalizes to test images?
 
 <!-- slides -->
 

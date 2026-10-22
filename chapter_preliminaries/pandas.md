@@ -287,6 +287,7 @@ scaling) and for chaining them into reproducible pipelines, see
    fraction of the columns are numerical, categorical, or text, and state
    which of the preprocessing steps of this section the dataset actually
    needs.
+
 1. [code] **Indexing by name.** This section splits `data` by position
    with `data.iloc[:, :3]` and `data.iloc[:, 3]`. Suppose a new version of
    `house_tiny.csv` adds a column `YearBuilt` between `Area` and `Price`.
@@ -298,6 +299,7 @@ scaling) and for chaining them into reproducible pipelines, see
        original one. The pandas user guide on
        [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html)
        lists the options.
+
 1. [code] **Imputation strategies.** Fill the missing values in `NumRooms`
    in three ways: with the column mean, with the column median, and with
    the column mean plus a "was-missing" indicator column.
@@ -315,33 +317,7 @@ scaling) and for chaining them into reproducible pipelines, see
     *Adapted from Kaggle Learn,
     [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
     Exercise 2.*
-1. [code] **Where leakage hides.** This section fills the missing
-   `NumRooms` entries with the mean of all observed values and
-   standardizes `NumRooms` and `Area` with the mean and standard deviation
-   of all ten rows. Treat the first eight rows of `data` as training data
-   and the last two as test data.
-    1. Redo the imputation and the standardization with statistics
-       computed on the training rows only and applied unchanged to the test
-       rows. Compare the standardized test rows with those of the
-       whole-dataset recipe.
-    1. Explain what the whole-dataset recipe lets the model learn about the
-       test rows that the training-only recipe does not.
-    1. Suppose a feature is constant on the training rows but not on the
-       test rows. State what the training-only recipe produces for that
-       feature on each split, and propose a fix.
-1. [code] **Memory per row.** Use `data.memory_usage(deep=True)` to find
-   how many bytes per row the `RoofType` column and the `Area` column of
-   `data` occupy in memory. Compare each with the average number of bytes
-   the same field takes in `house_tiny.csv`.
-1. [code] **Scaling limits.** ● Estimate how many rows of a table with the
-   columns of `house_tiny.csv` you can load with `pd.read_csv` on your
-   machine. Write synthetic CSV files with the four columns of
-   `house_tiny.csv` and $10^5$, $10^6$, and $10^7$ random rows. For each
-   file, time `pd.read_csv` and record the memory of the resulting
-   DataFrame. Extrapolate both measurements linearly. Find the number of
-   rows at which the DataFrame would fill your machine's memory and the
-   number at which loading would take ten minutes, and state which limit
-   comes first.
+
 1. **High-cardinality categories.** One-hot encoding turns a categorical
    column with $k$ distinct values into $k$ columns, plus one more with
    `dummy_na=True`.
@@ -358,6 +334,27 @@ scaling) and for chaining them into reproducible pipelines, see
     *Adapted from Kaggle Learn,
     [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
     Exercise 3.*
+
+1. [code] **Where leakage hides.** This section fills the missing
+   `NumRooms` entries with the mean of all observed values and
+   standardizes `NumRooms` and `Area` with the mean and standard deviation
+   of all ten rows. Treat the first eight rows of `data` as training data
+   and the last two as test data.
+    1. Redo the imputation and the standardization with statistics
+       computed on the training rows only and applied unchanged to the test
+       rows. Compare the standardized test rows with those of the
+       whole-dataset recipe.
+    1. Explain what the whole-dataset recipe lets the model learn about the
+       test rows that the training-only recipe does not.
+    1. Suppose a feature is constant on the training rows but not on the
+       test rows. State what the training-only recipe produces for that
+       feature on each split, and propose a fix.
+
+1. [code] **Memory per row.** Use `data.memory_usage(deep=True)` to find
+   how many bytes per row the `RoofType` column and the `Area` column of
+   `data` occupy in memory. Compare each with the average number of bytes
+   the same field takes in `house_tiny.csv`.
+
 1. [code] **Pandas alternatives, tried once.** NumPy and Pillow load data
    without pandas.
     1. Save `data` with `numpy.save` and reload it with
@@ -369,6 +366,7 @@ scaling) and for chaining them into reproducible pipelines, see
        it with `numpy.asarray`, and report the shape and dtype of the
        result. Explain why a DataFrame of rows and named columns is a poor
        container for this array.
+
 1. [extended] **A real messy dataset, end to end.** Take a messy public
    dataset, for example the San Francisco restaurant-inspection data used
    in Berkeley's Data 100. Run the full pipeline this section teaches:
@@ -380,6 +378,16 @@ scaling) and for chaining them into reproducible pipelines, see
 
     *Adapted from UC Berkeley Data 100,
     [homework 2A "Food Safety"](https://github.com/DS-100/sp25-student/blob/main/hw/hw02A/hw02A.ipynb).*
+
+1. [code] **Scaling limits.** ● Estimate how many rows of a table with the
+   columns of `house_tiny.csv` you can load with `pd.read_csv` on your
+   machine. Write synthetic CSV files with the four columns of
+   `house_tiny.csv` and $10^5$, $10^6$, and $10^7$ random rows. For each
+   file, time `pd.read_csv` and record the memory of the resulting
+   DataFrame. Extrapolate both measurements linearly. Find the number of
+   rows at which the DataFrame would fill your machine's memory and the
+   number at which loading would take ten minutes, and state which limit
+   comes first.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/28)

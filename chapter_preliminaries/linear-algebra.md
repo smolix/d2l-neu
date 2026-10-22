@@ -1491,8 +1491,9 @@ To recap:
     *Adapted from MIT 18.06,
     [problem set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf),
     Section 2.1, Problems 29–30.*
+   :exlabel:`ex_linear-algebra-watching-eigenvector-emerge`
 1. [code] **Power-iteration convergence rate.** ● Run the power iteration
-   from the previous problem on `S` and measure the factor by which the
+   from problem :exref:`ex_linear-algebra-watching-eigenvector-emerge` on `S` and measure the factor by which the
    sine of the angle between the iterate and the eigenvector of the
    largest eigenvalue shrinks per step. Express this factor in terms of
    the eigenvalues of `S`, and use it to explain the iteration count at

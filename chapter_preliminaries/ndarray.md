@@ -981,6 +981,28 @@ Tensors provide a variety of functionalities including construction routines; in
 
 ## Exercises
 
+1. **Inferred reshape axis.** A batch of $n$ grayscale images of
+   $28 \times 28$ pixels arrives as a tensor of shape $(n, 1, 28, 28)$.
+   Each image must be flattened into a row of 784 values. Check every
+   prediction below in code.
+    1. Predict the result of reshaping the batch to $(-1, 784)$ and to
+       $(256, -1)$, once for a full batch of $n = 256$ images and once for
+       a final batch of $n = 100$ images. State which of the two targets
+       works for every batch size.
+    1. Suppose the images were loaded with three color channels by
+       mistake, so that the batch has shape $(n, 3, 28, 28)$. Predict the
+       result of the reshape to $(-1, 784)$, and state whether this step
+       detects the mistake.
+
+1. **Shifted slices.** A tensor `T` of shape $(4, 11)$ holds four token
+   sequences, one per row. A model reads the first 10 tokens of each row
+   and predicts, at every position, the token that follows. Write slice
+   expressions for the input tensor and the target tensor, each of shape
+   $(4, 10)$, so that the target at position $t$ is the token that
+   follows the input at position $t$. Then give expressions for both
+   tensors that stay correct without change when each row holds $L + 1$
+   tokens and the model reads the first $L$, for every $L \geq 1$.
+
 1. **Comparison masks.** The comparison `X == Y` in this section uses
    the tensor `X` obtained by reshaping `arange(12)` to $(3, 4)$ and the
    $(3, 4)$ tensor `Y` with rows $(2, 1, 4, 3)$, $(1, 2, 3, 4)$, and
@@ -993,6 +1015,7 @@ Tensors provide a variety of functionalities including construction routines; in
        (not a number), because `X[0, 0]` is zero. Repeat the three counts
        with `N` in place of `X` and explain how their sum changes. Then
        evaluate `N == N` and explain its first entry.
+
 1. [code] **Broadcasting shapes.** Broadcasting in
    :numref:`subsec_broadcasting` aligns two shapes from the right.
     1. Replace `a` and `b` with two tensors that each have three axes and
@@ -1006,20 +1029,9 @@ Tensors provide a variety of functionalities including construction routines; in
        mean of the squared entries of `y_hat - y`, explain the value, and
        give the reshape of `y` that pairs each prediction with its own
        label.
-1. **Inferred reshape axis.** A batch of $n$ grayscale images of
-   $28 \times 28$ pixels arrives as a tensor of shape $(n, 1, 28, 28)$.
-   Each image must be flattened into a row of 784 values. Check every
-   prediction below in code.
-    1. Predict the result of reshaping the batch to $(-1, 784)$ and to
-       $(256, -1)$, once for a full batch of $n = 256$ images and once for
-       a final batch of $n = 100$ images. State which of the two targets
-       works for every batch size.
-    1. Suppose the images were loaded with three color channels by
-       mistake, so that the batch has shape $(n, 3, 28, 28)$. Predict the
-       result of the reshape to $(-1, 784)$, and state whether this step
-       detects the mistake.
+
 :begin_tab:`pytorch`
-4. [code] **Object identity versus storage.** The cells in
+5. [code] **Object identity versus storage.** The cells in
    :numref:`subsec_saving_memory` compare `id(Y)` before and after
    `Y = Y + X`, and `id(X)` before and after `X += Y`. The method
    `X.data_ptr()` returns the memory address of the first element of `X`.
@@ -1028,7 +1040,8 @@ Tensors provide a variety of functionalities including construction routines; in
     1. Use these observations to explain why a changed `id()` does not
        show that new storage was allocated. Then explain why an unchanged
        `id()` does not by itself show that the old storage was reused.
-5. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
+
+6. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
    same-shaped tensors without allocating any intermediate tensor, using
    only in-place methods such as `add_`, `div_`, `neg_`, and `mul_`, or
    the `out=` argument of the corresponding functions. Confirm that
@@ -1042,7 +1055,7 @@ Tensors provide a variety of functionalities including construction routines; in
 :end_tab:
 
 :begin_tab:`mxnet`
-4. [code] **Object identity versus storage.** The cells in
+5. [code] **Object identity versus storage.** The cells in
    :numref:`subsec_saving_memory` compare `id(Y)` before and after
    `Y = Y + X`, and `id(X)` before and after `X += Y`.
     1. Let `V = X.reshape(-1)` and compare `id(V)` with `id(X)`. Then
@@ -1051,7 +1064,8 @@ Tensors provide a variety of functionalities including construction routines; in
     1. Explain why a changed `id()` does not by itself show that new
        storage was allocated, and why an unchanged `id()`, as after
        `X += Y`, does not by itself show that the old storage was reused.
-5. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
+
+6. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
    same-shaped tensors without allocating any intermediate tensor, using
    only the in-place operators `+=`, `*=`, and `/=`. Confirm that the
    result equals the direct expression and explain why `Z[:] = A + B`
@@ -1063,12 +1077,13 @@ Tensors provide a variety of functionalities including construction routines; in
 :end_tab:
 
 :begin_tab:`tensorflow`
-4. **Object identity versus storage.** The cell in
+5. **Object identity versus storage.** The cell in
    :numref:`subsec_saving_memory` shows that `Z.assign(X + Y)` leaves
    `id(Z)` unchanged, whereas the earlier `Y = Y + X` changes `id(Y)`.
    State what the unchanged `id(Z)` establishes about `Z`, and what it
    leaves undetermined about the memory that holds the values of `Z`.
-5. [code] **In-place composition.** ● Ordinary tensors are immutable, so
+
+6. [code] **In-place composition.** ● Ordinary tensors are immutable, so
    every arithmetic operation on them allocates a new tensor. Hold `A` and
    `B` in `tf.Variable`s and compute `(A + B) * (-A / 2)` so that the
    result ends up in one of the two variables, using `assign`,
@@ -1085,13 +1100,14 @@ Tensors provide a variety of functionalities including construction routines; in
 :end_tab:
 
 :begin_tab:`jax`
-4. **Object identity versus storage.** The cell in
+5. **Object identity versus storage.** The cell in
    :numref:`subsec_saving_memory` shows that `X.at[:].set(X + Y)` returns
    an object with a new `id()`. Explain why the new `id()` does not show
    whether the result occupies fresh memory. Then explain why, for
    immutable arrays, whether two arrays share a buffer cannot change any
    value the program computes.
-5. [code] **In-place composition.** ● JAX arrays are immutable, so
+
+6. [code] **In-place composition.** ● JAX arrays are immutable, so
    `.at[...].set(...)` returns a new array and cannot save memory on its
    own. Write `(A + B) * (-A / 2)` as a function `f(A, B)`, count the
    intermediate arrays that eager evaluation creates, and inspect the
@@ -1108,7 +1124,7 @@ Tensors provide a variety of functionalities including construction routines; in
     problem 35.*
 :end_tab:
 
-6. [extended] **Loops, broadcasting, and library primitives.** ● Compute all
+7. [extended] **Loops, broadcasting, and library primitives.** ● Compute all
    pairwise squared Euclidean distances between two sets of 50 vectors in 8
    dimensions in three ways: two nested Python loops, one loop plus
    broadcasting, and a fully vectorized version with no explicit loop.
@@ -1123,14 +1139,6 @@ Tensors provide a variety of functionalities including construction routines; in
     k-nearest-neighbor distances, and fast.ai,
     [Deep Learning from the Foundations](https://github.com/fastai/course-v3/blob/master/files/dl-2019/notes/notes-2-8.md),
     Lesson 8.*
-1. **Shifted slices.** A tensor `T` of shape $(4, 11)$ holds four token
-   sequences, one per row. A model reads the first 10 tokens of each row
-   and predicts, at every position, the token that follows. Write slice
-   expressions for the input tensor and the target tensor, each of shape
-   $(4, 10)$, so that the target at position $t$ is the token that
-   follows the input at position $t$. Then give expressions for both
-   tensors that stay correct without change when each row holds $L + 1$
-   tokens and the model reads the first $L$, for every $L \geq 1$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/26)

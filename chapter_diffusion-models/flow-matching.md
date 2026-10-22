@@ -340,10 +340,11 @@ The final loss is a few units, far above the values of the earlier
 sections, because the floor of :eqref:`eq_diffusion-cfm-loss` is the
 conditional variance of $\mathbf{x}_1 - \mathbf{x}_0$ given the
 interpolated point, which is large near the noise end where the point says
-little about the data (Exercise 3); the number measures the target's
+little about the data (Exercise :exref:`ex_flow-matching-loss-floor`); the number measures the target's
 spread, not the fit.
 
 ### Checking the Dictionary on the Mixture
+:label:`subsec_diffusion-flow-matching-dictionary`
 
 Equation :eqref:`eq_diffusion-linear-dictionary` expresses the true velocity
 of the linear path through the score of $p_t$, which
@@ -389,6 +390,7 @@ targets. No score was learned, and no velocity appears in the closed form:
 the agreement follows from the dictionary.
 
 ### Sampling by Integration
+:label:`subsec_diffusion-flow-matching-sampling`
 
 Sampling integrates :eqref:`eq_diffusion-flow-ode` with Euler steps. We
 measure the summary statistics of the previous sections for decreasing
@@ -483,7 +485,7 @@ as the learned ones. To see
 the geometry without the learning error, the panels integrate eight
 starting
 points along the exact field of the linear path and along the exact
-velocity of a variance-preserving path, the cosine schedule
+velocity of a variance-preserving path, the *cosine path*
 $(\alpha_t, \sigma_t) = (\sin \tfrac{\pi t}{2}, \cos \tfrac{\pi t}{2})$
 (a smooth stand-in for the DDPM schedule, which is also variance
 preserving), obtained from the dictionary
@@ -552,7 +554,7 @@ After reparameterizing time so
 that the two paths have the same ratio $\alpha_t / \sigma_t$, and hence the
 same signal-to-noise ratio $\alpha_t^2 / \sigma_t^2$, at every instant, their marginals differ only by a scale factor, and
 substituting into :eqref:`eq_diffusion-score-velocity` shows that their
-velocity fields then map onto each other under that scaling (Exercise 4).
+velocity fields then map onto each other under that scaling (Exercise :exref:`ex_flow-matching-same-ratio-same-flow`).
 The trajectories of two Gaussian paths therefore differ only by a
 time-dependent rescaling and by the pace at which they are traversed
 :cite:`Karras.Aittala.Aila.ea.2022`. The rescaling changes the
@@ -688,53 +690,355 @@ drops that assumption.
 
 ## Exercises
 
-1. **The marginal of the linear path.** For the running example, derive the
-   density $p_t$ of $\mathbf{x}_t = (1 - t)\, \mathbf{x}_0 + t\, \mathbf{x}_1$
-   and confirm that it is the mixture with means $t \boldsymbol{\mu}_k$ and
-   per-coordinate variance $t^2 \cdot 0.25 + (1 - t)^2$. Then derive
-   :eqref:`eq_diffusion-linear-dictionary` from
-   :eqref:`eq_diffusion-score-velocity` with $(\alpha_t, \sigma_t) = (t, 1 - t)$.
-1. **Noise prediction as a velocity.** Substitute
-   $\nabla \log p_t = -\hat{\boldsymbol{\epsilon}} / \sigma_t$ into
-   :eqref:`eq_diffusion-score-velocity` and obtain the velocity in terms of
-   the noise prediction. Specialize to the variance-preserving path
-   $\alpha_t^2 + \sigma_t^2 = 1$ and show that the coefficient of
-   $\hat{\boldsymbol{\epsilon}}$ becomes $\dot{\sigma}_t (\alpha_t^2 + \sigma_t^2) / \alpha_t^2 = \dot{\sigma}_t / \alpha_t^2$
-   after using $\alpha_t \dot{\alpha}_t = -\sigma_t \dot{\sigma}_t$.
-1. **The loss floor.** Show that the conditional flow matching loss at its
-   minimum equals $\mathbb{E}_{t, \mathbf{x}_t}\, \mathrm{Var}[\mathbf{x}_1 - \mathbf{x}_0 \mid \mathbf{x}_t]$,
-   with the variance summed over coordinates. For one-dimensional Gaussian
-   data with variance $s^2$, show that the floor at time $t$ is
-   $s^2 / (s^2 t^2 + (1 - t)^2)$, which equals $s^2$ at the noise end and
-   $1$ at the data end. At which $t$ is it largest? Why is the floor large
-   near the noise end for the running example, whose coordinates have
-   variances of about $5$ and $2.8$?
-1. **Same ratio, same flow.** Let two Gaussian paths have coefficients
-   related by $\alpha^B_t = c_t\, \alpha^A_t$ and $\sigma^B_t = c_t\, \sigma^A_t$
-   for a positive function $c_t$, so that they share the signal-to-noise
-   ratio at every time. Show that their marginals satisfy
-   $p^B_t(\mathbf{y}) = c_t^{-d}\, p^A_t(\mathbf{y} / c_t)$, and use
-   :eqref:`eq_diffusion-score-velocity` to show that
-   $\mathbf{u}^B_t(\mathbf{y}) = (\dot{c}_t / c_t)\, \mathbf{y} + c_t\, \mathbf{u}^A_t(\mathbf{y} / c_t)$.
-   Conclude that the ODE trajectories are related by
-   $\mathbf{y}_t = c_t\, \mathbf{x}_t$. Which function of the path therefore
-   determines the shape of the route, up to this rescaling?
-1. [code] **Higher-order integration.** Replace the Euler step by the
-   midpoint rule (two field evaluations per step) and compare the summary
-   statistics at equal numbers of *field evaluations*: Euler with $10$ steps
-   against midpoint with $5$. Repeat with the exact field to separate the
-   integration error from the learning error.
-1. [code] **Reflow.** Generate $2000$ pairs $(\mathbf{x}_0, \hat{\mathbf{x}}_1)$
-   by integrating the learned flow from Gaussian draws with a hundred steps,
-   retrain the velocity network on these pairs instead of independent
-   noise-data pairs, and measure the curvature of the new flow and the
-   two-step sampling statistics. Explain why the coupling matters.
-1. [code] **A diffusion model as a flow.** Train the noise predictor of
-   :numref:`sec_diffusion-ddpm` on the mixture, convert it to a velocity
-   with the formula of Exercise 2 on the variance-preserving path of the
-   DDPM schedule, and integrate with Euler on the flow clock. Compare the
-   samples with DDIM at the same number of steps and explain the relation
-   between the two procedures.
+1. **The marginal of the linear path.** The linear path
+   :eqref:`eq_diffusion-linear-path` connects a standard Gaussian draw
+   $\mathbf{x}_0$ with an independent draw $\mathbf{x}_1$ of the running
+   example `mix`.
+    1. Derive the density $p_t$ of $\mathbf{x}_t$ and show that it is the
+       mixture with the weights of `mix`, the means $t \boldsymbol{\mu}_k$,
+       where $\boldsymbol{\mu}_k$ are the component means of `mix`, and the
+       per-coordinate variance $t^2 \cdot 0.25 + (1 - t)^2$. Then
+       derive :eqref:`eq_diffusion-linear-dictionary` from
+       :eqref:`eq_diffusion-score-velocity`.
+    1. `true_velocity` divides by $t$, so `exact` evaluates it at
+       $t = 10^{-3}$ in place of $t = 0$. Show from
+       :eqref:`eq_diffusion-marginal-velocity` that
+       $\mathbf{u}_t(\mathbf{x}) \to \mathbb{E}[\mathbf{x}_1] - \mathbf{x}$
+       as $t \to 0$, and compute $\mathbb{E}[\mathbf{x}_1]$ for `mix`.
+    1. Where does a single Euler step from $t = 0$ to $t = 1$ move every
+       starting point? What would one Euler step of `ema` produce from
+       Gaussian images?
+    1. In the run with two Euler steps in
+       :numref:`subsec_diffusion-flow-matching-sampling`, the first step ends
+       at $t = 1/2$. Use (b) to explain which mode the two-step samples
+       overweight.
+1. [code] **The loss floor.** By the regression lemma
+   :eqref:`eq_mdl-regression-lemma` (:numref:`sec_mdl-flow-matching`), the
+   minimum of :eqref:`eq_diffusion-cfm-loss` over all functions
+   $\mathbf{v}$ is
+   $\mathbb{E}_{t, \mathbf{x}_t}\, \mathrm{Var}[\mathbf{x}_1 - \mathbf{x}_0 \mid \mathbf{x}_t]$,
+   with the variance summed over coordinates.
+    1. Estimate this conditional variance for the running example at each
+       $t$ of a grid on $(0, 1)$ by Monte Carlo, with `true_velocity` as the
+       conditional mean. Plot it against $t$ and average it over $t$. At
+       which $t$ is it largest? Compare the average with the final training
+       loss printed after training `velocity`, which is the loss of a single
+       minibatch of $256$ pairs. How large is the standard error
+       of that printed value, and can the value fall below the floor?
+    1. Let $\Sigma$ be the covariance matrix of `mix`, with eigenvalues
+       $\kappa_1$ and $\kappa_2$. By exercise
+       :exref:`ex_flow-matching-gaussian-data`b, applied in the eigenbasis of
+       $\Sigma$, the Gaussian with the mean and the covariance of `mix` has
+       the floor $\sum_i \kappa_i / (\kappa_i t^2 + (1 - t)^2)$ at time $t$.
+       Compute $\Sigma$, add this curve to the plot, and explain why it
+       cannot lie below the floor of the mixture at any $t$. Near both ends
+       of the path the two floors differ by less than the Monte Carlo error
+       of a few thousand samples, so the estimated curve may cross the
+       Gaussian one there. Why do the two floors coincide at $t = 0$ and at
+       $t = 1$?
+    1. Extend the comparison of
+       :numref:`subsec_diffusion-flow-matching-dictionary` to the same grid
+       of $t$, and plot the error
+       $\mathbb{E}\|\mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t)\|^2$
+       of `velocity` next to the floor. Is the learning error largest where
+       the regression targets are noisiest?
+   :exlabel:`ex_flow-matching-loss-floor`
+1. **Velocity, noise, and clean-point targets.** On the linear path the
+   noise is the starting point, so the optimal noise prediction is
+   $\hat{\boldsymbol{\epsilon}}(\mathbf{x}, t) = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$
+   and the optimal clean-point prediction is
+   $\hat{\mathbf{x}}_1(\mathbf{x}, t) = \mathbb{E}[\mathbf{x}_1 \mid \mathbf{x}_t = \mathbf{x}]$.
+    1. Show that the marginal velocity equals both
+       $(\mathbf{x} - \hat{\boldsymbol{\epsilon}}) / t$ and
+       $(\hat{\mathbf{x}}_1 - \mathbf{x}) / (1 - t)$.
+    1. A network predicts the noise, or the clean point, with a
+       root-mean-square error $\delta$ per coordinate, and the velocity is
+       computed from its output by (a). What is the root-mean-square error of
+       the velocity as a function of $t$ in each case? Near which end of the
+       path is each of the two predictions a poor source of the velocity?
+       Compare the answer with problem
+       :exref:`ex_denoising-three-parameterizations`b of
+       :numref:`sec_diffusion-denoising`, where the same error propagates to
+       the score.
+    1. A noise network $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$ defines
+       the velocity
+       $\mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}, t) = (\mathbf{x} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}, t)) / t$.
+       Show that the loss :eqref:`eq_diffusion-cfm-loss` of
+       $\mathbf{v}_{\boldsymbol{\theta}}$ equals the noise-prediction loss
+       $\mathbb{E}\|\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) - \mathbf{x}_0\|^2$
+       weighted by $1 / t^2$. Which times does flow matching emphasize
+       relative to the unweighted noise-prediction loss?
+   :exlabel:`ex_flow-matching-prediction-targets`
+1. [code] **Higher-order integration.** The midpoint rule
+   (:numref:`sec_mdl-euler-runge-kutta`) advances the state by a step of
+   size $h$ as
+
+   $$\mathbf{x} \leftarrow \mathbf{x} + h\, \mathbf{v}\big(\mathbf{x} + \tfrac{h}{2}\, \mathbf{v}(\mathbf{x}, t),\ t + \tfrac{h}{2}\big),$$
+
+   with two field evaluations per step.
+    1. Implement it and compare it with `euler_sample` at equal budgets of
+       $2$, $4$, $10$, and $20$ field evaluations, that is, with half as many
+       midpoint steps as Euler steps. From $2000$ standard Gaussian starting
+       points, report the summary statistics and the mean distance of the
+       samples to those of $1000$ Euler steps from the same points. Do this
+       for `exact` and for `velocity`. From which budget on is the midpoint
+       rule the more accurate one?
+    1. Which part of the discrepancy between the samples of `velocity` and
+       the target is integration error, and which part is learning error?
+    1. Repeat the comparison of (a) for the image model `ema` with budgets of
+       $10$ and $50$ field evaluations from the same $48$ starting images,
+       and measure the mean squared distance per pixel to the images of
+       $200$ Euler steps. Show the grids.
+   :exlabel:`ex_flow-matching-higher-order`
+1. **Gaussian data.** ● Let the data follow $\mathcal{N}(\mathbf{m}, s^2 I)$
+   in $\mathbb{R}^d$, connected to the noise by the linear path
+   :eqref:`eq_diffusion-linear-path` with independent end points, and write
+   $\bar{\sigma}_t^2 = t^2 s^2 + (1 - t)^2$.
+    1. Show that $p_t = \mathcal{N}(t \mathbf{m}, \bar{\sigma}_t^2 I)$.
+       Compute the marginal velocity :eqref:`eq_diffusion-marginal-velocity`
+       by conditioning the jointly Gaussian pair
+       $(\mathbf{x}_1 - \mathbf{x}_0, \mathbf{x}_t)$, and show that
+       $\mathbf{u}_t(\mathbf{x}) = \mathbf{m} + (\dot{\bar{\sigma}}_t / \bar{\sigma}_t)(\mathbf{x} - t \mathbf{m})$.
+    1. Show that the conditional variance of $\mathbf{x}_1 - \mathbf{x}_0$
+       given $\mathbf{x}_t$, summed over coordinates, is
+       $d\, s^2 / \bar{\sigma}_t^2$. At which $t$ is it largest? What is the
+       correlation between $\mathbf{x}_t$ and $\mathbf{x}_1 - \mathbf{x}_0$
+       at that time?
+    1. Show that the trajectories of the flow are
+       $\mathbf{x}_t = t \mathbf{m} + \bar{\sigma}_t \mathbf{x}_0$, so that
+       they end at $\mathbf{m} + s \mathbf{x}_0$. Let
+       $\mathbf{m} \neq \mathbf{0}$. Show that for every $s > 0$ each
+       trajectory whose starting point is not a multiple of $\mathbf{m}$ is
+       curved.
+    1. Take $\mathbf{m} = \mathbf{0}$ and $s = 1$, so that the data and the
+       noise have the same distribution. What does the flow do to each
+       point between $t = 0$ and $t = 1$? Compute the kinetic energy
+       $\int_0^1 \mathbb{E}\|\mathbf{u}_t(\mathbf{x}_t)\|^2\, dt$ of the
+       flow and the time average of the conditional variance of (b), and
+       check that the two add up to
+       $\mathbb{E}\|\mathbf{x}_1 - \mathbf{x}_0\|^2$.
+       The substitution $w = 2t - 1$ simplifies both integrals.
+   :exlabel:`ex_flow-matching-gaussian-data`
+1. [code] **Reflow.** ● Reflow :cite:`Liu.Gong.Liu.2022` draws noise points
+   $\mathbf{x}_0$, maps each of them to the end point
+   $\Phi(\mathbf{x}_0)$ of the current model's trajectory that starts
+   there, and retrains on the pairs $(\mathbf{x}_0, \Phi(\mathbf{x}_0))$ in
+   place of independent pairs.
+    1. In one dimension two trajectories of an ODE cannot cross, so $\Phi$
+       is increasing. Show that the straight segments between the pairs
+       $(x_0, \Phi(x_0))$ do not cross either. Conclude that in one
+       dimension the exact marginal field of the new coupling has straight
+       trajectories with the same end points, so that a single round of
+       reflow straightens the flow completely.
+    1. Generate $2000$ pairs by integrating `velocity` with $100$ Euler steps
+       from fresh Gaussian draws. Train a new `VelocityNet` on these pairs
+       with the loss :eqref:`eq_diffusion-cfm-loss` and the settings used
+       for `velocity` ($4000$ Adam updates with learning rate $10^{-3}$ on
+       minibatches of $256$ pairs). Report the curvature of its flow and
+       the summary statistics with $1$, $2$, $4$, $10$, and $100$ Euler
+       steps.
+    1. Compare its final training loss with the floor of exercise
+       :exref:`ex_flow-matching-loss-floor`, and explain the difference.
+    1. Compare the mode weights and the stray fraction of the new model at
+       $100$ steps with those of `velocity` at $100$ steps and with those of
+       the target. Which errors does reflow remove, which does it inherit,
+       and which does it add? What would a second round do to each of them?
+   :exlabel:`ex_flow-matching-reflow`
+1. **Same ratio, same flow.** ● Let two Gaussian paths
+   :eqref:`eq_diffusion-gaussian-path` have coefficients related by
+   $\alpha^B_t = c_t\, \alpha^A_t$ and $\sigma^B_t = c_t\, \sigma^A_t$ for a
+   smooth positive function $c_t$, so that they have the same ratio
+   $\alpha_t / \sigma_t$ at every time.
+    1. Show that their marginals satisfy
+       $p^B_t(\mathbf{y}) = c_t^{-d}\, p^A_t(\mathbf{y} / c_t)$, and use
+       :eqref:`eq_diffusion-score-velocity` to show that
+       $\mathbf{u}^B_t(\mathbf{y}) = (\dot{c}_t / c_t)\, \mathbf{y} + c_t\, \mathbf{u}^A_t(\mathbf{y} / c_t)$.
+       Conclude that the ODE trajectories are related by
+       $\mathbf{y}_t = c_t\, \mathbf{x}_t$.
+    1. Let $\tau$ be an increasing function of time. Show that the path
+       $q_t = p_{\tau(t)}$ is generated by the field
+       $\dot{\tau}(t)\, \mathbf{u}_{\tau(t)}$ and that its trajectories are
+       the same curves as those of $\mathbf{u}$.
+    1. Find the change of time $\tau(t)$ for which the cosine path
+       $(\sin \tfrac{\pi \tau}{2}, \cos \tfrac{\pi \tau}{2})$ at time
+       $\tau(t)$ has the same ratio $\alpha / \sigma$ as the linear path at
+       time $t$, and compute $c_t$. Conclude that the trajectories of the
+       exact cosine-path flow are the curves $c_t\, \mathbf{x}_t$, where
+       $\mathbf{x}_t$ runs along a trajectory of the linear-path flow. Where
+       along the route is the rescaling largest?
+    1. For data $\mathcal{N}(\mathbf{0}, I)$, exercise
+       :exref:`ex_flow-matching-gaussian-data`d describes the linear-path
+       flow. What does the cosine-path flow do to these data? Why is this
+       the answer for a variance-preserving path?
+   :exlabel:`ex_flow-matching-same-ratio-same-flow`
+1. [code] **DDIM on the flow clock.** ● On a Gaussian path
+   :eqref:`eq_diffusion-gaussian-path`, substituting the optimal noise
+   prediction
+   $\hat{\boldsymbol{\epsilon}}(\mathbf{x}, t) = -\sigma_t \nabla_{\mathbf{x}} \log p_t(\mathbf{x})$
+   into :eqref:`eq_diffusion-score-velocity` gives the velocity
+
+   $$\mathbf{u}_t(\mathbf{x}) = \frac{\dot{\alpha}_t}{\alpha_t}\, \mathbf{x} + \Big(\dot{\sigma}_t - \sigma_t\, \frac{\dot{\alpha}_t}{\alpha_t}\Big)\, \hat{\boldsymbol{\epsilon}}(\mathbf{x}, t).$$
+
+   Write $\bar{\mathbf{x}} = \mathbf{x} / \alpha_t$ for the rescaled state
+   and $\nu_t = \sigma_t / \alpha_t$ for the noise-to-signal ratio. On the
+   diffusion path of :numref:`sec_diffusion-ddpm`, where $\alpha_t$ and
+   $\sigma_t$ are $\sqrt{\bar{\alpha}}$ and $\sqrt{1 - \bar{\alpha}}$ at the
+   corresponding diffusion step, these are the variables
+   $\mathbf{y}$ and $s$ of exercise :exref:`ex_ddim-euler-step` of
+   :numref:`sec_diffusion-ddim`, which shows that the deterministic DDIM
+   update is an Euler step of
+   $d\mathbf{y} / ds = \hat{\boldsymbol{\epsilon}}$ for every stride. The
+   same algebra, with the coefficients of any Gaussian path in place of
+   $\sqrt{\bar{\alpha}}$ and $\sqrt{1 - \bar{\alpha}}$, shows that the
+   deterministic DDIM update
+   $\mathbf{x}_{t'} = \alpha_{t'} \hat{\mathbf{x}}_1 + \sigma_{t'} \hat{\boldsymbol{\epsilon}}$
+   with $\hat{\mathbf{x}}_1 = (\mathbf{x}_t - \sigma_t \hat{\boldsymbol{\epsilon}}) / \alpha_t$,
+   from time $t$ to a time $t'$ closer to the data, is an Euler step of
+   $d\bar{\mathbf{x}} / d\nu = \hat{\boldsymbol{\epsilon}}$.
+    1. Show that along a trajectory of :eqref:`eq_diffusion-flow-ode` on any
+       Gaussian path, $d\bar{\mathbf{x}} / d\nu = \hat{\boldsymbol{\epsilon}}$.
+       Use the relation between the marginals in exercise
+       :exref:`ex_flow-matching-same-ratio-same-flow`a to show that
+       $\hat{\boldsymbol{\epsilon}}$, written as a function of
+       $\bar{\mathbf{x}}$ and $\nu$, is the same for every Gaussian path.
+       Conclude that, with the exact noise prediction, DDIM produces the
+       same samples on every Gaussian path that visits the same values of
+       $\nu$.
+    1. Show that one Euler step of :eqref:`eq_diffusion-flow-ode` on the
+       linear path, from $t$ to $t'$, is the deterministic DDIM update
+       (:eqref:`eq_diffusion-ddim-step` with $\eta = 0$) between the same
+       times, so that `euler_sample` with the exact field is DDIM on the
+       linear path.
+    1. Use (a), (b), and the change of time $\tau(t)$ of exercise
+       :exref:`ex_flow-matching-same-ratio-same-flow`c to implement DDIM on
+       the cosine path with $K$ steps equally spaced in its own time as
+       Euler steps of `exact` between the corresponding linear-path times.
+       For $K = 4$, $10$, and $20$, compare it with `euler_sample` applied
+       with $K$ steps to `exact` and to `vp_velocity`, all three from the
+       same $2000$ standard Gaussian starting points, by the summary
+       statistics and by the mean distance to the samples of $2000$ Euler
+       steps of `exact`. Which of the three samplers is the most accurate
+       here? How does the ranking relate to the curvatures of the exact
+       flows printed in :numref:`subsec_diffusion-flow-matching-sampling`?
+   :exlabel:`ex_flow-matching-noise-prediction-velocity`
+1. [code] **Stochastic sampling from a velocity.** ● A velocity model also
+   defines stochastic samplers :cite:`Albergo.Boffi.VandenEijnden.2023`.
+   For a function $g_t \geq 0$, consider the stochastic differential
+   equation
+
+   $$d\mathbf{x} = \Big[\mathbf{u}_t(\mathbf{x}) + \frac{g_t^2}{2}\, \nabla_{\mathbf{x}} \log p_t(\mathbf{x})\Big]\, dt + g_t\, d\mathbf{W}, \qquad \mathbf{x}_0 \sim \mathcal{N}(\mathbf{0}, I).$$
+
+    1. Use the Fokker--Planck equation (:numref:`sec_mdl-fokker-planck`) to
+       show that $\mathbf{x}_t$ has the distribution $p_t$ at every $t$, for
+       every choice of $g_t$.
+    1. Solve :eqref:`eq_diffusion-linear-dictionary` for the score. Why is a
+       score computed in this way from a learned velocity unreliable as
+       $t \to 1$? Show that the choice $g_t^2 = \gamma (1 - t)$, with a
+       constant $\gamma \geq 0$, gives a drift without any division.
+    1. Implement the Euler--Maruyama discretization
+       (:numref:`sec_mdl-euler-maruyama`) of the equation with
+       $g_t^2 = \gamma (1 - t)$ for $\gamma \in \{0, 0.5, 1, 2, 4\}$, and
+       report the summary statistics with $100$ and with $10$ steps, for
+       `velocity` and for `exact`. Which statistics does the noise improve
+       for the learned field, and which does it worsen? Why does the exact
+       field gain less?
+1. **The implied weighting.** ● :citet:`Kingma.Gao.2023` compare diffusion
+   objectives by writing each of them, for a network
+   $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$ that predicts the noise of
+   a Gaussian path, as an integral over the log signal-to-noise ratio
+   $\lambda = \log(\alpha_t^2 / \sigma_t^2)$,
+
+   $$\mathcal{L}_w = \frac{1}{2} \int w(\lambda)\, \mathbb{E}\big\|\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_\lambda, \lambda) - \boldsymbol{\epsilon}\big\|^2\, d\lambda,$$
+
+   where $\mathbf{x}_\lambda$ is the point of the path at the time whose
+   log signal-to-noise ratio is $\lambda$. The weighting $w$ determines
+   the objective; the time schedule matters only through the range of
+   $\lambda$ that it covers.
+    1. Change the integration variable of the loss of exercise
+       :exref:`ex_flow-matching-prediction-targets`c from $t$ to $\lambda$,
+       and show that flow matching on the linear path has
+       $w(\lambda) = e^{-\lambda / 2}$.
+    1. Show that the unweighted noise-prediction loss with $t$ uniform on
+       the cosine path $(\sin \tfrac{\pi t}{2}, \cos \tfrac{\pi t}{2})$ has
+       $w(\lambda) \propto 1 / \cosh(\lambda / 2)$.
+    1. On a general Gaussian path, the conversion displayed in exercise
+       :exref:`ex_flow-matching-noise-prediction-velocity`, applied to
+       $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$, gives a velocity that
+       differs from the conditional velocity
+       $\dot{\alpha}_t \mathbf{x}_1 + \dot{\sigma}_t \boldsymbol{\epsilon}$
+       by $\alpha_t\, \tfrac{d}{dt}(\sigma_t / \alpha_t)\, (\boldsymbol{\epsilon}_{\boldsymbol{\theta}} - \boldsymbol{\epsilon})$.
+       Verify this, and compute $w$ for flow matching on the cosine path.
+    1. Which of the three weightings are monotonic in $\lambda$? Which noise
+       levels does the noise-prediction loss of (b) downweight relative to
+       flow matching?
+1. [code] **The likelihood of the learned flow.** ● The learned field
+   defines a continuous normalizing flow. By
+   :eqref:`eq_mdl-ode-cnf-likelihood` with $T = 1$, the log-density of a
+   point $\mathbf{x}_1$ is $\log p_0$ at the start of the trajectory through
+   $\mathbf{x}_1$, which is found by integrating
+   :eqref:`eq_diffusion-flow-ode` backward from $t = 1$ to $t = 0$, minus
+   the integral of the divergence of the field along that trajectory.
+    1. Implement the computation with $100$ backward steps of the midpoint
+       rule of exercise :exref:`ex_flow-matching-higher-order`, and compute
+       the divergence exactly by automatic differentiation, which takes two
+       derivative passes in two dimensions. Check the implementation with
+       `exact` on the first $500$ points of `test` against `mix.log_prob`.
+       Then compute the per-point log-likelihood of `velocity` on `test`,
+       and report its mean together with the mean and the standard error of
+       the per-point difference from `mix.log_prob`.
+    1. In $d$ dimensions the exact divergence takes $d$ derivative passes.
+       Replace it by the estimate
+       $\mathbf{r}^\top (\partial \mathbf{v}_{\boldsymbol{\theta}} / \partial \mathbf{x})\, \mathbf{r}$
+       of :eqref:`eq_mdl-ode-hutchinson`, with one Rademacher vector
+       $\mathbf{r}$ per step :cite:`Grathwohl.Chen.Bettencourt.ea.2018`,
+       which takes one pass. Use exercise
+       :exref:`ex_score-matching-projection-identity` of
+       :numref:`sec_diffusion-score-matching` to show that the resulting
+       estimate of $\log p_1(\mathbf{x}_1)$ is unbiased, and measure its
+       standard deviation per point. On which entries of the Jacobian
+       $\partial \mathbf{v}_{\boldsymbol{\theta}} / \partial \mathbf{x}$
+       does the variance of a single estimate depend in two dimensions?
+    1. Evaluate the reflowed model of exercise
+       :exref:`ex_flow-matching-reflow` in the same way. Does its straighter
+       flow assign a higher likelihood to the test points?
+1. [extended] **Minibatch optimal transport.** ●● Reflow changes the
+   coupling after training; minibatch optimal transport
+   :cite:`Tong.Fatras.Malkin.ea.2023,Pooladian.BenHamu.DomingoEnrich.ea.2023`
+   changes it during training. Within each group of $B$ noise points and
+   $B$ data points of a minibatch, it pairs the points by the permutation
+   that minimizes the sum of the squared distances
+   $\|\mathbf{x}_1 - \mathbf{x}_0\|^2$, an assignment problem that
+   `scipy.optimize.linear_sum_assignment` solves. The group size $B = 1$
+   gives the independent coupling.
+    1. Show that a paired noise point is still a standard Gaussian draw and
+       a paired data point is still a draw from $p_{\textrm{data}}$, so that
+       the marginal field of this coupling still carries
+       $\mathcal{N}(\mathbf{0}, I)$ to $p_{\textrm{data}}$.
+    1. Suppose that the pairs satisfy $\mathbf{x}_1 = T(\mathbf{x}_0)$ with
+       $T = \nabla \varphi$ for a strictly convex function $\varphi$, the
+       form that the optimal transport map for the squared distance takes
+       by a theorem of :citet:`Brenier.1991`
+       (:numref:`sec_mdl-ot-connection`). Show that two segments of
+       :eqref:`eq_diffusion-linear-path` with different starting points
+       never pass through the same point at the same time $t \in [0, 1)$.
+       Conclude that the floor of :eqref:`eq_diffusion-cfm-loss` is then
+       zero and that the trajectories of the marginal flow are the segments.
+    1. Train `VelocityNet` on minibatches of $256$ pairs, coupled within
+       groups of $B \in \{1, 4, 16, 64, 256\}$ points. For each $B$, report
+       the average training loss over the last $500$ updates, the curvature
+       and the kinetic energy
+       $\int_0^1 \mathbb{E}\|\mathbf{v}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)\|^2\, dt$
+       of the learned flow, and the summary statistics with $1$, $2$, $4$,
+       and $100$ Euler steps. :citet:`Tong.Fatras.Malkin.ea.2023`
+       (Appendix D, Figure D.2) find that the path energy on their four
+       pairs of two-dimensional datasets stops decreasing at a batch size of
+       about $64$. Does the running example behave in the same way?
+    1. The floor at $B = 256$ is not zero. Which assumption of (b) does a
+       minibatch coupling violate?
+    1. Compare the coupling at $B = 256$ with reflow (exercise
+       :exref:`ex_flow-matching-reflow`) in the straightness of the flow, in
+       the errors of the samples, and in cost. Which errors of a trained
+       model does each method inherit?
 
 <!-- slides -->
 

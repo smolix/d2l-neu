@@ -365,8 +365,8 @@ in $[1, n]$ and its logarithm in $[0, \log n]$; adding $c$ gives both
 inequalities. $\blacksquare$
 
 These bounds show that lse is a *soft maximum* whose difference from the
-maximum is at most $\log n$. Its gradient is the softmax, which also establishes
-convexity (:numref:`sec_mdl-convexity`; the exercises derive this result).
+maximum is at most $\log n$. Its gradient is the softmax, and
+:numref:`sec_mdl-convexity` proves that it is convex.
 The same identity gives a stable expression for **log-softmax**:
 
 $$
@@ -667,7 +667,7 @@ formula's noise changed sign between builds. **Kahan (compensated)
 summation** carries each addition's rounding error explicitly in a second
 accumulator and drives the growth to $O(u)$, independent of $n$
 :cite:`Kahan.1965,Higham.2002`. Welford composes with either: the pairwise
-merge rule you will derive in Exercise 4 is precisely Welford in pairwise
+merge rule you will derive in Exercise :exref:`ex_mdl-numerical-stability-conditioning-pairwise-merge` is precisely Welford in pairwise
 form, and it is how running moments are combined across devices.
 
 ## Conditioning
@@ -784,7 +784,8 @@ The results follow the digit-count estimate. At $n=4$,
 $\log_{10}\kappa\approx4.2$ and about 13 of float64's 16 digits remain. At
 $n=8$, about seven remain; at $n=12$, barely one remains. The final decimals
 vary with the LAPACK implementation, but the trend is stable. Meanwhile, the
-backward error stays near $10^{-16}$ in every row. Each computed vector thus
+printed backward error stays at or below about $10^{-16}$ in every row. Each
+computed vector thus
 solves a system whose matrix differs from the stated one by roughly one part in
 $10^{16}$, yet the Hilbert matrix amplifies that perturbation into a large
 solution error, as bounded by :eqref:`eq_mdl-opt-backward-forward`.
@@ -843,7 +844,7 @@ The experiment gives
 $\kappa(\mathbf{A}^\top\mathbf{A})=10^{10}$, the square of
 $\kappa(\mathbf{A})=10^5$. The normal equations recover about seven correct
 digits, compared with roughly 13 for the SVD-based solve. The difference of
-five to six digits agrees with the predicted $\log_{10}\kappa=5$. Numerical
+about six digits is close to the predicted $\log_{10}\kappa=5$. Numerical
 libraries therefore implement least-squares solves with QR or SVD, as in
 `lstsq`. For the same reason, :numref:`subsec_mdl-pseudoinverse` constructs
 the pseudoinverse from the SVD rather than from
@@ -854,9 +855,10 @@ $(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$.
 When $\kappa(\mathbf{A})$ itself is the problem (nearly collinear
 features, a rank-deficient design), no choice of route saves the original
 problem. A **preconditioner** transforms a problem to reduce its condition
-number without changing its solution; the per-coordinate rescalings of
-:numref:`sec_mdl-adaptive-stochastic-methods` apply the same idea inside an
-optimizer. Ridge regularization conditions the problem the way a
+number without changing its solution, up to an invertible change of variables
+that maps the new solution back to the original one; the per-coordinate
+rescalings of :numref:`sec_mdl-adaptive-stochastic-methods` apply the same
+idea inside an optimizer. Ridge regularization conditions the problem the way a
 preconditioner does, with one difference we return to below: it changes the
 problem, and it changes it in exactly the right direction. Minimizing
 $\|\mathbf{A}\mathbf{w} - \mathbf{b}\|^2 + \lambda \|\mathbf{w}\|^2$ yields
@@ -985,49 +987,298 @@ algebra and the convergence rate of gradient descent.
 
 ## Exercises
 
-1. Compute $\varepsilon_{\text{mach}}$ for float32 by a halving loop: start
-   from $e = 1$ and halve until $1 + e == 1$ in float32. Why does the loop
-   exit at $e = 2^{-24}$ rather than at $2^{-23}$, and how does that relate
-   to the unit roundoff $u$ in :eqref:`eq_mdl-opt-rounding-model`? Repeat the
-   loop with bfloat16 arithmetic (emulated or native) and confirm $2^{-7}$.
-2. Find all integer logits $x$ for which $e^x$ overflows in fp16 but not in
-   fp32. A network's final layer emits activations of size $\approx 30$:
-   explain, with the numbers from this section, why training it in fp16
-   without loss scaling fails even though the softmax probabilities are
-   perfectly representable.
-3. Prove that $\nabla\, \mathrm{lse}(\mathbf{z}) = \mathrm{softmax}(\mathbf{z})$
-   and use :numref:`sec_mdl-convexity` to conclude that lse is convex.
-   Then show that the cross-entropy :eqref:`eq_mdl-opt-ce-from-logits` has
-   gradient $\mathrm{softmax}(\mathbf{z}) - \mathbf{e}_y$, another reason to
-   compute the loss from logits.
-4. Construct a small dataset (three numbers suffice) for which the naive
-   variance formula returns a strictly *negative* number in float64, and
-   verify that Welford's recursion :eqref:`eq_mdl-opt-welford` gets it right.
-   Then derive the *pairwise merge* rule: given $(m, M, k)$ for two disjoint
-   batches, express the combined statistics exactly; this is how the
-   computation parallelizes across devices.
-5. Show that if $a$ and $b$ carry relative errors of size $u$, the relative
-   error of the computed $a - b$ can be as large as
-   $(|a| + |b|)\,u / |a - b|$, and that the subtraction itself adds no
-   rounding error when $a/2 \le b \le 2a$ (Sterbenz's lemma
-   :cite:`Sterbenz.1974`; prove it for floats with the same exponent).
-6. Rewrite each of the following to avoid cancellation, and check one of them
-   numerically in float32: $\sqrt{x + 1} - \sqrt{x}$ for large $x$;
-   $1 - \cos x$ for small $x$; the smaller root of $ax^2 + bx + c = 0$ when
-   $b^2 \gg 4ac$.
-7. For the Hilbert experiment, compute the backward error of each solve with
-   respect to the right-hand side, $\|\mathbf{H}\hat{\mathbf{x}} - \mathbf{b}\|/\|\mathbf{b}\|$,
-   and verify that the forward error is bounded by
-   :eqref:`eq_mdl-condition-bound` applied to that perturbation. Where
-   in the table is the bound tightest?
-8. Let $\mathbf{A}$ have $\sigma_1 = 1$ and $\sigma_n = 10^{-3}$. Using
-   :eqref:`eq_mdl-opt-ridge-kappa` and the GD contraction factor
-   $(\kappa - 1)/(\kappa + 1)$ from
-   :numref:`sec_mdl-gradient-based-optimization`, compute the condition
-   number and the predicted iteration count (to relative error $10^{-6}$)
-   for $\lambda \in \{0, 10^{-4}, 10^{-2}\}$. Then explain, via
-   :numref:`sec_mdl-constrained-optimization-duality`, which constrained
-   problem each $\lambda$ implicitly solves.
+1. [code] **Machine epsilon by halving.** Start from $e = 1$ and halve $e$
+   in float32 arithmetic for as long as $1 + e \ne 1$.
+    1. Show that the loop exits at $e = 2^{-24}$ rather than at
+       $\varepsilon_{\text{mach}} = 2^{-23}$, and relate the exit value to
+       the unit roundoff $u$ of :eqref:`eq_mdl-opt-rounding-model`. Which
+       rounding rule decides the last comparison?
+    1. Predict the exit value of the same loop with $1024$ in place of $1$,
+       then run it and compare with `np.spacing(np.float32(1024))`.
+    1. Run the loop from $1$ in bfloat16 arithmetic by rounding every sum
+       with `to_bf16` from the `#numerical-stability-conditioning-finfo`
+       cell. At which power of two does it exit?
+
+1. **Loss-scale window.** Loss scaling multiplies the loss by a factor $S$,
+   which multiplies every gradient by $S$, and divides the gradients by $S$
+   after they have been converted to fp32. In fp16 the smallest normal
+   number is $2^{-14} \approx 6.1 \times 10^{-5}$, the smallest subnormal
+   number is $2^{-24} \approx 6.0 \times 10^{-8}$, and the largest finite
+   number is $65504$. Suppose that the exact nonzero gradient entries of a
+   network have magnitudes between $10^{-9}$ and $10^{-1}$, and that the
+   backward pass computes the scaled gradients in fp16.
+    1. Find all powers of two $S$ for which every scaled gradient is a
+       normal fp16 number.
+    1. The gradients of a deeper network have magnitudes between
+       $10^{-12}$ and $10^{-1}$. Show that no scale keeps all of them
+       normal. Take the largest power of two $S$ that avoids overflow. How
+       many significant bits does a scaled gradient of magnitude $10^{-12}$
+       keep, and what is its relative rounding error?
+    1. Dynamic loss scaling (:numref:`subsec_loss_scaling`) picks the
+       largest scale that avoids overflow and thereby sacrifices the
+       smallest gradients. Why is that the better end to sacrifice?
+    1. How do the answers to the first two sub-items change when the
+       gradients are computed in bfloat16?
+
+1. **Backward pass of the loss.** Automatic differentiation differentiates
+   the computation that is actually performed, so a stable forward formula
+   needs a stable backward pass as well.
+    1. Regard the shift $c$ in :eqref:`eq_mdl-opt-stable-lse` as a free
+       variable and compute the partial derivative of
+       $c + \log \sum_j e^{z_j - c}$ with respect to $c$. Conclude that the
+       gradient of the stable log-sum-exp with respect to $\mathbf{z}$ is
+       the same whether automatic differentiation propagates through
+       $c = \max_j z_j$ or treats $c$ as a constant, even at ties, where
+       $\max$ is not differentiable.
+    1. Exercise :exref:`ex_mdl-matrix-calculus-autodiff-composed-fused` of
+       :numref:`sec_mdl-matrix-calculus-autodiff` finds, in float32
+       arithmetic with subnormal numbers, the logit gaps $t$ at which
+       $-\log \mathrm{softmax}(\mathbf{z})_y$, computed from the
+       probabilities, stops returning a finite loss and a finite gradient.
+       Some hardware flushes subnormal results to zero. How do the two
+       thresholds change then?
+
+1. [code] **Rewrites against cancellation.** Each expression below loses
+   accuracy to catastrophic cancellation in the stated regime. Rewrite it in
+   an equivalent form that removes the cancellation or reduces its
+   amplification, and use :eqref:`eq_mdl-opt-cancellation-factor` to
+   predict the relative error of both forms. Check each prediction in
+   float32 against a float64 evaluation.
+    1. The root of smaller magnitude of $ax^2 + bx + c = 0$ for $b > 0$ and
+       $b^2 \gg 4|ac|$, for example $a = c = 1$ and $b = 10^4$.
+    1. The cosine distance
+       $1 - \mathbf{u}^\top \mathbf{v} / (\|\mathbf{u}\|\,\|\mathbf{v}\|)$
+       between two embedding vectors in $\mathbb{R}^{512}$ at an angle
+       $\theta \in \{10^{-2}, 10^{-3}, 10^{-4}\}$. Express the distance
+       through the difference of the normalized vectors. Which subtraction
+       remains in this form? How does its relative error scale with
+       $\theta$, compared with that of the direct form?
+    1. The function $\log(1 - e^{-x})$ for $x > 0$, which computes
+       $\log(1 - p)$ from $\log p = -x$, at
+       $x \in \{10^{-6}, 10^{-3}, 1, 20\}$. Find one formulation that is
+       accurate for small $x$ and one that is accurate for large $x$, and
+       choose a switching point.
+
+    *Adapted from Martin Mächler, [Accurately Computing log(1 − exp(−|a|))](https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf), Section 2.*
+
+1. [code] **A negative variance.** The direct formula
+   $\mathbb{E}[x^2] - \mathbb{E}[x]^2$ of
+   :numref:`subsec_mdl-catastrophic-cancellation` cancels badly when the
+   mean is large compared with the standard deviation.
+    1. Construct three float64 numbers for which the direct formula returns
+       a strictly negative variance. Explain the magnitude of the result
+       from the spacing of float64 numbers near $x_i^2$.
+    1. Run Welford's recursion :eqref:`eq_mdl-opt-welford` on the same
+       three numbers and compare with the exact variance.
+    1. A backward-stable variance algorithm
+       (:numref:`subsec_mdl-conditioning-revisited`) returns the exact
+       variance of slightly perturbed data. Explain why a single negative
+       output proves that the direct formula is not backward stable.
+   :exlabel:`ex_mdl-numerical-stability-conditioning-construct-small-dataset-three`
+
+1. [code] **Normal equations in floating point.** The normal equations
+   square the condition number :eqref:`eq_mdl-opt-kappa-squared`.
+    1. For $\epsilon > 0$, the $(m + 1) \times m$ matrix $\mathbf{A}$ of
+       :citet:`Lauchli.1961` has a first row of ones and $\epsilon\mathbf{I}$
+       below it. Compute $\mathbf{A}^\top\mathbf{A}$, the singular values
+       of $\mathbf{A}$, and $\kappa(\mathbf{A})$. Show that for
+       $\epsilon = 10^{-8}$ the matrix $\mathbf{A}^\top\mathbf{A}$ rounds to
+       a singular matrix in float64. How many correct digits does the rule
+       of thumb of :numref:`subsec_mdl-conditioning-revisited` predict for
+       a QR-based least-squares solve with this $\mathbf{A}$?
+    1. Modify the `#numerical-stability-conditioning-normal-equations` cell
+       to sweep $\kappa(\mathbf{A}) = 10^k$ for $k = 2, \ldots, 10$. Plot
+       the correct digits of the normal equations and of `lstsq` against
+       $k$. At which $k$ does the rule of thumb predict that the normal
+       equations keep no correct digit, and what do you observe there?
+
+1. **Ridge as a conditioning dial.** Let $\mathbf{A}$ have singular values
+   $\sigma_1 = 1$ and $\sigma_n = 10^{-3}$, and let
+   $\mathbf{w}_0 = \mathbf{A}^+\mathbf{b}$ be the least-squares minimizer.
+    1. For $\lambda \in \{0, 10^{-4}, 10^{-2}\}$, compute
+       $\kappa(\mathbf{A}^\top\mathbf{A} + \lambda\mathbf{I})$ from
+       :eqref:`eq_mdl-opt-ridge-kappa`, the number of correct float64
+       digits that a direct solve of :eqref:`eq_mdl-opt-ridge-solution` can
+       keep, and the number of fixed-step gradient-descent iterations that
+       the contraction factor $(\kappa - 1)/(\kappa + 1)$ predicts for a
+       relative error of $10^{-6}$.
+    1. Expand $\mathbf{w}_\lambda$ in the right singular vectors
+       $\mathbf{v}_i$ of $\mathbf{A}$, and show that ridge multiplies the
+       component of $\mathbf{w}_0$ along $\mathbf{v}_i$ by
+       $\sigma_i^2/(\sigma_i^2 + \lambda)$. Which fraction of the component
+       along $\mathbf{v}_n$ survives for each $\lambda$ of the first
+       sub-item?
+    1. Show that $\|\mathbf{w}_\lambda\|$ is strictly decreasing in
+       $\lambda$ unless $\mathbf{A}^\top\mathbf{b} = \mathbf{0}$. Conclude
+       that every norm budget $r$ with $0 < r < \|\mathbf{w}_0\|$ in
+       :numref:`subsec_mdl-weight-decay-duality` corresponds to exactly one
+       $\lambda > 0$.
+
+1. [code] **Feature scaling as preconditioning.** Features measured in
+   different units give the columns of a design matrix very different
+   norms. Let $\mathbf{X}$ be a $200 \times 5$ matrix with standard normal
+   entries, let $\mathbf{A} = \mathbf{X}\,\mathrm{diag}(1, 3, 10, 30, 100)$,
+   and let $\mathbf{b} = \mathbf{A}\mathbf{w}^\star$ for a random
+   $\mathbf{w}^\star$.
+    1. Generalize `gd_iterations` of the
+       `#numerical-stability-conditioning-ridge` cell so that it takes
+       $\mathbf{A}$ and $\mathbf{b}$ as arguments and computes $\mu$ and $L$
+       from the eigenvalues of $\mathbf{A}^\top\mathbf{A}$. Compute
+       $\kappa(\mathbf{A}^\top\mathbf{A})$ and the number of iterations at
+       $\lambda = 0$.
+    1. Divide every column of $\mathbf{A}$ by its norm and repeat the
+       measurement. How does the minimizer of the rescaled problem map back
+       to $\mathbf{w}^\star$?
+    1. Exercise
+       :exref:`ex_mdl-gradient-based-optimization-newton-show-that-any`b of
+       :numref:`sec_mdl-gradient-based-optimization` writes gradient descent
+       in new coordinates $\mathbf{u}$ with $\mathbf{w} = T\mathbf{u}$ as
+       gradient descent on the original problem preconditioned by a positive
+       definite matrix $B$. Which $T$ and which $B$ correspond to column
+       scaling? How is $B$ related to the diagonal of
+       $\mathbf{A}^\top\mathbf{A}$?
+
+1. [code] **Stochastic rounding.** ● Stochastic rounding
+   :cite:`Gupta.Agrawal.Gopalakrishnan.ea.2015` rounds a real number $x$
+   between adjacent representable values $x_- < x_+$ to $x_+$ with
+   probability $p = (x - x_-)/(x_+ - x_-)$ and to $x_-$ otherwise.
+    1. Show that the rounded value has expectation $x$ and variance
+       $p(1 - p)\Delta^2 \le \Delta^2/4$, where $\Delta = x_+ - x_-$.
+    1. A bfloat16 weight starts at $w = 1$ and receives $K = 1000$ updates
+       of $-10^{-4}$, each followed by stochastic rounding. The weight stays
+       in $[0.5, 1]$, where the bfloat16 spacing is $\Delta = 2^{-8}$. Show
+       that the rounding errors of different steps are uncorrelated, and
+       predict the mean and the standard deviation of the final weight.
+       Which final weight does round-to-nearest produce?
+    1. For a positive float32 number, adding a uniformly random integer
+       from $\{0, \ldots, 2^{16} - 1\}$ to its bit pattern and then clearing
+       the lower 16 bits rounds it stochastically to bfloat16. Explain why.
+       Implement this rounding next to `to_bf16` and check the predictions
+       of the previous sub-item with 1000 independent runs. Compare with an
+       fp32 master copy that receives the same updates.
+
+1. **Exact subtraction.** ● Subtraction can be exact and still return an
+   inaccurate difference.
+    1. Let $\hat a = a(1 + \delta_a)$ and $\hat b = b(1 + \delta_b)$ with
+       $|\delta_a|, |\delta_b| \le u$ and $a \ne b$. Derive
+       :eqref:`eq_mdl-opt-cancellation-factor` as a bound on the relative
+       error of $\hat a - \hat b$ as an approximation of $a - b$, and show
+       that the bound is attained for suitable $\delta_a$ and $\delta_b$.
+    1. Prove Sterbenz's lemma :cite:`Sterbenz.1974`: if $a$ and $b$ are
+       floating-point numbers in the format
+       :eqref:`eq_mdl-opt-float-format` with $b/2 \le a \le 2b$, then
+       $a - b$ is a floating-point number, so the computed difference is
+       exact. Assume that the format includes subnormal numbers.
+    1. In the `#numerical-stability-conditioning-log1p` cell, the float32
+       difference $a - b$ misses the true value $3.0 \times 10^{-7}$ by
+       about 20 percent. Use Sterbenz's lemma to locate the source of this
+       error, and check that the bound of the first sub-item covers it.
+
+1. [code] **Merging running moments.** ● Data-parallel training computes
+   statistics on shards and combines them. Let shard $A$ hold $k_A$ values
+   with mean $m_A$ and centered sum of squares $M_A$, and let shard $B$
+   hold $k_B$ values with $m_B$ and $M_B$.
+    1. Derive exact formulas for the mean $m$ and the centered sum of
+       squares $M$ of the union of the two shards in terms of $k_A$, $m_A$,
+       $M_A$, $k_B$, $m_B$, and $M_B$.
+    1. Show that the case $k_B = 1$ is Welford's recursion
+       :eqref:`eq_mdl-opt-welford`.
+    1. Split the $10^5$ samples of the
+       `#numerical-stability-conditioning-welford` cell into $2^j$ shards
+       of nearly equal size (`np.array_split`) for $j \in \{1, 4, 8\}$.
+       Compute each shard's statistics with
+       Welford's recursion, merge them pairwise in a binary tree, and
+       compare the variance with the two-pass reference. Merge the shards a
+       second time by adding their sums $\sum_i x_i$ and $\sum_i x_i^2$ and
+       applying the direct formula. Explain the difference.
+   :exlabel:`ex_mdl-numerical-stability-conditioning-pairwise-merge`
+
+1. [code] **Summation error growth.** ● Let $s = \sum_{i=1}^n x_i$ and let
+   $\hat s$ be its computed value. In-order summation has the worst-case
+   bound $|\hat s - s| \le (n - 1)\,u \sum_i |x_i| + O(u^2)$.
+    1. For $n = 2^k$, recursive pairwise summation splits the terms into
+       two halves, sums each half recursively, and adds the two results.
+       Prove that it satisfies
+       $|\hat s - s| \le u \log_2(n) \sum_i |x_i| + O(u^2)$.
+    1. For $n \in \{2^4, 2^8, 2^{12}, 2^{16}, 2^{20}\}$ uniform random
+       numbers in $[0, 1)$ stored as float32, measure the relative errors of
+       in-order summation (`np.cumsum(x)[-1]`), of `np.sum` (a blocked
+       pairwise summation), and of Kahan's compensated summation
+       :cite:`Kahan.1965` against a float64 reference. Kahan's method keeps
+       a correction $c$: after each addition $t = s + y$ it sets
+       $c = (t - s) - y$ and subtracts $c$ from the next term. Plot the
+       three errors against $n$ together with the two bounds.
+    1. How does the measured error of in-order summation grow with $n$
+       compared with its worst-case bound, and why?
+    1. What limits the error of the two accurate methods at large $n$?
+
+    *Adapted from Steven G. Johnson, [MIT 18.335 Introduction to Numerical Methods, Problem Set 1](https://ocw.mit.edu/courses/18-335j-introduction-to-numerical-methods-spring-2019/6e6730885b20bd046cbde805d15a4835_MIT18_335JS19_pset1.pdf), Problem 4.*
+
+1. [code] **Residual as a certificate.** ● The computed solution
+   $\hat{\mathbf{x}}$ of $\mathbf{H}\mathbf{x} = \mathbf{H}\mathbf{1}$ in
+   the `#numerical-stability-conditioning-hilbert` cell solves exactly the
+   system whose right-hand side is $\mathbf{H}\mathbf{1}$ perturbed by
+   $\delta\mathbf{b} = \mathbf{H}(\hat{\mathbf{x}} - \mathbf{1})$. The
+   bound :eqref:`eq_mdl-condition-bound` then gives
+   $$
+   \frac{\|\hat{\mathbf{x}} - \mathbf{1}\|}{\|\mathbf{1}\|}
+   \le \kappa(\mathbf{H})\,\frac{\|\delta\mathbf{b}\|}{\|\mathbf{H}\mathbf{1}\|}.
+   $$
+    1. Evaluate $\delta\mathbf{b}$ in float64 as `H @ x_hat - b` for each
+       $n$ of the cell, and compare the right-hand side of the bound with
+       the forward error. In which row does the bound appear to fail? Why
+       can a residual computed in working precision do that?
+    1. Every float64 number is a rational number, so `fractions.Fraction`
+       evaluates $\mathbf{H}(\hat{\mathbf{x}} - \mathbf{1})$ for the stored
+       matrix $\mathbf{H}$ without any rounding. Recompute the bound this
+       way and find, in each row, the ratio of the forward error to the
+       bound.
+    1. Write that ratio as a product of two factors, each at most $1$, one
+       depending only on the right-hand side $\mathbf{H}\mathbf{1}$ and one
+       depending only on the error vector $\hat{\mathbf{x}} - \mathbf{1}$.
+       Evaluate both. What do their values say about the directions of
+       $\mathbf{1}$ and of the error relative to the singular vectors of
+       $\mathbf{H}$?
+
+1. [code] **Mixed-precision iterative refinement.** ●● Mixed-precision
+   training does the bulk of its arithmetic in low precision and keeps the
+   quantities that accumulate small corrections in high precision. Iterative
+   refinement :cite:`Moler.1967,Carson.Higham.2018` applies the same split
+   to $\mathbf{A}\mathbf{x} = \mathbf{b}$: the $O(n^3)$ factorization runs
+   in low precision and only $O(n^2)$ residual work runs in high precision.
+   Starting from a float32 solution $\mathbf{x}_0$, it repeats
+   $$
+   \mathbf{r}_k = \mathbf{b} - \mathbf{A}\mathbf{x}_k, \qquad
+   (\mathbf{A} + \Delta\mathbf{A}_k)\,\mathbf{d}_k = \mathbf{r}_k, \qquad
+   \mathbf{x}_{k+1} = \mathbf{x}_k + \mathbf{d}_k,
+   $$
+   where the residual and the update are computed in float64 and the
+   correction $\mathbf{d}_k$ comes from a float32 solve.
+    1. Model the float32 solve as backward stable,
+       $\|\Delta\mathbf{A}_k\| \le c\,u_{32}\,\|\mathbf{A}\|$ with
+       $u_{32} = 2^{-24}$ and a moderate constant $c$, and neglect the
+       float64 rounding errors. Show that the error
+       $\mathbf{e}_k = \mathbf{x}_k - \mathbf{x}$ satisfies
+       $\mathbf{e}_{k+1} = (\mathbf{A} + \Delta\mathbf{A}_k)^{-1}
+       \Delta\mathbf{A}_k\,\mathbf{e}_k$. Derive a contraction factor in
+       terms of $c\,\kappa(\mathbf{A})\,u_{32}$, and state when it is below
+       $1$.
+    1. Implement the iteration for the Hilbert matrices of the
+       `#numerical-stability-conditioning-hilbert` cell with
+       $n = 3, \ldots, 10$, using `np.linalg.solve` on float32 copies of
+       $\mathbf{H}$ and $\mathbf{r}_k$ for the correction. Record the
+       forward error over ten iterations and compare its final value with
+       that of a float64 solve. For which $n$ does refinement reach the
+       accuracy of the float64 solve? For which $n$ does it still converge,
+       but too slowly to reach that accuracy within ten iterations? For
+       which $n$ does the error grow?
+    1. Estimate the measured contraction per iteration for each $n$ and
+       compare it with $\kappa(\mathbf{H})\,u_{32}$ and with the spectral
+       radius of $\mathbf{I} - \hat{\mathbf{H}}^{-1}\mathbf{H}$, where
+       $\hat{\mathbf{H}}$ is the float32 copy of $\mathbf{H}$ and the
+       inverse is applied in float64. Which perturbation dominates
+       $\Delta\mathbf{A}_k$ in this experiment, and how pessimistic is the
+       bound of the first sub-item?
 
 ## Discussions
 

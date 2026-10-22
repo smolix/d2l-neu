@@ -208,14 +208,13 @@ for x0, pm, pp in zip(x_new, pred_map, pred_grid):
     print(f'x={x0:+.1f}: plug-in MAP={pm:.3f}, posterior predictive={pp:.3f}')
 ```
 
-The two prediction columns differ, and in this example the posterior
-predictive is pulled toward $\tfrac12$ relative to the plug-in. The reason is
-that the sigmoid is nonlinear, and averaging a nonlinear function is not the
-same as applying it to an average — some plausible parameter vectors predict
-confidently one way, some the other, and posterior averaging hedges between
-them. Here the plug-in predictions are more extreme because they omit
-parameter uncertainty. The gap closes as the posterior concentrates with more
-data, but at $n=80$ it is visible. This example motivates the computational
+The two prediction columns differ. The reason is that the sigmoid is
+nonlinear, and averaging a nonlinear function is not the same as applying it
+to an average: plausible parameter vectors other than the MAP predict
+differently, and the posterior predictive weighs all of them, whereas the
+plug-in prediction omits parameter uncertainty. The gap closes as the
+posterior concentrates with more data; at $n=80$ it is small but visible.
+This example motivates the computational
 question that follows: how can we evaluate posterior averages when direct
 integration is unavailable?
 
@@ -255,8 +254,10 @@ like log-sum-exp.
 The identity requires more than nominal overlap. At minimum,
 $q(\boldsymbol\theta)>0$ wherever the target contributes to the estimand, and
 $\mathbb E_q[|w h|]$ and $\mathbb E_q[w]$ must be finite. A finite-variance
-central limit theorem further requires finite second moments of the weighted
-quantity. Thus full support is necessary but may be practically useless when
+central limit theorem further requires finite second moments of the weights
+and of the weighted quantity, $\mathbb E_q[w^2]<\infty$ and
+$\mathbb E_q[w^2h^2]<\infty$. Thus full support is necessary but may be
+practically useless when
 $q$ has lighter tails than the target or places negligible mass in an important
 mode.
 
@@ -398,6 +399,7 @@ chains = np.asarray(chains)
 ```
 
 ### Diagnosing Markov Chain Mixing
+:label:`subsec_mdl-bayes-mcmc-diagnostics`
 
 Exploration introduces dependence: consecutive states are correlated,
 so a chain of $10{,}000$ states holds far less information than $10{,}000$
@@ -413,8 +415,9 @@ pace*. Three checks answer different questions:
   chains from dispersed starts still disagree, none of them can be
   trusted.
 * **Effective sample size** converts autocorrelation into an equivalent draw
-  count: with autocorrelation time $\tau=1+2\sum_{k\ge1}\rho_k$, $M$
-  chains of length $N$ contain about $MN/\tau$ draws' worth of
+  count: with autocorrelation time $\tau=1+2\sum_{k\ge1}\rho_k$, where
+  $\rho_k$ is the lag-$k$ autocorrelation, $M$ chains of length $N$
+  contain about $N_{\mathrm{eff}}=MN/\tau$ draws' worth of
   information, and the Monte Carlo standard error of a posterior mean is
   roughly the posterior standard deviation over
   $\sqrt{N_{\mathrm{eff}}}$.
@@ -579,6 +582,7 @@ $$
 =\mathbb E[\nabla_{\boldsymbol\theta}\log p
  \odot\mathbf s\odot\boldsymbol\epsilon]+\mathbf1,
 $$
+:eqlabel:`eq_mdl-bayes-vi-gradients`
 
 where $+\mathbf1$ is the derivative of the Gaussian entropy. The following
 NumPy implementation estimates these expectations with batches of 256 samples
@@ -685,7 +689,7 @@ reminder.
   parameter uncertainty under the specified likelihood, prior, and inference
   method. This does not guarantee empirical calibration; calibration must be
   checked on relevant data. In the logistic example, the plug-in predictions
-  are more extreme, but that behavior is not universal.
+  are not always more extreme than the posterior predictive ones.
 * All four methods use evaluations of the unnormalized posterior; some variants
   also use its gradient. The unknown normalizer
   cancels — in importance ratios, in Metropolis acceptances, in the ELBO.
@@ -703,23 +707,357 @@ reminder.
 
 ## Exercises
 
-1. Change the prior standard deviation from $2$ to $0.5$ and $10$. Compare the
-   MAP, posterior mean, covariance, posterior predictive, and importance-sampling
-   ESS. Which quantities are most sensitive at this sample size?
-2. Deliberately use an importance proposal with covariance
-   $0.05I$. Run ten seeds. Although this Gaussian has full mathematical support,
-   explain why a plausible estimate in one run does not repair its poor
-   finite-sample coverage of the posterior.
-3. Sweep the Metropolis proposal multiplier over
-   $\{0.05,0.2,0.5,1.1,3,10\}$. Plot acceptance rate against ESS per log-joint
-   evaluation and explain why maximizing acceptance is the wrong objective.
-4. Replace the mean-field variational family by a full-covariance Gaussian
-   parameterized by a Cholesky factor. Derive a valid parameterization with
-   positive diagonal and compare the fitted correlation with the grid value.
-5. Create a bimodal one-dimensional posterior by using a likelihood invariant
-   under $\theta\mapsto-\theta$. Show how a local Laplace approximation,
-   mean-field reverse-KL optimization, and poorly initialized MCMC can each
-   report only one mode. Which diagnostics reveal the problem, and which do not?
+1. [code] **Prior scale.** The `#bayesian-computation-model` cell sets the
+   prior variance `prior_var` $=\tau^2=4$. Rerun the cells from
+   `#bayesian-computation-grid` through `#bayesian-computation-importance`
+   with $\tau=0.5$ and with $\tau=10$.
+    1. Check that the fixed grid of `#bayesian-computation-grid` still holds
+       essentially all of the posterior mass for both priors, for example by
+       summing the normalized grid weights in its outermost rows and columns.
+    1. Tabulate the MAP, the posterior mean, the posterior standard
+       deviations, the posterior predictive at the three inputs `x_new`, and
+       the ESS of both importance proposals for $\tau\in\{0.5,2,10\}$.
+       Measure the shift of the posterior mean from its value at $\tau=2$
+       in units of the posterior standard deviation. Which posterior
+       summaries depend noticeably on the prior at $n=80$, and which barely
+       move?
+   :exlabel:`ex_mdl-bayesian-computation-prior-scale`
+
+1. [code] **Grid resolution.** The grid of `#bayesian-computation-grid`
+   spends $241^2\approx 58{,}000$ evaluations of the log joint density.
+    1. Keep its range and use $m\in\{5,7,9,11,21,41\}$ points per coordinate.
+       Plot the error of the posterior mean against the number $m^2$ of
+       evaluations, taking the $241$-point grid as the reference. Compare it
+       with the standard error $\sigma/m$ of an average of $m^2$ independent
+       posterior draws, where $\sigma$ is the posterior standard deviation
+       of the coordinate.
+    1. Suppose that $11$ points per coordinate give the same accuracy in
+       $d$ dimensions. How many evaluations does the grid need for $d=10$
+       and for $d=100$? How many independent posterior draws give a
+       standard error of $1\%$ of a posterior standard deviation, in any
+       dimension?
+   :exlabel:`ex_mdl-bayesian-computation-grid-resolution`
+
+1. [code] **Tail probability by importance sampling.** Self-normalized
+   importance sampling estimates a posterior expectation by
+   $\hat\mu_N=\sum_{s=1}^N\bar w_s h(\boldsymbol\theta_s)$, with the
+   normalized weights $\bar w_s$ of :eqref:`eq_mdl-bayes-is-ess`.
+    1. Show that $\hat\mu_N$ lies between the smallest and the largest of
+       the values $h(\boldsymbol\theta_s)$. What is the expectation of
+       $\hat\mu_1$?
+    1. Modify `importance` to return its draws and normalized weights.
+       Estimate the posterior probability $P(\theta_1>2.5\mid\mathcal D)$
+       with 5,000 draws from the Laplace proposal and with 20,000 draws from
+       the prior proposal, over 20 seeds each. For a reference value,
+       evaluate the posterior on a grid that extends beyond the upper end
+       $\theta_1=2.8$ of the grid in `#bayesian-computation-grid`. Compare
+       the spread of the estimates and the ESS of the two proposals.
+    1. Which probability does the Laplace approximation
+       :eqref:`eq_mdl-bayes-laplace` itself assign to $\theta_1>2.5$?
+       Relate the discrepancy to the shape of the posterior in
+       `#bayesian-computation-comparison-plot`.
+   :exlabel:`ex_mdl-bayesian-computation-tail-probability`
+
+1. **Metropolis--Hastings acceptance.** The acceptance probability
+   :eqref:`eq_mdl-bayes-mh` turns any proposal into a chain that targets
+   the posterior.
+    1. Show that $\alpha$ satisfies detailed balance, that is, for
+       $\boldsymbol\theta'\ne\boldsymbol\theta$
+
+       $$\widetilde p(\boldsymbol\theta)\,q(\boldsymbol\theta'\mid\boldsymbol\theta)\,\alpha(\boldsymbol\theta,\boldsymbol\theta')=\widetilde p(\boldsymbol\theta')\,q(\boldsymbol\theta\mid\boldsymbol\theta')\,\alpha(\boldsymbol\theta',\boldsymbol\theta).$$
+
+       Show that detailed balance makes the normalized posterior a
+       stationary distribution of the chain.
+    1. A chain on the two states $\{1,2\}$ targets $\pi(1)=1/4$ and
+       $\pi(2)=3/4$ and always proposes the other state. Write down the
+       transition matrix of the Metropolis chain and check that $\pi$ is
+       stationary. Which state frequencies result if the average runs only
+       over accepted states, so that the repeated states after rejections
+       are dropped?
+    1. An independence sampler proposes $\boldsymbol\theta'\sim q$
+       regardless of the current state. Show that its acceptance
+       probability is $\min(1,w(\boldsymbol\theta')/w(\boldsymbol\theta))$
+       with the importance weight $w$ of :eqref:`eq_mdl-bayes-importance`.
+       What does the chain do after it reaches a state whose weight is far
+       larger than the weights of typical proposals?
+   :exlabel:`ex_mdl-bayesian-computation-mh-acceptance`
+
+1. [code] **Proposal scale.** The `#bayesian-computation-metropolis` cell
+   multiplies the Cholesky factor of `laplace_cov` by $1.1$.
+    1. Sweep the multiplier over
+       $\{0.05,0.2,0.5,1.1,1.7,2.4,3,10\}$ and keep the starts, the $12{,}000$
+       steps per chain, and the warm-up. For each value, record the
+       acceptance rate, the split $\widehat R$, and the ESS of
+       `teaching_ess` divided by the $48{,}000$ log-joint evaluations of the
+       four chains. Plot the ESS per evaluation against the acceptance rate.
+       Over which range of acceptance rates does the ESS per evaluation stay
+       within a factor of two of its maximum?
+    1. For a $d$-dimensional standard Gaussian target and the proposal
+       $\mathcal N(\boldsymbol\theta,(\ell^2/d)\mathbf I)$,
+       :citet:`Roberts.Gelman.Gilks.1997` show that as $d\to\infty$ the
+       efficiency is largest at $\ell\approx2.38$, where the acceptance rate
+       is about $0.234$. The posterior here is close to its Laplace
+       approximation :eqref:`eq_mdl-bayes-laplace`. Which
+       multiplier does this result suggest for $d=2$? How do the best
+       multiplier of your sweep and its acceptance rate compare?
+    1. Which of the diagnostics of `#bayesian-computation-mcmc-diagnostics`
+       flag the run with multiplier $0.05$, and how far is its posterior mean
+       from the grid mean?
+   :exlabel:`ex_mdl-bayesian-computation-proposal-scale`
+
+1. [code] **Monte Carlo standard error.** A stationary AR(1) sequence
+   $x_t=\phi x_{t-1}+\varepsilon_t$ with $|\phi|<1$ and independent
+   $\varepsilon_t$ has the lag-$k$ autocorrelation $\rho_k=\phi^k$.
+    1. Express the autocorrelation time $\tau=1+2\sum_{k\ge1}\rho_k$ of
+       :numref:`subsec_mdl-bayes-mcmc-diagnostics` as a function of $\phi$.
+       What is $\tau$ for $\phi=0.9$ and for $\phi=0.99$?
+    1. The `#bayesian-computation-mcmc-diagnostics` cell reports an ESS of
+       $4098$ for the slope from four chains of $10{,}000$ post-warm-up
+       states. Which $\tau$ does this imply, and which AR(1) coefficient
+       $\phi$ has this autocorrelation time? Compare $\phi$ with the lag-1
+       autocorrelation of the chains.
+    1. How many post-warm-up states per chain does the same sampler need to
+       bring the Monte Carlo standard error of the slope's posterior mean
+       down to $0.001$?
+    1. Batch means estimate the Monte Carlo standard error without
+       computing autocorrelations. Split each chain into batches of $b$
+       consecutive states, and divide the standard deviation of all batch
+       means by the square root of the number of batches. Compute this
+       estimate for $b\in\{25,100,500\}$ and compare it with the standard
+       error printed by the cell. What goes wrong when $b$ is not much
+       larger than $\tau$?
+   :exlabel:`ex_mdl-bayesian-computation-mcse`
+
+1. **Laplace and parameterization.** A coin shows 9 heads and 4 tails.
+   Under a uniform prior, the posterior of its heads probability $\theta$ is
+   $\mathrm{Beta}(10,5)$, with mean $2/3$, standard deviation $0.118$, and
+   central $95\%$ interval $[0.419,0.872]$.
+    1. Compute the Laplace approximation :eqref:`eq_mdl-bayes-laplace` in
+       the parameter $\theta$. Give its mean, its standard deviation, its
+       central $95\%$ interval, and the probability it places outside
+       $[0,1]$.
+    1. Repeat the computation in the log-odds
+       $\eta=\log(\theta/(1-\theta))$. Exercise
+       :exref:`ex_mdl-maximum-likelihood-map-log-odds`b of
+       :numref:`sec_mdl-maximum_likelihood` finds the posterior mode of
+       $\eta$. Compute the curvature of the log posterior density of $\eta$
+       at the mode, and map the central $95\%$ interval of the
+       approximation back to $\theta$.
+    1. Which of the two approximations is closer to the exact posterior?
+       Why does the Laplace approximation depend on the parameterization,
+       whereas the exact posterior probability of an event such as
+       $\theta>1/2$ does not?
+   :exlabel:`ex_mdl-bayesian-computation-laplace-parameterization`
+
+1. [code] **Moderated predictions.** ● Under the Laplace approximation
+   :eqref:`eq_mdl-bayes-laplace`, the logit
+   $a=\mathbf z_\star^\top\boldsymbol\theta$ at a test input with
+   $\mathbf z_\star=(1,x_\star)^\top$ is Gaussian with mean $\mu_a=\mathbf z_\star^\top\boldsymbol\theta_{\mathrm{MAP}}$ and
+   variance $s_a^2=\mathbf z_\star^\top H^{-1}\mathbf z_\star$. The probit
+   approximation $\sigma(a)\approx\Phi(\lambda a)$ with $\lambda^2=\pi/8$,
+   where $\Phi$ is the standard normal c.d.f., turns the predictive
+   integral :eqref:`eq_mdl-bayes-predictive` into a closed form
+   :cite:`MacKay.1992`.
+    1. Show that
+       $\mathbb E[\Phi(\lambda a)]=\Phi\bigl(\lambda\mu_a/\sqrt{1+\lambda^2s_a^2}\bigr)$
+       for $a\sim\mathcal N(\mu_a,s_a^2)$. Conclude that the moderated
+       prediction $\sigma\bigl(\mu_a/\sqrt{1+\pi s_a^2/8}\bigr)$ lies
+       between $\sigma(\mu_a)$ and $1/2$.
+    1. Compute the moderated predictions at $x_\star\in\{-2,0,2\}$ from
+       `theta_map` and `laplace_cov`, and compare them with the plug-in
+       and posterior predictive columns printed by
+       `#bayesian-computation-map-predictive`.
+    1. At $x_\star=0$ the posterior predictive printed by that cell lies
+       farther from $1/2$ than the plug-in prediction, and at
+       $x_\star=\pm2$ the two nearly agree. Explain both observations. What
+       do they imply for using the Laplace approximation to temper
+       overconfident predictions?
+   :exlabel:`ex_mdl-bayesian-computation-moderated-predictions`
+
+1. [code] **Predicting the weight ESS.** ● Let $w=\widetilde p/q$ be the
+   importance weight of :eqref:`eq_mdl-bayes-importance`. By the law of
+   large numbers, $N_{\mathrm{eff}}/N$ in :eqref:`eq_mdl-bayes-is-ess`
+   approaches $(\mathbb E_q[w])^2/\mathbb E_q[w^2]$ as the number $N$ of
+   draws grows.
+    1. Let the normalized target be $\mathcal N(\mu,\sigma^2)$ and the
+       proposal $\mathcal N(\nu,s^2)$ in one dimension, and let
+       $r=s/\sigma$. Show that for $s^2>\sigma^2/2$
+
+       $$\frac{\mathbb E_q[w^2]}{(\mathbb E_q[w])^2}=\frac{r^2}{\sqrt{2r^2-1}}\exp\!\left(\frac{(\mu-\nu)^2}{2s^2-\sigma^2}\right),$$
+
+       and that the ratio is infinite for $s^2\le\sigma^2/2$. Which $r$
+       minimizes the ratio when $\mu=\nu$?
+    1. Approximate the posterior by independent Gaussians with the grid
+       means and standard deviations printed by
+       `#bayesian-computation-grid`, ignoring the correlation, so that the
+       ratio factorizes over the coordinates. Predict the ESS of the 20,000
+       prior-proposal draws of `#bayesian-computation-importance` and
+       compare it with the printed value. Repeat the prediction for the
+       prior proposals with $\tau=0.5$ and $\tau=10$, using the grid moments
+       of problem
+       :exref:`ex_mdl-bayesian-computation-prior-scale`b, and compare it with
+       the ESS measured there. Which factor of the formula makes a narrow
+       prior a poor proposal, and which factor makes a broad prior a poor
+       proposal?
+    1. Under the same approximation, which coordinate makes
+       $\mathcal N(\boldsymbol\theta_{\mathrm{MAP}},0.05\,\mathbf I)$ a
+       proposal with infinite weight variance? Run this proposal with 5,000
+       draws for ten seeds, and record the ESS, the largest normalized
+       weight, and the estimated posterior mean. Why does a run whose
+       estimate looks plausible not show that the proposal is adequate?
+   :exlabel:`ex_mdl-bayesian-computation-weight-ess`
+
+1. [code] **Variational families.** ● The `#bayesian-computation-variational`
+   cell fits a mean-field Gaussian by stochastic gradient ascent on the
+   ELBO :eqref:`eq_mdl-bayes-vi-elbo`.
+    1. Let the target be $\mathcal N(\boldsymbol\mu,\boldsymbol\Lambda^{-1})$
+       with precision matrix $\boldsymbol\Lambda$. Show that the mean-field
+       Gaussian that minimizes $D_{\mathrm{KL}}(q\|p)$ has mean
+       $\boldsymbol\mu$ and variances $1/\Lambda_{jj}$. For two coordinates
+       with correlation $\rho$, show that each fitted standard deviation is
+       $\sqrt{1-\rho^2}$ times the true one. Predict the mean-field standard
+       deviations from the grid standard deviations and correlation, and
+       compare them with the printed values.
+    1. Rerun the cell with three other seeds for `rng_vi`. How much does the
+       final mean vary between seeds? Average the iterates of the last
+       1,000 steps instead of reporting the final iterate, and measure the
+       variation again. How much of the gap between the printed mean-field
+       mean and the grid mean is approximation error, and how much is
+       optimization noise?
+    1. Replace the mean-field family by a full-covariance Gaussian
+       $\boldsymbol\theta=\mathbf m+L\boldsymbol\epsilon$, where $L$ is
+       lower triangular with diagonal entries $e^{\ell_1}$ and $e^{\ell_2}$.
+       Extend :eqref:`eq_mdl-bayes-vi-gradients` to the gradients with
+       respect to $\mathbf m$, $\ell_1$, $\ell_2$, and the off-diagonal entry
+       of $L$. Implement them, and compare the fitted standard deviations and
+       correlation with the grid values.
+   :exlabel:`ex_mdl-bayesian-computation-variational-families`
+
+1. [code] **Estimating the evidence.** ● Every method of this section avoids
+   the evidence $p(\mathcal D)$. Let $q$ be a normalized proposal, let
+   $w=p(\mathcal D,\boldsymbol\theta)/q(\boldsymbol\theta)$, and let
+   $\hat Z_N=\frac1N\sum_{s=1}^N w(\boldsymbol\theta_s)$ for independent
+   draws $\boldsymbol\theta_s\sim q$.
+    1. Show that $\hat Z_N$ is an unbiased estimate of $p(\mathcal D)$ and
+       that $\mathbb E[\log\hat Z_N]\le\log p(\mathcal D)$. Show that
+       $\mathbb E[\log\hat Z_1]$ is the ELBO :eqref:`eq_mdl-bayes-vi-elbo`
+       of $q$ and that $\mathbb E[\log\hat Z_N]$ does not decrease with $N$
+       :cite:`Burda.Grosse.Salakhutdinov.2016`.
+    1. The function `log_joint` omits the normalizing constant
+       $-\log(2\pi\tau^2)$ of the two-dimensional prior. Add it, and compute
+       $\log p(\mathcal D)$ in three ways: by summing the density over a
+       grid and multiplying by the area of a grid cell, by $\hat Z_N$ with
+       5,000 Laplace-proposal draws, and by integrating the Gaussian of the
+       Laplace approximation, which gives
+       $\log p(\mathcal D,\boldsymbol\theta_{\mathrm{MAP}})+\log2\pi-\tfrac12\log\det H$.
+    1. Estimate the ELBO of three Gaussians: the Laplace approximation, the
+       mean-field fit, and the full-covariance fit of problem
+       :exref:`ex_mdl-bayesian-computation-variational-families`c. Use
+       $10^5$ draws from each Gaussian and report the Monte Carlo standard
+       error of each estimate. The gap between $\log p(\mathcal D)$ and the
+       ELBO of $q$ is $D_{\mathrm{KL}}(q\|p(\cdot\mid\mathcal D))$
+       (:eqref:`eq_mdl-elbo-gap`). Rank the three Gaussians by this
+       divergence. Explain where the Laplace Gaussian falls in this ranking.
+   :exlabel:`ex_mdl-bayesian-computation-evidence`
+
+1. [code] **A posterior with two modes.** ● Fifty observations are drawn as
+   $y_i\sim\mathcal N(\theta^2,1)$ with the true value $\theta=1$, and
+   $\theta$ has the prior $\mathcal N(0,4)$. The likelihood depends on
+   $\theta$ only through $\theta^2$, just as the loss of a neural network
+   does not change when the incoming weights, the bias, and the outgoing
+   weights of a $\tanh$ hidden unit flip sign together. The posterior is
+   therefore symmetric under $\theta\mapsto-\theta$.
+    1. Compute the posterior on a one-dimensional grid. Report
+       $\mathbb E[\theta\mid\mathcal D]$,
+       $\mathbb E[\theta^2\mid\mathcal D]$, and the ratio of the posterior
+       density at $\theta=0$ to its value at a mode.
+    1. Show that the Gaussian that minimizes the forward divergence
+       $D_{\mathrm{KL}}(p\|q)$ matches the mean and the variance of $p$.
+       Where does this Gaussian put its mode for the present posterior, and
+       how plausible is that point under $p$?
+    1. Fit three local approximations: the Laplace approximation at the
+       positive mode, a one-dimensional Gaussian fitted by the ELBO ascent of
+       `#bayesian-computation-variational` started at $m=0.5$, and four
+       Metropolis chains with proposal standard deviation $0.2$ started at
+       $\theta\in\{0.5,1,1.5,2\}$. Then rerun the chains from
+       $\theta\in\{-2,-0.5,0.5,2\}$. Which methods report a single mode?
+       For each run, which of its diagnostics (split $\widehat R$ and the ESS
+       for the chains, the ELBO for the variational fit) reveal the problem?
+    1. Which posterior expectations does a single-mode approximation still
+       estimate correctly? A network with $h$ hidden $\tanh$ units has the
+       sign flip of this problem for every unit and, in addition, the
+       permutations of its hidden units counted in exercise
+       :exref:`ex_mdl-maximum-likelihood-relu-symmetries`a of
+       :numref:`sec_mdl-maximum_likelihood`. How many equivalent copies of a
+       mode does its posterior have under an isotropic Gaussian prior? What
+       does this suggest about approximating the posterior of a neural
+       network by one of the methods of this section?
+   :exlabel:`ex_mdl-bayesian-computation-two-modes`
+
+1. [code] **Tails of the logistic posterior.** ●● A central limit theorem
+   for importance sampling needs a finite second moment of the weights
+   (:numref:`sec_mdl-bayes-importance`). Problem
+   :exref:`ex_mdl-bayesian-computation-weight-ess`a settles this question
+   for a Gaussian target. The Laplace proposal of
+   `#bayesian-computation-importance` reaches an ESS of about 4,300 of its
+   5,000 draws. Throughout, $\tau^2=$ `prior_var` $=4$ is the prior
+   variance of :eqref:`eq_mdl-bayes-logistic-posterior`.
+    1. Fix a unit vector $\mathbf v$ and let $\boldsymbol\theta=t\mathbf v$.
+       Show that the log-likelihood in
+       :eqref:`eq_mdl-bayes-logistic-posterior` equals $-c(\mathbf v)t+O(1)$
+       as $t\to\infty$, where $c(\mathbf v)$ is the sum of
+       $|\mathbf z_i^\top\mathbf v|$ over the observations whose label
+       disagrees with the sign of $\mathbf z_i^\top\mathbf v$. For which
+       datasets is $c(\mathbf v)>0$ for every $\mathbf v$?
+    1. Conclude that a Gaussian proposal $\mathcal N(\mathbf m,S)$ has
+       $\mathbb E_q[w^2]=\infty$ when some eigenvalue of $S$ is smaller than
+       $\tau^2/2$, and $\mathbb E_q[w^2]<\infty$ when every eigenvalue of
+       $S$ exceeds $\tau^2/2$. Which of the two proposals of
+       `#bayesian-computation-importance` has weights with finite variance?
+       Compare this answer with the one that the formula of problem
+       :exref:`ex_mdl-bayesian-computation-weight-ess`a gives for the Laplace
+       proposal when the posterior is approximated by a Gaussian.
+    1. Along each eigenvector of `laplace_cov`, in both directions, find the
+       Mahalanobis distance from $\boldsymbol\theta_{\mathrm{MAP}}$ beyond
+       which $\widetilde p^2/q$ exceeds its value at
+       $\boldsymbol\theta_{\mathrm{MAP}}$. How likely is a single
+       Laplace-proposal draw to land that far out? Reconcile your answer with
+       the printed ESS of the Laplace proposal.
+    1. :citet:`Geweke.1989` builds importance densities from multivariate
+       Student-$t$ approximations at the posterior mode. Use a Student-$t$
+       proposal with $3$ degrees of freedom, location
+       $\boldsymbol\theta_{\mathrm{MAP}}$, and scale matrix `laplace_cov`.
+       Show that its weights have finite variance. Compare it with the
+       Laplace proposal over 20 seeds, on the ESS and on the tail
+       probability of problem
+       :exref:`ex_mdl-bayesian-computation-tail-probability`b.
+   :exlabel:`ex_mdl-bayesian-computation-posterior-tails`
+
+1. [extended] **Approximations in higher dimension.** ●● Extend the running
+   example to $d$ parameters: an intercept and $d-1$ features with
+   independent standard normal entries, $n=10d$ observations whose labels
+   are drawn from a true parameter with independent
+   $\mathcal N(0,1.5^2/d)$ entries, and the prior
+   $\mathcal N(\mathbf 0,4\mathbf I)$. No grid is available, so a long
+   Metropolis run serves as the reference.
+    1. For $d\in\{2,5,10,20,50\}$, compute the Laplace approximation and the
+       ESS of 5,000 Laplace-proposal draws. Repeat with $n=40d$. Explain how
+       $N_{\mathrm{eff}}/N$ depends on $d$ and on $n/d$.
+    1. Run four Metropolis chains with the proposal $(2.38/\sqrt d)L$, where
+       $L$ is the Cholesky factor of the Laplace covariance (problem
+       :exref:`ex_mdl-bayesian-computation-proposal-scale`b). Measure the
+       acceptance rate and the smallest ESS per log-joint evaluation over
+       the coordinates as functions of $d$. Which power of $d$ describes the
+       efficiency?
+    1. At $d=50$ and $n=500$, give importance sampling and Metropolis the
+       same budget of 20,000 log-joint evaluations, and repeat each run with
+       five seeds. Measure their errors in the posterior mean against the
+       reference, in units of posterior standard deviations, and compare
+       them with the errors that each method's own ESS predicts. Report one
+       row per method with the number of evaluations, the ESS, the predicted
+       error, and the measured error. Which method would you use at this
+       budget?
+   :exlabel:`ex_mdl-bayesian-computation-higher-dimension`
 
 <!-- slides -->
 

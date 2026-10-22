@@ -113,7 +113,7 @@ $$\hat{u} = \frac{1}{n} \sum_{i=1}^n \sum_{t=0}^{T-1} \big( \hat{G}_t^i - b(s_t^
 
 Such a $b$ is called a baseline. The extra term is $b(s_t)$ times the score, and we showed above that this has zero mean, so :eqref:`eq_pg_baseline` and :eqref:`eq_rtg` estimate the same gradient.
 
-On FrozenLake, every reward-to-go is nonnegative. Without a baseline, sampled actions therefore receive only positive weights, with larger increases on more successful trajectories. Subtracting a value near the typical return gives positive weights to better-than-typical continuations and negative weights to worse-than-typical ones. A baseline may be a constant, an empirical mean return, or an estimate of the value function. The mean return is simple but not generally variance minimizing; the optimal constant is derived below and generalized in the exercises.
+On FrozenLake, every reward-to-go is nonnegative. Without a baseline, sampled actions therefore receive only positive weights, with larger increases on more successful trajectories. Subtracting a value near the typical return gives positive weights to better-than-typical continuations and negative weights to worse-than-typical ones. A baseline may be a constant, an empirical mean return, or an estimate of the value function. The mean return is simple but not generally variance minimizing; the optimal constant is derived below and generalized to a function of the state in exercise :exref:`ex_baselines-optimal-state-baseline`.
 
 ### Control Variates
 
@@ -144,7 +144,7 @@ $$Y = \nabla_\theta \log \pi_\theta(a_t \mid s_t).$$
 
 Here $E[Y\mid s_t]=0$ by the zero-mean lemma, and $X$ is a scalar multiple of $Y$. Setting $c=b(s_t)$ recovers :eqref:`eq_pg_baseline`. Thus a baseline is a control variate constructed from the policy score.
 
-This interpretation explains both unbiasedness and the choice of baseline. Any coefficient preserves the mean of a control-variate estimator, while the variance-minimizing coefficient is the covariance-to-variance ratio $c^*$, computed separately for each state. For a vector-valued score, scalar products replace ordinary products and give the score-weighted optimal baseline derived in the exercises. The average return is often effective, but it is not generally optimal. :citet:`Greensmith.Bartlett.Baxter.2004` develop this analysis for policy gradients and interpret a value-function critic as a control variate.
+This interpretation explains both unbiasedness and the choice of baseline. Any coefficient preserves the mean of a control-variate estimator, while the variance-minimizing coefficient is the covariance-to-variance ratio $c^*$, computed separately for each state. For a vector-valued score, scalar products replace ordinary products and give the score-weighted optimal baseline derived in exercise :exref:`ex_baselines-optimal-constant-baseline`. The average return is often effective, but it is not generally optimal. :citet:`Greensmith.Bartlett.Baxter.2004` develop this analysis for policy gradients and interpret a value-function critic as a control variate.
 
 ![Variance reduction for the one-step problem of :numref:`fig_rl_score_ascent`. The reward is $R(a)=0.4+2e^{-(a-2)^2/2}$ under $\mathcal{N}(0,1)$, with $E[R]=0.92$ and $\nabla_\mu J=0.52$. (a) Rewards preceding an action have zero expected product with its score, leaving only reward-to-go. (b) The standard deviation of a single-sample gradient estimate decreases from $1.34$ without a baseline to $0.69$ after subtracting the mean reward. The distributions are clipped at the 1st and 95th percentiles. (c) Estimator variance as a function of a constant baseline $b$. The optimum $b^\star=c^*=1.18$ leaves $1-\mathrm{corr}^2=0.23$ of the original variance.](../img/mdl-rl-variance-reduction.svg)
 :label:`fig_rl_variance_reduction`
@@ -237,6 +237,7 @@ def run_seeds(train, num_seeds, **kwargs):  #@save
 ```
 
 ### The Leave-One-Out Baseline
+:label:`subsec_leave_one_out`
 
 Leave-one-out centering removes the self-dependence of the batch mean $\mu$. For each trajectory, define a baseline from the *other* trajectories in the batch,
 
@@ -287,8 +288,9 @@ print(f'E[centered] equals (n-1)/n of it:           {np.allclose(u_cen, g / 2)}'
 Both identities hold to machine precision. The same estimator is used for language-model post-training under the name RLOO: sample $n$ responses to a prompt and weight each response by its reward minus the mean reward of the other $n-1$ responses :cite:`Ahmadian.Cremer.Galle.ea.2024`.
 
 ### Summing over Episodes of Different Lengths
+:label:`subsec_pg_loss_divisor`
 
-The normalization of a summed loss determines the resulting estimator. The double sum in :eqref:`eq_rtg` ranges over episodes and steps. Dividing by the number of episodes $n$ gives the estimator in that equation. Dividing by the total number of steps rescales each batch by its realized mean episode length, which varies across batches and may correlate with performance. Dividing each episode's contribution by its own length can also change the gradient direction because episodes receive different relative weights. Division by a fixed constant changes only the overall scale.
+The normalization of a summed loss determines the resulting estimator. The double sum in :eqref:`eq_rtg` ranges over episodes and steps. Dividing by the number of episodes $n$ gives the estimator in that equation. Dividing by the total number of steps rescales each batch by the reciprocal of its realized mean episode length, which varies across batches and may correlate with performance. Dividing each episode's contribution by its own length can also change the gradient direction because episodes receive different relative weights. Division by a fixed constant changes only the overall scale.
 
 We compare these four choices on a FrozenLake batch whose episode lengths differ:
 
@@ -317,7 +319,7 @@ for k, u in grads.items():
           f'cos to episodes = {cos:.3f}')
 ```
 
-Three of the four gradients are exactly parallel, at sizes an order of magnitude apart; the per-own-length variant tilts away from the rest. In order, these are the per-trajectory estimator, the per-response length normalization, the token-level loss, and the fixed-constant normalization of the LLM post-training literature. The choice of divisor differs among language-model objectives: GRPO normalizes each response by its own length, whereas the "Dr. GRPO" modification uses a constant because only batchwise rescaling preserves the estimator direction. The following four-episode example shows the resulting gradients.
+Three of the four gradients are exactly parallel, at sizes an order of magnitude apart; the per-own-length variant tilts away from the rest. In order, these are the per-trajectory estimator, the per-response length normalization, the token-level loss, and the fixed-constant normalization of the LLM post-training literature. The choice of divisor differs among language-model objectives: GRPO normalizes each response by its own length, whereas the "Dr. GRPO" modification :cite:`Liu.Chen.Li.ea.2025` uses a constant because only batchwise rescaling preserves the estimator direction. The four-episode example above shows the resulting gradients.
 
 ### Normalized Returns and GRPO
 
@@ -332,6 +334,7 @@ where $\mu$ and $\sigma$ are the mean and standard deviation within the group. T
 We next compare the estimators at a fixed policy and during training.
 
 ### Five Gradient Estimators
+:label:`subsec_five_estimators`
 
 The methods introduced above differ in the quantity multiplying the score at step $t$:
 
@@ -343,7 +346,7 @@ The methods introduced above differ in the quantity multiplying the score at ste
 6. **A learned critic** $\hat{V}(s)$: baseline subtraction remains unbiased when the critic only replaces $b(s_t)$; using critic predictions inside bootstrapped targets introduces the approximation studied in :numref:`sec_actorcritic`.
 7. **Generalized advantage estimation**: a coefficient $\lambda$ interpolating between reward-to-go and a bootstrapped critic (:numref:`sec_actorcritic`, :numref:`sec_ppo`).
 
-Before training, we hold $\theta$ fixed, draw 200 batches of the training batch size, and compute each per-episode estimator through the score identity. Comparison with the exact gradient measures both the estimator mean and its sampling variance. For the state baseline we can afford here what training cannot: the exact $V^{\pi_\theta}$ from the linear solve.
+Before training, we hold $\theta$ fixed, draw 200 batches of the training batch size, and compute five per-episode estimators through the score identity, one for each entry of `weightings`: the trajectory return, reward-to-go, reward-to-go centered by its batch mean $\mu$, the normalized weights :eqref:`eq_pg_normalized`, and reward-to-go minus the exact state baseline. Comparison with the exact gradient measures both the estimator mean and its sampling variance. For the state baseline we can afford here what training cannot: the exact $V^{\pi_\theta}$ from the linear solve.
 
 ```{.python .input #baselines-five-estimators-1}
 %%tab pytorch, jax
@@ -461,7 +464,7 @@ for v, r in runs.items():
 
 The plain trajectory-return estimator is the slowest in this experiment, with median runs requiring roughly 50--70 updates to maintain 90% batch success. Reward-to-go reduces the median by about one third. The learned baseline performs similarly to reward-to-go, with differences smaller than the variation across seeds. Sparse rewards explain part of this result: the value estimate remains near zero until the policy has reached the goal several times, so the learned-baseline update initially resembles reward-to-go. Centering reduces the frozen-policy variance but has little effect on the median training time.
 
-Normalization reaches 90% success in roughly half as many updates as the plain estimator, but it also produces much larger parameter steps. At the shared learning rate, its steps are about five times larger than those of the centered estimator and about twice as large as those of reward-to-go. Reward-to-go likewise increases the average weight scale relative to the full trajectory return on this environment. Consequently, the training ordering reflects both estimator variance and effective step size. The table reports both quantities, and exercise 1 repeats the comparison after matching their scales.
+Normalization reaches 90% success in roughly half as many updates as the plain estimator, but it also produces much larger parameter steps. At the shared learning rate, its steps are about five times larger than those of the centered estimator and about twice as large as those of reward-to-go. Reward-to-go likewise increases the average weight scale relative to the full trajectory return on this environment. Consequently, the training ordering reflects both estimator variance and effective step size. The table reports both quantities, and exercise :exref:`ex_baselines-step-size-confound-quantified` repeats the comparison after matching their scales.
 
 The runs also record policy entropy. Each method starts at the uniform policy's entropy of $\ln 4 \approx 1.39$ nats and decreases toward roughly $0.8$ as the policy becomes more concentrated. Methods with faster initial improvement reduce entropy earlier. The constrained updates in :numref:`sec_ppo` provide explicit control over this change.
 
@@ -486,49 +489,252 @@ The score function has zero conditional mean. This identity permits the removal 
 
 The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`, and `run_seeds` to the shared library.
 
-**Experimental scope.** The variance comparison probes one intermediate policy with 200 batches of four episodes. Different policies change the numerical variances, although the ordering is stable in these experiments. Training results use twenty seeds, and their spreads are often wider than the gaps between methods. FrozenLake's sparse terminal reward limits the benefit of reward-to-go, while plain SGD makes differences in effective step size visible.
+**Experimental scope.** The variance comparison probes one intermediate policy with 200 batches of four episodes. Other policies change the numerical variances; whether they also change the ordering is not tested here. Training results use twenty seeds, and their spreads are often wider than the gaps between methods. FrozenLake's sparse terminal reward limits the benefit of reward-to-go, while plain SGD makes differences in effective step size visible.
 
 ## Exercises
 
-1. [short-code] *The step-size confound, quantified.* Rerun the five arms with
-   the normalized arm's learning rate divided by its measured mean
-   $1/(\sigma + 10^{-8})$: log $\sigma$ per batch during a run of `train`,
-   average $1/(\sigma + 10^{-8})$ over the batches that contained any signal,
-   and scale $\alpha$ down by that factor for the normalized arm only. Does the
-   ordering survive, and which arm does the normalized variant now resemble?
-1. [short-code] *Measure the variance you claim to reduce.* Freeze the
-   parameters at a partially trained $\theta$. Draw 200 independent batches
-   and, for each of the five estimators the section compares, record the
-   sample covariance of $\hat{u}$ and report its trace. Does the ordering
-   match the ordering of the learning curves, and is the ratio between the
-   best and the worst as large as the curves suggested?
-1. [conceptual] *The variance-optimal baseline.* For a single state and a
-   constant baseline $b$, the variance of the estimator is minimized not by
-   the average return but by the weighted average
-   $b^* = E[\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2 \hat{G}] /
-   E[\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2]$.
-   Derive this by differentiating the variance with respect to $b$, and check
-   that it is the optimal coefficient $c^*$ of :eqref:`eq_control_variate`
-   carried over to the vector-valued score.
-1. [short-code] *Baseline step size.* Vary $\alpha_V$ in :eqref:`eq_value_baseline`
-   over $\{0.01, 0.1, 0.5, 1.0\}$. How sensitive is the learned-baseline variant,
-   and what exactly goes wrong at $\alpha_V = 1$? Relate the failure to what
-   $\hat{V}$ is being asked to average over.
-1. [short-code] *The group-relative baseline in two lines.* Replace the weight
-   in :eqref:`eq_pg_baseline` by
-   $(R(\tau_i) - \mu) / (\sigma + 10^{-8})$, applied to every step of
-   trajectory $i$, where $\mu$ and $\sigma$ are the mean and standard deviation
-   of the returns *within the batch*. This is the advantage estimate of GRPO,
-   with the batch playing the role of the group. Before running it: what happens
-   at batch size one, and why? Now run it at batch sizes $\{1, 2, 4, 16\}$ and
-   confirm.
-1. [conceptual] *What dividing by sigma costs.* The group standard deviation in
-   the previous exercise makes advantages comparable across prompts. Consider
-   two prompts, one on which the policy succeeds half the time and one on which
-   it succeeds nine times in ten. Compute $\sigma$ for each under a binary
-   reward, and say which prompt's gradient is amplified. Is that the weighting
-   you want? (This is the objection that the "Dr. GRPO" line of work raises
-   against dividing by $\sigma$.)
+1. **Admissible baselines.** The conditional zero-mean identity allows any
+   quantity that is already determined when the agent stands at $s_t$ to be
+   subtracted from $\hat{G}_t$. For each candidate below, decide whether
+   subtracting it in :eqref:`eq_pg_baseline` leaves the expected gradient
+   unchanged, and justify the answer with that condition:
+    1. the time index $t$;
+    1. the sum $r_0 + \cdots + r_{t-1}$ of the rewards collected before
+       step $t$;
+    1. the number $T - t$ of steps that remain in the episode;
+    1. a function of the next state $s_{t+1}$;
+    1. an action-value estimate $\hat{Q}(s_t, a_t)$.
+
+   For the last candidate with $\hat{Q} = Q^{\pi_\theta}$, compute the
+   expected contribution of step $t$ after the subtraction. What does the
+   result say about baselines that depend on the action?
+1. **Baselines on stale data.** The zero-mean lemma averages the score under
+   the same policy that is being differentiated. Suppose instead that the
+   action at state $s$ was drawn from an older policy
+   $\pi_{\theta_{\textrm{old}}}$, as happens when a batch is reused for a
+   second update, while the score is still
+   $\nabla_\theta \log \pi_\theta(a \mid s)$.
+    1. Use :eqref:`eq_softmax_score` to compute, for a constant $b$,
+
+       $$E_{a \sim \pi_{\theta_{\textrm{old}}}(\cdot \mid s)}\big[b\, \nabla_\theta \log \pi_\theta(a \mid s)\big].$$
+
+       Which values of $b$ introduce no bias, and how does the bias depend
+       on the difference between the two policies?
+    1. Show that multiplying each term by the ratio
+       $\pi_\theta(a \mid s) / \pi_{\theta_{\textrm{old}}}(a \mid s)$
+       restores the zero mean for every $b$. The same ratio drives the
+       clipped objective of :numref:`sec_ppo`.
+1. [code] **Reward-to-go with dense rewards.** The frozen-policy comparison
+   of :numref:`subsec_five_estimators` found that reward-to-go barely
+   improves on the trajectory return, since FrozenLake pays a single terminal
+   reward. Add a constant $c$ to the reward of every step: set
+   `b.rew = b.rew + c` right after the call of `d2l.rollout` that draws each
+   of the 200 batches, leave the loop that trains `probe` unchanged, and add
+   $c$ to `r` at every nonterminal state before recomputing `g_exact` and
+   `V_pi`.
+   The holes and the goal (the letters `H` and `G` in `env.unwrapped.desc`)
+   are absorbing in `mdp.P`, so their rewards must stay zero. Rerun the
+   comparison for $c \in \{0, -0.01, -0.05, -0.2\}$. For which $c$ does
+   reward-to-go clearly beat the trajectory return? Which terms of the
+   trajectory-return estimator does it remove there?
+1. **Optimal constant baseline.** Fix a state $s$, write
+   $\boldsymbol{\psi} = \nabla_\theta \log \pi_\theta(a \mid s)$ for the
+   score of the sampled action, and consider the single-step estimator
+   $(\hat{G} - b)\, \boldsymbol{\psi}$ with a constant $b$. Its mean does not
+   depend on $b$, so we measure its noise by the trace of its covariance,
+
+   $$E\big[\|(\hat{G} - b)\, \boldsymbol{\psi}\|^2\big] - \big\|E[\hat{G}\, \boldsymbol{\psi}]\big\|^2.$$
+
+    1. Minimize the trace over $b$ and show that the minimizer is
+
+       $$b^* = \frac{E\big[\|\boldsymbol{\psi}\|^2\, \hat{G}\big]}{E\big[\|\boldsymbol{\psi}\|^2\big]}.$$
+
+       Show that any other $b$ adds exactly
+       $E\big[\|\boldsymbol{\psi}\|^2\big]\, (b - b^*)^2$ to the trace, and
+       that $b^*$ is the coefficient $c^*$ of :eqref:`eq_control_variate`
+       for $X = \hat{G}\, \boldsymbol{\psi}$ and $Y = \boldsymbol{\psi}$,
+       with inner products in place of products.
+    1. In the one-step problem of :numref:`fig_rl_variance_reduction`, the
+       action is $a \sim \mathcal{N}(\mu, 1)$ at $\mu = 0$, so the score
+       with respect to $\mu$ is $a$. Compute $b^*$ for
+       $R(a) = 0.4 + 2e^{-(a-2)^2/2}$ and confirm the caption's value
+       $b^\star = 1.18$. The product of the standard normal density with
+       $e^{-(a-2)^2/2}$ is proportional to another normal density. Why does
+       $b^*$ exceed $E[R] = 0.92$?
+   :exlabel:`ex_baselines-optimal-constant-baseline`
+1. [code] **The training loss divisor.** :numref:`subsec_pg_loss_divisor`
+   compares four divisors for the summed loss.
+    1. Read `policy_step`. Which of the four divisors do the training runs
+       of `train` use?
+    1. At the policy `probe`, draw 2000 batches of four episodes. For each
+       batch, compute the per-episode estimate `estimate(b, G)` with the
+       reward-to-go weights `G = b.reward_to_go(gamma)`, the factor by which
+       the divisor of `policy_step` rescales it, and the number of successes
+       in the batch. How much does the factor vary between batches, and how
+       does it correlate with the number of successes?
+    1. Average `estimate(b, G)` and the rescaled estimate over the 2000
+       batches and compute the cosine between the two means. What does the
+       result say about comparing the training runs of `train` with the
+       frozen-policy measurements of :numref:`subsec_five_estimators`?
+1. [code] **Baseline step size and timing.** ● The learned-baseline arm of
+   `train` updates its table $\hat{V}$ by :eqref:`eq_value_baseline` after
+   `policy_step`, so the baseline used on each batch was fitted on earlier
+   batches only.
+    1. Sweep $\alpha_V$ (`alpha_v`) over $\{0.01, 0.1, 0.5, 1\}$ and report
+       the median and the range over twenty seeds of the number of updates
+       to 90% success. How sensitive is the arm to $\alpha_V$?
+    1. Move the value update above the line that computes the weights `w`,
+       so that the baseline of each batch has already seen that batch, and
+       repeat the sweep. At
+       $\alpha_V = 1$, what is the weight $\hat{G}_t - \hat{V}(s_t)$ of the
+       last visit to each state in the batch?
+    1. Explain both sweeps with the conditional zero-mean identity. Which of
+       its conditions does the second ordering violate, and why does the
+       damage grow with $\alpha_V$?
+1. [code] **Bias of batch centering.** ● :numref:`subsec_leave_one_out`
+   obtains the factor $(n-1)/n$ by which per-trajectory batch centering
+   shrinks the expected gradient from the leave-one-out identity
+   $R_i - b_i = \frac{n}{n-1}(R_i - \mu)$. That argument applies only to
+   per-trajectory weights.
+    1. Derive the factor directly, without the leave-one-out baseline. Write
+       the centered estimate as
+       $\frac{1}{n}\sum_{i=1}^n \big(R(\tau_i) - \mu\big)\, \mathbf{S}_i$,
+       where $\mathbf{S}_i$ is the summed score of trajectory $i$ and $\mu$
+       the mean return of the batch, expand $E[\mu\, \mathbf{S}_i]$ into its
+       $n$ terms, and use the independence of the trajectories. Which of the
+       terms have a nonzero expectation?
+    1. The centered arm of `train` instead subtracts the mean of all
+       reward-to-go values in the batch, step by step. Extend the
+       enumeration to this weighting. Each trajectory of the two-state
+       problem has $\hat{G}_0 = r_0 + r_1$ and $\hat{G}_1 = r_1$, since the
+       enumeration uses no discount, and row $s$ of `S[i]` is the score of
+       the step taken at state $s$. Compute the expected estimate for
+       $n \in \{2, 4, 8\}$ and compare it with `g` through the ratio of the
+       norms and the cosine.
+    1. Explain the comparison. For each of the two steps, which
+       reward-to-go values inside the batch mean have a nonzero expected
+       product with the score of that step?
+1. **The $\sigma$-normalized objective.** ● GRPO divides the centered
+   rewards of each group by their standard deviation $\sigma$, a choice
+   that :citet:`Liu.Chen.Li.ea.2025` analyze. Consider a
+   prompt $x$ with binary reward, $r = 1$ for a correct response and $r = 0$
+   otherwise, on which the current policy succeeds with probability $p_x$.
+   Take the group so large that $\mu$ and $\sigma$ equal their population
+   values $p_x$ and $\sqrt{p_x (1 - p_x)}$.
+    1. Compute $\sigma$ for $p_x = 0.5$ and for $p_x = 0.9$. By what factor
+       does the division amplify the update of the second prompt relative to
+       the first?
+    1. Let $y$ denote the sampled response. Show that
+
+       $$E\big[(r - p_x)\, \nabla_\theta \log \pi_\theta(y \mid x)\big] = \nabla_\theta\, p_x.$$
+
+       Conclude that the $\sigma$-normalized update ascends
+       $\sum_x h(p_x)$ for a function $h$ with $h'(p) = 1/\sqrt{p(1-p)}$,
+       and find $h$.
+    1. Compare $h$ with the objective $\sum_x p_x$ of the unnormalized
+       update. Which prompts gain weight relative to it? Is that the
+       weighting a practitioner wants when most prompts of a training set
+       are either nearly always or nearly never solved?
+    1. With a finite group of $K$ responses, a prompt contributes no
+       gradient when all $K$ rewards agree. Compute the probability of this
+       event for $p_x = 0.9$ and $K = 8$, and explain how it limits the
+       amplification of prompts with small $\sigma$.
+1. [code] **Variance ordering across policies.** ● The frozen-policy
+   comparison of :numref:`subsec_five_estimators` probes one policy,
+   `probe` after sixteen updates, at which $J(\theta) = 0.313$. Repeat it
+   at the policies reached after $k \in \{0, 8, 32, 64\}$ probe updates:
+   change the number of iterations of the loop that trains `probe`, and
+   recompute `g_exact`, `V_pi` and `pi_np` before drawing the 200 batches.
+    1. Tabulate the relative variance of the five estimators against $k$.
+       Does the ordering found at sixteen updates hold at every policy?
+    1. How do the two estimators without a baseline behave as $J(\theta)$
+       approaches its maximum $\gamma^5 \approx 0.77$, and why?
+    1. At $k = 0$, count how many of the 200 batches contain no success, and
+       explain what such a batch contributes to each of the five estimators.
+1. [code] **The step-size confound.** ● The normalized arm of `train`
+   reached 90% success in the fewest updates, but it also took the largest
+   steps. On a batch with $\sigma > 0$, the normalized weights
+   :eqref:`eq_pg_normalized` produce the SGD update of the centered weights
+   at the learning rate $\alpha / (\sigma + 10^{-8})$.
+    1. Log $\sigma$ per batch in the normalized arm and plot the median over
+       seeds of $1/(\sigma + 10^{-8})$ against the update index, skipping
+       batches without a success. How does this multiplier of the learning
+       rate change as the policy improves? What does that imply for an
+       attempt to equalize the two arms by running the normalized arm at
+       the learning rate $\alpha$ divided by the run average of
+       $1/(\sigma + 10^{-8})$?
+    1. Rerun the centered arm with $\alpha \in \{16, 32, 64, 128\}$ and find
+       the value whose mean step norm over the first 40 updates matches that
+       of the normalized arm. At matched step norms, which of the two arms
+       reaches 90% success sooner?
+   :exlabel:`ex_baselines-step-size-confound-quantified`
+1. [code] **Optimal state baseline.** ●● Exercise
+   :exref:`ex_baselines-optimal-constant-baseline` derived the
+   variance-optimal constant baseline at one state. Applied state by state,
+   it gives the optimal baseline function of
+   :citet:`Greensmith.Bartlett.Baxter.2004`, which minimizes the variance of
+   a single step's term. This problem works it out for the tabular softmax
+   policy and asks when it is also optimal for the episodic estimate
+   `estimate`.
+    1. Show from :eqref:`eq_softmax_score` that
+
+       $$\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2 = 1 - 2\pi_\theta(a \mid s) + \sum_{a'} \pi_\theta(a' \mid s)^2.$$
+
+       Use $E[\hat{G}_t \mid s_t = s, a_t = a] = Q^{\pi_\theta}(s, a)$ to
+       write the optimal baseline $b^*(s)$ in terms of
+       $\pi_\theta(\cdot \mid s)$ and $Q^{\pi_\theta}(s, \cdot)$.
+    1. The estimate of one episode sums the weighted scores of all its
+       steps. Show that in the tabular parameterization the scores of two
+       steps at different states are orthogonal, so that the squared norm of
+       the estimate splits into one term per step plus cross terms between
+       visits to the same state. Under which condition on the episodes does
+       $b^*(s)$ minimize the trace of the covariance of `estimate` exactly?
+       Does FrozenLake meet it?
+    1. Compute $b^*(s)$ at `probe`, with $Q^{\pi_\theta}$ given by
+       `mdp.backup(V_pi)`, and add the weighting `G - b_star[b.obs]` to
+       `weightings` in :numref:`subsec_five_estimators`. Compare its
+       relative variance with that of the exact baseline, at `probe` and at
+       the policy after 64 probe updates.
+    1. At which states does $b^*(s)$ differ most from $V^{\pi_\theta}(s)$?
+       Explain with the weights
+       $\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2$ why a nearly
+       deterministic state pulls $b^*(s)$ toward the action values of its
+       rarely chosen actions, and relate the gap between the two baselines
+       to the excess variance found in
+       problem :exref:`ex_baselines-optimal-constant-baseline`a.
+   :exlabel:`ex_baselines-optimal-state-baseline`
+1. [extended] **Length bias at small scale.** ●● Dividing the loss of each
+   episode by its own length changes the direction of the gradient
+   (:numref:`subsec_pg_loss_divisor`), and GRPO divides the loss of each
+   response by its own length. :citet:`Liu.Chen.Li.ea.2025` argue that this
+   favors short correct responses and long incorrect ones. This project
+   derives the effect in a toy model and looks for it on FrozenLake.
+    1. Take a single prompt with three responses and a softmax over one logit
+       per response: one correct response with reward $1$ and length $L_c$,
+       and two incorrect responses with reward $0$ and lengths $L_s < L_l$.
+       Weight the score of each response by $(r - p)/L$, where $p$ is the
+       probability of the correct response and $L$ the length of the
+       response. When the two
+       incorrect responses are equally likely, compute the expected change of
+       the logit difference $z_l - z_s$ after one ascent step of size
+       $\alpha$, and compare it with the change under a constant divisor.
+    1. On FrozenLake, sample batches of eight episodes and weight every step
+       of episode $i$ by its centered return
+       $A_i = R(\tau_i) - \frac{1}{8}\sum_{j=1}^8 R(\tau_j)$, divided either
+       by the episode's own length $T_i$ or by the constant $10$, where
+       $R(\tau_i)$ is the discounted return `b.episode_returns(gamma)`. Since
+       `policy_step` averages over all steps of the batch, pass the weight
+       $A_i N / (8 T_i)$, or $A_i N / 80$, at every step of episode $i$,
+       where $N$ is `len(b)`, the number of steps in the batch. Train twenty
+       seeds with each divisor for 200 updates of plain SGD at
+       $\alpha = 16$, as in `train`, and record per update the batch success
+       rate and the mean length of the failed episodes.
+    1. The two divisors learn at different speeds, so compare them at
+       matched success rates: group the updates of all seeds into bins of
+       success rate of width $0.2$ and plot the mean length of failed
+       episodes per bin for both divisors. Does FrozenLake show the predicted
+       bias? What does the same mechanism do to the incorrect responses of a
+       language model during GRPO training?
 
 [Discussions](https://d2l.discourse.group/)
 

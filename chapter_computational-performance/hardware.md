@@ -496,6 +496,29 @@ The following table summarizes the characteristic performance scales:
 
 ## Exercises
 
+1. [code] **Latency and bandwidth, measured.** A transfer of $n$ bytes
+   over a path with latency $\alpha$ and bandwidth $\beta$ takes about
+
+   $$t(n) = \alpha + \frac{n}{\beta},$$
+
+   so it reaches half the bandwidth at $n_{1/2} = \alpha\beta$. The model
+   describes a call that is timed to completion on its own, so every
+   measurement below waits for the device after each call.
+    1. Predict $n_{1/2}$ for the elementwise kernel `x * 2.0` of
+       :numref:`subsec_hw-bytes`, counting the bytes it reads and writes,
+       with $\alpha$ the kernel-launch latency of
+       :numref:`fig_latency_ladder` and $\beta$ the bandwidth that the
+       code of that subsection measures on your GPU.
+    1. Time `x * 2.0` for tensors from 1 MB to 2 GB, and plot the
+       achieved bandwidth against the size on logarithmic axes. Identify
+       the regimes that the curve passes through, and relate the sizes at
+       which it changes regime to :numref:`fig_latency_ladder` and to the
+       on-die capacity in :numref:`fig_memory_hierarchy`. In which regime
+       does the curve depart from $t(n)$, and why?
+    1. Repeat the host-to-device measurement of :numref:`subsec_hw-cpu`
+       for transfers from 4 KB to 256 MB, and fit $\alpha$ and $\beta$.
+       Where does the fitted $\alpha$ fall on :numref:`fig_latency_ladder`?
+
 1. **Shoreline countermeasures.** :numref:`subsec_hw-shoreline` names two
    countermeasures to the shoreline problem: wider memory interfaces and
    more dies per package.
@@ -519,19 +542,7 @@ The following table summarizes the characteristic performance scales:
        HBM? Use the physical reason behind the chip-boundary rule of
        :numref:`subsec_hw-bytes` to explain how an on-package bridge can
        meet this requirement.
-1. **Memory sweep time.** The *sweep time* $C/\beta$ of an accelerator
-   with memory capacity $C$ and bandwidth $\beta$ is the time it takes to
-   read every byte of its memory once.
-    1. Compute the sweep time of each GPU in :numref:`tab_gpu_specs`.
-    1. A model in bf16 fills a fraction $f$ of the memory with its
-       weights. Ignore the KV cache, and use :eqref:`eq_hw_decode_bound` to
-       bound the single-stream decode rate in terms of $f$ and the sweep
-       time. Which rate does the bound allow for the largest model that
-       each GPU can hold?
-    1. Under the long-run growth rates of :numref:`subsec_hw-shoreline`,
-       by what factor does the sweep time change per hardware generation?
-       What does this factor imply for the decode rate of the largest
-       model that fits on each new generation?
+
 1. **Format halving on the roofline.** Model the step from one format to
    a format of half its width, as :numref:`subsec_hw-gpu` describes, by a
    doubling of the peak arithmetic $P$ and a halving of the bytes that
@@ -548,26 +559,7 @@ The following table summarizes the characteristic performance scales:
        of :numref:`tab_gpu_specs` that breaks the pattern. What does that
        format step buy a bandwidth-bound operation, and what does it buy a
        compute-bound one?
-1. **Latency hiding.** ● Little's law :cite:`Little.1961` states that in
-   a steady state the average number of requests in flight equals the
-   throughput times the average latency of one request. For a memory
-   system, the bytes in flight therefore equal the bandwidth times the
-   latency.
-    1. Take the HBM access latency of :numref:`fig_latency_ladder`,
-       300 ns, as the latency of a load on the RTX 4090, with its 1.0 TB/s
-       and 128 SMs. How many bytes must be in flight to sustain the rated
-       bandwidth? If every thread has one 4-byte load outstanding, how
-       many warps per SM must be waiting on memory at any moment?
-    1. Repeat the byte count for the B200 at the same latency. Bandwidth
-       grows about $2\times$ per generation, while DRAM latency has
-       stayed nearly constant for decades. What does this imply for the
-       parallelism that a kernel must expose on each new generation?
-    1. In pointer chasing, the address of every load comes from the
-       previous load, so a chain of loads has one request in flight. A CPU
-       has the DDR5 access latency of :numref:`fig_latency_ladder`, 90 ns,
-       and fetches 64-byte cache lines. Compute the bandwidth of one chain
-       and the number of independent chains that would saturate a socket
-       with 0.5 TB/s.
+
 1. **Starved input pipeline.** The compute of a training job alone would
    process 2 GB/s of decoded images. One worker process prepares batches
    by running two stages in sequence. It reads compressed JPEG files from
@@ -585,6 +577,7 @@ The following table summarizes the characteristic performance scales:
        training step. By what fraction does it lengthen the step, and by
        what fraction after a switch to pinned memory at twice the pageable
        rate? What does an asynchronous copy change?
+
 1. **Ridge point of a link.** The ridge point $P/\beta$ of
    :numref:`subsec_perf-counting` applies to any data path, with $\beta$
    the bandwidth of that path: it counts the FLOPs that a device performs
@@ -608,6 +601,7 @@ The following table summarizes the characteristic performance scales:
        factor does the ridge point of each of these links exceed the memory
        ridge point of the same GPU? Relate the factors to the chip-boundary
        rule of :numref:`subsec_hw-bytes`.
+
 1. **Energy per byte.** Use the energies of :numref:`fig_energy_ladder`,
    and charge every FLOP the energy of one fp32 multiply.
     1. Find the arithmetic intensity at which the energy of the arithmetic
@@ -626,6 +620,21 @@ The following table summarizes the characteristic performance scales:
        and the electricity cost of one million tokens at 0.30 US dollars
        per kWh. Repeat for 64 streams that share every weight read, after
        checking that the batched step is still bandwidth-bound.
+
+1. **Memory sweep time.** The *sweep time* $C/\beta$ of an accelerator
+   with memory capacity $C$ and bandwidth $\beta$ is the time it takes to
+   read every byte of its memory once.
+    1. Compute the sweep time of each GPU in :numref:`tab_gpu_specs`.
+    1. A model in bf16 fills a fraction $f$ of the memory with its
+       weights. Ignore the KV cache, and use :eqref:`eq_hw_decode_bound` to
+       bound the single-stream decode rate in terms of $f$ and the sweep
+       time. Which rate does the bound allow for the largest model that
+       each GPU can hold?
+    1. Under the long-run growth rates of :numref:`subsec_hw-shoreline`,
+       by what factor does the sweep time change per hardware generation?
+       What does this factor imply for the decode rate of the largest
+       model that fits on each new generation?
+
 1. **Launch-bound decode.** In eager single-stream decode, the CPU
    launches every kernel of every block for every token, while the GPU
    reads the weights of every block. Consider a GPT whose $L$ blocks of
@@ -643,28 +652,7 @@ The following table summarizes the characteristic performance scales:
     1. What does the change of $d^*$ from the RTX 4090 to the B200 imply
        for the payoff of the capture-and-replay of
        :numref:`sec_compilation` on faster GPUs?
-1. [code] **Latency and bandwidth, measured.** A transfer of $n$ bytes
-   over a path with latency $\alpha$ and bandwidth $\beta$ takes about
 
-   $$t(n) = \alpha + \frac{n}{\beta},$$
-
-   so it reaches half the bandwidth at $n_{1/2} = \alpha\beta$. The model
-   describes a call that is timed to completion on its own, so every
-   measurement below waits for the device after each call.
-    1. Predict $n_{1/2}$ for the elementwise kernel `x * 2.0` of
-       :numref:`subsec_hw-bytes`, counting the bytes it reads and writes,
-       with $\alpha$ the kernel-launch latency of
-       :numref:`fig_latency_ladder` and $\beta$ the bandwidth that the
-       code of that subsection measures on your GPU.
-    1. Time `x * 2.0` for tensors from 1 MB to 2 GB, and plot the
-       achieved bandwidth against the size on logarithmic axes. Identify
-       the regimes that the curve passes through, and relate the sizes at
-       which it changes regime to :numref:`fig_latency_ladder` and to the
-       on-die capacity in :numref:`fig_memory_hierarchy`. In which regime
-       does the curve depart from $t(n)$, and why?
-    1. Repeat the host-to-device measurement of :numref:`subsec_hw-cpu`
-       for transfers from 4 KB to 256 MB, and fit $\alpha$ and $\beta$.
-       Where does the fitted $\alpha$ fall on :numref:`fig_latency_ladder`?
 1. [code] **Burst versus random access.** ● Let `x` be the 1 GB vector
    of :numref:`subsec_hw-bytes`, and gather it through an index vector
    `idx` of the same length, as `x[idx]`.
@@ -681,6 +669,7 @@ The following table summarizes the characteristic performance scales:
        the block size in bytes. At what block size does the shuffled gather
        approach the identity gather? What does this size imply for the
        granularity of shuffled reads from a dataset?
+
 1. [code] **False sharing.** ● CPUs keep their private caches coherent at
    the granularity of a cache line: before a core writes to a line, the
    copies of that line in the caches of other cores are invalidated. Write
@@ -694,6 +683,27 @@ The following table summarizes the characteristic performance scales:
     1. Sweep $s$ from 8 to 256 bytes. At which separation does the
        slowdown disappear? Compare it with the cache-line size that the
        operating system reports for your CPU.
+
+1. **Latency hiding.** ● Little's law :cite:`Little.1961` states that in
+   a steady state the average number of requests in flight equals the
+   throughput times the average latency of one request. For a memory
+   system, the bytes in flight therefore equal the bandwidth times the
+   latency.
+    1. Take the HBM access latency of :numref:`fig_latency_ladder`,
+       300 ns, as the latency of a load on the RTX 4090, with its 1.0 TB/s
+       and 128 SMs. How many bytes must be in flight to sustain the rated
+       bandwidth? If every thread has one 4-byte load outstanding, how
+       many warps per SM must be waiting on memory at any moment?
+    1. Repeat the byte count for the B200 at the same latency. Bandwidth
+       grows about $2\times$ per generation, while DRAM latency has
+       stayed nearly constant for decades. What does this imply for the
+       parallelism that a kernel must expose on each new generation?
+    1. In pointer chasing, the address of every load comes from the
+       previous load, so a chain of loads has one request in flight. A CPU
+       has the DDR5 access latency of :numref:`fig_latency_ladder`, 90 ns,
+       and fetches 64-byte cache lines. Compute the bandwidth of one chain
+       and the number of independent chains that would saturate a socket
+       with 0.5 TB/s.
 
 <!-- slides -->
 

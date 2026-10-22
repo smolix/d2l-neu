@@ -454,6 +454,14 @@ Dimensionality and storage for networks are automatically inferred
        first at `lr=0.015` and the second at `lr=0.03`. Confirm that the
        trained parameters agree, and explain why the two plotted
        training-loss curves still differ.
+
+1. [code] **Scratch versus concise.** Time `LinearRegressionScratch` and
+   `LinearRegression` on the same `SyntheticRegressionData` for 10, 100,
+   and 1000 epochs, and report the time per epoch for each. Both run the
+   same `fit_epoch`; identify which operations differ between the two runs
+   and determine, by timing those operations in isolation, whether they
+   account for the measured gap.
+
 1. [code] **Optimization versus estimation error.** ● Train
    `LinearRegression` with `lr=0.03` and `max_epochs=10` on
    `SyntheticRegressionData` with `num_train` set to each of
@@ -461,18 +469,12 @@ Dimensionality and storage for networks are automatically inferred
    compare the distance $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ of the
    trained weights from the generating weights $\mathbf{w}^*$, stored in
    `data.w`, with the same distance for the least-squares solution on the
-   same training data, computed as in exercise 5 of
+   same training data, computed as in exercise :exref:`ex_synthetic-regression-data-recovery-under-noise` of
    :numref:`sec_synthetic-regression-data`.
     1. Count the parameter updates in each run, and explain the ratio of
        the two errors at each `num_train`.
     1. Find the number of epochs after which the run with `num_train=5`
        comes within a factor of two of its least-squares error.
-1. [code] **Scratch versus concise.** Time `LinearRegressionScratch` and
-   `LinearRegression` on the same `SyntheticRegressionData` for 10, 100,
-   and 1000 epochs, and report the time per epoch for each. Both run the
-   same `fit_epoch`; identify which operations differ between the two runs
-   and determine, by timing those operations in isolation, whether they
-   account for the measured gap.
 
 
 :begin_tab:`mxnet`

@@ -722,9 +722,9 @@ assumptions yield other losses:
 | Output type | Noise model | Loss (negative log-likelihood) |
 |:--|:--|:--|
 | real-valued, well-behaved noise | Gaussian | squared error (this section) |
-| real-valued, outliers or heavy tails | Laplace | absolute error (exercise 4) |
-| positive, multiplicative fluctuations (prices) | Gaussian on $\log y$ | squared error on $\log y$ (exercise 6) |
-| counts (sales, arrivals) | Poisson | $\lambda(\mathbf{x}) - k \log \lambda(\mathbf{x})$ (exercise 7) |
+| real-valued, outliers or heavy tails | Laplace | absolute error (exercise :exref:`ex_linear-regression-laplace-noise`) |
+| positive, multiplicative fluctuations (prices) | Gaussian on $\log y$ | squared error on $\log y$ (exercise :exref:`ex_linear-regression-beyond-gaussian-noise`) |
+| counts (sales, arrivals) | Poisson | $\lambda(\mathbf{x}) - k \log \lambda(\mathbf{x})$ (exercise :exref:`ex_linear-regression-counting-apples`) |
 
 :numref:`fig_linreg-loss-menu` shows why the first two rows differ: the
 Laplace density places far more mass in its tails than a Gaussian of equal
@@ -733,7 +733,7 @@ its loss penalizes that residual only linearly, exactly the robustness we observ
 the outlier demonstration above. The figure also marks the *Huber* loss, a
 compromise that is quadratic near zero (like squared error) but linear in the
 tails (like absolute error). The exercises of this section explore the
-losses in the table, and exercise 8 of :numref:`sec_linear_scratch` explores
+losses in the table, and exercise :exref:`ex_linear-regression-scratch-robust-losses` of :numref:`sec_linear_scratch` explores
 the Huber loss; the same principle extends to *heteroscedastic* regression, where the
 noise level itself depends on the input and we predict $\sigma(\mathbf{x})$
 alongside the mean. We apply this principle again when deriving the loss
@@ -824,6 +824,7 @@ and ultimately, evaluation on previously unseen data.
     1. Change the loss to $\sum_i |y^{(i)} - b|$ and find all of its
        minimizers. Then replace a single label by an arbitrary value and
        determine how far the minimizers of each of the two losses can move.
+
 1. **Intercept and centering.** Appending a constant feature $1$ to every
    input turns the affine model $\mathbf{w}^\top \mathbf{x} + b$ into a
    linear model in $(\mathbf{x}, 1)$. Centering the data removes the bias
@@ -833,6 +834,83 @@ and ultimately, evaluation on previously unseen data.
        satisfies $b^* = \bar{y} - \mathbf{w}^{*\top} \bar{\mathbf{x}}$.
     1. Show that $\mathbf{w}^*$ is a least-squares fit without bias to the
        centered data $(\mathbf{x}^{(i)} - \bar{\mathbf{x}},\, y^{(i)} - \bar{y})$.
+
+1. **Laplace noise.** Assume that the noise model governing the additive
+   noise $\epsilon$ is the Laplace distribution (see
+   :numref:`sec_mdl-distributions`). That is,
+   $p(\epsilon) = \frac{1}{2} \exp(-|\epsilon|)$.
+    1. Write out the negative log-likelihood of the data under the model
+       $-\log P(\mathbf y \mid \mathbf X)$.
+    1. Determine whether a closed-form solution exists.
+    1. Write the minibatch stochastic gradient descent update for
+       $(\mathbf{w}, b)$ under this loss in the form of
+       :eqref:`eq_linreg_batch_update`, using the subgradient
+       $\operatorname{sign}(\cdot)$ of
+       :numref:`subsec_linear-regression-loss-function`. Compare how the
+       size of each example's contribution depends on its residual under
+       this loss and under the squared loss.
+    1. The outlier demonstration in
+       :numref:`subsec_linear-regression-loss-function` applies this update
+       to a line through the origin, using the full dataset in every step
+       and a constant learning rate. On its data the minimizer of the
+       absolute error is exactly $w = 2$, yet the code prints $2.02$.
+       Explain why the iterates do not settle at the minimizer, and propose
+       a fix.
+   :exlabel:`ex_linear-regression-laplace-noise`
+
+1. **Beyond Gaussian noise.** Suppose you use regression to estimate the
+   price of houses or of stocks.
+    1. Model the price directly as
+       $y = \mathbf{w}^\top \mathbf{x} + b + \epsilon$ with
+       $\epsilon \sim \mathcal{N}(0, \sigma^2)$, and take
+       $\sigma = 100{,}000$ dollars. Compute the probability that the model
+       assigns to a negative price for a house whose predicted price is
+       $50{,}000$ dollars. Explain why no single $\sigma$ suits both this
+       house and a house whose predicted price is $5{,}000{,}000$ dollars.
+    1. Now regress on the logarithm of the price,
+       $\log \textrm{price} = \mathbf{w}^\top \mathbf{x} + b + \epsilon$,
+       where $\epsilon \sim \mathcal{N}(0, \sigma^2)$ now acts on the log
+       scale. Compute the conditional mean and standard deviation of the
+       price and show that their ratio does not depend on $\mathbf{x}$.
+       Determine whether $\exp(\mathbf{w}^\top \mathbf{x} + b)$ is an
+       unbiased prediction of the price. The same modeling choice underlies
+       the Black--Scholes model of option pricing :cite:`Black.Scholes.1973`.
+    1. Stock prices are quoted on a discrete grid, for example in whole
+       cents. Explain how this affects the log-price model and for which
+       price range the effect is largest.
+   :exlabel:`ex_linear-regression-beyond-gaussian-noise`
+
+1. **Counting apples.** Suppose we want to use regression to estimate the
+   *number* of apples sold in a grocery store.
+    1. Identify the problems with a Gaussian additive noise model for such
+       a target.
+    1. The [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution)
+       models counts. It is given by
+       $p(k \mid \lambda) = \lambda^k e^{-\lambda}/k!$, where $\lambda > 0$
+       is the rate and $k \in \{0, 1, 2, \ldots\}$ is the observed count.
+       Prove that $E[k] = \lambda$.
+    1. Derive the negative log-likelihood of a count $k$ under a rate
+       $\lambda(\mathbf{x})$ that depends on the features, dropping terms
+       that do not depend on the parameters, and check it against the table
+       in :numref:`subsec_linreg-loss-menu`.
+    1. Compare the parameterizations
+       $\lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$ and
+       $\log \lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$.
+       Determine for each whether $\lambda(\mathbf{x}) > 0$ holds for all
+       inputs and parameters, and state the consequence for the loss of
+       part (c). Write that loss in terms of $(\mathbf{w}, b)$ for the
+       second parameterization.
+   :exlabel:`ex_linear-regression-counting-apples`
+
+1. **Composing two linear layers.** Suppose a network with two layers is
+   built by feeding the output of one linear layer,
+   $\mathbf{h} = \mathbf{W}_1 \mathbf{x} + \mathbf{b}_1$, into a second,
+   $\hat{y} = \mathbf{w}_2^\top \mathbf{h} + b_2$. Determine the class of
+   functions of $\mathbf{x}$ that this network can represent and compare it
+   with the class represented by a single linear layer. What property must
+   an operation inserted between the two layers have for the composition to
+   represent a strictly larger class?
+
 1. **Singular design matrix.** ● Full column rank makes the least-squares
    minimizer unique. Suppose instead that $\mathbf{X}^\top \mathbf{X}$ is
    singular.
@@ -869,75 +947,7 @@ and ultimately, evaluation on previously unseen data.
        equals the expected loss of part (d). Compare the limit of
        $\mathbf{w}_{\tilde{\lambda}}$ as $\tilde{\lambda} \to 0$ with
        $\mathbf{X}^{\dagger}\mathbf{y}$ from part (b).
-1. **Laplace noise.** Assume that the noise model governing the additive
-   noise $\epsilon$ is the Laplace distribution (see
-   :numref:`sec_mdl-distributions`). That is,
-   $p(\epsilon) = \frac{1}{2} \exp(-|\epsilon|)$.
-    1. Write out the negative log-likelihood of the data under the model
-       $-\log P(\mathbf y \mid \mathbf X)$.
-    1. Determine whether a closed-form solution exists.
-    1. Write the minibatch stochastic gradient descent update for
-       $(\mathbf{w}, b)$ under this loss in the form of
-       :eqref:`eq_linreg_batch_update`, using the subgradient
-       $\operatorname{sign}(\cdot)$ of
-       :numref:`subsec_linear-regression-loss-function`. Compare how the
-       size of each example's contribution depends on its residual under
-       this loss and under the squared loss.
-    1. The outlier demonstration in
-       :numref:`subsec_linear-regression-loss-function` applies this update
-       to a line through the origin, using the full dataset in every step
-       and a constant learning rate. On its data the minimizer of the
-       absolute error is exactly $w = 2$, yet the code prints $2.02$.
-       Explain why the iterates do not settle at the minimizer, and propose
-       a fix.
-1. **Composing two linear layers.** Suppose a network with two layers is
-   built by feeding the output of one linear layer,
-   $\mathbf{h} = \mathbf{W}_1 \mathbf{x} + \mathbf{b}_1$, into a second,
-   $\hat{y} = \mathbf{w}_2^\top \mathbf{h} + b_2$. Determine the class of
-   functions of $\mathbf{x}$ that this network can represent and compare it
-   with the class represented by a single linear layer. What property must
-   an operation inserted between the two layers have for the composition to
-   represent a strictly larger class?
-1. **Beyond Gaussian noise.** Suppose you use regression to estimate the
-   price of houses or of stocks.
-    1. Model the price directly as
-       $y = \mathbf{w}^\top \mathbf{x} + b + \epsilon$ with
-       $\epsilon \sim \mathcal{N}(0, \sigma^2)$, and take
-       $\sigma = 100{,}000$ dollars. Compute the probability that the model
-       assigns to a negative price for a house whose predicted price is
-       $50{,}000$ dollars. Explain why no single $\sigma$ suits both this
-       house and a house whose predicted price is $5{,}000{,}000$ dollars.
-    1. Now regress on the logarithm of the price,
-       $\log \textrm{price} = \mathbf{w}^\top \mathbf{x} + b + \epsilon$,
-       where $\epsilon \sim \mathcal{N}(0, \sigma^2)$ now acts on the log
-       scale. Compute the conditional mean and standard deviation of the
-       price and show that their ratio does not depend on $\mathbf{x}$.
-       Determine whether $\exp(\mathbf{w}^\top \mathbf{x} + b)$ is an
-       unbiased prediction of the price. The same modeling choice underlies
-       the Black--Scholes model of option pricing :cite:`Black.Scholes.1973`.
-    1. Stock prices are quoted on a discrete grid, for example in whole
-       cents. Explain how this affects the log-price model and for which
-       price range the effect is largest.
-1. **Counting apples.** Suppose we want to use regression to estimate the
-   *number* of apples sold in a grocery store.
-    1. Identify the problems with a Gaussian additive noise model for such
-       a target.
-    1. The [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution)
-       models counts. It is given by
-       $p(k \mid \lambda) = \lambda^k e^{-\lambda}/k!$, where $\lambda > 0$
-       is the rate and $k \in \{0, 1, 2, \ldots\}$ is the observed count.
-       Prove that $E[k] = \lambda$.
-    1. Derive the negative log-likelihood of a count $k$ under a rate
-       $\lambda(\mathbf{x})$ that depends on the features, dropping terms
-       that do not depend on the parameters, and check it against the table
-       in :numref:`subsec_linreg-loss-menu`.
-    1. Compare the parameterizations
-       $\lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$ and
-       $\log \lambda(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$.
-       Determine for each whether $\lambda(\mathbf{x}) > 0$ holds for all
-       inputs and parameters, and state the consequence for the loss of
-       part (c). Write that loss in terms of $(\mathbf{w}, b)$ for the
-       second parameterization.
+   :exlabel:`ex_linear-regression-singular-design-matrix`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/40)

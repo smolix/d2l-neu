@@ -696,11 +696,7 @@ other components.
     1. Attach a function `greet(self)` to the instance instead, with
        `setattr(a, 'greet', greet)`, and call `a.greet()`. Explain the
        difference from registering it on the class.
-1. **Optimizer and model.** The `Module` class keeps the optimizer in
-   `configure_optimizers`, a *method of the model*, rather than passing it
-   as an argument to `Trainer`. State the advantages of this design choice,
-   and describe a training setup in which putting the optimizer on the
-   model becomes awkward.
+
 1. [code] **Saving hyperparameters.** `save_hyperparameters` is
    implemented in :numref:`sec_utils` with Python's `inspect` module, which
    gives it access to the stack frame of the method that calls it.
@@ -714,6 +710,13 @@ other components.
        that `self.a` and `self.b` exist and `self.c` does not.
     1. State one thing the `inspect`-based version provides that your
        version gives up.
+
+1. **Optimizer and model.** The `Module` class keeps the optimizer in
+   `configure_optimizers`, a *method of the model*, rather than passing it
+   as an argument to `Trainer`. State the advantages of this design choice,
+   and describe a training setup in which putting the optimizer on the
+   model becomes awkward.
+
 1. [code] **Synchronous logs.** ● `ProgressBoard.draw` is asynchronous: it
    queues the point for a background thread, which converts it to a number
    and redraws the figure at most once every $0.1$ s. Starting from the

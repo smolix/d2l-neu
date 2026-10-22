@@ -487,7 +487,7 @@ $$\mathbf{w}^*_{\tilde{\lambda}} = (\mathbf{X}^\top \mathbf{X} + \tilde{\lambda}
 
 which is well defined for every $\tilde{\lambda} > 0$ even when
 $\mathbf{X}^\top \mathbf{X}$ is singular; this is the estimator promised in
-the last part of exercise 3 of :numref:`sec_linear_regression`. (Because the
+the last part of exercise :exref:`ex_linear-regression-singular-design-matrix` of :numref:`sec_linear_regression`. (Because the
 loss $L$ of this section *averages* over the $n$ examples while the objective
 above sums, the two conventions are related by $\tilde{\lambda} = n\lambda$.)
 
@@ -750,24 +750,6 @@ validation data, not from training error alone.
 
 ## Exercises
 
-1. [code] **The $\lambda$ sweep.** Train `WeightDecayScratch` on `Data`
-   for $\lambda \in \{0, 0.1, 0.3, 1, 3, 10, 30\}$. The loss that
-   `WeightDecayScratch` reports includes the penalty, so measure the final
-   training and validation losses with the unpenalized squared loss of
-   `d2l.LinearRegressionScratch`.
-    1. Plot both losses against the nonzero values of $\lambda$ on a
-       logarithmic $\lambda$ axis, draw the $\lambda = 0$ losses as
-       horizontal reference lines, and report the $\lambda^*$ with the
-       smallest validation loss.
-    1. Compute $\textrm{df}(\lambda)$ for the same values with the code of
-       :numref:`subsec_wd-shrinkage` and re-plot the validation loss
-       against $\textrm{df}(\lambda)$. Compare the shape with
-       :numref:`fig_capacity_vs_error`.
-    1. Repeat the search of (a) on two more random train/validation splits
-       of the same data (permute the rows of `data.X` and `data.y` with the
-       same permutation). Report whether $\lambda^*$ is stable across the
-       three splits and by how much the validation loss differs between
-       $\lambda^*$ and its runner-up.
 1. **The $\ell_1$ update.** Replace the penalty
    $\frac{\lambda}{2}\|\mathbf{w}\|^2$ by $\lambda \sum_i |w_i|$
    ($\ell_1$ regularization).
@@ -783,6 +765,7 @@ validation data, not from training error alone.
        the penalty step so that it sets $w_i$ to zero whenever it would
        change the sign of $w_i$. Relate the result to the feature selection
        that lasso performs.
+
 1. **Frobenius penalty.** Weight decay on a layer with weight matrix
    $\mathbf{W} \in \mathbb{R}^{q \times d}$ adds
    $\frac{\lambda}{2}\|\mathbf{W}\|_\textrm{F}^2$ to the loss, with the
@@ -796,55 +779,7 @@ validation data, not from training error alone.
        for every $\mathbf{v} \in \mathbb{R}^d$. Use it to bound the change
        of the output $\mathbf{W}\mathbf{x}$ when the input $\mathbf{x}$ is
        perturbed by $\boldsymbol{\delta}$.
-1. [code] **Early stopping.** Train `WeightDecayScratch` with
-   $\lambda = 0$ as in `train_scratch(0)` for at most 30 epochs. Record the
-   validation loss after every epoch, and stop when it has not improved for
-   three consecutive epochs. Report the epoch with the lowest validation
-   loss and that loss. Compare it with the final validation losses of
-   `train_scratch(0)` and `train_scratch(3)`, measuring the validation loss
-   of `train_scratch(3)` without its penalty term.
-1. **Decay of the nullspace.** ● Let $\mathbf{X}$ be the $20 \times 200$
-   matrix of training inputs.
-    1. Show that one minibatch SGD step of `WeightDecayScratch` multiplies
-       the component of $\mathbf{w}$ in the nullspace of $\mathbf{X}$ by
-       $1 - \eta\lambda$.
-    1. `WeightDecayScratch` draws its initial weights from
-       $\mathcal{N}(0, 0.01^2)$. Estimate how much the nullspace component
-       of the initial weights adds to the validation loss, and use the
-       estimate with (a) to explain the comparison of the early-stopped run
-       with `train_scratch(3)` in exercise 4.
-1. [code] **Ridge as augmented least squares.** Center the columns of
-   `data.X` and the labels `data.y` of the training split so that the
-   intercept drops out, and implement ridge regression two ways.
-    1. Use the closed form
-       $(\mathbf{X}^\top\mathbf{X}+\tilde{\lambda}\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$
-       of :numref:`subsec_wd-shrinkage`.
-    1. Run ordinary least squares on $\mathbf{X}$ stacked with
-       $\sqrt{\tilde{\lambda}}\,\mathbf{I}$ and $\mathbf{y}$ stacked with
-       $d$ zeros.
 
-    Confirm that the two give matching $\hat{\mathbf{w}}$ up to numerical
-    precision. With $\tilde{\lambda} = n\lambda = 60$, compare
-    `l2_penalty` of your solution with the value printed by
-    `train_scratch(3)`.
-
-    *Adapted from Hastie, Tibshirani, and Friedman,
-    [The Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/),
-    Exercise 3.12.*
-1. **MAP estimation.** The derivation in this section gives
-   $\lambda = \sigma^2/(n\tau^2)$ for the prior
-   $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2\mathbf{I})$ and noise
-   variance $\sigma^2$.
-    1. For `train_scratch(3)` ($n = 20$, $\sigma = 0.01$, $\lambda = 3$),
-       compute $\tau$ and compare it with the true weights $w_i = 0.01$ of
-       `Data`. Is the implied prior consistent with the data-generating
-       process? Then compute the $\lambda$ that a prior with $\tau = 0.01$
-       implies.
-    1. Holding $\tau$ and $\sigma$ fixed, describe how $\lambda$ changes as
-       $n$ grows and interpret the change in terms of the relative weight of
-       prior and likelihood.
-    1. The bias $b$ is not penalized. Which prior on $b$ does this
-       correspond to?
 1. **Shrinkage versus penalty.** Weight decay can be applied by shrinking
    the weights before the gradient step or by adding
    $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss $L$.
@@ -868,6 +803,79 @@ validation data, not from training error alone.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 9.5.*
+
+1. **MAP estimation.** The derivation in this section gives
+   $\lambda = \sigma^2/(n\tau^2)$ for the prior
+   $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2\mathbf{I})$ and noise
+   variance $\sigma^2$.
+    1. For `train_scratch(3)` ($n = 20$, $\sigma = 0.01$, $\lambda = 3$),
+       compute $\tau$ and compare it with the true weights $w_i = 0.01$ of
+       `Data`. Is the implied prior consistent with the data-generating
+       process? Then compute the $\lambda$ that a prior with $\tau = 0.01$
+       implies.
+    1. Holding $\tau$ and $\sigma$ fixed, describe how $\lambda$ changes as
+       $n$ grows and interpret the change in terms of the relative weight of
+       prior and likelihood.
+    1. The bias $b$ is not penalized. Which prior on $b$ does this
+       correspond to?
+
+1. [code] **The $\lambda$ sweep.** Train `WeightDecayScratch` on `Data`
+   for $\lambda \in \{0, 0.1, 0.3, 1, 3, 10, 30\}$. The loss that
+   `WeightDecayScratch` reports includes the penalty, so measure the final
+   training and validation losses with the unpenalized squared loss of
+   `d2l.LinearRegressionScratch`.
+    1. Plot both losses against the nonzero values of $\lambda$ on a
+       logarithmic $\lambda$ axis, draw the $\lambda = 0$ losses as
+       horizontal reference lines, and report the $\lambda^*$ with the
+       smallest validation loss.
+    1. Compute $\textrm{df}(\lambda)$ for the same values with the code of
+       :numref:`subsec_wd-shrinkage` and re-plot the validation loss
+       against $\textrm{df}(\lambda)$. Compare the shape with
+       :numref:`fig_capacity_vs_error`.
+    1. Repeat the search of (a) on two more random train/validation splits
+       of the same data (permute the rows of `data.X` and `data.y` with the
+       same permutation). Report whether $\lambda^*$ is stable across the
+       three splits and by how much the validation loss differs between
+       $\lambda^*$ and its runner-up.
+
+1. [code] **Early stopping.** Train `WeightDecayScratch` with
+   $\lambda = 0$ as in `train_scratch(0)` for at most 30 epochs. Record the
+   validation loss after every epoch, and stop when it has not improved for
+   three consecutive epochs. Report the epoch with the lowest validation
+   loss and that loss. Compare it with the final validation losses of
+   `train_scratch(0)` and `train_scratch(3)`, measuring the validation loss
+   of `train_scratch(3)` without its penalty term.
+
+1. [code] **Ridge as augmented least squares.** Center the columns of
+   `data.X` and the labels `data.y` of the training split so that the
+   intercept drops out, and implement ridge regression two ways.
+    1. Use the closed form
+       $(\mathbf{X}^\top\mathbf{X}+\tilde{\lambda}\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$
+       of :numref:`subsec_wd-shrinkage`.
+    1. Run ordinary least squares on $\mathbf{X}$ stacked with
+       $\sqrt{\tilde{\lambda}}\,\mathbf{I}$ and $\mathbf{y}$ stacked with
+       $d$ zeros.
+
+    Confirm that the two give matching $\hat{\mathbf{w}}$ up to numerical
+    precision. With $\tilde{\lambda} = n\lambda = 60$, compare
+    `l2_penalty` of your solution with the value printed by
+    `train_scratch(3)`.
+
+    *Adapted from Hastie, Tibshirani, and Friedman,
+    [The Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/),
+    Exercise 3.12.*
+
+1. **Decay of the nullspace.** ● Let $\mathbf{X}$ be the $20 \times 200$
+   matrix of training inputs.
+    1. Show that one minibatch SGD step of `WeightDecayScratch` multiplies
+       the component of $\mathbf{w}$ in the nullspace of $\mathbf{X}$ by
+       $1 - \eta\lambda$.
+    1. `WeightDecayScratch` draws its initial weights from
+       $\mathcal{N}(0, 0.01^2)$. Estimate how much the nullspace component
+       of the initial weights adds to the validation loss, and use the
+       estimate with (a) to explain the comparison of the early-stopped run
+       with `train_scratch(3)` in problem 6.
+   :exlabel:`ex_weight-decay-decay-nullspace`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/98)

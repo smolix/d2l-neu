@@ -104,7 +104,7 @@ def fit_value(ac, obs, target, num_steps=1):  #@save
 
 The training function below is the learned-baseline REINFORCE algorithm from :numref:`sec_baselines`. It collects rollouts, computes reward-to-go, subtracts a learned value estimate, updates the policy, and fits the value function. The agent constructor and environment are arguments, allowing the same function to train different policy representations.
 
-We normalize the advantages because the tasks considered below have substantially different return scales; as discussed in :numref:`sec_baselines`, this changes the effective step size. The controlled estimator comparison used plain SGD to expose that effect, whereas the neural-network experiments use Adam through the optimizer owned by each policy object.
+We normalize the advantages because the tasks considered below have substantially different return scales; as discussed in :numref:`sec_baselines`, under plain SGD this changes the effective step size. The controlled estimator comparison used plain SGD to expose that effect, whereas the neural-network experiments use Adam through the optimizer owned by each policy object.
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-3}
 %%tab pytorch, jax
@@ -127,7 +127,8 @@ def train_reinforce(seed, make_agent, env_name, gamma=0.99, num_updates=80,
 Relative to :numref:`sec_baselines`, three inputs change: the constructor
 is `ActorCritic.mlp(4, 2)` instead of `ActorCritic.tabular(16, 4)`, the
 environment is `'CartPole-v1'` instead of `'FrozenLake-v1'`, and the
-discount is $0.99$, suited to a 500-step horizon, instead of $0.95$. The
+discount is $0.99$ instead of $0.95$, which raises the effective horizon
+$1/(1-\gamma)$ of :numref:`sec_mdp` from 20 to 100 steps. The
 rollout, reward-to-go, policy update, and value-regression code remains
 unchanged. This compact diagnostic omits the replay, bootstrapped targets,
 and update constraints introduced in Chapter 15. We run three seeds:
@@ -376,7 +377,7 @@ The network update changes the output at all 255 unobserved probe states, someti
 
 A policy-gradient update estimates the gradient of the scalar objective $J(\theta)$ in :eqref:`eq_pg_objective`. Under the usual assumptions of smoothness, bounded-variance unbiased gradients, and decaying step sizes, this has the form studied in stochastic optimization. The implementation here does not satisfy all of those assumptions: normalization rescales each batch using its data, samples depend on the collecting policy, and Adam uses a fixed step size. The curves should therefore be interpreted as empirical results rather than applications of a convergence theorem.
 
-The value network in this section is fitted to observed reward-to-go targets that do not depend on the network's own predictions. Bootstrapped value methods instead construct targets from the current value estimate. Although each update is a gradient step with its target held fixed, the expected semi-gradient field need not be the gradient of a single scalar objective, and function approximation can make the iteration diverge :cite:`Tsitsiklis.VanRoy.1997`. Residual-gradient methods optimize a Bellman-error objective directly but encounter the double-sampling problem from :numref:`sec_qlearning`.
+The value network in this section is fitted to observed reward-to-go targets that do not depend on the network's own predictions. Bootstrapped value methods instead construct targets from the current value estimate. Although each update is a gradient step with its target held fixed, the expected semi-gradient field need not be the gradient of a single scalar objective, and the iteration can diverge when the updated states are not sampled along the chain's own trajectories or when the approximator is nonlinear :cite:`Tsitsiklis.VanRoy.1997`. Residual-gradient methods optimize a Bellman-error objective directly but encounter the double-sampling problem from :numref:`sec_qlearning`.
 
 Bootstrapped critics and their stability are introduced in :numref:`chap_deep_rl` and :numref:`sec_dqn`.
 
@@ -387,7 +388,7 @@ Deep learning frameworks express updates through scalar losses. Instead of assem
 $$L(\theta) = -\frac{1}{N} \sum_{\textrm{steps}} \hat{A}_t\, \log \pi_\theta(a_t \mid s_t),$$
 :eqlabel:`eq_pg_surrogate_loss`
 
-where the advantages $\hat A_t$ are treated as fixed. Its gradient is $-\hat u$ up to the positive batch-normalization factor discussed in :numref:`sec_baselines`, so minimizing $L$ implements a policy-gradient ascent step. In `policy_step`, the advantages arrive as a NumPy array and therefore carry no gradient graph. The numerical value of this surrogate loss is not an estimate of policy performance: it is constructed to have the desired derivative at the current parameters. Consequently, a decrease in $L$ need not correspond to an increase in return. The CartPole runs record both quantities:
+where $N$ is the number of steps in the batch and the advantages $\hat A_t$ are treated as fixed. Its gradient is $-\hat u$ up to the positive batch-normalization factor discussed in :numref:`sec_baselines`, so minimizing $L$ implements a policy-gradient ascent step. In `policy_step`, the advantages arrive as a NumPy array and therefore carry no gradient graph. The numerical value of this surrogate loss is not an estimate of policy performance: it is constructed to have the desired derivative at the current parameters. Consequently, a decrease in $L$ need not correspond to an increase in return. The CartPole runs record both quantities:
 
 ```{.python .input #deep-rl-the-estimator-written-as-a-loss}
 %%tab pytorch, jax
@@ -409,42 +410,328 @@ Parameter sharing makes continuous problems learnable but also couples updates a
 
 ## Exercises
 
-1. [conceptual] *A surrogate loss is not a performance metric.* Show that the gradient of
-   :eqref:`eq_pg_surrogate_loss` equals $-\hat{u}$ up to a positive constant
-   when the advantages are held fixed. Then describe a situation in which the
-   value of that loss decreases while the return also decreases, and say what
-   you should plot instead.
-1. [short-code] *How small can the policy be.* Sweep the hidden width over
-   $\{4, 16, 64\}$, two seeds each, and report the mean return over the last
-   ten updates. How small can the network be and still balance the pole, and
-   what changes about the speed and the smoothness of training at each end?
-   (About ten minutes on a laptop CPU.)
-1. [short-code] *Which return to plot.* `train_reinforce` reports the
-   *undiscounted* episode return but uses discounted reward-to-go inside the
-   update. Add the discounted return to the plot. Why do the two tell the same
-   story here, and construct a task where they would not.
-1. [short-code] *Batch size at a fixed episode budget.* Sweep the batch size
-   over $\{1, 8, 32\}$ with the total number of sampled episodes held fixed, so
-   that smaller batches take proportionally more updates. Which end learns
-   fastest per episode, and which gives the smoothest curve? Which of the two
-   would you optimize if episodes were expensive?
-1. [short-code] *Advantage scale.* Replace the normalized advantage in
-   `train_reinforce` by the raw reward-to-go, as in
-   :numref:`sec_policygradient`, and rerun both tasks. Which of the two tasks
-   degrades more, and why? (Compare the typical magnitude of $\hat{G}_t$ on
-   CartPole and on Pendulum, and recall which optimizer the policy uses.)
-1. [conceptual] *Benefits and costs of generalization.* On FrozenLake an update
-   touched one row of a table. Here it moves the policy at every state at
-   once. Argue why a batch dominated by near-vertical-pole states can make the
-   policy *worse* at large pole angles, and name two phenomena in
-   :numref:`chap_deep_rl` that are consequences of the same coupling.
-1. [short-code] *What the spread costs.* Fix the Gaussian head's `log_std`
-   (delete the parameter and hard-code $\sigma$) at each of
-   $\sigma \in \{0.1, 1.0, 4.0\}$ and rerun Pendulum with two seeds each. What
-   does an over-small $\sigma$ cost, and what does an over-large one cost?
-   Relate the two failures to exploration and to the score's variance in
-   :eqref:`eq_score_vs_pathwise`, and note what the environment's torque clip
-   at $\pm 2$ does to the largest choice.
+1. [code] **Policy size.** `ActorCritic.mlp` gives the policy and the value
+   network one hidden layer of 64 units each, and its argument `hidden` sets
+   that width.
+    1. Train `train_reinforce` on CartPole with `hidden` in
+       $\{4, 16, 64, 256\}$, three seeds each, by passing the width through
+       `cartpole_agent`. Report the mean return over the last ten updates and
+       the first update at which the batch mean exceeds 400.
+    1. Replace the policy network by a single linear layer from the four
+       state coordinates to the two action preferences, keep the value
+       network of `ActorCritic.mlp`, and repeat the experiment.
+    1. Near the upright position, the CartPole dynamics are approximately
+       linear in the state. Use this to explain why a policy whose
+       preferences are linear in the state can balance the pole. Which
+       decision rules can such a policy not represent?
+   :exlabel:`ex_deep-rl-policy-size`
+
+1. **Discounting at the time limit.** `train_reinforce` yields the
+   undiscounted mean return of the episodes in each batch, while its update
+   weights each step by the reward-to-go at $\gamma = 0.99$. Every CartPole
+   step earns reward $1$, and the environment truncates any episode that
+   reaches 500 steps.
+    1. Show that the discounted return of an episode of length $T$ is
+       $(1 - \gamma^T)/(1 - \gamma)$, and evaluate it for
+       $T \in \{20, 100, 200, 500\}$. Conclude that the undiscounted
+       return and the discounted return rank episodes identically. By what
+       factor does each grow when an episode lengthens from 200 to 500 steps?
+    1. Compute the reward-to-go $\hat{G}_t$ at $t \in \{0, 400, 450, 490\}$ of
+       an episode that reaches the time limit. The value network sees only
+       the state, and the states late in a successful episode resemble those
+       early in it. Which sign do the weights `w` of the last steps of a
+       successful episode tend to have, and what does the policy update do to
+       the actions taken at those steps?
+    1. Gymnasium ends an episode at the 500-step limit with
+       `truncated=True`, so the state reached by the last step can still have
+       nonzero continuation value (:numref:`subsec_mdp-termination`). Propose
+       a target for the steps of a truncated episode that uses $\hat{V}$ at
+       that state, the last entry of `batch.next_obs` in the episode, so that
+       the weight of a step no longer depends on its distance from the limit.
+
+1. **Tables as linear networks.** Consider a linear value estimate
+   $\hat{V}(s) = \mathbf{w}^\top \boldsymbol{\phi}(s)$ with features
+   $\boldsymbol{\phi}(s)$. With one-hot features it is the value table of
+   `ActorCritic.tabular`. Take one gradient step of size $\alpha$ on
+   $\frac{1}{2}\big(y - \hat{V}(s_0)\big)^2$ for a single state $s_0$ and a
+   target $y$.
+    1. Show that the estimate at every state $s$ changes by
+
+       $$\alpha\, \big(y - \hat{V}(s_0)\big)\, \boldsymbol{\phi}(s_0)^\top \boldsymbol{\phi}(s).$$
+
+       Which states move when the features are one-hot?
+    1. The model of :numref:`fig_rl_table_vs_network` has 64 unit-normalized
+       features and takes such a step with $\alpha = 0.5$ and
+       $y - \hat{V}(x_0) = 1$. Read from the caption the inner product
+       $\boldsymbol{\phi}(x_0)^\top \boldsymbol{\phi}(x)$ at the far end of
+       the state space, and the smallest inner product over the state space.
+    1. For which pairs of states does the step lower the estimate at $s$
+       although it raises the estimate at $s_0$?
+   :exlabel:`ex_deep-rl-tables-linear-networks`
+
+1. **Gaussian score.** `GaussianHead` parameterizes a one-dimensional action
+   by the mean $\mu$ and the log standard deviation $\ell = \log \sigma$,
+   which is `log_std`. Write $z = (a - \mu)/\sigma$ for a sampled action $a$.
+    1. Show that $\partial \log \pi / \partial \mu = z / \sigma$ and
+       $\partial \log \pi / \partial \ell = z^2 - 1$, and that both have mean
+       zero under the policy.
+    1. Let $Q$ be a quadratic function of the action with second derivative
+       $Q''$. Show that $E\big[Q(a)\,(z^2 - 1)\big] = \sigma^2 Q''$, using
+       $E[z^4] = 3$. In which direction does the expected policy-gradient
+       step move $\sigma$ near a maximum of $Q$? What does this imply for the
+       exploration of a policy whose mean approaches the best action?
+    1. Pendulum clips each sampled torque to $[-2, 2]$, while `log_prob`
+       scores the unclipped sample. Explain why the score-function estimate
+       remains unbiased for the return of the clipped environment.
+
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Exercise 13.4.*
+   :exlabel:`ex_deep-rl-gaussian-score`
+
+1. [code] **Fixed exploration noise.** `GaussianPolicy` learns its standard
+   deviation through `log_std`. Hard-code $\sigma$ in `GaussianHead`, so that
+   it is no longer a learned parameter, and train Pendulum with
+   `pendulum_agent` for $\sigma \in \{0.1, 0.3, 1, 3\}$, three seeds each.
+    1. Plot the return curves. What does a small $\sigma$ cost, and what does
+       a large one cost?
+    1. At $\mu = 0$, which fraction of the sampled torques does the
+       environment clip for each $\sigma$? Describe the distribution of the
+       torque that the environment applies for $\sigma = 3$.
+    1. Log $\sigma = e^{\ell}$ after every update of the default
+       `GaussianPolicy`, and plot it for three seeds. Explain the direction
+       of its change with problem :exref:`ex_deep-rl-gaussian-score`b.
+
+1. [code] **Discontinuous rewards.** The second equality of
+   :eqref:`eq_score_vs_pathwise` differentiates through $Q$. Take $\mu = 0$
+   and $\sigma = 0.5$, as in the computation of `g_score` and `g_path`, and
+   the threshold reward $Q(a) = 1$ for $a > 1$ and $Q(a) = 0$ otherwise.
+    1. Compute the exact gradient $\nabla_\mu E[Q(a)]$. What does the
+       pathwise estimator return for every sample? Which step of the
+       derivation of the second equality fails?
+    1. Replace `Q` in that computation by the smooth step
+       $Q_k(a) = 1 / \big(1 + e^{-k(a - 1)}\big)$ for
+       $k \in \{1, 10, 100, 1000\}$, and record the mean and the variance of
+       `g_score` and of `g_path`. The samples are single precision, so for
+       $k \geq 100$ the factor $e^{-k(a - 1)}$ overflows at the smallest
+       samples and the derivative of the formula as written is NaN there;
+       implement $Q_k$ with a numerically stable sigmoid. Plot both variances
+       against $k$. Which estimator has the lower variance at large $k$?
+       Explain how the variance of `g_path` depends on $k$ through the
+       height and the width of $Q_k'$, and how the variance of `g_score`
+       depends on $k$ through $Q_k$.
+    1. Pendulum clips each sampled torque to $[-2, 2]$. What does a pathwise
+       estimate through the clipped torque return at samples outside this
+       interval? Why does the score-function estimate of problem
+       :exref:`ex_deep-rl-gaussian-score`c not lose these samples?
+
+1. **Importance weights over a trajectory.** A replay buffer holds episodes
+   that an older behavior policy $\pi_\beta$ collected, while the gradient is
+   needed for the current policy $\pi_\theta$. Write
+
+   $$w(\tau) = \prod_{t} \frac{\pi_\theta(a_t \mid s_t)}{\pi_\beta(a_t \mid s_t)}$$
+
+   for the importance weight of a trajectory $\tau$.
+    1. Show that
+
+       $$E_{\tau \sim \pi_\beta}[w(\tau)\, R(\tau)] = E_{\tau \sim \pi_\theta}[R(\tau)],$$
+
+       and that computing $w(\tau)$ requires no knowledge of the transition
+       probabilities.
+    1. Let both policies be Gaussian with the same $\sigma$ and with means
+       that differ by $\delta$ at every state. Show that a single ratio has
+       second moment $e^{\delta^2/\sigma^2}$ under $\pi_\beta$, and that
+       $E[w(\tau)^2] = e^{T\delta^2/\sigma^2}$ for episodes of fixed length
+       $T$. Evaluate it for the Pendulum length $T = 200$, $\sigma = 1$ and
+       $\delta \in \{0.05, 0.1, 0.2\}$.
+    1. A common measure of the information in $n$ weighted episodes is the
+       effective sample size $n / E[w^2]$. Compute it for a batch of eight
+       episodes at each $\delta$ of part b. What does the result imply for
+       reusing old episodes in a score-function update?
+    1. An actor trained by the pathwise gradient through a critic $Q_w$
+       fitted on replayed transitions uses no such weight. At which actions
+       does the actor query $Q_w$? What can go wrong when the buffer contains
+       no transitions near those actions?
+   :exlabel:`ex_deep-rl-importance-weights`
+
+1. **Surrogate loss value.** `policy_step` evaluates the surrogate
+   :eqref:`eq_pg_surrogate_loss` on the batch that the current policy has
+   just collected. The weights from `d2l.normalize` have mean $0$ and
+   standard deviation $1$ over the $N$ steps of the batch.
+    1. Show that $L(\theta) = -s\, c$, where $s$ is the standard deviation
+       of $\log \pi_\theta(a_t \mid s_t)$ over the batch and $c$ is the
+       correlation coefficient between the weights and these
+       log-probabilities. Conclude that $|L(\theta)| \leq s$.
+    1. For `GaussianPolicy` with one action dimension, show that
+       $s \approx 1/\sqrt{2}$ for every mean network and every $\sigma$. What
+       does this imply for the policy loss of the Pendulum runs?
+    1. How does $s$ behave on CartPole as the policy becomes nearly
+       deterministic? What does this imply for the value of $L$ late in
+       training?
+
+1. [code] **Normalization under Adam.** ● Under plain SGD, dividing the
+   weights by their standard deviation changes the effective learning rate
+   (exercise :exref:`ex_baselines-step-size-confound-quantified` of
+   :numref:`sec_baselines`). `train_reinforce` updates with Adam instead.
+   Its step for each coordinate is
+   $-\eta\, \hat{m}_t / (\sqrt{\hat{v}_t} + \epsilon)$, where $\hat{m}_t$ and
+   $\hat{v}_t$ are bias-corrected moving averages of the gradient $g_t$ and
+   of $g_t^2$ with decay rates $\beta_1 = 0.9$ and $\beta_2 = 0.999$.
+    1. Show that for $\epsilon = 0$, multiplying every gradient by the same
+       constant $c > 0$ leaves every Adam step unchanged.
+    1. Show that
+
+       $$\hat{v}_t = \frac{1 - \beta_2}{1 - \beta_2^t} \sum_{i=1}^{t} \beta_2^{t-i} g_i^2.$$
+
+       By what factor do the weights of the oldest and the newest squared
+       gradient differ at $t = 300$, the length of the Pendulum runs?
+       Suppose that the gradient of a coordinate keeps a fixed sign and
+       drops tenfold in scale halfway through a run of 300 updates. By what
+       factor is the step at the end of the run smaller than the step at
+       the start?
+    1. Keep the centering of `d2l.normalize` in `train_reinforce` but drop
+       its division, so that the weights are `A - A.mean()` with
+       `A = G - ac.value_np(batch.obs)` and the two variants differ only in
+       scale. Log the standard deviation of the weights of every batch, and
+       train three seeds of both variants on CartPole and on Pendulum. How
+       does the scale of the weights evolve on each task? On which task does
+       part b predict that dropping
+       the division changes the return curves more?
+   :exlabel:`ex_deep-rl-normalization-adam`
+
+1. **Score versus pathwise variance.** ● The samples `g_score` and
+   `g_path` estimate the two forms of :eqref:`eq_score_vs_pathwise` for
+   $Q(a) = -(a - 1)^2$ at $\mu = 0$. Use $E[z^4] = 3$ and $E[z^6] = 15$ for
+   $z \sim \mathcal{N}(0, 1)$.
+    1. Show that the single-sample variance of the score-function estimate
+       is $15\sigma^2 + 14 + 1/\sigma^2$ and that of the pathwise estimate is
+       $4\sigma^2$. Evaluate both at $\sigma = 0.5$, and compare them with the
+       printed variances.
+    1. Adding a constant $c$ to $Q$ is the same as subtracting the baseline
+       $b = -c$. With the score $a/\sigma^2$ in the formula for $b^*$ of
+       exercise :exref:`ex_baselines-optimal-constant-baseline` of
+       :numref:`sec_baselines`, show that $b^* = -(1 + 3\sigma^2)$ and that
+       the smallest score-function variance is $6\sigma^2 + 8$. Check the
+       printed variance for $c = 10$ against your formula.
+    1. Let $\sigma \to 0$. How do the two variances behave, with and without
+       the optimal baseline? Explain the limit $8$ of the score-function
+       variance through the Taylor expansion of $Q$ around $\mu$. Which of
+       the two estimators remains usable for a deterministic actor?
+
+1. [code] **Tangent kernel.** ● The measurement of `dV` raises $\hat{V}$
+   at one probe state with 25 Adam steps of `fit_value`. A single plain
+   gradient step makes the coupling computable. Write
+   $\boldsymbol{\omega}$ for the parameters of the value network, to keep
+   them apart from the policy parameters $\boldsymbol{\theta}$, and
+
+   $$k(s, s') = \nabla_{\boldsymbol{\omega}} \hat{V}(s)^\top \nabla_{\boldsymbol{\omega}} \hat{V}(s')$$
+
+   for its tangent kernel :cite:`Jacot.Gabriel.Hongler.2018`.
+    1. Show that one gradient step of size $\eta$ on
+       $\frac{1}{2}\big(y - \hat{V}(s_0)\big)^2$ changes the estimate at $s$
+       by $\eta\, \big(y - \hat{V}(s_0)\big)\, k(s_0, s) + O(\eta^2)$. How
+       does this generalize problem
+       :exref:`ex_deep-rl-tables-linear-networks`a?
+    1. For a freshly constructed `net_probe`, compute the gradients
+       $\nabla_{\boldsymbol{\omega}} \hat{V}$ at the 256 probe states `S`
+       and the kernel values $k(s_0, s)$ for $s_0$ = `S[0]`. Take one plain
+       gradient step with $\eta = 10^{-3}$ toward $y = \hat{V}(s_0) + 1$,
+       without Adam, and compare the measured change at every probe with the
+       prediction.
+    1. Plot $k(s_0, s) / k(s_0, s_0)$ against the distance
+       $\|s - s_0\|$. Do any probes move in the direction opposite to $s_0$?
+    1. A CartPole policy that balances well collects batches of mostly
+       near-vertical states. Use the kernel to explain how fitting such a
+       batch changes the value estimate and the policy at large pole angles
+       that the batch never contains. Why can that change make the policy
+       worse at those angles?
+
+1. **Semi-gradient field.** ● Consider a finite Markov chain with
+   transition matrix $P$, reward vector $\mathbf{r}$ and discount
+   $0 < \gamma < 1$. A linear estimate $\hat{\mathbf{V}} = \Phi \mathbf{w}$
+   uses a feature matrix $\Phi$ of full column rank, and positive state
+   weights $\mathbf{d}$ define $D = \textrm{diag}(\mathbf{d})$. The expected
+   semi-gradient update of temporal-difference learning, with the target
+   $\mathbf{r} + \gamma P \Phi \mathbf{w}$ held fixed, is
+
+   $$F(\mathbf{w}) = \Phi^\top D \big(\mathbf{r} + \gamma P \Phi \mathbf{w} - \Phi \mathbf{w}\big).$$
+
+    1. A continuously differentiable vector field on $\mathbb{R}^n$ is the
+       gradient of a function if and only if its Jacobian is symmetric. Show
+       that $F$ is a gradient field if and only if
+       $\Phi^\top D (I - \gamma P) \Phi$ is symmetric. Show that the
+       corresponding field of `fit_value`, with fixed Monte Carlo targets in
+       place of the bootstrapped ones, is always a gradient field.
+    1. With one-hot features, show that $F$ is a gradient field if and only
+       if $d_s P_{s s'} = d_{s'} P_{s' s}$ for all pairs of states. Give a
+       three-state chain and a weighting $\mathbf{d}$ with
+       $\mathbf{d}^\top P = \mathbf{d}^\top$ for which this condition fails.
+    1. Let $\mathbf{d}^\top P = \mathbf{d}^\top$, and write
+       $\|\mathbf{v}\|_D^2 = \mathbf{v}^\top D \mathbf{v}$. Show with Jensen's
+       inequality that $\|P\mathbf{v}\|_D \leq \|\mathbf{v}\|_D$, and conclude
+       that
+
+       $$\mathbf{v}^\top D (I - \gamma P)\, \mathbf{v} \geq (1 - \gamma)\, \|\mathbf{v}\|_D^2.$$
+
+       The first of these inequalities is Lemma 1 of
+       :citet:`Tsitsiklis.VanRoy.1997`, on which their convergence proof for
+       on-policy linear temporal-difference learning rests.
+    1. Use the inequality to show that the expected iteration
+       $\mathbf{w} \leftarrow \mathbf{w} + \alpha F(\mathbf{w})$ converges
+       for small $\alpha > 0$, also when $F$ is not a gradient field. Which
+       property of $\mathbf{d}$ does the argument need, and why does
+       learning from a replay buffer of older policies lose it?
+
+1. [extended] **Parameter-space noise.** ●● Policy gradients inject noise
+   into the actions. Evolution strategies
+   :cite:`Salimans.Ho.Chen.ea.2017` inject it into the parameters instead:
+   they perturb the parameters $\boldsymbol{\theta} \in \mathbb{R}^d$ by
+   $\nu\boldsymbol{\epsilon}$ with
+   $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, I)$, run one episode
+   with the perturbed deterministic policy, and ascend the smoothed
+   objective
+
+   $$J_\nu(\boldsymbol{\theta}) = E_{\boldsymbol{\epsilon}}\big[J(\boldsymbol{\theta} + \nu\boldsymbol{\epsilon})\big].$$
+
+    1. Apply the score-function identity of :eqref:`eq_score_vs_pathwise` to
+       the distribution $\mathcal{N}(\boldsymbol{\theta}, \nu^2 I)$ of the
+       parameters, and show that
+
+       $$\nabla J_\nu(\boldsymbol{\theta}) = \frac{1}{\nu}\, E\big[J(\boldsymbol{\theta} + \nu\boldsymbol{\epsilon})\, \boldsymbol{\epsilon}\big].$$
+
+       Show that the antithetic estimate
+
+       $$\frac{1}{2\nu}\big(J(\boldsymbol{\theta} + \nu\boldsymbol{\epsilon}) - J(\boldsymbol{\theta} - \nu\boldsymbol{\epsilon})\big)\, \boldsymbol{\epsilon}$$
+
+       has the same mean. Which properties of the policy and of the
+       environment does the estimate not require?
+    1. For a linear objective
+       $J(\boldsymbol{\theta}) = \mathbf{c}^\top \boldsymbol{\theta}$, show
+       that the antithetic estimate equals
+       $(\mathbf{c}^\top \boldsymbol{\epsilon})\, \boldsymbol{\epsilon}$ and
+       that its expected squared norm is $(d + 2)\, \|\mathbf{c}\|^2$. How
+       does the noise of this estimate scale with $d$ and with the episode
+       length?
+       How do the same two quantities enter the noise of REINFORCE?
+    1. Implement the estimate on CartPole for the deterministic linear policy
+       that pushes right when $\boldsymbol{\theta}^\top s > 0$, so that
+       $d = 4$. Use eight antithetic pairs per update and divide the step by
+       the standard deviation of the sixteen returns, as in the random search
+       of :citet:`Mania.Guy.Recht.2018`. Start from $\nu = 0.1$ and a step
+       size of $0.02$. Count the sixteen perturbed episodes of every update
+       toward the budget, and measure progress by the mean return of the
+       unperturbed policy over five further episodes. Plot this return
+       against the number of episodes consumed for three seeds, together
+       with `train_reinforce` for the linear policy of problem
+       :exref:`ex_deep-rl-policy-size`b and with `runs`. Both of these
+       consume eight episodes per update.
+    1. Repeat with a deterministic one-hidden-layer tanh network of width 64
+       whose single output selects the action by its sign, so that
+       $d = 385$. How many episodes does each method need until its mean
+       return first exceeds 400, with the small and with the large policy?
+       How do these numbers change with $d$ for each method? Which properties
+       of CartPole favor the search in parameter space, and on which kinds of
+       task would you expect the comparison to reverse?
 
 [Discussions](https://d2l.discourse.group/)
 

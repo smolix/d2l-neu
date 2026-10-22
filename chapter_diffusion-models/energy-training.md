@@ -215,7 +215,7 @@ keeps $\exp(-E_{\boldsymbol{\theta}})$ integrable. A grid of $100 \times 100$
 points on $[-6, 6]^2$ has spacing $0.12$, a quarter of the component
 standard deviation, and quadrature on this grid evaluates
 $\log Z(\boldsymbol{\theta})$ accurately enough for every purpose in this
-section (Exercise 6 of :numref:`sec_diffusion-limits` quantifies the error).
+section (Exercise :exref:`ex_limits-quadrature-running-example` of :numref:`sec_diffusion-limits` quantifies the error).
 Here and below the model is normalized over this square, and the data
 distribution is taken to be the mixture restricted to it, which changes its
 density inside the square by about one part in $10^{12}$. With $\log Z$ available, the negative log-likelihood
@@ -495,6 +495,7 @@ def metropolis_hastings(energy, x, key, steps, step_size, box=math.inf):
 ```
 
 ### The Step Size Trades Acceptance against Mixing
+:label:`subsec_diffusion-mh-step-size`
 
 Before using the sampler inside training, we run it on a target whose
 samples we can check: the energy $-\log p$ of the mixture itself. Two
@@ -558,7 +559,7 @@ Large proposals are rarely accepted, about six in a hundred, but an accepted
 large proposal can land in another mode, so the chains move between modes
 and the weights approach the truth. The intermediate scale accepts about
 three proposals in ten and also ends close to the true weights, but its
-chains cross between modes far less often (Exercise 7 counts the
+chains cross between modes far less often (Exercise :exref:`ex_energy-training-mode-switches` counts the
 crossings). When the modes are far apart relative to their width, only a
 long jump crosses a gap, so on this target the largest scale moves chains
 between modes most often despite rejecting most of its proposals. Every
@@ -721,15 +722,16 @@ Persistent contrastive divergence recovers the three modes in the right
 places with approximately the right weights, and by the end of the run its
 test negative log-likelihood is within a few hundredths of a nat of the
 quadrature reference. The trace shows how it got there: the value falls over
-the first checkpoints, then fluctuates between checkpoints and settles only
-as the learning rate decays. A plausible
-source of the fluctuation is the
+the first checkpoints, then stalls or rises again in the middle of the run,
+and improves again over the last thousand steps, as the learning rate
+approaches zero. A plausible
+source of this irregularity is the
 negative phase. It is estimated from chains that mix slowly between modes,
 so the model's expectation is represented by whatever fraction of chains
 happens to occupy each mode, and the gradient is biased whenever that
 fraction differs from the model's own weights; the bias changes as the
 energy landscape changes, and a fixed learning rate would keep the
-parameters moving in response. Exercise 5 tests this explanation. The
+parameters moving in response. Exercise :exref:`ex_energy-training-learning-rate-schedule` tests this explanation. The
 result took sixty thousand Metropolis--Hastings steps for each of the $1024$
 chains, about sixty million proposals in two dimensions.
 For images, where each step of a gradient-based sampler costs a forward and
@@ -768,51 +770,271 @@ that depends on how well that loop mixes.
 
 ## Exercises
 
-1. **The gradient of the normalizer.** Repeat the derivation of
-   :eqref:`eq_diffusion-grad-logz` for a discrete model
-   $p_{\boldsymbol{\theta}}(x) = \exp(-E_{\boldsymbol{\theta}}(x)) / Z(\boldsymbol{\theta})$
-   over a finite set, replacing the integral by a sum. Then specialize to a
-   Gaussian written as an exponential family with sufficient statistics
-   $(x, x^2)$, and verify that setting :eqref:`eq_diffusion-ebm-gradient` to
-   zero matches the first two moments of the data.
-1. **Detailed balance for rejected moves.** The proof in the text treated
-   proposals $\mathbf{x}' \neq \mathbf{x}$. Write the full transition kernel of
-   Metropolis--Hastings, including the probability of remaining at
-   $\mathbf{x}$, and show that :eqref:`eq_diffusion-detailed-balance` holds for
-   $\mathbf{x}' = \mathbf{x}$ trivially. Then show that Gibbs sampling, viewed
-   as a proposal that draws one coordinate from its conditional, has
-   acceptance probability exactly one under :eqref:`eq_diffusion-mh-accept`.
-1. [code] **Acceptance and dimension.** Run the random-walk sampler on a
-   standard Gaussian target in $d = 2, 8, 32, 128$ dimensions with a fixed
-   step size, and record the acceptance rate. Then find, for each $d$, the
-   step size that gives an acceptance rate near $0.25$, and plot it against
-   $d$ on logarithmic axes. What power law do you observe, and what does it
-   imply for the number of steps needed to move a distance of order one?
-1. [code] **Contrastive divergence with short chains.** Train the energy
-   network with chains initialized at the minibatch and run for $k = 1$
-   Metropolis--Hastings steps, the original contrastive divergence. Compare
-   the test negative log-likelihood and the learned density with the
-   persistent run. Where does the $k = 1$ model place spurious probability
-   mass, and why does starting the chains at data make this failure likely?
-1. [code] **The learning-rate schedule.** Repeat the persistent run with a
-   constant learning rate of $2 \times 10^{-3}$ and record the test negative
-   log-likelihood every $250$ steps. Relate the fluctuations to the mode
-   weights of the persistent chains at the same checkpoints. Does averaging
-   the parameters over the last thousand steps recover the quality of the
-   decayed run?
-1. [code] **An energy-based classifier.** Train the energy network as a
-   conditional model $E_{\boldsymbol{\theta}}(\mathbf{x}, y)$ with $y$ the
-   index of the component that generated each training point, which the
-   sampler in `GaussianMixture.sample` can be modified to return. Because $y$
-   takes three values, the normalizer over $y$ for fixed $\mathbf{x}$ is a sum
-   of three terms and needs no sampling. Train by maximum likelihood of
-   $p(y \mid \mathbf{x})$, report the test accuracy, and explain which
-   quantity this model cannot provide that the unconditional model can.
-1. [code] **Mode switches.** Rerun the step-size experiment and, for each of
-   the three proposal scales, count how often a chain's nearest component
-   mean changes during the run, and record the mode weights after $200$,
-   $1000$, and $2000$ steps. Which scale reaches the true weights first, and
-   how does the answer square with its acceptance rate?
+1. **The gradient of the normalizer.** The derivation of
+   :eqref:`eq_diffusion-grad-logz` differentiates an integral over
+   $\mathbb{R}^d$ under the integral sign.
+    1. Let $p_{\boldsymbol{\theta}}(x) = \exp(-E_{\boldsymbol{\theta}}(x)) / Z(\boldsymbol{\theta})$
+       be a model over a finite set $\mathcal{X}$, so that
+       $Z(\boldsymbol{\theta}) = \sum_{x \in \mathcal{X}} \exp(-E_{\boldsymbol{\theta}}(x))$.
+       Derive the analogue of :eqref:`eq_diffusion-grad-logz` for this model.
+    1. Write the one-dimensional Gaussian $\mathcal{N}(\mu, s^2)$ as an
+       exponential family with sufficient statistics $\mathbf{f}(x) = (x, x^2)$,
+       and express $\boldsymbol{\theta}$ in terms of $\mu$ and $s^2$. Show
+       that :eqref:`eq_diffusion-ebm-gradient` vanishes exactly when the
+       model's expectations of $x$ and $x^2$ equal their averages over the
+       training set. Conclude, without solving for $\mu$ and $s^2$, that the
+       solution has the sample mean and the sample variance (with divisor
+       $n$) as its mean and variance, the maximizer that problem
+       :exref:`ex_limits-learning-without-normalization`b of
+       :numref:`sec_diffusion-limits` finds by direct maximization.
+    1. Show that the Hessian of $\log Z(\boldsymbol{\theta})$ is
+       $\textrm{Cov}_{p_{\boldsymbol{\theta}}}[\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}] - \mathbb{E}_{p_{\boldsymbol{\theta}}}[\nabla^2_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}]$.
+       Use it to prove that the average log-likelihood
+       :eqref:`eq_diffusion-ebm-loglik` of an exponential family is concave in
+       $\boldsymbol{\theta}$. Why does the argument fail for `EnergyNet`?
+1. **Logits as energies.** A classifier for the three components of `mix`
+   maps $\mathbf{x}$ to a vector of logits
+   $\mathbf{h}_{\boldsymbol{\theta}}(\mathbf{x}) \in \mathbb{R}^3$ and predicts
+   $p_{\boldsymbol{\theta}}(y \mid \mathbf{x}) = \exp(h_{\boldsymbol{\theta}}(\mathbf{x})_y) / \sum_{y'} \exp(h_{\boldsymbol{\theta}}(\mathbf{x})_{y'})$.
+   :citet:`Grathwohl.Wang.Jacobsen.ea.2020` read the same logits as the
+   energy $E_{\boldsymbol{\theta}}(\mathbf{x}, y) = -h_{\boldsymbol{\theta}}(\mathbf{x})_y$
+   of a joint model
+   $p_{\boldsymbol{\theta}}(\mathbf{x}, y) \propto \exp(-E_{\boldsymbol{\theta}}(\mathbf{x}, y))$.
+    1. Show that the conditional distribution of $y$ given $\mathbf{x}$ under
+       the joint model is the classifier's prediction, and that the marginal
+       $p_{\boldsymbol{\theta}}(\mathbf{x})$ is an energy-based model with
+       energy $-\log \sum_y \exp(h_{\boldsymbol{\theta}}(\mathbf{x})_y)$.
+    1. Cross-entropy training maximizes
+       $\log p_{\boldsymbol{\theta}}(y \mid \mathbf{x})$. Write its gradient in
+       the form of :eqref:`eq_diffusion-ebm-gradient`, with an expectation
+       over $y$ in place of the expectation over $\mathbf{x}$. Why does this
+       gradient need no Markov chain, whereas the gradient of
+       $\log p_{\boldsymbol{\theta}}(\mathbf{x})$ does?
+    1. Show that adding the same function $g(\mathbf{x})$ to all three logits
+       leaves the classifier unchanged and multiplies the unnormalized
+       marginal density by $\exp(g(\mathbf{x}))$. What does a classifier
+       trained by cross-entropy alone then determine about the density of its
+       inputs?
+1. [code] **Paired likelihood comparisons.** The section compares test
+   negative log-likelihoods that differ by hundredths of a nat, all estimated
+   on the same $2000$ test points. For a model
+   $p_{\boldsymbol{\theta}} = \exp(-E_{\boldsymbol{\theta}}) / Z(\boldsymbol{\theta})$
+   normalized with `log_Z`, let
+   $d_i = \log p(\mathbf{x}_i) - \log p_{\boldsymbol{\theta}}(\mathbf{x}_i)$
+   for the test points $\mathbf{x}_i$, where $\log p$ is given by
+   `mix.log_prob`.
+    1. Show that for a fixed model the mean of the $d_i$ is an unbiased
+       estimate of $\mathrm{KL}(p \,\|\, p_{\boldsymbol{\theta}})$. Why can the
+       estimate be negative?
+    1. For `energy_mle` and `energy_pcd`, compute the test negative
+       log-likelihood with its standard error over the test points, and the
+       mean of the $d_i$ with its standard error. Compare the two standard
+       errors and explain the difference.
+    1. Compute the differences
+       $\log p_{\textrm{mle}}(\mathbf{x}_i) - \log p_{\textrm{pcd}}(\mathbf{x}_i)$
+       of the log-densities of `energy_mle` and `energy_pcd` at the test
+       points, their mean, and the standard error of the mean. Is the
+       difference between the two fits resolved by the $2000$ test points?
+   :exlabel:`ex_energy-training-paired-comparison`
+1. **Detailed balance with rejections.** The proof that the kernel built
+   from :eqref:`eq_diffusion-mh-accept` satisfies
+   :eqref:`eq_diffusion-detailed-balance` treats only proposals
+   $\mathbf{x}' \neq \mathbf{x}$.
+    1. Write the full Metropolis--Hastings kernel as
+       $T(\mathbf{x}' \mid \mathbf{x}) = Q(\mathbf{x}' \mid \mathbf{x}) A(\mathbf{x}' \mid \mathbf{x}) + r(\mathbf{x})\, \delta(\mathbf{x}' - \mathbf{x})$,
+       give the probability $r(\mathbf{x})$ of staying at $\mathbf{x}$ as an
+       integral, and show that the term with $r$ satisfies
+       :eqref:`eq_diffusion-detailed-balance` on its own.
+    1. With the argument `box` set to $b$, `metropolis_hastings` rejects
+       every proposal outside the square $S = [-b, b]^2$. Show that for states
+       in $S$ the resulting kernel satisfies detailed balance with respect to
+       the restricted model
+       $p_S(\mathbf{x}) \propto p_{\boldsymbol{\theta}}(\mathbf{x})\, \mathbf{1}[\mathbf{x} \in S]$.
+    1. `train_pcd` clips the initial states of its chains to the square. What
+       would happen to a chain that started outside it?
+1. **Gibbs sampling.** Gibbs sampling updates one coordinate $x_i$ of
+   $\mathbf{x}$ at a time by drawing it from the conditional
+   $p(x_i \mid \mathbf{x}_{-i})$, where $\mathbf{x}_{-i}$ denotes the other
+   coordinates.
+    1. View this update as a proposal $Q$ in :eqref:`eq_diffusion-mh-accept`
+       and show that its acceptance probability is one.
+    1. Let $p$ be the bivariate Gaussian with zero means, unit variances and
+       correlation $\rho$, so that
+       $x_1 \mid x_2 \sim \mathcal{N}(\rho x_2, 1 - \rho^2)$ and
+       $x_2 \mid x_1 \sim \mathcal{N}(\rho x_1, 1 - \rho^2)$. One sweep
+       updates $x_1$ and then $x_2$. Show that the values of $x_2$ after
+       successive sweeps satisfy
+       $x_2^{(t+1)} = \rho^2 x_2^{(t)} + \eta_t$ with $\eta_t$ independent of
+       $x_2^{(t)}$. Start the chain from $p$, so that every state is
+       distributed as $p$. How many sweeps does it take for the correlation
+       between $x_2^{(0)}$ and $x_2^{(t)}$ to fall below $0.01$ when
+       $\rho = 0.99$?
+    1. Find a rotation of the coordinates after which one sweep of Gibbs
+       sampling produces an exact sample from this $p$. What does the example
+       say about the acceptance rate as a measure of mixing?
+1. [code] **Acceptance and dimension.** Run `metropolis_hastings` on the
+   standard Gaussian target, with energy $\|\mathbf{x}\|^2 / 2$ implemented
+   like `true_energy`, in $d = 2, 8, 32, 128, 512$ dimensions, with $2000$
+   chains started from the target and step size $1$, and record the
+   acceptance rate. Then find for each $d$, by bisection on a logarithmic
+   scale, the step size $\tau_d$ at which the acceptance rate is about
+   $0.25$, and plot $\tau_d$ against $d$ on logarithmic axes. What power law
+   do you observe? How many steps does a chain at step size $\tau_d$ need to
+   change one coordinate, say $x_1$, by an amount of order one? Why is the
+   Euclidean length of an accepted move no guide to this number?
+   :exlabel:`ex_energy-training-acceptance-dimension`
+1. [code] **Gradient from chain samples.** The section estimates the
+   right-hand side of :eqref:`eq_diffusion-grad-logz` from exact samples of
+   the grid model `probs` and compares the estimate with `grad_log_Z`.
+   Replace the exact samples by the final states of `metropolis_hastings`
+   chains on `energy_mle` with `box=6`, started from a broad Gaussian clipped
+   to the square as in `train_pcd`. For step sizes $0.25$, $1.0$, and $4.0$,
+   with $1000$ and $10000$ chains, compute the relative error of the estimate
+   after $10$, $100$, and $1000$ steps.
+    1. How does the error change with the number of chains at a fixed number
+       of steps? How does it change with the number of steps at a fixed
+       number of chains?
+    1. Explain the differences between the three step sizes with the results
+       of :numref:`subsec_diffusion-mh-step-size`.
+1. **The value of the contrastive loss.** The loss minimized in `train_pcd`
+   is the mean energy at the data minus the mean energy at the chain states.
+   Suppose that the chains sample $p_{\boldsymbol{\theta}}$ exactly, so that
+   the expected loss is
+   $L(\boldsymbol{\theta}) = \mathbb{E}_{p_{\textrm{data}}}[E_{\boldsymbol{\theta}}] - \mathbb{E}_{p_{\boldsymbol{\theta}}}[E_{\boldsymbol{\theta}}]$.
+    1. Show that
+       $L(\boldsymbol{\theta}) = \mathrm{KL}(p_{\textrm{data}} \,\|\, p_{\boldsymbol{\theta}}) + H(p_{\textrm{data}}) - H(p_{\boldsymbol{\theta}})$,
+       where $H$ denotes differential entropy.
+    1. Let $p_{\textrm{data}} = \mathcal{N}(0, 1)$ and
+       $E_s(x) = x^2 / (2 s^2)$ with $s > 0$. Compute $L(s)$ and its
+       derivative with respect to $s$. Then compute the expected update
+       direction of `train_pcd`, the derivative of the loss with the chain
+       states held fixed. Where does each of the two derivatives vanish?
+    1. What does the sign of $L(s)$ say about the model in this example? Why
+       is a loss value near zero during training no evidence of a good fit?
+1. [code] **Sampler settings in training.** `train_pcd` runs twenty
+   Metropolis--Hastings steps per update at step size $1.0$. Retrain with
+   `mcmc_steps` $\in \{1, 5, 20, 80\}$ at step size $1.0$, and with
+   `step_size` $\in \{0.25, 4.0\}$ at twenty steps, using two seeds per
+   setting. Judge differences in test negative log-likelihood by the paired
+   standard errors of problem :exref:`ex_energy-training-paired-comparison`c.
+    1. Which settings fit worse than the section's, and how do their failures
+       relate to the mode crossings at each step size in
+       :numref:`subsec_diffusion-mh-step-size`?
+    1. Which setting reaches the fit of the section's settings with the
+       fewest proposals in total?
+1. [code] **Mode switches.** ● The mode weights in
+   :numref:`subsec_diffusion-mh-step-size` are recorded only after $2000$
+   steps, so they do not show how fast chains move between modes.
+    1. Consider a chain on two states that moves from state 1 to state
+       2 with probability $a$ and from state 2 to state 1 with probability
+       $b$ in each step. Show that its stationary distribution is
+       $(b, a) / (a + b)$, that this distribution satisfies
+       :eqref:`eq_diffusion-detailed-balance`, and that the deviation of the
+       state distribution from it shrinks by the factor $1 - a - b$ per step.
+    1. Rerun the experiment of :numref:`subsec_diffusion-mh-step-size` one
+       step at a time, and label each chain at each step by the component
+       mean nearest to its state, as `mode_weights` does for a batch. For each
+       of the three proposal scales, count the label changes and record the
+       mode weights every $10$ steps. What fraction of the accepted proposals
+       changes the label at each scale? After how many steps are the mode
+       weights of each scale within $0.02$ of the true weights?
+    1. Treat the labels as a Markov chain on three states. For each scale,
+       estimate the $3 \times 3$ transition matrix of the labels from the changes
+       after step $200$, compute the modulus $|\lambda_2|$ of its
+       second-largest eigenvalue, and compare $1 / (1 - |\lambda_2|)$ with the
+       number of steps found in (b). Why is the sequence of labels only
+       approximately a Markov chain?
+   :exlabel:`ex_energy-training-mode-switches`
+1. [code] **Parallel tempering.** ● Parallel tempering runs $M$ chains side
+   by side, chain $m$ at inverse temperature $\beta_m$ with the target
+   $p_m(\mathbf{x}) \propto \exp(-\beta_m E(\mathbf{x}))$, where
+   $1 = \beta_1 > \beta_2 > \cdots > \beta_M > 0$
+   :cite:`Hukushima.Nemoto.1996,Earl.Deem.2005`. Between rounds of
+   Metropolis--Hastings steps, the states $\mathbf{x}_m$ and
+   $\mathbf{x}_{m+1}$ of two adjacent chains are exchanged with probability
+
+   $$\min\big\{1,\ \exp\big((\beta_m - \beta_{m+1})(E(\mathbf{x}_m) - E(\mathbf{x}_{m+1}))\big)\big\}.$$
+
+   This problem uses `true_energy` as $E$ and $\beta \in \{1, 1/2, 1/4, 1/8\}$.
+    1. Show that the exchange satisfies detailed balance with respect to the
+       product $\prod_m p_m(\mathbf{x}_m)$, so that the chain at $\beta_1 = 1$
+       still samples the mixture.
+    1. Evaluate `true_energy` at the mean of the heaviest component and at the
+       midpoint between the means of the two heaviest components. Use the
+       difference to explain the choice $\beta_M = 1/8$. Why should the step
+       size of chain $m$ grow as $1 / \sqrt{\beta_m}$?
+    1. Implement the method with $2000$ chains per temperature, initialized
+       as in :numref:`subsec_diffusion-mh-step-size`. Each round makes one
+       call of `metropolis_hastings` per temperature, on the energy
+       $\beta_m E$ implemented like `true_energy`, with one step of size
+       $0.25 / \sqrt{\beta_m}$, followed by one exchange attempt for each
+       adjacent pair. Report the mode weights of the chains at $\beta = 1$
+       after $200$, $1000$, and $2000$ rounds and the exchange acceptance
+       rates, and compare the weights with those of the plain chain at step
+       size $0.25$ in problem :exref:`ex_energy-training-mode-switches`b.
+1. [code] **Contrastive divergence from data.** ● Contrastive divergence
+   :cite:`Hinton.2002` starts the chains at the minibatch in every update and
+   runs $k$ steps.
+    1. Let the data be a mixture of components with disjoint supports
+       $R_1, \ldots, R_J$ and weights $w_1, \ldots, w_J$, and let the model
+       have the data's shape inside each region but weights
+       $\tilde{w}_j \neq w_j$. Suppose that the kernel of the chains leaves
+       $p_{\boldsymbol{\theta}}$ invariant and never leaves the region it
+       starts in. Show that after $k$ steps the chain states are distributed
+       as the data, so that the contrastive divergence estimate of
+       :eqref:`eq_diffusion-ebm-gradient` has zero expectation for every
+       choice of the $\tilde{w}_j$. What do persistent chains do differently?
+    1. Modify `train_pcd` so that the chains start at the positive minibatch
+       in every update. Train with $k = 1$ at step sizes $0.25$, $1.0$, and
+       $4.0$, and with $k = 20$ at step size $1.0$. For each run, report the
+       test negative log-likelihood and the mode weights of the learned
+       density: normalize $\exp(-E_{\boldsymbol{\theta}})$ over the points
+       of `grid`, and sum the resulting probabilities over the points nearest
+       to each component mean.
+    1. Which runs recover the true weights? Explain the results with (a).
+   :exlabel:`ex_energy-training-cd-from-data`
+1. [code] **The learning-rate schedule.** ● Repeat the persistent run of
+   `train_pcd` with a constant learning rate of $2 \times 10^{-3}$, and record
+   every $250$ steps the test negative log-likelihood, the mode weights of the
+   persistent chains, and the mode weights of the current model on the grid,
+   computed as in problem :exref:`ex_energy-training-cd-from-data`b.
+    1. Plot the three records against the step. Do the jumps of the negative
+       log-likelihood coincide with differences between the chains' mode
+       weights and the model's?
+    1. Does averaging the parameters over the last thousand steps recover the
+       quality of the run with the decaying learning rate?
+   :exlabel:`ex_energy-training-learning-rate-schedule`
+1. [extended] **Chain initialization.** ●● Contrastive divergence starts the
+   negative phase at the data (exercise :exref:`ex_energy-training-cd-from-data`),
+   and persistent contrastive divergence continues the chains of the previous
+   update. Two further schemes are common. Short-run training restarts every
+   chain from the same noise distribution $p_0$ in each update and runs a
+   fixed number $k$ of steps :cite:`Nijkamp.Hill.Zhu.ea.2019`. A replay buffer
+   continues each chain from its previous state but restarts it from $p_0$
+   with probability $0.05$ :cite:`Du.Mordatch.2019`. Let
+   $q_{\boldsymbol{\theta}}$ denote the distribution of the states after $k$
+   steps from $p_0$.
+    1. Consider an exponential family,
+       $E_{\boldsymbol{\theta}}(\mathbf{x}) = -\boldsymbol{\theta}^\top \mathbf{f}(\mathbf{x})$,
+       and assume that short-run training converges. Show that its fixed point
+       satisfies $\mathbb{E}_{q_{\boldsymbol{\theta}}}[\mathbf{f}] = \mathbb{E}_{p_{\textrm{data}}}[\mathbf{f}]$.
+       Why does this condition not make $p_{\boldsymbol{\theta}}$ match the
+       moments of the data? Which of $q_{\boldsymbol{\theta}}$ and
+       $p_{\boldsymbol{\theta}}$ should then serve as the generative model?
+    1. Modify `train_pcd` for both schemes, with $p_0$ uniform on the square
+       $[-6, 6]^2$. Train short-run models with $k = 20$ and $k = 100$ and a
+       replay-buffer model with twenty steps per update. For each of them and
+       for the persistent run, report the test negative log-likelihood of the
+       learned energy, the mode weights and the within-mode spread of the
+       final chain states, and the mode weights of the learned density on the
+       grid, computed as in problem :exref:`ex_energy-training-cd-from-data`b.
+    1. Which scheme yields a good density, and which yields a good sampler
+       without a good density? Relate the answer to (a). In Figure 23 of
+       :citet:`Du.Mordatch.2019`, an energy-based model of continuous MNIST
+       trained with persistent chains reaches a log-likelihood lower bound of
+       $381$ nats, against $1925$ nats with the replay buffer. Does your
+       comparison of the two schemes agree with this result? If it does not,
+       what differs between the two settings?
 
 <!-- slides -->
 

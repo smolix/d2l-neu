@@ -317,6 +317,7 @@ mix several classes, a consequence of that budget. The CIFAR-10 model of
 as many, and trained for 800 thousand updates.
 
 ### Guided Samples
+:label:`subsec_diffusion-images-guided`
 
 The guidance experiment requests eight samples of every class at three
 guidance scales. The field measures the fidelity and diversity of samples
@@ -444,6 +445,7 @@ setting chosen for each application rather than a constant fixed by the
 derivation.
 
 ### Classifier Guidance
+:label:`subsec_diffusion-images-classifier-guidance`
 
 Classifier-free guidance obtains the class direction from the diffusion
 network itself. The older route, *classifier guidance*
@@ -653,10 +655,11 @@ $\gamma = 1$. :citet:`Dhariwal.Nichol.2021` report a similar weakness on
 ImageNet: at scale one their samples did not match the requested classes on
 inspection, although their guiding classifier gave those classes about fifty
 percent probability; larger scales remedied this. Raising the scale raises agreement and lowers within-class
-distance, as before; at a scale of ten the agreement matches that of
-classifier-free guidance at $\gamma = 4$, while the within-class distance
-stays larger. The grids temper this comparison: at scale ten, more samples
-are malformed or faint than under classifier-free guidance at $\gamma = 4$.
+distance, as before; at a scale of ten the agreement comes within about
+$0.1$ of that of classifier-free guidance at $\gamma = 4$, while the
+within-class distance stays larger. The grids temper this comparison: at
+scale ten, more samples are malformed or faint than under classifier-free
+guidance at $\gamma = 4$.
 Classifier guidance ascends the log-probability of a classifier with the
 same architecture and training data as the one that scores the samples, so
 it can raise agreement without producing a recognizable garment, and pixel
@@ -751,40 +754,274 @@ chapter rather than replacing it.
 
 ## Exercises
 
-1. **Guidance in score space.** Starting from Bayes' rule at noise level
-   $t$, derive :eqref:`eq_diffusion-cfg` in two steps: express
-   $\nabla \log p_t(c \mid \mathbf{x})$ through the conditional and
-   unconditional scores, then convert scores to noise predictions using
-   :eqref:`eq_diffusion-score-eps`. Show that $\gamma = 1$ recovers the
-   conditional prediction exactly and that, for $\gamma \neq 1$, the guided
-   field is the score of $p_t(\mathbf{x}) \, p_t(c \mid \mathbf{x})^\gamma$ up
-   to normalization.
-1. **The null label.** Suppose label dropout were omitted, so that the
-   network never saw the null label during training. Which of the
-   quantities in :eqref:`eq_diffusion-cfg` would be untrained, and what would
-   the sampler compute at $\gamma = 0$? Then explain why a dropout
-   probability near one would also be harmful.
-1. [code] **The moving average.** Sample forty-eight images with the raw
-   weights `net` instead of `ema`, using the same seed, and compare the two
-   grids. Then repeat the training with the decay held at $0.999$ from the
-   first step, and explain what you observe in the averaged model's samples
-   in terms of the warm-up.
-1. [code] **Guidance scales.** Extend the guidance experiment to
-   $\gamma \in \{0.5, 1, 2, 4, 8, 16\}$ and plot class agreement and
-   within-class distance against $\gamma$. Describe what happens to the
-   samples at the largest scales, and relate it to the caveat that the guided
-   field is in general not the score of a noised data distribution.
-1. [code] **Fewer sampling steps.** Modify `sample` to use every tenth step of
-   the schedule, merging the skipped steps as in Exercise 6 of
-   :numref:`sec_diffusion-ddpm`, and compare the samples and the classifier
-   agreement with the full thousand-step sampler. How many steps can be
-   removed before the samples degrade visibly?
-1. [code] **Inpainting.** Take a test image, mask its lower half, and generate
-   the missing half by ancestral sampling in which, after every reverse step,
-   the known pixels are replaced by a noised copy of the original at the
-   current step (drawn from :eqref:`eq_diffusion-marginal`). Show the
-   results for several images and explain why the replacement uses the
-   noised original rather than the clean one.
+1. **The null label.** The network learns its unconditional prediction only
+   from the training examples whose label was replaced by the null label
+   $\varnothing$.
+    1. Suppose that label dropout were omitted, so that the null label never
+       occurs in training. Which term of :eqref:`eq_diffusion-cfg` would then
+       come from an untrained part of the network? What would `sample`
+       compute at $\gamma = 0$, and what at $\gamma = 1$?
+    1. Why would a dropout probability close to one also harm guided
+       sampling, and which of the two predictions would suffer?
+    1. Count the forward and backward passes through each network per
+       reverse step of `sample` and of `sample_classifier_guided`, for a
+       batch of $n$ requests. For which values of $\gamma$ could `sample`
+       drop half of its batched forward pass?
+   :exlabel:`ex_image-diffusion-null-label`
+1. **Equivalent guidance rules.** Suppose that the conditional and the
+   unconditional prediction at step $t$ are exact minimizers of the simple
+   loss of :numref:`sec_diffusion-ddpm`, so that by
+   :eqref:`eq_diffusion-score-eps` they are
+
+   $$\boldsymbol{\epsilon}(\mathbf{x}_t, t, c) = -\sqrt{1 - \bar{\alpha}_t}\, \nabla \log p_t(\mathbf{x}_t \mid c), \qquad \boldsymbol{\epsilon}(\mathbf{x}_t, t, \varnothing) = -\sqrt{1 - \bar{\alpha}_t}\, \nabla \log p_t(\mathbf{x}_t),$$
+
+   and that the classifier is the exact class posterior
+   $p_t(c \mid \mathbf{x}_t)$ of the noisy images.
+    1. Using :eqref:`eq_diffusion-bayes-score` at step $t$, show that
+       classifier guidance :eqref:`eq_diffusion-classifier-guidance` at scale
+       $s$ and classifier-free guidance :eqref:`eq_diffusion-cfg` at
+       $\gamma = s$ produce the same guided prediction.
+    1. A network may predict the clean image instead of the noise,
+       $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}) / \sqrt{\bar{\alpha}_t}$,
+       which solves :eqref:`eq_diffusion-marginal` for $\mathbf{x}_0$. Show
+       that applying the rule :eqref:`eq_diffusion-cfg` to the conditional
+       and unconditional clean-image predictions gives the clean-image
+       prediction of the guided noise prediction. Which property of the
+       weights $1 - \gamma$ and $\gamma$ does the argument use? For which
+       kind of prediction target would guiding the target differ from
+       guiding the noise?
+   :exlabel:`ex_image-diffusion-equivalent-guidance`
+1. [code] **Reference values for the proxies.** The class agreement and the
+   within-class distance printed in
+   :numref:`subsec_diffusion-images-guided` and
+   :numref:`subsec_diffusion-images-classifier-guidance` can be read only
+   against the values that real images attain.
+    1. Draw eight images of each class at random from `X_test`, compute both
+       quantities for them as the cells of
+       :numref:`subsec_diffusion-images-guided` compute them for the
+       samples, and repeat for $200$ independent draws. Report the mean and
+       the standard deviation of each quantity.
+    1. Compare the means with the printed rows of both guidance rules. Which
+       runs produce samples less varied than the test images by this
+       measure, and which exceed the test images?
+    1. Pixel distance between samples of one class grows with artifacts as
+       well as with variety. To separate the two, compute the Euclidean
+       distance from every image in `classifier_guided[1.0]`, in
+       `guided[1.0]`, and in one draw of test images from (a) to the nearest
+       training image in `X` of its class, which for a sample is the
+       requested class. Which of the two explanations of the excess
+       within-class distance of classifier guidance at scale $1$ do the
+       three sets of distances support?
+    1. Use the standard deviations as estimates of the sampling noise of a
+       run of $80$ samples. What is the standard deviation of the
+       difference between the values of two independent runs? Which
+       differences between the printed rows exceed twice that standard
+       deviation?
+   :exlabel:`ex_image-diffusion-proxy-reference`
+1. [code] **Guidance scales.** Extend the experiment of
+   :numref:`subsec_diffusion-images-guided` to
+   $\gamma \in \{0, 0.5, 1, 2, 4, 8, 16\}$, with the same requests `y` and
+   the same seed. Define the *saturation* of a set of images as the fraction
+   of its pixels that equal $1$, the white end of the range, after clamping.
+    1. Plot class agreement, within-class distance, and saturation against
+       $\gamma$. Mark the values for test images, computing the first two as
+       in exercise :exref:`ex_image-diffusion-proxy-reference`.
+    1. Display the samples at $\gamma = 8$ and $\gamma = 16$. Which of the
+       three quantities registers their defects? Which rates them as
+       improvements over $\gamma = 4$?
+   :exlabel:`ex_image-diffusion-guidance-scales`
+1. [code] **A clean classifier as guide.** Classifier guidance in
+   :numref:`subsec_diffusion-images-classifier-guidance` steers with
+   `noisy_classifier`, trained on noisy images, and scores the samples with
+   `classifier`, trained on clean ones.
+    1. Report the accuracy of `classifier` and of `noisy_classifier` on the
+       clean test images and on test images noised by
+       :eqref:`eq_diffusion-marginal` at the steps
+       $t \in \{100, 250, 500, 750\}$. How does the accuracy of each
+       classifier fall with $t$?
+    1. Wrap `classifier` in a module that accepts and ignores the step
+       argument, and pass it to `sample_classifier_guided` at the scales $1$
+       and $10$, with the requests `y` and seed $2$. Score these samples and
+       those in `classifier_guided` with two judges, `classifier` and
+       `noisy_classifier` at $t = 0$, and arrange the class agreements in a
+       table of guide against judge. Display the samples of the clean guide
+       at scale $10$.
+    1. Which entries of the table measure class fidelity, and which measure
+       how far the sampler raised the probability that its own guide assigns
+       to the requested class? What does the comparison imply for scoring a
+       guided sampler with a classifier?
+   :exlabel:`ex_image-diffusion-clean-classifier-guide`
+1. [code] **Inpainting.** A trained diffusion model can fill in missing pixels
+   without retraining :cite:`song2021score`. Take a test image, treat its
+   lower half as unknown, and run the ancestral chain of `sample` from
+   Gaussian noise. After each reverse step, replace the upper half of the
+   state by the upper half of a fresh noisy copy of the original at the step
+   that the state has reached. After the update at loop index `t`, that
+   step's marginal :eqref:`eq_diffusion-marginal` uses `alpha_bar[t - 1]`,
+   and after the last update the upper half is the clean original.
+    1. Implement the procedure with the null label at $\gamma = 0$, and show
+       the masked input, the completion, and the original for eight test
+       images.
+    1. Why does the replacement use a noisy copy of the original rather than
+       its clean pixels at every step?
+    1. Complete one masked image five times with different seeds. Which
+       parts of the lower half vary among the completions, and which does
+       the upper half determine?
+   :exlabel:`ex_image-diffusion-inpainting`
+1. **Resolution and the schedule.** ● The noise levels of the schedule are
+   calibrated for $28 \times 28$ images in $[-1, 1]$. Write
+   $\mathrm{SNR}_t = \bar{\alpha}_t / (1 - \bar{\alpha}_t)$, the ratio of the
+   signal variance to the noise variance in $\mathbf{x}_t$ of
+   :eqref:`eq_diffusion-marginal` for data with unit variance per pixel.
+    1. Show that multiplying the data by a constant $\kappa$ multiplies the
+       ratio of signal to noise variance in $\mathbf{x}_t$ by $\kappa^2$ at
+       every step.
+    1. Upsample each image to $28 r \times 28 r$ pixels by repeating every
+       pixel in an $r \times r$ block, and noise the large image with the
+       same schedule. Show that averaging the noisy image over the
+       $r \times r$ blocks gives the original image noised with the variance
+       $(1 - \bar{\alpha}_t) / r^2$ in place of $1 - \bar{\alpha}_t$, so that
+       the averaged image has the ratio $r^2\, \mathrm{SNR}_t$.
+    1. For $r = 32$, an $896 \times 896$ image, compute $r^2\, \mathrm{SNR}_t$
+       at the last step $t = T$, and find the step of the $28 \times 28$
+       chain with the same ratio. What does the result imply for an
+       $896 \times 896$ model trained with this schedule, whose sampler
+       starts from pure Gaussian noise?
+    1. Which shift of $\log \mathrm{SNR}_t$, and which rescaling of the data,
+       let the averaged image of the large model pass through the same
+       ratios as the $28 \times 28$ model?
+       :citet:`Hoogeboom.Heek.Salimans.2023` shift the schedule in this way.
+   :exlabel:`ex_image-diffusion-resolution-schedule`
+1. [code] **Weight averaging.** ● After the $S = 1500$ updates, the
+   averaged parameters `ema` are a weighted sum of the initial parameters
+   and of the parameters after each update $s = 0, \ldots, S - 1$, which the
+   loop mixes in with the decay $d_s = \min(0.999, (1 + s) / (10 + s))$.
+   The *weight* of a set of parameters is its coefficient in this sum.
+    1. Suppose that the decay were $0.999$ from the first update. Which
+       weight would the average give to the random initialization?
+    1. Show that the cap $0.999$ is never reached in this run, that the
+       initialization receives the weight $9!\, S! / (S + 9)!$, and that the
+       parameters after update $s$ receive the weight
+
+       $$w_s = \frac{9 \prod_{k=2}^{9} (s + k)}{\prod_{k=1}^{9} (S + k)}.$$
+
+    1. Approximate $w_s$ for large $s$ and $S$, and compute the fraction of
+       the total weight that falls on the last $300$ updates.
+       :citet:`Karras.Aittala.Lehtinen.ea.2024` propose averages whose
+       weights grow like a power of the update index. Which power does the
+       warm-up implement?
+    1. Repeat the training while keeping a second average with the constant
+       decay $0.999$, and sample forty-eight unconditional images with the
+       same seed from `net`, from `ema`, and from the second average.
+       Relate the differences among the three grids to your answers to (a)
+       to (c).
+   :exlabel:`ex_image-diffusion-weight-averaging`
+1. [code] **Thresholding the predicted image.** ● The guided noise
+   prediction $\tilde{\boldsymbol{\epsilon}}$ implies the clean image
+   $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sqrt{1 - \bar{\alpha}_t}\, \tilde{\boldsymbol{\epsilon}}) / \sqrt{\bar{\alpha}_t}$,
+   which solves :eqref:`eq_diffusion-marginal` for $\mathbf{x}_0$. By
+   :eqref:`eq_diffusion-posterior-mean-eps`, the update `mean` of each
+   reverse step of `sample` is the posterior mean
+   :eqref:`eq_diffusion-posterior` with $\hat{\mathbf{x}}_0$ in place of
+   $\mathbf{x}_0$.
+   :citet:`saharia2022photorealistic` trace the saturated samples of large
+   guidance scales to predictions $\hat{\mathbf{x}}_0$ outside the range of
+   the training data.
+    1. For $\gamma \in \{1, 4, 16\}$, record at every step of `sample` the
+       fraction of entries of $\hat{\mathbf{x}}_0$ outside $[-1, 1]$, and
+       plot it against $t$. In which part of the chain does the prediction
+       leave the range, and how does $\gamma$ change this?
+    1. Rewrite the step so that it computes $\hat{\mathbf{x}}_0$ and forms
+       `mean` from :eqref:`eq_diffusion-posterior`, where
+       $\bar{\alpha}_{t-1}$ is `alpha_bar[t - 1]` at loop index `t` and $1$
+       at `t = 0`. Check that the new step reproduces `sample` up to
+       rounding. Then clip $\hat{\mathbf{x}}_0$ to $[-1, 1]$ before forming
+       `mean`, the *static thresholding* of
+       :citet:`saharia2022photorealistic`.
+    1. Their *dynamic thresholding* sets, for each image, the threshold $m$
+       to the larger of $1$ and the $99.5$th percentile of
+       $|\hat{\mathbf{x}}_0|$, clips $\hat{\mathbf{x}}_0$ to $[-m, m]$, and
+       divides it by $m$. Implement it, and compare the class agreement, the
+       within-class distance, the saturation of exercise
+       :exref:`ex_image-diffusion-guidance-scales`, and the samples of the
+       three samplers at $\gamma \in \{4, 8, 16\}$.
+   :exlabel:`ex_image-diffusion-thresholding`
+1. [code] **Guidance in a limited interval.** ●
+   :citet:`Kynkaanniemi.Aittala.Karras.ea.2024` observe that guidance acts
+   differently at high, middle, and low noise levels, and they apply it only
+   within an interval of noise levels, with $\gamma = 1$ elsewhere. They
+   measure the noise level of a step by
+   $\sigma^{\textrm{eq}}_t = \sqrt{(1 - \bar{\alpha}_t) / \bar{\alpha}_t}$,
+   the noise level of the rescaled state
+   $\mathbf{x}_t / \sqrt{\bar{\alpha}_t}$ (the equivalent noise level of
+   exercise :exref:`ex_ddpm-equivalent-noise-levels` of
+   :numref:`sec_diffusion-ddpm`), and found the interval
+   $0.28 < \sigma^{\textrm{eq}}_t \leq 2.9$ best by the FID for one of the
+   ImageNet models of :citet:`Karras.Aittala.Lehtinen.ea.2024`.
+    1. Find the loop indices `t` of `sample` whose noise level, computed
+       from `alpha_bar[t]`, lies in the high-noise interval
+       $\sigma^{\textrm{eq}}_t > 2.9$, in the middle interval
+       $0.28 < \sigma^{\textrm{eq}}_t \leq 2.9$, and in the low-noise
+       interval $\sigma^{\textrm{eq}}_t \leq 0.28$.
+    1. Modify `sample` to apply $\gamma$ only at the steps of a given
+       interval. With $\gamma = 4$, sample the requests `y` with seed $2$
+       for each of the three intervals. Compare the class agreement, the
+       within-class distance, and the saturation of exercise
+       :exref:`ex_image-diffusion-guidance-scales` with those of guidance at
+       every step and of $\gamma = 1$.
+    1. Which interval accounts for most of the gain in class agreement, and
+       which for most of the loss of within-class distance? Explain the
+       answer by what the state of the chain has already settled at each
+       noise level, in the sense of the commitment time of exercise
+       :exref:`ex_ddpm-commitment-time` of :numref:`sec_diffusion-ddpm`.
+   :exlabel:`ex_image-diffusion-guidance-interval`
+1. [extended] **Autoguidance.** ●●
+   :citet:`Karras.Aittala.Kynkaanniemi.ea.2024` guide a conditional model with a weaker version of itself instead of its
+   unconditional prediction,
+
+   $$\tilde{\boldsymbol{\epsilon}} = \boldsymbol{\epsilon}_{\textrm{weak}}(\mathbf{x}_t, t, c) + \gamma \big( \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t, c) - \boldsymbol{\epsilon}_{\textrm{weak}}(\mathbf{x}_t, t, c) \big),$$
+
+   where the weak model is smaller or trained for less time on the same data
+   and labels. They report that this improves sample quality without the
+   loss of variation that classifier-free guidance causes.
+    1. Treat each network as the exact noise predictor of its own densities
+       $p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c)$ and
+       $p_{\textrm{weak}, t}(\mathbf{x} \mid c)$, as in exercise
+       :exref:`ex_image-diffusion-equivalent-guidance`. Show that the guided
+       prediction corresponds to the score of a density proportional to
+       $p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c)\, \big( p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c) / p_{\textrm{weak}, t}(\mathbf{x} \mid c) \big)^{\gamma - 1}$.
+       Classifier-free guidance corresponds in the same way to a density
+       proportional to
+       $p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c)\, \big( p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c) / p_{\boldsymbol{\theta}, t}(\mathbf{x}) \big)^{\gamma - 1}$,
+       whose ratio is proportional to the class posterior
+       $p_{\boldsymbol{\theta}, t}(c \mid \mathbf{x})$
+       (:numref:`sec_mdl-score-matching-diffusion-flow`). Which images does
+       each of the two tilts favor? Use the answer to explain why
+       classifier-free guidance reduces the variation within a class, while
+       autoguidance, according to
+       :citet:`Karras.Aittala.Kynkaanniemi.ea.2024`, does not.
+    1. Build two weak models: the moving average of the weights as it
+       stands after $375$ of the $1500$ updates of the training loop, and a
+       model built like `ConditionalUNet` but with `ch=16` passed to
+       `d2l.UNet`, trained with label dropout for $375$ updates. A copy of
+       the training loop rebinds `y` to its last batch of labels, so define
+       the requests `y` of :numref:`subsec_diffusion-images-guided` again
+       before sampling. For these requests and seed $2$, sample with
+       autoguidance at $\gamma \in \{1.5, 2, 3, 4\}$ for each weak model,
+       and with classifier-free guidance at
+       $\gamma \in \{1, 1.5, 2, 3, 4\}$. Plot the within-class distance
+       against the class agreement for the three samplers, and report the
+       saturation of exercise :exref:`ex_image-diffusion-guidance-scales`.
+    1. Which sampler reaches a given class agreement with the larger
+       within-class distance, and which weak model guides better? Relate
+       the answer to the requirement of
+       :citet:`Karras.Aittala.Kynkaanniemi.ea.2024` that the weak model make
+       the same kinds of errors as the main model.
+    1. With the null label in both models, autoguidance applies to
+       unconditional sampling as well. Sample forty-eight images with it at
+       $\gamma \in \{2, 4\}$ for each weak model, and compare them with the
+       samples of `sample` at $\gamma = 0$ with the same seed.
+   :exlabel:`ex_image-diffusion-autoguidance`
 
 <!-- slides -->
 

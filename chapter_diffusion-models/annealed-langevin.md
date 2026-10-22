@@ -41,9 +41,9 @@ import optax
 Fix a decreasing sequence of noise levels
 $\sigma_1 > \sigma_2 > \cdots > \sigma_L > 0$. The largest is chosen so that
 $p_{\sigma_1}$ is close to a single broad Gaussian, with no valleys left
-between the modes of the data (:citet:`Song.Ermon.2020` make this precise
-by taking $\sigma_1$ about as large as the largest distance between two
-training points); the smallest is chosen so small that
+between the modes of the data (:citet:`Song.Ermon.2020` recommend taking
+$\sigma_1$ about as large as the largest distance between two training
+points); the smallest is chosen so small that
 $p_{\sigma_L}$ is indistinguishable from the data for practical purposes.
 The levels in between are spaced geometrically, so that each perturbed
 density differs from its neighbors by a fixed ratio of noise scales.
@@ -56,6 +56,7 @@ and at $\sigma = 0.5$ they are nearly separate again.
 :label:`fig_diffusion-noise-ladder`
 
 ### One Network for All Levels
+:label:`subsec_diffusion-ncsn`
 
 Each level has its own score, so a separate network per level would be one
 option. A better one is a single network that takes the noise level as an
@@ -256,9 +257,15 @@ table above barely changes between $\sigma = 0.2$ and $\sigma = 0.05$), so
 the finest levels take steps that are small compared with the structure
 they resolve. At the coarser levels the curvature of $\log p_{\sigma_i}$
 scales as $1 / \sigma_i^2$, so the contraction per step is level-independent
-there (Exercise 2). The constant $\epsilon$ sets the overall scale; we use
+there (Exercise :exref:`ex_annealed-langevin-step-sizes`). The constant $\epsilon$ sets the overall scale; we use
 $\epsilon = 0.1\, \sigma_L^2$, so that $\alpha_i = 0.1\, \sigma_i^2$, and the
 code takes this ratio $\epsilon / \sigma_L^2$ as its `scale` argument.
+The cell compares the samples with the target through `summarize`. It
+assigns each sample to the nearest component mean and reports the fraction
+assigned to each component (the mode weights), the mean squared distance to
+the nearest mean, averaged over the samples that lie within three component
+standard deviations of it (the spread), and the fraction of samples farther
+away (the strays).
 
 ```{.python .input #annealed-langevin-annealed-langevin-dynamics-1}
 %%tab pytorch
@@ -349,10 +356,10 @@ spread doubles, and nearly half of the chains are strays. The cause is
 travel, not estimation. The finest level's step size
 $\alpha_L = 0.1\, \sigma_L^2$ is so small that a thousand steps carry a chain
 started far out only part of the way to the data, and the exact score of
-$p_{\sigma_L}$ gives the same numbers (Exercise 3). The ladder makes the
+$p_{\sigma_L}$ gives the same numbers (Exercise :exref:`ex_annealed-langevin-exact-scores-through-ladder`). The ladder makes the
 difference: its coarse levels take large steps while the target is still
 broad. With a hundred steps per level the exact scores of $p_{\sigma_i}$
-give nearly the same statistics as the network (Exercise 3 checks this and
+give nearly the same statistics as the network (Exercise :exref:`ex_annealed-langevin-exact-scores-through-ladder` checks this and
 compares the two at twenty steps), so most of what remains of the gap to
 the target at that budget comes from the finite chain rather than from the
 learned scores.
@@ -673,7 +680,7 @@ requires all ten scores to be accurate, and in particular the intermediate
 ones on inputs that are not real noisy images but the chain's own states;
 :citet:`song2019generative` achieve this with training runs orders of
 magnitude longer than the one above, and :citet:`Song.Ermon.2020` refine
-the choice of ladder, step size, and steps per level. Exercise 6 runs the
+the choice of ladder, step size, and steps per level. Exercise :exref:`ex_annealed-langevin-annealed-langevin-images` runs the
 sampler on this small network. :numref:`sec_diffusion-images` reaches
 recognizable samples within the chapter's budget with the closely related
 sampler of the next section.
@@ -745,59 +752,287 @@ conditioned on the level index learned approximations of the scores of
 Fashion-MNIST at ten noise levels in a few minutes, good enough to denoise at
 the three levels
 tested, from the layout at the coarsest to the detail at the finest;
-generating from noise is left to Exercise 6, and the original work trained
+generating from noise is left to Exercise :exref:`ex_annealed-langevin-annealed-langevin-images`, and the original work trained
 for orders of magnitude longer. Bayes' rule makes conditional sampling a
 matter of adding a classifier gradient to the score.
 
 ## Exercises
 
-1. **The weighting.** With the parameterization
-   $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, \sigma) = \mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}, \sigma) / \sigma$,
-   show that the $\sigma^2$-weighted denoising objective
-   :eqref:`eq_diffusion-ncsn-loss` equals
-   $\tfrac{1}{2L} \sum_i \mathbb{E}\|\mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x} + \sigma_i \boldsymbol{\epsilon}, \sigma_i) + \boldsymbol{\epsilon}\|^2$.
-   Then compute, for a single Gaussian data distribution
-   $\mathcal{N}(0, s^2)$ in one dimension, the value of the unweighted
-   objective at the optimum for each $\sigma_i$, and explain what an
-   unweighted sum over a ladder from $\sigma = 3$ to $\sigma = 0.05$ would
-   emphasize.
+1. [code] **The coarsest level.** :citet:`Song.Ermon.2020` recommend a
+   coarsest level $\sigma_1$ about as large as the largest distance between
+   two training points.
+    1. Compute this distance for the training set `data` and compare it with
+       the $\sigma_1 = 3$ of `sigmas`.
+    1. Rerun `annealed_langevin` from `x_init` with the ladder truncated to
+       `sigmas[k:]` for $k = 0, 1, \ldots, 5$, so that it starts at
+       $\sigma = 3$, $1.9$, $1.2$, $0.77$, $0.49$, or $0.31$, with a hundred
+       steps per level. Report the mode weights. Which is the finest starting
+       level that still recovers the weights of the mixture? Explain the
+       trend with :numref:`fig_diffusion-noise-ladder`.
+    1. The recommendation is meant to leave no valleys between the modes of
+       $p_{\sigma_1}$. Evaluate `mix.log_prob` with the `sigma` argument on a
+       grid over $[-6, 6]^2$, and find the smallest $\sigma$ at which
+       $p_\sigma$ has a single local maximum. Compare it with the distance
+       of (a) and with the finest starting level of (b). Which length scales
+       of the running example set this $\sigma$? Why does the
+       largest-distance rule, which has to work for training data of any
+       shape, ask for more?
+   :exlabel:`ex_annealed-langevin-coarsest-level`
+1. **The weighting.** For data in $\mathbb{R}^d$, the $\sigma^2$-weighted
+   term of level $i$ in :eqref:`eq_diffusion-ncsn-loss` is
+
+   $$J_i(\boldsymbol{\theta}) = \frac{1}{2}\, \mathbb{E}\big\| \sigma_i\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x} + \sigma_i \boldsymbol{\epsilon}, \sigma_i) + \boldsymbol{\epsilon} \big\|^2.$$
+
+    1. By Vincent's theorem (:numref:`sec_diffusion-denoising`), $J_i$
+       exceeds its minimum over all score functions by its excess,
+       $\sigma_i^2$ times the Fisher divergence at level $i$. By problem
+       :exref:`ex_denoising-regression-identity`c of
+       :numref:`sec_diffusion-denoising`, this minimum, the floor of $J_i$,
+       is
+       $\mathbb{E}\big[\operatorname{tr} \operatorname{Cov}(\mathbf{x} \mid \tilde{\mathbf{x}})\big] / (2 \sigma_i^2)$.
+       Using :eqref:`eq_diffusion-posterior-mean-score`, show that the floor
+       also equals
+
+       $$\frac{d}{2} - \frac{\sigma_i^2}{2}\, \mathbb{E}\big\|\nabla \log p_{\sigma_i}(\tilde{\mathbf{x}})\big\|^2, \qquad \tilde{\mathbf{x}} \sim p_{\sigma_i}.$$
+
+       Which value does the floor approach as $\sigma_i \to 0$ for data with
+       a smooth density? Problem :exref:`ex_denoising-regression-identity`d
+       finds the limit for two-point data. Which property of the data decides
+       between the two limits?
+    1. The code in :numref:`subsec_diffusion-ncsn` prints, at four levels,
+       the Fisher divergence and half the mean squared norm of the true score.
+       From these values compute the floor and the excess of $J_i$ at each of
+       the four levels. At which levels is the excess smallest? How large is
+       it there compared with the floor? What does this suggest about the
+       poor fit at the finest level?
+    1. Without the weight, level $i$ contributes $J_i / \sigma_i^2$. For
+       one-dimensional data $\mathcal{N}(0, s^2)$, compute the minimum of
+       $J_i / \sigma_i^2$ as a function of $\sigma_i$, and evaluate the ratio
+       of its values at $\sigma_i = 0.05$ and $\sigma_i = 3$ for $s = 0.5$.
+       Which levels would dominate the noise of the minibatch gradients of
+       an unweighted average over the ladder? What would that do to the fit
+       at the coarse levels?
+   :exlabel:`ex_annealed-langevin-weighting`
 1. **Step sizes.** The step size in :eqref:`eq_diffusion-annealed-langevin`
-   is $\alpha_i = \epsilon\, \sigma_i^2 / \sigma_L^2$. For a single Gaussian
-   target $p_{\sigma_i} = \mathcal{N}(0, s^2 + \sigma_i^2)$ with
-   $s \ll \sigma_i$, show that one Langevin step contracts the distance to the
-   mean by the factor $1 - \alpha_i / (2 (s^2 + \sigma_i^2)) \approx 1 - \epsilon / (2 \sigma_L^2)$,
-   independent of the level. What does this say about the number of steps a
-   level needs, and why is the injected noise $\sqrt{\alpha_i}$ nevertheless
-   different at every level?
-1. [code] **Exact scores through the ladder.** Replace the network in the
-   annealed sampler by the exact score of $p_{\sigma_i}$, available from
-   `GaussianMixture.score` with the `sigma` argument, and rerun the schedule
-   with $20$ and $100$ steps per level, and the thousand-step run at the
-   finest level alone. Compare with the learned-score results and decide
-   which part of each discrepancy from the target is due to the finite chain
-   and which to the learned scores.
-1. [code] **The coarsest level.** Rerun the annealed sampler with the ladder
-   truncated to start at the level nearest $0.5$ instead of $3$, keeping all other
-   settings. Report the mode weights and explain the result using
-   :numref:`fig_diffusion-noise-ladder`.
-1. [code] **A classifier gradient.** Label each training point of the running
-   example by the component that generated it, train a small classifier on
-   the *noisy* points at each level, and add its input gradient to the
-   learned score as in :eqref:`eq_diffusion-bayes-score` during annealed
-   sampling. Verify that conditioning on each class produces samples from the
-   corresponding component, and measure the fraction that lands in the wrong
-   one.
-1. [code] **Annealed Langevin on images.** Run annealed Langevin dynamics with
-   the trained U-Net, starting from uniform noise on $[-1, 1]$, with $100$
-   steps per level and the step-size ratio $\epsilon / \sigma_L^2 = 0.2$ of
-   :citet:`song2019generative`, whose $\epsilon = 2 \times 10^{-5}$ and
-   $\sigma_L = 0.01$ refer to pixels in $[0, 1]$ (pass `scale=0.2` and the
-   ladder `img_sigmas`). The sampler calls its score with noise levels,
-   whereas the U-Net takes a level index and predicts the noise, so wrap it
-   as the score `-unet(x, level) / sigma`, with `level` the index of the
-   current level. Display the states after each level. Describe what the
-   coarse levels establish and what the fine levels fail to add at this
-   training budget. Then train for $3000$ steps instead of $600$ and repeat.
+   is $\alpha_i = \epsilon\, \sigma_i^2 / \sigma_L^2$. Consider one
+   coordinate of a Gaussian component with standard deviation $s$, so that
+   the target at level $i$ is $p_{\sigma_i} = \mathcal{N}(0, s^2 + \sigma_i^2)$.
+    1. Show that one Langevin step contracts the distance to the mean by the
+       factor $1 - \alpha_i / (2 (s^2 + \sigma_i^2))$, which tends to
+       $1 - \epsilon / (2 \sigma_L^2)$, independent of the level, when
+       $s \ll \sigma_i$. What does this say about the number of steps a level
+       needs? Why is the injected noise $\sqrt{\alpha_i}$ nevertheless
+       different at every level?
+    1. Take $s = 0$, so that the data are a single point, and let the chain
+       enter level $i$ with the variance $\sigma_{i-1}^2 = \gamma^2 \sigma_i^2$
+       of the previous level's target. Show that after $T$ steps its variance
+       $v_T$ satisfies
+
+       $$\frac{v_T}{\sigma_i^2} = a^{2T} (\gamma^2 - c) + c, \qquad a = 1 - \frac{\epsilon}{2 \sigma_L^2}, \qquad c = \frac{\epsilon / \sigma_L^2}{1 - a^2}.$$
+
+       This is Proposition 3 of :citet:`Song.Ermon.2020` in the convention
+       of this section; their Langevin step is
+       $\alpha_i \mathbf{s} + \sqrt{2 \alpha_i}\, \boldsymbol{\xi}$. Evaluate
+       $v_T / \sigma_i^2$ for the ratio $\gamma = 60^{1/9}$ of `sigmas` and
+       $\epsilon / \sigma_L^2 = 0.1$, at $T = 20$ and $T = 100$. What do the
+       two values say about the samples of `annealed_langevin` with
+       `steps_per_level=20`?
+    1. Now take $s = 0.5$, the component standard deviation of the running
+       example, and $\epsilon / \sigma_L^2 = 0.1$. For each of the ten levels,
+       compute the number of steps over which the distance to the mean
+       shrinks by a factor of $e$. Which levels relax within the hundred
+       steps of `annealed_langevin`? What does the answer predict for the
+       within-mode spread of its samples?
+   :exlabel:`ex_annealed-langevin-step-sizes`
+1. [code] **Exact scores through the ladder.** Write a module with the call
+   signature of `NoiseConditionalScoreNet` that returns the exact score of
+   $p_{\sigma}$, which `GaussianMixture.score` computes with the `sigma`
+   argument, and pass it to `annealed_langevin` in place of the network.
+   Repeat the three runs of `annealed_langevin` from `x_init`: on `sigmas`
+   with $20$ and with $100$ steps per level, and on `sigmas[-1:]` with
+   $1000$ steps. Compare with the learned-score results. Which part of each
+   discrepancy from the target is due to the finite chain, and which to the
+   learned scores?
+   :exlabel:`ex_annealed-langevin-exact-scores-through-ladder`
+1. [code] **Skip connections.** Write a variant of `UNet` without its two
+   skip connections, in which `up1` and `up0` receive only the upsampled
+   features, so that their input widths shrink to `2 * ch` and `ch`. Before
+   training, predict at which of the levels $\sigma \approx 0.09$, $0.43$,
+   and $2$, the indices $6$, $3$, and $0$ of `img_sigmas`, the skip
+   connections matter most, and at which they hardly matter. Then train the
+   variant with the same $600$ updates as `unet`, and compare the per-pixel
+   squared errors of its Tweedie reconstructions
+   :eqref:`eq_diffusion-tweedie` of `X_test[:500]` with those of `unet` at
+   these levels.
+   :exlabel:`ex_annealed-langevin-skip-connections`
+1. [code] **Annealed Langevin on images.** `unet` takes a level index and
+   predicts the noise, so its score at level $i$ is
+   $-\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}, i) / \sigma_i$.
+   Write a version of `annealed_langevin` for images that loops over the
+   indices of `img_sigmas` and uses this score. Start sixteen chains from
+   uniform noise on $[-1, 1]$ and run $100$ steps per level with
+   $\alpha_i = 0.2\, \sigma_i^2$. This is the ratio
+   $\epsilon / \sigma_L^2 = 0.2$ of :citet:`song2019generative`, whose
+   $\epsilon = 2 \times 10^{-5}$ and $\sigma_L = 0.01$ refer to pixels in
+   $[0, 1]$. Display the states after each level. What do the coarse levels
+   establish? What do the fine levels add? Then train a new `UNet` for
+   $3000$ updates instead of $600$ and repeat. Which levels profit most from
+   the longer training?
+   :exlabel:`ex_annealed-langevin-annealed-langevin-images`
+1. **Conditional scores of the mixture.** Let the data be the mixture of the
+   running example, with weights $\pi_k$, means $\boldsymbol{\mu}_k$, and
+   standard deviation $s$ per coordinate, and let the label of a point be the
+   component $k$ that generated it. Write $v = s^2 + \sigma^2$ for the
+   per-coordinate variance of a component of $p_\sigma$.
+    1. Show that the class posterior $p_\sigma(k \mid \tilde{\mathbf{x}})$ is
+       a softmax over logits that are affine in $\tilde{\mathbf{x}}$,
+
+       $$\ell_k(\tilde{\mathbf{x}}) = \log \pi_k + \frac{\boldsymbol{\mu}_k^\top \tilde{\mathbf{x}}}{v} - \frac{\|\boldsymbol{\mu}_k\|^2}{2 v},$$
+
+       and that the conditional score :eqref:`eq_diffusion-bayes-score` for
+       label $k$ is $(\boldsymbol{\mu}_k - \tilde{\mathbf{x}}) / v$, the score
+       of the $k$-th component perturbed at level $\sigma$.
+    1. Merge the components with weights $0.3$ and $0.2$ into one class $B$.
+       Write the gradient of $\log p_\sigma(B \mid \tilde{\mathbf{x}})$ in
+       terms of the responsibilities of the components. Where in the plane is
+       it small? In which proportions should samples conditioned on $B$ fall
+       into its two components?
+    1. A classifier fitted to clean points approximates the posterior at
+       $\sigma = 0$. Show that its logits differ from those of the level-$\sigma$
+       posterior by a factor $v / s^2$ on every term except $\log \pi_k$; at
+       $\sigma = 3$ this factor is $37$. What does adding the gradient of the
+       clean posterior to the score amount to at a coarse level? Does it
+       change the proportions of (b)?
+   :exlabel:`ex_annealed-langevin-mixture-conditional`
+1. **Ladder spacing in high dimensions.** ● Let the data be a single point at
+   the origin of $\mathbb{R}^d$, so that $p_\sigma = \mathcal{N}(\mathbf{0}, \sigma^2 I)$,
+   and let the ladder be geometric with ratio
+   $\gamma = \sigma_{i-1} / \sigma_i > 1$.
+    1. Show that $r = \|\mathbf{x}\|$ for $\mathbf{x} \sim p_\sigma$ satisfies
+       $\mathbb{E}[r^2] = d \sigma^2$ and $\mathrm{Var}[r^2] = 2 d \sigma^4$.
+       Conclude, by a first-order expansion of the square root, that $r$ is
+       approximately $\mathcal{N}(\sigma \sqrt{d}, \sigma^2 / 2)$ for large
+       $d$, the limit stated in Proposition 2 of :citet:`Song.Ermon.2020`.
+    1. A chain that leaves level $i - 1$ with a sample of $p_{\sigma_{i-1}}$
+       enters level $i$ at a radius that lies, with high probability, in the
+       interval $\sigma_{i-1} (\sqrt{d} \pm 3 / \sqrt{2})$. Show that
+       $p_{\sigma_i}$ places the mass
+
+       $$\Phi\big(\sqrt{2d}\, (\gamma - 1) + 3 \gamma\big) - \Phi\big(\sqrt{2d}\, (\gamma - 1) - 3 \gamma\big)$$
+
+       on this interval, where $\Phi$ is the standard normal distribution
+       function. Why does a mass near zero mean that the chain starts the
+       level where the network has seen almost no training inputs?
+    1. :citet:`Song.Ermon.2020` choose $\gamma$ so that this mass is about
+       $0.5$. Solve numerically for $\gamma$ at $d = 3072$, the dimension of
+       CIFAR-10 images, and count the levels from $\sigma_1 = 50$ to
+       $\sigma_L = 0.01$. Compare the count with the $232$ levels of their
+       CIFAR-10 model. Then evaluate the mass for `img_sigmas`, with
+       $d = 784$. How many levels would the criterion ask for between $2$ and
+       $0.02$?
+    1. :citet:`song2019generative` used ten levels from $1$ to $0.01$ for
+       CIFAR-10, with a hundred Langevin steps per level, whereas the
+       $232$-level model of :citet:`Song.Ermon.2020` takes five steps per
+       level. How does the number of steps per level enter the choice of
+       $\gamma$?
+   :exlabel:`ex_annealed-langevin-ladder-spacing`
+1. [code] **Conditioning on the level.** ● `NoiseConditionalScoreNet`
+   receives $\log \sigma$ as an input and divides its output by $\sigma$.
+   Train two variants with the same loss and $3000$ updates: one that divides
+   by $\sigma$ but does not receive it, the parameterization of
+   :citet:`Song.Ermon.2020`, and one that receives $\log \sigma$ but does not
+   divide.
+    1. Compute the Fisher divergence at all ten levels for the three
+       networks, and sample each with `annealed_langevin` at a hundred steps
+       per level. Which variant fits each level best? Which gives the best
+       samples?
+    1. Relate the fit of each variant at the finest levels to how the score
+       of $p_\sigma$ of the running example changes as $\sigma$ falls below
+       the component standard deviation of $0.5$.
+    1. A network that does not receive $\sigma$ has to infer the level from
+       its input. Use problem :exref:`ex_annealed-langevin-ladder-spacing`a to
+       explain why the level can be read off a noisy Fashion-MNIST image,
+       with $d = 784$, far more reliably than off a noisy point of the
+       running example.
+    1. `UNet` receives the level index $i$ rather than $\sigma_i$. The
+       sampler of problem :exref:`ex_annealed-langevin-consistent-sampling`
+       evaluates the score at noise levels between those on which the
+       network was trained. Why does `score` support such a sampler without
+       retraining, whereas `unet` does not? How would you change the
+       conditioning input of `UNet` to lift the restriction?
+   :exlabel:`ex_annealed-langevin-conditioning-level`
+1. [code] **A learned classifier.** ● Draw $2000$ labeled training points
+   from the running example by sampling component indices with
+   probabilities `mix.weights` and adding `mix.std` times standard Gaussian
+   noise to the corresponding rows of `mix.means`. Use the two classes of
+   problem :exref:`ex_annealed-langevin-mixture-conditional`b: the component
+   with weight $0.5$, and $B$.
+    1. Train a noise-conditional classifier, a multilayer perceptron that
+       receives $(\tilde{\mathbf{x}}, \log \sigma)$ and returns two logits,
+       by cross-entropy on training points perturbed at levels drawn from
+       `sigmas`. Compare its input gradient
+       $\nabla_{\tilde{\mathbf{x}}} \log p_{\boldsymbol{\phi}}(B \mid \tilde{\mathbf{x}}, \sigma)$
+       with the exact gradient of problem
+       :exref:`ex_annealed-langevin-mixture-conditional`b on noisy test
+       points at four levels.
+    1. Run `annealed_langevin` conditioned on $B$, with the learned score
+       plus the classifier gradient as in :eqref:`eq_diffusion-bayes-score`.
+       Report the fraction of chains that end nearest the excluded component
+       and the proportions of the other two. Repeat with the exact class
+       posterior in place of the classifier, and then with the exact score as
+       well. Which error dominates: that of the score, that of the
+       classifier, or that of the finite chain?
+    1. Train a second classifier on clean points only, use its gradient at
+       every level, and repeat (b). Does the result agree with problem
+       :exref:`ex_annealed-langevin-mixture-conditional`c?
+   :exlabel:`ex_annealed-langevin-learned-classifier`
+1. [code] **Consistent annealed sampling.** ●●
+   :citet:`Jolicoeur-Martineau.Piche-Taillefer.Tachet-des-Combes.ea.2021`
+   observe that annealed Langevin dynamics does not keep the noise in its
+   samples at the level of the ladder, and propose a sampler that does,
+   with one step per level. Write the drift of
+   :eqref:`eq_diffusion-annealed-langevin` as
+   $\tfrac{\alpha_i}{2} \mathbf{s} = \eta\, \sigma_i^2\, \mathbf{s}$ with
+   $\eta = \epsilon / (2 \sigma_L^2)$, which is $0.05$ in the code, and let
+   the ladder be geometric, $\sigma_{i+1} = \sigma_i / \gamma$ for $i < L$
+   with some $\gamma > 1$, and set $\sigma_{L+1} = 0$, so that the step at
+   the last level adds no noise. The proposed step at level $i$ is
+
+   $$\mathbf{x} \leftarrow \mathbf{x} + \eta\, \sigma_i^2\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, \sigma_i) + \beta\, \sigma_{i+1}\, \boldsymbol{\xi}, \qquad \boldsymbol{\xi} \sim \mathcal{N}(\mathbf{0}, I).$$
+
+    1. Let the data be a single point, and let $\mathbf{x}$ be that point
+       plus Gaussian noise of variance $\sigma_i^2$ per coordinate. With the
+       exact score, find the $\beta$ for which the noise after the step has
+       variance exactly $\sigma_{i+1}^2$, and show that it exists only if
+       $\eta \geq 1 - 1 / \gamma$. Compare with problem
+       :exref:`ex_annealed-langevin-step-sizes`b. What does the step become
+       at $\eta = 1$, in terms of Tweedie's formula :eqref:`eq_diffusion-tweedie`?
+    1. Now let the data be $\mathcal{N}(\boldsymbol{\mu}, s^2 I)$. Show that
+       the step with the exact score and this $\beta$ maps $p_{\sigma_i}$ to a
+       Gaussian with per-coordinate variance
+
+       $$s^2 + \sigma_{i+1}^2 - \frac{\eta^2 \sigma_i^2 s^2}{s^2 + \sigma_i^2}.$$
+
+       Which part of the posterior of the clean point does the step discard
+       at $\eta = 1$? Why is the deficit harmless for small $\eta$?
+    1. Implement the sampler for the running example with `score`. The
+       sampler's ladders have more levels than `sigmas`, so the network is
+       evaluated between the levels on which it was trained; first compute
+       the Fisher divergence at the geometric midpoints between adjacent
+       levels of `sigmas`. Then sample from `x_init` on geometric ladders
+       from $3$ to $0.05$ with $100$ and $1000$ levels, for
+       $\eta \in \{0.05, 0.2, 1\}$ and for the smallest admissible $\eta$ of
+       each ladder. Compare `summarize` of these runs with that of
+       `annealed_langevin` at a hundred steps per level, which takes as many
+       network evaluations as the $1000$-level ladder. Explain the spread at
+       $\eta = 1$ with (b).
+    1. Ignoring the truncation in `summarize`, its spread is about
+       $2 (s^2 + \tau^2)$ for samples that carry residual noise of variance
+       $\tau^2$ per coordinate. Estimate $\tau$ for the samples of
+       `annealed_langevin` with a hundred steps per level, and relate the
+       estimate to problem
+       :exref:`ex_annealed-langevin-step-sizes`c.
+   :exlabel:`ex_annealed-langevin-consistent-sampling`
 
 <!-- slides -->
 

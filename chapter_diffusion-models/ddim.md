@@ -66,8 +66,9 @@ not the perturbation levels of the earlier sections.) By Bayes' rule the
 forward step $q_\sigma(\mathbf{x}_t \mid \mathbf{x}_{t-1}, \mathbf{x}_0)$
 is again Gaussian, but its mean depends on $\mathbf{x}_0$ as well as on
 $\mathbf{x}_{t-1}$, so the process is not Markov in general
-:cite:`Song.Meng.Ermon.2020`; the DDPM member below is the exception. What
-the family shares with DDPM is the marginals.
+:cite:`Song.Meng.Ermon.2020`; the DDPM member below is the exception
+(Exercise :exref:`ex_ddim-forward-step`). What the family shares with DDPM
+is the marginals.
 
 **Proposition.** *For every choice of $\sigma$ with
 $\sigma_t^2 \leq 1 - \bar{\alpha}_{t-1}$, the marginals of
@@ -101,8 +102,9 @@ and one learned transition per step. :citet:`Song.Meng.Ermon.2020` show
 that the variational bound of this model under $q_\sigma$ equals, for every
 $\sigma$ with positive entries, a weighted noise-prediction objective of the form
 :eqref:`eq_diffusion-lt-eps` plus a constant, with per-step weights that
-depend on $\sigma$. If the predictor had separate parameters for every
-step, the weights would not affect its optimum, so one network minimizing
+depend on $\sigma$ (Exercise :exref:`ex_ddim-bound-weights` derives them).
+If the predictor had separate parameters for every step, the weights would
+not affect its optimum, so one network minimizing
 the unweighted simple loss would be optimal for the entire family; with the
 shared parameters of a real network this holds only approximately, and the
 simple loss serves as the common surrogate. In other words, the noise
@@ -185,11 +187,11 @@ on the running example, where the optimal predictor is known.
 illustrates the strides. In the rescaled variables
 $\mathbf{x}_t / \sqrt{\bar{\alpha}_t}$ and $\sqrt{(1 - \bar{\alpha}_t) / \bar{\alpha}_t}$
 the deterministic update is an Euler step of an ordinary differential
-equation, whatever the stride, and in the limit of small steps it
-integrates that equation, which for the optimal predictor is the
-probability-flow ODE of :numref:`sec_mdl-probability-flow-ode`
-:cite:`Song.Meng.Ermon.2020`. Higher-order integrators and better step
-placements therefore reduce the error further
+equation, whatever the stride (Exercise :exref:`ex_ddim-euler-step`), and
+in the limit of small steps it integrates that equation, which for the
+optimal predictor is the probability-flow ODE of
+:numref:`sec_mdl-probability-flow-ode` :cite:`Song.Meng.Ermon.2020`. Higher-order integrators and better step
+placements can therefore reduce the error further
 :cite:`Karras.Aittala.Aila.ea.2022`.
 
 ## Experiments on the Running Example
@@ -197,7 +199,10 @@ placements therefore reduce the error further
 The network and the training loop are those of :numref:`sec_diffusion-ddpm`,
 with $T = 200$. The sampler below implements :eqref:`eq_diffusion-ddim-step`
 on a subsequence of `steps` equally spaced indices, one network evaluation
-per index, with the strength $\eta$ as an argument. With `steps = T` and
+per index, with the strength $\eta$ as an argument. As in
+:numref:`sec_diffusion-ddpm`, index `t` of the code stands for step $t + 1$,
+so the grid `taus` runs from index $T - 1$, step $T$, down to index $0$,
+step $1$. With `steps = T` and
 $\eta = 1$ it is the ancestral sampler with the posterior variance; with
 $\eta = 0$ it is DDIM. The code of :numref:`sec_diffusion-ddpm` used the
 other reverse variance, $\sigma_t^2 = \beta_t$, so the $\eta = 1$ runs below
@@ -356,7 +361,9 @@ Fifty deterministic steps reproduce the statistics of two hundred. Fewer
 steps change them: the within-mode spread is lowest at twenty or ten steps,
 several hundredths below its value at two hundred, and the stray fraction
 is highest at ten. With long strides, each step re-noises a posterior mean,
-and the samples contract toward the mode centers. The deterministic sampler
+and the samples contract toward the mode centers (Exercise
+:exref:`ex_ddim-gaussian-data` computes the contraction for Gaussian data).
+The deterministic sampler
 is also less accurate than the stochastic chain with the same learned
 predictor: at every step count its mode weights are further from the true
 ones, off by several hundredths or more, and it leaves several times as
@@ -411,7 +418,7 @@ With the exact predictor the per-sample distance to the fine-grained
 reference grows steadily as the stride grows, from a few hundredths at fifty
 steps to about half a unit at five, on a scale where the modes are five
 units apart. The stride cost is intrinsic to the method, and higher-order solvers
-reduce it. The determinism check returns zero: the map from
+can reduce it. The determinism check returns zero: the map from
 $\mathbf{x}_T$ to the sample is a function. The trajectories below make the
 difference between the two samplers visible: from the same eight starting
 points, the ancestral chain wanders while the deterministic one follows a
@@ -642,7 +649,8 @@ change is possible because the sampler is a continuous function of its
 code. A related property underlies DDIM *inversion*: running the
 deterministic update forward from a real image recovers a code that
 approximately regenerates it :cite:`Song.Meng.Ermon.2020`, a starting point
-for editing the image through its code.
+for editing the image through its code (Exercise :exref:`ex_ddim-inversion`
+measures the reconstruction error).
 
 ## Summary
 
@@ -671,38 +679,240 @@ the continuous-time picture of the next section and of
 
 ## Exercises
 
-1. **The Markov member.** Show that choosing $\sigma_t^2 = \tilde{\beta}_t$
-   in :eqref:`eq_diffusion-ddim-family` makes
-   $q_\sigma(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)$ equal to the
-   DDPM posterior :eqref:`eq_diffusion-posterior`, by rewriting the mean of
-   :eqref:`eq_diffusion-ddim-family` in terms of $\mathbf{x}_0$ and
-   $\mathbf{x}_t$ and comparing coefficients. Conclude that the process is
-   then Markov with the DDPM transitions.
-1. **The last step.** The sampler treats the transition from the smallest
-   retained step to the clean point by returning $\hat{\mathbf{x}}_0$. Show
-   that this is :eqref:`eq_diffusion-ddim-step` with $\bar{\alpha}_{t-1} = 1$,
-   and explain why no noise is added there for any $\eta$.
-1. **Bound and weights.** :citet:`Song.Meng.Ermon.2020` show that the
-   variational bound of the non-Markovian model equals a weighted
-   noise-prediction objective plus a constant. Starting from
-   :eqref:`eq_diffusion-lt-eps`, explain why a network that minimizes the
-   *unweighted* simple loss for every $t$ separately also minimizes every
-   weighted version, provided its capacity does not tie the steps together.
-   What does this argument assume about the network?
-1. [code] **The strength $\eta$.** Sample the running example with
-   $\eta \in \{0, 0.25, 0.5, 1\}$ on twenty steps and on two hundred, and
-   report the summary statistics. At which step count does the stochastic
-   sampler have the advantage, and which statistic reveals it?
-1. [code] **Consistency across step counts.** For the image model, generate
-   from the same eight codes with DDIM on $10$, $20$, $50$, and $100$ steps,
-   and measure the mean squared distance between the fifty-step images and
-   each of the others. Then repeat with $\eta = 1$. Which sampler produces
-   images that converge as the step count grows, and why?
-1. [code] **Inversion.** Run the deterministic update in the forward
-   direction on a test image, from step $0$ to step $T$, using the
-   predicted noise at each step to re-noise, and then regenerate from the
-   resulting code with the same number of steps. Measure the reconstruction
-   error as a function of the number of steps and explain its source.
+1. **The DDPM member.** The strength $\eta$ of :eqref:`eq_diffusion-ddim-eta`
+   interpolates between the deterministic sampler and the DDPM sampler.
+    1. Show that $\sigma_t(1)^2 = \tilde{\beta}_t$. Then rewrite the mean of
+       :eqref:`eq_diffusion-ddim-family` at $\sigma_t^2 = \tilde{\beta}_t$ as
+       a combination of $\mathbf{x}_0$ and $\mathbf{x}_t$, and show by
+       comparing coefficients that the conditional equals the DDPM posterior
+       :eqref:`eq_diffusion-posterior`.
+    1. On a strided grid, `ddim_sample` uses $\bar{\alpha}_{\tau_{i-1}}$ in
+       place of $\bar{\alpha}_{t-1}$. Show that each of its updates at
+       $\eta = 1$ is an ancestral step, with the posterior variance as the
+       reverse variance, of the merged chain of exercise
+       :exref:`ex_ddpm-sampling-fewer-steps` of :numref:`sec_diffusion-ddpm`,
+       whose single transition from $\tau_i$ to $\tau_{i-1}$ has
+       $\alpha = \bar{\alpha}_{\tau_i} / \bar{\alpha}_{\tau_{i-1}}$.
+1. **Admissible noise scales.** The family
+   :eqref:`eq_diffusion-ddim-family` requires
+   $\sigma_t^2 \leq 1 - \bar{\alpha}_{t-1}$. On a stride from $\tau_i$ to
+   $\tau_{i-1}$, `ddim_sample` evaluates :eqref:`eq_diffusion-ddim-eta` with
+   $\bar{\alpha}_{\tau_i}$ and $\bar{\alpha}_{\tau_{i-1}}$ in place of
+   $\bar{\alpha}_t$ and $\bar{\alpha}_{t-1}$.
+    1. Write the sampling step :eqref:`eq_diffusion-ddim-step` at the largest
+       admissible scale, $\sigma_t^2 = 1 - \bar{\alpha}_{t-1}$. What does the
+       next state retain of $\mathbf{x}_t$ beyond the estimate
+       $\hat{\mathbf{x}}_0(\mathbf{x}_t, t)$?
+    1. Show that a stride admits exactly the strengths with
+       $\eta^2 \leq (1 - \bar{\alpha}_{\tau_i}) / (1 - \bar{\alpha}_{\tau_i} / \bar{\alpha}_{\tau_{i-1}})$,
+       so that $\eta = 1$ is admissible on every grid.
+    1. The last update of `ddim_sample` goes to $\bar{\alpha} = 1$. Show that
+       it returns $\hat{\mathbf{x}}_0$ of :eqref:`eq_diffusion-x0-hat` for
+       every $\eta$.
+    1. At $\eta = 1$, the update fills the fraction
+       $\sigma_{\tau_i}^2 / (1 - \bar{\alpha}_{\tau_{i-1}})$ of the variance
+       at the next level with fresh noise. Show that this fraction equals
+       $1 - \mathrm{SNR}_{\tau_i} / \mathrm{SNR}_{\tau_{i-1}}$, where
+       $\mathrm{SNR}_t = \bar{\alpha}_t / (1 - \bar{\alpha}_t)$. Evaluate
+       it on the strides of `ddim_sample` with ten steps and with two hundred.
+       What does the $\eta = 1$ sampler carry from $\mathbf{x}_{\tau_i}$ to
+       the next level on the ten-step grid?
+   :exlabel:`ex_ddim-admissible-noise`
+1. [code] **The strength $\eta$.** Draw one fixed set of $2000$ starting
+   points, sample the running example from them with `ddim_sample` for
+   $\eta \in \{0, 0.25, 0.5, 1\}$ on $200$, $20$, and $10$ steps, and apply
+   `summarize` to each result. For $\eta > 0$, repeat each run with three
+   different seeds of the fresh noise, so that changes can be told apart
+   from the variation between runs.
+    1. How do the stray fraction and the spread change with $\eta$ at each
+       step count?
+    1. Repeat with `eps_star` in place of `net`. Which of the changes in
+       part (a) correct errors of the learned predictor, and which are
+       effects of the stride? Relate the spread at $\eta = 1$ on ten steps
+       to problem :exref:`ex_ddim-admissible-noise`d.
+1. [code] **Consistency across step counts.** Draw eight noise images once
+   and decode them with `ddim_images` and `ema`.
+    1. At $\eta = 0$, decode on $10$, $20$, $50$, $100$, and $200$ steps,
+       and compute the mean squared distance between the $200$-step images
+       and each of the others.
+    1. Repeat at $\eta = 1$, and also compute the distance between two
+       $200$-step runs at $\eta = 1$ that use different fresh noise. Which
+       sampler's images converge as the number of steps grows? What does the
+       last distance measure?
+1. [code] **Interpolation paths.** The codes `z0` and `z1`, between which
+   the image model interpolates along a great circle, are independent draws
+   from $\mathcal{N}(\mathbf{0}, I)$ in $d = 784$ dimensions.
+    1. By problem :exref:`ex_annealed-langevin-ladder-spacing`a of
+       :numref:`sec_diffusion-annealed`, the norm of such a code is
+       approximately $\mathcal{N}(\sqrt{d}, 1/2)$ for large $d$. Compute the
+       expected squared norm of the midpoint $(\mathbf{z}_0 + \mathbf{z}_1) / 2$
+       of the straight line between the codes, and express the gap between
+       its norm and $\sqrt{d}$ in standard deviations of the code norm.
+    1. Show that the angle between the two codes is close to $\pi / 2$ and
+       that the midpoint of the great circle then has a norm close to
+       $\sqrt{d}$.
+    1. Decode eight points of the straight line with fifty DDIM steps, next
+       to the eight points of the great circle, and compare the images in the
+       middle of the two rows.
+1. **The forward step.** ● Given $\mathbf{x}_0$, a draw from
+   :eqref:`eq_diffusion-ddim-family` can be written as
+   $\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}_t$
+   and
+   $\mathbf{x}_{t-1} = \sqrt{\bar{\alpha}_{t-1}}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_{t-1} - \sigma_t^2}\; \boldsymbol{\epsilon}_t + \sigma_t \mathbf{z}$,
+   with independent standard Gaussians $\boldsymbol{\epsilon}_t$ and
+   $\mathbf{z}$.
+    1. Compute the mean and the covariance of
+       $q_\sigma(\mathbf{x}_t \mid \mathbf{x}_{t-1}, \mathbf{x}_0)$ by
+       conditioning the joint Gaussian of $\mathbf{x}_t$ and
+       $\mathbf{x}_{t-1}$ given $\mathbf{x}_0$.
+    1. Let $\sigma_t = 0$ for every $t$. Show that the forward process is
+       then $\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}$
+       with one noise draw $\boldsymbol{\epsilon}$ shared by all $t$.
+    1. Show that the coefficient of $\mathbf{x}_0$ in the mean of part (a)
+       vanishes if and only if $\sigma_t^2 = \tilde{\beta}_t$, and that the
+       conditional is then the DDPM transition :eqref:`eq_diffusion-forward`.
+       Conclude that the DDPM member is the only member of the family whose
+       forward process is Markov.
+   :exlabel:`ex_ddim-forward-step`
+1. **Weights of the bound.** ● The learned transition of the family is
+   :eqref:`eq_diffusion-ddim-family` with the estimate
+   $\hat{\mathbf{x}}_0(\mathbf{x}_t, t)$ of :eqref:`eq_diffusion-x0-hat` in
+   place of $\mathbf{x}_0$. For $t \geq 2$, the bound contains the
+   Kullback--Leibler divergence from
+   $q_\sigma(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)$ to this
+   transition.
+    1. Let
+       $\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}$.
+       Show that the divergence equals
+       $\gamma_t \|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)\|^2$,
+       and find the weight $\gamma_t$ as a function of $\sigma_t$.
+    1. Check that $\sigma_t^2 = \tilde{\beta}_t$ gives the weight of
+       :eqref:`eq_diffusion-lt-eps` at that variance.
+    1. :citet:`Song.Meng.Ermon.2020` state as their Theorem 1 that the bound
+       equals a weighted noise-prediction objective plus a constant. In the
+       proof (their Appendix B) they write the divergence as
+       $\|\mathbf{x}_0 - \hat{\mathbf{x}}_0\|^2 / (2 \sigma_t^2)$ up to terms
+       that do not depend on the network. Which factor of your $\gamma_t$
+       does this expression lack? Does the omission affect the theorem?
+    1. Let $\sigma_t = \sigma_t(\eta)$ from :eqref:`eq_diffusion-ddim-eta`.
+       When $\beta_t$ is small compared with $1 - \bar{\alpha}_t$, show that
+       $\gamma_t(\sigma_t(\eta)) / \gamma_t(\sigma_t(1)) \approx (1 + \eta^2)^2 / (4 \eta^2)$,
+       the same factor at every step. What would an exactly constant factor
+       imply for a network whose parameters are shared across steps? At
+       which steps of the chain does the approximation fail?
+   :exlabel:`ex_ddim-bound-weights`
+1. **An Euler step.** ● :citet:`Song.Meng.Ermon.2020` (Section 4.3)
+   rescale the state and the noise level as
+   $\mathbf{y} = \mathbf{x}_t / \sqrt{\bar{\alpha}_t}$ and
+   $s = \sqrt{(1 - \bar{\alpha}_t) / \bar{\alpha}_t}$, the equivalent
+   noise level $\sigma^{\textrm{eq}}_t$ of exercise
+   :exref:`ex_ddpm-equivalent-noise-levels` of :numref:`sec_diffusion-ddpm`.
+   Write
+   $\hat{\boldsymbol{\epsilon}}(\mathbf{y}, s)$ for the noise predictor
+   evaluated at $\mathbf{x}_t = \mathbf{y} / \sqrt{1 + s^2}$ and at the noise
+   level $s$.
+    1. Show that the deterministic update from level $s$ to a lower retained
+       level $s'$, which is :eqref:`eq_diffusion-ddim-step` with
+       $\sigma_t = 0$, reads
+       $\mathbf{y}' = \mathbf{y} + (s' - s)\, \hat{\boldsymbol{\epsilon}}(\mathbf{y}, s)$
+       for every stride: an Euler step of
+       $d\mathbf{y} / ds = \hat{\boldsymbol{\epsilon}}(\mathbf{y}, s)$.
+    1. Let $p_s$ be the density of $\mathbf{x}_0 + s \boldsymbol{\epsilon}$,
+       where $\mathbf{x}_0$ is drawn from the data distribution and
+       $\boldsymbol{\epsilon}$ is independent standard Gaussian noise. Show
+       with :eqref:`eq_diffusion-score-eps` that the exact predictor satisfies
+       $\boldsymbol{\epsilon}^\star = -s\, \nabla_{\mathbf{y}} \log p_s(\mathbf{y})$.
+       Show that
+       $d\mathbf{y} / ds = -s\, \nabla_{\mathbf{y}} \log p_s(\mathbf{y})$ is
+       the probability-flow ODE :eqref:`eq_mdl-dyn-pf-ode` of the process
+       that adds Gaussian noise of variance $s^2$ to the data, with $s$ in
+       the role of time.
+   :exlabel:`ex_ddim-euler-step`
+1. **Gaussian data.** ● Let the data be one-dimensional with distribution
+   $\mathcal{N}(0, v)$, and use the variables $y$ and $s$ of exercise
+   :exref:`ex_ddim-euler-step`.
+    1. Show that the exact predictor is
+       $\epsilon^\star(y, s) = s y / (v + s^2)$, that one deterministic stride
+       from $s$ to $s'$ multiplies $y$ by $(v + s s') / (v + s^2)$, and that
+       the exact solution of the ODE from $s$ to $s'$ multiplies it by
+       $\sqrt{(v + s'^2) / (v + s^2)}$.
+    1. Show that the factor of the stride never exceeds the exact one, with
+       equality only for $s' = s$. What does this imply for the variance of
+       deterministic samples of Gaussian data on any grid? Problem
+       :exref:`ex_ddpm-ancestral-first-order`b of :numref:`sec_diffusion-ddpm`
+       computes the variance error of one ancestral step for the same data.
+       For which data variances do the two samplers err in the same
+       direction?
+    1. Take $v = 0.25$, the variance of one coordinate of a component of
+       `mix`, and the schedule of the running example. Compute the standard
+       deviation of the samples that the deterministic sampler produces from
+       $x_T \sim \mathcal{N}(0, 1)$ on the grids of `ddim_sample` with
+       $200$, $50$, $20$, $10$, and $5$ steps, including the final jump to
+       $s = 0$, and compare it with the standard deviation $0.5$ of the data.
+   :exlabel:`ex_ddim-gaussian-data`
+1. [code] **Inversion.** ● Running the deterministic update toward higher
+   noise encodes a data point. Set $\mathbf{x}_{\tau_1} = \mathbf{x}_0$ at
+   the smallest retained index $\tau_1$ of the grid, and set, for
+   consecutive retained indices $\tau_i < \tau_{i+1}$,
+
+   $$\mathbf{x}_{\tau_{i+1}} = \sqrt{\bar{\alpha}_{\tau_{i+1}}}\; \hat{\mathbf{x}}_0(\mathbf{x}_{\tau_i}, \tau_i) + \sqrt{1 - \bar{\alpha}_{\tau_{i+1}}}\; \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_{\tau_i}, \tau_i).$$
+
+    1. Implement the encoder on the grid of `ddim_sample`. Encode the points
+       of `data` with `eps_star` on $10$, $20$, $50$, and $200$ steps, and
+       decode each set of codes with `ddim_sample` on the same steps. How
+       does the mean reconstruction error depend on the number of steps? Why
+       is the round trip not exact even with the exact predictor?
+    1. Compute the mean and the covariance matrix of the $200$-step codes
+       for `eps_star` and for `net`. Which encoder maps the data to
+       approximately standard Gaussian codes, and what does the covariance
+       of the other one reveal about the learned model?
+    1. Repeat part (a) for eight Fashion-MNIST test images with `ema` and
+       the update of `ddim_images`, on $10$ and $50$ steps, and compare the
+       reconstructions with the originals.
+       :citet:`Song.Meng.Ermon.2020` (Table 2) report this experiment on
+       CIFAR-10.
+   :exlabel:`ex_ddim-inversion`
+1. [extended] **A second-order sampler.** ●● In the variables of exercise
+   :exref:`ex_ddim-euler-step`, the deterministic sampler takes Euler steps
+   of $d\mathbf{y} / ds = \hat{\boldsymbol{\epsilon}}(\mathbf{y}, s)$.
+   DPM-Solver-2 :cite:`Lu.Zhou.Bao.ea.2022` evaluates the predictor twice per
+   stride from $s$ to $s'$, the second time at $s_m = \sqrt{s s'}$, the
+   midpoint of the stride in $\log s$:
+
+   $$\mathbf{u} = \mathbf{y} + (s_m - s)\, \hat{\boldsymbol{\epsilon}}(\mathbf{y}, s), \qquad \mathbf{y}' = \mathbf{y} + (s' - s)\, \hat{\boldsymbol{\epsilon}}(\mathbf{u}, s_m).$$
+
+    1. Let $h = \log(s / s')$. Write the exact change of $\mathbf{y}$ over
+       the stride as an integral of $\hat{\boldsymbol{\epsilon}}$ along the
+       trajectory, and show that the local error of the update is
+       $O(s h^3)$, whereas that of the Euler step is $O(s h^2)$. Treat
+       $\hat{\boldsymbol{\epsilon}}$ along the trajectory as a smooth
+       function of $\log s$ and expand it around $\log s_m$. The second
+       evaluation is made at $\mathbf{u}$, not on the trajectory. To bound
+       the error this causes, assume, as :citet:`Lu.Zhou.Bao.ea.2022` do,
+       that $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$
+       is Lipschitz in $\mathbf{x}_t$ with one constant for all $t$.
+    1. Implement the update with the exact predictor, using a version of
+       `eps_star` that takes $\bar{\alpha} = 1 / (1 + s^2)$ instead of a step
+       index, and take the final jump to the clean point with the
+       deterministic update. On a grid of $K$ retained steps the sampler uses
+       $2K - 1$ evaluations. Compare it with `ddim_sample` at $11$, $21$, and
+       $51$ evaluations, from the same starting points, by the mean distance
+       to a reference computed with the second-order update on $2000$ levels
+       equally spaced in $\log s$ between the levels of the first and the
+       last step index.
+    1. Repeat both samplers with the quadratic placement
+       $\tau_i = \lfloor c\, i^2 \rfloor$, $i = 0, \ldots, K - 1$, of
+       :citet:`Song.Meng.Ermon.2020` (Appendix D.2), with
+       $c = (T - 1) / (K - 1)^2$, so that the indices run from $0$ to $T - 1$.
+       At the larger budgets the floor repeats some of the smallest indices.
+       Drop the repeats, and choose $K$ so that the distinct indices give the
+       same number of evaluations as the linear grid. Which combination of
+       sampler and placement is most accurate at each budget? How does the
+       advantage of the second-order sampler depend on the budget?
+    1. Run both samplers with `net`, rounding each intermediate level $s_m$
+       to the nearest step of the schedule, and compare the `summarize`
+       statistics at $11$ and $51$ evaluations. Does the gain measured with
+       the exact predictor survive the errors of the learned predictor?
 
 <!-- slides -->
 

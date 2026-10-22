@@ -125,11 +125,14 @@ $$
 = -\big[ s_{\boldsymbol{\theta}}(x)\, p(x) \big]_{-\infty}^{\infty} + \int s_{\boldsymbol{\theta}}'(x)\, p(x)\, dx
 = \mathbb{E}_{x \sim p}\big[ s_{\boldsymbol{\theta}}'(x) \big].
 $$
+:eqlabel:`eq_diffusion-sm-parts`
 
-The first equality cancels $p$ against the denominator of the score, and the
-boundary term vanishes because $p(x)\, s_{\boldsymbol{\theta}}(x) \to 0$ as
-$|x| \to \infty$, an assumption that holds for any density with sufficiently
-light tails and any model that does not grow faster than they decay. The
+The first equality cancels $p$ against the denominator of the score. The
+integration by parts needs $p$ to be differentiable on the whole line, and
+the boundary term vanishes because $p(x)\, s_{\boldsymbol{\theta}}(x) \to 0$
+as $|x| \to \infty$, an assumption that holds for any density with
+sufficiently light tails and any model that does not grow faster than they
+decay. The
 derivative has moved from the unknown density onto the model. In $d$
 dimensions the same step applies to each coordinate and the derivatives add
 up to the divergence of the field. The result is Hyvärinen's identity:
@@ -391,7 +394,7 @@ constant. Replacing $\tfrac12 (\mathbf{v}^\top \mathbf{s}_{\boldsymbol{\theta}})
 by its exact average $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}\|^2$
 removes one random term; the original paper calls this variant SSM-VR and
 found that it performed better in its experiments, although the replacement
-is not guaranteed to lower the variance (Exercise 5).
+is not guaranteed to lower the variance (Exercise :exref:`ex_score-matching-variance-reduction`).
 :citet:`Song.Garg.Shi.ea.2019` prove that, for a well-specified parametric
 model of the density, the estimator is consistent and asymptotically normal
 under standard regularity conditions. The cost is variance: each update
@@ -491,6 +494,7 @@ dimensions most of them still point roughly inward, and the table below
 quantifies how much accuracy is lost.
 
 ## Where the Estimate Is Accurate
+:label:`subsec_diffusion-sm-accuracy`
 
 The objective is an expectation under the data distribution, so it
 constrains the field only where the data have appreciable density. The cell
@@ -570,41 +574,186 @@ three or more orders of magnitude below its peak.
    $\tfrac12 e^{-|x|}$, and of the mixture $\sum_k \pi_k \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_k, \sigma^2 I)$.
    For the mixture, show that the score is the responsibility-weighted average
    of the component scores, which is what `GaussianMixture.score` implements.
-   Where is the Laplace score undefined, and what does this imply for
-   score matching on data with sharp features?
-1. **The identity in $d$ dimensions.** Carry out the integration by parts of
-   the cross term coordinate by coordinate and derive
-   :eqref:`eq_diffusion-hyvarinen`, stating explicitly the boundary condition
-   used in each coordinate. Then show that for the model
-   $\mathbf{s}_{\boldsymbol{\theta}} = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}$
-   the trace term becomes minus the Laplacian of the energy, and interpret the
-   sign: which energies does the objective favor at the data?
+   Where is the Laplace score undefined? The trace term of
+   :eqref:`eq_diffusion-hyvarinen` needs the derivative of the model score.
+   What does the Laplace case imply for score matching on data whose density
+   has a kink?
+
+1. **The identity in $d$ dimensions.**
+    1. Apply the integration by parts :eqref:`eq_diffusion-sm-parts` to each
+       coordinate of the cross term and derive
+       :eqref:`eq_diffusion-hyvarinen`. State the boundary condition used in
+       each coordinate.
+    1. Show that for the model
+       $\mathbf{s}_{\boldsymbol{\theta}} = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}$
+       the trace term becomes minus the Laplacian of the energy. Which
+       energies does the objective favor at the data?
+
+1. **Data on a half-line.** Let the data follow the exponential density
+   $p(x) = \lambda e^{-\lambda x}$ on $x > 0$, and let the model be
+   $s_\theta(x) = -\theta$, the score of an exponential density with rate
+   $\theta$. Show that the score matching objective is minimized at
+   $\theta = 0$ rather than at $\theta = \lambda$. Which term of
+   :eqref:`eq_diffusion-sm-parts` was dropped? Which quantity does that term
+   need that the samples do not provide directly?
+   :citet:`Hyvarinen.2007` modifies the objective for such nonnegative
+   data.
+
 1. **Score matching for a Gaussian.** Let the model be
    $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) = -A(\mathbf{x} - \mathbf{b})$
    with $A$ symmetric positive definite, the score of a Gaussian with
    precision $A$. Write the score matching objective in closed form in terms
    of the sample mean and covariance of the data, minimize it, and show that
    the solution coincides with the maximum-likelihood estimate.
+
+1. [code] **Noise of the objective.** Without the true score, the implicit
+   objective is the only available measure of fit, for example to choose
+   between two trained models. For each point of `test` and for both
+   `score_exact` and `score_sliced`, compute the per-point implicit estimate
+   $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}\|^2 + \operatorname{tr}(\nabla_{\mathbf{x}} \mathbf{s}_{\boldsymbol{\theta}}) + \tfrac12 \|\nabla_{\mathbf{x}} \log p\|^2$
+   and the per-point direct estimate
+   $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}} - \nabla_{\mathbf{x}} \log p\|^2$.
+   Both have the Fisher divergence as their expectation.
+    1. Show that at the true score the implicit estimate equals
+       $\Delta p(\mathbf{x}) / p(\mathbf{x})$, where $\Delta$ is the
+       Laplacian. Compute its mean and standard deviation under a single
+       Gaussian with standard deviation $0.5$ in two dimensions. Compare the
+       result with the standard deviations of both estimates measured for the
+       two models.
+    1. Estimate the difference between the Fisher divergences of the two
+       models from the implicit estimate, once with both models evaluated on
+       the same points and once with each model evaluated on its own half of
+       `test`, and compute the standard error of each estimate. How many
+       points would each of these two estimates need to resolve, at two
+       standard errors, the difference that the direct estimate shows?
+
+1. [code] **Cost of the trace.** Build a multilayer perceptron with the layers
+   of `ScoreNet` but $d$ inputs and $d$ outputs. On batches of $256$ standard
+   Gaussian inputs, time one gradient update with `score_matching_loss` and
+   one with `sliced_score_matching_loss` for $d = 2, 8, 32, 128, 512$,
+   excluding the first call from the timing. The count of derivative passes
+   predicts that the ratio of the two times grows linearly in $d$. Plot both
+   times and their ratio against $d$ on logarithmic axes. Over which range of
+   $d$ does the ratio grow linearly? Does the time of the exact loss itself
+   grow linearly over the same range? Extrapolate both times to a
+   $28 \times 28$ grayscale image and to a $256 \times 256$ color image.
+
 1. **The projection identity.** Show that $\mathbb{E}[\mathbf{v}^\top A \mathbf{v}] = \operatorname{tr}(A)$
    whenever $\mathbb{E}[\mathbf{v} \mathbf{v}^\top] = I$, and compute the
    variance of $\mathbf{v}^\top A \mathbf{v}$ for a standard Gaussian
    $\mathbf{v}$ and for a Rademacher (random sign) $\mathbf{v}$ when $A$ is
    symmetric. Which distribution gives the lower variance, and by how much
    when $A$ is diagonal?
-1. [code] **Variance reduction.** Replace $\tfrac12 (\mathbf{v}^\top \mathbf{s}_{\boldsymbol{\theta}})^2$
-   in :eqref:`eq_diffusion-ssm` by $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}\|^2$
-   and retrain. Compare the Fisher divergence on the test points across five
-   seeds for the two variants, and also try Rademacher projections. Report
-   the mean and spread, and relate the differences to the variances computed
-   in the previous exercise.
-1. [code] **A conservative score model.** Parameterize the score as the
-   gradient of a scalar energy network, $\mathbf{s}_{\boldsymbol{\theta}} = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}$,
-   using automatic differentiation inside the forward pass, and train it by
-   exact score matching. Compare its Fisher divergence with the unconstrained
-   field, then use the learned energy to compute the log-density on the grid
-   of :numref:`sec_diffusion-ebm-training` (normalizing by quadrature) and
-   report the test negative log-likelihood. Which quantity does this model
-   provide that the unconstrained field cannot?
+   :exlabel:`ex_score-matching-projection-identity`
+
+1. [code] **Data size and low density.** The function `train` draws its
+   minibatches from the global `data`. Rebind `data` to fresh samples of
+   $n = 200$, $2000$, and $20000$ points from `mix`, train with
+   `score_matching_loss` for each $n$, and recompute the relative score error
+   per log-density band of :numref:`subsec_diffusion-sm-accuracy` on the
+   same `grid`. In which bands does a tenfold increase of the data reduce
+   the error most? Estimate from `big` the probability that a data point
+   falls in each band, and use the expected number of training points per
+   band to explain the result.
+
+1. [code] **Blindness to mode weights.** ● In one dimension, let
+   $p_\pi = \pi\, \mathcal{N}(-\mu, 1) + (1 - \pi)\, \mathcal{N}(\mu, 1)$
+   with $\mu > 0$ and $0 < \pi < 1$, and write $s_\pi$ for its score.
+    1. Show that
+       $s_\pi(x) = -x + \mu \tanh\big(\mu x + \tfrac12 \log \tfrac{1 - \pi}{\pi}\big)$.
+    1. For fixed $\pi \neq \pi'$, show that the Fisher divergence
+       $\tfrac12 \mathbb{E}_{x \sim p_\pi}\big[(s_\pi(x) - s_{\pi'}(x))^2\big]$
+       decays like $e^{-\mu^2 / 2}$ up to a factor polynomial in $\mu$
+       :cite:`song2019generative,Wenliang.Kanagawa.2020`. From which region
+       of the line does it collect most of its value?
+    1. On the running example, estimate on `big` the Fisher divergence
+       between `mix` and a mixture with the same means and standard
+       deviation but equal weights. Compare it with the Fisher divergence of
+       `score_exact` and with the Monte Carlo uncertainty of about $0.02$ of
+       the score matching objective averaged over `big`.
+   :exlabel:`ex_score-matching-mode-weights`
+
+1. [code] **A conservative score model.** ● Parameterize the score as
+   $\mathbf{s}_{\boldsymbol{\theta}} = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}$,
+   with $E_{\boldsymbol{\theta}}$ the network `EnergyNet` of
+   :numref:`sec_diffusion-ebm-training`, which is not saved to the `d2l`
+   library and has to be copied from that section. Compute the gradient by
+   automatic differentiation inside the forward pass, in a way that lets
+   both `fisher_divergence` and `score_matching_loss` evaluate the field.
+   Train the model with `score_matching_loss`, using the batch size, learning
+   rate, and number of steps of `train`.
+    1. Compare its Fisher divergence on `test` with that of `score_exact`.
+    1. Normalize $\exp(-E_{\boldsymbol{\theta}})$ with `log_Z` of
+       :numref:`sec_diffusion-ebm-training`, on that section's
+       $100 \times 100$ grid on $[-6, 6]^2$ rather than on the `grid` of this
+       section, and compute the test negative log-likelihood with `nll` of
+       that section. Compare it with the value under the true density and
+       with the value of `energy_mle` printed in
+       :numref:`sec_diffusion-ebm-training`.
+    1. Compute the mode weights of the normalized model: assign each point of
+       the $100 \times 100$ grid to its nearest component mean, and sum the
+       model's probabilities over the points assigned to each mean. Compare
+       the weights with $0.5$, $0.3$, and $0.2$. Explain the result with
+       problem :exref:`ex_score-matching-mode-weights`c.
+
+1. [code] **Variance reduction.** ● At a fixed point $\mathbf{x}$, the
+   integrand of :eqref:`eq_diffusion-ssm` has two random terms, and SSM-VR
+   replaces the second by its average
+   $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}\|^2$. Write $A$ for the
+   symmetric part of $\nabla_{\mathbf{x}} \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x})$,
+   so that the first term equals $\mathbf{v}^\top A \mathbf{v}$.
+    1. For a standard Gaussian $\mathbf{v}$ and symmetric matrices $A$ and
+       $B$, $\operatorname{Cov}(\mathbf{v}^\top A \mathbf{v}, \mathbf{v}^\top B \mathbf{v}) = 2 \operatorname{tr}(AB)$.
+       Use this to show that the variance over $\mathbf{v}$ of the sliced
+       integrand minus that of the SSM-VR integrand is
+       $\tfrac12 \|\mathbf{s}_{\boldsymbol{\theta}}\|^4 + 2\, \mathbf{s}_{\boldsymbol{\theta}}^\top A\, \mathbf{s}_{\boldsymbol{\theta}}$.
+       Take $\mathbf{s}_{\boldsymbol{\theta}}$ to be the true score near a
+       component mean of the running example, where it is close to the score
+       of a single Gaussian with standard deviation $0.5$. For which values
+       of $\|\mathbf{s}_{\boldsymbol{\theta}}\|$ does the replacement increase
+       the variance there?
+    1. At the true score `mix.score`, estimate both variances at a few
+       hundred points of `test` from a few thousand directions each, once
+       with Gaussian and once with Rademacher directions. Check the result of
+       problem :exref:`ex_score-matching-variance-reduction`a, and relate the
+       Rademacher results to exercise
+       :exref:`ex_score-matching-projection-identity`.
+    1. Retrain with each of the four combinations of Gaussian or Rademacher
+       directions and the sliced or SSM-VR objective, over five seeds each.
+       Compare the mean and spread of the Fisher divergence on `test` across
+       the four variants and with exact score matching. Does the ranking
+       follow the variances measured in problem
+       :exref:`ex_score-matching-variance-reduction`b? These variances are
+       those of the loss value; which variance governs the progress of
+       training?
+   :exlabel:`ex_score-matching-variance-reduction`
+
+1. [code] **Statistical efficiency.** ●● Score matching is consistent, but
+   its estimates can be far noisier than those of maximum likelihood
+   :cite:`Koehler.Heckett.Risteski.2022`. Take the family $p_\pi$ of
+   exercise :exref:`ex_score-matching-mode-weights` with $\mu$ known and the
+   weight $\pi$ as the only parameter. The score matching estimate
+   $\hat{\pi}$ minimizes the average over $n$ samples of
+   $h_\pi(x) = \tfrac12 s_\pi(x)^2 + s_\pi'(x)$, where $s_\pi'$ is the
+   derivative of $s_\pi$ with respect to $x$.
+    1. Using the standard argument for estimators that minimize an average,
+       show that $\sqrt{n}\, (\hat{\pi} - \pi)$ is asymptotically normal with
+       variance
+       $$\Gamma_{\textrm{SM}} = \frac{\operatorname{Var}[\partial_\pi h_\pi(x)]}{\big(\mathbb{E}[(\partial_\pi s_\pi(x))^2]\big)^2}.$$
+       Why does the curvature of the population objective at the true $\pi$
+       equal $\mathbb{E}[(\partial_\pi s_\pi)^2]$?
+    1. Evaluate $\Gamma_{\textrm{SM}}$ and the maximum-likelihood variance
+       $\Gamma_{\textrm{MLE}} = 1 / \mathcal{I}(\pi)$, with $\mathcal{I}(\pi)$
+       the Fisher information (:numref:`sec_mdl-maximum_likelihood`), by
+       numerical quadrature for $\pi = 0.3$ and
+       $\mu = 0.5, 1, 1.5, \ldots, 4$. Check the values for $\mu = 1$ and
+       $\mu = 2$ by simulation: draw $n = 1000$ samples a few hundred times
+       and minimize both objectives over a fine grid of $\pi$.
+    1. Plot $\log(\Gamma_{\textrm{SM}} / \Gamma_{\textrm{MLE}})$ against
+       $\mu^2$. At what rate does the ratio grow, and which quantity of
+       exercise :exref:`ex_score-matching-mode-weights` does it track? How
+       many samples does score matching need at $\mu = 4$ to estimate $\pi$
+       as accurately as maximum likelihood does from $1000$ samples?
 
 <!-- slides -->
 

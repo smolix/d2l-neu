@@ -23,7 +23,7 @@ import numpy as np
 
 ## The Model
 
-:numref:`fig_rl_gridworld` shows the environment used in the next four sections: FrozenLake from the Gymnasium suite :cite:`Towers.Kwiatkowski.Terry.ea.2024`. The agent starts at the top-left cell and seeks the goal at the bottom right, which gives reward one. Four cells are holes, and reaching either a hole or the goal ends the episode. On *slippery* ice, a commanded move occurs with probability $1/3$; each of the two perpendicular moves also occurs with probability $1/3$.
+:numref:`fig_rl_gridworld` shows the environment used in the next four sections: FrozenLake from the Gymnasium suite :cite:`Towers.Kwiatkowski.Terry.ea.2024`. The agent starts at the top-left cell and seeks the goal at the bottom right, which gives reward one. Four cells are holes, and reaching either a hole or the goal ends the episode. On *slippery* ice, a commanded move occurs with probability $1/3$; each of the two perpendicular moves also occurs with probability $1/3$. A move off the edge of the grid leaves the agent in its cell.
 
 ![The environment for the next four sections. (a) S marks the start, G the goal, and the grey cells marked H are holes; each cell carries its state index. On non-slippery ice the shortest path takes six moves, for a discounted return of $\gamma^5$. (b) One command on slippery ice, read straight out of the transition table: from state $s = 9$ the action *down* lands in one of the three shaded cells with probability $1/3$ each; the intended move is one outcome among equals, and the probabilities sum to one.](../img/mdl-rl-gridworld.svg)
 :label:`fig_rl_gridworld`
@@ -104,6 +104,7 @@ The reward is chosen by the designer to represent the task. In contrast, the sta
 One reward modification provably preserves the optimal policy. Let $\Phi: \mathcal{S} \to \mathbb{R}$ be a *potential* that is zero at every terminal state, and replace the reward on each transition by
 
 $$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s).$$
+:eqlabel:`eq_mdp_shaping`
 
 Along a trajectory, the shaping terms telescope to $\gamma^T \Phi(s_T)-\Phi(s_0)$. The first term vanishes for an infinite discounted trajectory or for an episode ending at a state with $\Phi(s_T)=0$. Every policy's return then changes by the same constant $-\Phi(s_0)$, so the optimal policy is unchanged :cite:`Ng.Harada.Russell.1999`. This construction is called *potential-based shaping*.
 
@@ -144,6 +145,7 @@ In the transcript, the agent commands *right* at $t=0$ but remains in place. At 
 An agent that wanders forever without reaching a hole or the goal has an infinitely long trajectory, and with positive rewards along the way the sum $R(\tau)$ could grow without bound. To keep the objective meaningful we introduce a *discount factor* $0 \leq \gamma < 1$ and use the discounted return
 
 $$R(\tau) = r_0 + \gamma r_1 + \gamma^2 r_2 + \cdots = \sum_{t=0}^\infty \gamma^t r_t.$$
+:eqlabel:`eq_mdp_discounted_return`
 
 If rewards are bounded by $|r_t|\leq r_{\max}$, discounting makes the infinite return finite and gives a geometric bound on its tail:
 
@@ -165,10 +167,11 @@ for g in [0.5, 0.9, 0.95, 0.99]:
 :label:`fig_rl_return_discount`
 
 ### Episodes, Termination and Truncation
+:label:`subsec_mdp-termination`
 
 A state that ends the process is *terminal*. For analysis it may be represented as an absorbing state whose actions return to itself with zero reward. FrozenLake stores holes and the goal in this form, although the simulator ends the episode and requires a reset. A trajectory from the start to a terminal state is an *episode*. In an episodic task with at most $T$ steps, bounded rewards have a finite undiscounted sum and $\gamma=1$ is permitted. Continuing tasks instead rely on discounting or another average-reward formulation.
 
-Gymnasium distinguishes termination from truncation. `terminated=True` means that the process reached a terminal state and has zero continuation value. `truncated=True` means that observation stopped, usually because of a time limit, although the state can have nonzero continuation value. Either flag may stop an interaction loop, but only termination should set a bootstrapped target's continuation to zero. The learning algorithms beginning in :numref:`sec_qlearning` therefore mask targets with `terminated` alone.
+Gymnasium distinguishes termination from truncation. `terminated=True` means that the process reached a terminal state and has zero continuation value. `truncated=True` means that observation stopped, usually because of a time limit, although the state can have nonzero continuation value. `gym.make` wraps FrozenLake in such a limit: after 100 steps the episode ends with `truncated=True`. Either flag may stop an interaction loop, but only termination should set a bootstrapped target's continuation to zero. The learning algorithms beginning in :numref:`sec_qlearning` therefore mask targets with `terminated` alone.
 
 ## The Choice of State
 
@@ -206,7 +209,7 @@ Another special case has deterministic transitions and reward only at terminatio
 
 The computations above use the transition and reward model directly. Algorithms that plan with a known or learned model are *model-based*; value iteration in :numref:`sec_valueiter` is an example. *Model-free* algorithms instead use sampled transitions $(s,a,r,s')$, as in :numref:`sec_qlearning`. A model can be evaluated at any state-action pair, whereas samples are available only for pairs visited by the data-collection policy.
 
-Because the original reward is sparse, one might add a bonus of $0.3$ whenever a transition moves closer to the goal. In expectation this gives $\tilde r(s,a)=r(s,a)+0.3\sum_{s'}P(s'\mid s,a)\mathbf{1}(d(s')<d(s))$, where $d$ is Manhattan distance. This modification is not potential based: movement toward the goal receives a bonus, whereas movement away incurs no corresponding penalty. We compute its optimal policy by repeated backups and evaluate both policies under the original reward using exact policy evaluation:
+Because the original reward is sparse, one might add a bonus of $0.3$ whenever a transition moves closer to the goal. In expectation this gives $\tilde r(s,a)=r(s,a)+0.3\sum_{s'}P(s'\mid s,a)\mathbf{1}(d(s')<d(s))$, where $d$ is the Manhattan distance to the goal. This modification is not potential based: movement toward the goal receives a bonus, whereas movement away incurs no corresponding penalty. We compute its optimal policy by repeated backups and evaluate both policies under the original reward using exact policy evaluation:
 
 ```{.python .input #mdp-model-based-versus-model-free}
 %%tab pytorch, jax
@@ -234,7 +237,7 @@ print(f'true-optimal:   at s=14 goes {"<v>^"[pi_true[14]]}, true value '
 
 State 14 is the only cell from which the goal can be entered. The optimal policy for the original reward commands *down*, which reaches the goal with probability $1/3$. The policy optimized for the shaped reward instead commands *left*, whose possible successors are states 10, 13, and 14. It therefore never reaches the goal.
 
-Its value under the original reward is zero, although its value under the shaped reward is $2.15$, compared with $0.180$ for the original optimum. The per-step bonus favors continuing to collect approach rewards instead of terminating. With a smaller bonus of $0.1$, the policy still reaches the goal but remains altered. Exercise 4 replaces the bonus with a potential-based reward.
+Its value under the original reward is zero, although its value under the shaped reward is $2.15$, compared with $0.180$ for the original optimum. The per-step bonus favors continuing to collect approach rewards instead of terminating. With a smaller bonus of $0.1$, the policy still reaches the goal but remains altered. Exercise :exref:`ex_mdp-reward-design-its-failure`c replaces the bonus with a potential-based reward.
 
 ## Summary
 
@@ -246,53 +249,243 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
 
 ## Exercises
 
-1. [conceptual] *What the state must contain.* A single frame of
-   [Pong](https://gymnasium.farama.org/environments/atari/pong/) shows where the
-   ball is but not where it is going, so the frame alone is not a state in the
-   sense of :numref:`sec_mdp`. Say precisely which property of
-   :eqref:`eq_mdp` fails, give the smallest augmentation of the frame that
-   restores it, and explain why the standard practice of stacking four frames
-   is more than the minimum. Then do the same for
-   [MountainCar](https://gymnasium.farama.org/environments/classic_control/mountain_car/):
-   name its state and action sets, and say what the environment would have to
-   report instead for the position alone to be Markov.
-1. [short-code] *Look at a transition function.* Build the slippery
-   FrozenLake MDP with
-   `mdp = d2l.TabularMDP.from_gym(gym.make('FrozenLake-v1', is_slippery=True), gamma)`.
-   Verify that every row of `mdp.P` sums to one,
-   and count how many state-action pairs have more than one possible successor.
-   Repeat with `is_slippery=False`. How many numbers does the deterministic MDP
-   need, and how many does the slippery one need?
-1. [short-code] *The effective horizon.* Rewards in this book are bounded by
-   some $r_{\max}$. Show that the tail of the discounted return past step $k$ is
-   at most $\gamma^k r_{\max} / (1 - \gamma)$, and find, for
-   $\gamma \in \{0.9, 0.95, 0.99, 0.999\}$, the smallest $k$ at which that tail
-   is below one percent of the maximum possible return. Plot $k$ against
-   $1/(1-\gamma)$. Our gridworld's optimal path is six steps long: which of these
-   discount factors can even see the goal?
-1. [conceptual] *Reward design and its failure.* The gridworld gives reward $1$ at the
-   goal and nothing elsewhere, which makes learning slow. The section's shaped
-   reward gives a bonus for moving closer to the goal, and the policy it makes
-   optimal never reached the goal at all. Consider the closely related two-sided
-   form $r(s, a) = d(s) - d(s')$ with $d$ the Manhattan distance. Show that on a
-   map with a wall this too can make a policy that never reaches the goal earn
-   more than one that does. Then show that the *potential-based* form
-   $r(s,a) + \gamma \Phi(s') - \Phi(s)$ leaves the optimal policy unchanged for
-   any function $\Phi$ with $\Phi = 0$ at terminal states: write out the
-   telescoping sum for an episode of length $T$, exhibit the residual
-   $\gamma^T \Phi(s_T)$ that survives at the endpoint, and give the two ways to
-   eliminate it (the zero boundary condition, or continuing the shaped reward
-   through the absorbing state). Finally, identify what goes wrong with the
-   naive fixes in that language.
-1. [conceptual] *Random rewards.* :numref:`sec_mdp` notes that a random reward
-   can be folded into $r(s,a)$ by taking its mean. Make this precise: let the
-   reward at $(s,a)$ be a random variable $R$ with $E[R] = r(s,a)$, drawn
-   independently at each visit. Show that the value function of every policy is
-   unchanged. Where, then, does the randomness of $R$ show up at all?
-1. [conceptual] *Which problems are not MDPs.* For each of the following, say
-   whether it is an MDP under the obvious choice of state, and if not, what to
-   add: a poker hand; a robot whose battery drains; a recommender that a user
-   grows tired of; a chess position with the fifty-move rule.
+1. [code] **Episodes from the kernel.** The example trajectory $\tau$ of
+   :numref:`sec_mdp` draws every action uniformly at random with
+   `rng.integers(4)`. Under this policy the next state has the distribution
+
+   $$P_\pi(s' \mid s) = \frac{1}{4} \sum_{a \in \mathcal{A}} P(s' \mid s, a),$$
+
+   which is `mdp.P.mean(axis=1)`.
+    1. `from_gym` accumulates probabilities with `+=` because several of
+       Gymnasium's outcomes for one state-action pair can lead to the same
+       next state. Find every pair at which this happens, and explain from
+       :numref:`fig_rl_gridworld` why these pairs and no others. If the line
+       that fills `P` assigned with `=` instead, which rows of `mdp.P` would
+       no longer sum to one, and what would they sum to?
+    1. Let $\mu_t$ be the distribution of $s_t$, starting from the point
+       mass $\mu_0$ on state 0, so that
+       $\mu_{t+1}(s') = \sum_{s} \mu_t(s) P_\pi(s' \mid s)$. Plot, for
+       $t \leq 30$, the probability that the agent has reached the goal, the
+       probability that it has fallen into a hole, and the probability that
+       its episode is still running. What are the limits as
+       $t \to \infty$?
+    1. Ignoring the time limit of `env`, show that the mean episode length
+       equals $\sum_{t \geq 0} \Pr(s_t \textrm{ is not terminal})$. Run
+       10,000 episodes of `env` with the random policy, and compare the
+       fraction of episodes that reach the goal and the mean episode length
+       with the values that $\mu_t$ predicts.
+   :exlabel:`ex_mdp-kernel-predicts-episodes`
+
+1. **Expected rewards.** Gymnasium attaches its reward to the transition:
+   entering the goal pays one. `from_gym` replaces this reward
+   $\rho(s, a, s')$ by its expectation
+   $r(s, a) = \sum_{s'} P(s' \mid s, a)\, \rho(s, a, s')$.
+    1. Show that for every policy and every start state the expected
+       discounted return is the same whether step $t$ pays
+       $\rho(s_t, a_t, s_{t+1})$ or $r(s_t, a_t)$. Extend the argument to a
+       reward that is drawn at each visit of $(s, a)$, independently of
+       everything else, from a distribution with mean $r(s, a)$.
+    1. Under the convention $r(s, a)$, which FrozenLake episodes have a
+       positive return? For the policy `pi_true`, compare the probability of
+       a positive return under the two conventions. Which properties of the
+       return does the model :eqref:`eq_mdp` therefore determine, and which
+       does it not?
+
+1. **Discount as termination.** The discounted return
+   :eqref:`eq_mdp_discounted_return` weights the reward of step $t$ by
+   $\gamma^t$.
+    1. :numref:`sec_mdp` locates 95 percent of the discounted weight within
+       $\log(0.05) / \log(\gamma)$ steps and calls this about three effective
+       horizons. Show that for every $\varepsilon \in (0, 1)$
+
+        $$\frac{\ln(1/\varepsilon)}{\ln(1/\gamma)} \leq \frac{\ln(1/\varepsilon)}{1 - \gamma},$$
+
+       and that the ratio of the two sides tends to one as $\gamma \to 1$.
+       Use the inequality to explain the step counts of
+       :numref:`fig_rl_return_discount` at $\gamma = 0.5$, $0.9$ and $0.99$.
+    1. Modify an MDP so that after every reward the process moves, with
+       probability $1 - \gamma$, to an absorbing state with zero reward, and
+       otherwise moves according to $P$. Show that the expected undiscounted
+       return of every policy in the modified process equals its expected
+       discounted return in the original, and that the expected number of
+       rewards collected is $1 / (1 - \gamma)$. Read `TabularMDP.backup` in
+       these terms: what do the row sums of $\gamma P$ mean?
+   :exlabel:`ex_mdp-discount-as-termination`
+
+1. [code] **Time limits.** `gym.make` wraps FrozenLake in a time limit:
+   after 100 steps the episode ends with `truncated=True`
+   (:numref:`subsec_mdp-termination`).
+    1. Propagate the state distribution $\mu_t$ of problem
+       :exref:`ex_mdp-kernel-predicts-episodes`b under `pi_true` instead of
+       the random policy. Compute the probabilities that an episode reaches
+       the goal, falls into a hole, or is truncated. Compare the truncated
+       fraction with the one that $\mu_{100}$ gives for the random policy.
+    1. Suppose now that the limit is part of the task: the objective is the
+       probability of entering the goal within 100 steps. Model the end of
+       the limit as a move to an absorbing state. Show that the distribution
+       of the next state then depends on the number $h$ of steps that
+       remain, so that the location alone is not a Markov state, whereas the
+       pair $(s, h)$ is :cite:`Pardo.Tavakoli.Levdik.ea.2018`. Why can the
+       best action at a location depend on $h$?
+   :exlabel:`ex_mdp-time-limits`
+
+1. **What the state must contain.** In each system below the obvious state
+   is not Markov. Name the smallest addition that restores the Markov
+   property, and say whether the agent can observe it.
+    1. Pong, with a single screen frame as the state. How many consecutive
+       frames determine the ball's next position, assuming that the ball
+       moves with constant velocity between bounces?
+    1. A delivery robot whose state is its location, when every move drains
+       its battery by an amount that depends on the terrain and on the load
+       it carries, and the robot stops once the battery is empty.
+    1. A recommender whose state is the user's profile, when the user's
+       interest in a topic falls with the number of recent recommendations
+       of that topic.
+    1. A chess program whose state is the arrangement of the pieces on the
+       board, when the game ends in a draw as soon as a position occurs for
+       the third time, or as soon as fifty moves by each player pass without
+       a capture or a pawn move.
+
+   In which of the four systems can the addition grow with the length of
+   the episode, and what keeps it bounded there?
+
+1. **Actions without consequences.** A multi-armed bandit has a single
+   state, so no action can influence the future.
+    1. Suppose more generally that the kernel does not depend on the action,
+       $P(s' \mid s, a) = P(s' \mid s)$ for all $a$. Show that for every
+       $\gamma$ the policy that picks an action in
+       $\arg\max_a r(s, a)$ at every state maximizes the expected discounted
+       return from every start state.
+    1. Construct an MDP with two states and two actions in which this
+       greedy policy is optimal for small $\gamma$ and not for large
+       $\gamma$, and find the value of $\gamma$ at which the optimal action
+       changes.
+
+1. [code] **Potential-based shaping.** ● `TabularMDP` stores the holes and
+   the goal as absorbing states whose actions lead back to themselves, so
+   the returns it defines continue forever, while the simulator stops at the
+   first terminal state. The telescoping argument of :numref:`sec_mdp` shows
+   that the shaped reward :eqref:`eq_mdp_shaping` preserves the optimal
+   policy in the first setting for every potential $\Phi$, and in the second
+   only when $\Phi$ vanishes at the terminal states.
+    1. Add a constant $c$ to every entry of `mdp.r`, the absorbing states
+       included. Show that the discounted return of every trajectory changes
+       by the same amount, and find that amount. Which constant potential
+       $\Phi$ satisfies $\gamma \Phi(s') - \Phi(s) = c$?
+    1. Now charge the constant only while the episode runs: add $c$ to
+       $r(s, a)$ at the nonterminal states alone. For
+       $c \in \{-0.02, -0.01, 0.01, 0.05\}$, compute the optimal policy with
+       `greedy_sweeps`, report its action at state 0 and its value under the
+       original reward with `exact_value`, and estimate its success rate from
+       1,000 episodes of `env`. Explain the effect of each sign of $c$ with
+       the constant potential and the terminal condition.
+    1. Replace the approach bonus of `shaped` by the potential
+       $\Phi(s) = -0.3\, d(s)$, where $d$ is the Manhattan distance `dist`,
+       and average :eqref:`eq_mdp_shaping` over the next state, which gives
+       at every state
+
+        $$\tilde r(s, a) = r(s, a) + \sum_{s'} P(s' \mid s, a)\,[\gamma \Phi(s') - \Phi(s)].$$
+
+       Check that the values $\tilde V$ that `greedy_sweeps` returns
+       satisfy $\tilde V(s) = V(s) - \Phi(s)$ at every state, where $V$ is
+       `V_true`, and that the shaped optimum has
+       the same value under the original reward as `pi_true`. Then drop the
+       shaping term at the terminal states, as a simulator that stops there
+       would, and recompute the value of the optimum under the original
+       reward. Finally set $\Phi$ to zero at the terminal states and repeat.
+
+   *Adapted from Sutton and Barto,
+   [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+   Exercises 3.15 and 3.16.*
+   :exlabel:`ex_mdp-reward-design-its-failure`
+
+1. **Belief states.** ● In a partially observable MDP the agent receives
+   an observation $o_t$, drawn with probability $O(o_t \mid s_t)$, instead
+   of the state $s_t$. Its *belief*
+   $b_t(s) = \Pr(s_t = s \mid o_0, a_0, \ldots, a_{t-1}, o_t)$ is the
+   posterior over the hidden state given everything observed so far
+   :cite:`Kaelbling.Littman.Cassandra.1998`.
+    1. Using the Markov property of the hidden states, derive the update
+
+        $$b_{t+1}(s') \propto O(o_{t+1} \mid s') \sum_{s \in \mathcal{S}} P(s' \mid s, a_t)\, b_t(s).$$
+
+    1. Show that the belief is a Markov state: given $b_t$ and $a_t$, the
+       distribution of $b_{t+1}$ and the expected reward do not depend on
+       earlier observations. What are the state space and the kernel of the
+       resulting MDP over beliefs?
+    1. In a T-maze adapted from :citet:`Bakker.2001`, the agent observes a
+       cue at the start, *left* or *right* with probability $1/2$ each, then
+       moves one cell per step through $N$ corridor cells that all produce
+       the same observation, and then reaches a junction. Turning toward
+       the cue there gives reward one, and turning away gives zero. Show
+       that a policy that acts on the $k$ most recent observations succeeds
+       with probability at most $1/2$ unless $k \geq N + 2$. What is the
+       belief at the junction, and how much memory suffices to act
+       optimally? Why does stacking a few frames work for Pong but not
+       here?
+
+1. **Necessity of potential-based shaping.** ●●
+   :citet:`Ng.Harada.Russell.1999` also prove a converse: for every
+   shaping term that is not of the form $\gamma \Phi(s') - \Phi(s)$, some
+   MDP exists whose optimal policy the shaping changes. Their appendix
+   sketches the proof for two actions. Prove the result for $\gamma < 1$
+   and a shaping term $F(s, a, s')$ that is added to the reward of each
+   transition.
+    1. Suppose that $F(s, a, s') \neq F(s, a', s')$ for some $s$, $a$, $a'$
+       and $s'$. Construct an MDP with deterministic transitions and a
+       reward $r(s, a)$ whose optimal action at $s$ changes when $F$ is
+       added.
+    1. Let $F(s, s')$ now be independent of the action. Show that if
+       $F(s, s') = \gamma \Phi(s') - \Phi(s)$ for some $\Phi$, then
+       $\Phi(s) = -F(s, s) / (1 - \gamma)$, so the self-transitions
+       determine the only candidate potential.
+    1. Suppose that $F(s_1, s_2) \neq \gamma \Phi(s_2) - \Phi(s_1)$ for this
+       candidate $\Phi$ and some pair of states. Explain why
+       $s_1 \neq s_2$, and construct an MDP with deterministic transitions in
+       which the unique optimal action at $s_1$ under $r$ differs from the
+       unique optimal action under $r + F$.
+    1. The theorem quantifies over all kernels and rewards. Let $Q(s, a)$ be
+       the largest expected discounted return after taking action $a$ at
+       state $s$, and let $\Delta > 0$ be the smallest gap
+       $Q(s, a^*) - Q(s, a)$ between an optimal action $a^*$ and a
+       non-optimal action $a$ of a fixed MDP. Show that every shaping term
+       with $|F| < (1 - \gamma)\Delta / 2$ everywhere leaves every optimal
+       policy of the shaped MDP optimal for the original.
+
+1. [extended] **Planning horizon and model error.** ●● The discount
+   $\gamma$ of the objective is fixed by the task, but a planner may compute
+   its policy with a smaller *planning discount* $\gamma'$.
+   :citet:`Jiang.Kulesza.Singh.ea.2015` found that when the model is
+   estimated from data, $\gamma' < \gamma$ can yield a better policy than
+   $\gamma' = \gamma$. Let $V^\pi_\gamma(s)$ be the expected discounted
+   return from $s$ under policy $\pi$ and discount $\gamma$, computed by a
+   linear solve as in `exact_value`.
+    1. Let rewards lie in $[0, r_{\max}]$ and let $\gamma' \leq \gamma$.
+       Show that for every policy $\pi$ and state $s$
+
+        $$0 \leq V^\pi_\gamma(s) - V^\pi_{\gamma'}(s) \leq \frac{(\gamma - \gamma')\, r_{\max}}{(1 - \gamma)(1 - \gamma')},$$
+
+       and conclude that on the true model the policy that is optimal for
+       $\gamma'$ loses at most this amount under $\gamma$.
+    1. Reproduce their experiment at small scale with `TabularMDP`. Draw 100
+       random MDPs with 10 states and 2 actions: for each state-action pair,
+       choose 5 next states uniformly without replacement, give them weights
+       drawn uniformly from $[0, 1]$, and normalize; draw each $r(s, a)$
+       uniformly from $[0, 1]$. For each MDP and each
+       $n \in \{2, 5, 10, 20\}$, build 20 estimated kernels $\hat P$ from $n$
+       next states sampled per pair, keeping the true $r$. Compute the
+       optimal policy of each estimated model for
+       $\gamma' \in \{0, 0.1, \ldots, 0.9, 0.99\}$, evaluate it on the true
+       model at $\gamma = 0.99$, and average the loss
+       $V^*_\gamma(s) - V^\pi_\gamma(s)$ over states, kernels and MDPs,
+       where $V^*_\gamma$ is the value of the optimal policy of the true
+       model. `greedy_sweeps` runs 500 backups, which is too few at $0.99$;
+       use about 2,000 there. Plot the loss against $\gamma'$ for each $n$
+       (a few minutes of CPU time).
+    1. Which $\gamma'$ minimizes the loss for each $n$, and how does it move
+       with $n$? Explain the shape of the curves with two sources of loss,
+       the horizon bias bounded in this problem and the error of $\hat P$,
+       and say which of the two grows with $\gamma'$.
 
 [Discussions](https://d2l.discourse.group/)
 

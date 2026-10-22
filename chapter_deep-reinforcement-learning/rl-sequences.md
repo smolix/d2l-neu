@@ -85,6 +85,7 @@ sequential formulation.
 The correspondence in :numref:`tab_rl_sequence_dictionary` determines which general reinforcement-learning components simplify; :numref:`fig_rl_token_mdp` summarizes the result.
 
 ### Terms That Disappear
+:label:`subsec_rl_sequences_terms`
 
 Several parts of the general MDP formulation simplify under these assumptions. A finite response receives one terminal reward, so we use $\gamma=1$. There is no intermediate target for TD learning, and neither Bellman backups nor value iteration are needed for the derivation below. The methods remain close to on-policy and therefore do not use Q-learning's replay mechanism. Every token receives the same response-level reward, so the formulation does not solve within-response credit assignment. These simplifications depend on deterministic concatenation and a terminal reward in a single turn. Process rewards reintroduce intermediate credit, while tool calls, environment feedback, and multi-turn interaction restore nontrivial transitions.
 
@@ -107,8 +108,9 @@ nontrivial environment transitions.
 :label:`fig_rl_token_mdp`
 
 ### The Smallest Instance: Four Prompts and a Verifier
+:label:`subsec_rl_sequences_instance`
 
-We study a finite one-step example that requires no environment simulator. It contains four prompts, nine candidate responses shared across prompts, an exact-match verifier, and a reference policy $\pi_{\textrm{ref}}$ representing a pretrained model. The reference assigns probability across the ordinary candidates and about $0.2$ percent to a response that lists every possible answer. For two prompts, no individual candidate matches the answer, so the maximum exact-match score is $0.5$. The policy is :eqref:`eq_softmax_policy`, one preference row per prompt; training starts from the reference, as post-training does.
+We study a finite one-step example that requires no environment simulator. It contains four prompts, nine candidate responses shared across prompts, an exact-match verifier, and a reference policy $\pi_{\textrm{ref}}$ representing a pretrained model. The reference assigns probability across the ordinary candidates and about $0.2$ percent to a response that lists every possible answer, which we call the hedge. For two prompts, no individual candidate matches the answer, so the maximum exact-match score is $0.5$. The policy is :eqref:`eq_softmax_policy`, one preference row per prompt; training starts from the reference, as post-training does.
 
 ```{.python .input #rl-sequences-the-smallest-instance}
 %%tab pytorch, jax
@@ -136,6 +138,7 @@ print(f'success of a response sampled from the reference: '
 ```
 
 ### The Group Mean as the Baseline
+:label:`subsec_rl_sequences_group`
 
 For each prompt, we sample a group of $K$ responses, score them, standardize scores within the group, and take one ascent step on the log-probabilities. This applies :eqref:`eq_pg_normalized` with the group as the batch and the prompt as the start state. The group mean serves as a per-prompt baseline, so the example uses no value network. We also include the fixed-reference KL penalty from :numref:`sec_regularized` by replacing each sampled reward with $r - \beta \log \big( \pi_\theta(y \mid x) / \pi_{\textrm{ref}}(y \mid x) \big)$. The GRPO objective described below instead estimates KL as a separate loss term. Setting $\beta=0$ removes this penalty.
 
@@ -198,6 +201,7 @@ When quality cannot be computed directly, people can compare pairs of responses 
 For a growing family of tasks the reward needs no model at all, because the response can be *checked*: a unit-test harness runs the code, a proof assistant validates the derivation, an exact-match grader scores the final answer. Training against such checked rewards is called reinforcement learning from verifiable rewards, RLVR, the regime in which recent reasoning models are trained :cite:`DeepSeekAI.2025`. A verifier has a different error profile from a learned reward model: it is reliable for the property it checks but may omit relevant aspects of the intended objective.
 
 ### Reward Hacking as One Mechanism
+:label:`subsec_rl_sequences_hacking`
 
 Both learned reward models and programmatic verifiers are estimates of the intended objective, and optimization can exploit their errors. This is the same mechanism seen for a fitted $\hat{Q}$ in :numref:`sec_offline` and for a learned reward in :numref:`sec_regularized`. To demonstrate this mechanism, replace exact matching with a verifier that searches for the answer string. The response listing all answers then receives reward on every prompt, including the two without an individual correct candidate. Equation :eqref:`eq_kl_optimum` predicts the regularization required to suppress this response: its reference log-odds disadvantage is $4$, while its reward advantage is $1$, giving the threshold $\beta=1/4$.
 
@@ -215,7 +219,7 @@ for beta in (0.0, 0.1, 0.2, 0.3, 0.5):
           f'gold {success(pi, verify):.2f}, hedge {pi[:, 8].mean():.2f}')
 ```
 
-The columns report the approximate grader score, the exact score, and the average probability of the hedged response. At $\beta=0$, the policy obtains a perfect grader score but only $0.50$ under exact evaluation. The multi-answer response remains favored at $\beta=0.1$, is nearly balanced at $0.2$, and is suppressed above the predicted threshold of $1/4$. Each row is close to the tilted optimum in :eqref:`eq_kl_optimum`, although group standardization introduces a random denominator and can shift the stationary point. Larger $\beta$ also limits useful changes to the policy: at $\beta=0.5$, the exact score falls to $0.24$. Thus regularization selects a point on the reward--divergence frontier rather than providing an absolute safeguard.
+The columns report the approximate grader score, the exact score, and the average probability of the hedged response. At $\beta=0$, the policy obtains a perfect grader score but only $0.50$ under exact evaluation. The multi-answer response remains favored at $\beta=0.1$ and, less strongly, at $0.2$, and is suppressed above the predicted threshold of $1/4$. Each row is close to the tilted optimum in :eqref:`eq_kl_optimum` but not equal to it: after $400$ updates at step size $2$ the iterate still fluctuates, and the random denominator of group standardization enlarges these fluctuations. Larger $\beta$ also limits useful changes to the policy: at $\beta=0.5$, the exact score falls to $0.24$. Thus regularization selects a point on the reward--divergence frontier rather than providing an absolute safeguard.
 
 ## GRPO and the Notation Contract
 
@@ -227,7 +231,9 @@ uses the group-standardized response score
 
 $$A_j=\frac{r_j-\mu}{\sigma+10^{-8}}$$
 
-as the weight on every token of response $j$. The group mean replaces a
+as the weight on every token of response $j$, where $\mu$ and $\sigma$ are
+the mean and the standard deviation of the scores $r_1, \ldots, r_K$ of the
+group. The group mean replaces a
 learned per-prompt value baseline, while division by $\sigma$ rescales the
 update rather than providing an additional zero-mean control variate.
 Reusing a group for several epochs introduces token-level ratios
@@ -251,8 +257,8 @@ RLOO replaces that mean with the unbiased leave-one-out baseline from
 Direct Preference Optimization (DPO) uses a different objective. Solving
 :eqref:`eq_kl_optimum` for the reward gives
 
-$$r(x,y)=\beta\log\frac{\pi^\star(y\mid x)}
-                              {\pi_{\textrm{ref}}(y\mid x)}+c(x),$$
+$$r(x,y)=\beta\log\frac{\pi^\star(y\mid x)}{\pi_{\textrm{ref}}(y\mid x)}+c(x),$$
+:eqlabel:`eq_dpo_reward`
 
 where $c(x)$ is unidentified by same-prompt comparisons. Substituting this
 relation into the preference likelihood fits the policy directly rather
@@ -312,23 +318,292 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
 
 ## Exercises
 
-1. [conceptual] *The factorization.* Prove
-   $\nabla_\theta \log \pi_\theta(y \mid x) = \sum_t \nabla_\theta \log \pi_\theta(y_t \mid x, y_{<t})$
-   and say why this makes the token-level and response-level views the same
-   algorithm.
-1. [conceptual] *Which terms disappear.* For each of discounting, bootstrapping, the
-   TD error and replay, say in one sentence what property of the token MDP
-   removes it, and name one setting (multi-turn dialogue, tool use) in which
-   it comes back.
-1. [short-code] *Why $K = 1$ learns nothing.* Predict it from the
-   $(K-1)/K$ shrinkage of :numref:`sec_baselines`, run it, and say why
-   leave-one-out has no defined value at $K = 1$.
-1. [short-code] *Price the exploit.* Find the $\beta$ at which the KL penalty
-   makes the verifier loophole unprofitable, and relate it to the reward gap
-   between the exploit and the honest solution.
-1. [conceptual] *Read a paper.* Take the GRPO objective as published and name,
-   for each symbol, the section of these two chapters that built it, and the
-   one component that is not in these chapters at all.
+1. **Tool outputs in the trajectory.** A model that calls a tool first emits
+   tokens $y^{(1)}$, then receives the tool's output $o$, and then emits
+   tokens $y^{(2)}$ up to EOS. The output $o$ is a token string drawn from a
+   distribution $P_{\textrm{tool}}(o \mid x, y^{(1)})$ that does not depend
+   on $\theta$, and the verifier scores the complete trajectory
+   $\tau = (x, y^{(1)}, o, y^{(2)})$ once, with reward $r(\tau)$.
+    1. Write the probability of $\tau$ in the form of :eqref:`eq_traj_prob`
+       and take the gradient of its logarithm. Which tokens of $\tau$
+       contribute score terms, and in which form does
+       :eqref:`eq_seq_factorization` still hold?
+    1. A training loop that evaluates the model's log-probabilities on the
+       whole concatenated sequence adds the term
+       $\big(r(\tau) - b(x)\big)\, \nabla_\theta \log \pi_\theta(o \mid x, y^{(1)})$,
+       where $\pi_\theta(o \mid x, y^{(1)})$ is the probability that the
+       model itself assigns to the tool's output. Show that this term has a
+       nonzero expectation in general, even when $r(\tau) - b(x)$ is a
+       constant. Which condition of the zero-mean lemma of
+       :numref:`sec_baselines` fails?
+    1. What does the extra term train the model to do on trajectories with a
+       positive weight, and on trajectories with a negative one?
+1. **Two-digit responses.** Replace the one-token responses of
+   :numref:`subsec_rl_sequences_instance` by two tokens, a tens digit $d_1$
+   followed by a units digit $d_2$, each drawn from a softmax over
+   $\{0, 1, \ldots, 9\}$. The prompt `3*4` is then answered correctly only by
+   $(d_1, d_2) = (1, 2)$, and the verifier pays $r = 1$ for that response and
+   $0$ for every other one. Let the policy be uniform at both positions, and
+   write $V(x)$ and $V(x, d_1)$ for the probability that a response
+   completed from the prefix $x$ or $(x, d_1)$ is correct.
+    1. Compute $V(x)$ and $V(x, d_1)$ for every $d_1$. For the responses
+       `12`, `13` and `52`, compute the response-level weight $r - V(x)$
+       that both tokens receive, and the token advantages
+       $A(s_1, d_1) = V(x, d_1) - V(x)$ and $A(s_2, d_2) = r - V(x, d_1)$.
+       Which of the two weightings penalizes a correct tens digit?
+    1. Show that the two weightings give the same expected gradient for the
+       preferences of each position. Which conditional expectation makes
+       them agree?
+    1. Under the uniform policy every score of the first token has the same
+       squared norm, so the second moment of the weight decides which
+       estimate of the first token's gradient is noisier. Compute this
+       second moment for both weightings.
+   :exlabel:`ex_rl-sequences-two-digit-responses`
+1. **Discounting a terminal reward.** The section sets $\gamma = 1$. Suppose
+   instead that $\gamma < 1$, so that a response of $T$ tokens, which
+   receives the terminal reward $r(x, y)$ with its last token, has the
+   discounted return $\gamma^{T-1} r(x, y)$.
+    1. At $\gamma = 0.999$, compare the returns of two correct responses of
+       $100$ and $1000$ tokens. Which preference between responses does the
+       discounted objective add to the verifier's?
+    1. Let incorrect responses receive $r = -1$ instead of $0$. Which
+       incorrect responses does the discounted objective now prefer?
+    1. Implementations commonly weight the score of token $t$ by the
+       reward-to-go $\hat{G}_t$ of :eqref:`eq_rtg` and omit the factor
+       $\gamma^{t-1}$ of the exact estimator. Compute the weight that this
+       surrogate gives to the first and to the last token of a correct
+       response of $1000$ tokens, and compare both with the weight of the
+       exact estimator. Which tokens does the surrogate emphasize?
+1. **Which components return.** :numref:`subsec_rl_sequences_terms` lists
+   the components of the general formulation that a single-turn response
+   with a terminal reward does not need. Consider four training settings: a
+   math answer graded by exact match; the same responses scored by a process
+   reward model after every reasoning step; a coding agent that submits a
+   program, reads the output of a test run, and may revise its program twice
+   before the final score; and a dialogue model scored by a reward model
+   after each of its turns, with a simulated user writing the turns in
+   between.
+    1. For each setting, which transitions are deterministic and known to
+       the learner, and when do rewards arrive?
+    1. For each setting, which of the following become useful again: a value
+       function of the prefix, bootstrapped temporal-difference targets, and
+       a discount factor below one? Justify each answer with the property of
+       the setting that brings the component back.
+1. **Unequal group sizes.** Centering by the same-group mean shrinks the
+   expected update of a prompt by the factor $(K-1)/K$
+   (:numref:`subsec_leave_one_out`). Suppose that prompt $x$ receives a
+   group of fixed size $K_x$, which may differ between prompts, for instance
+   because a curriculum samples more responses for prompts that it considers
+   hard. Write $J_x = E_{y \sim \pi_\theta(\cdot \mid x)}[r(x, y)]$ for the
+   expected reward on prompt $x$, so that the objective is
+   $J = E_{x \sim \mu_0}[J_x]$, and use the centered weights $r_j - \mu$
+   without the division by the group standard deviation.
+    1. Write the expected update as a combination of the gradients
+       $\nabla_\theta J_x$. When is it a positive multiple of
+       $\nabla_\theta J$?
+    1. Which prompts does the curriculum underweight relative to
+       $\nabla_\theta J$? What does a prompt with a group of one response
+       contribute?
+    1. Which combination does leave-one-out centering give instead? A prompt
+       with a single response has no leave-one-out baseline. Which estimate
+       of its gradient remains unbiased?
+1. **Two thresholds for the hedge.** The text of
+   :numref:`subsec_rl_sequences_hacking` derives the threshold
+   $\beta = 1/4$ from :eqref:`eq_kl_optimum`. Let $\pi^\star$ be the tilted
+   optimum for the reward `sloppy` and the reference `pi_ref`.
+    1. On the prompts `8*8` and `9*9`, the hedge is the only response
+       that `sloppy` rewards. Write its probability under $\pi^\star$ as a
+       function of $\beta$. At which $\beta$ is it as probable as each of the
+       other eight responses, and at which $\beta$ does it hold half of the
+       probability? Which of the two is the threshold of the text?
+    1. On the prompts `2+2` and `3*4`, both the correct response and the
+       hedge receive reward $1$. What probability does $\pi^\star$ assign to
+       the hedge on these prompts as $\beta \to 0$?
+    1. At $\beta = 0$, the printed hedge probability of $0.50$ averages over
+       the four prompts, so training put almost no mass on the hedge on
+       `2+2` and `3*4`. The unregularized objective is maximized by every
+       split of the probability between the two rewarded responses. Which
+       property of the update in `group_step` selects the split that training
+       reached?
+   :exlabel:`ex_rl-sequences-two-thresholds`
+1. [code] **Noisy verifiers.** ● A verifier accepts a correct response
+   with probability $1 - \alpha$ and an incorrect one with probability $f$,
+   independently of the prompt and the response, where $\alpha + f < 1$.
+   Let $v \in \{0, 1\}$ be its score and $p_x$ the probability that the
+   policy answers prompt $x$ correctly.
+    1. Show that $E[v \mid x] = (1 - \alpha - f)\, p_x + f$. How is the
+       policy gradient of the expected score related to that of the expected
+       exact-match score?
+    1. Now set $\alpha = 0$ and let the false-positive rate depend on the
+       response, $f(x, y)$. Express $E[v \mid x, y]$ in terms of $r(x, y)$
+       and $f(x, y)$. Which choice of $f$ turns `verify` into `sloppy`, and
+       why can no rescaling of the score undo the effect of such a verifier?
+    1. Write a verifier `noisy(x, y)` that returns $1$ with probability
+       $1 - \alpha$ on a response that `verify` accepts and with probability
+       $f$ otherwise, at $\alpha = f = 0.1$, and rerun the $K$-sweep of
+       :numref:`subsec_rl_sequences_group` for $K \in \{8, 32\}$ with `noisy`
+       in place of `verify` in the call of `group_step`. Evaluate the final
+       policy with `verify`, and compute its entropy on each prompt. What
+       happens on `8*8` and `9*9`, although the expected score on these
+       prompts does not depend on the policy? Why does the effect differ
+       between the two group sizes?
+1. [code] **A fixed point of `group_step`.** ● The text of
+   :numref:`subsec_rl_sequences_hacking` attributes the gap between the
+   printed rows of the $\beta$ sweep and the tilted optimum
+   :eqref:`eq_kl_optimum` to the finite run at step size $2$ and to the
+   random denominator of group standardization. Let $\pi^\star$ be the
+   tilted optimum for the reward `sloppy`.
+    1. Show that at $\pi_\theta = \pi^\star$ the penalized reward
+       $r - \beta \log\big(\pi_\theta(y \mid x) / \pi_{\textrm{ref}}(y \mid x)\big)$
+       that `group_step` computes takes the same value for every response to
+       a prompt. What does `group_step` then do to $\theta$, for any sampled
+       group, with and without the division by the group standard deviation?
+    1. Rerun the sweep at $\beta = 0.5$ with $K = 32$ and `lr` in
+       $\{2, 0.5, 0.125\}$, for $4000$, $16000$ and $64000$ updates
+       respectively, and average $\pi_\theta$ over the second half of each
+       run. Then repeat the run at `lr = 2` with the centered weights
+       `r - r.mean()` in place of `d2l.normalize(r)`. Compare the
+       probability of the correct response to `2+2` in each run with its
+       probability under $\pi^\star$. Which of these changes close the gap?
+    1. The tilted optimum is a fixed point of every update, yet the iterate
+       at `lr = 2` fluctuates around a different point. Explain how the step
+       size produces this offset. Why is the offset larger with standardized
+       weights than with centered ones?
+1. **Process rewards in GRPO.** ● With process supervision, GRPO scores
+   every reasoning step of each of the $K$ responses in a group,
+   standardizes all step rewards of the group by their common mean
+   $\bar{r}$ and standard deviation $\sigma_{\textrm{step}}$, and weights
+   token $t$ of response $i$ by the sum of the standardized rewards of the
+   steps of response $i$ that end at or after token $t$
+   :cite:`Shao.Wang.Zhu.ea.2024`. Write $S_{i,t}$ for this set of steps,
+   $n_{i,t}$ for its size, and $r_{i,j}$ for the reward of step $j$, so
+   that the weight is
+
+   $$\hat{A}_{i,t} = \frac{1}{\sigma_{\textrm{step}}} \Big( \sum_{j \in S_{i,t}} r_{i,j} - n_{i,t}\, \bar{r} \Big).$$
+
+   Treat $\bar{r}$ and $\sigma_{\textrm{step}}$ as constants.
+    1. Which quantity of :numref:`sec_baselines` is the sum
+       $\sum_{j \in S_{i,t}} r_{i,j}$, and with which discount factor?
+    1. The term $n_{i,t}\, \bar{r}$ plays the role of a baseline. Is it
+       admissible under the conditional zero-mean identity of
+       :numref:`sec_baselines`? Which part of it depends on actions taken at
+       or after token $t$?
+    1. Suppose that most step rewards are positive, so that $\bar{r} > 0$.
+       Which responses does the term favor, those with many or those with
+       few remaining steps? What changes for $\bar{r} < 0$?
+    1. Propose a centering of the process rewards whose subtracted term
+       depends only on the prompt and the current prefix.
+1. [code] **DPO on the finite instance.** ● Let preferences between two
+   responses to the same prompt follow the Bradley-Terry model
+   :eqref:`eq_bradley_terry` with the reward `sloppy`, and let both
+   responses of a pair be drawn from `pi_ref`. Write $y_w$ and $y_l$ for the
+   preferred and the rejected response, and
+   $h_\theta(y) = \log\big(\pi_\theta(y \mid x) / \pi_{\textrm{ref}}(y \mid x)\big)$.
+    1. Substitute :eqref:`eq_dpo_reward` into :eqref:`eq_bradley_terry` and
+       show that the negative log-likelihood of one pair is
+       $-\log \sigma\big(\beta\, h_\theta(y_w) - \beta\, h_\theta(y_l)\big)$.
+       Why does $c(x)$ not appear?
+    1. Show that with infinitely many pairs the expected loss is minimized
+       by the tilted optimum :eqref:`eq_kl_optimum` for the reward `sloppy`.
+       What does this imply for DPO and the thresholds of
+       problem :exref:`ex_rl-sequences-two-thresholds`a?
+    1. Draw $1000$ labeled pairs per prompt and minimize the mean loss per
+       prompt at $\beta = 0.5$ by gradient descent with step size $10$ on the
+       preference table $\theta$, starting from `theta_ref`. Report the
+       probability of the hedge on each prompt after $200$, $2000$ and
+       $20000$ steps, and count how often the hedge appears as $y_w$ and as
+       $y_l$. Repeat for five seeds. What happens on prompts where the hedge
+       never loses a comparison, and why does $\beta$ not prevent it?
+    1. :citet:`GheshlaghiAzar.Rowland.Piot.ea.2024` explain why the
+       two-stage pipeline, which first fits a reward model and then
+       optimizes :eqref:`eq_kl_objective`, resists this failure in practice.
+       Which property of the fitted reward model does their argument rely
+       on? Which assumption of the infinite-data argument fails with $1000$
+       pairs?
+1. [extended] **Credit from restarts.** ●● Deterministic concatenation lets
+   an algorithm restart generation from any prefix, so the value of a prefix
+   can be estimated by sampling continuations from it. VinePPO
+   :cite:`Kazemnejad.Aghajohari.Portelance.ea.2025` uses such Monte Carlo
+   estimates in place of a learned critic. This project compares them with
+   the response-level weight on the two-digit responses of
+   problem :exref:`ex_rl-sequences-two-digit-responses`, for four prompts
+   with the answers `04`, `12`, `64` and `81` and a tabular policy with
+   preferences $\theta_1[x, d_1]$ and $\theta_2[x, d_1, d_2]$.
+    1. Implement two estimators of the policy gradient for one prompt, each
+       of which costs $B$ verifier calls, where every continuation sampled
+       from a prefix counts as one call. The group estimator samples $B$
+       responses and weights both tokens of each by its reward minus the
+       mean reward of the other $B - 1$ responses. The restart estimator
+       samples $n = B / (M + 1)$ responses, estimates $V(x, d_1)$ for each
+       of them by the mean reward $\hat{V}(x, d_1)$ of $M$ continuations
+       from $(x, d_1)$, and weights the first token by this estimate minus
+       the mean of the other $n - 1$ estimates and the second token by
+       $r - \hat{V}(x, d_1)$. Show that both estimators are unbiased.
+    1. Compute the exact gradient by enumerating the $100$ responses. For
+       $B \in \{8, 16\}$ and $M \in \{1, 3\}$, measure the mean squared error
+       of each estimator divided by the squared norm of the exact gradient,
+       at the uniform policy and at the policy with
+       $\theta_1[x, d_1^\star] = \theta_2[x, d_1^\star, d_2^\star] = 1.5$ and
+       all other preferences zero, where $(d_1^\star, d_2^\star)$ is the
+       answer. Which estimator is more accurate at a matched number of
+       verifier calls?
+    1. Append $L$ filler tokens to every response, each drawn from its own
+       softmax over ten symbols with preferences $\theta_f[x, l]$ that do not
+       depend on the prefix, and leave the verifier unchanged. Every prefix
+       that contains both digits then has the value $r$, which the restart
+       estimator uses without sampling, so that it weights each filler token
+       by zero. Repeat the measurement for $L \in \{0, 8, 32\}$, with the
+       filler preferences included in the error. Where is the crossover
+       between the two estimators?
+    1. VinePPO estimates values at the boundaries of reasoning steps rather
+       than at every token. Use your measurements to explain what a restart
+       buys and what it costs, and at which positions of a long response a
+       restart is worth its verifier calls.
+1. **The KL term as a loss.** ●● GRPO subtracts from its objective $\beta$
+   times the per-token quantity
+
+   $$k_3 = \frac{\pi_{\textrm{ref}}(y_t \mid s_t)}{\pi_\theta(y_t \mid s_t)} - \log \frac{\pi_{\textrm{ref}}(y_t \mid s_t)}{\pi_\theta(y_t \mid s_t)} - 1,$$
+
+   evaluated at the sampled tokens :cite:`Shao.Wang.Zhu.ea.2024`. For
+   $y_t \sim \pi_\theta(\cdot \mid s_t)$, its expectation is
+   $D_{\textrm{KL}}\big(\pi_\theta(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t)\big)$,
+   by problem :exref:`ex_ppo-diagnostics-estimate`a of :numref:`sec_ppo`
+   with $\pi_\theta$ as the sampling policy and $\pi_{\textrm{ref}}$ as the
+   evaluated one.
+   As a loss term it is differentiated with the sampled tokens held fixed,
+   so its gradient contains no score term for the sampling distribution.
+   :citet:`Tang.Munos.2025` analyze what such losses optimize.
+    1. For one-token responses, write
+       $\ell = \log\big(\pi_\theta(y \mid x) / \pi_{\textrm{ref}}(y \mid x)\big)$
+       and compare the three losses $k_1 = \ell$, $k_2 = \ell^2 / 2$ and
+       $k_3 = e^{-\ell} + \ell - 1$. Show that, for $y \sim \pi_\theta$, the
+       expected gradient of $k_1$ is zero, that of $k_2$ is
+       $\nabla_\theta D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})$,
+       and that of $k_3$ is
+       $\nabla_\theta D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$.
+       Which of the two directions of :numref:`subsec_kl_direction` does
+       GRPO's penalty push down?
+    1. With the penalty $\beta\, D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$
+       in place of the one in :eqref:`eq_kl_objective`, the maximizer is
+       $\pi(y) = \beta\, \pi_{\textrm{ref}}(y) / \big(\lambda - r(y)\big)$,
+       where the constant $\lambda > \max_y r(y)$ makes the probabilities
+       sum to one (exercise :exref:`ex_regularized-forward-kl-penalty`a of
+       :numref:`sec_regularized`). Apply this result to the prompt `8*8`
+       with the reward `sloppy`. Solve for $\lambda$ numerically at
+       $\beta \in \{0.1, 0.25, 0.5\}$ and compare the probability of the
+       hedge with its probability under the tilted optimum of
+       problem :exref:`ex_rl-sequences-two-thresholds`a. Which penalty
+       holds the hedge back more, and how does the answer depend on
+       $\beta$? Relate it to the rates found in exercise
+       :exref:`ex_regularized-forward-kl-penalty`b.
+    1. For responses of $T$ tokens, write $\ell_t$ for the log-ratio of token
+       $t$, and use :eqref:`eq_seq_factorization` to show that
+
+       $$\nabla_\theta D_{\textrm{KL}}\big(\pi_\theta(\cdot \mid x) \Vert \pi_{\textrm{ref}}(\cdot \mid x)\big) = E\Big[\sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(y_t \mid x, y_{<t}) \sum_{t'=t}^{T} \ell_{t'}\Big].$$
+
+       Which terms does the sum of the per-token losses $k_2$ miss? Why does
+       folding the penalty into the reward, as `group_step` does, avoid the
+       omission?
 
 [Discussions](https://d2l.discourse.group/)
 

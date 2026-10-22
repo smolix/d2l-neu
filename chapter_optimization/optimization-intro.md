@@ -145,7 +145,7 @@ minimum, all of its thousands or millions of Hessian eigenvalues must be
 positive. If the signs were roughly balanced independent coin flips, nearly
 every critical point would instead be a saddle. This coin-flip argument is
 only a heuristic. Hessian eigenvalues at a critical point form a structured
-spectrum rather than independent balanced signs, as the second exercise below
+spectrum rather than independent balanced signs, as Exercise :exref:`ex_optimization-intro-eigenvalues-symmetric-random-matrices`
 helps illustrate. Conditioning on criticality also relates the fraction of
 negative eigenvalues to the loss value. Even with these qualifications,
 saddles greatly outnumber exact local minima in high dimensions. Convex
@@ -301,7 +301,7 @@ bowl, as in stochastic weight averaging
 that transfers to deep networks essentially intact
 (:numref:`sec_practice`).
 
-This local argument does not make the full objective convex. A deep network's loss cannot be convex
+This local argument does not make the full objective convex. A deep network's loss is not convex
 globally: permuting the hidden units of a layer leaves the function
 computed unchanged, so every minimum comes with a combinatorial family of
 separated copies of itself, while a convex function's minima form a single
@@ -332,42 +332,6 @@ learning-rate schedules, and methods for controlling gradient noise.
 
 ## Exercises
 
-1. **Permutation-symmetric minima.** ● Consider a multilayer perceptron with
-   one hidden layer of $d \geq 2$ units and a single output, and let
-   $\boldsymbol{\theta}^\star$ be a local minimum of its loss at which no
-   two hidden units have identical incoming weights.
-    1. Show that permuting the hidden units yields $d!$ distinct parameter
-       vectors that all compute the same function and are therefore all
-       local minima with the same loss.
-    1. Suppose the loss were a convex function of the parameters. Show
-       that the average of the $d!$ copies would then also be a global
-       minimizer and that it computes the same function as a network with
-       one hidden unit. Conclude that the loss is not convex whenever
-       every network with one hidden unit has a higher loss than
-       $\boldsymbol{\theta}^\star$.
-    1. For the activation $\tanh$, identify a second symmetry of each
-       hidden unit, state the resulting count of equivalent minima, and
-       give a condition on $\boldsymbol{\theta}^\star$ under which all of
-       them are distinct.
-1. **Eigenvalues of symmetric random matrices.** ● Let $\mathbf{M}$ be a
-   random symmetric $k \times k$ matrix whose entries $M_{ij} = M_{ji}$,
-   $i \leq j$, are drawn independently from distributions $p_{ij}$ with
-   $p_{ij}(x) = p_{ij}(-x)$ :cite:`Wigner.1958`.
-    1. Prove that an eigenvalue $\lambda$ drawn uniformly at random from
-       the $k$ eigenvalues of $\mathbf{M}$ satisfies
-       $P(\lambda > 0) = P(\lambda < 0)$.
-    1. Explain why this symmetry alone does not determine the fraction of
-       negative eigenvalues in a single realization of $\mathbf{M}$. State
-       what the semicircle law of :citet:`Wigner.1958` says about that
-       fraction for large $k$ when the off-diagonal entries are
-       identically distributed with finite variance.
-    1. The coin-flip heuristic of :numref:`subsec_opt-intro-saddles`
-       treats the $k$ signs as independent, so all of them are positive
-       with probability $2^{-k}$. For $k = 2$, draw the diagonal entries
-       from $\mathcal{N}(0, 1)$ and the off-diagonal entry from
-       $\mathcal{N}(0, 1/2)$. Compute the probability that both
-       eigenvalues are positive, compare it with $2^{-2}$, and state what
-       the gap says about the independence assumption.
 1. **Critical points and plateaus.** Gradient descent slows or stops at
    each of the following points: the critical points of
    $f(x) = x\cos(\pi x)$ in the interior of $[-1, 2]$, the origin of
@@ -392,6 +356,7 @@ learning-rate schedules, and methods for controlling gradient noise.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 6.6.*
+
 1. [code] **Saddle escape time.** Balancing a ball on the saddle
    $f(x_1, x_2) = x_1^2 - x_2^2$ of :numref:`fig_mdl-opt-saddle` is stable
    along $x_1$ and unstable along $x_2$. Gradient descent with learning
@@ -405,6 +370,7 @@ learning-rate schedules, and methods for controlling gradient noise.
        for $\sigma \in \{10^{-3}, 10^{-1}\}$. Reconcile the result with
        the statement in :numref:`subsec_opt-intro-noise` that gradient
        descent from a random start escapes strict saddles without noise.
+
 1. [code] **An ill-conditioned valley.** Gradient descent on the valley
    :eqref:`eq_opt-intro-valley` multiplies $x_1$ by $1 - 0.2\eta$ and
    $x_2$ by $1 - 4\eta$ on every step, so it is stable for $\eta < 0.5$.
@@ -427,6 +393,7 @@ learning-rate schedules, and methods for controlling gradient noise.
        the valley perfectly conditioned? Give the step count at
        $\eta = 0.45$ and the smallest step count that any learning rate
        achieves after the rescaling.
+
 1. [code] **Learning rate and sharpness.** A two-layer scalar linear
    network $\hat{y} = abx$ is fit to the single example $(x, y) = (1, 1)$
    with the loss $\ell(a, b) = \frac{1}{2}(ab - 1)^2$. Every point of the
@@ -439,6 +406,46 @@ learning-rate schedules, and methods for controlling gradient noise.
        $\lambda_{\max}$ of the minimizer it reaches next to $2/\eta$.
     1. Explain the pattern with the stability condition
        $\eta < 2/\lambda_{\max}$.
+
+1. **Permutation-symmetric minima.** ● Consider a multilayer perceptron with
+   one hidden layer of $d \geq 2$ units and a single output, and let
+   $\boldsymbol{\theta}^\star$ be a local minimum of its loss at which no
+   two hidden units have identical incoming weights.
+    1. Show that permuting the hidden units yields $d!$ distinct parameter
+       vectors that all compute the same function and are therefore all
+       local minima with the same loss.
+    1. Suppose the loss were a convex function of the parameters. Show
+       that the average of the $d!$ copies would then also be a global
+       minimizer and that it computes the same function as a network with
+       one hidden unit. Conclude that the loss is not convex whenever
+       every network with one hidden unit has a higher loss than
+       $\boldsymbol{\theta}^\star$.
+    1. For the activation $\tanh$, identify a second symmetry of each
+       hidden unit, state the resulting count of equivalent minima, and
+       give a condition on $\boldsymbol{\theta}^\star$ under which all of
+       them are distinct.
+   :exlabel:`ex_optimization-intro-permutation-symmetric-minima`
+
+1. **Eigenvalues of symmetric random matrices.** ● Let $\mathbf{M}$ be a
+   random symmetric $k \times k$ matrix whose entries $M_{ij} = M_{ji}$,
+   $i \leq j$, are drawn independently from distributions $p_{ij}$ with
+   $p_{ij}(x) = p_{ij}(-x)$ :cite:`Wigner.1958`.
+    1. Prove that an eigenvalue $\lambda$ drawn uniformly at random from
+       the $k$ eigenvalues of $\mathbf{M}$ satisfies
+       $P(\lambda > 0) = P(\lambda < 0)$.
+    1. Explain why this symmetry alone does not determine the fraction of
+       negative eigenvalues in a single realization of $\mathbf{M}$. State
+       what the semicircle law of :citet:`Wigner.1958` says about that
+       fraction for large $k$ when the off-diagonal entries are
+       identically distributed with finite variance.
+    1. The coin-flip heuristic of :numref:`subsec_opt-intro-saddles`
+       treats the $k$ signs as independent, so all of them are positive
+       with probability $2^{-k}$. For $k = 2$, draw the diagonal entries
+       from $\mathcal{N}(0, 1)$ and the off-diagonal entry from
+       $\mathcal{N}(0, 1/2)$. Compute the probability that both
+       eigenvalues are positive, compare it with $2^{-2}$, and state what
+       the gap says about the independence assumption.
+   :exlabel:`ex_optimization-intro-eigenvalues-symmetric-random-matrices`
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/487)

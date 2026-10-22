@@ -330,6 +330,7 @@ The following sections address these requirements for reliable training.
     1. Repeat the sweep over learning rates at width 256 with 20 epochs
        instead of 10. How does the best learning rate relate to the training
        budget?
+   :exlabel:`ex_mlp-implementation-width-learning-rate`
 1. **Parameter count.** The one-hidden-layer model of this section maps 784
    inputs through $h$ hidden units to 10 outputs.
     1. Give a closed-form expression for the total number of parameters as a
@@ -359,6 +360,28 @@ The following sections address these requirements for reliable training.
        report for each run the validation accuracy and the fraction of
        validation examples on which $t > 0$. Compare any run in which this
        fraction is zero with your answer to (b).
+1. [code] **Benchmarking implementations.** Compare the speed of `MLPScratch`
+   and `MLP`: train both at hidden widths 256, 1024, and 4096 for three
+   epochs each on Fashion-MNIST, recording the wall-clock time per epoch.
+   Plot the ratio of `MLPScratch` time to `MLP` time as a function of width.
+   Does the ratio grow, shrink, or stay flat as the network gets larger?
+   Suggest an explanation.
+1. [code] **Memory alignment.** Time the product of two $n \times n$
+   matrices for $n \in \{1024, 1025, 1026, 1028, 1032\}$. Divide the $2n^3$
+   floating-point operations of each product by its time to obtain the
+   throughput. Measure the throughput on a CPU in single precision and on a
+   GPU in single and half precision. For which $n$ does the throughput drop
+   on each device and precision, and by how much?
+   :exlabel:`ex_mlp-implementation-memory-alignment`
+1. [code] **Activation functions.** Replace the ReLU in `MLP` by tanh,
+   sigmoid, and GELU in turn, and train each of the four versions on
+   Fashion-MNIST for 10 epochs.
+    1. For each activation, pick the best learning rate from
+       $\{0.03, 0.1, 0.3, 1\}$. Which activation reaches the highest
+       validation accuracy, and by how much does it beat the worst?
+    1. Repeat the comparison with three hidden layers of width 256. Does the
+       ranking change? Relate the result to the derivative of each
+       activation.
 1. [extended] **Joint hyperparameter search.** ● Extend `MLP` so that the
    number of hidden layers is a constructor argument. Treat the learning
    rate, the number of epochs, the number of hidden layers, and the number
@@ -367,7 +390,7 @@ The following sections address these requirements for reliable training.
     1. How many training runs does a full grid over these values need? How
        many does tuning one hyperparameter at a time need, sweeping it over
        its four values while the others stay fixed? Use the heatmap of
-       Exercise 1 to explain when the cheaper procedure misses the best
+       Exercise :exref:`ex_mlp-implementation-width-learning-rate` to explain when the cheaper procedure misses the best
        configuration.
     1. Describe a search strategy that covers all four hyperparameters at a
        small fraction of the grid's cost. Use it to find the best validation
@@ -393,19 +416,7 @@ The following sections address these requirements for reliable training.
     *Adapted from Stanford CS231n,
     [Assignment 1](https://cs231n.github.io/assignments2023/assignment1/),
     two-layer network.*
-1. [code] **Benchmarking implementations.** Compare the speed of `MLPScratch`
-   and `MLP`: train both at hidden widths 256, 1024, and 4096 for three
-   epochs each on Fashion-MNIST, recording the wall-clock time per epoch.
-   Plot the ratio of `MLPScratch` time to `MLP` time as a function of width.
-   Does the ratio grow, shrink, or stay flat as the network gets larger?
-   Suggest an explanation.
-1. [code] **Memory alignment.** Time the product of two $n \times n$
-   matrices for $n \in \{1024, 1025, 1026, 1028, 1032\}$. Divide the $2n^3$
-   floating-point operations of each product by its time to obtain the
-   throughput. Measure the throughput on a CPU in single precision and on a
-   GPU in single and half precision. For which $n$ does the throughput drop
-   on each device and precision, and by how much?
-1. **Arithmetic intensity.** ● The matrix product of Exercise 7 reads two
+1. **Arithmetic intensity.** ● The matrix product of Exercise :exref:`ex_mlp-implementation-memory-alignment` reads two
    $n \times n$ matrices and writes one, so it performs $2n^3$ operations on
    $3n^2$ numbers. Compare this ratio, in operations per byte at $n = 1024$
    in single precision (4 bytes per number),
@@ -413,15 +424,6 @@ The following sections address these requirements for reliable training.
    bandwidth. Does memory bandwidth or arithmetic limit the speed? Which
    property of the hardware or of its matrix-multiplication kernels makes
    some $n$ faster than others?
-1. [code] **Activation functions.** Replace the ReLU in `MLP` by tanh,
-   sigmoid, and GELU in turn, and train each of the four versions on
-   Fashion-MNIST for 10 epochs.
-    1. For each activation, pick the best learning rate from
-       $\{0.03, 0.1, 0.3, 1\}$. Which activation reaches the highest
-       validation accuracy, and by how much does it beat the worst?
-    1. Repeat the comparison with three hidden layers of width 256. Does the
-       ranking change? Relate the result to the derivative of each
-       activation.
 1. [code] **Initialization scale and depth.** ● `MLPScratch` initializes its
    weights with Gaussian noise of standard deviation $\sigma = 0.01$.
     1. Train the one-hidden-layer model with $\sigma = 0.001$, $0.01$, and

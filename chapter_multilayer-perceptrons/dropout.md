@@ -575,20 +575,6 @@ methods.
        masks is that?
     1. Using these two numbers, explain in what sense dropout does, and does
        not, train an ensemble of all these subnetworks.
-1. **Dropout at test time.** ● Dropout is normally disabled at test time,
-   so the full network runs with no masking and no rescaling. Set
-   `dropout_1` to zero in `DropoutMLP`, so that only the second hidden layer
-   is masked. Let $\mathbf{o}(\mathbf{m})$ and $\hat{\mathbf{y}}(\mathbf{m})$
-   be the logits and the softmax output under mask $\mathbf{m}$, which
-   occurs with probability $P(\mathbf{m})$. Show that the logits of the
-   unmasked network equal
-   $\sum_{\mathbf{m}} P(\mathbf{m})\, \mathbf{o}(\mathbf{m})$. Show further
-   that its softmax output equals the normalized weighted geometric mean
-
-    $$\tilde{y}_j = \frac{\prod_{\mathbf{m}} \hat{y}_j(\mathbf{m})^{P(\mathbf{m})}}{\sum_k \prod_{\mathbf{m}} \hat{y}_k(\mathbf{m})^{P(\mathbf{m})}}.$$
-
-    Explain why neither equality holds in general once `dropout_1` is
-    nonzero.
 1. [code] **Monte Carlo dropout.** Instead of disabling dropout at test
    time, keep it on in the trained `DropoutMLP` and run $T = 20$ forward
    passes per test example, then average the softmax outputs
@@ -627,6 +613,20 @@ methods.
    :citet:`Srivastava.Hinton.Krizhevsky.ea.2014` does for an autoencoder
    on MNIST. Describe how the two sets of images differ in noise and in
    redundancy across units.
+1. **Dropout at test time.** ● Dropout is normally disabled at test time,
+   so the full network runs with no masking and no rescaling. Set
+   `dropout_1` to zero in `DropoutMLP`, so that only the second hidden layer
+   is masked. Let $\mathbf{o}(\mathbf{m})$ and $\hat{\mathbf{y}}(\mathbf{m})$
+   be the logits and the softmax output under mask $\mathbf{m}$, which
+   occurs with probability $P(\mathbf{m})$. Show that the logits of the
+   unmasked network equal
+   $\sum_{\mathbf{m}} P(\mathbf{m})\, \mathbf{o}(\mathbf{m})$. Show further
+   that its softmax output equals the normalized weighted geometric mean
+
+    $$\tilde{y}_j = \frac{\prod_{\mathbf{m}} \hat{y}_j(\mathbf{m})^{P(\mathbf{m})}}{\sum_k \prod_{\mathbf{m}} \hat{y}_k(\mathbf{m})^{P(\mathbf{m})}}.$$
+
+    Explain why neither equality holds in general once `dropout_1` is
+    nonzero.
 1. [code] **Custom noise injection.** ● Invent a technique for injecting
    random noise during training that differs from both dropout and
    DropConnect, for example additive Gaussian noise on the activations, or

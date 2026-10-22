@@ -833,6 +833,23 @@ of `MiniMobileNet`, and train both networks with `d2l.Trainer`.
    kernels. For which output-channel counts $c_\textrm{o}$ does the pointwise
    term dominate? What does this imply for architectures that enlarge
    depthwise kernels, such as ConvNeXt (:numref:`sec_convnext`)?
+
+1. [code] **Width multiplier.** Add a width multiplier $\alpha$ to
+   `MiniMobileNet` that scales every channel count
+   :cite:`howard2017mobilenet`. Predict how the parameter count and the
+   number of multiply-adds scale with $\alpha$, and verify your prediction at
+   $\alpha = 0.5$.
+   :exlabel:`ex_efficient-convnets-width-multiplier`
+
+1. [code] **Folding batch normalization.** The function `fuse_bn` folds
+   batch normalization into a preceding convolution without a bias, using
+   :eqref:`eq_bn_fold` with $b_o = 0$. Extend `fuse_bn` to a convolution
+   with bias $b_o$, and verify numerically that the convolution followed by
+   batch normalization in inference mode agrees with the folded convolution.
+   Then switch batch normalization to training mode, feed the same example
+   inside two different minibatches, and explain why no fixed kernel and
+   bias reproduce both outputs.
+
 1. [code] **The inverted bottleneck.** ● MobileNetV2
    :cite:`sandler2018mobilenetv2` replaces the block of :numref:`fig_dws_block`
    by an inverted bottleneck: a $1 \times 1$ expansion by a factor $t$, a
@@ -855,24 +872,21 @@ of `MiniMobileNet`, and train both networks with `d2l.Trainer`.
        of the inverted bottleneck never needs to hold a whole expanded
        tensor, and determine which tensors then set its peak activation
        memory.
-1. [code] **Width multiplier.** Add a width multiplier $\alpha$ to
-   `MiniMobileNet` that scales every channel count
-   :cite:`howard2017mobilenet`. Predict how the parameter count and the
-   number of multiply-adds scale with $\alpha$, and verify your prediction at
-   $\alpha = 0.5$.
+
 1. [code] **Width versus resolution.** ● Lowering the input resolution is a
-   second way to cut multiply-adds. Using the width multiplier of the
-   previous problem, train `MiniMobileNet` at $\alpha = 1$ on
+   second way to cut multiply-adds. Using the width multiplier of
+   problem :exref:`ex_efficient-convnets-width-multiplier`, train `MiniMobileNet` at $\alpha = 1$ on
    $48 \times 48$ inputs and at $\alpha = 0.5$ on $96 \times 96$ inputs,
    with two seeds each and otherwise the setup of
    :numref:`tab_dws_vs_dense`. Compare the two networks in multiply-adds,
    parameter count, and test accuracy. Fashion-MNIST images have
    $28 \times 28$ pixels. How does this limit what the comparison says about
    scaling resolution in EfficientNet :cite:`tan2019efficientnet`?
+
 1. [code] **Arithmetic intensity.** ● `MiniMobileNet` performs about
    $7.7\times$ fewer multiply-adds than `VGGSmall` in
-   :numref:`tab_dws_vs_dense`, yet its epochs are only two to three times
-   faster.
+   :numref:`tab_dws_vs_dense`, yet its epochs in the PyTorch run are only
+   about 1.5 times faster.
     1. Measure the forward-pass time of both networks on a batch of 128
        images. Count how many multiply-adds a $3 \times 3$ depthwise
        convolution performs per weight and per input activation, compare
@@ -887,20 +901,14 @@ of `MiniMobileNet`, and train both networks with `d2l.Trainer`.
        intensities largest? Compare them with the stages in which
        EfficientNetV2 :cite:`tan2021efficientnetv2` replaces depthwise
        blocks by fused dense ones.
-1. [code] **Folding batch normalization.** The function `fuse_bn` folds
-   batch normalization into a preceding convolution without a bias, using
-   :eqref:`eq_bn_fold` with $b_o = 0$. Extend `fuse_bn` to a convolution
-   with bias $b_o$, and verify numerically that the convolution followed by
-   batch normalization in inference mode agrees with the folded convolution.
-   Then switch batch normalization to training mode, feed the same example
-   inside two different minibatches, and explain why no fixed kernel and
-   bias reproduce both outputs.
+
 1. [code] **Normalization before the convolution.** ● Let batch
    normalization come before a $3 \times 3$ convolution with zero padding of
    1, with no nonlinearity in between. Fold it into the kernel and bias of
    the convolution and compare the folded layer with the original
    numerically. At which output positions do they disagree, and with what
    value would the input have to be padded for the fold to be exact?
+
 1. [code] **Training with RepVGG blocks.** ● If the fused RepVGG layer
    computes the same function, why not train the plain $3 \times 3$ stack
    directly?

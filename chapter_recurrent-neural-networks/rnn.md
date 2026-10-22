@@ -228,20 +228,7 @@ Gating the state, the subject of :numref:`chap_modern_rnn`, is the standard fix.
        Count its parameters as a function of $k$, embedding table
        included, and state how many parameters each additional context
        token adds. Compare the growth in $k$ of the three models.
-1. **Parity beyond any window.** ● Let $x_1, x_2, \ldots$ be a sequence of
-   bits, and let the desired output at step $t$ be the parity of
-   $x_1 + \cdots + x_t$.
-    1. Show that no model that reads only the last $k$ inputs can produce
-       the correct output at every step of a sequence longer than $k$,
-       whatever the finite $k$.
-    1. Let $\phi$ be a threshold activation. Construct an RNN of the form
-       :eqref:`rnn_h_with_state` with two hidden units whose output
-       equals the parity at every step, for any sequence length. Give
-       the weights, and show that one hidden unit does not suffice.
-    1. How many bits of information about $x_1, \ldots, x_t$ must the
-       hidden state retain for the outputs at all later steps to be
-       correct? Relate this to the description of the state as a lossy
-       fixed-size summary in :numref:`subsec_rnn-constant-memory`.
+
 1. **Concatenated weight matrices.** Let
    $\mathbf{X}_t \in \mathbb{R}^{n \times d}$ and
    $\mathbf{H}_{t-1} \in \mathbb{R}^{n \times h}$ be as in
@@ -260,6 +247,7 @@ Gating the state, the subject of :numref:`chap_modern_rnn`, is the standard fix.
        step of the concatenated form. During generation, the input at
        step $t$ is the token generated at step $t-1$. Does the advantage
        of the separate form survive there?
+
 1. **Exposure bias.** Teacher forcing (:numref:`subsec_teacher-forcing`)
    conditions every training step on the true prefix, whereas generation
    conditions each step on the model's own earlier outputs. The resulting
@@ -273,6 +261,21 @@ Gating the state, the subject of :numref:`chap_modern_rnn`, is the standard fix.
        of :numref:`sec_sequence`, what plays the role of $c$ for a
        language model, and why can teacher forcing leave $c$ large even
        when $\bar\epsilon$ is small?
+
+1. **Parity beyond any window.** ● Let $x_1, x_2, \ldots$ be a sequence of
+   bits, and let the desired output at step $t$ be the parity of
+   $x_1 + \cdots + x_t$.
+    1. Show that no model that reads only the last $k$ inputs can produce
+       the correct output at every step of a sequence longer than $k$,
+       whatever the finite $k$.
+    1. Let $\phi$ be a threshold activation. Construct an RNN of the form
+       :eqref:`rnn_h_with_state` with two hidden units whose output
+       equals the parity at every step, for any sequence length. Give
+       the weights, and show that one hidden unit does not suffice.
+    1. How many bits of information about $x_1, \ldots, x_t$ must the
+       hidden state retain for the outputs at all later steps to be
+       correct? Relate this to the description of the state as a lossy
+       fixed-size summary in :numref:`subsec_rnn-constant-memory`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/337)

@@ -1912,24 +1912,7 @@ CPU fallback when no GPU exists.
        :numref:`subsec_activation_checkpointing`?
 :end_tab:
 
-3. [code] **Synchronization points.** ● Consider the training run of
-   `ResMLPClassifier` in :numref:`subsec_device_aware_trainer` on a GPU.
-    1. List every synchronization point in one training step, reading
-       `Trainer.fit_epoch`, `Trainer.prepare_batch`, and `Module.plot` as
-       well as the model code. Classify each as unavoidable for a correct
-       loop or as an avoidable instrumentation artifact, and justify each
-       classification.
-    1. Suppose the loop reads the loss into a Python float after every
-       step. Predict from your list how much this readout slows down the
-       default `ResMLPClassifier` and
-       `ResMLPClassifier(num_hiddens=2048, num_blocks=8)`. Then time one
-       epoch of each model with and without the readout, and explain the
-       four timings.
-
-    *Adapted from the PyTorch documentation
-    [CUDA semantics](https://docs.pytorch.org/docs/stable/notes/cuda.html).*
-
-1. [code] **Asynchronous dispatch.** ● Use the warm-up-then-synchronize
+3. [code] **Asynchronous dispatch.** ● Use the warm-up-then-synchronize
    timing pattern of :numref:`subsec_async_dispatch` for both parts.
     1. For $n$ from 256 to 8192, time a round trip of an $n \times n$
        matrix from CPU to GPU and back, and time one $n \times n$ matrix
@@ -1961,3 +1944,20 @@ CPU fallback when no GPU exists.
 
     *Adapted from the PyTorch recipe
     [Automatic Mixed Precision](https://docs.pytorch.org/tutorials/recipes/recipes/amp_recipe.html).*
+
+1. [code] **Synchronization points.** ● Consider the training run of
+   `ResMLPClassifier` in :numref:`subsec_device_aware_trainer` on a GPU.
+    1. List every synchronization point in one training step, reading
+       `Trainer.fit_epoch`, `Trainer.prepare_batch`, and `Module.plot` as
+       well as the model code. Classify each as unavoidable for a correct
+       loop or as an avoidable instrumentation artifact, and justify each
+       classification.
+    1. Suppose the loop reads the loss into a Python float after every
+       step. Predict from your list how much this readout slows down the
+       default `ResMLPClassifier` and
+       `ResMLPClassifier(num_hiddens=2048, num_blocks=8)`. Then time one
+       epoch of each model with and without the readout, and explain the
+       four timings.
+
+    *Adapted from the PyTorch documentation
+    [CUDA semantics](https://docs.pytorch.org/docs/stable/notes/cuda.html).*

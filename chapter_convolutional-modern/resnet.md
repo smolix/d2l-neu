@@ -1088,22 +1088,7 @@ A common feature of the designs we have discussed so far is that the network des
        parameters makes the Inception block the identity on nonnegative
        inputs, and state what the answer implies for deepening GoogLeNet
        by inserting Inception blocks.
-1. [code] **ResNet variants.** ● Table 1 of :citet:`He.Zhang.Ren.ea.2016`
-   specifies ResNet-18 to ResNet-152 by the number of blocks per stage and
-   by the block type.
-    1. Build ResNet-34 by passing its block counts as `arch` to `ResNet`
-       and report its parameter count against `ResNet18`.
-    1. ResNet-50 and its deeper relatives use a bottleneck block: a
-       $1 \times 1$ convolution that reduces the width fourfold, a
-       $3 \times 3$ convolution, and a $1 \times 1$ convolution that
-       restores the width. `ResNeXtBlock` with `groups=1` and
-       `bot_mul=0.25` implements this block. Compare its parameter count
-       and multiply-adds with those of `Residual` at the same input and
-       output width, and with those of `Residual` at a quarter of that
-       width, which is the width of the matching ResNet-34 stage.
-    1. Override `block` in a subclass of `ResNet` so that it stacks
-       bottleneck blocks, build ResNet-50, and compare its parameter count
-       with ResNet-34's.
+
 1. **Pre-activation ordering.** :citet:`He.Zhang.Ren.ea.2016*1`
    moved batch normalization and the ReLU in front of each convolution of
    the residual branch and removed the ReLU after the addition (their
@@ -1123,11 +1108,7 @@ A common feature of the designs we have discussed so far is that the network des
        $\partial \mathbf{x}_K / \partial \mathbf{x}_0$, and what does it
        imply for the gradient that reaches the first block through the
        shortcuts?
-1. [code] **Pre-activation ResNet-18.** ● Implement the pre-activation
-   block of :citet:`He.Zhang.Ren.ea.2016*1` as a variant of `Residual`,
-   override `block` in a subclass of `ResNet` so that it stacks the new
-   block, and compare the training curves of the resulting ResNet-18 with
-   those of `ResNet18`.
+
 1. **Nested function classes.** The containment argument of
    :numref:`fig_functionclasses` applies to a deeper network when each
    added block can represent the identity on every input it receives.
@@ -1142,6 +1123,44 @@ A common feature of the designs we have discussed so far is that the network des
        stage widths as `ResNet18` and more blocks per stage. Decide
        whether ResNet-34 represents every function that `ResNet18`
        represents, and justify the answer block by block.
+
+1. **Paths through a residual stack.** A stack of $K$ residual blocks can
+   be unraveled into an ensemble of paths: on each block, the signal
+   either passes through the block's body or skips it
+   :cite:`Veit.Wilber.Belongie.2016`.
+    1. How many end-to-end paths pass through exactly $\ell$ of the $K$
+       bodies? Verify your formula by explicit enumeration for $K = 4$.
+    1. Relate the distribution of path lengths to why very deep residual
+       networks remain trainable where equally deep plain networks are
+       not.
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 11.2.*
+
+1. [code] **ResNet variants.** ● Table 1 of :citet:`He.Zhang.Ren.ea.2016`
+   specifies ResNet-18 to ResNet-152 by the number of blocks per stage and
+   by the block type.
+    1. Build ResNet-34 by passing its block counts as `arch` to `ResNet`
+       and report its parameter count against `ResNet18`.
+    1. ResNet-50 and its deeper relatives use a bottleneck block: a
+       $1 \times 1$ convolution that reduces the width fourfold, a
+       $3 \times 3$ convolution, and a $1 \times 1$ convolution that
+       restores the width. `ResNeXtBlock` with `groups=1` and
+       `bot_mul=0.25` implements this block. Compare its parameter count
+       and multiply-adds with those of `Residual` at the same input and
+       output width, and with those of `Residual` at a quarter of that
+       width, which is the width of the matching ResNet-34 stage.
+    1. Override `block` in a subclass of `ResNet` so that it stacks
+       bottleneck blocks, build ResNet-50, and compare its parameter count
+       with ResNet-34's.
+
+1. [code] **Pre-activation ResNet-18.** ● Implement the pre-activation
+   block of :citet:`He.Zhang.Ren.ea.2016*1` as a variant of `Residual`,
+   override `block` in a subclass of `ResNet` so that it stacks the new
+   block, and compare the training curves of the resulting ResNet-18 with
+   those of `ResNet18`.
+
 1. **DenseNet accounting.** ● :citet:`Huang.Liu.Van-Der-Maaten.ea.2017`
    report that DenseNets match the accuracy of comparable ResNets with
    fewer parameters, whereas :citet:`pleiss2017memory` had to devise
@@ -1164,19 +1183,6 @@ A common feature of the designs we have discussed so far is that the network des
        compare this storage with your sum from the first part. Explain
        why the backward pass must then recompute concatenations, batch
        normalizations, and ReLUs, but no convolution.
-1. **Paths through a residual stack.** A stack of $K$ residual blocks can
-   be unraveled into an ensemble of paths: on each block, the signal
-   either passes through the block's body or skips it
-   :cite:`Veit.Wilber.Belongie.2016`.
-    1. How many end-to-end paths pass through exactly $\ell$ of the $K$
-       bodies? Verify your formula by explicit enumeration for $K = 4$.
-    1. Relate the distribution of path lengths to why very deep residual
-       networks remain trainable where equally deep plain networks are
-       not.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 11.2.*
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/85)

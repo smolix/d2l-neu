@@ -893,64 +893,6 @@ and Yogi are the standard responses.
 
 ## Exercises
 
-1. [code] **Adam's learning rate on the airfoil data.** The from-scratch
-   `adam` trains the linear model with `d2l.train_ch11` at $\eta = 0.01$.
-    1. Sweep $\eta \in \{10^{-3}, 10^{-2}, 10^{-1}, 1\}$ and report the
-       final loss of each run. Copy the `sgd` update function of
-       :numref:`sec_minibatch_sgd` into this notebook, repeat the sweep
-       with it on the same `data_iter`, and compare how the final loss of
-       each method changes as $\eta$ grows past its best value.
-    1. Explain from :eqref:`eq_adam-update` why the size of an Adam step in
-       a coordinate is typically about $\eta$ once the moment estimates
-       have stabilized, whatever the scale of the gradient, and why this
-       makes the usable range of $\eta$ differ from that of SGD.
-1. **Bias correction by initialization.** Instead of the zero
-   initialization and the corrections in :eqref:`eq_adam-moments`,
-   initialize $\mathbf{m}_1 = \mathbf{g}_1$ and
-   $\mathbf{v}_1 = \mathbf{g}_1^2$ and use the uncorrected averages from
-   then on.
-    1. Show that the two schemes coincide at $t = 1$ and derive the weights
-       that each assigns to $\mathbf{g}_1, \ldots, \mathbf{g}_t$ for
-       $t > 1$.
-    1. What is lost relative to the exact correction, and for which range
-       of $t$ does the difference matter?
-1. [code] **The second-moment window.** Rerun `run_lm` for Adam at the best
-   learning rate of `adam_lm` with
-   $\beta_2 \in \{0.9, 0.99, 0.999, 0.9999\}$. Which direction hurts more,
-   forgetting too fast or too slowly? Relate your finding to the averaging
-   window $1/(1-\beta_2)$ and to the 2,000-step budget.
-1. [code] **The $\epsilon$ ceiling.** Sweep
-   $\epsilon \in \{10^{-8}, 10^{-6}, 10^{-4}, 10^{-2}, 1\}$ for Adam on
-   `TinyLM` at the best learning rate of `adam_lm`. Explain the trend at
-   both ends of the sweep with the $\eta/\epsilon$ step ceiling of
-   :numref:`subsec_adam-variance-estimate`, and identify the $\epsilon$
-   from which the run resembles SGD with momentum, as in `sgd_lm`, at
-   learning rate $(1 - \beta_1)\eta/\epsilon$.
-1. [code] **Two repairs of the variance estimate.** Adam's second-moment
-   update can be written as
-   $$\mathbf{v}_t = \mathbf{v}_{t-1} + (1 - \beta_2)(\mathbf{g}_t^2 - \mathbf{v}_{t-1}),$$
-   which shrinks $\mathbf{v}_t$ whenever $\mathbf{g}_t^2 < \mathbf{v}_{t-1}$.
-   Yogi :cite:`Zaheer.Reddi.Sachan.ea.2018` caps the shrinkage rate by
-   replacing the increment with
-   $$(1 - \beta_2)\, \mathbf{g}_t^2 \odot \mathrm{sgn}(\mathbf{g}_t^2 - \mathbf{v}_{t-1}).$$
-   AMSGrad :cite:`Reddi.Kale.Kumar.2019` carries the running maximum
-   $$\hat{\mathbf{v}}_t^{\max} = \max(\hat{\mathbf{v}}_{t-1}^{\max}, \hat{\mathbf{v}}_t)$$
-   and uses it in place of $\hat{\mathbf{v}}_t$ in :eqref:`eq_adam-update`.
-   Implement Yogi and AMSGrad as update functions for `d2l.train_ch11`,
-   following `adam`, and compare both with `adam` on the airfoil data.
-1. [code] **Yogi on the Reddi construction.** ● The function `online` of
-   :numref:`subsec_mdl-per-coordinate` runs Adam and AMSGrad on the losses
-   :eqref:`eq_mdl-opt-reddi`, on which Adam converges to the worst point
-   $x = +1$. Add the Yogi update of problem 5 to it, run it at $C = 4$, and
-   report where its iterate ends. Explain the outcome from how far the
-   $v_t$ of Adam and of Yogi can fall during the two $-1$ gradients of each
-   period.
-1. [code] **Adadelta.** Adadelta :cite:`Zeiler.2012` extends RMSProp with a
-   second exponential average, of the squared *updates*, whose square root
-   replaces $\eta$, so that the method nominally has no learning rate.
-   Implement it as an update function for `d2l.train_ch11`, following
-   `rmsprop`, and compare the two on the airfoil data. Where does the scale
-   of the very first update come from?
 1. [code] **Rotating the coordinates.** Per-coordinate methods are
    axis-aligned. Rotating the valley `f_2d` by $45^\circ$ gives
    $$f(\mathbf{x}) = 0.05 (x_1 + x_2)^2 + (x_1 - x_2)^2,$$
@@ -966,6 +908,79 @@ and Yogi are the standard responses.
     1. How much of the adaptive methods' advantage over gradient descent
        survives the rotation? Explain the answer from the Hessian of the
        rotated valley.
+
+1. [code] **Adadelta.** Adadelta :cite:`Zeiler.2012` extends RMSProp with a
+   second exponential average, of the squared *updates*, whose square root
+   replaces $\eta$, so that the method nominally has no learning rate.
+   Implement it as an update function for `d2l.train_ch11`, following
+   `rmsprop`, and compare the two on the airfoil data. Where does the scale
+   of the very first update come from?
+
+1. [code] **Adam's learning rate on the airfoil data.** The from-scratch
+   `adam` trains the linear model with `d2l.train_ch11` at $\eta = 0.01$.
+    1. Sweep $\eta \in \{10^{-3}, 10^{-2}, 10^{-1}, 1\}$ and report the
+       final loss of each run. Copy the `sgd` update function of
+       :numref:`sec_minibatch_sgd` into this notebook, repeat the sweep
+       with it on the same `data_iter`, and compare how the final loss of
+       each method changes as $\eta$ grows past its best value.
+    1. Explain from :eqref:`eq_adam-update` why the size of an Adam step in
+       a coordinate is typically about $\eta$ once the moment estimates
+       have stabilized, whatever the scale of the gradient, and why this
+       makes the usable range of $\eta$ differ from that of SGD.
+
+1. **Bias correction by initialization.** Instead of the zero
+   initialization and the corrections in :eqref:`eq_adam-moments`,
+   initialize $\mathbf{m}_1 = \mathbf{g}_1$ and
+   $\mathbf{v}_1 = \mathbf{g}_1^2$ and use the uncorrected averages from
+   then on.
+    1. Show that the two schemes coincide at $t = 1$ and derive the weights
+       that each assigns to $\mathbf{g}_1, \ldots, \mathbf{g}_t$ for
+       $t > 1$.
+    1. What is lost relative to the exact correction, and for which range
+       of $t$ does the difference matter?
+
+1. [code] **The second-moment window.** Rerun `run_lm` for Adam at the best
+   learning rate of `adam_lm` with
+   $\beta_2 \in \{0.9, 0.99, 0.999, 0.9999\}$. Which direction hurts more,
+   forgetting too fast or too slowly? Relate your finding to the averaging
+   window $1/(1-\beta_2)$ and to the 2,000-step budget.
+
+1. [extended] **Frequent and rare characters.** Following
+   :citet:`Kunstner.Yadav.Milligan.ea.2024`, split the vocabulary of
+   `data` into a frequent and a rare half by corpus frequency and log the
+   training loss of `TinyLM` separately on the two halves under SGD with
+   momentum and under Adam, each at the best learning rate of `sgd_lm` and
+   `adam_lm`.
+    1. Which optimizer makes progress on the rare half, and does the gap of
+       :numref:`subsec_adam-where-wins` come mainly from the rare half, from
+       the frequent half, or from both?
+    1. Even the rarest character recurs thousands of times over the run.
+       Rebuild `data` with the default subword tokenization of
+       `d2l.TimeMachine`, whose 1,024-token vocabulary contains genuinely
+       rare tokens, repeat the measurement, and compare the two splits.
+
+1. [code] **The $\epsilon$ ceiling.** Sweep
+   $\epsilon \in \{10^{-8}, 10^{-6}, 10^{-4}, 10^{-2}, 1\}$ for Adam on
+   `TinyLM` at the best learning rate of `adam_lm`. Explain the trend at
+   both ends of the sweep with the $\eta/\epsilon$ step ceiling of
+   :numref:`subsec_adam-variance-estimate`, and identify the $\epsilon$
+   from which the run resembles SGD with momentum, as in `sgd_lm`, at
+   learning rate $(1 - \beta_1)\eta/\epsilon$.
+
+1. [code] **Two repairs of the variance estimate.** Adam's second-moment
+   update can be written as
+   $$\mathbf{v}_t = \mathbf{v}_{t-1} + (1 - \beta_2)(\mathbf{g}_t^2 - \mathbf{v}_{t-1}),$$
+   which shrinks $\mathbf{v}_t$ whenever $\mathbf{g}_t^2 < \mathbf{v}_{t-1}$.
+   Yogi :cite:`Zaheer.Reddi.Sachan.ea.2018` caps the shrinkage rate by
+   replacing the increment with
+   $$(1 - \beta_2)\, \mathbf{g}_t^2 \odot \mathrm{sgn}(\mathbf{g}_t^2 - \mathbf{v}_{t-1}).$$
+   AMSGrad :cite:`Reddi.Kale.Kumar.2019` carries the running maximum
+   $$\hat{\mathbf{v}}_t^{\max} = \max(\hat{\mathbf{v}}_{t-1}^{\max}, \hat{\mathbf{v}}_t)$$
+   and uses it in place of $\hat{\mathbf{v}}_t$ in :eqref:`eq_adam-update`.
+   Implement Yogi and AMSGrad as update functions for `d2l.train_ch11`,
+   following `adam`, and compare both with `adam` on the airfoil data.
+   :exlabel:`ex_adam-two-repairs-variance-estimate`
+
 1. [code] **Per-group learning rates for SGD.** ● The census of
    :numref:`subsec_tinylm` splits the parameters of `TinyLM` into
    embeddings, matrices, and vectors, which share one learning rate under
@@ -980,19 +995,14 @@ and Yogi are the standard responses.
        Adam's advantage on this model comes from scale differences between
        the three populations or from differences among the coordinates
        within each population?
-1. [extended] **Frequent and rare characters.** Following
-   :citet:`Kunstner.Yadav.Milligan.ea.2024`, split the vocabulary of
-   `data` into a frequent and a rare half by corpus frequency and log the
-   training loss of `TinyLM` separately on the two halves under SGD with
-   momentum and under Adam, each at the best learning rate of `sgd_lm` and
-   `adam_lm`.
-    1. Which optimizer makes progress on the rare half, and does the gap of
-       :numref:`subsec_adam-where-wins` come mainly from the rare half, from
-       the frequent half, or from both?
-    1. Even the rarest character recurs thousands of times over the run.
-       Rebuild `data` with the default subword tokenization of
-       `d2l.TimeMachine`, whose 1,024-token vocabulary contains genuinely
-       rare tokens, repeat the measurement, and compare the two splits.
+
+1. [code] **Yogi on the Reddi construction.** ● The function `online` of
+   :numref:`subsec_mdl-per-coordinate` runs Adam and AMSGrad on the losses
+   :eqref:`eq_mdl-opt-reddi`, on which Adam converges to the worst point
+   $x = +1$. Add the Yogi update of problem :exref:`ex_adam-two-repairs-variance-estimate` to it, run it at $C = 4$, and
+   report where its iterate ends. Explain the outcome from how far the
+   $v_t$ of Adam and of Yogi can fall during the two $-1$ gradients of each
+   period.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1078)

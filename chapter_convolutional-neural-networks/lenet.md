@@ -382,8 +382,10 @@ ReLU activations.
     1. Make both changes together, and call the result the modernized
        LeNet. Which of the two changes accounts for most of the difference
        in accuracy?
+   :exlabel:`ex_lenet-modern-components`
+
 1. [code] **Architecture sweep.** Starting from the modernized LeNet of
-   the first problem, vary one design choice at a time: the convolution
+   problem :exref:`ex_lenet-modern-components`, vary one design choice at a time: the convolution
    window size, the number of output channels of each convolutional
    layer, and the number of convolutional layers.
     1. Before training a variant, trace its output shapes with
@@ -392,18 +394,20 @@ ReLU activations.
     1. Train each variant with the training settings of this section and
        tabulate its validation accuracy against its parameter count. Does
        any variant improve on the accuracy of the modernized LeNet?
+
 1. [code] **Original MNIST.** Write an `MNIST` data class by adapting
    `d2l.FashionMNIST`, and train both `LeNet` and the modernized LeNet of
-   the first problem on it. :citet:`LeCun.Bottou.Bengio.ea.1998` report a
+   problem :exref:`ex_lenet-modern-components` on it. :citet:`LeCun.Bottou.Bengio.ea.1998` report a
    test error rate below 1% for LeNet-5 on MNIST.
     1. Compare the test error rates of both networks with this figure.
     1. For each dataset, compute the difference and the ratio of the two
-       networks' test error rates, reusing the Fashion-MNIST runs of the
-       first problem. :numref:`sec_fashion_mnist` states that MNIST makes
+       networks' test error rates, reusing the Fashion-MNIST runs of
+       problem :exref:`ex_lenet-modern-components`. :numref:`sec_fashion_mnist` states that MNIST makes
        differences among model classes less visible. Does each of the two
        measures support this statement?
-1. [code] **Activation maps.** Train the modernized LeNet of the first
-   problem and extract the feature maps of its first and second
+
+1. [code] **Activation maps.** Train the modernized LeNet of
+   problem :exref:`ex_lenet-modern-components` and extract the feature maps of its first and second
    convolutional layers, each taken after its ReLU.
     1. Display them for test images from two different classes, for
        example pullovers and coats.
@@ -414,6 +418,36 @@ ReLU activations.
        the pixel range of `d2l.FashionMNIST`. Do the maxima for photos and
        noise fall inside or clearly outside the range observed on
        Fashion-MNIST test images?
+
+1. [code] **Overfitting sanity check.** Before trusting a full training
+   run, check that a network can memorize a small dataset. Fix a subset
+   of 50 Fashion-MNIST training images and train on it with all 50
+   images in one minibatch, for at most 500 gradient steps.
+    1. For both `LeNet` and the modernized LeNet of problem :exref:`ex_lenet-modern-components`,
+       record the number of steps until training accuracy exceeds 99%. If
+       a network does not get there, diagnose which architectural or
+       optimization choice is responsible.
+    1. Name one bug that this check would catch and one that it would
+       miss, and explain why the check cannot detect the second.
+
+    *Adapted from Stanford CS231n,
+    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
+    Convolutional Networks notebook.*
+
+1. **Equivariance versus augmentation.** A stride-1 convolution on an
+   infinite grid is exactly translation equivariant.
+    1. Go through the layers of `LeNet` in order. Name each component that
+       breaks exact translation equivariance of the feature maps, and the
+       components that prevent the final prediction from being
+       translation invariant.
+    1. Explain why training `LeNet` on translated copies of its training
+       images can improve test accuracy even though its convolutional
+       layers share weights across all locations.
+
+    *Adapted from Michael Nielsen,
+    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
+    Chapter 6.*
+
 1. [code] **The dense head.** ● :numref:`tab_lenet_modern` states that
    replacing the dense head with global average pooling removes most of
    LeNet's parameters.
@@ -435,33 +469,6 @@ ReLU activations.
        accuracy of the two reduced heads with each other and with your
        prediction. What does the comparison say about where LeNet's
        capacity is used?
-
-    *Adapted from Michael Nielsen,
-    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
-    Chapter 6.*
-1. [code] **Overfitting sanity check.** Before trusting a full training
-   run, check that a network can memorize a small dataset. Fix a subset
-   of 50 Fashion-MNIST training images and train on it with all 50
-   images in one minibatch, for at most 500 gradient steps.
-    1. For both `LeNet` and the modernized LeNet of the first problem,
-       record the number of steps until training accuracy exceeds 99%. If
-       a network does not get there, diagnose which architectural or
-       optimization choice is responsible.
-    1. Name one bug that this check would catch and one that it would
-       miss, and explain why the check cannot detect the second.
-
-    *Adapted from Stanford CS231n,
-    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
-    Convolutional Networks notebook.*
-1. **Equivariance versus augmentation.** A stride-1 convolution on an
-   infinite grid is exactly translation equivariant.
-    1. Go through the layers of `LeNet` in order. Name each component that
-       breaks exact translation equivariance of the feature maps, and the
-       components that prevent the final prediction from being
-       translation invariant.
-    1. Explain why training `LeNet` on translated copies of its training
-       images can improve test accuracy even though its convolutional
-       layers share weights across all locations.
 
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),

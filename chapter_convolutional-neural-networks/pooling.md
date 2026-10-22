@@ -411,17 +411,7 @@ between a query and representation vectors rather than by spatial location.
    `X` of :numref:`fig_pooling`, verify that your convolution reproduces
    `pool2d(X, (2, 2), 'avg')`, where `pool2d` is the function defined at
    the start of this section.
-1. **Max-pooling via ReLU.** ●
-    1. Prove that max-pooling cannot be implemented by a convolution
-       alone.
-    1. Express $\max(a, b)$ using only affine operations and
-       $\textrm{ReLU}(x) = \max(0, x)$.
-    1. Use this to implement max-pooling as a stack of convolutions and
-       ReLU layers.
-    1. Count the channels per layer and the ReLU layers that your
-       construction uses for a $2 \times 2$ window and for a
-       $3 \times 3$ window. How does the number of ReLU layers grow with
-       the number of entries in the window?
+
 1. **Cost of pooling.** An input of shape
    $c \times n_\textrm{h} \times n_\textrm{w}$ is pooled with a
    $k_\textrm{h} \times k_\textrm{w}$ window, total padding
@@ -433,6 +423,7 @@ between a query and representation vectors rather than by spatial location.
        convolution with the same window, padding, and stride and with $c$
        input and $c$ output channels. By roughly which factor is pooling
        cheaper?
+
 1. [code] **Max versus average pooling.** Construct two synthetic
    $4 \times 4$ patches with the same mean: one with a single high-value
    outlier on a uniform background, and one with a smooth gradient. Apply
@@ -440,6 +431,7 @@ between a query and representation vectors rather than by spatial location.
    report all four outputs. Using these numbers, describe one scenario in
    which max-pooling is preferable and one in which average pooling is
    preferable.
+
 1. **Pooling alternatives.**
     1. Do we need a separate minimum-pooling layer, or can it be expressed
        through an operation already in this section?
@@ -448,6 +440,7 @@ between a query and representation vectors rather than by spatial location.
        $$\sum_{i=1}^m x_i \frac{\exp(x_i / \tau)}{\sum_{j=1}^m \exp(x_j / \tau)}.$$
        Find its limits as $\tau \to 0$ and as $\tau \to \infty$. Give one
        cost that softmax pooling adds relative to max-pooling.
+
 1. **Aliasing and blur-pool.** Naive stride-2 downsampling keeps
    every second entry of its input. Measure frequency in cycles per input
    sample, so that the one-dimensional signals $(1, 0, 1, 0, 1, 0)$ and
@@ -462,6 +455,7 @@ between a query and representation vectors rather than by spatial location.
        blur-pool with a two-tap box filter
        $(\tfrac{1}{2}, \tfrac{1}{2})$ computes on the two signals above.
        Which pooling operation from this section does it coincide with?
+
 1. [code] **Backward pass of max-pooling.** Derive the gradient of
    two-dimensional max-pooling with respect to its input, for a
    $k_\textrm{h} \times k_\textrm{w}$ window and stride equal to the
@@ -473,6 +467,18 @@ between a query and representation vectors rather than by spatial location.
     *Adapted from Stanford CS231n,
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
     ConvolutionalNetworks, naive max-pooling backward pass.*
+
+1. **Max-pooling via ReLU.** ●
+    1. Prove that max-pooling cannot be implemented by a convolution
+       alone.
+    1. Express $\max(a, b)$ using only affine operations and
+       $\textrm{ReLU}(x) = \max(0, x)$.
+    1. Use this to implement max-pooling as a stack of convolutions and
+       ReLU layers.
+    1. Count the channels per layer and the ReLU layers that your
+       construction uses for a $2 \times 2$ window and for a
+       $3 \times 3$ window. How does the number of ReLU layers grow with
+       the number of entries in the window?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/71)

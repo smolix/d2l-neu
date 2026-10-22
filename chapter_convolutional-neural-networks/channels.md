@@ -417,6 +417,7 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
        $3 \times 3$ kernels have a $7 \times 7$ receptive field. Decide
        whether every single-channel $7 \times 7$ kernel is the composition
        of three $3 \times 3$ kernels, and justify the answer.
+
 1. **Cost and memory accounting.** A convolution with kernel shape
    $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$,
    total padding $(p_\textrm{h}, p_\textrm{w})$, and stride
@@ -433,11 +434,13 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
     1. Count the multiplications needed for the gradients with respect
        to the kernel and with respect to the input, and give the number
        of values these gradients occupy.
+
 1. [code] **The $1 \times 1$ equivalence.** The check in
    :numref:`subsec_1x1` asserts that the summed absolute difference
    between `Y1` and `Y2` is below $10^{-5}$. Test whether `Y1` and `Y2`
    are identical elementwise. If they are not, explain where the
    discrepancy originates.
+
 1. [code] **Multi-channel im2col.** Extend the patch matrix of
    :numref:`subsec_conv_matmul` to several input and output channels.
    Rebuild the two-channel `X` of :numref:`fig_conv_multi_in` and the
@@ -454,6 +457,7 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 10.6 and 10.7.*
+
 1. **Strip-buffered convolution.** A fast implementation of a stride-1
    $k \times k$ convolution copies a strip of input columns, spanning all
    $c_\textrm{i}$ channels and the full height, into fast memory. It
@@ -466,6 +470,7 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
        scheme?
     1. What limits how large $m$ can be, and how does the load count of
        the previous sub-item change as $m$ grows?
+
 1. **Grouped convolutions.** A grouped $k \times k$ convolution with $g$
    groups (:numref:`sec_depthwise_separable`) has
    $c_\textrm{i} c_\textrm{o} k^2 / g$ weights, but no information flows
@@ -475,15 +480,7 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
    channel, count the weights of the pair, and determine for which $g$ the
    pair is cheaper than a single dense $k \times k$ convolution with the
    same $c_\textrm{i}$ and $c_\textrm{o}$.
-1. **Channel permutation between groups.** ● Grouped layers can also be
-   mixed without dense weights. Follow a grouped $k \times k$ convolution
-   from $c_\textrm{i}$ to $c_\textrm{o}$ channels with $g$ groups by a
-   second grouped convolution from $c_\textrm{o}$ to $c_\textrm{o}$
-   channels with $g$ groups, and insert a fixed permutation of the
-   $c_\textrm{o}$ intermediate channels between the two layers. Find the
-   condition on $g$ and $c_\textrm{o}$ under which some permutation makes
-   each output of the second layer depend on all $c_\textrm{i}$ input
-   channels, and construct such a permutation when the condition holds.
+
 1. **Depthwise-separable block.** Consider a block of two dense
    $3 \times 3$ convolutions, each with $c$ input and $c$ output channels,
    the building block of VGG (:numref:`sec_vgg`). Now replace each of the
@@ -497,6 +494,16 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
        block and let it use $c'$ channels instead of $c$. Solve for $c'$
        and state its limit relative to $c$ as $c$ grows. What does this
        suggest about how to spend the savings of the factorization?
+
+1. **Channel permutation between groups.** ● Grouped layers can also be
+   mixed without dense weights. Follow a grouped $k \times k$ convolution
+   from $c_\textrm{i}$ to $c_\textrm{o}$ channels with $g$ groups by a
+   second grouped convolution from $c_\textrm{o}$ to $c_\textrm{o}$
+   channels with $g$ groups, and insert a fixed permutation of the
+   $c_\textrm{o}$ intermediate channels between the two layers. Find the
+   condition on $g$ and $c_\textrm{o}$ under which some permutation makes
+   each output of the second layer depend on all $c_\textrm{i}$ input
+   channels, and construct such a permutation when the condition holds.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/69)

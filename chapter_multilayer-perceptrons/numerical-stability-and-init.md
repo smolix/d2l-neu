@@ -547,6 +547,21 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 
 ## Exercises
 
+1. **Spectral norm bounds.** The gradient in :eqref:`eq_grad-product` is a
+   product of $L - l$ Jacobians. The spectral norm (the largest singular
+   value) is submultiplicative:
+   $\|\mathbf{A}\mathbf{B}\|_2 \le \|\mathbf{A}\|_2 \|\mathbf{B}\|_2$.
+    1. Prove submultiplicativity from the definition
+       $\|\mathbf{A}\|_2 = \max_{\mathbf{x} \neq 0} \|\mathbf{A}\mathbf{x}\| / \|\mathbf{x}\|$.
+    1. Use it to bound the norm of the gradient product in terms of the
+       per-layer norms $\|\mathbf{M}^{(l)}\|_2$. Which condition on the
+       per-layer norms keeps this bound from growing geometrically with
+       depth?
+    1. This bound is only an upper bound. Explain why the condition of the
+       previous part rules out exploding gradients but not vanishing ones,
+       and give two $2 \times 2$ matrices that satisfy the condition with
+       equality but whose product has spectral norm strictly smaller than
+       one.
 1. **Other symmetries.** Permuting the hidden units is not the only change
    of parameters that leaves an MLP's function unchanged. Consider a
    one-hidden-layer MLP in which hidden unit $j$ has incoming weights
@@ -593,23 +608,6 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
     1. Which of the two rules keeps both second moments within a
        depth-independent factor of their initial values for every sequence
        of widths?
-1. **Variance under ReLU.** ● The derivation in :numref:`subsec_he_init`
-   tracks the second moment $E[\textrm{ReLU}(z)^2]$ rather than the variance,
-   because the next layer's pre-activation $o = \sum_j w_j h_j$ with
-   independent zero-mean weights has
-   $\textrm{Var}[o] = n_\textrm{in}\sigma^2 E[h_j^2]$ whatever the mean of
-   $h_j$.
-    1. For $z \sim \mathcal{N}(0, \tau^2)$, compute $E[\textrm{ReLU}(z)]$ and
-       $\textrm{Var}[\textrm{ReLU}(z)]$ explicitly, and show that the
-       variance equals $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\tau^2$
-       rather than $\tfrac{1}{2}\tau^2$.
-    1. A tempting shortcut substitutes $\textrm{Var}[h_j]$ for $E[h_j^2]$ in
-       the Xavier computation. Show that this shortcut prescribes
-       $\sigma^2 = 2 / \bigl(n_\textrm{in}(1 - 1/\pi)\bigr)$ instead of
-       $2/n_\textrm{in}$. Compute the factor by which each ReLU layer
-       initialized this way actually multiplies the second moment, and the
-       total factor over the 50 layers of the sweep in
-       :numref:`subsec_variance_propagation`.
 1. [code] **Linear depth sweep.** Rerun the depth-sweep experiment of
    :numref:`subsec_variance_propagation` with the ReLU removed, i.e., for a
    purely *linear* stack of 50 layers of width 100 under the same three
@@ -620,30 +618,6 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
        factors against the slopes of the plotted curves.
     1. Compare the ranking of the three schemes with the ranking in the ReLU
        sweep and explain the difference.
-1. [code] **Tanh depth sweep.** ● Rerun the depth-sweep experiment of
-   :numref:`subsec_variance_propagation` with $\tanh$ in place of ReLU and
-   with Xavier weights. A layer then maps the second moment $q$ of its input to
-   $q' = E[\tanh(z)^2]$, where $z$ is approximately $\mathcal{N}(0, q)$.
-    1. Use $\tanh(z)^2 \approx z^2 - \tfrac{2}{3}z^4$ for small $z$ to show
-       that $q' \approx q - 2q^2$. Over many layers, does the second moment
-       stay constant, decay geometrically, or decay more slowly?
-    1. Check the prediction by running the sweep without the renormalization
-       step, and explain why that step is exact for ReLU but not for $\tanh$.
-1. **Spectral norm bounds.** The gradient in :eqref:`eq_grad-product` is a
-   product of $L - l$ Jacobians. The spectral norm (the largest singular
-   value) is submultiplicative:
-   $\|\mathbf{A}\mathbf{B}\|_2 \le \|\mathbf{A}\|_2 \|\mathbf{B}\|_2$.
-    1. Prove submultiplicativity from the definition
-       $\|\mathbf{A}\|_2 = \max_{\mathbf{x} \neq 0} \|\mathbf{A}\mathbf{x}\| / \|\mathbf{x}\|$.
-    1. Use it to bound the norm of the gradient product in terms of the
-       per-layer norms $\|\mathbf{M}^{(l)}\|_2$. Which condition on the
-       per-layer norms keeps this bound from growing geometrically with
-       depth?
-    1. This bound is only an upper bound. Explain why the condition of the
-       previous part rules out exploding gradients but not vanishing ones,
-       and give two $2 \times 2$ matrices that satisfy the condition with
-       equality but whose product has spectral norm strictly smaller than
-       one.
 1. [code] **Layerwise adaptive scaling.** ● Write
    $\mathbf{g}^{(l)} = \nabla_{\mathbf{W}^{(l)}} J$ for the gradient of the
    loss $J$ with respect to the weights of layer $l$. Layerwise adaptive
@@ -666,6 +640,32 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
     1. Replace the update by the scaled one, with the same $\eta$, and repeat
        the ten steps. Does the loss decrease? Relate the outcome to the
        forward-pass scale of the network at this initialization.
+1. **Variance under ReLU.** ● The derivation in :numref:`subsec_he_init`
+   tracks the second moment $E[\textrm{ReLU}(z)^2]$ rather than the variance,
+   because the next layer's pre-activation $o = \sum_j w_j h_j$ with
+   independent zero-mean weights has
+   $\textrm{Var}[o] = n_\textrm{in}\sigma^2 E[h_j^2]$ whatever the mean of
+   $h_j$.
+    1. For $z \sim \mathcal{N}(0, \tau^2)$, compute $E[\textrm{ReLU}(z)]$ and
+       $\textrm{Var}[\textrm{ReLU}(z)]$ explicitly, and show that the
+       variance equals $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\tau^2$
+       rather than $\tfrac{1}{2}\tau^2$.
+    1. A tempting shortcut substitutes $\textrm{Var}[h_j]$ for $E[h_j^2]$ in
+       the Xavier computation. Show that this shortcut prescribes
+       $\sigma^2 = 2 / \bigl(n_\textrm{in}(1 - 1/\pi)\bigr)$ instead of
+       $2/n_\textrm{in}$. Compute the factor by which each ReLU layer
+       initialized this way actually multiplies the second moment, and the
+       total factor over the 50 layers of the sweep in
+       :numref:`subsec_variance_propagation`.
+1. [code] **Tanh depth sweep.** ● Rerun the depth-sweep experiment of
+   :numref:`subsec_variance_propagation` with $\tanh$ in place of ReLU and
+   with Xavier weights. A layer then maps the second moment $q$ of its input to
+   $q' = E[\tanh(z)^2]$, where $z$ is approximately $\mathcal{N}(0, q)$.
+    1. Use $\tanh(z)^2 \approx z^2 - \tfrac{2}{3}z^4$ for small $z$ to show
+       that $q' \approx q - 2q^2$. Over many layers, does the second moment
+       stay constant, decay geometrically, or decay more slowly?
+    1. Check the prediction by running the sweep without the renormalization
+       step, and explain why that step is exact for ReLU but not for $\tanh$.
 
 
 :begin_tab:`mxnet`

@@ -233,7 +233,7 @@ Y = net(X)
 This dictionary records no `MLP` class identity. Its names and shapes can
 populate a network with a compatible architecture and naming structure. Renaming an attribute or changing the nesting can break that match
 even when the computation is equivalent; the final section shows how to
-migrate such keys explicitly.
+detect such mismatches when loading.
 
 ## safetensors: the Interchange Format
 
@@ -1386,7 +1386,69 @@ caller must compute and review the missing/unexpected key sets.
        result equals the tensor that `load_file` returns.
     1. Explain why a pickle-based checkpoint cannot offer the same
        single-tensor read without deserializing the whole object graph.
-1. [code] **Dtype round trip.** ● A `float16` number stores 5 exponent bits
+
+:begin_tab:`pytorch`
+3. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+   a second hidden layer `hidden2` of width 256 before the output layer and
+   renames the attribute `output` to `head`.
+    1. Load `mlp.safetensors` into `MLP2` with
+       `load_state_dict(..., strict=False)`. Read the returned report and
+       explain each missing and each unexpected key.
+    1. Rename the file's keys to the names that `MLP2` uses before loading.
+       Confirm that only `hidden2` keeps its fresh initialization, and make
+       the load raise on any unexpected key and on any missing key outside
+       `hidden2`.
+
+    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
+:end_tab:
+
+:begin_tab:`jax`
+3. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+   a second hidden layer `hidden2` of width 256 before the output layer and
+   renames the attribute `output` to `head`.
+    1. Load `mlp-jax.safetensors` into `MLP2` with the key-set merge that
+       loads it into `Classifier`. Report the missing and unexpected key
+       sets, and explain each entry.
+    1. Rename the file's keys to the names that `MLP2` uses before the
+       merge. Confirm that only `hidden2` keeps its fresh initialization,
+       and make the merge raise on any unexpected key and on any missing
+       key outside `hidden2`.
+
+    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
+:end_tab:
+
+:begin_tab:`tensorflow`
+3. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+   a second hidden layer named `hidden2` of width 256 before the output
+   layer and names the output layer `head` instead of `output`.
+    1. Load `mlp-tf.safetensors` into `MLP2` by assigning each variable
+       whose `path` appears in the file. List the variables that keep their
+       fresh initialization and the file entries that find no variable, and
+       explain each.
+    1. Rename the file's keys to the paths that `MLP2` uses before
+       assigning. Confirm that only `hidden2` keeps its fresh
+       initialization, and make the load raise on any unexpected key and on
+       any missing path outside `hidden2`.
+
+    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
+:end_tab:
+
+:begin_tab:`mxnet`
+3. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+   a second hidden layer `hidden2` of width 256 before the output layer and
+   renames the attribute `output` to `head`.
+    1. Load `mlp-mx.safetensors` into `MLP2` with
+       `load_dict(..., allow_missing=True, ignore_extra=True)`. Compute the
+       missing and unexpected key sets, and explain each entry.
+    1. Rename the file's keys to the names that `MLP2` uses before loading.
+       Confirm that only `hidden2` keeps its fresh initialization, and make
+       the load raise on any unexpected key and on any missing key outside
+       `hidden2`.
+
+    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
+:end_tab:
+
+4. [code] **Dtype round trip.** ● A `float16` number stores 5 exponent bits
    and 10 mantissa bits, against 8 and 23 in `float32`
    (:numref:`sec_numerics`). Cast the parameters of an `MLP` to `float16`,
    save them, and load them back into a `float32` `MLP`.
@@ -1413,69 +1475,7 @@ caller must compute and review the missing/unexpected key sets.
        Compare this trend with the full-batch one, and explain which
        property of the minibatch iterates stochastic weight averaging
        :cite:`Izmailov.Podoprikhin.Garipov.ea.2018` exploits.
-
-:begin_tab:`pytorch`
-5. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
-   a second hidden layer `hidden2` of width 256 before the output layer and
-   renames the attribute `output` to `head`.
-    1. Load `mlp.safetensors` into `MLP2` with
-       `load_state_dict(..., strict=False)`. Read the returned report and
-       explain each missing and each unexpected key.
-    1. Rename the file's keys to the names that `MLP2` uses before loading.
-       Confirm that only `hidden2` keeps its fresh initialization, and make
-       the load raise on any unexpected key and on any missing key outside
-       `hidden2`.
-
-    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
-:end_tab:
-
-:begin_tab:`jax`
-5. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
-   a second hidden layer `hidden2` of width 256 before the output layer and
-   renames the attribute `output` to `head`.
-    1. Load `mlp-jax.safetensors` into `MLP2` with the key-set merge that
-       loads it into `Classifier`. Report the missing and unexpected key
-       sets, and explain each entry.
-    1. Rename the file's keys to the names that `MLP2` uses before the
-       merge. Confirm that only `hidden2` keeps its fresh initialization,
-       and make the merge raise on any unexpected key and on any missing
-       key outside `hidden2`.
-
-    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
-:end_tab:
-
-:begin_tab:`tensorflow`
-5. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
-   a second hidden layer named `hidden2` of width 256 before the output
-   layer and names the output layer `head` instead of `output`.
-    1. Load `mlp-tf.safetensors` into `MLP2` by assigning each variable
-       whose `path` appears in the file. List the variables that keep their
-       fresh initialization and the file entries that find no variable, and
-       explain each.
-    1. Rename the file's keys to the paths that `MLP2` uses before
-       assigning. Confirm that only `hidden2` keeps its fresh
-       initialization, and make the load raise on any unexpected key and on
-       any missing path outside `hidden2`.
-
-    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
-:end_tab:
-
-:begin_tab:`mxnet`
-5. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
-   a second hidden layer `hidden2` of width 256 before the output layer and
-   renames the attribute `output` to `head`.
-    1. Load `mlp-mx.safetensors` into `MLP2` with
-       `load_dict(..., allow_missing=True, ignore_extra=True)`. Compute the
-       missing and unexpected key sets, and explain each entry.
-    1. Rename the file's keys to the names that `MLP2` uses before loading.
-       Confirm that only `hidden2` keeps its fresh initialization, and make
-       the load raise on any unexpected key and on any missing key outside
-       `hidden2`.
-
-    *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
-:end_tab:
-
-6. [extended] **Crash-safe manifest.** ●
+1. [extended] **Crash-safe manifest.** ●
     1. Build a utility that writes model state, optimizer state, and a JSON
        metadata file under a fresh step-numbered prefix, then publishes the
        three by renaming into place one manifest that records each file's

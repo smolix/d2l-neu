@@ -634,6 +634,43 @@ limit known as the critical batch size.
 
 ## Exercises
 
+1. [code] **Block width and throughput.** The blocked computation in
+   :numref:`sec_minibatches` multiplies 64 columns of $\mathbf{C}$ at a
+   time.
+    1. Vary the block width $w$ over $\{1, 4, 16, 64, 256\}$. Time each
+       variant with `timer` after one untimed warm-up run, and report its
+       throughput in gigaflops. Then divide each time by the number of
+       calls, $256/w$. Use the time per call to decide, for each width,
+       whether dispatch overhead or arithmetic dominates.
+    1. Repeat the column-wise and one-call computations of
+       :numref:`subsec_minibatch-vectorization` and the blocked computation
+       with $4096 \times 4096$ matrices on a GPU, waiting for the device to
+       finish before each `timer.stop()`. Which ratios between the variants
+       change, and what does the change say about dispatch overhead
+       relative to arithmetic?
+
+1. **Duplicated data.** Suppose every example in the training set is
+   silently duplicated, so that the dataset doubles in size while its
+   empirical distribution is unchanged. For SGD with $b = 1$, for minibatch
+   SGD at a fixed $b$, and for full-batch gradient descent, state whether
+   the cost per step, the number of steps to reach a given loss, and the
+   variance of the gradient estimate change, and explain each answer.
+
+1. [code] **Gradient accumulation.** Implement gradient accumulation on top
+   of `train_ch11`: sum the gradients of $k$ consecutive minibatches of
+   size $b$ and update once with their average.
+    1. Take $b = 10$, $k = 10$ and the learning rate $0.05$. Set the same
+       random seed before this run and before a run with batch size
+       $kb = 100$ at the same learning rate, so that both draw the same
+       initial weights and the same example order. Plot both loss
+       trajectories against the number of examples processed and report
+       the largest difference between them.
+    1. Remove the division by $k$, so that the update uses the sum of the
+       $k$ gradients. Which learning rate of the batch-size-100 run does
+       the accumulated run now reproduce?
+    1. Compare the two runs of (a) against wall-clock time. Which costs
+       more per example, and where in the code does the difference arise?
+
 1. [code] **Batch size and learning rate together.** ● `train_sgd` trains
    the linear model at a chosen batch size and learning rate and returns
    the cumulative wall-clock times and the recorded losses. Fix
@@ -654,40 +691,6 @@ limit known as the critical batch size.
        runs diverge.
     1. At $b = 1$, which rule reaches the lower final loss? Explain the
        ordering with :eqref:`eq_sgd-noise-ball`.
-1. [code] **Block width and throughput.** The blocked computation in
-   :numref:`sec_minibatches` multiplies 64 columns of $\mathbf{C}$ at a
-   time.
-    1. Vary the block width $w$ over $\{1, 4, 16, 64, 256\}$. Time each
-       variant with `timer` after one untimed warm-up run, and report its
-       throughput in gigaflops. Then divide each time by the number of
-       calls, $256/w$. Use the time per call to decide, for each width,
-       whether dispatch overhead or arithmetic dominates.
-    1. Repeat the column-wise and one-call computations of
-       :numref:`subsec_minibatch-vectorization` and the blocked computation
-       with $4096 \times 4096$ matrices on a GPU, waiting for the device to
-       finish before each `timer.stop()`. Which ratios between the variants
-       change, and what does the change say about dispatch overhead
-       relative to arithmetic?
-1. **Duplicated data.** Suppose every example in the training set is
-   silently duplicated, so that the dataset doubles in size while its
-   empirical distribution is unchanged. For SGD with $b = 1$, for minibatch
-   SGD at a fixed $b$, and for full-batch gradient descent, state whether
-   the cost per step, the number of steps to reach a given loss, and the
-   variance of the gradient estimate change, and explain each answer.
-1. [code] **Gradient accumulation.** Implement gradient accumulation on top
-   of `train_ch11`: sum the gradients of $k$ consecutive minibatches of
-   size $b$ and update once with their average.
-    1. Take $b = 10$, $k = 10$ and the learning rate $0.05$. Set the same
-       random seed before this run and before a run with batch size
-       $kb = 100$ at the same learning rate, so that both draw the same
-       initial weights and the same example order. Plot both loss
-       trajectories against the number of examples processed and report
-       the largest difference between them.
-    1. Remove the division by $k$, so that the update uses the sum of the
-       $k$ gradients. Which learning rate of the batch-size-100 run does
-       the accumulated run now reproduce?
-    1. Compare the two runs of (a) against wall-clock time. Which costs
-       more per example, and where in the code does the difference arise?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1068)

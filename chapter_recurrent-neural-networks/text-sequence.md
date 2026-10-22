@@ -480,7 +480,7 @@ print_wrapped(len(crossers), 'tokens cross a word boundary, e.g.',
 Merges like "of the " compress the training corpus, but they are brittle
 composites: they burn vocabulary slots on specific phrase spellings,
 fragment the counts of the words they contain ("of" now appears in many
-disguises), and generalize poorly to new text. Every production tokenizer
+disguises). Every production tokenizer
 therefore adds one ingredient we have so far omitted: *pre-tokenization*.
 The text is first split into chunks with a regular expression, and BPE is
 trained, and applied, strictly *within* chunks, so no merge can cross a
@@ -828,9 +828,7 @@ to model them.
     1. Give the segmentation that every occurrence of "abc" in the
        training corpus had at the end of training, and say which rule
        agrees with it.
-1. **Rank replay.** ● Argue that, for any merge table learned by
-   `BPETokenizer.train`, the rank rule of `_encode_chunk` reproduces the
-   end-of-training segmentation of every chunk of the training corpus.
+
 1. [code] **Cross-corpus compression.** Train a `BPETokenizer` with a
    1,024-token vocabulary and `BPETokenizer.GPT2_PATTERN` on a different
    text of your choice, such as another public-domain book, your own
@@ -841,18 +839,7 @@ to model them.
     1. Measure bytes per token of your tokenizer on *The Time Machine*
        and of `bpe` on your corpus, and compare both with the in-domain
        figures.
-1. [code] **Pre-tokenization ablation.** ● Split `raw_text` into its first
-   90% and its last 10%. On the first part, train two 4,096-token
-   tokenizers that differ only in the pattern: one without a pattern, as
-   `big` was trained, and one with `BPETokenizer.GPT2_PATTERN`.
-    1. List the 20 longest tokens learned by each tokenizer, and mark
-       those that span more than one word.
-    1. Measure which of the two compresses the first part better, and
-       explain the outcome in terms of the merge rule.
-    1. Measure bytes per token of both tokenizers on the last 10%. Which
-       tokenizer loses the larger fraction of its compression on this
-       held-out text, and which compresses it better? Relate both answers
-       to the tokens you listed.
+
 1. [code] **Special-token round trip.** :numref:`subsec_special-tokens`
    places special tokens above the BPE id range so that ordinary text can
    never produce them. Construct a `BPETokenizer` whose `specials` add a
@@ -873,6 +860,7 @@ to model them.
     *Adapted from Andrej Karpathy,
     [minbpe](https://github.com/karpathy/minbpe/blob/master/exercise.md),
     Step 4.*
+
 1. [code] **Digit chunking.** Tokenize the addition prompts "1234+5678=",
    "1234+567=" and "567+678=" and their sums "6912", "1801" and "1245"
    with the `gpt2` and `o200k_base` encodings of `tiktoken`, writing out
@@ -885,6 +873,7 @@ to model them.
        they do not.
     1. Propose a pre-tokenization rule that aligns tokens with place
        value, and state one drawback of your rule.
+
 1. **Glitch tokens.** :numref:`subsec_fertility-digits-glitch` attributes
    a glitch token to a string that was frequent in the tokenizer's
    training corpus but absent from the language model's.
@@ -894,6 +883,24 @@ to model them.
     1. Propose a test that flags glitch tokens given the trained embedding
        table and the model's training corpus, and state what each of the
        two inputs contributes.
+
+1. **Rank replay.** ● The *rank rule* of `_encode_chunk` always applies
+   the lowest-ranked applicable merge. Argue that, for any merge table
+   learned by `BPETokenizer.train`, the rank rule reproduces the
+   end-of-training segmentation of every chunk of the training corpus.
+
+1. [code] **Pre-tokenization ablation.** ● Split `raw_text` into its first
+   90% and its last 10%. On the first part, train two 4,096-token
+   tokenizers that differ only in the pattern: one without a pattern, as
+   `big` was trained, and one with `BPETokenizer.GPT2_PATTERN`.
+    1. List the 20 longest tokens learned by each tokenizer, and mark
+       those that span more than one word.
+    1. Measure which of the two compresses the first part better, and
+       explain the outcome in terms of the merge rule.
+    1. Measure bytes per token of both tokenizers on the last 10%. Which
+       tokenizer loses the larger fraction of its compression on this
+       held-out text, and which compresses it better? Relate both answers
+       to the tokens you listed.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/117)

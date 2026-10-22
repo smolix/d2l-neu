@@ -1332,6 +1332,7 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
     1. Now the updates go to an fp32 master copy, and a bf16 working copy
        is rounded from the master copy after every update. Predict the
        final values of both copies.
+
 1. **Mixed-precision memory.** :numref:`sec_parameters` quotes three
    per-parameter ledgers: 16 bytes for fp32 Adam, 18 bytes when an fp16
    working copy of the weights is kept, and 16 bytes for the ZeRO
@@ -1346,6 +1347,23 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
        bytes in fp32 and in the 16-bit format `train` uses. At which batch
        size does the activation saving equal the persistent training state
        of this MLP?
+
+1. **Loss scaling on overflow.** Under dynamic loss scaling
+   (:numref:`subsec_loss_scaling`), a step whose unscaled gradients contain
+   an `inf` or NaN is skipped and the scale is halved. After $N$
+   consecutive clean steps, the scale is doubled.
+    1. A skipped step must leave Adam's moment estimates untouched. Explain
+       what would go wrong if the step instead updated the moments with the
+       non-finite gradient, and what would go wrong if it updated them with
+       the non-finite entries replaced by zeros.
+    1. Explain why the scale must grow again after a run of clean steps
+       instead of only shrinking.
+    1. Suppose that every step overflows when the scale is above a fixed
+       threshold and that no step overflows below it. Once the scale has
+       settled, what fraction of steps is skipped as a function of $N$?
+       Without the assumption of a fixed threshold, what does a larger $N$
+       cost?
+
 1. [code] **Normalization in fp16.** Mixed-precision recipes run
    normalization layers in fp32. To see why, consider RMSNorm with its
    gain set to one (:numref:`sec_custom_layer` implements it as a
@@ -1362,21 +1380,6 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
     1. Take the squares as exact. At what input standard deviation does
        their mean exceed the fp16 maximum, and at what standard deviation
        does their sum over the $d$ entries exceed it?
-1. **Loss scaling on overflow.** Under dynamic loss scaling
-   (:numref:`subsec_loss_scaling`), a step whose unscaled gradients contain
-   an `inf` or NaN is skipped and the scale is halved. After $N$
-   consecutive clean steps, the scale is doubled.
-    1. A skipped step must leave Adam's moment estimates untouched. Explain
-       what would go wrong if the step instead updated the moments with the
-       non-finite gradient, and what would go wrong if it updated them with
-       the non-finite entries replaced by zeros.
-    1. Explain why the scale must grow again after a run of clean steps
-       instead of only shrinking.
-    1. Suppose that every step overflows when the scale is above a fixed
-       threshold and that no step overflows below it. Once the scale has
-       settled, what fraction of steps is skipped as a function of $N$?
-       Without the assumption of a fixed threshold, what does a larger $N$
-       cost?
 
 :begin_tab:`pytorch`
 5. [code] **The e4m3fn format.** ● Print `torch.finfo(torch.float8_e4m3fn)`

@@ -400,6 +400,7 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
     1. The second derivative of $|x|^{1.5}$ is unbounded near the origin.
        Explain what the iterates do close to $0$ at any fixed $\eta$, and
        why the stopping test is reached late or not at all.
+
 1. [code] **Bisection line search.** A convex differentiable $f$ on $[a, b]$
    can be minimized by bisection: evaluate the sign of $f'$ at the midpoint
    and keep $[a, (a+b)/2]$ or $[(a+b)/2, b]$ accordingly.
@@ -414,38 +415,25 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
        $x_0 = 5$ and to stop once $|f'(x)| < 10^{-6}$, find the fixed
        learning rate that minimizes its step count on the same function,
        and compare that count with the bisection count.
-1. [code] **Newton's convergence order.** ● In :numref:`subsec_gd-newton`,
-   `newton` converges in a few steps on $f(x) = \cosh(cx)$. Run it with
-   $c = 0.5$ from $x_0 = 10$ and record $|x_t|$ after every step.
-    1. From the last steps before $x_t$ reaches $0$ in floating point,
-       estimate the order $p$ in $|x_{t+1}| \approx C |x_t|^p$. Where does
-       this fast phase begin, and what governs the steps before it?
-    1. Derive $p$ and $C$ from the Taylor expansion of the update
-       $x - \tanh(cx)/c$ around $0$, and reconcile $p$ with the quadratic
-       rate stated in :numref:`subsec_mdl-why-not-newton`.
+
+1. [code] **Counting local minima.** The objective
+   $f(x) = x\cos(cx)$ with $c = 0.15\pi$ of :numref:`subsec_gd-local-minima`
+   has many local minima, each with its own basin of attraction.
+    1. Locate every local minimum of $f$ in the open interval $(-20, 20)$
+       and its value. How does the number of local minima grow as the
+       interval widens?
+    1. Let `gd` take its starting point as an argument. Run 20 steps from
+       $x_0 \in \{-10, 5, 10\}$ at $\eta \in \{0.5, 1, 2\}$ and record
+       the minimum each run ends near, if any. Which combinations reach the
+       lowest local minimum in $(-20, 20)$, and why does the largest
+       learning rate change basins?
+
 1. [code] **Damped Newton steps.** In :numref:`subsec_gd-newton`, `newton`
    heads for a maximum of $f(x) = x\cos(cx)$ unless damped. On
    $x\cos(cx)$ from $x_0 = 10$, sweep the damping
    $\eta \in \{0.25, 0.5, 0.75, 1\}$. Which runs end at a minimum, and what
    is the sign of `f_hess` along the paths of those that do not?
-1. [code] **Stale Hessian factorizations.** ● A Newton step in $d$
-   dimensions can reuse the Hessian factorization of an earlier step.
-   Minimize
-   $f(\mathbf{x}) = \sum_{i=1}^{n} \cosh(c\, \mathbf{a}_i^\top \mathbf{x})$
-   with $n = 200$, $d = 50$, $c = 0.5$, directions $\mathbf{a}_i$ with
-   independent standard Gaussian entries, and $\mathbf{x}_0 = \mathbf{1}$.
-   Its minimum is $f^\star = n$ at $\mathbf{x} = \mathbf{0}$. Charge $4nd$
-   operations per gradient, $nd^2$ per Hessian evaluation, $d^3/3$ per
-   Cholesky factorization, and $2d^2$ per pair of triangular solves.
-   Evaluate and factor the Hessian on every step, every 5 steps, and every
-   20 steps, reusing the stale factorization in between. Plot
-   $f(\mathbf{x}_t) - f^\star$ against the cumulative operation count
-   rather than the iteration count. Which variant reaches $10^{-8}$ first,
-   and which of the four costs dominates its total?
 
-    *Adapted from Stephen Boyd and Lieven Vandenberghe,
-    [Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/),
-    Exercise 9.31(a).*
 1. [code] **Diagonal preconditioning.** The update
    :eqref:`eq_gd-diag-precond` of :numref:`subsec_gd-preconditioning`
    gives every coordinate its own learning rate.
@@ -466,6 +454,7 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
        method. Which of the three are unaffected by the rotation? Explain
        the behavior of the diagonal preconditioner from the entries of the
        rotated Hessian.
+
 1. [code] **Absolute-curvature preconditioning.** Replace
    $\textrm{diag}(\mathbf{H})^{-1}$ in :eqref:`eq_gd-diag-precond` by
    $|\textrm{diag}(\mathbf{H})|^{-1}$ and run this variant at $\eta = 1$ on
@@ -473,23 +462,42 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
    $c = 0.15\pi$ from the starting point of `d2l.train_2d`. Show that every
    update direction is a descent direction. Does every step decrease $f$?
    Explain the size of the largest step of the run.
-1. [code] **Counting local minima.** The objective
-   $f(x) = x\cos(cx)$ with $c = 0.15\pi$ of :numref:`subsec_gd-local-minima`
-   has many local minima, each with its own basin of attraction.
-    1. Locate every local minimum of $f$ in the open interval $(-20, 20)$
-       and its value. How does the number of local minima grow as the
-       interval widens?
-    1. Let `gd` take its starting point as an argument. Run 20 steps from
-       $x_0 \in \{-10, 5, 10\}$ at $\eta \in \{0.5, 1, 2\}$ and record
-       the minimum each run ends near, if any. Which combinations reach the
-       lowest local minimum in $(-20, 20)$, and why does the largest
-       learning rate change basins?
+
 1. **Certifying the lowest minimum.** ● Modify the objective
    $f(x) = x\cos(cx)$ with $c = 0.15\pi$ of :numref:`subsec_gd-local-minima`
    so that its local minima in $(-20, 20)$ differ in value by at most
    $10^{-3}$ except for one. Explain why any method that uses only $f$ and
    $f'$ at the points it visits must then visit every basin before it can
    certify which local minimum is lowest.
+
+1. [code] **Newton's convergence order.** ● In :numref:`subsec_gd-newton`,
+   `newton` converges in a few steps on $f(x) = \cosh(cx)$. Run it with
+   $c = 0.5$ from $x_0 = 10$ and record $|x_t|$ after every step.
+    1. From the last steps before $x_t$ reaches $0$ in floating point,
+       estimate the order $p$ in $|x_{t+1}| \approx C |x_t|^p$. Where does
+       this fast phase begin, and what governs the steps before it?
+    1. Derive $p$ and $C$ from the Taylor expansion of the update
+       $x - \tanh(cx)/c$ around $0$, and reconcile $p$ with the quadratic
+       rate stated in :numref:`subsec_mdl-why-not-newton`.
+
+1. [code] **Stale Hessian factorizations.** ● A Newton step in $d$
+   dimensions can reuse the Hessian factorization of an earlier step.
+   Minimize
+   $f(\mathbf{x}) = \sum_{i=1}^{n} \cosh(c\, \mathbf{a}_i^\top \mathbf{x})$
+   with $n = 200$, $d = 50$, $c = 0.5$, directions $\mathbf{a}_i$ with
+   independent standard Gaussian entries, and $\mathbf{x}_0 = \mathbf{1}$.
+   Its minimum is $f^\star = n$ at $\mathbf{x} = \mathbf{0}$. Charge $4nd$
+   operations per gradient, $nd^2$ per Hessian evaluation, $d^3/3$ per
+   Cholesky factorization, and $2d^2$ per pair of triangular solves.
+   Evaluate and factor the Hessian on every step, every 5 steps, and every
+   20 steps, reusing the stale factorization in between. Plot
+   $f(\mathbf{x}_t) - f^\star$ against the cumulative operation count
+   rather than the iteration count. Which variant reaches $10^{-8}$ first,
+   and which of the four costs dominates its total?
+
+    *Adapted from Stephen Boyd and Lieven Vandenberghe,
+    [Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/),
+    Exercise 9.31(a).*
 
 [Discussions](https://d2l.discourse.group/t/351)
 

@@ -748,6 +748,8 @@ is why serious runs grow their batch during training rather than fixing it.
        $\log b_{\textrm{noise}}$ linearly in the loss between checkpoints.
        Explain why the step counts of this run at $b = 64$ would not tell
        a ramped run when to double.
+   :exlabel:`ex_batch-size-noise-scale-over-training`
+
 1. [code] **Past the elbow.** Extend the `TinyLM` sweep of
    :numref:`subsec_batch-size-steps` to $b = 1024$ under the square-root
    rule of :eqref:`eq_lr-rules`, then rerun $b = 1024$ with $\eta$ held at
@@ -757,25 +759,13 @@ is why serious runs grow their batch during training rather than fixing it.
     1. Explain both observations with :eqref:`eq_steps-examples` and the
        saturating optimal step size
        $\eta_{\textrm{opt}}(b) = \eta_{\max} / (1 + b_{\textrm{noise}}/b)$.
-1. [code] **The factor-of-two check.** ● Equation :eqref:`eq_steps-examples`
-   predicts that examples-to-target reach twice their minimum at
-   $b = b_{\textrm{noise}}$, where $b_{\textrm{noise}}$ is averaged over
-   the run.
-    1. From the checkpoints of the first problem, average
-       $b_{\textrm{noise}}$ over the training steps before the loss first
-       falls to $1.5$, interpolating linearly between checkpoints.
-    1. Interpolate $\log (b\, S(b))$ linearly in $\log b$ from `lm_bs` and
-       `lm_steps`, and find the batch size at which $b\, S(b)$ reaches
-       twice its smallest measured value. By what factor does this elbow
-       differ from the average of the first sub-item?
-    1. Repeat the sweep and the checkpoint measurements with a second
-       seed. Is the gap between the two estimates larger than the
-       seed-to-seed scatter of each?
+
 1. [code] **Retuning instead of scaling.** The CNN sweep recorded in
    `cnn_bs` and `cnn_steps` moved $\eta$ by the square-root rule rather than
    retuning. For each batch size, run a three-point learning-rate grid
    spaced by factors of two around the rule's value and keep the best
    steps-to-target. Which points of the curve move, and does the elbow?
+
 1. **Time-optimal and compute-optimal batch size.** Suppose one
    optimizer step at batch size $b$ takes
    $t(b) = t_0 (1 + b / b_{\textrm{sat}})$ seconds, where $b_{\textrm{sat}}$
@@ -785,17 +775,8 @@ is why serious runs grow their batch during training rather than fixing it.
    the smallest batch. Using :eqref:`eq_steps-examples`, find the batch
    size that minimizes $T(b)$, and express its $E(b)$ as a multiple of
    $E_{\min}$.
-1. [extended] **Measured time-compute tradeoff.** ● The step-time model
-   $t(b)$ of the previous problem has two constants, $t_0$ and
-   $b_{\textrm{sat}}$, that depend on the hardware.
-    1. Measure $t_0$ and $b_{\textrm{sat}}$ for `TinyLM` on your hardware
-       with `d2l.Timer` by timing steps at several batch sizes.
-    1. Combine $t(b)$ with `lm_bs` and `lm_steps` and plot $T(b)$ against
-       $E(b)$. Compare the time-optimal batch size on this curve with the
-       prediction of the previous problem, evaluated at the run-averaged
-       $b_{\textrm{noise}}$ of the third problem. By what factor does the
-       time-optimal batch cut $T(b)$ relative to $b = 4$, and by what
-       factor does it raise $E(b)$?
+   :exlabel:`ex_batch-size-time-optimal-compute-optimal`
+
 1. [code] **Noise scale per population.** ● The census of
    :numref:`subsec_tinylm` splits `TinyLM`'s parameters into embeddings,
    matrices, and vectors. Restrict `grad_sq_norm` to one population at a
@@ -810,6 +791,33 @@ is why serious runs grow their batch during training rather than fixing it.
        embeddings' noise scale.
     1. What does the ranking imply for one global batch size serving all
        three populations?
+
+1. [code] **The factor-of-two check.** ● Equation :eqref:`eq_steps-examples`
+   predicts that examples-to-target reach twice their minimum at
+   $b = b_{\textrm{noise}}$, where $b_{\textrm{noise}}$ is averaged over
+   the run.
+    1. From the checkpoints of problem :exref:`ex_batch-size-noise-scale-over-training`, average
+       $b_{\textrm{noise}}$ over the training steps before the loss first
+       falls to $1.5$, interpolating linearly between checkpoints.
+    1. Interpolate $\log (b\, S(b))$ linearly in $\log b$ from `lm_bs` and
+       `lm_steps`, and find the batch size at which $b\, S(b)$ reaches
+       twice its smallest measured value. By what factor does this elbow
+       differ from the average of the first sub-item?
+    1. Repeat the sweep and the checkpoint measurements with a second
+       seed. Is the gap between the two estimates larger than the
+       seed-to-seed scatter of each?
+
+1. [extended] **Measured time-compute tradeoff.** ● The step-time model
+   $t(b)$ of problem :exref:`ex_batch-size-time-optimal-compute-optimal` has two constants, $t_0$ and
+   $b_{\textrm{sat}}$, that depend on the hardware.
+    1. Measure $t_0$ and $b_{\textrm{sat}}$ for `TinyLM` on your hardware
+       with `d2l.Timer` by timing steps at several batch sizes.
+    1. Combine $t(b)$ with `lm_bs` and `lm_steps` and plot $T(b)$ against
+       $E(b)$. Compare the time-optimal batch size on this curve with the
+       prediction of problem :exref:`ex_batch-size-time-optimal-compute-optimal`, evaluated at the run-averaged
+       $b_{\textrm{noise}}$ of problem 6. By what factor does the
+       time-optimal batch cut $T(b)$ relative to $b = 4$, and by what
+       factor does it raise $E(b)$?
 
 [Discussions](https://d2l.discourse.group/)
 

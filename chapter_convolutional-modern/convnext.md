@@ -733,6 +733,7 @@ schedule, `CategoricalCrossentropy` with `label_smoothing`, and `mixup` of
        channels, would have caused.
     1. Choose two rows whose gains you expect to depend on their order, and
        design the additional runs that would measure the interaction.
+
 1. **Where the parameters live.**
     1. For the `ConvNeXt` of this section, compute the fraction of
        parameters in the depthwise convolutions, in the $1 \times 1$
@@ -743,6 +744,7 @@ schedule, `CategoricalCrossentropy` with `label_smoothing`, and `mixup` of
        block of :numref:`sec_resnet` without the $1 \times 1$ shortcut as
        functions of the width $c$. Which design decision makes the ConvNeXt
        block cheaper, and by what factor for large $c$?
+
 1. **Normalization axes.** The activations entering a normalization layer
    form a minibatch of $n$ images, each with $c$ channels on an
    $h \times w$ map. Consider three layers: batch normalization, the
@@ -754,14 +756,7 @@ schedule, `CategoricalCrossentropy` with `label_smoothing`, and `mixup` of
     1. A network trained on $96 \times 96$ images is evaluated on
        $224 \times 224$ images. Which of the three layers can be applied to
        the larger images with their trained parameters unchanged? Explain.
-1. [code] **Depthwise kernel size.** ● Under the compact modern recipe of
-   :numref:`tab_convnext_local`, train `ConvNeXt` with $3 \times 3$ and
-   with $11 \times 11$ depthwise convolutions that leave the feature-map
-   size unchanged, and compare accuracy, parameter count, and time per
-   epoch against the $7 \times 7$ baseline. Does accuracy saturate at
-   $7 \times 7$ here as :citet:`liu2022convnet` report on ImageNet? How
-   does the change in time per epoch compare with the change in the
-   depthwise term's arithmetic, and why?
+
 1. [code] **Layer scale.** Under the compact modern recipe of
    :numref:`tab_convnext_local`, train `ConvNeXt` with $\gamma$ initialized
    to $10^{-6}$ (the default), with $\gamma$ initialized to $1$, and with
@@ -770,6 +765,7 @@ schedule, `CategoricalCrossentropy` with `label_smoothing`, and `mixup` of
    the network effectively shallower than its block count. For each
    mechanism, explain how it does so, state when during training it acts,
    and state whether it changes the network used at evaluation.
+
 1. [code] **Global Response Normalization.** ConvNeXt V2
    :cite:`woo2023convnextv2` inserts GRN after the GELU of the block and
    removes layer scale. For a feature map $\mathbf{X}$ with $C$ channels,
@@ -784,8 +780,19 @@ schedule, `CategoricalCrossentropy` with `label_smoothing`, and `mixup` of
        after the GELU, dropping layer scale.
     1. Retrain under the compact modern recipe and compare the test
        accuracy with :numref:`tab_convnext_local`.
+   :exlabel:`ex_convnext-global-response-normalization`
+
+1. [code] **Depthwise kernel size.** ● Under the compact modern recipe of
+   :numref:`tab_convnext_local`, train `ConvNeXt` with $3 \times 3$ and
+   with $11 \times 11$ depthwise convolutions that leave the feature-map
+   size unchanged, and compare accuracy, parameter count, and time per
+   epoch against the $7 \times 7$ baseline. Does accuracy saturate at
+   $7 \times 7$ here as :citet:`liu2022convnet` report on ImageNet? How
+   does the change in time per epoch compare with the change in the
+   depthwise term's arithmetic, and why?
+
 1. [code] **Channel redundancy.** ● Take the `ConvNeXt` trained with GRN in
-   the previous problem and the one trained without it under the same
+   problem :exref:`ex_convnext-global-response-normalization` and the one trained without it under the same
    recipe. Measure the channel redundancy that GRN was designed to prevent,
    at the input of the second $1 \times 1$ convolution of every block. For
    each test image, flatten each channel's map into a vector over the
@@ -793,6 +800,7 @@ schedule, `CategoricalCrossentropy` with `label_smoothing`, and `mixup` of
    channels. Average over the test images and compare the networks with and
    without GRN block by block. In which stages, if any, does GRN make the
    channels less similar?
+
 1. [code] **Recipe downgrade.** ● The comparison in :numref:`tab_convnext_local`
    trains two architectures under the compact modern recipe. Complete the
    ablation square by training both models under recipe A of

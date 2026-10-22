@@ -325,18 +325,8 @@ activation checkpointing at scale.
 
     *Adapted from CMU 11-785,
     [Homework 3 Part 1](https://deeplearning.cs.cmu.edu/F22/document/homework/HW3/HW3P1_F22.pdf).*
-1. [code] **Backward pass in code.** ● Train `d2l.RNNLMScratch` on
-   `d2l.TimeMachine` as in :numref:`sec_rnn-scratch`. Using the
-   single-step gradients and the recursion of the previous problem,
-   implement the backward pass of its `RNNScratch` cell over a full
-   window with tensor operations only, starting from the gradient of the
-   loss with respect to the logits
-   (:numref:`subsec_softmax_and_derivatives`). Run it on one training
-   minibatch, and compare your gradients of `W_xh`, `W_hh`, and `b_h`
-   with those computed by automatic differentiation.
+   :exlabel:`ex_bptt-backward-pass-hand`
 
-    *Adapted from CMU 11-785,
-    [Homework 3 Part 1](https://deeplearning.cs.cmu.edu/F22/document/homework/HW3/HW3P1_F22.pdf).*
 1. **Power iteration and alignment.** Let
    $\mathbf{M} \in \mathbb{R}^{n \times n}$ be symmetric with eigenvalues
    $\lambda_i$ and eigenvectors $\mathbf{v}_i$ for $i = 1, \ldots, n$,
@@ -350,6 +340,31 @@ activation checkpointing at scale.
        which the alignment holds.
     1. What does this imply for the gradient :eqref:`eq_bptt_partial_L_ht`
        of an RNN, beyond the change in its norm?
+
+1. **Beyond clipping.** Propose two methods for coping with exploding
+   gradients in a vanilla RNN other than clipping, truncation, and the
+   two architectural remedies of
+   :numref:`subsec_bptt-gradient-pathologies`. One method should act on
+   the parameters and the other on the optimizer step. For each, state
+   whether it changes the Jacobian product in
+   :eqref:`eq_bptt_partial_L_ht` or only limits what a large gradient
+   does to the update, and whether it also helps against vanishing
+   gradients. If it changes the product, name the property of the
+   product that it controls.
+
+1. [code] **Backward pass in code.** ● Train `d2l.RNNLMScratch` on
+   `d2l.TimeMachine` as in :numref:`sec_rnn-scratch`. Using the
+   single-step gradients and the recursion of problem :exref:`ex_bptt-backward-pass-hand`,
+   implement the backward pass of its `RNNScratch` cell over a full
+   window with tensor operations only, starting from the gradient of the
+   loss with respect to the logits
+   (:numref:`subsec_softmax_and_derivatives`). Run it on one training
+   minibatch, and compare your gradients of `W_xh`, `W_hh`, and `b_h`
+   with those computed by automatic differentiation.
+
+    *Adapted from CMU 11-785,
+    [Homework 3 Part 1](https://deeplearning.cs.cmu.edu/F22/document/homework/HW3/HW3P1_F22.pdf).*
+
 1. [code] **Nonlinear Jacobians.** ● Rerun the experiment of
    :numref:`subsec_vanishing-exploding` at the same three spectral radii
    with two changes.
@@ -373,16 +388,7 @@ activation checkpointing at scale.
        for it to grow :cite:`bengio1994learning,Pascanu.Mikolov.Bengio.2013`.
        Relate the argument to your $\tanh$ curves at $\rho = 0.9$ and
        $\rho = 1.1$.
-1. **Beyond clipping.** Propose two methods for coping with exploding
-   gradients in a vanilla RNN other than clipping, truncation, and the
-   two architectural remedies of
-   :numref:`subsec_bptt-gradient-pathologies`. One method should act on
-   the parameters and the other on the optimizer step. For each, state
-   whether it changes the Jacobian product in
-   :eqref:`eq_bptt_partial_L_ht` or only limits what a large gradient
-   does to the update, and whether it also helps against vanishing
-   gradients. If it changes the product, name the property of the
-   product that it controls.
+
 1. [code] **Effective memory horizon.** ● Take the RNN language model
    trained in :numref:`sec_rnn-scratch` and a fixed input sequence of
    several hundred tokens. Measure the norm of the gradient of the loss

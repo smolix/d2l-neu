@@ -654,6 +654,7 @@ implementation applies automatically.
     1. Implement a fix that subtracts the largest entry of each row before
        exponentiating, and check that it agrees with the built-in softmax
        on both rows and on random inputs.
+
 1. [code] **Cross-entropy from one-hot labels.** The `cross_entropy` of this
    section selects the correct-class probability by indexing. Implement an
    alternative that follows the definition $-\sum_j y_j \log \hat{y}_j$
@@ -666,6 +667,7 @@ implementation applies automatically.
        that each version allocates grows with $q$.
     1. Describe a setting in which the inner-product form applies but the
        indexing form does not.
+
 1. **Large vocabularies.** Suppose that softmax regression predicts the
    next word from a feature vector of dimension $d = 1024$. The vocabulary
    has $V = 10^6$ words, and each minibatch holds $n = 256$ examples.
@@ -674,13 +676,7 @@ implementation applies automatically.
    memory of `W`, and the float32 memory of the $n \times V$ matrix of
    probabilities, and compare each number with the Fashion-MNIST model of
    this section.
-1. **Output-layer gradients.** ● Consider softmax regression that predicts
-   the next word from a vocabulary of $V = 10^6$ words. By
-   :numref:`subsec_softmax_and_derivatives`, the derivative of the loss
-   with respect to the logit $o_j$ is $\hat{y}_j - y_j$. Explain why a
-   single example produces a nonzero gradient for every column of `W`, and
-   propose a change to the output layer that updates only a few columns
-   per example.
+
 1. [code] **Hyperparameter sweep.** Retrain `SoftmaxRegressionScratch` with
    `d2l.Trainer(max_epochs=10)`, varying one hyperparameter at a time.
     1. Plot the final validation loss against the learning rate over
@@ -691,6 +687,7 @@ implementation applies automatically.
        60,000 training images take at each batch size. Use these counts to
        explain the trend in the previous plot, and predict how the
        comparison changes when every run takes the same number of updates.
+
 1. [code] **Confusion matrix.** The diagonal of the column-normalized
    confusion matrix :eqref:`eq_confusion-normalized` holds the per-class
    recall.
@@ -701,7 +698,8 @@ implementation applies automatically.
     1. Reshape each column of the weight matrix `W` into a $28 \times 28$
        image and display the ten templates with `show_images`. Relate
        visually similar templates to the most confused class pairs.
-1. [code] **ROC of the trained model.** Exercises 6 and 7 of
+
+1. [code] **ROC of the trained model.** Exercises :exref:`ex_classification-roc-curves` and :exref:`ex_classification-auc-ranking-probability` of
    :numref:`sec_classification` define the ROC curve and the area under
    it (AUC) on simulated scores. Apply them to the trained
    `SoftmaxRegressionScratch` on the validation images of two classes $a$
@@ -716,6 +714,14 @@ implementation applies automatically.
     1. Compare the ordering of the two AUCs with the off-diagonal entries
        of the confusion matrix $C$ for the same pairs, and explain why the
        two diagnostics need not agree.
+
+1. **Output-layer gradients.** ● Consider softmax regression that predicts
+   the next word from a vocabulary of $V = 10^6$ words. By
+   :numref:`subsec_softmax_and_derivatives`, the derivative of the loss
+   with respect to the logit $o_j$ is $\hat{y}_j - y_j$. Explain why a
+   single example produces a nonzero gradient for every column of `W`, and
+   propose a change to the output layer that updates only a few columns
+   per example.
 
 
 :begin_tab:`mxnet`

@@ -1169,6 +1169,7 @@ meaningfully better speed.
     1. Replace $\tanh$ by ReLU in `RNNScratch` and train again, with and
        without clipping. Is clipping still needed? Explain the difference
        from the $\tanh$ cell in terms of the range of the hidden state.
+
 1. [code] **Usable history.** Every training window starts from a zero
    state, so the model is never trained to use more than `num_steps`
    tokens of context. `predict`, by contrast, carries the state across
@@ -1179,6 +1180,7 @@ meaningfully better speed.
    carried state help, hurt, or make no difference, and what does the
    answer say about the states the model reaches beyond its training
    horizon?
+
 1. [code] **Hyperparameters and data budget.**
     1. Adjust the number of epochs, hidden units, embedding dimension,
        `num_steps`, and learning rate to lower the validation perplexity.
@@ -1190,6 +1192,27 @@ meaningfully better speed.
        explain what you see. Consecutive windows overlap by 31 tokens, so
        how many parameters does the model have per distinct training
        token in this regime?
+
+1. **Weight tying savings.** Weight tying sets the embedding dimension
+   equal to the number of hidden units and uses $\mathbf{W}_\textrm{e}^\top$
+   as the output projection in place of $\mathbf{W}_{\textrm{hq}}$
+   :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`. How many parameters
+   does tying save at $|\mathcal{V}| = 1{,}024$ with 128 hidden units?
+   GPT-2 small ties its $50{,}257 \times 768$ token embedding to its
+   output layer. How many parameters would untying add there, and what
+   fraction of the model's roughly 124 million parameters is that?
+
+1. [code] **Scratch versus concise timing.** `t_scratch` and `t_concise`
+   time ten epochs of `RNNLMScratch` and `RNNLM` with 128 hidden units,
+   32-token windows, and a batch size of 1,024.
+    1. Vary `num_hiddens` over 32, 128, and 512 and `num_steps` over 16,
+       32, and 128, and tabulate the ratio `t_scratch / t_concise` for
+       each setting. In which direction does the ratio move with each
+       hyperparameter?
+    1. Repeat the default setting with a batch size of 64. Explain the
+       changes you measure: which of per-step launch overhead, arithmetic
+       per step, and compilation dominates in each regime?
+
 1. [code] **Vocabulary size and bits per byte.** ● Rebuild the dataset with
    `vocab_size` set to 512, 1,024, 2,048, and 4,096 in `d2l.TimeMachine`
    and retrain with the same architecture and training procedure. The
@@ -1205,14 +1228,7 @@ meaningfully better speed.
        layer, and the length of the corpus in tokens, change with the
        vocabulary size? Which of these effects best explains the trend
        you measured?
-1. **Weight tying savings.** Weight tying sets the embedding dimension
-   equal to the number of hidden units and uses $\mathbf{W}_\textrm{e}^\top$
-   as the output projection in place of $\mathbf{W}_{\textrm{hq}}$
-   :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`. How many parameters
-   does tying save at $|\mathcal{V}| = 1{,}024$ with 128 hidden units?
-   GPT-2 small ties its $50{,}257 \times 768$ token embedding to its
-   output layer. How many parameters would untying add there, and what
-   fraction of the model's roughly 124 million parameters is that?
+
 1. [code] **Weight tying.** ● Set the embedding dimension equal to the
    number of hidden units, 128, and use $\mathbf{W}_\textrm{e}^\top$ as
    the output projection in place of $\mathbf{W}_{\textrm{hq}}$ in
@@ -1224,6 +1240,7 @@ meaningfully better speed.
     1. Train the tied model and an untied model with a 128-dimensional
        embedding and 128 hidden units, and compare their validation
        perplexities.
+
 1. [code] **Cross-book generalization.** ● Subclass `d2l.TimeMachine` and
    override `_download` to return the text of a different H. G. Wells
    novel, such as *The War of the Worlds* (Project Gutenberg ebook 36).
@@ -1240,16 +1257,6 @@ meaningfully better speed.
        The first factor reflects the model's predictions and the second
        the tokenizer's compression. Measure both factors. Which lies
        further from one?
-1. [code] **Scratch versus concise timing.** `t_scratch` and `t_concise`
-   time ten epochs of `RNNLMScratch` and `RNNLM` with 128 hidden units,
-   32-token windows, and a batch size of 1,024.
-    1. Vary `num_hiddens` over 32, 128, and 512 and `num_steps` over 16,
-       32, and 128, and tabulate the ratio `t_scratch / t_concise` for
-       each setting. In which direction does the ratio move with each
-       hyperparameter?
-    1. Repeat the default setting with a batch size of 64. Explain the
-       changes you measure: which of per-step launch overhead, arithmetic
-       per step, and compilation dominates in each regime?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/336)

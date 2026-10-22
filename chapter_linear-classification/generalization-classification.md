@@ -443,7 +443,7 @@ The general statement holds in both directions, and neither is deep.
 For the lower bound, the $d+1$ points
 $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
 can be shattered by weights constructed directly from the desired labels;
-exercise 5 walks you through it.
+exercise :exref:`ex_generalization-classification-shattering-standard-basis` walks you through it.
 For the upper bound, *no* set of $d+2$ points can be shattered:
 by Radon's theorem :cite:`Radon.1921`, any $d+2$ points in $\mathbb{R}^d$
 can be partitioned into two subsets whose convex hulls intersect,
@@ -550,6 +550,32 @@ in :numref:`sec_generalization_deep`.
        most the sum of their probabilities. Use this fact with Hoeffding's
        inequality to find the required test-set size, and state how it
        grows with $k$.
+
+1. **Two confidence radii.** Two radii $r$ are meant to make the
+   interval $\epsilon_\mathcal{D}(f) \pm r$ contain the true error
+   $\epsilon$ of a classifier with probability 95%: the CLT radius
+   $1.96\sqrt{\epsilon(1-\epsilon)/n}$ and the Hoeffding radius
+   $\sqrt{\log(2/0.05)/(2n)}$.
+    1. Show that the standard deviation of $\epsilon_\mathcal{D}(f)$
+       equals $\sqrt{\epsilon(1-\epsilon)/n}$ exactly, for every $n$.
+       Which ingredient of the CLT interval is then only an asymptotic
+       approximation?
+    1. Show that the ratio of the Hoeffding radius to the CLT radius does
+       not depend on $n$, and compute it as a function of $\epsilon$. For
+       which $\epsilon$ is Hoeffding's bound least conservative, and by how
+       much does it then exceed the CLT radius?
+
+1. [code] **Simulating the gap.** Take a classifier with true error
+   $\epsilon = 0.01$. Adapt the simulation that produces `spread` to
+   estimate, for $n \in \{100, 300, 1000\}$, the fraction of simulated test
+   sets whose interval $\epsilon_\mathcal{D}(f) \pm r$ contains $\epsilon$.
+   Do this once with the CLT radius $r = 1.96\sqrt{\epsilon(1-\epsilon)/n}$
+   and once with the Hoeffding radius $r = \sqrt{\log(2/0.05)/(2n)}$. Repeat
+   with $\epsilon$ replaced by $\epsilon_\mathcal{D}(f)$ inside the CLT
+   radius, as one must when $\epsilon$ is unknown. Which intervals fall
+   short of 95%? What does this plug-in interval report for a test set with
+   no errors?
+
 1. **Leaking a test set.** Somebody else holds a test set $\mathcal{D}$ of
    $n$ examples with binary labels and releases only the inputs. You may
    submit any model $f$, with no restriction on the model class, and you
@@ -560,18 +586,12 @@ in :numref:`sec_generalization_deep`.
     1. Each answer $\epsilon_\mathcal{D}(f)$ takes one of $n+1$ values.
        Use this to lower-bound the number of submissions that any
        strategy needs to distinguish all $2^n$ labelings.
+
 1. **VC dimension of polynomials.** What is the VC dimension of the class
    of classifiers $f(x) = \operatorname{sign}(p(x))$ with $p$ a polynomial
    of degree at most five in $x \in \mathbb{R}$? What is it for
    $\mathbf{x} \in \mathbb{R}^d$?
-1. **VC dimension of rectangles.** ● Prove that axis-aligned rectangles in
-   $\mathbb{R}^d$ have VC dimension $2d$. Begin with $d = 2$: exhibit four
-   points that rectangles shatter and show that no set of five points can
-   be shattered; then generalize the argument.
 
-    *Adapted from Shalev-Shwartz and Ben-David,
-    [Understanding Machine Learning](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/understanding-machine-learning-theory-algorithms.pdf),
-    Chapter 6, Exercise 5.*
 1. **Shattering the standard basis.** Prove the lower bound
    $\textrm{VC} \geq d+1$ for linear classifiers
    $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on
@@ -581,11 +601,23 @@ in :numref:`sec_generalization_deep`.
    $\sigma_0, \sigma_1, \ldots, \sigma_d \in \{\pm 1\}$, construct $b$ and
    $\mathbf{w}$ that realize them. Hint: $f(\mathbf{0})$ depends on $b$
    alone, so choose $b$ first.
+   :exlabel:`ex_generalization-classification-shattering-standard-basis`
+
 1. **Collinear points.** In :numref:`fig_mdl-clf-shattering` the three
    shattered points are in *general position* (not collinear). Show that
    three collinear points can *not* be shattered by halfplanes: which
    labeling is unrealizable? Explain why this does not contradict the VC
    dimension of lines in the plane being $3$.
+
+1. **VC dimension of rectangles.** ● Prove that axis-aligned rectangles in
+   $\mathbb{R}^d$ have VC dimension $2d$. Begin with $d = 2$: exhibit four
+   points that rectangles shatter and show that no set of five points can
+   be shattered; then generalize the argument.
+
+    *Adapted from Shalev-Shwartz and Ben-David,
+    [Understanding Machine Learning](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/understanding-machine-learning-theory-algorithms.pdf),
+    Chapter 6, Exercise 5.*
+
 1. **Composing hypothesis classes.** ● The *shattering coefficient* (or
    growth function) $H[n]$ of a hypothesis class $H$ is the largest number
    of distinct labelings that $H$ can realize on any $n$ points, so that
@@ -604,29 +636,6 @@ in :numref:`sec_generalization_deep`.
     *Adapted from CMU 10-601,
     [homework 5](https://www.cs.cmu.edu/~ninamf/courses/601sp15/hw/homework5.pdf),
     Problem 1.*
-1. **Two confidence radii.** Two radii $r$ are meant to make the
-   interval $\epsilon_\mathcal{D}(f) \pm r$ contain the true error
-   $\epsilon$ of a classifier with probability 95%: the CLT radius
-   $1.96\sqrt{\epsilon(1-\epsilon)/n}$ and the Hoeffding radius
-   $\sqrt{\log(2/0.05)/(2n)}$.
-    1. Show that the standard deviation of $\epsilon_\mathcal{D}(f)$
-       equals $\sqrt{\epsilon(1-\epsilon)/n}$ exactly, for every $n$.
-       Which ingredient of the CLT interval is then only an asymptotic
-       approximation?
-    1. Show that the ratio of the Hoeffding radius to the CLT radius does
-       not depend on $n$, and compute it as a function of $\epsilon$. For
-       which $\epsilon$ is Hoeffding's bound least conservative, and by how
-       much does it then exceed the CLT radius?
-1. [code] **Simulating the gap.** Take a classifier with true error
-   $\epsilon = 0.01$. Adapt the simulation that produces `spread` to
-   estimate, for $n \in \{100, 300, 1000\}$, the fraction of simulated test
-   sets whose interval $\epsilon_\mathcal{D}(f) \pm r$ contains $\epsilon$.
-   Do this once with the CLT radius $r = 1.96\sqrt{\epsilon(1-\epsilon)/n}$
-   and once with the Hoeffding radius $r = \sqrt{\log(2/0.05)/(2n)}$. Repeat
-   with $\epsilon$ replaced by $\epsilon_\mathcal{D}(f)$ inside the CLT
-   radius, as one must when $\epsilon$ is unknown. Which intervals fall
-   short of 95%? What does this plug-in interval report for a test set with
-   no errors?
 
 [Discussions](https://d2l.discourse.group/t/6829)
 

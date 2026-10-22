@@ -286,7 +286,7 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
     1. Explain why these numbers do not decide which classifier is safer
        to deploy, and list the further information about the two
        classifiers you would need.
-    1. Temperature scaling (exercise 8 of :numref:`sec_softmax`) divides
+    1. Temperature scaling (exercise :exref:`ex_softmax-regression-temperature` of :numref:`sec_softmax`) divides
        $B$'s logits by $T > 0$ and leaves every one of its decisions
        unchanged. Assume that on every example the largest logit of $B$ is
        unique. Show that as $T \to 0$ the cross-entropy of $B$ tends to $0$
@@ -345,14 +345,16 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
        give.
     1. Show that a classifier whose scores are independent of the labels
        traces the diagonal in expectation.
+   :exlabel:`ex_classification-roc-curves`
 1. [code] **AUC as ranking probability.** ● This problem uses the ROC
-   curves and simulated scores of the previous problem.
+   curves and simulated scores of problem :exref:`ex_classification-roc-curves`.
     1. Show that, when no two scores tie, the area under the ROC curve
        equals the probability that a randomly chosen positive example
        receives a higher score than a randomly chosen negative one, which
        makes it a threshold-free summary of ranking quality.
     1. Compute this probability in closed form for the simulated scores
        and compare it with the trapezoidal area under each of the curves.
+   :exlabel:`ex_classification-auc-ranking-probability`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6808)

@@ -423,6 +423,45 @@ Although it seems that there are only a few more lines in AlexNet's implementati
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.16.*
+   :exlabel:`ex_alexnet-memory-compute-ledger`
+
+1. **Receptive fields of the early layers.** Apply
+   :eqref:`eq_receptive_field` to `AlexNet` as defined in this section,
+   counting each max-pooling layer as a layer with its own kernel size and
+   stride, to compute the receptive field of one unit after each of the
+   first three convolutional layers. What fraction of the $224 \times 224$
+   input side does each receptive field span?
+
+    *Adapted from Simon Prince,
+    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
+    Problem 10.17.*
+
+1. [code] **Learned first-layer filters.** :numref:`fig_filters` shows the
+   first-layer kernels that AlexNet learned on ImageNet.
+    1. Train `AlexNet` as in this section, keeping a copy of the weights of
+       its first convolutional layer from before training. Display the 96
+       kernels of $11 \times 11$ pixels at initialization, after training,
+       and as the difference between the two.
+    1. Compare the change made by training with :numref:`fig_filters`.
+       Name two visible differences and the property of this section's
+       input images that causes each.
+
+1. [code] **Training duration versus LeNet.** Train `AlexNet` as in this
+   section and `LeNet` as in :numref:`sec_lenet` for 50 epochs each,
+   keeping each model's own learning rate and batch size. Report the
+   validation accuracy of both models after 10, 20, and 50 epochs. Which
+   model gains more from the longer training, and why?
+
+1. [code] **A network for $28 \times 28$ images.** AlexNet is oversized for
+   Fashion-MNIST, whose images must be upsampled eightfold to reach the
+   $224 \times 224$ input it expects.
+    1. Simplify `AlexNet` to reduce training time while keeping validation
+       accuracy within one point of the original. Report the time per
+       epoch and the accuracy of both models.
+    1. Design a model that works directly on $28 \times 28$ images and
+       reaches, within a stated epoch budget, at least the accuracy of
+       your simplified model.
+
 1. **Arithmetic intensity.** ● The *arithmetic intensity* of a layer is
    the number of multiplications it performs per byte of parameters it
    reads from memory. Use the ledger of problem 1.
@@ -436,42 +475,10 @@ Although it seems that there are only a few more lines in AlexNet's implementati
        arithmetic throughput or the memory bandwidth. Which choice speeds
        up single-image inference more, and which speeds up training at
        batch size 128 more?
-1. **Receptive fields of the early layers.** Apply
-   :eqref:`eq_receptive_field` to `AlexNet` as defined in this section,
-   counting each max-pooling layer as a layer with its own kernel size and
-   stride, to compute the receptive field of one unit after each of the
-   first three convolutional layers. What fraction of the $224 \times 224$
-   input side does each receptive field span?
 
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 10.17.*
-1. [code] **Learned first-layer filters.** :numref:`fig_filters` shows the
-   first-layer kernels that AlexNet learned on ImageNet.
-    1. Train `AlexNet` as in this section, keeping a copy of the weights of
-       its first convolutional layer from before training. Display the 96
-       kernels of $11 \times 11$ pixels at initialization, after training,
-       and as the difference between the two.
-    1. Compare the change made by training with :numref:`fig_filters`.
-       Name two visible differences and the property of this section's
-       input images that causes each.
-1. [code] **Training duration versus LeNet.** Train `AlexNet` as in this
-   section and `LeNet` as in :numref:`sec_lenet` for 50 epochs each,
-   keeping each model's own learning rate and batch size. Report the
-   validation accuracy of both models after 10, 20, and 50 epochs. Which
-   model gains more from the longer training, and why?
-1. [code] **A network for $28 \times 28$ images.** AlexNet is oversized for
-   Fashion-MNIST, whose images must be upsampled eightfold to reach the
-   $224 \times 224$ input it expects.
-    1. Simplify `AlexNet` to reduce training time while keeping validation
-       accuracy within one point of the original. Report the time per
-       epoch and the accuracy of both models.
-    1. Design a model that works directly on $28 \times 28$ images and
-       reaches, within a stated epoch budget, at least the accuracy of
-       your simplified model.
 1. [code] **Batch size, throughput, and memory.** ● Train `AlexNet` as in
    this section while varying only the batch size.
-    1. Using the ledger of problem 1, predict the largest training batch
+    1. Using the ledger of problem :exref:`ex_alexnet-memory-compute-ledger`, predict the largest training batch
        size that fits in the memory of your GPU. Count the parameters,
        their gradients, and the activations stored for the backward pass.
     1. Starting from a batch size of 32 and doubling it, find the largest
@@ -480,6 +487,7 @@ Although it seems that there are only a few more lines in AlexNet's implementati
     1. Measure the throughput in images per second over a fixed number of
        training steps for at least four batch sizes up to that limit.
        Beyond which batch size does throughput stop growing, and why?
+
 1. [code] **Regularization ablation.** ● AlexNet differs from LeNet in its
    use of ReLU activations and dropout.
     1. Starting from `LeNet` (:numref:`sec_lenet`), train the four

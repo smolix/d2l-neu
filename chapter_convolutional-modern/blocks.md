@@ -787,6 +787,59 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
 
 ## Exercises
 
+1. [code] **VGG-16 and VGG-19.** Configurations D and E in Table 1 of
+   :citet:`Simonyan.Zisserman.2014` are the networks known as VGG-16 and
+   VGG-19. Write their `arch` tuples, instantiate both with the `VGG`
+   class, and report their parameter counts against VGG-11.
+
+1. [code] **NiN block design.** Each NiN block follows its spatial
+   convolution with two $1\times 1$ convolutions. Build variants of `NiN`
+   with three and with one $1 \times 1$ convolution per block, and report
+   the parameter count, validation accuracy, and training time of all
+   three networks. Which count would you choose, and which measurement
+   decides the choice?
+
+1. [code] **Global average pooling versus dense.** Replace the global
+   average pooling of `NiN` by a fully connected layer that maps the
+   flattened $10 \times 5 \times 5$ output of the last `nin_block` to the
+   10 logits.
+    1. Compare the number of parameters, validation accuracy, and time per
+       epoch with those of `NiN`.
+    1. Shift every resized $224 \times 224$ validation image horizontally
+       by 32 pixels, filling with zeros, and compare how much the
+       validation accuracy of each network drops.
+
+1. **One-step channel reduction.** What are possible problems with
+   reducing the $384 \times 5 \times 5$ representation to a
+   $10 \times 5 \times 5$ representation in one step, as the final NiN
+   block does?
+
+1. **Depthwise Inception.** Suppose the four branches of the first body
+   block of `GoogleNet`, which maps 192 input channels to
+   $64 + 128 + 32 + 32 = 256$ output channels, are replaced by a single
+   $7 \times 7$ depthwise convolution followed by a $1 \times 1$
+   convolution (:numref:`sec_depthwise_separable`). Compare the parameter
+   count and the number of multiplications of the two blocks at
+   the same input and output sizes.
+
+1. [code] **Native resolution.** Fashion-MNIST images are
+   $28 \times 28$, and the training runs of this section upsample them
+   eightfold to $224 \times 224$, which spends computation without adding
+   information.
+    1. Train `VGG` with
+       `arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128))` and
+       `lr=0.01` on images resized to $56 \times 56$ and to $84 \times 84$.
+       Compare validation accuracy and time per epoch with the same model
+       trained at $224 \times 224$, and give the spatial size of the
+       feature map that enters the fully connected layers at each of the
+       three resolutions.
+    1. `GoogleNet` accepts a $28 \times 28$ input as written, because its
+       convolutions and pooling layers pad so that every stride-2 step
+       halves the resolution, rounding up. Compute the resolution at which
+       each of the three groups of Inception blocks operates on a
+       $28 \times 28$ input. What do the $3 \times 3$ and $5 \times 5$
+       branches compute at the smallest of these resolutions?
+
 1. [code] **Parameters and FLOPs across architectures.** ● VGG-11, the `VGG`
    instance with `arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))`,
    is much slower than `AlexNet` from :numref:`sec_alexnet` and needs more
@@ -806,29 +859,7 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.18.*
-1. [code] **VGG-16 and VGG-19.** Configurations D and E in Table 1 of
-   :citet:`Simonyan.Zisserman.2014` are the networks known as VGG-16 and
-   VGG-19. Write their `arch` tuples, instantiate both with the `VGG`
-   class, and report their parameter counts against VGG-11.
-1. [code] **NiN block design.** Each NiN block follows its spatial
-   convolution with two $1\times 1$ convolutions. Build variants of `NiN`
-   with three and with one $1 \times 1$ convolution per block, and report
-   the parameter count, validation accuracy, and training time of all
-   three networks. Which count would you choose, and which measurement
-   decides the choice?
-1. [code] **Global average pooling versus dense.** Replace the global
-   average pooling of `NiN` by a fully connected layer that maps the
-   flattened $10 \times 5 \times 5$ output of the last `nin_block` to the
-   10 logits.
-    1. Compare the number of parameters, validation accuracy, and time per
-       epoch with those of `NiN`.
-    1. Shift every resized $224 \times 224$ validation image horizontally
-       by 32 pixels, filling with zeros, and compare how much the
-       validation accuracy of each network drops.
-1. **One-step channel reduction.** What are possible problems with
-   reducing the $384 \times 5 \times 5$ representation to a
-   $10 \times 5 \times 5$ representation in one step, as the final NiN
-   block does?
+
 1. [code] **Single-branch ablation.** ● Build a variant of `GoogleNet` whose
    Inception blocks keep only the $3 \times 3$ branch with its
    $1 \times 1$ reduction. Let the $3 \times 3$ convolution emit as many
@@ -838,30 +869,7 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
    inputs under the procedure used for `NiN` and compare validation
    accuracy. What does the result say about the value of mixing kernel
    sizes within one block?
-1. **Depthwise Inception.** Suppose the four branches of the first body
-   block of `GoogleNet`, which maps 192 input channels to
-   $64 + 128 + 32 + 32 = 256$ output channels, are replaced by a single
-   $7 \times 7$ depthwise convolution followed by a $1 \times 1$
-   convolution (:numref:`sec_depthwise_separable`). Compare the parameter
-   count and the number of multiplications of the two blocks at
-   the same input and output sizes.
-1. [code] **Native resolution.** Fashion-MNIST images are
-   $28 \times 28$, and the training runs of this section upsample them
-   eightfold to $224 \times 224$, which spends computation without adding
-   information.
-    1. Train `VGG` with
-       `arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128))` and
-       `lr=0.01` on images resized to $56 \times 56$ and to $84 \times 84$.
-       Compare validation accuracy and time per epoch with the same model
-       trained at $224 \times 224$, and give the spatial size of the
-       feature map that enters the fully connected layers at each of the
-       three resolutions.
-    1. `GoogleNet` accepts a $28 \times 28$ input as written, because its
-       convolutions and pooling layers pad so that every stride-2 step
-       halves the resolution, rounding up. Compute the resolution at which
-       each of the three groups of Inception blocks operates on a
-       $28 \times 28$ input. What do the $3 \times 3$ and $5 \times 5$
-       branches compute at the smallest of these resolutions?
+
 1. [code] **GoogLeNet stem redesign.** ● Redesign the stem of `GoogleNet`
    so that the first group of Inception blocks operates on at least a
    $14 \times 14$ feature map of a $28 \times 28$ input, and adjust the

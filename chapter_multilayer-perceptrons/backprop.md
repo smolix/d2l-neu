@@ -529,11 +529,6 @@ and training requires significantly more memory than prediction.
    :numref:`fig_forward` with the backward-pass nodes that compute
    $\partial J/\partial \mathbf{W}^{(1)}$, and mark which forward-pass
    variables each new node reads.
-1. **Hessian of a ReLU network.** ● ReLU has $\phi''(z) = 0$ for
-   $z \neq 0$. For the network in :eqref:`eq_backprop-example`, derive the
-   $4 \times 4$ Hessian of $L$ with respect to the entries of
-   $\mathbf{W}^{(1)}$, show that it has rank at most one, and evaluate it at
-   the given values.
 1. **Graph partitioning.** Assume that the computational graph is too large
    for the memory of a single GPU.
     1. Propose two different strategies for splitting training across two
@@ -569,6 +564,11 @@ and training requires significantly more memory than prediction.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 7.12 and 7.13.*
+1. **Hessian of a ReLU network.** ● ReLU has $\phi''(z) = 0$ for
+   $z \neq 0$. For the network in :eqref:`eq_backprop-example`, derive the
+   $4 \times 4$ Hessian of $L$ with respect to the entries of
+   $\mathbf{W}^{(1)}$, show that it has rank at most one, and evaluate it at
+   the given values.
 1. [extended] **Autograd engine.** ● Build a miniature autograd engine and
    use it to re-derive the gradients of the network in
    :eqref:`eq_backprop-example`.

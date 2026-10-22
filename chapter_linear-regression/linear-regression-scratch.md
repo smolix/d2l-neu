@@ -145,7 +145,7 @@ Our synthetic data loader already yields labels `y`
 with the same shape as the predictions `y_hat`
 (both are $(B, 1)$ column vectors for a batch of size $B$),
 so we can subtract them elementwise directly;
-exercise 5 asks what would go wrong
+exercise :exref:`ex_linear-regression-scratch-reshape-loss` asks what would go wrong
 if the two shapes did not match.
 We return the averaged loss value
 among all examples in the minibatch.
@@ -587,7 +587,7 @@ parameter initialization and the shuffling of minibatches.
 JAX needs no such call: its PRNG is *functional*, with no implicit global
 state. The model and dataset receive explicit typed keys; the synthetic dataset
 defaults to `key=jax.random.key(0)`. Reusing a key repeats the same random draw,
-so stochastic programs should split and thread keys explicitly; see exercise 4 of
+so stochastic programs should split and thread keys explicitly; see exercise :exref:`ex_synthetic-regression-data-reproducibility` of
 :numref:`sec_synthetic-regression-data`.
 :end_tab:
 
@@ -695,6 +695,22 @@ curb overfitting, the first of many regularizers we will meet.
    initialized to exactly zero, and separately if `sigma=1000`. Explain
    both answers, and state how the number of epochs needed changes in the
    second case.
+
+1. **Reshape in the loss.** Suppose the data loader yielded labels `y` of
+   shape $(B,)$ while the predictions `y_hat` have shape $(B, 1)$, and
+   `loss` computed `(y_hat - y) ** 2 / 2` without reshaping `y`.
+   Determine whether an error is raised, the shape and the entries of
+   `y_hat - y`, and the value that `loss` then returns.
+   :exlabel:`ex_linear-regression-scratch-reshape-loss`
+
+1. [code] **Second derivatives.** Compute by hand the Hessian of the
+   minibatch loss with respect to $(\mathbf{w}, b)$, and state which
+   quantities it depends on. Then compute it with automatic
+   differentiation, differentiating through the gradient as in
+   :numref:`sec_autograd`, for one fixed minibatch of
+   `SyntheticRegressionData`, once at initialization and once after
+   training. Compare both results with your formula.
+
 1. [code] **Ohm's law.**
    [Georg Simon Ohm](https://en.wikipedia.org/wiki/Georg_Ohm) found that
    the voltage $V$ across a conductor is proportional to the current $I$
@@ -705,35 +721,7 @@ curb overfitting, the first of many regularizers we will meet.
    with this section's `SGD` and `d2l.Trainer`, and compare the fitted $R$
    with the least-squares estimate
    $\hat{R} = \sum_i I_i V_i / \sum_i I_i^2$ computed on the training set.
-1. [code] **Planck's law.** ● Use
-   [Planck's law](https://en.wikipedia.org/wiki/Planck%27s_law) to
-   determine the temperature of a black body from measurements of its
-   spectral radiance at several wavelengths. The spectral radiance is
 
-    $$B(\lambda, T) = \frac{2 hc^2}{\lambda^5} \cdot \left(\exp \frac{h c}{\lambda k T} - 1\right)^{-1},$$
-
-    where $\lambda$ is the wavelength, $T$ is the temperature, $c$ is the
-    speed of light, $h$ is Planck's constant, and $k$ is the Boltzmann
-    constant. Generate measurements at a known $T$, then write a
-    `d2l.Module` subclass whose `forward` computes $B(\lambda, T)$ with $T$
-    as its only parameter and fit it with `d2l.Trainer`. Choose units in
-    which $B$ and $T$ are of order one before fitting.
-1. [code] **Second derivatives.** Compute by hand the Hessian of the
-   minibatch loss with respect to $(\mathbf{w}, b)$, and state which
-   quantities it depends on. Then compute it with automatic
-   differentiation, differentiating through the gradient as in
-   :numref:`sec_autograd`, for one fixed minibatch of
-   `SyntheticRegressionData`, once at initialization and once after
-   training. Compare both results with your formula.
-1. **Reshape in the loss.** Suppose the data loader yielded labels `y` of
-   shape $(B,)$ while the predictions `y_hat` have shape $(B, 1)$, and
-   `loss` computed `(y_hat - y) ** 2 / 2` without reshaping `y`.
-   Determine whether an error is raised, the shape and the entries of
-   `y_hat - y`, and the value that `loss` then returns.
-1. **Broadcast loss minimizer.** ● Find the values that $\mathbf{w}$ and
-   $b$ approach when the mismatched loss of problem 5 is used to train
-   `LinearRegressionScratch` on `SyntheticRegressionData`, whose features
-   are standard normal.
 1. [code] **Learning-rate sweep.** The labels of `SyntheticRegressionData`
    carry Gaussian noise with standard deviation $\sigma = 0.01$, so the
    expected squared loss on new data cannot fall below the noise floor
@@ -746,6 +734,20 @@ curb overfitting, the first of many regularizers we will meet.
     *Adapted from Andrew Ng,
     [Supervised Machine Learning: Regression and Classification (Coursera)](https://www.coursera.org/learn/machine-learning),
     Week 2, "Optional Lab: Feature scaling and learning rate".*
+
+1. **Why reshuffle.** The training loader draws a fresh random order at
+   every epoch. Explain which property of the minibatch gradient this
+   preserves. Then construct a fixed ordering of the training set, such as
+   sorting by label, under which minibatch SGD without reshuffling behaves
+   differently, and describe the trajectory of $(\mathbf{w}, b)$ within an
+   epoch and across epochs.
+   :exlabel:`ex_linear-regression-scratch-why-reshuffle`
+
+1. **Broadcast loss minimizer.** ● Find the values that $\mathbf{w}$ and
+   $b$ approach when the mismatched loss of problem :exref:`ex_linear-regression-scratch-reshape-loss` is used to train
+   `LinearRegressionScratch` on `SyntheticRegressionData`, whose features
+   are standard normal.
+
 1. [code] **Robust losses.** ● Replace `loss` in `LinearRegressionScratch`
    with the mean absolute error
    `d2l.reduce_mean(d2l.abs(y_hat - d2l.reshape(y, y_hat.shape)))`.
@@ -768,12 +770,8 @@ curb overfitting, the first of many regularizers we will meet.
         shape of the curve from the derivative of $l_\delta$ with respect
         to $y'$, and relate the result to the penalty curves of
         :numref:`fig_linreg-loss-menu`.
-1. **Why reshuffle.** The training loader draws a fresh random order at
-   every epoch. Explain which property of the minibatch gradient this
-   preserves. Then construct a fixed ordering of the training set, such as
-   sorting by label, under which minibatch SGD without reshuffling behaves
-   differently, and describe the trajectory of $(\mathbf{w}, b)$ within an
-   epoch and across epochs.
+   :exlabel:`ex_linear-regression-scratch-robust-losses`
+
 1. **Uncleared gradients.** ● Suppose the gradient buffers accumulate and
    are never cleared, so that the update at step $t$ subtracts
    $\eta(\mathbf{g}_1 + \cdots + \mathbf{g}_t)$, the sum of all minibatch
@@ -783,6 +781,20 @@ curb overfitting, the first of many regularizers we will meet.
    values of $\eta h$ the error converges to zero. State what this
    predicts for minibatch SGD on `LinearRegressionScratch` under the same
    accumulation.
+
+1. [code] **Planck's law.** ● Use
+   [Planck's law](https://en.wikipedia.org/wiki/Planck%27s_law) to
+   determine the temperature of a black body from measurements of its
+   spectral radiance at several wavelengths. The spectral radiance is
+
+    $$B(\lambda, T) = \frac{2 hc^2}{\lambda^5} \cdot \left(\exp \frac{h c}{\lambda k T} - 1\right)^{-1},$$
+
+    where $\lambda$ is the wavelength, $T$ is the temperature, $c$ is the
+    speed of light, $h$ is Planck's constant, and $k$ is the Boltzmann
+    constant. Generate measurements at a known $T$, then write a
+    `d2l.Module` subclass whose `forward` computes $B(\lambda, T)$ with $T$
+    as its only parameter and fit it with `d2l.Trainer`. Choose units in
+    which $B$ and $T$ are of order one before fitting.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/42)

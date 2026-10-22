@@ -359,7 +359,7 @@ $\lceil 1000 / 32 \rceil = 32$ batches: 31 full ones and a final
 partial batch of 8 examples.
 Note also that the built-in training loader *reshuffles* the examples at
 the start of every epoch, just as our hand-rolled loader drew a fresh
-random order on each call; exercise 9 of :numref:`sec_linear_scratch`
+random order on each call; exercise :exref:`ex_linear-regression-scratch-why-reshuffle` of :numref:`sec_linear_scratch`
 asks why this reshuffling matters.
 
 :begin_tab:`jax`
@@ -395,7 +395,81 @@ we use from here on.
 ## Exercises
 
 :begin_tab:`mxnet`
-1. **Partial batches.** With 1000 examples per split and `batch_size=32`,
+1. **Reproducibility.** Two instances of `SyntheticRegressionData` built
+   with the same arguments hold different `X` and `y`. Make them identical
+   by fixing the seed with `npx.random.seed`. State where the call must be
+   placed relative to the draws of `X` and `eps`, and explain why seeding
+   once at the top of a notebook does not make the second instance equal to
+   the first.
+   :exlabel:`ex_synthetic-regression-data-reproducibility`
+:end_tab:
+
+:begin_tab:`pytorch`
+1. **Reproducibility.** Two instances of `SyntheticRegressionData` built
+   with the same arguments hold different `X` and `y`. Make them identical
+   by fixing the seed with `torch.manual_seed`. State where the call must be
+   placed relative to the draws of `X` and `eps`, and explain why seeding
+   once at the top of a notebook does not make the second instance equal to
+   the first.
+   :exlabel:`ex_synthetic-regression-data-reproducibility`
+:end_tab:
+
+:begin_tab:`tensorflow`
+1. **Reproducibility.** Two instances of `SyntheticRegressionData` built
+   with the same arguments hold different `X` and `y`. Make them identical
+   by fixing the seed with `tf.random.set_seed`. State where the call must
+   be placed relative to the draws of `X` and `eps`, and explain why seeding
+   once at the top of a notebook does not make the second instance equal to
+   the first.
+   :exlabel:`ex_synthetic-regression-data-reproducibility`
+:end_tab:
+
+:begin_tab:`jax`
+1. **Reproducibility.** `SyntheticRegressionData` splits its `key` into
+   `key1` for `X` and `key2` for `eps`.
+    1. Explain why two instances built with the same `key` hold identical
+       data without any global seed.
+    1. Change both draws to use `key` itself instead of `key1` and `key2`,
+       and compare `eps / noise` with the entries of `X` numerically. State
+       what the split guarantees about `X` and `eps` that this version does
+       not.
+    1. Construct five instances whose datasets are independent of each
+       other, as averaging an error over repeated trials requires, and state
+       how you derive their keys.
+   :exlabel:`ex_synthetic-regression-data-reproducibility`
+:end_tab:
+
+2. [code] **Recovery under noise.** On the training split of
+   `SyntheticRegressionData`, fit $\hat{\mathbf{w}}$ and $\hat{b}$ jointly
+   by least squares, appending a column of ones to $\mathbf{X}$ as in
+   :numref:`subsec_linear-regression-analytic-solution` and solving with
+   the normal equations or `lstsq`. Measure the distance
+   $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ from the generating weights
+   $\mathbf{w}^*$, averaged over 10 independent datasets for each setting.
+    1. Before running, state how you expect this error to scale with the
+       noise standard deviation `noise` and with `num_train`.
+    1. Vary `noise` over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$ with
+       `num_train=1000`, and plot the error against the noise level on
+       logarithmic axes.
+    1. Vary `num_train` over $5, 10, 20, 50, \ldots, 10{,}000$ with
+       `noise=0.01`, and plot the error against `num_train` on logarithmic
+       axes.
+   :exlabel:`ex_synthetic-regression-data-recovery-under-noise`
+
+1. **Planted bug.** A faulty variant of the hand-rolled `get_dataloader`
+   shuffles the rows of `X` and the entries of `y` with two independent
+   permutations. We collect the pairs that it yields in one training epoch
+   on `data`, whose parameters are $\mathbf{w}^* = [2, -3.4]^\top$ and
+   $b^* = 4.2$ with noise standard deviation $0.01$. We then fit
+   $\hat{\mathbf{w}}$ and $\hat{b}$ to these pairs by least squares.
+    1. Predict the approximate values of $\hat{\mathbf{w}}$ and $\hat{b}$,
+       and explain your prediction.
+    1. Estimate the mean squared error of this fit on the collected pairs,
+       and compare it with the smallest mean squared error that any
+       predictor can attain on correctly paired data.
+
+:begin_tab:`mxnet`
+4. **Partial batches.** With 1000 examples per split and `batch_size=32`,
    each loader ends a pass with a partial batch of 8 examples. Gluon's
    `DataLoader` discards that batch when given `last_batch='discard'`.
     1. The training loader reshuffles every epoch, whereas the validation
@@ -410,7 +484,7 @@ we use from here on.
 :end_tab:
 
 :begin_tab:`pytorch`
-1. **Partial batches.** With 1000 examples per split and `batch_size=32`,
+4. **Partial batches.** With 1000 examples per split and `batch_size=32`,
    each loader ends a pass with a partial batch of 8 examples. `DataLoader`
    discards that batch when given `drop_last=True`.
     1. The training loader reshuffles every epoch, whereas the validation
@@ -425,7 +499,7 @@ we use from here on.
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. **Partial batches.** With 1000 examples per split and `batch_size=32`,
+4. **Partial batches.** With 1000 examples per split and `batch_size=32`,
    each loader ends a pass with a partial batch of 8 examples.
    `Dataset.batch` discards that batch when given `drop_remainder=True`.
     1. The training loader reshuffles every epoch, whereas the validation
@@ -440,7 +514,7 @@ we use from here on.
 :end_tab:
 
 :begin_tab:`jax`
-1. **Partial batches.** With 1000 examples per split and `batch_size=32`,
+4. **Partial batches.** With 1000 examples per split and `batch_size=32`,
    each loader ends a pass with a partial batch of 8 examples.
    `get_tensorloader` passes `drop_remainder=train`, so the training loader
    discards that batch while the validation loader keeps it.
@@ -457,7 +531,19 @@ we use from here on.
        over the validation set.
 :end_tab:
 
-2. **Data beyond memory.** ● Suppose that `len(w)` and
+5. [code] **On-the-fly generation.** Write a `DataModule` subclass that
+   stores no $\mathbf{X}$ or $\mathbf{y}$. Its training loader instead draws
+   every minibatch fresh from the data-generating process when the
+   minibatch is requested.
+    1. A stream of fresh minibatches has no natural end, yet
+       `Trainer.prepare_data` in :numref:`oo-design-training` calls `len`
+       on both loaders. Decide how many minibatches one epoch yields, and
+       make `len(data.train_dataloader())` return that number.
+    1. Decide whether the validation loader should also draw fresh examples
+       on every call, and implement your choice. Justify it by what the
+       validation loss is used for.
+
+1. **Data beyond memory.** ● Suppose that `len(w)` and
    `num_train + num_val` are so large that $\mathbf{X}$ no longer fits in
    memory, so `__init__` generates it in chunks and writes it to disk.
     1. Name the statements in `SyntheticRegressionData.__init__` and in the
@@ -473,85 +559,6 @@ we use from here on.
        entry per example. Explain how a pseudorandom permutation
        :cite:`Naor.Reingold.1999` meets this requirement while still
        changing the order every epoch.
-1. [code] **On-the-fly generation.** Write a `DataModule` subclass that
-   stores no $\mathbf{X}$ or $\mathbf{y}$. Its training loader instead draws
-   every minibatch fresh from the data-generating process when the
-   minibatch is requested.
-    1. A stream of fresh minibatches has no natural end, yet
-       `Trainer.prepare_data` in :numref:`oo-design-training` calls `len`
-       on both loaders. Decide how many minibatches one epoch yields, and
-       make `len(data.train_dataloader())` return that number.
-    1. Decide whether the validation loader should also draw fresh examples
-       on every call, and implement your choice. Justify it by what the
-       validation loss is used for.
-
-:begin_tab:`mxnet`
-4. **Reproducibility.** Two instances of `SyntheticRegressionData` built
-   with the same arguments hold different `X` and `y`. Make them identical
-   by fixing the seed with `npx.random.seed`. State where the call must be
-   placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second instance equal to
-   the first.
-:end_tab:
-
-:begin_tab:`pytorch`
-4. **Reproducibility.** Two instances of `SyntheticRegressionData` built
-   with the same arguments hold different `X` and `y`. Make them identical
-   by fixing the seed with `torch.manual_seed`. State where the call must be
-   placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second instance equal to
-   the first.
-:end_tab:
-
-:begin_tab:`tensorflow`
-4. **Reproducibility.** Two instances of `SyntheticRegressionData` built
-   with the same arguments hold different `X` and `y`. Make them identical
-   by fixing the seed with `tf.random.set_seed`. State where the call must
-   be placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second instance equal to
-   the first.
-:end_tab:
-
-:begin_tab:`jax`
-4. **Reproducibility.** `SyntheticRegressionData` splits its `key` into
-   `key1` for `X` and `key2` for `eps`.
-    1. Explain why two instances built with the same `key` hold identical
-       data without any global seed.
-    1. Change both draws to use `key` itself instead of `key1` and `key2`,
-       and compare `eps / noise` with the entries of `X` numerically. State
-       what the split guarantees about `X` and `eps` that this version does
-       not.
-    1. Construct five instances whose datasets are independent of each
-       other, as averaging an error over repeated trials requires, and state
-       how you derive their keys.
-:end_tab:
-
-5. [code] **Recovery under noise.** On the training split of
-   `SyntheticRegressionData`, fit $\hat{\mathbf{w}}$ and $\hat{b}$ jointly
-   by least squares, appending a column of ones to $\mathbf{X}$ as in
-   :numref:`subsec_linear-regression-analytic-solution` and solving with
-   the normal equations or `lstsq`. Measure the distance
-   $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ from the generating weights
-   $\mathbf{w}^*$, averaged over 10 independent datasets for each setting.
-    1. Before running, state how you expect this error to scale with the
-       noise standard deviation `noise` and with `num_train`.
-    1. Vary `noise` over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$ with
-       `num_train=1000`, and plot the error against the noise level on
-       logarithmic axes.
-    1. Vary `num_train` over $5, 10, 20, 50, \ldots, 10{,}000$ with
-       `noise=0.01`, and plot the error against `num_train` on logarithmic
-       axes.
-1. **Planted bug.** A faulty variant of the hand-rolled `get_dataloader`
-   shuffles the rows of `X` and the entries of `y` with two independent
-   permutations. We collect the pairs that it yields in one training epoch
-   on `data`, whose parameters are $\mathbf{w}^* = [2, -3.4]^\top$ and
-   $b^* = 4.2$ with noise standard deviation $0.01$. We then fit
-   $\hat{\mathbf{w}}$ and $\hat{b}$ to these pairs by least squares.
-    1. Predict the approximate values of $\hat{\mathbf{w}}$ and $\hat{b}$,
-       and explain your prediction.
-    1. Estimate the mean squared error of this fit on the collected pairs,
-       and compare it with the smallest mean squared error that any
-       predictor can attain on correctly paired data.
 
 
 :begin_tab:`mxnet`

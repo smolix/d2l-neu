@@ -598,6 +598,82 @@ first neural architectures of that lineage.
        $\tau \to 0$, and which as $\tau \to \infty$? For a context that
        occurred exactly once in training, what does the temperature
        change?
+
+1. **Dense versus sparse storage.** Consider a 5-gram model over a
+   vocabulary of $|\mathcal{V}| = 50{,}000$ word tokens.
+    1. How many entries does a dense table of the conditional
+       probabilities :eqref:`eq_ngram_mle` contain?
+    1. Suppose instead that only the 5-grams observed in a trillion-token
+       corpus are stored, at 16 bytes per entry. How much memory is needed
+       at most, and what fraction of all possible 5-grams is covered?
+    1. The code in :numref:`subsec_markov-models-and-n-grams` prints the
+       number of distinct word trigrams in the training text and the
+       fraction of held-out trigrams that never occurred in training. The
+       word vocabulary there has $|\mathcal{V}| = 4{,}579$ types. Compare
+       the fraction of all possible trigrams that occur in training with
+       the fraction of held-out trigrams that do. What does the gap say
+       about the coverage of (b) as an estimate of how often a query on
+       new text finds its 5-gram in the table?
+
+1. [code] **Smoothing constant.** Sweep $\alpha$ in
+   :eqref:`eq_laplace_smoothing` over the 19 values
+   $\alpha = 10^{k/4}$ for $k = -16, -15, \ldots, 2$, for the unigram,
+   bigram, and trigram word models, and plot held-out perplexity against
+   $\alpha$ on a logarithmic axis.
+    1. How does the best $\alpha$ change with $n$, and why?
+    1. Rank the three models, each at its own best $\alpha$, by held-out
+       perplexity. How does this ranking differ from the one printed in
+       :numref:`subsec_perplexity` with the default $\alpha = 0.01$ of
+       `NGramLM`?
+   :exlabel:`ex_language-model-smoothing-constant`
+
+1. **Perplexity under skew.** A training corpus over ten symbols consists
+   of one symbol 91% of the time and each of the other nine 1% of the
+   time.
+    1. Compute the perplexity of the unigram model estimated from this
+       corpus on a long test text drawn from the same distribution. How
+       does it compare with the vocabulary size of ten?
+    1. The word-level unigram model of :numref:`subsec_perplexity` chooses
+       among thousands of word types. Read off its held-out perplexity as
+       an effective number of equally likely choices, and explain with
+       Zipf's law :eqref:`eq_zipf_law` why this number is far below
+       $|\mathcal{V}|$.
+
+    *Adapted from Daniel Jurafsky and James H. Martin,
+    [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/),
+    3rd ed. draft, Exercise 3.12.*
+
+1. **Bits per byte from perplexity.** A model achieves per-token
+   perplexity $\textrm{ppl}$ on a text that its tokenizer splits into $T$
+   tokens and whose size is $B$ UTF-8 bytes.
+    1. Show that its bits per byte :eqref:`eq_bpb` equals
+       $$\textrm{bpb} = \frac{T}{B} \log_2 \textrm{ppl}.$$
+    1. Use the formula and the table printed in
+       :numref:`subsec_bits-per-byte` to compute the average number of
+       bytes per token, $B/T$, for each tokenization. Explain how bits per
+       byte that nearly agree can coexist with perplexities that differ by
+       more than two orders of magnitude.
+    1. What held-out perplexity would the BPE-level trigram need in order
+       to reach one bit per byte?
+
+1. **Overlapping windows.** `d2l.TimeMachine` builds one row of
+   `num_steps + 1` consecutive tokens for every possible start position
+   in the corpus. The first `num_steps` tokens of a row form a row of `X`,
+   and the last `num_steps` tokens form the matching row of `Y`. The first
+   `num_train` rows go to training and the next `num_val` rows to
+   validation (:numref:`subsec_partitioning-seqs`). Take `num_steps=32`,
+   `num_train=10000`, and `num_val=5000`.
+    1. Counting input and target tokens together, how many corpus
+       positions do the training rows touch, and how many do the
+       validation rows touch? How many positions do both touch?
+    1. How many times per epoch does a token in the interior of the
+       training range serve as a target?
+    1. How many windows does a partition of the entire corpus of about
+       66,000 tokens into non-overlapping 32-token windows yield? Compare
+       this partition with the 10,000 overlapping training rows in the
+       number of windows and in the number of distinct corpus positions
+       covered.
+
 1. [code] **Normalization across lengths.** ● `NGramLM` has no
    end-of-sequence token. Train a bigram `NGramLM` with $\alpha = 1$ and
    `vocab_size=3` on a short string over a three-symbol vocabulary. Use
@@ -617,82 +693,15 @@ first neural architectures of that lineage.
     *Adapted from Daniel Jurafsky and James H. Martin,
     [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/),
     3rd ed. draft, Exercise 3.5.*
-1. **Dense versus sparse storage.** Consider a 5-gram model over a
-   vocabulary of $|\mathcal{V}| = 50{,}000$ word tokens.
-    1. How many entries does a dense table of the conditional
-       probabilities :eqref:`eq_ngram_mle` contain?
-    1. Suppose instead that only the 5-grams observed in a trillion-token
-       corpus are stored, at 16 bytes per entry. How much memory is needed
-       at most, and what fraction of all possible 5-grams is covered?
-    1. The code in :numref:`subsec_markov-models-and-n-grams` prints the
-       number of distinct word trigrams in the training text and the
-       fraction of held-out trigrams that never occurred in training. The
-       word vocabulary there has $|\mathcal{V}| = 4{,}579$ types. Compare
-       the fraction of all possible trigrams that occur in training with
-       the fraction of held-out trigrams that do. What does the gap say
-       about the coverage of (b) as an estimate of how often a query on
-       new text finds its 5-gram in the table?
-1. [code] **Smoothing constant.** Sweep $\alpha$ in
-   :eqref:`eq_laplace_smoothing` over the 19 values
-   $\alpha = 10^{k/4}$ for $k = -16, -15, \ldots, 2$, for the unigram,
-   bigram, and trigram word models, and plot held-out perplexity against
-   $\alpha$ on a logarithmic axis.
-    1. How does the best $\alpha$ change with $n$, and why?
-    1. Rank the three models, each at its own best $\alpha$, by held-out
-       perplexity. How does this ranking differ from the one printed in
-       :numref:`subsec_perplexity` with the default $\alpha = 0.01$ of
-       `NGramLM`?
+
 1. [code] **Seen and unseen trigrams.** ● Split the held-out positions
    from the third word on by whether the word trigram ending at that
    position occurred in training. Take the bigram and the trigram word
-   models, each at its best $\alpha$ from the sweep of the previous
-   problem, and compute the average negative log-likelihood of each model
+   models, each at its best $\alpha$ from the sweep of
+   problem :exref:`ex_language-model-smoothing-constant`,
+   and compute the average negative log-likelihood of each model
    on each group. On which group is the trigram the better model, and what
    does this suggest about combining models of different orders?
-1. **Perplexity under skew.** A training corpus over ten symbols consists
-   of one symbol 91% of the time and each of the other nine 1% of the
-   time.
-    1. Compute the perplexity of the unigram model estimated from this
-       corpus on a long test text drawn from the same distribution. How
-       does it compare with the vocabulary size of ten?
-    1. The word-level unigram model of :numref:`subsec_perplexity` chooses
-       among thousands of word types. Read off its held-out perplexity as
-       an effective number of equally likely choices, and explain with
-       Zipf's law :eqref:`eq_zipf_law` why this number is far below
-       $|\mathcal{V}|$.
-
-    *Adapted from Daniel Jurafsky and James H. Martin,
-    [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/),
-    3rd ed. draft, Exercise 3.12.*
-1. **Bits per byte from perplexity.** A model achieves per-token
-   perplexity $\textrm{ppl}$ on a text that its tokenizer splits into $T$
-   tokens and whose size is $B$ UTF-8 bytes.
-    1. Show that its bits per byte :eqref:`eq_bpb` equals
-       $$\textrm{bpb} = \frac{T}{B} \log_2 \textrm{ppl}.$$
-    1. Use the formula and the table printed in
-       :numref:`subsec_bits-per-byte` to compute the average number of
-       bytes per token, $B/T$, for each tokenization. Explain how bits per
-       byte that nearly agree can coexist with perplexities that differ by
-       more than two orders of magnitude.
-    1. What held-out perplexity would the BPE-level trigram need in order
-       to reach one bit per byte?
-1. **Overlapping windows.** `d2l.TimeMachine` builds one row of
-   `num_steps + 1` consecutive tokens for every possible start position
-   in the corpus. The first `num_steps` tokens of a row form a row of `X`,
-   and the last `num_steps` tokens form the matching row of `Y`. The first
-   `num_train` rows go to training and the next `num_val` rows to
-   validation (:numref:`subsec_partitioning-seqs`). Take `num_steps=32`,
-   `num_train=10000`, and `num_val=5000`.
-    1. Counting input and target tokens together, how many corpus
-       positions do the training rows touch, and how many do the
-       validation rows touch? How many positions do both touch?
-    1. How many times per epoch does a token in the interior of the
-       training range serve as a target?
-    1. How many windows does a partition of the entire corpus of about
-       66,000 tokens into non-overlapping 32-token windows yield? Compare
-       this partition with the 10,000 overlapping training rows in the
-       number of windows and in the number of distinct corpus positions
-       covered.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/117)

@@ -493,15 +493,17 @@ and expect extrapolation to be much harder than interpolation.
        before the validation error stops improving?
     1. Suppose the noise term in `Data` were removed. How many past
        observations then suffice for exact prediction, and why?
-1. [code] **Dilated and averaged lags.** ● Keep four features for
-   `d2l.LinearRegression` but let them reach further back: once as the
-   lags $x_{t-1}, x_{t-2}, x_{t-4}, x_{t-8}$, and once as the four block
-   means $\frac{1}{4}\sum_{i=0}^{3} x_{t-4j+i}$ for $j = 1, \ldots, 4$.
-   Compare their validation errors with those for $\tau = 4$ and
-   $\tau = 16$. Which construction helps, and why?
+
+1. **Momentum strategies.** An investor selects stocks by their own past
+   returns, expecting those that rose to keep rising. State the assumption
+   about the return series that this strategy requires, in the terms of
+   :numref:`subsec_markov-models` and :numref:`subsec_stationarity`, and
+   describe one mechanism by which the assumption fails.
+
 1. [code] **Nonlinear autoregressor.** Replace `d2l.LinearRegression` by a
    small MLP on the same four lag features and retrain, possibly for more
    epochs. How do the one-step and the multistep predictions change?
+
 1. [code] **Error growth with the horizon.** For each $k$, the last entry
    of the list that `k_step_pred(k)` returns holds the $k$-step-ahead
    predictions of `data.x[data.tau+k-1:]`.
@@ -514,6 +516,14 @@ and expect extrapolation to be much harder than interpolation.
        which the mean squared $k$-step error exceeds this variance. What
        does a forecast beyond this horizon offer over the constant
        forecast?
+
+1. [code] **Dilated and averaged lags.** ● Keep four features for
+   `d2l.LinearRegression` but let them reach further back: once as the
+   lags $x_{t-1}, x_{t-2}, x_{t-4}, x_{t-8}$, and once as the four block
+   means $\frac{1}{4}\sum_{i=0}^{3} x_{t-4j+i}$ for $j = 1, \ldots, 4$.
+   Compare their validation errors with those for $\tau = 4$ and
+   $\tau = 16$. Which construction helps, and why?
+
 1. [code] **Regime switching.** ● Replace the single sine in `Data` by a
    series that alternates between $\sin(0.01\,t)$ and $\sin(0.05\,t)$
    every 200 time steps, and keep the additive noise. Both regimes then
@@ -523,6 +533,7 @@ and expect extrapolation to be much harder than interpolation.
    nevertheless fit both regimes, and why? Report training and validation
    error for each regime separately and locate the positions along the
    series where the fit is worst.
+
 1. [code] **Scheduled sampling.** ● :numref:`subsec_error-accumulation`
    states that exposing a model to its own predictions during training
    narrows the gap between one-step training and multistep use. Test the
@@ -535,11 +546,6 @@ and expect extrapolation to be much harder than interpolation.
    one-step validation error and the mean squared error of the last entry
    of `k_step_pred(64)`. Does any $\epsilon > 0$ lower the 64-step error
    below its value at $\epsilon = 0$? How does the one-step error change?
-1. **Momentum strategies.** An investor selects stocks by their own past
-   returns, expecting those that rose to keep rising. State the assumption
-   about the return series that this strategy requires, in the terms of
-   :numref:`subsec_markov-models` and :numref:`subsec_stationarity`, and
-   describe one mechanism by which the assumption fails.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/113)

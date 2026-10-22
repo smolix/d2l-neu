@@ -694,6 +694,7 @@ token, a property the next chapter's architectures inherit.
        out what the penalty does to a token whose logit is negative.
     1. Which legitimate repetitions in English text does the penalty
        discourage, and what happens as $\theta$ grows large?
+
 1. **Beam search properties.**
     1. Take beam size 2, the five-token vocabulary of
        :numref:`fig_beam-search`, and three steps. Assign conditional
@@ -709,12 +710,14 @@ token, a property the next chapter's architectures inherit.
        makes over $T$ steps. Count also the calls that exhaustive search
        makes when it evaluates every prefix once. Evaluate both counts
        for $|\mathcal{V}| = 1024$, $T = 50$, and $k = 4$.
+
 1. [code] **Length normalization.** Run `beam_search` at $k = 4$ for up to
    40 tokens after `'the time traveller'` and `'it seemed to me that'`.
    Pass the id of the newline character, `data.tokenizer.encode('\n')[0]`,
    as `eos_id`, and vary $\alpha \in \{0, 0.75, 1.5\}$. Compare the lengths
    and the total log-probabilities of the winning candidates, and explain
    the trend using :eqref:`eq_beam-search-score`.
+
 1. **Truncation under temperature.** `sample_next` applies every
    truncation rule to the temperature-scaled distribution $P_T$ of
    :eqref:`eq_temperature`. Write the min-$p$ condition
@@ -724,15 +727,7 @@ token, a property the next chapter's architectures inherit.
    top-$k$ with $k = 2$, top-$p$ with $p = 0.85$, and min-$p$ with
    $p_{\min} = 0.5$ keep at $T = 2$. Which of the three rules keeps the
    same set at every temperature?
-1. [code] **Top-$p$ versus min-$p$.** ● At $T = 1.5$, sweep $p$ for
-   top-$p$ and $p_{\min}$ for min-$p$ over a grid of values. For each
-   setting, generate 50-token continuations of five prefixes of your
-   choice and record two averages over the generated tokens: the number
-   of tokens the rule keeps, and the log-probability of the drawn token
-   under the untempered model. Plot the second average against the
-   first, one curve per rule. Which rule draws more probable tokens at
-   the same average number of kept tokens? Compare your finding with
-   those of :citet:`Nguyen.Baker.Neo.ea.2025`.
+
 1. [code] **Constrained sampling.** Ban every token whose text contains the
    letter "e" by setting its logit to $-\infty$ in a wrapper around
    `step_fn`. Generate 50 tokens greedily after `'the time traveller'`
@@ -748,6 +743,17 @@ token, a property the next chapter's architectures inherit.
        as forcing a given phrase to appear somewhere in the output. What
        does keeping several prefixes alive, as beam search does, add over
        masking one token at a time for such a constraint?
+
+1. [code] **Top-$p$ versus min-$p$.** ● At $T = 1.5$, sweep $p$ for
+   top-$p$ and $p_{\min}$ for min-$p$ over a grid of values. For each
+   setting, generate 50-token continuations of five prefixes of your
+   choice and record two averages over the generated tokens: the number
+   of tokens the rule keeps, and the log-probability of the drawn token
+   under the untempered model. Plot the second average against the
+   first, one curve per rule. Which rule draws more probable tokens at
+   the same average number of kept tokens? Compare your finding with
+   those of :citet:`Nguyen.Baker.Neo.ea.2025`.
+
 1. [code] **Failure taxonomy.** ● Choose 20 prefixes and decode a 50-token
    greedy continuation of each.
     1. Sort the failures into a taxonomy of your own, with categories such
@@ -764,6 +770,7 @@ token, a property the next chapter's architectures inherit.
     *Adapted from Stanford CS224n,
     [Assignment 4](https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1234/assignments/a4.pdf),
     Part 2(b).*
+
 1. [code] **Constant cost per token.** ● `step_fn` re-runs the network over
    the entire prefix for every generated token, so a $T$-token
    continuation costs $\mathcal{O}(T^2)$ cell updates

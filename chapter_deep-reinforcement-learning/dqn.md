@@ -74,6 +74,7 @@ uses older transitions. A bootstrapping error can therefore persist across many
 updates before the behavior policy revisits the affected states.
 
 ### The Deadly Triad
+:label:`subsec_dqn-deadly-triad`
 
 The three ingredients are *function approximation*, *bootstrapping*, and *off-policy data*. Figure :numref:`fig_rl_deadly_triad` locates familiar algorithms by which ingredients they use. Removing function approximation gives tabular Q-learning, which converges under the conditions of :numref:`sec_qlearning`. Removing bootstrapping gives neural REINFORCE with Monte Carlo targets and an unbiased policy gradient. Removing off-policy data gives methods such as SARSA and on-policy actor--critic.
 
@@ -106,10 +107,11 @@ The weights grow approximately exponentially: after a thousand sweeps, their
 sup norm has increased from $10$ to $335$, and the estimated value of state 7
 is $677$ although its true value is zero. This deterministic expected-update
 calculation has no sampling error, and reducing the step size slows but does not
-remove the divergence. The cause is the composition of projection under the
-off-policy weighting with a bootstrapped backup
-:cite:`Tsitsiklis.VanRoy.1997`. Reweighting the updates by the evaluated
-policy's visitation distribution converges in this example (exercise 7).
+remove the divergence. Since the true value function is representable, the
+cause is not an approximation error. It lies in the semi-gradient dynamics:
+under the off-policy weighting, the expected update has a direction along
+which the weights grow :cite:`Sutton.Barto.2018`. Reweighting the updates by the evaluated
+policy's visitation distribution converges in this example (exercise :exref:`ex_dqn-baird-on-policy`).
 
 Replay and target networks do not remove an element of the triad. They reduce
 temporal correlation and slow target changes, which often improves empirical
@@ -158,7 +160,7 @@ class ReplayBuffer:  #@save
                          np.array([batch_size]))
 ```
 
-Two details of the container matter. Its capacity is $200{,}000$ transitions, larger than the $50{,}000$-step training budget, so no transition is evicted in these experiments; exercise 4 studies a smaller buffer. In addition, `sample` returns a `Batch` without episode structure. Consequently, `reward_to_go` and `gae` are not defined for such a batch, whereas `td_target` requires only individual transitions. This is why replay combines naturally with one-step bootstrapping. The target below is the same `batch.td_target` used by the actor-critic critic.
+Two details of the container matter. Its capacity is $200{,}000$ transitions, larger than the $50{,}000$-step training budget, so no transition is evicted in these experiments; exercise :exref:`ex_dqn-shrink-buffer` studies a smaller buffer. In addition, `sample` returns a `Batch` without episode structure. Consequently, `reward_to_go` and `gae` are not defined for such a batch, whereas `td_target` requires only individual transitions. This is why replay combines naturally with one-step bootstrapping. The target below is the same `batch.td_target` used by the actor-critic critic.
 
 ### The Target Network
 
@@ -167,9 +169,9 @@ The repair for moving targets is the *target network* :cite:`mnih2015human`: a f
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_{w^-}(s', a'),$$
 :eqlabel:`eq_dqn_target`
 
-and synchronize the copy with the online weights, $w^-\leftarrow w$, every $C$ steps, here every 250. Between synchronizations, the target is fixed and the online network solves an ordinary regression problem. The feedback from predictions to targets now occurs once per synchronization rather than once per gradient step. The actor--critic method in :numref:`sec_actorcritic` updates its target from the newest critic because each batch contains fresh on-policy data. Replay removes that freshness, so DQN instead accepts stale targets to reduce the rate at which the regression problem changes.
+and synchronize the copy with the online weights, $w^-\leftarrow w$, every $C$ environment steps, here every 250. Between synchronizations, the target is fixed and the online network solves an ordinary regression problem. The feedback from predictions to targets now occurs once per synchronization rather than once per gradient step. The actor--critic method in :numref:`sec_actorcritic` updates its target from the newest critic because each batch contains fresh on-policy data. Replay removes that freshness, so DQN instead accepts stale targets to reduce the rate at which the regression problem changes.
 
-The regression update uses two distinct controls. The Huber loss is quadratic near zero and linear for large residuals, so it bounds the derivative of the loss with respect to the prediction. The parameter gradient also contains $\nabla_w Q_w(s,a)$, which the Huber loss does not bound. Global norm clipping therefore limits the complete parameter update, including the large simultaneous residual changes that may follow a target-network synchronization.
+The regression update uses two distinct controls. The Huber loss is quadratic near zero and linear for large residuals, so it bounds the derivative of the loss with respect to the prediction. The parameter gradient also contains $\nabla_w Q_w(s,a)$, which the Huber loss does not bound. Global norm clipping therefore bounds the norm of the complete parameter gradient before the optimizer uses it, including a large gradient produced by the simultaneous residual changes that may follow a target-network synchronization.
 
 ```{.python .input #dqn-the-target-network-1}
 %%tab pytorch
@@ -316,9 +318,10 @@ def train_dqn(seed, qnet, use_target=True, step=None):
             nnx.update(target, nnx.state(qnet, nnx.Param))
 ```
 
-Note what the buffer stores: `terminated`, never `truncated`. A CartPole episode cut off at 500 steps ends in a state with a future, and :numref:`sec_qlearning` established that masking the bootstrap there teaches the network that surviving is worthless; exercise 2 traces exactly what would go wrong.
+Note what the buffer stores: `terminated`, never `truncated`. A CartPole episode cut off at 500 steps ends in a state with a future, and :numref:`sec_qlearning` established that masking the bootstrap there teaches the network that surviving is worthless; exercise :exref:`ex_dqn-terminated-not-done` traces exactly what would go wrong.
 
 ### Ablating the Target Network
+:label:`subsec_dqn-ablation`
 
 Three seeds per arm, everything identical except the switch. The networks are caller-owned, as in :numref:`sec_actorcritic`, so later cells can audit the trained agents:
 
@@ -430,6 +433,7 @@ The next experiment isolates the maximization bias that produces this effect.
 ## Overestimation
 
 ### Measuring the Maximization Bias
+:label:`subsec_dqn-max-bias`
 
 The target :eqref:`eq_dqn_target` maximizes estimated action values. For noisy estimates, $E[\max_{a'}\hat{Q}(s',a')]\geq\max_{a'}E[\hat{Q}(s',a')]$, with strict inequality when noise can change the maximizing action. :numref:`sec_qlearning` demonstrated this bias in a table, and :numref:`sec_regularized` showed that the hard maximum is the $\beta\to0$ limit of the soft backup. Function approximation can feed the resulting bias back into subsequent targets :cite:`Thrun.Schwartz.1993`.
 
@@ -459,6 +463,7 @@ removes the corrective effect of new interaction (:numref:`sec_offline`).
 :label:`fig_rl_max_bias`
 
 ### Double DQN
+:label:`subsec_dqn-double-dqn`
 
 The double estimator requires two value estimates, and DQN already maintains an online network and a target network. Double DQN uses the online network to select the action and the target network to evaluate it :cite:`Hasselt.Guez.Silver.2016`:
 
@@ -539,45 +544,346 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
 
 ## Exercises
 
-1. [conceptual] *What survives the scramble.* A batch sampled from
-   `ReplayBuffer` carries a fake episode boundary. For each of
-   `td_target`, `reward_to_go`, and `gae`, state whether its value on such a
-   batch is meaningful, and connect the pattern to the on-policy/off-policy
-   split: why is the estimator that survives the scramble exactly the one
-   whose target ignores the collector?
-1. [conceptual] *Terminated, not done.* The buffer stores `float(terminated)`
-   and never `truncated`. Recalling :numref:`sec_qlearning`'s masking
-   discussion, describe precisely what the targets would teach the network
-   about long CartPole episodes if `done` were stored instead, and why the
-   damage would grow as the policy improves.
-1. [short-code] *The sync period.* Rerun the target arm with
-   `sync_every` in $\{50, 250, 2500\}$, one seed each. Distinguish two
-   failure directions: does the bad end merely slow learning, or does it cap
-   what the run reaches within the budget? Report fixed-budget greedy
-   evaluations, with the best and final windows beside them as descriptions
-   of the curve, and say why the distinction matters here of all places.
-1. [short-code] *Shrink the buffer.* Set the capacity to 500 transitions and
-   retrain one seed. Which of the two couplings does this reintroduce, what
-   do the return curve and the $\max_a Q_w(s_0, a)$ trace look like, and why
-   does the failure wait until the policy is good before it arrives?
-1. [short-code] *Best against final, at scale.* Using only curves already
-   logged by this section's cells and exercise 3's runs, no new training,
-   collect the best-window and final-window statistics across every seed and
-   arm. Which spread is a property of the algorithm and which is mostly a
-   property of when you stopped looking, and why does a predeclared
-   fixed-budget evaluation belong in a paper where neither window does?
-1. [short-code] *Port it.* Move the section's code to `LunarLander-v3`.
-   List every line that changes and every line that does not, then explain
-   why the step budget is the one number you should expect to raise
-   substantially. (Running the port to a strong policy takes roughly ten
-   times this section's budget; the listing question is answerable without
-   running at all.)
-1. [extended] *Baird, with a target network.* Add a target network to the
-   Baird cell: compute every $\delta$ from a frozen copy of $w$, synced every
-   $k$ sweeps, for $k \in \{10, 100\}$. Does the iteration now converge,
-   diverge more slowly, or diverge the same? Which corner of the triad did
-   the target network actually remove, and what does the answer say about
-   what DQN's second repair can and cannot buy?
+1. **Triad bookkeeping.** :numref:`fig_rl_deadly_triad` places the
+   algorithms of these chapters by the three ingredients of the deadly
+   triad. State which of function approximation, bootstrapping and
+   off-policy data each of the following agents uses.
+    1. A deep Q-network that collects 128 transitions with its current
+       network, takes one gradient step on exactly these transitions, and
+       then discards them, so that every minibatch comes from the current
+       $\epsilon$-greedy policy. Which policy generated its data, and the
+       value of which policy does its target :eqref:`eq_dqn_target`
+       estimate?
+    1. A deep Q-network whose buffer stores whole episodes and whose
+       regression target is the Monte Carlo return, the discounted sum of
+       the rewards to the end of the episode, in place of
+       :eqref:`eq_dqn_target`. Which function does this agent estimate when
+       its buffer holds episodes of older policies?
+    1. PQN :cite:`Gallici.Fellows.Ellis.ea.2025`, which keeps neither a
+       replay buffer nor a target network, collects each batch from
+       parallel environments with an $\epsilon$-greedy policy, and
+       bootstraps from the maximum over actions.
+
+1. [code] **Baird under on-policy weighting.** The computation of Baird's
+   counterexample in :numref:`subsec_dqn-deadly-triad` weights the seven
+   states equally through `.mean(0)`. In matrix form, one sweep is
+   $\mathbf{w} \leftarrow \mathbf{w} + \alpha A \mathbf{w}$ with $\alpha = 0.01$ and
+
+   $$A = \Phi^\top D (\gamma P - I) \Phi,$$
+
+   where $D$ is the diagonal matrix of the state weights and $P$ is the
+   transition matrix of the evaluated policy, every row of which puts all
+   probability on state 7.
+    1. Compute the eigenvalues of $A$ for $D = I/7$. Compare $1 + \alpha\lambda$,
+       for the eigenvalue $\lambda$ with the largest real part, with the
+       per-sweep growth factor of the sup norm of $\mathbf{w}$ late in a run
+       of $20{,}000$ sweeps.
+    1. The evaluated policy moves to state 7 and stays there, so its
+       visitation distribution puts all weight on state 7. Rerun the
+       iteration with this weighting. To which weights and which state values
+       does it converge, and how do these values compare with the true
+       values?
+    1. Mix the two weightings, $\mathbf{d} = (1 - p)\,\mathbf{1}/7 + p\,\mathbf{e}_7$,
+       and find by bisection the smallest $p$ for which no eigenvalue of $A$
+       has a positive real part, for $\gamma \in \{0.9, 0.95, 0.99\}$.
+       Because `Phi` has eight columns but only seven rows, $A$ always has
+       the eigenvalue $0$, and rounding can give it a real part of order
+       $10^{-17}$; count real parts below $10^{-10}$ as zero. How does the
+       amount of off-policy weight that the iteration tolerates depend on the
+       discount?
+   :exlabel:`ex_dqn-baird-on-policy`
+
+1. **Huber loss and norm clipping.** `fit_q` regresses with the Huber loss
+   of threshold 1, $\ell(e) = e^2/2$ for $|e| \leq 1$ and
+   $\ell(e) = |e| - 1/2$ otherwise, where $e = Q_w(s, a) - y$ is the residual
+   of one transition, and averages it over the $B$ transitions of a
+   minibatch. The update then rescales the minibatch gradient to norm
+   `grad_clip` $= 10$ whenever its norm exceeds 10 and passes it to Adam.
+    1. Show that $\ell'(e) = \max\big(-1, \min(1, e)\big)$. In which sense
+       is Huber regression squared-loss regression with clipped residuals?
+    1. Show that the gradient of the minibatch loss with respect to $w$ has
+       norm at most $\max_i \|\nabla_w Q_w(s_i, a_i)\|$. How can this bound
+       grow during training while every residual stays the same?
+    1. Adam divides a running average of the gradients by the square root
+       of a running average of their squares. Apart from the small constant
+       it adds for numerical stability, multiplying every gradient of a run
+       by one constant therefore leaves its steps unchanged. Which gradient
+       sequences does the norm clip change? How does it change the Adam
+       steps that follow a single gradient of very large norm, such as one
+       that may follow a target-network synchronization?
+    1. An Adam step moves each parameter by roughly the learning rate, here
+       $10^{-3}$, whatever the size of its gradient. The run without a target
+       network takes about $25{,}000$ such steps, and its start-state values
+       reach about $10^8$. Estimate how far one parameter can travel during
+       the run, and explain how steps of that size can produce values of
+       $10^8$ in the three linear layers of `make_qnet`, whose hidden layers
+       have 128 units.
+
+1. **Terminated, not done.** `train_dqn` stores `float(terminated)`, so a
+   transition into CartPole's 500-step time limit still bootstraps. Consider
+   an implementation that stores `float(terminated or truncated)` instead.
+    1. Which stored transitions does the change affect while the greedy
+       policy still fails within a few hundred steps, and which once every
+       episode reaches the limit?
+    1. The observation contains no clock, so the network cannot tell a state
+       at step 499 from a similar balanced state at step 50. Model its
+       estimate on balanced states by a single number $q$, the estimate of
+       the one-state task of exercise
+       :exref:`ex_qlearning-truncation-termination`a of
+       :numref:`sec_qlearning`, which pays reward 1 at every step. Evaluate
+       the value that this exercise found for the faulty mask at $H = 500$
+       and $\gamma = 0.99$. The start-state value plot of
+       :numref:`subsec_dqn-ablation` marks $1/(1 - \gamma)$ as the ceiling.
+       Compare $q$ with the value of the start state of a 500-step episode
+       when the remaining time is known, $(1 - \gamma^{H})/(1 - \gamma)$.
+       Which of the two is the ceiling of the faulty implementation for a
+       network without a clock? What would a final estimate of $94$
+       indicate?
+   :exlabel:`ex_dqn-terminated-not-done`
+
+1. [code] **The best window as a maximum.** The statistics printed in
+   :numref:`subsec_dqn-ablation` include, for each seed, the best of all
+   trailing 20-episode averages that `windows` computes. Choosing this window
+   after the run is a maximum over noisy estimates, the operation whose bias
+   :numref:`subsec_dqn-max-bias` measures.
+    1. Simulate runs whose episode returns are independent normal draws with
+       mean 200 and standard deviation 150, so that every window is an
+       unbiased estimate of the same mean. For runs of
+       $N \in \{50, 100, 300, 1000\}$ episodes, estimate the expected excess
+       of the best window over 200 and the standard deviation of the final
+       window.
+    1. Why does the excess grow with $N$ while the spread of the final window
+       does not?
+    1. The double estimator of :numref:`subsec_dqn-max-bias` selects with one
+       set of estimates and evaluates with an independent set. Describe the
+       corresponding procedure for reporting the return of a checkpoint
+       chosen during training. The fixed-budget greedy evaluation of
+       :numref:`subsec_dqn-ablation` chooses no checkpoint. Which choices,
+       made after seeing results, would still bring the bias of part (a) back
+       into it?
+
+1. **Values against returns.** In the continuing formulation of
+   :numref:`subsec_dqn-ablation`, a policy that keeps the pole up for $T$
+   steps and then fails has the discounted return
+   $(1 - \gamma^T)/(1 - \gamma)$ from its start state. Treat the evaluation
+   episodes as starting at $s_0$.
+    1. Let $T$ be random. Show that the expected discounted return is at most
+       $(1 - \gamma^{E[T]})/(1 - \gamma)$ when every episode ends by failure,
+       and that episodes truncated at 500 steps raise this bound by at most
+       $\gamma^{500}/(1 - \gamma)$.
+    1. Every CartPole step earns reward 1, so a greedy return printed by the
+       evaluation loop of :numref:`subsec_dqn-ablation` is a mean episode
+       length. For each DQN seed, convert this return into the bound of part
+       (a) and compare the bound with the final value estimate at $s_0$
+       printed in :numref:`subsec_dqn-double-dqn`. Which seeds estimate more
+       value than their own greedy policy obtains, and by at least how much?
+
+1. [code] **Maximization bias in closed form.** Let the estimates
+   $X_1, \ldots, X_m$ of $m$ actions with the same true value $0$ be jointly
+   normal with variance $\sigma^2$ each.
+    1. For $m = 2$ and independent estimates, show that
+       $E[\max(X_1, X_2)] = \sigma/\sqrt{\pi}$, using
+       $\max(x, y) = (x + y)/2 + |x - y|/2$.
+    1. The outputs of one network share its hidden layers, so their errors
+       are correlated. For $m = 2$ and correlation $c$ between $X_1$ and
+       $X_2$, show that the bias becomes $\sigma \sqrt{(1 - c)/\pi}$.
+    1. In Double DQN, the target network evaluates the action that the online
+       network selects, and the errors of the two networks are correlated.
+       Model the evaluating estimate of action $a$ as
+       $Y_a = \rho X_a + \sqrt{1 - \rho^2}\, Z_a$, where $Z_1, \ldots, Z_m$
+       have mean zero and variance $\sigma^2$ each and are independent of
+       $X_1, \ldots, X_m$, so that $Y_a$ has variance $\sigma^2$ and
+       correlation $\rho$ with $X_a$. Show that the bias of
+       $Y_{\mathrm{argmax}_a X_a}$ is $\rho\, E[\max_a X_a]$.
+    1. Check parts (a) and (c) by modifying the simulation of
+       :numref:`subsec_dqn-max-bias`: use two actions, and draw the second
+       estimate as `rho * est + np.sqrt(1 - rho**2) * noise` with fresh
+       standard normal `noise`, for $\rho \in \{0, 0.5, 0.9\}$.
+   :exlabel:`ex_dqn-max-bias-closed-form`
+
+1. [code] **Replay reuse and buffer capacity.** ● Once the buffer holds
+   `warmup` transitions, `train_dqn` takes one gradient step on
+   `batch_size` $= 128$ uniformly sampled transitions every `train_freq`
+   $= 2$ environment steps. With the default capacity, no transition is
+   evicted.
+    1. Show that a transition stored at step $\tau \geq 1000$ is sampled about
+       $64 \ln(50{,}000/\tau)$ times in expectation over the run, and evaluate
+       this for $\tau \in \{1000, 25{,}000, 49{,}000\}$. Data from which phase
+       of training dominate the updates?
+    1. With a capacity of 500 transitions, how often is a transition sampled
+       in expectation while it stays in the full buffer? Compare this with
+       part (a).
+    1. Set `buffer_size` to $500$ and to $5000$, and lower `warmup` to 500
+       for the smaller capacity, because `train_dqn` waits until the buffer
+       holds `warmup` transitions. Train one seed for each capacity and
+       compare the return curve and the start-state value trace with the
+       default run. At which stage of training does the damage appear?
+    1. A small buffer both correlates the transitions of a minibatch and
+       discards old states. To separate the two effects, keep the default
+       capacity and change `ReplayBuffer.sample` to return `batch_size`
+       consecutive transitions from a uniformly drawn start index. Compare
+       this run with the run at capacity 500. Which of the two effects
+       accounts for the damage of part (c)?
+   :exlabel:`ex_dqn-shrink-buffer`
+
+1. [code] **The sync period.** ● `train_dqn` copies the online weights into
+   the target network every `sync_every` $= 250$ environment steps, which is
+   every 125 gradient steps.
+    1. Suppose that every reward is 1, that all values start at zero, and that
+       the online network fits its targets exactly between two
+       synchronizations. Show that after $n$ synchronizations no value
+       exceeds $(1 - \gamma^n)/(1 - \gamma)$. Evaluate this bound at the end
+       of the budget for `sync_every` $\in \{10, 50, 250, 1000, 5000\}$,
+       counting the synchronizations that follow the first gradient step.
+    1. Rerun the DQN arm with these five values, two seeds each, and record
+       the greedy evaluation after the budget and the start-state value
+       trace. Which end of the sweep behaves like the run without a target
+       network? At which end does the bound of part (a) limit what the run
+       can reach?
+    1. With `sync_every` $= 250$, the final start-state values printed in
+       :numref:`subsec_dqn-double-dqn` exceed the bound of part (a). Which
+       assumption of part (a) fails, and what does the excess say about how
+       the network obtains its values?
+   :exlabel:`ex_dqn-sync-period`
+
+1. [code] **Duplicated actions.** ● :numref:`fig_rl_max_bias` shows the
+   maximization bias growing with the number of actions, and CartPole has
+   only two. Give the agent $k$ copies of each action: let the last layer of
+   `make_qnet` output $2k$ values, and pass `a % 2` to `env.step`, both in
+   `train_dqn` and in the greedy evaluation policy. The copies of an action
+   have the same true value, so they add estimates to every maximum without
+   changing the optimal return.
+    1. Suppose that every output carried independent noise of a fixed size.
+       Use problem :exref:`ex_dqn-max-bias-closed-form` and
+       :numref:`fig_rl_max_bias` to predict how the bias in the targets of
+       DQN and of Double DQN changes from $k = 1$ to $k = 8$.
+    1. Train DQN, with `q_step`, and Double DQN, with `q_step_double`, for
+       $k \in \{1, 4, 8\}$, two seeds each, and plot the start-state value
+       traces against the ceiling $1/(1 - \gamma)$. How do the measured
+       differences compare with the prediction?
+    1. Under $\epsilon$-greedy exploration, how often is each copy selected,
+       and how often is its output fitted to a target? Explain why the noise
+       per output need not stay fixed as $k$ grows.
+
+1. **n-step targets from replay.** ● Several successors of DQN replace the
+   one-step target :eqref:`eq_dqn_target` by an $n$-step target in the manner
+   of :eqref:`eq_nstep_return`,
+
+   $$y^{(n)}_t = \sum_{i=0}^{n-1} \gamma^i r_{t+i} + \gamma^n \max_{a'} Q_{w^-}(s_{t+n}, a'),$$
+
+   written here for an episode that continues past step $t + n$.
+    1. `ReplayBuffer.sample` returns isolated transitions. What must the
+       buffer store, and how must `sample` choose its indices, so that
+       $y^{(n)}_t$ can be formed?
+    1. Write $y^{(n)}_t$ for an episode that terminates at step $t + j$ with
+       $j < n$. How does it change when the episode is truncated at step
+       $t + j$ instead?
+    1. The actions $a_{t+1}, \ldots, a_{t+n-1}$ were chosen by the
+       $\epsilon$-greedy behavior policy of an older network. For $n = 2$ and
+       $Q_{w^-} = Q^*$, write $E[y^{(2)}_t \mid s_t, a_t]$ and show that it
+       equals the one-step target of $Q^*$ only if $a_{t+1}$ is greedy for
+       $Q^*$ with probability one. Which policy's value does the $n$-step
+       target estimate?
+    1. The $n$-step returns of :numref:`sec_actorcritic` did not raise the
+       question of part (c). Why not?
+
+1. **Prioritized sampling.** ● Prioritized replay
+   :cite:`Schaul.Quan.Antonoglou.ea.2016` samples stored transition $i$ with
+   probability $P(i)$ instead of $1/N$ and multiplies its loss by a weight
+   $u_i$. Let $\mathbf{g}_i$ be the gradient of the loss of transition $i$,
+   so that uniform replay estimates
+   $\bar{\mathbf{g}} = \frac{1}{N} \sum_i \mathbf{g}_i$.
+    1. Show that a single sampled transition with weight
+       $u_i = 1/\big(N P(i)\big)$ gives an unbiased estimate of
+       $\bar{\mathbf{g}}$.
+    1. Find the distribution $P$ that minimizes the expected squared error
+       $E\|u_i \mathbf{g}_i - \bar{\mathbf{g}}\|^2$ of this estimate. For the
+       squared loss, $\mathbf{g}_i = e_i \nabla_w Q_w(s_i, a_i)$ with residual
+       $e_i$. Under which condition is sampling in proportion to $|e_i|$
+       optimal?
+    1. :citet:`Schaul.Quan.Antonoglou.ea.2016` sample with
+       $P(i) \propto (|e_i| + c)^{\alpha}$ for a small constant $c > 0$, and
+       use the weights
+       $u_i = \big(N P(i)\big)^{-\beta}$ divided by $\max_j u_j$, with
+       $\beta$ annealed toward 1 over training. Which of the two changes to
+       the weights of part (a) affects only the step size, and which changes
+       the point to which the updates converge?
+
+1. [code] **Port to LunarLander.** ● `LunarLander-v3`, from Gymnasium's
+   Box2D extra, has an eight-dimensional observation, four discrete actions,
+   a reward shaped by distance, speed, tilt, leg contact and fuel use, a
+   reward of $-100$ at a crash and $+100$ when the lander comes to rest, and
+   a time limit of 1000 steps.
+    1. List the lines of the section's code that encode properties of
+       CartPole, and give their LunarLander values.
+    1. Two diagnostics of the section lose their meaning: the ceiling
+       $1/(1 - \gamma)$ and the probe state $s_0 = \mathbf{0}$. Explain why
+       each fails on LunarLander, and propose a replacement for each. Which
+       situation of the lander does the all-zero observation describe?
+    1. Train DQN and Double DQN for $250{,}000$ environment steps, three
+       seeds each, with the exploration schedule stretched in proportion to
+       the budget. Report the greedy evaluation and your replacement
+       diagnostics. On CartPole, the difference between the two arms stays
+       within the spread across seeds, and :numref:`fig_rl_max_bias` predicts
+       a larger maximization bias for four actions. Does the difference
+       exceed the spread across seeds on LunarLander?
+   :exlabel:`ex_dqn-port-lunarlander`
+
+1. [code] **Baird with a target network.** ●● DQN computes its bootstrap
+   from a frozen copy of the weights. In the computation of Baird's
+   counterexample in :numref:`subsec_dqn-deadly-triad`, compute `delta` from
+   a copy `w_target` as `gamma * (Phi @ w_target)[6] - Phi @ w`, and set
+   `w_target = w.copy()` every $k$ sweeps.
+    1. Run $100{,}000$ sweeps for $k \in \{1, 10, 30, 100, 300, 1000\}$ and
+       plot both the sup norm of $\mathbf{w}$ and the largest value error
+       $\max_i |(\Phi \mathbf{w})_i|$. For which $k$ does the iteration
+       converge, and how does its speed depend on $k$? Why does the sup norm
+       of $\mathbf{w}$ not approach zero where the values do?
+    1. Show that the seven rows of `Phi` are linearly independent, so that
+       every vector of target values is represented exactly by some
+       $\mathbf{w}$. Deduce that if the regression between two
+       synchronizations were solved exactly, each synchronization would map
+       the values $\mathbf{v}$ to $\gamma P \mathbf{v}$ under every positive
+       state weighting. Use this to explain both ends of part (a).
+    1. In the counterexample of Tsitsiklis and Van Roy, two nonterminal
+       states have values $w$ and $2w$ for one weight $w$, and every reward is
+       zero. The first state moves to the second, and the second stays where
+       it is with probability $1 - \eta$ and terminates otherwise. Weight both
+       states equally. Show that exact least-squares regression to the targets
+       of a frozen weight $w_k$ gives
+       $w_{k+1} = \gamma (6 - 4\eta)\, w_k / 5$, and that the semi-gradient
+       iteration without a target network diverges under the same condition
+       on $\gamma$ and $\eta$.
+    1. Both examples contain all three ingredients of the triad. Which
+       property of the function class separates the example that a target
+       network repairs from the one that it cannot repair?
+
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Example 11.1.*
+   :exlabel:`ex_dqn-baird-target-network`
+
+1. [extended] **LayerNorm instead of a target network.** ●●
+   :citet:`Gallici.Fellows.Ellis.ea.2025` prove that a sufficiently wide
+   Q-network with LayerNorm, trained with an $\ell_2$ penalty on its
+   final-layer weights, satisfies a stability condition for
+   temporal-difference learning without a target network, even on off-policy
+   data. In their experiments, LayerNorm alone sufficed in every environment
+   except Baird's counterexample.
+    1. Insert a LayerNorm after each hidden linear layer of `make_qnet`,
+       before the ReLU, and rerun the arm without a target network on three
+       seeds. Compare the start-state value traces and the greedy evaluations
+       with both arms of :numref:`subsec_dqn-ablation`.
+    1. Add the same layers to the DQN arm, which keeps its target network.
+       What does LayerNorm change there?
+    1. If a seed of part (a) still diverges, add an $\ell_2$ penalty on the
+       weights of the last linear layer and find the smallest coefficient
+       that prevents divergence. What does a large coefficient do to the
+       learned values?
+    1. The theorem concerns sufficiently wide networks and a regularized
+       update. Which of its assumptions does your experiment satisfy? Which
+       outcomes of parts (a) to (c) would contradict the paper's claim, and
+       which would only fall outside its scope?
 
 [Discussions](https://d2l.discourse.group/)
 

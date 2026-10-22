@@ -109,7 +109,7 @@ $$
 \end{aligned}
 $$
 
-More generally, we can define a $p \times q$ pooling layer by aggregating over 
+More generally, we can define a $k_\textrm{h} \times k_\textrm{w}$ pooling layer by aggregating over 
 a region of that size. Returning to the problem of edge detection, 
 we use the output of the convolutional layer
 as input for $2\times 2$ max-pooling.
@@ -213,6 +213,11 @@ X
 
 Since pooling aggregates information from an area, deep learning frameworks default to matching pooling window sizes and stride. For instance, if we use a pooling window of shape `(3, 3)`
 we get a stride shape of `(3, 3)` by default.
+
+:begin_tab:`jax`
+Flax's `nnx.max_pool` is an exception: its stride defaults to 1, so the code
+passes `strides` explicitly.
+:end_tab:
 
 ```{.python .input #pooling-padding-and-stride-2}
 %%tab mxnet

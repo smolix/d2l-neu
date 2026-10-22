@@ -41,7 +41,8 @@ import optax
 
 Fix a number of steps $T$ and a *variance schedule* $\beta_1, \ldots,
 \beta_T \in (0, 1)$. The **forward process** starts from a data point
-$\mathbf{x}_0 \sim q(\mathbf{x}_0)$, the data distribution ($q$ denotes
+$\mathbf{x}_0 \in \mathbb{R}^d$ drawn from the data distribution
+$q(\mathbf{x}_0)$ ($q$ denotes
 every distribution of the forward process), and applies $T$ Gaussian
 transitions,
 
@@ -303,7 +304,7 @@ $$
 :eqlabel:`eq_diffusion-posterior`
 
 where the simplification of the precision uses $\alpha_t (1 - \bar{\alpha}_{t-1}) + \beta_t = 1 - \bar{\alpha}_t$
-(Exercise 2 fills in the algebra). The posterior mean is a linear
+(Exercise :exref:`ex_ddpm-forward-posterior` fills in the algebra). The posterior mean is a linear
 combination of the clean point and the current noisy point, and its variance
 $\tilde{\beta}_t = \beta_t (1 - \bar{\alpha}_{t-1}) / (1 - \bar{\alpha}_t)$
 is smaller than $\beta_t$: much smaller at the first steps, where
@@ -360,7 +361,7 @@ For $\sigma_t^2 = \beta_t$ and the schedule used in the code below, the
 weight in front is about one half at the start of the chain, falls roughly
 like $1 / t$ to a tenth of that by $t = 20$, and stays between about $0.025$
 and $0.06$ over the rest of the chain; $\sigma_t^2 = \tilde{\beta}_t$ makes
-the early weights larger still (Exercise 3 traces both).
+the early weights larger still (Exercise :exref:`ex_ddpm-weights-bound` traces both).
 :citet:`ho2020denoising` drop the weight and also drop the separate
 treatment of $L_0$, training instead on the **simple loss**
 
@@ -415,7 +416,7 @@ Vincent's theorem the minimizer of :eqref:`eq_diffusion-simple-loss` over an
 unrestricted function class is the conditional expectation
 $\boldsymbol{\epsilon}^\star(\mathbf{x}_t, t) = \mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t]
 = -\sqrt{1 - \bar{\alpha}_t}\, \nabla_{\mathbf{x}_t} \log q(\mathbf{x}_t)$,
-where $q(\mathbf{x}_t)$ is the marginal of the forward process at step $t$.
+where $q(\mathbf{x}_t)$, also written $q_t$, is the marginal of the forward process at step $t$.
 The sampler is a score-based sampler as well. Substituting
 :eqref:`eq_diffusion-score-eps` into :eqref:`eq_diffusion-mu-theta`, one
 reverse step reads
@@ -473,6 +474,7 @@ differential equation, the *probability-flow* equation
 $$
 d\mathbf{x} = \big[ -\tfrac{1}{2} \beta(t)\, \mathbf{x} - \tfrac{1}{2} \beta(t)\, \nabla_{\mathbf{x}} \log q_t(\mathbf{x}) \big]\, dt,
 $$
+:eqlabel:`eq_diffusion-pf-ode`
 
 which carries half the score term and no noise. :numref:`sec_diffusion-ddim`
 meets a discretization of this equation.
@@ -561,6 +563,7 @@ net = train_ddpm(data, subkey)
 ```
 
 ### The Learned Predictor against the Optimal One
+:label:`subsec_diffusion-ddpm-optimal-predictor`
 
 For the running example the optimal noise predictor is available in closed
 form: the marginal $q(\mathbf{x}_t)$ is the mixture with its means scaled by
@@ -625,6 +628,7 @@ noise is read off directly. Relative to the bound, the simple loss puts
 more weight on these late steps, where predicting the noise is easiest.
 
 ### Ancestral Sampling
+:label:`subsec_diffusion-ddpm-ancestral`
 
 The sampler implements the procedure above. We run it with the learned
 predictor and, for reference, with $\boldsymbol{\epsilon}^\star$, and
@@ -795,14 +799,68 @@ $\sigma_t^2 = \beta_t$.
 
 ## Exercises
 
-1. **The marginal by induction.** Prove :eqref:`eq_diffusion-marginal` by
-   induction on $t$, using that a sum of independent Gaussians is Gaussian
-   with summed variances, and verify the variance-preserving property: if
-   $\mathbf{x}_0$ has identity covariance, so does every $\mathbf{x}_t$. Then
-   compute $\bar{\alpha}_T$ for the schedule of :citet:`ho2020denoising`
-   ($T = 1000$, $\beta_t$ linear from $10^{-4}$ to $0.02$), approximating the
-   product by $\exp(-\sum_t \beta_t)$, and compare with the value of
-   $\bar{\alpha}_T$ in the code.
+1. **Variance preservation.** Let the data have mean $\mathbf{0}$
+   and a covariance $\Sigma$ in $d$ dimensions with eigenvalues
+   $\lambda_1, \ldots, \lambda_d$. Show that $\mathbf{x}_t$ of
+   :eqref:`eq_diffusion-forward` has covariance
+   $\bar{\alpha}_t \Sigma + (1 - \bar{\alpha}_t) I$, and that each eigenvalue
+   moves monotonically from $\lambda_i$ toward $1$ as $t$ grows. On the noise
+   ladder of :numref:`sec_diffusion-annealed`, the perturbed point
+   $\mathbf{x} + \sigma \boldsymbol{\epsilon}$ has covariance
+   $\Sigma + \sigma^2 I$ instead. Suppose the data are multiplied by a factor
+   $c > 1$. What must change in each process for its end point to stay close
+   to the Gaussian from which its sampler starts?
+   :exlabel:`ex_ddpm-variance-preservation`
+1. [code] **Equivalent noise levels.** By :eqref:`eq_diffusion-marginal`,
+   $\mathbf{x}_t / \sqrt{\bar{\alpha}_t}$ is the data perturbed at the
+   equivalent noise level
+   $\sigma^{\textrm{eq}}_t = \sqrt{(1 - \bar{\alpha}_t) / \bar{\alpha}_t}$.
+    1. Compute $\sigma^{\textrm{eq}}_t$ for the schedule `beta` at
+       $t = 1, 10, 50, 100, 200$. The ladder of
+       :numref:`sec_diffusion-annealed` runs from $\sigma = 3$ down to
+       $\sigma = 0.05$. How many of the $200$ steps lie above its top, and
+       how many below its bottom?
+    1. :citet:`Nichol.Dhariwal.2021` (Section 3.2) observe that the end of
+       the linear schedule is so noisy that it contributes little to sample
+       quality. They propose the cosine schedule
+       $\bar{\alpha}_t = f(t) / f(0)$ with
+       $f(t) = \cos^2\big(\tfrac{t / T + s}{1 + s} \cdot \tfrac{\pi}{2}\big)$
+       and $s = 0.008$, with $\beta_t = 1 - \bar{\alpha}_t / \bar{\alpha}_{t-1}$
+       clipped at $0.999$. For $T = 200$, plot $\log \sigma^{\textrm{eq}}_t$
+       against $t$ for both schedules and repeat the counts of (a). How do
+       the two schedules distribute their steps over the noise levels?
+   :exlabel:`ex_ddpm-equivalent-noise-levels`
+1. [code] **The prior term.** The reverse chain starts from
+   $\mathcal{N}(\mathbf{0}, I)$, and the prior term $L_T$ of
+   :eqref:`eq_diffusion-elbo-terms` measures how far the end of the forward
+   chain is from it.
+    1. Approximating $\log(1 - \beta_t)$ by $-\beta_t$ gives
+       $\bar{\alpha}_T \approx \exp(-\sum_t \beta_t)$. Evaluate the
+       approximation for the schedule of :citet:`ho2020denoising`
+       ($T = 1000$, $\beta_t$ linear from $10^{-4}$ to $0.02$) and for the
+       schedule `beta`, and compare it with the exact products, about
+       $4.0 \times 10^{-5}$ and the printed $3.2 \times 10^{-5}$. Which term
+       of the expansion of $\log(1 - \beta_t)$ accounts for the difference?
+       Why does it matter more for the schedule `beta`?
+    1. Use :eqref:`eq_gan_mvn_kl` to write $L_T$ in closed form as a
+       function of $\bar{\alpha}_T$, $d$, and $\|\mathbf{x}_0\|^2$, and show
+       that it is approximately $\tfrac12 \bar{\alpha}_T \|\mathbf{x}_0\|^2$
+       for small $\bar{\alpha}_T$. Compute $\mathbb{E}\|\mathbf{x}_0\|^2$
+       for the running example from the parameters of `mix`, and evaluate
+       the average of $L_T$ for the schedule `beta` and for $T = 50$
+       with $\beta_t$ linear from $10^{-4}$ to $0.1$.
+    1. Write a version of `ancestral_sample` that takes the schedule as an
+       argument and uses the optimal predictor of that schedule,
+       $-\sqrt{1 - \bar{\alpha}_t}$ times `mix.score` with `scale`
+       $\sqrt{\bar{\alpha}_t}$ and `sigma` $\sqrt{1 - \bar{\alpha}_t}$. For
+       the schedule with $T = 50$, draw $20{,}000$ samples starting from
+       $\mathcal{N}(\mathbf{0}, I)$ and $20{,}000$ starting from the exact
+       $q(\mathbf{x}_T)$, which you obtain by noising draws of `mix` with
+       :eqref:`eq_diffusion-marginal`. Compare the outputs of `summarize` for
+       the two starts. Which statistic does the prior term affect? Compute
+       the mean of $q(\mathbf{x}_T)$ from the parameters of `mix`, and use it
+       to explain the direction of the change.
+   :exlabel:`ex_ddpm-prior-term`
 1. **The forward posterior.** Multiply the two Gaussian factors of
    $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)$, complete the square
    in $\mathbf{x}_{t-1}$, and derive :eqref:`eq_diffusion-posterior`. Then
@@ -810,40 +868,223 @@ $\sigma_t^2 = \beta_t$.
    and show that the coefficient of $\mathbf{x}_t$ in the posterior mean
    collapses to $1 / \sqrt{\alpha_t}$, which gives
    :eqref:`eq_diffusion-posterior-mean-eps`.
-1. [code] **The weights of the bound.** Compute the weight
-   $\beta_t^2 / (2 \sigma_t^2 \alpha_t (1 - \bar{\alpha}_t))$ in
-   :eqref:`eq_diffusion-lt-eps` for $\sigma_t^2 = \beta_t$ and for
-   $\sigma_t^2 = \tilde{\beta}_t$, as a function of $t = 2, \ldots, T$ for
-   the schedule in the code, and plot both. Which steps does the bound emphasize relative to
-   the simple loss, and how does this relate to the irreducible loss measured
-   in the experiment?
-1. **Two derivations, one model.** Starting from :eqref:`eq_diffusion-score-eps`,
-   show that the simple loss equals twice the noise-conditional denoising
-   objective :eqref:`eq_diffusion-ncsn-loss` evaluated on the scaled data
-   $\sqrt{\bar{\alpha}_t}\, \mathbf{x}_0$ at the noise levels of the forward
-   process, with weights $\lambda_t = 1 - \bar{\alpha}_t$. Then
-   substitute :eqref:`eq_diffusion-score-eps` into :eqref:`eq_diffusion-mu-theta`
-   to obtain :eqref:`eq_diffusion-ancestral-score`, and identify the step
-   size and the noise scale of the corresponding Langevin update.
-1. [code] **The prior term.** Estimate $L_T$ for the running example by
-   computing the Kullback--Leibler divergence between
-   $q(\mathbf{x}_T \mid \mathbf{x}_0)$ and $\mathcal{N}(\mathbf{0}, I)$ with
-   :eqref:`eq_gan_mvn_kl`, averaged over training points. Repeat with
-   $T = 50$ and the same $\beta$ range. How large does the prior term become,
-   and what does a large value imply for samples that start from a standard
-   Gaussian?
-1. [code] **Sampling with fewer steps.** Run the reverse chain using only
-   every fourth step of the schedule, treating the skipped steps as merged
-   into one transition with the product of their $\alpha$ values, and
-   compare the summary statistics with the full chain. Then try every tenth
-   step. Where does the approximation break down first: in the mode weights,
-   in the spread, or in the stray fraction?
-1. [code] **Predicting the mean instead of the noise.** Train a network to
-   output $\boldsymbol{\mu}_{\boldsymbol{\theta}}$ directly on the objective
-   :eqref:`eq_diffusion-mean-matching` with $\sigma_t^2 = \beta_t$, using the
-   same architecture and number of updates, and compare the sampling
-   statistics with the noise-prediction model. Explain the difference in the
-   scale of the two regression targets across $t$.
+   :exlabel:`ex_ddpm-forward-posterior`
+1. [code] **The weights of the bound.** Let
+   $w_t = \beta_t^2 / (2 \sigma_t^2 \alpha_t (1 - \bar{\alpha}_t))$ be the
+   weight in :eqref:`eq_diffusion-lt-eps`.
+    1. Compute $w_t$ for $\sigma_t^2 = \beta_t$ and for
+       $\sigma_t^2 = \tilde{\beta}_t$ as a function of $t = 2, \ldots, T$ for
+       the schedule `beta`, and plot both on a logarithmic axis. What
+       fraction of the total weight $\sum_{t=2}^{T} w_t$ lies on the steps
+       $t \leq 20$ for each choice? What fraction does the simple loss put
+       there?
+    1. For $\sigma_t^2 = \tilde{\beta}_t$ the constant in
+       :eqref:`eq_diffusion-lt-eps` vanishes, so at the optimal predictor
+       $L_{t-1}$ equals $w_t$ times the irreducible loss
+       $\mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}^\star\|^2$.
+       Evaluate it at the four steps printed in
+       :numref:`subsec_diffusion-ddpm-optimal-predictor`.
+    1. A minibatch estimate of the bound draws $t$ uniformly, as the simple
+       loss does. :citet:`Nichol.Dhariwal.2021` (Section 3.3) instead draw
+       $t$ with probability $p_t$ proportional to the root mean square of
+       the per-sample value of $L_{t-1}$, and divide the drawn term by $p_t$.
+       Why does this reduce the variance of the estimate? Which steps would
+       such a sampler draw most often on the running example?
+   :exlabel:`ex_ddpm-weights-bound`
+1. **The ancestral step to first order.** The section states that, to first
+   order in $\beta_t$, the reverse step :eqref:`eq_diffusion-ancestral-score`
+   with the exact score $\nabla \log q_t$ consists of a Langevin step that
+   leaves $q_t$ unchanged and a step of the probability-flow equation
+   :eqref:`eq_diffusion-pf-ode`.
+    1. Expand :eqref:`eq_diffusion-ancestral-score` to first order in
+       $\beta_t$, using $1 / \sqrt{\alpha_t} \approx 1 + \beta_t / 2$. Show
+       that it agrees to this order with a Langevin step
+       :eqref:`eq_diffusion-langevin` of step size $\beta_t$ on $q_t$,
+       followed by one Euler step of :eqref:`eq_diffusion-pf-ode` backward
+       over the time interval $1 / T$.
+    1. Let the data be $\mathcal{N}(\mathbf{0}, \nu I)$, so that
+       $q_t = \mathcal{N}(\mathbf{0}, v_t I)$ with
+       $v_t = \bar{\alpha}_t \nu + 1 - \bar{\alpha}_t$. Show that one
+       ancestral step with the exact score and $\sigma_t^2 = \beta_t$ maps
+       $q_t$ to $\mathcal{N}\big(\mathbf{0}, (v_{t-1} + \delta_t) I\big)$
+       with $\delta_t = (\beta_t^2 / \alpha_t)(1 / v_t - 1)$. For which data
+       is the step exact? Is the variance too large or too small for data
+       narrower than the standard Gaussian, such as a component of the
+       running example with $\nu = 0.25$? How does the error accumulated
+       over the chain change when the schedule is refined to twice as many
+       steps with half the $\beta_t$?
+   :exlabel:`ex_ddpm-ancestral-first-order`
+1. **The irreducible loss.** The column `E||eps - eps*||^2` printed in
+   :numref:`subsec_diffusion-ddpm-optimal-predictor` estimates the part of
+   the simple loss at each step that no predictor can remove.
+    1. Let the data be $\mathcal{N}(\boldsymbol{\mu}, \Sigma)$ in $d$
+       dimensions, with eigenvalues $\lambda_1, \ldots, \lambda_d$ of
+       $\Sigma$. Exercise :exref:`ex_denoising-linear-denoiser` of
+       :numref:`sec_diffusion-denoising` gives the posterior mean of such
+       data perturbed at a noise level $\sigma$, and its squared error. By
+       exercise :exref:`ex_ddpm-equivalent-noise-levels`,
+       $\mathbf{x}_t / \sqrt{\bar{\alpha}_t}$ is the data perturbed at the
+       level $\sigma^{\textrm{eq}}_t$. Use the two results to show that
+       $\boldsymbol{\epsilon}^\star(\mathbf{x}_t) = \mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t]$
+       is affine in $\mathbf{x}_t$ and that
+
+       $$\mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}^\star\|^2 = \sum_{i=1}^{d} \frac{\bar{\alpha}_t \lambda_i}{\bar{\alpha}_t \lambda_i + 1 - \bar{\alpha}_t}.$$
+
+    1. Evaluate this formula at steps $10$, $50$, $100$, and $200$ of the
+       schedule `beta`, where $\bar{\alpha}_t$ is about $0.977$,
+       $0.535$, $0.079$, and $3.2 \times 10^{-5}$, in two ways: for one
+       component of the running
+       example, with $\Sigma = 0.25\, I$, and for a single Gaussian with the
+       covariance of the whole mixture, computed from the parameters of
+       `mix`. Compare both with the printed column, whose entries have a
+       standard error of about $0.04$ at steps $10$ and $50$ and about
+       $0.01$ at step $100$. Which approximation fits at the early
+       steps and which at the late ones? Why?
+    1. Show that for the mixture the irreducible loss lies between the two
+       values of (b) at every step. For the lower bound, use that
+       conditioning on the component cannot increase the expected
+       conditional variance. For the upper bound, use that the best affine
+       predictor depends only on the mean and covariance of the data
+       (exercise :exref:`ex_denoising-linear-denoiser`b).
+   :exlabel:`ex_ddpm-irreducible-loss`
+1. [code] **Sampling with fewer steps.** Run the reverse chain on the
+   retained steps $t = k, 2k, \ldots, T$ only. Merge the skipped steps
+   between consecutive retained steps $t' < t$ into one transition with
+   $\alpha = \bar{\alpha}_t / \bar{\alpha}_{t'}$ and $\sigma^2 = 1 - \alpha$,
+   where the last transition goes from step $k$ to the clean point with
+   $\bar{\alpha}_0 = 1$. Use $k = 4, 10, 20, 40$, that is $50$, $20$, $10$,
+   and $5$ steps, once with `net` and once with `eps_star`, and compare the
+   summary statistics with those of the full chain. Where does the
+   approximation break down first: in the mode weights, in the spread, or in
+   the stray fraction? Relate the direction of the change in the spread at
+   moderate $k$ to the variance error of problem
+   :exref:`ex_ddpm-ancestral-first-order`b.
+   :exlabel:`ex_ddpm-sampling-fewer-steps`
+1. [code] **Step size and Gaussian reversal.** ● The reverse process :eqref:`eq_diffusion-reverse`
+   uses Gaussian transitions, which the section justifies for small steps.
+   This problem measures how small they must be.
+    1. Show that the exact reversal is the mixture
+       $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t) = \mathbb{E}_{\mathbf{x}_0 \sim q(\mathbf{x}_0 \mid \mathbf{x}_t)}\big[q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)\big]$
+       of the forward posteriors :eqref:`eq_diffusion-posterior`, and that
+       its covariance is
+       $\tilde{\beta}_t I + c_t^2 \operatorname{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]$,
+       where $c_t = \sqrt{\bar{\alpha}_{t-1}}\, \beta_t / (1 - \bar{\alpha}_t)$
+       is the coefficient of $\mathbf{x}_0$ in $\tilde{\boldsymbol{\mu}}_t$.
+    1. Let the data be $\tfrac12 \delta_{-1} + \tfrac12 \delta_{+1}$ in one
+       dimension, and let $x_t = 0$. The reversal is then the equal mixture
+       of $\mathcal{N}(-c_t, \tilde{\beta}_t)$ and
+       $\mathcal{N}(c_t, \tilde{\beta}_t)$, which is bimodal exactly when
+       $\rho_t^2 = c_t^2 / \tilde{\beta}_t$ exceeds $1$. Show that
+       $\rho_t^2 = \bar{\alpha}_{t-1} \beta_t / \big((1 - \bar{\alpha}_t)(1 - \bar{\alpha}_{t-1})\big)$,
+       and that at fixed $\bar{\alpha}_t$ the ratio $\rho_t$ shrinks like
+       $\sqrt{\beta_t}$ as the steps are refined.
+    1. Evaluate $\rho_t$ and the density $q(x_t = 0)$ for the schedule
+       `beta` and for the merged schedules of exercise
+       :exref:`ex_ddpm-sampling-fewer-steps` with $k = 10$ and $k = 40$. At
+       which steps is the reversal at $x_t = 0$ bimodal, and how probable is
+       $x_t$ near $0$ at those steps? Why can a Gaussian transition not be
+       accurate on the merged schedules? For $k = 40$, the last transition
+       goes from step $40$ to the clean point. What would it have to
+       produce, and what does a Gaussian transition with the optimal mean
+       produce instead?
+   :exlabel:`ex_ddpm-small-steps`
+1. [code] **Target and weighting.** ● :citet:`ho2020denoising` (Table 2)
+   compare predicting $\tilde{\boldsymbol{\mu}}_t$ with predicting
+   $\boldsymbol{\epsilon}$, each trained on the bound or on an unweighted
+   squared error.
+    1. Let the network output $\boldsymbol{\mu}_{\boldsymbol{\theta}}$
+       directly and train it on :eqref:`eq_diffusion-mean-matching` with
+       $\sigma_t^2 = \beta_t$. Solve :eqref:`eq_diffusion-mu-theta` for the
+       implied noise prediction $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$,
+       and show that in terms of it the objective is the regression of
+       :eqref:`eq_diffusion-lt-eps` with the weights of exercise
+       :exref:`ex_ddpm-weights-bound`, for every $t$ including $t = 1$,
+       where $L_0$ has the same form with $\sigma_1^2 = \beta_1$. The two
+       parameterizations of the bound thus differ only in what the network
+       outputs. Compare the size of the target $\tilde{\boldsymbol{\mu}}_t$
+       across $t$ with the size of its part that depends on
+       $\boldsymbol{\epsilon}$. What must a network that outputs
+       $\boldsymbol{\mu}_{\boldsymbol{\theta}}$ represent accurately?
+    1. Modify the training loss and train three models with the
+       architecture, optimizer, and number of updates of `train_ddpm`: noise
+       prediction with the weights of the bound for $\sigma_t^2 = \beta_t$,
+       mean prediction on the bound, and mean prediction on the unweighted
+       error
+       $\|\tilde{\boldsymbol{\mu}}_t - \boldsymbol{\mu}_{\boldsymbol{\theta}}\|^2$.
+       For each model, compare the implied noise prediction with `eps_star`
+       at the four steps of
+       :numref:`subsec_diffusion-ddpm-optimal-predictor`, and sample with it
+       as in :numref:`subsec_diffusion-ddpm-ancestral`. At which of the four
+       steps does each model fit `eps_star` better than `net`, which was
+       trained on the simple loss, and at which worse? Which findings of
+       :citet:`ho2020denoising` does your comparison reproduce?
+   :exlabel:`ex_ddpm-target-weighting`
+1. [code] **Commitment time.** ● The panels of
+   :numref:`subsec_diffusion-ddpm-ancestral` show a Gaussian cloud through
+   the first half of the reverse chain.
+   :citet:`Biroli.Bonnaire.deBortoli.ea.2024` measure when a chain commits
+   to a mode by cloning: run a chain down to step $t$, duplicate it, run
+   both copies to the end with independent noise, and record whether they
+   end in the same mode.
+    1. Run $2000$ chains with `net` and clone them at
+       $t = 200, 160, 120, 100, 80, 60, 40, 20$. Plot the fraction
+       $\varphi(t)$ of pairs whose final points have the same nearest
+       component mean. Which value does $\varphi$ take at $t = T$, and why?
+    1. Let $\Lambda$ be the largest eigenvalue of the covariance of the
+       data. :citet:`Biroli.Bonnaire.deBortoli.ea.2024` compare the signal
+       variance along the top principal direction, $\bar{\alpha}_t \Lambda$,
+       with the noise variance $1 - \bar{\alpha}_t$. They define the
+       speciation time by $\bar{\alpha}_t \Lambda = 1$ (their Eq. (4)), a
+       convention that agrees with this comparison when $\Lambda$ is large.
+       Compute $\Lambda$ from the parameters of `mix`, and find the steps at
+       which $\bar{\alpha}_t \Lambda = 1$ and at which
+       $\bar{\alpha}_t \Lambda = 1 - \bar{\alpha}_t$. Compare both with your
+       curve and with the steps at which the three blobs become visible in
+       the panels. Over which steps does the reverse chain decide the mode
+       weights?
+   :exlabel:`ex_ddpm-commitment-time`
+1. [extended] **The optimal reverse variance.** ●● :citet:`ho2020denoising`
+   (Section 3.2) note that $\sigma_t^2 = \beta_t$ is optimal for
+   $\mathbf{x}_0 \sim \mathcal{N}(\mathbf{0}, I)$ and
+   $\sigma_t^2 = \tilde{\beta}_t$ for $\mathbf{x}_0$ fixed at one point.
+   :citet:`Bao.Li.Zhu.ea.2022` derive the optimal fixed variance for every
+   data distribution from its score. Throughout, the reverse mean is
+   :eqref:`eq_diffusion-mu-theta` with the optimal predictor
+   $\boldsymbol{\epsilon}^\star$, and $\bar{e}_t = \mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}^\star\|^2 / d$
+   is the irreducible loss per coordinate at step $t$.
+    1. Show that for $t \geq 2$ the term $L_{t-1}$ of
+       :eqref:`eq_diffusion-elbo-terms` with reverse variance $\sigma_t^2$ is
+
+       $$L_{t-1} = \frac{d}{2} \left( \frac{\tilde{\beta}_t + k_t \bar{e}_t}{\sigma_t^2} - 1 + \log \frac{\sigma_t^2}{\tilde{\beta}_t} \right), \qquad k_t = \frac{\beta_t^2}{\alpha_t (1 - \bar{\alpha}_t)},$$
+
+       and that it is minimized by $\sigma_t^{\star 2} = \tilde{\beta}_t + k_t \bar{e}_t$.
+       Show that $\bar{e}_t = 1 - (1 - \bar{\alpha}_t)\, \mathbb{E}\|\nabla \log q_t(\mathbf{x}_t)\|^2 / d$,
+       so that $\sigma_t^{\star 2}$ follows from the score alone, and derive
+       $L_0$ in the same way.
+    1. Show that $0 \leq \bar{e}_t \leq 1$, and that $\sigma_t^{\star 2}$
+       equals $\tilde{\beta}_t$ for data at one point and $\beta_t$ for
+       $\mathbf{x}_0 \sim \mathcal{N}(\mathbf{0}, I)$. For data
+       $\mathcal{N}(\mathbf{0}, \nu I)$, show that the ancestral step of
+       problem :exref:`ex_ddpm-ancestral-first-order`b with
+       $\sigma_t^2 = \sigma_t^{\star 2}$ maps $q_t$ exactly to $q_{t-1}$.
+    1. Estimate $\bar{e}_t$ at every step of the schedule `beta` from
+       `eps_star` on noisy test points, as in
+       :numref:`subsec_diffusion-ddpm-optimal-predictor`, and plot
+       $\sigma_t^{\star 2} / \beta_t$ and $\tilde{\beta}_t / \beta_t$ against
+       $t$. Evaluate the bound $L_{\textrm{VLB}}$ for the three choices
+       $\beta_t$, $\tilde{\beta}_t$, and $\sigma_t^{\star 2}$, with $L_T$
+       from problem :exref:`ex_ddpm-prior-term`b and with $\sigma_1^2 = \beta_1$
+       in the second choice, since $\tilde{\beta}_1 = 0$. Compare the three
+       values with the true negative log-likelihood
+       $-\mathbb{E}[\log q(\mathbf{x}_0)]$, estimated with `mix.log_prob`.
+    1. Repeat (c) on the merged schedules of exercise
+       :exref:`ex_ddpm-sampling-fewer-steps` with $50$, $20$, and $10$
+       steps, and sample $20{,}000$ points with `eps_star` for each variance
+       choice and step count. Which choice gives the tightest bound and which
+       the most accurate spread at each step count? Why does the variance
+       matter little for the samples of the full chain but much for its
+       bound?
+   :exlabel:`ex_ddpm-optimal-variance`
 
 <!-- slides -->
 

@@ -55,8 +55,9 @@ $d\mathbf{X} = \tfrac12 \nabla \log p(\mathbf{X})\, dt + d\mathbf{W}$, and
 :numref:`sec_mdl-score-matching-diffusion-flow` proves from the
 Fokker--Planck equation that $p$ is a stationary density of this equation
 (:eqref:`eq_mdl-langevin`). Under mild conditions the continuous-time process
-converges to $p$ from any starting point :cite:`Roberts.Tweedie.1996`. The
-discrete chain with a fixed $\alpha$ converges instead to a distribution
+converges to $p$ from any starting point :cite:`Roberts.Tweedie.1996`. Under
+conditions that include a globally Lipschitz score, the discrete chain with
+a fixed $\alpha$ converges instead to a distribution
 that differs from $p$ by a discretization error, which vanishes as
 $\alpha \to 0$ with the number of steps growing correspondingly
 :cite:`Durmus.Moulines.2017`, and for targets whose tails are lighter than
@@ -163,6 +164,7 @@ class TrueScore(nnx.Module):  # the closed-form score as a jittable module
 ## Two Failures on the Running Example
 
 ### Sampling with the True Score
+:label:`subsec_diffusion-langevin-true-score`
 
 The first experiment removes all estimation error: the chain uses the exact
 score of the mixture. Two thousand chains start from a broad Gaussian
@@ -204,9 +206,10 @@ within the discretization bias, and the stray fraction is close to that of
 exact samples, one to two percent. Between modes it is stuck. After two
 hundred steps the three modes hold roughly equal fractions of the chains,
 which is where the broad initialization sent them, and after ten times as
-many steps the fractions are unchanged. Chains started inside one mode
-remain there. Nothing is wrong with the score: given enough steps, the chain
-would reach the right weights up to its discretization bias. The two lower
+many steps the fractions are unchanged. Of the chains started inside one
+mode, all but a few out of two thousand remain there. Nothing is wrong
+with the score: given enough steps, the chain would reach the right
+weights up to its discretization bias. The two lower
 modes are ten standard deviations apart and the upper one about nine and a
 half from each, and to cross from one to another a chain must climb against
 the gradient to the floor of the valley between them, about five standard
@@ -214,8 +217,9 @@ deviations from either mode, where the density is smaller than at the modes
 by a factor between about $e^{-10}$ and $e^{-12}$. The noise term
 occasionally pushes a chain outward, but the gradient term pulls it back
 long before it reaches the valley. The expected waiting time for a crossing
-exceeds the run by orders of magnitude (Exercise 2 estimates it), so the
-weights the chain reports are the weights of its initialization. This *slow
+exceeds the run by orders of magnitude (exercise
+:exref:`ex_langevin-escaping-mode` estimates it), so the weights the chain
+reports are the weights of its initialization. This *slow
 mixing* is the same defect that the random-walk sampler showed, and the
 gradient does not cure it :cite:`song2019generative`. The trajectories below
 show the mechanism: chains started far out
@@ -262,6 +266,7 @@ d2l.plt.xlabel('$x_1$'), d2l.plt.ylabel('$x_2$');
 ```
 
 ### Sampling with a Learned Score
+:label:`subsec_diffusion-langevin-learned-score`
 
 A learned score adds a second problem. :numref:`sec_diffusion-score-matching`
 measured the relative error of a score matching estimate and found it under
@@ -351,6 +356,7 @@ the estimate is unreliable is almost all of pixel space, is the one that
 the next section addresses.
 
 ## Gaussian Smoothing and Its Price
+:label:`subsec_diffusion-langevin-smoothing`
 
 Both failures share a cause: the empty regions between and around the
 modes. Perturbing the data with Gaussian noise fills them.
@@ -482,48 +488,229 @@ require different noise levels, and the next section uses a ladder of them.
 
 ## Exercises
 
-1. **Stationarity in one dimension.** For $p(x) \propto e^{-x^2 / 2}$, the
-   Langevin update :eqref:`eq_diffusion-langevin` is linear:
-   $x_{k+1} = (1 - \alpha / 2) x_k + \sqrt{\alpha}\, \xi_k$. For
-   $0 < \alpha < 4$, compute the variance of the stationary distribution of
-   this chain as a function of $\alpha$, show that it exceeds $1$, and expand
-   the excess to first order in $\alpha$. This is the discretization bias of the unadjusted chain in the
-   simplest case.
-1. **Escaping a mode.** Model the valley between two modes of the running
-   example by a one-dimensional density $p(x) \propto e^{-U(x)}$ with a
-   barrier of height $\Delta U$ between two wells. Using the fact that the
-   stationary density at the barrier top is smaller than at the well bottom
-   by a factor of $e^{\Delta U}$, argue that, in the limit of small $\alpha$,
-   the expected number of steps before a crossing grows like $e^{\Delta U}$,
-   up to a factor that depends on $\alpha$ and on the curvature of $U$ at the
-   well bottom and at the barrier top. Estimate $\Delta U$ for two
-   Gaussian modes of standard deviation $0.5$ whose means are $5$ apart, and
-   compare the resulting waiting time with the two thousand steps of the
-   experiment.
-1. [code] **Step size.** Repeat the true-score experiment with step sizes
-   $0.005$, $0.05$, and $0.5$ for two thousand steps each, and report the
-   within-mode spread and the stray fraction. Explain the two failure
-   directions: what happens to the spread when $\alpha$ is large, and what
-   happens to the distance traveled from the initialization when $\alpha$ is
-   small?
-1. [code] **Metropolis adjustment.** Add an acceptance test to the Langevin
-   move, treating :eqref:`eq_diffusion-langevin` as the proposal
-   $Q(\mathbf{x}' \mid \mathbf{x}) = \mathcal{N}(\mathbf{x} + \tfrac{\alpha}{2} \nabla \log p(\mathbf{x}),\, \alpha I)$
-   in :eqref:`eq_diffusion-mh-accept`; note that this proposal is not
-   symmetric. Verify that with the true score the within-mode spread becomes
-   exact even at a large step size, and measure the acceptance rate as a
-   function of $\alpha$.
-1. [code] **Fewer data.** Train the sliced score matching model on $200$
-   training points instead of $2000$ and repeat the learned-score sampling
-   run. How do the stray fraction and the within-mode spread change, and
-   which of the two failures discussed in the section does the change
-   reflect?
-1. [code] **A denoising step at the end.** For the run at $\sigma = 1$,
-   apply Tweedie's formula :eqref:`eq_diffusion-tweedie` once to the final
-   samples, moving each by $\sigma^2$ times the learned score. Report the
-   spread and the mode weights of the result and compare them with the data.
-   Which aspect of the blur does one denoising step remove, and which does it
-   not?
+1. **Stationarity in one dimension.** For the Gaussian target
+   $p(x) \propto e^{-x^2 / (2 \nu)}$ with variance $\nu$, the Langevin update
+   :eqref:`eq_diffusion-langevin` is linear:
+
+   $$
+   x_{k+1} = \left(1 - \frac{\alpha}{2 \nu}\right) x_k + \sqrt{\alpha}\, \xi_k.
+   $$
+
+    1. Find the step sizes for which the chain has a stationary
+       distribution, and compute its variance as a function of $\alpha$ and
+       $\nu$. Show that the variance exceeds $\nu$, and expand the excess to
+       first order in $\alpha$.
+    1. Each component of the running example has variance $\nu = 0.25$ per
+       coordinate. At which step size is the stationary variance of an
+       isolated component ten percent too large, and from which step size on
+       does the chain diverge?
+   :exlabel:`ex_langevin-stationarity`
+
+1. **Light tails.** The target $p(x) \propto e^{-x^4 / 4}$ in one dimension
+   has the score $-x^3$, which grows faster than linearly, and the Langevin
+   update :eqref:`eq_diffusion-langevin` reads
+   $x_{k+1} = x_k - \tfrac{\alpha}{2} x_k^3 + \sqrt{\alpha}\, \xi_k$.
+    1. Show that for $|x_k| > 2 / \sqrt{\alpha}$ the update without its noise
+       term returns a point farther from the origin than $x_k$, and that far
+       beyond this threshold $|x_k|$ grows faster than any geometric
+       sequence.
+    1. Chains start from $\mathcal{N}(0, 9)$, the one-dimensional analogue of
+       `x_init`. Neglecting the noise, estimate the fraction of chains that
+       diverge at $\alpha = 0.05$ and at $\alpha = 0.2$.
+    1. Explain why no fixed $\alpha > 0$ makes this chain converge to a
+       stationary distribution, although the continuous-time diffusion
+       converges to $p$ from every starting point.
+    1. The analysis of :citet:`Durmus.Moulines.2017` assumes a globally
+       Lipschitz score $s$, $|s(x) - s(y)| \le L\, |x - y|$ for all $x$ and $y$.
+       Show that under this assumption the update without its noise term
+       satisfies
+       $|x_{k+1}| \le (1 + \alpha L / 2)\, |x_k| + \tfrac{\alpha}{2}\, |s(0)|$,
+       so that the growth of part (a) cannot occur, and that the score $-x^3$
+       violates the assumption.
+
+1. [code] **Step size.** Repeat the two-thousand-step run with the true score
+   in :numref:`subsec_diffusion-langevin-true-score` at the step sizes
+   $\alpha = 0.0005$, $0.005$, $0.05$, $0.5$, and $1.2$. Record the fraction
+   of chains that remain finite, and the mode weights, the spread, and the
+   stray fraction of the finite chains; `summarize` assigns a row of
+   non-finite values to the first mean.
+    1. Apply `summarize` to exact samples of a mixture whose components have
+       the stationary variance of problem :exref:`ex_langevin-stationarity`a
+       instead of $0.25$, and compare the result with the spread and the
+       stray fraction of each run. Which runs does the stationary variance
+       explain, and what happens at $\alpha = 1.2$?
+    1. The discretization bias is smallest at $\alpha = 0.0005$. Why do the
+       statistics of this run nevertheless differ from the target?
+    1. Among the runs whose chains all remain finite, which one moves the
+       mode weights away from those of the initialization, and why?
+   :exlabel:`ex_langevin-step-size`
+
+1. [code] **Score error along the chain.**
+   :numref:`sec_diffusion-score-matching` measured the error of a learned
+   score on a grid, grouped by density. Measure it instead at the states
+   that the sampler visits. Run the chains with `score_data` from `x_init`
+   as in :numref:`subsec_diffusion-langevin-learned-score`, and at steps $0$,
+   $10$, $50$, $200$, and $2000$ compute the mean squared difference between
+   `score_data` and `mix.score` over the chain states, divided by the mean
+   squared norm of `mix.score` there.
+    1. How does this relative error evolve over the run? Relate the result to
+       :numref:`fig_diffusion-low-density`.
+    1. Retrain the model on the first $200$ points of `data`, and repeat the
+       measurement and the summary statistics. By how much does the relative
+       error grow, and how much do the mode weights, the spread, and the
+       stray fraction change? What does the comparison say about these
+       statistics as a test of a learned score?
+
+1. [code] **A denoising step at the end.** The chains `samples[1.0]` of
+   :numref:`subsec_diffusion-langevin-smoothing` sample the blurred
+   distribution $p_\sigma$ at $\sigma = 1$. Tweedie's formula
+   :eqref:`eq_diffusion-tweedie` maps each of them to the posterior mean of
+   the clean point by adding $\sigma^2$ times the score of $p_\sigma$.
+    1. Consider a single component $\mathcal{N}(\boldsymbol{\mu}, 0.25\, I)$
+       in two dimensions, perturbed at $\sigma = 1$. Compute the expected
+       squared distance between $\mathbb{E}[\mathbf{x} \mid \tilde{\mathbf{x}}]$
+       and $\boldsymbol{\mu}$, and compare it with the value $0.5$ for clean
+       samples.
+    1. Apply the formula once to `samples[1.0]`, with the learned score of
+       $p_\sigma$ that `score_sigma` holds after the loop, and report the
+       summary statistics. Which defects of the blurred samples does the step
+       remove, which defect does it introduce, and why are the results not
+       samples of the data distribution?
+
+1. [code] **Metropolis adjustment.** ● Treat the Langevin move as the
+   proposal
+
+   $$
+   Q(\mathbf{x}' \mid \mathbf{x}) = \mathcal{N}\left(\mathbf{x}';\ \mathbf{x} + \tfrac{\alpha}{2} \nabla_{\mathbf{x}} \log p(\mathbf{x}),\ \alpha I\right)
+   $$
+
+   of the Metropolis--Hastings test :eqref:`eq_diffusion-mh-accept`. This
+   proposal is not symmetric, so the two values of $Q$ in the test do not
+   cancel. The test also needs the density ratio
+   $p(\mathbf{x}') / p(\mathbf{x})$, which `mix.log_prob` supplies for the
+   running example and a score model does not.
+    1. Implement the adjusted chain for the running example with
+       `mix.log_prob` and `mix.score`, and run it from `x_init` for $2000$
+       steps at $\alpha = 0.05$, $0.5$, and $1.2$. Report the acceptance rate
+       and the summary statistics, and compare them with the unadjusted runs
+       of problem :exref:`ex_langevin-step-size` at the same step sizes.
+    1. Compare the mode weights of the adjusted chain with those of the
+       unadjusted chain at the step size found in problem
+       :exref:`ex_langevin-step-size`c, and explain the difference. Is the
+       movement of the unadjusted weights evidence that this chain samples
+       $p$ more faithfully?
+    1. On a standard Gaussian target in $d = 2, 8, 32, 128$ dimensions, find
+       for each $d$ the step size whose acceptance rate is about $0.574$, the
+       asymptotically optimal rate of :citet:`Roberts.Rosenthal.1998`, and
+       fit a power law $\alpha \propto d^{-\kappa}$. Exercise
+       :exref:`ex_energy-training-acceptance-dimension` of
+       :numref:`sec_diffusion-ebm-training` measures the corresponding power
+       law for the random-walk proposal of `metropolis_hastings`
+       :cite:`Roberts.Gelman.Gilks.1997`, whose step size is the standard
+       deviation of the proposal. How does the number of steps needed
+       to move each coordinate by a distance of order one, the width of the
+       target, grow with $d$ for each of the two samplers?
+
+1. **Escaping a mode.** ● Model the valley between the two lower modes of
+   the running example in one dimension by the equal mixture of
+   $\mathcal{N}(-2.5, 0.25)$ and $\mathcal{N}(2.5, 0.25)$, with potential
+   $U = -\log p$, well bottoms at $a = \pm 2.5$, and the barrier top at
+   $b = 0$. When the barrier height $\Delta U = U(b) - U(a)$ is large
+   compared with one, Kramers' formula :cite:`Kramers.1940` gives the
+   expected time for the diffusion $dX = -\tfrac12 U'(X)\, dt + dW$, the
+   continuous-time limit of :eqref:`eq_diffusion-langevin`, to pass from one
+   well to the other:
+
+   $$
+   \tau \approx \frac{4 \pi}{\sqrt{U''(a)\, |U''(b)|}}\, e^{\Delta U}.
+   $$
+
+    1. Compute $\Delta U$, $U''(a)$, and $U''(b)$, and convert $\tau$ into a
+       number of Langevin steps at $\alpha = 0.05$.
+    1. Estimate how many of $2000$ chains started inside mode 1 cross to
+       mode 2 during $2000$ steps. Mode 3 lies closer to mode 1, at a
+       distance of $\sqrt{22.25} \approx 4.7$, and has weight $0.2$. Evaluate
+       $U = -\log p$ of the running example along the segment between the
+       means of modes 1 and 3, read off the barrier height, and estimate the
+       number of crossings into mode 3 in the same way. Compare both
+       estimates with the run started in mode 1 in
+       :numref:`subsec_diffusion-langevin-true-score`.
+    1. Repeat the estimate of part (a) for $p_\sigma$ at $\sigma = 0.3$ and
+       $\sigma = 1$, treating the result as an order of magnitude where
+       $\Delta U$ is small, and use it to explain the mode weights in
+       :numref:`subsec_diffusion-langevin-smoothing`.
+   :exlabel:`ex_langevin-escaping-mode`
+
+1. **Score errors and samples.** ● A chain that uses the field
+   $\mathbf{s} = \nabla_{\mathbf{x}} \log p + \boldsymbol{\delta}$ with an
+   error $\boldsymbol{\delta}$ discretizes, for small $\alpha$, the diffusion
+   $d\mathbf{X} = \tfrac12 \mathbf{s}(\mathbf{X})\, dt + d\mathbf{W}$. The
+   Fokker--Planck equation (:numref:`sec_mdl-fokker-planck`) decides which
+   errors change the stationary density of this diffusion.
+    1. Let $\boldsymbol{\delta} = (c - 1) \nabla_{\mathbf{x}} \log p$ for a
+       constant $c > 0$, so that the field is the true score scaled by $c$.
+       Show that the stationary density is proportional to $p^c$. What do
+       $c < 1$ and $c > 1$ do to the spread of each mode and to the valleys
+       between the modes of the running example?
+    1. Show that $p$ remains stationary whenever
+       $\nabla \cdot (p\, \boldsymbol{\delta}) = 0$. For
+       $p = \mathcal{N}(\mathbf{0}, I)$ in two dimensions, verify that the
+       rotation field $\boldsymbol{\delta}(\mathbf{x}) = \gamma\, (-x_2, x_1)$
+       qualifies, and compute the Fisher divergence
+       :eqref:`eq_diffusion-esm` of $\mathbf{s}$ as a function of $\gamma$.
+    1. Let $\boldsymbol{\delta} = \nabla g$ for a smooth function $g$ that
+       equals $0$ near one mode, equals a constant $h$ near the others, and
+       varies only in the valley between them. Show that the stationary
+       density is proportional to $p\, e^{g}$, and bound the Fisher
+       divergence of $\mathbf{s}$ by $\tfrac12 \sup \|\nabla g\|^2$ times the
+       probability mass of the valley. The two mixtures $p_\pi$ and
+       $p_{\pi'}$ of problem :exref:`ex_score-matching-mode-weights` of
+       :numref:`sec_diffusion-score-matching` are an example: find, up to an
+       additive constant, the function $g$ with
+       $p_{\pi'} \propto p_\pi\, e^{g}$, and its value $h$ near the second
+       mode. What do parts (b) and (c) together say
+       about the Fisher divergence as a measure of sample quality
+       :cite:`Wenliang.Kanagawa.2020`?
+
+1. [code] **Mode weights from the score.** ●● Chains on the running example
+   report the mode weights of their initialization, yet the true score
+   determines the density up to its normalizer and therefore also the
+   weights. This problem recovers the weights from a score field and uses
+   them to correct the chains.
+    1. Let $p = \sum_k \pi_k\, \mathcal{N}(\boldsymbol{\mu}_k, \rho_k^2 I)$
+       have well-separated components in $d$ dimensions. Show that
+       $\log p(\boldsymbol{\mu}_k) - \log p(\boldsymbol{\mu}_j)$ equals the
+       line integral of the score along any path from $\boldsymbol{\mu}_j$
+       to $\boldsymbol{\mu}_k$, and that it approximates
+       $\log (\pi_k / \pi_j) - d \log (\rho_k / \rho_j)$. Which step of
+       this argument can fail for a learned field?
+    1. Compute the line integrals along the three straight segments between
+       the component means, by the trapezoidal rule on a few hundred points
+       per segment, for `mix.score`, for `score_data`, and for `score_sigma`,
+       which after the first cell of
+       :numref:`subsec_diffusion-langevin-smoothing` holds the network
+       trained at $\sigma = 1$. For each field, report the weights
+       $\hat{\pi}_k$ implied by the integrals from $\boldsymbol{\mu}_1$ and
+       the circulation, the sum of the integrals around the triangle
+       $\boldsymbol{\mu}_1 \to \boldsymbol{\mu}_2 \to \boldsymbol{\mu}_3 \to \boldsymbol{\mu}_1$.
+       Which field comes closest to the true weights, and why can a score of
+       $p_\sigma$ recover the weights of $p$ in this example?
+    1. Rerun the two-thousand-step chains with the true score from `x_init`,
+       assign each chain to its nearest mean, and resample the chains with
+       probabilities proportional to $\hat{\pi}_k / f_k$, where $f_k$ is the
+       fraction of chains in basin $k$. Show that the expected basin
+       fractions after resampling equal $\hat{\pi}_k$ whatever the
+       initialization, and that for $N$ chains the effective sample size
+       $(\sum_i w_i)^2 / \sum_i w_i^2$ of
+       :numref:`subsec_diffusion-limits-monte-carlo` becomes
+
+       $$
+       N_{\textrm{eff}} = N \Big/ \sum_k \frac{\hat{\pi}_k^2}{f_k}.
+       $$
+
+       Evaluate $N_{\textrm{eff}}$ with the true weights for these chains and
+       for chains started from `x_one`. When does the correction fail even
+       with exact weights?
 
 <!-- slides -->
 

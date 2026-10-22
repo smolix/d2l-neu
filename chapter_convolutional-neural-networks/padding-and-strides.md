@@ -469,6 +469,7 @@ example in image generation.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 10.2 and 10.4.*
+
 1. [code] **Mirror padding.** Mirror padding, also called reflect padding,
    extends a tensor by reflecting its entries about the border without
    repeating the border entry: padding the vector $(1, 2, 3)$ by one entry
@@ -483,6 +484,7 @@ example in image generation.
        outputs at the corners, along the edges, and in the interior, and
        relate the difference to the boundary condition that zero padding
        imposes.
+
 1. **Benefits of stride.** A $3 \times 3$ convolution with one pixel of
    padding on every side is applied to a single-channel $64 \times 64$
    input.
@@ -494,16 +496,7 @@ example in image generation.
        layers have stride 1 and when the first two have stride 2. Use the
        comparison to give one statistical benefit of a stride larger
        than 1.
-1. **Fractional stride.** ● Read a stride of $\frac{1}{2}$ as moving the
-   convolution window by half an input element per output element.
-    1. Evaluate :eqref:`eq_conv_output_shape` at $d_\textrm{h} = 1$,
-       $s_\textrm{h} = \frac{1}{2}$, and $p_\textrm{h} = k_\textrm{h} - 1$.
-       How does the output height compare with the input height?
-    1. Describe how to compute this output with an ordinary stride-1
-       convolution applied to a modified input, and check that your
-       construction gives the same output height.
-    1. Name a task in which a network needs this operation, and say where
-       in the network it would be placed.
+
 1. **Stride as sampling.** For a length-6 one-dimensional input, write the
    $4 \times 6$ weight matrix of a stride-1, kernel-3 convolution in the
    banded-matrix form of :numref:`subsec_conv_matmul`, and the
@@ -514,6 +507,7 @@ example in image generation.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 10.15.*
+
 1. **Dilation and gridding.** A network stacks four $3 \times 3$
    convolutions with stride 1. By :numref:`sec_dilation`, the doubling
    dilation schedule $(1, 2, 4, 8)$ gives one output element a receptive
@@ -528,6 +522,18 @@ example in image generation.
        field is said to exhibit *gridding*.
     1. Give one reason gridding is harmful for dense prediction tasks such
        as segmentation.
+
+1. **Fractional stride.** ● Read a stride of $\frac{1}{2}$ as moving the
+   convolution window by half an input element per output element.
+    1. Evaluate :eqref:`eq_conv_output_shape` at $d_\textrm{h} = 1$,
+       $s_\textrm{h} = \frac{1}{2}$, and $p_\textrm{h} = k_\textrm{h} - 1$.
+       How does the output height compare with the input height?
+    1. Describe how to compute this output with an ordinary stride-1
+       convolution applied to a modified input, and check that your
+       construction gives the same output height.
+    1. Name a task in which a network needs this operation, and say where
+       in the network it would be placed.
+
 1. **Gridding-free dilations.** ● A network stacks $L$ convolutions of
    size $3 \times 3$ with stride 1 and dilations $d_1, \ldots, d_L$. State
    a condition on $d_1, \ldots, d_L$ that guarantees the output depends on

@@ -155,7 +155,8 @@ $-\sum_k y_k\log p_k$ with $\mathbf y$ the one-hot label, is exactly the softmax
 *cross-entropy* loss (:numref:`subsec_mdl-nll-crossentropy`, :numref:`sec_softmax`).
 The Bernoulli is the case $K=2$. To *sample* a class rather than score one, the
 *Gumbel-max trick* perturbs each logit with independent Gumbel noise (the Gumbel
-distribution is the location--scale law of the maxima of many independent draws
+distribution, whose standard form has the CDF $\exp(-e^{-x})$, is the
+location--scale law of the maxima of many independent draws
 :cite:`Gumbel.1954`) and takes the argmax: an exact categorical sampler, and the
 basis of the Gumbel-softmax relaxation that lets gradients flow through discrete
 choices :cite:`Jang.Gu.Poole.2017,Maddison.Mnih.Teh.2017`.
@@ -474,7 +475,8 @@ $$
 
 The waiting clock never "ages", exactly the property that makes the exponential
 the continuous-time partner of the Poisson. The converse, that memorylessness
-*forces* the exponential form, is Exercise 4.
+*forces* the exponential form, is exercise
+:exref:`ex_mdl-distributions-memoryless-converse`.
 
 **Mean and variance.** With the standard integrals $\int_0^\infty u\,e^{-u}\,du=1$
 and $\int_0^\infty u^2 e^{-u}\,du=2$ (integration by parts,
@@ -506,6 +508,7 @@ print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(sample.var().round(
 ```
 
 ### Gaussian
+:label:`subsec_mdl-gaussian-clt`
 
 The *Gaussian* (or normal) distribution is what sums of many small independent
 effects look like, and such sums are everywhere.
@@ -536,8 +539,8 @@ Gaussian is everywhere. We take the theorem as given; :cite:`Wasserman.2013`
 gives the proof.
 
 **Watching universality happen.** Like the Poisson limit, this claim is
-checkable in a few lines. The cell below starts from about the least Gaussian
-summand available (a $U(0,1)$ draw, flat with hard edges and no tails), forms
+checkable in a few lines. The cell below starts from a summand that looks
+nothing like a Gaussian (a $U(0,1)$ draw, flat with hard edges and no tails), forms
 sums of $n$ of them, standardizes each sum by its mean $n/2$ and standard
 deviation $\sqrt{n/12}$, and overlays the resulting histograms on the standard
 normal density. At $n=1$ we see the uniform's own plateau; at $n=2$ the
@@ -576,8 +579,9 @@ $$
 
 so the standard Gaussian has variance $1$; shifting by $\mu$ and scaling by
 $\sigma$ gives mean $\mu$ and variance $\sigma^2$ in general. (The exponential
-family's moment property, :eqref:`eq_mdl-exp_family_moment`, will recover both by
-differentiation alone.)
+family's moment property, :eqref:`eq_mdl-exp_family_moment`, recovers both by
+differentiation alone; see exercise
+:exref:`ex_mdl-distributions-log-partition-moments`.)
 
 **Maximum entropy.** Among all distributions with a given mean and variance, the
 Gaussian has the largest entropy: it is the *most noncommittal* choice consistent
@@ -634,8 +638,8 @@ $$
 $$
 
 The *location estimator* makes the contrast concrete: the maximum-likelihood
-$\hat\mu$ under a Laplace minimizes $\sum_i|x_i-\mu|$, whose minimizer is the sample
-*median* (robust to outliers), whereas the Gaussian's is the mean. The cell
+$\hat\mu$ under a Laplace minimizes $\sum_i|x_i-\mu|$, whose minimizers include
+the sample *median* (robust to outliers), whereas the Gaussian's is the mean. The cell
 matches a Laplace and a Gaussian on variance and confirms the Laplace's heavier
 tail by the fraction of mass beyond $3$ standard deviations.
 
@@ -697,7 +701,7 @@ $$
 
 and the conditional $\mathbf x_1\mid\mathbf x_2$ is again Gaussian. We state its
 mean and covariance as a given fact (the derivation is a block-matrix computation,
-carried out in :cite:`Bishop.2006`, §2.3; Exercise 10 puts the formulas to work):
+carried out in :cite:`Bishop.2006`, §2.3; Exercise :exref:`ex_mdl-distributions-using-conditional-formula-eqref` puts the formulas to work):
 
 $$
 \boldsymbol\mu_{1\mid 2} = \boldsymbol\mu_1 + \boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}(\mathbf x_2-\boldsymbol\mu_2),
@@ -865,6 +869,7 @@ parameters. Both conveniences are exponential-family privileges, as the rest of
 this section shows.
 
 ### Maximum-Entropy Derivation
+:label:`subsec_mdl-max-entropy-derivation`
 
 Maximum entropy produces an exponential-family form only relative to a chosen
 support, base measure, and feasible set of constraints. Fix a base measure
@@ -954,6 +959,7 @@ $$
 = n\,A(\boldsymbol\eta) - \boldsymbol\eta^\top \sum_{i=1}^{n} T(x_i)
 - \sum_{i=1}^{n} \log h(x_i),
 $$
+:eqlabel:`eq_mdl-exp_family_nll`
 
 convex in $\boldsymbol\eta$ because $A$ is. Setting its gradient to zero gives
 $n\nabla A(\boldsymbol\eta)=\sum_i T(x_i)$: by the moment property, maximum
@@ -964,10 +970,13 @@ representation is *minimal* (no linear combination of the sufficient statistics
 is constant). The section's own softmax parameterization :eqref:`eq_mdl-softmax`
 is *not* minimal: adding the same constant to every logit leaves every $p_k$
 unchanged, so the categorical negative log-likelihood is flat along the direction
-$\mathbf 1$ and its optima form a line rather than a point, which is why
-implementations pin the shift (fixing one logit at zero, or subtracting the
-maximum). We verify :eqref:`eq_mdl-exp_family_moment` for the
-Bernoulli, where it should read $A'(\eta)=\sigma(\eta)=\mathbb E[x]=p$.
+$\mathbf 1$ and its optima form a line rather than a point. Multinomial logistic
+regression in statistics software removes this direction by fixing one logit at
+zero. Deep-learning implementations keep all $K$ logits and use the invariance
+only to subtract the maximum logit before exponentiating, which prevents
+overflow (:numref:`sec_softmax_concise`). We verify
+:eqref:`eq_mdl-exp_family_moment` for the Bernoulli, where it should read
+$A'(\eta)=\sigma(\eta)=\mathbb E[x]=p$.
 
 ```{.python .input #distributions-exp-family}
 import numpy as onp
@@ -1089,6 +1098,7 @@ its width decreases as $1/\sqrt n$.
 :label:`fig_mdl-prob-beta-posterior`
 
 ### Other Conjugate Pairs
+:label:`subsec_mdl-other-conjugate-pairs`
 
 The other discrete laws have their own conjugate partners, built the same way.
 
@@ -1124,9 +1134,9 @@ The other discrete laws have their own conjugate partners, built the same way.
 These are three instances of one theorem. **Every exponential-family likelihood
 has a conjugate prior**, provided the hyperparameters are chosen so that the
 prior below is normalizable, and that prior is itself an exponential family in
-the natural parameters $\boldsymbol\eta$: writing the prior as
-$p(\boldsymbol\eta)\propto\exp\!\bigl(\boldsymbol\nu^\top\boldsymbol\eta - \kappa\,A(\boldsymbol\eta)\bigr)$,
-Multiplying by the likelihood :eqref:`eq_mdl-exp_family` adds the data's
+the natural parameters $\boldsymbol\eta$:
+$p(\boldsymbol\eta)\propto\exp\!\bigl(\boldsymbol\nu^\top\boldsymbol\eta - \kappa\,A(\boldsymbol\eta)\bigr)$.
+Multiplying this prior by the likelihood :eqref:`eq_mdl-exp_family` adds the data's
 sufficient statistics to $\boldsymbol\nu$ and increments $\kappa$ by the sample
 size. The pseudo-count update of :eqref:`eq_mdl-beta_posterior` is this general
 mechanism specialized to the Bernoulli, and the hyperparameters
@@ -1193,48 +1203,358 @@ object whose mean and covariance the table states.
 
 ## Exercises
 
-1. Let $X,Y\sim\mathrm{Binomial}(16,1/2)$ be independent. Find the standard
-   deviation of $X-Y$. (*Hint:* variances add for independent variables, even under
-   subtraction.)
-2. Show that the categorical negative log-likelihood $-\sum_k y_k\log p_k$ with
-   $p_k$ from the softmax :eqref:`eq_mdl-softmax` has gradient
-   $\hat{\mathbf p}-\mathbf y$ with respect to the logits $\mathbf z$. Why does this
-   form make softmax classification well behaved?
-3. Verify that the multinomial pmf :eqref:`eq_mdl-multinomial_pmf` for $n$ trials,
-   $K=2$, reduces exactly to the binomial pmf :eqref:`eq_mdl-binomial_pmf`.
-4. Prove the converse of memorylessness: if a positive continuous random variable
-   has survival function $G(t)=P(X>t)$ satisfying $G(s+t)=G(s)\,G(t)$ for all
-   $s,t\ge0$, show that $G(t)=e^{-\lambda t}$ for some $\lambda>0$ (use
-   monotonicity of $G$). Then show that the minimum of independent
-   $\mathrm{Exp}(\lambda_i)$ is again exponential with rate $\sum_i\lambda_i$.
-5. For $X\sim\mathrm{Poisson}(\lambda)$, argue that $(X-\lambda)/\sqrt\lambda$
-   becomes approximately Gaussian as $\lambda\to\infty$. (*Hint:* for integer
-   $\lambda=m$, a $\mathrm{Poisson}(m)$ variable is the sum of $m$ independent
-   $\mathrm{Poisson}(1)$ variables, so the iid CLT applies as $m\to\infty$;
-   general $\lambda$ follows by splitting off the fractional part.)
-6. Show that the maximum-likelihood location $\mu$ under a $\mathrm{Laplace}(\mu,b)$
-   model minimizes $\sum_i|x_i-\mu|$ and hence is the sample *median*, while under a
-   Gaussian it is the mean.
-7. Write the **categorical** distribution over $K$ classes in exponential-family
-   form :eqref:`eq_mdl-exp_family`. Identify $T(\mathbf x)$ (one-hot) and the natural
-   parameters, and verify that $\nabla A(\boldsymbol\eta)=\mathbb E[T]$ recovers the
-   softmax :eqref:`eq_mdl-softmax`.
-8. Given $\boldsymbol\Sigma=\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$,
-   find the eigenvalues and eigenvectors and state the axis directions and
-   half-lengths of the $\mathcal N(\mathbf 0,\boldsymbol\Sigma)$ density contours.
-   Show that a linear map $\mathbf A\mathbf x+\mathbf b$ of a multivariate Gaussian
-   is again Gaussian with covariance $\mathbf A\boldsymbol\Sigma\mathbf A^\top$.
-9. Start from a uniform $\mathrm{Beta}(1,1)$ prior on a coin's bias and observe the
-   sequence "HHHTHTTHHHHHT" ($9$ heads, $4$ tails) of
-   :numref:`sec_mdl-maximum_likelihood`. Give the posterior :eqref:`eq_mdl-beta_posterior`
-   and its mean, and show that as the data grows the posterior mean converges to the
-   maximum-likelihood frequency $n_H/(n_H+n_T)$.
-10. Using the conditional formula :eqref:`eq_mdl-mvn_conditional`, take the
-    bivariate Gaussian with $\boldsymbol\mu=\mathbf 0$ and
-    $\boldsymbol\Sigma=\left(\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\right)$
-    and find the distribution of $x_1$ given $x_2$. Show its mean is $\rho x_2$ and
-    its variance is $1-\rho^2$, and explain why observing $x_2$ never *increases* the
-    uncertainty about $x_1$.
+1. **Multinomial moments.** Code a categorical draw as a one-hot vector
+   $\mathbf t\in\{0,1\}^K$ with $P(t_k=1)=p_k$. A multinomial count vector is
+   then the sum $\mathbf x=\sum_{i=1}^n\mathbf t_i$ of $n$ independent one-hot
+   draws, just as a binomial count is a sum of Bernoulli variables.
+    1. Show that $\mathbb E[\mathbf t]=\mathbf p$ and
+       $\operatorname{Cov}(\mathbf t)=\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$.
+       Use that every one-hot vector satisfies
+       $\mathbf t\mathbf t^\top=\operatorname{diag}(\mathbf t)$.
+    1. Derive $\mathbb E[\mathbf x]=n\mathbf p$ and
+       $\operatorname{Cov}(\mathbf x)=n\bigl(\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top\bigr)$
+       without manipulating the pmf :eqref:`eq_mdl-multinomial_pmf`. Why is
+       the covariance of two different counts $x_j$ and $x_k$ negative?
+    1. Show that $\mathbf 1^\top\operatorname{Cov}(\mathbf x)\,\mathbf 1=0$,
+       and explain this degeneracy by a property that every count vector
+       $\mathbf x$ has. What is the marginal distribution of a single count
+       $x_k$?
+   :exlabel:`ex_mdl-distributions-multinomial-moments`
+
+1. **Error counts on a test set.** A classifier is scored on $n=10{,}000$
+   independent test examples, so that its number of errors $E$ has the
+   distribution $\mathrm{Binomial}(n,q)$, where $q$ is its true error rate.
+    1. Let $q=0.1$. Use the Gaussian approximation of the binomial (the
+       de Moivre--Laplace theorem) to find the interval around $nq$ that
+       contains $E$ with probability about $95\%$. Two classifiers with this
+       error rate are scored on two independent test sets of this size. Find
+       the standard deviation of the difference of their observed accuracies.
+    1. Let $q=5\cdot10^{-4}$. Compute $P(E=0)$ and $P(E\ge10)$ exactly and
+       under the Poisson approximation $\mathrm{Poisson}(nq)$. Show that the
+       logarithm of $P(E=0)$ under the binomial differs from its Poisson
+       value by about $-nq^2/2$.
+    1. The classifier makes no errors on the $n$ test examples. Under the
+       Poisson approximation, find the largest error rate $q$ for which this
+       outcome still has probability at least $0.05$, and express it as a
+       multiple of $1/n$. Use (b) to explain why the Poisson approximation
+       is accurate for every error rate this small.
+   :exlabel:`ex_mdl-distributions-error-counts`
+
+1. **Poisson process.** Let $X\sim\mathrm{Poisson}(\lambda_1)$ and
+   $Y\sim\mathrm{Poisson}(\lambda_2)$ be independent.
+    1. Compute $P(X+Y=k)$ by summing over the ways to split $k$ events
+       between $X$ and $Y$, and show that
+       $X+Y\sim\mathrm{Poisson}(\lambda_1+\lambda_2)$.
+    1. In a Poisson process with rate $\lambda$, the number $N(t)$ of events
+       in the window $[0,t]$ has the distribution $\mathrm{Poisson}(\lambda t)$.
+       Let $S_k$ be the time of the $k$-th event. Explain why $S_k\le t$ holds
+       exactly when $N(t)\ge k$, and use this to write $P(S_k\le t)$ as a
+       finite sum of Poisson probabilities. Differentiate in $t$ to show that
+       $S_k$ has the density $\mathrm{Gamma}(k,\lambda)$ of
+       :numref:`subsec_mdl-other-conjugate-pairs`.
+    1. Use (a) and the central limit theorem to show that
+       $(X-\lambda_1)/\sqrt{\lambda_1}$ converges in distribution to
+       $\mathcal N(0,1)$ as $\lambda_1\to\infty$ through the integers.
+   :exlabel:`ex_mdl-distributions-poisson-process`
+
+1. **Exponential races.** Let $X_1,\dots,X_m$ be independent with
+   $X_i\sim\mathrm{Exp}(\lambda_i)$, for example the waiting times for the next
+   event in $m$ independent event streams.
+    1. Show that $\min_i X_i\sim\mathrm{Exp}\bigl(\sum_i\lambda_i\bigr)$.
+    1. Show that the $j$-th stream fires first with probability
+       $P\bigl(X_j=\min_i X_i\bigr)=\lambda_j/\sum_i\lambda_i$.
+    1. Let $E_1,\dots,E_K$ be independent $\mathrm{Exp}(1)$ variables and let
+       $\mathbf z\in\mathbb R^K$ be a vector of logits. Use (b) to show that
+       $\operatorname{argmax}_k\,(z_k-\log E_k)$ is distributed according to
+       the softmax probabilities :eqref:`eq_mdl-softmax`. Because $-\log E_k$
+       has the standard Gumbel distribution, this result is the Gumbel-max
+       trick.
+   :exlabel:`ex_mdl-distributions-exponential-races`
+
+1. **Laplace location estimate.** Model a sample $x_1,\dots,x_n$, sorted as
+   $x_{(1)}\le\dots\le x_{(n)}$, as independent draws from
+   $\mathrm{Laplace}(\mu,b)$ :eqref:`eq_mdl-laplace_pdf`. The
+   maximum-likelihood location minimizes $f(\mu)=\sum_i|x_i-\mu|$.
+    1. Away from the data points, $f$ is differentiable. Express $f'(\mu)$
+       through the numbers of data points to the left and to the right of
+       $\mu$. Use it to find every minimizer of $f$, separately for odd and
+       for even $n$.
+    1. Fix the location at a minimizer $\hat\mu$ and find the
+       maximum-likelihood scale $\hat b$.
+    1. An adversary may replace $k$ of the $n$ points by arbitrary values.
+       What is the smallest $k$ that can move the sample mean arbitrarily far?
+       What is the smallest such $k$ for the sample median when $n$ is odd?
+       What does the comparison imply for training a regression network with
+       the mean absolute error instead of the mean squared error when some
+       labels are corrupted?
+   :exlabel:`ex_mdl-distributions-laplace-location`
+
+1. [code] **Confidence ellipses.** Let
+   $\mathbf x\sim\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ in
+   $\mathbb R^d$. Its squared *Mahalanobis distance* from the mean is
+
+   $$r^2=(\mathbf x-\boldsymbol\mu)^\top\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu),$$
+
+   whose level sets are the density contours of :eqref:`eq_mdl-mvn_pdf`.
+    1. Write $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$ with the Cholesky
+       factorization $\boldsymbol\Sigma=\mathbf L\mathbf L^\top$ and
+       $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$, and show that
+       $r^2=\|\mathbf z\|^2$. Why does the distribution of $r^2$ not depend
+       on $\boldsymbol\Sigma$?
+    1. For $d=2$, integrate the density of $\mathbf z$ in polar coordinates
+       to show that $P(r^2>c)=e^{-c/2}$. Which distribution of this section
+       does $r^2$ have? Find the $c$ for which the ellipse $r^2\le c$ contains
+       $95\%$ of the probability.
+    1. For $\boldsymbol\Sigma=\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$
+       and $\boldsymbol\mu=\mathbf 0$, give the directions and half-lengths of
+       the axes of this $95\%$ ellipse. Draw $5000$ samples with
+       `rng.multivariate_normal(mu_v, Sigma, size=5000)` and compute the
+       fraction of them that falls inside the ellipse.
+   :exlabel:`ex_mdl-distributions-confidence-ellipses`
+
+1. **Conditioning on a noisy observation.** The conditional formulas
+   :eqref:`eq_mdl-mvn_conditional` turn a joint Gaussian into a prediction of
+   one block from another.
+    1. Take the bivariate Gaussian with $\boldsymbol\mu=\mathbf 0$ and
+       $\boldsymbol\Sigma=\left(\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\right)$,
+       where $|\rho|<1$. Show that $x_1\mid x_2\sim\mathcal N(\rho x_2,1-\rho^2)$.
+       Why does observing $x_2$ never increase the uncertainty about $x_1$?
+    1. A signal $s\sim\mathcal N(0,\tau^2)$ is observed with additive noise,
+       $y=s+\epsilon$, where $\epsilon\sim\mathcal N(0,\sigma^2)$ is
+       independent of $s$. Write $(s,y)$ as a linear map of $(s,\epsilon)$ to
+       obtain its joint Gaussian distribution, and compute the conditional
+       distribution of $s$ given $y$. Show that the conditional precision
+       $1/\operatorname{Var}(s\mid y)$ is the sum of the prior precision
+       $1/\tau^2$ and the noise precision $1/\sigma^2$. How does
+       $\mathbb E[s\mid y]$ behave as $\sigma^2\to0$ and as
+       $\sigma^2\to\infty$? This computation is Gaussian process regression
+       (:numref:`chap_gp`) with a single observation.
+   :exlabel:`ex_mdl-distributions-using-conditional-formula-eqref`
+
+1. **Maximum entropy on the integers.** Consider distributions
+   $(p_0,p_1,p_2,\dots)$ on $\{0,1,2,\dots\}$ with a fixed mean $m>0$.
+   :numref:`subsec_mdl-max-entropy-derivation` asserts that the base measure
+   decides which of them maximizes entropy.
+    1. Maximize the Shannon entropy $H[p]=-\sum_k p_k\log p_k$ subject to
+       $\sum_k p_k=1$ and $\sum_k k\,p_k=m$, using Lagrange multipliers
+       (:numref:`subsec_mdl-lagrange-multipliers`). Show that the stationary
+       point is a geometric distribution $p_k=(1-q)\,q^k$, and express $q$
+       through $m$.
+    1. Repeat the derivation for the entropy relative to $h(k)=1/k!$,
+       $H_h[p]=-\sum_k p_k\log\bigl(p_k/h(k)\bigr)$, and show that the
+       maximizer is $\mathrm{Poisson}(m)$.
+    1. At $m=4$, compute the Shannon entropy of both distributions
+       numerically. Which one is larger, and why must it be? Compare
+       $P(X\ge15)$ under the two distributions. Which assumption about large
+       counts does the choice of base measure encode?
+   :exlabel:`ex_mdl-distributions-max-entropy-integers`
+
+1. **Moments from the log-partition.** The moment property
+   :eqref:`eq_mdl-exp_family_moment` and its second-order form
+   $\nabla^2A=\operatorname{Cov}(T)$ turn moment calculations into
+   differentiation.
+    1. For the Poisson, $A(\eta)=e^\eta$. Derive the mean and the variance
+       from $A$. Which property of the function $A$ makes them equal?
+    1. For the Gaussian, the natural parameters are $\eta_1=\mu/\sigma^2$
+       and $\eta_2=-1/(2\sigma^2)$. Express $A$ as a function of
+       $(\eta_1,\eta_2)$. Differentiate it to recover $\mathbb E[x]$,
+       $\mathbb E[x^2]$, $\operatorname{Var}(x)$ and
+       $\operatorname{Cov}(x,x^2)$.
+    1. The Laplace distribution with a fixed location $\mu$ has the
+       sufficient statistic $T(x)=|x-\mu|$. Write it in the form
+       :eqref:`eq_mdl-exp_family`, and use $A$ to compute
+       $\mathbb E\,|x-\mu|$ and $\operatorname{Var}|x-\mu|$. Check the result
+       against the Laplace variance $2b^2$.
+   :exlabel:`ex_mdl-distributions-log-partition-moments`
+
+1. **Gamma--Poisson mixture.** Let the Poisson rate itself be random,
+   $\lambda\sim\mathrm{Gamma}(\alpha,\beta)$ with the density of
+   :numref:`subsec_mdl-other-conjugate-pairs`, and let
+   $X\mid\lambda\sim\mathrm{Poisson}(\lambda)$.
+    1. Use the laws of total expectation and total variance
+       :eqref:`eq_mdl-tower` to compute $\mathbb E[X]$ and
+       $\operatorname{Var}(X)$. Write the variance in terms of the mean
+       $m=\alpha/\beta$ and the shape $\alpha$. In which limit of $\alpha$
+       and $\beta$ does the Poisson reappear?
+    1. Show that $X$ has the *negative binomial* pmf
+
+       $$P(X=k)=\frac{\Gamma(k+\alpha)}{k!\,\Gamma(\alpha)}\Bigl(\frac{\beta}{1+\beta}\Bigr)^{\alpha}\Bigl(\frac{1}{1+\beta}\Bigr)^{k},\qquad k=0,1,2,\dots,$$
+
+       by integrating out $\lambda$ with the help of the Gamma normalizer.
+    1. A count dataset has sample mean $2$ and sample variance $6$. Choose
+       $\alpha$ and $\beta$ so that the model matches both. Which named
+       distribution results?
+   :exlabel:`ex_mdl-distributions-gamma-poisson-mixture`
+
+1. **Converse of memorylessness.** ● The exponential distribution is
+   memoryless. This problem proves the converse.
+    1. Let $X>0$ be a continuous random variable whose survival function
+       $G(t)=P(X>t)$ satisfies $G(s+t)=G(s)\,G(t)$ for all $s,t\ge0$. Show
+       that $G(t)=e^{-\lambda t}$ for some $\lambda>0$. Start from $G(1)$,
+       extend the formula to rational $t$, and then use that $G$ is
+       nonincreasing. Why can $G(1)$ be neither $0$ nor $1$?
+    1. Let $X$ take values in $\{1,2,\dots\}$ and satisfy
+       $P(X>s+t\mid X>s)=P(X>t)$ for all integers $s,t\ge0$. Show that $X$ is
+       geometric, $P(X>t)=(1-p)^t$ for some $p\in(0,1]$.
+   :exlabel:`ex_mdl-distributions-memoryless-converse`
+
+1. **Minimal categorical family.** ● Code a categorical outcome as a one-hot
+   vector $\mathbf x\in\{0,1\}^K$, with class probabilities
+   $\mathbf p=\mathrm{softmax}(\mathbf z)$ given by :eqref:`eq_mdl-softmax`.
+    1. Write $P(\mathbf x)$ in the form :eqref:`eq_mdl-exp_family` with
+       $T(\mathbf x)=\mathbf x$ and natural parameters
+       $\boldsymbol\eta=\mathbf z$. Find $A(\mathbf z)$ and verify that
+       $\nabla A(\mathbf z)=\mathrm{softmax}(\mathbf z)$. Deduce the gradient
+       of the cross-entropy loss $-\log P(\mathbf y)$ of a one-hot label
+       $\mathbf y$ with respect to the logits.
+    1. Compute $\nabla^2 A(\mathbf z)$ and compare it with
+       $\operatorname{Cov}(\mathbf t)$ of problem
+       :exref:`ex_mdl-distributions-multinomial-moments`a. Show that
+       $\nabla^2A(\mathbf z)\,\mathbf 1=\mathbf 0$, and that the gradient of
+       the negative log-likelihood of a dataset is orthogonal to $\mathbf 1$
+       at every $\mathbf z$. Gradient descent with a small step size runs on
+       the logits from a starting point $\mathbf z_0$, and every class
+       occurs in the data. Which function of $\mathbf z$ does gradient
+       descent never change? Which of the minimizers does it therefore
+       approach?
+    1. Fix $z_K=0$. This gives a minimal representation with
+       $\boldsymbol\eta=(z_1,\dots,z_{K-1})$ and
+       $T(\mathbf x)=(x_1,\dots,x_{K-1})$. Show that $\nabla^2A(\boldsymbol\eta)$
+       is positive definite whenever every $p_k>0$. Given class counts
+       $n_1,\dots,n_K$, solve the moment-matching condition
+       $\nabla A(\boldsymbol\eta)=\bar T$ for the maximum-likelihood
+       $\hat{\boldsymbol\eta}$. What happens when some class has $n_k=0$?
+   :exlabel:`ex_mdl-distributions-minimal-categorical`
+
+1. [code] **Poisson regression.** ● A generalized linear model for counts
+   makes the natural parameter of a Poisson an affine function of the
+   features: $y_i\mid\mathbf x_i\sim\mathrm{Poisson}(e^{\eta_i})$ with
+   $\eta_i=\mathbf w^\top\mathbf x_i+b$.
+    1. Use the negative log-likelihood :eqref:`eq_mdl-exp_family_nll` to
+       write the loss as a function of $(\mathbf w,b)$, and compute its
+       gradient and Hessian. Show that the loss is convex. Which equations
+       does a zero gradient impose on the fitted means
+       $\hat m_i=e^{\hat\eta_i}$?
+    1. Generate $n=1000$ examples with $\mathbf x_i\sim\mathcal N(\mathbf 0,\mathbf I_2)$,
+       $\mathbf w=(-0.3,1.0)$ and $b=0.5$. Starting from zero, fit
+       $(\mathbf w,b)$ with the Newton step :eqref:`eq_mdl-opt-newton-step`,
+       and check the equations of (a) at the solution.
+    1. Multiply each rate by an independent $g_i\sim\mathrm{Gamma}(1,1)$,
+       which has mean $1$, so that the counts become overdispersed while their
+       conditional means stay $e^{\eta_i}$. Fit the Poisson model to $200$
+       such datasets and to $200$ datasets without the multiplier. Compare
+       the mean and the standard deviation of the estimates across datasets.
+       Explain the behavior of the mean with the equations of (a).
+   :exlabel:`ex_mdl-distributions-poisson-regression`
+
+1. **Conjugate priors from natural parameters.** ● For a scalar natural
+   parameter $\eta$, the general conjugate prior of an exponential-family
+   likelihood is
+
+   $$p(\eta)\propto\exp\bigl(\nu\,\eta-\kappa\,A(\eta)\bigr),$$
+
+   and $n$ observations update it by $\nu\to\nu+\sum_i T(x_i)$ and
+   $\kappa\to\kappa+n$.
+    1. For the Poisson, $\eta=\log\lambda$ and $A(\eta)=e^\eta$. Change
+       variables from $\eta$ to $\lambda$, including the Jacobian, and show
+       that the prior on $\lambda$ is a Gamma distribution. Identify its shape
+       and rate, and check that the update reproduces the Gamma posterior of
+       :numref:`subsec_mdl-other-conjugate-pairs`.
+    1. For the Bernoulli, $\eta=\log\frac{p}{1-p}$ and
+       $A(\eta)=\log(1+e^\eta)$. Show that the prior on $p$ is a Beta
+       distribution, identify its parameters, and find the values of
+       $(\nu,\kappa)$ for which it is normalizable.
+    1. Take the flat prior on the logit, $\nu=\kappa=0$. Which density on $p$
+       does it induce, and is that density normalizable? After $x$ heads in
+       $n$ flips, when is the posterior normalizable, and what is its mean?
+       Compare it with the mean of the posterior :eqref:`eq_mdl-beta_posterior`
+       under the uniform prior $\mathrm{Beta}(1,1)$ on $p$.
+   :exlabel:`ex_mdl-distributions-conjugate-recipe`
+
+1. [code] **Convergence rate of the CLT.** ●● Let $F_n$ be the c.d.f. of
+   the standardized sum $(S_n-n\mu)/(\sigma\sqrt n)$ of $n$ independent
+   summands with mean $\mu$ and standard deviation $\sigma$. Measure the
+   error of the Gaussian approximation by the Kolmogorov distance
+   $D_n=\sup_x|F_n(x)-\Phi(x)|$, where $\Phi$ and $\phi$ denote the standard
+   Gaussian c.d.f. and density. :numref:`subsec_mdl-gaussian-clt` judges the
+   approximation by eye; this problem measures its rate.
+    1. Compute $D_n$ for $n\in\{1,2,4,\dots,64\}$ and three summand
+       distributions, $U(0,1)$, $\mathrm{Exp}(1)$ and
+       $\mathrm{Bernoulli}(1/2)$, from an exact formula for $F_n$ in each
+       case. For uniform summands use the Irwin--Hall formula
+
+       $$P(S_n\le s)=\frac{1}{n!}\sum_{k=0}^{\lfloor s\rfloor}(-1)^k\binom{n}{k}(s-k)^n,$$
+
+       evaluated in exact rational arithmetic with Python's
+       `fractions.Fraction`, because its terms cancel catastrophically in
+       floating point once $n$ exceeds about $40$. For exponential summands
+       use problem :exref:`ex_mdl-distributions-poisson-process`b. For the
+       two continuous summands, take the supremum over a fine grid of
+       $x\in[-4,4]$. For Bernoulli summands, compare $\Phi$ with $F_n$ on
+       both sides of every jump. Plot $D_n$ against $n$ on log-log axes and
+       fit the slopes.
+    1. For summands that are not confined to a lattice and have skewness
+       $\gamma=\mathbb E[(X-\mu)^3]/\sigma^3$, the Edgeworth expansion
+       :cite:`Hall.1992` refines the central limit theorem to
+
+       $$F_n(x)=\Phi(x)-\frac{\gamma}{6\sqrt n}\,(x^2-1)\,\phi(x)+o\bigl(n^{-1/2}\bigr).$$
+
+       Predict the limit of $\sqrt n\,D_n$ for exponential summands and
+       compare it with your measurements. What does the expansion predict for
+       uniform summands, and which rate did you measure for them?
+    1. Bernoulli$(1/2)$ summands also have $\gamma=0$. Explain the slope you
+       measured for them by the size of the largest jump of $F_n$, and predict
+       the limit of $\sqrt n\,D_n$. Then compare $F_n$ at the lattice points
+       $k$ with the continuity-corrected value
+       $\Phi\bigl((k+\tfrac12-n\mu)/(\sigma\sqrt n)\bigr)$. Which rate does the
+       corrected error have?
+    1. The correctness indicators of a classifier with accuracy $0.99$ are
+       $\mathrm{Bernoulli}(0.99)$ variables. Compute their skewness, and
+       assume that the skewness term of (b) also governs the
+       continuity-corrected error. Predict the number of test examples
+       needed before the corrected error falls below $0.01$, and check the
+       prediction by computing the corrected error for
+       $n\in\{10^2,10^3,10^4\}$. Build the pmf of $S_n$ from the number of
+       errors $n-S_n\sim\mathrm{Binomial}(n,0.01)$: the successive-ratio
+       recursion started from $P(S_n=0)=0.01^n$ underflows to zero in
+       floating point once $n$ exceeds about $160$, whereas the recursion for
+       the errors starts from $0.99^n$. What does the result imply for
+       Gaussian error bars on the test accuracy of a highly accurate model?
+   :exlabel:`ex_mdl-distributions-clt-rate`
+
+1. [extended] **Burstiness of word counts.** ●● :citet:`Church.Gale.1995`
+   found that word counts in text vary across documents more than a Poisson
+   model allows, and that Poisson mixtures such as the negative binomial fit
+   them better. Reproduce the finding at small scale on *The Time Machine*
+   (:numref:`sec_text-sequence`). Download the text with
+   `d2l.download(d2l.DATA_URL + 'timemachine.txt')`, keep only letters as
+   `d2l.TimeMachine._preprocess` does, split it into words, and cut the word
+   sequence into consecutive chunks of $L=500$ words, which play the role of
+   documents.
+    1. For each of the words "the", "and", "of", "time", "traveller",
+       "weena" and "morlocks", count its occurrences in every chunk, and
+       compute the ratio of the sample variance to the sample mean of the
+       counts. Which ratio does a Poisson model predict? Which words deviate
+       most from it?
+    1. Fit a Poisson and a negative binomial model
+       (problem :exref:`ex_mdl-distributions-gamma-poisson-mixture`b) to the
+       counts of each word by maximum likelihood, and compare the maximized
+       log-likelihoods. Parameterize the negative binomial by its mean $m$
+       and its shape $\alpha$. The maximum-likelihood $m$ is the sample mean,
+       so only $\alpha$ requires a one-dimensional search, for example on a
+       logarithmic grid.
+    1. For each word, compare the empirical fraction of chunks that do not
+       contain the word, and the empirical *adaptation*
+       $P(X\ge2\mid X\ge1)$, with the predictions of both fitted models. What
+       does the adaptation measure, and why does a Poisson model
+       underestimate it for a name such as "traveller"?
+    1. Repeat (a) for chunk lengths $L\in\{100,250,500,2000\}$. Assume that
+       the rate of a word in a chunk is $L$ times a per-word rate drawn from a
+       Gamma distribution with a fixed shape. Use problem
+       :exref:`ex_mdl-distributions-gamma-poisson-mixture`a to predict how the
+       variance-to-mean ratio grows with $L$, and compare the prediction with
+       your measurements.
+   :exlabel:`ex_mdl-distributions-word-burstiness`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/417)

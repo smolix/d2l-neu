@@ -146,8 +146,9 @@ stable log-space rule discussed in
 $$\hat{y} = \mathop{\mathrm{argmax}}_y \; \log p(y) + \sum_{i=1}^d \log p(x_i\mid y).$$
 :eqlabel:`eq_mdl-naive_bayes_log`
 
-Each class score is now a sum of 785 finite log probabilities rather than a
-product prone to underflow. Prediction requires a table of precomputed log
+Each class score is now a sum of 785 log probabilities rather than a
+product prone to underflow, and each term is finite as long as no estimated
+probability is zero. Prediction requires a table of precomputed log
 probabilities and a sequence of additions.
 
 For a binary feature,
@@ -184,7 +185,7 @@ values in an array $P_{xy}$, represented below as one $28\times28$ grid per
 class. The complementary probability is
 $\hat p(x_i=0\mid y)=1-\hat p(x_i=1\mid y)$.
 
-One hazard remains. If feature $i$ is *never* on for class $y$ in the training set, the MLE is $\hat p(x_i=1\mid y)=0$, and a single such feature at test time annihilates the whole product in :eqref:`eq_mdl-naive_bayes` (and sends :eqref:`eq_mdl-naive_bayes_log` to $-\infty$). The cure is **Laplace smoothing** :cite:`Laplace.1814`: add a pseudocount, estimating $p(x_i=1\mid y)$ as $(n_{iy}+1)/(n_y+2)$ rather than $n_{iy}/n_y$, where $n_{iy}$ counts the class-$y$ examples with feature $i$ on and the $+2$ covers the two outcomes a binary pixel can take; a categorical feature with $v$ possible values gets $+1$ on each value's count and $+v$ in the denominator, so the smoothed probabilities still sum to one (the text models at the end of this section smooth the same way, with $+|V|$ for a vocabulary $V$). The pseudocount has a Bayesian justification: $(n_{iy}+1)/(n_y+2)$ is the posterior *mean* of the Bernoulli parameter under a uniform $\mathrm{Beta}(1,1)$ prior, Laplace's *rule of succession*, as :numref:`subsec_mdl-beta-map` derives (along with the numerically coincident, but conceptually distinct, $\mathrm{Beta}(2,2)$ MAP estimate it is often conflated with).
+One hazard remains. If feature $i$ is *never* on for class $y$ in the training set, the MLE is $\hat p(x_i=1\mid y)=0$, and a single such feature that is on at test time annihilates the whole product in :eqref:`eq_mdl-naive_bayes` (and sends :eqref:`eq_mdl-naive_bayes_log` to $-\infty$). The cure is **Laplace smoothing** :cite:`Laplace.1814`: add a pseudocount, estimating $p(x_i=1\mid y)$ as $(n_{iy}+1)/(n_y+2)$ rather than $n_{iy}/n_y$, where $n_{iy}$ counts the class-$y$ examples with feature $i$ on and the $+2$ covers the two outcomes a binary pixel can take; a categorical feature with $v$ possible values gets $+1$ on each value's count and $+v$ in the denominator, so the smoothed probabilities still sum to one (the multinomial text model of exercise :exref:`ex_mdl-naive-bayes-two-event-models` smooths the same way, with $+|V|$ for a vocabulary $V$). The pseudocount has a Bayesian justification: $(n_{iy}+1)/(n_y+2)$ is the posterior *mean* of the Bernoulli parameter under a uniform $\mathrm{Beta}(1,1)$ prior, Laplace's *rule of succession*, as :numref:`subsec_mdl-beta-map` derives (along with the numerically coincident, but conceptually distinct, $\mathrm{Beta}(2,2)$ MAP estimate it is often conflated with).
 
 For continuous features, **Gaussian naive Bayes** models each feature within
 each class by a univariate Gaussian (:numref:`sec_mdl-distributions`).
@@ -265,7 +266,7 @@ The blur is the naive assumption made visible: the model knows each pixel's marg
 
 ### Classifying and Evaluating
 
-Prediction sums log-likelihoods per :eqref:`eq_mdl-naive_bayes_log`. We precompute $\log P_{xy}$, $\log(1-P_{xy})$, and $\log P_y$, then score a batch of images at once: a pixel that is on contributes $\log P_{xy}$, a pixel that is off contributes $\log(1-P_{xy})$, and the prior is added in. The winning class is the $\mathrm{argmax}$. Before reporting the accuracy, the cell also puts numbers to the underflow story that motivated log space, by checking what the *raw* products of :eqref:`eq_mdl-naive_bayes` would have done in single and double precision.
+Prediction sums log-likelihoods per :eqref:`eq_mdl-naive_bayes_log`. We precompute $\log P_{xy}$, $\log(1-P_{xy})$, and $\log P_y$, then score a batch of images at once: a pixel that is on contributes $\log P_{xy}$, a pixel that is off contributes $\log(1-P_{xy})$ (the code computes both terms for every pixel and weights them by $x_i$ and $1-x_i$), and the prior is added in. The winning class is the $\mathrm{argmax}$. Before reporting the accuracy, the cell also puts numbers to the underflow story that motivated log space, by checking what the *raw* products of :eqref:`eq_mdl-naive_bayes` would have done in single and double precision.
 
 ```{.python .input #naive-bayes-predict}
 log_P_xy, log_P_xy_neg = np.log(P_xy), np.log(1 - P_xy)
@@ -325,9 +326,9 @@ d2l.plt.ylabel('true digit')
 d2l.plt.colorbar();
 ```
 
-The errors are anything but uniform: the model's worst failures are $4\to9$, $5\to3$, $8\to3$, and $7\to9$ (the reverse confusion $9\to4$ sits just below the printed four). These are largely the digit pairs whose learned *templates*, plotted above, overlap the most: the most-overlapping pair is indeed the top confusion $4/9$, though the correspondence is loose rather than exact, as Exercise 6 lets you check. A $4$ and a $9$ differ mainly in whether the top strokes close into a loop, a fact carried by the *joint* behavior of a handful of neighboring pixels; a model that sees only per-pixel marginals is structurally blind to it. The confusion matrix is the independence assumption's failure map.
+The errors are anything but uniform: the model's worst failures are $4\to9$, $5\to3$, $8\to3$, and $7\to9$ (the reverse confusion $9\to4$ sits just below the printed four). These are largely the digit pairs whose learned *templates*, plotted above, overlap the most: the most-overlapping pair is indeed the top confusion $4/9$, though the correspondence is loose rather than exact, as Exercise :exref:`ex_mdl-naive-bayes-check-template-overlap-explanation` lets you check. A $4$ and a $9$ differ mainly in whether the top strokes close into a loop, a fact carried by the *joint* behavior of a handful of neighboring pixels; a model that sees only per-pixel marginals is structurally blind to it. The confusion matrix is the independence assumption's failure map.
 
-Third, the confidence. The class scores determine a genuine posterior: since each score $s_y(\mathbf x)$ is the logarithm of the Bayes-rule numerator $p(\mathbf x\mid y)\,p(y)$, exponentiating and normalizing restores the dropped denominator, so $p(y\mid\mathbf x) = \exp(s_y(\mathbf x))/\sum_{y'}\exp(s_{y'}(\mathbf x))$, a softmax of the scores (Exercise 4 works this out). The model therefore announces a probability along with each predicted digit. A model is **calibrated** if its announced probabilities match empirical
+Third, the confidence. The class scores determine a genuine posterior: since each score $s_y(\mathbf x)$ is the logarithm of the Bayes-rule numerator $p(\mathbf x\mid y)\,p(y)$, exponentiating and normalizing restores the dropped denominator, so $p(y\mid\mathbf x) = \exp(s_y(\mathbf x))/\sum_{y'}\exp(s_{y'}(\mathbf x))$, a softmax of the scores (exercise :exref:`ex_mdl-naive-bayes-discussion-after-eqref-eq` derives the two-class case). The model therefore announces a probability along with each predicted digit. A model is **calibrated** if its announced probabilities match empirical
 frequencies: among predictions made with confidence $c$, a fraction $c$ should
 be correct. We predicted early in this section that multiplying $784$ falsely-independent factors would leave the model badly miscalibrated; the cell below checks, binning the test examples by their maximum posterior and comparing the claimed confidence with the achieved accuracy in each bin, the tabular form of a *reliability diagram*, the standard name for this diagnostic. (The softmax is evaluated in its subtract-the-max stable form from :numref:`subsec_mdl-stable-softmax`.)
 
@@ -344,7 +345,7 @@ for a, b in zip([0.0, 0.9, 0.99, 0.999], [0.9, 0.99, 0.999, 1.0]):
           f'claimed {conf_max[m].mean():.4f},  achieved {correct[m].mean():.4f}')
 ```
 
-On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accuracy, and the miscalibration is worst where the claims are strongest: $87\%$ of all test examples land in the top bin, where the model asserts essentially $100\%$ certainty yet is right only $89.9\%$ of the time, and every other bin overstates itself too, with examples announced at $72\%$ confidence being correct barely $37\%$ of the time. (The *ordering* still carries signal, since accuracy does rise with confidence bin, but the probabilities themselves are grossly inflated.) This is exactly what the log-space picture predicts. Each of the $784$ pixels contributes its log-likelihood ratio to the score *as if* it were independent evidence, so correlated pixels get counted many times over and the score gaps between classes grow far beyond what the evidence supports: the median gap between the best and second-best class score on the test set is about $30$ nats (natural-log units; :numref:`sec_mdl-divergences-distances` makes the unit precise), and since $e^{-30}\approx 10^{-13}$ that already pushes the softmax to $0$ or $1$; gaps of hundreds of nats occur only between the best and *worst* classes. The same failure extends well past naive Bayes: modern neural classifiers trained to low loss are overconfident in the same direction, though to a smaller degree :cite:`Guo.Pleiss.Sun.Weinberger.2017`, which is why the reliability check you just ran, confidence binned against accuracy, is a standard diagnostic for any classifier whose probabilities you intend to consume.
+On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accuracy, and the miscalibration is worst where the claims are strongest: $87\%$ of all test examples land in the top bin, where the model asserts essentially $100\%$ certainty yet is right only $89.9\%$ of the time, and every other bin overstates itself too, with examples announced at $72\%$ confidence being correct barely $37\%$ of the time. (The *ordering* still carries signal, since accuracy does rise with confidence bin, but the probabilities themselves are grossly inflated.) This is exactly what the log-space picture predicts. Each of the $784$ pixels contributes its log-likelihood ratio to the score *as if* it were independent evidence, so correlated pixels get counted many times over and the score gaps between classes grow far beyond what the evidence supports: the median gap between the best and second-best class score on the test set is about $30$ nats (natural-log units; :numref:`sec_mdl-divergences-distances` makes the unit precise), and since $e^{-30}\approx 10^{-13}$ that already pushes the softmax to $0$ or $1$; gaps of hundreds of nats are typical only between the best and *worst* classes. The same failure extends well past naive Bayes: modern neural classifiers trained to low loss are overconfident in the same direction, though to a smaller degree :cite:`Guo.Pleiss.Sun.Weinberger.2017`, which is why the reliability check you just ran, confidence binned against accuracy, is a standard diagnostic for any classifier whose probabilities you intend to consume.
 
 ## Summary
 
@@ -362,12 +363,314 @@ On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accura
 * The $84.27\%$ carries a bootstrap error bar of about $\pm 0.7$ points; the confusion matrix localizes the failures in template-overlapping pairs like $4/9$ and $5/3$; and the model is severely **miscalibrated**, claiming $98.6\%$ mean confidence while delivering $84.3\%$ accuracy, because falsely independent factors double-count correlated evidence. Bin confidence against accuracy (a reliability diagram) before trusting any classifier's probabilities.
 
 ## Exercises
-1. Consider the dataset $\{(0,0),(0,1),(1,0),(1,1)\}$ with labels given by the XOR of the two coordinates, $\{0,1,1,0\}$. Compute the naive Bayes estimates $p(y)$ and $p(x_i\mid y)$. Does the classifier separate the points? If not, which assumption is violated?
-2. Suppose we omitted Laplace smoothing and, at test time, an example contained a feature value never observed for some class in training. What would the model's log-score for that class be, and why?
-3. The naive Bayes classifier is a special case of a Bayesian network, in which dependencies among random variables are encoded by a graph (see :citet:`Koller.Friedman.2009`). Explain why adding an explicit edge between the two inputs of the XOR model would let it classify the points correctly.
-4. The discussion after :eqref:`eq_mdl-naive_bayes_log` showed that each class score of the binary model is affine, $s_y(\mathbf{x}) = \mathbf{w}_y\cdot\mathbf{x} + b_y$. Derive the exact posterior by normalizing: show that $p(y\mid\mathbf{x}) = \exp(s_y(\mathbf{x}))\,/\sum_{y'} \exp(s_{y'}(\mathbf{x}))$, and recognize the softmax. Conclude that naive Bayes produces posteriors of exactly the functional form that softmax regression (:numref:`sec_softmax`) fits directly; the two classifiers differ only in how the weights $\mathbf{w}_y, b_y$ are set. (With two classes, you recover logistic regression.)
-5. Generalize the smoothing in the training cell to a pseudocount $\alpha$, estimating $p(x_i{=}1\mid y)$ as $(n_{iy}+\alpha)/(n_y+2\alpha)$, and report the MNIST test accuracy for $\alpha\in\{0,1,10\}$. Explain what you observe at $\alpha=0$: beyond the $-\infty$ log-probabilities of exercise 2, what does the scoring code compute when a pixel with $\hat p(x_i{=}1\mid y)=0$ is *off* in a test image? (Recall that $0\cdot(-\infty)$ is NaN in floating point.)
-6. Check the template-overlap explanation of the confusion matrix: flatten the ten smoothed templates in $P_{xy}$ into vectors and compute the cosine similarity of every pair (one line with NumPy). Which pairs overlap most, and how well do they match the top confusions? You should find that $(4,9)$ is the most similar pair, at cosine similarity about $0.92$, matching the top confusion, but that the second most similar pair, $(5,8)$ at about $0.91$, is *not* among the top four confusions: the correspondence between template overlap and confusion is real but loose.
+
+1. **XOR and the naive assumption.** The four points $(0,0)$, $(0,1)$,
+   $(1,0)$ and $(1,1)$ carry the labels $y=x_1\oplus x_2$, that is $0$, $1$,
+   $1$ and $0$. Each point occurs once in the training set.
+    1. Compute the maximum-likelihood estimates of $p(y)$ and
+       $p(x_i=1\mid y)$, and the class scores of all four points. Which
+       predictions does the naive Bayes rule :eqref:`eq_mdl-naive_bayes`
+       make?
+    1. Show that no choice of Bernoulli naive Bayes parameters classifies all
+       four points correctly. Use the affine form of the class scores derived
+       after :eqref:`eq_mdl-naive_bayes_log`.
+    1. Replace the two factors $p(x_1\mid y)\,p(x_2\mid y)$ by a joint table
+       $p(x_1,x_2\mid y)$. In the language of Bayesian networks
+       :cite:`Koller.Friedman.2009`, this adds the edge between $x_1$ and
+       $x_2$ that the right panel of :numref:`fig_mdl-naive-independence`
+       shows. Estimate this model from the four points and show that it
+       classifies them correctly. Why is its class score no longer affine in
+       $\mathbf x$?
+    1. Within one class, let $x_1$ and $x_2$ be independent fair bits and let
+       $x_3=x_1\oplus x_2$. Show that every pair of the three features is
+       independent. Compare the probability of each of the eight patterns
+       with the product of the three marginals. Why can a check of all
+       pairwise correlations within a class not confirm the assumption
+       :eqref:`eq_mdl-naive_assumption`?
+   :exlabel:`ex_mdl-naive-bayes-xor`
+
+1. **Naive Bayes as logistic regression.** Consider two classes
+   $y\in\{0,1\}$ with the prior $\pi=p(y=1)$ and the Bernoulli parameters
+   $\theta_{iy}=p(x_i=1\mid y)$.
+    1. Show that the naive Bayes posterior is
+       $p(y=1\mid\mathbf x)=\sigma(\mathbf w^\top\mathbf x+b)$ with the
+       sigmoid $\sigma(z)=1/(1+e^{-z})$, and express each $w_i$ and $b$
+       through the $\theta_{iy}$ and $\pi$. Which sign does $w_i$ have for a
+       pixel that is inked more often in class $1$ than in class $0$?
+    1. Show that, conversely, every pair $(\mathbf w,b)$ arises from some
+       choice of $\theta_{iy}\in(0,1)$ and $\pi\in(0,1)$. Naive Bayes and
+       logistic regression therefore define the same set of posteriors and
+       differ in how they fit it.
+    1. Suppose the two classes of the training set are linearly separable.
+       How does the conditional likelihood of logistic regression change when
+       a separating $(\mathbf w,b)$ is multiplied by a factor $t\to\infty$?
+       What does this imply for the maximum-likelihood estimate of
+       $(\mathbf w,b)$? Which $(\mathbf w,b)$ does naive Bayes with Laplace
+       smoothing return on the same data?
+   :exlabel:`ex_mdl-naive-bayes-discussion-after-eqref-eq`
+
+1. **Gaussian class-conditionals.** A single feature has
+   $x\mid y=0\sim\mathcal N(0,1)$ and $x\mid y=1\sim\mathcal N(0,4)$, and both
+   classes have prior $1/2$.
+    1. Find the set of $x$ that the Bayes classifier assigns to class $1$.
+       Why can no threshold on $x$ produce this set? Which transformed
+       feature turns the boundary into a threshold?
+    1. In $d$ dimensions, Gaussian naive Bayes with class-specific variances
+       has the class score
+       $$\log p(y)-\sum_{i=1}^d\left[\frac{(x_i-\mu_{iy})^2}{2\sigma_{iy}^2}+\frac12\log\left(2\pi\sigma_{iy}^2\right)\right].$$
+       Show that the boundary between two classes is a quadratic surface
+       without cross terms $x_ix_j$.
+    1. Two classes in two dimensions have equal priors and the
+       class-conditionals $\mathcal N(\mathbf 0,\boldsymbol\Sigma_+)$ and
+       $\mathcal N(\mathbf 0,\boldsymbol\Sigma_-)$ with
+       $\boldsymbol\Sigma_\pm=\left(\begin{smallmatrix}1&\pm\rho\\\pm\rho&1\end{smallmatrix}\right)$
+       for some $0<\rho<1$. Find the Bayes classifier, and show that its
+       class score depends on $\mathbf x$ only through the cross term
+       $x_1x_2$ that (b) excludes. As for the XOR data of exercise
+       :exref:`ex_mdl-naive-bayes-xor`, the two classes have the same
+       marginals, so Gaussian naive Bayes is at chance even with unlimited
+       data. Under $\mathcal N(\mathbf 0,\boldsymbol\Sigma_+)$,
+       $P(x_1x_2>0)=\frac12+\frac1\pi\arcsin\rho$. Find the Bayes error as
+       a function of $\rho$, and evaluate it for $\rho=0.1$ and $\rho=0.9$.
+
+1. [code] **Smoothing and unseen pixels.** The `#naive-bayes-train` cell
+   estimates $p(x_i{=}1\mid y)$ by $(n_{iy}+1)/(n_y+2)$.
+    1. Without the smoothing, a pixel that is off in every training image of
+       class $y$ sends the log-score :eqref:`eq_mdl-naive_bayes_log` of class
+       $y$ to $-\infty$ whenever it is on in a test image. Use the counts
+       `n_x` to find how many pixels of each class are never on in training.
+       How many test images have a pixel on that is never on in the training
+       images of their true class?
+    1. Generalize the cell to a pseudocount $\alpha$, estimating
+       $p(x_i{=}1\mid y)$ by $(n_{iy}+\alpha)/(n_y+2\alpha)$, and report the
+       test accuracy for $\alpha\in\{0,0.01,0.1,1,10,100,1000\}$. In floating
+       point, $0\cdot(-\infty)$ is NaN. Which values does `scores` return at
+       $\alpha=0$, and which class does `predict` then return?
+    1. Rewrite `scores` so that each pixel selects one of its two log
+       probabilities, for example with `np.where`, instead of multiplying both
+       by $x_i$ and $1-x_i$. Rerun $\alpha=0$. Which fraction of the class
+       scores is $-\infty$, and for how many test images is every class score
+       $-\infty$? Was the failure in (b) a property of the unsmoothed model or
+       of its implementation?
+    1. The estimate with pseudocount $\alpha$ is the posterior mean of
+       $p(x_i{=}1\mid y)$ under a Beta prior (:numref:`subsec_mdl-beta-map`).
+       Which prior is it? Why does the accuracy fall as $\alpha$ grows large?
+   :exlabel:`ex_mdl-naive-bayes-suppose-we-omitted-laplace`
+
+1. [code] **Missing pixels.** A generative model can classify an input of
+   which some features are unobserved. Let $O\subseteq\{1,\ldots,d\}$ be the
+   set of observed features and $\mathbf x_O$ their values.
+    1. Show that under :eqref:`eq_mdl-naive_assumption` the posterior
+       $p(y\mid\mathbf x_O)$ follows from :eqref:`eq_mdl-naive_bayes` by
+       dropping the factors of the unobserved features. Why does a
+       discriminative model of $p(y\mid\mathbf x)$ offer no such operation?
+    1. Hide the top $14$ rows of every test image. Compare the test accuracy
+       of the rule from (a) with that of setting the hidden pixels to $0$ and
+       applying `predict`. Which assumption about the hidden pixels does the
+       second rule make?
+
+1. **Two event models for text.** A vocabulary $V$ has the four words
+   *goal*, *match*, *vote* and *poll*. The training set contains three
+   sports documents, "goal goal match", "goal match match" and "match vote",
+   and three politics documents, "vote poll poll", "vote vote match" and
+   "poll vote". The multinomial model treats a document as a sequence of
+   independent word draws from a class-specific distribution over $V$. The
+   Bernoulli model records for each word of $V$ only whether it occurs in the
+   document.
+    1. Estimate both models with Laplace smoothing. For the multinomial
+       model, add $1$ to each word count of a class and $|V|$ to the class's
+       total count. For the Bernoulli model, estimate the probability that a
+       word occurs by $(n_{iy}+1)/(n_y+2)$, where $n_{iy}$ counts the
+       class-$y$ documents that contain word $i$.
+    1. Classify the document "goal match poll poll" with both models. Which
+       words drive each decision?
+    1. Concatenate a document with itself $k$ times. How do the log posterior
+       odds of the two models change? In real text, a word that has occurred
+       once in a document tends to occur again :cite:`Church.Gale.1995`, a
+       finding that exercise :exref:`ex_mdl-distributions-word-burstiness`
+       of :numref:`sec_mdl-distributions` reproduces. Which assumption of the
+       multinomial model does this violate?
+   :exlabel:`ex_mdl-naive-bayes-two-event-models`
+
+1. [code] **Paired accuracy comparison.** Fit the model with the
+   pseudocounts $\alpha=1$ and $\alpha=10$ of exercise
+   :exref:`ex_mdl-naive-bayes-suppose-we-omitted-laplace`b, and record for
+   each model which test images it classifies correctly.
+    1. Does the test accuracy of the $\alpha=10$ model lie inside the
+       bootstrap interval that the `#mdl-naive-bayes-calibration-1` cell
+       computes for the $\alpha=1$ model?
+    1. Compute a bootstrap interval of the accuracy difference, using the
+       same resampled test indices for both models. Does it contain $0$?
+       Count the test images on which the two models disagree. From this
+       count and the accuracy difference, predict the width of the interval
+       with the variance of the per-example differences $d_i$ of exercise
+       :exref:`ex_mdl-statistics-paired-comparisons`a of
+       :numref:`sec_mdl-statistics`, and compare the prediction with the
+       bootstrap interval. Why is this interval much narrower than the
+       interval of one accuracy?
+
+1. [code] **Template overlap and confusions.** Flatten the ten smoothed
+   templates in `P_xy` into vectors and compute the cosine similarity of every
+   pair of classes. Rank the pairs by similarity, and rank them by the
+   confusion count of the `#mdl-naive-bayes-calibration-2` cell, adding the
+   errors in both directions of a pair. How well do the two rankings agree?
+   Which highly similar pair is rarely confused?
+   :exlabel:`ex_mdl-naive-bayes-check-template-overlap-explanation`
+
+1. **Duplicated features.** Two classes have equal priors, and a single
+   binary feature has $p(x=1\mid y=1)=0.8$ and $p(x=1\mid y=0)=0.2$. A data
+   pipeline stores this feature $k$ times, so naive Bayes sees $k$ identical
+   features and treats them as conditionally independent.
+    1. Show that the log posterior odds of naive Bayes are $k$ times those of
+       the correct model, while its predictions are those of the correct
+       model.
+    1. The correct model's predictions are right with probability $0.8$.
+       Which confidence does naive Bayes claim for each of its predictions?
+       Find the smallest $k$ for which this confidence is at least $99.9\%$.
+    1. Show that dividing every class score by $T=k$ before the softmax
+       restores the posterior of the correct model.
+   :exlabel:`ex_mdl-naive-bayes-duplicated-features`
+
+1. [code] **Label shift.** Under label shift
+   (:numref:`sec_environment-and-distribution-shift`), the test prior $q(y)$
+   differs from the training prior $p(y)$, while $p(\mathbf x\mid y)$ stays
+   the same.
+    1. Show that the posterior under the test prior is
+       $q(y\mid\mathbf x)\propto p(y\mid\mathbf x)\,q(y)/p(y)$. Why does naive
+       Bayes need no retraining to use it?
+    1. Build a test set in which digit $4$ makes up $90\%$ of the images:
+       keep all test images of digit $4$ and draw the others at random from
+       the remaining digits. Compare the accuracy of `predict` with that of
+       the corrected rule of (a), with $q(4)=0.9$ and $q(y)=1/90$ for every
+       other digit.
+   :exlabel:`ex_mdl-naive-bayes-label-shift`
+
+1. [code] **Grayscale Gaussian naive Bayes.** ● The
+   `#naive-bayes-load` cell discards grayscale information by thresholding.
+   Reload the images without the threshold, scale the intensities to
+   $[0,1]$, and fit Gaussian naive Bayes with a mean $\mu_{iy}$ and a
+   variance $\sigma_{iy}^2$ for each class and pixel.
+    1. How many class--pixel pairs have zero training variance? What does the
+       log density of such a pixel do at test time? Add a floor $\epsilon$ to
+       every variance and report the test accuracy for
+       $\epsilon\in\{10^{-9},10^{-4},10^{-3},10^{-2},10^{-1}\}$. Which role
+       of the pseudocount in the Bernoulli model does $\epsilon$ play?
+    1. Replace the class-specific variances by one variance per pixel, the
+       average of the ten class variances, so that the decision boundaries
+       become linear. Repeat the sweep over $\epsilon$.
+    1. Compare the best accuracy of (a) and (b) with the $84\%$ of the
+       Bernoulli model. Within one class, choose a pixel whose mean intensity
+       in that class lies near $1/2$, and plot the histogram of its
+       intensities over the class's training images. How well does a
+       Gaussian describe this histogram? What does that imply for the
+       comparison?
+
+1. [code] **Score gaps under the model.** ● Exercise
+   :exref:`ex_mdl-naive-bayes-check-template-overlap-explanation` compares
+   templates, which describe only the per-pixel means. For two classes $a$
+   and $b$, let $g(\mathbf x)=s_a(\mathbf x)-s_b(\mathbf x)$ be the
+   difference of their scores as computed by `scores`, so that the rule
+   ranks $b$ above $a$ exactly when $g(\mathbf x)<0$. Write $\theta_{iy}$ for
+   the entries of `P_xy`.
+    1. By exercise :exref:`ex_mdl-naive-bayes-discussion-after-eqref-eq`a,
+       the gap is affine, $g(\mathbf x)=\mathbf w^\top\mathbf x+c$, with the
+       weights and offset of that exercise for the classes $a$ and $b$.
+       Compute $\mathbf w$ and $c$ from `P_xy` and `log_P_y`, and display
+       $\mathbf w$ for $a=4$ and $b=9$ as a $28\times28$ image. Which pixels
+       decide between the two digits?
+    1. Let $\mathbf x$ follow the model's own class-$a$ distribution, with
+       independent pixels $x_i\sim\mathrm{Bernoulli}(\theta_{ia})$. Show that
+       $E[g]$ equals the Kullback--Leibler divergence
+       $\sum_{\mathbf x}p(\mathbf x\mid a)\log\bigl(p(\mathbf x\mid a)/p(\mathbf x\mid b)\bigr)$
+       of the two class-conditional distributions of the model plus
+       $\log\bigl(p(a)/p(b)\bigr)$, and that
+       $\operatorname{Var}[g]=\sum_i w_i^2\,\theta_{ia}(1-\theta_{ia})$.
+    1. Let $a=4$ and $b=9$. Compute $g$ on the test images of digit $4$, and
+       compare its empirical mean and standard deviation with the two values
+       of (b). From the model's mean and variance, use a Gaussian
+       approximation to predict the fraction of these images with $g<0$, and
+       compare it with the observed fraction.
+    1. On real images, $\operatorname{Var}[g]=\mathbf w^\top\boldsymbol\Sigma_a\mathbf w$,
+       where $\boldsymbol\Sigma_a$ is the covariance matrix of the pixels of
+       class $a$. Which entries of $\boldsymbol\Sigma_a$ does the variance
+       of (b) omit? Which property of handwritten strokes makes their
+       contribution positive?
+   :exlabel:`ex_mdl-naive-bayes-score-gaps`
+
+1. [code] **Temperature scaling.** ● Exercise
+   :exref:`ex_mdl-naive-bayes-duplicated-features` shows that dividing the
+   class scores by $T=k$ undoes a $k$-fold duplication of features. For
+   MNIST the effective duplication is unknown, and temperature scaling
+   :cite:`Guo.Pleiss.Sun.Weinberger.2017` fits $T$ on held-out data instead:
+   the posterior becomes the softmax of $s_y(\mathbf x)/T$.
+    1. Refit the model on the first $50{,}000$ training images, and choose $T$
+       by minimizing the average negative log-likelihood of the posterior on
+       the remaining $10{,}000$. Why does $T$ not change the test accuracy?
+    1. Repeat the reliability table of the `#mdl-naive-bayes-calibration-3`
+       cell for the full-data model with the fitted $T$, using the bin edges
+       $0$, $0.5$, $0.7$, $0.9$, $0.99$ and $1$. Compare the mean claimed
+       confidence with the accuracy.
+    1. In the setting of exercise
+       :exref:`ex_mdl-naive-bayes-duplicated-features`, show that the
+       standard deviation of the score gap on real data is $\sqrt k$ times
+       the standard deviation that the model predicts. Compute the square of
+       this ratio for the pair $(4,9)$ of exercise
+       :exref:`ex_mdl-naive-bayes-score-gaps`c and for a few other confused
+       pairs, and compare it with the fitted $T$.
+    1. Apply the prior correction of exercise
+       :exref:`ex_mdl-naive-bayes-label-shift`a to the temperature-scaled
+       posterior, on the test set of exercise
+       :exref:`ex_mdl-naive-bayes-label-shift`b. Why does the corrected prior
+       change more predictions after temperature scaling?
+   :exlabel:`ex_mdl-naive-bayes-temperature-scaling`
+
+1. [extended] **Generative versus discriminative learning.** ●●
+   :citet:`Ng.Jordan.2002` compare naive Bayes with logistic regression,
+   which by exercise :exref:`ex_mdl-naive-bayes-discussion-after-eqref-eq`
+   fits the same family of posteriors by maximizing the conditional
+   likelihood. They prove that the naive Bayes parameters approach their
+   population values after a number of examples logarithmic in $d$. For
+   logistic regression, the number of examples needed to approach its
+   asymptotic error is at most linear in $d$, and in the worst case it is
+   also at least linear in $d$. On many of their
+   $15$ datasets, naive Bayes has the lower test error for small training
+   sets and logistic regression for large ones.
+    1. Let each class have at least $m$ training examples. Use Hoeffding's
+       inequality :eqref:`eq_mdl-hoeffding` and a union bound to show that
+       all $2d$ unsmoothed estimates $\hat\theta_{iy}$ of a two-class model
+       lie within $\varepsilon$ of their population values with probability
+       at least $1-\delta$ when
+       $$m\ge\frac{\log(4d/\delta)}{2\varepsilon^2}.$$
+       Evaluate the bound for $d=784$, $\varepsilon=0.05$ and $\delta=0.05$.
+    1. A uniform bound on $|\hat\theta_{iy}-\theta_{iy}|$ does not by itself
+       bound the change of the class scores. Why not, for the many MNIST
+       pixels with $\theta_{iy}$ close to $0$? What must be assumed about the
+       $\theta_{iy}$ for the scores to converge at the rate of the
+       parameters?
+    1. Restrict the binarized MNIST data to the digits $4$ and $9$. For the
+       total training-set sizes
+       $n\in\{10,20,50,100,200,500,1000,2000,5000\}$ and for the full set,
+       draw random training subsets that contain both digits, $20$ for each
+       size up to $n=200$ and $5$ for each larger size. Fit naive Bayes with
+       Laplace smoothing, and logistic regression without weight decay. For
+       small $n$ the training data are linearly separable, and by exercise
+       :exref:`ex_mdl-naive-bayes-discussion-after-eqref-eq`c the logistic
+       loss has no minimizer, so run a fixed number of full-batch optimizer
+       steps from zero initialization. Plot the average test errors of both
+       classifiers against $n$ on a logarithmic axis. In which range of $n$,
+       if any, does naive Bayes have the lower error?
+    1. Repeat (c) with synthetic data for which the naive assumption holds:
+       draw balanced labels and sample each pixel independently from
+       $\mathrm{Bernoulli}(\theta_{iy})$, with the $\theta_{iy}$ estimated
+       from all training images of the two digits. How do the two learning
+       curves and their asymptotic errors change?
+    1. Theorem 4 of :citet:`Ng.Jordan.2002` bounds the excess error of naive
+       Bayes by the probability that the score gap of the population model
+       falls near zero. Use the score-gap variances of exercise
+       :exref:`ex_mdl-naive-bayes-score-gaps` to compare this probability for
+       real pixels and for the synthetic data of (d). How does this
+       comparison, together with the asymptotic errors of (c) and (d),
+       account for the two pairs of learning curves?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/418)

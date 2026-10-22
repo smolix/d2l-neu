@@ -127,6 +127,7 @@ likelihood :eqref:`eq_mdl-coin-like` gives $\hat\theta = n_H/(n_H+n_T)$: the MLE
 of a coin's bias is the empirical frequency of heads.
 
 ### The Negative Log-Likelihood
+:label:`subsec_mdl-nll`
 
 The closed-form trick above does not extend to a real model: with billions of
 parameters there is no polynomial to factor, and we optimize numerically
@@ -258,9 +259,10 @@ theta, n_H / (n_H + n_T)
 The learning rate $10^{-9}$ looks absurd. It works only because this loss is a
 *sum* over nearly nine million flips, so its gradient carries that factor of
 $n$. Shrink $n_H$ and $n_T$ a thousandfold and the same learning rate barely
-moves $\theta$; scale them up and the update diverges. Averaging the loss over
-examples instead of summing (as the minibatch losses in this book do) removes
-the coupling and returns sensible learning rates to sensible magnitudes. The
+moves $\theta$; scale them up tenfold and the iterates no longer converge.
+Averaging the loss over examples instead of summing (as the minibatch losses
+in this book do) removes the coupling and returns sensible learning rates to
+sensible magnitudes. The
 lesson generalizes: a learning rate is always tuned *to a loss scale*, and
 silently changing one without the other is a classic way to break training.
 
@@ -371,6 +373,7 @@ softmax cross-entropy loss of :numref:`sec_softmax`.
 :label:`fig_mdl-mle-kl`
 
 ### From Probabilities to Densities
+:label:`subsec_mdl-mle-densities`
 
 The preceding discussion concerned discrete outcomes, where $P(X\mid\boldsymbol{\theta})$
 is a genuine probability. For continuous data we replace probabilities by
@@ -410,8 +413,10 @@ $$
 $$
 
 exactly as in the discrete case. Thus continuous-data likelihoods use density
-values in place of probability masses. We next apply this construction to the
-Gaussian density.
+values in place of probability masses. A density value is not itself a
+probability: only $\epsilon\, p(x_i\mid\boldsymbol{\theta})$ approximates one,
+so $p$ carries the inverse units of $x$ and can exceed $1$. We next apply this
+construction to the Gaussian density.
 
 ### Gaussian Negative Log-Likelihood and Mean Squared Error
 :label:`subsec_mdl-gaussian-mse`
@@ -468,6 +473,7 @@ terms independent of $\boldsymbol{\theta}$. Thus the choice of loss encodes an
 assumption about the conditional distribution of the observations.
 
 ## Estimator Theory: Why Maximum Likelihood Works
+:label:`subsec_mdl-mle-estimator-theory`
 
 How good is $\hat{\boldsymbol{\theta}}$? Suppose the observations are i.i.d. and
 the data-generating distribution belongs to the model. The average NLL then
@@ -645,8 +651,8 @@ the ellipse within which the estimate scatters.
 :label:`fig_mdl-prob-mle-fisher`
 
 The curvature intuition extends to a theorem constraining *every* estimator.
-The **Cramér--Rao bound** :cite:`Cramer.1946,Radhakrishna-Rao.1945` states that
-any *unbiased* estimator $\tilde\theta$
+The **Cramér--Rao bound** :cite:`Cramer.1946,Radhakrishna-Rao.1945` states that,
+under the regularity conditions above, any *unbiased* estimator $\tilde\theta$
 built from $n$ i.i.d. observations obeys
 
 $$
@@ -738,6 +744,7 @@ log-prior. A prior concentrated near small parameters penalizes large ones, whic
 is precisely what a regularizer does.
 
 ### Gaussian Priors and Weight Decay
+:label:`subsec_mdl-gaussian-prior-weight-decay`
 
 **Proposition (Gaussian prior = $L_2$ / weight decay).** *A Gaussian prior
 $\boldsymbol{\theta}\sim\mathcal{N}(\mathbf 0,\tau^2 \mathbf I)$ contributes the
@@ -779,10 +786,11 @@ the prior mean, and the MAP estimate lies between them.
 
 The figure also reads off the two limits. As the prior flattens ($\tau\to\infty$,
 or $b\to\infty$) the penalty vanishes and $\hat{\boldsymbol{\theta}}_{\textrm{MAP}}
-\to \hat{\boldsymbol{\theta}}_{\textrm{MLE}}$, the flat-prior assumption
-we started with. And as the data grows the NLL term deepens faster than the fixed
-prior, so the data term dominates and MAP again approaches the MLE. A bookkeeping
-detail makes the second limit quantitative: deep-learning code minimizes the
+\to \hat{\boldsymbol{\theta}}_{\textrm{MLE}}$ of
+:eqref:`eq_mdl-mle`, which uses no prior. And as the data grows the NLL term
+deepens faster than the fixed prior, so the data term dominates and MAP again
+approaches the MLE. A bookkeeping detail makes the second limit quantitative:
+deep-learning code minimizes the
 *mean* per-example loss rather than the sum, and dividing the MAP objective by
 $n$ rescales the weight decay to $\lambda = \sigma^2/(n\tau^2)$: the prior's
 contribution to the averaged loss decreases as $1/n$. Regularization matters most
@@ -849,6 +857,7 @@ never-observed feature--class pairs from annihilating its products; the
 pseudo-count interpretation explains the correction.
 
 ### Distinguishing the Posterior Mode from the Posterior
+:label:`subsec_mdl-map-vs-posterior`
 
 One caution before we move on: MAP is *not* the same as "being Bayesian." MAP
 restores the prior but still reports a single point: the *mode* of the posterior
@@ -1055,7 +1064,7 @@ $$
 These are the coin's counting estimator and the Gaussian's mean and variance
 estimators, softened: instead of voting for one component, each point spreads
 its single vote across components in proportion to its responsibilities
-(exercise 10 derives the $\mu_k$ update). The cell below runs EM on a
+(exercise :exref:`ex_mdl-maximum-likelihood-derive-gmm-m-step` derives the $\mu_k$ update). The cell below runs EM on a
 two-component mixture in plain NumPy and prints the log-likelihood as it climbs.
 
 ```{.python .input #maximum-likelihood-em-gmm}
@@ -1166,49 +1175,372 @@ taken up in detail there.
   constant, while empirical-KL statements require the distinction above.
 
 ## Exercises
-1. A non-negative random variable has density $\alpha e^{-\alpha x}$ for some
-   $\alpha>0$. From the single observation $x=3$, find the maximum likelihood
-   estimate of $\alpha$. Generalize to a sample $\{x_i\}_{i=1}^N$ and show
-   $\hat\alpha = 1/\bar x$.
-2. Given a sample $\{x_i\}_{i=1}^N$ from a Gaussian with unknown mean and
-   variance $1$, show the maximum likelihood estimate of the mean is the sample
-   average $\bar x$. (*Hint:* minimize the Gaussian NLL of
-   :numref:`subsec_mdl-gaussian-mse`.)
-3. Show directly that a fixed-variance Gaussian NLL equals the mean squared error
-   up to an additive constant, and identify the constant.
-4. For a $K$-class classifier with one-hot label $\mathbf y$ and softmax
-   prediction $\hat{\mathbf p} = \mathrm{softmax}(\mathbf o)$, where the vector
-   $\mathbf o$ collects the *logits*, the raw scores fed to the softmax
-   (:numref:`sec_softmax`), show the categorical NLL $-\sum_k y_k\log\hat p_k$
-   is the cross-entropy, and that its gradient with respect to the logits is
-   $\hat{\mathbf p} - \mathbf y$ (compare :eqref:`eq_mdl-softmax-jacobian`).
-5. Show that a Gaussian prior on the regression weights recovers ridge
-   regression, and read off the weight-decay strength in terms of the noise and
-   prior variances.
-6. Show that MAP estimation with a Laplace prior gives an $L_1$ penalty, and
-   argue why its kink at the origin can force coefficients to be exactly zero.
-7. Prove that $\hat{\boldsymbol{\theta}}_{\textrm{MAP}} \to \hat{\boldsymbol{\theta}}_{\textrm{MLE}}$
-   as the prior variance $\tau^2\to\infty$, and explain why the same happens as
-   the dataset size $n\to\infty$ for fixed $\tau$.
-8. For a single Gaussian observation with known variance $\sigma^2$ and unknown
-   mean $\mu$, compute the score $\frac{d}{d\mu}\log p(x\mid\mu)$ and show the
-   Fisher information is $I(\mu)=1/\sigma^2$. Conclude that the sample-mean MLE
-   over $n$ observations has variance $\sigma^2/n$, attaining the Cramér--Rao
-   bound :eqref:`eq_mdl-cramer-rao` exactly. (*Hint:* use :eqref:`eq_mdl-fisher`.)
-9. Extend the asymptotic-normality demonstration in the text. First rerun it
-   with $n = 10$ in place of $400$: how many distinct values can $\hat\theta$
-   take, and what does the "histogram" become? Then restore $n = 400$ but move
-   $\theta^\star$ to $0.95$ and compare the match to the predicted Gaussian.
-   Explain why convergence is slower near the boundary, considering both the
-   skew of the binomial there and the shrinking variance
-   $\theta^\star(1-\theta^\star)$.
-10. Derive the GMM M-step for the means: holding the responsibilities $r_{ik}$
-    fixed, show that maximizing the expected complete-data log-likelihood
-    $\sum_i \sum_k r_{ik}\big[\log \pi_k + \log \mathcal{N}(x_i;\,\mu_k,\sigma_k^2)\big]$
-    over $\mu_k$ yields the responsibility-weighted mean of
-    :eqref:`eq_mdl-gmm-mstep`. Then derive the $\pi_k$ update by maximizing over
-    the weights subject to $\sum_k \pi_k = 1$. (*Hint:* use a Lagrange
-    multiplier for the constraint.)
+
+1. **Exponential lifetimes.** A component fails after a random time $x>0$
+   with the exponential density $p(x\mid\lambda)=\lambda e^{-\lambda x}$,
+   where the rate $\lambda>0$ is unknown. We observe $n$ independent lifetimes
+   $x_1,\ldots,x_n$ with average $\bar x$.
+    1. Write the NLL :eqref:`eq_mdl-nll`, find its stationary point
+       $\hat\lambda$, and show that it is the unique minimizer.
+    1. The mean lifetime is $1/\lambda$ and the median lifetime is
+       $(\log 2)/\lambda$. Use the equivariance of maximum likelihood
+       (:numref:`subsec_mdl-map-vs-posterior`) to write down the MLEs of both
+       without a second optimization.
+    1. Compute the per-observation Fisher information $I(\lambda)$ from
+       :eqref:`eq_mdl-fisher`. For $n=50$ lifetimes with $\bar x=2$, use
+       :eqref:`eq_mdl-asymptotic-normality` to give an approximate standard
+       error of $\hat\lambda$.
+   :exlabel:`ex_mdl-maximum-likelihood-exponential-lifetimes`
+
+1. [code] **Learning rate and loss scale.** The cell of
+   :numref:`subsec_mdl-nll` minimizes the summed coin NLL by gradient
+   descent with `lr` $=10^{-9}$ for the counts `n_H` $=8675309$ and
+   `n_T` $=256245$. Near its minimizer $\hat\theta$ the NLL is approximately
+   quadratic with curvature $c=n\,I(\hat\theta)$, where $n=n_H+n_T$ and $I$
+   is the per-flip Fisher information :eqref:`eq_mdl-coin-fisher`. On such a
+   quadratic, each step multiplies the distance to $\hat\theta$ by
+   $1-\texttt{lr}\cdot c$, so gradient descent converges if and only if
+   $\texttt{lr}<2/c$.
+    1. Predict the learning rate above which the cell stops converging. Rerun
+       it with `lr` $\in\{5\times10^{-9},\,6.5\times10^{-9},\,10^{-8}\}$ and
+       print the last four iterates of $\theta$. What do the iterates do just
+       above the threshold?
+    1. Multiply `n_H` and `n_T` by $10^{-3}$, keeping `lr` $=10^{-9}$.
+       Predict $\theta$ after the $100$ steps once from the gradient at the
+       starting point $\theta=0.5$ and once from the contraction factor
+       $1-\texttt{lr}\cdot c$ of the quadratic model. Which prediction
+       matches the run, and why?
+    1. Multiply the original counts by $10$ instead, keeping
+       `lr` $=10^{-9}$. Show that, in exact arithmetic, scaling both counts
+       by $k$ at a fixed `lr` produces the iterates of the original counts
+       with learning rate $k\cdot\texttt{lr}$. Which run of (a) does the
+       factor $10$ reproduce? Do its iterates leave $(0,1)$ within the $100$
+       steps?
+    1. Divide the loss by $n$ before differentiating. What is the threshold
+       now, and why does it no longer depend on $n$?
+   :exlabel:`ex_mdl-maximum-likelihood-learning-rate-loss-scale`
+
+1. **The cross-entropy floor.** For discrete outcomes the average NLL equals
+   $H(\hat p_{\textrm{data}})+D_{\textrm{KL}}(\hat p_{\textrm{data}}\,\|\,p_{\boldsymbol{\theta}})$
+   (:numref:`subsec_mdl-nll-crossentropy`), so it cannot fall below the
+   empirical entropy.
+    1. Evaluate this floor in nats for the coin sequence with $9$ heads and
+       $4$ tails, and the KL gap of the fair-coin model $\theta=1/2$.
+    1. A classifier models $p(y\mid\mathbf x)$ and can represent any
+       distribution over labels separately for each distinct input. Show
+       that its smallest achievable average NLL on a training set is the
+       empirical conditional entropy
+       $\sum_{\mathbf x}\hat p_{\textrm{data}}(\mathbf x)\,H\big(\hat p_{\textrm{data}}(\cdot\mid\mathbf x)\big)$.
+       Evaluate it for a binary task in which each of $100$ distinct inputs
+       occurs $10$ times and carries the wrong label in exactly one of its
+       occurrences.
+    1. Now every training input occurs once, as in a typical image dataset.
+       What is the floor of (b)? Why does a training loss near zero then say
+       nothing about how noisy the labels are? Which quantity that we can
+       measure has the population conditional entropy $H(Y\mid X)$ as its
+       floor?
+   :exlabel:`ex_mdl-maximum-likelihood-cross-entropy-floor`
+
+1. **Learned noise variance.** The Gaussian NLL :eqref:`eq_mdl-gaussian-nll`
+   holds the variance $\sigma^2$ fixed. Here the variance is learned as well.
+    1. Let one shared $\sigma^2$ be a parameter alongside
+       $\boldsymbol{\theta}$. Minimize the NLL over $\sigma^2$ for fixed
+       $\boldsymbol{\theta}$ and show that the remaining objective is
+       $\tfrac n2\log\big(\tfrac1n\sum_i(y_i-\hat y_i)^2\big)$ plus a
+       constant. Is the minimizer over $\boldsymbol{\theta}$ still the
+       least-squares fit?
+    1. A network outputs a mean $\hat y(\mathbf x)$ and a variance
+       $\hat\sigma^2(\mathbf x)>0$ for each input. Up to an additive
+       constant, its NLL on the training set is
+
+       $$\sum_{i=1}^n\Big[\frac{(y_i-\hat y(\mathbf x_i))^2}{2\hat\sigma^2(\mathbf x_i)}+\frac12\log\hat\sigma^2(\mathbf x_i)\Big].$$
+
+       Show that this objective is unbounded below if the network can fit
+       one training point exactly while shrinking its variance. Which
+       property of the Gaussian mixture likelihood in
+       :numref:`sec_mdl-latent-em-elbo` has the same cause?
+    1. Compute the gradient of example $i$'s term with respect to
+       $\hat y(\mathbf x_i)$. Suppose that the predicted variance tracks the
+       squared residual, $\hat\sigma^2(\mathbf x_i)\approx r_i^2$ with
+       $r_i=y_i-\hat y(\mathbf x_i)$. How does the size of the gradient then
+       depend on $|r_i|$, and how does that compare with squared error? What
+       does this weighting do to the fit of the mean in regions where the
+       fit is currently poor :cite:`Seitzer.Tavakoli.Antic.ea.2022`?
+   :exlabel:`ex_mdl-maximum-likelihood-learned-noise-variance`
+
+1. **Losses that are not likelihoods.** Let $\phi(y,o)$ be a loss of a label
+   $y$ and a model output $o$, and let $Z(o)=\sum_y e^{-\phi(y,o)}$. If
+   $Z(o)$ does not depend on $o$, then $e^{-\phi(y,o)}/Z$ is a conditional
+   distribution of $y$ given $o$ whose NLL is $\phi$ plus a constant, so
+   minimizing $\phi$ is maximum likelihood.
+    1. For labels $y\in\{-1,+1\}$, show that the logistic loss
+       $\phi(y,o)=\log(1+e^{-yo})$ has $Z(o)=1$, and identify the
+       probability that the model assigns to $y=+1$.
+    1. Compute $Z(o)$ for the hinge loss $\phi(y,o)=\max(0,1-yo)$ of support
+       vector machines, separately for $|o|\le1$ and for $|o|>1$. Conclude
+       that the hinge loss is not the NLL, up to a constant, of any
+       conditional distribution of $y$ given $o$. Which term must be added
+       to the hinge loss to obtain the NLL of $e^{-\phi(y,o)}/Z(o)$, and how
+       does that term behave as $|o|$ grows?
+    1. For a real target $y$ and a prediction $\hat y$, take any loss of the
+       residual, $\phi(y,\hat y)=\rho(y-\hat y)$ with
+       $\int e^{-\rho(r)}\,dr<\infty$, such as the Huber loss. Show that
+       $Z(\hat y)=\int e^{-\rho(y-\hat y)}\,dy$ does not depend on $\hat y$.
+       Why is the condition of this problem automatic for such regression
+       losses but restrictive for classification losses?
+   :exlabel:`ex_mdl-maximum-likelihood-losses-not-likelihoods`
+
+1. [code] **Small samples and the boundary.** The cell of
+   :numref:`subsec_mdl-mle-estimator-theory` compares a histogram of
+   $\sqrt n\,(\hat\theta-\theta^\star)$ over $20{,}000$ coin datasets with the
+   limit :eqref:`eq_mdl-asymptotic-normality`, for $n=400$ (`n`) and
+   $\theta^\star=0.7$ (`theta_star`).
+    1. Rerun it with $n=10$. How many distinct values can $\hat\theta$ take,
+       how far apart are they on the rescaled axis, and what does the
+       plotted curve become? Choose bins so that the plot again estimates a
+       density.
+    1. Restore $n=400$ and set $\theta^\star=0.95$. Compare the histogram
+       with the predicted Gaussian. The skewness of $\hat\theta$ is
+       $(1-2\theta^\star)/\sqrt{n\,\theta^\star(1-\theta^\star)}$. Evaluate it
+       for both values of $\theta^\star$, and find the $n$ at which
+       $\theta^\star=0.95$ reaches the skewness that $\theta^\star=0.7$ has at
+       $n=400$.
+    1. For $\theta^\star$ close to $1$, express the skewness through the
+       expected number of tails $n(1-\theta^\star)$. What does this say about
+       the amount of data that a parameter near the boundary of the
+       parameter space needs before the Gaussian limit is accurate?
+   :exlabel:`ex_mdl-maximum-likelihood-small-samples-boundary`
+
+1. **Gaussian versus Laplace shrinkage.** Observe one value
+   $z\sim\mathcal N(\theta,1)$ of an unknown scalar $\theta$.
+    1. With the prior $\theta\sim\mathcal N(0,\tau^2)$, show that the MAP
+       estimate is $\tau^2 z/(1+\tau^2)$. The posterior of $\theta$ is the
+       conditional Gaussian of exercise
+       :exref:`ex_mdl-distributions-using-conditional-formula-eqref`b of
+       :numref:`sec_mdl-distributions` with noise variance $1$. Why does the
+       MAP estimate therefore equal the posterior mean? For which $z$ is it
+       exactly zero?
+    1. With the Laplace prior $p(\theta)\propto e^{-|\theta|/b}$ of
+       :numref:`subsec_mdl-gaussian-prior-weight-decay`, write the MAP
+       objective and solve it with the soft-thresholding formula
+       :eqref:`eq_mdl-opt-soft-threshold`. For which $z$ is the estimate
+       exactly zero?
+    1. Keep the Laplace prior and let $z>0$. Compare the posterior density at
+       $\theta$ and at $-\theta$ for $\theta>0$, and conclude that the
+       posterior mean is strictly positive. What is the posterior probability
+       that $\theta=0$? What does this imply for reading the exact zeros of
+       an $L_1$-regularized fit as evidence that a coefficient is zero?
+   :exlabel:`ex_mdl-maximum-likelihood-gaussian-laplace-shrinkage`
+
+1. **MAP in log-odds.** Parameterize the coin by its log-odds
+   $\eta=\log\frac{\theta}{1-\theta}$, so that $\theta=\sigma(\eta)$ with the
+   sigmoid $\sigma$ and $\frac{d\theta}{d\eta}=\theta(1-\theta)$. Keep the
+   uniform prior $\mathrm{Beta}(1,1)$ on $\theta$ and the sequence with $9$
+   heads and $4$ tails.
+    1. Use the change of variables :eqref:`eq_mdl-cov_density_1d` to find
+       the prior density of $\eta$ that this belief implies. Which law of
+       exercise :exref:`ex_mdl-random-variables-logistic-calibration` of
+       :numref:`sec_mdl-random_variables` is it? Explain the result with
+       inverse-transform sampling, without a calculation.
+    1. Find the MAP estimate of $\eta$ and map it back to $\theta$. Compare
+       it with the MAP estimate in the $\theta$ parameterization, with the
+       MLE $\log\frac94$ of :numref:`subsec_mdl-map-vs-posterior`, and with
+       Laplace's rule of succession.
+    1. Repeat (b) for a general prior $\mathrm{Beta}(a,b)$ and counts
+       $n_H,n_T$. Which summary of the posterior over $\theta$ does the
+       log-odds MAP estimate reproduce?
+   :exlabel:`ex_mdl-maximum-likelihood-map-log-odds`
+
+1. **GMM M-step.** Hold the responsibilities $r_{ik}$ of the E-step fixed.
+   The M-step for the Gaussian mixture maximizes the expected complete-data
+   log-likelihood
+
+   $$\sum_{i=1}^n\sum_{k=1}^K r_{ik}\big[\log\pi_k+\log\mathcal N(x_i;\,\mu_k,\sigma_k^2)\big].$$
+
+    1. Maximize over $\mu_k$ and show that the result is the
+       responsibility-weighted mean of :eqref:`eq_mdl-gmm-mstep`.
+    1. Maximize over the weights subject to $\sum_k\pi_k=1$, using a
+       Lagrange multiplier for the constraint, and recover $\pi_k=n_k/n$.
+   :exlabel:`ex_mdl-maximum-likelihood-derive-gmm-m-step`
+
+1. **Densities carry units.** ● A density value is not a probability: if $x$
+   is measured in metres, $p(x)$ has units of inverse metres
+   (:numref:`subsec_mdl-mle-densities`).
+    1. A Gaussian is fit by maximum likelihood to $n$ lengths measured in
+       metres and then refit to the same lengths in millimetres. How do
+       $\hat\mu$, $\hat\sigma$, and the minimal NLL change?
+    1. Model A is a density for positive data $x$. Model B is a Gaussian
+       density for $\log x$. Use the change of variables
+       :eqref:`eq_mdl-cov_density_1d` to write model B's NLL for the data
+       $x_1,\ldots,x_n$. Which term must be added to B's NLL on the values
+       $\log x_i$ before the two models can be compared?
+    1. Images have integer pixel values $\mathbf x\in\{0,\ldots,255\}^D$. A
+       density fit to such values can place a narrow spike on every grid
+       point and so make its average NLL arbitrarily low, by the mechanism of
+       problem :exref:`ex_mdl-maximum-likelihood-learned-noise-variance`b.
+       :citet:`Theis.Oord.Bethge.2016` instead fit a density $q$ on
+       $[0,256)^D$ to the dequantized values $\mathbf x+\mathbf u$, with
+       $\mathbf u$ uniform on $[0,1)^D$. Show that
+       $Q(\mathbf x)=\int_{[0,1)^D}q(\mathbf x+\mathbf u)\,d\mathbf u$ is a
+       probability distribution on the pixel grid. Use Jensen's inequality,
+       as in :eqref:`eq_mdl-elbo`, to show that
+       $-\log Q(\mathbf x)\le-\mathbb E_{\mathbf u}\big[\log q(\mathbf x+\mathbf u)\big]$.
+       What does this bound guarantee about an NLL reported on dequantized
+       data?
+   :exlabel:`ex_mdl-maximum-likelihood-densities-units`
+
+1. **Symmetries of a ReLU network.** ● Consider the network
+   $f_{\boldsymbol{\theta}}(x)=\sum_{j=1}^h a_j\,\mathrm{ReLU}(w_jx)$ with a
+   scalar input $x$ and parameters
+   $\boldsymbol{\theta}=(a_1,w_1,\ldots,a_h,w_h)$, and the regression model
+   $y\sim\mathcal N(f_{\boldsymbol{\theta}}(x),\sigma^2)$ with fixed
+   $\sigma^2$. Identifiability is defined in
+   :numref:`subsec_mdl-mle-estimator-theory`.
+    1. Show that replacing $(a_j,w_j)$ by $(c\,a_j,\,w_j/c)$ for any $c>0$
+       leaves $f_{\boldsymbol{\theta}}$ unchanged. How many distinct
+       parameter vectors with the same function does permuting the hidden
+       units produce when no two units coincide?
+    1. Show from :eqref:`eq_mdl-fisher` that the Fisher information of this
+       model is
+       $I(\boldsymbol{\theta})=\mathbb E_x\big[\nabla_{\boldsymbol{\theta}}f_{\boldsymbol{\theta}}(x)\,\nabla_{\boldsymbol{\theta}}f_{\boldsymbol{\theta}}(x)^\top\big]/\sigma^2$.
+       Differentiate the rescaling of (a) with respect to $c$ at $c=1$ to
+       find a nonzero vector $\mathbf v$ with
+       $I(\boldsymbol{\theta})\mathbf v=\mathbf 0$. Which hypothesis behind
+       :eqref:`eq_mdl-asymptotic-normality` fails?
+    1. The Hessian entry of the mean squared error
+       $\tfrac1n\sum_i(y_i-f_{\boldsymbol{\theta}}(x_i))^2$ with respect to
+       $a_j$ is $\tfrac2n\sum_i\mathrm{ReLU}(w_jx_i)^2$. How does this entry
+       change under the rescaling of (a)? Compute the entry for $w_j$, and
+       explain why for a ReLU unit it contains no residual term (away from
+       the kinks $w_jx_i=0$). How does it change under the rescaling? What
+       does this imply for measures of the flatness of a minimum that are
+       based on Hessian eigenvalues :cite:`Dinh.Pascanu.Bengio.ea.2017`?
+   :exlabel:`ex_mdl-maximum-likelihood-relu-symmetries`
+
+1. **A support that moves.** ● Let $x_1,\ldots,x_n$ be independent and
+   uniform on $[0,\theta]$ with unknown $\theta>0$. This model violates one
+   of the regularity conditions of :numref:`subsec_mdl-mle-estimator-theory`.
+    1. Write the likelihood as a function of $\theta$ and show that the MLE
+       is $\hat\theta=\max_i x_i$. Why does setting a derivative to zero not
+       find it?
+    1. Show that
+       $P\big(n(\theta-\hat\theta)>t\big)=\big(1-\tfrac{t}{n\theta}\big)^n$
+       for $0\le t\le n\theta$, and find the limit as $n\to\infty$. At which
+       rate in $n$ does the error shrink, and is the limit Gaussian?
+    1. On the support, the score is $s(x;\theta)=-1/\theta$. Compute
+       $\mathbb E_\theta[s]$. Which step in the derivation of the mean-zero
+       score fails (compare exercise
+       :exref:`ex_mdl-integral-calculus-moving-support` of
+       :numref:`sec_mdl-integral_calculus`)?
+    1. The unbiased estimator $\tfrac{n+1}{n}\hat\theta$ has variance
+       $\theta^2/(n(n+2))$. Compare it with the value
+       $1/(n\,\mathbb E_\theta[s^2])$ that :eqref:`eq_mdl-cramer-rao` would
+       give as a floor. Why does this estimator not contradict the
+       Cramér--Rao bound?
+   :exlabel:`ex_mdl-maximum-likelihood-moving-support`
+
+1. [code] **Fisher information of a Gaussian.** ● The caption of
+   :numref:`fig_mdl-prob-mle-fisher` states the per-observation Fisher
+   information $I(\mu,\sigma)=\operatorname{diag}(1/\sigma^2,\,2/\sigma^2)$
+   of a Gaussian with unknown mean $\mu$ and standard deviation $\sigma$.
+    1. Derive this matrix from :eqref:`eq_mdl-fisher`, once from the outer
+       product of the score and once from the expected Hessian. Why are its
+       off-diagonal entries zero?
+    1. Reparameterize by the variance $v=\sigma^2$. Use the chain rule for
+       the score to show that the information about $v$ is $1/(2\sigma^4)$.
+       How does a scalar Fisher information transform under a smooth
+       one-to-one reparameterization $\theta=g(\eta)$ in general?
+    1. Simulate the setting of the figure: $20{,}000$ datasets of $n=30$
+       draws from $\mathcal N(1,1.5^2)$. Compute the MLE
+       $(\hat\mu,\hat\sigma)$ of each dataset and compare the empirical
+       covariance matrix of the estimates with $I(\mu,\sigma)^{-1}/n$. Also
+       measure the bias of $\hat\sigma$. Is it small compared with the
+       standard deviation of $\hat\sigma$?
+   :exlabel:`ex_mdl-maximum-likelihood-gaussian-fisher`
+
+1. [code] **EM speed and missing information.** ● Consider the mixture
+   $p(x;\pi)=\pi f_0(x)+(1-\pi)f_1(x)$ with known components
+   $f_0=\mathcal N(\cdot\,;0,1)$ and $f_1=\mathcal N(\cdot\,;\Delta,1)$, in
+   which only the weight $\pi$ is unknown.
+    1. Show that EM updates the weight by $\pi^{(t+1)}=M(\pi^{(t)})$ with
+       $M(\pi)=\tfrac1n\sum_i r_i(\pi)$ and responsibilities
+       $r_i(\pi)=\pi f_0(x_i)/p(x_i;\pi)$.
+    1. Near a fixed point $\hat\pi=M(\hat\pi)$, each iteration multiplies the
+       error by about $M'(\hat\pi)$. Define the observed information
+       $I_{\textrm{obs}}=-\frac{d^2}{d\pi^2}\sum_i\log p(x_i;\pi)$ at
+       $\hat\pi$, and the complete-data information
+       $I_{\textrm{com}}=n/(\hat\pi(1-\hat\pi))$ that the labels would carry
+       if they were observed (compare :eqref:`eq_mdl-coin-fisher`). Show
+       that
+
+       $$M'(\hat\pi)=1-\frac{I_{\textrm{obs}}}{I_{\textrm{com}}}.$$
+
+       Express both sides through the responsibilities and use
+       $\sum_i r_i(\hat\pi)=n\hat\pi$. :citet:`Dempster.Laird.Rubin.1977`
+       prove the general form of this result: the rate of EM is set by the
+       fraction of the information that the latent variables hide.
+    1. Draw $n=10{,}000$ points with $\pi=0.3$ for each
+       $\Delta\in\{0.5,1,2,4\}$, run EM from $\pi^{(0)}=0.5$, and compare the
+       measured ratio of successive errors with the prediction of (b). How
+       many iterations does each $\Delta$ need to bring the error below
+       $10^{-6}$?
+    1. What does the ratio $I_{\textrm{obs}}/I_{\textrm{com}}$ say about the
+       standard error of $\hat\pi$, compared with a dataset of the same size
+       whose labels were observed?
+   :exlabel:`ex_mdl-maximum-likelihood-em-missing-information`
+
+1. [extended] **Misspecification and the sandwich.** ●● When no member of
+   the model family is the data-generating law, the MLE converges to the
+   pseudo-true parameter $\boldsymbol{\theta}^\dagger$ that minimizes the
+   population KL divergence (:numref:`subsec_mdl-nll-crossentropy`), and
+   its spread is no longer $I^{-1}/n$ :cite:`White.1982`. Write
+   $\mathbf A=-\mathbb E\big[\nabla^2_{\boldsymbol{\theta}}\log p(x\mid\boldsymbol{\theta}^\dagger)\big]$
+   and
+   $\mathbf B=\mathbb E\big[s(x;\boldsymbol{\theta}^\dagger)\,s(x;\boldsymbol{\theta}^\dagger)^\top\big]$,
+   with expectations under the data-generating law.
+    1. Expand the first-order condition
+       $\sum_i s(x_i;\hat{\boldsymbol{\theta}})=\mathbf 0$ to first order
+       around $\boldsymbol{\theta}^\dagger$, and apply the central limit
+       theorem to $\tfrac{1}{\sqrt n}\sum_i s(x_i;\boldsymbol{\theta}^\dagger)$
+       to argue that
+
+       $$\sqrt n\,\big(\hat{\boldsymbol{\theta}}-\boldsymbol{\theta}^\dagger\big)\xrightarrow{d}\mathcal N\big(\mathbf 0,\ \mathbf A^{-1}\mathbf B\mathbf A^{-1}\big).$$
+
+       Why does $\mathbb E\big[s(x;\boldsymbol{\theta}^\dagger)\big]=\mathbf 0$
+       hold although the model is wrong? Show that the covariance reduces to
+       the one in :eqref:`eq_mdl-asymptotic-normality` when the model is
+       correct.
+    1. Fit a Poisson model with rate $\lambda$ to counts from a negative
+       binomial distribution with mean $m$ and shape $\alpha$, whose variance
+       is $m+m^2/\alpha$ (exercise
+       :exref:`ex_mdl-distributions-gamma-poisson-mixture` of
+       :numref:`sec_mdl-distributions`). Find $\hat\lambda$,
+       $\lambda^\dagger$, $\mathbf A$, and $\mathbf B$. By which factor does
+       the inverse Fisher information understate the variance of
+       $\hat\lambda$?
+    1. Fit the Poisson regression $\log\lambda(x)=w_0+w_1x$ with one feature
+       by the Newton method of exercise
+       :exref:`ex_mdl-distributions-poisson-regression` of
+       :numref:`sec_mdl-distributions`. An observation is now a pair
+       $(x_i,y_i)$, and $\log p(y_i\mid x_i;\mathbf w)$ takes the place of
+       $\log p(x\mid\boldsymbol{\theta})$ in $\mathbf A$ and $\mathbf B$;
+       estimate both by sample averages at the fitted $\hat{\mathbf w}$.
+       Generate $2{,}000$ datasets of $n=500$ pairs with
+       $x\sim\mathcal N(0,1)$, $\mathbf w=(1,0.5)$,
+       and negative-binomial counts with $\alpha=2$: draw a rate from the
+       Gamma distribution with shape $\alpha$ and mean $\lambda(x)$, then a
+       Poisson count with that rate. Compare three standard errors of
+       $\hat w_1$: from the inverse Fisher information, from the sandwich,
+       and from the spread of $\hat w_1$ across datasets. Which fraction of the nominal
+       $95\%$ intervals of the first two covers $w_1=0.5$? Repeat with
+       $\alpha=10^6$.
+    1. Exercise :exref:`ex_mdl-distributions-poisson-regression`c of
+       :numref:`sec_mdl-distributions` shows that the Poisson fit still
+       recovers $\mathbf w$ when the counts are overdispersed. Which part
+       of the model would have to be wrong for $\mathbf w^\dagger$ to
+       differ from $\mathbf w$? Which parameter does the sandwich interval
+       of (c) cover in that case?
+   :exlabel:`ex_mdl-maximum-likelihood-sandwich`
 
 
 :begin_tab:`mxnet`

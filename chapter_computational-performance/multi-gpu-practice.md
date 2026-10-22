@@ -764,7 +764,38 @@ that turn a synchronous step into a queueing problem.
 
 ## Exercises
 
-1. **Weak-scaling extrapolation.** The DDP sweep of
+:begin_tab:`pytorch`
+1. [code] **Splitting the data.** `train_ddp.py` gives each rank a disjoint
+   shard of Fashion-MNIST through a `DistributedSampler` and reshuffles the
+   shards every epoch with `sampler.set_epoch`.
+    1. Remove the sampler, so that every rank builds the same `DataLoader`
+       over the full dataset. Predict, for $k = 2$, the aggregate throughput
+       that `ddp_throughput` reports relative to the correct script, the
+       time an epoch takes, and the global batch that the averaged gradient
+       corresponds to. Then run it, with each rank printing a checksum of
+       its first batch.
+    1. Restore the sampler and remove only the call to `set_epoch`. What
+       changes from one epoch to the next, and what stays the same?
+    1. Name a check that catches both mistakes and is cheap enough to run
+       on every launch.
+:end_tab:
+
+:begin_tab:`jax`
+1. [code] **Splitting the data.** `shard_batch` places the batch with
+   `PartitionSpec('data')`, which splits its leading axis across the mesh.
+    1. Change `shard_batch` to place the batch with `PartitionSpec()`, which
+       replicates it on every device. Predict which collectives the
+       compiled `train_step` contains and how the throughput of
+       `jax_throughput(2)` compares with that of `jax_throughput(1)`, then
+       check both.
+    1. Place the images with `PartitionSpec(None, 'data')`, which splits
+       the height of every image across the devices, and keep the labels
+       replicated. Which values must neighboring devices exchange for a
+       $3 \times 3$ convolution, and which collective does that take? Find
+       it in the compiled `train_step`.
+:end_tab:
+
+2. **Weak-scaling extrapolation.** The DDP sweep of
    :numref:`subsec_mgp-ddp` reports weak-scaling efficiencies of 88% at
    $k = 2$ and 82% at $k = 4$. Suppose that a step on $k$ GPUs takes the
    single-GPU step time $t_1$ plus an exposed communication time, and that
@@ -847,37 +878,6 @@ that turn a synchronous step into a queueing problem.
        16-byte anatomy of :numref:`subsec_mp-anatomy`?
 
 :begin_tab:`pytorch`
-5. [code] **Splitting the data.** `train_ddp.py` gives each rank a disjoint
-   shard of Fashion-MNIST through a `DistributedSampler` and reshuffles the
-   shards every epoch with `sampler.set_epoch`.
-    1. Remove the sampler, so that every rank builds the same `DataLoader`
-       over the full dataset. Predict, for $k = 2$, the aggregate throughput
-       that `ddp_throughput` reports relative to the correct script, the
-       time an epoch takes, and the global batch that the averaged gradient
-       corresponds to. Then run it, with each rank printing a checksum of
-       its first batch.
-    1. Restore the sampler and remove only the call to `set_epoch`. What
-       changes from one epoch to the next, and what stays the same?
-    1. Name a check that catches both mistakes and is cheap enough to run
-       on every launch.
-:end_tab:
-
-:begin_tab:`jax`
-5. [code] **Splitting the data.** `shard_batch` places the batch with
-   `PartitionSpec('data')`, which splits its leading axis across the mesh.
-    1. Change `shard_batch` to place the batch with `PartitionSpec()`, which
-       replicates it on every device. Predict which collectives the
-       compiled `train_step` contains and how the throughput of
-       `jax_throughput(2)` compares with that of `jax_throughput(1)`, then
-       check both.
-    1. Place the images with `PartitionSpec(None, 'data')`, which splits
-       the height of every image across the devices, and keep the labels
-       replicated. Which values must neighboring devices exchange for a
-       $3 \times 3$ convolution, and which collective does that take? Find
-       it in the compiled `train_step`.
-:end_tab:
-
-:begin_tab:`pytorch`
 6. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
    as follows. The backward pass takes time $t_b$ and releases the
    gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
@@ -901,39 +901,7 @@ that turn a synchronous step into a queueing problem.
        taking the backward pass as twice the cost of the forward pass, and
        $\tau$ as $2N/\beta$. Is the measured optimum consistent with your
        model, and which $\alpha$ does it imply?
-:end_tab:
 
-:begin_tab:`jax`
-6. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
-   as follows. The backward pass takes time $t_b$ and releases the
-   gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
-   The allreduces of the buckets run one at a time and in order, and each
-   takes $\alpha + \tau/n$, where $\tau = 2N/\beta$ is the communication
-   time of :eqref:`eq_dp_cost` and $\alpha$ is a fixed cost per
-   collective. The exposed communication is the time from the end of the
-   backward pass to the end of the last allreduce.
-    1. Show that the exposed communication is
-
-        $$t_{\text{exposed}}(n) = \max\Bigl(\alpha + \frac{\tau}{n},\;
-        n\alpha + \tau - \frac{n-1}{n}\,t_b\Bigr).$$
-
-    1. Find the $n$ that minimizes $t_{\text{exposed}}$ when $\tau$ is well
-       below $t_b$, and again when $\tau > t_b$. What does a bucket that is
-       too small cost, and what does one that is too large cost?
-    1. XLA fuses gradient allreduces up to a byte threshold, which the
-       flag `--xla_gpu_all_reduce_combine_threshold_bytes` sets. In fresh
-       processes, with `XLA_FLAGS` set before JAX initializes its backend,
-       sweep the threshold from 1 MB to 100 MB. For each value, count the
-       gradient allreduces in the compiled `train_step` and measure
-       `jax_throughput(2)`. Estimate $t_b$ from the single-device step
-       time, 256 examples divided by `jax_throughput(1)`, by taking the
-       backward pass as twice the cost of the forward pass, and $\tau$ as
-       $2N/\beta$ with the $\beta$ that the `psum` of
-       :numref:`subsec_mg-accounting` measures. Is the measured optimum
-       consistent with your model, and which $\alpha$ does it imply?
-:end_tab:
-
-:begin_tab:`pytorch`
 7. [code] **Transport configuration.** ● `bare_allreduce_gbs` compares
    the default NCCL transport with the copy-engine transport that
    `NCCL_SHM_USE_CUDA_MEMCPY=1` selects, at a single payload of 64 MB. The
@@ -955,35 +923,37 @@ that turn a synchronous step into a queueing problem.
        overlap of communication with the backward pass, and what does the
        outcome tell you about which workloads the bare benchmark
        validates?
-:end_tab:
 
-:begin_tab:`jax`
-7. [code] **Transport configuration.** ● XLA runs its collectives through
-   NCCL, so the switch `NCCL_SHM_USE_CUDA_MEMCPY=1` of
-   :numref:`subsec_mgp-ddp` applies to JAX programs as well. The switch
-   affects only NCCL's shared-memory transport, which NCCL uses between
-   GPUs that lack peer-to-peer access (:numref:`subsec_hw-interconnects`).
-   NCCL reads its environment when it sets up communication, so compare the
-   two settings in separate fresh processes and set the variable with
-   `os.environ` before the first collective, the way this section sets
-   `NCCL_LOCAL_REGISTER`.
-    1. Run the `psum` of :numref:`subsec_mg-accounting` once with
-       `NCCL_DEBUG=INFO`, find the transport that NCCL reports for each
-       channel, and predict whether the switch can change anything on your
-       machine.
-    1. Time the `psum` for payloads from 1 MB to 256 MB under both settings
-       and plot the effective bandwidth against the payload. Where does
-       each saturate, and how does the gap compare with the factor of five
-       reported in :numref:`subsec_mgp-ddp`?
-    1. Run `jax_throughput(2)` with the switch set, under a time limit.
-       Does training complete, and at what throughput relative to the
-       default transport?
-    1. Read the payload sizes of the allreduces in the compiled
-       `train_step`. At which of them does the switch change the bandwidth?
-:end_tab:
+8. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
+    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` by hand and measure what it
+    saves. Start from `train_ddp.py` with `torch.optim.Adam` in place of
+    SGD.
+    1. Assign every parameter tensor to one owner rank, so that the ranks
+       own nearly equal numbers of values, and give each rank an Adam
+       optimizer over its own tensors only. After the backward pass and the
+       owners' steps, send each tensor from its owner to all ranks with
+       `dist.broadcast`. Check that after a few steps the parameters match
+       those of DDP with a full Adam from the same initialization, and
+       compare with `torch.distributed.optim.ZeroRedundancyOptimizer`.
+    1. Read `torch.cuda.memory_allocated` after initialization, before the
+       first optimizer step, and after it, with and without sharding at
+       $k = 2$ and $k = 4$. Account for the differences with the anatomy
+       of :numref:`subsec_mp-anatomy`. Then read
+       `torch.cuda.max_memory_allocated` after the second step and compare
+       its change under sharding with the change in live memory.
+    1. Measure the step time with and without sharding. DDP's allreduce
+       hands every rank the full summed gradient, of which stage 1 uses
+       only the part that the rank owns. Count the bytes per device that
+       the allreduce and the broadcasts of your implementation send
+       together, and compare them with the volume of stage 1 found in
+       problem 5.
 
-:begin_tab:`pytorch`
-8. [code] **Batch-norm statistics.** ● `resnet18` normalizes with batch
+    *Adapted from Stanford CS336,
+    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
+    Problems optimizer_state_sharding and
+    optimizer_state_sharding_accounting.*
+
+9. [code] **Batch-norm statistics.** ● `resnet18` normalizes with batch
    normalization (:numref:`sec_batch_norm`), and under DDP each replica
    computes its statistics over its own shard of the batch.
     1. Write the one-step parity check of :numref:`subsec_mg-byhand` for
@@ -1001,30 +971,8 @@ that turn a synchronous step into a queueing problem.
        the cost with the time that the added bytes take at the bandwidth
        of :eqref:`eq_dp_cost`. Which properties of these collectives,
        other than their size, set their cost?
-:end_tab:
 
-:begin_tab:`jax`
-8. [code] **Batch-norm statistics.** ● `ResNet18` normalizes with batch
-   normalization (:numref:`sec_batch_norm`). Under `jit` with a sharded
-   batch the compiler computes its statistics over the global batch
-   (:numref:`subsec_mgp-jax`), exactly as a single device would.
-    1. Count the small allreduces in the compiled `train_step`, and
-       account for their number from the `BatchNorm` layers of `ResNet18`
-       and the passes in which their statistics are needed. What does each
-       of them carry?
-    1. Call `model.eval()` before compiling, so that every `BatchNorm`
-       normalizes with its running averages, and count the allreduces
-       again. Measure `jax_throughput` with and without this change at
-       $k = 1$, $k = 2$ and $k = 4$. Separate what making the statistics
-       global costs per step from what computing batch statistics costs on
-       a single device, and compare the cost of global statistics with the
-       time that the added bytes take at the bandwidth of
-       :eqref:`eq_dp_cost`. Which properties of these collectives, other
-       than their size, set their cost?
-:end_tab:
-
-:begin_tab:`pytorch`
-9. [code] **Tensor versus data parallelism.** ● Consider the MLP block
+10. [code] **Tensor versus data parallelism.** ● Consider the MLP block
    $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
    $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
    step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
@@ -1061,7 +1009,105 @@ that turn a synchronous step into a queueing problem.
 :end_tab:
 
 :begin_tab:`jax`
-9. [code] **Tensor versus data parallelism.** ● Consider the MLP block
+6. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
+   as follows. The backward pass takes time $t_b$ and releases the
+   gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
+   The allreduces of the buckets run one at a time and in order, and each
+   takes $\alpha + \tau/n$, where $\tau = 2N/\beta$ is the communication
+   time of :eqref:`eq_dp_cost` and $\alpha$ is a fixed cost per
+   collective. The exposed communication is the time from the end of the
+   backward pass to the end of the last allreduce.
+    1. Show that the exposed communication is
+
+        $$t_{\text{exposed}}(n) = \max\Bigl(\alpha + \frac{\tau}{n},\;
+        n\alpha + \tau - \frac{n-1}{n}\,t_b\Bigr).$$
+
+    1. Find the $n$ that minimizes $t_{\text{exposed}}$ when $\tau$ is well
+       below $t_b$, and again when $\tau > t_b$. What does a bucket that is
+       too small cost, and what does one that is too large cost?
+    1. XLA fuses gradient allreduces up to a byte threshold, which the
+       flag `--xla_gpu_all_reduce_combine_threshold_bytes` sets. In fresh
+       processes, with `XLA_FLAGS` set before JAX initializes its backend,
+       sweep the threshold from 1 MB to 100 MB. For each value, count the
+       gradient allreduces in the compiled `train_step` and measure
+       `jax_throughput(2)`. Estimate $t_b$ from the single-device step
+       time, 256 examples divided by `jax_throughput(1)`, by taking the
+       backward pass as twice the cost of the forward pass, and $\tau$ as
+       $2N/\beta$ with the $\beta$ that the `psum` of
+       :numref:`subsec_mg-accounting` measures. Is the measured optimum
+       consistent with your model, and which $\alpha$ does it imply?
+
+7. [code] **Transport configuration.** ● XLA runs its collectives through
+   NCCL, so the switch `NCCL_SHM_USE_CUDA_MEMCPY=1` of
+   :numref:`subsec_mgp-ddp` applies to JAX programs as well. The switch
+   affects only NCCL's shared-memory transport, which NCCL uses between
+   GPUs that lack peer-to-peer access (:numref:`subsec_hw-interconnects`).
+   NCCL reads its environment when it sets up communication, so compare the
+   two settings in separate fresh processes and set the variable with
+   `os.environ` before the first collective, the way this section sets
+   `NCCL_LOCAL_REGISTER`.
+    1. Run the `psum` of :numref:`subsec_mg-accounting` once with
+       `NCCL_DEBUG=INFO`, find the transport that NCCL reports for each
+       channel, and predict whether the switch can change anything on your
+       machine.
+    1. Time the `psum` for payloads from 1 MB to 256 MB under both settings
+       and plot the effective bandwidth against the payload. Where does
+       each saturate, and how does the gap compare with the factor of five
+       reported in :numref:`subsec_mgp-ddp`?
+    1. Run `jax_throughput(2)` with the switch set, under a time limit.
+       Does training complete, and at what throughput relative to the
+       default transport?
+    1. Read the payload sizes of the allreduces in the compiled
+       `train_step`. At which of them does the switch change the bandwidth?
+
+8. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
+    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` declaratively and measure
+    what it saves. Use `optax.adam` in `nnx.Optimizer` instead of SGD, keep
+    the model replicated, and place every leaf of `nnx.state(opt)` with a
+    `NamedSharding` that splits the first of its axes whose length is
+    divisible by $k$, replicating the leaves that have no such axis.
+    1. Run `train_step` once and show the layout of a weight afterwards.
+       Stage 1 needs replicated parameters at the start of every step; if
+       the compiler did not keep them replicated, restore the layout inside
+       the step with `jax.sharding.reshard` and a replicated
+       `NamedSharding`. Check that after a few steps the parameters match
+       those of replicated Adam from the same initialization.
+    1. Read the collectives of the compiled step. Which collective is new
+       compared with the replicated step, and is the gradient sum an
+       allreduce or a reduce-scatter? Compare the bytes per device of the
+       compiled step with the volume of stage 1 found in
+       problem 5.
+    1. In fresh processes, read `'bytes_in_use'` and `'peak_bytes_in_use'`
+       from `jax.devices()[0].memory_stats()` after a completed step, and
+       measure the step time, with and without sharding at $k = 2$ and
+       $k = 4$. Account for the differences in live memory with the anatomy
+       of :numref:`subsec_mp-anatomy`, and compare them with the change in
+       the peak.
+
+    *Adapted from Stanford CS336,
+    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
+    Problems optimizer_state_sharding and
+    optimizer_state_sharding_accounting.*
+
+9. [code] **Batch-norm statistics.** ● `ResNet18` normalizes with batch
+   normalization (:numref:`sec_batch_norm`). Under `jit` with a sharded
+   batch the compiler computes its statistics over the global batch
+   (:numref:`subsec_mgp-jax`), exactly as a single device would.
+    1. Count the small allreduces in the compiled `train_step`, and
+       account for their number from the `BatchNorm` layers of `ResNet18`
+       and the passes in which their statistics are needed. What does each
+       of them carry?
+    1. Call `model.eval()` before compiling, so that every `BatchNorm`
+       normalizes with its running averages, and count the allreduces
+       again. Measure `jax_throughput` with and without this change at
+       $k = 1$, $k = 2$ and $k = 4$. Separate what making the statistics
+       global costs per step from what computing batch statistics costs on
+       a single device, and compare the cost of global statistics with the
+       time that the added bytes take at the bandwidth of
+       :eqref:`eq_dp_cost`. Which properties of these collectives, other
+       than their size, set their cost?
+
+10. [code] **Tensor versus data parallelism.** ● Consider the MLP block
    $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
    $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
    step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
@@ -1096,67 +1142,6 @@ that turn a synchronous step into a queueing problem.
     *Adapted from Stanford CS336,
     [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
     Problems data_parallel_calcs and tp_calcs.*
-:end_tab:
-
-:begin_tab:`pytorch`
-10. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
-    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` by hand and measure what it
-    saves. Start from `train_ddp.py` with `torch.optim.Adam` in place of
-    SGD.
-    1. Assign every parameter tensor to one owner rank, so that the ranks
-       own nearly equal numbers of values, and give each rank an Adam
-       optimizer over its own tensors only. After the backward pass and the
-       owners' steps, send each tensor from its owner to all ranks with
-       `dist.broadcast`. Check that after a few steps the parameters match
-       those of DDP with a full Adam from the same initialization, and
-       compare with `torch.distributed.optim.ZeroRedundancyOptimizer`.
-    1. Read `torch.cuda.memory_allocated` after initialization, before the
-       first optimizer step, and after it, with and without sharding at
-       $k = 2$ and $k = 4$. Account for the differences with the anatomy
-       of :numref:`subsec_mp-anatomy`. Then read
-       `torch.cuda.max_memory_allocated` after the second step and compare
-       its change under sharding with the change in live memory.
-    1. Measure the step time with and without sharding. DDP's allreduce
-       hands every rank the full summed gradient, of which stage 1 uses
-       only the part that the rank owns. Count the bytes per device that
-       the allreduce and the broadcasts of your implementation send
-       together, and compare them with the volume of stage 1 found in
-       Problem 4.
-
-    *Adapted from Stanford CS336,
-    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
-    Problems optimizer_state_sharding and
-    optimizer_state_sharding_accounting.*
-:end_tab:
-
-:begin_tab:`jax`
-10. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
-    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` declaratively and measure
-    what it saves. Use `optax.adam` in `nnx.Optimizer` instead of SGD, keep
-    the model replicated, and place every leaf of `nnx.state(opt)` with a
-    `NamedSharding` that splits the first of its axes whose length is
-    divisible by $k$, replicating the leaves that have no such axis.
-    1. Run `train_step` once and show the layout of a weight afterwards.
-       Stage 1 needs replicated parameters at the start of every step; if
-       the compiler did not keep them replicated, restore the layout inside
-       the step with `jax.sharding.reshard` and a replicated
-       `NamedSharding`. Check that after a few steps the parameters match
-       those of replicated Adam from the same initialization.
-    1. Read the collectives of the compiled step. Which collective is new
-       compared with the replicated step, and is the gradient sum an
-       allreduce or a reduce-scatter? Compare the bytes per device of the
-       compiled step with the volume of stage 1 found in Problem 4.
-    1. In fresh processes, read `'bytes_in_use'` and `'peak_bytes_in_use'`
-       from `jax.devices()[0].memory_stats()` after a completed step, and
-       measure the step time, with and without sharding at $k = 2$ and
-       $k = 4$. Account for the differences in live memory with the anatomy
-       of :numref:`subsec_mp-anatomy`, and compare them with the change in
-       the peak.
-
-    *Adapted from Stanford CS336,
-    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
-    Problems optimizer_state_sharding and
-    optimizer_state_sharding_accounting.*
 :end_tab:
 
 <!-- slides -->

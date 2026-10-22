@@ -881,6 +881,124 @@ behavior at scale, where budgets, tuning, and data change the ordering.
        -\mathbf{b}_\textrm{f}$. Show that with zero weights this makes
        $\mathbf{F}_t + \mathbf{I}_t = 1$, and compare the resulting cell
        update with :eqref:`gru_H`.
+
+1. **Output squashing.** The input node $\tilde{\mathbf{C}}_t$ is already
+   squashed by the $\tanh$ in :eqref:`lstm_c_tilde`, yet :eqref:`lstm_update`
+   applies $\tanh$ to $\mathbf{C}_t$ again before the output gate.
+    1. Starting from $\mathbf{C}_0 = \mathbf{0}$, show that every entry of
+       $\mathbf{C}_t$ is smaller than $t$ in magnitude. Show further that if
+       every forget-gate value is at most $f_\textrm{max} < 1$, every entry
+       stays below $1 / (1 - f_\textrm{max})$ in magnitude, whatever $t$ is.
+    1. Suppose that the hidden state were $\mathbf{H}_t = \mathbf{O}_t \odot
+       \mathbf{C}_t$ instead. After many steps of accumulation, what happens
+       to the gate pre-activations at the next step, and what does that do
+       to the gradients that flow through the gates?
+
+1. [code] **Forget-gate bias.** With weights near zero, the forget gate is
+   close to $\sigma(\mathbf{b}_\textrm{f})$, so `LSTMScratch` starts with
+   every forget gate near $0.5$. :citet:`Jozefowicz.Zaremba.Sutskever.2015`
+   found that a forget-gate bias of 1 let the LSTM nearly match the GRU on
+   their benchmarks.
+    1. Initialize $\mathbf{b}_\textrm{f}$ to 1 in `LSTMScratch`, keep the
+       other biases at zero, and train with the recipe of
+       :numref:`subsec_lstm-training`. Compare the validation perplexity with
+       that of the run with $\mathbf{b}_\textrm{f} = \mathbf{0}$, and repeat
+       both runs with a second random seed. Does the difference exceed the
+       spread between seeds?
+    1. Train both initializations and `GRU` for 20 epochs instead of 10,
+       and plot the validation perplexity of all three after every epoch.
+       Which of the two remedies, the bias or the longer budget, closes more
+       of the gap between the LSTM and the lowest validation perplexity that
+       the GRU reaches at any epoch?
+    1. Set the total forget-gate bias of the concise `LSTM` to 1 at
+       initialization and retrain it. The fused layer keeps its gate
+       parameters in its own layout and initializes them differently from
+       `LSTMScratch` (:numref:`subsec_lstm-concise`), so locate the
+       forget-gate bias first. Does the change help the concise model?
+
+1. [code] **Memory timescales.** In a gated cell each unit has its own
+   learned rate of decay. Train `LSTMScratch` with the recipe of
+   :numref:`subsec_lstm-training`, let it read 1,024 consecutive
+   validation tokens with the state carried across them, and record
+   $\mathbf{F}_t$ along the way.
+    1. Average the forget-gate values of each unit $i$ to $\bar{f}_i$, and
+       convert each average into a time constant
+       $\tau_i = 1 / (1 - \bar{f}_i)$. Plot a histogram of the $\tau_i$. How
+       many units have a time constant longer than the 32-token training
+       window?
+    1. Repeat the measurement for a model trained with
+       $\mathbf{b}_\textrm{f}$ initialized to 1. Which parts of the timescale
+       distribution move?
+
+1. **Reset before or after.** The fused layers that `GRU` wraps apply the
+   reset gate after the recurrent matrix product. Apart from the placement
+   of the bias terms, they compute the candidate
+   $$\tilde{\mathbf{H}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{R}_t \odot (\mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}) + \mathbf{b}_\textrm{h})$$
+   in place of :eqref:`gru_tilde_H`.
+    1. Show that the two candidates agree for every $\mathbf{R}_t$ and
+       $\mathbf{H}_{t-1}$ if and only if $\mathbf{W}_{\textrm{hh}}$ is
+       diagonal. For a general $\mathbf{W}_{\textrm{hh}}$, which reset-gate
+       values still make them agree?
+    1. The input products $\mathbf{X}_t \mathbf{W}_{\textrm{x}\cdot}$ of all
+       steps can be computed as one large product before the recurrence
+       starts. Under each form of the candidate, how many matrix products
+       involving the previous state must each step perform one after the
+       other? Why do fused GRU kernels use the form above?
+
+1. [code] **GRU from scratch.** Write a class `GRUScratch` by editing
+   `LSTMScratch`: three heads following :eqref:`gru_gates` and
+   :eqref:`gru_tilde_H`, the update :eqref:`gru_H`, and a carried state that
+   consists of $\mathbf{H}$ alone. Keep the attributes `num_inputs`,
+   `num_hiddens`, and `sigma`, which `d2l.RNNLMScratch` reads.
+    1. Check the output and state shapes as for `LSTMScratch`, train the
+       model with the recipe of :numref:`subsec_lstm-training`, and compare
+       its validation perplexity with those of `LSTMScratch` and of the
+       concise `GRU`. Which of the two comparisons isolates the effect of
+       the architecture?
+    1. Remove the reset gate by fixing $\mathbf{R}_t = 1$, and in a second
+       model remove the update gate by fixing $\mathbf{Z}_t = 0$; in each
+       case delete the parameters of the removed gate. Before training,
+       predict from :eqref:`gru_H` which removal hurts more. Then train both
+       models, check your prediction, and explain the outcome.
+
+1. [code] **Matched parameters.** :numref:`sec_gru` counts $3h(d + h + 1)$
+   weights in the recurrent core of the GRU and $4h(d + h + 1)$ in that of
+   the LSTM, where $d = 64$ is the embedding dimension. These counts are
+   those of `LSTMScratch` and of the `GRUScratch` of problem
+   6, which share one
+   initialization; the concise `LSTM` and `GRU` start from the
+   initializations of their fused layers.
+    1. At $h = 128$, find the width $h'$ at which the recurrent core of
+       `GRUScratch` has about as many weights as that of `LSTMScratch`.
+       Then count the parameters of the whole language model, including the
+       embedding table and the output layer for the `len(data.vocab)`
+       tokens, and find the width of `GRUScratch` that matches whole models
+       instead. What fraction of the parameters of the `LSTMScratch`
+       language model sits in its recurrent core?
+    1. Train `GRUScratch` at both widths with the recipe of
+       :numref:`subsec_lstm-training` and compare it with `LSTMScratch` at
+       $h = 128$. Does the difference between the two models at equal
+       width, measured in problem
+       6, survive
+       either matching?
+
+1. **Highway gates.** A highway layer :cite:`srivastava2015highway` maps an
+   input $\mathbf{x}$ to
+   $$\mathbf{y} = \mathbf{g} \odot \phi(\mathbf{x} \mathbf{W} + \mathbf{b}) + (1 - \mathbf{g}) \odot \mathbf{x}, \qquad \mathbf{g} = \sigma(\mathbf{x} \mathbf{W}_\textrm{g} + \mathbf{b}_\textrm{g}),$$
+   where $\phi$ is a nonlinearity and $\mathbf{g}$ is the *transform gate*.
+    1. Stack such layers and read the layer index as time. Match the stack
+       term by term with the GRU of :eqref:`gru_tilde_H` and :eqref:`gru_H`.
+       Which ingredients of the GRU does the highway stack lack?
+    1. Holding $\mathbf{g}$ fixed, compute the Jacobian
+       $\partial \mathbf{y} / \partial \mathbf{x}$ and compare it with that
+       of a residual block $\mathbf{y} = \mathbf{x} + f(\mathbf{x})$
+       (:numref:`sec_resnet`). Which of the two layers is an accumulator in
+       the sense of :eqref:`eq_lstm-accumulator`, and which weakness of the
+       accumulator does it inherit as the depth grows?
+    1. :citet:`srivastava2015highway` initialize $\mathbf{b}_\textrm{g}$ to
+       a negative value. Which initialization of an LSTM gate does this
+       correspond to, and why does it help a deep stack to train?
+
 1. [code] **The carousel's other paths.** ● Consider an LSTM with one
    input and one hidden unit, so that every quantity in :eqref:`lstm_gates`,
    :eqref:`lstm_c_tilde`, and :eqref:`lstm_update` is a scalar. Write $C_t$,
@@ -905,38 +1023,7 @@ behavior at scale, where budgets, tuning, and data change the ordering.
        $\mathbf{C}_{1024}$ elementwise by the product of the forget-gate
        values over the last $k$ steps. Where do the two curves part, and
        which is larger?
-1. **Output squashing.** The input node $\tilde{\mathbf{C}}_t$ is already
-   squashed by the $\tanh$ in :eqref:`lstm_c_tilde`, yet :eqref:`lstm_update`
-   applies $\tanh$ to $\mathbf{C}_t$ again before the output gate.
-    1. Starting from $\mathbf{C}_0 = \mathbf{0}$, show that every entry of
-       $\mathbf{C}_t$ is smaller than $t$ in magnitude. Show further that if
-       every forget-gate value is at most $f_\textrm{max} < 1$, every entry
-       stays below $1 / (1 - f_\textrm{max})$ in magnitude, whatever $t$ is.
-    1. Suppose that the hidden state were $\mathbf{H}_t = \mathbf{O}_t \odot
-       \mathbf{C}_t$ instead. After many steps of accumulation, what happens
-       to the gate pre-activations at the next step, and what does that do
-       to the gradients that flow through the gates?
-1. [code] **Forget-gate bias.** With weights near zero, the forget gate is
-   close to $\sigma(\mathbf{b}_\textrm{f})$, so `LSTMScratch` starts with
-   every forget gate near $0.5$. :citet:`Jozefowicz.Zaremba.Sutskever.2015`
-   found that a forget-gate bias of 1 let the LSTM nearly match the GRU on
-   their benchmarks.
-    1. Initialize $\mathbf{b}_\textrm{f}$ to 1 in `LSTMScratch`, keep the
-       other biases at zero, and train with the recipe of
-       :numref:`subsec_lstm-training`. Compare the validation perplexity with
-       that of the run with $\mathbf{b}_\textrm{f} = \mathbf{0}$, and repeat
-       both runs with a second random seed. Does the difference exceed the
-       spread between seeds?
-    1. Train both initializations and `GRU` for 20 epochs instead of 10,
-       and plot the validation perplexity of all three after every epoch.
-       Which of the two remedies, the bias or the longer budget, closes more
-       of the gap between the LSTM and the lowest validation perplexity that
-       the GRU reaches at any epoch?
-    1. Set the total forget-gate bias of the concise `LSTM` to 1 at
-       initialization and retrain it. The fused layer keeps its gate
-       parameters in its own layout and initializes them differently from
-       `LSTMScratch` (:numref:`subsec_lstm-concise`), so locate the
-       forget-gate bias first. Does the change help the concise model?
+
 1. [code] **No forget gate.** ● The original LSTM of
    :citet:`Hochreiter.Schmidhuber.1997` had no forget gate;
    :citet:`Gers.Schmidhuber.Cummins.2000` added it.
@@ -956,60 +1043,7 @@ behavior at scale, where budgets, tuning, and data change the ordering.
        Report the largest $|c_{t,i}|$ at the end of the carried run and the
        average loss under both schemes. Does the carried state hurt the
        model without a forget gate, and why or why not?
-1. [code] **Memory timescales.** In a gated cell each unit has its own
-   learned rate of decay. Train `LSTMScratch` with the recipe of
-   :numref:`subsec_lstm-training`, let it read 1,024 consecutive
-   validation tokens with the state carried across them, and record
-   $\mathbf{F}_t$ along the way.
-    1. Average the forget-gate values of each unit $i$ to $\bar{f}_i$, and
-       convert each average into a time constant
-       $\tau_i = 1 / (1 - \bar{f}_i)$. Plot a histogram of the $\tau_i$. How
-       many units have a time constant longer than the 32-token training
-       window?
-    1. Repeat the measurement for a model trained with
-       $\mathbf{b}_\textrm{f}$ initialized to 1. Which parts of the timescale
-       distribution move?
-1. **Reset before or after.** The fused layers that `GRU` wraps apply the
-   reset gate after the recurrent matrix product. Apart from the placement
-   of the bias terms, they compute the candidate
-   $$\tilde{\mathbf{H}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{R}_t \odot (\mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}) + \mathbf{b}_\textrm{h})$$
-   in place of :eqref:`gru_tilde_H`.
-    1. Show that the two candidates agree for every $\mathbf{R}_t$ and
-       $\mathbf{H}_{t-1}$ if and only if $\mathbf{W}_{\textrm{hh}}$ is
-       diagonal. For a general $\mathbf{W}_{\textrm{hh}}$, which reset-gate
-       values still make them agree?
-    1. The input products $\mathbf{X}_t \mathbf{W}_{\textrm{x}\cdot}$ of all
-       steps can be computed as one large product before the recurrence
-       starts. Under each form of the candidate, how many matrix products
-       involving the previous state must each step perform one after the
-       other? Why do fused GRU kernels use the form above?
-1. [code] **GRU from scratch.** Write a class `GRUScratch` by editing
-   `LSTMScratch`: three heads following :eqref:`gru_gates` and
-   :eqref:`gru_tilde_H`, the update :eqref:`gru_H`, and a carried state that
-   consists of $\mathbf{H}$ alone. Keep the attributes `num_inputs`,
-   `num_hiddens`, and `sigma`, which `d2l.RNNLMScratch` reads.
-    1. Check the output and state shapes as for `LSTMScratch`, train the
-       model with the recipe of :numref:`subsec_lstm-training`, and compare
-       its validation perplexity with those of `LSTMScratch` and of the
-       concise `GRU`. Which of the two comparisons isolates the effect of
-       the architecture?
-    1. Remove the reset gate by fixing $\mathbf{R}_t = 1$, and in a second
-       model remove the update gate by fixing $\mathbf{Z}_t = 0$; in each
-       case delete the parameters of the removed gate. Before training,
-       predict from :eqref:`gru_H` which removal hurts more. Then train both
-       models, check your prediction, and explain the outcome.
-1. [code] **Matched parameters.** :numref:`sec_gru` counts $3h(d + h + 1)$
-   weights in the recurrent core of the GRU and $4h(d + h + 1)$ in that of
-   the LSTM, where $d = 64$ is the embedding dimension.
-    1. At $h = 128$, find the GRU width $h'$ whose recurrent core has about
-       as many weights as that of the LSTM. Then count the parameters of the
-       whole language model, including the embedding table and the output
-       layer for the `len(data.vocab)` tokens, and find the GRU width that
-       matches whole models instead. What fraction of the parameters of the
-       LSTM language model sits in its recurrent core?
-    1. Train the GRU at both widths with the recipe of
-       :numref:`subsec_lstm-training` and compare with the LSTM. Does the
-       GRU's advantage survive either matching?
+
 1. [code] **Depth sweep.** ● Under the recipe of
    :numref:`subsec_lstm-training`, the two-layer `LSTM` of
    :numref:`sec_deep_rnn` does not improve on one layer.
@@ -1021,6 +1055,7 @@ behavior at scale, where budgets, tuning, and data change the ordering.
        they are harder to optimize within ten epochs. Test the remedy that
        your diagnosis suggests, either the `dropout` argument of `LSTM` or a
        longer schedule. Do two layers then beat one?
+
 1. [code] **Bidirectional leak.** ● Training a bidirectional network to
    predict the next token leaks the target into the input, as
    :numref:`sec_bi_rnn` explains.
@@ -1042,22 +1077,7 @@ behavior at scale, where budgets, tuning, and data change the ordering.
        sequences. What does this imply for using the product to score whole
        sequences, for instance to compare two candidate sentences or to
        report a perplexity?
-1. **Highway gates.** A highway layer :cite:`srivastava2015highway` maps an
-   input $\mathbf{x}$ to
-   $$\mathbf{y} = \mathbf{g} \odot \phi(\mathbf{x} \mathbf{W} + \mathbf{b}) + (1 - \mathbf{g}) \odot \mathbf{x}, \qquad \mathbf{g} = \sigma(\mathbf{x} \mathbf{W}_\textrm{g} + \mathbf{b}_\textrm{g}),$$
-   where $\phi$ is a nonlinearity and $\mathbf{g}$ is the *transform gate*.
-    1. Stack such layers and read the layer index as time. Match the stack
-       term by term with the GRU of :eqref:`gru_tilde_H` and :eqref:`gru_H`.
-       Which ingredients of the GRU does the highway stack lack?
-    1. Holding $\mathbf{g}$ fixed, compute the Jacobian
-       $\partial \mathbf{y} / \partial \mathbf{x}$ and compare it with that
-       of a residual block $\mathbf{y} = \mathbf{x} + f(\mathbf{x})$
-       (:numref:`sec_resnet`). Which of the two layers is an accumulator in
-       the sense of :eqref:`eq_lstm-accumulator`, and which weakness of the
-       accumulator does it inherit as the depth grows?
-    1. :citet:`srivastava2015highway` initialize $\mathbf{b}_\textrm{g}$ to
-       a negative value. Which initialization of an LSTM gate does this
-       correspond to, and why does it help a deep stack to train?
+
 1. [extended] **Adding problem.** ● :citet:`Hochreiter.Schmidhuber.1997`
    tested long-range memory with the *adding problem*. A simplified version
    common in later work feeds two inputs per step: a value $u_t$ drawn

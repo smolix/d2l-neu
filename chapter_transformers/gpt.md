@@ -728,7 +728,7 @@ produces coherent completions for the example prompts.
        its four linear layers and the gains and shifts of its two
        LayerNorms. Add the token table, the position table, and the final
        normalization, and verify that the total is $124{,}439{,}808$.
-    1. Exercise 8 of :numref:`sec_transformer-block` gives the exact
+    1. Exercise :exref:`ex_transformer-block-ffn-width-rounding` of :numref:`sec_transformer-block` gives the exact
        parameter count of the default `TransformerBlock`, which `GPT`
        builds with its default flags. Use it to count the parameters of
        `GPT(vocab_size=28)`, with $d = 256$ and six blocks, and check the
@@ -743,6 +743,7 @@ produces coherent completions for the example prompts.
        per-token matrix work that the head accounts for at short contexts,
        where the attention scores are negligible, and compare it with the
        share of the parameters that the shared table holds.
+
 1. [code] **Unmasked attention.** In `GPT`, the flag `is_causal=True` of
    the attention call in `CausalAttention` is the only mechanism that keeps
    position $t$ from attending to later positions.
@@ -759,6 +760,7 @@ produces coherent completions for the example prompts.
        `'the time traveller '`. Explain why the validation loss of the
        previous sub-problem and this sample judge the unmasked model so
        differently.
+
 1. [code] **Loss baselines.** Simple predictors give reference levels for
    the losses of :numref:`subsec_gpt-training`. Let the *training text* be
    the first 100,128 characters of the preprocessed corpus
@@ -768,32 +770,9 @@ produces coherent completions for the example prompts.
    vocabulary entries, that of the unigram distribution of the training
    text, and that of the bigram model, which predicts each character from
    the previous one with the conditional frequencies of the training text.
-   Check the unigram value against the 2.83 nats quoted in
-   :numref:`subsec_gpt-norm-placement`.
-1. [code] **Tied head without blocks.** ● Consider `GPT` with
-   `num_blks=0` and its defaults `pos='rope'` and `norm='rms'`. Let
-   $\mathbf{e}_1, \ldots, \mathbf{e}_V \in \mathbb{R}^d$ be the rows of
-   the token table, let $\boldsymbol{\gamma}$ be the gain of the final
-   RMSNorm :eqref:`eq_rmsnorm`, and let $z_{ij}$ be the logit of token $j$
-   when the current token is $i$.
-    1. Show that $z_{ij} = s_i M_{ij}$ with scalars $s_i > 0$ and a
-       symmetric matrix $\mathbf{M}$, and express $s_i$ and $\mathbf{M}$
-       in terms of the table and $\boldsymbol{\gamma}$.
-    1. For three distinct tokens $i$, $j$, and $k$, show that
+   Check the unigram and bigram values against the 2.83 and 2.28 nats
+   quoted in :numref:`subsec_gpt-norm-placement`.
 
-       $$\frac{z_{ij} - z_{ik}}{s_i} + \frac{z_{jk} - z_{ji}}{s_j} + \frac{z_{ki} - z_{kj}}{s_k} = 0.$$
-
-       Conclude that on the periodic text $ijk\,ijk\,ijk \ldots$ the model
-       assigns the correct next token a probability of at most $1/2$ in at
-       least one of the three contexts, so that its average loss exceeds
-       $(\ln 2)/3$ nats per token. Which loss can a model with an untied
-       head reach on this text?
-    1. Show that losses arbitrarily close to $(\ln 2)/3$ are attainable.
-    1. Train `GPT(len(data.vocab), num_blks=0)` for 2,000 steps with the
-       optimizer of :numref:`subsec_gpt-training` at learning rate
-       $10^{-2}$, and compare its final training loss with the bigram
-       cross-entropy of problem 3. Use the first sub-problem to explain the
-       difference.
 1. [code] **Verbatim recall.** :numref:`subsec_gpt-sampling` attributes
    much of the fluency of the samples of `model` to memorization. A sample
    that copies its training text contains long strings that occur in that
@@ -812,30 +791,7 @@ produces coherent completions for the example prompts.
        lowest validation loss, the step at which that loss occurs, and its
        verbatim fraction at the end of training with those of the two
        previous models.
-1. [code] **Post-norm plateau.** ● :numref:`subsec_gpt-norm-placement`
-   reads the post-norm loss of about 2.8 nats as the loss of a model whose
-   attention has learned nothing.
-    1. Suppose that every attention sublayer of the post-norm model outputs
-       zero, while its FFN sublayers still act on every position. Which of
-       the losses of problem 3 can such a model still reach? What does a
-       plateau at the unigram entropy imply about how the predictions
-       depend on the current character?
-    1. Train the post-norm ablation for 800 steps at learning rate
-       $3 \times 10^{-3}$. On a validation batch, measure the mean KL
-       divergence of its predictive distributions from the unigram
-       distribution of the training text. Then apply `token_emb` and the
-       blocks of `blks` one at a time, and record after each block the
-       token spread $\|\mathbf{H} - \bar{\mathbf{H}}\| / \|\mathbf{H}\|$ of
-       :numref:`subsec_signal-propagation`, averaged over the sequences of
-       the batch, both for the trained model and for a freshly initialized
-       post-norm model. After which block, if any, have the tokens of the
-       trained model collapsed, and how did training change the profile of
-       the initialized model?
-    1. Add a linear warmup of the learning rate from 0 to
-       $3 \times 10^{-3}$ over the first 200 steps and repeat the 800-step
-       run. Does the post-norm model leave the plateau, and how does its
-       loss at step 800 compare with that of the pre-norm run of
-       :numref:`subsec_gpt-norm-placement`?
+
 1. [code] **Temperature limits.** `generate` divides the logits
    $\mathbf{z}$ by the temperature $\tau$ before the softmax.
     1. Show that as $\tau \to 0$ the sampling distribution converges to the
@@ -850,6 +806,7 @@ produces coherent completions for the example prompts.
        with the limits $0$ and $\ln 28$, and relate the result to the
        observation of :numref:`subsec_gpt-sampling` that the temperature
        changes the early tokens of the samples little.
+
 1. [code] **Nucleus sampling.** Nucleus or top-$p$ sampling
    :cite:`Holtzman.Buys.Du.ea.2020` keeps the smallest set of most probable
    tokens whose probabilities sum to at least $p$, renormalizes the
@@ -874,6 +831,7 @@ produces coherent completions for the example prompts.
     *Adapted from Stanford CS336,
     [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
     Problem (decoding).*
+
 1. [code] **Checkpoint mismatches.** The GPT-2 checkpoint holds 160 tensors
    with 137,022,720 numbers in all, while `gpt2` has 124,439,808
    parameters.
@@ -897,13 +855,14 @@ produces coherent completions for the example prompts.
        `'Alan Turing theorized that computers would one day become'`.
        Which mistake does the perplexity check flag most clearly, and which
        least?
+
 1. [code] **Learned position table.** The rows $\mathbf{p}_0, \ldots,
    \mathbf{p}_{1023}$ of `gpt2.pos_emb` were learned freely, without the
    structure of the sinusoidal table :eqref:`eq_sinusoidal-def`.
     1. Compute the norm of every row and plot it against position. Which
        rows stand out? What distinguishes position 0 from every other
        position in a causal model?
-    1. Exercise 4 of :numref:`sec_positional-information` tested the
+    1. Exercise :exref:`ex_positional-information-untrained-rows` of :numref:`sec_positional-information` tested the
        trained table of `TinyCharLM` for shift invariance by comparing the
        spread of the cosine similarities along each diagonal
        $i - j = \textrm{const}$ with the spread of the diagonal means.
@@ -916,6 +875,59 @@ produces coherent completions for the example prompts.
        against position, and describe the curve that the rows trace in this
        three-dimensional subspace. Which features of a sinusoidal table
        does it share?
+
+1. [code] **Tied head without blocks.** ● Consider `GPT` with
+   `num_blks=0` and its defaults `pos='rope'` and `norm='rms'`. Let
+   $\mathbf{e}_1, \ldots, \mathbf{e}_V \in \mathbb{R}^d$ be the rows of
+   the token table, let $\boldsymbol{\gamma}$ be the gain of the final
+   RMSNorm :eqref:`eq_rmsnorm`, and let $z_{ij}$ be the logit of token $j$
+   when the current token is $i$.
+    1. Show that $z_{ij} = s_i M_{ij}$ with scalars $s_i > 0$ and a
+       symmetric matrix $\mathbf{M}$, and express $s_i$ and $\mathbf{M}$
+       in terms of the table and $\boldsymbol{\gamma}$.
+    1. For three distinct tokens $i$, $j$, and $k$, show that
+
+       $$\frac{z_{ij} - z_{ik}}{s_i} + \frac{z_{jk} - z_{ji}}{s_j} + \frac{z_{ki} - z_{kj}}{s_k} = 0.$$
+
+       Conclude that on the periodic text $ijk\,ijk\,ijk \ldots$ the model
+       assigns the correct next token a probability of at most $1/2$ in at
+       least one of the three contexts, so that its average loss exceeds
+       $(\ln 2)/3$ nats per token. Which loss can a model with an untied
+       head reach on this text?
+    1. Show that losses arbitrarily close to $(\ln 2)/3$ are attainable.
+    1. Train `GPT(len(data.vocab), num_blks=0)` for 2,000 steps with the
+       optimizer of :numref:`subsec_gpt-training` at learning rate
+       $10^{-2}$, and compare its final training loss with the bigram
+       cross-entropy of problem 3. Use the first sub-problem to explain the
+       difference.
+
+1. [code] **Post-norm plateau.** ● :numref:`subsec_gpt-norm-placement`
+   argues that the post-norm model could reach the bigram loss of problem
+   3 even if every attention sublayer output zero, so that its plateau
+   at the unigram entropy of about 2.8 nats means that its predictions
+   ignore even the current character.
+    1. Suppose that every attention sublayer of the post-norm model outputs
+       zero, while its FFN sublayers still act on every position. Show that
+       the logits at position $t$ are then a function of the token at
+       position $t$ alone. Which property of the default `pos='rope'` does
+       the argument use, and what changes with `pos='learned'`?
+    1. Train the post-norm ablation for 800 steps at learning rate
+       $3 \times 10^{-3}$. On a validation batch, measure the mean KL
+       divergence of its predictive distributions from the unigram
+       distribution of the training text. Then apply `token_emb` and the
+       blocks of `blks` one at a time, and record after each block the
+       token spread $\|\mathbf{H} - \bar{\mathbf{H}}\| / \|\mathbf{H}\|$ of
+       :numref:`subsec_signal-propagation`, averaged over the sequences of
+       the batch, both for the trained model and for a freshly initialized
+       post-norm model. After which block, if any, have the tokens of the
+       trained model collapsed, and how did training change the profile of
+       the initialized model?
+    1. Add a linear warmup of the learning rate from 0 to
+       $3 \times 10^{-3}$ over the first 200 steps and repeat the 800-step
+       run. Does the post-norm model leave the plateau, and how does its
+       loss at step 800 compare with that of the pre-norm run of
+       :numref:`subsec_gpt-norm-placement`?
+
 1. [code] **Bits per character.** ● GPT-2 and `model` use different
    tokens, so their per-token losses are not comparable. A loss of $\ell$
    nats per token at $c$ characters per token corresponds to
@@ -935,6 +947,7 @@ produces coherent completions for the example prompts.
        trained on the same novel, sees 128 characters of context, and
        predicts 28 symbols, whereas GPT-2 was trained on 40 GB of WebText,
        sees up to 1,024 tokens, and predicts 50,257 symbols.
+
 1. [extended] **Subwords at small scale.** ●
    :numref:`subsec_gpt-blocks-to-lm` trains on characters because, on a
    180 KB novel, a subword vocabulary would leave each token type a handful

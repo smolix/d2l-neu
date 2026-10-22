@@ -430,6 +430,82 @@ belong to deployment rather than training.
 
 ## Exercises
 
+:begin_tab:`pytorch`
+1. [code] **Value-dependent branches.** The function `f` of
+   :numref:`subsec_comp-capture` breaks the graph at its `if`.
+    1. Read the break reason in the output of `torch._dynamo.explain(f)`.
+       Rewrite `f` with `torch.where` so that `explain` reports no break,
+       and check that both versions return the same values.
+    1. Time the compiled original and the compiled rewrite with
+       `d2l.Benchmark`, once on the 8-element input of
+       :numref:`subsec_comp-capture` and once on a $4000 \times 4000$
+       input. Explain the time difference at each size.
+    1. `torch.where` evaluates both branches. Describe a pair of branches
+       for which this costs more than the graph break saves.
+
+2. [code] **Shape changes.** `torch.compile` guards on the shapes of its
+   inputs and recompiles when a guard fails
+   (:numref:`subsec_comp-capture`).
+    1. Compile a function that computes `torch.tanh(x) * 2 + 1`, and call
+       it on vectors of lengths 8, 16, 32, and so on up to 8192. Predict
+       the number of compilations from the guard rule. Then count them,
+       with `torch._logging.set_logs(recompiles=True)` and with a `backend`
+       function for `torch.compile` that increments a counter, prints
+       `gm.code`, and returns `gm.forward`. Explain the count from the log
+       and from the printed graphs.
+    1. Repeat with `torch.compile(..., dynamic=False)`. How many
+       compilations happen now, and what do the calls after the last
+       compilation run?
+:end_tab:
+
+:begin_tab:`jax`
+1. [code] **Value-dependent branches.** Tracing replaces the values of the
+   arguments by placeholders (:numref:`subsec_comp-capture`).
+    1. Write a function that doubles `x` and then returns `x + 1` when
+       `x.sum() > 0` and `x - 1` otherwise, and apply `jax.jit` to it.
+       Explain the error it raises.
+    1. Rewrite the branch once with `jnp.where` and once with
+       `jax.lax.cond`, and print both jaxprs with `jax.make_jaxpr`. Which
+       operations does each version execute at run time?
+    1. Apply `jax.vmap` to the `jax.lax.cond` version over a batch of
+       vectors and print its jaxpr. Explain what became of the conditional,
+       and why.
+
+2. [code] **Shape changes.** A jitted function is specialized to the shapes
+   of its arguments (:numref:`subsec_comp-capture`).
+    1. Jit a function that returns the mean of `jnp.tanh(x)` over a vector
+       `x`, and let its Python body increment a global counter. Call it in
+       a loop on vectors of lengths 100, 200, and 300, three times each.
+       Count the traces, and time the first and the later calls at each
+       length.
+    1. Pad every input to length 512 and pass the function what it needs
+       to exclude the padding from the mean, so that one trace serves all
+       three lengths. Check the results against the unpadded version.
+    1. Instead, pass the padded vector together with its length, mark the
+       length with `static_argnums`, and slice inside the function. Count
+       the traces and explain the count. Name an argument of a training
+       step for which `static_argnums` is the right tool.
+:end_tab:
+
+3. **Padding buckets.** A compiled step that is specialized to static
+   shapes (:numref:`subsec_comp-capture`) compiles once for every distinct
+   input shape it sees. Consider a training run of $10^5$ steps in which
+   every batch holds sequences of one length $\ell$, drawn uniformly from
+   $\{1, \ldots, 512\}$, and is padded to a length $\ell' \geq \ell$. One
+   compilation costs 20 s, and a step at padded length $\ell'$ costs
+   $50\,\textrm{ms} \cdot \ell'/512$.
+    1. Pad every batch to the next multiple of $w$, for $w$ dividing 512.
+       Find the number of compilations and the expected padded length as
+       functions of $w$, and write the total run time $T(w)$.
+    1. Minimize $T(w)$ over $w$ treated as a continuous variable, and state
+       how the optimal $w$ scales with the compilation cost and with the
+       number of steps. Compare $T$ at $w = 1$, at the two powers of two
+       nearest the optimum, and at $w = 512$.
+    1. Padding to the next power of two compiles ten shapes. Compute its
+       expected padded length and total run time, and compare them with
+       those of $w = 64$. For which distribution of lengths would powers
+       of two be the better choice?
+
 1. **Counting round trips.** In eager execution, every operation of
    `gelu_ish` in :numref:`subsec_comp-fusion` runs as its own kernel, which
    reads its input arrays from memory and writes its output array back.
@@ -444,6 +520,17 @@ belong to deployment rather than training.
        :numref:`subsec_perf-counting`. Compare both predictions and their
        ratio with the times that the code of :numref:`subsec_comp-fusion`
        measures, and account for the differences.
+
+1. [code] **Break-even step count.** The compiled training step of
+   :numref:`subsec_comp-wholestep` costs a one-time compilation time $t_0$
+   and lowers the steady-state time per step from $t_e$ to $t_c$.
+    1. Derive the number of steps $N^*$ after which compilation has saved
+       more time than it cost. Measure $t_0$, $t_e$, and $t_c$ with the
+       section's code, making sure that $t_0$ excludes the execution of the
+       step itself, and evaluate $N^*$.
+    1. Repeat the measurement of $t_0$ in a fresh Python process without
+       changing the code, and explain any change.
+
 1. [code] **Fusion behind a matmul.** ● Compilation leaves a large matrix
    product unchanged but fuses the elementwise chain that follows it.
    Consider `gelu_ish(a @ a)` for an $n \times n$ matrix `a` in bf16 on a
@@ -462,6 +549,7 @@ belong to deployment rather than training.
        `d2l.Benchmark` for the sizes of :numref:`subsec_perf-sweep`. Plot
        the measured speedup together with $S(n)$, and explain where and
        why the two differ.
+
 1. **Fusing a reduction.** ● A numerically safe softmax over each row of an
    $R \times d$ fp32 matrix can be written as five eager operations: the
    row maximum, the subtraction of that maximum, the exponential, the row
@@ -475,7 +563,38 @@ belong to deployment rather than training.
        resulting traffic, for a fused kernel that computes the maximum and
        the sum in separate passes, and for one that maintains both online
        as in :eqref:`eq_online-softmax`.
-1. [code] **Overhead crossover.** ● Use the stack of 60 layers of width
+
+:begin_tab:`pytorch`
+8. [code] **Compiling the optimizer.** ● `torch.compile(net)` in
+    :numref:`subsec_comp-wholestep` compiles the forward and the backward
+    pass but leaves `opt.step()` eager.
+    1. Apply `torch._dynamo.explain` to `train_step` itself, called with
+       the eager `net`. How many graphs does it capture, where does it
+       break, and which parts of the step fall into which graph?
+    1. Count the parameter-sized arrays that one update must read and
+       write at minimum, for plain SGD and for Adam (:numref:`sec_adam`).
+       Then time `train_step(cnet)` against
+       `torch.compile(train_step)(net)`, once with `torch.optim.SGD` and
+       once with `torch.optim.Adam`. For which optimizer does compiling the
+       update pay, and why?
+
+    *Adapted from Michael Lazos,
+    [Compiling the optimizer with torch.compile](https://docs.pytorch.org/tutorials/recipes/compiling_optimizer.html),
+    PyTorch recipe.*
+:end_tab:
+
+:begin_tab:`jax`
+8. [code] **Trace-time constants.** The Python body of a jitted function
+    runs only while it is traced (:numref:`subsec_comp-capture`).
+    1. Jit a function that returns `x + np.random.randn()`, call it twice,
+       and print its jaxpr. Explain the two outputs.
+    1. A dropout function draws its mask with `jax.random.bernoulli` from
+       a key held in a global variable. Jit it, call it, assign a new key
+       to the global variable, and call it again. Explain the result, and
+       rewrite the function so that every step draws a fresh mask.
+:end_tab:
+
+9. [code] **Overhead crossover.** ● Use the stack of 60 layers of width
    256 at batch size 64 from :numref:`subsec_comp-overhead`, with its eager
    and its compiled version. Compilation removes the per-kernel launch
    latency of :numref:`fig_latency_ladder` from the critical path, but not
@@ -490,34 +609,8 @@ belong to deployment rather than training.
        from 64 to 4096, plot the ratio of eager to compiled time against
        the width, and compare the width at which the ratio approaches 1
        with your prediction.
-1. [code] **Break-even step count.** The compiled training step of
-   :numref:`subsec_comp-wholestep` costs a one-time compilation time $t_0$
-   and lowers the steady-state time per step from $t_e$ to $t_c$.
-    1. Derive the number of steps $N^*$ after which compilation has saved
-       more time than it cost. Measure $t_0$, $t_e$, and $t_c$ with the
-       section's code, making sure that $t_0$ excludes the execution of the
-       step itself, and evaluate $N^*$.
-    1. Repeat the measurement of $t_0$ in a fresh Python process without
-       changing the code, and explain any change.
-1. **Padding buckets.** A compiled step that is specialized to static
-   shapes (:numref:`subsec_comp-capture`) compiles once for every distinct
-   input shape it sees. Consider a training run of $10^5$ steps in which
-   every batch holds sequences of one length $\ell$, drawn uniformly from
-   $\{1, \ldots, 512\}$, and is padded to a length $\ell' \geq \ell$. One
-   compilation costs 20 s, and a step at padded length $\ell'$ costs
-   $50\,\textrm{ms} \cdot \ell'/512$.
-    1. Pad every batch to the next multiple of $w$, for $w$ dividing 512.
-       Find the number of compilations and the expected padded length as
-       functions of $w$, and write the total run time $T(w)$.
-    1. Minimize $T(w)$ over $w$ treated as a continuous variable, and state
-       how the optimal $w$ scales with the compilation cost and with the
-       number of steps. Compare $T$ at $w = 1$, at the two powers of two
-       nearest the optimum, and at $w = 512$.
-    1. Padding to the next power of two compiles ten shapes. Compute its
-       expected padded length and total run time, and compare them with
-       those of $w = 64$. For which distribution of lengths would powers
-       of two be the better choice?
-1. [extended] **A tracer of your own.** ● Build a miniature tracing
+
+1. [extended] **A tracer of your own.** ●● Build a miniature tracing
    compiler in plain Python, with NumPy arrays as the values on which the
    captured program finally runs.
     1. Write a class `Tracer` whose instances carry a `shape` but no
@@ -547,83 +640,7 @@ belong to deployment rather than training.
        array elements moved through memory under one kernel per node and
        under your partition.
 
-:begin_tab:`pytorch`
-8. [code] **Value-dependent branches.** The function `f` of
-   :numref:`subsec_comp-capture` breaks the graph at its `if`.
-    1. Read the break reason in the output of `torch._dynamo.explain(f)`.
-       Rewrite `f` with `torch.where` so that `explain` reports no break,
-       and check that both versions return the same values.
-    1. Time the compiled original and the compiled rewrite with
-       `d2l.Benchmark`, once on the 8-element input of
-       :numref:`subsec_comp-capture` and once on a $4000 \times 4000$
-       input. Explain the time difference at each size.
-    1. `torch.where` evaluates both branches. Describe a pair of branches
-       for which this costs more than the graph break saves.
-9. [code] **Shape changes.** `torch.compile` guards on the shapes of its
-   inputs and recompiles when a guard fails
-   (:numref:`subsec_comp-capture`).
-    1. Compile a function that computes `torch.tanh(x) * 2 + 1`, and call
-       it on vectors of lengths 8, 16, 32, and so on up to 8192. Predict
-       the number of compilations from the guard rule. Then count them,
-       with `torch._logging.set_logs(recompiles=True)` and with a `backend`
-       function for `torch.compile` that increments a counter, prints
-       `gm.code`, and returns `gm.forward`. Explain the count from the log
-       and from the printed graphs.
-    1. Repeat with `torch.compile(..., dynamic=False)`. How many
-       compilations happen now, and what do the calls after the last
-       compilation run?
-10. [code] **Compiling the optimizer.** ● `torch.compile(net)` in
-    :numref:`subsec_comp-wholestep` compiles the forward and the backward
-    pass but leaves `opt.step()` eager.
-    1. Apply `torch._dynamo.explain` to `train_step` itself, called with
-       the eager `net`. How many graphs does it capture, where does it
-       break, and which parts of the step fall into which graph?
-    1. Count the parameter-sized arrays that one update must read and
-       write at minimum, for plain SGD and for Adam (:numref:`sec_adam`).
-       Then time `train_step(cnet)` against
-       `torch.compile(train_step)(net)`, once with `torch.optim.SGD` and
-       once with `torch.optim.Adam`. For which optimizer does compiling the
-       update pay, and why?
-
-    *Adapted from Michael Lazos,
-    [Compiling the optimizer with torch.compile](https://docs.pytorch.org/tutorials/recipes/compiling_optimizer.html),
-    PyTorch recipe.*
-:end_tab:
-
 :begin_tab:`jax`
-8. [code] **Value-dependent branches.** Tracing replaces the values of the
-   arguments by placeholders (:numref:`subsec_comp-capture`).
-    1. Write a function that doubles `x` and then returns `x + 1` when
-       `x.sum() > 0` and `x - 1` otherwise, and apply `jax.jit` to it.
-       Explain the error it raises.
-    1. Rewrite the branch once with `jnp.where` and once with
-       `jax.lax.cond`, and print both jaxprs with `jax.make_jaxpr`. Which
-       operations does each version execute at run time?
-    1. Apply `jax.vmap` to the `jax.lax.cond` version over a batch of
-       vectors and print its jaxpr. Explain what became of the conditional,
-       and why.
-9. [code] **Shape changes.** A jitted function is specialized to the shapes
-   of its arguments (:numref:`subsec_comp-capture`).
-    1. Jit a function that returns the mean of `jnp.tanh(x)` over a vector
-       `x`, and let its Python body increment a global counter. Call it in
-       a loop on vectors of lengths 100, 200, and 300, three times each.
-       Count the traces, and time the first and the later calls at each
-       length.
-    1. Pad every input to length 512 and pass the function what it needs
-       to exclude the padding from the mean, so that one trace serves all
-       three lengths. Check the results against the unpadded version.
-    1. Instead, pass the padded vector together with its length, mark the
-       length with `static_argnums`, and slice inside the function. Count
-       the traces and explain the count. Name an argument of a training
-       step for which `static_argnums` is the right tool.
-10. [code] **Trace-time constants.** The Python body of a jitted function
-    runs only while it is traced (:numref:`subsec_comp-capture`).
-    1. Jit a function that returns `x + np.random.randn()`, call it twice,
-       and print its jaxpr. Explain the two outputs.
-    1. A dropout function draws its mask with `jax.random.bernoulli` from
-       a key held in a global variable. Jit it, call it, assign a new key
-       to the global variable, and call it again. Explain the result, and
-       rewrite the function so that every step draws a fresh mask.
 11. [code] **Unrolled loops.** ● `deep_fwd` of
     :numref:`subsec_comp-overhead` loops over a Python list of weight
     matrices, so tracing unrolls the loop into one long sequence of

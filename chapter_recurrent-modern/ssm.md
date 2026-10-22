@@ -1510,6 +1510,7 @@ the mercy of its draw, not a general architecture ranking.
        form $h \mapsto \tanh(w h + c)$ for any $w$ and $c$. What would a
        scan then have to store to represent the composite of $k$ steps, and
        how does that storage grow with $k$?
+
 1. [code] **Candidate nonlinearity.** `MinGRU` keeps a $\tanh$ on the
    candidate $\tilde{\mathbf{H}}_t$ of :eqref:`eq_mingru_heads`, whereas
    :citet:`Feng.Tung.Ahmed.ea.2024` use a linear candidate.
@@ -1523,6 +1524,7 @@ the mercy of its draw, not a general architecture ranking.
        :numref:`subsec_mingru-lm`, and compare the training curves and the
        validation perplexity with those of `MinGRU`. Relate what you
        observe to your bound.
+
 1. [code] **A minimal LSTM.** Apply the two cuts of :numref:`subsec_mingru`
    to the LSTM of :numref:`sec_lstm`: compute the gates
    $\mathbf{I}_t, \mathbf{F}_t, \mathbf{O}_t$ of :eqref:`lstm_gates` and the
@@ -1545,6 +1547,7 @@ the mercy of its draw, not a general architecture ranking.
        $\mathbf{I}_t / (\mathbf{F}_t + \mathbf{I}_t)$. Which bound holds
        after this normalization? Retrain with it, and compare the validation
        perplexity with that of the unnormalized cell.
+
 1. [code] **State passing.** `associative_scan` starts from
    $\mathbf{h}_0 = \mathbf{0}$, and `MinGRU` folds a carried-in state into
    $\mathbf{b}_1$.
@@ -1560,6 +1563,7 @@ the mercy of its draw, not a general architecture ranking.
     1. Backpropagation through a scan stores its intermediate results.
        Describe a training loop over the chunks whose activation memory is
        set by $\tau$ rather than by $T$.
+
 1. [code] **Discretization rules.** For the scalar mode $a = -1$, $b = 1$,
    :numref:`subsec_zoh` shows that backward Euler turns the update into
    $x_t = (1 - z)\, x_{t-1} + z\, u_t$ with the gate $z = \sigma(\theta)$,
@@ -1583,21 +1587,24 @@ the mercy of its draw, not a general architecture ranking.
        solution at the same times. How does the error of each rule grow with
        $\Delta$? What does the forward-Euler state retain from the past at
        $\Delta = 1$, and what happens at $\Delta = 2.5$?
-1. **Effective memory horizon.** For the scalar recurrence
-   $h_t = \bar{a}\, h_{t-1} + u_t$ with $0 < \bar{a} < 1$, define the
-   *effective memory horizon* as the smallest lag $k$ at which the influence
-   $\bar{a}^k$ of an input falls below $0.01$.
-    1. Express the horizon in terms of $\bar{a}$, evaluate it for
-       $\bar{a} \in \{0.9, 0.99, 0.999\}$, and derive the approximation that
-       holds as $\bar{a} \to 1$.
-    1. Under the zero-order hold a mode with $a < 0$ has
-       $\bar{a} = e^{\Delta a}$. Express the horizon in terms of $\Delta$
-       and $a$, and state how $\Delta$ must change for the mode to remember
-       ten times longer.
+
+1. **Horizons of S4D modes.** Exercise
+   14 of
+   :numref:`sec_attention-at-scale` computes, for $\gamma = 0.99$, the lag
+   at which the weight $\gamma^k$ of a scalar decay falls below $0.01$. For
+   any decay $\gamma \in (0, 1)$, call the smallest such lag the *effective
+   memory horizon* of the decay. For $\gamma$ close to one it is about
+   $\ln 100 / (1 - \gamma)$.
+    1. Under the zero-order hold, a mode with $a < 0$ decays by
+       $\bar{a} = e^{\Delta a}$ per step. Express its horizon exactly in
+       terms of $\Delta$ and $a$, and compare it with the approximation for
+       $\bar{a}$ close to one. How must $\Delta$ change for the mode to
+       remember ten times longer?
     1. `S4D` initializes $\Delta$ log-uniformly on $[10^{-3}, 10^{-1}]$ and
        its modes at $a_n = -(n + 1)$ for $n = 0, \ldots, 3$. Find the range
        of horizons at initialization and compare it with the 784 steps of
        the task in :numref:`subsec_ssm-seq-classification`.
+
 1. [code] **Convolution by FFT.** S4 evaluates the convolution view
    :eqref:`eq_ssm_kernel` with fast Fourier transforms. Use `u`, `kernel`,
    and `y_loop` from the code of :numref:`subsec_ssm-conv`, and let $T$ be
@@ -1609,6 +1616,7 @@ the mercy of its draw, not a general architecture ranking.
     1. Explain the error at $n = T$: which outputs does it corrupt, and
        which inputs leak into them? Find the smallest $n$ that reproduces
        the causal convolution exactly.
+
 1. **Hidden modes.** Consider a diagonal SSM with
    $\mathbf{A} = \mathrm{diag}(a_1, \ldots, a_N)$, input vector
    $\mathbf{B} = (b_1, \ldots, b_N)^\top$, and readout
@@ -1632,7 +1640,59 @@ the mercy of its draw, not a general architecture ranking.
     1. Suppose that $b_n$ and $c_n$ change from step to step, as they will
        in :numref:`sec_mamba`. Write $y_t$ as a sum over past inputs and
        explain why $\mathbf{B}$ can no longer be absorbed into $\mathbf{C}$.
-1. [code] **Frozen HiPPO kernels.** ● S4 freezes the LegS matrix
+
+1. [code] **Prediction from a prefix.** The classifiers `s4d` and
+   `s4d_final` of :numref:`subsec_ssm-seq-classification` read the same
+   kind of encoder through different readouts, `pool='mean'` and
+   `pool='last'`. The encoder is causal, so one call on a full image yields
+   the features of every prefix.
+    1. Run each trained encoder once over the validation images and compute
+       the accuracy that each classifier reaches after seeing the first $t$
+       pixels, for $t = 28, 56, \ldots, 784$: feed the head of `s4d` the
+       mean of the first $t$ outputs and the head of `s4d_final` the output
+       at step $t$. Plot both curves.
+    1. Explain the difference between the two curves from what each readout
+       was trained on. After how many image rows does each model come within
+       one percentage point of its final accuracy?
+
+:begin_tab:`pytorch`
+10. [code] **Scan schedules.** ● `associative_scan` implements the
+    doubling schedule of :numref:`fig_scan_tree`. A recursive schedule does
+    less work: combine adjacent pairs, which halves the sequence; scan the
+    half-length sequence recursively, which yields every second prefix;
+    then obtain each remaining prefix with one more combine.
+    1. For $T = 2^k$, count the combines :eqref:`eq_scan_combine` and the
+       rounds of combines performed by each schedule, and compare both
+       counts with the $T - 1$ steps of the sequential loop at
+       $T = 16384$.
+    1. Implement the recursive schedule for any length $T$ with tensor
+       slicing, verify it against `sequential_scan`, and time it against
+       `associative_scan` with `wall_clock` at the lengths of the benchmark
+       in :numref:`subsec_parallel-scans`. Does the measured ratio follow
+       the ratio of combine counts on your hardware, and what could make it
+       deviate?
+:end_tab:
+
+:begin_tab:`jax`
+10. [code] **Scan schedules.** ● `associative_scan` calls
+    `jax.lax.associative_scan`, which uses a recursive schedule: combine
+    adjacent pairs, which halves the sequence; scan the half-length sequence
+    recursively, which yields every second prefix; then obtain each
+    remaining prefix with one more combine. The doubling schedule of
+    :numref:`fig_scan_tree` is the alternative.
+    1. For $T = 2^k$, count the combines :eqref:`eq_scan_combine` and the
+       rounds of combines performed by each schedule, and compare both
+       counts with the $T - 1$ steps of the sequential loop at
+       $T = 16384$.
+    1. Implement the doubling schedule as a Python loop over strides with
+       slicing and `jnp.concatenate`, verify it against `sequential_scan`,
+       and time its jitted version against `parallel_fn` with `wall_clock`
+       at the lengths of the benchmark in :numref:`subsec_parallel-scans`.
+       Does the measured ratio follow the ratio of combine counts on your
+       hardware, and what could make it deviate?
+:end_tab:
+
+11. [code] **Frozen HiPPO kernels.** ● S4 freezes the LegS matrices of
    :eqref:`eq_hippo` into the time-invariant system :eqref:`eq_ssm_cont`,
    which leaves the optimality theorem behind
    (:numref:`subsec_hippo_s4_bridge`).
@@ -1653,14 +1713,6 @@ the mercy of its draw, not a general architecture ranking.
        $\tau \in [0, 10]$, for $N \in \{4, 6, 8, 10\}$, and describe how
        each grows with $N$. What does the difference imply for learning
        $\mathbf{C}$ by gradient descent?
-1. [code] **Warped Legendre memory.** ● Freeze the LegS matrices of
-   :eqref:`eq_hippo` into the time-invariant system :eqref:`eq_ssm_cont`.
-   With $P_n$ the Legendre polynomial of degree $n$ on $[-1, 1]$, the
-   impulse response of its state is
-   :cite:`Gu.Johnson.Timalsina.ea.2023`
-
-    $$(e^{\tau \mathbf{A}} \mathbf{B})_n = \sqrt{2n+1}\; e^{-\tau}\, P_n(2 e^{-\tau} - 1), \qquad \tau \geq 0.$$
-
     1. Substitute $s = e^{-\tau}$ in
        $x_n(t) = \int_0^\infty (e^{\tau \mathbf{A}} \mathbf{B})_n\,
        u(t - \tau)\, d\tau$ to show that $x_n(t)$ is the coefficient of
@@ -1674,19 +1726,7 @@ the mercy of its draw, not a general architecture ranking.
        $N \in \{8, 16, 64\}$. Which part of the past does the frozen state
        remember, and how does that window grow with $N$? Contrast the
        result with the reconstruction of :numref:`fig_hippo_reconstruction`.
-1. [code] **Prediction from a prefix.** The classifiers `s4d` and
-   `s4d_final` of :numref:`subsec_ssm-seq-classification` read the same
-   kind of encoder through different readouts, `pool='mean'` and
-   `pool='last'`. The encoder is causal, so one call on a full image yields
-   the features of every prefix.
-    1. Run each trained encoder once over the validation images and compute
-       the accuracy that each classifier reaches after seeing the first $t$
-       pixels, for $t = 28, 56, \ldots, 784$: feed the head of `s4d` the
-       mean of the first $t$ outputs and the head of `s4d_final` the output
-       at step $t$. Plot both curves.
-    1. Explain the difference between the two curves from what each readout
-       was trained on. After how many image rows does each model come within
-       one percentage point of its final accuracy?
+
 1. [extended] **Step-size initialization.** ● `S4D` draws $\log \Delta$
    uniformly between $\log 10^{-3}$ and $\log 10^{-1}$, so that its
    channels start as gates of very different speeds. Measure how much of
@@ -1694,8 +1734,10 @@ the mercy of its draw, not a general architecture ranking.
    initialization explains.
     1. Consider two alternatives that give every channel the same step
        size, $\Delta = 10^{-1}$ or $\Delta = 10^{-3}$. Predict from the
-       effective memory horizons of the four modes $a_n = -(n + 1)$,
-       $n = 0, \ldots, 3$, which alternative should hurt which readout.
+       effective memory horizons of problem
+       6 for the
+       four modes $a_n = -(n + 1)$, $n = 0, \ldots, 3$, which alternative
+       should hurt which readout.
     1. For each alternative, build classifiers like `s4d` and `s4d_final`,
        overwrite every encoder block's `ssm.log_dt` with its value of
        $\log \Delta$ before training, and train both with
@@ -1704,43 +1746,6 @@ the mercy of its draw, not a general architecture ranking.
     1. Plot the distribution of the learned $\Delta$ in each run. Does
        training move $\Delta$ toward the default range, and in which runs
        does it move far from its initial value?
-
-:begin_tab:`pytorch`
-13. [code] **Scan schedules.** ● `associative_scan` implements the
-    doubling schedule of :numref:`fig_scan_tree`. A recursive schedule does
-    less work: combine adjacent pairs, which halves the sequence; scan the
-    half-length sequence recursively, which yields every second prefix;
-    then obtain each remaining prefix with one more combine.
-    1. For $T = 2^k$, count the combines :eqref:`eq_scan_combine` and the
-       rounds of combines performed by each schedule, and compare both
-       counts with the $T - 1$ steps of the sequential loop at
-       $T = 16384$.
-    1. Implement the recursive schedule for any length $T$ with tensor
-       slicing, verify it against `sequential_scan`, and time it against
-       `associative_scan` with `wall_clock` at the lengths of the benchmark
-       in :numref:`subsec_parallel-scans`. Does the measured ratio follow
-       the ratio of combine counts on your hardware, and what could make it
-       deviate?
-:end_tab:
-
-:begin_tab:`jax`
-13. [code] **Scan schedules.** ● `associative_scan` calls
-    `jax.lax.associative_scan`, which uses a recursive schedule: combine
-    adjacent pairs, which halves the sequence; scan the half-length sequence
-    recursively, which yields every second prefix; then obtain each
-    remaining prefix with one more combine. The doubling schedule of
-    :numref:`fig_scan_tree` is the alternative.
-    1. For $T = 2^k$, count the combines :eqref:`eq_scan_combine` and the
-       rounds of combines performed by each schedule, and compare both
-       counts with the $T - 1$ steps of the sequential loop at
-       $T = 16384$.
-    1. Implement the doubling schedule as a Python loop over strides with
-       slicing and `jnp.concatenate`, verify it against `sequential_scan`,
-       and time its jitted version against `parallel_fn` with `wall_clock`
-       at the lengths of the benchmark in :numref:`subsec_parallel-scans`.
-       Does the measured ratio follow the ratio of combine counts on your
-       hardware, and what could make it deviate?
-:end_tab:
 
 [Discussions](https://d2l.discourse.group/)
 

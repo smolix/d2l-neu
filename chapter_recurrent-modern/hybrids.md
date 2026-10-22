@@ -1092,16 +1092,17 @@ before it joins the residual stream.
        transformer then grow with $L$ at fixed $\delta$, and how does this
        compare with the number of bits that a fixed state needs in order to
        copy the same strings?
-1. **Million-token decode state.** Consider 48-layer models that serve a
-   context of $2^{20}$ tokens to a batch of one in 16-bit precision. In
-   :eqref:`eq_kv-cache-bytes`, every attention layer has
+1. **Million-token decode state.** Exercise :exref:`ex_matrix-state-decode-memory-ledger` of :numref:`sec_matrix-state`
+   finds the context length at which the cache of one attention layer
+   equals the state of one recurrent layer. This problem compares whole
+   models at a context far past that crossing. Consider 48-layer models
+   that serve a context of $2^{20}$ tokens to a batch of one in 16-bit
+   precision. In :eqref:`eq_kv-cache-bytes`, every attention layer has
    $n_\textrm{kv} = 8$ key–value heads of dimension
    $d_\textrm{head} = 128$. Every recurrent
    layer holds the Mamba-2 state of :numref:`subsec_hy-economics`,
    $8192 \cdot 128$ numbers per :eqref:`eq_ms-state-bytes`, and
    the convolution buffer is neglected.
-    1. Find the context length at which the cache of one attention layer
-       equals the state of one recurrent layer.
     1. Compute the persistent decode state of a pure transformer, of a pure
        recurrent stack, and of a hybrid with 6 attention layers. How many
        concurrent users fit into 80 GiB of free accelerator memory under
@@ -1196,6 +1197,22 @@ before it joins the residual stream.
        three accounts with the accuracies of `'GGGG'` in
        :numref:`subsec_hy-recall-sweep`. What does the comparison suggest
        about the keys that training finds?
+1. [code] **Attention fraction.** The layouts of `LAYOUTS` give a
+   four-layer stack the attention fractions $0$, $1/4$, and $1$. The
+   layouts `'GAGA'` and `'GAAA'` fill in $1/2$ and $3/4$ without placing
+   attention first.
+    1. Train both with `train_recall` at `num_pairs` $\in \{32, 64\}$, and
+       take the other three layouts from `recall`. Using `kv_layer` and
+       `state_layer`, compute the persistent decode state of all five
+       layouts at the 128 positions of a sequence with 64 pairs, and plot
+       recall at each load against this state. Which is the cheapest
+       layout that matches the recall of `'AAAA'`, and how much state does
+       each further attention layer add?
+    1. Train `'GAGA'` and `'GAAA'` with `train_lm` on the `data` of
+       :numref:`subsec_hy-lm-panel`, take the other three layouts from
+       `lm_loss`, and plot the validation loss of all five layouts against
+       the attention fraction. Which of the two measures, recall or
+       validation loss, responds to the attention fraction?
 1. [code] **A window instead.** ● Samba replaces global attention by
    sliding-window attention :cite:`Ren.Liu.Lu.ea.2024`. Test this choice on
    the recall task with a window of 16 positions, in which each query

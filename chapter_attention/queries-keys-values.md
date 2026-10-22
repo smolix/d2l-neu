@@ -277,6 +277,7 @@ representations of queries and keys.
     1. Replace the score by $a(q, k) = -(q - k)^2 / (2\sigma^2)$. Describe
        the output as a function of $q$ in the limits $\sigma \to 0$ and
        $\sigma \to \infty$, and state which lookup each limit performs.
+
 1. **A fixed parameter budget.** A database holds $m$ key--value pairs
    with $\mathbf{k}_i \in \mathbb{R}^{d_k}$ and
    $\mathbf{v}_i \in \mathbb{R}^{d_v}$, and the lookup :eqref:`eq_attention_pooling` scores them with a learned
@@ -294,6 +295,7 @@ representations of queries and keys.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problem 12.1.*
+
 1. **An average of two values.** Let the keys $\mathbf{k}_1, \ldots,
    \mathbf{k}_m$ be orthonormal and let the score be $a(\mathbf{q},
    \mathbf{k}) = \mathbf{q}^\top \mathbf{k}$ with the weights of
@@ -312,6 +314,74 @@ representations of queries and keys.
     *Adapted from Stanford CS224N,
     [Assignment 4](https://web.stanford.edu/class/cs224n/assignments_w25/a4.pdf),
     Problem 1(b).*
+
+1. [code] **Effective number of keys.** For the weights $\alpha_i(q)$ of
+   one query, define the effective number of keys
+   $n_{\textrm{eff}}(q) = 1 / \sum_i \alpha_i(q)^2$.
+    1. Show that $1 \leq n_{\textrm{eff}}(q) \leq m$ for $m$ nonnegative
+       weights that sum to one, and identify the weights that attain each
+       bound.
+    1. Let the values be $y_i = g(x_i) + \epsilon_i$ with independent noise
+       of variance $s^2$, and hold the keys fixed. Show that the variance of
+       the estimate :eqref:`eq_nadaraya-watson` at $q$ is
+       $s^2 / n_{\textrm{eff}}(q)$.
+    1. Compute $n_{\textrm{eff}}$ at every query in `x_val` from the weights
+       that `nadaraya_watson` returns, for each bandwidth in `sigmas`, and
+       plot the three curves. Then redraw the noise in `y_train` 200 times
+       with `x_train` fixed, and compare the standard deviation of the
+       estimate at each query with $1 / \sqrt{n_{\textrm{eff}}(q)}$.
+
+1. [code] **Boxcar and triangular kernels.** The section states that for
+   the data `x_train` and `y_train` the bandwidth affects the estimate more
+   than the choice among the kernel shapes of :eqref:`eq_similarity-kernels`
+   does, and then varies only $\sigma$. Test the claim.
+    1. Extend `nadaraya_watson` with the boxcar and triangular kernels, each
+       with a radius $h$ in place of the unit distance. Display the weights
+       of the Gaussian kernel at $\sigma = 0.5$ and of the other two kernels
+       at $h = 0.5$ side by side with `d2l.show_heatmaps`, and describe how
+       the rows of the three matrices differ.
+    1. Which of the kernels can leave a query with all-zero weights? Count
+       the queries in `x_val` that this affects at $h = 0.05$, and define
+       the estimate at those queries.
+    1. For each kernel, sweep the bandwidth $\sigma$ or the radius $h$ over
+       20 values between $0.05$ and $3$, record the mean squared error
+       against `y_val`, and plot the three error curves.
+    1. Compare the spread of the error across the three kernels at their
+       best bandwidths with the spread across bandwidths for one kernel.
+       Does the comparison support the claim? Redraw the training noise
+       five times. Is the ranking of the kernels at their best bandwidths
+       stable?
+
+1. [code] **Queries beyond the data.** The estimate
+   :eqref:`eq_nadaraya-watson` is a convex combination of the values, and
+   the inputs `x_train` lie in the interval $[0, 5)$.
+    1. For distinct scalar keys and a Gaussian kernel of fixed bandwidth,
+       find the limit of the estimate as $q \to \infty$. Find the same limit
+       for the constant kernel.
+    1. Evaluate `nadaraya_watson` with $\sigma = 0.5$ at the queries $5,
+       5.5, \ldots, 10$ and plot the estimate against $y = 2\sin(x) + x$.
+       Explain why no nonnegative kernel and no bandwidth let the estimate
+       follow the trend of the truth.
+    1. With $\sigma = 0.5$, `nadaraya_watson` returns NaN at the query
+       $q = 15$. Explain why in single precision, and compute the weights
+       instead as the softmax :eqref:`eq_softmax_attention` of the scores
+       $-(q - x_i)^2 / (2\sigma^2)$, so that the estimate is finite at
+       every query and every bandwidth.
+
+1. [code] **A learned bandwidth.** Treat $\sigma$ in `nadaraya_watson`
+   as a parameter and fit it by gradient descent on `x_train` and
+   `y_train`.
+    1. Before running, predict the minimizer of the training error
+       $\sum_i (f(x_i) - y_i)^2$, given that $y_i$ enters the computation of
+       $f(x_i)$ through its own kernel weight.
+    1. Run the optimization from $\sigma = 1$, report where $\sigma$ goes,
+       and compare the fitted curve with the estimates for the bandwidths in
+       `sigmas`.
+    1. Exclude $(x_i, y_i)$ from the estimate at $x_i$ by zeroing the
+       diagonal of the kernel matrix and refit. Compare the learned
+       $\sigma$ with $\sigma = 0.5$, the best of the bandwidths in `sigmas`,
+       and compute the mean squared error against `y_val` for both.
+
 1. [code] **The gradient of attention.** ● Suppose that $a(\mathbf{q},
    \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$ and that $\mathbf{k}_i =
    \mathbf{v}_i$ for $i = 1, \ldots, m$. Denote by $p(\mathbf{k}_i;
@@ -328,6 +398,7 @@ representations of queries and keys.
        gradient descent.
     1. Verify the identity and the limit with automatic differentiation on
        a random database with $m = 8$ and $d_k = 4$.
+
 1. [code] **Soft lookup as retrieval.** ● Build a database of $m$ keys
    drawn uniformly from the unit sphere in $\mathbb{R}^{16}$, with value
    $\mathbf{v}_i$ the one-hot indicator of index $i$, and weight them with
@@ -354,69 +425,7 @@ representations of queries and keys.
        $-\|\mathbf{q} - \mathbf{k}_j\|^2 / 2\sigma^2$. Explain why a larger
        $m$ lowers the accuracy at fixed $\tau$ although the distance from
        the query to the correct key is unchanged.
-1. [code] **Effective number of keys.** For the weights $\alpha_i(q)$ of
-   one query, define the effective number of keys
-   $n_{\textrm{eff}}(q) = 1 / \sum_i \alpha_i(q)^2$.
-    1. Show that $1 \leq n_{\textrm{eff}}(q) \leq m$ for $m$ nonnegative
-       weights that sum to one, and identify the weights that attain each
-       bound.
-    1. Let the values be $y_i = g(x_i) + \epsilon_i$ with independent noise
-       of variance $s^2$, and hold the keys fixed. Show that the variance of
-       the estimate :eqref:`eq_nadaraya-watson` at $q$ is
-       $s^2 / n_{\textrm{eff}}(q)$.
-    1. Compute $n_{\textrm{eff}}$ at every query in `x_val` from the weights
-       that `nadaraya_watson` returns, for each bandwidth in `sigmas`, and
-       plot the three curves. Then redraw the noise in `y_train` 200 times
-       with `x_train` fixed, and compare the standard deviation of the
-       estimate at each query with $1 / \sqrt{n_{\textrm{eff}}(q)}$.
-1. [code] **Boxcar and triangular kernels.** The section states that for
-   the data `x_train` and `y_train` the bandwidth affects the estimate more
-   than the choice among the kernel shapes of :eqref:`eq_similarity-kernels`
-   does, and then varies only $\sigma$. Test the claim.
-    1. Extend `nadaraya_watson` with the boxcar and triangular kernels, each
-       with a radius $h$ in place of the unit distance. Display the weights
-       of the Gaussian kernel at $\sigma = 0.5$ and of the other two kernels
-       at $h = 0.5$ side by side with `d2l.show_heatmaps`, and describe how
-       the rows of the three matrices differ.
-    1. Which of the kernels can leave a query with all-zero weights? Count
-       the queries in `x_val` that this affects at $h = 0.05$, and define
-       the estimate at those queries.
-    1. For each kernel, sweep the bandwidth $\sigma$ or the radius $h$ over
-       20 values between $0.05$ and $3$, record the mean squared error
-       against `y_val`, and plot the three error curves.
-    1. Compare the spread of the error across the three kernels at their
-       best bandwidths with the spread across bandwidths for one kernel.
-       Does the comparison support the claim? Redraw the training noise
-       five times. Is the ranking of the kernels at their best bandwidths
-       stable?
-1. [code] **Queries beyond the data.** The estimate
-   :eqref:`eq_nadaraya-watson` is a convex combination of the values, and
-   the inputs `x_train` lie in the interval $[0, 5)$.
-    1. For distinct scalar keys and a Gaussian kernel of fixed bandwidth,
-       find the limit of the estimate as $q \to \infty$. Find the same limit
-       for the constant kernel.
-    1. Evaluate `nadaraya_watson` with $\sigma = 0.5$ at the queries $5,
-       5.5, \ldots, 10$ and plot the estimate against $y = 2\sin(x) + x$.
-       Explain why no nonnegative kernel and no bandwidth let the estimate
-       follow the trend of the truth.
-    1. With $\sigma = 0.5$, `nadaraya_watson` returns NaN at the query
-       $q = 15$. Explain why in single precision, and compute the weights
-       instead as the softmax :eqref:`eq_softmax_attention` of the scores
-       $-(q - x_i)^2 / (2\sigma^2)$, so that the estimate is finite at
-       every query and every bandwidth.
-1. [code] **A learned bandwidth.** Treat $\sigma$ in `nadaraya_watson`
-   as a parameter and fit it by gradient descent on `x_train` and
-   `y_train`.
-    1. Before running, predict the minimizer of the training error
-       $\sum_i (f(x_i) - y_i)^2$, given that $y_i$ enters the computation of
-       $f(x_i)$ through its own kernel weight.
-    1. Run the optimization from $\sigma = 1$, report where $\sigma$ goes,
-       and compare the fitted curve with the estimates for the bandwidths in
-       `sigmas`.
-    1. Exclude $(x_i, y_i)$ from the estimate at $x_i$ by zeroing the
-       diagonal of the kernel matrix and refit. Compare the learned
-       $\sigma$ with $\sigma = 0.5$, the best of the bandwidths in `sigmas`,
-       and compute the mean squared error against `y_val` for both.
+
 1. [extended] **A learned metric.** ● Kernel regression with a learned
    distance :cite:`Weinberger.Tesauro.2007` replaces the fixed similarity
    of :eqref:`eq_nadaraya-watson` by a learned one. Draw $n = 200$ inputs

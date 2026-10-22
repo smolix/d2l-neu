@@ -451,7 +451,7 @@ passes depends on repetition count and data conditions
 Two footnotes before trusting the plot. First, a scaling study is only as
 good as the tuning of each point: had we frozen the learning rate across
 widths, part of our "bend" would have been a tuning artifact
-(:numref:`sec_scaling`; exercise 9 has you produce this artifact
+(:numref:`sec_scaling`; exercise :exref:`ex_scaling-laws-frozen-learning-rate` has you produce this artifact
 deliberately). Second, loss is the quantity that scales smoothly;
 downstream abilities can surface abruptly as loss creeps down, which is
 why small differences on this axis are worth more than they look
@@ -693,6 +693,7 @@ settings of a shared collection of architectural components.
        as $12d^2$ parameters. By what factor does $6ND$ underestimate the
        training cost per token at each context length, with and without
        causal skipping?
+
 1. **Variations on six.** The factor $6 = 2 + 4$ in :eqref:`eq_six_nd`
    assumes that every linear layer computes its forward product, the
    gradient with respect to its input, and the gradient with respect to
@@ -706,6 +707,7 @@ settings of a shared collection of architectural components.
        trained.
     1. The top half of the blocks is frozen, and only the bottom half is
        trained. Explain why this answer differs from the previous one.
+
 1. **Total versus non-embedding parameters.** Suppose that each model in
    `sizes` had used GPT-2's vocabulary of $V = 50{,}257$ tokens with tied
    embeddings and had reached the validation losses it reached with the
@@ -722,6 +724,7 @@ settings of a shared collection of architectural components.
        Which of the three exponents would you use to predict the loss of a
        much larger model, one whose embedding is a negligible share of its
        parameters, and why do the other two mislead?
+
 1. **Pricing a mixture-of-experts run.** DeepSeek-V3
    :cite:`Liu.Feng.Xue.ea.2024` has 671B parameters, of which 37B are
    active for each token, and was pretrained on 14.8T tokens in 2.664M
@@ -734,6 +737,51 @@ settings of a shared collection of architectural components.
     1. Compute the utilization implied by your estimate against each peak.
        Name two kinds of work in this run that the estimate omits, so that
        the true utilization is higher.
+
+1. [code] **Frozen learning rate.** The sweep of
+   :numref:`subsec_scaling-laws-five-sizes` scales the learning rate as
+   $10^{-3} \cdot 256/d$.
+    1. Using the width dependence of the tuned learning rate in
+       :numref:`sec_scaling`, predict which points of the sweep move, and
+       in which direction, when every model uses $10^{-3}$. Then rerun the
+       sweep with this rate.
+    1. By how much does the frozen rate change the validation loss of each
+       model? Compare these changes with the seed-to-seed variation stated
+       in :numref:`subsec_scaling-laws-five-sizes`, and decide which part
+       of the shape of the frozen-rate curve is a tuning artifact.
+   :exlabel:`ex_scaling-laws-frozen-learning-rate`
+
+1. **A row for the recipe table.** Choose an open-weights model that
+   :numref:`tab_modern-recipe` does not cover, for example Kimi K2
+   :cite:`Kimi.Team.2025`, and fill in every column of the table from the
+   architecture section of its report. Which cells map onto `d2l.GPT`
+   constructor flags, which need the `attn_factory` or `ffn_factory`
+   arguments of `d2l.TransformerBlock`, and which need machinery this
+   chapter has not built?
+
+1. [code] **A sixth size.** ● A sixth model for the sweep of
+   :numref:`subsec_scaling-laws-five-sizes` has width 512, ten blocks, and
+   eight heads, about 31.5M non-embedding parameters.
+    1. Fit a line on log--log axes to the three smallest entries of `Ns`
+       and `curves['validation']`, and compare its predictions for the two
+       larger models with their measured losses.
+    1. Before training the new model, predict its validation loss twice:
+       by extending the line, and by assuming that the corpus allows no
+       improvement over the largest measured model. Estimate the run's
+       cost with :eqref:`eq_six_nd`.
+    1. Train it with the same recipe. Which prediction was closer, and
+       what does the result say about the headroom that about three passes
+       over 5.1M characters leave?
+
+1. [code] **Irreducible loss from three points.** ● Fit
+   $E + A N^{-\alpha}$ exactly through the three smallest entries of `Ns`
+   and `curves['validation']` from
+   :numref:`subsec_scaling-laws-five-sizes`. Then shift each of the three
+   losses by $\pm 0.005$, the rounding of a two-decimal printout, and
+   report the range of $E$ and $\alpha$ over the perturbations that admit
+   an exact fit with $\alpha > 0$. What does the range say about
+   estimating an irreducible loss from this sweep?
+
 1. **Twenty tokens per parameter.** ● The sweep of
    :numref:`subsec_scaling-laws-five-sizes` gives every model 16.4M
    training tokens drawn from 5.1M unique characters.
@@ -752,6 +800,7 @@ settings of a shared collection of architectural components.
        three passes. Compare its number of unique tokens per parameter
        with the regime that study examined, and argue whether doubling the
        number of passes would help the largest model.
+
 1. **Allocation from the fitted law.** ● Under the budget $C = 6ND$, the
    minimizer of :eqref:`eq_chinchilla_law` satisfies
    :eqref:`eq_chinchilla_optimum`.
@@ -772,6 +821,7 @@ settings of a shared collection of architectural components.
        Repeat the evaluation. What do the two results say about how
        precisely a fit of :eqref:`eq_chinchilla_law` determines the
        token--parameter ratio?
+
 1. **Training for inference.** ● A model that serves $D_{\textrm{inf}}$
    tokens after training costs about
 
@@ -793,45 +843,7 @@ settings of a shared collection of architectural components.
        same predicted loss, the ratio of the two training costs, and the
        number of inference tokens at which the two lifetime costs are
        equal.
-1. **A row for the recipe table.** Choose an open-weights model that
-   :numref:`tab_modern-recipe` does not cover, for example Kimi K2
-   :cite:`Kimi.Team.2025`, and fill in every column of the table from the
-   architecture section of its report. Which cells map onto `d2l.GPT`
-   constructor flags, which need the `attn_factory` or `ffn_factory`
-   arguments of `d2l.TransformerBlock`, and which need machinery this
-   chapter has not built?
-1. [code] **Frozen learning rate.** The sweep of
-   :numref:`subsec_scaling-laws-five-sizes` scales the learning rate as
-   $10^{-3} \cdot 256/d$.
-    1. Using the width dependence of the tuned learning rate in
-       :numref:`sec_scaling`, predict which points of the sweep move, and
-       in which direction, when every model uses $10^{-3}$. Then rerun the
-       sweep with this rate.
-    1. By how much does the frozen rate change the validation loss of each
-       model? Compare these changes with the seed-to-seed variation stated
-       in :numref:`subsec_scaling-laws-five-sizes`, and decide which part
-       of the shape of the frozen-rate curve is a tuning artifact.
-1. [code] **A sixth size.** ● A sixth model for the sweep of
-   :numref:`subsec_scaling-laws-five-sizes` has width 512, ten blocks, and
-   eight heads, about 31.5M non-embedding parameters.
-    1. Fit a line on log--log axes to the three smallest entries of `Ns`
-       and `curves['validation']`, and compare its predictions for the two
-       larger models with their measured losses.
-    1. Before training the new model, predict its validation loss twice:
-       by extending the line, and by assuming that the corpus allows no
-       improvement over the largest measured model. Estimate the run's
-       cost with :eqref:`eq_six_nd`.
-    1. Train it with the same recipe. Which prediction was closer, and
-       what does the result say about the headroom that about three passes
-       over 5.1M characters leave?
-1. [code] **Irreducible loss from three points.** ● Fit
-   $E + A N^{-\alpha}$ exactly through the three smallest entries of `Ns`
-   and `curves['validation']` from
-   :numref:`subsec_scaling-laws-five-sizes`. Then shift each of the three
-   losses by $\pm 0.005$, the rounding of a two-decimal printout, and
-   report the range of $E$ and $\alpha$ over the perturbations that admit
-   an exact fit with $\alpha > 0$. What does the range say about
-   estimating an irreducible loss from this sweep?
+
 1. [extended] **IsoFLOP profiles.** ● The sweep of
    :numref:`subsec_scaling-laws-five-sizes` fixes the data and varies the
    model, so each model receives a different compute budget.

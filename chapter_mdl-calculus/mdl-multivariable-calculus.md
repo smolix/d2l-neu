@@ -25,6 +25,7 @@ derivative*, written $\frac{\partial}{\partial w_1}$. The new idea is what
 happens when we perturb several coordinates at once.
 
 ### The Gradient
+:label:`subsec_mdl-gradient`
 
 Assume first that $L$ is differentiable at $\mathbf w$. By definition, its change
 under a joint perturbation $\boldsymbol\epsilon$ equals a linear function plus an
@@ -200,6 +201,7 @@ $[\tfrac13, \tfrac23]^\top$.
 ## The Geometry of Gradients
 
 ### Steepest Descent
+:label:`subsec_mdl-steepest-descent`
 
 Equation :eqref:`eq_mdl-nabla_use` tells us how $L$ changes in *any* direction,
 so we can ask which direction makes it decrease fastest. This is the geometric
@@ -712,6 +714,7 @@ symmetric second difference
 $$
 \Delta_h = \frac{f(\mathbf{x}+h\mathbf{e}_i+h\mathbf{e}_j) - f(\mathbf{x}+h\mathbf{e}_i) - f(\mathbf{x}+h\mathbf{e}_j) + f(\mathbf{x})}{h^2},
 $$
+:eqlabel:`eq_mdl-second-difference`
 
 which is symmetric in $i$ and $j$ by inspection. Indeed, write
 $g(t) = f(\mathbf{x}+t\mathbf{e}_i+h\mathbf{e}_j) - f(\mathbf{x}+t\mathbf{e}_i)$,
@@ -777,8 +780,8 @@ $$
 This is the best-approximating quadratic to $f$ near $\mathbf{x}_0$ in a
 precise sense: its error vanishes faster than $\|\mathbf{x}-\mathbf{x}_0\|^2$,
 and it is the only quadratic with that property. For smoother $f$ (three
-continuous derivatives) the error is *third order* in the step. To see it in
-numbers, take $f(x, y) = xe^{-x^2-y^2}$. Assembling its value,
+continuous derivatives) the error is at most *third order* in the step. To see
+it in numbers, take $f(x, y) = xe^{-x^2-y^2}$. Assembling its value,
 gradient, and Hessian at $\mathbf{x}_0 = [-1, 0]^\top$ via
 :eqref:`eq_mdl-second_taylor` gives the approximating quadratic
 $q(x, y) = e^{-1}\bigl(-1 - (x+1) + (x+1)^2 + y^2\bigr)$.
@@ -888,19 +891,22 @@ for x0 in [-1 / math.sqrt(2), 1 / math.sqrt(2)]:
 At $(-1/\sqrt{2}, 0)$ both eigenvalues are positive ($\mathbf{H} \succ 0$, a
 strict local minimum) and at $(+1/\sqrt{2}, 0)$ both are negative, a local
 maximum; a saddle would show one eigenvalue of each sign, as in
-Exercise 5. This five-line loop is the second-derivative test as a program:
-differentiate twice (here numerically; autograd Hessians appear in
+exercise :exref:`ex_mdl-multivariable-calculus-classify`. This five-line loop
+is the second-derivative test as a program: differentiate twice (here
+numerically; autograd Hessians appear in
 :numref:`sec_mdl-matrix-calculus-autodiff`), extract eigenvalues, read the signs.
 
 The eigenvalue picture also explains why, in high dimension, saddles are the
 rule rather than the exception: a minimum requires *all* $n$ eigenvalues to be
 positive at once, and if the signs at a random critical point behaved like
 independent coin flips, that would happen with probability $2^{-n}$. The
-coin-flip heuristic can be made precise: for random Gaussian landscapes the
+coin-flip heuristic is not exact, but its conclusion survives a precise
+analysis: for random Gaussian landscapes the
 statistics of critical points can be computed exactly and minima are
-exponentially outnumbered by saddles :cite:`Bray.Dean.2007`, and the critical
-points actually encountered while training deep networks are overwhelmingly
-saddles too :cite:`Dauphin.Pascanu.Gulcehre.ea.2014`, one reason gradient
+exponentially outnumbered by saddles :cite:`Bray.Dean.2007`, and among the
+critical points that Newton's method finds on the loss of a small neural
+network, those of high loss are saddles too
+:cite:`Dauphin.Pascanu.Gulcehre.ea.2014`, one reason gradient
 methods fare better in practice than the old fear of "getting stuck in a bad
 local minimum" suggests.
 
@@ -934,33 +940,292 @@ automatic differentiation.
   minimum, a maximum, and a saddle.
 
 ## Exercises
-1. Let $L(x, y) = \log(e^x + e^y)$. Compute the gradient, and verify that the
-   sum of its components is always $1$. What does that say about the directions
-   in which $L$ grows fastest?
-2. For $f(x, y) = x^2 + 2y^2$, compute $\nabla f$ and verify at a sample point on
-   the ellipse $f = c$ that the gradient is orthogonal to the level curve.
-3. Prove directly from :eqref:`eq_mdl-nabla_use` that at a local minimum the
-   gradient must vanish.
-4. Let $f(x, y) = x^3 - 3x + y^2$. Show that the critical points are
-   $(\pm 1, 0)$. By examining $f$ along the lines $y = 0$ and $x = \pm 1$,
-   determine whether each is a minimum, a maximum, or a saddle, and confirm by
-   computing the Hessian there.
-5. Classify the critical point of $f(x, y) = x^2 - y^2$ by inspecting the
-   eigenvalues of its (constant) Hessian. Why is this point a saddle?
-6. Give a two-variable $f$ whose Hessian at a critical point is positive
-   *semidefinite* (one zero eigenvalue) yet the point is not a local minimum.
-   Why does the second-derivative test go silent here?
-7. Suppose we minimize $f(\mathbf{x}) = g(\mathbf{x}) + h(\mathbf{x})$. Interpret
-   the condition $\nabla f = \mathbf{0}$ geometrically in terms of $\nabla g$ and
-   $\nabla h$.
-8. Use the Lagrange condition :eqref:`eq_mdl-lagrange-condition` to maximize
-   $f(x, y) = xy$ subject to $g(x, y) = x + y = 1$. First check that
-   $\nabla g \neq \mathbf{0}$ everywhere, so the condition applies; then solve
-   $\nabla f = \lambda \nabla g$ together with the constraint, and confirm your
-   answer by eliminating $y = 1 - x$ and maximizing in one variable. Finally,
-   replace the constraint by $x + y = 1 + \delta$ and show that the maximum
-   value changes by $\lambda\delta$ to first order: the multiplier prices the
-   constraint.
+
+1. **Gradient of log-sum-exp.** Let
+   $L(\mathbf{x}) = \log \sum_{i=1}^n e^{x_i}$ for $\mathbf{x} \in \mathbb{R}^n$.
+    1. Compute $\nabla L$ and show that its components are positive and sum
+       to $1$.
+    1. Show that $L(\mathbf{x} + t\mathbf{1}) = L(\mathbf{x}) + t$ for every
+       scalar $t$, where $\mathbf{1}$ is the all-ones vector. Derive the
+       sum-to-one property from this identity and :eqref:`eq_mdl-nabla_use`,
+       without differentiating $L$ coordinate by coordinate.
+    1. Between which bounds does the rate of steepest ascent
+       $\|\nabla L(\mathbf{x})\|$ lie? At which inputs are the bounds attained
+       or approached?
+
+1. **Directional derivatives without a gradient.** Let
+   $f(x, y) = x^2 y / (x^2 + y^2)$ for $(x, y) \neq (0, 0)$ and
+   $f(0, 0) = 0$.
+    1. Show that $f$ is continuous at the origin.
+    1. Compute the two partial derivatives of $f$ at the origin and the
+       directional derivative there along every unit vector
+       $\mathbf{u} = [\cos\theta, \sin\theta]^\top$.
+    1. Show that no vector $\mathbf{g}$ gives these directional derivatives
+       as $\mathbf{u}\cdot\mathbf{g}$, so that $f$ is not differentiable at
+       the origin. Which hypothesis of the sufficient condition for
+       differentiability in :numref:`subsec_mdl-gradient` fails? What does
+       this function show that the counterexample $2xy/(x^2+y^2)$ there does
+       not?
+
+1. **Gradients of an elongated bowl.** Let $f(x, y) = x^2 + \kappa y^2$ with
+   $\kappa \ge 1$. Its minimizer is the origin, and $\kappa$ measures how much
+   more strongly $f$ curves along $y$ than along $x$.
+    1. Find a direction tangent to the level curve of $f$ through $(1, 1)$
+       and check that it is orthogonal to $\nabla f(1, 1)$.
+    1. Compute the angle between $-\nabla f(1, 1)$ and the direction
+       $-[1, 1]^\top$ from $(1, 1)$ to the minimizer. At which points
+       $(x, y) \neq (0, 0)$ does the negative gradient point exactly at the
+       minimizer?
+    1. Find the smallest value of the cosine of this angle over all points
+       $(x, y) \neq (0, 0)$, and the points where it is attained. What does
+       the result imply for a gradient-descent step on such a loss as
+       $\kappa$ grows?
+
+1. **Lagrange multipliers.** The Lagrange condition
+   :eqref:`eq_mdl-lagrange-condition` holds at a constrained optimum provided
+   $\nabla g \neq \mathbf{0}$ there.
+    1. Check that $\nabla g \neq \mathbf{0}$ everywhere for
+       $g(x, y) = x + y$. Then use the Lagrange condition to maximize
+       $f(x, y) = xy$ subject to $x + y = 1$, and find the multiplier
+       $\lambda$.
+    1. Replace the constraint by $x + y = 1 + \delta$. Show that the maximum
+       value changes by $\lambda\delta$ to first order in $\delta$, where
+       $\lambda$ is the multiplier of the unperturbed problem. In what sense
+       does the multiplier price the constraint?
+    1. Minimize $f(x, y) = x$ subject to $y^2 - x^3 = 0$. Show that the
+       minimizer is the origin and that no $\lambda$ satisfies
+       :eqref:`eq_mdl-lagrange-condition` there. What does the constraint set
+       look like near the origin, and which step of the argument behind
+       :eqref:`eq_mdl-lagrange-condition` breaks down there?
+
+1. [code] **Backward sweep for two tanh units.** A network with one input
+   $x$, two hidden units, and one output computes, for a target $t$,
+
+   $$h_i = \tanh(w_i x + b_i) \quad (i = 1, 2), \qquad f = v_1 h_1 + v_2 h_2, \qquad \ell = \tfrac12 (f - t)^2.$$
+
+    1. Draw the dependency graph of $\ell$. In plain Python, write a forward
+       sweep that stores every intermediate value and a backward sweep that
+       returns the partial derivatives of $\ell$ with respect to all six
+       parameters $w_1, b_1, w_2, b_2, v_1, v_2$. Check them against
+       automatic differentiation at $x = 1.5$, $t = 0.5$, and
+       $(w_1, b_1, w_2, b_2, v_1, v_2) = (0.5, 0, -1, 0.2, 1, -0.5)$.
+       Which intermediate derivative does every one of the six partials
+       reuse?
+    1. Set $w_1 = 5$ and $x = 2$, keeping the other values. Compute
+       $\partial \ell / \partial w_1$ with the plain-Python backward sweep
+       and explain its size from the product of edge derivatives along its
+       path. Compare it with the value that automatic differentiation returns
+       in single precision, and explain the difference. What does this imply
+       for training a unit whose pre-activation is large?
+    1. Set $w_1 = w_2$, $b_1 = b_2$, and $v_1 = v_2$. Show from the backward
+       sweep that both units receive identical gradients, so that gradient
+       descent keeps them identical at every step. What does this imply for
+       the initialization of hidden units?
+
+1. [code] **Order of the Taylor gap.**
+    1. Let $L(x, y) = \log(e^x + e^y)$ and
+       $\boldsymbol{\epsilon} = d\,[1, -3]^\top$. For
+       $d = 10^{-1}, 10^{-2}, \ldots, 10^{-5}$, compute the gap between
+       $L(\epsilon_1, \log 2 + \epsilon_2)$ and its linear approximation
+       :eqref:`eq_mdl-nabla_use` at $(0, \log 2)$. Compute the Hessian of $L$
+       at $(0, \log 2)$ by hand and use the quadratic term of
+       :eqref:`eq_mdl-second_taylor` to predict the gap as a function of
+       $d$. How closely does the prediction match the measured gaps?
+    1. Let $f(x, y) = x e^{-x^2 - y^2}$, and let $q$ be its quadratic
+       approximation at $(-1, 0)$, implemented as `quad`. Compute the gap
+       $|f - q|$ at $(-1, 0) + d\,\mathbf{u}$ for $\mathbf{u} = [1, 1]^\top$,
+       $[1, 0]^\top$, and $[0, 1]^\top$ with $d$ from $10^{-1}$ to $10^{-3}$,
+       and plot the three gaps against $d$ on log-log axes. Read the order of
+       each gap off its slope.
+    1. Along one of the three directions the gap shrinks faster than third
+       order. Explain this from a symmetry of $f$. Is it the only direction
+       with this property?
+
+1. **Classifying critical points.** Let $f(x, y) = x^3 - 3x + y^2$. Show that
+   the critical points are $(\pm 1, 0)$. Determine whether each is a minimum,
+   a maximum, or a saddle by examining $f$ along the lines $y = 0$ and
+   $x = \pm 1$, and confirm the classification with the eigenvalues of the
+   Hessian.
+   :exlabel:`ex_mdl-multivariable-calculus-classify`
+
+1. **Flat directions.**
+    1. Give three functions of $(x, y)$ that have a critical point at the
+       origin with Hessian $\operatorname{diag}(2, 0)$ there: one with a
+       strict local minimum, one with a local minimum that is not strict, and
+       one without a local minimum.
+    1. The function $f(x, y) = (x - y^2)(x - 2y^2)$ also has Hessian
+       $\operatorname{diag}(2, 0)$ at the origin. Show that its restriction
+       to every line through the origin has a strict local minimum there.
+       Sketch the region of the plane where $f < 0$, and show that the origin
+       is nevertheless not a local minimum of $f$. What does this imply for
+       testing a critical point by probing the loss along a few directions?
+    1. The *monkey saddle* $f(x, y) = x^3 - 3xy^2$ has a critical point at
+       the origin. Compute its Hessian there, write $f$ in polar coordinates,
+       and find the directions along which $f$ decreases. How does
+       $\|\nabla f\|$ scale with the distance to the origin, compared with the
+       saddle $x^2 - y^2$? What does this imply for gradient descent started
+       near each of the two saddles?
+
+1. **Steepest descent in other norms.** ● The steepest-descent proposition
+   of :numref:`subsec_mdl-steepest-descent` measures the length of a step in
+   the Euclidean norm.
+   Measure it instead in a norm $\|\cdot\|$ and seek the step $\mathbf{v}$
+   with $\|\mathbf{v}\| \le 1$ that minimizes the first-order change
+   $\mathbf{v}\cdot\mathbf{g}$, where $\mathbf{g} = \nabla L(\mathbf{w})$ is
+   nonzero.
+    1. Solve this problem for $\|\mathbf{v}\|_\infty = \max_i |v_i|$ and for
+       $\|\mathbf{v}\|_1 = \sum_i |v_i|$. In each case give the minimizing
+       step, the condition on $\mathbf{g}$ under which it is unique, and the
+       minimal value written as a norm of $\mathbf{g}$. Which of the two steps
+       is the update of Adam with its moving averages switched off
+       :cite:`Bernstein.Newhouse.2024`?
+    1. For a weight matrix, the first-order change under a step
+       $\boldsymbol{\Delta}$ is the Frobenius inner product
+       $\langle \mathbf{G}, \boldsymbol{\Delta} \rangle = \operatorname{tr}(\mathbf{G}^\top \boldsymbol{\Delta})$
+       with the gradient matrix $\mathbf{G}$. Let
+       $\mathbf{G} = \sum_i \sigma_i \mathbf{u}_i \mathbf{v}_i^\top = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$
+       be a reduced singular value decomposition
+       (:numref:`sec_mdl-svd-low-rank`). Show that over all steps with
+       spectral norm $\|\boldsymbol{\Delta}\|_2 \le 1$ the minimum of
+       $\langle \mathbf{G}, \boldsymbol{\Delta} \rangle$ is attained at
+       $\boldsymbol{\Delta} = -\mathbf{U}\mathbf{V}^\top$, the direction along
+       which Muon :cite:`Jordan.Jin.Boza.ea.2024` steps, and compute the
+       minimal value. (Write
+       $\langle \mathbf{G}, \boldsymbol{\Delta} \rangle = \sum_i \sigma_i \mathbf{u}_i^\top \boldsymbol{\Delta} \mathbf{v}_i$
+       and bound each term.)
+
+1. **Paths through a residual stack.** ● In a one-dimensional model of the
+   residual networks of :numref:`sec_resnet`, scalar blocks compute
+   $x_{l+1} = x_l + g_l(x_l)$ for $l = 0, \ldots, m-1$ with differentiable
+   functions $g_l$.
+    1. Use the chain rule to write $\partial x_m / \partial x_0$ as a product
+       of $m$ factors.
+    1. Expand the product and match each term to a directed path from $x_0$
+       to $x_m$ in the dependency graph. How many paths are there, and how
+       many of them pass through exactly $k$ of the functions $g_l$? Compare
+       the number of paths with the number of multiplications that a
+       backward sweep needs to compute $\partial x_m / \partial x_0$.
+    1. For a trained network of $m = 54$ residual blocks,
+       :citet:`Veit.Wilber.Belongie.2016` found that almost all of the
+       gradient flows along the paths through $5$ to $17$ blocks. What
+       fraction of all paths are these? Now assume that
+       $g_l'(x_l) = c > 0$ for every block. Which value of $c$ makes the
+       paths through about $11$ blocks contribute the most to
+       $\partial x_m / \partial x_0$, and what share of the derivative do the
+       paths through $5$ to $17$ blocks then carry?
+
+1. [code] **Gradient checks in single precision.** ● A gradient check
+   compares a backward sweep with the central difference
+   $\bigl(f(w + h, x, y, z) - f(w - h, x, y, z)\bigr) / (2h)$. Let $f$ be the
+   function of :eqref:`eq_mdl-multi_func_def`, whose exact partial derivative
+   at $(w, x, y, z) = (1, 1, -2, 1)$ is
+   $\partial f / \partial w = 73472$.
+    1. Implement $f$ in NumPy and compute the central difference at this point
+       for $h = 10^{-1}, 10^{-2}, \ldots, 10^{-12}$, once in `float64` and
+       once in `float32`. Plot the relative error against $h$ on log-log axes
+       for both precisions, and read off the best $h$ and the smallest
+       relative error of each.
+    1. The error of the central difference is a truncation part of order
+       $h^2$ plus a rounding part of order
+       $\varepsilon_{\textrm{mach}} |f| / h$, where the machine epsilon
+       $\varepsilon_{\textrm{mach}}$ is about $2.2 \times 10^{-16}$ for
+       `float64` and $1.2 \times 10^{-7}$ for `float32`. By which factors
+       should the best $h$ and the smallest relative error change from
+       `float64` to `float32`? Compare the predicted factors with the plot.
+    1. Which tolerance on the relative error can a `float32` gradient check
+       use without rejecting a correct backward sweep? Why are gradient
+       checks run in double precision?
+    1. Why does the `float32` estimate become exactly zero for the smallest
+       values of $h$?
+   :exlabel:`ex_mdl-multivariable-calculus-gradient-check`
+
+1. **Mixed partials that disagree.** ● Second-order methods treat the Hessian
+   as a symmetric matrix. Let $f(x, y) = xy(x^2 - y^2)/(x^2 + y^2)$ for
+   $(x, y) \neq (0, 0)$ and $f(0, 0) = 0$.
+    1. Compute $\frac{\partial f}{\partial x}(0, y)$ and
+       $\frac{\partial f}{\partial y}(x, 0)$, and from them the two mixed
+       partials at the origin in the notation of :eqref:`eq_mdl-hess_def`.
+    1. Evaluate the symmetric second difference
+       :eqref:`eq_mdl-second-difference` at the origin for this $f$. Which
+       step of the proof of the Clairaut–Schwarz theorem fails?
+    1. What does the function `hessian` of this section return as `fxy` at
+       the origin? What does a symmetric finite-difference formula miss here?
+
+1. [code] **Random Hessians.** ● A minimum requires all $n$ eigenvalues of the
+   Hessian to be positive, and the section notes that independent random
+   signs would make this happen with probability $2^{-n}$. Test this
+   heuristic on random symmetric matrices
+   $\mathbf{A} = (\mathbf{G} + \mathbf{G}^\top)/\sqrt{2}$, where the
+   $n \times n$ matrix $\mathbf{G}$ has independent standard normal entries.
+    1. For $n = 2$, show that $s = (a_{11} + a_{22})/2$,
+       $d = (a_{11} - a_{22})/2$, and $a_{12}$ are independent standard normal
+       variables, and that $\mathbf{A} \succ 0$ exactly when
+       $s > \sqrt{d^2 + a_{12}^2}$. Use the rotational symmetry of the
+       standard normal distribution in three dimensions to compute
+       $P(\mathbf{A} \succ 0)$ exactly, and compare it with $2^{-2}$.
+    1. Estimate $P(\mathbf{A} \succ 0)$ by Monte Carlo for
+       $n = 1, \ldots, 6$, with $10^6$ draws for $n \le 5$ and $10^7$ draws,
+       generated in batches, for $n = 6$. Plot $\log P$ against $n$ together
+       with $\log 2^{-n}$, and fit a quadratic in $n$ to your estimates.
+       :citet:`Dean.Majumdar.2006` prove that
+       $\log P \approx -\tfrac{\ln 3}{4} n^2$ for large $n$. Compare this
+       coefficient with the quadratic coefficient of your fit. Which property
+       of the eigenvalues does the coin-flip heuristic ignore?
+    1. For large $n$ the smallest eigenvalue of $\mathbf{A}$ lies close to
+       $-2\sqrt{n}$. For $n = 5, 10, 20$, find the shift $\mu$ at which half
+       of the shifted matrices $\mathbf{A} + \mu\mathbf{I}$ are positive
+       definite, and compare it with $2\sqrt{n}$. In the random landscapes of
+       :citet:`Bray.Dean.2007`, the Hessian at a critical point behaves like
+       such a shifted matrix, with a shift that grows as the value of the
+       random function at the critical point decreases. What does your result
+       suggest about critical points of low loss?
+
+1. [extended] **Saddles of a linear network.** ●● Let $\mathbf{A}$ be a
+   symmetric $n \times n$ matrix with eigenvalues
+   $\lambda_1 > \lambda_2 > \cdots > \lambda_n > 0$ and orthonormal
+   eigenvectors $\mathbf{q}_1, \ldots, \mathbf{q}_n$. A linear network with
+   one hidden unit, input weights $\mathbf{v}$, and output weights
+   $\mathbf{u}$ maps $\mathbf{x}$ to $\mathbf{u}\mathbf{v}^\top\mathbf{x}$.
+   Trained on whitened inputs ($\mathbb{E}[\mathbf{x}\mathbf{x}^\top] = \mathbf{I}$)
+   with targets $\mathbf{A}\mathbf{x}$, half its expected squared error is
+
+   $$L(\mathbf{u}, \mathbf{v}) = \tfrac12 \|\mathbf{A} - \mathbf{u}\mathbf{v}^\top\|_F^2.$$
+
+   :citet:`Baldi.Hornik.1989` showed that the local minima of such linear
+   networks are global. This problem derives the complete set of critical
+   points and compares it with the relation between loss and index that
+   :citet:`Dauphin.Pascanu.Gulcehre.ea.2014` measured for nonlinear
+   networks; the *index* of a critical point is the fraction of negative
+   eigenvalues of its Hessian.
+    1. Compute $\nabla_{\mathbf{u}} L$ and $\nabla_{\mathbf{v}} L$. Show that
+       the critical points are the origin and the points
+       $\mathbf{u} = \alpha\mathbf{q}_i$,
+       $\mathbf{v} = (\lambda_i / \alpha)\mathbf{q}_i$ with $\alpha \neq 0$,
+       and compute $L$ at each of them.
+    1. Compute the eigenvalues of the $2n \times 2n$ Hessian at the balanced
+       point $\mathbf{u} = \mathbf{v} = \sqrt{\lambda_i}\,\mathbf{q}_i$ and at
+       the origin. (In the eigenvector basis, the Hessian splits into
+       $2 \times 2$ blocks, one for each pair of coordinates along
+       $\mathbf{q}_j$ in $\mathbf{u}$ and in $\mathbf{v}$.) How many
+       eigenvalues are negative at each critical point? Explain the zero
+       eigenvalue by a symmetry of $L$, and conclude that every local minimum
+       is global.
+    1. Take $n = 4$, $(\lambda_1, \ldots, \lambda_4) = (4, 3, 2, 1)$, and a
+       random orthonormal basis of eigenvectors. Run Newton's method from
+       many random starting points of different scales, and record the loss
+       and the index of every critical point it reaches. The Hessian is
+       singular at every critical point other than the origin, so compute
+       each Newton step by least squares. Plot the loss against the index,
+       as in Figure 1 of :citet:`Dauphin.Pascanu.Gulcehre.ea.2014`. How often
+       does Newton's method end at each kind of critical point, and where
+       does gradient descent from small random initializations end?
+    1. Replace $\mathbf{u}\mathbf{v}^\top$ by $\mathbf{U}\mathbf{V}^\top$ with
+       two hidden units, so that $\mathbf{U}$ and $\mathbf{V}$ are
+       $4 \times 2$ matrices. Predict the loss values of the critical points
+       from the rank-one analysis, and confirm them with Newton's method.
+       How many zero eigenvalues does the Hessian have at the critical
+       points, and which symmetry explains them? Is the index a monotone
+       function of the loss?
 
 
 :begin_tab:`mxnet`

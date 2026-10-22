@@ -265,7 +265,7 @@ f(x+\epsilon) &= g\bigl(h(x+\epsilon)\bigr)\\
 \end{aligned}
 $$
 
-The coefficient of $\epsilon$ is $\frac{dg}{dh}(h(x))\, h'(x)$: a change in $x$ moves $h$ by $\epsilon h'(x)$, and that in turn moves $g$ by its own derivative times that step: *the rates multiply*. The one subtlety is the second line, where we fed the *variable* step $\epsilon h'(x)$ into $g$'s small-change identity: because $g$ is differentiable at $h(x)$, its error term is $o(\text{step}) = o(\epsilon h'(x))$ in the $o(\cdot)$ notation we fixed after :eqref:`eq_mdl-small_change`, which is still $o(\epsilon)$ and so vanishes faster than the $\epsilon$ we keep. (The borderline case $h'(x) = 0$, where the step degenerates, is handled by the standard error-function form of the proof: write $g(h(x)+s) = g(h(x)) + (g'(h(x)) + r(s))\,s$ with $r(s)\to 0$, substitute $s = \epsilon h'(x) + o(\epsilon)$, and the same coefficient drops out.) Applied across the layers of a network, this chaining of local linear factors is the backpropagation we met above. (The quotient rule is the product and chain rules applied to $g\cdot h^{-1}$; we leave it as Exercise 2.) $\blacksquare$
+The coefficient of $\epsilon$ is $\frac{dg}{dh}(h(x))\, h'(x)$: a change in $x$ moves $h$ by $\epsilon h'(x)$, and that in turn moves $g$ by its own derivative times that step: *the rates multiply*. The one subtlety is the second line, where we fed the *variable* step $\epsilon h'(x)$ into $g$'s small-change identity: because $g$ is differentiable at $h(x)$, its error term is $o(\text{step}) = o(\epsilon h'(x))$ in the $o(\cdot)$ notation we fixed after :eqref:`eq_mdl-small_change`, which is still $o(\epsilon)$ and so vanishes faster than the $\epsilon$ we keep. (The borderline case $h'(x) = 0$, where the step degenerates, is handled by the standard error-function form of the proof: write $g(h(x)+s) = g(h(x)) + (g'(h(x)) + r(s))\,s$ with $r(s)\to 0$, substitute $s = \epsilon h'(x) + o(\epsilon)$, and the same coefficient drops out.) Applied across the layers of a network, this chaining of local linear factors is the backpropagation we met above. (The quotient rule is the product and chain rules applied to $g\cdot h^{-1}$; we leave it as exercise :exref:`ex_mdl-single-variable-calculus-quotient-rule`.) $\blacksquare$
 
 The chain rule also gives the derivative of an **inverse function**. If $g$ undoes $f$, meaning $g(f(x)) = x$, then differentiating both sides gives $g'(f(x))\,f'(x) = 1$, so $g'(y) = 1/f'(g(y))$ wherever $f'(g(y)) \neq 0$: the slope of the inverse is the *reciprocal* slope, read at the matching point (the graph of $g$ is the graph of $f$ flipped across the diagonal, which turns rise-over-run upside down). This is where the logarithm's entry in the table comes from: $\log$ undoes $e^x$, so $\frac{d}{dx}\log(x) = 1/e^{\log x} = 1/x$. The deep-learning instance is the sigmoid $\sigma(x) = 1/(1+e^{-x})$, with $\sigma' = \sigma(1-\sigma)$, and its inverse the *logit* $\log\frac{p}{1-p}$, whose derivative $\frac{1}{p(1-p)}$ is exactly the reciprocal of $\sigma'$ evaluated at the matching point.
 
@@ -541,6 +541,7 @@ of digits per step, Newton doubles them. Matching yet *more* derivatives with
 higher-degree polynomials is the Taylor series, to which we now turn.
 
 ### Taylor Series
+:label:`subsec_mdl-taylor-series`
 
 The *Taylor series* generalizes the tangent and the best parabola: given the value and first $n$ derivatives of $f$ at a base point $x_0$, find the degree-$n$ polynomial that matches all of them. The quadratic case, rewritten in displacement from $x_0$, is
 
@@ -747,8 +748,9 @@ for name, fn in [('d|x|/dx', jnp.abs), ("ReLU'", jax.nn.relu)]:
     print(f"{name} at 0: autograd returns {jax.grad(fn)(0.0):.1f}")
 ```
 
-For both $\frac{d}{dx}|x|$ and $\mathrm{ReLU}'$ at $0$ it returns the fixed value $0$:
-one particular slope, chosen by convention, from the set of candidates we now define.
+For $\mathrm{ReLU}'$ at $0$ it returns the fixed value $0$. For $\frac{d}{dx}|x|$ at $0$
+it returns a fixed value that depends on the library, $0$ or $1$. Each is one particular
+slope, chosen by convention, from the set of candidates we now define.
 
 ### Subgradients and Optimality
 
@@ -765,7 +767,7 @@ $$
 \partial |x|(0) = [-1, 1], \qquad \partial\, \mathrm{ReLU}(0) = [0, 1].
 $$
 
-Off the corner each function is differentiable and the subdifferential collapses to the single ordinary slope; at the corner, the $0$ that autograd returned above is one element of each set.
+Off the corner each function is differentiable and the subdifferential collapses to the single ordinary slope; at the corner, each value that autograd returned above is one element of the corresponding set.
 
 ![Two corners and their subdifferentials: the fan of supporting lines through the origin of $|x|$ (left) and of $\mathrm{ReLU}$ (right), with slopes running over $\partial|x|(0)$ and $\partial\,\mathrm{ReLU}(0)$ respectively. Off each corner there is a single tangent and the subdifferential collapses to the ordinary derivative.](../img/mdl-cal-relu-corner.svg)
 :label:`fig_mdl-relu-corner`
@@ -780,6 +782,7 @@ $$
 This is no harder to prove than its smooth cousin: taking $g = 0$ in :eqref:`eq_mdl-subgrad` reads $f(y) \ge f(x)$ for all $y$, which is precisely the statement that $x$ is a global minimum. For $|x|$ at $0$ we have $0 \in [-1,1] = \partial|x|(0)$, correctly certifying the origin as the minimum even though no derivative exists there, exactly the case the smooth test $f'(x)=0$ cannot reach.
 
 ### Nonsmooth Points in Stochastic Training
+:label:`subsec_mdl-nonsmooth-training`
 
 Nondifferentiable corners generally do not prevent stochastic training. The relevant
 behavior is the value that autograd assigns at each corner. One clarification first, so
@@ -854,16 +857,282 @@ Why does training tolerate the occasional bad chained value? The usual picture i
 
 ## Exercises
 
-1. Compute the derivative of $x^3 - 4x + 1$, and of $\log\!\left(\frac{1}{x}\right)$ for $x > 0$.
-2. Derive the quotient rule from the product and chain rules by writing $\frac{g(x)}{h(x)} = g(x)\cdot\left(h(x)\right)^{-1}$ and using the power rule with $n = -1$ for the outer function. Check your result on $\tan(x) = \frac{\sin(x)}{\cos(x)}$: you should find $\frac{d}{dx}\tan(x) = \frac{1}{\cos^2(x)}$.
-3. True or false: if $f'(x) = 0$ then $f$ has a maximum or a minimum at $x$. If false, give a counterexample and the test that distinguishes the cases.
-4. Find the minimum of $f(x) = x\log(x)$ for $x \ge 0$ (take the limiting value $f(0) = 0$).
-5. The first-order model predicts $f(x - \eta f'(x)) \approx f(x) - \eta[f'(x)]^2$. Starting from the small-change identity, derive this prediction and name the term it discards. Then extend the descent lemma to the vector case: for $f: \mathbb{R}^n \to \mathbb{R}$ with an $L$-Lipschitz gradient ($\|\nabla f(\mathbf{u}) - \nabla f(\mathbf{v})\| \le L\|\mathbf{u} - \mathbf{v}\|$), show that $f(\mathbf{x} - \eta\nabla f(\mathbf{x})) \le f(\mathbf{x}) - \eta\left(1 - \tfrac{L\eta}{2}\right)\|\nabla f(\mathbf{x})\|^2$. (*Hint:* repeat the proof of :eqref:`eq_mdl-descent` along the segment $\mathbf{x} + t\mathbf{s}$ with $\mathbf{s} = -\eta\nabla f(\mathbf{x})$, bounding the integral with the Cauchy--Schwarz inequality.)
-6. For $f(x) = x^2$, find *all* step sizes $\eta$ for which gradient descent from $x_0 \neq 0$ converges to the minimum, and the one $\eta$ that reaches it in a single step. (*Hint:* use $x_{t+1} = (1-2\eta)x_t$.)
-7. Give a function $f$ and a step size $\eta$ for which a single gradient-descent step *increases* $f$, and explain the failure: which hypothesis of the descent lemma :eqref:`eq_mdl-descent` is violated, or is $\eta$ simply past $2/L$? (*Hint:* $f(x) = x^2$ with $\eta > 1$ already does it.)
-8. Relate the one-dimensional update $x \leftarrow x - \eta f'(x)$ to the vector update $\mathbf{w} \leftarrow \mathbf{w} - \eta\nabla L(\mathbf{w})$ from the introduction.
-9. Compute the subdifferentials $\partial\,\mathrm{ReLU}(0)$ and $\partial|x|(0)$. Which of $\{0,\, 0.5,\, 1\}$ are valid subgradients of $\mathrm{ReLU}$ at $0$? Sketch the subdifferential of the hinge loss $\max(0, 1 - x)$.
-10. Use the degree-$5$ Taylor polynomial of $e^x$ at $x_0 = 0$ to estimate $e$, and compare with the true value.
+1. **Quotient rule.** Write a quotient as a product,
+   $\frac{g(x)}{h(x)} = g(x)\,\bigl(h(x)\bigr)^{-1}$, on an interval where
+   $h(x) \neq 0$.
+    1. Derive the quotient rule of :numref:`sec_mdl-derivative_table` from
+       the product rule, the chain rule, and the power rule with $n = -1$.
+    1. Apply the quotient rule to the sigmoid $\sigma(x) = 1/(1+e^{-x})$,
+       and derive the identity $\sigma' = \sigma(1-\sigma)$, which
+       :numref:`sec_mdl-derivative_table` states without proof.
+   :exlabel:`ex_mdl-single-variable-calculus-quotient-rule`
+1. **Activation derivatives.** The softplus $s(x) = \log(1+e^x)$ is a smooth
+   version of $\mathrm{ReLU}$, and $\tanh$ is a rescaled sigmoid.
+    1. Show that $s'(x) = \sigma(x)$.
+    1. Differentiate the identity $\tanh(x) = 2\sigma(2x) - 1$ with the chain
+       rule and $\sigma' = \sigma(1-\sigma)$, and show that
+       $\tanh'(x) = 1 - \tanh^2(x)$.
+    1. Find the largest values of $\sigma'$ and of $\tanh'$, and the inputs at
+       which they occur.
+    1. The scaled softplus $s_\beta(x) = \frac{1}{\beta}\log(1 + e^{\beta x})$
+       with $\beta > 0$ approaches $\mathrm{ReLU}$ as $\beta \to \infty$.
+       Show that $|s_\beta(x) - \mathrm{ReLU}(x)| \le (\log 2)/\beta$ for
+       every $x$, with equality at $x = 0$, and find the smallest $L$ for
+       which $s_\beta'$ is $L$-Lipschitz. Choose the smallest $\beta$ for
+       which $|s_\beta - \mathrm{ReLU}| \le \epsilon$ everywhere. Which step
+       sizes does the descent lemma :eqref:`eq_mdl-descent` then certify for
+       gradient descent on $s_\beta$?
+1. **Smoothness of the logistic loss.** The descent lemma
+   :eqref:`eq_mdl-descent` requires a Lipschitz constant $L$ for $f'$.
+    1. Use the Mean Value Theorem :eqref:`eq_mdl-mvt` to show that if
+       $|f''| \le L$ on an interval, then $f'$ is $L$-Lipschitz there.
+       Conversely, show from the definition :eqref:`eq_mdl-der_def` that a
+       twice differentiable $f$ with an $L$-Lipschitz $f'$ satisfies
+       $|f''| \le L$.
+    1. Logistic regression with one weight $w$, inputs $a_i \in \mathbb{R}$,
+       and labels $y_i \in \{-1, 1\}$ minimizes
+
+       $$\ell(w) = \frac{1}{n}\sum_{i=1}^{n} \log\bigl(1 + e^{-y_i a_i w}\bigr).$$
+
+       Express $\ell''$ in terms of $\sigma$. Find the smallest $L$ for which
+       $\ell'$ is $L$-Lipschitz on all of $\mathbb{R}$, and the step sizes for
+       which :eqref:`eq_mdl-descent` guarantees a decrease from every
+       starting point.
+   :exlabel:`ex_mdl-single-variable-calculus-logistic-smoothness`
+1. **Entropy extremes.** The binary entropy of a coin that shows heads with
+   probability $p$ is
+
+   $$H(p) = -p\log p - (1-p)\log(1-p), \qquad 0 < p < 1.$$
+
+    1. Find the minimum of $f(x) = x\log x$ on $x \ge 0$, where $f(0) = 0$ is
+       the limiting value. Why does the minimum not lie at the boundary
+       $x = 0$?
+    1. Show that $H'(p) = -\log\frac{p}{1-p}$, the negative logit of $p$.
+       Locate the stationary point of $H$ and classify it with the
+       second-derivative test.
+    1. Find the limit of $H'(p)$ as $p \to 0$. Then parameterize the coin by
+       its logit $z$, so that $p = \sigma(z)$, and compute
+       $\frac{d}{dz}H(\sigma(z))$. In which of the two parameterizations is
+       the slope of $H$ Lipschitz on the whole domain, so that
+       :eqref:`eq_mdl-descent` certifies one step size of gradient descent on
+       $-H$ for every starting point?
+1. **Newton at degenerate minima.** For $p > 1$, the function
+   $f_p(x) = |x|^p/p$ is convex with its unique minimum at $x = 0$.
+    1. Show that $f_p$ is differentiable everywhere, including at $0$, with
+       $f_p'(x) = \operatorname{sign}(x)\,|x|^{p-1}$, and compute $f_p''(x)$
+       for $x \neq 0$. For which $p$ does $f_p''(0)$ exist, and what is its
+       value?
+    1. Show that Newton's method :eqref:`eq_mdl-newton` maps every
+       $x_t \neq 0$ to $x_{t+1} = \frac{p-2}{p-1}\,x_t$. For which $p$ does
+       the iteration converge? How fast does it converge for $p = 4$?
+    1. Which hypothesis of the local convergence statement in
+       :numref:`subsec_mdl-newton` fails for $p = 4/3$, and which fails for
+       $p = 4$?
+    1. For $p = 4/3$, the damped update
+       $x_{t+1} = x_t - \alpha f_p'(x_t)/f_p''(x_t)$ shortens the Newton step
+       by a factor $\alpha > 0$. For which $\alpha$ does it converge from
+       every $x_0$, and at what rate?
+
+    *Adapted from MIT 18.01SC,
+    [Session 33 problems](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/resources/mit18_01scf10_ex33prb/),
+    "Cube Root of x".*
+   :exlabel:`ex_mdl-single-variable-calculus-newton-degenerate`
+1. **Flat stationary points.** The functions $x^3$, $x^4$, and $-x^4$ all
+   satisfy $f'(0) = f''(0) = 0$, so the second-derivative test is silent at
+   $0$.
+    1. Classify the stationary point $0$ of each of the three functions
+       directly from its values.
+    1. Suppose that $f^{(k)}(x_0) = 0$ for $1 \le k \le n-1$, that
+       $f^{(n)}(x_0) \neq 0$, and that $f^{(n)}$ is continuous near $x_0$. Use
+       the Lagrange remainder :eqref:`eq_mdl-lagrange` of degree $n-1$ to
+       show that $x_0$ is a local minimum if $n$ is even and
+       $f^{(n)}(x_0) > 0$, a local maximum if $n$ is even and
+       $f^{(n)}(x_0) < 0$, and neither if $n$ is odd.
+    1. Classify the stationary point $0$ of $x - \sin x$ and of
+       $\cos x - 1 + x^2/2$.
+1. [code] **Minimizers at kinks.** A support vector machine with one weight
+   $x$, weight decay $\lambda > 0$, and a single training example whose label
+   times input equals $1$ minimizes
+
+   $$F(x) = \max(0, 1 - x) + \frac{\lambda}{2}x^2.$$
+
+    1. Compute the subdifferential of the hinge loss $\max(0, 1-x)$ at every
+       $x$ from :eqref:`eq_mdl-subgrad`.
+    1. Take as given that adding a differentiable convex function $q$ to a
+       convex function $h$ adds $q'$ to every subgradient,
+       $\partial(q + h)(x) = q'(x) + \partial h(x)$. Use the optimality
+       condition :eqref:`eq_mdl-subopt` to find the minimizer of $F$ for
+       every $\lambda > 0$. For which $\lambda$ does it sit at the kink?
+    1. Take $\lambda = 1/2$ and run the subgradient method
+       $x_{t+1} = x_t - \eta_t g_t$ from $x_0 = 0$ for $10^4$ steps, where
+       $g_t$ is the value that autograd returns for $F'(x_t)$ when the hinge
+       is written as $\mathrm{ReLU}(1-x)$. Compare the constant steps
+       $\eta_t = 0.1$ and $\eta_t = 0.01$ with the decaying steps
+       $\eta_t = 0.5/\sqrt{t+1}$. How does the final distance to the
+       minimizer depend on the schedule?
+    1. The kink $\{x = 1\}$ has measure zero. What do (b) and (c) imply for
+       the picture in :numref:`subsec_mdl-nonsmooth-training` that training
+       rarely meets a kink?
+1. [code] **Chained subgradients.** Autograd returns
+   $\mathrm{ReLU}'(0) = 0$ and chains this value through every expression, as
+   in :numref:`subsec_mdl-nonsmooth-training`.
+    1. Let $f_1$ and $f_2$ be convex, $g_1 \in \partial f_1(x)$,
+       $g_2 \in \partial f_2(x)$, and $c_1, c_2 \ge 0$. Show from
+       :eqref:`eq_mdl-subgrad` that
+       $c_1 g_1 + c_2 g_2 \in \partial (c_1 f_1 + c_2 f_2)(x)$. Why does this
+       argument not cover $\mathrm{ReLU}(x) - \mathrm{ReLU}(-x)$?
+    1. Show that for every real $c$,
+
+       $$k_c(x) = \mathrm{ReLU}(x) + \mathrm{ReLU}(-x) + c\,\bigl(x - \mathrm{ReLU}(x) + \mathrm{ReLU}(-x)\bigr) = |x|.$$
+
+       Predict the value that autograd returns for $k_c'(0)$, and check the
+       prediction for $c = 0$, $1$, and $5$. For which $c$ is the returned
+       value a subgradient of $|x|$ at $0$?
+    1. Run gradient descent with the derivative from autograd on
+       $g(x) = \mathrm{ReLU}(x) - \mathrm{ReLU}(-x)$ for $10$ steps from
+       $x_0 = 0.5$, once with $\eta = 0.125$ and once with $\eta = 0.1$.
+       What happens in each run? Why do the two step sizes behave
+       differently? What does the difference imply for the measure-zero
+       argument of :numref:`subsec_mdl-nonsmooth-training` in
+       floating-point arithmetic?
+1. **Quartic descent.** ● The minimum of $f(x) = x^4/4$ is flat, since
+   $f''(0) = 0$. Gradient descent :eqref:`eq_mdl-gd-loop` on $f$ reads
+   $x_{t+1} = x_t - \eta x_t^3$.
+    1. Using problem
+       :exref:`ex_mdl-single-variable-calculus-logistic-smoothness`a, find
+       the smallest $L$ for which $f'$ is $L$-Lipschitz on $[-R, R]$. Which
+       starting points $x_0$ does the descent lemma :eqref:`eq_mdl-descent`
+       cover for a given $\eta$? Why does no fixed $\eta$ cover all of them?
+    1. Show that the iterates converge to $0$ if $\eta x_0^2 < 2$ and
+       diverge if $\eta x_0^2 > 2$. What happens at $\eta x_0^2 = 2$? Compare
+       this threshold with the starting points covered in (a).
+    1. Show that $1/x_{t+1}^2 = 1/x_t^2 + 2\eta + O(x_t^2)$, and conclude that
+       $x_t^2 \approx 1/(x_0^{-2} + 2\eta t)$. Check the prediction for
+       $\eta = 0.1$ and $x_0 = 1$ at $t = 10$, $100$, and $1000$. How does
+       this rate compare with gradient descent on $x^2$, and with Newton's
+       method on $x^4/4$ in problem
+       :exref:`ex_mdl-single-variable-calculus-newton-degenerate`b?
+   :exlabel:`ex_mdl-single-variable-calculus-quartic-descent`
+1. **Newton's error recursion.** ● Let $x^\star$ be a stationary point of a
+   three times continuously differentiable $f$ with $f''(x^\star) \neq 0$,
+   and write $e_t = x_t - x^\star$ for the error of Newton's method
+   :eqref:`eq_mdl-newton`.
+    1. Apply the Lagrange remainder :eqref:`eq_mdl-lagrange` with $n = 1$ to
+       $f'$, expanded at $x_t$ and evaluated at $x^\star$, and show that
+
+       $$e_{t+1} = \frac{f'''(\xi_t)}{2 f''(x_t)}\, e_t^2$$
+
+       for some $\xi_t$ between $x_t$ and $x^\star$. What does the ratio
+       $e_{t+1}/e_t^2$ converge to?
+    1. Evaluate this limit for $f(x) = \tfrac14 x^4 - x$ at $x^\star = 1$.
+       Compute $e_{t+1}/e_t^2$ from the iterates printed in
+       :numref:`subsec_mdl-newton`, and compare.
+1. [code] **Argument reduction for exp.** ● According to
+   :numref:`subsec_mdl-taylor-series`, libraries do not evaluate a Taylor
+   polynomial of $e^x$ at the input itself; they first reduce the argument.
+   Write $x = k\log 2 + r$ with an integer $k$ and $|r| \le \tfrac12\log 2$,
+   so that $e^x = 2^k e^r$ and only $e^r$ needs a polynomial. Let $P_n$ be
+   the degree-$n$ Taylor polynomial of $e^x$ at $x_0 = 0$.
+    1. Use the Lagrange remainder :eqref:`eq_mdl-lagrange` to find the
+       smallest degree $n$ for which $P_n(r)$ approximates $e^r$ with relative
+       error below $2^{-53} \approx 1.1 \times 10^{-16}$, the unit roundoff
+       of float64, for every $|r| \le \tfrac12\log 2$. Repeat the calculation
+       for $P_n(x)$ on $|x| \le 10$ without reduction.
+    1. Evaluate $P_n(-10)$ in float64 with the unreduced degree of (a), and
+       compare the result with `math.exp(-10)`. Explain the size of the error
+       from the largest term of the sum.
+    1. Implement $e^x = 2^k P_n(r)$ with the reduced degree of (a), and
+       compare it with `math.exp` on a grid over $[-20, 20]$. Which step
+       limits the accuracy of the implementation for large $|x|$?
+1. [code] **Gradient descent past $2/L$.** ●● On $f(x) = x^2$, every step
+   size $\eta > 2/L$ diverges. On other functions, gradient descent past this
+   threshold can settle into an oscillation instead :cite:`Chen.Bruna.2023`,
+   a one-dimensional version of the edge of stability
+   :cite:`Cohen.Kaur.Li.ea.2021`. Let $x^\star$ be a local minimizer of a
+   four times continuously differentiable $f$ with $f''(x^\star) > 0$, and
+   write $g(x) = x - \eta f'(x)$ for one step of :eqref:`eq_mdl-gd-loop`.
+    1. Use :eqref:`eq_mdl-mvt` to show that iterates that start close enough
+       to $x^\star$ converge to it if $\eta < 2/f''(x^\star)$. Show that if
+       $\eta > 2/f''(x^\star)$, every iterate in some neighborhood of
+       $x^\star$, other than $x^\star$ itself, is followed by one farther
+       from $x^\star$.
+    1. A period-2 orbit is a pair $a \neq b$ with $g(a) = b$ and $g(b) = a$.
+       Show that for every period-2 orbit there is a point $\xi$ strictly
+       between $a$ and $b$ with $f''(\xi) = 2/\eta$.
+    1. Let $\eta = (1 + \delta)\,2/f''(x^\star)$ with a small $\delta > 0$.
+       Expand $g(g(x))$ around $x^\star$ to third order, and show that a
+       period-2 orbit near $x^\star$ exists and attracts nearby iterates if
+
+       $$3 f'''(x^\star)^2 - f''(x^\star)\, f''''(x^\star) > 0.$$
+
+       Derive the half-width $|a - b|/2$ of the orbit to leading order in
+       $\delta$.
+    1. Run gradient descent on the double well
+       $f(x) = \tfrac14 (x^2 - 1)^2$ from $x_0 = 0.5$ for $5000$ steps for
+       each step size $\eta \in [0.9, 1.5]$, and plot the last $100$
+       iterates against $\eta$. Compare the half-width of the orbit near
+       $\eta = 1$ with (c). Compare the range of $\eta$ with a stable
+       period-2 orbit with the range $1 < \eta < \sqrt{4.5} - 1$ in which
+       :citet:`Chen.Bruna.2023` prove convergence to the orbit from almost
+       every $0 < x_0 < 1$.
+    1. By the chain rule, a period-2 orbit $\{a, b\}$ attracts nearby
+       iterates when $|g'(a)\,g'(b)| < 1$ and repels them when
+       $|g'(a)\,g'(b)| > 1$. Find the step size at which the period-2 orbit
+       of the double well loses stability. Beyond it, estimate the Lyapunov
+       exponent $\frac{1}{T}\sum_{t} \log|g'(x_t)|$ over $T = 10^4$ iterates
+       after a burn-in; it is positive when nearby trajectories separate
+       exponentially. Find the step size at which it first becomes
+       positive. For which larger step sizes in $[0.9, 1.5]$ does it turn
+       negative again, and what do the iterates do there?
+    1. Predict from (c) what gradient descent with $\eta = 2.02$ does on
+       $\log\cosh x$ and on $x^2/2 + x^4/4$, both of which have
+       $x^\star = 0$ and $f''(x^\star) = 1$. Confirm the predictions by
+       running both from $x_0 = 0.01$ for $500$ steps.
+1. [extended] **$\mathrm{ReLU}'(0)$ in low precision.** ●● In exact
+   arithmetic, the parameters at which backpropagation with
+   $\mathrm{ReLU}'(0) = 0$ and with $\mathrm{ReLU}'(0) = 1$ disagree form a
+   set of measure zero. :citet:`Bertoin.Bolte.Gerchinovitz.ea.2021` call this
+   set the bifurcation zone and measure how often floating-point computations
+   meet it. The erratum in the arXiv version of their paper reduces the
+   reported gradient differences by a factor of about $10^5$ and reports
+   essentially the same frequencies. This project reproduces the frequency measurement
+   at small scale on Fashion-MNIST (:numref:`sec_fashion_mnist`).
+    1. Write the forward pass and the backward pass (:numref:`sec_backprop`)
+       of a fully connected network with three hidden $\mathrm{ReLU}$ layers
+       of width $256$ and a softmax cross-entropy loss by hand in NumPy. Make
+       the value $s$ used for $\mathrm{ReLU}'(0)$ and the floating-point type
+       arguments. Check the gradient in float64 against finite differences.
+    1. Draw $10$ parameter vectors with weights uniform on
+       $[-\sqrt{6/m}, \sqrt{6/m}]$ for a layer with $m$ inputs, as in the
+       paper. For each vector, compute the gradient on each of the $40$
+       minibatches of $256$ images among the first $10{,}240$ training images
+       with $s = 0$ and with $s = 1$, in float16, float32, and float64. The
+       two backward passes can differ only on a minibatch whose forward pass
+       produces an exact zero pre-activation. Report the fraction of
+       parameter vectors with at least one disagreeing minibatch, the
+       fraction of disagreeing minibatches, and the median relative $\ell_2$
+       difference of disagreeing gradients. Table 1 of the erratum reports
+       these quantities for MNIST and $1000$ parameter vectors. In float16,
+       float32, and float64, respectively, $100\%$, $43\%$, and $0\%$ of the
+       parameter vectors have a disagreeing minibatch, and $0.005\%$,
+       $0.0002\%$, and $0\%$ of the minibatches disagree. The median relative
+       difference is $2 \times 10^{-3}$ in both float16 and float32. Compare
+       your fractions with these.
+    1. Repeat the float16 measurement with matrix products that accumulate
+       in float32 and round only their results to float16. Explain the
+       difference from (b).
+    1. Count the exact zeros among the pre-activations in each setting.
+       Suppose that the rate of exact zeros is proportional to the unit
+       roundoff $u$, which is $2^{-11}$, $2^{-24}$, and $2^{-53}$ for the
+       three formats. Predict the float32 and float64 counts from the
+       float16 count, and compare.
+    1. Train the network with minibatch SGD for one epoch in float32 twice,
+       from the same initialization and with the same minibatch order, once
+       with $s = 0$ and once with $s = 1$. Plot the $\ell_1$ distance
+       between the two parameter vectors against the iteration. Repeat with
+       $s = 10^4$. What do the results say about the claim in
+       :numref:`subsec_mdl-nonsmooth-training` that training tolerates the
+       occasional incorrect chained value?
 
 
 :begin_tab:`mxnet`

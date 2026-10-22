@@ -885,6 +885,7 @@ The underlying procedure is the same: record the forward computation, seed the
 output adjoint, and replay the graph backward while accumulating VJPs.
 
 ### The Cost Asymmetry, Counted
+:label:`subsec_mdl-cost-asymmetry`
 
 The two implementations allow a direct comparison of pass counts. Take a scalar function
 of $n=200$ inputs, built from nothing but the additions and multiplications both engines
@@ -1047,9 +1048,10 @@ print('forward-over-reverse Hv:', Hv)
 print('A v                    :', A @ v)
 ```
 
-The printed product equals $\mathbf A\mathbf v$ to the digit. Exercise 7 works
-through the analytic claim and contrasts forward-over-reverse with the
-*double-backward* (reverse-over-reverse) alternative.
+The printed product equals $\mathbf A\mathbf v$ to the digit. Exercise
+:exref:`ex_mdl-matrix-calculus-autodiff-hessian-vector-product` builds
+Hessian--vector products from the toy engines `Dual` and `Var` and contrasts forward-over-reverse
+with the *double-backward* (reverse-over-reverse) alternative.
 
 ### Differentiating Through Equations
 :label:`subsec_mdl-implicit-diff`
@@ -1085,8 +1087,9 @@ $$
 $$
 :eqlabel:`eq_mdl-implicit-grad`
 
-Both Jacobians on the right are evaluated *at the solution only*: the gradient
-of an implicitly defined output costs one linear solve, no matter how many
+Both Jacobians on the right are evaluated *at the solution only*: the derivative
+of an implicitly defined output costs one linear solve with the matrix
+$\partial\mathbf g/\partial\mathbf x$ per parameter, no matter how many
 iterations the solver ran. The "never form the Jacobian" discipline applies
 verbatim: a VJP $\mathbf u^\top\partial\mathbf x^\star/\partial\boldsymbol\theta$
 needs only one linear solve against
@@ -1199,74 +1202,357 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
 
 ## Exercises
 
-1. Compute the Jacobian of $\mathbf f(x,y)=(x^2y,\ \sin(x+y))$ and verify the linear
-   approximation $\mathbf f(\mathbf x+\boldsymbol\delta)\approx\mathbf f(\mathbf x)+\mathbf J\boldsymbol\delta$
-   at $(1,0)$ against a finite difference. By how much does the error shrink when you
-   halve $\boldsymbol\delta$?
-2. Show $\nabla_{\mathbf x}\|\mathbf A\mathbf x-\mathbf b\|_2^2=2\mathbf A^\top(\mathbf A\mathbf x-\mathbf b)$
-   two ways: by an index/Einstein-notation derivation, and by the scalar-collapse
-   heuristic (guess from $\frac{d}{dx}(ax-b)^2$, then fix the shapes with transposes).
-3. For a scalar loss with $n=10^6$ parameters, how many passes does forward mode need
-   to assemble the full gradient, and how many does reverse mode need? Explain via JVPs
-   versus VJPs.
-4. Extend the `Dual` class with a `__pow__` (or a `log`) method and use it to
-   differentiate $f(x)=\log(1+x^2)$ at $x=2$; check against the analytic derivative.
-   Which rule from the proof of :eqref:`eq_mdl-dual-eval` does each new method encode?
-5. Add a new primitive (e.g. $\exp$ or $\sin$) to the reverse-mode `Var`/`backprop`
-   tape, give it the correct `_backward`, and verify a gradient against a framework's
-   autograd.
-6. Derive the softmax Jacobian :eqref:`eq_mdl-softmax-jacobian` from the quotient
-   rule, then re-derive the logit gradient $\mathbf p-\mathbf y$ and explain why
-   fusing softmax with cross-entropy is numerically preferable to composing them.
-7. **Hessian--vector product.** For $L(\mathbf x)=\tfrac12\mathbf x^\top\mathbf A\mathbf x$
-   with symmetric $\mathbf A$, show analytically that $\nabla L=\mathbf A\mathbf x$ and
-   hence $\mathbf H\mathbf v=\mathbf A\mathbf v$. Then implement the forward-over-reverse
-   recipe of :eqref:`eq_mdl-hvp` for a general scalar $L$ using a framework's
-   autograd (a forward-mode JVP pushed through the reverse-mode gradient: in PyTorch,
-   `torch.func.jvp(torch.func.grad(L), (x,), (v,))`; in JAX,
-   `jax.jvp(jax.grad(L), (x,), (v,))`) and confirm it returns $\mathbf A\mathbf v$
-   *without ever building the $n\times n$ matrix $\mathbf H$*. PyTorch's classic
-   *double-backward* alternative (differentiate $\langle\nabla L,\mathbf v\rangle$
-   once more, via `torch.autograd.grad(L, x, create_graph=True)`) computes the same
-   product as *reverse-over-reverse*; it works, but it tapes the backward pass
-   itself, so it costs somewhat more time and memory than forward-over-reverse.
-8. **Gradient of the log-absolute-determinant.** For a real invertible
-   $\mathbf A$, show that
-   $\nabla_{\mathbf A}\log|\det\mathbf A|=\mathbf A^{-\top}$. (If
-   $\det\mathbf A>0$, this is also the gradient of $\log\det\mathbf A$.) *Hint:* perturb one entry
-   at a time: with $\mathbf E=\mathbf e_a\mathbf e_b^\top$, expand
-   $\det(\mathbf A+\varepsilon\mathbf E)
-   =\det(\mathbf A)\det(\mathbf I+\varepsilon\mathbf A^{-1}\mathbf E)
-   \approx\det(\mathbf A)\,\bigl(1+\varepsilon\operatorname{tr}(\mathbf A^{-1}\mathbf E)\bigr)$
-   and read off the $(a,b)$ partial; equivalently, apply Jacobi's formula
-   $\tfrac{d}{dt}\det\mathbf A(t)=\det\mathbf A(t)\,
-   \operatorname{tr}\bigl(\mathbf A(t)^{-1}\tfrac{d\mathbf A}{dt}\bigr)$. This
-   identity is what makes the $\log|\det\mathbf J|$ term of the change-of-variables
-   formula for densities (:numref:`sec_mdl-random_variables`) trainable by
-   gradient descent; normalizing flows, generative models built from invertible
-   maps and trained on exactly this log-likelihood (:numref:`sec_mdl-flow-matching`),
-   depend on it. Verify it numerically by
-   differentiating the log-absolute-determinant of a random invertible
-   $3\times3$ matrix (use a `slogdet`-style routine) with a framework's autograd
-   and comparing against $\mathbf A^{-\top}$.
-9. **Attention Jacobians.** In self-attention (:numref:`sec_attention-scoring-functions`),
-   softmax is applied *row-wise* to the score matrix
-   $\mathbf S=\mathbf Q\mathbf K^\top/\sqrt d$, giving attention weights
-   $\mathbf P$ with rows $\mathbf p_i=\operatorname{softmax}(\mathbf s_i)$.
-   Show that the Jacobian of the attention weights with respect to the scores is
-   *block-diagonal*: row $i$ of $\mathbf P$ depends only on row $i$ of
-   $\mathbf S$, and each block is exactly the per-row softmax Jacobian
-   $\operatorname{diag}(\mathbf p_i)-\mathbf p_i\mathbf p_i^\top$ of
-   :eqref:`eq_mdl-softmax-jacobian`. Then push one step further down the chain:
-   differentiating the scores $\mathbf s_i=\mathbf K\mathbf q_i/\sqrt d$ with
-   respect to the query $\mathbf q_i$ contributes the Jacobian
-   $\mathbf K/\sqrt d$, so
-   $\partial\mathbf p_i/\partial\mathbf q_i
-   =\bigl(\operatorname{diag}(\mathbf p_i)-\mathbf p_i\mathbf p_i^\top\bigr)\mathbf K/\sqrt d$.
-   Where does the temperature-like $1/\sqrt d$ end up in the gradient, and what
-   does it do to gradient magnitudes as $d$ grows? Verify the block-diagonal
-   structure numerically with a framework's `jacobian` on a $3\times3$ score
-   matrix.
+1. **Jacobian of a ReLU network.** Let
+   $\mathbf g(\mathbf x)=\mathbf W_2\,\boldsymbol\varphi(\mathbf W_1\mathbf x+\mathbf b)$
+   with $\mathbf W_1\in\mathbb R^{h\times n}$, $\mathbf b\in\mathbb R^h$,
+   $\mathbf W_2\in\mathbb R^{m\times h}$, and the elementwise ReLU
+   $\boldsymbol\varphi$. Assume that no entry of the pre-activation
+   $\mathbf W_1\mathbf x+\mathbf b$ is zero. By
+   :eqref:`eq_mdl-jacobian-chain`,
+   $\mathbf J_{\mathbf g}(\mathbf x)=\mathbf W_2\mathbf M(\mathbf x)\mathbf W_1$,
+   where the diagonal matrix $\mathbf M(\mathbf x)$ has the entry $1$ for
+   each active hidden unit and $0$ for each inactive one.
+    1. Show that
+       $\mathbf g(\mathbf x+\boldsymbol\delta)=\mathbf g(\mathbf x)+\mathbf J_{\mathbf g}(\mathbf x)\,\boldsymbol\delta$
+       holds exactly for every sufficiently small $\boldsymbol\delta$, so
+       that the remainder in :eqref:`eq_mdl-jacobian-linearization`
+       vanishes identically. For $n=m=2$, how does the image of a small
+       circle under $\mathbf g$ differ from the one in
+       :numref:`fig_mdl-cal-jacobian-ellipse`?
+    1. Let $k$ hidden units be active at $\mathbf x$. Show that
+       $\operatorname{rank}\mathbf J_{\mathbf g}(\mathbf x)\le k$. For
+       $n=m=2$ and $k=1$, what is the image of a small circle around
+       $\mathbf x$?
+    1. Describe the set of inputs at which some pre-activation is zero.
+       What happens to $\mathbf J_{\mathbf g}$ when $\mathbf x$ crosses
+       this set?
+
+1. **Least-squares input gradient.** For $\mathbf W\in\mathbb R^{m\times n}$
+   with $m\neq n$, :numref:`subsec_mdl-matrix-identities` states the input
+   gradient
+   $\nabla_{\mathbf x}\|\mathbf W\mathbf x-\mathbf y\|^2=2\mathbf W^\top(\mathbf W\mathbf x-\mathbf y)$
+   without deriving it.
+    1. Derive it by differentiating one component in index notation, as in
+       the derivation of :eqref:`eq_mdl-lstsq-grad`.
+    1. Derive it from the chain rule :eqref:`eq_mdl-jacobian-chain`. Write
+       the loss as $h(\mathbf r(\mathbf x))$ with
+       $\mathbf r(\mathbf x)=\mathbf W\mathbf x-\mathbf y$ and
+       $h(\mathbf r)=\|\mathbf r\|^2$, multiply the two Jacobians in
+       numerator layout, and convert the result with
+       :eqref:`eq_mdl-grad-is-jacobian-transpose`. Which chain rule for
+       gradients in denominator layout does this derivation give for a
+       general composition $h\circ\mathbf r$?
+    1. Start from the scalar collapse $\frac{d}{dx}(wx-y)^2=2w(wx-y)$.
+       List the expressions obtained by placing $\mathbf W$ or
+       $\mathbf W^\top$ to the left or to the right of the residual
+       $\mathbf W\mathbf x-\mathbf y$, and rule out all but one by their
+       shapes.
+    1. Some references write
+       $\nabla_{\mathbf W}\|\mathbf W\mathbf x-\mathbf y\|^2=2\,\mathbf x(\mathbf W\mathbf x-\mathbf y)^\top$.
+       How does this differ from :eqref:`eq_mdl-lstsq-grad`, and which
+       layout convention produces it? Which of the two expressions can be
+       subtracted from $\mathbf W$ in a gradient-descent step?
+
+1. **Softmax vector--Jacobian product.** Reverse mode never forms the
+   softmax Jacobian :eqref:`eq_mdl-softmax-jacobian`. It maps the adjoint
+   $\mathbf u=\nabla_{\mathbf p}\ell$ of the probabilities to the adjoint
+   $\mathbf J_{\operatorname{softmax}}^\top\mathbf u$ of the logits.
+    1. Show that
+       $\mathbf J_{\operatorname{softmax}}^\top\mathbf u=\mathbf p\odot\bigl(\mathbf u-(\mathbf p^\top\mathbf u)\,\mathbf 1\bigr)$,
+       where $\odot$ is the elementwise product. For $n$ classes, count
+       the operations of this formula and those of forming
+       $\mathbf J_{\operatorname{softmax}}$ and multiplying it by
+       $\mathbf u$.
+    1. Self-attention applies softmax to each row of an $n\times n$ score
+       matrix $\mathbf S$ and produces the weights $\mathbf P$. How many
+       entries does the Jacobian of $\mathbf P$ with respect to
+       $\mathbf S$ have, and how many of them can be nonzero? For
+       $n=4096$ tokens in float32, compare the memory of the full
+       Jacobian, of its nonzero entries, and of the adjoint of
+       $\mathbf S$ that the formula of (a), applied row by row, returns.
+
+1. [code] **Composed versus fused cross-entropy.** Take two classes with
+   logits $\mathbf z=(0,-t)$ for $t>0$ and the target class 2, so that the
+   loss is $\ell=-\log p_2$. The composed loss applies a softmax,
+   stabilized by subtracting $\max_i z_i$, and then a logarithm. The fused
+   loss evaluates $\log p_2=z_2-\log\sum_k e^{z_k}$ with a stable
+   log-sum-exp, and its logit gradient is $\mathbf p-\mathbf y$. Reverse
+   mode through the composed loss multiplies the adjoint $-1/p_2$ of $p_2$
+   by the second row of :eqref:`eq_mdl-softmax-jacobian`.
+    1. Simplify this product in exact arithmetic, and compare it with
+       $\mathbf p-\mathbf y$.
+    1. In float32 NumPy, evaluate the composed loss and the product as
+       written, without simplifying, for the integers
+       $t=80,81,\ldots,110$. For which $t$ is the loss finite, and for
+       which $t$ is the gradient finite? Explain both thresholds from the
+       range of float32, subnormal numbers included. Find the two
+       thresholds in float64 as well.
+    1. What do the fused loss and the fused gradient return over the same
+       range of $t$?
+
+1. [code] **Dual and complex steps.** Take the map
+   $\mathbf f(x,y)=(x^2y,\ \sin(x+y))$ at $\mathbf x_0=(1,0.5)$ and the
+   first column $\mathbf J\mathbf e_1$ of its exact Jacobian. Problem
+   :exref:`ex_mdl-multivariable-calculus-gradient-check`b of
+   :numref:`sec_mdl-multivariable_calculus` models the error of a central
+   difference with step $t$ as a truncation part of order $t^2$ plus a
+   rounding part proportional to machine epsilon divided by $t$.
+    1. Use this model to predict the best step and the smallest error of
+       the central difference
+       $(\mathbf f(\mathbf x_0+t\mathbf e_1)-\mathbf f(\mathbf x_0-t\mathbf e_1))/(2t)$
+       in float64. Check the prediction for
+       $t=10^{-1},10^{-2},\ldots,10^{-12}$. Compare the smallest error with
+       the error of one pass of `VDual` seeded with $\mathbf e_1$. Why does
+       no step size enter the `VDual` computation?
+    1. Replacing $\varepsilon$ by the imaginary unit $i$ gives the
+       complex-step estimate
+       $\operatorname{Im}\mathbf f(\mathbf x_0+it\mathbf e_1)/t$
+       :cite:`Squire.Trapp.1998`. Expand
+       $\mathbf f(\mathbf x_0+it\mathbf e_1)$ to third order in $t$, and
+       show that the error of this estimate is $O(t^2)$. Why does the
+       estimate subtract no nearly equal numbers?
+    1. Evaluate the complex-step estimate with NumPy's complex arithmetic
+       for $t=10^{-1},10^{-2},\ldots,10^{-20}$, and compare its errors with
+       those of (a). Evaluated on the dual input
+       $\mathbf x_0+t\mathbf e_1\varepsilon$, $\mathbf f$ returns
+       $t\,\mathbf J\mathbf e_1$ as the $\varepsilon$-part exactly. Which
+       difference between $\varepsilon^2=0$ and $i^2=-1$ causes the
+       $O(t^2)$ error of the complex step?
+
+1. [code] **New primitives.** `Dual` supports addition, multiplication,
+   $\sin$, and $\exp$; `Var` supports addition and multiplication.
+    1. Derive the $\varepsilon$-part of $1/(c+d\varepsilon)$ for $c\neq0$
+       from :eqref:`eq_mdl-dual-rule` by solving
+       $(c+d\varepsilon)(c'+d'\varepsilon)=1$ for $c'$ and $d'$. Add
+       `__neg__`, `__sub__`, `__truediv__`, their reflected versions
+       `__rsub__` and `__rtruediv__`, and `log` to `Dual`. Which
+       differentiation rule does division encode? Differentiate the
+       sigmoid $\sigma(x)=1/(1+e^{-x})$ and the function $\log(1+x^2)$ at
+       $x=2$, and compare with $\sigma(x)(1-\sigma(x))$ and $2x/(1+x^2)$.
+    1. Add `exp` and `log` methods to `Var`, each with a backward closure
+       that adds the correct contribution to the adjoint of its input, and
+       add `__neg__` and `__sub__`, built from the existing addition and
+       multiplication. Which value does the closure of `exp` need, and
+       does it have to recompute that value?
+    1. Use the extended `Var` to differentiate the cross-entropy
+       $\ell(\mathbf z)=\log(e^{z_1}+e^{z_2}+e^{z_3})-z_2$ at
+       $\mathbf z=(1,-0.5,2)$, and compare with $\mathbf p-\mathbf y$ for
+       $\mathbf y=\mathbf e_2$.
+
+1. [code] **Compressed Jacobians.** A dense $m\times n$ Jacobian costs
+   $\min(m,n)$ passes, and a sparse one can cost fewer. A JVP with the seed
+   $\mathbf e_j+\mathbf e_k$ returns the sum of columns $j$ and $k$ of the
+   Jacobian. If no row has nonzero entries in both columns, each nonzero
+   entry of the sum belongs to exactly one of them.
+    1. Show that one JVP recovers the whole Jacobian of an elementwise map
+       $\boldsymbol\varphi:\mathbb R^n\to\mathbb R^n$. Which seed does it
+       use? How many VJPs does reverse mode need for the same matrix?
+    1. Let $f_i(\mathbf x)=x_{i-1}x_i+\sin(x_{i+1})$ for $i=1,\ldots,n$,
+       where every term with an index outside $1,\ldots,n$ is dropped.
+       Find three seeds from which all nonzero entries of
+       $\mathbf J_{\mathbf f}$ can be read off. Implement $\mathbf f$ for
+       `VDual` inputs with $n=10$, recover $\mathbf J_{\mathbf f}$ from the
+       three JVPs, and compare it with the analytic Jacobian. Can the
+       three JVPs share a single pass of `VDual`?
+    1. How many seeds does a banded Jacobian need whose nonzero entries
+       satisfy $|i-j|\le b$, and how does this number depend on $n$? Apply
+       the answer to a one-dimensional convolution with kernel size $k$,
+       viewed as a map from its input to its output.
+
+1. [code] **Hyperparameter gradient.** Ridge regression with one penalty
+   $\lambda_j>0$ per feature fits
+
+   $$\mathbf w^\star(\boldsymbol\lambda)=\operatorname*{argmin}_{\mathbf w}\ \|\mathbf X\mathbf w-\mathbf y\|^2+\sum_{j=1}^d\lambda_jw_j^2$$
+
+   on training data $(\mathbf X,\mathbf y)$, and its validation loss on
+   data $(\mathbf X_{\text{v}},\mathbf y_{\text{v}})$ is
+   $V(\boldsymbol\lambda)=\|\mathbf X_{\text{v}}\mathbf w^\star(\boldsymbol\lambda)-\mathbf y_{\text{v}}\|^2$.
+    1. Show that $\mathbf w^\star$ solves
+       $\mathbf g(\mathbf w,\boldsymbol\lambda)=(\mathbf X^\top\mathbf X+\operatorname{diag}(\boldsymbol\lambda))\,\mathbf w-\mathbf X^\top\mathbf y=\mathbf 0$,
+       and use :eqref:`eq_mdl-implicit-grad` to derive
+       $\partial\mathbf w^\star/\partial\boldsymbol\lambda$.
+    1. Show that $\nabla_{\boldsymbol\lambda}V=-\mathbf a\odot\mathbf w^\star$,
+       where $\mathbf a$ solves one linear system with the matrix
+       $\mathbf X^\top\mathbf X+\operatorname{diag}(\boldsymbol\lambda)$,
+       and give its right-hand side. How many linear solves does the
+       forward route through $\partial\mathbf w^\star/\partial\boldsymbol\lambda$
+       need for $d$ penalties, and how many does this adjoint route need?
+    1. Implement $V$ and the adjoint gradient in NumPy for random data
+       with $50$ training examples, $50$ validation examples, and $d=10$
+       features. Check the gradient against central differences of $V$.
+
+    *Adapted from Alan Edelman and Steven G. Johnson,
+    [Matrix Calculus for Machine Learning and Beyond, problem set 2](https://ocw.mit.edu/courses/18-s096-matrix-calculus-for-machine-learning-and-beyond-january-iap-2023/mit18_s096iap23_pset2.pdf),
+    MIT 18.S096, IAP 2023, Problem 1.*
+
+1. [code] **Cheapest chain order.** ● By :eqref:`eq_mdl-jacobian-product`
+   the Jacobian of a chain of $L$ maps is $\mathbf J_L\cdots\mathbf J_1$
+   with $\mathbf J_k\in\mathbb R^{d_k\times d_{k-1}}$. Multiplying a
+   $p\times q$ matrix by a $q\times r$ matrix costs $pqr$ multiplications.
+    1. Give the costs of the forward order, which multiplies from the
+       right, and of the reverse order, which multiplies from the left, as
+       functions of $d_0,\ldots,d_L$. Evaluate both for
+       $(d_0,\ldots,d_4)=(1000,10,1000,10,1000)$, a map whose layers
+       alternate between wide and narrow.
+    1. Write a dynamic program over the sub-chains
+       $\mathbf J_j\cdots\mathbf J_i$ that finds the cheapest
+       parenthesization, and run it on the dimensions of (a). Which order
+       does it choose, and how much cheaper is it than the better of the
+       two orders of (a)?
+    1. For a scalar output, $d_L=1$, compare the optimum with the reverse
+       order on a few thousand random dimension vectors, with $L$ between
+       $2$ and $6$ and each of $d_0,\ldots,d_{L-1}$ drawn uniformly from
+       $\{1,\ldots,10\}$. Characterize the vectors for which some other
+       order is cheaper.
+
+1. **Log-determinant gradient.** ● A normalizing flow
+   :cite:`rezende2015variational` passes a random vector $\mathbf X$
+   through invertible layers. For one layer $\mathbf Y=\mathbf g(\mathbf X)$,
+   the log-density of $\mathbf Y$ at $\mathbf g(\mathbf x)$ is
+   $\log p_{\mathbf X}(\mathbf x)-\log|\det\mathbf J_{\mathbf g}(\mathbf x)|$,
+   a consequence of the change of variables :eqref:`eq_mdl-change_var_nd`
+   of :numref:`sec_mdl-integral_calculus`. For a linear
+   layer $\mathbf x\mapsto\mathbf A\mathbf x$ the correction
+   $-\log|\det\mathbf J_{\mathbf g}|$ is $-\log|\det\mathbf A|$, so maximum-likelihood training differentiates
+   $\log|\det\mathbf A|$ with respect to $\mathbf A$. For a real
+   invertible matrix $\mathbf A$ the gradient is
+   $\nabla_{\mathbf A}\log|\det\mathbf A|=\mathbf A^{-\top}$.
+    1. Derive the identity entry by entry. With
+       $\mathbf E=\mathbf e_a\mathbf e_b^\top$, write
+       $\det(\mathbf A+t\mathbf E)=\det(\mathbf A)\det(\mathbf I+t\mathbf A^{-1}\mathbf E)$,
+       expand $\det(\mathbf I+t\mathbf M)$ to first order in $t$, and read
+       off the $(a,b)$ partial derivative. Why does the sign of
+       $\det\mathbf A$ not matter?
+    1. Check the identity on a random invertible $3\times3$ matrix by
+       central differences of `np.linalg.slogdet`.
+    1. How does the norm of the gradient behave as $\mathbf A$ approaches
+       a singular matrix? What does this imply for a flow layer whose
+       weight matrix is nearly singular?
+
+1. [code] **Hessian--vector product.** ● The function
+   $f(\mathbf x)=\bigl(\sum_j x_j^2\bigr)^2$ of
+   :numref:`subsec_mdl-cost-asymmetry`, evaluated at the inputs `xs0` with
+   $n=200$, is built from addition and multiplication alone, so both
+   `Dual` and `Var` can evaluate it.
+    1. Derive $\nabla f$ and the Hessian $\mathbf H$ of $f$, and write
+       $\mathbf H\mathbf v$ in a form that never builds $\mathbf H$.
+    1. Draw a random direction $\mathbf v$, wrap each input $x_j$ as
+       `Var(Dual(x_j, v_j))`, and run `backprop`. Show that the value
+       parts of the resulting adjoints form $\nabla f$ and that their
+       $\varepsilon$-parts form $\mathbf H\mathbf v$, and compare both with
+       (a). Which operations of the backward closures run in dual
+       arithmetic, and why does this make the computation
+       forward-over-reverse in the sense of :eqref:`eq_mdl-hvp`?
+    1. Nest the tape in itself instead. Wrap each input as
+       `Var(Var(x_j))` and run `backprop`; the adjoints are now `Var`
+       objects. Form $\sum_j(\nabla f)_jv_j$ from them and run `backprop`
+       on it to obtain $\mathbf H\mathbf v$ by reverse-over-reverse.
+       Count the `Var` objects that each method creates, for example with
+       a counter in `Var.__init__`, and compare both counts with that of
+       one plain gradient. Which method records the backward pass, and
+       what does that cost in memory?
+   :exlabel:`ex_mdl-matrix-calculus-autodiff-hessian-vector-product`
+
+1. **Gradient of the spectral norm.** ● Spectral normalization
+   :cite:`Miyato.Kataoka.Koyama.ea.2018` divides each weight matrix
+   $\mathbf W$ of a network by its largest singular value
+   $\sigma_1(\mathbf W)$, so training differentiates $\sigma_1$.
+    1. Let $\mathbf S$ be a real symmetric matrix with a simple eigenvalue
+       $\lambda$ and unit eigenvector $\mathbf q$, and perturb it to
+       $\mathbf S+t\mathbf E$ with $\mathbf E$ symmetric. The implicit
+       function theorem of :numref:`subsec_mdl-implicit-diff`, applied to
+       $(\mathbf S+t\mathbf E)\mathbf q=\lambda\mathbf q$ and
+       $\mathbf q^\top\mathbf q=1$, makes $\lambda(t)$ and $\mathbf q(t)$
+       differentiable. Differentiate both equations at $t=0$ to show the
+       Hellmann--Feynman theorem
+       $\lambda'(0)=\mathbf q^\top\mathbf E\,\mathbf q$, and give
+       $\nabla_{\mathbf S}\lambda$ for the inner product
+       $\operatorname{tr}(\mathbf A^\top\mathbf B)$.
+    1. Apply (a) to
+       $\sigma_1(\mathbf W)^2=\lambda_{\max}(\mathbf W^\top\mathbf W)$ to
+       show that $\nabla_{\mathbf W}\sigma_1=\mathbf u_1\mathbf v_1^\top$
+       when $\sigma_1$ is simple, where $\mathbf u_1$ and $\mathbf v_1$
+       are the top left and right singular vectors. Check the formula by
+       central differences on a random $5\times3$ matrix in NumPy.
+    1. Compute $\sigma_1(\mathbf I+t\operatorname{diag}(1,-1))$ for small
+       $t$ of both signs. Is $\sigma_1$ differentiable at the $2\times2$
+       identity, and which hypothesis of (a) fails there?
+
+    *Adapted from Alan Edelman and Steven G. Johnson,
+    [Matrix Calculus for Machine Learning and Beyond, problem set 2](https://ocw.mit.edu/courses/18-s096-matrix-calculus-for-machine-learning-and-beyond-january-iap-2023/mit18_s096iap23_pset2.pdf),
+    MIT 18.S096, IAP 2023, Problem 3.*
+
+1. [code] **Checkpointing on the tape.** ● Let
+   $x_k=x_{k-1}-0.01\,x_{k-1}^2$ for $k=1,\ldots,L$ with $L=400$ and
+   $x_0=1$, and differentiate $x_L$ with respect to $x_0$. `Var` has no
+   subtraction, so record each step as `x + (-0.01) * x * x`.
+    1. Record the chain on the tape with plain `backprop` and count the
+       nodes that the tape holds when the backward sweep starts.
+    1. `backprop` seeds the output adjoint with $1$. Generalize it to
+       accept any seed. Show that recording a segment
+       $x_i\mapsto x_j$ from a fresh leaf for $x_i$ and running the
+       generalized `backprop` from $x_j$ with the seed
+       $\partial x_L/\partial x_j$ returns $\partial x_L/\partial x_i$ in
+       the adjoint of the leaf.
+    1. Implement the schedule of :numref:`fig_mdl-cal-checkpointing` with
+       segments of $s$ steps: a forward pass in plain floats that stores
+       $x_0,x_s,x_{2s},\ldots$, followed by a backward pass that re-records
+       one segment at a time, from the last to the first, and applies (b).
+       Check that the result equals the gradient of (a).
+    1. For $s\in\{1,5,10,20,100,400\}$, report the number of stored
+       checkpoints, the largest tape, and the number of evaluations of the
+       step $x\mapsto x-0.01x^2$, the first forward pass included. Which
+       $s$ minimizes the sum of checkpoints and largest tape? Repeat the
+       sweep for $L=100$ and $L=1600$ over the divisors $s\le800$ of $L$
+       (a single segment of $1600$ steps exceeds Python's default
+       recursion limit in `backprop`). How does the minimizing $s$ scale
+       with $L$?
+
+1. [extended] **Equilibrium layer.** ●● A deep equilibrium layer
+   :cite:`Bai.Kolter.Koltun.2019` outputs the fixed point
+
+   $$\mathbf z^\star=\tanh(\mathbf W\mathbf z^\star+\mathbf c),$$
+
+   where $\mathbf c$ depends on the layer's input. Let the loss be
+   $\ell=\tfrac12\|\mathbf z^\star-\mathbf y\|^2$, and write
+   $\mathbf D=\operatorname{diag}\bigl(1-(z^\star_1)^2,\ldots,1-(z^\star_d)^2\bigr)$
+   for the derivative of $\tanh$ at the fixed point.
+    1. Show that the map $\mathbf z\mapsto\tanh(\mathbf W\mathbf z+\mathbf c)$
+       is a contraction when $\|\mathbf W\|_2<1$, so that the fixed point
+       exists and is unique, and that $\mathbf I-\mathbf D\mathbf W$ is
+       then invertible. Use :eqref:`eq_mdl-implicit-grad` to derive
+       $\nabla_{\mathbf W}\ell$, and show that it equals
+       $(\mathbf D\mathbf a)(\mathbf z^\star)^\top$ for the adjoint
+       $\mathbf a$ that solves
+       $(\mathbf I-\mathbf D\mathbf W)^\top\mathbf a=\mathbf z^\star-\mathbf y$.
+    1. Take $d=20$, a standard normal $\mathbf G\in\mathbb R^{d\times d}$,
+       $\mathbf S=\mathbf G+\mathbf G^\top$, and
+       $\mathbf W=\rho\,\mathbf S/\|\mathbf S\|_2$ for
+       $\rho\in\{0.5,0.9,0.99\}$, and draw the entries of $\mathbf c$ and
+       $\mathbf y$ independently from $\mathcal N(0,0.1^2)$. In NumPy,
+       compute $\mathbf z^\star$ by fixed-point iteration and the gradient
+       of (a) with one linear solve. Check a few of its entries against
+       central differences of $\ell$.
+    1. Unrolled differentiation runs $K$ iterations from
+       $\mathbf z_0=\mathbf 0$ and backpropagates through all of them.
+       Implement this backward sweep by hand, one VJP per iteration. Plot
+       against $K$ the error of the unrolled gradient relative to the
+       gradient of (b), together with the forward error
+       $\|\mathbf z_K-\mathbf z^\star\|$. Compare the decay rate of both
+       errors with the spectral radius of $\mathbf D\mathbf W$. How does
+       the ratio of the two errors behave as $K$ grows, and why? How does
+       the memory of each gradient scale with $K$?
+    1. Replace the linear solve by $m$ steps of the iteration
+       $\mathbf a\leftarrow(\mathbf z^\star-\mathbf y)+(\mathbf D\mathbf W)^\top\mathbf a$
+       from $\mathbf a=\mathbf 0$, a truncated Neumann series that
+       :citet:`Geng.Zhang.Bai.ea.2021` use as a *phantom gradient*. Show
+       that this truncated adjoint gives the same gradient as
+       backpropagation through $m$ iterations started at
+       $\mathbf z^\star$. Plot the cosine between the truncated and the
+       exact gradient against $m$ for each $\rho$. The gradient for $m=1$
+       needs no linear solve and is the Jacobian-free backpropagation of
+       :citet:`Fung.Heaton.Li.ea.2022`. Is it still a descent direction
+       for $\ell$?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/)

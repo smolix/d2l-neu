@@ -483,6 +483,7 @@ blocks.
    Fashion-MNIST at $96 \times 96$. Work out the feature-map size at which
    each stage operates and explain what a $3 \times 3$ convolution computes
    on the last one.
+
 1. [code] **ResNet blocks in RegNetX.** Replace `d2l.ResNeXtBlock` in
    `AnyNet.stage` by the `Residual` block of :numref:`sec_resnet`, keeping
    the depths and widths of `RegNetX32`. Compare parameter count,
@@ -491,23 +492,7 @@ blocks.
    as a function of $c$ and the number of groups $g$, the `groups` argument
    of `d2l.ResNeXtBlock`. Check both formulas against the parameters of one
    such block in each model.
-1. [code] **VioNet.** ● `RegNetX32` passes `groups=16`, the number of
-   groups, to stages of width 32 and 80, so its group widths, the channels
-   per group, are 2 and 5. Build a baseline with the depths and widths of
-   `RegNetX32` and one group width of 16 shared by both stages. Then
-   implement variants of the baseline that each violate one design
-   principle of $\textrm{AnyNetX}_E$ (:numref:`subsec_regnet`) at roughly
-   matched parameter count: widths that decrease across stages, depths
-   that decrease across stages, group widths that differ between stages,
-   and bottleneck ratios that differ between stages.
-    1. Report validation accuracy for each violation against the baseline.
-    1. Which of depth $d_i$, width $c_i$, group width, and bottleneck ratio
-       $k_i$ matters most here?
-    1. Compare your ranking with :numref:`fig_regnet-fig`. Which violations
-       did the sampled design spaces of
-       :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` also find harmless,
-       and why does one network per violation give weaker evidence than an
-       error CDF?
+
 1. **Quantized linear widths.** :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
    turn the observation that width should grow linearly with the block index
    into a rule with three numbers. For $d$ blocks, the target width of block
@@ -527,6 +512,7 @@ blocks.
     1. A shared group width, the number of channels per group, must divide
        every stage width. Which of your widths violate this for a group
        width of 16, and how would you adjust them?
+
 1. [code] **RegNetY.** RegNetY adds the `SE` gate of :numref:`subsec_se` to
    every block. Insert `SE` into `d2l.ResNeXtBlock` after its grouped
    $3 \times 3$ convolution, as :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
@@ -538,6 +524,39 @@ blocks.
        no floating point operations?
     1. Sweep the reduction ratio over $r \in \{1, 4, 16\}$. How sensitive
        are accuracy and parameter count to $r$?
+
+1. **Design spaces versus architecture search.** Neural architecture search
+   :cite:`zoph2016neural,liu2018darts` selects one network from a search
+   space; the method of :numref:`subsec_design_space_distributions`
+   constrains a distribution over networks.
+    1. Explain why comparing empirical CDFs :eqref:`eq_edf` cannot identify
+       the best network in a space, and why that is not its purpose.
+    1. Of the four assumptions listed in
+       :numref:`subsec_design_space_distributions`, which does a NAS method
+       that trains candidates briefly also rely on, and which are specific
+       to the design-space approach?
+    1. Name one failure mode of each approach: what can go wrong when a
+       single architecture is selected by a proxy score, and what can go
+       wrong when a design space is constrained by rules fitted to a sample?
+
+1. [code] **VioNet.** ● `RegNetX32` passes `groups=16`, the number of
+   groups, to stages of width 32 and 80, so its group widths, the channels
+   per group, are 2 and 5. Build a baseline with the depths and widths of
+   `RegNetX32` and one group width of 16 shared by both stages. Then
+   implement variants of the baseline that each violate one design
+   principle of $\textrm{AnyNetX}_E$ (:numref:`subsec_regnet`) at roughly
+   matched parameter count: widths that decrease across stages, depths
+   that decrease across stages, group widths that differ between stages,
+   and bottleneck ratios that differ between stages.
+    1. Report validation accuracy for each violation against the baseline.
+    1. Which of depth $d_i$, width $c_i$, group width, and bottleneck ratio
+       $k_i$ matters most here?
+    1. Compare your ranking with :numref:`fig_regnet-fig`. Which violations
+       did the sampled design spaces of
+       :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` also find harmless,
+       and why does one network per violation give weaker evidence than an
+       error CDF?
+
 1. [extended] **Proxy reliability.** ● The method of
    :numref:`subsec_design_space_distributions` assumes that accuracy after a
    few epochs predicts final accuracy and that results at small scale carry
@@ -557,19 +576,7 @@ blocks.
     1. Which of the two assumptions holds up better in your experiment? What
        would a failure of the weaker one do to conclusions drawn from short,
        small-scale runs such as those behind :numref:`fig_regnet-fig`?
-1. **Design spaces versus architecture search.** Neural architecture search
-   :cite:`zoph2016neural,liu2018darts` selects one network from a search
-   space; the method of :numref:`subsec_design_space_distributions`
-   constrains a distribution over networks.
-    1. Explain why comparing empirical CDFs :eqref:`eq_edf` cannot identify
-       the best network in a space, and why that is not its purpose.
-    1. Of the four assumptions listed in
-       :numref:`subsec_design_space_distributions`, which does a NAS method
-       that trains candidates briefly also rely on, and which are specific
-       to the design-space approach?
-    1. Name one failure mode of each approach: what can go wrong when a
-       single architecture is selected by a proxy score, and what can go
-       wrong when a design space is constrained by rules fitted to a sample?
+
 1. [extended] **A ConvNeXt design space.** ● The design spaces of
    :numref:`fig_regnet-fig` were built from ResNeXt blocks. Build a
    two-stage AnyNet space from the `ConvNeXtBlock` of :numref:`sec_convnext`

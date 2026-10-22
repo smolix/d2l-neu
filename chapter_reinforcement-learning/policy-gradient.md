@@ -191,6 +191,7 @@ $$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau)\ \nab
 This expectation can be estimated by sampling trajectories from the current policy.
 
 ### Cancellation of the Transition Probabilities
+:label:`subsec_pg-cancellation`
 
 Although $P(\tau;\theta)$ contains the transition kernel, its derivative does not require evaluating that kernel. Taking the logarithm and differentiating gives
 
@@ -217,7 +218,7 @@ Since each update changes the policy, a new on-policy batch is collected before 
 ![One REINFORCE step on a one-step problem. The Gaussian policy is $\pi_\theta(a)=\mathcal{N}(a;\mu,1)$ with $\mu=0$, and the reward is $R(a)=0.4+2e^{-(a-2)^2/2}$, giving expected reward $J=0.92$ and exact gradient $\mathrm{d}J/\mathrm{d}\mu=0.52$. (a) Twelve sampled actions increase their log-probabilities in proportion to their rewards. All arrows point upward because all rewards are positive. (b) After the update, the policy mean moves from $0$ to $0.55$, toward the actions with higher rewards.](../img/mdl-rl-score-ascent.svg)
 :label:`fig_rl_score_ascent`
 
-The implementation reuses `policy_step` from :numref:`sec_imitation`. Behavior cloning assigned weight one to each demonstrated action; REINFORCE assigns the trajectory return $R(\tau_i)$ to every action in trajectory $i$. The caller supplies the agent and records the number of environment steps:
+The implementation reuses `policy_step` from :numref:`sec_imitation`, which takes one Adam step with the learning rate `lr` of `ActorCritic.tabular` ($0.1$ by default) in place of the plain ascent step. Behavior cloning assigned weight one to each demonstrated action; REINFORCE assigns the trajectory return $R(\tau_i)$ to every action in trajectory $i$. The caller supplies the agent and records the number of environment steps:
 
 ```{.python .input #policy-gradient-the-reinforce-estimator-1}
 %%tab pytorch, jax
@@ -262,7 +263,7 @@ probs = np.exp(agents[0].log_prob_np(np.repeat(np.arange(16), 4),
 d2l.show_grid(env.unwrapped.desc, probs.max(axis=1), probs.argmax(axis=1))
 ```
 
-The arrows show the most probable action in each state, and shading shows its probability. The learned policy concentrates on one of the three optimal six-step paths; the selected path depends on the sampled trajectories and can differ across seeds. The holes and goal remain uniform because actions are never taken from terminal states. Preferences at other states change in proportion to how often those states are visited.
+The arrows show the most probable action in each state, and shading shows its probability. The learned policy concentrates on one of the three optimal six-step paths; the selected path depends on the sampled trajectories and can differ across seeds. The holes and goal remain uniform because actions are never taken from terminal states. Preferences at the other states change only if those states occur in successful episodes, and by far less than in proportion to their visit counts, because Adam scales the step of each coordinate separately.
 
 ### The Policy Gradient Theorem
 
@@ -275,9 +276,9 @@ $$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 
 
 *where $d^{\pi_\theta}_\gamma(s) = (1 - \gamma) \sum_{t \geq 0} \gamma^t \Pr(s_t = s)$ is the discounted state-occupancy distribution* :cite:`Sutton.McAllester.Singh.ea.2000`.
 
-The theorem has three useful consequences. First, the score at time $t$ is weighted by $Q^{\pi_\theta}(s_t,a_t)$ rather than by rewards received before the action was taken; removing those earlier rewards yields the reward-to-go estimator of :numref:`sec_baselines`. Second, the occupancy form averages over the discounted frequency with which the policy visits each state, including the effect of the start distribution $\mu_0$. Third, omitting the factors $\gamma^t$, as many implementations do, replaces the discounted occupancy $d^{\pi_\theta}_\gamma$ by an undiscounted visitation distribution. This changes the relative weighting of states and generally produces the gradient of a different objective.
+The theorem has three useful consequences. First, the score at time $t$ is weighted by $Q^{\pi_\theta}(s_t,a_t)$ rather than by rewards received before the action was taken; removing those earlier rewards yields the reward-to-go estimator of :numref:`sec_baselines`. Second, the occupancy form averages over the discounted frequency with which the policy visits each state, including the effect of the start distribution $\mu_0$. Third, omitting the factors $\gamma^t$, as many implementations do, replaces the discounted occupancy $d^{\pi_\theta}_\gamma$ by an undiscounted visitation distribution. This changes the relative weighting of states, and the resulting update is in general not the gradient of any objective :cite:`Nota.Thomas.2020`.
 
-Exercise 6 examines the difference.
+Exercise :exref:`ex_policy-gradient-discount-that-implementations-drop` examines the difference.
 
 ## Costs and Limitations
 
@@ -296,15 +297,16 @@ print(f'environment steps spent by the full run: {np.sort(steps.sum(axis=1))}')
 
 Learning required roughly $3{,}000$--$4{,}500$ environment steps, while the complete run used about $27{,}000$. Data collection continues at every on-policy update even after performance has stabilized. The median Q-learning run in :numref:`sec_qlearning` used $95{,}569$ steps on the harder slippery environment, while its deterministic comparison used 256 episodes on this map. These results are not a controlled algorithm comparison, but they illustrate why interaction should be reported in environment steps.
 
-Exercise 5 reuses a batch for several uncorrected updates and tracks the probability ratio between the updated policy and the policy that collected the data; :numref:`sec_ppo` develops a controlled form of such reuse.
+Exercise :exref:`ex_policy-gradient-breaking-policy-rule-purpose` reuses a batch for several uncorrected updates and tracks the probability ratio between the updated policy and the policy that collected the data; :numref:`sec_ppo` develops a controlled form of such reuse.
 
 ### Unbiasedness and Variance
 
 Unbiasedness in :eqref:`eq_reinforce` means that the expectation of the sampled vector equals $\nabla_\theta J(\theta)$. Exact gradients are generally unavailable, but the sixteen-state example permits a direct comparison. For the softmax policy, writing $P^\pi$ for its transition matrix and $r^\pi$ for its expected one-step reward, the objective of :eqref:`eq_pg_objective` has the closed form
 
 $$J(\theta) = V^{\pi_\theta}(s_0) = \Big[ \big(I - \gamma P^{\pi_\theta}\big)^{-1} r^{\pi_\theta} \Big]_{s_0},$$
+:eqlabel:`eq_pg_exact_objective`
 
-a differentiable linear solve, so automatic differentiation gives the exact $\nabla_\theta J$. As in :numref:`sec_qlearning`, this exact solution provides a reference for a sampled estimator. We evaluate the policy after 16 updates, while its gradient is still appreciable:
+a differentiable linear solve, so automatic differentiation gives the exact $\nabla_\theta J$. In the table `mdp` built below, holes and the goal are absorbing states with zero reward, so the solve accounts for termination. As in :numref:`sec_qlearning`, this exact solution provides a reference for a sampled estimator. We evaluate the policy after 16 updates, while its gradient is still appreciable:
 
 ```{.python .input #policy-gradient-unbiased-and-how-noisy-1}
 %%tab pytorch
@@ -396,6 +398,7 @@ for n in [4, 16, 64]:
 The mean of fifty estimates approaches the exact gradient as the batch size grows: its cosine with the exact gradient increases from about $0.93$ to $1.00$. This is consistent with unbiasedness, although cosine similarity alone is not a proof because it does not measure magnitude errors. Individual estimates remain noisy. At $n=4$, the typical error exceeds three and a half times the norm of the true gradient, and some batches contain no successful trajectories and therefore yield a zero estimate. The error decreases approximately as $1/\sqrt{n}$, from about $3.6$ to $1.7$ to $0.9$ as the batch size quadruples. :numref:`sec_baselines` evaluates variance-reduction methods against the same exact gradient.
 
 ### Nonconcavity of the Objective
+:label:`subsec_pg-nonconcavity`
 
 The objective $J(\theta)$ is generally nonconcave. The softmax makes it smooth, but a nearly deterministic suboptimal policy can lie on a plateau where the score and gradient are very small. Standard convergence results establish approach to a stationary point under assumptions such as smoothness, bounded estimator variance, and suitable decreasing step sizes. The fixed-rate Adam implementation used here does not satisfy those assumptions. Its success from a uniform initialization on this small environment is therefore empirical rather than a general guarantee.
 
@@ -407,50 +410,211 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
 
 ## Exercises
 
-1. [conceptual] *The score sums to zero.* Show that the derivative
-   :eqref:`eq_softmax_score` sums to zero over $b \in \mathcal{A}$. Conclude
-   that one REINFORCE update at a visited state can only *redistribute*
-   probability among the actions at that state, never raise all of them.
-   Which line of the section's gradient-check cell encodes this identity,
-   and what would break if the $-\pi_\theta(b \mid s)$ term were dropped?
-1. [short-code] *Unbiased, where enumeration is exact.* Build a two-state,
-   two-action MDP with horizon $T = 2$, small enough to enumerate every
-   trajectory. Repeat the yardstick measurement there: compute
-   $\nabla_\theta J(\theta)$ exactly from the sum in :eqref:`eq_pg_objective`,
-   then compute the REINFORCE estimate :eqref:`eq_reinforce` from
-   $n \in \{10, 100, 10000\}$ sampled trajectories, ten times each, and plot
-   the mean error and the standard deviation of the estimate against $n$.
-   Confirm the $1/\sqrt{n}$ rate. Which of the two numbers does not shrink
-   with $n$ at all? Explain why this invariance is useful.
-1. [short-code] *Batch size and learning rate.* Sweep `batch_episodes` over
-   $\{1, 4, 16, 64\}$ and the learning rate of `ActorCritic.tabular` over
-   $\{0.03, 0.1, 0.3\}$, three seeds each, and report for every cell of the
-   grid the total number of *episodes* (not updates) consumed before the
-   batch mean return first exceeds $0.5$. Which direction of the grid is a
-   real improvement, and which merely trades updates for episodes?
-1. [conceptual] *Sparse reward, seen from the estimator.* A trajectory that
-   never reaches the goal has $R(\tau) = 0$ and drops out of
-   :eqref:`eq_reinforce` entirely. Now change the reward to $-1$ per step
-   with $0$ at the goal, which encodes the same preference for short
-   successful paths. Does the drop-out problem disappear? Describe the new
-   pathology, and say which of the two reward conventions the baseline of
-   :numref:`sec_baselines` repairs.
-1. [short-code] *Breaking the on-policy rule on purpose.* Modify
-   `train_reinforce` to reuse each batch for $k$ gradient steps without any
-   correction, for $k \in \{1, 2, 5, 20\}$. Alongside the return, log the
-   mean and the maximum over the batch of
-   $\pi_\theta(a_t \mid s_t) / \pi_{\theta_{\textrm{old}}}(a_t \mid s_t)$ at
-   the last of the $k$ steps (`log_prob_np` makes this two lines). At which
-   $k$ does the return start to suffer, and what is the ratio doing at that
-   point? Keep the diagnostic in mind: it is the central object of
-   :numref:`sec_ppo`.
-1. [conceptual] *The discount that implementations drop.* The trajectory
-   form of the policy gradient theorem places a factor $\gamma^t$ in front
-   of the score at step $t$. Weighting each step's score by the reward-to-go
-   *without* that factor, as the next section will, therefore estimates the
-   gradient of a different objective. Write that objective down, say how it
-   differs from $J(\theta)$, and give a practical reason why nearly every
-   implementation makes this choice anyway.
+1. [code] **Redundant preferences.** Adding the same constant $c_s$ to every
+   preference $\theta_{s,a}$ at a state $s$ leaves the policy
+   :eqref:`eq_softmax_policy` unchanged, so the table of
+   `ActorCritic.tabular` has one redundant direction per state.
+    1. Use :eqref:`eq_softmax_score` to show that every REINFORCE estimate
+       :eqref:`eq_reinforce` is orthogonal to each of these directions.
+       Conclude that plain gradient ascent
+       $\theta \leftarrow \theta + \alpha \hat{u}$, started from the zero
+       table, keeps every row sum
+       $\sum_a \theta_{s,a}$ at zero.
+    1. `ActorCritic.tabular` updates the table with Adam instead. Compute
+       the row sums of the trained table of `agents[0]`, and explain their
+       sign from the way Adam scales each coordinate of its step
+       separately.
+    1. While a coordinate's gradient keeps its sign, Adam moves it by about
+       `lr` per update. What rate of change of a row sum does this bound
+       allow? Rerun the training of `agents[0]` with seed $0$, record the
+       row sum at the start state after every update, and plot it against
+       the update index. Compare its growth with that rate, and explain the
+       difference.
+1. **Parameter-dependent dynamics.** The derivation of
+   :numref:`subsec_pg-cancellation` assumes that the transition
+   probabilities do not depend on $\theta$. A recommender violates this
+   assumption when users who see an item more often click it less.
+    1. Suppose the dynamics are $P_\theta(s_{t+1} \mid s_t, a_t)$. Repeat
+       the derivation of $\nabla_\theta \log P(\tau; \theta)$ and state the
+       term that no longer vanishes. What would the agent need to know to
+       compute it?
+    1. In a one-step model, the recommender shows item 1 with probability
+       $\pi_\theta(1) = \sigma(\theta)$ and item 0 otherwise, where $\sigma$
+       is the logistic function. A shown item 1 is clicked with probability
+       $1 - \sigma(\theta)$, item 0 is never clicked, and a click earns
+       reward $1$. Compute $J(\theta)$ and $\mathrm{d}J/\mathrm{d}\theta$.
+       Compare the derivative with the expectation of the REINFORCE estimate
+       :eqref:`eq_reinforce`, which drops that term. Where does plain
+       gradient ascent converge with each of the two?
+1. [code] **A one-step policy gradient.** The example of
+   :numref:`fig_rl_score_ascent` draws actions from the Gaussian policy
+   $\pi_\theta(a) = \mathcal{N}(a; \mu, 1)$ and rewards them with
+   $R(a) = 0.4 + 2e^{-(a-2)^2/2}$.
+    1. Show that the score with respect to $\mu$ is $a - \mu$, so that a
+       single-sample REINFORCE estimate of $\mathrm{d}J/\mathrm{d}\mu$ is
+       $R(a)(a - \mu)$.
+    1. Compute $J(\mu) = E_{a \sim \pi_\theta}[R(a)]$ in closed form, and
+       confirm the values $J = 0.92$ and $\mathrm{d}J/\mathrm{d}\mu = 0.52$
+       that the caption gives for $\mu = 0$. Which $\mu$ maximizes $J$?
+    1. Compute the variance of the single-sample estimate at $\mu = 0$; a
+       Monte Carlo average over $10^6$ samples suffices. How many samples
+       does an estimate need for its standard error to fall to 10% of the
+       gradient? What is the standard error of the figure's twelve-sample
+       estimate?
+1. [code] **Sparse rewards.** Consider a single state with two actions,
+   softmax preferences $\theta_1, \theta_2$, reward $1$ for action 1 and
+   $0$ for action 2, and write $p = \pi_\theta(1)$.
+    1. Use :eqref:`eq_softmax_score` to find the mean and the standard
+       deviation of the single-sample REINFORCE estimate of
+       $\partial J / \partial \theta_1$. Show that the standard deviation is
+       $\sqrt{(1-p)/p}$ times the mean.
+    1. On FrozenLake, the analogous quantity is the probability $p_0$ that
+       an episode of the uniform initial policy reaches the goal. Compute
+       $p_0$ with `d2l.policy_evaluation` on
+       `d2l.TabularMDP.from_gym(env, 1.0)`, whose value function at
+       $\gamma = 1$ is the probability of reaching the goal (problem
+       :exref:`ex_value-iter-undiscounted-lake`b of :numref:`sec_valueiter`).
+       What fraction of the batches of 16 episodes in `train_reinforce`
+       contains no success at the start of training, and what is the ratio
+       of part a at $p = p_0$?
+   :exlabel:`ex_policy-gradient-sparse-rewards`
+1. **Shifted rewards.** A trajectory with return zero drops out of
+   :eqref:`eq_reinforce`, so subtracting one from every reward is a
+   tempting way to make failed episodes informative.
+    1. In the two-action setting of problem
+       :exref:`ex_policy-gradient-sparse-rewards`, change the rewards to $0$
+       for action 1 and $-1$ for action 2, which subtracts one from every
+       return. Show that the mean of the single-sample estimate is unchanged
+       and that the ratio of problem
+       :exref:`ex_policy-gradient-sparse-rewards`a becomes
+       $\sqrt{p/(1-p)}$. For which policies does the shift help, and for
+       which does it hurt?
+    1. On FrozenLake, the same subtraction makes every step earn $-1$ and
+       the step into the goal earn $0$. Show that the return of an episode
+       of $T$ steps decreases by $(1 - \gamma^T)/(1 - \gamma)$. Does this
+       shift change $J$ by a constant, as in the two-action setting?
+    1. The shift is the per-step charge $c = -1$ of problem
+       :exref:`ex_mdp-reward-design-its-failure`b of :numref:`sec_mdp`. At
+       $\gamma = 0.95$, compare the shifted return of the shortest path from
+       the start into a hole with that of a shortest path to the goal on the
+       deterministic map. Which policy maximizes $J$ under the shifted
+       rewards? Among the failed episodes of a batch, which ones does the
+       estimate :eqref:`eq_reinforce` penalize least?
+1. [code] **Batch size and learning rate.** Sweep `batch_episodes` of
+   `train_reinforce` over $\{1, 4, 16, 64\}$ and the learning rate `lr` of
+   `ActorCritic.tabular` over $\{0.03, 0.1, 0.3\}$, with three seeds each.
+   Give every run a budget of $8{,}192$ episodes, that is,
+   `num_updates=8192 // batch_episodes`. For every cell, record the number
+   of episodes consumed before $J(\theta)$ first exceeds $0.5$, evaluating
+   $J(\theta)$ exactly with :eqref:`eq_pg_exact_objective` after each
+   update; the batch mean return is too coarse a criterion at batch size
+   one. Each run can stop once $J(\theta)$ exceeds $0.5$. Which direction
+   of the grid saves episodes, and which only trades updates for episodes?
+   Explain the pattern from the way Adam scales its steps.
+1. [code] **The theorem in a table.** ● For the tabular softmax policy,
+   write $\rho(s) = \sum_{t \geq 0} \gamma^t \Pr(s_t = s)$ for the
+   discounted number of visits to $s$, so that
+   $d^{\pi_\theta}_\gamma = (1 - \gamma)\rho$ in :eqref:`eq_pg_theorem`.
+    1. Combine the occupancy form of :eqref:`eq_pg_theorem` with
+       :eqref:`eq_softmax_score` to show that
+       $$\frac{\partial J}{\partial \theta_{s,b}} = \rho(s)\, \pi_\theta(b \mid s) \big( Q^{\pi_\theta}(s,b) - V^{\pi_\theta}(s) \big).$$
+    1. By problem :exref:`ex_value-iter-linear-system`b of
+       :numref:`sec_valueiter`, $\rho^\top$ is the row of
+       $(I - \gamma P^{\pi_\theta})^{-1}$ that belongs to $s_0$. Compute
+       $\rho$, $V^{\pi_\theta}$ and $Q^{\pi_\theta}$ at the parameters of
+       `probe` by linear solves with `mdp.P` and `mdp.r`, assemble the
+       formula, and compare the result with `g_exact`.
+   :exlabel:`ex_policy-gradient-theorem-table`
+1. [code] **Reusing a batch.** ● Modify `train_reinforce` to call
+   `policy_step` $k$ times on each batch without any correction, for
+   $k \in \{1, 2, 5, 20\}$. Write $\theta_\textrm{old}$ for the parameters
+   that collected the batch.
+    1. On the deterministic map, log the batch mean return and, after the
+       $k$-th step, the mean and the maximum over the batch of the ratio
+       $\pi_\theta(a_t \mid s_t) / \pi_{\theta_\textrm{old}}(a_t \mid s_t)$;
+       `log_prob_np` evaluates both policies. How many environment steps
+       does each $k$ need before the batch mean return reaches $0.7$, and
+       how large does the ratio grow?
+    1. As $k$ grows, the steps approach a maximizer of the surrogate
+       $\sum_t w_t \log \pi_\theta(a_t \mid s_t)$ on the fixed batch, where
+       $w_t$ is the return of the episode that contains step $t$. Find the
+       maximizing tabular policy in closed form, and use it to explain the
+       result of part a.
+    1. Compare $k = 1$ with $k = 20$ on the slippery map
+       (`is_slippery=True`) by the final $J(\theta)$, computed with
+       :eqref:`eq_pg_exact_objective` from the slippery transition table.
+       The runs take a few minutes. Explain the difference from the
+       deterministic map with the closed form of part b.
+   :exlabel:`ex_policy-gradient-breaking-policy-rule-purpose`
+1. [code] **Testing unbiasedness.** ● The cosine that the section computes
+   from fifty draws of `reinforce_estimate` cannot reveal a small bias. A
+   sharper test averages $M$ estimates: for an unbiased estimator, the
+   angle between the average and the exact gradient shrinks toward zero as
+   $M$ grows, whereas for a biased one it levels off.
+    1. At the parameters of `probe`, draw $M = 25{,}600$ estimates with
+       `reinforce_estimate` at $n = 1$. Plot one minus the cosine between
+       the running average and `g_exact` against $M$ on logarithmic axes.
+       Explain the slope of the curve.
+    1. Repeat the measurement after rebuilding `env` with
+       `max_episode_steps` lowered to $20$ and to $10$, so that `rollout`
+       ends some episodes by truncation. At what level does each curve
+       settle? Which objective do the truncated estimates estimate the
+       gradient of without bias?
+1. **Softmax plateaus.** ● Consider a single state with two actions,
+   rewards $1$ and $0$, and initial preferences $\theta = (0, L)$ with
+   $L > 0$, so that the better action starts with probability
+   $1/(1 + e^L)$. This is the plateau of :numref:`subsec_pg-nonconcavity`
+   in its smallest form.
+    1. Show that $J$ depends on $\theta$ only through
+       $x = \theta_1 - \theta_2$, as $J = \sigma(x)$ with the logistic
+       function $\sigma$. Conclude that $J$ is not concave.
+    1. Show that one step of plain gradient ascent with step size $\alpha$
+       increases $x$ by $2\alpha\, \sigma(x)(1 - \sigma(x))$. Treat this as
+       a differential equation, and show that reaching
+       $\pi_\theta(1) = 1/2$ from $x = -L$ takes about $e^L / (2\alpha)$
+       steps when $L$ is large.
+    1. Adam, fed the same exact gradients, moves each coordinate by about
+       $\alpha$ per step while the sign of the gradient stays fixed.
+       Estimate the number of steps it needs, and compare it with the
+       answer of part b at
+       $L = 10$ and $\alpha = 0.1$. What does the comparison suggest about
+       the use of Adam in `ActorCritic.tabular`?
+   :exlabel:`ex_policy-gradient-softmax-plateaus`
+1. [code] **The dropped discount.** ●● Many implementations omit the
+   factor $\gamma^t$ from the trajectory form of :eqref:`eq_pg_theorem`,
+   which gives the update field
+
+   $$F(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 0} \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ Q^{\pi_\theta}(s_t, a_t) \Big].$$
+
+   :citet:`Nota.Thomas.2020` prove that $F$ need not be the gradient of any
+   function, and they construct an MDP in which exact updates along $F$
+   drive the policy toward the worst possible policy. The parts below check
+   the first finding on FrozenLake and then construct a small MDP in which
+   a step along $F$ lowers $J$, the starting point of the second.
+    1. Following problem :exref:`ex_policy-gradient-theorem-table`a, show
+       that
+
+       $$F_{s,b}(\theta) = \eta(s)\, \pi_\theta(b \mid s) \big( Q^{\pi_\theta}(s,b) - V^{\pi_\theta}(s) \big),$$
+
+       where $\eta(s) = \sum_{t \geq 0} \Pr(s_t = s)$ is the expected number
+       of visits to $s$ in an episode. Compute $\eta$ by a linear solve in
+       which the rows of the policy's transition matrix that belong to
+       terminal states are set to zero.
+    1. The Jacobian of a continuously differentiable gradient field is a
+       Hessian and therefore symmetric. Compute the Jacobian $DF$ at the
+       zero table and at the parameters of `probe` by automatic
+       differentiation, and report $\|DF - DF^\top\| / \|DF\|$ in the
+       Frobenius norm. Run the same check on $\nabla_\theta J$ as a control.
+    1. Measure the cosine between $F$ and $\nabla_\theta J$ at the same two
+       points. Give a practical reason why implementations accept $F$
+       anyway.
+    1. Show that $F(\theta)^\top \nabla_\theta J(\theta) \geq 0$ for the
+       tabular softmax policy at every $\theta$, so that a small step along
+       $F$ never lowers $J$ on FrozenLake. Then construct a small episodic
+       MDP in which a single parameter controls the policy at two states
+       visited in sequence, together with a $\theta$ at which
+       $F(\theta)\, \mathrm{d}J/\mathrm{d}\theta < 0$.
+   :exlabel:`ex_policy-gradient-discount-that-implementations-drop`
 
 [Discussions](https://d2l.discourse.group/)
 

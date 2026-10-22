@@ -300,7 +300,7 @@ $(-1)^{n-1}\sum_i\lambda_i$, on the left it is $(-1)^{n-1}\sum_i a_{ii}$ (this
 uses the permutation expansion of :numref:`subsec_mdl-determinant-general`; only
 the all-diagonal term contributes at that degree). Complex eigenvalues of a real
 matrix enter in conjugate pairs, so both the product and the sum come out real.
-We meet these complex pairs concretely in :numref:`subsec_mdl-jordan`.
+We meet these complex pairs concretely in :numref:`subsec_mdl-complex-rotation`.
 
 Finally, recall that the rank was the maximum number of linearly independent
 columns of a matrix. For a *diagonalizable* matrix, the rank equals the number
@@ -594,7 +594,10 @@ orthogonal, and unitary matrices are normal, as are planar rotation--scaling
 blocks. The complex spectral theorem says that a matrix is normal if and only
 if it has an orthonormal eigenbasis over $\mathbb C$:
 $\mathbf A=\mathbf U\boldsymbol\Lambda\mathbf U^*$ with $\mathbf U$ unitary.
-Consequently,
+Write $\|\mathbf M\|_2=\max_{\|\mathbf x\|=1}\|\mathbf M\mathbf x\|$ for the
+*spectral norm*, the largest factor by which $\mathbf M$ stretches a vector,
+and $\rho(\mathbf A)=\max_i|\lambda_i|$ for the *spectral radius*, the largest
+eigenvalue modulus. For a normal matrix,
 
 $$
 \|\mathbf A^k\|_2
@@ -717,6 +720,7 @@ in deep learning they explain why a spectral-radius constraint alone does not
 control a layer's Lipschitz constant or its gradient amplification.
 
 ### Products of Jacobians
+:label:`subsec_mdl-jacobian-products`
 
 A recurrent or very deep network adds one complication: its backward map is a
 product of generally different Jacobians,
@@ -731,7 +735,10 @@ one another. The product's norm therefore cannot be obtained by multiplying
 the factors' spectral radii. Singular values give finite-horizon
 bounds,
 $\|\mathbf J_T\cdots\mathbf J_1\|_2\le\prod_t\sigma_{\max}(\mathbf J_t)$;
-long-run average logarithmic growth is summarized by **Lyapunov exponents**.
+long-run average logarithmic growth is summarized by **Lyapunov exponents**,
+the largest of which is
+$\mu=\lim_{T\to\infty}\tfrac1T\log\|\mathbf J_T\cdots\mathbf J_1\mathbf x_0\|$
+for a generic starting vector $\mathbf x_0$.
 The practical hierarchy is now precise: eigenvalues describe asymptotic powers
 of one fixed map, singular values describe finite-time stretch, pseudospectra
 describe sensitivity, and Lyapunov exponents describe long products of
@@ -1084,6 +1091,7 @@ $$
 0.1 & 0.3 & 0.5 & 9.0
 \end{bmatrix}.
 $$
+:eqlabel:`eq_mdl-gershgorin-example`
 
 We have $r_1 = 0.3$, $r_2 = 0.6$, $r_3 = 0.8$ and $r_4 = 0.9$.
 The matrix is symmetric, so all eigenvalues are real.
@@ -1222,6 +1230,7 @@ $\rho(\mathbf A)=\max_i|\lambda_i|$, the largest
 eigenvalue modulus, which we examine next.
 
 #### Aside: PageRank and the Perron--Frobenius Theorem
+:label:`subsec_mdl-pagerank`
 
 For non-negative matrices, power iteration is also the algorithm of choice for
 *computing* the dominant eigenvector, and that eigenvector is often the target.
@@ -1251,13 +1260,14 @@ $\mathbf{P}\boldsymbol\pi=\boldsymbol\pi$, the dominant eigenvector. One wrinkle
 the repaired link matrix can still fail irreducibility or be periodic because
 the web contains disconnected pockets and cycles. The separate fix is
 *damping*: iterate the blended matrix
-$\alpha\mathbf{P}+(1-\alpha)\tfrac1n\mathbf{1}\mathbf{1}^\top$ with
+$\mathbf{G}=\alpha\mathbf{P}+(1-\alpha)\tfrac1n\mathbf{1}\mathbf{1}^\top$ with
 $\alpha\approx0.85$, i.e. with probability $0.15$ the surfer teleports to a
 uniformly random page. Every entry of the blend is positive, so
-Perron--Frobenius applies *by construction*, and it guarantees the gap
-$|\lambda_2|\le\alpha$ :cite:`Haveliwala.Kamvar.2003`, so power iteration
-converges fast. Power
-iteration started from the uniform distribution converges to $\boldsymbol\pi$, and
+Perron--Frobenius applies *by construction*, and
+:citet:`Haveliwala.Kamvar.2003` show that the second eigenvalue of
+$\mathbf{G}$ satisfies $|\lambda_2|\le\alpha$, so power iteration
+converges fast. Power iteration on $\mathbf{G}$ started from the uniform
+distribution converges to the stationary distribution of $\mathbf{G}$, and
 that is precisely how PageRank is computed at web scale: forming $\mathbf{P}$
 explicitly is unthinkable, but multiplying by it is cheap (and the teleportation
 term is rank one, so the damped multiply costs no more). The same
@@ -1287,6 +1297,7 @@ not guarantee bounded iterates. This distinction matters for initialization
 and raises the question of how large $\rho$ typically is to begin with.
 
 ### What Random Matrices Look Like
+:label:`subsec_mdl-random-matrices`
 
 Random matrix theory answers it. The *real Ginibre ensemble*
 :cite:`Ginibre.1965` is the $n\times n$ matrix whose entries are independent
@@ -1388,63 +1399,422 @@ trajectory.
   factors' spectral radii alone, control exploding and vanishing gradients.
 
 ## Exercises
-1. For the non-normal matrix in :eqref:`eq_mdl-nonnormal-example`, derive the
-   formula for $(\mathbf A^k)_{12}$ by diagonalization or induction. Find the
-   integer $k$ at which this entry is largest, and compare it with the NumPy
-   result for $\|\mathbf A^k\|_2$.
-1. Prove :eqref:`eq_mdl-normal-power-norm` from a unitary diagonalization.
-   Then construct a diagonalizable $2\times2$ matrix with spectral radius
-   $1/2$ but one-step norm larger than an arbitrary prescribed $M>0$.
-1. What are the eigenvalues and eigenvectors of
-$$
-\mathbf{A} = \begin{bmatrix}
-2 & 1 \\
-1 & 2
-\end{bmatrix}?
-$$
-1.  What are the eigenvalues and eigenvectors of the following matrix, and what is strange about this example compared to the previous one?
-$$
-\mathbf{A} = \begin{bmatrix}
-2 & 1 \\
-0 & 2
-\end{bmatrix}.
-$$
-1. Without computing the eigenvalues, determine whether the smallest eigenvalue of the following matrix can be less than $0.5$. Use a bound rather than explicit computation.
-$$
-\mathbf{A} = \begin{bmatrix}
-3.0 & 0.1 & 0.3 & 1.0 \\
-0.1 & 1.0 & 0.1 & 0.2 \\
-0.3 & 0.1 & 5.0 & 0.0 \\
-1.0 & 0.2 & 0.0 & 1.8
-\end{bmatrix}.
-$$
-1. Classify each matrix as positive definite, positive semidefinite, or
-   indefinite *from its eigenvalues*:
-$\begin{bmatrix}2&1\\1&2\end{bmatrix}$,
-$\begin{bmatrix}1&2\\2&1\end{bmatrix}$, and
-$\begin{bmatrix}1&1\\1&1\end{bmatrix}$.
-1. Prove that for any matrix $\mathbf{X}$, the Gram matrix
-   $\mathbf{X}^\top\mathbf{X}$ is positive semidefinite, and is positive definite
-   if and only if $\mathbf{X}$ has full column rank. Conclude that the sum of two
-   positive semidefinite matrices is again positive semidefinite.
-1. Using $\det\mathbf{A}=\prod_i\lambda_i$ and
-   $\operatorname{tr}\mathbf{A}=\sum_i\lambda_i$, find both eigenvalues of
-   $\begin{bmatrix}4&1\\1&4\end{bmatrix}$ without forming the characteristic
-   polynomial directly. (*Hint:* their sum and product are known.)
-1. Verify the Rayleigh-quotient bounds for
-   $\mathbf{A}=\begin{bmatrix}3&1\\1&2\end{bmatrix}$: compute
-   $\mathbf{x}^\top\mathbf{A}\mathbf{x}/\mathbf{x}^\top\mathbf{x}$ for several unit
-   vectors and confirm the values stay between $\lambda_{\min}$ and
-   $\lambda_{\max}$, hitting the endpoints at the eigenvectors.
-1. The power-iteration tail in :eqref:`eq_mdl-power-iter` decays at rate
-   $|\lambda_2/\lambda_1|$. For $\mathbf{B}=\begin{bmatrix}3&1\\1&2\end{bmatrix}$,
-   compute this rate and predict roughly how many iterations are needed to reduce
-   the misalignment by a factor of $100$.
-1. Compute $\mathbf{J}_2(\lambda)^n$ by hand by writing
-   $\mathbf{J}_2(\lambda)=\lambda\mathbf{I}+\mathbf{N}$ and using
-   $\mathbf{N}^2=\mathbf{0}$. For $\lambda=0.99$, at which $n$ does
-   $\|\mathbf{J}_2(\lambda)^n\|$ peak? Check your prediction against the code
-   in :numref:`subsec_mdl-jordan`.
+
+1. **Trace, determinant, and definiteness.** The identities
+   :eqref:`eq_mdl-det-eig` and :eqref:`eq_mdl-tr-eig` fix both eigenvalues of
+   a $2\times2$ matrix through their sum and product.
+    1. Find the eigenvalues of
+       $\left[\begin{smallmatrix}4&1\\1&4\end{smallmatrix}\right]$ from its
+       trace and determinant alone, without forming the characteristic
+       polynomial. Then find its eigenvectors.
+    1. Show that a symmetric $2\times2$ matrix is positive definite exactly
+       when its trace and its determinant are both positive. Which sign
+       conditions on trace and determinant characterize positive
+       semidefiniteness?
+    1. Each of the matrices
+       $\left[\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right]$,
+       $\left[\begin{smallmatrix}1&2\\2&1\end{smallmatrix}\right]$, and
+       $\left[\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right]$ is the
+       Hessian of the quadratic $f(\mathbf{x})=\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$
+       at its critical point $\mathbf{0}$. Use (b) to decide for each $f$
+       whether the origin is a strict minimum, a minimum that is not strict,
+       or a saddle point. For the saddle point, give a direction along which
+       $f$ decreases.
+    1. Show that the Cholesky factor $\mathbf{L}$ of
+       $\left[\begin{smallmatrix}a&b\\b&c\end{smallmatrix}\right]$ has the
+       diagonal entries $\sqrt a$ and $\sqrt{(ac-b^2)/a}$. Why do the
+       conditions under which a factor with positive diagonal exists coincide
+       with the test of (b)?
+   :exlabel:`ex_mdl-eigendecomposition-trace-determinant`
+
+1. **Rank and zero eigenvalues.** The section shows that the rank of a
+   diagonalizable matrix equals the number of its nonzero eigenvalues.
+    1. Find the rank and the eigenvalues of
+       $\mathbf{N}=\left[\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right]$.
+       Which step of the argument for diagonalizable matrices fails for
+       $\mathbf{N}$?
+    1. Let $g_0$ be the geometric multiplicity of the eigenvalue $0$ of an
+       $n\times n$ matrix $\mathbf{A}$, with $g_0=0$ when $0$ is not an
+       eigenvalue. Show that $\operatorname{rank}\mathbf{A}=n-g_0$ for every
+       square matrix. Conclude that the rank is at least the number of nonzero
+       eigenvalues counted with algebraic multiplicity, with equality exactly
+       when the eigenvalue $0$ is not defective.
+    1. For a general matrix, the section counts the rank by the nonzero
+       singular values
+       $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$ instead. Find the
+       singular values of $\mathbf{N}$ and of the Jordan block
+       $\mathbf{J}_k(0)$ of :numref:`subsec_mdl-jordan`. Compare the number of
+       nonzero singular values with the rank and with the number of nonzero
+       eigenvalues.
+   :exlabel:`ex_mdl-eigendecomposition-rank-zero-eigenvalues`
+
+1. **A defective limit.** For $\varepsilon\ge0$, let
+
+   $$
+   \mathbf{A}_\varepsilon=\begin{bmatrix}2&1\\\varepsilon&2\end{bmatrix}.
+   $$
+
+    1. Find the eigenvalues and eigenvectors of $\mathbf{A}_\varepsilon$ for
+       $\varepsilon>0$ and for $\varepsilon=0$. Which multiplicities differ at
+       $\varepsilon=0$?
+    1. Collect the unit eigenvectors of $\mathbf{A}_\varepsilon$ in the columns
+       of $\mathbf{W}_\varepsilon$. How do the angle between them and the
+       condition number $\kappa_2(\mathbf{W}_\varepsilon)$ of
+       :eqref:`eq_mdl-nonnormal-power-bound` behave as $\varepsilon\to0$?
+    1. By how much do the eigenvalues of $\mathbf{A}_0$ move when its
+       lower-left entry changes from $0$ to $\varepsilon=10^{-10}$? Compare
+       with the eigenvalues of the symmetric matrix
+       $2\mathbf{I}+\varepsilon\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$.
+   :exlabel:`ex_mdl-eigendecomposition-defective-limit`
+
+1. [code] **Larger Jordan blocks.** :numref:`subsec_mdl-jordan` computes
+   $\mathbf{J}_2(\lambda)^n$ from $\mathbf{J}_2(\lambda)=\lambda\mathbf{I}+\mathbf{N}$
+   with $\mathbf{N}^2=\mathbf{0}$.
+    1. Write $\mathbf{J}_3(\lambda)=\lambda\mathbf{I}+\mathbf{N}$ with
+       $\mathbf{N}^3=\mathbf{0}$ and compute $\mathbf{J}_3(\lambda)^n$ with the
+       binomial theorem. Which entry grows fastest with $n$?
+    1. Find the corner entry of $\mathbf{J}_k(\lambda)^n$ for general $k$. For
+       $0<\lambda<1$, at which $n$, approximately, does it peak? Evaluate the
+       peak location and height for $k=3$ and $\lambda=0.99$.
+    1. Adapt the code of :numref:`subsec_mdl-jordan` to print
+       $\|\mathbf{J}_3(0.99)^n\|_2$, and check the prediction of (b).
+   :exlabel:`ex_mdl-eigendecomposition-larger-jordan-blocks`
+
+1. **Fourth roots of minus the identity.** Let $\mathbf{A}$ be a
+   real $n\times n$ matrix with $\mathbf{A}^4=-\mathbf{I}$.
+    1. Show that every eigenvalue $\lambda$ of $\mathbf{A}$ satisfies
+       $\lambda^4=-1$. Which values can $\lambda$ take, and why does
+       $\mathbf{A}$ have no real eigenvector?
+    1. Take the determinant of both sides of $\mathbf{A}^4=-\mathbf{I}$ to show
+       that $n$ is even.
+    1. Use the rotation--scaling block :eqref:`eq_mdl-rotation-scaling-block`
+       to construct such a matrix for $n=2$. Then construct a $4\times4$
+       example whose eigenvalues are all four solutions of $\lambda^4=-1$.
+
+   *Adapted from Sheldon Axler,
+   [Linear Algebra Done Right, 4th ed.](https://linear.axler.net/LADR4e.pdf),
+   Exercises 5A, Problem 31.*
+   :exlabel:`ex_mdl-eigendecomposition-fourth-root-minus-identity`
+
+1. **Spectral radius and norms.** The spectral radius bounds every power of
+   a matrix from below, and for normal matrices it also bounds them from
+   above.
+    1. Show that $\rho(\mathbf{A})\le\|\mathbf{A}^k\|_2^{1/k}$ for every
+       square matrix $\mathbf{A}$ and every $k\ge1$.
+    1. The chain :eqref:`eq_mdl-normal-power-norm` uses two facts without
+       proof. Show that $\|\mathbf{U}\mathbf{M}\mathbf{U}^*\|_2=\|\mathbf{M}\|_2$
+       for every unitary $\mathbf{U}$ and every square $\mathbf{M}$, and that
+       the spectral norm of a diagonal matrix is the largest modulus of its
+       diagonal entries.
+    1. Show that the converse of :eqref:`eq_mdl-normal-power-norm` fails:
+       find a $3\times3$ matrix that is not normal but satisfies
+       $\|\mathbf{A}^k\|_2=\rho(\mathbf{A})^k$ for every $k\ge1$.
+    1. For an arbitrary $M>0$, construct a diagonalizable $2\times2$ matrix
+       with spectral radius $1/2$ and $\|\mathbf{A}\|_2>M$.
+   :exlabel:`ex_mdl-eigendecomposition-spectral-radius-norms`
+
+1. **Transient peak.** Let $\mathbf{A}$ be the non-normal matrix
+   :eqref:`eq_mdl-nonnormal-example`.
+    1. Derive the closed form of $(\mathbf{A}^k)_{12}$ stated in
+       :numref:`sec_mdl-nonnormal-transient`, by induction or by
+       diagonalization.
+    1. Treat $k$ as a continuous variable and find the maximizer of this
+       entry. Which integer $k$ maximizes it? Compare with the $k$ at which the
+       code of :numref:`sec_mdl-nonnormal-transient` finds the largest
+       $\|\mathbf{A}^k\|_2$.
+    1. Evaluate the bound :eqref:`eq_mdl-nonnormal-power-bound` at that $k$,
+       with the eigenvector condition number printed by the same code. How far
+       is it from the true norm? Why can no bound of the form
+       $C\rho(\mathbf{A})^k$ locate the peak?
+   :exlabel:`ex_mdl-eigendecomposition-transient-peak`
+
+1. **Complex symmetric matrices.** The spectral theorem of
+   :numref:`subsec_mdl-spectral-theorem` concerns real symmetric matrices.
+   The complex matrix
+
+   $$
+   \mathbf{S}=\begin{bmatrix}1&i\\i&-1\end{bmatrix}
+   $$
+
+   is symmetric as well, $\mathbf{S}=\mathbf{S}^\top$.
+    1. Compute $\mathbf{S}^2$ and the eigenvalues of $\mathbf{S}$. Is
+       $\mathbf{S}$ diagonalizable?
+    1. The eigenvalues of $\mathbf{S}$ are real, yet by (a) $\mathbf{S}$ has
+       no eigenbasis, so some step of part (iii) of the proof of the spectral
+       theorem fails for $\mathbf{S}$. Find a unit eigenvector $\mathbf{w}_1$
+       of $\mathbf{S}$ and the step that fails. Which property of real
+       symmetric matrices does that step use?
+    1. Is $\mathbf{S}$ normal in the sense of
+       :numref:`sec_mdl-nonnormal-transient`?
+   :exlabel:`ex_mdl-eigendecomposition-complex-symmetric`
+
+1. **The centering matrix.** Let $\mathbf{1}\in\mathbb{R}^n$ be the all-ones
+   vector and $\mathbf{H}=\mathbf{I}-\tfrac1n\mathbf{1}\mathbf{1}^\top$.
+    1. Show that $n\mathbf{I}-\mathbf{1}\mathbf{1}^\top$ is positive
+       semidefinite by writing
+       $\mathbf{x}^\top(n\mathbf{I}-\mathbf{1}\mathbf{1}^\top)\mathbf{x}$ as a
+       sum of squares of the differences $x_i-x_j$. Then find all eigenvalues
+       of $n\mathbf{I}-\mathbf{1}\mathbf{1}^\top$ and their eigenvectors.
+    1. Show that $\mathbf{H}$ is symmetric with $\mathbf{H}^2=\mathbf{H}$, and
+       deduce its eigenvalues and its rank from (a).
+    1. Let the rows of $\mathbf{X}\in\mathbb{R}^{n\times d}$ be $n$ samples.
+       Subtracting the sample mean from every row gives $\mathbf{H}\mathbf{X}$,
+       so that the sample covariance is
+       $\hat{\boldsymbol\Sigma}=\tfrac1n\mathbf{X}^\top\mathbf{H}\mathbf{X}$.
+       Show that $\hat{\boldsymbol\Sigma}\succeq0$ and
+       $\operatorname{rank}\hat{\boldsymbol\Sigma}\le n-1$. How many zero
+       eigenvalues does the sample covariance of $512$-dimensional embeddings
+       computed from a minibatch of $256$ examples have at least? Which
+       operations on $\hat{\boldsymbol\Sigma}$ does this rule out?
+
+   *Adapted from Gilbert Strang,
+   [MIT 18.065 Problem Sets](https://ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/cd4c57b7e61b8ca9fdd3511a30aca052_MIT18_065S18PSets.pdf),
+   Problems for Lecture 13, Problem 4.*
+   :exlabel:`ex_mdl-eigendecomposition-centering-matrix`
+
+1. **Gershgorin bounds.** Consider the symmetric matrix
+
+   $$
+   \mathbf{A} = \begin{bmatrix}
+   3.0 & 0.1 & 0.3 & 1.0 \\
+   0.1 & 1.0 & 0.1 & 0.2 \\
+   0.3 & 0.1 & 5.0 & 0.0 \\
+   1.0 & 0.2 & 0.0 & 1.8
+   \end{bmatrix}.
+   $$
+
+    1. Without computing the eigenvalues, decide whether the smallest
+       eigenvalue of $\mathbf{A}$ can be less than $0.5$.
+    1. Use the same discs to bound the condition number
+       $\kappa=\lambda_{\max}/\lambda_{\min}$ of $\mathbf{A}$ from above.
+    1. For an invertible diagonal matrix $\mathbf{D}$, the matrix
+       $\mathbf{D}^{-1}\mathbf{A}\mathbf{D}$ has the same eigenvalues as
+       $\mathbf{A}$ but different discs. Find a $\mathbf{D}$ whose discs prove
+       $\lambda_{\min}(\mathbf{A})>0.75$.
+   :exlabel:`ex_mdl-eigendecomposition-gershgorin-bounds`
+
+1. [code] **Power-iteration rates.** Let $\mathbf{B}$ be the matrix of
+   :numref:`fig_mdl-la-power-iter`.
+    1. By :eqref:`eq_mdl-power-iter`, the misalignment between the iterate and
+       $\mathbf{w}_1$ decays at the rate $|\lambda_2/\lambda_1|$. Predict how
+       many iterations reduce it by a factor of $100$.
+    1. Let $\mathbf{A}$ be symmetric with unit eigenvector $\mathbf{w}_1$ for
+       $\lambda_1$, and let $\mathbf{x}=\mathbf{w}_1+\delta\mathbf{u}$ for a unit
+       vector $\mathbf{u}$ orthogonal to $\mathbf{w}_1$. Show that the Rayleigh
+       quotient of :numref:`subsec_mdl-rayleigh` satisfies
+       $R(\mathbf{x})-\lambda_1=O(\delta^2)$, with no term linear in $\delta$.
+       At which rate does the Rayleigh quotient of the power iterates
+       therefore approach $\lambda_1$?
+    1. Run power iteration on $\mathbf{B}$ from a random start for $20$ steps.
+       Plot the sine of the angle between the iterate and $\mathbf{w}_1$, and
+       the error of its Rayleigh quotient, against the step on a logarithmic
+       scale. Do the slopes match (a) and (b)?
+   :exlabel:`ex_mdl-eigendecomposition-power-iteration-rates`
+
+1. [code] **Accuracy of computed eigenvalues.** ● The QR algorithm behind
+   `np.linalg.eigvals` is backward stable: it returns the exact eigenvalues of
+   a matrix $\mathbf{A}+\mathbf{E}$ with $\|\mathbf{E}\|_2$ of the order of
+   $\epsilon_{\textrm{mach}}\|\mathbf{A}\|_2$, where
+   $\epsilon_{\textrm{mach}}\approx2.2\times10^{-16}$ in double precision
+   :cite:`Golub.Van-Loan.1996`. Exercise
+   :exref:`ex_mdl-eigendecomposition-defective-limit` shows how strongly such
+   a perturbation can move a defective eigenvalue.
+    1. Let $\mathbf{e}_1,\ldots,\mathbf{e}_k$ be the standard basis vectors.
+       Show that $\mathbf{J}_k(\lambda)+\varepsilon\,\mathbf{e}_k\mathbf{e}_1^\top$,
+       which places $\varepsilon$ in the lower-left corner of the Jordan
+       block, has the eigenvalues $\lambda+\varepsilon^{1/k}\omega$, where
+       $\omega$ ranges over the $k$-th roots of unity.
+    1. For $k=1,\ldots,4$, form $\mathbf{Q}\mathbf{J}_k(2)\mathbf{Q}^\top$ with
+       an orthogonal $\mathbf{Q}$ taken from the QR factorization of a
+       Gaussian matrix, and record the median over $20$ draws of
+       $\max_i|\hat\lambda_i-2|$ for the computed eigenvalues
+       $\hat\lambda_i$. Compare with $\epsilon_{\textrm{mach}}^{1/k}$. Repeat
+       with the symmetric matrix $\mathbf{Q}(2\mathbf{I})\mathbf{Q}^\top$.
+    1. Let $\mathbf{A}$ and $\mathbf{E}$ be symmetric. Use the Rayleigh
+       proposition of :numref:`subsec_mdl-rayleigh` to show that
+       $\lambda_{\max}(\mathbf{A}+\mathbf{E})\le\lambda_{\max}(\mathbf{A})+\|\mathbf{E}\|_2$
+       and
+       $\lambda_{\min}(\mathbf{A}+\mathbf{E})\ge\lambda_{\min}(\mathbf{A})-\|\mathbf{E}\|_2$.
+       How does this explain the symmetric result of (b)?
+   :exlabel:`ex_mdl-eigendecomposition-computed-eigenvalue-accuracy`
+
+1. [code] **A rotating dominant pair.** ● Let $\mathbf{C}$ be the
+   block-diagonal $3\times3$ matrix whose upper-left block is the
+   rotation--scaling block :eqref:`eq_mdl-rotation-scaling-block` with $a=0.6$
+   and $b=0.8$ and whose lower-right entry is $0.5$. Let
+   $\mathbf{A}=\mathbf{S}\mathbf{C}\mathbf{S}^{-1}$ with
+
+   $$
+   \mathbf{S}=\begin{bmatrix}1&2&0\\0&1&1\\1&0&1\end{bmatrix}.
+   $$
+
+    1. Run power iteration on $\mathbf{C}$ from a random start $\mathbf{v}$.
+       Explain why the consecutive-norm ratio converges to $1$, although the
+       iterate keeps rotating.
+    1. Repeat with $\mathbf{A}$, which has the same eigenvalues. Plot the
+       consecutive-norm ratio and $\|\mathbf{A}^k\mathbf{v}\|^{1/k}$ for
+       $k\le200$. Between which values does the ratio oscillate for large
+       $k$? Show that $\|\mathbf{A}^k\mathbf{v}\|^{1/k}-1=O(1/k)$, and use the
+       oscillation of $\|\mathbf{A}^k\mathbf{v}\|$ to explain why no faster
+       rate is possible.
+    1. Show that the block $\mathbf{M}$ of
+       :eqref:`eq_mdl-rotation-scaling-block` satisfies
+       $\mathbf{M}^2-2a\mathbf{M}+(a^2+b^2)\mathbf{I}=\mathbf{0}$. Conclude
+       that, for large $k$, the iterates $\mathbf{x}_k=\mathbf{A}^k\mathbf{v}$
+       approximately satisfy
+       $\mathbf{x}_{k+2}=2a\,\mathbf{x}_{k+1}-(a^2+b^2)\,\mathbf{x}_k$. Fit
+       $2a$ and $a^2+b^2$ by least squares from three consecutive iterates,
+       and find the number of iterations after which $a$ and $b$ are correct
+       to four digits.
+   :exlabel:`ex_mdl-eigendecomposition-rotating-dominant-pair`
+
+1. [code] **Pseudospectra and transient growth.** ● Let $\mathbf{A}$ be the
+   non-normal matrix :eqref:`eq_mdl-nonnormal-example` and $\mathbf{D}$ the
+   diagonal matrix with the same eigenvalues from the code of
+   :numref:`sec_mdl-nonnormal-transient`.
+    1. Let $\sigma=\sigma_{\min}(z\mathbf{I}-\mathbf{A})$, with unit singular
+       vectors $\mathbf{u}$ and $\mathbf{v}$ such that
+       $(z\mathbf{I}-\mathbf{A})\mathbf{v}=\sigma\mathbf{u}$. Show that $z$ is
+       an eigenvalue of $\mathbf{A}+\sigma\mathbf{u}\mathbf{v}^*$, a matrix at
+       distance $\sigma$ from $\mathbf{A}$. This proves one inclusion of
+       :eqref:`eq_mdl-pseudospectrum`. Using the resolvent norms printed by
+       the code, how large a perturbation makes $z=1$ an eigenvalue of a
+       perturbed $\mathbf{A}$, and how large for $\mathbf{D}$?
+    1. Suppose that $\|\mathbf{A}^k\|_2\le M$ for all $k\ge0$. Show that for
+       $|z|>1$ the series $\sum_{k\ge0}\mathbf{A}^k/z^{k+1}$ converges to
+       $(z\mathbf{I}-\mathbf{A})^{-1}$, and conclude that
+
+       $$
+       \sup_{k\ge0}\|\mathbf{A}^k\|_2\;\ge\;K(\mathbf{A})=\sup_{|z|>1}\,(|z|-1)\,\|(z\mathbf{I}-\mathbf{A})^{-1}\|_2 .
+       $$
+
+       The quantity $K(\mathbf{A})$ is called the Kreiss constant. Restate the
+       bound in terms of pseudospectra: if $\Lambda_\varepsilon(\mathbf{A})$
+       contains a point at distance $\delta$ outside the unit circle, how
+       large must some power of $\mathbf{A}$ be?
+    1. Evaluate $K(\mathbf{A})$ numerically on a grid of points $z$ with
+       $|z|>1$, and compare it with the largest $\|\mathbf{A}^k\|_2$ printed in
+       :numref:`sec_mdl-nonnormal-transient`. Find $K(\mathbf{D})$ by hand.
+   :exlabel:`ex_mdl-eigendecomposition-pseudospectra-transient-growth`
+
+1. [code] **Shifted inverse iteration.** ● Power iteration finds only the
+   dominant eigenvalue. *Inverse iteration* with shift $\mu$ runs power
+   iteration with $(\mathbf{A}-\mu\mathbf{I})^{-1}$ instead, solving one linear
+   system per step :cite:`Golub.Van-Loan.1996`.
+    1. Show that $(\mathbf{A}-\mu\mathbf{I})^{-1}$ has the same eigenvectors as
+       $\mathbf{A}$, and find its eigenvalues. Which eigenpair of $\mathbf{A}$
+       does inverse iteration find, and at which rate does it converge?
+    1. Run inverse iteration on the matrix :eqref:`eq_mdl-gershgorin-example`
+       with each of the four disc centers as the shift. How many iterations
+       does each run need until the sine of the angle between the iterate and
+       the eigenvector returned by `np.linalg.eigh` falls below $10^{-10}$?
+       Compare with plain power iteration for the largest eigenvalue.
+    1. *Rayleigh quotient iteration* replaces the fixed shift by the Rayleigh
+       quotient of the current iterate at every step. Repeat (b) with the disc
+       centers as initial shifts. Relate the iteration counts to problem
+       :exref:`ex_mdl-eigendecomposition-power-iteration-rates`b.
+   :exlabel:`ex_mdl-eigendecomposition-shifted-inverse-iteration`
+
+1. [code] **Damping in PageRank.** ● Let $\mathbf{P}$ be a column-stochastic
+   $n\times n$ matrix and
+   $\mathbf{G}=\alpha\mathbf{P}+(1-\alpha)\tfrac1n\mathbf{1}\mathbf{1}^\top$
+   with $0<\alpha<1$, the damped matrix of :numref:`subsec_mdl-pagerank`.
+    1. Let $\mathbf{P}\mathbf{x}=\lambda\mathbf{x}$. Show that
+       $\mathbf{1}^\top\mathbf{x}=0$ whenever $\lambda\neq1$, and that
+       $\mathbf{G}\mathbf{x}=\alpha\lambda\mathbf{x}$ whenever
+       $\mathbf{1}^\top\mathbf{x}=0$.
+    1. The eigenvalue $1$ of $\mathbf{P}$ can be repeated, as it is when the
+       links split into disconnected pockets. Show that the vectors $\mathbf{x}$
+       of its eigenspace with $\mathbf{1}^\top\mathbf{x}=0$ form a subspace of
+       dimension one less than the eigenspace. Conclude that for
+       diagonalizable $\mathbf{P}$ the eigenvalues of $\mathbf{G}$ are $1$ and
+       $\alpha\lambda_2(\mathbf{P}),\ldots,\alpha\lambda_n(\mathbf{P})$, which
+       gives the bound $|\lambda_2(\mathbf{G})|\le\alpha$ of
+       :citet:`Haveliwala.Kamvar.2003`.
+    1. Four pages link in a cycle, $1\to2\to3\to4\to1$. Find the eigenvalues
+       of their link matrix $\mathbf{P}$. Why does undamped power iteration
+       started at page $1$ never converge?
+    1. With $\alpha=0.85$, run power iteration on $\mathbf{G}$ from page $1$,
+       and count the iterations until the $\ell_1$ distance to the stationary
+       distribution falls below $10^{-8}$. Compare with the prediction
+       from (b).
+   :exlabel:`ex_mdl-eigendecomposition-pagerank-damping`
+
+1. [code] **Spikes above the bulk.** ● :numref:`subsec_mdl-random-matrices`
+   treats the Marchenko--Pastur bulk as the null hypothesis of spectral data
+   analysis. Suppose that the data contain one real direction: the $n$ samples
+   have independent Gaussian coordinates of variance $1$, except the first
+   coordinate, whose variance is $1+\beta$. For $n\to\infty$ with
+   $\gamma=d/n$ fixed, :citet:`Baik.Silverstein.2006` show that the largest
+   eigenvalue of $\hat{\boldsymbol\Sigma}=\tfrac1n\mathbf{X}^\top\mathbf{X}$
+   converges to
+
+   $$
+   \lambda_{\max}\to\begin{cases}(1+\sqrt\gamma)^2, & \beta\le\sqrt\gamma,\\
+   (1+\beta)\left(1+\gamma/\beta\right), & \beta>\sqrt\gamma.\end{cases}
+   $$
+
+    1. For $n=2000$ and $d=500$, compute the largest eigenvalue of
+       $\hat{\boldsymbol\Sigma}$ for
+       $\beta\in\{0,0.3,0.5,0.7,1,2\}$, averaged over five draws, and compare
+       with the prediction.
+    1. Fix $d=500$ and $\beta=0.4$. Use the formula to find the sample size
+       $n$ above which the largest eigenvalue leaves the bulk. Then increase
+       the number of samples through $n\in\{500,1000,2000,4000,8000\}$, and
+       compare the largest eigenvalue with the bulk edge, with the prediction,
+       and with the largest eigenvalue for $\beta=0$ at the same $n$. Why is
+       the separation hard to see at $n=4000$?
+    1. A practitioner keeps the principal components whose eigenvalues exceed
+       the bulk edge. How large must the variance of a direction be at
+       $\gamma=1/4$ for it to be kept? How many samples per dimension are
+       needed to detect a direction whose variance exceeds the others by
+       $10\%$?
+   :exlabel:`ex_mdl-eigendecomposition-spiked-covariance`
+
+1. [code] **Lyapunov exponents of random products.** ●● Let
+   $\mathbf{J}_1,\mathbf{J}_2,\ldots$ be independent $n\times n$ matrices with
+   independent $\mathcal{N}(0,1/n)$ entries, a linear model of the Jacobians
+   of a deep network at fan-in initialization, and let $\mathbf{x}_0$ be a
+   unit vector. By :numref:`subsec_mdl-random-matrices`, each factor has
+   spectral radius close to $1$ for large $n$.
+   :numref:`subsec_mdl-jacobian-products`
+   summarizes the growth of the product by its top Lyapunov exponent
+
+   $$
+   \mu=\lim_{T\to\infty}\frac1T\log\|\mathbf{J}_T\cdots\mathbf{J}_1\mathbf{x}_0\|.
+   $$
+
+    1. Show that $\mathbb{E}\|\mathbf{J}\mathbf{x}\|^2=\|\mathbf{x}\|^2$ for
+       every fixed $\mathbf{x}$, so that this scaling preserves squared norms
+       on average.
+    1. Let $\mathbf{u}_0=\mathbf{x}_0$ and
+       $\mathbf{u}_t=\mathbf{x}_t/\|\mathbf{x}_t\|$ for the iterates
+       $\mathbf{x}_t=\mathbf{J}_t\cdots\mathbf{J}_1\mathbf{x}_0$. Given
+       $\mathbf{J}_1,\ldots,\mathbf{J}_{t-1}$, what is the distribution of
+       $n\|\mathbf{J}_t\mathbf{u}_{t-1}\|^2$? Use the answer to write
+       $\log\|\mathbf{J}_T\cdots\mathbf{J}_1\mathbf{x}_0\|$ as a sum of
+       independent terms. With $\mathbb{E}\log\chi^2_n=\psi(n/2)+\log2$, where
+       $\psi$ is the digamma function, derive the closed form of
+       :citet:`Cohen.Newman.1984`
+
+       $$
+       \mu=\tfrac12\bigl(\psi(n/2)+\log2-\log n\bigr).
+       $$
+
+    1. Show that $\mu<0$ for every $n$, although (a) holds. Evaluate $\mu$ in
+       closed form for $n=1$, using $\psi(1/2)=-\gamma_{\textrm{E}}-2\log2$
+       with Euler's constant $\gamma_{\textrm{E}}\approx0.5772$. Using
+       $\psi(x)=\log x-\tfrac1{2x}+O(x^{-2})$, show that $\mu\approx-1/(2n)$
+       for large $n$.
+    1. Simulate $T=10^4$ steps with renormalization for
+       $n\in\{1,2,5,50\}$, and compare the measured exponent with (b) and with
+       the logarithms of the spectral radius and of the largest singular value
+       of single factors. By which factor does a typical input shrink in a
+       linear network of width $50$ and depth $100$ at this initialization?
+       What does the comparison say about the hierarchy of eigenvalues,
+       singular values, and Lyapunov exponents in
+       :numref:`subsec_mdl-jacobian-products`?
+   :exlabel:`ex_mdl-eigendecomposition-lyapunov-random-products`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/411)

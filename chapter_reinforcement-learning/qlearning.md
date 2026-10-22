@@ -427,6 +427,7 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        steps to the state, as in problem :exref:`ex_mdp-time-limits`b of
        :numref:`sec_mdp`. Find the value of each state $(s, h)$, and show
        that the mask `terminated or truncated` is then correct.
+   :exlabel:`ex_qlearning-truncation-termination`
 
 1. [code] **The exploration schedule.** On a zero-initialized table,
    `epsilon_greedy` breaks every tie uniformly at random, and every reward

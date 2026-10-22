@@ -154,7 +154,7 @@ Q-learning can use transitions from any behavior policy, so it can be applied to
 
 The learned policy preferentially selects actions with large estimated values. Estimation errors are largest where the dataset provides the least support, so this selection can concentrate the policy on poorly estimated actions. The resulting mismatch between the dataset's action distribution and the learned policy's action distribution is called *distribution shift*. In :numref:`fig_rl_distribution_shift`, several actions selected by the learned policy lie in the sparsely sampled region where the fitted values have the largest errors.
 
-![Distribution shift after offline Q-learning on 500 uniformly random episodes, comprising 3697 transitions. Left: the 44 available state--action pairs, ordered by their counts in the dataset; crosses mark the pairs selected by the learned greedy policy. Several selected pairs lie in the sparsely sampled tail and have errors near $0.3$. Right: absolute value error against visit count, together with the fitted curve $\kappa/\sqrt{n}$ for $\kappa=0.53$. The curve is a descriptive envelope rather than a statistical law: the errors decrease more slowly than $1/\sqrt{n}$ and remain near $0.10$ even for well-supported pairs. Maximization bias, the constant step size, and incomplete convergence all contribute to this residual.](../img/mdl-rl-distribution-shift.svg)
+![Distribution shift after offline Q-learning on an independent draw of 500 uniformly random episodes, comprising 3697 transitions (`data` has 3997). Left: the 44 available state--action pairs, ordered by their counts in the dataset; crosses mark the pairs selected by the learned greedy policy. Several selected pairs lie in the sparsely sampled tail and have errors near $0.3$. Right: absolute value error against visit count, together with the fitted curve $\kappa/\sqrt{n}$ for $\kappa=0.53$. The curve is a descriptive envelope rather than a statistical law: the errors decrease more slowly than $1/\sqrt{n}$ and remain near $0.10$ even for well-supported pairs. Maximization bias, the constant step size, and incomplete convergence all contribute to this residual.](../img/mdl-rl-distribution-shift.svg)
 :label:`fig_rl_distribution_shift`
 
 ### The Loss of Self-Correction
@@ -281,7 +281,7 @@ These two comparisons measure different properties. Comparison with behavior clo
 
 ### The Count-Based Penalty $\kappa/\sqrt{n}$
 
-The largest errors occur at poorly supported state--action pairs. We therefore subtract $\kappa/\sqrt{n(s,a)}$ both inside the bootstrap maximum and from the final values, where $n(s,a)$ is the pair's count in the dataset. This is the penalty implemented by `offline_q` when `kappa > 0`.
+The largest errors occur at poorly supported state--action pairs. We therefore subtract $\kappa/\sqrt{n(s,a)}$ both inside the bootstrap maximum and from the final values, where $n(s,a)$ is the pair's count in the dataset, and clip each penalized value at zero, the smallest value any policy can attain here because rewards are nonnegative. This is the penalty implemented by `offline_q` when `kappa > 0`.
 
 The $1/\sqrt{n}$ dependence is motivated by the sampling error of an $n$-sample average and resembles the UCB radius $\kappa\sqrt{\log t/n}$ from :numref:`sec_qlearning`. Here it is a heuristic shrinkage term, not a confidence interval with a coverage guarantee. We evaluate this shape by pooling the counts and errors against $Q^*$ from the fifteen naive runs:
 
@@ -309,7 +309,7 @@ d2l.plot([n, grid], [e, kappa_fit / np.sqrt(grid)],
 
 The fitted scale is $\kappa=0.57$, but it only centers the curve on these fifteen datasets. The errors range from $0.000$ to $0.458$, with median $0.094$, and do not follow a clean $1/\sqrt{n}$ law. Even above 100 visits, their median remains $0.077$. Maximization bias, the constant step size $\alpha$, and incomplete convergence can all produce this residual, which additional samples do not necessarily remove.
 
-Among the 660 state--action-pair and dataset combinations, one pair is unobserved and receives the $n=0$ treatment defined above. We use the milder value $\kappa=0.1$, about one fifth of the descriptive fit. Exercise 4 explores both smaller and larger penalties.
+Among the 660 state--action-pair and dataset combinations, one pair is unobserved and receives the $n=0$ treatment defined above. We use the milder value $\kappa=0.1$, about one fifth of the descriptive fit. Exercise :exref:`ex_offline-rl-how-much-pessimism` explores both smaller and larger penalties.
 
 The example combines four distinct difficulties. *Support failure* occurs when an action or region is absent from the data. *Statistical uncertainty* remains when counts are finite and is the component approximated by $1/\sqrt{n}$. *Bootstrapped extrapolation* propagates errors through function approximation and is largely absent from this tabular experiment. Finally, *model selection* requires choosing $\kappa$ without the online evaluation that the setting forbids.
 
@@ -363,7 +363,7 @@ Decision Transformer avoids bootstrapping by treating each trajectory as a seque
 
 The preceding comparisons use simulator rollouts, which are unavailable in a genuine offline deployment. Selecting $\kappa$, the number of sweeps, or one of several learned policies requires estimating counterfactual performance from logged data. Importance-weighted estimators for this task inherit the high variance described in :numref:`sec_ppo` when the evaluated policy differs from the behavior policy :cite:`Levine.Kumar.Tucker.ea.2020`.
 
-Reliable offline model selection remains an open problem. Exercise 6 examines what can be inferred when direct evaluation rollouts are unavailable.
+Reliable offline model selection remains an open problem. Exercise :exref:`ex_offline-rl-what-you-cannot-measure` examines what can be inferred when direct evaluation rollouts are unavailable.
 
 ## Summary
 
@@ -373,36 +373,314 @@ On-policy updates estimate expectations under the current policy; importance rat
 
 ## Exercises
 
-1. [short-code] *Does the clone win?* Add a behavior-cloning arm on each of
-   the three dataset types of exercise 3 and report which arm wins on each;
-   explain the pattern in terms of the behavior policy's quality.
-1. [short-code] *More data, or better data.* Rerun the offline experiment with
-   datasets of 100, 500 and 2000 episodes. How do the predicted and the actual
-   values move? Does more random data close the gap by itself, and if not, what
-   is it that more data does not buy?
-1. [short-code] *Where the data comes from.* Build three datasets of 500
-   episodes each: from a uniform random policy, from a near-optimal policy with
-   $\epsilon = 0.1$, and from a fifty-fifty mixture. Run naive offline
-   Q-learning on each and report predicted value and actual return. Which
-   dataset yields the best policy, which the best-calibrated prediction, and
-   why is the expert-only dataset not the winner?
-1. [short-code] *How much pessimism.* Sweep $\kappa$ over
-   $\{0.02, 0.1, 0.3, 1.0\}$. Describe both failure directions: what happens
-   when pessimism is too weak, and what happens when it is too strong? Plot
-   predicted value and actual return on the same axes and identify the
-   crossing.
-1. [conceptual] *Constrain the values, or constrain the policy.* The text's
-   support rule reproduced the naive run exactly, and the argument for why
-   leaned on zero initialization and nonnegative rewards. Construct a behavior
-   policy, or an initialization, for which the support rule and the count
-   penalty genuinely differ, and say which of the two you would trust with a
-   dataset gathered by a safety-conscious human operator.
-1. [conceptual] *What you cannot measure offline.* Our diagnostic compared the
-   predicted value with the actual return of the greedy policy, which required
-   rolling the policy out in the simulator. A real offline deployment cannot do
-   that. Name what you would use instead, say what each of those estimators
-   needs that our setting supplies for free, and explain why the whole family
-   inherits a version of the variance problem of :numref:`sec_ppo`.
+1. **Exploration priced into the values.** A start state $s$ offers two
+   actions. *Edge* moves with reward $0$ to a state $x$ beside a hole, and
+   *detour* moves with reward $0$ to a state $y$. In $x$, one action reaches
+   the goal with reward $1$ and the other falls into the hole with reward
+   $0$; both end the episode. From $y$, both actions move with reward $0$ to
+   a state $z$, and from $z$ both actions reach the goal with reward $1$.
+   The behavior policy acts like `d2l.epsilon_greedy` on its current table:
+   with probability $\epsilon$ it picks one of the two actions uniformly at
+   random, and otherwise the greedy one.
+    1. Compute $Q^*(s, a)$ and the SARSA fixed point $Q^{\pi_e}(s, a)$ of
+       :eqref:`eq_sarsa` for both actions, where $\pi_e$ is
+       $\epsilon$-greedy with respect to its own table. Which action does
+       each table prefer at $s$ for $\gamma = 0.95$ and $\epsilon = 0.3$?
+    1. For which $\epsilon$, as a function of $\gamma$, does SARSA's
+       preferred action at $s$ switch?
+    1. Compute the expected return from $s$ when the agent prefers *edge*
+       and when it prefers *detour*, under two deployments: it keeps
+       exploring with $\epsilon = 0.3$, or it always takes its preferred
+       action. Which table's preference is right for each deployment? Relate
+       the answer to the values of `claim` and `earned` printed for `Q_q`
+       and `Q_sarsa`.
+
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Example 6.6.*
+
+1. **Expected SARSA.** Expected SARSA replaces the sampled action $a'$ in
+   :eqref:`eq_sarsa` by an average under a policy $\pi$,
+   $$\delta = r + \gamma \sum_{a'} \pi(a' \mid s')\, Q(s', a') - Q(s, a).$$
+    1. Let $\pi = \pi_e$, the behavior policy. Show that, given $(s, a)$
+       and $s'$, the Expected SARSA target equals the conditional
+       expectation of the SARSA target over $a' \sim \pi_e(\cdot \mid s')$.
+       Conclude that both methods have the fixed point $Q^{\pi_e}$, and use
+       the law of total variance to show that the Expected SARSA target has
+       no larger variance.
+    1. Show that the target becomes the Q-learning target when $\pi$ is the
+       greedy policy of $Q$.
+    1. For $\pi \neq \pi_e$, Expected SARSA estimates $Q^\pi$ from
+       transitions collected by $\pi_e$, and its update contains no
+       importance ratio. Explain why the one-step action-value target needs
+       none. Exercise :exref:`ex_offline-rl-truncated-ratios` treats the
+       state-value target, which does need one.
+    1. Which source of variance does Expected SARSA remove, and which
+       remains? Predict whether it gains more over SARSA on a gridworld with
+       deterministic moves or on the slippery lake.
+
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Section 6.6.*
+
+1. [code] **Coverage of the random log.** The counts of `data` over the 44
+   live state--action pairs have minimum $7$, median $42$ and maximum $465$.
+   They can be predicted from the model. Under the
+   uniformly random policy, let $P_{\textrm{live}}$ be the transition matrix
+   among the live states, computed from `mdp.P`. The expected number of
+   visits to each live state in one episode is then the start-state row of
+   $N = (I - P_{\textrm{live}})^{-1}$. Ignore the time limit, which almost
+   never binds for this policy.
+    1. Compute this row, the expected episode length, and the expected count
+       of each live pair in 500 episodes, and compare them with `len(data)`
+       and the printed counts. Where on the lake are the rarest pairs, and
+       which role do these states play for the optimal policy?
+    1. Model each count as a Poisson variable whose mean is the expected
+       count. Estimate the expected number of unobserved live pairs in
+       fifteen datasets, and compare it with the one unobserved pair among
+       the 660 combinations of live pair and dataset in `datasets`. Which
+       assumption of the Poisson model is questionable here?
+    1. How many random episodes would bring the expected count of every
+       live pair to at least $100$?
+
+1. [code] **Data from a better policy.** The random behavior covers every
+   pair but rarely reaches the goal. Build three kinds of datasets of 500
+   episodes each: from `behavior`; from a near-optimal policy that acts by
+   `d2l.epsilon_greedy` on `Q_star` with $\epsilon = 0.1$; and from 250
+   episodes of each, concatenated into one `d2l.Batch` (shift the second
+   batch's `ep_ends` by the length of the first). Draw five datasets of
+   each kind.
+    1. On every dataset, train naive offline Q-learning and `clone_policy`,
+       and record the predicted value and the actual return as the loop that
+       fills `results` does. Which combination of data and method delivers
+       the best policy, and which the best-calibrated prediction?
+    1. On which kind of data does the clone outperform naive offline
+       Q-learning? Explain the pattern with the return of each behavior
+       policy.
+    1. On the near-optimal datasets, count at each live state how often the
+       dataset contains the action that the greedy policy of naive offline
+       Q-learning selects there. What do these counts explain about its
+       return?
+   :exlabel:`ex_offline-rl-where-data-comes`
+
+1. [code] **How much pessimism.** Rerun the loop that fills `results`
+   with the pessimistic arm's $\kappa$ set to each value in
+   $\{0, 0.02, 0.1, 0.3, 1\}$.
+    1. Plot the median predicted value and the median actual return against
+       $\kappa$ on the same axes. Between which values of $\kappa$ do the two
+       curves cross, and what happens on either side of the crossing?
+    1. What does the greedy policy do at $\kappa = 1$, and how well
+       calibrated is its prediction? What does this case say about
+       calibration as a criterion for choosing $\kappa$?
+    1. Which $\kappa$ delivers the best median return? Which information did
+       you use to find it that an offline deployment does not have?
+   :exlabel:`ex_offline-rl-how-much-pessimism`
+
+1. **Conditioning on luck.** Decision Transformer conditions each action on
+   a desired return. Its simplest tabular form, return-conditioned
+   supervised learning, acts in state $s$ for a target return $g$ with the
+   dataset's action distribution among the episodes that achieved $g$,
+   $\pi(a \mid s, g) = P_{\mathcal{D}}(a \mid s, G = g)$
+   :cite:`Brandfonbrener.Bietti.Buckman.ea.2022`. A one-step task has two
+   actions, and a uniformly random behavior has collected plentiful data.
+   Action A pays $1$ with probability $1/2$ and $0$ otherwise; action B
+   always pays $0.6$.
+    1. Which action does the policy take for $g = 1$, the highest return in
+       the data, and what is its expected reward? Which action does it take
+       for $g = 0.6$?
+    1. Let A pay $1$ with probability $p$. For which $p$ does conditioning
+       on the highest return select the optimal action?
+    1. What does offline Q-learning learn from the same data, and why do
+       the lucky episodes not mislead it?
+
+1. **Truncated importance ratios.** ● V-trace
+   :cite:`Espeholt.Soyer.Munos.ea.2018` corrects data from a behavior
+   policy $\pi_e$ toward a target policy $\pi$ with the truncated ratios
+   $\rho_t = \min\big(\bar{\rho},\, \pi(a_t \mid s_t) / \pi_e(a_t \mid s_t)\big)$.
+   In its one-step form, the state-value update on a transition collected
+   by $\pi_e$ is
+   $$V(s_t) \leftarrow V(s_t) + \alpha\, \rho_t \big(r_t + \gamma V(s_{t+1}) - V(s_t)\big).$$
+   Assume that $\pi_e(a \mid s) > 0$ wherever $\pi(a \mid s) > 0$.
+    1. For $\bar{\rho} = \infty$, show that the expected update under
+       $a_t \sim \pi_e(\cdot \mid s_t)$ vanishes at every state exactly when
+       $V$ satisfies the Bellman expectation equation of $\pi$.
+    1. For finite $\bar{\rho}$, show that the expected update vanishes at
+       the value function of the policy
+       $$\pi_{\bar{\rho}}(a \mid s) = \frac{\min\big(\bar{\rho}\, \pi_e(a \mid s),\, \pi(a \mid s)\big)}{\sum_b \min\big(\bar{\rho}\, \pi_e(b \mid s),\, \pi(b \mid s)\big)}.$$
+    1. Compute $\pi_{\bar{\rho}}$ for two actions with $\pi_e = (0.5, 0.5)$,
+       $\pi = (0.9, 0.1)$ and $\bar{\rho} = 1$, the value IMPALA uses. Which
+       policy does $\pi_{\bar{\rho}}$ approach as $\bar{\rho} \to 0$, and for
+       which $\bar{\rho}$ does it equal $\pi$?
+    1. In distributed training, $\pi_e$ is a slightly older copy of $\pi$.
+       Why is the bias of truncation small in this regime, and what does
+       truncation buy in exchange?
+   :exlabel:`ex_offline-rl-truncated-ratios`
+
+1. [code] **Dataset size and the error floor.** ● The computation of
+   `kappa_fit` reports a median error of $0.077$ at pairs with more than
+   $100$ visits, and the section names three candidate causes: maximization
+   bias, the constant step size $\alpha$, and incomplete convergence. In a
+   dataset of $500$ random episodes, the pairs with more than $100$ visits
+   are, in expectation, the twelve pairs of states $0$, $1$ and $4$. Measure
+   the error at these twelve pairs throughout.
+    1. Rerun naive offline Q-learning on five datasets each of $100$, $500$
+       and $2000$ random episodes. How do the median predicted value and the
+       median actual return move with the size? How does the median error
+       against `Q_star` at the twelve pairs move?
+    1. Separate the step size from the other causes. Build the empirical
+       MDP of each dataset from its counts,
+       $\hat{P}(s' \mid s, a) = n(s, a, s') / n(s, a)$, with $\hat{r}(s, a)$
+       the average observed reward and zero rows for unvisited pairs, as
+       `d2l.TabularMDP(P_hat, r_hat, gamma)`. Solve it with
+       `d2l.value_iteration` and apply its `backup` to the solution. This
+       certainty-equivalent table is the limit of offline Q-learning with
+       decaying step sizes, as in exercise
+       :exref:`ex_qlearning-batch-td-monte-carlo` of
+       :numref:`sec_qlearning`. Repeat the measurements of part (a) with it.
+       Which part of the error floor disappears?
+    1. Does the certainty-equivalent prediction still exceed $V^*(s_0)$?
+       Which of the three causes explains what remains? How should it scale
+       with the size of the dataset, and do your measurements agree?
+   :exlabel:`ex_offline-rl-dataset-size`
+
+1. **Pessimism in a two-armed bandit.** ● An offline dataset for a
+   two-armed bandit holds $n_1$ pulls of arm 1, which always pays $1/2$, and
+   $n_2$ pulls of arm 2, which pays $1$ with probability $1/4$ and $0$
+   otherwise. Write $r(a)$ for the mean reward of arm $a$, $\hat{r}(a)$ for
+   its empirical mean, and $a^*$ for the best arm. Ties go to arm 1.
+    1. The empirical best arm maximizes $\hat{r}(a)$. Compute the
+       probability that it is arm 2, and the expected shortfall
+       $r(a^*) - r(\hat{a})$, for $n_2 \in \{1, 5, 20\}$. How does the
+       answer depend on $n_1$?
+    1. The lower-confidence-bound rule
+       :cite:`Rashidinejad.Zhu.Ma.ea.2021` selects
+       $\hat{a} = \operatorname{argmax}_a \hat{r}(a) - b(a)$ with
+       $$b(a) = \sqrt{\frac{\log(2K/\delta)}{2 n(a)}}$$
+       for $K$ arms with rewards in $[0, 1]$, where $n(a)$ counts the pulls
+       of arm $a$. Assume that every arm has at least one pull. Use
+       Hoeffding's inequality, as stated in exercise
+       :exref:`ex_qlearning-ucb-logarithmic-regret` of
+       :numref:`sec_qlearning`, and a union bound to show that
+       $r(a^*) - r(\hat{a}) \leq 2 b(a^*)$ with probability at least
+       $1 - \delta$.
+    1. The optimistic rule $\operatorname{argmax}_a \hat{r}(a) + b(a)$ has
+       the form of :eqref:`eq_ucb`. Derive the analogous bound for it. On
+       whose count does the bound depend now, and why is this dependence
+       harmless online but harmful offline?
+    1. Take $n_1 = 100$, $n_2 = 1$ and $\delta = 0.1$. Which arm does the
+       lower-confidence-bound rule select? Suppose instead that arm 2 pays
+       $1$ with probability $0.7$, and take its empirical mean to be $0.7$
+       at every count. How many pulls of arm 2 must the dataset hold before
+       the rule selects it?
+
+1. [code] **Missing and thin support.** ● On `data`, `support_q`
+   reproduced naive offline Q-learning bit for bit. Every live pair of
+   `data` was observed, and with zero initialization and nonnegative
+   rewards an unobserved pair could not have outranked an observed one
+   anyway. A network, however, assigns arbitrary values to actions it has
+   never been trained on. Model this by giving `offline_q` and `support_q`
+   an argument `init` for the initial table, with entries drawn uniformly
+   from $[0, 1]$.
+    1. Collect 500 episodes from a behavior that picks uniformly among
+       *left*, *down* and *right* and never *up*. On three such datasets,
+       compare naive offline Q-learning, `support_q`, and `offline_q` with
+       $\kappa = 0.1$ by predicted value and actual return. Which method
+       fails, and how?
+    1. Let the behavior pick *up* with probability $0.01$ and the other
+       three actions uniformly otherwise, and repeat. Print the counts of
+       the *up* pairs at the live states. Why does the prediction of naive
+       offline Q-learning fall compared with part (a)? How do the
+       predictions of `support_q` and of `offline_q` with $\kappa = 0.1$
+       change, and which *up* pairs cause the change?
+    1. A cautious human operator collected a dataset and avoided the
+       actions that the operator judged unsafe, taking some of them rarely
+       and others never. What does the rarity of an action tell the learner
+       in such a dataset? Which of the two rules, the support rule or the
+       count penalty, uses this information? How does each treat an action
+       that the operator took exactly once?
+
+1. [code] **Evaluation without a simulator.** ● Every comparison in this
+   section rolled the learned policies out in the environment, which a
+   genuine offline deployment cannot do. Ordinary importance sampling
+   estimates the value of a target policy $\pi$ from $m$ episodes of a
+   behavior policy $\pi_e$ by $\frac{1}{m} \sum_i w_i G_i$, and weighted
+   importance sampling by $\sum_i w_i G_i / \sum_i w_i$, where $G_i$ is the
+   discounted return of episode $i$ and
+   $w_i = \prod_t \pi(a_t \mid s_t) / \pi_e(a_t \mid s_t)$ is the product
+   over its steps.
+    1. For the greedy policy of `fits[0]`, how many of the 500 episodes of
+       `data` receive a nonzero weight? Explain the number with the length
+       of the episodes.
+    1. Evaluate instead the $\epsilon$-greedy version of each table in
+       `fits`, with $\epsilon = 0.3$, on the dataset that trained it.
+       Compute both estimates and the effective sample size
+       :eqref:`eq_mdl-bayes-is-ess` of the weights,
+       $(\sum_i w_i)^2 / \sum_i w_i^2$. Compare the estimates with the exact
+       value `d2l.policy_evaluation(mdp, pi, 1000)[-1][0]`, where `pi` is
+       the $16 \times 4$ array of the policy's action probabilities; only
+       the experimenter can compute this value. For a fixed target policy,
+       ordinary importance sampling is unbiased by
+       :eqref:`eq_offpolicy_objective`. How does the spread
+       of the weights explain the errors of the two estimates?
+    1. A model-based alternative evaluates a greedy policy exactly in the
+       empirical MDP of problem :exref:`ex_offline-rl-dataset-size`b.
+       Evaluate the greedy policy of each table in `fits` in the empirical
+       MDP of the dataset that trained it.
+    1. Train instead on the first 250 episodes of each dataset, and evaluate
+       the resulting greedy policy in the empirical MDP of the other 250.
+       Compare both model-based estimates with the exact values. Which
+       estimate is biased, in which direction, and why? Which one is
+       noisier?
+    1. Could any of these estimators have selected $\kappa$ in exercise
+       :exref:`ex_offline-rl-how-much-pessimism` reliably?
+
+    *Adapted from Richard S. Sutton and Andrew G. Barto,
+    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
+    Section 5.5.*
+   :exlabel:`ex_offline-rl-what-you-cannot-measure`
+
+1. [extended] **Conservative Q-learning in a table.** ●● Conservative
+   Q-learning (CQL) :cite:`Kumar.Zhou.Tucker.ea.2020` adds to the squared
+   Bellman error a term that lowers values under a chosen action
+   distribution $\mu(a \mid s)$ and raises them under the dataset's
+   empirical action distribution
+   $\hat{\pi}_e(a \mid s) = n(s, a) / n(s)$, where
+   $n(s) = \sum_a n(s, a)$. In a table, one iteration chooses
+   $$\hat{Q}_{k+1} = \operatorname*{argmin}_Q\; \alpha_{\textrm{c}} \Big( E_{s \sim \mathcal{D},\, a \sim \mu(\cdot \mid s)}\big[Q(s, a)\big] - E_{(s, a) \sim \mathcal{D}}\big[Q(s, a)\big] \Big) + \frac{1}{2} E_{(s, a) \sim \mathcal{D}} \Big[ \big( Q(s, a) - \hat{\mathcal{B}} \hat{Q}_k(s, a) \big)^2 \Big],$$
+   where $E_{\mathcal{D}}$ averages over the transitions of the dataset,
+   $\alpha_{\textrm{c}} > 0$ sets the strength of the penalty, and
+   $\hat{\mathcal{B}} \hat{Q}_k(s, a)$ averages the Q-learning target
+   $r + \gamma \max_{a'} \hat{Q}_k(s', a')$ over the transitions from
+   $(s, a)$ in the dataset.
+    1. Show that every pair with $n(s, a) > 0$ satisfies
+       $$\hat{Q}_{k+1}(s, a) = \hat{\mathcal{B}} \hat{Q}_k(s, a) - \alpha_{\textrm{c}} \Big( \frac{\mu(a \mid s)}{\hat{\pi}_e(a \mid s)} - 1 \Big).$$
+       Which pairs does the penalty lower, and which does it raise?
+    1. Let $\mu = \pi$ for some policy $\pi$. Show that one iteration lowers
+       $\sum_a \pi(a \mid s) \hat{Q}_{k+1}(s, a)$ by
+       $\alpha_{\textrm{c}} \big( \sum_a \pi(a \mid s)^2 / \hat{\pi}_e(a \mid s) - 1 \big)$
+       relative to the same average of the backup, and that this amount is
+       nonnegative.
+    1. Take for $\mu$ the greedy policy of `fits[0]`. For the live pairs of
+       `data`, plot the CQL penalty of part (a) and the penalty
+       $\kappa / \sqrt{n(s, a)}$ of `offline_q` against $n(s, a)$. Which
+       property of the data does each penalty respond to, and which pairs do
+       the two treat differently?
+    1. A sample-based version of CQL extends the loop of `offline_q` with
+       $\kappa = 0$: after the update of $Q(s, a)$, it subtracts
+       $\alpha\, \alpha_{\textrm{c}}\, \mu(\cdot \mid s)$ from the row
+       $Q(s, \cdot)$ and adds $\alpha\, \alpha_{\textrm{c}}$ to $Q(s, a)$,
+       where $\mu(\cdot \mid s)$ is the softmax of $Q(s, \cdot) / \tau$ with
+       $\tau = 0.01$. Show that the expected update over a sweep vanishes at
+       the fixed point of part (a).
+    1. Implement this update and run it on the fifteen `datasets` for
+       $\alpha_{\textrm{c}} \in \{0.003, 0.01, 0.03, 0.1\}$, about a minute
+       of CPU time per value. Compare the predicted values and actual
+       returns with those of `offline_q` at $\kappa = 0.1$.
+    1. Does the predicted value $\max_a \hat{Q}(s_0, a)$ of CQL stay below
+       the actual return of its greedy policy at every
+       $\alpha_{\textrm{c}}$? Explain what you find with parts (a) and (b).
+       Which of the two penalties carries over to a deep network, and what
+       would have to replace $n(s, a)$ for the other?
 
 [Discussions](https://d2l.discourse.group/)
 

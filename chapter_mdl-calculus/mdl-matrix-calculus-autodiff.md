@@ -1289,6 +1289,7 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
        thresholds in float64 as well.
     1. What do the fused loss and the fused gradient return over the same
        range of $t$?
+   :exlabel:`ex_mdl-matrix-calculus-autodiff-composed-fused`
 
 1. [code] **Dual and complex steps.** Take the map
    $\mathbf f(x,y)=(x^2y,\ \sin(x+y))$ at $\mathbf x_0=(1,0.5)$ and the

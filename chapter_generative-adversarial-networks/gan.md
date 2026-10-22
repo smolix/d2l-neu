@@ -37,6 +37,7 @@ One possible response is to restrict $G$ until its likelihood becomes tractable.
 $$
 \tilde p \;=\; 0.01\, p_{\textrm{data}} + 0.99\, p_{\textrm{noise}}.
 $$
+:eqlabel:`eq_gan_noise_mixture`
 
 For every $x$ we have $\tilde p(x) \geq 0.01\, p_{\textrm{data}}(x)$, so $\log \tilde p(x) \geq \log p_{\textrm{data}}(x) - \log 100$. The expected log-likelihood of $\tilde p$ is therefore within $\log 100 \approx 4.6$ nats of the best achievable by any model. For images or audio, whose log-likelihoods can contain thousands of nats, this penalty is small. Yet 99 percent of the mixture's samples are noise. A model can thus have nearly optimal likelihood while remaining useless as a sampler :cite:`Theis.Oord.Bethge.2016`. Evaluating a sampler requires examining its samples.
 
@@ -45,11 +46,11 @@ Statistics provides a direct way to compare samples. Given real and generated ex
 ![Adversarial training. A latent draw $z$ passes through the generator $G$ to produce a batch of generated samples. The discriminator $D$ assigns realness logits to this batch and to a batch of real data. The discriminator raises its scores on data and lowers them on generated samples; the generator receives gradients through the discriminator and makes the two batches harder to distinguish.](../img/mdl-gan-architecture.svg)
 :label:`fig_gan`
 
-The diagram specifies the training mechanism but not the quantity being optimized. We compute the objective at the discriminator's best response, then determine whether the resulting generator gradient is useful. Both calculations use the original logistic loss.
+The diagram specifies the training mechanism but not the quantity being optimized. We compute the objective at the discriminator's *best response*, the discriminator that maximizes the objective for a fixed generator. We then determine whether the resulting generator gradient is useful. Both calculations use the original logistic loss.
 
 ## The Log-Loss Game
 
-The discriminator solves a binary classification problem. Draw a label $y \sim \textrm{Bernoulli}(\tfrac12)$. If $y = 1$, draw $x$ from the data density $p$; if $y = 0$, draw $x$ from the generator density $q$. The marginal density of $x$ is the balanced mixture $m = (p + q)/2$, which describes a sample whose source is unknown. Throughout this chapter, $p$ denotes the data distribution and $q$ the generator distribution. Two derived quantities will recur: the density ratio $\rho = p/q$ and its logarithm $\lambda = \log \rho$. The discriminator is a function $D: \mathcal{X} \to \mathbb{R}$ that produces a *realness logit*. With $\sigma(t) = 1/(1 + e^{-t})$, the value $\sigma(D(x))$ estimates $P(y = 1 \mid x)$, and a larger $D(x)$ indicates stronger evidence that $x$ came from the data. We will repeatedly use the identities $\sigma(-t) = 1 - \sigma(t)$ and $\tfrac{d}{dt} \log \sigma(t) = \sigma(-t)$.
+The discriminator solves a binary classification problem. Draw a label $y \sim \textrm{Bernoulli}(\tfrac12)$. If $y = 1$, draw $x$ from the data density $p$; if $y = 0$, draw $x$ from the generator density $q$. The marginal density of $x$ is the balanced mixture $m = (p + q)/2$, which describes a sample whose source is unknown. Throughout this chapter, $p$ denotes the data distribution and $q$ the generator distribution. Two derived quantities will recur: the density ratio $\rho = p/q$ and its logarithm $\lambda = \log \rho$. The discriminator is a function $D: \mathcal{X} \to \mathbb{R}$ that produces a *realness logit*; we also call $D$ the *critic*. With $\sigma(t) = 1/(1 + e^{-t})$, the value $\sigma(D(x))$ estimates $P(y = 1 \mid x)$, and a larger $D(x)$ indicates stronger evidence that $x$ came from the data. We will repeatedly use the identities $\sigma(-t) = 1 - \sigma(t)$ and $\tfrac{d}{dt} \log \sigma(t) = \sigma(-t)$.
 
 The natural loss for a probabilistic classifier is the log loss, and on the balanced problem the discriminator's expected negative log-likelihood is $-\tfrac12 E_{x \sim p}[\log \sigma(D(x))] - \tfrac12 E_{x' \sim q}[\log \sigma(-D(x'))]$. Dropping the factor $\tfrac12$ and flipping the sign gives the objective the discriminator maximizes,
 
@@ -71,7 +72,7 @@ D^\star(x) = \log \frac{p(x)}{q(x)} = \lambda(x).
 $$
 :eqlabel:`eq_gan_dstar`
 
-The optimal discriminator returns the Bayes posterior for the labeling problem, and its logit is the log density ratio. This pointwise argument assumes that both densities are positive. Where one density vanishes, the optimal logit is infinite and is attained only in the limit; the corresponding divergences are interpreted as extended-real quantities throughout the chapter. Although $q$ has no computable density, :eqref:`eq_gan_dstar` shows that a classifier can estimate the function of $q$ required by the objective. An unconstrained critic trained with log loss is therefore a density-ratio estimator. Other losses and critic classes will produce related estimates later in the chapter. The objective also determines the additive constant: shifting $D^\star$ by any $b \neq 0$ strictly decreases $V$ (Exercise 1). Pairwise critics will provide a contrasting case in which such shifts leave the objective unchanged.
+The optimal discriminator returns the Bayes posterior for the labeling problem, and its logit is the log density ratio. This pointwise argument assumes that both densities are positive. Where one density vanishes, the optimal logit is infinite and is attained only in the limit; the corresponding divergences are interpreted as extended-real quantities throughout the chapter. Although $q$ has no computable density, :eqref:`eq_gan_dstar` shows that a classifier can estimate the function of $q$ required by the objective. An unconstrained critic trained with log loss is therefore a density-ratio estimator. Other losses and critic classes will produce related estimates later in the chapter. The objective also determines the additive constant: shifting $D^\star$ by any $b \neq 0$ strictly decreases $V$ (Exercise :exref:`ex_gan-log-loss-game-identifies`b). Pairwise critics will provide a contrasting case in which such shifts leave the objective unchanged.
 
 ### The Value of the Game
 
@@ -304,6 +305,7 @@ def update_G(Z, net_D, net_G, optimizer_G):
 ```
 
 ### Training
+:label:`subsec_gan_training`
 
 The loop alternates the two half-steps over minibatches, records each player's per-sample loss, and stores generated samples at selected epochs. These snapshots are used by the comparison experiment below. Adam serves as the optimizer for both players, with the discriminator given the larger learning rate so that its scores stay close to their best response to the current generator.
 
@@ -399,6 +401,7 @@ fig.tight_layout()
 The loss curves provide an empirical check of the value calculation. While real and generated samples remain distinguishable, the discriminator loss is below $\log 2$. As the generator improves, the loss approaches the dashed line at $\log 2 \approx 0.693$. Equation :eqref:`eq_gan_js_value` places the optimal discriminator's per-sample negative log-likelihood at $\log 2 - \mathrm{JS}(p, q)$, so the observed rise is consistent with $\mathrm{JS}$ approaching zero. The generator loss approaches the same level from above for a different reason. By :eqref:`eq_gan_ns_value`, the non-saturating loss against a near-optimal critic approaches its minimum $\log 2$ as $q$ approaches $p$. The sample overlay provides a separate qualitative check: generated samples occupy the same tilted ellipse as the data. Nevertheless, a discriminator loss of $\log 2$ establishes only that the trained discriminator cannot distinguish the samples. It does not prove that $q=p$, so the next two measurements evaluate the fit independently.
 
 ### Verifying the Optimal Critic
+:label:`subsec_gan_verify_critic`
 
 Equation :eqref:`eq_gan_dstar` states that an optimal critic computes $\lambda = \log(p/q)$. Both densities are known in this experiment: $p = \mathcal{N}(b, A^\top A)$ by construction, and the trained linear generator determines the Gaussian $q$. Two conditions are needed for a useful check. First, the theorem concerns the best response to a *fixed* generator, whereas ordinary training alternates between the two networks. We therefore freeze the generator and give the critic additional steps to converge. Second, by the end of the main run $q$ is so close to $p$ that $\lambda$ is nearly zero throughout the sampled region. We instead freeze the partially trained generator at epoch ten, when the mismatch remains measurable.
 
@@ -491,9 +494,10 @@ d2l.plt.xlabel(r'analytic $\log(p/q)$')
 d2l.plt.ylabel('critic output')
 ```
 
-The points lie close to the dashed identity line. As :eqref:`eq_gan_dstar` predicts, a three-layer network trained only for classification has learned the log density ratio, with a mean error well below one nat. The errors increase at extreme values of $\lambda$, where one density is nearly zero and the mixture supplies few samples. The objective constrains the critic only where $m$ places appreciable mass; elsewhere the network extrapolates (Exercise 5 maps this error over the plane). Density-ratio estimation is therefore least accurate where the ratio is most extreme, a limitation examined further in the next section.
+The points lie close to the dashed identity line. As :eqref:`eq_gan_dstar` predicts, a three-layer network trained only for classification has learned the log density ratio, with a mean error well below one nat. The errors increase at extreme values of $\lambda$, where one density is nearly zero and the mixture supplies few samples. The objective constrains the critic only where $m$ places appreciable mass; elsewhere the network extrapolates (Exercise :exref:`ex_gan-verification-above-compared-critic` maps this error over the plane). Density-ratio estimation is therefore least accurate where the ratio is most extreme, a limitation examined further in the next section.
 
 ### Quantifying the Fit
+:label:`subsec_gan_fit`
 
 The sample overlay lets the fit be judged by eye; the linear generator lets it be measured in nats. For Gaussians in $d$ dimensions the Kullback--Leibler divergence has the closed form :cite:`Kullback.1959`
 
@@ -542,6 +546,7 @@ for name, net in [('at initialization', make_nets()[0]),
 The divergence falls from roughly eight nats at initialization to a small fraction of a nat. Although the training loop never evaluates the generator density, the classifier supplies enough information to fit its parameters. The resulting generator distribution closely approximates the data distribution.
 
 ### Saturating versus Non-Saturating Training
+:label:`subsec_gan_saturation`
 
 Testing the two weights in :eqref:`eq_gan_weights` requires an initialization at which they differ substantially. In the preceding run, the initial generator emits samples near the origin, about one standard deviation from the data mean. The critic never becomes confident enough to drive $w_{\textrm{sat}}$ toward zero, and both losses train successfully. We therefore initialize the generator's bias far from the data, where the critic can reject its samples confidently. Two runs begin from this same initialization and differ only in the sign that produces the saturating or non-saturating weight.
 
@@ -660,11 +665,285 @@ The saturating and non-saturating generator losses have the same fixed point but
 
 ## Exercises
 
-1. The log-loss game identifies its optimal critic exactly. Let $D^\star = \log(p/q)$ and consider the shifted critic $D^\star + b$ for a constant $b \neq 0$. Show that $V(D^\star + b) < V(D^\star)$, by examining the pointwise objective $p \log \sigma(t) + q \log \sigma(-t)$ at $t = \lambda(x) + b$ and using the uniqueness of its maximizer. (Later in this chapter, an objective built from *pairs* of samples will be invariant to such shifts; this exercise is the contrast.)
-1. Suppose the labeling problem uses unequal priors: $P(y = 1) = \alpha$ with $0 < \alpha < 1$, so a sample is real with probability $\alpha$ and generated otherwise. Derive the optimal critic $\sigma(D^\star) = \alpha p / (\alpha p + (1-\alpha) q)$ and show that the value of the game is, up to constants, the skewed divergence $\alpha\, \mathrm{KL}(p \,\|\, m_\alpha) + (1-\alpha)\, \mathrm{KL}(q \,\|\, m_\alpha)$ with $m_\alpha = \alpha p + (1-\alpha) q$. What does a discriminator trained on imbalanced batches therefore optimize?
-1. Generalize the mixture argument: for $\tilde p = \epsilon\, p_{\textrm{data}} + (1 - \epsilon)\, p_{\textrm{noise}}$ with $0 < \epsilon < 1$, show that the expected log-likelihood of $\tilde p$ under the data distribution is within $-\log \epsilon$ nats of that of $p_{\textrm{data}}$ itself. As $\epsilon$ decreases from $1$ toward $0$ the penalty $-\log \epsilon$ grows; determine the largest $\epsilon$ at which it reaches one nat, and the fraction of the model's samples that are noise at that point.
-1. Derive the two generator weights of :eqref:`eq_gan_weights` in two lines each: differentiate the saturating loss $E_z[\log \sigma(-D(G(z)))]$ using $\tfrac{d}{du} \log \sigma(-u) = -\sigma(u)$, and the non-saturating loss $-E_z[\log \sigma(D(G(z)))]$ using $\tfrac{d}{du} \log \sigma(u) = \sigma(-u)$. Then evaluate both weights at $D(x') = 3$ and $D(x') = -3$ and confirm that their ratio $w_{\textrm{ns}}/w_{\textrm{sat}} = e^{-D(x')}$ is about $1/20$ and $20$ respectively: a confidently rejected sample receives roughly twenty times the step size under the non-saturating weight.
-1. The verification above compared the critic with $\lambda$ at samples from the mixture. Repeat it on a regular grid covering the data region (for example $[-2, 4] \times [-4, 8]$), and report the sup-norm error of $\sigma(D(x))$ against the analytic $p/(p+q)$ over the grid. Where in the plane is the error largest, and why does the training objective permit large errors exactly there?
+1. **Likelihood versus samples.** The noise mixture
+   :eqref:`eq_gan_noise_mixture` of :citet:`Theis.Oord.Bethge.2016` has a
+   nearly optimal likelihood and poor samples.
+    1. Replace the weights $0.01$ and $0.99$ by $\epsilon$ and $1 - \epsilon$.
+       The argument after :eqref:`eq_gan_noise_mixture` then bounds the
+       shortfall
+       $E_{p_{\textrm{data}}}[\log p_{\textrm{data}}] - E_{p_{\textrm{data}}}[\log \tilde p]$
+       by $\log(1/\epsilon)$. Write the shortfall exactly as an expectation
+       under $p_{\textrm{data}}$ of a function of the ratio
+       $p_{\textrm{noise}} / p_{\textrm{data}}$. When is the bound nearly
+       attained? Is it nearly attained for natural images when
+       $p_{\textrm{noise}}$ is the uniform density on the pixel cube?
+    1. Image models often report likelihoods in bits per dimension: the
+       negative log-likelihood divided by the number of dimensions and by
+       $\log 2$. Convert the bound for $\epsilon = 0.01$ into bits per
+       dimension for $32 \times 32$ color images, with $d = 3072$. Would a
+       table of results rounded to two decimals reveal the difference?
+    1. Now take the converse case. Let the data distribution be
+       $p = \mathcal{N}(0, I_d)$ and let a model be
+       $q = \mathcal{N}(0, s^2 I_d)$ with $s < 1$. Each sample of $q$ is then
+       a data sample shrunk by the factor $s$, which for images resembles a
+       slight loss of contrast. Use :eqref:`eq_gan_mvn_kl` to compute the gap
+       $E_p[\log p] - E_p[\log q]$ for $d = 3072$ and $s = 0.9$. Find the $s$
+       at which the gap equals the $\log 100$ nats of the noise mixture. Which
+       of the two models wins by likelihood, and which by its samples?
+   :exlabel:`ex_gan-likelihood-versus-samples`
+
+1. **Excess loss and the additive constant.** Let
+   $\eta(x) = p(x) / (p(x) + q(x))$ be the posterior of
+   :eqref:`eq_gan_dstar`, and let
+   $\mathrm{KL}_{\textrm{b}}(a \,\|\, s) = a \log \frac{a}{s} + (1 - a) \log \frac{1 - a}{1 - s}$
+   be the Kullback--Leibler divergence between Bernoulli distributions with
+   success probabilities $a$ and $s$.
+    1. Show that every critic $D$ satisfies
+
+       $$V(D^\star) - V(D) = 2\, E_{x \sim m}\big[\mathrm{KL}_{\textrm{b}}\big(\eta(x) \,\|\, \sigma(D(x))\big)\big],$$
+
+       and conclude that $D^\star$ is the unique maximizer of
+       :eqref:`eq_gan_V`, up to changes on a set of $m$-probability zero.
+    1. Apply the identity to the shifted critic $D^\star + b$ with a constant
+       $b \neq 0$, and show that $V(D^\star + b) < V(D^\star)$.
+    1. Expand the pointwise objective $p \log \sigma(t) + q \log \sigma(-t)$
+       to second order around $t = \lambda(x)$, and show that
+
+       $$V(D^\star + b) - V(D^\star) = -\frac{b^2}{2} \int \frac{p q}{p + q}\, dx + O(b^3).$$
+
+       Show that the coefficient $\int pq/(p+q)\, dx$ lies between $0$ and
+       $\tfrac12$. When does it equal $\tfrac12$, and when does it vanish?
+       When the discriminator separates real from generated samples easily,
+       how sharply do finite samples determine the critic's additive
+       constant?
+   :exlabel:`ex_gan-log-loss-game-identifies`
+
+1. **Unequal priors.** Suppose the labeling problem draws $y = 1$ with
+   probability $\alpha$, where $0 < \alpha < 1$, so that the critic maximizes
+
+   $$V_\alpha(D) = \alpha\, E_{x \sim p}\big[\log \sigma(D(x))\big] + (1 - \alpha)\, E_{x' \sim q}\big[\log \sigma(-D(x'))\big].$$
+
+    1. Show that the optimal critic is
+       $D^\star_\alpha = \lambda + \log \frac{\alpha}{1 - \alpha}$, so that
+       $\sigma(D^\star_\alpha) = \alpha p / (\alpha p + (1 - \alpha) q)$.
+    1. Let $m_\alpha = \alpha p + (1 - \alpha) q$ and
+       $H_{\textrm{b}}(\alpha) = -\alpha \log \alpha - (1 - \alpha) \log(1 - \alpha)$.
+       Show that
+
+       $$\max_D V_\alpha(D) = \alpha\, \mathrm{KL}(p \,\|\, m_\alpha) + (1 - \alpha)\, \mathrm{KL}(q \,\|\, m_\alpha) - H_{\textrm{b}}(\alpha).$$
+
+       Identify the divergence term as the mutual information between a
+       sample and its label, as the section does for $\alpha = \tfrac12$, and
+       conclude that it lies between $0$ and $H_{\textrm{b}}(\alpha)$. When is
+       the upper end attained?
+    1. `update_D` gives the real and the generated batch the same size.
+       Suppose that the real batch had twice as many samples as the generated
+       one, with the summed loss kept. Which $\alpha$ does this implement? How
+       do the critic's best response and the non-saturating weight
+       $w_{\textrm{ns}}$ of a generated sample change? Is $q = p$ still a
+       stationary point of the generator update?
+   :exlabel:`ex_gan-unequal-priors`
+
+1. **Supports of measure zero.** The value calculation
+   :eqref:`eq_gan_js_value` treats $p$ and $q$ as densities on the same
+   space. Two settings close to this section's experiment violate that
+   assumption.
+    1. A generator with a one-dimensional latent variable,
+       $G(z) = z v + c$ with $z \sim \mathcal{N}(0, 1)$ and fixed vectors
+       $v \neq 0$ and $c$ in the plane, places all its samples on a line.
+       Show that $\mathrm{JS}(p, q) = \log 2$ against the data distribution
+       $p = \mathcal{N}(b, A^\top A)$ for every choice of $v$ and $c$, and
+       describe the best response of an unrestricted critic.
+    1. The training loop never sees $p$, only the empirical distribution
+       $\hat p$ that places mass $1/1000$ on each point of `data`. Show that
+       $\mathrm{JS}(\hat p, q) = \log 2$ for every generator distribution $q$
+       with a density, $q = p$ included.
+    1. By (a) and (b), the unrestricted game assigns the same value to every
+       generator in either setting. Yet the run of
+       :numref:`subsec_gan_training` trains on $\hat p$ and reduces
+       $\mathrm{KL}(q \,\|\, p)$ from about eight nats to a fraction of a nat.
+       Let $V_{\hat p}(D)$ denote :eqref:`eq_gan_V` with $p$ replaced by
+       $\hat p$, and restrict the critic to functions with
+       $|D(x) - D(y)| \leq L \|x - y\|$ for all $x, y$; the critic built by
+       `make_nets` is such a function for some finite $L$. Use the
+       Kantorovich--Rubinstein duality :eqref:`eq_mdl-kr-dual` to show that
+       $|V_{\hat p}(D) - V(D)| \leq L\, W_1(\hat p, p)$ for every such critic.
+       Why does this bound make the restricted game on $\hat p$ informative
+       about $q$? What happens to it as $L$ grows?
+   :exlabel:`ex_gan-measure-zero-supports`
+
+1. [code] **Critic error over the plane.** The verification of
+   :numref:`subsec_gan_verify_critic` compares the critic `net_D_mid` with
+   $\lambda$ only at samples from the mixture. Write
+   $\eta = p / (p + q)$ for the posterior of :eqref:`eq_gan_dstar`.
+    1. Evaluate $|\sigma(D(x)) - \eta(x)|$ on a regular grid over
+       $[-2, 4] \times [-4, 8]$, using `gaussian_logpdf` and
+       `generator_gaussian(net_G_mid)`, and plot it as a heat map with
+       contours of the mixture density $m$ on top. Report the largest error on
+       the grid and where it occurs.
+    1. Draw 10,000 fresh samples from each of $p$ and $q$. Estimate the
+       $m$-weighted mean error $E_m\big[|\sigma(D) - \eta|\big]$, and estimate
+       the excess $V(D^\star) - V(D)$ of the trained critic from the identity
+       of problem :exref:`ex_gan-log-loss-game-identifies`a. Which of the
+       three error measures does the training objective control? Use the
+       identity to explain why the largest grid errors cost the critic
+       almost nothing.
+   :exlabel:`ex_gan-verification-above-compared-critic`
+
+1. [code] **Saturation in the discriminator loss.** The per-sample
+   discriminator loss $\ell_D$ that `train` records in the first column of
+   its returned history averages the log loss on real samples and the log
+   loss on generated samples with equal weight.
+    1. Show that $\sigma(t) \leq -\log \sigma(-t)$ for every logit $t$.
+       Conclude that the mean saturating weight $w_{\textrm{sat}}$ of
+       :eqref:`eq_gan_weights` over the generated samples of an epoch,
+       evaluated at the critic before each discriminator half-step, is at most
+       $2 \ell_D$, and that the mean non-saturating weight is at least
+       $1 - 2 \ell_D$.
+    1. In the saturating run of :numref:`subsec_gan_saturation`,
+       `runs['saturating'][0][:, 0]` holds $\ell_D$ for each epoch. Plot the
+       bound $2 \ell_D$ against the epoch on a logarithmic axis. After the
+       loop, `net_D_ab` and `net_G_ab` hold the networks of the saturating
+       run. Compute the mean of $\sigma(D(x'))$ over 1,000 generated samples
+       and compare it with the bound at the last epoch. By which factor is the
+       saturating weight smaller than the non-saturating weight at the same
+       samples?
+   :exlabel:`ex_gan-saturation-in-loss`
+
+1. [code] **Two time scales.** ● `train` gives the critic ten times the
+   generator's learning rate, `lr_D=0.05` against `lr_G=0.005`, so that the
+   critic stays close to its best response.
+    1. Rerun the twenty-epoch training of :numref:`subsec_gan_training` with
+       (`lr_D`, `lr_G`) set to $(0.05, 0.005)$, $(0.005, 0.005)$, and
+       $(0.005, 0.05)$, five seeds each. Keep the initialization of
+       `make_nets`, and set the seed of the minibatch order and the latent
+       draws after calling it. Report the median and the range of the final
+       $\mathrm{KL}(q \,\|\, p)$ from `kl_gaussians`, and count a run without
+       a finite value as a failure. Is the spread across seeds at the default
+       setting small compared with the differences between the settings?
+    1. :eqref:`eq_gan_js_value` and :eqref:`eq_gan_ns_value` describe the
+       generator's objective against a best-response critic. What does the
+       generator follow instead when it adapts faster than the critic? The
+       convergence theorem for the two time-scale update rule of
+       :citet:`Heusel.Ramsauer.Unterthiner.ea.2017` (Theorem 1) assumes,
+       besides smoothness, noise and stability conditions, generator step
+       sizes $a(n)$ and critic step sizes $b(n)$ with
+       $\sum_n a(n) = \sum_n b(n) = \infty$,
+       $\sum_n a(n)^2 < \infty$, $\sum_n b(n)^2 < \infty$, and
+       $a(n) = o(b(n))$. Which of these conditions do the constant learning
+       rates of `train` violate? Does a ratio of ten suffice in your runs?
+   :exlabel:`ex_gan-two-time-scales`
+
+1. [code] **Classifier two-sample test.** ● A classifier two-sample test
+   :cite:`Lopez-Paz.Oquab.2017` trains a classifier to separate fresh real
+   samples from fresh generated ones and asks whether its accuracy on held-out
+   samples exceeds chance. Apply it to the trained generator `net_G`, whose
+   divergence $\mathrm{KL}(q \,\|\, p)$ the cell of
+   :numref:`subsec_gan_fit` prints. Write $\eta = p / (p + q)$ for the
+   posterior of :eqref:`eq_gan_dstar`.
+    1. For balanced classes, the Bayes classifier labels $x$ as real where
+       $\eta(x) > \tfrac12$. Show that its accuracy is
+
+       $$E_{x \sim m}\big[\max(\eta(x), 1 - \eta(x))\big] = \tfrac12 \big(1 + \mathrm{TV}(p, q)\big)$$
+
+       with the total variation distance :eqref:`eq_mdl-tv-def`. Use
+       Pinsker's inequality :eqref:`eq_mdl-pinsker` and the printed
+       $\mathrm{KL}(q \,\|\, p)$ to bound the accuracy that any classifier can
+       reach against `net_G`.
+    1. Estimate the Bayes accuracy of (a) by Monte Carlo with
+       `gaussian_logpdf` and `generator_gaussian`. Then train the fresh
+       critic `make_nets()[1]` with `update_D` against the frozen `net_G` on
+       fresh real samples $z A + b$, as the critic-only loop of
+       :numref:`subsec_gan_verify_critic` does, and measure its accuracy on
+       2,000 held-out samples from each distribution. How close does it come
+       to the Bayes accuracy?
+    1. Under $q = p$, the held-out accuracy on $n_{\textrm{te}}$ test points
+       is approximately Gaussian with mean $\tfrac12$ and variance
+       $1/(4 n_{\textrm{te}})$. Find the smallest $n_{\textrm{te}}$ for which
+       an observed accuracy equal to the Bayes accuracy of (b) rejects
+       $q = p$ in a one-sided test at the 5 percent level. With what probability does
+       a classifier whose expected accuracy is the Bayes accuracy reject at
+       this $n_{\textrm{te}}$? What does a test with fewer points say about
+       the generator?
+   :exlabel:`ex_gan-classifier-two-sample-test`
+
+1. **Generator weights and their divergences.** ●● A generator loss
+   $E_z[g(D(G(z)))]$, differentiated with the critic held fixed, has the
+   gradient $-E_z\big[w(D(x'))\, \nabla_\theta D(G(z))\big]$ with the weight
+   $w = -g'$, and :eqref:`eq_gan_weights` lists the two weights of this
+   section. Throughout this problem, the critic is the best response
+   $D = \lambda$ to the current generator $q_{\theta_0}$ and is held fixed
+   while the loss is differentiated at $\theta_0$. Write
+   $\rho = e^{D} = p / q_{\theta_0}$.
+    1. Show that the sum of the saturating loss $E_z[\log \sigma(-D(G(z)))]$
+       and the non-saturating loss $-E_z[\log \sigma(D(G(z)))]$ equals
+       $\mathrm{KL}(q \,\|\, p)$ at $D = \lambda$, and that its weight is
+       $w = 1$.
+    1. Let $D_f(p \,\|\, q_\theta) = E_{x \sim q_\theta}\big[f\big(p(x)/q_\theta(x)\big)\big]$
+       be the f-divergence :eqref:`eq_mdl-f-div-def` with a twice
+       differentiable convex function $f$. Show that
+
+       $$\nabla_\theta D_f(p \,\|\, q_\theta)\big|_{\theta_0} = -E_z\big[\rho^2 f''(\rho)\, \nabla_\theta D(G(z))\big],$$
+
+       with $\rho$ evaluated at $x' = G(z)$. Two steps suffice: the product
+       rule gives $\int \nabla_\theta q_\theta(x)\, h(x)\, dx$ with
+       $h = f(\rho) - \rho f'(\rho)$, and for a fixed $h$ this integral equals
+       $\nabla_\theta E_z[h(G(z))]$. A positive weight $w$ therefore selects
+       the divergence whose function $f$ satisfies
+       $\rho^2 f''(\rho) = w(\log \rho)$.
+    1. Identify the divergences selected by $w_{\textrm{sat}}$, by $w = 1$,
+       by $w(t) = e^t$, and by $w_{\textrm{ns}}$. Check the
+       $w_{\textrm{sat}}$ case against :eqref:`eq_gan_js_value`: why may the
+       critic be held fixed when the maximum over $D$ is differentiated? The
+       weight $e^t$ belongs to a generator loss of :citet:`Goodfellow.2016`
+       (Section 7.3), and the $w_{\textrm{ns}}$ case is Theorem 2.5 of
+       :citet:`Arjovsky.Bottou.2017`.
+    1. :citet:`Arjovsky.Bottou.2017` read the negative Jensen--Shannon term in
+       the divergence of $w_{\textrm{ns}}$ as pushing the two distributions
+       apart. Show that the function $f$ of this divergence is strictly
+       convex with $f(1) = 0$. What does this imply for the fixed points of
+       non-saturating training against a best-response critic, and for that
+       reading?
+    1. Compare the four weights as $\rho \to 0$, where the generator
+       oversamples, and as $\rho \to \infty$, where it undersamples. Which
+       updates are zero-forcing and which are zero-avoiding in the sense of
+       :numref:`sec_mdl-fwd-vs-rev-kl`? A trained critic only estimates
+       $\rho$; what does the weight $e^t$ do to the variance of a minibatch
+       gradient when $q$ places little mass where $p$ places much?
+
+   *Adapted from Stefano Ermon and Aditya Grover,
+   [CS236: Deep Generative Models, Homework 3](https://raw.githubusercontent.com/Subhajit135/CS236_DGM/master/hw/CS236_Homework_3.pdf),
+   Problem 2.3.*
+   :exlabel:`ex_gan-generator-weight-divergences`
+
+1. [extended] **Finite samples and critic capacity.** ●● Problem
+   :exref:`ex_gan-measure-zero-supports`b showed that an unrestricted critic
+   separates the empirical distribution of the training points from every
+   generator with a density. :citet:`Arora.Ge.Liang.ea.2017` (Theorem 3.1)
+   show that a critic class with few parameters behaves differently: once the
+   number of samples exceeds the number of critic parameters, up to
+   logarithmic factors and the required accuracy, the critic's value on the
+   samples is close to its value on the populations. Test this at small
+   scale. Set the generator's parameters so that it computes $z A + b$, which
+   makes $q = p$ exactly.
+    1. Train critics with two tanh hidden layers of equal width, for the
+       widths 5, 32, 256, and 1024 and for $n \in \{100, 1000, 10000\}$, with
+       `update_D`.
+       Each critic sees minibatches from a fixed sample of $n$ draws from $p$
+       and fresh generated samples. Adam with learning rate $10^{-3}$ and
+       4,000 steps of 256 samples per class suffice. Evaluate the per-sample
+       discriminator loss on the $n$ training points and on fresh draws from
+       $p$, with fresh generated samples in both, and plot the gap between the
+       two losses against the number of critic parameters, one curve per $n$.
+    1. At which ratio of critic parameters to $n$ does the training loss fall
+       visibly below $\log 2$? Where does the critic of `make_nets`, with 37
+       parameters, lie at $n = 1000$?
+    1. A GAN computes its discriminator loss on minibatches of the training
+       data. For a critic large enough to fall below $\log 2$ at $q = p$, what
+       can a discriminator loss below $\log 2$ during GAN training no longer
+       tell apart? Propose a measurement that separates the two causes, and
+       state what it costs.
+   :exlabel:`ex_gan-finite-sample-critic`
 
 [Discussions](https://d2l.discourse.group/)
 

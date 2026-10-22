@@ -508,7 +508,7 @@ for net in (Generator(rngs=nnx.Rngs(0)), Discriminator(rngs=nnx.Rngs(0))):
 
 The generator has about 2.8 million parameters and the critic about 1.6 million. This model is a reduced instance of the R3GAN design rather than the published Config E. We omit its grouped convolutions, inverted bottlenecks, and additional residual depth, which provide capacity at the larger scale considered in that work.
 
-Two additional training choices complete the recipe. First, random horizontal flips augment the real images. A critic with enough capacity can memorize a dataset of this size, and augmentation reduces that risk; :citet:`Karras.Aittala.Hellsten.ea.2020` develops a feedback-controlled version for larger models. Second, evaluation uses an exponential moving average of the generator parameters rather than the raw iterates. This is the weight EMA introduced for classifiers in :eqref:`eq_ema`. The two-player dynamics analyzed in :numref:`sec_gan_convergence` rotate while contracting, so averaging successive iterates also reduces their displacement from the equilibrium. We use a half-life of 500 steps.
+Two additional training choices complete the recipe. First, random horizontal flips augment the real images. A critic with enough capacity can memorize a dataset of this size, and augmentation reduces that risk; :citet:`Karras.Aittala.Hellsten.ea.2020` develops a feedback-controlled version for larger models. Second, evaluation uses an exponential moving average of the generator parameters rather than the raw iterates. This is the weight EMA introduced for classifiers in :eqref:`eq_ema`. The two-player dynamics analyzed in :numref:`sec_gan_convergence` rotate while contracting, so averaging successive iterates can also reduce their displacement from the equilibrium. We use a half-life of 500 steps.
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-3}
 %%tab pytorch
@@ -562,7 +562,7 @@ def sample_real(key, images, n):
 
 ## Loss A/B on One Backbone
 
-The controlled comparison uses two training arms with the same backbone and initialization. Every convolutional and linear weight is drawn from $\mathcal{N}(0, 0.02^2)$, following the 2015 convention, and every bias starts at zero. Both frameworks apply the same role-aware convention used for DCGAN above; because this backbone has no normalization parameters, the roles reduce to weights and biases. Within each framework, the two arms therefore begin with identical parameters. Across frameworks, the backbones have the same layers, initialization convention, and antialiased bilinear downsampling, but they are not bitwise identical because each library uses its own random stream.
+The controlled comparison uses two training arms with the same backbone and initialization. Every convolutional and linear weight, as well as the learned constant of `Generator`, is drawn from $\mathcal{N}(0, 0.02^2)$, following the 2015 convention, and every bias starts at zero. Both frameworks apply the same role-aware convention used for DCGAN above; because this backbone has no normalization parameters, the roles reduce to weights and biases. Within each framework, the two arms therefore begin with identical parameters. Across frameworks, the backbones have the same layers, initialization convention, and antialiased bilinear downsampling, but they are not bitwise identical because each library uses its own random stream.
 
 The arms share Adam with $\beta_1 = 0$ and $\beta_2 = 0.99$ at learning rate $2 \cdot 10^{-4}$, batch size 64, augmentation, EMA, and a budget of 15,000 steps, or about 26 epochs. They differ only in the loss. The first arm uses the classic non-saturating objective through `d2l.update_D` and `d2l.update_G`. The second uses the loss from :numref:`sec_gan_convergence`: the relativistic pairing objective with its non-saturating generator, `d2l.rpgan_loss_D` and `d2l.rpgan_loss_G`, plus both zero-centered penalties from `d2l.r1_r2_penalty`.
 
@@ -728,7 +728,7 @@ for ax, (name, (ema_G, hist)) in zip(axes, runs.items()):
 fig.tight_layout()
 ```
 
-The classic arm collapses: all 64 latent codes produce visually indistinguishable images. This is the most extreme form of mode collapse and corresponds to one of the mode-dropping minima identified in :numref:`sec_gan_relativistic`. The result depends on initialization. With either framework's default initialization, the classic arm remains diverse over this training budget; Exercise 5 performs that control. The $\mathcal{N}(0, 0.02^2)$ initialization inherited from DCGAN instead leads optimization to a mode-dropping minimum. Because the classic objective does not exclude such minima, different starting points can produce different endpoints.
+The classic arm collapses: all 64 latent codes produce visually indistinguishable images. This is the most extreme form of mode collapse and corresponds to one of the mode-dropping minima identified in :numref:`sec_gan_relativistic`. The result depends on initialization. With the default initialization of every layer, the classic arm remains diverse over this training budget; Exercise :exref:`ex_dcgan-rerun-arm-classic-loss` performs that control. The $\mathcal{N}(0, 0.02^2)$ initialization inherited from DCGAN instead leads optimization to a mode-dropping minimum. Because the classic objective does not exclude such minima, different starting points can produce different endpoints.
 
 From the same initialization and with the same training budget, the penalized relativistic arm produces diverse, creature-shaped sprites. The silhouettes and palettes vary, no duplicate is visible, and the grid contains no checkerboard texture. The best-response analysis in :numref:`sec_gan_relativistic` shows that the pairing objective removes collapsed configurations from the set of minima :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. This comparison changes the complete loss recipe, adding both the pairing objective and the two penalties, so it does not isolate their individual effects. The three-configuration experiment in :numref:`sec_gan_convergence` and the StackedMNIST ablation cited there separate these components.
 
@@ -805,7 +805,7 @@ $$
 $$
 :eqlabel:`eq_gan_fid`
 
-The commuting case makes the formula easy to interpret. If $\Sigma_p$ and $\Sigma_q$ commute, they share an eigenbasis. Let $\lambda_i$ and $\nu_i$ denote their eigenvalues in this basis. The matrix $\Sigma_p^{1/2} \Sigma_q \Sigma_p^{1/2}$ then has eigenvalues $\lambda_i \nu_i$, and the trace term becomes $\sum_i (\sqrt{\lambda_i}-\sqrt{\nu_i})^2$. FID therefore adds the squared distance between the means to the squared differences between standard deviations along the shared principal axes. In one dimension, it reduces to $(\mu_p-\mu_q)^2+(\sigma_p-\sigma_q)^2$; Exercise 1 derives this expression from optimal transport. The cited results establish the non-commuting case. FID has two immediate limitations: the Gaussian approximation retains only the first two feature moments, and its plug-in estimate is biased for finite $n$.
+The commuting case makes the formula easy to interpret. If $\Sigma_p$ and $\Sigma_q$ commute, they share an eigenbasis. Let $\lambda_i$ and $\nu_i$ denote their eigenvalues in this basis. The matrix $\Sigma_p^{1/2} \Sigma_q \Sigma_p^{1/2}$ then has eigenvalues $\lambda_i \nu_i$, and the trace term becomes $\sum_i (\sqrt{\lambda_i}-\sqrt{\nu_i})^2$. FID therefore adds the squared distance between the means to the squared differences between standard deviations along the shared principal axes. In one dimension, it reduces to $(\mu_p-\mu_q)^2+(\sigma_p-\sigma_q)^2$; Exercise :exref:`ex_dcgan-one-dimension-squared-wasserstein` derives this expression from optimal transport. The cited results establish the non-commuting case. FID has two immediate limitations: the Gaussian approximation retains only the first two feature moments, and its plug-in estimate is biased for finite $n$.
 
 The kernel inception distance (KID) of :citet:`Binkowski.Sutherland.Arbel.ea.2018` uses the chapter's other closed form, the maximum mean discrepancy. Its population value is the kernel expression :eqref:`eq_mdl-mmd2`, and KID reports the *unbiased* estimator of that quantity, the U-statistic that omits the diagonal self-similarity terms:
 
@@ -1042,9 +1042,9 @@ for name, (ema_G, hist) in runs.items():
 
 Both scores rank the penalized relativistic run far above the collapsed classic run. The gap between the arms is two orders of magnitude larger than the real-versus-real reference, so estimator noise at this scale is unlikely to reverse the ordering. The numerical values remain specific to this run and feature network, but reruns with different feature-network seeds and larger sample sizes preserve the ordering. The reference row also demonstrates the finite-sample behavior described above: real-versus-real FD is positive because the fitted moments of two finite samples differ, whereas the unbiased $\mathrm{MMD}^2$ estimate fluctuates around zero.
 
-The main limitations concern the evaluation design. First, each score depends on the feature network as well as the generator. Our CIFAR-trained CNN emphasizes properties useful for CIFAR-10 classification, just as Inception features emphasize properties useful for ImageNet classification. Changing the feature network changes the values and may reverse the ordering of two similar models; Exercise 3 tests this dependence.
+The main limitations concern the evaluation design. First, each score depends on the feature network as well as the generator. Our CIFAR-trained CNN emphasizes properties useful for CIFAR-10 classification, just as Inception features emphasize properties useful for ImageNet classification. Changing the feature network changes the values and may reverse the ordering of two similar models; Exercise :exref:`ex_dcgan-retrain-feature-network-this` tests this dependence.
 
-Second, the evaluation features may overlap with features used during training. Matching the ImageNet class histogram of the real data can reduce Inception-based FID without a visible improvement in sample quality. A discriminator built from ImageNet-pretrained features may exploit this dependence :cite:`Kynkaanniemi.Karras.Aittala.ea.2023`; R3GAN therefore reports results without pretrained discriminators :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Third, preprocessing affects the score. Incorrect antialiasing during resizing can shift FID by amounts comparable to reported differences between methods :cite:`Parmar.Zhang.Zhu.2022`. We avoid one such change by training the feature network at the sprites' native resolution. Finally, the finite-sample bias shown by the reference row depends on both the model and $n$. At small sample sizes, this bias alone can reverse a ranking :cite:`Chong.Forsyth.2020`; Exercise 2 measures the effect.
+Second, the evaluation features may overlap with features used during training. Matching the ImageNet class histogram of the real data can reduce Inception-based FID without a visible improvement in sample quality. A discriminator built from ImageNet-pretrained features may exploit this dependence :cite:`Kynkaanniemi.Karras.Aittala.ea.2023`; R3GAN therefore reports results without pretrained discriminators :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Third, preprocessing affects the score. Incorrect antialiasing during resizing can shift FID by amounts comparable to reported differences between methods :cite:`Parmar.Zhang.Zhu.2022`. We avoid one such change by training the feature network at the sprites' native resolution. Finally, the finite-sample bias shown by the reference row depends on both the model and $n$. At small sample sizes, this bias alone can reverse a ranking :cite:`Chong.Forsyth.2020`; Exercise :exref:`ex_dcgan-measure-finite-sample-bias` measures the effect.
 
 A single score also combines two distinct failures: low-fidelity samples and missing modes. The precision and recall metrics of :citet:`Kynkaanniemi.Karras.Laine.ea.2019` separate them through feature-space neighborhoods. Precision measures the fraction of generated samples that lie within the support of the real features; recall measures the fraction of real samples covered by generated features. A collapsed generator can retain nonzero precision if its single output lies near the data manifold, while its recall approaches zero. FID does not expose this asymmetry. R3GAN therefore reports recall as a separate measure of diversity alongside FID.
 
@@ -1059,7 +1059,7 @@ Augmentation reduces critic memorization, but its placement determines the targe
 
 Differentiable augmentation instead applies the same random transformation to real and generated inputs during both updates :cite:`Zhao.Liu.Lin.ea.2020`. The transformation remains in the generator's differentiation path. Because the critic observes multiple transformed versions of each training image, direct memorization becomes harder. Applying the transformation to both distributions preserves the original matching problem when the transformation cannot map distinct distributions to the same one. :citet:`Karras.Aittala.Hellsten.ea.2020` call this requirement *non-leaking*.
 
-The augmentation strength must also be controlled. Too little augmentation permits memorization, whereas too much makes the classification problem unnecessarily difficult. Adaptive discriminator augmentation changes the augmentation probability in response to an overfitting statistic :cite:`Karras.Aittala.Hellsten.ea.2020`. The authors considered the train--validation score gap used here, but adopted a related statistic computed from training images alone so that no data need be withheld. With this control, StyleGAN2 attains competitive quality on datasets of a few thousand images, about an order of magnitude smaller than its usual training sets.
+The augmentation strength must also be controlled. Too little augmentation permits memorization, whereas too much makes the classification problem unnecessarily difficult. Adaptive discriminator augmentation changes the augmentation probability in response to an overfitting statistic :cite:`Karras.Aittala.Hellsten.ea.2020`. The authors considered the train--validation score gap used here, divided by the gap between training and generated images, but adopted a related statistic computed from training images alone so that no data need be withheld. With this control, StyleGAN2 attains competitive quality on datasets of a few thousand images, about an order of magnitude smaller than its usual training sets.
 
 Critic memorization and generator memorization require different diagnostics. To test the generator directly, we embed the same 500 generated samples used above in the CIFAR-CNN feature space and find each sample's nearest training image. We calibrate these distances by matching held-out sprites against the same training set. A generator that copies its training data should place generated samples closer to individual training images than genuine held-out images are. Because variants of the same species may occur in both data splits, some held-out sprites already have close training neighbors. This makes the comparison conservative: it will detect pronounced copying but may miss more subtle reuse.
 
@@ -1111,7 +1111,7 @@ d2l.show_images(np.asarray(pairs) / 2 + 0.5, num_rows=2, num_cols=8);
 
 The generated samples are farther from the training set than the held-out sprites are, by a factor of two to three in the recorded runs. Copying would instead drive the generated distances toward zero. The lower held-out distances are consistent with the data split: many held-out sprites have a variant of the same species in the training set. The grid gives an image-level comparison. Its top row contains the eight generated samples closest to the training set, and its bottom row contains their nearest neighbors. Even these pairs depict different creatures; they share palettes or coarse silhouettes, but the generated samples are softer and less articulated.
 
-This test has two limitations. Distances are defined by the CIFAR-CNN features, so they can detect direct copying but cannot rule out recombination of memorized parts. The result also applies only to this generator and dataset. Repeating the diagnostic after reducing the training set would reveal whether the generator begins to memorize under greater data scarcity. Exercise 6 extends the comparison to mirrored candidates and raw pixels.
+This test has two limitations. Distances are defined by the CIFAR-CNN features, so they can detect direct copying but cannot rule out recombination of memorized parts. The result also applies only to this generator and dataset. Repeating the diagnostic after reducing the training set would reveal whether the generator begins to memorize under greater data scarcity. Exercise :exref:`ex_dcgan-extend-memorization-check-numref` extends the comparison to mirrored candidates and raw pixels.
 
 ### Scale
 
@@ -1125,18 +1125,378 @@ The resulting image-generation pipeline specifies an objective, regularization, 
 
 Image generation requires both an architecture and an evaluation method. The 2015 DCGAN recipe improves the trainability of the classic objective through transposed convolutions, batch normalization, carefully chosen activations, and optimizer settings. A modern minimal backbone instead uses bilinear resampling, leaky ReLU, no normalization, and explicit latent injection.
 
-On this backbone, the classic non-saturating loss collapses from the shared $\mathcal{N}(0,0.02^2)$ initialization: every latent code maps to nearly the same image and the critic scores grow without bound. The same arm survives under the frameworks' default initializations, showing that the failure depends on which initializations enter a mode-dropping basin. From the shared initialization, the relativistic pairing loss with both zero-centered penalties at $\gamma=10$ trains stably and produces diverse sprites. The two-arm comparison changes the loss recipe as a whole; the component-wise evidence comes from :numref:`sec_gan_convergence` and the cited ablations. A feature-space nearest-neighbor check finds no evidence that the penalized generator copies training images.
+On this backbone, the classic non-saturating loss collapses from the shared $\mathcal{N}(0,0.02^2)$ initialization: every latent code maps to nearly the same image and the critic scores grow without bound. The same arm survives under the default layer initializations, showing that the failure depends on which initializations enter a mode-dropping basin. From the shared initialization, the relativistic pairing loss with both zero-centered penalties at $\gamma=10$ trains stably and produces diverse sprites. The two-arm comparison changes the loss recipe as a whole; the component-wise evidence comes from :numref:`sec_gan_convergence` and the cited ablations. A feature-space nearest-neighbor check finds no evidence that the penalized generator copies training images.
 
 We evaluate the runs with the Fréchet distance between Gaussian feature models and the unbiased MMD U-statistic. Because the feature network is trained within the chapter, the reported FD and $\mathrm{MMD}^2$ values are not comparable with published Inception-based scores. Both metrics strongly prefer the penalized run, but their interpretation depends on the feature network, preprocessing, and sample size. On limited data, augmentation reduces critic memorization; applying the same differentiable transformation to real and generated inputs avoids changing the target distribution. Larger experiments alter the penalty schedule, EMA horizon, augmentation strength, and numerical precision, but use the same underlying method. :numref:`sec_gan_conditional` next introduces control through labels, text, or source images.
 
 ## Exercises
 
-1. In one dimension, the squared Wasserstein-2 distance between distributions with quantile functions $F^{-1}$ and $G^{-1}$ is $\int_0^1 \big(F^{-1}(u) - G^{-1}(u)\big)^2\, du$. Using the Gaussian quantile function $F^{-1}(u) = \mu + \sigma\, \Phi^{-1}(u)$, show that for two univariate Gaussians this equals $(\mu_p - \mu_q)^2 + (\sigma_p - \sigma_q)^2$. Then verify that the multivariate formula :eqref:`eq_gan_fid` reduces to a sum of such terms when $\Sigma_p$ and $\Sigma_q$ commute.
-1. Measure the finite-sample bias of FID directly: split the held-out sprites into two disjoint subsets of size $n$ each and compute the real-versus-real FID and KID for $n \in \{100, 250, 500, 2000\}$. How does each floor move with $n$? Now plot the FID estimates against $1/n$ and extrapolate the fitted line to $1/n \to 0$; this extrapolation is the bias-corrected estimator of :citet:`Chong.Forsyth.2020`. How close is the extrapolated floor to zero, and what does the slope of the line say about the bias at $n = 500$, the sample size this section uses?
-1. Retrain the feature network of this section on Fashion-MNIST instead of CIFAR-10 (replicate the grayscale channel three times, and upsample to $64 \times 64$ as before), and rescore both arms. Do the FID and KID *values* change substantially? Does the *ordering* of the two arms change? Formulate in one sentence what this implies about comparing FID numbers computed with different feature networks.
-1. Apply the modern recipe to Fashion-MNIST: adapt the backbone to single-channel images (for instance by padding to $32 \times 32$ and removing one upsampling stage), train once with the classic loss and once with the RpGAN plus $R_1 + R_2$ loss at the same budget, and compare sample grids. Which of this section's findings reproduce on a dataset with ten well-separated modes?
-1. Rerun arm A, the classic loss on the modern backbone, with the explicit $\mathcal{N}(0, 0.02^2)$ initialization removed, so that your framework's default initialization applies, keeping the architecture, optimizer, and budget fixed. Compare the resulting grid with the two grids of this section, and reconcile what you find with the landscape discussion of :numref:`sec_gan_relativistic`: the mode-dropping minima do not move when the initialization changes, so what does the outcome say about which starting points descend into them?
-1. Extend the memorization check of :numref:`subsec_gan_limited_data` in two directions. First, training presented every real image under a random horizontal flip, so a generator could reproduce the mirrored version of a training sprite, which a search over the stored images would miss: repeat the search with each training image and its mirror image both admitted as candidates, and report whether the distance distributions or the closest pairs change. Second, run the check in pixel space: use Euclidean distance between the flattened $64 \times 64 \times 3$ images in place of feature distance, and display the ten closest pairs it finds. Compare the neighbors the two distances select. Which search is the stronger screen for copying, and why is near-duplicate detection usually run in a feature space rather than on raw pixels?
+1. **Checkerboards from stride.** A transposed convolution with kernel
+   size $k$, stride $s$, and padding $p$ maps an $n \times n$ input to an
+   output of side $s(n - 1) + k - 2p$. `G_block` uses $k = 4$, $s = 2$, and
+   $p = 1$.
+    1. Find every pair $(k, p)$ with $k \leq 6$ for which a transposed
+       convolution with stride 2 exactly doubles the side $n$.
+    1. Consider a one-dimensional transposed convolution with stride 2 whose
+       kernel entries all equal one, applied to a constant input. Away from
+       the borders, how many input positions contribute to each output
+       position for $k = 3$, and how many for $k = 4$? The first case is
+       what :citet:`Odena.Dumoulin.Olah.2016` call uneven overlap.
+    1. Now let the kernel $(w_0, w_1, w_2, w_3)$ of the case $k = 4$ be
+       arbitrary. Show that, away from the borders, a constant input
+       produces an output that alternates between two values. Under which
+       condition on the kernel do the two values agree? What does the
+       two-dimensional version of this argument predict for the output of
+       the transposed convolution of a `G_block` on a constant feature map?
+    1. `Generator` upsamples bilinearly and then applies a $3 \times 3$
+       convolution with stride 1. What does this pair of operations produce
+       from a constant input away from the borders? Why does this remove the
+       periodic pattern for every choice of the learned weights?
+   :exlabel:`ex_dcgan-checkerboards-from-stride`
+1. [code] **Stabilizers of DCGAN.** `train_dcgan` trains networks built
+   from `G_block` and `D_block`, both with batch normalization, using Adam
+   at $\beta_1 = 0.5$. The section states that DCGAN remains sensitive to
+   hyperparameters and may collapse during longer runs.
+    1. Modify `train_dcgan` so that it shows 20 samples from fixed latent
+       codes after every 10 epochs, and train freshly initialized networks
+       for 60 epochs instead of 20. At which epoch, if any, do the samples
+       begin to lose diversity or quality?
+    1. Add an argument `beta1` to `train_dcgan` and repeat the 20-epoch run
+       with $\beta_1 = 0.9$, the default of Adam, and with $\beta_1 = 0$,
+       as in principle (b) of :numref:`subsec_gan_r3gan_principles`.
+       Compare the samples and the loss histories with those of the run at
+       $\beta_1 = 0.5$.
+    1. Remove batch normalization from `D_block` and repeat the 20-epoch
+       run at $\beta_1 = 0.5$. Which of the changes in (b) and (c) harms
+       training most?
+   :exlabel:`ex_dcgan-stabilizers`
+1. **Penalties through batch normalization.** `Generator` and
+   `Discriminator` omit batch normalization (:numref:`sec_batch_norm`)
+   partly because it couples the per-sample input gradients that the
+   penalties :eqref:`eq_gan_r1r2` need. Exercise
+   :exref:`ex_convergence-batch-mixing-critics` of
+   :numref:`sec_gan_convergence` shows what `r1_r2_penalty` reports for a
+   linear critic that centers its inputs over the batch. Consider a
+   convolutional critic with batch normalization after every convolution,
+   as in `D_block`. In training mode, each such layer standardizes every
+   channel by its mean and standard deviation over the minibatch and the
+   spatial positions.
+    1. Which function of a single image does such a critic compute on a
+       minibatch of one? What does a penalty that evaluates the critic on
+       one sample at a time therefore constrain?
+    1. In evaluation mode, batch normalization uses running averages of the
+       statistics instead, so that every score depends on its own sample
+       only. Why does a penalty computed in evaluation mode still not
+       regularize the critic that the loss trains?
+    1. What can a batch-normalized critic achieve under these penalties
+       that a per-sample critic cannot? Relate the answer to principle (c)
+       of :numref:`subsec_gan_r3gan_principles`.
+   :exlabel:`ex_dcgan-penalties-through-batch-norm`
+1. **Penalty weight and resolution.** The section uses $\gamma = 10$ for
+   $64 \times 64$ sprites with pixel values in $[-1, 1]$, and
+   :citet:`Huang.Gokaslan.Kuleshov.ea.2024` tune $\gamma$ separately for
+   every dataset and resolution. This problem shows that part of this
+   dependence follows from the units of the input gradient in
+   :eqref:`eq_gan_r1r2`.
+    1. Let $U$ upsample a $64 \times 64$ image to $128 \times 128$ by
+       copying every pixel into a $2 \times 2$ block, and let $A$ average
+       every $2 \times 2$ block, so that $AU$ is the identity. The critic
+       $D' = D \circ A$ scores every upsampled image $Ux$ exactly as $D$
+       scores $x$. Express $\|\nabla D'(Ux)\|^2$ in terms of
+       $\|\nabla D(x)\|^2$. Which weight $\gamma'$ makes the penalized game
+       on the upsampled data equivalent to the game with weight $\gamma$ on
+       the original data?
+    1. Suppose that the pixel values are scaled to $[0, 1]$ instead of
+       $[-1, 1]$. How must $\gamma$ change for the penalized game to stay
+       equivalent?
+    1. In its automatic configuration, the official implementation of
+       :citet:`Karras.Aittala.Hellsten.ea.2020` sets
+       $\gamma = 0.0002\, r^2 / B$ for resolution $r$ and batch size $B$.
+       Which factor of this heuristic does the upsampling argument account
+       for?
+   :exlabel:`ex_dcgan-penalty-weight-resolution`
+1. [code] **A scale-free overfitting statistic.** The loop that calls
+   `train_backbone` prints the critic's train--holdout gap for both arms.
+   The critic of the classic arm scores on a much larger scale than the
+   critic of the penalized arm, so the two gaps cannot be compared directly.
+   :citet:`Karras.Aittala.Hellsten.ea.2020` consider two statistics,
+
+   $$r_v = \frac{E[D_{\textrm{train}}] - E[D_{\textrm{holdout}}]}{E[D_{\textrm{train}}] - E[D_{\textrm{generated}}]}, \qquad r_t = E\big[\operatorname{sign}(D_{\textrm{train}})\big],$$
+
+   where $D_{\textrm{train}}$, $D_{\textrm{holdout}}$, and
+   $D_{\textrm{generated}}$ denote critic scores on training images,
+   held-out images, and samples of the current generator.
+    1. Show that $r_v$ does not change when the critic $D$ is replaced by
+       $aD + c$ with $a > 0$, whereas the train--holdout gap scales with $a$
+       and $r_t$ changes with $c$.
+    1. By problem :exref:`ex_relativistic-prove-shift-invariance-ev`c of
+       :numref:`sec_gan_relativistic`, the sign of a single score carries
+       no information about a critic trained on the pairing objective, such
+       as that of the penalized arm. Consider instead the pairwise statistic
+       $E\big[\operatorname{sign}(D_{\textrm{train}} - D_{\textrm{holdout}})\big]$
+       over independent pairs of a training and a held-out image. Under
+       which transformations of $D$ is it invariant? Which value does it
+       take when the critic scores training and held-out images alike?
+    1. Modify `train_backbone` so that it also returns the raw generator
+       `net_G`. For both arms, compute $r_v$ and the pairwise statistic of
+       (b) from 1,024 training images, 1,024 held-out images, and 1,024
+       samples of the raw generator. Do the normalized statistics change the
+       comparison of the two arms?
+   :exlabel:`ex_dcgan-scale-free-overfitting-statistic`
+1. **FID across dimensions.** In one dimension, the squared
+   Wasserstein-2 distance between two distributions with quantile functions
+   $F^{-1}$ and $G^{-1}$ is
+   $\int_0^1 \big(F^{-1}(u) - G^{-1}(u)\big)^2\, du$.
+    1. Using the Gaussian quantile function
+       $F^{-1}(u) = \mu + \sigma\, \Phi^{-1}(u)$, show that for two
+       univariate Gaussians this distance equals
+       $(\mu_p - \mu_q)^2 + (\sigma_p - \sigma_q)^2$.
+    1. Evaluate :eqref:`eq_gan_fid` for $\mathcal{N}(0, I_d)$ against
+       $\mathcal{N}(0, c\, I_d)$ with $c > 0$, and for $\mathcal{N}(0, I_d)$
+       against $\mathcal{N}(\delta \mathbf{1}, I_d)$, where $\mathbf{1}$ is
+       the all-ones vector.
+    1. The features of a generator are 10% too spread out along every
+       coordinate, so that $c = 1.21$. Assuming isotropic features, compare
+       its FID under a 128-dimensional feature map, as in this section, with
+       its FID under the 2,048-dimensional Inception features of published
+       FID. What does the comparison imply for FID values computed with
+       different feature networks?
+   :exlabel:`ex_dcgan-one-dimension-squared-wasserstein`
+1. [code] **Finite-sample bias.** The real-versus-real reference values
+   `floor_fd` and `floor_mmd` compare two disjoint sets of 500 training
+   images.
+    1. Split the held-out sprites into two disjoint subsets of $n$ images
+       each, and compute the real-versus-real FD and
+       $\widehat{\mathrm{MMD}}^2$ with `fid_score` and `kid_score` for
+       $n \in \{100, 250, 500, 1000, 2000\}$, with five random splits per
+       $n$. How does each floor move with $n$?
+    1. Plot the FD estimates against $1/n$, fit a line, and extrapolate it
+       to $1/n \to 0$, which is the bias-corrected estimate of
+       :citet:`Chong.Forsyth.2020`. How close to zero is the extrapolated
+       value? What does the slope imply for the bias at $n = 500$, the
+       sample size of `floor_fd`?
+    1. Repeat the fit for the FD between $n$ samples of the EMA generator
+       of the penalized arm and $n$ held-out images. Is the slope the same
+       as for the real-versus-real pairs? Why can two generators be ranked
+       differently at $n = 500$ and in the limit $n \to \infty$?
+   :exlabel:`ex_dcgan-measure-finite-sample-bias`
+1. [code] **Precision and recall.**
+   :citet:`Kynkaanniemi.Karras.Laine.ea.2019` estimate the support of a set
+   of features $\Phi$ by a union of balls, one around every point of $\Phi$,
+   whose radius is the distance from that point to its $k$-th nearest
+   neighbor in $\Phi$. Precision is the fraction of generated features that
+   lie inside the support estimate of the real features. Recall is the
+   fraction of real features that lie inside the support estimate of the
+   generated features.
+    1. Implement both metrics on the CIFAR-CNN features, using `feat_real`
+       for the 500 held-out images and 500 samples of each arm, with $k = 3$
+       as in the paper. Report precision and recall for both arms and for
+       two disjoint sets of 500 training images. Repeat with
+       $k \in \{1, 10\}$. How do the two metrics respond to $k$?
+    1. Let a generator collapse onto $m$ distinct images, each produced by
+       an equal share of the 500 samples. For $k = 3$, find the largest $m$
+       for which every radius of its support estimate is zero, and the
+       recall that every such generator receives. What does this imply
+       about recall as a count of the modes that a generator covers? What
+       determines the precision of such a generator?
+   :exlabel:`ex_dcgan-precision-recall`
+1. [code] **Screening for copies.** The memorization check of
+   :numref:`subsec_gan_limited_data` compares every generated sample with
+   the stored training images in the CIFAR-CNN feature space.
+    1. Training presented every real image under a random horizontal flip,
+       so a generator could reproduce the mirror image of a training sprite,
+       which a search over the stored images would miss. Repeat the search
+       with every training image and its mirror image both admitted as
+       candidates. Do the distance distributions or the closest pairs
+       change?
+    1. Run the check in pixel space: use the Euclidean distance between the
+       flattened $64 \times 64 \times 3$ images in place of the feature
+       distance, and display the ten closest pairs. How do the neighbors that
+       the two distances select differ?
+    1. Which kinds of copies does each search detect: exact copies, copies
+       shifted by a few pixels, and copies with a changed palette? Which
+       search is therefore the stronger screen for copying?
+   :exlabel:`ex_dcgan-extend-memorization-check-numref`
+1. **EMA on a rotating trajectory.** ● The class `EMA` keeps the shadow
+   weights $\bar{\theta}_t = \beta \bar{\theta}_{t-1} + (1 - \beta)\theta_t$
+   of :eqref:`eq_ema`, starts from $\bar{\theta}_0 = \theta_0$, and sets
+   $\beta = 0.5^{1/h}$ for the half-life $h = 500$ steps. The section
+   motivates the average by the rotation of the two-player dynamics around
+   the equilibrium $\theta^\star$.
+    1. Which weight does $\bar{\theta}_T$ give the initial parameters
+       $\theta_0$ after $T = 1{,}000$, $4{,}000$, and $15{,}000$ steps? What
+       is the mean age of the iterates in the average when $T$ is large?
+    1. In its automatic configuration, the official implementation of
+       :citet:`Karras.Aittala.Hellsten.ea.2020` caps the half-life, counted
+       in images, at 5% of the number of training images shown so far.
+       Apply this cap to `train_backbone`, which shows 64 images per step,
+       and let step $t$ use the cap for the $64t$ images shown after it.
+       For how many of the 15,000 steps does the cap shorten the half-life
+       of 500 steps? Which weight does $\theta_0$ receive after 1,000
+       steps, compared with (a)?
+    1. Model one rotating pair of coordinates near the equilibrium in
+       complex notation as $\theta_t = \theta^\star + \rho^t e^{i\omega t} c$
+       with $\beta < \rho \leq 1$. Show that for large $t$
+       $$\frac{\bar{\theta}_t - \theta^\star}{\theta_t - \theta^\star} \to \frac{1 - \beta}{1 - (\beta/\rho)\, e^{-i\omega}}.$$
+    1. Evaluate the magnitude of this ratio for a pure rotation, $\rho = 1$,
+       with periods of 125 and 2,000 steps, and for a pure contraction,
+       $\omega = 0$, with $\rho = 0.999$. When does the average lie closer
+       to the equilibrium than the current iterate, and when does it lag
+       behind?
+   :exlabel:`ex_dcgan-ema-rotating-trajectory`
+1. [code] **Initialization and collapse.** ● With `Generator` and
+   `Discriminator`, the classic arm of `train_backbone` collapses from the
+   $\mathcal{N}(0, 0.02^2)$ initialization.
+    1. Rerun the classic arm of `train_backbone` with the explicit
+       $\mathcal{N}(0, 0.02^2)$ initialization of the convolutional and
+       linear weights removed, so that every layer keeps its default
+       initialization. Keep the initialization of the learned constant, the
+       architecture, the optimizer, and the budget fixed. Draw the grid from
+       `z_show` and compare it with the grids of both arms.
+    1. Train the classic arm with weights drawn from $\mathcal{N}(0, s^2)$
+       for $s \in \{0.01, 0.02, 0.05\}$. Define the diversity of a generator
+       as the mean pairwise distance between the CIFAR-CNN features of its
+       64 samples from `z_show`, divided by the same statistic for 64
+       held-out images. Modify `train_backbone` so that it records the
+       diversity of the raw generator `net_G` every 1,000 steps. For every
+       run, plot the diversity and the mean critic score on real batches,
+       the last column of the returned history, against the step. Does the
+       growth of the critic scores precede the collapse?
+    1. The mode-dropping minima of :numref:`sec_gan_relativistic` do not
+       depend on the initialization. What do the outcomes say about which
+       starting points descend into them? How should a comparison of two
+       losses on a new backbone be designed in view of this dependence?
+   :exlabel:`ex_dcgan-rerun-arm-classic-loss`
+1. **Moments behind FID and KID.** ● FID depends on the two feature
+   distributions only through their means and covariances. KID uses the
+   polynomial kernel $k(u, v) = (u^\top v / d + 1)^3$ in the estimator
+   :eqref:`eq_gan_kid`.
+    1. Expand the kernel with the binomial theorem and write
+       $(u^\top v)^j = \langle u^{\otimes j}, v^{\otimes j} \rangle$ to show
+       that the population value of $\mathrm{MMD}^2$ is
+
+       $$\sum_{j=1}^{3} \binom{3}{j} d^{-j}\, \big\| E_p[u^{\otimes j}] - E_q[u^{\otimes j}] \big\|^2.$$
+
+       Which moments of the feature distributions does KID compare?
+    1. In one dimension, let $p = \mathcal{N}(0, 1)$. Compute the
+       population FID and $\mathrm{MMD}^2$ of $p$ against two distributions
+       $q$: the distribution of $X - 1$ for $X$ exponential with rate 1,
+       which has mean 0, variance 1, and third moment 2, and the equal
+       mixture of $\mathcal{N}(a, 1 - a^2)$ and $\mathcal{N}(-a, 1 - a^2)$
+       for $0 < a < 1$.
+    1. Which differences between two feature distributions are invisible
+       to both metrics? A kernel is *characteristic* when its mean embedding
+       $E_p[k(u, \cdot)]$ determines the distribution $p$, so that the
+       population $\mathrm{MMD}^2$ vanishes only for $q = p$. Is the kernel
+       of KID characteristic? Does the $\mathrm{MMD}^2$ with the Gaussian
+       RBF kernel of CMMD distinguish the mixture in (b) from $p$?
+   :exlabel:`ex_dcgan-moments-fid-kid`
+1. [code] **Dependence on the feature network.** ● The scores of the two
+   arms depend on the feature network as well as on the generators.
+    1. Retrain `FeatureCNN` on Fashion-MNIST, loaded with
+       `d2l.FashionMNIST`, instead of CIFAR-10: scale the pixel values to
+       $[-1, 1]$, replicate the grayscale channel three times, and upsample
+       to $64 \times 64$ as before. Rescore the real-versus-real reference
+       and both arms. Do the FD and $\widehat{\mathrm{MMD}}^2$ values change
+       substantially? Does the ordering of the two arms change?
+    1. The FDs of the two arms differ by a factor of about 40, so their
+       ordering says little about the ordering of similar models. Degrade
+       500 held-out sprites in two ways: blur them with a $3 \times 3$ box
+       filter, and add Gaussian noise with a standard deviation chosen so
+       that the FDs of the two degraded sets against 500 training images
+       agree within 10% under the CIFAR-CNN. Score both degraded sets under
+       the Fashion-MNIST network. Which defect does each feature network
+       penalize more?
+   :exlabel:`ex_dcgan-retrain-feature-network-this`
+1. **Leaking augmentations.** ● Let $F$ denote the horizontal flip of an
+   image, and for a distribution $r$ over images let $F_\# r$ denote the
+   distribution of the flipped images. An augmentation that flips each image
+   with probability $\pi$ maps $r$ to $T_\pi r = (1 - \pi)\, r + \pi\, F_\# r$.
+    1. `sample_real` flips only the real images, with $\pi = 1/2$, so the
+       generator is trained toward $T_{1/2}\, p$ rather than $p$, and the
+       two agree only if $F_\# p = p$. Suppose that a fraction $\alpha$ of
+       the sprites faces left and has no mirrored counterpart in the
+       dataset, while every other sprite equals its own mirror image. Which
+       fraction of the samples of the optimal generator faces right?
+    1. A differentiable augmentation :cite:`Zhao.Liu.Lin.ea.2020` applies
+       $T_\pi$ to the real and to the generated images. Show that
+       $T_\pi q = T_\pi p$ implies $q = p$ whenever $\pi \neq 1/2$, using
+       $F_\# F_\# r = r$. For $\pi = 1/2$, describe the set of generator
+       distributions that the critic cannot distinguish from $p$, and give
+       one in this set that never produces an unmirrored sprite.
+    1. Let $S$ rotate an image by $90^\circ$. An augmentation replaces each
+       image, with probability $\pi$, by its rotation under $S$, $S^2$,
+       $S^3$, or the identity, chosen uniformly. Show that this augmentation
+       is non-leaking for every $\pi < 1$ and leaking at $\pi = 1$.
+       :citet:`Karras.Aittala.Hellsten.ea.2020` observe that the generated
+       images are always oriented correctly in practice while $\pi$ stays
+       below about 0.85, but not reliably above. Why can a finite critic
+       trained on a finite dataset fail before the limit $\pi = 1$?
+   :exlabel:`ex_dcgan-augmentation-leaks`
+1. [code] **Bias of the Fréchet distance.** ●● Exercise
+   :exref:`ex_dcgan-measure-finite-sample-bias` measures the bias of the
+   plug-in FD; this problem derives its leading term. Let both feature sets
+   consist of $n$ independent samples of the same Gaussian
+   $\mathcal{N}(\mu, \Sigma)$ in $d$ dimensions, with sample means
+   $\hat{\mu}_p, \hat{\mu}_q$ and sample covariances $\hat{\Sigma}_p,
+   \hat{\Sigma}_q$. Since :eqref:`eq_gan_fid` is invariant under rotations
+   of the feature space, take $\Sigma = \operatorname{diag}(\lambda_1,
+   \ldots, \lambda_d)$.
+    1. Show that the mean term of :eqref:`eq_gan_fid` has expectation
+       $2 \operatorname{tr}(\Sigma) / n$.
+    1. Write $\hat{\Sigma}_p = \Sigma + X$ and $\hat{\Sigma}_q = \Sigma + Y$.
+       Explain why the trace term vanishes to first order and why its
+       second-order part depends on $X$ and $Y$ only through $X - Y$. Then
+       compute this part for $Y = 0$: write
+       $\big(\Sigma^{1/2} (\Sigma + X) \Sigma^{1/2}\big)^{1/2} = \Sigma + L$,
+       expand $L$ to second order in $X$ with the equation
+       $\Sigma L + L \Sigma + L^2 = \Sigma^{1/2} X \Sigma^{1/2}$, and show
+       that the trace term equals
+       $\frac{1}{2} \sum_{i,j} X_{ij}^2 / (\lambda_i + \lambda_j)$ up to
+       terms of third order.
+    1. For Gaussian samples, $X$ and $Y$ are independent with mean zero and
+       $E[X_{ij}^2] \approx (\lambda_i \lambda_j + \delta_{ij} \lambda_i^2)/n$.
+       Conclude that the expected plug-in FD is approximately
+
+       $$\frac{1}{n} \Big( \frac{5}{2} \operatorname{tr}(\Sigma) + \sum_{i,j} \frac{\lambda_i \lambda_j}{\lambda_i + \lambda_j} \Big),$$
+
+       which equals $d(d + 5)/(2n)$ for $\Sigma = I_d$. Which of the two
+       terms dominates for $d = 128$? How many samples does a plug-in FD in
+       $d$ dimensions need for its bias to stay below a fixed value?
+    1. Check the prediction with `fid_score` on Gaussian samples with
+       $d = 128$ and $n \in \{500, 2000\}$, both for $\Sigma = I_d$ and for
+       $\lambda_i = 1/i$. Then evaluate the prediction with the eigenvalues
+       of the covariance of `feat_real` at $n = 500$, and compare it with
+       `floor_fd`. What could explain a discrepancy?
+   :exlabel:`ex_dcgan-bias-frechet-distance`
+1. [extended] **The recipe on Fashion-MNIST.** ●● Fashion-MNIST has ten
+   balanced classes, so a classifier can count the modes that a generator
+   covers, which the sprites do not allow. This project repeats the
+   comparison of the two arms on Fashion-MNIST.
+    1. Adapt `Generator` and `Discriminator` to single-channel
+       $32 \times 32$ images: pad the $28 \times 28$ images to
+       $32 \times 32$, scale them to $[-1, 1]$, and remove one resampling
+       stage from each network. Decide whether to keep the horizontal flip
+       of `sample_real`, using problem
+       :exref:`ex_dcgan-augmentation-leaks`a.
+    1. Train the classic arm and the penalized arm with the budget,
+       optimizer, and $\mathcal{N}(0, 0.02^2)$ initialization of
+       `train_backbone`, and train the classic arm once more from the
+       default initialization.
+    1. Crop 10,000 samples of every EMA generator back to $28 \times 28$
+       and classify them with the Fashion-MNIST network of exercise
+       :exref:`ex_dcgan-retrain-feature-network-this`, replicating the
+       channel and upsampling as there. Report the class histogram, its KL
+       divergence from the uniform
+       distribution, the number of classes that receive at least 1% of the
+       samples, and the FD against held-out images in the features of that
+       network.
+    1. Which findings of the section reproduce: the collapse of the classic
+       arm from the shared initialization, its diversity under the default
+       initialization, and the stability of the penalized arm? Which
+       differences between the two datasets could explain a finding that
+       does not reproduce?
+   :exlabel:`ex_dcgan-recipe-fashion-mnist`
 
 [Discussions](https://d2l.discourse.group/)
 

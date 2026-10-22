@@ -460,6 +460,8 @@ train_scratch(0)
 ### Using Weight Decay
 
 Below, we run with substantial weight decay.
+Both plotted losses now include the penalty term,
+because `validation_step` calls the same `loss` method.
 Note that the training error increases
 but the validation error decreases.
 This is precisely the effect
@@ -554,13 +556,16 @@ for lam in (0, 3, 30):
 
 Two things stand out. First, 20 training examples constrain at most 20
 directions of the 200-dimensional weight space:
-$\textrm{rank}(\mathbf{X}) = 20$, so $\textrm{df}(0) = 20$. Every gradient lies
-in the row space of $\mathbf{X}$, so gradient descent never changes the
-component of $\mathbf{w}$ in the 180-dimensional nullspace. Exercise 5
+$\textrm{rank}(\mathbf{X}) = 20$, so $\textrm{df}(0) = 20$. Every gradient
+of the unpenalized loss lies in the row space of $\mathbf{X}$, so gradient
+descent without weight decay never changes the component of $\mathbf{w}$ in
+the 180-dimensional nullspace. Exercise :exref:`ex_weight-decay-decay-nullspace`
 examines what this implies for the random initialization that
 `WeightDecayScratch` uses. Second, at the $\lambda = 3$ that lowered the
 validation loss above, every shrinkage factor drops below one, the weakest
-directions are damped most, and $\textrm{df}(\lambda)$ falls well below 20: the
+directions are damped most, and $\textrm{df}(\lambda)$, short for
+$\textrm{df}(\tilde{\lambda})$ at $\tilde{\lambda} = n\lambda$, falls from 20
+to about 15: the
 regularized model behaves like one with far fewer parameters than its nominal
 200, which is exactly the continuous capacity control weight decay provides
 (:numref:`sec_generalization_basics`).
@@ -684,10 +689,11 @@ benefits that grow more pronounced on larger problems and as this work becomes
 routine. One subtlety: a framework's `weight_decay` adds the
 term $\lambda\mathbf{w}$ to the *gradient*, whereas our from-scratch penalty added
 $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the *loss*. When the loss omits the
-$\frac{1}{2}$ factor (as PyTorch's `nn.MSELoss` does), the two correspond to
-slightly different effective values of $\lambda$, so the converged
-$\|\mathbf{w}\|^2$ need not match the from-scratch value exactly, even though the
-regularizing effect is the same.
+$\frac{1}{2}$ factor (as PyTorch's `nn.MSELoss` does), the loss gradient
+doubles while the decay term does not. The framework update then equals the
+from-scratch update with twice the learning rate and half the value of
+$\lambda$, so the converged $\|\mathbf{w}\|^2$ need not match the from-scratch
+value.
 
 ```{.python .input #weight-decay-concise-implementation-2}
 %%tab pytorch

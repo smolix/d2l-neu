@@ -250,12 +250,14 @@ but it costs us in three ways:
 all of the data must fit in memory, the iteration is single-threaded
 Python looping over indices, and there is no prefetching to overlap
 data loading with computation on the previous batch.
-The data loaders built into a deep learning framework fix all three.
-They run several worker processes in parallel, prefetch the next batch
-while the current one trains, and stream from sources such as files,
+The data loaders built into a deep learning framework can remove all three
+costs. They can run several worker processes in parallel, prefetch the next
+batch while the current one trains, and stream from sources such as files,
 network streams, or generators that produce data on the fly.
 We now switch to the framework's built-in loader,
 which presents an identical interface to the caller.
+Because we hand it tensors that are already in memory,
+it does not remove the first cost.
 
 ## Concise Implementation of the Data Loader
 

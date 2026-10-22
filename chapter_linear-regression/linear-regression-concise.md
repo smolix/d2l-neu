@@ -177,9 +177,9 @@ def forward(self, X):
 The `loss` module defines many useful loss functions.
 We choose the built-in `loss.L2Loss` rather than maintaining another
 implementation.
-Because the `loss` that it returns is
-the squared error for each example,
-we use `mean` to average the loss over the minibatch.
+Because `L2Loss` returns half the squared error for each example,
+we multiply it by 2 and use `mean` to average over the minibatch.
+The result is the mean squared error without the $1/2$ factor in :eqref:`eq_mse`.
 :end_tab:
 
 :begin_tab:`pytorch`

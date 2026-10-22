@@ -25,6 +25,7 @@ import optax
 ```
 
 ## The Capacity Argument
+:label:`subsec_gan_beyond_capacity`
 
 Many generation problems are conditional predictions. A super-resolution network receives a low-resolution image and must produce a high-resolution one; a vocoder receives a spectrogram and must produce a waveform; a one-step distillation student receives a noise vector and must produce, in a single forward pass, the image its teacher builds over hundreds of evaluations. The default loss for a prediction is the pointwise squared error, and its minimizer is a classical identity. For any predictor $f$ and the conditional mean $\mu(x) = E[y \mid x]$, adding and subtracting $\mu$ inside the square and noting that the cross term vanishes conditionally on $x$ gives
 
@@ -47,6 +48,7 @@ y \;=\; x + m + 0.05\,\epsilon,
 m \in \{-1, +1\} \textrm{ with probability } \tfrac12 \textrm{ each},
 \quad \epsilon \sim \mathcal{N}(0, 1),
 $$
+:eqlabel:`eq_beyond_twoband`
 
 with the mode $m$ drawn independently of $x$. The data form two parallel bands, $y = x \pm 1$, forty noise widths apart. The conditional mean is $\mu(x) = x$, a line through the empty corridor between them. Both students are the same deterministic network, a small two-hidden-layer perceptron mapping $x$ to a single $\hat y$, so neither can represent two answers for one input; the capacity limit is built in. The first student trains on the squared error. The second trains as the generator of the log-loss game against a critic that scores $(x, y)$ pairs, using the non-saturating weight of :eqref:`eq_gan_weights`; its prediction enters the game carrying the same observation noise as the data, so the two distributions the critic compares differ in structure rather than in smoothness.
 
@@ -255,10 +257,11 @@ On natural images, several fixed discrepancies became more effective after addin
 The optimal log-loss critic between $p$ and $q$ is the log density ratio :eqref:`eq_gan_dstar`. Standard adversarial training estimates this ratio with a separate network because the generator density cannot usually be evaluated. A likelihood model can instead compute a ratio between two versions of itself. Direct discriminative optimization applies this observation to a pretrained likelihood model $q_\theta$ :cite:`Zheng.Chen.Chen.ea.2025`. It compares real data with samples from a frozen reference copy $q_{\textrm{ref}}$ and parameterizes the critic as
 
 $$
-D(x) = \log\big(q_\theta(x)/q_{\textrm{ref}}(x)\big).
+D_\theta(x) = \log\big(q_\theta(x)/q_{\textrm{ref}}(x)\big).
 $$
+:eqlabel:`eq_beyond_ddo`
 
-Optimizing the critic then updates the generative model directly, without a separate discriminator or simultaneous two-player training. If $q_\theta = p$, this parameterization equals the Bayes-optimal critic (Exercise 2). As a fine-tuning stage for pretrained EDM diffusion models, it lowers FID from 1.79 to 1.30 on CIFAR-10 and from 1.58 to 0.97 on ImageNet-64 :cite:`Zheng.Chen.Chen.ea.2025`.
+Optimizing the critic then updates the generative model directly, without a separate discriminator or simultaneous two-player training. If $q_\theta = p$, this parameterization equals the Bayes-optimal critic (exercise :exref:`ex_adversarial-losses-ddo-plays-log-loss`a). As a fine-tuning stage for pretrained EDM diffusion models, it lowers FID from 1.79 to 1.30 on CIFAR-10 and from 1.58 to 0.97 on ImageNet-64 :cite:`Zheng.Chen.Chen.ea.2025`.
 
 This construction separates the adversarial objective from its usual optimization scheme. The objective scores samples through an estimate of $\log(p/q)$ and follows its gradient; the optimization scheme estimates that ratio with a second network trained simultaneously. The convergence failures in :numref:`sec_gan_convergence` arise from the latter. Applications need not use both components together. Vocoders and video post-training retain the two-player game; LADD freezes the critic features; ViTok-v2 replaces the critic with fixed perceptual features; and direct discriminative optimization represents the ratio with the likelihood model itself. Chapter :numref:`chap_diffusion` develops models trained by regression against closed-form targets, with foundations in :numref:`sec_mdl-score-matching-diffusion-flow`. Adversarial objectives reappear when some of these models are distilled to a few sampling steps.
 
@@ -270,11 +273,256 @@ The capacity argument explains the continued use of adversarial terms in diffusi
 
 ## Exercises
 
-1. Use the capacity argument to rank three tasks by how much an adversarial term should help a capacity-limited student trained with a pointwise loss: (a) super-resolution of photographs, (b) class-conditional generation of $32 \times 32$ images, and (c) rendering a specified string of text into an image. For each task, ask how many distinct valid outputs are compatible with one input, and where in the output the ambiguity lies. Check your ranking against the evidence in this section, in particular the patch-level observation of :citet:`Lin.Wang.Yang.2024`.
-2. DDO plays the log-loss game between real data ($y = 1$) and samples from a frozen model $q_{\textrm{ref}}$ ($y = 0$), with the critic parameterized as $D(x) = \log\big(q_\theta(x)/q_{\textrm{ref}}(x)\big)$. Show in three lines from :numref:`sec_basic_gan` that if training reaches $q_\theta = p$, this critic equals the game's optimal critic, so the parameterization can represent the exact solution of the game it plays.
-3. Modify the two-band experiment so that the mode offset takes the three values $\{-1, 0, +1\}$ with equal probability. What does the squared-error student now predict, and does its qualitative failure persist? Then make the three probabilities unequal, for example $(\tfrac14, \tfrac14, \tfrac12)$, and explain what changes and why.
-4. Give the student the information it lacks: extend the two-band experiment with a latent input $s \in \{-1, +1\}$, drawn uniformly and independently of $x$, so that the student maps $(x, s)$ to $\hat y$. Train one such student with the squared error and one adversarially, then estimate the conditional mode frequencies at several values of $x$ by sampling $s$. What changes relative to the deterministic students, and which of the two losses gives the student an incentive to use the latent bit at all?
-5. For each of the three responses in :numref:`fig_gan_exits`, state its cost in one sentence: what does regularizing the dynamics still require, what does a critic built on frozen features inherit, and what do fixed discrepancies and regression objectives each give up?
+1. **Distortion of a perfect sampler.** Let $\hat y$ be drawn from
+   $p(y \mid x)$, independently of $y$ given $x$, so that the predictor
+   samples the conditional distribution exactly. This problem follows the
+   analysis of the trade-off between distortion and realism by
+   :citet:`Blau.Michaeli.2017`.
+    1. Use :eqref:`eq_beyond_condmean` to show that
+       $E\big[(y - \hat y)^2\big] = 2\, E\big[(y - \mu(x))^2\big]$. For
+       outputs with peak value $y_{\max}$, the peak signal-to-noise ratio of
+       a predictor $\hat y$ is
+       $10 \log_{10}\big(y_{\max}^2 / E[(y - \hat y)^2]\big)$ decibels. By
+       how many decibels does the peak signal-to-noise ratio of such a
+       sampler fall below that of the conditional mean?
+    1. For the two-band data :eqref:`eq_beyond_twoband`, compute the
+       expected squared error of the conditional mean, of the exact sampler,
+       and of a deterministic student whose curve follows the band
+       $y = x + 1$ for every $x$. Which of the three does squared error rank
+       first? Which of them can an optimal critic of $(x, y)$ pairs not
+       distinguish from the data?
+    1. A predictor can match the distribution of $y$ without sampling. Let
+       $y \sim \mathcal{N}(0, 1)$ and $x = y + \tau \epsilon$ with
+       $\epsilon \sim \mathcal{N}(0, 1)$ independent of $y$. Show that the
+       deterministic predictor $\hat y = x / \sqrt{1 + \tau^2}$ has the same
+       distribution as $y$, and compute the ratio of its squared error to
+       that of the conditional mean for $\tau \in \{0.1, 1, 10\}$. When is
+       the price of matching the distribution of $y$ small?
+1. [code] **Mean and median.** Squared error is minimized by the
+   conditional mean :eqref:`eq_beyond_condmean`. Absolute error
+   $E\big[|y - f(x)|\big]$ is minimized by a conditional median, a value $t$
+   with $P(y \leq t \mid x) = \tfrac12$. Both statistics can be computed for
+   variants of the two-band data :eqref:`eq_beyond_twoband`.
+    1. Let the mode offset $m$ take the three values $\{-1, 0, +1\}$ with
+       equal probability. What are the conditional mean and the conditional
+       median, and is each a valid output? Answer the same questions for the
+       probabilities $(\tfrac14, \tfrac14, \tfrac12)$ of $-1$, $0$ and $+1$.
+    1. Return to two bands and let $P(m = +1) = r$. Write the conditional
+       mean as a function of $r$. For $r = \tfrac34$, show that the
+       conditional median lies on the upper band, and compute its offset from
+       $x$ to two decimal places. For $r = \tfrac12$, describe the
+       absolute-error risk as a function of $f(x) - x$ inside the corridor
+       between the bands.
+    1. Train the squared-error student of
+       :numref:`subsec_gan_beyond_capacity` and a copy trained with absolute
+       error on the data of (a) and (b), using three seeds for $r = \tfrac12$,
+       and compare the curves with your predictions. Under which condition on
+       $p(y \mid x)$ is the conditional median a valid output?
+1. **Where the ambiguity lies.** Consider four tasks, each learned with
+   squared error by a capacity-limited student: denoising photographs
+   corrupted by Gaussian noise of small standard deviation, $4\times$
+   super-resolution of photographs, colorization of grayscale photographs,
+   and class-conditional generation of $32 \times 32$ images whose only input
+   is the class label.
+    1. For each task, which parts of the output does the input determine,
+       and which remain ambiguous? Predict the visible defect of the
+       squared-error output.
+    1. Rank the tasks by how much an adversarial term should improve the
+       outputs.
+    1. Among few-step distillation methods, :citet:`Lin.Wang.Yang.2024`
+       find small differences in whole-image FID and larger ones in
+       patch-level FID. For which of the four tasks should the same pattern
+       appear when a squared-error student is compared with an adversarially
+       trained one?
+1. [code] **Pointwise plus adversarial.** ADD trains its student on the sum
+   of an adversarial loss and a weighted pointwise distillation loss
+   :cite:`Sauer.Lorenz.Blattmann.ea.2023`.
+    1. Add $\lambda_{\textrm{pw}}$ times the squared error against the
+       observed $y$ to the generator loss of the adversarial student of
+       :numref:`subsec_gan_beyond_capacity`. Train with
+       $\lambda_{\textrm{pw}} \in \{0.1, 1, 10, 100\}$ and two seeds each,
+       and report the mean distances to the nearest mode and to the
+       conditional mean. Near which $\lambda_{\textrm{pw}}$ does the curve
+       leave the bands?
+    1. ADD's distillation target is not an observed sample. The teacher
+       denoises a noised copy of the student's own output, and this estimate
+       serves as a constant target. As a stand-in for such a teacher, use the
+       center of the band nearest to the student's prediction,
+       $x + \operatorname{sign}(\hat y - x)$, with its gradient stopped, and
+       repeat the sweep. Why does this pointwise term not pull the curve into
+       the corridor? Relate the two sweeps to ADD's one-step ablation, in
+       which the adversarial loss alone gives FID 20.8 and the sum of both
+       losses gives 20.6.
+1. **A patch critic.** VQGAN :cite:`Esser.Rombach.Ommer.2021` uses the patch
+   critic of pix2pix :cite:`Isola.Zhu.Zhou.ea.2017`: five $4 \times 4$
+   convolutions with padding 1 and strides 2, 2, 2, 1, and 1, the last of
+   which has a single output channel. The critic therefore returns a map of
+   scores instead of one score per image.
+    1. Compute the receptive field of one score and the size of the score
+       map for a $256 \times 256$ input.
+    1. A critic of this kind compares the distribution of local patches of
+       generated images with that of real images. Describe an image in which
+       every patch that one score sees is plausible, but which is not
+       plausible as a whole.
+    1. Why does this blind spot matter little for the decoder of a
+       tokenizer, which is also trained with a reconstruction loss against
+       the encoded image? Why does it matter more for a generator that maps
+       noise to images and is trained against this critic alone?
+1. **Phase and the conditional mean.** A vocoder receives a spectrogram,
+   which fixes the frequency content and the magnitude of each frame but not
+   the phase. Model one frame of $N$ samples as
+   $y_t = \sin(\omega t + \phi)$ for $t = 0, \ldots, N - 1$, where the
+   spectrogram fixes $\omega$ and the phase $\phi$ is uniform on $[-a, a]$
+   with $0 < a \leq \pi$.
+    1. Compute the squared-error prediction $E[y_t]$ and the ratio of its
+       amplitude to the common amplitude of the valid waveforms. Evaluate the
+       ratio for $a = \pi/2$ and $a = \pi$.
+    1. Let $\omega = 2\pi k / N$ for an integer $k$ with $0 < k < N/2$. Show
+       that the magnitudes of the discrete Fourier transform of $y$ do not
+       depend on $\phi$. Which outputs minimize a loss on these magnitudes,
+       such as the mel-spectrogram term in the generator loss of HiFi-GAN
+       :cite:`Kong.Kim.Bae.2020`?
+    1. Concatenate two such frames whose phases are drawn independently. A
+       magnitude loss computed on the two non-overlapping frames is zero.
+       What is wrong with the waveform at the boundary between the frames,
+       and why can no loss that sees each non-overlapping frame only through
+       its magnitudes detect it? What must the input of a critic contain for
+       the critic to penalize this defect?
+1. **Frozen critic features.** Projected GAN and ADD score a sample through
+   a frozen pretrained feature map $\psi$ and train only a head $g$, so that
+   $D(\mathbf{x}) = g(\psi(\mathbf{x}))$
+   :cite:`Sauer.Chitta.Muller.ea.2021,Sauer.Lorenz.Blattmann.ea.2023`. Let
+   $p_\psi$ and $q_\psi$ be the distributions of $\psi(\mathbf{x})$ for
+   $\mathbf{x} \sim p$ and for $\mathbf{x} \sim q$, and let $g$ range over all
+   functions.
+    1. Write :eqref:`eq_gan_V` for this critic as an expectation over
+       $p_\psi$ and $q_\psi$, and maximize it over $g$ as in the derivation
+       of :eqref:`eq_gan_dstar`. What is the optimal head, and which
+       divergence does the maximal value measure? Which generator
+       distributions $q$ minimize this value?
+    1. Let $p = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$ and
+       $\psi(\mathbf{x}) = x_1$. Give a distribution $q \neq p$ that
+       minimizes the value of (a).
+    1. Suppose that the generator is evaluated by the Fréchet distance of
+       :numref:`sec_dcgan`, computed with the same features $\psi$. Which
+       score does a minimizer from (a) reach, and what does this score say
+       about $q$? Relate the answer to the observation of
+       :citet:`Kynkaanniemi.Karras.Aittala.ea.2023` that ImageNet-pretrained
+       discriminators can lower Inception-based FID.
+1. **DDO's implicit critic.** Direct discriminative optimization
+   :cite:`Zheng.Chen.Chen.ea.2025` plays the log-loss game :eqref:`eq_gan_V`
+   between real data and samples from a frozen model $q_{\textrm{ref}}$,
+   with the critic $D_\theta$ of :eqref:`eq_beyond_ddo`. It minimizes
+   $L(\theta) = -V(D_\theta)$, with $q = q_{\textrm{ref}}$ in
+   :eqref:`eq_gan_V`, over the parameters $\theta$ of $q_\theta$, starting
+   from $\theta = \theta_{\textrm{ref}}$.
+    1. Show in three lines from :numref:`sec_basic_gan` that if training
+       reaches $q_\theta = p$, this critic equals the game's optimal critic,
+       so the parameterization can represent the exact solution of the game
+       it plays.
+    1. Show that at $\theta = \theta_{\textrm{ref}}$ the gradient of $L$ is
+       one half of the gradient of the negative log-likelihood
+       $-E_{x \sim p}[\log q_\theta(x)]$. Use the identity
+       $E_{x \sim q_\theta}[\nabla_\theta \log q_\theta(x)] = 0$, which
+       follows from differentiating $\int q_\theta(x)\, dx = 1$.
+    1. At $\theta = \theta_{\textrm{ref}}$, every real and every reference
+       sample enters the gradient with weight $\tfrac12$. Away from
+       $\theta_{\textrm{ref}}$, which real samples receive a smaller weight,
+       and which reference samples does the update push down most strongly?
+   :exlabel:`ex_adversarial-losses-ddo-plays-log-loss`
+1. [code] **A latent bit.** ● Give the student of
+   :numref:`subsec_gan_beyond_capacity` the information it lacks: a latent
+   input $s \in \{-1, +1\}$, drawn uniformly and independently of $x$, so
+   that the student maps $(x, s)$ to $\hat y$. The critic still scores
+   $(x, y)$ pairs.
+    1. Train one such student with squared error and one adversarially. At
+       several values of $x$, find the band on which the output for each
+       latent value lies. Which of the two losses gives the student an
+       incentive to use the latent bit?
+    1. IMLE :cite:`Li.Malik.2018` associates each data point with its
+       nearest generated sample. With a binary latent, this becomes the loss
+       $E\big[\min_{s} (f(x, s) - y)^2\big]$. Train a student with this loss
+       and compare it with the two students of (a). Which property of the
+       loss forces both latent values into use without a critic?
+    1. Now let $P(m = +1) = \tfrac34$. Which band frequencies can a student
+       with a uniform binary latent represent at a given $x$? Compute the
+       Jensen--Shannon divergence between the band probabilities
+       $(\tfrac14, \tfrac34)$ of the data and each representable choice,
+       predict the choice that the adversarial student and the IMLE student
+       reach, and check by training. What must change in the latent input for
+       a student to represent the probability $\tfrac34$?
+1. [code] **Random and learned projections.** ● Sliced-Wasserstein
+   generators replace the critic by one-dimensional transport costs along
+   random directions :cite:`Deshpande.Zhang.Schwing.2018`, the third response
+   of :numref:`fig_gan_exits`. For a unit vector $\mathbf{u}$, let
+   $W_2^2(\mathbf{u})$ be the squared Wasserstein-2 distance between the
+   distributions of $\mathbf{u}^\top \mathbf{x}$ under $p$ and under $q$.
+   Between two samples of equal size $n$, it equals the mean squared
+   difference of the sorted projected samples. The sliced distance averages
+   $W_2^2(\mathbf{u})$ over directions $\mathbf{u}$ drawn uniformly from the
+   unit sphere. Let $p = \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$ and
+   $q = \mathcal{N}(\delta \mathbf{e}_1, \mathbf{I}_d)$.
+    1. By exercise :exref:`ex_dcgan-one-dimension-squared-wasserstein`a of
+       :numref:`sec_dcgan`, two one-dimensional Gaussians with equal
+       variance have $W_2^2$ equal to the squared difference of their
+       means. Use this to show that the
+       sliced distance equals $\delta^2 / d$. What is $W_2^2(\mathbf{u})$ for
+       the best direction?
+    1. For $\delta = 1$ and $n = 1000$, estimate the sliced distance with 100
+       random directions between samples of $p$ and $q$, and between two
+       independent samples of $p$, for $d \in \{2, 16, 128, 1024\}$ with 20
+       repetitions each. At which dimension does the first value become hard
+       to distinguish from the second?
+    1. Replace the random directions by one learned direction, the
+       difference between the means of the two samples being compared, and
+       evaluate $W_2^2$ along it for $p$ against $q$ and for $p$ against $p$.
+       Explain the $p$-against-$p$ value at $d = 1024$. What does this show
+       about a critic that is trained and evaluated on the same samples?
+    1. Learn the direction instead from an independent pair of samples of
+       the same two distributions, and repeat the evaluation. Predict the
+       $p$-against-$q$ value from the angle between the learned direction and
+       $\mathbf{e}_1$, and compare the prediction with the measured value.
+1. [code] **Multi-round refinement.** ●● In practice DDO minimizes
+
+   $$L_{\alpha, \beta}(\theta) = -E_{x \sim p}\big[\log \sigma\big(\beta D_\theta(x)\big)\big] - \alpha\, E_{x \sim q_{\textrm{ref}}}\big[\log \sigma\big(-\beta D_\theta(x)\big)\big]$$
+
+   with $D_\theta$ from :eqref:`eq_beyond_ddo`, typical values
+   $\beta \in [0.01, 0.1]$, and several rounds, each of which replaces
+   $q_{\textrm{ref}}$ by the model obtained in the previous round
+   :cite:`Zheng.Chen.Chen.ea.2025`.
+    1. Let $q_\theta$ range over all densities. Minimize the integrand at
+       each $x$ over $D_\theta(x)$, as in the derivation of
+       :eqref:`eq_gan_dstar`, to show that the minimizer is proportional to
+       $q_{\textrm{ref}}^{1 - 1/\beta}\, p^{1/\beta}$ and is normalized for
+       exactly one value of $\alpha$. Write $r_n = \log(q_n / p)$ for the
+       model $q_n$ of round $n$, and derive the recursion that relates
+       $r_{n+1}$ to $r_n$ up to an additive constant. For which $\beta$ do
+       the rounds converge to $p$, and what happens at $\beta = 0.05$?
+    1. Now let the family $q_\theta$ be restricted. Generalize problem
+       :exref:`ex_adversarial-losses-ddo-plays-log-loss`b to show that at
+       $\theta = \theta_{\textrm{ref}}$ the gradient of $L_{\alpha, \beta}$
+       is $\beta / 2$ times the gradient of the negative log-likelihood, for
+       every $\alpha$. Conclude that every fixed point of the rounds is a
+       stationary point of the likelihood.
+    1. Let $q_\theta(x) = h(x) \exp\big(\theta^\top T(x) - A(\theta)\big)$
+       be an exponential family and $\theta_{\textrm{ref}}$ its
+       maximum-likelihood fit, so that
+       $E_{x \sim q_{\textrm{ref}}}[T(x)] = E_{x \sim p}[T(x)]$. Show that for
+       $\alpha = 1$ and every $\beta > 0$, $\theta_{\textrm{ref}}$ minimizes
+       $L_{1, \beta}$ globally. Compare with logistic regression over all
+       critics of the form $\mathbf{w}^\top T(x) + b$.
+    1. Fit the Gaussian family to
+       $p = \tfrac12 \mathcal{N}(-2, 0.5^2) + \tfrac12 \mathcal{N}(2, 0.5^2)$,
+       computing all expectations by quadrature on a grid. Start the rounds
+       from $q_{\textrm{ref}} = \mathcal{N}(1, 1)$ with $\alpha = 1$, solve
+       each round to convergence by gradient descent, and track the mean and
+       the standard deviation over eight rounds for
+       $\beta \in \{1, 0.75, 0.5, 0.05\}$. For which $\beta$ do the rounds
+       converge, and how does the threshold compare with the one from (a)?
+       By (b) and (c), the rounds cannot improve on maximum likelihood in
+       this experiment. Which features of the setting of
+       :citet:`Zheng.Chen.Chen.ea.2025` must differ for their reported gains
+       to be possible?
 
 [Discussions](https://d2l.discourse.group/)
 

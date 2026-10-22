@@ -259,7 +259,7 @@ print(f'singular values after 5 iterations: '
 
 One iteration lifts the whole spectrum; three compress it to within a factor
 of a few; after five, every singular value sits in a band around $1$, from
-roughly $0.7$ to $1.2$. That is $\mathbf{U}\mathbf{V}^\top$ for an
+roughly $0.7$ to $1.1$. That is $\mathbf{U}\mathbf{V}^\top$ for an
 optimizer's purposes, at the cost of fifteen matrix multiplications. (A
 *nearly singular* direction takes a few more iterations to climb out, at
 $3.4$-fold per pass; the exercises probe how much that matters in

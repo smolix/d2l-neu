@@ -134,7 +134,8 @@ gradient is zero:
   definite* — we have a strict local minimum;
 * if all are strictly negative, a strict local maximum;
 * if some are strictly positive and some strictly negative — the Hessian is
-  *indefinite* — a saddle point;
+  *indefinite* — a saddle point, called *strict* because the Hessian has a
+  strictly negative eigenvalue;
 * if the nonzero eigenvalues share a sign but at least one eigenvalue is
   zero — the Hessian is only semidefinite, hence singular — the test is
   inconclusive: the flat directions are settled by higher-order terms, and
@@ -304,8 +305,10 @@ that transfers to deep networks essentially intact
 This local argument does not make the full objective convex. A deep network's loss cannot be convex
 globally: permuting the hidden units of a layer leaves the function
 computed unchanged, so every minimum comes with a combinatorial family of
-separated copies of itself, while a convex function's minima form a single
-connected set; the first exercise below makes this precise. Convexity
+copies of itself. Under convexity the average of these copies, a network
+whose units in that layer are all identical, would be a minimizer as well,
+a conclusion that fails whenever such a network fits worse; Exercise :exref:`ex_optimization-intro-permutation-symmetric-minima`
+makes this precise. Convexity
 for deep learning is therefore a local approximation and a source of
 tools, never a global fact. The full treatment lives in
 :numref:`sec_mdl-convexity` of the mathematical appendix: convex sets and

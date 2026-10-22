@@ -312,9 +312,10 @@ see :citet:`Ioffe.2017` for how to rescale the relevant terms.
 The experiments in the rest of this chapter run on a small real regression
 task: predicting aircraft wing
 [self-noise](https://archive.ics.uci.edu/dataset/291/airfoil+self+noise)
-from five physical features, a dataset collected by NASA. We use the first
-$1{,}500$ examples and whiten the data, removing the mean and rescaling the
-variance to $1$ per coordinate. It is deliberately modest: each training run
+from five physical features, a dataset collected by NASA. We whiten the
+data with the statistics of the full dataset, removing the mean and
+rescaling the variance to $1$ per coordinate, and use the first $1{,}500$
+examples. It is deliberately modest: each training run
 takes seconds, so we can afford to rerun it under every optimizer the chapter
 introduces.
 
@@ -487,7 +488,7 @@ therefore incurs dispatch overhead at every step.
 sgd_res = train_sgd(0.005, 1)
 ```
 
-With a batch size of 100 the time per epoch drops below both extremes.
+With a batch size of 100 the time per epoch falls far below that of SGD.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-5}
 mini1_res = train_sgd(.4, 100)

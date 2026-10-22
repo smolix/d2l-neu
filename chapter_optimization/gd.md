@@ -335,8 +335,8 @@ show_trace(newton(0.5), f)
 
 Two facts about Newton's method are worth carrying away, and both are proved
 in the appendix rather than here. First, near a minimum with positive
-curvature it converges *quadratically*: the number of correct digits roughly
-doubles at every iteration. :numref:`subsec_mdl-why-not-newton` gives the
+curvature it converges at least *quadratically*: the number of correct digits
+roughly doubles at every iteration, or grows faster. :numref:`subsec_mdl-why-not-newton` gives the
 proof and shows the doubling numerically. Second, nothing rescues the method
 at deep-learning scale. Storing the Hessian costs $\mathcal{O}(d^2)$ memory
 and solving with it $\mathcal{O}(d^3)$ time, which at $d \sim 10^9$

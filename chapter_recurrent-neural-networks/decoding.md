@@ -426,8 +426,10 @@ admit the noise floor wholesale.
 
 All four dials act on the same object, the next-token distribution, so a
 single function can host them. `sample_next` turns one vector of logits
-into one token id: greedy if asked, otherwise temperature-scaled sampling
-after optional top-$k$, top-$p$, and min-$p$ truncation. Note how each
+into one token id. It returns the argmax if asked for greedy decoding;
+otherwise it computes the temperature-scaled distribution $P_T$ of
+:eqref:`eq_temperature`, applies the optional top-$k$, top-$p$, and
+min-$p$ truncation to $P_T$, and samples from what remains. Note how each
 truncation rule is just a different cut of the same sorted-by-probability
 order, a pure function of the distribution; we exploit that shortly to
 visualize all three at once. Like `beam_search` it is written in plain

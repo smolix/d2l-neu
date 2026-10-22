@@ -153,7 +153,7 @@ The total mass is $1.0000$, as :eqref:`eq_mdl-density` requires
 (the grid spans $[-8,8]$, wide enough that the truncated Gaussian tails hold
 mass under $10^{-7}$), and the interval integral returns a genuine probability
 in $[0,1]$. The estimate $0.7725$ is within $6\times10^{-4}$ of the exact value
-$0.7731$, the small bias of a left-endpoint Riemann sum at $\epsilon=0.01$. A
+$0.7731$, the small bias of a right-endpoint Riemann sum at $\epsilon=0.01$. A
 catalogue of named densities (Gaussian, exponential, and the rest) follows in
 :numref:`sec_mdl-distributions`; here we stay abstract.
 
@@ -185,7 +185,10 @@ F(x) = \begin{cases}
 \end{cases}
 $$
 
-a *staircase* that jumps by the mass at each atom. The same $F$ thus describes
+a *staircase* that jumps by the mass at each atom. Since $F(x)=P(X\le x)$
+includes the atom at $x$ itself, $F$ takes the upper value at each jump; in
+general every c.d.f. is *right-continuous*, $\lim_{y\downarrow x}F(y)=F(x)$.
+The same $F$ thus describes
 continuous variables, discrete ones, and mixtures (flip a coin: heads, report a
 die roll; tails, a dart distance).
 
@@ -255,7 +258,7 @@ that distribution's standard sampler in closed form.
 Sampling is also how expectations are computed at scale: given independent
 draws $x_1,\ldots,x_n$ of $X$, the *Monte Carlo* estimate
 $\tfrac1n\sum_{i=1}^n g(x_i)$ approximates $E[g(X)]$, and its variance is
-$\textrm{Var}(g(X))/n$ (Exercise 6 carries out the computation), shrinking with
+$\textrm{Var}(g(X))/n$ (Exercise :exref:`ex_mdl-random-variables-using-textrmvar-x-y`a carries out the computation), shrinking with
 every additional sample. The guarantee that the estimate converges to the
 expectation, the law of large numbers, is stated and proved in
 :numref:`sec_mdl-statistics`.
@@ -538,7 +541,8 @@ for R in [10, 100, 1000]:
 The "integral" grows without bound as the range widens: it does not converge, so
 the variance is infinite. Distributions whose tails are fat enough that moments
 diverge are called *heavy-tailed*, and they are endemic inside machine learning:
-gradient-noise spectra, token frequencies, and the spectra of trained weight
+minibatch gradient noise :cite:`Simsekli.Sagun.Gurbuzbalaban.2019`,
+token frequencies, and the spectra of trained weight
 matrices all show heavy tails. :numref:`sec_mdl-concentration-generalization`
 classifies tails by how fast averages over them concentrate.
 
@@ -665,7 +669,11 @@ $$
 
 the average value of $X$ *once $Y$ is known to be $y$*. As $y$ ranges it traces a
 function of $y$; feeding in the random $Y$ makes $E[X\mid Y]$ itself a random
-variable, a function of $Y$ alone. The variance gets a conditional version the
+variable, a function of $Y$ alone. The same slice average defines
+$E[g(X,Y)\mid Y{=}y]=\int g(x,y)\,p_{X\mid Y}(x\mid y)\,dx$ for any function
+$g$, and a factor $h(Y)$ is constant within each slice, so it comes out:
+$E[h(Y)\,g(X,Y)\mid Y]=h(Y)\,E[g(X,Y)\mid Y]$.
+The variance gets a conditional version the
 same way: $\textrm{Var}(X\mid Y)=E[X^2\mid Y]-E[X\mid Y]^2$, the computational
 form :eqref:`eq_mdl-var_comp` applied within each slice. Two identities then say
 that conditioning can
@@ -697,6 +705,8 @@ The set where $p_Y(y)=0$, on which the conditional density
 :eqref:`eq_mdl-cond_density` is undefined, contributes nothing to either
 integral: $Y$ lands in it with probability zero, and the joint density vanishes
 there as well (it integrates to $p_Y$ in $x$), so both sides ignore it.
+Replacing $x$ by $g(x,y)$ in this computation gives
+$E\bigl[E[g(X,Y)\mid Y]\bigr]=E[g(X,Y)]$ in the same way.
 For the variance, apply the definition of $\textrm{Var}(X\mid Y)$ within
 each slice, take the
 expectation over $Y$, and add and subtract $E\bigl[E[X\mid Y]\bigr]^2=E[X]^2$:
@@ -1068,17 +1078,315 @@ $|\det A|$ and the density thins by the same factor.
   powers normalizing flows.
 
 ## Exercises
-1. Suppose $X$ has density $p(x) = \frac{1}{x^2}$ for $x \ge 1$ and $p(x) = 0$ otherwise. Verify it is a density and compute $P(X > 2)$ and the c.d.f. $F(x)$.
-2. The Laplace distribution has density $p(x) = \tfrac12 e^{-|x|}$. Find its mean and standard deviation. (*Hint:* $\int_0^\infty xe^{-x}\,dx = 1$ and $\int_0^\infty x^2e^{-x}\,dx = 2$.)
-3. A population has mean $1$ and standard deviation $2$. Use Chebyshev
-   :eqref:`eq_mdl-chebyshev` to bound the population probability $P(X>9)$. Then
-   explain why observing $25\%$ above $9$ in a *finite sample* is evidence
-   against the claim but is not logically impossible without knowing the sample
-   size.
-4. Two variables $X,Y$ have joint density $p_{XY}(x, y) = x+y$ on $[0,1]^2$ and $0$ otherwise. Verify that it integrates to one, find the marginals $p_X,p_Y$ and the covariance $\textrm{Cov}(X,Y)$, and decide whether $X$ and $Y$ are independent.
-5. Give a second proof of the affine variance rule $\textrm{Var}(aX+b)=a^2\textrm{Var}(X)$ :eqref:`eq_mdl-var_affine`, this time starting from the computational form $\textrm{Var}(aX+b)=E[(aX+b)^2]-E[aX+b]^2$ :eqref:`eq_mdl-var_comp`: expand both expectations with linearity :eqref:`eq_mdl-exp_linear` and watch the cross terms cancel. (The proof in the text instead worked with the deviation $a(X-\mu_X)$.)
-6. Using $\textrm{Var}(X+Y)=\textrm{Var}(X)+\textrm{Var}(Y)+2\textrm{Cov}(X,Y)$ :eqref:`eq_mdl-var_sum`, show that for independent identically distributed $X_1,\ldots,X_n$ with variance $\sigma^2$, the sample mean $\bar X=\tfrac1n\sum_i X_i$ has variance $\sigma^2/n$. (This is why averaging reduces noise.)
-7. Let $X$ be uniform on $\{-1,0,1\}$ and $Y=|X|$. Compute $\textrm{Cov}(X,Y)$ and confirm it is zero even though $Y$ is a deterministic function of $X$. Why does correlation miss this relationship?
+
+1. **Power-law tail.** Let $X$ have the density $p(x) = 1/x^2$ for
+   $x \ge 1$ and $p(x) = 0$ otherwise.
+    1. Verify that $p$ is a density, and compute $P(X > 2)$ and the c.d.f.
+       $F(x)$ for every real $x$.
+    1. Find the quantile function $F^{-1}(q)$ for $q \in (0, 1)$, the
+       median, and the other two quartiles. Write down the
+       inverse-transform sampler $X = F^{-1}(U)$ of
+       :numref:`fig_mdl-prob-inverse-transform` for this law.
+    1. Show that $E[X] = \infty$. Clipping $X$ at a level $c > 1$, as
+       gradient clipping does for a gradient norm, gives $\min(X, c)$.
+       Compute $E[\min(X, c)]$, and describe how it grows with $c$.
+    1. For the Cauchy density $q(x) = 1/\bigl(\pi(1+x^2)\bigr)$, compute
+       $\int_{-R}^{R} x\,q(x)\,dx$ and $\int_{-R}^{2R} x\,q(x)\,dx$ and
+       their limits as $R \to \infty$. What do the two limits say about the
+       mean of the Cauchy law? Why can no such ambiguity arise for $E[X]$?
+   :exlabel:`ex_mdl-random-variables-power-law-tail`
+
+1. **Rectified Gaussian.** Let $X \sim \mathcal{N}(0, 1)$ have the c.d.f.
+   $\Phi$, and let $Y = \max(0, X)$. This is the activation of a ReLU unit
+   with a standard normal pre-activation, a common model of a unit at
+   initialization. The analysis of :numref:`subsec_he_init` assumes only
+   that the pre-activations are symmetric about zero.
+    1. Express the c.d.f. $F_Y$ through $\Phi$ and sketch it. Where does
+       $Y$ have an atom, and what is its mass? Is the law of $Y$ discrete,
+       absolutely continuous, or mixed?
+    1. Explain why $Y$ has no density. Which hypothesis of the
+       change-of-variables formula :eqref:`eq_mdl-cov_density_1d` fails for
+       the ReLU?
+    1. Clipping to $[-c, c]$ for a threshold $c > 0$, as the hard-tanh
+       activation does for $c = 1$, gives $C = \min(\max(X, -c), c)$. Write
+       down the c.d.f. of $C$, and find the threshold $c$ at which the atoms
+       of $C$ together hold $10\%$ of the mass. The equation has no
+       closed-form solution; use tabulated values of $\Phi$, or `math.erf`
+       with $\Phi(z) = \tfrac12\bigl(1 + \operatorname{erf}(z/\sqrt{2})\bigr)$.
+   :exlabel:`ex_mdl-random-variables-rectified-gaussian`
+
+1. [code] **Logistic law and calibration.** The logistic distribution has
+   the c.d.f. $F(x) = \operatorname{sigmoid}(x) = 1/(1 + e^{-x})$.
+    1. Find its density with :eqref:`eq_mdl-cdf_deriv` and its quantile
+       function. What are its quartiles?
+    1. Let $X$ have a continuous, strictly increasing c.d.f. $F$. Show that
+       $F(X)$ is uniform on $[0, 1]$. This is the converse of
+       inverse-transform sampling.
+    1. A probabilistic regression model predicts for each input $i$ a
+       logistic law for the target $y_i$, centered at the correct location
+       $\mu_i$ but with a scale $s$, that is, the c.d.f.
+       $\operatorname{sigmoid}\bigl((y - \mu_i)/s\bigr)$. The actual errors
+       $y_i - \mu_i$ follow the standard logistic law. Draw $10^4$ errors
+       with the quantile function from (a), compute
+       $u_i = \operatorname{sigmoid}\bigl((y_i - \mu_i)/s\bigr)$ for
+       $s \in \{0.5, 1, 2\}$, and plot the three histograms of the $u_i$.
+       Which shape reveals predicted laws that are too narrow, and which
+       reveals laws that are too wide? Such histograms are a standard check
+       of the calibration of probabilistic forecasts
+       :cite:`Gneiting.Balabdaoui.Raftery.2007`.
+   :exlabel:`ex_mdl-random-variables-logistic-calibration`
+
+1. [code] **Classes missing from a minibatch.** A minibatch holds $B$
+   labels drawn independently and uniformly from $K$ classes. Let $M$ be
+   the number of classes that do not appear in it, and write
+   $M = \sum_{k=1}^K I_k$, where $I_k = 1$ if class $k$ is missing and
+   $I_k = 0$ otherwise.
+    1. Compute $E[M]$ with linearity :eqref:`eq_mdl-exp_linear`, and
+       evaluate it for $K = 1000$ and $B = 256$.
+    1. Compute $\textrm{Cov}(I_j, I_k)$ for $j \neq k$. Are the indicators
+       independent?
+    1. Extend the variance-of-a-sum rule :eqref:`eq_mdl-var_sum` to $K$
+       terms, and compute the standard deviation of $M$ for $K = 1000$ and
+       $B = 256$. Compare it with the value that independent indicators
+       would give, and check both against $10^4$ simulated minibatches. How
+       can covariances as small as those in (b) change the answer this much?
+   :exlabel:`ex_mdl-random-variables-missing-classes`
+
+1. **Markov versus Chebyshev.** A non-negative random variable $X$ has
+   mean $1$ and standard deviation $2$, as a gradient norm with a long
+   right tail might.
+    1. Bound $P(X \ge 9)$ with Markov's inequality :eqref:`eq_mdl-markov`
+       and with Chebyshev's inequality :eqref:`eq_mdl-chebyshev`. For which
+       thresholds $t > 1$ does Markov's inequality give the smaller bound on
+       $P(X \ge t)$?
+    1. Find a non-negative $X$ with mean $1$ and standard deviation $2$ for
+       which $P(X \ge 5)$ equals Markov's bound.
+    1. A dataset of $n$ numbers has mean $1$ and standard deviation $2$,
+       computed with the divisor $n$. Apply Chebyshev's inequality to the
+       empirical distribution, which puts mass $1/n$ on each number, to show
+       that at most $1/16$ of the numbers exceed $9$.
+    1. Now let $1$ and $2$ be the mean and standard deviation of a
+       population, and draw $20$ points from it independently. Apply
+       Markov's inequality to the number $N$ of sample points above $9$ to
+       bound $P(N \ge 5)$. Why does (c) not rule out this event?
+   :exlabel:`ex_mdl-random-variables-markov-chebyshev`
+
+1. **Joint density on the unit square.** Let $p_{X,Y}(x, y) = x + y$ on
+   $[0, 1]^2$ and $p_{X,Y}(x, y) = 0$ elsewhere.
+    1. Verify that $p_{X,Y}$ integrates to one, and find the marginals
+       $p_X$ and $p_Y$ with :eqref:`eq_mdl-marginal`.
+    1. Compute $\textrm{Cov}(X, Y)$ and $\rho(X, Y)$. Are $X$ and $Y$
+       independent?
+    1. Find the conditional density $p_{Y \mid X}(y \mid x)$
+       :eqref:`eq_mdl-cond_density` and the conditional mean
+       $E[Y \mid X = x]$ :eqref:`eq_mdl-cond_exp`. Is the conditional mean
+       increasing or decreasing in $x$, and how does that agree with the
+       sign of the covariance? Check the tower property
+       :eqref:`eq_mdl-tower` by averaging the conditional mean over $p_X$.
+   :exlabel:`ex_mdl-random-variables-joint-unit-square`
+
+1. [code] **Moments of a mixture.** The
+   `#random-variables-density-to-probability` cell integrates the mixture
+   density $p(x) = 0.2\,\mathcal{N}(x; 3, 1) + 0.8\,\mathcal{N}(x; -1, 1)$.
+   Let $Z$ be the component label, with $P(Z = 1) = 0.2$ and
+   $X \mid Z{=}1 \sim \mathcal{N}(3, 1)$, and with $P(Z = 2) = 0.8$ and
+   $X \mid Z{=}2 \sim \mathcal{N}(-1, 1)$.
+    1. Compute $E[X]$ and $\textrm{Var}(X)$ with the laws of total
+       expectation and variance :eqref:`eq_mdl-tower`, without integrating.
+    1. Extend the cell to compute both quantities as Riemann sums of
+       :eqref:`eq_mdl-cont_mean_var`, and compare them with (a).
+    1. Compute $P\bigl(|X - \mu_X| \ge \alpha\sigma_X\bigr)$ by a Riemann
+       sum for $\alpha \in \{1.5, 2, 3\}$, and compare each value with
+       Chebyshev's bound :eqref:`eq_mdl-chebyshev`.
+   :exlabel:`ex_mdl-random-variables-mixture-moments`
+
+1. **Uncorrelated but dependent.** Whitening, for example with the
+   principal components of :numref:`sec_mdl-svd-low-rank`, makes
+   coordinates uncorrelated. The following pair has Gaussian coordinates
+   and zero covariance. Let $X \sim \mathcal{N}(0, 1)$, let $S$ be a random
+   sign independent of $X$ with $P(S = 1) = P(S = -1) = \tfrac12$, and let
+   $Y = SX$.
+    1. Show that $Y \sim \mathcal{N}(0, 1)$ by computing its c.d.f., and
+       that $\textrm{Cov}(X, Y) = 0$.
+    1. Compare $P(|X| \le 1, |Y| \le 1)$ with
+       $P(|X| \le 1)\,P(|Y| \le 1)$. Are $X$ and $Y$ independent?
+    1. Show that $X + Y$ has an atom at $0$, so that $X + Y$ is not
+       Gaussian. On the event $\{X + Y = 0\}$ the point $(X, Y)$ lies on
+       the line $y = -x$, and a line in the plane can be covered by
+       countably many boxes of arbitrarily small total area. Conclude that the pair $(X, Y)$ has no joint
+       density, although each coordinate has one.
+   :exlabel:`ex_mdl-random-variables-uncorrelated-dependent`
+
+1. **Averaging correlated estimates.** The Monte Carlo estimate of
+   $E[g(X)]$ from draws $x_1, \ldots, x_n$ is
+   $\hat g_n = \tfrac1n \sum_{i=1}^n g(x_i)$.
+    1. Let the draws be independent. Extend :eqref:`eq_mdl-var_sum` to $n$
+       terms and combine it with :eqref:`eq_mdl-var_affine` to show that
+       $\textrm{Var}(\hat g_n) = \textrm{Var}(g(X))/n$.
+    1. Now let $Y_1, \ldots, Y_n$ each have variance $\sigma^2$, with
+       correlation $\rho$ between every pair, as the predictions of $n$
+       ensemble members trained on the same data might. Show that
+
+       $$\textrm{Var}\Bigl(\frac1n\sum_{i=1}^n Y_i\Bigr) = \sigma^2\Bigl(\rho + \frac{1-\rho}{n}\Bigr).$$
+
+       What does averaging achieve as $n \to \infty$?
+    1. Use $\mathbf{a}^\top \boldsymbol\Sigma\, \mathbf{a} \ge 0$ for the
+       covariance matrix $\boldsymbol\Sigma$ of $Y_1, \ldots, Y_n$ to show
+       that $\rho \ge -1/(n-1)$. Give variables that attain this bound.
+   :exlabel:`ex_mdl-random-variables-using-textrmvar-x-y`
+
+1. [code] **Sigmoid of a Gaussian.** Let $X \sim \mathcal{N}(0, s^2)$ be
+   the pre-activation of a sigmoid unit, and let
+   $Y = \operatorname{sigmoid}(X)$, whose inverse is
+   $\operatorname{logit}(y) = \log\bigl(y/(1-y)\bigr)$.
+    1. Use :eqref:`eq_mdl-cov_density_1d` to find the density $p_Y$ on
+       $(0, 1)$.
+    1. For which $s$ is $y = \tfrac12$ a local minimum of $p_Y$? Writing
+       $\log p_Y$ as a function of $z = \operatorname{logit}(y)$ simplifies
+       the computation.
+    1. Modify the `#random-variables-change-of-variables` cell to compare a
+       histogram of $Y$ with $p_Y$ for $s \in \{1, \sqrt{2}, 3\}$. What does
+       the histogram at $s = 3$ imply for the derivative
+       $\operatorname{sigmoid}'(X) = Y(1 - Y)$, through which
+       backpropagation passes the gradient of these units?
+   :exlabel:`ex_mdl-random-variables-sigmoid-gaussian`
+
+1. [code] **Sampling from a staircase.** ● The inverse-transform sampler of
+   :numref:`fig_mdl-prob-inverse-transform` assumes a continuous, strictly
+   increasing c.d.f. A categorical distribution, such as the softmax over
+   the vocabulary from which a language model samples its next token, has
+   a staircase c.d.f. instead. For any c.d.f. $F$, define the generalized
+   inverse $F^{-}(u) = \min\{x : F(x) \ge u\}$ for $u \in (0, 1)$; the
+   minimum exists because every c.d.f. is right-continuous.
+    1. Show that $F^{-}(u) \le x$ holds exactly when $u \le F(x)$. Conclude
+       that $F^{-}(U)$ has the c.d.f. $F$ when $U$ is uniform on $[0, 1]$.
+    1. Let $X$ take the value $k \in \{1, \ldots, K\}$ with probability
+       $p_k$, and let $c_k = p_1 + \cdots + p_k$. Show that $F^{-}(u)$ is the
+       smallest $k$ with $c_k \ge u$. Implement the sampler with NumPy's
+       `cumsum` and `searchsorted`, and check the frequencies of $10^5$ draws
+       for $\mathbf{p} = (0.1, 0.2, 0.3, 0.25, 0.15)$. What does it cost
+       to draw $m$ samples from one distribution over $K$ classes? What does
+       each draw cost when the distribution changes at every draw, as in
+       autoregressive decoding?
+    1. Apply the softmax to $50{,}000$ logits, each $3$ times a standard
+       normal draw, store the probabilities in float32, and compute
+       $c_K - 1$ from a float32 `cumsum`. How often does a uniform draw
+       exceed $c_K$, and what does `searchsorted` return then? Give two ways
+       to make the sampler safe.
+   :exlabel:`ex_mdl-random-variables-staircase-sampling`
+
+1. **One-sided Chebyshev.** ● Chebyshev's inequality
+   :eqref:`eq_mdl-chebyshev` bounds both tails at once. Cantelli's
+   inequality bounds one tail: for $X$ with mean $\mu$ and variance
+   $\sigma^2$, and for every $t > 0$,
+
+   $$P(X - \mu \ge t) \le \frac{\sigma^2}{\sigma^2 + t^2}.$$
+
+    1. For every $u \ge 0$, apply Markov's inequality :eqref:`eq_mdl-markov`
+       to $(X - \mu + u)^2$ to show that
+       $P(X - \mu \ge t) \le (\sigma^2 + u^2)/(t + u)^2$. Choose $u$ to prove
+       Cantelli's inequality.
+    1. Write the bound for $t = \alpha\sigma$, and compare it with
+       :eqref:`eq_mdl-chebyshev` at $\alpha = 1$ and $\alpha = 2$.
+    1. For given $\mu$, $\sigma$ and $t$, find a distribution on two points
+       with mean $\mu$ and variance $\sigma^2$ that attains the bound.
+   :exlabel:`ex_mdl-random-variables-one-sided-chebyshev`
+
+1. **Conditional mean as best predictor.** ● A regression model $h$
+   predicts a target $X$ from an input $Y$, and training minimizes the
+   expected squared error $E\bigl[(X - h(Y))^2\bigr]$ over functions $h$.
+    1. Write $X - h(Y) = \bigl(X - E[X \mid Y]\bigr) + \bigl(E[X \mid Y] - h(Y)\bigr)$
+       and use the tower property :eqref:`eq_mdl-tower` to show that the
+       cross term has mean zero. Conclude that $h^\star(Y) = E[X \mid Y]$
+       minimizes the error, and that the minimum equals
+       $E\bigl[\textrm{Var}(X \mid Y)\bigr]$.
+    1. The fraction of variance that a predictor explains is
+       $R^2 = 1 - E\bigl[(X - h(Y))^2\bigr]/\textrm{Var}(X)$. Use (a) and the
+       law of total variance to show that every predictor has
+       $R^2 \le \textrm{Var}\bigl(E[X \mid Y]\bigr)/\textrm{Var}(X)$.
+       Evaluate this ceiling for predicting $X$ from the label $Z$ of
+       problem :exref:`ex_mdl-random-variables-mixture-moments`.
+    1. Given the input, the target is $-1$ or $+1$ with probability
+       $\tfrac12$ each. Which prediction minimizes the expected squared
+       error, and how often does the target take that value? Which
+       predictions minimize the expected absolute error
+       $E\bigl[|X - h(Y)|\bigr]$?
+   :exlabel:`ex_mdl-random-variables-best-predictor`
+
+1. [code] **Affine coupling layer.** ● Normalizing flows stack invertible
+   maps whose log-determinants in :eqref:`eq_mdl-cov_density` are cheap to
+   compute. The affine coupling layer of RealNVP :cite:`dinh2017density`
+   maps $\mathbf{x} \in \mathbb{R}^2$ to
+
+   $$y_1 = x_1, \qquad y_2 = x_2\, e^{s(x_1)} + t(x_1),$$
+
+   where $s$ and $t$ are arbitrary functions, for example small neural
+   networks.
+    1. Write down the inverse map and the Jacobian $J_g(\mathbf{x})$. Show
+       that $\log|\det J_g(\mathbf{x})| = s(x_1)$, however complicated $s$
+       and $t$ are.
+    1. Let $X_1$ and $X_2$ be independent standard normal variables, and
+       take $s(x_1) = \tanh(x_1)$ and $t(x_1) = x_1^2/2$. Use
+       :eqref:`eq_mdl-cov_density` to write $\log p_{\mathbf{Y}}(\mathbf{y})$
+       in closed form. With NumPy, evaluate $p_{\mathbf{Y}}$ on a grid over
+       $[-6, 6] \times [-12, 24]$ with spacing $0.02$ and check that its
+       Riemann sum is close to $1$. Check the log-determinant against the
+       determinant of a finite-difference Jacobian at a few random points.
+    1. The first coordinate passes through the layer unchanged. What is the
+       law of $Y_1$, whatever $s$ and $t$ are? How must a second coupling
+       layer be arranged so that the composition can change both marginals,
+       and what is the log-determinant of the composition?
+   :exlabel:`ex_mdl-random-variables-affine-coupling`
+
+1. [extended] **Averages of heavy tails.** ●●
+   :citet:`Simsekli.Sagun.Gurbuzbalaban.2019` argued that the gradient
+   noise of SGD in deep networks is heavy-tailed and better described by an
+   $\alpha$-stable law, whose variance is infinite for $\alpha < 2$, than by
+   a Gaussian. This project measures how a Monte Carlo average behaves in
+   that regime and then tests the premise on a small model. The Pareto
+   density $p(x) = \alpha x^{-\alpha-1}$ on $x \ge 1$, with $\alpha > 0$,
+   contains the density of problem
+   :exref:`ex_mdl-random-variables-power-law-tail` as the case $\alpha = 1$.
+    1. Generalize problem :exref:`ex_mdl-random-variables-power-law-tail`b
+       and c to this family: show that $E[X^k] < \infty$ exactly when
+       $k < \alpha$, compute the mean $\mu$ for $\alpha > 1$, and write down
+       an inverse-transform sampler.
+    1. Let $1 < \alpha < 2$, so that the mean is finite but the variance is
+       not. Show that the largest of $n$ independent draws exceeds $t$ with
+       probability close to $n t^{-\alpha}$ when $n t^{-\alpha}$ is small,
+       and find the scale $t_n$ that the largest draw typically reaches.
+       Argue heuristically that the error $|\bar X_n - \mu|$ of the sample
+       mean is of order $n^{1/\alpha - 1}$ rather than $n^{-1/2}$. The
+       generalized central limit theorem that Simsekli et al. invoke makes
+       this argument precise.
+    1. For $\alpha \in \{1.5, 2.5, 3\}$ and $n \in \{10, 10^2, \ldots, 10^5\}$,
+       estimate the median of $|\bar X_n - \mu|$ over $400$ repetitions, and
+       fit the slope of the logarithm of the median error against $\log n$.
+       Compare the slope at $\alpha = 1.5$ with the rate $n^{1/\alpha - 1}$
+       from (b). Compare the slopes at $\alpha = 2.5$ and $\alpha = 3$ with
+       the rate $n^{-1/2}$ that holds when the variance is finite.
+    1. In each repetition, form the interval
+       $\bar X_n \pm 1.96\,\hat\sigma_n/\sqrt{n}$, where $\hat\sigma_n$ is
+       the sample standard deviation; for Gaussian averages it covers $\mu$
+       with probability about $95\%$. Record how often it covers $\mu$.
+       Explain the coverage at $\alpha = 1.5$ and $n = 10^5$, given that
+       $\hat\sigma_n$ is finite in every run. What does this imply for error
+       bars computed from heavy-tailed samples, such as minibatch gradients?
+    1. The Hill estimator :cite:`Hill.1975` estimates the tail index from
+       the $k$ largest of $m$ positive draws
+       $X_{(1)} \ge X_{(2)} \ge \cdots \ge X_{(m)}$ as
+
+       $$\hat\alpha_k = \Bigl(\frac1k \sum_{i=1}^k \log\frac{X_{(i)}}{X_{(k+1)}}\Bigr)^{-1}.$$
+
+       Check it on $10^5$ Pareto draws for $\alpha \in \{1.5, 3\}$ and
+       $k \in \{10^2, 10^3, 10^4\}$. Then train the softmax regression of
+       :numref:`sec_softmax_concise`. At the trained parameters, collect
+       the coordinates of the difference between the minibatch gradient and
+       the full-batch gradient over $1000$ minibatches, for batch sizes $32$
+       and $256$. Plot $\hat\alpha_k$ of their absolute values against $k$
+       for both batch sizes. Is the estimate below $2$? How much does the
+       conclusion depend on $k$?
+   :exlabel:`ex_mdl-random-variables-heavy-tail-averages`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/415)

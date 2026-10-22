@@ -1057,6 +1057,7 @@ and decoder-only models for general autoregressive generation.
        $L$ decoder blocks against prefix language models with $L$ blocks and
        with $2L$ blocks. Which prefix model matches the encoder--decoder in
        parameters, and which in compute?
+
 1. [code] **A leaky objective.** Without a mask, next-token prediction is a
    copying exercise for an encoder, because position $t$ can read token
    $t + 1$ directly. Train `TransformerEncoder` on next-token prediction
@@ -1071,27 +1072,7 @@ and decoder-only models for general autoregressive generation.
        position. For each of the two models, count the training targets per
        window that cannot be read off the input, at position 63 and in
        total, and explain the difference.
-1. **Time's arrow.** ● The masked loss of
-   :numref:`subsec_mlm-loss-by-position` takes nearly equal values at the two
-   edges of the window, although position 0 sees only what follows it and
-   position 63 only what precedes it. The conditional entropy
-   $H(A \mid B) = -\mathbb{E}\left[\log p(A \mid B)\right]$ is the
-   expected loss, in nats, of the best predictor of $A$ from $B$.
-    1. Let $X_1, X_2, \ldots$ be a stationary process, so that the joint
-       distribution of any $k$ consecutive variables does not depend on
-       where the block starts. Show that
-       $$H(X_1 \mid X_2, \ldots, X_{k+1}) = H(X_{k+1} \mid X_1, \ldots, X_k).$$
-    1. A stationary Markov chain on the states $\{0, 1, 2\}$ moves from
-       state $i$ to state $i + 1 \bmod 3$ with probability $0.9$ and stays
-       with probability $0.1$. Compute both sides of the identity for
-       $k = 1$ in nats. Find the transition matrix of the time-reversed
-       chain, and decide whether a long sample path reveals the direction
-       of time.
-    1. State what the identity predicts for the two edge losses of a model
-       whose masked-token predictions equal the true conditional
-       distributions. Which differences between the experiment and the
-       assumptions of the identity allow the two measured edge losses to
-       differ?
+
 1. [code] **The masking recipe.** `mask_tokens` masks 15% of the characters
    and writes `<mask>` at every masked position. Evaluate every variant below
    with the evaluation of :numref:`subsec_mlm-loss-by-position`, so that only
@@ -1110,6 +1091,39 @@ and decoder-only models for general autoregressive generation.
        $p \in \{0.05, 0.15, 0.4\}$ for the same number of steps and compare
        the masked loss at evaluation. Explain the result by what a higher
        rate adds to each training window and what it removes.
+
+1. **Padding masks of a ragged batch.** The cell of
+   :numref:`subsec_encdec-masks` builds the three masks for a toy batch with
+   source lengths $(3, 5)$ and target lengths $(3, 4)$, padded on the right.
+    1. Compare `dec_self` with the causal triangle alone and name the rows
+       that differ. Would replacing `dec_self` by the causal triangle change
+       the training loss of a decoder with any number of blocks? Explain.
+       Then decide whether the encoder output at a padded source position
+       can reach the loss.
+    1. Now pad the batch on the left, so that every sequence ends at the
+       last position. Which of the three masks change, and does the causal
+       triangle still suffice for decoder self-attention? Which of the three
+       masks can the `valid_lens` argument of `d2l.MultiHeadAttention`
+       still express?
+    1. What goes wrong with the learned position tables of `EncoderDecoder`
+       under left padding unless the position indices change as well?
+
+1. [code] **Depth, heads, and readable maps.** The alignment check of
+   :numref:`subsec_reading-alignment` reads one decoder block with four
+   heads.
+    1. Retrain `EncoderDecoder` once with `num_blks=2` and once with
+       `num_heads=8`, in each case until the exact match on 1000 fresh
+       strings exceeds 0.99. Rerun the alignment check for every decoder
+       block, and plot the map of every head.
+    1. Give `EncoderDecoder` separate depths for its encoder and its
+       decoder. Repeat the check with two encoder blocks and one decoder
+       block, and with one encoder block and two decoder blocks. Compare
+       the maps of both models with those of the one-block model.
+    1. Explain how a model can solve reversal while its cross-attention puts
+       little weight on source position $n - 1 - t$. Reconcile your
+       findings with the cautions about reading attention maps in
+       :numref:`sec_multihead-attention`.
+
 1. [code] **Several masks at once.** ● The objective
    :eqref:`eq_mlm` scores each masked position separately, so the encoder
    returns one distribution per masked position, conditioned only on the
@@ -1132,21 +1146,29 @@ and decoder-only models for general autoregressive generation.
     1. Plot the accuracy of both fills against the offset within the run.
        Explain the shape of the curves by the context that each masked
        character has lost, and explain where the two fills differ.
-1. **Padding masks of a ragged batch.** The cell of
-   :numref:`subsec_encdec-masks` builds the three masks for a toy batch with
-   source lengths $(3, 5)$ and target lengths $(3, 4)$, padded on the right.
-    1. Compare `dec_self` with the causal triangle alone and name the rows
-       that differ. Would replacing `dec_self` by the causal triangle change
-       the training loss of a decoder with any number of blocks? Explain.
-       Then decide whether the encoder output at a padded source position
-       can reach the loss.
-    1. Now pad the batch on the left, so that every sequence ends at the
-       last position. Which of the three masks change, and does the causal
-       triangle still suffice for decoder self-attention? Which of the three
-       masks can the `valid_lens` argument of `d2l.MultiHeadAttention`
-       still express?
-    1. What goes wrong with the learned position tables of `EncoderDecoder`
-       under left padding unless the position indices change as well?
+
+1. **Time's arrow.** ● The masked loss of
+   :numref:`subsec_mlm-loss-by-position` takes nearly equal values at the two
+   edges of the window, although position 0 sees only what follows it and
+   position 63 only what precedes it. The conditional entropy
+   $H(A \mid B) = -\mathbb{E}\left[\log p(A \mid B)\right]$ is the
+   expected loss, in nats, of the best predictor of $A$ from $B$.
+    1. Let $X_1, X_2, \ldots$ be a stationary process, so that the joint
+       distribution of any $k$ consecutive variables does not depend on
+       where the block starts. Show that
+       $$H(X_1 \mid X_2, \ldots, X_{k+1}) = H(X_{k+1} \mid X_1, \ldots, X_k).$$
+    1. A stationary Markov chain on the states $\{0, 1, 2\}$ moves from
+       state $i$ to state $i + 1 \bmod 3$ with probability $0.9$ and stays
+       with probability $0.1$. Compute both sides of the identity for
+       $k = 1$ in nats. Find the transition matrix of the time-reversed
+       chain, and decide whether a long sample path reveals the direction
+       of time.
+    1. State what the identity predicts for the two edge losses of a model
+       whose masked-token predictions equal the true conditional
+       distributions. Which differences between the experiment and the
+       assumptions of the identity allow the two measured edge losses to
+       differ?
+
 1. [code] **Where position enters.** ● Cross-attention without a mask is
    invariant to a joint permutation of its keys and values, so the reversal
    task of :numref:`subsec_reversal-task` is solvable only because the
@@ -1163,21 +1185,7 @@ and decoder-only models for general autoregressive generation.
     1. Restore the encoder's position table and remove the decoder's
        instead. Measure the exact match after greedy decoding, and explain
        from which part of the decoder its position information can come.
-1. [code] **Depth, heads, and readable maps.** The alignment check of
-   :numref:`subsec_reading-alignment` reads one decoder block with four
-   heads.
-    1. Retrain `EncoderDecoder` once with `num_blks=2` and once with
-       `num_heads=8`, in each case until the exact match on 1000 fresh
-       strings exceeds 0.99. Rerun the alignment check for every decoder
-       block, and plot the map of every head.
-    1. Give `EncoderDecoder` separate depths for its encoder and its
-       decoder. Repeat the check with two encoder blocks and one decoder
-       block, and with one encoder block and two decoder blocks. Compare
-       the maps of both models with those of the one-block model.
-    1. Explain how a model can solve reversal while its cross-attention puts
-       little weight on source position $n - 1 - t$. Reconcile your
-       findings with the cautions about reading attention maps in
-       :numref:`sec_multihead-attention`.
+
 1. [code] **Content-addressed alignment.** ● In reversal, target position
    $t$ copies the same source position for every string. Change the line of
    `sample_batch` that builds the target so that the target is the source
@@ -1194,6 +1202,7 @@ and decoder-only models for general autoregressive generation.
        step $t$ must encode for sorting, compared with reversal, and which
        information the encoder must supply when a letter occurs more than
        once.
+
 1. [code] **FLOPs versus time.** ● The caption of
    :numref:`fig_latent-bottleneck` counts only the attention mixing, whereas
    the cost curve of :numref:`subsec_perceiver-cost-curve` times whole
@@ -1218,6 +1227,7 @@ and decoder-only models for general autoregressive generation.
        to your count. For one output per input element, $K = N$, as in
        optical flow, state how the total grows with $N$ and compare it with
        the count of `SelfAttentionEncoder`.
+
 1. [extended] **A Perceiver for reversal.** ● Perceiver IO produces its
    outputs through learned output queries rather than an autoregressive
    decoder. Solve the reversal task of :numref:`subsec_reversal-task` in

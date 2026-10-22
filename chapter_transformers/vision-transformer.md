@@ -566,6 +566,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        convolution FLOPs per image, ignoring normalization, activations, and
        pooling, and compare them with those of the ViT. Is the comparison of
        :numref:`subsec_vit-cnn-baseline` also matched in compute?
+
 1. [code] **Patchify as convolution.** `PatchEmbedding` replaces cutting
    an image into patches and projecting each flattened patch by a single
    convolution whose kernel size and stride equal the patch size. Check
@@ -577,6 +578,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
    floating-point round-off. In which order must the entries of a
    flattened patch appear, and in which order must the patches be
    enumerated?
+
 1. [code] **Choice of readout.** `ViT` classifies from the final
    representation of the “&lt;cls&gt;” token.
     1. Under this readout, part of the computation of the last `ViTBlock`
@@ -593,6 +595,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        readouts work about equally well but need different learning rates.
        Train both readouts at the learning rates $0.03$ and $0.3$ as well.
        Does the ranking of the two readouts depend on the learning rate?
+
 1. [code] **Position information.** By the proposition of
    :numref:`subsec_pos-ignores-order`, self-attention without positional
    information is equivariant to permutations of its input tokens.
@@ -610,6 +613,8 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        its predictions unchanged.
     1. Compare the accuracy drop under permutation with the gap between the
        two trained models. What does each of the two numbers measure?
+   :exlabel:`ex_vision-transformer-position-information`
+
 1. [code] **Grid permutation test.** The two means printed in
    :numref:`subsec_vit-pos-grid` compare the cosine similarity of the
    position embeddings of grid neighbors with that of distant positions.
@@ -624,13 +629,14 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        for 30 epochs instead of 10, and repeat the test. How do $\Delta$
        and its position within the permutation distribution change with
        longer training?
+
 1. **Shift equivariance.** Shift a $96 \times 96$ image by $s$ pixels to
    the right, and fill the vacated columns with zeros. Suppose that the $s$
    rightmost columns of the original image are zero.
     1. For $s = 16$, describe the tokens that `PatchEmbedding` produces for
        the shifted image, and show that they are a rearrangement of those of
        the original image. Give an image for which this fails at $s = 8$.
-    1. Use this and problem 4 to show that a `ViT` whose patch position
+    1. Use this and problem :exref:`ex_vision-transformer-position-information` to show that a `ViT` whose patch position
        embeddings are all equal assigns the same logits to both images when
        $s = 16$. Why does the argument not extend to the trained `model`?
     1. Compute the stride of the final feature map of `CompactResNet`
@@ -645,6 +651,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        pixel. Name a property that every convolution of `CompactResNet`
        builds in and the attention layers of the ViT lack, and a property
        that both models share.
+
 1. [code] **Higher resolution.** ● Fine-tuning at a higher resolution than
    in pretraining keeps the patch size, so the grid of patches grows.
    :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` therefore interpolate the
@@ -668,7 +675,65 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        as fit into the time of the ten epochs at $96 \times 96$ plus the
        fine-tuning epoch. Compare the two accuracies. What does the
        comparison say about pretraining at low resolution?
-1. [code] **Recipe confound.** ● :numref:`subsec_vit-first-run` trains the
+
+:begin_tab:`pytorch`
+8. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
+    the attention weight of query patch $i$ on key patch $j$ in an image, and
+    let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
+    The *mean attention distance* of the head
+    :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` averages
+
+    $$\bar{r} = \frac{1}{36} \sum_{i=1}^{36} \sum_{j=1}^{36} \frac{\alpha_{ij}}{\sum_{k=1}^{36} \alpha_{ik}}\, \|\mathbf{u}_i - \mathbf{u}_j\|$$
+
+    over images, with the “&lt;cls&gt;” token excluded as query and key.
+    In large pretrained ViTs, some heads of the lowest layers attend
+    locally while others attend across the whole image, and the distance
+    grows with depth.
+    1. Evaluate $\bar{r}$ for a head that attends uniformly to all 36
+       patches, as a reference value.
+    1. After a forward pass of the trained `model` in evaluation mode,
+       `blk.attention.attention.attention_weights` holds the attention
+       weights of block `blk`, of shape (batch size $\times$ 8, 37, 37),
+       with the eight heads of each image adjacent. Compute $\bar{r}$ for
+       each of the 16 heads on 512 validation images, and plot it against
+       the block index. Do the two blocks show either pattern of the
+       pretrained ViTs?
+    1. Repeat the measurement for the ViT of problem :exref:`ex_vision-transformer-position-information` whose position
+       embeddings are fixed at zero. What other than position embeddings
+       can make a head attend to nearby patches, and how do the results of
+       the two models separate the two causes?
+:end_tab:
+
+:begin_tab:`jax`
+8. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
+    the attention weight of query patch $i$ on key patch $j$ in an image, and
+    let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
+    The *mean attention distance* of the head
+    :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` averages
+
+    $$\bar{r} = \frac{1}{36} \sum_{i=1}^{36} \sum_{j=1}^{36} \frac{\alpha_{ij}}{\sum_{k=1}^{36} \alpha_{ik}}\, \|\mathbf{u}_i - \mathbf{u}_j\|$$
+
+    over images, with the “&lt;cls&gt;” token excluded as query and key.
+    In large pretrained ViTs, some heads of the lowest layers attend
+    locally while others attend across the whole image, and the distance
+    grows with depth.
+    1. Evaluate $\bar{r}$ for a head that attends uniformly to all 36
+       patches, as a reference value.
+    1. `ViTBlock.__call__` discards the attention weights that
+       `d2l.MultiHeadAttention` returns as its second output. Write a
+       function that runs the trained `model` as `ViT.forward` does, in
+       deterministic mode, and also returns the weights of each block, of
+       shape (batch size $\times$ 8, 37, 37), with the eight heads of each
+       image adjacent. Compute $\bar{r}$ for each of the 16 heads on 512
+       validation images, and plot it against the block index. Do the two
+       blocks show either pattern of the pretrained ViTs?
+    1. Repeat the measurement for the ViT of problem :exref:`ex_vision-transformer-position-information` whose position
+       embeddings are fixed at zero. What other than position embeddings
+       can make a head attend to nearby patches, and how do the results of
+       the two models separate the two causes?
+:end_tab:
+
+9. [code] **Recipe confound.** ● :numref:`subsec_vit-first-run` trains the
    ViT with the recipe of the convolutional networks of
    :numref:`chap_modern_cnn`, plain SGD at a constant learning rate.
    :citet:`touvron2021training` train ViTs on ImageNet-1k alone for 300
@@ -692,6 +757,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        `CompactResNet` and the ViT after each change. How much of the gap
        does each change close, and how large is the part that remains
        attributable to the architecture under the final protocol?
+
 1. **Shifted windows.** ● Swin transformers :cite:`liu2021swin` restrict
    attention to non-overlapping windows of $M \times M$ patches. Successive
    blocks alternate between a regular partition of the patch grid into
@@ -715,7 +781,8 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        distance from a token to the nearer end of its reach, taken over all
        tokens. Compute $g(s)$, and show that $s = \lfloor M/2 \rfloor$
        maximizes it.
-1. [extended] **Distillation from the CNN.** ● Knowledge distillation trains
+
+1. [extended] **Distillation from the CNN.** ●● Knowledge distillation trains
    a student model to match the predictions of a trained teacher model as
    well as the labels :cite:`Hinton.Vinyals.Dean.2015`.
    :citet:`touvron2021training` find that ViTs distilled from a
@@ -760,63 +827,6 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        that an inductive bias was transferred. Construct a control that
        separates the two explanations, run it, and state which outcome
        would favor the inductive-bias explanation.
-
-:begin_tab:`pytorch`
-11. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
-    the attention weight of query patch $i$ on key patch $j$ in an image, and
-    let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
-    The *mean attention distance* of the head
-    :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` averages
-
-    $$\bar{r} = \frac{1}{36} \sum_{i=1}^{36} \sum_{j=1}^{36} \frac{\alpha_{ij}}{\sum_{k=1}^{36} \alpha_{ik}}\, \|\mathbf{u}_i - \mathbf{u}_j\|$$
-
-    over images, with the “&lt;cls&gt;” token excluded as query and key.
-    In large pretrained ViTs, some heads of the lowest layers attend
-    locally while others attend across the whole image, and the distance
-    grows with depth.
-    1. Evaluate $\bar{r}$ for a head that attends uniformly to all 36
-       patches, as a reference value.
-    1. After a forward pass of the trained `model` in evaluation mode,
-       `blk.attention.attention.attention_weights` holds the attention
-       weights of block `blk`, of shape (batch size $\times$ 8, 37, 37),
-       with the eight heads of each image adjacent. Compute $\bar{r}$ for
-       each of the 16 heads on 512 validation images, and plot it against
-       the block index. Do the two blocks show either pattern of the
-       pretrained ViTs?
-    1. Repeat the measurement for the ViT of problem 4 whose position
-       embeddings are fixed at zero. What other than position embeddings
-       can make a head attend to nearby patches, and how do the results of
-       the two models separate the two causes?
-:end_tab:
-
-:begin_tab:`jax`
-11. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
-    the attention weight of query patch $i$ on key patch $j$ in an image, and
-    let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
-    The *mean attention distance* of the head
-    :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` averages
-
-    $$\bar{r} = \frac{1}{36} \sum_{i=1}^{36} \sum_{j=1}^{36} \frac{\alpha_{ij}}{\sum_{k=1}^{36} \alpha_{ik}}\, \|\mathbf{u}_i - \mathbf{u}_j\|$$
-
-    over images, with the “&lt;cls&gt;” token excluded as query and key.
-    In large pretrained ViTs, some heads of the lowest layers attend
-    locally while others attend across the whole image, and the distance
-    grows with depth.
-    1. Evaluate $\bar{r}$ for a head that attends uniformly to all 36
-       patches, as a reference value.
-    1. `ViTBlock.__call__` discards the attention weights that
-       `d2l.MultiHeadAttention` returns as its second output. Write a
-       function that runs the trained `model` as `ViT.forward` does, in
-       deterministic mode, and also returns the weights of each block, of
-       shape (batch size $\times$ 8, 37, 37), with the eight heads of each
-       image adjacent. Compute $\bar{r}$ for each of the 16 heads on 512
-       validation images, and plot it against the block index. Do the two
-       blocks show either pattern of the pretrained ViTs?
-    1. Repeat the measurement for the ViT of problem 4 whose position
-       embeddings are fixed at zero. What other than position embeddings
-       can make a head attend to nearby patches, and how do the results of
-       the two models separate the two causes?
-:end_tab:
 
 <!-- slides -->
 

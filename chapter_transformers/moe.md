@@ -625,7 +625,7 @@ experts, choose 8 of 64 quarter-width ones. The active-parameter
 accounting is identical; what changes is *composability*. With $k$
 narrow experts a token assembles its FFN from
 $\binom{64}{8} \approx 4 \times 10^{9}$ combinations rather than
-$\binom{8}{2} = 28$, so specializations can mix and match — one slice
+$\binom{16}{2} = 120$, so specializations can mix and match — one slice
 for chemistry vocabulary and another for parsing nested clauses,
 combined on demand rather than fused into one wide monolith.
 
@@ -792,22 +792,8 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        the logits only through the difference $z_a - z_b$ of the two
        selected experts $a$ and $b$. Which routing decision can the router
        learn from the loss in this case, and which can it not?
-1. **Balancing-loss gradient.** The gradient of :eqref:`eq_moe-aux` flows
-   through $\bar{p}_i$ only, because $f_i$ is a count. Consider a batch of
-   $N$ tokens, and write $\mathbf{z}(\mathbf{x})$ for the router logits of
-   token $\mathbf{x}$.
-    1. Derive
-       $\partial \mathcal{L}_{\mathrm{balance}} / \partial z_j(\mathbf{x})$.
-       For which experts $j$ does the gradient step lower the logit of
-       token $\mathbf{x}$, and for which does it raise it?
-    1. Show that the gradient vanishes for every token whenever the batch
-       load is uniform, $f_i = 1/E$, whatever the individual distributions
-       $\mathbf{p}(\mathbf{x})$ are. Which property of the router does the
-       loss therefore leave unconstrained?
-    1. Show that the gradient for a token tends to zero as its router
-       distribution approaches a one-hot vector. What does this imply for
-       the ability of the loss to repair a collapse in which the router
-       has become confident?
+   :exlabel:`ex_moe-router-gradient`
+
 1. **Serving arithmetic.** Qwen3-235B-A22B :cite:`Yang.Li.Yang.ea.2025`
    has $d = 4096$ and 94 layers. Every layer holds 128 SwiGLU experts of
    width 1536, of which each token activates 8, and no shared expert. Its
@@ -830,32 +816,30 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        layer reads, and evaluate it for $B = 1$, 8, and 64. Above which
        batch size does a step read 90% of the expert weights, and which
        dense model then reads the same number of bytes per step?
-1. **Capacity factor.** ● Production MoE systems give each expert a
-   buffer of fixed size for a batch of $N$ tokens, commonly
 
-   $$C = c\, \frac{N k}{E},$$
+1. **Balancing-loss gradient.** The gradient of :eqref:`eq_moe-aux` flows
+   through $\bar{p}_i$ only, because $f_i$ is a count. Consider a batch of
+   $N$ tokens, and write $\mathbf{z}(\mathbf{x})$ for the router logits of
+   token $\mathbf{x}$.
+    1. Derive
+       $\partial \mathcal{L}_{\mathrm{balance}} / \partial z_j(\mathbf{x})$.
+       For which experts $j$ does the gradient step lower the logit of
+       token $\mathbf{x}$, and for which does it raise it?
+    1. Show that the gradient vanishes for every token whenever the batch
+       load is uniform, $f_i = 1/E$, whatever the individual distributions
+       $\mathbf{p}(\mathbf{x})$ are. Which property of the router does the
+       loss therefore leave unconstrained?
+    1. Show that the gradient for a token tends to zero as its router
+       distribution approaches a one-hot vector. What does this imply for
+       the ability of the loss to repair a collapse in which the router
+       has become confident?
 
-   where $c$ is the *capacity factor*
-   :cite:`Lepikhin.Lee.Xu.ea.2021,fedus2022switch`. Tokens routed to a
-   full expert are dropped: they skip the layer and continue on the
-   residual stream unchanged.
-    1. Explain why the buffer size must be fixed in advance rather than
-       set by each batch's routing, when the experts live on different
-       devices.
-    1. Take $k = 1$, $N = 4096$, and a router that sends each token to a
-       uniformly random expert, independently of the other tokens. The
-       load of one expert is then binomial with mean $N/E$. Use a normal
-       approximation, together with $\mathbb{E}[\max(Z, 0)] = 1/\sqrt{2\pi}$
-       for a standard normal $Z$, to estimate the fraction of tokens
-       dropped at $c = 1$ for $E = 8$ and for $E = 64$. How does the
-       fraction scale with $E$ and $N$, and what does $c = 1.25$ change?
-    1. What does a large $c$ cost in memory and in arithmetic when the
-       routing is balanced?
 1. **Expert-choice routing.** In *expert-choice* routing
    :cite:`Zhou.Lei.Liu.ea.2022`, the selection runs the other way: each
-   expert takes the $C = cN/E$ tokens of the batch that assign it the
-   highest router probability, and a token is processed by every expert
-   that took it.
+   expert takes the $C = cN/E$ tokens of a batch of $N$ tokens that assign
+   it the highest router probability, and a token is processed by every
+   expert that took it. The *capacity factor* $c$ sets the size of each
+   expert's buffer relative to its balanced share $N/E$.
     1. Every expert processes exactly $C$ tokens, so the load is balanced
        by construction. What is the average number of experts per token,
        and what are the smallest and largest numbers of experts a single
@@ -867,6 +851,7 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        batch order and drops the overflow. Which tokens of the batch can
        decide whether a given token is processed, and how does the order
        in which the buffers are filled matter for a causal model?
+
 1. [code] **Feedback-loop ablations.** The argument of
    :numref:`subsec_moe-feedback` names two reinforcing effects: a
    frequently selected expert improves on its tokens, and the router
@@ -879,9 +864,10 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        routing when $\mathbf{W}_r$ is fixed?
     1. Restore the router gradient and rerun the three runs with
        `num_active=2`. Does the unbalanced run still collapse, and as
-       strongly? Use the router gradient of problem 1 to explain how a
+       strongly? Use the router gradient of problem :exref:`ex_moe-router-gradient` to explain how a
        second active expert changes the signal that the runner-up
        receives.
+
 1. [code] **Bias controller in isolation.** The controller of
    :eqref:`eq_moe-bias` can be studied without training. Build
    `MoELayer(256, num_experts=8, num_active=1)`, draw a fixed batch of
@@ -903,7 +889,72 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        $b_i \leftarrow b_i + u' (\bar{f} - f_i)$, with $u'$ chosen so that
        the largest first step equals that of $u = 0.01$. Which behavior
        from the first sub-problem changes?
-1. [code] **Auxiliary-loss weight.** ● The comparison of
+
+1. **Capacity factor.** ● Production MoE systems give each expert a
+   buffer of fixed size for a batch of $N$ tokens, commonly
+
+   $$C = c\, \frac{N k}{E},$$
+
+   where $c$ is the *capacity factor*
+   :cite:`Lepikhin.Lee.Xu.ea.2021,fedus2022switch`. Tokens routed to a
+   full expert are dropped: they skip the layer and continue on the
+   residual stream unchanged.
+    1. Explain why the buffer size must be fixed in advance rather than
+       set by each batch's routing, when the experts live on different
+       devices.
+    1. Take $k = 1$, $N = 4096$, and a router that sends each token to a
+       uniformly random expert, independently of the other tokens. The
+       load of one expert is then binomial with mean $N/E$. Use a normal
+       approximation, together with $\mathbb{E}[\max(Z, 0)] = 1/\sqrt{2\pi}$
+       for a standard normal $Z$, to estimate the fraction of tokens
+       dropped at $c = 1$ for $E = 8$ and for $E = 64$. How does the
+       fraction scale with $E$ and $N$, and what does $c = 1.25$ change?
+    1. What does a large $c$ cost in memory and in arithmetic when the
+       routing is balanced?
+
+:begin_tab:`pytorch`
+8. [code] **Sparse dispatch.** ● `MoELayer` evaluates every expert on
+    every token and masks the result, so its arithmetic grows with $E$
+    rather than with $k$. Write a function `gathered_moe(layer, X)` that
+    returns `layer(X)` for a `MoELayer` with `num_active=1` while
+    evaluating each expert only on its own tokens: flatten `X` to shape
+    $(BT, d)$, find the rows routed to each expert with `torch.nonzero`,
+    apply the expert to those rows, and accumulate the gated outputs with
+    `index_add_`.
+    1. Check on random input that `gathered_moe(layer, X)` agrees with
+       `layer(X)` up to floating-point error.
+    1. Time both on an input of shape $(4, 512, 256)$ for
+       $E \in \{2, 4, 8, 16, 32\}$. From which $E$ on is the gathered
+       version faster on your hardware? Count the expert FLOPs of each
+       version as a function of $E$, compare the measured ratio of run
+       times with the ratio of FLOPs, and name the operations of the
+       gathered version that account for the difference.
+:end_tab:
+
+:begin_tab:`jax`
+8. [code] **Capacity-limited dispatch.** ● `MoELayer` evaluates every
+    expert on every token and masks the result, so its arithmetic grows
+    with $E$ rather than with $k$. A jitted alternative must keep its
+    shapes static, so each expert receives a buffer of
+    $C = \lceil cN/E \rceil$ slots for $N$ tokens. Write a function
+    `capacity_moe(layer, X, c)` for a `MoELayer` with `num_active=1`:
+    flatten `X` to shape $(N, d)$, compute each token's slot in its
+    expert's buffer with `jnp.cumsum` over the one-hot selection mask, drop
+    the tokens whose slot is at least $C$, build a dispatch tensor of shape
+    $(N, E, C)$ with `jax.nn.one_hot`, gather the expert inputs into shape
+    $(E, C, d)$ with `jnp.einsum`, apply each expert to its buffer, and
+    combine the outputs with the gates.
+    1. Check on random input that `capacity_moe(layer, X, c)` with $c = E$,
+       where nothing is dropped, agrees with `layer(X)` up to
+       floating-point error.
+    1. Jit both and time them at $c = 1.25$ on an input of shape
+       $(4, 512, 256)$ for $E \in \{2, 4, 8, 16, 32\}$. From which $E$ on
+       is the dispatch version faster on your hardware? Express the FLOPs
+       of each of its steps in terms of $N$, $E$, $c$, and $d$, and identify
+       the step that dominates as $N$ grows at fixed $E$ and $c$.
+:end_tab:
+
+9. [code] **Auxiliary-loss weight.** ● The comparison of
    :numref:`subsec_moe-balance-comparison` fixes $\alpha = 0.01$ and runs
    one seed per method.
     1. Run the auxiliary-loss configuration with
@@ -919,6 +970,7 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
     1. At $\alpha = 0.01$, is the difference in training loss between the
        auxiliary loss and the bias controller larger than the spread over
        seeds?
+
 1. [code] **Shared expert.** ● Write `SharedMoELayer`, a subclass of
    `MoELayer` that adds the output of one extra `d2l.FeedForward`, applied
    to every token with weight one, to the routed mixture
@@ -937,6 +989,7 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        and compare the validation loss with that of the intact model. What
        does the result say about the division of labor? Why does removing
        the shared path without the replacement say little about it?
+
 1. [extended] **Expert granularity.** ● :numref:`subsec_moe-fine-grained`
    cites large-scale evidence that narrower, more numerous experts help at
    a fixed budget, and this section does not test it. In the setup of
@@ -958,48 +1011,6 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        occur. Compare the count with the number of tokens and with the
        number of available combinations. How much of the added flexibility
        does the model use?
-
-:begin_tab:`pytorch`
-11. [code] **Sparse dispatch.** ● `MoELayer` evaluates every expert on
-    every token and masks the result, so its arithmetic grows with $E$
-    rather than with $k$. Write a function `gathered_moe(layer, X)` that
-    returns `layer(X)` for a `MoELayer` with `num_active=1` while
-    evaluating each expert only on its own tokens: flatten `X` to shape
-    $(BT, d)$, find the rows routed to each expert with `torch.nonzero`,
-    apply the expert to those rows, and accumulate the gated outputs with
-    `index_add_`.
-    1. Check on random input that `gathered_moe(layer, X)` agrees with
-       `layer(X)` up to floating-point error.
-    1. Time both on an input of shape $(4, 512, 256)$ for
-       $E \in \{2, 4, 8, 16, 32\}$. From which $E$ on is the gathered
-       version faster on your hardware? Count the expert FLOPs of each
-       version as a function of $E$, compare the measured ratio of run
-       times with the ratio of FLOPs, and name the operations of the
-       gathered version that account for the difference.
-:end_tab:
-
-:begin_tab:`jax`
-11. [code] **Capacity-limited dispatch.** ● `MoELayer` evaluates every
-    expert on every token and masks the result, so its arithmetic grows
-    with $E$ rather than with $k$. A jitted alternative must keep its
-    shapes static, so each expert receives a buffer of
-    $C = \lceil cN/E \rceil$ slots for $N$ tokens. Write a function
-    `capacity_moe(layer, X, c)` for a `MoELayer` with `num_active=1`:
-    flatten `X` to shape $(N, d)$, compute each token's slot in its
-    expert's buffer with `jnp.cumsum` over the one-hot selection mask, drop
-    the tokens whose slot is at least $C$, build a dispatch tensor of shape
-    $(N, E, C)$ with `jax.nn.one_hot`, gather the expert inputs into shape
-    $(E, C, d)$ with `jnp.einsum`, apply each expert to its buffer, and
-    combine the outputs with the gates.
-    1. Check on random input that `capacity_moe(layer, X, c)` with $c = E$,
-       where nothing is dropped, agrees with `layer(X)` up to
-       floating-point error.
-    1. Jit both and time them at $c = 1.25$ on an input of shape
-       $(4, 512, 256)$ for $E \in \{2, 4, 8, 16, 32\}$. From which $E$ on
-       is the dispatch version faster on your hardware? Express the FLOPs
-       of each of its steps in terms of $N$, $E$, $c$, and $d$, and identify
-       the step that dominates as $N$ grows at fixed $E$ and $c$.
-:end_tab:
 
 <!-- slides -->
 

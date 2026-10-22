@@ -766,18 +766,7 @@ placement as options, with replaceable attention and FFN modules.
        $\nabla_{\mathbf{x}} \ell$ is orthogonal to $\mathbf{x}$ for every
        loss $\ell$ that depends on $\mathbf{x}$ only through
        $\mathrm{RMSNorm}(\mathbf{x})$.
-1. **Scale-invariant weights.** ● Let the loss be invariant to the scale
-   of a parameter matrix, $\ell(\alpha \mathbf{W}) = \ell(\mathbf{W})$ for
-   all $\alpha > 0$. Under QK-norm with $\epsilon = 0$ and without a query
-   bias, this holds for the rows of $\mathbf{W}_q$ that produce the queries
-   of one head.
-    1. Show that $\langle \mathbf{W}, \nabla_{\mathbf{W}} \ell \rangle = 0$
-       and that a gradient-descent step never decreases
-       $\|\mathbf{W}\|_F$.
-    1. Show that the gradient at $\alpha \mathbf{W}$ is $\alpha^{-1}$ times
-       the gradient at $\mathbf{W}$. Explain how the angle through which
-       one step turns $\mathbf{W}$ changes as its norm grows during
-       training.
+
 1. **Unrolled residual stream.** Number the $2N$ sublayers of an
    $N$-block stack by $j = 1, \ldots, 2N$, write $F_j$ for the $j$-th
    sublayer (attention or FFN) and $\mathrm{Norm}_j$ for its
@@ -806,6 +795,96 @@ placement as options, with replaceable attention and FFN modules.
        head. Describe what the head would receive without it as a pre-LN
        stack grows deeper, and explain why a post-LN stack needs no final
        normalization.
+
+1. [code] **Normalization cost.** A kernel is *memory-bound* when moving
+   its data between memory and the processor takes longer than its
+   arithmetic, so that its runtime is close to the number of bytes moved
+   divided by the memory bandwidth.
+    1. Recreate the tensor `X` of :numref:`subsec_rmsnorm`, of shape
+       $(64, 512, 1024)$ in 32-bit floats. Count the bytes that LayerNorm
+       and RMSNorm must at least read and write, and the floating-point
+       operations per element of each.
+    1. Time the elementwise map $\mathbf{X} \mapsto 2\mathbf{X}$ in the
+       same way as the two normalizers, and convert all three timings into
+       achieved bandwidths in GB/s.
+    1. Use the achieved bandwidths to estimate how many passes over `X`
+       each normalizer makes. Explain why dropping the centering and one
+       statistic need not change the runtime of a normalizer that reads
+       `X` once, and describe an implementation in which RMSNorm would be
+       measurably faster.
+
+1. [code] **QK-norm as a factory.** QK-norm
+   (:numref:`subsec_qk-norm`) applies RMSNorm over the head dimension
+   $p = d/h$ to every query and key just before the scores are computed.
+    1. Write `QKNormAttention`, a subclass of `d2l.MultiHeadAttention` in
+       which the queries and the keys returned by `transpose_qkv` each pass
+       through their own RMSNorm before the dot product. Build a
+       `TransformerBlock` with it through `attn_factory` and check the
+       output shape.
+    1. Show that with unit gains every scaled logit
+       $\hat{\mathbf{q}}^\top \hat{\mathbf{k}} / \sqrt{p}$ lies in
+       $[-\sqrt{p}, \sqrt{p}]$, and generalize the bound to learned gains
+       $\boldsymbol{\gamma}_q$ and $\boldsymbol{\gamma}_k$. Compute the
+       largest possible ratio between two attention weights of one query
+       for $p = 64$ and unit gains.
+    1. Training can inflate the query and key weights. Mimic this at
+       initialization: multiply the weights of `W_q` and `W_k` of a
+       freshly initialized layer with $d = 256$ and $h = 4$ by
+       $\lambda \in \{1, 2, 4, 8\}$, and feed it 64 standard normal
+       tokens. Measure the standard deviation of the logits and the mean
+       entropy of the attention weights, with and without QK-norm. Compare
+       the entropies with $\log 64$, and explain the shape of each curve.
+
+1. **FFN width rounding.** `FeedForward` sets the SwiGLU width to
+   $\mathrm{round}(8d/3)$.
+    1. Write the exact parameter count of the default
+       `TransformerBlock(d, h)` as a function of $d$, and bound the
+       relative deviation of its FFN from $8d^2$.
+    1. The released 7B configuration of Llama :cite:`touvron2023llama` has
+       $d = 4096$ and SwiGLU width $11008$, the smallest multiple of 256
+       that is at least $\lfloor 8d/3 \rfloor$. Compute the relative excess
+       of its FFN parameters over $8d^2$, and the excess that the same
+       rule gives at $d = 256$ and at $d = 128$, the default `num_hiddens`
+       of `CharLM`. Explain what the comparison implies for
+       parameter-matched experiments with small models.
+   :exlabel:`ex_transformer-block-ffn-width-rounding`
+
+1. [code] **Causal valid lengths.** `CharLM` passes the valid lengths
+   `causal` to every block, so that the query at position
+   $t = 0, \ldots, T - 1$ attends to the keys at positions
+   $0, \ldots, t$.
+    1. Show by induction over the blocks that the logits of `CharLM` at
+       position $t$ depend only on the tokens at positions $0, \ldots, t$.
+       Which step of the induction fails if only the first block receives
+       `causal` and the other blocks receive no mask?
+    1. Give `CharLM` an argument `shift` that is added to every entry of
+       `causal`. For `shift=-1`, the query at position 0 has no valid key,
+       and `d2l.masked_softmax` gives it zero weights. For `shift=1` and
+       for `shift=-1`, predict the positions whose logits depend on the
+       token at position $j$ in a stack of $N$ blocks. Which of the two
+       settings can be trained as a next-token predictor?
+    1. Check your predictions on freshly initialized models with
+       `num_blks` $\in \{1, 2, 4\}$: change the token at position 16 of a
+       sequence of 32 random tokens, and find the positions whose logits
+       change.
+
+1. [code] **Gated variants.** :citet:`Shazeer.2020` varies the gate of
+   :eqref:`eq_swiglu`. ReGLU replaces SiLU by ReLU, GEGLU replaces it by
+   GELU, and the bilinear variant drops the activation and multiplies the
+   two linear views $\mathbf{W}_g \mathbf{x}$ and $\mathbf{W}_1
+   \mathbf{x}$ directly.
+    1. Extend `FeedForward` with these three settings of `act` at width
+       $\mathrm{round}(8d/3)$, and check that all gated settings have the
+       same parameter count.
+    1. Train `CharLM` with each of the five settings for three seeds under
+       the protocol of :numref:`subsec_gelu-vs-swiglu`. Report the mean and
+       the standard deviation over seeds of the loss averaged over the last
+       100 steps.
+    1. Compare your ranking with Table 1 of :citet:`Shazeer.2020`. Compare
+       the gap between the bilinear variant and the GELU MLP with the
+       spread among the four gated variants, and state which ingredient of
+       SwiGLU the comparison credits with its improvement.
+
 1. [code] **Stream variance budget.** ● In the pre-LN arrangement every
    branch reads a normalized input. If each branch output is uncorrelated
    with the stream it is added to, the mean square of the stream after $k$
@@ -830,6 +909,7 @@ placement as options, with replaceable attention and FFN modules.
        comparison with the variance budget, and state the regime in which
        the square-root growth stated in :numref:`subsec_signal-propagation`
        holds.
+
 1. [code] **Rate of token collapse.** ● Write the tokens of one sequence
    as $\mathbf{x}_i = \boldsymbol{\mu} + \boldsymbol{\delta}_i$ for
    $i = 1, \ldots, n$, where $\boldsymbol{\mu}$ is the mean token and
@@ -861,27 +941,21 @@ placement as options, with replaceable attention and FFN modules.
        $n = 64$, both for this initialization and for Xavier
        initialization at the same width. Check both predictions with
        `signal_stats`.
-1. [code] **QK-norm as a factory.** QK-norm
-   (:numref:`subsec_qk-norm`) applies RMSNorm over the head dimension
-   $p = d/h$ to every query and key just before the scores are computed.
-    1. Write `QKNormAttention`, a subclass of `d2l.MultiHeadAttention` in
-       which the queries and the keys returned by `transpose_qkv` each pass
-       through their own RMSNorm before the dot product. Build a
-       `TransformerBlock` with it through `attn_factory` and check the
-       output shape.
-    1. Show that with unit gains every scaled logit
-       $\hat{\mathbf{q}}^\top \hat{\mathbf{k}} / \sqrt{p}$ lies in
-       $[-\sqrt{p}, \sqrt{p}]$, and generalize the bound to learned gains
-       $\boldsymbol{\gamma}_q$ and $\boldsymbol{\gamma}_k$. Compute the
-       largest possible ratio between two attention weights of one query
-       for $p = 64$ and unit gains.
-    1. Training can inflate the query and key weights. Mimic this at
-       initialization: multiply the weights of `W_q` and `W_k` of a
-       freshly initialized layer with $d = 256$ and $h = 4$ by
-       $\lambda \in \{1, 2, 4, 8\}$, and feed it 64 standard normal
-       tokens. Measure the standard deviation of the logits and the mean
-       entropy of the attention weights, with and without QK-norm. Compare
-       the entropies with $\log 64$, and explain the shape of each curve.
+
+1. **Scale-invariant weights.** ● Let the loss be invariant to the scale
+   of a parameter matrix, $\ell(\alpha \mathbf{W}) = \ell(\mathbf{W})$ for
+   all $\alpha > 0$. Under QK-norm with $\epsilon = 0$ and without a query
+   bias, this holds for the rows of $\mathbf{W}_q$ that produce the queries
+   of one head. The same property holds for weights followed by batch
+   normalization, the setting that :citet:`Arora.Li.Lyu.2019` analyze.
+    1. Show that $\langle \mathbf{W}, \nabla_{\mathbf{W}} \ell \rangle = 0$
+       and that a gradient-descent step never decreases
+       $\|\mathbf{W}\|_F$.
+    1. Show that the gradient at $\alpha \mathbf{W}$ is $\alpha^{-1}$ times
+       the gradient at $\mathbf{W}$. Explain how the angle through which
+       one step turns $\mathbf{W}$ changes as its norm grows during
+       training.
+
 1. [code] **Off-stream normalization.** ● OLMo 2 normalizes the output
    of each branch instead of its input :cite:`OLMo.2025`,
    $$\mathbf{h} = \mathbf{x} + \mathrm{Norm}(\mathrm{Attn}(\mathbf{x})),$$
@@ -906,50 +980,7 @@ placement as options, with replaceable attention and FFN modules.
        the effect of QK-norm on the entropies and the token spread of both
        arrangements, and relate each effect to the cause of that
        arrangement's failure.
-1. **FFN width rounding.** `FeedForward` sets the SwiGLU width to
-   $\mathrm{round}(8d/3)$.
-    1. Write the exact parameter count of the default
-       `TransformerBlock(d, h)` as a function of $d$, and bound the
-       relative deviation of its FFN from $8d^2$.
-    1. The released 7B configuration of Llama :cite:`touvron2023llama` has
-       $d = 4096$ and SwiGLU width $11008$, the smallest multiple of 256
-       that is at least $\lfloor 8d/3 \rfloor$. Compute the relative excess
-       of its FFN parameters over $8d^2$, and the excess that the same
-       rule gives at $d = 256$ and at $d = 128$, the default `num_hiddens`
-       of `CharLM`. Explain what the comparison implies for
-       parameter-matched experiments with small models.
-1. [code] **Normalization cost.** A kernel is *memory-bound* when moving
-   its data between memory and the processor takes longer than its
-   arithmetic, so that its runtime is close to the number of bytes moved
-   divided by the memory bandwidth.
-    1. Recreate the tensor `X` of :numref:`subsec_rmsnorm`, of shape
-       $(64, 512, 1024)$ in 32-bit floats. Count the bytes that LayerNorm
-       and RMSNorm must at least read and write, and the floating-point
-       operations per element of each.
-    1. Time the elementwise map $\mathbf{X} \mapsto 2\mathbf{X}$ in the
-       same way as the two normalizers, and convert all three timings into
-       achieved bandwidths in GB/s.
-    1. Use the achieved bandwidths to estimate how many passes over `X`
-       each normalizer makes. Explain why dropping the centering and one
-       statistic need not change the runtime of a normalizer that reads
-       `X` once, and describe an implementation in which RMSNorm would be
-       measurably faster.
-1. [code] **Gated variants.** :citet:`Shazeer.2020` varies the gate of
-   :eqref:`eq_swiglu`. ReGLU replaces SiLU by ReLU, GEGLU replaces it by
-   GELU, and the bilinear variant drops the activation and multiplies the
-   two linear views $\mathbf{W}_g \mathbf{x}$ and $\mathbf{W}_1
-   \mathbf{x}$ directly.
-    1. Extend `FeedForward` with these three settings of `act` at width
-       $\mathrm{round}(8d/3)$, and check that all gated settings have the
-       same parameter count.
-    1. Train `CharLM` with each of the five settings for three seeds under
-       the protocol of :numref:`subsec_gelu-vs-swiglu`. Report the mean and
-       the standard deviation over seeds of the loss averaged over the last
-       100 steps.
-    1. Compare your ranking with Table 1 of :citet:`Shazeer.2020`. Compare
-       the gap between the bilinear variant and the GELU MLP with the
-       spread among the four gated variants, and state which ingredient of
-       SwiGLU the comparison credits with its improvement.
+
 1. [extended] **Learning-rate sensitivity.** ●
    :citet:`Wortsman.Liu.Xiao.ea.2024` reproduce the growth of attention
    logits reported for large training runs (:numref:`subsec_qk-norm`) in

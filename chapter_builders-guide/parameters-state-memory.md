@@ -391,7 +391,7 @@ because all of its state happens to be trainable. That is not always so.
 Some tensors must persist inside a model and follow it from device to device,
 yet should never receive a gradient. The canonical example is batch
 normalization :cite:`Ioffe.Szegedy.2015`: each layer maintains a running mean
-and variance of its inputs, updated during the forward pass and used at
+and variance of its inputs, updated at every training step and used at
 prediction time. Those statistics must be saved with the model and must move
 to the GPU with it, but the optimizer has no business touching them. A
 precomputed positional table may be treated the same way. Other non-trained

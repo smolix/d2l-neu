@@ -555,8 +555,9 @@ For *inference*, casting a model can halve parameter memory, but its effect
 on predictions must be evaluated for the model and task. For *training*,
 casting all parameters to 16 bits can suppress small updates. A single
 optimizer update changes a weight by roughly $\eta \cdot g$, often a factor
-$10^{-4}$ or less of the weight's own magnitude, and adding an increment
-smaller than about `eps` times the weight rounds to no change at all. With
+$10^{-4}$ or less of the weight's own magnitude, and under round-to-nearest an
+increment smaller than half the spacing of representable values at the weight
+rounds to no change at all; for weights in $[1, 2)$ that spacing is `eps`. With
 bf16's `eps` of 0.0078, small updates can round away; in fp16, small gradients
 can underflow first. Mixed-precision training therefore retains fp32 master
 weights while performing selected computations in 16 bits.
@@ -1229,8 +1230,8 @@ accurate reduction tree rather than materializing every prefix.
 
 :begin_tab:`mxnet`
 `cumsum`'s `dtype` argument sets the accumulator while the data stays fp16.
-The fp16 total stalls early: once the running sum reaches a few units, fp16's
-spacing exceeds 0.001 and every further increment rounds to no change, so
+The fp16 total stalls early: once the running sum reaches 4, fp16's spacing
+exceeds twice the increment and every further increment rounds to no change, so
 essentially all ten million remaining terms contribute nothing. The fp32
 accumulator does far better but is not immune, since near $10^4$ fp32's own
 spacing is about 0.001, the size of one increment; the fp64 accumulator

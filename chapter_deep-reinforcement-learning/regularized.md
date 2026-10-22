@@ -30,7 +30,7 @@ The Bradley-Terry model :cite:`Bradley.Terry.1952` assigns each candidate a scal
 $$P(\tau \succ \tau') = \sigma\big( r(\tau) - r(\tau') \big), \qquad \sigma(u) = \frac{1}{1 + e^{-u}}.$$
 :eqlabel:`eq_bradley_terry`
 
-Fitting $r$ by maximum likelihood on labeled pairs is logistic regression on feature differences. We use a $4 \times 4$ gridworld with deterministic moves, an absorbing goal in the far corner worth $+1$, a living cost of $-0.04$ per step, and two central hazard cells that cost $-1.5$ to enter. The reference policy $\pi_{\textrm{ref}}$ is a softmax over the true action values at temperature $0.25$. It reaches the goal but remains stochastic, and it rarely enters the hazard lane.
+Fitting $r$ by maximum likelihood on labeled pairs is logistic regression on feature differences. We use a $4 \times 4$ gridworld with deterministic moves, an absorbing goal in the far corner worth $+1$, a living cost of $-0.04$ per step, and two central hazard cells that cost $-1.5$ to enter. The code numbers the cells row by row, so state $s$ lies in column $s \bmod 4$ of row $\lfloor s / 4 \rfloor$; trajectories start in state $0$, the hazard cells are states $5$ and $6$, the goal is state $15$, and the actions $0$ to $3$ move left, down, right and up. The reference policy $\pi_{\textrm{ref}}$ is a softmax over the true action values at temperature $0.25$. It reaches the goal but remains stochastic, and it rarely enters the hazard lane.
 
 ```{.python .input #regularized-preferences-and-bradley-terry-1}
 %%tab pytorch, jax
@@ -52,7 +52,8 @@ pi_ref /= pi_ref.sum(1, keepdims=True)
 ```
 
 We next withhold $r^*$ and estimate it from comparisons. We collect one
-thousand trajectories from $\pi_{\textrm{ref}}$ and represent each by its
+thousand trajectories from $\pi_{\textrm{ref}}$, each ending at the goal or
+after forty steps, and represent each by its
 discounted visit counts $x(\tau)$, for which the true return is
 $x(\tau)^\top r^*$. We sample six thousand pairs, label them according to
 :eqref:`eq_bradley_terry`, and fit $\hat r$ by logistic regression on
@@ -92,11 +93,11 @@ print(f'entries into the hazard lane: true '
       f'fitted {np.round(r_hat[[1, 4, 2, 5], [1, 2, 1, 2]], 2)}')
 ```
 
-The fit has an rms error of $0.19$ on the forty-six state-action pairs visited by the reference policy. Nine pairs are absent from the data, so their fitted rewards remain at the initialization value of zero. This matters for the hazard lane: entering it has true reward $-1.5$, but the fitted model assigns a value near zero because the reference policy rarely provides comparisons there. In this example, zero initialization and weight decay make unsupported predictions remain near zero. A neural reward model need not behave this way and may extrapolate unpredictably outside the data distribution.
+The fit has an rms error of $0.19$ on the forty-six state-action pairs of `core`, those that occur in at least fifty of the reference policy's episodes. Nine pairs are absent from the data, so their fitted rewards remain at the initialization value of zero. This matters for the hazard lane: entering it has true reward $-1.5$, but the fitted model assigns a value near zero because the reference policy rarely provides comparisons there. In this example, zero initialization and weight decay make unsupported predictions remain near zero. A neural reward model need not behave this way and may extrapolate unpredictably outside the data distribution.
 
 ### Identifiability and the Per-Prompt Baseline
 
-A comparison includes two trajectories from the *same* start state, so :eqref:`eq_bradley_terry` depends only on score differences. In the prompt-response notation used at scale, shifting the reward by any function of the prompt, $r(x, y) \to r(x, y) + f(x)$, leaves every difference and therefore the likelihood unchanged; exercise 5 asks you to verify this result. A learned reward is thus identified only *relative to each prompt*, and its absolute level per prompt is a convention. Subtracting a per-prompt baseline does not change the comparison model. Independently, the zero-mean lemma of :numref:`sec_baselines` shows that subtracting any function of the state from the policy-gradient weight preserves unbiasedness. The group mean used by GRPO (:numref:`sec_baselines`) combines these two properties, subject to the self-inclusion qualification developed later.
+A comparison includes two trajectories from the *same* start state, so :eqref:`eq_bradley_terry` depends only on score differences. In the prompt-response notation used at scale, shifting the reward by any function of the prompt, $r(x, y) \to r(x, y) + f(x)$, leaves every difference and therefore the likelihood unchanged; exercise :exref:`ex_regularized-identifiability`a asks you to verify this result. A learned reward is thus identified only *relative to each prompt*, and its absolute level per prompt is a convention. Subtracting a per-prompt baseline does not change the comparison model. Independently, the zero-mean lemma of :numref:`sec_baselines` shows that subtracting any function of the state from the policy-gradient weight preserves unbiasedness. The group mean used by GRPO (:numref:`sec_baselines`) combines these two properties, subject to the self-inclusion qualification developed later.
 
 ### Dense versus Terminal Rewards
 
@@ -133,15 +134,17 @@ for name, r in (('true reward  ', r_true), ('fitted reward', r_hat)):
           f'true return {ret(pi, r_true):+.2f}')
 ```
 
-Under the fitted reward, the optimized policy scores $-0.03$, compared with $-0.24$ for the reference policy; only the difference is meaningful because the additive reward constant is unidentified. Under the true reward, however, the scores are $-2.11$ and $+0.59$. The optimized policy enters the hazard lane because its unsupported rewards were estimated near zero. Value iteration has optimized the supplied reward correctly; the failure lies in the reward model outside the reference policy's data distribution. :numref:`sec_offline` encounters the same problem for learned value functions.
+Under the fitted reward, the optimized policy scores $-0.03$, compared with $-0.24$ for the policy that is optimal under the true reward; only the difference is meaningful because the additive reward constant is unidentified. Under the true reward, however, the scores are $-2.11$ and $+0.59$. The optimized policy enters the hazard lane because its unsupported rewards were estimated near zero. Value iteration has optimized the supplied reward correctly; the failure lies in the reward model outside the reference policy's data distribution. :numref:`sec_offline` encounters the same problem for learned value functions.
 
 ### True Return against the KL Budget
+:label:`subsec_kl_budget`
 
 The available evidence supports $\hat{r}$ primarily on trajectories sampled from $\pi_{\textrm{ref}}$. We therefore measure policy displacement from the reference with the KL divergence. For each coefficient $\beta$, we compute the policy that maximizes $\sum_t \gamma^t \big( \hat{r}_t - \beta\, D_{\textrm{KL}}( \pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t) ) \big)$, thereby tracing fitted and true return as functions of divergence. The next section derives this objective for a single decision and proves its optimum in closed form; in an MDP the optimum must also account for every *later* step's reward and penalty, and it does so through a $\beta$-dependent soft action value: replace value iteration's hard-max backup (:numref:`sec_valueiter`) with the reference-weighted soft one,
 
 $$V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}, \qquad Q_\beta(s, a) = \hat{r}(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V_\beta(s'),$$
+:eqlabel:`eq_soft_backup`
 
-whose fixed point gives the exactly optimal policy $\pi_\beta(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}$. The next section derives this backup. Like the ordinary Bellman backup of :numref:`sec_valueiter`, it is a contraction, and the loop below solves its fixed point for each $\beta$. The printed residual measures numerical convergence. Large $\beta$ keeps the policy close to the reference, whereas small $\beta$ approaches the fitted-reward maximizer. For each $\pi_\beta$, we record true return, fitted return, and the discounted sum of per-state divergences from the reference along trajectories generated by $\pi_\beta$:
+whose fixed point gives the exactly optimal policy $\pi_\beta(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}$. :numref:`subsec_soft_backup` derives this backup. Like the ordinary Bellman backup of :numref:`sec_valueiter`, it is a contraction, and the loop below solves its fixed point for each $\beta$. The printed residual measures numerical convergence. Large $\beta$ keeps the policy close to the reference, whereas small $\beta$ approaches the fitted-reward maximizer. For each $\pi_\beta$, we record true return, fitted return, and the discounted sum of per-state divergences from the reference along trajectories generated by $\pi_\beta$:
 
 ```{.python .input #regularized-the-measurement-true-return-against-the-kl-budget}
 %%tab pytorch, jax
@@ -293,7 +296,7 @@ print(f'KL 0 pays {p_ref @ r:.2f}; the frontier ends at KL '
 d2l.plot(kl_f, front @ r, 'KL from the reference (nats)', 'expected reward')
 ```
 
-With true reward on the vertical axis, the frontier is concave and increasing (exercise 2), so its marginal reward gain per nat decreases. The gridworld curve is nonmonotonic because optimization uses the fitted reward while evaluation uses true return. The two rows of :numref:`fig_rl_kl_tilting` are two points on this curve.
+With true reward on the vertical axis, the frontier is concave and increasing (exercise :exref:`ex_regularized-frontier-is-concave`b), so its marginal reward gain per nat decreases. The gridworld curve is nonmonotonic because optimization uses the fitted reward while evaluation uses true return. The two rows of :numref:`fig_rl_kl_tilting` are two points on this curve.
 
 ### Trust Region versus Penalty
 
@@ -302,18 +305,20 @@ Trust-region and fixed-reference methods both use KL divergence but in different
 > **Two uses of KL divergence.** A **trust region** (:numref:`sec_ppo`) measures divergence from the *previous iterate*. It restricts each update and protects a local approximation, while its reference changes after the update. A **fixed-reference penalty** (this section) is part of the objective and changes the optimum to :eqref:`eq_kl_optimum`. PPO-style language-model fine-tuning can use both: a clipped surrogate relative to the sampling policy for update stability, and a reward penalty relative to the frozen initial model to control the final policy :cite:`ouyang2022training`.
 
 ### The Direction of the KL Divergence
+:label:`subsec_kl_direction`
 
 $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ is the *reverse* divergence in the taxonomy of :numref:`sec_mdl-fwd-vs-rev-kl`. Because it is an expectation under $\pi$, it can be estimated from policy samples. It penalizes assigning probability where the reference has little support but does not penalize assigning zero probability to reference modes, producing mode-seeking behavior. The forward direction $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$ instead penalizes failure to cover behavior sampled by the reference. The direction is therefore a modeling choice with different coverage effects.
 
 ## The Soft Backup and Its Consequences
 
 ### Maximum-Entropy Reinforcement Learning and the Soft Backup
+:label:`subsec_soft_backup`
 
 The preceding derivation concerned one decision. In an MDP the penalty is applied at every step, $\sum_t \gamma^t \big( r_t - \beta\, D_{\textrm{KL}}( \pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t) ) \big)$, the objective our gridworld sweep optimized, and the proposition applies state by state with an action value in place of $r$, under one precaution the gridworld code already took: the value entering the tilt must itself account for every later step's reward *and* penalty, which makes it the $\beta$-dependent soft value $Q_\beta$ rather than the unregularized $Q^*$; tilting the reference by $Q^*$ is a different, merely heuristic family that is the exact optimum of no exchange rate. Writing the proposition's achieved value $\beta \log Z$ into the Bellman equation of :numref:`sec_valueiter` replaces the hard maximum with a soft one,
 
 $$V(s) = \max_a Q(s, a) \quad \textrm{becomes} \quad V(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q(s, a)/\beta},$$
 
-the backup that `soft_v` iterated to a fixed point, with residual zero to double precision. It replaces the maximum by a log-sum-exp, recovering the ordinary $\max$ as $\beta \to 0$. With a uniform reference, this is *soft value iteration* and the objective is maximum-entropy reinforcement learning. The smooth backup provides an alternative to the hard maximum whose estimation bias was discussed in :numref:`sec_dqn`. Exercise 6 applies this backup to the slippery lake and varies $\beta$ from value iteration toward policy evaluation.
+the backup that `soft_v` iterated to a fixed point, with residual zero to double precision. It replaces the maximum by a log-sum-exp, recovering the ordinary $\max$ as $\beta \to 0$. With a uniform reference, this is *soft value iteration* and the objective is maximum-entropy reinforcement learning. The smooth backup provides an alternative to the hard maximum whose estimation bias was discussed in :numref:`sec_dqn`. Exercise :exref:`ex_regularized-soft-backup-transplanted` applies this backup to the slippery lake and varies $\beta$ from value iteration toward policy evaluation.
 
 ### DDPG, TD3 and SAC
 
@@ -331,26 +336,227 @@ Pairwise preferences identify reward differences but not an additive term depend
 
 ## Exercises
 
-1. [conceptual] *Three limits.* Derive $\beta \to 0$, $\beta \to \infty$ and
-   $\pi_{\textrm{ref}}$ uniform from the proposition, and say which one you have
-   already met and where.
-1. [short-code] *The frontier is concave.* Sweep $\beta$ and plot achieved
-   reward against $D_{\textrm{KL}}(\pi_\beta \Vert \pi_{\textrm{ref}})$; verify
-   concavity and explain what the slope at each point is.
-1. [short-code] *Break the reward.* Perturb the fitted $\hat r$ at one
-   rarely-visited state and rerun; how much KL budget does the optimizer need
-   before it finds the error?
-1. [conceptual] *Trust region or penalty.* For each of TRPO, PPO's clip, RLHF's
-   KL term and on-policy distillation, say which of the two it is and what it
-   is measured against.
-1. [conceptual] *Identifiability.* Show $r(x,y) \to r(x,y) + f(x)$ leaves the
-   Bradley-Terry likelihood unchanged, and deduce that a per-prompt baseline
-   costs nothing.
-1. [extended] *The soft backup, transplanted.* The measurement cell's
-   `soft_v` solved the regularized Bellman equations on the hazard grid.
-   Port it to the slippery lake with a uniform reference, plot
-   $V_\beta^\star(s_0)$ against $\beta$, identify the two limits, and check
-   the $\beta \to 0$ end against :numref:`sec_valueiter`'s value iteration.
+1. **Identifiability and scale.** The Bradley-Terry model
+   :eqref:`eq_bradley_terry` is fitted to comparisons of two responses $y$ and
+   $y'$ to the same prompt $x$.
+    1. Show that replacing $r(x, y)$ by $r(x, y) + f(x)$, for any function $f$
+       of the prompt, leaves the likelihood of every such dataset unchanged.
+       Conversely, join two responses to $x$ by an edge whenever the dataset
+       compares them. Show that two rewards that assign the same preference
+       probability to every compared pair differ by a constant on each
+       connected component of this graph. What is identified when the graph
+       of one prompt has several components?
+    1. Suppose that the annotators label according to
+       $P(y \succ y') = \sigma\big(\kappa\, (r^*(x, y) - r^*(x, y'))\big)$ for
+       some $\kappa > 0$, and that :eqref:`eq_bradley_terry` is fitted by
+       maximum likelihood on unlimited data. Which reward does the fit
+       recover?
+    1. Show that the optimum :eqref:`eq_kl_optimum` for the fitted reward at
+       coefficient $\beta$ is the optimum for $r^*$ at coefficient
+       $\beta / \kappa$. Suppose that $\beta$ was tuned against a reward
+       model fitted to the labels of one pool of annotators. How strong a
+       penalty is the same $\beta$ for a reward model fitted to the labels of
+       a less consistent pool, that is, one with a smaller $\kappa$?
+   :exlabel:`ex_regularized-identifiability`
+1. [code] **Trajectory divergence.** Let $p_\pi(\tau)$ denote the probability
+   that a policy $\pi$, started at state $0$, produces the trajectory
+   $\tau = (s_0, a_0, s_1, a_1, \ldots, s_T)$ of a fixed horizon $T$.
+    1. Show that
+       $$D_{\textrm{KL}}\big(p_\pi \Vert p_{\pi_{\textrm{ref}}}\big) = E_\pi\Big[\sum_{t=0}^{T-1} D_{\textrm{KL}}\big(\pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t)\big)\Big].$$
+       Which factors of $p_\pi(\tau)$ cancel, and why can the divergence
+       therefore be estimated from trajectories of $\pi$ without a model of
+       the transitions?
+    1. Let the trajectory instead end after each step with probability
+       $1 - \gamma$, independently of the actions. Show that the divergence
+       between the two trajectory distributions becomes the discounted sum
+       of per-state divergences that the sweep of :numref:`subsec_kl_budget`
+       appends to `kls` as `rho @ kl`.
+    1. Take the policy $\pi_\beta$ at the peak of the true return in that
+       sweep. Average $x(\tau)^\top \log(\pi_\beta / \pi_{\textrm{ref}})$,
+       with the logarithm taken entrywise and flattened like $x(\tau)$, over
+       2000 trajectories from `sample_traj(pi, T=400)`, and compare the
+       average with the divergence of $3.7$ nats printed at the peak. Some of
+       the per-trajectory values are negative. Why does this not contradict
+       Gibbs' inequality?
+1. [code] **Convergence of the solver.** `solve_kl` maximizes
+   :eqref:`eq_kl_objective` by the multiplicative update
+   $$\pi_{k+1}(a) \propto \pi_k(a)\, \exp\Big(\eta\, \big(r(a) - \beta \log \frac{\pi_k(a)}{\pi_{\textrm{ref}}(a)}\big)\Big)$$
+   with step size $\eta$.
+    1. Let $d_k = \log \pi_k - \log \pi^\star$, with $\pi^\star$ from
+       :eqref:`eq_kl_optimum`. Show that
+       $d_{k+1} = (1 - \eta \beta)\, d_k + c_k$, where $c_k$ is the same for
+       every action. Conclude that the spread
+       $\max_a d_k(a) - \min_a d_k(a)$ shrinks by the factor
+       $|1 - \eta \beta|$ per step.
+    1. With $\eta = 0.3$ and the uniform start of `solve_kl`, which
+       coefficient of the ladder $\beta \in \{5, 2, 0.5, 0.2\}$ converges
+       slowest, and about how many steps does it need before the spread
+       falls below $10^{-12}$? Are the 3000 steps of `solve_kl` enough for
+       all four?
+    1. Predict what happens for $\eta = 1 / \beta$, and for $\beta = 10$
+       with $\eta = 0.3$. Check both predictions with `solve_kl`.
+   :exlabel:`ex_regularized-solver-convergence`
+1. [code] **Tilting by the unregularized value.** :numref:`subsec_soft_backup`
+   states that tilting $\pi_{\textrm{ref}}$ by the unregularized action value
+   $Q^*$ instead of the soft value $Q_\beta$ gives a heuristic family in
+   which no member is the exact optimum for any exchange rate.
+    1. Compute $Q^*$ for $\hat r$ by value iteration and form
+       $\pi(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q^*(s, a) / \beta}$
+       for every $\beta$ of the sweep in :numref:`subsec_kl_budget`. Plot
+       the fitted return of this family against its discounted divergence
+       from $\pi_{\textrm{ref}}$, together with `prox_ret` against `kls`.
+    1. Why can no member of the heuristic family lie above the curve of the
+       exact optima?
+    1. In which limits of $\beta$ do the two families approach each other,
+       and why do they differ in between?
+1. [code] **Soft backup on the lake.** The proof in
+   :numref:`subsec_vi_contraction` used one property of the maximum,
+   $|\max_a f(a) - \max_a g(a)| \leq \max_a |f(a) - g(a)|$.
+    1. Let
+       $m_\beta(f) = \beta \log \sum_a \pi_{\textrm{ref}}(a)\, e^{f(a) / \beta}$.
+       Show that $m_\beta$ is monotone and that
+       $m_\beta(f + c) = m_\beta(f) + c$ for every constant $c$, and deduce
+       that $m_\beta$ has the same property as the maximum. Conclude that the
+       backup :eqref:`eq_soft_backup` is a $\gamma$-contraction for every
+       $\beta > 0$ and every reference.
+    1. Rewrite `soft_v` to take the transition array, the reward, the
+       discount and the reference as arguments, and apply it to the slippery
+       lake of :numref:`sec_valueiter` with a uniform reference. Plot
+       $V_\beta(s_0)$ against $\beta$ on a logarithmic grid from $10^{-4}$ to
+       $10^2$. Which two values computed in :numref:`sec_valueiter` does the
+       curve approach at its two ends? Explain with the regularized objective
+       why the curve is monotone.
+    1. At about which $\beta$ does $V_\beta(s_0)$ lie halfway between the two
+       limits? Compare this coefficient with the differences between the
+       optimal action values $Q^*(s_0, a)$ of the lake.
+   :exlabel:`ex_regularized-soft-backup-transplanted`
+1. [extended] **Neural reward models.** ● The linear fit of `r_hat` leaves
+   the pairs without data near zero, whereas a neural reward model
+   extrapolates according to its inductive bias. Replace the 64 parameters
+   `w` by the outputs of a multilayer perceptron with two hidden layers of 64
+   ReLU units, applied to a feature vector of each state-action pair, and set
+   the row of the absorbing goal to zero as in `r_true`. Train the network on
+   the same pairs `D` and `y` by minimizing the Bradley-Terry negative
+   log-likelihood with Adam, learning rate $0.01$, for 2000 full-batch steps
+   and without weight decay.
+    1. Train one model whose features are the one-hot codes of the state and
+       the action, and one whose features are the two grid coordinates of the
+       state, scaled to $[0, 1]$, together with a one-hot code of the action.
+       Use four seeds for each. For every model, report the rms error on the
+       pairs of `core`, the fitted rewards at the indices
+       `[1, 4, 2, 5], [1, 2, 1, 2]` of the four entries into the hazard lane,
+       and the true return of `plan`.
+    1. Repeat the sweep of :numref:`subsec_kl_budget` on each fitted reward.
+       Which representation needs the penalty? Which property of its input
+       explains the difference?
+   :exlabel:`ex_regularized-neural-reward-models`
+1. [code] **Exploited reward errors.** ● Each run below modifies $\hat r$
+   and repeats the sweep of :numref:`subsec_kl_budget` with the same
+   reference $\pi_{\textrm{ref}}$.
+    1. Add $\delta \in \{0.25, 0.5, 1, 2\}$ to `r_hat[9, 3]`, the move up from
+       state 9 into hazard cell 5, which never occurs in the data. How do the
+       height and the divergence of the peak of the true return move with
+       $\delta$?
+    1. Subtract $2$ from `r_hat[9, 3]` instead. In a second run, subtract
+       $2$ from `r_hat[1, 1]`, an entry into the hazard lane that $\hat r$
+       prices near zero. Before running them, predict how each change moves
+       the peak of the true return. Explain both outcomes.
+    1. Refit $\hat r$ from 1000 trajectories of the uniform policy, and keep
+       $\pi_{\textrm{ref}}$ as the reference of the penalty. Which error of
+       the new fit does `plan` exploit? Does the true return still peak at
+       an intermediate divergence?
+1. **Slope of the frontier.** ● Write $\lambda = 1 / \beta$, and let
+   $R(\lambda)$ and $K(\lambda)$ denote the expected reward and the
+   divergence $D_{\textrm{KL}}(\pi^\star \Vert \pi_{\textrm{ref}})$ of the
+   optimum :eqref:`eq_kl_optimum`.
+    1. Show that $R(\lambda) = \frac{d}{d\lambda} \log Z$ and that
+       $R'(\lambda) = \textrm{Var}_{\pi^\star}(r)$. Then use the value
+       $\beta \log Z$ of the proposition to show that
+       $K'(\lambda) = \lambda\, \textrm{Var}_{\pi^\star}(r)$.
+    1. Conclude that the frontier traced by `front` and `kl_f` has slope
+       $\beta$ at the point $\pi^\star$, and that it is increasing and concave
+       whenever $r$ is not constant on the support of $\pi_{\textrm{ref}}$.
+    1. Show that $\pi^\star$ also solves the constrained problem
+       $\max_\pi E_\pi[r]$ subject to
+       $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) \leq K(\lambda)$. Which
+       quantity of the constrained problem does $\beta$ become?
+    1. Check the slope numerically by finite differences along `front` and
+       `kl_f`.
+   :exlabel:`ex_regularized-frontier-is-concave`
+1. **A moving reference.** ● The trust region of :numref:`sec_ppo` measures
+   divergence from the previous iterate. Consider, for a single decision with
+   reward $r(a)$, the idealized update that solves each step exactly,
+   $$\pi_{k+1} = \operatorname*{argmax}_\pi\ E_\pi[r] - \nu\, D_{\textrm{KL}}(\pi \Vert \pi_k), \qquad \pi_0 = \pi_{\textrm{ref}},$$
+   with a coefficient $\nu > 0$.
+    1. Show that $\pi_k$ is the optimum :eqref:`eq_kl_optimum` with
+       coefficient $\nu / k$. What is the limit of $\pi_k$ as $k \to \infty$?
+    1. Now add the fixed-reference penalty of :eqref:`eq_kl_objective`, as
+       PPO-style fine-tuning does, so that $\pi_{k+1}$ maximizes
+       $$E_\pi[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) - \nu\, D_{\textrm{KL}}(\pi \Vert \pi_k).$$
+       Show that, up to a constant,
+       $$\log \pi_{k+1} = \frac{\beta \log \pi_{\textrm{ref}} + \nu \log \pi_k + r}{\beta + \nu},$$
+       and find the limit of $\pi_k$. Which coefficient determines the limit?
+       How fast is the limit approached?
+    1. Show that the recursion of part b is the update of `solve_kl` with a
+       suitable step size, and express that step size through $\beta$ and
+       $\nu$. Which of the convergent step sizes of exercise
+       :exref:`ex_regularized-solver-convergence` have no interpretation as
+       a trust region?
+1. [code] **Forward-KL penalty.** ● :numref:`subsec_kl_direction` contrasts
+   the reverse divergence of :eqref:`eq_kl_objective` with the forward one.
+   Replace the penalty by the forward divergence,
+   $$\max_\pi\ E_{a \sim \pi}\big[r(a)\big] - \beta\, D_{\textrm{KL}}\big(\pi_{\textrm{ref}} \Vert \pi\big).$$
+    1. Introduce a multiplier $\lambda$ for the constraint
+       $\sum_a \pi(a) = 1$, and show that the optimum is
+       $\pi(a) = \beta\, \pi_{\textrm{ref}}(a) / (\lambda - r(a))$, where
+       $\lambda > \max_a r(a)$ is the unique value for which these
+       probabilities sum to one.
+    1. Let $\Delta(a) = \max_{a'} r(a') - r(a) > 0$ be the reward gap of a
+       suboptimal action $a$. As $\beta \to 0$, how fast does
+       $\pi(a) / \pi_{\textrm{ref}}(a)$ vanish under the forward penalty, and
+       how fast under the reverse penalty?
+    1. For the five-action bandit `p_ref`, `r`, compute the forward optimum
+       by bisection on $\lambda$. For each penalty, find the $\beta$ at which
+       the optimum's expected reward is $2.9$, and compare the two optima
+       action by action. Which actions receive more probability under the forward
+       penalty, and how does this match :numref:`subsec_kl_direction`?
+   :exlabel:`ex_regularized-forward-kl-penalty`
+1. [code] **Error modulo shaping.** ●● Potential-based shaping
+   :cite:`Ng.Harada.Russell.1999` adds
+   $$F(s, a) = \gamma \sum_{s'} P(s' \mid s, a)\, \Phi(s') - \Phi(s)$$
+   to the reward, for a potential $\Phi$ on the states with $\Phi(15) = 0$ at
+   the absorbing goal.
+    1. Show that if $Q_\beta$ solves the soft backup :eqref:`eq_soft_backup`
+       for the reward $r$, then $Q_\beta(s, a) - \Phi(s)$ solves it for
+       $r + F$. Conclude that, for every $\beta$, the shaped reward has the
+       same optimum $\pi_\beta$ with the same divergence from
+       $\pi_{\textrm{ref}}$, and that every policy's return from state $0$
+       changes by $-\Phi(0)$.
+    1. Show that $F$ changes the discounted return $x(\tau)^\top r$ of every
+       trajectory that reaches the goal by exactly $-\Phi(0)$. Which
+       trajectories in `X` carry information about $F$, and through which
+       factor?
+    1. The pairs of `core` neither start in nor enter the hazard cells 5
+       and 6, so they do not determine $\Phi(5)$ and $\Phi(6)$; set both to
+       zero. Find the potential whose shaping term matches $\hat r - r^*$ on
+       the pairs of `core` best in the least-squares sense. How much of the
+       rms error printed for those pairs does the shaping term account for?
+       On which pairs of `core` is the shaping term largest, and why does
+       the weight decay of the logistic regression push the fit in this
+       direction?
+    1. :citet:`Gleave.Dennis.Legg.ea.2021` compare reward functions only
+       after removing potential shaping. Apply the decomposition of part c to
+       the one-hot models of exercise
+       :exref:`ex_regularized-neural-reward-models`, and compare their
+       Bradley-Terry loss with that of the linear model. What do the results
+       imply for the rms error on the data as a measure of the quality of a
+       reward model?
+    1. :citet:`Christiano.Leike.Brown.ea.2017` compare short trajectory
+       segments that start at different states. Comparisons of this kind
+       identify the reward up to transitions that the dynamics rule out
+       :cite:`Skalse.Farrugia-Roberts.Russell.ea.2023`. Which step of part b
+       fails for such segments?
+   :exlabel:`ex_regularized-error-modulo-shaping`
 
 [Discussions](https://d2l.discourse.group/)
 

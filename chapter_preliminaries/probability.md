@@ -302,11 +302,11 @@ as the sample size $n$ grows,
 the error of our estimate should go down
 at a rate of $(1/\sqrt{n})$ :cite:`Wasserman.2013`.
 
-Where does the rate come from? Each toss is a random variable
+Where does the rate come from? Each toss $X_i$ is a random variable
 taking value $1$ (heads) with probability $p$ and $0$ otherwise,
 so its variance is $E[X_i^2] - E[X_i]^2 = p - p^2 = p(1-p)$
 (we formally introduce variances later in this section).
-Our estimate averages $n$ *independent* tosses
+Our estimate $\hat{p} = n_\textrm{h}/n$ of $p$ averages $n$ *independent* tosses
 (no toss influences any other),
 and variances of independent variables add
 (a fact proved in :numref:`sec_mdl-random_variables`),
@@ -806,6 +806,9 @@ Because conditional probabilities satisfy the probability axioms,
 independence and dependence also apply to them.
 Two random variables $A$ and $B$ are *conditionally independent*
 given a third variable $C$ if and only if $P(A, B \mid C) = P(A \mid C)P(B \mid C)$.
+When this factorization holds for one value $c$ of $C$, that is,
+$P(A, B \mid C = c) = P(A \mid C = c)P(B \mid C = c)$,
+we say that $A$ and $B$ are conditionally independent given $C = c$.
 Two variables can be independent in general
 but become dependent when conditioning on a third.
 This often occurs when the two random variables $A$ and $B$

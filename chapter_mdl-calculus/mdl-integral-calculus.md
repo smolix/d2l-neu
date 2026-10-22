@@ -231,14 +231,15 @@ print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(onp.array(2.))))
 
 The first comparison is exact in exact arithmetic: differencing the cumulative
 sum *telescopes*, $F(x+\epsilon)-F(x)$ collapsing back to the single term
-$\epsilon f(x+\epsilon)$ that the sum just added. The printed error, a few
-parts in $10^{5}$, is therefore not discretization error at all but pure
-float32 roundoff in the accumulated $F$, amplified by the division by
+$\epsilon f(x+\epsilon)$ that the sum just added. The printed error, about
+$6\times 10^{-14}$, is therefore not discretization error at all but pure
+float64 roundoff in the accumulated $F$, amplified by the division by
 $\epsilon$. The Riemann total $F(2)$ agrees with the antiderivative value
 $G(2)$ to about $2\times 10^{-4}$, the expected first-order bias of the
 left-endpoint rule.
 
 ### Improper Integrals
+:label:`subsec_mdl-improper-integrals`
 
 Many densities have an unbounded domain, including Gaussian, exponential, and
 heavy-tailed densities. Their normalization requires integration to infinity,
@@ -293,7 +294,8 @@ overshoots and settles near $1.0005$, not $1$. That residue is *discretization
 error*. The left rule samples each slice at its left edge, where the decreasing
 integrand $e^{-x}$ is largest, so every rectangle overcounts slightly; the
 overcounts add up to a bias of
-$\approx \tfrac{\epsilon}{2}\bigl(f(0)-f(b)\bigr) \to \tfrac{\epsilon}{2}
+$\approx \tfrac{\epsilon}{2}\bigl(f(a)-f(b)\bigr)$ on an interval $[a,b]$, here
+$\tfrac{\epsilon}{2}\bigl(f(0)-f(b)\bigr) \to \tfrac{\epsilon}{2}
 = 0.0005$. The two errors are independent: increasing $b$ reduces truncation error, while
 shrinking $\epsilon$ reduces discretization error. Changing either parameter
 does not eliminate the other error.
@@ -629,6 +631,7 @@ one, since the integrand is positive) gives
 $$
 \int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi} .
 $$
+:eqlabel:`eq_mdl-gaussian-integral`
 
 The same factorization also explains the bell-volume cell's exact value:
 over the box, $\bigl(\int_{-2}^{2} e^{-x^2}\,dx\bigr)^2
@@ -649,6 +652,7 @@ print('exact value pi               :', round(float(onp.pi), 6))
 ```
 
 ## Integration in Probability
+:label:`subsec_mdl-integration-in-probability`
 
 This is why a deep-learning reader needs integration at all. A continuous
 probability **density** is nothing more than a non-negative function that is
@@ -699,9 +703,10 @@ $$
 
 a stochastic counterpart of the Riemann sum that ignores the geometry of the
 domain. The **law of large numbers** (:numref:`sec_mdl-statistics`) guarantees
-that it works: the sample
+that it works whenever $\mathbb{E}[|g(X)|]$ is finite: the sample
 average converges to the true expectation. The error scale comes from a
-variance computation: the estimator's standard deviation is
+variance computation: when $g(X)$ has finite variance, the estimator's
+standard deviation is
 $\mathrm{sd}(g(X))/\sqrt{n}$, an order-$1/\sqrt{n}$ error whose limiting
 distribution comes from the **central limit theorem**
 (:numref:`sec_mdl-distributions`). The rate depends only on the sample size
@@ -799,6 +804,7 @@ $$
 \nabla_{\boldsymbol{\theta}} \int f(x, \boldsymbol{\theta})\,dx
 = \int \nabla_{\boldsymbol{\theta}} f(x, \boldsymbol{\theta})\,dx .
 $$
+:eqlabel:`eq_mdl-diff-under-integral`
 
 The swap needs a hypothesis. The standard sufficient condition is that, near
 the current $\boldsymbol{\theta}$, the integrands' derivatives are bounded in
@@ -819,6 +825,7 @@ $$
 + f\bigl(b(\theta), \theta\bigr)\,b'(\theta)
 - f\bigl(a(\theta), \theta\bigr)\,a'(\theta) .
 $$
+:eqlabel:`eq_mdl-leibniz`
 
 The two boundary terms are precisely what the naive swap forgets: each moving
 endpoint sweeps area in or out at the rate the limit moves, weighted by the
@@ -972,38 +979,273 @@ for a gradient.
 
 ## Exercises
 
-1. For $X\sim\mathcal N(\theta,1)$ and $g(X)=X^4$, derive the pathwise and
-   score-function gradient estimators. Verify analytically that both have mean
-   $4\theta^3+12\theta$, then compare their Monte Carlo variances in NumPy.
-2. Show that replacing $g(X)$ by $g(X)-b$ in
-   :eqref:`eq_mdl-score-function-gradient` leaves the expected gradient
-   unchanged when $b$ is independent of $X$. Derive the scalar baseline that
-   minimizes the estimator's second moment.
-3. Evaluate $\int_1^2 \tfrac{1}{x}\,dx$ using an antiderivative, then confirm with
-   a Riemann sum.
-4. Use the change-of-variables formula to integrate
-   $\int_0^{\sqrt{\pi}} x\sin(x^2)\,dx$.
-5. Compute $\int_{[0,1]^2} xy\,dx\,dy$ by Fubini's theorem.
-6. For which $p$ does $\int_1^\infty x^{-p}\,dx$ converge? Verify the boundary
-   $p=1$ numerically by watching the partial integrals as the upper limit grows.
-7. Find the constant $c$ that makes $c\,e^{-x^2}$ a probability density on
-   $\mathbb{R}$, then compute its mean and $\mathbb{E}[X^2]$.
-8. Let $f(x,y) = (x^2-y^2)/(x^2+y^2)^2$. Compute the iterated integrals
-   $\int_0^1\!\bigl(\int_0^1 f\,dx\bigr)dy$ and $\int_0^1\!\bigl(\int_0^1
-   f\,dy\bigr)dx$ over $[0,1]^2$ and confirm they equal $-\tfrac{\pi}{4}$ and
-   $+\tfrac{\pi}{4}$. Why does this not contradict Fubini's theorem? (Hint:
-   $\frac{\partial}{\partial x}\frac{-x}{x^2+y^2} = f(x,y)$; the singularity at the
-   origin breaks absolute integrability.)
-9. Estimate $\int_0^1 e^{-x^2}\,dx$ by Monte Carlo (average $e^{-x_i^2}$ over
-   $x_i$ uniform on $[0,1]$) and compare with a Riemann sum.
-10. Use integration by parts :eqref:`eq_mdl-parts` twice to evaluate
-   $\int_0^\infty u^2 e^{-u}\,du$, the second moment behind the exponential
-   distribution's variance in :numref:`sec_mdl-distributions`. The integral you
-   have computed is $\Gamma(3)$, an instance of the **Gamma function**
-   $\Gamma(t) = \int_0^\infty u^{t-1}e^{-u}\,du$; the same
-   integration-by-parts step, run once at general $t$, gives the recursion
-   $\Gamma(t+1) = t\,\Gamma(t)$ and hence $\Gamma(n+1) = n!$, the function that
-   names the Gamma distribution of :numref:`sec_mdl-distributions`.
+1. [code] **Midpoint versus left rule.** The function `riemann` evaluates
+   the left-endpoint rule. The midpoint rule instead evaluates $f$ at the
+   center of each slice of width $\epsilon$. On $[a,b]$ with
+   $n=(b-a)/\epsilon$ slices and $x_i=a+i\epsilon$, it returns
+   $\epsilon\sum_{i=1}^n f\bigl(x_{i-1}+\tfrac{\epsilon}{2}\bigr)$.
+    1. :numref:`subsec_mdl-improper-integrals` estimates the bias of the
+       left rule on $[a,b]$ as $\tfrac{\epsilon}{2}\bigl(f(a)-f(b)\bigr)$.
+       Justify this estimate by a first-order expansion of $f$ on each
+       slice. Use it to predict the errors that the cell defining `riemann`
+       prints for $\int_0^2 \tfrac{x}{1+x^2}\,dx$. Do the sums lie above or
+       below $\tfrac12\log 5$?
+    1. Implement both rules for an integrand $f$ on $[a,b]$. Evaluate
+       $\int_1^2 \tfrac{1}{x}\,dx$ with an antiderivative, and tabulate the error of both rules for
+       $\epsilon\in\{10^{-1},10^{-2},10^{-3}\}$. By what factor does each
+       error shrink when $\epsilon$ shrinks by a factor of ten?
+    1. Expand $f$ to second order about the center of each slice and show
+       that the integral minus the midpoint sum is approximately
+       $\tfrac{\epsilon^2}{24}\bigl(f'(b)-f'(a)\bigr)$. Compare this
+       prediction with your table for $\int_1^2 \tfrac{1}{x}\,dx$. For which
+       integrands does the midpoint rule underestimate the integral?
+
+   *Adapted from MIT 18.01SC,
+   [Unit 3 exercises](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/eaabc6c74a11402341dbc120fffa5ea5_MIT18_01SC_pset3prb.pdf),
+   Problems 3G-1 and 3G-5.*
+   :exlabel:`ex_mdl-integral-calculus-midpoint-rule`
+1. **Activations as accumulated areas.** Let $H$ be the unit step, with
+   $H(t)=1$ for $t>0$ and $H(t)=0$ for $t\le 0$. Let
+   $\phi(t)=e^{-t^2/2}/\sqrt{2\pi}$ be the standard Gaussian density and
+   $\Phi(x)=\int_{-\infty}^x \phi(t)\,dt$ its distribution function.
+    1. Show that $\int_{-\infty}^{x} H(t)\,dt=\mathrm{ReLU}(x)$. Which
+       hypothesis of the fundamental theorem :eqref:`eq_mdl-ftc` fails at
+       $x=0$? What are the one-sided derivatives of the integral there?
+    1. Write $\Phi(x)=\Phi(0)+\int_0^x \phi(t)\,dt$ to conclude that
+       $\Phi'=\phi$. Then substitute $t=\sqrt2\,s$ to show that
+       $\Phi(x)=\tfrac12\bigl(1+\operatorname{erf}(x/\sqrt2)\bigr)$.
+    1. The GELU activation of :numref:`sec_mlp` is $x\Phi(x)$. Derive its
+       derivative, find the points where the derivative is largest and
+       smallest, and evaluate it there with `math.erf`. In which interval
+       does the slope of GELU lie, and how does that interval compare with
+       the slopes $0$ and $1$ of ReLU?
+   :exlabel:`ex_mdl-integral-calculus-activation-areas`
+1. **Heavy tails.** The *Pareto density* with tail index $\alpha>0$ is
+   $p(x)=\alpha x^{-\alpha-1}$ for $x\ge 1$ and $p(x)=0$ otherwise. The
+   *Cauchy density* is $p(x)=\tfrac{1}{\pi(1+x^2)}$ on $\mathbb R$.
+    1. Show that the Pareto density is normalized for every $\alpha>0$.
+       For which $\alpha$ are $\mathbb E[X]$ and $\mathbb E[X^2]$ finite?
+       Compute $\mathbb E[X]$ where it is finite.
+    1. Show that the Cauchy density is normalized, using the antiderivative
+       $\arctan x$ of $\tfrac{1}{1+x^2}$.
+    1. Show that $\int_{-b}^{b} x\,p(x)\,dx=0$ for the Cauchy density and
+       every $b>0$. Why does the Cauchy density nevertheless have no mean
+       under the definition of $\int_{-\infty}^{\infty}$ that follows
+       :eqref:`eq_mdl-improper`? How fast does $\int_0^b x\,p(x)\,dx$ grow
+       with $b$?
+   :exlabel:`ex_mdl-integral-calculus-heavy-tails`
+1. **Gamma function by parts.** The *Gamma function* is
+   $\Gamma(t)=\int_0^\infty u^{t-1}e^{-u}\,du$. For $t<1$ the integrand is
+   unbounded at $u=0$, and the integral near $0$ is defined as in
+   :eqref:`eq_mdl-improper`, by a limit: $\int_0^1=\lim_{a\to 0^+}\int_a^1$.
+    1. For which $t$ does the integral converge at $u=0$? Compare the
+       condition with the power-law test at infinity in
+       :numref:`subsec_mdl-improper-integrals`.
+    1. Integrate by parts :eqref:`eq_mdl-parts` at a general $t>0$ to show
+       that $\Gamma(t+1)=t\,\Gamma(t)$, and conclude that $\Gamma(n+1)=n!$
+       for every integer $n\ge 0$. Where does the argument use $t>0$? Use
+       the result to compute the variance of the exponential density
+       $e^{-u}$ on $u\ge 0$, whose mean
+       :numref:`subsec_mdl-integration-by-parts` computes.
+    1. Substitute $u=x^2$ and use the Gaussian integral
+       :eqref:`eq_mdl-gaussian-integral` to evaluate $\Gamma(\tfrac12)$.
+   :exlabel:`ex_mdl-integral-calculus-gamma-function`
+1. **Orientation in substitution.** The one-dimensional rule
+   :eqref:`eq_mdl-change_var` integrates between oriented limits and
+   carries the factor $\frac{du}{dx}$. The $n$-dimensional rule
+   :eqref:`eq_mdl-change_var_nd` integrates over a set and carries
+   $\bigl|\det D\boldsymbol{\phi}\bigr|$.
+    1. Let $u$ be continuously differentiable and strictly monotone on
+       $[a,b]$, either increasing or decreasing. Show that
+
+       $$\int_{u([a,b])} f(y)\,dy=\int_a^b f(u(x))\,|u'(x)|\,dx,$$
+
+       where the left side integrates over the interval $u([a,b])$ from its
+       smaller to its larger endpoint. Check the decreasing case with
+       $u(x)=e^{-x^2}$ and $f=1$ on $[0,1]$.
+    1. Take $u(x)=x^2$ on $[-1,1]$ and $f(y)=y$. Evaluate both sides of
+       :eqref:`eq_mdl-change_var`, and both sides of the absolute-value form
+       of (a). Which of the two forms remains valid for this $u$, which is
+       not injective? Explain the discrepancy in the other form.
+   :exlabel:`ex_mdl-integral-calculus-orientation`
+1. **Swapping the order.** Fubini's theorem :eqref:`eq_mdl-fubini`, together
+   with zero-extension for regions that are not rectangles, lets us choose
+   the order of integration.
+    1. The inner integral of
+       $\int_0^1\bigl(\int_y^1 e^{-x^2}\,dx\bigr)\,dy$ has no elementary
+       antiderivative. Sketch the triangular region of integration, reverse
+       the order, and evaluate the integral in closed form.
+    1. Let $X\ge 0$ have density $p$. Write $x=\int_0^x dt$ inside
+       $\mathbb E[X]=\int_0^\infty x\,p(x)\,dx$ and swap the two integrals to
+       show that $\mathbb E[X]=\int_0^\infty P(X>t)\,dt$. Why is the swap
+       valid even when $\mathbb E[X]=\infty$? Check the formula on the
+       density $\lambda e^{-\lambda x}$ for $x\ge 0$.
+   :exlabel:`ex_mdl-integral-calculus-order-of-integration`
+1. **When the order matters.** The function
+   $f(x,y)=(x^2-y^2)/(x^2+y^2)^2$ on $[0,1]^2$ shows that Fubini's theorem
+   :eqref:`eq_mdl-fubini` needs absolute integrability.
+    1. Verify that
+       $\frac{\partial}{\partial x}\frac{-x}{x^2+y^2}=f(x,y)$, and use it to
+       show that $\int_0^1\bigl(\int_0^1 f\,dx\bigr)\,dy=-\tfrac{\pi}{4}$.
+       Obtain the other order from the symmetry $f(y,x)=-f(x,y)$.
+    1. Show that $\int_{[0,1]^2}|f|\,dx\,dy=\infty$ by integrating $|f|$ in
+       polar coordinates over the quarter disc of radius $1$, which lies
+       inside the square.
+    1. A midpoint grid sum of $f$ on an $m\times m$ grid over the square adds
+       finitely many numbers, so its value does not depend on the order of
+       summation. What is its value for every $m$? Why does refining the
+       grid not single out either iterated integral?
+   :exlabel:`ex_mdl-integral-calculus-fubini-counterexample`
+1. **Gaussian normalizers and moments.** The Gaussian integral
+   :eqref:`eq_mdl-gaussian-integral` normalizes every Gaussian density by a
+   change of variables. Let
+   $p(x)=\tfrac{1}{\sqrt{2\pi\sigma^2}}\exp\bigl(-\tfrac{(x-\mu)^2}{2\sigma^2}\bigr)$
+   with $\sigma>0$.
+    1. Substitute $x=\mu+\sqrt2\,\sigma z$ to show that $p$ is normalized.
+       The density $\tfrac{1}{\sqrt\pi}e^{-x^2}$ of
+       :numref:`subsec_mdl-integration-in-probability` has this form. Which
+       $\mu$ and $\sigma^2$ does it have?
+    1. Let $X$ have density $p$, and let $g$ be differentiable with
+       $g(x)\,p(x)\to 0$ as $x\to\pm\infty$. Use
+       $p'(x)=-\tfrac{x-\mu}{\sigma^2}\,p(x)$ and integration by parts to
+       show that
+
+       $$\mathbb E\bigl[(X-\mu)\,g(X)\bigr]=\sigma^2\,\mathbb E\bigl[g'(X)\bigr].$$
+
+       Deduce $\mathbb E[(X-\mu)^2]$ and $\mathbb E[(X-\mu)^4]$.
+    1. Let $\boldsymbol\Sigma=\mathbf L\mathbf L^\top$ be a $d\times d$
+       covariance matrix with invertible $\mathbf L$. Use the change of
+       variables $\mathbf x=\mathbf L\mathbf z$ in
+       :eqref:`eq_mdl-change_var_nd` and Fubini's theorem to show that
+
+       $$\int_{\mathbb R^d}\exp\bigl(-\tfrac12\mathbf x^\top\boldsymbol\Sigma^{-1}\mathbf x\bigr)\,d\mathbf x=(2\pi)^{d/2}\,(\det\boldsymbol\Sigma)^{1/2}.$$
+   :exlabel:`ex_mdl-integral-calculus-gaussian-normalizers`
+1. **A moving support.** Let $X$ be uniform on $[0,\theta]$ with
+   $\theta>0$, so that
+   $L(\theta)=\mathbb E[X^2]=\int_0^\theta \tfrac{x^2}{\theta}\,dx=\tfrac{\theta^2}{3}$
+   and $L'(\theta)=\tfrac{2\theta}{3}$.
+    1. Differentiate $L$ with the Leibniz rule :eqref:`eq_mdl-leibniz`.
+       Which part of the result does the plain swap
+       :eqref:`eq_mdl-diff-under-integral` produce, and which part does it
+       miss?
+    1. On the support, $\log p_\theta(x)=-\log\theta$. Compute the
+       expectation of the score-function estimator
+       $X^2\,\partial_\theta\log p_\theta(X)$ of
+       :eqref:`eq_mdl-score-function-gradient`. Then let $g$ be continuous
+       on $[0,\infty)$. Show that the mean of
+       $g(X)\,\partial_\theta\log p_\theta(X)$ equals the plain swap
+       :eqref:`eq_mdl-diff-under-integral` applied to
+       $\mathbb E[g(X)]=\int_0^\theta g(x)\,p_\theta(x)\,dx$. What is its
+       bias as an estimate of $\frac{d}{d\theta}\mathbb E[g(X)]$, in terms
+       of $g(\theta)$ and $\theta$?
+    1. Write $X=\theta U$ with $U$ uniform on $[0,1]$ and compute the
+       expectation of the pathwise estimator of
+       :eqref:`eq_mdl-pathwise-gradient`. Why does it need no boundary term,
+       although the support of $X$ moves with $\theta$?
+   :exlabel:`ex_mdl-integral-calculus-moving-support`
+1. [code] **Grids against Monte Carlo.** ●
+   :numref:`subsec_mdl-integration-in-probability` compares exponents: with
+   $N$ evaluations in $d$ dimensions, a second-order grid has error of order
+   $N^{-2/d}$ and Monte Carlo of order $N^{-1/2}$. Test this comparison on
+   $f(\mathbf x)=\exp(-\|\mathbf x\|^2)$ over $[0,1]^d$, whose integral is
+   $\bigl(\tfrac{\sqrt\pi}{2}\operatorname{erf}(1)\bigr)^d$ by Fubini's
+   theorem.
+    1. Implement the midpoint rule on the full grid of $m^d$ cubes and the
+       Monte Carlo average :eqref:`eq_mdl-monte-carlo` over $N=m^d$ uniform
+       samples. For $d\in\{1,2,4,5,6\}$ and $N$ up to about $10^6$, plot the
+       relative error against $N$ on log-log axes, using for Monte Carlo the
+       root mean squared error over $20$ repetitions. Do the slopes match
+       the predicted exponents?
+    1. At $d=4$ the exponents tie. Which method is more accurate there?
+       What sets the constant in front of each rate, and how does each
+       constant change with $d$?
+    1. Both errors can be predicted exactly. The midpoint sum of $f$ is a
+       product of one-dimensional midpoint sums. The root mean squared
+       error of Monte Carlo is $\mathrm{sd}\bigl(f(\mathbf U)\bigr)/\sqrt N$
+       for $\mathbf U$ uniform on $[0,1]^d$, and Fubini's theorem factors
+       $\mathbb E\bigl[f(\mathbf U)^2\bigr]$ into one-dimensional integrals.
+       Compute both predicted relative errors for $d\in\{4,5,6\}$ at
+       $N\approx 10^5$ and compare them with your measurements. At which $d$
+       do the two methods break even? How reliably do $20$ repetitions
+       decide the comparison at that $d$?
+   :exlabel:`ex_mdl-integral-calculus-grids-monte-carlo`
+1. [code] **Monte Carlo under heavy tails.** ● The Monte Carlo average
+   :eqref:`eq_mdl-monte-carlo` converges by the law of large numbers when
+   the mean is finite, and its $1/\sqrt n$ rate rests on a finite variance.
+   Use the Pareto and Cauchy densities of exercise
+   :exref:`ex_mdl-integral-calculus-heavy-tails`, and write $\bar X_n$ for
+   the running mean of the first $n$ samples.
+    1. Show that $X=U^{-1/\alpha}$, with $U$ uniform on $(0,1)$, has the
+       Pareto density with tail index $\alpha$, by computing $P(X>x)$. Find
+       the analogous transformation of $U$ for the Cauchy density.
+    1. For $\alpha=3$ and $\alpha=1.5$, draw $200$ independent sequences of
+       $10^5$ samples each. Plot the median over sequences of
+       $|\bar X_n-\mathbb E[X]|$ against $n$ on log-log axes, and fit the
+       slopes. Why is the median a better summary here than the root mean
+       squared error?
+    1. Show that the largest of $n$ Pareto samples exceeds $n^{1/\alpha}$
+       with probability approaching $1-e^{-1}$ as $n\to\infty$. A single
+       sample of that size shifts $\bar X_n$ by about $n^{1/\alpha-1}$. Use
+       this to predict the slope for $1<\alpha<2$. Why does the same
+       argument not set the slope for $\alpha=3$?
+    1. The Pareto density with $\alpha=1$ and the Cauchy density have no
+       finite mean, so the error of (b) is undefined for them. Draw $200$
+       sequences of $10^5$ samples from each, and plot the 25th, 50th and
+       75th percentiles of $\bar X_n$ over sequences against $n$. What does
+       the running mean do in each case?
+   :exlabel:`ex_mdl-integral-calculus-heavy-tail-monte-carlo`
+1. [code] **Estimator variance for a quartic.** ● Let
+   $X\sim\mathcal N(\theta,1)$ and $g(X)=X^4$, so that
+   $\frac{d}{d\theta}\mathbb E[X^4]=4\theta^3+12\theta$.
+    1. Derive the single-sample pathwise estimator from
+       :eqref:`eq_mdl-pathwise-gradient` and the single-sample
+       score-function estimator from
+       :eqref:`eq_mdl-score-function-gradient`. Use the identity of problem
+       :exref:`ex_mdl-integral-calculus-gaussian-normalizers`b to show that
+       both have mean $4\theta^3+12\theta$.
+    1. For a scalar parameter $\theta$, a constant baseline $b$ leaves the
+       mean of $(g(X)-b)\,\partial_\theta\log p_\theta(X)$ unchanged,
+       because the score has mean zero. Derive the $b$ that minimizes its
+       variance, and check that for $g(X)=X^2$ it reproduces `b_opt` in the
+       code of :numref:`subsec_mdl-stochastic-gradient-estimators`.
+    1. Evaluate this baseline for $g(X)=X^4$. With $10^6$ samples at
+       $\theta\in\{0,1,2\}$, estimate the standard deviations of the
+       pathwise estimator, the score-function estimator, and the
+       score-function estimator with the baseline. Does the baseline close
+       the gap to the pathwise estimator at any $\theta$?
+   :exlabel:`ex_mdl-integral-calculus-quartic-estimators`
+1. [extended] **Gradients through a coin flip.** ●●
+   :citet:`Tucker.Mnih.Maddison.ea.2017` illustrate the bias of relaxed
+   gradient estimators on a toy problem. A single Bernoulli variable
+   $b\in\{0,1\}$ has $P(b=1)=\sigma(\theta)$ for a logit $\theta$, and the
+   objective is $L(\theta)=\mathbb E[(b-t)^2]$ with target $t=0.45$. Let $U$
+   be uniform on $(0,1)$, let $\ell=\log U-\log(1-U)$, and, for a
+   temperature $\tau>0$, let $z=\sigma\bigl((\theta+\ell)/\tau\bigr)$, the
+   two-class case of the Gumbel-softmax relaxation
+   :cite:`Jang.Gu.Poole.2017,Maddison.Mnih.Teh.2017`.
+    1. Compute $L(\theta)$ and $L'(\theta)$ in closed form. Which probability
+       $\sigma(\theta)$ minimizes $L$, and does a finite $\theta$ attain it?
+    1. Show that $b=\mathbb 1[z>\tfrac12]$ satisfies $P(b=1)=\sigma(\theta)$
+       for every $\tau$.
+    1. Implement three single-sample estimators of $L'(\theta)$: REINFORCE
+       :eqref:`eq_mdl-score-function-gradient` with the baseline
+       $L(\theta)$; the relaxed estimator $\frac{d}{d\theta}(z-t)^2$; and the
+       straight-through estimator $2(b-t)\frac{dz}{d\theta}$, which uses the
+       hard sample in the loss and the relaxed sample in the derivative
+       :cite:`Bengio.Leonard.Courville.2013`. Tabulate the mean and the
+       standard deviation of each estimator against $L'(\theta)$ for
+       $\theta\in\{-2,0,2\}$ and $\tau\in\{1,0.5,0.1\}$. How does the bias of
+       each estimator depend on $\theta$ and $\tau$?
+    1. Run stochastic gradient descent on $\theta$ from $\theta=0$ with step
+       size $1$ for $5000$ steps with REINFORCE and with the relaxed and
+       straight-through estimators at each $\tau$, replacing the REINFORCE
+       baseline by an exponential moving average of past losses.
+       Plot $L(\theta)$ along each run. Compute the relaxed objective
+       $R_\tau(\theta)=\mathbb E[(z-t)^2]$ by quadrature over $U$, and compare
+       its minimizer with the values of $\theta$ at which the relaxed runs
+       settle. How does lowering $\tau$ trade the bias of the relaxed
+       estimator against its variance?
+   :exlabel:`ex_mdl-integral-calculus-coin-flip`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/414)

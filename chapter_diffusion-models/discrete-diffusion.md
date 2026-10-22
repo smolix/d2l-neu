@@ -104,6 +104,7 @@ the vocabulary with probability $\beta_t$ and keeps it otherwise,
 $$
 Q_t = (1 - \beta_t)\, I + \beta_t\, \tfrac{1}{K} \mathbf{1}\mathbf{1}^\top,
 $$
+:eqlabel:`eq_diffusion-uniform-kernel`
 
 where $\mathbf{1}$ is the all-ones vector; its stationary distribution is
 uniform over the vocabulary, the counterpart of the standard Gaussian. The
@@ -191,7 +192,7 @@ the average over the joint $q(\mathbf{x}_{t-1}, \mathbf{x}_t \mid \hat{\mathbf{x
 and renormalize, which reweights the candidates by
 $q(\mathbf{x}_t \mid \hat{\mathbf{x}}_0)$; for the absorbing kernel that
 weight is the same for every candidate at a masked position, so the two
-forms agree, whereas for the uniform kernel they differ (Exercise 1).
+forms agree, whereas for the uniform kernel they differ (Exercise :exref:`ex_discrete-diffusion-two-forms`).
 
 ### The Posterior of the Absorbing Chain
 
@@ -235,6 +236,7 @@ $(1 - \bar{\alpha}_{t-1}) / (1 - \bar{\alpha}_t)$, or replaces it by a draw
 from $p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)$.
 
 ### A Weighted Cross-Entropy
+:label:`subsec_diffusion-masked-ce`
 
 **Proposition (masked diffusion bound).** *For the absorbing kernel with
 $\bar{\alpha}_0 = 1$, $\bar{\alpha}_t < 1$ for $t \geq 1$, and
@@ -340,8 +342,9 @@ for equally spaced levels, and summing over the $S$ jumps gives $1/S$.
 With an *exact* network, one whose prediction at each masked position is
 the true conditional distribution of that token given the unmasked ones,
 the sampler thus produces the mixture
-$(1 - 1/S)\, p + (1/S)\, p^1 \otimes p^2$ of the true joint and the product
-of its marginals, whose total variation distance from $p$ is
+$(1 - 1/S)\, p + (1/S)\, p^1 \otimes p^2$ of the true joint distribution $p$
+of the two tokens and the product of its marginals $p^1$ and $p^2$, whose
+total variation distance from $p$ is
 $\mathrm{TV}(p^1 \otimes p^2, p) / S$. The experiments below measure this.
 
 The sampler also places masked diffusion among older models. Trained at a
@@ -380,9 +383,10 @@ product of two one-dimensional Gaussian integrals, so the true table is
 available exactly, and so is its entropy, the negative log-likelihood that a
 perfect model attains. Little mass lies outside the square in any case: the
 nearest mode is five standard deviations from its edge. The cell also prints the bound that an *exact* network would
-attain, the entropy plus $I(X^1; X^2) / T$ with $I$ the mutual information
-of the two coordinates, because pairs masked together are predicted
-independently; Exercise 3 derives it, and the training experiment below
+attain, the entropy $H(X^1, X^2)$ plus $I(X^1; X^2) / T$, with $X^1$ and
+$X^2$ the two tokens of a pair drawn from the table and $I$ their mutual
+information, because pairs masked together are predicted
+independently; Exercise :exref:`ex_discrete-diffusion-revealed-together` derives it, and the training experiment below
 uses it as the reference. Two reference quantities accompany the table:
 the total variation distance between a histogram of $20{,}000$ true samples
 and the table, the floor that finite samples impose on every comparison
@@ -529,7 +533,7 @@ The resulting number is the bound averaged over the true distribution,
 which cannot fall below the entropy of the table. Part of the excess
 remains even for an exact network: its bound equals the entropy plus
 $I(X^1; X^2) / T$, the mutual information of the two coordinates divided by
-the number of steps (Exercise 3), the cost of predicting the two tokens
+the number of steps (Exercise :exref:`ex_discrete-diffusion-revealed-together`), the cost of predicting the two tokens
 independently whenever both are masked. No network that predicts the
 positions independently can go below this floor, whose value the first cell
 printed. We track the model's bound during training.
@@ -706,6 +710,7 @@ fig.tight_layout()
 ```
 
 ## Images as Binary Tokens
+:label:`subsec_diffusion-binary-images`
 
 Thresholding Fashion-MNIST at half intensity makes every pixel a token
 with two values, and a masked image has three. The U-Net of
@@ -983,50 +988,338 @@ data :cite:`Nie.Zhu.You.ea.2025`.
 
 ## Exercises
 
-1. **The uniform kernel.** Derive the posterior
-   $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)$ for the uniform
-   kernel from :eqref:`eq_diffusion-discrete-posterior` and
-   :eqref:`eq_diffusion-discrete-qbar`. Show that it depends on whether
-   $\mathbf{x}_t = \mathbf{x}_0$, and that for $t \geq 2$, unlike the
-   absorbing case, every value keeps positive probability. Why does this
-   make the bound's divergence terms more expensive to evaluate than
-   :eqref:`eq_diffusion-masked-loss`? Then show that for this kernel the two
-   ways of averaging the posterior over the network's prediction, the
-   average :eqref:`eq_diffusion-x0-parameterization` and the renormalized
-   average of the joint $q(\mathbf{x}_{t-1}, \mathbf{x}_t \mid \hat{\mathbf{x}}_0)$
-   used by :citet:`Austin.Johnson.Ho.ea.2021`, differ.
-1. **Weights of other schedules.** Compute the weight
-   $w_t = (\bar{\alpha}_{t-1} - \bar{\alpha}_t)/(1 - \bar{\alpha}_t)$ for
-   the schedule $\bar{\alpha}_t = 1 - (t/T)^2$ and compare it with $1/t$.
-   Which steps receive more weight, and how does the expected number of
-   tokens revealed per step change? Then verify the substitution
-   $u = 1 - \bar{\alpha}(\tau)$ in the continuous-time limit and explain
-   why the limiting bound does not depend on the schedule.
-1. **Revealed together.** Generalize the calculation of the independence
-   error to $L$ tokens: for the linear schedule with $S$ equally spaced
-   steps, compute the expected number of *pairs* of tokens revealed in the
-   same step, and show that it is $\binom{L}{2}/S$. What does this suggest
-   about the number of steps needed for sequences of length $L$? Then
-   evaluate :eqref:`eq_diffusion-masked-loss` for two tokens and an exact
-   network under the linear schedule, using the three mask patterns and
-   their probabilities, and show that it equals $H(X^1, X^2) + I(X^1; X^2) / T$.
-1. [code] **One token at a time.** Modify `unmask` so that every step
-   reveals exactly one masked position, chosen uniformly at random, and
-   sample $20{,}000$ pairs. Compare the total variation distance to the
-   table with the thirty-two-step sampler and explain why the product term
-   disappears.
-1. [code] **Schedules at finite $T$.** Train the pair model with the
-   schedule $\bar{\alpha}_t = 1 - (t/T)^2$ and compare its exact bound with
-   that of the linear schedule. Show that an exact network attains
-   $H(X^1, X^2) + I(X^1; X^2) \sum_{t=1}^{T} (\bar{\alpha}_{t-1} - \bar{\alpha}_t)^2$,
-   evaluate the sum for both schedules, and explain why the difference
-   vanishes as $T \to \infty$. Why does the exact prediction not depend on
-   the time input at all?
-1. [code] **Steps against speckles.** Sample the image model with
-   $S \in \{100, 25, 10, 4, 1\}$ steps and plot the speckle rate against
-   $S$. At which point does it approach the rate of the training images,
-   and what does that say about the number of network evaluations that
-   masked diffusion needs for images of this size?
+1. **The uniform kernel.** Let the forward chain use the uniform kernel
+   :eqref:`eq_diffusion-uniform-kernel` with $\beta_t > 0$ at every step.
+    1. Show from :eqref:`eq_diffusion-discrete-qbar` that
+       $\mathbf{x}_t = \mathbf{x}_0$ with probability
+       $\bar{\alpha}_t + (1 - \bar{\alpha}_t)/K$. A token that shows a
+       value at step $t$ may therefore have been resampled. Which question
+       about every position does a network have to answer under this kernel
+       but not under the absorbing kernel?
+    1. Derive the posterior
+       $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)$ from
+       :eqref:`eq_diffusion-discrete-posterior`, treating the cases
+       $\mathbf{x}_t = \mathbf{x}_0$ and $\mathbf{x}_t \neq \mathbf{x}_0$
+       separately. Show that for $t \geq 2$ every one of the $K$ values has
+       positive probability, unlike under the two-point posterior
+       :eqref:`eq_diffusion-masked-posterior`.
+    1. The divergence terms of the bound compare this posterior with the
+       reverse model at every position. Why are they more expensive to
+       evaluate than the summand of :eqref:`eq_diffusion-masked-loss`?
+   :exlabel:`ex_discrete-diffusion-uniform-kernel`
+
+1. **Weights of other schedules.** The weight of step $t$ in
+   :eqref:`eq_diffusion-masked-loss` is
+   $w_t = (\bar{\alpha}_{t-1} - \bar{\alpha}_t)/(1 - \bar{\alpha}_t)$.
+    1. Compute $w_t$ for the schedule $\bar{\alpha}_t = 1 - (t/T)^2$ and
+       compare it with the weight $1/t$ of the linear schedule.
+    1. Show that a $T$-step sampling run from the all-mask sequence reveals
+       a given token at step $t$ with probability
+       $\bar{\alpha}_{t-1} - \bar{\alpha}_t$, independently of the other
+       positions, and that this probability equals $w_t$ times the
+       probability that the token is masked at step $t$ of the bound. In
+       which part of a sampling run does the schedule of (a) reveal most of
+       the tokens?
+    1. For a network that receives the masking probability $u$, the
+       continuous-time limit of :numref:`subsec_diffusion-masked-ce` is
+       $\int_0^1 \frac{1}{u}\, \mathbb{E}_u[\cdots]\, du$ for every
+       schedule. Show that the integrand stays bounded as $u \to 0$,
+       although the weight $1/u$ diverges.
+    1. Training draws the time $\tau$ uniformly from $[0, 1]$. Which
+       density does the masking probability $u = 1 - \bar{\alpha}(\tau)$
+       then have? Why does the schedule change the variance of the
+       one-sample estimate of the bound, although it leaves the limiting
+       bound unchanged :cite:`Kingma.Salimans.Poole.ea.2021`?
+   :exlabel:`ex_discrete-diffusion-schedule-weights`
+
+1. **Pairs revealed together.** Let the sampler use the levels
+   $T = t_0 > t_1 > \cdots > t_S = 0$ under a schedule with
+   $\bar{\alpha}_0 = 1$ and $\bar{\alpha}_T = 0$, and write
+   $\Delta_k = \bar{\alpha}_{t_{k+1}} - \bar{\alpha}_{t_k}$ for the
+   increase of $\bar{\alpha}$ in jump $k$, where $k = 0, \ldots, S - 1$.
+    1. By problem :exref:`ex_discrete-diffusion-schedule-weights`b,
+       applied to the coarser chain of the levels $t_k$, a token is revealed
+       in jump $k$ with probability $\Delta_k$, independently of the other
+       positions. Show that two tokens are revealed in the same jump with
+       probability $\rho = \sum_k \Delta_k^2$, and that, among all $S$
+       increments that sum to one, equal increments $\Delta_k = 1/S$
+       minimize $\rho$.
+    1. Show that with an exact network the sampler draws the two tokens of
+       the running example from $(1 - \rho)\, p + \rho\, p^1 \otimes p^2$.
+    1. For a sequence of $L$ tokens and equal increments, compute the
+       expected number of pairs of tokens revealed in the same jump. How
+       many steps keep it below one for $L = 1024$? Why does this count
+       overstate the error of the sampler on text?
+   :exlabel:`ex_discrete-diffusion-pairs-revealed`
+
+1. [code] **One token at a time.** An order-agnostic autoregressive sampler
+   reveals exactly one token per step. Use the trained `model` with
+   `T = 32`, `MASK = 32`, and the linear `alpha_bar` of the running example,
+   which the code of :numref:`subsec_diffusion-binary-images` redefines.
+    1. Modify `unmask` so that it takes two steps. The first reveals one of
+       the two positions, chosen uniformly at random, from the prediction at
+       the all-mask input with $t = 32$. The second reveals the other
+       position from the prediction with $t = 16$. Sample $20{,}000$ pairs
+       and compare their total variation distance to `table` with that of
+       the thirty-two-step sampler.
+    1. The same predictions define, for the order that reveals position 1
+       first, a table over all $1024$ pairs,
+
+       $$q_{12}(a, b) = p_{\boldsymbol{\theta}}(\mathbf{x}_0^1 = a \mid [\textrm{M}], [\textrm{M}])\, p_{\boldsymbol{\theta}}(\mathbf{x}_0^2 = b \mid a, [\textrm{M}]),$$
+
+       and the reverse order defines a table $q_{21}$. Compute both from
+       `model` with the time inputs of (a), and their total variation
+       distances to `table` and to each other. An
+       exact network makes the two tables equal. What does their difference
+       say about the trained network?
+   :exlabel:`ex_discrete-diffusion-one-token`
+
+1. [code] **Bits by masking level.** The held-out bound `bound` of
+   :numref:`subsec_diffusion-binary-images` is the average over $t$ of
+   `masked_image_loss` at level $t$.
+    1. Show that under the linear schedule the expected term at level $t$
+       is the sum, over the $784$ positions, of the expected cross-entropy
+       at a position given that it is masked, for images masked with
+       probability $t/T$.
+    1. Evaluate the term at every level for `ema` on `X_test`, averaging
+       over several random masks at the low levels, where few pixels are
+       masked. Plot it in bits per pixel against the masking probability
+       $t/T$.
+    1. Compare the term at $t = T$ with the independent-pixel cross-entropy
+       `independent`, and explain the relation between the two models.
+       Which half of the masking levels contributes more to the bound?
+   :exlabel:`ex_discrete-diffusion-bits-by-level`
+
+1. [code] **Steps against speckles.** By problem
+   :exref:`ex_discrete-diffusion-pairs-revealed`a, two neighboring pixels
+   are revealed in the same step with probability $1/S$. Sample $480$
+   images from `ema` with `unmask_images`, in batches of $48$, for
+   $S \in \{100, 50, 25, 10, 4, 2, 1\}$ steps, and compute `speckles` for
+   each $S$. Plot the speckle rate against $1/S$, together with the rate of
+   the training images. Over which range of $S$ is the rate linear in
+   $1/S$? Extrapolate the linear part to $1/S = 0$. Which part of the
+   excess of the hundred-step samples over the training images can no
+   number of steps remove?
+   :exlabel:`ex_discrete-diffusion-steps-speckles`
+
+1. **Two reverse parameterizations.** ● The reverse model
+   :eqref:`eq_diffusion-x0-parameterization` averages the posterior over
+   the network's prediction. :citet:`Austin.Johnson.Ho.ea.2021` instead set
+
+   $$p_{\boldsymbol{\theta}}(\mathbf{x}_{t-1} \mid \mathbf{x}_t) \propto \sum_{\hat{\mathbf{x}}_0} q(\mathbf{x}_{t-1}, \mathbf{x}_t \mid \hat{\mathbf{x}}_0)\, \tilde{p}_{\boldsymbol{\theta}}(\hat{\mathbf{x}}_0 \mid \mathbf{x}_t)$$
+
+   for a network output $\tilde{p}_{\boldsymbol{\theta}}$. Let
+   $q(\mathbf{x}_0 \mid \mathbf{x}_t)$ and
+   $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t)$ denote the conditionals of the
+   forward process started from the data.
+    1. Take a single token. Show that if the prediction in
+       :eqref:`eq_diffusion-x0-parameterization` equals
+       $q(\mathbf{x}_0 \mid \mathbf{x}_t)$, the reverse model is the true
+       reverse transition $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t)$, for
+       every kernel.
+    1. For the same token, show that the renormalized form yields
+       $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t)$ when
+       $\tilde{p}_{\boldsymbol{\theta}}(\cdot \mid \mathbf{x}_t)$ is the
+       data distribution itself, and in general not when it is
+       $q(\mathbf{x}_0 \mid \mathbf{x}_t)$. Under the uniform kernel, what
+       happens to the evidence that $\mathbf{x}_t$ carries about
+       $\mathbf{x}_0$ in the second case?
+    1. Now take a sequence of $L$ tokens and a prediction that factorizes
+       over positions. Show that at position $i$ the renormalized form
+       agrees with the average form with prediction
+       $q(\mathbf{x}_0^i \mid \mathbf{x}_t)$ when
+       $\tilde{p}_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)$ is
+       the conditional of $\mathbf{x}_0^i$ given the other positions of
+       $\mathbf{x}_t$ alone. Which inputs does the network of each form have
+       to use at position $i$?
+   :exlabel:`ex_discrete-diffusion-two-forms`
+
+1. [code] **Time-agnostic predictions.** ● :citet:`Ou.Nie.Xue.ea.2025`
+   remove the time input from the network of a masked diffusion model.
+    1. Show that the prediction that minimizes the expected cross-entropy
+       at step $t$ of :eqref:`eq_diffusion-masked-loss`, the conditional
+       of a masked token $\mathbf{x}_0^i$ given all of $\mathbf{x}_t$,
+       equals its conditional given the unmasked tokens of $\mathbf{x}_t$
+       and does not depend on $t$. Which property of the absorbing forward
+       process does the argument use? Does the same hold for the uniform
+       kernel?
+    1. A step that reveals no token leaves the input of the next step
+       unchanged. A sampler can therefore draw the reveal decisions first
+       and evaluate a network without time input only in the jumps that
+       reveal at least one token. Show that with $S$ equally spaced levels
+       under the linear schedule the expected number of evaluations is
+       $S\, (1 - (1 - 1/S)^L)$ for $L$ tokens. Evaluate it for the running
+       example with $S = 32$, for the binary images with $S = 100$, and for
+       $L = S = 1024$.
+    1. BERT :cite:`Devlin.Chang.Lee.ea.2018` is trained to predict masked
+       tokens at a masking rate of $15\%$. By (a), its exact predictions
+       are those that the sampler needs at mask patterns of that density.
+       Which inputs of a sampling run from the all-mask sequence lie far
+       outside its training distribution?
+    1. `MaskedMLP` receives the step as an input. Restore `T = 32` and
+       `MASK = 32` as in problem :exref:`ex_discrete-diffusion-one-token`,
+       and fix the pattern in which the first token is masked and the
+       second is observed. Compute the predictions of the trained `model`
+       for all $32$ values of the second token at $t \in \{1, 16, 31\}$.
+       Then compute two kinds of Kullback–Leibler divergence, each averaged
+       over the marginal of the second token: that of the predictions at
+       $t = 16$ and at $t = 31$ from those at $t = 1$, and that of the
+       predictions at each $t$ from the exact conditionals of `table`. In
+       single precision some values of the second token have marginal
+       probability zero or nearly zero, so clamp the marginal at a small
+       positive value before dividing. What do the sizes of the two kinds say about the
+       use that the trained network makes of its time input?
+   :exlabel:`ex_discrete-diffusion-time-agnostic`
+
+1. [code] **Floor of an exact network.** ● Let a schedule with
+   $\bar{\alpha}_0 = 1$ and $\bar{\alpha}_T = 0$ have the increments
+   $\Delta_t = \bar{\alpha}_{t-1} - \bar{\alpha}_t$, and consider the two
+   tokens of the running example.
+    1. Show that the bound :eqref:`eq_diffusion-masked-loss` of an exact
+       network, averaged over the true table, is
+
+       $$H(X^1, X^2) + I(X^1; X^2) \sum_{t=1}^{T} \Delta_t^2.$$
+
+       Write the term of step $t$ with the three mask patterns and their
+       probabilities; a telescoping sum of $(1 - \bar{\alpha}_t)^2$
+       evaluates the sum over $t$. Check that the linear schedule gives
+       $H(X^1, X^2) + I(X^1; X^2)/T$.
+    1. By problem :exref:`ex_discrete-diffusion-pairs-revealed`a,
+       $\sum_t \Delta_t^2$ is the probability that the $T$-step sampler
+       reveals both tokens in the same step. Explain why the excess of the
+       bound over the entropy is the mutual information times this
+       probability.
+    1. Evaluate the sum for the schedule $\bar{\alpha}_t = 1 - (t/T)^2$ in
+       closed form and at $T = 32$, and compare the floor with that of the
+       linear schedule. Why does the choice of schedule cease to matter as
+       $T \to \infty$?
+    1. Write a function with the call signature of `MaskedMLP` that
+       returns the logarithms of the exact conditionals computed from
+       `table`, and of the marginals where both tokens are masked. With
+       `T = 32` and `MASK = 32` restored as in problem
+       :exref:`ex_discrete-diffusion-one-token`, pass it to `exact_bound`
+       with `alpha_bar` set to each of the two schedules. In single
+       precision `table` has cells of probability zero, so clamp
+       probabilities at a small positive value before dividing and taking
+       logarithms.
+    1. Write a version of `masked_loss` that takes the schedule as an
+       argument, train `MaskedMLP` with it under the schedule of (c) with
+       the settings used for `model`, and compare its exact bound with its
+       floor and with the final exact bound of `model`.
+   :exlabel:`ex_discrete-diffusion-revealed-together`
+
+1. **The order-agnostic bound.** ● Let a network ignore the step, as the
+   exact network does by problem :exref:`ex_discrete-diffusion-time-agnostic`a,
+   and write $\ell(i, U) = -\log p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_0^U)$
+   for its loss at position $i$ when exactly the positions in the set $U$
+   are unmasked. The continuous-time limit of the bound in
+   :numref:`subsec_diffusion-masked-ce`, written as an integral over the
+   masking probability $u$, is then a weighted sum of the losses
+   $\ell(i, U)$ over $i \notin U$. :citet:`Ou.Nie.Xue.ea.2025` show that it
+   equals the expected negative log-likelihood of an order-agnostic
+   autoregressive model :cite:`Uria.Murray.Larochelle.2014`,
+
+   $$\mathbb{E}_{\sigma} \Big[ \sum_{k=1}^{L} -\log p_{\boldsymbol{\theta}}\big(\mathbf{x}_0^{\sigma(k)} \mid \mathbf{x}_0^{\sigma(1)}, \ldots, \mathbf{x}_0^{\sigma(k-1)}\big) \Big],$$
+
+   where $\sigma$ is a uniformly random permutation of the $L$ positions.
+    1. Find the weight of $\ell(i, U)$ in the integral when $|U| = L - m$.
+       The Beta integral
+       $\int_0^1 u^{m-1} (1 - u)^{L-m}\, du = (m-1)!\, (L-m)! / L!$
+       evaluates it.
+    1. Find the probability that a random order reveals the positions of
+       $U$ first and position $i$ next, and conclude that the two
+       expressions agree.
+    1. Every order gives the same value for an exact network. Which value
+       is it? Compare with problem
+       :exref:`ex_discrete-diffusion-revealed-together`a as $T \to \infty$.
+    1. Use Jensen's inequality to show that the expression also bounds the
+       negative log-likelihood of the model that draws an order uniformly
+       at random and then samples the tokens in that order. Which sampler
+       of problem :exref:`ex_discrete-diffusion-one-token` implements this
+       model for two tokens?
+   :exlabel:`ex_discrete-diffusion-order-agnostic`
+
+1. [code] **Confidence-ordered unmasking.** ● The sampler of
+   :citet:`Chang.Zhang.Jiang.ea.2022` draws a candidate at every masked
+   position, keeps the candidates that are most probable under their own
+   predicted distributions, and masks the others again;
+   :citet:`Nie.Zhu.You.ea.2025` use the same rule with the most probable
+   value as the candidate. Apply it to the two tokens of the running
+   example, with exact conditionals computed from `table` and two steps
+   that reveal one token each. In the first step, the candidates
+   $a \sim p^1$ and $b \sim p^2$ are drawn, and the first is kept if
+   $p^1(a) \geq p^2(b)$, the second otherwise. The second step draws the
+   other token from its conditional given the kept one.
+    1. Write the probability that the sampler outputs the pair $(a, b)$ as
+       a sum of two terms, and compute the resulting table exactly from
+       `table`.
+    1. Compare it with `table` by total variation distance and by entropy.
+       Which cells gain mass? Why does the random choice of the position in
+       problem :exref:`ex_discrete-diffusion-one-token`a introduce no such
+       error?
+    1. Under the rule of :citet:`Nie.Zhu.You.ea.2025`, both steps take the
+       most probable value instead of a draw: in the first step the
+       candidates are the modes of $p^1$ and $p^2$, and in the second step
+       the other token is the mode of its conditional given the kept one.
+       Which pairs does this sampler output, and with which probabilities?
+    1. Why can the bound :eqref:`eq_diffusion-masked-loss` not detect the
+       error of (b)?
+   :exlabel:`ex_discrete-diffusion-confidence-unmasking`
+
+1. [code] **Uniform kernel in practice.** ●●
+   :citet:`Austin.Johnson.Ho.ea.2021` report $1.61$ bits per character for
+   the uniform kernel and $1.45$ for the absorbing kernel on text8, a
+   character-level benchmark, with $1000$ steps. Repeat the comparison on
+   the two tokens of the running example, with $T = 32$ and the linear
+   schedule $\bar{\alpha}_t = 1 - t/T$ for both kernels.
+    1. Write a function that evaluates the bound of a uniform-kernel model
+       exactly, averaged over `table`, with the reverse model
+       :eqref:`eq_diffusion-x0-parameterization` and the posterior of
+       problem :exref:`ex_discrete-diffusion-uniform-kernel`b. Unlike
+       `exact_bound`, it has to enumerate all $1024$ noisy pairs at every
+       step. Why does the prior term vanish?
+    1. Evaluate the function with the exact predictions
+       $q(\mathbf{x}_0^i \mid \mathbf{x}_t)$, computed by Bayes' rule from
+       `table` and :eqref:`eq_diffusion-discrete-qbar`. Compare this floor
+       with the floor $H(X^1, X^2) + I(X^1; X^2)/T$ of the absorbing kernel.
+    1. Train `MaskedMLP`, whose mask channel then stays zero, on a
+       one-sample estimate of the uniform-kernel bound. Compare its exact
+       bound with the final exact bound of `model`.
+    1. Sample $20{,}000$ pairs with the $T$-step reverse chain and compare
+       their total variation distance to `table` with that of `unmask` at
+       $32$ steps. Explain the ranking of the two kernels with problem
+       :exref:`ex_discrete-diffusion-uniform-kernel`a.
+   :exlabel:`ex_discrete-diffusion-uniform-running-example`
+
+1. [extended] **A masked diffusion language model.** ●● Train a masked
+   diffusion model on the character-level Time Machine windows of
+   :numref:`subsec_gpt-training` and compare it with the autoregressive
+   `GPT` trained there. That run passes about $160$ times over its corpus.
+   The validation loss of `GPT` reaches its minimum after about $200$ of
+   its $2000$ updates and then rises while its training loss keeps
+   falling. :citet:`Prabhudesai.Wu.Zadeh.ea.2025` report that masked
+   diffusion models make better use of repeated data than autoregressive
+   models.
+    1. Build the denoiser from `GPT` with an attention call that passes
+       `is_causal=False`, one extra vocabulary entry for the mask, and no
+       time input, which problem
+       :exref:`ex_discrete-diffusion-time-agnostic`a justifies; its forward
+       pass accepts the step and ignores it, so that `masked_loss` can call
+       it. Train it with `masked_loss`, with `T = 128`, the linear
+       `alpha_bar` and `MASK` set to the new vocabulary entry, on the
+       windows of $128$ characters for $2000$ updates.
+    1. Every $200$ updates, estimate its bound in bits per character on the
+       validation windows, with several masks per window. Plot it next to
+       the validation loss of `GPT` in bits per character. Compare the best
+       value of each curve and the update at which it is reached.
+    1. Continue training the denoiser to $8000$ updates if its bound still
+       falls at update $2000$. Which model begins to overfit later? How does
+       training on randomly masked windows change what the denoiser can
+       memorize from a window it has seen many times?
+    1. Sample windows with $S \in \{128, 32, 8\}$ steps and compare them
+       with samples of `GPT`. Where do the few-step samples fail? Relate the
+       failures to problem :exref:`ex_discrete-diffusion-pairs-revealed`c.
+   :exlabel:`ex_discrete-diffusion-language-model`
 
 <!-- slides -->
 

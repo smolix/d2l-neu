@@ -760,8 +760,9 @@ GoogleNet().layer_summary((1, 96, 96, 1))
 ```
 
 Training follows the AlexNet and VGG procedure, so we do not repeat the run
-here. GoogLeNet uses about 7 million parameters, compared with VGG's 138
-million, while improving accuracy in the cited comparison. It therefore
+here. With a 1000-class ImageNet head, GoogLeNet uses about 7 million
+parameters, compared with 138 million for VGG-16, while improving accuracy in
+the cited comparison. It therefore
 illustrates explicit trade-offs between evaluation cost and error, as well as
 manual experimentation with block-level hyperparameters. We revisit systematic
 network-structure exploration in :numref:`sec_cnn-design`.

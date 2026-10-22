@@ -510,16 +510,16 @@ per framework, rounded).
 
 | Model | Parameters | Multiply-adds | PyTorch | JAX | TensorFlow |
 |---|---:|---:|---:|---:|---:|
-| Mini-MobileNet | 542,474 | 50.3 million | ≈91% | ≈91% | ≈91.5% |
-| VGG-style control | 583,594 | 384.9 million | ≈89.5% | ≈89.5% | ≈92.5% |
+| Mini-MobileNet | 542,474 | 50.3 million | ≈91.5% | ≈91% | ≈91.5% |
+| VGG-style control | 583,594 | 384.9 million | ≈91.5% | ≈88.5% | ≈92% |
 
 The two models have comparable accuracy in this small experiment: every run
-of both architectures falls in a band of roughly 89–93%, and which of the
-two comes out ahead varies with the framework and the seed — a difference
-within run-to-run noise, on which no conclusion should be built. The stable
+of both architectures falls in a band of roughly 88.5–92.5%, and which of the
+two comes out ahead varies with the framework and the seed. The accuracy
+difference lies within run-to-run noise, and no conclusion should be built on it. The stable
 result is computational. At this parameter budget the separable network
-performs about $7.7\times$ fewer multiply-adds, and its epochs run roughly
-$2$–$3\times$ faster (in this PyTorch run, about 7 versus 18 seconds). The
+performs about $7.7\times$ fewer multiply-adds, but its epochs run only about
+$1.5\times$ faster (in this PyTorch run, 8.9 versus 13.6 seconds). The
 speedup is far smaller than the operation-count ratio: depthwise
 convolutions perform little arithmetic per byte of memory, so operation
 count and wall-clock time diverge. We return to this systems constraint

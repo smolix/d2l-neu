@@ -1111,28 +1111,8 @@ subclass with a few lines of array code in its `_init_weight`.
 
 ## Exercises
 
-1. [code] **Layer activations across the network.** Instrument the stack
-   that `output_std` builds in :numref:`subsec_variance_across_depth` so
-   that it records the standard deviation of the activation after every
-   block, by running the blocks one at a time. Plot the recorded standard
-   deviation against depth on a logarithmic axis for the default and scaled
-   treatments at $N=32$.
-1. **Growth per block.** ● Assume that each block's branch output is
-   uncorrelated with the block's input.
-    1. Use the second-moment argument of :numref:`subsec_he_init` to derive
-       the factor by which one block of the default treatment multiplies
-       the standard deviation of the stream, and compare it with the slope
-       of the default curve from the first exercise.
-    1. Derive the standard deviation at the end of the scaled stack as a
-       function of $N$, and its limit as $N \to \infty$.
-1. **Zero initialization.** Zero-initialize *all* layers of every block
-   instead of just the output projection. The forward pass still returns the
-   input, but what can the network learn? Work out which parameters receive
-   a nonzero gradient, and relate the answer to the symmetry-breaking
-   argument of :numref:`sec_numerical_stability`.
-
 :begin_tab:`pytorch`
-4. [code] **Default scale.** PyTorch draws both the weight and the bias of
+1. [code] **Default scale.** PyTorch draws both the weight and the bias of
    an `nn.Linear` from $U(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$.
     1. With the biases set to zero, compute the factor by which one such
        layer followed by a ReLU multiplies the second moment of its input,
@@ -1148,7 +1128,7 @@ subclass with a few lines of array code in its `_init_weight`.
 :end_tab:
 
 :begin_tab:`jax`
-4. [code] **Default scale.** NNX draws the kernel of an `nnx.Linear` from
+1. [code] **Default scale.** NNX draws the kernel of an `nnx.Linear` from
    LeCun normal, a truncated normal rescaled to standard deviation
    $1/\sqrt{n_\textrm{in}}$, and starts the bias at zero.
     1. Compute the factor by which one such layer followed by a ReLU
@@ -1162,7 +1142,7 @@ subclass with a few lines of array code in its `_init_weight`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-4. [code] **Default scale.** Keras draws the kernel of a `Dense` layer
+1. [code] **Default scale.** Keras draws the kernel of a `Dense` layer
    from Glorot uniform, $U(\pm\sqrt{6/(n_\textrm{in} + n_\textrm{out})})$,
    and starts the bias at zero.
     1. For a layer with $n_\textrm{in} = n_\textrm{out}$, compute the
@@ -1176,7 +1156,7 @@ subclass with a few lines of array code in its `_init_weight`.
 :end_tab:
 
 :begin_tab:`mxnet`
-4. [code] **Default scale.** Gluon draws every `Dense` weight from
+1. [code] **Default scale.** Gluon draws every `Dense` weight from
    $U(-0.07, 0.07)$, whatever the layer's shape, and starts the bias at
    zero.
     1. Compute, as a function of the width $n$, the factor by which an
@@ -1189,7 +1169,7 @@ subclass with a few lines of array code in its `_init_weight`.
        output, the mean of its squared entries, with your predictions.
 :end_tab:
 
-5. **Truncated normal.** For a normal distribution truncated at
+2. **Truncated normal.** For a normal distribution truncated at
    $\pm 2\sigma$: what fraction of draws does the clip discard, and by how
    much does it shrink the standard deviation? Neither quantity has an
    elementary closed form; express both in terms of the standard normal
@@ -1198,6 +1178,20 @@ subclass with a few lines of array code in its `_init_weight`.
    demo in :numref:`subsec_truncated_normals`, and the discarded fraction
    by counting the entries of the demo's plain normal draw that lie beyond
    $\pm 2\sigma$.
+
+1. **Zero initialization.** Zero-initialize *all* layers of every block
+   instead of just the output projection. The forward pass still returns the
+   input, but what can the network learn? Work out which parameters receive
+   a nonzero gradient, and relate the answer to the symmetry-breaking
+   argument of :numref:`sec_numerical_stability`.
+
+1. [code] **Layer activations across the network.** Instrument the stack
+   that `output_std` builds in :numref:`subsec_variance_across_depth` so
+   that it records the standard deviation of the activation after every
+   block, by running the blocks one at a time. Plot the recorded standard
+   deviation against depth on a logarithmic axis for the default and scaled
+   treatments at $N=32$.
+
 1. [code] **Kaiming initialization.** Implement the Kaiming (He)
    initializers of :numref:`subsec_he_init`, uniform and normal, with an
    explicit `nonlinearity` argument that switches the gain between `'relu'`
@@ -1210,12 +1204,22 @@ subclass with a few lines of array code in its `_init_weight`.
     1. Apply your normal initializer to the stack of
        :numref:`subsec_variance_across_depth`, with the `'relu'` gain on
        each block's first layer and the `'linear'` gain on its output
-       projection, and add the resulting curve to the plot of the first
-       exercise. Does matching the per-layer gain keep the standard
+       projection, and add the resulting curve to the plot of the previous
+       problem. Does matching the per-layer gain keep the standard
        deviation flat across depth, and why?
 
     *Adapted from CMU 10-714, [Homework 2](https://github.com/dlsyscourse/hw2)
     and [Homework 4](https://github.com/dlsyscourse/hw4).*
+
+1. **Growth per block.** ● Assume that each block's branch output is
+   uncorrelated with the block's input.
+    1. Use the second-moment argument of :numref:`subsec_he_init` to derive
+       the factor by which one block of the default treatment multiplies
+       the standard deviation of the stream, and compare it with the slope
+       of the default curve from problem 4.
+    1. Derive the standard deviation at the end of the scaled stack as a
+       function of $N$, and its limit as $N \to \infty$.
+
 1. [code] **Data-driven calibration.** ● Initialize the stack of
    :numref:`subsec_variance_across_depth` with the default treatment, then
    calibrate it block by block on one mini-batch of unit-variance inputs.

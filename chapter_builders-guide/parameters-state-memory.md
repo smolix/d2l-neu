@@ -1660,17 +1660,6 @@ not stop running-statistics updates in training mode.
 
 ## Exercises
 
-1. [code] **Memory footprint.** Write a helper that reports, for each
-   top-level block of `net`, its number of state entries and its bytes
-   under fp32 Adam training with every parameter trained.
-    1. Which block dominates? At what output width would the output layer
-       overtake one residual block?
-    1. Insert a batch normalization layer over the 64 hidden features
-       between the two residual blocks. Extend the helper so that it costs
-       the layer's running statistics correctly, and report each block's
-       bytes per entry. For which blocks is the share of the total bytes
-       larger than the share of the total entries, and for which is it
-       smaller? Explain both directions.
 1. [code] **Running statistics.** In training mode a batch normalization
    layer normalizes with the minibatch mean
    $\hat{\boldsymbol{\mu}}_\mathcal{B}$ and variance, and each training
@@ -1693,14 +1682,34 @@ not stop running-statistics updates in training mode.
        with learning rate $\eta$ on each minibatch reproduces the removed
        update, and state the $\eta$ that matches $\rho$.
 
+1. **State census.** :numref:`subsec_params_buffers` distinguishes trained
+   parameters from non-trained buffers within a model's state. State a
+   one-line rule that classifies every entry of a model's state as one or
+   the other, and check it against the state listing of `whiten` in
+   :numref:`subsec_params_buffers` and against the batch normalization
+   layer `bn` of :numref:`subsec_freezing`.
+
+1. [code] **Memory footprint.** Write a helper that reports, for each
+   top-level block of `net`, its number of state entries and its bytes
+   under fp32 Adam training with every parameter trained.
+    1. Which block dominates? At what output width would the output layer
+       overtake one residual block?
+    1. Insert a batch normalization layer over the 64 hidden features
+       between the two residual blocks. Extend the helper so that it costs
+       the layer's running statistics correctly, and report each block's
+       bytes per entry. For which blocks is the share of the total bytes
+       larger than the share of the total entries, and for which is it
+       smaller? Explain both directions.
+
 :begin_tab:`pytorch`
-3. [code] **Tied parameters.** Copy the tied `lm` with `copy.deepcopy`, as
+4. [code] **Tied parameters.** Copy the tied `lm` with `copy.deepcopy`, as
    `AveragedModel` does when it clones a model for weight averaging. Check
    with `is` whether the head and the embedding of the copy share one
    tensor, and whether that tensor is the original's. Explain both results.
    Then cast the original with `lm.to(torch.float64)` and check again
    whether its head and embedding share one tensor.
-4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
+
+5. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
    section.
     1. Freeze `lm.emb.weight` but leave `lm.head` alone. How many trainable
        parameters remain, and what does this show about the interaction
@@ -1712,13 +1721,14 @@ not stop running-statistics updates in training mode.
 :end_tab:
 
 :begin_tab:`jax`
-3. [code] **Tied parameters.** Perturb `untied.head.kernel` so that the two
+4. [code] **Tied parameters.** Perturb `untied.head.kernel` so that the two
    tables of the untied twin no longer agree. Then build a tied `TinyLM`
    and fill it with values from `untied`. Which values must the conversion
    discard or combine? Compare the logits of the converted model on
    `tokens` with those of `untied`, and state when the converted model
    reproduces `untied` exactly.
-4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
+
+5. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
    section.
     1. Label the embedding table `'freeze'` and every other leaf `'train'`
        in `optax.multi_transform`. How many parameters are trained, and can
@@ -1731,13 +1741,14 @@ not stop running-statistics updates in training mode.
 :end_tab:
 
 :begin_tab:`tensorflow`
-3. [code] **Tied parameters.** Perturb `untied.head.kernel` so that the two
+4. [code] **Tied parameters.** Perturb `untied.head.kernel` so that the two
    tables of the untied twin no longer agree. Then build a tied `TinyLM`
    and fill it from `untied` with `set_weights`. Which values must the
    conversion discard or combine? Compare the logits of the converted model
    on `tokens` with those of `untied`, and state when the converted model
    reproduces `untied` exactly.
-4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
+
+5. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
    section.
     1. Set `lm.emb.trainable = False` but leave `lm.head` alone. How many
        trainable parameters remain, and can the head still adapt? What does
@@ -1749,13 +1760,14 @@ not stop running-statistics updates in training mode.
 :end_tab:
 
 :begin_tab:`mxnet`
-3. [code] **Tied parameters.** Round-trip the tied model through
+4. [code] **Tied parameters.** Round-trip the tied model through
    `save_parameters` and `load_parameters` (:numref:`sec_read_write`), once
    with `deduplicate=False` and once with `deduplicate=True`. Compare the
    file sizes, and check which of the two files loads into the untied twin.
    Where, if anywhere, is the tying recorded? Then cast the tied model with
    `lm.cast('float64')`: do both names still point at one `Parameter`?
-4. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
+
+5. [code] **Tying and freezing.** Consider the tied `TinyLM` of this
    section.
     1. Set `lm.emb.weight.grad_req = 'null'`. What happened to the head, and
        how many trainable parameters remain? What does this show about the
@@ -1765,10 +1777,3 @@ not stop running-statistics updates in training mode.
        optimizer step. How many parameters does it store and how many does
        it train, compared with a fully trainable `lm`?
 :end_tab:
-
-5. **State census.** :numref:`subsec_params_buffers` distinguishes trained
-   parameters from non-trained buffers within a model's state. State a
-   one-line rule that classifies every entry of a model's state as one or
-   the other, and check it against the state listing of `whiten` in
-   :numref:`subsec_params_buffers` and against the batch normalization
-   layer `bn` of :numref:`subsec_freezing`.

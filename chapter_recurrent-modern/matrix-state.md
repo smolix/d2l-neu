@@ -726,7 +726,7 @@ for n in [4096, 131072, 1048576]:
 ```
 
 The recurrent side of the ledger is constant in context length; the
-cache side crosses it within a few thousand tokens and keeps growing
+cache side crosses it within a few hundred tokens and keeps growing
 with every token kept. Both sides compose with quantization, and the
 cache side with sharing and eviction schemes, so the constants move;
 the shapes do not. What the flat line costs, we measured at

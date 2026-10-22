@@ -140,9 +140,13 @@ The corrective write holds recall at $1.000$ at every overwrite count, and
 not approximately: with $\beta = 1$ and orthonormal keys, each write
 replaces the row it addresses and touches nothing else, so the last write
 always wins. Note what this experiment does *not* show: with only $8$
-orthogonal keys there is no crowding, so the decay ladder of
-:numref:`subsec_ms-decay-ladder` would not help here. Decay discounts by
-*age*; the failure is indexed by *key*.
+orthogonal keys there is no crowding, so shrinking the binding of an
+untouched key never changes its decoded value, and the experiment cannot
+separate the corrective write from the decay ladder of
+:numref:`subsec_ms-decay-ladder`, which also favors recent writes. Decay
+discounts every binding by *age*, whether or not its key was written
+again; the corrective write replaces only the binding of the key it
+writes.
 
 ### End-to-End Training on the Overwrite Task
 :label:`subsec_dn-trained`
@@ -183,13 +187,15 @@ classification head. One design decision is necessary for the comparison.
 The projections that produce $\mathbf{q}_t$,
 $\mathbf{k}_t$, and $\beta_t$ form the write *address*, and they must see
 the key token alone, while the *content* $\mathbf{v}_t$ must come from the
-value token alone. Give the address projection access to the value token and a trained
-Hebbian model escapes superposition entirely, by assigning every
-(key, value) *pair* its own private address so that no two writes ever
-collide; recall stops distinguishing the two rules. That escape is itself
-instructive, since superposition only binds when addresses are reused,
-but it dodges the question we are asking. Real linear-attention layers offer no
-such dodge at this task's scale: $\mathbf{q}$, $\mathbf{k}$, $\mathbf{v}$
+value token alone. Give the address projection access to the value token,
+and a trained Hebbian model can assign every (key, value) *pair* its own
+private address so that no two writes collide. Private addresses do not
+remove the limitation: the state is still a sum of writes, which does not
+record their order, and problem
+1 derives the
+recall ceiling that follows for every additive memory, private addresses
+included. In real linear-attention layers at this task's scale,
+$\mathbf{q}$, $\mathbf{k}$, $\mathbf{v}$
 are all projections of the same token embedding, so a model that answers
 "what is ticker X now" must address by the ticker. Our split enforces the
 shared-address regime we set out to measure.
@@ -1215,8 +1221,12 @@ Householder-like factors, rank-$n_h$ beyond diagonal, which
 interpolates between DeltaNet ($n_h = 1$) and a dense (but
 norm-bounded, hence stable) transition; on group word problems the
 reachable groups and the length extrapolation grow with $n_h$, at
-$n_h$ times the write cost. And there, as of the 2024--2025 results
-cited here, the ladder stops.
+$n_h$ times the write cost. The ladder does not stop at small groups:
+with signed factors, one layer with enough factors per token solves the
+word problem of every symmetric group $S_n$, and a gated stack with a
+finite number of layers recognizes every regular language, as Theorems 1
+and 2 of :citet:`Siems.Carstensen.Zela.ea.2025` prove. In their
+experiments, a single layer with $n_h = 4$ extrapolates on $S_5$.
 :citet:`Merrill.Petty.Sabharwal.2024` place fixed-depth, log-precision
 transformers, S4, and Mamba in the complexity class $\mathsf{TC}^0$:
 under standard conjectures, no such model solves the word problem of
@@ -1230,9 +1240,11 @@ paying the sequential price this chapter has been trying to
 avoid. Their phrase for the diagonal families' predicament: an
 *illusion of state*,
 a recurrence that carries a state but cannot compose with it. The
-delta-rule rungs recover a real, if bounded, slice of that power
-without giving up parallel training; at the time of writing (2025), no
-published rung climbs higher without giving up the parallel schedule.
+delta-rule rungs with signed eigenvalues recover that power without
+giving up parallel training: under the same conjectures, a DeltaProduct
+layer that solves the $S_5$ word problem lies outside $\mathsf{TC}^0$,
+and it pays with $n_h$ factors per token, or with extra layers, instead
+of a sequential schedule.
 :numref:`tab_dn-ladder` summarizes the ladder with
 the evidence this section put on the table.
 
@@ -1246,17 +1258,23 @@ the evidence this section put on the table.
 | diagonal, $(-1, 1)$ | signed | negative-eigenvalue variants | parity, via sign flips |
 | $\alpha_t(\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top)$, $\beta_t \in (0, 1)$ | non-negative | DeltaNet, Gated DeltaNet | targeted erasure (demonstrated in this section) |
 | same, $\beta_t \in (0, 2)$ | signed | `allow_neg_eigval` variants, RWKV-7 | sign flips: parity (exact reflection at the $\beta = 2$ boundary) |
-| product of $n_h$ Householders | signed, rank-$n_h$ | DeltaProduct | composing reflections: group word problems ($S_3$, $S_4$) |
+| product of $n_h$ Householders | signed, rank-$n_h$ | DeltaProduct | composing reflections: the word problem of every $S_n$, $S_5$ included; gated, every regular language |
 | dense nonlinear | unrestricted | plain RNN (:numref:`chap_rnn`) | $S_5$ and beyond, at sequential cost |
 
 The family combines corrective writes, learned decay, and matmul-based
 training with transitions more expressive than diagonal dynamics. It still
 uses a fixed-size state subject to the capacity ceiling measured in
-:numref:`subsec_ms-capacity`, and its $\mathsf{TC}^0$ limit excludes some
-dynamics that a nonlinear recurrent state can track. Both residual gaps
-point to the
-same production answer, pairing these layers with a few attention
-layers, and that is :numref:`sec_hybrids`. Before the hybrids, though,
+:numref:`subsec_ms-capacity`, and its members with non-negative
+eigenvalues, Gated DeltaNet among them, cannot track parity at arbitrary
+length, which a nonlinear recurrent state can. The first gap points to
+the production answer, pairing these layers with a few attention layers
+whose cache retrieves exactly what a fixed state must compress, and that
+is :numref:`sec_hybrids`. The second gap is a property of the transition,
+and the signed rungs of :numref:`tab_dn-ladder` close it inside the
+recurrent layer, from parity up to the word problem of every $S_n$;
+attention layers are no substitute, since fixed-depth transformers
+share the $\mathsf{TC}^0$ ceiling on the $S_5$ word problem. Before the
+hybrids, though,
 one further generalization remains: the delta rule is *one* SGD step on
 *one* loss. :numref:`sec_test-time-regression` treats the sequence layer as
 an optimizer and derives the preceding updates from this perspective.
@@ -1265,8 +1283,10 @@ an optimizer and derives the preceding updates from this perspective.
 cells are diagnostics under a stated restriction, write addresses
 computed from the key token alone, and show that within it the additive
 write superposes and the delta write does not, both mechanistically and
-after end-to-end training; they do not bound what an architecture with
-pair-dependent addressing can learn. The WY check is an identity,
+after end-to-end training. The experiments do not bound what an
+architecture with pair-dependent addressing can learn; for additive
+memories, problem :exref:`ex_deltanet-order-invariance` derives such a bound from the order invariance of
+the summed state. The WY check is an identity,
 verified to floating-point tolerance. The scoreboard row is one seeded
 run per framework on one small corpus; the conclusions at 1.3B scale
 belong to the cited paper. The parity sweep shows a representational
@@ -1281,8 +1301,9 @@ not a trained result.
 An additive matrix memory cannot re-bind a key: after $R$ writes to the
 same key it returns the superposition of all $R$ values, and recall of
 latest approaches chance accuracy, a failure that persists under end-to-end
-training whenever write addresses must be reused (and one that decay
-cannot fix, since decay discounts by age, not by key). The delta rule
+training whenever write addresses must be reused (decay favors recent
+writes, but it discounts every binding by age, not only the overwritten
+one). The delta rule
 reads before writing and stores only the correction,
 $\mathbf{S}_t = \mathbf{S}_{t-1} - \beta_t \mathbf{k}_t
 (\mathbf{k}_t^\top \mathbf{S}_{t-1} - \mathbf{v}_t^\top)$, which is one
@@ -1303,8 +1324,9 @@ non-diagonal transition also computes: eigenvalue $1 - \beta_t$ along
 the key means $\beta > 1$ buys sign flips, up to the exact reflection at
 the boundary $\beta = 2$, and with them parity
 (the `allow_neg_eigval` flag); products of reflections (DeltaProduct)
-buy group word problems, and the $\mathsf{TC}^0$ ceiling marks where
-parallel-trainable recurrences still end.
+buy the word problem of every symmetric group, $S_5$ included, and so
+carry a parallel-trainable recurrence past the $\mathsf{TC}^0$ ceiling of
+diagonal transitions.
 
 ## Exercises
 

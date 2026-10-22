@@ -132,8 +132,8 @@ constraining predictions between observations. Use a
 *leave-one-out* construction: when predicting at $x_i$, the model may use
 every training pair except $(x_i, y_i)$. Below, each row of `keys` and
 `values` holds the other $n-1$ points, built by masking the diagonal of a
-tiled copy of the data. Five epochs of plain gradient descent on the one
-scalar then suffice.
+tiled copy of the data. We run five epochs of plain gradient descent on
+the one scalar.
 
 ```{.python .input #test-time-regression-learning-it-without-cheating}
 %%tab pytorch
@@ -854,13 +854,13 @@ by four and eight overwrites it collapses toward chance
 overwriter than the pure delta rule, and the mechanism is visible in
 :eqref:`eq_ttr-titans`: the surprise from an earlier binding persists in
 $\mathbf{U}$ and keeps writing the superseded value for several more
-steps, while $\alpha$ erodes keys that were never touched. The result
-isolates the bias introduced by momentum. Momentum smooths the fit across
-tokens,
-which is the wrong bias when the stream rebinds keys adversarially and a
-useful one when successive tokens carry consistent evidence, precisely
-the regime that this section's closing experiment returns to, as does one
-of the exercises.
+steps. The result isolates the bias introduced by momentum. Momentum
+smooths the fit across tokens, which is the wrong bias when the stream
+rebinds keys adversarially. Whether it helps when successive tokens carry
+consistent evidence is a separate question, which problem
+6
+tests by giving the implicit tracker of :numref:`subsec_ttr-tracking` a
+velocity.
 
 ### A Deep Memory via Autograd
 :label:`subsec_ttr-titans-deep`
@@ -869,7 +869,7 @@ Why make the memory deep? Because the function class $\mathcal{M}$ is a
 choice, and the linear choice has a hard ceiling: the capacity law of
 :numref:`subsec_ms-capacity` is a statement about linear maps, at most
 $d_k$ associations retrievable without interference, however clever the
-solver. An MLP memory is not superposition-bound in the same way, and
+solver. An MLP memory is not limited to $d_k$ associations, and
 Titans reports that deeper memories keep improving language modeling at
 scale :cite:`Behrouz.Zhong.Mirrokni.2025`. The update
 :eqref:`eq_ttr-titans` does not care what $\mathcal{M}_{\mathbf{W}}$ is;

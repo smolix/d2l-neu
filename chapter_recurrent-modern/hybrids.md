@@ -251,7 +251,7 @@ $a \approx 0.5$ per token — a state half-life of one token — and the
 untrained model destroys the write phase before the query phase
 arrives; it then sits at chance recall for every load we test, and
 training rarely digs it out. Initializing the gate bias at $-4.5$ gives
-$a \approx 0.99$, a half-life of about seventy tokens, and the problem
+$a \approx 0.99$, a half-life of about sixty tokens, and the problem
 disappears. Every production cell in this family makes the same move:
 S4D's small initial step sizes (:numref:`subsec_s4d`), Mamba's
 $\Delta$ bias, the retention bias we gave Gated DeltaNet in

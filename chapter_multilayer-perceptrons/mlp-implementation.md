@@ -272,11 +272,20 @@ class MLP(d2l.Classifier):
 ```
 
 A `forward` method applies each model transformation to the output of the
-preceding one. Here, `MLP` inherits the `Module` implementation
+preceding one.
+
+:begin_tab:`mxnet, pytorch, tensorflow`
+Here, `MLP` inherits the `Module` implementation
 (:numref:`subsec_oo-design-models`), which invokes `self.net(X)`. The
 `Sequential` container applies its registered transformations in order and
 therefore defines the forward computation. :numref:`subsec_model-construction-sequential`
 examines this container in detail.
+:end_tab:
+
+:begin_tab:`jax`
+Here, `MLP` defines its own `forward` method, which flattens each image and
+then applies the hidden layer, the ReLU, and the output layer in order.
+:end_tab:
 
 
 ### Training

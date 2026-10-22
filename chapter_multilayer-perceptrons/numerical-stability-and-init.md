@@ -245,15 +245,16 @@ with two hidden units.
 For illustration,
 suppose that the output layer transforms the two hidden units into only one output unit.
 Suppose we initialized all the parameters of the hidden layer
-as $\mathbf{W}^{(1)} = c$ for some constant $c$.
+as $\mathbf{W}^{(1)} = c$ for some constant $c$,
+and gave both hidden units the same weight in the output layer.
 In this case, during forward propagation
 either hidden unit takes the same inputs and parameters
 producing the same activation
 which is fed to the output unit.
 During backpropagation,
-differentiating the output unit with respect to parameters $\mathbf{W}^{(1)}$ gives a gradient all of whose elements take the same value.
+differentiating the output unit with respect to parameters $\mathbf{W}^{(1)}$ gives the same gradient for the incoming weights of both hidden units.
 Thus, after gradient-based iteration (e.g., minibatch stochastic gradient descent),
-all the elements of $\mathbf{W}^{(1)}$ still take the same value.
+the two hidden units still have identical incoming and outgoing weights.
 Such iterations would
 never *break the symmetry* on their own
 and we might never be able to realize

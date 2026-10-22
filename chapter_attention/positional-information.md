@@ -691,7 +691,7 @@ refines it by rescaling the fast, position-discriminating frequencies
 differently from the slow, content-carrying ones. Many long-context RoPE
 models use schemes from this family. Note
 that the recipe has two halves: rescaling *and* a brief fine-tune at the
-scaled angles. Exercise 13 walks through both halves on our character model;
+scaled angles. Exercise :exref:`ex_positional-information-position-interpolation` walks through both halves on our character model;
 in our runs, rescaling alone increases perplexity because compressing the
 angle range makes neighboring characters less distinguishable in the
 high-frequency pairs. Rescaling followed by a few hundred fine-tuning steps
@@ -725,23 +725,7 @@ to map longer contexts into the trained range.
        that fixes $t$ and only rearranges the positions before it. What is
        then the only positional information that the first layer of a NoPE
        model can carry?
-1. **Biases that keep the symmetry.** ● Suppose that a fixed matrix
-   $\mathbf{B} \in \mathbb{R}^{n \times n}$ is added to the score matrix
-   $\mathbf{S}$ of the proof before the softmax, so that the layer
-   :eqref:`eq_pos-selfattn` computes $\mathrm{softmax}(\mathbf{S} +
-   \mathbf{B})\, \mathbf{X}\mathbf{W}_v$.
-    1. Show that the proposition still holds for every permutation matrix
-       $\boldsymbol{\Pi}$ with $\boldsymbol{\Pi}^\top \mathbf{B}
-       \boldsymbol{\Pi} = \mathbf{B}$.
-    1. Find all matrices $\mathbf{B}$ that satisfy this condition for every
-       permutation, and describe how each of them changes the attention
-       weights.
-    1. Without the causal mask, the ALiBi bias of :eqref:`eq_alibi-def`
-       extends symmetrically to $B_{ij} = -m_h\,|i - j|$. Determine the
-       permutations that preserve this matrix, and state what the result
-       implies for an unmasked layer that receives this bias and no other
-       positional signal. Explain why the causal ALiBi of
-       :eqref:`eq_alibi-def` does not share this symmetry.
+
 1. **Distinct positions, distinct codes.** Let $\mathbf{p}_i$ be row $i$ of
    the sinusoidal table :eqref:`eq_sinusoidal-def` of width $d$, with the
    frequencies $\omega_j = 1/10000^{2j/d}$ of
@@ -763,6 +747,8 @@ to map longer contexts into the trained range.
        $511$ at which the distance is smallest. Which pairs keep the two
        positions of the near repeat apart? Relate the answer to the binary
        counting of :numref:`subsec_pos-sinusoidal`.
+   :exlabel:`ex_positional-information-distinct-positions-distinct-codes`
+
 1. [code] **Untrained rows.** The table `pos_emb` of `models['learned']`
    has `max_len = 512` rows, of which training at context 128 used only the
    first 128.
@@ -776,7 +762,7 @@ to map longer contexts into the trained range.
        table and display them with `d2l.show_heatmaps`. Describe the three
        blocks of the result: trained rows against trained rows, untrained
        against untrained, and trained against untrained.
-    1. By problem 3, the dot products of the sinusoidal rows depend only on
+    1. By problem :exref:`ex_positional-information-distinct-positions-distinct-codes`, the dot products of the sinusoidal rows depend only on
        $i - j$, so the sinusoidal similarity matrix is constant along each
        diagonal $i - j = \textrm{const}$. For the trained rows 0 to 127,
        compute the standard deviation of the cosine similarities along each
@@ -784,6 +770,8 @@ to map longer contexts into the trained range.
        the standard deviation of the diagonal means across diagonals, and
        decide whether training produced a code whose similarities are
        approximately invariant to shifts.
+   :exlabel:`ex_positional-information-untrained-rows`
+
 1. [code] **Amplitude of the sinusoidal table.** `TinyCharLM` adds the
    sinusoidal table at full amplitude, while the token embeddings are
    initialized with standard deviation $0.02$.
@@ -797,6 +785,7 @@ to map longer contexts into the trained range.
        128 and at 512 distinguishes the two outcomes.
     1. Retrain the `'sinusoidal'` variant with the scaled table, evaluate at
        all three context lengths, and decide.
+
 1. **Additive codes in the score.** With the additive encoding of
    :numref:`subsec_pos-sinusoidal`, a first-layer head of
    :eqref:`eq_pos-selfattn` scores the inputs at positions $i$ and $j$ as
@@ -809,7 +798,7 @@ to map longer contexts into the trained range.
        :eqref:`eq_sinusoidal-rotation`, show that the position--position
        term $\mathbf{p}_i^\top \mathbf{A}\, \mathbf{p}_j$ depends only on
        $j - i$ when $\mathbf{A}$ is block diagonal with $2 \times 2$ blocks
-       $a_m \mathbf{I} + b_m \mathbf{J}$, one per frequency pair. Problem 3
+       $a_m \mathbf{I} + b_m \mathbf{J}$, one per frequency pair. Problem :exref:`ex_positional-information-distinct-positions-distinct-codes`
        treats $\mathbf{A} = \mathbf{I}$. Then show that a single nonzero
        entry of $\mathbf{A}$ that couples two different frequency pairs
        destroys this property.
@@ -818,29 +807,7 @@ to map longer contexts into the trained range.
        shift of $j$. Use the answer to explain the score change of the
        additive encoding in the shift test of :numref:`subsec_pos-rope`,
        and why RoPE has no content--position term.
-1. **Offset preference in RoPE.** ● Split a query $\mathbf{q}$ and a key
-   $\mathbf{k}$ into the $d/2$ two-dimensional pairs $\mathbf{q}^{(m)},
-   \mathbf{k}^{(m)} \in \mathbb{R}^2$ on which :eqref:`eq_rope-def` acts,
-   and let $\delta = j - i$ be the offset of the key position $j$ from the
-   query position $i$.
-    1. Show that the RoPE score :eqref:`eq_rope-goal` equals
-       $$\sum_{m=0}^{d/2-1} \|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\| \cos(\delta\,\omega_m - \varphi_m),$$
-       where $\varphi_m$ is the angle from $\mathbf{k}^{(m)}$ to
-       $\mathbf{q}^{(m)}$.
-    1. Choose the angles $\varphi_m$ so that every pair contributes its
-       maximum at the offset $\delta = -1$, the previous token. With all
-       products $\|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\|$ equal to $c$,
-       show that the score, as a function of $\delta$, is $c$ times a
-       shifted copy of the dot product $\mathbf{p}_i^\top
-       \mathbf{p}_{i+\delta}$ of problem 3 for a sinusoidal table of width
-       $d$.
-    1. Take $d = 32$ and the query at position 127, which attends to the
-       offsets $\delta = -127, \ldots, 0$. Let the attention logits equal
-       these scores, with the factor $1/\sqrt{d}$ absorbed into $c$. Find
-       the $c$ at which the offset $-1$ receives half of the softmax
-       weight, and identify the offsets that compete most with it. Which
-       pairs set the gap between the score at $-1$ and the scores at its
-       neighbors?
+
 1. [code] **RoPE at explicit positions.** `rope` assumes that the rows of
    its input sit at consecutive positions starting at `offset`.
    Re-implement it as a class that is constructed with the frequency base
@@ -868,6 +835,7 @@ to map longer contexts into the trained range.
     *Adapted from Stanford CS336,
     [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
     Problem (rope).*
+
 1. [code] **Attention by distance.** For one head of `TinyCharLM`, the
    *distance profile* is the average attention weight on the key at
    distance $r = i - j$ from the query, taken over queries and validation
@@ -881,20 +849,7 @@ to map longer contexts into the trained range.
     1. Relate the difference to the perplexity gap between the two models
        at the training length. What does a character model gain from heads
        that attend to the immediately preceding positions?
-1. [code] **Position through the mask.** ● NoPE receives positional
-   information only through the causal mask. Measure how much of it reaches
-   the representation.
-    1. Collect the final residual vector $\mathbf{h}_i$ that `TinyCharLM`
-       passes to its output head, at every position of the length-128
-       validation sequences, for `models['none']` and for `models['rope']`;
-       the loop in `attention_weights` shows where to read it.
-    1. Train a linear probe that predicts the position index $i$ from
-       $\mathbf{h}_i$ as a 128-way classification, and report its held-out
-       accuracy for both models against the chance level $1/128$. Which
-       positions are predicted best?
-    1. Repeat the probe on an untrained `TinyCharLM` with `pos='none'`.
-       Which positions can it identify, and how does the variance of an
-       average of $i + 1$ random vectors explain the result?
+
 1. [code] **Where extrapolation fails.** The perplexities of
    :numref:`subsec_pos-experiment` at context 512 average the loss over all
    positions of each sequence.
@@ -922,6 +877,65 @@ to map longer contexts into the trained range.
        same fraction for the eight heads of `models['alibi']` at context
        512, and decide whether the stability of ALiBi at that length comes
        from never attending beyond the training range.
+
+1. **Biases that keep the symmetry.** ● Suppose that a fixed matrix
+   $\mathbf{B} \in \mathbb{R}^{n \times n}$ is added to the score matrix
+   $\mathbf{S}$ of the proof before the softmax, so that the layer
+   :eqref:`eq_pos-selfattn` computes $\mathrm{softmax}(\mathbf{S} +
+   \mathbf{B})\, \mathbf{X}\mathbf{W}_v$.
+    1. Show that the proposition still holds for every permutation matrix
+       $\boldsymbol{\Pi}$ with $\boldsymbol{\Pi}^\top \mathbf{B}
+       \boldsymbol{\Pi} = \mathbf{B}$.
+    1. Find all matrices $\mathbf{B}$ that satisfy this condition for every
+       permutation, and describe how each of them changes the attention
+       weights.
+    1. Without the causal mask, the ALiBi bias of :eqref:`eq_alibi-def`
+       extends symmetrically to $B_{ij} = -m_h\,|i - j|$. Determine the
+       permutations that preserve this matrix, and state what the result
+       implies for an unmasked layer that receives this bias and no other
+       positional signal. Explain why the causal ALiBi of
+       :eqref:`eq_alibi-def` does not share this symmetry.
+
+1. **Offset preference in RoPE.** ● Split a query $\mathbf{q}$ and a key
+   $\mathbf{k}$ into the $d/2$ two-dimensional pairs $\mathbf{q}^{(m)},
+   \mathbf{k}^{(m)} \in \mathbb{R}^2$ on which :eqref:`eq_rope-def` acts,
+   and let $\delta = j - i$ be the offset of the key position $j$ from the
+   query position $i$.
+    1. Show that the RoPE score :eqref:`eq_rope-goal` equals
+       $$\sum_{m=0}^{d/2-1} \|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\| \cos(\delta\,\omega_m - \varphi_m),$$
+       where $\varphi_m$ is the angle from $\mathbf{k}^{(m)}$ to
+       $\mathbf{q}^{(m)}$.
+    1. Choose the angles $\varphi_m$ so that every pair contributes its
+       maximum at the offset $\delta = -1$, the previous token. With all
+       products $\|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\|$ equal to $c$,
+       show that the score, as a function of $\delta$, is $c$ times a
+       shifted copy of the dot product $\mathbf{p}_i^\top
+       \mathbf{p}_{i+\delta}$ of problem :exref:`ex_positional-information-distinct-positions-distinct-codes` for a sinusoidal table of width
+       $d$.
+    1. Take $d = 32$ and the query at position 127, which attends to the
+       offsets $\delta = -127, \ldots, 0$. Let the attention logits equal
+       these scores, with the factor $1/\sqrt{d}$ absorbed into $c$. Find
+       the $c$ at which the offset $-1$ receives half of the softmax
+       weight, and identify the offsets that compete most with it. Which
+       pairs set the gap between the score at $-1$ and the scores at its
+       neighbors?
+   :exlabel:`ex_positional-information-offset-preference-rope`
+
+1. [code] **Position through the mask.** ● NoPE receives positional
+   information only through the causal mask. Measure how much of it reaches
+   the representation.
+    1. Collect the final residual vector $\mathbf{h}_i$ that `TinyCharLM`
+       passes to its output head, at every position of the length-128
+       validation sequences, for `models['none']` and for `models['rope']`;
+       the loop in `attention_weights` shows where to read it.
+    1. Train a linear probe that predicts the position index $i$ from
+       $\mathbf{h}_i$ as a 128-way classification, and report its held-out
+       accuracy for both models against the chance level $1/128$. Which
+       positions are predicted best?
+    1. Repeat the probe on an untrained `TinyCharLM` with `pos='none'`.
+       Which positions can it identify, and how does the variance of an
+       average of $i + 1$ random vectors explain the result?
+
 1. [code] **The RoPE base.** ● In :eqref:`eq_rope-def` the frequencies are
    $\omega_m = 10000^{-2m/d}$, and the constant $10000$ is a choice.
     1. For the per-head width 32 of `TinyCharLM`, compute the periods
@@ -937,6 +951,8 @@ to map longer contexts into the trained range.
     1. Explain from the counts why the base is expected to matter more at
        length 512 than at 128, and check the expectation against your
        results.
+   :exlabel:`ex_positional-information-rope-base`
+
 1. [extended] **Position interpolation.** ●
    :numref:`subsec_pos-context-extension` describes the effect of
    rescaling the RoPE angles by $128/512$ on `models['rope']` at context
@@ -945,24 +961,28 @@ to map longer contexts into the trained range.
     1. Show that a pair that completes a full rotation within the training
        offsets 0 to 127 has already met, to within $\omega_m/2$ modulo
        $2\pi$, every angle that a longer offset produces. Using the counts
-       of problem 12 for base $10^4$, determine which pairs a uniform
+       of problem :exref:`ex_positional-information-rope-base` for base $10^4$, determine which pairs a uniform
        rescaling by $128/512$ compresses although they did not need it.
-       Compute the gap of problem 7 between the score at offset $-1$ and
+       Compute the gap of problem :exref:`ex_positional-information-offset-preference-rope` between the score at offset $-1$ and
        the scores at its neighbors for $d = 32$, before and after the
        rescaling, and for the rescaling of only the pairs whose period
        exceeds 128 positions.
     1. Redefine the method `TinyCharLM._rope` so that it multiplies the
        angle of each pair by the entry of a model attribute `rope_scale`
-       (all ones when the attribute is absent). Set every entry to $128/512$
-       on the trained `models['rope']`, evaluate it at context 512, and
-       compare with its unscaled perplexity at 512 and with the ALiBi result
-       of :numref:`subsec_pos-experiment`.
+       (all ones when the attribute is absent). Store `rope_scale` as
+       non-trainable model state, the way `TinyCharLM` stores the
+       sinusoidal table `P`. Set every entry to $128/512$ on the trained
+       `models['rope']`, evaluate it at context 512, and compare with its
+       unscaled perplexity at 512 and with the ALiBi result of
+       :numref:`subsec_pos-experiment`.
     1. Rescale only the pairs whose period exceeds 128 positions and
        evaluate again without fine-tuning. This is a simplified form of the
        selective rescaling of YaRN :cite:`Peng.Quesnelle.Fan.ea.2024`.
     1. Fine-tune for a few hundred steps at context 512 with each of the two
-       rescalings, re-evaluate at 128, 256, and 512, and compare with the
-       ALiBi result.
+       rescalings, each starting from a copy of the trained
+       `models['rope']`, re-evaluate at 128, 256, and 512, and compare with
+       the ALiBi result.
+   :exlabel:`ex_positional-information-position-interpolation`
 
 <!-- slides -->
 

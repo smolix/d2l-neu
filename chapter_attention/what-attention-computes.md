@@ -725,7 +725,7 @@ Attention maps therefore locate candidates rather than establish their role.
 | attention pattern | activation | a head attends with the predicted offset pattern | attention alone omits the value transformation |
 | OV diagonal | weight-level | the candidate head contains a copy-compatible map | compatibility does not show necessity |
 | input-period change | input intervention | separates content matching from a fixed-offset shortcut | changes the task as well as the input |
-| targeted head/path ablation | component intervention | would test whether the proposed component is necessary | left as Exercise 13 rather than established here |
+| targeted head/path ablation | component intervention | would test whether the proposed component is necessary | left as Exercise :exref:`ex_what-attention-computes-circuit-ablation` rather than established here |
 
 These checks are comparatively direct in the attention-only model because
 the residual update becomes linear after fixing the patterns. Feed-forward
@@ -760,6 +760,25 @@ probes, and weight-level checks in addition to attention maps.
 
 ## Exercises
 
+1. **Head reparameterization.** Replacing $\mathbf{W}_q$ by
+   $\mathbf{A}\mathbf{W}_q$ and $\mathbf{W}_k$ by
+   $\mathbf{A}^{-\top}\mathbf{W}_k$, for an invertible $\mathbf{A} \in
+   \mathbb{R}^{d_h \times d_h}$, leaves $\mathbf{W}_{\mathrm{QK}}$ and
+   therefore every score of :eqref:`eq_qkov` unchanged.
+    1. Give the analogous substitution of $\mathbf{W}_v$ and $\mathbf{W}_o$
+       that leaves $\mathbf{W}_{\mathrm{OV}}$ unchanged.
+    1. The $d \times d$ matrices of rank at most $d_h$ form a set of
+       dimension $d_h(2d - d_h)$. For $d = 128$ and $d_h = 32$, count the
+       parameters of one head of a `TinyCharLM` with `pos='none'` and the
+       dimensions of its two circuits, and give the fraction of the
+       parameters that the two substitutions make redundant.
+    1. Two training runs from different seeds yield layers that compute the
+       same function. Which of $\mathbf{W}_q$, $\mathbf{W}_k$,
+       $\mathbf{W}_{\mathrm{QK}}$, $\mathbf{W}_{\mathrm{OV}}$, and the
+       singular values of $\mathbf{W}_{\mathrm{OV}}$ can be compared
+       directly between the runs? Which further symmetry of a layer with $H$
+       heads must the comparison account for?
+
 1. **Tied bigrams.** With zero blocks, the logit of token $b$ after token
    $a$ is $\mathbf{e}_b^\top \mathbf{e}_a$, so the geometry of the
    embeddings alone fixes which successor the model prefers. Call $b$ the
@@ -780,47 +799,7 @@ probes, and weight-level checks in addition to attention maps.
        \mathbf{e}_{x_0}$ for a matrix $\mathbf{M}$ built from the OV
        circuits, and explain why neither constraint of the previous parts
        applies to $\mathbf{E}\mathbf{M}\mathbf{E}^\top$.
-1. **Head reparameterization.** Replacing $\mathbf{W}_q$ by
-   $\mathbf{A}\mathbf{W}_q$ and $\mathbf{W}_k$ by
-   $\mathbf{A}^{-\top}\mathbf{W}_k$, for an invertible $\mathbf{A} \in
-   \mathbb{R}^{d_h \times d_h}$, leaves $\mathbf{W}_{\mathrm{QK}}$ and
-   therefore every score of :eqref:`eq_qkov` unchanged.
-    1. Give the analogous substitution of $\mathbf{W}_v$ and $\mathbf{W}_o$
-       that leaves $\mathbf{W}_{\mathrm{OV}}$ unchanged.
-    1. The $d \times d$ matrices of rank at most $d_h$ form a set of
-       dimension $d_h(2d - d_h)$. For $d = 128$ and $d_h = 32$, count the
-       parameters of one head of a `TinyCharLM` with `pos='none'` and the
-       dimensions of its two circuits, and give the fraction of the
-       parameters that the two substitutions make redundant.
-    1. Two training runs from different seeds yield layers that compute the
-       same function. Which of $\mathbf{W}_q$, $\mathbf{W}_k$,
-       $\mathbf{W}_{\mathrm{QK}}$, $\mathbf{W}_{\mathrm{OV}}$, and the
-       singular values of $\mathbf{W}_{\mathrm{OV}}$ can be compared
-       directly between the runs? Which further symmetry of a layer with $H$
-       heads must the comparison account for?
-1. **The QK circuit under RoPE.** ● With RoPE, :eqref:`eq_rope-goal` turns
-   the score of :eqref:`eq_qkov` at offset $\delta = j - i$ into
-   $\mathbf{h}_i^\top \mathbf{W}_q^\top \mathbf{R}_\delta \mathbf{W}_k
-   \mathbf{h}_j / \sqrt{d_h}$, where $\mathbf{R}_\delta$ is the rotation of
-   :eqref:`eq_rope-def` acting on the $d_h$ coordinates of the head. Assume
-   that $\mathbf{W}_q$ and $\mathbf{W}_k$ have rank $d_h$.
-    1. Show that the substitution $\mathbf{W}_q \to \mathbf{A}\mathbf{W}_q$,
-       $\mathbf{W}_k \to \mathbf{A}^{-\top}\mathbf{W}_k$ preserves the
-       scores at every offset if and only if $\mathbf{A}$ commutes with every
-       $\mathbf{R}_\delta$.
-    1. Let $\mathbf{J}$ be the rotation of the plane by $\pi/2$. A matrix
-       that is block-diagonal with one $2 \times 2$ block $a_m \mathbf{I} +
-       b_m \mathbf{J}$ per rotation pair commutes with every
-       $\mathbf{R}_\delta$, since each block scales and rotates its own
-       plane. For $d_h = 32$ the frequencies $\omega_m$ are distinct and lie
-       in $(0, \pi)$. Show that no other matrix commutes with every
-       $\mathbf{R}_\delta$, and compare the dimension of this set with the
-       $d_h^2$ dimensions of the substitutions available without RoPE.
-    1. Show that an orthogonal $\mathbf{A}$ that does not commute with
-       $\mathbf{R}_1$ leaves $\mathbf{W}_{\mathrm{QK}}$ unchanged but changes
-       the scores at nonzero offsets. Which object must a weight-level
-       analysis of a RoPE head inspect in place of
-       $\mathbf{W}_{\mathrm{QK}}$?
+
 1. **Paths through two blocks.** Fix the attention patterns of a model with
    $L$ blocks of $H$ heads on a sequence of $T$ tokens, and write
    $\mathbf{A}^{\ell h}$ for the $T \times T$ matrix with entries
@@ -846,6 +825,7 @@ probes, and weight-level checks in addition to attention maps.
        $(x_{i-1}, x_i)$ when block 1 contains heads that attend to offsets
        $-1$ and $-2$, and name the composition term that carries each half
        of the match.
+
 1. [code] **A copying head by hand.** The skip-trigram
    "$[\mathrm{A}] \ldots [\mathrm{A}] \to [\mathrm{A}]$" of
    :eqref:`eq_one-layer-paths` can be built without training. Instantiate
@@ -873,6 +853,67 @@ probes, and weight-level checks in addition to attention maps.
        32 as `split_losses` pools them. Compare both numbers with
        `eval_copy` of `model_one`, and name the information that the trained
        one-block RoPE model can use and this head cannot.
+
+1. **Weights that change nothing.** The output of a head at query $i$ is
+   $\mathbf{W}_{\mathrm{OV}} \sum_j \alpha_{ij}\, \mathbf{h}_j$ by
+   :eqref:`eq_stream-update`, and the softmax makes every weight
+   $\alpha_{ij}$ on an unmasked key positive.
+    1. Show that the attention distributions over $n$ keys that give the
+       same head output as $\boldsymbol{\alpha}_i$ contain, around
+       $\boldsymbol{\alpha}_i$, a piece of an affine subspace of dimension
+       at least $n - 1 - d_h$. Evaluate the bound for the last query of a
+       63-token input to `model_two`.
+    1. The alternatives of the first part are constructed for one input at
+       a time, as are those of :citet:`Jain.Wallace.2019`. State the
+       condition under which a family of alternatives can be the attention
+       patterns of one head with other QK weights on every input at once.
+       Explain why this condition, raised by
+       :citet:`Wiegreffe.Pinter.2019`, weakens the argument that the
+       existence of alternative distributions disqualifies attention
+       weights as explanations.
+
+1. [code] **Circuit ablation.** The last row of
+   :numref:`tab_induction-evidence` leaves the component intervention to
+   this problem.
+    1. Explain why zeroing a head's slice of `proj` removes exactly that
+       head's contribution to the residual stream, and which attention
+       patterns this intervention leaves unchanged and which it can alter.
+    1. Zero each block-2 head of `model_two` in turn and measure the
+       later-copy loss and accuracy with `eval_copy`; then do the same for
+       each block-1 head.
+    1. Ablate together the two block-2 heads with the highest
+       induction-target scores in `head_scores`. Does the sum of the two
+       single-head loss increases predict the joint increase, and what does
+       the comparison say about redundancy between the heads?
+    1. Which of the remaining limitations listed in
+       :numref:`tab_induction-evidence` does this experiment remove, and
+       which does it leave?
+   :exlabel:`ex_what-attention-computes-circuit-ablation`
+
+1. **The QK circuit under RoPE.** ● With RoPE, :eqref:`eq_rope-goal` turns
+   the score of :eqref:`eq_qkov` at offset $\delta = j - i$ into
+   $\mathbf{h}_i^\top \mathbf{W}_q^\top \mathbf{R}_\delta \mathbf{W}_k
+   \mathbf{h}_j / \sqrt{d_h}$, where $\mathbf{R}_\delta$ is the rotation of
+   :eqref:`eq_rope-def` acting on the $d_h$ coordinates of the head. Assume
+   that $\mathbf{W}_q$ and $\mathbf{W}_k$ have rank $d_h$.
+    1. Show that the substitution $\mathbf{W}_q \to \mathbf{A}\mathbf{W}_q$,
+       $\mathbf{W}_k \to \mathbf{A}^{-\top}\mathbf{W}_k$ preserves the
+       scores at every offset if and only if $\mathbf{A}$ commutes with every
+       $\mathbf{R}_\delta$.
+    1. Let $\mathbf{J}$ be the rotation of the plane by $\pi/2$. A matrix
+       that is block-diagonal with one $2 \times 2$ block $a_m \mathbf{I} +
+       b_m \mathbf{J}$ per rotation pair commutes with every
+       $\mathbf{R}_\delta$, since each block scales and rotates its own
+       plane. For $d_h = 32$ the frequencies $\omega_m$ are distinct and lie
+       in $(0, \pi)$. Show that no other matrix commutes with every
+       $\mathbf{R}_\delta$, and compare the dimension of this set with the
+       $d_h^2$ dimensions of the substitutions available without RoPE.
+    1. Show that an orthogonal $\mathbf{A}$ that does not commute with
+       $\mathbf{R}_1$ leaves $\mathbf{W}_{\mathrm{QK}}$ unchanged but changes
+       the scores at nonzero offsets. Which object must a weight-level
+       analysis of a RoPE head inspect in place of
+       $\mathbf{W}_{\mathrm{QK}}$?
+
 1. [code] **An offset head by hand.** ● A one-block model with biases
    solves the fixed-period task of :numref:`subsec_fixed-offset-shortcut`
    with a head that ignores token content. Let the query and key maps of
@@ -896,6 +937,7 @@ probes, and weight-level checks in addition to attention maps.
     1. For which pattern lengths does a head that always copies the token
        at offset $-31$ predict every target at position 32 or later
        correctly?
+
 1. [code] **The Bayes-optimal predictor.** ● In the task of
    :numref:`subsec_two-block-induction`, the pattern length $L$ is uniform
    on $\{16, \ldots, 32\}$ and the pattern tokens are uniform over 64
@@ -915,11 +957,14 @@ probes, and weight-level checks in addition to attention maps.
        loss, and later-copy accuracy, pooled over positions as
        `split_losses` and `eval_copy` pool them. Compare the results with
        `model_two`.
-    1. :numref:`subsec_unseen-patterns` states that the restart at position
-       24 of a period-24 pattern is unpredictable in principle. Compute the
-       probability that the Bayes-optimal predictor assigns to the correct
-       token there, and determine whether its most probable token is
-       correct. In which sense does the statement hold?
+    1. :numref:`subsec_unseen-patterns` states that no predictor can be
+       confident of the restart at position 24 of a period-24 pattern, and
+       that the low accuracy of `model_two` there is a shortfall of the
+       model. Compute the probability that the Bayes-optimal predictor
+       assigns to the correct token there, and determine whether its most
+       probable token is correct. Why does the match-and-copy circuit of
+       `model_two` not predict that token?
+
 1. [code] **Positional schemes and induction.** ● The induction circuit
    needs a previous-token head in block 1 and, in block 2, a match with a
    key 15 to 31 positions back.
@@ -942,6 +987,7 @@ probes, and weight-level checks in addition to attention maps.
        and `head_scores`, and compare the transition steps with the seed
        spread of the previous part. Which schemes develop induction heads,
        and which heads of the ALiBi model carry the match?
+
 1. [code] **Repeated tokens within a pattern.** ●
    :numref:`subsec_unseen-patterns` attributes the remaining errors of
    `model_two` to tokens that occur more than once in a pattern with
@@ -969,6 +1015,7 @@ probes, and weight-level checks in addition to attention maps.
        the attention mass that each block-1 head of `model_two` places at
        offset $-2$, and decide from this and your earlier measurements
        whether `model_two` matches on more than one token.
+
 1. [code] **A vocabulary split.** ● Every test pattern of
    :numref:`subsec_unseen-patterns` is new, but each of its tokens has
    occurred as an input during training. Retrain the two-block model of
@@ -989,6 +1036,7 @@ probes, and weight-level checks in addition to attention maps.
        tokens and restricted to tokens 0 to 15, compare their diagonal
        fractions, and relate the difference to the accuracies of the first
        part.
+
 1. [code] **K-composition in the weights.** ● The match of the induction
    head works because the QK circuit of block 2 reads what the OV circuit
    of block 1 wrote into the stream.
@@ -1007,40 +1055,8 @@ probes, and weight-level checks in addition to attention maps.
        circuit. Include it for a fixed offset with :eqref:`eq_rope-goal`,
        and check whether doing so at offset $-23$ changes the ranking of the
        pairs.
-1. **Weights that change nothing.** The output of a head at query $i$ is
-   $\mathbf{W}_{\mathrm{OV}} \sum_j \alpha_{ij}\, \mathbf{h}_j$ by
-   :eqref:`eq_stream-update`, and the softmax makes every weight
-   $\alpha_{ij}$ on an unmasked key positive.
-    1. Show that the attention distributions over $n$ keys that give the
-       same head output as $\boldsymbol{\alpha}_i$ contain, around
-       $\boldsymbol{\alpha}_i$, a piece of an affine subspace of dimension
-       at least $n - 1 - d_h$. Evaluate the bound for the last query of a
-       63-token input to `model_two`.
-    1. The alternatives of the first part are constructed for one input at
-       a time, as are those of :citet:`Jain.Wallace.2019`. State the
-       condition under which a family of alternatives can be the attention
-       patterns of one head with other QK weights on every input at once.
-       Explain why this condition, raised by
-       :citet:`Wiegreffe.Pinter.2019`, weakens the argument that the
-       existence of alternative distributions disqualifies attention
-       weights as explanations.
-1. [code] **Circuit ablation.** The last row of
-   :numref:`tab_induction-evidence` leaves the component intervention to
-   this problem.
-    1. Explain why zeroing a head's slice of `proj` removes exactly that
-       head's contribution to the residual stream, and which attention
-       patterns this intervention leaves unchanged and which it can alter.
-    1. Zero each block-2 head of `model_two` in turn and measure the
-       later-copy loss and accuracy with `eval_copy`; then do the same for
-       each block-1 head.
-    1. Ablate together the two block-2 heads with the highest
-       induction-target scores in `head_scores`. Does the sum of the two
-       single-head loss increases predict the joint increase, and what does
-       the comparison say about redundancy between the heads?
-    1. Which of the remaining limitations listed in
-       :numref:`tab_induction-evidence` does this experiment remove, and
-       which does it leave?
-1. [extended] **Induction heads in text.** ●
+
+1. [extended] **Induction heads in text.** ●●
    :citet:`Olsson.Elhage.Nanda.ea.2022` tie the formation of induction
    heads in language models to an abrupt gain in in-context learning,
    measured as the drop in loss from early to late positions of the

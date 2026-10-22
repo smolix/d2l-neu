@@ -645,6 +645,7 @@ form used in the original neural alignment model.
     1. Through which of the four terms does $\mathbf{b}_q$ affect the
        weights, and what preference over the keys can it express that the
        bias-free score cannot?
+
 1. [code] **Distance-based attention.** Equation
    :eqref:`eq_gaussian-expansion` writes the Gaussian score as a dot product
    minus two squared norms, and the section drops the key-norm term to
@@ -662,27 +663,7 @@ form used in the original neural alignment model.
        :numref:`subsec_dot-product-attention-class`, ten random
        two-dimensional keys per example. For which keys do the rules
        disagree most, and why?
-1. **Entropy of random scores.** ● The scaled curve of `attention_stats`
-   stays near $3.7$ nats, below the uniform value $\ln 64 \approx 4.16$.
-   Fix one query $\mathbf{q} \in \mathbb{R}^d$ and draw $m$ keys with
-   independent standard normal coordinates, as `attention_stats` does.
-    1. Show that the scaled scores $a_i = \mathbf{q}^\top \mathbf{k}_i /
-       \sqrt{d}$ are independent normal variables with mean $0$ and variance
-       $s^2 = \|\mathbf{q}\|^2 / d$, and compute the expected value of $s^2$
-       when $\mathbf{q}$ is drawn as in `attention_stats`.
-    1. The entropy of the weights is $H = \ln Z - \sum_i \alpha_i a_i$ with
-       $Z = \sum_j \exp(a_j)$. For large $m$, replace $Z/m$ and
-       $\sum_i \exp(a_i)\, a_i / m$ by their expected values and derive
-       $$H \approx \ln m - \frac{s^2}{2}.$$
-       Evaluate the approximation for $m = 64$ and $s = 1$.
-    1. The approximation needs $Z$ to concentrate around its mean. Compute
-       the relative standard deviation of $Z$ as a function of $s$ and $m$,
-       and derive from it a condition on $s^2$ under which the approximation
-       holds. Unscaled scores have $s^2 = \|\mathbf{q}\|^2$, whose expected
-       value is $d$. Evaluate the relative standard deviation for $m = 64$
-       at $s^2 = 4$ and $s^2 = 8$, and compare the approximation with the
-       unscaled entropies that `attention_stats` returns for $d = 4$ and
-       $d = 8$.
+
 1. [code] **The softmax Jacobian.** `attention_stats` measures the
    Frobenius norm of the Jacobian :eqref:`eq_softmax-jacobian`.
     1. Derive :eqref:`eq_softmax-jacobian` from
@@ -699,6 +680,7 @@ form used in the original neural alignment model.
        weight vectors that none exceeds this maximum. Use the result to
        explain why the unscaled norm printed for $d = 4$ exceeds the scaled
        one.
+
 1. **Fully masked rows.** `masked_softmax` overwrites excluded scores with
    the most negative finite value of the dtype and then zeroes the rows of
    queries that have no valid key.
@@ -722,6 +704,7 @@ form used in the original neural alignment model.
        excludes the padding position as a key. Explain why the NaN
        nevertheless corrupts the outputs of all valid positions of that
        sequence in the next layer.
+
 1. **Composite masks.** :numref:`subsec_composing-masks` combines masks by
    logical AND and warns that masks that are harmless alone can leave a
    query with no valid key. A causal sliding window of width $w$ lets the
@@ -742,6 +725,7 @@ form used in the original neural alignment model.
        biases in single precision, and determine what the softmax returns
        for a row in which every key is excluded by both masks and for a row
        in which every key is excluded but some keys by only one mask.
+
 1. [code] **Two masking conventions.** `masked_softmax` describes the valid
    keys of a query by a prefix length, whereas the masks of
    :numref:`subsec_composing-masks` and many libraries use a boolean tensor
@@ -766,6 +750,7 @@ form used in the original neural alignment model.
     *Adapted from Stanford CS336,
     [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
     Problem (scaled_dot_product_attention).*
+
 1. [code] **Attention dropout.** `DotProductAttention` applies dropout with
    rate $p$ to the attention weights, and the weights it exposes for
    visualization are those before dropout. Dropout multiplies each kept
@@ -781,6 +766,7 @@ form used in the original neural alignment model.
        identity matrices, so that each output row equals the weights after
        dropout. Compare the mean and the variance of the row sums over many
        draws with the prediction computed from the weights before dropout.
+
 1. [code] **Keys of a different width.**
    :numref:`subsec_dot-product-attention-class` notes that a matrix
    $\mathbf{M} \in \mathbb{R}^{d_q \times d_k}$ turns the dot product into
@@ -807,24 +793,29 @@ form used in the original neural alignment model.
        as `W_q` and `W_k` in :numref:`subsec_learned-alignment` do. Compute
        the variance of the factored score, and state the factor that
        replaces $1/\sqrt{d}$.
-1. **Arithmetic intensity of attention.** For $n$ queries and $m$ keys,
-   with queries and keys of width $d$ and values of width $v$, the two
-   matrix products of :eqref:`eq_softmax_QK_V` cost $2nmd$ and $2nmv$
-   floating-point operations, and the softmax costs a few operations per
-   score.
-    1. Suppose that the score matrix is written to memory once and read
-       once by the softmax, whose output is written once and read once by
-       the value product, all in single precision. Count the bytes moved by
-       these four passes, and by reading $\mathbf{Q}$, $\mathbf{K}$,
-       $\mathbf{V}$ and writing the output.
-    1. Neglecting the softmax arithmetic, form the ratio of operations to
-       bytes and let $n, m \to \infty$ at fixed $d$ and $v$. Show that the
-       limit is $(d + v)/8$, and state how the softmax arithmetic changes
-       it.
-    1. Look up the peak arithmetic throughput and the memory bandwidth of
-       one accelerator, compute its ratio of operations per byte, and decide
-       whether attention with $d = v = 64$ is limited by arithmetic or by
-       memory traffic on it.
+
+1. **Entropy of random scores.** ● The scaled curve of `attention_stats`
+   stays near $3.7$ nats, below the uniform value $\ln 64 \approx 4.16$.
+   Fix one query $\mathbf{q} \in \mathbb{R}^d$ and draw $m$ keys with
+   independent standard normal coordinates, as `attention_stats` does.
+    1. Show that the scaled scores $a_i = \mathbf{q}^\top \mathbf{k}_i /
+       \sqrt{d}$ are independent normal variables with mean $0$ and variance
+       $s^2 = \|\mathbf{q}\|^2 / d$, and compute the expected value of $s^2$
+       when $\mathbf{q}$ is drawn as in `attention_stats`.
+    1. The entropy of the weights is $H = \ln Z - \sum_i \alpha_i a_i$ with
+       $Z = \sum_j \exp(a_j)$. For large $m$, replace $Z/m$ and
+       $\sum_i \exp(a_i)\, a_i / m$ by their expected values and derive
+       $$H \approx \ln m - \frac{s^2}{2}.$$
+       Evaluate the approximation for $m = 64$ and $s = 1$.
+    1. The approximation needs $Z$ to concentrate around its mean. Compute
+       the relative standard deviation of $Z$ as a function of $s$ and $m$,
+       and derive from it a condition on $s^2$ under which the approximation
+       holds. Unscaled scores have $s^2 = \|\mathbf{q}\|^2$, whose expected
+       value is $d$. Evaluate the relative standard deviation for $m = 64$
+       at $s^2 = 4$ and $s^2 = 8$, and compare the approximation with the
+       unscaled entropies that `attention_stats` returns for $d = 4$ and
+       $d = 8$.
+
 1. [code] **Additive scores near zero.** ● The additive score
    :eqref:`eq_additive-attn` adds the projected query and the projected key
    inside a $\tanh$.
@@ -840,6 +831,7 @@ form used in the original neural alignment model.
        of the three queries. Check the scaling you derived, and state what
        the result for $\epsilon = 1$ implies for additive attention at
        initialization.
+
 1. [code] **Additive versus dot-product cost.** ● Score $n$ queries of
    width $d_q$ against $m$ keys of width $d_k$ with the additive rule
    :eqref:`eq_additive-attn` of hidden size $h$, and $n$ queries against
@@ -853,6 +845,7 @@ form used in the original neural alignment model.
        $d_q = d_k = d = h = 64$ and at $d_q = d_k = d = h = 256$. Relate
        the ratio of the two times
        to your counts of operations and of intermediate memory.
+
 1. [extended] **A learned alignment.** ●
    :citet:`Bahdanau.Cho.Bengio.2014` observed that attention weights trained
    only for translation behave like alignments (:numref:`fig_alignment`).

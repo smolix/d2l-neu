@@ -542,6 +542,130 @@ from another, with output length equal to the query length.
 
 ## Exercises
 
+1. [code] **Head pruning.** Removing heads from a trained layer at
+   inference time :cite:`Michel.Levy.Neubig.2019` requires a measure of
+   each head's importance. The copy-both task supplies a case in which
+   importance is not additive.
+    1. Form three heads with weights $(1, 0)$, $(0.88, 0.12)$, and again
+       $(0.88, 0.12)$, concatenate their mixtures, and evaluate
+       `readout_error` after removing each single head and after removing
+       each pair of heads.
+    1. Define a head's importance as the increase in error when it alone is
+       removed. A one-shot procedure computes every importance once and
+       removes all heads whose importance is below the tolerance
+       $\tau = 0.01$. Which heads does it remove, and which error results?
+    1. A greedy procedure instead removes the least important head,
+       re-estimates the importance of the remaining heads, and repeats
+       until every remaining head has an importance of at least $\tau$.
+       Find the heads it keeps and the resulting error. Without the
+       stopping rule, count the evaluations of `readout_error` that it
+       needs to prune $h$ heads down to one, and compare the count with
+       the number that the one-shot procedure needs.
+
+1. [code] **Narrow heads.** With $p = d/h$, the leading count of
+   :eqref:`eq_multihead-flops` does not depend on $h$, so the head count
+   looks free up to $h = d$. Consider one head with scores
+   $\mathbf{q}^\top \mathbf{k}_j / \sqrt{p}$ over keys $\mathbf{k}_1,
+   \ldots, \mathbf{k}_m \in \mathbb{R}^p$ and no mask. Call a query sharp
+   on key $j$ when its weights concentrate on $\mathbf{k}_j$ as the query
+   is scaled by a factor that grows without bound.
+    1. For $p = 1$ and distinct scalar keys, show that every query's weights
+       are monotone in $k_j$. Conclude that the queries of such a head can
+       be sharp only on the largest or the smallest key.
+    1. Show that for $p = 2$ the keys and queries can be chosen so that
+       each of $n$ queries is sharp on a key of its own choosing, for every
+       assignment of queries to keys.
+    1. Use these two results to state which attention patterns a layer
+       gives up as $h$ approaches $d$.
+    1. Time the forward pass of `MultiHeadAttention` with dropout 0 for
+       self-attention with $d = 256$ and $n = 512$ on a batch of $8$
+       sequences for $h \in \{1, 2, 4, 8, 16, 32, 64\}$. Make a warm-up
+       call first and wait for the result before stopping the clock.
+       Report the ratio of the slowest to the fastest configuration.
+       Identify the cost that grows with $h$ and that
+       :eqref:`eq_multihead-flops` leaves out, and check that it accounts
+       for the trend.
+
+1. **Cost of cross-attention.** :eqref:`eq_multihead-flops` counts
+   self-attention over $n$ tokens.
+    1. Redo the count for cross-attention with $n$ queries from
+       $\mathbf{A}$ and $m$ keys and values from $\mathbf{B}$. Identify
+       which terms grow with $n$, which with $m$, and which with $nm$.
+    1. A decoder generates its output one token at a time and
+       cross-attends from each new token to a fixed source of $m$ tokens.
+       Count the FLOPs per generated token when the projected source keys
+       and values are recomputed at every step and when they are computed
+       once and stored. Give the ratio for $d = 512$ and $m = 1000$.
+
+1. **Multi-query and grouped-query attention.** Multi-query attention
+   :cite:`Shazeer.2019` shares one key head and one value head of width
+   $p = d/h$ across all $h$ query heads. Grouped-query attention
+   :cite:`Ainslie.Lee-Thorp.Jong.ea.2023` shares them within each of $g$
+   groups of $h/g$ query heads.
+    1. Redo the parameter count and the FLOP count of
+       :eqref:`eq_multihead-flops` for both schemes. Which of the two terms
+       changes, and by what factor?
+    1. During autoregressive generation every past key and value is cached.
+       Compute the cache size per token and per layer in bytes for
+       $d = 4096$, $h = 32$, and 16-bit numbers under the three schemes,
+       with $g = 8$ for grouped-query attention.
+    1. Show that two query heads that share one key head and one value head
+       can still produce two distinct mixtures of the same projected
+       values, as the copy-both construction requires. Then state the
+       limit that sharing places on the information the layer can move
+       from each source token to its output.
+
+1. [code] **Heads as slices.** `MultiHeadAttention` computes one projection
+   of width $d$ for each of the queries, keys, and values and splits it
+   into heads with `transpose_qkv`.
+    1. Determine from `transpose_qkv` which output features of `W_q`,
+       `W_k`, and `W_v` feed head $i$, and which input features of `W_o`
+       receive that head's output. Write a forward pass that loops over the
+       heads, applies the sliced projections, and calls
+       `d2l.DotProductAttention` once per head. Verify on random inputs
+       with `valid_lens` that it matches `MultiHeadAttention` with
+       dropout 0.
+    1. Replace the repetition of `valid_lens` in the forward pass of
+       `MultiHeadAttention` with a tiling that copies the whole vector
+       `num_heads` times. Find inputs for which the output changes, and
+       explain which mask each head of each sequence receives. Characterize
+       the `valid_lens` for which no test can detect the change.
+
+1. **Permuting the source.** In cross-attention, the queries come from
+   $\mathbf{A} \in \mathbb{R}^{n \times d}$ and the keys and values from
+   $\mathbf{B} \in \mathbb{R}^{m \times d}$, neither carrying positional
+   information. Let $\boldsymbol{\Pi}$ be an $m \times m$ permutation
+   matrix.
+    1. Show that replacing $\mathbf{B}$ by $\boldsymbol{\Pi}\mathbf{B}$ in
+       both the key and the value argument leaves the output of
+       `MultiHeadAttention` unchanged when no mask is applied, and that
+       replacing it in the key argument alone changes the output in general.
+    1. Now let `valid_lens` mark only the first $\ell$ rows of
+       $\mathbf{B}$ as valid. Which permutations leave the output unchanged
+       when `valid_lens` stays fixed?
+    1. Self-attention without positional information is permutation
+       equivariant: permuting the rows of its input permutes the rows of
+       its output in the same way. A translation decoder cross-attends to
+       the output of an encoder built from such self-attention layers.
+       Show that the decoder's outputs are identical for the source
+       sentences "dog bites man" and "man bites dog", and state where word
+       order must enter the model for cross-attention to use it.
+
+1. [code] **Random projections and readable maps.** The alignment of
+   :numref:`subsec_cross-attention-alignment` uses shared random embeddings
+   and no learned projections.
+    1. Pass the letter embeddings of the two words as queries, keys, and
+       values through a freshly initialized `MultiHeadAttention` with 4
+       heads, 32 hidden units, and dropout 0, and plot the attention
+       weights of each head.
+    1. Which properties of the plain map hold in every head, whatever the
+       projections, and which are lost? Explain both from the score that
+       head $i$ assigns to a query letter with embedding $\mathbf{e}$ and a
+       key letter with embedding $\mathbf{e}'$,
+       $$\mathbf{e}^\top \mathbf{W}_i^{(q)\top} \mathbf{W}_i^{(k)} \mathbf{e}' / \sqrt{p}.$$
+    1. State what this implies for reading the attention maps of a trained
+       network whose projections have not been inspected.
+
 1. [code] **Nonlinear readouts.** ● For Gaussian values, the proof of the
    proposition in :numref:`subsec_one-mixture-bottleneck` shows that the
    conditional mean $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}]$ is linear in
@@ -559,6 +683,7 @@ from another, with output length equal to the query length.
        $(v_{1j}, v_{2j}) \mapsto m_j$ is injective. Train the perceptron
        again and report its held-out error. Explain why this escape from
        the bound does not contradict the proposition.
+
 1. [code] **Nearly identical heads.** ● Two heads with weights
    $(0.5 + \epsilon, 0.5 - \epsilon)$ and $(0.5 - \epsilon, 0.5 +
    \epsilon)$ supply two distinct mixtures, so the linear readout inverts
@@ -577,6 +702,7 @@ from another, with output length equal to the query length.
        the second head stops helping, and to predict how that point moves
        with $\sigma$. Check the prediction by repeating the sweep at
        $\sigma = 0.001$, extended down to $\epsilon = 10^{-5}$.
+
 1. **What the bound counts.** ● The proposition of
    :numref:`subsec_one-mixture-bottleneck` fixes the softmax weights, but
    its error bound rests on a weaker fact: the readout receives a single
@@ -609,13 +735,17 @@ from another, with output length equal to the query length.
        $$1 - \frac{\operatorname{rank}(\mathbf{A})}{k},$$
        and that softmax weights, whose entries are all positive, can attain
        $\operatorname{rank}(\mathbf{A}) = \min(h, k)$.
+
 1. [code] **Averages under key noise.** ● Let $m = 4$ keys
    $\mathbf{k}_i \in \mathbb{R}^8$ be drawn as $\mathbf{k}_i \sim
    \mathcal{N}(\boldsymbol{\mu}_i, \boldsymbol{\Sigma}_i)$ with orthonormal
    means $\boldsymbol{\mu}_i$, let the values $\mathbf{v}_1, \ldots,
    \mathbf{v}_4$ be the standard basis vectors of $\mathbb{R}^4$, and let
    the score be $\mathbf{q}^\top \mathbf{k}_i$. When every covariance is
-   $\beta \mathbf{I}$ with vanishingly small $\beta$, the query
+   $\beta \mathbf{I}$ with vanishingly small $\beta$, the keys are nearly
+   orthonormal, so by Exercise
+   3a
+   of :numref:`sec_queries-keys-values` the query
    $c\,(\boldsymbol{\mu}_a + \boldsymbol{\mu}_b)$ with a large scale $c$
    returns an output $\mathbf{o}$ close to $\tfrac{1}{2}(\mathbf{v}_a +
    \mathbf{v}_b)$.
@@ -623,10 +753,17 @@ from another, with output length equal to the query length.
        \boldsymbol{\mu}_a \boldsymbol{\mu}_a^\top$, so that
        $\mathbf{k}_a \approx (1 + \gamma)\, \boldsymbol{\mu}_a$ with
        $\gamma \sim \mathcal{N}(0, \tfrac{1}{2})$, and leave the other
-       covariances at $\beta \mathbf{I}$. Write the ratio of the weights on
-       $\mathbf{k}_a$ and $\mathbf{k}_b$ as a function of $\gamma$, and
-       describe the distribution of $\mathbf{o}$ across resamples of the
-       keys.
+       covariances at $\beta \mathbf{I}$. Each draw of the keys then gives
+       $\mathbf{k}_a$ and $\mathbf{k}_b$ different norms, the case of
+       Exercise
+       3c
+       of :numref:`sec_queries-keys-values`: as $\beta \to 0$, the weights
+       on $\mathbf{k}_a$ and $\mathbf{k}_b$ stand in the ratio
+       $e^{c\gamma}$, and the other two weights are negligible at large
+       $c$. Derive from this the probability, over resamples of the keys,
+       that $\|\mathbf{o} - \tfrac{1}{2}(\mathbf{v}_a + \mathbf{v}_b)\|$
+       exceeds $0.1$, and evaluate it for $c = 10$ and $c = 100$. What
+       does the probability tend to as $c \to \infty$?
     1. Replace the single query by two queries $\mathbf{q}_1$ and
        $\mathbf{q}_2$, each with its own softmax and output
        $\mathbf{o}_1$ or $\mathbf{o}_2$, and return $\tfrac{1}{2}
@@ -641,8 +778,10 @@ from another, with output length equal to the query length.
        $c \in \{10, 100\}$, and $1000$ resamples of the keys. Report the
        median of $\|\mathbf{o} - \tfrac{1}{2}(\mathbf{v}_a +
        \mathbf{v}_b)\|$ and the fraction of resamples on which it exceeds
-       $0.1$. Explain why raising $c$ from $10$ to $100$ hurts the single
-       query even when the covariances are isotropic.
+       $0.1$. Compare that fraction for the anisotropic $\mathbf{k}_a$ and
+       the single query with the probability from (a). Explain why raising
+       $c$ from $10$ to $100$ hurts the single query even when the
+       covariances are isotropic.
     1. Repeat the two single-query settings with the query
        $-c \sum_{i \notin \{a, b\}} \boldsymbol{\mu}_i$, which lowers the
        scores of the other keys instead of raising those of $\mathbf{k}_a$
@@ -654,123 +793,7 @@ from another, with output length equal to the query length.
     *Adapted from Stanford CS224N,
     [Assignment 4](https://web.stanford.edu/class/cs224n/assignments_w25/a4.pdf),
     Problem 1(c) and 1(d).*
-1. [code] **Head pruning.** Removing heads from a trained layer at
-   inference time :cite:`Michel.Levy.Neubig.2019` requires a measure of
-   each head's importance. The copy-both task supplies a case in which
-   importance is not additive.
-    1. Form three heads with weights $(1, 0)$, $(0.88, 0.12)$, and again
-       $(0.88, 0.12)$, concatenate their mixtures, and evaluate
-       `readout_error` after removing each single head and after removing
-       each pair of heads.
-    1. Define a head's importance as the increase in error when it alone is
-       removed. A one-shot procedure computes every importance once and
-       removes all heads whose importance is below the tolerance
-       $\tau = 0.01$. Which heads does it remove, and which error results?
-    1. A greedy procedure instead removes the least important head,
-       re-estimates the importance of the remaining heads, and repeats
-       until every remaining head has an importance of at least $\tau$.
-       Find the heads it keeps and the resulting error. Without the
-       stopping rule, count the evaluations of `readout_error` that it
-       needs to prune $h$ heads down to one, and compare the count with
-       the number that the one-shot procedure needs.
-1. [code] **Narrow heads.** With $p = d/h$, the leading count of
-   :eqref:`eq_multihead-flops` does not depend on $h$, so the head count
-   looks free up to $h = d$. Consider one head with scores
-   $\mathbf{q}^\top \mathbf{k}_j / \sqrt{p}$ over keys $\mathbf{k}_1,
-   \ldots, \mathbf{k}_m \in \mathbb{R}^p$ and no mask. Call a query sharp
-   on key $j$ when its weights concentrate on $\mathbf{k}_j$ as the query
-   is scaled by a factor that grows without bound.
-    1. For $p = 1$ and distinct scalar keys, show that every query's weights
-       are monotone in $k_j$. Conclude that the queries of such a head can
-       be sharp only on the largest or the smallest key.
-    1. Show that for $p = 2$ the keys and queries can be chosen so that
-       each of $n$ queries is sharp on a key of its own choosing, for every
-       assignment of queries to keys.
-    1. Use these two results to state which attention patterns a layer
-       gives up as $h$ approaches $d$.
-    1. Time the forward pass of `MultiHeadAttention` with dropout 0 for
-       self-attention with $d = 256$ and $n = 512$ on a batch of $8$
-       sequences for $h \in \{1, 2, 4, 8, 16, 32, 64\}$. Make a warm-up
-       call first and wait for the result before stopping the clock.
-       Report the ratio of the slowest to the fastest configuration.
-       Identify the cost that grows with $h$ and that
-       :eqref:`eq_multihead-flops` leaves out, and check that it accounts
-       for the trend.
-1. **Cost of cross-attention.** :eqref:`eq_multihead-flops` counts
-   self-attention over $n$ tokens.
-    1. Redo the count for cross-attention with $n$ queries from
-       $\mathbf{A}$ and $m$ keys and values from $\mathbf{B}$. Identify
-       which terms grow with $n$, which with $m$, and which with $nm$.
-    1. A decoder generates its output one token at a time and
-       cross-attends from each new token to a fixed source of $m$ tokens.
-       Count the FLOPs per generated token when the projected source keys
-       and values are recomputed at every step and when they are computed
-       once and stored. Give the ratio for $d = 512$ and $m = 1000$.
-1. **Multi-query and grouped-query attention.** Multi-query attention
-   :cite:`Shazeer.2019` shares one key head and one value head of width
-   $p = d/h$ across all $h$ query heads. Grouped-query attention
-   :cite:`Ainslie.Lee-Thorp.Jong.ea.2023` shares them within each of $g$
-   groups of $h/g$ query heads.
-    1. Redo the parameter count and the FLOP count of
-       :eqref:`eq_multihead-flops` for both schemes. Which of the two terms
-       changes, and by what factor?
-    1. During autoregressive generation every past key and value is cached.
-       Compute the cache size per token and per layer in bytes for
-       $d = 4096$, $h = 32$, and 16-bit numbers under the three schemes,
-       with $g = 8$ for grouped-query attention.
-    1. Show that two query heads that share one key head and one value head
-       can still produce two distinct mixtures of the same projected
-       values, as the copy-both construction requires. Then state the
-       limit that sharing places on the information the layer can move
-       from each source token to its output.
-1. [code] **Heads as slices.** `MultiHeadAttention` computes one projection
-   of width $d$ for each of the queries, keys, and values and splits it
-   into heads with `transpose_qkv`.
-    1. Determine from `transpose_qkv` which output features of `W_q`,
-       `W_k`, and `W_v` feed head $i$, and which input features of `W_o`
-       receive that head's output. Write a forward pass that loops over the
-       heads, applies the sliced projections, and calls
-       `d2l.DotProductAttention` once per head. Verify on random inputs
-       with `valid_lens` that it matches `MultiHeadAttention` with
-       dropout 0.
-    1. Replace the repetition of `valid_lens` in the forward pass of
-       `MultiHeadAttention` with a tiling that copies the whole vector
-       `num_heads` times. Find inputs for which the output changes, and
-       explain which mask each head of each sequence receives. Characterize
-       the `valid_lens` for which no test can detect the change.
-1. **Permuting the source.** In cross-attention, the queries come from
-   $\mathbf{A} \in \mathbb{R}^{n \times d}$ and the keys and values from
-   $\mathbf{B} \in \mathbb{R}^{m \times d}$, neither carrying positional
-   information. Let $\boldsymbol{\Pi}$ be an $m \times m$ permutation
-   matrix.
-    1. Show that replacing $\mathbf{B}$ by $\boldsymbol{\Pi}\mathbf{B}$ in
-       both the key and the value argument leaves the output of
-       `MultiHeadAttention` unchanged when no mask is applied, and that
-       replacing it in the key argument alone changes the output in general.
-    1. Now let `valid_lens` mark only the first $\ell$ rows of
-       $\mathbf{B}$ as valid. Which permutations leave the output unchanged
-       when `valid_lens` stays fixed?
-    1. Self-attention without positional information is permutation
-       equivariant: permuting the rows of its input permutes the rows of
-       its output in the same way. A translation decoder cross-attends to
-       the output of an encoder built from such self-attention layers.
-       Show that the decoder's outputs are identical for the source
-       sentences "dog bites man" and "man bites dog", and state where word
-       order must enter the model for cross-attention to use it.
-1. [code] **Random projections and readable maps.** The alignment of
-   :numref:`subsec_cross-attention-alignment` uses shared random embeddings
-   and no learned projections.
-    1. Pass the letter embeddings of the two words as queries, keys, and
-       values through a freshly initialized `MultiHeadAttention` with 4
-       heads, 32 hidden units, and dropout 0, and plot the attention
-       weights of each head.
-    1. Which properties of the plain map hold in every head, whatever the
-       projections, and which are lost? Explain both from the score that
-       head $i$ assigns to a query letter with embedding $\mathbf{e}$ and a
-       key letter with embedding $\mathbf{e}'$,
-       $$\mathbf{e}^\top \mathbf{W}_i^{(q)\top} \mathbf{W}_i^{(k)} \mathbf{e}' / \sqrt{p}.$$
-    1. State what this implies for reading the attention maps of a trained
-       network whose projections have not been inspected.
+
 1. [extended] **Learned copy-both heads.** ● Train `MultiHeadAttention`
    with 16 hidden units and dropout 0 on a copy-both task whose target
    fits the layer's width. Each example has one query and two key--value

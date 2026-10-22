@@ -1002,6 +1002,7 @@ models of :numref:`sec_ssm`.
        sequential steps, counting each layer of a stack as one step and
        each token of the RNN as one step. Which resource does each design
        spend to connect the two tokens?
+
 1. **The quadratic crossover.** A multi-head layer costs
    $8nd^2 + 4n^2 d$ FLOPs (:eqref:`eq_multihead-flops`,
    :eqref:`eq_attn-layer-flops`), and its two terms are equal at
@@ -1020,6 +1021,7 @@ models of :numref:`sec_ssm`.
        `valid` keeps. Generalize to blocks of $b \leq w$ queries, each
        scored against the $b + w - 1$ keys that its queries can reach, and
        explain what limits how small $b$ can be chosen in practice.
+
 1. [code] **The running maximum.** Remove the running maximum from
    `chunked_attention`, so that the state accumulates plain sums of
    $e^{a_j}$. Run the result with $\mathbf{Q}$, $\mathbf{K}$, $\mathbf{V}$
@@ -1044,6 +1046,7 @@ models of :numref:`sec_ssm`.
        masked for a query in the first block. Trace $m$, $s$, and
        $\mathbf{O}$ for that query through both iterations, and show that
        the final output is still exact.
+
 1. **Merging partial states.** Fix one query with scores $a_j$ and values
    $\mathbf{v}_j$. For a set $B$ of keys, call the triple $(m_B, s_B,
    \mathbf{o}_B)$ that :eqref:`eq_online-softmax` produces from the keys in
@@ -1065,6 +1068,7 @@ models of :numref:`sec_ssm`.
        $\bar{\mathbf{o}}$ is a convex combination of
        $\bar{\mathbf{o}}_B$ and $\bar{\mathbf{o}}_{B'}$ whose weights
        depend only on $\ell_B$ and $\ell_{B'}$.
+
 1. **Memory of chunked attention.** `chunked_attention` keeps one
    $n \times c$ stripe of scores in memory at a time during the forward
    pass.
@@ -1076,49 +1080,26 @@ models of :numref:`sec_ssm`.
     1. Evaluate your formula for $n = 16{,}384$, $d = 64$, and $c = 512$
        in single precision, and compare it with the measurement in
        :numref:`subsec_attn-chunked`.
-1. [code] **Backward memory of chunked attention.** ● Training also needs
-   the backward pass of `causal_attention` and `chunked_attention`.
-    1. For each of the two functions separately, differentiate the sum of
-       its outputs with respect to $\mathbf{Q}$, $\mathbf{K}$, and
-       $\mathbf{V}$ by automatic differentiation. From the arrays that the
-       backward pass of each operation needs, predict how much memory
-       automatic differentiation keeps for `chunked_attention` as a
-       function of $n$, $c$, and $d$. Then measure the peak memory of the
-       forward and backward computation of both functions for
-       $n \in \{2048, 4096, 8192, 16384\}$ as in
-       :numref:`subsec_attn-counting-memory`.
-    1. Activation checkpointing (:numref:`subsec_activation_checkpointing`)
-       of each iteration keeps only the inputs of every iteration. Count
-       what it keeps over all $n/c$ iterations. FlashAttention instead
-       keeps only the output and the two statistics $m_i$ and $s_i$ of
-       every query :cite:`Dao.Fu.Ermon.ea.2022`. Show that every attention
-       weight can be recomputed from its score and the single number
-       $\ell_i = m_i + \log s_i$. Compare the floats stored by the three
-       strategies at $n = 16{,}384$, with FlashAttention keeping $\ell_i$
-       in place of the two statistics.
-1. **Traffic of a tiled schedule.** ● Take the off-chip memory traffic of
-   the naive layer to be $4n^2$ floats, since the score matrix and the
-   weight matrix are each written once and read once. Ignore all traffic
-   that is linear in $n$.
-    1. Suppose that `chunked_attention` runs one operation at a time, each
-       reading its inputs from off-chip memory and writing its output
-       back. Count, as functions of $n$, $c$, and $d$, the floats moved for
-       the score stripes, the floats moved for $\mathbf{Q}$ and the
-       accumulator $\mathbf{O}$, and the number of operations launched.
-       Which of these quantities does chunking reduce relative to the
-       naive layer?
-    1. A fused kernel instead holds a tile of $b$ queries, their output
-       accumulator, and one tile each of $b$ keys and $b$ values in an
-       on-chip memory of $M$ floats, so that $4bd \leq M$; scores and
-       per-row statistics stay in registers. It loads each query tile once,
-       streams all key and value tiles past it, and writes each output tile
-       once. Show that its traffic beyond the linear terms is
-       $2n^2 d / b$ floats and that the largest admissible tile gives
-       $\Theta(n^2 d^2 / M)$, the bound that
-       :citet:`Dao.Fu.Ermon.ea.2022` prove for FlashAttention.
-    1. Compute the ratio of the fused traffic to the naive traffic for
-       $d \in \{64, 128, 256\}$ with $M = 2^{16}$, and state how the head
-       width limits the benefit of tiling.
+
+1. **Arithmetic intensity of attention.** The count
+   :eqref:`eq_attn-layer-flops` extends to values of width $v$: for $n$
+   queries and keys of width $d$, the two matrix products of
+   :eqref:`eq_softmax_QK_V` cost $2n^2 d$ and $2n^2 v$ floating-point
+   operations, and the softmax costs a few operations per score.
+    1. Suppose that the score matrix is written to memory once and read
+       once by the softmax, whose output is written once and read once by
+       the value product, all in single precision. Count the bytes moved by
+       these four passes, and by reading $\mathbf{Q}$, $\mathbf{K}$,
+       $\mathbf{V}$ and writing the output.
+    1. Neglecting the softmax arithmetic, form the ratio of operations to
+       bytes and let $n \to \infty$ at fixed $d$ and $v$. Show that the
+       limit is $(d + v)/8$, and state how the softmax arithmetic changes
+       it.
+    1. Look up the peak arithmetic throughput and the memory bandwidth of
+       one accelerator, compute its ratio of operations per byte, and decide
+       whether attention with $d = v = 64$ is limited by arithmetic or by
+       memory traffic on it.
+
 1. [code] **Dilated windows.** Longformer :cite:`beltagy2020longformer`
    combines its sliding window with *dilation*: a layer attends to the $w$
    positions $t, t - r, \ldots, t - (w-1)r$, spaced $r$ apart, as dilated
@@ -1134,6 +1115,7 @@ models of :numref:`sec_ssm`.
        window fill the gaps?
     1. Compare the FLOP count of the alternating stack with that of a stack
        of plain windows that achieves the same reach.
+
 1. **The cost of one more token.** During generation, dense causal
    attention appends the new key and value to a cache of $t$ past pairs,
    whereas `linear_attention_recurrent` updates a state of fixed size.
@@ -1156,6 +1138,7 @@ models of :numref:`sec_ssm`.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 12.7 and 12.10.*
+
 1. [code] **The feature map.** The feature map $\phi(x) =
    \mathrm{elu}(x) + 1$ in `phi` is one choice among many. Compare it with
    $\phi(x) = \mathrm{relu}(x)$ and $\phi(x) = \exp(x)$, both applied
@@ -1176,6 +1159,54 @@ models of :numref:`sec_ssm`.
        Explain from a property of each $\phi$ which maps cannot sharpen
        their weights in this way, and what this implies for approximating
        a softmax row that is nearly one-hot.
+
+1. [code] **Backward memory of chunked attention.** ● Training also needs
+   the backward pass of `causal_attention` and `chunked_attention`.
+    1. For each of the two functions separately, differentiate the sum of
+       its outputs with respect to $\mathbf{Q}$, $\mathbf{K}$, and
+       $\mathbf{V}$ by automatic differentiation. From the arrays that the
+       backward pass of each operation needs, predict how much memory
+       automatic differentiation keeps for `chunked_attention` as a
+       function of $n$, $c$, and $d$. Then measure the peak memory of the
+       forward and backward computation of both functions for
+       $n \in \{2048, 4096, 8192, 16384\}$ as in
+       :numref:`subsec_attn-counting-memory`.
+    1. Activation checkpointing (:numref:`subsec_activation_checkpointing`)
+       of each iteration keeps only the inputs of every iteration. Count
+       what it keeps over all $n/c$ iterations. FlashAttention instead
+       keeps only the output and the two statistics $m_i$ and $s_i$ of
+       every query :cite:`Dao.Fu.Ermon.ea.2022`. Show that every attention
+       weight can be recomputed from its score and the single number
+       $\ell_i = m_i + \log s_i$. Compare the floats stored by the three
+       strategies at $n = 16{,}384$, with FlashAttention keeping $\ell_i$
+       in place of the two statistics.
+
+1. **Traffic of a tiled schedule.** ● By problem
+   6a,
+   the naive layer moves $4n^2$ floats to and from off-chip memory beyond
+   the terms linear in $n$, since the score matrix and the weight matrix
+   are each written once and read once. Ignore all traffic that is linear
+   in $n$.
+    1. Suppose that `chunked_attention` runs one operation at a time, each
+       reading its inputs from off-chip memory and writing its output
+       back. Count, as functions of $n$, $c$, and $d$, the floats moved for
+       the score stripes, the floats moved for $\mathbf{Q}$ and the
+       accumulator $\mathbf{O}$, and the number of operations launched.
+       Which of these quantities does chunking reduce relative to the
+       naive layer?
+    1. A fused kernel instead holds a tile of $b$ queries, their output
+       accumulator, and one tile each of $b$ keys and $b$ values in an
+       on-chip memory of $M$ floats, so that $4bd \leq M$; scores and
+       per-row statistics stay in registers. It loads each query tile once,
+       streams all key and value tiles past it, and writes each output tile
+       once. Show that its traffic beyond the linear terms is
+       $2n^2 d / b$ floats and that the largest admissible tile gives
+       $\Theta(n^2 d^2 / M)$, the bound that
+       :citet:`Dao.Fu.Ermon.ea.2022` prove for FlashAttention.
+    1. Compute the ratio of the fused traffic to the naive traffic for
+       $d \in \{64, 128, 256\}$ with $M = 2^{16}$, and state how the head
+       width limits the benefit of tiling.
+
 1. **An exact feature map.** ● The softmax kernel $\kappa(\mathbf{q},
    \mathbf{k}) = \exp(\mathbf{q}^\top \mathbf{k} / \sqrt{d})$ also
    factorizes, but only with infinitely many features.
@@ -1197,6 +1228,7 @@ models of :numref:`sec_ssm`.
        distinct $\mathbf{x}_1, \ldots, \mathbf{x}_n$. Show that no feature
        map of dimension $D < n$ reproduces $\kappa$ exactly on these points
        when queries and keys coincide.
+
 1. [extended] **Attention variants in a language model.** ● Whether the
    quality gap between exact and linear attention matters depends on the
    task. Measure it on `TinyCharLM` of
@@ -1218,6 +1250,7 @@ models of :numref:`sec_ssm`.
        that on the first half for every variant. Which variants exploit the
        repetition, and how does the answer relate to the reach of the
        windowed models and to the fixed-size state of linear attention?
+
 1. [code] **A decaying state.** ● Give the state of
    :eqref:`eq_linear-attn-recurrence` a scalar decay $\gamma \in (0, 1)$,
    $$\mathbf{S}_t = \gamma\, \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top, \qquad \mathbf{z}_t = \gamma\, \mathbf{z}_{t-1} + \phi(\mathbf{k}_t).$$

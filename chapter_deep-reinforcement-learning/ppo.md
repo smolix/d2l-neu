@@ -68,6 +68,7 @@ $$J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \big[ R(\tau) \big] = E_{\tau \si
 Thus data from the old policy give an unbiased estimate of the new policy's return when weighted by the trajectory likelihood ratio. Expanding $P(\tau;\theta)$ from :eqref:`eq_traj_prob` cancels the transition probabilities between numerator and denominator, just as in :numref:`sec_policygradient`. The remaining weight is a product of policy ratios:
 
 $$\frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})} = \prod_{t=0}^{T-1} \frac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_{\textrm{old}}}(a_t \mid s_t)}.$$
+:eqlabel:`eq_traj_ratio`
 
 ### The Exploding Product of Ratios
 
@@ -88,7 +89,7 @@ where $\hat{A}_t^i$ is an advantage estimate for step $t$ of trajectory $i$, suc
 
 ### The Length-Normalized Trajectory Ratio
 
-A length-normalized trajectory ratio lies between the full product and the individual per-step ratios. Raising the product to the power $1/T$ gives its geometric mean, whose logarithm is the average per-step log-ratio and whose scale does not grow exponentially with sequence length. GSPO clips this sequence-level ratio rather than each per-step ratio in language-model training. :numref:`sec_rl_sequences` returns to this construction for token trajectories.
+A length-normalized trajectory ratio lies between the full product and the individual per-step ratios. Raising the product to the power $1/T$ gives its geometric mean, whose logarithm is the average per-step log-ratio and whose scale does not grow exponentially with sequence length. Group Sequence Policy Optimization (GSPO) clips this sequence-level ratio rather than each per-step ratio in language-model training :cite:`Zheng.Liu.Li.ea.2025`. :numref:`sec_rl_sequences` returns to this construction for token trajectories.
 
 ## Bounding the Step
 
@@ -112,10 +113,12 @@ The lemma says that improvement depends on the old policy's advantages evaluated
 Trust Region Policy Optimization answers with a constraint measured where the two-action example said it must be: in policy space. Maximize the surrogate, but keep the new policy close to the old one,
 
 $$\max_\theta\ \hat{L}(\theta) \quad \textrm{subject to} \quad \frac{1}{n}\sum_{i,t} D_{\textrm{KL}}\big( \pi_{\theta_{\textrm{old}}}(\cdot \mid s_t^i)\ \Vert\ \pi_\theta(\cdot \mid s_t^i) \big) \leq \delta_{\textrm{KL}},$$
+:eqlabel:`eq_trpo_constraint`
 
 where the Kullback--Leibler divergence (:numref:`sec_mdl-information_theory`) measures the change in the action distribution at each visited state. The monotonic-improvement result is stated for population quantities rather than a sampled batch. Let $\rho_{\textrm{old}}(s)=\sum_{t\geq0}\gamma^tP(s_t=s\mid\pi_{\theta_{\textrm{old}}})$ denote the old policy's discounted state-visitation measure, with total mass $1/(1-\gamma)$ in a continuing task, and define the population surrogate
 
 $$\bar{L}(\theta) = \sum_s \rho_{\textrm{old}}(s) \sum_a \pi_\theta(a \mid s)\, A^{\textrm{old}}(s, a),$$
+:eqlabel:`eq_pop_surrogate`
 
 the sampled surrogate with every sample replaced by its expectation. Two facts distinguish the two quantities. First, $\bar{L}(\theta_{\textrm{old}})=0$ because the old policy's expected advantage vanishes at every state; the finite-sample $\hat{L}$ need not be zero there and also omits the $\gamma^t$ weights, as discussed after :eqref:`eq_rtg`. Second, the theoretical bound uses the largest divergence over all states, including states absent from a sampled batch. With $A_{\max} = \max_{s, a} \lvert A^{\textrm{old}}(s, a) \rvert$,
 
@@ -144,10 +147,11 @@ with a clipping parameter $\epsilon$, typically $0.2$. Consider one sample. If $
 Unlike the TRPO bound in :eqref:`eq_trpo_bound`, the clipped objective does not guarantee monotonic improvement. It is a first-order heuristic that discourages large changes in sampled action probabilities. The ablation below tests its effect empirically, and the subsequent diagnostics measure the policy changes that the theorem would otherwise constrain.
 
 ### Asymmetric Clipping Bands
+:label:`subsec_ppo_asymmetric`
 
 A symmetric interval in ratio space permits different absolute probability changes. If the old policy assigns probability $0.01$ to an action, the upper ratio $1+\epsilon$ with $\epsilon=0.2$ stops rewarding increases above $0.012$. An action with probability $0.60$ may instead increase to $0.72$ within the same ratio interval. Low-probability actions therefore receive much smaller allowed changes in probability mass.
 
-An asymmetric band uses $1-\epsilon_{\textrm{low}}$ and $1+\epsilon_{\textrm{high}}$, with $\epsilon_{\textrm{high}}>\epsilon_{\textrm{low}}$, to permit larger relative increases. Variants of this design appear in some recent language-model training recipes discussed near :numref:`sec_rl_sequences`. It is not a standard component of PPO, and Exercise 7 examines its arithmetic.
+An asymmetric band uses $1-\epsilon_{\textrm{low}}$ and $1+\epsilon_{\textrm{high}}$, with $\epsilon_{\textrm{high}}>\epsilon_{\textrm{low}}$, to permit larger relative increases. Variants of this design appear in some recent language-model training recipes discussed near :numref:`sec_rl_sequences`. It is not a standard component of PPO, and Exercise :exref:`ex_ppo-asymmetric-bands` examines its arithmetic.
 
 ### The Entropy Bonus
 
@@ -350,8 +354,9 @@ instead of taking a single actor step. During reuse, only the current policy
 $\pi_\theta$ changes.
 
 As before, the critic is updated first and regresses on the $\lambda$-return
-target `gae + value`. The generator yields the batch return together with
-per-epoch diagnostic summaries. An optional `trace` retains the full
+target `gae + value`. For each update, the generator yields the batch
+return, the three diagnostics averaged over the epochs, and the three
+diagnostics of the last epoch, in this order. An optional `trace` retains the full
 diagnostic matrix for the experiments below.
 
 ```{.python .input #ppo-the-implementation-5}
@@ -376,6 +381,7 @@ def train_ppo(seed, ac, use_clip=True, trace=None):
 ```
 
 ### Ablating the Clip
+:label:`subsec_ppo_ablation`
 
 Twenty epochs per batch is aggressive reuse: each batch of eight episodes now drives twenty gradient steps instead of one, and the ratios have twenty chances to drift from one. This is on purpose. The failure this section is about only shows itself when the combined step gets big, and we want it on screen. We run the clipped objective on eight seeds, keeping the trained agents for the audits below and the full diagnostics for the next subsection:
 
@@ -416,7 +422,7 @@ d2l.plot_curves({name: r[:, :, 0] for name, r in runs.items()},
                 reference=500)
 ```
 
-With twenty optimization epochs per batch, at least half of the unclipped seeds finish with a return below 100. Repeated unconstrained updates move the policy into a saturated region in which gradients are small, and subsequent batches are then collected by the poor policy. Every clipped seed finishes near the maximum return under the same data and update schedule. The identities of the failed seeds can vary with numerical details, so the comparison concerns the failure rate rather than particular seeds. With fewer epochs or a smaller learning rate, the unclipped variant usually succeeds; clipping is most useful when batch reuse and step size would otherwise produce an excessive policy change.
+With twenty optimization epochs per batch, at least half of the unclipped seeds finish with a return below 100. Repeated unconstrained updates move the policy into a saturated region in which gradients are small, and subsequent batches are then collected by the poor policy. Every clipped seed finishes near the maximum return under the same data and update schedule. The identities of the failed seeds, and their exact number, can vary with numerical details, so the comparison concerns the failure rate rather than particular seeds. With fewer epochs or a smaller learning rate, the unclipped variant usually succeeds; clipping is most useful when batch reuse and step size would otherwise produce an excessive policy change.
 
 The clipping rate must be defined carefully. Each update checks every sample once per epoch, and the first epoch begins with $\rho_t=1$ for every sample. We report both the fraction of all per-epoch checks outside the band and the corresponding fraction in the final epoch of each batch:
 
@@ -431,10 +437,11 @@ for name, r in runs.items():
 
 For the clipped runs, both counts are near one check in twenty. Clipping sets
 the surrogate gradient to zero for samples whose ratios have crossed the
-relevant boundary. In the unclipped control, ratios cross the band about three
-times as often overall and continue to move across repeated epochs.
+relevant boundary. In the unclipped control, ratios cross the band three to
+four times as often overall and continue to move across repeated epochs.
 
 ### Training Diagnostics
+:label:`subsec_ppo_diagnostics`
 
 :numref:`sec_deeprl` closed with the warning that the loss carries no signal here and that what deserves watching are diagnostics of the *update*. This section is where that advice becomes concrete, because the run above already returned every number an engineer would watch. Within a batch:
 
@@ -488,8 +495,9 @@ d2l.plt.show()
 After twenty passes, the clipped agent's ratios remain concentrated near one,
 with a minority beyond the dashed boundaries. The unclipped ratios are much
 more dispersed and many approach zero. The effective sample size
-:eqref:`eq_mdl-bayes-is-ess`, $N_{\textrm{eff}} = 1 / \sum_s \bar{w}_s^2$ for
-normalized weights $\bar{w}$, summarizes this concentration: it equals the
+:eqref:`eq_mdl-bayes-is-ess`, $N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$, where
+$\bar{w}_j$ is the ratio of step $j$ of the batch divided by the sum of all
+its ratios, summarizes this concentration: it equals the
 batch size for uniform weights and one when a single weight dominates.
 
 ```{.python .input #ppo-how-to-know-your-rl-is-broken-4}
@@ -507,7 +515,7 @@ print(f'after {num_epochs} epochs the batch is worth '
 
 With clipping, the weight distribution remains comparatively flat through the
 twentieth epoch. Without clipping, it becomes concentrated enough that the
-weight-based effective sample size falls below half the batch.
+weight-based effective sample size falls to about half the batch or less.
 
 This is only a ratio-concentration diagnostic. It does not include advantage
 signs or magnitudes, temporal dependence, repeated state visits, or states that
@@ -526,6 +534,7 @@ print(f'greedy mean return over 100 episodes: {score:.0f}')
 ```
 
 ### Vectorized Collection and Minibatch Updates
+:label:`subsec_ppo_vectorized`
 
 The implementation above is deliberately small: it uses one environment, complete episodes, full-batch epochs, and a learning rate of $10^{-2}$. This rate is four to forty times larger than common tuned settings so that the unclipped failure is visible within sixty updates; it should not be treated as a recommended PPO default. Production implementations usually step $N$ environments in parallel for a fixed horizon $T$, producing an $N\times T$ array of transitions. Since this array often ends in the middle of an episode, the value function supplies the continuation value at the truncation boundary, as described in :numref:`sec_mdp`.
 
@@ -577,6 +586,7 @@ for name, ag in (('full batch', full), ('minibatches', mini)):
 The two procedures produce policy changes of similar order. Minibatching reduces memory requirements and improves hardware utilization while adding gradient noise. Each sample's ratio is checked four times rather than twenty, and advantage normalization is commonly recomputed within each minibatch. There is also an update-order difference: our loop completes all critic passes before computing advantages and updating the actor, whereas typical implementations compute advantages once with the pre-update critic and then interleave policy and value losses across minibatches.
 
 ### Omitted Implementation Details
+:label:`subsec_ppo_omitted`
 
 The gap between this section's PPO and a production one is a list of small, named decisions, none of which needs new theory:
 
@@ -600,48 +610,333 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
 
 ## Exercises
 
-1. [conceptual] *One epoch is not PPO.* Show that at $\theta = \theta_{\textrm{old}}$
-   every ratio in :eqref:`eq_ppo_clip` equals one, and that the gradient of the
-   clipped objective there is exactly the policy gradient estimate of
-   :numref:`sec_baselines`. Predict what the clipped and unclipped variants will
-   do at `num_epochs = 1`, before you run the next exercise.
-1. [extended] *Reuse against clipping.* Vary `num_epochs` over $\{1, 5, 20\}$
-   with and without clipping, three seeds each. Report the fraction of seeds
-   that end below a return of 100, and the fraction of ratio checks outside the
-   band. Where does the unclipped variant start losing seeds, and does the
-   clipped one ever lose one? (About thirty minutes.)
-1. [short-code] *How wide should the band be.* Sweep the clipping parameter
-   $\epsilon$ over $\{0.02, 0.1, 0.2, 0.5\}$ and one very large value, say
-   $10^6$. When does a small $\epsilon$ hurt, what does the large value
-   reproduce, and how does the outside-the-band fraction move across the sweep?
-1. [short-code] *Minibatch epochs.* Extend `train_ppo` to spend each batch as
-   four passes of shuffled minibatches of 32, the deployed default, instead of
-   twenty full-batch passes, reusing the slicing pattern of the comparison
-   cell. Compare the two on three seeds: learning curves, final approximate KL
-   per batch, and the outside-the-band fraction. Which differences are
-   statistical and which are bookkeeping?
-1. [short-code] *Saturation, and the cure.* Run the normalized REINFORCE of
-   :numref:`sec_baselines` with a deliberately oversized learning rate,
-   $\alpha = 50$, on eight seeds, and record how many seeds ever reach the
-   goal. Diagnose the failing seeds with this section's instruments, the
-   policy's entropy and the norm of the score, then add an entropy bonus
-   $-c \sum_a \pi_\theta(a \mid s) \log \pi_\theta(a \mid s)$ to the
-   per-sample objective. How large must $c$ be to change the outcome, and what
-   does the same $c$ cost at $\alpha = 2$?
-1. [conceptual] *The clip as a step size.* For a two-action softmax policy,
-   translate the band $|\rho_t - 1| \leq \epsilon$ into a bound on the change
-   in the difference of the two logits, and show that the bound tightens as
-   the policy becomes more certain. Explain in one sentence why this is the
-   fix that the sigmoid example asked for, and why capping the step in
-   $\theta$ would not have been.
-1. [conceptual] *Asymmetric bands.* With $\epsilon = 0.2$, compute the largest
-   probability each of two actions with $\pi_{\theta_{\textrm{old}}}(a \mid s)
-   = 0.01$ and $0.60$ can reach before the clip stops paying for further
-   growth, and the smallest each can be driven to before the clip stops the
-   penalty. Which side of the band binds exploration, and why does raising
-   $\epsilon_{\textrm{high}}$ while keeping $\epsilon_{\textrm{low}}$ fixed
-   change the entropy trace of the diagnostic panel rather than just the
-   speed of learning?
+1. **Step limits for one logit.** Take the two-action policy
+   $\pi_\theta(a{=}1) = \sigma(\theta)$ of
+   :numref:`fig_rl-policy-vs-parameter` and three ways of limiting an update
+   $\theta \to \theta + \Delta$: a trust region on the divergence, PPO's clip,
+   and a cap on $|\Delta|$.
+    1. Expand $D_{\textrm{KL}}\big(\pi_\theta \Vert \pi_{\theta+\Delta}\big)$
+       to second order in $\Delta$ and show that it equals
+       $\frac{1}{2}\sigma'(\theta)\,\Delta^2$. Compute the exact divergence of
+       the two updates with $\Delta = 2$ drawn in the figure, from
+       $\theta = 0$ and from $\theta = 6$. Which of them stays inside a trust
+       region with $\delta_{\textrm{KL}} = 0.02$?
+    1. Use the second-order form to find the largest $|\Delta|$ that this
+       trust region permits at $\theta = 0$ and at $\theta = 6$. At
+       $\theta = 6$, compute the exact divergence of the two steps of that
+       size, one in each direction. Why is the second-order form much less
+       accurate there than at $\theta = 0$?
+    1. Now let the clip of :eqref:`eq_ppo_clip` with $\epsilon = 0.2$ limit
+       the step, for one sample with positive advantage. The update raises
+       the probability of the sampled action, so $\Delta > 0$ when the sample
+       is $a = 1$ and $\Delta < 0$ when it is $a = 2$. Find the largest
+       $|\Delta|$ over which the clipped objective still increases, for both
+       actions at $\theta = 0$ and at $\theta = 6$.
+    1. Which of the three limits permits large parameter steps where the
+       policy is insensitive to $\theta$ and only small ones where it is
+       sensitive? At $\theta = 6$, for which sampled action is the clip
+       looser than the trust region, and for which is it tighter?
+   :exlabel:`ex_ppo-step-limits`
+
+1. **Exploding product of ratios.** A two-action policy that ignores the
+   state collects episodes with $\pi_{\theta_{\textrm{old}}} = (0.5, 0.5)$,
+   and the data are used to evaluate $\pi_\theta = (0.6, 0.4)$. Write $W_T$
+   for the trajectory ratio :eqref:`eq_traj_ratio` of an episode of $T$
+   steps.
+    1. Compute $E[\rho_t]$ and $E[\rho_t^2]$ under the old policy. Problem
+       :exref:`ex_deep-rl-importance-weights`b of :numref:`sec_deeprl`
+       found the second moment of a trajectory weight for two Gaussian
+       policies. Use the same argument to find $E[W_T]$ and
+       $\textrm{Var}[W_T]$ here, and evaluate the variance for
+       $T \in \{10, 100, 500\}$, where $500$ is CartPole's episode limit.
+    1. As the number $n$ of episodes grows, the effective sample size
+       :eqref:`eq_mdl-bayes-is-ess` of the weights $W_T$ approaches
+       $n / E[W_T^2]$. For which $n$ does this limit equal one at
+       $T = 200$? Simulate one batch of that many episodes (the number of
+       steps with $a = 1$ in an episode is binomial) and compute its
+       effective sample size. Why does the batch report a much larger
+       effective sample size than the limit? Which of the two describes the
+       variance of the importance-weighted estimate?
+    1. The per-step surrogate :eqref:`eq_surrogate` weights each step by a
+       single ratio $\rho_t$. What is the variance of that weight here, and
+       which approximation in :eqref:`eq_surrogate` makes it independent of
+       $T$?
+   :exlabel:`ex_ppo-exploding-product`
+
+1. **The first epoch of a batch.** `ppo_epochs` evaluates the clipped
+   objective :eqref:`eq_ppo_clip` with log-probabilities `logp_old` that
+   `train_ppo` freezes before the first pass.
+    1. Show that at $\theta = \theta_{\textrm{old}}$ the gradient of
+       $L^{\textrm{CLIP}}$ equals the gradient of the unclipped surrogate
+       :eqref:`eq_surrogate`, and hence the policy-gradient estimate of
+       :numref:`sec_baselines` with weights $\hat{A}_t^i$. Which property of
+       $\textrm{clip}(\rho, 1-\epsilon, 1+\epsilon)$ near $\rho = 1$ does the
+       argument use?
+    1. Predict how a clipped and an unclipped run of `train_ppo` with
+       `num_epochs = 1` and the same seed differ, and what the first column of
+       the diagnostics of `ppo_epochs` reads in both. Problem
+       :exref:`ex_ppo-reuse-against-clipping`a checks the prediction.
+    1. Suppose `logp_old` were recomputed from the current policy before
+       every pass, without gradient. What would twenty passes then optimize,
+       and why would the clip never act? REINFORCE stores no log-probabilities
+       of the collecting policy; why does PPO have to?
+
+   *Adapted from Emma Brunskill,
+   [CS234: Reinforcement Learning, Assignment 2](https://web.stanford.edu/class/cs234/assignments/a2/CS234_A2_Questions.pdf),
+   Section 2.7(c).*
+
+1. **Asymmetric bands.** An action has probability $0.01$ under the
+   collecting policy. Suppose that every batch raises its probability by
+   exactly the factor $1 + \epsilon_{\textrm{high}}$ at which the clip stops
+   rewarding further growth (:numref:`subsec_ppo_asymmetric`), and that the
+   next batch is collected by the updated policy.
+    1. How many batches does it take to raise the probability from $0.01$ to
+       $0.5$ with $\epsilon_{\textrm{high}} = 0.2$, and how many with
+       $\epsilon_{\textrm{high}} = 0.28$, the value that
+       :citet:`Yu.Zhang.Zhu.ea.2025` pair with $\epsilon_{\textrm{low}} = 0.2$?
+    1. In a two-action problem, the other action starts at probability
+       $0.99$. Compute its ratio after one such batch. Which side of the band,
+       applied to which action, limits how fast a rarely sampled action can
+       gain probability?
+    1. Lowering the bound $1 - \epsilon_{\textrm{low}}$ as well would widen
+       the band on both sides. What would that do to rare actions with
+       negative advantage?
+    1. Policy entropy falls from about $0.65$ to $0.25$ nats over the CartPole
+       runs of :numref:`subsec_ppo_diagnostics`. Convert both values into the
+       probability $p$ of the more likely of the two actions. The upper clip
+       limits the growth of an action only while
+       $(1 + \epsilon_{\textrm{high}})\, p < 1$, as in problem
+       :exref:`ex_ppo-step-limits`c. Over which part of this range of $p$ does
+       raising $\epsilon_{\textrm{high}}$ from $0.2$ to $0.28$ let the more
+       likely action grow faster as well as the rare one? What does that do to
+       the entropy? A language model has tens of thousands of actions, most of
+       them with small probability. Why does the same change keep its entropy
+       higher?
+   :exlabel:`ex_ppo-asymmetric-bands`
+
+1. [code] **Entropy of the dead seeds.** The ablation of
+   :numref:`subsec_ppo_ablation` explains the unclipped collapses by
+   saturation. The array `runs['no clip'][:, :, 3]` holds the mean policy
+   entropy over the epochs of each batch. Without new training, split the
+   unclipped seeds into dead and surviving ones by the criterion of the
+   ablation, a mean return below 100 over the last ten updates, and plot the
+   entropy of both groups against the update. Do the dead seeds end with a
+   saturated policy?
+   :exlabel:`ex_ppo-dead-seed-entropy`
+
+1. **What the diagnostics estimate.** Fix a state $s$, draw
+   $a \sim \pi_{\theta_{\textrm{old}}}(\cdot \mid s)$, and let
+   $\rho = \pi_\theta(a \mid s) / \pi_{\theta_{\textrm{old}}}(a \mid s)$.
+    1. The approximate KL of `ppo_epochs` averages $k_1 = -\log \rho$ over the
+       batch. Show that
+       $E[k_1] = D_{\textrm{KL}}\big(\pi_{\theta_{\textrm{old}}}(\cdot \mid s) \Vert \pi_\theta(\cdot \mid s)\big)$.
+       Then show that $k_3 = (\rho - 1) - \log \rho$ has the same expectation
+       and is nonnegative for every sample. Expand both estimators to second
+       order in $\rho - 1$. Why does $k_3$ have a much smaller variance than
+       $k_1$ when the policy changes little? `cleanrl/ppo.py` logs both.
+    1. Problem :exref:`ex_ppo-exploding-product`b uses the limit
+       $n / E[w^2]$ of the effective sample size
+       :eqref:`eq_mdl-bayes-is-ess` of $n$ independent weights $w$ with
+       $E[w] = 1$. Derive this limit with the law of large numbers. Then show
+       that $E[\rho^2] = 1 + \chi^2$, so that the effective sample size of the
+       weights $\rho$ divided by $n$ approaches $1 / (1 + \chi^2)$, where
+
+       $$\chi^2 = \sum_a \frac{\big(\pi_\theta(a \mid s) - \pi_{\theta_{\textrm{old}}}(a \mid s)\big)^2}{\pi_{\theta_{\textrm{old}}}(a \mid s)}.$$
+
+       Show that $\chi^2 \approx 2 D_{\textrm{KL}}$ to second order in the
+       policy change.
+    1. With states drawn from a batch, $\chi^2$ becomes its average over the
+       visited states. Which values of $\chi^2$ do the two fractions
+       `ess[name][-1]` of :numref:`subsec_ppo_diagnostics` imply? Which
+       approximate KL does the second-order relation of (b) predict for each?
+       Compare each prediction with the $k_1$ estimate of the same ratios,
+       `(-np.log(rhos[clip][-1])).mean()` for `clip` in `(True, False)`. For
+       which agent does the second-order relation fail? Besides the size of
+       the policy change, which assumption of (b) do ratios violate that are
+       measured on the very batch the policy was trained on?
+
+   *Adapted from John Schulman,
+   [Approximating KL Divergence](http://joschu.net/blog/kl-approx.html),
+   estimators $k_1$ and $k_3$.*
+   :exlabel:`ex_ppo-diagnostics-estimate`
+
+1. **Bootstrapping at the cut.** In :numref:`subsec_ppo_vectorized`, all
+   eight trajectories of the $32 \times 8$ rectangle end at the collection
+   horizon, where $\hat{V} \approx 100$. Suppose that GAE with
+   $\gamma = 0.99$ and $\lambda = 0.95$ treated each cut as a termination and
+   used $\hat{V}(s_T) = 0$ there.
+    1. Problem :exref:`ex_actor-critic-lambda-return-recursion`b of
+       :numref:`sec_actorcritic` differentiates the $\lambda$-return with
+       respect to the critic's value at a truncation point. Use the
+       derivative to show that the advantage $\hat{A}_{T-1-k}$ of the step
+       $k$ steps before the cut shifts by
+       $-(\gamma\lambda)^k \gamma \hat{V}(s_T)$. Evaluate the shift for
+       $k \in \{0, 10, 31\}$ with $\hat{V}(s_T) = 100$.
+    1. For which $k$ does the shift exceed $1$, the reward of one step? Which
+       fraction of the steps of a trajectory is shifted by more than that
+       with the horizon $T = 32$ used there, and with $T = 128$,
+       the default of `cleanrl/ppo.py`?
+    1. The CartPole observation does not contain the time since the
+       rectangle began. What does a policy update with the shifted advantages
+       teach the policy about the actions it took shortly before each cut?
+
+1. **Length-normalized ratio.** ● GSPO :cite:`Zheng.Liu.Li.ea.2025`
+   replaces the per-step ratios, both as weights and inside the clip, by the
+   geometric mean $s = W_T^{1/T}$ of the trajectory ratio
+   :eqref:`eq_traj_ratio`. Model the per-step log-ratios $\log \rho_t$ under
+   the old policy as independent and identically distributed, with mean
+   $-\kappa$ and variance $v$, where $\kappa$ is the per-step divergence
+   $D_{\textrm{KL}}(\pi_{\theta_{\textrm{old}}} \Vert \pi_\theta)$.
+    1. Show that $\log W_T$ has mean $-\kappa T$ and variance $vT$, whereas
+       $\log s$ has mean $-\kappa$ and variance $v / T$.
+    1. Show that $E[s] = \big(E[\rho_t^{1/T}]\big)^T \leq 1$ and that
+       $E[s] \to e^{-\kappa}$ as $T \to \infty$. Evaluate $E[s]$ for the two
+       policies of problem :exref:`ex_ppo-exploding-product` at
+       $T \in \{10, 500\}$. Is $s$ an importance weight in the sense of
+       :eqref:`eq_change_of_measure`?
+    1. GSPO's experiments clip $s$ to $[1 - 3 \cdot 10^{-4}, 1 + 4 \cdot 10^{-4}]$,
+       whereas their GRPO baseline clips per-token ratios to
+       $[1 - 0.2, 1 + 0.27]$. Use (a) to explain why a sequence-level band
+       must be much narrower than a per-token band to bind at all.
+
+1. [code] **Entropy bonus and saturation.** ● `train_ppo` reads
+   `entropy_coef` as a global. Count a seed as dead by the criterion of
+   :numref:`subsec_ppo_ablation`.
+    1. Rerun the unclipped variant on the eight seeds with `entropy_coef` in
+       $\{0, 0.05, 0.2\}$ and count the dead seeds. The number and identities
+       of the dead seeds already change with numerical details alone
+       (:numref:`subsec_ppo_ablation`), so a change by one seed is no
+       evidence. Which coefficient lowers the count by more than that? Does
+       the entropy of its dead and surviving seeds, plotted as in problem
+       :exref:`ex_ppo-dead-seed-entropy`, explain why?
+    1. Run the clipped variant at that coefficient, or at $0.2$ if none
+       qualifies. What does it cost in final return and final entropy?
+
+1. [extended] **Reuse and band width.** ● `train_ppo` reads `num_epochs` and
+   `epsilon_clip` as globals, so both can be set between runs. Count a seed
+   as dead by the criterion of :numref:`subsec_ppo_ablation`. The two sweeps
+   take about forty runs of `train_ppo`.
+    1. Vary `num_epochs` over $\{1, 2, 5, 10, 20\}$ with and without
+       clipping, three seeds each. Report the fraction of dead seeds and the
+       fraction of ratio checks outside the band. Where does the unclipped
+       variant start losing seeds, and does the clipped one ever lose one?
+    1. At `num_epochs = 20` with clipping, sweep `epsilon_clip` over
+       $\{0.02, 0.1, 0.2, 0.5, 10^6\}$ on the same three seeds. When does a
+       small $\epsilon$ hurt, and which run does $\epsilon = 10^6$ reproduce?
+    1. The fraction outside the band is measured against the same $\epsilon$
+       that the clip uses. How does it move across the sweep of (b), and why
+       does it stop measuring policy drift at $\epsilon = 10^6$? Which
+       diagnostics of `ppo_epochs` do not depend on $\epsilon$?
+   :exlabel:`ex_ppo-reuse-against-clipping`
+
+1. [code] **Minibatch epochs.** ● :numref:`subsec_ppo_vectorized` spends one
+   batch as four epochs of minibatches of 32 by slicing it into `d2l.Batch`
+   objects.
+    1. Extend `train_ppo` to spend every batch this way, reshuffling the
+       minibatches in each epoch. Compare it with twenty full-batch passes on
+       three seeds: learning curves, the approximate KL of each batch's final
+       policy from the collecting policy, and the fraction of ratio checks
+       outside the band.
+    1. The full-batch run checks each ratio twenty times per batch and the
+       minibatch run four times. Why is the outside-the-band fraction not a
+       fair comparison of the two procedures? Which of the measurements of
+       (a) is?
+    1. Typical implementations compute the advantages once with the critic
+       from before the update. Move the GAE computation in `train_ppo` above
+       the critic passes and rerun the full-batch variant of (a) on the same
+       seeds. For one batch, compare the advantages before normalization
+       under the two orders. How does a critic that
+       was just fitted to the batch's own $\lambda$-returns change the
+       advantages it produces?
+
+1. [code] **KL early stopping.** ● :numref:`subsec_ppo_omitted` lists
+   KL-based early stopping. Spinning Up's PPO computes the approximate KL
+   before every pass and ends the passes on a batch once it exceeds
+   $1.5$ times `target_kl`, which defaults to $0.01$.
+    1. Replace the `ppo_epochs` call in `train_ppo` by a loop of single
+       passes, `ppo_epochs(..., 1, ...)`, as the loop that collects `rhos` in
+       :numref:`subsec_ppo_diagnostics` does. Before each pass, compute the
+       approximate KL from `log_prob_np` and apply the stopping rule. Record
+       the number of passes spent on each batch.
+    1. Run the unclipped variant with early stopping on the eight seeds of
+       the ablation. Does the stopping rule alone prevent the collapse? How
+       does the number of passes per batch change over training?
+    1. Run the clipped variant with early stopping as well. Which of the two
+       mechanisms limits the policy change of a batch in this run? What does
+       the answer say about describing the clip as a trust region?
+
+   *Adapted from Joshua Achiam,
+   [Spinning Up in Deep RL](https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/ppo.py),
+   PPO implementation, early stopping on `target_kl`.*
+
+1. **The monotonic-improvement bound.** ●● This problem derives
+   :eqref:`eq_trpo_bound` by the coupling argument of
+   :citet:`Schulman.Levine.Abbeel.ea.2015`. Take an infinite-horizon task
+   with $\gamma < 1$ and write $\pi = \pi_{\theta_{\textrm{old}}}$,
+   $\tilde{\pi} = \pi_\theta$, $A = A^{\textrm{old}}$, and
+   $\bar{A}(s) = \sum_a \tilde{\pi}(a \mid s)\, A(s, a)$. Let
+   $\alpha = \max_s D_{\textrm{TV}}\big(\pi(\cdot \mid s), \tilde{\pi}(\cdot \mid s)\big)$
+   with the total variation distance
+   $D_{\textrm{TV}}(p, q) = \frac{1}{2} \sum_a |p(a) - q(a)|$.
+    1. Show from :eqref:`eq_perf_diff` that
+       $J(\theta) - J(\theta_{\textrm{old}}) = \sum_t \gamma^t E_{s_t \sim \tilde{\pi}}\big[\bar{A}(s_t)\big]$,
+       and that the population surrogate :eqref:`eq_pop_surrogate` is
+       $\bar{L}(\theta) = \sum_t \gamma^t E_{s_t \sim \pi}\big[\bar{A}(s_t)\big]$,
+       where $s_t \sim \pi$ denotes the state distribution at time $t$ under
+       $\pi$.
+    1. Two distributions at total variation distance $\alpha$ can be coupled:
+       there is a joint distribution of $(a, \tilde{a})$ with marginals
+       $\pi(\cdot \mid s)$ and $\tilde{\pi}(\cdot \mid s)$ under which
+       $P(a \neq \tilde{a}) \leq \alpha$ at every state. Use
+       $E_{a \sim \pi}[A(s, a)] = 0$ to show that
+       $|\bar{A}(s)| \leq 2\alpha A_{\max}$.
+    1. Run both policies from the same start state with coupled actions at
+       every step, and let $n_t$ count the steps before $t$ at which the two
+       actions differ. On the event $n_t = 0$, the two trajectories coincide
+       up to time $t$. Show that
+       $\big|E_{s_t \sim \tilde{\pi}}[\bar{A}(s_t)] - E_{s_t \sim \pi}[\bar{A}(s_t)]\big| \leq 4\alpha \big(1 - (1 - \alpha)^t\big) A_{\max}$.
+    1. Sum over $t$ to obtain
+
+       $$\big|J(\theta) - J(\theta_{\textrm{old}}) - \bar{L}(\theta)\big| \leq \frac{4 \alpha^2 \gamma A_{\max}}{(1-\gamma)^2},$$
+
+       and finish the proof with $D_{\textrm{TV}}^2 \leq D_{\textrm{KL}}$.
+    1. Evaluate the coefficient $4\gamma / (1-\gamma)^2$ at $\gamma = 0.99$.
+       Use (b) to show that $\bar{L}(\theta) \leq 2\alpha A_{\max} / (1-\gamma)$.
+       With Pinsker's inequality $D_{\textrm{KL}} \geq 2 D_{\textrm{TV}}^2$,
+       show that the bound certifies an improvement only if
+       $\alpha < (1-\gamma) / (4\gamma)$. How large can $\bar{L}(\theta)$ of
+       a certified step then be, in units of $A_{\max}$? Compare this limit
+       on $\alpha$ with the total variation $\sqrt{\delta_{\textrm{KL}} / 2}$
+       that Pinsker's inequality permits at a state whose divergence equals
+       the limit $\delta_{\textrm{KL}} = 0.01$ that
+       :citet:`Schulman.Levine.Abbeel.ea.2015` use in all their experiments.
+
+1. [extended] **TRPO from the pieces.** ●● Replace the `ppo_epochs` call in
+   `train_ppo` by one TRPO update :cite:`Schulman.Levine.Abbeel.ea.2015` on
+   the constrained problem :eqref:`eq_trpo_constraint` with
+   $\delta_{\textrm{KL}} = 0.01$, and leave the critic and the advantages
+   unchanged. Treat the parameters of `ac.policy` as one flat vector, and
+   freeze the collecting policy's action probabilities, `_probs(ac, batch.obs)`,
+   together with `logp_old`.
+    1. Compute the gradient $\mathbf{g}$ of the surrogate :eqref:`eq_surrogate`
+       at $\theta_{\textrm{old}}$. Write a function that returns the
+       Fisher-vector product $F\mathbf{v}$, the Hessian of the mean
+       divergence over the batch's states at $\theta_{\textrm{old}}$ applied
+       to $\mathbf{v}$, by differentiating the gradient of that divergence a
+       second time. Check it against a finite difference of the gradient.
+    1. Solve $F\mathbf{x} = \mathbf{g}$ approximately by ten iterations of
+       conjugate gradient, and scale the step to $\beta\mathbf{x}$ with
+       $\beta = \sqrt{2\delta_{\textrm{KL}} / \mathbf{x}^\top F \mathbf{x}}$.
+       Halve $\beta$ until the measured mean divergence is at most
+       $\delta_{\textrm{KL}}$ and the surrogate has increased.
+    1. Train three seeds and compare them with the clipped runs of
+       :numref:`subsec_ppo_ablation`: learning curves, the measured divergence
+       of each update, and the number of halvings. How many gradient and
+       Fisher-vector computations does each method spend per batch?
+    1. :citet:`Engstrom.Ilyas.Santurkar.ea.2020` found that PPO and TRPO
+       perform similarly when their code-level choices are matched. Here the
+       two share every choice except the policy update. Does your comparison
+       agree?
 
 [Discussions](https://d2l.discourse.group/)
 

@@ -434,7 +434,7 @@ logits by a single learned $T > 0$ before the softmax, exactly the temperature
 of the Boltzmann distribution in :numref:`fig_mdl-clf-temperature`. Because it
 scales every logit by the same factor $1/T$ it preserves their order, leaving
 the predicted class (the $\operatorname{argmax}$) and hence the accuracy
-untouched, while sharpening or softening the confidences. Exercise 8 develops
+untouched, while sharpening or softening the confidences. Exercise :exref:`ex_softmax-regression-temperature` develops
 this dial in detail.
 
 ## Summary and Discussion
@@ -477,6 +477,7 @@ for which they are needed.
        step.
     1. Conclude that $g$ is convex and that the cross-entropy loss is convex
        in the logits.
+
 1. **Softmax and sigmoid.** By :eqref:`eq_softmax_to_sigmoid`, binary
    logistic regression is softmax regression with the redundant logit
    removed. A colleague hands you a fitted binary logistic model
@@ -495,6 +496,7 @@ for which they are needed.
     *Adapted from James, Witten, Hastie, and Tibshirani,
     [An Introduction to Statistical Learning](https://www.statlearning.com/),
     Exercise 4.12.*
+
 1. **Coding three classes.** Assume that we have three classes which occur
    with equal probability, i.e., the probability vector is
    $P = (1/3, 1/3, 1/3)$, whose entropy is $\log_2 3 \approx 1.585$ bits.
@@ -511,21 +513,7 @@ for which they are needed.
        expected length in bits when observations are drawn from $P$, and
        compare it with the entropy of $P$ and with the cross-entropy
        $H(P, Q)$ in bits.
-1. **Separable data.** ● Suppose that some parameters
-   $(\mathbf{W}, \mathbf{b})$ classify every training example correctly and
-   without ties: on each example, the logit of the true class strictly
-   exceeds every other logit. Consider the scaled parameters $(c\mathbf{W}, c\mathbf{b})$ for
-   $c > 0$.
-    1. Show that the cross-entropy loss of every training example strictly
-       decreases as $c$ grows and tends to $0$ as $c \to \infty$.
-    1. Conclude that the training loss has no minimizer and that every
-       sequence of parameters whose training loss tends to $0$ has
-       unbounded norm.
-    1. Add the weight decay penalty of :numref:`sec_weight_decay`, applied
-       to both weights and biases,
-       $\frac{\lambda}{2}(\|\mathbf{W}\|^2 + \|\mathbf{b}\|^2)$ with
-       $\lambda > 0$, to the training loss. Show that the penalized loss
-       has a minimizer.
+
 1. **Bradley--Terry model.** The
    [Bradley--Terry model](https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model)
    :cite:`Bradley.Terry.1952` uses a logistic model to capture preferences.
@@ -540,6 +528,7 @@ for which they are needed.
     1. Compare the ratio $P(\textrm{apple}) / P(\textrm{orange})$ with and
        without the default option. Describe a choice situation in which
        real users would not keep this ratio fixed.
+
 1. **RealSoftMax.** The log-sum-exp function
    $\textrm{RealSoftMax}(a, b) = \log (\exp(a) + \exp(b))$ is the
    log-partition function $g$ of :numref:`subsec_softmax_and_derivatives`
@@ -557,6 +546,8 @@ for which they are needed.
     1. Construct an analogous softmin function.
     1. Extend the definition and both bounds to $q$ numbers, showing that
        the gap to $\max_i a_i$ is at most $\log q$.
+   :exlabel:`ex_softmax-regression-realsoftmax`
+
 1. **Log-partition function.** The function
    $g(\mathbf{x}) \stackrel{\textrm{def}}{=} \log \sum_i \exp x_i$ is
    sometimes also referred to as the
@@ -570,6 +561,7 @@ for which they are needed.
        $g(\mathbf{x} - \bar{x}\mathbf{1}) + \bar{x}$ with
        $\bar{x} = \max_i x_i$ neither overflows nor loses the leading term
        to underflow.
+
 1. **Temperature.** Recall from :numref:`fig_mdl-clf-temperature` that
    changing the temperature of $P = \mathrm{softmax}(\mathbf{o})$ amounts
    to replacing $\mathrm{softmax}(\mathbf{o})$ by
@@ -588,6 +580,24 @@ for which they are needed.
        $\beta = 1/T$, so that the fit is a one-dimensional convex problem.
        Hint: use the convexity of the log-partition function $g$ from
        exercise 1.
+   :exlabel:`ex_softmax-regression-temperature`
+
+1. **Separable data.** ● Suppose that some parameters
+   $(\mathbf{W}, \mathbf{b})$ classify every training example correctly and
+   without ties: on each example, the logit of the true class strictly
+   exceeds every other logit. Consider the scaled parameters $(c\mathbf{W}, c\mathbf{b})$ for
+   $c > 0$.
+    1. Show that the cross-entropy loss of every training example strictly
+       decreases as $c$ grows and tends to $0$ as $c \to \infty$.
+    1. Conclude that the training loss has no minimizer and that every
+       sequence of parameters whose training loss tends to $0$ has
+       unbounded norm.
+    1. Add the weight decay penalty of :numref:`sec_weight_decay`, applied
+       to both weights and biases,
+       $\frac{\lambda}{2}(\|\mathbf{W}\|^2 + \|\mathbf{b}\|^2)$ with
+       $\lambda > 0$, to the training loss. Show that the penalized loss
+       has a minimizer.
+
 1. [code] **Gumbel-max trick.** ● :numref:`subsec_softmax_operation`
    modeled an observed label as a *noisy argmax*,
    $y = \operatorname*{argmax}_i \, (o_i + \epsilon_i)$. Gaussian noise

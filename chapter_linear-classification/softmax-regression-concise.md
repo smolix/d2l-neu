@@ -197,7 +197,7 @@ $$
 
 The first term, $\log \sum_k \exp(o_k)$, is the *log-sum-exp* function, a
 smooth upper bound on $\max_k o_k$ (you proved this, including the fact that
-the gap never exceeds $\log q$, in :numref:`sec_softmax`, exercise 6); the
+the gap never exceeds $\log q$, in :numref:`sec_softmax`, exercise :exref:`ex_softmax-regression-realsoftmax`); the
 second equality provides a stable way
 to evaluate it, since every exponent $o_k - \bar{o} \leq 0$. This is precisely
 what the built-in cross-entropy loss computes when handed raw logits: it never
@@ -301,16 +301,6 @@ and which belongs to its implementation.
 
 ## Exercises
 
-1. **Number formats.** ● Deep learning uses several floating-point formats.
-   Each consists of one sign bit, an exponent field and a mantissa field.
-   The exponent and mantissa fields have 11 and 52 bits in FP64, 8 and 23
-   bits in FP32, 8 and 10 bits in TF32, 8 and 7 bits in BFLOAT16, and 5
-   and 10 bits in FP16. Assume that every format represents subnormal
-   numbers as FP32 does. For each format, determine the smallest and
-   largest argument of the exponential function for which the result
-   neither underflows to $0$ nor overflows. Present the result as a table
-   with one row per format, and explain how each limit depends on the
-   numbers of exponent and mantissa bits.
 1. [code] **Double softmax.** The `loss` of this section expects logits.
    Suppose that a model's `forward` mistakenly ends with a softmax. The
    loss then receives a probability vector $\mathbf{p}$ in place of the
@@ -325,6 +315,7 @@ and which belongs to its implementation.
        and `d2l.Trainer(max_epochs=10)`. Compare its training loss and
        validation accuracy with those of `SoftmaxRegression`, and relate
        the final training loss to the value from the previous step.
+
 1. [code] **Fused loss on extreme logits.** :numref:`sec_softmax_scratch`
    showed that the from-scratch `softmax` returns `NaN` on the logits
    $\mathbf{o} = (1000, 0, 0)$. That `softmax` is not part of the `d2l`
@@ -338,9 +329,10 @@ and which belongs to its implementation.
        determine the largest finite loss this route can return.
     1. Verify on benign logits such as $\mathbf{o} = (2, 1, 0)$ that the
        two routes agree to floating-point precision.
+
 1. [code] **Log-sum-exp bound.** Write
    $\mathrm{lse}(\mathbf{o}) = \log\sum_k \exp(o_k)$ for logits
-   $\mathbf{o} \in \mathbb{R}^q$. By exercise 6 of :numref:`sec_softmax`,
+   $\mathbf{o} \in \mathbb{R}^q$. By exercise :exref:`ex_softmax-regression-realsoftmax` of :numref:`sec_softmax`,
    the gap $\mathrm{lse}(\mathbf{o}) - \max_k o_k$ is at most $\log q$.
     1. Show that the gap equals
        $-\log \max_j \mathrm{softmax}(\mathbf{o})_j$.
@@ -348,6 +340,17 @@ and which belongs to its implementation.
        Gaussian logit vectors. Plot the mean gap against $q$ together with
        the bound $\log q$, and report the ratio of the two for each $q$.
        How does this ratio change as $q$ grows?
+
+1. **Number formats.** ● Deep learning uses several floating-point formats.
+   Each consists of one sign bit, an exponent field and a mantissa field.
+   The exponent and mantissa fields have 11 and 52 bits in FP64, 8 and 23
+   bits in FP32, 8 and 10 bits in TF32, 8 and 7 bits in BFLOAT16, and 5
+   and 10 bits in FP16. Assume that every format represents subnormal
+   numbers as FP32 does. For each format, determine the smallest and
+   largest argument of the exponential function for which the result
+   neither underflows to $0$ nor overflows. Present the result as a table
+   with one row per format, and explain how each limit depends on the
+   numbers of exponent and mantissa bits.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/52)

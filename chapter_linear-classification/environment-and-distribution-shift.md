@@ -485,7 +485,7 @@ above 90% at the cost of a worse source fit, as
 so clipping at $c=5$ reduces the influence of a few source points and happens to
 improve this run slightly. Repeated seeds or confidence intervals are needed
 before treating that last comparison as systematic.
-Exercises 3 and 4 probe when this pipeline fails as the target moves away
+Exercises :exref:`ex_environment-and-distribution-shift-when-reweighting-fails` and :exref:`ex_environment-and-distribution-shift-learned-true-weights` probe when this pipeline fails as the target moves away
 from the source, although the supports of the two Gaussians always overlap.
 
 
@@ -682,6 +682,7 @@ on another, so evaluation should represent the deployment shifts of interest.
     1. For each response, state whether it changes $p(\mathbf{x})$,
        $p(y \mid \mathbf{x})$, or both in the next training set. Then
        decide whether the response is an instance of Goodhart's law.
+
 1. **Covariate-shift identity.** The covariate-shift assumption is
    $p(y \mid \mathbf{x}) = q(y \mid \mathbf{x})$.
     1. Starting from the risk under the target distribution
@@ -693,6 +694,7 @@ on another, so evaluation should represent the deployment shifts of interest.
     1. Suppose $p(\mathbf{x}) > 0$ on a region where $q(\mathbf{x}) = 0$.
        Which part of the target risk does the reweighted source risk omit,
        and why can no choice of weights on source examples recover it?
+
 1. [code] **When reweighting fails.** The pipeline of
    :numref:`subsec_covariate-shift-correction` (`fit_logreg`, `X_src`,
    `X_tgt`, `label`) places the target mean at $(2, 0)$. Sweep the target
@@ -706,22 +708,8 @@ on another, so evaluation should represent the deployment shifts of interest.
        predictor that outputs the majority class of `y_tgt`. Explain why
        target accuracy alone cannot show whether reweighting worked at
        large $s$.
-1. [code] **Learned versus true weights.** ● Reuse the sweep of exercise 3
-   over target means $(s, 0)$.
-    1. Derive the true log-ratio $\log(p(\mathbf{x})/q(\mathbf{x}))$ as a
-       function of $s$, and compare it with the learned $h$ at each $s$.
-       Explain how the domain classifier can reach high accuracy at large
-       $s$ while $h$ is far from the true log-ratio.
-    1. Both input distributions are Gaussian, so $q(\mathbf{x}) > 0$
-       wherever $p(\mathbf{x}) > 0$ for every $s$. For each $s$, compute
-       the effective sample size $(\sum_i \beta_i)^2 / \sum_i \beta_i^2$
-       of the source data under the learned weights
-       $\beta_i = \exp(h(\mathbf{x}_i))$ and under the true weights
-       $p(\mathbf{x}_i)/q(\mathbf{x}_i)$. Explain why the true weights
-       leave only a few effective source examples at large $s$ although no
-       weight is infinite. Relate the difference between the two effective
-       sample sizes to the gap between $h$ and the true log-ratio, and say
-       whether clipping at $c = 5$ repairs the shortage.
+   :exlabel:`ex_environment-and-distribution-shift-when-reweighting-fails`
+
 1. **Label-shift linear system.** A $k$-class classifier has the
    column-normalized validation confusion matrix $\mathbf{C}$ with entries
    $c_{ij} = q(\hat{y} = i \mid y = j)$, and its predictions on unlabeled
@@ -736,22 +724,7 @@ on another, so evaluation should represent the deployment shifts of interest.
        finite samples. Explain how errors in $\mu(\hat{\mathbf{y}})$
        propagate to $\mathbf{C}^{-1}\mu(\hat{\mathbf{y}})$ when
        $\mathbf{C}$ is nearly singular.
-1. **Shift assumptions from unlabeled data.** ● In a binary source domain,
-   $q(y = 1) = q(y = 0) = 1/2$, and the scalar input satisfies
-   $x \mid y = 1 \sim \mathcal{N}(1, 1)$ and
-   $x \mid y = 0 \sim \mathcal{N}(-1, 1)$. Hence
-   $q(y = 1 \mid x) = 1/(1 + \exp(-2x))$. Unlabeled target inputs follow
-   the mixture
 
-   $$p(x) = 0.8\, \mathcal{N}(x; 1, 1) + 0.2\, \mathcal{N}(x; -1, 1).$$
-
-    1. Assume label shift. Give $p(y = 1)$ and the threshold on $x$ of
-       the Bayes-optimal target classifier.
-    1. Assume instead covariate shift with the same $p(x)$. Compute
-       $p(y = 1)$ numerically and give the Bayes-optimal threshold.
-    1. Use your results to explain why no statistic of the unlabeled
-       target sample can decide which of the two corrections of this
-       section applies.
 1. **Features missing at serving time.** A model forecasts a store's daily
    revenue at the start of each day. Its training records hold each past
    day's final customer count as a feature, and the model performs well in
@@ -768,6 +741,7 @@ on another, so evaluation should represent the deployment shifts of interest.
 
     *Adapted from Google's Machine Learning Crash Course,
     ["Monitoring pipelines"](https://developers.google.com/machine-learning/crash-course/production-ml-systems/monitoring).*
+
 1. [extended] **Real-world shifts.** The WILDS benchmark
    :cite:`Koh.Sagawa.Marklund.ea.2021` catalogs distribution shifts
    collected in the wild. Pick two of its tasks, for example a
@@ -776,6 +750,41 @@ on another, so evaluation should represent the deployment shifts of interest.
    your classification from how the data were collected. If you can
    download one of the smaller WILDS datasets, train a linear baseline and
    report its in-distribution versus out-of-distribution accuracy gap.
+
+1. [code] **Learned versus true weights.** ● Reuse the sweep of exercise :exref:`ex_environment-and-distribution-shift-when-reweighting-fails`
+   over target means $(s, 0)$.
+    1. Derive the true log-ratio $\log(p(\mathbf{x})/q(\mathbf{x}))$ as a
+       function of $s$, and compare it with the learned $h$ at each $s$.
+       Explain how the domain classifier can reach high accuracy at large
+       $s$ while $h$ is far from the true log-ratio.
+    1. Both input distributions are Gaussian, so $q(\mathbf{x}) > 0$
+       wherever $p(\mathbf{x}) > 0$ for every $s$. For each $s$, compute
+       the effective sample size $(\sum_i \beta_i)^2 / \sum_i \beta_i^2$
+       of the source data under the learned weights
+       $\beta_i = \exp(h(\mathbf{x}_i))$ and under the true weights
+       $p(\mathbf{x}_i)/q(\mathbf{x}_i)$. Explain why the true weights
+       leave only a few effective source examples at large $s$ although no
+       weight is infinite. Relate the difference between the two effective
+       sample sizes to the gap between $h$ and the true log-ratio, and say
+       whether clipping at $c = 5$ repairs the shortage.
+   :exlabel:`ex_environment-and-distribution-shift-learned-true-weights`
+
+1. **Shift assumptions from unlabeled data.** ● In a binary source domain,
+   $q(y = 1) = q(y = 0) = 1/2$, and the scalar input satisfies
+   $x \mid y = 1 \sim \mathcal{N}(1, 1)$ and
+   $x \mid y = 0 \sim \mathcal{N}(-1, 1)$. Hence
+   $q(y = 1 \mid x) = 1/(1 + \exp(-2x))$. Unlabeled target inputs follow
+   the mixture
+
+   $$p(x) = 0.8\, \mathcal{N}(x; 1, 1) + 0.2\, \mathcal{N}(x; -1, 1).$$
+
+    1. Assume label shift. Give $p(y = 1)$ and the threshold on $x$ of
+       the Bayes-optimal target classifier.
+    1. Assume instead covariate shift with the same $p(x)$. Compute
+       $p(y = 1)$ numerically and give the Bayes-optimal threshold.
+    1. Use your results to explain why no statistic of the unlabeled
+       target sample can decide which of the two corrections of this
+       section applies.
 
 
 [Discussions](https://d2l.discourse.group/t/105)

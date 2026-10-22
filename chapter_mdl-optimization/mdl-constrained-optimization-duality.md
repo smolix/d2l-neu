@@ -167,6 +167,7 @@ objective's gradient is balanced by a combination of the constraint normals,
 with nothing left over along any feasible direction.
 
 ### Worked Example: Closest Point on a Hyperplane
+:label:`subsec_mdl-closest-point`
 
 Minimize $f(\mathbf{x}) = \mathbf{x}^\top\mathbf{x}$ subject to
 $h(\mathbf{x}) = \mathbf{a}^\top\mathbf{x} - b = 0$: the point of a hyperplane
@@ -284,7 +285,7 @@ constraints' gradients to be linearly independent, the inequality
 analogue of $\nabla g \neq \mathbf{0}$ above); see
 :citet:`Nocedal.Wright.2006`, chapter 12, for the proof. They are not
 sufficient: a non-convex problem can have KKT points that
-are saddles or maxima (Exercise 3). Under convexity, the conditions are also sufficient, as the following proof
+are saddles or maxima (Exercise :exref:`ex_mdl-constrained-optimization-duality-write-all-four-kkt`). Under convexity, the conditions are also sufficient, as the following proof
 shows.
 
 **Proposition (KKT sufficiency under convexity).** *In problem
@@ -657,6 +658,7 @@ g(\boldsymbol{\lambda})
 &= -f^*(-A^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda},
 \end{aligned}
 $$
+:eqlabel:`eq_mdl-opt-dual-conjugate`
 
 with $f^*$ the conjugate of :numref:`subsec_mdl-convex-conjugate`. Tables
 of conjugates are tables of duals.
@@ -749,8 +751,10 @@ and equality between the $\min\max$ and $\max\min$ values holds when an
 appropriate saddle point exists. A duality gap separates these values. This
 formulation also underlies
 **primal--dual methods**, which descend in $\mathbf{x}$ and ascend in
-$\boldsymbol{\lambda}$ simultaneously, converging (for convex problems) to the
-saddle rather than to a minimum.
+$\boldsymbol{\lambda}$ simultaneously and seek the saddle rather than a
+minimum. Convexity alone does not make them converge; they reach the saddle
+under extra conditions, for example a strongly convex objective and a small
+enough step size.
 
 ### Sensitivity and Shadow Prices
 
@@ -891,6 +895,7 @@ family, and the multiplier connects them.
 :label:`subsec_mdl-worked-duals`
 
 ### The Support Vector Machine Dual
+:label:`subsec_mdl-svm-dual`
 
 The support-vector machine :cite:`Cortes.Vapnik.1995` is a standard example in
 which the dual exposes useful structure. Given linearly separable data
@@ -981,6 +986,7 @@ $Q_{ij} = y_i y_j \tilde{\mathbf{x}}_i^\top \tilde{\mathbf{x}}_j$, the dual is
 $$
 \max_{\boldsymbol{\alpha} \succeq 0}\;\; \mathbf{1}^\top \boldsymbol{\alpha} - \tfrac12 \boldsymbol{\alpha}^\top Q\, \boldsymbol{\alpha},
 $$
+:eqlabel:`eq_mdl-opt-svm-dual-folded`
 
 a concave quadratic over the orthant, exactly the setting of
 :eqref:`eq_mdl-opt-pgd`. Projected gradient *ascent* iterates
@@ -1024,7 +1030,7 @@ $\mathbf{w}^\star = (\tfrac47, \tfrac47)$, $b^\star = -\tfrac37$, with
 $p^\star = d^\star = \tfrac{41}{98} \approx 0.418367$ and a primal--dual gap at
 $10^{-16}$ after five thousand fixed-step projected-ascent iterations. The
 primal--dual gap therefore certifies optimality to machine precision. The
-printout also verifies an identity derived in Exercise 6:
+printout also verifies an identity derived in Exercise :exref:`ex_mdl-constrained-optimization-duality-offset-folded-svm-dual`a:
 $\sum_i \alpha_i^\star = \|\tilde{\mathbf{w}}^\star\|^2$ at the optimum, which
 is why the dual and primal values coincide line for line.
 
@@ -1110,6 +1116,7 @@ rate to the budget through six digits. Perturbing the constraint verifies this
 shadow-price interpretation.
 
 ### An Explicit Duality Gap
+:label:`subsec_mdl-explicit-duality-gap`
 
 Weak duality always holds, whereas strong duality need not. The following
 one-dimensional problem gives an explicit counterexample: on the interval $x \in [0, 1]$,
@@ -1121,7 +1128,11 @@ $$
 
 The objective is *concave* (this is a non-convex problem) and the
 feasible region is $[0, \tfrac12]$, so the primal optimum is at the boundary:
-$p^\star = f_0(\tfrac12) = -\tfrac14$. The dual function is computable by hand:
+$p^\star = f_0(\tfrac12) = -\tfrac14$. Only the constraint $f_1(x) \le 0$ is
+dualized: the domain $[0, 1]$ stays a hard constraint, so the infimum in
+:eqref:`eq_mdl-opt-dual-function` runs over $[0, 1]$ instead of all of
+$\mathbb{R}$, and the proof of weak duality goes through unchanged. The dual
+function is computable by hand:
 $\mathcal{L}(x, \lambda) = -x^2 + \lambda(x - \tfrac12)$ is concave in $x$, so
 its minimum over $[0, 1]$ is at an endpoint, giving
 $g(\lambda) = \min(-\lambda/2,\; \lambda/2 - 1)$: piecewise linear, concave
@@ -1166,8 +1177,8 @@ corresponds to standard solver families:
 | Class | Template | Machine-learning examples |
 |---|---|---|
 | **LP** (linear program) | linear $f$, constraints $A\mathbf{x} \preceq \mathbf{b}$ | $\ell_1$ / $\ell_\infty$ reformulations, optimal transport |
-| **QP** (quadratic program) | convex quadratic $f$, affine constraints | ridge, lasso, SVM dual, simplex projection, trust-region step |
-| **SOCP** (second-order cone program) | cones $\|A\mathbf{x} + \mathbf{b}\| \le \mathbf{c}^\top\mathbf{x} + d$ | max-norm weight constraints, robust losses |
+| **QP** (quadratic program) | convex quadratic $f$, affine constraints | ridge, lasso, SVM dual, simplex projection |
+| **SOCP** (second-order cone program) | cones $\|A\mathbf{x} + \mathbf{b}\| \le \mathbf{c}^\top\mathbf{x} + d$ | max-norm weight constraints, robust losses, trust-region step with a convex model |
 | **SDP** (semidefinite program) | matrix variable $X \succeq 0$, the semidefinite sense of $\succeq$ (:numref:`sec_mdl-convexity`) | spectral-norm bounds, nuclear-norm relaxations |
 
 Each class contains the previous ($\mathrm{LP} \subseteq \mathrm{QP} \subseteq
@@ -1179,9 +1190,9 @@ deep network lies
 *outside* the hierarchy, since the composition of layers destroys convexity
 (:numref:`sec_mdl-convexity`); but many of its
 *sub-problems* are convex, where multipliers, KKT, and duality apply directly:
-projections, clipped updates, last-layer fits, and the trust-region step,
-which minimizes a local quadratic model of the objective within a ball around
-the current iterate :cite:`Nocedal.Wright.2006`.
+projections, clipped updates, last-layer fits, and, when the local quadratic
+model is convex, the trust-region step, which minimizes that model within a
+ball around the current iterate :cite:`Nocedal.Wright.2006`.
 
 ## Summary
 
@@ -1227,56 +1238,424 @@ the current iterate :cite:`Nocedal.Wright.2006`.
 
 ## Exercises
 
-1. Derive the Lagrange condition for *two* equality constraints: if
-   $\mathbf{x}^\star$ is a local minimum of $f$ on
-   $\{h_1 = 0\} \cap \{h_2 = 0\}$ and $\nabla h_1(\mathbf{x}^\star)$,
-   $\nabla h_2(\mathbf{x}^\star)$ are linearly independent, show
-   $\nabla f(\mathbf{x}^\star) \in \mathrm{span}\{\nabla h_1, \nabla h_2\}$ by
-   the no-feasible-descent argument. Then revisit the counterexample
-   ($\min x_1$ s.t. $x_1^2 + x_2^2 = 0$) and identify exactly which step of
-   your proof fails there.
-2. Maximize the entropy $-\sum_i p_i \log p_i$ over the probability simplex
-   using one multiplier for $\sum_i p_i = 1$, and show the optimum is the
-   uniform distribution. Where did you use that the $p_i > 0$ constraints are
-   inactive at the optimum? (Compare :numref:`subsec_mdl-jensen`, which reaches
-   the same conclusion through Jensen's inequality.)
-3. Write all four KKT conditions for
-   $\min\, \tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$ s.t. $\|\mathbf{x}\|^2 \le r^2$
-   and verify the clipping solution and $\lambda^\star = \max(0, \|\mathbf{x}_0\|/r - 1)$.
-   Then exhibit a one-dimensional *non-convex* problem with a KKT point that is
-   a local maximum: necessity without sufficiency.
-4. Show that $\mathbf{x}^\star$ is a fixed point of the projected gradient
-   update :eqref:`eq_mdl-opt-pgd` with $C = \{\mathbf{x} : \mathbf{x} \succeq 0\}$
-   if and only if for each coordinate either $\partial f/\partial x_i = 0$ and
-   $x_i^\star \ge 0$, or $\partial f/\partial x_i > 0$ and $x_i^\star = 0$;
-   then check this is precisely KKT for the constraints $-x_i \le 0$.
-5. Prove from the definitions that the dual function of *any* primal problem
-   is concave, and that weak duality holds (reproduce the proofs without
-   looking). Then compute the dual of the equality-constrained QP
-   $\min\, \tfrac12\mathbf{x}^\top A \mathbf{x} - \mathbf{b}^\top\mathbf{x}$
-   s.t. $C\mathbf{x} = \mathbf{d}$ with $A \succ 0$ in closed form, and verify
-   $d^\star = p^\star$ by solving both sides for
-   $A = \mathrm{diag}(1, 2)$, $\mathbf{b} = (1, 1)$, $C = (1\;\; 1)$, $d = 1$.
-6. For the offset-folded SVM dual
-   $\max_{\boldsymbol{\alpha} \succeq 0} \mathbf{1}^\top\boldsymbol{\alpha} - \tfrac12 \boldsymbol{\alpha}^\top Q \boldsymbol{\alpha}$,
-   show that at the optimum
-   $\sum_i \alpha_i^\star = \|\tilde{\mathbf{w}}^\star\|^2$ where
+1. **Degenerate constraints.** The Lagrange condition
+   :eqref:`eq_mdl-opt-lagrange-condition` and the KKT conditions
+   :eqref:`eq_mdl-opt-kkt` hold at a minimum only under a constraint
+   qualification. Each of the following problems violates one.
+    1. Minimize $f(\mathbf{x}) = x_1 + x_2^2$ over $\mathbb{R}^3$ subject to
+       $h_1(\mathbf{x}) = x_3 = 0$ and $h_2(\mathbf{x}) = x_3 - x_1^2 = 0$.
+       Show that the feasible set is a line, find the minimizer, and show
+       that both constraint gradients are nonzero everywhere. Show that no
+       multipliers $\nu_1, \nu_2$ satisfy
+       $\nabla f + \nu_1 \nabla h_1 + \nu_2 \nabla h_2 = \mathbf{0}$ at the
+       minimizer. Describe the same line by two other equality constraints
+       for which multipliers exist. Is a constraint qualification a property
+       of the feasible set or of the functions that describe it?
+    1. Minimize $f(x) = x$ over $\mathbb{R}$ subject to $x^2 \le 0$. Compute
+       $p^\star$, the dual function :eqref:`eq_mdl-opt-dual-function`, and
+       $d^\star$. Is the dual optimum attained? Does a KKT multiplier exist at
+       the minimizer? Which hypothesis of the Slater proposition in
+       :numref:`subsec_mdl-lagrangian-duality` fails?
+    1. Minimize $f(x) = x$ over $\mathbb{R}$ subject to the constraint
+       $-x \le 0$ written twice, $g_1(x) = g_2(x) = -x$. Which constraint
+       qualification holds here, and which fails? Find all pairs
+       $(\lambda_1^\star, \lambda_2^\star)$ that satisfy the KKT conditions at
+       the minimizer. Compute the optimal value $p^\star(u_1, u_2)$ under the
+       perturbed constraints $-x \le u_1$ and $-x \le u_2$, and show that
+       every such pair satisfies the shadow-price inequality
+       :eqref:`eq_mdl-opt-shadow-price`. Is $p^\star$ differentiable at
+       $\mathbf{0}$, and what takes the place of the relation
+       $\boldsymbol{\lambda}^\star = -\nabla p^\star(\mathbf{0})$?
+
+1. **Maximum entropy and temperature.** The entropy of a probability vector
+   $\mathbf{p} \in \mathbb{R}^n$ is $H(\mathbf{p}) = -\sum_i p_i \log p_i$.
+    1. Maximize $H$ subject to $\sum_i p_i = 1$ with one Lagrange
+       multiplier, ignoring the sign constraints $p_i \ge 0$. Show that the
+       only stationary point is the uniform distribution. Why does ignoring
+       the sign constraints not change the answer?
+    1. Fix scores $s_1, \ldots, s_n$, not all equal, and a target $\bar s$
+       strictly between $\min_i s_i$ and $\max_i s_i$, and add the constraint
+       $\sum_i p_i s_i = \bar s$. Show that the maximizer is
+       $\mathbf{p} = \mathrm{softmax}(\beta\mathbf{s})$ for a scalar $\beta$
+       determined by the multiplier of the score constraint. Show that the
+       mean score under $\mathrm{softmax}(\beta\mathbf{s})$ increases strictly
+       with $\beta$, so that exactly one $\beta$ meets the target.
+    1. Let $H^\star(\bar s)$ be the maximal entropy. Show that
+       $dH^\star / d\bar s = -\beta$, so that the multiplier prices the score
+       constraint as the multiplier of :numref:`subsec_mdl-closest-point`
+       prices the offset $b$. For which targets $\bar s$ is $\beta$
+       negative? What happens to the softmax temperature $1/\beta$ as
+       $\bar s$ approaches $\max_i s_i$?
+
+1. **KKT points that are not minima.** The KKT conditions
+   :eqref:`eq_mdl-opt-kkt` are necessary at a local minimum under a
+   constraint qualification, but a nonconvex problem can satisfy them at other
+   points.
+    1. Minimize $f(\mathbf{x}) = x_1^2 - x_2^2$ over the box
+       $-1 \le x_1 \le 1$, $-1 \le x_2 \le 1$, written as four inequality
+       constraints. Find all KKT points and their multipliers. Classify each
+       KKT point as a local minimum, a local maximum, or neither.
+    1. The maximum of $f$ on the box is attained at $(\pm 1, 0)$. Which KKT
+       condition fails at these points, and what value would the multiplier
+       of the active constraint need?
+    1. Give a problem in one variable with a single inequality constraint
+       $g(x) \le 0$ that has a KKT point $x^\star$ which is a strict local
+       maximum. Can the multiplier at such a point be positive when
+       $g'(x^\star) \neq 0$?
+   :exlabel:`ex_mdl-constrained-optimization-duality-write-all-four-kkt`
+
+1. **Projected fixed points.** For a closed convex set $C$, the fixed points
+   of projected gradient descent :eqref:`eq_mdl-opt-pgd` are the constrained
+   stationary points, whatever the step size $\eta > 0$.
+    1. Let $C = \{\mathbf{x} : \mathbf{x} \succeq 0\}$. Show that
+       $\mathbf{x}^\star$ is a fixed point if and only if, for every
+       coordinate $i$, either $\partial f / \partial x_i (\mathbf{x}^\star) = 0$
+       and $x_i^\star \ge 0$, or
+       $\partial f / \partial x_i (\mathbf{x}^\star) > 0$ and $x_i^\star = 0$.
+       Show that these conditions are the KKT conditions for the constraints
+       $-x_i \le 0$, and express the multipliers through
+       $\nabla f(\mathbf{x}^\star)$.
+    1. Gradient clipping updates
+       $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\Pi_{B_c}(\nabla f(\mathbf{x}_t))$,
+       where $B_c = \{\mathbf{z} : \|\mathbf{z}\| \le c\}$. Find the fixed
+       points of this update and compare them with those of projected
+       gradient descent onto the parameter ball
+       $\{\mathbf{x} : \|\mathbf{x}\| \le r\}$. Which of the two updates
+       solves a constrained problem?
+    1. Binary weights restrict a parameter to the nonconvex set
+       $C = \{-1, 1\}$, and projecting onto $C$ rounds to the nearer element
+       (to $1$ at a tie). Let $f(x) = \tfrac12 (x - a)^2$ with $0 < a < 1$.
+       For which step sizes is $x = 1$ a fixed point of
+       :eqref:`eq_mdl-opt-pgd`, and for which is $x = -1$ one? What do the
+       iterates do when $\eta$ exceeds both ranges? Which point minimizes
+       $f$ over $C$? Does either point satisfy
+       $f'(x^\star)(x - x^\star) \ge 0$ for all $x \in C$? Which step of the
+       fixed-point argument in :numref:`subsec_mdl-projected-gd` fails for
+       this set?
+
+1. [code] **Sparsemax and the $\ell_1$ ball.** The function `project_simplex`
+   of :numref:`subsec_mdl-projected-gd` computes the simplex projection
+   :eqref:`eq_mdl-opt-simplex`, which is sparsemax; its first output is the
+   projected vector.
+    1. Show that adding the same constant to every score leaves the
+       projection unchanged. Divide the scores by a temperature $T > 0$, and
+       let $u_1 > u_2$ be the two largest entries of $\mathbf{y}$. Show that
+       the projection of $\mathbf{y} / T$ is one-hot exactly when
+       $T \le u_1 - u_2$, and find its limit as $T \to \infty$. Plot the
+       number of nonzero entries of the projection of $\mathbf{y} / T$
+       against $T$ for ten standard normal scores.
+    1. Let $S$ be the support of $\mathbf{x}^\star$, and suppose that no
+       $y_i$ equals the threshold $\tau$. Derive the Jacobian
+       $\partial \mathbf{x}^\star / \partial \mathbf{y}$ from
+       :eqref:`eq_mdl-opt-simplex` :cite:`Martins.Astudillo.2016` and check
+       it against central finite differences. How many arithmetic operations
+       does the backward pass through sparsemax need for an input of length
+       $n$?
+    1. Show that the projection onto the $\ell_1$ ball
+       $\{\mathbf{x} : \|\mathbf{x}\|_1 \le z\}$ keeps the signs of
+       $\mathbf{y}$ and, when $\|\mathbf{y}\|_1 > z$, equals
+       $\mathrm{sign}(\mathbf{y}) \odot z\,\Pi_\Delta(|\mathbf{y}| / z)$
+       :cite:`Duchi.Shalev-Shwartz.Singer.ea.2008`. Implement it with
+       `project_simplex`. Why does it suffice to check the variational
+       inequality :eqref:`eq_mdl-opt-proj-variational` at the $2n$ points
+       $\pm z\,\mathbf{e}_i$ to certify the result? Run that check.
+
+1. **Dual of an equality-constrained QP.** Consider
+
+   $$\min_{\mathbf{x}}\; \tfrac12 \mathbf{x}^\top A \mathbf{x} - \mathbf{b}^\top \mathbf{x} \quad \textrm{subject to} \quad F\mathbf{x} = \mathbf{c},$$
+
+   with $A \in \mathbb{R}^{n \times n}$ positive definite and
+   $F \in \mathbb{R}^{m \times n}$ of full row rank $m < n$.
+    1. Compute the dual function in closed form, show that it is a concave
+       quadratic in $\boldsymbol{\nu}$, and find the dual optimum
+       $\boldsymbol{\nu}^\star$ as the solution of an $m \times m$ linear
+       system. Recover $\mathbf{x}^\star$ from $\boldsymbol{\nu}^\star$.
+       Check $d^\star = p^\star$ by hand for $A = \mathrm{diag}(1, 2)$,
+       $\mathbf{b} = (1, 1)$, $F = (1\;\; 1)$, and $c = 1$.
+    1. Take $A = I$, $\mathbf{b} = \mathbf{0}$, $F = X$, and
+       $\mathbf{c} = \mathbf{y}$, which asks for the minimum-norm solution of
+       an underdetermined system $X\mathbf{x} = \mathbf{y}$. Show that the dual
+       recovers $\mathbf{x}^\star = X^\top (X X^\top)^{-1} \mathbf{y}$, the
+       limit of gradient descent from $\mathbf{0}$ in Exercise
+       :exref:`ex_mdl-gradient-based-optimization-implicit-bias` of
+       :numref:`sec_mdl-gradient-based-optimization`. When is solving the dual
+       cheaper than solving the primal KKT system?
+
+1. **A dual certificate for $\ell_1$ minimization.** Basis pursuit,
+
+   $$\min_{\mathbf{x}}\; \|\mathbf{x}\|_1 \quad \textrm{subject to} \quad A\mathbf{x} = \mathbf{b},$$
+
+   with $A \in \mathbb{R}^{m \times n}$ and $m < n$, selects a sparse solution
+   of an underdetermined linear system. Its constraints are affine, so the
+   refined Slater condition gives $d^\star = p^\star$ whenever the system has
+   a solution.
+    1. Adapt the conjugate form :eqref:`eq_mdl-opt-dual-conjugate` of the
+       dual function to equality constraints. Use the conjugate of
+       $\|\cdot\|_1$ from Exercise :exref:`ex_mdl-convexity-conjugate-pairs`a
+       of :numref:`sec_mdl-convexity` to show that, after replacing
+       $\boldsymbol{\nu}$ by $-\boldsymbol{\nu}$, the dual problem is
+       $\max_{\boldsymbol{\nu}} \mathbf{b}^\top \boldsymbol{\nu}$ subject to
+       $\|A^\top \boldsymbol{\nu}\|_\infty \le 1$.
+    1. Solve both problems by hand for $A = (1\;\; 2)$ and $b = 2$, and
+       check $d^\star = p^\star$.
+    1. Let $\mathbf{x}^\star$ and $\boldsymbol{\nu}^\star$ be optimal. Show
+       that $x_i^\star = 0$ wherever
+       $|(A^\top \boldsymbol{\nu}^\star)_i| < 1$, and that
+       $(A^\top \boldsymbol{\nu}^\star)_i = \mathrm{sign}(x_i^\star)$ wherever
+       $x_i^\star \neq 0$. A candidate $\mathbf{x}$ with $A\mathbf{x} = \mathbf{b}$
+       is given. Which conditions must a vector $\boldsymbol{\nu}$ satisfy to
+       certify that $\mathbf{x}$ is optimal without solving the problem?
+
+1. **Support vectors and the dual value.** For the offset-folded SVM dual
+   :eqref:`eq_mdl-opt-svm-dual-folded`, let $\boldsymbol{\alpha}^\star$ be
+   optimal and
    $\tilde{\mathbf{w}}^\star = \sum_i \alpha_i^\star y_i \tilde{\mathbf{x}}_i$.
-   (*Hint:* multiply the KKT stationarity condition
-   $(\mathbf{1} - Q\boldsymbol{\alpha}^\star)_i = -\lambda_i^\star \le 0$ by
-   $\alpha_i^\star$, sum, and use complementary slackness.) Conclude that the
-   dual optimal value equals $\tfrac12\|\tilde{\mathbf{w}}^\star\|^2$, as the
-   `#constrained-svm-dual` cell observed numerically.
-7. In water-filling :eqref:`eq_mdl-opt-waterfilling`, show that the optimal
-   rate $U^\star(P)$ is concave and piecewise smooth in $P$, that the water
-   level $w(P)$ is piecewise linear and increasing, and that the shadow price
-   $\mu = 1/w$ therefore *decreases* with the budget: diminishing returns.
-   At which values of $P$ (for the noise floors in the
-   `#constrained-water-filling` cell) does the slope change, and why?
-8. Rerun the duality-gap demo with the objective $f_0(x) = +x^2$ in place of
-   $-x^2$ (everything else unchanged). Compute $p^\star$ and $d^\star$ by hand
-   and numerically, and explain in terms of Slater's condition why the gap is
-   now zero.
+    1. Show that $\sum_i \alpha_i^\star = \|\tilde{\mathbf{w}}^\star\|^2$ by
+       writing the KKT conditions of the dual over the orthant. Conclude that
+       the dual optimal value equals the primal value
+       $\tfrac12 \|\tilde{\mathbf{w}}^\star\|^2$.
+    1. Show that deleting a training point with $\alpha_j^\star = 0$ leaves
+       the remaining multipliers optimal for the smaller problem and leaves
+       $\tilde{\mathbf{w}}^\star$ unchanged. In leave-one-out validation, each
+       of the $n$ points is classified by the SVM trained on the other
+       $n - 1$ points. Conclude that the leave-one-out error rate is at most
+       the fraction of points with $\alpha_i^\star > 0$.
+   :exlabel:`ex_mdl-constrained-optimization-duality-offset-folded-svm-dual`
+
+1. [code] **Water-filling and diminishing returns.** For the water-filling
+   problem :eqref:`eq_mdl-opt-waterfilling`, let $U^\star(P)$ be the optimal
+   rate and $w(P)$ the water level at budget $P$. Order the channels so that
+   $n_1 \le n_2 \le \cdots$.
+    1. Show that while exactly the $k$ quietest channels receive power,
+       $w(P) = (P + \sum_{i \le k} n_i) / k$. Conclude that $w$ is continuous,
+       piecewise linear, and increasing. Compute the budgets at which a new
+       channel starts to receive power for the noise floors `noise` of the
+       cell that defines `water_fill`.
+    1. Show that $dU^\star / dP = 1 / w(P)$, and conclude that $U^\star$ is
+       concave. Plot $U^\star$ and a finite-difference estimate of its
+       derivative for $P \in [0, 10]$ with `water_fill`, and mark the budgets
+       at which a channel starts to receive power. At which budgets is
+       $U^\star$ not twice differentiable?
+    1. As $P \to \infty$, how do the allocations $p_i^\star$ of two channels
+       compare, and what is the limit of $p_i^\star / P$?
+
+1. [code] **Duality gaps and formulations.** The cell that computes `p_star`
+   and `d_star` in :numref:`subsec_mdl-explicit-duality-gap` minimizes the
+   Lagrangian over the domain $[0, 1]$ and dualizes only the constraint
+   $x \le \tfrac12$.
+    1. Replace the objective by $f_0(x) = (x - 1)^2$. Compute $p^\star$, the
+       dual function, $d^\star$, and $\lambda^\star$ by hand, and confirm them
+       with the modified cell. Why is the gap now zero?
+    1. Keep $f_0(x) = -x^2$, but write the constraint as $x^2 \le \tfrac14$,
+       which defines the same feasible set on $[0, 1]$. Compute the new dual
+       function and $d^\star$ by hand and with the cell.
+    1. Keep $f_0(x) = -x^2$ and the constraint $x \le \tfrac12$, but treat
+       $0 \le x$ and $x \le 1$ as constraints with their own multipliers and
+       minimize the Lagrangian over all of $\mathbb{R}$. What is $d^\star$
+       now? Rank the dual bounds of the three formulations of the same
+       problem (the one in the body and those of sub-items b and c). Is a
+       duality gap a property of the problem or of its formulation?
+
+1. **Second-order conditions on the sphere.** ● The Lagrange condition is a
+   first-order condition and cannot tell minima from saddles. A second-order
+   test must account for the curvature of the constraint.
+    1. Let $f$ and $g$ be twice continuously differentiable, and let
+       $\mathbf{x}^\star$ satisfy :eqref:`eq_mdl-opt-lagrange-condition` with
+       multiplier $\nu^\star$. For every curve $\mathbf{x}(t)$ on
+       $\{g = 0\}$ with $\mathbf{x}(0) = \mathbf{x}^\star$ and
+       $\dot{\mathbf{x}}(0) = \mathbf{v}$, show that
+
+       $$\left.\frac{d^2}{dt^2} f(\mathbf{x}(t))\right|_{t=0} = \mathbf{v}^\top \nabla^2_{\mathbf{x}} \mathcal{L}(\mathbf{x}^\star, \nu^\star)\, \mathbf{v},$$
+
+       with the Lagrangian :eqref:`eq_mdl-opt-lagrangian-eq`. Conclude that
+       $\mathbf{v}^\top \nabla^2_{\mathbf{x}} \mathcal{L}\, \mathbf{v} \ge 0$
+       for every tangent direction $\mathbf{v}$ at a local minimum. Why is the
+       Hessian of $f$ alone the wrong matrix for this test? Conversely,
+       positive definiteness on the tangent space implies a strict local
+       minimum (:citet:`Nocedal.Wright.2006`, chapter 12).
+    1. Let $A$ be symmetric with distinct eigenvalues
+       $a_1 < a_2 < \cdots < a_n$ and unit eigenvectors
+       $\mathbf{q}_1, \ldots, \mathbf{q}_n$, and minimize
+       $f(\mathbf{x}) = \mathbf{x}^\top A \mathbf{x}$ subject to
+       $\mathbf{x}^\top \mathbf{x} = 1$. Show that the Lagrange points are
+       $\pm \mathbf{q}_i$ with $\nu^\star = -a_i$, and find the eigenvalues of
+       $\nabla^2_{\mathbf{x}} \mathcal{L}$ on the tangent space at
+       $\mathbf{q}_i$. Which Lagrange points are local minima, which are local
+       maxima, and which are saddles? How many independent descent directions
+       does $\mathbf{q}_i$ have?
+    1. Projected gradient descent onto the sphere,
+       $\mathbf{x} \leftarrow (\mathbf{x} - \eta \nabla f(\mathbf{x})) / \|\mathbf{x} - \eta \nabla f(\mathbf{x})\|$,
+       projects onto a nonconvex set. Show that for this $f$ it is the power
+       iteration for $I - 2\eta A$. Assume $a_1 + a_n > 0$. From a random
+       start, what do the iterates $\mathbf{x}_t$ and the values
+       $f(\mathbf{x}_t)$ do? How does the answer depend on $\eta > 0$?
+
+1. [code] **Gradient descent--ascent.** ● Primal--dual methods and GAN
+   training update the minimizing variable by gradient descent and the
+   maximizing variable by gradient ascent at the same time.
+    1. For the bilinear game $\min_x \max_y\, xy$, whose saddle point is the
+       origin, write simultaneous descent--ascent,
+       $x \leftarrow x - \eta y$ and $y \leftarrow y + \eta x$, as a linear
+       map. Show that every nonzero start spirals away from the saddle for
+       every $\eta > 0$. Show that the alternating version, in which the
+       $y$-update uses the new $x$, is a linear map with determinant $1$.
+       What do its iterates do for $\eta < 2$?
+    1. Run simultaneous descent--ascent on the Lagrangian
+       $\mathcal{L}(\mathbf{x}, \nu) = \mathbf{x}^\top \mathbf{x} + \nu(\mathbf{a}^\top \mathbf{x} - b)$
+       of the closest-point problem of :numref:`subsec_mdl-closest-point`, with
+       $\mathbf{a} = (1, 2)$, $b = 1$, and the start $\mathbf{x} = \mathbf{0}$,
+       $\nu = 0$. Find the step sizes for which the iterates converge to
+       $(\mathbf{x}^\star, \nu^\star)$. Derive them from the eigenvalues of
+       the update acting on the pair
+       $(\mathbf{a}^\top \mathbf{x} / \|\mathbf{a}\|, \nu)$ and on the
+       components of $\mathbf{x}$ orthogonal to $\mathbf{a}$.
+    1. Add $\tfrac{\epsilon}{2} x^2$ with $0 < \epsilon \le 2$ to the
+       objective of the bilinear game. For which step sizes does simultaneous
+       descent--ascent converge now? Which term of the Lagrangian of sub-item
+       b plays the role of $\epsilon$?
+
+1. [code] **Penalty versus constraint without convexity.** ● For a convex
+   loss, :numref:`subsec_mdl-weight-decay-duality` shows that weight decay and
+   a norm constraint trace the same solutions. Take instead the nonconvex
+   one-dimensional loss $L(w) = (w - 1)^2 (w - 3)^2 - w$, whose local minima
+   lie at $w \approx 1.16$ and $w \approx 3.11$.
+    1. On a fine grid of $w$, compute the penalized minimizers
+       $w_\lambda = \mathrm{argmin}_w\, L(w) + \lambda w^2$ for $\lambda$ on
+       a logarithmic grid, and the constrained optimum
+       $p^\star(r) = \min \{L(w) : w^2 \le r^2\}$ for $r \in [0, 3.2]$. Plot
+       the points $(w_\lambda^2, L(w_\lambda))$ on top of the curve
+       $(r^2, p^\star(r))$. Which budgets $r$ are never the norm $|w_\lambda|$
+       of a penalized minimizer?
+    1. Show that $w_\lambda$ minimizes $L(w) + \lambda w^2$ if and only if
+       the line of slope $-\lambda$ through $(w_\lambda^2, L(w_\lambda))$ lies
+       below every point of the set $\{(w^2, L(w)) : w \in \mathbb{R}\}$. Use
+       this and the supporting-line picture of
+       :numref:`fig_mdl-opt-primal-dual-gap` to explain the missing budgets.
+    1. Pick a budget $r$ in the missing range at which the constraint is
+       active. Compute the KKT multiplier $\lambda$ of the constrained
+       solution, and find a point where the penalized objective with this
+       $\lambda$ is lower. Compute the duality gap $p^\star(r) - d^\star(r)$
+       of the constrained problem.
+
+1. [code] **Soft-margin SVM.** ● Add the point $(2, 2)$ with label $-1$ to
+   the data of the cell that computes `alpha` in :numref:`subsec_mdl-svm-dual`.
+   The new point lies among the positive examples, so the classes are no
+   longer linearly separable.
+    1. Run the projected gradient ascent of that cell for $10^3$, $10^4$, and
+       $10^5$ iterations, and record $\sum_i \alpha_i$ and the dual objective.
+       Explain the result with weak duality.
+    1. The soft-margin SVM :cite:`Cortes.Vapnik.1995` minimizes
+       $\tfrac12 \|\tilde{\mathbf{w}}\|^2 + C \sum_i \xi_i$ subject to
+       $y_i \tilde{\mathbf{w}}^\top \tilde{\mathbf{x}}_i \ge 1 - \xi_i$ and
+       $\xi_i \ge 0$. Show that eliminating the slacks $\xi_i$ gives the
+       hinge-loss objective
+       $\tfrac12 \|\tilde{\mathbf{w}}\|^2 + C \sum_i \max(0, 1 - y_i \tilde{\mathbf{w}}^\top \tilde{\mathbf{x}}_i)$,
+       and that the dual is :eqref:`eq_mdl-opt-svm-dual-folded` with the
+       additional constraints $\alpha_i \le C$. Use complementary slackness
+       to relate each of the cases $\alpha_i^\star = 0$, $0 < \alpha_i^\star < C$, and
+       $\alpha_i^\star = C$ to the margin
+       $y_i \tilde{\mathbf{w}}^{\star\top} \tilde{\mathbf{x}}_i$.
+    1. Replace the projection in the cell by the projection onto the box
+       $[0, C]^n$, and run $10^5$ iterations. For
+       $C \in \{0.1, 1, 10, 100\}$, report $\tilde{\mathbf{w}}^\star$, the points with $\alpha_i^\star = C$, the
+       number of training errors, and the gap between the hinge-loss
+       objective and the dual value. Check the relation between multipliers
+       and margins of sub-item b at every $C$. What does a small $C$ trade
+       against a large one?
+
+1. [extended] **Entropic optimal transport.** ●● Given probability vectors
+   $\mathbf{p} \in \mathbb{R}^n$ and $\mathbf{q} \in \mathbb{R}^m$ and a cost
+   matrix $C \in \mathbb{R}^{n \times m}$, optimal transport finds the
+   cheapest plan $\Gamma$ that moves the mass $\mathbf{p}$ to the mass
+   $\mathbf{q}$,
+
+   $$\mathrm{OT} = \min_{\Gamma \ge 0}\; \sum_{i,j} C_{ij} \Gamma_{ij} \quad \textrm{subject to} \quad \Gamma \mathbf{1} = \mathbf{p}, \;\; \Gamma^\top \mathbf{1} = \mathbf{q},$$
+
+   a linear program with $nm$ variables. Entropic regularization
+   :cite:`Cuturi.2013` adds $\varepsilon \sum_{i,j} \Gamma_{ij} (\log \Gamma_{ij} - 1)$
+   to the objective, with $\varepsilon > 0$; let $\Gamma_\varepsilon$ be the
+   regularized optimum. :numref:`sec_mdl-divergences-distances` uses the
+   resulting Sinkhorn iterations to compare distributions
+   :cite:`Peyre.Cuturi.2019`.
+    1. Form the Lagrangian with the terms
+       $\boldsymbol{\phi}^\top (\mathbf{p} - \Gamma \mathbf{1}) + \boldsymbol{\psi}^\top (\mathbf{q} - \Gamma^\top \mathbf{1})$
+       for the marginal constraints. Show that
+       $\Gamma_\varepsilon = \mathrm{diag}(\mathbf{u})\, K\, \mathrm{diag}(\mathbf{v})$
+       with $K_{ij} = e^{-C_{ij} / \varepsilon}$, $u_i = e^{\phi_i / \varepsilon}$,
+       and $v_j = e^{\psi_j / \varepsilon}$. Why can the sign constraints
+       $\Gamma_{ij} \ge 0$ be left out of the Lagrangian?
+    1. Show that the dual function is
+
+       $$g(\boldsymbol{\phi}, \boldsymbol{\psi}) = \mathbf{p}^\top \boldsymbol{\phi} + \mathbf{q}^\top \boldsymbol{\psi} - \varepsilon \sum_{i,j} e^{(\phi_i + \psi_j - C_{ij}) / \varepsilon},$$
+
+       and that maximizing it exactly over $\boldsymbol{\phi}$ with
+       $\boldsymbol{\psi}$ fixed gives the Sinkhorn update
+       $\mathbf{u} = \mathbf{p} / (K \mathbf{v})$, elementwise. Conclude that
+       Sinkhorn's algorithm is block-coordinate ascent on a concave function
+       and that its dual value never decreases. Why is every dual value a
+       lower bound on $\mathrm{OT}$?
+    1. Let $H(\Gamma) = -\sum_{i,j} \Gamma_{ij} \log \Gamma_{ij}$, and grant
+       that every feasible plan satisfies
+       $\max(H(\mathbf{p}), H(\mathbf{q})) \le H(\Gamma) \le H(\mathbf{p}) + H(\mathbf{q})$.
+       Show that
+       $0 \le \sum_{i,j} C_{ij} (\Gamma_\varepsilon)_{ij} - \mathrm{OT} \le \varepsilon \min(H(\mathbf{p}), H(\mathbf{q}))$.
+    1. Implement Sinkhorn in the log domain, updating $\boldsymbol{\phi}$ and
+       $\boldsymbol{\psi}$ with a numerically stable log-sum-exp, and stop
+       when the row sums of the plan are off by less than $10^{-6}$ in
+       $\ell_1$ norm. Take two histograms on $50$ equally spaced points
+       $x_i$ of $[0, 1]$, for example a Gaussian bump and a mixture of two
+       bumps, and the cost $C_{ij} = (x_i - x_j)^2$. Compute $\mathrm{OT}$
+       exactly: in one dimension an optimal plan is monotone, filling the
+       destinations from left to right with the sources taken from left to
+       right. For $\varepsilon \in \{10^{-1}, 10^{-2}, 10^{-3}, 10^{-4}\}$,
+       tabulate the number of iterations, the transport cost of
+       $\Gamma_\varepsilon$, its excess over $\mathrm{OT}$ next to the bound
+       of sub-item c, and the final dual value. Then run the multiplicative
+       updates $\mathbf{v} = \mathbf{q} / (K^\top \mathbf{u})$,
+       $\mathbf{u} = \mathbf{p} / (K \mathbf{v})$. At which $\varepsilon$ do
+       they break down, and why?
+
+1. [code] **Trust-region subproblem.** ●● The trust-region step
+   :eqref:`eq_mdl-opt-trust-region` of
+   :numref:`sec_mdl-gradient-based-optimization` minimizes
+   $m(\mathbf{p}) = \mathbf{c}^\top \mathbf{p} + \tfrac12 \mathbf{p}^\top B \mathbf{p}$
+   subject to $\|\mathbf{p}\| \le \Delta$, where
+   $\mathbf{c} = \nabla f(\mathbf{x}_k)$, $B$ is symmetric, and the constant
+   term is dropped. Write the constraint as
+   $\tfrac12 (\|\mathbf{p}\|^2 - \Delta^2) \le 0$ throughout. When $B$ has a
+   negative eigenvalue the problem is nonconvex. Unlike the example of
+   :numref:`subsec_mdl-explicit-duality-gap`, it nevertheless has no duality
+   gap; exact trust-region solvers build on this fact
+   :cite:`Nocedal.Wright.2006`.
+    1. Suppose that $\mathbf{p}^\star$ with $\|\mathbf{p}^\star\| \le \Delta$
+       and $\lambda \ge 0$ satisfy $(B + \lambda I) \mathbf{p}^\star = -\mathbf{c}$,
+       $\lambda (\Delta - \|\mathbf{p}^\star\|) = 0$, and
+       $B + \lambda I \succeq 0$. Show that $\mathbf{p}^\star$ is a global
+       minimizer. Which of these conditions is not one of the KKT conditions
+       :eqref:`eq_mdl-opt-kkt`?
+    1. Let $b_1 \le \cdots \le b_n$ be the eigenvalues of $B$ with unit
+       eigenvectors $\mathbf{q}_i$, and let $c_i = \mathbf{q}_i^\top \mathbf{c}$.
+       Compute the dual function for $\lambda > -b_1$ and for
+       $\lambda < -b_1$. Assume $b_1 < 0$ and $c_1 \neq 0$. Show that the
+       dual optimum $\lambda^\star$ is the unique root in $(-b_1, \infty)$ of
+       $\|\mathbf{p}(\lambda)\| = \Delta$, where
+       $\mathbf{p}(\lambda) = -(B + \lambda I)^{-1} \mathbf{c}$. Show that
+       $\mathbf{p}(\lambda^\star)$ and $\lambda^\star$ satisfy the conditions
+       of sub-item a, so that there is no duality gap.
+    1. Implement the solver by bisection on $\lambda$, as `water_fill`
+       bisects on the water level. For a random symmetric $6 \times 6$
+       matrix $B$ with a negative eigenvalue, a random vector $\mathbf{c}$,
+       and $\Delta = 1$, compare $m(\mathbf{p}(\lambda^\star))$ with the dual
+       value and with the smallest value of $m$ over $10^5$ random points of
+       the ball.
+    1. In the hard case $c_1 = 0$, show that $\|\mathbf{p}(\lambda)\|$ stays
+       bounded as $\lambda \downarrow -b_1$, so that the root of sub-item b
+       does not exist when $\Delta$ exceeds that bound. For such $\Delta$,
+       construct a global minimizer of the form
+       $\mathbf{p} = -\sum_{i \ge 2} \frac{c_i}{b_i - b_1} \mathbf{q}_i + \tau \mathbf{q}_1$,
+       and show that there is still no duality gap. Test the construction by
+       setting $c_1 = 0$ in your experiment and choosing $\Delta$ above that
+       bound. What does bisection face when $c_1$ is nonzero but tiny?
 
 ## Discussions
 

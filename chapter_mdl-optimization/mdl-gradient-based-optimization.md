@@ -91,8 +91,8 @@ with $-\nabla f$. For any such direction, differentiability guarantees a
 decrease only for sufficiently small positive steps; a finite step requires a
 smoothness bound or a line-search test. For *any* positive-definite
 matrix $B$, every vector in the family
-$\mathbf{d} = -B\,\nabla f(\mathbf{x})$ is a descent direction (Exercise 2).
-Newton's method and preconditioned optimizers are instances of this family,
+$\mathbf{d} = -B\,\nabla f(\mathbf{x})$ is a descent direction (exercise :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`a).
+Newton's method (where the Hessian is positive definite) and preconditioned optimizers are instances of this family,
 with $B$ encoding curvature; we return to them in :numref:`subsec_mdl-why-not-newton`. The following cell evaluates the proposition on this section's running example,
 $f(x, y) = \tfrac12(x^2 + 10\,y^2)$: it compares the first-order slope and the
 actual decrease along several unit directions, then scans $3600$ directions to
@@ -159,7 +159,8 @@ which for twice-differentiable $f$ is equivalent to every Hessian
 eigenvalue lying in $[-L, L]$: bounded eigenvalues give
 :eqref:`eq_mdl-opt-smoothness` by integrating the Hessian along the segment
 from $\mathbf{x}$ to $\mathbf{y}$ (the same device as in the proof below),
-and the converse is a mean-value argument we leave to the reader. Either way,
+and the converse is a mean-value argument
+(exercise :exref:`ex_mdl-gradient-based-optimization-smoothness-constants`a). Either way,
 the curvature is bounded by $L$ in every
 direction. Smoothness converts the first-order model into a one-sided
 *guarantee*: a quadratic upper bound
@@ -378,7 +379,7 @@ $1 - \eta\lambda_i$ determine convergence and speed:
   quadratics, the $2/L$ that the descent lemma offered as sufficient turns out
   to be necessary. Above it, the stiffest mode's factor is below $-1$, so that
   coordinate oscillates with increasing amplitude even if other modes
-  converge: divergence along one axis (Exercise 4 has you build this
+  converge: divergence along one axis (problem :exref:`ex_mdl-gradient-based-optimization-f-mathbfx-tfrac12-lambda`b has you build this
   half-converging, half-exploding run).
 * **Speed** is set by the slowest mode: the error norm shrinks like
   $\rho(\eta)^k$, where $\rho(\eta) = \max_i |1 - \eta\lambda_i|$ is the
@@ -683,6 +684,7 @@ $$
 \qquad
 \beta^\star = \left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^{\!2},
 $$
+:eqlabel:`eq_mdl-opt-hb-tuning`
 
 heavy ball contracts every mode with asymptotic factor
 
@@ -696,14 +698,15 @@ so the iteration count drops from $O(\kappa \log \tfrac1\varepsilon)$ to
 $O(\sqrt{\kappa} \log \tfrac1\varepsilon)$ :cite:`Polyak.1964`. The proof is a
 $2 \times 2$ eigenvalue computation per mode (with the velocity, each mode's
 state is two-dimensional, and the optimal tuning places every mode's pair of
-eigenvalues on a circle of radius $\sqrt{\beta^\star}$), and Exercise 5 derives it. For $\kappa = 10^4$, that is the difference between tens of
+eigenvalues on a circle of radius $\sqrt{\beta^\star}$), and exercise :exref:`ex_mdl-gradient-based-optimization-write-heavy-ball-eqref` derives it. For $\kappa = 10^4$, that is the difference between tens of
 thousands of iterations and hundreds.
 
 The heavy-ball parameter formula and rate above are exact for quadratics; they
 do not constitute a guarantee for arbitrary strongly convex functions.
 :citet:`Lessard.Recht.Packard.2016` constructed a one-dimensional, smooth,
 strongly convex function on which heavy ball with the classical tuning does not
-converge at all: the iterates fall into a stable limit cycle. Momentum as
+converge from some starting points: the iterates fall into a stable limit cycle
+(exercise :exref:`ex_mdl-gradient-based-optimization-heavy-ball-limit-cycle`). Momentum as
 deep learning uses it :cite:`Sutskever.Martens.Dahl.ea.2013` is supported by the local quadratic model and broad empirical evidence, not by
 a global theorem for arbitrary strongly convex functions.
 
@@ -732,7 +735,8 @@ converges linearly with factor $1 - 1/\sqrt{\kappa}$
 lower bound of :citet:`Nemirovski.Yudin.1983` shows that no method forming
 its iterates from gradients and their linear combinations can improve on
 $O(1/k^2)$, or beat $\sqrt{\kappa}$ dependence, on the worst case over this
-problem class (see :cite:`Nesterov.2018` for the construction and proof).
+problem class (see :cite:`Nesterov.2018` for the construction and proof,
+whose $O(1/k^2)$ part exercise :exref:`ex_mdl-gradient-based-optimization-first-order-lower-bound` derives).
 The worst-case construction uses a dimension that grows with the horizon,
 $n \gtrsim 2k$, so the bound governs roughly the first $n/2$ iterations. In a
 fixed dimension, sufficiently long runs can have better asymptotic behavior.
@@ -835,7 +839,7 @@ error. $\blacksquare$
 The expected squared estimation error falls like $1/b$, while its root-mean-square
 magnitude falls like $1/\sqrt{b}$: increasing the batch computation by
 $100\times$ reduces this magnitude by only $10\times$. This scaling contributes
-to diminishing returns from very large batches (Exercise 7); the practical
+to diminishing returns from very large batches (exercise :exref:`ex_mdl-gradient-based-optimization-use-eqref-eq-mdl`); the practical
 operating point also depends on parallel hardware and optimization dynamics. The cell
 verifies both claims on a hand-rolled logistic-regression problem, the toy
 we will keep for the rest of the section: $n = 200$ points in five dimensions,
@@ -903,7 +907,7 @@ ball** of squared radius proportional to $\eta\,\sigma^2$, as in
 :numref:`fig_mdl-opt-sgd-noise-ball`. Far from the optimum the contraction
 term dominates and SGD makes GD-like linear progress; once the error reaches
 the ball, signal and noise balance, and subsequent iterates continue to fluctuate within the stationary distribution. The radius formula is a design guide: halving $\eta$ halves the
-squared radius (and so does quadrupling $b$, since $\sigma^2 \mapsto \sigma^2/b$
+squared radius (and so does doubling $b$, since $\sigma^2 \mapsto \sigma^2/b$
 by :eqref:`eq_mdl-opt-variance`; step size and batch size are coupled parameters, the coupling behind the practical recipes of
 :numref:`sec_minibatch_sgd`).
 
@@ -933,7 +937,8 @@ asymptotic conclusions under its own regularity conditions
 A condition on the constant is easy to miss: with $\eta_k = c/k$, the
 $O(1/k)$ guarantee requires $c$
 large enough relative to the curvature, $c > 1/(2\mu)$; choose $c$ too
-small and the rate degrades to $O(k^{-2\mu c})$, arbitrarily slower
+small and the rate degrades to $O(k^{-2\mu c})$
+(exercise :exref:`ex_mdl-gradient-based-optimization-one-over-k-constant`), arbitrarily slower
 than advertised, one reason practical schedules decay more gently than $1/k$
 :cite:`Bottou.Curtis.Nocedal.2018`. Compare the
 deterministic linear rate :eqref:`eq_mdl-opt-gd-rate-strongly-convex`: noise
@@ -1016,7 +1021,7 @@ $\mathbf{x}_1 = \mathbf{x}_0 - A^{-1} A \mathbf{x}_0 = \mathbf{0}$, for every
 $\kappa$. The quadratic Newton step is independent of the condition number because the method is
 **affine-invariant**: rescale or shear the coordinates,
 $\mathbf{x} = T\mathbf{y}$, and Newton's iterates transform equivariantly through $T$
-(Exercise 8): coordinate rescaling does not change Newton's iteration count on this quadratic, while gradient descent's behavior changes with every reparametrization.
+(exercise :exref:`ex_mdl-gradient-based-optimization-newton-show-that-any`a): coordinate rescaling does not change Newton's iteration count on this quadratic, while gradient descent's behavior changes with every reparametrization whose $T$ is not orthogonal.
 Started close enough to a minimizer whose Hessian is positive definite and
 Lipschitz continuous in a neighborhood, Newton converges
 **quadratically**, $\|\mathbf{x}_{k+1} - \mathbf{x}^\star\| \le C\,\|\mathbf{x}_k - \mathbf{x}^\star\|^2$
@@ -1057,7 +1062,7 @@ typically *indefinite*, and the Newton direction can point toward a saddle
 unless safeguarded, because it seeks a stationary point of the model,
 any stationary point. Large-scale methods therefore use cheaper curvature
 surrogates. **L-BFGS** rebuilds a low-rank curvature estimate from recent
-gradient differences with $O(d)$ memory :cite:`Liu.Nocedal.1989`, and the
+gradient differences with $O(md)$ memory :cite:`Liu.Nocedal.1989`, and the
 adaptive family (AdaGrad :cite:`Duchi.Hazan.Singer.2011`, RMSProp
 :cite:`Tieleman.Hinton.2012`, Adam :cite:`Kingma.Ba.2014`) maintains a
 *diagonal* preconditioner, a per-coordinate learning rate
@@ -1163,7 +1168,8 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-trust-region`
 
-The radius $\Delta_k$ prevents an inaccurate local model from making an
+Here $B_k$ is the Hessian $\nabla^2 f(\mathbf x_k)$ or a symmetric
+approximation of it. The radius $\Delta_k$ prevents an inaccurate local model from making an
 arbitrarily large proposal and makes the subproblem bounded even when $B_k$ has
 a negative eigenvalue. After approximately solving the subproblem, compare
 actual with predicted improvement,
@@ -1238,86 +1244,400 @@ beyond explicitly inverting a Hessian.
 
 ## Exercises
 
-1. Prove the descent lemma :eqref:`eq_mdl-opt-descent-lemma` from
-   $L$-smoothness without looking, and show that $\eta = 1/L$ maximizes the
-   guaranteed per-step decrease $\eta(1 - L\eta/2)\,\|\nabla f\|^2$. What goes
-   wrong in the bound (and in practice) at $\eta = 2/L$ exactly?
-2. Show that $\mathbf{d} = -B\,\nabla f(\mathbf{x})$ is a descent direction
-   for every positive definite matrix $B$. Then find the steepest descent
-   direction when length is measured by the norm
-   $\|\mathbf{d}\|_A = \sqrt{\mathbf{d}^\top A \mathbf{d}}$ for positive
-   definite $A$, and recognize the answer as a *preconditioned* gradient:
-   with $A = \nabla^2 f$, as Newton's direction. (*Hint:* substitute
-   $\mathbf{u} = A^{1/2}\mathbf{d}$ and reuse Cauchy--Schwarz.)
-3. Derive the optimal step $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$
-   by minimizing $\max_i |1 - \eta\lambda_i|$, confirm the contraction factor
-   $(\kappa - 1)/(\kappa + 1)$, and explain geometrically why $\kappa \to 1$
-   gives convergence in a single step.
-4. On $f(\mathbf{x}) = \tfrac12(\lambda_1 x_1^2 + \lambda_2 x_2^2)$ with
-   $\lambda_1 = 1$, $\lambda_2 = 10$, choose a step size with
-   $2/\lambda_2 < \eta < 2/\lambda_1$ and run twenty iterations from
-   $(1, 1)$. Verify that one coordinate converges while the other diverges,
-   and reconcile this with the spectral-radius criterion of
-   :eqref:`eq_mdl-opt-per-mode`.
-5. Write heavy ball :eqref:`eq_mdl-opt-heavy-ball` on the one-dimensional
-   quadratic $f(x) = \tfrac{\lambda}{2} x^2$ as a linear map of the state
-   $(x_k, x_{k-1})$, and compute the eigenvalues of its $2 \times 2$ iteration
-   matrix. Show that for $\beta \ge (1 - \sqrt{\eta\lambda})^2$ the
-   eigenvalues are complex with modulus $\sqrt{\beta}$ (independent of
-   $\lambda$), and conclude that the tuning
-   :eqref:`eq_mdl-opt-hb-rate` contracts *every* mode of a quadratic at rate
-   $(\sqrt{\kappa}-1)/(\sqrt{\kappa}+1)$.
-6. Prove the unbiasedness and $1/b$ variance of
-   :eqref:`eq_mdl-opt-variance`. Now suppose the minibatch is drawn *without*
-   replacement. Show the estimate is still unbiased, and that its covariance
-   acquires the finite-population factor $\tfrac{N - b}{N - 1}$, so
-   sampling without replacement is (slightly) better, and exact at $b = N$.
-7. Use :eqref:`eq_mdl-opt-noise-ball` to argue that *no* constant step size
-   can converge to the minimizer while the gradient noise at the optimum is
-   nonzero. Then study the tradeoff: combining :eqref:`eq_mdl-opt-variance`
-   and :eqref:`eq_mdl-opt-noise-ball`, the noise-ball radius scales like
-   $\eta\sigma^2 / b$. Doubling $b$ doubles per-step compute and halves the
-   ball; halving $\eta$ halves the ball but slows the transient.
-   Discuss when large batches are worth it (hint: wall-clock time under data
-   parallelism vs. total FLOPs), and check the prediction against the
-   schedule-comparison experiment above, where halving $\eta$
-   halved the measured floor.
-8. Newton: show that on *any* strictly convex quadratic, the step
-   :eqref:`eq_mdl-opt-newton-step` reaches the minimizer in one iteration
-   regardless of $\kappa$. Show affine invariance: if $g(\mathbf{y}) = f(T\mathbf{y})$
-   for invertible $T$, Newton iterates for $g$ satisfy
-   $\mathbf{y}_k = T^{-1}\mathbf{x}_k$ where $\mathbf{x}_k$ are Newton
-   iterates for $f$ (while gradient descent has no such property). Finally,
-   compare the $O(d^2)$ storage and $O(d^3)$ factorization of dense Newton with
-   a truncated-CG step using $m$ Hessian--vector products and $O(d)$ working
-   memory. State which structure makes the latter feasible at large $d$ and
-   which Newton safeguards it still requires on a nonconvex objective.
-9. *Implicit bias.* Let $X \in \mathbb{R}^{n \times d}$ with $n < d$ and full
-   row rank, and minimize the underdetermined least-squares loss
-   $f(\mathbf{w}) = \tfrac12\|X\mathbf{w} - \mathbf{y}\|^2$, which has
-   infinitely many global minimizers. Show that every gradient (hence,
-   started from $\mathbf{w}_0 = \mathbf{0}$, every GD iterate) lies in the
-   row space of $X$; show that the unique minimizer within the row space is
-   the minimum-norm interpolator $\mathbf{w}^\dagger = X^\top (X X^\top)^{-1} \mathbf{y}$;
-   and conclude that gradient descent with any fixed step size
-   $0 < \eta < 2/\lambda_{\max}(X^\top X)$ converges to it. Moral: when
-   minimizers
-   are plentiful, the *optimizer*, not the loss, chooses among them, a
-   theme that returns for deep networks in :numref:`sec_mdl-convexity`. (This
-   exercise is deliberately pencil-and-paper; its numerical companion,
-   observing convergence to $\mathbf{w}^\dagger$, is Exercise 8 of
-   :numref:`sec_mdl-convexity`.)
+1. **Preconditioned descent directions.** The proposition of
+   :numref:`subsec_mdl-descent-directions` measures the length of a
+   direction by the Euclidean norm. Other norms give other steepest
+   directions.
+    1. Show that $\mathbf{d} = -B\,\nabla f(\mathbf{x})$ is a descent
+       direction for every positive definite matrix $B$.
+    1. For positive definite $A$, measure length by
+       $\|\mathbf{d}\|_A = \sqrt{\mathbf{d}^\top A\, \mathbf{d}}$. Show that
+       the minimizer of $\nabla f(\mathbf{x})^\top \mathbf{d}$ over
+       $\|\mathbf{d}\|_A = 1$ is proportional to
+       $-A^{-1}\nabla f(\mathbf{x})$, and find the $A$ for which it is
+       Newton's direction :eqref:`eq_mdl-opt-newton-step`. The substitution
+       $\mathbf{u} = A^{1/2}\mathbf{d}$ reduces the problem to the Euclidean
+       case.
+   :exlabel:`ex_mdl-gradient-based-optimization-show-that-is-de`
 
-10. **BFGS and the secant equation.** Verify directly that the update
-    :eqref:`eq_mdl-opt-bfgs` is symmetric and satisfies
-    $H_{k+1}\mathbf y_k=\mathbf s_k$. Show that it remains positive definite
-    when $H_k\succ0$ and $\mathbf y_k^\top\mathbf s_k>0$.
-11. **Trust-region acceptance.** For
-    $f(x)=\tfrac14x^4-\tfrac12x^2$ at $x=0.2$, form the quadratic Taylor model.
-    Solve the one-dimensional trust-region subproblem for several radii
-    $\Delta$, compute :eqref:`eq_mdl-opt-trust-ratio`, and determine which
-    proposals should be accepted. What goes wrong with the unrestricted Newton
-    step at this point?
+1. [code] **Smoothness constants.** The smoothness constant $L$ of
+   :eqref:`eq_mdl-opt-smoothness` bounds the curvature of $f$, and for the
+   logistic loss of this section it can be computed from the data.
+    1. Let $f$ be twice continuously differentiable and $L$-smooth. Show that
+       $\|\nabla^2 f(\mathbf{x})\,\mathbf{v}\| \le L\,\|\mathbf{v}\|$ for
+       all $\mathbf{x}$ and $\mathbf{v}$, and conclude that every Hessian
+       eigenvalue lies in $[-L, L]$. This is the converse direction of the
+       equivalence stated after :eqref:`eq_mdl-opt-smoothness`.
+    1. The function `loss` of the `#gradient-based-optimization-sgd-variance`
+       cell is
+       $f(\mathbf{w}) = \frac1n \sum_{i=1}^n \log\big(1 + \exp(-y_i\, \mathbf{x}_i^\top \mathbf{w})\big) + \frac{\nu}{2}\|\mathbf{w}\|^2$
+       with $\nu = 0.1$ (the variable `lam_reg`), where $\mathbf{x}_i^\top$
+       is the $i$-th row of `X`. Show that
+       $L = \lambda_{\max}(X^\top X)/(4n) + \nu$ is a valid smoothness
+       constant and that the Hessian attains this bound at
+       $\mathbf{w} = \mathbf{0}$.
+    1. Compute this $L$ for the data of the cell. The
+       `#gradient-based-optimization-sgd-schedule` cell computes its
+       reference optimum with $4000$ gradient steps at $\eta = 0.5$. Count
+       the steps that $\eta = 0.5$ and $\eta = 1/L$ each need, from
+       $\mathbf{w} = \mathbf{0}$, to reach
+       $\|\nabla f(\mathbf{w})\| \le 10^{-10}$.
+   :exlabel:`ex_mdl-gradient-based-optimization-smoothness-constants`
+
+1. [code] **A saddle that attracts.** The stationarity guarantee
+   :eqref:`eq_mdl-opt-stationarity-rate` does not distinguish minima from
+   saddle points. Consider $f(x, y) = \tfrac12 x^2 + \cos y$.
+    1. Show that $f$ is bounded below and $L$-smooth with $L = 1$. Find all
+       stationary points and classify each one as a minimum or a saddle
+       point.
+    1. Run gradient descent :eqref:`eq_mdl-opt-gd-step` with $\eta = 1/L$
+       from $(1, 0)$. Where does it converge?
+    1. Start instead from $(1, \delta)$ for
+       $\delta \in \{10^{-2}, 10^{-4}, 10^{-8}, 10^{-12}\}$ and count the
+       steps until $f < -0.99$. Linearize the update of $y$ near $y = 0$ to
+       predict how this count grows as $\delta$ shrinks, and compare the
+       prediction with your counts.
+    1. What do these runs suggest about whether gradient descent from a
+       random initialization converges to a saddle point? What do they
+       suggest about the time it can spend near one?
+
+1. [code] **Backtracking guarantees.** For an $L$-smooth $f$, backtracking
+   that halves the step from $\eta_0$ accepts a step
+   $\eta_k \ge \min\big(\eta_0, (1-c)/L\big)$ at every iteration, as
+   :numref:`subsec_mdl-gd-smoothness` shows.
+    1. Combine this bound with the Armijo condition :eqref:`eq_mdl-opt-armijo`
+       to derive a stationarity guarantee for gradient descent with
+       backtracking in the form of :eqref:`eq_mdl-opt-stationarity-rate`.
+       For $c = 1/2$ and $\eta_0 \ge 1/(2L)$, compare its constant with the
+       constant $2L$ of the known-$L$ step $\eta = 1/L$.
+    1. In the `#gradient-based-optimization-backtracking` cell, vary
+       $c \in \{10^{-4}, 0.1, 0.5, 0.9\}$ and $\eta_0 \in \{1, 100\}$, and
+       record $f(x_{25})$ and the total number of evaluations of `quartic`.
+       Why is $c = 0.9$ slow? Why does a larger $\eta_0$ help on this
+       objective?
+
+1. [code] **Step size and the ceiling.** Let
+   $f(\mathbf{x}) = \tfrac12\mathbf{x}^\top A\,\mathbf{x}$ with $A$
+   symmetric positive definite and condition number $\kappa$. Suppose the
+   step $\eta = 1/\hat{L}$ is computed from an estimate $\hat{L}$ of the
+   smoothness constant $L = \lambda_{\max}$, and write
+   $\alpha = L/\hat{L}$, so that $\eta = \alpha/\lambda_{\max}$.
+    1. Use :eqref:`eq_mdl-opt-per-mode` to express the convergence factor
+       $\rho(\eta) = \max_i |1 - \eta\lambda_i|$ through $\alpha$ and
+       $\kappa$. Show that for $0 < \alpha \le 1$, reducing the error by a
+       factor $\varepsilon$ takes about
+       $(\kappa/\alpha)\ln(1/\varepsilon)$ steps. What does overestimating
+       $L$ by a factor of two cost? What does underestimating it by a factor
+       of two cost?
+    1. On $A = \mathrm{diag}(1, 10)$, choose a step with
+       $2/10 < \eta < 2$ and run twenty iterations from $(1, 1)$. Show that
+       one coordinate converges while the other diverges, and reconcile the
+       run with $\rho(\eta)$.
+   :exlabel:`ex_mdl-gradient-based-optimization-f-mathbfx-tfrac12-lambda`
+
+1. **Implicit bias.** Let $X \in \mathbb{R}^{n \times d}$ with $n < d$ and
+   full row rank, and minimize the underdetermined least-squares loss
+   $f(\mathbf{w}) = \tfrac12\|X\mathbf{w} - \mathbf{y}\|^2$, which has
+   infinitely many global minimizers.
+    1. Show that every gradient of $f$ lies in the row space of $X$, so that
+       gradient descent started from $\mathbf{w}_0 = \mathbf{0}$ never leaves
+       the row space.
+    1. Show that the unique minimizer of $f$ within the row space is the
+       minimum-norm interpolant
+       $\mathbf{w}^\dagger = X^\top (X X^\top)^{-1} \mathbf{y}$.
+    1. Conclude that gradient descent with any fixed step size
+       $0 < \eta < 2/\lambda_{\max}(X^\top X)$ converges to
+       $\mathbf{w}^\dagger$.
+
+   Exercise :exref:`ex_mdl-convexity-implicit-bias-verified` of
+   :numref:`sec_mdl-convexity` checks this limit numerically.
+   :exlabel:`ex_mdl-gradient-based-optimization-implicit-bias`
+
+1. **Reparametrization and preconditioning.** Let $T$ be an invertible
+   matrix and $h(\mathbf{y}) = f(T\mathbf{y})$, so that
+   $\mathbf{x} = T\mathbf{y}$ is a change of coordinates.
+    1. Express $\nabla h$ and $\nabla^2 h$ through the derivatives of $f$.
+       Show that Newton's iterates :eqref:`eq_mdl-opt-newton-step` for $h$,
+       started at $\mathbf{y}_0 = T^{-1}\mathbf{x}_0$, satisfy
+       $\mathbf{y}_k = T^{-1}\mathbf{x}_k$, where $\mathbf{x}_k$ are
+       Newton's iterates for $f$.
+    1. Run gradient descent with step $\eta$ on $h$ and map every iterate
+       back by $\mathbf{x}_k = T\mathbf{y}_k$. Show that the mapped iterates
+       follow $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, B\, \nabla f(\mathbf{x}_k)$
+       for a positive definite matrix $B$, and find $B$. In which norm
+       $\|\cdot\|_A$ of problem
+       :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`b is this
+       direction the steepest one?
+    1. For $f(\mathbf{x}) = \tfrac12\mathbf{x}^\top A\,\mathbf{x}$ with
+       $A = \mathrm{diag}(1, 100)$, the quadratic of the
+       `#gradient-based-optimization-newton` cell, find a diagonal $T$ for
+       which gradient descent on $h$ with $\eta = 1$ reaches the minimizer in
+       one step. What does constructing such a $T$ require for a general
+       positive definite $A$?
+   :exlabel:`ex_mdl-gradient-based-optimization-newton-show-that-any`
+
+1. **BFGS and the secant equation.** Let $H_k$ be symmetric positive
+   definite, and let $\mathbf{s}_k$ and $\mathbf{y}_k$ be the step and
+   gradient difference of :numref:`subsec_mdl-quasi-newton`.
+    1. Verify directly that the update :eqref:`eq_mdl-opt-bfgs` is symmetric
+       and satisfies the secant equation $H_{k+1}\mathbf{y}_k = \mathbf{s}_k$.
+    1. Show that $H_{k+1}$ is positive definite whenever
+       $\mathbf{y}_k^\top \mathbf{s}_k > 0$.
+    1. A Wolfe line search accepts a step $\mathbf{s}_k = \alpha\,\mathbf{p}_k$
+       along a descent direction $\mathbf{p}_k$ only if, besides a
+       sufficient-decrease condition, the curvature condition
+       $\nabla f(\mathbf{x}_k + \alpha\,\mathbf{p}_k)^\top \mathbf{p}_k \ge c_2\, \nabla f(\mathbf{x}_k)^\top \mathbf{p}_k$
+       holds for a constant $c_2 \in (0, 1)$. Show that this condition
+       implies $\mathbf{y}_k^\top \mathbf{s}_k > 0$ for every differentiable
+       $f$.
+
+1. **Trust-region acceptance.** Let $f(x) = \tfrac14 x^4 - \tfrac12 x^2$,
+   $x_k = 0.2$, and $B_k = f''(x_k)$ in :eqref:`eq_mdl-opt-trust-region`, and
+   accept a proposal when the ratio :eqref:`eq_mdl-opt-trust-ratio` satisfies
+   $r_k \ge 1/4$.
+    1. Form the model $m_k$ and solve the one-dimensional subproblem for
+       $\Delta \in \{0.1, 0.4, 0.8, 1.5\}$.
+    1. Compute $r_k$ for each proposal and decide which proposals are
+       accepted.
+    1. Compute the unrestricted Newton step :eqref:`eq_mdl-opt-newton-step`
+       from $x_k$. Where does it lead, and why?
+
+1. **Steepest descent in other norms.** ● Problem
+   :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`b measures
+   length by a norm $\|\cdot\|_A$ that comes from an inner product. Norms
+   that do not come from an inner product give steepest directions of a
+   different form.
+    1. Find the minimizers of $\nabla f(\mathbf{x})^\top \mathbf{d}$ over
+       $\|\mathbf{d}\|_\infty = 1$ and over $\|\mathbf{d}\|_1 = 1$, together
+       with the minimal slopes, and state when each minimizer is unique.
+    1. Let the parameter be a matrix whose gradient $G$ has the reduced SVD
+       $G = U \Sigma V^\top$, let the slope of a direction $D$ be
+       $\mathrm{tr}(G^\top D)$, and measure length by the spectral norm
+       $\|D\|_2$. Show that the minimal slope over $\|D\|_2 \le 1$ is
+       $-\mathrm{tr}\,\Sigma$, attained at $D = -U V^\top$, the polar factor
+       that Muon applies to its momentum matrix
+       (:numref:`subsec_mdl-preconditioning-ladder`). Writing
+       $\mathrm{tr}(G^\top D) = \sum_i \sigma_i\, \mathbf{u}_i^\top D\, \mathbf{v}_i$
+       is a useful first step. This steepest-descent view is due to
+       :citet:`Bernstein.Newhouse.2024`, who derive it for Shampoo with its
+       moving averages switched off.
+   :exlabel:`ex_mdl-gradient-based-optimization-steepest-other-norms`
+
+1. **Heavy ball as a two-dimensional recurrence.** ● Apply heavy ball
+   :eqref:`eq_mdl-opt-heavy-ball` to $f(x) = \tfrac{\lambda}{2} x^2$.
+    1. Write one step as a linear map of the state $(x_k, x_{k-1})$ and
+       compute the eigenvalues of its $2 \times 2$ iteration matrix.
+    1. Show that for $\beta \ge (1 - \sqrt{\eta\lambda})^2$ both eigenvalues
+       have modulus $\sqrt{\beta}$, independent of $\lambda$.
+    1. Conclude that the tuning :eqref:`eq_mdl-opt-hb-tuning` contracts every
+       mode of a quadratic with eigenvalues in
+       $[\lambda_{\min}, \lambda_{\max}]$ at the rate
+       :eqref:`eq_mdl-opt-hb-rate`.
+   :exlabel:`ex_mdl-gradient-based-optimization-write-heavy-ball-eqref`
+
+1. [code] **Heavy ball beyond quadratics.** ●
+   :citet:`Lessard.Recht.Packard.2016` define a one-dimensional function
+   through its gradient,
+
+   $$
+   \nabla f(x) = \begin{cases} 25x, & x < 1, \\ x + 24, & 1 \le x < 2, \\ 25x - 24, & x \ge 2. \end{cases}
+   $$
+
+    1. Show that $f$ is $\mu$-strongly convex with $\mu = 1$ and $L$-smooth
+       with $L = 25$.
+    1. Run heavy ball with the tuning :eqref:`eq_mdl-opt-hb-tuning` for $300$
+       steps from $x_0 = 3.3$ with zero initial velocity, and run Nesterov's
+       method :eqref:`eq_mdl-opt-nesterov` with $\eta = 1/L$ and
+       $\beta = (\sqrt{\kappa} - 1)/(\sqrt{\kappa} + 1)$ from the same
+       start, where $\kappa = L/\mu$. Plot $x_k$ against $k$ for both
+       methods.
+    1. The heavy-ball iterates approach a cycle of period three that visits
+       the piece $x < 1$ twice and the piece $x \ge 2$ once. Write the
+       heavy-ball update on these pieces as a linear system for the three
+       points of the cycle, solve it, and compare the solution with the
+       simulation.
+    1. Repeat the heavy-ball run from a grid of starting points on
+       $[-6, 6]$ and report the fraction that end on the cycle. Every piece
+       of $f$ is a quadratic with curvature in $[\mu, L]$. Why does the
+       per-mode analysis behind :eqref:`eq_mdl-opt-hb-rate` nevertheless not
+       apply to $f$?
+   :exlabel:`ex_mdl-gradient-based-optimization-heavy-ball-limit-cycle`
+
+1. [code] **A lower bound for first-order methods.** ● This problem derives
+   the $O(1/k^2)$ part of the bound of :citet:`Nemirovski.Yudin.1983` quoted
+   in :numref:`subsec_mdl-momentum-acceleration`, the part for smooth convex
+   functions, following the construction of :citet:`Nesterov.2018`. A
+   first-order method here is any method whose iterates satisfy
+   $\mathbf{x}_k \in \mathbf{x}_0 + \mathrm{span}\{\nabla f(\mathbf{x}_0), \ldots, \nabla f(\mathbf{x}_{k-1})\}$;
+   take $\mathbf{x}_0 = \mathbf{0}$. For $p \le n$, let
+   $A_p \in \mathbb{R}^{n \times n}$ be zero except for its leading
+   $p \times p$ block, which is tridiagonal with $2$ on the diagonal and $-1$
+   on both off-diagonals, and let
+
+   $$
+   f_p(\mathbf{x}) = \frac{L}{4} \left( \tfrac12\, \mathbf{x}^\top A_p\, \mathbf{x} - x_1 \right).
+   $$
+
+    1. Show that $f_p$ is convex and $L$-smooth.
+    1. Show that if $\mathbf{x}$ is supported on the first $j$ coordinates,
+       then $\nabla f_p(\mathbf{x})$ is supported on the first $j + 1$.
+       Conclude that the $k$-th iterate of every first-order method is
+       supported on the first $k$ coordinates.
+    1. Show that the minimizer of $f_p$ has entries
+       $x_i^\star = 1 - i/(p+1)$ for $i \le p$ and zero beyond, that the
+       minimum is $-\frac{L}{8}\big(1 - \frac{1}{p+1}\big)$, and that
+       $\|\mathbf{x}^\star\|^2 \le (p+1)/3$.
+    1. Let $2k + 1 \le n$. The functions $f_{2k+1}$ and $f_k$ agree on
+       vectors supported on the first $k$ coordinates. Use this fact to show
+       that every first-order method applied to $f_{2k+1}$ satisfies, with
+       $\mathbf{x}^\star$ the minimizer of $f_{2k+1}$,
+
+       $$
+       f_{2k+1}(\mathbf{x}_k) - \min f_{2k+1} \;\ge\; \frac{3L\, \|\mathbf{x}_0 - \mathbf{x}^\star\|^2}{32\,(k+1)^2}.
+       $$
+    1. For $k \in \{5, 10, 25, 50, 100, 200, 400\}$, run $k$ steps of
+       gradient descent with $\eta = 1/L$ and of Nesterov's update
+       :eqref:`eq_mdl-opt-nesterov` with $\eta = 1/L$ and
+       $\beta_j = (j-1)/(j+2)$ at step $j = 1, 2, \ldots$ on $f_{2k+1}$ with
+       $n = 2k + 1$, and divide each gap by the bound. Which ratio stays
+       bounded as $k$ grows?
+   :exlabel:`ex_mdl-gradient-based-optimization-first-order-lower-bound`
+
+1. [code] **Sampling without replacement.** ● Data loaders usually draw a
+   minibatch as $b$ distinct indices, uniformly without replacement from
+   $\{1, \ldots, N\}$, rather than with replacement as in
+   :eqref:`eq_mdl-opt-minibatch`.
+    1. Show that the minibatch gradient $\hat{\mathbf{g}}_b$ is still
+       unbiased.
+    1. Show that its expected squared error is
+       $\frac{N-b}{N-1} \cdot \frac{\mathrm{tr}\,\Sigma}{b}$, with $\Sigma$ as
+       in :eqref:`eq_mdl-opt-variance`. Writing
+       $\hat{\mathbf{g}}_b = \frac1b \sum_{i=1}^N z_i\, \nabla f_i$ with
+       indicators $z_i \in \{0, 1\}$ reduces the computation to the first
+       and second moments of the $z_i$.
+    1. Modify the `#gradient-based-optimization-sgd-variance` cell, where
+       $N = n = 200$, to draw each batch with
+       `rng.choice(n, size=b, replace=False)`, and compare the measured
+       error with the prediction for $b \in \{16, 64, 128, 200\}$. For which
+       batch sizes does the factor $\frac{N-b}{N-1}$ matter?
+   :exlabel:`ex_mdl-gradient-based-optimization-sampling-without-replacement`
+
+1. [code] **Noise scale and critical batch size.** ● How much does one
+   minibatch step lower the loss, and how does the gain depend on $b$? Write
+   $\mathbf{g} = \nabla f(\mathbf{w})$ and $H = \nabla^2 f(\mathbf{w})$, and
+   approximate the loss after the step
+   $\mathbf{w} - \eta\,\hat{\mathbf{g}}_b$ of :eqref:`eq_mdl-opt-minibatch`
+   by its second-order Taylor expansion at $\mathbf{w}$. The analysis follows
+   :citet:`McCandlish.Kaplan.Amodei.ea.2018`.
+    1. Use the covariance $\Sigma/b$ of $\hat{\mathbf{g}}_b$, established in
+       the proof of :eqref:`eq_mdl-opt-variance`, to show that the expected
+       loss after the step is minimized by
+       $\eta_{\textrm{opt}}(b) = \eta_{\max} / (1 + B_{\textrm{noise}}/b)$,
+       with expected improvement $\Delta_{\max} / (1 + B_{\textrm{noise}}/b)$,
+       where
+
+       $$
+       \eta_{\max} = \frac{\|\mathbf{g}\|^2}{\mathbf{g}^\top H \mathbf{g}},
+       \qquad
+       \Delta_{\max} = \frac{\|\mathbf{g}\|^4}{2\,\mathbf{g}^\top H \mathbf{g}},
+       \qquad
+       B_{\textrm{noise}} = \frac{\mathrm{tr}(H \Sigma)}{\mathbf{g}^\top H \mathbf{g}}.
+       $$
+
+    1. The linear scaling rule of :citet:`Goyal.Dollar.Girshick.ea.2017`
+       multiplies $\eta$ by $s$ when it multiplies $b$ by $s$. For which
+       batch sizes does this rule follow from $\eta_{\textrm{opt}}(b)$? What
+       does a larger batch buy per step once $b \gg B_{\textrm{noise}}$?
+    1. For $H$ proportional to the identity, $B_{\textrm{noise}}$ reduces to
+       $B_{\textrm{simple}} = \mathrm{tr}\,\Sigma / \|\mathbf{g}\|^2$. Compute
+       $B_{\textrm{simple}}$ and $B_{\textrm{noise}}$ for the logistic loss
+       of the `#gradient-based-optimization-sgd-variance` cell at
+       $\mathbf{w} = \mathbf{0}$ and after $5$, $10$, and $20$ full-batch
+       gradient steps with $\eta = 0.5$, using `example_grads` and the
+       Hessian formula of the `#gradient-based-optimization-newton` cell.
+       How does the noise scale change as the iterates approach the optimum?
+       Treat $B_{\textrm{noise}}$ as the critical batch size that separates
+       the two regimes of (b). How should the batch size change over a
+       training run?
+   :exlabel:`ex_mdl-gradient-based-optimization-use-eqref-eq-mdl`
+
+1. [code] **The constant in a $1/k$ schedule.** ● With
+   $\eta_k \propto 1/k$, SGD attains the $O(1/k)$ rate only when the
+   constant is large enough relative to $\mu$
+   (:numref:`subsec_mdl-stochastic-gradients`). The scalar model of
+   :eqref:`eq_mdl-opt-noise-ball` with curvature $\lambda = \mu$ and steps
+   $\eta_k = c/(k + k_0)$ makes this condition exact: the second moment
+   $e_k = \mathbb{E}[x_k^2]$ obeys
+
+   $$
+   e_{k+1} = (1 - \eta_k \mu)^2\, e_k + \eta_k^2 \sigma^2.
+   $$
+
+    1. Let $2\mu c > 1$. Substitute $e_k \approx A/k$ for large $k$, keep
+       the terms of order $1/k^2$, and solve for $A$. Which $c$ minimizes
+       $A$?
+    1. Let $2\mu c < 1$. Show that $e_k = \Theta(k^{-2\mu c})$.
+    1. Iterate the recursion with $\mu = \sigma = 1$, $k_0 = 10$, and
+       $e_0 = 1$ up to $k = 10^6$ for $c \in \{0.1, 0.25, 0.5, 1, 2\}$, and
+       estimate the slope of $\log e_k$ against $\log k$ between $k = 10^5$
+       and $k = 10^6$. Which costs more, a constant twice as large as the
+       minimizer of $A$ or one half as large?
+   :exlabel:`ex_mdl-gradient-based-optimization-one-over-k-constant`
+
+1. [extended] **L-BFGS on an ill-conditioned problem.** ● L-BFGS
+   :cite:`Liu.Nocedal.1989` applies the inverse-Hessian approximation
+   implied by the $m$ most recent secant pairs
+   $(\mathbf{s}_i, \mathbf{y}_i)$, with $\rho_i = 1/(\mathbf{y}_i^\top \mathbf{s}_i)$,
+   without forming it. Given a vector $\mathbf{q}$, the two-loop recursion
+   first runs over the stored pairs from newest to oldest, computing
+   $\alpha_i = \rho_i\, \mathbf{s}_i^\top \mathbf{q}$ and replacing
+   $\mathbf{q}$ by $\mathbf{q} - \alpha_i \mathbf{y}_i$. It then sets
+   $\mathbf{r} = \gamma\, \mathbf{q}$ with
+   $\gamma = \mathbf{s}^\top \mathbf{y} / \mathbf{y}^\top \mathbf{y}$ for the
+   newest pair. Finally it runs from oldest to newest, computing
+   $\beta_i = \rho_i\, \mathbf{y}_i^\top \mathbf{r}$ and replacing
+   $\mathbf{r}$ by $\mathbf{r} + (\alpha_i - \beta_i)\, \mathbf{s}_i$.
+    1. Implement the recursion. Check that, when all pairs since the start
+       are kept, its output equals $H\mathbf{q}$, where $H$ results from
+       applying the dense update :eqref:`eq_mdl-opt-bfgs` once per stored
+       pair, oldest first, to $H_0 = \gamma I$ with the same $\gamma$.
+    1. Generate a logistic-regression problem as in the
+       `#gradient-based-optimization-sgd-variance` cell, but with $n = 2000$,
+       $d = 200$, feature $j$ multiplied by the $j$-th entry of
+       `np.geomspace(0.1, 10, d)`, regularization weight $10^{-3}$, and true
+       weights for which the labels are neither nearly deterministic nor
+       nearly random. Combine the recursion with backtracking on the
+       sufficient-decrease condition
+       $f(\mathbf{x} + \eta\,\mathbf{p}) \le f(\mathbf{x}) + c\,\eta\, \nabla f(\mathbf{x})^\top \mathbf{p}$
+       along $\mathbf{p} = -\mathbf{r}$, where $\mathbf{r}$ is the output
+       for $\mathbf{q} = \nabla f(\mathbf{x})$. Explain why the curvature
+       condition $\mathbf{y}_k^\top \mathbf{s}_k > 0$ holds on this problem
+       without a Wolfe line search.
+    1. Compare gradient descent with $\eta = 1/L$ for the bound $L$ of
+       problem :exref:`ex_mdl-gradient-based-optimization-smoothness-constants`b,
+       L-BFGS with $m \in \{1, 3, 10, 30\}$, and Newton's method by the
+       number of gradient evaluations and the wall-clock time needed to
+       reach $\|\nabla f\| \le 10^{-8}$. How does the cost of L-BFGS depend
+       on $m$?
+
+1. [code] **Edge of stability with momentum.** ●●
+   :citet:`Cohen.Kaur.Li.ea.2021` report that with momentum, the sharpness
+   settles at a threshold that differs from $2/\eta$.
+    1. Use the iteration matrix of problem
+       :exref:`ex_mdl-gradient-based-optimization-write-heavy-ball-eqref`a to
+       show that heavy ball :eqref:`eq_mdl-opt-heavy-ball` on
+       $f(x) = \tfrac{\lambda}{2} x^2$ with $0 \le \beta < 1$ converges if
+       and only if $0 < \eta\lambda < 2 + 2\beta$. Derive the corresponding
+       interval for Nesterov's update :eqref:`eq_mdl-opt-nesterov`.
+    1. Modify the `#gradient-based-optimization-edge-of-stability` cell to
+       train with heavy ball and with Nesterov's update for
+       $\beta \in \{0.25, 0.5\}$, choosing for each run a step size whose
+       predicted threshold lies between $5$ and $12$. Track the sharpness
+       against $2/\eta$ and against the threshold from (a).
+    1. At which threshold does the sharpness settle? What does the answer
+       imply for choosing $\eta$ from a sharpness measured at
+       initialization when training with momentum?
+   :exlabel:`ex_mdl-gradient-based-optimization-edge-of-stability-momentum`
 
 ## Discussions
 

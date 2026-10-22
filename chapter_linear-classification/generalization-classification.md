@@ -158,10 +158,8 @@ of our estimate $\epsilon_\mathcal{D}(f)$ of the error $\epsilon(f)$
 (over the choice of the $n$ test samples)
 cannot be any greater than $\sqrt{0.25/n}$.
 
-If we ignore the fact that this rate characterizes
-behavior as the test set size approaches infinity
-rather than when we possess finite samples,
-this tells us that if we want our test error $\epsilon_\mathcal{D}(f)$
+This bound holds at every test set size $n$, not only in the limit.
+It tells us that if we want our test error $\epsilon_\mathcal{D}(f)$
 to approximate the population error $\epsilon(f)$
 such that one standard deviation corresponds
 to an interval of $\pm 0.01$,

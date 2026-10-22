@@ -148,7 +148,7 @@ we can have for certain data types. This is called *overflow*.
 Conversely, a strongly negative $o_k$ makes
 $\exp(o_k)$ *underflow* to $0$. Single-precision floats span roughly
 $10^{-38}$ to $10^{38}$, so $\exp$ overflows once an argument exceeds about
-$88$ and gradually underflows past about $-88$
+$88$ and gradually underflows past about $-87$
 (entering the *subnormal* range),
 reaching exactly $0$ only near $-104$. A single large
 positive logit therefore overflows the numerator, while strongly negative

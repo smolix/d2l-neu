@@ -173,7 +173,12 @@ EXTRA_ENV_tensorflow := TF_FORCE_GPU_ALLOW_GROWTH=true \
 # cache (torch.cuda.empty_cache()). The only oversized pool is `at::Threads`
 # (32 OpenMP workers by default = nproc/2). Capping OMP/BLAS/MKL to 2 brings
 # the total to ~5 threads with no measurable perf cost on d2l workloads.
-EXTRA_ENV_pytorch := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+# torch.compile writes Triton's compiled helpers (.so) under /tmp by default;
+# on hosts that mount /tmp noexec they fail to load ("failed to map segment
+# from shared object"), so keep the Inductor/Triton caches in the repo.
+EXTRA_ENV_pytorch := OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+                     TORCHINDUCTOR_CACHE_DIR=$(CURDIR)/.cache/torchinductor \
+                     TRITON_CACHE_DIR=$(CURDIR)/.cache/triton
 
 # MXNet 2.0 baseline is ~304 threads per process. Almost all of them come
 # from libopenblas / libopencv OpenMP pools pulled in by the custom wheel;

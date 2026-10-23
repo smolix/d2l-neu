@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max update difference, k=1 vs k=2: 9.31e-10\n"
+          "text": "max update difference, k=1 vs k=2: 1.40e-09\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.70, 2.37 sec/epoch on 1 GPU(s)\n"
+          "text": "test acc 0.78, 1.54 sec/epoch on 1 GPU(s)\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.79, 2.31 sec/epoch on 2 GPU(s)\n"
+          "text": "test acc 0.78, 1.74 sec/epoch on 2 GPU(s)\n"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "allreduce 17.28 GB/s effective over 31.1 ms\n"
+          "text": "allreduce 18.02 GB/s effective over 29.8 ms\n"
         }
       ]
     }

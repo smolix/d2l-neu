@@ -36,14 +36,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.14, validation 3.45; best validation 1.49 at step 200\n"
+          "text": "final: train 0.14, validation 3.44; best validation 1.49 at step 200\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 18985,
-          "sha256": "sha256:39c266093aac1d59af342c07744a73902a8be351bc4d9f5b014c76e94820541b"
+          "bytes": 18992,
+          "sha256": "sha256:c3e3b66bd70df944ec343a12a12f829ec7493585bf7fec6bc8f87f15accf405c"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 2.20/1.83/1.38/1.11\n"
+          "text": "pre_norm=True: loss at step 100/200/400/800: 2.20/1.82/1.37/1.06\n"
         },
         {
           "type": "stream",
@@ -80,12 +80,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'the time traveller had more than a touch of whim among his\n    elements and we distrusted him things that would have made the frame of\n    a less c'\n"
+          "text": "T=0.7, top_k=8: 'the time traveller s words we should have shown him far\n    less scepticism for we should have perceived his motives a pork butcher\n    could under'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller had more that exceriesy of the silent\n    man egr and so i never talked of it until experimental verification\n    cried i you ar'\n"
+          "text": "T=2.0, top_k=None: 'the time traveller moment can you conveyage that showned\n    the lamp flashed down into a common passion what if in this interval the\n    race had '\n"
         }
       ]
     },

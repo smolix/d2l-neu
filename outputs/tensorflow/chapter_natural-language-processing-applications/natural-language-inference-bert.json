@@ -66,7 +66,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[-0.29832834,  0.37638614,  0.30557573],\n       [-0.29832834,  0.37638614,  0.30557573]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[ 0.45487553, -1.1152694 , -0.42889202],\n       [ 0.45487553, -1.1152694 , -0.42889202]], dtype=float32)>"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 122s - 114ms/step - accuracy: 0.6502 - loss: 0.7805 - val_accuracy: 0.7239 - val_loss: 0.6539\n"
+          "text": "1073/1073 - 131s - 122ms/step - accuracy: 0.6525 - loss: 0.7784 - val_accuracy: 0.7257 - val_loss: 0.6478\n"
         },
         {
           "type": "stream",
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 43s - 41ms/step - accuracy: 0.7370 - loss: 0.6322 - val_accuracy: 0.7615 - val_loss: 0.5860\n"
+          "text": "1073/1073 - 50s - 46ms/step - accuracy: 0.7334 - loss: 0.6379 - val_accuracy: 0.7532 - val_loss: 0.5949\n"
         },
         {
           "type": "stream",
@@ -102,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 43s - 40ms/step - accuracy: 0.7705 - loss: 0.5634 - val_accuracy: 0.7741 - val_loss: 0.5570\n"
+          "text": "1073/1073 - 51s - 47ms/step - accuracy: 0.7662 - loss: 0.5707 - val_accuracy: 0.7740 - val_loss: 0.5608\n"
         },
         {
           "type": "stream",
@@ -112,7 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 43s - 40ms/step - accuracy: 0.7932 - loss: 0.5154 - val_accuracy: 0.7831 - val_loss: 0.5505\n"
+          "text": "1073/1073 - 43s - 40ms/step - accuracy: 0.7903 - loss: 0.5205 - val_accuracy: 0.7764 - val_loss: 0.5433\n"
         },
         {
           "type": "stream",
@@ -122,11 +122,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1073/1073 - 43s - 40ms/step - accuracy: 0.8089 - loss: 0.4807 - val_accuracy: 0.7851 - val_loss: 0.5449\n"
+          "text": "1073/1073 - 48s - 45ms/step - accuracy: 0.8071 - loss: 0.4841 - val_accuracy: 0.7815 - val_loss: 0.5439\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x76c36c7ea660>"
+          "text": "<keras.src.callbacks.history.History at 0x7071a04ea2d0>"
         }
       ]
     }

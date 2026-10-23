@@ -36,14 +36,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.15, validation 3.19; best validation 1.46 at step 200\n"
+          "text": "final: train 0.15, validation 3.36; best validation 1.49 at step 200\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 18990,
-          "sha256": "sha256:b7fef75a0a443edfb7fb4b6e224eaf27a96fa992cad6343dcb2d7ea34f80e5b9"
+          "bytes": 18995,
+          "sha256": "sha256:46ecfee4e592b9174077c854d35a124697ead2d285ceffeccec8cf4e3d8ed873"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 1.88/1.41/1.01/0.35\n"
+          "text": "pre_norm=True: loss at step 100/200/400/800: 1.95/1.46/1.06/0.53\n"
         },
         {
           "type": "stream",
@@ -75,17 +75,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'the time traveller hated to have servants waiting at\n    dinner for a hot plate at that the editor turned to his knife and fork\n    with a grunt an'\n"
+          "text": "T=1.0, top_k=None: 'the time traveller holding the lamp aloft i intend to\n    explore time is that plain i was never more serious in my life none of\n    us quite knew '\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'the time traveller stood before us i gave a cry of surprise\n    good heavens man what s the matter cried the medical man who saw him\n    next and t'\n"
+          "text": "T=0.7, top_k=8: 'the time traveller did not seem to hear don t let me\n    disturb you he said with a certain faltering articulation i m all right\n    he stopped hel'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller hated to have seubitating across the\n    lower round nature azout you like to the buildings with intricate\n    parapets and type'\n"
+          "text": "T=2.0, top_k=None: 'the time traveller house by and no up the hill side and\n    refination i pushed my teep the indicated takes to arress the freshness\n    of the my e'\n"
         }
       ]
     },
@@ -96,12 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[8086, 1463, 318, 477, 345, 761, 13]"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " ['Att', 'ention', ' is', ' all', ' you', ' need', '.']\n"
+          "text": "[8086, 1463, 318, 477, 345, 761, 13] ['Att', 'ention', ' is', ' all', ' you', ' need', '.']\n"
         }
       ]
     },

@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
           "bytes": 46412,
-          "sha256": "sha256:eca4aadff99afb6abaab3b21de8085a6650046c52623e8767500b20b17331c1e"
+          "sha256": "sha256:8358d489f36cdbc4e8df53ec1059750a192f813fd43cec8adde23eb2de4823c0"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
           "bytes": 15266,
-          "sha256": "sha256:7536a9ffd5cefb635dffd14f9313a7193916ff9f45f56522045876a6bdb1601a"
+          "sha256": "sha256:897c468edd725882509118397cde5a6f6173754020e6ba2a83085fa96ee047e6"
         }
       ]
     },

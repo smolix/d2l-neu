@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 19142,
-          "sha256": "sha256:7cf2d3fd2a60d46dfc79fbd21a8f6b1028a987c4dbacf15044fdc599301d52be"
+          "bytes": 18945,
+          "sha256": "sha256:cf0aa5fa50928c5275fe3c2085b9005ef7de10282944c5d639f063b987a93d7c"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time traveller to the gallery of my\\nfour ornow a certain was a\n    starting my\\nman,\\nincured, I had\\nthe signs of the Time\n    Traveller.\\n\\n'I wo\"\n"
+          "text": "\"the time travelleroonsciate. We so of purderable\\nsuntil that was I saw was\n    a language. The Time Traveller.\\n\\n'I was a small\\ndistinctly.\\n\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"it seemed to me that the Time Traveller, the bigned. I felt a\n    trames.\\n\\n'In that the Time Traveller.\\n\\n'I wondering in\n    the\\nsheert.\\n\\n'In that\"\n"
+          "text": "'it seemed to me that the em, and I was in\\ntheset of my mind. It was not\n    remember, I saw a loxserved. I had a course, and I was ined me and to\n    me'\n"
         }
       ]
     },
@@ -69,22 +69,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.76, distinct-3 1.00: 'the time traveller to the gallery of\n    my\\nfour ornow a certain was a starting my\\nman,\\nincured, I had\\nthe\n    signs of'\n"
+          "text": "k=1, score -4.69, distinct-3 1.00: \"the time travelleroonsciate. We so of\n    purderable\\nsuntil that was I saw was a language. The Time\n    Traveller.\\n\\n'I was a\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.90, distinct-3 0.87: \"the time traveller tow, I saw that I\n    had\\nlooked at first.\\n\\n'There I found a second.\\n\\n'There I don't know\n    how it was\"\n"
+          "text": "k=4, score -4.03, distinct-3 0.87: \"the time travelleroonze, as I did not\n    see that I was fing.\\n\\n'Then I heard a certain sides of\n    cloder.\\n\\n'Then I\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.39, distinct-3 0.89: \"it seemed to me that the Time Traveller,\n    the bigned. I felt a trames.\\n\\n'In that the Time Traveller.\\n\\n'I\n    wondering in the\\ns\"\n"
+          "text": "k=1, score -4.67, distinct-3 1.00: 'it seemed to me that the em, and I was\n    in\\ntheset of my mind. It was not remember, I saw a loxserved. I had a\n    course'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.81, distinct-3 0.76: \"it seemed to me that the Time\n    Traveller.\\n\\n'Well, I saw it.\\n\\n'As I stood there in the\n    end.\\n\\n'Well, I saw that I was in\\nthe\"\n"
+          "text": "k=4, score -3.89, distinct-3 1.00: \"it seemed to me that my\n    necessity.\\n\\n'Then I heards and silent flop. Then, as I could see a\n    question of means of mere\"\n"
         }
       ]
     },
@@ -115,14 +115,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x738fd0398410>"
+          "text": "<matplotlib.legend.Legend at 0x78a54735e210>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 51314,
-          "sha256": "sha256:d17d614670cc3d367e9ca9ba9997902cf9948a17d85380289eb75ac219ddce04"
+          "bytes": 50796,
+          "sha256": "sha256:457970a49cea34bd7eb210966bfd2450a7af4c714927f978019d66f7069718e8"
         }
       ]
     },
@@ -133,12 +133,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.15, top-k keeps 20, top-p keeps 80, min-p keeps 16\n"
+          "text": "'the time traveller': top prob 0.13, top-k keeps 20, top-p keeps 79, min-p keeps 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'it seemed to me that': top prob 0.17, top-k keeps 20, top-p keeps 142, min-p keeps 19\n"
+          "text": "'it seemed to me that': top prob 0.10, top-k keeps 20, top-p keeps 112, min-p keeps 33\n"
         }
       ]
     },
@@ -149,17 +149,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: 'the time travellerfushes, too, and in the first time, I found that I\n    thought in a moment, was a smallerne; to the little people. I thought of\n    the mereasonable, I was express the breat'\n"
+          "text": "T=0.5: \"the time travellernon't knowkll of the wiarrowo. I was\\nfoundly\n    being\\nvoluttering down the others of straate of which wely side of a\n    cling of anture\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: 'the time travellereli, and po sl more kelys. Yet again, moret in\n    this strange. Yet all ofently still sur. Stor. There were\\nBexason. It\n    was\\nfor a creatureion'\n"
+          "text": "T=1.0: \"the time traveller in my mind. Then Filby he through other vats and\n    piderve about\\nmourneici\\x08otion by right. I should so\\nreim,' that I\n    saw and at us import in a a\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: 'the time travelleroneyed inff*gg riedH Man I uses night isile\n    suingocent before hill could sGched smoneting you all dim unifbe gl� lur\n    after d gourH at everyrilog'\n"
+          "text": "T=2.0: 'the time traveller shaorying you mightcoor off himem\\x14as dark I\n    light it Medicalam came cry on twul one onXct man h fig on this human\n    roundanlingery\\x06x strber if you people darkness veryod last%'\n"
         }
       ]
     },
@@ -170,27 +170,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 1.00): \"the time traveller to the gallery of my\\nfour\n    ornow a certain was a starting my\\nman,\\nincured, I had\\nthe signs of\n    the Time Traveller.\\n\\n'I wo\"\n"
+          "text": " greedy (distinct-3 0.98): \"the time travelleroonsciate. We so of\n    purderable\\nsuntil that was I saw was a language. The Time\n    Traveller.\\n\\n'I was a small\\ndistinctly.\\n\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 0.98): 'the time travellereli, and po sl more kelys. Yet\n    again, moret in this strange. Yet all ofently still sur. Stor. There\n    were\\nBexason. It was\\nfor a creatureion'\n"
+          "text": "  T=1.0 (distinct-3 1.00): \"the time traveller in my mind. Then Filby he\n    through other vats and piderve about\\nmourneici\\x08otion by right. I\n    should so\\nreim,' that I saw and at us import in a a\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): \"the time travellerrange. I' have\\nlt at\n    my\\nthereason b the letiism, for a so to my eyes; I was too what\n    the\\nint and the Morlocks I could, a moment, to doa\"\n"
+          "text": "  top-k (distinct-3 1.00): 'the time travellering meaning pause of breatter\n    piclecticationed, as I could see my\\nheoriresy is sound of pets,\n    tooavingaxt. The bigiculty'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): 'the time traveller I to myself, tlple. It moate,\n    on the lamilience, and I thought that to his over noto remained, then,\n    the thread ro the old in one little you D\\njimit'\n"
+          "text": "  top-p (distinct-3 1.00): 'the time traveller, and there was dectnerowing\n    had left them away I wrmatical\\nscup for and s otherce for any letreish.\n    I did it absolutes and call the bly of aight'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): \"the time travellerrange. I dare say were still\n    fanishedity and behining to a faller,\\nI dilight my complete, now the\n    place, soou know. 'And I did not stark\"\n"
+          "text": "  min-p (distinct-3 1.00): \"the time travellering meaning strength of\n    humanouched that had followed me and friendleruing, which growed them. I\n    suppose the admeh\\nlooking,' he said. 'N\"\n"
         }
       ]
     }

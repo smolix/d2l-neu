@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-visualizing-attention-weights-1.svg",
           "bytes": 18256,
-          "sha256": "sha256:107221c54e8ce369be007e6f36e074d7bef8ea1b381c7331d4cf8a4a49870954"
+          "sha256": "sha256:b9f9d5daec397cc37300daae99e9a29856b070eeaa68fd0a5351e56ee3595816"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-2-1.svg",
           "bytes": 34348,
-          "sha256": "sha256:e53ede66db5755c5d6bac4805733a9f14218e9ec1adf71e498060bc6c368c6ea"
+          "sha256": "sha256:240f559a1e373c861822d71b75872e599e05062768b64414c25c2a57a512225e"
         }
       ]
     },
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-nadaraya-watson-regression-in-action-3-1.svg",
           "bytes": 38726,
-          "sha256": "sha256:1084973ad4583f24db401ba0c1d514a3a8457d387f038b256055eed0a750a9ba"
+          "sha256": "sha256:ae6aa16f6939d4dd575ca31e26dd20255d2dca0b778a422bf461e416cbe305d3"
         }
       ]
     }

@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32 control @512 (clocked up front): 201228 tokens/s, plan 15.1 GiB\n"
+          "text": "fp32 control @512 (clocked up front): 200824 tokens/s, plan 15.1 GiB\n"
         }
       ]
     },
@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R0 un-jitted: 13659 tokens/s\n"
+          "text": "R0 un-jitted: 13727 tokens/s\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R1 jit: 255278 tokens/s (19x)\n"
+          "text": "R1 jit: 256016 tokens/s (19x)\n"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "XLA counts 765 GFLOP per step; at 32.1 ms per step that is 24 TFLOP/s achieved\n"
+          "text": "XLA counts 765 GFLOP per step; at 32.0 ms per step that is 24 TFLOP/s achieved\n"
         }
       ]
     },
@@ -90,7 +90,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"bf16\", naive cast: 249913 tokens/s (0.98x)\n"
+          "text": "\"bf16\", naive cast: 250430 tokens/s (0.98x)\n"
         },
         {
           "type": "stream",
@@ -116,7 +116,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R2 +bf16, threaded: 233844 tokens/s (0.92x)\n"
+          "text": "R2 +bf16, threaded: 233928 tokens/s (0.91x)\n"
         }
       ]
     },
@@ -127,7 +127,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R3 +batch-up (512): 440731 tokens/s (1.88x), 45 TFLOP/s achieved\nfp32 control at 512: 201228 tokens/s -> bf16 pays 2.19x here\nplanned temp: bf16 8.9 GiB (fp32 control: 15.1 GiB)\n"
+          "text": "R3 +batch-up (512): 434277 tokens/s (1.86x), 44 TFLOP/s achieved\nfp32 control at 512: 200824 tokens/s -> bf16 pays 2.16x here\nplanned temp: bf16 8.9 GiB (fp32 control: 15.1 GiB)\n"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R4 +checkpoint: 377527 tokens/s (0.86x), planned temp 1.8 GiB\n"
+          "text": "R4 +checkpoint: 379212 tokens/s (0.87x), planned temp 1.8 GiB\n"
         }
       ]
     },
@@ -159,12 +159,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R5 k=2: no-overlap floor 249k tokens/s, measured 201k (0.79x of one GPU)\n"
+          "text": "R5 k=2: no-overlap floor 250k tokens/s, measured 200k (0.78x of one GPU)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "R5 k=4: no-overlap floor 499k tokens/s, measured 298k (1.17x of one GPU)\n"
+          "text": "R5 k=4: no-overlap floor 500k tokens/s, measured 298k (1.16x of one GPU)\n"
         }
       ]
     },
@@ -175,12 +175,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fast config, k=2: 528k tokens/s (60% weak-scaling efficiency)\n"
+          "text": "fast config, k=2: 512k tokens/s (59% weak-scaling efficiency)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fast config, k=4: 983k tokens/s (56% weak-scaling efficiency)\n"
+          "text": "fast config, k=4: 980k tokens/s (56% weak-scaling efficiency)\n"
         }
       ]
     },
@@ -191,14 +191,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cumulative, R1 -> R3: 1.73x (and R0 -> R3: 32x)\n"
+          "text": "cumulative, R1 -> R3: 1.70x (and R0 -> R3: 32x)\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "fast-transformer/fast-transformer-the-waterfall-1.png",
-          "bytes": 23972,
-          "sha256": "sha256:ff2e759b8572cf3e613d54334a65fb8e7906bff8859bb316d9659b37331f2ffa"
+          "bytes": 23965,
+          "sha256": "sha256:9fa3c943901fee42d588f133c385bb6e203febdff1e0c5ecef5696f351b4b541"
         }
       ]
     },

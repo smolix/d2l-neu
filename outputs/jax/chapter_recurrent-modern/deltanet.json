@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "deltanet/deltanet-the-trouble-with-adding-1.svg",
           "bytes": 27273,
-          "sha256": "sha256:9311049dbbf39aac3aa2b05876e62aca0d91ba024b285921c4d30e2a04915cc4"
+          "sha256": "sha256:2c3c8585b2e09df1dffa12c767e259486720eb822d2fe1229534f5bdb14420a8"
         }
       ]
     },
@@ -121,14 +121,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " Gated DeltaNet     74.5   562,315      4.4\n"
+          "text": " Gated DeltaNet     74.2   562,315      6.0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deltanet/deltanet-a-language-model-2-1.svg",
-          "bytes": 20631,
-          "sha256": "sha256:e5361d5a4bdd76978142c9048aae1070e42e7614a227ec4343358ecb65719b09"
+          "bytes": 20639,
+          "sha256": "sha256:9af2ab69f9ea2f86d9ec7dca857035c99446840dde563faa349f53d282fd2344"
         }
       ]
     },
@@ -160,7 +160,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=16  sigmoid, a in (0,1): 0.486  0.486  0.496\n"
+          "text": "T=16  sigmoid, a in (0,1): 0.497  0.486  0.496\n"
         },
         {
           "type": "stream",

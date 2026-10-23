@@ -79,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86064,
-          "sha256": "sha256:3bf2a9900681363aa117ce319524e9dc0a87b070fdda4211b49e79bbaa49bbe8"
+          "sha256": "sha256:31343d49f3fb74a9eb2163429aefc3f56c14819c95856a5e9946439d8d7b9cb7"
         }
       ]
     },
@@ -111,27 +111,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.621, pixel acc 0.706, val loss 1.201, val pixel acc 0.731\n"
+          "text": "epoch 1, loss 1.622, pixel acc 0.708, val loss 1.183, val pixel acc 0.731\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 1.143, pixel acc 0.737, val loss 1.091, val pixel acc 0.749\n"
+          "text": "epoch 2, loss 1.119, pixel acc 0.740, val loss 1.051, val pixel acc 0.749\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 1.030, pixel acc 0.755, val loss 0.971, val pixel acc 0.762\n"
+          "text": "epoch 3, loss 1.011, pixel acc 0.759, val loss 0.960, val pixel acc 0.765\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.940, pixel acc 0.772, val loss 0.905, val pixel acc 0.778\n"
+          "text": "epoch 4, loss 0.924, pixel acc 0.776, val loss 0.900, val pixel acc 0.781\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.866, pixel acc 0.787, val loss 0.836, val pixel acc 0.792\n"
+          "text": "epoch 5, loss 0.852, pixel acc 0.790, val loss 0.828, val pixel acc 0.794\n"
         }
       ]
     },
@@ -153,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 157197,
-          "sha256": "sha256:5e7a5d57fc8daa5d1d800c08fbf7966f70a09c198e7a07cffc88a6bafebd6abb"
+          "bytes": 156109,
+          "sha256": "sha256:ff2e369c72710b8180717b5fa4a8e7b90d0a5f51f5e11c4fbba39073b8132452"
         }
       ]
     }

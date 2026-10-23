@@ -77,14 +77,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fold validation log mse = [0.0478, 0.0282, 0.0400, 0.0345, 0.0191]\nmean = 0.0339; sd = 0.0110\n"
+          "text": "fold validation log mse = [0.0484, 0.0321, 0.0419, 0.0337, 0.0185]\nmean = 0.0349; sd = 0.0113\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 31165,
-          "sha256": "sha256:41f9fb04648a22a4db2afa0b1abc8a247f6c885341c984e4894a7d0ba4d093e8"
+          "bytes": 31242,
+          "sha256": "sha256:41c21209c3158a049475bedfb307425aac207ebcdb421e468d47dcc0df8378b9"
         }
       ]
     },

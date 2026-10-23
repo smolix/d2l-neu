@@ -31,12 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  2048:   0.15 ms\nn =  4096:   0.47 ms\nn =  8192:   1.84 ms\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n = 16384:   7.37 ms\n"
+          "text": "n =  2048:   0.13 ms\nn =  4096:   0.47 ms\nn =  8192:   1.84 ms\nn = 16384:   7.37 ms\n"
         }
       ]
     },
@@ -65,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-a-chunked-implementation-3-1.svg",
           "bytes": 31289,
-          "sha256": "sha256:4422ecc5478a695c956be97a84cb8b31a04bfa602483eb17cc7abd4e46fe3d28"
+          "sha256": "sha256:088b1fbcd1aa9ae244b3fd20ab09a0eece75ff5f7902f6b23e135fb0f2b2a5f1"
         }
       ]
     },
@@ -76,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive:  19.79 ms, peak memory  4112.1 MiB\nfused:   1.05 ms, peak memory    16.5 MiB\n"
+          "text": "naive:  19.78 ms, peak memory  4112.1 MiB\nfused:   1.04 ms, peak memory    16.5 MiB\n"
         }
       ]
     },
@@ -89,7 +84,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-attention-through-a-window-1.svg",
           "bytes": 18052,
-          "sha256": "sha256:a3103e599661d8766077d99ff3b16363a82191b86e7fee2373b1b8d5691079d5"
+          "sha256": "sha256:ce318bddaade8f746d2d78e61512f40906ac4184a948d2e37f5eebe7f0e9d530"
         }
       ]
     },
@@ -107,7 +102,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-depth-restores-the-reach-1.svg",
           "bytes": 103391,
-          "sha256": "sha256:4cba04b38dfdee7c7f93991cadab4b4589965fc29a7f1f34b78df5075422cabc"
+          "sha256": "sha256:9d12a1c8a0f5a10d148626bfc5bd5058f33ff264207a2b8b9943658a6abfa090"
         }
       ]
     },
@@ -151,8 +146,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-at-scale/attention-at-scale-the-price-of-attention-measured-1.svg",
-          "bytes": 54934,
-          "sha256": "sha256:310d51eb91398a1fbf84c587258836773af3c4334753515b8b99bda8c38bb6d1"
+          "bytes": 54929,
+          "sha256": "sha256:dcec798f2de314f2eb1fe1dd22c066a953764f6dac33524b2bac8103a3d7d0a4"
         }
       ]
     }

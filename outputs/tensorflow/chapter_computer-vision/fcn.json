@@ -78,7 +78,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86084,
-          "sha256": "sha256:fbf72cd8f354b7e072ae394b65cba6d559c3a6573320219617b2dd5ddd28cc56"
+          "sha256": "sha256:2090bff824a720ddc4a8e840c23d38781563e2dd0f553aaed5b7a824d2c9ad8d"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 44s - 1s/step - accuracy: 0.3790 - loss: 2.5847 - val_accuracy: 0.7193 - val_loss: 2.6590\n"
+          "text": "34/34 - 58s - 2s/step - accuracy: 0.4163 - loss: 2.4976 - val_accuracy: 0.7267 - val_loss: 2.5575\n"
         },
         {
           "type": "stream",
@@ -125,7 +125,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 10s - 297ms/step - accuracy: 0.7040 - loss: 1.5470 - val_accuracy: 0.7288 - val_loss: 2.0669\n"
+          "text": "34/34 - 12s - 368ms/step - accuracy: 0.7065 - loss: 1.5671 - val_accuracy: 0.7288 - val_loss: 1.9555\n"
         },
         {
           "type": "stream",
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 9s - 274ms/step - accuracy: 0.7104 - loss: 1.4708 - val_accuracy: 0.7287 - val_loss: 1.6975\n"
+          "text": "34/34 - 13s - 386ms/step - accuracy: 0.7134 - loss: 1.4845 - val_accuracy: 0.7296 - val_loss: 1.6279\n"
         },
         {
           "type": "stream",
@@ -145,7 +145,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 9s - 279ms/step - accuracy: 0.7121 - loss: 1.4293 - val_accuracy: 0.7290 - val_loss: 1.5018\n"
+          "text": "34/34 - 13s - 394ms/step - accuracy: 0.7133 - loss: 1.4511 - val_accuracy: 0.7284 - val_loss: 1.4750\n"
         },
         {
           "type": "stream",
@@ -155,11 +155,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "34/34 - 10s - 280ms/step - accuracy: 0.7119 - loss: 1.4044 - val_accuracy: 0.7283 - val_loss: 1.4144\n"
+          "text": "34/34 - 13s - 380ms/step - accuracy: 0.7133 - loss: 1.4191 - val_accuracy: 0.7287 - val_loss: 1.4076\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x74b1fc18f230>"
+          "text": "<keras.src.callbacks.history.History at 0x769f3ecaf590>"
         }
       ]
     },
@@ -182,7 +182,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
           "bytes": 149021,
-          "sha256": "sha256:0793c10991d248e025a94824acf0fb6940d115b07adb11bcc0fdab6b75ca0f8f"
+          "sha256": "sha256:4ebcd578b1ad945785d7789840af81f0a38ef0d28c9f76fd02094a68caa694e0"
         }
       ]
     }

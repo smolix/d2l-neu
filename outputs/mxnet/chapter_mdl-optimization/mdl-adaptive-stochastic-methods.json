@@ -57,7 +57,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",
@@ -84,17 +89,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         E f at 80% budget   E f at end     (floor ~ 0.088)\nconstant       9.53e-02       9.19e-02\nc/k decay      2.82e-03       1.94e-03\n"
+          "text": "         E f at 80% budget   E f at end     (floor ~ 0.088)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine         8.71e-03       1.58e-03\n"
+          "text": "constant       9.53e-02       9.19e-02\nc/k decay      2.82e-03       1.94e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "WSD 80/20      9.53e-02       5.48e-03\n"
+          "text": "cosine         8.71e-03       1.58e-03\nWSD 80/20      9.53e-02       5.48e-03\n"
         }
       ]
     },
@@ -107,7 +112,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
           "bytes": 29558,
-          "sha256": "sha256:cd01b9b5bd6c43413260795d4a2921933b5d9fdc9b5bb9fe0f135a09d9d0ed8f"
+          "sha256": "sha256:cca3c0cce63850d166fccc1f9af29d303feae0eccaf0aeeb63d15b1c7f086acc"
         }
       ]
     }

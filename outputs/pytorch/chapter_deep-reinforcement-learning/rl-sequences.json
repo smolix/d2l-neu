@@ -73,17 +73,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.0: sloppy 1.00, gold 0.50, hedge 0.50\n"
+          "text": "beta = 0.0: sloppy 1.00, gold 0.50, hedge 0.50\nbeta = 0.1: sloppy 0.99, gold 0.50, hedge 0.49\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.1: sloppy 0.99, gold 0.50, hedge 0.49\n"
+          "text": "beta = 0.2: sloppy 0.60, gold 0.48, hedge 0.12\nbeta = 0.3: sloppy 0.42, gold 0.39, hedge 0.04\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta = 0.2: sloppy 0.60, gold 0.48, hedge 0.12\nbeta = 0.3: sloppy 0.42, gold 0.39, hedge 0.04\nbeta = 0.5: sloppy 0.25, gold 0.24, hedge 0.01\n"
+          "text": "beta = 0.5: sloppy 0.25, gold 0.24, hedge 0.01\n"
         }
       ]
     }

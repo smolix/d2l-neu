@@ -88,14 +88,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SAC: env steps to a trailing five-episode average of -200: [7400, 5400, 6400]\nsingle critic: env steps to a trailing five-episode average of -200: [6400, 5400, 7200]\n"
+          "text": "SAC: env steps to a trailing five-episode average of -200: [7000, 5600, 6400]\nsingle critic: env steps to a trailing five-episode average of -200: [7400, 6200, 7200]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
-          "bytes": 34719,
-          "sha256": "sha256:8a02e1fbad1e93513f50b3751ca1e7d00bd81e972d07d2f7f7acce000d1c81fb"
+          "bytes": 34712,
+          "sha256": "sha256:b29fd7aeda0f947b19f6848d343ac5c838b72e173c1ffe4b89af9543a5dd035d"
         }
       ]
     },
@@ -106,14 +106,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SAC: entropy over the last 20 episodes, per seed [-0.18  0.07 -0.12]\nsingle critic: entropy over the last 20 episodes, per seed [ 0.01  0.15 -0.03]\n"
+          "text": "SAC: entropy over the last 20 episodes, per seed [-0.2   0.01 -0.14]\nsingle critic: entropy over the last 20 episodes, per seed [-0.19 -0.01 -0.19]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
-          "bytes": 34327,
-          "sha256": "sha256:cf466de47def14c91b6b714f288cc81229f2fe75db3576188b02733c49729ed0"
+          "bytes": 34330,
+          "sha256": "sha256:d11040a72115eb61ec469ad29a75e2cb3c7891f2e8961a95f070c7af2b9957de"
         }
       ]
     },
@@ -124,32 +124,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SAC, seed 0: deterministic  -188.8, stochastic  -189.8, noise cost   +1.0\n"
+          "text": "SAC, seed 0: deterministic  -187.2, stochastic  -187.3, noise cost   +0.1\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SAC, seed 1: deterministic  -139.0, stochastic  -145.8, noise cost   +6.9\n"
+          "text": "SAC, seed 1: deterministic  -145.6, stochastic  -145.9, noise cost   +0.4\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SAC, seed 2: deterministic  -182.5, stochastic  -182.5, noise cost   -0.0\n"
+          "text": "SAC, seed 2: deterministic  -186.3, stochastic  -186.3, noise cost   -0.1\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single critic, seed 0: deterministic  -180.8, stochastic  -181.2, noise cost   +0.5\n"
+          "text": "single critic, seed 0: deterministic  -188.1, stochastic  -190.1, noise cost   +2.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single critic, seed 1: deterministic  -145.1, stochastic  -145.9, noise cost   +0.8\n"
+          "text": "single critic, seed 1: deterministic  -139.6, stochastic  -146.4, noise cost   +6.8\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single critic, seed 2: deterministic  -182.1, stochastic  -182.1, noise cost   +0.0\n"
+          "text": "single critic, seed 2: deterministic  -183.4, stochastic  -183.4, noise cost   -0.0\n"
         }
       ]
     },
@@ -160,32 +160,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          SAC, seed 0: promised  -151.5, delivered (soft)  -112.1, gap  -39.4, plain  -118.1\n"
+          "text": "          SAC, seed 0: promised  -155.5, delivered (soft)  -110.5, gap  -45.1, plain  -116.9\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          SAC, seed 1: promised  -115.0, delivered (soft)   -83.5, gap  -31.5, plain   -93.3\n"
+          "text": "          SAC, seed 1: promised  -116.1, delivered (soft)   -86.7, gap  -29.4, plain   -93.3\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          SAC, seed 2: promised  -184.2, delivered (soft)  -136.7, gap  -47.5, plain  -141.3\n"
+          "text": "          SAC, seed 2: promised  -179.0, delivered (soft)  -140.2, gap  -38.8, plain  -146.7\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single critic, seed 0: promised  -112.1, delivered (soft)  -109.8, gap   -2.3, plain  -118.8\n"
+          "text": "single critic, seed 0: promised  -118.8, delivered (soft)  -110.0, gap   -8.8, plain  -117.7\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single critic, seed 1: promised   -80.5, delivered (soft)   -82.8, gap   +2.4, plain   -93.1\n"
+          "text": "single critic, seed 1: promised   -81.8, delivered (soft)   -84.6, gap   +2.8, plain   -93.5\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "single critic, seed 2: promised  -162.6, delivered (soft)  -134.2, gap  -28.4, plain  -141.8\n"
+          "text": "single critic, seed 2: promised  -160.1, delivered (soft)  -134.4, gap  -25.7, plain  -139.6\n"
         }
       ]
     }

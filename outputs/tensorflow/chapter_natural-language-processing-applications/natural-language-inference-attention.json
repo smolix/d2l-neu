@@ -66,7 +66,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2146/2146 - 63s - 29ms/step - accuracy: 0.6221 - loss: 0.8304 - val_accuracy: 0.7607 - val_loss: 0.5956\n"
+          "text": "2146/2146 - 67s - 31ms/step - accuracy: 0.6325 - loss: 0.8086 - val_accuracy: 0.7652 - val_loss: 0.5862\n"
         },
         {
           "type": "stream",
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2146/2146 - 11s - 5ms/step - accuracy: 0.7519 - loss: 0.6096 - val_accuracy: 0.8050 - val_loss: 0.5068\n"
+          "text": "2146/2146 - 14s - 6ms/step - accuracy: 0.7550 - loss: 0.6025 - val_accuracy: 0.7907 - val_loss: 0.5354\n"
         },
         {
           "type": "stream",
@@ -86,7 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2146/2146 - 11s - 5ms/step - accuracy: 0.7803 - loss: 0.5501 - val_accuracy: 0.8182 - val_loss: 0.4817\n"
+          "text": "2146/2146 - 13s - 6ms/step - accuracy: 0.7811 - loss: 0.5479 - val_accuracy: 0.8092 - val_loss: 0.4921\n"
         },
         {
           "type": "stream",
@@ -96,11 +96,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2146/2146 - 11s - 5ms/step - accuracy: 0.7956 - loss: 0.5173 - val_accuracy: 0.8220 - val_loss: 0.4693\n"
+          "text": "2146/2146 - 12s - 6ms/step - accuracy: 0.7953 - loss: 0.5168 - val_accuracy: 0.8232 - val_loss: 0.4598\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x77f769b8f4a0>"
+          "text": "<keras.src.callbacks.history.History at 0x71702c6a7f80>"
         }
       ]
     },

@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40516,
-          "sha256": "sha256:17bc7441c98d7a856c3938a06655aba8c71f74099ce2c3a0db6dedce97737b90"
+          "bytes": 40461,
+          "sha256": "sha256:ab5d288f068e44142992d108b96f588591498c165d55465d052887bdad507f47"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 19944,
-          "sha256": "sha256:fd958dd6c8e59eee4b9d9f51df6516c4955334f0246dee9e9188b38cabf967dc"
+          "bytes": 19947,
+          "sha256": "sha256:1e9a76af735930b41fd90ebdf50fe837cd291b805c0c4b878146267805d196bb"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 68316,
-          "sha256": "sha256:5196b8be7046429c975ffb344c39c7288a38e5d80a8d8ce9777d370bc6457601"
+          "bytes": 67570,
+          "sha256": "sha256:b3ee57b4b81443dcc1c9de4ea5375c8a71ba613ecdf88605c12b46e9dd73df4c"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44810,
-          "sha256": "sha256:db84abab4bcc691598cdfbbd9ba383a8623f2480fc5ab2b1c33bcdec360fad77"
+          "bytes": 44234,
+          "sha256": "sha256:4f80091b9421c2538a79a3ba4e0e6bf6bf4830280f72dc04e6d0d8b4bcf2168b"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 106058,
-          "sha256": "sha256:d4c51fc21fff226ab3dfcc461601c205db4de299296d9a9e2d1a7e5457492c7d"
+          "bytes": 105252,
+          "sha256": "sha256:4d6fdf3897db40ea3113a43a7cffddedb917ba683d6279f75bc6a609e760d9dc"
         }
       ]
     }

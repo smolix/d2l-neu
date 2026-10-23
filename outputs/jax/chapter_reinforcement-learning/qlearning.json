@@ -42,7 +42,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247382,
-          "sha256": "sha256:75f6aa36c192f75f30036e4d56e8bbb949f9f8b874c38907d25c667239e527df"
+          "sha256": "sha256:6a1243a5e7c78cc89998be69f94ba77d67de0f9eca3bacb1c3dbb814c941177f"
         }
       ]
     },
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 38089,
-          "sha256": "sha256:1053ec9290dfef22bc65a0fb240d37bbfb707c812948a8356b8e95d81d838a43"
+          "sha256": "sha256:6659398bd29b425f0a9106827a489043e7a245f10f0025dddc07a1fecb214fd1"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 706464,
-          "sha256": "sha256:528619159195b7d7021eab48281ba5cdaaf7743fe2537b5f723df8229ea16999"
+          "sha256": "sha256:e558e71c8501357423641b55bcdb510c9f6adca8a8d8ea8da437b66acb68d240"
         }
       ]
     },
@@ -154,7 +154,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
           "bytes": 535592,
-          "sha256": "sha256:c64cf3ddc66cbba4d4b8bb3a84ea7993dabff43c53c1910ec495432a8e65a42a"
+          "sha256": "sha256:422b70fd379de5b9ecd978c23c06c6166644d5383d6fbe977b7046dac6e42e73"
         }
       ]
     }

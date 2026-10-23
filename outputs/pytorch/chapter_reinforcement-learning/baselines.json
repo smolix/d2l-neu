@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 72097,
-          "sha256": "sha256:67299a9175befa2c5a067e5cee33ad138568054a541a180454044751e60a3135"
+          "sha256": "sha256:17ef85eb6423857c7fa9818cd5e557af34bf8faddf2507f74d84760880baf0f1"
         }
       ]
     },
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
           "bytes": 48018,
-          "sha256": "sha256:fbc0f1bbd654ecc449c74e668f2f6e38f5de93b387fd255f8a9b95a3c7ebc7ac"
+          "sha256": "sha256:1d150fb845d3d0c10a65bf3a2b98a96255a70589753779527b1745b58caa4cac"
         }
       ]
     }

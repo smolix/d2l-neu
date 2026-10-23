@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "21 ms per step: 11.0 TFLOP/s achieved\n"
+          "text": "24 ms per step: 9.5 TFLOP/s achieved\n"
         }
       ]
     },
@@ -83,7 +83,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=384, 8 blocks: 14.16M parameters, train 1.03, validation 1.06\n"
+          "text": "d=384, 8 blocks: 14.16M parameters, train 1.03, validation 1.07\n"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 33780,
-          "sha256": "sha256:6e20200322a52cb5f4c728620a1fefce5b3743bb3b7e9ace12593ecfc41ff5f0"
+          "bytes": 33779,
+          "sha256": "sha256:c21f3f9349e6089e908a9798191eb0af0c1843b3d20c4022fd0a943df4135c8a"
         }
       ]
     },

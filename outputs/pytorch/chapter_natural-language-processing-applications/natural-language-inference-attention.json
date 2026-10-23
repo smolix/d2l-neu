@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.495, train acc 0.805, test acc 0.825\n30948.6 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.493, train acc 0.806, test acc 0.825\n32016.5 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-attention/natural-language-inference-attention-training-and-evaluating-the-model-2-2-1.svg",
-          "bytes": 27064,
-          "sha256": "sha256:de2dff1fb8813e98d99b841d8f7e1759e2b5ee2f3e882b7f437754de939cf035"
+          "bytes": 27068,
+          "sha256": "sha256:571425e5dcf92ae592d717a345b94ada4192dd9ace273a0b555c0c6a4b8d1839"
         }
       ]
     },

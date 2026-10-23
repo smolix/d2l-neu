@@ -25,7 +25,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 28, 28, 6)\nAveragePooling2D output shape:\t (1, 14, 14, 6)\nConv2D output shape:\t (1, 10, 10, 16)\nAveragePooling2D output shape:\t (1, 5, 5, 16)\nFlatten output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv2D output shape:\t (1, 28, 28, 6)\nAveragePooling2D output shape:\t (1, 14, 14, 6)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv2D output shape:\t (1, 10, 10, 16)\nAveragePooling2D output shape:\t (1, 5, 5, 16)\nFlatten output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -37,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21486,
-          "sha256": "sha256:781faa24699c0c701b2a5b8bdb32b573aa1c1382c86345bb87cc65fbdf8f653f"
+          "bytes": 21489,
+          "sha256": "sha256:eeda41cc0a519515003c756dd4a2733827a8446f43144bde1f00ee714704e5cb"
         }
       ]
     }

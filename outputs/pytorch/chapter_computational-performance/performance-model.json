@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive timer: 0.69 ms   with synchronize: 8.99 ms\n"
+          "text": "naive timer: 0.66 ms   with synchronize: 9.08 ms\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.061 s   read once: 0.042 s\n"
+          "text": "read every step: 0.062 s   read once: 0.041 s\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4096-matmul: 0.89 ms/call"
+          "text": "4096-matmul: 0.90 ms/call"
         }
       ]
     },
@@ -68,14 +68,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['256: 2.3', '512: 18.6', '1024: 119.6', '2048: 157.5', '4096: 152.8', '8192: 165.8']\n"
+          "text": "['256: 2.3', '512: 18.7', '1024: 117.1', '2048: 157.2', '4096: 151.3', '8192: 164.8']\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-the-sweep-mapping-our-gpu-1.svg",
-          "bytes": 23259,
-          "sha256": "sha256:019563e9116074c532b94e5587311fb7e97cb900016e17b1cb932eec4c6327ef"
+          "bytes": 23261,
+          "sha256": "sha256:72e637518ff25c2df1edef00b0d8147b67dab4ae8c19e2b0a6445bb9c5d8f78c"
         }
       ]
     },
@@ -108,7 +108,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "operator                    CPU total  CUDA total\naten::linear                  3.21 ms     0.20 ms\naten::addmm                   3.02 ms     0.20 ms\nautograd::engine::evaluat     2.74 ms     0.17 ms\nvoid cutlass::Kernel2<cut     0.00 ms     0.15 ms\nAddmmBackward0                1.97 ms     0.13 ms\naten::mm                      1.57 ms     0.13 ms\naten::sum                     0.59 ms     0.05 ms\nvoid cutlass::Kernel2<cut     0.00 ms     0.05 ms\n"
+          "text": "operator                    CPU total  CUDA total\naten::linear                  3.47 ms     0.20 ms\naten::addmm                   3.29 ms     0.20 ms\nautograd::engine::evaluat     2.29 ms     0.18 ms\nvoid cutlass::Kernel2<cut     0.00 ms     0.16 ms\nAddmmBackward0                1.64 ms     0.14 ms\naten::mm                      1.32 ms     0.14 ms\naten::sum                     0.53 ms     0.05 ms\nvoid cutlass::Kernel2<cut     0.00 ms     0.05 ms\n"
         }
       ]
     }

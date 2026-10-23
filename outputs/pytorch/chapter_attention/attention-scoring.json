@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
           "bytes": 25631,
-          "sha256": "sha256:2479eb5b4cca92b8dc42d72d3bb783ab9c554939564a4d2b977337b61e9abff0"
+          "sha256": "sha256:370309715449595c72195f5fabbdbbf803146c6286aec50572328ae7e52e143e"
         }
       ]
     },
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
           "bytes": 16481,
-          "sha256": "sha256:af8e48963a065ea9f1f828ded80f580ae7a70f5f05aede84cb0d5aeae6b6eb30"
+          "sha256": "sha256:3f2937c45266e97e29fb40f9ae04605cb929550d5f4a6c5d04f607f7eb08845d"
         }
       ]
     },
@@ -84,7 +84,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
           "bytes": 19827,
-          "sha256": "sha256:dcb8bb381a6f3f424942b1f6348c18029a0dcae9d04f30eebb61c15649178322"
+          "sha256": "sha256:ea21dbe65cf27e93f584137bfe9370ff848b0058f520ba7c785eb80615ebb144"
         }
       ]
     },
@@ -112,7 +112,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
           "bytes": 14822,
-          "sha256": "sha256:3bdf9b5159d158c0edd61b1dc46d36e5329bb70c8480579151945a93e5d81285"
+          "sha256": "sha256:a2c1f87bfab88dd7d10b988fb928f098db5d6cea01cb77fc013c4bcbb7e3f372"
         }
       ]
     },

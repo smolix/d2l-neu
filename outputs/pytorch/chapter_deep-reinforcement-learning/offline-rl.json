@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 29617,
-          "sha256": "sha256:2f244ad58d6ed9018c3fca72f0865ebdb2b254715db05e7136bd21918cabca94"
+          "sha256": "sha256:214b803edd26ba713d8d069266fa781a2cb7e608bea3f7d1a0f39e38e5d93dea"
         }
       ]
     },
@@ -122,7 +122,7 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-kappa-over-root-n-1.svg",
           "bytes": 101448,
-          "sha256": "sha256:32d2e1c2aa32e9fec0f10152bff934bbb1b5c738dea31fded21b05d862724887"
+          "sha256": "sha256:5263e8142975bb1c0f01b45af8fdbfbdb8854cb352fe0a2263284e361daf4f8b"
         }
       ]
     },

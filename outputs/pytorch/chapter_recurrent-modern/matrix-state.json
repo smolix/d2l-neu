@@ -65,12 +65,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     recurrence     282.93         3.0\n"
+          "text": "     recurrence     275.33         3.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   chunked (16)      36.12         1.5\n   chunked (64)       9.42         3.0\n  chunked (256)       2.61        12.0\n chunked (1024)       0.87        48.0\n quadratic dual       1.01       272.0\n(NVIDIA GeForce RTX 4090, float32, torch 2.11.0+cu128; teaching implementations, warmed up)\n"
+          "text": "   chunked (16)      36.08         1.5\n   chunked (64)       9.59         3.0\n  chunked (256)       2.96        12.0\n chunked (1024)       0.93        48.0\n quadratic dual       1.94       272.0\n(NVIDIA GeForce RTX 4090, float32, torch 2.11.0+cu128; teaching implementations, warmed up)\n"
         }
       ]
     },

@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first compiled step: 0.3 s\neager: 1.84 ms/call\ncompiled: 1.28 ms/call\n"
+          "text": "first compiled step: 1.9 s\neager: 3.13 ms/call\ncompiled: 2.14 ms/call\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 2.33 ms/call\nreduce-overhead: 0.31 ms/call\n"
+          "text": "eager: 2.34 ms/call\nreduce-overhead: 0.31 ms/call\n"
         }
       ]
     }

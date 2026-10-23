@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 2.0e-03\nwidth  512: best lr 2.0e-03\nwidth 1024: best lr 9.8e-04\n"
+          "text": "width  128: best lr 7.8e-03\nwidth  256: best lr 3.9e-03\nwidth  512: best lr 2.0e-03\nwidth 1024: best lr 9.8e-04\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
-          "bytes": 30843,
-          "sha256": "sha256:fc0ec5ddcf7567eda4c6eb64db12677ab9712a561b7f0989d6165faa4b29ead6"
+          "bytes": 30851,
+          "sha256": "sha256:9a58801d3f2f735b339a6cc6e3159e5f470aca66839b9d0a81b808e160b5cd05"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
-          "bytes": 26756,
-          "sha256": "sha256:a9b8048f2b1c076748ef251377c0f0235097329c1cb164ab7b870234356022aa"
+          "bytes": 26753,
+          "sha256": "sha256:1e39b7a0a1f9a80c6fc50b55e0777771afcf97d4a920c37ee68f30c8e773c55d"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
-          "bytes": 26621,
-          "sha256": "sha256:12cbd1019c26e5a994636276cd2d18e7ed811b1f88aa2e102240d969c73854f4"
+          "bytes": 26623,
+          "sha256": "sha256:40c66ab7cf8409fd3d73f9b5f1706439782b581315afc86232452320bc8b83dd"
         }
       ]
     },
@@ -89,14 +89,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 7.8e-03\nwidth  512: best lr 7.8e-03\nwidth 1024: best lr 7.8e-03\n"
+          "text": "width  128: best lr 7.8e-03\nwidth  256: best lr 7.8e-03\nwidth  512: best lr 7.8e-03\nwidth 1024: best lr 7.8e-03\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
           "bytes": 30896,
-          "sha256": "sha256:8fd4bdd7387cd0119e203dba9dcf4a2618aaf426516a541113d99a5b6d7059bd"
+          "sha256": "sha256:8d3ac0252d285e1d7aba5859a337daa38b339a2a5da32cab5e24bc5368c8ea46"
         }
       ]
     }

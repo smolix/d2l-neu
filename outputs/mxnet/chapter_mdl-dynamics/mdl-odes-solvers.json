@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:a1091de1552a806b753de8290ad4f3db2ffbd0a10e373735c38071748ffd8668"
+          "sha256": "sha256:0519ec11befb2536db2627ae1868a0fbd77b90651bd712131df41d0f9c0cda49"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[18:54:29] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[05:08:07] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -112,7 +112,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },

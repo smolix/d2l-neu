@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.54 ms/call\ncompiled: 0.16 ms/call\n"
+          "text": "eager: 1.42 ms/call\ncompiled: 0.16 ms/call\n"
         }
       ]
     },
@@ -42,12 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ahead-of-time compile: 2.5 s\n"
+          "text": "ahead-of-time compile: 4.4 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 21.33 ms/call\ncompiled: 0.21 ms/call\n"
+          "text": "eager: 17.12 ms/call\ncompiled: 0.18 ms/call\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 9.18 ms/call\njit: 0.28 ms/call\n"
+          "text": "eager: 8.90 ms/call\njit: 0.29 ms/call\n"
         }
       ]
     }

@@ -31,17 +31,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32 (tf32 off): 26.41 ms/call\n"
+          "text": "fp32 (tf32 off): 20.73 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 15.99 ms/call\n"
+          "text": "tf32: 13.55 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 8.70 ms/call\n"
+          "text": "bf16: 6.97 ms/call\n"
         }
       ]
     },
@@ -52,12 +52,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "store all: compiler temp 3230 MB, fwd+bwd 50.5 ms\n"
+          "text": "store all: compiler temp 3230 MB, fwd+bwd 52.1 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointed: compiler temp 1216 MB, fwd+bwd 58.7 ms\n"
+          "text": "checkpointed: compiler temp 1216 MB, fwd+bwd 60.3 ms\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max gradient difference: 3.10e-06\n"
+          "text": "max gradient difference: 3.81e-06\n"
         }
       ]
     }

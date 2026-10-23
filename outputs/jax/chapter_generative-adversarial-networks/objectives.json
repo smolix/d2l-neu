@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-divergence-against-separation-1.svg",
           "bytes": 37132,
-          "sha256": "sha256:d5e7bd37ecdf2b564e8c3fa46ba7a92cdf6141487501c2936c2027905877553b"
+          "sha256": "sha256:c85809531fcc834160546523f84f3012e6b91691f1489af6e955465390c884da"
         }
       ]
     },
@@ -87,7 +87,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-one-testbed-four-losses-5-1.svg",
           "bytes": 289762,
-          "sha256": "sha256:a3a9a9ef29f35c7602633046e32e8048d3a1d3bb731716398442eb47c8f746ed"
+          "sha256": "sha256:3cd2db5dc7c6cb04b8bacca1b9c987c3512cea82dc3d1d430ffbfc8dbbd35759"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-one-testbed-four-losses-6-1.svg",
           "bytes": 40279,
-          "sha256": "sha256:3e247266efa6a1b24c2cef80b8b0bf990b6444d7d8edb06f3fabfbae10676c88"
+          "sha256": "sha256:655163f262ca50e27c8f2e5ba2a6b454371417cb2e7f3986171a127d3197202d"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-what-each-critic-estimates-1.svg",
           "bytes": 228523,
-          "sha256": "sha256:a82bc1786189e343f4568f5c28e3ef42426b314bb67f678b70325aed613bcc9a"
+          "sha256": "sha256:641ad235bf2f18bb619e7b5e998858a6c8434e8b425efa6be8b000040377704a"
         }
       ]
     },
@@ -142,7 +142,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-recovering-the-ratio-by-duality-2-1.svg",
           "bytes": 27245,
-          "sha256": "sha256:d7a2a75d1bf79cfa3ead83b29ad6b88e486eca80a002e5e55b57828180f185bb"
+          "sha256": "sha256:36832a4166382598f1c3824c4339926830fa0b7e8acedee07117ffec9f8df374"
         }
       ]
     }

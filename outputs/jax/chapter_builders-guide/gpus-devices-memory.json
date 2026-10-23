@@ -147,7 +147,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ gradients             304.4 MiB\n+ optimizer state       592.9 MiB\npeak with activations  1236.7 MiB\n"
+          "text": "+ gradients             304.4 MiB\n+ optimizer state       592.8 MiB\npeak with activations  1236.7 MiB\n"
         }
       ]
     },
@@ -174,12 +174,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   peak   1377 MiB, 0.07 sec\n"
+          "text": "checkpointing=True   peak   1377 MiB, 0.04 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  peak   2401 MiB, 0.06 sec\n"
+          "text": "checkpointing=False  peak   2401 MiB, 0.03 sec\n"
         }
       ]
     },
@@ -190,7 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0028 sec\ntime until they all finished:     0.0159 sec\n"
+          "text": "time to queue 32 matrix products: 0.0032 sec\ntime until they all finished:     0.0087 sec\n"
         }
       ]
     },
@@ -207,8 +207,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 20108,
-          "sha256": "sha256:06bf8fff436e9650d7e8228fbb979c1c5bc75010fb1a14d4bd22e7c3c887690b"
+          "bytes": 21157,
+          "sha256": "sha256:d54ead4d3525f4d65aaf4ec2ae8ce39aad74b1f694b0d83726b924232970eeab"
         }
       ]
     }

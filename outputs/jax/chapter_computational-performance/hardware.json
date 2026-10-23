@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "device_put: 0.9 GB/s\n"
+          "text": "device_put: 1.0 GB/s\n"
         }
       ]
     }

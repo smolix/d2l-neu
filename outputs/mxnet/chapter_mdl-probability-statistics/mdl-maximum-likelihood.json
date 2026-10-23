@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 20942,
-          "sha256": "sha256:5791c6becfb747c47dc9b41186c588814a6c1f39309ec105372e97d699f24956"
+          "sha256": "sha256:cdcff04e31df24ed73ee87b88e87f41bd761c070a1457372600a400a9bac6704"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[14:02:32] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[05:10:22] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "execute_result",
@@ -50,7 +50,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
           "bytes": 30558,
-          "sha256": "sha256:70797466ffe34d88674822a1d577f3cd03e1033ff2344238eb610dbcb7f99002"
+          "sha256": "sha256:c8775c61cd39b551cbba098852b5179c2b9d382c35d7a7faaa3628142a49fbd5"
         }
       ]
     },

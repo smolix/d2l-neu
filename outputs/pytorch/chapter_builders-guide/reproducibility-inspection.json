@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CUDA error: out of memory\nSearch for `cudaErrorMemoryAllocation' in https://docs\n"
+          "text": "avg_pool3d_backward_cuda does not have a deterministic implementation, but you set 'torch\n"
         }
       ]
     },

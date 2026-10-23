@@ -46,15 +46,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 23627,
-          "sha256": "sha256:8551d8c1b5899333e783f2c1569c35a6c521646c8be6f6d14180ebbfdabd840c"
+          "bytes": 23624,
+          "sha256": "sha256:471562b6619ae59ab40a148aaeef263f2c65e6087fd385569074a523d65ea202"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 24843,
-          "sha256": "sha256:5c951ac1d6ff3ef174a4fdaa2fb066b506cc66574ce5ba2867cb206452ab8a2d"
+          "bytes": 24845,
+          "sha256": "sha256:7bff14d44fee627a3857f950c1307a0405d4ce7c8abd9619b8a1d1583ec59b00"
         }
       ]
     },
@@ -65,7 +65,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, val acc 0.923\ncompact ResNet-18: 3,348,320 parameters, val acc 0.944\n"
+          "text": "ConvNeXt: 3,376,450 parameters, val acc 0.924\ncompact ResNet-18: 3,348,320 parameters, val acc 0.945\n"
         }
       ]
     }

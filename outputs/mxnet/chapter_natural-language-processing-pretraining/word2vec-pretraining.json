@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[ 0.02661642, -0.04748285, -0.03379811, -0.01430823],\n        [-0.01604078, -0.01082754, -0.03449766, -0.05374802],\n        [-0.00585967,  0.00188897,  0.05319733, -0.01289434]],\n\n       [[-0.01441558, -0.01342334,  0.03499428,  0.0316329 ],\n        [-0.0647854 ,  0.02187309, -0.05004802, -0.00250625],\n        [-0.06475766, -0.06259221, -0.03145109, -0.00724341]]])"
+          "text": "array([[[ 0.05894137,  0.02919267, -0.02309755,  0.00290553],\n        [ 0.06833787,  0.04527909, -0.05539911, -0.03376235],\n        [ 0.02966202, -0.00788733, -0.04601707, -0.01842976]],\n\n       [[-0.01289444, -0.03605414,  0.01122338,  0.06889229],\n        [ 0.01583111, -0.03330534, -0.02329686,  0.01381379],\n        [-0.0615192 , -0.02636361,  0.01047096,  0.05616725]]])"
         }
       ]
     },
@@ -91,14 +91,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.408, 16285.6 tokens/sec on gpu(0)\n"
+          "text": "loss 0.408, 42029.4 tokens/sec on gpu(0)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 18347,
-          "sha256": "sha256:c673ddc02e5bc2e5eae285cf74d8985a943f1ba8605e3aae73817a3c21b5cfa5"
+          "bytes": 18343,
+          "sha256": "sha256:feceef0e6cdc38c9fc9afee1c4ab985935be61e0309af8c7aad26a5655582e76"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.628: intel\ncosine sim=0.611: users\ncosine sim=0.602: computer\n"
+          "text": "cosine sim=0.600: intel\ncosine sim=0.576: microprocessor\ncosine sim=0.568: semiconductors\n"
         }
       ]
     }

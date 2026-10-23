@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 30080,
-          "sha256": "sha256:b2e96f80b22904e6d56079dc62bdb6a554b9a0d9516dce04f9d46c556ded4dd1"
+          "bytes": 23919,
+          "sha256": "sha256:5908636d426f1021e4462efe583845288cfdb7752429280a83a5c58029ebb09f"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 98.3\n"
+          "text": "validation perplexity 96.7\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.38 bits per byte\n"
+          "text": "2.78 bytes/token, 2.37 bits per byte\n"
         }
       ]
     },
@@ -125,7 +125,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller. I had the same. I was not beenred, and the same. I was\n    not beenred, and the same. I was not beenred, and the same. I was not\n    beenred, and the same. I was not been'\n"
+          "text": "'the time traveller and the parading the rising, and the little people, and\n    I was a lit, and the wood, and I was a lrevention of the fallen, and the\n    wooded by the'\n"
         }
       ]
     },
@@ -136,7 +136,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time travellerions move it was sensle of the Lil of an with the L Space\n    this curesivity of the little peoplepeove\nthe time traveller of the Time Traveller. 'I wonderful of the great\ndiffto the Morlocks, and I could see the panelight\n"
+          "text": "the time traveller their Weena fightilar them I saw itving that the same\n    goubt enough out his pastue reme, and assu place\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the time traveller and the pathossets, but I was in the cried shaftotonze\n    was at the entery of my\n"
         }
       ]
     },
@@ -161,7 +166,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has>oratoryV part eyes� blackhed le mind�pp downultJ Man black seemed were8'"
+          "text": "'it hasberving�akineret st�msall ThenPwasQall Thenving qu�'"
         }
       ]
     },
@@ -173,8 +178,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 19123,
-          "sha256": "sha256:d554c07e7818e2c67b3798a168f5a517a6c72a2833f76b1909b34c935322fa86"
+          "bytes": 20825,
+          "sha256": "sha256:f602955a1817d97644b8fd176ad44b54e7c75f5d27460ca2e95e4470db31d36d"
         }
       ]
     },
@@ -185,7 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 101.1, \"the time traveller.\\nThe Time Traveller'ser--\n    aitsie.\\n\\n'Incendly, and\\nwere was a f\"\n"
+          "text": "perplexity 104.9, \"the time traveller. I had\\nwhen the Time\n    Traveller.\\n\\n'In a moment I was lamp, who I had seen.\\n\"\n"
         }
       ]
     },
@@ -196,7 +201,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      16.9     98.3\n concise       6.5    101.1\n"
+          "text": "   model  time (s)  val ppl\n scratch      21.4     96.7\n concise      10.7    104.9\n"
         }
       ]
     }

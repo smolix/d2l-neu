@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 20980,
-          "sha256": "sha256:abf15c74936508537a2f369795ba6fdd59d66e865ca0177fc36321d42283cd76"
+          "bytes": 20988,
+          "sha256": "sha256:bbfa53710be649c4d2adea18eb62dbbba72d1c23e82edbee9b6009028290e5c6"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 20987,
-          "sha256": "sha256:45ef3c87577e8ec7218ac30d09b40c207512b489b3b9f0ba03166876947cfe34"
+          "bytes": 20982,
+          "sha256": "sha256:1759580902a26b33fbc7ce32e77367f2eccf4140fa569e5811a43d789604e7a4"
         }
       ]
     },

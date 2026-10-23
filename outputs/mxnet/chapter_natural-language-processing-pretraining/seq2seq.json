@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[1905  399  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 271  309  735  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  297 1443  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001 2340   45  507  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  286  259   39 1129  485  900  256 4002 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270  296  352  788  319 2838  256 4002 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 5 5]\nshared vocabulary size: 4003\n"
+          "text": "source: [[1905  399  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 271  309   32   51   58 1901  256 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  297 2160  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  697   45  324  508  262 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  286  330 3630 2843 2390 1034  425  256 4002 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270  296 1342  263  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 8 5]\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24562,
-          "sha256": "sha256:8f7a19c9eddae3f60e28ea6a538d1a12abe2346907cd07b73eea7d535c20eb87"
+          "sha256": "sha256:ba2f6e00e18f3528e32b0420174b28e2f5c2181a32076258075765d2613e8d4d"
         }
       ]
     },
@@ -110,8 +110,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20407,
-          "sha256": "sha256:deda354f8589c82c866d4fc5f0a02fc060a9428e8f44cca55cb98ae88ecf9ec2"
+          "bytes": 20409,
+          "sha256": "sha256:bd5c99a834743bb56fd4381d1452e10bccaa62e1e6976db09929d902ca465907"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai dit .\"\ni'm calm . => 'je suis en moi .'\ni'm home . => 'je suis en moi .'\n"
+          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis en premier .'\ni'm home . => 'je suis à la cuire .'\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai dit .\", chrF 0.231\ni'm calm . => 'je suis en moi .', chrF 0.388\ni'm home . => 'je suis en moi .', chrF 0.444\n"
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis en premier .', chrF 0.360\ni'm home . => 'je suis à la cuire .', chrF 0.331\n"
         }
       ]
     },
@@ -170,8 +170,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 24549,
-          "sha256": "sha256:c05c64ecf9054f3f0df2b603bd427b5b6a020f2777ec57dfb8406d705d242dce"
+          "bytes": 24545,
+          "sha256": "sha256:b29c50597862a6d595939854543c9aa5044d494a1a81b3521df312d112ad95a3"
         }
       ]
     }

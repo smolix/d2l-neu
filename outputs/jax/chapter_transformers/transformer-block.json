@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " post-LN: stream RMS at k=32:  1.00,  token spread at k=8,16,32:  3.5e-01  2.5e-02  2.0e-04\n          grad norms at k=32: W_q 5.6e-09  W_k 4.9e-09  W_v 6.5e-02  W_o 6.6e-02\n  pre-LN: stream RMS at k=32:  5.22,  token spread at k=8,16,32:  7.2e-01  5.3e-01  3.7e-01\n          grad norms at k=32: W_q 2.3e-03  W_k 2.3e-03  W_v 8.2e-02  W_o 8.4e-02\n"
+          "text": " post-LN: stream RMS at k=32:  1.00,  token spread at k=8,16,32:  3.5e-01  2.5e-02  2.1e-04\n          grad norms at k=32: W_q 5.2e-09  W_k 4.8e-09  W_v 6.5e-02  W_o 6.6e-02\n  pre-LN: stream RMS at k=32:  5.22,  token spread at k=8,16,32:  7.2e-01  5.3e-01  3.7e-01\n          grad norms at k=32: W_q 2.3e-03  W_k 2.3e-03  W_v 8.2e-02  W_o 8.4e-02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
           "bytes": 28328,
-          "sha256": "sha256:165213e1d7511e16809089eb973875bcf93598b00f7fec6264beed91b4fb07ee"
+          "sha256": "sha256:937759536e80950d2b3d49da516553d25f9a2d626db7fff4d361177c1429d95a"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LayerNorm: 1.076 ms\n"
+          "text": "LayerNorm: 1.113 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RMSNorm: 0.732 ms\n"
+          "text": "RMSNorm: 0.787 ms\n"
         }
       ]
     },
@@ -106,12 +106,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   gelu: loss at step 200/400/600: 2.27/1.73/1.41\n"
+          "text": "   gelu: loss at step 200/400/600: 2.27/1.71/1.40\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " swiglu: loss at step 200/400/600: 2.22/1.57/1.24\n"
+          "text": " swiglu: loss at step 200/400/600: 2.21/1.55/1.23\n"
         }
       ]
     }

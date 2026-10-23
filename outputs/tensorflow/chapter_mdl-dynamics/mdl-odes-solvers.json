@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:1b9d69b39c47037a952f6875c369cb31bb47098aff6a1ffa82c21d4e1732d804"
+          "sha256": "sha256:380e5c222d1fd9db654e10cab25a3d933c79987d50f7a2b608edded2e9d75e6f"
         }
       ]
     },
@@ -71,12 +71,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter   0  loss 1.36651\niter 100  loss 0.00007\niter 200  loss 0.00002\n"
+          "text": "iter   0  loss 1.19553\niter 100  loss 0.00013\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter 300  loss 0.00000\niter 400  loss 0.00000\nmean endpoint error: 0.0015\n"
+          "text": "iter 200  loss 0.00005\niter 300  loss 0.00000\niter 400  loss 0.00024\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean endpoint error: 0.0128\n"
         }
       ]
     },
@@ -87,7 +92,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "discrete adjoint vs finite differences: 1.2e-10\nn =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
+          "text": "discrete adjoint vs finite differences: 1.2e-10\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
         },
         {
           "type": "stream",

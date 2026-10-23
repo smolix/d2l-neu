@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:76253b775b59bc6bb5af2734bfdeb68f6d5a7dbd70b6e9a0183d227a8408ed42"
+          "sha256": "sha256:fef9f8cbad55fc896d60917ea44c2c47c1df73f031bb20569531bd458d4205c6"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:ac571ae753ad621548aa45935eb2cfcf15eb7068e39bd052c3ae96407d352fcd"
+          "sha256": "sha256:7233295965553b6fbeb98e40184fb38dad34a57d31c1e9934b3ad83441cb02e7"
         }
       ]
     },
@@ -109,12 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   character    27   17345      6.4  2.68\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
+          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
         }
       ]
     },
@@ -135,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[ 39, 454, 545, 269, 491,  44, 492,  73, 102, 316],\n        [271, 338, 362, 311, 272, 625, 304, 284, 942,  10]]) \nY: tensor([[ 454,  545,  269,  491,   44,  492,   73,  102,  316, 1015],\n        [ 338,  362,  311,  272,  625,  304,  284,  942,   10,  100]])\nX[0]: \"'But,' I said, 'If it\"\nY[0]: \"But,' I said, 'If it travell\"\n"
+          "text": "X: tensor([[115, 278, 279, 292, 330, 292, 260, 964, 111, 498],\n        [409, 519, 668, 260, 421, 387, 284,  10, 808, 458]]) \nY: tensor([[278, 279, 292, 330, 292, 260, 964, 111, 498, 282],\n        [519, 668, 260, 421, 387, 284,  10, 808, 458, 260]])\nX[0]: 'son besides the Doct'\nY[0]: 'on besides the Doctor'\n"
         }
       ]
     }

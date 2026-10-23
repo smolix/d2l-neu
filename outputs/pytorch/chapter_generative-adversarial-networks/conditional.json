@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss_D 0.558, loss_G 0.976, R1+R2 0.224\n"
+          "text": "final loss_D 0.586, loss_G 1.044, R1+R2 0.260\n"
         }
       ]
     },
@@ -71,8 +71,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-4-1.png",
-          "bytes": 47894,
-          "sha256": "sha256:0f6e08c6edbbaf6e29fcefea39a74b5341c2979504c3720f4dc729de6203ff9b"
+          "bytes": 42159,
+          "sha256": "sha256:0231c0090abb08919ef6de3b019390066b46ea5f8af4db4a4e4cd717d0cb6332"
         }
       ]
     },
@@ -84,8 +84,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-5-1.svg",
-          "bytes": 590976,
-          "sha256": "sha256:8604212d3688c7ba18da1e7f9b91aac138f5ed9135b4e9594e60a05151611bb7"
+          "bytes": 589736,
+          "sha256": "sha256:f1c2293c15dd60792c16480978db68fe67fbd6a6b7db4540a93bfc8c24e8ef9d"
         }
       ]
     },
@@ -96,7 +96,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.711\n"
+          "text": "CIFAR-10 test accuracy: 0.712\n"
         }
       ]
     },
@@ -107,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class         alignment  classifier\nairplane           0.73        0.81\nautomobile         0.73        0.84\nbird               0.39        0.49\ncat                0.28        0.38\ndeer               0.80        0.86\ndog                0.47        0.58\nfrog               0.80        0.85\nhorse              0.69        0.81\nship               0.54        0.64\ntruck              0.78        0.84\noverall            0.62        0.71\n"
+          "text": "class         alignment  classifier\nairplane           0.73        0.80\nautomobile         0.69        0.87\nbird               0.46        0.52\ncat                0.27        0.37\ndeer               0.82        0.88\ndog                0.43        0.58\nfrog               0.80        0.82\nhorse              0.76        0.80\nship               0.49        0.63\ntruck              0.75        0.83\noverall            0.62        0.71\n"
         }
       ]
     },
@@ -123,7 +123,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.72             -0.008            --\ngenerated vs. real                1.56              0.052         0.005\n"
+          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.71             -0.008            --\ngenerated vs. real                1.84              0.115         0.006\n"
         }
       ]
     },
@@ -134,7 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "permuted labels: alignment 0.60 -> 0.06, FD 1.56, MMD^2 0.052 (both unchanged)\ncritic label check: mean D(x, y) - D(x, y+1) on real = 0.13\ncollapse baseline: alignment 0.80, per-class feature variance 0 (generator 0.188, real 0.218)\n"
+          "text": "permuted labels: alignment 0.61 -> 0.06, FD 1.84, MMD^2 0.115 (both unchanged)\ncritic label check: mean D(x, y) - D(x, y+1) on real = 0.18\ncollapse baseline: alignment 0.90, per-class feature variance 0 (generator 0.185, real 0.218)\n"
         }
       ]
     }

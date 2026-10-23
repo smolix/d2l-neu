@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 31621,
-          "sha256": "sha256:7bc556586e4a9a80b8abc8a0a8c0ad1d80d347f32c3843b1c22a8bab1510fc4d"
+          "bytes": 19140,
+          "sha256": "sha256:2dd5bdf76aa99dfd1557647ff43d885141a2807b32d61f9c60eb6deb0a3bf713"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 97.9\n"
+          "text": "validation perplexity 88.5\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.38 bits per byte\n"
+          "text": "2.78 bytes/token, 2.33 bits per byte\n"
         }
       ]
     },
@@ -125,7 +125,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time traveller had\\ndeerved in\\ntheset of the\\nside of\\nthem.\\n\\n'Ined\n    the Time Traveller.\\n\\n'Ined the Time Traveller.\\n\\n'Ined the Time\n    Traveller\"\n"
+          "text": "'the time traveller. I had the sloping in the parado. I had the sloping in\n    the parado. I had the sloping in the parado. I had the sloping'\n"
         }
       ]
     },
@@ -136,12 +136,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time travellerom his sanil to disacal meerely I must have a sudden\n    muchions of fant Machineveral\nwell useping\n"
+          "text": "the time travellerved with preasing kn in the shape of the world in the\n    Psychologistves plorts--that meanriday Sund\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time traveller had\ndorsson which\nthese form of the\nfirst on of the\ntelling of\nthese waste\n"
+          "text": "the time traveller that it was a necessity, and I was friendlish there was\n    the full of the rising. And then\n"
         }
       ]
     },
@@ -179,7 +179,7 @@
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
           "bytes": 18946,
-          "sha256": "sha256:d4aba02f6eb69985a8053bc5689ea4750b76329466884cab0eda92ab7bf9335f"
+          "sha256": "sha256:987bc1026d3da92bb21b6f4865a7047fe79a7dc514d2127529c1c0c8667fc720"
         }
       ]
     },
@@ -190,7 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 109.1, 'the time traveller of the Time Traveller, and, I had not\n    been\\nfast or four\\nshelposs\\ntime. I could'\n"
+          "text": "perplexity 107.1, 'the time traveller, the slope of a mass the bushes. I\n    felt as it was, as I could see\\ntheircion of'\n"
         }
       ]
     },
@@ -201,7 +201,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      18.5     97.9\n concise      14.2    109.1\n"
+          "text": "   model  time (s)  val ppl\n scratch      37.1     88.5\n concise      22.5    107.1\n"
         }
       ]
     }

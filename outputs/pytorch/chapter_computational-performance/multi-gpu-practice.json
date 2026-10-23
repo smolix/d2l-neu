@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2107 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 3714 samples/s, 1.76x, 88% weak-scaling efficiency\n4 GPU(s): 6924 samples/s, 3.29x, 82% weak-scaling efficiency\n"
+          "text": "1 GPU(s): 2102 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 3708 samples/s, 1.76x, 88% weak-scaling efficiency\n4 GPU(s): 6924 samples/s, 3.29x, 82% weak-scaling efficiency\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-3-1.svg",
-          "bytes": 19030,
-          "sha256": "sha256:3fac807de239377917cdcc84d47a2c67ef74d9e84fc7332ca964c37d0abb17af"
+          "bytes": 19024,
+          "sha256": "sha256:d5cd30143259e6a64600e7286fa41e1ce58141911cd111473a4cc1a91187c0a3"
         }
       ]
     },
@@ -48,14 +48,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2092 samples/s, 1.00x, 100% strong-scaling efficiency\n2 GPU(s): 3717 samples/s, 1.78x, 89% strong-scaling efficiency\n4 GPU(s): 5885 samples/s, 2.81x, 70% strong-scaling efficiency\n"
+          "text": "1 GPU(s): 2088 samples/s, 1.00x, 100% strong-scaling efficiency\n2 GPU(s): 3702 samples/s, 1.77x, 89% strong-scaling efficiency\n4 GPU(s): 5875 samples/s, 2.81x, 70% strong-scaling efficiency\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
-          "bytes": 27157,
-          "sha256": "sha256:3c3d6601e7067464c2fb87677c9f85403a3092887ccb7a39eeba8ed6ed9118d3"
+          "bytes": 27156,
+          "sha256": "sha256:ace2b51b7b41f272fd2d638512f7ccf6fe2edc402f35645e31b7a3b18f19901c"
         }
       ]
     },
@@ -66,7 +66,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=2: predicted comm 2N/beta = 20 ms/step; measured 15 ms (synced 132, no_sync 117)\n"
+          "text": "k=2: predicted comm 2N/beta = 20 ms/step; measured 15 ms (synced 133, no_sync 117)\n"
         }
       ]
     },

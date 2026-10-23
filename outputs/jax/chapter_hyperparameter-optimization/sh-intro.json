@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.13209998607635498, runtime = 40.7797474861145\n"
+          "text": "    error = 0.13269996643066406, runtime = 28.93260669708252\n"
         }
       ]
     },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-7-1.svg",
-          "bytes": 25890,
-          "sha256": "sha256:7d3d2d562a4b19b8727f9b35b098d59730e58b999ae6f79007960ff73f9f35ef"
+          "bytes": 25853,
+          "sha256": "sha256:451bd9d7498c6de8d865d3f7d41f474b21f4fff07a63d38db6e741fac4a3b1c7"
         }
       ]
     }

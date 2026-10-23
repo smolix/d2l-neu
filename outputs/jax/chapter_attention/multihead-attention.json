@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 6.8e-07\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.8e-07\n"
+          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 6.9e-07\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.8e-07\n"
         }
       ]
     },
@@ -80,7 +80,7 @@
           "mime": "image/svg+xml",
           "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
           "bytes": 27042,
-          "sha256": "sha256:9c1fa2fc6f2cd9191faa2993cb364bf571e27f49fb2b87ba49c59f5441316df4"
+          "sha256": "sha256:7fc5ca25c7f4441bf5c83f206175d9a66a0e614f22fc7600d1bfa176f7a7bce8"
         }
       ]
     }

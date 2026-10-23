@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     pairs      4      8     16     32     64\n    linear  0.964  0.950  0.734  0.591  0.376\n attention  1.000  1.000  1.000  1.000  1.000\n    hybrid  0.980  0.936  0.923  0.998  1.000\n    chance  0.031  0.031  0.031  0.031  0.031\n"
+          "text": "     pairs      4      8     16     32     64\n    linear  0.967  0.950  0.816  0.699  0.467\n attention  1.000  1.000  1.000  1.000  1.000\n    hybrid  0.976  0.965  0.937  0.996  1.000\n    chance  0.031  0.031  0.031  0.031  0.031\n"
         }
       ]
     },
@@ -58,8 +58,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-2-1.svg",
-          "bytes": 30870,
-          "sha256": "sha256:9f0ebb8107c0a55fc1a67444ed3a3e35d04ef2ca219a3a839557009b59a769d8"
+          "bytes": 30868,
+          "sha256": "sha256:44d1f9bbfcfe56306e24eaf282bb7837c8d2fee6bdcc8a41ab2379032723b5f7"
         }
       ]
     },
@@ -75,17 +75,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    linear      1.76       2.54\n"
+          "text": "    linear      1.80       2.59\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " attention      1.84       2.66\n"
+          "text": " attention      1.86       2.68\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    hybrid      1.77       2.55\n"
+          "text": "    hybrid      1.79       2.58\n"
         }
       ]
     },
@@ -98,7 +98,7 @@
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-memory-bill-measured-1.svg",
           "bytes": 29175,
-          "sha256": "sha256:309c47644dc4224dc8d478515a90a36cd278a1af8027380f27a9266bfcf3544c"
+          "sha256": "sha256:09cca48bfdc946dd6073b3c46c79773b264bad0f2db3e7cbc58c285e4116b35c"
         }
       ]
     }

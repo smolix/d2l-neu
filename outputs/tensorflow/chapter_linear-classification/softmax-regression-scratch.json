@@ -44,7 +44,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.21319394, 0.13474208, 0.20669897, 0.17184985, 0.27351508],\n        [0.18383098, 0.17291924, 0.17053534, 0.20444588, 0.26826856]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.9999999, 1.       ], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.17924716, 0.22839944, 0.14009763, 0.13500087, 0.317255  ],\n        [0.19666208, 0.25570065, 0.21839881, 0.16036585, 0.16887262]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([1.0000001, 1.       ], dtype=float32)>)"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22391,
-          "sha256": "sha256:27b39ab3e6db89426a2f2145abb768e646a5adc25769fb52bf731b463bd9bbef"
+          "bytes": 22399,
+          "sha256": "sha256:4afc06ced4c903e1f247e5f8a97d373b47512b98d0c878110c16bdde0b8f39d6"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Test accuracy: 0.834\n"
+          "text": "Test accuracy: 0.833\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 50972,
-          "sha256": "sha256:016117469404b00f16ee3bbd96e5a19e9f9ed5f7e353e80c8ace8b7dade66ef0"
+          "bytes": 48989,
+          "sha256": "sha256:c42bd4f9620c233c1ba981ec9862b1c9411033f81f169ecfd48ecdccaabcf9ce"
         }
       ]
     },
@@ -143,8 +143,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21495,
-          "sha256": "sha256:b2d61709c8d1c764d37e2a01e4dfef5f4d01f62f775538d3e998ee482fa69c24"
+          "bytes": 21519,
+          "sha256": "sha256:69ab47b6227180e65dfcdb2c9f701c2c18cfb245544e81a9c493fd85fa249fec"
         }
       ]
     }

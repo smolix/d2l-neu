@@ -311,7 +311,7 @@ subproblems: nested-list(ex1 L469-470; ex2 L472-473; ex3 L475-476; ex5 L482-483;
 discussions: single-link (L507) — zero `begin_tab` blocks (framework-agnostic content)
 defects: none found
 clarity:
-  - ex3 sub-item (L476, verified verbatim): "Can you design a better code?" — tone violation, a "Can you...?" filler question per docs/style-guide.md.
+  - ex3 sub-item (L476, verified verbatim): "Can you design a better code?" — tone violation, a "Can you...?" filler question per docs/attic/style-guide.md.
 notable: Densest, most mathematically elaborate exercises section in the chapter — 9 top-level items, up to 6 nested sub-parts (ex6, RealSoftMax), the chapter's only citation, and an internal self-reference ("Combine the two parts of exercise 1...", L493) verified consistent with ex1's actual content. Exemplary nested-list formatting despite legacy repeated-"1." numbering. Slide deck resumes after Discussions through EOF (L830).
 ```
 

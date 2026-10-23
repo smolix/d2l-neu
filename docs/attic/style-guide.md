@@ -1,5 +1,10 @@
 # Style Guide for Technical Chapters
 
+> **Abandoned 2026-10-23.** This guide is kept for history only. Do not
+> apply it. It has been replaced by [`docs/writing-guide.md`](../writing-guide.md),
+> which forbids several patterns this guide permits, among them question and
+> wh-clause headings.
+
 This document defines the house style for technical chapters, slides, examples,
 captions, and supporting explanations. It is written as an operational guide for
 authors and agents. Following it should produce prose that is enjoyable to read,

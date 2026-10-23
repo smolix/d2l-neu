@@ -58,6 +58,7 @@ from d2l_preprocess import (
     extract_cell_id, translate_directives,
 )
 from build_lib import flatten_tab_branches
+from exercise_refs import render as render_exercise_refs
 
 
 # ──────────────────────────────────────────────────────────
@@ -484,6 +485,9 @@ def generate_slides_qmd(src_path, framework, warnings):
         return None
 
     text = Path(src_path).read_text(encoding='utf-8')
+    # Slides cite exercises by number (":exref:`ex_...`"); render them as the
+    # notebooks and the PDF do.
+    text = render_exercise_refs(text, src_path, mode='plain')
 
     # Self-healing cover kickers: rewrite the section number in any
     # "[Dive into Deep Learning · §N.M]{.kicker}" line from CHAPTER_NUMBERING,

@@ -45,7 +45,7 @@ the review found.
 - **~70 clarity flags in three recurring classes** — underspecified
   "vary X and see what happens" experiments (~25), reading prompts with no
   deliverable (~12), and "Can you…?" filler questions (~30, a direct
-  violation of docs/style-guide.md §17.5) — plus **4 genuine content bugs**.
+  violation of docs/attic/style-guide.md §17.5) — plus **4 genuine content bugs**.
   Nearly all of this debt sits in un-rewritten legacy sections; the
   correlation between "rewritten for this book" and "clean" is almost perfect.
 

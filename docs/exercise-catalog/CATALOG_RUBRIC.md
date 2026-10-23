@@ -39,7 +39,8 @@ propose an improved problem set with full provenance.
     (3–8 entries; note explicitly if the topic has NO good external exercise
     tradition — that is a finding, not a failure)
 
-    **Proposed problem set** (5–8 problems, our reference format):
+    **Proposed problem set** (good problems only, no filler; our reference
+    format; about 30% of the section's body prose as a guide):
     1. [tag] **Title.** Sketch of the task in 2–4 sentences: what the reader
        does, what artifact they produce, how they know it worked. Subproblems
        as an indented `1.` list if needed.
@@ -48,6 +49,13 @@ propose an improved problem set with full provenance.
     1. ...
 
 ## Rules for proposed problems
+
+- Size (decided 2026-10-23, `docs/writing-guide.md` §12.2): keep problems
+  that are good and add value; drop filler (drills, restatements, sweeps
+  without a question, API trivia, near-duplicates, dependence on later
+  chapters). About 30% of the section's body prose is a guide for balance
+  (`tools/exercise_budget.py`), not a cap. Depth and multi-part problems are
+  welcome when every part teaches something. Never pad.
 
 - Tags: exactly one of [conceptual] (pencil-and-paper), [short-code] (small
   implementation/run against the section's own code), [extended]

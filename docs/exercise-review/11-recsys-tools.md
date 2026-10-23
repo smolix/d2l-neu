@@ -53,7 +53,7 @@ defects: none found
 clarity:
   - ex 1: "What other similar recommendation datasets can you find?" — no deliverable
     (how many? compared how?); also reads as a "can you...?" filler question (house
-    style, docs/style-guide.md).
+    style, docs/attic/style-guide.md).
   - ex 2: "Go through the https://movielens.org/ site for more information about
     MovieLens." — pure reading prompt, no task or artifact at all.
 notable: both exercises are exploratory/reading-prompt style rather than

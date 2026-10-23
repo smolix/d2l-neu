@@ -190,7 +190,7 @@ rebuild-book-artifacts:
 	@# parallel PDF render can't skip-then-read a corrupt one (Quarto
 	@# convert_svg, main.lua:7348). Makes `make all` self-sufficient with no
 	@# preceding `make clean`.
-	@find img/outputs -name '*.pdf' -delete 2>/dev/null || true
+	@find img/outputs _pdf/*/img/outputs -name '*.pdf' -delete 2>/dev/null || true
 	@# Render slides with a RAM-aware fleet: RENDER_JOBS frameworks in parallel,
 	@# each quarto capped to RENDER_V8_HEAP_MIB. (Old hardcoded -j4 @ 24 GiB
 	@# over-committed RAM on <128 GiB boxes → rc=137; 24 GiB starved a full
@@ -258,7 +258,7 @@ clean:
 	# img/outputs/ is render scratch; stale *.pdf there make Quarto's
 	# convert_svg skip-then-read an old/corrupt PDF and abort the PDF build
 	# (main.lua:7348 assertion). Clear them so PDFs always rebuild clean.
-	find img/outputs -name '*.pdf' -delete 2>/dev/null || true
+	find img/outputs _pdf/*/img/outputs -name '*.pdf' -delete 2>/dev/null || true
 	rm -f $(wildcard _notebooks/*/.generated _notebooks/*/.executed)
 	rm -f $(wildcard _notebooks/*/MANIFEST.mk)
 	rm -f $(wildcard _pdf/*/.generated)

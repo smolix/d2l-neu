@@ -806,9 +806,6 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        :numref:`subsec_moe-conditional` does for Mixtral. Reproduce the
        235B stored and 22B active parameters of the model's name, ignoring
        normalization weights.
-    1. How much accelerator memory do the weights need in 16-bit
-       precision? Compare it with the memory of a dense model that has the
-       same per-token computation.
     1. Decoding a batch of $B$ sequences sends one token per sequence
        through every layer, and its speed is set by the bytes of weights
        read per step (:numref:`sec_kv-cache`). Assume that each token
@@ -910,8 +907,6 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        for a standard normal $Z$, to estimate the fraction of tokens
        dropped at $c = 1$ for $E = 8$ and for $E = 64$. How does the
        fraction scale with $E$ and $N$, and what does $c = 1.25$ change?
-    1. What does a large $c$ cost in memory and in arithmetic when the
-       routing is balanced?
 
 :begin_tab:`pytorch`
 8. [code] **Sparse dispatch.** ● `MoELayer` evaluates every expert on

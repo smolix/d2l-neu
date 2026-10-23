@@ -1479,29 +1479,6 @@ information estimates.
 
 ## Exercises
 
-1. **Entropy bookkeeping.** Take the joint p.m.f.
-   $p_{X,Y} = \left(\begin{smallmatrix} 0.3 & 0.2 \\ 0.1 & 0.4
-   \end{smallmatrix}\right)$, with rows indexing $x$ and columns indexing
-   $y$ as in :numref:`sec_mdl-mi-recap`.
-    1. Compute the marginals, $H(X,Y)$, $H(X)$, $H(Y)$, the pointwise mutual
-       information :eqref:`eq_mdl-pmi_def` of each cell, and $I(X;Y)$ as the
-       average of the four values weighted by $p_{X,Y}$. Check the result
-       with `mutual_information`.
-    1. The table holds the same four probabilities as the joint `p_xy` of
-       :numref:`sec_mdl-mi-recap`, rearranged. Which quantities of (a) agree
-       between the two tables? Why do their mutual informations differ?
-    1. Prove the discrete bounds
-       $\max\{H(X), H(Y)\} \leq H(X, Y) \leq H(X) + H(Y)$ from the chain
-       rule, the nonnegativity of discrete entropy, and the properties of
-       mutual information.
-    1. Let $X \sim \mathcal{N}(0, 1)$ and $Y = X + \sigma\epsilon$ with
-       independent noise $\epsilon \sim \mathcal{N}(0, 1)$. Compute the
-       differential entropy $h(Y)$ and, by the chain rule, $h(X, Y)$. Find
-       the noise levels $\sigma$ for which $h(X, Y) < h(Y)$. Which step
-       of the proof of (c) fails for differential entropy? Does the upper
-       bound survive?
-   :exlabel:`ex_mdl-mutual-information-entropy-bookkeeping`
-
 1. **Gaussian pointwise mutual information.** Let $(X, Y)$ be the standard
    bivariate Gaussian pair with correlation $\rho$ that `gauss_pair`
    samples.
@@ -1565,17 +1542,6 @@ information estimates.
        recompute both pmi values. Which of these scores would you use to rank
        collocations, and why?
    :exlabel:`ex_mdl-mutual-information-rare-pairs`
-
-1. **Zero correlation and dependence.** Correlation detects only linear
-   dependence (:numref:`sec_mdl-mi-nonlinear-correlation`).
-    1. Construct a pair of discrete random variables with zero correlation
-       and positive mutual information, and compute both quantities.
-    1. Let $X \sim \mathcal{N}(0, 1)$ and let $S$ be an independent sign,
-       uniform on $\{-1, +1\}$. Show that $Y = SX$ is standard Gaussian and
-       uncorrelated with $X$.
-    1. Show that $I(X;Y) = \infty$ for the pair of (b). Why does
-       :eqref:`eq_mdl-gaussian_mi` with $\rho = 0$ not apply?
-   :exlabel:`ex_mdl-mutual-information-zero-correlation`
 
 1. **Information versus usable information.** A label $Y$ is a fair bit.
    Given $Y = 0$ the input $X \in \mathbb{R}^2$ is uniform on the circle of
@@ -1691,25 +1657,6 @@ information estimates.
        :cite:`Wang.Liu.2021`?
    :exlabel:`ex_mdl-mutual-information-temperature`
 
-1. **Gaussian bottleneck operating points.** The encoder
-   $Z = X + \sigma\epsilon$ of :numref:`subsec_mdl-gaussian-bottleneck` has
-   the informations :eqref:`eq_mdl-gaussian-ib-info`. Write $R = I(X;Z)$.
-    1. Eliminate $\sigma$ to show that the frontier is
-       $I(Y;Z) = -\tfrac{1}{2}\log\big(1 - \rho^2(1 - e^{-2R})\big)$. Show
-       that it is increasing and concave in $R$, has slope $\rho^2$ at
-       $R = 0$, and approaches $I(X;Y)$ as $R \to \infty$.
-    1. Show that the Lagrangian :eqref:`eq_mdl-ib_lagrangian` is minimized
-       at $R = 0$ when $\beta \leq 1/\rho^2$, and otherwise at the noise
-       level $\sigma^2 = (1 - \rho^2)/(\beta\rho^2 - 1)$. Compute the
-       corresponding $I(X;Z)$ for $\rho = 0.9$ and $\beta \in \{2, 4, 16\}$,
-       and compare with the minimizers over the grid `sigma` that the cell of
-       :numref:`subsec_mdl-gaussian-bottleneck` prints.
-    1. Describe the optimal encoder as $\beta \to \infty$. What happens to
-       $I(X;Z)$ in this limit? Which remark of
-       :numref:`sec_mdl-information-bottleneck` about deterministic encoders
-       does it illustrate?
-   :exlabel:`ex_mdl-mutual-information-gaussian-bottleneck`
-
 1. **Entropy bounds from samples.** ●
    :numref:`subsec_mdl-mi-distribution-free` states the theorem of
    :citet:`McAllester.Stratos.2020` informally. This problem proves a
@@ -1803,33 +1750,6 @@ information estimates.
        it numerically. What does the width of this interval say about
        predicting a downstream error rate from a mutual information?
    :exlabel:`ex_mdl-mutual-information-fano-converse`
-
-1. [extended] **Learned critics for the bounds.** ●● The section evaluates
-   DV, NWJ, and InfoNCE with critics set to `pmi_gauss`
-   (:numref:`sec_mdl-infonce`) and trains a critic for InfoNCE alone
-   (:numref:`subsec_mdl-infonce-learned-critic`).
-   :citet:`Poole.Oord.Alemi.ea.2019` train critics for NWJ, InfoNCE, and two
-   further bounds on $d = 20$ independent coordinate pairs, each a standard
-   bivariate Gaussian with correlation $\rho$, so that
-   $I(X;Y) = -\tfrac{d}{2}\log(1 - \rho^2)$. They raise $\rho$ during
-   training so that the true value steps through $2$, $4$, $6$, $8$, and
-   $10$ nats, with batches of $64$. Reproduce this comparison at small scale,
-   and add the DV bound, which their comparison leaves out.
-    1. Extend `scores` to vector inputs by feeding the concatenation
-       $(x, y) \in \mathbb{R}^{2d}$ to the MLP, and train the critic with the
-       InfoNCE loss on this staircase. Plot the batch estimate
-       :eqref:`eq_mdl-infonce_est` and the true value over training.
-    1. Train fresh critics with the NWJ bound :eqref:`eq_mdl-nwj_bound` and
-       the DV bound :eqref:`eq_mdl-dv_bound` as objectives, using the
-       off-diagonal entries of the score matrix as samples of
-       $P_X \otimes P_Y$. Add their estimates to the plot.
-    1. Replace the joint critic by a separable critic
-       $f(x, y) = g(x)^\top h(y)$ built from two MLPs, and repeat (a) and
-       (b).
-    1. Which deviations from the truth in (a) to (c) already appear in the
-       evaluation of :numref:`sec_mdl-infonce` with critics set to
-       `pmi_gauss`, and which come from learning the critic?
-   :exlabel:`ex_mdl-mutual-information-learned-critics`
 
 1. [extended] **Compression phase at small scale.** ●●
    :citet:`Shwartz-Ziv.Tishby.2017` trained fully connected tanh networks of

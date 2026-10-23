@@ -1655,19 +1655,14 @@ depths plus a `build` function that stacks blocks.
     1. Which of these failures are silent and which raise an error? Explain
        all three from the same missing registration.
 
-2. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
-   child modules `net1` and `net2`, runs both on the same input, and
-   concatenates their outputs along the last dimension. What must be true of
-   the two children's outputs for the concatenation to be valid?
-
-3. **Widening a residual block.** `ResidualBlock` requires its input and
+2. **Widening a residual block.** `ResidualBlock` requires its input and
    output widths to agree. Suppose a block maps width $d$ to a larger width
    $d'$, so its body ends in a $d'$-wide layer and the skip path must also
    produce width $d'$. Give one way to build that skip path with
    parameters and one without. For each, count the extra parameters and
    state which output coordinates still receive the identity path.
 
-4. [code] **Config boundaries.** Extend `MLPConfig` with a field
+3. [code] **Config boundaries.** Extend `MLPConfig` with a field
    `act: str = 'relu'` that selects the activation inside every
    `ResidualBlock`, and make `build` honor it.
     1. Build one model with `act='tanh'` and one from the default config,
@@ -1679,7 +1674,7 @@ depths plus a `build` function that stacks blocks.
        the two block types, and decide whether that choice belongs in the
        config or in code.
 
-5. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+4. [code] **A module from scratch.** ● In plain Python and NumPy, without any
    framework base class, write a `Parameter` class that wraps an array and
    a minimal `Module` class whose `__setattr__` registers every assigned
    `Parameter` or `Module`. Give `Module` a `parameters()` method that
@@ -1693,7 +1688,7 @@ depths plus a `build` function that stacks blocks.
     *Adapted from CMU 10-714,
     [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
 
-6. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
+5. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
    residual MLP with `d_in=1`, `d_out=1`, and `num_blocks` set to 0, 1,
    and 4.
     1. Before training, list the layers that `build` stacks when
@@ -1709,7 +1704,7 @@ depths plus a `build` function that stacks blocks.
     [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf),
     Section 7.*
 
-7. [code] **Lazy input width.** Build
+6. [code] **Lazy input width.** Build
    `net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))`
    and pass a batch with 20 features through it, then a batch with 30
    features. Explain the outcome from what the first forward pass did to
@@ -1733,19 +1728,14 @@ depths plus a `build` function that stacks blocks.
     1. Which of these failures are silent and which raise an error? Explain
        both from the same missing registration.
 
-2. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
-   child blocks `net1` and `net2`, runs both on the same input, and
-   concatenates their outputs along the last dimension. What must be true of
-   the two children's outputs for the concatenation to be valid?
-
-3. **Widening a residual block.** `ResidualBlock` requires its input and
+2. **Widening a residual block.** `ResidualBlock` requires its input and
    output widths to agree. Suppose a block maps width $d$ to a larger width
    $d'$, so its body ends in a $d'$-wide layer and the skip path must also
    produce width $d'$. Give one way to build that skip path with
    parameters and one without. For each, count the extra parameters and
    state which output coordinates still receive the identity path.
 
-4. [code] **Config boundaries.** Extend `MLPConfig` with a field
+3. [code] **Config boundaries.** Extend `MLPConfig` with a field
    `act: str = 'relu'` that selects the activation inside every
    `ResidualBlock`, and make `build` honor it.
     1. Build one model with `act='tanh'` and one from the default config,
@@ -1757,7 +1747,7 @@ depths plus a `build` function that stacks blocks.
        the two block types, and decide whether that choice belongs in the
        config or in code.
 
-5. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+4. [code] **A module from scratch.** ● In plain Python and NumPy, without any
    framework base class, write a `Parameter` class that wraps an array and
    a minimal `Module` class whose `__setattr__` registers every assigned
    `Parameter` or `Module`. Give `Module` a `parameters()` method that
@@ -1771,7 +1761,7 @@ depths plus a `build` function that stacks blocks.
     *Adapted from CMU 10-714,
     [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
 
-6. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
+5. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
    residual MLP with `d_in=1`, `d_out=1`, and `num_blocks` set to 0, 1,
    and 4.
     1. Before training, list the layers that `build` stacks when
@@ -1787,7 +1777,7 @@ depths plus a `build` function that stacks blocks.
     [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf),
     Section 7.*
 
-7. [code] **Lazy input width.** Build an `nn.Sequential` holding
+6. [code] **Lazy input width.** Build an `nn.Sequential` holding
    `nn.Dense(256, activation='relu')` and `nn.Dense(10)`, call
    `initialize()`, and pass a batch with 20 features through it, then a
    batch with 30 features. Explain the outcome from what the first forward
@@ -1807,19 +1797,14 @@ depths plus a `build` function that stacks blocks.
        arrays. Which of the two rewrites could restore a checkpoint saved
        from `ListMLP`, and why?
 
-2. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
-   child modules `net1` and `net2` as fields, runs both on the same input,
-   and concatenates their outputs along the last dimension. What must be
-   true of the two children's outputs for the concatenation to be valid?
-
-3. **Widening a residual block.** `ResidualBlock` requires its input and
+2. **Widening a residual block.** `ResidualBlock` requires its input and
    output widths to agree. Suppose a block maps width $d$ to a larger width
    $d'$, so its body ends in a $d'$-wide layer and the skip path must also
    produce width $d'$. Give one way to build that skip path with
    parameters and one without. For each, count the extra parameters and
    state which output coordinates still receive the identity path.
 
-4. [code] **Config boundaries.** Extend `MLPConfig` with a field
+3. [code] **Config boundaries.** Extend `MLPConfig` with a field
    `act: str = 'relu'` that selects the activation inside every
    `ResidualBlock`, and make `ResidualMLP` honor it.
     1. Build one model with `act='tanh'` and one from the default config,
@@ -1831,7 +1816,7 @@ depths plus a `build` function that stacks blocks.
        the two block types, and decide whether that choice belongs in the
        config or in code.
 
-5. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+4. [code] **A module from scratch.** ● In plain Python and NumPy, without any
    framework base class, write a `Parameter` class that wraps an array and
    a minimal `Module` class whose `__setattr__` registers every assigned
    `Parameter` or `Module`. Give `Module` a `parameters()` method that
@@ -1845,7 +1830,7 @@ depths plus a `build` function that stacks blocks.
     *Adapted from CMU 10-714,
     [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
 
-6. [code] **Shared children.** Reusing one child module at several sites
+5. [code] **Shared children.** Reusing one child module at several sites
    turns the module tree of :numref:`fig_blocks` into a graph. Build a
    small network that uses the same child at two sites. Predict, then
    verify: does the shared child's parameter set appear once or twice in
@@ -1854,7 +1839,7 @@ depths plus a `build` function that stacks blocks.
    rebuilds a module from the two. After such a round trip, are the two
    sites still one object, checked with `is`?
 
-7. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
+6. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
    residual MLP with `d_in=1`, `d_out=1`, and `num_blocks` set to 0, 1,
    and 4.
     1. Before training, list the layers that `build` stacks when
@@ -1879,19 +1864,14 @@ depths plus a `build` function that stacks blocks.
    optimizer would train, and explain what happens to the layer's weights
    between two calls.
 
-2. [code] **Parallel block.** Implement a `ParallelBlock` that takes two
-   child modules `net1` and `net2`, runs both on the same input, and
-   concatenates their outputs along the last dimension. What must be true of
-   the two children's outputs for the concatenation to be valid?
-
-3. **Widening a residual block.** `ResidualBlock` requires its input and
+2. **Widening a residual block.** `ResidualBlock` requires its input and
    output widths to agree. Suppose a block maps width $d$ to a larger width
    $d'$, so its body ends in a $d'$-wide layer and the skip path must also
    produce width $d'$. Give one way to build that skip path with
    parameters and one without. For each, count the extra parameters and
    state which output coordinates still receive the identity path.
 
-4. [code] **Config boundaries.** Extend `MLPConfig` with a field
+3. [code] **Config boundaries.** Extend `MLPConfig` with a field
    `act: str = 'relu'` that selects the activation inside every
    `ResidualBlock`, and make `build` honor it.
     1. Build one model with `act='tanh'` and one from the default config,
@@ -1903,7 +1883,7 @@ depths plus a `build` function that stacks blocks.
        the two block types, and decide whether that choice belongs in the
        config or in code.
 
-5. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+4. [code] **A module from scratch.** ● In plain Python and NumPy, without any
    framework base class, write a `Parameter` class that wraps an array and
    a minimal `Module` class whose `__setattr__` registers every assigned
    `Parameter` or `Module`. Give `Module` a `parameters()` method that
@@ -1917,7 +1897,7 @@ depths plus a `build` function that stacks blocks.
     *Adapted from CMU 10-714,
     [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
 
-6. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
+5. [extended] **Depth family.** ● With `MLPConfig` and `build`, construct the
    residual MLP with `d_in=1`, `d_out=1`, and `num_blocks` set to 0, 1,
    and 4.
     1. Before training, list the layers that `build` stacks when
@@ -1933,7 +1913,7 @@ depths plus a `build` function that stacks blocks.
     [Homework 1 Part 1](https://deeplearning.cs.cmu.edu/F23/document/homework/HW1/HW1P1_F23.pdf),
     Section 7.*
 
-7. [code] **Lazy input width.** Build a `tf.keras.Sequential` holding
+6. [code] **Lazy input width.** Build a `tf.keras.Sequential` holding
    `tf.keras.layers.Dense(256, activation='relu')` and
    `tf.keras.layers.Dense(10)`, and pass a batch with 20 features through
    it, then a batch with 30 features. Explain the outcome from what the

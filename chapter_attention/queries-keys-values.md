@@ -268,34 +268,6 @@ representations of queries and keys.
 
 ## Exercises
 
-1. **A two-entry database.** Consider the database $\mathcal{D} =
-   \{(2, 10), (5, 20)\}$ of scalar keys and values, with the score
-   $a(q, k) = -(q - k)^2$ normalized by :eqref:`eq_softmax_attention`.
-    1. Compute the two weights and the output for the query $q = 4$.
-    1. Express the output as a function of $q$. Which query returns $15$,
-       and which outputs do the queries $q \in \mathbb{R}$ reach?
-    1. Replace the score by $a(q, k) = -(q - k)^2 / (2\sigma^2)$. Describe
-       the output as a function of $q$ in the limits $\sigma \to 0$ and
-       $\sigma \to \infty$, and state which lookup each limit performs.
-
-1. **A fixed parameter budget.** A database holds $m$ key--value pairs
-   with $\mathbf{k}_i \in \mathbb{R}^{d_k}$ and
-   $\mathbf{v}_i \in \mathbb{R}^{d_v}$, and the lookup :eqref:`eq_attention_pooling` scores them with a learned
-   bilinear form $a(\mathbf{q}, \mathbf{k}) = \mathbf{q}^\top \mathbf{M}
-   \mathbf{k}$, $\mathbf{M} \in \mathbb{R}^{d_k \times d_k}$.
-    1. Count the parameters of this lookup and the number of scores it
-       evaluates for one query.
-    1. A fully connected layer instead maps the concatenation of the query
-       and all $m$ pairs, a vector of length $d_k + m(d_k + d_v)$, to an
-       output in $\mathbb{R}^{d_v}$. Count its parameters as a function of
-       $m$.
-    1. The pairs of a database carry no order. Determine how the output of
-       each of the two maps changes when the $m$ pairs are permuted.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 12.1.*
-
 1. **An average of two values.** Let the keys $\mathbf{k}_1, \ldots,
    \mathbf{k}_m$ be orthonormal and let the score be $a(\mathbf{q},
    \mathbf{k}) = \mathbf{q}^\top \mathbf{k}$ with the weights of
@@ -314,13 +286,11 @@ representations of queries and keys.
     *Adapted from Stanford CS224N,
     [Assignment 4](https://web.stanford.edu/class/cs224n/assignments_w25/a4.pdf),
     Problem 1(b).*
+   :exlabel:`ex_queries-keys-values-average-two-values`
 
 1. [code] **Effective number of keys.** For the weights $\alpha_i(q)$ of
    one query, define the effective number of keys
    $n_{\textrm{eff}}(q) = 1 / \sum_i \alpha_i(q)^2$.
-    1. Show that $1 \leq n_{\textrm{eff}}(q) \leq m$ for $m$ nonnegative
-       weights that sum to one, and identify the weights that attain each
-       bound.
     1. Let the values be $y_i = g(x_i) + \epsilon_i$ with independent noise
        of variance $s^2$, and hold the keys fixed. Show that the variance of
        the estimate :eqref:`eq_nadaraya-watson` at $q$ is
@@ -330,27 +300,6 @@ representations of queries and keys.
        plot the three curves. Then redraw the noise in `y_train` 200 times
        with `x_train` fixed, and compare the standard deviation of the
        estimate at each query with $1 / \sqrt{n_{\textrm{eff}}(q)}$.
-
-1. [code] **Boxcar and triangular kernels.** The section states that for
-   the data `x_train` and `y_train` the bandwidth affects the estimate more
-   than the choice among the kernel shapes of :eqref:`eq_similarity-kernels`
-   does, and then varies only $\sigma$. Test the claim.
-    1. Extend `nadaraya_watson` with the boxcar and triangular kernels, each
-       with a radius $h$ in place of the unit distance. Display the weights
-       of the Gaussian kernel at $\sigma = 0.5$ and of the other two kernels
-       at $h = 0.5$ side by side with `d2l.show_heatmaps`, and describe how
-       the rows of the three matrices differ.
-    1. Which of the kernels can leave a query with all-zero weights? Count
-       the queries in `x_val` that this affects at $h = 0.05$, and define
-       the estimate at those queries.
-    1. For each kernel, sweep the bandwidth $\sigma$ or the radius $h$ over
-       20 values between $0.05$ and $3$, record the mean squared error
-       against `y_val`, and plot the three error curves.
-    1. Compare the spread of the error across the three kernels at their
-       best bandwidths with the spread across bandwidths for one kernel.
-       Does the comparison support the claim? Redraw the training noise
-       five times. Is the ranking of the kernels at their best bandwidths
-       stable?
 
 1. [code] **Queries beyond the data.** The estimate
    :eqref:`eq_nadaraya-watson` is a convex combination of the values, and
@@ -381,6 +330,7 @@ representations of queries and keys.
        diagonal of the kernel matrix and refit. Compare the learned
        $\sigma$ with $\sigma = 0.5$, the best of the bandwidths in `sigmas`,
        and compute the mean squared error against `y_val` for both.
+   :exlabel:`ex_queries-keys-values-learned-bandwidth`
 
 1. [code] **The gradient of attention.** ● Suppose that $a(\mathbf{q},
    \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$ and that $\mathbf{k}_i =

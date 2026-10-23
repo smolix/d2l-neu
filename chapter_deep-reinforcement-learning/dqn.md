@@ -544,26 +544,6 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
 
 ## Exercises
 
-1. **Triad bookkeeping.** :numref:`fig_rl_deadly_triad` places the
-   algorithms of these chapters by the three ingredients of the deadly
-   triad. State which of function approximation, bootstrapping and
-   off-policy data each of the following agents uses.
-    1. A deep Q-network that collects 128 transitions with its current
-       network, takes one gradient step on exactly these transitions, and
-       then discards them, so that every minibatch comes from the current
-       $\epsilon$-greedy policy. Which policy generated its data, and the
-       value of which policy does its target :eqref:`eq_dqn_target`
-       estimate?
-    1. A deep Q-network whose buffer stores whole episodes and whose
-       regression target is the Monte Carlo return, the discounted sum of
-       the rewards to the end of the episode, in place of
-       :eqref:`eq_dqn_target`. Which function does this agent estimate when
-       its buffer holds episodes of older policies?
-    1. PQN :cite:`Gallici.Fellows.Ellis.ea.2025`, which keeps neither a
-       replay buffer nor a target network, collects each batch from
-       parallel environments with an $\epsilon$-greedy policy, and
-       bootstraps from the maximum over actions.
-
 1. [code] **Baird under on-policy weighting.** The computation of Baird's
    counterexample in :numref:`subsec_dqn-deadly-triad` weights the seven
    states equally through `.mean(0)`. In matrix form, one sweep is
@@ -808,26 +788,6 @@ With function approximation, bootstrapping, and off-policy data, Q-learning can 
        $\beta$ annealed toward 1 over training. Which of the two changes to
        the weights of part (a) affects only the step size, and which changes
        the point to which the updates converge?
-
-1. [code] **Port to LunarLander.** ● `LunarLander-v3`, from Gymnasium's
-   Box2D extra, has an eight-dimensional observation, four discrete actions,
-   a reward shaped by distance, speed, tilt, leg contact and fuel use, a
-   reward of $-100$ at a crash and $+100$ when the lander comes to rest, and
-   a time limit of 1000 steps.
-    1. List the lines of the section's code that encode properties of
-       CartPole, and give their LunarLander values.
-    1. Two diagnostics of the section lose their meaning: the ceiling
-       $1/(1 - \gamma)$ and the probe state $s_0 = \mathbf{0}$. Explain why
-       each fails on LunarLander, and propose a replacement for each. Which
-       situation of the lander does the all-zero observation describe?
-    1. Train DQN and Double DQN for $250{,}000$ environment steps, three
-       seeds each, with the exploration schedule stretched in proportion to
-       the budget. Report the greedy evaluation and your replacement
-       diagnostics. On CartPole, the difference between the two arms stays
-       within the spread across seeds, and :numref:`fig_rl_max_bias` predicts
-       a larger maximization bias for four actions. Does the difference
-       exceed the spread across seeds on LunarLander?
-   :exlabel:`ex_dqn-port-lunarlander`
 
 1. [code] **Baird with a target network.** ●● DQN computes its bootstrap
    from a frozen copy of the weights. In the computation of Baird's

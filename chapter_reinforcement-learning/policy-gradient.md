@@ -410,26 +410,6 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
 
 ## Exercises
 
-1. [code] **Redundant preferences.** Adding the same constant $c_s$ to every
-   preference $\theta_{s,a}$ at a state $s$ leaves the policy
-   :eqref:`eq_softmax_policy` unchanged, so the table of
-   `ActorCritic.tabular` has one redundant direction per state.
-    1. Use :eqref:`eq_softmax_score` to show that every REINFORCE estimate
-       :eqref:`eq_reinforce` is orthogonal to each of these directions.
-       Conclude that plain gradient ascent
-       $\theta \leftarrow \theta + \alpha \hat{u}$, started from the zero
-       table, keeps every row sum
-       $\sum_a \theta_{s,a}$ at zero.
-    1. `ActorCritic.tabular` updates the table with Adam instead. Compute
-       the row sums of the trained table of `agents[0]`, and explain their
-       sign from the way Adam scales each coordinate of its step
-       separately.
-    1. While a coordinate's gradient keeps its sign, Adam moves it by about
-       `lr` per update. What rate of change of a row sum does this bound
-       allow? Rerun the training of `agents[0]` with seed $0$, record the
-       row sum at the start state after every update, and plot it against
-       the update index. Compare its growth with that rate, and explain the
-       difference.
 1. **Parameter-dependent dynamics.** The derivation of
    :numref:`subsec_pg-cancellation` assumes that the transition
    probabilities do not depend on $\theta$. A recommender violates this
@@ -446,21 +426,6 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
        Compare the derivative with the expectation of the REINFORCE estimate
        :eqref:`eq_reinforce`, which drops that term. Where does plain
        gradient ascent converge with each of the two?
-1. [code] **A one-step policy gradient.** The example of
-   :numref:`fig_rl_score_ascent` draws actions from the Gaussian policy
-   $\pi_\theta(a) = \mathcal{N}(a; \mu, 1)$ and rewards them with
-   $R(a) = 0.4 + 2e^{-(a-2)^2/2}$.
-    1. Show that the score with respect to $\mu$ is $a - \mu$, so that a
-       single-sample REINFORCE estimate of $\mathrm{d}J/\mathrm{d}\mu$ is
-       $R(a)(a - \mu)$.
-    1. Compute $J(\mu) = E_{a \sim \pi_\theta}[R(a)]$ in closed form, and
-       confirm the values $J = 0.92$ and $\mathrm{d}J/\mathrm{d}\mu = 0.52$
-       that the caption gives for $\mu = 0$. Which $\mu$ maximizes $J$?
-    1. Compute the variance of the single-sample estimate at $\mu = 0$; a
-       Monte Carlo average over $10^6$ samples suffices. How many samples
-       does an estimate need for its standard error to fall to 10% of the
-       gradient? What is the standard error of the figure's twelve-sample
-       estimate?
 1. [code] **Sparse rewards.** Consider a single state with two actions,
    softmax preferences $\theta_1, \theta_2$, reward $1$ for action 1 and
    $0$ for action 2, and write $p = \pi_\theta(1)$.

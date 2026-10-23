@@ -1263,8 +1263,7 @@ gradient $X^\top(X\mathbf{w} - \mathbf{y})$ lies in the row space of $X$, so
 the iterates never leave it, and the limit is the *minimum-norm* interpolant,
 the same solution the pseudoinverse computes
 (exercise :exref:`ex_mdl-svd-low-rank-ridgeless-gradient-descent` of
-:numref:`sec_mdl-svd-low-rank` has you verify it, and Exercise :exref:`ex_mdl-gradient-based-optimization-implicit-bias`
-of :numref:`sec_mdl-gradient-based-optimization` has you derive it). For
+:numref:`sec_mdl-svd-low-rank` has you verify it). For
 logistic regression on separable data, gradient descent's direction converges
 to the maximum-margin separator :cite:`Soudry.Hoffer.Nacson.ea.2018`, the
 SVM solution of :numref:`sec_mdl-constrained-optimization-duality`. These
@@ -1408,22 +1407,6 @@ particular model and regime.
        Which hypothesis of the uniqueness proposition does the penalty
        supply?
    :exlabel:`ex_mdl-convexity-minimizer-existence`
-
-1. **Certifying convexity.** For each function, name the characterization
-   of :numref:`subsec_mdl-three-lenses` or the rules of the calculus in
-   :numref:`subsec_mdl-recognizing-convexity` that certify its convexity, or
-   show that it is not convex.
-    1. The Poisson regression loss
-       $\sum_i \bigl(e^{\mathbf{w}^\top \mathbf{x}_i} - y_i \mathbf{w}^\top \mathbf{x}_i\bigr)$
-       as a function of $\mathbf{w}$, with counts $y_i \ge 0$.
-    1. The squared hinge loss
-       $\sum_i \max(0, 1 - y_i \mathbf{w}^\top \mathbf{x}_i)^2$ as a
-       function of $\mathbf{w}$.
-    1. The largest eigenvalue $\lambda_{\max}(A)$ as a function of a
-       symmetric matrix $A$.
-    1. The pointwise minimum $\min(f_1, f_2)$ of two convex functions
-       $f_1$ and $f_2$.
-   :exlabel:`ex_mdl-convexity-certifying-convexity`
 
 1. **Conjugate pairs.** Compute each conjugate from
    :eqref:`eq_mdl-opt-conjugate`.
@@ -1622,14 +1605,12 @@ particular model and regime.
    :exlabel:`ex_mdl-convexity-factored-model`
 
 1. [code] **Implicit bias and the optimizer.** ● Exercise
-   :exref:`ex_mdl-gradient-based-optimization-implicit-bias` of
-   :numref:`sec_mdl-gradient-based-optimization` shows on paper that gradient
+   :exref:`ex_mdl-svd-low-rank-ridgeless-gradient-descent` of
+   :numref:`sec_mdl-svd-low-rank` shows on paper that gradient
    descent on $\tfrac12\|X\mathbf{w} - \mathbf{y}\|^2$, for
    $X \in \mathbb{R}^{n \times d}$ with $n < d$ and full row rank, started at
    $\mathbf{w}_0 = \mathbf{0}$, stays in the row space of $X$ and converges to
-   the minimum-norm interpolant $X^+\mathbf{y}$. Exercise
-   :exref:`ex_mdl-svd-low-rank-ridgeless-gradient-descent` of
-   :numref:`sec_mdl-svd-low-rank` changes the starting point. Here the start
+   the minimum-norm interpolant $X^+\mathbf{y}$. Here the start
    stays at $\mathbf{w}_0 = \mathbf{0}$ and the algorithm changes. Take a
    random $4 \times 10$ system, and compare the limit of each method and its
    norm with `np.linalg.pinv(X) @ y`.

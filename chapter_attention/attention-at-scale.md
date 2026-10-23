@@ -1003,25 +1003,6 @@ models of :numref:`sec_ssm`.
        each token of the RNN as one step. Which resource does each design
        spend to connect the two tokens?
 
-1. **The quadratic crossover.** A multi-head layer costs
-   $8nd^2 + 4n^2 d$ FLOPs (:eqref:`eq_multihead-flops`,
-   :eqref:`eq_attn-layer-flops`), and its two terms are equal at
-   $n = 2d$.
-    1. Derive the sequence length at which the quadratic term accounts for
-       90% of the layer's FLOPs, as a function of $d$.
-    1. Replace dense attention by a sliding window of width $w$, and count
-       every query as scoring $w$ keys, as :eqref:`eq_attn-layer-flops`
-       counts every query as scoring all $n$ keys. Show that the attention
-       term becomes $4nwd$, derive the ratio of dense to windowed layer
-       FLOPs, and find for
-       $d = 128$ and $w = 4096$ the $n$ at which the windowed layer does
-       half the work of the dense one.
-    1. `windowed_attention` scores a $w \times 2w$ tile for every block of
-       $w$ queries. Compute the fraction of these scores that the mask
-       `valid` keeps. Generalize to blocks of $b \leq w$ queries, each
-       scored against the $b + w - 1$ keys that its queries can reach, and
-       explain what limits how small $b$ can be chosen in practice.
-
 1. [code] **The running maximum.** Remove the running maximum from
    `chunked_attention`, so that the state accumulates plain sums of
    $e^{a_j}$. Run the result with $\mathbf{Q}$, $\mathbf{K}$, $\mathbf{V}$
@@ -1069,18 +1050,6 @@ models of :numref:`sec_ssm`.
        $\bar{\mathbf{o}}_B$ and $\bar{\mathbf{o}}_{B'}$ whose weights
        depend only on $\ell_B$ and $\ell_{B'}$.
 
-1. **Memory of chunked attention.** `chunked_attention` keeps one
-   $n \times c$ stripe of scores in memory at a time during the forward
-   pass.
-    1. Assume that every operation in the loop body writes a fresh array
-       and that an array is freed once no variable refers to it. List the
-       arrays alive at the peak of one iteration, and express the memory
-       beyond the inputs as $\alpha\, nd + \beta\, nc$ floats with your
-       values of $\alpha$ and $\beta$.
-    1. Evaluate your formula for $n = 16{,}384$, $d = 64$, and $c = 512$
-       in single precision, and compare it with the measurement in
-       :numref:`subsec_attn-chunked`.
-
 1. **Arithmetic intensity of attention.** The count
    :eqref:`eq_attn-layer-flops` extends to values of width $v$: for $n$
    queries and keys of width $d$, the two matrix products of
@@ -1099,45 +1068,7 @@ models of :numref:`sec_ssm`.
        one accelerator, compute its ratio of operations per byte, and decide
        whether attention with $d = v = 64$ is limited by arithmetic or by
        memory traffic on it.
-
-1. [code] **Dilated windows.** Longformer :cite:`beltagy2020longformer`
-   combines its sliding window with *dilation*: a layer attends to the $w$
-   positions $t, t - r, \ldots, t - (w-1)r$, spaced $r$ apart, as dilated
-   convolutions do (:numref:`sec_dilation`).
-    1. Build the dilated band mask, and recompute the receptive-field growth
-       of :numref:`subsec_attn-receptive-field` with $n = 256$ and
-       $L = 1, \ldots, 6$ for a stack that starts with a plain window
-       ($w = 8$) and alternates it with a dilated one ($w = 8$, $r = 4$).
-       Derive the closed form of the reach after $L$
-       layers of this alternation.
-    1. Repeat the computation for a stack of dilated layers only. Which
-       offsets does it never reach, and why does alternating with a plain
-       window fill the gaps?
-    1. Compare the FLOP count of the alternating stack with that of a stack
-       of plain windows that achieves the same reach.
-
-1. **The cost of one more token.** During generation, dense causal
-   attention appends the new key and value to a cache of $t$ past pairs,
-   whereas `linear_attention_recurrent` updates a state of fixed size.
-   Consider one head of width $d$ in single precision.
-    1. Count the FLOPs and the bytes read from the cache to produce the
-       output at position $t + 1$ under dense attention.
-    1. Count the FLOPs and the bytes of state read and written for the same
-       step under :eqref:`eq_linear-attn-recurrence`.
-    1. Find the $t$ beyond which the dense cache traffic per token exceeds
-       the state traffic of the linear form for $d = 64$. Compute the ratio
-       of the two traffics at $t = 8192$, and compare it with the ratio of
-       the two memory sizes at that length, a 16 KiB state against a 4 MiB
-       cache.
-    1. A sliding-window head of width $w$ keeps only the last $w$ keys and
-       values. Compare its per-token cache traffic with the state traffic
-       of the linear form for $d = 128$ and $w = 4096$, and state what each
-       of the two fixed-size memories retains about the tokens before
-       position $t - w$.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problems 12.7 and 12.10.*
+   :exlabel:`ex_attention-at-scale-arithmetic-intensity`
 
 1. [code] **The feature map.** The feature map $\phi(x) =
    \mathrm{elu}(x) + 1$ in `phi` is one choice among many. Compare it with
@@ -1160,29 +1091,8 @@ models of :numref:`sec_ssm`.
        their weights in this way, and what this implies for approximating
        a softmax row that is nearly one-hot.
 
-1. [code] **Backward memory of chunked attention.** ● Training also needs
-   the backward pass of `causal_attention` and `chunked_attention`.
-    1. For each of the two functions separately, differentiate the sum of
-       its outputs with respect to $\mathbf{Q}$, $\mathbf{K}$, and
-       $\mathbf{V}$ by automatic differentiation. From the arrays that the
-       backward pass of each operation needs, predict how much memory
-       automatic differentiation keeps for `chunked_attention` as a
-       function of $n$, $c$, and $d$. Then measure the peak memory of the
-       forward and backward computation of both functions for
-       $n \in \{2048, 4096, 8192, 16384\}$ as in
-       :numref:`subsec_attn-counting-memory`.
-    1. Activation checkpointing (:numref:`subsec_activation_checkpointing`)
-       of each iteration keeps only the inputs of every iteration. Count
-       what it keeps over all $n/c$ iterations. FlashAttention instead
-       keeps only the output and the two statistics $m_i$ and $s_i$ of
-       every query :cite:`Dao.Fu.Ermon.ea.2022`. Show that every attention
-       weight can be recomputed from its score and the single number
-       $\ell_i = m_i + \log s_i$. Compare the floats stored by the three
-       strategies at $n = 16{,}384$, with FlashAttention keeping $\ell_i$
-       in place of the two statistics.
-
 1. **Traffic of a tiled schedule.** ● By problem
-   6a,
+   :exref:`ex_attention-at-scale-arithmetic-intensity`a,
    the naive layer moves $4n^2$ floats to and from off-chip memory beyond
    the terms linear in $n$, since the score matrix and the weight matrix
    are each written once and read once. Ignore all traffic that is linear
@@ -1275,6 +1185,7 @@ models of :numref:`sec_ssm`.
        Explain why no fixed $\gamma$ serves both that token and the
        filler, and what a decay computed from each token's own input could
        do instead.
+   :exlabel:`ex_attention-at-scale-decaying-state`
 
 <!-- slides -->
 

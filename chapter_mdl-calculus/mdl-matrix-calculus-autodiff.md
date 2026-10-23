@@ -1227,32 +1227,6 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
        What happens to $\mathbf J_{\mathbf g}$ when $\mathbf x$ crosses
        this set?
 
-1. **Least-squares input gradient.** For $\mathbf W\in\mathbb R^{m\times n}$
-   with $m\neq n$, :numref:`subsec_mdl-matrix-identities` states the input
-   gradient
-   $\nabla_{\mathbf x}\|\mathbf W\mathbf x-\mathbf y\|^2=2\mathbf W^\top(\mathbf W\mathbf x-\mathbf y)$
-   without deriving it.
-    1. Derive it by differentiating one component in index notation, as in
-       the derivation of :eqref:`eq_mdl-lstsq-grad`.
-    1. Derive it from the chain rule :eqref:`eq_mdl-jacobian-chain`. Write
-       the loss as $h(\mathbf r(\mathbf x))$ with
-       $\mathbf r(\mathbf x)=\mathbf W\mathbf x-\mathbf y$ and
-       $h(\mathbf r)=\|\mathbf r\|^2$, multiply the two Jacobians in
-       numerator layout, and convert the result with
-       :eqref:`eq_mdl-grad-is-jacobian-transpose`. Which chain rule for
-       gradients in denominator layout does this derivation give for a
-       general composition $h\circ\mathbf r$?
-    1. Start from the scalar collapse $\frac{d}{dx}(wx-y)^2=2w(wx-y)$.
-       List the expressions obtained by placing $\mathbf W$ or
-       $\mathbf W^\top$ to the left or to the right of the residual
-       $\mathbf W\mathbf x-\mathbf y$, and rule out all but one by their
-       shapes.
-    1. Some references write
-       $\nabla_{\mathbf W}\|\mathbf W\mathbf x-\mathbf y\|^2=2\,\mathbf x(\mathbf W\mathbf x-\mathbf y)^\top$.
-       How does this differ from :eqref:`eq_mdl-lstsq-grad`, and which
-       layout convention produces it? Which of the two expressions can be
-       subtracted from $\mathbf W$ in a gradient-descent step?
-
 1. **Softmax vector--Jacobian product.** Reverse mode never forms the
    softmax Jacobian :eqref:`eq_mdl-softmax-jacobian`. It maps the adjoint
    $\mathbf u=\nabla_{\mathbf p}\ell$ of the probabilities to the adjoint
@@ -1270,26 +1244,6 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
        $n=4096$ tokens in float32, compare the memory of the full
        Jacobian, of its nonzero entries, and of the adjoint of
        $\mathbf S$ that the formula of (a), applied row by row, returns.
-
-1. [code] **Composed versus fused cross-entropy.** Take two classes with
-   logits $\mathbf z=(0,-t)$ for $t>0$ and the target class 2, so that the
-   loss is $\ell=-\log p_2$. The composed loss applies a softmax,
-   stabilized by subtracting $\max_i z_i$, and then a logarithm. The fused
-   loss evaluates $\log p_2=z_2-\log\sum_k e^{z_k}$ with a stable
-   log-sum-exp, and its logit gradient is $\mathbf p-\mathbf y$. Reverse
-   mode through the composed loss multiplies the adjoint $-1/p_2$ of $p_2$
-   by the second row of :eqref:`eq_mdl-softmax-jacobian`.
-    1. Simplify this product in exact arithmetic, and compare it with
-       $\mathbf p-\mathbf y$.
-    1. In float32 NumPy, evaluate the composed loss and the product as
-       written, without simplifying, for the integers
-       $t=80,81,\ldots,110$. For which $t$ is the loss finite, and for
-       which $t$ is the gradient finite? Explain both thresholds from the
-       range of float32, subnormal numbers included. Find the two
-       thresholds in float64 as well.
-    1. What do the fused loss and the fused gradient return over the same
-       range of $t$?
-   :exlabel:`ex_mdl-matrix-calculus-autodiff-composed-fused`
 
 1. [code] **Dual and complex steps.** Take the map
    $\mathbf f(x,y)=(x^2y,\ \sin(x+y))$ at $\mathbf x_0=(1,0.5)$ and the
@@ -1319,26 +1273,6 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
        $t\,\mathbf J\mathbf e_1$ as the $\varepsilon$-part exactly. Which
        difference between $\varepsilon^2=0$ and $i^2=-1$ causes the
        $O(t^2)$ error of the complex step?
-
-1. [code] **New primitives.** `Dual` supports addition, multiplication,
-   $\sin$, and $\exp$; `Var` supports addition and multiplication.
-    1. Derive the $\varepsilon$-part of $1/(c+d\varepsilon)$ for $c\neq0$
-       from :eqref:`eq_mdl-dual-rule` by solving
-       $(c+d\varepsilon)(c'+d'\varepsilon)=1$ for $c'$ and $d'$. Add
-       `__neg__`, `__sub__`, `__truediv__`, their reflected versions
-       `__rsub__` and `__rtruediv__`, and `log` to `Dual`. Which
-       differentiation rule does division encode? Differentiate the
-       sigmoid $\sigma(x)=1/(1+e^{-x})$ and the function $\log(1+x^2)$ at
-       $x=2$, and compare with $\sigma(x)(1-\sigma(x))$ and $2x/(1+x^2)$.
-    1. Add `exp` and `log` methods to `Var`, each with a backward closure
-       that adds the correct contribution to the adjoint of its input, and
-       add `__neg__` and `__sub__`, built from the existing addition and
-       multiplication. Which value does the closure of `exp` need, and
-       does it have to recompute that value?
-    1. Use the extended `Var` to differentiate the cross-entropy
-       $\ell(\mathbf z)=\log(e^{z_1}+e^{z_2}+e^{z_3})-z_2$ at
-       $\mathbf z=(1,-0.5,2)$, and compare with $\mathbf p-\mathbf y$ for
-       $\mathbf y=\mathbf e_2$.
 
 1. [code] **Compressed Jacobians.** A dense $m\times n$ Jacobian costs
    $\min(m,n)$ passes, and a sparse one can cost fewer. A JVP with the seed

@@ -1589,7 +1589,7 @@ the mercy of its draw, not a general architecture ranking.
        $\Delta = 1$, and what happens at $\Delta = 2.5$?
 
 1. **Horizons of S4D modes.** Exercise
-   14 of
+   :exref:`ex_attention-at-scale-decaying-state` of
    :numref:`sec_attention-at-scale` computes, for $\gamma = 0.99$, the lag
    at which the weight $\gamma^k$ of a scalar decay falls below $0.01$. For
    any decay $\gamma \in (0, 1)$, call the smallest such lag the *effective

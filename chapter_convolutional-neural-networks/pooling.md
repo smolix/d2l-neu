@@ -417,26 +417,6 @@ between a query and representation vectors rather than by spatial location.
    `pool2d(X, (2, 2), 'avg')`, where `pool2d` is the function defined at
    the start of this section.
 
-1. **Cost of pooling.** An input of shape
-   $c \times n_\textrm{h} \times n_\textrm{w}$ is pooled with a
-   $k_\textrm{h} \times k_\textrm{w}$ window, total padding
-   $(p_\textrm{h}, p_\textrm{w})$, and stride $(s_\textrm{h}, s_\textrm{w})$.
-    1. Count the comparisons that max-pooling performs and the additions
-       that average pooling performs. Take the output shape from
-       :eqref:`eq_conv_output_shape` with dilation 1.
-    1. Compare these counts with the number of multiply-adds of a
-       convolution with the same window, padding, and stride and with $c$
-       input and $c$ output channels. By roughly which factor is pooling
-       cheaper?
-
-1. [code] **Max versus average pooling.** Construct two synthetic
-   $4 \times 4$ patches with the same mean: one with a single high-value
-   outlier on a uniform background, and one with a smooth gradient. Apply
-   $2 \times 2$ max-pooling and average pooling with stride 2 to both and
-   report all four outputs. Using these numbers, describe one scenario in
-   which max-pooling is preferable and one in which average pooling is
-   preferable.
-
 1. **Pooling alternatives.**
     1. Do we need a separate minimum-pooling layer, or can it be expressed
        through an operation already in this section?

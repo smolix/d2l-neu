@@ -1171,20 +1171,6 @@ $|\det A|$ and the density thins by the same factor.
        bound $P(N \ge 5)$. Why does (c) not rule out this event?
    :exlabel:`ex_mdl-random-variables-markov-chebyshev`
 
-1. **Joint density on the unit square.** Let $p_{X,Y}(x, y) = x + y$ on
-   $[0, 1]^2$ and $p_{X,Y}(x, y) = 0$ elsewhere.
-    1. Verify that $p_{X,Y}$ integrates to one, and find the marginals
-       $p_X$ and $p_Y$ with :eqref:`eq_mdl-marginal`.
-    1. Compute $\textrm{Cov}(X, Y)$ and $\rho(X, Y)$. Are $X$ and $Y$
-       independent?
-    1. Find the conditional density $p_{Y \mid X}(y \mid x)$
-       :eqref:`eq_mdl-cond_density` and the conditional mean
-       $E[Y \mid X = x]$ :eqref:`eq_mdl-cond_exp`. Is the conditional mean
-       increasing or decreasing in $x$, and how does that agree with the
-       sign of the covariance? Check the tower property
-       :eqref:`eq_mdl-tower` by averaging the conditional mean over $p_X$.
-   :exlabel:`ex_mdl-random-variables-joint-unit-square`
-
 1. [code] **Moments of a mixture.** The
    `#random-variables-density-to-probability` cell integrates the mixture
    density $p(x) = 0.2\,\mathcal{N}(x; 3, 1) + 0.8\,\mathcal{N}(x; -1, 1)$.

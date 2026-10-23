@@ -280,14 +280,6 @@ scaling) and for chaining them into reproducible pipelines, see
 
 ## Exercises
 
-1. [code] **Inspecting a real dataset.** Load a dataset from the
-   [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets),
-   for example Abalone, and inspect it with `dtypes`, `describe`, and
-   `isna`. Report what fraction of the values are missing and what
-   fraction of the columns are numerical, categorical, or text, and state
-   which of the preprocessing steps of this section the dataset actually
-   needs.
-
 1. [code] **Indexing by name.** This section splits `data` by position
    with `data.iloc[:, :3]` and `data.iloc[:, 3]`. Suppose a new version of
    `house_tiny.csv` adds a column `YearBuilt` between `Area` and `Price`.
@@ -299,24 +291,6 @@ scaling) and for chaining them into reproducible pipelines, see
        original one. The pandas user guide on
        [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html)
        lists the options.
-
-1. [code] **Imputation strategies.** Fill the missing values in `NumRooms`
-   in three ways: with the column mean, with the column median, and with
-   the column mean plus a "was-missing" indicator column.
-    1. For the mean fill and the median fill, compute the mean and the
-       standard deviation of the filled column, compare them with those of
-       the observed values, and explain the direction of each change.
-    1. Suppose that in a larger dataset `NumRooms` is missing mostly for
-       large homes. State what a model sees for those homes after mean
-       imputation alone. Then explain how a model that predicts the price
-       as a weighted sum of its features plus a constant can use the
-       indicator column to correct its predictions for them.
-    1. State what each of the three treatments assumes about why the values
-       are missing.
-
-    *Adapted from Kaggle Learn,
-    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
-    Exercise 2.*
 
 1. **High-cardinality categories.** One-hot encoding turns a categorical
    column with $k$ distinct values into $k$ columns, plus one more with
@@ -350,23 +324,6 @@ scaling) and for chaining them into reproducible pipelines, see
        test rows. State what the training-only recipe produces for that
        feature on each split, and propose a fix.
 
-1. [code] **Memory per row.** Use `data.memory_usage(deep=True)` to find
-   how many bytes per row the `RoofType` column and the `Area` column of
-   `data` occupy in memory. Compare each with the average number of bytes
-   the same field takes in `house_tiny.csv`.
-
-1. [code] **Pandas alternatives, tried once.** NumPy and Pillow load data
-   without pandas.
-    1. Save `data` with `numpy.save` and reload it with
-       [`numpy.load`](https://numpy.org/doc/stable/reference/generated/numpy.load.html).
-       Report what happens when `numpy.load` runs with its default
-       arguments, the dtype of the array once it loads, and which
-       information in `data` the array no longer carries.
-    1. Load a photograph with [Pillow](https://python-pillow.org/), convert
-       it with `numpy.asarray`, and report the shape and dtype of the
-       result. Explain why a DataFrame of rows and named columns is a poor
-       container for this array.
-
 1. [extended] **A real messy dataset, end to end.** Take a messy public
    dataset, for example the San Francisco restaurant-inspection data used
    in Berkeley's Data 100. Run the full pipeline this section teaches:
@@ -378,16 +335,6 @@ scaling) and for chaining them into reproducible pipelines, see
 
     *Adapted from UC Berkeley Data 100,
     [homework 2A "Food Safety"](https://github.com/DS-100/sp25-student/blob/main/hw/hw02A/hw02A.ipynb).*
-
-1. [code] **Scaling limits.** ● Estimate how many rows of a table with the
-   columns of `house_tiny.csv` you can load with `pd.read_csv` on your
-   machine. Write synthetic CSV files with the four columns of
-   `house_tiny.csv` and $10^5$, $10^6$, and $10^7$ random rows. For each
-   file, time `pd.read_csv` and record the memory of the resulting
-   DataFrame. Extrapolate both measurements linearly. Find the number of
-   rows at which the DataFrame would fill your machine's memory and the
-   number at which loading would take ten minutes, and state which limit
-   comes first.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/28)

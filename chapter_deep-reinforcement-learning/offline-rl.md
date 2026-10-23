@@ -373,32 +373,6 @@ On-policy updates estimate expectations under the current policy; importance rat
 
 ## Exercises
 
-1. **Exploration priced into the values.** A start state $s$ offers two
-   actions. *Edge* moves with reward $0$ to a state $x$ beside a hole, and
-   *detour* moves with reward $0$ to a state $y$. In $x$, one action reaches
-   the goal with reward $1$ and the other falls into the hole with reward
-   $0$; both end the episode. From $y$, both actions move with reward $0$ to
-   a state $z$, and from $z$ both actions reach the goal with reward $1$.
-   The behavior policy acts like `d2l.epsilon_greedy` on its current table:
-   with probability $\epsilon$ it picks one of the two actions uniformly at
-   random, and otherwise the greedy one.
-    1. Compute $Q^*(s, a)$ and the SARSA fixed point $Q^{\pi_e}(s, a)$ of
-       :eqref:`eq_sarsa` for both actions, where $\pi_e$ is
-       $\epsilon$-greedy with respect to its own table. Which action does
-       each table prefer at $s$ for $\gamma = 0.95$ and $\epsilon = 0.3$?
-    1. For which $\epsilon$, as a function of $\gamma$, does SARSA's
-       preferred action at $s$ switch?
-    1. Compute the expected return from $s$ when the agent prefers *edge*
-       and when it prefers *detour*, under two deployments: it keeps
-       exploring with $\epsilon = 0.3$, or it always takes its preferred
-       action. Which table's preference is right for each deployment? Relate
-       the answer to the values of `claim` and `earned` printed for `Q_q`
-       and `Q_sarsa`.
-
-    *Adapted from Richard S. Sutton and Andrew G. Barto,
-    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
-    Example 6.6.*
-
 1. **Expected SARSA.** Expected SARSA replaces the sampled action $a'$ in
    :eqref:`eq_sarsa` by an average under a policy $\pi$,
    $$\delta = r + \gamma \sum_{a'} \pi(a' \mid s')\, Q(s', a') - Q(s, a).$$

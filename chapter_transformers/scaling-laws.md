@@ -751,14 +751,6 @@ settings of a shared collection of architectural components.
        of the shape of the frozen-rate curve is a tuning artifact.
    :exlabel:`ex_scaling-laws-frozen-learning-rate`
 
-1. **A row for the recipe table.** Choose an open-weights model that
-   :numref:`tab_modern-recipe` does not cover, for example Kimi K2
-   :cite:`Kimi.Team.2025`, and fill in every column of the table from the
-   architecture section of its report. Which cells map onto `d2l.GPT`
-   constructor flags, which need the `attn_factory` or `ffn_factory`
-   arguments of `d2l.TransformerBlock`, and which need machinery this
-   chapter has not built?
-
 1. [code] **A sixth size.** ● A sixth model for the sweep of
    :numref:`subsec_scaling-laws-five-sizes` has width 512, ten blocks, and
    eight heads, about 31.5M non-embedding parameters.
@@ -781,25 +773,6 @@ settings of a shared collection of architectural components.
    report the range of $E$ and $\alpha$ over the perturbations that admit
    an exact fit with $\alpha > 0$. What does the range say about
    estimating an irreducible loss from this sweep?
-
-1. **Twenty tokens per parameter.** ● The sweep of
-   :numref:`subsec_scaling-laws-five-sizes` gives every model 16.4M
-   training tokens drawn from 5.1M unique characters.
-    1. At twenty tokens per parameter, how many tokens would each model in
-       `Ns` want? Which models receive fewer, and which want more than the
-       corpus holds?
-    1. Validation loss falls at every step up in size, including the steps
-       between models that by your count receive too few tokens. Use
-       :eqref:`eq_chinchilla_law` with $D$ fixed to explain why a model
-       below twenty tokens per parameter still gains from more parameters,
-       and state what the ratio of :citet:`hoffmann2022training` does
-       determine.
-    1. :citet:`Muennighoff.Rush.Barak.ea.2023` find that up to about four
-       epochs of repeated data are nearly as valuable as unique data. The
-       largest model in `sizes` shows a train--validation gap after about
-       three passes. Compare its number of unique tokens per parameter
-       with the regime that study examined, and argue whether doubling the
-       number of passes would help the largest model.
 
 1. **Allocation from the fitted law.** ● Under the budget $C = 6ND$, the
    minimizer of :eqref:`eq_chinchilla_law` satisfies

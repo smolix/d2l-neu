@@ -841,15 +841,7 @@ The basic workflow is:
 ## Exercises
 
 :begin_tab:`mxnet`
-1. [code] **Repeated backward passes.** For an `x` with an attached
-   gradient, compute `y = 2 * np.dot(x, x)` inside `autograd.record()`,
-   call `y.backward()`, and then call `y.backward()` a second time. What
-   happens? Record `y` again and repeat both calls, this time passing
-   `retain_graph=True` to the first one. Explain what the backward pass
-   discards by default and why, and what the second call leaves in
-   `x.grad`.
-
-2. [code] **Detached intermediates.** Let `y = x * x` and
+1. [code] **Detached intermediates.** Let `y = x * x` and
    `u = y.detach()`, and consider `z = u * u`, `z = y * u`, and
    `z = y * y`. For each `z`, compute `y`, `u`, and `z` afresh inside an
    `autograd.record()` scope and call `z.backward()`. Before running any
@@ -857,7 +849,7 @@ The basic workflow is:
    `x.grad`. Check your predictions, and explain the ratio between the
    gradients for `z = y * u` and `z = y * y`.
 
-3. [code] **Manual parameter updates.** Let `w` be an array with an
+2. [code] **Manual parameter updates.** Let `w` be an array with an
    attached gradient, compute `loss = (w * w).sum()` inside
    `autograd.record()`, and call `loss.backward()`. Perform the update
    `w = w - 0.1 * w.grad` outside the recording scope and inspect
@@ -868,15 +860,7 @@ The basic workflow is:
 :end_tab:
 
 :begin_tab:`pytorch`
-1. [code] **Repeated backward passes.** For an `x` with
-   `requires_grad=True`, compute `y = 2 * torch.dot(x, x)`, call
-   `y.backward()`, and then call `y.backward()` a second time. What
-   happens? Reset `x.grad`, recompute `y`, and repeat both calls, this
-   time passing `retain_graph=True` to the first one. Explain what the
-   backward pass discards by default and why, and what the second call
-   leaves in `x.grad`.
-
-2. [code] **Detached intermediates.** Let `y = x * x` and
+1. [code] **Detached intermediates.** Let `y = x * x` and
    `u = y.detach()`, and consider `z = u * u`, `z = y * u`, and
    `z = y * y`. For each `z`, recompute `y` and `u`, reset `x.grad`, and
    call `backward` on the sum of the components of `z`. Before running any
@@ -884,7 +868,7 @@ The basic workflow is:
    `x.grad`. Check your predictions, and explain the ratio between the
    gradients for `z = y * u` and `z = y * y`.
 
-3. [code] **Manual parameter updates.** Let `w` be a tensor with
+2. [code] **Manual parameter updates.** Let `w` be a tensor with
    `requires_grad=True`, compute `loss = (w * w).sum()`, and call
    `loss.backward()`. Perform the update `w = w - 0.1 * w.grad` and
    inspect `w.requires_grad`, `w.grad_fn`, `w.is_leaf`, and `w.grad`.
@@ -894,22 +878,14 @@ The basic workflow is:
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. [code] **Repeated backward passes.** Record
-   `y = 2 * tf.tensordot(x, x, axes=1)` under
-   `with tf.GradientTape() as t:`, call `t.gradient(y, x)`, and then call
-   it a second time. What happens? A tape constructed with
-   `persistent=True` keeps its recorded operations so that `t.gradient`
-   can be called repeatedly. Explain what this costs in memory during
-   training, and when the memory held by a persistent tape is released.
-
-2. [code] **Detached intermediates.** Let `y = x * x` and
+1. [code] **Detached intermediates.** Let `y = x * x` and
    `u = tf.stop_gradient(y)` inside a persistent `tf.GradientTape` `t`.
    Before running any code, predict `t.gradient(z, x)` for each of
    `z = u * u`, `z = y * u`, and `z = y * y`, all computed inside `t`.
    Check your predictions, and explain the ratio between the results for
    `z = y * u` and `z = y * y`.
 
-3. [code] **Manual parameter updates.** Let `w` be a `tf.Variable`,
+2. [code] **Manual parameter updates.** Let `w` be a `tf.Variable`,
    compute `loss = tf.reduce_sum(w * w)` under a `tf.GradientTape` `t`,
    and obtain `g = t.gradient(loss, w)`.
     1. Perform the update `w = w - 0.1 * g` and inspect `type(w)`. Predict
@@ -921,19 +897,14 @@ The basic workflow is:
 :end_tab:
 
 :begin_tab:`jax`
-1. [code] **Repeated backward passes.** Call the function returned by
-   `jax.grad` twice on the same input. Why does the second call behave no
-   differently from the first? What does this tell you about where JAX
-   keeps the information needed for differentiation?
-
-2. [code] **Detached intermediates.** Let `y = lambda x: x * x` and
+1. [code] **Detached intermediates.** Let `y = lambda x: x * x` and
    `u = jax.lax.stop_gradient(y(x))`. Before running any code, predict
    `grad(lambda x: z(x).sum())(x)` for each of `z = lambda x: u * u`,
    `z = lambda x: y(x) * u`, and `z = lambda x: y(x) * y(x)`. Check your
    predictions, and explain the ratio between the results for
    `z = lambda x: y(x) * u` and `z = lambda x: y(x) * y(x)`.
 
-3. [code] **Manual parameter updates.** Let `w = jnp.arange(4.0)` and
+2. [code] **Manual parameter updates.** Let `w = jnp.arange(4.0)` and
    `g = lambda x: (w * x).sum()`, which reads `w` from the enclosing
    scope. Predict `grad(g)(x)`, check, and state with respect to which
    array `grad` differentiates. Then rewrite `g` so that `grad` returns
@@ -943,7 +914,7 @@ The basic workflow is:
    function.
 :end_tab:
 
-4. [code] **From scalar to vector input.** Replace the scalar input `a` of
+3. [code] **From scalar to vector input.** Replace the scalar input `a` of
    the function `f` defined in :numref:`subsec_autograd_control_flow` by a
    random vector of length 5, and differentiate the sum of the entries of
    `d = f(a)` with respect to `a`.

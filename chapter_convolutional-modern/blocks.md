@@ -788,18 +788,6 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
 
 ## Exercises
 
-1. [code] **VGG-16 and VGG-19.** Configurations D and E in Table 1 of
-   :citet:`Simonyan.Zisserman.2014` are the networks known as VGG-16 and
-   VGG-19. Write their `arch` tuples, instantiate both with the `VGG`
-   class, and report their parameter counts against VGG-11.
-
-1. [code] **NiN block design.** Each NiN block follows its spatial
-   convolution with two $1\times 1$ convolutions. Build variants of `NiN`
-   with three and with one $1 \times 1$ convolution per block, and report
-   the parameter count, validation accuracy, and training time of all
-   three networks. Which count would you choose, and which measurement
-   decides the choice?
-
 1. [code] **Global average pooling versus dense.** Replace the global
    average pooling of `NiN` by a fully connected layer that maps the
    flattened $10 \times 5 \times 5$ output of the last `nin_block` to the
@@ -809,11 +797,6 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
     1. Shift every resized $224 \times 224$ validation image horizontally
        by 32 pixels, filling with zeros, and compare how much the
        validation accuracy of each network drops.
-
-1. **One-step channel reduction.** What are possible problems with
-   reducing the $384 \times 5 \times 5$ representation to a
-   $10 \times 5 \times 5$ representation in one step, as the final NiN
-   block does?
 
 1. **Depthwise Inception.** Suppose the four branches of the first body
    block of `GoogleNet`, which maps 192 input channels to
@@ -870,14 +853,6 @@ The stem-body-head decomposition that GoogLeNet made explicit is now a common vo
    inputs under the procedure used for `NiN` and compare validation
    accuracy. What does the result say about the value of mixing kernel
    sizes within one block?
-
-1. [code] **GoogLeNet stem redesign.** ● Redesign the stem of `GoogleNet`
-   so that the first group of Inception blocks operates on at least a
-   $14 \times 14$ feature map of a $28 \times 28$ input, and adjust the
-   body and head as needed. Train the redesigned network on
-   $28 \times 28$ inputs and `GoogleNet` on $96 \times 96$ inputs, both
-   under the procedure used for `NiN`, report the changes, and compare
-   validation accuracy and time per epoch.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/77)

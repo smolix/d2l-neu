@@ -1081,21 +1081,6 @@ for a gradient.
        valid even when $\mathbb E[X]=\infty$? Check the formula on the
        density $\lambda e^{-\lambda x}$ for $x\ge 0$.
    :exlabel:`ex_mdl-integral-calculus-order-of-integration`
-1. **When the order matters.** The function
-   $f(x,y)=(x^2-y^2)/(x^2+y^2)^2$ on $[0,1]^2$ shows that Fubini's theorem
-   :eqref:`eq_mdl-fubini` needs absolute integrability.
-    1. Verify that
-       $\frac{\partial}{\partial x}\frac{-x}{x^2+y^2}=f(x,y)$, and use it to
-       show that $\int_0^1\bigl(\int_0^1 f\,dx\bigr)\,dy=-\tfrac{\pi}{4}$.
-       Obtain the other order from the symmetry $f(y,x)=-f(x,y)$.
-    1. Show that $\int_{[0,1]^2}|f|\,dx\,dy=\infty$ by integrating $|f|$ in
-       polar coordinates over the quarter disc of radius $1$, which lies
-       inside the square.
-    1. A midpoint grid sum of $f$ on an $m\times m$ grid over the square adds
-       finitely many numbers, so its value does not depend on the order of
-       summation. What is its value for every $m$? Why does refining the
-       grid not single out either iterated integral?
-   :exlabel:`ex_mdl-integral-calculus-fubini-counterexample`
 1. **Gaussian normalizers and moments.** The Gaussian integral
    :eqref:`eq_mdl-gaussian-integral` normalizes every Gaussian density by a
    change of variables. Let

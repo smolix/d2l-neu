@@ -318,22 +318,6 @@ The capacity argument explains the continued use of adversarial terms in diffusi
        error on the data of (a) and (b), using three seeds for $r = \tfrac12$,
        and compare the curves with your predictions. Under which condition on
        $p(y \mid x)$ is the conditional median a valid output?
-1. **Where the ambiguity lies.** Consider four tasks, each learned with
-   squared error by a capacity-limited student: denoising photographs
-   corrupted by Gaussian noise of small standard deviation, $4\times$
-   super-resolution of photographs, colorization of grayscale photographs,
-   and class-conditional generation of $32 \times 32$ images whose only input
-   is the class label.
-    1. For each task, which parts of the output does the input determine,
-       and which remain ambiguous? Predict the visible defect of the
-       squared-error output.
-    1. Rank the tasks by how much an adversarial term should improve the
-       outputs.
-    1. Among few-step distillation methods, :citet:`Lin.Wang.Yang.2024`
-       find small differences in whole-image FID and larger ones in
-       patch-level FID. For which of the four tasks should the same pattern
-       appear when a squared-error student is compared with an adversarially
-       trained one?
 1. [code] **Pointwise plus adversarial.** ADD trains its student on the sum
    of an adversarial loss and a weighted pointwise distillation loss
    :cite:`Sauer.Lorenz.Blattmann.ea.2023`.

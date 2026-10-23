@@ -754,20 +754,6 @@ chapter rather than replacing it.
 
 ## Exercises
 
-1. **The null label.** The network learns its unconditional prediction only
-   from the training examples whose label was replaced by the null label
-   $\varnothing$.
-    1. Suppose that label dropout were omitted, so that the null label never
-       occurs in training. Which term of :eqref:`eq_diffusion-cfg` would then
-       come from an untrained part of the network? What would `sample`
-       compute at $\gamma = 0$, and what at $\gamma = 1$?
-    1. Why would a dropout probability close to one also harm guided
-       sampling, and which of the two predictions would suffer?
-    1. Count the forward and backward passes through each network per
-       reverse step of `sample` and of `sample_classifier_guided`, for a
-       batch of $n$ requests. For which values of $\gamma$ could `sample`
-       drop half of its batched forward pass?
-   :exlabel:`ex_image-diffusion-null-label`
 1. **Equivalent guidance rules.** Suppose that the conditional and the
    unconditional prediction at step $t$ are exact minimizers of the simple
    loss of :numref:`sec_diffusion-ddpm`, so that by

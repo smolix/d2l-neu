@@ -521,16 +521,6 @@ belong to deployment rather than training.
        ratio with the times that the code of :numref:`subsec_comp-fusion`
        measures, and account for the differences.
 
-1. [code] **Break-even step count.** The compiled training step of
-   :numref:`subsec_comp-wholestep` costs a one-time compilation time $t_0$
-   and lowers the steady-state time per step from $t_e$ to $t_c$.
-    1. Derive the number of steps $N^*$ after which compilation has saved
-       more time than it cost. Measure $t_0$, $t_e$, and $t_c$ with the
-       section's code, making sure that $t_0$ excludes the execution of the
-       step itself, and evaluate $N^*$.
-    1. Repeat the measurement of $t_0$ in a fresh Python process without
-       changing the code, and explain any change.
-
 1. [code] **Fusion behind a matmul.** ● Compilation leaves a large matrix
    product unchanged but fuses the elementwise chain that follows it.
    Consider `gelu_ish(a @ a)` for an $n \times n$ matrix `a` in bf16 on a
@@ -565,7 +555,7 @@ belong to deployment rather than training.
        as in :eqref:`eq_online-softmax`.
 
 :begin_tab:`pytorch`
-8. [code] **Compiling the optimizer.** ● `torch.compile(net)` in
+7. [code] **Compiling the optimizer.** ● `torch.compile(net)` in
     :numref:`subsec_comp-wholestep` compiles the forward and the backward
     pass but leaves `opt.step()` eager.
     1. Apply `torch._dynamo.explain` to `train_step` itself, called with
@@ -584,7 +574,7 @@ belong to deployment rather than training.
 :end_tab:
 
 :begin_tab:`jax`
-8. [code] **Trace-time constants.** The Python body of a jitted function
+7. [code] **Trace-time constants.** The Python body of a jitted function
     runs only while it is traced (:numref:`subsec_comp-capture`).
     1. Jit a function that returns `x + np.random.randn()`, call it twice,
        and print its jaxpr. Explain the two outputs.
@@ -594,7 +584,7 @@ belong to deployment rather than training.
        rewrite the function so that every step draws a fresh mask.
 :end_tab:
 
-9. [code] **Overhead crossover.** ● Use the stack of 60 layers of width
+8. [code] **Overhead crossover.** ● Use the stack of 60 layers of width
    256 at batch size 64 from :numref:`subsec_comp-overhead`, with its eager
    and its compiled version. Compilation removes the per-kernel launch
    latency of :numref:`fig_latency_ladder` from the critical path, but not
@@ -641,7 +631,7 @@ belong to deployment rather than training.
        under your partition.
 
 :begin_tab:`jax`
-11. [code] **Unrolled loops.** ● `deep_fwd` of
+10. [code] **Unrolled loops.** ● `deep_fwd` of
     :numref:`subsec_comp-overhead` loops over a Python list of weight
     matrices, so tracing unrolls the loop into one long sequence of
     operations.

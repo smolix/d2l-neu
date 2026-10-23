@@ -1513,21 +1513,6 @@ trajectory.
        with spectral radius $1/2$ and $\|\mathbf{A}\|_2>M$.
    :exlabel:`ex_mdl-eigendecomposition-spectral-radius-norms`
 
-1. **Transient peak.** Let $\mathbf{A}$ be the non-normal matrix
-   :eqref:`eq_mdl-nonnormal-example`.
-    1. Derive the closed form of $(\mathbf{A}^k)_{12}$ stated in
-       :numref:`sec_mdl-nonnormal-transient`, by induction or by
-       diagonalization.
-    1. Treat $k$ as a continuous variable and find the maximizer of this
-       entry. Which integer $k$ maximizes it? Compare with the $k$ at which the
-       code of :numref:`sec_mdl-nonnormal-transient` finds the largest
-       $\|\mathbf{A}^k\|_2$.
-    1. Evaluate the bound :eqref:`eq_mdl-nonnormal-power-bound` at that $k$,
-       with the eigenvector condition number printed by the same code. How far
-       is it from the true norm? Why can no bound of the form
-       $C\rho(\mathbf{A})^k$ locate the peak?
-   :exlabel:`ex_mdl-eigendecomposition-transient-peak`
-
 1. **Complex symmetric matrices.** The spectral theorem of
    :numref:`subsec_mdl-spectral-theorem` concerns real symmetric matrices.
    The complex matrix

@@ -712,16 +712,6 @@ remains the sensible default for the models we build next.
        points, and verify it on the four inputs.
     1. Show that no network with a single ReLU hidden unit and a linear output
        can compute XOR.
-1. **Activation derivatives.** Compute the following derivatives.
-    1. The derivatives of the pReLU activation function with respect to its
-       input $x$ and with respect to its slope $\alpha$, for $x \neq 0$.
-    1. The derivative of the Swish activation function
-       $x \operatorname{sigmoid}(\beta x)$ with respect to $x$. For fixed
-       $x \neq 0$, find its limits as $\beta \to 0$ and as
-       $\beta \to \infty$, and identify the function that Swish approaches
-       in each limit.
-1. **Piecewise linearity.** Show that an MLP using only ReLU (or pReLU)
-   constructs a continuous piecewise linear function.
 1. **Sigmoid and tanh.** Sigmoid and tanh are very similar.
     1. Show that $\operatorname{tanh}(x) + 1 = 2 \operatorname{sigmoid}(2x)$.
     1. Show that for every MLP with tanh hidden activations there is an MLP

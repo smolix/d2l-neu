@@ -1722,7 +1722,7 @@ $$P(X > s+t \mid X > s) = e^{-\lambda t} = P(X > t).$$
 @distributions-exponential
 
 ::: {.d2l-note .rule}
-The only memoryless continuous law (converse: Exercise 4); the continuous
+The only memoryless continuous law (converse: Exercise :exref:`ex_mdl-distributions-memoryless-converse`); the continuous
 partner of the Poisson, and the source of $X=-\log U/\lambda$ sampling.
 :::
 :::

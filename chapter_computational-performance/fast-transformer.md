@@ -1307,25 +1307,7 @@ model, one configuration at a time.
        resolve?
 
 :begin_tab:`pytorch`
-2. [code] **Retrace in the window.** The stream `batches` drops the final
-   batch of every epoch, which has fewer rows than the others.
-    1. The training split holds 10,000 windows. Compute the number of
-       batches per epoch at batch 64 and the size of the last batch. On a
-       fresh stream without the filter, at which step does the first short
-       batch arrive, and does it fall into the 60 warm-up steps or into the
-       100 timed steps of `throughput`?
-    1. Remove the condition `X.shape[0] == dm.batch_size` from `batches`.
-       Call `torch._dynamo.reset()`, so that no graph compiled earlier for
-       another batch size remains, turn on
-       `torch._logging.set_logs(recompiles=True)`, and measure
-       Configuration 1 of :numref:`subsec_ft-rungs` on a fresh stream.
-       Compare the throughput with `tput1`, and relate the difference to
-       the recompilation that the log reports.
-    1. Time a second window that contains the short batch of the next
-       epoch. Compare its throughput with the first window and with
-       `tput1`, and explain both comparisons from the log.
-
-3. [code] **Parity tolerance.** Configuration 1 of
+2. [code] **Parity tolerance.** Configuration 1 of
     :numref:`subsec_ft-rungs` asserts that `compiled(X)` and `model(X)`
     agree within `atol=1e-2`, and attributes the residue to tf32 matrix
     products whose summation order the fusion changes.
@@ -1341,25 +1323,7 @@ model, one configuration at a time.
 :end_tab:
 
 :begin_tab:`jax`
-2. [code] **Retrace in the window.** The stream `batches` rounds every
-   epoch down to whole batches.
-    1. The training split holds 10,000 windows. Compute the number of
-       batches per epoch at batch 64 and the size of the last batch if the
-       epoch were not rounded. On a fresh stream without the rounding, at
-       which step does the first short batch arrive, and does it fall into
-       the 60 warm-up steps or into the 100 timed steps of `throughput`?
-    1. Replace `n = (len(X) // B) * B` in `batches` by `n = len(X)`. Call
-       `jax.clear_caches()`, so that no program compiled earlier for
-       another batch size remains, turn on
-       `jax.config.update('jax_log_compiles', True)`, and measure
-       Configuration 1 of :numref:`subsec_ft-rungs` on a fresh stream.
-       Compare the throughput with `tput1`, and relate the difference to
-       the compilation that the log reports.
-    1. Time a second window that contains the short batch of the next
-       epoch. Compare its throughput with the first window and with
-       `tput1`, and explain both comparisons from the log.
-
-3. [code] **Parity tolerance.** Configuration 1 of
+2. [code] **Parity tolerance.** Configuration 1 of
     :numref:`subsec_ft-rungs` asserts that `fwd(model, X)` and `model(X)`
     agree within `atol=1e-2`, and attributes the residue of a few times
     $10^{-4}$ to tf32 arithmetic whose summation order the fusion changes.
@@ -1373,7 +1337,7 @@ model, one configuration at a time.
        that check can use `atol=1e-6`.
 :end_tab:
 
-4. [code] **Model FLOPs utilization.** The GPT of
+3. [code] **Model FLOPs utilization.** The GPT of
    :numref:`subsec_ft-subject` has $L = 6$ blocks of width $d = 512$ and
    reads contexts of $T = 128$ tokens. Up to the rounding of the SwiGLU
    width, each block holds $12d^2$ weights in its matrix products, and
@@ -1474,7 +1438,7 @@ model, one configuration at a time.
        batch that checkpointing admits repays that cost.
 
 :begin_tab:`pytorch`
-9. [code] **bf16 at width 256.** ● At `num_hiddens=256`,
+8. [code] **bf16 at width 256.** ● At `num_hiddens=256`,
    :numref:`subsec_ft-subject` reports that bf16 slows the compiled step
    down.
     1. Consider the product of the $8192 \times 256$ activations of one
@@ -1491,7 +1455,7 @@ model, one configuration at a time.
        for the measured ratio of Configuration 2 to Configuration 1 kernel
        by kernel, and compare it with the prediction.
 
-10. [code] **Attention kernel.** `d2l.GPT` computes attention with
+9. [code] **Attention kernel.** `d2l.GPT` computes attention with
     `F.scaled_dot_product_attention`, which selects a fused kernel when its
     inputs allow one.
     1. For a batch of $B$ sequences of $T$ tokens and 8 heads, compute the
@@ -1508,7 +1472,7 @@ model, one configuration at a time.
        writes the scores to memory. Relate the four results to the first
        sub-problem.
 
-11. [code] **Data-parallel overlap.** ● Let $\phi$ be the
+10. [code] **Data-parallel overlap.** ● Let $\phi$ be the
     fraction of $t_{\text{comm}}$ that DDP hides under the backward pass,
     so that a step on $k$ GPUs takes
 
@@ -1529,7 +1493,7 @@ model, one configuration at a time.
 :end_tab:
 
 :begin_tab:`jax`
-9. [code] **Precision audit.** The receipts of Configuration 2 in
+8. [code] **Precision audit.** The receipts of Configuration 2 in
    :numref:`subsec_ft-rungs` check the dtype of one layer's output. An
    audit of the lowered program checks every matrix product of the step.
     1. Write a function that lowers a jitted step with `.lower(...)`, reads
@@ -1540,7 +1504,7 @@ model, one configuration at a time.
        gradients of `step_bf16` arise, and name the forward operation whose
        transpose each of them is.
 
-10. [code] **Attention kernel.** ● `d2l.GPT` calls
+9. [code] **Attention kernel.** ● `d2l.GPT` calls
     `jax.nn.dot_product_attention` without naming an implementation, and
     the default lowering writes the score matrices to memory. The fused
     kernel of :numref:`sec_attention-at-scale` is selected by
@@ -1560,7 +1524,7 @@ model, one configuration at a time.
        attention implementations. Relate the four results to the first
        sub-problem.
 
-11. [code] **Data-parallel overlap.** ● Let $\phi$ be the
+10. [code] **Data-parallel overlap.** ● Let $\phi$ be the
     fraction of $t_{\text{comm}}$ that the compiled step hides under
     computation, so that a step on $k$ GPUs takes
 
@@ -1580,7 +1544,7 @@ model, one configuration at a time.
        Explain the trend by the terms of :eqref:`eq_dp_cost`.
 :end_tab:
 
-12. [extended] **Another model.** ●● Apply the method of this section
+11. [extended] **Another model.** ●● Apply the method of this section
    to `MambaLM` of :numref:`subsec_capstone` or to `d2l.ViT` of
    :numref:`sec_vision-transformer`.
     1. Write a benchmark contract in the form of the table in
@@ -1595,7 +1559,7 @@ model, one configuration at a time.
        configuration targets.
 
 :begin_tab:`jax`
-13. [code] **Sharded parameters.** ● Configuration 5 of
+12. [code] **Sharded parameters.** ● Configuration 5 of
     :numref:`subsec_ft-rungs` replicates the model and the optimizer state
     on every device and shards only the batch.
     1. Change `dp_setup` so that every array of the model and optimizer

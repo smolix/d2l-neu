@@ -583,22 +583,6 @@ it at all.
        kind trained in :numref:`sec_basic_gan`. Which of the two combinations
        can be sampled directly from the two generators, and which cannot?
    :exlabel:`ex_limits-products-mixtures`
-1. **Which quantities need the normalizer.** For an energy-based model
-   :eqref:`eq_diffusion-ebm` on $\mathbb{R}^d$, decide for each quantity
-   below whether it follows from $E_{\boldsymbol{\theta}}$ alone, needs only
-   an integral over one coordinate, or needs $Z(\boldsymbol{\theta})$.
-   Justify each answer in one sentence.
-    1. Whether a test point is more probable under the model than under a
-       second energy-based model with a different energy.
-    1. The conditional density $p_{\boldsymbol{\theta}}(x_1 \mid x_2, \ldots, x_d)$
-       of the first coordinate given the others.
-    1. The most probable value of $x_1$ given $x_2, \ldots, x_d$.
-    1. The probability that a sample falls in a given region.
-    1. The divergence
-       $\mathrm{KL}(p_{\boldsymbol{\theta}} \,\|\, p_{\boldsymbol{\theta}}^{(\tau)})$,
-       where $p_{\boldsymbol{\theta}}^{(\tau)}$ has the energy
-       $E_{\boldsymbol{\theta}} / \tau$ for a temperature $\tau > 0$.
-   :exlabel:`ex_limits-which-quantities`
 1. **The log-normal weight.** In the Gaussian example of
    :numref:`subsec_diffusion-limits-monte-carlo`, the target is
    $\mathcal{N}(\mathbf{m}, I)$ up to normalization and the proposal is

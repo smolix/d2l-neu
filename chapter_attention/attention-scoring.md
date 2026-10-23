@@ -646,24 +646,6 @@ form used in the original neural alignment model.
        weights, and what preference over the keys can it express that the
        bias-free score cannot?
 
-1. [code] **Distance-based attention.** Equation
-   :eqref:`eq_gaussian-expansion` writes the Gaussian score as a dot product
-   minus two squared norms, and the section drops the key-norm term to
-   arrive at :eqref:`eq_dot_product_attention`.
-    1. Modify `DotProductAttention` so that it keeps the term
-       $-\tfrac{1}{2}\|\mathbf{k}_i\|^2$, using one batch matrix
-       multiplication for the dot products and a broadcast of the $m$
-       squared key norms, without forming the $n \times m \times d$ tensor
-       of differences $\mathbf{q} - \mathbf{k}_i$. Apply the $1/\sqrt{d}$
-       scaling to both terms.
-    1. Verify on random inputs that the resulting weights equal those of a
-       direct evaluation of $\exp(-\|\mathbf{q} - \mathbf{k}_i\|^2 /
-       (2\sqrt{d}))$ normalized over the keys.
-    1. Compare the weights of the two scoring rules on the inputs of
-       :numref:`subsec_dot-product-attention-class`, ten random
-       two-dimensional keys per example. For which keys do the rules
-       disagree most, and why?
-
 1. [code] **The softmax Jacobian.** `attention_stats` measures the
    Frobenius norm of the Jacobian :eqref:`eq_softmax-jacobian`.
     1. Derive :eqref:`eq_softmax-jacobian` from
@@ -689,12 +671,6 @@ form used in the original neural alignment model.
        scores are overwritten with $-\infty$ instead. Trace both cases
        through the subtraction of the row maximum that a numerically stable
        softmax performs.
-    1. An older codebase overwrites excluded scores with the constant
-       $-10^6$ and computes its scores in float16, whose largest finite
-       magnitude is about $6.55 \times 10^4$. Determine the value that the
-       constant takes when it is rounded to float16, and state what the
-       softmax of such a codebase returns for a fully masked row and for a
-       row with at least one valid key.
     1. In a self-attention layer, whose queries, keys, and values all come
        from the same sequence, let a query at a padding position have no
        valid key, as the composite masks of :numref:`subsec_composing-masks`
@@ -725,31 +701,6 @@ form used in the original neural alignment model.
        biases in single precision, and determine what the softmax returns
        for a row in which every key is excluded by both masks and for a row
        in which every key is excluded but some keys by only one mask.
-
-1. [code] **Two masking conventions.** `masked_softmax` describes the valid
-   keys of a query by a prefix length, whereas the masks of
-   :numref:`subsec_composing-masks` and many libraries use a boolean tensor
-   in which `True` marks a pair the query may attend to.
-    1. Write a converter from `valid_lens` of shape (batch size,) or (batch
-       size, number of queries) to a boolean mask of shape (batch size,
-       number of queries, number of keys), and a variant of `masked_softmax`
-       that takes such a mask.
-    1. Verify on ten random padding and causal configurations that both
-       routes produce identical weights, including for fully masked rows.
-    1. Pack two documents of lengths $4$ and $2$ into one row of length
-       $6$. Build the boolean mask that combines the causal mask with the
-       block-diagonal mask of document indices, and verify that attention
-       with your variant gives each document the outputs it receives when
-       it is processed alone with a causal mask.
-    1. Which of the following masks can be expressed by one prefix length
-       per query: padding, causal, padding combined with causal, the packed
-       mask, and a causal sliding window? State what the boolean interface
-       costs in memory for $B$ sequences of length $n$ relative to
-       `valid_lens`.
-
-    *Adapted from Stanford CS336,
-    [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
-    Problem (scaled_dot_product_attention).*
 
 1. [code] **Attention dropout.** `DotProductAttention` applies dropout with
    rate $p$ to the attention weights, and the weights it exposes for
@@ -831,20 +782,6 @@ form used in the original neural alignment model.
        of the three queries. Check the scaling you derived, and state what
        the result for $\epsilon = 1$ implies for additive attention at
        initialization.
-
-1. [code] **Additive versus dot-product cost.** ● Score $n$ queries of
-   width $d_q$ against $m$ keys of width $d_k$ with the additive rule
-   :eqref:`eq_additive-attn` of hidden size $h$, and $n$ queries against
-   $m$ keys of a shared width $d$ with :eqref:`eq_dot_product_attention`.
-    1. Count the parameters, the floating-point operations, and the size of
-       the largest intermediate tensor for each rule.
-    1. Implement a batched version of :eqref:`eq_additive-attn` that
-       produces weights of shape (batch size, $n$, $m$), and check it
-       against the unbatched code of :numref:`subsec_learned-alignment`.
-    1. Time both rules for a batch of $4$ sequences with $n = m = 512$ at
-       $d_q = d_k = d = h = 64$ and at $d_q = d_k = d = h = 256$. Relate
-       the ratio of the two times
-       to your counts of operations and of intermediate memory.
 
 1. [extended] **A learned alignment.** ●
    :citet:`Bahdanau.Cho.Bengio.2014` observed that attention weights trained

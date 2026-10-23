@@ -416,22 +416,6 @@ DAgger collects states from the learner and obtains expert labels for them, addr
 
 ## Exercises
 
-1. [code] **Greedy or sampled actions.** The clone `bc` acts with
-   `act_greedy`, which breaks the four-way tie at an undemonstrated state in
-   favor of action 0, *left*.
-    1. Evaluate `bc` over 1,000 episodes with `bc.act` in place of
-       `bc.act_greedy`, passing `rng=np.random.default_rng(0)` to
-       `d2l.evaluate`, and compare the success rate with that of the greedy
-       rule. Which states account for the difference?
-    1. Draw a larger dataset with `demonstrations(10)`. Replace each expert
-       label independently with probability $\rho$ by an action drawn
-       uniformly at random, refit with `clone`, and evaluate both rules for
-       $\rho \in \{0, 0.1, 0.3\}$. What does the cross-entropy fit converge
-       to at a state with many noisy labels? Explain the success rates of
-       both rules as $\rho$ grows from these fitted probabilities.
-    1. At which states, if any, does the label noise change the greedy
-       action, and what do these states have in common?
-
 1. **The chain in closed form.** In the chain experiment of
    :numref:`fig_rl_compounding_error`, an imitator disagrees with the expert
    independently with probability $\varepsilon$ at each step

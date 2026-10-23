@@ -401,39 +401,6 @@ chapter builds cheap, gradient-estimated stand-ins for that ideal.
        Explain what the iterates do close to $0$ at any fixed $\eta$, and
        why the stopping test is reached late or not at all.
 
-1. [code] **Bisection line search.** A convex differentiable $f$ on $[a, b]$
-   can be minimized by bisection: evaluate the sign of $f'$ at the midpoint
-   and keep $[a, (a+b)/2]$ or $[(a+b)/2, b]$ accordingly.
-    1. Explain why the sign of $f'$ at one point suffices to choose the
-       half, whereas comparing the values $f(a)$, $f((a+b)/2)$, and $f(b)$
-       does not.
-    1. Derive the number of iterations needed to shrink the interval to a
-       width $\epsilon$.
-    1. Implement the method and apply it to
-       $f(x) = \log(\exp(x) + \exp(-2x - 3))$ on $[-5, 5]$ until the
-       interval is narrower than $10^{-6}$. Modify `gd` to start at
-       $x_0 = 5$ and to stop once $|f'(x)| < 10^{-6}$, find the fixed
-       learning rate that minimizes its step count on the same function,
-       and compare that count with the bisection count.
-
-1. [code] **Counting local minima.** The objective
-   $f(x) = x\cos(cx)$ with $c = 0.15\pi$ of :numref:`subsec_gd-local-minima`
-   has many local minima, each with its own basin of attraction.
-    1. Locate every local minimum of $f$ in the open interval $(-20, 20)$
-       and its value. How does the number of local minima grow as the
-       interval widens?
-    1. Let `gd` take its starting point as an argument. Run 20 steps from
-       $x_0 \in \{-10, 5, 10\}$ at $\eta \in \{0.5, 1, 2\}$ and record
-       the minimum each run ends near, if any. Which combinations reach the
-       lowest local minimum in $(-20, 20)$, and why does the largest
-       learning rate change basins?
-
-1. [code] **Damped Newton steps.** In :numref:`subsec_gd-newton`, `newton`
-   heads for a maximum of $f(x) = x\cos(cx)$ unless damped. On
-   $x\cos(cx)$ from $x_0 = 10$, sweep the damping
-   $\eta \in \{0.25, 0.5, 0.75, 1\}$. Which runs end at a minimum, and what
-   is the sign of `f_hess` along the paths of those that do not?
-
 1. [code] **Diagonal preconditioning.** The update
    :eqref:`eq_gd-diag-precond` of :numref:`subsec_gd-preconditioning`
    gives every coordinate its own learning rate.

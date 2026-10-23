@@ -747,25 +747,6 @@ version to test accuracy.
        the analogous count for both values of $p$, and explain why it, rather
        than $n$ alone, decides whether the delta method can be trusted.
 
-1. [code] **Bootstrap of the mean.** The bootstrap substitutes the empirical
-   distribution $\hat F_n$ for the unknown $F$, and this substitution can be
-   carried out exactly for the mean.
-    1. Condition on the observed sample $x_1,\ldots,x_n$. Show that the mean
-       $\bar x^*$ of a bootstrap resample has conditional expectation $\bar x$
-       and conditional variance $s_0^2/n$, where $s_0^2$ is the
-       divide-by-$n$ variance. Conclude that as $B\to\infty$ the bootstrap
-       standard error equals $\sqrt{(n-1)/n}$ times the closed-form standard
-       error $\hat\sigma_n/\sqrt n$.
-    1. Change the statistic in the `#statistics-bootstrap` cell from the
-       median to the mean, and compare the bootstrap standard error with the
-       closed-form one of the `#statistics-bootstrap-contrast` cell. Can
-       $B=10{,}000$ resamples resolve the factor $\sqrt{(n-1)/n}$ at
-       $n=200$? Repeat with the first $5$ observations and $B=100{,}000$.
-
-   *Adapted from Larry Wasserman,
-   [All of Statistics](https://link.springer.com/book/10.1007/978-0-387-21736-9),
-   Chapter 8, Exercise 5.*
-
 1. [code] **Bootstrap of the maximum.** Let $x_1,\ldots,x_n$ be iid
    $U(0,\theta)$, let $\hat\theta=\max_i x_i$, and let
    $\hat\theta^*$ be the maximum of a bootstrap resample.

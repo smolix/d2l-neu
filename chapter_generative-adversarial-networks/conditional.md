@@ -1268,7 +1268,7 @@ Three axes: fidelity, diversity, condition alignment.
 - Alignment can be high for a generator that returns one recognizable image
   per class. This is **within-class collapse**.
 - The conditional objective penalizes this failure, but alignment does not.
-  Per-class metrics are needed to detect it (Exercises 4--5).
+  Per-class metrics are needed to detect it.
 :::
 
 ::: {.slide title="Translation as Conditioning"}

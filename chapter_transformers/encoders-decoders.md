@@ -1058,21 +1058,6 @@ and decoder-only models for general autoregressive generation.
        with $2L$ blocks. Which prefix model matches the encoder--decoder in
        parameters, and which in compute?
 
-1. [code] **A leaky objective.** Without a mask, next-token prediction is a
-   copying exercise for an encoder, because position $t$ can read token
-   $t + 1$ directly. Train `TransformerEncoder` on next-token prediction
-   anyway: feed it the unmodified windows `X`, score its predictions at
-   every position against the shifted targets `Y` that the data loader
-   returns, and train for 2000 steps with the optimizer settings used for
-   `model`.
-    1. Predict the validation loss at each position before training. Then
-       plot the measured loss by position as in
-       :numref:`subsec_mlm-loss-by-position`.
-    1. Compare the loss at position 63 with the loss of `model` at the same
-       position. For each of the two models, count the training targets per
-       window that cannot be read off the input, at position 63 and in
-       total, and explain the difference.
-
 1. [code] **The masking recipe.** `mask_tokens` masks 15% of the characters
    and writes `<mask>` at every masked position. Evaluate every variant below
    with the evaluation of :numref:`subsec_mlm-loss-by-position`, so that only

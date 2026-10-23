@@ -497,23 +497,6 @@ for which they are needed.
     [An Introduction to Statistical Learning](https://www.statlearning.com/),
     Exercise 4.12.*
 
-1. **Coding three classes.** Assume that we have three classes which occur
-   with equal probability, i.e., the probability vector is
-   $P = (1/3, 1/3, 1/3)$, whose entropy is $\log_2 3 \approx 1.585$ bits.
-   See :numref:`sec_mdl-information_theory` for the information-theoretic
-   background.
-    1. A fixed-length binary code, in which every codeword has the same
-       number of bits, needs $2$ bits for a single observation. Design a
-       fixed-length binary code for blocks of $n$ independent observations.
-       Find the smallest $n$ for which it uses fewer than $2$ bits per
-       observation, and show that the per-observation rate approaches
-       $\log_2 3$ bits as $n$ grows.
-    1. The variable-length code $\{0, 10, 11\}$ for a single observation
-       is optimal for the distribution $Q = (1/2, 1/4, 1/4)$. Compute its
-       expected length in bits when observations are drawn from $P$, and
-       compare it with the entropy of $P$ and with the cross-entropy
-       $H(P, Q)$ in bits.
-
 1. **Bradley--Terry model.** The
    [Bradley--Terry model](https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model)
    :cite:`Bradley.Terry.1952` uses a logistic model to capture preferences.
@@ -619,6 +602,7 @@ for which they are needed.
        $\operatorname{argmax}_i (o_i + T\gamma_i)$ and confirm that the
        label frequencies match $\mathrm{softmax}(\mathbf{o}/T)$ up to Monte
        Carlo error.
+   :exlabel:`ex_softmax-regression-gumbel-max-trick`
 
 [Discussions](https://d2l.discourse.group/t/46)
 
@@ -768,7 +752,7 @@ $y = \operatorname*{argmax}_i\,(o_i + \epsilon_i)$.
 - **Gaussian** noise gives the (multinomial) **probit** model (Fechner, 1860):
   appealing, but no closed form and a harder optimization.
 - **Gumbel** noise gives *exactly* $\mathrm{softmax}(\mathbf{o})$, the
-  *Gumbel-max trick* (exercise 9), and scaling the noise by $T$ samples from
+  *Gumbel-max trick* (exercise :exref:`ex_softmax-regression-gumbel-max-trick`), and scaling the noise by $T$ samples from
   $\mathrm{softmax}(\mathbf{o}/T)$.
 
 ::: {.d2l-note}
@@ -895,7 +879,7 @@ The loss keeps rewarding confidence even after the decision is right, nudging $0
 The fix is the dial we already hold: **temperature scaling** divides the logits by one learned $T > 0$ before the softmax: Boltzmann's $T$, relearned post hoc.
 :::
 
-Because $1/T$ scales every logit alike, the ranking (hence the $\arg\max$, hence the **accuracy**) is untouched; only the confidences sharpen ($T<1$) or soften ($T>1$). Exercise 8 develops this.
+Because $1/T$ scales every logit alike, the ranking (hence the $\arg\max$, hence the **accuracy**) is untouched; only the confidences sharpen ($T<1$) or soften ($T>1$). Exercise :exref:`ex_softmax-regression-temperature` develops this.
 :::
 
 ::: {.slide}

@@ -1123,19 +1123,6 @@ an Euler--Maruyama step with identical coefficients.
        one finely sampled trajectory?
    :exlabel:`ex_mdl-sdes-quadratic-variation-ito-process`
 
-1. **Moments from Itô's lemma.** Itô's lemma together with the zero mean of
-   the Itô integral turns expectations of functions of $W$ into ordinary
-   differential equations.
-    1. Apply :eqref:`eq_mdl-sde-ito-lemma` to $\phi(x) = x^n$ with $X = W$
-       and take expectations to obtain an ODE for
-       $m_n(t) = \mathbb{E}[W_t^n]$ in terms of $m_{n-2}(t)$. Solve it for
-       $n = 4$ and $n = 6$, and check the results against the moments of
-       $\mathcal{N}(0, t)$.
-    1. Compute $\operatorname{Var}\big(\int_0^t W_s\,dW_s\big)$ in two ways:
-       with the Itô isometry :eqref:`eq_mdl-sde-ito-isometry`, and from
-       :eqref:`eq_mdl-sde-wdw` with the result of (a).
-   :exlabel:`ex_mdl-sdes-moments-ito-lemma`
-
 1. **Geometric Brownian motion and the $-\sigma^2/2$ correction.** Consider
    $dX = \mu X\,dt + \sigma X\,dW$ with $X_0 > 0$.
     1. Apply Itô's lemma to $\phi(x) = \log x$ to show

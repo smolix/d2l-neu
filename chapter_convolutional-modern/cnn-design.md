@@ -484,15 +484,6 @@ blocks.
    each stage operates and explain what a $3 \times 3$ convolution computes
    on the last one.
 
-1. [code] **ResNet blocks in RegNetX.** Replace `d2l.ResNeXtBlock` in
-   `AnyNet.stage` by the `Residual` block of :numref:`sec_resnet`, keeping
-   the depths and widths of `RegNetX32`. Compare parameter count,
-   multiply-adds, and validation accuracy with the original. For a block
-   that keeps its width $c$, express the parameter count of both block types
-   as a function of $c$ and the number of groups $g$, the `groups` argument
-   of `d2l.ResNeXtBlock`. Check both formulas against the parameters of one
-   such block in each model.
-
 1. **Quantized linear widths.** :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`
    turn the observation that width should grow linearly with the block index
    into a rule with three numbers. For $d$ blocks, the target width of block

@@ -912,11 +912,6 @@ behavior at scale, where budgets, tuning, and data change the ordering.
        Which of the two remedies, the bias or the longer budget, closes more
        of the gap between the LSTM and the lowest validation perplexity that
        the GRU reaches at any epoch?
-    1. Set the total forget-gate bias of the concise `LSTM` to 1 at
-       initialization and retrain it. The fused layer keeps its gate
-       parameters in its own layout and initializes them differently from
-       `LSTMScratch` (:numref:`subsec_lstm-concise`), so locate the
-       forget-gate bias first. Does the change help the concise model?
 
 1. [code] **Memory timescales.** In a gated cell each unit has its own
    learned rate of decay. Train `LSTMScratch` with the recipe of

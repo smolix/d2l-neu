@@ -1063,8 +1063,8 @@ $$
 
 These are the coin's counting estimator and the Gaussian's mean and variance
 estimators, softened: instead of voting for one component, each point spreads
-its single vote across components in proportion to its responsibilities
-(exercise :exref:`ex_mdl-maximum-likelihood-derive-gmm-m-step` derives the $\mu_k$ update). The cell below runs EM on a
+its single vote across components in proportion to its responsibilities.
+The cell below runs EM on a
 two-component mixture in plain NumPy and prints the log-likelihood as it climbs.
 
 ```{.python .input #maximum-likelihood-em-gmm}
@@ -1175,22 +1175,6 @@ taken up in detail there.
   constant, while empirical-KL statements require the distinction above.
 
 ## Exercises
-
-1. **Exponential lifetimes.** A component fails after a random time $x>0$
-   with the exponential density $p(x\mid\lambda)=\lambda e^{-\lambda x}$,
-   where the rate $\lambda>0$ is unknown. We observe $n$ independent lifetimes
-   $x_1,\ldots,x_n$ with average $\bar x$.
-    1. Write the NLL :eqref:`eq_mdl-nll`, find its stationary point
-       $\hat\lambda$, and show that it is the unique minimizer.
-    1. The mean lifetime is $1/\lambda$ and the median lifetime is
-       $(\log 2)/\lambda$. Use the equivariance of maximum likelihood
-       (:numref:`subsec_mdl-map-vs-posterior`) to write down the MLEs of both
-       without a second optimization.
-    1. Compute the per-observation Fisher information $I(\lambda)$ from
-       :eqref:`eq_mdl-fisher`. For $n=50$ lifetimes with $\bar x=2$, use
-       :eqref:`eq_mdl-asymptotic-normality` to give an approximate standard
-       error of $\hat\lambda$.
-   :exlabel:`ex_mdl-maximum-likelihood-exponential-lifetimes`
 
 1. [code] **Learning rate and loss scale.** The cell of
    :numref:`subsec_mdl-nll` minimizes the summed coin NLL by gradient
@@ -1350,18 +1334,6 @@ taken up in detail there.
        $n_H,n_T$. Which summary of the posterior over $\theta$ does the
        log-odds MAP estimate reproduce?
    :exlabel:`ex_mdl-maximum-likelihood-map-log-odds`
-
-1. **GMM M-step.** Hold the responsibilities $r_{ik}$ of the E-step fixed.
-   The M-step for the Gaussian mixture maximizes the expected complete-data
-   log-likelihood
-
-   $$\sum_{i=1}^n\sum_{k=1}^K r_{ik}\big[\log\pi_k+\log\mathcal N(x_i;\,\mu_k,\sigma_k^2)\big].$$
-
-    1. Maximize over $\mu_k$ and show that the result is the
-       responsibility-weighted mean of :eqref:`eq_mdl-gmm-mstep`.
-    1. Maximize over the weights subject to $\sum_k\pi_k=1$, using a
-       Lagrange multiplier for the constraint, and recover $\pi_k=n_k/n$.
-   :exlabel:`ex_mdl-maximum-likelihood-derive-gmm-m-step`
 
 1. **Densities carry units.** ● A density value is not a probability: if $x$
    is measured in metres, $p(x)$ has units of inverse metres

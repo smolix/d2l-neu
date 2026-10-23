@@ -699,15 +699,6 @@ fine-tuning of pretrained models.
        the unstandardized linear model trains without diverging. Compare
        its cross-validated error after $100$ epochs with that of the
        standardized pipeline, and explain both observations.
-1. [code] **Encoding categorical features.** `fit_preprocess` one-hot
-   encodes every categorical column by calling `pd.get_dummies` with
-   `dummy_na=True`. Find the categorical column with the most distinct
-   values in the training data, and determine how many columns of the
-   feature matrix its one-hot encoding occupies.
-
-    *Adapted from Kaggle Learn,
-    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
-    Exercise 3.*
 1. [code] **Gradient-boosted trees.** Fit a gradient-boosted tree model
    (for example scikit-learn's `GradientBoostingRegressor`, or XGBoost or
    LightGBM if installed) to the log sale price, using the preprocessed

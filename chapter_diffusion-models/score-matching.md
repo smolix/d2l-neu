@@ -569,26 +569,6 @@ three or more orders of magnitude below its peak.
 
 ## Exercises
 
-1. **Scores of standard densities.** Compute the score of the Gaussian
-   $\mathcal{N}(\boldsymbol{\mu}, \Sigma)$, of the Laplace density
-   $\tfrac12 e^{-|x|}$, and of the mixture $\sum_k \pi_k \mathcal{N}(\mathbf{x}; \boldsymbol{\mu}_k, \sigma^2 I)$.
-   For the mixture, show that the score is the responsibility-weighted average
-   of the component scores, which is what `GaussianMixture.score` implements.
-   Where is the Laplace score undefined? The trace term of
-   :eqref:`eq_diffusion-hyvarinen` needs the derivative of the model score.
-   What does the Laplace case imply for score matching on data whose density
-   has a kink?
-
-1. **The identity in $d$ dimensions.**
-    1. Apply the integration by parts :eqref:`eq_diffusion-sm-parts` to each
-       coordinate of the cross term and derive
-       :eqref:`eq_diffusion-hyvarinen`. State the boundary condition used in
-       each coordinate.
-    1. Show that for the model
-       $\mathbf{s}_{\boldsymbol{\theta}} = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}$
-       the trace term becomes minus the Laplacian of the energy. Which
-       energies does the objective favor at the data?
-
 1. **Data on a half-line.** Let the data follow the exponential density
    $p(x) = \lambda e^{-\lambda x}$ on $x > 0$, and let the model be
    $s_\theta(x) = -\theta$, the score of an exponential density with rate
@@ -626,17 +606,6 @@ three or more orders of magnitude below its peak.
        `test`, and compute the standard error of each estimate. How many
        points would each of these two estimates need to resolve, at two
        standard errors, the difference that the direct estimate shows?
-
-1. [code] **Cost of the trace.** Build a multilayer perceptron with the layers
-   of `ScoreNet` but $d$ inputs and $d$ outputs. On batches of $256$ standard
-   Gaussian inputs, time one gradient update with `score_matching_loss` and
-   one with `sliced_score_matching_loss` for $d = 2, 8, 32, 128, 512$,
-   excluding the first call from the timing. The count of derivative passes
-   predicts that the ratio of the two times grows linearly in $d$. Plot both
-   times and their ratio against $d$ on logarithmic axes. Over which range of
-   $d$ does the ratio grow linearly? Does the time of the exact loss itself
-   grow linearly over the same range? Extrapolate both times to a
-   $28 \times 28$ grayscale image and to a $256 \times 256$ color image.
 
 1. **The projection identity.** Show that $\mathbb{E}[\mathbf{v}^\top A \mathbf{v}] = \operatorname{tr}(A)$
    whenever $\mathbb{E}[\mathbf{v} \mathbf{v}^\top] = I$, and compute the

@@ -615,27 +615,6 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
     1. Return to the tapered error and find the optimal depth for
        $\sigma = 0.04$ and for $\sigma = 0.3$. Explain the direction in
        which the optimum moves.
-1. **Where the actor-critic sits.** Characterize each of the following
-   learning rules by two properties. The first is whether the expected
-   update for step $t$ is unbiased for an arbitrary critic or value table.
-   For the policy-gradient rules, the update estimates the step-$t$ term of
-   the policy gradient; for Q-learning, the target estimates
-   $Q^*(s_t, a_t)$. The second is how many transitions after $(s_t, a_t)$
-   the rule must observe before that update can be computed. The rules are
-   REINFORCE, REINFORCE with a learned baseline, actor-critic with the
-   weight $\delta_t$ of :eqref:`eq_actor_critic`, actor-critic with the
-   $n$-step advantage $\hat{G}^{(n)}_t - \hat{V}(s_t)$ of
-   :eqref:`eq_nstep_return`, GAE with $0 < \lambda < 1$, and Q-learning
-   (:numref:`sec_qlearning`).
-    1. Tabulate the two properties for the six rules. Which combination of
-       them does no rule in the list achieve, and what would a rule need in
-       order to achieve it?
-    1. `train_ac` computes the one-step weight $\delta_t$ but still waits
-       for eight complete episodes before every update. Which design choice
-       causes this wait? A2C instead steps each environment for a fixed
-       number $k$ of transitions per update. Which of the six rules can work
-       on such segments without modification, and what must the others
-       change?
 1. [code] **Critic passes and target freshness.** `train_ac` gives the
    critic `critic_steps` regression passes per batch
    (:numref:`subsec_actorcritic_two_timescales`) and recomputes
@@ -826,33 +805,6 @@ Actor--critic methods use a learned value function to construct bootstrapped pol
        :exref:`ex_actor-critic-uncorrelated-td-errors`b found the best
        $\lambda$ for an exact critic. Does the measured optimum move toward
        it?
-1. [extended] **The $\gamma$ and $\lambda$ grid.** ●●
-   :citet:`Schulman.Moritz.Levine.ea.2016` swept both parameters on
-   cart-pole, training a linear policy by a trust-region method on batches
-   of 20 trajectories over 21 seeds, and found the best performance after
-   20 iterations at $\gamma \in [0.96, 0.99]$ and
-   $\lambda \in [0.92, 0.99]$. They argue that $\gamma < 1$ biases the
-   gradient of the undiscounted objective whatever the critic, whereas
-   $\lambda < 1$ biases it only when the critic is inaccurate. This project
-   repeats the sweep with `train_gae`.
-    1. Add an argument `gamma` to `train_gae`, used in every call of
-       `batch.gae`. Fix the metric before running: the median over five
-       seeds of the mean batch return over the last ten of the 50 updates.
-       Run the grid $\gamma \in \{0.9, 0.96, 0.99, 1\}$ by
-       $\lambda \in \{0, 0.5, 0.9, 0.96, 0.99, 1\}$ and show it as a heat
-       map. Where is the best region, and which differences between the two
-       setups could move it?
-    1. CartPole truncates episodes at 500 steps, and the observation does
-       not contain the time step. Explain why the critic's regression
-       problem becomes harder as $\gamma$ approaches $1$, and how the
-       difficulty shows up in the grid.
-    1. `d2l.normalize` removes the overall scale of the weights, and the
-       weights depend on $\gamma$ and $\lambda$ through the decay
-       $\gamma \lambda$ of :eqref:`eq_gae_deltas` and through the discount
-       inside each $\delta_t$. Plot the metric of every cell against
-       $\gamma \lambda$. Do cells with similar $\gamma \lambda$ perform
-       similarly? Relate the answer to the paper's distinction between the
-       two kinds of bias.
 
 [Discussions](https://d2l.discourse.group/)
 

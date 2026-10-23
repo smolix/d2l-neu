@@ -30,8 +30,10 @@ This design has three practical consequences:
   by the next build. Edit the `.md` source and regenerate.
 * **Framework tabs live in one file.** A code block tagged `%%tab pytorch`
   appears only in the PyTorch view; an untagged Python block appears in
-  every framework's notebook. One source file thus yields up to four
-  notebooks that must all execute.
+  every notebook of the file. The file yields one notebook for each
+  framework that at least one of its blocks is tagged for, and a file
+  without tagged blocks yields a PyTorch notebook only. One source file
+  thus yields up to four notebooks that must all execute.
 * **Cell identity is stable.** Every Python block carries a permanent ID
   (assigned by `tools/add_cell_ids.py`) so that slides, executed outputs,
   and framework views can refer to a cell across renames and moves.
@@ -40,8 +42,9 @@ Why Markdown sources instead of committing notebooks directly? Version
 control. A `.ipynb` file is JSON that combines code, outputs, execution counts, and
 editor metadata, producing noisier diffs than the Markdown source. Markdown
 source produces readable prose diffs;
-executed outputs are stored separately (and only re-blessed when the code
-that produced them changes); and one file drives the website, the PDF,
+executed outputs are stored separately (and re-captured only when the code
+that produced them, the library code it uses, or the framework version
+changes); and one file drives the website, the PDF,
 four notebook sets, and the slide decks without four copies drifting
 apart.
 
@@ -111,9 +114,9 @@ properties:
   instructions also support human contributors.
 * **Verification is executable.** The definition of "this edit works" is
   mechanical: the notebook executes top to bottom in all frameworks, the
-  linter passes, the page renders. An agent can run the edit, regeneration,
-  execution, and failure-inspection
-  loop, but the contributor must review both the final diff and the evidence
+  audit of the committed outputs passes, the page renders. An agent can
+  run the edit, regeneration, execution, and failure-inspection loop,
+  but the contributor must review both the final diff and the evidence
   from the checks.
 * **The tedious parts are mechanical.** Keeping four framework
   implementations in sync, checking that every `:numref:` resolves,
@@ -142,8 +145,9 @@ Contributions range from one-line corrections to executable content changes:
   button, and GitHub walks you through fork, commit, and pull request in
   the browser.
 * **Code and content changes.** Clone, branch, edit the source `.md`, and
-  verify before submitting: regenerate the affected notebooks and run
-  them end to end and render
+  verify before submitting: regenerate the affected notebooks, run
+  them end to end, copy their outputs into the committed store with
+  `make capture-outputs`, and render
   the page with `make html` to check formatting, references, and
   figures. If you edit code that carries `#@save`, rebuild the library
   (`make lib`) and expect downstream notebooks to be affected.
@@ -179,14 +183,270 @@ artifact — is what changed.
 
 ## Exercises
 
-1. Fork the repository, run `make html`, and render the book locally.
-   How long does a no-op rebuild of one page take?
-1. Find the `#@save` block that defines a `d2l` function you have used,
-   change its docstring, rebuild the library, and verify the change is
-   visible from a notebook import.
-1. Use a coding agent for a real micro-contribution: have it find a typo
-   or broken link in a chapter of your choice, fix the source, and verify
-   the render — then review its diff as if you were the maintainer.
-1. Open the generated PyTorch and JAX notebooks of one section side by
-   side (the VS Code extension makes this two keystrokes). What exactly
-   differs, and where does that difference live in the source file?
+1. **Framework tabs.** A source file contains exactly five code blocks, in
+   this order: (1) a block tagged `%%tab pytorch` that runs `import torch`
+   and `x = torch.arange(6.0)`; (2) a block tagged `%%tab jax` that runs
+   `import jax.numpy as jnp` and `x = jnp.arange(6.0)`; (3) an untagged
+   block `y = x * 2`; (4) a block tagged `%%tab pytorch` that runs
+   `x[0] = 10.0`; (5) an untagged block `print(y.sum(), x.sum())`.
+    1. Which notebooks does the build generate from this file, which
+       blocks does each of them contain, and what does each print?
+    1. A contributor deletes the tag of block (4) so that every framework
+       runs it. Which notebook now fails, and with which error? Replace
+       block (4) by tagged blocks so that both notebooks print the same
+       values.
+    1. You edit block (3) in the generated PyTorch notebook, and the VS
+       Code extension writes the edit back into the source file. Which
+       notebooks does the edit change, and which of them must you run
+       before you submit it?
+   :exlabel:`ex_developers-guide-framework-tabs`
+
+1. **Stale outputs.** The committed store keeps the outputs of a notebook
+   in `outputs/<fw>/<chapter>/<stem>.json`, filed under the ID of the cell
+   that produced them. With each output it stores a fingerprint: a hash of
+   the code of that cell and of every earlier code cell of the notebook,
+   with trailing whitespace stripped from every line. For the whole
+   notebook it also stores the installed framework version without its
+   local build tag (`torch==2.11.0`, not `torch==2.11.0+cu128`) and a hash
+   of the library blocks of every symbol `d2l.X` that the code of the
+   section mentions. An output is stale when one of these values no longer
+   matches the current source and environment. The audit
+   `tools/audit_outputs.py`, which `make html` runs before it renders the
+   site, reports a stale image as a warning and stops the build at a stale
+   text output, unless the notebook needs more GPUs than the host has.
+    1. A section has ten code cells, and every framework variant of it
+       calls `d2l.Trainer`. Which outputs, in which frameworks, become
+       stale after each of the following edits: (i) a typo fixed in a
+       paragraph; (ii) a typo fixed in a comment of the third code cell,
+       which has no tab; (iii) trailing spaces removed from every line;
+       (iv) the fifth and the sixth code cell swapped; (v) the docstring of
+       a `Trainer` method changed in an untagged `#@save` cell of another
+       section; (vi) PyTorch upgraded from 2.11.0 to 2.12.0; (vii) PyTorch
+       2.11.0 installed from the CPU build for macOS instead of the CUDA
+       build for Linux?
+    1. Which of the stale marks of (a) flag outputs that cannot have
+       changed? Which real change of an output does (vii) let pass? Why do
+       the rules accept both kinds of error?
+    1. Why does the build not declare an output stale when a fresh run
+       prints something different from the stored output?
+   :exlabel:`ex_developers-guide-stale-outputs`
+
+1. **Stable cell IDs.** The audit of exercise
+   :exref:`ex_developers-guide-stale-outputs` matches the stored outputs of
+   a notebook to its cells by ID. A stored ID that no cell of the notebook
+   carries any more is an error that stops `make html`, while a cell
+   without a stored output only causes a warning. Slide sources cite cells
+   by ID as well, for example `@resnet-training` in :numref:`sec_resnet`.
+    1. In :numref:`sec_use_gpu`, the cell that adds `__init__` and
+       `prepare_batch` to `d2l.Trainer` for PyTorch has the ID
+       `gpus-devices-memory-the-trainer-now-with-devices-1`, although it
+       stands under the heading "Device-Aware Trainer". Why does the ID
+       name a different heading?
+    1. Suppose that the build derived every ID from the current heading. An
+       author renames a heading and changes no code. What does the audit
+       report, and what must the author run before `make html` passes
+       again?
+    1. Suppose instead that the build numbered the cells by position, and
+       an author inserts a code cell. Does the audit notice that the stored
+       outputs now sit under the IDs of other cells? Which other users of
+       the IDs receive no warning, and what do they show afterward?
+   :exlabel:`ex_developers-guide-cell-ids`
+
+1. [code] **Duplicate definitions.** `make lib` collects the `#@save`
+   blocks of all sections in book order. When several blocks define the
+   same function or method, the library keeps only one of them. The method
+   `Trainer.prepare_batch` is defined in the untagged cell
+   `#linear-regression-scratch-training-1` of :numref:`sec_linear_scratch`,
+   which every framework runs, and again, with device support, in the
+   framework variants of the cell
+   `#gpus-devices-memory-the-trainer-now-with-devices-1` of
+   :numref:`sec_use_gpu`.
+    1. Add a comment line to the body of the untagged definition and of
+       the PyTorch variant of the device-aware one, run `make lib`, and
+       search `d2l/torch.py` for both comments. Which comment arrives,
+       and which rule does this reveal?
+    1. Which definition does `d2l.Trainer.prepare_batch` hold when the
+       PyTorch notebook of :numref:`sec_linear_scratch` starts, and which
+       one after its cell `#linear-regression-scratch-training-1` has run?
+    1. Why does the build keep the last definition rather than the first?
+    1. A contributor changes the device-aware PyTorch `prepare_batch` so
+       that it also converts every batch to 16-bit floats. The PyTorch
+       notebooks of which sections can print different results: those
+       before :numref:`sec_use_gpu` in book order, those after it, or both?
+   :exlabel:`ex_developers-guide-duplicate-definitions`
+
+1. [code] **Incremental rebuilds.** The Makefile requires GNU Make 4.3 or
+   later; on macOS, whose `make` is older, install GNU Make and run it as
+   `gmake`. Build the site once with `make html`.
+    1. Run `make html` a second time and time it. Run it a third time as
+       `make --debug=basic html`. Does Make remake any target? If it does,
+       which reason does it print for the first of them? Is that remake
+       necessary?
+    1. Run `touch` on one source `.md` file and time `make html` again.
+       Which targets does Make remake now? Why does an edit to one section
+       re-render every page, and what would a render of only the edited
+       page still have to read from all other pages?
+   :exlabel:`ex_developers-guide-incremental-rebuilds`
+
+1. [code] **Focused pull requests.** A branch holds three commits. C1
+   corrects a typo in a prose paragraph of
+   `chapter_convolutional-modern/resnet.md`. C2 changes `lr=0.01` to
+   `lr=0.05` in the PyTorch variant of the cell `#resnet-training` of the
+   same file. C3 runs a code formatter over every code cell of
+   `chapter_convolutional-modern/`, and the formatter changes at least one
+   line of every cell.
+    1. Which committed outputs does each commit make stale under the rules
+       of exercise :exref:`ex_developers-guide-stale-outputs`? The ResNet
+       notebook needs a GPU. Which commits can a contributor without a GPU
+       complete, outputs included?
+    1. Split the branch into pull requests. Why should C3 not travel with
+       C2, and which pull request would you submit first?
+    1. In a clone of your fork, make three commits of the same kinds on
+       one branch. Create one branch per pull request from `main` with
+       `git switch -c` and `git cherry-pick`, and check each with
+       `git diff main...<branch> --stat`. Which cherry-pick can conflict
+       when C3 is merged before C2, and why?
+   :exlabel:`ex_developers-guide-focused-prs`
+
+1. **Agent patches.** A contributor changes the format string of a `print`
+   call in the PyTorch variant of the last code cell of a section, and
+   `make html` stops because the committed text output of that cell is
+   stale. Asked to make the build pass, a coding agent proposes five
+   patches: (i) set the cell's `code_fingerprint` in
+   `outputs/pytorch/<chapter>/<stem>.json` to the fingerprint of the new
+   code; (ii) delete the cell's entry from that file, which the audit
+   reports only as a warning about a missing output; (iii) edit the
+   generated `.qmd` file of the section so that the page shows the new
+   output; (iv) re-execute the notebook with
+   `make -B _notebooks/pytorch/<chapter>/<stem>.executed` and then run
+   `make capture-outputs FILES=<chapter>/<stem>.md`; (v) change the
+   Makefile so that a stale text output only prints a warning.
+    1. For each patch, does it remove the cause, hide it, or leave it in
+       place? What does a reader of the page see after each?
+    1. After which patches does `make html` pass? What would you look for
+       in the pull request to confirm that the committed output came from
+       the committed code?
+    1. Write the task statement that you would have given the agent: the
+       change it may make, the files it must not edit, and the checks
+       whose results it must report.
+   :exlabel:`ex_developers-guide-agent-patches`
+
+1. [code] **Transitive library dependencies.** ● Besides `d2l/torch.py`,
+   `make lib` writes one file per `#@save` symbol to `d2l/_blocks/<fw>/`.
+   The script `tools/scan_d2l_usage.py` lists in
+   `_notebooks/<fw>/<chapter>/<stem>.d` the files of every symbol `d2l.X`
+   that the code of a section mentions, and the fingerprint of exercise
+   :exref:`ex_developers-guide-stale-outputs` hashes exactly these files.
+    1. Run `make lib` and then `python3 tools/scan_d2l_usage.py`, and read
+       the `.d` file of `chapter_convolutional-modern/resnet.md` for
+       PyTorch. Which block defines the optimizer that `trainer.fit` uses
+       in the cell `#resnet-training`? If a contributor added momentum to
+       this optimizer, would the build mark the outputs of
+       :numref:`sec_resnet` stale? Would it mark stale the notebooks of
+       problem :exref:`ex_developers-guide-duplicate-definitions`d, whose
+       results the 16-bit `prepare_batch` can change? Why do the two cases
+       differ?
+    1. Write a script that extends the list of every notebook by each
+       symbol that a listed file mentions as `d2l.X`, repeated until the
+       list stops growing. For how many PyTorch notebooks does the list
+       grow? How many notebooks does an edit of `d2l.Module` mark stale
+       before and after the extension?
+    1. Code in a block also reaches symbols of the library without the
+       prefix `d2l.`: `Module.__init__`, for example, creates its progress
+       board as `ProgressBoard()`. Replace the text search by an analysis
+       of the names in each file with `ast`, and report what it adds.
+    1. A coarser rule hashes all of `d2l/torch.py` for every notebook that
+       imports the library. How many PyTorch notebooks would one library
+       edit then mark stale? Which part of `d2l/torch.py` does this rule
+       cover that no block file contains?
+   :exlabel:`ex_developers-guide-transitive-deps`
+
+1. **Execution stamps.** ● Make and the notebook scheduler
+   `tools/notebook_scheduler.py` re-execute a notebook when its stamp
+   `_notebooks/<fw>/<chapter>/<stem>.executed` is older than the generated
+   `.ipynb` or than one of the library block files that its `.d` file
+   lists (exercise :exref:`ex_developers-guide-transitive-deps`).
+   `make notebooks-pytorch` regenerates every PyTorch notebook and writes
+   each `.ipynb` anew. When the code cells of a regenerated notebook are
+   unchanged, `tools/gen_notebooks.py` then sets the modification times of
+   the `.ipynb` and of its stamp to the current time.
+    1. Why does the script advance the stamp, and not only the `.ipynb`?
+       What would a prose edit in one section cost otherwise?
+    1. An author edits a `#@save` method in one section and runs
+       `make run-notebooks-pytorch`, which rebuilds the library,
+       regenerates the notebooks, and then executes those that the
+       modification times call out of date. Notebook B lists the edited
+       block in its `.d` file, but its own source is unchanged. Order the
+       modification times of the block file, of the `.ipynb` of B, and of
+       the stamp of B. Is B executed? What does the audit of exercise
+       :exref:`ex_developers-guide-stale-outputs` report afterward?
+    1. Propose a stamp that keeps prose edits free of re-execution and
+       still executes B. What must it record that a modification time
+       cannot?
+    1. The repository guards against the failure of (b) twice:
+       `make refresh-stale` deletes the stamps of the notebooks that the
+       audit reports stale before it executes them, and
+       `make capture-outputs` refuses outputs whose fingerprints, recorded
+       when the notebook ran, differ from the current ones. Which route to
+       committing stale outputs does each guard close?
+   :exlabel:`ex_developers-guide-execution-stamps`
+
+1. [extended] **Dataflow staleness.** ●● The fingerprint of exercise
+   :exref:`ex_developers-guide-stale-outputs` marks every cell from the
+   first edited cell on as stale. A dataflow rule marks only the cells
+   that read, directly or through other cells, a name that the edited cell
+   binds. The detector of exercise
+   :exref:`ex_interactive-development-use-before-define` of
+   :numref:`sec_interactive_development` already extracts the names that
+   each cell binds and reads.
+    1. Generate the PyTorch notebooks with `make notebooks-pytorch` and
+       extract, for every code cell, the names that it binds and reads.
+       For every edit of a single cell, compute the cells that the dataflow
+       rule marks stale and the cells that must run to recompute them,
+       which include every earlier cell that a stale cell depends on.
+       Report per chapter the mean fraction of cells marked stale and the
+       mean fraction that must run, under both rules.
+    1. Find cells in the book through which an edit changes later outputs
+       without binding a name that the later cells read, for instance
+       through the state of a random number generator. Which other
+       channels of this kind do the notebooks of the book use?
+    1. :citet:`Macke.Gong.Lee.ea.2021` record such dependencies while the
+       notebook runs instead of reading them from the source. Which of the
+       channels of (b) can a run-time tracer observe, and which stay
+       invisible to it?
+    1. Would you replace the prefix rule of the build by your rule? Base
+       the answer on the savings of (a) and the failures of (b).
+   :exlabel:`ex_developers-guide-dataflow-staleness`
+
+1. [code] **Noisy bisection.** ●● `git bisect` finds the commit that
+   introduced a fault by binary search: it checks out a commit halfway
+   between a known good and a known bad commit, and a test of that commit
+   halves the range. A test that trains a model is noisy. Suppose that a
+   notebook's check "validation accuracy at least 0.9" passes with
+   probability $p = 0.9$ on every commit before the first bad commit $k$
+   and with probability $q = 0.3$ on $k$ and every later commit,
+   independently across runs. Commit 0 is known good, commit 64 is known
+   bad, and $k$ is uniform on $\{1, \ldots, 64\}$.
+    1. With one run per test, what is the probability that `git bisect`
+       names $k$?
+    1. Repeat each test $m$ times and call the commit good when the number
+       of passes reaches a threshold. Find the smallest $m$, with its
+       threshold, for which the probability of naming a wrong commit is at
+       most 5%. How many runs does the search take?
+    1. The probabilistic bisection algorithm keeps a posterior distribution
+       over the location of the fault, tests at its median, and updates the
+       posterior with Bayes' rule after every run
+       :cite:`Frazier.Henderson.Waeber.2019`. Simulate it with a posterior
+       over $k$ and the likelihoods given by $p$ and $q$, until the
+       posterior puts 0.95 on one commit. Why can testing at the median
+       stop making progress on a discrete set of commits? Change the choice
+       of the test commit to fix this, and compare the mean number of runs
+       and the error rate with (b).
+    1. Treat one run as a channel from $\{\text{good}, \text{bad}\}$ to
+       $\{\text{pass}, \text{fail}\}$ and compute its capacity
+       :eqref:`eq_mdl-channel-capacity`. Each run reveals at most this many
+       bits about $k$, even when the tests are chosen adaptively. Use
+       Fano's inequality :eqref:`eq_mdl-fano` to bound from below the mean
+       number of runs of any strategy that names $k$ with probability at
+       least 0.95. How close does (c) come?
+   :exlabel:`ex_developers-guide-noisy-bisection`

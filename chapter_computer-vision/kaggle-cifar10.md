@@ -1145,7 +1145,7 @@ Folder-based dataset + the augmentation pipelines:
 @kaggle-cifar10-reading-the-dataset-2
 :::
 
-::: {.slide title="ResNet-18 residual block"}
+::: {.slide title="ResNet-18 residual block" only="mxnet"}
 No transfer learning this time — CIFAR-10 is small enough
 to train from scratch. The core unit is the same residual
 block from the ResNet chapter: two 3×3 convs plus an
@@ -1154,7 +1154,15 @@ identity or 1×1 projection shortcut.
 @kaggle-cifar10-defining-the-model-1
 :::
 
-::: {.slide title="Assembling ResNet-18"}
+::: {.slide title="ResNet-18, trained from scratch" except="mxnet"}
+No transfer learning this time — CIFAR-10 is small enough
+to train from scratch. The model is the ResNet-18 of the
+ResNet chapter: four residual stages that halve the
+resolution and widen the channels, global average pooling,
+and a dense layer that emits 10 class logits.
+:::
+
+::: {.slide title="Assembling ResNet-18" only="mxnet"}
 Four residual stages progressively downsample the image
 and widen channels. Global average pooling removes spatial
 dimensions; the final dense layer emits 10 class logits:

@@ -57,6 +57,15 @@ venv-%: .venv-%/.synced
 
 RUNTIME_DEPS_mxnet := .venv-mxnet/.runtime-deps
 
+# syne-tune ignores CUDA_VISIBLE_DEVICES, so the async HPO notebooks would
+# start trials on GPUs the scheduler gave to other jobs; patched after sync.
+.venv-pytorch/.runtime-deps: .venv-pytorch/.synced tools/check_runtime_deps.py
+	@echo "=== Patching syne-tune to honour CUDA_VISIBLE_DEVICES ==="
+	@python3 tools/check_runtime_deps.py pytorch
+	@touch $@
+
+RUNTIME_DEPS_pytorch := .venv-pytorch/.runtime-deps
+
 # Pull the latest mxnet wheel URL from
 # https://github.com/smolix/mxnet/releases/latest into pyproject.toml.
 # Manual (not on every sync) so builds stay reproducible and we don't

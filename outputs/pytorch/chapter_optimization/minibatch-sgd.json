@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.8060321807861328"
+          "text": "0.7889494895935059"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.014944314956665039"
+          "text": "0.011038064956665039"
         }
       ]
     },
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "performance in Gigaflops: element 0.037, column 2.007, full 21.284\n"
+          "text": "performance in Gigaflops: element 0.038, column 2.718, full 22.025\n"
         }
       ]
     },
@@ -56,7 +56,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "performance in Gigaflops: block 18.069\n"
+          "text": "performance in Gigaflops: block 16.380\n"
         }
       ]
     },
@@ -82,14 +82,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.016 sec/epoch\n"
+          "text": "loss: 0.242, 0.014 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-3-1.svg",
-          "bytes": 20225,
-          "sha256": "sha256:516828c4ca9c18af7a5070a86de20c9d4f3299811ccd213aa0dfb60c02da69ed"
+          "bytes": 20227,
+          "sha256": "sha256:3233a9c9091eea7a4cd912f6cafb8055676b816fbdf18e73945d0dd905295fbe"
         }
       ]
     },
@@ -100,14 +100,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.401 sec/epoch\n"
+          "text": "loss: 0.246, 0.404 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-4-1.svg",
-          "bytes": 18780,
-          "sha256": "sha256:224937599149d4f69487aadb948125c2681608d56014a3a7bddd3f29dc11bec6"
+          "bytes": 18781,
+          "sha256": "sha256:e2b01ebbc170c61320d81f52678b787d3665dcbe59a945a87b11031cdd46db4a"
         }
       ]
     },
@@ -118,14 +118,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.247, 0.016 sec/epoch\n"
+          "text": "loss: 0.243, 0.020 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-5-1.svg",
-          "bytes": 18783,
-          "sha256": "sha256:bb59be7b08010469fe350df28ff72523575ba2a38548e97e38a93d007eacd405"
+          "bytes": 18782,
+          "sha256": "sha256:fc28739d828f040b90404e465e49306a2ba87b1ef60c88a40a8d5448812fa273"
         }
       ]
     },
@@ -136,14 +136,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.247, 0.055 sec/epoch\n"
+          "text": "loss: 0.246, 0.060 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-6-1.svg",
-          "bytes": 18781,
-          "sha256": "sha256:b9f333ffc6299ed93a2700f4cdb08a69413d913ac3651fb9539758774672a0cc"
+          "bytes": 18782,
+          "sha256": "sha256:57118f64cbbc72fd1fd2dc0a844924036f4518f767958e6ef839984484eed2d1"
         }
       ]
     },
@@ -155,8 +155,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 33808,
-          "sha256": "sha256:630be26b65c681e1f52211a31e59b3e8ae9ae7b51f02e7f0431be39cec792579"
+          "bytes": 33002,
+          "sha256": "sha256:53f9279c65cfc5eecae7f30aff83c6aad924ee5468c433dd2f8f0f3321a8bf61"
         }
       ]
     },
@@ -172,14 +172,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.058 sec/epoch\n"
+          "text": "loss: 0.246, 0.062 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "minibatch-sgd/minibatch-sgd-concise-implementation-2-1.svg",
           "bytes": 18621,
-          "sha256": "sha256:4a73e63ff6ef6701134ffb255498790af8f76c4a5febda73a3308e6c4f8cbe9e"
+          "sha256": "sha256:788ff53ab9b37f7aec0b73476a54282ef23f3a81629780040cc1cae42ba8e84c"
         }
       ]
     }

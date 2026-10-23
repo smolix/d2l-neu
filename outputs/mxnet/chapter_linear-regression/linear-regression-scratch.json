@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
           "bytes": 19127,
-          "sha256": "sha256:8aa32e671f85c145efffad95a435afedafb5a1613f4041b41a2dda49e030e68e"
+          "sha256": "sha256:9741a86e1c027aecceea7cf0e018fac4d7c1aba02878fde1efe1ae65534aefdd"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [ 0.00036156 -0.00023723]\nerror in estimating b: [0.00015402]\n"
+          "text": "error in estimating w: [ 0.00029862 -0.00013661]\nerror in estimating b: [0.00026751]\n"
         }
       ]
     }

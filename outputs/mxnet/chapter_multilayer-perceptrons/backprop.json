@@ -21,6 +21,11 @@
           "type": "stream",
           "name": "stdout",
           "text": "L = 2.0, dL/dW2 = [[ 0. -4.]], dL/dh = [-4.  2.]\ndL/dz = [-0.  2.], dL/dW1 =\n[[0. 0.]\n [2. 4.]]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[05:10:43] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     }

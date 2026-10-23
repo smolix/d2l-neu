@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:d87a43ac303fcb4049ef2e49d08cbc56cfe5711e9e16ab11921749171a02e4b0"
+          "sha256": "sha256:866c253a45c143eecd5a3efa7a8492e7b26e57912048f341511fd9c1aa764f9d"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:f8c3459e602450b739d70b70ec8ab0b6f1c113c42ff19e68a18d6f8fcd647052"
+          "sha256": "sha256:6fb6dccd4834a1e33823765eb0de85ee490ea4e6f75fd6076afb82a224aaa463"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[109 754 275 285 298 104 277 286 682  44]\n [273 708 650 430 565 776 622 285 256 736]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[754 275 285 298 104 277 286 682  44 277]\n [708 650 430 565 776 622 285 256 736 316]], shape=(2, 10), dtype=int32)\nX[0]: 'm going to wash and dress,'\nY[0]: ' going to wash and dress, and'\n"
+          "text": "X: tf.Tensor(\n[[835 314 385 100 684  44 554 275  10 111]\n [545 491 260 419 578  44 688 319 275 260]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[314 385 100 684  44 554 275  10 111 325]\n [491 260 419 578  44 688 319 275 260 293]], shape=(2, 10), dtype=int32)\nX[0]: ' sat behind him, looking\\no'\nY[0]: ' behind him, looking\\nover'\n"
         }
       ]
     }

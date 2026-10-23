@@ -86,3 +86,6 @@ run_one.sh
 
 # incremental `make figures` per-generator stamps
 .figstamps/
+
+# torch.compile / Triton caches (make/notebooks.mk EXTRA_ENV_pytorch)
+.cache/

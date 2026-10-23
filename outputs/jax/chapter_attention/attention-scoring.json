@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
           "bytes": 25631,
-          "sha256": "sha256:3cdf299675cd0ded12308a6391ad542b5236d936399f8aed0a2234b0517b8a30"
+          "sha256": "sha256:9ceb5031509a1f3f5750b6476ea56ab7fd09cf1becd7ccf3f2f638e0450918f3"
         }
       ]
     },
@@ -76,7 +76,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
           "bytes": 16485,
-          "sha256": "sha256:583ebf12c529e0553411898ddd46fe3ab36a40b6c178d8571adebb92fb1e334e"
+          "sha256": "sha256:ebc78b47f2fe6555d59e330329793293828dec0436f69047ebb987b9fe69ea7b"
         }
       ]
     },
@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
           "bytes": 19831,
-          "sha256": "sha256:2179499d64e83adfd6f9d6444b636d3661a1f8c421b5f2267bc7e791e6394992"
+          "sha256": "sha256:de213cd7ede6074e5249626af3fe255ed2b77caf21c5aef4027cdacd736d29d4"
         }
       ]
     },
@@ -117,7 +117,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
           "bytes": 13609,
-          "sha256": "sha256:032c2844e333cb060fdc1237ac3542fc5cc48b5a2c971db0c3cae891f8bc7f9c"
+          "sha256": "sha256:5771a56ccb09a0cba5ce13332316c385da4770e0d9f3de84098ce6a46a925a7e"
         }
       ]
     },

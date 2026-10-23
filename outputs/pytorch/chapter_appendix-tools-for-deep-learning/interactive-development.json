@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "10.1 μs ± 302 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)\n"
+          "text": "9.18 μs ± 7.51 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)\n"
         }
       ]
     }

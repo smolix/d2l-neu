@@ -91,7 +91,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-mcmc-diagnostics-1.svg",
           "bytes": 89462,
-          "sha256": "sha256:fc868c2f6d1e0fef16805a105e8b7cf4bcdb9941fad1dc09f074bdd2f0c310d8"
+          "sha256": "sha256:4c1284918bc93a11ad5acb11dcf5f39cee587ab2012b8f3dc3cc041d3727c9ea"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
           "bytes": 140281,
-          "sha256": "sha256:753bf3a42e2ce3876f9d8db6f9434dd99be1fe8b86f75f91dc648387a29c3a4a"
+          "sha256": "sha256:7f4d325bfd3c8bd5331bde038c5ef330d85b147955eb83ce76ccf5fb72a71858"
         }
       ]
     }

@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25813,
-          "sha256": "sha256:baf852a4f5ecf96514cfd068bef00917ec82ffedb1f8f5dd00dfacace89077fe"
+          "bytes": 20815,
+          "sha256": "sha256:8fd02c55ed1cb8040862a256afecdd130c2fc40bcdf33961ad36f8f64b96ac88"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 91.2\n"
+          "text": "validation perplexity 92.8\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.34 bits per byte\n"
+          "text": "2.78 bytes/token, 2.35 bits per byte\n"
         }
       ]
     },
@@ -125,7 +125,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller, I saw the\\nside\\nfeet, I\\nface, I saw the\\nside\\nfeet,\n    I\\nface, I saw the\\nside\\nfeet, I\\nface, I'\n"
+          "text": "'the time traveller. I was a trap of the paradox, and I was in the slos, and\n    the slos, and the slos, and the slos, and the slos, and the'\n"
         }
       ]
     },
@@ -136,7 +136,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time travellerook vightdle. It was anse acley this leed even might like\n    workelftagge\nwellso sat\nthe time traveller, I had\nwellt the\nsideer, I saw a vivident in the\nsurmit. At first\n"
+          "text": "the time traveller I Fented tolditted me. Natiside me. In diff deints we\n    should have frides down down\nthe time traveller. I had a naturals, and I was not a a suddenly eachate,\n    was the balance of the earth\n"
         }
       ]
     },
@@ -161,7 +161,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has\\x1aning diffreat o wentous anotherreatreat o wentous anotherreatreat o wentous another'"
+          "text": "'it has qu Weena neworlock//: beenn m%�ly manrow�ellk theel'"
         }
       ]
     },
@@ -173,8 +173,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 19197,
-          "sha256": "sha256:004234cd3c1efa55cc238aa4099e0dbf89976a4866690a3f32ddbaa8c020ac50"
+          "bytes": 18340,
+          "sha256": "sha256:8987b756d6bfab4d19b1970122844343fef7b7682b05189bb806bd42ef5bf03c"
         }
       ]
     },
@@ -185,7 +185,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 132.4, \"the time travellerzy.\\nThe Time Traveller's face.\\n\\n'I\n    was a lineervitution.\\n\\n'I was a\"\n"
+          "text": "perplexity 132.9, 'the time travellerumpedes of\\nafters of my armay of a\n    gallery of a gallery of a gallery of a'\n"
         }
       ]
     },
@@ -196,7 +196,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      88.6     91.2\n concise      32.3    132.4\n"
+          "text": "   model  time (s)  val ppl\n scratch      90.4     92.8\n concise      28.3    132.9\n"
         }
       ]
     }

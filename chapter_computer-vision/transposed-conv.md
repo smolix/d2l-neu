@@ -172,9 +172,20 @@ tconv(X)
 ```
 
 ```{.python .input #transposed-conv-basic-operation-3}
+#@tab tensorflow
+X, K = tf.reshape(X, (1, 2, 2, 1)), tf.reshape(K, (2, 2, 1, 1))
+tconv = tf.keras.layers.Conv2DTranspose(1, kernel_size=2, use_bias=False)
+tconv.build(X.shape)
+tconv.kernel.assign(K)
+tconv(X)
+```
+
+```{.python .input #transposed-conv-basic-operation-3}
 #@tab jax
 X, K = X.reshape(1, 2, 2, 1), K.reshape(2, 2, 1, 1)
-tconv = nnx.ConvTranspose(1, 1, kernel_size=(2, 2), use_bias=False,
+# transpose_kernel=True flips the kernel: the transpose of a convolution
+tconv = nnx.ConvTranspose(1, 1, kernel_size=(2, 2), padding='VALID',
+                          transpose_kernel=True, use_bias=False,
                           rngs=nnx.Rngs(0))
 tconv.kernel[...] = K
 tconv(X)
@@ -208,13 +219,19 @@ tconv(X)
 ```
 
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-1}
+#@tab tensorflow
+# Keras has no numeric padding here: apply, then remove the outer border
+tconv(X)[:, 1:-1, 1:-1, :]
+```
+
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-1}
 #@tab jax
 tconv = nnx.ConvTranspose(1, 1, kernel_size=(2, 2), padding='VALID',
-                          use_bias=False, rngs=nnx.Rngs(0))
+                          transpose_kernel=True, use_bias=False,
+                          rngs=nnx.Rngs(0))
 tconv.kernel[...] = K
 # Apply then remove the outer border (equivalent to padding=1 in PyTorch)
-out = tconv(X)
-out[:, 1:-1, 1:-1, :]
+tconv(X)[:, 1:-1, 1:-1, :]
 ```
 
 In the transposed convolution,
@@ -249,8 +266,18 @@ tconv(X)
 ```
 
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-2}
+#@tab tensorflow
+tconv = tf.keras.layers.Conv2DTranspose(1, kernel_size=2, strides=2,
+                                        use_bias=False)
+tconv.build(X.shape)
+tconv.kernel.assign(K)
+tconv(X)
+```
+
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-2}
 #@tab jax
 tconv = nnx.ConvTranspose(1, 1, kernel_size=(2, 2), strides=(2, 2),
+                          padding='VALID', transpose_kernel=True,
                           use_bias=False, rngs=nnx.Rngs(0))
 tconv.kernel[...] = K
 tconv(X)
@@ -295,15 +322,28 @@ tconv(conv(X)).shape == X.shape
 ```
 
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-3}
+#@tab tensorflow
+# Channels last: (batch, height, width, channels)
+X = tf.random.uniform((1, 16, 16, 10))
+conv = tf.keras.Sequential([tf.keras.layers.ZeroPadding2D(2),
+                            tf.keras.layers.Conv2D(20, kernel_size=5,
+                                                   strides=3)])
+tconv = tf.keras.layers.Conv2DTranspose(10, kernel_size=5, strides=3)
+# Padding 2 on the transposed side removes two rows/columns per border
+tconv(conv(X))[:, 2:-2, 2:-2, :].shape == X.shape
+```
+
+```{.python .input #transposed-conv-padding-strides-and-multiple-channels-3}
 #@tab jax
-# JAX uses channels-last format: (batch, height, width, channels)
+# Channels last: (batch, height, width, channels)
 X = jax.random.normal(jax.random.PRNGKey(0), (1, 16, 16, 10))
-conv = nnx.Conv(10, 20, kernel_size=(5, 5), padding='SAME',
-                strides=(3, 3), rngs=nnx.Rngs(1))
-tconv = nnx.ConvTranspose(20, 10, kernel_size=(5, 5), padding='SAME',
-                          strides=(3, 3), rngs=nnx.Rngs(2))
-Y = conv(X)
-tconv(Y).shape == X.shape
+conv = nnx.Conv(10, 20, kernel_size=(5, 5), padding=2, strides=(3, 3),
+                rngs=nnx.Rngs(1))
+tconv = nnx.ConvTranspose(20, 10, kernel_size=(5, 5), strides=(3, 3),
+                          padding='VALID', transpose_kernel=True,
+                          rngs=nnx.Rngs(2))
+# Padding 2 on the transposed side removes two rows/columns per border
+tconv(conv(X))[:, 2:-2, 2:-2, :].shape == X.shape
 ```
 
 ## Connection to Matrix Transposition

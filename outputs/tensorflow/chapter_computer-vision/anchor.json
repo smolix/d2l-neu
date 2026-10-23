@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95779,
-          "sha256": "sha256:244b467586c94faf740df6e11d0640bf07d154ef18f632f9288747e80dcc98c2"
+          "sha256": "sha256:0079a96a78ffeef79622d01f75a58418cff5ae6d245ee51a01b83f7513b67000"
         }
       ]
     },
@@ -90,7 +90,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94721,
-          "sha256": "sha256:d23daa2df6bfabbb7eecc6d948d0dffae87e62f756ca64c0b5657c25043d90de"
+          "sha256": "sha256:e3c01d505906c04f67d349b459f85089a5855320a72eb9253b52ebd2aefe36d5"
         }
       ]
     },
@@ -158,7 +158,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96403,
-          "sha256": "sha256:541a89d8d1269fb5fa881954f4d499cb0031c84ccdd1121e9bb43ba258623f40"
+          "sha256": "sha256:80e799c0f5395ef5ccfe37d469390ea87a93c4641f8435ceaa1e8f4fa2b0f576"
         }
       ]
     },
@@ -181,7 +181,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 93212,
-          "sha256": "sha256:5f8fa974f21afd7147562ea80a0e8592d9dd8cbf171d8be84eed19855e8e87a7"
+          "sha256": "sha256:a0d65c3546783fa67fbaef1e1cb80139d89be77c9b29afd72731c60bf31ed5e3"
         }
       ]
     }

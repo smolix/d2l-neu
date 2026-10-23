@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-the-running-example-2-1.svg",
           "bytes": 223654,
-          "sha256": "sha256:41621384c1710cede4c4b05cc64e58e274a3530116b79b6cbd7e535192cc4281"
+          "sha256": "sha256:d08237e9eb6f96ae37a62810fbf79ab47bd1d9311b20d257c813f40e21a23ebe"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-training/energy-training-contrastive-divergence-2-1.svg",
           "bytes": 297505,
-          "sha256": "sha256:71d31424e9e615c6ab940db0f0ecd1b171745635baeef7858de93bb6113c9763"
+          "sha256": "sha256:3cf8d6c7fa4a21686e51bddf4d80cdbb3c1047c94b944677fce552c1fa8662b0"
         }
       ]
     }

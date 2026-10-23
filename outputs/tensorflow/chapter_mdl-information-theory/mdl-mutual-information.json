@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:d25bc36cbb870135464badf227de73a546206b1783d4a3fe98a7c1ed60382b9a"
+          "sha256": "sha256:88732e1c7d6e061dab3ab50e9d1db1fd22344f94792deedc594e45bcecf0f126"
         }
       ]
     },
@@ -131,7 +131,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:06ccfe7ab2aab56590a7a8e241468d01d0d624f8b69a8d51df270adc47d1ddb0"
+          "sha256": "sha256:c5ee27e504e8fe630ee375a4b01aaafbe24997de5820ca7bfad95c14852ce544"
         }
       ]
     },
@@ -163,7 +163,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.408 nats\n"
+          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.409 nats\n"
         },
         {
           "type": "stream",
@@ -191,7 +191,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:16c88fb1e9aa4dfc21a8097706dabc965e59f1b51ad65a3c274e567a20c1130c"
+          "sha256": "sha256:265a825ae27f5d8589eef0d119d8a4d4e027b5426dd84c3fd68038ab3cfb7b31"
         }
       ]
     },

@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:c2eea7e13f3e968dfbe84a3bd537c9584d30952fa853dafc0fadff1004808429"
+          "sha256": "sha256:736298f0eb6eb4bff01f98a6b966f1cd2da96eaf499b64fde441a1570dce8101"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:253ac93485752bb20097216d4da7db0d0da8f4ed22d01a51895cbd37c7b4ee70"
+          "sha256": "sha256:6386fd0a47764f7b5fb4a1b0df4383d0a92d6f09fd4557c0a097281cfb150ee1"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 10.  39.  83. 116. 558. 314. 286. 428. 110. 270.]\n [ 10.  10.  39.  89. 276. 324. 294. 285. 965. 313.]] \nY: [[ 39.  83. 116. 558. 314. 286. 428. 110. 270.  33.]\n [ 10.  39.  89. 276. 324. 294. 285. 965. 313. 313.]]\nX[0]: \"\\n'Story be damned\"\nY[0]: \"'Story be damned!\"\n"
+          "text": "X: [[109. 439. 417. 317.  10.  98. 281. 289. 612.  10.]\n [612.  10.  10.  39.  78. 297.  44. 316. 442. 523.]] \nY: [[439. 417. 317.  10.  98. 281. 289. 612.  10.  10.]\n [ 10.  10.  39.  78. 297.  44. 316. 442. 523. 764.]]\nX[0]: \"munistic\\nbasis.'\\n\"\nY[0]: \"unistic\\nbasis.'\\n\\n\"\n"
         }
       ]
     }

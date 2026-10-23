@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-data-and-models-1-1.svg",
           "bytes": 20902,
-          "sha256": "sha256:fb6fcb11a667cb850ef0daac7745d9838276491f9f8af403a4e96e7eec2dd46a"
+          "sha256": "sha256:157b6dfc8cc97838e6dbe99318331c5001c887339b243213a5780fb2125e2d63"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-2-1.svg",
           "bytes": 58232,
-          "sha256": "sha256:568db2d997c4a67a3c3dceb67ed73c7170b470bba002d2105ec05f8b1623c21c"
+          "sha256": "sha256:70697cf32dc6a108d362d36ea75815e2a93b40fc6ac1d0cbff7a74e7a8cefd4a"
         }
       ]
     },
@@ -87,7 +87,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-verifying-the-optimal-critic-2-1.svg",
           "bytes": 61452,
-          "sha256": "sha256:d19ba2d6ab6ca261d83526ce8e82f0d839c65f240aedc9a52e91d76ad3f781b8"
+          "sha256": "sha256:01e9161bf6e97c03b719aa386fe7bd253300fae57de587838fdae35eb56f4bb3"
         }
       ]
     },
@@ -127,7 +127,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-saturating-versus-non-saturating-training-2-1.svg",
           "bytes": 169617,
-          "sha256": "sha256:238b303507880f210d81cc55dab2f74120e0e717af2b2365a7464e4ac8f1353b"
+          "sha256": "sha256:b2dd135f6eb4617d49a3302530e7326659d80be72dc51b282c47f92e9827ddd3"
         }
       ]
     }

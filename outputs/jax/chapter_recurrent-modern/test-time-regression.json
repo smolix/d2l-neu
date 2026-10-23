@@ -44,7 +44,7 @@
           "mime": "image/svg+xml",
           "asset": "test-time-regression/test-time-regression-what-learning-sharpened-1-1.svg",
           "bytes": 35753,
-          "sha256": "sha256:ce030174bdb1f7b14f4772402b8c247ede1294de2afaf5b28fd9a313e0d8e702"
+          "sha256": "sha256:ca4f631b88a31e1acc35279aed5fd488c9dd7a0ad930f56496f6acacc1d84f61"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "test-time-regression/test-time-regression-what-learning-sharpened-2-1.svg",
           "bytes": 45189,
-          "sha256": "sha256:779c239cc66343575889e10227d44740caf752e067b955470fc5207da6c96773"
+          "sha256": "sha256:de139e2cc1bbb6992c681a05315c142fd250a8fbc104eda1b547bb64cdd6cc58"
         }
       ]
     },
@@ -81,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "test-time-regression/test-time-regression-the-spectrum-measured-2-1.svg",
           "bytes": 43752,
-          "sha256": "sha256:3ac327cda40b9b2e50d650cc4d8c4cfe5abf0b5806c770ec5cb768c6f66b3df7"
+          "sha256": "sha256:9444aae2308bc2ad1c16ba4defdc80060f616b00eaf2b15a41eefdb054440b91"
         }
       ]
     },
@@ -132,7 +132,7 @@
           "mime": "image/svg+xml",
           "asset": "test-time-regression/test-time-regression-regression-that-tracks-the-forecasting-connection-1.svg",
           "bytes": 64287,
-          "sha256": "sha256:bb22e51a33ab8e0d97dd17b128ac087f4059d6d2f153d1cc83951614222ee832"
+          "sha256": "sha256:0c2480adea913faed0483628a994c9b5dc5a2d950ebdfe6f0fa53d1bafaed15b"
         }
       ]
     }

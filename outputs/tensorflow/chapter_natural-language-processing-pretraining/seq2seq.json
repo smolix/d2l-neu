@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: tf.Tensor(\n[[ 421  701  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [1910  822  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 271 2164  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001  497 3577  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1383  275  810  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  536 1776  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([4 4 4], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
+          "text": "source: tf.Tensor(\n[[ 288 1047  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 456  701  267 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 271  358  862  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001  324 1240 1228  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  446  265  915  267 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001   99   39  281  721  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([4 4 5], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24562,
-          "sha256": "sha256:2b135eed37420cab0b4648f7e5108a8d802214823a7909b06eeaaa6a409f096c"
+          "sha256": "sha256:97efc8be5ed1426cc4acfee784967e2572fb8087e3e739a286177d946291370b"
         }
       ]
     },
@@ -110,8 +110,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 23696,
-          "sha256": "sha256:ed4d47fc5dd071715c8f0005e29ac118a3908fd709bb876d0a9f7d35f0a23c01"
+          "bytes": 22516,
+          "sha256": "sha256:7378a912d479f5b3d361bb78418c074fdd843df401bc790c9bee06cff46d2e39"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis en colère .'\ni'm home . => 'je suis en tom .'\n"
+          "text": "i lost . => 'je suis en vu .'\ni'm calm . => 'je suis en sécurité .'\ni'm home . => 'je suis en sécurité .'\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis en colère .', chrF 0.394\ni'm home . => 'je suis en tom .', chrF 0.347\n"
+          "text": "i lost . => 'je suis en vu .', chrF 0.100\ni'm calm . => 'je suis en sécurité .', chrF 0.354\ni'm home . => 'je suis en sécurité .', chrF 0.320\n"
         }
       ]
     },
@@ -170,8 +170,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 26032,
-          "sha256": "sha256:df9249def81bf85c9d06f846bfb253f3b1bd230e073c5abb7b19dfe5a960ff94"
+          "bytes": 26033,
+          "sha256": "sha256:620595e1d74f66e5ee82a345ea862ff5671b1d37deff5ef4494152bbe3453680"
         }
       ]
     }

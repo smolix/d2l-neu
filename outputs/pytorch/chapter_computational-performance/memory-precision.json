@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
           "bytes": 24434,
-          "sha256": "sha256:483a57c90838261aeb0fa292cf55c48bee750f2ea1da1d5448b04509aaa03f9f"
+          "sha256": "sha256:b8254ee05908e620b1465a733ae9e671d2e47dfdc15f692e9e5985dbc716ead7"
         }
       ]
     },
@@ -44,17 +44,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32 (tf32 off): 22.58 ms/call\n"
+          "text": "fp32 (tf32 off): 22.03 ms/call\ntf32: 15.02 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 17.79 ms/call\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "bf16 autocast: 9.78 ms/call\n"
+          "text": "bf16 autocast: 9.58 ms/call\n"
         }
       ]
     },
@@ -65,12 +60,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "store all: peak 4318 MB, fwd+bwd 59.9 ms\n"
+          "text": "store all: peak 4318 MB, fwd+bwd 54.1 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointed: peak 2306 MB, fwd+bwd 71.1 ms\n"
+          "text": "checkpointed: peak 2306 MB, fwd+bwd 63.1 ms\n"
         }
       ]
     },

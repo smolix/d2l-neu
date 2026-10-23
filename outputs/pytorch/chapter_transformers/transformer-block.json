@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
           "bytes": 29255,
-          "sha256": "sha256:fa5bc72f6350c8a8ba273d819d0b679ab1fe534641a4548e7c1a3d0e3f814f3b"
+          "sha256": "sha256:a3e0fb20b49997e221e80b29340dd2c3ebf0734a89574f397c8f99c7261e2463"
         }
       ]
     },
@@ -43,12 +43,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.681 ms\n"
+          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.685 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RMSNorm: 0.652 ms\n"
+          "text": "RMSNorm: 0.646 ms\n"
         }
       ]
     },

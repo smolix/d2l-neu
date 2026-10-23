@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: tf.Tensor([-0.70784295 -0.2909985 ], shape=(2,), dtype=float32) \nlabel: tf.Tensor([3.7740877], shape=(1,), dtype=float32)\n"
+          "text": "features: tf.Tensor([-0.84000164  2.662666  ], shape=(2,), dtype=float32) \nlabel: tf.Tensor([-6.5365863], shape=(1,), dtype=float32)\n"
         }
       ]
     },

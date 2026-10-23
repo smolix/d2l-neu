@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40443,
-          "sha256": "sha256:b61a10f6c4a76db910eb80c4331960dfa6f85bb287b035533bd09248b7b5f562"
+          "bytes": 39841,
+          "sha256": "sha256:bbab3dd75fee4455600932e5d2d5274f1afea5cea747201864781c95a12d9937"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 18970,
-          "sha256": "sha256:686eb2470ad37b6802da1794694c8c4ef20f0cea7e7e383d1e281c7518984185"
+          "bytes": 20313,
+          "sha256": "sha256:fe0751c9310f36b2dd3a3c1d7a3e985c902399d09c5d61736f018d7d37229a6f"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 69654,
-          "sha256": "sha256:418bb4a4fd2c9ebc43bde60bb9daee7f71679407dc521fd11a5653752897a2f4"
+          "bytes": 68702,
+          "sha256": "sha256:6517579dda9d2716d7a72d6efd45c289e5cbd2b9b29b675f9ce4da7066925b8c"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 46782,
-          "sha256": "sha256:c0f64a87a4ad11957c5c117cd405cf72f5866ee60e42dbc15d1bca5d87a43f13"
+          "bytes": 46014,
+          "sha256": "sha256:dab0d5450d131a4971c496c4b6bcb2823c8ba03ac410c339d3c5ff2c1f67a4a9"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 108431,
-          "sha256": "sha256:58a4e6aead3bf0dd89c7ad3688813399a92a53e5927b53c05ef506201ff5b7d7"
+          "bytes": 105871,
+          "sha256": "sha256:2925a34e57b699f369c6cfd29fcf1e37e6d62eebb90369f3c9d7a0a6fe12f0eb"
         }
       ]
     }

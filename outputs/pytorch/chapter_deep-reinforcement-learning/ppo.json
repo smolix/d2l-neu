@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-the-ablation-4-1.svg",
           "bytes": 35079,
-          "sha256": "sha256:ea37dc19e6b569860a13b56fb78a87db3d30e351d6009a6db97df3f41cdfce4a"
+          "sha256": "sha256:fb7852dafa5c0467c192a3f857ed7f19464cd09f02cc6478d6be86f6048b666d"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
           "bytes": 35520,
-          "sha256": "sha256:019c264ec4215a234ae970c1cd6a960f423fbed6a62e8b3cfd9238239226ba31"
+          "sha256": "sha256:3558b87c9a96acc394ffc01f74612dd135da7bd477bfbced4fa94157332f9a25"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-3-1.svg",
           "bytes": 52051,
-          "sha256": "sha256:c262a8a9f14a2e833a3fc854018272060b2a1785bca3ba76ff2742eb2a01d1d6"
+          "sha256": "sha256:1b3b4db6a575dd2e0ee3b57c37059f2ec74a9172e604ecda9c07711f0e04fc52"
         }
       ]
     },
@@ -133,7 +133,7 @@
           "mime": "image/svg+xml",
           "asset": "ppo/ppo-how-to-know-your-rl-is-broken-4-1.svg",
           "bytes": 30183,
-          "sha256": "sha256:7854d9f0de942e85d16207ff763527a826f7c58c6ffc89fde1455ee897eb5373"
+          "sha256": "sha256:79a3fbb84231f03bb0224e26981a4331ea6c645d3d305426f37bf70c73d573ab"
         }
       ]
     },

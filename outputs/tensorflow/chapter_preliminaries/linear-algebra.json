@@ -259,7 +259,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=1.960163950920105>,\n <tf.Tensor: shape=(), dtype=bool, numpy=True>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.0440874099731445>,\n <tf.Tensor: shape=(), dtype=bool, numpy=True>)"
         }
       ]
     },
@@ -320,7 +320,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf.Tensor(4.0812373, shape=(), dtype=float32) tf.Tensor(4.081238, shape=(), dtype=float32)\ntf.Tensor(True, shape=(), dtype=bool)\n"
+          "text": "tf.Tensor(6.1906333, shape=(), dtype=float32) tf.Tensor(6.1906333, shape=(), dtype=float32)\ntf.Tensor(True, shape=(), dtype=bool)\n"
         }
       ]
     },

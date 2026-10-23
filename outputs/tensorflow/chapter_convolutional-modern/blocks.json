@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
           "bytes": 20444,
-          "sha256": "sha256:6e2bc7693b3b94760a0ae8ee8b10c63ea561a3221aca67520be3a7391d2981fd"
+          "sha256": "sha256:d61fe868b12c1f4c2b8c4f65074cad499ac2ed49c5e0c1d7bde6416675a2828b"
         }
       ]
     },
@@ -74,7 +74,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\nSequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\n"
+          "text": "Sequential output shape:\t (1, 54, 54, 96)\nMaxPooling2D output shape:\t (1, 26, 26, 96)\nSequential output shape:\t (1, 26, 26, 256)\nMaxPooling2D output shape:\t (1, 12, 12, 256)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 12, 12, 384)\nMaxPooling2D output shape:\t (1, 5, 5, 384)\nDropout output shape:\t (1, 5, 5, 384)\n"
         },
         {
           "type": "stream",
@@ -91,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 20956,
-          "sha256": "sha256:219b2f8bc62826f0f9009fc4d9a4e8ec9881503db63e84ba9e8e01e13108a277"
+          "bytes": 20957,
+          "sha256": "sha256:161067a47cdf0634e860eb183604627d3d2260b633a7d3cc6fb6795601e1c628"
         }
       ]
     },

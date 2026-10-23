@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
           "bytes": 44301,
-          "sha256": "sha256:9bd78efd51e4f8c10229eb2f0fe2f0a0c8fa852857965dc2401170dd268ec06d"
+          "sha256": "sha256:76f22ea13a1db24aa782887d4c9e4f4da1a69d8080693f2fb4831d64dcd76cf8"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1.svg",
           "bytes": 28528,
-          "sha256": "sha256:8dd54f9d63f06b3053c9f5c64a50cea366a3146470726525a87304cc86f579d9"
+          "sha256": "sha256:a41871a0a3cd5f7f8110785a125528d8788467f912fd3418d2694ec517485920"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
           "bytes": 29842,
-          "sha256": "sha256:c43ccdc380af8b2e24d8d760851ec4dd003ec78ce6654f40c0a1ec7960ed9234"
+          "sha256": "sha256:3c53afffed49203dcb7baa4377ede1e5c904bf50e3e8e3bb6c15d043b5b00ace"
         }
       ]
     },
@@ -154,7 +154,7 @@
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
           "bytes": 46544,
-          "sha256": "sha256:e249a35d3c5b705b928d356d12ac02daa651fde734e72ab785ae712fa893d895"
+          "sha256": "sha256:ae2ceeb808880c0d26f24112b1c58ffe95fa5f000c3ec80e2117dd0d6b2e801f"
         }
       ]
     },

@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 20498,
-          "sha256": "sha256:65545fa261fa14591b2691779bb34d2b23f5c8539538db53f97c7a0e25e5f165"
+          "bytes": 20501,
+          "sha256": "sha256:055b188f847899d938b46b50517c02870bdfb11de9c799577cbdbe9423b1f99b"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
           "bytes": 20522,
-          "sha256": "sha256:b9113bd4cf7f3388b5dde5bc7172e6b2762aaa4801469fbdaeb9b6d013a7017e"
+          "sha256": "sha256:a216e87839fb1c4e0a90b8f6327d2515de511e00f4057543c18980f0be0eea63"
         }
       ]
     },
@@ -71,12 +71,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.913\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.911\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 params, val acc 0.922\n"
+          "text": "VGG-style: 583,594 params, val acc 0.927\n"
         }
       ]
     },
@@ -96,7 +96,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.0016694068908691406"
+          "text": "0.0025153160095214844"
         }
       ]
     }

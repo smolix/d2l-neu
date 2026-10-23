@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
-          "bytes": 26181,
-          "sha256": "sha256:15399fd3c27ff0f59618a8c1aa28eced18b58c89f478e3ddd74de3d042e372c3"
+          "bytes": 26183,
+          "sha256": "sha256:983951f882f2556d2973f4cefdf10368ce019f4855ae221e655566f710deba8b"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tf.Tensor(\n[[ 0.88569    -0.53551334 -2.0258462  -1.6222503 ]\n [ 0.08253931  0.37377733 -1.1129707   0.7584501 ]\n [-0.30639806  0.44809902  1.0800251  -0.8498218 ]\n [-0.37185267 -1.3523052   0.4892188  -1.1749656 ]], shape=(4, 4), dtype=float32)\nafter multiplying 100 matrices\n [[-3.3796842e+23 -1.4009740e+23  4.3313110e+23  7.5757996e+23]\n [ 8.0702145e+22  3.3508249e+22 -1.0345620e+23 -1.8100430e+23]\n [-1.6039657e+23 -6.6450585e+22  2.0551867e+23  3.5942717e+23]\n [-7.8191073e+22 -3.2419027e+22  1.0021750e+23  1.7529337e+23]]\n"
+          "text": "a single matrix \n tf.Tensor(\n[[-0.1293929   0.82914126 -0.22045612 -0.47461188]\n [ 0.00792806  0.2819877   0.2964523  -1.4655552 ]\n [-0.13566627 -0.44157365 -1.4890292  -1.4580845 ]\n [-1.2898535  -1.1984932   0.27996385 -0.44041106]], shape=(4, 4), dtype=float32)\nafter multiplying 100 matrices\n [[4.6627121e+21 1.0282160e+21 1.1931760e+22 3.7007562e+21]\n [4.2777477e+22 9.4332240e+21 1.0946640e+23 3.3952126e+22]\n [3.9112538e+22 8.6250486e+21 1.0008794e+23 3.1043294e+22]\n [1.8583879e+21 4.0980927e+20 4.7555653e+21 1.4749869e+21]]\n"
         }
       ]
     },
@@ -45,8 +45,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 32907,
-          "sha256": "sha256:da4d60a3657924cc4b2cbfa51d1f7a4a78b9e1b61b076a52eedc173b2893662a"
+          "bytes": 30999,
+          "sha256": "sha256:facc8b561699e384f8fc9fa379fedec793eea6e38b0fdca43c1abb9ef31926f5"
         }
       ]
     }

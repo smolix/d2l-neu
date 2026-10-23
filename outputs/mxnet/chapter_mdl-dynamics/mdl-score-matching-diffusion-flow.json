@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:1b7a56a68be0b99502963ae9ea53143a1b718931c3d8c1a2b8c5b21b4ba74882"
+          "sha256": "sha256:30f501ef8671564fc7f346342bd0b54add68644f11894e8d6b6a8d23296e4078"
         }
       ]
     },
@@ -88,7 +88,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
           "bytes": 30656,
-          "sha256": "sha256:c511dc038219ca9a64dc861551f72cac6c466a11407edc07da8b005bd809346a"
+          "sha256": "sha256:2591fe33b55c5a970780928b34daacdfd83179725b12c0b25dbbf9ed467e7c4b"
         }
       ]
     },
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[22:56:57] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[05:08:35] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -164,7 +164,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114875,
-          "sha256": "sha256:018b5b476de3f7e0f5fa83341a207ec01cf9aa087004279b429ea0d961ab587b"
+          "sha256": "sha256:a5716275252418974e260cb9f5bc9069597ea989e19c83bbbfc66299bfd03984"
         }
       ]
     },
@@ -208,7 +208,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 24637,
-          "sha256": "sha256:c5e7fa5fb48efc7ff6143013865529e9291067718a6fe912be7a32a0fc85bdcc"
+          "sha256": "sha256:9f48c4b7c3d6e9fc8c9f5e71570270f229d14c3a8749b4865131f33a8a450d5a"
         }
       ]
     },

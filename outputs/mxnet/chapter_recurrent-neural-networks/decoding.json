@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 18336,
-          "sha256": "sha256:9833eb60151894aaed39931674158e01d0c4dddb49b80f6226d8c60da74be3f1"
+          "bytes": 18339,
+          "sha256": "sha256:a9e1a4f6f6db6e7e40ccc8e7ede4b29e9f46c0b36e822355d3d6cd192e89c863"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller,\\nI could see no\\nsideways,\\nI could see\n    no\\nsideways,\\nI could see no\\nsideways,\\nI could see no\\nsideways,\\nI\n    could see no'\n'it seemed to me that\\nthese,\\nand straighter I had\\nchairing,\\nI could see\n    no\\nsideways,\\nI could see no\\nsideways,\\nI could see no\\nsideways'\n"
+          "text": "'the time travellering the\\nsunning in the\\nsharing my\\nsharing my\\nsharing\n    my\\nsharing my\\nsharing my\\nsharing my\\nsharing my'\n'it seemed to me that\\ntheirken of the\\ncameed the\\nsharing my\\nsharing\n    my\\nsharing my\\nsharing my\\nsharing my\\nsharing my\\ns'\n"
         }
       ]
     },
@@ -64,17 +64,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.95, distinct-3 0.29: 'the time traveller,\\nI could see\n    no\\nsideways,\\nI could see no\\nsideways,\\nI could see no\\nsideways,\\nI\n    could see no\\n'\n"
+          "text": "k=1, score -4.84, distinct-3 0.34: 'the time travellering the\\nsunning in\n    the\\nsharing my\\nsharing my\\nsharing my\\nsharing my\\nsharing my\\ns'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -4.14, distinct-3 0.63: 'the time travellerlearly\n    enough\\ndisappeared to me, as I say, I\\nfirst I\\ndisappeared to me, as I\n    say, I\\nfurther me'\nk=1, score -4.80, distinct-3 0.74: 'it seemed to me that\\nthese,\\nand\n    straighter I had\\nchairing,\\nI could see no\\nsideways,\\nI could see\n    no\\nsideways,'\n"
+          "text": "k=4, score -3.78, distinct-3 0.82: 'the time travellering the\\nsharacter\\nof\n    the thing was\\nstrangely\\nwerent\\nblramely\\ndifferent\\nblramely\\n'\nk=1, score -4.77, distinct-3 0.47: 'it seemed to me that\\ntheirken of\n    the\\ncameed the\\nsharing my\\nsharing my\\nsharing my\\nsharing my\\nshar'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -4.29, distinct-3 0.82: 'it seemed to me that they\n    were\\nsomething\\nhimbstance, I\\nfirst I\\ndisappeared to me, as I say,\n    I\\nfirst I\\ndism'\n"
+          "text": "k=4, score -3.69, distinct-3 0.95: 'it seemed to me that\\ntowards\n    the\\nsharacter\\nof the thing\n    was\\nstrangely\\nwerent\\nblramely\\ndifferent\\nbut'\n"
         }
       ]
     },
@@ -105,14 +105,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7430f112b830>"
+          "text": "<matplotlib.legend.Legend at 0x764806f65e80>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 50814,
-          "sha256": "sha256:3112da96ef9860809b7cab7f40e6fe0d88e3e399c183fc544139638024ebd7c3"
+          "bytes": 56047,
+          "sha256": "sha256:6f0ba574aa0e6823e394be45a713e9deeea7424d9eb459f2415b7154122c3bcb"
         }
       ]
     },
@@ -123,7 +123,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.22, top-k keeps 20, top-p keeps 105, min-p keeps 13\n'it seemed to me that': top prob 0.12, top-k keeps 20, top-p keeps 224, min-p keeps 30\n"
+          "text": "'the time traveller': top prob 0.28, top-k keeps 20, top-p keeps 42, min-p keeps 10\n'it seemed to me that': top prob 0.28, top-k keeps 20, top-p keeps 70, min-p keeps 8\n"
         }
       ]
     },
@@ -134,17 +134,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: 'the time traveller,\\nI could nothing\\nhandant dimensiting\n    at\\nwarception,\\nand,\\nby sleeping,\\ntherever\\nwhat Time Traveller,\\nand\n    everinger\\nwere,'\n"
+          "text": "T=0.5: 'the time travellering the\\nsurfaceones for\\ninto the bushes\\nthe\n    general\\ndownting gave a\\nminented\\ninciftly\\nof the skull of the sp'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: 'the time traveller had been\\nthe skyound, lawnve\n    their\\nhadmadeacadeast\\nban, unaknesser�ide bingmentsideageedell you\n    follow now,, so touchedtimes them\\nwor'\n"
+          "text": "T=1.0: 'the time travellerotal of the moreagine with her\n    hoinsunderzitushes\\nmet one stoneningroreack in stired sering re vurf\n    down this heads andudekeesg'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: 'the time traveller reance tendich distical shaally( futi enough,\n    felt c white frow from\\nlearhin after these\\\\oseonoveking waste do lau\n    atationhingWow Weena wouldfat downering of gom minute'\n"
+          "text": "T=2.0: \"the time travelleribleered\\nme sl got strange_.' darknesshinx theain\n    Iertain a en whogeto the great very got along me other� still ne and by\n    which dark surpuostrow said amongend our know ha our antheries'\"\n"
         }
       ]
     },
@@ -155,27 +155,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.23): 'the time traveller,\\nI could see\n    no\\nsideways,\\nI could see no\\nsideways,\\nI could see no\\nsideways,\\nI\n    could see no\\nsideways,\\nI could see no'\n"
+          "text": " greedy (distinct-3 0.27): 'the time travellering the\\nsunning in\n    the\\nsharing my\\nsharing my\\nsharing my\\nsharing my\\nsharing my\\nsharing\n    my\\nsharing my'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): 'the time traveller had been\\nthe skyound, lawnve\n    their\\nhadmadeacadeast\\nban, unaknesser�ide bingmentsideageedell you\n    follow now,, so touchedtimes them\\nwor'\n"
+          "text": "  T=1.0 (distinct-3 1.00): 'the time travellerotal of the moreagine with her\n    hoinsunderzitushes\\nmet one stoneningroreack in stired sering re vurf\n    down this heads andudekeesg'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): 'the time traveller you were\\nwrarrowapedceeded\n    animmerared,\\nand straggible fear: since have been\\nvalterly daminite\n    metal, came,,\\nt'\n"
+          "text": "  top-k (distinct-3 1.00): 'the time travellerlephs\\nmeakness my cloping for\n    the Medical Man and steadying\\ntonsteadfentered; but the\\ncorracet in\n    the threefinishedy\\nweren'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): 'the time traveller\\nfromly intoch they felt\n    seemed voicar\\norn;er\\nthese, bature, can expected therewith, upon my\n    own accene he knowsurveloped\\nac'\n"
+          "text": "  top-p (distinct-3 1.00): 'the time traveller amidstainy feelcitech upon\n    the\\ncontinuectiderngth and clumber rving more at first of the starature\n    dinner the Filbyingting\\ngen away'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): 'the time traveller an\\nhow, as they would not\n    oldrelyumping\\nthinking up\\nthe waved-cocess me. I was\n    clue,\\nasimension,\\nand, it was already-'\n"
+          "text": "  min-p (distinct-3 1.00): \"the time travellerlever\\n\\n'Nowing to the Webit\n    know of our own time and the\\nmotion. And here noctorododenemed\\nof the\n    dimensions of the edday it\\nsu\"\n"
         }
       ]
     }

@@ -38,12 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "relative deviation, dual vs recurrence: 4.14e-06\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "a_t = 1, deviation from masked linear attention: 0.00e+00\n"
+          "text": "relative deviation, dual vs recurrence: 4.14e-06\na_t = 1, deviation from masked linear attention: 0.00e+00\n"
         }
       ]
     },
@@ -80,32 +75,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     recurrence      49.63         0.0\n"
+          "text": "     recurrence      48.58         0.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   chunked (16)       2.80         1.1\n"
+          "text": "   chunked (16)       2.78         1.1\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   chunked (64)       1.62         1.1\n"
+          "text": "   chunked (64)       1.29         1.1\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  chunked (256)       0.46         5.0\n"
+          "text": "  chunked (256)       2.42         5.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " chunked (1024)       0.37        21.0\n"
+          "text": " chunked (1024)       2.08        21.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " quadratic dual       0.45        68.0\n(NVIDIA GeForce RTX 4090, float32, jax 0.10.2; teaching implementations, all forms compiled)\n"
+          "text": " quadratic dual       2.41        68.0\n(NVIDIA GeForce RTX 4090, float32, jax 0.10.2; teaching implementations, all forms compiled)\n"
         }
       ]
     },

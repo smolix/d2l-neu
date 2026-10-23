@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40491,
-          "sha256": "sha256:fe60571b8f61a4eed94a1dd2d36c7e22728dec9cd137804fe248745148713350"
+          "bytes": 39948,
+          "sha256": "sha256:b26a126d061f13cae89f05ce2767b64027587e3f931182b6b42b62678c31fa06"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 17929,
-          "sha256": "sha256:807c4d4c868e01fbfb8aa34d8655dc27bb36eae65ca4ab4397d271bdc5b04873"
+          "bytes": 19947,
+          "sha256": "sha256:8455155fba0b8a51ddea0260d779a4f557f62e449494bbf153c11e327590f531"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 68138,
-          "sha256": "sha256:879c238429c26b60ab2f341af840b186b131b304c7beecbfd2bc6a9c3a3cb7de"
+          "bytes": 67400,
+          "sha256": "sha256:3218771a474cea38f09d0680dd2ac6d5e506022b508b445a0f968ec986f16c3a"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44751,
-          "sha256": "sha256:37ad5e623433867daf4f85c002fee371e6aa07bd25935f46b9b9cd93577a5d53"
+          "bytes": 44424,
+          "sha256": "sha256:0ce16e99b8c40b1b5507fac06ae1ae4a1862643513553b92811a8ba7768fd7ba"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 104797,
-          "sha256": "sha256:4585ce8b36da0bcb6c2ddc78580761353610fa5f40a6bb38f02c826de5985169"
+          "bytes": 105094,
+          "sha256": "sha256:4f9b6c77adecec2af8d88d44f4bebd475caa13c103ee442fbc100d72cdd3044c"
         }
       ]
     }

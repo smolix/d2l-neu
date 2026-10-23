@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "measured 0.80 TB/s (spec: about 1.0 TB/s)\n"
+          "text": "measured 0.92 TB/s (spec: about 1.0 TB/s)\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 13.4 GB/s\npinned: 24.3 GB/s\n"
+          "text": "pageable: 14.9 GB/s\npinned: 26.0 GB/s\n"
         }
       ]
     }

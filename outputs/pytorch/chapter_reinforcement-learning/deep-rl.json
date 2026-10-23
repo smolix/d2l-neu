@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
           "bytes": 35711,
-          "sha256": "sha256:992f6c688bb5689b6a876c09c6603746345cf9dea4dbb5a922a415a738c3642c"
+          "sha256": "sha256:3fd754499fb7954eb6061abdf0f75a94363d05c98e6efe4c2932e289e0bb1fc3"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
           "bytes": 52266,
-          "sha256": "sha256:e7667d9c9c5af16999ae589b6f4038e83a0ebb099a1de6fa7f26a5eef55feaf7"
+          "sha256": "sha256:2500a8daf3100e9c5ceef7a07651d00c05e923babfba47543407f00588e8217c"
         }
       ]
     },
@@ -101,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
           "bytes": 31785,
-          "sha256": "sha256:c224bc8512f5f5ee3ef67d7005a3c9aa0c9144bf251cc7122d40160a04dd70fb"
+          "sha256": "sha256:b32e56021e150429987a41cc412cbea7c6181a7c18c5c7b7dca842f9b2907358"
         }
       ]
     }

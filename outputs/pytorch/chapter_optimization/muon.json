@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "muon/muon-orthogonalization-by-newton-schulz-2-1.svg",
           "bytes": 30186,
-          "sha256": "sha256:25e30f8d881129992eb91bde3116115f71d81ecde2178c6b86114b47f4537abf"
+          "sha256": "sha256:486f43a81578e35d31eb544dff5520c95d1297d4d252e69f98819d3666a9926f"
         }
       ]
     },
@@ -74,12 +74,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.913\n"
+          "text": "lr 0.003: final loss 0.914\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.972\n"
+          "text": "lr 0.01: final loss 0.976\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.833\n"
+          "text": "lr 0.01: final loss 0.831\n"
         }
       ]
     },
@@ -122,8 +122,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-race-on-the-language-model-3-1.svg",
-          "bytes": 28630,
-          "sha256": "sha256:19e540f0d40c86e08ff5e6e82d8dfa3b83e061bf3f493af379b15fd0dd452b70"
+          "bytes": 28640,
+          "sha256": "sha256:cd89d95b48170522a91e705de79fe6142cbfc963af77ed2d4dd131d42d45f07a"
         }
       ]
     },
@@ -193,7 +193,7 @@
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-same-race-on-a-cnn-3-1.svg",
           "bytes": 28752,
-          "sha256": "sha256:e28c4b62b074e21791f6d0f028f7093da5487ae315ddd9c9964021512c0bc1fc"
+          "sha256": "sha256:2dc7224d86df864d85a2482d678175a44224fbb600855c42c454ea49be0e03d0"
         }
       ]
     },
@@ -204,7 +204,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss 0.832\n"
+          "text": "final loss 0.827\n"
         }
       ]
     }

@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
           "bytes": 23523,
-          "sha256": "sha256:283777f61be73c2ddc5f6d75b586d485958edf60afa208342615159f55703b41"
+          "sha256": "sha256:c75dfcb9258c52ae053f2aeeb89e68491af4ce121ceb1874923b0f0af547aa82"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
-          "bytes": 35558,
-          "sha256": "sha256:b0f2f337e11906aae55df9dc473bc6f33ffd8efff27079639006e442a54b49db"
+          "bytes": 35578,
+          "sha256": "sha256:d97a19a7d26d18a70b79ab95a50f7362802512f8730680e36e98c723cce53e2b"
         }
       ]
     },
@@ -87,7 +87,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "               DQN: best 20-episode window per seed [256. 104. 233.]\n                    final window [163.  98. 233.] (spread 136)\n                    fifty episodes earlier [162.  94. 157.]\n no target network: best 20-episode window per seed [27. 25. 26.]\n                    final window [ 9. 10. 10.] (spread 0)\n                    fifty episodes earlier [10. 10. 10.]\n"
+          "text": "               DQN: best 20-episode window per seed [215. 217. 283.]\n                    final window [145. 217. 283.] (spread 138)\n                    fifty episodes earlier [158.  97. 174.]\n no target network: best 20-episode window per seed [27. 25. 26.]\n                    final window [ 9. 10. 10.] (spread 0)\n                    fifty episodes earlier [10. 10. 10.]\n"
         }
       ]
     },
@@ -98,17 +98,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "               DQN, seed 0: greedy return over 100 episodes 220\n"
+          "text": "               DQN, seed 0: greedy return over 100 episodes 395\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "               DQN, seed 1: greedy return over 100 episodes 152\n"
+          "text": "               DQN, seed 1: greedy return over 100 episodes 437\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "               DQN, seed 2: greedy return over 100 episodes 500\n"
+          "text": "               DQN, seed 2: greedy return over 100 episodes 444\n"
         },
         {
           "type": "stream",
@@ -140,8 +140,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
-          "bytes": 31119,
-          "sha256": "sha256:15e0fb425d4c4a6dc09f5579768910f98d86f638da93c8d17015687fbe994e59"
+          "bytes": 30052,
+          "sha256": "sha256:d6e278a1d2d3fbd44433c69fe8fa3342c8c66c25150f1173c9a773f3f4765b60"
         }
       ]
     },
@@ -173,14 +173,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "       DQN: final value estimate at s0, per seed: [100.3 157.   94.4]\nDouble DQN: final value estimate at s0, per seed: [ 97.1 109.2  92.7]\n"
+          "text": "       DQN: final value estimate at s0, per seed: [108.  129.5  99.8]\nDouble DQN: final value estimate at s0, per seed: [ 98.7 108.1  92. ]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-double-dqn-in-three-lines-3-1.svg",
-          "bytes": 37013,
-          "sha256": "sha256:2eec86c29210e5fe5d794f1fa3d28e82eb7feb2cba586f608e3203892591c63b"
+          "bytes": 35946,
+          "sha256": "sha256:ec20d491f5b18dd2b9b7fc0e19707615bac881325579d0c8ac7f8396434e9469"
         }
       ]
     }

@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-data-and-models-1-1.svg",
-          "bytes": 20466,
-          "sha256": "sha256:24811ed601d23d146de55546496c47a8a0a24a7e3bedd6c17a8c0d9a27a27294"
+          "bytes": 20462,
+          "sha256": "sha256:7c22a510cbfee84b6b0bdc434ed3ee33880002b1cfd3b55f33773ea2b97b9d7c"
         }
       ]
     },
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-2-1.svg",
-          "bytes": 57037,
-          "sha256": "sha256:fbf9aee11c0899f5ee3a56b620a4adb358377de2f39b08eaa9de3cf87923722e"
+          "bytes": 57057,
+          "sha256": "sha256:a4c39d230c69d6e3a1c0df43a335447d2a3d41a0c17c1905625139bc9bf31b38"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "correlation(D, lambda) = 0.949\nmean |D - lambda| = 0.154 nats\n"
+          "text": "correlation(D, lambda) = 0.875\nmean |D - lambda| = 0.182 nats\n"
         },
         {
           "type": "execute_result",
@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-verifying-the-optimal-critic-2-1.svg",
-          "bytes": 60837,
-          "sha256": "sha256:280782b729fd5c0f6fee0e9c194cc3c7345c0911465e2401ad82a8b40a1c0c34"
+          "bytes": 62271,
+          "sha256": "sha256:d811a4edbe2d6f84ac8345ab4134a6d4dda855c8394925d802da7f86418b5603"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "KL(q || p) at initialization: 7.856 nats\nKL(q || p) after training   : 0.051 nats\n"
+          "text": "KL(q || p) at initialization: 7.856 nats\nKL(q || p) after training   : 0.048 nats\n"
         }
       ]
     },
@@ -109,12 +109,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "non-saturating: final KL(q || p) = 77.73 nats\n"
+          "text": "non-saturating: final KL(q || p) = 1.87 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saturating: final KL(q || p) = 323.85 nats\n"
+          "text": "saturating: final KL(q || p) = 323.86 nats\n"
         }
       ]
     },
@@ -126,8 +126,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-saturating-versus-non-saturating-training-2-1.svg",
-          "bytes": 169364,
-          "sha256": "sha256:225a58908e555a9bf5a8c3f0bfdf8663439d2d3da9bdaaf61aaba4f2ace516f6"
+          "bytes": 169373,
+          "sha256": "sha256:6e69ba5f752c35a20eb9e4c7cc7505bcbac52981ff400c721fa502e503aede51"
         }
       ]
     }

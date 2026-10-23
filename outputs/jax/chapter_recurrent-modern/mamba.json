@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D: final validation accuracy 0.631\n"
+          "text": "S4D: final validation accuracy 0.630\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-3-1.svg",
-          "bytes": 21293,
-          "sha256": "sha256:f324c33f8c9dc88a0a0d2077a5c55d14a6d0ac103382461cc9b41170a9f6d4c3"
+          "bytes": 21296,
+          "sha256": "sha256:5859ed04d70294bd5d6b511432a9214b45b5d5a7f4aa7a9c8666f97d7221f598"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM: final validation accuracy 0.903\n"
+          "text": "LSTM: final validation accuracy 0.992\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-4-1.svg",
-          "bytes": 21316,
-          "sha256": "sha256:e40ed8fc8f57195d61b27736aa0c81ae55f0f8be85cd6dc394b3a1d21a998879"
+          "bytes": 21875,
+          "sha256": "sha256:f98fe1167df0ecb83881a4146d26f865372cafde20c1a259382fd4dd52b8a831"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-5-1.svg",
-          "bytes": 26908,
-          "sha256": "sha256:d6b3b5dadf43549281f4c48927d64004ae18e528daf517f24a7b931e4078b5bc"
+          "bytes": 27636,
+          "sha256": "sha256:eab53dbf6d4e744a01f84821be9e30cada948d2845cecd889c897bee23235b7d"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-3-1.svg",
-          "bytes": 18952,
-          "sha256": "sha256:80ac777fb999fa05e622c8694d461988909c697052b339c86766af5de62098d0"
+          "bytes": 18949,
+          "sha256": "sha256:c5f360c3202b33a696edc6e44c300735d4099f15ecf8fa28f9b9960503c6b548"
         }
       ]
     },
@@ -134,8 +134,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-4-1.svg",
-          "bytes": 18571,
-          "sha256": "sha256:e508589cd75f1f4f36b899a9a0deeb5b322e3677e581a915a4901afa7da9f69c"
+          "bytes": 18572,
+          "sha256": "sha256:4524fdfdfec3fa568a4050f45d0b5a294a93636afa96420aabd08a6dc7ee9342"
         }
       ]
     },
@@ -147,8 +147,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-5-1.svg",
-          "bytes": 20825,
-          "sha256": "sha256:daa74b7d98911f7e0942df5867d2687828454c49087bcb8b0c624b80c8d19dde"
+          "bytes": 20822,
+          "sha256": "sha256:1812e931aff446b0542c6a80d957c88d98f6d9a8a2602e80d5bf78b224f5149d"
         }
       ]
     },
@@ -159,7 +159,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     91.4   2.34   297,027      1.7\n minGRU     85.7   2.31   214,851      1.0\n  Mamba     88.6   2.33   488,739      2.8\n"
+          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     92.8   2.35   297,027      3.5\n minGRU     85.5   2.31   214,851      2.0\n  Mamba     88.3   2.33   488,739      6.0\n"
         }
       ]
     },
@@ -175,7 +175,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stepped vs scanned logits: deviation 4.29e-06, relative 4.02e-07\n"
+          "text": "stepped vs scanned logits: deviation 4.29e-06, relative 3.92e-07\n"
         }
       ]
     },
@@ -186,17 +186,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   LSTM: 'the time traveller. I had\\nconanted to fue. And the same\\nwas\n    circumstant, as'\n"
+          "text": "   LSTM: 'the time travellers of the pusian. The question, and there was the\n    running, and then, that'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " minGRU: \"the time traveller,\\nand a moment\\nI dw up down the three-\n    down.\\n\\n'I must have\\n\"\n"
+          "text": " minGRU: 'the time traveller, I had\\non mere to bey\n    expltictically\\nincession\\ntall'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  Mamba: 'the time traveller, I was not know. One of a\\nmind, but the\n    weather-world people as\\nthis'\n"
+          "text": "  Mamba: 'the time traveller, I was not recatural that so\\nas I saw the\n    hall, and the ghosts'\n"
         }
       ]
     },
@@ -207,14 +207,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba: final validation accuracy 1.000\n"
+          "text": "Mamba: final validation accuracy 0.999\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-1-1.svg",
-          "bytes": 21890,
-          "sha256": "sha256:b47a3fe9a82905217cfac77847cbd7bd51673fbce41ab1ee5f3603a067041d6e"
+          "bytes": 21899,
+          "sha256": "sha256:ad1bdd191639f75b8ee4219091e754102d8a2200a1bb581e85a79af793d2f6d2"
         }
       ]
     },
@@ -226,8 +226,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-2-1.svg",
-          "bytes": 30431,
-          "sha256": "sha256:37e7291ace8ba584cbf552a8fc134a74351038e401861420cad6934f75414f02"
+          "bytes": 30466,
+          "sha256": "sha256:53f4f919a2b9d88028dfce6fecf54a91491e26699886e63640431a27e5ad1d60"
         }
       ]
     },
@@ -239,8 +239,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-3-1.svg",
-          "bytes": 35672,
-          "sha256": "sha256:d1d900918a64a89f43a218d7dbc9584976f0ec0e990b25b74095dffb81e6c446"
+          "bytes": 36809,
+          "sha256": "sha256:ef3879ed019c8e2806ff7f5ed70e558d41b847dacacee7e86a8e262ebbde8e68"
         }
       ]
     }

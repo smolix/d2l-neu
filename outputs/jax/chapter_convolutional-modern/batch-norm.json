@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19979,
-          "sha256": "sha256:96346bcb9de614c7c04769888efd2d3afeaa219642800ee288c87b1473b044b5"
+          "bytes": 19978,
+          "sha256": "sha256:066221ff0099cd3f30e7d439b2d45f00312d1d09a149ccd08db649d4c5c1d033"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([2.6707244, 1.8966421, 1.8147523, 1.6768903, 1.9702979, 1.7232087],      dtype=float32),\n Array([ 1.2342167 ,  0.5609814 , -0.26910412,  0.81538904,  0.20941882,\n         0.6389893 ], dtype=float32))"
+          "text": "(Array([2.6750534, 1.864373 , 1.8413514, 1.666423 , 2.0202115, 1.7439376],      dtype=float32),\n Array([ 1.2240539 ,  0.5756531 , -0.20262136,  0.75587565,  0.0692879 ,\n         0.7089879 ], dtype=float32))"
         }
       ]
     },
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
           "bytes": 19980,
-          "sha256": "sha256:8087b2bc340fe5609ed6c364281eb9e780f035ed1c84669a1714f82c966120ee"
+          "sha256": "sha256:0e91714d9bbcb1f0903d738a17aded50ae6b99c5a90083f1b29a919472574026"
         }
       ]
     },

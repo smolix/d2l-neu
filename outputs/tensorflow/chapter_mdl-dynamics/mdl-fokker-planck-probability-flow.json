@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
           "bytes": 71874,
-          "sha256": "sha256:67ac75f2d176b9b240612cbda4ca6c274e3025ea1beea9f43b3cd74bdc18bfd4"
+          "sha256": "sha256:3c19ea2e9fcee477792a64ec1d7023390a0b5e963a66457f2a76350cdeffecee"
         }
       ]
     },
@@ -71,19 +71,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
+          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\nt=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
           "bytes": 245349,
-          "sha256": "sha256:9cdc5ce083f3e0c9af9bfc452264fb6443969bf99c27e683a61af5f5c09bee03"
+          "sha256": "sha256:26f0c36128b1632728a0917b046ac4a95cf645dba7a73f20c88fc50aaf938610"
         }
       ]
     },
@@ -101,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 25825,
-          "sha256": "sha256:6f2242823aa2f4debde2b4db2de50afac77b404f51d639eb07b242f67b3a4637"
+          "sha256": "sha256:3a39dd5d955afe467b34030aa60ddc414d1d52a1deedb7509d57b8fff45f5bbc"
         }
       ]
     },
@@ -124,7 +119,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
           "bytes": 43149,
-          "sha256": "sha256:0dfdc26c0b9c19636a448a8328ad5ad6f233b5978d7ce18cd914471868dc71c2"
+          "sha256": "sha256:9df1f1157772a22855b4ddbe0451113cd1035cb6c0c7569f520030de8c90f3ed"
         }
       ]
     }

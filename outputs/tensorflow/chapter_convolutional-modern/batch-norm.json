@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19978,
-          "sha256": "sha256:da13dc2a0dcdba0b9e819748c4c3b605bca3bd02438fdc732a77b6c1c0b57bfb"
+          "bytes": 19979,
+          "sha256": "sha256:1a8e39220ebfe6e67a4e5e75ebdfd6af934b7da7766a1b0840d747b2f0947de6"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.6330233, 2.25818  , 3.374007 , 3.820023 , 2.5220754, 2.6115816],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([ 2.1658266 , -2.5676103 , -1.7646055 , -2.344429  ,  2.7539537 ,\n        -0.35519245], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([3.5524964, 4.387585 , 3.3685105, 2.0423777, 1.6704628, 1.7215525],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([-1.7834271,  2.242198 , -2.3563418, -2.5878525, -1.2285628,\n         1.1503007], dtype=float32)>)"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19971,
-          "sha256": "sha256:94f60b836e5bc234b8a8698899284828519b4939684f91a74e039523303e1335"
+          "bytes": 19973,
+          "sha256": "sha256:b8feeca8de67e7a1d1c16b4e86411e8526ef9235d4ad73d586c0c3a9146b3187"
         }
       ]
     },
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.60770320892334e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9989977478981018>,\n True)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.60770320892334e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9989879727363586>,\n True)"
         }
       ]
     }

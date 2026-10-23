@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 18941,
-          "sha256": "sha256:cb34ccb3dac56ba5e09b4f79b05afa0ee0ccbc7798fd30fa2db465cbb54d0aab"
+          "bytes": 18939,
+          "sha256": "sha256:2bf19156e5737dd58ecc97c240e2c8b767ddd7f1f85e987667e2f3f734233ef9"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller. The\\ndismins of my faint\\ntheseen. It was not the\n    circle of the little people. And the Time Traveller hesitated\\ntheirer.\n    I had\\navidently a'\n"
+          "text": "'the time travelleres of\\ntheir. The\\ndownward, and the\\noverered, I saw\n    a\\nmatical civilization of the\\nside of mereal. I had a narrowing. The'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'it seemed to me that my fy-fastly in a friendron\\nbranent the Time Machine,\n    and, I found a corner of the floor, and then\\nthere in a pattering, and\n    then'\n"
+          "text": "'it seemed to me that my\\nmaster. The\\ndiscovereded, and I had\\ndisappeared.\n    After a\\nmaterm. The\\ndisappeared. After a\\nsurper'\n"
         }
       ]
     },
@@ -69,22 +69,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.59, distinct-3 1.00: 'the time traveller. The\\ndismins of my\n    faint\\ntheseen. It was not the circle of the little people. And the Time\n    Traveller hesitated\\ntheir'\n"
+          "text": "k=1, score -4.69, distinct-3 1.00: 'the time travelleres of\\ntheir.\n    The\\ndownward, and the\\noverered, I saw a\\nmatical civilization of\n    the\\nside of mereal'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.52, distinct-3 0.82: \"the time traveller.\n    The\\ndisappeared.\\n\\n'There I found a gallery,\\nchanismory.\\n\\n'There I\n    found a secondit\"\n"
+          "text": "k=4, score -4.50, distinct-3 1.00: \"the time travelleres of\\nthese.\n    Allerngs.\\n\\n'Then I was to below, and then\\nstrors, and I had seen to\n    me\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -5.08, distinct-3 1.00: 'it seemed to me that my fy-fastly in a\n    friendron\\nbranent the Time Machine, and, I found a corner of the floor,\n    and then\\nthe'\n"
+          "text": "k=1, score -4.62, distinct-3 0.84: 'it seemed to me that my\\nmaster.\n    The\\ndiscovereded, and I had\\ndisappeared. After a\\nmaterm.\n    The\\ndisappe'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.59, distinct-3 0.95: \"it seemed to me that the flooral\\npoint.\n    The\\ndisappeared.\\n\\n'There I found a gallery,\\nchanismory.\\n\\n'\"\n"
+          "text": "k=4, score -4.06, distinct-3 1.00: \"it seemed to me that I had seen in my\n    mind. I thought of a chap.\\n\\n'Then I had to learnce between, and it was\n    a little\\nhow\"\n"
         }
       ]
     },
@@ -115,14 +115,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7e301814afc0>"
+          "text": "<matplotlib.legend.Legend at 0x7fad1dfa0e90>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 50104,
-          "sha256": "sha256:ec94b6e904fe64ce7d0f53c4ea1ed1631ce995f03c4f55c75a3546f9f631b8b6"
+          "bytes": 49231,
+          "sha256": "sha256:1297a8ad4b1feb49603e230c816378c606ee7ad8bd43d046ba7b5aed0271fa0e"
         }
       ]
     },
@@ -133,7 +133,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.25, top-k keeps 20, top-p keeps 141, min-p keeps 6\n'it seemed to me that': top prob 0.07, top-k keeps 20, top-p keeps 155, min-p keeps 52\n"
+          "text": "'the time traveller': top prob 0.11, top-k keeps 20, top-p keeps 207, min-p keeps 32\n'it seemed to me that': top prob 0.09, top-k keeps 20, top-p keeps 163, min-p keeps 33\n"
         }
       ]
     },
@@ -144,17 +144,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: 'the time travellermmentered the little people of the\n    great\\npreciedred theseeds. But, no right. Twy\\npresently a bothes.\n    There were no turning of right. I did'\n"
+          "text": "T=0.5: 'the time travellerleep. I was unknown. Well, I had dreed me. I was\n    not a sensations had foundued itself. Aserve. For I remember her\\na\n    socies'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: \"the time travellerying to freour little proper maty. Fearising car\n    in a half-conaring,'ac they outerrid you rather- in him to clotarerired,\n    then, man\"\n"
+          "text": "T=1.0: 'the time travellero of the\\nat own race of foaler habment I pock my\n    hands. I began it s look He at frightmmined. C la tranurs of largefulm\n    even'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: 'the time traveller aduded byureshingationsoratoryrto there ofove gr\n    way\\n so uponul by the Time perx by haak� but crefter fter wag she\n    theyX� be these bish by histherin moon Inot'\n"
+          "text": "T=2.0: 'the time travellerong about the Timeaint=aport theirK procetil\\nfull\n    allard y nerewge poofm ward< can am poir to along himichner��olff\n    echesined elog ofully lear'\n"
         }
       ]
     },
@@ -165,27 +165,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 1.00): 'the time traveller. The\\ndismins of my\n    faint\\ntheseen. It was not the circle of the little people. And the Time\n    Traveller hesitated\\ntheirer. I had\\navidently a'\n"
+          "text": " greedy (distinct-3 1.00): 'the time travelleres of\\ntheir. The\\ndownward,\n    and the\\noverered, I saw a\\nmatical civilization of the\\nside of mereal.\n    I had a narrowing. The'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): \"the time travellerying to freour little proper\n    maty. Fearising car in a half-conaring,'ac they outerrid you rather- in\n    him to clotarerired, then, man\"\n"
+          "text": "  T=1.0 (distinct-3 1.00): 'the time travellero of the\\nat own race of\n    foaler habment I pock my hands. I began it s look He at frightmmined. C\n    la tranurs of largefulm even'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): \"the time travellermprewhere ris of these sing of\n    angoted at the time. But I have expression?' into a perp the sentul. But\n    was of them, and was always, with a l\"\n"
+          "text": "  top-k (distinct-3 1.00): 'the time travellererriss he lities in part with\n    a mistt\\nhempoors\\nhalf-plreciousity. And there are\\nbet her expits of\n    my arention that\\nv'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): \"the time travellerly findeded one hand that that\n    leloiumbut\\npreterience of this attents far been out of makeum, and as\n    they's before startingularly. There were clot;\"\n"
+          "text": "  top-p (distinct-3 1.00): 'the time travellerk at my mind of all numberures\n    everything point I died. \"I delayed might strucking myselfdel. Sely\n    lecerns.\\n\\n\\'The enerm'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): 'the time travellermprew to get to freorbly\n    problerightypation of it will that they stwiteible. I had not a least to\n    car, and I could notce to her I to myself to'\n"
+          "text": "  min-p (distinct-3 1.00): 'the time travelleruge of a ntane fert. She\n    shrpulation, and I felt suggested the pocket. I took a hung by mores.\n    Aservos of the po'\n"
         }
       ]
     }

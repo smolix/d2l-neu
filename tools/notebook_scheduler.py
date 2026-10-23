@@ -34,6 +34,14 @@ Env in (Makefile SCHED_ENV, else detect_resources):
   D2L_GPU_MIB_PER_SLOT e.g. "7680"
   D2L_JAX_TOTAL_SLOTS e.g. "8"       (combined GPU + CPU JAX jobs)
 
+Shared hosts (opt-in, D2L_GPU_LIVE_GATE=1): a GPU job is admitted to a card
+only if `nvidia-smi` reports at least slots × GPU_MIB_PER_SLOT +
+D2L_GPU_LIVE_HEADROOM_MIB (default 2048) free, and the card has had at least
+one slot's worth free for D2L_GPU_LIVE_STABLE_S seconds (default 180), so a
+momentary gap between another user's jobs is never taken. After a dispatch the
+card is left alone for D2L_GPU_LIVE_SETTLE_S seconds (default 90) while the
+new job allocates. CPU jobs are unaffected; GPU jobs simply wait.
+
 Usage: notebook_scheduler.py [--frameworks a,b] [--dry-run] [--force-all]
 """
 import argparse
@@ -79,8 +87,8 @@ class Item:
     def slots(self):  # total slots, for reporting / big-first tie-break
         if self.req[0] == "cpu":
             return 1
-        if self.req[1] == "all":
-            return -1  # host-sized; unknown until reserve() resolves it
+        if "all" in self.req[1:]:
+            return -1  # card/host-sized; unknown until reserve() resolves it
         return self.req[1] * self.req[2]
 
 
@@ -167,6 +175,17 @@ class Scheduler:
         if len(self.gpu_vram) != self.num_gpus:        # vram unknown → assume uniform
             self.gpu_vram = [self.mib_per_slot * c for c in self.gpu_cap]
 
+        # Live memory gate for shared hosts (see module docstring).
+        self.live_gate = os.environ.get("D2L_GPU_LIVE_GATE") == "1"
+        self.live_headroom = int(os.environ.get("D2L_GPU_LIVE_HEADROOM_MIB") or 2048)
+        self.live_stable_s = float(os.environ.get("D2L_GPU_LIVE_STABLE_S") or 180)
+        self.live_settle_s = float(os.environ.get("D2L_GPU_LIVE_SETTLE_S") or 90)
+        self.live_free = [0] * self.num_gpus
+        self.live_ok_since = [None] * self.num_gpus
+        self.live_settle_until = [0.0] * self.num_gpus
+        self.live_checked = 0.0
+        self.live_reported = 0.0
+
         # pools (mutated under lock)
         self.gpu_free = list(self.gpu_cap)
         cores = sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") \
@@ -220,6 +239,45 @@ class Scheduler:
             "JAX_TOTAL_SLOTS": _detect("JAX_TOTAL_SLOTS") or "1",
         }
 
+    # ---- live memory gate (under lock) ----
+    def _refresh_live(self):
+        now = time.time()
+        if now - self.live_checked < 10:
+            return
+        self.live_checked = now
+        try:
+            out = subprocess.run(
+                ["nvidia-smi", "--query-gpu=memory.free",
+                 "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=20).stdout.split()
+            free = [int(x) for x in out][:self.num_gpus]
+        except Exception:
+            free = [0] * self.num_gpus           # unknown → admit nothing
+        self.live_free = free + [0] * (self.num_gpus - len(free))
+        for g, f in enumerate(self.live_free):
+            if f >= self.mib_per_slot + self.live_headroom:
+                if self.live_ok_since[g] is None:
+                    self.live_ok_since[g] = now
+            else:
+                self.live_ok_since[g] = None
+        if now - self.live_reported >= 600:
+            self.live_reported = now
+            print(f"scheduler: live GPU free MiB {self.live_free}", flush=True)
+
+    def _live_ok(self, g, slots):
+        if not self.live_gate:
+            return True
+        now = time.time()
+        since = self.live_ok_since[g]
+        # A full-card reservation (whole-box, or 3 slots on a 24 GB card) can
+        # exceed the card's VRAM once headroom is added; for it, "free" means
+        # the card is idle up to the headroom, not more VRAM than exists.
+        need = min(slots * self.mib_per_slot + self.live_headroom,
+                   self.gpu_vram[g] - self.live_headroom)
+        return (now >= self.live_settle_until[g]
+                and since is not None and now - since >= self.live_stable_s
+                and self.live_free[g] >= need)
+
     # ---- reservation (under lock); returns assignment dict or None ----
     def _reserve(self, it):
         cap = self.fw_total_cap.get(it.fw)
@@ -242,12 +300,24 @@ class Scheduler:
             # branch. Nothing below special-cases the number of GPUs.
             if any(free < cap for free, cap in zip(self.gpu_free, self.gpu_cap)):
                 return None
+            if not all(self._live_ok(g, c) for g, c in enumerate(self.gpu_cap)):
+                return None
             chosen = list(range(self.num_gpus))
             per_gpu_spg = list(self.gpu_cap)  # each card's own full capacity
+        elif spg == "all":
+            # n whole cards: each chosen GPU entirely free, at its own full
+            # capacity (so the request means the same on 16 GB and 24 GB cards).
+            cand = [g for g in range(self.num_gpus)
+                    if self.gpu_free[g] == self.gpu_cap[g]
+                    and self._live_ok(g, self.gpu_cap[g])]
+            if len(cand) < ngpu:
+                return None
+            chosen = cand[:ngpu]
+            per_gpu_spg = [self.gpu_cap[g] for g in chosen]
         else:
             # GPUs with at least spg free, most-free first (spread load)
             cand = sorted((g for g in range(self.num_gpus)
-                           if self.gpu_free[g] >= spg),
+                           if self.gpu_free[g] >= spg and self._live_ok(g, spg)),
                           key=lambda g: self.gpu_free[g], reverse=True)
             if len(cand) < ngpu:
                 return None
@@ -255,6 +325,7 @@ class Scheduler:
             per_gpu_spg = [spg] * len(chosen)
         for g, s in zip(chosen, per_gpu_spg):
             self.gpu_free[g] -= s
+            self.live_settle_until[g] = time.time() + self.live_settle_s
         env = {}
         if it.fw == "jax":   # jax preallocates: cap to the slots we reserved.
             # Per-GPU fraction, tightest (min) across chosen cards so no GPU is
@@ -353,6 +424,8 @@ class Scheduler:
         with self.lock:
             while pending or self.inflight:
                 progressed = False
+                if self.live_gate:
+                    self._refresh_live()
                 # First-fit in framework order: dispatch every item whose slots
                 # are free right now; skip (don't block on) ones that don't fit.
                 for it in list(pending):
@@ -366,7 +439,9 @@ class Scheduler:
                                      daemon=True).start()
                     progressed = True
                 if not progressed:
-                    self.lock.wait()
+                    # With the live gate, GPU capacity can appear without a
+                    # job finishing, so wake up periodically to re-check.
+                    self.lock.wait(timeout=15 if self.live_gate else None)
 
         failed = [it for it, rc, _ in self.results if rc != 0]
         print(f"=== scheduler done: {self.total - len(failed)}/{self.total} ok, "

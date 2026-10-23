@@ -54,7 +54,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
           "bytes": 24458,
-          "sha256": "sha256:897dd88c0bf694e00606eeb0726be622139d1422fd7994e5c0afe7604d050e89"
+          "sha256": "sha256:0b967afe128914c54c6dd32b06b898cd95421203e820ec68c656d3ef1e12cb93"
         }
       ]
     },
@@ -116,7 +116,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23413,
-          "sha256": "sha256:25d9838b30c3d2a753090cd348e074858cc4a91fe89351a9355975b174da8a3d"
+          "sha256": "sha256:85396ac5858c015f3e29ff7191a281553646f48d0f9abee34f7b98ddb830ebbc"
         }
       ]
     }

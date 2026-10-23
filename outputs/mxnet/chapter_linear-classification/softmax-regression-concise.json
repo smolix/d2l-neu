@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-lse-vs-max-1.svg",
           "bytes": 20594,
-          "sha256": "sha256:642df972423fe0e4cb484389166c4694f8c5a0e2df5b0ab9d11132a1e1ac6aad"
+          "sha256": "sha256:f696639764ae8a507bcf0da41f2e0f2a666d6345eae57d9dbfc3dd7a66866137"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 22397,
-          "sha256": "sha256:50e8b646f9b801ee6d643efe1689cd2a10f5808d272003eacf35f63ea933cbc7"
+          "bytes": 22395,
+          "sha256": "sha256:665662b1e181479ac8b548aa583aed7aa4090dc0ae6d075710bb5534a1d6e9fa"
         }
       ]
     }

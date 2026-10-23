@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 20814,
-          "sha256": "sha256:8da58902a1d30498b0186ad104285d3bf68d5dd2760352ac4f2ccced3241faaa"
+          "bytes": 20817,
+          "sha256": "sha256:5414d93781cbcc5abcc3521728544dc6752c822cd616675818b2812fe6ce4f17"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 94.6\n"
+          "text": "validation perplexity 86.7\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.36 bits per byte\n"
+          "text": "2.78 bytes/token, 2.32 bits per byte\n"
         }
       ]
     },
@@ -125,7 +125,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time traveller. I had not a line of the Time Traveller. 'I'm\\nthe\n    simple the Time Traveller. I had not a line of the Time Traveller.\n    'I'm\\nthe simple the Time Traveller. I\"\n"
+          "text": "\"the time travellerleed. I\\nwas the Time Traveller.\\n\\n'I had a sound.\\n\\n'I\n    had a sound.\\n\\n'I had a sound.\\n\\n'I had a sound.\\n\\n'I\"\n"
         }
       ]
     },
@@ -136,7 +136,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time travellerred phating of the increes of impachin. Filbyare got\n    tooild of my imagine, in itressves\nthe time travellers. The\nman. I had nothing of the bronze of the daylight, and then I had\ndelside\n"
+          "text": "the time travellerestot and\nheo fles of an night mystery.\nThe curiousledinus glass in\narquireary\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the time travellerleed.\n\n'But I was gone.\n\n'I cannot all the\nside of the\nsistinctly\n"
         }
       ]
     },
@@ -161,7 +166,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has kind could� comeher� d\\x0eill might two�ence cle diff awaylfDileead'"
+          "text": "'it has very been weud go againillistayoreick horose lau will mat cameunmult'"
         }
       ]
     },
@@ -173,8 +178,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 18937,
-          "sha256": "sha256:3fe8a866e56ca44cd155e6397212bf834042689d7427108d827f41eeb2926be9"
+          "bytes": 19132,
+          "sha256": "sha256:931353cc6734735f9dbd780a2ce744806b0487cdbe18437bc5c37074b4e333b7"
         }
       ]
     },
@@ -185,7 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 104.1, \"the time traveller had\\nafter heard the\\nface,\n    and\\ntoolailed to\\nmonze.\\n\\n'I was\"\n"
+          "text": "perplexity 111.3, 'the time travelleroralace, and then\\ntrors, and the\n    little people\\nmorning, as it was the\\ndelie'\n"
         }
       ]
     },
@@ -196,7 +201,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      56.0     94.6\n concise      41.6    104.1\n"
+          "text": "   model  time (s)  val ppl\n scratch      53.6     86.7\n concise      36.5    111.3\n"
         }
       ]
     }

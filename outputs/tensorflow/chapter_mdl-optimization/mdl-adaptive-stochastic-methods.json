@@ -62,7 +62,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Adam reaches f < 1e-8 at k = 344\n"
+          "text": "Adam reaches f < 1e-8 at k = 344"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n"
         }
       ]
     },
@@ -117,7 +122,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
           "bytes": 29558,
-          "sha256": "sha256:5cd8a631d7e20d6ccc5fa700961823cdf51c427da5e47f23f9192e5ab415c8f1"
+          "sha256": "sha256:bb7e17a36015c5e608b4d825a5bb8d3b38f67fe3b85dfde54b53e713f9c953e1"
         }
       ]
     }

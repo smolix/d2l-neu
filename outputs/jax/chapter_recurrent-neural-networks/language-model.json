@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:7c40274a4ee9f37e804f71d09348aa5947c3b4cebb8897f58294536ea6ba6e12"
+          "sha256": "sha256:bff7287bb364cf09d12780abaced0f47bca740965620ced96677c79deaffa285"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:99d4baae60ae2153c639605a28f2fc6e51a73988036d66628d2b8cfb72215583"
+          "sha256": "sha256:eaa2b4237088470bb51843efd817c30810092c666fac538a82a4e9a67aebb9b8"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[337 321  33  39 280 720 516 360 844  44]\n [114 300 270 277  10  99 521 357 270 708]] \nY: [[321  33  39 280 720 516 360 844  44 648]\n [300 270 277  10  99 521 357 270 708 349]]\nX[0]: \"iment!' cried Filby,\"\nY[0]: \"ent!' cried Filby, who\"\n"
+          "text": "X: [[ 46 301 299 269 335 296 109 758 620  99]\n [455 419 578 745 360 270 783 351 708  46]] \nY: [[301 299 269 335 296 109 758 620  99 117]\n [419 578 745 360 270 783 351 708  46 533]]\nX[0]: '. That I remember disc'\nY[0]: ' That I remember discu'\n"
         }
       ]
     }

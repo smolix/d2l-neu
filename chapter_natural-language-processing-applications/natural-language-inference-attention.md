@@ -879,7 +879,7 @@ end-to-end:
 @natural-language-inference-attention-creating-the-model
 :::
 
-::: {.slide title="Training"}
+::: {.slide title="Training" only="mxnet"}
 Loss should fall quickly: there is no recurrence, so every
 token-pair alignment and every MLP comparison is fully
 parallelizable.
@@ -887,6 +887,14 @@ parallelizable.
 @natural-language-inference-attention-training-and-evaluating-the-model-2-1
 
 . . .
+
+@natural-language-inference-attention-training-and-evaluating-the-model-2-2
+:::
+
+::: {.slide title="Training" except="mxnet"}
+Loss should fall quickly: there is no recurrence, so every
+token-pair alignment and every MLP comparison is fully
+parallelizable.
 
 @natural-language-inference-attention-training-and-evaluating-the-model-2-2
 :::

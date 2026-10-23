@@ -44,7 +44,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([[0.21704897, 0.24554421, 0.24123886, 0.12218714, 0.17398085],\n        [0.19595093, 0.17780103, 0.22065419, 0.27965066, 0.12594323]]),\n array([1., 1.]))"
+          "text": "(array([[0.16075738, 0.14756155, 0.31750426, 0.20206226, 0.17211452],\n        [0.21455885, 0.16880582, 0.19559756, 0.20276861, 0.21826914]]),\n array([0.9999999, 1.       ]))"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22396,
-          "sha256": "sha256:b269a1b2c55eeae459003e3efd022ad8063da3db15a63ef96b247620167cf2e5"
+          "bytes": 22390,
+          "sha256": "sha256:718540511b7e61e4b6e196fbf00dffccdf230fd8763fe9f3b2170202b7b03ae1"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Test accuracy: 0.833\n"
+          "text": "Test accuracy: 0.844\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 51725,
-          "sha256": "sha256:769f961c88b588b02b5c85ded6441916948e853c96b4c64ff3264245f55f0303"
+          "bytes": 51883,
+          "sha256": "sha256:25e550138ad8421925dedec5452a0b4eda1947aad526c60052b94ad92d539a3e"
         }
       ]
     },
@@ -143,8 +143,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21535,
-          "sha256": "sha256:a54f1b45ecc78cc436056c7cc2249e74f930033627bdb933cf64f5428a884272"
+          "bytes": 21510,
+          "sha256": "sha256:f9a251222feb2be85bee4616b9217b6b16c790faa6298da348aea73c1871cdfb"
         }
       ]
     }

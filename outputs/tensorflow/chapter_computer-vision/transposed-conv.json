@@ -28,8 +28,48 @@
         }
       ]
     },
+    "transposed-conv-basic-operation-3": {
+      "code_fingerprint": "sha256:b1c7d04df99c222e0ef5d207e162492be94b02ae0ea57573306e9c4d89777f70",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 3, 3, 1), dtype=float32, numpy=\narray([[[[ 0.],\n         [ 0.],\n         [ 1.]],\n\n        [[ 0.],\n         [ 4.],\n         [ 6.]],\n\n        [[ 4.],\n         [12.],\n         [ 9.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-1": {
+      "code_fingerprint": "sha256:0f2cc827f025f08cacbee348f518482469252e672bf12bf387859a5f7c2ed8e4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 1, 1, 1), dtype=float32, numpy=array([[[[4.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-2": {
+      "code_fingerprint": "sha256:450d1f83547a773b9872631a9441bb849728c1d6aa30f1bb4596780a83697650",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(1, 4, 4, 1), dtype=float32, numpy=\narray([[[[0.],\n         [0.],\n         [0.],\n         [1.]],\n\n        [[0.],\n         [0.],\n         [2.],\n         [3.]],\n\n        [[0.],\n         [2.],\n         [0.],\n         [3.]],\n\n        [[4.],\n         [6.],\n         [6.],\n         [9.]]]], dtype=float32)>"
+        }
+      ]
+    },
+    "transposed-conv-padding-strides-and-multiple-channels-3": {
+      "code_fingerprint": "sha256:43b18fe1d4122fd42f5c9e3711ff6acdafa81a595d5f85bda6957fa78c848be3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
     "transposed-conv-connection-to-matrix-transposition-1": {
-      "code_fingerprint": "sha256:f10b645289984d1ecf7e9691842846ed8a26ae68c1482e2605acb115289f0605",
+      "code_fingerprint": "sha256:e87e65280a7406b4d3e07c67ba02dfed114be3809ce3b6fbdabc71ef742922bf",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +79,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-2": {
-      "code_fingerprint": "sha256:593ecc6c5e26cd2d56500d4e69fb3be942d89f4265bf19545ab1160b8b979396",
+      "code_fingerprint": "sha256:95f92078db40a480540384b844cd6d497765e0abe41f723578b57153b23d092b",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +89,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-3": {
-      "code_fingerprint": "sha256:a87bd0ce35faf63b9d857010bb8e7ed435759681447cfc422e39180579b3d75c",
+      "code_fingerprint": "sha256:033c4f9ad0303c651cd54f3c672ebdf00eb96becb833db1883ee153b5e24cd71",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +99,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-4": {
-      "code_fingerprint": "sha256:124fe23c1e49637ef62dc155d53abca3522851e2ca22df79c016e23a519b70d4",
+      "code_fingerprint": "sha256:52684ff0a73b74780601f85f90d5b63b0f4bcc500b69a49c85b5ea9850ff0f6b",
       "kind": "text",
       "outputs": [
         {

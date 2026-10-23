@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, 0.4958228465454059)"
+          "text": "(0.5, 0.5060325812616601)"
         }
       ]
     },
@@ -166,7 +166,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[22:56:51] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[05:08:45] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     }

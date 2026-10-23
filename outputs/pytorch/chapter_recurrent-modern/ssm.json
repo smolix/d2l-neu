@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 4.77e-07\n"
+          "text": "maximum deviation: 9.54e-07\n"
         }
       ]
     },
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 31168,
-          "sha256": "sha256:ea8a2610016a3466e570000951cfb30c139cd040680d7ede4f96343671c96c6e"
+          "bytes": 31170,
+          "sha256": "sha256:f55c25af7009645492dddfea02fd3b34d47cc77353e185d7a56b43bb73c508cc"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
-          "bytes": 18564,
-          "sha256": "sha256:8374edc0292a96ac2deaecf08568c80551590fab476e805c03f889610dc9c8b7"
+          "bytes": 18562,
+          "sha256": "sha256:133a0d2c9f37b7e1cd07ade8824cc26786ea737d59e14c2030628fcf43463f91"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 83.6, 9s wall clock\nthe time traveller. I had a\ndised. I was in the\nside, and the\nside, and the\nside, and\n"
+          "text": "validation perplexity 83.6, 9s wall clock\nthe time traveller.\n\n'I had a\nmateries.\n\n'I had a\nmateries.\n\n'I had\n"
         }
       ]
     },
@@ -88,7 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scan vs loop: 2.38e-07, conv vs loop: 2.38e-07\n"
+          "text": "scan vs loop: 1.19e-07, conv vs loop: 1.19e-07\n"
         }
       ]
     },
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
-          "bytes": 22075,
-          "sha256": "sha256:3a24ad9be0397be4949f619564e674c9b2eafb42029c05abc08e1213f995a171"
+          "bytes": 21513,
+          "sha256": "sha256:45047f7120d48d6946e6e546f8cb8a28cfe4b4bb3c39edb45daba7e68b9dbbca"
         }
       ]
     },
@@ -128,8 +128,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-5-1.svg",
-          "bytes": 22820,
-          "sha256": "sha256:cac7521eea0b44f1fc13ac85dd49ce265343ff4aa699de6be7e1dbfca1c214fa"
+          "bytes": 22077,
+          "sha256": "sha256:a5b5f4b9d7526bfbb9ea89f7e7658aad62b6b671cac5c0331623fd51d702c45e"
         }
       ]
     },
@@ -141,8 +141,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
-          "bytes": 22113,
-          "sha256": "sha256:734a4f8f00bf440f4a1dce5cb542d081e9a8241306868ef7365624679420fa02"
+          "bytes": 22077,
+          "sha256": "sha256:5b2481a5d442eaf198a265596db21485c24b1f283596459a61b1f8e0426c19a8"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "       model   params  val acc  s/epoch\n         S4D   30,058    0.808     47.6\n S4D (final)   30,058    0.806     36.9\n        LSTM   29,930    0.819      4.0\n"
+          "text": "       model   params  val acc  s/epoch\n         S4D   30,058    0.813     44.8\n S4D (final)   30,058    0.814     34.5\n        LSTM   29,930    0.818      4.0\n"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stepped vs scanned: deviation 4.41e-04 on activations of scale 71: relative 6.21e-06\n"
+          "text": "stepped vs scanned: deviation 1.14e-03 on activations of scale 64: relative 1.78e-05\n"
         }
       ]
     },
@@ -186,8 +186,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-inference-one-token-at-a-time-3-1.svg",
-          "bytes": 29558,
-          "sha256": "sha256:5438a92eed81da96c664e8150b37486c5fb15eeb60d19692dd1c5786f7130c09"
+          "bytes": 29561,
+          "sha256": "sha256:4bf2b6c8f011b0d6b7352137ed1bc0bc69d286c38180149f6bcface7eb3d5e78"
         }
       ]
     }

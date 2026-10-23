@@ -25,7 +25,13 @@ quarto="${QUARTO:-$root/.venv-build/bin/quarto}"
 
 if [ -d _notebooks ]; then
 	echo "Injecting notebook outputs for $fw..."
-	python3 tools/inject_outputs.py pdf --framework "$fw" --pdf-dir "_pdf/$fw"
+	# Per-framework image dir: chapters without this framework's tab fall back
+	# to another framework's outputs, so a shared img/outputs/ had concurrent
+	# PDF renders converting the SAME *.svg; Quarto's convert_svg then read a
+	# half-written .pdf from the other session and failed its assert
+	# (main.lua:7348). A private tree makes the four renders independent.
+	python3 tools/inject_outputs.py pdf --framework "$fw" --pdf-dir "_pdf/$fw" \
+		--img-dir "_pdf/$fw/img/outputs"
 fi
 
 # Pre-convert every SVG → PDF (Quarto shells rsvg-convert per figure); only

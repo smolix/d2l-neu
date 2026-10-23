@@ -61,17 +61,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  no balancing: training loss 0.74, experts under 2% usage: 6 of 16\n"
+          "text": "  no balancing: training loss 0.77, experts under 2% usage: 6 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "auxiliary loss: training loss 0.53, experts under 2% usage: 0 of 16\n"
+          "text": "auxiliary loss: training loss 0.52, experts under 2% usage: 0 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          bias: training loss 0.46, experts under 2% usage: 0 of 16\n"
+          "text": "          bias: training loss 0.53, experts under 2% usage: 0 of 16\n"
         }
       ]
     },
@@ -81,14 +81,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x765ee00d91f0>"
+          "text": "<matplotlib.legend.Legend at 0x7e5dac0b71d0>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 44929,
-          "sha256": "sha256:cccafc36ab15f8048578d13bc57fcf8ffe6193ed633b52b9b9fce30bb66836eb"
+          "bytes": 44922,
+          "sha256": "sha256:2ad76203ddb53c04a15c419f61c2421e11cf01e9323c1fc0579a5dfe460080b6"
         }
       ]
     },
@@ -99,12 +99,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dense:  3.16M parameters (3.16M active), best validation 1.49, final training loss 0.20\n"
+          "text": "dense:  3.16M parameters (3.16M active), best validation 1.48, final training loss 0.20\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.49, final training loss 0.17\n"
+          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.48, final training loss 0.18\n"
         }
       ]
     }

@@ -1016,6 +1016,15 @@ all four PDFs (~46–51 MB each) with no manual steps:
   `make -j4 pdfs`) now `find img/outputs -name '*.pdf' -delete`, so `make all` is
   self-sufficient. For a bare standalone `make pdfs` on a dirty tree, run
   `make clean` first if you suspect stale scratch.
+- **Concurrent PDF renders must not share output images (2026-10-23).** A
+  chapter without a given framework's tab (the PyTorch+JAX Advanced part in the
+  TF/MXNet books) falls back to another framework's outputs, so several of the
+  parallel PDF renders injected the *same* `*-pytorch-1.svg`. With one shared
+  `img/outputs/`, one session's half-written `.pdf` tripped the other's
+  `convert_svg` assert (same `main.lua:7348` failure as a stale PDF, but on a
+  freshly cleaned tree). `build_one_pdf.sh` now injects into a per-framework
+  `_pdf/<fw>/img/outputs/`, so the four renders share no files; the stale-PDF
+  cleanup covers both trees.
 - **A full `/tmp` truncates the book silently (2026-08-02).** Quarto stages
   each render session under `$TMPDIR` (default `/tmp`), which on the GPU box
   is a dedicated 9.3 GiB partition. When it filled mid-render, quarto died

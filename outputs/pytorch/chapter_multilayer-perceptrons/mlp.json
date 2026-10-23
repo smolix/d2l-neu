@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16904,
-          "sha256": "sha256:9a4bf01fa8b7d05d06fa5e05e56fe377e616f60591b12df3fb41631215733a20"
+          "sha256": "sha256:81719d52ccae3f2f38e380d21b132fa5eaac18be2fced66d2e9856d38d91d4eb"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21206,
-          "sha256": "sha256:44319ac85dfb4c7acc0b6bc7b2ad17c27503c2267db702cae59bc066841c53e9"
+          "sha256": "sha256:71be76fc2117517a5bcedcba3381ee5790b289b57c7b12eecdb9f54adf4a3302"
         }
       ]
     },
@@ -79,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21785,
-          "sha256": "sha256:81d02f12fc78d732eebb523247de77c7d6842dbd6b0a5e8200ad0aad77ce8aa0"
+          "sha256": "sha256:61110470e79d1047c070a3125e22bf8603c34f4880df4f89d9bae1a234a05808"
         }
       ]
     },
@@ -92,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24520,
-          "sha256": "sha256:a8fe2c46dcc84818fb4d0b918c07e44a857d6c1b044f288177048b2f70ff7a91"
+          "sha256": "sha256:4dcf9c4aecbfdde3dc1a03322d8374180ff481760a841ea2b76c7546bde96ca6"
         }
       ]
     },
@@ -105,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20176,
-          "sha256": "sha256:574471158b66dd990cb658451ca5c4edcf6a13bd88bc7e226c9145c1f74fed57"
+          "sha256": "sha256:595957f0b8b9e90c41b557c8892d411ad43c333240caa557386e7f18216711b2"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22744,
-          "sha256": "sha256:481502ed5eec1f04b7a3c315120234a9d14cdfc5e3db754f3edcbd7c473989e8"
+          "sha256": "sha256:21a261ed8ed3bcc887470376aa3ef485a39d4e4fc520496466c7ce025bf79713"
         }
       ]
     }

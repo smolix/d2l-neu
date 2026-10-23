@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.250367, x2: 0.000626\n"
+          "text": "epoch 50, x1: -0.378101, x2: 0.177863\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 23428,
-          "sha256": "sha256:1e8186403070a631947da2cc6abc429697ca3a546f7a6256d6ba27fd785f3a4a"
+          "bytes": 23442,
+          "sha256": "sha256:ca63b56cd9737212a44d41d32977333bfb7c0256d9fa74f3ed4993ed88e97757"
         }
       ]
     },
@@ -48,14 +48,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1000, x1: -0.769816, x2: -0.084568\n"
+          "text": "epoch 1000, x1: -0.907831, x2: -0.022228\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
-          "bytes": 123688,
-          "sha256": "sha256:41758665f88596a2e5fd3c91cbbcbc93c3b1ffb6bec13db2078367aa93f097cd"
+          "bytes": 123788,
+          "sha256": "sha256:4d0185147a4f9bc661f32587f9e244f45f49048d1d8f70307d999ca5f2ed77b4"
         }
       ]
     },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.020206, x2: -0.012148\n"
+          "text": "epoch 50, x1: -0.058757, x2: 0.031384\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
-          "bytes": 23436,
-          "sha256": "sha256:89b0a317272bd2d66dfcfaf0b0e7449e9cc80d536d2ad2e33398eeccc932eb0f"
+          "bytes": 23442,
+          "sha256": "sha256:7fda2f17e37a721b3604856cebd70308fd7a857fdf706f599436dae4fdbb1737"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
-          "bytes": 30456,
-          "sha256": "sha256:fc3a61041da3abdeb050cfb7265ae1e9d3c43ef3f21898e6d52c2b1921fef759"
+          "bytes": 30049,
+          "sha256": "sha256:3dfef4540a2b3f3499f052d21fa172193ba3e902a0b2bea1795c23944e4fa74d"
         }
       ]
     }

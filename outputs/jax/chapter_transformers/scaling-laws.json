@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2ND analytic: 7.743e+10 FLOPs, XLA forward: 8.480e+10 (ratio 1.10)\n6ND analytic: 2.323e+11 FLOPs, XLA step:    2.547e+11 (ratio 1.10)\nbackward / forward = 2.00\n"
+          "text": "2ND analytic: 7.743e+10 FLOPs, XLA forward: 5.576e+10 (ratio 0.72)\n6ND analytic: 2.323e+11 FLOPs, XLA step:    2.256e+11 (ratio 0.97)\nbackward / forward = 3.05\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.21, validation 1.21\n"
+          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.20, validation 1.20\n"
         },
         {
           "type": "stream",
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.08\n"
+          "text": "d=256, 6 blocks:  4.72M parameters, train 1.07, validation 1.08\n"
         },
         {
           "type": "stream",
@@ -90,8 +90,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 32684,
-          "sha256": "sha256:7731a9e1539e201048b34e9480088c3db251bf999dcf5e9ab8b073640a7733b6"
+          "bytes": 35130,
+          "sha256": "sha256:f2caa9528419671c6b674864b06c16c9db8384e50d4c1cfa82fd047d7b75600b"
         }
       ]
     },
@@ -112,12 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Llama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen3        4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+          "text": "Llama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\nQwen3        4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
         }
       ]
     }

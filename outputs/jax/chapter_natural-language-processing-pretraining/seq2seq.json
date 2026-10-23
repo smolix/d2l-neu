@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[1683  752  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 771  642  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [2151  471  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001 3547   45  507 1231  262 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 3554   45  507  486  262 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 3592  436  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 4 4]\nshared vocabulary size: 4003\n"
+          "text": "source: [[1142  445  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 323 1430  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 271  309 2585  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001 3595   45  507  319  436  262 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  317  442  435 3658 2402  256 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001   99   39  281  485 2847  256 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 4 5]\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24562,
-          "sha256": "sha256:16c134d1a6b30d6e481ed33e64fdfeb3a3cfc7f96186c17d390abacbd02db1a1"
+          "sha256": "sha256:363fcc8c3f5fc0d229ac97680cf2ad1c86e66ed3794a41383a53daea7f9fc402"
         }
       ]
     },
@@ -116,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20800,
-          "sha256": "sha256:657479ec61236e040f92b213f50f348406c8705f6593b01d04950cd33bb39ba3"
+          "bytes": 20801,
+          "sha256": "sha256:1c21bae3ad7516889d03e9017ae47b54eaac92f01fc523b765ea88fc17d1064f"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis chez moi .'\n"
+          "text": "i lost . => 'j’ai perdu .'\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis tatillonne .'\n"
         }
       ]
     },
@@ -154,7 +154,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
+          "text": "i lost . => 'j’ai perdu .', chrF 0.735\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis tatillonne .', chrF 0.320\n"
         }
       ]
     },
@@ -175,7 +175,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost .     k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+          "text": "i lost .     k=1: 0.73  k=2: 0.73  k=5: 0.73\n"
         },
         {
           "type": "stream",
@@ -185,7 +185,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i'm home .   k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+          "text": "i'm home .   k=1: 0.32  k=2: 0.32  k=5: 0.32\n"
         }
       ]
     },
@@ -202,8 +202,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 26024,
-          "sha256": "sha256:f3df1ec2b65369b33a7608b93d060271d73eeeb390ca54d01cdddae6034a1936"
+          "bytes": 26021,
+          "sha256": "sha256:e26b3c2abd87ef7bf73087eb870f437fefb1d470856499dd1686a8b8907d7dd4"
         }
       ]
     }

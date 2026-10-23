@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "MLM loss 9.546, NSP loss 0.696\n16685.1 sentence pairs/sec on [device(type='cuda', index=0)]\n"
+          "text": "MLM loss 9.504, NSP loss 0.695\n12288.8 sentence pairs/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bert-pretraining/bert-pretraining-pretraining-bert-2-4-1.svg",
-          "bytes": 21551,
-          "sha256": "sha256:ace817fd542312f2e1303a51a5d740883c509d4daf37bb638ffdc405525753b7"
+          "bytes": 21556,
+          "sha256": "sha256:b43bfd0caadcaa03da5cd0cdb70f57147124ad93d5a7fa3994afb6d9d80512b4"
         }
       ]
     },
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(torch.Size([1, 6, 128]),\n torch.Size([1, 128]),\n tensor([ 0.7876, -1.5818,  0.8600], device='cuda:0', grad_fn=<SliceBackward0>))"
+          "text": "(torch.Size([1, 6, 128]),\n torch.Size([1, 128]),\n tensor([-0.0343, -1.1850,  0.0185], device='cuda:0', grad_fn=<SliceBackward0>))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(torch.Size([1, 10, 128]),\n torch.Size([1, 128]),\n tensor([ 0.6938, -1.6631,  0.9437], device='cuda:0', grad_fn=<SliceBackward0>))"
+          "text": "(torch.Size([1, 10, 128]),\n torch.Size([1, 128]),\n tensor([ 0.1491, -1.4320, -0.1898], device='cuda:0', grad_fn=<SliceBackward0>))"
         }
       ]
     }

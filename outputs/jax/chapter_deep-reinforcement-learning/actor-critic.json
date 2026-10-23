@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-a2c-by-name-9-1.svg",
-          "bytes": 44098,
-          "sha256": "sha256:830b58c44fbe617a3bf360080c575d279590407d4fda3c4b200b92fc84f6871e"
+          "bytes": 44289,
+          "sha256": "sha256:714e57a3eafaf3bec67a96b3baaa7e065930e595c7e701ee12ab865904007c5c"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "REINFORCE + baseline: longest stretch of perfect batches, per seed: [26, 13, 22]\n        actor-critic: longest stretch of perfect batches, per seed: [39, 22, 3]\n"
+          "text": "REINFORCE + baseline: longest stretch of perfect batches, per seed: [9, 4, 5]\n        actor-critic: longest stretch of perfect batches, per seed: [28, 21, 3]\n"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "REINFORCE + baseline: median pre-clip gradient norm  0.03, clip binds on   0% of updates\n        actor-critic: median pre-clip gradient norm  0.33, clip binds on  30% of updates\n"
+          "text": "REINFORCE + baseline: median pre-clip gradient norm  0.04, clip binds on   0% of updates\n        actor-critic: median pre-clip gradient norm  0.40, clip binds on  40% of updates\n"
         }
       ]
     },
@@ -95,14 +95,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "corr(TD error, MC advantage): mean 0.33 over the first ten updates, -0.03 over the last 50\n"
+          "text": "corr(TD error, MC advantage): mean 0.33 over the first ten updates, 0.02 over the last 50\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1.svg",
-          "bytes": 28528,
-          "sha256": "sha256:f9213b6816ac4a1a961f8b6c04b658bd90cf7983854fffd6f6b8805394d6dffc"
+          "bytes": 27707,
+          "sha256": "sha256:46222ccd8454363c2fa00d0b5a9cd0974418576077d88142c419e6e2313095d4"
         }
       ]
     },
@@ -113,14 +113,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "median variance, MC advantage over TD error: 318x\n"
+          "text": "median variance, MC advantage over TD error: 1590x\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1-1.svg",
-          "bytes": 29829,
-          "sha256": "sha256:254ed4ed663ade3a4d4497325cbf4eb9ca33f0cae532f93ed2f0691deae915fc"
+          "bytes": 29828,
+          "sha256": "sha256:3d74c65e0cdf2676a5f46b2cf245d65ce67e58b3443323cfc7beec9d5f1c8ca6"
         }
       ]
     },
@@ -152,14 +152,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda =  0.0: best 20-update window, median 161.9, seeds [144. 145. 162. 302. 474.]\nlambda =  0.5: best 20-update window, median 201.3, seeds [174. 183. 201. 312. 371.]\nlambda =  0.9: best 20-update window, median 322.5, seeds [274. 319. 322. 488. 492.]\nlambda = 0.95: best 20-update window, median 460.6, seeds [348. 372. 461. 486. 497.]\nlambda =  1.0: best 20-update window, median 466.2, seeds [415. 456. 466. 469. 497.]\n"
+          "text": "lambda =  0.0: best 20-update window, median 167.9, seeds [141. 145. 168. 305. 413.]\nlambda =  0.5: best 20-update window, median 268.4, seeds [173. 183. 268. 383. 453.]\nlambda =  0.9: best 20-update window, median 365.0, seeds [296. 356. 365. 436. 466.]\nlambda = 0.95: best 20-update window, median 478.1, seeds [310. 346. 478. 479. 481.]\nlambda =  1.0: best 20-update window, median 460.4, seeds [421. 447. 460. 485. 496.]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-measuring-the-dial-2-1.svg",
-          "bytes": 46187,
-          "sha256": "sha256:43c36d5a0efbc157141bd31da56af50422985d738781e46c5c6795db9fc73c72"
+          "bytes": 46192,
+          "sha256": "sha256:098c83179392fcd9d7f456599a4610f30d965b5729d0a4a720af383253542275"
         }
       ]
     },
@@ -175,7 +175,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda =  0.0: relative bias 1.34, relative variance    0.3, one-draw error    2.1\nlambda =  0.5: relative bias 1.22, relative variance    0.4, one-draw error    1.9\nlambda =  0.9: relative bias 0.57, relative variance    1.4, one-draw error    1.7\nlambda = 0.95: relative bias 0.26, relative variance    2.4, one-draw error    2.5\nlambda =  1.0: relative bias 0.00, relative variance    5.9, one-draw error    5.9\n"
+          "text": "lambda =  0.0: relative bias 0.28, relative variance    0.2, one-draw error    0.2\nlambda =  0.5: relative bias 0.24, relative variance    0.2, one-draw error    0.3\nlambda =  0.9: relative bias 0.21, relative variance    0.6, one-draw error    0.7\nlambda = 0.95: relative bias 0.28, relative variance    0.9, one-draw error    1.0\nlambda =  1.0: relative bias 0.00, relative variance    2.0, one-draw error    2.0\n"
         }
       ]
     },
@@ -186,7 +186,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "REINFORCE + baseline: greedy mean return over 100 episodes: 499\n"
+          "text": "REINFORCE + baseline: greedy mean return over 100 episodes: 500\n"
         },
         {
           "type": "stream",

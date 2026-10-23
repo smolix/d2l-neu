@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x758883906c00>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x758883c9c6c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x75887c23df80>)"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7e1235240900>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7e1234103300>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341bfd40>)"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x75887c245880>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x75887c245600>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x75887c2455c0>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x75887c245580>])"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341ce900>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341ce680>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341ce640>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7e12341ce600>])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.420228  , 0.25577712, 0.6758996 ],\n       [0.85069597, 0.7197846 , 0.03151751]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.44956338, 0.12775362, 0.7496455 ],\n       [0.85422397, 0.7500856 , 0.5636759 ]], dtype=float32)>"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.420228 , 1.2557771, 1.6758996],\n       [1.850696 , 1.7197846, 1.0315175]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.4495634, 1.1277536, 1.7496455],\n       [1.854224 , 1.7500856, 1.5636759]], dtype=float32)>"
         }
       ]
     },
@@ -100,7 +100,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-0.9162799],\n       [-0.9162799]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-1.8785037],\n       [-1.8785037]], dtype=float32)>"
         }
       ]
     },
@@ -132,12 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weights              160.2 MiB\n+ activations        352.6 MiB\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "+ gradients          304.4 MiB\n"
+          "text": "weights              160.2 MiB\n+ activations        352.6 MiB\n+ gradients          304.4 MiB\n"
         },
         {
           "type": "stream",
@@ -169,7 +164,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  peak   2509 MiB, 0.09 sec\ncheckpointing=True   peak   1521 MiB, 0.16 sec\n"
+          "text": "checkpointing=False  peak   2477 MiB, 0.13 sec\ncheckpointing=True   peak   1453 MiB, 0.18 sec\n"
         }
       ]
     },
@@ -180,7 +175,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0027 sec\ntime until they all finished:     0.0538 sec\n"
+          "text": "time to queue 32 matrix products: 0.0027 sec\ntime until they all finished:     0.1666 sec\n"
         }
       ]
     },
@@ -197,8 +192,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 20107,
-          "sha256": "sha256:7e086cde7843e76e4e4443d9ad19353c79d641d2b4f8657983b7a0262439f777"
+          "bytes": 20108,
+          "sha256": "sha256:df8af9235d81b11ab9f3b53a84ea7ef91a5e21835bf1cb8a79ef696e02a37efa"
         }
       ]
     }

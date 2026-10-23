@@ -397,6 +397,8 @@ $$
 
 the quadratic variation again: a *finite, deterministic* disagreement
 between two discretizations of "the same" integral. The midpoint choice
+(the integrand at the midpoint of each interval, or the average of its values
+at the two endpoints, which has the same limit for smooth functions of $W$)
 defines the *Stratonovich* integral :cite:`Stratonovich.1966`, which obeys
 the ordinary chain rule but gives up the zero-mean and fair-game properties;
 Itô's left endpoint is the one that matches causal simulation (the integrand
@@ -608,6 +610,7 @@ error ($1.9 \times 10^{-3}$ at $h = 10^{-2}$). With the noise switched on,
 "error" itself needs a definition, and it splits in two.
 
 ### Strong and Weak Convergence
+:label:`sec_mdl-sde-strong-weak`
 
 Fix one Brownian path and feed the *same* increments to the exact solution
 and to the scheme. The **strong error**
@@ -655,8 +658,9 @@ accumulate to a global $O(\Delta t)$ strong error. With sufficiently smooth
 test functions and coefficients, the leading mean-zero terms cancel in
 expectation, leaving $O(\Delta t)$ weak bias.
 
-Every SDE treated numerically in this chapter (Ornstein--Uhlenbeck and the two
-diffusion-model families) has smooth additive noise, so strong order $1$ is
+Apart from the geometric Brownian motion below, every SDE treated numerically
+in this chapter (Ornstein--Uhlenbeck and the two diffusion-model families) has
+smooth additive noise, so strong order $1$ is
 the relevant prediction for these examples rather than the general
 $\tfrac12$ rate. Let us measure both rates in one
 experiment: the OU process $dX = -\theta X\,dt + \sigma\,dW$ (additive;
@@ -665,7 +669,7 @@ geometric Brownian motion $dX = \mu X\,dt + \sigma X\,dW$
 :cite:`Black.Scholes.1973` (multiplicative;
 compare against its exact solution
 $X_T = X_0 \exp\!\left((\mu - \tfrac{\sigma^2}{2})T + \sigma W_T\right)$,
-which you will derive via Itô's lemma in Exercise 5).
+which you will derive via Itô's lemma in Exercise :exref:`ex_mdl-sdes-geometric-brownian-motion-correction`).
 
 ```{.python .input #sdes-em-strong-order}
 rng = np.random.default_rng(0)
@@ -740,7 +744,8 @@ weak order $1$. (The exact OU mean and variance used as ground truth here
 are derived in the next section.) Halving the step halves the marginal error:
 the rate at which a discretized diffusion model's forward marginals
 approach the SDE's, a fact :numref:`sec_mdl-ddpm-discretized-sde` leans on
-when it reads DDPM's forward chain as exactly this discretization.
+when it reads DDPM's forward chain as this discretization to first order in
+the step.
 
 ## The Ornstein--Uhlenbeck Process
 :label:`sec_mdl-ornstein-uhlenbeck`
@@ -954,7 +959,7 @@ as possible at unit variance, the two-point (Rademacher) distribution
 $X_0 = \pm 1$, and track two moments: the variance, which should stay
 pinned at $1$, and the fourth moment $\mathbb{E}[X_t^4]$, which
 :eqref:`eq_mdl-sde-vp-marginal` predicts to be
-$3 - 2\bar{\alpha}_t^2$ (Exercise 8), changing from the bimodal value $1$
+$3 - 2\bar{\alpha}_t^2$ (Exercise :exref:`ex_mdl-sdes-variance-preservation-exactly`), changing from the bimodal value $1$
 to the Gaussian value $3$.
 
 ```{.python .input #sdes-vp-normalization}
@@ -975,11 +980,11 @@ for s in [0.0, 0.25, 1.0, 3.0]:
 ```
 
 The variance column reads $1.000$, $1.003$, $1.007$, $1.014$ (pinned at
-$1$ up to EM bias) while the fourth moment changes from $1.000$ through
-$2.286$ (analytic $2.264$) to $3.06$ against the Gaussian $3$. The overshoot
-is mostly EM's weak bias: the printed variance $1.014$ corresponds to a
-Gaussian fourth moment of $3v^2 \approx 3.08$, and the remainder sits inside
-one Monte-Carlo standard error ($\approx 0.04$ for a fourth moment on
+$1$ up to EM bias and sampling noise) while the fourth moment changes from
+$1.000$ through $2.286$ (analytic $2.264$) to $3.06$ against the Gaussian $3$.
+EM's weak bias accounts for about half of the overshoot: the EM recursions
+give variance $1.005$ and fourth moment $3.03$ at $t = 3$, and the remainder
+sits inside one Monte-Carlo standard error ($\approx 0.04$ for a fourth moment on
 $50{,}000$ paths). The distribution is close to Gaussian, while the variance
 remains near one. Time-dependent noise schedules are a direct
 generalization: the **VP-SDE** of score-based diffusion
@@ -1043,62 +1048,300 @@ an Euler--Maruyama step with identical coefficients.
 
 ## Exercises
 
-1. **The square-root scaling is forced.** For the random walk with step
-   duration $\Delta t$ and step size $c\,(\Delta t)^{\gamma}$, compute
-   $\operatorname{Var}(W^{(\Delta t)}_t)$ for fixed $t$ and show that the
-   limit as $\Delta t \to 0$ is $0$ for $\gamma > \tfrac12$, $\infty$ for
-   $\gamma < \tfrac12$, and $c^2 t$ for $\gamma = \tfrac12$. Conclude that
-   Brownian motion is the *only* nontrivial scaling limit in this family.
-2. **No velocity.** Using $W_{t+\Delta t} - W_t \sim \sqrt{\Delta t}\,\xi$,
-   show that $\mathbb{P}\left(\left|\Delta W / \Delta t\right| > M\right) \to 1$
-   as $\Delta t \to 0$ for every fixed $M$. Why does this rule out defining an
-   SDE pathwise as $\dot{X} = f + g\,\dot{W}$, and how does the integral
-   formulation sidestep the problem?
-3. **Quadratic variation, by hand and by machine.** Re-derive
-   $\mathbb{E}[Q_n] = t$ and $\operatorname{Var}(Q_n) \le 2\delta t$ without
-   looking. Then explain why the same computation gives $Q_n \to 0$ for any
-   continuously differentiable path, and verify both claims numerically by
-   adapting the `#sdes-quadratic-variation` cell to the path
-   $x(t) = W_1 \cdot t$ (random slope, but smooth in $t$).
-4. **Itô's lemma practice.** Apply :eqref:`eq_mdl-sde-ito-lemma` to
-   $\phi(x) = x^2$ for general $dX = f\,dt + g\,dW$ and identify the term
-   ordinary calculus misses. Use the result with $f = 0$, $g = 1$ to confirm
-   $\int_0^t W\,dW = \tfrac12 (W_t^2 - t)$ and check that this integral has
-   zero mean, as :numref:`sec_mdl-ito-lemma` promised.
-5. **Geometric Brownian motion and the $-\sigma^2/2$ correction.** For
-   $dX = \mu X\,dt + \sigma X\,dW$ with $X_0 > 0$, apply Itô's lemma to
-   $\phi(x) = \log x$ to show
-   $d(\log X) = \left(\mu - \tfrac{\sigma^2}{2}\right)dt + \sigma\,dW$, and
-   solve: $X_t = X_0 \exp\left((\mu - \tfrac{\sigma^2}{2})t + \sigma W_t\right)$
-   (the exact solution the `#sdes-em-strong-order` cell tested against).
-   Where does the $-\sigma^2/2$ come from in the Taylor expansion? Show
-   nevertheless that $\mathbb{E}[X_t] = X_0 e^{\mu t}$, and explain how the
-   typical path can grow more slowly than the mean.
-6. **Euler--Maruyama and its orders.** (a) Show that the EM update
-   :eqref:`eq_mdl-sde-em` reduces to forward Euler when $g \to 0$, and explain
-   what would go wrong if the noise were scaled by $\Delta t$ instead of
-   $\sqrt{\Delta t}$. (b) State why the strong order on the OU process is $1$
-   rather than the general $\tfrac12$, by identifying the Milstein term and
-   evaluating it for additive noise. (c) Predict the strong-order slope for
-   the VP-SDE :eqref:`eq_mdl-sde-vp-sde` with $\beta(t) = 1 + t$, then verify
-   your prediction by adapting the `#sdes-em-strong-order` cell. (d) Why is
-   weak order the relevant one for a diffusion model's forward process?
-7. **The OU process, end to end.** Re-derive the solution
-   :eqref:`eq_mdl-sde-ou-solution` and the kernel
-   :eqref:`eq_mdl-sde-ou-kernel` from Itô's lemma and the isometry without
-   looking. Then show that in the stationary regime
-   $\operatorname{Cov}(X_s, X_t) = \tfrac{\sigma^2}{2\theta} e^{-\theta |t-s|}$
-   (correlations decay exponentially with time lag), and check it
-   numerically with the `#sdes-ou-cloud` ensemble.
-8. **Variance preservation, exactly.** From
-   :eqref:`eq_mdl-sde-vp-marginal`, show
-   $\operatorname{Var}(X_t) = \bar{\alpha}_t \operatorname{Var}(X_0) + (1 - \bar{\alpha}_t)$
-   for zero-mean data, so the marginal variance is identically $1$ if and only
-   if $\operatorname{Var}(X_0) = 1$. For Rademacher data $X_0 = \pm 1$, derive
-   $\mathbb{E}[X_t^4] = 3 - 2\bar{\alpha}_t^2$ (as printed by
-   `#sdes-vp-normalization`). What happens to $\operatorname{Var}(X_t)$ over
-   time if the data has variance $4$ instead, and why is that harmless for
-   a *sampler* but annoying for a *noise schedule*?
+1. **Biased random walk.** A walker takes a step of size $\pm c\sqrt{\Delta t}$
+   every $\Delta t$ time units, as in :numref:`sec_mdl-wiener-process`, but
+   its coin is biased: the step is positive with probability
+   $p = \tfrac12\left(1 + b\,\Delta t^{\delta}\right)$ for constants
+   $b, c, \delta > 0$ and $\Delta t$ small enough that $p \le 1$. Let
+   $X^{(\Delta t)}_t$ be the position after $k = t/\Delta t$ steps, starting
+   from $0$.
+    1. Compute $\mathbb{E}\big[X^{(\Delta t)}_t\big]$ and
+       $\operatorname{Var}\big(X^{(\Delta t)}_t\big)$. For which exponent
+       $\delta$ does the mean have a finite nonzero limit as
+       $\Delta t \to 0$? What happens to the mean for smaller and for larger
+       $\delta$?
+    1. For that exponent, find the limits of the mean and the variance.
+       Which constant drift and diffusion coefficients give an SDE
+       :eqref:`eq_mdl-sde-general` whose solution from $X_0 = 0$ has the
+       same mean and variance at every $t$?
+    1. Take $c = 1$ and $\Delta t = 10^{-3}$, and choose $b$ so that the
+       drift in (b) equals $1$. Compute $p$. Compare the drift displacement
+       with the standard deviation of the noise displacement, first over one
+       step and then over the interval $[0, 1]$.
+   :exlabel:`ex_mdl-sdes-biased-random-walk`
+
+1. **Infinite total variation.** The total variation of a path $x$ along a
+   partition $0 = t_0 < t_1 < \cdots < t_n = t$ is
+   $V_n = \sum_i |x(t_{i+1}) - x(t_i)|$. Pathwise integrals
+   $\int G\,dx$, defined as limits of sums $\sum_i G(s_i)\,\Delta x_i$ with
+   arbitrary evaluation points $s_i \in [t_i, t_{i+1}]$, exist for every
+   continuous $G$ when $V_n$ stays bounded as the mesh shrinks.
+    1. Let $x = W$ and use the uniform partition with $\Delta t_i = t/n$.
+       Compute $\mathbb{E}[V_n]$ and $\operatorname{Var}(V_n)$, using
+       $\mathbb{E}|\xi| = \sqrt{2/\pi}$ for $\xi \sim \mathcal{N}(0, 1)$, and
+       conclude that $V_n \to \infty$ in probability as $n \to \infty$.
+    1. Use the bound on $\sum_i (\Delta x_i)^2$ from
+       :numref:`sec_mdl-quadratic-variation` to show that a continuous path
+       whose total variation stays bounded as the mesh shrinks has
+       quadratic variation zero. Why does :eqref:`eq_mdl-sde-qv` then give a
+       second proof that Brownian paths have unbounded total variation?
+    1. Let $x$ be continuous with bounded total variation. Show that the
+       left-endpoint sums $\sum_i x(t_i)\,\Delta x_i$ and the right-endpoint
+       sums $\sum_i x(t_{i+1})\,\Delta x_i$ both converge to
+       $\tfrac12\left(x(t)^2 - x(0)^2\right)$. Apply the same algebra to
+       $x = W$ to derive :eqref:`eq_mdl-sde-wdw` without Itô's lemma.
+   :exlabel:`ex_mdl-sdes-infinite-total-variation`
+
+1. [code] **Quadratic variation of an Itô process.** Let $X$ solve
+   :eqref:`eq_mdl-sde-general`, and let $[X]_t$ be the limit in probability
+   of $\sum_i (X_{t_{i+1}} - X_{t_i})^2$ over partitions of $[0, t]$ whose
+   mesh tends to zero. The computation of $(dX)^2$ in
+   :numref:`sec_mdl-ito-lemma` suggests
+   $[X]_t = \int_0^t g(X_s, s)^2\, ds$.
+    1. Write $X_t = X_0 + A_t + M_t$ with $A_t = \int_0^t f(X_s, s)\,ds$ and
+       $M_t = \int_0^t g(X_s, s)\,dW_s$, and assume that $f(X_s, s)$ is
+       bounded on $[0, t]$. Show that $\sum_i (\Delta A_i)^2$ and
+       $\sum_i \Delta A_i\, \Delta M_i$ tend to zero along every path, so
+       that $[X]_t = [M]_t$. Problem
+       :exref:`ex_mdl-sdes-infinite-total-variation`b supplies the first
+       limit; the second needs only the continuity of $M$.
+    1. Rerun `#sdes-quadratic-variation`, since later cells reuse the name
+       `dW`. Reshape its increments `dW` into an array of shape
+       $(1, 2^{18})$ and pass them to `euler_maruyama` to simulate the OU
+       process $dX = -X\,dt + 0.9\,dW$ from $X_0 = 2$ and the geometric
+       Brownian motion $dX = X\,dt + X\,dW$ from $X_0 = 1.5$ on $[0, 1]$.
+       For each path, print the sum of squared increments on the subsampled
+       grids of that cell next to $\int_0^1 g(X_s, s)^2\,ds$ evaluated along
+       the same simulated path. For which of the two processes is $[X]_1$
+       random?
+    1. Let $X_t = \mu t + \sigma W_t$ be observed at $n + 1$ equally spaced
+       times on $[0, T]$. Show that
+       $\frac{1}{T}\sum_i (\Delta X_i)^2 \to \sigma^2$ in mean square as
+       $n \to \infty$ for every fixed $T$, whereas the estimator $X_T / T$
+       of $\mu$ has variance $\sigma^2 / T$ for every $n$. What does this
+       imply for estimating the diffusion coefficient and the drift from
+       one finely sampled trajectory?
+   :exlabel:`ex_mdl-sdes-quadratic-variation-ito-process`
+
+1. **Moments from Itô's lemma.** Itô's lemma together with the zero mean of
+   the Itô integral turns expectations of functions of $W$ into ordinary
+   differential equations.
+    1. Apply :eqref:`eq_mdl-sde-ito-lemma` to $\phi(x) = x^n$ with $X = W$
+       and take expectations to obtain an ODE for
+       $m_n(t) = \mathbb{E}[W_t^n]$ in terms of $m_{n-2}(t)$. Solve it for
+       $n = 4$ and $n = 6$, and check the results against the moments of
+       $\mathcal{N}(0, t)$.
+    1. Compute $\operatorname{Var}\big(\int_0^t W_s\,dW_s\big)$ in two ways:
+       with the Itô isometry :eqref:`eq_mdl-sde-ito-isometry`, and from
+       :eqref:`eq_mdl-sde-wdw` with the result of (a).
+   :exlabel:`ex_mdl-sdes-moments-ito-lemma`
+
+1. **Geometric Brownian motion and the $-\sigma^2/2$ correction.** Consider
+   $dX = \mu X\,dt + \sigma X\,dW$ with $X_0 > 0$.
+    1. Apply Itô's lemma to $\phi(x) = \log x$ to show
+       $d(\log X) = \left(\mu - \tfrac{\sigma^2}{2}\right)dt + \sigma\,dW$,
+       and solve for $X_t$. This is the exact solution against which
+       `#sdes-em-strong-order` measures the strong error. Which term of the
+       second-order Taylor expansion produces the $-\sigma^2/2$?
+    1. Using $\mathbb{E}\big[e^{\lambda Z}\big] = e^{\lambda^2 v/2}$ for
+       $Z \sim \mathcal{N}(0, v)$, show that
+       $\mathbb{E}[X_t] = X_0 e^{\mu t}$ and
+       $\mathbb{E}[X_t^2] = X_0^2 e^{(2\mu + \sigma^2) t}$. Find the median
+       of $X_t$.
+    1. Take $\mu = 0.1$ and $\sigma = 0.6$. What happens to the mean, to the
+       median, and to a typical path as $t \to \infty$? How can these
+       statements hold at the same time?
+
+   *Adapted from Simo Särkkä and Arno Solin,
+   [Applied Stochastic Differential Equations](https://users.aalto.fi/~asolin/sde-book/sde-book.pdf),
+   Exercise 4.3.*
+   :exlabel:`ex_mdl-sdes-geometric-brownian-motion-correction`
+
+1. [code] **Strong order and Milstein's correction.** As
+   :numref:`sec_mdl-sde-strong-weak` explains, Euler--Maruyama omits the
+   Milstein term
+   $\tfrac12 g\,\partial_x g\left((\Delta W)^2 - \Delta t\right)$, and its
+   strong order is $\tfrac12$ unless that term vanishes.
+    1. By problem :exref:`ex_mdl-sdes-geometric-brownian-motion-correction`a,
+       $Y = \log X$ satisfies an SDE with additive noise when $X$ is
+       geometric Brownian motion. Rerun `#sdes-em-strong-order`, since later
+       cells overwrite `T`, `X0`, and `x0`. Apply `euler_maruyama` to that SDE
+       with the increments and step sizes of that cell, exponentiate the
+       endpoints, and measure the strong error against `gbm_exact`. Explain
+       the result.
+    1. Use Itô's lemma to show that for $dX = f(X)\,dt + g(X)\,dW$ with
+       $g > 0$, the variable $Y = \psi(X)$ with $\psi' = 1/g$ has unit
+       additive noise, and find its drift.
+    1. Milstein's scheme :cite:`Milstein.1975` adds the first omitted term of
+       the stochastic Taylor expansion to the Euler--Maruyama step,
+
+       $$X_{n+1} = X_n + f\,\Delta t + g\,\Delta W_n + \tfrac12\, g\,\partial_x g\left((\Delta W_n)^2 - \Delta t\right),$$
+
+       with $f$, $g$, and $\partial_x g$ evaluated at $(X_n, t_n)$. Implement
+       it for the geometric Brownian motion of `#sdes-em-strong-order`, and
+       measure its strong-order slope on the same increments and step sizes.
+       By what factor does it reduce the strong error at
+       $\Delta t = 2^{-8}$?
+   :exlabel:`ex_mdl-sdes-milstein-correction`
+
+1. [code] **Weak order under multiplicative noise.** For geometric Brownian
+   motion, the Euler--Maruyama step multiplies $X_n$ by
+   $1 + \mu\,\Delta t + \sigma\,\Delta W_n$. Its strong order is
+   $\tfrac12$, as `#sdes-em-strong-order` measures.
+    1. Derive recursions for the mean and the second moment of the simulated
+       $X_n$, and solve them in closed form.
+    1. As `#sdes-em-weak-order` does for the OU process, compute the errors
+       of both moments at $T = 1$ against the exact moments of problem
+       :exref:`ex_mdl-sdes-geometric-brownian-motion-correction`b, for
+       $\mu = \sigma = 1$, $X_0 = 1.5$, and
+       $n \in \{20, 40, 80, 160, 320, 640\}$ steps, and fit the slopes.
+       How do they compare with the strong-order slope of the same scheme?
+   :exlabel:`ex_mdl-sdes-weak-order-multiplicative`
+
+1. [code] **Covariance of the OU process.** Let $X$ be the OU process
+   :eqref:`eq_mdl-sde-ou`.
+    1. For $s \le t$, split the integral in :eqref:`eq_mdl-sde-ou-solution`
+       at time $s$ and show that
+       $\operatorname{Cov}(X_s, X_t \mid X_0) = e^{-\theta(t - s)}\operatorname{Var}(X_s \mid X_0)$.
+       Write the result in closed form with :eqref:`eq_mdl-sde-ou-kernel`.
+    1. Let $X_0 \sim \mathcal{N}(0, \sigma^2/2\theta)$ be independent of $W$.
+       Show that
+       $\operatorname{Cov}(X_s, X_t) = \frac{\sigma^2}{2\theta}\, e^{-\theta |t - s|}$
+       for all $s, t \ge 0$.
+    1. Rerun `#sdes-ou-cloud`, since `#sdes-vp-normalization` overwrites
+       `X`, `theta`, and `sigma`. Estimate $\operatorname{Cov}(X_1, X_t)$
+       for $t \in \{1, 1.5, 2, 3\}$ from its ensemble `X`, and compare the
+       estimates with the formulas of (a) and (b). Which formula does the
+       ensemble follow, and why?
+    1. A sampler stores the state of a stationary OU process every $\Delta$
+       time units. How large must $\Delta$ be for the correlation between
+       consecutive stored states to fall below $0.01$?
+   :exlabel:`ex_mdl-sdes-ou-covariance`
+
+1. **Variance preservation, exactly.** Let $X_t$ follow
+   :eqref:`eq_mdl-sde-vp-marginal` with zero-mean data $X_0$.
+    1. Assume unit-variance data and show that
+       $\mathbb{E}[X_t^4] = 3 + \bar{\alpha}_t^2\left(\mathbb{E}[X_0^4] - 3\right)$.
+       Specialize to Rademacher data $X_0 = \pm 1$ to obtain the prediction
+       $3 - 2\bar{\alpha}_t^2$ that `#sdes-vp-normalization` prints.
+    1. The excess kurtosis $\mathbb{E}[X^4]/\operatorname{Var}(X)^2 - 3$ is
+       zero for every Gaussian. At what rate in $t$ does it decay for
+       $X_t$? Compare this rate with the rate at which the conditional mean
+       $\mathbb{E}[X_t \mid X_0]$ forgets the data.
+    1. Suppose instead that the data has variance $s^2$. Find
+       $\operatorname{Var}(X_t)$. For $s = 2$ and $\theta = 1$, how long must
+       the process run before $\operatorname{Var}(X_T)$ is within $1\%$ of
+       the variance of the reference $\mathcal{N}(0, 1)$?
+   :exlabel:`ex_mdl-sdes-variance-preservation-exactly`
+
+1. [code] **Itô versus Stratonovich.** ● By problem
+   :exref:`ex_mdl-sdes-infinite-total-variation`c, the average of the left-
+   and right-endpoint sums for $\int_0^t W\,dW$ equals $\tfrac12 W_t^2$ for
+   every partition. Sums of this kind define the Stratonovich integral
+   :cite:`Stratonovich.1966`, which obeys the ordinary chain rule.
+    1. Heun's method of :numref:`sec_mdl-euler-runge-kutta` carries over to
+       SDEs if the noise term is treated like a second slope. The predictor
+       is the Euler--Maruyama step
+       $\tilde{X} = X_n + f(X_n)\,\Delta t + g(X_n)\,\Delta W_n$, and the
+       corrector averages both coefficients:
+
+       $$X_{n+1} = X_n + \tfrac12\left[f(X_n) + f(\tilde{X})\right]\Delta t + \tfrac12\left[g(X_n) + g(\tilde{X})\right]\Delta W_n.$$
+
+       Implement it for the geometric Brownian motion of
+       `#sdes-em-strong-order`, rerunning that cell first, since later cells
+       overwrite `T`, `X0`, and `x0`. On the same increments and step sizes,
+       compare its endpoints with the exact Itô solution and with
+       $X_0 \exp(\mu T + \sigma W_T)$. To which of the two does the scheme
+       converge?
+    1. Expand the corrector's noise term to first order in
+       $\tilde{X} - X_n$, and use $(\Delta W_n)^2 \approx \Delta t$ to show
+       that the scheme behaves like Euler--Maruyama for an Itô SDE with a
+       modified drift. Find that drift and check that it explains the limit
+       in (a).
+    1. Why do the two conventions give the same solution for every SDE of
+       the form :eqref:`eq_mdl-sde-template`?
+   :exlabel:`ex_mdl-sdes-ito-versus-stratonovich`
+
+1. **Exact transitions of linear SDEs.** ● Consider the linear SDE
+   $dX = -\theta(t) X\,dt + \sigma(t)\,dW$ with continuous $\theta$ and
+   $\sigma$, and let $\Theta(t) = \int_0^t \theta(u)\,du$.
+    1. Apply Itô's lemma to $\phi(x, t) = e^{\Theta(t)} x$ and show that,
+       given $X_s$, the state $X_t$ at a later time $t$ is Gaussian with mean
+       $e^{-(\Theta(t) - \Theta(s))} X_s$ and variance
+       $\int_s^t e^{-2(\Theta(t) - \Theta(u))}\, \sigma(u)^2\, du$.
+    1. Specialize (a) to the VP-SDE :eqref:`eq_mdl-sde-vp-sde` and show that
+       a transition of any length maps a unit-variance state to a
+       unit-variance state. Conversely, assume for the linear SDE of (a) that
+       $\operatorname{Var}(X_t) = 1$ for every $t \ge 0$ whenever
+       $\operatorname{Var}(X_0) = 1$, and show that
+       $\sigma(t)^2 = 2\,\theta(t)$ at every $t$.
+    1. Consider the semilinear SDE
+       $dX = \left(-\theta X + q(X)\right)dt + \sigma\,dW$ with constants
+       $\theta, \sigma > 0$ and a smooth function $q$. The exponential
+       Euler--Maruyama step holds $q$ at the value $q(X_n)$ over a step of
+       length $\Delta t$ and solves the remaining linear SDE exactly, by the
+       method of (a). Write the step. Show that it agrees with the
+       Euler--Maruyama step :eqref:`eq_mdl-sde-em` to first order in
+       $\Delta t$ and that it is exact when $q$ is constant. For
+       $q \equiv 0$, Euler--Maruyama damps the mean only for
+       $\Delta t < 2/\theta$ (:numref:`sec_mdl-stiffness-implicit`). What
+       limits the step size of the exponential step?
+    1. Exact steps have zero weak error at every step size. Which property
+       of the drift and the diffusion of the VP-SDE makes them available?
+       The generative sampler of :numref:`sec_mdl-time-reversal` simulates an
+       SDE whose drift adds a multiple of the score $\nabla \log p_t$ of the
+       forward marginals to the linear VP drift, and the score is a
+       nonlinear function of $x$ for non-Gaussian data. Why can its steps not
+       be made exact? Exponential integrators for diffusion samplers
+       :cite:`Zhang.Chen.2023` apply the step of (c) to this drift. Which
+       part of the drift does that step treat exactly, and which part does
+       it approximate?
+   :exlabel:`ex_mdl-sdes-exact-vp-discretization`
+
+1. [extended] **Multilevel Monte Carlo.** ●● Estimating
+   $\mathbb{E}[\varphi(X_T)]$ by averaging over Euler--Maruyama paths has two
+   sources of error, the weak bias of the scheme and the sampling noise.
+   Multilevel Monte Carlo :cite:`Giles.2008` reduces the cost by coupling
+   paths across step sizes, which is one of the uses of strong accuracy named
+   in :numref:`sec_mdl-sde-strong-weak`. Throughout, the mean-square strong
+   error $\mathbb{E}\big[(X^{\Delta t}_N - X_T)^2\big]^{1/2}$ has the same
+   orders as the strong error of that section.
+    1. Plain Monte Carlo averages $\varphi(X^{\Delta t}_N)$ over $M$
+       independent paths at a cost of $MT/\Delta t$ steps. Assume a weak
+       bias $c_1\,\Delta t$ and a variance $v$ of $\varphi(X^{\Delta t}_N)$.
+       Show that a mean squared error below $\varepsilon^2$ costs order
+       $\varepsilon^{-3}$ steps at the best choice of $M$ and $\Delta t$.
+    1. Let $P_l$ be $\varphi$ of the Euler--Maruyama endpoint with step
+       $h_l = T\,2^{-l}$, and write
+       $\mathbb{E}[P_L] = \mathbb{E}[P_0] + \sum_{l=1}^{L}\mathbb{E}[P_l - P_{l-1}]$.
+       Each term is estimated from $M_l$ independent pairs in which the coarse
+       path uses the sums of consecutive pairs of fine increments, as in
+       `#sdes-em-strong-order`. For Lipschitz $\varphi$, bound
+       $V_l = \operatorname{Var}(P_l - P_{l-1})$ by the mean-square strong
+       error. Take $\varphi(x) = x$, and predict how $V_l$ scales with $h_l$
+       for the OU process and the geometric Brownian motion of
+       `#sdes-em-strong-order`, with that cell's parameters. Measure $V_l$
+       for $l = 1, \ldots, 8$ with `euler_maruyama`, and fit the slopes on
+       the finer levels.
+    1. Minimize the total cost $\sum_l M_l / h_l$ subject to
+       $\sum_l V_l / M_l \le \varepsilon^2 / 2$ with a Lagrange multiplier.
+       Choose the finest level $L$ so that the bias stays below
+       $\varepsilon / \sqrt{2}$. Assuming $V_l \propto h_l^{r}$, show that
+       the cost is of order $\varepsilon^{-2}$ for $r = 2$ and of order
+       $\varepsilon^{-2} (\log \varepsilon)^2$ for $r = 1$.
+    1. Implement both estimators for $\mathbb{E}[X_T] = X_0 e^{\mu T}$ of the
+       geometric Brownian motion of `#sdes-em-strong-order`, with $M_l$ from
+       (c) and your measured $V_l$. For
+       $\varepsilon \in \{0.2, 0.1, 0.05, 0.02\}$, record the total number of
+       steps each estimator uses and check its error over a few repetitions.
+       Plot $\varepsilon^2$ times the cost against $\varepsilon$. Repeat with
+       the Milstein scheme of problem :exref:`ex_mdl-sdes-milstein-correction`c
+       in place of Euler--Maruyama. `euler_maruyama` stores every path in
+       full, so simulate large $M_l$ in batches.
+    1. Repeat the measurement of (b) for the discontinuous
+       $\varphi(x) = \mathbf{1}[x > X_0]$. Why does $V_l$ decay more slowly,
+       and what does the slower decay do to the cost?
+   :exlabel:`ex_mdl-sdes-multilevel-monte-carlo`
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/)

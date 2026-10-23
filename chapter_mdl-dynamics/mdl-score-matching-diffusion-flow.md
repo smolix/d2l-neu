@@ -339,8 +339,8 @@ d2l.plot(grid, [mixture_score(grid, 0.5), s_hat], 'x', 'score',
 The learned field tracks the analytic score across both modes and the
 low-density valley between them: the largest gap on $[-4, 4]$ is about
 $0.2$, on a curve whose values span $\pm 4$ (the smoothed score is
-$s(x) = 4\tanh(4x) - 2x$, extremal at the interval ends). And the printout verifies the regression
-lemma numerically: the final DSM loss ($\approx 2.04$) is close to the
+$s(x) = 4\tanh(4x) - 2x$, extremal at the interval ends). And the printout is consistent with the
+regression lemma: the final DSM loss ($\approx 2.04$) is close to the
 estimated Bayes risk $\mathbb{E}\|Y - \mathbf{m}(X)\|^2$ ($\approx 2.04$,
 estimated on this finite sample with the analytic score). Their agreement is
 consistent with little reducible error remaining in this particular fit.
@@ -399,7 +399,9 @@ $\mathbf{s}(\cdot,t)=\nabla\log p_t$. A finite network trained on samples adds
 approximation, estimation, and optimization error. With the likelihood
 weighting $\lambda(t)=g(t)^2$, the cited analysis relates the population score
 loss to an upper bound on negative log-likelihood under its regularity and
-terminal-distribution assumptions :cite:`Song.Durkan.Murray.ea.2021`. DDPM's
+terminal-distribution assumptions :cite:`Song.Durkan.Murray.ea.2021`;
+exercise :exref:`ex_mdl-score-matching-diffusion-flow-likelihood-bound`
+derives this bound from the Fokker–Planck equation. DDPM's
 simple loss instead induces $\lambda(t)=1-\bar{\alpha}_t$, derived below; this
 changes the relative emphasis across noise levels and is often chosen for
 sample quality rather than for that bound. Generation then follows the program of
@@ -605,7 +607,7 @@ $\mathbf{x} \leftarrow \mathbf{x} + \tfrac{h}{2}\, \mathbf{s}(\mathbf{x}) + \sqr
 Stationarity of the SDE is not convergence of its discretization. Under
 appropriate ergodicity and regularity assumptions, the finite-step chain has
 an invariant law that approximates $p$, generally with $O(h)$ weak bias (see
-Exercise 6); convergence to that law can still be slow. With
+Exercise :exref:`ex_mdl-score-matching-diffusion-flow-langevin-stationarity`); convergence to that law can still be slow. With
 $\mathbf{s} = \mathbf{s}_{\boldsymbol{\theta}}$, this turns a trained score
 network directly into a generator. The cell runs it on our mixture with the
 analytic score, exposing that weakness along the way.
@@ -695,8 +697,8 @@ DDPM, so the same trained network can be reused. Second, in the fine-step
 continuous-time limit the deterministic trajectory is related to the
 probability-flow ODE of the VP-SDE
 (:numref:`sec_mdl-probability-flow-ode`). This relationship motivates sparse
-deterministic sampling, but it does not make a finite DDIM stride exact, even
-when a marginal happens to be Gaussian.
+deterministic sampling, but it makes a finite DDIM stride exact only in
+special cases, and Gaussian marginals alone are not enough.
 
 ![In the $(t, x)$ plane, each forward pair $(x_0,\epsilon)$ defines a curve $\sqrt{\bar{\alpha}_t}\,x_0+\sqrt{1-\bar{\alpha}_t}\,\epsilon$ whose cross-sections reproduce the noising marginals. DDIM uses the network's conditional noise estimate to take deterministic strides across selected time levels (marked), skipping the intermediate grid times (gray); the drawn curves explain the update algebra, not an exactly recovered latent path.](../img/mdl-dyn-ddim-strides.svg)
 :label:`fig_mdl-dyn-ddim-strides`
@@ -785,8 +787,9 @@ $$
 = \nabla \log \left[ \frac{p_t(\mathbf{x})\, p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t)^{\gamma}}{Z} \right].
 $$
 
-The second equality identifies the sampled distribution as a *tilted*
-distribution in which the classifier contribution is weighted by $\gamma$.
+The second equality identifies the guided field at noise level $t$ as the
+score of a *tilted* distribution in which the classifier contribution is
+weighted by $\gamma$.
 This weighting favors more prototypical examples of "$y$" and reduces
 diversity.
 
@@ -818,7 +821,8 @@ classifier-guidance tilt with the implicit classifier
 $p_t(y \mid \mathbf{x}) = p_t(\mathbf{x} \mid y)\, p(y) / p_t(\mathbf{x})$ in
 the exponent's role. One caveat: for $\gamma > 1$ the tilted object
 $p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})^\gamma$ is not, in general, the
-noised marginal of *any* clean distribution: the guided field is a useful
+noised marginal of *any* clean distribution (exercise
+:exref:`ex_mdl-score-matching-diffusion-flow-guided-marginals`): the guided field is a useful
 controlled distortion, not the score of a consistent diffusion, and the
 resulting fidelity-versus-diversity trade-off is an engineering choice, not a
 theorem. In $\boldsymbol{\epsilon}$-parameterization, :eqref:`eq_mdl-cfg` is
@@ -869,8 +873,8 @@ instead: the mean slides from $0.97$ to $1.04$ to $1.07$, away from the class
 boundary ("more prototypically $y$") while the histogram narrows slightly.
 This shift and narrowing illustrate the preceding caveat:
 for $\gamma > 1$ the samples track no noised marginal of any clean
-distribution; the tilt is its own object, more emphatic and less diverse than
-the class it names.
+distribution; the guided chain produces its own distribution, more emphatic
+and less diverse than the class it names.
 
 ## Flow Matching and Rectified Flow
 :label:`sec_mdl-flow-matching`
@@ -998,6 +1002,7 @@ $$
 \mathbf{x}_t = \alpha_t\, \mathbf{x}_1 + \sigma_t\, \boldsymbol{\epsilon},
 \qquad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, I),
 $$
+:eqlabel:`eq_mdl-gaussian-path`
 
 with smooth schedules $(\alpha_t, \sigma_t)$: on the flow-matching clock
 $(\alpha_0, \sigma_0) = (0, 1)$ and $(\alpha_1, \sigma_1) = (1, 0)$; on the
@@ -1051,7 +1056,11 @@ $\blacksquare$
 
 The same posterior mean $\hat{\mathbf{x}}_1$ underlies the common
 parameterizations, so they are inter-convertible by
-$t$-dependent affine maps of the same posterior mean:
+$t$-dependent affine maps of the same posterior mean
+(:numref:`tab_mdl-score-noise-velocity`).
+
+:Network targets on a Gaussian path. Each row gives the quantity a network predicts, the posterior expectation it estimates, and its conversion from the score.
+:label:`tab_mdl-score-noise-velocity`
 
 | Network predicts | Posterior meaning | From the score $\mathbf{s} = \nabla \log p_t$ |
 | :-- | :-- | :-- |
@@ -1708,7 +1717,7 @@ not be optimal transport. This distinction organizes the methods in this section
   a certificate of the Benamou--Brenier minimizer.
 
 One caveat: exact OT in high dimension is expensive
-and minibatch plans are biased toward their batch, so OT-CFM and reflow are
+and minibatch plans are biased toward their batch, so OT-CFM and reflow
 should be viewed as *variance- and curvature-reduction methods* whose idealized
 limit is the dynamic OT problem, rather than as exact $W_2$ solvers.
 
@@ -1847,9 +1856,11 @@ reversing a stochastic process, velocity rows by integrating a prescribed
 path): the **stochastic interpolants** of
 :citet:`Albergo.Boffi.VandenEijnden.2023` write
 $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \beta_t \mathbf{x}_1 + \gamma_t \mathbf{w}$
-and recover every row by a choice of schedule, the diffusion rows with
-interior noise $\gamma_t > 0$ and the rectified-flow row with
-$\gamma_t \equiv 0$. Exercise 8 walks the construction.
+and recover every row by a choice of schedule. With a Gaussian base $p_0$,
+the paper writes the diffusion rows, like the rectified-flow row, as
+*one-sided* interpolants with $\gamma_t \equiv 0$; it uses the latent term
+$\gamma_t \mathbf{w}$ for its *two-sided* interpolants between arbitrary
+$p_0$ and $p_1$. Exercise :exref:`ex_mdl-score-matching-diffusion-flow-stochastic-interpolants` walks the construction.
 
 ## Summary
 
@@ -1896,60 +1907,374 @@ flows.
 
 ## Exercises
 
-1. Derive the conditional score
-   $\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) = (\mathbf{x} - \tilde{\mathbf{x}})/\sigma^2$
-   from the Gaussian density, and verify that with
-   $\tilde{\mathbf{x}} = \mathbf{x} + \sigma \boldsymbol{\epsilon}$ it equals
-   $-\boldsymbol{\epsilon}/\sigma$. Then derive Hyvärinen's identity
-   :eqref:`eq_mdl-hyvarinen` in one dimension, stating exactly where the
-   boundary term vanishes.
-2. Prove the regression lemma :eqref:`eq_mdl-regression-lemma` and use it to
-   show that marginal flow matching and conditional flow matching have the
-   same minimizers. Where exactly does the proof need
-   $p_t(\mathbf{x}) > 0$?
-3. From the linear path :eqref:`eq_mdl-rf-path`, derive the constant
-   conditional velocity, and show that if every trajectory of the *learned*
-   field is a straight line traversed at constant speed, a single Euler step
-   integrates it exactly. What does the local truncation error of Euler
-   (:numref:`sec_mdl-euler-runge-kutta`) reduce to along such a trajectory?
-4. Show that the DDPM loss
-   $\mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}}\|^2$
-   equals the noise-conditional DSM loss :eqref:`eq_mdl-ncsm-loss` with
-   weighting $\lambda(t) = 1 - \bar{\alpha}_t$, and that
-   $\mathbf{s}_{\boldsymbol{\theta}} = -\boldsymbol{\epsilon}_{\boldsymbol{\theta}} / \sqrt{1 - \bar{\alpha}_t}$.
-   Which noise levels does the simple loss emphasize relative to
-   $\lambda(t) = 1$, and why might that be desirable for perceptual quality?
-5. Place a new model family in the unifying table: variance-exploding SMLD
-   (score matching with Langevin dynamics) :cite:`song2019generative`, with
-   $\mathbf{x}_t = \mathbf{x}_0 + \sigma(t) \boldsymbol{\epsilon}$. Fill in
-   all four remaining columns and predict its step-count behavior relative to
-   the VP row.
-6. *(Langevin stationarity.)* Verify by direct substitution into the
-   Fokker–Planck equation that $p \propto e^{-E}$ is stationary for
-   $d\mathbf{X} = -\tfrac12 \nabla E(\mathbf{X})\, dt + d\mathbf{W}$. Then
-   consider the Euler–Maruyama discretization with step $h$: for the 1-D
-   Gaussian case $E(x) = x^2/(2 v)$, compute the stationary variance of the
-   discrete chain exactly and show it is biased by $O(h)$. What classical
-   acceptance step removes this bias?
-7. *(CFG as a score tilt.)* Substitute the Bayes identity
-   :eqref:`eq_mdl-guidance-bayes` into the CFG field :eqref:`eq_mdl-cfg` and
-   show
-   $\tilde{\mathbf{s}} = \nabla \log \left[ p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})^{\gamma} \right]$.
-   For a two-component Gaussian-mixture $p_t$ with equally likely classes
-   $y \in \{1, 2\}$, describe what $\gamma > 1$ does to the effective
-   density, and exhibit a case where
-   $p_t(\mathbf{x}) p_t(y \mid \mathbf{x})^\gamma$ is not proportional to any
-   noised-data marginal.
-8. *(Stochastic interpolants.)* The framework of
+1. **Boundary terms.** Hyvärinen's identity :eqref:`eq_mdl-hyvarinen` assumes
+   that $p(x)\, s_{\boldsymbol{\theta}}(x)$ vanishes at the ends of the
+   support. Let the data be uniform on $[0, 1]$, so that $\nabla \log p = 0$
+   inside the interval, and fit the linear model $s_{a,b}(x) = a + b x$.
+    1. Minimize the explicit objective :eqref:`eq_mdl-esm-objective` and the
+       implicit objective, the right-hand side of :eqref:`eq_mdl-hyvarinen`,
+       over $(a, b)$. Which density has the score that the implicit objective
+       selects?
+    1. Repeat the one-dimensional integration by parts of the proof on
+       $[0, 1]$, keep the boundary term, and show that it accounts for the
+       difference between the two objectives.
+    1. Pixel intensities are bounded in the same way. Why does denoising score
+       matching at a noise level $\sigma > 0$ not inherit the problem?
+
+1. [code] **Exact and Euler–Maruyama steps.** The DDPM step
+   :eqref:`eq_mdl-ddpm-forward` and the Euler–Maruyama step of the VP-SDE
+   :eqref:`eq_mdl-sde-vp-sde` agree to first order in $\beta_t$. By exercise
+   :exref:`ex_mdl-sdes-exact-vp-discretization`a of :numref:`sec_mdl-sdes`,
+   the exact transition of the VP-SDE from time $s$ to time $t$ has mean
+   $e^{-B/2}\, \mathbf{x}_s$ and covariance $(1 - e^{-B})\, I$, where
+   $B = \int_s^t \beta(r)\, dr$. This is the DDPM step with
+   $\beta_t = 1 - e^{-B}$.
+    1. For unit-variance data, show that one Euler–Maruyama step, which has
+       the coefficient $1 - \tfrac12 \beta_t$, returns the variance
+       $1 + \beta_t^2 / 4$.
+    1. Iterate the variance recursion of each step over the schedule `beta` of
+       `#score-matching-diffusion-flow-ddpm-marginal`, and over the
+       fifty-step schedule `np.linspace(1e-4, 0.02, 50) * 20`, which has the
+       same total $\sum_t \beta_t$. Compare the final variances with the
+       standard error of a variance estimated from $4096$ samples. When does
+       the choice between the two steps matter?
+
+1. [code] **Langevin discretization bias.** For the Gaussian target
+   $p = \mathcal{N}(0, v)$, the Langevin sampler of :eqref:`eq_mdl-langevin`
+   with step $h$ is the linear recursion
+   $x \leftarrow (1 - \tfrac{h}{2v})\, x + \sqrt{h}\, \xi$.
+    1. Find the step sizes for which the recursion has a stationary
+       distribution, compute its variance, and expand the bias to first order
+       in $h$.
+    1. Treat each mode of the mixture in
+       `#score-matching-diffusion-flow-langevin` as a separate Gaussian with
+       $v = 0.25$, and predict the stationary $\mathbb{E}[X^2]$ at
+       $h \in \{0.01, 0.1, 0.25, 0.5\}$. Compare each predicted bias with the
+       Monte Carlo standard error of an estimate from $10000$ chains. Then run
+       `langevin` for $2000$ steps at each of these step sizes from the
+       initial points `rng.normal(0.0, 3.0, 10000)` of `warm`. From which
+       step size on does the experiment resolve the bias?
+    1. The Metropolis-adjusted Langevin algorithm :cite:`Roberts.Tweedie.1996`
+       removes the bias with an accept–reject test that needs the density
+       ratio $p(\mathbf{x}') / p(\mathbf{x})$. Why can a sampler that has only
+       a trained score network $\mathbf{s}_{\boldsymbol{\theta}}$ not apply
+       this test directly?
+   :exlabel:`ex_mdl-score-matching-diffusion-flow-langevin-stationarity`
+
+1. [code] **Annealing out of one mode.** In
+   `#score-matching-diffusion-flow-langevin`, chains started in the left mode
+   stay there. Annealed Langevin dynamics first runs the sampler on smoothed
+   densities $p_\sigma$, here the mixture with component variance
+   $0.25 + \sigma^2$, for the decreasing ladder of noise levels
+   $\sigma = 2, 1, 0.5, 0.25, 0.1, 0$.
+    1. By exercise
+       :exref:`ex_mdl-fokker-planck-probability-flow-mode-merging`b of
+       :numref:`sec_mdl-fokker-planck-probability-flow`, the mixture
+       $\tfrac12 \mathcal{N}(-\mu, s^2) + \tfrac12 \mathcal{N}(\mu, s^2)$ is
+       unimodal if and only if $s \ge \mu$. The means of `mixture_score` are
+       $\pm 2$. For which $\sigma$ is $p_\sigma$ unimodal? Which levels of the
+       ladder lie in this range?
+    1. Give `langevin` the component variance as an argument, start $10000$
+       chains at $-2$, and run $300$ steps at each level of the ladder. Do
+       this once with the fixed step
+       $h = 0.01$ and once with $h = 0.04\, (0.25 + \sigma^2)$, which equals
+       $0.01$ at $\sigma = 0$. Report the fraction of chains with $X > 0$ at
+       the end of each run.
+    1. :citet:`song2019generative` scale the step size of each level with
+       $\sigma^2$. Use the contraction factor of the linear recursion in
+       exercise :exref:`ex_mdl-score-matching-diffusion-flow-langevin-stationarity`
+       to explain why the fixed step fails at the large noise levels.
+
+1. **Crossing segments and the floor.** The constant $C$ of the CFM theorem
+   (:numref:`sec_mdl-flow-matching`) is the conditional variance
+   $\mathbb{E} \| Y - \mathbf{u}_t(\mathbf{x}) \|^2$ of the target
+   $Y = \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$.
+    1. Show that $C = 0$ if and only if, for almost every $t$, the conditional
+       velocity is almost surely a function of $(\mathbf{x}_t, t)$. What does
+       this condition require of the segments of the linear path
+       :eqref:`eq_mdl-rf-path`?
+    1. For the independent coupling of $\mathcal{N}(\mathbf{0}, I)$ with the
+       standardized data `moons`, compute the conditional variance of
+       $\mathbf{x}_1 - \mathbf{x}_0$ given $\mathbf{x}_t$, summed over
+       coordinates, at $t = 0$ and at $t = 1$.
+    1. The training loss in
+       `#mdl-score-matching-diffusion-flow-one-reflow-round-measured` ends at a
+       few thousandths. What does this value imply about crossings of the
+       segments from $\mathbf{z}$ to $\hat{\mathbf{x}}_1(\mathbf{z})$, even
+       though the network may carry approximation error?
+
+1. [code] **Parameterization conversions.** For the Gaussian path
+   :eqref:`eq_mdl-gaussian-path`, Tweedie's formula reads
+   $\hat{\mathbf{x}}_1 = (\mathbf{x} + \sigma_t^2\, \nabla \log p_t(\mathbf{x})) / \alpha_t$.
+    1. Derive the $v$-prediction row of :numref:`tab_mdl-score-noise-velocity`
+       from Tweedie's formula.
+    1. Specialize the score–velocity identity :eqref:`eq_mdl-score-velocity`
+       to the linear path $\alpha_t = t$, $\sigma_t = 1 - t$ of rectified flow.
+    1. Change the cell
+       `#mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function`
+       to the linear path, and check your formula from (b) and the
+       $v$-prediction row at $t \in \{0.05, 0.6, 0.95\}$.
+    1. Solve your formula from (b) for the score. If a velocity field has error
+       $\delta$ at time $t$, how large is the error of the score computed from
+       it? Near which end of the path is a score read off a flow-matching
+       model unreliable?
+
+1. [code] **The Bayes-risk floor.** ● The cell
+   `#score-matching-diffusion-flow-dsm-train` prints a final DSM loss of
+   $2.036$ and an estimated Bayes risk of $2.038$ for the mixture at
+   $\sigma = 0.5$. Both are averages over the same $4096$ noisy samples.
+    1. Let $Y = -\boldsymbol{\epsilon}/\sigma$ be the DSM target
+       :eqref:`eq_mdl-dsm-target` for data in $\mathbb{R}^d$. Use the
+       regression lemma :eqref:`eq_mdl-regression-lemma` and Vincent's theorem
+       to show that the population Bayes risk is
+
+       $$\mathbb{E} \left\| Y - \nabla \log p_\sigma(\tilde{\mathbf{x}}) \right\|^2 = \frac{d}{\sigma^2} - \mathbb{E}_{\tilde{\mathbf{x}} \sim p_\sigma} \left\| \nabla \log p_\sigma(\tilde{\mathbf{x}}) \right\|^2.$$
+
+    1. Evaluate the right-hand side for the mixture at $\sigma = 0.5$ by
+       numerical quadrature with `mixture_score`. Compute the standard error of
+       the printed Bayes-risk estimate from its $4096$ per-sample terms. Is the
+       printed value consistent with the population value?
+    1. The printed loss and the printed Bayes-risk estimate differ by much less
+       than either standard error. Explain why.
+    1. Estimate the excess risk
+       $\mathbb{E}_{p_\sigma} (s_{\boldsymbol{\theta}} - \nabla \log p_\sigma)^2$
+       of the trained network at the noisy points `x + 0.5 * eps`, with the
+       targets `y`, in two ways: as the mean of the per-sample differences of
+       the two squared errors, and as the mean of
+       $(s_{\boldsymbol{\theta}} - \nabla \log p_\sigma)^2$ at these points.
+       Evaluate $s_{\boldsymbol{\theta}}$ from the final parameters `W1`, `b1`,
+       `W2`, and `b2`, because the array `S` was computed before the last Adam
+       update. Which estimate is more precise, and why? Compare both with a
+       quadrature of the expectation on a grid.
+   :exlabel:`ex_mdl-score-matching-diffusion-flow-bayes-risk-floor`
+
+1. **Weightings across noise levels.** ● Consider the VP-SDE with the schedule
+   `beta_fn` of `#score-matching-diffusion-flow-euler-vs-heun`,
+   $\beta(t) = \beta_{\min} + t\, (\beta_{\max} - \beta_{\min})$ with
+   $\beta_{\min} = 0.1$ and $\beta_{\max} = 20$, and
+   $\sigma_t^2 = 1 - \bar{\alpha}(t)$, where $\bar{\alpha}(t)$ is `abar_fn`.
+   Let the data in $\mathbb{R}^d$ have a smooth density, and assume that
+   $\mathbb{E} \| \nabla \log p_t \|^2$ stays bounded as $t \to 0$. Write
+   $\ell(t)$ for the Bayes risk of the noise-conditional DSM loss
+   :eqref:`eq_mdl-ncsm-loss` at level $t$, which problem
+   :exref:`ex_mdl-score-matching-diffusion-flow-bayes-risk-floor`a gives with
+   $\sqrt{\bar{\alpha}(t)}\, \mathbf{x}_0$ in place of $\mathbf{x}$ and
+   $\sigma_t$ in place of $\sigma$.
+    1. Show that $\ell(t) \approx d / (\beta_{\min} t)$ as $t \to 0$.
+    1. Find the behavior of $\lambda(t)\, \ell(t)$ as $t \to 0$ for
+       $\lambda = 1$, for the DDPM weighting $\lambda = \sigma_t^2$, and for
+       the likelihood weighting $\lambda = \beta(t)$. For which weightings is
+       $\int_0^1 \lambda(t)\, \ell(t)\, dt$ finite, and which noise levels does
+       each weighting emphasize?
+    1. Training draws $t$ uniformly from $[\varepsilon, 1]$. For the likelihood
+       weighting, show that the second moment of $\lambda(t)\, \ell(t)$ under
+       this draw grows like $1/\varepsilon$.
+       :citet:`Song.Durkan.Murray.ea.2021` (Section 5.1) instead draw $t$ from
+       the density proportional to $\beta(t) / \sigma_t^2$ on
+       $[\varepsilon, 1]$ and multiply the DSM term at the drawn level by
+       $Z \sigma_t^2$, where $Z$ normalizes that density. Show that this
+       estimate is unbiased for the likelihood-weighted loss and that its
+       value at the optimum, $Z \sigma_t^2\, \ell(t)$, stays bounded as
+       $t \to 0$.
+   :exlabel:`ex_mdl-score-matching-diffusion-flow-weightings`
+
+1. [code] **DDIM against Euler and Heun.** ● The cell
+   `#score-matching-diffusion-flow-euler-vs-heun` integrates the
+   probability-flow ODE with exact scores, and the DDIM update
+   :eqref:`eq_mdl-ddim-update` can be run on the same continuous schedule.
+    1. Implement DDIM on the uniform time grid of `solve`, with `abar_fn` in
+       place of $\bar{\alpha}$ and the exact noise prediction
+       $-\sqrt{1 - \bar{\alpha}(t)}$ times `score_vp`. For
+       $K \in \{5, 10, 20, 40\}$, compare its endpoint error against `ref`
+       with those of Euler and Heun from the same draws `z`.
+    1. Show that for data concentrated at a single point the DDIM update lands
+       on the probability-flow trajectory for every stride. Which quantity does
+       DDIM hold constant across a stride, and which quantity does Euler hold
+       constant?
+    1. Repeat (a) with the component variance $0.01$ and then $10^{-4}$ in
+       place of $0.25$, and recompute `ref`. Compute the responsibilities in
+       `score_vp` from differences of the exponents, so that they do not
+       evaluate to $0/0$. How does the ranking of the three methods change?
+       Explain the failure of Heun with the Jacobian of `pf_ode` near $t = 0$
+       and the times at which Heun evaluates the field.
+    1. :citet:`Karras.Aittala.Aila.ea.2022` (Algorithm 1) skip the
+       second-order correction on the step that ends at noise level zero. Make
+       this change to Heun and repeat (c).
+
+1. [code] **Guidance by noise level.** ● In
+   `#mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule`,
+   raising $\gamma$ from $1$ to $10$ moves the mean of the guided samples from
+   $0.966$ to $1.072$.
+    1. At the last level of the chain, $t = 0$ in `cfg_sample`, the class
+       posterior of the right mode is a logistic function of $x$. Write it, and
+       compute by quadrature the mean of the tilted density proportional to
+       $p_t(x)\, p_t(y \mid x)^{\gamma}$ at that level for
+       $\gamma \in \{1, 3, 10\}$. Does this tilt explain the printed shift?
+    1. Modify `cfg_sample` so that it uses $\gamma = 10$ only on the steps
+       $t \ge 500$, only on $200 \le t < 500$, or only on $t < 200$, and
+       $\gamma = 1$ on the others. Which band of noise levels produces the
+       shift? Relate the answer to the separation
+       $\sqrt{\bar{\alpha}_t}\, m / \sqrt{v_t}$ of the two noised classes,
+       where $m$ is `mt`, $v_0$ is the clean component variance `vt`, and
+       $v_t = \bar{\alpha}_t\, v_0 + 1 - \bar{\alpha}_t$ is the noised
+       component variance, the variable `v` of `cfg_sample`.
+    1. :citet:`Kynkaanniemi.Aittala.Karras.ea.2024` find on image models that
+       guidance is harmful at high noise levels, largely unnecessary at low
+       noise levels, and beneficial in between. Which parts of this pattern
+       does the one-dimensional example reproduce, and which can it not
+       exhibit?
+
+1. **Guided densities and noised marginals.** ● The guided field
+   :eqref:`eq_mdl-cfg` with $\gamma > 1$ is the score of the tilted density
+   $\tilde{p}_t(\mathbf{x}) \propto p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})^{\gamma}$.
+   Call a density a noised marginal at level $t$ if it is the law of
+   $\sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sigma_t \boldsymbol{\epsilon}$,
+   with $\sigma_t^2 = 1 - \bar{\alpha}_t$, for some clean distribution of
+   $\mathbf{x}_0$.
+    1. For a noised marginal $p_t$, Tweedie's formula reads
+       $\nabla \log p_t(\mathbf{x}) = (\sqrt{\bar{\alpha}_t}\, \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}] - \mathbf{x}) / \sigma_t^2$.
+       Differentiate it once more to show
+
+       $$\nabla^2 \log p_t(\mathbf{x}) = -\frac{I}{\sigma_t^2} + \frac{\bar{\alpha}_t}{\sigma_t^4} \operatorname{Cov}\left[ \mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x} \right].$$
+
+       Conclude that no eigenvalue of $-\nabla^2 \log p_t$ exceeds
+       $1 / \sigma_t^2$, whatever the clean distribution.
+    1. In `cfg_sample`, the two noised classes are
+       $\mathcal{N}(\pm \sqrt{\bar{\alpha}_t}\, m, v_t)$, where $m$ is `mt`,
+       $v_0$ is the clean component variance `vt`, and
+       $v_t = \bar{\alpha}_t\, v_0 + \sigma_t^2$ is the noised component
+       variance, the variable `v` of `cfg_sample`. The label $y$ names the
+       right class. Show that
+       $-(\log \tilde{p}_t)''(x) = 1/v_t + (\gamma - 1)\, a_t^2\, \varsigma(a_t x)\, (1 - \varsigma(a_t x))$,
+       where $a_t = 2 \sqrt{\bar{\alpha}_t}\, m / v_t$ and
+       $\varsigma(u) = 1 / (1 + e^{-u})$ is the logistic function.
+    1. Find the smallest $\gamma$ for which $\tilde{p}_t$ violates the bound of
+       (a) at some $x$. Evaluate it at the levels $t = 0$, $100$, and $500$ of
+       `alpha_bar`. What do the values say about the densities that the chain
+       of `cfg_sample` follows at $\gamma = 3$?
+   :exlabel:`ex_mdl-score-matching-diffusion-flow-guided-marginals`
+
+1. [code] **Kinetic energy of learned flows.** ● By the Benamou–Brenier
+   theorem :eqref:`eq_mdl-benamou-brenier`, every flow that carries $p_0$ to
+   $p_1$ has kinetic energy at least $W_2^2(p_0, p_1)$ of :eqref:`eq_mdl-w2`.
+    1. Let a trajectory satisfy $\dot{\mathbf{X}}_t = \mathbf{v}_t$ on
+       $[0, 1]$. Show that
+
+       $$\int_0^1 \|\mathbf{v}_t\|^2\, dt - \|\mathbf{X}_1 - \mathbf{X}_0\|^2 = \int_0^1 \left\| \mathbf{v}_t - (\mathbf{X}_1 - \mathbf{X}_0) \right\|^2 dt,$$
+
+       and that this gap vanishes if and only if the Euler step
+       $\mathbf{X}_s + (1 - s)\, \mathbf{v}_s$ from every time $s \in [0, 1)$
+       lands on $\mathbf{X}_1$.
+    1. Modify `euler_sample` and `euler_sample2` so that they also return the
+       starting points and the Euler estimate $\sum_k h\, \|\mathbf{v}_k\|^2$
+       of the kinetic energy of each trajectory, with $h = 1/K$. For the
+       models behind both functions and for $K = 32$ and $K = 128$, estimate
+       the kinetic energy and the transport cost
+       $\mathbb{E} \|\mathbf{X}_1 - \mathbf{X}_0\|^2$ of the coupling that the
+       flow defines.
+    1. Estimate $W_2^2$ between $\mathcal{N}(\mathbf{0}, I)$ and the data by
+       solving the assignment problem between $2048$ Gaussian draws and
+       `held_out` with `scipy.optimize.linear_sum_assignment`, for three
+       independent sets of draws. Compute the transport cost of the
+       independent coupling exactly.
+    1. By (a) and :eqref:`eq_mdl-w2`, every flow from $p_0$ to $p_1$ satisfies
+       $W_2^2 \le \mathbb{E} \|\mathbf{X}_1 - \mathbf{X}_0\|^2 \le \int_0^1 \mathbb{E} \|\mathbf{v}_t\|^2\, dt$.
+       Order the cost of the independent coupling, the estimate of $W_2^2$,
+       and the transport costs and kinetic energies of the two flows. Which of
+       the two inequalities does reflow tighten? How close does the coupling
+       of the first model come to the optimal cost, given the spread of the
+       estimates in (c)?
+
+1. **Stochastic interpolants.** ● The framework of
    :citet:`Albergo.Boffi.VandenEijnden.2023` writes
-   $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \beta_t \mathbf{x}_1 + \gamma_t \mathbf{w}$
-   with $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, I)$ and smooth schedules
-   satisfying $\alpha_0 = \beta_1 = 1$, $\alpha_1 = \beta_0 = \gamma_0 = \gamma_1 = 0$.
-   Derive the conditional velocity
-   $\mathbb{E}[\dot{\alpha}_t \mathbf{x}_0 + \dot{\beta}_t \mathbf{x}_1 + \dot{\gamma}_t \mathbf{w} \mid \mathbf{x}_t]$
-   as the CFM target, and identify schedule choices that recover (a) rectified
-   flow and (b) a variance-preserving diffusion path. What effect does $\gamma_t > 0$
-   have in the interior?
+   $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \beta_t \mathbf{x}_1 + \gamma_t \mathbf{w}$,
+   where $(\mathbf{x}_0, \mathbf{x}_1)$ is drawn from a coupling of $p_0$
+   and $p_1$, $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, I)$ is independent of
+   both, and the smooth schedules satisfy $\alpha_0 = \beta_1 = 1$ and
+   $\alpha_1 = \beta_0 = \gamma_0 = \gamma_1 = 0$.
+    1. Take $\mathbf{z} = (\mathbf{x}_0, \mathbf{x}_1, \mathbf{w})$ in
+       :eqref:`eq_mdl-marginal-velocity`. Show that the marginal velocity is
+       $\mathbb{E}[\dot{\alpha}_t \mathbf{x}_0 + \dot{\beta}_t \mathbf{x}_1 + \dot{\gamma}_t \mathbf{w} \mid \mathbf{x}_t = \mathbf{x}]$,
+       and write the corresponding CFM loss :eqref:`eq_mdl-cfm-loss`.
+    1. Give schedules that recover rectified flow :eqref:`eq_mdl-rf-path` and
+       the variance-preserving path of
+       `#mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function`,
+       whose data and noise coefficients are $\sin \tfrac{\pi t}{2}$ and
+       $\cos \tfrac{\pi t}{2}$, both with independent endpoints and
+       $p_0 = \mathcal{N}(\mathbf{0}, I)$.
+    1. For $p_0 = \mathcal{N}(\mathbf{0}, I)$, independent endpoints, and
+       $\gamma_t > 0$, show that the interpolant has the same marginal
+       velocity as the interpolant with $\gamma \equiv 0$ and
+       $\sqrt{\alpha_t^2 + \gamma_t^2}$ in place of $\alpha_t$.
+    1. For $\gamma_t > 0$, show that
+       $\nabla \log p_t(\mathbf{x}) = -\mathbb{E}[\mathbf{w} \mid \mathbf{x}_t = \mathbf{x}] / \gamma_t$.
+       What does interior noise provide when $p_0$ is an arbitrary data
+       distribution rather than a Gaussian?
+   :exlabel:`ex_mdl-score-matching-diffusion-flow-stochastic-interpolants`
+
+1. **Score error and likelihood.** ●● With the likelihood weighting
+   $\lambda = g^2$, the population score loss bounds the Kullback–Leibler
+   divergence from the data to the model, by Theorem 1 of
+   :citet:`Song.Durkan.Murray.ea.2021`. The paper proves the bound with path
+   measures; this problem derives it from the Fokker–Planck equation
+   (:numref:`sec_mdl-fokker-planck`), following
+   :citet:`Lu.Zheng.Bao.ea.2022`, who take this route for the SDE (their
+   Proposition C.1) and for the probability-flow ODE (their Theorem 3.1).
+   Let the forward SDE
+   $d\mathbf{x} = \mathbf{f}(\mathbf{x}, t)\, dt + g(t)\, d\mathbf{W}$ have
+   marginals $p_t$ on $[0, T]$. In reverse time $\tau = T - t$, the exact
+   reversal and the model are
+
+   $$d\mathbf{x} = \left[ -\mathbf{f} + g^2\, \nabla \log p_t \right] d\tau + g\, d\mathbf{B}_\tau, \qquad d\mathbf{x} = \left[ -\mathbf{f} + g^2\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t) \right] d\tau + g\, d\mathbf{B}_\tau,$$
+
+   evaluated at $t = T - \tau$. The first has marginals $p_t$; the second,
+   started from a prior $\pi$ at $\tau = 0$, has marginals $q_t$. Assume that
+   all densities are smooth and positive and decay fast enough for every
+   integration by parts.
+    1. Write both Fokker–Planck equations in $\tau$ in the form
+       $\partial_\tau \rho = -\nabla \cdot (\rho\, \mathbf{w})$, and identify
+       the velocities $\mathbf{w}_p$ and $\mathbf{w}_q$.
+    1. Show that
+       $\frac{d}{d\tau} \mathrm{KL}(p_t \,\|\, q_t) = \mathbb{E}_{p_t}\left[ (\mathbf{w}_p - \mathbf{w}_q)^\top \nabla \log (p_t / q_t) \right]$.
+    1. Bound the right-hand side by
+       $\tfrac12 g^2\, \mathbb{E}_{p_t} \| \mathbf{s}_{\boldsymbol{\theta}} - \nabla \log p_t \|^2$,
+       integrate over $\tau$, and obtain
+
+       $$\mathrm{KL}(p_0 \,\|\, q_0) \le \mathrm{KL}(p_T \,\|\, \pi) + \frac12 \int_0^T g(t)^2\, \mathbb{E}_{p_t} \left\| \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \nabla \log p_t(\mathbf{x}) \right\|^2 dt.$$
+
+       Under which condition on $q_t$ is the bound of the derivative tight?
+    1. Repeat (a) and (b) for the probability-flow ODE with
+       $\mathbf{s}_{\boldsymbol{\theta}}$ in place of the score. Which term
+       that made (c) possible is missing, and why does the score loss alone no
+       longer bound $\mathrm{KL}(p_0 \,\|\, q_0)$?
+   :exlabel:`ex_mdl-score-matching-diffusion-flow-likelihood-bound`
+
+1. [extended] **Learned noise prediction.** ●● The samplers `langevin`,
+   `ddim`, `cfg_sample`, and `solve` all use exact scores.
+   Replace the exact score by a trained network for the standardized mixture
+   `x / x.std()` under the DDPM schedule `beta` and `alpha_bar`.
+    1. Train a noise-prediction network
+       $\epsilon_{\boldsymbol{\theta}}(x_t, t)$ with input $(x_t, t/1000)$,
+       two hidden layers of $64$ tanh units, and the optimizer settings of
+       `#score-matching-diffusion-flow-cfm-train`, on the simple loss with $t$
+       uniform over the $1000$ levels. Compute its root-mean-square error
+       against the exact noise prediction
+       $-\sqrt{1 - \bar{\alpha}_t}\, \nabla \log p_t$ on samples of $p_t$ at
+       several levels $t$. Where is the error largest?
+    1. Sample with `ddim` at $K = 10$ and $K = 50$, and with the ancestral
+       chain of `cfg_sample` in which the network's score replaces the guided
+       score. Compare each set of samples with exact draws of the mixture by
+       the fraction in the right mode, the standard deviation, and `ks`. Which
+       sampler is most sensitive to the error of (a), and at which step of
+       that sampler does the error enter?
+    1. Retrain with the per-level weights that correspond to $\lambda = 1$ and
+       to the likelihood weighting $\lambda = \beta$, that is, with the noise
+       loss at level $t$ multiplied by $\lambda(t) / (1 - \bar{\alpha}_t)$, and
+       repeat (a) and (b). Relate the results to problem
+       :exref:`ex_mdl-score-matching-diffusion-flow-weightings`.
+
+   The deliverable is a table of the statistics of (b) for each weighting and
+   sampler, together with a plot of the error of (a) against $t$.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/)

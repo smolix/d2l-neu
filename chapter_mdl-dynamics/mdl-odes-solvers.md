@@ -129,6 +129,7 @@ $$
 \qquad
 \Phi_{t+s} = \Phi_t \circ \Phi_s .
 $$
+:eqlabel:`eq_mdl-ode-flow-group`
 
 Flowing for $s$ seconds and then $t$ more is the same as flowing for $t+s$, whenever all
 three solutions exist. This holds because the field is frozen in time: the second leg
@@ -394,6 +395,7 @@ determines the asymptotic verdict. On the imaginary axis, however, a nontrivial
 Jordan block can cause polynomial growth and must be classified separately.)
 
 ### Linearization at Fixed Points
+:label:`subsec_mdl-ode-linearization`
 
 Nonlinear fields inherit all of this *locally*. A **fixed point** of an
 autonomous system is a state $\mathbf{x}^\star$ with
@@ -419,9 +421,9 @@ imaginary axis, by the Hartman--Grobman theorem
 quadratic terms get a vote.) Write the damped pendulum
 $\ddot{\theta} = -\sin\theta - \gamma\dot{\theta}$ as a first-order
 system in $(\theta, \dot{\theta})$. It has Jacobian eigenvalues with negative
-real part at the hanging rest point $(0, 0)$ (a stable spiral, the
-ring-down of a released pendulum) and a saddle at the inverted balance
-$(\pi, 0)$, analogous to balancing a pencil on its tip: only a measure-zero
+real part at the hanging rest point $(0, 0)$ (for light damping a stable
+spiral, the ring-down of a released pendulum) and a saddle at the inverted
+balance $(\pi, 0)$, analogous to balancing a pencil on its tip: only a measure-zero
 set of initial conditions remains there. The same computation is the working
 stability tool of this whole chapter, applied to a trained network's dynamics
 or to the mean of the Ornstein--Uhlenbeck process
@@ -594,9 +596,9 @@ the difference between $10^6$ steps and $30$ steps for the same accuracy.
 This is why solver *order* is the headline spec, and why few-step samplers
 for diffusion models (:numref:`sec_mdl-score-matching-diffusion-flow`) rely
 on higher-order integrators. Practical solvers often use *embedded* pairs. For example,
-Dormand--Prince `RK45` computes two orders at once
-and use the gap between them as an error estimate without a separate solve
-:cite:`Dormand.Prince.1980`. That estimate drives an adaptive step size,
+Dormand--Prince `RK45` computes solutions of orders $4$ and $5$ from the same
+field evaluations and uses the gap between them as an error estimate without
+a separate solve :cite:`Dormand.Prince.1980`. That estimate drives an adaptive step size,
 shrinking $h$ where the field changes rapidly and enlarging it in smoother
 regions.
 
@@ -682,8 +684,11 @@ method that decays on the test equation for every $h > 0$ is called
 $\lambda$ is real, but the complete stability region is defined in the complex plane.
 Write the test equation as
 $\dot{y} = \lambda y$ with complex $\lambda$, so that a decaying, rotating
-mode has $\operatorname{Re}\lambda < 0$; a method's
-**stability region** is the set of $z = h\lambda$ for which its update
+mode has $\operatorname{Re}\lambda < 0$. One step of a method multiplies
+the mode by a factor $R(z)$ of $z = h\lambda$, the method's **stability
+function**: $R(z) = 1 + z$ for forward Euler and $R(z) = 1/(1 - z)$ for
+backward Euler. A method's
+**stability region** is the set of $z$ with $|R(z)| < 1$, where its update
 decays, and A-stability proper demands that this region contain the entire
 left half-plane. :numref:`fig_mdl-dyn-stability-regions` draws the regions;
 the computation above, $z = -h\lambda$ with $\lambda > 0$, is their slice
@@ -779,10 +784,12 @@ The solver bound $h < 2/\lambda$ *is* the learning-rate ceiling: a diverging
 learning rate is a solver instability, and an ill-conditioned Hessian is a
 *stiff* gradient flow, with the steep, already-converged curvature directions
 setting the stability limit under which the shallow directions must then
-crawl. Polyak's heavy-ball momentum discretizes the second-order ODE
+crawl. Polyak's heavy-ball momentum, whose discrete recurrence
+:numref:`sec_mdl-gradient-based-optimization` analyzes, discretizes the
+second-order ODE
 $m\, \ddot{\mathbf{x}} + \gamma\, \dot{\mathbf{x}} = -\nabla L(\mathbf{x})$
-analyzed in :numref:`sec_mdl-gradient-based-optimization`
-:cite:`Polyak.1964`. We rerun that section's experiment on a quadratic with
+:cite:`Polyak.1964` (exercise :exref:`ex_mdl-odes-solvers-heavy-ball-ode`).
+We rerun that section's experiment on a quadratic with
 $\lambda_{\max} = 10$ and compare it with the stiffness sweep:
 predicted flip at $\eta = 2/10 = 0.2$.
 
@@ -1102,19 +1109,21 @@ need a $C^1$ field. A ReLU field is differentiable only piecewise; in
 practice autograd differentiates the unrolled solver piece by piece, and
 smooth activations (tanh, GELU) remove the issue entirely.
 
-Each backward-ODE step computes
-$-\mathbf{a}^\top \partial\mathbf{f}/\partial\mathbf{x}$ is a
-**vector--Jacobian product**, the very primitive that reverse-mode AD is made
-of (:numref:`sec_mdl-matrix-calculus-autodiff`). Discretize
+The product
+$-\mathbf{a}^\top \partial\mathbf{f}/\partial\mathbf{x}$ that each
+backward-ODE step computes is a **vector--Jacobian product**, the very
+primitive that reverse-mode AD is made of
+(:numref:`sec_mdl-matrix-calculus-autodiff`). Discretize
 :eqref:`eq_mdl-ode-adjoint` with the same Euler scheme as the forward pass
 and the result is the backpropagation recursion through the unrolled
-network: backprop **is** the discrete adjoint method, a lineage that runs
+network, except that each Jacobian is evaluated at the other end of its
+step: backprop **is** the discrete adjoint method, a lineage that runs
 from optimal control :cite:`Pontryagin.Boltyanskii.Gamkrelidze.ea.1962`
 straight to the backward pass of every deep-learning framework. The continuous formulation offers another implementation:
 instead of storing the forward states for the VJPs, one may
-*re-integrate* $\mathbf{x}(t)$ backward alongside $\mathbf{a}(t)$, making
-constant memory in the number of stored trajectory checkpoints in an
-idealized implementation, at the cost of extra compute
+*re-integrate* $\mathbf{x}(t)$ backward alongside $\mathbf{a}(t)$, so that
+in an idealized implementation the memory does not grow with the number of
+solver steps, at the cost of extra compute
 and of numerical drift when the reversed dynamics are unstable (a strongly
 contracting forward flow is, run backward, strongly expanding; in that regime
 checkpointing or plain unrolling is the sturdier choice). The literature
@@ -1123,7 +1132,7 @@ unrolled solver, exact for the executed program) versus
 **optimize-then-discretize** (discretize the continuous adjoint, using less
 trajectory storage but generally producing only an approximation to the
 gradient of the discrete forward program)
-:cite:`Kidger.2022`; Exercise 7 probes exactly this fault line.
+:cite:`Kidger.2022`; Exercise :exref:`ex_mdl-odes-solvers-re-derive-adjoint-equations` probes exactly this fault line.
 
 The preceding identities can be checked on the linear ODE
 $\dot{\mathbf{x}} = A\mathbf{x}$, where every ingredient has a closed form:
@@ -1328,8 +1337,9 @@ print(f'Hutchinson: tr(J) = {np.trace(J):.4f},  estimate = {est.mean():.4f}'
       f' +- {est.std() / np.sqrt(len(est)):.4f}')
 ```
 
-The two log-density computations agree digit for digit (the trace integral
-equals the log-det-Jacobian evaluated through the trace integral), and the Hutchinson
+The two log-density computations agree digit for digit (the Gaussian formula
+subtracts $\log\det e^{At}$ from $\log p_0(\mathbf{x}_0)$, and
+$\log\det e^{At} = t\operatorname{tr}A$), and the Hutchinson
 estimate brackets the true trace within its standard error. Finally,
 :eqref:`eq_mdl-ode-instant-cov` is the
 trajectory-wise form of the *continuity equation* governing how a whole
@@ -1386,65 +1396,492 @@ integrated by exactly the solvers of this section.
 
 ## Exercises
 
-1. Verify by differentiation that $\mathbf{x}(t) = e^{-t}\mathbf{x}_0$ solves
-   $\dot{\mathbf{x}} = -\mathbf{x}$, and that trajectories of the rotational
-   field $\dot{\mathbf{x}} = \left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)\mathbf{x}$
-   keep $\|\mathbf{x}(t)\|$ constant. Write the integral form
-   :eqref:`eq_mdl-ode-integral-form` for $\dot{x} = t$ and evaluate it.
-2. Show that a linear field $\mathbf{f}(\mathbf{x}) = A\mathbf{x}$ is
-   Lipschitz with constant $\|A\|$ (the operator norm). Then construct a
-   solution of $\dot{x} = \sqrt{|x|}$, $x(0) = 0$ that waits at the origin
-   until time $c$ before leaving, verify it solves the ODE at every $t$, and
-   identify exactly where the Lipschitz hypothesis fails. Finally, compute
-   the blow-up time of $\dot{x} = x^2$, $x(0) = x_0 > 0$, and explain why
-   Picard--Lindelöf only promises a *local* solution here.
-3. From the series :eqref:`eq_mdl-ode-matrix-exp-series`, show that $e^{At}$
-   commutes with $A$ and that $e^{A(t+s)} = e^{At}e^{As}$. Then classify the
-   phase portraits of
-   $\left(\begin{smallmatrix}-2&0\\0&-1\end{smallmatrix}\right)$,
-   $\left(\begin{smallmatrix}1&0\\0&-1\end{smallmatrix}\right)$, and
-   $\left(\begin{smallmatrix}0&-2\\2&0\end{smallmatrix}\right)$ using the
-   stability dictionary.
-4. Derive Euler's local truncation error $O(h^2)$ from Taylor's theorem with
-   remainder, and rehearse the accumulation argument that turns it into a
-   global $O(h)$. Then show that the midpoint method's update matches the
-   true Taylor expansion through $h^2$ in the vector case, where the scalar
-   product $f'f$ becomes the Jacobian--vector product
-   $(\partial\mathbf{f}/\partial\mathbf{x})\mathbf{f}$.
-5. Re-derive the forward-Euler stability bound $h < 2/\lambda$ and backward
-   Euler's unconditional stability. For the stiff matrix
-   $A = \mathrm{diag}(-100, -1)$: what step size does forward Euler need for
-   stability, how many steps to reach $T = 5$, and how do both change if the
-   fast eigenvalue moves to $-10^4$? For nonlinear $\mathbf{f}$, write the
-   equation one backward-Euler step must solve and the Newton iteration you
-   would use.
-6. A residual block computes
-   $\mathbf{x}_{l+1} = \mathbf{x}_l + \mathbf{f}_\theta(\mathbf{x}_l)$.
-   Identify the implied step size; explain what halving the solver step while
-   doubling the step count corresponds to architecturally; and use
-   :numref:`sec_mdl-ode-existence-uniqueness` to argue that the time-$T$ flow
-   of a Lipschitz $\mathbf{f}_\theta$ is invertible; then explain why a
-   *plain* (non-residual) layer $\mathbf{x} \mapsto \sigma(W\mathbf{x})$ has
-   no such guarantee.
-7. Re-derive the adjoint equations :eqref:`eq_mdl-ode-adjoint` and
-   :eqref:`eq_mdl-ode-adjoint-grad` from the variational argument without
-   looking. Show that one Euler step of the adjoint ODE is exactly one
-   vector--Jacobian product, and that discretizing the adjoint ODE with
-   Euler reproduces the backpropagation recursion of the
-   `#odes-solvers-adjoint-check` cell. When the forward dynamics contract
-   strongly (all $\operatorname{Re}\lambda \ll 0$), what goes wrong with
-   reconstructing $\mathbf{x}(t)$ by integrating backward, and why does the
-   $O(1)$-memory adjoint suffer where unrolled backprop does not?
-8. Derive the instantaneous change of variables
-   :eqref:`eq_mdl-ode-instant-cov` from the discrete log-det formula as
-   $h \to 0$, and check that for a single linear "layer" $\Phi_t = e^{At}$ it
-   reproduces $-\log|\det e^{At}| = -t\operatorname{tr}(A)$ (use
-   $\det e^{At} = e^{t \operatorname{tr} A}$, e.g. via
-   :eqref:`eq_mdl-ode-matrix-exp-eig`). Prove the Hutchinson estimator
-   :eqref:`eq_mdl-ode-hutchinson` is unbiased, compute its variance for
-   Rademacher probes (express it in terms of the off-diagonal entries of
-   $M + M^\top$), and explain why estimating the *trace* costs one VJP while
-   the *determinant* has no comparably cheap unbiased estimator.
+1. **Flow maps of a time-dependent field.** The group property
+   :eqref:`eq_mdl-ode-flow-group` is stated for autonomous fields. A Neural
+   ODE field $\mathbf{f}_\theta(\mathbf{x}, t)$ depends on time, and so does
+   the probability-flow ODE of
+   :numref:`sec_mdl-fokker-planck-probability-flow`. Let $\Phi_{t,s}(y)$
+   denote the solution at time $t$ of $\dot{x} = 2tx$ started from
+   $x(s) = y$.
+    1. Compute $\Phi_{t,s}$ and show that
+       $\Phi_{t,u} \circ \Phi_{u,s} = \Phi_{t,s}$ for all $s$, $u$, and $t$.
+    1. Write $\Phi_t = \Phi_{t,0}$. Show that
+       $\Phi_{t+s} \neq \Phi_t \circ \Phi_s$ for $s, t > 0$. Which step of
+       the argument after :eqref:`eq_mdl-ode-flow-group` fails?
+    1. Append the time to the state, $\mathbf{z} = (x, \tau)$ with
+       $\dot{\tau} = 1$. Show that the flow of the resulting autonomous field
+       on $\mathbb{R}^2$ has the group property, and express $\Phi_{t,s}$
+       through it. Why is the map $\Phi_{T,0}$ of a time-dependent field a
+       bijection under the hypotheses of Picard--Lindelöf?
+   :exlabel:`ex_mdl-odes-solvers-nonautonomous-flows`
+
+1. **Picard iteration.** The proof of Picard--Lindelöf in
+   :numref:`sec_mdl-ode-existence-uniqueness` iterates the Picard operator
+   $P$ from the constant path.
+    1. For $\dot{\mathbf{x}} = A\mathbf{x}$ with
+       $\mathbf{x}(0) = \mathbf{x}_0$, show by induction that the $k$-th
+       Picard iterate is $\sum_{j=0}^{k} (At)^j \mathbf{x}_0 / j!$, a partial
+       sum of :eqref:`eq_mdl-ode-matrix-exp-series`.
+    1. For $\dot{x} = x^2$ with $x(0) = 1$, compute the first three iterates
+       and compare them with the Taylor series of the solution $1/(1 - t)$.
+       Through which power of $t$ does the $k$-th iterate agree with it?
+    1. On the interval $|x| \le R$, the field $x^2$ is Lipschitz with
+       constant $2R$. Why does the contraction argument guarantee a solution
+       only on a short time interval? Restart the argument at time $t_k$ with
+       $R = 2x(t_k)$. Show that the iterates stay in $|x| \le R$ and that $P$
+       contracts on every interval of length $\delta < 1/(4x(t_k))$. With
+       $\delta_k = 1/(8x(t_k))$, show that the restart times $t_k$ approach
+       $1$ geometrically and never reach it. Why does a globally Lipschitz
+       field not have this problem?
+   :exlabel:`ex_mdl-odes-solvers-picard-iteration`
+
+1. **Separation of trajectories.** The field of the
+   `#odes-solvers-neural-ode-train` cell has the form
+   $\mathbf{f}(\mathbf{x}) = W_2 \tanh(W_1\mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2$.
+    1. Show that $\mathbf{f}$ is Lipschitz with constant
+       $L = \|W_2\|\,\|W_1\|$ in the operator norm. Which property of
+       $\tanh$ does the proof use? Does the bound change when $\tanh$ is
+       replaced by ReLU?
+    1. Let $\mathbf{x}(t)$ and $\mathbf{y}(t)$ be two trajectories of an
+       autonomous field with Lipschitz constant $L$. Differentiate
+       $\|\mathbf{x}(t) - \mathbf{y}(t)\|^2$ and show that
+
+       $$
+       e^{-Lt}\|\mathbf{x}(0) - \mathbf{y}(0)\|
+       \le \|\mathbf{x}(t) - \mathbf{y}(t)\|
+       \le e^{Lt}\|\mathbf{x}(0) - \mathbf{y}(0)\| .
+       $$
+
+       What does the lower bound imply for two trajectories that start at
+       distinct points? What do the two bounds imply for the Lipschitz
+       constants of $\Phi_T$ and of its inverse?
+   :exlabel:`ex_mdl-odes-solvers-trajectory-separation`
+
+1. **Matrix exponential beyond diagonalizable matrices.** The
+   eigendecomposition formula :eqref:`eq_mdl-ode-matrix-exp-eig` requires a
+   diagonalizable matrix.
+    1. Show from the series :eqref:`eq_mdl-ode-matrix-exp-series` that
+       $e^{B + C} = e^B e^C$ whenever $BC = CB$. Then compute $e^B e^C$ and
+       $e^{B + C}$ for
+       $B = \left(\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right)$ and
+       $C = \left(\begin{smallmatrix}0&0\\1&0\end{smallmatrix}\right)$. What
+       does the result say about following the flow of
+       $\dot{\mathbf{x}} = C\mathbf{x}$ for unit time and then the flow of
+       $\dot{\mathbf{x}} = B\mathbf{x}$, compared with following the flow of
+       their sum?
+    1. Write the Jordan block
+       $\left(\begin{smallmatrix}\lambda&1\\0&\lambda\end{smallmatrix}\right)$
+       as $\lambda I + N$ with $N^2 = 0$ and compute its exponential. For
+       $\lambda = 0$ the system is the free particle $\ddot{x} = 0$. Does
+       every trajectory stay bounded?
+    1. Show that $\det e^{At} = e^{t \operatorname{tr} A}$ for every square
+       matrix $A$, diagonalizable or not. Write
+       $e^{A(t + h)} = e^{Ah} e^{At}$ and apply the Lemma of
+       :numref:`sec_mdl-continuous-normalizing-flows` to obtain an ODE for
+       $\det e^{At}$.
+   :exlabel:`ex_mdl-odes-solvers-matrix-exponential-algebra`
+
+1. [code] **Transient growth.** The classification of
+   :numref:`sec_mdl-linear-odes-stability` predicts how $\|\mathbf{x}(t)\|$
+   behaves as $t \to \infty$. The Jacobian of a trained network's dynamics
+   at a fixed point can have all its eigenvalues in the left half-plane
+   without being normal, and the classification then says nothing about a
+   finite horizon. Consider
+
+   $$
+   A = \begin{pmatrix} -1 & 25 \\ 0 & -2 \end{pmatrix},
+   \qquad \mathbf{x}_0 = (0, 1)^\top .
+   $$
+
+    1. Compute $e^{At}$ in closed form. Find the maximum of the first
+       coordinate of $\mathbf{x}(t) = e^{At}\mathbf{x}_0$ and the time at
+       which it occurs.
+    1. Evaluate the operator norm $\|e^{At}\|_2$ on a grid of
+       $t \in [0, 8]$ with `expm_eig` of the `#odes-solvers-adjoint-check`
+       cell. Find its maximum and the time after which it stays below $1$.
+    1. For $A = V \Lambda V^{-1}$, show that
+       $\|e^{At}\| \le \kappa(V)\, e^{t \max_i \operatorname{Re}\lambda_i}$
+       with $\kappa(V) = \|V\|\,\|V^{-1}\|$, and compute $\kappa(V)$ for
+       unit-norm eigenvectors of this $A$. A matrix is *normal* if
+       $A^\top A = A A^\top$. Show that
+       $\|e^{At}\|_2 = e^{t \max_i \operatorname{Re}\lambda_i}$ for every
+       normal $A$.
+   :exlabel:`ex_mdl-odes-solvers-transient-growth`
+
+1. **Fixed points of the damped pendulum.**
+   :numref:`subsec_mdl-ode-linearization` states the stability of the damped
+   pendulum $\ddot{\theta} = -\sin\theta - \gamma\dot{\theta}$ at its two
+   rest points without computing it.
+    1. Write the pendulum as a first-order system in $(\theta, \omega)$ with
+       $\omega = \dot{\theta}$. Compute the Jacobians at $(0, 0)$ and
+       $(\pi, 0)$ and their eigenvalues as functions of $\gamma \ge 0$.
+    1. For which $\gamma > 0$ is $(0, 0)$ a stable spiral, and for which a
+       stable node? Show that $(\pi, 0)$ is a saddle for every
+       $\gamma \ge 0$.
+    1. For $\gamma = 0$ the linearization at $(0, 0)$ is a center, and
+       Hartman--Grobman does not apply. Show that
+       $E = \tfrac12\omega^2 - \cos\theta$ is constant along trajectories,
+       and conclude that the trajectories near $(0, 0)$ are closed curves.
+    1. The scalar fields $\dot{x} = -x^3$ and $\dot{x} = x^3$ have the same
+       linearization at $0$. What is it, and how do the two fixed points
+       differ?
+   :exlabel:`ex_mdl-odes-solvers-pendulum-fixed-points`
+
+1. [code] **Heun on the pendulum.** The orders measured by the
+   `#odes-solvers-euler-rk4-order` cell belong to a linear field.
+    1. Show that Heun's method matches the Taylor expansion of the true
+       solution through the $h^2$ term for a vector field
+       $\mathbf{f}(\mathbf{x})$. In the vector case, the product $f' f$ of
+       the midpoint computation becomes the Jacobian--vector product
+       $(\partial\mathbf{f}/\partial\mathbf{x})\,\mathbf{f}$.
+    1. Implement `heun(f, x0, T, n)` with the signature of `euler` and
+       `rk4`. Run the three methods on the damped pendulum of exercise
+       :exref:`ex_mdl-odes-solvers-pendulum-fixed-points` with
+       $\gamma = 0.5$, $(\theta, \omega)(0) = (2, 0)$, and $T = 10$, for
+       $n = 32, 64, \ldots, 1024$ steps. Use `rk4` with $2^{16}$ steps as the
+       reference solution and fit the log--log slopes.
+    1. Plot the error of each method against its number of field
+       evaluations, for budgets from $8$ to $128$ evaluations. Does RK4 beat
+       Heun and Euler at every budget?
+    1. One step of each method multiplies a mode of the linearized field
+       with eigenvalue $\lambda$ by the value $R(h\lambda)$ of its stability
+       function (:numref:`sec_mdl-stiffness-implicit`). Heun's method has
+       $R(z) = 1 + z + z^2/2$, and RK4 has
+       $R(z) = 1 + z + z^2/2 + z^3/6 + z^4/24$. At a budget of $8$
+       evaluations, evaluate $|R(h\lambda)|$ of each method for the
+       eigenvalues at $(0, 0)$ of exercise
+       :exref:`ex_mdl-odes-solvers-pendulum-fixed-points`a. Which of the
+       three methods are stable at this budget? How do the values explain
+       the place of RK4 in the ranking?
+
+   *Adapted from Simo Särkkä and Arno Solin,
+   [Applied Stochastic Differential Equations](https://users.aalto.fi/~asolin/sde-book/sde-book.pdf),
+   Exercise 2.10.*
+   :exlabel:`ex_mdl-odes-solvers-heun-pendulum`
+
+1. **Rotating modes.** The stability analysis of
+   :numref:`sec_mdl-stiffness-implicit` treats a real decay rate. A complex
+   eigenvalue $\lambda$ enters through $z = h\lambda$ in
+   :numref:`fig_mdl-dyn-stability-regions`.
+    1. For the spiral field of :numref:`fig_mdl-dyn-ode-field`, with
+       eigenvalues $-0.5 \pm i$, find the largest step size for which forward
+       Euler decays.
+    1. For the rotational field
+       $\dot{\mathbf{x}} = \left(\begin{smallmatrix}0&-b\\b&0\end{smallmatrix}\right)\mathbf{x}$,
+       show that forward Euler multiplies $\|\mathbf{x}\|$ by
+       $\sqrt{1 + h^2 b^2}$ per step and that backward Euler divides it by the
+       same factor. By which factor does each method change $\|\mathbf{x}\|$
+       over one revolution, that is $2\pi/(hb)$ steps, when $hb = 0.1$?
+    1. RK4 multiplies each mode by its stability function
+       $R(z) = 1 + z + z^2/2 + z^3/6 + z^4/24$. Show that
+       $|R(iy)|^2 = 1 - y^6/72 + y^8/576$ for real $y$, and find the range of
+       $hb$ for which RK4 does not amplify the rotation.
+    1. An explicit Runge--Kutta method with $s$ stages computes
+       $\mathbf{k}_i = \mathbf{f}\big(\mathbf{x}_n + h\sum_{j<i} a_{ij}\mathbf{k}_j\big)$
+       for $i = 1, \ldots, s$ and
+       $\mathbf{x}_{n+1} = \mathbf{x}_n + h\sum_{i} b_i\mathbf{k}_i$, as RK4
+       does in :eqref:`eq_mdl-ode-rk4-update`. Show that its stability
+       function is a polynomial in $z$ of degree at most $s$. Why does this
+       rule out A-stability for explicit methods?
+   :exlabel:`ex_mdl-odes-solvers-rotating-modes`
+
+1. **Stiffness budget.** Consider $\dot{\mathbf{x}} = A\mathbf{x}$ with
+   $A = \mathrm{diag}(-100, -1)$ and $\mathbf{x}(0) = (1, 1)$ on $[0, 5]$.
+    1. How many forward-Euler steps does stability require? How many RK4
+       steps does it require, given the real-axis reach $\approx -2.79$ of
+       :numref:`fig_mdl-dyn-stability-regions`, and how many field
+       evaluations are they?
+    1. Measure accuracy by the relative error of the slow coordinate at
+       $T = 5$. Show that both forward and backward Euler have relative error
+       approximately $Th/2$ there, and compute the number of steps for a
+       relative error of $1\%$. Is the system stiff at this accuracy?
+    1. Repeat (a) and (b) with the fast eigenvalue moved to $-10^4$.
+    1. For a nonlinear $\mathbf{f}$, write the equation that one
+       backward-Euler step must solve for $\mathbf{x}_{n+1}$ and the Newton
+       iteration for it in terms of the Jacobian $J$ of $\mathbf{f}$. How
+       many Newton iterations does a linear $\mathbf{f}$ need?
+   :exlabel:`ex_mdl-odes-solvers-stiffness-budget`
+
+1. **Heavy ball as a discretized ODE.** :numref:`sec_mdl-gd-as-solver`
+   states that heavy-ball momentum :eqref:`eq_mdl-opt-heavy-ball`
+   discretizes $m\ddot{\mathbf{x}} + \gamma\dot{\mathbf{x}} = -\nabla L(\mathbf{x})$.
+    1. Replace $\ddot{\mathbf{x}}(t_k)$ by the central difference
+       $(\mathbf{x}_{k+1} - 2\mathbf{x}_k + \mathbf{x}_{k-1})/h^2$ and
+       $\dot{\mathbf{x}}(t_k)$ by the backward difference
+       $(\mathbf{x}_k - \mathbf{x}_{k-1})/h$. Show that the result is the
+       heavy-ball update
+       $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\nabla L(\mathbf{x}_k) + \beta(\mathbf{x}_k - \mathbf{x}_{k-1})$,
+       and express $\eta$ and $\beta$ through $m$, $\gamma$, and $h$.
+    1. For $L(x) = \tfrac{\lambda}{2}x^2$ the ODE is a damped oscillator,
+       critically damped at $\gamma = 2\sqrt{m\lambda}$. Express this
+       condition through $\eta$, $\beta$, and $\lambda$. The heavy-ball
+       recurrence is critically damped when its characteristic polynomial
+       $z^2 - (1 + \beta - \eta\lambda)z + \beta$ has a double root. Find the
+       corresponding $\beta$ and compare the two conditions for small
+       $\eta\lambda$.
+    1. Exercise
+       :exref:`ex_mdl-gradient-based-optimization-edge-of-stability-momentum`a
+       of :numref:`sec_mdl-gradient-based-optimization` shows that the
+       heavy-ball recurrence on this quadratic converges if and only if
+       $0 < \eta\lambda < 2(1 + \beta)$ for $0 \le \beta < 1$. Translate this
+       condition into a condition on $h$, $m$, $\gamma$, and $\lambda$. The
+       ODE decays for every $\lambda > 0$, but its discretization does not.
+       What is the largest stable step $h$ as $\gamma \to 0$, in terms of the
+       angular frequency $\sqrt{\lambda/m}$ of the oscillator? Which
+       eigenvalue of the Hessian of an ill-conditioned quadratic sets the
+       step limit?
+   :exlabel:`ex_mdl-odes-solvers-heavy-ball-ode`
+
+1. [code] **The learned field at other step counts.** The
+   `#odes-solvers-neural-ode-train` cell trains the field with $N = 10$ Euler
+   steps of size $h = 0.1$. Integrating the trained field differently tests
+   whether it defines a continuous flow or only a ten-step program.
+    1. After training, set `N` and `h` with $Nh = 1$ for
+       $N = 1, 2, 5, 10, 20, 100, 1000$, and compute the mean endpoint error
+       of `flow` on `X` for each. Which quantity does the error at
+       $N = 1000$ approximate?
+    1. Integrate the learned field backward from `Y` with $N$ steps
+       $\mathbf{x} \leftarrow \mathbf{x} - h\,\mathbf{f}_\theta(\mathbf{x})$
+       for the same values of $N$, and compare the result with `X`. Why does
+       the round trip not return `X` at $N = 10$?
+    1. Retrain with $N = 1$ and with $N = 2$, and repeat (a). Which of the
+       three trained models comes close to the time-one flow of its own
+       field?
+   :exlabel:`ex_mdl-odes-solvers-step-count-transfer`
+
+1. [code] **Adaptive step size.** ● The embedded pairs of
+   :numref:`sec_mdl-euler-runge-kutta` estimate the local error from two
+   methods of different order. The simplest pair uses the stages
+   $\mathbf{k}_1 = \mathbf{f}(\mathbf{x})$ and
+   $\mathbf{k}_2 = \mathbf{f}(\mathbf{x} + h\mathbf{k}_1)$ of Heun's method:
+   the Euler value $\mathbf{x} + h\mathbf{k}_1$ and the Heun value
+   $\mathbf{x} + \tfrac{h}{2}(\mathbf{k}_1 + \mathbf{k}_2)$ differ by
+   $e = \tfrac{h}{2}\|\mathbf{k}_2 - \mathbf{k}_1\|$. A controller accepts
+   the step, keeping the Heun value, when $e \le \texttt{tol}$, and in
+   either case continues with the step size
+
+   $$
+   h \leftarrow h \min\!\Big(2,\ \max\!\big(0.2,\ 0.9\sqrt{\texttt{tol}/e}\,\big)\Big).
+   $$
+
+    1. Which order of the local error does the exponent $1/2$ assume?
+    1. Implement the controller, starting from $h = 0.1$ and shortening the
+       last step so that it ends at $T$. Integrate the spiral field `f` from
+       `x0` to $T = 2$ for $\texttt{tol} = 10^{-2}, 10^{-3}, \ldots, 10^{-6}$.
+       Count the field evaluations, including those of rejected steps, and
+       compare the error with the exact endpoint `x_true`. How does the
+       number of evaluations scale with $\texttt{tol}$?
+    1. Integrate the field of `A_stiff` from $(1, 1)$ to $T = 10$ with
+       $\texttt{tol} = 10^{-3}$ and plot the accepted step sizes against
+       time. At which value do they settle after the fast mode has decayed?
+       Explain this value with the stability function $1 + z + z^2/2$ of
+       Heun's method.
+   :exlabel:`ex_mdl-odes-solvers-adaptive-steps`
+
+1. [code] **What a flow cannot represent.** ● Trajectories of a Lipschitz
+   field never meet (:numref:`sec_mdl-ode-existence-uniqueness`), and
+   :citet:`Dupont.Doucet.Teh.2019` draw a consequence for Neural ODEs.
+    1. Let $d = 1$. Use exercise
+       :exref:`ex_mdl-odes-solvers-trajectory-separation`b to show that the
+       time-$T$ map $\Phi_T$ of a Lipschitz field is strictly increasing.
+       Conclude that no Neural ODE on $\mathbb{R}$ maps $-1$ to $1$ and $1$
+       to $-1$.
+    1. Show that the residual block $x + f(x)$ with $f(x) = -2x$ maps every
+       $x$ to $-x$. Show that one Euler step $x + hf(x)$ of a field on
+       $\mathbb{R}$ with Lipschitz constant $L$ is strictly increasing
+       whenever $hL < 1$. Which condition does the block violate?
+    1. Embed $\mathbb{R}$ in $\mathbb{R}^2$ as $x \mapsto (x, 0)$. Find a
+       linear field on $\mathbb{R}^2$ whose time-one flow maps $(x, 0)$ to
+       $(-x, 0)$ for every $x$.
+    1. Change the `#odes-solvers-neural-ode-train` cell to fit the map
+       $x \mapsto -x$ on $64$ evenly spaced points of $[-1, 1]$, with a field
+       of input and output dimension $1$ and $N = 10$ steps. What does the
+       trained model output? Repeat with input and output dimension $2$,
+       inputs $(x, 0)$, and the loss on the first output coordinate.
+    1. Train the one-dimensional model once more with $N = 1$ and $h = 1$,
+       and evaluate it with $N = 1$ and with $N = 100$ steps of size
+       $h = 0.01$. Relate the two results to (a) and (b).
+   :exlabel:`ex_mdl-odes-solvers-flow-expressivity`
+
+1. **Adjoint with a running loss.** ● The adjoint equations
+   :eqref:`eq_mdl-ode-adjoint` and :eqref:`eq_mdl-ode-adjoint-grad` treat a
+   loss on the endpoint. Regularizers such as the kinetic energy
+   $\int_0^T \|\mathbf{f}(\mathbf{x}(t), \theta, t)\|^2\,dt$ of
+   :citet:`Finlay.Jacobsen.Nurbekyan.ea.2020` accumulate a cost along the
+   trajectory. Let
+
+   $$
+   L = \ell_T(\mathbf{x}(T)) + \int_0^T \ell(\mathbf{x}(t), \theta, t)\,dt .
+   $$
+
+    1. Extend the variational proof of :eqref:`eq_mdl-ode-adjoint` to show
+       that the adjoint acquires a source term,
+       $\dot{\mathbf{a}} = -(\partial\mathbf{f}/\partial\mathbf{x})^\top\mathbf{a} - \nabla_{\mathbf{x}}\ell$
+       with $\mathbf{a}(T) = \nabla\ell_T(\mathbf{x}(T))$, and that
+       $\partial L/\partial\theta = \int_0^T \big((\partial\mathbf{f}/\partial\theta)^\top\mathbf{a} + \nabla_\theta\ell\big)\,dt$.
+    1. :citet:`Finlay.Jacobsen.Nurbekyan.ea.2020` instead append a
+       coordinate $E$ with $\dot{E} = \ell$ and $E(0) = 0$ to the state, and
+       add $E(T)$ to the endpoint loss. Apply :eqref:`eq_mdl-ode-adjoint` to
+       the augmented state and show that it reproduces (a).
+    1. For the kinetic energy, $\ell = \|\mathbf{f}\|^2$. Write
+       $\nabla_{\mathbf{x}}\ell$ as a vector--Jacobian product. How many
+       reverse-mode passes through $\mathbf{f}$ does one step of the adjoint
+       ODE then require?
+   :exlabel:`ex_mdl-odes-solvers-running-loss-adjoint`
+
+1. [code] **Reconstructing the trajectory backward.** ● The continuous
+   adjoint of :numref:`sec_mdl-adjoint-method` can avoid storing the forward
+   states by integrating $\mathbf{x}(t)$ backward from $\mathbf{x}(T)$
+   alongside $\mathbf{a}(t)$.
+    1. For $\dot{x} = -\lambda x$ with $\lambda > 0$, an error $\delta$ in
+       the stored $x(T)$ causes an error in the reconstructed $x(0)$. Find
+       it.
+    1. Let $R$ be the rotation by $0.6$ radians and
+       $A = R\,\mathrm{diag}(-50, -1)\,R^\top$. Integrate
+       $\dot{\mathbf{x}} = A\mathbf{x}$ from $(1, 1)$ to time $T$ with `rk4`
+       and $2000$ steps, then integrate the field $-A\mathbf{x}$ from the
+       result for the same time. Report the reconstruction error for
+       $T = 0.25, 0.5, 1, 2$, and compare it with (a), taking $\delta$ to be
+       the double-precision rounding error $\approx 10^{-16}$. Repeat with
+       `A_stiff`. Why does the diagonal matrix reconstruct far more
+       accurately?
+    1. Activation checkpointing (:numref:`subsec_activation_checkpointing`)
+       stores the state at the start of each segment of the trajectory. A
+       hybrid scheme reconstructs the states within a segment by integrating
+       backward from the checkpoint at its end. For the matrix $A$ of (b),
+       what is the longest segment duration for which the error of (a)
+       stays below $10^{-8}$?
+   :exlabel:`ex_mdl-odes-solvers-backward-reconstruction`
+
+1. **Log-determinant of a residual step.** ● The instantaneous change of
+   variables :eqref:`eq_mdl-ode-instant-cov` is a limit of infinitesimal
+   steps. A finite residual step $F(\mathbf{x}) = \mathbf{x} + \mathbf{g}(\mathbf{x})$
+   needs its exact log-determinant, as in the invertible residual networks
+   of :citet:`Behrmann.Grathwohl.Chen.ea.2019`.
+    1. Let $\mathbf{g}$ be Lipschitz with constant $c < 1$. For $d = 1$ and
+       $g = hf$, exercise :exref:`ex_mdl-odes-solvers-flow-expressivity`b
+       shows that $F$ is strictly increasing, hence injective. For general
+       $d$, write $F(\mathbf{x}) = \mathbf{y}$ as a fixed-point equation for
+       $\mathbf{x}$ and use the Banach fixed-point theorem, as in the proof of
+       Picard--Lindelöf, to show that $F$ is a bijection of $\mathbb{R}^d$.
+       How fast does the fixed-point iteration converge?
+    1. Show that $\|J_{\mathbf{g}}\| \le c$, where $J_{\mathbf{g}}$ is the
+       Jacobian of $\mathbf{g}$, and use the eigenvalues of $J_{\mathbf{g}}$
+       to show that
+
+       $$
+       \log\det(I + J_{\mathbf{g}})
+       = \sum_{k=1}^\infty \frac{(-1)^{k+1}}{k}\operatorname{tr}\big(J_{\mathbf{g}}^k\big).
+       $$
+
+    1. An Euler step has $\mathbf{g} = h\mathbf{f}$ and
+       $J_{\mathbf{g}} = hJ$. Compare $\log\det(I + hJ)$ with the term
+       $h\operatorname{tr}J$ that :eqref:`eq_mdl-ode-cnf-likelihood`
+       accumulates per step. How large is the difference per step, and how
+       large is it in total over $T/h$ steps?
+    1. The Hutchinson estimator :eqref:`eq_mdl-ode-hutchinson` estimates
+       $\operatorname{tr}(J_{\mathbf{g}}^k)$ by
+       $\boldsymbol{\epsilon}^\top J_{\mathbf{g}}^k \boldsymbol{\epsilon}$.
+       How many vector--Jacobian products per probe does the series
+       truncated after $n$ terms cost?
+   :exlabel:`ex_mdl-odes-solvers-residual-logdet`
+
+1. [code] **Variance of the Hutchinson estimator.** ● The estimator
+   :eqref:`eq_mdl-ode-hutchinson` estimates $\operatorname{tr} M$ by
+   $\boldsymbol{\epsilon}^\top M \boldsymbol{\epsilon}$ for a single probe
+   $\boldsymbol{\epsilon}$. Let $S = (M + M^\top)/2$, so that
+   $\boldsymbol{\epsilon}^\top M \boldsymbol{\epsilon} = \boldsymbol{\epsilon}^\top S \boldsymbol{\epsilon}$.
+    1. Show that the variance of
+       $\boldsymbol{\epsilon}^\top M \boldsymbol{\epsilon}$ is
+       $2\|S\|_F^2$ for Gaussian probes and $2\sum_{i \neq j} S_{ij}^2$ for
+       Rademacher probes. For which matrices is a single Rademacher probe
+       exact?
+    1. Evaluate both variances for the matrix `J` of the
+       `#odes-solvers-cnf-trace` cell, and compare the Rademacher value with
+       the standard error that the cell prints. How many probes does each
+       distribution need for a standard error of $0.01$?
+    1. In a CNF, $M$ is the Jacobian $\partial\mathbf{f}/\partial\mathbf{x}$
+       in dimension $d$. Suppose that all entries have comparable magnitude.
+       How does the relative standard error
+       $\sqrt{\operatorname{Var}}/|\operatorname{tr} M|$ of one probe scale
+       with $d$ when the diagonal entries share one sign, and when their
+       signs are random?
+   :exlabel:`ex_mdl-odes-solvers-hutchinson-variance`
+
+1. [code] **Implicit gradient regularization.** ●● Gradient descent is
+   forward Euler on the gradient flow (:numref:`sec_mdl-gd-as-solver`), so
+   each step leaves the flow of $L$ by $O(\eta^2)$. Backward error analysis
+   looks for a modified field $\tilde{\mathbf{f}} = \mathbf{f} + \eta\mathbf{f}_1$
+   whose exact time-$\eta$ flow agrees with one Euler step up to
+   $O(\eta^3)$. :citet:`Barrett.Dherin.2021` find that for gradient descent
+   this field is again a gradient field, of the modified loss
+
+   $$
+   \tilde{L}(\mathbf{x}) = L(\mathbf{x}) + \frac{\eta}{4}\|\nabla L(\mathbf{x})\|^2 .
+   $$
+
+    1. Expand the exact flow of $\tilde{\mathbf{f}}$ over time $\eta$ to
+       second order, and show that
+       $\mathbf{f}_1 = -\tfrac12(\partial\mathbf{f}/\partial\mathbf{x})\,\mathbf{f}$.
+       Derive $\tilde{L}$ for $\mathbf{f} = -\nabla L$. Which regions of
+       parameter space does the added term penalize?
+    1. For $L(x) = \tfrac{\lambda}{2}x^2$ with $0 < \eta\lambda < 1$, show
+       that the iterates of gradient descent lie exactly on the gradient flow
+       of $\tfrac{\tilde{\lambda}}{2}x^2$ with
+       $\tilde{\lambda} = -\ln(1 - \eta\lambda)/\eta$. Expand
+       $\tilde{\lambda}$ in $\eta$ and compare it with the curvature of
+       $\tilde{L}$.
+    1. Gradient descent on this quadratic still converges for
+       $1 < \eta\lambda < 2$. Use exercise
+       :exref:`ex_mdl-odes-solvers-flow-expressivity`a to show that no scalar
+       autonomous ODE with a Lipschitz field takes the values of the iterates
+       at the times $k\eta$.
+       For a quadratic with Hessian $H$ in $d$ dimensions, show that the
+       iterates lie on the flow of no gradient field
+       $-\nabla\big(\tfrac12\mathbf{x}^\top\tilde{H}\mathbf{x}\big)$ once
+       $\eta \ge 1/\lambda_{\max}(H)$.
+    1. For $L(x) = x^4/4 + x^2/2$ and $x_0 = 1.5$, run gradient descent to
+       $T = 1$ with $\eta = 0.1, 0.05, 0.025, 0.0125$. Compute the gradient
+       flows of $L$ and of $\tilde{L}$ to $T = 1$ with `rk4` and many steps,
+       the latter separately for each $\eta$. Fit the slopes of the two
+       endpoint errors of gradient descent against $\eta$.
+   :exlabel:`ex_mdl-odes-solvers-implicit-gradient-regularization`
+
+1. [code] **Discrete and continuous adjoints.** ●● Backpropagation through
+   a solver differentiates the executed program, whereas a solver applied to
+   the adjoint ODE :eqref:`eq_mdl-ode-adjoint` approximates the gradient of
+   the exact flow :cite:`Kidger.2022`. Compare the two recursions step by
+   step for an autonomous field with Jacobian
+   $J(\mathbf{x}) = \partial\mathbf{f}/\partial\mathbf{x}$ and forward
+   states $\mathbf{x}_k$.
+    1. For forward Euler, the backward sweep of `loss_and_grad_unrolled`
+       computes $\mathbf{a}_k = (I + hJ(\mathbf{x}_k))^\top\mathbf{a}_{k+1}$.
+       An explicit Euler step of the adjoint ODE from $t_{k+1}$ back to
+       $t_k$ computes $\mathbf{a}_k = \mathbf{a}_{k+1} + hJ(\mathbf{x}_{k+1})^\top\mathbf{a}_{k+1}$.
+       Bound the difference of the two updates for a smooth $\mathbf{f}$. For
+       a linear field the two coincide. What then produces the gap that the
+       `#odes-solvers-adjoint-check` cell prints?
+    1. Differentiate one Heun step
+       $\mathbf{x}_{k+1} = \mathbf{x}_k + \tfrac{h}{2}\big[\mathbf{f}(\mathbf{x}_k) + \mathbf{f}(\mathbf{u}_k)\big]$
+       with $\mathbf{u}_k = \mathbf{x}_k + h\mathbf{f}(\mathbf{x}_k)$ to
+       obtain its discrete adjoint recursion. Show that this recursion is a
+       Heun step of the adjoint ODE from $t_{k+1}$ to $t_k$ in which
+       $J(\mathbf{x}_{k+1})$ is replaced by $J(\mathbf{u}_k)$. At which order
+       in $h$ do the two updates differ?
+    1. For a linear field $\mathbf{f}(\mathbf{x}) = A\mathbf{x}$, one RK4
+       step multiplies the state by $R(hA)$, with $R$ as in exercise
+       :exref:`ex_mdl-odes-solvers-rotating-modes`c. Show that the discrete
+       adjoint of RK4 is an RK4 step of the adjoint ODE.
+    1. Replace the Euler step of `loss_and_grad_unrolled` by an RK4 step,
+       and compute the gradient of the unrolled loss by central finite
+       differences instead of a hand-written backward sweep. Measure its gap
+       to the continuous-adjoint gradient `g_cont` for
+       $n = 5, 10, 20, 40, 80$ steps. The trapezoid rule that computes
+       `g_cont` in the `#odes-solvers-adjoint-check` cell uses $m = 2000$
+       intervals and is accurate to only about $10^{-7}$, so refine it first.
+       Which slope do you measure? Which order does the gradient computed
+       through a solver of order $p$ inherit?
+   :exlabel:`ex_mdl-odes-solvers-re-derive-adjoint-equations`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/)

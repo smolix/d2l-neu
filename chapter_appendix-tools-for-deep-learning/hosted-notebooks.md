@@ -31,7 +31,10 @@ Every code-bearing page of the book has a **Run notebook** control that
 follows the active framework tab: framework-specific pages offer PyTorch,
 TensorFlow, or JAX; framework-independent pages use a single NumPy notebook.
 The generated notebooks live at a stable path on a public GitHub branch and
-record the exact source revision they were built from.
+record the exact source revision they were built from. A PyTorch,
+TensorFlow, or JAX notebook whose code imports `d2l` starts with a generated
+setup cell that installs missing or mismatched packages and downloads the
+`d2l` helper modules of that revision from GitHub.
 
 ![The source page, the generated notebook branch, and the provider launch are separate stages with a stable page-to-notebook mapping.](../img/tools-notebook-pipeline.svg)
 :label:`fig_tools_notebook_pipeline`
@@ -84,6 +87,9 @@ resource = {
 resource
 ```
 
+The cell detects Colab through `COLAB_RELEASE_TAG`, which holds a dated tag
+of the Colab runtime release, such as `release-colab-20230216-060056-RC01`.
+
 For PyTorch, check `torch.cuda.is_available()` and
 `torch.cuda.get_device_properties(0)`; for TensorFlow,
 `tf.config.list_physical_devices("GPU")`; for JAX, `jax.devices()`. A
@@ -120,9 +126,9 @@ permissions of your local Jupyter process. Connect only notebooks you trust.
 Where Colab orbits Drive, Kaggle orbits *datasets and competitions*, and its
 notebook product reflects that. Three directories define the mental model:
 
-* `/kaggle/input/` holds attached datasets and models, mounted **read-only**
-  and versioned. Attaching an existing dataset is instant and costs no
-  download time or quota.
+* `/kaggle/input/` holds attached datasets, models, and output files of
+  notebooks, mounted **read-only** and versioned. Attaching an existing
+  dataset is instant and costs no download time or quota.
 * `/kaggle/working/` is your writable output directory (about 20 GB); its
   contents persist only into *saved versions* of the notebook.
 * everything else is scratch that disappears with the session.
@@ -250,13 +256,220 @@ part of what you publish.
 
 ## Exercises
 
-1. Open this section on both Colab and Kaggle via the **Run notebook**
-   control. Where does your edited copy live in each case, and what happens
-   to it when the session ends?
-1. Extend the environment fingerprint with the framework version and
-   accelerator name, without failing on a CPU-only runtime.
-1. On Kaggle, produce two versions of a notebook with **Save & Run All**
-   and compare them. What exactly does Kaggle store per version?
-1. Estimate how long a free weekly Kaggle GPU quota would take to fine-tune
-   the BERT model of :numref:`sec_bert-pretraining`, using the timings
-   reported there.
+1. **Pointer versus copy.** Open this section through its **Run
+   notebook** control on Colab and on Kaggle. In each notebook, edit one
+   code cell, run the cell that sets `work`, and write a small file into
+   `work`.
+    1. Predict what you will find on each provider, both the edited cell
+       and the file in `work`, when the session has ended and you reload
+       the page in the same browser tab. Then end both sessions from the
+       providers' menus, reload, and check your predictions.
+    1. Click **Run notebook** a second time on each provider. Which launch
+       returns your edited notebook? Where would you look for the edits
+       otherwise?
+    1. Suppose that the book republishes this notebook with a corrected
+       cell. Which of your notebooks from the first launch shows the
+       correction, and which keeps your edits?
+
+1. **Setup cell audit.** A notebook reached through an "Open in Colab"
+   badge starts with a setup cell of four lines. It runs
+   `!pip install git+https://github.com/someone/helpers`, then
+   `!curl -fsSL https://example.org/setup.sh | bash`, then
+   `from google.colab import drive`, and finally
+   `drive.mount("/content/drive")`.
+    1. For each line, state what code it runs or which of your data it
+       makes readable to the notebook. Which of that code is open to
+       inspection before the cell runs?
+    1. Rewrite the first two lines so that the code they run is fixed at
+       the moment you read it.
+    1. You now connect the same notebook to a local runtime, so that the
+       browser controls a Jupyter server on your own machine. Which line
+       changes its consequences most, and why?
+
+1. [code] **Two identical versions.** On Kaggle, add a cell to this
+   section's notebook that prints `time.time()` and `np.random.rand(3)`.
+   Produce two versions with **Save & Run All** without editing anything
+   in between.
+    1. Which outputs differ between the two versions? Explain each
+       difference.
+    1. Does a saved version guarantee that rerunning the notebook
+       reproduces its outputs? List the sources of variation that remain
+       between two such runs of a training notebook whose random number
+       generators are all seeded.
+    1. Find the notebook setting that decides whether a later version
+       runs on the same environment image as an earlier one. What does
+       each choice trade?
+
+1. **Sessions and quota.** A training notebook needs about 40 hours on
+   Kaggle's P100, extrapolated from a one-hour run. Use the weekly GPU
+   quota and the session limit of the mid-2026 snapshot given in this
+   section.
+    1. What is the smallest number of sessions that the job needs? Over
+       how many weekly quota periods must it spread?
+    1. What must each session write before it reaches its limit, and
+       where? How does the next session read it, given that
+       `/kaggle/working` persists only into saved versions and attached
+       inputs are read-only?
+    1. The 2×T4 machine draws on the same weekly quota. Under which
+       conditions does switching to it shorten the job? What share of its
+       hardware does a notebook that runs on a single device leave idle?
+   :exlabel:`ex_hosted-notebooks-sessions-and-quota`
+
+1. [code] **Restart after install.** Run the following experiment in a
+   hosted notebook or in a Jupyter kernel of a fresh local virtual
+   environment. Check first that `"tabulate" in sys.modules` is `False`.
+   Install version 0.8.10 of the small package `tabulate` and import it.
+   In a later cell of the same kernel session, install version 0.9.0
+   without restarting.
+    1. Print `tabulate.__version__` and
+       `importlib.metadata.version("tabulate")` after the second install.
+       Why do the two values differ? Which of them describes the code that
+       runs?
+    1. The cell of this section that computes `missing` relies on
+       `importlib.util.find_spec`. Why does this check miss the mismatch
+       that you just observed?
+    1. Write a function `ensure(dist, module, version)` that installs
+       `dist==version` only when the installed distribution has a
+       different version, and that returns whether the kernel must
+       restart because `module` was imported before the install. Call it
+       twice in a row from a setup cell and confirm that the second call
+       installs nothing.
+   :exlabel:`ex_hosted-notebooks-restart-after-install`
+
+1. [code] **Fingerprint extension.** The cell that builds `fingerprint`
+   records the Python version, the NumPy version, and the machine
+   architecture.
+    1. The cell should also record the version of every installed deep
+       learning framework that this book uses. Why is importing every
+       framework a poor way to learn its version in this cell?
+    1. Extend the cell with these framework versions, the name and memory
+       of each visible NVIDIA GPU as reported by `nvidia-smi`, and the
+       value of `COLAB_RELEASE_TAG` when it is set. The cell must run on a
+       CPU-only runtime and must read the framework versions from the
+       package metadata. When a framework is already imported, also record
+       its `__version__`; exercise
+       :exref:`ex_hosted-notebooks-restart-after-install` shows why the
+       two values can differ.
+    1. A notebook whose first cell runs
+       `pip install --upgrade transformers` worked on Monday and fails
+       on Friday with an import error inside `transformers`. In a first
+       hypothetical case, Friday's fingerprint shows the same
+       `COLAB_RELEASE_TAG` and NumPy version as Monday's, and
+       `transformers` moved from 4.56.1 to 4.57.0. In a second case, the release tag changed, NumPy moved
+       from 2.0.2 to 2.3.1, and `transformers` stayed at 4.56.1. Which
+       change caused the failure in each case? Which edit to the notebook
+       prevents a recurrence in each case?
+   :exlabel:`ex_hosted-notebooks-fingerprint-extension`
+
+1. [code] **Durable and scratch paths.** The cell that sets `work`
+   chooses `/kaggle/working` on Kaggle, `/content` on Colab, and the
+   current directory elsewhere.
+    1. On which of the three runtimes does a checkpoint written to `work`
+       survive the end of the session, and in what form?
+    1. Replace the cell with a function `locations(root)` that returns a
+       dictionary with three entries: `inputs`, the read-only input
+       directory; `durable`, a directory for checkpoints that outlives the
+       session; and `scratch`, space that may disappear with it. The
+       argument `root` stands for the root of the file system: a hosted
+       notebook calls `locations(Path("/"))`, and the function tests
+       `root / "kaggle" / "working"` rather than `/kaggle/working`. Return
+       `None` for every location that the runtime does not have, such as
+       the inputs on Colab. On Colab, a durable directory exists only when
+       Google Drive is mounted at `/content/drive`, and returning `None`
+       otherwise lets a checkpoint writer refuse to save into a directory
+       that disappears with the session.
+    1. Test the function on your own machine with four temporary
+       directories as `root`: one that contains `kaggle/input` and
+       `kaggle/working`, one that contains `content` alone, one that
+       contains `content/drive`, and an empty one.
+   :exlabel:`ex_hosted-notebooks-durable-paths`
+
+1. **Token in a traceback.** A cell reads an API token from the secret
+   manager into `token` and calls
+   `requests.get(f"https://api.example.com/v1/data?key={token}")`,
+   followed by `raise_for_status()`. The server answers with status 404,
+   and the error message of `raise_for_status` contains the full request
+   URL. The author saves a version of the notebook with **Save & Run
+   All**, then fixes the URL, saves a second version, and makes the
+   notebook public.
+    1. Where does the token appear in what the author published?
+    1. The author clears all outputs and saves a third version. Is the
+       token private again? What must the author do with the token
+       itself?
+    1. Rewrite the request so that an HTTP error cannot reveal the token.
+
+1. **Pretraining on a free quota.** ● BERT-base has about 110 million
+   parameters. :citet:`Devlin.Chang.Lee.ea.2018` pretrained it for
+   1,000,000 steps on batches of 256 sequences, with sequences of 128
+   tokens for 90% of the steps and of 512 tokens for the rest. NVIDIA
+   lists a peak of 65 TFLOP/s in FP16 for the T4. Assume that training
+   sustains 30% of this peak on one T4.
+    1. Estimate the training cost with :eqref:`eq_six_nd`. How many T4
+       hours does it take? How many 12-hour sessions and how many weeks
+       of a 30-hour weekly quota does that amount to?
+    1. Which costs of BERT pretraining does $6ND$ leave out, and which
+       does it overcount? Consider the attention scores at both sequence
+       lengths (:numref:`sec_scaling-laws` gives the correction), the
+       masked language model head, which predicts only 15% of the
+       positions, and the embedding table. For each, does correcting it
+       raise or lower the estimate, and by roughly how much?
+    1. :citet:`hoffmann2022training` found a compute-optimal allocation of
+       about twenty training tokens per parameter. Which model size and
+       token count would a single 12-hour T4 session train under this
+       allocation? Compare the tokens per parameter of BERT-base with it.
+
+1. [extended] **Portable training notebook.** ● Turn the notebook of
+   :numref:`sec_softmax_concise` into one that runs unmodified on Colab,
+   on Kaggle with internet access disabled, and on a local Jupyter
+   kernel.
+    1. Build its setup from your solutions to exercises
+       :exref:`ex_hosted-notebooks-restart-after-install`,
+       :exref:`ex_hosted-notebooks-fingerprint-extension`, and
+       :exref:`ex_hosted-notebooks-durable-paths`. Make the training loop
+       save a checkpoint to the durable directory after every epoch and
+       resume from the newest checkpoint it finds.
+    1. On Kaggle with internet access disabled, every network access of
+       the notebook fails. `d2l.FashionMNIST` downloads its data, and the
+       setup cell at the top of the generated notebook downloads the `d2l`
+       helper modules from GitHub and installs missing packages. Change the
+       notebook so that on Kaggle it reads all of these from attached
+       inputs instead.
+    1. On each runtime, interrupt training after two epochs, resume in a
+       fresh session, and check that training continues with the third
+       epoch. On Kaggle, carry the checkpoint into the fresh session as in
+       problem :exref:`ex_hosted-notebooks-sessions-and-quota`b. Tabulate
+       the three fingerprints. Which lines of the finished notebook still
+       depend on the provider?
+
+1. [code] **Checkpoint interval.** ●● Model the interruptions of a hosted
+   session, such as idle disconnects and reclaimed machines, as a Poisson
+   process with mean time $M$ between interruptions. Training writes a
+   checkpoint after every $\tau$ seconds of computation, and writing it
+   takes $\delta$ seconds. After an interruption, reconnecting and
+   restoring the newest checkpoint takes $R$ seconds, and the computation
+   since that checkpoint is lost. Interruptions can also strike during a
+   restore.
+    1. Assume $\delta \ll \tau \ll M$. Show that, to first order, the
+       expected share of wall time spent on checkpoints and lost
+       computation is smallest at
+
+       $$\tau^* = \sqrt{2 \delta M},$$
+
+       the interval of :citet:`Young.1974`.
+    1. Show that the expected wall time to complete one segment, $\tau$
+       seconds of computation followed by its checkpoint, is
+
+       $$\mathbb{E}[T] = M e^{R/M} \left(e^{(\tau + \delta)/M} - 1\right).$$
+
+       Minimize $\mathbb{E}[T]/\tau$ numerically for
+       $\delta/M \in \{0.01, 0.05, 0.1, 0.25, 0.5\}$. By how much does
+       $\tau^*$ miss the exact optimum? By how much does the expected wall
+       time at $\tau^*$ exceed the minimum? Explain why the two
+       discrepancies differ so much in size.
+    1. Write a Monte Carlo simulation of the process and check the
+       formula for $\mathbb{E}[T]$ at one setting of $\delta/M$ and $R/M$.
+    1. A Kaggle session ends at a fixed 12-hour limit rather than at a
+       random time. How should the checkpoint schedule change when the
+       time of an interruption is known in advance? Which part of the
+       analysis still applies when random idle disconnects occur as well?
+   :exlabel:`ex_hosted-notebooks-checkpoint-interval`

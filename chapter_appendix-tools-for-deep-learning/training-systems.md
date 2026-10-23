@@ -54,6 +54,7 @@ optimization sees is
 $$
 B_{\textrm{global}} = B_{\textrm{device}} \cdot N_{\textrm{ranks}} \cdot N_{\textrm{accumulation}},
 $$
+:eqlabel:`eq_global_batch`
 
 so changing the number of GPUs without adjusting per-device batch size or
 learning rate silently changes the optimization problem. Distributed
@@ -69,8 +70,11 @@ metrics with the right denominators — the two classic sources of
 Peak training memory is the sum of parameters, gradients, optimizer state,
 activations, communication buffers, and allocator overhead — for a 7B-
 parameter model trained in BF16 with Adam, roughly 14 + 14 + 56 GB of
-state before a single activation is stored. The toy model below is crude
-but sorts strategies correctly, and needs no GPU to run:
+parameters, gradients, and Adam moments before a single activation is
+stored, and 28 GB more for the FP32 master parameters that mixed-precision
+training usually keeps. The toy model below leaves out the master copy and
+reuses the GB figures as GiB. It is crude but sorts strategies correctly,
+and needs no GPU to run:
 
 ```{.python .input #training-systems-memory-model}
 terms_gib = {"parameters": 14.0, "gradients": 14.0, "optimizer": 56.0,
@@ -98,7 +102,7 @@ microbatch while preserving a larger effective batch, reducing activation
 memory but not model state. **Activation checkpointing** recomputes selected
 activations during backpropagation; its memory savings and compute overhead
 depend on the partition. **CPU/NVMe offload** (including DeepSpeed's
-ZeRO-Offload) exchanges transfer latency for device capacity. **LoRA and
+ZeRO-Offload) exchanges host-device transfer time for device capacity. **LoRA and
 QLoRA** reduce trainable parameters and optimizer state; with compatible
 quantization and sequence settings, a 7B fine-tune can fit on a 16 GB card.
 Combine techniques deliberately: four
@@ -186,6 +190,7 @@ table support more forms of parallelism but require more configuration. Use
 the least complex row that satisfies the measured constraints.
 
 ## Keeping a Long Run Alive
+:label:`subsec_training_long_run`
 
 Throughput alone does not complete a long run. As worker count and duration
 increase, hardware, network, and software failures become more likely, so
@@ -194,10 +199,10 @@ recovery must be designed and tested.
 * **Checkpoint completely and atomically.** A resumable checkpoint holds
   model and optimizer state, the learning-rate schedule and step count,
   data-loader position, and RNG state. Write to a temporary path and
-  rename on completion, so a crash mid-write cannot destroy the previous
-  checkpoint; keep more than one until restore has been tested. Sharded
-  (per-rank) checkpoints avoid gathering a model larger than any single
-  host's memory.
+  rename on completion, so a crash of the training process mid-write
+  cannot destroy the previous checkpoint; keep more than one until
+  restore has been tested. Sharded (per-rank) checkpoints avoid
+  gathering a model larger than any single host's memory.
 * **Drill the recovery.** Kill the job deliberately, restore on fresh
   workers, and check that loss, step count, and data position continue as
   if nothing happened. Test recovery before relying on spot-priced training
@@ -231,16 +236,299 @@ recovery must be designed and tested.
 
 ## Exercises
 
-1. Extend the memory model with a communication-buffer term and a LoRA
-   configuration (frozen base weights, small trainable adapter). At what
-   world size does FSDP stop paying for a 7B model?
-1. For a fixed global batch of 4M tokens, enumerate three combinations of
-   device batch, world size, and accumulation steps, and reason about
-   their relative throughput and optimizer behavior.
-1. Take a training notebook of roughly the scale of
-   :numref:`sec_bert-pretraining` and run it once with
-   `torchrun --nproc-per-node=2`. Measure the actual speedup over one GPU
-   and explain the gap from 2×.
-1. Design (on paper) the checkpoint contents and restore protocol for a
-   sharded training job that must resume with a *different* number of
-   workers. Which parts of the state are per-rank, and which are global?
+1. **Global batch bookkeeping.** A pretraining job uses sequences of 4,096
+   tokens and a global batch of $2^{22} \approx 4.2$ million tokens, that
+   is, 1,024 sequences per optimizer step. Each GPU holds at most 4
+   sequences per microbatch.
+    1. For $N_{\textrm{ranks}} \in \{32, 64, 128, 256\}$, choose
+       $B_{\textrm{device}}$ and $N_{\textrm{accumulation}}$ in
+       :eqref:`eq_global_batch` so that the global batch stays at 1,024
+       sequences with as few accumulation steps as possible. What is the
+       largest world size that can train with this global batch under data
+       parallelism alone?
+    1. Let a microbatch of 4 sequences take time $t_{\textrm{mb}}$, and let
+       the gradient all-reduce at the end of each optimizer step take time
+       $t_{\textrm{ar}}$, without overlap. Write the time per optimizer step
+       and the tokens per second per GPU as functions of
+       $N_{\textrm{ranks}}$. For $t_{\textrm{ar}} = 2t_{\textrm{mb}}$, by
+       what factor does the time to train on a fixed number of tokens
+       shrink when the world size doubles from 32 to 64, and from 128 to
+       256? What limits the speedup as the world size grows?
+    1. A colleague moves the job from 64 to 128 GPUs and keeps
+       $B_{\textrm{device}}$ and $N_{\textrm{accumulation}}$. How do the
+       global batch and the number of optimizer steps for a fixed number of
+       tokens change? Which learning rate does :eqref:`eq_lr-rules` suggest
+       for Adam if the larger batch is kept, and what happens to a warmup
+       that is specified in steps?
+   :exlabel:`ex_training-systems-global-batch`
+
+1. [code] **Padded evaluation shards.** An evaluation set of 10,001
+   examples is evaluated on 8 ranks, and rank $r$ iterates over
+   `DistributedSampler(dataset, num_replicas=8, rank=r, shuffle=False)`.
+   Because `num_replicas` and `rank` are passed explicitly, one process can
+   construct the samplers of all ranks without starting a process group.
+    1. Collect the indices of all 8 samplers for
+       `dataset = list(range(10001))`. How many indices are there, which
+       examples occur twice, and by how many percentage points can the
+       duplicates shift the measured accuracy at most?
+    1. Repeat with `drop_last=True`. Which examples are never evaluated?
+    1. Write an exact evaluation in which the ranks partition the 10,001
+       examples without padding, each rank counts its correct predictions
+       and its examples, and the ranks combine the counts with
+       `torch.distributed.all_reduce`. Test the reduction in one process by
+       simulating the 8 ranks with random predictions and replacing the
+       all-reduce by a sum over the ranks. Why is the mean of the 8
+       per-rank accuracies not exact for these shards?
+   :exlabel:`ex_training-systems-padded-evaluation`
+
+1. [code] **Memory floor of sharding.** Under `shard_state=True`,
+   `per_device_gib` divides the parameters, gradients, and optimizer state
+   by the world size and leaves the activations and temporaries unchanged.
+    1. Tabulate `per_device_gib(n, shard_state=True, ckpt_activations=True)`
+       for $n = 1, 2, 4, \ldots, 64$. Which per-device memory does FSDP
+       approach as $n$ grows?
+    1. FSDP gathers the full parameters of a layer before using them and
+       prefetches those of the next layer. Add a buffer term for two layers
+       of unsharded BF16 parameters, for a model of 32 identical layers that
+       together hold the 14 GiB of `terms_gib["parameters"]`. Find the
+       smallest world size that fits a 24 GiB, a 40 GiB, and an 80 GiB
+       card. Beyond which world size does doubling it reduce the
+       per-device memory by less than 10%?
+    1. Activation memory grows linearly with the microbatch size, and
+       gradient accumulation preserves the global batch when the microbatch
+       shrinks. Add an argument that scales the activation term, and keep
+       the temporary term fixed. What is the smallest world size that fits
+       a 16 GiB card at the full microbatch, and at half of it? What does
+       halving the microbatch cost in time per optimizer step?
+   :exlabel:`ex_training-systems-memory-floor`
+
+1. **70B fine-tune on one node.** The second row of
+   :numref:`tab_training_tools` assigns full fine-tunes of models with up
+   to 70B parameters to one node of 2 to 8 GPUs with DDP or FSDP2. Count
+   the model state with the 16 bytes per parameter of mixed-precision Adam
+   from exercise :exref:`ex_hardware-training-memory` of
+   :numref:`sec_hardware_buyers`: 2 bytes each for the BF16 parameters and
+   gradients, 4 for the FP32 master parameters, and 8 for Adam's two
+   moments.
+    1. Compute the per-device model state of a 70B full fine-tune under DDP
+       and under FSDP on 8 GPUs, and add 20 GB per device for activations
+       and temporaries. Does either configuration fit on cards with 80 GB?
+    1. Which technique of :numref:`fig_tools_training_memory` makes the row
+       hold on eight 80 GB cards without changing which parameters are
+       trained? How much host memory and how much memory per GPU does it
+       require? Rewrite the row so that it is correct.
+   :exlabel:`ex_training-systems-one-node-70b`
+
+1. [code] **Resume parity.** A resumed run is correct when it computes the
+   same parameters as an uninterrupted one. Build a small experiment on the
+   CPU: a two-layer MLP with dropout, trained on 1,024 random examples with
+   20 features by Adam with a `LambdaLR` warmup schedule. The examples come
+   from a `DataLoader` with batch size 32 and `shuffle=True`, whose
+   shuffling is seeded per epoch by its own `torch.Generator`.
+    1. Train for 64 steps without interruption. In a second run, train for
+       40 steps, save a checkpoint, rebuild the model, optimizer,
+       scheduler, and data loader from a different seed, restore the
+       checkpoint, and train for the remaining 24 steps. Make the final
+       parameters of both runs bitwise identical. Which object of this
+       experiment holds each piece of state that
+       :numref:`subsec_training_long_run` lists, and how does the restore
+       resume the data loader in the middle of an epoch?
+    1. Omit each piece of state from the restore in turn, and report the
+       largest parameter difference after the 64 steps. Which omissions
+       would show in a loss curve, and which would go unnoticed?
+    1. Simulate a crash during `torch.save` by writing only the first half
+       of a checkpoint's bytes to its final path, and load the file. Then
+       write each checkpoint to a temporary file in the same directory and
+       move it into place with `os.replace`. Why does the final path hold a
+       complete checkpoint, the previous one or the new one, whenever the
+       training process crashes during the second procedure? A power loss
+       can leave the rename on disk before the file's contents. Which calls
+       does the procedure need so that it also survives a power loss?
+   :exlabel:`ex_training-systems-resume-parity`
+
+1. **Data-bound scaling.** The CPUs of a node decode and augment 3,000
+   images per second, independent of the number of GPUs, and each GPU
+   trains on 1,200 images per second when its input is ready.
+    1. Predict the throughput and the GPU utilization with 1, 2, 4, and 8
+       GPUs. Beyond which number of GPUs does adding a GPU leave the
+       throughput unchanged?
+    1. Decoding takes 80% of the CPU time per image, and storing decoded
+       images removes it. Compute the storage that the 1,281,167 training
+       images of ImageNet occupy as decoded $256 \times 256$ RGB arrays of
+       8-bit integers, and the read bandwidth that 8 GPUs need at 1,200
+       images per second each. The node reads from network storage at
+       1 GB/s and has 512 GB of host memory. Which resource limits the
+       throughput in the first epoch, and which in later epochs? Which part
+       of the input pipeline must still run in every epoch?
+   :exlabel:`ex_training-systems-data-bound`
+
+1. [extended] **DataParallel versus DDP.** ● `train_bert` in
+   :numref:`sec_bert-pretraining` wraps the model in `nn.DataParallel`,
+   which drives all GPUs from one process. On one GPU, the output of
+   `train_bert` in that section reports about 16,700 sentence pairs per
+   second. This problem needs two GPUs, such as the 2×T4 machine on Kaggle
+   (:numref:`sec_hosted_notebooks`).
+    1. Run `train_bert` for 500 steps with the batch size of 512, once on
+       one GPU and once on both, and record the throughput and the MLM loss
+       that it prints, which is the mean over all 500 steps.
+    1. Convert the training into a script launched with
+       `torchrun --nproc-per-node=2` that wraps the model in
+       `DistributedDataParallel` and feeds each rank 256 sentence pairs per
+       step through a `DistributedSampler` over `train_iter.dataset`, so
+       that the global batch stays at 512. Each rank constructs its own
+       `_WikiTextDataset`, which draws sentence pairs and masks at random.
+       What must hold across the ranks for the sampler's shards to
+       partition one dataset? What goes wrong when it does not hold?
+    1. Compare the throughput and the MLM loss of the three runs. Explain
+       why neither two-GPU run reaches twice the single-GPU throughput.
+       Which work does `nn.DataParallel` perform on the first GPU or in its
+       single Python process that DDP distributes over the ranks?
+
+   *Adapted from Nicki Skafte Detlefsen, [Machine Learning Operations](https://skaftenicki.github.io/dtu_mlops/s9_scalable_applications/distributed_training/), module M30 "Distributed Training".*
+   :exlabel:`ex_training-systems-dataparallel-ddp`
+
+1. **Optimizer offload.** ● ZeRO-Offload
+   :cite:`Ren.Rajbhandari.Aminabadi.ea.2021` keeps 16-bit parameters on
+   the GPU for the forward and backward passes, and keeps FP32 master
+   parameters and Adam's two moments in host memory, where the CPU performs
+   the update. Each step sends the 16-bit gradients to the host and the
+   updated 16-bit parameters back. The paper uses FP16, which has the same
+   size as BF16. Consider a 7B model on one GPU that
+   sustains 400 TFLOP/s, connected over PCIe at 50 GB/s in each direction
+   to a host whose memory delivers 200 GB/s.
+    1. Compute the time per step of the two transfers, run one after the
+       other.
+    1. The update on the CPU is limited by memory traffic. Count the bytes
+       per parameter that an Adam update reads and writes in this layout,
+       and estimate the time of the update.
+    1. With the cost of :eqref:`eq_six_nd`, how many tokens must a step
+       contain so that the transfers and the update take less than 20% of
+       the step time when nothing overlaps?
+    1. The one-step delayed parameter update of ZeRO-Offload computes the
+       update from the gradients of step $k$ on the CPU while the GPU runs
+       the forward and backward passes of step $k + 1$ with the parameters
+       that the gradients of step $k - 1$ produced. Under which condition
+       does the update then cost no time? What does the delay change about
+       the optimization?
+   :exlabel:`ex_training-systems-optimizer-offload`
+
+1. **Parallel axis placement.** ● Tensor parallelism of degree $t$
+   splits every transformer layer across $t$ GPUs, and pipeline parallelism
+   of degree $p$ assigns consecutive groups of layers to $p$ stages.
+   :citet:`Narayanan.Shoeybi.Casper.ea.2021` count, for a microbatch of $b$
+   sequences of length $s$ and hidden size $h$, a tensor-parallel traffic of
+
+   $$8bsh\,\frac{t-1}{t}$$
+
+   values per layer and device, and $bsh$ values between consecutive
+   pipeline stages in each of the forward and the backward pass.
+    1. Derive the tensor-parallel count from the two all-reduces of $bsh$
+       values in the forward pass of every layer and the two in its
+       backward pass :cite:`shoeybi2019megatron`, using the ring traffic
+       :eqref:`eq_ring_traffic`.
+    1. A model with 80 layers and $h = 8192$ is trained with $s = 4096$,
+       $b = 1$, and BF16 activations on 32 GPUs in 4 nodes of 8. NVLink
+       carries 450 GB/s per GPU in each direction inside a node, and the
+       network carries 50 GB/s per GPU between nodes. Assume that each
+       collective and each transfer between stages runs at the bandwidth
+       of the slowest link that it crosses. Compute the bytes and the time
+       per microbatch and device of the tensor-parallel and of the pipeline
+       traffic for $t = 8, p = 4$ and for $t = 16, p = 2$.
+    1. Let the forward and backward pass of one layer cost
+       $3(24bsh^2 + 4bs^2h)$ FLOPs, split evenly over the $t$ GPUs, and let
+       every GPU sustain 400 TFLOP/s. The tensor-parallel all-reduces sit
+       between dependent matrix multiplications and are not hidden behind
+       computation. Compare the communication time of each configuration
+       with its compute time per microbatch. By what factor does the time
+       per microbatch of $t = 16, p = 2$ exceed that of $t = 8, p = 4$?
+   :exlabel:`ex_training-systems-axis-placement`
+
+1. **Failures at scale.** ● In a synchronous job, one failed GPU stops all
+   ranks, and the job restarts from its newest checkpoint. Let failures
+   arrive at random with mean time $M$ between them, and let a blocking
+   checkpoint take time $\delta$. The first-order analysis of
+   :citet:`Young.1974`, which problem
+   :exref:`ex_hosted-notebooks-checkpoint-interval`a of
+   :numref:`sec_hosted_notebooks` derives, gives the checkpoint interval and
+   the fraction of time lost to checkpoints and recomputation as
+
+   $$\tau^* = \sqrt{2 \delta M}, \qquad f^* = \sqrt{2 \delta / M}.$$
+
+   :citet:`Grattafiori.Dubey.Jauhri.ea.2024` report 419 unexpected
+   interruptions during a 54-day period of pretraining Llama 3 405B on 16K
+   GPUs.
+    1. Compute $M$ for this job, and $\tau^*$ and $f^*$ for
+       $\delta = 5$ min and for $\delta = 30$ s. Ignoring restart time,
+       which values of $\delta$ are compatible with the effective training
+       time above 90% that the report states?
+    1. Suppose that every GPU fails independently at the same rate. How do
+       $M$, $\tau^*$, and $f^*$ scale with the number of GPUs $N$? Evaluate
+       them for the same hardware at 1,024 GPUs and $\delta = 30$ s.
+    1. Each restart costs a further time $R$ for rescheduling, loading the
+       checkpoint, and warming up. Add this cost to $f^*$. At 16K GPUs with
+       $\delta = 30$ s and $R = 10$ min, which of the two costs is larger?
+    1. A checkpoint of this model holds 14 bytes per parameter: the BF16
+       parameters, FP32 master parameters, and two FP32 moments. Which
+       aggregate write bandwidth over all ranks does $\delta = 30$ s
+       require? Asynchronous checkpointing copies the state to host memory
+       and writes it to storage in the background. Which duration takes the
+       place of $\delta$ in the formulas, and what new constraint on
+       $\tau$ appears?
+   :exlabel:`ex_training-systems-failures-at-scale`
+
+1. **Resumption on fewer workers.** ● A job trains with FSDP on 64 ranks with
+   $B_{\textrm{device}} = 4$ sequences and $N_{\textrm{accumulation}} = 4$,
+   writes sharded checkpoints, and must resume on 48 ranks after losing two
+   nodes.
+    1. Sort the contents of a resumable checkpoint, as listed in
+       :numref:`subsec_training_long_run`, into state that is the same on
+       every rank and state that differs between ranks. For each per-rank
+       item, state what the restore must do when the number of ranks
+       changes.
+    1. Show that no choice of $B_{\textrm{device}}$ and
+       $N_{\textrm{accumulation}}$ on 48 ranks reproduces the global batch
+       of 1,024 sequences. Compare two remedies, a different global batch
+       and unequal microbatches across the ranks, by what each changes
+       about the optimization and what each requires of the loss
+       normalization.
+    1. Design a data order for which the resumed run sees every remaining
+       example of the epoch exactly once, for any number of ranks. Why is it
+       insufficient to store each rank's position in its own shard?
+   :exlabel:`ex_training-systems-elastic-resume`
+
+1. [extended] **Pipeline schedules.** ●● A pipeline of $p$ stages trains on
+   $m$ microbatches per optimizer step. The forward pass of one microbatch
+   through one stage takes time $t_f$, and its backward pass takes
+   $t_b = 2t_f$. A stage can run the forward pass of microbatch $j$ once the
+   previous stage has finished it, and the backward pass of $j$ once the
+   next stage has finished its backward pass of $j$. A stage holds the
+   activations of $j$ from its forward pass until its backward pass. GPipe
+   :cite:`Huang.Cheng.Bapna.ea.2019` runs all forward passes before all
+   backward passes, while the 1F1B schedule of
+   :citet:`Narayanan.Shoeybi.Casper.ea.2021` runs a few warm-up forward
+   passes and then alternates one forward and one backward pass. The
+   bubble fraction of a schedule is its step time minus the ideal time
+   $m(t_f + t_b)$, divided by the ideal time.
+    1. Write a simulator that takes the order of the operations on each
+       stage, runs each operation as soon as its stage is free and its
+       inputs are ready, and returns the step time and, for each stage, the
+       largest number of microbatches whose activations it holds at once.
+    1. Generate GPipe and 1F1B orders for any $p$ and $m$, deriving the
+       number of warm-up forward passes that each stage of 1F1B needs. Run
+       them for $p \in \{2, 4, 8\}$ and $m \in \{1, 4, 8, 32\}$. From the
+       results, derive the bubble fraction and the activation memory of
+       each schedule as functions of $p$ and $m$.
+    1. In the interleaved assignment of
+       :citet:`Narayanan.Shoeybi.Casper.ea.2021`, each device holds $v$
+       nonconsecutive chunks of layers. A microbatch then passes through
+       $pv$ stages and visits every device $v$ times, each at $1/v$ of the
+       cost. Simulate it for $v \in \{1, 2, 4\}$ with all forward passes
+       first. How do the bubble fraction and the number of point-to-point
+       transfers per step depend on $v$?
+    1. With data parallelism of degree $d$ around the pipeline and
+       microbatches of $b$ sequences, the global batch of 1,024 sequences of
+       exercise :exref:`ex_training-systems-global-batch` gives
+       $m = 1024/(db)$. For $p = 8$ and $b = 1$, compute the bubble
+       fraction of 1F1B at $d = 8$, 16, and 64. What limits the
+       data-parallel degree of a pipelined job at a fixed global batch?
+   :exlabel:`ex_training-systems-pipeline-schedules`

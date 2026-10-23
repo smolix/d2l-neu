@@ -17,12 +17,14 @@ gates what runs at all**: training state is several times model size
 (:numref:`sec_training_systems`), and an LLM that does not fit in memory
 does not run slowly — it does not run. Second, **bandwidth gates
 generation speed**: producing one token requires streaming essentially all
-active weights through the compute units, so
+active weights, and the KV cache of the context (:numref:`sec_kv-cache`),
+through the compute units, so
 
 $$
 \textrm{decode tokens/s} \lesssim
-\frac{\textrm{memory bandwidth}}{\textrm{bytes of active weights}},
+\frac{\textrm{memory bandwidth}}{\textrm{bytes of active weights and KV cache}},
 $$
+:eqlabel:`eq_hardware-buyers-decode`
 
 while *prompt processing* (prefill) and *training* are parallel across
 tokens and lean on compute instead. Machines differ by an order of
@@ -51,8 +53,9 @@ for b in [0.1, 1, 7]:
 ```
 
 A 7B full fine-tune wants ~90 GiB — no consumer card holds it — while
-LoRA (freeze the weights, train small adapters, quantize the base to
-4 bits) reduces the estimate for the same job to under 8 GiB. This allows
+QLoRA :cite:`Dettmers.Pagnoni.Holtzman.ea.2023` (freeze the weights, train
+small adapters, quantize the base to 4 bits) reduces the training state
+of the same job from 78 GiB to about 4 GiB. This allows
 some 7B adapter fine-tuning workloads to fit on a 16 GB card. For inference,
 apply the decode bound:
 
@@ -80,6 +83,7 @@ and unified-memory systems (capacious, slow) — with the workstation-class
 RTX PRO 6000 bridging them at a price. Everything below walks this figure.
 
 ## Training Boxes: Discrete NVIDIA GPUs
+:label:`subsec_hardware-buyers-training`
 
 For many training and fine-tuning workloads, a discrete NVIDIA GPU offers
 high memory bandwidth and broad software support, including the frameworks
@@ -91,7 +95,7 @@ on rented machines.
 The RTX 5070 Ti (16 GB GDDR7 at 896 GB/s, 300 W, ~\$900 in July 2026
 against a \$749 list) provides a useful lower-capacity reference for local
 training. Sixteen gigabytes runs every notebook in this book and supports
-some LoRA/QLoRA fine-tunes of
+some QLoRA fine-tunes of
 7–8B models comfortably, and diffusion fine-tuning at 1024² — while a
 12 GB card excludes more model, sequence-length, and batch-size
 configurations. A complete quiet desktop around it (any 8-core CPU, 64 GB RAM, 1 TB
@@ -130,6 +134,7 @@ whether interconnect bandwidth limits the workload before purchasing a
 multi-GPU system.
 
 ## Local Inference: the Unified-Memory Class
+:label:`subsec_hardware-buyers-unified`
 
 ![Discrete GPUs copy between system RAM and VRAM; unified-memory systems share one address space, but capacity and bandwidth remain distinct constraints.](../img/tools-memory-path.svg)
 :label:`fig_tools_memory_path`
@@ -155,8 +160,8 @@ size. The July 2026 menu:
 | Mac Studio M3 Ultra | up to 96 GB new | 819 GB/s | from \$5,300 | 256/512 GB configs discontinued 2026; used units carry a premium |
 | MacBook Pro M5 Max | up to 128 GB | 614 GB/s | from ~\$3,500 | the same class, portable |
 
-Measured reality (community `llama-bench` figures, mid-2026) matches the
-bandwidth ordering: the 120B-parameter MoE `gpt-oss` (~5B active per
+Measured reality (community `llama-bench` figures, mid-2026) roughly matches
+the bandwidth ordering: the 120B-parameter MoE `gpt-oss` (~5B active per
 token) generates ~71 tok/s on an M3 Ultra, ~35 on a DGX Spark, ~40 on
 Strix Halo; a *dense* 70B at 4-bit limps at 5–12 tok/s on all of them.
 Where they differ sharply is prefill: the Spark's Blackwell tensor cores
@@ -169,13 +174,14 @@ the relevant models because framework and kernel support can change the
 hardware-level ordering.
 
 ## The Top End: Workstation Blackwell
+:label:`subsec_hardware-buyers-top-end`
 
 The RTX PRO 6000 Blackwell packs 96 GB of GDDR7 at the 5090's 1.79 TB/s —
 the upper-right bridge in :numref:`fig_tools_hardware_menu` — for about
 \$13,000 list in July 2026 (it launched at \$8,565; the memory crisis did
 the rest). A 300 W Max-Q variant with identical memory exists precisely so
 that four of them fit in one chassis: a 2× build (~\$30–35k) runs
-unquantized 70B inference and full 70B fine-tunes; a 4× Threadripper PRO
+unquantized 70B inference and 70B LoRA fine-tunes; a 4× Threadripper PRO
 workstation (~\$60k turnkey) holds 384 GB — DeepSeek-class MoE territory
 at 4-bit. One caveat defines the class: no NVLink (dropped from
 workstation cards after Ampere), so inter-card traffic rides PCIe 5.0 at
@@ -197,6 +203,7 @@ think) — against which weigh privacy, zero queue time, and the real
 pedagogical value of hardware you can take apart.
 
 ## Keeping Current
+:label:`subsec_hardware-buyers-current`
 
 The specifications and prices above will change. The following sources can
 supply newer measurements, but their claims still require cross-checking. For build
@@ -237,15 +244,278 @@ decode-bound sanity check above.
 
 ## Exercises
 
-1. Compute the decode bound for a 30B-A3B mixture-of-experts model (3B
-   active parameters, 4-bit) on every machine in
-   :numref:`tab_unified_memory`. Which become interactive (>20 tok/s)?
-1. Estimate LoRA fine-tuning memory for an 8B model on a 16 GB card:
-   4-bit frozen base, BF16 adapters at 1% of parameters, Adam. Does it
-   fit, and what dominates?
-1. Spec a complete RTX 5070 Ti build at current local prices, then
-   compute its break-even in hours against a rented 4090 from
-   :numref:`tab_cloud_prices`.
-1. Find this month's used 3090 price and recompute its \$/GB against the
-   current 5070 Ti. Has the 2026 anomaly (used cards appreciating)
-   persisted?
+1. [code] **Training memory.** `training_memory_gib` charges every
+   parameter 2 bytes of weights, 2 bytes of gradients, and 8 bytes of
+   optimizer state, and it adds fixed amounts for activations and
+   workspace.
+    1. Mixed-precision training with Adam, as counted by
+       :citet:`Rajbhandari.Rasley.Ruwase.ea.2020`, keeps 16 bytes per
+       parameter. Which tensor do the defaults of `training_memory_gib`
+       leave out, and how does adding it change the estimate for the 7B
+       model? Under both counts, find the largest model whose full
+       fine-tune fits on cards with 16, 24, 32, and 96 GB, treating a
+       card's GB as GiB.
+    1. LoRA :cite:`Hu.Shen.Wallis.ea.2021` freezes the pretrained weights
+       and trains small adapter matrices beside them. QLoRA
+       :cite:`Dettmers.Pagnoni.Holtzman.ea.2023` also stores the frozen
+       weights in 4 bits, plus 0.127 bits per parameter of quantization
+       constants. Give `training_memory_gib` an argument for the trainable
+       fraction of the parameters: a frozen parameter costs only its
+       stored bytes, and a trainable one costs weights, gradients, and
+       optimizer state as before. Evaluate the function for an 8B model
+       with 1% trainable parameters and the default activation and
+       workspace terms, once for LoRA with frozen bf16 weights and once for
+       QLoRA. Which of the two fine-tunes fits on a 16 GB card? Which term
+       is the largest in the one that fits?
+    1. The activation term is not a constant: it grows with the number of
+       tokens per step. With per-block activation checkpointing
+       (:numref:`subsec_mp-checkpointing`), a model keeps only the input of
+       each block, $d$ bf16 values per token, plus the activations of one
+       block during its recomputation, which this sub-problem ignores. Give
+       the QLoRA fine-tune of the second sub-problem the shape of Llama 3.1
+       8B :cite:`Grattafiori.Dubey.Jauhri.ea.2024`: 32 blocks of width
+       $d = 4096$ and a vocabulary of 128,256 tokens. How many tokens per
+       step fit into the memory that the 16 GB card leaves for activations?
+    1. The output layer also keeps one bf16 logit per vocabulary entry and
+       token for the loss. How many tokens per step fit once the logits
+       count as well? Compare the logit bytes per token with the bytes of
+       the block inputs per token.
+   :exlabel:`ex_hardware-training-memory`
+
+1. **Context length and decode.** Every decode step reads the KV cache of
+   all earlier tokens as well as the weights, which is why the code that
+   defines `bandwidth_gbs` charges an 8B model at 4 bits
+   `active_gb = 4.5` GB per token. Llama 3.1 8B
+   :cite:`Grattafiori.Dubey.Jauhri.ea.2024` has 32 layers and 8
+   key-value heads of dimension 128, and it keeps its cache in bf16.
+    1. Compute the cache bytes per token with :eqref:`eq_kv-cache-bytes`.
+       Which context length does the 0.5 GB of cache traffic in
+       `active_gb` correspond to?
+    1. Bound the decode rate on the RTX 5070 Ti and on the M3 Ultra at
+       contexts of 4K, 32K, and 128K tokens, and give the share of the
+       cache in the bytes read per token. At which of these contexts do
+       the weights and the cache still fit on the 16 GB card?
+    1. Quantizing the weights from bf16 to 4 bits divides their bytes by
+       4. By what factor does it raise the decode bound at 4K tokens, and
+       by what factor at 128K tokens? What does this imply for a buyer
+       whose workload uses long contexts?
+
+1. [code] **Price per capacity and per bandwidth.**
+   :numref:`fig_tools_hardware_menu` places every machine on the axes of
+   capacity and bandwidth, and a purchase adds price as a third axis. Take
+   the July 2026 prices of the RTX 5070 Ti, the used RTX 3090, the RTX
+   5090, the RTX PRO 6000, Strix Halo, and the DGX Spark from this
+   section, at the midpoint of every range. Leave out the Mac entries of
+   :numref:`tab_unified_memory`, whose starting prices do not belong to a
+   stated memory configuration.
+    1. Compute the price per GB of memory and the price per GB/s of
+       bandwidth of each machine. Which machines are not beaten on both
+       measures at once by another machine? What does each of the other
+       machines offer that the two measures miss?
+    1. A card needs a host computer, while Strix Halo and the DGX Spark are
+       complete machines. Repeat the comparison with system prices: take
+       the 5070 Ti desktop and the 5090 build of
+       :numref:`subsec_hardware-buyers-training` at the midpoints of their
+       ranges, put the used 3090 into the host of the 5070 Ti desktop, and
+       put the RTX PRO 6000 into the host of the 5090 build. Which
+       conclusions of the first sub-problem change?
+    1. Redo the first sub-problem with prices that you find today through
+       the sources of :numref:`subsec_hardware-buyers-current`, and date
+       them. Does the used 3090 still cost less per gigabyte than the
+       5070 Ti?
+
+1. **Power budget.** :numref:`subsec_hardware-buyers-training` notes that
+   a 5090 build needs a 1200 W power supply and a circuit that can sustain
+   the load of the whole system, not only of the card. Consider a box with
+   four used RTX 3090 cards at 350 W each on a Threadripper-class platform
+   that draws 350 W, with another 100 W for drives and fans, fed by power
+   supplies that are 90% efficient. The box is plugged into a North
+   American 120 V, 15 A circuit, whose continuous load should stay below
+   80% of its 1,800 W rating.
+    1. Compute the draw at the wall under full load. To which power limit
+       per card must the cards be capped to stay on one such circuit? Does
+       a 230 V, 16 A circuit under the same 80% rule carry the box without
+       a cap?
+    1. Capping the power of a GPU lowers its clock and hence its peak
+       arithmetic rate, while its memory bandwidth changes little. Which
+       workloads of this section lose much throughput under the cap of the
+       first sub-problem, and which lose little?
+
+1. **Mixture-of-experts decode.** A mixture-of-experts (MoE) model stores
+   many expert networks but runs only a few of them for each token, so a
+   decode step reads only the *active* parameters. Take a 30B-A3B model,
+   with 30 billion parameters of which 3 billion are active per token, and
+   a dense 30B model, both with 4-bit weights. Ignore the KV cache.
+    1. Use :eqref:`eq_hardware-buyers-decode` to bound the decode rate of
+       both models on every machine in :numref:`tab_unified_memory`. Which
+       machines decode each model faster than 20 tokens/s, a common
+       threshold for interactive use?
+    1. A dense 3B model at 4 bits reads as many bytes per token as the
+       MoE. What does the MoE cost a buyer that the dense 3B model does
+       not? Which cards in `bandwidth_gbs` can run the MoE?
+    1. The model card of gpt-oss-120b :cite:`OpenAI.2025` counts 114.71B
+       parameters in the experts of its 36 MoE layers, 0.96B attention
+       parameters, and 1.16B parameters in its untied embedding and output
+       matrices, which have equal size. Each layer has 128 experts, of which
+       a token uses 4. The experts are stored in MXFP4 at 4.25 bits per
+       parameter, and all other weights in bf16. Compute the bytes that a
+       decode step reads, given that the embedding lookup reads a single
+       row. Bound the decode rate on the M3 Ultra, the DGX Spark, and Strix
+       Halo, and compute the fraction of each bound that the measured rates
+       of :numref:`subsec_hardware-buyers-unified` achieve. What does the
+       comparison between the DGX Spark and Strix Halo say about bandwidth
+       as a predictor of decode speed?
+   :exlabel:`ex_hardware-moe-decode`
+
+1. **Partial offload.** A model that does not fit into the memory of a
+   discrete card can still run if some of its layers stay in system
+   memory, where the CPU computes them (:numref:`fig_tools_memory_path`).
+   Consider a desktop with a used RTX 3090 (24 GB at 936 GB/s),
+   dual-channel DDR5-5600 system memory (89.6 GB/s), and a PCIe 4.0 ×16
+   link (32 GB/s per direction). A dense 70B model at 4 bits takes about
+   40 GB.
+    1. Keep 22 GB of layers on the GPU and run the other 18 GB on the CPU.
+       Bound the decode rate, and compare it with the bound for the whole
+       model on Strix Halo. Above which fraction of offloaded bytes does
+       the system memory take more than half of the time per token?
+    1. Instead, copy the 18 GB of offloaded weights over PCIe to the GPU
+       for every token. What does this do to the bound?
+    1. Run gpt-oss-120b on the same desktop, with its attention, embedding,
+       and output weights on the GPU and all of its experts in system
+       memory. Use the accounting of problem
+       :exref:`ex_hardware-moe-decode`c to bound the decode rate, and find
+       how much system memory the experts need. Why does this split suit an
+       MoE model better than a dense one?
+
+1. [code] **Break-even with operating costs.** The code that computes the
+   break-even divides `purchase_and_operation` by
+   `rental_per_productive_hour`, the rental price of the work that the
+   owned machine does in one productive hour.
+    1. An owned machine also draws electricity in every productive hour,
+       and it can be resold afterwards. Write the break-even condition for
+       a purchase price $C$, a resale value $R$, a wall power $p$ under
+       load, an electricity price $e$ per kWh, and a rental price $r$ per
+       productive hour, and solve it for the number of productive hours
+       $H$.
+    1. Evaluate $H$ for the RTX 5070 Ti desktop of
+       :numref:`subsec_hardware-buyers-training` at \$2,250, with a resale
+       value of \$600 after three years and 450 W at the wall, against a
+       marketplace RTX 4090 of :numref:`tab_cloud_prices` at \$0.35 per
+       hour, with electricity at \$0.20 per kWh. Assume that the 5070 Ti
+       completes 70% of the work of a 4090 per hour. How many years of
+       eight productive hours per day does $H$ take?
+    1. The code compares a 5090 box with an H100-class rental price, which
+       counts an hour on either machine as the same amount of work. Use
+       :numref:`tab_gpu_specs` to estimate how much more work an H100 does
+       per hour in compute-bound training and in bandwidth-bound decode.
+       Recompute $H$ for both workloads with the 5090 build of
+       :numref:`subsec_hardware-buyers-training` at the midpoint of its
+       price range, without resale, and with 900 W at the wall.
+   :exlabel:`ex_hardware-break-even`
+
+1. **Prefill versus decode.** ● A request first processes its prompt
+   (prefill) and then generates its answer token by token (decode).
+   :numref:`subsec_hardware-buyers-unified` reports that gpt-oss-120b
+   decodes at about 35 tokens/s on the DGX Spark and at about 40 tokens/s
+   on Strix Halo. Assume that prefill runs at 2,000 prompt tokens/s on the
+   DGX Spark and at 500 prompt tokens/s on Strix Halo, and that every
+   answer has 500 tokens.
+    1. Compute the time to the first token and the total time of a chat
+       request with a 500-token prompt and of a coding-agent request with a
+       30,000-token prompt on both machines. At which prompt length do the
+       two machines take equally long?
+    1. Count 2 FLOPs per active parameter and token, for the 5.13B active
+       parameters of gpt-oss-120b :cite:`OpenAI.2025`, and ignore the
+       FLOPs of the attention scores. Convert both prefill rates into
+       sustained FLOP/s.
+    1. A prefill that processes its prompt in chunks of 512 tokens reads
+       every weight that some token of the chunk uses, once per chunk.
+       Assume that every token picks its 4 experts of a layer uniformly at
+       random from the 128, independently of the other tokens. How many
+       distinct experts of a layer does a chunk read on average? Use the
+       accounting of problem :exref:`ex_hardware-moe-decode`c to compute
+       the bytes that one chunk reads. Which resource limits the prefill
+       rate on the DGX Spark, and which on Strix Halo?
+    1. How does the bandwidth bound on prefill of the DGX Spark change with
+       chunks of 2,048 tokens? Why does an MoE model need longer chunks
+       than a dense model with the same active parameters before its
+       prefill becomes compute-bound?
+
+1. **Tensor parallelism over PCIe.** ●
+   :numref:`subsec_hardware-buyers-top-end` notes that workstation cards
+   exchange data over PCIe 5.0 at about 64 GB/s per direction, while each
+   card reads its own memory at 1.79 TB/s. Consider two RTX PRO 6000 cards
+   that serve Llama 3.1 70B :cite:`Grattafiori.Dubey.Jauhri.ea.2024` in
+   bf16, with about 141 GB of weights in
+   $L = 80$ layers of width $d = 8192$. A *pipeline* split places the
+   first 40 layers on one card and the other 40 on the second, so that a
+   token passes through the cards in turn. A *tensor-parallel* split
+   :cite:`shoeybi2019megatron` gives each card half of every weight
+   matrix. After the attention and after the MLP of every layer, the cards
+   then sum their partial outputs with an all-reduce of one
+   $d$-dimensional bf16 vector per token.
+    1. Ignore communication, and bound the single-stream decode rate under
+       both splits. What does the pipeline split buy compared with a
+       hypothetical single card with 192 GB at the same bandwidth?
+    1. Assume that every all-reduce of one token's vector takes 20 µs over
+       PCIe, independently of its 16 KB size. By what fraction does this
+       communication slow down tensor-parallel decode?
+    1. In prefill, each card sustains 200 TFLOP/s in bf16, about the dense
+       rate of the RTX 5090 in :numref:`tab_gpu_specs`, at 2 FLOPs per
+       parameter and token. The all-reduces of a long prompt carry many
+       tokens at once and therefore run at the bandwidth $\beta$ of the
+       link. A ring all-reduce over $n$ cards sends $2(n-1)/n$ times the
+       message from every card. Derive the ratio of communication time to
+       compute time per token on $n$ cards, and simplify it with
+       $N \approx 12 L d^2$ parameters. Evaluate the ratio for $n = 2$,
+       4, and 8 over PCIe and over an NVLink-class link at 900 GB/s per
+       direction. Which quantity of :numref:`sec_hardware` appears in the
+       simplified ratio?
+
+1. [extended] **Specifying a lab machine.** ● A group can spend \$12,000
+   at the July 2026 prices of this section on one machine for an office
+   with a 120 V, 15 A circuit. The machine must fine-tune 8B models with
+   LoRA or QLoRA on sequences of 4,096 tokens for about ten hours per
+   week, and run every notebook of this book. It must also serve one user
+   at a time at 20 tokens/s or more, both with a dense 70B model at 4 bits
+   and with gpt-oss-120b. Where the section gives no figure, such as the
+   price of a desktop with two used 3090 cards or the wall power of the
+   unified-memory machines, estimate it from the section's components or
+   take it from a vendor datasheet, and state the source.
+    1. For the 5070 Ti desktop, the 5090 build, a desktop with two used
+       3090 cards, the DGX Spark, Strix Halo, and the M3 Ultra, tabulate
+       whether the fine-tune fits (exercise
+       :exref:`ex_hardware-training-memory`), the decode bound of each chat
+       model, the power at the wall under load, and the price. Which
+       machines meet every requirement?
+    1. Price three years of the same work on rented machines from
+       :numref:`tab_cloud_prices`, with the break-even analysis of exercise
+       :exref:`ex_hardware-break-even`, and recommend whether to buy and
+       which machine. Which single assumption, if it were wrong, would most
+       likely reverse the recommendation?
+
+1. [extended] **Calibrating the decode bound.** ●● The summary states that
+   :eqref:`eq_hardware-buyers-decode` predicts generation speed to within
+   a factor of two. Test this claim on hardware that you can access, and
+   replace the bound by a calibrated model. A laptop CPU suffices, because
+   llama.cpp runs on CPUs.
+    1. Measure the bandwidth that your machine sustains on a large
+       streaming copy, and compare it with the bandwidth of its datasheet.
+    1. Use `llama-bench` from llama.cpp to measure the decode rate of at
+       least six configurations that span model size and weight format,
+       for example dense models with 1B, 3B, and 8B parameters at 4 and
+       8 bits, and one MoE model. Compute the bytes that each
+       configuration reads per token from its parameter counts and format,
+       and plot the measured rates against the bound.
+    1. Fit the model
+       $1/\textrm{rate} = t_0 + \textrm{bytes}/(\eta \beta)$, with $\beta$
+       the bandwidth of the first sub-problem, to estimate the fraction
+       $\eta$ of the bandwidth that decoding achieves and a fixed time
+       $t_0$ per token. Which configurations deviate most from the fit,
+       and why?
+    1. Predict the decode rate of one configuration that the fit did not
+       use, and of one configuration at a context of 16K tokens, adding
+       the cache bytes of :eqref:`eq_kv-cache-bytes`. Measure both, and
+       compare your prediction errors with the factor of two of the
+       summary and with a published number for your hardware from the
+       sources of :numref:`subsec_hardware-buyers-current`.

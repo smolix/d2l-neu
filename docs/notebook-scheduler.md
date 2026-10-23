@@ -272,6 +272,22 @@ shared-dataset notebooks. This path is unchanged and self-contained.
 | `--files "a.md b.md"` | all | restrict to a subset of source notebooks (whitespace/comma-separated `chapter_x/foo.md`); `make refresh-stale` passes the audit-stale set here for a parallel re-run |
 | `--force-all` | off | ignore stamp freshness, run everything |
 | `--dry-run` | off | simulate dispatch (no execution); checks per-GPU invariants |
+| `D2L_GPU_LIVE_GATE=1` | off | shared hosts: admit a GPU job to a card only when `nvidia-smi` shows enough free memory (see below) |
+| `D2L_GPU_LIVE_HEADROOM_MIB` | 2048 | extra free MiB required beyond `slots × GPU_MIB_PER_SLOT` |
+| `D2L_GPU_LIVE_STABLE_S` | 180 | a card must have had one slot's worth free this long, so a momentary gap between another user's jobs is never taken |
+| `D2L_GPU_LIVE_SETTLE_S` | 90 | pause on a card after a dispatch while the new job allocates |
+
+**Shared hosts.** The slot pools are static: they assume the GPUs belong to the
+build. When other users' jobs share the cards, set `D2L_GPU_LIVE_GATE=1` (and,
+to be conservative, fewer slots per card). CPU notebooks run as usual; GPU
+notebooks wait, re-checking every 15 s, until a card has held enough free
+memory for `D2L_GPU_LIVE_STABLE_S`. The scheduler prints the live free memory
+every 10 minutes. Used for the 2026-10 full re-execution, when another user's
+vLLM fleet occupied about 23 GiB of every card:
+
+```bash
+D2L_GPU_LIVE_GATE=1 make run-all-notebooks GPU_SLOTS_PER=2,2,2,2
+```
 
 Examples:
 

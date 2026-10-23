@@ -243,6 +243,7 @@ term vanishes and
 $$
 \frac{d}{dt}\, \mathbb{E}[\phi(\mathbf{X}_t)] = \mathbb{E}\!\left[\nabla\phi \cdot \mathbf{f} + \tfrac12 g^2 \Delta\phi\right].
 $$
+:eqlabel:`eq_mdl-dyn-expectation-evolution`
 
 Both sides are integrals against the marginal density: writing
 $\mathbb{E}[\,\cdot\,] = \int (\cdot)\, p_t(\mathbf{x})\, d\mathbf{x}$,
@@ -295,6 +296,7 @@ J_i(\mathbf{x},t)
 = f_i(\mathbf{x},t)p_t(\mathbf{x})
 - \frac12\sum_j \partial_j\big(a_{ij}(\mathbf{x},t)p_t(\mathbf{x})\big).
 $$
+:eqlabel:`eq_mdl-dyn-probability-current`
 
 Then the general Fokker--Planck equation is
 $\partial_t p_t=-\nabla\cdot\mathbf{J}$. Integrating it over a domain
@@ -304,6 +306,7 @@ $$
 \frac{d}{dt}\int_\Omega p_t(\mathbf{x})\,d\mathbf{x}
 = -\int_{\partial\Omega}\mathbf{J}\cdot\mathbf{n}\,dS.
 $$
+:eqlabel:`eq_mdl-dyn-mass-balance`
 
 This identity makes the required boundary assumptions explicit.
 On all of $\mathbb{R}^d$ we require the current to decay sufficiently fast.
@@ -325,6 +328,7 @@ $$
 \qquad
 (\nabla\cdot a)_i=\sum_j\partial_j a_{ij}.
 $$
+:eqlabel:`eq_mdl-dyn-general-pf-velocity`
 
 Thus state-dependent or anisotropic noise contributes both a score term and a
 spatial-divergence term. The later formula
@@ -415,8 +419,9 @@ $v(t) = \frac{\sigma^2}{2\theta}(1 - e^{-2\theta t})$, which satisfy
 :numref:`sec_mdl-ornstein-uhlenbeck` solves Fokker--Planck, by direct
 differentiation. The fixed point $\dot m = \dot v = 0$ gives $m = 0$,
 $v = \sigma^2/2\theta$: the stationary Gaussian is the *steady state*
-$\partial_t p = 0$ of the PDE (you will re-derive it from scratch, without the
-Gaussian ansatz, in the exercises). And setting $\theta = 0$ recovers the heat
+$\partial_t p = 0$ of the PDE (Exercise
+:exref:`ex_mdl-fokker-planck-probability-flow-stationary-density` re-derives
+it from scratch, without the Gaussian ansatz). And setting $\theta = 0$ recovers the heat
 equation's linear variance growth $\dot v = \sigma^2$.
 
 A finite-difference calculation independently checks the closed-form result. We evaluate
@@ -820,10 +825,11 @@ s(x) = \frac{\mu \tanh\!\left(\mu x / s_0^2\right) - x}{s_0^2}.
 $$
 :eqlabel:`eq_mdl-dyn-tanh-score`
 
-Near each mode, $\tanh \to \pm 1$ and $s(x) \approx -(x \mp \mu)/s_0^2$,
-the local Gaussian spring. At $x = 0$ the score vanishes (the trough between
-the modes is a critical point too), but it is a *repeller*: infinitesimally to
-the right of $0$ the score is large and positive, pushing mass toward $+\mu$.
+For well-separated components ($\mu \gg s_0$, as in the code below), near
+each mode $\tanh \to \pm 1$ and $s(x) \approx -(x \mp \mu)/s_0^2$, the local
+Gaussian spring. At $x = 0$ the score vanishes (the trough between the modes
+is a critical point too), but here it is a *repeller*: infinitesimally to the
+right of $0$ the score is large and positive, pushing mass toward $+\mu$.
 
 ### Independence from the Normalizing Constant
 
@@ -911,6 +917,7 @@ completing the square shifts the mean by $g^2 \tau\, \nabla \log p_t(\mathbf{y})
 $$
 p(\mathbf{x} \mid \mathbf{y}) \approx \mathcal{N}\big(\mathbf{x};\; \mathbf{y} - [\mathbf{f}(\mathbf{y}, t) - g^2 \nabla \log p_t(\mathbf{y})]\,\tau,\; g^2 \tau I\big).
 $$
+:eqlabel:`eq_mdl-dyn-reverse-step`
 
 Stepping *backward* is therefore again a Gaussian kick of variance
 $g^2 \tau$ (a diffusion) whose drift is the forward drift *corrected by
@@ -1116,53 +1123,293 @@ the score.
 
 ## Exercises
 
-1. **Stationary distribution from scratch.** Set $\partial_t p = 0$ in the OU
-   Fokker--Planck equation:
-   $0 = \theta\,\partial_x(x p) + \tfrac12 \sigma^2 \partial_{xx} p$.
-   Integrate once in $x$ and argue from decay at infinity that the constant of
-   integration (the probability current) must vanish. Solve the resulting
-   first-order ODE and confirm $p_\infty = \mathcal{N}(0, \sigma^2/2\theta)$;
-   no Gaussian ansatz allowed.
-2. **Heat kernel.** Use the moment-ODE proposition with $\theta = 0$ to show
-   that $\mathcal{N}(x_0, v_0 + \sigma^2 t)$ solves the heat equation
-   :eqref:`eq_mdl-dyn-heat-equation`, and conclude the marginal law of
-   Brownian motion started from $x_0$. What happens as $v_0 \to 0$?
-3. **Continuity from conservation.** Re-derive the continuity equation
-   :eqref:`eq_mdl-dyn-continuity` from the divergence theorem without looking,
-   then derive the along-trajectory rule
-   $\frac{d}{dt} \log q_t(\mathbf{x}(t)) = -\nabla \cdot \mathbf{v}$ and
-   reconcile it with the instantaneous change-of-variables formula of
-   :numref:`sec_mdl-continuous-normalizing-flows`.
-4. **The sign, in $d$ dimensions.** Prove
-   $\tfrac12 \nabla \cdot (g^2 \nabla p) = \nabla \cdot (p \cdot \tfrac12 g^2 \nabla \log p)$
-   for $\mathbf{x} \in \mathbb{R}^d$ and time-dependent scalar $g$, stating
-   exactly where you use $p > 0$. Then explain, in one sentence each, why the
-   right-hand side carries a plus sign while the probability-flow velocity
-   carries $-\tfrac12 g^2 \nabla \log p$.
-5. **The Gaussian flow is affine.** For OU started from the point mass
-   $\delta_{x_0}$, the marginal is the Gaussian
-   :eqref:`eq_mdl-dyn-ou-marginal`. Show that the probability-flow velocity
-   $v_t(x) = -\theta x - \tfrac12 \sigma^2 \cdot \big(-(x - m_t)/v_t\big)$ is
-   affine in $x$, solve the PF-ODE in closed form, and verify that it maps
-   $\mathcal{N}(m_s, v_s)$ to $\mathcal{N}(m_t, v_t)$. Why can two of its
-   trajectories never cross, while two SDE paths can?
-6. **The factor of two.** Re-derive the family
-   :eqref:`eq_mdl-dyn-reverse-family` from Fokker--Planck bookkeeping. Explain
-   in words why the reverse SDE needs $g^2 \nabla \log p_t$ where the PF-ODE
-   needs only $\tfrac12 g^2 \nabla \log p_t$, and what the dial $\lambda$
-   trades off.
-7. **Mixture scores.** Derive the responsibility formula
-   :eqref:`eq_mdl-dyn-mixture-score` for $K$ components, then specialize to
-   the symmetric two-component case to obtain
-   :eqref:`eq_mdl-dyn-tanh-score`. Find all zeros of
-   :eqref:`eq_mdl-dyn-tanh-score` when $\mu \gg s_0$ and classify each as a
-   mode or a repeller of the ascent flow $\dot x = s(x)$.
-8. **Break the sampler.** Rerun the reverse-SDE experiment with two
-   modifications, one at a time: (a) an asymmetric prior
-   $\pi = (0.25, 0.75)$ (predict the recovered mass split before you run);
-   (b) the *wrong* drift correction $\tfrac12 g^2 \nabla \log p_t$ while
-   keeping the noise: describe what the recovered density looks like and
-   explain why, using the $\lambda$-family with mismatched drift and noise.
+1. **Laplacian as averaging.** Averaging a smooth $h$ over the sphere of
+   radius $r$ centered at $\mathbf{x}$ gives
+   $h(\mathbf{x}) + \frac{r^2}{2d}\Delta h(\mathbf{x}) + O(r^4)$
+   (:numref:`sec_mdl-paths-to-densities`).
+    1. Let $\mathbf{u}$ be uniformly distributed on the unit sphere of
+       $\mathbb{R}^d$. Show by symmetry that $\mathbb{E}[u_i] = 0$,
+       $\mathbb{E}[u_i u_j] = \delta_{ij}/d$ and
+       $\mathbb{E}[u_i u_j u_k] = 0$. Use these moments in a Taylor
+       expansion of $h(\mathbf{x} + r\mathbf{u})$ to prove the averaging
+       formula. Why does no $r^3$ term appear?
+    1. In one dimension the sphere is the pair of points $x \pm \delta$.
+       Show that one forward-Euler step of the heat equation
+       $\partial_t u = D\,\partial_{xx} u$, with $\partial_{xx} u$ replaced
+       by the centered difference $(u_{i+1} - 2u_i + u_{i-1})/\delta^2$,
+       sets each new $u_i$ to a weighted combination of $u_{i-1}$, $u_i$
+       and $u_{i+1}$ whose weights sum to one. Find the largest step
+       $\Delta t$ for which all three weights are nonnegative. Why can the
+       iteration then never create a new maximum?
+   :exlabel:`ex_mdl-fokker-planck-probability-flow-laplacian-averaging`
+
+1. **Moments from the weak form.** The evolution law
+   :eqref:`eq_mdl-dyn-expectation-evolution` was derived for compactly
+   supported test functions. Assume that it also holds for polynomial
+   $\phi$, which the Gaussian tails of this section's densities justify.
+    1. For the one-dimensional OU process, insert $\phi(x) = x$ and
+       $\phi(x) = x^2$ and derive ODEs for the mean $m(t)$ and the variance
+       $v(t)$ of $X_t$. Show that they are the moment ODEs
+       :eqref:`eq_mdl-dyn-moment-odes` for every initial law $p_0$, Gaussian
+       or not. Check this against `mixture_params` by computing the mean and
+       the variance of the bimodal mixture at time $t$.
+    1. For the linear SDE $d\mathbf{X} = A\mathbf{X}\,dt + g\,d\mathbf{W}$ in
+       $\mathbb{R}^d$ with a constant matrix $A$, use $\phi(\mathbf{x}) = x_i$
+       and $\phi(\mathbf{x}) = x_i x_j$ to show that the mean and the
+       covariance satisfy $\dot{\mathbf{m}} = A\mathbf{m}$ and
+       $\dot{\Sigma} = A\Sigma + \Sigma A^\top + g^2 I$. Which matrix
+       equation must a stationary covariance solve?
+   :exlabel:`ex_mdl-fokker-planck-probability-flow-moments-weak-form`
+
+1. [code] **Reflecting and absorbing walls.** Consider
+   $dX = -c\,dt + \sigma\,dW$ with $c > 0$ on the half-line $x \ge 0$, so
+   that the drift pushes particles toward the wall at $x = 0$.
+    1. Impose the reflecting condition: the current
+       :eqref:`eq_mdl-dyn-probability-current` vanishes at $x = 0$. Show
+       that a stationary current then vanishes everywhere, and solve the
+       resulting first-order ODE for the stationary density.
+    1. Adapt the `#fokker-planck-cloud-marginals` cell: start all particles
+       at $x_0 = 3$, take $c = 1$ and $\sigma = \sqrt{2}$, and replace each
+       Euler--Maruyama update $x \leftarrow x + \Delta x$ by
+       $x \leftarrow |x + \Delta x|$, which reflects every particle that
+       crosses the wall. Compare the histogram at $t = 10$ with your
+       stationary density.
+    1. Make the wall absorbing instead: remove each particle when it first
+       crosses $x = 0$, and plot the surviving fraction against time. Apply
+       the mass balance :eqref:`eq_mdl-dyn-mass-balance` to
+       $\Omega = (0, \infty)$ with the absorbing condition $p_t(0) = 0$, and
+       express the rate of mass loss through $\partial_x p_t(0)$. Why must
+       the surviving fraction tend to zero?
+
+1. **Stationary density from zero current.**
+    1. Set $\partial_t p = 0$ in the OU Fokker--Planck equation,
+       $0 = \theta\,\partial_x(x p) + \tfrac12 \sigma^2 \partial_{xx} p$.
+       Integrate once in $x$ and argue from decay at infinity that the
+       constant of integration, which is minus the probability current
+       :eqref:`eq_mdl-dyn-probability-current`, vanishes.
+       Solve the resulting first-order ODE and show that
+       $p_\infty = \mathcal{N}(0, \sigma^2/2\theta)$ without assuming a
+       Gaussian form.
+    1. Repeat the argument for a general drift $f(x)$ with constant
+       $\sigma$, and express $p_\infty$ through a potential $V$ with
+       $f = -V'$. Conversely, given a density $p \propto e^{-E(x)}$, find the
+       drift that makes $p$ stationary and write it through the score of $p$.
+    1. Apply the result to the double-well drift $f(x) = x - x^3$ with
+       $\sigma = \sqrt{2}$ and find the modes of $p_\infty$. What goes wrong
+       for the unstable drift $f(x) = \theta x$ with $\theta > 0$?
+   :exlabel:`ex_mdl-fokker-planck-probability-flow-stationary-density`
+
+1. **Affine Gaussian flow.** Start the OU process from
+   $X_0 \sim \mathcal{N}(x_0, v_0)$ with $v_0 > 0$. Then
+   $p_t = \mathcal{N}(m_t, v_t)$, where $m_t$ and $v_t$ solve
+   :eqref:`eq_mdl-dyn-moment-odes`.
+    1. Write the probability-flow velocity :eqref:`eq_mdl-dyn-pf-velocity`
+       for this $p_t$ and show that it is affine in $x$. Show that the
+       standardized coordinate $z = (x - m_t)/\sqrt{v_t}$ is constant along
+       every PF-ODE trajectory, and write the trajectory $x(t)$ in closed
+       form.
+    1. Compute $\nabla \cdot \mathbf{v}_t$, evaluate the time integral in
+       the likelihood identity :eqref:`eq_mdl-dyn-pf-likelihood` along a
+       trajectory, and verify that the identity holds exactly by comparing
+       the two Gaussian log-densities.
+    1. Let $v_0 \to 0$, so that the process starts from the point mass at
+       $x_0$ of :eqref:`eq_mdl-dyn-ou-marginal`. What happens to the
+       velocity field as $t \to 0$? Use
+       :numref:`sec_mdl-ode-existence-uniqueness` to explain why a
+       deterministic flow can spread a point mass into a Gaussian only
+       through a field of this kind.
+
+1. [code] **Same marginals, different couplings.** The
+   `#fokker-planck-pf-ode-overlay` cell launches the SDE cloud and the ODE
+   cloud from one shared sample of $p_0$. Store a copy of that sample
+   before the loop.
+    1. At each snapshot time, compute for both clouds the fraction of
+       particles whose sign differs from the sign of their starting point,
+       that is, the fraction that has switched modes. Exercise
+       :exref:`ex_mdl-odes-solvers-flow-expressivity`a of
+       :numref:`sec_mdl-odes-solvers` shows that the time-$T$ map of a
+       Lipschitz field on $\mathbb{R}$ is strictly increasing, and the
+       argument carries over to a time-dependent field whose Lipschitz
+       constant does not depend on $t$. Use this and the symmetry of $p_0$
+       to explain why the ODE fraction is exactly zero.
+    1. Compute the correlation between starting and current positions for
+       both clouds. Predict the value for the SDE cloud from the OU
+       solution :eqref:`eq_mdl-sde-ou-solution` and the variance of the
+       mixture $p_0$, and compare.
+    1. Which uses of a diffusion model need the deterministic coupling of
+       the PF-ODE, and not only its marginals?
+
+1. **Mode merging.** Consider the symmetric two-component mixture with the
+   score :eqref:`eq_mdl-dyn-tanh-score`.
+    1. Derive :eqref:`eq_mdl-dyn-tanh-score` from the responsibility formula
+       :eqref:`eq_mdl-dyn-mixture-score`.
+    1. Show that the score has three zeros when $\mu > s_0$ and only the
+       zero $x = 0$ when $\mu \le s_0$. Classify each zero as a local
+       maximum or a local minimum of the density.
+    1. Under the OU process the mixture stays symmetric, with component
+       means $\pm\mu e^{-\theta t}$ and the component variance computed by
+       `mixture_params`. Find the time $t^*$ at which $p_t$ stops being
+       bimodal for the section's parameters, $\mu = 2$ and $s_0 = 0.25$
+       from `#fokker-planck-mixture-setup` and $\theta = 1$ and
+       $\sigma = \sqrt{2}$ from `#fokker-planck-cloud-marginals`.
+    1. What does the change at $t^*$ mean for a reverse-time sampler that
+       starts from noise? (:citet:`Biroli.Bonnaire.deBortoli.ea.2024`
+       analyze the high-dimensional counterpart of this symmetry breaking
+       and call it speciation.)
+   :exlabel:`ex_mdl-fokker-planck-probability-flow-mode-merging`
+
+1. [code] **State-dependent noise.** ● Let $dX = g(X)\,dW$ with no drift
+   and a smooth positive $g$, on the circle $[0, 1)$ with periodic
+   boundaries.
+    1. Specialize the current :eqref:`eq_mdl-dyn-probability-current` and
+       the velocity :eqref:`eq_mdl-dyn-general-pf-velocity` to this SDE.
+       Show that a stationary density has constant current, that
+       periodicity forces the constant to vanish, and find $p_\infty$.
+    1. Replacing the constant $g^2$ of :eqref:`eq_mdl-dyn-fokker-planck` by
+       $g(x)^2$ gives the PDE $\partial_t p = \tfrac12 g(x)^2\,\partial_{xx} p$.
+       Which stationary density does this PDE predict?
+    1. Simulate $50{,}000$ particles started from the uniform distribution
+       with Euler--Maruyama, $g(x) = 1 + \tfrac12 \sin(2\pi x)$ and
+       $\Delta t = 10^{-3}$ up to $t = 2$, wrapping positions modulo $1$.
+       Compare the histogram with both predictions. Where do the particles
+       accumulate, and why?
+
+1. [code] **Fokker--Planck on a grid.** ● Divide $[-6, 6]$ into $N$ cells
+   of width $\delta = 12/N$ with centers $x_i$, and let $p_i(t)$
+   approximate the density in cell $i$. A conservative discretization of
+   the OU equation assigns to each interior face $x_{i+1/2}$ the current
+
+   $$J_{i+1/2} = f(x_{i+1/2})\,\frac{p_i + p_{i+1}}{2} - \frac{\sigma^2}{2}\,\frac{p_{i+1} - p_i}{\delta},$$
+
+   sets the current through the two outer faces to zero, and evolves
+   $\dot{p}_i = -(J_{i+1/2} - J_{i-1/2})/\delta$. This is a linear system
+   $\dot{\mathbf{p}} = F\mathbf{p}$.
+    1. Show that $\sum_i p_i\,\delta$ is conserved exactly for every
+       $\mathbf{p}$, the discrete counterpart of the divergence theorem
+       :eqref:`eq_mdl-dyn-divergence-theorem`. Which boundary condition of
+       :numref:`sec_mdl-fokker-planck` do the zero outer currents impose?
+    1. Build $F$ for $\theta = 1$, $\sigma = \sqrt{2}$ and $\delta = 0.05$.
+       Start from the bimodal mixture `p_t(x, 0.0)` on the cell centers and
+       integrate to $t = 0.5$ with forward Euler at step $h = 10^{-3}$ and
+       with backward Euler at step $h = 10^{-2}$ (one `np.linalg.solve` per
+       step). Compare both results with `p_t(x, 0.5)`.
+    1. Increase the forward-Euler step from $10^{-3}$ and find the largest
+       step that stays stable on a run to $t = 5$, long enough for an
+       unstable mode seeded by rounding error to grow. Relate this step to
+       the most negative eigenvalue $-\lambda$ of $F$ through the bound
+       $h < 2/\lambda$ of :numref:`sec_mdl-stiffness-implicit`. How does the
+       limit change when $\delta$ is halved? Compare it with the condition
+       of problem :exref:`ex_mdl-fokker-planck-probability-flow-laplacian-averaging`b.
+    1. A grid with $100$ cells per axis in $d$ dimensions has $100^d$
+       unknowns. Evaluate this count for $d = 2$ and for $d = 784$, the
+       pixel count of a $28 \times 28$ image. What does it imply for how
+       diffusion models use the Fokker--Planck equation?
+
+   *Adapted from Simo Särkkä and Arno Solin,
+   [Applied Stochastic Differential Equations](https://users.aalto.fi/~asolin/sde-book/sde-book.pdf),
+   Exercise 5.3.*
+
+1. **Divergence-free velocity fields.** ● Let $R$ be a constant
+   antisymmetric $d \times d$ matrix.
+    1. Show that $\nabla \cdot (p\,R\nabla \log p) = 0$ for every smooth
+       positive density $p$. Conclude that for every $\beta \in \mathbb{R}$
+       the ODE
+       $\dot{\mathbf{x}} = \mathbf{v}_t(\mathbf{x}) + \beta R \nabla \log p_t(\mathbf{x})$,
+       with $\mathbf{v}_t$ from :eqref:`eq_mdl-dyn-pf-velocity`, has the
+       same marginals as the probability-flow ODE.
+    1. Take the two-dimensional OU process at stationarity,
+       $p_t = \mathcal{N}(\mathbf{0}, \frac{\sigma^2}{2\theta} I)$ for all
+       $t$, and $R = \left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$.
+       Show that the probability-flow velocity vanishes, and describe
+       the trajectories of the modified ODE.
+    1. Now put the rotation into the SDE itself:
+       $d\mathbf{X} = (-\theta I + \beta R)\mathbf{X}\,dt + \sigma\,d\mathbf{W}$
+       in $\mathbb{R}^2$. Use the covariance equation of problem
+       :exref:`ex_mdl-fokker-planck-probability-flow-moments-weak-form`b to
+       show that $\frac{\sigma^2}{2\theta} I$ is a stationary covariance for
+       every $\beta$, so that the SDE has the same stationary density as in
+       (b). Compute its stationary current
+       :eqref:`eq_mdl-dyn-probability-current`. Why does the argument of
+       problem :exref:`ex_mdl-fokker-planck-probability-flow-stationary-density`a,
+       which forces a stationary current to vanish, fail in two dimensions?
+    1. Suppose that $\mathbf{f} = -\nabla V$, so that $\mathbf{v}_t$ is a
+       gradient field. Among all velocity fields $\mathbf{u}$ whose
+       continuity equation :eqref:`eq_mdl-dyn-continuity` is solved by
+       $p_t$, show that $\mathbf{v}_t$ has the smallest kinetic energy
+       $\mathbb{E}_{p_t}\|\mathbf{u}\|^2$. The Benamou--Brenier formulation
+       :cite:`Benamou.Brenier.2000` minimizes the same energy over the
+       path $p_t$ as well.
+
+1. **Exact Gaussian reverse step.** ● Let $p_t = \mathcal{N}(m_t, v_t)$ be
+   a Gaussian OU marginal. Over a step $\tau$, the exact forward
+   transition is $X_{t+\tau} \mid X_t = x \sim \mathcal{N}(a x, b)$ with
+   $a = e^{-\theta\tau}$ and $b = \frac{\sigma^2}{2\theta}(1 - e^{-2\theta\tau})$,
+   by :eqref:`eq_mdl-dyn-ou-marginal`.
+    1. Use Gaussian conditioning to show that
+
+       $$X_t \mid X_{t+\tau} = y \;\sim\; \mathcal{N}\!\left(\frac{b\, m_t + a v_t\, y}{v_{t+\tau}},\; \frac{b\, v_t}{v_{t+\tau}}\right).$$
+
+       Here $v_{t+\tau} = a^2 v_t + b$ is the marginal variance at time
+       $t + \tau$.
+    1. Expand the mean and the variance to first order in $\tau$, and
+       recover the reverse step :eqref:`eq_mdl-dyn-reverse-step`, including
+       the full factor $g^2$ in front of the score.
+   :exlabel:`ex_mdl-fokker-planck-probability-flow-gaussian-reverse-step`
+
+1. [code] **Mismatched drift and noise.** ● Consider a reverse-time sampler
+   in the reversed clock $s = T - t$ with drift
+   $-\mathbf{f} + c\, g^2 \nabla \log p_t$ and noise $\lambda g$. The family
+   :eqref:`eq_mdl-dyn-reverse-family` uses $c = (1 + \lambda^2)/2$.
+    1. Take Gaussian data $p_0 = \mathcal{N}(0, v_0)$ and the OU forward
+       process, so that $p_t = \mathcal{N}(0, v_t)$. Derive the ODE for the
+       variance $V(s)$ of the sampler's state, and show that
+       $V(s) = v_{T-s}$ solves it for every $v_0$ exactly when
+       $c = (1 + \lambda^2)/2$.
+    1. From the sign of the mismatch term in your ODE, predict whether the
+       generated distribution is too wide or too narrow for $c = \tfrac12$,
+       $\lambda = 1$ (the ODE's correction with the SDE's noise) and for
+       $c = 1$, $\lambda = 0$ (the SDE's correction without noise).
+    1. Modify the `#fokker-planck-reverse-sde` cell to run both settings on
+       the bimodal mixture. Report the recovered mode means and widths
+       against the targets $\pm 2$ and $0.25$.
+
+1. [extended] **Prior mismatch, ODE versus SDE.** ●● Samplers start from
+   the reference $q_T = \mathcal{N}(0, 1)$ instead of the exact $p_T$.
+   This project compares how the reverse SDE and the reverse PF-ODE carry
+   that mismatch to $t = 0$. Set `pis = np.array([0.25, 0.75])`, which
+   makes $p_T$ differ visibly from $q_T$ for small $T$; the functions
+   `p_t`, `score_t` and `sample_p0` read the global `pis`.
+    1. Run Anderson's reverse SDE as in `#fokker-planck-reverse-sde` and
+       the reverse-time PF-ODE with Heun steps as in
+       `#fokker-planck-pf-ode-overlay`, both from $q_T$, for
+       $T \in \{0.25, 0.5, 1, 2, 3\}$ with step $\Delta t = 0.005$. Record
+       the fraction of samples with $x < 0$, whose target is $0.25$.
+    1. Anderson's theorem holds for the whole process
+       (:numref:`sec_mdl-time-reversal`): started at $X_T = y$, the reverse
+       SDE produces $X_0 \sim p(x_0 \mid x_T = y)$. Use this to predict the
+       SDE's left-mode mass as an expectation over $y \sim q_T$ of a
+       responsibility of $p_T$ (:eqref:`eq_mdl-dyn-mixture-score`). For
+       the ODE, use that its map from $x_T$ to $x_0$ is increasing and
+       carries $p_T$ to $p_0$, and predict the left-mode mass from the
+       standard normal CDF and the CDFs of $p_T$ and $p_0$. Evaluate both
+       predictions by quadrature and compare them with the measurements.
+    1. Let $q_0$ be the law of a sampler's output. Use the data-processing
+       inequality of :numref:`sec_mdl-tv-pinsker` to prove that the ODE
+       output satisfies $\mathrm{KL}(q_0 \| p_0) = \mathrm{KL}(q_T \| p_T)$,
+       while the SDE output satisfies
+       $\mathrm{KL}(q_0 \| p_0) \le \mathrm{KL}(q_T \| p_T)$.
+    1. Compute $\mathrm{KL}(q_T \| p_T)$ and the SDE's
+       $\mathrm{KL}(q_0 \| p_0)$ by quadrature for each $T$. The posterior
+       $p(x_0 \mid x_T = y)$ is a two-component Gaussian mixture whose
+       components follow from problem
+       :exref:`ex_mdl-fokker-planck-probability-flow-gaussian-reverse-step`a,
+       so $q_0$ is a one-dimensional integral over $y$. By what factor does
+       the SDE shrink the mismatch at $T = 1$?
+    1. Repeat the measurement of (a) at $T = 1$ for the samplers of the
+       family :eqref:`eq_mdl-dyn-reverse-family` with
+       $\lambda \in \{0, 0.5, 1, 2\}$. Which sampler would you use when the
+       forward horizon $T$ must be short? What limits how large $\lambda$
+       can be at a fixed step size?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/)

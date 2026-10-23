@@ -155,6 +155,7 @@ book:
         - chapter_transformers/scaling-laws.qmd
         - chapter_recurrent-modern/index.qmd
         - chapter_recurrent-modern/lstm.qmd
+        - chapter_recurrent-modern/linear-recurrence.qmd
         - chapter_recurrent-modern/ssm.qmd
         - chapter_recurrent-modern/mamba.qmd
         - chapter_recurrent-modern/matrix-state.qmd

@@ -2038,6 +2038,42 @@ class GRU(d2l.RNN):
                 outputs = self.dropouts[i](outputs)
         return outputs, new_state
 
+def linear_scan(a, b, h0=None):
+    """All states of h_t = a_t * h_{t-1} + b_t, by a parallel scan.
+
+    Defined in :numref:`sec_linear-recurrence`"""
+    if h0 is not None:  # Fold the initial state into the first step
+        b = b.at[0].add(a[0] * h0)
+    def combine(earlier, later):
+        (a1, b1), (a2, b2) = earlier, later
+        return a1 * a2, a2 * b1 + b2
+    return jax.lax.associative_scan(combine, (a, b))[1]
+
+class MinGRU(nnx.Module):
+    """The minimal GRU: its gates and candidate read only the input.
+
+    Defined in :numref:`sec_linear-recurrence`"""
+    def __init__(self, num_inputs, num_hiddens, *, rngs):
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.W_z = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)  # Decay
+        self.W_h = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
+
+    def __call__(self, inputs, H=None):
+        Z = jax.nn.sigmoid(self.W_z(inputs))  # (num_steps, batch, num_hiddens)
+        H_tilde = jnp.tanh(self.W_h(inputs))
+        outputs = linear_scan(Z, (1 - Z) * H_tilde, H)
+        return outputs, outputs[-1]
+
+def lm_perplexity(model, data):
+    """Perplexity of a language model on the validation set of `data`.
+
+    Defined in :numref:`sec_linear-recurrence`"""
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        losses = model.loss(model(X), Y, averaged=False)
+        total, count = total + losses.sum(), count + losses.size
+    return math.exp(float(total) / count)
+
 def scan_combine(prev, cur):
     a_prev, b_prev = prev
     a_cur, b_cur = cur

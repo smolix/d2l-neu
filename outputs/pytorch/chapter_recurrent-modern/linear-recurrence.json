@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/linear-recurrence.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:c0317d115821babe93d30d1c6e9a2166fb257d5120d4c1b0067c57a153d41937",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-recurrence-imports": {
+      "code_fingerprint": "sha256:c7e49803ad99b6f242f769f72a986c5d683e860486a91ebd1cc929366d0d3fd4",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-scan": {
+      "code_fingerprint": "sha256:a81b3c8cdb330e8ed0d23b1135d1d07d045cbd2378a355908dbeab0456c80b3b",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-check": {
+      "code_fingerprint": "sha256:209b8e93278cc9fa5a67355956c81810afe14860ac8f95b7e0806dca75c82343",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max deviation: 4.8e-07\n"
+        }
+      ]
+    },
+    "linear-recurrence-timing": {
+      "code_fingerprint": "sha256:0be2a9232986141966a7849fd7624514bd782d19a34a3224fed1beb29ef06724",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-recurrence/linear-recurrence-timing-1.svg",
+          "bytes": 30252,
+          "sha256": "sha256:71be4bdc1cd37b0439893cfdc76c4c6289d5aa0596fa78140aaadb926865a21a"
+        }
+      ]
+    },
+    "linear-recurrence-mingru": {
+      "code_fingerprint": "sha256:b91266f54ebfe9abfac37d738a0b148368e22f017836bd6e2e1be630e64eaa78",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-perplexity": {
+      "code_fingerprint": "sha256:25a701ba25b52a9404499025cd8a4fd7c57ed1d4b3e075f7481bfa3acd30fff6",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-data": {
+      "code_fingerprint": "sha256:25590f266e01b278c807e1b7b68459d236a13762cc5b4756617aa39da7208b1d",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-train": {
+      "code_fingerprint": "sha256:eb8dadc381a6791a35839eb91cd53def4322c6683d1947de17de0a0b11b414b1",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-results": {
+      "code_fingerprint": "sha256:b5fed56f242bc66b4bd814b060345d22c8528d86114e48094d6f7f54a671e6e9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GRU      74496 recurrent parameters  perplexity 79.9\nminGRU   16640 recurrent parameters  perplexity 83.9\n"
+        }
+      ]
+    },
+    "linear-recurrence-probe": {
+      "code_fingerprint": "sha256:20555e18642eb551a4a598d3120948aef6d114a81ca64439cca943a668a20694",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "with memory  perplexity 81.9\nstate reset  perplexity 97.4\ngates above 0.5: 28%, above 0.9: 5%\n"
+        }
+      ]
+    }
+  }
+}

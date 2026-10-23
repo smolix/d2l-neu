@@ -1856,6 +1856,48 @@ class GRU(d2l.RNN):
         self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
                           dropout=dropout)
 
+def linear_scan(a, b, h0=None):
+    """All states of h_t = a_t * h_{t-1} + b_t, by a parallel scan.
+
+    Defined in :numref:`sec_linear-recurrence`"""
+    if h0 is not None:  # Fold the initial state into the first step
+        b = torch.cat([a[:1] * h0 + b[:1], b[1:]])
+    s = 1
+    while s < b.shape[0]:  # Combine every position with the one s back
+        a, b = (torch.cat([a[:s], a[:-s] * a[s:]]),
+                torch.cat([b[:s], a[s:] * b[:-s] + b[s:]]))
+        s *= 2
+    return b
+
+class MinGRU(d2l.Module):
+    """The minimal GRU: its gates and candidate read only the input.
+
+    Defined in :numref:`sec_linear-recurrence`"""
+    def __init__(self, num_inputs, num_hiddens):
+        super().__init__()
+        self.save_hyperparameters()
+        self.W_z = nn.Linear(num_inputs, num_hiddens)  # Update gate (decay)
+        self.W_h = nn.Linear(num_inputs, num_hiddens)  # Candidate state
+
+    def forward(self, inputs, H=None):
+        Z = torch.sigmoid(self.W_z(inputs))  # (num_steps, batch, num_hiddens)
+        H_tilde = torch.tanh(self.W_h(inputs))
+        outputs = linear_scan(Z, (1 - Z) * H_tilde, H)
+        return outputs, outputs[-1]
+
+def lm_perplexity(model, data):
+    """Perplexity of a language model on the validation set of `data`.
+
+    Defined in :numref:`sec_linear-recurrence`"""
+    device = next(model.parameters()).device
+    total, count = 0, 0
+    with torch.inference_mode():
+        for X, Y in data.val_dataloader():
+            losses = model.loss(model(X.to(device)), Y.to(device),
+                                averaged=False)
+            total, count = total + losses.sum(), count + losses.numel()
+    return math.exp(float(total) / count)
+
 def associative_scan(a, b, dim=0):
     """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0.
 

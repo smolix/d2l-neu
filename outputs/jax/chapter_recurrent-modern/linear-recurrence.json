@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/linear-recurrence.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:82ce7d3e8a3383139a0cc74e3d34476012a9ffda66dbd8e510981ea762009af6",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-recurrence-imports": {
+      "code_fingerprint": "sha256:1e1f90a6c47635e6350f4f645795dce34693b25fcca1d2222b776e9b792cbe27",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-scan": {
+      "code_fingerprint": "sha256:252191ebcf2ad623304d57f6a3d33a888d62f1d91c307aac898419162c80a2f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-check": {
+      "code_fingerprint": "sha256:ead3ec59ae458766132fb33bb1a846b6e02328c5bbcf04249a1c28aa4edf527a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max deviation: 9.5e-07\n"
+        }
+      ]
+    },
+    "linear-recurrence-timing": {
+      "code_fingerprint": "sha256:1df648d3c6c7a8a332c1731647048d458df1f79e7ad4d0bf85e763c48b6a072e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-recurrence/linear-recurrence-timing-1.svg",
+          "bytes": 32119,
+          "sha256": "sha256:104f421959461bbcfade7daf936c860fe0e740688f52720bd8292dc7a167c963"
+        }
+      ]
+    },
+    "linear-recurrence-mingru": {
+      "code_fingerprint": "sha256:559af28de29cf4c1a40a455dfb7e369e3bef1253d7085876326565b09db3af3f",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-perplexity": {
+      "code_fingerprint": "sha256:ae492a22cea1c71db4bea2be58d9d24ca5bb1a94931386d465610ab8de14b597",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-data": {
+      "code_fingerprint": "sha256:008bdb0e2c1c5750944fa8994369af8182294bd5f41cb73777a3a36c0d1e006a",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-train": {
+      "code_fingerprint": "sha256:7fe39eee9ee54a15925877b6eb9146db812038204fb38cfb11732ba86dccb99b",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-results": {
+      "code_fingerprint": "sha256:7fca61cf2ec5482014999394bcbf0c0f6816ba86db7c46331685894a6a457b71",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GRU      74112 recurrent parameters  perplexity 82.1\nminGRU   16640 recurrent parameters  perplexity 84.4\n"
+        }
+      ]
+    },
+    "linear-recurrence-probe": {
+      "code_fingerprint": "sha256:02b0d2cbb6537a76d5d4a59a876c2aaa7186a18f80abfb341a0b2150d7657f04",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "with memory  perplexity 80.1\nstate reset  perplexity 93.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gates above 0.5: 31%, above 0.9: 7%\n"
+        }
+      ]
+    }
+  }
+}

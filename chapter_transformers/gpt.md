@@ -798,21 +798,6 @@ perplexity check and produces coherent completions for the example prompts.
        verbatim fraction at the end of training with those of the two
        previous models.
 
-1. [code] **Temperature limits.** `generate` divides the logits
-   $\mathbf{z}$ by the temperature $\tau$ before the softmax.
-    1. Show that as $\tau \to 0$ the sampling distribution converges to the
-       one-hot vector on the largest logit, assuming that this logit is
-       unique, and that as $\tau \to \infty$ it converges to the uniform
-       distribution over the vocabulary.
-    1. For the trained `model`, sample 100 characters with the prefix
-       `'the time traveller '` at each $\tau \in \{0.5, 1, 2, 4\}$ without
-       truncation. At every generated position, compute the entropy of the
-       tempered distribution $\mathrm{softmax}(\mathbf{z}/\tau)$, and
-       average over positions. Plot the averages against $\tau$ together
-       with the limits $0$ and $\ln 28$, and relate the result to the
-       observation of :numref:`subsec_gpt-sampling` that the temperature
-       changes the early tokens of the samples little.
-
 1. [code] **Nucleus sampling.** Nucleus or top-$p$ sampling
    :cite:`Holtzman.Buys.Du.ea.2020` keeps the smallest set of most probable
    tokens whose probabilities sum to at least $p$, renormalizes the
@@ -953,6 +938,7 @@ perplexity check and produces coherent completions for the example prompts.
        trained on the same novel, sees 128 characters of context, and
        predicts 28 symbols, whereas GPT-2 was trained on 40 GB of WebText,
        sees up to 1,024 tokens, and predicts 50,257 symbols.
+   :exlabel:`ex_gpt-bits-per-character`
 
 1. [extended] **Subwords at small scale.** ●
    :numref:`subsec_gpt-blocks-to-lm` trains on characters because, on a
@@ -971,7 +957,7 @@ perplexity check and produces coherent completions for the example prompts.
        `num_train` and `num_val` as in the previous sub-problem, and train
        `GPT` with the other settings of :numref:`subsec_gpt-training`.
        Convert the lowest validation loss of each run to bits per character
-       as in problem 11. Record also how often the median token type of
+       as in problem :exref:`ex_gpt-bits-per-character`. Record also how often the median token type of
        each vocabulary occurs in the tokenized training text, counting only
        the types that occur at least once.
     1. With `num_steps=128`, a larger vocabulary also gives the model more

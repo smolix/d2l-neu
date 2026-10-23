@@ -711,21 +711,7 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
        host, and check both answers.
 :end_tab:
 
-4. [code] **Your GPU's roofline.** The sweep of :numref:`subsec_perf-sweep`
-   measures square bf16 matmuls on whatever GPU runs it.
-    1. Take the dense bf16 peak and the memory bandwidth of your GPU from
-       its specification sheet, compute its ridge point, and compute the
-       matrix size at which the intensity $n/3$ crosses it. Add the ceiling
-       of :eqref:`eq_roofline` to the plot of the sweep, and find the
-       smallest swept size whose measured throughput reaches half of the
-       ceiling.
-    1. Recent NVIDIA tensor cores run fp32 matrix products in the tf32
-       format at half the bf16 rate. Show that the nominal crossover of the
-       square fp32 matmul then equals that of bf16. Rerun the sweep in fp32,
-       and compare the sizes at which the two measured curves reach half of
-       their ceilings.
-
-1. **Diagnosis from timings.** Suppose that `Benchmark` reports the
+4. **Diagnosis from timings.** Suppose that `Benchmark` reports the
    following times per call for four operations of a bf16 program on the
    RTX 4090 ($P = 165$ TFLOP/s, $\beta = 1.008$ TB/s). Operation A
    multiplies two $8192 \times 8192$ matrices in 7.4 ms. Operation B

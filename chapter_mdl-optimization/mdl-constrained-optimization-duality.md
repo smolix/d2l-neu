@@ -1360,27 +1360,6 @@ ball around the current iterate :cite:`Nocedal.Wright.2006`.
        inequality :eqref:`eq_mdl-opt-proj-variational` at the $2n$ points
        $\pm z\,\mathbf{e}_i$ to certify the result? Run that check.
 
-1. **Dual of an equality-constrained QP.** Consider
-
-   $$\min_{\mathbf{x}}\; \tfrac12 \mathbf{x}^\top A \mathbf{x} - \mathbf{b}^\top \mathbf{x} \quad \textrm{subject to} \quad F\mathbf{x} = \mathbf{c},$$
-
-   with $A \in \mathbb{R}^{n \times n}$ positive definite and
-   $F \in \mathbb{R}^{m \times n}$ of full row rank $m < n$.
-    1. Compute the dual function in closed form, show that it is a concave
-       quadratic in $\boldsymbol{\nu}$, and find the dual optimum
-       $\boldsymbol{\nu}^\star$ as the solution of an $m \times m$ linear
-       system. Recover $\mathbf{x}^\star$ from $\boldsymbol{\nu}^\star$.
-       Check $d^\star = p^\star$ by hand for $A = \mathrm{diag}(1, 2)$,
-       $\mathbf{b} = (1, 1)$, $F = (1\;\; 1)$, and $c = 1$.
-    1. Take $A = I$, $\mathbf{b} = \mathbf{0}$, $F = X$, and
-       $\mathbf{c} = \mathbf{y}$, which asks for the minimum-norm solution of
-       an underdetermined system $X\mathbf{x} = \mathbf{y}$. Show that the dual
-       recovers $\mathbf{x}^\star = X^\top (X X^\top)^{-1} \mathbf{y}$, the
-       limit of gradient descent from $\mathbf{0}$ in Exercise
-       :exref:`ex_mdl-gradient-based-optimization-implicit-bias` of
-       :numref:`sec_mdl-gradient-based-optimization`. When is solving the dual
-       cheaper than solving the primal KKT system?
-
 1. **A dual certificate for $\ell_1$ minimization.** Basis pursuit,
 
    $$\min_{\mathbf{x}}\; \|\mathbf{x}\|_1 \quad \textrm{subject to} \quad A\mathbf{x} = \mathbf{b},$$

@@ -941,18 +941,6 @@ automatic differentiation.
 
 ## Exercises
 
-1. **Gradient of log-sum-exp.** Let
-   $L(\mathbf{x}) = \log \sum_{i=1}^n e^{x_i}$ for $\mathbf{x} \in \mathbb{R}^n$.
-    1. Compute $\nabla L$ and show that its components are positive and sum
-       to $1$.
-    1. Show that $L(\mathbf{x} + t\mathbf{1}) = L(\mathbf{x}) + t$ for every
-       scalar $t$, where $\mathbf{1}$ is the all-ones vector. Derive the
-       sum-to-one property from this identity and :eqref:`eq_mdl-nabla_use`,
-       without differentiating $L$ coordinate by coordinate.
-    1. Between which bounds does the rate of steepest ascent
-       $\|\nabla L(\mathbf{x})\|$ lie? At which inputs are the bounds attained
-       or approached?
-
 1. **Directional derivatives without a gradient.** Let
    $f(x, y) = x^2 y / (x^2 + y^2)$ for $(x, y) \neq (0, 0)$ and
    $f(0, 0) = 0$.
@@ -981,23 +969,6 @@ automatic differentiation.
        the result imply for a gradient-descent step on such a loss as
        $\kappa$ grows?
 
-1. **Lagrange multipliers.** The Lagrange condition
-   :eqref:`eq_mdl-lagrange-condition` holds at a constrained optimum provided
-   $\nabla g \neq \mathbf{0}$ there.
-    1. Check that $\nabla g \neq \mathbf{0}$ everywhere for
-       $g(x, y) = x + y$. Then use the Lagrange condition to maximize
-       $f(x, y) = xy$ subject to $x + y = 1$, and find the multiplier
-       $\lambda$.
-    1. Replace the constraint by $x + y = 1 + \delta$. Show that the maximum
-       value changes by $\lambda\delta$ to first order in $\delta$, where
-       $\lambda$ is the multiplier of the unperturbed problem. In what sense
-       does the multiplier price the constraint?
-    1. Minimize $f(x, y) = x$ subject to $y^2 - x^3 = 0$. Show that the
-       minimizer is the origin and that no $\lambda$ satisfies
-       :eqref:`eq_mdl-lagrange-condition` there. What does the constraint set
-       look like near the origin, and which step of the argument behind
-       :eqref:`eq_mdl-lagrange-condition` breaks down there?
-
 1. [code] **Backward sweep for two tanh units.** A network with one input
    $x$, two hidden units, and one output computes, for a target $t$,
 
@@ -1021,25 +992,6 @@ automatic differentiation.
        sweep that both units receive identical gradients, so that gradient
        descent keeps them identical at every step. What does this imply for
        the initialization of hidden units?
-
-1. [code] **Order of the Taylor gap.**
-    1. Let $L(x, y) = \log(e^x + e^y)$ and
-       $\boldsymbol{\epsilon} = d\,[1, -3]^\top$. For
-       $d = 10^{-1}, 10^{-2}, \ldots, 10^{-5}$, compute the gap between
-       $L(\epsilon_1, \log 2 + \epsilon_2)$ and its linear approximation
-       :eqref:`eq_mdl-nabla_use` at $(0, \log 2)$. Compute the Hessian of $L$
-       at $(0, \log 2)$ by hand and use the quadratic term of
-       :eqref:`eq_mdl-second_taylor` to predict the gap as a function of
-       $d$. How closely does the prediction match the measured gaps?
-    1. Let $f(x, y) = x e^{-x^2 - y^2}$, and let $q$ be its quadratic
-       approximation at $(-1, 0)$, implemented as `quad`. Compute the gap
-       $|f - q|$ at $(-1, 0) + d\,\mathbf{u}$ for $\mathbf{u} = [1, 1]^\top$,
-       $[1, 0]^\top$, and $[0, 1]^\top$ with $d$ from $10^{-1}$ to $10^{-3}$,
-       and plot the three gaps against $d$ on log-log axes. Read the order of
-       each gap off its slope.
-    1. Along one of the three directions the gap shrinks faster than third
-       order. Explain this from a symmetry of $f$. Is it the only direction
-       with this property?
 
 1. **Classifying critical points.** Let $f(x, y) = x^3 - 3x + y^2$. Show that
    the critical points are $(\pm 1, 0)$. Determine whether each is a minimum,
@@ -1065,34 +1017,6 @@ automatic differentiation.
        $\|\nabla f\|$ scale with the distance to the origin, compared with the
        saddle $x^2 - y^2$? What does this imply for gradient descent started
        near each of the two saddles?
-
-1. **Steepest descent in other norms.** ● The steepest-descent proposition
-   of :numref:`subsec_mdl-steepest-descent` measures the length of a step in
-   the Euclidean norm.
-   Measure it instead in a norm $\|\cdot\|$ and seek the step $\mathbf{v}$
-   with $\|\mathbf{v}\| \le 1$ that minimizes the first-order change
-   $\mathbf{v}\cdot\mathbf{g}$, where $\mathbf{g} = \nabla L(\mathbf{w})$ is
-   nonzero.
-    1. Solve this problem for $\|\mathbf{v}\|_\infty = \max_i |v_i|$ and for
-       $\|\mathbf{v}\|_1 = \sum_i |v_i|$. In each case give the minimizing
-       step, the condition on $\mathbf{g}$ under which it is unique, and the
-       minimal value written as a norm of $\mathbf{g}$. Which of the two steps
-       is the update of Adam with its moving averages switched off
-       :cite:`Bernstein.Newhouse.2024`?
-    1. For a weight matrix, the first-order change under a step
-       $\boldsymbol{\Delta}$ is the Frobenius inner product
-       $\langle \mathbf{G}, \boldsymbol{\Delta} \rangle = \operatorname{tr}(\mathbf{G}^\top \boldsymbol{\Delta})$
-       with the gradient matrix $\mathbf{G}$. Let
-       $\mathbf{G} = \sum_i \sigma_i \mathbf{u}_i \mathbf{v}_i^\top = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$
-       be a reduced singular value decomposition
-       (:numref:`sec_mdl-svd-low-rank`). Show that over all steps with
-       spectral norm $\|\boldsymbol{\Delta}\|_2 \le 1$ the minimum of
-       $\langle \mathbf{G}, \boldsymbol{\Delta} \rangle$ is attained at
-       $\boldsymbol{\Delta} = -\mathbf{U}\mathbf{V}^\top$, the direction along
-       which Muon :cite:`Jordan.Jin.Boza.ea.2024` steps, and compute the
-       minimal value. (Write
-       $\langle \mathbf{G}, \boldsymbol{\Delta} \rangle = \sum_i \sigma_i \mathbf{u}_i^\top \boldsymbol{\Delta} \mathbf{v}_i$
-       and bound each term.)
 
 1. **Paths through a residual stack.** ● In a one-dimensional model of the
    residual networks of :numref:`sec_resnet`, scalar blocks compute

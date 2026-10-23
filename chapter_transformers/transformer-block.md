@@ -942,20 +942,6 @@ placement as options, with replaceable attention and FFN modules.
        initialization at the same width. Check both predictions with
        `signal_stats`.
 
-1. **Scale-invariant weights.** ● Let the loss be invariant to the scale
-   of a parameter matrix, $\ell(\alpha \mathbf{W}) = \ell(\mathbf{W})$ for
-   all $\alpha > 0$. Under QK-norm with $\epsilon = 0$ and without a query
-   bias, this holds for the rows of $\mathbf{W}_q$ that produce the queries
-   of one head. The same property holds for weights followed by batch
-   normalization, the setting that :citet:`Arora.Li.Lyu.2019` analyze.
-    1. Show that $\langle \mathbf{W}, \nabla_{\mathbf{W}} \ell \rangle = 0$
-       and that a gradient-descent step never decreases
-       $\|\mathbf{W}\|_F$.
-    1. Show that the gradient at $\alpha \mathbf{W}$ is $\alpha^{-1}$ times
-       the gradient at $\mathbf{W}$. Explain how the angle through which
-       one step turns $\mathbf{W}$ changes as its norm grows during
-       training.
-
 1. [code] **Off-stream normalization.** ● OLMo 2 normalizes the output
    of each branch instead of its input :cite:`OLMo.2025`,
    $$\mathbf{h} = \mathbf{x} + \mathrm{Norm}(\mathrm{Attn}(\mathbf{x})),$$

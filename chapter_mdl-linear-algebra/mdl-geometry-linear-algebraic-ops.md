@@ -1710,12 +1710,6 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
 
 ## Exercises
 
-1. **Angle in four dimensions.** Compute the angle between
-   $$\mathbf{v}_1 = [1, 0, -1, 2]^\top \quad\textrm{and}\quad \mathbf{v}_2 = [3, 1, 0, 1]^\top$$
-   with :eqref:`eq_mdl-angle_formula`, in radians and in degrees, and check
-   the result with the function `angle`.
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-angle-4d`
-
 1. **Equality in the triangle inequality.** By the Cauchy–Schwarz
    proposition, $|\mathbf{v}\cdot\mathbf{w}| = \|\mathbf{v}\|\,\|\mathbf{w}\|$
    holds exactly when $\mathbf{v}$ and $\mathbf{w}$ are collinear. Use the
@@ -1725,13 +1719,6 @@ $\textrm{tr}(\mathbf{A}) = \sum_i \lambda_i$ in
    paired first with $\mathbf{w} = [2, 4]^\top$ and then with
    $\mathbf{w} = [-1, -2]^\top$.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-triangle-equality`
-
-1. **Linear independence.** Which of the following sets are linearly
-   independent? For each dependent set, give a linear combination with
-   coefficients not all zero that equals $\mathbf{0}$, and state the dimension
-   of the set's span.
-   $$S_1 = \left\{\begin{bmatrix}1\\0\\-1\end{bmatrix}, \begin{bmatrix}2\\1\\-1\end{bmatrix}, \begin{bmatrix}3\\1\\1\end{bmatrix}\right\}, \qquad S_2 = \left\{\begin{bmatrix}3\\1\\1\end{bmatrix}, \begin{bmatrix}1\\1\\1\end{bmatrix}, \begin{bmatrix}0\\0\\0\end{bmatrix}\right\}, \qquad S_3 = \left\{\begin{bmatrix}1\\1\\0\end{bmatrix}, \begin{bmatrix}0\\1\\-1\end{bmatrix}, \begin{bmatrix}1\\0\\1\end{bmatrix}\right\}$$
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-independence`
 
 1. **Fitting a line by projection.** Four measurements
    $\mathbf{b} = [0, 8, 8, 20]^\top$ are taken at the times

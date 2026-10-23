@@ -679,20 +679,6 @@ the continuous-time picture of the next section and of
 
 ## Exercises
 
-1. **The DDPM member.** The strength $\eta$ of :eqref:`eq_diffusion-ddim-eta`
-   interpolates between the deterministic sampler and the DDPM sampler.
-    1. Show that $\sigma_t(1)^2 = \tilde{\beta}_t$. Then rewrite the mean of
-       :eqref:`eq_diffusion-ddim-family` at $\sigma_t^2 = \tilde{\beta}_t$ as
-       a combination of $\mathbf{x}_0$ and $\mathbf{x}_t$, and show by
-       comparing coefficients that the conditional equals the DDPM posterior
-       :eqref:`eq_diffusion-posterior`.
-    1. On a strided grid, `ddim_sample` uses $\bar{\alpha}_{\tau_{i-1}}$ in
-       place of $\bar{\alpha}_{t-1}$. Show that each of its updates at
-       $\eta = 1$ is an ancestral step, with the posterior variance as the
-       reverse variance, of the merged chain of exercise
-       :exref:`ex_ddpm-sampling-fewer-steps` of :numref:`sec_diffusion-ddpm`,
-       whose single transition from $\tau_i$ to $\tau_{i-1}$ has
-       $\alpha = \bar{\alpha}_{\tau_i} / \bar{\alpha}_{\tau_{i-1}}$.
 1. **Admissible noise scales.** The family
    :eqref:`eq_diffusion-ddim-family` requires
    $\sigma_t^2 \leq 1 - \bar{\alpha}_{t-1}$. On a stride from $\tau_i$ to

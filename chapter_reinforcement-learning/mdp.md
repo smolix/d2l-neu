@@ -329,26 +329,6 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        best action at a location depend on $h$?
    :exlabel:`ex_mdp-time-limits`
 
-1. **What the state must contain.** In each system below the obvious state
-   is not Markov. Name the smallest addition that restores the Markov
-   property, and say whether the agent can observe it.
-    1. Pong, with a single screen frame as the state. How many consecutive
-       frames determine the ball's next position, assuming that the ball
-       moves with constant velocity between bounces?
-    1. A delivery robot whose state is its location, when every move drains
-       its battery by an amount that depends on the terrain and on the load
-       it carries, and the robot stops once the battery is empty.
-    1. A recommender whose state is the user's profile, when the user's
-       interest in a topic falls with the number of recent recommendations
-       of that topic.
-    1. A chess program whose state is the arrangement of the pieces on the
-       board, when the game ends in a draw as soon as a position occurs for
-       the third time, or as soon as fifty moves by each player pass without
-       a capture or a pawn move.
-
-   In which of the four systems can the addition grow with the length of
-   the episode, and what keeps it bounded there?
-
 1. **Actions without consequences.** A multi-armed bandit has a single
    state, so no action can influence the future.
     1. Suppose more generally that the kernel does not depend on the action,

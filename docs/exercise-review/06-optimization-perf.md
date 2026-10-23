@@ -218,7 +218,7 @@ defects: none found (math and italics balanced)
 clarity:
   - ex3 (sub-item 2, L348): "Can you exploit this effect also for optimization
     algorithms?" — "Can you...?" filler-question tone violation per house
-    style (docs/style-guide.md §8.8, §17.5); no concrete deliverable is named.
+    style (docs/attic/style-guide.md §8.8, §17.5); no concrete deliverable is named.
   - ex5 (L364-365): "What other challenges involved in deep learning
     optimization can you think of?" — a pure reading/brainstorming prompt
     with no artifact, no criterion for success, and no scope; also phrased

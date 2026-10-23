@@ -1169,22 +1169,6 @@ $\eta$ transfers from a small model to a large one.
        the memory that its table needs for this problem.
    :exlabel:`ex_mdl-adaptive-stochastic-methods-svrg-inner-loop`
 
-1. [code] **Kronecker-factored preconditioning.** Let
-   $A \in \mathbb{R}^{n \times n}$ and $G \in \mathbb{R}^{m \times m}$ be
-   symmetric positive definite and
-   $V \in \mathbb{R}^{m \times n}$.
-    1. Prove $(A \otimes G)\,\mathrm{vec}(V) = \mathrm{vec}(G V A)$ from the
-       block definition of the Kronecker product, and deduce
-       :eqref:`eq_mdl-opt-kronecker`.
-    1. For a square layer with $m = n = 4096$, compare the float32 storage
-       and the arithmetic cost of inverting the full curvature block
-       $A \otimes G$ with those of inverting the two factors.
-    1. Check :eqref:`eq_mdl-opt-kronecker` numerically with `np.kron` for
-       random positive definite $A$ of size $4 \times 4$ and $G$ of size
-       $3 \times 3$. Which `order` argument of `reshape` implements
-       $\mathrm{vec}$? If vectors were formed by stacking rows instead,
-       which Kronecker product would the identity need?
-
 1. **Biased gradient estimators.** ● Keep the variance bound of
    :eqref:`eq_mdl-opt-sgd-oracle`, now measured around the conditional mean,
    but replace unbiasedness by
@@ -1210,23 +1194,6 @@ $\eta$ transfers from a small model to a large one.
        every example once per epoch in a fresh random order; a stochastic
        gradient clipped to norm at most $c$; the gradient evaluated at the
        iterate of $\tau$ steps earlier, as in asynchronous training?
-
-1. [code] **Selecting an iterate.** ● The guarantee
-   :eqref:`eq_mdl-opt-ghadimi-lan-balanced` holds for a uniformly random
-   iterate. In the `#adaptive-stochastic-methods-ghadimi-lan` cell at
-   $K = 2000$, store every $20$th iterate, and measure gradients with
-   `full_grad` of that cell. The `#mdl-adaptive-svrg` cell redefines
-   `full_grad` for its ridge problem, so re-run the definitions of the
-   `#adaptive-stochastic-methods-ghadimi-lan` cell first.
-    1. Over $20$ seeds, compare $\|\nabla f\|^2$ at a uniformly random stored
-       iterate, at the last iterate, and at the best stored iterate.
-    1. Select instead the stored iterate whose minibatch gradient, over $m$
-       examples drawn without replacement, has the smallest squared norm,
-       for $m \in \{1, 4, 16, 64\}$; at $m = 64 = n$ the estimate is exact.
-       How close does the selection come to the best stored iterate, and
-       how many example gradients does it cost compared with training?
-    1. What do the measurements say about the role of the random iterate in
-       the theorem?
 
 1. **Regret of online gradient descent.** ● Projected online gradient
    descent plays

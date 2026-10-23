@@ -1153,23 +1153,6 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
        from a constant input away from the borders? Why does this remove the
        periodic pattern for every choice of the learned weights?
    :exlabel:`ex_dcgan-checkerboards-from-stride`
-1. [code] **Stabilizers of DCGAN.** `train_dcgan` trains networks built
-   from `G_block` and `D_block`, both with batch normalization, using Adam
-   at $\beta_1 = 0.5$. The section states that DCGAN remains sensitive to
-   hyperparameters and may collapse during longer runs.
-    1. Modify `train_dcgan` so that it shows 20 samples from fixed latent
-       codes after every 10 epochs, and train freshly initialized networks
-       for 60 epochs instead of 20. At which epoch, if any, do the samples
-       begin to lose diversity or quality?
-    1. Add an argument `beta1` to `train_dcgan` and repeat the 20-epoch run
-       with $\beta_1 = 0.9$, the default of Adam, and with $\beta_1 = 0$,
-       as in principle (b) of :numref:`subsec_gan_r3gan_principles`.
-       Compare the samples and the loss histories with those of the run at
-       $\beta_1 = 0.5$.
-    1. Remove batch normalization from `D_block` and repeat the 20-epoch
-       run at $\beta_1 = 0.5$. Which of the changes in (b) and (c) harms
-       training most?
-   :exlabel:`ex_dcgan-stabilizers`
 1. **Penalties through batch normalization.** `Generator` and
    `Discriminator` omit batch normalization (:numref:`sec_batch_norm`)
    partly because it couples the per-sample input gradients that the

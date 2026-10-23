@@ -772,20 +772,6 @@ validation data, not from training error alone.
        change the sign of $w_i$. Relate the result to the feature selection
        that lasso performs.
 
-1. **Frobenius penalty.** Weight decay on a layer with weight matrix
-   $\mathbf{W} \in \mathbb{R}^{q \times d}$ adds
-   $\frac{\lambda}{2}\|\mathbf{W}\|_\textrm{F}^2$ to the loss, with the
-   Frobenius norm of :numref:`subsec_lin-algebra-norms`.
-    1. The trace $\textrm{tr}(\mathbf{A})$ of a square matrix $\mathbf{A}$
-       is the sum of its diagonal entries. Show that
-       $\|\mathbf{W}\|_\textrm{F}^2 = \textrm{tr}(\mathbf{W}^\top \mathbf{W})$,
-       the matrix analogue of $\|\mathbf{w}\|^2 = \mathbf{w}^\top \mathbf{w}$.
-    1. Show that
-       $\|\mathbf{W}\mathbf{v}\| \le \|\mathbf{W}\|_\textrm{F}\,\|\mathbf{v}\|$
-       for every $\mathbf{v} \in \mathbb{R}^d$. Use it to bound the change
-       of the output $\mathbf{W}\mathbf{x}$ when the input $\mathbf{x}$ is
-       perturbed by $\boldsymbol{\delta}$.
-
 1. **Shrinkage versus penalty.** Weight decay can be applied by shrinking
    the weights before the gradient step or by adding
    $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss $L$.
@@ -880,7 +866,7 @@ validation data, not from training error alone.
        $\mathcal{N}(0, 0.01^2)$. Estimate how much the nullspace component
        of the initial weights adds to the validation loss, and use the
        estimate with (a) to explain the comparison of the early-stopped run
-       with `train_scratch(3)` in problem 6.
+       with `train_scratch(3)` in problem 5.
    :exlabel:`ex_weight-decay-decay-nullspace`
 
 :begin_tab:`mxnet`

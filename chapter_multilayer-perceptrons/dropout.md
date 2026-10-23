@@ -581,38 +581,7 @@ methods.
    :cite:`Gal.Ghahramani.2016`. Compare the resulting accuracy and
    calibration (the mean largest softmax probability versus the accuracy)
    against the standard single-pass evaluation.
-1. [code] **Dropout and weight decay.** Weight decay
-   (:numref:`sec_weight_decay`) and dropout both regularize `DropoutMLP`, but
-   by different mechanisms. Measure each run by its validation accuracy and
-   by the gap between training and validation loss, with both losses
-   evaluated with dropout disabled.
-    1. With both dropout rates set to zero, add weight decay as in
-       :numref:`sec_weight_decay` at strengths
-       $\lambda \in \{0, 10^{-4}, 10^{-3}, 10^{-2}\}$. Compare these runs
-       with the dropout-only run at rates 0.2 and 0.5.
-    1. Keep the dropout rates at 0.2 and 0.5, and add weight decay at each
-       nonzero strength from (a). Are the effects of the two regularizers
-       additive, do they show diminishing returns, or do they cancel each
-       other out?
-1. [code] **Input dropout.** This section applies dropout only to
-   hidden-layer activations. Add dropout on the input features, before the
-   first linear layer, at a small rate such as $p = 0.1$, keeping the
-   hidden-layer rates unchanged, and compare validation accuracy against
-   the original configuration. Relate the outcome to the redundancy among
-   neighboring pixels.
-1. [code] **DropConnect.** What happens if we apply dropout to the
-   individual weights of the weight matrix rather than to the activations?
-   This variant is known as *DropConnect*
-   :cite:`Wan.Zeiler.Zhang.LeCun.Fung.2013`. Implement it and compare it
-   against standard dropout on Fashion-MNIST, holding the architecture and
-   training budget fixed.
-1. [code] **First-layer features.** Train `DropoutMLP` and a copy with both
-   dropout rates set to zero, then visualize each first-layer unit's
-   incoming weight vector as a $28 \times 28$ image. Compare at least 16
-   units side by side for each model, as Figure 7 of
-   :citet:`Srivastava.Hinton.Krizhevsky.ea.2014` does for an autoencoder
-   on MNIST. Describe how the two sets of images differ in noise and in
-   redundancy across units.
+   :exlabel:`ex_dropout-monte-carlo-dropout`
 1. **Dropout at test time.** ● Dropout is normally disabled at test time,
    so the full network runs with no masking and no rescaling. Set
    `dropout_1` to zero in `DropoutMLP`, so that only the second hidden layer
@@ -627,16 +596,6 @@ methods.
 
     Explain why neither equality holds in general once `dropout_1` is
     nonzero.
-1. [code] **Custom noise injection.** ● Invent a technique for injecting
-   random noise during training that differs from both dropout and
-   DropConnect, for example additive Gaussian noise on the activations, or
-   randomly rescaling rather than zeroing each unit's output. State the
-   randomization rule and any rescaling needed to preserve the expectation
-   of each activation. Implement the method and train it at two or three
-   noise levels on Fashion-MNIST, with the same architecture and epoch
-   budget as `DropoutMLP`. Compare the validation accuracy and the gap
-   between training and validation loss at each noise level with those of
-   `DropoutMLP`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/100)
@@ -960,7 +919,7 @@ regularization methods.
 :::
 
 ::: {.d2l-note}
-Exercise 5 keeps dropout **on** at test time:
+Exercise :exref:`ex_dropout-monte-carlo-dropout` keeps dropout **on** at test time:
 average 20 passes, and you get uncertainty estimates (MC dropout).
 Next, the Kaggle house-prices section applies the methods from this chapter,
 deployed on a Kaggle competition.

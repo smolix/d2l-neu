@@ -470,70 +470,7 @@ we use from here on.
        and compare it with the smallest mean squared error that any
        predictor can attain on correctly paired data.
 
-:begin_tab:`mxnet`
-4. **Partial batches.** With 1000 examples per split and `batch_size=32`,
-   each loader ends a pass with a partial batch of 8 examples. Gluon's
-   `DataLoader` discards that batch when given `last_batch='discard'`.
-    1. The training loader reshuffles every epoch, whereas the validation
-       loader reads in a fixed order. For each loader, state which examples
-       a discarded partial batch leaves out over many epochs, and decide for
-       which loader discarding is acceptable.
-    1. Suppose that the partial batch is kept and that the validation loss
-       is reported as the unweighted mean of the 32 per-batch mean losses.
-       Compute the weight that this mean gives one example of the partial
-       batch and one example of a full batch, and compare both with the
-       weight $1/1000$ in the exact mean over the validation set.
-:end_tab:
-
-:begin_tab:`pytorch`
-4. **Partial batches.** With 1000 examples per split and `batch_size=32`,
-   each loader ends a pass with a partial batch of 8 examples. `DataLoader`
-   discards that batch when given `drop_last=True`.
-    1. The training loader reshuffles every epoch, whereas the validation
-       loader reads in a fixed order. For each loader, state which examples
-       a discarded partial batch leaves out over many epochs, and decide for
-       which loader discarding is acceptable.
-    1. Suppose that the partial batch is kept and that the validation loss
-       is reported as the unweighted mean of the 32 per-batch mean losses.
-       Compute the weight that this mean gives one example of the partial
-       batch and one example of a full batch, and compare both with the
-       weight $1/1000$ in the exact mean over the validation set.
-:end_tab:
-
-:begin_tab:`tensorflow`
-4. **Partial batches.** With 1000 examples per split and `batch_size=32`,
-   each loader ends a pass with a partial batch of 8 examples.
-   `Dataset.batch` discards that batch when given `drop_remainder=True`.
-    1. The training loader reshuffles every epoch, whereas the validation
-       loader reads in a fixed order. For each loader, state which examples
-       a discarded partial batch leaves out over many epochs, and decide for
-       which loader discarding is acceptable.
-    1. Suppose that the partial batch is kept and that the validation loss
-       is reported as the unweighted mean of the 32 per-batch mean losses.
-       Compute the weight that this mean gives one example of the partial
-       batch and one example of a full batch, and compare both with the
-       weight $1/1000$ in the exact mean over the validation set.
-:end_tab:
-
-:begin_tab:`jax`
-4. **Partial batches.** With 1000 examples per split and `batch_size=32`,
-   each loader ends a pass with a partial batch of 8 examples.
-   `get_tensorloader` passes `drop_remainder=train`, so the training loader
-   discards that batch while the validation loader keeps it.
-    1. The training loader reshuffles every epoch, whereas the validation
-       loader reads in a fixed order. State which training examples the
-       discarded batch leaves out over many epochs, and which examples every
-       validation pass would leave out if `drop_remainder=True` were passed
-       for validation as well. Explain why discarding is acceptable for one
-       loader and not for the other.
-    1. Suppose that the validation loss is reported as the unweighted mean
-       of the 32 per-batch mean losses. Compute the weight that this mean
-       gives one example of the partial batch and one example of a full
-       batch, and compare both with the weight $1/1000$ in the exact mean
-       over the validation set.
-:end_tab:
-
-5. [code] **On-the-fly generation.** Write a `DataModule` subclass that
+1. [code] **On-the-fly generation.** Write a `DataModule` subclass that
    stores no $\mathbf{X}$ or $\mathbf{y}$. Its training loader instead draws
    every minibatch fresh from the data-generating process when the
    minibatch is requested.
@@ -544,24 +481,6 @@ we use from here on.
     1. Decide whether the validation loader should also draw fresh examples
        on every call, and implement your choice. Justify it by what the
        validation loss is used for.
-
-1. **Data beyond memory.** ● Suppose that `len(w)` and
-   `num_train + num_val` are so large that $\mathbf{X}$ no longer fits in
-   memory, so `__init__` generates it in chunks and writes it to disk.
-    1. Name the statements in `SyntheticRegressionData.__init__` and in the
-       hand-rolled `get_dataloader` whose memory or cost grows with the
-       number of examples, and state which of them writing $\mathbf{X}$ to
-       disk in chunks does not fix.
-    1. Reading single examples from random disk locations is slow, so the
-       training loader should read long contiguous blocks. Design a loader
-       that reads such blocks and still visits the examples in a fresh order
-       every epoch. State in what sense this order falls short of a
-       uniformly random permutation.
-    1. The loader must also avoid storing a permutation table with one
-       entry per example. Explain how a pseudorandom permutation
-       :cite:`Naor.Reingold.1999` meets this requirement while still
-       changing the order every epoch.
-
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6662)

@@ -474,6 +474,7 @@ remains an active research problem.
        test-error curve of the 15% run as if it were a validation curve. At
        which epoch would the rule stop, and how does the test error there
        compare with the test error at the end of training?
+   :exlabel:`ex_generalization-deep-epoch-wise-double-descent`
 1. [code] **Neural tangent kernel.** ● :numref:`subsec_nonparametrics`
    describes the neural-tangent-kernel limit, in which a wide MLP trains
    like a kernel method with a fixed kernel. In this limit every weight
@@ -539,6 +540,7 @@ remains an active research problem.
    count, and compare with :numref:`fig_grokking`. How does the delay before
    generalization change with the training fraction and with the
    weight-decay strength?
+   :exlabel:`ex_generalization-deep-grokking`
 
 [Discussions](https://d2l.discourse.group/t/7473)
 
@@ -714,7 +716,7 @@ Nakkiran et al. propose **effective model complexity**, how many examples the
 full training procedure (model, optimizer, and budget) can fit. It organizes
 their observed model-, epoch-, and sample-wise curves, but it is an empirical
 account rather than a universal law.
-Exercise 6 has you produce the epoch-wise flavor yourself.
+Exercise :exref:`ex_generalization-deep-epoch-wise-double-descent` has you produce the epoch-wise flavor yourself.
 :::
 :::
 
@@ -888,8 +890,8 @@ is the next such tool.)
 
 ::: {.d2l-note}
 Why particular choices improve generalization remains an **open research
-question**. Exercise 6 reproduces epoch-wise
-double descent; exercise 7, grokking on modular addition. Next (the dropout
+question**. Exercise :exref:`ex_generalization-deep-epoch-wise-double-descent` reproduces epoch-wise
+double descent; exercise :exref:`ex_generalization-deep-grokking`, grokking on modular addition. Next (the dropout
 section): dropout, regularization by structured noise.
 :::
 :::

@@ -449,26 +449,6 @@ Parameter sharing makes continuous problems learnable but also couples updates a
        that state, the last entry of `batch.next_obs` in the episode, so that
        the weight of a step no longer depends on its distance from the limit.
 
-1. **Tables as linear networks.** Consider a linear value estimate
-   $\hat{V}(s) = \mathbf{w}^\top \boldsymbol{\phi}(s)$ with features
-   $\boldsymbol{\phi}(s)$. With one-hot features it is the value table of
-   `ActorCritic.tabular`. Take one gradient step of size $\alpha$ on
-   $\frac{1}{2}\big(y - \hat{V}(s_0)\big)^2$ for a single state $s_0$ and a
-   target $y$.
-    1. Show that the estimate at every state $s$ changes by
-
-       $$\alpha\, \big(y - \hat{V}(s_0)\big)\, \boldsymbol{\phi}(s_0)^\top \boldsymbol{\phi}(s).$$
-
-       Which states move when the features are one-hot?
-    1. The model of :numref:`fig_rl_table_vs_network` has 64 unit-normalized
-       features and takes such a step with $\alpha = 0.5$ and
-       $y - \hat{V}(x_0) = 1$. Read from the caption the inner product
-       $\boldsymbol{\phi}(x_0)^\top \boldsymbol{\phi}(x)$ at the far end of
-       the state space, and the smallest inner product over the state space.
-    1. For which pairs of states does the step lower the estimate at $s$
-       although it raises the estimate at $s_0$?
-   :exlabel:`ex_deep-rl-tables-linear-networks`
-
 1. **Gaussian score.** `GaussianHead` parameterizes a one-dimensional action
    by the mean $\mu$ and the log standard deviation $\ell = \log \sigma$,
    which is `log_std`. Write $z = (a - \mu)/\sigma$ for a sampled action $a$.
@@ -524,35 +504,6 @@ Parameter sharing makes continuous problems learnable but also couples updates a
        estimate through the clipped torque return at samples outside this
        interval? Why does the score-function estimate of problem
        :exref:`ex_deep-rl-gaussian-score`c not lose these samples?
-
-1. **Importance weights over a trajectory.** A replay buffer holds episodes
-   that an older behavior policy $\pi_\beta$ collected, while the gradient is
-   needed for the current policy $\pi_\theta$. Write
-
-   $$w(\tau) = \prod_{t} \frac{\pi_\theta(a_t \mid s_t)}{\pi_\beta(a_t \mid s_t)}$$
-
-   for the importance weight of a trajectory $\tau$.
-    1. Show that
-
-       $$E_{\tau \sim \pi_\beta}[w(\tau)\, R(\tau)] = E_{\tau \sim \pi_\theta}[R(\tau)],$$
-
-       and that computing $w(\tau)$ requires no knowledge of the transition
-       probabilities.
-    1. Let both policies be Gaussian with the same $\sigma$ and with means
-       that differ by $\delta$ at every state. Show that a single ratio has
-       second moment $e^{\delta^2/\sigma^2}$ under $\pi_\beta$, and that
-       $E[w(\tau)^2] = e^{T\delta^2/\sigma^2}$ for episodes of fixed length
-       $T$. Evaluate it for the Pendulum length $T = 200$, $\sigma = 1$ and
-       $\delta \in \{0.05, 0.1, 0.2\}$.
-    1. A common measure of the information in $n$ weighted episodes is the
-       effective sample size $n / E[w^2]$. Compute it for a batch of eight
-       episodes at each $\delta$ of part b. What does the result imply for
-       reusing old episodes in a score-function update?
-    1. An actor trained by the pathwise gradient through a critic $Q_w$
-       fitted on replayed transitions uses no such weight. At which actions
-       does the actor query $Q_w$? What can go wrong when the buffer contains
-       no transitions near those actions?
-   :exlabel:`ex_deep-rl-importance-weights`
 
 1. **Surrogate loss value.** `policy_step` evaluates the surrogate
    :eqref:`eq_pg_surrogate_loss` on the batch that the current policy has
@@ -629,9 +580,7 @@ Parameter sharing makes continuous problems learnable but also couples updates a
    for its tangent kernel :cite:`Jacot.Gabriel.Hongler.2018`.
     1. Show that one gradient step of size $\eta$ on
        $\frac{1}{2}\big(y - \hat{V}(s_0)\big)^2$ changes the estimate at $s$
-       by $\eta\, \big(y - \hat{V}(s_0)\big)\, k(s_0, s) + O(\eta^2)$. How
-       does this generalize problem
-       :exref:`ex_deep-rl-tables-linear-networks`a?
+       by $\eta\, \big(y - \hat{V}(s_0)\big)\, k(s_0, s) + O(\eta^2)$.
     1. For a freshly constructed `net_probe`, compute the gradients
        $\nabla_{\boldsymbol{\omega}} \hat{V}$ at the 256 probe states `S`
        and the kernel values $k(s_0, s)$ for $s_0$ = `S[0]`. Take one plain

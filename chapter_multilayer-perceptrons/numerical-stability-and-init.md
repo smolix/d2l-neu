@@ -584,14 +584,6 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 3.5, 4.3, and 7.15.*
-1. **Constant initialization.** Initialize all weights of linear regression,
-   and separately of softmax regression, to the same constant $c$, and all
-   biases to zero.
-    1. For each model, write the gradient of the minibatch loss with respect
-       to each weight at this initialization.
-    1. Which weights, if any, receive identical gradients? Does the
-       symmetry-breaking failure that this section describes for hidden
-       units occur in either model?
 1. **Fan-in versus averaged fans.** Following
    :citet:`He.Zhang.Ren.ea.2015`, consider a linear network with $L$ layers
    in which layer $l$ maps $n_{l-1}$ inputs to $n_l$ outputs and draws its
@@ -667,7 +659,6 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
        stay constant, decay geometrically, or decay more slowly?
     1. Check the prediction by running the sweep without the renormalization
        step, and explain why that step is exact for ReLU but not for $\tanh$.
-
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/103)

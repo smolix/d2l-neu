@@ -643,11 +643,8 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
    and the data are used to evaluate $\pi_\theta = (0.6, 0.4)$. Write $W_T$
    for the trajectory ratio :eqref:`eq_traj_ratio` of an episode of $T$
    steps.
-    1. Compute $E[\rho_t]$ and $E[\rho_t^2]$ under the old policy. Problem
-       :exref:`ex_deep-rl-importance-weights`b of :numref:`sec_deeprl`
-       found the second moment of a trajectory weight for two Gaussian
-       policies. Use the same argument to find $E[W_T]$ and
-       $\textrm{Var}[W_T]$ here, and evaluate the variance for
+    1. Compute $E[\rho_t]$ and $E[\rho_t^2]$ under the old policy. Use them
+       to find $E[W_T]$ and $\textrm{Var}[W_T]$ here, and evaluate the variance for
        $T \in \{10, 100, 500\}$, where $500$ is CartPole's episode limit.
     1. As the number $n$ of episodes grows, the effective sample size
        :eqref:`eq_mdl-bayes-is-ess` of the weights $W_T$ approaches
@@ -674,8 +671,7 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
        argument use?
     1. Predict how a clipped and an unclipped run of `train_ppo` with
        `num_epochs = 1` and the same seed differ, and what the first column of
-       the diagnostics of `ppo_epochs` reads in both. Problem
-       :exref:`ex_ppo-reuse-against-clipping`a checks the prediction.
+       the diagnostics of `ppo_epochs` reads in both.
     1. Suppose `logp_old` were recomputed from the current policy before
        every pass, without gradient. What would twenty passes then optimize,
        and why would the clip never act? REINFORCE stores no log-probabilities
@@ -811,23 +807,6 @@ Equal parameter steps need not produce equal changes in a policy. Importance sam
        :exref:`ex_ppo-dead-seed-entropy`, explain why?
     1. Run the clipped variant at that coefficient, or at $0.2$ if none
        qualifies. What does it cost in final return and final entropy?
-
-1. [extended] **Reuse and band width.** ● `train_ppo` reads `num_epochs` and
-   `epsilon_clip` as globals, so both can be set between runs. Count a seed
-   as dead by the criterion of :numref:`subsec_ppo_ablation`. The two sweeps
-   take about forty runs of `train_ppo`.
-    1. Vary `num_epochs` over $\{1, 2, 5, 10, 20\}$ with and without
-       clipping, three seeds each. Report the fraction of dead seeds and the
-       fraction of ratio checks outside the band. Where does the unclipped
-       variant start losing seeds, and does the clipped one ever lose one?
-    1. At `num_epochs = 20` with clipping, sweep `epsilon_clip` over
-       $\{0.02, 0.1, 0.2, 0.5, 10^6\}$ on the same three seeds. When does a
-       small $\epsilon$ hurt, and which run does $\epsilon = 10^6$ reproduce?
-    1. The fraction outside the band is measured against the same $\epsilon$
-       that the clip uses. How does it move across the sweep of (b), and why
-       does it stop measuring policy drift at $\epsilon = 10^6$? Which
-       diagnostics of `ppo_epochs` do not depend on $\epsilon$?
-   :exlabel:`ex_ppo-reuse-against-clipping`
 
 1. [code] **Minibatch epochs.** ● :numref:`subsec_ppo_vectorized` spends one
    batch as four epochs of minibatches of 32 by slicing it into `d2l.Batch`

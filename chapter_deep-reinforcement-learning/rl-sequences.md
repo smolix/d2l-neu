@@ -374,21 +374,6 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
        surrogate gives to the first and to the last token of a correct
        response of $1000$ tokens, and compare both with the weight of the
        exact estimator. Which tokens does the surrogate emphasize?
-1. **Which components return.** :numref:`subsec_rl_sequences_terms` lists
-   the components of the general formulation that a single-turn response
-   with a terminal reward does not need. Consider four training settings: a
-   math answer graded by exact match; the same responses scored by a process
-   reward model after every reasoning step; a coding agent that submits a
-   program, reads the output of a test run, and may revise its program twice
-   before the final score; and a dialogue model scored by a reward model
-   after each of its turns, with a simulated user writing the turns in
-   between.
-    1. For each setting, which transitions are deterministic and known to
-       the learner, and when do rewards arrive?
-    1. For each setting, which of the following become useful again: a value
-       function of the prefix, bootstrapped temporal-difference targets, and
-       a discount factor below one? Justify each answer with the property of
-       the setting that brings the component back.
 1. **Unequal group sizes.** Centering by the same-group mean shrinks the
    expected update of a prompt by the factor $(K-1)/K$
    (:numref:`subsec_leave_one_out`). Suppose that prompt $x$ receives a

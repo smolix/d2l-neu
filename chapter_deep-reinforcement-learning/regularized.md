@@ -378,24 +378,6 @@ Pairwise preferences identify reward differences but not an additive term depend
        average with the divergence of $3.7$ nats printed at the peak. Some of
        the per-trajectory values are negative. Why does this not contradict
        Gibbs' inequality?
-1. [code] **Convergence of the solver.** `solve_kl` maximizes
-   :eqref:`eq_kl_objective` by the multiplicative update
-   $$\pi_{k+1}(a) \propto \pi_k(a)\, \exp\Big(\eta\, \big(r(a) - \beta \log \frac{\pi_k(a)}{\pi_{\textrm{ref}}(a)}\big)\Big)$$
-   with step size $\eta$.
-    1. Let $d_k = \log \pi_k - \log \pi^\star$, with $\pi^\star$ from
-       :eqref:`eq_kl_optimum`. Show that
-       $d_{k+1} = (1 - \eta \beta)\, d_k + c_k$, where $c_k$ is the same for
-       every action. Conclude that the spread
-       $\max_a d_k(a) - \min_a d_k(a)$ shrinks by the factor
-       $|1 - \eta \beta|$ per step.
-    1. With $\eta = 0.3$ and the uniform start of `solve_kl`, which
-       coefficient of the ladder $\beta \in \{5, 2, 0.5, 0.2\}$ converges
-       slowest, and about how many steps does it need before the spread
-       falls below $10^{-12}$? Are the 3000 steps of `solve_kl` enough for
-       all four?
-    1. Predict what happens for $\eta = 1 / \beta$, and for $\beta = 10$
-       with $\eta = 0.3$. Check both predictions with `solve_kl`.
-   :exlabel:`ex_regularized-solver-convergence`
 1. [code] **Tilting by the unregularized value.** :numref:`subsec_soft_backup`
    states that tilting $\pi_{\textrm{ref}}$ by the unregularized action value
    $Q^*$ instead of the soft value $Q_\beta$ gives a heuristic family in
@@ -499,9 +481,8 @@ Pairwise preferences identify reward differences but not an additive term depend
        How fast is the limit approached?
     1. Show that the recursion of part b is the update of `solve_kl` with a
        suitable step size, and express that step size through $\beta$ and
-       $\nu$. Which of the convergent step sizes of exercise
-       :exref:`ex_regularized-solver-convergence` have no interpretation as
-       a trust region?
+       $\nu$. Which of the convergent step sizes of
+       `solve_kl` have no interpretation as a trust region?
 1. [code] **Forward-KL penalty.** ● :numref:`subsec_kl_direction` contrasts
    the reverse divergence of :eqref:`eq_kl_objective` with the forward one.
    Replace the penalty by the forward divergence,

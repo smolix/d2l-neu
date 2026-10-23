@@ -401,17 +401,6 @@ of this chapter.
        $\kappa = 20$, and explain each learning rate at which they differ.
    :exlabel:`ex_momentum-momentum-learning-rate-together`
 
-1. [code] **Critical damping.** For $f(x) = \frac{\lambda}{2} x^2$ at a
-   fixed learning rate with $\eta\lambda = 0.1$, sweep $\beta$ over
-   $[0, 1)$ in steps of $0.02$ and measure the number of iterations after
-   which $|x_t|$ stays at or below $10^{-6} |x_0|$.
-    1. Locate the minimizing $\beta$ and compare it with the critical value
-       $\beta^\star = (1 - \sqrt{\eta\lambda})^2$ at which the recurrence
-       :eqref:`eq_momentum` for this mode is critically damped.
-    1. Describe the iterates on either side of $\beta^\star$ and match them
-       with the over-damped and under-damped regimes of
-       :numref:`fig_opt_critical_damping`.
-
 1. **Velocity noise.** Let
    $\mathbf{g}_t = \mathbf{g} + \boldsymbol{\xi}_t$, where the noise
    $\boldsymbol{\xi}_t$ is independent across steps, has zero mean, and has

@@ -951,7 +951,7 @@ convolutions skip the masked holes.
 
 Pretraining exposed **feature collapse**; the proposed remedy is
 **Global Response Normalization**: normalize each channel's global
-response by the mean over channels (~5 lines; exercise 1).
+response by the mean over channels (~5 lines; see the exercises).
 
 Reported result: **88.9%** top-1, then the strongest model trained on public data.
 :::

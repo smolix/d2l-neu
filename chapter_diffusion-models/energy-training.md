@@ -770,28 +770,6 @@ that depends on how well that loop mixes.
 
 ## Exercises
 
-1. **The gradient of the normalizer.** The derivation of
-   :eqref:`eq_diffusion-grad-logz` differentiates an integral over
-   $\mathbb{R}^d$ under the integral sign.
-    1. Let $p_{\boldsymbol{\theta}}(x) = \exp(-E_{\boldsymbol{\theta}}(x)) / Z(\boldsymbol{\theta})$
-       be a model over a finite set $\mathcal{X}$, so that
-       $Z(\boldsymbol{\theta}) = \sum_{x \in \mathcal{X}} \exp(-E_{\boldsymbol{\theta}}(x))$.
-       Derive the analogue of :eqref:`eq_diffusion-grad-logz` for this model.
-    1. Write the one-dimensional Gaussian $\mathcal{N}(\mu, s^2)$ as an
-       exponential family with sufficient statistics $\mathbf{f}(x) = (x, x^2)$,
-       and express $\boldsymbol{\theta}$ in terms of $\mu$ and $s^2$. Show
-       that :eqref:`eq_diffusion-ebm-gradient` vanishes exactly when the
-       model's expectations of $x$ and $x^2$ equal their averages over the
-       training set. Conclude, without solving for $\mu$ and $s^2$, that the
-       solution has the sample mean and the sample variance (with divisor
-       $n$) as its mean and variance, the maximizer that problem
-       :exref:`ex_limits-learning-without-normalization`b of
-       :numref:`sec_diffusion-limits` finds by direct maximization.
-    1. Show that the Hessian of $\log Z(\boldsymbol{\theta})$ is
-       $\textrm{Cov}_{p_{\boldsymbol{\theta}}}[\nabla_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}] - \mathbb{E}_{p_{\boldsymbol{\theta}}}[\nabla^2_{\boldsymbol{\theta}} E_{\boldsymbol{\theta}}]$.
-       Use it to prove that the average log-likelihood
-       :eqref:`eq_diffusion-ebm-loglik` of an exponential family is concave in
-       $\boldsymbol{\theta}$. Why does the argument fail for `EnergyNet`?
 1. **Logits as energies.** A classifier for the three components of `mix`
    maps $\mathbf{x}$ to a vector of logits
    $\mathbf{h}_{\boldsymbol{\theta}}(\mathbf{x}) \in \mathbb{R}^3$ and predicts
@@ -836,22 +814,6 @@ that depends on how well that loop mixes.
        points, their mean, and the standard error of the mean. Is the
        difference between the two fits resolved by the $2000$ test points?
    :exlabel:`ex_energy-training-paired-comparison`
-1. **Detailed balance with rejections.** The proof that the kernel built
-   from :eqref:`eq_diffusion-mh-accept` satisfies
-   :eqref:`eq_diffusion-detailed-balance` treats only proposals
-   $\mathbf{x}' \neq \mathbf{x}$.
-    1. Write the full Metropolis--Hastings kernel as
-       $T(\mathbf{x}' \mid \mathbf{x}) = Q(\mathbf{x}' \mid \mathbf{x}) A(\mathbf{x}' \mid \mathbf{x}) + r(\mathbf{x})\, \delta(\mathbf{x}' - \mathbf{x})$,
-       give the probability $r(\mathbf{x})$ of staying at $\mathbf{x}$ as an
-       integral, and show that the term with $r$ satisfies
-       :eqref:`eq_diffusion-detailed-balance` on its own.
-    1. With the argument `box` set to $b$, `metropolis_hastings` rejects
-       every proposal outside the square $S = [-b, b]^2$. Show that for states
-       in $S$ the resulting kernel satisfies detailed balance with respect to
-       the restricted model
-       $p_S(\mathbf{x}) \propto p_{\boldsymbol{\theta}}(\mathbf{x})\, \mathbf{1}[\mathbf{x} \in S]$.
-    1. `train_pcd` clips the initial states of its chains to the square. What
-       would happen to a chain that started outside it?
 1. **Gibbs sampling.** Gibbs sampling updates one coordinate $x_i$ of
    $\mathbf{x}$ at a time by drawing it from the conditional
    $p(x_i \mid \mathbf{x}_{-i})$, where $\mathbf{x}_{-i}$ denotes the other
@@ -911,17 +873,6 @@ that depends on how well that loop mixes.
        states held fixed. Where does each of the two derivatives vanish?
     1. What does the sign of $L(s)$ say about the model in this example? Why
        is a loss value near zero during training no evidence of a good fit?
-1. [code] **Sampler settings in training.** `train_pcd` runs twenty
-   Metropolis--Hastings steps per update at step size $1.0$. Retrain with
-   `mcmc_steps` $\in \{1, 5, 20, 80\}$ at step size $1.0$, and with
-   `step_size` $\in \{0.25, 4.0\}$ at twenty steps, using two seeds per
-   setting. Judge differences in test negative log-likelihood by the paired
-   standard errors of problem :exref:`ex_energy-training-paired-comparison`c.
-    1. Which settings fit worse than the section's, and how do their failures
-       relate to the mode crossings at each step size in
-       :numref:`subsec_diffusion-mh-step-size`?
-    1. Which setting reaches the fit of the section's settings with the
-       fewest proposals in total?
 1. [code] **Mode switches.** ● The mode weights in
    :numref:`subsec_diffusion-mh-step-size` are recorded only after $2000$
    steps, so they do not show how fast chains move between modes.

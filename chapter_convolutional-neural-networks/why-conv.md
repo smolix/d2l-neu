@@ -319,26 +319,6 @@ dimensions and channels efficiently.
 
 ## Exercises
 
-1. **Network in Network.** Set $\Delta = 0$ in
-   :eqref:`eq_conv-layer-channels`, so that the kernel covers a single
-   pixel.
-    1. Show that the layer then applies one fully connected layer, with
-       weight matrix $[\mathsf{V}]_{0, 0, c, d}$, independently to the
-       channel vector at every spatial location.
-    1. Stack several such layers with nonlinearities in between. Which
-       model does each spatial location now pass through, and how many
-       parameters does the stack have as a function of the channel
-       widths? The Network in Network architecture
-       :cite:`Lin.Chen.Yan.2013` places such a stack after each
-       convolution with $\Delta \geq 1$.
-1. **Commutativity of convolution.**
-    1. Prove that the convolution of :eqref:`eq_2d-conv-discrete` is
-       commutative, i.e., $f * g = g * f$.
-    1. Define the cross-correlation
-       $(f \star g)(i, j) = \sum_a \sum_b f(a, b)\, g(i+a, j+b)$, the
-       operation of :eqref:`eq_conv-layer`. Express $(g \star f)(i, j)$
-       through values of $f \star g$, and decide from this expression
-       whether cross-correlation is commutative.
 1. **Convolutions for audio.** Audio data is often represented as a
    one-dimensional sequence of samples.
     1. Derive the one-dimensional analog of :eqref:`eq_conv-layer`.

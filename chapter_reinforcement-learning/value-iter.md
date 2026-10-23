@@ -435,29 +435,6 @@ A policy is described by its state and action values, related by $V^\pi(s)=\sum_
        without bound at $\gamma = 1$. Which property of FrozenLake used in
        part b does it lack?
    :exlabel:`ex_value-iter-undiscounted-lake`
-1. [code] **Cost of a sweep.** One sweep of value iteration evaluates the
-   bracket of :eqref:`eq_value_iteration` for every state-action pair.
-    1. Count the multiply-adds of one sweep as `mdp.backup` computes it, in
-       terms of the numbers of states and actions. Count them again for a
-       sweep that sums only over the successors $s'$ with
-       $P(s' \mid s, a) > 0$, of which the slippery lake has at most three per
-       state-action pair: the intended cell and the two perpendicular ones.
-    1. Convert the outcome lists in `env.unwrapped.P` once into arrays of
-       successor indices and probabilities of shape
-       $|\mathcal{S}| \times |\mathcal{A}| \times 3$, padded with zero
-       probabilities, so that the sparse sweep is a vectorized gather rather
-       than a Python loop. Implement this sweep and check that it agrees with
-       `mdp.backup`. Time both on random slippery maps of side
-       $n \in \{8, 16, 32\}$, built with
-       `gym.make('FrozenLake-v1', desc=generate_random_map(size=n, seed=0), is_slippery=True)`
-       after importing `generate_random_map` from
-       `gymnasium.envs.toy_text.frozen_lake`. From which size on do the
-       timings follow your counts?
-    1. The contraction rate does not involve the number of cells. Count the
-       sweeps that the certificate :eqref:`eq_vi_certificate` needs to reach
-       $10^{-6}$ on the $8 \times 8$ map, `map_name='8x8'`, and compare them
-       with the $164$ sweeps on the $4 \times 4$ map. What, then, makes a
-       larger map more expensive to solve?
 1. **Ties in policy iteration.** The policy-iteration loop of
    :numref:`subsec_vi_policy_iteration` stops when the greedy policy equals
    the current one, `(new == pi).all()`. On the slippery lake, *left* and

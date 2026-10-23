@@ -247,7 +247,7 @@ class SquashedGaussianPolicy(nnx.Module):
         return c * np.tanh(np.asarray(mean))
 ```
 
-Inside `log_prob`, the Gaussian and Jacobian terms must be summed over the action dimension before averaging over the batch. Summing one term but averaging the other is incorrect for multidimensional actions, although a one-dimensional test would not expose the error. Exercise :exref:`ex_sac-port-it` tests this reduction in a two-dimensional environment.
+Inside `log_prob`, the Gaussian and Jacobian terms must be summed over the action dimension before averaging over the batch. Summing one term but averaging the other is incorrect for multidimensional actions, although a one-dimensional test would not expose the error.
 
 ### A Numerically Stable Log-Determinant
 
@@ -944,31 +944,6 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
     Section 3.5.*
    :exlabel:`ex_sac-temperature-autotuning`
 
-1. [code] **Port to LunarLander.** ● `LunarLander-v3` with
-   `continuous=True`, from Gymnasium's Box2D extra, has an eight-dimensional
-   state, a two-dimensional action in $[-1, 1]^2$, and terminal states: an
-   episode ends when the lander crashes, leaves the viewport, or comes to
-   rest. Gymnasium counts an episode return of at least $200$ as a solution.
-    1. List every line of the section's code that changes in the port, and
-       name the components that carry over unchanged. Which term of
-       `log_prob` vanishes at the new action scale, and which convention does
-       the port therefore no longer test?
-    1. The stored termination flag is identically zero on Pendulum. Which
-       factor of `sac_step` becomes active in the port, and how does the
-       target of a transition into a crash differ from that of any Pendulum
-       transition?
-    1. Write a check that `log_prob` of a two-dimensional action equals the
-       sum of the two one-dimensional log densities of
-       :eqref:`eq_tanh_logdet`. Change `log_prob` so that it averages the
-       Jacobian term over the action axis instead of summing it, and show
-       that the check detects the change when `act_dim` is $2$ but not when
-       it is $1$.
-    1. Which hyperparameter of the section must grow by the largest factor
-       in the port, and why? Train one seed until
-       the trailing five-episode return computed by `steps_to` reaches $200$,
-       and report the number of environment steps.
-   :exlabel:`ex_sac-port-it`
-
 1. [extended] **Discrete soft actor-critic.** ● With a finite action set,
    the policy network outputs the probabilities $\pi_\theta(\cdot \mid s)$
    through a softmax, and each critic outputs one value per action, as the
@@ -986,33 +961,6 @@ SAC optimizes expected reward plus entropy. Soft policy evaluation adds $-\alpha
        and compare its return against environment steps with `train_dqn` of
        :numref:`sec_dqn` at the same budget and seeds.
    :exlabel:`ex_sac-discrete`
-
-1. [extended] **Update-to-data ratio.** ●● `train_sac` takes one gradient
-   update per environment step. :citet:`Chen.Wang.Zhou.ea.2021` raise this
-   update-to-data ratio to $K = 20$ and report that SAC's critics then show
-   an average bias that fluctuates during training and a large spread of the
-   bias across state-action pairs. Their REDQ trains an ensemble of
-   $N = 10$ critics, takes the minimum over a random pair of them in the
-   target, and averages all $N$ in the actor loss. They measure the bias at
-   every state-action pair of fresh episodes of the current policy as the
-   average of the critics minus the realized discounted return from that
-   pair, divided by the absolute mean of these returns.
-    1. Add $K$ to `train_sac`, so that every environment step after the
-       warm-up is followed by $K$ calls of `sac_step`, and implement the REDQ
-       target. Measure the normalized bias with the soft return of
-       `calibration` as the realized return. Roll the analysis episodes out
-       in `gym.make('Pendulum-v1', max_episode_steps=600)` and score only
-       their first 200 pairs. Why is the longer episode necessary?
-    1. For $K \in \{1, 5, 20\}$, compare one critic, two critics, and REDQ,
-       with two seeds each and $10{,}000$ environment steps. Plot the return,
-       and the mean and the standard deviation of the normalized bias over
-       the scored pairs, against environment steps.
-    1. Does Pendulum reproduce the finding of
-       :citet:`Chen.Wang.Zhou.ea.2021`? At which $K$, if any, does the
-       single critic overestimate? Does a larger $K$ buy sample efficiency?
-       Which of the two explanations that :numref:`subsec_sac-sample-efficiency`
-       offers for the gap between SAC and REINFORCE does the sweep test?
-   :exlabel:`ex_sac-update-to-data`
 
 [Discussions](https://d2l.discourse.group/)
 

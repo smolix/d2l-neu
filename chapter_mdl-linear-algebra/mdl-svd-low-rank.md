@@ -990,20 +990,6 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
 
 ## Exercises
 
-1. **SVD by hand.** The construction of :numref:`subsec_mdl-svd-via-ata`
-   computes an SVD in three steps: diagonalize $\mathbf{A}^\top\mathbf{A}$,
-   take the square roots of its eigenvalues, and set
-   $\mathbf{u}_i = \mathbf{A}\mathbf{v}_i/\sigma_i$.
-    1. Carry out these steps by hand for
-       $\mathbf{A} = \begin{bmatrix}3&4\\0&5\end{bmatrix}$. Verify
-       $\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ by
-       multiplication and check that $\sigma_1\sigma_2 = |\det\mathbf{A}|$.
-    1. List every SVD of the matrix in (a).
-
-   *Adapted from Gilbert Strang,
-   [MIT 18.065 problem sets](https://www.ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/cd4c57b7e61b8ca9fdd3511a30aca052_MIT18_065S18PSets.pdf),
-   Lecture 6, Problem 6.*
-
 1. **Eigenvalues and singular values.** The scaled rotation
    $\begin{bmatrix}0&-2\\1&0\end{bmatrix}$ of
    :numref:`subsec_mdl-svd-via-ata` has eigenvalues of modulus $\sqrt2$,
@@ -1022,26 +1008,6 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
        conclude that the singular values of $\mathbf{A}$ are the $|\lambda_i|$.
        Apply the construction to $\operatorname{diag}(3,-2)$. Which factor
        absorbs the minus sign?
-
-1. [code] **Subspaces of a rank-one matrix.** Let
-   $\mathbf{A} = \begin{bmatrix}1&2\\2&4\\3&6\end{bmatrix}$.
-    1. Write $\mathbf{A}$ as an outer product and read off its thin SVD. Give
-       orthonormal bases of the four fundamental subspaces of
-       :numref:`subsec_mdl-svd-subspaces`. Which columns of the full
-       $\mathbf{U}$ does the construction of
-       :numref:`subsec_mdl-svd-via-ata` leave undetermined, and how many
-       full SVDs does $\mathbf{A}$ have?
-    1. For which right-hand sides $\mathbf{b}$ does
-       $\mathbf{A}\mathbf{x} = \mathbf{b}$ have a solution? For
-       $\mathbf{b} = (1, 0, 0)^\top$, compute the minimum-norm least-squares
-       solution $\mathbf{A}^{+}\mathbf{b}$ of
-       :eqref:`eq_mdl-pseudoinverse` and the squared residual.
-    1. Add independent Gaussian noise with standard deviation $10^{-10}$ to
-       every entry of $\mathbf{A}$. Compute the singular values of the result
-       and its rank according to `np.linalg.matrix_rank` with the default
-       tolerance. Explain the reported rank. Which tolerance would you choose
-       if the entries of $\mathbf{A}$ were measured to an accuracy of about
-       $10^{-8}$?
 
 1. **Norms from singular values.** The Frobenius error formula of the
    Eckart--Young--Mirsky theorem rests on an identity between the Frobenius

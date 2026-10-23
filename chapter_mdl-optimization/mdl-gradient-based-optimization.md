@@ -1335,24 +1335,6 @@ beyond explicitly inverting a Hessian.
        run with $\rho(\eta)$.
    :exlabel:`ex_mdl-gradient-based-optimization-f-mathbfx-tfrac12-lambda`
 
-1. **Implicit bias.** Let $X \in \mathbb{R}^{n \times d}$ with $n < d$ and
-   full row rank, and minimize the underdetermined least-squares loss
-   $f(\mathbf{w}) = \tfrac12\|X\mathbf{w} - \mathbf{y}\|^2$, which has
-   infinitely many global minimizers.
-    1. Show that every gradient of $f$ lies in the row space of $X$, so that
-       gradient descent started from $\mathbf{w}_0 = \mathbf{0}$ never leaves
-       the row space.
-    1. Show that the unique minimizer of $f$ within the row space is the
-       minimum-norm interpolant
-       $\mathbf{w}^\dagger = X^\top (X X^\top)^{-1} \mathbf{y}$.
-    1. Conclude that gradient descent with any fixed step size
-       $0 < \eta < 2/\lambda_{\max}(X^\top X)$ converges to
-       $\mathbf{w}^\dagger$.
-
-   Exercise :exref:`ex_mdl-convexity-implicit-bias-verified` of
-   :numref:`sec_mdl-convexity` checks this limit numerically.
-   :exlabel:`ex_mdl-gradient-based-optimization-implicit-bias`
-
 1. **Reparametrization and preconditioning.** Let $T$ be an invertible
    matrix and $h(\mathbf{y}) = f(T\mathbf{y})$, so that
    $\mathbf{x} = T\mathbf{y}$ is a change of coordinates.
@@ -1390,17 +1372,6 @@ beyond explicitly inverting a Hessian.
        holds for a constant $c_2 \in (0, 1)$. Show that this condition
        implies $\mathbf{y}_k^\top \mathbf{s}_k > 0$ for every differentiable
        $f$.
-
-1. **Trust-region acceptance.** Let $f(x) = \tfrac14 x^4 - \tfrac12 x^2$,
-   $x_k = 0.2$, and $B_k = f''(x_k)$ in :eqref:`eq_mdl-opt-trust-region`, and
-   accept a proposal when the ratio :eqref:`eq_mdl-opt-trust-ratio` satisfies
-   $r_k \ge 1/4$.
-    1. Form the model $m_k$ and solve the one-dimensional subproblem for
-       $\Delta \in \{0.1, 0.4, 0.8, 1.5\}$.
-    1. Compute $r_k$ for each proposal and decide which proposals are
-       accepted.
-    1. Compute the unrestricted Newton step :eqref:`eq_mdl-opt-newton-step`
-       from $x_k$. Where does it lead, and why?
 
 1. **Steepest descent in other norms.** ● Problem
    :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`b measures

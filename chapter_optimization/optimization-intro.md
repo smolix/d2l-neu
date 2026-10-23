@@ -379,10 +379,6 @@ learning-rate schedules, and methods for controlling gradient noise.
    $x_2$ by $1 - 4\eta$ on every step, so it is stable for $\eta < 0.5$.
    The *step count* is the number of steps until both $|x_1|$ and $|x_2|$
    are below $1\%$ of their starting values.
-    1. Modify `gd_valley` so that the learning rate is a parameter and run
-       30 steps at $\eta \in \{0.45, 0.5, 0.55\}$ with `d2l.train_2d`.
-       Describe the three trajectories and account for each with the two
-       factors.
     1. For $f(\mathbf{x}) = \frac{\lambda_{\min}}{2} x_1^2 +
        \frac{\lambda_{\max}}{2} x_2^2$, set $\eta = 1.8/\lambda_{\max}$,
        the same fraction of the stability limit $2/\lambda_{\max}$ as

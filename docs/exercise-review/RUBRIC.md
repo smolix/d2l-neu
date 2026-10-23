@@ -81,7 +81,7 @@ artifact/answer to produce, and (c) how to tell they succeeded?
 - Ambiguous asks: two readings of what to prove/implement.
 - Missing success criteria for open-ended design exercises.
 - Exercises that are really just reading prompts ("think about X").
-- Tone violations per house style (docs/style-guide.md): theatrical phrasing,
+- Tone violations per house style (docs/attic/style-guide.md): theatrical phrasing,
   "Can you...?" filler questions, promotional adjectives. Flag only clear cases.
 
 Do NOT flag as unclear: legitimately open research-flavored exercises that

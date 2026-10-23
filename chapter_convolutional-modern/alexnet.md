@@ -446,22 +446,6 @@ Although it seems that there are only a few more lines in AlexNet's implementati
        Name two visible differences and the property of this section's
        input images that causes each.
 
-1. [code] **Training duration versus LeNet.** Train `AlexNet` as in this
-   section and `LeNet` as in :numref:`sec_lenet` for 50 epochs each,
-   keeping each model's own learning rate and batch size. Report the
-   validation accuracy of both models after 10, 20, and 50 epochs. Which
-   model gains more from the longer training, and why?
-
-1. [code] **A network for $28 \times 28$ images.** AlexNet is oversized for
-   Fashion-MNIST, whose images must be upsampled eightfold to reach the
-   $224 \times 224$ input it expects.
-    1. Simplify `AlexNet` to reduce training time while keeping validation
-       accuracy within one point of the original. Report the time per
-       epoch and the accuracy of both models.
-    1. Design a model that works directly on $28 \times 28$ images and
-       reaches, within a stated epoch budget, at least the accuracy of
-       your simplified model.
-
 1. **Arithmetic intensity.** ● The *arithmetic intensity* of a layer is
    the number of multiplications it performs per byte of parameters it
    reads from memory. Use the ledger of problem 1.
@@ -487,24 +471,6 @@ Although it seems that there are only a few more lines in AlexNet's implementati
     1. Measure the throughput in images per second over a fixed number of
        training steps for at least four batch sizes up to that limit.
        Beyond which batch size does throughput stop growing, and why?
-
-1. [code] **Regularization ablation.** ● AlexNet differs from LeNet in its
-   use of ReLU activations and dropout.
-    1. Starting from `LeNet` (:numref:`sec_lenet`), train the four
-       combinations of activation function (sigmoid or ReLU) and dropout
-       with probability 0.5 after each hidden fully connected layer
-       (present or absent). Report validation accuracy for all four
-       conditions in a table.
-    1. Add one data augmentation step to the training images of the most
-       accurate of the four conditions, leaving the validation images
-       unchanged. Name the invariance of Fashion-MNIST images that the
-       step exploits, and report validation accuracy as a fifth row of the
-       table.
-    1. The two dropout layers are the only explicit regularizer in
-       `AlexNet` as defined in this section. Remove them and retrain for
-       the 10 epochs of this section. Report training and validation
-       accuracy per epoch for both models. What is the largest gap between
-       training and validation accuracy that each model reaches?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/75)

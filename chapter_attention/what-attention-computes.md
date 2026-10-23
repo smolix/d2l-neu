@@ -762,25 +762,6 @@ probes, and weight-level checks in addition to attention maps.
 
 ## Exercises
 
-1. **Head reparameterization.** Replacing $\mathbf{W}_q$ by
-   $\mathbf{A}\mathbf{W}_q$ and $\mathbf{W}_k$ by
-   $\mathbf{A}^{-\top}\mathbf{W}_k$, for an invertible $\mathbf{A} \in
-   \mathbb{R}^{d_h \times d_h}$, leaves $\mathbf{W}_{\mathrm{QK}}$ and
-   therefore every score of :eqref:`eq_qkov` unchanged.
-    1. Give the analogous substitution of $\mathbf{W}_v$ and $\mathbf{W}_o$
-       that leaves $\mathbf{W}_{\mathrm{OV}}$ unchanged.
-    1. The $d \times d$ matrices of rank at most $d_h$ form a set of
-       dimension $d_h(2d - d_h)$. For $d = 128$ and $d_h = 32$, count the
-       parameters of one head of a `TinyCharLM` with `pos='none'` and the
-       dimensions of its two circuits, and give the fraction of the
-       parameters that the two substitutions make redundant.
-    1. Two training runs from different seeds yield layers that compute the
-       same function. Which of $\mathbf{W}_q$, $\mathbf{W}_k$,
-       $\mathbf{W}_{\mathrm{QK}}$, $\mathbf{W}_{\mathrm{OV}}$, and the
-       singular values of $\mathbf{W}_{\mathrm{OV}}$ can be compared
-       directly between the runs? Which further symmetry of a layer with $H$
-       heads must the comparison account for?
-
 1. **Tied bigrams.** With zero blocks, the logit of token $b$ after token
    $a$ is $\mathbf{e}_b^\top \mathbf{e}_a$, so the geometry of the
    embeddings alone fixes which successor the model prefers. Call $b$ the
@@ -892,54 +873,6 @@ probes, and weight-level checks in addition to attention maps.
        which does it leave?
    :exlabel:`ex_what-attention-computes-circuit-ablation`
 
-1. **The QK circuit under RoPE.** ● With RoPE, :eqref:`eq_rope-goal` turns
-   the score of :eqref:`eq_qkov` at offset $\delta = j - i$ into
-   $\mathbf{h}_i^\top \mathbf{W}_q^\top \mathbf{R}_\delta \mathbf{W}_k
-   \mathbf{h}_j / \sqrt{d_h}$, where $\mathbf{R}_\delta$ is the rotation of
-   :eqref:`eq_rope-def` acting on the $d_h$ coordinates of the head. Assume
-   that $\mathbf{W}_q$ and $\mathbf{W}_k$ have rank $d_h$.
-    1. Show that the substitution $\mathbf{W}_q \to \mathbf{A}\mathbf{W}_q$,
-       $\mathbf{W}_k \to \mathbf{A}^{-\top}\mathbf{W}_k$ preserves the
-       scores at every offset if and only if $\mathbf{A}$ commutes with every
-       $\mathbf{R}_\delta$.
-    1. Let $\mathbf{J}$ be the rotation of the plane by $\pi/2$. A matrix
-       that is block-diagonal with one $2 \times 2$ block $a_m \mathbf{I} +
-       b_m \mathbf{J}$ per rotation pair commutes with every
-       $\mathbf{R}_\delta$, since each block scales and rotates its own
-       plane. For $d_h = 32$ the frequencies $\omega_m$ are distinct and lie
-       in $(0, \pi)$. Show that no other matrix commutes with every
-       $\mathbf{R}_\delta$, and compare the dimension of this set with the
-       $d_h^2$ dimensions of the substitutions available without RoPE.
-    1. Show that an orthogonal $\mathbf{A}$ that does not commute with
-       $\mathbf{R}_1$ leaves $\mathbf{W}_{\mathrm{QK}}$ unchanged but changes
-       the scores at nonzero offsets. Which object must a weight-level
-       analysis of a RoPE head inspect in place of
-       $\mathbf{W}_{\mathrm{QK}}$?
-
-1. [code] **An offset head by hand.** ● A one-block model with biases
-   solves the fixed-period task of :numref:`subsec_fixed-offset-shortcut`
-   with a head that ignores token content. Let the query and key maps of
-   one RoPE head be zero, so that every query equals the bias
-   $\mathbf{b}_q \in \mathbb{R}^{d_h}$ and every key equals
-   $\mathbf{b}_k$. By :eqref:`eq_rope-goal` the score at offset
-   $\delta = j - i$ is
-   $$s(\delta) = \frac{\mathbf{b}_q^\top \mathbf{R}_\delta \mathbf{b}_k}{\sqrt{d_h}}.$$
-    1. Show that $\mathbf{b}_k = \mathbf{R}_{31}\mathbf{b}_q$ makes
-       $s(\delta)$ maximal at $\delta = -31$, and write $s(\delta)$ as a sum
-       over the 16 rotation pairs of :eqref:`eq_rope-def`, with the
-       frequencies $\omega_m = 10000^{-2m/d_h}$ that `TinyCharLM` uses.
-    1. Spread $\|\mathbf{b}_q\|^2$ equally over the pairs, and find the
-       $\|\mathbf{b}_q\|^2$ at which the query at position 62 places $0.9$
-       of its weight on offset $-31$.
-    1. Repeat the last computation with all of $\|\mathbf{b}_q\|^2$ in the
-       fastest pair, and find the offsets that then compete with $-31$.
-       Find an allocation over the pairs that needs a smaller norm than
-       equal spreading, and explain the result through the periods
-       $2\pi/\omega_m$ relative to the 63 offsets a query can see.
-    1. For which pattern lengths does a head that always copies the token
-       at offset $-31$ predict every target at position 32 or later
-       correctly?
-
 1. [code] **The Bayes-optimal predictor.** ● In the task of
    :numref:`subsec_two-block-induction`, the pattern length $L$ is uniform
    on $\{16, \ldots, 32\}$ and the pattern tokens are uniform over 64
@@ -966,29 +899,6 @@ probes, and weight-level checks in addition to attention maps.
        assigns to the correct token there, and determine whether its most
        probable token is correct. Why does the match-and-copy circuit of
        `model_two` not predict that token?
-
-1. [code] **Positional schemes and induction.** ● The induction circuit
-   needs a previous-token head in block 1 and, in block 2, a match with a
-   key 15 to 31 positions back.
-    1. In a `pos='none'` model, permuting $x_0, \ldots, x_{i-1}$ leaves the
-       output of block 1 at position $i$ unchanged, because the causal mask
-       treats all earlier keys alike. Conclude that no block-1 head of such
-       a model can be a previous-token head.
-    1. The ALiBi bias of :eqref:`eq_alibi-def` is largest at offset $0$.
-       Show that a content score with a large penalty on keys holding the
-       query's own token moves the peak of a block-1 ALiBi head to offset
-       $-1$, and compute the weight it then places on offset $-1$ on long
-       random sequences for each of the four slopes. Which of the four
-       heads, if any, is a previous-token head? Then compute the penalty
-       that each head pays in block 2 for a match at distance 15 to 31.
-    1. The timing of the loss transition varies across seeds. Retrain the
-       `'rope'` model of :numref:`subsec_two-block-induction` with three
-       further seeds and record the step at which the smoothed later-copy
-       loss first falls below 2 nats.
-    1. Retrain with `pos='none'` and with `pos='alibi'`, report `eval_copy`
-       and `head_scores`, and compare the transition steps with the seed
-       spread of the previous part. Which schemes develop induction heads,
-       and which heads of the ALiBi model carry the match?
 
 1. [code] **Repeated tokens within a pattern.** ●
    :numref:`subsec_unseen-patterns` attributes the remaining errors of
@@ -1017,27 +927,6 @@ probes, and weight-level checks in addition to attention maps.
        the attention mass that each block-1 head of `model_two` places at
        offset $-2$, and decide from this and your earlier measurements
        whether `model_two` matches on more than one token.
-
-1. [code] **A vocabulary split.** ● Every test pattern of
-   :numref:`subsec_unseen-patterns` is new, but each of its tokens has
-   occurred as an input during training. Retrain the two-block model of
-   :numref:`subsec_two-block-induction` with `train_repeat` and
-   `vocab=48`, so that training patterns use only tokens 0 to 47 while the
-   model keeps all 64 embeddings.
-    1. Report the later-copy loss and accuracy on patterns drawn from
-       tokens 48 to 63 and, as a control with a vocabulary of the same size,
-       on patterns drawn from tokens 0 to 15.
-    1. The held-out tokens never appear as inputs or as targets, but
-       through the tied output head their embeddings still receive a
-       gradient at every training position. Find the direction in which
-       these gradients move their embeddings.
-    1. The copy matrix :eqref:`eq_copy-matrix` of a held-out token applies
-       an OV circuit trained only on streams of tokens 0 to 47 to an
-       embedding shaped only by its initialization and the gradients of the
-       previous part. Compute the copy matrix restricted to the held-out
-       tokens and restricted to tokens 0 to 15, compare their diagonal
-       fractions, and relate the difference to the accuracies of the first
-       part.
 
 1. [code] **K-composition in the weights.** ● The match of the induction
    head works because the QK circuit of block 2 reads what the OV circuit

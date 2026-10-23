@@ -713,19 +713,6 @@ to map longer contexts into the trained range.
 
 ## Exercises
 
-1. [code] **Causal masks and symmetry.** The proposition of
-   :numref:`subsec_pos-ignores-order` assumes that no mask is present.
-   Repeat its numerical check on `d2l.MultiHeadAttention` with the
-   per-query valid lengths $(1, 2, \ldots, 8)$, which implement the causal
-   mask of :numref:`sec_attention-scoring-functions`.
-    1. Measure the maximum output difference as in the unmasked check.
-    1. Identify the step of the proof that fails. Which matrix is not
-       conjugated by $\boldsymbol{\Pi}$ once the mask is present?
-    1. Show that the output at position $t$ is unchanged by any permutation
-       that fixes $t$ and only rearranges the positions before it. What is
-       then the only positional information that the first layer of a NoPE
-       model can carry?
-
 1. **Distinct positions, distinct codes.** Let $\mathbf{p}_i$ be row $i$ of
    the sinusoidal table :eqref:`eq_sinusoidal-def` of width $d$, with the
    frequencies $\omega_j = 1/10000^{2j/d}$ of
@@ -772,20 +759,6 @@ to map longer contexts into the trained range.
        approximately invariant to shifts.
    :exlabel:`ex_positional-information-untrained-rows`
 
-1. [code] **Amplitude of the sinusoidal table.** `TinyCharLM` adds the
-   sinusoidal table at full amplitude, while the token embeddings are
-   initialized with standard deviation $0.02$.
-    1. Compute the root-mean-square entry of the table over the first 128
-       positions and its ratio to $0.02$. Which of the two signals dominates
-       the input of the first block at initialization?
-    1. Two outcomes are possible when the table is scaled by $0.02$ instead.
-       The model may use position as well as before, because the
-       projections can amplify a small but structured signal, or it may
-       behave like the `'none'` model. State which perplexity pattern at
-       128 and at 512 distinguishes the two outcomes.
-    1. Retrain the `'sinusoidal'` variant with the scaled table, evaluate at
-       all three context lengths, and decide.
-
 1. **Additive codes in the score.** With the additive encoding of
    :numref:`subsec_pos-sinusoidal`, a first-layer head of
    :eqref:`eq_pos-selfattn` scores the inputs at positions $i$ and $j$ as
@@ -807,48 +780,6 @@ to map longer contexts into the trained range.
        shift of $j$. Use the answer to explain the score change of the
        additive encoding in the shift test of :numref:`subsec_pos-rope`,
        and why RoPE has no content--position term.
-
-1. [code] **RoPE at explicit positions.** `rope` assumes that the rows of
-   its input sit at consecutive positions starting at `offset`.
-   Re-implement it as a class that is constructed with the frequency base
-   `base`, the query width `d_k`, and `max_seq_len`, precomputes the
-   cosine and sine tables once, and applies the rotation at the integer
-   positions given by a `token_positions` array of arbitrary leading batch
-   shape.
-    1. Verify that the class reproduces `rope(x)` on the positions $0,
-       \ldots, T-1$ and `rope(x, offset)` on the positions
-       $\textrm{offset}, \ldots, \textrm{offset} + T - 1$.
-    1. A packed row of :numref:`sec_attention-scoring-functions`
-       concatenates several documents and masks attention between them.
-       Explain why restarting the positions at $0$ for each document leaves
-       every unmasked RoPE score unchanged.
-    1. A row instead holds a shared prefix of 8 tokens followed by two
-       alternative continuations A and B of 4 tokens each, as when several
-       candidate continuations are scored in one pass. Give the tokens of
-       both A and B the positions 8 to 11, and mask attention between A and
-       B. Verify that the scores of the queries of B against the prefix and
-       against B equal those of the row formed by the prefix and B alone,
-       and explain why the consecutive positions $0, \ldots, 15$, which are
-       all that one call of `rope` on the 16-token row can express, do not
-       give this result.
-
-    *Adapted from Stanford CS336,
-    [Assignment 1](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf),
-    Problem (rope).*
-
-1. [code] **Attention by distance.** For one head of `TinyCharLM`, the
-   *distance profile* is the average attention weight on the key at
-   distance $r = i - j$ from the query, taken over queries and validation
-   sequences. `TinyCharLM.attention_weights` returns the maps from which it
-   is computed.
-    1. At context 128, compute the profiles of the eight heads of
-       `models['rope']` and of `models['none']` over the queries at
-       positions 64 to 127. Summarize each head by its mass on $r \leq 3$
-       and by its mean row entropy. Which heads of the RoPE model attend
-       locally, and what do the heads of the NoPE model do instead?
-    1. Relate the difference to the perplexity gap between the two models
-       at the training length. What does a character model gain from heads
-       that attend to the immediately preceding positions?
 
 1. [code] **Where extrapolation fails.** The perplexities of
    :numref:`subsec_pos-experiment` at context 512 average the loss over all
@@ -920,21 +851,6 @@ to map longer contexts into the trained range.
        pairs set the gap between the score at $-1$ and the scores at its
        neighbors?
    :exlabel:`ex_positional-information-offset-preference-rope`
-
-1. [code] **Position through the mask.** ● NoPE receives positional
-   information only through the causal mask. Measure how much of it reaches
-   the representation.
-    1. Collect the final residual vector $\mathbf{h}_i$ that `TinyCharLM`
-       passes to its output head, at every position of the length-128
-       validation sequences, for `models['none']` and for `models['rope']`;
-       the loop in `attention_weights` shows where to read it.
-    1. Train a linear probe that predicts the position index $i$ from
-       $\mathbf{h}_i$ as a 128-way classification, and report its held-out
-       accuracy for both models against the chance level $1/128$. Which
-       positions are predicted best?
-    1. Repeat the probe on an untrained `TinyCharLM` with `pos='none'`.
-       Which positions can it identify, and how does the variance of an
-       average of $i + 1$ random vectors explain the result?
 
 1. [code] **The RoPE base.** ● In :eqref:`eq_rope-def` the frequencies are
    $\omega_m = 10000^{-2m/d}$, and the constant $10000$ is a choice.

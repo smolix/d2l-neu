@@ -706,51 +706,7 @@ particular network mirrors the brain.
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
     ConvolutionalNetworks notebook.*
 
-:begin_tab:`pytorch`
-3. [code] **Autodiff on the custom layer.** `corr2d` fills its output with
-   the in-place assignment `Y[i, j] = ...` into a tensor that does not
-   itself require gradients.
-    1. Create `K` with `requires_grad=True`, run
-       `corr2d(X, K).sum().backward()`, and inspect `K.grad` and the
-       `grad_fn` of the output. Does the assignment block
-       differentiation? Explain what autograd records for it.
-    1. Rebuild, as two-dimensional tensors, the $6 \times 8$ image `X` of
-       :numref:`subsec_edge_detection` and its edge map
-       `Y = corr2d(X, K)` for the kernel `K` of :eqref:`eq_edge_kernel`.
-       Train `Conv2D((1, 2))` on them by plain gradient descent and
-       compare the learned `weight` with `K`.
-:end_tab:
-
-:begin_tab:`jax`
-3. [code] **Autodiff on the custom layer.** `corr2d` builds its output
-   with the functional update `Y.at[i, j].set(...)`. Compute
-   `jax.grad(lambda K: corr2d(X, K).sum())(K)` and explain why this update
-   poses no obstacle to differentiation. Then wrap `corr2d` in `jax.jit`
-   and compare the compile time for a $6 \times 8$ and a $28 \times 28$
-   input. Why does the Python loop make the compiled program grow with
-   the input size?
-:end_tab:
-
-:begin_tab:`tensorflow`
-3. [code] **Autodiff on the custom layer.** `corr2d` writes its output into
-   a `tf.Variable` with `Y[i, j].assign(...)`. Watch `K` on a
-   `tf.GradientTape`, evaluate `corr2d(X, K)`, and request the gradient of
-   its sum with respect to `K`. What does the tape return, and why does a
-   variable assignment break the chain from `K` to the output? Rewrite
-   `corr2d` so that it collects the window sums in a Python list and
-   assembles the output with `tf.stack`, and verify that the gradient is
-   now defined.
-:end_tab:
-
-:begin_tab:`mxnet`
-3. [code] **Autodiff on the custom layer.** Call `K.attach_grad()`,
-   evaluate `corr2d(X, K)` inside `autograd.record()`, and call
-   `backward()`. What error message do you see, and which line of
-   `corr2d` triggers it? Rewrite `corr2d` without in-place assignment so
-   that the gradient with respect to `K` can be computed.
-:end_tab:
-
-4. [code] **Convolution as a banded matrix.** The patch matrix of
+1. [code] **Convolution as a banded matrix.** The patch matrix of
    :numref:`subsec_conv_matmul` unfolds the input. The opposite
    construction unrolls the kernel. Let $\mathbf{X}$ be a $4 \times 4$
    input, $\mathbf{K}$ a $3 \times 3$ kernel, and $\textrm{vec}(\cdot)$
@@ -820,7 +776,7 @@ particular network mirrors the brain.
     ConvolutionalNetworks notebook.*
 
 1. [code] **Effective width versus depth.** ● Use the stack of $L$ random
-   linear layers of problem 5.
+   linear layers of problem 4.
     1. Average the squared input gradient over 500 draws of the kernels,
        for $L = 3$ and for $L = 10$. Sum each averaged map over its rows
        and normalize the resulting column profile to sum to one. How does

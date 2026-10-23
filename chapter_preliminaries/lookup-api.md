@@ -229,15 +229,6 @@ APIs change and applies equally to suggestions from search or coding assistants.
    read the signature with `help` (or `?`) to find out how the sampler is
    parameterized. Draw 10,000 samples with $k = 2$ and $\beta = 3$ and
    confirm the mean and variance from the samples.
-1. [code] **Standard-deviation conventions.** For $n$ numbers whose
-   squared deviations from their mean sum to $S$, a library computes the
-   standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
-   :numref:`sec_pandas` standardized columns with the pandas method `std`.
-   Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
-   once with `pd.Series.std` and once with `np.std` on an MXNet array.
-   Use `help` on both functions to find out how each one sets the
-   divisor, state the default divisor of each, and check both results
-   against a hand computation. Then make the two results agree.
 1. [code] **Checking a coding assistant's answer.** Ask a coding
    assistant the two questions below. Check each function it names in
    three steps: `dir` or `hasattr` shows that the name exists, `help` or
@@ -259,15 +250,6 @@ APIs change and applies equally to suggestions from search or coding assistants.
    and read the signature with `help` (or `?`) to find out how the class is
    parameterized. Draw 10,000 samples with $k = 2$ and $\beta = 3$ and
    confirm the mean and variance from the samples.
-1. [code] **Standard-deviation conventions.** For $n$ numbers whose
-   squared deviations from their mean sum to $S$, a library computes the
-   standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
-   :numref:`sec_pandas` standardized columns with the pandas method `std`.
-   Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
-   with `pd.Series.std`, with `torch.std`, and with `numpy.std`. Use
-   `help` on each function to find out how it sets the divisor, state the
-   default divisor of each, and check the three results against a hand
-   computation. Then make all three results agree.
 1. [code] **Checking a coding assistant's answer.** Ask a coding
    assistant the two questions below. Check each function it names in
    three steps: `dir` or `hasattr` shows that the name exists, `help` or
@@ -290,15 +272,6 @@ APIs change and applies equally to suggestions from search or coding assistants.
    read the signature with `help` (or `?`) to find out how the sampler is
    parameterized. Draw 10,000 samples with $k = 2$ and $\beta = 3$ and
    confirm the mean and variance from the samples.
-1. [code] **Standard-deviation conventions.** For $n$ numbers whose
-   squared deviations from their mean sum to $S$, a library computes the
-   standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
-   :numref:`sec_pandas` standardized columns with the pandas method `std`.
-   Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
-   once with `pd.Series.std` and once with `tf.math.reduce_std`. Use
-   `help` on both functions to find out how each one sets the divisor,
-   state the default divisor of each, and check both results against a
-   hand computation. Then make the two results agree.
 1. [code] **Checking a coding assistant's answer.** Ask a coding
    assistant the two questions below. Check each function it names in
    three steps: `dir` or `hasattr` shows that the name exists, `help` or
@@ -321,15 +294,6 @@ APIs change and applies equally to suggestions from search or coding assistants.
    read the signature with `help` (or `?`) to find out how the sampler is
    parameterized. Draw 10,000 samples with $k = 2$ and $\beta = 3$, using
    an explicit key, and confirm the mean and variance from the samples.
-1. [code] **Standard-deviation conventions.** For $n$ numbers whose
-   squared deviations from their mean sum to $S$, a library computes the
-   standard deviation either as $\sqrt{S/n}$ or as $\sqrt{S/(n-1)}$.
-   :numref:`sec_pandas` standardized columns with the pandas method `std`.
-   Compute the standard deviation of the values 1.0, 2.0, 3.0 and 4.0
-   once with `pd.Series.std` and once with `jax.numpy.std`. Use `help` on
-   both functions to find out how each one sets the divisor, state the
-   default divisor of each, and check both results against a hand
-   computation. Then make the two results agree.
 1. [code] **Checking a coding assistant's answer.** Ask a coding
    assistant the two questions below. Check each function it names in
    three steps: `dir` or `hasattr` shows that the name exists, `help` or
@@ -343,7 +307,7 @@ APIs change and applies equally to suggestions from search or coding assistants.
        all three checks and test it on an array of shape $(4, 2, 3)$.
 :end_tab:
 
-4. [code] **Reading the source.** The docstring of `d2l.plot`, defined in
+3. [code] **Reading the source.** The docstring of `d2l.plot`, defined in
    :numref:`sec_calculus`, describes the function only as "Plot data
    points." After importing `d2l` as in that section, predict how many
    curves `d2l.plot(x, Y)` draws when `x` is a 1-D tensor of length 50 and

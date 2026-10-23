@@ -1130,7 +1130,7 @@ attention a model must keep.
 ## Exercises
 
 1. [code] **Leave-one-out from one fit.** Exercise
-   7 of
+   :exref:`ex_queries-keys-values-learned-bandwidth` of
    :numref:`sec_queries-keys-values` fits the bandwidth of
    `nadaraya_watson` to the training error, which is smallest in the limit
    of a vanishing bandwidth, and then refits with every pair excluded from

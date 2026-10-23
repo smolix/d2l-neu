@@ -455,21 +455,6 @@ example in image generation.
 
 ## Exercises
 
-1. [code] **Output shapes.**
-    1. For the last example of :numref:`subsec_stride`, with kernel size
-       $(3, 5)$, padding $(0, 1)$, and stride $(3, 4)$ on the $8 \times 8$
-       input, calculate the output shape by hand and check that it is
-       consistent with the experimental result.
-    1. Using :eqref:`eq_conv_output_shape`, predict the output shape for a
-       $7 \times 7$ kernel with dilation $(3, 3)$, stride $(3, 3)$, and no
-       padding on a $32 \times 32$ input. Verify the prediction with
-       `comp_conv2d` in two steps: apply the dilated kernel at stride 1,
-       then keep every third row and column of the result.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problems 10.2 and 10.4.*
-
 1. [code] **Mirror padding.** Mirror padding, also called reflect padding,
    extends a tensor by reflecting its entries about the border without
    repeating the border entry: padding the vector $(1, 2, 3)$ by one entry

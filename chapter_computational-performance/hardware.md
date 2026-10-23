@@ -99,9 +99,7 @@ predictable. For dense tensors this is mostly handled for you — a matmul
 kernel is a carefully choreographed burst-read machine — but it is why
 sparse and gather-heavy workloads struggle to reach more than a fraction
 of rated bandwidth, and why shuffled *dataset* access is best done at the
-granularity of large blocks. (The classic multi-core pathology of *false
-sharing* — two CPU threads bouncing one cache line between cores — is
-relegated to the exercises.)
+granularity of large blocks.
 
 Let's measure the one number from this subsection that matters most for
 the roofline: our card's achievable memory bandwidth. A large elementwise
@@ -669,20 +667,6 @@ The following table summarizes the characteristic performance scales:
        the block size in bytes. At what block size does the shuffled gather
        approach the identity gather? What does this size imply for the
        granularity of shuffled reads from a dataset?
-
-1. [code] **False sharing.** ● CPUs keep their private caches coherent at
-   the granularity of a cache line: before a core writes to a line, the
-   copies of that line in the caches of other cores are invalidated. Write
-   a C program in which two POSIX threads each increment their own 64-bit
-   counter $10^8$ times with a relaxed atomic add
-   (`atomic_fetch_add_explicit` from `stdatomic.h`). Place the two
-   counters $s$ bytes apart in one array whose start is aligned to 256
-   bytes (`_Alignas(256)`), so that the first counter begins a cache line.
-    1. Time the program for $s = 8$ and $s = 256$, and explain the ratio
-       with the coherence rule.
-    1. Sweep $s$ from 8 to 256 bytes. At which separation does the
-       slowdown disappear? Compare it with the cache-line size that the
-       operating system reports for your CPU.
 
 1. **Latency hiding.** ● Little's law :cite:`Little.1961` states that in
    a steady state the average number of requests in flight equals the

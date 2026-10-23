@@ -987,18 +987,6 @@ algebra and the convergence rate of gradient descent.
 
 ## Exercises
 
-1. [code] **Machine epsilon by halving.** Start from $e = 1$ and halve $e$
-   in float32 arithmetic for as long as $1 + e \ne 1$.
-    1. Show that the loop exits at $e = 2^{-24}$ rather than at
-       $\varepsilon_{\text{mach}} = 2^{-23}$, and relate the exit value to
-       the unit roundoff $u$ of :eqref:`eq_mdl-opt-rounding-model`. Which
-       rounding rule decides the last comparison?
-    1. Predict the exit value of the same loop with $1024$ in place of $1$,
-       then run it and compare with `np.spacing(np.float32(1024))`.
-    1. Run the loop from $1$ in bfloat16 arithmetic by rounding every sum
-       with `to_bf16` from the `#numerical-stability-conditioning-finfo`
-       cell. At which power of two does it exit?
-
 1. **Loss-scale window.** Loss scaling multiplies the loss by a factor $S$,
    which multiplies every gradient by $S$, and divides the gradients by $S$
    after they have been converted to fp32. In fp16 the smallest normal
@@ -1019,24 +1007,6 @@ algebra and the convergence rate of gradient descent.
        smallest gradients. Why is that the better end to sacrifice?
     1. How do the answers to the first two sub-items change when the
        gradients are computed in bfloat16?
-
-1. **Backward pass of the loss.** Automatic differentiation differentiates
-   the computation that is actually performed, so a stable forward formula
-   needs a stable backward pass as well.
-    1. Regard the shift $c$ in :eqref:`eq_mdl-opt-stable-lse` as a free
-       variable and compute the partial derivative of
-       $c + \log \sum_j e^{z_j - c}$ with respect to $c$. Conclude that the
-       gradient of the stable log-sum-exp with respect to $\mathbf{z}$ is
-       the same whether automatic differentiation propagates through
-       $c = \max_j z_j$ or treats $c$ as a constant, even at ties, where
-       $\max$ is not differentiable.
-    1. Exercise :exref:`ex_mdl-matrix-calculus-autodiff-composed-fused` of
-       :numref:`sec_mdl-matrix-calculus-autodiff` finds, in float32
-       arithmetic with subnormal numbers, the logit gaps $t$ at which
-       $-\log \mathrm{softmax}(\mathbf{z})_y$, computed from the
-       probabilities, stops returning a finite loss and a finite gradient.
-       Some hardware flushes subnormal results to zero. How do the two
-       thresholds change then?
 
 1. [code] **Rewrites against cancellation.** Each expression below loses
    accuracy to catastrophic cancellation in the stated regime. Rewrite it in

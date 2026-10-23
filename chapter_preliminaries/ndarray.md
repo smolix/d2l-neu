@@ -1001,19 +1001,6 @@ Tensors provide a variety of functionalities including construction routines; in
    tensors that stay correct without change when each row holds $L + 1$
    tokens and the model reads the first $L$, for every $L \geq 1$.
 
-1. **Comparison masks.** The comparison `X == Y` in this section uses
-   the tensor `X` obtained by reshaping `arange(12)` to $(3, 4)$ and the
-   $(3, 4)$ tensor `Y` with rows $(2, 1, 4, 3)$, $(1, 2, 3, 4)$, and
-   $(4, 3, 2, 1)$. Form the masks `X < Y`, `X == Y`, and `X > Y` from
-   these two tensors.
-    1. Predict the number of `True` entries in each mask before running
-       the code. Explain why the three counts add up to the number of
-       elements of `X`.
-    1. Let `N = X / X`. Its first entry is the floating-point value NaN
-       (not a number), because `X[0, 0]` is zero. Repeat the three counts
-       with `N` in place of `X` and explain how their sum changes. Then
-       evaluate `N == N` and explain its first entry.
-
 1. [code] **Broadcasting shapes.** Broadcasting in
    :numref:`subsec_broadcasting` aligns two shapes from the right.
     1. Replace `a` and `b` with two tensors that each have three axes and
@@ -1029,7 +1016,7 @@ Tensors provide a variety of functionalities including construction routines; in
        label.
 
 :begin_tab:`pytorch`
-5. [code] **Object identity versus storage.** The cells in
+4. [code] **Object identity versus storage.** The cells in
    :numref:`subsec_saving_memory` compare `id(Y)` before and after
    `Y = Y + X`, and `id(X)` before and after `X += Y`. The method
    `X.data_ptr()` returns the memory address of the first element of `X`.
@@ -1039,7 +1026,7 @@ Tensors provide a variety of functionalities including construction routines; in
        show that new storage was allocated. Then explain why an unchanged
        `id()` does not by itself show that the old storage was reused.
 
-6. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
+5. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
    same-shaped tensors without allocating any intermediate tensor, using
    only in-place methods such as `add_`, `div_`, `neg_`, and `mul_`, or
    the `out=` argument of the corresponding functions. Confirm that
@@ -1053,7 +1040,7 @@ Tensors provide a variety of functionalities including construction routines; in
 :end_tab:
 
 :begin_tab:`mxnet`
-5. [code] **Object identity versus storage.** The cells in
+4. [code] **Object identity versus storage.** The cells in
    :numref:`subsec_saving_memory` compare `id(Y)` before and after
    `Y = Y + X`, and `id(X)` before and after `X += Y`.
     1. Let `V = X.reshape(-1)` and compare `id(V)` with `id(X)`. Then
@@ -1063,7 +1050,7 @@ Tensors provide a variety of functionalities including construction routines; in
        storage was allocated, and why an unchanged `id()`, as after
        `X += Y`, does not by itself show that the old storage was reused.
 
-6. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
+5. [code] **In-place composition.** Compute `(A + B) * (-A / 2)` for two
    same-shaped tensors without allocating any intermediate tensor, using
    only the in-place operators `+=`, `*=`, and `/=`. Confirm that the
    result equals the direct expression and explain why `Z[:] = A + B`
@@ -1075,13 +1062,13 @@ Tensors provide a variety of functionalities including construction routines; in
 :end_tab:
 
 :begin_tab:`tensorflow`
-5. **Object identity versus storage.** The cell in
+4. **Object identity versus storage.** The cell in
    :numref:`subsec_saving_memory` shows that `Z.assign(X + Y)` leaves
    `id(Z)` unchanged, whereas the earlier `Y = Y + X` changes `id(Y)`.
    State what the unchanged `id(Z)` establishes about `Z`, and what it
    leaves undetermined about the memory that holds the values of `Z`.
 
-6. [code] **In-place composition.** ● Ordinary tensors are immutable, so
+5. [code] **In-place composition.** ● Ordinary tensors are immutable, so
    every arithmetic operation on them allocates a new tensor. Hold `A` and
    `B` in `tf.Variable`s and compute `(A + B) * (-A / 2)` so that the
    result ends up in one of the two variables, using `assign`,
@@ -1098,14 +1085,14 @@ Tensors provide a variety of functionalities including construction routines; in
 :end_tab:
 
 :begin_tab:`jax`
-5. **Object identity versus storage.** The cell in
+4. **Object identity versus storage.** The cell in
    :numref:`subsec_saving_memory` shows that `X.at[:].set(X + Y)` returns
    an object with a new `id()`. Explain why the new `id()` does not show
    whether the result occupies fresh memory. Then explain why, for
    immutable arrays, whether two arrays share a buffer cannot change any
    value the program computes.
 
-6. [code] **In-place composition.** ● JAX arrays are immutable, so
+5. [code] **In-place composition.** ● JAX arrays are immutable, so
    `.at[...].set(...)` returns a new array and cannot save memory on its
    own. Write `(A + B) * (-A / 2)` as a function `f(A, B)`, count the
    intermediate arrays that eager evaluation creates, and inspect the
@@ -1122,7 +1109,7 @@ Tensors provide a variety of functionalities including construction routines; in
     problem 35.*
 :end_tab:
 
-7. [extended] **Loops, broadcasting, and library primitives.** ● Compute all
+6. [extended] **Loops, broadcasting, and library primitives.** ● Compute all
    pairwise squared Euclidean distances between two sets of 50 vectors in 8
    dimensions in three ways: two nested Python loops, one loop plus
    broadcasting, and a fully vectorized version with no explicit loop.

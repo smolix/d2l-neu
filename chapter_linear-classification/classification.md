@@ -293,14 +293,6 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
        on the correctly classified examples and to $\infty$ on the
        misclassified ones. What does this imply about comparing
        classifiers by loss alone?
-1. [code] **Top-$k$ accuracy.** Generalize `accuracy` to *top-$k$
-   accuracy*, which counts a prediction as correct when the true class is
-   among the $k$ highest-scoring classes.
-    1. Add a `k` argument to `accuracy`, replacing the single `argmax` by
-       the indices of the $k$ largest scores, and check that the result
-       equals $1$ when `k` equals the number of classes.
-    1. Why is top-5 accuracy a standard companion to top-1 on benchmarks
-       with many fine-grained classes?
 1. **Class-weighted loss.** In the disease-screening example of
    :numref:`subsec_beyond-accuracy`, missing a sick patient costs much
    more than a false alarm. Give each class $j$ a weight $w_j > 0$ and

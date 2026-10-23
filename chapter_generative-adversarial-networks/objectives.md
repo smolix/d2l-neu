@@ -818,36 +818,6 @@ When the supports overlap, all four tested objectives move the generator toward 
        generator when the supports are disjoint? Which kind of critic does
        the LSGAN argument therefore assume?
    :exlabel:`ex_objectives-verify-numerically-that-lsgan`
-1. [code] **Exponential-loss row.** The exponential loss pays $e^{-t}$ for
-   a real sample with score $t$ and $e^{t}$ for a generated one, so that
-   $\ell(t) = -e^{-t}$ in :eqref:`eq_gan_margin`.
-    1. Derive its conditional Bayes risk $L(\eta) = 2\sqrt{\eta(1 - \eta)}$,
-       the optimal critic $\lambda / 2$, and the value
-       $\Delta = H^2(p, q)$ listed in :numref:`tab_gan_loss_divergences`.
-    1. Add this critic loss to `critic_losses` and its link to `links`, and
-       extend the diagnostic of :numref:`subsec_gan_objectives_critics` to
-       four panels. Twice the exponential critic is an estimate of
-       $\lambda$. Which of the logistic and exponential critics estimates
-       $\lambda$ more accurately at the points `pts`?
-1. **Zero--one and hinge rows.** The zero--one loss pays $1$ for a wrong
-   sign and $0$ for a right one, so its conditional Bayes risk
-   :eqref:`eq_gan_bayes_risk` is $L(\eta) = \min(\eta, 1 - \eta)$. By
-   exercise :exref:`ex_gan-classifier-two-sample-test`a of
-   :numref:`sec_basic_gan`, the Bayes classifier has the accuracy
-   $\tfrac12 \big(1 + \mathrm{TV}(p, q)\big)$ with
-   $\mathrm{TV} = \tfrac12 \int |p - q|$, so its expected zero--one loss is
-   $E_m[L(\eta)] = \tfrac12 \big(1 - \mathrm{TV}(p, q)\big)$ and
-   :eqref:`eq_gan_bayes_gap` gives
-   $\Delta_{0\textrm{--}1} = \tfrac12 \mathrm{TV}(p, q)$.
-    1. The hinge loss pays $\max(0, 1 - t)$ for a real sample with score
-       $t$ and $\max(0, 1 + t)$ for a generated one. Show that its
-       conditional risk is piecewise linear in $t$ with kinks at
-       $t = \pm 1$. Derive $L(\eta) = 2 \min(\eta, 1 - \eta)$ and the set
-       of minimizing scores at every $\eta$, including $\eta = \tfrac12$.
-    1. Explain from the two Bayes risks alone why the hinge value is
-       exactly twice the zero--one value, and why both rows of
-       :numref:`tab_gan_loss_divergences` list the optimal critic
-       $\operatorname{sign} \lambda$.
 1. **Symmetric gaps.** The game :eqref:`eq_gan_margin` scores real and
    generated samples with the same function $\ell$, applied to $D$ and to
    $-D$.

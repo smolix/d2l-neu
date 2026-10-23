@@ -487,11 +487,6 @@ and training requires significantly more memory than prediction.
        recover the term $(\partial J/\partial \mathbf{o})\mathbf{h}^\top$ of
        :eqref:`eq_backprop-J-h`. Explain why backpropagation never needs to
        store $\partial \mathbf{o}/\partial \mathbf{W}^{(2)}$.
-1. **Hidden-layer bias.** Add a bias to the hidden layer of the model
-   described in this section (you do not need to include the bias in the
-   regularization term).
-    1. Draw the corresponding computational graph.
-    1. Derive the forward and backward propagation equations.
 1. **Modified activation.** The first hidden unit of the network in
    :eqref:`eq_backprop-example` receives the pre-activation $z_1 = -1$, so
    the ReLU derivative $\phi'(z_1) = 0$ blocks the gradient of every weight
@@ -523,19 +518,6 @@ and training requires significantly more memory than prediction.
        prediction on the same minibatch holds at any moment.
     1. For which minibatch sizes $n$ do the kept forward-pass quantities
        outnumber the parameters and their gradients together?
-1. **Second derivatives.** Automatic differentiation obtains second
-   derivatives by differentiating the backward pass, so the operations of
-   the backward pass become nodes of a larger computational graph. Extend
-   :numref:`fig_forward` with the backward-pass nodes that compute
-   $\partial J/\partial \mathbf{W}^{(1)}$, and mark which forward-pass
-   variables each new node reads.
-1. **Graph partitioning.** Assume that the computational graph is too large
-   for the memory of a single GPU.
-    1. Propose two different strategies for splitting training across two
-       GPUs. For each, state what every GPU stores and what the two GPUs
-       must communicate.
-    1. For each strategy, name one advantage and one disadvantage relative
-       to training on a single GPU with a smaller minibatch.
 1. [code] **Batched backprop.** This section's forward and backward equations
    process one example $\mathbf{x}$ at a time.
     1. Rewrite them to process a minibatch of $n$ examples, stored as the
@@ -549,21 +531,6 @@ and training requires significantly more memory than prediction.
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap2.html),
     Chapter 2.*
-1. **Forward mode.** Backpropagation seeds $\partial J/\partial J = 1$ at the
-   output and sweeps the graph backward. Forward-mode differentiation instead
-   seeds $\partial w/\partial w = 1$ at one chosen scalar parameter $w$ and
-   sweeps forward: each node computes the derivative of its value with
-   respect to $w$ from the derivatives of its inputs.
-    1. Use forward mode to recompute $\partial L/\partial \mathbf{W}^{(1)}$
-       for the network in :eqref:`eq_backprop-example`, one sweep per entry
-       of $\mathbf{W}^{(1)}$.
-    1. How many sweeps does each mode need to obtain all six parameter
-       gradients of this network? Which factors does forward mode multiply
-       again in every sweep that reverse mode multiplies only once?
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problems 7.12 and 7.13.*
 1. **Hessian of a ReLU network.** ● ReLU has $\phi''(z) = 0$ for
    $z \neq 0$. For the network in :eqref:`eq_backprop-example`, derive the
    $4 \times 4$ Hessian of $L$ with respect to the entries of
@@ -602,6 +569,7 @@ and training requires significantly more memory than prediction.
     *Adapted from Andrej Karpathy,
     [micrograd](https://github.com/karpathy/micrograd),
     `micrograd/engine.py`.*
+   :exlabel:`ex_backprop-autograd-engine`
 
 [Discussions](https://d2l.discourse.group/t/102)
 
@@ -965,7 +933,7 @@ errors.
 :::
 
 ::: {.d2l-note}
-Capstone (exercise 6): build a miniature autograd engine (a scalar `Value`
+Capstone (exercise :exref:`ex_backprop-autograd-engine`): build a miniature autograd engine (a scalar `Value`
 class with `+`, `*`, `relu` and a topological `backward()`) and re-derive
 today's example with it.
 :::

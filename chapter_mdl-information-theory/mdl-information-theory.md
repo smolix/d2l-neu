@@ -1384,70 +1384,12 @@ information (:numref:`sec_mdl-mutual-information`).
 1. **Differential entropy and units.** The differential entropy
    :eqref:`eq_mdl-diff-ent-def` depends on the units in which $x$ is
    measured.
-    1. Two Gaussian regression models are compared by their average
-       negative log-likelihood per sample on the same targets. By how many
-       nats does the average NLL of each model change when the targets are
-       recorded in millimeters instead of meters, and in which direction?
-       Which comparison between the two models survives the change of units?
     1. Let $X$ have a continuous density $p$, and let $X_\Delta$ be the
        index of the bin of width $\Delta$ that contains $X$. Show that
        $H(X_\Delta) + \log \Delta \to h(X)$ as $\Delta \to 0$, so that the
        discrete entropy grows without bound. Check the limit numerically for
        $X \sim \mathcal{N}(0, 1)$ with $\Delta = 0.1$ and $\Delta = 0.01$.
-    1. Image density models are often trained on $8$-bit pixel values
-       rescaled to $[0, 1]$, with independent uniform noise on
-       $[0, \tfrac{1}{256})$ added to each of the $m$ values of an image
-       $\mathbf{x}$, and they are scored by a continuous density $q$. Let
-       the discrete model $P(\mathbf{x})$ be the $q$-mass of the bin that
-       contains $\mathbf{x}$. Following :citet:`Theis.Oord.Bethge.2016`,
-       use Jensen's inequality to show that
-
-       $$
-       -\log_2 P(\mathbf{x}) \leq
-       E_{\mathbf{u}}\big[-\log_2 q(\mathbf{x} + \mathbf{u})\big] + 8m.
-       $$
-
-       Papers on such models report
-       $E_{\mathbf{u}}\big[-\log_2 q(\mathbf{x} + \mathbf{u})\big]/m + 8$
-       as bits per dimension. What does this number bound?
    :exlabel:`ex_mdl-information-theory-quantization`
-
-1. **Uniform maximum via Gibbs.** Give a second proof that the uniform
-   distribution $U$ on $k$ outcomes maximizes entropy, this time from Gibbs'
-   inequality: show that $D_{\textrm{KL}}(P \,\|\, U) = \log k - H(P)$ and
-   conclude. When $k$ is a power of two, a code that spends $\log_2 k$ bits
-   on every outcome needs no knowledge of $P$. What does
-   $\log_2 k - H_2(P)$ measure for this code?
-   :exlabel:`ex_mdl-information-theory-uniform-via-gibbs`
-
-1. [code] **Validating `kl_divergence`.** The `entropy` helper rejects
-   invalid input, whereas `kl_divergence` returns
-   `nansum(p * log(p / q))` without any checks.
-    1. Evaluate `kl_divergence(p, q)` for $\mathbf{p} = (0.5, 0.5)$ and
-       $\mathbf{q} = (1, 1)$, and for $\mathbf{p} = (-0.1, 1.1)$ and
-       $\mathbf{q} = (0.5, 0.5)$. Which hypothesis of Gibbs' inequality does
-       each input violate? What does `nansum` do with the second input?
-    1. Rewrite `kl_divergence` so that it validates both inputs as `entropy`
-       does, handles the terms with $p_i = 0$ by masking instead of
-       `nansum`, and returns $+\infty$ when some $p_i > 0$ has $q_i = 0$.
-       Test it on the inputs of (a) and on $\mathbf{p} = (0.5, 0.5, 0)$ and
-       $\mathbf{q} = (0.5, 0.25, 0.25)$ in both orders.
-    1. Rejecting unnormalized vectors is one repair. Another is a
-       divergence that stays non-negative on them. For vectors with entries
-       $p_i \geq 0$ and $q_i > 0$ that need not sum to one, define
-
-       $$
-       \tilde D(\mathbf{p} \,\|\, \mathbf{q})
-       = \sum_i \Big(p_i \log \frac{p_i}{q_i} - p_i + q_i\Big).
-       $$
-
-       Show with the inequality $\log u \leq u - 1$ that
-       $\tilde D(\mathbf{p} \,\|\, \mathbf{q}) \geq 0$, with equality if and
-       only if $\mathbf{p} = \mathbf{q}$, and that $\tilde D$ equals the KL
-       divergence for probability vectors. This proves Gibbs' inequality
-       without Jensen's inequality. Evaluate $\tilde D$ on the first input
-       of (a).
-   :exlabel:`ex_mdl-information-theory-validating-kl`
 
 1. **Gaussian KL divergence.** Let $P = \mathcal{N}(\mu_1, \sigma_1^2)$.
     1. Derive the closed form :eqref:`eq_mdl-gaussian_kl` by writing out
@@ -1586,7 +1528,7 @@ information (:numref:`sec_mdl-mutual-information`).
    sample on the index of the bin.
     1. For small $\Delta$ the mean squared error is approximately
        $\Delta^2/12$. Combine this approximation with problem
-       :exref:`ex_mdl-information-theory-quantization`b to show that the
+       :exref:`ex_mdl-information-theory-quantization`a to show that the
        rate exceeds the Gaussian rate--distortion function
        :eqref:`eq_mdl-gaussian-rd` at the same distortion by
        $\tfrac{1}{2}\log(2\pi e/12)$ nats ($\approx 0.255$ bits) per sample,

@@ -562,20 +562,6 @@ The implementations add `Batch.backward_scan`, `Batch.reward_to_go`, `normalize`
        $e^{-(a-2)^2/2}$ is proportional to another normal density. Why does
        $b^*$ exceed $E[R] = 0.92$?
    :exlabel:`ex_baselines-optimal-constant-baseline`
-1. [code] **The training loss divisor.** :numref:`subsec_pg_loss_divisor`
-   compares four divisors for the summed loss.
-    1. Read `policy_step`. Which of the four divisors do the training runs
-       of `train` use?
-    1. At the policy `probe`, draw 2000 batches of four episodes. For each
-       batch, compute the per-episode estimate `estimate(b, G)` with the
-       reward-to-go weights `G = b.reward_to_go(gamma)`, the factor by which
-       the divisor of `policy_step` rescales it, and the number of successes
-       in the batch. How much does the factor vary between batches, and how
-       does it correlate with the number of successes?
-    1. Average `estimate(b, G)` and the rescaled estimate over the 2000
-       batches and compute the cosine between the two means. What does the
-       result say about comparing the training runs of `train` with the
-       frozen-policy measurements of :numref:`subsec_five_estimators`?
 1. [code] **Baseline step size and timing.** ● The learned-baseline arm of
    `train` updates its table $\hat{V}$ by :eqref:`eq_value_baseline` after
    `policy_step`, so the baseline used on each batch was fitted on earlier

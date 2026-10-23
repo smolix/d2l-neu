@@ -551,26 +551,6 @@ from another, with output length equal to the query length.
 
 ## Exercises
 
-1. [code] **Head pruning.** Removing heads from a trained layer at
-   inference time :cite:`Michel.Levy.Neubig.2019` requires a measure of
-   each head's importance. The copy-both task supplies a case in which
-   importance is not additive.
-    1. Form three heads with weights $(1, 0)$, $(0.88, 0.12)$, and again
-       $(0.88, 0.12)$, concatenate their mixtures, and evaluate
-       `readout_error` after removing each single head and after removing
-       each pair of heads.
-    1. Define a head's importance as the increase in error when it alone is
-       removed. A one-shot procedure computes every importance once and
-       removes all heads whose importance is below the tolerance
-       $\tau = 0.01$. Which heads does it remove, and which error results?
-    1. A greedy procedure instead removes the least important head,
-       re-estimates the importance of the remaining heads, and repeats
-       until every remaining head has an importance of at least $\tau$.
-       Find the heads it keeps and the resulting error. Without the
-       stopping rule, count the evaluations of `readout_error` that it
-       needs to prune $h$ heads down to one, and compare the count with
-       the number that the one-shot procedure needs.
-
 1. [code] **Narrow heads.** With $p = d/h$, the leading count of
    :eqref:`eq_multihead-flops` does not depend on $h$, so the head count
    looks free up to $h = d$. Consider one head with scores
@@ -594,35 +574,6 @@ from another, with output length equal to the query length.
        Identify the cost that grows with $h$ and that
        :eqref:`eq_multihead-flops` leaves out, and check that it accounts
        for the trend.
-
-1. **Cost of cross-attention.** :eqref:`eq_multihead-flops` counts
-   self-attention over $n$ tokens.
-    1. Redo the count for cross-attention with $n$ queries from
-       $\mathbf{A}$ and $m$ keys and values from $\mathbf{B}$. Identify
-       which terms grow with $n$, which with $m$, and which with $nm$.
-    1. A decoder generates its output one token at a time and
-       cross-attends from each new token to a fixed source of $m$ tokens.
-       Count the FLOPs per generated token when the projected source keys
-       and values are recomputed at every step and when they are computed
-       once and stored. Give the ratio for $d = 512$ and $m = 1000$.
-
-1. **Multi-query and grouped-query attention.** Multi-query attention
-   :cite:`Shazeer.2019` shares one key head and one value head of width
-   $p = d/h$ across all $h$ query heads. Grouped-query attention
-   :cite:`Ainslie.Lee-Thorp.Jong.ea.2023` shares them within each of $g$
-   groups of $h/g$ query heads.
-    1. Redo the parameter count and the FLOP count of
-       :eqref:`eq_multihead-flops` for both schemes. Which of the two terms
-       changes, and by what factor?
-    1. During autoregressive generation every past key and value is cached.
-       Compute the cache size per token and per layer in bytes for
-       $d = 4096$, $h = 32$, and 16-bit numbers under the three schemes,
-       with $g = 8$ for grouped-query attention.
-    1. Show that two query heads that share one key head and one value head
-       can still produce two distinct mixtures of the same projected
-       values, as the copy-both construction requires. Then state the
-       limit that sharing places on the information the layer can move
-       from each source token to its output.
 
 1. [code] **Heads as slices.** `MultiHeadAttention` computes one projection
    of width $d$ for each of the queries, keys, and values and splits it
@@ -659,21 +610,6 @@ from another, with output length equal to the query length.
        Show that the decoder's outputs are identical for the source
        sentences "dog bites man" and "man bites dog", and state where word
        order must enter the model for cross-attention to use it.
-
-1. [code] **Random projections and readable maps.** The alignment of
-   :numref:`subsec_cross-attention-alignment` uses shared random embeddings
-   and no learned projections.
-    1. Pass the letter embeddings of the two words as queries, keys, and
-       values through a freshly initialized `MultiHeadAttention` with 4
-       heads, 32 hidden units, and dropout 0, and plot the attention
-       weights of each head.
-    1. Which properties of the plain map hold in every head, whatever the
-       projections, and which are lost? Explain both from the score that
-       head $i$ assigns to a query letter with embedding $\mathbf{e}$ and a
-       key letter with embedding $\mathbf{e}'$,
-       $$\mathbf{e}^\top \mathbf{W}_i^{(q)\top} \mathbf{W}_i^{(k)} \mathbf{e}' / \sqrt{p}.$$
-    1. State what this implies for reading the attention maps of a trained
-       network whose projections have not been inspected.
 
 1. [code] **Nonlinear readouts.** ● For Gaussian values, the proof of the
    proposition in :numref:`subsec_one-mixture-bottleneck` shows that the
@@ -753,7 +689,7 @@ from another, with output length equal to the query length.
    the score be $\mathbf{q}^\top \mathbf{k}_i$. When every covariance is
    $\beta \mathbf{I}$ with vanishingly small $\beta$, the keys are nearly
    orthonormal, so by Exercise
-   3a
+   :exref:`ex_queries-keys-values-average-two-values`a
    of :numref:`sec_queries-keys-values` the query
    $c\,(\boldsymbol{\mu}_a + \boldsymbol{\mu}_b)$ with a large scale $c$
    returns an output $\mathbf{o}$ close to $\tfrac{1}{2}(\mathbf{v}_a +
@@ -765,7 +701,7 @@ from another, with output length equal to the query length.
        covariances at $\beta \mathbf{I}$. Each draw of the keys then gives
        $\mathbf{k}_a$ and $\mathbf{k}_b$ different norms, the case of
        Exercise
-       3c
+       :exref:`ex_queries-keys-values-average-two-values`c
        of :numref:`sec_queries-keys-values`: as $\beta \to 0$, the weights
        on $\mathbf{k}_a$ and $\mathbf{k}_b$ stand in the ratio
        $e^{c\gamma}$, and the other two weights are negligible at large

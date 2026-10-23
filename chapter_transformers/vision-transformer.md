@@ -567,18 +567,6 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        pooling, and compare them with those of the ViT. Is the comparison of
        :numref:`subsec_vit-cnn-baseline` also matched in compute?
 
-1. [code] **Patchify as convolution.** `PatchEmbedding` replaces cutting
-   an image into patches and projecting each flattened patch by a single
-   convolution whose kernel size and stride equal the patch size. Check
-   this on `patch_emb` with a batch of random images of its input shape.
-   Cut the images into non-overlapping $16 \times 16$ patches with reshapes
-   and transpositions alone, flatten each patch, and apply the
-   convolution's kernel and bias, rearranged into a matrix and a vector.
-   Verify that the result agrees with the output of `patch_emb` up to
-   floating-point round-off. In which order must the entries of a
-   flattened patch appear, and in which order must the patches be
-   enumerated?
-
 1. [code] **Choice of readout.** `ViT` classifies from the final
    representation of the “&lt;cls&gt;” token.
     1. Under this readout, part of the computation of the last `ViTBlock`
@@ -677,7 +665,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        comparison say about pretraining at low resolution?
 
 :begin_tab:`pytorch`
-8. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
+7. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
     the attention weight of query patch $i$ on key patch $j$ in an image, and
     let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
     The *mean attention distance* of the head
@@ -705,7 +693,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
 :end_tab:
 
 :begin_tab:`jax`
-8. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
+7. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
     the attention weight of query patch $i$ on key patch $j$ in an image, and
     let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
     The *mean attention distance* of the head
@@ -733,7 +721,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        the two models separate the two causes?
 :end_tab:
 
-9. [code] **Recipe confound.** ● :numref:`subsec_vit-first-run` trains the
+8. [code] **Recipe confound.** ● :numref:`subsec_vit-first-run` trains the
    ViT with the recipe of the convolutional networks of
    :numref:`chap_modern_cnn`, plain SGD at a constant learning rate.
    :citet:`touvron2021training` train ViTs on ImageNet-1k alone for 300

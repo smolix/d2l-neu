@@ -1199,21 +1199,6 @@ asymptotic shapes that do not.
        term dominates. Compare the complete prediction with the errors that
        `hebbian_memory(64, nums, rho=0.5)` returns.
 
-1. **Cross-moment versus least squares.** ● A scalar-decay state stores
-   the weighted cross-moment $\mathbf{K}^\top \mathbf{W} \mathbf{V}$,
-   whereas the read-out $\mathbf{S}^\star$ of
-   :eqref:`eq_ms-wls` also applies the covariance correction. Let
-   $\mathbf{K} \in \mathbb{R}^{n \times d_k}$ hold the keys as rows, and
-   let every weight $w_i$ be positive.
-    1. Let $n \le d_k$ and let the keys be linearly independent. Show that
-       in the limit $\lambda \to 0$, $\mathbf{S}^\star$ reads back every
-       stored value exactly, whatever the weights. Contrast this with what
-       $\mathbf{K}^\top \mathbf{W} \mathbf{V}$ returns at $\mathbf{k}_j$.
-    1. Now let $n > d_k$. Explain what the weights decide about
-       $\mathbf{S}^\star$ in this regime, and state when the decay of a
-       memory that applies the covariance correction affects its read-out
-       at all.
-
 1. [code] **Decay as a sliding window.** ● Give `hebbian_memory` the
    decayed write $\mathbf{S}_t = \gamma\,\mathbf{S}_{t-1} + \mathbf{k}_t
    \mathbf{v}_t^\top$, so that the pair written $m$ steps before the end

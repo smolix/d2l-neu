@@ -1,5 +1,10 @@
 # Language Guide for Technical Chapters
 
+> **Abandoned 2026-10-23.** This guide is kept for history only. Do not
+> apply it. It has been replaced by [`docs/writing-guide.md`](../writing-guide.md),
+> which forbids several patterns this guide permits, among them question and
+> wh-clause headings.
+
 This guide is a companion to [the structural style guide](style-guide.md).
 The structural guide explains how to order a chapter, introduce a concept, build
 an example, and connect theory with code. This guide addresses a narrower

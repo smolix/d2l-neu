@@ -384,17 +384,6 @@ ReLU activations.
        in accuracy?
    :exlabel:`ex_lenet-modern-components`
 
-1. [code] **Architecture sweep.** Starting from the modernized LeNet of
-   problem :exref:`ex_lenet-modern-components`, vary one design choice at a time: the convolution
-   window size, the number of output channels of each convolutional
-   layer, and the number of convolutional layers.
-    1. Before training a variant, trace its output shapes with
-       `layer_summary` and count its parameters. Which layer's parameter
-       count changes most, and why?
-    1. Train each variant with the training settings of this section and
-       tabulate its validation accuracy against its parameter count. Does
-       any variant improve on the accuracy of the modernized LeNet?
-
 1. [code] **Original MNIST.** Write an `MNIST` data class by adapting
    `d2l.FashionMNIST`, and train both `LeNet` and the modernized LeNet of
    problem :exref:`ex_lenet-modern-components` on it. :citet:`LeCun.Bottou.Bengio.ea.1998` report a

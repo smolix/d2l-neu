@@ -1325,14 +1325,6 @@ hybrid architectures provide further alternatives.
        the three configurations, find how many sequences of 4096 tokens fit
        into the memory that the weights leave free, ignoring activations.
 
-1. [code] **A cached GQA step.** Extend the cached forward pass of
-   :numref:`subsec_kv-cache-cached-forward` to a `d2l.GPT` whose blocks
-   hold `GQAAttention` with `rope=True`, built as in
-   :numref:`subsec_kv-cache-gqa-quality`, so that the cache stores only the
-   $H_{kv}$ key-value heads. Verify for $H_{kv} = 2$ that the cached logits
-   agree with those of the full forward pass, as in
-   :numref:`subsec_kv-cache-same-logits`.
-
 1. [code] **A fixed low-rank basis.** `lowrank_kv` fits its rank-$r$ basis
    to the passage that it evaluates, so the experiment of
    :numref:`subsec_kv-cache-low-rank` uses an oracle. A cache that stores
@@ -1391,56 +1383,7 @@ hybrid architectures provide further alternatives.
        FLOPs per byte. How does the limit change when the $H$ query heads
        share $H_{kv}$ key-value heads?
 
-:begin_tab:`pytorch`
-8. [code] **Cache buffers.** ● `forward_step` stores `contiguous()`
-    copies of the new keys and values, and it grows the cache with
-    `torch.cat`.
-    1. Without the `contiguous()` call, the allocator growth after the
-       prefill of :numref:`subsec_kv-cache-memory` is twice
-       :eqref:`eq_kv-cache-bytes` for `model`, which uses RoPE, although a
-       cached view keeps alive a fused QKV buffer three times as wide as
-       the keys. Explain the factor of two, and predict the factor for a
-       model built with the arguments of `model` plus `pos='learned'`.
-       Remove the call, measure both factors, and explain what happens to
-       the excess after the first decode step.
-    1. Time one decode step of `model` at context 2048 for
-       $b \in \{1, 4, 16, 32\}$ sequences, with caches of the right shape
-       filled with arbitrary values, since the cost of a step does not
-       depend on them. Fit the step time as $t(b) = t_0 + b\, t_1$. Compare
-       $t_0$ with the time to read the weights at 1 TB/s and $t_1$ with the
-       time to read the cache of one sequence, and account for the
-       differences.
-    1. Replace `torch.cat` by writes into slices of buffers that are
-       allocated once for `max_len` positions, and let attention read only
-       the filled slice. Count the bytes per step that the change saves,
-       repeat the fit of the previous sub-item, and compare the new $t_1$
-       with the old one.
-:end_tab:
-
-:begin_tab:`jax`
-8. [code] **Cache buffers.** ● `cached_forward` writes into preallocated
-    buffers with `dynamic_update_slice`, but its cache arguments are not
-    donated, so XLA returns the updated cache in fresh buffers.
-    1. Predict the peak device memory of one decode step of `model` at
-       context 4096 for a batch of 16 sequences, with and without donating
-       `ks` and `vs` through the `donate_argnums` option of `nnx.jit`.
-       Measure both with `jax.local_devices()[0].memory_stats()`, and run
-       each configuration in a fresh process, because `peak_bytes_in_use`
-       never decreases within one.
-    1. Time one decode step of `model` at context 2048 for
-       $b \in \{1, 4, 16, 32\}$ sequences, with buffers from `init_cache`
-       for 2048 positions, since the cost of a step does not depend on
-       their contents. Fit the step time as $t(b) = t_0 + b\, t_1$. Compare
-       $t_0$ with the time to read the weights at 1 TB/s and $t_1$ with the
-       time to read the cache of one sequence, and account for the
-       differences.
-    1. Count the bytes per step that donation saves. Repeat the fit of the
-       previous sub-item with `ks` and `vs` donated, and compare the new
-       $t_1$ with the old one. A donated buffer cannot be used again, so
-       pass the returned buffers to the next call.
-:end_tab:
-
-9. [code] **Uptraining to GQA.** ● :citet:`Ainslie.Lee-Thorp.Jong.ea.2023`
+1. [code] **Uptraining to GQA.** ● :citet:`Ainslie.Lee-Thorp.Jong.ea.2023`
    convert a multi-head checkpoint into a grouped one by mean-pooling the
    key and value projections of the heads in each group, and then continue
    training for 5 percent of the original number of steps. Apply this

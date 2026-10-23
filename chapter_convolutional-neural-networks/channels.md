@@ -435,12 +435,6 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
        to the kernel and with respect to the input, and give the number
        of values these gradients occupy.
 
-1. [code] **The $1 \times 1$ equivalence.** The check in
-   :numref:`subsec_1x1` asserts that the summed absolute difference
-   between `Y1` and `Y2` is below $10^{-5}$. Test whether `Y1` and `Y2`
-   are identical elementwise. If they are not, explain where the
-   discrepancy originates.
-
 1. [code] **Multi-channel im2col.** Extend the patch matrix of
    :numref:`subsec_conv_matmul` to several input and output channels.
    Rebuild the two-channel `X` of :numref:`fig_conv_multi_in` and the
@@ -470,16 +464,6 @@ $(1/c_\textrm{o} + 1/k^2)^{-1}$, about $21\times$ here.
        scheme?
     1. What limits how large $m$ can be, and how does the load count of
        the previous sub-item change as $m$ grows?
-
-1. **Grouped convolutions.** A grouped $k \times k$ convolution with $g$
-   groups (:numref:`sec_depthwise_separable`) has
-   $c_\textrm{i} c_\textrm{o} k^2 / g$ weights, but no information flows
-   between groups within the layer. Follow the grouped convolution by a
-   dense $1 \times 1$ convolution from $c_\textrm{o}$ to $c_\textrm{o}$
-   channels. Show that every output channel now depends on every input
-   channel, count the weights of the pair, and determine for which $g$ the
-   pair is cheaper than a single dense $k \times k$ convolution with the
-   same $c_\textrm{i}$ and $c_\textrm{o}$.
 
 1. **Depthwise-separable block.** Consider a block of two dense
    $3 \times 3$ convolutions, each with $c$ input and $c$ output channels,

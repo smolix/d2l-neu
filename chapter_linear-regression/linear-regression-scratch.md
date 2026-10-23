@@ -711,17 +711,6 @@ curb overfitting, the first of many regularizers we will meet.
    `SyntheticRegressionData`, once at initialization and once after
    training. Compare both results with your formula.
 
-1. [code] **Ohm's law.**
-   [Georg Simon Ohm](https://en.wikipedia.org/wiki/Georg_Ohm) found that
-   the voltage $V$ across a conductor is proportional to the current $I$
-   through it, $V = RI$, with the resistance $R$ as the constant of
-   proportionality. Generate current--voltage pairs with
-   `SyntheticRegressionData` using the single weight $R = 5$ and bias 0.
-   Write a `d2l.Module` subclass whose only parameter is $R$, train it
-   with this section's `SGD` and `d2l.Trainer`, and compare the fitted $R$
-   with the least-squares estimate
-   $\hat{R} = \sum_i I_i V_i / \sum_i I_i^2$ computed on the training set.
-
 1. [code] **Learning-rate sweep.** The labels of `SyntheticRegressionData`
    carry Gaussian noise with standard deviation $\sigma = 0.01$, so the
    expected squared loss on new data cannot fall below the noise floor
@@ -742,11 +731,6 @@ curb overfitting, the first of many regularizers we will meet.
    differently, and describe the trajectory of $(\mathbf{w}, b)$ within an
    epoch and across epochs.
    :exlabel:`ex_linear-regression-scratch-why-reshuffle`
-
-1. **Broadcast loss minimizer.** ● Find the values that $\mathbf{w}$ and
-   $b$ approach when the mismatched loss of problem :exref:`ex_linear-regression-scratch-reshape-loss` is used to train
-   `LinearRegressionScratch` on `SyntheticRegressionData`, whose features
-   are standard normal.
 
 1. [code] **Robust losses.** ● Replace `loss` in `LinearRegressionScratch`
    with the mean absolute error

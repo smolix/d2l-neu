@@ -866,22 +866,6 @@ Why does training tolerate the occasional bad chained value? The usual picture i
        and derive the identity $\sigma' = \sigma(1-\sigma)$, which
        :numref:`sec_mdl-derivative_table` states without proof.
    :exlabel:`ex_mdl-single-variable-calculus-quotient-rule`
-1. **Activation derivatives.** The softplus $s(x) = \log(1+e^x)$ is a smooth
-   version of $\mathrm{ReLU}$, and $\tanh$ is a rescaled sigmoid.
-    1. Show that $s'(x) = \sigma(x)$.
-    1. Differentiate the identity $\tanh(x) = 2\sigma(2x) - 1$ with the chain
-       rule and $\sigma' = \sigma(1-\sigma)$, and show that
-       $\tanh'(x) = 1 - \tanh^2(x)$.
-    1. Find the largest values of $\sigma'$ and of $\tanh'$, and the inputs at
-       which they occur.
-    1. The scaled softplus $s_\beta(x) = \frac{1}{\beta}\log(1 + e^{\beta x})$
-       with $\beta > 0$ approaches $\mathrm{ReLU}$ as $\beta \to \infty$.
-       Show that $|s_\beta(x) - \mathrm{ReLU}(x)| \le (\log 2)/\beta$ for
-       every $x$, with equality at $x = 0$, and find the smallest $L$ for
-       which $s_\beta'$ is $L$-Lipschitz. Choose the smallest $\beta$ for
-       which $|s_\beta - \mathrm{ReLU}| \le \epsilon$ everywhere. Which step
-       sizes does the descent lemma :eqref:`eq_mdl-descent` then certify for
-       gradient descent on $s_\beta$?
 1. **Smoothness of the logistic loss.** The descent lemma
    :eqref:`eq_mdl-descent` requires a Lipschitz constant $L$ for $f'$.
     1. Use the Mean Value Theorem :eqref:`eq_mdl-mvt` to show that if

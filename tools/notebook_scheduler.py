@@ -87,8 +87,8 @@ class Item:
     def slots(self):  # total slots, for reporting / big-first tie-break
         if self.req[0] == "cpu":
             return 1
-        if self.req[1] == "all":
-            return -1  # host-sized; unknown until reserve() resolves it
+        if "all" in self.req[1:]:
+            return -1  # card/host-sized; unknown until reserve() resolves it
         return self.req[1] * self.req[2]
 
 
@@ -269,9 +269,14 @@ class Scheduler:
             return True
         now = time.time()
         since = self.live_ok_since[g]
+        # A full-card reservation (whole-box, or 3 slots on a 24 GB card) can
+        # exceed the card's VRAM once headroom is added; for it, "free" means
+        # the card is idle up to the headroom, not more VRAM than exists.
+        need = min(slots * self.mib_per_slot + self.live_headroom,
+                   self.gpu_vram[g] - self.live_headroom)
         return (now >= self.live_settle_until[g]
                 and since is not None and now - since >= self.live_stable_s
-                and self.live_free[g] >= slots * self.mib_per_slot + self.live_headroom)
+                and self.live_free[g] >= need)
 
     # ---- reservation (under lock); returns assignment dict or None ----
     def _reserve(self, it):
@@ -299,6 +304,16 @@ class Scheduler:
                 return None
             chosen = list(range(self.num_gpus))
             per_gpu_spg = list(self.gpu_cap)  # each card's own full capacity
+        elif spg == "all":
+            # n whole cards: each chosen GPU entirely free, at its own full
+            # capacity (so the request means the same on 16 GB and 24 GB cards).
+            cand = [g for g in range(self.num_gpus)
+                    if self.gpu_free[g] == self.gpu_cap[g]
+                    and self._live_ok(g, self.gpu_cap[g])]
+            if len(cand) < ngpu:
+                return None
+            chosen = cand[:ngpu]
+            per_gpu_spg = [self.gpu_cap[g] for g in chosen]
         else:
             # GPUs with at least spg free, most-free first (spread load)
             cand = sorted((g for g in range(self.num_gpus)

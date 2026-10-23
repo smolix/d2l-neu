@@ -81,6 +81,8 @@ What a single notebook needs is decided by
 | `('gpu', 1, 2)` | 2 slots on **one** GPU (memory-heavy) | `HEAVY_GPU_NOTEBOOKS[(fw, rel)] = 2` |
 | `('gpu', 2, 1)` | **2×1** — 1 slot on **each of two** GPUs | `rel ∈ MULTI_GPU_NOTEBOOKS` |
 | `('gpu', 2, 2)` | **2×2** — 2 slots on **each of two** GPUs | `MULTI_GPU_NOTEBOOKS` + `TWO_GPU_SLOTS_PER[(fw, rel)] = 2` |
+| `('gpu', n, 'all')` | **n whole cards** — every slot on each of n GPUs, rest of the box free for others | `FULL_CARD_NOTEBOOKS[rel] = n` |
+| `('gpu', 'all', 'all')` | **whole box** — every GPU, every slot on each | `rel ∈ WHOLE_BOX_NOTEBOOKS` |
 
 The tuple is `('gpu', n_gpus, slots_per_gpu)`: *n_gpus* distinct GPUs, each
 contributing *slots_per_gpu* slots. A GPU slot is 7.5 GiB of VRAM, so a notebook
@@ -88,6 +90,15 @@ that peaks above 7.5 GiB on a card must be marked for 2 slots on that card.
 
 Resolution order in `notebook_resource`:
 
+0. `rel ∈ GPU_ONLY_NOTEBOOKS` → `('gpu', 1, 1)`; `rel ∈ CPU_ONLY_NOTEBOOKS` →
+   `('cpu',)`; `rel ∈ WHOLE_BOX_NOTEBOOKS` → `('gpu', 'all', 'all')` — a
+   notebook that scales over every visible GPU (a `jax.sharding.Mesh` over
+   `jax.devices()`, `torchrun --nproc-per-node` up to the device count). They
+   run on any k ≥ 2; whole-box is used so the captured scaling tables include
+   the k = 4 rows the prose quotes. `rel ∈ FULL_CARD_NOTEBOOKS` →
+   `('gpu', n, 'all')` — a notebook that sizes its own work to the visible
+   cards' memory (the async HPO notebooks start `total_memory // 7 GB`
+   syne-tune workers per visible GPU).
 1. `rel ∈ MULTI_GPU_NOTEBOOKS` → `('gpu', 2, TWO_GPU_SLOTS_PER.get((fw, rel), 1))`
    — a data-parallel notebook genuinely uses two GPUs; default 1 slot each
    (`2×1`), bumped to 2 each (`2×2`) for a framework that allocates >7.5 GiB on a
@@ -110,7 +121,18 @@ MULTI_GPU_NOTEBOOKS = {            # data-parallel: need 2 GPUs
     "chapter_optimization/minibatch-sgd.ipynb",
 }
 
-HEAVY_GPU_NOTEBOOKS = {            # 2 slots on ONE gpu
+WHOLE_BOX_NOTEBOOKS = {            # every GPU, fully; nothing shares a card
+    "chapter_computational-performance/multi-gpu-practice.ipynb",
+    "chapter_computational-performance/fast-transformer.ipynb",
+}
+
+FULL_CARD_NOTEBOOKS = {            # n whole cards, whatever their size
+    "chapter_hyperparameter-optimization/rs-async.ipynb": 1,   # syne-tune
+    "chapter_hyperparameter-optimization/sh-async.ipynb": 1,   # syne-tune
+}
+
+HEAVY_GPU_NOTEBOOKS = {            # 2 slots on ONE gpu (excerpt)
+    ("jax", "chapter_generative-adversarial-networks/dcgan.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/ssd.ipynb"): 2,
     ("tensorflow", "chapter_natural-language-processing-pretraining/bert-pretraining.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/fine-tuning.ipynb"): 2,
@@ -124,7 +146,14 @@ TWO_GPU_SLOTS_PER = {             # per-(fw, rel) override: 2x2 instead of 2x1
 **To change a notebook's footprint:** add it to the right table (above). A
 single-GPU notebook that OOMs → `HEAVY_GPU_NOTEBOOKS[(fw,rel)] = 2`. A
 data-parallel notebook that OOMs at `2×1` → `TWO_GPU_SLOTS_PER[(fw,rel)] = 2`.
-`TWO_GPU_SLOTS_PER` starts empty and is filled in empirically.
+`TWO_GPU_SLOTS_PER` starts empty and is filled in empirically. A notebook that
+spreads work over GPUs it was not given (failures name a GPU outside its
+`[GPU n]` reservation, or a trial OOMs on a card another job holds) is a bug in
+whatever ignores `CUDA_VISIBLE_DEVICES` — fix that rather than widening the
+reservation. Example: syne-tune 0.3.x counts GPUs with `nvidia-smi --list-gpus`
+and pins trial *i* to physical GPU *i*; `tools/check_runtime_deps.py pytorch`
+(run by the `.venv-pytorch/.runtime-deps` target after every venv sync) patches
+it to honour the parent's `CUDA_VISIBLE_DEVICES`.
 
 ---
 
@@ -273,7 +302,7 @@ shared-dataset notebooks. This path is unchanged and self-contained.
 | `--force-all` | off | ignore stamp freshness, run everything |
 | `--dry-run` | off | simulate dispatch (no execution); checks per-GPU invariants |
 | `D2L_GPU_LIVE_GATE=1` | off | shared hosts: admit a GPU job to a card only when `nvidia-smi` shows enough free memory (see below) |
-| `D2L_GPU_LIVE_HEADROOM_MIB` | 2048 | extra free MiB required beyond `slots × GPU_MIB_PER_SLOT` |
+| `D2L_GPU_LIVE_HEADROOM_MIB` | 2048 | extra free MiB required beyond `slots × GPU_MIB_PER_SLOT`; a reservation that fills the card (whole-box, or 3 slots on 24 GB) instead needs free ≥ VRAM − headroom, i.e. an idle card |
 | `D2L_GPU_LIVE_STABLE_S` | 180 | a card must have had one slot's worth free this long, so a momentary gap between another user's jobs is never taken |
 | `D2L_GPU_LIVE_SETTLE_S` | 90 | pause on a card after a dispatch while the new job allocates |
 

@@ -11,6 +11,13 @@ Two checks today:
     libcusolver.so.11 and silently falls back to CPU. We symlink the cusolver
     libs into nvidia/cusparse/lib/ (which IS on the runpath). The symlinks are
     re-created on every venv sync because `uv sync` wipes them.
+  - pytorch: syne-tune 0.3.x ignores CUDA_VISIBLE_DEVICES. `get_num_gpus()`
+    counts `nvidia-smi --list-gpus` (every card on the host) and
+    `LocalBackend._allocate_gpu` sets CUDA_VISIBLE_DEVICES=<index> per trial,
+    so a notebook confined to some GPUs by the scheduler still starts trials
+    on all of them (the async HPO notebooks OOMed on a card another job held).
+    We patch both to honour the parent's CUDA_VISIBLE_DEVICES. Idempotent;
+    re-applied after every venv sync.
 """
 import argparse
 import os
@@ -157,6 +164,59 @@ def fix_tensorflow():
     print(f"  TF sees {n} GPU(s)")
 
 
+SYNE_TUNE_MARK = "# d2l: honour CUDA_VISIBLE_DEVICES"
+SYNE_TUNE_PATCHES = {
+    "num_gpu.py": [
+        ("import logging\n",
+         "import logging\nimport os  " + SYNE_TUNE_MARK + "\n"),
+        ("    if _num_gpus is None:\n",
+         "    visible = os.environ.get(\"CUDA_VISIBLE_DEVICES\")  " + SYNE_TUNE_MARK + "\n"
+         "    if _num_gpus is None and visible is not None:\n"
+         "        _num_gpus = len([d for d in visible.split(\",\") if d.strip()])\n"
+         "    if _num_gpus is None:\n"),
+    ],
+    "backend/local_backend.py": [
+        ('            env["CUDA_VISIBLE_DEVICES"] = str(gpu)\n',
+         '            visible = os.environ.get("CUDA_VISIBLE_DEVICES")  ' + SYNE_TUNE_MARK + '\n'
+         '            env["CUDA_VISIBLE_DEVICES"] = (\n'
+         '                visible.split(",")[gpu].strip() if visible else str(gpu))\n'),
+    ],
+}
+
+
+def fix_syne_tune(framework):
+    """Patch syne-tune in .venv-<framework> (if installed) to keep trials on
+    the GPUs in CUDA_VISIBLE_DEVICES. Idempotent: a patched file carries
+    SYNE_TUNE_MARK and is left alone."""
+    venv = ROOT / f".venv-{framework}"
+    pkgs = list((venv / "lib").glob("python3*/site-packages/syne_tune"))
+    if not pkgs:
+        return
+    for rel, edits in SYNE_TUNE_PATCHES.items():
+        path = pkgs[0] / rel
+        text = path.read_text()
+        if SYNE_TUNE_MARK in text:
+            continue
+        for old, new in edits:
+            if text.count(old) != 1:
+                sys.exit(f"syne-tune patch: anchor not found once in {path}: "
+                         f"{old.strip()!r} (syne-tune version changed?)")
+            text = text.replace(old, new)
+        path.write_text(text)
+        print(f"  patched {path}")
+    py = venv / "bin/python"
+    result = subprocess.run(
+        [str(py), "-c",
+         "import os; os.environ['CUDA_VISIBLE_DEVICES'] = '3,1';"
+         "from syne_tune.num_gpu import get_num_gpus; print(get_num_gpus())"],
+        text=True, capture_output=True, check=False, cwd=ROOT / "logs")
+    lines = result.stdout.strip().splitlines()   # import-time chatter first
+    if result.returncode != 0 or not lines or lines[-1] != "2":
+        sys.exit(f"syne-tune patch: smoke test failed: {result.stdout!r} "
+                 f"{result.stderr.strip()}")
+    print("  syne-tune honours CUDA_VISIBLE_DEVICES")
+
+
 def check_darwin(framework):
     """macOS arm64 CPU builds carry no CUDA libs and link native code as
     .dylib bundled in the wheel — `ldd`/cusolver checks don't apply. The
@@ -175,8 +235,12 @@ def check_darwin(framework):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("framework", choices=["mxnet", "tensorflow"])
+    parser.add_argument("framework", choices=["mxnet", "tensorflow", "pytorch"])
     args = parser.parse_args()
+
+    if args.framework == "pytorch":   # pure-Python patch: any platform
+        fix_syne_tune(args.framework)
+        return
 
     if sys.platform == "darwin":
         check_darwin(args.framework)

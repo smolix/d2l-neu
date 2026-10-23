@@ -212,6 +212,17 @@ WHOLE_BOX_NOTEBOOKS = {
     "chapter_computational-performance/fast-transformer.ipynb",
 }
 
+# rel → number of GPUs this notebook takes WHOLE (every slot on each card,
+# whatever the card's size), without claiming the rest of the box. For
+# notebooks that size their own work to the visible cards' memory: the async
+# HPO notebooks start `total_memory // 7 GB` syne-tune workers per visible
+# GPU. (syne-tune itself only honours CUDA_VISIBLE_DEVICES with the patch
+# that tools/check_runtime_deps.py applies to the pytorch venv.)
+FULL_CARD_NOTEBOOKS = {
+    "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
+    "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
+}
+
 # (framework, relative-path) → number of global GPU slots to hold for
 # this single notebook. Used for notebooks that overflow the standard
 # per-process VRAM budget. Each entry causes run_one_notebook to flock
@@ -228,6 +239,10 @@ HEAVY_GPU_NOTEBOOKS = {
     # 12.5's Gated-DeltaNet LM + chunked-WY cells peak ~8 GiB in the XLA
     # arena; green solo, RESOURCE_EXHAUSTED at 2-slot sharing. Run exclusive.
     ("jax", "chapter_recurrent-modern/deltanet.ipynb"): 2,
+    # 16.4's scoring cell generates 500 samples per run in one call
+    # (f32[500,64,64,64] activations) and OOMs/fails XLA autotuning at the
+    # 1-slot (~7.5 GiB) arena, deterministically on both attempts.
+    ("jax", "chapter_generative-adversarial-networks/dcgan.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/ssd.ipynb"): 2,
     # bert-pretraining: hidden=128, seq=64, batch=512 lands a
     # BatchMatMulV2 of ~512×64×128×128 that OOMs the 8 GB budget.
@@ -254,6 +269,7 @@ def notebook_resource(framework, rel, uses_gpu):
         ('gpu', n, spg)    → spg GPU slots on EACH of n distinct GPUs:
                              (1,1) default 1 slot · (1,2) 2 slots on one GPU
                              (2,1) "2x1" (1 each on 2 GPUs) · (2,2) "2x2"
+        ('gpu', n, 'all')  → n whole cards: every slot on each of n GPUs
         ('gpu', 'all', 'all') → whole-box: every GPU on the host, every slot
                              on each (host-sized, never a literal count —
                              resolved against the live GPU pool at reserve
@@ -270,6 +286,8 @@ def notebook_resource(framework, rel, uses_gpu):
         return ('cpu',)
     if rel in WHOLE_BOX_NOTEBOOKS:
         return ('gpu', 'all', 'all')
+    if rel in FULL_CARD_NOTEBOOKS:
+        return ('gpu', FULL_CARD_NOTEBOOKS[rel], 'all')
     if rel in MULTI_GPU_NOTEBOOKS:
         return ('gpu', 2, TWO_GPU_SLOTS_PER.get((framework, rel), 1))
     heavy = HEAVY_GPU_NOTEBOOKS.get((framework, rel))

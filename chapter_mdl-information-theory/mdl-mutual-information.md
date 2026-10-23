@@ -202,7 +202,8 @@ independence. $\blacksquare$
 The identities have a picture, :numref:`fig_mdl-mi-overlap`: draw $H(X)$ and
 $H(Y)$ as overlapping disks. The overlap is $I(X;Y)$, the crescents are the
 conditional entropies, the union is the joint entropy, and each identity in
-claim 1 is one way of reading off the overlap's area. The picture also
+the properties proposition is one way of reading off the overlap's area.
+The picture also
 explains the directed reading: $I(X;Y) = H(X) - H(X \mid Y)$ is the
 *reduction in surprise* about $X$ obtained by observing $Y$.
 
@@ -233,6 +234,7 @@ print(f'       = {mi_kl / onp.log(2):.4f} bits')
 ```
 
 ### A Gaussian Example
+:label:`subsec_mdl-mi-gaussian`
 
 For continuous variables, the bivariate Gaussian provides a useful worked
 example with a closed form. We use this expression as a known reference value
@@ -258,7 +260,8 @@ $h(X) = h(Y) = \tfrac{1}{2}\log(2\pi e)$, a value computed explicitly inside
 the maximum-entropy proof of :numref:`subsec_mdl-gaussian-max-entropy`; the
 same integration against the bivariate density gives
 $h(X, Y) = \tfrac{1}{2}\log\left((2\pi e)^2 \det\Sigma\right)$. The entropy
-identity of claim 1 carries over: joint and conditional differential
+identity of the properties proposition carries over: joint and conditional
+differential
 entropies are the same formulas with integrals in place of sums, and the
 chain-rule algebra never used discreteness. It gives
 
@@ -273,8 +276,9 @@ caveat of :numref:`sec_mdl-information_theory`: differential entropy can even
 be negative), but the offending terms cancel in the combination: mutual
 information is a *relative* quantity. $\blacksquare$
 
-Read the limits: at $\rho = 0$ the variables are independent (for Gaussians,
-uncorrelated implies independent) and $I = 0$; as $\rho \to \pm 1$ the joint
+Read the limits: at $\rho = 0$ the variables are independent (for jointly
+Gaussian variables, uncorrelated implies independent) and $I = 0$; as
+$\rho \to \pm 1$ the joint
 density collapses onto a line, $Y$ determines $X$, and $I \to \infty$. In
 between, the formula gives concrete targets: $\rho = 0.5$ carries
 $\approx 0.144$ nats, $\rho = 0.9$ carries $\approx 0.830$ nats, and
@@ -319,6 +323,7 @@ the plug-in histogram estimator is already biased once the dependence is
 strong. The high-dimensional estimators developed below face still sharper limits.
 
 ### Pointwise Mutual Information
+:label:`subsec_mdl-pmi`
 
 Mutual information is an *average*. Its summand in
 :eqref:`eq_mdl-mut_ent_def` is the *pointwise mutual information*
@@ -329,7 +334,8 @@ $$\textrm{pmi}(x, y) = \log\frac{p_{X, Y}(x, y)}{p_X(x)\, p_Y(y)}$$
 compares how often the specific pair $(x, y)$ occurs to how often it *would*
 occur if $X$ and $Y$ were independent. Positive pmi means the outcomes attract
 (they co-occur more than chance predicts); negative pmi means they repel; and
-$I(X;Y) = E[\textrm{pmi}(x,y)]$ is the average attraction.
+$I(X;Y) = E_{(x,y) \sim P_{X,Y}}[\textrm{pmi}(x,y)]$ is the average
+attraction.
 
 Pointwise mutual information is widely used in natural language
 processing :cite:`Church.Hanks.1990`, where it separates genuine
@@ -381,7 +387,8 @@ methods, where factorizing a pmi matrix recovers word vectors
 How does mutual information relate to the correlation coefficient of
 :numref:`sec_mdl-random_variables`? Correlation detects *linear* dependence:
 $\rho(X, Y) = 0$ does **not** imply independence, only the absence of a
-linear trend. Mutual information detects *any* dependence: by claim 3 of the
+linear trend. Mutual information detects *any* dependence: by the equality
+condition of the
 properties proposition, $I(X; Y) = 0$ holds *if and only if* $X \perp Y$.
 Two further properties sharpen the contrast.
 
@@ -445,7 +452,8 @@ Equivalently, $I(X; Y \mid Z) = E_{z}\left[D_{\textrm{KL}}(P_{X,Y \mid z}
 \,\|\, P_{X \mid z} \otimes P_{Y \mid z})\right]$: expanding each
 conditional entropy as an expectation and collecting the logarithms into the
 ratio $p_{X,Y \mid z}/(p_{X \mid z}\, p_{Y \mid z})$ repeats the algebra of
-claim 1 under each conditional law. As an average of per-$z$ divergences it
+the properties proposition under each conditional law. As an average of
+per-$z$ divergences it
 inherits nonnegativity from Gibbs, with $I(X; Y \mid Z) = 0$ if and only if
 $X$ and $Y$ are conditionally independent given $Z$. The chain rule then
 splits joint information into sequential contributions.
@@ -481,6 +489,7 @@ is appended to $Y$ and must add no information about $X$. The chain rule's
 main consequence deserves its own subsection.
 
 ### The Data-Processing Inequality
+:label:`subsec_mdl-dpi`
 
 Random variables $X, Y, Z$ form a *Markov chain*, written
 $X \to Y \to Z$, when $Z$ depends on $(X, Y)$ only through $Y$:
@@ -538,7 +547,7 @@ One caution about scope. The data-processing inequality is a statement about
 Markov chains, not about conditioning in general. Conditioning can *create*
 dependence, and $I(X; Y \mid Z) > I(X; Y)$ is perfectly possible: in the
 extreme case of two independent fair bits with $Z$ their XOR, conditioning
-turns zero dependence into a full $\ln 2$ nats (Exercise 6 works this out).
+turns zero dependence into a full $\ln 2$ nats (Exercise :exref:`ex_mdl-mutual-information-synergy-conditioning-can-create` works this out).
 "Processing destroys information" is a theorem about the chain
 $X \to Y \to Z$ alone; outside that structure, conditioning can raise or
 lower dependence, as the XOR example shows.
@@ -582,6 +591,7 @@ images and their augmentations or sentences and their continuations. This is
 substantially harder than evaluating the closed-form examples above.
 
 ### Estimation in High Dimensions
+:label:`subsec_mdl-mi-high-dim`
 
 The histogram plug-in estimator used above scales poorly in high dimensions.
 With $b$ bins per axis, a $d$-dimensional
@@ -597,9 +607,10 @@ $k$-nearest-neighbor distances: around each
 sample find the Chebyshev (max-coordinate) distance $\epsilon_i$ to its $k$-th
 nearest neighbor in
 the *joint* space, count the marginal neighbors $n_x^{(i)}$ and $n_y^{(i)}$
-lying within $\epsilon_i$, and average
+lying strictly closer than $\epsilon_i$, and average
 
 $$\hat{I}_{\textrm{KSG}} = \psi(k) + \psi(n) - \frac{1}{n} \sum_{i=1}^{n} \left(\psi\left(n_x^{(i)} + 1\right) + \psi\left(n_y^{(i)} + 1\right)\right),$$
+:eqlabel:`eq_mdl-ksg`
 
 where $\psi = (\log \Gamma)'$ is the digamma function. The local radii
 $\epsilon_i$ adapt the resolution to wherever the data actually sit: no bins
@@ -648,6 +659,7 @@ coordinate system. The following theorem describes one consequence for
 distribution-free lower confidence bounds.
 
 ### Distribution-Free Lower Bounds Grow Only Logarithmically
+:label:`subsec_mdl-mi-distribution-free`
 
 Suppose we are conservative and ask only for a *lower bound*: an estimator
 $\hat{I}_N$, computed from $N$ samples of the joint, such that
@@ -852,7 +864,7 @@ family: estimators stacked under the true value, trading bias
 for variance, with the contrastive bound we meet next sitting lowest but
 steadiest.
 
-![Variational lower bounds on mutual information, after Poole et al. (2019). Every estimator sits at or below the true-MI diagonal, and each fails in its own way as $I$ grows: InfoNCE is low-variance but capped at $\log N$; the decoder-based Barber--Agakov bound is low-variance but biased downward by its decoder's gap (it flattens); and the critic-based bounds lose control of their batch-to-batch spread (shaded band): NWJ's spread grows first while its mean falls below the truth, and the log-of-average in Donsker--Varadhan / MINE adds upward bias and the largest blow-up.](../img/mdl-it-mi-variational-bounds.svg)
+![Variational lower bounds on mutual information, after Poole et al. (2019). Every bound sits at or below the true-MI diagonal, and each fails in its own way as $I$ grows: InfoNCE is low-variance but capped at $\log N$; the decoder-based Barber--Agakov bound is low-variance but biased downward by its decoder's gap (it flattens); and the critic-based bounds lose control of their batch-to-batch spread (shaded band): NWJ's spread grows first while its mean falls below the truth, and the log-of-average in Donsker--Varadhan / MINE adds upward bias and the largest blow-up.](../img/mdl-it-mi-variational-bounds.svg)
 :label:`fig_mdl-mi-variational-bounds`
 
 ### InfoNCE: Estimation as Classification
@@ -947,7 +959,8 @@ $\mathcal{L}_{\textrm{NCE}} \geq 0$ and the estimator
 The two halves of the proposition are the two faces of contrastive learning.
 The bound explains *why it works*: driving the classification loss down
 provably drives shared information up, and the optimal critic recovers the
-density ratio $f^*(x,y) = \textrm{pmi}(x,y) + c(x)$ (Exercise 8;
+log density ratio up to a function of $x$,
+$f^*(x,y) = \textrm{pmi}(x,y) + c(x)$ (Exercise :exref:`ex_mdl-mutual-information-optimal-critic`;
 :cite:`Poole.Oord.Alemi.ea.2019`). With $N$ candidates, the bound has the exact
 upper limit $\log N$. This fact partly motivates the large candidate sets used
 by CPC, SimCLR, and CLIP, although optimization and negative diversity also
@@ -991,7 +1004,8 @@ for tm in [0.5, 1.0, 2.0, 4.0, 6.0]:
           f'  {onp.mean(nce):6.2f} +-{onp.std(nce):6.2f}')
 ```
 
-The table is :numref:`fig_mdl-mi-variational-bounds` in numbers. At low
+The table puts numbers on the critic-based bounds of
+:numref:`fig_mdl-mi-variational-bounds`, here with exact critics. At low
 mutual information all three estimators are accurate and well-behaved. As
 the truth climbs past $\ln N \approx 4.85$ nats, they fail in their
 characteristic ways: InfoNCE stays steady (standard deviation a few
@@ -1004,6 +1018,7 @@ of nats, despite using a perfect critic. Estimator choice is therefore a
 bias--variance decision, not a ranking.
 
 ### Experiment: Learning the Critic
+:label:`subsec_mdl-infonce-learned-critic`
 
 Finally, let the critic be learned, as in practice. We train a small MLP
 critic $f(x, y)$ with the InfoNCE loss on a correlated Gaussian pair with
@@ -1257,6 +1272,7 @@ tradeoff traces is shown in :numref:`fig_mdl-ib-tradeoff`.
 :label:`fig_mdl-ib-tradeoff`
 
 ### The Information Plane: a Gaussian Bottleneck in Closed Form
+:label:`subsec_mdl-gaussian-bottleneck`
 
 Rather than train a VIB (two stacked variational bounds would put us two
 bounds away from anything checkable), we exhibit the IB tradeoff in a model
@@ -1277,6 +1293,7 @@ $$
 I(X; Z) = \tfrac{1}{2}\log\left(1 + \sigma^{-2}\right), \qquad
 I(Y; Z) = -\tfrac{1}{2}\log\left(1 - \frac{\rho^2}{1 + \sigma^2}\right).
 $$
+:eqlabel:`eq_mdl-gaussian-ib-info`
 
 In this scalar Gaussian family the noise level is the *only* degree of
 freedom, so sweeping $\sigma$ traces the family's entire curve; the Gaussian
@@ -1319,6 +1336,7 @@ variational bounds instead of closed forms.
 Its $\beta$-sweep traces a noisy version of the same curve.
 
 ### The Compression-Phase Debate
+:label:`subsec_mdl-compression-debate`
 
 The information plane has also been central to a debate about deep learning.
 :citet:`Shwartz-Ziv.Tishby.2017` plotted estimated $(I(X;Z), I(Y;Z))$
@@ -1331,9 +1349,10 @@ compression phase to be largely an artifact: it appears with saturating
 activations (tanh squashes activations into the bins' edges, which the
 binned MI estimator reads as compression) and disappears with ReLU networks,
 which can generalize without any measured compression. Moreover, for
-a *deterministic* network with continuous inputs, $I(X; Z)$ is in fact
-infinite or constant (the singular case flagged at the definition
-:eqref:`eq_mdl-mut_ent_def`): whatever the plotted trajectories track, it is
+a *deterministic* network, $I(X; Z)$ is infinite for continuous inputs (the
+singular case flagged at the definition :eqref:`eq_mdl-mut_ent_def`) and
+equals the constant $H(X)$ for discrete inputs that the network maps to
+distinct activations: whatever the plotted trajectories track, it is
 a property of the binning, not a mutual information. Where the debate
 stands: the
 IB *objective* :eqref:`eq_mdl-ib_lagrangian` is well-posed for explicitly
@@ -1460,49 +1479,382 @@ information estimates.
 
 ## Exercises
 
-1. Prove the discrete bounds $\max\{H(X), H(Y)\} \leq H(X, Y) \leq
-   H(X) + H(Y)$ from the chain rule and the properties of (conditional)
-   entropy. Which inequality fails for differential entropy, and why?
-1. Compute $I(X;Y)$ by hand for the joint p.m.f.
+1. **Entropy bookkeeping.** Take the joint p.m.f.
    $p_{X,Y} = \left(\begin{smallmatrix} 0.3 & 0.2 \\ 0.1 & 0.4
-   \end{smallmatrix}\right)$: form the marginals, evaluate the pointwise
-   mutual information at each cell, and average. Check your answer against
-   the `mutual_information` function.
-1. Derive the Gaussian formula :eqref:`eq_mdl-gaussian_mi` directly by
-   integrating :eqref:`eq_mdl-mut_ent_def` (without the entropy
-   identities). How large must $\rho$ be for $I(X;Y)$ to exceed the
-   certification ceiling of a batch of $N = 256$?
-1. Construct a pair of *discrete* random variables with zero correlation
-   but positive mutual information, and verify both numerically. Then prove
-   that for jointly Gaussian variables, zero correlation does imply
-   $I = 0$.
-1. (Data-processing) Let $X \to Y \to Z$ with a *deterministic* second step
-   $Z = g(Y)$. Show $I(X; g(Y)) \leq I(X; Y)$ with equality when $g$ is
-   invertible, and give an example where $g$ is not invertible yet equality
-   still holds. Can post-processing by any randomized $g$ ever increase
-   mutual information?
-1. (Synergy) Conditioning can *create* dependence: let $X, Y$ be
-   independent fair bits and $Z = X \oplus Y$ (exclusive or). Show
-   $I(X; Y) = 0$ but $I(X; Y \mid Z) = \ln 2$. Why does this not contradict
-   the data-processing inequality?
-1. Derive the Barber--Agakov bound :eqref:`eq_mdl-ba_bound` from
-   $I = H(X) - H(X \mid Y)$ and Gibbs' inequality, and show that the gap of
-   the bound equals $E_y[D_{\textrm{KL}}(p(\cdot \mid y) \| q(\cdot \mid
-   y))]$.
-1. Show from :eqref:`eq_mdl-infonce_def` that
-   $\mathcal{L}_{\textrm{NCE}} \geq 0$, conclude that the InfoNCE estimator
-   :eqref:`eq_mdl-infonce_est` can never exceed $\log N$, and explain in one paragraph
-   why increasing the batch size tightens the bound. What does the optimal
-   critic look like?
-1. For the scalar Gaussian bottleneck, derive the critical value
-   $\beta^* = 1/\rho^2$ below which the IB optimum collapses to an
-   uninformative $Z$, by examining the slope of the frontier at
-   $I(X;Z) = 0$. Characterize the optimal $Z$ as $\beta \to \infty$.
-1. Using Fano's inequality :eqref:`eq_mdl-fano` and the $\log N$ ceiling
-   taken at face value, estimate the smallest contrastive batch size that
-   could in principle certify enough mutual information for $1\%$ error on
-   a balanced $10{,}000$-class problem. Then design (and run) a sanity check for any
-   MI estimator using a known-MI Gaussian pair.
+   \end{smallmatrix}\right)$, with rows indexing $x$ and columns indexing
+   $y$ as in :numref:`sec_mdl-mi-recap`.
+    1. Compute the marginals, $H(X,Y)$, $H(X)$, $H(Y)$, the pointwise mutual
+       information :eqref:`eq_mdl-pmi_def` of each cell, and $I(X;Y)$ as the
+       average of the four values weighted by $p_{X,Y}$. Check the result
+       with `mutual_information`.
+    1. The table holds the same four probabilities as the joint `p_xy` of
+       :numref:`sec_mdl-mi-recap`, rearranged. Which quantities of (a) agree
+       between the two tables? Why do their mutual informations differ?
+    1. Prove the discrete bounds
+       $\max\{H(X), H(Y)\} \leq H(X, Y) \leq H(X) + H(Y)$ from the chain
+       rule, the nonnegativity of discrete entropy, and the properties of
+       mutual information.
+    1. Let $X \sim \mathcal{N}(0, 1)$ and $Y = X + \sigma\epsilon$ with
+       independent noise $\epsilon \sim \mathcal{N}(0, 1)$. Compute the
+       differential entropy $h(Y)$ and, by the chain rule, $h(X, Y)$. Find
+       the noise levels $\sigma$ for which $h(X, Y) < h(Y)$. Which step
+       of the proof of (c) fails for differential entropy? Does the upper
+       bound survive?
+   :exlabel:`ex_mdl-mutual-information-entropy-bookkeeping`
+
+1. **Gaussian pointwise mutual information.** Let $(X, Y)$ be the standard
+   bivariate Gaussian pair with correlation $\rho$ that `gauss_pair`
+   samples.
+    1. Derive the expression for $\textrm{pmi}(x, y)$ that the function
+       `pmi_gauss` of :numref:`sec_mdl-mi-hard` evaluates.
+    1. Average it over $P_{X,Y}$ and recover :eqref:`eq_mdl-gaussian_mi`
+       without the entropy identities.
+    1. Average it over $P_X \otimes P_Y$ instead. Show that the result is
+       $-D_{\textrm{KL}}(P_X \otimes P_Y \,\|\, P_{X,Y})$, evaluate it in
+       closed form, and compute it for $\rho = 0.99$.
+    1. Show that $E_{P_X \otimes P_Y}\big[e^{\textrm{pmi}(x, y)}\big] = 1$
+       for every $\rho$, although by (c) a typical shuffled pair has a tiny
+       $e^{\textrm{pmi}}$ at $\rho = 0.99$. Which shuffled pairs carry this
+       expectation? Explain why the average of $e^{\textrm{pmi}}$ over $128$
+       shuffled pairs, which the DV and NWJ estimates of
+       :numref:`sec_mdl-infonce` compute, varies strongly from batch to
+       batch.
+   :exlabel:`ex_mdl-mutual-information-gaussian-pmi`
+
+1. [code] **Bias of the histogram estimator.** The plug-in estimate of
+   `binned_mi` depends on the sample size $n$, on the number $b$ of bins per
+   axis, and on the coordinates of the data. Mutual information depends on
+   none of them.
+    1. For an independent pair, $2n$ times the plug-in estimate is the
+       $G$-statistic of the test for independence. When every cell's
+       expected count is large, this statistic is approximately
+       $\chi^2$-distributed with $(b-1)^2$ degrees of freedom. Predict the
+       mean estimate at $\rho = 0$ for $n = 200{,}000$ and $b = 40$, and
+       compare it with the value $0.0027$ that the cell of
+       :numref:`subsec_mdl-mi-gaussian` prints for $\rho = 0$. Why is the
+       printed value smaller?
+    1. Replace each coordinate by its rank divided by $n$ before binning, so
+       that every bin of each axis holds the same number of samples. Average
+       the estimate over $20$ independent pairs with $\rho = 0$ for
+       $n \in \{2000, 20{,}000\}$ and $b \in \{10, 40\}$, and compare with the
+       prediction of (a). For which setting does the prediction fail, and
+       why?
+    1. Apply $x \mapsto x^3$ to the first coordinate of a pair with
+       $\rho = 0.9$ and $n = 200{,}000$, and estimate $I(X;Y)$ with and
+       without the rank transform. Why is the rank-based estimate exactly
+       unchanged?
+    1. Repeat (c) at $\rho = 0.99$ with $b \in \{40, 100\}$, using ranks.
+       Together with (b), what does this suggest about how $b$ should grow
+       with $n$?
+   :exlabel:`ex_mdl-mutual-information-histogram-bias`
+
+1. [code] **Rare pairs and PMI.** Pointwise mutual information
+   :eqref:`eq_mdl-pmi_def` corrects co-occurrence counts for the frequencies
+   of the two words (:numref:`subsec_mdl-pmi`).
+    1. Show that
+       $\textrm{pmi}(x, y) \leq \min\{-\log p_X(x), -\log p_Y(y)\}$. When is
+       each of the two bounds attained?
+    1. Extend `counts` by a fourth first word *sri* and a fourth second word
+       *lanka* that occur only in the bigram "sri lanka", with count $2$.
+       Recompute the pmi of "new york", "machine learning", "the day", and
+       "sri lanka", and repeat with count $1$. Zero counts give
+       $\textrm{pmi} = -\infty$ and make `(p * pmi).sum()` return `nan`, so
+       restrict sums to the nonzero cells, as `binned_mi` does.
+    1. Compare the contributions $p_{X,Y}(x, y)\,\textrm{pmi}(x, y)$ of "new
+       york" and "sri lanka" to $I(X;Y)$. Then add $1$ to every count and
+       recompute both pmi values. Which of these scores would you use to rank
+       collocations, and why?
+   :exlabel:`ex_mdl-mutual-information-rare-pairs`
+
+1. **Zero correlation and dependence.** Correlation detects only linear
+   dependence (:numref:`sec_mdl-mi-nonlinear-correlation`).
+    1. Construct a pair of discrete random variables with zero correlation
+       and positive mutual information, and compute both quantities.
+    1. Let $X \sim \mathcal{N}(0, 1)$ and let $S$ be an independent sign,
+       uniform on $\{-1, +1\}$. Show that $Y = SX$ is standard Gaussian and
+       uncorrelated with $X$.
+    1. Show that $I(X;Y) = \infty$ for the pair of (b). Why does
+       :eqref:`eq_mdl-gaussian_mi` with $\rho = 0$ not apply?
+   :exlabel:`ex_mdl-mutual-information-zero-correlation`
+
+1. **Information versus usable information.** A label $Y$ is a fair bit.
+   Given $Y = 0$ the input $X \in \mathbb{R}^2$ is uniform on the circle of
+   radius $1$, and given $Y = 1$ it is uniform on the circle of radius $2$.
+   A representation computes $Z = \|X\|^2$.
+    1. Show that $I(Y;Z) = I(Y;X) = \ln 2$, although $x \mapsto \|x\|^2$ is
+       not invertible. Which condition for equality in the data-processing
+       inequality of :numref:`subsec_mdl-dpi` holds?
+    1. Show that no linear classifier
+       $\hat y = \mathbf{1}[\mathbf{w}^\top \mathbf{x} + b > 0]$ classifies
+       every input correctly, whereas a threshold on $Z$ does.
+    1. The layers of a network form a Markov chain
+       $X \to Z_1 \to Z_2 \to \cdots$. Suppose that the accuracy of a linear
+       classifier fit to $Z_\ell$ rises with $\ell$. Why does this not
+       contradict $I(Y;Z_1) \geq I(Y;Z_2) \geq \cdots$?
+    1. :citet:`Xu.Zhao.Song.ea.2020` measure the information that a family
+       $\mathcal{V}$ of predictors $q(y \mid x)$ can extract. Let
+       $H_{\mathcal{V}}(Y \mid X) = \inf_{q \in \mathcal{V}} E[-\log q(Y \mid X)]$,
+       and let $H_{\mathcal{V}}(Y)$ be the same infimum over the predictors
+       in $\mathcal{V}$ that ignore their input. The *usable information* is
+
+       $$I_{\mathcal{V}}(X \to Y) = H_{\mathcal{V}}(Y) - H_{\mathcal{V}}(Y \mid X).$$
+
+       Let $\mathcal{V}$ be logistic regression on the given input. Show that
+       $I_{\mathcal{V}}(X \to Y) = 0$ and $I_{\mathcal{V}}(Z \to Y) = \ln 2$.
+       For $X$, use that the expected logistic loss is convex in
+       $(\mathbf{w}, b)$ and unchanged when $\mathbf{w}$ is rotated. Which
+       inequality of :numref:`subsec_mdl-dpi` does $I_{\mathcal{V}}$ violate?
+   :exlabel:`ex_mdl-mutual-information-usable-information`
+
+1. **Synergy and the Venn diagram.** Let $X$ and $Y$ be independent fair
+   bits and $Z = X \oplus Y$ their exclusive or.
+    1. Show that $I(X;Y) = 0$ but $I(X;Y \mid Z) = \ln 2$. Which of the
+       Markov chains $X \to Z \to Y$, $X \to Y \to Z$, and $Y \to X \to Z$
+       hold? What does the data-processing inequality therefore say about
+       this triple?
+    1. In a three-variable version of :numref:`fig_mdl-mi-overlap`, the
+       area common to all three disks would be the *interaction information*
+       $I(X;Y;Z) = I(X;Y) - I(X;Y \mid Z)$. Prove that
+       $I(X;Y;Z) = H(X) + H(Y) + H(Z) - H(X,Y) - H(X,Z) - H(Y,Z) + H(X,Y,Z)$,
+       and conclude that $I(X;Y;Z)$ is symmetric in its three arguments.
+    1. Evaluate $I(X;Y;Z)$ for the triple of (a) and for three copies
+       $X = Y = Z$ of one fair bit. What do the two values imply for a
+       three-disk diagram of entropies?
+
+   *Adapted from Thomas M. Cover and Joy A. Thomas,
+   [Elements of Information Theory, 2nd ed.](https://www.wiley.com/en-us/Elements+of+Information+Theory%2C+2nd+Edition-p-9780471241959),
+   Exercise 2.25, and David J. C. MacKay,
+   [Information Theory, Inference, and Learning Algorithms](https://www.inference.org.uk/itprnn/book.pdf),
+   Exercise 8.8.*
+   :exlabel:`ex_mdl-mutual-information-synergy-conditioning-can-create`
+
+1. [code] **KSG in more dimensions.** The cell of
+   :numref:`subsec_mdl-mi-high-dim` compares `ksg_mi`, the estimator
+   :eqref:`eq_mdl-ksg`, with the closed form $-\tfrac{d}{2}\log(1-\rho^2)$
+   for $d$ independent coordinate pairs.
+    1. Use the chain rule for mutual information to prove the closed form:
+       if the pairs $(X_i, Y_i)$ are independent across $i$, then
+       $I(X;Y) = \sum_i I(X_i;Y_i)$.
+    1. Assume that no two distances tie. Show that $n_x^{(i)} \geq k - 1$
+       and $n_y^{(i)} \geq k - 1$, so that the estimate never exceeds
+       $\psi(n) - \psi(k)$. Evaluate this ceiling for $n = 2000$ and $k = 5$.
+    1. Rerun the cell with $\rho = 0.9$, $n = 2000$, and
+       $d \in \{1, 2, 4, 8, 16\}$, and plot the estimate against the closed
+       form. From which $d$ on does the estimate fall more than one nat
+       below the truth? Is the ceiling of (b) responsible?
+    1. For $d = 8$, vary $n \in \{500, 1000, 2000\}$ and $k \in \{3, 5, 10\}$.
+       How quickly does the gap close as $n$ grows?
+   :exlabel:`ex_mdl-mutual-information-ksg-dimensions`
+
+1. **Barber--Agakov with a Gaussian decoder.** Take the standard bivariate
+   Gaussian pair with correlation $\rho$ and the decoders
+   $q(x \mid y) = \mathcal{N}(x; a y, s^2)$ with parameters $a \in \mathbb{R}$
+   and $s^2 > 0$. In the bound :eqref:`eq_mdl-ba_bound`, use the
+   differential entropy $h(X) = \tfrac{1}{2}\log(2\pi e)$ in place of
+   $H(X)$.
+    1. Evaluate the right-hand side of :eqref:`eq_mdl-ba_bound` as a
+       function of $a$ and $s^2$. Maximize it over both parameters and show
+       that the maximum equals :eqref:`eq_mdl-gaussian_mi`.
+    1. A decoder trained with the squared error alone corresponds to the
+       fixed variance $s^2 = 1$. Show that the best bound in this family is
+       $\rho^2/2$, and compare it with the true value at $\rho = 0.9$ and
+       $\rho = 0.99$. How does the gap behave as $\rho \to 1$?
+    1. Let $\hat x(y)$ be any predictor of $X$ with mean squared error $m$.
+       Use the decoder $\mathcal{N}(x; \hat x(y), m)$ to show that
+       $I(X;Y) \geq -\tfrac{1}{2}\log m$. What is the corresponding bound
+       when $X \sim \mathcal{N}(0, v)$? How does it relate to the Gaussian
+       rate--distortion function :eqref:`eq_mdl-gaussian-rd` of
+       :numref:`sec_mdl-information_theory` at distortion $m$?
+   :exlabel:`ex_mdl-mutual-information-ba-gaussian-decoder`
+
+1. **Temperature of a cosine critic.** SimCLR-style systems score
+   candidates with $f(x, y) = s(x, y)/\tau$, where
+   $s(x, y) = \textrm{sim}(z_x, z_y) \in [-1, 1]$ is a cosine similarity and
+   $\tau > 0$ is the temperature (:numref:`sec_mdl-infonce`). For one anchor
+   $x$, write $s_j = s(x, y_j)$ and let $\ell$ be the loss inside the
+   expectation :eqref:`eq_mdl-infonce_def`.
+    1. Show that
+       $\mathcal{L}_{\textrm{NCE}} \geq \log\big(1 + (N-1)e^{-2/\tau}\big)$,
+       and hence $\hat{I}_{\textrm{NCE}} < 2/\tau$ for every $N$. Evaluate
+       the cap $\log N - \log\big(1 + (N-1)e^{-2/\tau}\big)$ for $N = 4096$
+       and $\tau \in \{1, 0.5, 0.1\}$. When does the temperature rather than
+       the batch size limit the bound?
+    1. Show that $\partial \ell / \partial s_j = p_j/\tau$ for every negative
+       $j \geq 2$, where $p_j$ is the softmax probability of candidate $j$.
+       Express $\partial \ell / \partial s_1$ through the $p_j$.
+    1. Show that $\tau \ell \to \max\{0, \max_{j \geq 2} s_j - s_1\}$ as
+       $\tau \to 0$, and that
+
+       $$\ell = \log N - \frac{1}{\tau}\Big(s_1 - \frac{1}{N}\sum_{j=1}^N s_j\Big) + O(\tau^{-2}) \quad \textrm{as } \tau \to \infty.$$
+
+       Which negatives drive the gradient in each limit
+       :cite:`Wang.Liu.2021`?
+   :exlabel:`ex_mdl-mutual-information-temperature`
+
+1. **Gaussian bottleneck operating points.** The encoder
+   $Z = X + \sigma\epsilon$ of :numref:`subsec_mdl-gaussian-bottleneck` has
+   the informations :eqref:`eq_mdl-gaussian-ib-info`. Write $R = I(X;Z)$.
+    1. Eliminate $\sigma$ to show that the frontier is
+       $I(Y;Z) = -\tfrac{1}{2}\log\big(1 - \rho^2(1 - e^{-2R})\big)$. Show
+       that it is increasing and concave in $R$, has slope $\rho^2$ at
+       $R = 0$, and approaches $I(X;Y)$ as $R \to \infty$.
+    1. Show that the Lagrangian :eqref:`eq_mdl-ib_lagrangian` is minimized
+       at $R = 0$ when $\beta \leq 1/\rho^2$, and otherwise at the noise
+       level $\sigma^2 = (1 - \rho^2)/(\beta\rho^2 - 1)$. Compute the
+       corresponding $I(X;Z)$ for $\rho = 0.9$ and $\beta \in \{2, 4, 16\}$,
+       and compare with the minimizers over the grid `sigma` that the cell of
+       :numref:`subsec_mdl-gaussian-bottleneck` prints.
+    1. Describe the optimal encoder as $\beta \to \infty$. What happens to
+       $I(X;Z)$ in this limit? Which remark of
+       :numref:`sec_mdl-information-bottleneck` about deterministic encoders
+       does it illustrate?
+   :exlabel:`ex_mdl-mutual-information-gaussian-bottleneck`
+
+1. **Entropy bounds from samples.** ●
+   :numref:`subsec_mdl-mi-distribution-free` states the theorem of
+   :citet:`McAllester.Stratos.2020` informally. This problem proves a
+   version of it for entropy. Draw a sample $S$ of $N$
+   i.i.d. values from a discrete distribution $p$. The *type* of $S$ records,
+   for each $i \geq 1$, how many distinct values occur exactly $i$ times in
+   $S$; it forgets which values these are. Let $B$ be a function of the type
+   that is a lower confidence bound for every discrete distribution:
+   $P_{S \sim p^N}\big(B \leq H(p)\big) \geq 1 - \delta$ for every $p$,
+   with $\delta < 1/2$.
+    1. Show that $N$ draws from the uniform distribution on $M$ values
+       contain a repeated value with probability at most $N(N-1)/(2M)$.
+    1. Let $T_0$ be the type of a sample of $N$ distinct values. Apply the
+       validity of $B$ to the uniform distribution on $N^2$ values and
+       conclude that $B(T_0) \leq 2 \log N$.
+    1. Let $p$ be uniform on $M = 2^{256}$ values, so that
+       $H(p) \approx 177$ nats. For $N = 10^6$, bound the probability that
+       $B$ reports more than $2 \log N \approx 27.6$ nats.
+    1. For $X = Y$ uniform on $M$ values, $I(X;Y) = H(X)$. Explain why a
+       distribution-free lower bound on $I(X;Y)$ that depends on the sample
+       of pairs only through its type obeys the same limit. Which assumption
+       must an estimator add to certify more than $2 \log N$ nats from $N$
+       samples?
+   :exlabel:`ex_mdl-mutual-information-entropy-bounds-samples`
+
+1. **Optimal InfoNCE critic.** ● For one anchor $x$ and one bag
+   $v = (y_1, \ldots, y_N)$, write
+   $\ell(x, v) = -\log\big(e^{f(x, y_1)} / \sum_{j=1}^N e^{f(x, y_j)}\big)$,
+   so that $\mathcal{L}_{\textrm{NCE}}$ of :eqref:`eq_mdl-infonce_def` is
+   its expectation.
+    1. Show that replacing $f(x, y)$ by $f(x, y) + c(x)$, for any function
+       $c$, leaves $\mathcal{L}_{\textrm{NCE}}$ unchanged.
+    1. Shuffle the bag so that the positive sits at a uniformly random
+       position $J$ and the other $N - 1$ positions hold the negatives. Show
+       that
+
+       $$P(J = i \mid x, y_1, \ldots, y_N) = \frac{e^{\textrm{pmi}(x, y_i)}}{\sum_{j=1}^N e^{\textrm{pmi}(x, y_j)}}.$$
+
+       Use Gibbs' inequality to conclude that every critic
+       $f(x, y) = \textrm{pmi}(x, y) + c(x)$ minimizes
+       $\mathcal{L}_{\textrm{NCE}}$.
+    1. For this critic, show that
+
+       $$\hat{I}_{\textrm{NCE}} = I(X;Y) - E\left[\log \frac{1}{N}\sum_{j=1}^N e^{\textrm{pmi}(x, y_j)}\right].$$
+
+       Use the law of large numbers to argue that the correction tends to
+       zero as $N \to \infty$ when $I(X;Y)$ is finite. How does this explain
+       the curves that `infonce_oracle` produces in :numref:`sec_mdl-mi-hard`?
+   :exlabel:`ex_mdl-mutual-information-optimal-critic`
+
+1. **Negative sampling as shifted PMI.** ● Skip-gram with negative sampling
+   (:numref:`subsec_negative-sampling`) scores a center word $w$ and a
+   context word $o$ by $s(w, o) = \mathbf{u}_o^\top \mathbf{v}_w$ and draws
+   $K$ noise words from a distribution $P$. Let $p(w, o)$ be the frequency of
+   the pair among all (center, context) pairs of the corpus, with marginals
+   $p(w)$ and $p(o)$. Averaged over the corpus, the loss of
+   :numref:`subsec_negative-sampling` is
+
+   $$\ell = -\sum_{w, o} p(w, o) \log \sigma\big(s(w, o)\big) - K \sum_{w} p(w) \sum_{o} P(o) \log \sigma\big(-s(w, o)\big),$$
+
+   where $\sigma$ is the sigmoid :eqref:`eq_sigma-f`. Assume that the
+   embeddings have enough dimensions for every score $s(w, o)$ to be chosen
+   independently.
+    1. Show that $\ell$ is minimized at
+       $s^*(w, o) = \log \frac{p(w, o)}{p(w)\, P(o)} - \log K$, which equals
+       $\textrm{pmi}(w, o) - \log K$ when $P$ is the unigram distribution
+       $p(o)$ :cite:`Levy.Goldberg.2014`.
+    1. word2vec draws noise words with probability proportional to their
+       count raised to the power $0.75$ (:numref:`sec_word2vec_data`). Show
+       that $s^*$ then differs from $\textrm{pmi}(w, o) - \log K$ by a term
+       that depends on $o$ alone. For which context words is this term
+       negative? How does it act on the rare pairs of problem
+       :exref:`ex_mdl-mutual-information-rare-pairs`?
+    1. Compare $s^*$ with the optimal InfoNCE critic of problem
+       :exref:`ex_mdl-mutual-information-optimal-critic`b. Why does the
+       binary classification of negative sampling fix the additive term that
+       InfoNCE leaves free?
+   :exlabel:`ex_mdl-mutual-information-negative-sampling-pmi`
+
+1. **Fano and a converse.** ● Fano's inequality :eqref:`eq_mdl-fano` bounds
+   from below the error of any estimate $\hat{X} = g(Y)$ of a label $X$ with
+   $k$ values.
+    1. Let $\hat{X}(y) = \arg\max_x p(x \mid y)$. Show that its error
+       satisfies $P_e \leq 1 - e^{-H(X \mid Y)}$. Bound
+       $\max_x p(x \mid y)$ from below by $\sum_x p(x \mid y)^2$ and apply
+       Jensen's inequality twice.
+    1. An observation $Y$ carries $I(X;Y) = 9$ nats about a balanced
+       $10{,}000$-class label $X$. Use :eqref:`eq_mdl-fano` and (a) to
+       bracket the error of the best classifier. The inequality
+       :eqref:`eq_mdl-fano` has no closed-form solution for $P_e$, so solve
+       it numerically. What does the width of this interval say about
+       predicting a downstream error rate from a mutual information?
+   :exlabel:`ex_mdl-mutual-information-fano-converse`
+
+1. [extended] **Learned critics for the bounds.** ●● The section evaluates
+   DV, NWJ, and InfoNCE with critics set to `pmi_gauss`
+   (:numref:`sec_mdl-infonce`) and trains a critic for InfoNCE alone
+   (:numref:`subsec_mdl-infonce-learned-critic`).
+   :citet:`Poole.Oord.Alemi.ea.2019` train critics for NWJ, InfoNCE, and two
+   further bounds on $d = 20$ independent coordinate pairs, each a standard
+   bivariate Gaussian with correlation $\rho$, so that
+   $I(X;Y) = -\tfrac{d}{2}\log(1 - \rho^2)$. They raise $\rho$ during
+   training so that the true value steps through $2$, $4$, $6$, $8$, and
+   $10$ nats, with batches of $64$. Reproduce this comparison at small scale,
+   and add the DV bound, which their comparison leaves out.
+    1. Extend `scores` to vector inputs by feeding the concatenation
+       $(x, y) \in \mathbb{R}^{2d}$ to the MLP, and train the critic with the
+       InfoNCE loss on this staircase. Plot the batch estimate
+       :eqref:`eq_mdl-infonce_est` and the true value over training.
+    1. Train fresh critics with the NWJ bound :eqref:`eq_mdl-nwj_bound` and
+       the DV bound :eqref:`eq_mdl-dv_bound` as objectives, using the
+       off-diagonal entries of the score matrix as samples of
+       $P_X \otimes P_Y$. Add their estimates to the plot.
+    1. Replace the joint critic by a separable critic
+       $f(x, y) = g(x)^\top h(y)$ built from two MLPs, and repeat (a) and
+       (b).
+    1. Which deviations from the truth in (a) to (c) already appear in the
+       evaluation of :numref:`sec_mdl-infonce` with critics set to
+       `pmi_gauss`, and which come from learning the critic?
+   :exlabel:`ex_mdl-mutual-information-learned-critics`
+
+1. [extended] **Compression phase at small scale.** ●●
+   :citet:`Shwartz-Ziv.Tishby.2017` trained fully connected tanh networks of
+   widths 12-10-7-5-4-3-2 on all $4096$ binary input patterns of $12$ bits.
+   For each hidden layer $T$ they binned every unit's activation into $30$
+   equal intervals of $[-1, 1]$ and computed $I(X;T)$ and $I(Y;T)$ from the
+   binned values. :numref:`subsec_mdl-compression-debate` describes the
+   debate about the compression phase they reported.
+    1. Let $X$ be uniform on the $4096$ patterns and let $T_{\textrm{bin}}$
+       be the binned layer of a deterministic network. Show that the binned
+       estimate of $I(X;T)$ equals $H(T_{\textrm{bin}})$ and never exceeds
+       $\ln 4096 \approx 8.32$ nats. When does it decrease during training?
+    1. Fix a random vector $\mathbf{w} \in \mathbb{R}^{12}$ and let $Y = 1$
+       when $\mathbf{w}^\top \mathbf{x}$ exceeds its median over the $4096$
+       patterns. Train the tanh network, with a softmax over its two output
+       units, by SGD with the cross-entropy loss on a random $85\%$ of the
+       patterns. Plot the trajectory of every hidden layer in the
+       information plane $\big(I(X;T), I(Y;T)\big)$ over training.
+    1. Repeat (b) with ReLU hidden units, binning each unit into $30$ equal
+       intervals between $0$ and its largest activation over the run.
+    1. Record the fraction of tanh units with $|t| > 0.99$ during training.
+       Does the decrease of the binned $I(X;T)$ in (b) track this fraction?
+       Which conclusions about compression survive the change of activation
+       in (c) :cite:`Saxe.Bansal.Dapello.ea.2018`?
+   :exlabel:`ex_mdl-mutual-information-compression-phase`
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/)

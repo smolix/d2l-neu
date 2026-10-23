@@ -76,7 +76,7 @@ $-\log p$ is the unique choice (up to the base, i.e., the unit) satisfying
 the properties we implicitly demanded: certain events carry zero information,
 rarer events carry more, and independent events add, so that $I$ of a joint
 outcome with probability $p_1 p_2$ is $I(p_1) + I(p_2)$, which forces a
-logarithm (:citet:`Csiszar.2008` gives the formal axiomatics; Exercise 5
+logarithm (:citet:`Csiszar.2008` gives the formal axiomatics; Exercise :exref:`ex_mdl-information-theory-show-that-self-information`
 walks through the argument).
 
 This surprise is relative to the stated probabilistic model and its event
@@ -387,8 +387,9 @@ These logs are natural logs, so the result is in nats. Read two things off
 and zero exactly when $\mu_1=\mu_2$ and $\sigma_1=\sigma_2$ (i.e., $P=Q$),
 as Gibbs' inequality demands. Second, it is *not symmetric*: swapping the
 roles of $P$ and $Q$ changes the value, because the variance ratio and the
-mean gap enter asymmetrically. (Deriving :eqref:`eq_mdl-gaussian_kl` is
-Exercise 4.)
+mean gap enter asymmetrically. (Exercise
+:exref:`ex_mdl-information-theory-gaussian-kl` derives
+:eqref:`eq_mdl-gaussian_kl`.)
 
 The following calculation compares the formula with a direct Monte Carlo estimate of
 $D_{\textrm{KL}}(P\|Q) = E_{x\sim P}[\log p(x) - \log q(x)]$. The estimate
@@ -593,7 +594,9 @@ penalty is exactly
 $\textrm{CE}(\mathbf{p}, \mathbf{q}) = H(\mathbf{p}) +
 D_{\textrm{KL}}(\mathbf{p} \| \mathbf{q})$, which Gibbs' inequality minimizes
 uniquely at $\mathbf{q} = \mathbf{p}$. Strict propriety of the log score *is*
-Gibbs' inequality restated; Exercise 6 develops the argument.
+Gibbs' inequality restated; Exercise
+:exref:`ex_mdl-information-theory-scoring-rule-is-strictly` applies the same
+test to the Brier score and to an improper rule.
 
 Why insist on *strict* propriety? At population risk, over a model class that
 can represent the true conditional distribution, the log score is minimized
@@ -683,6 +686,7 @@ E[l] = \sum_i p_i l_i
 = H_2(P) + D_{\textrm{KL}}^{(2)}(P \| Q) - \log_2 Z
 \geq H_2(P),
 $$
+:eqlabel:`eq_mdl-code-length-decomp`
 
 since the KL term is non-negative by Gibbs and $-\log_2 Z \geq 0$ (the
 superscript $(2)$ marks base-$2$ logs, here and in $\textrm{CE}_2$ below).
@@ -736,6 +740,7 @@ A possible Shannon code here is $0,\, 10,\, 110,\, 111$, exactly the tree of
 lengths $1, 2, 3, 3$ are the ones computed above.
 
 ### From Symbol Codes to Arithmetic Coding
+:label:`subsec_mdl-arithmetic-coding`
 
 The Shannon code is optimal only up to that "$+1$", and the leak is real: the
 ceiling in $l_i = \lceil \log_2(1/p_i) \rceil$ rounds a fraction of a bit up
@@ -771,6 +776,7 @@ interval's binary address is the codeword. The total length is therefore
 $$
 l \;<\; \sum_{i=1}^N \log_2 \frac{1}{q(x_i \mid x_{<i})} + 2,
 $$
+:eqlabel:`eq_mdl-arith-bound`
 
 the message's total surprisal under the model plus at most two bits: the
 ceiling is paid once per *message*, not once per symbol. A ten-line
@@ -901,10 +907,11 @@ print(f'typical strings: 2^{log2_typical:.1f} of all 2^{n}')
 print(f'probability they carry: {prob_k[typical].sum():.4f}')
 ```
 
-A vanishing fraction of the strings contains almost all of the probability:
-about $2^{nH}$ of the $2^n$, missing some $24$ orders of magnitude of the
-count. Indexing only those strings *is* the compressor, and $nH$ bits
-is the length of the index.
+A small fraction of the strings carries almost all of the probability: the
+$2^{188.8}$ typical strings are about one in $2^{11}$ of the $2^{200}$, and
+they carry probability $0.989$. Indexing only those strings *is* the
+compressor, with an index of $189$ bits instead of $200$; at this length and
+tolerance the count still exceeds $2^{nH} \approx 2^{176}$.
 
 ### Lossy Compression and Rate--Distortion
 :label:`subsec_mdl-rate-distortion`
@@ -929,6 +936,7 @@ R(D)=\frac12\log\frac{\sigma^2}{D}
 \quad (0<D<\sigma^2),
 \qquad R(D)=0\quad(D\ge\sigma^2),
 $$
+:eqlabel:`eq_mdl-gaussian-rd`
 
 in nats per sample. The left panel of :numref:`fig_mdl-it-capacity-rd` plots
 it: bits buy reconstruction quality at a rate that explodes as $D\to0$ and
@@ -965,7 +973,9 @@ $$
 C=1-h_2(\varepsilon)\quad\text{bits per channel use},
 $$
 
-where $h_2$ is binary entropy. The right panel of
+where $h_2(\varepsilon) = -\varepsilon \log_2 \varepsilon -
+(1 - \varepsilon) \log_2 (1 - \varepsilon)$ is the binary entropy in bits.
+The right panel of
 :numref:`fig_mdl-it-capacity-rd` plots this curve, and it rewards a moment's
 reading. At $\varepsilon=0$ one bit survives per use. At $\varepsilon=1/2$
 the output is independent of the input and capacity is zero — no code, however
@@ -1009,7 +1019,7 @@ $\textrm{PPL} \geq e^{H}$, where $H$ is the entropy rate
 its irreducible randomness (Gibbs applied to each next-token prediction,
 averaged, plus the entropy-rate limit granted above). Because $\textrm{PPL} = b^{\textrm{CE}_b}$ for *any* log base $b$,
 perplexity is also the rare information-theoretic quantity with no unit
-ambiguity: nats and bits give the same number (Exercise 7).
+ambiguity: nats and bits give the same number (Exercise :exref:`ex_mdl-information-theory-show-that-perplexity-does`).
 
 A five-token toy stream makes the bookkeeping concrete.
 
@@ -1087,6 +1097,7 @@ small probability $\epsilon$ for the other classes:
 $$
 \mathbf{p}^\epsilon = (1 - \epsilon)\, \mathbf{e}_y + \frac{\epsilon}{k}\, \mathbf{1},
 $$
+:eqlabel:`eq_mdl-label-smoothing-target`
 
 i.e., target probability $1 - \epsilon + \epsilon/k$ for the true class and
 $\epsilon/k$ for each of the other $k - 1$. The training loss is the ordinary
@@ -1143,6 +1154,7 @@ target than the calibrated one: label smoothing penalizes the very
 behavior that one-hot targets demand.
 
 ### Knowledge Distillation
+:label:`subsec_mdl-distillation`
 
 *Knowledge distillation* :cite:`Hinton.Vinyals.Dean.2015` trains a small
 *student* network to imitate a large *teacher*, transferring the teacher's
@@ -1163,6 +1175,7 @@ $$
 \mathcal{L}_{\textrm{distill}}
 = T^2\, D_{\textrm{KL}}\big(\mathbf{p}^{(T)} \,\|\, \mathbf{q}^{(T)}\big).
 $$
+:eqlabel:`eq_mdl-distill-loss`
 
 Where does the $T^2$ come from? Differentiate the KL term with respect to a
 student logit. Since only $-\sum_j p_j^{(T)} \log q_j^{(T)}$ depends on the
@@ -1334,54 +1347,408 @@ information (:numref:`sec_mdl-mutual-information`).
 
 ## Exercises
 
-1. Verify the card-deck numbers from the first subsection: the four reports
-   carry $0$, $\ln 4$, $\ln 52$, and $\ln 52!$ nats. Use Stirling's
-   approximation to estimate $\ln 52!$ and check it against the exact value.
-1. Give a second proof that the uniform distribution maximizes entropy on $k$
-   outcomes, this time from Gibbs' inequality: show that
-   $D_{\textrm{KL}}(P \,\|\, U) = \log k - H(P)$ for the uniform $U$, and
-   conclude.
-1. Compute the entropy of the following data sources:
-    * Suppose that you are watching the output generated by a monkey at a
-      typewriter that hits any of the $44$ keys uniformly at random. How many
-      nats (and bits) of randomness per character do you observe?
-    * Unhappy with the monkey, you replace it with a drunk typesetter that
-      picks a random word out of a vocabulary of $2{,}000$ words, with an
-      average word length of $4.5$ letters. How many nats per character now?
-    * Still unhappy, you replace the typesetter with a language model that
-      achieves a per-word perplexity of $15$. How many nats per character
-      does that correspond to?
-1. Derive the closed form :eqref:`eq_mdl-gaussian_kl` for the KL divergence
-   between two univariate Gaussians by writing
-   $E_{x\sim P}[\log p(x) - \log q(x)]$ and using
-   $E_{x \sim P}[x] = \mu_1$, $E_{x\sim P}[(x-\mu_1)^2] = \sigma_1^2$.
-1. Show that self-information is unique up to scale: if a continuous,
-   decreasing function $I(p)$ on $(0, 1]$ satisfies $I(1) = 0$ and
-   $I(p_1 p_2) = I(p_1) + I(p_2)$ for all $p_1, p_2$, then
-   $I(p) = -c \log p$ for some constant $c > 0$.
-1. A scoring rule $S(\mathbf{q}, y)$ is *strictly proper* if the expected
-   penalty $E_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is uniquely minimized at
-   $\mathbf{q} = \mathbf{p}$. Prove from Gibbs' inequality that the log score
-   $S(\mathbf{q}, y) = -\log q_y$ is strictly proper. Then prove that the
-   Brier score $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}[j = y])^2$ is
-   strictly proper too, by showing that its expected penalty exceeds the
-   truthful reporter's by exactly $\|\mathbf{q} - \mathbf{p}\|^2$
-   :cite:`Gneiting.Raftery.2007`.
-1. Show that perplexity does not depend on the log base: if
-   $\textrm{CE}_b$ denotes the per-token cross-entropy in base-$b$ units,
-   then $b^{\textrm{CE}_b}$ is the same for every $b$. Then compute the
-   perplexity of a model whose per-token cross-entropy is $\ln 5$ nats.
-1. For label smoothing with $k$ classes and smoothing parameter $\epsilon$,
-   derive the optimal prediction $\mathbf{q}^*$ and the optimal logit gap,
-   and evaluate the gap for $k = 1000$, $\epsilon = 0.1$. What happens to the
-   gap as $\epsilon \to 0$, and why does that recover the one-hot pathology?
-1. For the distillation loss, derive the gradient formula
-   $\partial D_{\textrm{KL}}(\mathbf{p}^{(T)} \| \mathbf{q}^{(T)}) / \partial
-   z^{\textrm{stu}}_j = (q_j^{(T)} - p_j^{(T)})/T$, and show that as
-   $T \to \infty$ the $T^2$-scaled gradient tends to
-   $\tfrac{1}{k}\big((z^{\textrm{stu}}_j - \bar z^{\textrm{stu}}) -
-   (z^{\textrm{tea}}_j - \bar z^{\textrm{tea}})\big)$. What does the loss
-   reduce to at $T = 1$ with a one-hot teacher?
+1. **Storing a shuffled deck.** The order of a shuffled deck carries
+   $\ln 52! \approx 156.4$ nats, or $\log_2 52! \approx 225.6$ bits.
+    1. Estimate $\ln 52!$ with Stirling's approximation
+       $\ln n! \approx n \ln n - n + \tfrac{1}{2}\ln(2\pi n)$ and compute its
+       relative error. How large is the relative error when the term
+       $\tfrac{1}{2}\ln(2\pi n)$ is dropped?
+    1. Three programs store the order of the deck. The first writes each
+       card as a $6$-bit index into the $52$ cards. The second writes the
+       $i$-th card as an index into the $53 - i$ cards that remain, using
+       $\lceil \log_2(53 - i) \rceil$ bits. The third writes the position of
+       the whole order in a fixed enumeration of all $52!$ orders, using
+       $\lceil \log_2 52! \rceil$ bits. Compute the three lengths. Where
+       does the second program lose bits relative to the third?
+   :exlabel:`ex_mdl-information-theory-shuffled-deck`
+
+1. **Entropy of text sources.** Each source below emits text one character
+   at a time, and the space between two words counts as a character.
+    1. A monkey hits each of the $44$ keys of a typewriter uniformly at
+       random. How many nats and how many bits of entropy per character does
+       its output have?
+    1. A program draws each word uniformly at random from a vocabulary of
+       $2{,}000$ words whose average length is $4.5$ letters. How many bits
+       of entropy per character does its output have?
+    1. The program instead draws the word of frequency rank $r$ with
+       probability proportional to $1/r$ (Zipf's law). Assume that the
+       average stays at $5.5$ characters per word, including the space.
+       Evaluate the entropy per word numerically and convert it to bits per
+       character.
+
+   :citet:`Shannon.1951` estimated the entropy rate of printed English at
+   roughly one bit per character. Which statistical structure of English
+   does each of the three sources leave out?
+   :exlabel:`ex_mdl-information-theory-text-sources`
+
+1. **Differential entropy and units.** The differential entropy
+   :eqref:`eq_mdl-diff-ent-def` depends on the units in which $x$ is
+   measured.
+    1. Two Gaussian regression models are compared by their average
+       negative log-likelihood per sample on the same targets. By how many
+       nats does the average NLL of each model change when the targets are
+       recorded in millimeters instead of meters, and in which direction?
+       Which comparison between the two models survives the change of units?
+    1. Let $X$ have a continuous density $p$, and let $X_\Delta$ be the
+       index of the bin of width $\Delta$ that contains $X$. Show that
+       $H(X_\Delta) + \log \Delta \to h(X)$ as $\Delta \to 0$, so that the
+       discrete entropy grows without bound. Check the limit numerically for
+       $X \sim \mathcal{N}(0, 1)$ with $\Delta = 0.1$ and $\Delta = 0.01$.
+    1. Image density models are often trained on $8$-bit pixel values
+       rescaled to $[0, 1]$, with independent uniform noise on
+       $[0, \tfrac{1}{256})$ added to each of the $m$ values of an image
+       $\mathbf{x}$, and they are scored by a continuous density $q$. Let
+       the discrete model $P(\mathbf{x})$ be the $q$-mass of the bin that
+       contains $\mathbf{x}$. Following :citet:`Theis.Oord.Bethge.2016`,
+       use Jensen's inequality to show that
+
+       $$
+       -\log_2 P(\mathbf{x}) \leq
+       E_{\mathbf{u}}\big[-\log_2 q(\mathbf{x} + \mathbf{u})\big] + 8m.
+       $$
+
+       Papers on such models report
+       $E_{\mathbf{u}}\big[-\log_2 q(\mathbf{x} + \mathbf{u})\big]/m + 8$
+       as bits per dimension. What does this number bound?
+   :exlabel:`ex_mdl-information-theory-quantization`
+
+1. **Uniform maximum via Gibbs.** Give a second proof that the uniform
+   distribution $U$ on $k$ outcomes maximizes entropy, this time from Gibbs'
+   inequality: show that $D_{\textrm{KL}}(P \,\|\, U) = \log k - H(P)$ and
+   conclude. When $k$ is a power of two, a code that spends $\log_2 k$ bits
+   on every outcome needs no knowledge of $P$. What does
+   $\log_2 k - H_2(P)$ measure for this code?
+   :exlabel:`ex_mdl-information-theory-uniform-via-gibbs`
+
+1. [code] **Validating `kl_divergence`.** The `entropy` helper rejects
+   invalid input, whereas `kl_divergence` returns
+   `nansum(p * log(p / q))` without any checks.
+    1. Evaluate `kl_divergence(p, q)` for $\mathbf{p} = (0.5, 0.5)$ and
+       $\mathbf{q} = (1, 1)$, and for $\mathbf{p} = (-0.1, 1.1)$ and
+       $\mathbf{q} = (0.5, 0.5)$. Which hypothesis of Gibbs' inequality does
+       each input violate? What does `nansum` do with the second input?
+    1. Rewrite `kl_divergence` so that it validates both inputs as `entropy`
+       does, handles the terms with $p_i = 0$ by masking instead of
+       `nansum`, and returns $+\infty$ when some $p_i > 0$ has $q_i = 0$.
+       Test it on the inputs of (a) and on $\mathbf{p} = (0.5, 0.5, 0)$ and
+       $\mathbf{q} = (0.5, 0.25, 0.25)$ in both orders.
+    1. Rejecting unnormalized vectors is one repair. Another is a
+       divergence that stays non-negative on them. For vectors with entries
+       $p_i \geq 0$ and $q_i > 0$ that need not sum to one, define
+
+       $$
+       \tilde D(\mathbf{p} \,\|\, \mathbf{q})
+       = \sum_i \Big(p_i \log \frac{p_i}{q_i} - p_i + q_i\Big).
+       $$
+
+       Show with the inequality $\log u \leq u - 1$ that
+       $\tilde D(\mathbf{p} \,\|\, \mathbf{q}) \geq 0$, with equality if and
+       only if $\mathbf{p} = \mathbf{q}$, and that $\tilde D$ equals the KL
+       divergence for probability vectors. This proves Gibbs' inequality
+       without Jensen's inequality. Evaluate $\tilde D$ on the first input
+       of (a).
+   :exlabel:`ex_mdl-information-theory-validating-kl`
+
+1. **Gaussian KL divergence.** Let $P = \mathcal{N}(\mu_1, \sigma_1^2)$.
+    1. Derive the closed form :eqref:`eq_mdl-gaussian_kl` by writing out
+       $E_{x\sim P}[\log p(x) - \log q(x)]$ and using
+       $E_{x \sim P}[x] = \mu_1$ and $E_{x\sim P}[(x-\mu_1)^2] = \sigma_1^2$.
+    1. Let $Q$ have mean $\mu_1 + \delta$ and standard deviation
+       $\sigma_1 e^{\eta}$. Expand both $D_{\textrm{KL}}(P\|Q)$ and
+       $D_{\textrm{KL}}(Q\|P)$ to second order in $\delta$ and $\eta$. At
+       which order do the two directions first differ?
+    1. Evaluate the second-order approximation for $P = \mathcal{N}(0, 1)$
+       and $Q = \mathcal{N}(0, 4)$, and compare it with the exact values
+       $0.318$ and $0.807$ nats of the two directions.
+   :exlabel:`ex_mdl-information-theory-gaussian-kl`
+
+1. **Other scoring rules.** A scoring rule $S(\mathbf{q}, y)$ is strictly
+   proper if the expected penalty $E_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$
+   is uniquely minimized at $\mathbf{q} = \mathbf{p}$. For the log score,
+   this property is Gibbs' inequality.
+    1. Show that the expected Brier score, with
+       $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}[j = y])^2$, exceeds the
+       expected Brier score of the truthful report by exactly
+       $\|\mathbf{q} - \mathbf{p}\|^2$, so that the Brier score is strictly
+       proper :cite:`Gneiting.Raftery.2007`.
+    1. The linear score $S(\mathbf{q}, y) = -q_y$ rewards the probability
+       placed on the observed class. Which report minimizes its expected
+       penalty? Is the linear score proper? What does a classifier trained
+       with it report for an input whose label is class $1$ with probability
+       $0.6$ and class $2$ with probability $0.4$?
+   :exlabel:`ex_mdl-information-theory-scoring-rule-is-strictly`
+
+1. [code] **Kraft slack.** Let $P = (0.4, 0.3, 0.2, 0.1)$, whose
+   probabilities are not powers of two.
+    1. Compute the Shannon code lengths, their Kraft sum $Z$, the expected
+       length $E[l]$, and $H_2(P)$. Split the excess $E[l] - H_2(P)$ into
+       the two terms of :eqref:`eq_mdl-code-length-decomp`. Which term
+       dominates?
+    1. Among all integer lengths of at most $4$ bits that satisfy the Kraft
+       inequality, find by exhaustive search those with the smallest
+       expected length. What is their Kraft sum, and how close does their
+       expected length come to $H_2(P)$?
+   :exlabel:`ex_mdl-information-theory-kraft-slack`
+
+1. **Entropy rate of a Markov source.** A binary source emits a fair coin
+   flip as its first symbol. Each later symbol repeats the previous one with
+   probability $0.9$ and differs from it with probability $0.1$.
+    1. Show that every symbol is marginally a fair coin flip, so that a code
+       that treats the symbols as i.i.d. needs about $1$ bit per symbol.
+    1. The second limit in :eqref:`eq_mdl-entropy_rate` is the expected
+       surprisal $E[-\log_2 p(X_n \mid X_{n-1}, \ldots, X_1)]$ of the next
+       symbol given its past. Use the Markov property to evaluate it and
+       obtain the entropy rate in bits per symbol.
+    1. An arithmetic coder driven by the true conditional probabilities
+       $q(x_i \mid x_{i-1})$ encodes $N = 10^4$ symbols. What is its expected
+       code length? How many bits per symbol does a coder that ignores the
+       previous symbol waste?
+   :exlabel:`ex_mdl-information-theory-markov-entropy-rate`
+
+1. **Perplexity across tokenizers.** Perplexity is computed per token, so
+   it depends on how a text is split into tokens.
+    1. Show that perplexity does not depend on the log base: if
+       $\textrm{CE}_b$ denotes the per-token cross-entropy in base-$b$ units,
+       then $b^{\textrm{CE}_b}$ is the same for every $b$.
+    1. Two language models are evaluated on the same text of $10^6$
+       characters. The tokenizer of model A splits it into
+       $2.5 \times 10^5$ tokens, and A reaches a per-token perplexity of
+       $20$. The tokenizer of model B splits it into $6.7 \times 10^5$
+       tokens, and B reaches a per-token perplexity of $8$. Convert both
+       results to bits per character with :eqref:`eq_bpb`, counting
+       characters in place of bytes. Which model predicts the text better?
+    1. Take the entropy rate of the text to be one bit per character, the
+       estimate of :citet:`Shannon.1951`. Per-token perplexity is bounded
+       below by $e^{H}$, where $H$ is the entropy rate per token in nats.
+       What is the lowest per-token perplexity that any model can reach
+       with the tokenizer of A, and with that of B? How far is each model
+       from its floor, and how do both compare with the sources of exercise
+       :exref:`ex_mdl-information-theory-text-sources`?
+   :exlabel:`ex_mdl-information-theory-show-that-perplexity-does`
+
+1. **Uniqueness of self-information.** ● Show that self-information is
+   unique up to scale: if a continuous, decreasing function $I(p)$ on
+   $(0, 1]$ satisfies $I(1) = 0$ and $I(p_1 p_2) = I(p_1) + I(p_2)$ for all
+   $p_1, p_2 \in (0, 1]$, then $I(p) = -c \log p$ for some constant
+   $c > 0$. Work with the function $g(t) = I(e^{-t})$ for $t \geq 0$.
+   :exlabel:`ex_mdl-information-theory-show-that-self-information`
+
+1. [code] **Exact arithmetic coding.** ● The interval narrowing of
+   :numref:`subsec_mdl-arithmetic-coding` stores `lo` and `hi` as
+   floating-point numbers. Draw a message of $N = 1000$ symbols, each of
+   which is `a` with probability $0.9$ and `b` otherwise.
+    1. Run the floating-point narrowing on this message with the model
+       $q(\texttt{a}) = 0.9$. After how many symbols does `hi - lo` first
+       differ from the product of the probabilities by more than $0.1\%$,
+       and after how many does it become zero? Relate both answers to the
+       $53$-bit significand of a double-precision number.
+    1. Repeat the narrowing with exact rationals (`fractions.Fraction`).
+       Name a point of the final interval of width $w$ with
+       $\lceil \log_2(1/w) \rceil + 1$ bits, as in
+       :numref:`subsec_mdl-arithmetic-coding`, and write a decoder that
+       replays the model to recover the message. Compare the code length
+       with the surprisal of the message and with $N H_2(0.9)$.
+    1. Encode the same message with the mismatched model
+       $q(\texttt{a}) = 0.7$. Compare the increase in code length with
+       $N D_{\textrm{KL}}^{(2)}(P \| Q)$. Why do the two numbers differ for
+       a single message?
+   :exlabel:`ex_mdl-information-theory-exact-arithmetic-coding`
+
+1. [code] **Typical and high-probability sets.** ● The code of
+   :numref:`subsec_mdl-aep` declares a binary string of length $n = 200$
+   from a Bernoulli source with $p = 0.3$ typical when its surprisal per
+   symbol lies within $\epsilon = 0.1$ bit of the entropy $H$ in bits. It
+   finds $2^{188.8}$ typical strings, many more than $2^{nH} \approx 2^{176}$.
+    1. Which string is the most probable one? Compute its surprisal per
+       symbol and decide whether it is typical. Why does this string not
+       matter for compression?
+    1. Let $A$ be the typical set and let $B$ be any set of strings with
+       $P(B) \geq 1 - \delta$. Show that
+       $P(A \cap B) \geq 1 - \delta - P(A^c)$, and conclude that
+       $|B| \geq \big(1 - \delta - P(A^c)\big)\, 2^{n(H - \epsilon)}$.
+    1. The smallest set with probability at least $0.9$ collects strings in
+       order of decreasing probability. Group the strings by their number of
+       ones, as the code does, and compute $\tfrac{1}{n}\log_2$ of the size
+       of this set for $n = 200$, $1000$, $5000$, and $20000$. Compare it
+       with $H$ and with $\tfrac{1}{n}\log_2 |A|$ at the same $n$. Which of
+       the two sets grows like $2^{nH}$, and why does the typical set with a
+       fixed $\epsilon$ not?
+
+   *Adapted from David Tse,
+   [EE376A/Stats376A: Information Theory, Homework 2](https://web.stanford.edu/~kedart/ee376a_winter1617/hw2.pdf),
+   Problem 6.*
+   :exlabel:`ex_mdl-information-theory-typical-sets`
+
+1. [code] **Scalar quantization and rate--distortion.** ● Let
+   $X \sim \mathcal{N}(0, \sigma^2)$. A uniform scalar quantizer with step
+   $\Delta$ replaces $X$ by the nearest multiple of $\Delta$, the center of
+   its bin, and an entropy coder then spends about $H(X_\Delta)$ nats per
+   sample on the index of the bin.
+    1. For small $\Delta$ the mean squared error is approximately
+       $\Delta^2/12$. Combine this approximation with problem
+       :exref:`ex_mdl-information-theory-quantization`b to show that the
+       rate exceeds the Gaussian rate--distortion function
+       :eqref:`eq_mdl-gaussian-rd` at the same distortion by
+       $\tfrac{1}{2}\log(2\pi e/12)$ nats ($\approx 0.255$ bits) per sample,
+       independently of $\sigma$ and $\Delta$.
+    1. Check the gap numerically for $\sigma = 1$ and
+       $\Delta = 2, 1, 0.5, 0.25, 0.1$, computing the bin probabilities and
+       the distortion by numerical integration. Part (a) uses two
+       approximations, $D \approx \Delta^2/12$ and
+       $H(X_\Delta) \approx h(X) - \log \Delta$. Which of them accounts for
+       the deviation of the gap from its limit at $\Delta = 1$ and
+       $\Delta = 0.5$?
+    1. A learned codec rounds each coordinate of its latent vector to the
+       nearest integer and entropy-codes the result. What does the gap of
+       (a) imply for such a codec at high rate? Which kind of quantizer can
+       close the gap?
+   :exlabel:`ex_mdl-information-theory-scalar-quantization`
+
+1. **Binary channels.** ● For a channel $p(y \mid x)$, let
+   $H(Y \mid X) = \sum_x p(x)\, H(Y \mid X = x)$ be the average entropy of
+   the output given the input. The mutual information in
+   :eqref:`eq_mdl-channel-capacity` is then
+   $I(X; Y) = H(Y) - H(Y \mid X)$; :numref:`sec_mdl-mutual-information`
+   develops both quantities.
+    1. Show that the binary symmetric channel of
+       :numref:`subsec_mdl-channel-capacity` has capacity
+       $1 - h_2(\varepsilon)$ bits and that the uniform input attains it.
+    1. A feature takes the values $\pm 1$ and passes through dropout with
+       rate $\alpha$, which replaces it by $0$ with probability $\alpha$
+       and rescales it otherwise. Show that this binary erasure channel has
+       capacity $1 - \alpha$ bits.
+    1. Find the flip probability $\varepsilon$ at which the binary symmetric
+       channel has the same capacity as dropout with $\alpha = 0.5$. Why
+       does a flipped bit cost more capacity than an erased one?
+   :exlabel:`ex_mdl-information-theory-binary-channels`
+
+1. **Two-part code for a coin.** ● A sequence $\mathcal{D}$ of $n$ coin
+   flips contains $k$ heads, and $\hat\theta = k/n$. Hypothesis $h_0$ is
+   the fair coin: it has no parameter to describe, and
+   $L(\mathcal{D} \mid h_0) = n \log 2$. Hypothesis $h_1$ is a coin with
+   bias $\theta$. Its encoder sends the point $\theta_q$ nearest to
+   $\hat\theta$ on a grid of spacing $\delta$ in $(0, 1)$, which costs
+   $L(h_1) = \log(1/\delta)$, and the decoder knows $n$ and $\delta$.
+    1. Use :eqref:`eq_mdl-ce_decomp` to show that
+       $L(\mathcal{D} \mid h_1) = n H(\hat\theta) +
+       n D_{\textrm{KL}}(\hat\theta \,\|\, \theta_q)$, where entropy and KL
+       divergence are those of the Bernoulli distributions with these
+       parameters. Expand the KL term to second order and show that the
+       total length :eqref:`eq_mdl-mdl` of $h_1$ exceeds
+       $n H(\hat\theta)$ by at most about
+       $\log(1/\delta) + n\delta^2 / \big(8\hat\theta(1 - \hat\theta)\big)$.
+    1. Which spacing $\delta$ minimizes this bound? The decoder must know
+       $\delta$ before it decodes $\theta_q$. Why can the code therefore not
+       use the minimizer? Show that the spacing $\delta = 1/\sqrt{n}$, which
+       depends on $n$ alone, gives an excess of
+       $\tfrac{1}{2}\log n + O(1)$ whenever $\hat\theta$ stays bounded away
+       from $0$ and $1$.
+    1. Take $n = 1000$ and the approximation
+       $L(h_1) + L(\mathcal{D} \mid h_1) \approx n H_2(\hat\theta) +
+       \tfrac{1}{2}\log_2 n$ bits. Which hypothesis does MDL select for
+       $k = 600$, and which for $k = 520$? Approximately how far from $n/2$
+       must $k$ lie for $h_1$ to win? Compare this distance with the
+       standard deviation $\sqrt{n}/2$ of $k$ under the fair coin.
+   :exlabel:`ex_mdl-information-theory-two-part-coin`
+
+1. **Label smoothing on ambiguous inputs.** ● Label smoothing trains with
+   the target :eqref:`eq_mdl-label-smoothing-target`.
+    1. In the training distribution, an input $\mathbf{x}$ carries the
+       label $y$ with probability $p(y \mid \mathbf{x})$. Show that the
+       expected smoothed loss for this input is minimized by
+       $\mathbf{q}^*(\cdot \mid \mathbf{x}) = (1 - \epsilon)\,
+       p(\cdot \mid \mathbf{x}) + \tfrac{\epsilon}{k}\mathbf{1}$. How can
+       $p(\cdot \mid \mathbf{x})$ be recovered from $\mathbf{q}^*$? What is
+       the largest probability that the minimizer can assign to a class?
+    1. For one example with logits $\mathbf{z}$ and
+       $\mathbf{q} = \mathrm{softmax}(\mathbf{z})$, the gradient of
+       $\textrm{CE}(\mathbf{p}^\epsilon, \mathbf{q})$ with respect to $z_j$
+       is $q_j - p^\epsilon_j$. For $\epsilon > 0$, show that all
+       wrong-class logits are equal at every stationary point.
+    1. With one-hot targets ($\epsilon = 0$), the gradient with respect to a
+       wrong-class logit is $q_j$, and the loss has no stationary point.
+       Show that gradient descent on the logits of one example still shrinks
+       the gap between two wrong-class logits, and explain why this
+       shrinkage stalls as $q_y \to 1$. In a network, the logits of all
+       examples are computed from shared features. Which differences between
+       wrong-class logits can therefore survive training with
+       $\epsilon = 0$? Why does training with $\epsilon > 0$ remove them?
+    1. :citet:`Muller.Kornblith.Hinton.2019` observe that teachers trained
+       with label smoothing produce worse students under the distillation
+       loss :eqref:`eq_mdl-distill-loss`. Explain this observation with the
+       results of (b) and (c).
+   :exlabel:`ex_mdl-information-theory-label-smoothing`
+
+1. [code] **Distillation at high temperature.** ●
+   :citet:`Hinton.Vinyals.Dean.2015` state in their Section 2.1 that, at
+   high temperature, distillation reduces to matching zero-mean logits by
+   squared error.
+    1. Problem :exref:`ex_mdl-information-theory-two-part-coin`a expands
+       the KL divergence of two coins to second order. For $k$ classes the
+       same expansion reads
+
+       $$
+       D_{\textrm{KL}}(\mathbf{p} \| \mathbf{q}) =
+       \frac{1}{2}\sum_j \frac{(q_j - p_j)^2}{p_j}
+       + O\big(\|\mathbf{q} - \mathbf{p}\|^3\big).
+       $$
+
+       Combine this expansion with the large-$T$ approximation of
+       $\mathrm{softmax}(\mathbf{z}/T)$ in
+       :numref:`subsec_mdl-distillation` to show that, as $T \to \infty$,
+
+       $$
+       T^2 D_{\textrm{KL}}\big(\mathbf{p}^{(T)} \,\|\, \mathbf{q}^{(T)}\big)
+       \to \frac{1}{2k} \sum_{j=1}^k
+       \Big(\big(z^{\textrm{stu}}_j - \bar z^{\textrm{stu}}\big)
+       - \big(z^{\textrm{tea}}_j - \bar z^{\textrm{tea}}\big)\Big)^2.
+       $$
+
+    1. Evaluate $T^2 D_{\textrm{KL}}(\mathbf{p}^{(T)} \| \mathbf{q}^{(T)})$
+       for $T = 1, 2, 5, 10, 100$ with the logits `z_tea` $= (5, 2, -1)$ and
+       `z_stu` $= (3, 3, 0)$ of :numref:`subsec_mdl-distillation`, and
+       compare it with the limit.
+    1. At low temperature, which teacher logits have almost no influence on
+       the loss? :citet:`Hinton.Vinyals.Dean.2015` argue that this can be an
+       advantage and also a drawback. Give one argument for each side,
+       based on what the teacher's own cross-entropy training does to these
+       logits.
+   :exlabel:`ex_mdl-information-theory-distillation-high-temperature`
+
+1. [extended] **Adaptive context-model compression.** ●● An adaptive model
+   transmits no parameters. Before coding the $i$-th symbol, it estimates
+   $q(x_i \mid x_{<i})$ from the counts of the symbols already coded, and
+   the decoder repeats the same counting. The arithmetic code length
+   :eqref:`eq_mdl-arith-bound` of a text is then its total surprisal under
+   these predictions plus at most two bits. This total is a complete
+   description length in the sense of :eqref:`eq_mdl-mdl`, with no separate
+   term for the model. :citet:`Blier.Ollivier.2018` use such prequential
+   codes to measure the description length of deep networks (see also
+   Section 3.2 of :citet:`Deletang.Ruoss.Duquenne.ea.2023`). Work with the
+   text of *The Time Machine* (:numref:`sec_text-sequence`), downloaded
+   with `d2l.download(d2l.DATA_URL + 'timemachine.txt')`, lowercased, and
+   reduced to the $27$ symbols of letters and space as in
+   `TimeMachine._preprocess`.
+    1. An order-$m$ model predicts each character from the $m$ characters
+       before it with the estimate
+       $q(x \mid s) = \big(n(s, x) + \tfrac{1}{2}\big) /
+       \big(n(s) + \tfrac{27}{2}\big)$, where $n(s, x)$ counts how often $x$
+       has followed the context $s$ so far and $n(s) = \sum_x n(s, x)$. For
+       $m = 0, 1, \ldots, 8$, compute the adaptive code length in bits per
+       character. Compare it with the per-character cross-entropy of the
+       order-$m$ model whose counts are taken from the entire text, and
+       with the size of `zlib.compress(text.encode(), 9)` in bits per
+       character.
+    1. Explain why the adaptive code length has a minimum over $m$ while
+       the cross-entropy of the fitted model keeps falling. Which order does
+       MDL select? Which term of :eqref:`eq_mdl-mdl` does the cross-entropy
+       of the fitted model leave out?
+    1. Design an adaptive model that combines contexts of several orders,
+       for example by falling back to shorter contexts when a long context
+       has few counts. Report a table of bits per character for every model
+       you tried, together with zlib, and a paragraph on the design choice
+       that mattered most.
+   :exlabel:`ex_mdl-information-theory-adaptive-compression`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/420)

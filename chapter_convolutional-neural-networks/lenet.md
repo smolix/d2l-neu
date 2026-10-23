@@ -528,11 +528,11 @@ saturating early in training:
 :::
 
 ::: {.slide title="LeNet in code"}
-@lenet-1
+@lenet-2
 :::
 
-::: {.slide title="LeNet initialization"}
-@lenet-2
+::: {.slide title="LeNet initialization" only="pytorch"}
+@lenet-1
 :::
 
 ::: {.slide title="Tracing shapes through the network"}

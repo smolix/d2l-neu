@@ -1277,8 +1277,8 @@ feed back, stop at `<eos>`):
 @seq2seq-greedy
 :::
 
-::: {.slide title="Beam search"}
-The 8.7 toolkit plugs straight in: wrap the decoder in a `step_fn` (source
+::: {.slide title="Beam search" only="pytorch,jax"}
+The decoding toolkit plugs straight in: wrap the decoder in a `step_fn` (source
 fixed, target prefix varies), then `d2l.beam_search`. Greedy is beam size 1;
 score it vs $k = 2, 5$ with chrF:
 

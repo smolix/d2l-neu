@@ -104,16 +104,20 @@ a run of uninformative tokens, and overwrite it when something important
 arrives. We can keep that ability, and keep the update linear in the state,
 by letting the decay depend on the current input:
 
-$$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t,
+$$
+\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t,
 \qquad \mathbf{a}_t = \mathbf{a}(\mathbf{x}_t), \quad
-\mathbf{b}_t = \mathbf{b}(\mathbf{x}_t).$$
+\mathbf{b}_t = \mathbf{b}(\mathbf{x}_t).
+$$
 :eqlabel:`eq_affine_recurrence`
 
 Unrolling as before, the power $a^{t-s}$ becomes the product of the decays
 met along the way:
 
-$$\mathbf{h}_t = \sum_{s=1}^{t} \Big( \prod_{r=s+1}^{t} \mathbf{a}_r \Big)
-\odot \mathbf{b}_s.$$
+$$
+\mathbf{h}_t = \sum_{s=1}^{t} \Big( \prod_{r=s+1}^{t} \mathbf{a}_r \Big)
+\odot \mathbf{b}_s.
+$$
 :eqlabel:`eq_lr-unrolled-gated`
 
 An input survives for as long as the inputs after it choose to keep it.
@@ -142,8 +146,10 @@ $$
 
 and the new state is a blend of the old state and the candidate,
 
-$$\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t)
-\odot \tilde{\mathbf{h}}_t.$$
+$$
+\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t)
+\odot \tilde{\mathbf{h}}_t.
+$$
 
 The blend is already affine in $\mathbf{h}_{t-1}$, with decay
 $\mathbf{z}_t$. What stands in the way are the three places where
@@ -198,9 +204,11 @@ $\mathbf{a}_2 \odot (\mathbf{a}_1 \odot \mathbf{h} + \mathbf{b}_1) +
 \mathbf{b}_2$, which is again a map of the same form. We write the
 composition as
 
-$$(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) =
+$$
+(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) =
 (\mathbf{a}_1 \odot \mathbf{a}_2,\ \mathbf{a}_2 \odot \mathbf{b}_1 +
-\mathbf{b}_2).$$
+\mathbf{b}_2).
+$$
 :eqlabel:`eq_scan_combine`
 
 Read from left to right, $\bullet$ means "this step, then that one". It is

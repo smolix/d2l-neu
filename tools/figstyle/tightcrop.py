@@ -17,6 +17,7 @@ Usage:  python3 tools/figstyle/tightcrop.py FILE.svg [FILE2.svg ...]
 from __future__ import annotations
 
 import io
+import math
 import os
 import re
 import subprocess
@@ -51,25 +52,42 @@ def crop(path: str) -> str:
     if bbox is None:
         return f"{path}: blank — skipped"
 
-    # pixel bbox -> viewBox units (raster spans the whole viewBox)
+    # pixel bbox -> viewBox units (raster spans the whole viewBox).  Each
+    # edge is rounded OUTWARD to an integer (padding never drops below PAD),
+    # which also makes a re-crop of a cropped file a no-op: the raster grid
+    # then stays aligned and the clamped edges reproduce themselves.
     sx, sy = vw / im.size[0], vh / im.size[1]
-    nx = max(vx, vx + bbox[0] * sx - PAD)
-    ny = max(vy, vy + bbox[1] * sy - PAD)
-    nx2 = min(vx + vw, vx + bbox[2] * sx + PAD)
-    ny2 = min(vy + vh, vy + bbox[3] * sy + PAD)
-    nw, nh = round(nx2 - nx), round(ny2 - ny)
-    nx, ny = round(nx), round(ny)
+    nx = max(vx, math.floor(vx + bbox[0] * sx - PAD))
+    ny = max(vy, math.floor(vy + bbox[1] * sy - PAD))
+    nx2 = min(vx + vw, math.ceil(vx + bbox[2] * sx + PAD))
+    ny2 = min(vy + vh, math.ceil(vy + bbox[3] * sy + PAD))
+    nx, ny, nw, nh = (_num(v) for v in (nx, ny, nx2 - nx, ny2 - ny))
 
     if (nx, ny, nw, nh) == (vx, vy, vw, vh):
         return f"{path}: already tight"
 
-    svg = svg.replace(m.group(0), f'viewBox="{nx} {ny} {nw} {nh}"')
-    # keep explicit width/height (if present) in sync with the viewBox
-    svg = re.sub(r'width="[\d.]+" height="[\d.]+"',
-                 f'width="{nw}" height="{nh}"', svg, count=1)
+    svg = svg.replace(m.group(0), f'viewBox="{nx} {ny} {nw} {nh}"', 1)
+    # keep the ROOT element's explicit width/height (if present) in sync with
+    # the viewBox, preserving its unit and scale (matplotlib writes "pt");
+    # never touch a width/height pair further down (e.g. a clipPath rect).
+    root = re.search(r"<svg\b[^>]*>", svg)
+    tag = root.group(0)
+    new_tag = tag
+    for attr, old, new in (("width", vw, nw), ("height", vh, nh)):
+        a = re.search(rf'\s{attr}="([\d.]+)([a-z%]*)"', tag)
+        if a:
+            val = _num(float(a.group(1)) * new / old)
+            new_tag = new_tag.replace(a.group(0), f' {attr}="{val}{a.group(2)}"', 1)
+    svg = svg[:root.start()] + new_tag + svg[root.end():]
     with open(path, "w") as fh:
         fh.write(svg)
-    return f"{path}: {vw:.0f}x{vh:.0f} -> {nw}x{nh}"
+    return f"{path}: {vw:g}x{vh:g} -> {nw}x{nh}"
+
+
+def _num(v: float):
+    """int when integral, else a short fixed-precision float (deterministic)."""
+    r = round(v, 6)
+    return int(r) if r == int(r) else float(f"{r:.6f}")
 
 
 def main() -> None:

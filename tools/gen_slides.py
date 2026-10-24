@@ -339,8 +339,9 @@ def _inline_diagram(fig_id, forced_fw, framework, slide_path, warnings):
 
     Resolution: `@fig:<id>@<fw>` prefers `img/auto/<id>-<fw>.svg` and falls
     back to `img/auto/<id>.svg`; `@fig:<id>` uses `img/auto/<id>.svg`
-    directly. The SVG is inlined (not `<img>`-referenced) so its text
-    inherits the page's Source Sans 3 / JetBrains Mono (docs/slides-northstar-design.md §5.3/§5.4).
+    directly. The SVG is inlined (not `<img>`-referenced); its text is
+    already outlined to glyph paths (tools/figstyle/outline_svg.py), so it
+    needs no page fonts and carries no ids that could collide.
     """
     candidates = []
     if forced_fw:

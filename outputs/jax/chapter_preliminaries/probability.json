@@ -20,83 +20,83 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [52, 48]\n"
+          "text": "heads, tails:  [55, 45]\n"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-2": {
-      "code_fingerprint": "sha256:0d78496a36432ceb34a920f684249fa6c9332daf05b2e6c92187965510fd301c",
+      "code_fingerprint": "sha256:6aac5264b5967849b0eb9f1f2e27201c75a79ebd033b8dd9587d6d480a03c070",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([51., 49.], dtype=float32)"
+          "text": "Array([50., 50.], dtype=float32)"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-3": {
-      "code_fingerprint": "sha256:ad79a7e5c64a2004bf73fe48c20171e3f2fd94025401bfd4447a544e405b02f3",
+      "code_fingerprint": "sha256:5ff4c101bcc1c27272641b824707282f65d2d1014b3095f2aa37efcf6d7f69ef",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.51      , 0.48999998],\n       [0.42999998, 0.57      ],\n       [0.5       , 0.5       ],\n       [0.48      , 0.52      ],\n       [0.58      , 0.42      ]], dtype=float32)"
+          "text": "Array([[0.53      , 0.47      ],\n       [0.42999998, 0.57      ],\n       [0.48      , 0.52      ],\n       [0.51      , 0.48999998],\n       [0.5       , 0.5       ]], dtype=float32)"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-4": {
-      "code_fingerprint": "sha256:98c787f826f44fe225274da0ff5360a1ac39b5d40077e521a5bd8b9ccd28daef",
+      "code_fingerprint": "sha256:2ea435250fdaa35ef64e3f66a34fdb30343501d85e8c10095d0cc19fe14f2638",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([0.50339997, 0.4966    ], dtype=float32)"
+          "text": "Array([0.4973, 0.5027], dtype=float32)"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-5": {
-      "code_fingerprint": "sha256:bcbde36fd0dbb3fd4d9762ae8e93f0a62653d76bf30bb1a5b792172ec5d176e2",
+      "code_fingerprint": "sha256:12ecac3663437fef60752a74269684e63a91b253d06b2152f172e7149f2de0e0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 72988,
-          "sha256": "sha256:8fb331bbc7cb6bc6fd1f381379e8e1a9e693675d9ab4c1a3906272621f28f953"
+          "bytes": 67652,
+          "sha256": "sha256:26e8987667769b5fec0b3ef403c96910beb8fb9aca1905d027a1f6ddc3637ee2"
         }
       ]
     },
     "probability-worked-example-hiv-testing-1": {
-      "code_fingerprint": "sha256:c382204526c6fc476b8a74200f7a72e678aa7f050401e14d08ce7b5526e2ef6f",
+      "code_fingerprint": "sha256:e4b6d13b3ea86a241e637e983805314615bd6e1bd01062882558ae7b2ea6e3f9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(0.8285052, dtype=float32)"
+          "text": "Array(0.8307516, dtype=float32)"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-6": {
-      "code_fingerprint": "sha256:55206e3b092b1b9f31848405027c9ba4922ab55951186e08805fa0889b7fb6d4",
+      "code_fingerprint": "sha256:ee9b33038fac42eb4fc06f9e745f010d0eeb7e9cdb48b9a6abb718a21e3c2cde",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31535,
-          "sha256": "sha256:15a306b490e95ff247c961c419b7e3a21cf5caa411f4b0ee17db80c1c3a13a12"
+          "bytes": 31534,
+          "sha256": "sha256:3a84bd2225fd45de957deb8baa9b918e134fba302be6efde3c7a6700bb85bf8b"
         }
       ]
     },
     "probability-is-the-coin-biased": {
-      "code_fingerprint": "sha256:ad4b7ad75a7bfa87aab7d369c76df3ffe372dc3cb33658f10be424bdfdf8f84f",
+      "code_fingerprint": "sha256:b80254539810288bd8fbdbb3722508f71dead607dc45867f2d062214f81a0932",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.271, 0.0)"
+          "text": "(0.281, 0.0)"
         }
       ]
     }

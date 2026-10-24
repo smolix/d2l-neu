@@ -97,11 +97,12 @@ draws that do not influence one another, such as $n$ tosses of a coin. We
 pass $n$ and the vector of probabilities, here $(0.5, 0.5)$ for heads and
 tails, and receive the count of each outcome.
 
-:begin_tab:`jax`
-JAX keeps no hidden random state. Every sampler takes a key, and the same
-key always produces the same draws (:numref:`sec_ndarray`). To obtain fresh
-randomness, we split a key into new keys and use each of them once.
-:end_tab:
+:begin_tab:`jax` JAX keeps no hidden random state. Every sampler takes a
+key, and the same key always produces the same draws
+(:numref:`sec_ndarray`). To obtain fresh randomness, we split a key into new
+keys and use each of them once. Like the samplers of the other frameworks,
+which draw their seed from the operating system, we start from a key with a
+random seed, so each run of this section gives new counts. :end_tab:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-2}
 %%tab mxnet
@@ -123,7 +124,7 @@ tfd.Multinomial(100, probs=fair_probs).sample()
 
 ```{.python .input #probability-a-simple-example-tossing-coins-2}
 %%tab jax
-key = jax.random.key(23)
+key = jax.random.key(random.getrandbits(32))  # A new seed on each run
 key, subkey = jax.random.split(key)
 fair_probs = jnp.array([0.5, 0.5])
 jax.random.multinomial(subkey, 100, fair_probs)

@@ -920,7 +920,7 @@ $$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$$
 - As $h \to 0$, the secant turns into the **tangent** at $P$.
 :::
 
-::: {.col .fig}
+::: {.col .fig .big}
 @fig:calculus-secant-tangent
 :::
 :::
@@ -943,11 +943,19 @@ Neither tells us which way to move. We train on a differentiable
 ::: {.slide title="Float32 Finite Differences Are Good to Three or Four Digits"}
 [Derivatives · finite differences]{.kicker}
 
-@!calculus-finite-differences-2
+::: {.cols .vc}
+::: {.col}
+Error of $\big(L(1+h) - L(1)\big)/h$ against $L'(1) = 2$:
 
 - Right branch: truncation error $3h$, slope $+1$.
 - Left branch: rounding error below $\epsilon/h$, slope $-1$, with
   $\epsilon \approx 2 \times 10^{-16}$ (float64) or $10^{-7}$ (float32).
+:::
+
+::: {.col .fig .big}
+@!calculus-finite-differences-2
+:::
+:::
 :::
 
 ::: {.slide title="Check: The Best Step in Float32"}
@@ -957,9 +965,12 @@ Balance the two errors, $3h = \epsilon / h$, with $\epsilon = 10^{-7}$.
 Which $h$ is best, and how large is the error there?
 
 ::: {.fragment .fade-up}
-$h = \sqrt{\epsilon/3} \approx 2 \times 10^{-4}$, and the error is at most
-$3h + \epsilon/h \approx 10^{-3}$. The plot shows about $3 \times 10^{-4}$
-near $h = 10^{-4}$: three to four correct digits of $L'(1) = 2$.
+::: {.d2l-note}
+**Answer.** $h = \sqrt{\epsilon/3} \approx 2 \times 10^{-4}$, and the
+error is at most $3h + \epsilon/h \approx 10^{-3}$. The plot shows about
+$3 \times 10^{-4}$ near $h = 10^{-4}$: three to four correct digits of
+$L'(1) = 2$.
+:::
 :::
 :::
 
@@ -1008,7 +1019,7 @@ $$L(w + h) \approx L(w) + L'(w)\, h$$
 - $L'(w) = 0$ at $w = 2/3$, the mean of the labels.
 :::
 
-::: {.col .fig}
+::: {.col .fig .big}
 @!calculus-visualization-utilities-5
 :::
 :::
@@ -1063,8 +1074,11 @@ Compute $\partial L / \partial w_1$ and $\partial L / \partial w_2$ at
 $(w_1, w_2) = (0, 0)$ by slicing. Which parameters should grow?
 
 ::: {.fragment .fade-up}
-$L(w_1, 0) = 3w_1^2 - 4w_1 + 2$ gives $-4$; $L(0, w_2) = 5w_2^2 - 2w_2 + 2$
-gives $-2$. Both are negative: increasing either parameter lowers the loss.
+::: {.d2l-note}
+**Answer.** $L(w_1, 0) = 3w_1^2 - 4w_1 + 2$ gives $-4$;
+$L(0, w_2) = 5w_2^2 - 2w_2 + 2$ gives $-2$. Both are negative: increasing
+either parameter lowers the loss.
+:::
 :::
 :::
 
@@ -1084,15 +1098,15 @@ Finite differences, one parameter at a time, in float64:
 ::: {.slide title="The Negative Gradient Is the Steepest Way Down"}
 [Gradients · derivation]{.kicker}
 
-I. Changes add up, one coordinate at a time:
+**Step 1.** Changes add up, one coordinate at a time:
 $f(\mathbf{x} + \mathbf{h}) \approx f(\mathbf{x}) + \nabla f(\mathbf{x})^\top \mathbf{h}$.
 
-II. Move a small $t > 0$ along a unit vector $\mathbf{d}$. With
+**Step 2.** Move a small $t > 0$ along a unit vector $\mathbf{d}$. With
 $\mathbf{a}^\top\mathbf{b} = \|\mathbf{a}\|\|\mathbf{b}\|\cos\theta$, the
 change is $t\, \|\nabla f(\mathbf{x})\| \cos\theta$, where $\theta$ is the
 angle between $\mathbf{d}$ and $\nabla f(\mathbf{x})$.
 
-III. Largest at $\theta = 0$, most negative at $\theta = 180^\circ$, zero
+**Step 3.** Largest at $\theta = 0$, most negative at $\theta = 180^\circ$, zero
 at $\theta = 90^\circ$.
 
 ::: {.d2l-note .rule}
@@ -1150,9 +1164,10 @@ $\nabla_{\mathbf{x}}\, \mathbf{a}^\top\mathbf{x} = \mathbf{a}, \qquad
 ::: {.col}
 - If $u$ changes $2\times$ as fast as $x$ and $z$ changes $3\times$ as
   fast as $u$, then $z$ changes $6\times$ as fast as $x$.
-- Last term of the line loss: $z = u^2$, $u = w_1 + 2w_2$. At $(1, 0)$:
-  $\frac{dz}{du} = 2u = 2$ and $\frac{\partial u}{\partial w_2} = 2$, so
-  the term contributes $4$.
+- Last term of the line loss: $z = u^2$ with $u = w_1 + 2w_2$. At
+  $(1, 0)$, where $u = 1$:
+
+$$\frac{\partial z}{\partial w_2} = \frac{dz}{du}\,\frac{\partial u}{\partial w_2} = 2u \cdot 2 = 4.$$
 :::
 
 ::: {.col .fig .big}
@@ -1198,8 +1213,11 @@ From $\mathbf{w} = (0.8, -0.4)$ with $\eta = 0.1$: run the forward pass
 (errors), the backward pass (gradient), and take the step.
 
 ::: {.fragment .fade-up}
-Errors $(-0.2, -0.6, 0)$; gradient $2\mathbf{X}^\top(-0.2, -0.6, 0) =
-(-1.6, -1.2)$; next point $(0.96, -0.28)$, with loss $0.264$.
+::: {.d2l-note}
+**Answer.** Errors $(-0.2, -0.6, 0)$; gradient
+$2\mathbf{X}^\top(-0.2, -0.6, 0) = (-1.6, -1.2)$; next point
+$(0.96, -0.28)$, with loss $0.264$.
+:::
 :::
 :::
 

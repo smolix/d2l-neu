@@ -573,7 +573,8 @@ n = 2000000
 H = tf.random.uniform((n,)) < 0.0015
 D1 = tf.random.uniform((n,)) < tf.where(H, 1.00, 0.01)
 D2 = tf.random.uniform((n,)) < tf.where(H, 0.98, 0.03)
-tf.reduce_mean(tf.cast(H[D1 & D2], tf.float32))  # Exact value: 0.8307
+fraction = tf.reduce_mean(tf.cast(H[D1 & D2], tf.float32))
+round(float(fraction), 4)  # Exact value: 0.8307
 ```
 
 ```{.python .input #probability-worked-example-hiv-testing-1}
@@ -842,7 +843,7 @@ def fraction_as_far(heads, n, num_experiments=1000):
     tosses = tf.random.uniform((num_experiments, n)) < 0.5
     counts = tf.reduce_sum(tf.cast(tosses, tf.float32), axis=1)
     far = tf.abs(counts - n / 2) >= abs(heads - n / 2)
-    return tf.reduce_mean(tf.cast(far, tf.float32))
+    return tf.reduce_mean(tf.cast(far, tf.float64))  # no float32 print noise
 
 float(fraction_as_far(56, 100)), float(fraction_as_far(5600, 10000))
 ```
@@ -852,7 +853,8 @@ float(fraction_as_far(56, 100)), float(fraction_as_far(5600, 10000))
 def fraction_as_far(key, heads, n, num_experiments=1000):
     """Fraction of fair-coin experiments at least as far from n/2 as heads."""
     counts = (jax.random.uniform(key, (num_experiments, n)) < 0.5).sum(axis=1)
-    return (jnp.abs(counts - n / 2) >= abs(heads - n / 2)).mean()
+    far = jnp.abs(counts - n / 2) >= abs(heads - n / 2)
+    return far.sum().item() / num_experiments
 
 key, k1, k2 = jax.random.split(key, 3)
 fraction_as_far(k1, 56, 100), fraction_as_far(k2, 5600, 10000)
@@ -1148,16 +1150,16 @@ In 10,000 tosses:
 
 ::: {.cols .vc}
 ::: {.col}
-@!probability-a-simple-example-tossing-coins-5
-:::
-
-::: {.col .narrow}
 - Heads so far divided by tosses so far, after each toss.
 - **Law of large numbers:** $\hat{p} \to p$ as $n \to \infty$.
 
 ::: {.d2l-note}
 It does not say **how fast**. How far from $0.5$ may 100 tosses land?
 :::
+:::
+
+::: {.col .fig .big}
+@!probability-a-simple-example-tossing-coins-5
 :::
 :::
 :::
@@ -1175,7 +1177,8 @@ An **event** is a subset of the sample space $\mathcal{S}$.
 Consequences: $P(\mathcal{A}') = 1 - P(\mathcal{A})$ and
 $P(\mathcal{A}\cup\mathcal{B}) = P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
 
-Die, "even or at least 5": $\tfrac36 + \tfrac26 - \tfrac16 = \tfrac23$.
+Die, "even or at least 5":
+$$\frac{3}{6} + \frac{2}{6} - \frac{1}{6} = \frac{2}{3}.$$
 :::
 
 ::: {.col .fig}
@@ -1187,12 +1190,17 @@ Die, "even or at least 5": $\tfrac36 + \tfrac26 - \tfrac16 = \tfrac23$.
 ::: {.slide title="A Random Variable Maps Outcomes to Values"}
 [The rules]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 - Heads in 100 tosses: $2^{100}$ outcomes, only **101** values.
 - **Distribution** $P(X)$: the probability of each value.
 - A height has a **density**: $P(a \le X \le b) = \int_a^b p(x)\,dx$;
   each exact value has probability zero.
-
+:::
+::: {.col .fig .big}
 @fig:probability-density
+:::
+:::
 :::
 
 ::: {.slide title="A Joint Table Gives Marginals and Conditionals"}
@@ -1216,12 +1224,12 @@ Die, "even or at least 5": $\tfrac36 + \tfrac26 - \tfrac16 = \tfrac23$.
 ::: {.slide title="Bayes' Theorem Reverses the Conditional"}
 [The rules · derivation]{.kicker}
 
-I. Write the joint both ways: $P(A, B) = P(B \mid A)\,P(A) = P(A \mid B)\,P(B)$.
+**Step 1.** Write the joint both ways: $P(A, B) = P(B \mid A)\,P(A) = P(A \mid B)\,P(B)$.
 
-II. Divide by $P(B)$:
+**Step 2.** Divide by $P(B)$:
 $$P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}, \qquad P(B) = \sum_a P(B \mid A{=}a)\,P(A{=}a).$$
 
-III. Hypothesis $H$, observed data $D$:
+**Step 3.** Hypothesis $H$, observed data $D$:
 
 ::: {.d2l-note .rule}
 posterior $\propto$ likelihood $\times$ prior:
@@ -1234,12 +1242,17 @@ $\;P(H \mid D) \propto P(D \mid H)\,P(H)$.
 
 **Independent:** $P(A, B) = P(A)\,P(B)$, as for two separate coin tosses.
 
+::: {.cols .vc}
+::: {.col}
 - **Common cause:** shoe size and reading level are related through age,
   and unrelated at a fixed age.
 - **Common effect:** broken bones and lung cancer become related among
   hospital patients (*explaining away*).
-
+:::
+::: {.col .fig .big}
 @fig:probability-explaining-away
+:::
+:::
 :::
 
 ::: {.slide title="Check: Condition on a Column"}
@@ -1249,8 +1262,11 @@ In the joint table, $P(A{=}a_1, B{=}b_1) = 0.12$ and $P(B{=}b_1) = 0.32$.
 What is $P(A{=}a_1 \mid B{=}b_1)$? Are $A$ and $B$ independent?
 
 ::: {.fragment .fade-up}
-$0.12 / 0.32 = 0.375$, while $P(A{=}a_1) = 0.40$. Learning $B = b_1$
-changes the distribution of $A$, so $A$ and $B$ are **not** independent.
+::: {.d2l-note}
+**Answer.** $0.12 / 0.32 = 0.375$, while $P(A{=}a_1) = 0.40$. Learning
+$B = b_1$ changes the distribution of $A$, so $A$ and $B$ are **not**
+independent.
+:::
 :::
 :::
 
@@ -1285,8 +1301,9 @@ Rare disease: false positives outnumber true ones.
 ::: {.col}
 Second test: positive with probability $0.98$ if $H{=}1$, $0.03$ if $H{=}0$.
 Given $H$ the tests are independent, so likelihoods multiply:
+$1 \cdot 0.98$ if $H{=}1$, $0.01 \cdot 0.03$ if $H{=}0$.
 
-$$\frac{0.98 \cdot 0.0015}{0.98 \cdot 0.0015 + 0.0003 \cdot 0.9985} = 0.83$$
+$$\frac{0.98 \cdot 0.0015}{0.98 \cdot 0.0015 + 0.01 \cdot 0.03 \cdot 0.9985} = 0.83$$
 :::
 
 ::: {.col .fig}
@@ -1304,7 +1321,8 @@ Draw each patient's status, then both test results:
 
 ::: {.d2l-note}
 Only about 3,500 patients test positive twice, so the simulated fraction
-is accurate to about $\pm 0.006$, not to six digits.
+has a standard error of about $0.006$ and lands within $0.02$, about three
+standard errors, of $0.83$.
 :::
 :::
 
@@ -1315,8 +1333,11 @@ Same first test, but 1% of the population is infected. What is
 $P(H{=}1 \mid D_1{=}1)$?
 
 ::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.**
 $$\frac{1 \cdot 0.01}{1 \cdot 0.01 + 0.01 \cdot 0.99} = \frac{0.01}{0.0199} \approx 0.50.$$
 The prior matters as much as the test: one positive is now a coin flip.
+:::
 :::
 :::
 
@@ -1360,11 +1381,11 @@ $$\textrm{Var}(X) = E\big[(X - \mu)^2\big] = E[X^2] - \mu^2$$
 ::: {.slide title="Variances of Independent Variables Add"}
 [Expectation and variance · derivation]{.kicker}
 
-I. Expand the square:
+**Step 1.** Expand the square:
 $\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X,Y)$,
 with $\textrm{Cov}(X,Y) = E[(X-\mu_X)(Y-\mu_Y)]$.
 
-II. Independent: $\textrm{Cov}(X,Y) = E[X-\mu_X]\,E[Y-\mu_Y] = 0$.
+**Step 2.** Independent: $\textrm{Cov}(X,Y) = E[X-\mu_X]\,E[Y-\mu_Y] = 0$.
 
 ::: {.d2l-note .rule}
 $\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y)$: the sum of $n$
@@ -1376,7 +1397,7 @@ independent draws has standard deviation $\sqrt{n}\,\sigma$, not $n\sigma$.
 [Estimation error]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .narrow}
+::: {.col}
 $$\textrm{Var}(\hat{p}) = \frac{1}{n^2} \cdot n\,p(1-p) = \frac{p(1-p)}{n}$$
 
 - Fair coin: $0.05$ at $n = 100$, $0.005$ at $n = 10{,}000$.
@@ -1433,7 +1454,7 @@ $\sigma/\sqrt{n}$.
   the next toss is still 50/50; an ambiguous image stays ambiguous.
 :::
 
-::: {.col .fig}
+::: {.col .fig .big}
 @fig:probability-uncertainty
 :::
 :::
@@ -1446,8 +1467,11 @@ A classifier has accuracy about $0.9$. How many test images make the
 standard error of its measured accuracy $0.005$?
 
 ::: {.fragment .fade-up}
-$\sqrt{0.9 \cdot 0.1 / n} = 0.005$ gives $n = 0.09 / 0.000025 = 3{,}600$.
-Halving the error to $0.0025$ takes four times as many: 14,400.
+::: {.d2l-note}
+**Answer.** $\sqrt{0.9 \cdot 0.1 / n} = 0.005$ gives
+$n = 0.09 / 0.000025 = 3{,}600$. Halving the error to $0.0025$ takes four
+times as many: 14,400.
+:::
 :::
 :::
 
@@ -1458,8 +1482,9 @@ Halving the error to $0.0025$ takes four times as many: 14,400.
 - **Bayes:** two positive HIV tests take 0.15% to 13% to 83%.
 - **Summaries:** $E[X]$ and $\textrm{Var}(X)$; variances of independent
   variables add.
-- **Standard error** $\sigma/\sqrt{n}$: 56 heads in 100 tosses is
-  1.2 standard errors (no evidence of bias), 5,600 in 10,000 is 12.
+- **Standard error** $\sigma/\sqrt{n}$: a frequency of $0.56$ lies $1.2$
+  standard errors from $0.5$ after 100 tosses (no evidence of bias), and
+  $12$ after 10,000.
 
 **Next:** looking up what a framework function does, and then the first
 model fitted to data.

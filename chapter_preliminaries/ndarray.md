@@ -532,7 +532,7 @@ X_var
 
 ```{.python .input #ndarray-indexing-and-slicing-2}
 %%tab jax
-X_new = X.at[1, 2].set(17)  # A new array; X itself is unchanged
+X_new = X.at[1, 2].set(17)  # X is unchanged
 X_new
 ```
 
@@ -774,12 +774,22 @@ Shapes that are not compatible raise an error. Lining up $(3, 2)$ and
 $(2, 3)$ from the right pairs $2$ with $3$ and $3$ with $2$; in both pairs
 the lengths differ and neither is $1$:
 
+:begin_tab:`mxnet`
+MXNet reports the error with a traceback from its C++ code, so we print
+only the last line, which states the problem.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow's error message also names the device and the internal operation
+that failed, so we print only the type of the error.
+:end_tab:
+
 ```{.python .input #ndarray-broadcasting-3}
 %%tab mxnet
 try:
     mnp.ones((3, 2)) + mnp.ones((2, 3))
 except Exception as e:
-    print(e)
+    print(str(e).splitlines()[-1])
 ```
 
 ```{.python .input #ndarray-broadcasting-3}
@@ -795,7 +805,7 @@ except Exception as e:
 try:
     tf.ones((3, 2)) + tf.ones((2, 3))
 except Exception as e:
-    print(e)
+    print(type(e).__name__)
 ```
 
 ```{.python .input #ndarray-broadcasting-3}
@@ -982,8 +992,8 @@ converts the array back, again by copying.
 The function `jax.device_get` returns a JAX array as a NumPy array, and
 `jax.device_put` converts it back. For an array on an accelerator,
 `device_get` copies the data to main memory. For an array that is already in
-main memory, the NumPy array may share its memory with the JAX array, but
-then it is read-only, so the JAX array stays immutable.
+main memory, the NumPy array may share its memory with the JAX array.
+Either way, the NumPy array is read-only, so the JAX array stays immutable.
 :end_tab:
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-1}
@@ -1012,6 +1022,51 @@ type(A), type(B)
 A = jax.device_get(X)
 B = jax.device_put(A)
 type(A), type(B)
+```
+
+:begin_tab:`mxnet`
+Writing an element of the NumPy array `A` leaves `X` and `B` unchanged,
+because each of them holds its own copy of the data:
+:end_tab:
+
+:begin_tab:`pytorch`
+Writing an element of the NumPy array `A` changes `X` and `B` as well,
+because all three use the same memory:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Writing an element of the NumPy array `A` leaves `X` and `B` unchanged,
+because each of them holds its own copy of the data:
+:end_tab:
+
+:begin_tab:`jax`
+Writing an element of the NumPy array `A` fails, because `A` is read-only:
+:end_tab:
+
+```{.python .input #ndarray-conversion-to-other-python-objects-3}
+%%tab mxnet
+A[0, 0] = 100  # Write to the NumPy copy
+X[0, 0], B[0, 0]
+```
+
+```{.python .input #ndarray-conversion-to-other-python-objects-3}
+%%tab pytorch
+A[0, 0] = 100  # Write to the NumPy array
+X[0, 0], B[0, 0]
+```
+
+```{.python .input #ndarray-conversion-to-other-python-objects-3}
+%%tab tensorflow
+A[0, 0] = 100  # Write to the NumPy copy
+X[0, 0].numpy(), B[0, 0].numpy()
+```
+
+```{.python .input #ndarray-conversion-to-other-python-objects-3}
+%%tab jax
+try:
+    A[0, 0] = 100
+except ValueError as e:
+    print(e)
 ```
 
 A tensor with a single element converts to a Python number with the method
@@ -1314,10 +1369,10 @@ computes with whole tensors, not with loops over their elements.
 
 @fig:ndarray-rank-ladder
 
-- Size = product of the shape: $3 \times 4 = 12$, and for the minibatch
-  $256 \times 1 \times 28 \times 28 = 200{,}704$.
+- Size = product of the shape: $3 \times 4 = 12$; for the minibatch,
+  ${256 \times 1 \times 28 \times 28 = 200{,}704}$.
 - Order = number of axes: the minibatch (image, channel, row, column) has
-  order 4. Axes are numbered from 0.
+  order 4.
 :::
 
 ::: {.slide title="The Minibatch Takes 200,704 Bytes as uint8 and 0.8 MB as float32"}
@@ -1329,8 +1384,8 @@ computes with whole tensors, not with loops over their elements.
 
 | type | bytes per element | holds | the minibatch |
 |---|---|---|---|
-| `uint8` | 1 | integers 0 to 255 | $200{,}704 \times 1$ = 200,704 B |
-| `float32` | 4 | about 7 significant digits | $200{,}704 \times 4$ = 802,816 B |
+| `uint8` | 1 | integers 0 to 255 | 200,704 × 1 = 200,704 B |
+| `float32` | 4 | about 7 significant digits | 200,704 × 4 = 802,816 B |
 :::
 
 ::: {.slide title="Reshape Keeps the Order and Changes Only the Shape"}
@@ -1354,10 +1409,10 @@ A length of $-1$ is inferred, giving one row of 784 pixels per image:
 ::: {.slide title="An Integer Index Drops Its Axis; a Slice Keeps It"}
 [Indexing]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 @ndarray-indexing-and-slicing-4
 
+::: {.cols .vc}
+::: {.col}
 - `images[0]`: one image; `images[:32]`: 32 images.
 - `images[:, 0, 14, 14]`: one pixel of every image.
 - Slices are half-open: `1:3` selects 1 and 2.
@@ -1379,7 +1434,9 @@ A length of $-1$ is inferred, giving one row of 784 pixels per image:
 3. `images[:64, :, :14]`
 4. `images[:, :, 14, :]`
 
-::: {.fragment .fade-up}
+::: {.d2l-note .fragment .fade-up}
+**Answers.**
+
 1. $(1, 28, 28)$: the integer removes axis 0.
 2. $(256, 28, 28)$: the channel axis is gone.
 3. $(64, 1, 14, 28)$: slices keep their axes.
@@ -1431,11 +1488,9 @@ array:
 ::: {.cols .vc}
 ::: {.col}
 Parameters change at every training step, so they live in a
-`tf.Variable`; `assign` overwrites one element or a whole slice:
+`tf.Variable`, whose method `assign` overwrites elements in place:
 
 @ndarray-indexing-and-slicing-2
-
-@-ndarray-indexing-and-slicing-3
 :::
 
 ::: {.col .fig}
@@ -1503,7 +1558,7 @@ to match the other.
 :::
 :::
 
-::: {.col .fig}
+::: {.col .fig .big}
 @fig:ndarray-broadcasting
 :::
 :::
@@ -1528,7 +1583,9 @@ Predict the shape of the result, or an error.
 3. flattened images $(256, 784)$ plus $(256, 1)$
 4. predictions $(5, 1)$ minus labels $(5,)$
 
-::: {.fragment .fade-up}
+::: {.d2l-note .fragment .fade-up}
+**Answers.**
+
 1. $(256, 1, 28, 28)$: the mean image is stretched over images and channels.
 2. Error: from the right, 784 meets 256.
 3. $(256, 784)$: one number per image, stretched across its pixels.
@@ -1539,10 +1596,10 @@ Predict the shape of the result, or an error.
 ::: {.slide title="Concatenation Joins Tensors Along an Existing Axis"}
 [Concatenation]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 @-ndarray-operations-3
 
+::: {.cols .vc}
+::: {.col}
 - Two minibatches of 256 images along axis 0: one minibatch of 512.
 - All other axes must agree.
 :::
@@ -1569,8 +1626,8 @@ Predict the shape of the result, or an error.
 
 ::: {.cols .vc}
 ::: {.col}
-Updating parameters in place needs no second copy. `Z[:] =` writes into
-`Z`:
+Updating parameters in place needs no second copy. Slice assignment
+writes into the memory of `Z`:
 
 @ndarray-saving-memory-2
 
@@ -1635,12 +1692,12 @@ Plotting and pandas take NumPy arrays, so we convert at the boundary:
 
 @ndarray-conversion-to-other-python-objects-1
 
-A one-element tensor becomes a Python number:
+A write through `A` shows up in `X` and `B`:
 
-@ndarray-conversion-to-other-python-objects-2
+@ndarray-conversion-to-other-python-objects-3
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:ndarray-numpy-share
 :::
 :::
@@ -1649,19 +1706,13 @@ A one-element tensor becomes a Python number:
 ::: {.slide title="Conversion to NumPy Copies the Data" only="mxnet,tensorflow"}
 [Conversion]{.kicker}
 
-Plotting and pandas take NumPy arrays, so we convert at the boundary.
+Plotting and pandas take NumPy arrays, so we convert at the boundary:
 
-::: {.cols}
-::: {.col}
 @ndarray-conversion-to-other-python-objects-1
-:::
 
-::: {.col}
-A one-element tensor becomes a Python number:
+A write to the copy `A` leaves `X` and `B` unchanged:
 
-@ndarray-conversion-to-other-python-objects-2
-:::
-:::
+@ndarray-conversion-to-other-python-objects-3
 
 ::: {.d2l-note}
 On a GPU, a conversion waits for the computation to finish, so training
@@ -1669,26 +1720,19 @@ code converts rarely.
 :::
 :::
 
-::: {.slide title="On the CPU, NumPy Reads JAX Memory Without Copying" only="jax"}
+::: {.slide title="The NumPy Array From device_get Is Read-Only" only="jax"}
 [Conversion]{.kicker}
 
-Plotting and pandas take NumPy arrays, so we convert at the boundary.
+Plotting and pandas take NumPy arrays, so we convert at the boundary:
 
-::: {.cols}
-::: {.col}
 @ndarray-conversion-to-other-python-objects-1
-:::
 
-::: {.col}
-A one-element array becomes a Python number:
+A write to `A` fails:
 
-@ndarray-conversion-to-other-python-objects-2
-:::
-:::
+@ndarray-conversion-to-other-python-objects-3
 
 ::: {.d2l-note}
-`device_get` copies from an accelerator. On the CPU it may share memory,
-but the NumPy array is read-only, so the JAX array stays immutable.
+On the CPU, `A` may share the memory of `X`; either way it is read-only.
 :::
 :::
 
@@ -1699,7 +1743,9 @@ A model has $10^9$ parameters `W` and gradients `G`, all float32. Without
 compilation, how much new memory does `W = W - 0.01 * G` allocate, and how
 much memory is in use at the peak?
 
-::: {.fragment .fade-up}
+::: {.d2l-note .fragment .fade-up}
+**Answer.**
+
 - Two new tensors of 4 GB each: `0.01 * G` and the difference.
 - Peak: `W`, `G`, and both new tensors, 16 GB, until the old `W` and the
   temporary are freed.

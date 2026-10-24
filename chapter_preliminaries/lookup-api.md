@@ -567,11 +567,13 @@ small run whose result you predicted.
 ::: {.slide title="dir Lists What a Module Offers"}
 [Discover]{.kicker}
 
-Which distributions can the library sample from?
+Which distributions can the library sample from? `dir` lists the
+candidates:
 
 @lookup-api-functions-and-classes-in-a-module
 
-- Names starting with `_` are internals.
+- The list mixes distributions with helpers: keys, generators, transforms.
+- Names starting with `_` are internals; they are dropped here.
 - In a notebook: module name, a dot, then Tab, filtered as you type.
 :::
 
@@ -601,23 +603,24 @@ Use the signatures to predict, for each framework:
 4. `ones([2, 3])`
 
 ::: {.fragment .fade-up}
-1. PyTorch only.
-2. All four.
-3. All but PyTorch, whose signature has no argument `shape`.
-4. All four.
+::: {.d2l-note}
+**Answers.** (1) PyTorch only. (2) All four. (3) All but PyTorch, whose
+signature has no argument `shape`. (4) All four.
+:::
 :::
 :::
 
-::: {.slide title="?? Shows the Source, If the Function Is Python"}
+::: {.slide title="When the Docstring Leaves a Question Open, Read Further"}
 [Read]{.kicker}
 
-- `ones?` shows the docstring in a pane; `ones??` adds the source.
+- `ones?` shows the docstring in a pane; `ones??` adds the source code.
 - The source answers what a docstring leaves open: how an argument is
   converted or checked.
-- `torch.ones` is compiled C++: `??` shows only the docstring.
+- Only functions written in Python have source to show: `torch.ones` is
+  compiled C++, so `??` shows its docstring alone.
 
 ::: {.d2l-note}
-Next stop: the reference page of the function, and the tutorials.
+Also read the reference page of the function, and the tutorials.
 :::
 :::
 
@@ -656,8 +659,8 @@ Check every suggested call like a name you found yourself:
 3. a small run gives the predicted result.
 
 ::: {.d2l-note .warn}
-`tf.ones(2, 3)` exists, fits the signature, and runs, yet computes
-something else. Only check 3 catches it.
+A wrong suggestion need not fail: a call can exist, fit the signature, and
+run, yet compute something else.
 :::
 :::
 
@@ -669,9 +672,11 @@ something else. Only check 3 catches it.
 3. `tf.ones(2, 3)` was meant as a $2 \times 3$ matrix.
 
 ::: {.fragment .fade-up}
-1. Discover: `dir` or `hasattr`.
-2. Inspect: the signature has no argument named `shape`.
-3. Only verify: the call runs and returns two `int32` ones.
+::: {.d2l-note}
+**Answers.** (1) Discover: `dir` or `hasattr`. (2) Inspect: the signature
+has no argument named `shape`. (3) Only verify: the call runs and returns
+two `int32` ones.
+:::
 :::
 :::
 
@@ -680,7 +685,7 @@ something else. Only check 3 catches it.
 
 | step | tool | in the example |
 |---|---|---|
-| discover | `dir`, Tab | the samplers of the random module |
+| discover | `dir`, Tab | the distributions a library can sample from |
 | inspect | `help`, `?` | `ones(*size, ...)` against `ones(shape, dtype, ...)` |
 | read | reference pages, `??` | `tf.ones` passes 3 to `tf.as_dtype` |
 | verify | a predicted small run | `ones(2, 3)`: (2, 3), (2,) `int32`, or an error |

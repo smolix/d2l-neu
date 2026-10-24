@@ -61,21 +61,26 @@ def fig_gradient_field():
         return 2 * Xm.T @ (Xm @ w - y)
 
     fig, ax = plt.subplots(figsize=(5.2, 4.2))
-    xlim, ylim = (0.25, 2.12), (-1.22, 0.36)
+    xlim, ylim = (0.22, 2.14), (-1.3, 0.36)
     g1, g2 = np.meshgrid(np.linspace(*xlim, 400), np.linspace(*ylim, 400))
     D1, D2 = g1 - w_star[0], g2 - w_star[1]
     Z = (H[0, 0] * D1 ** 2 + 2 * H[0, 1] * D1 * D2 + H[1, 1] * D2 ** 2
          + loss(w_star))
-    levels = [0.25, 0.4, 0.6, 1.0, 1.5]
+    # No level between 0.32 and 0.7, nor between 2.0 and 4.3: the labels
+    # -grad L and grad L sit in those bands, and "minimum" inside L < 0.7,
+    # so no text lies on a contour line.
+    levels = [0.7, 1.0, 1.5, 2.0]
     ax.contour(g1, g2, Z, levels=levels, colors=T.FAINT,
                linewidths=T.SW_HAIR, zorder=1)
 
     # Gradients (true direction and relative length) at points of the
-    # level set L = 1, which passes through the starting point (1, 0).
+    # level set L = 1, which passes through the starting point (1, 0).  The
+    # angles spread the arrows around the ellipse and keep every arrowhead
+    # inside the axes.
     evals, evecs = np.linalg.eigh(H)
     c = 1.0 - loss(w_star)
     scale = 0.055
-    for ang in (35, 100, 150, 215, 280):
+    for ang in (15, 120, 200, 270, 315):
         t = np.radians(ang)
         d = (evecs[:, 0] * np.cos(t) / np.sqrt(evals[0])
              + evecs[:, 1] * np.sin(t) / np.sqrt(evals[1])) * np.sqrt(c)
@@ -97,13 +102,12 @@ def fig_gradient_field():
     ax.plot(*w0, "o", color=T.INK, ms=5.5, zorder=5)
     ax.plot(*w_star, "o", color=T.GREEN.base, ms=7, zorder=5)
 
-    halo = dict(facecolor="white", edgecolor="none", pad=1.5)
     ax.text(1.16, 0.22, r"$\nabla L$", fontsize=16, color=T.RED.dark,
-            ha="left", va="center", bbox=halo)
-    ax.text(0.85, -0.17, r"$-\nabla L$", fontsize=16, color=T.ORANGE.dark,
-            ha="right", va="center", bbox=halo, zorder=6)
-    ax.text(w_star[0] + 0.06, w_star[1] - 0.07, "minimum", fontsize=15,
-            color=T.GREEN.dark, ha="left", va="top", bbox=halo, zorder=6)
+            ha="left", va="center")
+    ax.text(0.86, -0.15, r"$-\nabla L$", fontsize=16, color=T.ORANGE.dark,
+            ha="right", va="center", zorder=6)
+    ax.text(w_star[0], w_star[1] - 0.045, "minimum", fontsize=15,
+            color=T.GREEN.dark, ha="center", va="top", zorder=6)
 
     ax.set_aspect("equal")
     ax.set_xlim(*xlim)

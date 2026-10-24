@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 0.7594,  0.7543,  0.9382,  1.1595],\n        [ 0.6148,  0.3022, -0.5427,  0.1595],\n        [-1.4716, -0.6480,  0.6175, -0.6189]])"
+          "text": "tensor([[ 0.6910,  1.2026,  0.0388, -0.6365],\n        [ 1.0047,  0.5378, -0.6221, -0.0085],\n        [ 0.1226, -0.6486, -0.2371,  0.0968]])"
         }
       ]
     },
@@ -295,8 +295,18 @@
         }
       ]
     },
+    "ndarray-conversion-to-other-python-objects-3": {
+      "code_fingerprint": "sha256:8767925d6b33f5fd7f9183eab1627b8f0457820b84427165499f9020284300b6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(100.), tensor(100.))"
+        }
+      ]
+    },
     "ndarray-conversion-to-other-python-objects-2": {
-      "code_fingerprint": "sha256:5d7c5f4116a9a0337c4435fd7cb8340a24c00893abfbd3dc20779cce3c3f9316",
+      "code_fingerprint": "sha256:c2253d7e8b5460ad00e41b3d8607cfc29aaa54a4020d4796e1c83ea3ad07e5f8",
       "kind": "text",
       "outputs": [
         {

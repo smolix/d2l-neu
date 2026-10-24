@@ -50,17 +50,17 @@
       ]
     },
     "pandas-separating-inputs-and-targets-1": {
-      "code_fingerprint": "sha256:37fe69f8cecd83ceb8ab1a706d2d9c0ad19f2ff26adf07a8c2f259fc55d98958",
+      "code_fingerprint": "sha256:387fdb4b75a3eb1ebec4099ddd44a708581a750058bcf94c5635050280990bfb",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "   NumRooms RoofType  Area\n0       3.0    Slate  1500\n1       NaN     Tile  2100\n2       2.0      NaN   850\n3       4.0    Slate  1940\n4       NaN      NaN  1200\n5       3.0     Tile  1650\n6       5.0    Slate  2600\n7       2.0      NaN   900\n8       NaN     Tile  1750\n9       4.0      NaN  2050"
+          "text": "(['NumRooms', 'RoofType', 'Area'], 'Price')"
         }
       ]
     },
     "pandas-handling-missing-values-1": {
-      "code_fingerprint": "sha256:73c45df52f053378a0466a8ef6f42cc934cc2c6605fa17c79861fac17ead80b9",
+      "code_fingerprint": "sha256:1aa5e4c6062a422e206de1c8b674ddee87b060d94f3a7c6fbb9b6995aa8f265b",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     "pandas-handling-missing-values-2": {
-      "code_fingerprint": "sha256:74ecd3d0bbe38f72eb9385c9eb38aa5894441387102b78887e97a4727ec82b26",
+      "code_fingerprint": "sha256:94f7fdad601aeba1da6895dba71e15c3aa0ffd313aa91536b56688e53dc92337",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "pandas-handling-missing-values-3": {
-      "code_fingerprint": "sha256:bc5c1c83e16c9afc0322c6f4d916bac06af86bf6278501449e0aa18c5f78bf09",
+      "code_fingerprint": "sha256:05d35a27358e0df00c5e654e5b24a94d0495d2c6ba046af521548767615f8fd1",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +90,7 @@
       ]
     },
     "pandas-encoding-categorical-features-1": {
-      "code_fingerprint": "sha256:b90590a3ca542f0ea70a2e84df0a5f5316c68f41ca34f1151065b725c78be615",
+      "code_fingerprint": "sha256:9599f75b8c6a0cc9eff96316100f6159870502340b12a3b811871deea2b8aad8",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "pandas-numerical-features-1": {
-      "code_fingerprint": "sha256:d0c83e46075f4c4cf311aa9f62b27c3d3c78a4aa4dc620ab8551f7c97c008bc6",
+      "code_fingerprint": "sha256:dac585cec55bc2984ef539e6b63bde48a5b12c3e74fa30827f65cd5659c30b7f",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +110,7 @@
       ]
     },
     "pandas-conversion-to-tensor-format": {
-      "code_fingerprint": "sha256:04eac182703de0e5e3fa1894f09c1c6c54cc7b5d48d613d36245f93bfccc1738",
+      "code_fingerprint": "sha256:6474b7e53a0ef6ab851dfff76aeaaa4228e88a2be69156e456e2b91d38c27f20",
       "kind": "text",
       "outputs": [
         {

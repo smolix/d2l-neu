@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [46, 54]\n"
+          "text": "heads, tails:  [56, 44]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([51., 49.])"
+          "text": "tensor([52., 48.])"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.4600, 0.5400],\n        [0.5000, 0.5000],\n        [0.4800, 0.5200],\n        [0.5500, 0.4500],\n        [0.4600, 0.5400]])"
+          "text": "tensor([[0.4400, 0.5600],\n        [0.4800, 0.5200],\n        [0.4800, 0.5200],\n        [0.4200, 0.5800],\n        [0.5600, 0.4400]])"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.4944, 0.5056])"
+          "text": "tensor([0.4974, 0.5026])"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 74873,
-          "sha256": "sha256:83f16f7b9316c6f987f43a8f63c5a9132c26406e59f54454c59bf8842e0abbfd"
+          "bytes": 73987,
+          "sha256": "sha256:56cc4d1141590cbbfb609f5f3d014293887709112e4a2d0035473aa5223becf4"
         }
       ]
     },
@@ -73,7 +73,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(0.8273)"
+          "text": "tensor(0.8335)"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 31510,
-          "sha256": "sha256:23e5371be8bdd1030cbd74ffbda5bc9061482535b8bc31474821ae3c02434c6c"
+          "bytes": 31508,
+          "sha256": "sha256:87177757b7f0d288556c0354aae456ab03ee965c26570a8c9f3a408dbf474f79"
         }
       ]
     },
@@ -96,7 +96,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0.2440), tensor(0.))"
+          "text": "(tensor(0.2620), tensor(0.))"
         }
       ]
     }

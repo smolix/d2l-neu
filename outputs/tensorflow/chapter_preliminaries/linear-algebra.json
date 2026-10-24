@@ -164,17 +164,17 @@
       ]
     },
     "linear-algebra-matrix-vector-products": {
-      "code_fingerprint": "sha256:c42b3c2f18ff10ec5c4a6148b2111284e04fe73815466ba6993e3f19031754ba",
+      "code_fingerprint": "sha256:c7d653bb196c7b9f54584c28087884ec1babcf76ba817b722861ca1bdc7850be",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(TensorShape([2, 3]),\n TensorShape([3]),\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([ 5., 14.], dtype=float32)>)"
+          "text": "(TensorShape([2, 3]), TensorShape([3]), array([ 5., 14.], dtype=float32))"
         }
       ]
     },
     "linear-algebra-matrix-matrix-multiplication": {
-      "code_fingerprint": "sha256:77045c7e8b57c58e05ac824a6a63c9999a0bdaf648480e494bc7a0b61219045a",
+      "code_fingerprint": "sha256:b7a0ae466100b3e272d5afde10cf04945a35154e640957e1bbeb1d81c8a61998",
       "kind": "text",
       "outputs": [
         {
@@ -184,7 +184,7 @@
       ]
     },
     "linear-algebra-matrix-matrix-products-1": {
-      "code_fingerprint": "sha256:f2bc6536f691685d506fd349b64b59076977540f08cde3adf6e11f28247dbeea",
+      "code_fingerprint": "sha256:c34b1eebf979df50581b8c3cfe179c3e9857ff6cfd764876bf953ad459c5afbd",
       "kind": "text",
       "outputs": [
         {
@@ -193,38 +193,28 @@
         }
       ]
     },
-    "linear-algebra-norms-1": {
-      "code_fingerprint": "sha256:92fc5a980c3070e3e8c37240c853e5898576ef198c65c2ee998c1aa497f38d85",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=5.0>"
-        }
-      ]
-    },
     "linear-algebra-dot-products-3": {
-      "code_fingerprint": "sha256:c1dc9f22c9d2388d7a249b2b3356ac1c7dc89beb25db019dd079099246e860dc",
+      "code_fingerprint": "sha256:9f2df203681fe0740372546156dc4247c196cf4b4948e6abedee68191acd59de",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.5>,\n <tf.Tensor: shape=(), dtype=float32, numpy=1.0471975803375244>)"
+          "text": "(np.float32(0.5), np.float32(0.5), np.float32(1.0471976))"
         }
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:006721e2fa45bb228f45b184e9e5bb2ae97755e4b879b2ff007515938b9e1465",
+      "code_fingerprint": "sha256:1e11639b72ec5a2b61ec7dfb4aab441271f4f9546a9f0d4bf380ac0569f31c55",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=7.0>"
+          "text": "(np.float32(5.0), np.float32(7.0))"
         }
       ]
     },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:0830ce0438d9a81631487fecac0b8ee14f8d4ec584f52af743a3ebd26a04c0f8",
+      "code_fingerprint": "sha256:a0298de9555a1aa3a991055dd438c1323110a4960a7f170a4059d752d69d7c1e",
       "kind": "text",
       "outputs": [
         {
@@ -234,7 +224,7 @@
       ]
     },
     "linear-algebra-eigenvalues-1": {
-      "code_fingerprint": "sha256:7b6300df7ec17973b0e920cd1ae169575ae365f05723883478141cf38e247dd7",
+      "code_fingerprint": "sha256:d11ffb2258ef5a0f9f26ad0ad847e4516f62fd191ec0e52571064e3009a119ec",
       "kind": "text",
       "outputs": [
         {
@@ -244,22 +234,22 @@
       ]
     },
     "linear-algebra-eigenvalues-2": {
-      "code_fingerprint": "sha256:46407a38405ec25e79777560259fb477d7713ad788bf0fd23e131cd99b43f9fa",
+      "code_fingerprint": "sha256:edba7b85bbdac6adcaf269ec778179ebc16e620c7b51771c0547904fc0d336e6",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=3.000000238418579>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.70711875, 0.7070948 ], dtype=float32)>)"
+          "text": "(3.0, array([0.7071, 0.7071], dtype=float32))"
         }
       ]
     },
     "linear-algebra-powers-of-a-matrix-1": {
-      "code_fingerprint": "sha256:1ae906d0521ffb659eb59f8af54cc1c837ad84323d82974f390f9bd4bc813b82",
+      "code_fingerprint": "sha256:4a97876ebb89ce82184b5fcae97fd3762239ad00c2e021ba46b4fe5df0695add",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([1.1739086e+02, 5.1537761e-03], dtype=float32)>"
+          "text": "array([1.1739086e+02, 5.1537761e-03], dtype=float32)"
         }
       ]
     }

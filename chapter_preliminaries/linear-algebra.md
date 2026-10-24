@@ -567,7 +567,7 @@ A.shape, x.shape, A @ x
 
 ```{.python .input #linear-algebra-matrix-vector-products}
 %%tab tensorflow
-A.shape, x.shape, tf.linalg.matvec(A, x)
+A.shape, x.shape, tf.linalg.matvec(A, x).numpy()
 ```
 
 Multiplication by $\mathbf{A} \in \mathbb{R}^{m \times n}$ maps vectors
@@ -721,31 +721,7 @@ It is the default norm, so we often write $\|\mathbf{x}\|$ without the
 subscript. Its square, applied to the errors, is the sum of squared
 errors; divided by the number of examples, it becomes the mean squared
 error, the standard loss for predicting real numbers. For
-$\mathbf{x} = (3, -4)$ the $\ell_2$ norm is $\sqrt{9 + 16} = 5$:
-
-```{.python .input #linear-algebra-norms-1}
-%%tab mxnet
-x = mnp.array([3.0, -4.0])
-mnp.linalg.norm(x)
-```
-
-```{.python .input #linear-algebra-norms-1}
-%%tab pytorch
-x = torch.tensor([3.0, -4.0])
-torch.linalg.vector_norm(x)
-```
-
-```{.python .input #linear-algebra-norms-1}
-%%tab tensorflow
-x = tf.constant([3.0, -4.0])
-tf.norm(x)
-```
-
-```{.python .input #linear-algebra-norms-1}
-%%tab jax
-x = jnp.array([3.0, -4.0])
-jnp.linalg.norm(x)
-```
+$\mathbf{x} = (3, -4)$ the $\ell_2$ norm is $\sqrt{9 + 16} = 5$.
 
 Length also explains why the dot product serves to compare vectors. Take
 two vectors $\mathbf{x}$ and $\mathbf{y}$ in the plane, at angle $\theta$,
@@ -837,7 +813,7 @@ def cosine(x, y):
     return tf.tensordot(x, y, axes=1) / (tf.norm(x) * tf.norm(y))
 
 x, y = tf.constant([1.0, 1, 1, 1]), tf.constant([1.0, 1, 1, -1])
-cosine(x, y), cosine(2 * x, y), tf.acos(cosine(x, y))
+cosine(x, y).numpy(), cosine(2 * x, y).numpy(), tf.acos(cosine(x, y)).numpy()
 ```
 
 ```{.python .input #linear-algebra-dot-products-3}
@@ -863,28 +839,30 @@ $\ell_1$ norm the distance walked along the streets, hence the name
 ![The $\ell_2$ norm of $\mathbf{x}$ is the length of the straight path to $\mathbf{x}$; the $\ell_1$ norm is the length of the path along the grid.](../img/linear-algebra-norms.svg)
 :label:`fig_la_norms`
 
+In code, the $\ell_2$ and the $\ell_1$ norm of $(3, -4)$ are:
+
 ```{.python .input #linear-algebra-norms-2}
 %%tab mxnet
 x = mnp.array([3.0, -4.0])
-mnp.abs(x).sum()
+mnp.linalg.norm(x), mnp.abs(x).sum()
 ```
 
 ```{.python .input #linear-algebra-norms-2}
 %%tab pytorch
 x = torch.tensor([3.0, -4.0])
-torch.abs(x).sum()
+torch.linalg.vector_norm(x), torch.abs(x).sum()
 ```
 
 ```{.python .input #linear-algebra-norms-2}
 %%tab tensorflow
 x = tf.constant([3.0, -4.0])
-tf.reduce_sum(tf.abs(x))
+tf.norm(x).numpy(), tf.reduce_sum(tf.abs(x)).numpy()
 ```
 
 ```{.python .input #linear-algebra-norms-2}
 %%tab jax
 x = jnp.array([3.0, -4.0])
-jnp.abs(x).sum()
+jnp.linalg.norm(x), jnp.abs(x).sum()
 ```
 
 The two norms weigh large entries differently. In the error vector
@@ -1095,7 +1073,7 @@ v = tf.constant([1.0, 0.0])
 for _ in range(10):
     v_prev, v = v, tf.linalg.matvec(S, v)
 growth = tf.norm(v) / tf.norm(v_prev)
-growth, v / tf.norm(v)
+round(float(growth), 4), (v / tf.norm(v)).numpy().round(4)
 ```
 
 ```{.python .input #linear-algebra-eigenvalues-2}
@@ -1156,7 +1134,7 @@ M = tf.constant([[1.0, 0.1], [0.1, 1.0]])
 V = tf.constant([[1.0, -1.0], [1.0, 1.0]]) / 2 ** 0.5
 for _ in range(50):  # 50 "layers"
     V = M @ V
-tf.norm(V, axis=0)
+tf.norm(V, axis=0).numpy()
 ```
 
 ```{.python .input #linear-algebra-powers-of-a-matrix-1}
@@ -1371,12 +1349,12 @@ Linear algebra for one minibatch of images<br>**shapes · reductions · dot and 
 ::: {.cols .vc}
 ::: {.col}
 - A linear classifier for $28 \times 28$ images: 784 pixels, 10
-  categories, $784 \times 10 + 10 = 7{,}850$ parameters, minibatches of
-  256.
+  categories, $784 \times 10 + 10 = 7{,}850$ parameters, minibatches
+  of 256.
 - $256 \times 10 \times 784 \approx 2$ million multiply--adds per
   minibatch, about $4 \times 10^6$ FLOPs.
-- As one expression, $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$:
-  its shape and its cost follow from the shapes, before anything runs.
+- The scores $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ are one
+  expression whose shape and cost we can read off before anything runs.
 :::
 
 ::: {.col .fig .big}
@@ -1485,13 +1463,14 @@ $$\mathbf{w}^\top \mathbf{x} + b = \sum_{i=1}^{784} w_i x_i + b$$
 ::: {.slide title="Ax Takes One Dot Product per Row"}
 [Matrix–vector]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-$(\mathbf{A}\mathbf{x})_i = \mathbf{a}_i^\top\mathbf{x}$: an
-$m \times n$ matrix maps $\mathbb{R}^n \to \mathbb{R}^m$.
+$(\mathbf{A}\mathbf{x})_i = \mathbf{a}_i^\top\mathbf{x}$ for each row
+$\mathbf{a}_i^\top$ of $\mathbf{A}$, so an $m \times n$ matrix maps
+$\mathbb{R}^n$ to $\mathbb{R}^m$.
 
 @linear-algebra-matrix-vector-products
 
+::: {.cols .vc}
+::: {.col}
 ::: {.d2l-note}
 $\mathbf{X}\mathbf{w} + b$: one score per image. Fitted to one
 real-valued label per example, such as a price, it is linear regression.
@@ -1532,9 +1511,9 @@ You stored the weights as $\mathbf{W}^\top \in \mathbb{R}^{10 \times 784}$,
 one row per category. Does $\mathbf{X}\mathbf{W}^\top$ work? What should
 you compute instead?
 
-::: {.fragment .fade-up}
-No: the inner sizes 784 and 10 differ. Transpose the stored matrix:
-$(256 \times 784)(784 \times 10) = 256 \times 10$, the same scores.
+::: {.d2l-note .fragment .fade-up}
+**Answer.** No: the inner sizes 784 and 10 differ. Transpose the stored
+matrix: $(256 \times 784)(784 \times 10) = 256 \times 10$, the same scores.
 :::
 :::
 
@@ -1546,8 +1525,8 @@ $(m \times k)(k \times n)$: $mn$ entries, each a dot product of length $k$
 
 | product | FLOPs | data moved (float32) | FLOPs per byte |
 |---|---|---|---|
-| $(256 \times 784)(784 \times 10)$ | $4.0 \times 10^6$ | 0.8 MB | about 5 |
-| $(4096 \times 4096)(4096 \times 4096)$ | $1.4 \times 10^{11}$ | 200 MB | about 680 |
+| (256 × 784)(784 × 10) | 4.0 × 10⁶ | 0.8 MB | about 5 |
+| (4096 × 4096)(4096 × 4096) | 1.4 × 10¹¹ | 200 MB | about 680 |
 
 ::: {.d2l-note}
 Double $n$: 8× the work, 4× the data. Accelerators are built for large
@@ -1562,8 +1541,6 @@ products; small ones are limited by moving data.
 ::: {.col}
 $$\|\mathbf{x}\|_2 = \sqrt{\textstyle\sum_i x_i^2}, \qquad \|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|$$
 
-@linear-algebra-norms-1
-
 @linear-algebra-norms-2
 
 ::: {.d2l-note}
@@ -1573,7 +1550,7 @@ only at $\mathbf{0}$.
 :::
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 @fig:linear-algebra-norms
 :::
 :::
@@ -1589,7 +1566,8 @@ In the plane, the law of cosines gives
 $$\mathbf{x}^\top\mathbf{y} = \|\mathbf{x}\|\,\|\mathbf{y}\|\cos\theta.$$
 
 In 784 dimensions, this *defines* the angle:
-$\cos\theta = \frac{\mathbf{x}^\top\mathbf{y}}{\|\mathbf{x}\|\,\|\mathbf{y}\|}$.
+
+$$\cos\theta = \frac{\mathbf{x}^\top\mathbf{y}}{\|\mathbf{x}\|\,\|\mathbf{y}\|}.$$
 
 ::: {.d2l-note}
 Cosine similarity ignores length: an image and the same image at twice
@@ -1643,7 +1621,9 @@ Compute the cosine similarity of each pair.
 2. $(1, 0, 1)$ and $(2, 0, 2)$
 3. $(1, 1)$ and $(1, -1)$
 
-::: {.fragment .fade-up}
+::: {.d2l-note .fragment .fade-up}
+**Answers.**
+
 1. Dot product $2 + 2 - 4 = 0$: perpendicular, cosine 0.
 2. The second is twice the first: cosine 1.
 3. Dot product $1 - 1 = 0$: perpendicular. These are the eigenvector
@@ -1696,7 +1676,15 @@ after each step is *power iteration*.
 [Eigenvalues]{.kicker}
 
 $\mathbf{M} = \left(\begin{smallmatrix} 1 & 0.1 \\ 0.1 & 1 \end{smallmatrix}\right)$
-has eigenvalues 1.1 and 0.9. Apply it 50 times to both eigenvectors:
+has eigenvalues 1.1 and 0.9. Each layer multiplies the part of a signal
+along an eigenvector by its eigenvalue:
+
+| layers *k* | 10 | 20 | 50 |
+|---|---|---|---|
+| 1.1^*k*^ | 2.59 | 6.73 | 117 |
+| 0.9^*k*^ | 0.35 | 0.12 | 0.005 |
+
+Applying $\mathbf{M}$ 50 times to both eigenvectors gives the last column:
 
 @!linear-algebra-powers-of-a-matrix-1
 
@@ -1715,7 +1703,9 @@ $4096 \times 4096$ weight matrix, on a GPU that sustains $10^{14}$ FLOP/s.
 1. How many FLOPs?
 2. About how long?
 
-::: {.fragment .fade-up}
+::: {.d2l-note .fragment .fade-up}
+**Answers.**
+
 1. $2 \times 256 \times 4096 \times 4096 \approx 8.6 \times 10^9$ FLOPs.
 2. $8.6 \times 10^9 / 10^{14} \approx 86$ µs, if the arithmetic is the
    bottleneck.

@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.8635534 ,  1.190269  , -0.62027955,  0.53076774],\n       [ 0.33879486, -1.0118216 ,  1.170501  ,  0.8770916 ],\n       [ 1.7505347 ,  0.49154708,  0.00331562,  0.19719714]])"
+          "text": "array([[-0.28460652,  0.61225224,  0.01656   ,  0.19303514],\n       [ 0.1342056 , -2.0128534 , -0.05900747,  0.60155624],\n       [ 1.3197917 , -0.31684533, -1.0704677 ,  0.40954432]])"
         }
       ]
     },
@@ -235,18 +235,18 @@
       ]
     },
     "ndarray-broadcasting-3": {
-      "code_fingerprint": "sha256:320d8f6d47e415c8508d38200654c0b9e054b5e1ae8a36ee3de14f710cdbd2d4",
+      "code_fingerprint": "sha256:e7fbb23f24f60172834d239b0a1d30f2566fbdb76d15494e76100305c8b640ab",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Traceback (most recent call last):\n  File \"/home/smola/mxnet/src/operator/numpy/./../tensor/elemwise_binary_broadcast_op.h\", line 69\nMXNetError: Check failed: l == 1 || r == 1: operands could not be broadcast together with shapes [3,2] [2,3]\n"
+          "text": "MXNetError: Check failed: l == 1 || r == 1: operands could not be broadcast together with shapes [3,2] [2,3]\n"
         }
       ]
     },
     "ndarray-operations-3": {
-      "code_fingerprint": "sha256:23fb2009a13213547d3fcaa03a7c602ef466070ca881acc3b81a27ce257f1c2a",
+      "code_fingerprint": "sha256:d24e23a7db7fe5d2401b299ef23c43d6e54993fd5b54d7c2a637f291826d0a2d",
       "kind": "text",
       "outputs": [
         {
@@ -256,7 +256,7 @@
       ]
     },
     "ndarray-saving-memory-1": {
-      "code_fingerprint": "sha256:4f478f8c50608a5314c0eab947700a8f9417f0b348fc29025edea65bece7220f",
+      "code_fingerprint": "sha256:8fe6b528c297516f70e78a78aa3bf53590f08bc11312eab7a8dc9f775e1fc511",
       "kind": "text",
       "outputs": [
         {
@@ -266,7 +266,7 @@
       ]
     },
     "ndarray-saving-memory-2": {
-      "code_fingerprint": "sha256:2d1f37363446f90b02731ce67239db4512148bdc3d6c71e6f3774e35f59eefaa",
+      "code_fingerprint": "sha256:db98bbbb70176aa85a9e5dde49162fb959577778cfb0d5db6349d26dbcf6503d",
       "kind": "text",
       "outputs": [
         {
@@ -276,7 +276,7 @@
       ]
     },
     "ndarray-saving-memory-3": {
-      "code_fingerprint": "sha256:9e4a3c7bc31fd3a215e173351ceb544372bfca33dbd0bf3f3ff4f250553f2b64",
+      "code_fingerprint": "sha256:7d7ddf8a969ae0d6558b59a7de7bfb01bb60c6fdac596cdc32586a47efcb907a",
       "kind": "text",
       "outputs": [
         {
@@ -286,7 +286,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-1": {
-      "code_fingerprint": "sha256:907d0e4f0f190f75f669c1cd1beddc4eab43d40553543071d0c7994ff69fc1b7",
+      "code_fingerprint": "sha256:85dc5cf8d7413bac7ef9e6fbf2377ef662235bb6b414d730a2f43be4904a479d",
       "kind": "text",
       "outputs": [
         {
@@ -295,8 +295,18 @@
         }
       ]
     },
+    "ndarray-conversion-to-other-python-objects-3": {
+      "code_fingerprint": "sha256:f9cc1f12c453bc3f1119588c428e288f4f77eb6b89034ce3110b3676505bed95",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array(2.), array(2.))"
+        }
+      ]
+    },
     "ndarray-conversion-to-other-python-objects-2": {
-      "code_fingerprint": "sha256:0647aa9cb1071e03d7ff36de6192084792f26931f0d9ab71abce181737dddfae",
+      "code_fingerprint": "sha256:ae6734bd11019d62ca9806e2d458daadc2c252f5efb1bf838cf703e2533f1ea6",
       "kind": "text",
       "outputs": [
         {

@@ -39,7 +39,7 @@
       ]
     },
     "autograd-backward-for-non-scalar-variables": {
-      "code_fingerprint": "sha256:6ea3978af6c5ac010d582da1a5f99e1f0630ec7c91aac45ab65b6440b611e211",
+      "code_fingerprint": "sha256:c338e1fb1d2597520324698d07ea0dbef1b64e33ef4b67f39c26ca645daf9841",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:2bad7d40cfdba0dfadf53954f5b060e5462fbf227234eb2867ff5745f0720e5d",
+      "code_fingerprint": "sha256:9de67cb66e5132d14bdd56c898210b22f95465add9ba39d5d6f75fd44ac85430",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:9db5a62269d486dc4e2f326bbd572dbc091807ede4b2d9ecd076f9cd9e4774d1",
+      "code_fingerprint": "sha256:155d4c53f1a917090d2f1d68b97072931fe4154d8242ac093a537d844330be9d",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:5c87fe27941a0b46da99063d0161d9598fc7df0a066100d045268f4b94bb1b08",
+      "code_fingerprint": "sha256:682713f220a212e54617631450f06e197c07bf9c826cf688adcca3c7a2bd4710",
       "kind": "text",
       "outputs": [
         {
@@ -79,12 +79,12 @@
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:eda4923fe2365521401c0dcda24168ed4ddbb499e808a4e2ca4c9d4101143034",
+      "code_fingerprint": "sha256:4eff05a2fb6330ce3d6eda18184ad562a41abd6b450e528e6c4ca7e1d8b333a4",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:dd07cf20a4bc68278549b347aca9f877057f6d2593827eecb78f5beb1c1105c2",
+      "code_fingerprint": "sha256:2442241fbad2f08e56ad6c3a1d734b067c3f8156f5cc0adba5c39806e6ccbc91",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "autograd-higher-order-derivatives-1": {
-      "code_fingerprint": "sha256:17c3184f328adf2b41ed6a671f7148ae6336801df484b2edd751db0d54f7816f",
+      "code_fingerprint": "sha256:802ba939820cfb764850da5f151f2bc0260fc5a1fe10a5fa94a8ee4561912c0b",
       "kind": "text",
       "outputs": [
         {
@@ -105,12 +105,13 @@
       ]
     },
     "autograd-rows-and-columns-of-the-jacobian": {
-      "code_fingerprint": "sha256:64b5e709ba70f9e46ce5d015fa6fb2e58cac4c4314b374e8b698e99fe0b8c62e",
+      "code_fingerprint": "sha256:d684adf8658c47652cd98961508939b464ba65900cfdac81b82ca2d4b1d4fec1",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(Array([[1., 0.],\n        [1., 1.],\n        [1., 2.]], dtype=float32),\n Array([[1., 0.],\n        [1., 1.],\n        [1., 2.]], dtype=float32))"
+          "type": "stream",
+          "name": "stdout",
+          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\nforward sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
         }
       ]
     }

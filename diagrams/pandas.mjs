@@ -71,35 +71,37 @@ function pipeline() {
 }
 
 // ── three responses to a missing value ────────────────────────────────
-// The column holds 3, NaN, 2, 4; its mean is 3.
+// The column holds 3, NaN, 2, 4; its mean is 3.  Slide-only, shown in a
+// figure column at ~0.9x, so values and labels are 16-18 px.
 function missing() {
-  const s = 40, g = 4, step = s + g; let o = '';
-  const W = 540, tcx = W / 2, ty = 36;
+  const s = 36, g = 4, step = s + g, fs = 17; let o = '';
+  const W = 540, tcx = W / 2, ty = 38;
   const src = [['3'], ['NaN'], ['2'], ['4']];
-  o += code(tcx, ty - 20, 'NumRooms', C.ink, { fw: 700 });
-  o += grid(src, tcx - s / 2, ty, s, g, { fs: 14.5, fill: (r, c, v) => v === 'NaN' ? AMBER : BLUE });
+  o += code(tcx, ty - 22, 'NumRooms', C.ink, { fs, fw: 700 });
+  o += grid(src, tcx - s / 2, ty, s, g, { fs, fill: (r, c, v) => v === 'NaN' ? AMBER : BLUE });
   const srcBot = ty + 4 * step - g;
-  const ry = srcBot + 70;
+  const ry = srcBot + 58;
   const ax = 40, bx = W / 2 - s / 2, cx = W - 40 - (2 * s + g);
   // fan arrows from the source column to the three results
   o += arrow(tcx - 26, srcBot + 8, ax + s / 2 + 8, ry - 10, C.gray);
   o += arrow(tcx, srcBot + 8, tcx, ry - 10, C.gray);
   o += arrow(tcx + 26, srcBot + 8, cx + s - 8, ry - 10, C.gray);
   // deletion: the row with the gap is gone
-  o += grid([['3'], ['2'], ['4']], ax, ry, s, g, { fs: 14.5, fill: () => BLUE });
+  o += grid([['3'], ['2'], ['4']], ax, ry, s, g, { fs, fill: () => BLUE });
   // imputation: the gap holds the mean
-  o += grid([['3'], ['3'], ['2'], ['4']], bx, ry, s, g, { fs: 14.5,
+  o += grid([['3'], ['3'], ['2'], ['4']], bx, ry, s, g, { fs,
     fill: (r) => r === 1 ? GREEN : BLUE });
   // indicator: imputed value plus a column that flags the gap
-  o += grid([['3', '0'], ['3', '1'], ['2', '0'], ['4', '0']], cx, ry, s, g, { fs: 14.5,
+  o += grid([['3', '0'], ['3', '1'], ['2', '0'], ['4', '0']], cx, ry, s, g, { fs,
     fill: (r, c) => c === 1 ? PURPLE : (r === 1 ? GREEN : BLUE) });
   // labels on one baseline, below the tallest result
   const lab = (x, t, sub) =>
-    name(x, ry + 4 * step + 14, t) + note(x, ry + 4 * step + 36, sub);
+    name(x, ry + 4 * step + 16, t, C.ink, { fs: 18 })
+    + note(x, ry + 4 * step + 40, sub, C.ink, { fs: 16 });
   o += lab(ax + s / 2, 'deletion', 'drops the row');
   o += lab(bx + s / 2, 'imputation', 'fills in the mean');
   o += lab(cx + s + g / 2, 'indicator', 'mean and a flag');
-  return svg(W, ry + 4 * step + 50, o);
+  return svg(W, ry + 4 * step + 54, o);
 }
 
 // ── one-hot encoding of the first four RoofType entries ───────────────

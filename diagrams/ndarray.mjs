@@ -146,23 +146,25 @@ function broadcasting() {
   const col = 2 * s + g, row3 = 3 * s + 2 * g, top = 44, mid = top + row3 / 2;
   const gA = GHOST(C.blue), gB = GHOST(C.amber);
   const op = (x, t) => tx(x, mid, t, { fs: 30, fw: 700, fill: C.ink });
+  // 17 px labels and values: the figure also sits in a slide column at ~0.9x
+  const lab = (x, t) => code(x, top - 24, t, C.ink, { fs: 17 });
   let x = 40;                                    // a: (3, 1)
-  o += code(x + s / 2, top - 22, 'a: (3, 1)');
-  o += grid([[0], [1], [2]], x, top, s, g, { fill: () => BLUE });
+  o += lab(x + s / 2, 'a: (3, 1)');
+  o += grid([[0], [1], [2]], x, top, s, g, { fs: 17, fill: () => BLUE });
   o += arrow(x + s + 8, mid, x + s + 44, mid, C.ink, false);
   x += s + 54;                                   // a stretched to (3, 2)
-  o += code(x + col / 2, top - 22, '(3, 2)');
-  o += grid([[0, 0], [1, 1], [2, 2]], x, top, s, g, { fill: (r, c) => c === 0 ? BLUE : gA });
+  o += lab(x + col / 2, '(3, 2)');
+  o += grid([[0, 0], [1, 1], [2, 2]], x, top, s, g, { fs: 17, fill: (r, c) => c === 0 ? BLUE : gA });
   x += col + 30; o += op(x, '+'); x += 30;
-  o += code(x + col / 2, top - 22, 'b: (1, 2)');   // b: (1, 2)
-  o += grid([[0, 1]], x, mid - s / 2, s, g, { fill: () => AMBER });
+  o += lab(x + col / 2, 'b: (1, 2)');   // b: (1, 2)
+  o += grid([[0, 1]], x, mid - s / 2, s, g, { fs: 17, fill: () => AMBER });
   o += arrow(x + col + 8, mid, x + col + 44, mid, C.ink, false);
   x += col + 54;                                 // b stretched to (3, 2)
-  o += code(x + col / 2, top - 22, '(3, 2)');
-  o += grid([[0, 1], [0, 1], [0, 1]], x, top, s, g, { fill: (r) => r === 0 ? AMBER : gB });
+  o += lab(x + col / 2, '(3, 2)');
+  o += grid([[0, 1], [0, 1], [0, 1]], x, top, s, g, { fs: 17, fill: (r) => r === 0 ? AMBER : gB });
   x += col + 30; o += op(x, '='); x += 30;
-  o += code(x + col / 2, top - 22, 'a + b: (3, 2)');
-  o += grid([[0, 1], [1, 2], [2, 3]], x, top, s, g, { fill: () => GREEN });
+  o += lab(x + col / 2, 'a + b: (3, 2)');
+  o += grid([[0, 1], [1, 2], [2, 3]], x, top, s, g, { fs: 17, fill: () => GREEN });
   return svg(x + col + 40, top + row3 + 16, o);
 }
 
@@ -215,22 +217,26 @@ function savingMemoryJax() {
 }
 
 // ── PyTorch: X, A = X.numpy(), B = torch.from_numpy(A) share a buffer ─
+// Portrait, so that it fills a slide column at a legible size: the three
+// names stacked on the left, their arrows converging on one memory block.
 function numpyShare() {
-  const s = 40, g = 5, n = 8; let o = '';
-  const bw = 196;
+  const s = 34, g = 4, n = 5, bw = 196, bh = 58, gap = 22; let o = '';
   const heads = [
-    [24, 'X', 'torch.Tensor', C.blue],
-    [24 + bw + 20, 'A = X.numpy()', 'numpy.ndarray', C.amber],
-    [24 + 2 * (bw + 20), 'B = from_numpy(A)', 'torch.Tensor', C.blue],
+    ['X', 'torch.Tensor', C.blue],
+    ['A = X.numpy()', 'numpy.ndarray', C.amber],
+    ['B = from_numpy(A)', 'torch.Tensor', C.blue],
   ];
-  for (const [x, t, sub, acc] of heads) o += buffer(x, 20, t, sub, acc, false, bw);
-  const W = 24 + 3 * bw + 2 * 20 + 24;
-  const gwid = n * s + (n - 1) * g, gx = (W - gwid) / 2, gy = 150;
-  o += grid([Array(n).fill('')], gx, gy, s, g, { showVal: false, fill: () => [N.panel, N.faint, false] });
-  o += name(W / 2, gy + s + 24, 'memory', C.ink, { fs: 16, fw: 600 });
-  const tgt = [gx + 40, W / 2, gx + gwid - 40];
-  heads.forEach(([x], i) => { o += arrow(x + bw / 2, 80, tgt[i], gy - 8, C.purple, false); });
-  return svg(W, gy + s + 42, o);
+  const x0 = 16, y0 = 16, H = 3 * bh + 2 * gap, mh = n * s + (n - 1) * g;
+  const mx = x0 + bw + 84, my = y0 + (H - mh) / 2, mid = my + mh / 2;
+  heads.forEach(([t, sub, acc], i) => {
+    const y = y0 + i * (bh + gap);
+    o += buffer(x0, y, t, sub, acc, false, bw);
+    o += arrow(x0 + bw + 8, y + bh / 2, mx - 8, mid + (i - 1) * (s + g), C.purple, false);
+  });
+  o += grid(Array.from({ length: n }, () => ['']), mx, my, s, g,
+            { showVal: false, fill: () => [N.panel, N.faint, false] });
+  o += name(mx + s / 2, my + mh + 24, 'memory', C.ink, { fs: 16, fw: 600 });
+  return svg(mx + s + 24, my + mh + 42, o);
 }
 
 // Keyed by stable diagram id. The id is the SVG filename and the

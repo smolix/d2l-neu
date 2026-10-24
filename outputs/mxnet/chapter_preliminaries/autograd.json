@@ -43,6 +43,11 @@
       "kind": "text",
       "outputs": [
         {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[08:44:39] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
+        {
           "type": "execute_result",
           "text": "array([2., 4.])"
         }
@@ -59,7 +64,7 @@
       ]
     },
     "autograd-backward-for-non-scalar-variables": {
-      "code_fingerprint": "sha256:418240112633d2930c7667722742960ebba98b298df9832cf426ad411700f425",
+      "code_fingerprint": "sha256:3780b17170c80aca5f8b17dab70c77b6f258c91d25e4f2df38e2a4642081eb8a",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +74,7 @@
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:f3f3fee469f79c2ba79d51b54777f534b9e431fbb2d7e0822632e71963eddfc2",
+      "code_fingerprint": "sha256:eeba30f49b80d1718020caef507386889afc4e2be1312fc50227b74d77512936",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +84,7 @@
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:8d4418241bb0052976fef27c7bf4f66ce5a00034cdde1e799854825014539301",
+      "code_fingerprint": "sha256:6157de5051492281101820e814ddfe11bcb884bb78c6658c26377f79eeabd68a",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +94,7 @@
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:7bdf0ab0a6a16f034902ffe2f9af96d3da8159c51c37ba96442dda45b50a2d3b",
+      "code_fingerprint": "sha256:7286754ef321664424445d762bab5c22f346f79258f8e855a8f88d90d3a48454",
       "kind": "text",
       "outputs": [
         {
@@ -99,12 +104,12 @@
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:e4f72dc365485d89385390b3722bd50b46395f399dc998d640bc5702b2273118",
+      "code_fingerprint": "sha256:4b607576127892dcaad6cd239edb828bad8dae7b44da9949aa6fbb30182eff78",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:75c928878813ebbe45baf46d94fc29247e6d14333e67a048d587f3c2a438667f",
+      "code_fingerprint": "sha256:76720dbfff81d5a6520405845278905642d214bf502966541cbd3d2530365187",
       "kind": "text",
       "outputs": [
         {
@@ -115,12 +120,13 @@
       ]
     },
     "autograd-rows-and-columns-of-the-jacobian": {
-      "code_fingerprint": "sha256:6017ac12b67e915a16ac6fe96294eb2a2135306f05b92000a8e70240921042d2",
+      "code_fingerprint": "sha256:5971089444e394ba587a564c6e0bedfa50e61b7929b1e841d84462fd5c9f45fb",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "array([[1., 0.],\n       [1., 1.],\n       [1., 2.]])"
+          "type": "stream",
+          "name": "stdout",
+          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
         }
       ]
     }

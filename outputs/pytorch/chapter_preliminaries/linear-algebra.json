@@ -193,18 +193,8 @@
         }
       ]
     },
-    "linear-algebra-norms-1": {
-      "code_fingerprint": "sha256:ab469b91336926d4d5b49df46b1070bda54f263e557008dafbc891dc77ff0cb0",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "tensor(5.)"
-        }
-      ]
-    },
     "linear-algebra-dot-products-3": {
-      "code_fingerprint": "sha256:d2d39c2ff7f2c415115b3bd3fba5646e3f8ba7bfac4fb1a2e767e2998846ba6b",
+      "code_fingerprint": "sha256:d8f88ca130dbd99dfd9cd267fcfaf0465396fe0ed255a426a8e0c8c2d7f1c78b",
       "kind": "text",
       "outputs": [
         {
@@ -214,17 +204,17 @@
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:dd620c042e30767298c5b0d15be5472d2b80896fb042710ae2356a4459f51470",
+      "code_fingerprint": "sha256:96431ac3327f362c34c32991dc2c4fc99cdcf8b56db9b703b6acae1785230157",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(7.)"
+          "text": "(tensor(5.), tensor(7.))"
         }
       ]
     },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:5d52677d478110bb7cc92cc22d393894867230821c693fbee1263716a55c861b",
+      "code_fingerprint": "sha256:5c748a760f730d7100daa2cb7095fa5576a2196867fe36f827bd6d327407d3f2",
       "kind": "text",
       "outputs": [
         {
@@ -234,7 +224,7 @@
       ]
     },
     "linear-algebra-eigenvalues-1": {
-      "code_fingerprint": "sha256:e5e09779a4a558b6b2911ab7ca6953a1c6510902e5240b36961ea31bbd765f46",
+      "code_fingerprint": "sha256:ab09cf7b90397f3d0c6db1fba107615c44f5ca4f9c5164e1b449b2b5e9ca6895",
       "kind": "text",
       "outputs": [
         {
@@ -244,7 +234,7 @@
       ]
     },
     "linear-algebra-eigenvalues-2": {
-      "code_fingerprint": "sha256:adbde709353926a4f8ad0a0a0c707194b0126e30b5f899745a6a5863e3d0544e",
+      "code_fingerprint": "sha256:c5adf00f6dabf16be72109e25950b67c7edcbe22653daf90ff132efe6b41b2ad",
       "kind": "text",
       "outputs": [
         {
@@ -254,7 +244,7 @@
       ]
     },
     "linear-algebra-powers-of-a-matrix-1": {
-      "code_fingerprint": "sha256:3fafab3365f04fadc736759451b2789d4e4b0d61cb6850990c72fc462cc10ee8",
+      "code_fingerprint": "sha256:7e54f4baa5846926b1c6fc20548ea355bb4a0efb09f6435a0e573e35c87b723b",
       "kind": "text",
       "outputs": [
         {

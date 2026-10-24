@@ -125,12 +125,13 @@
       ]
     },
     "autograd-rows-and-columns-of-the-jacobian": {
-      "code_fingerprint": "sha256:32b66eef6f7f6b10e70a7c158b4a8aa21de5b95bc1d5ee22b9e2f35398af273e",
+      "code_fingerprint": "sha256:86d9716cdb7cde16613f1c569d455f5888552e95d80ef7bbee15d463f79c81c4",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(tensor([[1., 0.],\n         [1., 1.],\n         [1., 2.]]),\n tensor([[1., 0.],\n         [1., 1.],\n         [1., 2.]]))"
+          "type": "stream",
+          "name": "stdout",
+          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\nforward sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
         }
       ]
     }

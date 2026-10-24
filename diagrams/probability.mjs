@@ -98,25 +98,25 @@ function jointGrid() {
 
 // ── (in)dependence graphs: conditioning creates or destroys it ──────
 function explainingAway() {
-  const W = 660, H = 256; let o = '';
+  const W = 660, H = 262; let o = '';
   const node = (x, y, l) =>
-    `<circle cx="${x}" cy="${y}" r="21" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`
-    + tx(x, y, l, { fs: 17, fw: 700, fill: C.ink });
-  const cap = (cx, t1, t2) => tx(cx, 210, t1, { fs: 15, fw: 700, fill: C.ink }) + tx(cx, 234, t2, { fs: 14, fill: C.ink });
+    `<circle cx="${x}" cy="${y}" r="23" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`
+    + tx(x, y, l, { fs: 20, fw: 700, fill: C.ink });
+  const cap = (cx, t1, t2) => tx(cx, 210, t1, { fs: 18, fw: 700, fill: C.ink }) + tx(cx, 238, t2, { fs: 17, fill: C.ink });
   // 1 — common cause  C → A, C → B
   let cx = 110;
   o += node(cx, 70, 'C'); o += node(cx - 46, 152, 'A'); o += node(cx + 46, 152, 'B');
-  o += arrow(cx - 11, 88, cx - 35, 134, C.ink); o += arrow(cx + 11, 88, cx + 35, 134, C.ink);
+  o += arrow(cx - 12, 90, cx - 34, 132, C.ink); o += arrow(cx + 12, 90, cx + 34, 132, C.ink);
   o += cap(cx, 'common cause', 'A ⟂ B given C');
   // 2 — chain  A → B → C
   cx = 330;
-  o += node(cx - 66, 112, 'A'); o += node(cx, 112, 'B'); o += node(cx + 66, 112, 'C');
-  o += arrow(cx - 45, 112, cx - 21, 112, C.ink); o += arrow(cx + 21, 112, cx + 45, 112, C.ink);
+  o += node(cx - 70, 112, 'A'); o += node(cx, 112, 'B'); o += node(cx + 70, 112, 'C');
+  o += arrow(cx - 47, 112, cx - 23, 112, C.ink); o += arrow(cx + 23, 112, cx + 47, 112, C.ink);
   o += cap(cx, 'chain', 'A ⟂ C given B');
   // 3 — common effect  A → C ← B  (explaining away)
   cx = 552;
   o += node(cx - 46, 70, 'A'); o += node(cx + 46, 70, 'B'); o += node(cx, 152, 'C');
-  o += arrow(cx - 35, 88, cx - 11, 134, C.ink); o += arrow(cx + 35, 88, cx + 11, 134, C.ink);
+  o += arrow(cx - 34, 90, cx - 12, 132, C.ink); o += arrow(cx + 34, 90, cx + 12, 132, C.ink);
   o += cap(cx, 'common effect', 'A ⟂ B, but not given C');
   return svg(W, H, o);
 }
@@ -153,7 +153,7 @@ function venn() {
   o += `<circle cx="${bx}" cy="${ay}" r="78" fill="${C.amber}" fill-opacity="0.16" stroke="${C.amber}" stroke-width="2.2"/>`;
   o += tx(ax - 42, ay, 'A', { fs: 20, fw: 700, fill: DK.blue });
   o += tx(bx + 42, ay, 'B', { fs: 20, fw: 700, fill: DK.amber });
-  o += tx((ax + bx) / 2, ay, 'A ∩ B', { fs: 15, fw: 700, fill: C.ink });
+  o += tx((ax + bx) / 2, ay, 'A ∩ B', { fs: 19, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -162,23 +162,23 @@ function density() {
   const W = 700, H = 280; let o = '';
   const base = 244;
   // left: PMF
-  o += tx(191, 50, 'P(X = v)', { fs: 16, fw: 700, fill: DK.blue });
+  o += tx(191, 46, 'P(X = v)', { fs: 19, fw: 700, fill: DK.blue });
   o += line(60, base, 322, base, C.ink, 1.6);
   const pmf = [0.10, 0.24, 0.30, 0.21, 0.15], bx0 = 99, bp = 46, bw = 30, hsc = 480;
   pmf.forEach((p, i) => {
     const cx = bx0 + i * bp, h = p * hsc;
     o += `<rect x="${cx - bw / 2}" y="${base - h}" width="${bw}" height="${h}" rx="3" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`;
-    o += tx(cx, base + 18, `${i + 1}`, { fs: 14, fw: 600, fill: C.ink });
+    o += tx(cx, base + 20, `${i + 1}`, { fs: 18, fw: 600, fill: C.ink });
   });
   // right: PDF
-  o += tx(526, 50, 'P(a ≤ X ≤ b) = area', { fs: 16, fw: 700, fill: DK.amber });
+  o += tx(526, 46, 'P(a ≤ X ≤ b) = area', { fs: 19, fw: 700, fill: DK.amber });
   o += line(388, base, 664, base, C.ink, 1.6);
   const mu = 526, sig = 46, peak = 170, f = (x) => base - peak * gauss(x, mu, sig), a = 500, b = 584;
   o += area(f, a, b, 40, base, C.amber, 0.30);
   o += curve(f, 396, 656, 80, C.amber, 2.6);
-  o += line(a, base, a, base + 6, C.ink, 1.6); o += tx(a, base + 19, 'a', { fs: 15, fw: 700, fill: C.ink });
-  o += line(b, base, b, base + 6, C.ink, 1.6); o += tx(b, base + 19, 'b', { fs: 15, fw: 700, fill: C.ink });
-  o += tx(620, 132, 'p(x)', { fs: 15, fw: 700, fill: DK.amber, anchor: 'start' });
+  o += line(a, base, a, base + 6, C.ink, 1.6); o += tx(a, base + 20, 'a', { fs: 19, fw: 700, fill: C.ink });
+  o += line(b, base, b, base + 6, C.ink, 1.6); o += tx(b, base + 20, 'b', { fs: 19, fw: 700, fill: C.ink });
+  o += tx(614, 132, 'p(x)', { fs: 19, fw: 700, fill: DK.amber, anchor: 'start' });
   return svg(W, H, o);
 }
 
@@ -196,13 +196,13 @@ function expectation() {
   out.forEach(d => {
     const cx = X(d.r), h = d.p * hsc;
     o += `<rect x="${cx - bw / 2}" y="${base - h}" width="${bw}" height="${h}" rx="3" fill="${d.cl}" stroke="${d.c}" stroke-width="2"/>`;
-    o += tx(cx, base - h - 34, d.l, { fs: 16, fw: 700, fill: C.ink });
-    o += tx(cx, base - h - 14, `${Math.round(d.p * 100)}%`, { fs: 14, fw: 700, fill: d.d });
+    o += tx(cx, base - h - 40, d.l, { fs: 19, fw: 700, fill: C.ink });
+    o += tx(cx, base - h - 16, `${Math.round(d.p * 100)}%`, { fs: 17, fw: 700, fill: d.d });
   });
-  o += tx(X(6.5), base + 18, 'return', { fs: 14, fill: C.ink });
+  o += tx(X(6.5), base + 20, 'return', { fs: 18, fill: C.ink });
   const mx = X(1.8);
   o += `<path d="M${mx} ${base - 1} L${mx - 11} ${base + 20} L${mx + 11} ${base + 20} Z" fill="${C.blue}"/>`;
-  o += tx(mx, base + 40, 'E[X] = 1.8', { fs: 16, fw: 700, fill: DK.blue });
+  o += tx(mx, base + 42, 'E[X] = 1.8', { fs: 19, fw: 700, fill: DK.blue });
   return svg(W, H, o);
 }
 
@@ -215,13 +215,13 @@ function spread() {
   o += curve(fW, 70, 530, 110, C.amber, 2.6);
   o += curve(fN, 70, 530, 110, C.blue, 2.6);
   o += line(mu, base, mu, 72, C.ink, 1.4, true);
-  o += tx(mu, 60, 'μ', { fs: 17, fw: 700, fill: C.ink });
-  o += line(mu - 82, base, mu - 82, base - 8, C.ink, 1.6); o += tx(mu - 82, base + 19, 'μ − σ', { fs: 14, fw: 700, fill: DK.amber });
-  o += line(mu + 82, base, mu + 82, base - 8, C.ink, 1.6); o += tx(mu + 82, base + 19, 'μ + σ', { fs: 14, fw: 700, fill: DK.amber });
-  o += `<rect x="402" y="84" width="16" height="14" rx="2" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`;
-  o += tx(426, 92, 'small variance', { fs: 15, fw: 600, fill: C.ink, anchor: 'start' });
-  o += `<rect x="402" y="112" width="16" height="14" rx="2" fill="${C.lamber}" stroke="${C.amber}" stroke-width="2"/>`;
-  o += tx(426, 120, 'large variance', { fs: 15, fw: 600, fill: C.ink, anchor: 'start' });
+  o += tx(mu, 58, 'μ', { fs: 20, fw: 700, fill: C.ink });
+  o += line(mu - 82, base, mu - 82, base - 8, C.ink, 1.6); o += tx(mu - 82, base + 21, 'μ − σ', { fs: 18, fw: 700, fill: DK.amber });
+  o += line(mu + 82, base, mu + 82, base - 8, C.ink, 1.6); o += tx(mu + 82, base + 21, 'μ + σ', { fs: 18, fw: 700, fill: DK.amber });
+  o += `<rect x="392" y="82" width="18" height="16" rx="2" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`;
+  o += tx(418, 90, 'small variance', { fs: 18, fw: 600, fill: C.ink, anchor: 'start' });
+  o += `<rect x="392" y="112" width="18" height="16" rx="2" fill="${C.lamber}" stroke="${C.amber}" stroke-width="2"/>`;
+  o += tx(418, 120, 'large variance', { fs: 18, fw: 600, fill: C.ink, anchor: 'start' });
   return svg(W, H, o);
 }
 
@@ -249,17 +249,17 @@ function covariance() {
 function uncertainty() {
   const W = 680, H = 250; let o = '';
   // left: aleatoric
-  o += tx(176, 30, 'aleatoric: irreducible', { fs: 16, fw: 700, fill: DK.amber });
+  o += tx(176, 28, 'aleatoric: irreducible', { fs: 19, fw: 700, fill: DK.amber });
   const lb = 184;
   o += line(70, lb, 300, lb, C.ink, 1.6);
   [['heads', 124], ['tails', 214]].forEach(([lab, cx]) => {
     o += `<rect x="${cx - 34}" y="${lb - 100}" width="68" height="100" rx="3" fill="${C.lamber}" stroke="${C.amber}" stroke-width="2"/>`;
-    o += tx(cx, lb - 114, '0.5', { fs: 15, fw: 700, fill: DK.amber });
-    o += tx(cx, lb + 18, lab, { fs: 14, fw: 600, fill: C.ink });
+    o += tx(cx, lb - 116, '0.5', { fs: 18, fw: 700, fill: DK.amber });
+    o += tx(cx, lb + 20, lab, { fs: 18, fw: 600, fill: C.ink });
   });
-  o += tx(176, 230, 'known p: the next toss is still 50/50', { fs: 14, fw: 600, fill: C.ink });
+  o += tx(176, 234, 'p known, still 50/50', { fs: 18, fw: 600, fill: C.ink });
   // right: epistemic — converging confidence band around the true p
-  o += tx(510, 30, 'epistemic: shrinks with data', { fs: 16, fw: 700, fill: DK.blue });
+  o += tx(510, 28, 'epistemic: shrinks with data', { fs: 19, fw: 700, fill: DK.blue });
   const rx0 = 392, rx1 = 628, tY = 120;
   const hw = (x) => 60 * (1 - 0.86 * (x - rx0) / (rx1 - rx0)), up = (x) => tY - hw(x), lo = (x) => tY + hw(x);
   let band = `M${rx0} ${up(rx0).toFixed(1)}`;
@@ -267,9 +267,9 @@ function uncertainty() {
   for (let i = 60; i >= 0; i--) { const x = rx0 + (rx1 - rx0) * i / 60; band += `L${x.toFixed(1)} ${lo(x).toFixed(1)}`; }
   o += `<path d="${band}Z" fill="${C.lblue}" fill-opacity="0.75" stroke="${C.blue}" stroke-width="1.6"/>`;
   o += line(rx0, tY, rx1, tY, C.ink, 1.4, true);
-  o += tx(rx1 + 12, tY, 'p', { fs: 16, fw: 700, fill: C.ink, anchor: 'start' });
+  o += tx(rx1 + 12, tY, 'p', { fs: 20, fw: 700, fill: C.ink, anchor: 'start' });
   o += arrow(rx0, 196, rx1, 196, C.ink);
-  o += tx(510, 220, 'number of tosses n', { fs: 14, fw: 600, fill: C.ink });
+  o += tx(510, 222, 'number of tosses n', { fs: 18, fw: 600, fill: C.ink });
   return svg(W, H, o);
 }
 

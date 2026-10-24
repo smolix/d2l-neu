@@ -78,16 +78,17 @@ names the section it accompanies. All are freely accessible online.
 ::: {.cover}
 [Dive into Deep Learning · §1]{.kicker}
 
-Preliminaries<br>
-**the tools for the smallest complete learning problem**
+The tools for the smallest complete learning problem<br>
+**tensors · tables · linear algebra · calculus · autograd · probability · documentation**
 :::
 :::
 
 ::: {.slide title="Even a Small Learning Problem Involves Many Numbers"}
 [The problem]{.kicker}
 
-- The problem: load examples, represent them as numbers, predict, measure
-  the loss, change the parameters, and check whether the result is real.
+- Learning takes six steps: load examples, represent them as numbers,
+  predict, measure the loss, change the parameters, and check whether the
+  result is real.
 - A minibatch of 256 grayscale images of 28 × 28 pixels holds 200,704
   numbers; a linear classifier for ten categories has
   784 × 10 + 10 = 7,850 parameters.

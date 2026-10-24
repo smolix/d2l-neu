@@ -337,8 +337,8 @@ is what we want: the gradient of the total loss. We differentiate the
 per-example squared errors $r_i^2$ of the line model, whose sum is $L$.
 
 :begin_tab:`mxnet`
-Calling `backward` on an array that is not a scalar uses $\mathbf{v} =
-\mathbf{1}$, so it differentiates the sum of the entries.
+`backward` takes $\mathbf{v}$ as its argument. Without one, it uses
+$\mathbf{v} = \mathbf{1}$ for an array that is not a scalar.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -350,20 +350,23 @@ vector of ones is the same as calling `losses.sum().backward()`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-For a tensor that is not a scalar, `gradient` uses $\mathbf{v} =
-\mathbf{1}$, so it differentiates the sum of the entries.
+The tape's `gradient` method takes $\mathbf{v}$ as the argument
+`output_gradients`. Without it, `gradient` uses $\mathbf{v} = \mathbf{1}$
+for a tensor that is not a scalar.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.grad` accepts only functions with a scalar output, so we differentiate
-the sum explicitly.
+`jax.grad` accepts only functions with a scalar output. `jax.vjp(losses, w)`
+returns the value of `losses` at `w` and a function that maps $\mathbf{v}$
+to $\mathbf{J}^\top \mathbf{v}$. That function returns a tuple with one
+entry per argument of `losses`, here only `w`.
 :end_tab:
 
 ```{.python .input #autograd-backward-for-non-scalar-variables}
 %%tab mxnet
 with autograd.record():
     losses = (X @ w - y) ** 2  # one loss per example
-losses.backward()  # differentiates losses.sum()
+losses.backward(mnp.ones(3))  # v = 1: differentiates losses.sum()
 w.grad
 ```
 
@@ -379,7 +382,7 @@ w.grad
 %%tab tensorflow
 with tf.GradientTape() as t:
     losses = (tf.linalg.matvec(X, w) - y) ** 2  # per-example losses
-t.gradient(losses, w)  # differentiates the sum of the losses
+t.gradient(losses, w, output_gradients=tf.ones(3))  # v = 1
 ```
 
 ```{.python .input #autograd-backward-for-non-scalar-variables}
@@ -387,7 +390,8 @@ t.gradient(losses, w)  # differentiates the sum of the losses
 def losses(w):
     return (X @ w - y) ** 2  # one loss per example
 
-jax.grad(lambda w: losses(w).sum())(w)
+_, vjp = jax.vjp(losses, w)  # vjp maps v to J^T v
+vjp(jnp.ones(3))[0]  # v = 1
 ```
 
 All four frameworks return $(2, 4)$, the gradient of the total loss.
@@ -590,7 +594,7 @@ w, L
 with tf.GradientTape() as t:
     L = loss(w)
 w.assign_sub(0.1 * t.gradient(L, w))  # outside the tape
-w, loss(w)
+w.numpy(), round(float(loss(w)), 4)
 ```
 
 ```{.python .input #autograd-turning-off-gradient-tracking-1}
@@ -863,8 +867,8 @@ $\mathbf{d}$ that it is given.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.vjp(errors, w0)` returns the value of `errors` at `w0` and a function
-that maps $\mathbf{v}$ to $\mathbf{J}^\top \mathbf{v}$.
+As for the per-example losses, `jax.vjp(errors, w0)` returns a function that
+maps $\mathbf{v}$ to $\mathbf{J}^\top \mathbf{v}$.
 `jax.jvp(errors, (w0,), (d,))` returns the value and $\mathbf{J}\mathbf{d}$,
 computed in one forward sweep.
 :end_tab:
@@ -882,7 +886,7 @@ for v in mnp.eye(3):  # row by row, one reverse sweep each
         r = errors(w0)
     r.backward(v)
     rows.append(w0.grad.copy())
-mnp.stack(rows)
+print('reverse sweeps:', mnp.stack(rows).tolist())
 ```
 
 ```{.python .input #autograd-rows-and-columns-of-the-jacobian}
@@ -895,7 +899,8 @@ _, vjp = torch.func.vjp(errors, w0)
 rows = torch.stack([vjp(v)[0] for v in torch.eye(3)])  # row by row
 cols = torch.stack([torch.func.jvp(errors, (w0,), (d,))[1]
                     for d in torch.eye(2)], dim=1)  # column by column
-rows, cols
+print('reverse sweeps:', rows.tolist())
+print('forward sweeps:', cols.tolist())
 ```
 
 ```{.python .input #autograd-rows-and-columns-of-the-jacobian}
@@ -914,7 +919,8 @@ for d in tf.eye(2):  # column by column
     with tf.autodiff.ForwardAccumulator(w0, d) as acc:
         r = errors(w0)
     cols.append(acc.jvp(r))
-rows, tf.stack(cols, axis=1)
+print('reverse sweeps:', rows.numpy().tolist())
+print('forward sweeps:', tf.stack(cols, axis=1).numpy().tolist())
 ```
 
 ```{.python .input #autograd-rows-and-columns-of-the-jacobian}
@@ -927,7 +933,8 @@ _, vjp = jax.vjp(errors, w0)
 rows = jnp.stack([vjp(v)[0] for v in jnp.eye(3)])  # row by row
 cols = jnp.stack([jax.jvp(errors, (w0,), (d,))[1]
                   for d in jnp.eye(2)], axis=1)  # column by column
-rows, cols
+print('reverse sweeps:', rows.tolist())
+print('forward sweeps:', cols.tolist())
 ```
 
 :begin_tab:`mxnet`
@@ -1139,7 +1146,7 @@ parameters, which is why it trains the networks of this book.
 [Dive into Deep Learning · §2.5]{.kicker}
 
 Gradients from a recorded forward pass<br>
-**computational graphs · the backward pass · detaching · control flow · forward and reverse mode**
+**the backward pass · detaching · control flow · forward and reverse mode**
 :::
 :::
 
@@ -1169,8 +1176,8 @@ gradient, exact up to rounding, for a small multiple of the cost of the loss.
 - compute a gradient in your framework and check it against one derived by
   hand;
 - predict what accumulation, detaching, and disabling recording do;
-- differentiate programs with loops and branches, and differentiate a
-  derivative;
+- differentiate programs with loops and branches, and say what autograd
+  returns where a program jumps;
 - count the passes through the graph that forward and reverse mode need
   for a Jacobian.
 
@@ -1233,14 +1240,18 @@ Recording costs memory, so only operations on marked tensors are recorded:
 @autograd-a-simple-function-3
 :::
 
-::: {.slide title="JAX Records Nothing: jax.grad Transforms the Function" only="jax"}
+::: {.slide title="jax.grad Turns loss Into a Function That Returns (2, 4)" only="jax"}
 [Gradients]{.kicker}
 
-There is nothing to mark. The forward pass is an ordinary call, and
-`jax.grad(loss)` is a new function that returns the gradient. It keeps no
-state between calls.
+Nothing is marked, and the call `loss(w)` records nothing. JAX records the
+operations of `loss` only while `jax.grad` runs it:
 
 @autograd-a-simple-function-3
+
+@autograd-a-simple-function-4
+
+This is $\nabla L = 2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$ at
+$\mathbf{w} = (1, 0)$, without a derivative written by hand.
 :::
 
 ::: {.slide title="The Backward Pass Applies One Local Rule per Operation"}
@@ -1253,7 +1264,7 @@ $2\mathbf{r}$, subtracting $\mathbf{y}$ passes it on, and the product with
 $\mathbf{X}$ multiplies by $\mathbf{X}^\top$.
 :::
 
-::: {.slide title="One Backward Pass Returns (2, 4), the Gradient Derived by Hand"}
+::: {.slide title="One Backward Pass Returns (2, 4), the Gradient Derived by Hand" except="jax"}
 [Gradients]{.kicker}
 
 @autograd-a-simple-function-4
@@ -1293,7 +1304,7 @@ $\mathbf{v}$ and returns $\mathbf{J}^\top\mathbf{v} =
 \nabla_{\mathbf{x}}(\mathbf{v}^\top\mathbf{u})$; $\mathbf{v} = \mathbf{1}$,
 the vector of all ones, gives the gradient of the sum.
 
-Per-example squared errors, $\mathbf{v} = \mathbf{1}$:
+Per-example squared errors, passing $\mathbf{v} = \mathbf{1}$:
 
 @autograd-backward-for-non-scalar-variables
 :::
@@ -1306,9 +1317,11 @@ Which local rule of the backward pass changes, and what gradient does it
 return at $\mathbf{w} = (1, 0)$?
 
 ::: {.fragment .fade-up}
-Only the rule of the last operation: the mean passes $1/3$ to each input,
-where the sum passed $1$. The other rules are unchanged, so
+::: {.d2l-note}
+**Answer.** Only the rule of the last operation: the mean passes $1/3$ to
+each input, where the sum passed $1$. The other rules are unchanged, so
 $\nabla L = (2, 4)/3 = (2/3, 4/3)$.
+:::
 :::
 :::
 
@@ -1327,9 +1340,7 @@ $\nabla L = (2, 4)/3 = (2/3, 4/3)$.
 
 @fig:autograd-detach
 
-A target that the model computes itself must act as a constant: the update
-should move the prediction toward the target, not the target toward the
-prediction.
+Why: a target that the model computes must stay fixed while the prediction moves.
 :::
 
 ::: {.slide title="Detached, ∂z/∂x = x² = (0, 1, 4, 9); Attached, 3x²"}
@@ -1359,7 +1370,7 @@ $\mathbf{w} = (0.8, -0.4)$, as computed by hand in the calculus deck.
 
 [Differentiating programs]{.dtitle}
 
-[control flow · higher-order derivatives]{.dsub}
+[loops and branches: the graph is what ran]{.dsub}
 :::
 :::
 
@@ -1399,8 +1410,11 @@ How many times does `f` double $a = 0.1$, which branch runs, and what
 gradient does autograd return?
 
 ::: {.fragment .fade-up}
-$0.1 \cdot 2^{13} = 819.2 < 1000$ and $0.1 \cdot 2^{14} = 1638.4$: 14
-doublings, the first branch, and gradient $2^{14} = 16384$.
+::: {.d2l-note}
+**Answer.** $0.1 \cdot 2^{13} = 819.2 < 1000$ and
+$0.1 \cdot 2^{14} = 1638.4$: 14 doublings, the first branch, and gradient
+$2^{14} = 16384$.
+:::
 :::
 :::
 
@@ -1469,8 +1483,10 @@ A simulation maps 3 parameters to $10^6$ outputs. How many sweeps does each
 mode need for the full Jacobian?
 
 ::: {.fragment .fade-up}
-Forward mode: 3 sweeps, one per column. Reverse mode: $10^6$ sweeps, one
-per row. Forward mode wins.
+::: {.d2l-note}
+**Answer.** Forward mode: 3 sweeps, one per column. Reverse mode: $10^6$
+sweeps, one per row. Forward mode wins.
+:::
 :::
 :::
 

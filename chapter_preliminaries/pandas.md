@@ -149,11 +149,12 @@ inputs, also called *features*. We separate the two first, so that the steps
 below transform only the inputs and the price never ends up among them. The
 indexer `iloc` selects by position, with the slicing rules of tensors:
 `data.iloc[:, :3]` takes all rows and the first three columns, and
-`data.iloc[:, 3]` takes the fourth column.
+`data.iloc[:, 3]` takes the fourth column. The names of the selected
+columns confirm the split:
 
 ```{.python .input #pandas-separating-inputs-and-targets-1}
 inputs, targets = data.iloc[:, :3], data.iloc[:, 3]
-inputs
+list(inputs.columns), targets.name
 ```
 
 Selection by position is short, but it breaks without an error when a new
@@ -550,12 +551,20 @@ A model needs a tensor of numbers.
 
 ::: {.cols .vc}
 ::: {.col}
-@pandas-knowing-your-data-1
+@-pandas-knowing-your-data-1
+
+10 rows; per column, `info` reports:
+
+| column | present | type |
+|---|---|---|
+| `NumRooms` | 7 of 10 | `float64` |
+| `RoofType` | 6 of 10 | `str` |
+| `Area` | 10 of 10 | `int64` |
+| `Price` | 10 of 10 | `int64` |
 :::
 
 ::: {.col .narrow}
-- 7 of 10 room counts, 6 of 10 roof types present.
-- `NumRooms` is `float64`: `NaN` is a float.
+- `NumRooms` holds whole numbers but is `float64`: `NaN` is a float.
 - `RoofType` is `str`: a category to encode.
 :::
 :::
@@ -564,15 +573,22 @@ A model needs a tensor of numbers.
 ::: {.slide title="describe Shows Scales 500× Apart"}
 [Inspect]{.kicker}
 
-@pandas-knowing-your-data-2
+@-pandas-knowing-your-data-2
 
-Rooms 2 to 5, area 850 to 2,600 sq ft, price 127,500 to 375,000 dollars.
+| | `NumRooms` | `Area` (sq ft) | `Price` (dollars) |
+|---|---|---|---|
+| mean | 3.29 | 1,654 | 233,050 |
+| std | 1.11 | 556 | 76,129 |
+| min | 2 | 850 | 127,500 |
+| max | 5 | 2,600 | 375,000 |
+
+The mean area is about 500 times the mean number of rooms.
 :::
 
 ::: {.slide title="Split Off the Target Before Any Transformation"}
 [Inspect]{.kicker}
 
-@-pandas-separating-inputs-and-targets-1
+@pandas-separating-inputs-and-targets-1
 
 - **Inputs** (features): `NumRooms`, `RoofType`, `Area`.
 - **Target** (label): `Price`, which must never appear among the inputs.
@@ -615,9 +631,15 @@ instead.
 ::: {.slide title="Mean Imputation Fills the Gaps With 23/7 ≈ 3.29"}
 [Missing values]{.kicker}
 
-@pandas-handling-missing-values-3
+@-pandas-handling-missing-values-3
 
-`RoofType` has no mean; its gaps are handled by the encoding.
+| row | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `NumRooms` before | 3 | NaN | 2 | 4 | NaN | 3 | 5 | 2 | NaN | 4 |
+| after | 3 | **3.29** | 2 | 4 | **3.29** | 3 | 5 | 2 | **3.29** | 4 |
+
+The seven observed counts sum to 23. `RoofType` has no mean; its gaps are
+handled by the encoding.
 :::
 
 ::: {.slide title="Check: Which Remedy Fits?"}
@@ -627,7 +649,9 @@ instead.
 2. `NumRooms` is missing mostly for large homes.
 3. `RoofType` is missing for 4 of 10 homes.
 
-::: {.fragment .fade-up}
+::: {.d2l-note .fragment .fade-up}
+**Answers.**
+
 1. Drop the column, or keep only an indicator: imputation would invent
    most of it.
 2. Impute and add an indicator: the gap itself predicts a high price.
@@ -657,17 +681,18 @@ instead.
 ::: {.slide title="In Raw Units, Two Rooms Count Less Than Three Square Feet"}
 [Scaling]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 Standardize each numerical column: $x \mapsto (x - \mu)/\sigma$, with
-column mean $\mu$ and standard deviation $\sigma$.
+mean $\mu$ and standard deviation $\sigma$.
 
 @-pandas-numerical-features-1
 
-Largest home: 5 rooms $\to$ 1.89, 2,600 sq ft $\to$ 1.70.
+::: {.cols .vc}
+::: {.col}
+Largest home: 5 rooms $\to$ 1.89, 2,600 sq ft $\to$ 1.70. Both now
+count in standard deviations from the mean.
 :::
 
-::: {.col .fig}
+::: {.col .fig .big}
 @fig:pandas-scale
 :::
 :::
@@ -705,9 +730,9 @@ some with gaps, a column `RoofType` with the values `Slate`, `Tile`, and
 `Metal` and some gaps, and the target `Price`. How many columns does `X`
 have after `get_dummies(..., dummy_na=True)`?
 
-::: {.fragment .fade-up}
-7: three numerical columns, three roof types, and one column for a
-missing roof type. `Price` is the target, not a feature.
+::: {.d2l-note .fragment .fade-up}
+**Answer.** 7: three numerical columns, three roof types, and one column
+for a missing roof type. `Price` is the target, not a feature.
 :::
 :::
 

@@ -54,7 +54,7 @@
       ]
     },
     "autograd-backward-for-non-scalar-variables": {
-      "code_fingerprint": "sha256:e6122d9f8ed25ed122622d6c08a09615e710d3e059755a9936fe3ca31cc63360",
+      "code_fingerprint": "sha256:4bb276d26b90d0e7822fab0c3f01e602ed8a2e1b8ce33014988cd895bd0b3ff2",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "autograd-detaching-computation-1": {
-      "code_fingerprint": "sha256:9bc3f95f26ed3543c8f6beb85ba3f9a40c3a93e9618d0f651cd10c753bb6dff6",
+      "code_fingerprint": "sha256:74c8e25ca5f76fb5951143e2c236098586a267a3461306b3c81e3276f511c37d",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "autograd-detaching-computation-2": {
-      "code_fingerprint": "sha256:7bef9c0f3b218478b48152c7772eaf570c3be41e256ae74df97d17d3902a6f94",
+      "code_fingerprint": "sha256:362e2222a7f0605fb4961a44418170dea9c96c3b3a0764ad68b29b256369de94",
       "kind": "text",
       "outputs": [
         {
@@ -84,22 +84,22 @@
       ]
     },
     "autograd-turning-off-gradient-tracking-1": {
-      "code_fingerprint": "sha256:588263b04fa7a7d3bdb34470e83e0f7b4a4f23efcf3b422fcbd67cd14049dcc8",
+      "code_fingerprint": "sha256:c61d38dc9ed66c9cf4ad92c25e1fc5fd2db357eb62414ccd33c7168fcab1bae1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Variable 'Variable:0' shape=(2,) dtype=float32, numpy=array([ 0.8, -0.4], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.40000003576278687>)"
+          "text": "(array([ 0.8, -0.4], dtype=float32), 0.4)"
         }
       ]
     },
     "autograd-gradients-and-python-control-flow-1": {
-      "code_fingerprint": "sha256:83fe11d0f5cf4ed8c6e0e91377ebb8e90de35a0b6d688d03bfb6945ae7970137",
+      "code_fingerprint": "sha256:de782fe15874efe2fe2349de7d41ad9c52d53f632b535c0c97bec5c1fea75ef1",
       "kind": "text",
       "outputs": []
     },
     "autograd-gradients-and-python-control-flow-2": {
-      "code_fingerprint": "sha256:3682c529e0b00de910a3d520d54092a4aa1b168d2ea356ec958018ef5d5482bf",
+      "code_fingerprint": "sha256:0ad913a249862cd7bc5241f690d0369fbfafa2ec954933ed76e341a110e5c1e6",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +110,7 @@
       ]
     },
     "autograd-higher-order-derivatives-1": {
-      "code_fingerprint": "sha256:8b65a803fe247a8d501b56fd66ea8be10933c9e3bd5df2254b77938512f73296",
+      "code_fingerprint": "sha256:1704fa67188d50ab3703909ce1cfaa2a9abeb02394db3dd1481bd18ea47e8339",
       "kind": "text",
       "outputs": [
         {
@@ -120,12 +120,13 @@
       ]
     },
     "autograd-rows-and-columns-of-the-jacobian": {
-      "code_fingerprint": "sha256:162d3483fd888bc774e23e4fb9da89081b0a7dc9cbc0d41d5caa6c6cf84b88b0",
+      "code_fingerprint": "sha256:1abfdc28aa163ff791d2f53da916852b2f0536e1052fafc970ed7d4ae6bcdfdb",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(3, 2), dtype=float32, numpy=\n array([[1., 0.],\n        [1., 1.],\n        [1., 2.]], dtype=float32)>,\n <tf.Tensor: shape=(3, 2), dtype=float32, numpy=\n array([[1., 0.],\n        [1., 1.],\n        [1., 2.]], dtype=float32)>)"
+          "type": "stream",
+          "name": "stdout",
+          "text": "reverse sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\nforward sweeps: [[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]]\n"
         }
       ]
     }

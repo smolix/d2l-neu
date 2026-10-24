@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-0.3223433 , -2.593103  ,  0.08528833, -2.2215    ],\n       [ 1.2924837 , -1.9427313 ,  0.6065103 ,  1.3440096 ],\n       [-1.2130404 ,  0.2497625 , -0.41527447, -1.0896933 ]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[ 0.22822283, -0.48512027, -0.9922501 ,  0.66108334],\n       [-0.21169297, -0.19791688, -0.19686942,  0.30150452],\n       [ 0.17416205,  1.2534379 ,  0.64600986, -0.75767726]],\n      dtype=float32)>"
         }
       ]
     },
@@ -236,18 +236,18 @@
       ]
     },
     "ndarray-broadcasting-3": {
-      "code_fingerprint": "sha256:e2f35e0da3280a422f32e8bc53eb6501d778f707938ac88a1cdcbea207a8d414",
+      "code_fingerprint": "sha256:764bd3c14576a9b2f5ce78e4116278b3522b126b5720a89aebf58030ec4a5dde",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{{function_node __wrapped__AddV2_device_/job:localhost/replica:0/task:0/device:GPU:0}} required broadcastable shapes [Op:AddV2] name: \n"
+          "text": "InvalidArgumentError\n"
         }
       ]
     },
     "ndarray-operations-3": {
-      "code_fingerprint": "sha256:7a9ceb18fb5dd4050704fb53ff257791e7a24fb0051b1bc5df0d4ff8f0e0574b",
+      "code_fingerprint": "sha256:b16a2a892fc6af9ae4741656da74b185b53a9b8731216158c353e8b4139a7877",
       "kind": "text",
       "outputs": [
         {
@@ -257,7 +257,7 @@
       ]
     },
     "ndarray-saving-memory-1": {
-      "code_fingerprint": "sha256:ddea22cfddbcd2e15c50964e12e3236606eec2efd466c727bd59d895ef27c1df",
+      "code_fingerprint": "sha256:bc9b17e96848e3a99c681f878767bc975c3d579d64faf1b971fce0388fe0bb94",
       "kind": "text",
       "outputs": [
         {
@@ -267,7 +267,7 @@
       ]
     },
     "ndarray-saving-memory-2": {
-      "code_fingerprint": "sha256:8c2665b7a308ead54754428d958af0332c422ca27b4313b2eb8418a811a3bc37",
+      "code_fingerprint": "sha256:35f2563653ac9dc80ef02265075d8d65e1cc49cb69103016ad943f2078f5f24a",
       "kind": "text",
       "outputs": [
         {
@@ -277,7 +277,7 @@
       ]
     },
     "ndarray-saving-memory-3": {
-      "code_fingerprint": "sha256:7fef8656538295c7c6aa134e4b677ff81c45e466b2823d5366b9b7cfb90c0ec6",
+      "code_fingerprint": "sha256:33664c37f0dedfcc73ca724d0c6b8733506a7446adbb92075f581ace382d1077",
       "kind": "text",
       "outputs": [
         {
@@ -287,7 +287,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-1": {
-      "code_fingerprint": "sha256:01c38568fed8702b302363c6608de792b36bf2ebf53884f5fb12eb101740a6e3",
+      "code_fingerprint": "sha256:cd8ca683ad65cb22c3cbd3a2bb21aae4fbfd9e5d01df404d861a5a5afe448125",
       "kind": "text",
       "outputs": [
         {
@@ -296,8 +296,18 @@
         }
       ]
     },
+    "ndarray-conversion-to-other-python-objects-3": {
+      "code_fingerprint": "sha256:7c5f465c24348ccdaa5bfa0b580cab34915f634260e75e92bf8f27f21b352d4b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(np.float32(2.0), np.float32(2.0))"
+        }
+      ]
+    },
     "ndarray-conversion-to-other-python-objects-2": {
-      "code_fingerprint": "sha256:635f768ff3c847736543d50fc75d3780a114ad8d9fcc383628a3581ac99e4c53",
+      "code_fingerprint": "sha256:8ce7d68b7200c96dd90f284dfd1eca216445cbb7a941d10a422957f044382795",
       "kind": "text",
       "outputs": [
         {

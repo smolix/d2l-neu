@@ -2,12 +2,14 @@
 :label:`sec_ssm-further-reading`
 
 The sections of this chapter teach one representative of each idea. This
-notebook collects related work that the main text leaves out: the theory
-behind the initialization of state space models, other ways to write to a
-matrix memory, results on what fixed-state models can compute, and how
-recent large models combine recurrent and attention layers. Each topic
-states the problem it addresses and what it changes relative to the
-chapter. Nothing else in the book depends on this notebook.
+section points to topics they had no room for: the theory behind the
+initialization of state space models, other ways to build and write to a
+fixed-size state, results on what such models can compute, other ways to
+combine recurrence and attention, and applications beyond language. Each
+topic states the problem it addresses and what it changes relative to the
+chapter. Implementations, tutorials, and courses for the material that the
+chapter does teach are listed in its introduction,
+:numref:`chap_modern_rnn`. Nothing else in the book depends on this section.
 
 ## State Space Models
 
@@ -51,6 +53,24 @@ sequence benchmarks without discretization. S5
 an S4D layer by one SSM with vector input and output, computed with a
 parallel scan rather than a convolution, which is the route the selective
 models of :numref:`sec_mamba` take.
+
+### Long Convolutions
+
+The kernel of S4D in :numref:`sec_ssm` is a sum of $N$ decaying
+exponentials, one per state dimension, which is what gives the layer a
+recurrent form with a small state. H3 :cite:`Fu.Dao.Saab.ea.2023` kept such
+kernels and chained two SSMs, with elementwise products of input projections
+between them in the roles of queries, keys, and values. The first SSM only
+shifts its input, which pairs each token with its predecessor, and the
+second, diagonal SSM accumulates these pairs. A layer can then compare a
+token with earlier ones and recall what followed them, and H3 closed much of
+the gap to attention on language. Hyena
+:cite:`Poli.Massaroli.Nguyen.ea.2023` drops the constraint on the kernel: a
+small network maps each position to the kernel value there, the convolution
+over the whole sequence is computed with the FFT in $\mathcal{O}(T \log T)$
+time, and elementwise gates sit between the convolutions. Such kernels have
+no recurrent form with a small state, so generation either recomputes the
+convolution or approximates the kernel by a recurrence afterwards.
 
 ### Kernels for Selective Scans
 
@@ -113,19 +133,19 @@ current research question.
 ### Expressivity of Fixed-State Models
 
 Some tasks are hard for the linear recurrences of this chapter,
-independently of memory size. :citet:`Merrill.Petty.Sabharwal.2024` show that linear
-recurrences with diagonal transitions, like transformers, fall in a class of
-parallel computations that cannot track the state of a general finite
-automaton over arbitrary lengths, for instance the result of a long
-sequence of permutations. Nonlinear recurrent networks and recurrences
-with non-diagonal transitions can. :citet:`Grazzi.Siems.Franke.ea.2025`
-show that allowing negative eigenvalues, as the delta rule with
-$\beta_t > 1$ does, is enough for parity and helps on related tasks, and
-DeltaProduct extends the range further.
+independently of memory size. :citet:`Merrill.Petty.Sabharwal.2024` show
+that linear recurrences with diagonal transitions, like transformers, fall
+in a class of parallel computations that cannot track the state of a general
+finite automaton over arbitrary lengths, for instance the result of a long
+sequence of permutations. Nonlinear recurrent networks and recurrences with
+non-diagonal transitions can. :citet:`Grazzi.Siems.Franke.ea.2025` show that
+allowing negative eigenvalues, as the delta rule with $\beta_t > 1$ does, is
+enough for parity and helps on related tasks, and DeltaProduct extends the
+range further.
 
-## Hybrid Models in Practice
+## Recurrence and Attention Together
 
-### Attention in Hybrid Models
+### Hybrid Models in Practice
 
 :numref:`sec_hybrids` showed that one attention layer among several
 recurrent ones restores recall. Released models make different choices
@@ -146,6 +166,21 @@ build their recurrent layers on the delta rule: Qwen3-Next
 layers, three to one, and Kimi Linear :cite:`Kimi.Team.2025b` does the same
 with a Gated DeltaNet variant whose decay acts on each key coordinate.
 
+### Between a Fixed State and a Full Cache
+
+A recurrent layer stores a fixed amount, and attention stores every token.
+Two designs sit in between. Based :cite:`Arora.Eyuboglu.Zhang.ea.2024`
+combines linear attention, whose feature map approximates the exponential of
+the softmax by its Taylor expansion, with exact attention over a short
+window of recent tokens. The size of the feature map and of the window then
+set how much the layer stores, and the authors trace how recall improves as
+the state grows. Log-linear attention :cite:`Guo.Yang.Goel.ea.2025` keeps
+one matrix state per block of the past, with blocks that double in length
+the further back they lie, so the memory grows with the logarithm of the
+length rather than staying fixed or growing linearly. The construction
+applies to the gated recurrences of this chapter, Mamba-2 and Gated DeltaNet
+among them.
+
 ### Distillation from Transformers
 
 Training a large recurrent model from scratch is as expensive as training a
@@ -158,12 +193,37 @@ into a hybrid that keeps some of its attention layers, and
 :citet:`Bick.Li.Xing.ea.2024` distill in stages, first matching the mixing
 matrices of attention, then the hidden states, then the outputs.
 
-### Implementations
+## Beyond Language
 
-The layers of this chapter are written for clarity. Fused GPU kernels for
-most of them, including chunked gated linear attention and Gated DeltaNet,
-are collected in the [flash-linear-attention](https://github.com/fla-org/flash-linear-attention)
-library, and the reference kernels for Mamba and Mamba-2 are in the
-[mamba](https://github.com/state-spaces/mamba) repository.
+### Images
+
+An image has no natural order. If it is flattened into a sequence of patches
+and scanned causally, as a language model scans text, each patch sees only
+the patches above it and to its left. Vision Mamba
+:cite:`Zhu.Liao.Zhang.ea.2024` scans the sequence of patches forward and
+backward and adds the two outputs. VMamba :cite:`Liu.Tian.Zhao.ea.2024`
+scans the grid of patches along rows and along columns, each in both
+directions, and merges the four results, so that every patch receives
+information from the whole image.
+
+### Audio
+
+Raw audio has tens of thousands of samples per second, far too many for
+attention over a recording of any length. SaShiMi
+:cite:`Goel.Gu.Donahue.ea.2022` stacks S4 layers in a multiscale network
+that pools the sequence to coarser rates and upsamples it again, and
+generates waveforms one sample at a time with the recurrent form of each
+layer.
+
+### Genomics
+
+A stretch of DNA can regulate a gene tens of thousands of bases away, and a
+strand and its reverse complement encode the same information. HyenaDNA
+:cite:`Nguyen.Poli.Faizi.ea.2023` trains Hyena on contexts of up to a
+million bases with one token per nucleotide. Caduceus
+:cite:`Schiff.Kao.Gokaslan.ea.2024` builds on Mamba, scans in both
+directions, and makes each layer equivariant to taking the reverse
+complement, so that a sequence and its reverse complement receive consistent
+predictions.
 
 [Discussions](https://d2l.discourse.group/)

@@ -14,6 +14,7 @@ $\mathbb{Z}$.
 
 * $x$: a scalar
 * $\mathbf{x}$: a vector
+* $(x_1, \ldots, x_n)$: the column vector with entries $x_1, \ldots, x_n$, written inline
 * $\mathbf{X}$: a matrix
 * $\mathsf{X}$: a general tensor
 * $\mathbf{I}$: the identity matrix (of some given dimension), i.e., a square matrix with $1$ on all diagonal entries and $0$ on all off-diagonals
@@ -45,6 +46,7 @@ $\mathbb{Z}$.
 * $\log(\cdot)$: the natural logarithm (base $e$)
 * $\log_2(\cdot)$: logarithm to base $2$
 * $\exp(\cdot)$: the exponential function
+* $\mathbf{1}$: the vector of all ones (of some given dimension); unlike the indicator function below, it takes no argument
 * $\mathbf{1}(\cdot)$: the indicator function, equal to $1$ when its Boolean argument is true and $0$ otherwise
 * $\mathbf{1}_{\mathcal{X}}(z)$: the set-membership indicator, equal to $1$ when $z\in\mathcal{X}$ and $0$ otherwise
 * $\mathbf{(\cdot)}^\top$: transpose of a vector or a matrix

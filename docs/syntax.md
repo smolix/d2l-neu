@@ -91,6 +91,12 @@ Consecutive tab blocks are grouped into Quarto `panel-tabset` divs.
 In `gen_notebooks.py:convert_prose_tabs_single()`, only the target
 framework's content is kept.
 
+**Exercise markers.** A problem starts with `1. **Title.**`, optionally
+preceded by a tag: `[code]` for a problem that needs code, `[extended]` for a
+small project. A difficulty dot follows the title: `●` marks a harder,
+multi-step problem and `●●` a very hard one; ordinary problems carry no dot.
+A tabbed variant of a problem carries the same tag and dot in every tab.
+
 **Tabbed exercise problems.** A per-framework variant of a problem in
 `## Exercises` is written as a `:begin_tab:` block holding the list item(s)
 with their literal numbers (`tools/exercise_refs.py` counts a tab block from

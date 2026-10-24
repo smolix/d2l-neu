@@ -351,8 +351,9 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   - **tensorflow**: TF 2.21 ships SASS through `sm_89` plus
     `compute_90` PTX; on Blackwell the first use of each op
     JIT-compiles from PTX (slower cold start, then cached).
-  - **mxnet**: custom MXNet 2.0 CUDA 13 wheel, pinned to
-    `2.0.0+cu13.bw.20260529.3` (GitHub release). This build **ships `sm_89`
+  - **mxnet**: custom MXNet 2.0 CUDA 13 wheel, pinned in `pyproject.toml` to
+    `2.0.0+cu133.bw.zombie.1` (GitHub release `mxnet-2.0.0.zombie.1`; it
+    replaced `…20260529.3`). This build **ships `sm_89`
     kernels and runs on the RTX 4090** — the earlier
     `cudaErrorNoKernelImageForDevice` (error 209) is **resolved**; all MXNet GPU
     notebooks execute. One caveat: MXNet image-dataset notebooks spawn many

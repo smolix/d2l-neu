@@ -482,56 +482,6 @@ it at all.
 
 ## Exercises
 
-1. **The non-saturating divergence.** At an optimal discriminator, the
-   non-saturating generator loss follows the gradient of
-   $\mathrm{KL}(p_g \,\|\, p_{\textrm{data}}) - 2\, \mathrm{JS}(p_g, p_{\textrm{data}})$
-   :cite:`Arjovsky.Bottou.2017`.
-    1. Prove that this difference equals
-       $2\, \mathrm{KL}(m \,\|\, p_{\textrm{data}})$ with
-       $m = (p_g + p_{\textrm{data}}) / 2$.
-    1. Write $2\, \mathrm{KL}(m \,\|\, p_{\textrm{data}})$ as the integral of
-       an integrand that is nonnegative at every point, by adding a term
-       that integrates to zero. Do the same for the forward divergence
-       $\mathrm{KL}(p_{\textrm{data}} \,\|\, p_g)$ that maximum likelihood
-       minimizes. Evaluate both integrands at a point where
-       $p_g = 0 < p_{\textrm{data}}$. How does each behave at a point where
-       $p_g > 0$ as $p_{\textrm{data}} \to 0$?
-    1. Let $p_{\textrm{data}}$ put mass $(1 - \varepsilon) / 2$ on each of two
-       points $a$ and $b$ and mass $\varepsilon$ on a third point $c$, so that
-       the integrals become sums. Generator (i) puts all its mass on $a$ and
-       drops the mode $b$. Generator (ii) puts mass $0.495$ on each of $a$ and
-       $b$ and the remaining $0.01$ on $c$. Compute the divergence of (a) for
-       both generators as a function of $\varepsilon$, find the $\varepsilon$
-       at which the two are equal, and evaluate both at
-       $\varepsilon = e^{-100}$. How does the divergence of generator (ii)
-       grow as $\varepsilon \to 0$? Compute the forward divergence
-       $\mathrm{KL}(p_{\textrm{data}} \,\|\, p_g)$ of both generators. For
-       which $\varepsilon$ does each of the two divergences prefer
-       generator (i)?
-   :exlabel:`ex_limits-nonsaturating-divergence`
-1. [code] **Heavy-tailed updates.** In the model behind Theorem 2.6 of
-   :citet:`Arjovsky.Bottou.2017`, the perfect discriminator is zero near
-   every generated sample, and a trained discriminator $D$ differs from it by
-   an error $\varepsilon$ in its value and an error $\mathbf{r}$ in its input
-   gradient. Both errors are centered Gaussians, independent of each other
-   and across samples. The non-saturating loss $-\log D(\mathbf{x}')$ has the
-   input gradient $-\nabla_{\mathbf{x}'} D / D$, so each coordinate of one
-   sample's contribution to the update is a ratio of two independent
-   centered Gaussians.
-    1. Show that the ratio $r / \varepsilon$ of independent
-       $r \sim \mathcal{N}(0, \sigma_r^2)$ and
-       $\varepsilon \sim \mathcal{N}(0, \sigma_\varepsilon^2)$ has the Cauchy
-       density $\gamma / (\pi (\gamma^2 + u^2))$ with
-       $\gamma = \sigma_r / \sigma_\varepsilon$.
-    1. The characteristic function of this density is $e^{-\gamma |t|}$. Show
-       that the average of $B$ independent such ratios has the same
-       distribution as a single one.
-    1. Simulate minibatch averages of the ratio for $B = 1, 16, 256, 4096$
-       and compare their interquartile range with that of the average of $B$
-       standard Gaussians. Which statistic of a minibatch would concentrate as
-       $B$ grows? What does the result say about a larger batch as a remedy
-       for this instability?
-   :exlabel:`ex_limits-heavy-tailed-updates`
 1. **Discrete samples.** A generator for text ends in a softmax
    $\boldsymbol{\pi}$ over a vocabulary of $V$ tokens and emits the token
    $\operatorname{argmax}_j \pi_j$ as a one-hot vector, which the
@@ -599,28 +549,11 @@ it at all.
        times the squared sample mean of the weights divided by their sample
        second moment. Use (a) to predict its value for large $n$ when
        $\mathbf{m}$ is the all-ones vector, and compare the prediction with
-       the effective sample sizes printed in
-       :numref:`subsec_diffusion-limits-monte-carlo`. Why do the printed
+       the effective sample sizes
+       printed in :numref:`subsec_diffusion-limits-monte-carlo`. Why do the printed
        values exceed the prediction from $d = 8$ on? What does this imply for
        the effective sample size as a diagnostic?
    :exlabel:`ex_limits-log-normal-weight`
-1. [code] **Broader and narrower proposals.** Keep the target of the Gaussian
-   example of :numref:`subsec_diffusion-limits-monte-carlo` and use the
-   proposal $\mathcal{N}(\mathbf{m}, s^2 I)$, whose mean is right and whose
-   scale is not.
-    1. Show that
-       $\mathbb{E}_q[(w / Z)^2] = \big(s^2 / \sqrt{2 s^2 - 1}\big)^d$ for
-       $s^2 > 1/2$ and that the second moment is infinite for
-       $s^2 \leq 1/2$.
-    1. Repeat the experiment of
-       :numref:`subsec_diffusion-limits-monte-carlo` with $s^2 = 2$ and
-       compare the effective sample size at each $d$ with the prediction
-       $n \big(\sqrt{2 s^2 - 1} / s^2\big)^d$.
-    1. Per coordinate, the shifted proposal $\mathcal{N}(\mathbf{0}, I)$
-       multiplies the second moment by $e$. Compare this factor with the
-       factors for $s^2 = 2$ and $s^2 = 0.6$. What does the comparison say
-       about erring on the broad side rather than on the narrow side?
-   :exlabel:`ex_limits-proposal-width`
 1. [code] **Restricted Boltzmann machines.** ● A restricted Boltzmann machine
    :cite:`Smolensky.1986,Hinton.2002` has visible units
    $\mathbf{v} \in \{0, 1\}^m$, hidden units $\mathbf{h} \in \{0, 1\}^k$,
@@ -686,8 +619,8 @@ it at all.
     1. Show that $\mathbb{E}[W] = 1$ and that $\log W$ is Gaussian with
        variance $d / T$. Conclude that the relative standard error of the
        estimate is $\sqrt{(e^{d / T} - 1) / n}$, which for $T = 1$ is the
-       relative standard error of
-       :numref:`subsec_diffusion-limits-monte-carlo`.
+       relative standard error
+       of :numref:`subsec_diffusion-limits-monte-carlo`.
     1. A run costs $T$ energy evaluations. For a fixed budget of $N = nT$
        evaluations, find the limit of the relative variance as $T \to \infty$.
        Beyond roughly how many stages do further stages stop helping?
@@ -704,42 +637,6 @@ it at all.
        estimate stays unbiased. What then determines the variance of $W$?
        What does a run cost that the exact version did not?
    :exlabel:`ex_limits-annealing`
-1. [code] **The sample size of importance sampling.** ●● The relative standard
-   error $\sqrt{(e^d - 1) / n}$ of the Gaussian example of
-   :numref:`subsec_diffusion-limits-monte-carlo` is a mean-square criterion,
-   and it asks for about $e^d$ draws. :citet:`Chatterjee.Diaconis.2018`
-   (Theorem 1.1) show that about $\exp(\mathrm{KL}(p \,\|\, q))$ draws are
-   necessary and sufficient for the estimate to be close to $Z$ with high
-   probability, when $\log(p / q)$ concentrates around its mean under the
-   target. Here $p = \mathcal{N}(\mathbf{m}, I)$ is the normalized target and
-   $q = \mathcal{N}(\mathbf{0}, I)$ the proposal.
-    1. Show that the weight depends on $\mathbf{x}$ only through
-       $z = \mathbf{m}^\top \mathbf{x} / \sqrt{d}$, which is
-       $\mathcal{N}(0, 1)$ under $q$ and $\mathcal{N}(\sqrt{d}, 1)$ under
-       $p$. Compute $\mathrm{KL}(p \,\|\, q)$ and the mean and standard
-       deviation of $\log(p / q)$ under $p$.
-    1. The integral $Z = \mathbb{E}_q[w]$ is carried by draws whose $z$ lies
-       near $\sqrt{d}$. Estimate the probability under $q$ that
-       $z \geq \sqrt{d}$, and conclude that an estimate from far fewer than
-       $e^{d/2}$ draws typically falls far below $Z$.
-    1. Near which value of $z$ is the second moment $\mathbb{E}_q[w^2]$
-       carried? How probable is that region under $q$? Use this probability
-       to estimate how many draws the effective sample size of problem
-       :exref:`ex_limits-log-normal-weight`b needs before it approaches its
-       large-$n$ prediction, and check the estimate against the effective
-       sample sizes printed in :numref:`subsec_diffusion-limits-monte-carlo`
-       at $d = 4$ and $d = 8$.
-    1. For $e^{d/2} \ll n \ll e^d$, explain why most estimates land close to
-       $Z$ while the relative standard error is still much larger than one.
-    1. Check this picture for $d = 16$, drawing $z$ directly instead of
-       $\mathbf{x}$. For $n = 10, 10^2, \ldots, 10^7$, repeat the estimate
-       $200$ times ($20$ times for $n \geq 10^6$) and plot, against $\log n$,
-       the median of $\hat{Z} / Z$ and the fractions of estimates within a
-       factor of $2$ and within $10\%$ of $Z$. Mark $\log n = d / 2$ and
-       $\log n = d$. How wide is the transition compared with the standard
-       deviation of (a)? What does this say about the concentration
-       assumption at this $d$?
-   :exlabel:`ex_limits-sample-size`
 
 <!-- slides -->
 

@@ -836,8 +836,8 @@ and ultimately, evaluation on previously unseen data.
        centered data $(\mathbf{x}^{(i)} - \bar{\mathbf{x}},\, y^{(i)} - \bar{y})$.
 
 1. **Laplace noise.** Assume that the noise model governing the additive
-   noise $\epsilon$ is the Laplace distribution (see
-   :numref:`sec_mdl-distributions`). That is,
+   noise $\epsilon$ is the Laplace distribution
+   (see :numref:`sec_mdl-distributions`). That is,
    $p(\epsilon) = \frac{1}{2} \exp(-|\epsilon|)$.
     1. Write out the negative log-likelihood of the data under the model
        $-\log P(\mathbf y \mid \mathbf X)$.
@@ -845,8 +845,8 @@ and ultimately, evaluation on previously unseen data.
     1. Write the minibatch stochastic gradient descent update for
        $(\mathbf{w}, b)$ under this loss in the form of
        :eqref:`eq_linreg_batch_update`, using the subgradient
-       $\operatorname{sign}(\cdot)$ of
-       :numref:`subsec_linear-regression-loss-function`. Compare how the
+       $\operatorname{sign}(\cdot)$
+       of :numref:`subsec_linear-regression-loss-function`. Compare how the
        size of each example's contribution depends on its residual under
        this loss and under the squared loss.
     1. The outlier demonstration in

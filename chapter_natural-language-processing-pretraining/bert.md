@@ -927,6 +927,39 @@ class BERTModel(keras.Model):
 
 1. All other things being equal, will a masked language model require more or fewer pretraining steps to converge than a left-to-right language model? Why?
 1. In the original implementation of BERT, the positionwise feed-forward network in `BERTEncoder` (via `d2l.TransformerEncoderBlock`) and the fully connected layer in `MaskLM` both use the Gaussian error linear unit (GELU) :cite:`Hendrycks.Gimpel.2016` as the activation function. Research into the difference between GELU and ReLU.
+1. `MaskLM` applies its MLP only at the positions in `pred_positions`. For
+   the instances `encoder` and `mlm` of this section, count the
+   multiply-adds per token of one `d2l.TransformerEncoderBlock`, ignoring
+   the attention scores and the normalization layers, and of the MLP of
+   `MaskLM`. If 15% of the positions are predicted, what fraction of the
+   forward computation of the encoder and `MaskLM` together does gathering
+   these positions save, compared with applying the MLP at every position?
+1. The text claims that GPT gives "bank" the same representation in
+   "i went to the bank to deposit cash" and "i went to the bank to sit
+   down". `BERTEncoder` becomes causal without any change to its code when
+   it receives a `valid_lens` of shape (batch size, sequence length) whose
+   rows are $1, 2, \ldots, T$. Position $t$ then attends only to positions
+   up to $t$, as in the decoder of :numref:`sec_transformer`.
+    1. Map the words of both sentences to indices with a small vocabulary
+       of your own, build the inputs with `get_tokens_and_segments`, and
+       encode both with the untrained `encoder`, dropout disabled, once with
+       `valid_lens` set to `None` and once with the causal `valid_lens`.
+    1. In each case, report the largest absolute difference between the
+       two encodings of "bank" and between the two encodings of the last
+       word.
+    1. Explain why the result does not depend on the parameter values, so
+       that no training is needed to confirm the claim.
+1. Suppose that, instead of corrupting the input, we train `BERTEncoder` to
+   predict every input token $x_t$ from the encoding at position $t$, and
+   prevent each query from attending to its own key, so that position $t$
+   cannot read $x_t$ through attention.
+    1. Show that $x_t$ still reaches the encoding at position $t$ within a
+       single `d2l.TransformerEncoderBlock`. Which component carries it?
+    1. Remove that component as well. Show that with two blocks $x_t$
+       reaches the encoding at position $t$ again, and give the path.
+    1. Explain why replacing $x_t$ by `<mask>` in the input blocks every
+       such path, and why the causal mask of GPT blocks them when position
+       $t$ predicts $x_{t+1}$.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/388)

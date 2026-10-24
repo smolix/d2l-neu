@@ -272,6 +272,11 @@ in :numref:`sec_ssd`.
 1. According to our discussions in :numref:`sec_alexnet`, deep neural networks learn hierarchical features with increasing levels of abstraction for images. In multiscale object detection, do feature maps at different scales correspond to different levels of abstraction? Why or why not?
 1. At the first scale (`fmap_w=4, fmap_h=4`) in the experiments in :numref:`subsec_multiscale-anchor-boxes`, generate uniformly distributed anchor boxes that may overlap.
 1. Given a feature map variable with shape $1 \times c \times h \times w$, where $c$, $h$, and $w$ are the number of channels, height, and width of the feature maps, respectively. How can you transform this variable into the classes and offsets of anchor boxes? What is the shape of the output?
+1. Anchors on a coarse grid can miss an object even when their size matches it. Consider square anchors of side $s$ in normalized coordinates, centered on an $f \times f$ grid as `display_anchors` generates them for ratio 1, and a square object of the same side whose center may lie anywhere.
+    1. Show that the smallest possible IoU between the object and its nearest anchor is $u^2/(2 - u^2)$ with $u = \max(0, 1 - 1/(2fs))$.
+    1. Evaluate this for the three settings $(f, s) = (4, 0.15)$, $(2, 0.4)$, and $(1, 0.8)$ of :numref:`subsec_multiscale-anchor-boxes`. For $f = 1$, use the fact that the object has to lie inside the image.
+    1. How large must $fs$, the anchor side measured in grid steps, be for every such object to have an anchor with IoU at least 0.5, the threshold of `assign_anchor_to_bbox`?
+1. Normalize `dog_bbox` and `cat_bbox` from :numref:`sec_bbox` by the width and height of the image. For each of the three settings used with `display_anchors` in this section, compute with `d2l.box_iou` the largest IoU between each animal and the anchors, and report the six values in a table. Which setting fits each animal best? Then pool the 63 anchors of all three settings and label them with `d2l.multibox_target`. How many positive anchors does each animal get, and which step of the assignment algorithm in :numref:`subsec_labeling-anchor-boxes` produces them?
 
 
 :begin_tab:`mxnet`

@@ -657,6 +657,44 @@ limit known as the critical batch size.
    the cost per step, the number of steps to reach a given loss, and the
    variance of the gradient estimate change, and explain each answer.
 
+1. **Memory traffic of the four schedules.** Count the floats that the
+   options of :numref:`subsec_minibatch-vectorization` read from main
+   memory when they compute $\mathbf{A} = \mathbf{B}\mathbf{C}$ for
+   $n \times n$ matrices. A float is read from main memory unless the
+   schedule keeps it in a cache that holds $M$ floats, with
+   $n < M \ll n^2$. Keep only the terms of order $n^3$.
+    1. Option 1 reads a row of $\mathbf{B}$ and a column of $\mathbf{C}$
+       for every entry of $\mathbf{A}$. Option 2 keeps the column
+       $\mathbf{C}_{:,j}$ in cache while it reads all of $\mathbf{B}$. Show
+       that option 2 halves the traffic of option 1, and compute the
+       arithmetic intensity of both in single precision.
+    1. Option 4 splits the matrices into $w \times w$ blocks. It keeps one
+       block of $\mathbf{A}$ in cache while it accumulates the $n/w$
+       products of a block of $\mathbf{B}$ with a block of $\mathbf{C}$
+       that contribute to it. Show that it reads about $2n^3/w$ floats, and
+       find the largest $w$ for which the three blocks fit in the cache.
+    1. How many bytes of cache does option 4 need to reach an arithmetic
+       intensity of $100$ operations per byte in single precision?
+
+1. **Unequal micro-batches.** A training loop accumulates the gradients of
+   $k = 4$ micro-batches into one update with an effective batch of $100$
+   examples, drawn uniformly at random from the training set. The
+   micro-batches hold $32$, $32$, $32$, and $4$ examples. The loop averages
+   the loss of each micro-batch over its own examples and divides the
+   accumulated gradient by $k$. Assume that the per-example gradients are
+   independent, with mean $\nabla f(\mathbf{w})$ and covariance
+   $\boldsymbol{\Sigma}$.
+    1. Find the weight that the accumulated gradient gives to each example,
+       and show that it is still an unbiased estimate of
+       $\nabla f(\mathbf{w})$.
+    1. Express the covariance of the accumulated gradient as a multiple of
+       $\boldsymbol{\Sigma}$, and find the batch size of a uniformly
+       weighted average with the same covariance.
+    1. State the scaling of the micro-batch losses that makes the
+       accumulated gradient the average over all $100$ examples. Use
+       :eqref:`eq_sgd-noise-ball` to compare the squared radius of the
+       noise ball of the two loops at the same learning rate.
+
 1. [code] **Gradient accumulation.** Implement gradient accumulation on top
    of `train_ch11`: sum the gradients of $k$ consecutive minibatches of
    size $b$ and update once with their average.

@@ -717,6 +717,14 @@ other components.
    and describe a training setup in which putting the optimizer on the
    model becomes awkward.
 
+1. [code] **Test split.** Extend `DataModule` with a `test_dataloader`
+   method and extend `Trainer.fit` to evaluate on it once, after the last
+   epoch (this can be run once :numref:`sec_linear_scratch` supplies
+   `fit_epoch`). Explain why the test loader is evaluated once at the end
+   rather than after every epoch like the validation loader, and what
+   would go wrong if the epoch with the best test loss were reported.
+   :numref:`sec_generalization_basics` returns to this question.
+
 1. [code] **Synchronous logs.** ● `ProgressBoard.draw` is asynchronous: it
    queues the point for a background thread, which converts it to a number
    and redraws the figure at most once every $0.1$ s. Starting from the

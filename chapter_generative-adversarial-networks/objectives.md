@@ -797,8 +797,8 @@ When the supports overlap, all four tested objectives move the generator toward 
        need? Does the location family have it?
 1. [code] **Square-loss row.** The Brier score predicts a probability
    $s \in (0, 1)$ and pays $(y - s)^2$ against the label $y \in \{0, 1\}$.
-   This is the zero--one target coding of the square row of
-   :numref:`tab_gan_loss_divergences`.
+   This is the zero--one target coding of the square
+   row of :numref:`tab_gan_loss_divergences`.
     1. Show that the conditional Bayes risk :eqref:`eq_gan_bayes_risk` of
        this loss is $L(\eta) = \eta(1 - \eta)$, attained at $s = \eta$, so
        that the optimal critic reports $\sigma(\lambda)$.
@@ -848,33 +848,6 @@ When the supports overlap, all four tested objectives move the generator toward 
        which points $x$ do they occur? What does it do to the bound
        :eqref:`eq_gan_fgan_bound` whenever $p \neq q$?
    :exlabel:`ex_objectives-variational-bound-eqref-eq`
-1. [code] **Kernel blind spot.** The separation experiment of
-   :numref:`subsec_gan_objectives_separation` moves $q$ by translation.
-   Replace the RBF kernel by the linear kernel $k(x, y) = xy$, for which
-   $\mathrm{MMD}^2(p, q) = (E_p[x] - E_q[x])^2$. For the translated pair
-   this value is $d^2$, which grows at every separation.
-    1. Let the two distributions differ in scale instead,
-       $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(0, (1 + d)^2)$ for
-       $d \in [0, 4]$. Since the wider $q$ extends beyond `xs`, rebind
-       `xs = np.linspace(-30, 30, 12001)`, the grid over which `js_1d`
-       integrates, before evaluating the densities. Compute JS with
-       `js_1d`, $W_1$ from the CDF formula :eqref:`eq_mdl-w1-cdf`, the RBF
-       $\mathrm{MMD}^2$ with $\ell = 4$, and the linear-kernel
-       $\mathrm{MMD}^2$. For the RBF
-       kernel, use $E[k(x, y)] = \ell / \sqrt{\ell^2 + s^2 + t^2}$ for
-       independent $x \sim \mathcal{N}(0, s^2)$ and
-       $y \sim \mathcal{N}(0, t^2)$. Which of the four quantities detect
-       the change of scale?
-    1. Let the length scale $\ell$ of the RBF kernel
-       $k(x, y) = \exp\big(-(x - y)^2 / (2\ell^2)\big)$ be much larger than
-       the spread of the data. Expand the kernel in powers of $1/\ell^2$ and
-       show that, for any two distributions with finite fourth moments,
-       $\mathrm{MMD}^2(p, q) = (E_p[x] - E_q[x])^2 / \ell^2 + O(\ell^{-4})$.
-       Check this leading term against :eqref:`eq_gan_mmd_gauss`, and find
-       the leading term for the pair of (a), which differs in scale only.
-       The separation experiment chose $\ell = 4$ for its gradient range.
-       What does a much larger $\ell$ cost a generator whose samples have
-       the right mean but the wrong spread?
 1. [code] **MMD gradient range.** Equation :eqref:`eq_gan_mmd_gauss` gives
    $\mathrm{MMD}^2$ between two unit-variance Gaussians at separation $d$.
     1. Differentiate it with respect to $d$ and show that the derivative is
@@ -930,26 +903,6 @@ When the supports overlap, all four tested objectives move the generator toward 
     1. Besides the link, name one difference between the two critic losses
        that could also change the residual, and describe a control run
        that separates it from the link.
-1. [code] **Reverse-KL critic.** ● The dual experiment of
-   :numref:`subsec_gan_objectives_kl_critic` trains the forward-KL critic
-   between $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(2, 1.5^2)$. Repeat
-   it for the reverse-KL generator $f(u) = -\log u$, for which
-   $D_f(p \,\|\, q) = \mathrm{KL}(q \,\|\, p)$.
-    1. Derive the conjugate $f^*(t) = -1 - \log(-t)$ on $t < 0$, the game
-       $\sup_T \{E_p[T] + 1 + E_q[\log(-T)]\}$, and the optimal critic
-       $T^\star = -e^{-\lambda}$.
-    1. Show that $E_p[(T^\star)^2] = \int q^2 / p$ is infinite for this
-       pair, whereas the corresponding second moment of the forward-KL
-       game, $E_q[e^{2(T^\star - 1)}] = \int p^2 / q$, is finite. What does the
-       difference imply for minibatch estimates of the objective near the
-       optimum?
-    1. Build a freshly initialized network with the architecture of
-       `net_T`, followed by the output activation $-\mathrm{softplus}$.
-       Train it on this game, and compare the attained bound with the exact
-       $\mathrm{KL}(q \,\|\, p)$ from the Gaussian KL formula. Plot the
-       trained critic against $T^\star$ and the mixture density, as in the
-       forward-KL experiment. Where does the critic depart from $T^\star$,
-       and which term of the objective accounts for the shortfall?
 1. [code] **Estimation and dimension.** ●
    :numref:`subsec_gan_objectives_estimation` quotes estimation rates
    without measuring them. Let $p = \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$

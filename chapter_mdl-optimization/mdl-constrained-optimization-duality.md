@@ -1262,9 +1262,9 @@ ball around the current iterate :cite:`Nocedal.Wright.2006`.
        $(\lambda_1^\star, \lambda_2^\star)$ that satisfy the KKT conditions at
        the minimizer. Compute the optimal value $p^\star(u_1, u_2)$ under the
        perturbed constraints $-x \le u_1$ and $-x \le u_2$, and show that
-       every such pair satisfies the shadow-price inequality
-       :eqref:`eq_mdl-opt-shadow-price`. Is $p^\star$ differentiable at
-       $\mathbf{0}$, and what takes the place of the relation
+       every such pair satisfies the shadow-price
+       inequality :eqref:`eq_mdl-opt-shadow-price`. Is $p^\star$
+       differentiable at $\mathbf{0}$, and what takes the place of the relation
        $\boldsymbol{\lambda}^\star = -\nabla p^\star(\mathbf{0})$?
 
 1. **Maximum entropy and temperature.** The entropy of a probability vector
@@ -1401,23 +1401,6 @@ ball around the current iterate :cite:`Nocedal.Wright.2006`.
        the fraction of points with $\alpha_i^\star > 0$.
    :exlabel:`ex_mdl-constrained-optimization-duality-offset-folded-svm-dual`
 
-1. [code] **Water-filling and diminishing returns.** For the water-filling
-   problem :eqref:`eq_mdl-opt-waterfilling`, let $U^\star(P)$ be the optimal
-   rate and $w(P)$ the water level at budget $P$. Order the channels so that
-   $n_1 \le n_2 \le \cdots$.
-    1. Show that while exactly the $k$ quietest channels receive power,
-       $w(P) = (P + \sum_{i \le k} n_i) / k$. Conclude that $w$ is continuous,
-       piecewise linear, and increasing. Compute the budgets at which a new
-       channel starts to receive power for the noise floors `noise` of the
-       cell that defines `water_fill`.
-    1. Show that $dU^\star / dP = 1 / w(P)$, and conclude that $U^\star$ is
-       concave. Plot $U^\star$ and a finite-difference estimate of its
-       derivative for $P \in [0, 10]$ with `water_fill`, and mark the budgets
-       at which a channel starts to receive power. At which budgets is
-       $U^\star$ not twice differentiable?
-    1. As $P \to \infty$, how do the allocations $p_i^\star$ of two channels
-       compare, and what is the limit of $p_i^\star / P$?
-
 1. [code] **Duality gaps and formulations.** The cell that computes `p_star`
    and `d_star` in :numref:`subsec_mdl-explicit-duality-gap` minimizes the
    Lagrangian over the domain $[0, 1]$ and dualizes only the constraint
@@ -1516,32 +1499,6 @@ ball around the current iterate :cite:`Nocedal.Wright.2006`.
        $\lambda$ is lower. Compute the duality gap $p^\star(r) - d^\star(r)$
        of the constrained problem.
 
-1. [code] **Soft-margin SVM.** ● Add the point $(2, 2)$ with label $-1$ to
-   the data of the cell that computes `alpha` in :numref:`subsec_mdl-svm-dual`.
-   The new point lies among the positive examples, so the classes are no
-   longer linearly separable.
-    1. Run the projected gradient ascent of that cell for $10^3$, $10^4$, and
-       $10^5$ iterations, and record $\sum_i \alpha_i$ and the dual objective.
-       Explain the result with weak duality.
-    1. The soft-margin SVM :cite:`Cortes.Vapnik.1995` minimizes
-       $\tfrac12 \|\tilde{\mathbf{w}}\|^2 + C \sum_i \xi_i$ subject to
-       $y_i \tilde{\mathbf{w}}^\top \tilde{\mathbf{x}}_i \ge 1 - \xi_i$ and
-       $\xi_i \ge 0$. Show that eliminating the slacks $\xi_i$ gives the
-       hinge-loss objective
-       $\tfrac12 \|\tilde{\mathbf{w}}\|^2 + C \sum_i \max(0, 1 - y_i \tilde{\mathbf{w}}^\top \tilde{\mathbf{x}}_i)$,
-       and that the dual is :eqref:`eq_mdl-opt-svm-dual-folded` with the
-       additional constraints $\alpha_i \le C$. Use complementary slackness
-       to relate each of the cases $\alpha_i^\star = 0$, $0 < \alpha_i^\star < C$, and
-       $\alpha_i^\star = C$ to the margin
-       $y_i \tilde{\mathbf{w}}^{\star\top} \tilde{\mathbf{x}}_i$.
-    1. Replace the projection in the cell by the projection onto the box
-       $[0, C]^n$, and run $10^5$ iterations. For
-       $C \in \{0.1, 1, 10, 100\}$, report $\tilde{\mathbf{w}}^\star$, the points with $\alpha_i^\star = C$, the
-       number of training errors, and the gap between the hinge-loss
-       objective and the dual value. Check the relation between multipliers
-       and margins of sub-item b at every $C$. What does a small $C$ trade
-       against a large one?
-
 1. [extended] **Entropic optimal transport.** ●● Given probability vectors
    $\mathbf{p} \in \mathbb{R}^n$ and $\mathbf{q} \in \mathbb{R}^m$ and a cost
    matrix $C \in \mathbb{R}^{n \times m}$, optimal transport finds the
@@ -1593,48 +1550,6 @@ ball around the current iterate :cite:`Nocedal.Wright.2006`.
        updates $\mathbf{v} = \mathbf{q} / (K^\top \mathbf{u})$,
        $\mathbf{u} = \mathbf{p} / (K \mathbf{v})$. At which $\varepsilon$ do
        they break down, and why?
-
-1. [code] **Trust-region subproblem.** ●● The trust-region step
-   :eqref:`eq_mdl-opt-trust-region` of
-   :numref:`sec_mdl-gradient-based-optimization` minimizes
-   $m(\mathbf{p}) = \mathbf{c}^\top \mathbf{p} + \tfrac12 \mathbf{p}^\top B \mathbf{p}$
-   subject to $\|\mathbf{p}\| \le \Delta$, where
-   $\mathbf{c} = \nabla f(\mathbf{x}_k)$, $B$ is symmetric, and the constant
-   term is dropped. Write the constraint as
-   $\tfrac12 (\|\mathbf{p}\|^2 - \Delta^2) \le 0$ throughout. When $B$ has a
-   negative eigenvalue the problem is nonconvex. Unlike the example of
-   :numref:`subsec_mdl-explicit-duality-gap`, it nevertheless has no duality
-   gap; exact trust-region solvers build on this fact
-   :cite:`Nocedal.Wright.2006`.
-    1. Suppose that $\mathbf{p}^\star$ with $\|\mathbf{p}^\star\| \le \Delta$
-       and $\lambda \ge 0$ satisfy $(B + \lambda I) \mathbf{p}^\star = -\mathbf{c}$,
-       $\lambda (\Delta - \|\mathbf{p}^\star\|) = 0$, and
-       $B + \lambda I \succeq 0$. Show that $\mathbf{p}^\star$ is a global
-       minimizer. Which of these conditions is not one of the KKT conditions
-       :eqref:`eq_mdl-opt-kkt`?
-    1. Let $b_1 \le \cdots \le b_n$ be the eigenvalues of $B$ with unit
-       eigenvectors $\mathbf{q}_i$, and let $c_i = \mathbf{q}_i^\top \mathbf{c}$.
-       Compute the dual function for $\lambda > -b_1$ and for
-       $\lambda < -b_1$. Assume $b_1 < 0$ and $c_1 \neq 0$. Show that the
-       dual optimum $\lambda^\star$ is the unique root in $(-b_1, \infty)$ of
-       $\|\mathbf{p}(\lambda)\| = \Delta$, where
-       $\mathbf{p}(\lambda) = -(B + \lambda I)^{-1} \mathbf{c}$. Show that
-       $\mathbf{p}(\lambda^\star)$ and $\lambda^\star$ satisfy the conditions
-       of sub-item a, so that there is no duality gap.
-    1. Implement the solver by bisection on $\lambda$, as `water_fill`
-       bisects on the water level. For a random symmetric $6 \times 6$
-       matrix $B$ with a negative eigenvalue, a random vector $\mathbf{c}$,
-       and $\Delta = 1$, compare $m(\mathbf{p}(\lambda^\star))$ with the dual
-       value and with the smallest value of $m$ over $10^5$ random points of
-       the ball.
-    1. In the hard case $c_1 = 0$, show that $\|\mathbf{p}(\lambda)\|$ stays
-       bounded as $\lambda \downarrow -b_1$, so that the root of sub-item b
-       does not exist when $\Delta$ exceeds that bound. For such $\Delta$,
-       construct a global minimizer of the form
-       $\mathbf{p} = -\sum_{i \ge 2} \frac{c_i}{b_i - b_1} \mathbf{q}_i + \tau \mathbf{q}_1$,
-       and show that there is still no duality gap. Test the construction by
-       setting $c_1 = 0$ in your experiment and choosing $\Delta$ above that
-       bound. What does bisection face when $c_1$ is nonzero but tiny?
 
 ## Discussions
 

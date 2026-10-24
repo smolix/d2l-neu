@@ -845,19 +845,6 @@ that depends on how well that loop mixes.
    change one coordinate, say $x_1$, by an amount of order one? Why is the
    Euclidean length of an accepted move no guide to this number?
    :exlabel:`ex_energy-training-acceptance-dimension`
-1. [code] **Gradient from chain samples.** The section estimates the
-   right-hand side of :eqref:`eq_diffusion-grad-logz` from exact samples of
-   the grid model `probs` and compares the estimate with `grad_log_Z`.
-   Replace the exact samples by the final states of `metropolis_hastings`
-   chains on `energy_mle` with `box=6`, started from a broad Gaussian clipped
-   to the square as in `train_pcd`. For step sizes $0.25$, $1.0$, and $4.0$,
-   with $1000$ and $10000$ chains, compute the relative error of the estimate
-   after $10$, $100$, and $1000$ steps.
-    1. How does the error change with the number of chains at a fixed number
-       of steps? How does it change with the number of steps at a fixed
-       number of chains?
-    1. Explain the differences between the three step sizes with the results
-       of :numref:`subsec_diffusion-mh-step-size`.
 1. **The value of the contrastive loss.** The loss minimized in `train_pcd`
    is the mean energy at the data minus the mean energy at the chain states.
    Suppose that the chains sample $p_{\boldsymbol{\theta}}$ exactly, so that

@@ -707,57 +707,6 @@ reminder.
 
 ## Exercises
 
-1. [code] **Prior scale.** The `#bayesian-computation-model` cell sets the
-   prior variance `prior_var` $=\tau^2=4$. Rerun the cells from
-   `#bayesian-computation-grid` through `#bayesian-computation-importance`
-   with $\tau=0.5$ and with $\tau=10$.
-    1. Check that the fixed grid of `#bayesian-computation-grid` still holds
-       essentially all of the posterior mass for both priors, for example by
-       summing the normalized grid weights in its outermost rows and columns.
-    1. Tabulate the MAP, the posterior mean, the posterior standard
-       deviations, the posterior predictive at the three inputs `x_new`, and
-       the ESS of both importance proposals for $\tau\in\{0.5,2,10\}$.
-       Measure the shift of the posterior mean from its value at $\tau=2$
-       in units of the posterior standard deviation. Which posterior
-       summaries depend noticeably on the prior at $n=80$, and which barely
-       move?
-   :exlabel:`ex_mdl-bayesian-computation-prior-scale`
-
-1. [code] **Grid resolution.** The grid of `#bayesian-computation-grid`
-   spends $241^2\approx 58{,}000$ evaluations of the log joint density.
-    1. Keep its range and use $m\in\{5,7,9,11,21,41\}$ points per coordinate.
-       Plot the error of the posterior mean against the number $m^2$ of
-       evaluations, taking the $241$-point grid as the reference. Compare it
-       with the standard error $\sigma/m$ of an average of $m^2$ independent
-       posterior draws, where $\sigma$ is the posterior standard deviation
-       of the coordinate.
-    1. Suppose that $11$ points per coordinate give the same accuracy in
-       $d$ dimensions. How many evaluations does the grid need for $d=10$
-       and for $d=100$? How many independent posterior draws give a
-       standard error of $1\%$ of a posterior standard deviation, in any
-       dimension?
-   :exlabel:`ex_mdl-bayesian-computation-grid-resolution`
-
-1. [code] **Tail probability by importance sampling.** Self-normalized
-   importance sampling estimates a posterior expectation by
-   $\hat\mu_N=\sum_{s=1}^N\bar w_s h(\boldsymbol\theta_s)$, with the
-   normalized weights $\bar w_s$ of :eqref:`eq_mdl-bayes-is-ess`.
-    1. Show that $\hat\mu_N$ lies between the smallest and the largest of
-       the values $h(\boldsymbol\theta_s)$. What is the expectation of
-       $\hat\mu_1$?
-    1. Modify `importance` to return its draws and normalized weights.
-       Estimate the posterior probability $P(\theta_1>2.5\mid\mathcal D)$
-       with 5,000 draws from the Laplace proposal and with 20,000 draws from
-       the prior proposal, over 20 seeds each. For a reference value,
-       evaluate the posterior on a grid that extends beyond the upper end
-       $\theta_1=2.8$ of the grid in `#bayesian-computation-grid`. Compare
-       the spread of the estimates and the ESS of the two proposals.
-    1. Which probability does the Laplace approximation
-       :eqref:`eq_mdl-bayes-laplace` itself assign to $\theta_1>2.5$?
-       Relate the discrepancy to the shape of the posterior in
-       `#bayesian-computation-comparison-plot`.
-   :exlabel:`ex_mdl-bayesian-computation-tail-probability`
-
 1. **Metropolis--Hastings acceptance.** The acceptance probability
    :eqref:`eq_mdl-bayes-mh` turns any proposal into a chain that targets
    the posterior.
@@ -893,10 +842,11 @@ reminder.
        ratio factorizes over the coordinates. Predict the ESS of the 20,000
        prior-proposal draws of `#bayesian-computation-importance` and
        compare it with the printed value. Repeat the prediction for the
-       prior proposals with $\tau=0.5$ and $\tau=10$, using the grid moments
-       of problem
-       :exref:`ex_mdl-bayesian-computation-prior-scale`b, and compare it with
-       the ESS measured there. Which factor of the formula makes a narrow
+       prior proposals with $\tau=0.5$ and $\tau=10$: set `prior_var`
+       $=\tau^2$ in the `#bayesian-computation-model` cell, rerun the cells
+       from `#bayesian-computation-grid` through
+       `#bayesian-computation-importance`, and compare the prediction with the
+       measured ESS. Which factor of the formula makes a narrow
        prior a poor proposal, and which factor makes a broad prior a poor
        proposal?
     1. Under the same approximation, which coordinate makes
@@ -955,9 +905,10 @@ reminder.
        :exref:`ex_mdl-bayesian-computation-variational-families`c. Use
        $10^5$ draws from each Gaussian and report the Monte Carlo standard
        error of each estimate. The gap between $\log p(\mathcal D)$ and the
-       ELBO of $q$ is $D_{\mathrm{KL}}(q\|p(\cdot\mid\mathcal D))$
-       (:eqref:`eq_mdl-elbo-gap`). Rank the three Gaussians by this
-       divergence. Explain where the Laplace Gaussian falls in this ranking.
+       ELBO of $q$ is
+       $D_{\mathrm{KL}}(q\|p(\cdot\mid\mathcal D))$ (:eqref:`eq_mdl-elbo-gap`).
+       Rank the three Gaussians by this divergence. Explain where the
+       Laplace Gaussian falls in this ranking.
    :exlabel:`ex_mdl-bayesian-computation-evidence`
 
 1. [code] **A posterior with two modes.** ● Fifty observations are drawn as
@@ -987,16 +938,16 @@ reminder.
        estimate correctly? A network with $h$ hidden $\tanh$ units has the
        sign flip of this problem for every unit and, in addition, the
        permutations of its hidden units counted in exercise
-       :exref:`ex_mdl-maximum-likelihood-relu-symmetries`a of
-       :numref:`sec_mdl-maximum_likelihood`. How many equivalent copies of a
+       :exref:`ex_mdl-maximum-likelihood-relu-symmetries`a
+       of :numref:`sec_mdl-maximum_likelihood`. How many equivalent copies of a
        mode does its posterior have under an isotropic Gaussian prior? What
        does this suggest about approximating the posterior of a neural
        network by one of the methods of this section?
    :exlabel:`ex_mdl-bayesian-computation-two-modes`
 
 1. [code] **Tails of the logistic posterior.** ●● A central limit theorem
-   for importance sampling needs a finite second moment of the weights
-   (:numref:`sec_mdl-bayes-importance`). Problem
+   for importance sampling needs a finite second moment of the
+   weights (:numref:`sec_mdl-bayes-importance`). Problem
    :exref:`ex_mdl-bayesian-computation-weight-ess`a settles this question
    for a Gaussian target. The Laplace proposal of
    `#bayesian-computation-importance` reaches an ESS of about 4,300 of its
@@ -1028,9 +979,10 @@ reminder.
        proposal with $3$ degrees of freedom, location
        $\boldsymbol\theta_{\mathrm{MAP}}$, and scale matrix `laplace_cov`.
        Show that its weights have finite variance. Compare it with the
-       Laplace proposal over 20 seeds, on the ESS and on the tail
-       probability of problem
-       :exref:`ex_mdl-bayesian-computation-tail-probability`b.
+       Laplace proposal over 20 seeds, on the ESS and on the estimate of the
+       tail probability $P(\theta_1>2.5\mid\mathcal D)$. For a reference
+       value, evaluate the posterior on a grid that extends beyond the upper
+       end $\theta_1=2.8$ of the grid in `#bayesian-computation-grid`.
    :exlabel:`ex_mdl-bayesian-computation-posterior-tails`
 
 1. [extended] **Approximations in higher dimension.** ●● Extend the running

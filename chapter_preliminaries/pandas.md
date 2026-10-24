@@ -292,6 +292,24 @@ scaling) and for chaining them into reproducible pipelines, see
        [indexing](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html)
        lists the options.
 
+1. [code] **Imputation strategies.** Fill the missing values in `NumRooms`
+   in three ways: with the column mean, with the column median, and with
+   the column mean plus a "was-missing" indicator column.
+    1. For the mean fill and the median fill, compute the mean and the
+       standard deviation of the filled column, compare them with those of
+       the observed values, and explain the direction of each change.
+    1. Suppose that in a larger dataset `NumRooms` is missing mostly for
+       large homes. State what a model sees for those homes after mean
+       imputation alone. Then explain how a model that predicts the price
+       as a weighted sum of its features plus a constant can use the
+       indicator column to correct its predictions for them.
+    1. State what each of the three treatments assumes about why the values
+       are missing.
+
+    *Adapted from Kaggle Learn,
+    [Intermediate Machine Learning](https://www.kaggle.com/learn/intermediate-machine-learning),
+    Exercise 2.*
+
 1. **High-cardinality categories.** One-hot encoding turns a categorical
    column with $k$ distinct values into $k$ columns, plus one more with
    `dummy_na=True`.
@@ -335,6 +353,16 @@ scaling) and for chaining them into reproducible pipelines, see
 
     *Adapted from UC Berkeley Data 100,
     [homework 2A "Food Safety"](https://github.com/DS-100/sp25-student/blob/main/hw/hw02A/hw02A.ipynb).*
+
+1. [code] **Scaling limits.** ● Estimate how many rows of a table with the
+   columns of `house_tiny.csv` you can load with `pd.read_csv` on your
+   machine. Write synthetic CSV files with the four columns of
+   `house_tiny.csv` and $10^5$, $10^6$, and $10^7$ random rows. For each
+   file, time `pd.read_csv` and record the memory of the resulting
+   DataFrame. Extrapolate both measurements linearly. Find the number of
+   rows at which the DataFrame would fill your machine's memory and the
+   number at which loading would take ten minutes, and state which limit
+   comes first.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/28)

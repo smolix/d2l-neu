@@ -822,8 +822,8 @@ validation data, not from training error alone.
        smallest validation loss.
     1. Compute $\textrm{df}(\lambda)$ for the same values with the code of
        :numref:`subsec_wd-shrinkage` and re-plot the validation loss
-       against $\textrm{df}(\lambda)$. Compare the shape with
-       :numref:`fig_capacity_vs_error`.
+       against $\textrm{df}(\lambda)$. Compare the shape
+       with :numref:`fig_capacity_vs_error`.
     1. Repeat the search of (a) on two more random train/validation splits
        of the same data (permute the rows of `data.X` and `data.y` with the
        same permutation). Report whether $\lambda^*$ is stable across the

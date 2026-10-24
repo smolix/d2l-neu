@@ -1001,8 +1001,8 @@ data :cite:`Nie.Zhu.You.ea.2025`.
        :eqref:`eq_diffusion-discrete-posterior`, treating the cases
        $\mathbf{x}_t = \mathbf{x}_0$ and $\mathbf{x}_t \neq \mathbf{x}_0$
        separately. Show that for $t \geq 2$ every one of the $K$ values has
-       positive probability, unlike under the two-point posterior
-       :eqref:`eq_diffusion-masked-posterior`.
+       positive probability, unlike under the two-point
+       posterior :eqref:`eq_diffusion-masked-posterior`.
     1. The divergence terms of the bound compare this posterior with the
        reverse model at every position. Why are they more expensive to
        evaluate than the summand of :eqref:`eq_diffusion-masked-loss`?
@@ -1073,34 +1073,6 @@ data :cite:`Nie.Zhu.You.ea.2025`.
        exact network makes the two tables equal. What does their difference
        say about the trained network?
    :exlabel:`ex_discrete-diffusion-one-token`
-
-1. [code] **Bits by masking level.** The held-out bound `bound` of
-   :numref:`subsec_diffusion-binary-images` is the average over $t$ of
-   `masked_image_loss` at level $t$.
-    1. Show that under the linear schedule the expected term at level $t$
-       is the sum, over the $784$ positions, of the expected cross-entropy
-       at a position given that it is masked, for images masked with
-       probability $t/T$.
-    1. Evaluate the term at every level for `ema` on `X_test`, averaging
-       over several random masks at the low levels, where few pixels are
-       masked. Plot it in bits per pixel against the masking probability
-       $t/T$.
-    1. Compare the term at $t = T$ with the independent-pixel cross-entropy
-       `independent`, and explain the relation between the two models.
-       Which half of the masking levels contributes more to the bound?
-   :exlabel:`ex_discrete-diffusion-bits-by-level`
-
-1. [code] **Steps against speckles.** By problem
-   :exref:`ex_discrete-diffusion-pairs-revealed`a, two neighboring pixels
-   are revealed in the same step with probability $1/S$. Sample $480$
-   images from `ema` with `unmask_images`, in batches of $48$, for
-   $S \in \{100, 50, 25, 10, 4, 2, 1\}$ steps, and compute `speckles` for
-   each $S$. Plot the speckle rate against $1/S$, together with the rate of
-   the training images. Over which range of $S$ is the rate linear in
-   $1/S$? Extrapolate the linear part to $1/S = 0$. Which part of the
-   excess of the hundred-step samples over the training images can no
-   number of steps remove?
-   :exlabel:`ex_discrete-diffusion-steps-speckles`
 
 1. **Two reverse parameterizations.** ● The reverse model
    :eqref:`eq_diffusion-x0-parameterization` averages the posterior over
@@ -1265,31 +1237,6 @@ data :cite:`Nie.Zhu.You.ea.2025`.
     1. Why can the bound :eqref:`eq_diffusion-masked-loss` not detect the
        error of (b)?
    :exlabel:`ex_discrete-diffusion-confidence-unmasking`
-
-1. [code] **Uniform kernel in practice.** ●●
-   :citet:`Austin.Johnson.Ho.ea.2021` report $1.61$ bits per character for
-   the uniform kernel and $1.45$ for the absorbing kernel on text8, a
-   character-level benchmark, with $1000$ steps. Repeat the comparison on
-   the two tokens of the running example, with $T = 32$ and the linear
-   schedule $\bar{\alpha}_t = 1 - t/T$ for both kernels.
-    1. Write a function that evaluates the bound of a uniform-kernel model
-       exactly, averaged over `table`, with the reverse model
-       :eqref:`eq_diffusion-x0-parameterization` and the posterior of
-       problem :exref:`ex_discrete-diffusion-uniform-kernel`b. Unlike
-       `exact_bound`, it has to enumerate all $1024$ noisy pairs at every
-       step. Why does the prior term vanish?
-    1. Evaluate the function with the exact predictions
-       $q(\mathbf{x}_0^i \mid \mathbf{x}_t)$, computed by Bayes' rule from
-       `table` and :eqref:`eq_diffusion-discrete-qbar`. Compare this floor
-       with the floor $H(X^1, X^2) + I(X^1; X^2)/T$ of the absorbing kernel.
-    1. Train `MaskedMLP`, whose mask channel then stays zero, on a
-       one-sample estimate of the uniform-kernel bound. Compare its exact
-       bound with the final exact bound of `model`.
-    1. Sample $20{,}000$ pairs with the $T$-step reverse chain and compare
-       their total variation distance to `table` with that of `unmask` at
-       $32$ steps. Explain the ranking of the two kernels with problem
-       :exref:`ex_discrete-diffusion-uniform-kernel`a.
-   :exlabel:`ex_discrete-diffusion-uniform-running-example`
 
 1. [extended] **A masked diffusion language model.** ●● Train a masked
    diffusion model on the character-level Time Machine windows of

@@ -172,8 +172,39 @@ On this particular split and optimization setting, the plotted DeepFM run reache
 
 ## Exercises
 
-* Vary the structure of the MLP to check its impact on model performance.
-* Change the dataset to Criteo and compare it with the original FM model.
+1. Write the FM pairwise term
+   $\sum_{a<b}\langle\mathbf e_a,\mathbf e_b\rangle$ as a quadratic form
+   $\mathbf z^{(0)\top}\mathbf A\,\mathbf z^{(0)}$ in the concatenated
+   embeddings and give $\mathbf A$. A ReLU MLP computes a piecewise linear
+   function of $\mathbf z^{(0)}$. Show that the largest error of any such
+   function as an approximation of the pairwise term on the ball of radius
+   $\rho$ grows at least proportionally to $\rho^2$ as $\rho\to\infty$. What
+   does this suggest about adding the explicit FM term to the MLP?
+1. The `FM` run of the previous section uses $k=20$ and a learning rate of
+   0.02, while the DeepFM run uses $k=10$ and 0.01. Rerun both with $k=10$ and
+   a learning rate of 0.01, and add a third model that keeps the linear term
+   and the MLP but drops the pairwise term. Report the lowest test log loss of
+   each across epochs. Does the comparison stated after the training run hold
+   when the settings match?
+1. DeepFM feeds the same embeddings to both branches, while NeuMF gives its
+   two branches separate tables. Modify `DeepFM` so that the MLP has its own
+   embedding table, and report the number of parameters and the lowest test
+   log loss of both versions with the settings above. What does sharing the
+   table constrain?
+1. An embedding row of a feature value that occurs in $n$ training
+   impressions receives a gradient from the data only in minibatches that
+   contain one of them, while every weight of the MLP receives one in every
+   minibatch. With 15,000 training impressions, batches of 2,048, and
+   `drop_last=True`, compute the expected number of minibatches per epoch
+   that update the row of a value with $n=4$, the default `min_threshold`.
+   How does the default row of each field, which collects all rare values,
+   differ? Which of the two kinds of parameters benefits more from Adam's
+   per-coordinate step size?
+1. Train DeepFM with `mlp_dims` set to `[30, 20, 10]`, `[100, 100]`, and
+   `[400, 400, 400]`, the setting of :cite:`Guo.Tang.Ye.ea.2017`. For each,
+   report the number of MLP parameters and the training and lowest test log
+   loss. Which setting overfits the 15,000 training impressions, and does a
+   dropout rate of 0.5 change the answer?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/407)

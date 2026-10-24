@@ -322,8 +322,8 @@ The capacity argument explains the continued use of adversarial terms in diffusi
    of an adversarial loss and a weighted pointwise distillation loss
    :cite:`Sauer.Lorenz.Blattmann.ea.2023`.
     1. Add $\lambda_{\textrm{pw}}$ times the squared error against the
-       observed $y$ to the generator loss of the adversarial student of
-       :numref:`subsec_gan_beyond_capacity`. Train with
+       observed $y$ to the generator loss of the adversarial student
+       of :numref:`subsec_gan_beyond_capacity`. Train with
        $\lambda_{\textrm{pw}} \in \{0.1, 1, 10, 100\}$ and two seeds each,
        and report the mean distances to the nearest mode and to the
        conditional mean. Near which $\lambda_{\textrm{pw}}$ does the curve
@@ -337,21 +337,6 @@ The capacity argument explains the continued use of adversarial terms in diffusi
        the corridor? Relate the two sweeps to ADD's one-step ablation, in
        which the adversarial loss alone gives FID 20.8 and the sum of both
        losses gives 20.6.
-1. **A patch critic.** VQGAN :cite:`Esser.Rombach.Ommer.2021` uses the patch
-   critic of pix2pix :cite:`Isola.Zhu.Zhou.ea.2017`: five $4 \times 4$
-   convolutions with padding 1 and strides 2, 2, 2, 1, and 1, the last of
-   which has a single output channel. The critic therefore returns a map of
-   scores instead of one score per image.
-    1. Compute the receptive field of one score and the size of the score
-       map for a $256 \times 256$ input.
-    1. A critic of this kind compares the distribution of local patches of
-       generated images with that of real images. Describe an image in which
-       every patch that one score sees is plausible, but which is not
-       plausible as a whole.
-    1. Why does this blind spot matter little for the decoder of a
-       tokenizer, which is also trained with a reconstruction loss against
-       the encoded image? Why does it matter more for a generator that maps
-       noise to images and is trained against this critic alone?
 1. **Phase and the conditional mean.** A vocoder receives a spectrogram,
    which fixes the frequency content and the magnitude of each frame but not
    the phase. Model one frame of $N$ samples as
@@ -435,37 +420,6 @@ The capacity argument explains the continued use of adversarial terms in diffusi
        predict the choice that the adversarial student and the IMLE student
        reach, and check by training. What must change in the latent input for
        a student to represent the probability $\tfrac34$?
-1. [code] **Random and learned projections.** ● Sliced-Wasserstein
-   generators replace the critic by one-dimensional transport costs along
-   random directions :cite:`Deshpande.Zhang.Schwing.2018`, the third response
-   of :numref:`fig_gan_exits`. For a unit vector $\mathbf{u}$, let
-   $W_2^2(\mathbf{u})$ be the squared Wasserstein-2 distance between the
-   distributions of $\mathbf{u}^\top \mathbf{x}$ under $p$ and under $q$.
-   Between two samples of equal size $n$, it equals the mean squared
-   difference of the sorted projected samples. The sliced distance averages
-   $W_2^2(\mathbf{u})$ over directions $\mathbf{u}$ drawn uniformly from the
-   unit sphere. Let $p = \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$ and
-   $q = \mathcal{N}(\delta \mathbf{e}_1, \mathbf{I}_d)$.
-    1. By exercise :exref:`ex_dcgan-one-dimension-squared-wasserstein`a of
-       :numref:`sec_dcgan`, two one-dimensional Gaussians with equal
-       variance have $W_2^2$ equal to the squared difference of their
-       means. Use this to show that the
-       sliced distance equals $\delta^2 / d$. What is $W_2^2(\mathbf{u})$ for
-       the best direction?
-    1. For $\delta = 1$ and $n = 1000$, estimate the sliced distance with 100
-       random directions between samples of $p$ and $q$, and between two
-       independent samples of $p$, for $d \in \{2, 16, 128, 1024\}$ with 20
-       repetitions each. At which dimension does the first value become hard
-       to distinguish from the second?
-    1. Replace the random directions by one learned direction, the
-       difference between the means of the two samples being compared, and
-       evaluate $W_2^2$ along it for $p$ against $q$ and for $p$ against $p$.
-       Explain the $p$-against-$p$ value at $d = 1024$. What does this show
-       about a critic that is trained and evaluated on the same samples?
-    1. Learn the direction instead from an independent pair of samples of
-       the same two distributions, and repeat the evaluation. Predict the
-       $p$-against-$q$ value from the angle between the learned direction and
-       $\mathbf{e}_1$, and compare the prediction with the measured value.
 1. [code] **Multi-round refinement.** ●● In practice DDO minimizes
 
    $$L_{\alpha, \beta}(\theta) = -E_{x \sim p}\big[\log \sigma\big(\beta D_\theta(x)\big)\big] - \alpha\, E_{x \sim q_{\textrm{ref}}}\big[\log \sigma\big(-\beta D_\theta(x)\big)\big]$$

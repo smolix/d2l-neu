@@ -361,8 +361,8 @@ Fifty deterministic steps reproduce the statistics of two hundred. Fewer
 steps change them: the within-mode spread is lowest at twenty or ten steps,
 several hundredths below its value at two hundred, and the stray fraction
 is highest at ten. With long strides, each step re-noises a posterior mean,
-and the samples contract toward the mode centers (Exercise
-:exref:`ex_ddim-gaussian-data` computes the contraction for Gaussian data).
+and the samples contract toward the mode centers
+(Exercise :exref:`ex_ddim-gaussian-data` computes the contraction for Gaussian data).
 The deterministic sampler
 is also less accurate than the stochastic chain with the same learned
 predictor: at every step count its mode weights are further from the true
@@ -716,30 +716,6 @@ the continuous-time picture of the next section and of
        part (a) correct errors of the learned predictor, and which are
        effects of the stride? Relate the spread at $\eta = 1$ on ten steps
        to problem :exref:`ex_ddim-admissible-noise`d.
-1. [code] **Consistency across step counts.** Draw eight noise images once
-   and decode them with `ddim_images` and `ema`.
-    1. At $\eta = 0$, decode on $10$, $20$, $50$, $100$, and $200$ steps,
-       and compute the mean squared distance between the $200$-step images
-       and each of the others.
-    1. Repeat at $\eta = 1$, and also compute the distance between two
-       $200$-step runs at $\eta = 1$ that use different fresh noise. Which
-       sampler's images converge as the number of steps grows? What does the
-       last distance measure?
-1. [code] **Interpolation paths.** The codes `z0` and `z1`, between which
-   the image model interpolates along a great circle, are independent draws
-   from $\mathcal{N}(\mathbf{0}, I)$ in $d = 784$ dimensions.
-    1. By problem :exref:`ex_annealed-langevin-ladder-spacing`a of
-       :numref:`sec_diffusion-annealed`, the norm of such a code is
-       approximately $\mathcal{N}(\sqrt{d}, 1/2)$ for large $d$. Compute the
-       expected squared norm of the midpoint $(\mathbf{z}_0 + \mathbf{z}_1) / 2$
-       of the straight line between the codes, and express the gap between
-       its norm and $\sqrt{d}$ in standard deviations of the code norm.
-    1. Show that the angle between the two codes is close to $\pi / 2$ and
-       that the midpoint of the great circle then has a norm close to
-       $\sqrt{d}$.
-    1. Decode eight points of the straight line with fifty DDIM steps, next
-       to the eight points of the great circle, and compare the images in the
-       middle of the two rows.
 1. **The forward step.** ● Given $\mathbf{x}_0$, a draw from
    :eqref:`eq_diffusion-ddim-family` can be written as
    $\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}_t$
@@ -815,8 +791,8 @@ the continuous-time picture of the next section and of
        the role of time.
    :exlabel:`ex_ddim-euler-step`
 1. **Gaussian data.** ● Let the data be one-dimensional with distribution
-   $\mathcal{N}(0, v)$, and use the variables $y$ and $s$ of exercise
-   :exref:`ex_ddim-euler-step`.
+   $\mathcal{N}(0, v)$, and use the variables $y$ and $s$ of
+   exercise :exref:`ex_ddim-euler-step`.
     1. Show that the exact predictor is
        $\epsilon^\star(y, s) = s y / (v + s^2)$, that one deterministic stride
        from $s$ to $s'$ multiplies $y$ by $(v + s s') / (v + s^2)$, and that

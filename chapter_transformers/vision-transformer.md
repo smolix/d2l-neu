@@ -640,32 +640,8 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        builds in and the attention layers of the ViT lack, and a property
        that both models share.
 
-1. [code] **Higher resolution.** ● Fine-tuning at a higher resolution than
-   in pretraining keeps the patch size, so the grid of patches grows.
-   :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` therefore interpolate the
-   pretrained position embeddings in two dimensions to fit the new grid.
-    1. Which parameters of `ViT` depend on `img_size`? Explain why all
-       others can be reused unchanged at a resolution of $144 \times 144$.
-    1. Build a `ViT` for $144 \times 144$ inputs and copy into it every
-       parameter of the trained `model` except the position embeddings.
-       Keep the “&lt;cls&gt;” slot, and obtain the 81 patch position
-       embeddings by reshaping the 36 trained ones into a
-       $6 \times 6 \times d$ array,
-       resizing it bilinearly to $9 \times 9 \times d$, and flattening it.
-       Without further training, measure the validation accuracy on
-       Fashion-MNIST resized to $144 \times 144$. Compare it with `vit_acc`
-       and with the accuracy of the same model when all 81 patch
-       embeddings equal the mean of the 36 trained ones.
-    1. Fine-tune the interpolated model for one epoch at $144 \times 144$
-       with learning rate $0.01$, and measure the time per epoch at both
-       resolutions. Train a $144 \times 144$ `ViT` from scratch with the
-       protocol of :numref:`subsec_vit-first-run` for as many whole epochs
-       as fit into the time of the ten epochs at $96 \times 96$ plus the
-       fine-tuning epoch. Compare the two accuracies. What does the
-       comparison say about pretraining at low resolution?
-
 :begin_tab:`pytorch`
-7. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
+6. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
     the attention weight of query patch $i$ on key patch $j$ in an image, and
     let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
     The *mean attention distance* of the head
@@ -693,7 +669,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
 :end_tab:
 
 :begin_tab:`jax`
-7. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
+6. [code] **Attention distance.** ● For one head, let $\alpha_{ij}$ be
     the attention weight of query patch $i$ on key patch $j$ in an image, and
     let $\mathbf{u}_i$ be the pixel coordinates of the center of patch $i$.
     The *mean attention distance* of the head
@@ -721,32 +697,7 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        the two models separate the two causes?
 :end_tab:
 
-8. [code] **Recipe confound.** ● :numref:`subsec_vit-first-run` trains the
-   ViT with the recipe of the convolutional networks of
-   :numref:`chap_modern_cnn`, plain SGD at a constant learning rate.
-   :citet:`touvron2021training` train ViTs on ImageNet-1k alone for 300
-   epochs, with AdamW, a cosine schedule, label smoothing, Mixup, and
-   stronger augmentation.
-    1. Retrain the ViT for 10 epochs with AdamW at weight decay $0.05$ and
-       the cosine schedule with warmup of :eqref:`eq_cosine_warmup`, using
-       two warmup epochs and the base learning rates $3 \times 10^{-4}$ and
-       $10^{-3}$. Compare the better of the two runs with `vit_acc` and
-       `cnn_acc`.
-    1. Train the ViT with the better of the two settings, and
-       `CompactResNet` with the optimizer of
-       :numref:`subsec_vit-cnn-baseline`, for 30 epochs each, once plainly
-       and once with Mixup at $\alpha = 0.2$ (:eqref:`eq_mixup`) and label
-       smoothing at $\epsilon = 0.1$ (:eqref:`eq_label_smoothing`).
-       Tabulate the four validation accuracies.
-    1. The runs of the first two parts change three things in turn: the
-       optimizer and schedule of the ViT, the training length from 10 to 30
-       epochs, and Mixup with label smoothing. Starting from the gap of
-       :numref:`subsec_vit-cnn-baseline`, compute the gap between
-       `CompactResNet` and the ViT after each change. How much of the gap
-       does each change close, and how large is the part that remains
-       attributable to the architecture under the final protocol?
-
-1. **Shifted windows.** ● Swin transformers :cite:`liu2021swin` restrict
+7. **Shifted windows.** ● Swin transformers :cite:`liu2021swin` restrict
    attention to non-overlapping windows of $M \times M$ patches. Successive
    blocks alternate between a regular partition of the patch grid into
    windows and a partition displaced by $\lfloor M/2 \rfloor$ patches along
@@ -798,8 +749,8 @@ and deployment constraints; :numref:`chap_cv` develops these applications.
        not carry over to the augmented training of
        :citet:`touvron2021training`.
     1. Override `training_step` of `ViT` to minimize
-       $\mathcal{L}_\textrm{hard}$, and train with the protocol of
-       :numref:`subsec_vit-first-run`. Train again with
+       $\mathcal{L}_\textrm{hard}$, and train with the protocol
+       of :numref:`subsec_vit-first-run`. Train again with
        $\mathcal{L}_\textrm{soft}$ at $\tau = 3$ for
        $\lambda \in \{0.1, 0.5\}$, and compare the three students with
        `vit_acc`.

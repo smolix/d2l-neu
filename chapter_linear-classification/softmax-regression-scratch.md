@@ -646,6 +646,15 @@ implementation applies automatically.
 
 ## Exercises
 
+1. [code] **Numerical stability.** The `softmax` of this section returns
+   `NaN` on a matrix whose single row is the logits $(1000, 0, 0)$, because
+   $\exp(1000)$ overflows.
+    1. Show that it also returns `NaN` on the row $(-1000, -1000, -1000)$,
+       and identify the operation that produces the `NaN` in this case.
+    1. Implement a fix that subtracts the largest entry of each row before
+       exponentiating, and check that it agrees with the built-in softmax
+       on both rows and on random inputs.
+
 1. [code] **Cross-entropy from one-hot labels.** The `cross_entropy` of this
    section selects the correct-class probability by indexing. Implement an
    alternative that follows the definition $-\sum_j y_j \log \hat{y}_j$
@@ -667,6 +676,17 @@ implementation applies automatically.
    memory of `W`, and the float32 memory of the $n \times V$ matrix of
    probabilities, and compare each number with the Fashion-MNIST model of
    this section.
+
+1. [code] **Hyperparameter sweep.** Retrain `SoftmaxRegressionScratch` with
+   `d2l.Trainer(max_epochs=10)`, varying one hyperparameter at a time.
+    1. Plot the final validation loss against the learning rate over
+       $\{0.01, 0.03, 0.1, 0.3, 1\}$.
+    1. Plot the final training and validation losses against the minibatch
+       size over $\{8, 32, 256, 2048\}$ at learning rate $0.1$.
+    1. Compute the number of parameter updates that ten epochs over the
+       60,000 training images take at each batch size. Use these counts to
+       explain the trend in the previous plot, and predict how the
+       comparison changes when every run takes the same number of updates.
 
 1. [code] **Confusion matrix.** The diagonal of the column-normalized
    confusion matrix :eqref:`eq_confusion-normalized` holds the per-class

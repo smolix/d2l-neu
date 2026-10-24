@@ -582,6 +582,18 @@ methods.
    calibration (the mean largest softmax probability versus the accuracy)
    against the standard single-pass evaluation.
    :exlabel:`ex_dropout-monte-carlo-dropout`
+1. [code] **Dropout and weight decay.** Weight decay and dropout both
+   regularize `DropoutMLP`, but by different mechanisms. Measure each run
+   by its validation accuracy and by the gap between training and
+   validation loss, with both losses evaluated with dropout disabled.
+    1. With both dropout rates set to zero, add weight decay as in
+       :numref:`sec_weight_decay` at strengths
+       $\lambda \in \{0, 10^{-4}, 10^{-3}, 10^{-2}\}$. Compare these runs
+       with the dropout-only run at rates 0.2 and 0.5.
+    1. Keep the dropout rates at 0.2 and 0.5, and add weight decay at each
+       nonzero strength from (a). Are the effects of the two regularizers
+       additive, do they show diminishing returns, or do they cancel each
+       other out?
 1. **Dropout at test time.** ● Dropout is normally disabled at test time,
    so the full network runs with no masking and no rescaling. Set
    `dropout_1` to zero in `DropoutMLP`, so that only the second hidden layer

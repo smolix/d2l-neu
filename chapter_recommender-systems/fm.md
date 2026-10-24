@@ -164,8 +164,36 @@ d2l.train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs, devices)
 
 ## Exercises
 
-* Can you test FM on other dataset such as Avazu, MovieLens, and Criteo datasets?
-* Vary the embedding size to check its impact on performance, can you observe a similar pattern as that of matrix factorization?
+1. For an input with a one-hot user field and a one-hot item field, show that
+   the FM score is $w_0+w_u+w_i+\langle\mathbf v_u,\mathbf v_i\rangle$, matrix
+   factorization with biases and a global offset. Add a third one-hot field
+   for the hour of the day, write out the pairwise terms, and count the
+   parameters of the FM with $k=20$ for field sizes 943, 1,682, and 24. Compare
+   with a model that has a free weight for every pair of features from
+   different fields.
+1. Show that the derivative of the pairwise term with respect to $v_{i,l}$ is
+   $x_i\sum_j v_{j,l}x_j-v_{i,l}x_i^2$. Explain how the sums computed in the
+   forward pass give the gradient for all $k\,\mathrm{nnz}(\mathbf x)$ active
+   embedding coordinates in $\mathcal O(k\,\mathrm{nnz}(\mathbf x))$ time.
+1. `train_ch13` reports accuracy only. Record the training and test log loss
+   after every epoch and find the epoch at which the test log loss is lowest.
+   Then train with $k\in\{2, 8, 20\}$ and a model without the pairwise term,
+   which is logistic regression on the same features, and report the lowest
+   test log loss of each. How much does the pairwise term improve on logistic
+   regression on this dataset?
+1. Encode MovieLens 100K as two fields, user and item, with the offset scheme
+   of `CTRDataset`, train `FM` with the squared loss on the `seq-aware` split,
+   and compare its test RMSE with that of `MF` on the same split. Use the
+   first problem to explain why the two values should be close. Which
+   additional field derived from the MovieLens data could make them differ?
+1. Show that no second-order FM, for any $k$, represents the three-way
+   interaction $x_1x_2x_3$ of three binary features exactly on all eight
+   inputs. A third-order term
+   $\sum_{i<j<l}\sum_{f=1}^k v_{i,f}v_{j,f}v_{l,f}\,x_ix_jx_l$ fixes this.
+   Using the identity $e_3=(p_1^3-3p_1p_2+2p_3)/6$ for the third elementary
+   symmetric polynomial of numbers $a_1,\ldots,a_d$, where
+   $p_m=\sum_i a_i^m$, compute this term in $\mathcal O(k\,\mathrm{nnz}(\mathbf x))$
+   time.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/406)

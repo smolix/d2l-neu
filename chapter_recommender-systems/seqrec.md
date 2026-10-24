@@ -412,9 +412,35 @@ d2l.train_ranking(net, train_iter, test_iter, loss, trainer,
 
 ## Exercises
 
-* Conduct an ablation study by removing one of the horizontal and vertical convolutional networks, which component is the more important ?
-* Vary the hyperparameter $L$. Does longer historical interactions bring higher accuracy?
-* Apart from the sequence-aware recommendation task we introduced above, there is another type of sequence-aware recommendation task called session-based recommendation :cite:`Hidasi.Karatzoglou.Baltrunas.ea.2015`. Can you explain the differences between these two tasks?
+1. Session-based recommendation :cite:`Hidasi.Karatzoglou.Baltrunas.ea.2015`
+   predicts the next item within an anonymous browsing session, without a
+   user identifier. List the inputs of Caser that are unavailable in this
+   setting, state what the score $\hat y_{uit}$ reduces to without
+   $\mathbf p_u$, and describe a train/test split for session data that plays
+   the role of the `seq-aware` mode.
+1. Show that the vertical branch with one filter and the identity activation
+   computes a weighted sum of the $L$ item embeddings, and that with equal
+   filter weights it does not depend on the order of the window at all. To
+   which reorderings of the window is the output of one horizontal filter of
+   height 1 invariant? Then shuffle the $L$ items of every row of
+   `test_seq_iter` and evaluate the trained model again. How much of its hit
+   rate and AUC depends on the order within the window?
+1. A first-order Markov baseline scores candidate $j$ for user $u$ by the
+   number of times $j$ immediately follows $u$'s most recent training item in
+   the chronological training sequences of all users. Implement it, evaluate
+   it with `evaluate_ranking`, and compare its hit rate and AUC with those of
+   Caser and of a ranking by item popularity.
+1. Remove the horizontal branch, and separately the vertical branch. The
+   input size of the fully connected layer must follow the active branches;
+   the code as written fails with `d=0` or `d_prime=0`. Report the hit rate
+   and AUC of the full model and of the two ablations. Is the difference
+   between them larger than the change you observe when you retrain the full
+   model with a different random seed?
+1. Train Caser with $L\in\{1, 3, 5, 10\}$. With $L=1$ the window holds only
+   the previous item, so the model is a first-order Markov model plus a user
+   embedding. Report the hit rate, the AUC, and the number of training
+   windows `len(train_seq_data)` for each $L$, and explain why a change in
+   accuracy with $L$ cannot be attributed to the history length alone.
 
 
 :begin_tab:`mxnet`

@@ -1111,7 +1111,7 @@ d2l.show_images(np.asarray(pairs) / 2 + 0.5, num_rows=2, num_cols=8);
 
 The generated samples are farther from the training set than the held-out sprites are, by a factor of two to three in the recorded runs. Copying would instead drive the generated distances toward zero. The lower held-out distances are consistent with the data split: many held-out sprites have a variant of the same species in the training set. The grid gives an image-level comparison. Its top row contains the eight generated samples closest to the training set, and its bottom row contains their nearest neighbors. Even these pairs depict different creatures; they share palettes or coarse silhouettes, but the generated samples are softer and less articulated.
 
-This test has two limitations. Distances are defined by the CIFAR-CNN features, so they can detect direct copying but cannot rule out recombination of memorized parts. The result also applies only to this generator and dataset. Repeating the diagnostic after reducing the training set would reveal whether the generator begins to memorize under greater data scarcity. Exercise :exref:`ex_dcgan-extend-memorization-check-numref` extends the comparison to mirrored candidates and raw pixels.
+This test has two limitations. Distances are defined by the CIFAR-CNN features, so they can detect direct copying but cannot rule out recombination of memorized parts. The result also applies only to this generator and dataset. Repeating the diagnostic after reducing the training set would reveal whether the generator begins to memorize under greater data scarcity.
 
 ### Scale
 
@@ -1153,34 +1153,12 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
        from a constant input away from the borders? Why does this remove the
        periodic pattern for every choice of the learned weights?
    :exlabel:`ex_dcgan-checkerboards-from-stride`
-1. **Penalties through batch normalization.** `Generator` and
-   `Discriminator` omit batch normalization (:numref:`sec_batch_norm`)
-   partly because it couples the per-sample input gradients that the
-   penalties :eqref:`eq_gan_r1r2` need. Exercise
-   :exref:`ex_convergence-batch-mixing-critics` of
-   :numref:`sec_gan_convergence` shows what `r1_r2_penalty` reports for a
-   linear critic that centers its inputs over the batch. Consider a
-   convolutional critic with batch normalization after every convolution,
-   as in `D_block`. In training mode, each such layer standardizes every
-   channel by its mean and standard deviation over the minibatch and the
-   spatial positions.
-    1. Which function of a single image does such a critic compute on a
-       minibatch of one? What does a penalty that evaluates the critic on
-       one sample at a time therefore constrain?
-    1. In evaluation mode, batch normalization uses running averages of the
-       statistics instead, so that every score depends on its own sample
-       only. Why does a penalty computed in evaluation mode still not
-       regularize the critic that the loss trains?
-    1. What can a batch-normalized critic achieve under these penalties
-       that a per-sample critic cannot? Relate the answer to principle (c)
-       of :numref:`subsec_gan_r3gan_principles`.
-   :exlabel:`ex_dcgan-penalties-through-batch-norm`
 1. **Penalty weight and resolution.** The section uses $\gamma = 10$ for
    $64 \times 64$ sprites with pixel values in $[-1, 1]$, and
    :citet:`Huang.Gokaslan.Kuleshov.ea.2024` tune $\gamma$ separately for
    every dataset and resolution. This problem shows that part of this
-   dependence follows from the units of the input gradient in
-   :eqref:`eq_gan_r1r2`.
+   dependence follows from the units of the input
+   gradient in :eqref:`eq_gan_r1r2`.
     1. Let $U$ upsample a $64 \times 64$ image to $128 \times 128$ by
        copying every pixel into a $2 \times 2$ block, and let $A$ average
        every $2 \times 2$ block, so that $AU$ is the identity. The critic
@@ -1283,50 +1261,6 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
        about recall as a count of the modes that a generator covers? What
        determines the precision of such a generator?
    :exlabel:`ex_dcgan-precision-recall`
-1. [code] **Screening for copies.** The memorization check of
-   :numref:`subsec_gan_limited_data` compares every generated sample with
-   the stored training images in the CIFAR-CNN feature space.
-    1. Training presented every real image under a random horizontal flip,
-       so a generator could reproduce the mirror image of a training sprite,
-       which a search over the stored images would miss. Repeat the search
-       with every training image and its mirror image both admitted as
-       candidates. Do the distance distributions or the closest pairs
-       change?
-    1. Run the check in pixel space: use the Euclidean distance between the
-       flattened $64 \times 64 \times 3$ images in place of the feature
-       distance, and display the ten closest pairs. How do the neighbors that
-       the two distances select differ?
-    1. Which kinds of copies does each search detect: exact copies, copies
-       shifted by a few pixels, and copies with a changed palette? Which
-       search is therefore the stronger screen for copying?
-   :exlabel:`ex_dcgan-extend-memorization-check-numref`
-1. **EMA on a rotating trajectory.** ● The class `EMA` keeps the shadow
-   weights $\bar{\theta}_t = \beta \bar{\theta}_{t-1} + (1 - \beta)\theta_t$
-   of :eqref:`eq_ema`, starts from $\bar{\theta}_0 = \theta_0$, and sets
-   $\beta = 0.5^{1/h}$ for the half-life $h = 500$ steps. The section
-   motivates the average by the rotation of the two-player dynamics around
-   the equilibrium $\theta^\star$.
-    1. Which weight does $\bar{\theta}_T$ give the initial parameters
-       $\theta_0$ after $T = 1{,}000$, $4{,}000$, and $15{,}000$ steps? What
-       is the mean age of the iterates in the average when $T$ is large?
-    1. In its automatic configuration, the official implementation of
-       :citet:`Karras.Aittala.Hellsten.ea.2020` caps the half-life, counted
-       in images, at 5% of the number of training images shown so far.
-       Apply this cap to `train_backbone`, which shows 64 images per step,
-       and let step $t$ use the cap for the $64t$ images shown after it.
-       For how many of the 15,000 steps does the cap shorten the half-life
-       of 500 steps? Which weight does $\theta_0$ receive after 1,000
-       steps, compared with (a)?
-    1. Model one rotating pair of coordinates near the equilibrium in
-       complex notation as $\theta_t = \theta^\star + \rho^t e^{i\omega t} c$
-       with $\beta < \rho \leq 1$. Show that for large $t$
-       $$\frac{\bar{\theta}_t - \theta^\star}{\theta_t - \theta^\star} \to \frac{1 - \beta}{1 - (\beta/\rho)\, e^{-i\omega}}.$$
-    1. Evaluate the magnitude of this ratio for a pure rotation, $\rho = 1$,
-       with periods of 125 and 2,000 steps, and for a pure contraction,
-       $\omega = 0$, with $\rho = 0.999$. When does the average lie closer
-       to the equilibrium than the current iterate, and when does it lag
-       behind?
-   :exlabel:`ex_dcgan-ema-rotating-trajectory`
 1. [code] **Initialization and collapse.** ● With `Generator` and
    `Discriminator`, the classic arm of `train_backbone` collapses from the
    $\mathcal{N}(0, 0.02^2)$ initialization.
@@ -1352,8 +1286,8 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
    :exlabel:`ex_dcgan-rerun-arm-classic-loss`
 1. **Moments behind FID and KID.** ● FID depends on the two feature
    distributions only through their means and covariances. KID uses the
-   polynomial kernel $k(u, v) = (u^\top v / d + 1)^3$ in the estimator
-   :eqref:`eq_gan_kid`.
+   polynomial kernel $k(u, v) = (u^\top v / d + 1)^3$ in the
+   estimator :eqref:`eq_gan_kid`.
     1. Expand the kernel with the binomial theorem and write
        $(u^\top v)^j = \langle u^{\otimes j}, v^{\otimes j} \rangle$ to show
        that the population value of $\mathrm{MMD}^2$ is
@@ -1416,70 +1350,6 @@ We evaluate the runs with the Fréchet distance between Gaussian feature models 
        below about 0.85, but not reliably above. Why can a finite critic
        trained on a finite dataset fail before the limit $\pi = 1$?
    :exlabel:`ex_dcgan-augmentation-leaks`
-1. [code] **Bias of the Fréchet distance.** ●● Exercise
-   :exref:`ex_dcgan-measure-finite-sample-bias` measures the bias of the
-   plug-in FD; this problem derives its leading term. Let both feature sets
-   consist of $n$ independent samples of the same Gaussian
-   $\mathcal{N}(\mu, \Sigma)$ in $d$ dimensions, with sample means
-   $\hat{\mu}_p, \hat{\mu}_q$ and sample covariances $\hat{\Sigma}_p,
-   \hat{\Sigma}_q$. Since :eqref:`eq_gan_fid` is invariant under rotations
-   of the feature space, take $\Sigma = \operatorname{diag}(\lambda_1,
-   \ldots, \lambda_d)$.
-    1. Show that the mean term of :eqref:`eq_gan_fid` has expectation
-       $2 \operatorname{tr}(\Sigma) / n$.
-    1. Write $\hat{\Sigma}_p = \Sigma + X$ and $\hat{\Sigma}_q = \Sigma + Y$.
-       Explain why the trace term vanishes to first order and why its
-       second-order part depends on $X$ and $Y$ only through $X - Y$. Then
-       compute this part for $Y = 0$: write
-       $\big(\Sigma^{1/2} (\Sigma + X) \Sigma^{1/2}\big)^{1/2} = \Sigma + L$,
-       expand $L$ to second order in $X$ with the equation
-       $\Sigma L + L \Sigma + L^2 = \Sigma^{1/2} X \Sigma^{1/2}$, and show
-       that the trace term equals
-       $\frac{1}{2} \sum_{i,j} X_{ij}^2 / (\lambda_i + \lambda_j)$ up to
-       terms of third order.
-    1. For Gaussian samples, $X$ and $Y$ are independent with mean zero and
-       $E[X_{ij}^2] \approx (\lambda_i \lambda_j + \delta_{ij} \lambda_i^2)/n$.
-       Conclude that the expected plug-in FD is approximately
-
-       $$\frac{1}{n} \Big( \frac{5}{2} \operatorname{tr}(\Sigma) + \sum_{i,j} \frac{\lambda_i \lambda_j}{\lambda_i + \lambda_j} \Big),$$
-
-       which equals $d(d + 5)/(2n)$ for $\Sigma = I_d$. Which of the two
-       terms dominates for $d = 128$? How many samples does a plug-in FD in
-       $d$ dimensions need for its bias to stay below a fixed value?
-    1. Check the prediction with `fid_score` on Gaussian samples with
-       $d = 128$ and $n \in \{500, 2000\}$, both for $\Sigma = I_d$ and for
-       $\lambda_i = 1/i$. Then evaluate the prediction with the eigenvalues
-       of the covariance of `feat_real` at $n = 500$, and compare it with
-       `floor_fd`. What could explain a discrepancy?
-   :exlabel:`ex_dcgan-bias-frechet-distance`
-1. [extended] **The recipe on Fashion-MNIST.** ●● Fashion-MNIST has ten
-   balanced classes, so a classifier can count the modes that a generator
-   covers, which the sprites do not allow. This project repeats the
-   comparison of the two arms on Fashion-MNIST.
-    1. Adapt `Generator` and `Discriminator` to single-channel
-       $32 \times 32$ images: pad the $28 \times 28$ images to
-       $32 \times 32$, scale them to $[-1, 1]$, and remove one resampling
-       stage from each network. Decide whether to keep the horizontal flip
-       of `sample_real`, using problem
-       :exref:`ex_dcgan-augmentation-leaks`a.
-    1. Train the classic arm and the penalized arm with the budget,
-       optimizer, and $\mathcal{N}(0, 0.02^2)$ initialization of
-       `train_backbone`, and train the classic arm once more from the
-       default initialization.
-    1. Crop 10,000 samples of every EMA generator back to $28 \times 28$
-       and classify them with the Fashion-MNIST network of exercise
-       :exref:`ex_dcgan-retrain-feature-network-this`, replicating the
-       channel and upsampling as there. Report the class histogram, its KL
-       divergence from the uniform
-       distribution, the number of classes that receive at least 1% of the
-       samples, and the FD against held-out images in the features of that
-       network.
-    1. Which findings of the section reproduce: the collapse of the classic
-       arm from the shared initialization, its diversity under the default
-       initialization, and the stability of the penalized arm? Which
-       differences between the two datasets could explain a finding that
-       does not reproduce?
-   :exlabel:`ex_dcgan-recipe-fashion-mnist`
 
 [Discussions](https://d2l.discourse.group/)
 

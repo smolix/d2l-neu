@@ -465,17 +465,6 @@ Policy gradient methods optimize a parameterized policy directly. The log-deriva
        deterministic map. Which policy maximizes $J$ under the shifted
        rewards? Among the failed episodes of a batch, which ones does the
        estimate :eqref:`eq_reinforce` penalize least?
-1. [code] **Batch size and learning rate.** Sweep `batch_episodes` of
-   `train_reinforce` over $\{1, 4, 16, 64\}$ and the learning rate `lr` of
-   `ActorCritic.tabular` over $\{0.03, 0.1, 0.3\}$, with three seeds each.
-   Give every run a budget of $8{,}192$ episodes, that is,
-   `num_updates=8192 // batch_episodes`. For every cell, record the number
-   of episodes consumed before $J(\theta)$ first exceeds $0.5$, evaluating
-   $J(\theta)$ exactly with :eqref:`eq_pg_exact_objective` after each
-   update; the batch mean return is too coarse a criterion at batch size
-   one. Each run can stop once $J(\theta)$ exceeds $0.5$. Which direction
-   of the grid saves episodes, and which only trades updates for episodes?
-   Explain the pattern from the way Adam scales its steps.
 1. [code] **The theorem in a table.** ● For the tabular softmax policy,
    write $\rho(s) = \sum_{t \geq 0} \gamma^t \Pr(s_t = s)$ for the
    discounted number of visits to $s$, so that

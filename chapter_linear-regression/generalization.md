@@ -608,8 +608,8 @@ principles guide model selection in the settings considered here:
 1. [extended] **Double descent.** ● Extend the degree sweep of
    :numref:`subsec_polynomial-curve-fitting` well past the number of
    training points, for example to degree 60 on 20 training points,
-   computing the minimum-norm interpolant with `numpy.linalg.pinv` as in
-   :numref:`sec_mdl-concentration-generalization`.
+   computing the minimum-norm interpolant with `numpy.linalg.pinv` as
+   in :numref:`sec_mdl-concentration-generalization`.
     1. Run the sweep in the monomial basis $1, x, x^2, \ldots$ used in
        this section and plot the test error over the full range.
     1. Repeat with the Legendre polynomials $P_0(x), \ldots, P_d(x)$

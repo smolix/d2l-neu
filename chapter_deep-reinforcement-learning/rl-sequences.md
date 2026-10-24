@@ -359,24 +359,9 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
        estimate of the first token's gradient is noisier. Compute this
        second moment for both weightings.
    :exlabel:`ex_rl-sequences-two-digit-responses`
-1. **Discounting a terminal reward.** The section sets $\gamma = 1$. Suppose
-   instead that $\gamma < 1$, so that a response of $T$ tokens, which
-   receives the terminal reward $r(x, y)$ with its last token, has the
-   discounted return $\gamma^{T-1} r(x, y)$.
-    1. At $\gamma = 0.999$, compare the returns of two correct responses of
-       $100$ and $1000$ tokens. Which preference between responses does the
-       discounted objective add to the verifier's?
-    1. Let incorrect responses receive $r = -1$ instead of $0$. Which
-       incorrect responses does the discounted objective now prefer?
-    1. Implementations commonly weight the score of token $t$ by the
-       reward-to-go $\hat{G}_t$ of :eqref:`eq_rtg` and omit the factor
-       $\gamma^{t-1}$ of the exact estimator. Compute the weight that this
-       surrogate gives to the first and to the last token of a correct
-       response of $1000$ tokens, and compare both with the weight of the
-       exact estimator. Which tokens does the surrogate emphasize?
 1. **Unequal group sizes.** Centering by the same-group mean shrinks the
-   expected update of a prompt by the factor $(K-1)/K$
-   (:numref:`subsec_leave_one_out`). Suppose that prompt $x$ receives a
+   expected update of a prompt by the factor
+   $(K-1)/K$ (:numref:`subsec_leave_one_out`). Suppose that prompt $x$ receives a
    group of fixed size $K_x$, which may differ between prompts, for instance
    because a curriculum samples more responses for prompts that it considers
    hard. Write $J_x = E_{y \sim \pi_\theta(\cdot \mid x)}[r(x, y)]$ for the
@@ -572,8 +557,8 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
        in place of the one in :eqref:`eq_kl_objective`, the maximizer is
        $\pi(y) = \beta\, \pi_{\textrm{ref}}(y) / \big(\lambda - r(y)\big)$,
        where the constant $\lambda > \max_y r(y)$ makes the probabilities
-       sum to one (exercise :exref:`ex_regularized-forward-kl-penalty`a of
-       :numref:`sec_regularized`). Apply this result to the prompt `8*8`
+       sum to one (exercise :exref:`ex_regularized-forward-kl-penalty`a
+       of :numref:`sec_regularized`). Apply this result to the prompt `8*8`
        with the reward `sloppy`. Solve for $\lambda$ numerically at
        $\beta \in \{0.1, 0.25, 0.5\}$ and compare the probability of the
        hedge with its probability under the tilted optimum of

@@ -475,8 +475,8 @@ $$
 
 The waiting clock never "ages", exactly the property that makes the exponential
 the continuous-time partner of the Poisson. The converse, that memorylessness
-*forces* the exponential form, is exercise
-:exref:`ex_mdl-distributions-memoryless-converse`.
+*forces* the exponential form, is
+exercise :exref:`ex_mdl-distributions-memoryless-converse`.
 
 **Mean and variance.** With the standard integrals $\int_0^\infty u\,e^{-u}\,du=1$
 and $\int_0^\infty u^2 e^{-u}\,du=2$ (integration by parts,
@@ -580,8 +580,8 @@ $$
 so the standard Gaussian has variance $1$; shifting by $\mu$ and scaling by
 $\sigma$ gives mean $\mu$ and variance $\sigma^2$ in general. (The exponential
 family's moment property, :eqref:`eq_mdl-exp_family_moment`, recovers both by
-differentiation alone; see exercise
-:exref:`ex_mdl-distributions-log-partition-moments`.)
+differentiation alone; see
+exercise :exref:`ex_mdl-distributions-log-partition-moments`.)
 
 **Maximum entropy.** Among all distributions with a given mean and variance, the
 Gaussian has the largest entropy: it is the *most noncommittal* choice consistent
@@ -1203,24 +1203,6 @@ object whose mean and covariance the table states.
 
 ## Exercises
 
-1. **Multinomial moments.** Code a categorical draw as a one-hot vector
-   $\mathbf t\in\{0,1\}^K$ with $P(t_k=1)=p_k$. A multinomial count vector is
-   then the sum $\mathbf x=\sum_{i=1}^n\mathbf t_i$ of $n$ independent one-hot
-   draws, just as a binomial count is a sum of Bernoulli variables.
-    1. Show that $\mathbb E[\mathbf t]=\mathbf p$ and
-       $\operatorname{Cov}(\mathbf t)=\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$.
-       Use that every one-hot vector satisfies
-       $\mathbf t\mathbf t^\top=\operatorname{diag}(\mathbf t)$.
-    1. Derive $\mathbb E[\mathbf x]=n\mathbf p$ and
-       $\operatorname{Cov}(\mathbf x)=n\bigl(\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top\bigr)$
-       without manipulating the pmf :eqref:`eq_mdl-multinomial_pmf`. Why is
-       the covariance of two different counts $x_j$ and $x_k$ negative?
-    1. Show that $\mathbf 1^\top\operatorname{Cov}(\mathbf x)\,\mathbf 1=0$,
-       and explain this degeneracy by a property that every count vector
-       $\mathbf x$ has. What is the marginal distribution of a single count
-       $x_k$?
-   :exlabel:`ex_mdl-distributions-multinomial-moments`
-
 1. **Error counts on a test set.** A classifier is scored on $n=10{,}000$
    independent test examples, so that its number of errors $E$ has the
    distribution $\mathrm{Binomial}(n,q)$, where $q$ is its true error rate.
@@ -1240,23 +1222,6 @@ object whose mean and covariance the table states.
        is accurate for every error rate this small.
    :exlabel:`ex_mdl-distributions-error-counts`
 
-1. **Poisson process.** Let $X\sim\mathrm{Poisson}(\lambda_1)$ and
-   $Y\sim\mathrm{Poisson}(\lambda_2)$ be independent.
-    1. Compute $P(X+Y=k)$ by summing over the ways to split $k$ events
-       between $X$ and $Y$, and show that
-       $X+Y\sim\mathrm{Poisson}(\lambda_1+\lambda_2)$.
-    1. In a Poisson process with rate $\lambda$, the number $N(t)$ of events
-       in the window $[0,t]$ has the distribution $\mathrm{Poisson}(\lambda t)$.
-       Let $S_k$ be the time of the $k$-th event. Explain why $S_k\le t$ holds
-       exactly when $N(t)\ge k$, and use this to write $P(S_k\le t)$ as a
-       finite sum of Poisson probabilities. Differentiate in $t$ to show that
-       $S_k$ has the density $\mathrm{Gamma}(k,\lambda)$ of
-       :numref:`subsec_mdl-other-conjugate-pairs`.
-    1. Use (a) and the central limit theorem to show that
-       $(X-\lambda_1)/\sqrt{\lambda_1}$ converges in distribution to
-       $\mathcal N(0,1)$ as $\lambda_1\to\infty$ through the integers.
-   :exlabel:`ex_mdl-distributions-poisson-process`
-
 1. **Exponential races.** Let $X_1,\dots,X_m$ be independent with
    $X_i\sim\mathrm{Exp}(\lambda_i)$, for example the waiting times for the next
    event in $m$ independent event streams.
@@ -1270,47 +1235,6 @@ object whose mean and covariance the table states.
        has the standard Gumbel distribution, this result is the Gumbel-max
        trick.
    :exlabel:`ex_mdl-distributions-exponential-races`
-
-1. **Laplace location estimate.** Model a sample $x_1,\dots,x_n$, sorted as
-   $x_{(1)}\le\dots\le x_{(n)}$, as independent draws from
-   $\mathrm{Laplace}(\mu,b)$ :eqref:`eq_mdl-laplace_pdf`. The
-   maximum-likelihood location minimizes $f(\mu)=\sum_i|x_i-\mu|$.
-    1. Away from the data points, $f$ is differentiable. Express $f'(\mu)$
-       through the numbers of data points to the left and to the right of
-       $\mu$. Use it to find every minimizer of $f$, separately for odd and
-       for even $n$.
-    1. Fix the location at a minimizer $\hat\mu$ and find the
-       maximum-likelihood scale $\hat b$.
-    1. An adversary may replace $k$ of the $n$ points by arbitrary values.
-       What is the smallest $k$ that can move the sample mean arbitrarily far?
-       What is the smallest such $k$ for the sample median when $n$ is odd?
-       What does the comparison imply for training a regression network with
-       the mean absolute error instead of the mean squared error when some
-       labels are corrupted?
-   :exlabel:`ex_mdl-distributions-laplace-location`
-
-1. [code] **Confidence ellipses.** Let
-   $\mathbf x\sim\mathcal N(\boldsymbol\mu,\boldsymbol\Sigma)$ in
-   $\mathbb R^d$. Its squared *Mahalanobis distance* from the mean is
-
-   $$r^2=(\mathbf x-\boldsymbol\mu)^\top\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu),$$
-
-   whose level sets are the density contours of :eqref:`eq_mdl-mvn_pdf`.
-    1. Write $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$ with the Cholesky
-       factorization $\boldsymbol\Sigma=\mathbf L\mathbf L^\top$ and
-       $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$, and show that
-       $r^2=\|\mathbf z\|^2$. Why does the distribution of $r^2$ not depend
-       on $\boldsymbol\Sigma$?
-    1. For $d=2$, integrate the density of $\mathbf z$ in polar coordinates
-       to show that $P(r^2>c)=e^{-c/2}$. Which distribution of this section
-       does $r^2$ have? Find the $c$ for which the ellipse $r^2\le c$ contains
-       $95\%$ of the probability.
-    1. For $\boldsymbol\Sigma=\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$
-       and $\boldsymbol\mu=\mathbf 0$, give the directions and half-lengths of
-       the axes of this $95\%$ ellipse. Draw $5000$ samples with
-       `rng.multivariate_normal(mu_v, Sigma, size=5000)` and compute the
-       fraction of them that falls inside the ellipse.
-   :exlabel:`ex_mdl-distributions-confidence-ellipses`
 
 1. **Conditioning on a noisy observation.** The conditional formulas
    :eqref:`eq_mdl-mvn_conditional` turn a joint Gaussian into a prediction of
@@ -1327,8 +1251,8 @@ object whose mean and covariance the table states.
        $1/\operatorname{Var}(s\mid y)$ is the sum of the prior precision
        $1/\tau^2$ and the noise precision $1/\sigma^2$. How does
        $\mathbb E[s\mid y]$ behave as $\sigma^2\to0$ and as
-       $\sigma^2\to\infty$? This computation is Gaussian process regression
-       (:numref:`chap_gp`) with a single observation.
+       $\sigma^2\to\infty$? This computation is Gaussian process
+       regression (:numref:`chap_gp`) with a single observation.
    :exlabel:`ex_mdl-distributions-using-conditional-formula-eqref`
 
 1. **Maximum entropy on the integers.** Consider distributions
@@ -1336,8 +1260,8 @@ object whose mean and covariance the table states.
    :numref:`subsec_mdl-max-entropy-derivation` asserts that the base measure
    decides which of them maximizes entropy.
     1. Maximize the Shannon entropy $H[p]=-\sum_k p_k\log p_k$ subject to
-       $\sum_k p_k=1$ and $\sum_k k\,p_k=m$, using Lagrange multipliers
-       (:numref:`subsec_mdl-lagrange-multipliers`). Show that the stationary
+       $\sum_k p_k=1$ and $\sum_k k\,p_k=m$, using Lagrange
+       multipliers (:numref:`subsec_mdl-lagrange-multipliers`). Show that the stationary
        point is a geometric distribution $p_k=(1-q)\,q^k$, and express $q$
        through $m$.
     1. Repeat the derivation for the entropy relative to $h(k)=1/k!$,
@@ -1407,9 +1331,10 @@ object whose mean and covariance the table states.
        $\nabla A(\mathbf z)=\mathrm{softmax}(\mathbf z)$. Deduce the gradient
        of the cross-entropy loss $-\log P(\mathbf y)$ of a one-hot label
        $\mathbf y$ with respect to the logits.
-    1. Compute $\nabla^2 A(\mathbf z)$ and compare it with
-       $\operatorname{Cov}(\mathbf t)$ of problem
-       :exref:`ex_mdl-distributions-multinomial-moments`a. Show that
+    1. Compute $\nabla^2 A(\mathbf z)$ and show that it equals the
+       covariance $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$
+       of the one-hot vector $\mathbf x$. Every one-hot vector satisfies
+       $\mathbf x\mathbf x^\top=\operatorname{diag}(\mathbf x)$. Show that
        $\nabla^2A(\mathbf z)\,\mathbf 1=\mathbf 0$, and that the gradient of
        the negative log-likelihood of a dataset is orthogonal to $\mathbf 1$
        at every $\mathbf z$. Gradient descent with a small step size runs on
@@ -1458,8 +1383,8 @@ object whose mean and covariance the table states.
     1. For the Poisson, $\eta=\log\lambda$ and $A(\eta)=e^\eta$. Change
        variables from $\eta$ to $\lambda$, including the Jacobian, and show
        that the prior on $\lambda$ is a Gamma distribution. Identify its shape
-       and rate, and check that the update reproduces the Gamma posterior of
-       :numref:`subsec_mdl-other-conjugate-pairs`.
+       and rate, and check that the update reproduces the Gamma posterior
+       of :numref:`subsec_mdl-other-conjugate-pairs`.
     1. For the Bernoulli, $\eta=\log\frac{p}{1-p}$ and
        $A(\eta)=\log(1+e^\eta)$. Show that the prior on $p$ is a Beta
        distribution, identify its parameters, and find the values of
@@ -1487,8 +1412,9 @@ object whose mean and covariance the table states.
 
        evaluated in exact rational arithmetic with Python's
        `fractions.Fraction`, because its terms cancel catastrophically in
-       floating point once $n$ exceeds about $40$. For exponential summands
-       use problem :exref:`ex_mdl-distributions-poisson-process`b. For the
+       floating point once $n$ exceeds about $40$. For exponential summands,
+       $S_n$ is the time of the $n$-th event of a Poisson process with rate
+       $1$, so $P(S_n\le s)=P(N\ge n)$ for $N\sim\mathrm{Poisson}(s)$. For the
        two continuous summands, take the supremum over a fine grid of
        $x\in[-4,4]$. For Bernoulli summands, compare $\Phi$ with $F_n$ on
        both sides of every jump. Plot $D_n$ against $n$ on log-log axes and
@@ -1525,8 +1451,8 @@ object whose mean and covariance the table states.
 1. [extended] **Burstiness of word counts.** ●● :citet:`Church.Gale.1995`
    found that word counts in text vary across documents more than a Poisson
    model allows, and that Poisson mixtures such as the negative binomial fit
-   them better. Reproduce the finding at small scale on *The Time Machine*
-   (:numref:`sec_text-sequence`). Download the text with
+   them better. Reproduce the finding at small scale on
+   *The Time Machine* (:numref:`sec_text-sequence`). Download the text with
    `d2l.download(d2l.DATA_URL + 'timemachine.txt')`, keep only letters as
    `d2l.TimeMachine._preprocess` does, split it into words, and cut the word
    sequence into consecutive chunks of $L=500$ words, which play the role of

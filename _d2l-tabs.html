@@ -123,6 +123,40 @@
 </script>
 
 <script>
+// Anchors repeated across framework panes. An Exercises list with tabbed
+// problems is rendered once per framework pane (expand_exercise_tabs in
+// tools/d2l_preprocess.py), so a problem's anchor id occurs in every pane.
+// The browser jumps to the first occurrence, which is hidden unless that
+// pane's framework is selected; scroll to the visible occurrence instead.
+(function() {
+  function shown(el) { return el.getClientRects().length > 0; }
+
+  function jump() {
+    var id;
+    try { id = decodeURIComponent(location.hash.slice(1)); } catch (e) { return; }
+    if (!id) return;
+    var first = document.getElementById(id);
+    if (!first || shown(first)) return;
+    var all = document.querySelectorAll('[id="' + id.replace(/["\\]/g, '\\$&') + '"]');
+    for (var i = 0; i < all.length; i++) {
+      if (shown(all[i])) { all[i].scrollIntoView(); return; }
+    }
+  }
+
+  window.addEventListener('hashchange', jump);
+  window.addEventListener('load', function() { setTimeout(jump, 0); });
+  // A click on a link to the current hash fires no hashchange.
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest && e.target.closest('a[href*="#"]');
+    if (a && a.hash && a.hash === location.hash &&
+        a.pathname === location.pathname) {
+      setTimeout(jump, 0);
+    }
+  });
+})();
+</script>
+
+<script>
 // Hide tab chrome on text-only tabsets.
 // A tabset is "text-only" if none of its panes contain a code block.
 // Adds d2l-text-only class AND directly hides the nav to beat Bootstrap timing.

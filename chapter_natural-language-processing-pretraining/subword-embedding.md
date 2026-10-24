@@ -232,6 +232,18 @@ print(segment_BPE(tokens, symbols))
 1. As an example, there are about $3\times 10^8$ possible  $6$-grams in English. What is the issue when there are too many subwords? How to address the issue? Hint: refer to the end of Section 3.2 of the fastText paper :cite:`Bojanowski.Grave.Joulin.ea.2017`.
 1. How to design a subword embedding model based on the continuous bag-of-words model?
 1. To get a vocabulary of size $m$, how many merging operations are needed when the initial symbol vocabulary size is $n$?
+1. `segment_BPE` segments a word greedily, taking the longest symbol that
+   matches at the current position. It does not replay the merges that
+   training learned.
+    1. Record `max_freq_pair` in every iteration of the training loop, and
+       write a function that segments a word by splitting it into
+       characters and applying the recorded merges in the order in which
+       they were learned.
+    1. Segment "tallest_", "fatter_", and "fastall_" with both functions,
+       and report the results.
+    1. Explain why the two functions disagree on one of these words, and
+       show that replaying the merges reproduces the segmentation of every
+       word in `token_freqs`.
 1. How to extend the idea of byte pair encoding to extract phrases?
 
 

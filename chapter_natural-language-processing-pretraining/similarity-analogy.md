@@ -343,6 +343,40 @@ get_analogy('do', 'did', 'go', glove_6b50d)
 ## Exercises
 
 1. Test the fastText results using `TokenEmbedding('wiki.en')`.
+1. Write a variant of `knn` that ranks words by the dot product
+   $\mathbf{W} \mathbf{x}$ instead of the cosine similarity. Run
+   `get_similar_tokens` with both scores for "chip", "baby", and
+   "beautiful", and report the five nearest words of each together with
+   the norms of their vectors. Explain why the dot product prefers the
+   words that it adds to the lists.
+1. `get_analogy` returns the word whose vector is closest to
+   $\mathbf{x} = \textrm{vec}(b) - \textrm{vec}(a) + \textrm{vec}(c)$ among
+   all words, including $a$, $b$, and $c$.
+    1. Complete the analogies "man":"king"::"woman":? and
+       "good":"better"::"bad":? with `get_analogy` and `glove_6b50d`, and
+       report the answers.
+    1. Show that ranking words $d$ by the cosine similarity of
+       $\textrm{vec}(d)$ and $\mathbf{x}$ is the same as ranking them by
+       $\|\textrm{vec}(b)\| \cos(d, b) - \|\textrm{vec}(a)\| \cos(d, a) + \|\textrm{vec}(c)\| \cos(d, c)$,
+       where $\cos(d, b)$ is the cosine similarity of $\textrm{vec}(d)$ and
+       $\textrm{vec}(b)$. Use this to explain the answers of the previous
+       part.
+    1. Modify `get_analogy` to exclude $a$, $b$, $c$, and the unknown token
+       from the candidates. Report its answers for the two analogies above
+       and for the four analogies of this section.
+1. Word vectors reproduce associations that are present in their training
+   corpus. Using a version of `get_analogy` that excludes the query words
+   from the candidates, report the five best candidates for
+   "man":"doctor"::"woman":? and for "woman":"nurse"::"man":?. Find one more
+   analogy in `glove_6b50d` that reproduces a social stereotype, for
+   example about professions or nationalities. Explain how the
+   co-occurrence counts $x_{ij}$ of :numref:`sec_glove` produce such
+   associations, and describe one way in which they can harm a downstream
+   system that uses these vectors as input features.
+
+   *Adapted from Stanford CS224N,
+   [Assignment 1](https://web.stanford.edu/class/cs224n/assignments/a1_preview/exploring_word_vectors.html),
+   Questions 2.7–2.9.*
 1. When the vocabulary is extremely large, how can we find similar words or complete a word analogy faster?
 
 :begin_tab:`mxnet`

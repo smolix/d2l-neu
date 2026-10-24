@@ -507,24 +507,6 @@ combine noise levels so that neither side of the trade-off is lost.
        $\mathbb{R}^d$ instead. Compute the mean square of the component of the
        score orthogonal to the subspace.
    :exlabel:`ex_denoising-data-on-a-line`
-1. [code] **Vincent's theorem in numbers.** By Vincent's theorem, the
-   denoising objective :eqref:`eq_diffusion-dsm` of a model exceeds its value
-   at the exact score of $p_\sigma$ by the Fisher divergence between the model
-   and $p_\sigma$. For `mix` the exact score is
-   `lambda z: mix.score(z, sigma=sigma)`, so the theorem can be checked on the
-   networks in `scores`, trained in
-   :numref:`subsec_diffusion-denoising-noise-level`.
-    1. For each $\sigma \in \{0.1, 0.3, 1.0\}$, draw $2 \times 10^5$ points
-       $\mathbf{x}$ from `mix` and one noise vector $\boldsymbol{\epsilon}$
-       for each point, and evaluate the denoising objective on these pairs,
-       once with the trained network and once with the exact score. Compare
-       the difference with `fisher_divergence` of the network at the noisy
-       points $\mathbf{x} + \sigma \boldsymbol{\epsilon}$.
-    1. Why does the comparison at $\sigma = 0.1$ need the same noise draws
-       for both evaluations?
-    1. What fraction of each network's denoising objective is irreducible?
-       What does the answer imply for judging training progress from the
-       training loss at $\sigma = 0.1$?
 1. **Two-point data.** Let $p = \tfrac12 \delta_{-1} + \tfrac12 \delta_{+1}$
    in one dimension, perturbed at noise level $\sigma$.
     1. Compute the posterior mean $\mathbb{E}[x \mid \tilde{x}]$ by Bayes'
@@ -557,8 +539,8 @@ combine noise levels so that neither side of the trade-off is lost.
 
     1. Evaluate it for $s = 0.5$, $d = 2$, and
        $\sigma \in \{0.1, 0.3, 1.0\}$, and compare it with the values of
-       `fisher_divergence(scores[sigma], test)` printed in
-       :numref:`subsec_diffusion-denoising-noise-level`. Which part of each
+       `fisher_divergence(scores[sigma], test)`
+       printed in :numref:`subsec_diffusion-denoising-noise-level`. Which part of each
        printed value does the bias account for, and what accounts for the
        rest at $\sigma = 0.1$?
     1. Divide the bias by
@@ -570,19 +552,6 @@ combine noise levels so that neither side of the trade-off is lost.
        $10\%$? What does this imply for data concentrated near a
        low-dimensional set, as in problem
        :exref:`ex_denoising-data-on-a-line`?
-1. [code] **Mismatched noise levels.** The network `denoiser` was trained at
-   $\sigma = 0.5$; call its output $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$.
-   Corrupt the first $1000$ images of `X_test` at the levels
-   $\sigma_{\textrm{test}} \in \{0.1, 0.25, 0.5, 0.75, 1.0\}$ and denoise
-   them in two ways: with Tweedie's formula at the training level,
-   $\tilde{\mathbf{x}} - 0.5\, \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}})$,
-   and with the test level,
-   $\tilde{\mathbf{x}} - \sigma_{\textrm{test}}\, \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}})$.
-   Plot the per-pixel squared error of both against $\sigma_{\textrm{test}}$,
-   together with the error $\sigma_{\textrm{test}}^2$ of the noisy input.
-   Describe the failure below the training level and above it. What
-   information would a single network need in order to denoise well at every
-   level?
 1. **Laplace noise.** ● The derivation of
    :eqref:`eq_diffusion-posterior-mean-score` uses the Gaussian form of the
    noise kernel only to identify the target with the conditional score.
@@ -668,8 +637,8 @@ combine noise levels so that neither side of the trade-off is lost.
     1. Estimate $\boldsymbol{\mu}$ and $\Sigma$ from the flattened images in
        `X`, compute the predicted error at $\sigma = 0.5$, and check it on the
        first $1000$ images of `X_test`. Compare it with the error of the
-       Tweedie denoiser built from `denoiser` in
-       :numref:`subsec_diffusion-denoising-images`. How many eigenvalues of
+       Tweedie denoiser built from `denoiser`
+       in :numref:`subsec_diffusion-denoising-images`. How many eigenvalues of
        $\Sigma$ exceed $\sigma^2$, and what does this count say about which
        image features the linear denoiser keeps?
    :exlabel:`ex_denoising-linear-denoiser`

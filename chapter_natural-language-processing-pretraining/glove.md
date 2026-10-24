@@ -285,6 +285,47 @@ the GloVe loss function in
 
 1. If words $w_i$ and $w_j$ co-occur in the same context window, how can we use their distance in the text sequence to redesign the method for calculating the conditional probability $p_{ij}$? Hint: see Section 4.2 of the GloVe paper :cite:`Pennington.Socher.Manning.2014`.
 1. For any word, are its center word bias and context word bias mathematically equivalent in GloVe? Why?
+1. Let $X = \sum_{i, j} x_{ij}$, and define the pointwise mutual information
+   $\textrm{PMI}_{ij} = \log \left(x_{ij} X / (x_i x_j)\right)$, where
+   $x_j = \sum_i x_{ji}$ as in the text.
+    1. Show that with the biases fixed to
+       $b_i = \log x_i - \frac{1}{2} \log X$ and
+       $c_j = \log x_j - \frac{1}{2} \log X$, the relation
+       :eqref:`eq_glove-square` becomes
+       $\mathbf{u}_j^\top \mathbf{v}_i \approx \textrm{PMI}_{ij}$.
+    1. Suppose that a word becomes twice as frequent while the words it
+       co-occurs with stay the same, so that every count in its row and
+       column doubles. Which of $\log x_{ij}$ and $\textrm{PMI}_{ij}$ stays
+       approximately unchanged? What do the biases therefore absorb?
+    1. What is $\textrm{PMI}_{ij}$ for two words that never co-occur, and
+       how does $h(0) = 0$ avoid the problem? Compare with skip-gram with
+       negative sampling, whose dot products approximate
+       $\textrm{PMI}_{ij} - \log K$ for $K$ noise words
+       :cite:`Levy.Goldberg.2014`.
+1. The derivation of :eqref:`eq_glove-square` requires $f(x) f(-x) = 1$
+   and then picks $f(x) = \exp(x)$.
+    1. Show that $f(x) = \exp(g(x))$ satisfies this condition for every odd
+       function $g$, so that the condition alone does not single out the
+       exponential function.
+    1. The next step uses a stronger property: it writes
+       $f\left((\mathbf{v}_j - \mathbf{v}_k)^\top \mathbf{u}_i\right)$ as
+       $f(\mathbf{v}_j^\top \mathbf{u}_i) / f(\mathbf{v}_k^\top \mathbf{u}_i)$
+       for all vectors, that is, $f(a - b) = f(a) / f(b)$ for all real $a$
+       and $b$. Show that every continuous $f > 0$ with this property is
+       $f(x) = \exp(\lambda x)$ for some constant $\lambda$.
+    1. Explain why the value of $\lambda$ does not matter for the model.
+1. Let $\mathbf{A}$ be an invertible $d \times d$ matrix.
+    1. Show that the loss :eqref:`eq_glove-loss` does not change when every
+       $\mathbf{v}_i$ is replaced by $\mathbf{A} \mathbf{v}_i$ and every
+       $\mathbf{u}_j$ by $\mathbf{A}^{-\top} \mathbf{u}_j$.
+    1. Which of the quantities $\mathbf{u}_j^\top \mathbf{v}_i$,
+       $\mathbf{v}_i^\top \mathbf{v}_k$, and the cosine similarity of
+       $\mathbf{v}_i$ and $\mathbf{v}_k$ are unchanged for every invertible
+       $\mathbf{A}$, and which only for orthogonal $\mathbf{A}$?
+    1. The loss cannot prefer one $\mathbf{A}$ over another. What then
+       determines the cosine similarities of the trained vectors, and what
+       does this imply for interpreting individual coordinates of a word
+       vector?
 
 
 [Discussions](https://d2l.discourse.group/t/385)

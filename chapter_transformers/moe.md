@@ -832,24 +832,6 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        the ability of the loss to repair a collapse in which the router
        has become confident?
 
-1. **Expert-choice routing.** In *expert-choice* routing
-   :cite:`Zhou.Lei.Liu.ea.2022`, the selection runs the other way: each
-   expert takes the $C = cN/E$ tokens of a batch of $N$ tokens that assign
-   it the highest router probability, and a token is processed by every
-   expert that took it. The *capacity factor* $c$ sets the size of each
-   expert's buffer relative to its balanced share $N/E$.
-    1. Every expert processes exactly $C$ tokens, so the load is balanced
-       by construction. What is the average number of experts per token,
-       and what are the smallest and largest numbers of experts a single
-       token can receive?
-    1. Explain why this rule cannot be used as is to train a causal
-       language model that later decodes one token at a time. Consider
-       which positions influence whether a given token is selected.
-    1. A capacity-limited token-choice layer fills each expert's buffer in
-       batch order and drops the overflow. Which tokens of the batch can
-       decide whether a given token is processed, and how does the order
-       in which the buffers are filled matter for a causal model?
-
 1. [code] **Feedback-loop ablations.** The argument of
    :numref:`subsec_moe-feedback` names two reinforcing effects: a
    frequently selected expert improves on its tokens, and the router
@@ -908,69 +890,10 @@ GPT implementation exposes the same mechanism by replacing the dense FFN.
        dropped at $c = 1$ for $E = 8$ and for $E = 64$. How does the
        fraction scale with $E$ and $N$, and what does $c = 1.25$ change?
 
-:begin_tab:`pytorch`
-8. [code] **Sparse dispatch.** ● `MoELayer` evaluates every expert on
-    every token and masks the result, so its arithmetic grows with $E$
-    rather than with $k$. Write a function `gathered_moe(layer, X)` that
-    returns `layer(X)` for a `MoELayer` with `num_active=1` while
-    evaluating each expert only on its own tokens: flatten `X` to shape
-    $(BT, d)$, find the rows routed to each expert with `torch.nonzero`,
-    apply the expert to those rows, and accumulate the gated outputs with
-    `index_add_`.
-    1. Check on random input that `gathered_moe(layer, X)` agrees with
-       `layer(X)` up to floating-point error.
-    1. Time both on an input of shape $(4, 512, 256)$ for
-       $E \in \{2, 4, 8, 16, 32\}$. From which $E$ on is the gathered
-       version faster on your hardware? Count the expert FLOPs of each
-       version as a function of $E$, compare the measured ratio of run
-       times with the ratio of FLOPs, and name the operations of the
-       gathered version that account for the difference.
-:end_tab:
-
-:begin_tab:`jax`
-8. [code] **Capacity-limited dispatch.** ● `MoELayer` evaluates every
-    expert on every token and masks the result, so its arithmetic grows
-    with $E$ rather than with $k$. A jitted alternative must keep its
-    shapes static, so each expert receives a buffer of
-    $C = \lceil cN/E \rceil$ slots for $N$ tokens. Write a function
-    `capacity_moe(layer, X, c)` for a `MoELayer` with `num_active=1`:
-    flatten `X` to shape $(N, d)$, compute each token's slot in its
-    expert's buffer with `jnp.cumsum` over the one-hot selection mask, drop
-    the tokens whose slot is at least $C$, build a dispatch tensor of shape
-    $(N, E, C)$ with `jax.nn.one_hot`, gather the expert inputs into shape
-    $(E, C, d)$ with `jnp.einsum`, apply each expert to its buffer, and
-    combine the outputs with the gates.
-    1. Check on random input that `capacity_moe(layer, X, c)` with $c = E$,
-       where nothing is dropped, agrees with `layer(X)` up to
-       floating-point error.
-    1. Jit both and time them at $c = 1.25$ on an input of shape
-       $(4, 512, 256)$ for $E \in \{2, 4, 8, 16, 32\}$. From which $E$ on
-       is the dispatch version faster on your hardware? Express the FLOPs
-       of each of its steps in terms of $N$, $E$, $c$, and $d$, and identify
-       the step that dominates as $N$ grows at fixed $E$ and $c$.
-:end_tab:
-
-9. [code] **Auxiliary-loss weight.** ● The comparison of
-   :numref:`subsec_moe-balance-comparison` fixes $\alpha = 0.01$ and runs
-   one seed per method.
-    1. Run the auxiliary-loss configuration with
-       $\alpha \in \{0, 10^{-3}, 10^{-2}, 10^{-1}, 1\}$, and the bias
-       configuration with $u = 0.01$, each for seeds 0, 1, and 2. Plot the
-       final training loss and the number of experts under 2% usage
-       against $\alpha$ with their spread over seeds, and draw the bias
-       runs as a reference.
-    1. Does the unbalanced run ($\alpha = 0$) collapse for every seed?
-       Describe how the training loss depends on $\alpha$, and explain its
-       behavior at small and at large $\alpha$ from the two terms of the
-       training objective.
-    1. At $\alpha = 0.01$, is the difference in training loss between the
-       auxiliary loss and the bias controller larger than the spread over
-       seeds?
-
 1. [code] **Shared expert.** ● Write `SharedMoELayer`, a subclass of
    `MoELayer` that adds the output of one extra `d2l.FeedForward`, applied
-   to every token with weight one, to the routed mixture
-   (:numref:`subsec_moe-fine-grained`). Compare two models in the setup of
+   to every token with weight one, to the routed
+   mixture (:numref:`subsec_moe-fine-grained`). Compare two models in the setup of
    :numref:`subsec_moe-balance-comparison`, both balanced by the bias
    controller: `MoELayer` with $E = 8$ and $k = 2$, and `SharedMoELayer`
    with 7 routed experts and $k = 1$. Both store eight experts per layer

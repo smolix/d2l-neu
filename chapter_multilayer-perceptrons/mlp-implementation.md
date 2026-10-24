@@ -329,6 +329,13 @@ The following sections address these requirements for reliable training.
 
 ## Exercises
 
+1. **Parameter count.** The one-hidden-layer model of this section maps 784
+   inputs through $h$ hidden units to 10 outputs.
+    1. Give a closed-form expression for the total number of parameters as a
+       function of $h$.
+    1. At which $h$ does the parameter count equal the number of training
+       examples in Fashion-MNIST (60,000)? Compare this value with the 256
+       units used in this section.
 1. [code] **Single hidden unit.** Set `num_hiddens=1` in `MLP`, so that its
    hidden layer has a single ReLU unit with weights
    $\mathbf{w}^{(1)} \in \mathbb{R}^{784 \times 1}$ and bias
@@ -351,6 +358,43 @@ The following sections address these requirements for reliable training.
        report for each run the validation accuracy and the fraction of
        validation examples on which $t > 0$. Compare any run in which this
        fraction is zero with your answer to (b).
+1. [code] **Width and learning rate.** Train `MLP` for 10 epochs at every
+   combination of learning rate in $\{0.01, 0.03, 0.1, 0.3\}$ and hidden
+   width `num_hiddens` in $\{32, 64, 128, 256\}$, and plot the final
+   validation accuracy as a heatmap.
+    1. At the learning rate $0.1$ used in this section, which width gives the
+       best result, and how strongly does accuracy depend on width there?
+    1. Does the best learning rate shift systematically with width?
+    1. Repeat the sweep over learning rates at width 256 with 20 epochs
+       instead of 10. How does the best learning rate relate to the training
+       budget?
+1. [code] **Memory alignment.** This section notes that power-of-two widths
+   often suit accelerator kernels. Time the product of two $n \times n$
+   matrices for $n \in \{1024, 1025, 1026, 1028, 1032\}$. Divide the $2n^3$
+   floating-point operations of each product by its time to obtain the
+   throughput. Measure the throughput on a CPU in single precision and on a
+   GPU in single and half precision. For which $n$ does the throughput drop
+   on each device and precision, and by how much?
+1. [code] **Gradient check.** ● Cast the parameters of `MLPScratch` and one
+   minibatch of Fashion-MNIST to double precision. For an entry $w$ of `W1`,
+   the central difference
+
+    $$\hat{g} = \frac{\ell(w + \epsilon) - \ell(w - \epsilon)}{2\epsilon}$$
+
+    approximates the derivative $g = \partial \ell / \partial w$ of the
+    minibatch loss $\ell$. Compute $\hat{g}$ and the gradient $g$ from
+    automatic differentiation for 50 randomly chosen entries of `W1`.
+    1. For some entries both $g$ and $\hat{g}$ are exactly zero. Explain how
+       this happens in this network, and exclude these entries below.
+    1. Plot the maximum over the sample of the relative error
+       $|g - \hat{g}| / \max(|g|, |\hat{g}|)$ against $\epsilon$ for
+       $\epsilon = 10^{-1}, 10^{-2}, \ldots, 10^{-9}$. Inspect the entries
+       that attain the maximum, and explain why the error grows at both
+       ends of this range.
+
+    *Adapted from Stanford CS231n,
+    [Assignment 1](https://cs231n.github.io/assignments2023/assignment1/),
+    two-layer network.*
 1. [code] **Initialization scale and depth.** ● `MLPScratch` initializes its
    weights with Gaussian noise of standard deviation $\sigma = 0.01$.
     1. Train the one-hidden-layer model with $\sigma = 0.001$, $0.01$, and

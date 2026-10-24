@@ -878,8 +878,8 @@ and suspicion of round numbers.
     1. `newton_schulz` leaves the singular values in a band around $1$
        rather than exactly at $1$. Bound the ratio between the Frobenius
        norm of its output and $\sqrt{\min(m, n)}$ in terms of the band's
-       endpoints, and measure the ratio on the $96 \times 64$ example of
-       :numref:`subsec_muon-newton-schulz`.
+       endpoints, and measure the ratio on the $96 \times 64$ example
+       of :numref:`subsec_muon-newton-schulz`.
     1. Instrument a short AdamW run of `TinyLM` to measure the entrywise
        RMS of its actual updates, per parameter tensor, over the first few
        hundred steps. Does the constant $0.2$ fit the hidden matrices, the
@@ -910,8 +910,8 @@ and suspicion of round numbers.
        do to the update of a rare token's row of `token_emb`, compared
        with that of a frequent token's row?
     1. Move `token_emb` into the Muon group, keeping `pos_emb` and the
-       output head with AdamW, and rerun the sweep of
-       :numref:`subsec_muon-lm-race`. Compare the best final loss with that
+       output head with AdamW, and rerun the sweep
+       of :numref:`subsec_muon-lm-race`. Compare the best final loss with that
        of `muon_lm`, and explain the difference with your answer to the
        previous sub-item.
 

@@ -404,6 +404,12 @@ for ax, label in zip(axes, batch[1][:10]):
 
 1. Demonstrate other images with ground-truth bounding boxes in the banana detection dataset. How do they differ with respect to bounding boxes and objects?
 1. Say that we want to apply data augmentation, such as random cropping, to object detection. How can it be different from that in image classification? Hint: what if a cropped image only contains a small portion of an object?
+1. Compute the width, height, aspect ratio (width divided by height), and area of every training box returned by `read_data_bananas`, in units of the image size. Plot their histograms and report the minimum, median, and maximum of each. Then generate one anchor per position (size 0.2, ratio 1) with `d2l.multibox_prior` on feature maps of size $4 \times 4$, $8 \times 8$, $16 \times 16$, and $32 \times 32$, and use `d2l.box_iou` to report for each the fraction of training boxes whose best anchor has IoU at least 0.5. What is the coarsest feature map that covers at least 99% of the boxes? On the $8 \times 8$ map, how much does adding the sizes and ratios of your choice raise the fraction, compared with halving the grid step?
+1. Implement the random crop of problem 2 for the banana dataset: crop a random $192 \times 192$ window from each $256 \times 256$ training image, resize the window back to $256 \times 256$, and shift, clip, and rescale the box label accordingly. Plot a few augmented images with their boxes to check the labels. Report the fraction of training images in which less than half of the banana's area remains inside the window. What label would you give such an image?
+1. Images with fewer than $m$ boxes are padded with illegal boxes of class $-1$. Check what the implementation of `multibox_target` in :numref:`sec_anchor` does with such a box: append the row `[-1, 0, 0, 0, 0]` to the dog and cat labels of the example in :numref:`subsec_labeling-anchor-boxes`, and compare the returned class labels, masks, and offsets with and without it.
+    1. Which anchor does the loop in `assign_anchor_to_bbox` assign to the padding box, and why that one?
+    1. What class label, mask, and offset label does that anchor receive, and how would they affect the loss of a detector trained on these labels?
+    1. Modify `multibox_target` so that it ignores padding boxes, and check that its output then matches the unpadded case.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/372)

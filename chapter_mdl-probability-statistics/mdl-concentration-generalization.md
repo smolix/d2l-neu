@@ -254,8 +254,8 @@ MGF identity holds with equality). A *bounded* variable on $[a,b]$ is
 sub-Gaussian with proxy $(b-a)^2/4$; that is Hoeffding's lemma. And a
 *Rademacher* variable, a uniform random sign $\varepsilon\in\{-1,+1\}$, is
 sub-Gaussian with proxy $1$: $E[e^{\lambda\varepsilon}]=\cosh\lambda\le
-e^{\lambda^2/2}$, a term-by-term comparison of Taylor series left as exercise
-:exref:`ex_mdl-concentration-generalization-random-signs`. Sub-Gaussianity
+e^{\lambda^2/2}$, a term-by-term comparison of Taylor series left as
+exercise :exref:`ex_mdl-concentration-generalization-random-signs`. Sub-Gaussianity
 is closed under averaging: if $X_1,\ldots,X_n$ are independent with proxy
 $\sigma^2$, then $\bar X$ is sub-Gaussian with proxy $\sigma^2/n$ (the MGF
 product argument again), so *every* sub-Gaussian average concentrates at the
@@ -696,8 +696,8 @@ statement *in expectation* to the high-probability form
 :cite:`McDiarmid.1989`, the extension of
 Hoeffding from sums to any function that no single coordinate can move much
 (here, changing one sample point moves the supremum by at most $1/n$); it is
-stated in exercise
-:exref:`ex_mdl-concentration-generalization-mcdiarmid-s-inequality`, which
+stated in
+exercise :exref:`ex_mdl-concentration-generalization-mcdiarmid-s-inequality`, which
 carries out this step.
 Sanity-check the theorem at its ends. A singleton class has $\widehat{\mathfrak R}=0$ (the expectation of
 $\frac1n\sum\varepsilon_i f(\mathbf x_i)$ is $0$ with nothing to optimize) and
@@ -1023,9 +1023,8 @@ predicts a given network's test error from first principles remains open.
   tilted variance, at most $(b-a)^2/4$), and *Hoeffding's inequality* follows:
   $P(|\bar X-E\bar X|\ge t)\le 2e^{-2nt^2/(b-a)^2}$, the finite-sample bound
   behind the main book's test-set arithmetic, exponentially sharper than
-  Chebyshev's $1/n$. Inverted, it gives the finite-sample confidence interval
-  :eqref:`eq_mdl-hoeffding-interval`.
-  *Sub-Gaussian* variables are those obeying such an MGF
+  Chebyshev's $1/n$. Inverted, it gives the finite-sample confidence
+  interval :eqref:`eq_mdl-hoeffding-interval`. *Sub-Gaussian* variables are those obeying such an MGF
   bound; *Bernstein's inequality* refines the constant using the true
   variance and covers the sub-exponential case (squares, norms).
 * In high dimension, concentration is geometry (*concentration of measure*):
@@ -1070,8 +1069,8 @@ predicts a given network's test error from first principles remains open.
        ranges agree.
     1. Let $x_1,\ldots,x_d$ be independent uniform random signs and let
        $\mathbf u\in\mathbb R^d$ be a unit vector. Apply the bound of (a)
-       to the sum $\sum_i u_i x_i$ and derive
-       :eqref:`eq_mdl-inner-product-tail`.
+       to the sum $\sum_i u_i x_i$ and
+       derive :eqref:`eq_mdl-inner-product-tail`.
    :exlabel:`ex_mdl-concentration-generalization-proof-eqref-eq-mdl`
 
 1. **Sub-Gaussian random signs.** A Rademacher variable $\varepsilon$ takes
@@ -1090,71 +1089,6 @@ predicts a given network's test error from first principles remains open.
        $\tfrac18$ in :eqref:`eq_mdl-hoeffding-lemma` for all bounded
        variables.
    :exlabel:`ex_mdl-concentration-generalization-random-signs`
-
-1. [code] **Bounds for rare errors.** Chebyshev's inequality uses the
-   variance of the summands, Hoeffding's inequality :eqref:`eq_mdl-hoeffding`
-   uses only their range, and Bernstein's inequality :eqref:`eq_mdl-bernstein`
-   uses both. In :numref:`subsec_mdl-tail-bounds-numerical`, Chebyshev's
-   bound is slightly smaller than Hoeffding's for a fair coin at $n=100$.
-    1. For the fair coin, write both bounds on $P(|\hat p-\tfrac12|\ge t)$
-       as functions of $u=nt^2$ alone. Find numerically the value of $u$
-       beyond which Hoeffding's bound is the smaller one, and the common
-       value of the two bounds there. Which bound certifies a miss
-       probability of $0.05$ with fewer flips?
-    1. A classifier has true error rate $p=0.01$, and $\hat p$ is its error
-       rate on $n=1{,}000$ independent test examples. Generalize
-       `exact_tail` to a coin with bias $p$ and compute
-       $P(|\hat p-p|\ge 0.01)$ exactly. Compare it with the bounds of
-       Chebyshev, Hoeffding, and Bernstein, the last with $\sigma^2=p(1-p)$
-       and $M=1-p$.
-    1. How many test examples does each of the three bounds require to
-       guarantee $|\hat p-p|\le 0.005$ with probability at least $0.95$?
-       Bernstein's bound needs the variance $p(1-p)$, which depends on the
-       unknown error rate. Why does it suffice to know that $p\le 0.02$?
-   :exlabel:`ex_mdl-concentration-generalization-rare-errors`
-
-1. [code] **Guaranteed shell mass.** By :eqref:`eq_mdl-norm-concentration`,
-   at least a fraction $1-2e^{-d\varepsilon^2/8}$ of the mass of
-   $\mathcal N(\mathbf 0,\mathbf I_d)$ lies in the shell of radii
-   $(1\pm\varepsilon)\sqrt d$.
-    1. Evaluate this guarantee for $\varepsilon=0.1$ at the dimensions
-       $d\in\{2,20,200,2000\}$ of :numref:`subsec_mdl-measuring-shell` and
-       compare it with the measured shell masses. At which of these
-       dimensions does the bound say anything at all?
-    1. Find the smallest $d$ for which the bound guarantees $99\%$ of the
-       mass in the shell $(1\pm 0.01)\sqrt d$. Estimate the true smallest
-       such $d$ by simulation. Sampling $\|\mathbf x\|^2$ directly from its
-       $\chi^2_d$ distribution with `rng.chisquare` avoids storing
-       $d$-dimensional vectors.
-    1. The standard deviation of $\|\mathbf x\|/\sqrt d$ is close to
-       $1/\sqrt{2d}$. Use it to write a Gaussian approximation of the tail
-       that :eqref:`eq_mdl-norm-concentration` bounds, and compare its
-       exponent with that of the bound. How much of the ratio between the two
-       values of $d$ in (b) does the constant in the exponent explain?
-       What accounts for the rest?
-   :exlabel:`ex_mdl-concentration-generalization-shell-mass`
-
-1. [code] **Distances in structured data.** The nearest-neighbor contrast
-   $(d_{\max}-d_{\min})/d_{\min}$ of $200$ standard Gaussian points around a
-   query collapses as the dimension grows
-   (:numref:`subsec_mdl-measuring-shell`), and
-   :numref:`subsec_mdl-concentration-dl` argues that real embeddings escape
-   this collapse because they lie near a low-dimensional set.
-    1. In ambient dimension $d=2000$, draw $201$ points
-       $\mathbf x=\mathbf A\mathbf z$ with $\mathbf z\sim\mathcal N(\mathbf
-       0,\mathbf I_k)$, where $\mathbf A$ is a $d\times k$ matrix with
-       orthonormal columns, for example from `onp.linalg.qr`. Measure the
-       median contrast over $20$ draws for $k\in\{2,5,20,200,2000\}$ and
-       compare it with the values of :numref:`subsec_mdl-measuring-shell`.
-       Which dimension does the contrast measure?
-    1. Fix $k=5$ and add isotropic noise $\sigma\boldsymbol\xi$ with
-       $\boldsymbol\xi\sim\mathcal N(\mathbf 0,\mathbf I_d)$ to every point,
-       for $\sigma\in\{0.01,0.03,0.1,0.3\}$. Compare the expected squared
-       norms of signal and noise, $k$ and $d\sigma^2$. Near which noise level
-       does the contrast approach that of isotropic data in $d=2000$? What
-       does this imply for nearest-neighbor retrieval with embeddings whose
-       noise is spread over all coordinates?
-   :exlabel:`ex_mdl-concentration-generalization-structured-distances`
 
 1. **Latent interpolation.** A generative model decodes latent codes
    $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$ with $d=512$. Let
@@ -1177,29 +1111,6 @@ predicts a given network's test error from first principles remains open.
        $\|\mathbf z_1\|=\|\mathbf z_2\|=\rho$. Which value does $\theta$
        take approximately for $d=512$, and why?
    :exlabel:`ex_mdl-concentration-generalization-latent-interpolation`
-
-1. [code] **Pre-registered model pool.** An analyst fixes $m$ models before
-   the validation data are drawn, evaluates all of them on $n=10{,}000$
-   validation points with losses in $[0,1]$, and reports the smallest
-   validation loss.
-    1. Use :eqref:`eq_mdl-finite-class` with $\delta=0.05$ to bound how far
-       the reported validation loss can lie below the true loss of the
-       reported model. Beyond which $m$ does this bound exceed $0.02$? On the
-       same event, how far can the true loss of the reported model exceed the
-       smallest true loss in the pool?
-    1. Simulate a pool in which each model's errors on the validation points
-       are independent fair coin flips, so that every true loss is
-       $\tfrac12$. For $m\in\{10,10^3,10^4\}$, estimate the $95\%$ quantile
-       of the optimism $\tfrac12-(\textrm{reported loss})$ over $200$
-       repetitions and compare it with the bound of (a) at the same $m$.
-       Drawing each validation loss as `rng.binomial(n, 0.5) / n` avoids
-       storing the predictions.
-    1. Suppose instead that the $m$ models agree with each other on all but
-       $1\%$ of the validation points. Why is the bound of (a) then
-       loose? Which step of the proof of :eqref:`eq_mdl-finite-class` is
-       responsible? Under which name does the same step appear in
-       :numref:`sec_mdl-statistics`?
-   :exlabel:`ex_mdl-concentration-generalization-pre-registered-pool`
 
 1. [code] **Chernoff bound for coins.** ● Let $\hat p$ be the fraction of
    heads in $n$ independent flips of a coin with bias $p$, and let $a>p$.
@@ -1239,8 +1150,8 @@ predicts a given network's test error from first principles remains open.
 1. [code] **Activation norms through depth.** ● Consider a ReLU network of
    width $d$ and depth $K$ without biases,
    $\mathbf h_k=\mathrm{ReLU}(\mathbf W_k\mathbf h_{k-1})$, whose weights are
-   independent draws from $\mathcal N(0,2/d)$ (He initialization,
-   :numref:`sec_numerical_stability`). Let
+   independent draws from $\mathcal N(0,2/d)$ (He
+   initialization, :numref:`sec_numerical_stability`). Let
    $\rho_k=\|\mathbf h_k\|^2/\|\mathbf h_{k-1}\|^2$. How such norms fluctuate
    with depth and width was analyzed by :citet:`Hanin.Nica.2020`.
     1. Show that, given $\mathbf h_{k-1}\ne\mathbf 0$, the ratio $\rho_k$ is
@@ -1360,28 +1271,6 @@ predicts a given network's test error from first principles remains open.
        the printed capacity bound with (a) and (b). What happens to the
        capacity bound as $p\to\infty$?
    :exlabel:`ex_mdl-concentration-generalization-fitting-random-signs`
-
-1. [code] **Anatomy of the peak.** ●
-   :numref:`subsec_mdl-double-descent-example` attributes the test-error
-   peak at $p=n$ to the smallest singular value $\sigma_{\min}$ of the
-   feature matrix $\boldsymbol\Phi_p$, the first $p$ columns of `Phi`.
-    1. Record the median of $\sigma_{\min}(\boldsymbol\Phi_p)$ over the $20$
-       runs for every $p$ in `p_grid`, alongside the test error and
-       $\|\mathbf w\|$. How close to zero does $\sigma_{\min}$ come at $p=n$,
-       and how does $1/\sigma_{\min}^2$ compare with the test error across
-       the grid?
-    1. Rerun the sweep with `noise` in $\{0,0.1,0.5,1.0\}$. Does the location
-       of the peak move, and how does its height grow with the noise level?
-       The peak does not vanish at `noise` $=0$, although the labels then
-       carry no noise. Why not?
-    1. Replace the pseudoinverse by the ridge solution
-       :eqref:`eq_mdl-opt-ridge-solution` with
-       $\mathbf A=\boldsymbol\Phi_p$ and $\mathbf b=\mathbf y$, for
-       $\lambda\in\{10^{-8},10^{-4},10^{-2},1\}$. Write $\mathbf w_\lambda$
-       in terms of the singular value decomposition of $\boldsymbol\Phi_p$
-       and use it to explain how the peak changes with $\lambda$. What does
-       the largest $\lambda$ cost at $p=400$?
-   :exlabel:`ex_mdl-concentration-generalization-interpolation-peak`
 
 1. [code] **Leaderboard attack.** ●● A leaderboard reports the 0-1 loss of
    each submitted label vector on a holdout set of $n=4{,}000$ examples with

@@ -906,6 +906,10 @@ Some of these blocks even have the subtle texture of brush strokes.
 1. How does the output change when you select different content and style layers?
 1. Adjust the weight hyperparameters in the loss function. Does the output retain more content or have less noise?
 1. Use different content and style images. Can you create more interesting synthesized images?
+1. Evaluate `tv_loss` by hand for three single-channel $h\times w$ images: a constant image, a checkerboard with values $\pm 1$, and an image that steps from 0 to 1 between two neighboring columns. Then take an image that ramps linearly from 0 to 1 over $m$ columns. Show that `tv_loss` takes the same value for the step and for every ramp, while a penalty on squared differences of neighboring pixels decreases as $1/m$ for the ramp. Based on these results, state which of the two penalties removes isolated noisy pixels while keeping sharp edges, and why.
+1. The style loss compares Gram matrices.
+    1. Show that `gram(Y)` does not change when the $hw$ spatial positions of a feature map `Y` are permuted, and verify this numerically for the style features `styles_Y` at one style layer.
+    1. Set `content_weight` to 0, initialize the synthesized image with random noise instead of the content image, and train. Describe the output. Using the first part, explain which properties of the style image it reproduces and which it does not.
 1. Can we apply style transfer for text? Hint: you may refer to the survey paper by :citet:`10.1145/3544903.3544906`.
 
 :begin_tab:`mxnet`

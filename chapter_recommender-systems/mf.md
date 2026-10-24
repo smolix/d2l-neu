@@ -291,9 +291,46 @@ scores
 
 ## Exercises
 
-* Vary the size of latent factors. How does the size of latent factors influence the model performance?
-* Try different optimizers, learning rates, and weight decay rates.
-* Check the predicted rating scores of other users for a specific movie.
+1. `split_and_load_ml100k` defaults to `split_mode='seq-aware'`, so the test
+   set above holds each user's most recent rating. Train `MF` with the same
+   settings on `split_mode='random'` and report both test RMSEs. Explain the
+   difference by what each test set asks the model to predict.
+1. `MF` has no global offset, so its bias tables, initialized at zero, must
+   absorb the mean rating of about 3.5. Add a learned global offset $\mu$, and
+   write a second variant that keeps only $\mu + b_u + b_i$. Train both with
+   the settings above and compare their test RMSEs with that of `MF` and with
+   that of the constant prediction $\mu$ set to the training mean. How much of
+   the improvement of `MF` over the constant comes from the biases?
+1. In `train_recsys_rating`, the `weight_decay` argument of Adam adds
+   $\lambda\boldsymbol\theta$ to the gradient of every parameter at every
+   step, including the embedding rows of users who do not occur in the
+   minibatch. Many SGD implementations instead minimize
+   $\sum_{(u,i)\in\mathcal K}\big[(R_{ui}-\hat R_{ui})^2
+   +\lambda(\|\mathbf p_u\|^2+\|\mathbf q_i\|^2)\big]$. For a user with $n_u$
+   training ratings, count per epoch how often $\mathbf p_u$ is pulled toward
+   zero under each scheme and under the objective of the text, which penalizes
+   $\|\mathbf P\|_F^2$ once. Which scheme regularizes frequent users more
+   strongly than rare ones?
+1. Train `MF` with $k \in \{1, 5, 30, 100\}$ and `weight_decay`
+   $\in \{0, 10^{-5}, 10^{-3}\}$, and tabulate the final training loss and the
+   test RMSE. The model has $(m+n)(k+1)$ parameters: at which $k$ does it
+   have more parameters than training ratings? Does the test RMSE start to
+   rise at the same $k$ for every weight decay?
+1. Show that replacing $\mathbf P$ by $\mathbf P\mathbf A$ and $\mathbf Q$ by
+   $\mathbf Q\mathbf A^{-\top}$ leaves every prediction unchanged for any
+   invertible $\mathbf A$, and that the regularizer
+   $\|\mathbf P\|_F^2+\|\mathbf Q\|_F^2$ is unchanged only for orthogonal
+   $\mathbf A$. Then prove that
+   $\min\{\tfrac12(\|\mathbf P\|_F^2+\|\mathbf Q\|_F^2) :
+   \mathbf P\mathbf Q^\top=\mathbf X\}=\|\mathbf X\|_*$, the sum of the
+   singular values of $\mathbf X$ (:numref:`sec_mdl-svd-low-rank`). For the
+   upper bound, split the singular values evenly between the factors of the
+   SVD $\mathbf X=\mathbf U\boldsymbol\Sigma\mathbf V^\top$. For the lower
+   bound, write $\|\mathbf X\|_*=\operatorname{tr}(\mathbf U^\top\mathbf X
+   \mathbf V)$ and apply the Cauchy--Schwarz inequality to
+   $\langle\mathbf U^\top\mathbf P,\mathbf V^\top\mathbf Q\rangle_F$. What
+   does this say about the rank of the matrices that the regularized objective
+   prefers?
 
 
 :begin_tab:`mxnet`

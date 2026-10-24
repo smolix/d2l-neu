@@ -528,8 +528,8 @@ and expect extrapolation to be much harder than interpolation.
    series that alternates between $\sin(0.01\,t)$ and $\sin(0.05\,t)$
    every 200 time steps, and keep the additive noise. Both regimes then
    occur among the training examples and among the validation examples.
-   The switching series violates the stationarity assumption of
-   :numref:`subsec_stationarity`. Does one linear model with $\tau = 4$
+   The switching series violates the stationarity assumption
+   of :numref:`subsec_stationarity`. Does one linear model with $\tau = 4$
    nevertheless fit both regimes, and why? Report training and validation
    error for each regime separately and locate the positions along the
    series where the fit is worst.

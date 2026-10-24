@@ -163,7 +163,31 @@ The encoded example contains one integer index per categorical field and a binar
 
 ## Exercises
 
-* Extend `CTRDataset` with an explicit path for continuous fields. How will you fit normalization or bin boundaries without leaking information from the test set?
+1. Compute the click rate of the training and of the test set. Report the
+   accuracy and the log loss on the test set of the predictor that outputs
+   the training click rate for every impression. These are the values that a
+   CTR model trained on this data has to beat.
+1. Click rates in advertising logs are typically a few percent. Suppose this
+   dataset came from a log with a click rate of 2% by keeping every click and
+   a fraction $r$ of the non-clicks. Find $r$ from the click rate of the
+   previous problem. Show that a model calibrated on the subsampled data
+   predicts $q=p/(p+r(1-p))$, where $p$ is the click probability under the
+   original log, and that recovering $p$ amounts to adding $\ln r$ to the
+   model's logit.
+1. Build the vocabulary with `min_threshold` equal to 1, 4 (the default), and
+   16. For each, report the number of embedding rows `sum(field_dims)` and the
+   fraction of test feature values that fall back to their field's default
+   index. Which fields does the threshold affect most?
+1. Instead of a vocabulary, a model can hash each (field, value) pair to one
+   of $B$ rows of a shared table. Show that hashing $n$ distinct pairs
+   uniformly occupies $B\big(1-(1-1/B)^n\big)$ rows in expectation, so that
+   about $n-B(1-e^{-n/B})$ pairs land in a row that another pair already
+   occupies. Count $n$ for
+   the training set and evaluate this for $B=2^{14}$ and $B=2^{18}$. What does
+   hashing change for a feature value that first appears after training?
+1. Extend `CTRDataset` with an explicit path for continuous fields. How will
+   you fit normalization or bin boundaries without leaking information from
+   the test set?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/405)

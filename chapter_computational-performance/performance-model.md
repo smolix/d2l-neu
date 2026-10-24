@@ -730,32 +730,6 @@ and all. We will read one in earnest in :numref:`sec_fast_transformer`.
        describe what a profiler timeline of the repeated calls would show
        that confirms it.
 
-1. **Intensity of a fused chain.** :numref:`subsec_comp-fusion` fuses the
-   function `gelu_ish` of :numref:`subsec_perf-regimes` into one kernel
-   that reads the fp32 tensor `x` once and writes the result once. The
-   elementwise arithmetic of that kernel runs on the ordinary fp32 units of
-   the RTX 4090, at 82.6 TFLOP/s against a bandwidth of 1.008 TB/s.
-    1. Count the FLOPs per element of `gelu_ish`, charging the hyperbolic
-       tangent a few tens of FLOPs. Compute the arithmetic intensity of the
-       fused kernel, compare it with the fp32 ridge point, and decide
-       whether fusion moves the chain out of the bandwidth-bound regime.
-    1. Find the number of FLOPs per element at which a fused fp32
-       elementwise kernel with one input and one output becomes
-       compute-bound on this GPU. What does the result imply for the speed
-       of a fused activation function when its hyperbolic tangent is
-       replaced by a cheaper approximation?
-
-1. [code] **Bound versus measurement.** The training step of
-   :numref:`subsec_perf-profiler` runs a three-layer MLP of width 1024 with
-   ten outputs on a batch of 64 examples in fp32.
-    1. Count the FLOPs that the matrix products of one training step
-       perform, forward and backward, and the bytes that the step moves to
-       read the weight matrices and write their gradients. Combine the two
-       counts into a roofline lower bound on the device time of the step,
-       taking the fp32 peak as the tf32 rate, half the bf16 peak.
-    1. Time the step with `Benchmark`, compare the result with the bound,
-       and name the regime of the step.
-
 1. **Idle time in a profile.** Suppose that two programs keep the GPU busy
    for only a fifth of their wall-clock time. Program A trains a small MLP
    with many narrow layers and launches every operation from Python.

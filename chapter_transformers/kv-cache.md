@@ -1290,8 +1290,8 @@ hybrid architectures provide further alternatives.
        $P = 3584$ and $T = 256$.
     1. The end-to-end run is only a few times faster with the cache, far
        less than this ratio of FLOPs. Explain the difference with the
-       arithmetic intensities of the two kinds of forward pass in
-       :numref:`subsec_kv-cache-prefill-decode`.
+       arithmetic intensities of the two kinds of forward pass
+       in :numref:`subsec_kv-cache-prefill-decode`.
 
 1. [code] **A missing position offset.** The cached step of
    :numref:`subsec_kv-cache-cached-forward` rotates the queries and keys of
@@ -1387,8 +1387,8 @@ hybrid architectures provide further alternatives.
    convert a multi-head checkpoint into a grouped one by mean-pooling the
    key and value projections of the heads in each group, and then continue
    training for 5 percent of the original number of steps. Apply this
-   recipe to the character model of
-   :numref:`subsec_kv-cache-gqa-quality`.
+   recipe to the character model
+   of :numref:`subsec_kv-cache-gqa-quality`.
     1. Train the $H_{kv} = 8$ configuration for 300 steps. Convert it to
        $H_{kv} = 2$ by averaging the key and value projections over each
        group of four consecutive heads, the grouping that `GQAAttention`

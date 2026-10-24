@@ -429,7 +429,7 @@ $$ \mathrm{softmax}\left(\frac{\mathbf{Q} \mathbf{K}^\top }{\sqrt{d}}\right) \ma
 Requiring queries and keys to share the length $d$ is no real restriction:
 a learned matrix $\mathbf{M}$ turns $\mathbf{q}^\top \mathbf{k}$ into
 $\mathbf{q}^\top \mathbf{M} \mathbf{k}$ and translates between spaces of
-different dimension (an exercise below). Applied to a minibatch,
+different dimension. Applied to a minibatch,
 :eqref:`eq_softmax_QK_V` uses the batch matrix multiplication of
 :eqref:`eq_batch-matrix-mul` twice. The implementation applies dropout to
 the attention weights as regularization, and stores the weights for
@@ -717,33 +717,6 @@ form used in the original neural alignment model.
        identity matrices, so that each output row equals the weights after
        dropout. Compare the mean and the variance of the row sums over many
        draws with the prediction computed from the weights before dropout.
-
-1. [code] **Keys of a different width.**
-   :numref:`subsec_dot-product-attention-class` notes that a matrix
-   $\mathbf{M} \in \mathbb{R}^{d_q \times d_k}$ turns the dot product into
-   the score $\mathbf{q}^\top \mathbf{M} \mathbf{k}$ for queries
-   $\mathbf{q} \in \mathbb{R}^{d_q}$ and keys $\mathbf{k} \in
-   \mathbb{R}^{d_k}$.
-    1. Implement this score for a batch of $n$ queries and $m$ keys with a
-       learnable $\mathbf{M}$, and test it on three $20$-dimensional queries
-       against six $2$-dimensional keys, the dimensions used in
-       :numref:`subsec_learned-alignment`. Count the floating-point
-       operations of the two evaluation orders
-       $(\mathbf{Q}\mathbf{M})\mathbf{K}^\top$ and
-       $\mathbf{Q}(\mathbf{M}\mathbf{K}^\top)$ for these dimensions, and
-       state the rule that decides between them.
-    1. The factorization $\mathbf{M} = \mathbf{W}_q^\top \mathbf{W}_k$ with
-       $\mathbf{W}_q \in \mathbb{R}^{r \times d_q}$ and $\mathbf{W}_k \in
-       \mathbb{R}^{r \times d_k}$ turns the score into a dot product of two
-       projected vectors. Count the parameters of both parameterizations,
-       find the values of $r$ for which the factored form has fewer, and
-       state the constraint it places on $\mathbf{M}$.
-    1. Let $\mathbf{q}$ and $\mathbf{k}$ have independent zero-mean,
-       unit-variance coordinates, and let $\mathbf{W}_q$ and $\mathbf{W}_k$
-       have independent zero-mean entries of variance $1/d_q$ and $1/d_k$,
-       as `W_q` and `W_k` in :numref:`subsec_learned-alignment` do. Compute
-       the variance of the factored score, and state the factor that
-       replaces $1/\sqrt{d}$.
 
 1. **Entropy of random scores.** ● The scaled curve of `attention_stats`
    stays near $3.7$ nats, below the uniform value $\ln 64 \approx 4.16$.

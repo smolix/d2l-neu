@@ -1138,8 +1138,8 @@ follows.
    translation quality. When would separate vocabularies help, and when hurt?
 1. Sweep the beam width $k \in \{1, 2, 4, 8, 16\}$ on the three example
    sentences and on a handful of longer held-out sentences. Where does quality
-   stop improving, and why (recall the large-beam discussion of
-   :numref:`sec_beam-search`)?
+   stop improving, and why (recall the large-beam discussion
+   of :numref:`sec_beam-search`)?
 1. `d2l.beam_search` normalizes scores by length raised to $\alpha$. Decode with
    $\alpha \in \{0, 0.75, 1.5\}$ and relate the lengths of the winning
    translations to :eqref:`eq_beam-search-score`.

@@ -721,8 +721,8 @@ token, a property the next chapter's architectures inherit.
    the trend using :eqref:`eq_beam-search-score`.
 
 1. **Truncation under temperature.** `sample_next` applies every
-   truncation rule to the temperature-scaled distribution $P_T$ of
-   :eqref:`eq_temperature`. Write the min-$p$ condition
+   truncation rule to the temperature-scaled distribution $P_T$
+   of :eqref:`eq_temperature`. Write the min-$p$ condition
    $P_T(x \mid x_{<t}) \geq p_{\min} \max_{x'} P_T(x' \mid x_{<t})$ as a
    condition on the untempered probabilities. For the five-token
    distribution 0.45, 0.25, 0.15, 0.10, 0.05, compute the sets that
@@ -775,8 +775,8 @@ token, a property the next chapter's architectures inherit.
 
 1. [code] **Constant cost per token.** ● `step_fn` re-runs the network over
    the entire prefix for every generated token, so a $T$-token
-   continuation costs $\mathcal{O}(T^2)$ cell updates
-   (:numref:`subsec_cost-of-generation`).
+   continuation costs $\mathcal{O}(T^2)$ cell
+   updates (:numref:`subsec_cost-of-generation`).
     1. Write a stateful replacement for `step_fn` that keeps the hidden
        state of `model.rnn` and consumes only the newest token, so that
        each call performs one cell update. Verify that `generate` produces

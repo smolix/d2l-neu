@@ -1080,8 +1080,23 @@ as with RMSNorm, maintain the custom implementation.
 
 ## Exercises
 
+1. **Centering over the batch.** `CenteredLayer` subtracts the mean over
+   every entry of its input, the batch axis included. Consider the network
+   of this section, a linear layer with bias $\mathbf{b}$ followed by
+   `CenteredLayer`.
+    1. Show that the output for one example depends on the other examples
+       in the minibatch. State when evaluating the network on one example
+       at a time gives the same outputs as evaluating it on the whole
+       minibatch at once.
+    1. Show that adding the same constant to every entry of $\mathbf{b}$
+       leaves the output unchanged, and conclude which direction in the
+       space of biases receives zero gradient.
+    1. A per-example variant subtracts from each row its own mean over the
+       feature axis, as LayerNorm does. State which of the two properties
+       above this variant keeps.
+
 :begin_tab:`pytorch`
-1. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+2. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
    `RMSNorm` (a shift applied after the scale, restoring part of what
    LayerNorm had), and verify that the state dict of a model containing it
    grows by the expected entry. Then place the layer directly before a
@@ -1089,7 +1104,7 @@ as with RMSNorm, maintain the custom implementation.
    that $\mathbf{b}$ can be folded into $\mathbf{c}$ without changing the
    outputs. What is the folded bias?
 
-2. [code] **Offset causal mask.** During cached decoding, the score matrix
+3. [code] **Offset causal mask.** During cached decoding, the score matrix
    has shape $T_q \times T_k$ with $T_q \le T_k$, and the $T_q$ queries
    occupy the last $T_q$ of the $T_k$ key positions. Generalize
    `CausalMask` to such score matrices while it still slices its single
@@ -1098,7 +1113,7 @@ as with RMSNorm, maintain the custom implementation.
    masks when $T_q = 1$, and state what happens when $T_k$ exceeds
    `max_len`.
 
-3. [code] **Custom gradients.**
+4. [code] **Custom gradients.**
     1. Implement a clamp with a custom gradient: an `autograd.Function`
        whose forward is `X.clamp(lo, hi)` and whose backward passes the
        gradient only where the input lay strictly inside the clamp range.
@@ -1115,7 +1130,7 @@ as with RMSNorm, maintain the custom implementation.
     and the JAX notebook
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
 
-4. [extended] **Bucketing with a straight-through estimator.** ●
+5. [extended] **Bucketing with a straight-through estimator.** ●
    :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
    Extend the idea to a layer whose forward pass maps a score $s$ to the
    bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
@@ -1130,7 +1145,7 @@ as with RMSNorm, maintain the custom implementation.
 :end_tab:
 
 :begin_tab:`jax`
-1. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+2. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
    `RMSNorm` (a shift applied after the scale, restoring part of what
    LayerNorm had), and verify that the parameter state of a model
    containing it grows by the expected entry. Then place the layer directly
@@ -1138,7 +1153,7 @@ as with RMSNorm, maintain the custom implementation.
    and show that $\mathbf{b}$ can be folded into $\mathbf{c}$ without
    changing the outputs. What is the folded bias?
 
-2. [code] **Offset causal mask.** During cached decoding, the score matrix
+3. [code] **Offset causal mask.** During cached decoding, the score matrix
    has shape $T_q \times T_k$ with $T_q \le T_k$, and the $T_q$ queries
    occupy the last $T_q$ of the $T_k$ key positions. Generalize
    `CausalMask` to such score matrices while it still slices its single
@@ -1147,7 +1162,7 @@ as with RMSNorm, maintain the custom implementation.
    masks when $T_q = 1$, and state what happens when $T_k$ exceeds
    `max_len`.
 
-3. [code] **Custom gradients.**
+4. [code] **Custom gradients.**
     1. Implement a clamp with a custom gradient: a `custom_vjp` function
        whose forward is `jnp.clip(X, lo, hi)` and whose backward passes the
        gradient only where the input lay strictly inside the clamp range;
@@ -1165,7 +1180,7 @@ as with RMSNorm, maintain the custom implementation.
     and the JAX notebook
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
 
-4. [extended] **Bucketing with a straight-through estimator.** ●
+5. [extended] **Bucketing with a straight-through estimator.** ●
    :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
    Extend the idea to a layer whose forward pass maps a score $s$ to the
    bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
@@ -1180,7 +1195,7 @@ as with RMSNorm, maintain the custom implementation.
 :end_tab:
 
 :begin_tab:`tensorflow`
-1. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+2. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
    `RMSNorm` (a shift applied after the scale, restoring part of what
    LayerNorm had), and verify that `get_weights` on a model containing it
    grows by the expected entry. Then place the layer directly before a
@@ -1188,7 +1203,7 @@ as with RMSNorm, maintain the custom implementation.
    that $\mathbf{b}$ can be folded into $\mathbf{c}$ without changing the
    outputs. What is the folded bias?
 
-2. [code] **Offset causal mask.** During cached decoding, the score matrix
+3. [code] **Offset causal mask.** During cached decoding, the score matrix
    has shape $T_q \times T_k$ with $T_q \le T_k$, and the $T_q$ queries
    occupy the last $T_q$ of the $T_k$ key positions. Generalize
    `CausalMask` to such score matrices while it still slices its single
@@ -1197,7 +1212,7 @@ as with RMSNorm, maintain the custom implementation.
    masks when $T_q = 1$, and state what happens when $T_k$ exceeds
    `max_len`.
 
-3. [code] **Custom gradients.**
+4. [code] **Custom gradients.**
     1. Implement a clamp with a custom gradient: a `@tf.custom_gradient`
        function whose forward is `tf.clip_by_value(X, lo, hi)` and whose
        backward passes the gradient only where the input lay strictly
@@ -1215,7 +1230,7 @@ as with RMSNorm, maintain the custom implementation.
     and the JAX notebook
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
 
-4. [extended] **Bucketing with a straight-through estimator.** ●
+5. [extended] **Bucketing with a straight-through estimator.** ●
    :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
    Extend the idea to a layer whose forward pass maps a score $s$ to the
    bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
@@ -1230,7 +1245,7 @@ as with RMSNorm, maintain the custom implementation.
 :end_tab:
 
 :begin_tab:`mxnet`
-1. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+2. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
    `RMSNorm` (a shift applied after the scale, restoring part of what
    LayerNorm had), and verify that the file written by `save_parameters`
    for a model containing it grows by the expected entry. Then place the
@@ -1238,7 +1253,7 @@ as with RMSNorm, maintain the custom implementation.
    $\mathbf{c}$, and show that $\mathbf{b}$ can be folded into $\mathbf{c}$
    without changing the outputs. What is the folded bias?
 
-2. [code] **Offset causal mask.** During cached decoding, the score matrix
+3. [code] **Offset causal mask.** During cached decoding, the score matrix
    has shape $T_q \times T_k$ with $T_q \le T_k$, and the $T_q$ queries
    occupy the last $T_q$ of the $T_k$ key positions. Generalize
    `CausalMask` to such score matrices while it still slices its single
@@ -1247,7 +1262,7 @@ as with RMSNorm, maintain the custom implementation.
    masks when $T_q = 1$, and state what happens when $T_k$ exceeds
    `max_len`.
 
-3. [code] **Custom gradients.**
+4. [code] **Custom gradients.**
     1. Implement a clamp with a custom gradient: an `autograd.Function`
        whose forward is `np.clip(X, lo, hi)` and whose backward passes the
        gradient only where the input lay strictly inside the clamp range;
@@ -1265,7 +1280,7 @@ as with RMSNorm, maintain the custom implementation.
     and the JAX notebook
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
 
-4. [extended] **Bucketing with a straight-through estimator.** ●
+5. [extended] **Bucketing with a straight-through estimator.** ●
    :numref:`fig_bg_ste` passes a surrogate gradient through `round(x)`.
    Extend the idea to a layer whose forward pass maps a score $s$ to the
    bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats

@@ -268,9 +268,10 @@ decode-bound sanity check above.
        QLoRA. Which of the two fine-tunes fits on a 16 GB card? Which term
        is the largest in the one that fits?
     1. The activation term is not a constant: it grows with the number of
-       tokens per step. With per-block activation checkpointing
-       (:numref:`subsec_mp-checkpointing`), a model keeps only the input of
-       each block, $d$ bf16 values per token, plus the activations of one
+       tokens per step. With per-block activation
+       checkpointing (:numref:`subsec_mp-checkpointing`), a model keeps
+       only the input of each block, $d$ bf16 values per token, plus the
+       activations of one
        block during its recomputation, which this sub-problem ignores. Give
        the QLoRA fine-tune of the second sub-problem the shape of Llama 3.1
        8B :cite:`Grattafiori.Dubey.Jauhri.ea.2024`: 32 blocks of width
@@ -299,30 +300,6 @@ decode-bound sanity check above.
        4. By what factor does it raise the decode bound at 4K tokens, and
        by what factor at 128K tokens? What does this imply for a buyer
        whose workload uses long contexts?
-
-1. [code] **Price per capacity and per bandwidth.**
-   :numref:`fig_tools_hardware_menu` places every machine on the axes of
-   capacity and bandwidth, and a purchase adds price as a third axis. Take
-   the July 2026 prices of the RTX 5070 Ti, the used RTX 3090, the RTX
-   5090, the RTX PRO 6000, Strix Halo, and the DGX Spark from this
-   section, at the midpoint of every range. Leave out the Mac entries of
-   :numref:`tab_unified_memory`, whose starting prices do not belong to a
-   stated memory configuration.
-    1. Compute the price per GB of memory and the price per GB/s of
-       bandwidth of each machine. Which machines are not beaten on both
-       measures at once by another machine? What does each of the other
-       machines offer that the two measures miss?
-    1. A card needs a host computer, while Strix Halo and the DGX Spark are
-       complete machines. Repeat the comparison with system prices: take
-       the 5070 Ti desktop and the 5090 build of
-       :numref:`subsec_hardware-buyers-training` at the midpoints of their
-       ranges, put the used 3090 into the host of the 5070 Ti desktop, and
-       put the RTX PRO 6000 into the host of the 5090 build. Which
-       conclusions of the first sub-problem change?
-    1. Redo the first sub-problem with prices that you find today through
-       the sources of :numref:`subsec_hardware-buyers-current`, and date
-       them. Does the used 3090 still cost less per gigabyte than the
-       5070 Ti?
 
 1. **Power budget.** :numref:`subsec_hardware-buyers-training` notes that
    a 5090 build needs a 1200 W power supply and a circuit that can sustain
@@ -440,59 +417,6 @@ decode-bound sanity check above.
        chunks of 2,048 tokens? Why does an MoE model need longer chunks
        than a dense model with the same active parameters before its
        prefill becomes compute-bound?
-
-1. **Tensor parallelism over PCIe.** ●
-   :numref:`subsec_hardware-buyers-top-end` notes that workstation cards
-   exchange data over PCIe 5.0 at about 64 GB/s per direction, while each
-   card reads its own memory at 1.79 TB/s. Consider two RTX PRO 6000 cards
-   that serve Llama 3.1 70B :cite:`Grattafiori.Dubey.Jauhri.ea.2024` in
-   bf16, with about 141 GB of weights in
-   $L = 80$ layers of width $d = 8192$. A *pipeline* split places the
-   first 40 layers on one card and the other 40 on the second, so that a
-   token passes through the cards in turn. A *tensor-parallel* split
-   :cite:`shoeybi2019megatron` gives each card half of every weight
-   matrix. After the attention and after the MLP of every layer, the cards
-   then sum their partial outputs with an all-reduce of one
-   $d$-dimensional bf16 vector per token.
-    1. Ignore communication, and bound the single-stream decode rate under
-       both splits. What does the pipeline split buy compared with a
-       hypothetical single card with 192 GB at the same bandwidth?
-    1. Assume that every all-reduce of one token's vector takes 20 µs over
-       PCIe, independently of its 16 KB size. By what fraction does this
-       communication slow down tensor-parallel decode?
-    1. In prefill, each card sustains 200 TFLOP/s in bf16, about the dense
-       rate of the RTX 5090 in :numref:`tab_gpu_specs`, at 2 FLOPs per
-       parameter and token. The all-reduces of a long prompt carry many
-       tokens at once and therefore run at the bandwidth $\beta$ of the
-       link. A ring all-reduce over $n$ cards sends $2(n-1)/n$ times the
-       message from every card. Derive the ratio of communication time to
-       compute time per token on $n$ cards, and simplify it with
-       $N \approx 12 L d^2$ parameters. Evaluate the ratio for $n = 2$,
-       4, and 8 over PCIe and over an NVLink-class link at 900 GB/s per
-       direction. Which quantity of :numref:`sec_hardware` appears in the
-       simplified ratio?
-
-1. [extended] **Specifying a lab machine.** ● A group can spend \$12,000
-   at the July 2026 prices of this section on one machine for an office
-   with a 120 V, 15 A circuit. The machine must fine-tune 8B models with
-   LoRA or QLoRA on sequences of 4,096 tokens for about ten hours per
-   week, and run every notebook of this book. It must also serve one user
-   at a time at 20 tokens/s or more, both with a dense 70B model at 4 bits
-   and with gpt-oss-120b. Where the section gives no figure, such as the
-   price of a desktop with two used 3090 cards or the wall power of the
-   unified-memory machines, estimate it from the section's components or
-   take it from a vendor datasheet, and state the source.
-    1. For the 5070 Ti desktop, the 5090 build, a desktop with two used
-       3090 cards, the DGX Spark, Strix Halo, and the M3 Ultra, tabulate
-       whether the fine-tune fits (exercise
-       :exref:`ex_hardware-training-memory`), the decode bound of each chat
-       model, the power at the wall under load, and the price. Which
-       machines meet every requirement?
-    1. Price three years of the same work on rented machines from
-       :numref:`tab_cloud_prices`, with the break-even analysis of exercise
-       :exref:`ex_hardware-break-even`, and recommend whether to buy and
-       which machine. Which single assumption, if it were wrong, would most
-       likely reverse the recommendation?
 
 1. [extended] **Calibrating the decode bound.** ●● The summary states that
    :eqref:`eq_hardware-buyers-decode` predicts generation speed to within

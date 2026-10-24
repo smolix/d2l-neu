@@ -804,18 +804,6 @@ chapter rather than replacing it.
        differences between the printed rows exceed twice that standard
        deviation?
    :exlabel:`ex_image-diffusion-proxy-reference`
-1. [code] **Guidance scales.** Extend the experiment of
-   :numref:`subsec_diffusion-images-guided` to
-   $\gamma \in \{0, 0.5, 1, 2, 4, 8, 16\}$, with the same requests `y` and
-   the same seed. Define the *saturation* of a set of images as the fraction
-   of its pixels that equal $1$, the white end of the range, after clamping.
-    1. Plot class agreement, within-class distance, and saturation against
-       $\gamma$. Mark the values for test images, computing the first two as
-       in exercise :exref:`ex_image-diffusion-proxy-reference`.
-    1. Display the samples at $\gamma = 8$ and $\gamma = 16$. Which of the
-       three quantities registers their defects? Which rates them as
-       improvements over $\gamma = 4$?
-   :exlabel:`ex_image-diffusion-guidance-scales`
 1. [code] **A clean classifier as guide.** Classifier guidance in
    :numref:`subsec_diffusion-images-classifier-guidance` steers with
    `noisy_classifier`, trained on noisy images, and scores the samples with
@@ -878,30 +866,6 @@ chapter rather than replacing it.
        ratios as the $28 \times 28$ model?
        :citet:`Hoogeboom.Heek.Salimans.2023` shift the schedule in this way.
    :exlabel:`ex_image-diffusion-resolution-schedule`
-1. [code] **Weight averaging.** ● After the $S = 1500$ updates, the
-   averaged parameters `ema` are a weighted sum of the initial parameters
-   and of the parameters after each update $s = 0, \ldots, S - 1$, which the
-   loop mixes in with the decay $d_s = \min(0.999, (1 + s) / (10 + s))$.
-   The *weight* of a set of parameters is its coefficient in this sum.
-    1. Suppose that the decay were $0.999$ from the first update. Which
-       weight would the average give to the random initialization?
-    1. Show that the cap $0.999$ is never reached in this run, that the
-       initialization receives the weight $9!\, S! / (S + 9)!$, and that the
-       parameters after update $s$ receive the weight
-
-       $$w_s = \frac{9 \prod_{k=2}^{9} (s + k)}{\prod_{k=1}^{9} (S + k)}.$$
-
-    1. Approximate $w_s$ for large $s$ and $S$, and compute the fraction of
-       the total weight that falls on the last $300$ updates.
-       :citet:`Karras.Aittala.Lehtinen.ea.2024` propose averages whose
-       weights grow like a power of the update index. Which power does the
-       warm-up implement?
-    1. Repeat the training while keeping a second average with the constant
-       decay $0.999$, and sample forty-eight unconditional images with the
-       same seed from `net`, from `ema`, and from the second average.
-       Relate the differences among the three grids to your answers to (a)
-       to (c).
-   :exlabel:`ex_image-diffusion-weight-averaging`
 1. [code] **Thresholding the predicted image.** ● The guided noise
    prediction $\tilde{\boldsymbol{\epsilon}}$ implies the clean image
    $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sqrt{1 - \bar{\alpha}_t}\, \tilde{\boldsymbol{\epsilon}}) / \sqrt{\bar{\alpha}_t}$,
@@ -927,10 +891,11 @@ chapter rather than replacing it.
     1. Their *dynamic thresholding* sets, for each image, the threshold $m$
        to the larger of $1$ and the $99.5$th percentile of
        $|\hat{\mathbf{x}}_0|$, clips $\hat{\mathbf{x}}_0$ to $[-m, m]$, and
-       divides it by $m$. Implement it, and compare the class agreement, the
-       within-class distance, the saturation of exercise
-       :exref:`ex_image-diffusion-guidance-scales`, and the samples of the
-       three samplers at $\gamma \in \{4, 8, 16\}$.
+       divides it by $m$. Implement it. Define the *saturation* of a set of
+       images as the fraction of its pixels that equal $1$, the white end of
+       the range, after clamping. Compare the class agreement, the
+       within-class distance, the saturation, and the samples of the three
+       samplers at $\gamma \in \{4, 8, 16\}$.
    :exlabel:`ex_image-diffusion-thresholding`
 1. [code] **Guidance in a limited interval.** ●
    :citet:`Kynkaanniemi.Aittala.Karras.ea.2024` observe that guidance acts
@@ -940,8 +905,8 @@ chapter rather than replacing it.
    $\sigma^{\textrm{eq}}_t = \sqrt{(1 - \bar{\alpha}_t) / \bar{\alpha}_t}$,
    the noise level of the rescaled state
    $\mathbf{x}_t / \sqrt{\bar{\alpha}_t}$ (the equivalent noise level of
-   exercise :exref:`ex_ddpm-equivalent-noise-levels` of
-   :numref:`sec_diffusion-ddpm`), and found the interval
+   exercise :exref:`ex_ddpm-equivalent-noise-levels`
+   of :numref:`sec_diffusion-ddpm`), and found the interval
    $0.28 < \sigma^{\textrm{eq}}_t \leq 2.9$ best by the FID for one of the
    ImageNet models of :citet:`Karras.Aittala.Lehtinen.ea.2024`.
     1. Find the loop indices `t` of `sample` whose noise level, computed
@@ -953,7 +918,7 @@ chapter rather than replacing it.
        interval. With $\gamma = 4$, sample the requests `y` with seed $2$
        for each of the three intervals. Compare the class agreement, the
        within-class distance, and the saturation of exercise
-       :exref:`ex_image-diffusion-guidance-scales` with those of guidance at
+       :exref:`ex_image-diffusion-thresholding`c with those of guidance at
        every step and of $\gamma = 1$.
     1. Which interval accounts for most of the gain in class agreement, and
        which for most of the loss of within-class distance? Explain the
@@ -972,16 +937,16 @@ chapter rather than replacing it.
    loss of variation that classifier-free guidance causes.
     1. Treat each network as the exact noise predictor of its own densities
        $p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c)$ and
-       $p_{\textrm{weak}, t}(\mathbf{x} \mid c)$, as in exercise
-       :exref:`ex_image-diffusion-equivalent-guidance`. Show that the guided
+       $p_{\textrm{weak}, t}(\mathbf{x} \mid c)$, as in
+       exercise :exref:`ex_image-diffusion-equivalent-guidance`. Show that the guided
        prediction corresponds to the score of a density proportional to
        $p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c)\, \big( p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c) / p_{\textrm{weak}, t}(\mathbf{x} \mid c) \big)^{\gamma - 1}$.
        Classifier-free guidance corresponds in the same way to a density
        proportional to
        $p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c)\, \big( p_{\boldsymbol{\theta}, t}(\mathbf{x} \mid c) / p_{\boldsymbol{\theta}, t}(\mathbf{x}) \big)^{\gamma - 1}$,
        whose ratio is proportional to the class posterior
-       $p_{\boldsymbol{\theta}, t}(c \mid \mathbf{x})$
-       (:numref:`sec_mdl-score-matching-diffusion-flow`). Which images does
+       $p_{\boldsymbol{\theta}, t}(c \mid \mathbf{x})$ (:numref:`sec_mdl-score-matching-diffusion-flow`).
+       Which images does
        each of the two tilts favor? Use the answer to explain why
        classifier-free guidance reduces the variation within a class, while
        autoguidance, according to
@@ -997,7 +962,7 @@ chapter rather than replacing it.
        and with classifier-free guidance at
        $\gamma \in \{1, 1.5, 2, 3, 4\}$. Plot the within-class distance
        against the class agreement for the three samplers, and report the
-       saturation of exercise :exref:`ex_image-diffusion-guidance-scales`.
+       saturation of exercise :exref:`ex_image-diffusion-thresholding`c.
     1. Which sampler reaches a given class agreement with the larger
        within-class distance, and which weak model guides better? Relate
        the answer to the requirement of

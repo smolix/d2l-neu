@@ -77,12 +77,30 @@ attributes or another mechanism that can score unseen identifiers
 
 ## Exercises
 
-1. Construct two histories with the same interacted items but different order.
+1. A memory-based method scores the similarity of items $i$ and $j$ by the
+   cosine of their rating vectors restricted to the users who rated both.
+   Show that two items with a single common rater have similarity 1 whenever
+   ratings are positive. Suppose item 1 has similarity 1 with item 2 through
+   one common rater and similarity 0.8 with item 3 through 20 common raters.
+   With the shrunk similarity $\frac{n}{n+\beta}s$, where $n$ is the number
+   of common raters, find the values of $\beta$ for which item 3 ranks above
+   item 2.
+2. Construct two histories with the same interacted items but different order.
    Which chapter models assign them identical scores, and which can distinguish
    them?
-2. Give an example in which an unobserved item is a false negative. How would
+3. Give an example in which an unobserved item is a false negative. How would
    uniform negative sampling change the expected training objective?
-3. Design separate warm-start and item-cold-start splits. Which input fields
+4. Design separate warm-start and item-cold-start splits. Which input fields
    are required to produce a score in each split?
+5. A system has three items with appeal $a=(0.5, 0.4, 0.6)$: a displayed item
+   is clicked with probability equal to its appeal. In each round it displays
+   the two items with the most recorded clicks. Items 1 and 2 start with one
+   click each and item 3 with none. Show that item 3 is never displayed and
+   that its count stays zero, although it has the highest appeal. Now let the
+   system show item 3 in the second slot with probability $\varepsilon$ in
+   each round. Compute the expected number of rounds until item 3 is first
+   displayed and until it is first clicked. Explain why a model evaluated
+   offline on the logs of the first system cannot learn that item 3 is the
+   best item.
 
 [Discussions](https://d2l.discourse.group/t/398)

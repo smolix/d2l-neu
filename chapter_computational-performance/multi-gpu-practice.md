@@ -799,8 +799,8 @@ that turn a synchronous step into a queueing problem.
    :numref:`subsec_mgp-ddp` reports weak-scaling efficiencies of 88% at
    $k = 2$ and 82% at $k = 4$. Suppose that a step on $k$ GPUs takes the
    single-GPU step time $t_1$ plus an exposed communication time, and that
-   this exposed time is proportional to the per-device ring traffic of
-   :eqref:`eq_ring_traffic`.
+   this exposed time is proportional to the per-device ring
+   traffic of :eqref:`eq_ring_traffic`.
     1. Express the efficiency $E(k)$ through a single constant, fit the
        constant to the measurement at $k = 2$, and predict $E(4)$. Compare
        your prediction with the measured 82% and with the prediction of a
@@ -815,46 +815,8 @@ that turn a synchronous step into a queueing problem.
        rank runs $a$ micro-batches of 256 examples per optimizer step and
        synchronizes only after the last one. Starting from the measured 82%,
        find the smallest $a$ that raises the efficiency at $k = 4$ to 95%.
-       What happens to the global batch, and why does that matter
-       (:numref:`sec_batch_size`)?
-
-1. **Strong versus weak efficiency.** Model the forward and backward time
-   of one device at per-device batch $b$ as
-   $t_{\text{compute}}(b) = t_0 + c\,b$, where $t_0$ is a fixed cost per
-   step that does not shrink with the batch and $c$ is the time per
-   example. Let the communication of a step on $k > 1$ devices take
-   $(1 - 1/k)\,\tau$ with $\tau = 2N/\beta$, the ring traffic of
-   :eqref:`eq_ring_traffic` at the bandwidth of :eqref:`eq_dp_cost`,
-   without overlap. Let $E_{\text{weak}}(k; b)$ be the
-   weak-scaling efficiency at per-device batch $b$, and
-   $E_{\text{strong}}(k)$ the strong-scaling efficiency at global batch $B$.
-    1. Show that
-
-        $$E_{\text{strong}}(k) = E_{\text{weak}}(k; B/k)\,
-        \frac{t_0 + c B}{k\, t_0 + c B}.$$
-
-       What does this identity say about the gap between the weak and the
-       strong sweeps of :numref:`subsec_mgp-ddp` at equal per-device batch?
-    1. :numref:`subsec_mgp-ddp` reports that an RTX 4090 is about equally
-       saturated by per-rank batches of 256 and 512 for ResNet-18. What
-       does that say about $t_0$ for this model? For the
-       LeNet of :numref:`sec_multi_gpu`,
-       $t_{\text{compute}}(B/2) \approx t_{\text{compute}}(B)$; what bound
-       does the identity then place on $E_{\text{strong}}(2)$?
-
-1. **ZeRO memory budget.** A model with 7 billion parameters is to be
-   trained with Adam on 8 GPUs with 80 GB each. Use the anatomy of
-   :numref:`subsec_mp-anatomy` (16 bytes per parameter before activations)
-   and ignore activations. ZeRO :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`
-   shards the optimizer states across the GPUs in stage 1, also the
-   gradients in stage 2, and also the parameters in stage 3
-   (:numref:`subsec_mgp-fsdp`).
-    1. Compute the per-GPU training state under DDP and under each of the
-       three stages. Which configurations fit, and how much memory does
-       each leave for activations?
-    1. For each configuration, find the largest model whose training state
-       fits on these 8 GPUs. How does this limit grow as more GPUs join,
-       and what caps it for DDP and for stages 1 and 2?
+       What happens to the global batch, and why does that
+       matter (:numref:`sec_batch_size`)?
 
 1. **Cost of sharding.** Count the communication per device and step in
    units of $N$, the bytes of one full set of gradients, and assume that
@@ -878,7 +840,7 @@ that turn a synchronous step into a queueing problem.
        16-byte anatomy of :numref:`subsec_mp-anatomy`?
 
 :begin_tab:`pytorch`
-6. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
+4. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
    as follows. The backward pass takes time $t_b$ and releases the
    gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
    The allreduces of the buckets run one at a time and in order, and each
@@ -902,12 +864,12 @@ that turn a synchronous step into a queueing problem.
        $\tau$ as $2N/\beta$. Is the measured optimum consistent with your
        model, and which $\alpha$ does it imply?
 
-7. [code] **Transport configuration.** ● `bare_allreduce_gbs` compares
+5. [code] **Transport configuration.** ● `bare_allreduce_gbs` compares
    the default NCCL transport with the copy-engine transport that
    `NCCL_SHM_USE_CUDA_MEMCPY=1` selects, at a single payload of 64 MB. The
    variable affects only NCCL's shared-memory transport, which NCCL uses
-   between GPUs that lack peer-to-peer access
-   (:numref:`subsec_hw-interconnects`).
+   between GPUs that lack peer-to-peer
+   access (:numref:`subsec_hw-interconnects`).
     1. Launch `allreduce_bench.py` once with `NCCL_DEBUG=INFO` and find the
        transport that NCCL reports for each channel. Predict whether the
        variable can change anything on your machine.
@@ -924,7 +886,7 @@ that turn a synchronous step into a queueing problem.
        outcome tell you about which workloads the bare benchmark
        validates?
 
-8. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
+6. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
     :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` by hand and measure what it
     saves. Start from `train_ddp.py` with `torch.optim.Adam` in place of
     SGD.
@@ -946,14 +908,14 @@ that turn a synchronous step into a queueing problem.
        only the part that the rank owns. Count the bytes per device that
        the allreduce and the broadcasts of your implementation send
        together, and compare them with the volume of stage 1 found in
-       problem 5.
+       problem 3.
 
     *Adapted from Stanford CS336,
     [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
     Problems optimizer_state_sharding and
     optimizer_state_sharding_accounting.*
 
-9. [code] **Batch-norm statistics.** ● `resnet18` normalizes with batch
+7. [code] **Batch-norm statistics.** ● `resnet18` normalizes with batch
    normalization (:numref:`sec_batch_norm`), and under DDP each replica
    computes its statistics over its own shard of the batch.
     1. Write the one-step parity check of :numref:`subsec_mg-byhand` for
@@ -972,14 +934,14 @@ that turn a synchronous step into a queueing problem.
        of :eqref:`eq_dp_cost`. Which properties of these collectives,
        other than their size, set their cost?
 
-10. [code] **Tensor versus data parallelism.** ● Consider the MLP block
-   $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
-   $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
-   step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
-   $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$, and an elementwise
-   activation $\phi$, on $k$ devices. Tensor parallelism
-   (:numref:`fig_splitting`) splits $\mathbf{W}_1$ by columns and
-   $\mathbf{W}_2$ by rows :cite:`shoeybi2019megatron`.
+8. [code] **Tensor versus data parallelism.** ● Consider the MLP block
+    $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
+    $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
+    step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
+    $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$, and an elementwise
+    activation $\phi$, on $k$ devices. Tensor
+    parallelism (:numref:`fig_splitting`) splits $\mathbf{W}_1$ by columns and
+    $\mathbf{W}_2$ by rows :cite:`shoeybi2019megatron`.
     1. Show that each device can compute, without communication, an
        $n \times d$ partial result from its columns of $\mathbf{W}_1$ and
        its rows of $\mathbf{W}_2$, and that $\mathbf{Y}$ is the sum of the
@@ -1009,7 +971,7 @@ that turn a synchronous step into a queueing problem.
 :end_tab:
 
 :begin_tab:`jax`
-6. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
+4. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
    as follows. The backward pass takes time $t_b$ and releases the
    gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
    The allreduces of the buckets run one at a time and in order, and each
@@ -1037,7 +999,7 @@ that turn a synchronous step into a queueing problem.
        :numref:`subsec_mg-accounting` measures. Is the measured optimum
        consistent with your model, and which $\alpha$ does it imply?
 
-7. [code] **Transport configuration.** ● XLA runs its collectives through
+5. [code] **Transport configuration.** ● XLA runs its collectives through
    NCCL, so the switch `NCCL_SHM_USE_CUDA_MEMCPY=1` of
    :numref:`subsec_mgp-ddp` applies to JAX programs as well. The switch
    affects only NCCL's shared-memory transport, which NCCL uses between
@@ -1060,7 +1022,7 @@ that turn a synchronous step into a queueing problem.
     1. Read the payload sizes of the allreduces in the compiled
        `train_step`. At which of them does the switch change the bandwidth?
 
-8. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
+6. [extended] **Sharded optimizer state.** ● Implement ZeRO stage 1
     :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` declaratively and measure
     what it saves. Use `optax.adam` in `nnx.Optimizer` instead of SGD, keep
     the model replicated, and place every leaf of `nnx.state(opt)` with a
@@ -1076,7 +1038,7 @@ that turn a synchronous step into a queueing problem.
        compared with the replicated step, and is the gradient sum an
        allreduce or a reduce-scatter? Compare the bytes per device of the
        compiled step with the volume of stage 1 found in
-       problem 5.
+       problem 3.
     1. In fresh processes, read `'bytes_in_use'` and `'peak_bytes_in_use'`
        from `jax.devices()[0].memory_stats()` after a completed step, and
        measure the step time, with and without sharding at $k = 2$ and
@@ -1089,10 +1051,10 @@ that turn a synchronous step into a queueing problem.
     Problems optimizer_state_sharding and
     optimizer_state_sharding_accounting.*
 
-9. [code] **Batch-norm statistics.** ● `ResNet18` normalizes with batch
+7. [code] **Batch-norm statistics.** ● `ResNet18` normalizes with batch
    normalization (:numref:`sec_batch_norm`). Under `jit` with a sharded
-   batch the compiler computes its statistics over the global batch
-   (:numref:`subsec_mgp-jax`), exactly as a single device would.
+   batch the compiler computes its statistics over the global
+   batch (:numref:`subsec_mgp-jax`), exactly as a single device would.
     1. Count the small allreduces in the compiled `train_step`, and
        account for their number from the `BatchNorm` layers of `ResNet18`
        and the passes in which their statistics are needed. What does each
@@ -1103,18 +1065,18 @@ that turn a synchronous step into a queueing problem.
        $k = 1$, $k = 2$ and $k = 4$. Separate what making the statistics
        global costs per step from what computing batch statistics costs on
        a single device, and compare the cost of global statistics with the
-       time that the added bytes take at the bandwidth of
-       :eqref:`eq_dp_cost`. Which properties of these collectives, other
+       time that the added bytes take at the bandwidth
+       of :eqref:`eq_dp_cost`. Which properties of these collectives, other
        than their size, set their cost?
 
-10. [code] **Tensor versus data parallelism.** ● Consider the MLP block
-   $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
-   $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
-   step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
-   $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$, and an elementwise
-   activation $\phi$, on $k$ devices. Tensor parallelism
-   (:numref:`fig_splitting`) splits $\mathbf{W}_1$ by columns and
-   $\mathbf{W}_2$ by rows :cite:`shoeybi2019megatron`.
+8. [code] **Tensor versus data parallelism.** ● Consider the MLP block
+    $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
+    $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
+    step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
+    $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$, and an elementwise
+    activation $\phi$, on $k$ devices. Tensor
+    parallelism (:numref:`fig_splitting`) splits $\mathbf{W}_1$ by columns and
+    $\mathbf{W}_2$ by rows :cite:`shoeybi2019megatron`.
     1. Show that each device can compute, without communication, an
        $n \times d$ partial result from its columns of $\mathbf{W}_1$ and
        its rows of $\mathbf{W}_2$, and that $\mathbf{Y}$ is the sum of the

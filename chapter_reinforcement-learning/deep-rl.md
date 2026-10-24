@@ -410,22 +410,6 @@ Parameter sharing makes continuous problems learnable but also couples updates a
 
 ## Exercises
 
-1. [code] **Policy size.** `ActorCritic.mlp` gives the policy and the value
-   network one hidden layer of 64 units each, and its argument `hidden` sets
-   that width.
-    1. Train `train_reinforce` on CartPole with `hidden` in
-       $\{4, 16, 64, 256\}$, three seeds each, by passing the width through
-       `cartpole_agent`. Report the mean return over the last ten updates and
-       the first update at which the batch mean exceeds 400.
-    1. Replace the policy network by a single linear layer from the four
-       state coordinates to the two action preferences, keep the value
-       network of `ActorCritic.mlp`, and repeat the experiment.
-    1. Near the upright position, the CartPole dynamics are approximately
-       linear in the state. Use this to explain why a policy whose
-       preferences are linear in the state can balance the pole. Which
-       decision rules can such a policy not represent?
-   :exlabel:`ex_deep-rl-policy-size`
-
 1. **Discounting at the time limit.** `train_reinforce` yields the
    undiscounted mean return of the episodes in each batch, while its update
    weights each step by the reward-to-go at $\gamma = 0.99$. Every CartPole
@@ -469,19 +453,6 @@ Parameter sharing makes continuous problems learnable but also couples updates a
     Exercise 13.4.*
    :exlabel:`ex_deep-rl-gaussian-score`
 
-1. [code] **Fixed exploration noise.** `GaussianPolicy` learns its standard
-   deviation through `log_std`. Hard-code $\sigma$ in `GaussianHead`, so that
-   it is no longer a learned parameter, and train Pendulum with
-   `pendulum_agent` for $\sigma \in \{0.1, 0.3, 1, 3\}$, three seeds each.
-    1. Plot the return curves. What does a small $\sigma$ cost, and what does
-       a large one cost?
-    1. At $\mu = 0$, which fraction of the sampled torques does the
-       environment clip for each $\sigma$? Describe the distribution of the
-       torque that the environment applies for $\sigma = 3$.
-    1. Log $\sigma = e^{\ell}$ after every update of the default
-       `GaussianPolicy`, and plot it for three seeds. Explain the direction
-       of its change with problem :exref:`ex_deep-rl-gaussian-score`b.
-
 1. [code] **Discontinuous rewards.** The second equality of
    :eqref:`eq_score_vs_pathwise` differentiates through $Q$. Take $\mu = 0$
    and $\sigma = 0.5$, as in the computation of `g_score` and `g_path`, and
@@ -522,8 +493,8 @@ Parameter sharing makes continuous problems learnable but also couples updates a
 
 1. [code] **Normalization under Adam.** ● Under plain SGD, dividing the
    weights by their standard deviation changes the effective learning rate
-   (exercise :exref:`ex_baselines-step-size-confound-quantified` of
-   :numref:`sec_baselines`). `train_reinforce` updates with Adam instead.
+   (exercise :exref:`ex_baselines-step-size-confound-quantified`
+   of :numref:`sec_baselines`). `train_reinforce` updates with Adam instead.
    Its step for each coordinate is
    $-\eta\, \hat{m}_t / (\sqrt{\hat{v}_t} + \epsilon)$, where $\hat{m}_t$ and
    $\hat{v}_t$ are bias-corrected moving averages of the gradient $g_t$ and
@@ -595,42 +566,6 @@ Parameter sharing makes continuous problems learnable but also couples updates a
        that the batch never contains. Why can that change make the policy
        worse at those angles?
 
-1. **Semi-gradient field.** ● Consider a finite Markov chain with
-   transition matrix $P$, reward vector $\mathbf{r}$ and discount
-   $0 < \gamma < 1$. A linear estimate $\hat{\mathbf{V}} = \Phi \mathbf{w}$
-   uses a feature matrix $\Phi$ of full column rank, and positive state
-   weights $\mathbf{d}$ define $D = \textrm{diag}(\mathbf{d})$. The expected
-   semi-gradient update of temporal-difference learning, with the target
-   $\mathbf{r} + \gamma P \Phi \mathbf{w}$ held fixed, is
-
-   $$F(\mathbf{w}) = \Phi^\top D \big(\mathbf{r} + \gamma P \Phi \mathbf{w} - \Phi \mathbf{w}\big).$$
-
-    1. A continuously differentiable vector field on $\mathbb{R}^n$ is the
-       gradient of a function if and only if its Jacobian is symmetric. Show
-       that $F$ is a gradient field if and only if
-       $\Phi^\top D (I - \gamma P) \Phi$ is symmetric. Show that the
-       corresponding field of `fit_value`, with fixed Monte Carlo targets in
-       place of the bootstrapped ones, is always a gradient field.
-    1. With one-hot features, show that $F$ is a gradient field if and only
-       if $d_s P_{s s'} = d_{s'} P_{s' s}$ for all pairs of states. Give a
-       three-state chain and a weighting $\mathbf{d}$ with
-       $\mathbf{d}^\top P = \mathbf{d}^\top$ for which this condition fails.
-    1. Let $\mathbf{d}^\top P = \mathbf{d}^\top$, and write
-       $\|\mathbf{v}\|_D^2 = \mathbf{v}^\top D \mathbf{v}$. Show with Jensen's
-       inequality that $\|P\mathbf{v}\|_D \leq \|\mathbf{v}\|_D$, and conclude
-       that
-
-       $$\mathbf{v}^\top D (I - \gamma P)\, \mathbf{v} \geq (1 - \gamma)\, \|\mathbf{v}\|_D^2.$$
-
-       The first of these inequalities is Lemma 1 of
-       :citet:`Tsitsiklis.VanRoy.1997`, on which their convergence proof for
-       on-policy linear temporal-difference learning rests.
-    1. Use the inequality to show that the expected iteration
-       $\mathbf{w} \leftarrow \mathbf{w} + \alpha F(\mathbf{w})$ converges
-       for small $\alpha > 0$, also when $F$ is not a gradient field. Which
-       property of $\mathbf{d}$ does the argument need, and why does
-       learning from a replay buffer of older policies lose it?
-
 1. [extended] **Parameter-space noise.** ●● Policy gradients inject noise
    into the actions. Evolution strategies
    :cite:`Salimans.Ho.Chen.ea.2017` inject it into the parameters instead:
@@ -671,9 +606,10 @@ Parameter sharing makes continuous problems learnable but also couples updates a
        toward the budget, and measure progress by the mean return of the
        unperturbed policy over five further episodes. Plot this return
        against the number of episodes consumed for three seeds, together
-       with `train_reinforce` for the linear policy of problem
-       :exref:`ex_deep-rl-policy-size`b and with `runs`. Both of these
-       consume eight episodes per update.
+       with `train_reinforce` for a policy network replaced by a single
+       linear layer from the four state coordinates to the two action
+       preferences, keeping the value network of `ActorCritic.mlp`, and with
+       `runs`. Both of these consume eight episodes per update.
     1. Repeat with a deterministic one-hidden-layer tanh network of width 64
        whose single output selects the action by its sign, so that
        $d = 385$. How many episodes does each method need until its mean

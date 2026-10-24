@@ -175,6 +175,11 @@ fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));
 
 1. Find another image and try to label a bounding box that contains the object. Compare labeling bounding boxes and categories: which usually takes longer?
 1. Why is the innermost dimension of the input argument `boxes` of `box_corner_to_center` and `box_center_to_corner` always 4?
+1. Data augmentation for object detection must transform the boxes together with the image. Let the image have width $W$ and height $H$.
+    1. Show that flipping the image left to right maps the box $(x_1, y_1, x_2, y_2)$ to $(W - x_2, y_1, W - x_1, y_2)$, and that rotating it by 90 degrees counterclockwise maps the box to $(y_1, W - x_2, y_2, W - x_1)$ in an image of width $H$ and height $W$. Why do the corners have to be reordered?
+    1. Implement both maps for a tensor `boxes` of shape ($n$, 4). Apply them to `dog_bbox` and `cat_bbox`, and draw the results with `bbox_to_rect` on the flipped image `img[:, ::-1]` and on the rotated image `img.transpose(1, 0, 2)[::-1]` to check them.
+1. Suppose that an annotator places each of the four corner coordinates $x_1, y_1, x_2, y_2$ with an independent error of standard deviation $\sigma$ pixels. Write `box_corner_to_center` as a $4 \times 4$ matrix acting on $(x_1, y_1, x_2, y_2)^\top$, and use it to show that the center coordinates have standard deviation $\sigma/\sqrt{2}$, the width and height have standard deviation $\sqrt{2}\sigma$, and the center is uncorrelated with the width and height. For the cat box and $\sigma = 5$ pixels, estimate to first order the relative standard deviation of the box area.
+1. An axis-aligned box describes a rotated object only loosely. Show that a rectangular object of width $a$ and height $b$, rotated by an angle $\theta \in [0, \pi/2]$, has a bounding box of width $a\cos\theta + b\sin\theta$ and height $a\sin\theta + b\cos\theta$. Show that the fraction of the box area covered by the object is smallest at $\theta = \pi/4$, where it equals $2ab/(a+b)^2$. Evaluate this for an elongated object such as a pen with $a = 4b$: what fraction of its box is background?
 
 
 :begin_tab:`mxnet`

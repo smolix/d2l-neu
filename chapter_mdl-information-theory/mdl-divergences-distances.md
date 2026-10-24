@@ -229,8 +229,8 @@ boundedness becomes a limitation in
 :numref:`sec_mdl-optimal-transport`: on disjoint supports JS is constant at
 $\log 2$, so it provides no gradient. Expanding :eqref:`eq_mdl-js-def` in
 terms of the ratio $u = p/q$ produces the generator in
-:numref:`tab_mdl-f-div-generators` (problem
-:exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`c carries out the
+:numref:`tab_mdl-f-div-generators`
+(problem :exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`c carries out the
 expansion).
 
 The table's last row is a *family within the family*
@@ -737,8 +737,8 @@ for eps in (0.1, 0.01, 0.001):
 
 The ratio $\textrm{TV}/\sqrt{\textrm{KL}/2}$ never exceeds $1$ (the worst of
 $10{,}000$ random pairs reaches $0.9926$), and on nearly-fair coins it climbs
-to $0.999999$: the constant $\tfrac{1}{2}$ is the best possible (problem
-:exref:`ex_mdl-divergences-distances-sharpness-pinsker-coins-biases`c),
+to $0.999999$: the constant $\tfrac{1}{2}$ is the best possible
+(problem :exref:`ex_mdl-divergences-distances-sharpness-pinsker-coins-biases`c),
 a sharpening due to Csiszár :cite:`Csiszar.1967` rather than to Pinsker's
 original argument.
 
@@ -1110,8 +1110,8 @@ equal-variance Gaussians the scores differ by the constant
 $(\mu_2 - \mu_1)/\sigma^2$, so
 $D_{\textrm{F}} = (\mu_1 - \mu_2)^2 / (2\sigma^4)$; compare KL's
 $(\mu_1 - \mu_2)^2/(2\sigma^2)$ from :eqref:`eq_mdl-gaussian_kl`; the general
-unequal-variance form is problem
-:exref:`ex_mdl-divergences-distances-fisher-stein`a. The following example verifies the mixture score formula,
+unequal-variance form is
+problem :exref:`ex_mdl-divergences-distances-fisher-stein`a. The following example verifies the mixture score formula,
 the normalizer-blindness, and the Gaussian closed form numerically.
 
 ```{.python .input #divergences-distances-score}
@@ -1373,8 +1373,8 @@ sampling, and optimization determine how strongly the idealized tendency appears
 ## Exercises
 
 1. **Generators and argument order.** Each row of
-   :numref:`tab_mdl-f-div-generators` is one choice of $f$ in the template
-   :eqref:`eq_mdl-f-div-def`.
+   :numref:`tab_mdl-f-div-generators` is one choice of $f$ in the
+   template :eqref:`eq_mdl-f-div-def`.
     1. For a generator $f$, define $f^\diamond(u) = u\, f(1/u)$. Show that
        $f^\diamond$ is convex with $f^\diamond(1) = 0$ and that
        $D_f(Q\|P) = D_{f^\diamond}(P\|Q)$. Compute $f^\diamond$ for the KL
@@ -1385,50 +1385,14 @@ sampling, and optimization determine how strongly the idealized tendency appears
        $f^\diamond(u) = f(u) + c\,(u - 1)$ for some constant $c$. Check this
        condition for the rows of :numref:`tab_mdl-f-div-generators` that are
        marked symmetric, and show that
-       $D_{f_\alpha}(Q\|P) = D_{f_{1-\alpha}}(P\|Q)$ for the generator
-       :eqref:`eq_mdl-alpha-generator`. Use this identity to confirm the
-       entry of the $\alpha$-divergence row in the "Symmetric?" column.
+       $D_{f_\alpha}(Q\|P) = D_{f_{1-\alpha}}(P\|Q)$ for the
+       generator :eqref:`eq_mdl-alpha-generator`. Use this identity to
+       confirm the entry of the $\alpha$-divergence row in the "Symmetric?"
+       column.
     1. Expand :eqref:`eq_mdl-js-def` in terms of the ratio $u = p/q$ and
-       recover the Jensen--Shannon generator of
-       :numref:`tab_mdl-f-div-generators`.
+       recover the Jensen--Shannon
+       generator of :numref:`tab_mdl-f-div-generators`.
    :exlabel:`ex_mdl-divergences-distances-recover-kl-reverse-kl`
-
-1. **Support mismatch.** The extended definition of
-   :numref:`sec_mdl-f-divergences` scores the part of $P$ that lies outside
-   the support of $Q$ by $f'(\infty) = \lim_{t \to \infty} f(t)/t$. Write
-   $f(0) = \lim_{u \to 0^+} f(u)$, and let $P$ and $Q$ have disjoint
-   supports. Show that $D_f(P\|Q) = f(0) + f'(\infty)$. Evaluate this sum
-   for the first six rows of :numref:`tab_mdl-f-div-generators`, and check
-   the values $D_{\textrm{KL}} = \infty$, $\textrm{TV} = 1$ and
-   $\textrm{JS} = \log 2$ that :numref:`sec_mdl-optimal-transport` quotes
-   for two point masses. Which of the six divergences stay finite? For
-   which orders $\alpha$ is the $\alpha$-divergence
-   :eqref:`eq_mdl-alpha-generator` finite on disjoint supports?
-   :exlabel:`ex_mdl-divergences-distances-support-mismatch`
-
-1. **Rényi orders.** The Rényi divergence :eqref:`eq_mdl-renyi-def` is
-   nondecreasing in its order $\alpha$ :cite:`Van-Erven.Harremoes.2014`.
-    1. Show that $D_2(P\|Q) = \log\big(1 + \chi^2(P\|Q)\big)$ and
-       $D_{1/2}(P\|Q) = -2 \log\big(1 - \tfrac{1}{2} H^2(P, Q)\big)$, with
-       $\chi^2$ and $H^2$ as in :numref:`tab_mdl-f-div-generators`. Evaluate
-       $D_{1/2}$, $D_{\textrm{KL}}$ and $D_2$ for $P = (0.6, 0.3, 0.1)$ and
-       $Q = (0.2, 0.5, 0.3)$ from the values that the
-       `#divergences-distances-f-table` cell prints, and check that they
-       increase with the order.
-    1. Show that Rényi divergences add over independent coordinates:
-       $D_\alpha(P_1 \otimes P_2 \,\|\, Q_1 \otimes Q_2)
-       = D_\alpha(P_1\|Q_1) + D_\alpha(P_2\|Q_2)$.
-    1. Show that
-       $D_\alpha\big(\mathcal{N}(0, \sigma^2) \,\|\, \mathcal{N}(\mu, \sigma^2)\big)
-       = \alpha \mu^2 / (2\sigma^2)$, and compare the limit $\alpha \to 1$
-       with :eqref:`eq_mdl-gaussian_kl`. The Gaussian mechanism of
-       differential privacy releases a statistic plus independent
-       $\mathcal{N}(0, \sigma^2)$ noise, and changing one person's record
-       shifts the statistic by at most $\Delta$. Bound the order-$\alpha$
-       Rényi divergence between the output distributions of $k$ such
-       releases for two datasets that differ in one record. This is the
-       accounting of Rényi differential privacy :cite:`Mironov.2017`.
-   :exlabel:`ex_mdl-divergences-distances-renyi-orders`
 
 1. **Local quadratic regime.** For a generator that is twice continuously
    differentiable near $1$, :eqref:`eq_mdl-f-div-local` states that every
@@ -1524,22 +1488,6 @@ sampling, and optimization determine how strongly the idealized tendency appears
        distributions on $\mathbb{R}$ with finite first moments.
    :exlabel:`ex_mdl-divergences-distances-prove-that-total-variation`
 
-1. **Invariance and geometry.** For a map $g$ and a distribution $P$, write
-   $g_\# P$ for the distribution of $g(X)$ when $X \sim P$.
-    1. Let $g$ be invertible with a measurable inverse. Apply the
-       data-processing inequality of :numref:`sec_mdl-tv-pinsker` twice to
-       show that $D_f(g_\# P \,\|\, g_\# Q) = D_f(P\|Q)$.
-    1. Show that $W_1(g_\# P, g_\# Q) \leq L\, W_1(P, Q)$ for every
-       $L$-Lipschitz map $g$. Give a deterministic map that increases
-       $W_1$. Does $W_1$ satisfy a data-processing inequality?
-    1. Before training, the data are standardized by
-       $\mathbf{x} \mapsto (\mathbf{x} - \mathbf{a})/s$ with one scale
-       $s > 0$ shared by all coordinates, and the model is transformed in the
-       same way. By which factors does this change KL, TV, $W_1$ and the
-       Fisher divergence :eqref:`eq_mdl-fisher-div-def` between the data and
-       the model?
-   :exlabel:`ex_mdl-divergences-distances-invariance-geometry`
-
 1. [code] **MMD in closed form.** For the RBF kernel with bandwidth $\ell$
    and $Z \sim \mathcal{N}(m, s^2)$, a Gaussian integral gives
 
@@ -1631,32 +1579,6 @@ sampling, and optimization determine how strongly the idealized tendency appears
        $\chi^2$ itself?
    :exlabel:`ex_mdl-divergences-distances-restricted-critics`
 
-1. [code] **Alpha-divergence fits.** ● The $\alpha$-divergences with
-   the generator :eqref:`eq_mdl-alpha-generator` move between reverse KL
-   ($\alpha \to 0$) and forward KL ($\alpha \to 1$), and the order is a
-   tuning knob of variational inference :cite:`Li.Turner.2016`. That paper
-   measures the divergence from the model to the target, so its order
-   corresponds to $1 - \alpha$ here. For $\alpha \neq 0, 1$ the divergence
-   is
-   $D_{f_\alpha}(P\|Q) = \big(\int p^\alpha q^{1 - \alpha}\, dx - 1\big) / \big(\alpha(\alpha - 1)\big)$,
-   and at $\alpha = 0$ and $\alpha = 1$ it is the reverse and the forward
-   KL divergence.
-    1. Reuse `log_p`, `log_q`, `kl` and the grid `x` of the
-       `#divergences-distances-fwd-rev-kl` cell. For
-       $\alpha \in \{0, 0.1, \ldots, 1\}$, minimize
-       $D_{f_\alpha}(P\|Q_{\boldsymbol{\theta}})$ over
-       $\boldsymbol{\theta} = (\mu, \log\sigma)$ from the starting points
-       $(0, 0)$, $(-2, \log 0.6)$ and $(2, \log 0.6)$, and record every
-       local optimum you find. At which order does the global optimum
-       switch from one mode to both? Does the fitted $\sigma$ change
-       continuously with $\alpha$? For which orders do several optima
-       coexist?
-    1. Repeat (a) for $\alpha \in \{1.5, 2\}$. How do these fits compare
-       with the moment-matching fit at $\alpha = 1$? For $\alpha > 1$ the
-       divergence grows with $E_Q\big[(p/q)^\alpha\big]$. Where is this
-       expectation large, and how does that explain the difference?
-   :exlabel:`ex_mdl-divergences-distances-alpha-interpolation`
-
 1. **Hellinger bounds and testing.** ● Pinsker's inequality is vacuous
    once $D_{\textrm{KL}} > 2$. Let
    $\textrm{BC}(P, Q) = \sum_x \sqrt{p(x) q(x)} = 1 - \tfrac{1}{2} H^2(P, Q)$
@@ -1665,8 +1587,8 @@ sampling, and optimization determine how strongly the idealized tendency appears
        $|p - q| = |\sqrt{p} - \sqrt{q}|\,(\sqrt{p} + \sqrt{q})$.
     1. Prove that
        $\textrm{TV}(P, Q) \leq H(P, Q) \sqrt{1 - \tfrac{1}{4} H^2(P, Q)}$
-       with the Cauchy--Schwarz inequality
-       (:numref:`sec_mdl-geometry-linear-algebraic-ops`), and rewrite the
+       with the Cauchy--Schwarz inequality of
+       :numref:`sec_mdl-geometry-linear-algebraic-ops`, and rewrite the
        bound as $\textrm{TV}^2 \leq 1 - \textrm{BC}^2$.
     1. Use Jensen's inequality to show that
        $\textrm{BC}(P, Q) \geq e^{-D_{\textrm{KL}}(P\|Q)/2}$, and conclude
@@ -1712,9 +1634,9 @@ sampling, and optimization determine how strongly the idealized tendency appears
    $P_w = w\, \mathcal{N}(-m, 1) + (1 - w)\, \mathcal{N}(m, 1)$.
     1. Compute $D_{\textrm{F}}(P_{0.7}\|P_{0.3})$ and
        $D_{\textrm{KL}}(P_{0.7}\|P_{0.3})$ by quadrature for
-       $m \in \{1, \ldots, 6\}$, with the mixture score of
-       :numref:`sec_mdl-fisher-divergence`. Which limit does the KL
-       divergence approach as $m$ grows? How fast does the Fisher
+       $m \in \{1, \ldots, 6\}$, with the
+       mixture score of :numref:`sec_mdl-fisher-divergence`. Which limit
+       does the KL divergence approach as $m$ grows? How fast does the Fisher
        divergence decay?
     1. Use the responsibility form of the mixture score to explain where
        the scores of $P_{0.7}$ and $P_{0.3}$ differ, and why the weights
@@ -1727,59 +1649,6 @@ sampling, and optimization determine how strongly the idealized tendency appears
        divergences? Relate the result to the noise-perturbed score models
        of :citet:`song2019generative`.
    :exlabel:`ex_mdl-divergences-distances-score-blindness`
-
-1. [code] **Kernel Stein discrepancy of a model.** ● Let the sample come
-   from $Q = \mathcal{N}(0, 1)$, let a model $P$ have the score $s_P$, and
-   write $\delta(x) = s_P(x) - s_Q(x)$ for the score difference.
-    1. Apply Stein's identity :eqref:`eq_mdl-stein-identity` for $Q$ to show
-       that $E_Q[(\mathcal{A}_P f)(X)] = E_Q[\delta(X)\, f(X)]$ for every $f$
-       that satisfies its conditions. Apply this in each argument of the
-       Stein kernel :eqref:`eq_mdl-stein-kernel` to show that
-       $\mathrm{KSD}^2(Q, P) = E_{x, x' \sim Q}\big[\delta(x)\, k(x, x')\, \delta(x')\big]$
-       :cite:`Liu.Lee.Jordan.2016`.
-    1. For the model $P = \mathcal{N}(\mu, 1)$ and the RBF kernel with
-       bandwidth $\ell$, use the Gaussian integral of exercise
-       :exref:`ex_mdl-divergences-distances-q-mathcaln-delta` to show that
-       $\mathrm{KSD}^2(Q, P) = \mu^2 \ell / \sqrt{\ell^2 + 2}$. Compare the
-       value at $\mu = \ell = 1$ with the estimate that the
-       `#divergences-distances-ksd` cell prints, and with the mean and
-       standard deviation of `ksd2_ustat` over $20$ fresh samples of size
-       $1{,}000$.
-    1. Estimate $\mathrm{KSD}^2(Q, P)$ with `ksd2_ustat` for the model
-       $P = \mathcal{N}(0, 4)$ at $\ell \in \{0.3, 1, 3, 10, 30\}$, and
-       evaluate the formula of (b) at $\mu = 1$ for the same bandwidths. How
-       does each discrepancy behave as $\ell \to \infty$? Explain the
-       difference with the form of (a).
-   :exlabel:`ex_mdl-divergences-distances-ksd-model`
-
-1. [code] **Stein variational gradient descent.** ● SVGD
-   :cite:`Liu.Wang.2016` moves particles $x_1, \ldots, x_n$ toward a target
-   $P$ by the update $x_i \leftarrow x_i + \eta\, \varphi(x_i)$ with
-
-   $$
-   \varphi(x) = \frac{1}{n} \sum_{j=1}^n \Big[ k(x_j, x)\, s_P(x_j)
-   + \partial_{x_j} k(x_j, x) \Big],
-   $$
-
-   where $k$ is the RBF kernel and its bandwidth follows the median
-   heuristic of that paper, $\ell^2 = \mathrm{med}^2 / (2 \log n)$ with
-   $\mathrm{med}$ the median distance between particles, recomputed at
-   every step.
-    1. Implement SVGD for the mixture $P$ of the
-       `#divergences-distances-fwd-rev-kl` cell with the function `score_p`
-       of the `#divergences-distances-score` cell. Use $200$ particles drawn
-       from $\mathcal{N}(0, 1)$, $\eta = 0.05$ and $3{,}000$ steps. Compare
-       the fraction of particles with $x > 0$, their mean and their
-       standard deviation with $P(X > 0) \approx 0.30$, $-0.8$ and $1.929$.
-    1. Drop the second term of $\varphi$. Where do the particles go? Which
-       algorithm does SVGD reduce to for a single particle?
-    1. Restart (a) from particles drawn from $\mathcal{N}(-10, 1)$, run
-       $18{,}000$ steps, and record the fraction of particles with $x > 0$
-       every $3{,}000$ steps. Then widen both components of $P$ to standard
-       deviation $1$ by changing `sigmas`, and run both initializations
-       again. Explain the four outcomes with exercise
-       :exref:`ex_mdl-divergences-distances-score-blindness`.
-   :exlabel:`ex_mdl-divergences-distances-svgd`
 
 1. [code] **Sinkhorn divergences.** ●● Regularize the transport LP of the
    `#divergences-distances-w1` cell by the divergence from the independent

@@ -1040,8 +1040,8 @@ algebra and the convergence rate of gradient descent.
        from the spacing of float64 numbers near $x_i^2$.
     1. Run Welford's recursion :eqref:`eq_mdl-opt-welford` on the same
        three numbers and compare with the exact variance.
-    1. A backward-stable variance algorithm
-       (:numref:`subsec_mdl-conditioning-revisited`) returns the exact
+    1. A backward-stable variance
+       algorithm (:numref:`subsec_mdl-conditioning-revisited`) returns the exact
        variance of slightly perturbed data. Explain why a single negative
        output proves that the direct formula is not backward stable.
    :exlabel:`ex_mdl-numerical-stability-conditioning-construct-small-dataset-three`
@@ -1151,8 +1151,8 @@ algebra and the convergence rate of gradient descent.
     1. Derive exact formulas for the mean $m$ and the centered sum of
        squares $M$ of the union of the two shards in terms of $k_A$, $m_A$,
        $M_A$, $k_B$, $m_B$, and $M_B$.
-    1. Show that the case $k_B = 1$ is Welford's recursion
-       :eqref:`eq_mdl-opt-welford`.
+    1. Show that the case $k_B = 1$ is Welford's
+       recursion :eqref:`eq_mdl-opt-welford`.
     1. Split the $10^5$ samples of the
        `#numerical-stability-conditioning-welford` cell into $2^j$ shards
        of nearly equal size (`np.array_split`) for $j \in \{1, 4, 8\}$.

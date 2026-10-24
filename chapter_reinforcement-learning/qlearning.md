@@ -424,8 +424,8 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
     1. Suppose instead that the time limit is part of the task, so that
        the return really ends after $H$ steps. Show that no single number
        is the correct value of the state. Add the number $h$ of remaining
-       steps to the state, as in problem :exref:`ex_mdp-time-limits`b of
-       :numref:`sec_mdp`. Find the value of each state $(s, h)$, and show
+       steps to the state, as in problem :exref:`ex_mdp-time-limits`b
+       of :numref:`sec_mdp`. Find the value of each state $(s, h)$, and show
        that the mask `terminated or truncated` is then correct.
    :exlabel:`ex_qlearning-truncation-termination`
 
@@ -457,39 +457,6 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        Where do the two rankings disagree, and what explains the
        disagreement?
    :exlabel:`ex_qlearning-exploration-schedule`
-
-1. [code] **Regret rates of epsilon-greedy.** The expected regret is
-   $\sum_a (\mu^* - \mu_a)\, E[n(a)]$, where $n(a)$ counts the pulls of arm
-   $a$.
-    1. Once the empirical means rank the best arm first, a fixed-$\epsilon$
-       rule pulls an arm chosen uniformly at random with probability
-       $\epsilon$ and the best arm otherwise. Derive its expected regret per
-       pull for `arms` at $\epsilon = 0.1$, and the regret that this
-       exploration alone accumulates in $2000$ and in $20000$ pulls.
-    1. Repeat the calculation for the annealed schedule
-       $\epsilon_t = \max(0.02, 1/\sqrt{t + 1})$ of `rules`. Show that its
-       exploration regret grows like $\sqrt{t}$ until the floor takes
-       over, find the pull at which that happens, and give the regret per
-       pull after it.
-    1. Run the three rules of `rules` for $20000$ pulls, twenty seeds
-       each, and plot the mean cumulative regret on doubly logarithmic
-       axes. Compare the slopes and the levels with your predictions. What
-       accounts for the measured regret in excess of the exploration
-       regret?
-
-1. [code] **The UCB coefficient.** The section chose $\kappa = 0.5$ for
-   these arms. Rerun `ucb` for
-   $\kappa \in \{0.15, 0.3, 0.5, 1, \sqrt{2}, 2.4\}$, twenty seeds each,
-   and report the mean, the median and the maximum over seeds of the
-   regret after $2000$ pulls.
-    1. Which $\kappa$ minimizes the median, and which minimizes the mean?
-       Explain the difference at small $\kappa$ by what the rule does after
-       the best arm loses its first few pulls.
-    1. Which of the three statistics would you use to compare exploration
-       rules, and why?
-    1. Report the same statistics for `thompson`. Which property of the
-       Beta posterior plays the role of the bonus
-       $\kappa \sqrt{\log t / n(a)}$ of :eqref:`eq_ucb`?
 
 1. **Greedy SARSA and Q-learning.** SARSA replaces the maximum in
    :eqref:`eq_td_error` by the value of the action $a'$ that the behavior
@@ -577,8 +544,8 @@ Replacing the table by a neural network gives the deep Q-learning methods develo
        pairs at zero, solve it with `d2l.value_iteration`, and add the
        error of its action values to the plot at the same environment
        steps. Which estimate makes better use of the samples, and what
-       does it cost in computation? Relate the result to exercise
-       :exref:`ex_qlearning-batch-td-monte-carlo`.
+       does it cost in computation? Relate the result
+       to exercise :exref:`ex_qlearning-batch-td-monte-carlo`.
     1. Value iteration consumes model backups, Q-learning consumes
        environment steps, and the estimated model of part (b) consumes
        both. Suppose that one environment step costs as much computation

@@ -1106,8 +1106,8 @@ and decoder-only models for general autoregressive generation.
        the maps of both models with those of the one-block model.
     1. Explain how a model can solve reversal while its cross-attention puts
        little weight on source position $n - 1 - t$. Reconcile your
-       findings with the cautions about reading attention maps in
-       :numref:`sec_multihead-attention`.
+       findings with the cautions about reading attention maps
+       in :numref:`sec_multihead-attention`.
 
 1. [code] **Several masks at once.** ● The objective
    :eqref:`eq_mlm` scores each masked position separately, so the encoder
@@ -1154,23 +1154,6 @@ and decoder-only models for general autoregressive generation.
        assumptions of the identity allow the two measured edge losses to
        differ?
 
-1. [code] **Where position enters.** ● Cross-attention without a mask is
-   invariant to a joint permutation of its keys and values, so the reversal
-   task of :numref:`subsec_reversal-task` is solvable only because the
-   source representations carry position. `EncoderDecoder` supplies
-   position to both streams through learned tables.
-    1. Remove the position embedding from the encoder, retrain on reversal,
-       and measure the accuracy of the teacher-forced predictions
-       `seq2seq(src, dec_in)` at each target position on fresh strings.
-    1. Without position, the encoder output determines at most the multiset
-       of source letters. For 16 letters and strings of length 12, compute
-       the best accuracy at each target position that a predictor can reach
-       when it knows this multiset and the correct target prefix. Compare
-       it with your measurement.
-    1. Restore the encoder's position table and remove the decoder's
-       instead. Measure the exact match after greedy decoding, and explain
-       from which part of the decoder its position information can come.
-
 1. [code] **Content-addressed alignment.** ● In reversal, target position
    $t$ copies the same source position for every string. Change the line of
    `sample_batch` that builds the target so that the target is the source
@@ -1187,31 +1170,6 @@ and decoder-only models for general autoregressive generation.
        step $t$ must encode for sorting, compared with reversal, and which
        information the encoder must supply when a letter occurs more than
        once.
-
-1. [code] **FLOPs versus time.** ● The caption of
-   :numref:`fig_latent-bottleneck` counts only the attention mixing, whereas
-   the cost curve of :numref:`subsec_perceiver-cost-curve` times whole
-   forward passes.
-    1. Count the FLOPs of one forward pass of `PerceiverEncoder` and of
-       `SelfAttentionEncoder` on a batch of one, as functions of $N$, $M$,
-       $d$, and the number of blocks $L$, with one multiply--add counted as
-       two FLOPs as in :eqref:`eq_multihead-flops`. Include the query,
-       key, value, and output projections and the SwiGLU FFN of
-       `d2l.FeedForward`. Evaluate both counts for $d = 256$, $L = 2$, and
-       $M = 64$ at the four input lengths of the cost curve. Which term
-       dominates the Perceiver's count?
-    1. Compare the ratio of the two counts at each $N$ with the ratio of
-       your measured times. Where do the two ratios disagree most, and which
-       part of the running time does a count of arithmetic leave out?
-    1. Repeat the timing for $M \in \{16, 64, 256\}$ at the input lengths
-       $N \in \{128, 256, \ldots, 8192\}$. How does the input length at which
-       the Perceiver becomes the faster model move with $M$, and does your
-       count explain the movement?
-    1. Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2022` adds $K$ learned
-       output queries that cross-attend into the $M$ latents. Add their cost
-       to your count. For one output per input element, $K = N$, as in
-       optical flow, state how the total grows with $N$ and compare it with
-       the count of `SelfAttentionEncoder`.
 
 1. [extended] **A Perceiver for reversal.** ● Perceiver IO produces its
    outputs through learned output queries rather than an autoregressive

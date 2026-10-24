@@ -328,7 +328,47 @@ system; it is not guaranteed to be faster than training.
     1. Explain whether the images that `visualize` shows for the first
        validation batch would change.
 
-1. [code] **Upsampling and linear models.** ● Treat the resizing from
+:begin_tab:`pytorch`
+3. [code] **Worker ablation.** `get_dataloader` passes the `num_workers`
+   attribute, which `DataModule` sets to 4 by default, to
+   `torch.utils.data.DataLoader`. For `data = FashionMNIST()`, time one pass
+   of `data.train_dataloader()` with `data.num_workers` set to 0, 1, 2, 4,
+   and 8, where 0 loads in the main process. State under what conditions
+   increasing `num_workers` stops helping.
+   :exlabel:`ex_image-classification-dataset-loader-parallelism`
+:end_tab:
+
+:begin_tab:`jax`
+3. [code] **Parallel loading.** The `tf.data` pipeline in `get_dataloader`
+   does not use the `num_workers` attribute of `DataModule`; its
+   parallelism is set per stage. Time one pass of `train_dataloader` as
+   written, then with `num_parallel_calls=tf.data.AUTOTUNE` in the `map`
+   call and a trailing `.prefetch(tf.data.AUTOTUNE)`. State under what
+   conditions additional parallelism stops helping.
+   :exlabel:`ex_image-classification-dataset-loader-parallelism`
+:end_tab:
+
+:begin_tab:`tensorflow`
+3. [code] **Parallel loading.** The `tf.data` pipeline in `get_dataloader`
+   does not use the `num_workers` attribute of `DataModule`; its
+   parallelism is set per stage. Time one pass of `train_dataloader` as
+   written, then with `num_parallel_calls=tf.data.AUTOTUNE` in the `map`
+   call and a trailing `.prefetch(tf.data.AUTOTUNE)`. State under what
+   conditions additional parallelism stops helping.
+   :exlabel:`ex_image-classification-dataset-loader-parallelism`
+:end_tab:
+
+:begin_tab:`mxnet`
+3. [code] **Worker ablation.** `get_dataloader` passes the `num_workers`
+   attribute, which `DataModule` sets to 4 by default, to
+   `gluon.data.DataLoader`. For `data = FashionMNIST()`, time one pass of
+   `data.train_dataloader()` with `data.num_workers` set to 0, 1, 2, 4,
+   and 8, where 0 loads in the main process. State under what conditions
+   increasing `num_workers` stops helping.
+   :exlabel:`ex_image-classification-dataset-loader-parallelism`
+:end_tab:
+
+4. [code] **Upsampling and linear models.** ● Treat the resizing from
    $28 \times 28$ to $32 \times 32$ as a linear map
    $\mathbf{x}' = \mathbf{A}\mathbf{x}$ from the 784 original pixels to the
    1024 resized ones, where the columns of
@@ -339,6 +379,18 @@ system; it is not guaranteed to be faster than training.
        at both resolutions, with `num_inputs` set to the number of pixels
        per image. Compare the validation accuracies and explain any
        difference in light of the previous part.
+
+1. [extended] **Loader or compute.** ● Combine the two sweeps of problems
+   :exref:`ex_image-classification-dataset-throughput-batch-size` and
+   :exref:`ex_image-classification-dataset-loader-parallelism` into a grid
+   of batch sizes and loader-parallelism settings, and measure loader
+   throughput in images per second at each point. After
+   :numref:`sec_softmax_scratch`, measure the throughput of a full training
+   step of `SoftmaxRegressionScratch` (forward pass, loss, gradient, and
+   parameter update) on a minibatch held in memory, at the same batch sizes.
+   Draw a heatmap of the ratio of loader throughput to training throughput
+   over the grid. Identify the region of the grid in which loading is the
+   bottleneck, and state whether a crossover exists on your hardware.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/48)

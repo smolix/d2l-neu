@@ -1396,45 +1396,6 @@ integrated by exactly the solvers of this section.
 
 ## Exercises
 
-1. **Flow maps of a time-dependent field.** The group property
-   :eqref:`eq_mdl-ode-flow-group` is stated for autonomous fields. A Neural
-   ODE field $\mathbf{f}_\theta(\mathbf{x}, t)$ depends on time, and so does
-   the probability-flow ODE of
-   :numref:`sec_mdl-fokker-planck-probability-flow`. Let $\Phi_{t,s}(y)$
-   denote the solution at time $t$ of $\dot{x} = 2tx$ started from
-   $x(s) = y$.
-    1. Compute $\Phi_{t,s}$ and show that
-       $\Phi_{t,u} \circ \Phi_{u,s} = \Phi_{t,s}$ for all $s$, $u$, and $t$.
-    1. Write $\Phi_t = \Phi_{t,0}$. Show that
-       $\Phi_{t+s} \neq \Phi_t \circ \Phi_s$ for $s, t > 0$. Which step of
-       the argument after :eqref:`eq_mdl-ode-flow-group` fails?
-    1. Append the time to the state, $\mathbf{z} = (x, \tau)$ with
-       $\dot{\tau} = 1$. Show that the flow of the resulting autonomous field
-       on $\mathbb{R}^2$ has the group property, and express $\Phi_{t,s}$
-       through it. Why is the map $\Phi_{T,0}$ of a time-dependent field a
-       bijection under the hypotheses of Picard--Lindelöf?
-   :exlabel:`ex_mdl-odes-solvers-nonautonomous-flows`
-
-1. **Picard iteration.** The proof of Picard--Lindelöf in
-   :numref:`sec_mdl-ode-existence-uniqueness` iterates the Picard operator
-   $P$ from the constant path.
-    1. For $\dot{\mathbf{x}} = A\mathbf{x}$ with
-       $\mathbf{x}(0) = \mathbf{x}_0$, show by induction that the $k$-th
-       Picard iterate is $\sum_{j=0}^{k} (At)^j \mathbf{x}_0 / j!$, a partial
-       sum of :eqref:`eq_mdl-ode-matrix-exp-series`.
-    1. For $\dot{x} = x^2$ with $x(0) = 1$, compute the first three iterates
-       and compare them with the Taylor series of the solution $1/(1 - t)$.
-       Through which power of $t$ does the $k$-th iterate agree with it?
-    1. On the interval $|x| \le R$, the field $x^2$ is Lipschitz with
-       constant $2R$. Why does the contraction argument guarantee a solution
-       only on a short time interval? Restart the argument at time $t_k$ with
-       $R = 2x(t_k)$. Show that the iterates stay in $|x| \le R$ and that $P$
-       contracts on every interval of length $\delta < 1/(4x(t_k))$. With
-       $\delta_k = 1/(8x(t_k))$, show that the restart times $t_k$ approach
-       $1$ geometrically and never reach it. Why does a globally Lipschitz
-       field not have this problem?
-   :exlabel:`ex_mdl-odes-solvers-picard-iteration`
-
 1. **Separation of trajectories.** The field of the
    `#odes-solvers-neural-ode-train` cell has the form
    $\mathbf{f}(\mathbf{x}) = W_2 \tanh(W_1\mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2$.
@@ -1457,112 +1418,10 @@ integrated by exactly the solvers of this section.
        constants of $\Phi_T$ and of its inverse?
    :exlabel:`ex_mdl-odes-solvers-trajectory-separation`
 
-1. **Matrix exponential beyond diagonalizable matrices.** The
-   eigendecomposition formula :eqref:`eq_mdl-ode-matrix-exp-eig` requires a
-   diagonalizable matrix.
-    1. Show from the series :eqref:`eq_mdl-ode-matrix-exp-series` that
-       $e^{B + C} = e^B e^C$ whenever $BC = CB$. Then compute $e^B e^C$ and
-       $e^{B + C}$ for
-       $B = \left(\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right)$ and
-       $C = \left(\begin{smallmatrix}0&0\\1&0\end{smallmatrix}\right)$. What
-       does the result say about following the flow of
-       $\dot{\mathbf{x}} = C\mathbf{x}$ for unit time and then the flow of
-       $\dot{\mathbf{x}} = B\mathbf{x}$, compared with following the flow of
-       their sum?
-    1. Write the Jordan block
-       $\left(\begin{smallmatrix}\lambda&1\\0&\lambda\end{smallmatrix}\right)$
-       as $\lambda I + N$ with $N^2 = 0$ and compute its exponential. For
-       $\lambda = 0$ the system is the free particle $\ddot{x} = 0$. Does
-       every trajectory stay bounded?
-    1. Show that $\det e^{At} = e^{t \operatorname{tr} A}$ for every square
-       matrix $A$, diagonalizable or not. Write
-       $e^{A(t + h)} = e^{Ah} e^{At}$ and apply the Lemma of
-       :numref:`sec_mdl-continuous-normalizing-flows` to obtain an ODE for
-       $\det e^{At}$.
-   :exlabel:`ex_mdl-odes-solvers-matrix-exponential-algebra`
-
-1. [code] **Transient growth.** The classification of
-   :numref:`sec_mdl-linear-odes-stability` predicts how $\|\mathbf{x}(t)\|$
-   behaves as $t \to \infty$. The Jacobian of a trained network's dynamics
-   at a fixed point can have all its eigenvalues in the left half-plane
-   without being normal, and the classification then says nothing about a
-   finite horizon. Consider
-
-   $$
-   A = \begin{pmatrix} -1 & 25 \\ 0 & -2 \end{pmatrix},
-   \qquad \mathbf{x}_0 = (0, 1)^\top .
-   $$
-
-    1. Compute $e^{At}$ in closed form. Find the maximum of the first
-       coordinate of $\mathbf{x}(t) = e^{At}\mathbf{x}_0$ and the time at
-       which it occurs.
-    1. Evaluate the operator norm $\|e^{At}\|_2$ on a grid of
-       $t \in [0, 8]$ with `expm_eig` of the `#odes-solvers-adjoint-check`
-       cell. Find its maximum and the time after which it stays below $1$.
-    1. For $A = V \Lambda V^{-1}$, show that
-       $\|e^{At}\| \le \kappa(V)\, e^{t \max_i \operatorname{Re}\lambda_i}$
-       with $\kappa(V) = \|V\|\,\|V^{-1}\|$, and compute $\kappa(V)$ for
-       unit-norm eigenvectors of this $A$. A matrix is *normal* if
-       $A^\top A = A A^\top$. Show that
-       $\|e^{At}\|_2 = e^{t \max_i \operatorname{Re}\lambda_i}$ for every
-       normal $A$.
-   :exlabel:`ex_mdl-odes-solvers-transient-growth`
-
-1. **Fixed points of the damped pendulum.**
-   :numref:`subsec_mdl-ode-linearization` states the stability of the damped
-   pendulum $\ddot{\theta} = -\sin\theta - \gamma\dot{\theta}$ at its two
-   rest points without computing it.
-    1. Write the pendulum as a first-order system in $(\theta, \omega)$ with
-       $\omega = \dot{\theta}$. Compute the Jacobians at $(0, 0)$ and
-       $(\pi, 0)$ and their eigenvalues as functions of $\gamma \ge 0$.
-    1. For which $\gamma > 0$ is $(0, 0)$ a stable spiral, and for which a
-       stable node? Show that $(\pi, 0)$ is a saddle for every
-       $\gamma \ge 0$.
-    1. For $\gamma = 0$ the linearization at $(0, 0)$ is a center, and
-       Hartman--Grobman does not apply. Show that
-       $E = \tfrac12\omega^2 - \cos\theta$ is constant along trajectories,
-       and conclude that the trajectories near $(0, 0)$ are closed curves.
-    1. The scalar fields $\dot{x} = -x^3$ and $\dot{x} = x^3$ have the same
-       linearization at $0$. What is it, and how do the two fixed points
-       differ?
-   :exlabel:`ex_mdl-odes-solvers-pendulum-fixed-points`
-
-1. [code] **Heun on the pendulum.** The orders measured by the
-   `#odes-solvers-euler-rk4-order` cell belong to a linear field.
-    1. Show that Heun's method matches the Taylor expansion of the true
-       solution through the $h^2$ term for a vector field
-       $\mathbf{f}(\mathbf{x})$. In the vector case, the product $f' f$ of
-       the midpoint computation becomes the Jacobian--vector product
-       $(\partial\mathbf{f}/\partial\mathbf{x})\,\mathbf{f}$.
-    1. Implement `heun(f, x0, T, n)` with the signature of `euler` and
-       `rk4`. Run the three methods on the damped pendulum of exercise
-       :exref:`ex_mdl-odes-solvers-pendulum-fixed-points` with
-       $\gamma = 0.5$, $(\theta, \omega)(0) = (2, 0)$, and $T = 10$, for
-       $n = 32, 64, \ldots, 1024$ steps. Use `rk4` with $2^{16}$ steps as the
-       reference solution and fit the log--log slopes.
-    1. Plot the error of each method against its number of field
-       evaluations, for budgets from $8$ to $128$ evaluations. Does RK4 beat
-       Heun and Euler at every budget?
-    1. One step of each method multiplies a mode of the linearized field
-       with eigenvalue $\lambda$ by the value $R(h\lambda)$ of its stability
-       function (:numref:`sec_mdl-stiffness-implicit`). Heun's method has
-       $R(z) = 1 + z + z^2/2$, and RK4 has
-       $R(z) = 1 + z + z^2/2 + z^3/6 + z^4/24$. At a budget of $8$
-       evaluations, evaluate $|R(h\lambda)|$ of each method for the
-       eigenvalues at $(0, 0)$ of exercise
-       :exref:`ex_mdl-odes-solvers-pendulum-fixed-points`a. Which of the
-       three methods are stable at this budget? How do the values explain
-       the place of RK4 in the ranking?
-
-   *Adapted from Simo Särkkä and Arno Solin,
-   [Applied Stochastic Differential Equations](https://users.aalto.fi/~asolin/sde-book/sde-book.pdf),
-   Exercise 2.10.*
-   :exlabel:`ex_mdl-odes-solvers-heun-pendulum`
-
 1. **Rotating modes.** The stability analysis of
    :numref:`sec_mdl-stiffness-implicit` treats a real decay rate. A complex
-   eigenvalue $\lambda$ enters through $z = h\lambda$ in
-   :numref:`fig_mdl-dyn-stability-regions`.
+   eigenvalue $\lambda$ enters through
+   $z = h\lambda$ in :numref:`fig_mdl-dyn-stability-regions`.
     1. For the spiral field of :numref:`fig_mdl-dyn-ode-field`, with
        eigenvalues $-0.5 \pm i$, find the largest step size for which forward
        Euler decays.
@@ -1584,23 +1443,6 @@ integrated by exactly the solvers of this section.
        function is a polynomial in $z$ of degree at most $s$. Why does this
        rule out A-stability for explicit methods?
    :exlabel:`ex_mdl-odes-solvers-rotating-modes`
-
-1. **Stiffness budget.** Consider $\dot{\mathbf{x}} = A\mathbf{x}$ with
-   $A = \mathrm{diag}(-100, -1)$ and $\mathbf{x}(0) = (1, 1)$ on $[0, 5]$.
-    1. How many forward-Euler steps does stability require? How many RK4
-       steps does it require, given the real-axis reach $\approx -2.79$ of
-       :numref:`fig_mdl-dyn-stability-regions`, and how many field
-       evaluations are they?
-    1. Measure accuracy by the relative error of the slow coordinate at
-       $T = 5$. Show that both forward and backward Euler have relative error
-       approximately $Th/2$ there, and compute the number of steps for a
-       relative error of $1\%$. Is the system stiff at this accuracy?
-    1. Repeat (a) and (b) with the fast eigenvalue moved to $-10^4$.
-    1. For a nonlinear $\mathbf{f}$, write the equation that one
-       backward-Euler step must solve for $\mathbf{x}_{n+1}$ and the Newton
-       iteration for it in terms of the Jacobian $J$ of $\mathbf{f}$. How
-       many Newton iterations does a linear $\mathbf{f}$ need?
-   :exlabel:`ex_mdl-odes-solvers-stiffness-budget`
 
 1. **Heavy ball as a discretized ODE.** :numref:`sec_mdl-gd-as-solver`
    states that heavy-ball momentum :eqref:`eq_mdl-opt-heavy-ball`

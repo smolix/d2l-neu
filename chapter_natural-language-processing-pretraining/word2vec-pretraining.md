@@ -612,6 +612,46 @@ get_similar_tokens('chip', 3, embed_v)
 ## Exercises
 
 1. Using the trained model, find semantically similar words for other input words. Can you improve the results by tuning hyperparameters?
+1. The loss that `train` reports is the binary cross-entropy averaged over
+   the non-padded positions of each example. Example $i$ has $n_i$ context
+   words and $K n_i$ noise words, where $K$ is `num_noise_words`.
+    1. At initialization all dot products are close to zero. Show that the
+       loss is then close to $\log 2 \approx 0.693$.
+    1. Consider a predictor that outputs the same logit $b$ for every pair
+       of a center word and a context or noise word. Find the $b$ that
+       minimizes the loss, and show that the minimum is the binary entropy
+       of $1/(K + 1)$, about 0.451 for $K = 5$. Show that the skip-gram
+       model can represent this predictor although it has no bias terms.
+    1. Compare both values with the loss in the training plot. What
+       fraction of the decrease below $\log 2$ does the constant predictor
+       already achieve?
+1. The training loop multiplies the masked loss of each example by
+   `mask.shape[1] / mask.sum(axis=1)`, so that each center word contributes
+   the mean of the losses at its $(K + 1) n_i$ non-padded positions, where
+   $n_i$ is its number of context words and $K$ the number of noise words
+   per context word.
+    1. Show that the negative sampling objective
+       of :numref:`sec_approx_train`, a sum over all (center word, context
+       word) pairs, instead gives every non-padded position the same weight.
+    1. Relative to that objective, by what factor does the training loop
+       weight the loss of one (center word, context word) pair, as a
+       function of $n_i$? Which pairs does it weight up: those of center
+       words near either end of a sentence or with a small sampled window,
+       or the others?
+1. `get_similar_tokens` compares center word vectors, the rows of `net[0]`
+   (`embed_v` in TensorFlow).
+    1. Pass the context word table `net[1]` (`embed_u`) instead, and
+       compare the neighbors of "chip" and of two query words of your choice
+       with those from the center word table.
+    1. Write a variant that ranks every word $w$ by the cosine similarity
+       between the center word vector $\mathbf{v}_q$ of the query word $q$
+       and the context word vector $\mathbf{u}_w$, and report its five
+       nearest words for "bank", "stock", and "president".
+    1. Training increases $\mathbf{u}_w^\top \mathbf{v}_q$ for words $w$
+       that occur near $q$. Explain why the variant of the previous part
+       tends to return words that occur next to the query word, whereas the
+       center word table tends to return words that occur in contexts
+       similar to those of the query word.
 1. When a training corpus is huge, we often sample context words and noise words for the center words in the current minibatch *when updating model parameters*. In other words, the same center word may have different context words or noise words in different training epochs. What are the benefits of this method? Try to implement this training method.
 
 :begin_tab:`mxnet`

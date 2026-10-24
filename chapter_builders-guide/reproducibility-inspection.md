@@ -1276,8 +1276,8 @@ are read after the fact from `param.grad()`.
 1. [code] **Block ablation.** Keras has no hook mechanism that could
    replace a layer's output.
     1. Zero the output of one residual block's body by editing the `call`
-       of the `ResidualBlock` used in `Checked`
-       (:numref:`subsec_nan_finder`), which turns the block into the
+       of the `ResidualBlock` used
+       in `Checked` (:numref:`subsec_nan_finder`), which turns the block into the
        identity, and measure the relative change in the output of a
        freshly built `Checked` model on a fixed batch. Repeat for every
        block, and rank the blocks by this change.

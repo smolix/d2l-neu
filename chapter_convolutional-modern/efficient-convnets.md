@@ -857,8 +857,8 @@ of `MiniMobileNet`, and train both networks with `d2l.Trainer`.
    a residual connection whenever input and output shapes match.
     1. Implement the block with $t = 6$ and replace the blocks of
        `MiniMobileNet` by it, choosing the widths so that the parameter count
-       stays near 542,474. Train it with the setup of
-       :numref:`tab_dws_vs_dense`. Compare its test accuracy with the table
+       stays near 542,474. Train it with the setup
+       of :numref:`tab_dws_vs_dense`. Compare its test accuracy with the table
        and its time per epoch with that of `MiniMobileNet` on the same
        device.
     1. Add a ReLU after the projection. Train the linear and the ReLU
@@ -877,8 +877,8 @@ of `MiniMobileNet`, and train both networks with `d2l.Trainer`.
    second way to cut multiply-adds. Using the width multiplier of
    problem :exref:`ex_efficient-convnets-width-multiplier`, train `MiniMobileNet` at $\alpha = 1$ on
    $48 \times 48$ inputs and at $\alpha = 0.5$ on $96 \times 96$ inputs,
-   with two seeds each and otherwise the setup of
-   :numref:`tab_dws_vs_dense`. Compare the two networks in multiply-adds,
+   with two seeds each and otherwise the setup
+   of :numref:`tab_dws_vs_dense`. Compare the two networks in multiply-adds,
    parameter count, and test accuracy. Fashion-MNIST images have
    $28 \times 28$ pixels. How does this limit what the comparison says about
    scaling resolution in EfficientNet :cite:`tan2019efficientnet`?

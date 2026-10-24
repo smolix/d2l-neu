@@ -444,8 +444,7 @@ belong to deployment rather than training.
        for which this costs more than the graph break saves.
 
 2. [code] **Shape changes.** `torch.compile` guards on the shapes of its
-   inputs and recompiles when a guard fails
-   (:numref:`subsec_comp-capture`).
+   inputs and recompiles when a guard fails (:numref:`subsec_comp-capture`).
     1. Compile a function that computes `torch.tanh(x) * 2 + 1`, and call
        it on vectors of lengths 8, 16, 32, and so on up to 8192. Predict
        the number of compilations from the guard rule. Then count them,
@@ -506,21 +505,6 @@ belong to deployment rather than training.
        those of $w = 64$. For which distribution of lengths would powers
        of two be the better choice?
 
-1. **Counting round trips.** In eager execution, every operation of
-   `gelu_ish` in :numref:`subsec_comp-fusion` runs as its own kernel, which
-   reads its input arrays from memory and writes its output array back.
-    1. List the kernels that eager execution launches for `gelu_ish`, in
-       the order in which Python evaluates the expression, and count the
-       arrays of the size of `x` that each kernel reads and writes. How
-       many array-sized transfers does the chain make in total, and how
-       many does a single fused kernel make?
-    1. Predict the eager and the fused time for the $4000 \times 4000$
-       fp32 input from these transfer counts and the memory bandwidth of
-       your GPU, which is about 1.0 TB/s for the build GPU of
-       :numref:`subsec_perf-counting`. Compare both predictions and their
-       ratio with the times that the code of :numref:`subsec_comp-fusion`
-       measures, and account for the differences.
-
 1. [code] **Fusion behind a matmul.** ● Compilation leaves a large matrix
    product unchanged but fuses the elementwise chain that follows it.
    Consider `gelu_ish(a @ a)` for an $n \times n$ matrix `a` in bf16 on a
@@ -555,7 +539,7 @@ belong to deployment rather than training.
        as in :eqref:`eq_online-softmax`.
 
 :begin_tab:`pytorch`
-7. [code] **Compiling the optimizer.** ● `torch.compile(net)` in
+6. [code] **Compiling the optimizer.** ● `torch.compile(net)` in
     :numref:`subsec_comp-wholestep` compiles the forward and the backward
     pass but leaves `opt.step()` eager.
     1. Apply `torch._dynamo.explain` to `train_step` itself, called with
@@ -574,7 +558,7 @@ belong to deployment rather than training.
 :end_tab:
 
 :begin_tab:`jax`
-7. [code] **Trace-time constants.** The Python body of a jitted function
+6. [code] **Trace-time constants.** The Python body of a jitted function
     runs only while it is traced (:numref:`subsec_comp-capture`).
     1. Jit a function that returns `x + np.random.randn()`, call it twice,
        and print its jaxpr. Explain the two outputs.
@@ -584,7 +568,7 @@ belong to deployment rather than training.
        rewrite the function so that every step draws a fresh mask.
 :end_tab:
 
-8. [code] **Overhead crossover.** ● Use the stack of 60 layers of width
+7. [code] **Overhead crossover.** ● Use the stack of 60 layers of width
    256 at batch size 64 from :numref:`subsec_comp-overhead`, with its eager
    and its compiled version. Compilation removes the per-kernel launch
    latency of :numref:`fig_latency_ladder` from the critical path, but not
@@ -629,23 +613,6 @@ belong to deployment rather than training.
        `relu(x @ W1 + b1) @ W2 + b2`, count the kernel launches and the
        array elements moved through memory under one kernel per node and
        under your partition.
-
-:begin_tab:`jax`
-10. [code] **Unrolled loops.** ● `deep_fwd` of
-    :numref:`subsec_comp-overhead` loops over a Python list of weight
-    matrices, so tracing unrolls the loop into one long sequence of
-    operations.
-    1. For depths from 10 to 400, count the equations of the jaxpr of
-       `deep_fwd` and time its ahead-of-time compilation with
-       `jax.jit(deep_fwd).lower(deep_params, x).compile()`. Repeat for the
-       gradient of `deep_fwd(deep_params, x).sum()` with respect to the
-       weights. How do the count and the compile time grow with depth?
-    1. Stack the weights into one array of shape $(L, 256, 256)$ for depth
-       $L$, and rewrite the loop with `jax.lax.scan`. Repeat the
-       measurements, check that both versions agree, and compare their
-       steady-state times at depths 60 and 400. What does each version
-       give up?
-:end_tab:
 
 <!-- slides -->
 

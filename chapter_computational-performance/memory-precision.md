@@ -534,22 +534,7 @@ are added.
        and how does it compare with $16P$?
 :end_tab:
 
-3. [code] **Recomputation overhead.** :numref:`subsec_mp-checkpointing`
-   bounds the extra work of per-block checkpointing by one forward pass,
-   and it measures about 15–20% more step time on its 16-block stack.
-    1. Suppose that a backward pass costs twice the FLOPs of the
-       corresponding forward pass and that time is proportional to FLOPs.
-       Predict the time overhead if the recomputation repeats the whole
-       forward pass of every block.
-    1. Time the forward pass of the stack alone and its
-       forward-plus-backward step without checkpointing, and predict the
-       overhead again from the two measured times. Compare both
-       predictions with the measured overhead.
-    1. List the tensors that the backward pass of one block reads, and the
-       operations of the block that are needed to recompute them. Predict
-       the overhead from this count, and explain the measured overhead.
-
-1. **Clipping under accumulation.** Gradient clipping to norm $\tau$
+3. **Clipping under accumulation.** Gradient clipping to norm $\tau$
    replaces a gradient $\mathbf{g}$ by
    $\mathbf{g} \min(1, \tau / \|\mathbf{g}\|)$. Let
    $\mathbf{g}_1, \ldots, \mathbf{g}_k$ be the micro-batch gradients
@@ -569,28 +554,9 @@ are added.
     [Automatic Mixed Precision examples](https://docs.pytorch.org/docs/stable/notes/amp_examples.html),
     sections "Gradient clipping" and "Gradient accumulation".*
 
-1. [code] **Second copy of the weights.** ● Mixed precision keeps some
-   tensors in two formats (:numref:`subsec_mp-anatomy`), and its memory
-   saving rests on the activations being the dominant term.
-    1. For the network of :numref:`subsec_mp-mixed` at its batch size of
-       2048, list the tensors that the backward pass keeps in the tf32
-       configuration and in the bf16 configuration. Decide for each 16-bit
-       copy of a weight matrix whether the backward pass needs it. Predict
-       which configuration has the higher peak, and find the batch size
-       above which the bf16 configuration has the lower one.
-    1. Measure the peak of the computation that :numref:`subsec_mp-mixed`
-       times, in both configurations and at batch sizes 2048 and 16384, and
-       compare the measurements with your predictions.
-    1. A model with $P = 1.3 \times 10^9$ parameters is trained with AdamW
-       on a card with $24 \times 10^9$ bytes of memory. Compare the memory
-       left for activations under fp32 training, at $16P$ bytes, and under
-       mixed precision, at $18P$ bytes. Name two changes to the optimizer
-       or to the storage formats that leave more room for activations, and
-       state what each change gives up.
-
 :begin_tab:`pytorch`
-6. [code] **fp16 gradient window.** ● The 5-bit exponent of fp16
-   (:numref:`fig_float_formats`) gives it normal numbers from $2^{-14}$ to
+4. [code] **fp16 gradient window.** ● The 5-bit exponent of
+   fp16 (:numref:`fig_float_formats`) gives it normal numbers from $2^{-14}$ to
    65,504 and subnormal numbers down to $2^{-24}$. Loss scaling
    :cite:`Micikevicius.Narang.Alben.ea.2018` multiplies the loss by a
    factor $S$ before the backward pass and divides the gradients by $S$
@@ -618,8 +584,8 @@ are added.
 :end_tab:
 
 :begin_tab:`jax`
-6. [code] **fp16 gradient window.** ● The 5-bit exponent of fp16
-   (:numref:`fig_float_formats`) gives it normal numbers from $2^{-14}$ to
+4. [code] **fp16 gradient window.** ● The 5-bit exponent of
+   fp16 (:numref:`fig_float_formats`) gives it normal numbers from $2^{-14}$ to
    65,504 and subnormal numbers down to $2^{-24}$. Loss scaling
    :cite:`Micikevicius.Narang.Alben.ea.2018` multiplies the loss by a
    factor $S$ before the backward pass and divides the gradients by $S$
@@ -649,7 +615,7 @@ are added.
        workload can fail for another.
 :end_tab:
 
-7. **Checkpoint placement.** ● Consider a stack of $n$ identical residual
+5. **Checkpoint placement.** ● Consider a stack of $n$ identical residual
    blocks, and measure memory in units of the input of one block. The
    backward pass of one block needs $c$ units of stored tensors, its input
    included. A schedule with segments of $s$ consecutive blocks stores only
@@ -674,7 +640,7 @@ are added.
        best segment length.
 
 :begin_tab:`pytorch`
-8. [code] **Selective recomputation.** ● Per-block checkpointing
+6. [code] **Selective recomputation.** ● Per-block checkpointing
     stores only the input of each block. The function
     `torch.utils.checkpoint.create_selective_checkpoint_contexts`, passed
     to `checkpoint` through its `context_fn` argument, instead caches the
@@ -694,7 +660,7 @@ are added.
 :end_tab:
 
 :begin_tab:`jax`
-8. [code] **Selective recomputation.** ● `jax.checkpoint` accepts a
+6. [code] **Selective recomputation.** ● `jax.checkpoint` accepts a
     `policy` argument that names the intermediate values it may save, and
     `jax.checkpoint_policies.checkpoint_dots` saves the outputs of matrix
     multiplications and recomputes everything else.
@@ -709,7 +675,7 @@ are added.
        predictions.
 :end_tab:
 
-9. [code] **Cost of accumulation.** ● Split the global batch of 2048
+7. [code] **Cost of accumulation.** ● Split the global batch of 2048
    examples of the bf16 configuration of :numref:`subsec_mp-mixed` into $k$
    equal micro-batches, and accumulate their gradients, for
    $k = 1, 2, 4, \ldots, 64$.
@@ -720,9 +686,9 @@ are added.
        of the two passes, and it reads and writes the fp32 gradient
        accumulator. Ignore the activations. Write the peak compute of
        :eqref:`eq_roofline` as $F$ here, because $P$ counts parameters, and
-       take $F$ and $\beta$ from the RTX 4090 column of
-       :numref:`tab_gpu_specs`. Predict the time per global batch as a
-       function of $k$, and find the $k$ beyond which the micro-batches are
+       take $F$ and $\beta$ from the RTX 4090
+       column of :numref:`tab_gpu_specs`. Predict the time per global batch
+       as a function of $k$, and find the $k$ beyond which the micro-batches are
        bandwidth-bound.
     1. Measure the time per global batch for every $k$, and plot it
        together with the prediction. Identify the weight and gradient

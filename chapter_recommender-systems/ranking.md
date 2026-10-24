@@ -161,11 +161,24 @@ fixed margin and zero gradient once that margin is satisfied.
 1. Differentiate the BPR and hinge losses with respect to the score difference
    $d=\hat y_{ui}-\hat y_{uj}$. Compare their gradients as $d\to-\infty$, at
    $d=0$, and after the hinge margin is satisfied.
-2. Suppose unobserved items are sampled uniformly or in proportion to item
+2. `BPRLoss` takes the logarithm of a sigmoid. Evaluate the loss and its
+   gradient with respect to $d$ in 32-bit floats for
+   $d\in\{-10, -50, -90, -100, -120\}$, and find where each stops being
+   finite or correct. Rewrite the loss with the identity
+   $-\ln\sigma(d)=\ln(1+e^{-d})$, evaluated stably as the softplus of $-d$,
+   and check that the two versions agree for moderate $d$.
+3. For one user, let $I^+$ be the observed items and $I^-$ the unobserved
+   ones, and define the AUC as the fraction of pairs
+   $(i,j)\in I^+\times I^-$ with $\hat y_{ui}>\hat y_{uj}$. Show that
+   $\mathbf 1\{d\le 0\}\le-\log_2\sigma(d)$ for every $d$. Conclude that the
+   BPR loss summed over all such pairs and divided by $|I^+|\,|I^-|\ln 2$ is
+   an upper bound on $1-\textrm{AUC}$. For which score differences is the
+   bound tight?
+4. Suppose unobserved items are sampled uniformly or in proportion to item
    popularity. Write the expectation optimized by each proposal. Which proposal
    is more likely to sample an exposed but skipped item, and which requires
    importance weights to estimate the uniform-item objective?
-3. Construct a user history in which a held-out positive is sampled as a
+5. Construct a user history in which a held-out positive is sampled as a
    training negative. Explain how this label contradiction affects BPR and how
    a strict train/validation/test protocol can avoid consulting test identities
    during model fitting.

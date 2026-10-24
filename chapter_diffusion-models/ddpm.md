@@ -303,8 +303,8 @@ $$
 $$
 :eqlabel:`eq_diffusion-posterior`
 
-where the simplification of the precision uses $\alpha_t (1 - \bar{\alpha}_{t-1}) + \beta_t = 1 - \bar{\alpha}_t$
-(Exercise :exref:`ex_ddpm-forward-posterior` fills in the algebra). The posterior mean is a linear
+where the simplification of the precision uses $\alpha_t (1 - \bar{\alpha}_{t-1}) + \beta_t = 1 - \bar{\alpha}_t$.
+The posterior mean is a linear
 combination of the clean point and the current noisy point, and its variance
 $\tilde{\beta}_t = \beta_t (1 - \bar{\alpha}_{t-1}) / (1 - \bar{\alpha}_t)$
 is smaller than $\beta_t$: much smaller at the first steps, where
@@ -799,18 +799,6 @@ $\sigma_t^2 = \beta_t$.
 
 ## Exercises
 
-1. **Variance preservation.** Let the data have mean $\mathbf{0}$
-   and a covariance $\Sigma$ in $d$ dimensions with eigenvalues
-   $\lambda_1, \ldots, \lambda_d$. Show that $\mathbf{x}_t$ of
-   :eqref:`eq_diffusion-forward` has covariance
-   $\bar{\alpha}_t \Sigma + (1 - \bar{\alpha}_t) I$, and that each eigenvalue
-   moves monotonically from $\lambda_i$ toward $1$ as $t$ grows. On the noise
-   ladder of :numref:`sec_diffusion-annealed`, the perturbed point
-   $\mathbf{x} + \sigma \boldsymbol{\epsilon}$ has covariance
-   $\Sigma + \sigma^2 I$ instead. Suppose the data are multiplied by a factor
-   $c > 1$. What must change in each process for its end point to stay close
-   to the Gaussian from which its sampler starts?
-   :exlabel:`ex_ddpm-variance-preservation`
 1. [code] **Equivalent noise levels.** By :eqref:`eq_diffusion-marginal`,
    $\mathbf{x}_t / \sqrt{\bar{\alpha}_t}$ is the data perturbed at the
    equivalent noise level
@@ -855,20 +843,12 @@ $\sigma_t^2 = \beta_t$.
        $\sqrt{\bar{\alpha}_t}$ and `sigma` $\sqrt{1 - \bar{\alpha}_t}$. For
        the schedule with $T = 50$, draw $20{,}000$ samples starting from
        $\mathcal{N}(\mathbf{0}, I)$ and $20{,}000$ starting from the exact
-       $q(\mathbf{x}_T)$, which you obtain by noising draws of `mix` with
-       :eqref:`eq_diffusion-marginal`. Compare the outputs of `summarize` for
+       $q(\mathbf{x}_T)$, which you obtain by noising draws of `mix`
+       with :eqref:`eq_diffusion-marginal`. Compare the outputs of `summarize` for
        the two starts. Which statistic does the prior term affect? Compute
        the mean of $q(\mathbf{x}_T)$ from the parameters of `mix`, and use it
        to explain the direction of the change.
    :exlabel:`ex_ddpm-prior-term`
-1. **The forward posterior.** Multiply the two Gaussian factors of
-   $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)$, complete the square
-   in $\mathbf{x}_{t-1}$, and derive :eqref:`eq_diffusion-posterior`. Then
-   substitute $\mathbf{x}_0 = (\mathbf{x}_t - \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}) / \sqrt{\bar{\alpha}_t}$
-   and show that the coefficient of $\mathbf{x}_t$ in the posterior mean
-   collapses to $1 / \sqrt{\alpha_t}$, which gives
-   :eqref:`eq_diffusion-posterior-mean-eps`.
-   :exlabel:`ex_ddpm-forward-posterior`
 1. [code] **The weights of the bound.** Let
    $w_t = \beta_t^2 / (2 \sigma_t^2 \alpha_t (1 - \bar{\alpha}_t))$ be the
    weight in :eqref:`eq_diffusion-lt-eps`.
@@ -882,8 +862,8 @@ $\sigma_t^2 = \beta_t$.
        :eqref:`eq_diffusion-lt-eps` vanishes, so at the optimal predictor
        $L_{t-1}$ equals $w_t$ times the irreducible loss
        $\mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}^\star\|^2$.
-       Evaluate it at the four steps printed in
-       :numref:`subsec_diffusion-ddpm-optimal-predictor`.
+       Evaluate it at the four steps
+       printed in :numref:`subsec_diffusion-ddpm-optimal-predictor`.
     1. A minibatch estimate of the bound draws $t$ uniformly, as the simple
        loss does. :citet:`Nichol.Dhariwal.2021` (Section 3.3) instead draw
        $t$ with probability $p_t$ proportional to the root mean square of
@@ -894,8 +874,8 @@ $\sigma_t^2 = \beta_t$.
 1. **The ancestral step to first order.** The section states that, to first
    order in $\beta_t$, the reverse step :eqref:`eq_diffusion-ancestral-score`
    with the exact score $\nabla \log q_t$ consists of a Langevin step that
-   leaves $q_t$ unchanged and a step of the probability-flow equation
-   :eqref:`eq_diffusion-pf-ode`.
+   leaves $q_t$ unchanged and a step of the probability-flow
+   equation :eqref:`eq_diffusion-pf-ode`.
     1. Expand :eqref:`eq_diffusion-ancestral-score` to first order in
        $\beta_t$, using $1 / \sqrt{\alpha_t} \approx 1 + \beta_t / 2$. Show
        that it agrees to this order with a Langevin step

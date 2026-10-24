@@ -289,57 +289,6 @@ note the environment and hardware needed to interpret any measurement.
        clone of the repository. Which of the five failures does this
        catch? For the failures that remain, name a check that catches them.
 
-1. [code] **Kernel environment.** The cell
-   `#interactive-development-identity` reports the interpreter and the
-   working directory of the kernel.
-    1. Run its code from a terminal with `python3`, from the extracted
-       notebook directory with `uv run python`, in a JupyterLab kernel, and
-       in a VS Code kernel. Explain every difference in `sys.executable` and
-       in the working directory.
-    1. In the extracted notebook archive, the figure files sit in a
-       directory `img` next to the chapter directories, so this notebook
-       reaches them as `../img/tools-kernel-state.svg`. Check with
-       `os.path.exists` from the notebook and from `uv run python` started
-       in the top-level directory of the archive. Rewrite the path so that
-       it resolves in both cases.
-    1. In a notebook cell, compare `sys.executable` with the output of
-       `!python -c "import sys; print(sys.executable)"`. Explain how a shell
-       command started from a cell chooses its interpreter, and describe a
-       setup in which the two differ.
-    1. The magic `%pip install` runs `pip` with the kernel's interpreter.
-       The environments that `uv` creates contain no `pip`. What happens when
-       you run `%pip install` in the book's environment, and how do you add
-       a package to the environment of the kernel instead?
-
-1. [code] **Output history.** When the last line of a cell is an
-   expression whose value is displayed, IPython also stores the value in
-   the dictionary `Out` and in the variables `_`, `__`, and `___`.
-    1. Allocate `x = np.ones(10**7)` and create a weak reference
-       `r = weakref.ref(x)`. Display `x` as the last line of a cell, then run
-       `del x` in the next cell. Does `r()` still return the array? Find
-       every reference that keeps it alive.
-    1. Repeat with `x[:3]` instead of `x` as the displayed expression. How
-       much memory does the displayed object keep alive?
-    1. Free the array without restarting the kernel. Why does this matter
-       more for an array that lives in accelerator memory?
-
-1. [code] **Edited modules.** The section advises keeping testable logic in
-   `.py` modules. Write a module `helpers.py` that defines a function
-   `scale(x)` returning `2 * x` and a class `Box` with a method `get`
-   returning `1`. In a notebook, run `import helpers`,
-   `from helpers import scale`, and `b = helpers.Box()`. Then change the
-   module so that `scale` returns `3 * x` and `get` returns `2`.
-    1. Predict, then check, the values of `helpers.scale(1)`, `scale(1)`,
-       `b.get()`, and `isinstance(b, helpers.Box)`, first after running
-       `import helpers` again and then after `importlib.reload(helpers)`.
-       Explain each value.
-    1. Repeat the experiment in a fresh kernel after
-       `%load_ext autoreload` and `%autoreload 2`.
-    1. Add the line `self.size = 10` to a new `__init__` method of `Box`
-       while `%autoreload 2` is active. Does the instance `b` now have the
-       attribute `size`? Which kinds of edits can automatic reloading never
-       apply to objects that already exist?
-
 1. [code] **Broad exception handlers.** The following loop whitens the
    batches of a dataset with 1001 examples, and it prints `failed` once.
 
@@ -370,50 +319,6 @@ note the environment and hardware needed to interpret any measurement.
        splits them into batches of 100 as the loop does. Name two ways to
        handle the batch that fails in (a), and state what each one changes
        about the data the model sees.
-
-1. [code] **Timing statistics.** The cell
-   `#interactive-development-timing` printed
-   `10.1 μs ± 302 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)`.
-    1. Before the seven timed runs, `%timeit` chose the number of loops: it
-       timed 1, 10, 100, ... loops in turn and stopped at the first count
-       that took at least 0.2 seconds. How many times did the product run in
-       total? Of which quantities are the mean and the standard deviation
-       computed? Why does $302$ ns not describe
-       the spread of the time of a single call?
-    1. The documentation of Python's `timeit` module recommends the minimum
-       over runs, because slower runs mostly reflect interference from other
-       processes. Rerun the cell with `%timeit -o` and compare the attributes
-       `best` and `average` of the result. Which number do you report when
-       comparing two implementations of one operation? Which number do you
-       use to estimate how long ten million calls take inside a training
-       run?
-
-1. [code] **Layers of a remote session.** Open a notebook on a remote
-   machine through the SSH tunnel of :numref:`fig_tools_remote_layers`.
-    1. Run `socket.gethostname()`, `os.getcwd()`, and a cell that writes
-       `probe.txt`. Upload a small file through the JupyterLab file browser.
-       On which machine does each of these run or land, and which machine's
-       file system does the editor show?
-    1. Repeat (a) in VS Code with Remote SSH, and then in VS Code opening a
-       local notebook with a kernel on the remote Jupyter server. Which
-       answers change?
-    1. Start a cell that prints a line every 10 seconds for 3 minutes.
-       Close the tunnel after 30 seconds and reopen it after 2 minutes. Is
-       the kernel still running? Which printed lines does the notebook show
-       after the reconnection? What does the result imply for logging a
-       long training run?
-
-1. [code] **Output audit.** Before a notebook is shared, its outputs must
-   not reveal personal paths or private data. The cell
-   `#interactive-development-identity` replaces the home directory by `~`
-   for this reason.
-    1. A notebook file is JSON. Write a function `audit(path)` that loads a
-       `.ipynb` file and reports every code cell whose outputs contain the
-       absolute home directory, the user name, the host name, or a Jupyter
-       URL with a `token=` parameter, together with every output larger
-       than 100 kB. Run it on notebooks of this book and on one of your own.
-    1. Which kinds of private information in outputs can a string search of
-       this kind never find?
 
 1. [code] **Use-before-define detector.** ● Restart and run all finds an
    out-of-order dependency only by executing the notebook. A static check
@@ -456,25 +361,6 @@ note the environment and hardware needed to interpret any measurement.
        changed the default on Linux to `forkserver`. Restructure the notebook
        so that the pool works under every start method.
 
-1. [code] **Overhead and throughput.** ● The cell
-   `#interactive-development-timing` measures `values @ values` for
-   $n = 100{,}000$ elements. Model the time of one call as
-   $t(n) = a + b n$, where $a$ is the fixed cost per call and $b$ the cost
-   per element.
-    1. Measure the best time of `values @ values` with `%timeit -o` for
-       $n = 10, 10^2, \ldots, 10^7$ and fit $a$ and $b$. Plot the
-       measurements and the fit on log-log axes.
-    1. At which $n$ does the fixed cost account for half of the time? Which
-       fraction of the time at $n = 100{,}000$ is fixed cost on your
-       machine? Convert $b$ into floating-point operations per second.
-    1. A GPU has a fixed cost per operation of 5 to 15 microseconds for
-       the launch (:numref:`tab_rules_of_thumb`) and a much smaller cost
-       per element than a CPU. Use the model to find the size below which a
-       GPU loses to your CPU on this operation, for a GPU with
-       $a = 5\ \mu\text{s}$ and $b$ one hundredth of your CPU's value. What
-       does the model imply for a network built from many small layers
-       (:numref:`subsec_comp-overhead`)?
-
 1. [code] **Asynchronous accelerator timing.** ● Consider the product of two
    $8192 \times 8192$ matrices in a 16-bit format on a GPU: bf16 where the
    GPU supports it, and fp16 on the T4 and P100 of the free Colab and Kaggle
@@ -516,36 +402,3 @@ note the environment and hardware needed to interpret any measurement.
        machines apart?
     1. Write a connection procedure that turns each collision of (b) and (c)
        into an error you notice.
-
-1. [extended] **Reproducibility of public notebooks.** ●●
-   :citet:`Pimentel.Murta.Braganholo.ea.2019` call the execution order of a
-   notebook unambiguous when no two cells share an execution counter and no
-   cell is marked as still executing. They attempted to execute 863,878
-   Python notebooks from GitHub with an unambiguous execution order,
-   running their cells in the order of the execution counters. Of these
-   executions, 24.11% finished without errors and 4.03% reproduced the
-   saved outputs; `ImportError` or `ModuleNotFoundError` ended 29.23% of
-   them and `NameError` 14.53%. Repeat the study at small scale for deep
-   learning notebooks written since 2024.
-    1. Collect at least 100 such notebooks from public repositories, and
-       record for each whether its repository declares its dependencies.
-       Extend the detector of exercise
-       :exref:`ex_interactive-development-use-before-define` to report for
-       each notebook whether its execution order is unambiguous, whether
-       its cells are out of order, and how many gaps its execution
-       counters contain.
-    1. Execute every notebook on a CPU in a fresh environment, with the
-       declared dependencies where they exist and a time limit per
-       notebook, once in document order and once in the order of its
-       execution counters. Classify each outcome as success, missing
-       module, `NameError`, missing file, missing accelerator, time limit,
-       or other error. How does the order of execution change the
-       distribution of outcomes?
-    1. For every notebook that runs, compare the new outputs with the saved
-       ones, once by exact text equality and once with a
-       comparison that tolerates small numerical differences and ignores
-       timings and memory addresses. Report both rates.
-    1. Compare your rates with those of the study. Which differences come
-       from your sample, and which from your method? Relate the failures
-       you find to the static warnings of exercise
-       :exref:`ex_interactive-development-use-before-define`.

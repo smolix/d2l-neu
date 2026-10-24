@@ -1349,8 +1349,8 @@ use a stable `logsumexp` implementation, and accumulate long sums in fp32.
        size does the activation saving equal the persistent training state
        of this MLP?
 
-1. **Loss scaling on overflow.** Under dynamic loss scaling
-   (:numref:`subsec_loss_scaling`), a step whose unscaled gradients contain
+1. **Loss scaling on overflow.** Under dynamic loss
+   scaling (:numref:`subsec_loss_scaling`), a step whose unscaled gradients contain
    an `inf` or NaN is skipped and the scale is halved. After $N$
    consecutive clean steps, the scale is doubled.
     1. A skipped step must leave Adam's moment estimates untouched. Explain

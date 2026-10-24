@@ -1594,24 +1594,6 @@ information estimates.
    Exercise 8.8.*
    :exlabel:`ex_mdl-mutual-information-synergy-conditioning-can-create`
 
-1. [code] **KSG in more dimensions.** The cell of
-   :numref:`subsec_mdl-mi-high-dim` compares `ksg_mi`, the estimator
-   :eqref:`eq_mdl-ksg`, with the closed form $-\tfrac{d}{2}\log(1-\rho^2)$
-   for $d$ independent coordinate pairs.
-    1. Use the chain rule for mutual information to prove the closed form:
-       if the pairs $(X_i, Y_i)$ are independent across $i$, then
-       $I(X;Y) = \sum_i I(X_i;Y_i)$.
-    1. Assume that no two distances tie. Show that $n_x^{(i)} \geq k - 1$
-       and $n_y^{(i)} \geq k - 1$, so that the estimate never exceeds
-       $\psi(n) - \psi(k)$. Evaluate this ceiling for $n = 2000$ and $k = 5$.
-    1. Rerun the cell with $\rho = 0.9$, $n = 2000$, and
-       $d \in \{1, 2, 4, 8, 16\}$, and plot the estimate against the closed
-       form. From which $d$ on does the estimate fall more than one nat
-       below the truth? Is the ceiling of (b) responsible?
-    1. For $d = 8$, vary $n \in \{500, 1000, 2000\}$ and $k \in \{3, 5, 10\}$.
-       How quickly does the gap close as $n$ grows?
-   :exlabel:`ex_mdl-mutual-information-ksg-dimensions`
-
 1. **Barber--Agakov with a Gaussian decoder.** Take the standard bivariate
    Gaussian pair with correlation $\rho$ and the decoders
    $q(x \mid y) = \mathcal{N}(x; a y, s^2)$ with parameters $a \in \mathbb{R}$
@@ -1707,11 +1689,12 @@ information estimates.
        the curves that `infonce_oracle` produces in :numref:`sec_mdl-mi-hard`?
    :exlabel:`ex_mdl-mutual-information-optimal-critic`
 
-1. **Negative sampling as shifted PMI.** ● Skip-gram with negative sampling
-   (:numref:`subsec_negative-sampling`) scores a center word $w$ and a
-   context word $o$ by $s(w, o) = \mathbf{u}_o^\top \mathbf{v}_w$ and draws
-   $K$ noise words from a distribution $P$. Let $p(w, o)$ be the frequency of
-   the pair among all (center, context) pairs of the corpus, with marginals
+1. **Negative sampling as shifted PMI.** ● Skip-gram with negative
+   sampling of :numref:`subsec_negative-sampling` scores a center word $w$
+   and a context word $o$ by $s(w, o) = \mathbf{u}_o^\top \mathbf{v}_w$ and
+   draws $K$ noise words from a distribution $P$. Let $p(w, o)$ be the
+   frequency of the pair among all (center, context) pairs of the corpus,
+   with marginals
    $p(w)$ and $p(o)$. Averaged over the corpus, the loss of
    :numref:`subsec_negative-sampling` is
 

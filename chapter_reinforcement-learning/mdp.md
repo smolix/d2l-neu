@@ -313,8 +313,8 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
    :exlabel:`ex_mdp-discount-as-termination`
 
 1. [code] **Time limits.** `gym.make` wraps FrozenLake in a time limit:
-   after 100 steps the episode ends with `truncated=True`
-   (:numref:`subsec_mdp-termination`).
+   after 100 steps the episode ends with
+   `truncated=True` (:numref:`subsec_mdp-termination`).
     1. Propagate the state distribution $\mu_t$ of problem
        :exref:`ex_mdp-kernel-predicts-episodes`b under `pi_true` instead of
        the random policy. Compute the probabilities that an episode reaches
@@ -403,34 +403,6 @@ A one-state MDP is a bandit, and a deterministic MDP with terminal reward descri
        belief at the junction, and how much memory suffices to act
        optimally? Why does stacking a few frames work for Pong but not
        here?
-
-1. **Necessity of potential-based shaping.** ●●
-   :citet:`Ng.Harada.Russell.1999` also prove a converse: for every
-   shaping term that is not of the form $\gamma \Phi(s') - \Phi(s)$, some
-   MDP exists whose optimal policy the shaping changes. Their appendix
-   sketches the proof for two actions. Prove the result for $\gamma < 1$
-   and a shaping term $F(s, a, s')$ that is added to the reward of each
-   transition.
-    1. Suppose that $F(s, a, s') \neq F(s, a', s')$ for some $s$, $a$, $a'$
-       and $s'$. Construct an MDP with deterministic transitions and a
-       reward $r(s, a)$ whose optimal action at $s$ changes when $F$ is
-       added.
-    1. Let $F(s, s')$ now be independent of the action. Show that if
-       $F(s, s') = \gamma \Phi(s') - \Phi(s)$ for some $\Phi$, then
-       $\Phi(s) = -F(s, s) / (1 - \gamma)$, so the self-transitions
-       determine the only candidate potential.
-    1. Suppose that $F(s_1, s_2) \neq \gamma \Phi(s_2) - \Phi(s_1)$ for this
-       candidate $\Phi$ and some pair of states. Explain why
-       $s_1 \neq s_2$, and construct an MDP with deterministic transitions in
-       which the unique optimal action at $s_1$ under $r$ differs from the
-       unique optimal action under $r + F$.
-    1. The theorem quantifies over all kernels and rewards. Let $Q(s, a)$ be
-       the largest expected discounted return after taking action $a$ at
-       state $s$, and let $\Delta > 0$ be the smallest gap
-       $Q(s, a^*) - Q(s, a)$ between an optimal action $a^*$ and a
-       non-optimal action $a$ of a fixed MDP. Show that every shaping term
-       with $|F| < (1 - \gamma)\Delta / 2$ everywhere leaves every optimal
-       policy of the shaped MDP optimal for the original.
 
 1. [extended] **Planning horizon and model error.** ●● The discount
    $\gamma$ of the objective is fixed by the task, but a planner may compute

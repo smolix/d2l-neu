@@ -1301,21 +1301,6 @@ beyond explicitly inverting a Hessian.
        random initialization converges to a saddle point? What do they
        suggest about the time it can spend near one?
 
-1. [code] **Backtracking guarantees.** For an $L$-smooth $f$, backtracking
-   that halves the step from $\eta_0$ accepts a step
-   $\eta_k \ge \min\big(\eta_0, (1-c)/L\big)$ at every iteration, as
-   :numref:`subsec_mdl-gd-smoothness` shows.
-    1. Combine this bound with the Armijo condition :eqref:`eq_mdl-opt-armijo`
-       to derive a stationarity guarantee for gradient descent with
-       backtracking in the form of :eqref:`eq_mdl-opt-stationarity-rate`.
-       For $c = 1/2$ and $\eta_0 \ge 1/(2L)$, compare its constant with the
-       constant $2L$ of the known-$L$ step $\eta = 1/L$.
-    1. In the `#gradient-based-optimization-backtracking` cell, vary
-       $c \in \{10^{-4}, 0.1, 0.5, 0.9\}$ and $\eta_0 \in \{1, 100\}$, and
-       record $f(x_{25})$ and the total number of evaluations of `quartic`.
-       Why is $c = 0.9$ slow? Why does a larger $\eta_0$ help on this
-       objective?
-
 1. [code] **Step size and the ceiling.** Let
    $f(\mathbf{x}) = \tfrac12\mathbf{x}^\top A\,\mathbf{x}$ with $A$
    symmetric positive definite and condition number $\kappa$. Suppose the
@@ -1358,21 +1343,6 @@ beyond explicitly inverting a Hessian.
        positive definite $A$?
    :exlabel:`ex_mdl-gradient-based-optimization-newton-show-that-any`
 
-1. **BFGS and the secant equation.** Let $H_k$ be symmetric positive
-   definite, and let $\mathbf{s}_k$ and $\mathbf{y}_k$ be the step and
-   gradient difference of :numref:`subsec_mdl-quasi-newton`.
-    1. Verify directly that the update :eqref:`eq_mdl-opt-bfgs` is symmetric
-       and satisfies the secant equation $H_{k+1}\mathbf{y}_k = \mathbf{s}_k$.
-    1. Show that $H_{k+1}$ is positive definite whenever
-       $\mathbf{y}_k^\top \mathbf{s}_k > 0$.
-    1. A Wolfe line search accepts a step $\mathbf{s}_k = \alpha\,\mathbf{p}_k$
-       along a descent direction $\mathbf{p}_k$ only if, besides a
-       sufficient-decrease condition, the curvature condition
-       $\nabla f(\mathbf{x}_k + \alpha\,\mathbf{p}_k)^\top \mathbf{p}_k \ge c_2\, \nabla f(\mathbf{x}_k)^\top \mathbf{p}_k$
-       holds for a constant $c_2 \in (0, 1)$. Show that this condition
-       implies $\mathbf{y}_k^\top \mathbf{s}_k > 0$ for every differentiable
-       $f$.
-
 1. **Steepest descent in other norms.** ● Problem
    :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`b measures
    length by a norm $\|\cdot\|_A$ that comes from an inner product. Norms
@@ -1386,8 +1356,8 @@ beyond explicitly inverting a Hessian.
        $\mathrm{tr}(G^\top D)$, and measure length by the spectral norm
        $\|D\|_2$. Show that the minimal slope over $\|D\|_2 \le 1$ is
        $-\mathrm{tr}\,\Sigma$, attained at $D = -U V^\top$, the polar factor
-       that Muon applies to its momentum matrix
-       (:numref:`subsec_mdl-preconditioning-ladder`). Writing
+       that Muon applies to its momentum
+       matrix (:numref:`subsec_mdl-preconditioning-ladder`). Writing
        $\mathrm{tr}(G^\top D) = \sum_i \sigma_i\, \mathbf{u}_i^\top D\, \mathbf{v}_i$
        is a useful first step. This steepest-descent view is due to
        :citet:`Bernstein.Newhouse.2024`, who derive it for Shampoo with its
@@ -1402,8 +1372,8 @@ beyond explicitly inverting a Hessian.
        have modulus $\sqrt{\beta}$, independent of $\lambda$.
     1. Conclude that the tuning :eqref:`eq_mdl-opt-hb-tuning` contracts every
        mode of a quadratic with eigenvalues in
-       $[\lambda_{\min}, \lambda_{\max}]$ at the rate
-       :eqref:`eq_mdl-opt-hb-rate`.
+       $[\lambda_{\min}, \lambda_{\max}]$ at the
+       rate :eqref:`eq_mdl-opt-hb-rate`.
    :exlabel:`ex_mdl-gradient-based-optimization-write-heavy-ball-eqref`
 
 1. [code] **Heavy ball beyond quadratics.** ●
@@ -1474,25 +1444,6 @@ beyond explicitly inverting a Hessian.
        bounded as $k$ grows?
    :exlabel:`ex_mdl-gradient-based-optimization-first-order-lower-bound`
 
-1. [code] **Sampling without replacement.** ● Data loaders usually draw a
-   minibatch as $b$ distinct indices, uniformly without replacement from
-   $\{1, \ldots, N\}$, rather than with replacement as in
-   :eqref:`eq_mdl-opt-minibatch`.
-    1. Show that the minibatch gradient $\hat{\mathbf{g}}_b$ is still
-       unbiased.
-    1. Show that its expected squared error is
-       $\frac{N-b}{N-1} \cdot \frac{\mathrm{tr}\,\Sigma}{b}$, with $\Sigma$ as
-       in :eqref:`eq_mdl-opt-variance`. Writing
-       $\hat{\mathbf{g}}_b = \frac1b \sum_{i=1}^N z_i\, \nabla f_i$ with
-       indicators $z_i \in \{0, 1\}$ reduces the computation to the first
-       and second moments of the $z_i$.
-    1. Modify the `#gradient-based-optimization-sgd-variance` cell, where
-       $N = n = 200$, to draw each batch with
-       `rng.choice(n, size=b, replace=False)`, and compare the measured
-       error with the prediction for $b \in \{16, 64, 128, 200\}$. For which
-       batch sizes does the factor $\frac{N-b}{N-1}$ matter?
-   :exlabel:`ex_mdl-gradient-based-optimization-sampling-without-replacement`
-
 1. [code] **Noise scale and critical batch size.** ● How much does one
    minibatch step lower the loss, and how does the gain depend on $b$? Write
    $\mathbf{g} = \nabla f(\mathbf{w})$ and $H = \nabla^2 f(\mathbf{w})$, and
@@ -1534,8 +1485,8 @@ beyond explicitly inverting a Hessian.
 
 1. [code] **The constant in a $1/k$ schedule.** ● With
    $\eta_k \propto 1/k$, SGD attains the $O(1/k)$ rate only when the
-   constant is large enough relative to $\mu$
-   (:numref:`subsec_mdl-stochastic-gradients`). The scalar model of
+   constant is large enough relative to
+   $\mu$ (:numref:`subsec_mdl-stochastic-gradients`). The scalar model of
    :eqref:`eq_mdl-opt-noise-ball` with curvature $\lambda = \mu$ and steps
    $\eta_k = c/(k + k_0)$ makes this condition exact: the second moment
    $e_k = \mathbb{E}[x_k^2]$ obeys
@@ -1554,42 +1505,6 @@ beyond explicitly inverting a Hessian.
        and $k = 10^6$. Which costs more, a constant twice as large as the
        minimizer of $A$ or one half as large?
    :exlabel:`ex_mdl-gradient-based-optimization-one-over-k-constant`
-
-1. [extended] **L-BFGS on an ill-conditioned problem.** ● L-BFGS
-   :cite:`Liu.Nocedal.1989` applies the inverse-Hessian approximation
-   implied by the $m$ most recent secant pairs
-   $(\mathbf{s}_i, \mathbf{y}_i)$, with $\rho_i = 1/(\mathbf{y}_i^\top \mathbf{s}_i)$,
-   without forming it. Given a vector $\mathbf{q}$, the two-loop recursion
-   first runs over the stored pairs from newest to oldest, computing
-   $\alpha_i = \rho_i\, \mathbf{s}_i^\top \mathbf{q}$ and replacing
-   $\mathbf{q}$ by $\mathbf{q} - \alpha_i \mathbf{y}_i$. It then sets
-   $\mathbf{r} = \gamma\, \mathbf{q}$ with
-   $\gamma = \mathbf{s}^\top \mathbf{y} / \mathbf{y}^\top \mathbf{y}$ for the
-   newest pair. Finally it runs from oldest to newest, computing
-   $\beta_i = \rho_i\, \mathbf{y}_i^\top \mathbf{r}$ and replacing
-   $\mathbf{r}$ by $\mathbf{r} + (\alpha_i - \beta_i)\, \mathbf{s}_i$.
-    1. Implement the recursion. Check that, when all pairs since the start
-       are kept, its output equals $H\mathbf{q}$, where $H$ results from
-       applying the dense update :eqref:`eq_mdl-opt-bfgs` once per stored
-       pair, oldest first, to $H_0 = \gamma I$ with the same $\gamma$.
-    1. Generate a logistic-regression problem as in the
-       `#gradient-based-optimization-sgd-variance` cell, but with $n = 2000$,
-       $d = 200$, feature $j$ multiplied by the $j$-th entry of
-       `np.geomspace(0.1, 10, d)`, regularization weight $10^{-3}$, and true
-       weights for which the labels are neither nearly deterministic nor
-       nearly random. Combine the recursion with backtracking on the
-       sufficient-decrease condition
-       $f(\mathbf{x} + \eta\,\mathbf{p}) \le f(\mathbf{x}) + c\,\eta\, \nabla f(\mathbf{x})^\top \mathbf{p}$
-       along $\mathbf{p} = -\mathbf{r}$, where $\mathbf{r}$ is the output
-       for $\mathbf{q} = \nabla f(\mathbf{x})$. Explain why the curvature
-       condition $\mathbf{y}_k^\top \mathbf{s}_k > 0$ holds on this problem
-       without a Wolfe line search.
-    1. Compare gradient descent with $\eta = 1/L$ for the bound $L$ of
-       problem :exref:`ex_mdl-gradient-based-optimization-smoothness-constants`b,
-       L-BFGS with $m \in \{1, 3, 10, 30\}$, and Newton's method by the
-       number of gradient evaluations and the wall-clock time needed to
-       reach $\|\nabla f\| \le 10^{-8}$. How does the cost of L-BFGS depend
-       on $m$?
 
 1. [code] **Edge of stability with momentum.** ●●
    :citet:`Cohen.Kaur.Li.ea.2021` report that with momentum, the sharpness

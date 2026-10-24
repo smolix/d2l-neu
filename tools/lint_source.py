@@ -17,6 +17,9 @@ Checks performed (per file):
     `#@tab`, `%%tab`, `tab.interact_select`, `:begin_tab:`, and
     placeholder `@<fw>` suffixes.
   - Unknown `:directive:` constructs.
+  - A continuation line of a list item that begins with a cross-reference
+    followed by `.` or `)` (warn): pandoc reads `@sec-x.`, `@sec-x)` or
+    `(@sec-x)` there as the start of a new block, which splits the item.
   - Cell-ID derivation drift (warn): the existing ID no longer matches
     the slug derivation from its surrounding section.
 
@@ -70,6 +73,7 @@ class Issue:
 # Allowed top-level directive names that can appear as `:foo:...`.
 _KNOWN_DIRECTIVES = {
     'label', 'eqlabel', 'numref', 'eqref', 'cite', 'citet', 'ref',
+    'exlabel', 'exref',
     'begin_tab', 'end_tab', 'class', 'func', 'mod',
     'width', 'height', 'bibliography',
 }
@@ -179,6 +183,9 @@ def lint_file(path: Path, corpus_labels=None):
 
     # ── Display math: `\\` needs an alignment environment ──
     issues += _check_display_math(path, lines)
+
+    # ── List continuation lines that start with a cross-reference ──
+    issues += _check_xref_line_starts(path, lines)
 
     # ── Optional: cross-corpus label uniqueness ──
     if corpus_labels is not None:
@@ -361,6 +368,54 @@ def _check_display_math(path, lines):
             continue
         if in_math:
             body.append(line)
+    return issues
+
+
+_LIST_ITEM_RE = re.compile(r'^\s*(?:\d+[.)]|[-*+])\s')
+_XREF_ROLE = r':(?:numref|eqref|ref|exref):`{1,2}[^`\s]+`{1,2}'
+_XREF_LINE_START_RE = re.compile(
+    r'^\s*(?:\(' + _XREF_ROLE + r'\)|' + _XREF_ROLE + r'[.)])(?=\s|$)')
+
+
+def _check_xref_line_starts(path, lines):
+    """Warn on a wrapped list-item line that begins with a cross-reference.
+
+    The preprocessor turns `:numref:`x`` into `@sec-x` (and `:exref:` into
+    a number in notebooks and the PDF), so a continuation line that starts
+    `:numref:`x`.`, `:numref:`x`)` or `(:numref:`x`)`, followed by a space
+    or the end of the line, begins `@sec-x. ` and the like. Pandoc takes
+    that for a list marker and ends the paragraph:
+    the reference becomes a stray paragraph inside the item, or, under a
+    two-digit marker with a shallow indent, ends the list. Rewrap the line
+    so the reference does not start it. Slides (after `<!-- slides -->`)
+    keep the role text, so they are not checked.
+    """
+    issues = []
+    in_fence = False
+    in_list = False
+    prev_blank = True
+    for i, line in enumerate(lines, start=1):
+        if line.startswith('<!-- slides -->'):
+            break
+        if line.lstrip().startswith('```'):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if not line.strip():
+            prev_blank = True
+            continue
+        if _LIST_ITEM_RE.match(line):
+            in_list = True
+        elif not line[0].isspace() and (prev_blank or line.startswith('#')):
+            in_list = False  # an unindented block after a blank line
+        elif in_list and _XREF_LINE_START_RE.match(line):
+            issues.append(Issue(path, i, len(line) - len(line.lstrip()) + 1,
+                'warning',
+                'list-item line starts with a cross-reference followed by '
+                '`.` or `)`, which pandoc reads as a new block; rewrap so '
+                'the reference does not begin the line'))
+        prev_blank = False
     return issues
 
 

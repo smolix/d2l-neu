@@ -861,21 +861,6 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
        discarded. Retrain the critic in both settings and compare the
        converged losses with your computed values.
    :exlabel:`ex_conditional-verify-decomposition-eqref-eq`
-1. **Concatenation as a bias.** The mixing convolution `mix` of `Generator`
-   receives the learned constant, the projected latent code, and the class
-   embedding broadcast over the $4 \times 4$ grid, concatenated along the
-   channels. Write $g_c$ for this 64-dimensional embedding of class $c$, to
-   distinguish it from the critic's $e_c$.
-    1. Show that the embedding channels add to the output of `mix` a
-       256-channel $4 \times 4$ map $B_c$ that depends on the class but not
-       on the latent code. The embedding is the same at every position, yet
-       $B_c$ is not. At which of the 16 positions does $B_c$ take the same
-       value, and why does it differ at the others?
-    1. Condition-dependent modulation computes
-       $\gamma(c) \cdot \mathrm{norm}(h) + \beta(c)$. Which of the two
-       coefficients does concatenation into a single convolution reproduce?
-       How does the leaky ReLU after `mix` nevertheless let the class change
-       how later layers respond to the latent code?
 1. **Separate feature maps.** The derivation of
    :eqref:`eq_gan_cond_projection` modeled both class posteriors with one
    shared feature map $\varphi$. Suppose instead that the two posteriors
@@ -883,8 +868,8 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
    $p(c \mid x) \propto \exp(u_c^\top \varphi_p(x))$ and
    $q(c \mid x) \propto \exp(w_c^\top \varphi_q(x))$ with
    $\varphi_p \neq \varphi_q$.
-    1. Derive the critic that takes the place of
-       :eqref:`eq_gan_cond_projection`.
+    1. Derive the critic that takes the place
+       of :eqref:`eq_gan_cond_projection`.
     1. Show that this critic is a projection head over the concatenated
        feature map $(\varphi_p(x), \varphi_q(x))$, and give its class
        embeddings.
@@ -920,24 +905,6 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
        states of the game that would produce this. Which measurement of
        this section tells them apart?
    :exlabel:`ex_conditional-critic-classifier`
-1. [code] **Noise in the collapse baseline.** The collapse baseline repeats
-   the first test image of each class 100 times. In the recorded runs its
-   alignment exceeds the classifier's overall accuracy on real test images,
-   which suggests that the real-image reference is not an upper bound on
-   alignment.
-    1. Which values can the baseline's alignment take? How many independent
-       classifier decisions does it contain?
-    1. Suppose that the stored image of class $c$ is classified correctly
-       with probability equal to the classifier's accuracy on real images of
-       class $c$, independently across classes. Compute the mean and the
-       standard deviation of the baseline's alignment from `cls_acc`. Is the
-       printed excess larger than this noise?
-    1. Repeat the baseline 200 times, each time storing a randomly drawn
-       test image of each class, and plot the distribution of its alignment.
-       Then store, for each class, the test image to which `cnn` assigns the
-       highest probability of that class. What alignment does this baseline
-       reach, and what does it show about alignment measured by the
-       classifier that selected the images?
 1. [code] **Per-class distances.** Per-class feature variance detects
    within-class collapse but not other differences between a generated
    class and its real counterpart. The features `f_gen`, `f_real` and
@@ -1032,8 +999,8 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
        $\mathrm{MMD}^2$ of problem
        :exref:`ex_conditional-diagnostics-cell-detects-within`b, and the
        feature distances of its generated samples to their nearest neighbors
-       among its 50 training images, as in the memorization check of
-       :numref:`subsec_gan_limited_data`. Which scheme serves the rare class
+       among its 50 training images, as in the memorization
+       check of :numref:`subsec_gan_limited_data`. Which scheme serves the rare class
        better, and what does it cost the other classes?
    :exlabel:`ex_conditional-rare-class`
 1. **Auxiliary classifier bias.** ● An auxiliary classifier critic
@@ -1102,34 +1069,6 @@ Conditional evaluation adds an axis that marginal sample metrics cannot observe.
        object? :citet:`Chu.Zhmoginov.Sandler.2017` examine this behavior in
        a trained CycleGAN.
    :exlabel:`ex_conditional-translation-identifiability`
-1. [extended] **Cycle-consistency ablation.** ●● This project trains a
-   small CycleGAN :cite:`Zhu.Park.Isola.ea.2017` between two CIFAR-10
-   classes, for instance horses as the collection $X$ and deer as $Y$, and
-   measures what the cycle-consistency loss contributes.
-    1. Build two image-to-image generators $G: X \to Y$ and $F: Y \to X$ at
-       $32 \times 32$, for example two strided convolutions, a few residual
-       blocks, and two upsampling stages. Use two marginal critics, each a
-       `Discriminator` with a single class whose label is always zero.
-       Train them with the pairing losses and both penalties of
-       `train_conditional`, plus the cycle loss
-       $\lambda_{\textrm{cyc}}\big(\|F(G(x)) - x\|_1 + \|G(F(y)) - y\|_1\big)$.
-    1. Train with $\lambda_{\textrm{cyc}} = 0$ and with
-       $\lambda_{\textrm{cyc}} = 10$ at the same budget.
-       For ten held-out horses, display $x$, $G(x)$ and $F(G(x))$ under both
-       settings. For 100 held-out horses, compare the mean squared pixel
-       distance between $G(x)$ and $x$ with that between $G(x)$ and another
-       randomly chosen source. Which setting produces translations that
-       depend on their source?
-    1. For the run with $\lambda_{\textrm{cyc}} = 10$, add Gaussian noise of
-       standard deviation $\sigma \in \{0, 0.01, 0.03, 0.1\}$ to $G(x)$
-       before applying $F$, and plot the round-trip error against $\sigma$. Compare
-       the noise level at which the reconstruction degrades with the pixel
-       range $[-1, 1]$, and relate the result to problem
-       :exref:`ex_conditional-translation-identifiability`c.
-
-    *Adapted from Paul Vicol and Roger Grosse,
-    [CSC321 Programming Assignment 4: CycleGAN](https://www.cs.toronto.edu/~rgrosse/courses/csc321_2018/assignments/a4-handout.pdf),
-    Part 2, CycleGAN Experiments.*
 
 [Discussions](https://d2l.discourse.group/)
 

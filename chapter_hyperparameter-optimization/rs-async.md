@@ -263,11 +263,21 @@ modifications.
 
 ## Exercises
 
-1. Consider the `DropoutMLP` model implemented in :numref:`sec_dropout`, and used in Exercise 1 of :numref:`sec_api_hpo`.
+1. Suppose that $K$ workers run trials whose durations are independent of the configuration and of each other.
+    1. Synchronous scheduling starts $K$ trials together and waits for the slowest one. Show that if the durations are exponentially distributed with mean $\mu$, a batch takes $\mu H_K$ in expectation, where $H_K = 1 + 1/2 + \cdots + 1/K$, so that the workers are busy for a fraction $1/H_K$ of the time. Evaluate this fraction for $K = 4$ and $K = 12$.
+    2. Repeat the calculation for durations that are uniformly distributed on $[T, 2T]$. Why does the busy fraction of synchronous scheduling go to zero as $K$ grows in the first case but not in the second?
+2. Measure how well the run in this section used its workers, using `tuning_experiment.results`.
+    1. For each trial, take the last reported value of `st_worker_time`, the number of seconds since the trial created its `Reporter`. Divide the sum of these values by `n_workers * max_wallclock_time` and report the result. Find the work that `hpo_objective_lenet_synetune` does before it creates the `Reporter`, and name the other overheads that keep this fraction below 1.
+    2. Measure the runtime of one 10-epoch trial with batch size 128 under the sequential `HPOTuner` of :numref:`sec_api_hpo`, and compare it with `st_worker_time` of trials with similar batch sizes in this run. What speed-up over sequential random search did the `n_workers` workers achieve? Why is it smaller than `n_workers` when several workers share one GPU?
+3. A searcher that learns from earlier results, such as Bayesian optimization, faces a problem under asynchronous scheduling that random search does not: when a worker becomes free, other trials are still running. Suppose that the searcher fits a Gaussian process regression model (:numref:`chap_gp`) to the validation errors observed so far, and proposes the configuration that minimizes an acquisition function.
+    1. If the acquisition function is the posterior mean $\mu(\mathbf{x})$, explain why several workers that become free before any new result arrives all receive the same configuration.
+    2. A common remedy treats every pending configuration $\mathbf{x}_p$ as if it had been observed with value $\mu(\mathbf{x}_p)$. Show, using the posterior update for one additional observation, that this leaves the posterior mean unchanged everywhere and reduces the posterior variance near $\mathbf{x}_p$.
+    3. Does the remedy help a searcher that minimizes $\mu(\mathbf{x})$? Does it help one that minimizes $\mu(\mathbf{x}) - \kappa \sigma(\mathbf{x})$ for some $\kappa > 0$, where $\sigma(\mathbf{x})$ is the posterior standard deviation?
+4. Consider the `DropoutMLP` model implemented in :numref:`sec_dropout`, and used in Exercise 1 of :numref:`sec_api_hpo`.
     1. Implement an objective function `hpo_objective_dropoutmlp_synetune` to be used with Syne Tune. Make sure that your function reports the validation error after every epoch.
     2. Using the setup of Exercise 1 in :numref:`sec_api_hpo`, compare random search to Bayesian optimization. If you use SageMaker, feel free to use Syne Tune's benchmarking facilities in order to run experiments in parallel. Hint: Bayesian optimization is provided as `syne_tune.optimizer.baselines.BayesianOptimization`.
     3. For this exercise, you need to run on an instance with at least 4 CPU cores. For one of the methods used above (random search, Bayesian optimization), run experiments with `n_workers=1`, `n_workers=2`, `n_workers=4`, and compare results (incumbent trajectories). At least for random search, you should observe linear scaling with respect to the number of workers. Hint: For robust results, you may have to average over several repetitions each.
-2. *Advanced*. The goal of this exercise is to implement a new scheduler in Syne Tune.
+5. *Advanced*. The goal of this exercise is to implement a new scheduler in Syne Tune.
     1. Create a virtual environment containing both the [d2lbook](https://github.com/d2l-ai/d2l-en/blob/master/INFO.md#installation-for-developers) and [syne-tune](https://syne-tune.readthedocs.io/en/latest/getting_started.html) sources.
     2. Implement the `LocalSearcher` from Exercise 2 in :numref:`sec_api_hpo` as a new searcher in Syne Tune. Hint: Read [this tutorial](https://syne-tune.readthedocs.io/en/latest/tutorials/developer/README.html). Alternatively, you may follow this [example](https://syne-tune.readthedocs.io/en/latest/examples.html#launch-hpo-experiment-with-home-made-scheduler).
     3. Compare your new `LocalSearcher` with `RandomSearch` on the `DropoutMLP` benchmark.

@@ -622,8 +622,8 @@ matched update sizes; the goal of transfer is common to all of them.
    update of a weight matrix
    $\mathbf{W} \in \mathbb{R}^{n_{\text{out}} \times n_{\text{in}}}$ is
    $\Delta\mathbf{W} = -\eta\, \operatorname{sign}(\boldsymbol{\delta})\,
-   \operatorname{sign}(\mathbf{h})^\top$, as in the derivation of
-   :eqref:`eq_scaling_first_step`. Let $k_{\text{out}}$ and $k_{\text{in}}$
+   \operatorname{sign}(\mathbf{h})^\top$, as in the derivation
+   of :eqref:`eq_scaling_first_step`. Let $k_{\text{out}}$ and $k_{\text{in}}$
    be the numbers of nonzero entries of $\boldsymbol{\delta}$ and
    $\mathbf{h}$.
     1. Compute $\|\Delta\mathbf{W}\|_2$ as a function of $\eta$,
@@ -641,8 +641,8 @@ matched update sizes; the goal of transfer is common to all of them.
    widths. Override `configure_adam` in a subclass of `MLP` to return
    AdamW (:numref:`sec_adamw`) with decay coefficient
    $\lambda = 10^{-3}/\eta$, so that every run averages its updates over
-   the horizon $1/(\eta\lambda) = 1{,}000$ steps described in
-   :numref:`subsec_wd-at-scale`.
+   the horizon $1/(\eta\lambda) = 1{,}000$ steps described
+   in :numref:`subsec_wd-at-scale`.
     1. Run the standard-parametrization sweep of
        :numref:`subsec_scaling-sweep` at widths 128 and 1,024 with
        `num_steps=4000`, once with this AdamW and once with Adam. Report

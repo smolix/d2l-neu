@@ -796,25 +796,8 @@ placement as options, with replaceable attention and FFN modules.
        stack grows deeper, and explain why a post-LN stack needs no final
        normalization.
 
-1. [code] **Normalization cost.** A kernel is *memory-bound* when moving
-   its data between memory and the processor takes longer than its
-   arithmetic, so that its runtime is close to the number of bytes moved
-   divided by the memory bandwidth.
-    1. Recreate the tensor `X` of :numref:`subsec_rmsnorm`, of shape
-       $(64, 512, 1024)$ in 32-bit floats. Count the bytes that LayerNorm
-       and RMSNorm must at least read and write, and the floating-point
-       operations per element of each.
-    1. Time the elementwise map $\mathbf{X} \mapsto 2\mathbf{X}$ in the
-       same way as the two normalizers, and convert all three timings into
-       achieved bandwidths in GB/s.
-    1. Use the achieved bandwidths to estimate how many passes over `X`
-       each normalizer makes. Explain why dropping the centering and one
-       statistic need not change the runtime of a normalizer that reads
-       `X` once, and describe an implementation in which RMSNorm would be
-       measurably faster.
-
-1. [code] **QK-norm as a factory.** QK-norm
-   (:numref:`subsec_qk-norm`) applies RMSNorm over the head dimension
+1. [code] **QK-norm as a factory.**
+   QK-norm (:numref:`subsec_qk-norm`) applies RMSNorm over the head dimension
    $p = d/h$ to every query and key just before the scores are computed.
     1. Write `QKNormAttention`, a subclass of `d2l.MultiHeadAttention` in
        which the queries and the keys returned by `transpose_qkv` each pass
@@ -867,23 +850,6 @@ placement as options, with replaceable attention and FFN modules.
        `num_blks` $\in \{1, 2, 4\}$: change the token at position 16 of a
        sequence of 32 random tokens, and find the positions whose logits
        change.
-
-1. [code] **Gated variants.** :citet:`Shazeer.2020` varies the gate of
-   :eqref:`eq_swiglu`. ReGLU replaces SiLU by ReLU, GEGLU replaces it by
-   GELU, and the bilinear variant drops the activation and multiplies the
-   two linear views $\mathbf{W}_g \mathbf{x}$ and $\mathbf{W}_1
-   \mathbf{x}$ directly.
-    1. Extend `FeedForward` with these three settings of `act` at width
-       $\mathrm{round}(8d/3)$, and check that all gated settings have the
-       same parameter count.
-    1. Train `CharLM` with each of the five settings for three seeds under
-       the protocol of :numref:`subsec_gelu-vs-swiglu`. Report the mean and
-       the standard deviation over seeds of the loss averaged over the last
-       100 steps.
-    1. Compare your ranking with Table 1 of :citet:`Shazeer.2020`. Compare
-       the gap between the bilinear variant and the GELU MLP with the
-       spread among the four gated variants, and state which ingredient of
-       SwiGLU the comparison credits with its improvement.
 
 1. [code] **Stream variance budget.** ● In the pre-LN arrangement every
    branch reads a normalized input. If each branch output is uncorrelated
@@ -941,31 +907,6 @@ placement as options, with replaceable attention and FFN modules.
        $n = 64$, both for this initialization and for Xavier
        initialization at the same width. Check both predictions with
        `signal_stats`.
-
-1. [code] **Off-stream normalization.** ● OLMo 2 normalizes the output
-   of each branch instead of its input :cite:`OLMo.2025`,
-   $$\mathbf{h} = \mathbf{x} + \mathrm{Norm}(\mathrm{Attn}(\mathbf{x})),$$
-   and Gemma 3 normalizes both the input and the output of each branch
-   :cite:`Gemma.Team.2025`,
-   $$\mathbf{h} = \mathbf{x} + \mathrm{Norm}'(\mathrm{Attn}(\mathrm{Norm}(\mathbf{x}))),$$
-   with the FFN sublayer treated identically in both.
-   :numref:`fig_norm-taxonomy` draws these two placements next to
-   post-LN and pre-LN.
-    1. Predict the stream RMS after $N$ blocks at initialization for both
-       arrangements.
-    1. Replace the `pre_norm` flag of `MiniBlock` by a string that selects
-       one of the four arrangements, and extend `signal_stats` to record
-       the mean entropy of the attention weights of each block. Compare
-       the stream RMS, the token spread, the query-projection gradient
-       norms, and the entropies of all four arrangements.
-    1. Explain the entropies that you measure in the upper blocks of the
-       OLMo 2 stack, and name the failure that takes the place of the
-       token collapse of post-LN.
-    1. Replace the attention of the OLMo 2 arrangement and of the post-LN
-       arrangement by `QKNormAttention` and rerun the experiment. Compare
-       the effect of QK-norm on the entropies and the token spread of both
-       arrangements, and relate each effect to the cause of that
-       arrangement's failure.
 
 1. [extended] **Learning-rate sensitivity.** ●
    :citet:`Wortsman.Liu.Xiao.ea.2024` reproduce the growth of attention

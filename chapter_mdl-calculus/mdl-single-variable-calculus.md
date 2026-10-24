@@ -999,8 +999,8 @@ Why does training tolerate the occasional bad chained value? The usual picture i
    :exlabel:`ex_mdl-single-variable-calculus-quartic-descent`
 1. **Newton's error recursion.** ● Let $x^\star$ be a stationary point of a
    three times continuously differentiable $f$ with $f''(x^\star) \neq 0$,
-   and write $e_t = x_t - x^\star$ for the error of Newton's method
-   :eqref:`eq_mdl-newton`.
+   and write $e_t = x_t - x^\star$ for the error of Newton's
+   method :eqref:`eq_mdl-newton`.
     1. Apply the Lagrange remainder :eqref:`eq_mdl-lagrange` with $n = 1$ to
        $f'$, expanded at $x_t$ and evaluated at $x^\star$, and show that
 

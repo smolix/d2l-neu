@@ -256,21 +256,6 @@ part of what you publish.
 
 ## Exercises
 
-1. **Pointer versus copy.** Open this section through its **Run
-   notebook** control on Colab and on Kaggle. In each notebook, edit one
-   code cell, run the cell that sets `work`, and write a small file into
-   `work`.
-    1. Predict what you will find on each provider, both the edited cell
-       and the file in `work`, when the session has ended and you reload
-       the page in the same browser tab. Then end both sessions from the
-       providers' menus, reload, and check your predictions.
-    1. Click **Run notebook** a second time on each provider. Which launch
-       returns your edited notebook? Where would you look for the edits
-       otherwise?
-    1. Suppose that the book republishes this notebook with a corrected
-       cell. Which of your notebooks from the first launch shows the
-       correction, and which keeps your edits?
-
 1. **Setup cell audit.** A notebook reached through an "Open in Colab"
    badge starts with a setup cell of four lines. It runs
    `!pip install git+https://github.com/someone/helpers`, then
@@ -285,35 +270,6 @@ part of what you publish.
     1. You now connect the same notebook to a local runtime, so that the
        browser controls a Jupyter server on your own machine. Which line
        changes its consequences most, and why?
-
-1. [code] **Two identical versions.** On Kaggle, add a cell to this
-   section's notebook that prints `time.time()` and `np.random.rand(3)`.
-   Produce two versions with **Save & Run All** without editing anything
-   in between.
-    1. Which outputs differ between the two versions? Explain each
-       difference.
-    1. Does a saved version guarantee that rerunning the notebook
-       reproduces its outputs? List the sources of variation that remain
-       between two such runs of a training notebook whose random number
-       generators are all seeded.
-    1. Find the notebook setting that decides whether a later version
-       runs on the same environment image as an earlier one. What does
-       each choice trade?
-
-1. **Sessions and quota.** A training notebook needs about 40 hours on
-   Kaggle's P100, extrapolated from a one-hour run. Use the weekly GPU
-   quota and the session limit of the mid-2026 snapshot given in this
-   section.
-    1. What is the smallest number of sessions that the job needs? Over
-       how many weekly quota periods must it spread?
-    1. What must each session write before it reaches its limit, and
-       where? How does the next session read it, given that
-       `/kaggle/working` persists only into saved versions and attached
-       inputs are read-only?
-    1. The 2×T4 machine draws on the same weekly quota. Under which
-       conditions does switching to it shorten the job? What share of its
-       hardware does a notebook that runs on a single device leave idle?
-   :exlabel:`ex_hosted-notebooks-sessions-and-quota`
 
 1. [code] **Restart after install.** Run the following experiment in a
    hosted notebook or in a Jupyter kernel of a fresh local virtual
@@ -424,8 +380,8 @@ part of what you publish.
    kernel.
     1. Build its setup from your solutions to exercises
        :exref:`ex_hosted-notebooks-restart-after-install`,
-       :exref:`ex_hosted-notebooks-fingerprint-extension`, and
-       :exref:`ex_hosted-notebooks-durable-paths`. Make the training loop
+       :exref:`ex_hosted-notebooks-fingerprint-extension`,
+       and :exref:`ex_hosted-notebooks-durable-paths`. Make the training loop
        save a checkpoint to the durable directory after every epoch and
        resume from the newest checkpoint it finds.
     1. On Kaggle with internet access disabled, every network access of
@@ -436,10 +392,10 @@ part of what you publish.
        inputs instead.
     1. On each runtime, interrupt training after two epochs, resume in a
        fresh session, and check that training continues with the third
-       epoch. On Kaggle, carry the checkpoint into the fresh session as in
-       problem :exref:`ex_hosted-notebooks-sessions-and-quota`b. Tabulate
-       the three fingerprints. Which lines of the finished notebook still
-       depend on the provider?
+       epoch. On Kaggle, where `/kaggle/working` persists only into saved
+       versions and attached inputs are read-only, decide how the checkpoint
+       reaches the fresh session. Tabulate the three fingerprints. Which
+       lines of the finished notebook still depend on the provider?
 
 1. [code] **Checkpoint interval.** ●● Model the interruptions of a hosted
    session, such as idle disconnects and reclaimed machines, as a Poisson

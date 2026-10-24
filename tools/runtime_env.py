@@ -14,7 +14,7 @@ from pathlib import Path
 # Keywords that indicate a notebook/slide needs GPU access.
 GPU_KEYWORDS = ("gpu(", "cuda", "GPU", "num_gpus", "try_gpu", "try_all_gpus",
                 "device(", "/GPU:", "/device:GPU",
-                "Trainer(", "d2l.train")
+                "Trainer(", "d2l.train", "fit_lm(")
 
 # Notebooks that mention GPU-related terms in prose or discussion but whose
 # executable cells are CPU-only. Keep these out of the GPU scheduler bucket.

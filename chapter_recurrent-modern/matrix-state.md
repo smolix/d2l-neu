@@ -1,1255 +1,802 @@
-# Matrix-State Recurrences and State Space Duality
+# Matrix-State Recurrences
 :label:`sec_matrix-state`
 
-Dropping the softmax in :numref:`sec_attention-at-scale` produced a
-matrix-valued recurrent state updated by outer products. The preceding
-sections derived selective linear recurrences from continuous-time dynamics.
-This section establishes the equivalence between these formulations.
+A program defines `rate = 0.05` near its top and uses `rate` two hundred
+lines later. A story introduces a character as "the engineer" and refers to
+"the engineer" again three pages on. To predict such a token, a model must
+store a *pair*, a name together with what it stands for, and later retrieve
+the second half of the pair when the first half reappears. This is
+*associative recall*, and transformers do it with attention: the current
+token's query is compared with the keys of all earlier tokens, and the
+values of the best matches are returned. A recurrent state that holds one
+decaying number per channel has no natural place to keep such pairs.
 
-We first analyze the matrix state as a memory and measure its capacity.
-Several models then arise from the same recurrence by choosing different
-forms of decay. Unrolling the recurrence shows that a gated linear recurrence
-and masked attention compute the same matrix in different contraction orders.
-A chunked order combines parallel matrix multiplication within chunks with a
-short recurrence between chunks. The final table compares models from RetNet
-through Mamba-2 and xLSTM.
+This section makes the state a matrix that stores key–value pairs. A pair
+is written by adding the outer product of its value and its key; it is read
+by multiplying the matrix by a query. This is linear attention, the
+variant of attention in :numref:`sec_attention-at-scale` that drops the
+softmax, and, up to its decay, it is also what the selective state space
+model of :numref:`sec_mamba` computes, with different names for the same
+vectors.
+We ask how many pairs such a memory can hold, how a decay keeps it from
+filling up, and how to train it fast: a decayed matrix recurrence can be
+computed as masked attention, as a scan, or in chunks that combine the two.
+The section ends with a limit that the next section removes: every write
+adds, so a memory cannot change what it has stored.
 
-*Prerequisites: the linear-attention recurrence and its normalizer from
-:numref:`sec_attention-at-scale`; the selective SSM of
-:numref:`sec_mamba` and the parallel scan of
-:numref:`subsec_parallel-scans`; the KV-cache accounting of
-:numref:`sec_kv-cache`.*
-
-```{.python .input #matrix-state-the-matrix-state-from-linear-attention-to-mamba-2}
+```{.python .input #matrix-state-matrix-state-recurrences}
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
+import math
 import numpy as np
-import time
 import torch
+from torch import nn
+from torch.nn import functional as F
 ```
 
-```{.python .input #matrix-state-the-matrix-state-from-linear-attention-to-mamba-2}
+```{.python .input #matrix-state-matrix-state-recurrences}
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
+from flax import nnx
 import jax
 from jax import numpy as jnp
+import math
 import numpy as np
-import time
 ```
 
-## The Matrix-State Recurrence
-:label:`subsec_ms-two-roads`
+## An Associative Memory
 
-Kernelizing attention produced
-:eqref:`eq_linear-attn-recurrence`: a state
-$\mathbf{S}_t \in \mathbb{R}^{d_k \times d_v}$, with keys indexing rows,
-written by outer products and read by the query. Every model in this
-section is an instance of the template
+### Writing and Reading Pairs
 
-$$
-\mathbf{S}_t = \mathbf{D}_t\, \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top,
-\qquad
-\mathbf{o}_t = \mathbf{S}_t^\top \mathbf{q}_t,
-$$
+Start with two keys in $\mathbb{R}^2$, $\mathbf{k}_1 = (1, 0)^\top$ and
+$\mathbf{k}_2 = (0, 1)^\top$, with the values $v_1 = 3$ and $v_2 = 5$.
+Store both in one row vector, the sum of each value times its key,
+$\mathbf{S} = v_1 \mathbf{k}_1^\top + v_2 \mathbf{k}_2^\top = (3, 5)$.
+Multiplying by a key reads its value back: $\mathbf{S}\mathbf{k}_1 = 3$ and
+$\mathbf{S}\mathbf{k}_2 = 5$. Now store a third pair, $\mathbf{k}_3 =
+(1, 1)^\top / \sqrt{2}$ with $v_3 = 7$. The memory becomes $(3 + 7/\sqrt 2,
+5 + 7/\sqrt 2) \approx (7.95, 9.95)$, and reading $\mathbf{k}_1$ now returns
+7.95 instead of 3. Two dimensions hold two pairs exactly; a third key must
+overlap with the others, and its value leaks into theirs.
+
+With values $\mathbf{v}_t \in \mathbb{R}^{d_v}$ and keys $\mathbf{k}_t \in
+\mathbb{R}^{d_k}$, the memory is a matrix $\mathbf{S}_t \in \mathbb{R}^{d_v
+\times d_k}$, the transpose of the layout in
+:numref:`sec_attention-at-scale`. Each step writes one pair and the output
+reads the memory with a query $\mathbf{q}_t \in \mathbb{R}^{d_k}$:
+
+$$\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top, \qquad
+\mathbf{y}_t = \mathbf{S}_t \mathbf{q}_t.$$
 :eqlabel:`eq_ms-recurrence`
 
-where the *transition* $\mathbf{D}_t$ determines which preceding state is
-retained and the *write* $\mathbf{k}_t \mathbf{v}_t^\top$ associates the
-current token with its key. Linear attention is the case $\mathbf{D}_t = \mathbf{I}$: never
-forget. The minGRU and the selective SSM obeyed the same shape one level
-down, as the elementwise affine recurrence :eqref:`eq_affine_recurrence`
-evaluated by the parallel scan of :numref:`subsec_parallel-scans`; here the
-state is a matrix rather than a vector, but the algebra is identical:
-affine maps composing into affine maps.
+The outer product $\mathbf{v}_t \mathbf{k}_t^\top$ is a matrix of rank one
+that maps the direction $\mathbf{k}_t$ to $\mathbf{v}_t$; the state is the
+sum of these maps. The keys, values, and queries are linear projections of
+the input, as in attention, so the network learns what to store under
+which key and what to look up. A weight matrix that the network rewrites at
+every step is called a *fast weight*; :citet:`Schlag.Irie.Schmidhuber.2021`
+trace linear attention back to this older idea.
 
-This template differs from the construction in
-:numref:`sec_attention-at-scale`. That construction used a pair of states:
-$\mathbf{S}_t$ together with a normalizer
-$\mathbf{z}_t = \sum_{s \le t} \phi(\mathbf{k}_s)$, read as
-$\phi(\mathbf{q}_t)^\top \mathbf{S}_t / \phi(\mathbf{q}_t)^\top \mathbf{z}_t$,
-with the feature map $\phi = \mathrm{elu} + 1$ keeping everything positive
-so that the denominator could not vanish. The modern family drops both.
-Queries and keys come out of learned projections whose scale training can
-set freely, so the feature map goes; and rather than tracking a normalizer
-state, production layers normalize the *output*, passing $\mathbf{o}_t$
-through an RMSNorm or GroupNorm before the residual add
-:cite:`Yang.Wang.Shen.ea.2024,Dao.Gu.2024`. The mLSTM at the end of this
-section is the one member of the family that keeps an explicit normalizer
-state; when we meet it, the pair $(\mathbf{S}, \mathbf{z})$ of :numref:`chap_attention` will be waiting.
+### Linear Attention
 
-### Memory and Computation Costs
-:label:`subsec_ms-capacity`
+Unrolling :eqref:`eq_ms-recurrence` from $\mathbf{S}_0 = \mathbf{0}$ gives
 
-A matrix associative memory fails through interference between stored
-keys. Suppose we store $n$ pairs with $\mathbf{D}_t = \mathbf{I}$, so
-$\mathbf{S} = \sum_{i=1}^{n} \mathbf{k}_i \mathbf{v}_i^\top$, and read back
-key $j$. If the keys have unit norm (an assumption we make throughout this
-subsection; normalized keys are also the shipped default in this model
-family), the read-out is
+$$\mathbf{y}_t = \Big(\sum_{s \le t} \mathbf{v}_s \mathbf{k}_s^\top\Big)
+\mathbf{q}_t = \sum_{s \le t} (\mathbf{k}_s^\top \mathbf{q}_t)\,
+\mathbf{v}_s.$$
 
-$$
-\mathbf{S}^\top \mathbf{k}_j
-= \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)\, \mathbf{v}_i .
-$$
+The right side is causal attention with the score $\mathbf{k}_s^\top
+\mathbf{q}_t$ and no softmax: every earlier value, weighted by how well its
+key matches the query. Softmax attention computes $\sum_s
+\exp(\mathbf{k}_s^\top \mathbf{q}_t) \mathbf{v}_s$ divided by the sum of the
+weights, and the exponential prevents the sum from being folded into a
+fixed-size matrix. :citet:`Katharopoulos.Vyas.Pappas.ea.2020` replaced it by
+a product of features, which can be folded, and called the result *linear
+attention*: its cost per token does not grow with the length of the
+context (:numref:`sec_attention-at-scale` develops it with its normalizer;
+the models of this chapter normalize the output of the layer instead).
+The left side is the recurrence. The same computation is a transformer
+layer read one way and a recurrent network read the other.
+
+### Interference
+
+How many pairs can $\mathbf{S}$ hold? Store $n$ pairs, $\mathbf{S} =
+\sum_{i=1}^n \mathbf{v}_i \mathbf{k}_i^\top$, with keys of unit length, and
+read key $j$:
+
+$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j}
+(\mathbf{k}_i^\top \mathbf{k}_j)\, \mathbf{v}_i.$$
 :eqlabel:`eq_ms-retrieval-error`
 
-The read returns the stored value plus every *other* value weighted by its
-key's overlap with the target key. Only mutually orthogonal keys
-retrieve without error, and $\mathbb{R}^{d_k}$ holds at most $d_k$ of
-those: the capacity of the memory is capped by its width, not by time. The
-limiting resource is therefore interference from other stored pairs, not
-elapsed time :cite:`Yang.Wang.Zhang.ea.2024`.
-
-The following proposition quantifies how interference grows under
-independent isotropic keys.
+The read returns the stored value plus every other value, weighted by the
+overlap of its key with the target key. Only mutually orthogonal keys are
+read back without error, and $\mathbb{R}^{d_k}$ holds at most $d_k$ of
+them. For more pairs, or for keys that are not orthogonal, interference is
+unavoidable. How large it is depends on the keys; for random keys we can
+compute it.
 
 **Proposition.** Let the keys $\mathbf{k}_1, \ldots, \mathbf{k}_n$ be
-independent and isotropic on the unit sphere of $\mathbb{R}^{d_k}$
-(normalized Gaussians, for instance), and let the stored values be any
-unit-norm vectors chosen independently of the keys. Then the expected
-squared read error at every stored key $j$ is
+independent and uniformly distributed on the unit sphere of
+$\mathbb{R}^{d_k}$, and let the values be unit vectors chosen independently
+of the keys. Then the expected squared read error at every stored key is
 
-$$
-\mathbb{E}\,\big\| \mathbf{S}^\top \mathbf{k}_j - \mathbf{v}_j \big\|^2
-= \frac{n-1}{d_k},
-$$
+$$\mathbb{E}\,\big\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\big\|^2 =
+\frac{n - 1}{d_k}.$$
 :eqlabel:`eq_ms-capacity-law`
 
-where the expectation is over the keys and the squared norm sums over
-all $d_v$ coordinates of the read-out; coordinate $c$ alone contributes
-$\sum_{i \neq j} v_{i,c}^2 / d_k$ in expectation.
+**Proof.** The error is $\sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)\,
+\mathbf{v}_i$. Its squared norm is a double sum over $i$ and $l$. For $i
+\neq l$, the expected cross term vanishes: given $\mathbf{k}_j$, the
+overlaps $\mathbf{k}_i^\top \mathbf{k}_j$ and $\mathbf{k}_l^\top
+\mathbf{k}_j$ are independent with mean zero. What remains is $\sum_{i \neq
+j} \mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)^2]$, using $\|\mathbf{v}_i\|
+= 1$. A random unit vector has the same expected squared coordinate in every
+direction, and these $d_k$ expectations sum to $\|\mathbf{k}_i\|^2 = 1$, so
+each term is $1/d_k$. There are $n - 1$ terms. $\blacksquare$
 
-**Proof.** The error is $\sum_{i \neq j} (\mathbf{k}_i^\top
-\mathbf{k}_j)\, \mathbf{v}_i$. For $i \neq l$, the cross term
-$\mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)(\mathbf{k}_l^\top
-\mathbf{k}_j)]\, \mathbf{v}_i^\top \mathbf{v}_l$ vanishes: conditioned
-on $\mathbf{k}_j$, the factors are independent with mean zero. What
-remains is $\sum_{i \neq j} \mathbb{E}[(\mathbf{k}_i^\top
-\mathbf{k}_j)^2]\, \|\mathbf{v}_i\|^2$, and by isotropy each
-$\mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)^2] = 1/d_k$, with $n-1$
-terms. $\blacksquare$
+The error grows in proportion to the number of stored pairs and falls in
+proportion to the key dimension. Once $n$ approaches $d_k$, the
+interference is as large as the signal, whose squared norm is one. Time
+does not appear: a pair written long ago is read back as well as one
+written a moment ago: memories are lost because other pairs interfere with
+them, not because they are old.
 
-The expected squared error grows linearly with the number of stored pairs
-and inversely with key width, provided that keys are independent and
-isotropic. Both
-assumptions are load-bearing: correlated keys revive the cancelled
-cross terms, and learned keys are rarely isotropic. The cell below
-measures the law under its own assumptions and then breaks them on
-purpose. It fills a memory with $n$ random pairs whose values come from
-a codebook of 256 unit vectors, reads every key back, and decodes by
-nearest codebook entry, sweeping $n$ across three widths; a final curve
-mixes every key with one shared direction ($\rho = 0.5$) to correlate
-them.
+We check the proposition by storing random pairs and reading them back.
+The values come from a codebook of 256 random unit vectors, so we can also
+ask whether the nearest codebook entry to the read is the stored one. A last
+curve breaks the assumptions: every key shares a common direction, with
+weight $\rho = 0.5$, so the keys are correlated. The computation needs only
+NumPy.
 
-```{.python .input #matrix-state-what-the-memory-costs}
+```{.python .input #matrix-state-interference-1}
 %%tab pytorch, jax
-rng = np.random.default_rng(0)
-
-def hebbian_memory(d, nums, num_values=256, trials=20, rho=0):
-    """Read error and recall of S = sum_i k_i v_i^T over random unit keys;
-    rho > 0 mixes every key with one shared direction (correlated keys)."""
-    codebook = rng.standard_normal((num_values, d))
-    codebook /= np.linalg.norm(codebook, axis=1, keepdims=True)
-    errs, accs = [], []
+def matrix_memory(d_k, nums, rho=0, num_values=256, trials=20, seed=0):
+    """Read error and recall of S = sum_i v_i k_i^T over random unit keys."""
+    rng = np.random.default_rng(seed)
+    unit = lambda X: X / np.linalg.norm(X, axis=-1, keepdims=True)
+    codebook = unit(rng.standard_normal((num_values, d_k)))
+    errors, recalls = [], []
     for n in nums:
-        err = acc = 0
+        error = recall = 0
         for _ in range(trials):
-            K = rng.standard_normal((n, d))
-            K /= np.linalg.norm(K, axis=1, keepdims=True)  # Unit-norm keys
-            if rho:                    # Break independence: shared component
-                c = rng.standard_normal(d)
-                K = np.sqrt(1 - rho ** 2) * K + rho * c / np.linalg.norm(c)
-                K /= np.linalg.norm(K, axis=1, keepdims=True)
+            K = unit(rng.standard_normal((n, d_k)))  # Keys as rows
+            K = unit(np.sqrt(1 - rho**2) * K + rho * unit(rng.standard_normal(d_k)))
             ids = rng.integers(0, num_values, n)
-            S = K.T @ codebook[ids]                        # Write: sum k v^T
-            read = K @ S                                   # Rows are S^T k_j
-            err += ((read - codebook[ids]) ** 2).sum(1).mean()
-            acc += ((read @ codebook.T).argmax(1) == ids).mean()
-        errs.append(err / trials)
-        accs.append(acc / trials)
-    return errs, accs
-
-fig, axes = d2l.plt.subplots(1, 2, figsize=(9, 3.2))
-for d in [32, 64, 128]:
-    nums = [d // 4, d // 2, d, 2 * d, 4 * d, 8 * d]
-    errs, accs = hebbian_memory(d, nums)
-    axes[0].loglog(nums, errs, marker='o', label=f'$d_k$ = {d}')
-    axes[0].loglog(nums, [(n - 1) / d for n in nums], 'k--', lw=1)
-    axes[1].semilogx(nums, accs, marker='o', label=f'$d_k$ = {d}')
-nums = [16, 32, 64, 128, 256, 512]                 # Width 64, correlated keys
-errs, accs = hebbian_memory(64, nums, rho=0.5)
-axes[0].loglog(nums, errs, marker='s', ls=':', color='C1',
-               label=r'$d_k$ = 64, $\rho$ = 0.5')
-axes[1].semilogx(nums, accs, marker='s', ls=':', color='C1')
-for ax, ylabel in zip(axes, ['squared read error', 'recall accuracy']):
-    ax.set_xlabel('stored pairs n')
-    ax.set_ylabel(ylabel)
-    ax.grid(linestyle='--', alpha=0.4)
-axes[0].legend();
+            S = codebook[ids].T @ K  # Sum of v_i k_i^T
+            reads = K @ S.T  # Row j is S k_j
+            error += ((reads - codebook[ids]) ** 2).sum(1).mean() / trials
+            recall += ((reads @ codebook.T).argmax(1) == ids).mean() / trials
+        errors.append(error)
+        recalls.append(recall)
+    return errors, recalls
 ```
 
-The left panel is the capacity law (both panels: independent isotropic
-unit keys, except the dotted curve): the measured error sits on the
-dashed $(n-1)/d_k$ prediction so closely that the curves are hard to
-tell apart, across a 256-fold range of $n$ and three widths. The dotted
-curve breaks the proposition's assumptions as promised, and the
-proposition's cancellation is what it loses: with a common component in
-every key, the cross terms no longer vanish in expectation, the read
-error at $d_k = 64$ sits about five-fold above the independent curve
-already at small $n$ and grows faster than linearly, and recall
-degrades well before $n$ reaches $d_k$.
-Width stops helping when the keys all resemble one another; this is why
-the family normalizes its keys and why key *geometry*, not just key
-count, determines what a matrix memory holds. The right panel shows the
-corresponding recall accuracy. Recall is essentially perfect while the
-interference
-stays small relative to the unit-norm signal, then grows with $n$
-past $d_k$; at a fixed error level, doubling the width doubles how many
-pairs fit. Nothing in either panel depends on *when* a pair was stored.
-This quantity controls the capacity comparison below: a fixed-size
-state does not lose memories to time, it loses them to crowding, and
-:numref:`sec_hybrids` will use this quantity when comparing
-how much full attention a production model must keep.
+```{.python .input #matrix-state-interference-2}
+%%tab pytorch, jax
+nums = [8, 16, 32, 64, 128, 256, 512]
+results = {f'dₖ = {d_k}': matrix_memory(d_k, nums) for d_k in (32, 64, 128)}
+results['dₖ = 64, ρ = 0.5'] = matrix_memory(64, nums, rho=0.5)
+predictions = [[(n - 1) / d_k for n in nums] for d_k in (32, 64, 128)]
+d2l.plot(nums, [err for err, _ in results.values()] + predictions,
+         'stored pairs n', 'squared read error',
+         legend=list(results) + ['$(n-1)/d_k$'], xscale='log', yscale='log',
+         fmts=('-o', '-o', '-o', '-s', 'k:', 'k:', 'k:'), figsize=(5, 3.5))
+print('recall at n =    ', ' '.join(f'{n:4d}' for n in nums))
+for name, (_, recalls) in results.items():
+    print(f'{name:17s}', ' '.join(f'{r:4.2f}' for r in recalls))
+```
 
-One caution about the word "capacity", which this chapter uses for
-four distinct quantities. *Algebraic rank*: $\mathbf{S}$ has rank at
-most $d_k$, so no write rule stores more than $d_k$ pairs with exact
-recall. *Interference capacity*: the proposition above, an expected
-read error under random independent keys. *Information capacity*: at
-finite precision, $d_k d_v$ numbers hold at most a fixed number of
-bits, the counting behind the copying lower bound of
-:numref:`sec_hybrids`. *Task-usable capacity*: what a trained model
-retrieves in practice, which :numref:`sec_hybrids` measures with its
-recall sweep and which none of the first three numbers guarantees.
+The measured errors lie on the predicted lines $(n-1)/d_k$ at all three
+widths. The recall shows what this means for retrieval: with $d_k = 64$,
+every pair is recovered up to $n = 64$, 96% at $n = 128$, 72% at $n = 256$,
+and 37% at $n = 512$, and doubling $d_k$ doubles the number of pairs held
+at a given recall. Correlated keys do worse. With a shared component of
+weight $\rho = 0.5$, the error is about four times larger already at $n =
+8$, it grows faster than in proportion to $n$, and only half of 64 pairs
+are recovered. What a matrix memory can hold depends on how different its
+keys are, not only on how many there are.
 
-### Forms of Decay
-:label:`subsec_ms-decay-ladder`
+## Decay
 
-Decay limits crowding by shrinking preceding writes before each new write,
-preventing the interference sum from growing without bound. The family did
-this in three steps, each a one-line change to
-:eqref:`eq_ms-recurrence`:
+### Forgetting Old Pairs
 
-$$
-\mathbf{S}_t = \gamma\, \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top,
-\qquad
-\mathbf{S}_t = a_t\, \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top,
-\qquad
-\mathbf{S}_t = \mathrm{diag}(\boldsymbol{\alpha}_t)\, \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top .
-$$
-:eqlabel:`eq_ms-decay-ladder`
+Linear attention never forgets. After $n$ writes all $n$ pairs share the
+memory, and by :eqref:`eq_ms-capacity-law` the read error grows with $n$,
+however old most of the pairs are. A decay before each write shrinks the
+old pairs,
 
-A *fixed scalar* $\gamma \in (0,1)$ is RetNet's *retention*
-:cite:`Sun.Dong.Huang.ea.2023`: each head gets its own constant decay, so
-different heads keep different horizons. (If you worked the closing
-exercise of :numref:`sec_attention-at-scale`, you have already built this
-rung and verified that its parallel form weights past values by
-$\gamma^{t-s}$.) An *input-dependent scalar* $a_t$ is the transition of
-Mamba-2 :cite:`Dao.Gu.2024`, one number per head per token. The token
-determines how much of the whole memory is retained, analogous to
-the forget gate of :numref:`sec_lstm` applied to a matrix state. And an
-input-dependent *diagonal* $\mathrm{diag}(\boldsymbol{\alpha}_t)$ decays
-each key coordinate at its own rate, the design of gated linear attention
-(GLA) :cite:`Yang.Wang.Shen.ea.2024` and RWKV-6
-:cite:`Peng.Goldstein.Anthony.ea.2024`. :numref:`fig_ms-decay-ladder`
-draws the ladder. The selective SSM of :numref:`sec_mamba` lives on the
-diagonal rung too, run per channel: $e^{\Delta_t \mathbf{a}}$ in
-:eqref:`eq_selective_ssm` is an input-dependent diagonal decay in
-everything but notation.
+$$\mathbf{S}_t = a_t\, \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top,
+\qquad a_t \in (0, 1),$$
+:eqlabel:`eq_ms-decay`
 
-Each transition also has a statistical interpretation, which we note here and
-develop in :numref:`sec_test-time-regression`. Stack the keys and
-values seen so far as rows of $\mathbf{K}$ and $\mathbf{V}$, and let
-the diagonal matrix $\mathbf{W}$ hold each row's accumulated decay. The
-linear read-out minimizing the decay-weighted squared error
-$\sum_i w_i \|\mathbf{S}^\top \mathbf{k}_i - \mathbf{v}_i\|^2$ is the
-weighted least-squares solution
+so that a pair written $k$ steps ago has weight $a^k$ if the decay is
+constant. The weights of all past pairs then sum to $1/(1 - a)$, and the
+memory behaves as if it held about the last $1/(1-a)$ pairs: 10 for $a =
+0.9$, 100 for $a = 0.99$. As in :numref:`sec_ssm`, a decay that depends on
+the input lets the model choose: hold the memory through a paragraph and
+clear it at a new document.
 
-$$
-\mathbf{S}^\star
-= \big(\mathbf{K}^\top \mathbf{W} \mathbf{K} + \lambda \mathbf{I}\big)^{-1}
-  \mathbf{K}^\top \mathbf{W} \mathbf{V},
-$$
-:eqlabel:`eq_ms-wls`
+The decay can be shaped in several ways, each a one-line change of
+:eqref:`eq_ms-decay`. RetNet :cite:`Sun.Dong.Huang.ea.2023` uses a fixed
+scalar per head, so that different heads remember for different lengths.
+Mamba-2 :cite:`Dao.Gu.2024` uses an input-dependent scalar per head, as
+above. Gated linear attention :cite:`Yang.Wang.Shen.ea.2024` decays each key
+coordinate at its own rate, $\mathbf{S}_t = \mathbf{S}_{t-1}
+\textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}_t \mathbf{k}_t^\top$, so
+that some directions of the key space are kept longer than others.
 
-with a small ridge $\lambda$ (or a pseudoinverse at $\lambda = 0$)
-covering rank-deficient keys. The decayed state on any rung of the
-ladder stores only the *weighted cross-moment*
-$\mathbf{K}^\top \mathbf{W} \mathbf{V}$: the shortcut that deletes the
-covariance correction
-$(\mathbf{K}^\top \mathbf{W} \mathbf{K} + \lambda \mathbf{I})^{-1}$.
-For orthonormal keys the deletion adds no error beyond the decay's own
-discounting of each stored value; for overlapping keys it also incurs
-interference sum of :eqref:`eq_ms-retrieval-error`. The decay sets how
-fast old evidence expires, and which architectures restore the deleted
-correction is part of :numref:`sec_test-time-regression`'s subject.
+The selective state space model of :numref:`sec_mamba` is a matrix memory
+of the same kind. Its state holds $N$ numbers for each of its $H$ channels,
+an $H \times N$ matrix $\mathbf{S}_t$. Each step adds the outer product of the
+channel inputs, scaled by the step sizes, $\boldsymbol{\Delta}_t \odot
+\mathbf{x}_t$, with the vector $\mathbf{B}_t \in \mathbb{R}^N$, and the
+output reads $\mathbf{S}_t \mathbf{C}_t$. In the terms of this section the
+value is $\boldsymbol{\Delta}_t \odot \mathbf{x}_t$, the key is
+$\mathbf{B}_t$, the query is $\mathbf{C}_t$, and $d_k = N$. Its decay is
+elementwise, a different rate for every entry of $\mathbf{S}_t$. Mamba-2
+replaced it by one scalar per head, which loses some flexibility and gains
+the matrix products of the dual form below.
 
-![Transition structures for matrix-state recurrences. Left to right, $\mathbf{D}_t$ in :eqref:`eq_ms-recurrence` is the identity (linear attention), a fixed scalar per head (RetNet), an input-dependent scalar (Mamba-2), or an input-dependent diagonal (GLA, RWKV-6, and, per channel, the selective SSM). All four use the same additive write; :numref:`sec_deltanet` changes the write rule.](../img/mdl-modernrnn-decay-ladder.svg)
-:label:`fig_ms-decay-ladder`
+## The Dual Form
 
-## The State-Space Duality
-:label:`subsec_ms-duality`
+### Unrolling with Decay
 
-We now connect this recurrence to :numref:`chap_attention`. Take the
-scalar-decay transition, the simplest form with forgetting, and *unroll*
-it, exactly as we
-unrolled the LTI recurrence into a convolution in
-:numref:`subsec_ssm-conv`. Substituting the update into itself, the state
-at time $t$ is a decayed sum of every write so far, and the read-out is
+With a scalar decay, unrolling :eqref:`eq_ms-decay` from $\mathbf{S}_0 =
+\mathbf{0}$ gives each output as a weighted sum over the past, in which a
+pair written at step $s$ is scaled by all decays met since:
 
-$$
-\mathbf{o}_t
-= \sum_{s \le t} \big(a_t\, a_{t-1} \cdots a_{s+1}\big)\,
-  (\mathbf{q}_t^\top \mathbf{k}_s)\, \mathbf{v}_s,
-\qquad \textrm{i.e.} \qquad
-\mathbf{Y} = \big(\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top\big)\, \mathbf{V},
-\quad
-L_{ts} = \!\!\prod_{r=s+1}^{t}\!\! a_r,
-$$
+$$\mathbf{y}_t = \sum_{s \le t} L_{ts}\, (\mathbf{k}_s^\top \mathbf{q}_t)\,
+\mathbf{v}_s, \qquad L_{ts} = a_{s+1} a_{s+2} \cdots a_t.$$
+
+Stack the queries, keys, values, and outputs of a sequence as the rows of
+$\mathbf{Q}$, $\mathbf{K}$, $\mathbf{V}$, and $\mathbf{Y}$, and set $L_{ts}
+= 0$ for $s > t$. Then all outputs together are
+
+$$\mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\, \mathbf{V}.$$
 :eqlabel:`eq_ms-semiseparable`
 
-where $\circ$ is the elementwise product and $\mathbf{L}$ is lower
-triangular with ones on the diagonal. The structure of $\mathbf{L}$
-establishes the equivalence. If every
-$a_t = 1$, then $L_{ts} = 1$ for $t \ge s$ and zero otherwise: $\mathbf{L}$
-*is the causal mask*, and :eqref:`eq_ms-semiseparable` is masked linear
-attention, scores $\mathbf{Q}\mathbf{K}^\top$, mask, value mixing, exactly
-as in :numref:`sec_attention-at-scale`. A gated linear recurrence is
-attention whose 0/1 causal mask has been replaced by a *learned, decaying*
-mask. These are two formulations of the same object. :citet:`Dao.Gu.2024` named
-the correspondence *state space duality* (SSD), and matrices of $\mathbf{L}$'s
-form are called 1-semiseparable, every submatrix below the diagonal
-having rank one. The equivalence has a restricted scope: it is an identity
-for this structured family, a scalar-gated (1-semiseparable) mask on
-*linear* attention, not a statement about softmax attention, whose
-exponential kernel is no masked linear read.
+This is masked attention. With every $a_t = 1$, $\mathbf{L}$ is the causal
+mask of a transformer, ones on and below the diagonal, and
+:eqref:`eq_ms-semiseparable` is causal linear attention. With decays,
+$\mathbf{L}$ is a *learned, decaying* mask: a decayed linear recurrence is
+attention in which older tokens count less, by an amount the inputs choose.
+:citet:`Dao.Gu.2024` call this correspondence *state space duality*. It
+holds for linear attention, not for softmax attention, whose exponential
+does not factor this way.
 
-The duality is also a statement about computation. The right-hand side of
-:eqref:`eq_ms-semiseparable` is a triple product, and the two ways of
-parenthesizing it are the two modes we already know. Materialize
-$\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top$ first and you compute
-attention: quadratic in $T$, all positions in parallel, no state in sight.
-Sweep the sum over $s$ from the left instead, one $t$ at a time, and the
-partial sums *are* the state $\mathbf{S}_t$: linear in $T$, constant
-memory, one token at a time. The two methods use different contraction
-orders for the same tensor. The
-following computation verifies their agreement, beginning with the recurrent
-form:
+The two sides of the duality are two orders of computing the same
+products. Forming $\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top$ first is
+attention: all positions in parallel, at a cost and memory quadratic in
+$T$. Summing from the left, one step at a time, is the recurrence: the
+partial sums are the states $\mathbf{S}_t$, the cost is linear in $T$,
+and the steps are sequential. We check that both give the same outputs,
+starting with the recurrence.
 
-```{.python .input #matrix-state-the-state-space-duality-1}
+```{.python .input #matrix-state-unrolling-with-decay-1}
+%%tab pytorch
+def linear_attention_recurrent(Q, K, V, a):
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, step by step."""
+    S, outputs = Q.new_zeros(V.shape[-1], K.shape[-1]), []
+    for q, k, v, a_t in zip(Q, K, V, a):
+        S = a_t * S + torch.outer(v, k)
+        outputs.append(S @ q)
+    return torch.stack(outputs)
+```
+
+```{.python .input #matrix-state-unrolling-with-decay-1}
+%%tab jax
+def linear_attention_recurrent(Q, K, V, a):
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, step by step."""
+    def step(S, inputs):
+        q, k, v, a_t = inputs
+        S = a_t * S + jnp.outer(v, k)
+        return S, S @ q
+    S0 = jnp.zeros((V.shape[-1], K.shape[-1]))
+    return jax.lax.scan(step, S0, (Q, K, V, a))[1]
+```
+
+The dual form needs the mask $\mathbf{L}$. Its entries are products of
+decays, which we compute from the logarithms of the decays: $\log L_{ts}$ is
+the sum of $\log a_r$ over $s < r \le t$, a difference of two cumulative
+sums. Above the diagonal these differences are positive and their
+exponentials can overflow, so we set them to $-\infty$ before
+exponentiating, which turns them into exact zeros. We save the mask,
+because the chunked algorithms below and in the next section use it too.
+
+```{.python .input #matrix-state-unrolling-with-decay-2}
+%%tab pytorch
+def decay_mask(log_a):  #@save
+    """L[t, s] = a_{s+1} * ... * a_t for s <= t, and 0 for s > t."""
+    cum = log_a.cumsum(-1)
+    log_L = cum[..., :, None] - cum[..., None, :]  # Sum of log a over (s, t]
+    causal = torch.ones(log_L.shape[-2:], dtype=torch.bool,
+                        device=log_a.device).tril()
+    return torch.exp(log_L.masked_fill(~causal, -torch.inf))
+
+def linear_attention_dual(Q, K, V, a):
+    """The same outputs as Y = (L * Q K^T) V, all positions at once."""
+    return (decay_mask(torch.log(a)) * (Q @ K.T)) @ V
+```
+
+```{.python .input #matrix-state-unrolling-with-decay-2}
+%%tab jax
+def decay_mask(log_a):  #@save
+    """L[t, s] = a_{s+1} * ... * a_t for s <= t, and 0 for s > t."""
+    cum = log_a.cumsum(-1)
+    log_L = cum[..., :, None] - cum[..., None, :]  # Sum of log a over (s, t]
+    causal = jnp.tril(jnp.ones(log_L.shape[-2:], dtype=bool))
+    return jnp.exp(jnp.where(causal, log_L, -jnp.inf))
+
+def linear_attention_dual(Q, K, V, a):
+    """The same outputs as Y = (L * Q K^T) V, all positions at once."""
+    return (decay_mask(jnp.log(a)) * (Q @ K.T)) @ V
+```
+
+We compare the two on a random sequence of 512 steps with decays between
+0.8 and 0.99.
+
+```{.python .input #matrix-state-unrolling-with-decay-3}
 %%tab pytorch
 torch.manual_seed(0)
-d_k, d_v, T = 64, 64, 512
-device = d2l.try_gpu()
-
-def matrix_state_recurrent(Q, K, V, a):
-    """S_t = a_t S_{t-1} + k_t v_t^T, read o_t = S_t^T q_t."""
-    S = Q.new_zeros(Q.shape[-1], V.shape[-1])
-    outputs = []
-    for t in range(Q.shape[0]):
-        S = a[t] * S + K[t][:, None] * V[t][None, :]    # Decay, then write
-        outputs.append(Q[t] @ S)                        # Read S^T q
-    return torch.stack(outputs)
-
-Q, K, V = (torch.randn(T, d, device=device) for d in (d_k, d_k, d_v))
-a = 0.65 + 0.3 * torch.rand(T, device=device)           # Decays in (0.65, 0.95)
-y_rec = matrix_state_recurrent(Q, K, V, a)
+T, d_k, d_v = 512, 64, 64
+Q, K, V = torch.randn(T, d_k), torch.randn(T, d_k), torch.randn(T, d_v)
+a = 0.8 + 0.19 * torch.rand(T)
+Y = linear_attention_recurrent(Q, K, V, a)
+Y_dual = linear_attention_dual(Q, K, V, a)
+print(f'relative deviation: {(Y_dual - Y).abs().max() / Y.abs().max():.1e}')
 ```
 
-```{.python .input #matrix-state-the-state-space-duality-1}
+```{.python .input #matrix-state-unrolling-with-decay-3}
 %%tab jax
-d_k, d_v, T = 64, 64, 512
-
-def matrix_state_recurrent(Q, K, V, a):
-    """S_t = a_t S_{t-1} + k_t v_t^T, read o_t = S_t^T q_t."""
-    def step(S, qkva):
-        q, k, v, a_t = qkva
-        S = a_t * S + k[:, None] * v[None, :]           # Decay, then write
-        return S, q @ S                                 # Read S^T q
-    S0 = jnp.zeros((Q.shape[-1], V.shape[-1]))
-    return jax.lax.scan(step, S0, (Q, K, V, a))[1]
-
-keys = jax.random.split(jax.random.key(0), 4)
-Q, K, V = (jax.random.normal(k, (T, d))
-           for k, d in zip(keys, (d_k, d_k, d_v)))
-a = 0.65 + 0.3 * jax.random.uniform(keys[3], (T,))      # Decays in (0.65, 0.95)
-y_rec = matrix_state_recurrent(Q, K, V, a)
+T, d_k, d_v = 512, 64, 64
+key_q, key_k, key_v, key_a = jax.random.split(jax.random.key(0), 4)
+Q, K = jax.random.normal(key_q, (T, d_k)), jax.random.normal(key_k, (T, d_k))
+V = jax.random.normal(key_v, (T, d_v))
+a = 0.8 + 0.19 * jax.random.uniform(key_a, (T,))
+with jax.default_matmul_precision('highest'):  # Full float32, not TF32
+    Y = linear_attention_recurrent(Q, K, V, a)
+    Y_dual = linear_attention_dual(Q, K, V, a)
+print(f'relative deviation: {jnp.abs(Y_dual - Y).max() / jnp.abs(Y).max():.1e}')
 ```
 
-The quadratic dual builds $\mathbf{L}$ in log space: the product of decays
-from $s$ to $t$ is a difference of cumulative log-decays, and masking with
-$-\infty$ *before* exponentiating keeps the entries above the diagonal
-from overflowing (they would be products of *inverse* decays). We assert
-agreement rather than eyeball it; this check is the duality.
+The two orders agree to rounding error. Neither is what we want for
+training: the recurrence is sequential, and the dual form stores a $T
+\times T$ matrix, 64 MB per head in 32-bit floats at $T = 4{,}096$.
 
-```{.python .input #matrix-state-the-state-space-duality-2}
-%%tab pytorch
-def matrix_state_dual(Q, K, V, a):
-    """Y = (L o Q K^T) V with L_ts = a_t ... a_{s+1} for t >= s, else 0."""
-    cum = torch.cumsum(torch.log(a), 0)
-    logL = cum[:, None] - cum[None, :]                  # Sum of logs over (s, t]
-    causal = torch.tril(torch.ones(len(a), len(a), dtype=torch.bool,
-                                   device=a.device))
-    L = torch.exp(logL.masked_fill(~causal, -torch.inf))
-    return (L * (Q @ K.T)) @ V
+### Chunked Computation
 
-err = (matrix_state_dual(Q, K, V, a) - y_rec).abs().max() / y_rec.abs().max()
-print(f'relative deviation, dual vs recurrence: {float(err):.2e}')
-assert err < 1e-3                          # Two orders, one computation
+Chunking combines the two. Cut the sequence into chunks of $m$ steps and
+partition the matrix $\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top$ into $m
+\times m$ blocks, as in :numref:`fig_ms-semiseparable`. The blocks on the
+diagonal describe how tokens within a chunk interact; each is a small masked
+attention product, and all of them are computed in parallel. The blocks
+below the diagonal describe how earlier chunks influence later ones, and
+they need not be formed at all: everything a chunk needs from the entire
+past is the $d_v \times d_k$ state at the chunk's start. The chunked
+computation therefore has three parts:
 
-ones = torch.ones(T, device=device)                     # All a_t = 1
-err = (matrix_state_dual(Q, K, V, ones)
-       - torch.tril(Q @ K.T) @ V).abs().max()
-print(f'a_t = 1, deviation from masked linear attention: {float(err):.2e}')
-assert err < 1e-6                          # L is literally the causal mask
-```
+1. *Within chunks*: the dual form :eqref:`eq_ms-semiseparable` on each
+   chunk.
+2. *Across chunks*: each chunk's writes, decayed to the chunk's end, form
+   one matrix; the states at the chunk boundaries follow from a linear
+   recurrence over the $T/m$ chunks, $\mathbf{S}^{(c)} = (\textrm{decay
+   over chunk } c)\, \mathbf{S}^{(c-1)} + (\textrm{writes of chunk } c)$,
+   which `linear_scan` of :numref:`sec_ssm` computes with matrix-valued
+   states.
+3. *Reading the past*: each position adds the read of the state at its
+   chunk's start, decayed to its own position.
 
-```{.python .input #matrix-state-the-state-space-duality-2}
-%%tab jax
-def matrix_state_dual(Q, K, V, a):
-    """Y = (L o Q K^T) V with L_ts = a_t ... a_{s+1} for t >= s, else 0."""
-    cum = jnp.cumsum(jnp.log(a))
-    logL = cum[:, None] - cum[None, :]                  # Sum of logs over (s, t]
-    causal = jnp.tril(jnp.ones((len(a), len(a)), bool))
-    L = jnp.exp(jnp.where(causal, logL, -jnp.inf))
-    return (L * (Q @ K.T)) @ V
+Almost all of the work is in matrix products, which GPUs do well, and the
+memory holds $m \times m$ blocks and one state per chunk instead of a $T
+\times T$ matrix. Mamba-2 and the models of the next section train this way.
 
-with jax.default_matmul_precision('highest'):
-    err = (jnp.abs(matrix_state_dual(Q, K, V, a) - y_rec).max()
-           / jnp.abs(y_rec).max())
-    print(f'relative deviation, dual vs recurrence: {float(err):.2e}')
-    assert err < 1e-3                      # Two orders, one computation
-
-    ones = jnp.ones(T)                                  # All a_t = 1
-    err = jnp.abs(matrix_state_dual(Q, K, V, ones)
-                  - jnp.tril(Q @ K.T) @ V).max()
-    print(f'a_t = 1, deviation from masked linear attention: {float(err):.2e}')
-    assert err < 1e-6                      # L is literally the causal mask
-```
-
-Ten lines of quadratic code, a scan-shaped loop, and they agree to
-floating-point rounding; with the decays pinned to one, the dual reduces
-*exactly* to the masked linear attention of :numref:`chap_attention`. The correspondence
-that :numref:`sec_attention-at-scale` promised is now a computation you
-have run, not an analogy. It also locates Mamba-2 precisely: take
-:numref:`sec_mamba`'s selective model, restrict its per-coordinate decay
-to a single input-dependent scalar per head, and the layer *is*
-:eqref:`eq_ms-semiseparable`, trainable in whichever mode is cheaper.
-The recurrence costs $\mathcal{O}(T)$ but executes sequentially, whereas the
-dual is parallel but costs $\mathcal{O}(T^2)$. Chunking provides an
-intermediate schedule.
-
-## Chunked Computation: Mostly Matmul, a Little Scan
-:label:`subsec_ms-chunked`
-
-There is, and it is how GLA, Mamba-2, and the DeltaNet family of the next
-section all train. Partition the sequence into chunks of $C$ tokens and
-partition $\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top$ accordingly, as in
-:numref:`fig_ms-semiseparable`. The blocks on the diagonal are the
-interactions *within* a chunk: each is a $C \times C$ masked-attention
-product, quadratic only in the chunk length, and all of them run in
-parallel. Everything below the diagonal is the influence of earlier chunks
-on later ones, and here the semiseparable structure pays off: those blocks
-have rank at most $d_k$, because all a later chunk needs from the entire
-past is the $d_k \times d_v$ state at its boundary. The algorithm computes
-the diagonal blocks as matmuls, passes the state
-between chunks with a recurrence of $T/C$ steps, and adds each chunk's read
-of its incoming state. It therefore uses attention within chunks and
-recurrence across chunks :cite:`Dao.Gu.2024`.
-
-![One matrix, three schedules. The mask $\mathbf{L}$ of :eqref:`eq_ms-semiseparable`, computed for random decays and partitioned into chunks; the shading fades as the decays compound. Diagonal blocks (blue) are $C \times C$ masked-attention matmuls computed in parallel; every off-diagonal block (orange) has rank at most $d_k$, so its contribution flows through the $d_k \times d_v$ state passed from chunk to chunk (arrows).](../img/mdl-modernrnn-semiseparable.svg)
+![The mask $\mathbf{L}$ of :eqref:`eq_ms-semiseparable` for random decays, partitioned into chunks. Diagonal blocks (blue) are small masked-attention products computed in parallel. Every block below the diagonal (orange) is accounted for by the state passed from chunk to chunk (arrows); the shading fades as the decays compound.](../img/mdl-modernrnn-semiseparable.svg)
 :label:`fig_ms-semiseparable`
 
-The implementation needs one helper. `segsum` builds, for one chunk, the
-matrix of *segment sums* of log-decays, $\sum_{s < r \le t} \log a_r$,
-whose exponential is the within-chunk $\mathbf{L}$; as in the dual, the
-invalid upper triangle is masked to $-\infty$ in log space, before any
-exponential can overflow. The chunked form is then a dozen lines: the
-decayed attention matmul inside each chunk, and a loop over chunk
-boundaries that carries the state, decays each key's write to its chunk's
-end, and lets each chunk read the state it inherited.
+The function takes a batch of sequences and the logarithms of the decays.
+Its three parts follow the list above; the decay from the start of a chunk
+to step $t$ is the exponential of a cumulative sum, `cum`, and the decay
+from step $t$ to the end of its chunk is the exponential of a difference.
 
-```{.python .input #matrix-state-chunked-computation-mostly-matmul-a-little-scan-1}
+```{.python .input #matrix-state-chunked-computation-1}
 %%tab pytorch
-def segsum(log_a):
-    """Segment sums: (..., C) -> (..., C, C) with entries sum over (s, t]."""
-    C = log_a.shape[-1]
-    cum = torch.cumsum(log_a, -1)
-    diff = cum[..., :, None] - cum[..., None, :]
-    keep = torch.tril(torch.ones(C, C, dtype=torch.bool, device=log_a.device))
-    return diff.masked_fill(~keep, -torch.inf)          # Mask in log space
+def chunked_linear_attention(Q, K, V, log_a, chunk_size):  #@save
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
 
-def matrix_state_chunked(Q, K, V, a, chunk_size=64):
-    """The same Y, chunk by chunk: attention inside, recurrence across."""
-    T, C = Q.shape[0], chunk_size
-    Qc, Kc = Q.view(-1, C, Q.shape[-1]), K.view(-1, C, K.shape[-1])
-    Vc, log_a = V.view(-1, C, V.shape[-1]), torch.log(a).view(-1, C)
-    L = torch.exp(segsum(log_a))                        # (T/C, C, C)
-    b = torch.exp(torch.cumsum(log_a, -1))              # Decay since chunk entry
-    Y = (L * (Qc @ Kc.transpose(-1, -2))) @ Vc          # Diagonal blocks
-    S = Q.new_zeros(Q.shape[-1], V.shape[-1])
-    for c in range(T // C):                             # T/C boundary steps
-        Y[c] += (Qc[c] * b[c][:, None]) @ S             # Read the carried state
-        S = b[c][-1] * S + (Kc[c] * (b[c][-1] / b[c])[:, None]).T @ Vc[c]
-    return Y.reshape(T, -1)
-
-for chunk_size in [16, 64, 256]:
-    err = ((matrix_state_chunked(Q, K, V, a, chunk_size) - y_rec).abs().max()
-           / y_rec.abs().max())
-    print(f'chunk size {chunk_size:4d}: relative deviation {float(err):.2e}')
-    assert err < 1e-3                      # Chunked == recurrence
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
+    """
+    B, T, m = Q.shape[0], Q.shape[1], chunk_size
+    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
+    log_a = log_a.reshape(B, T // m, m)
+    # 1. Within chunks: the dual form on every chunk at once
+    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    # 2. Across chunks: the writes of each chunk, decayed to its end, and
+    #    a scan over chunks for the state at every chunk's end
+    cum = log_a.cumsum(-1)
+    writes = (V * torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
+              ).mT @ K
+    S = d2l.linear_scan(torch.exp(cum[..., -1:, None]), writes)
+    S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the start
+    # 3. Every step reads the state at its chunk's start, decayed to it
+    Y = Y + torch.exp(cum).unsqueeze(-1) * (Q @ S.mT)
+    return Y.reshape(B, T, -1)
 ```
 
-```{.python .input #matrix-state-chunked-computation-mostly-matmul-a-little-scan-1}
+```{.python .input #matrix-state-chunked-computation-1}
 %%tab jax
-def segsum(log_a):
-    """Segment sums: (..., C) -> (..., C, C) with entries sum over (s, t]."""
-    C = log_a.shape[-1]
-    cum = jnp.cumsum(log_a, -1)
-    diff = cum[..., :, None] - cum[..., None, :]
-    keep = jnp.tril(jnp.ones((C, C), bool))
-    return jnp.where(keep, diff, -jnp.inf)              # Mask in log space
+def chunked_linear_attention(Q, K, V, log_a, chunk_size):  #@save
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
 
-def matrix_state_chunked(Q, K, V, a, chunk_size=64):
-    """The same Y, chunk by chunk: attention inside, recurrence across."""
-    T, C = Q.shape[0], chunk_size
-    Qc, Kc = Q.reshape(-1, C, Q.shape[-1]), K.reshape(-1, C, K.shape[-1])
-    Vc, log_a = V.reshape(-1, C, V.shape[-1]), jnp.log(a).reshape(-1, C)
-    L = jnp.exp(segsum(log_a))                          # (T/C, C, C)
-    b = jnp.exp(jnp.cumsum(log_a, -1))                  # Decay since chunk entry
-    Y = (L * (Qc @ Kc.transpose(0, 2, 1))) @ Vc         # Diagonal blocks
-    def boundary(S, chunk):                             # T/C boundary steps
-        Qb, Kb, Vb, bb, Yb = chunk
-        Yb = Yb + (Qb * bb[:, None]) @ S                # Read the carried state
-        S = bb[-1] * S + (Kb * (bb[-1] / bb)[:, None]).T @ Vb
-        return S, Yb
-    S0 = jnp.zeros((Q.shape[-1], V.shape[-1]))
-    _, Y = jax.lax.scan(boundary, S0, (Qc, Kc, Vc, b, Y))
-    return Y.reshape(T, -1)
-
-with jax.default_matmul_precision('highest'):
-    for chunk_size in [16, 64, 256]:
-        err = (jnp.abs(matrix_state_chunked(Q, K, V, a, chunk_size)
-                       - y_rec).max() / jnp.abs(y_rec).max())
-        print(f'chunk size {chunk_size:4d}: relative deviation {float(err):.2e}')
-        assert err < 1e-3                  # Chunked == recurrence
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
+    """
+    B, T, m = Q.shape[0], Q.shape[1], chunk_size
+    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
+    log_a = log_a.reshape(B, T // m, m)
+    # 1. Within chunks: the dual form on every chunk at once
+    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    # 2. Across chunks: the writes of each chunk, decayed to its end, and
+    #    a scan over chunks for the state at every chunk's end
+    cum = log_a.cumsum(-1)
+    writes = (V * jnp.exp(cum[..., -1:] - cum)[..., None]).mT @ K
+    S = d2l.linear_scan(jnp.exp(cum[..., -1:, None]), writes)
+    S = jnp.concatenate([jnp.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At start
+    # 3. Every step reads the state at its chunk's start, decayed to it
+    Y = Y + jnp.exp(cum)[..., None] * (Q @ S.mT)
+    return Y.reshape(B, T, -1)
 ```
 
-One numerical note before we time these forms. Within a chunk, `segsum`
-works in log space and masks with $-\infty$ *before* exponentiating, so
-the diagonal blocks cannot overflow. The boundary step is less careful:
-it exponentiates the prefix products $b$ and then divides, and $b$
-shrinks geometrically with position in the chunk. For our decay range
-the smallest prefix product at $C = 256$ is around $10^{-28}$, still
-inside float32's range; by $C = 512$ it underflows to exactly zero and
-the late-chunk ratios $b_C / b_t$ degenerate to $0/0$. The $C = 1024$
-row of the timing table below therefore measures the right arithmetic
-shape — the work and memory traffic are unchanged — on values that have
-already turned to NaN; correctness holds for the chunk sizes asserted
-above. Production kernels carry the boundary decays in log space too,
-or rescale chunk by chunk, for exactly this reason; we keep the plain
-ratio because it leaves the algebra visible.
+The chunked outputs match the recurrence for every chunk size.
 
-The chunk size interpolates between the two modes we proved dual: at
-$C = 1$ each diagonal block shrinks to the $1 \times 1$ self-write
-$(\mathbf{q}_t^\top \mathbf{k}_t)\,\mathbf{v}_t$ — within-chunk
-interaction between *distinct* tokens is gone, and everything earlier
-flows through the state recurrence; at $C = T$ there is one block and
-no recurrence. The preferred chunk size depends on both time and memory, so we measure each
-as in the attention experiments of :numref:`sec_attention-at-scale`.
-
-```{.python .input #matrix-state-chunked-computation-mostly-matmul-a-little-scan-2}
+```{.python .input #matrix-state-chunked-computation-2}
 %%tab pytorch
+for m in [16, 64, 256]:
+    Y_chunked = chunked_linear_attention(Q[None], K[None], V[None],
+                                         torch.log(a)[None], m)[0]
+    print(f'chunk size {m:3d}: relative deviation '
+          f'{(Y_chunked - Y).abs().max() / Y.abs().max():.1e}')
+```
+
+```{.python .input #matrix-state-chunked-computation-2}
+%%tab jax
+for m in [16, 64, 256]:
+    with jax.default_matmul_precision('highest'):
+        Y_chunked = chunked_linear_attention(Q[None], K[None], V[None],
+                                             jnp.log(a)[None], m)[0]
+    print(f'chunk size {m:3d}: relative deviation '
+          f'{jnp.abs(Y_chunked - Y).max() / jnp.abs(Y).max():.1e}')
+```
+
+How fast are the three orders? We time them on one sequence of 4,096 steps
+on a GPU.
+
+```{.python .input #matrix-state-chunked-computation-3}
+%%tab pytorch
+device = d2l.try_gpu()
 T = 4096
 Q, K, V = (torch.randn(T, d, device=device) for d in (d_k, d_k, d_v))
-a = 0.65 + 0.3 * torch.rand(T, device=device)
-
-def wall_clock(f, *args, reps=5):
-    f(*args)  # Warm up
-    if device.type == 'cuda':
-        torch.cuda.synchronize()
-    start = time.time()
-    for _ in range(reps):
-        f(*args)
-    if device.type == 'cuda':
-        torch.cuda.synchronize()
-    return (time.time() - start) / reps
-
-def peak_memory(f, *args):
-    """Extra peak memory allocated by f, in bytes (CUDA only)."""
-    torch.cuda.synchronize()
-    torch.cuda.reset_peak_memory_stats()
-    base = torch.cuda.memory_allocated()
-    f(*args)
-    torch.cuda.synchronize()
-    return torch.cuda.max_memory_allocated() - base
-
-forms = {'recurrence': matrix_state_recurrent}
-for C in [16, 64, 256, 1024]:
-    forms[f'chunked ({C})'] = \
-        lambda q, k, v, a, C=C: matrix_state_chunked(q, k, v, a, C)
-forms['quadratic dual'] = matrix_state_dual
-
-print(f'{"form":>15} {"time (ms)":>10} {"peak (MiB)":>11}')
+a = 0.8 + 0.19 * torch.rand(T, device=device)
+forms = {'recurrence': lambda: linear_attention_recurrent(Q, K, V, a),
+         'dual': lambda: linear_attention_dual(Q, K, V, a)}
+for m in [16, 64, 256]:
+    forms[f'chunks of {m}'] = lambda m=m: chunked_linear_attention(
+        Q[None], K[None], V[None], torch.log(a)[None], m)
 for name, f in forms.items():
-    t = wall_clock(f, Q, K, V, a) * 1e3
-    mem = (f'{peak_memory(f, Q, K, V, a) / 2**20:11.1f}'
-           if device.type == 'cuda' else f'{"n/a":>11}')
-    print(f'{name:>15} {t:10.2f} {mem}')
-dev = torch.cuda.get_device_name(device) if device.type == 'cuda' else 'CPU'
-print(f'({dev}, float32, torch {torch.__version__}; '
-      f'teaching implementations, warmed up)')
+    print(f'{name:14s} {1e3 * d2l.Benchmark(f, warmup=1, repeats=5).time:8.2f} ms')
 ```
 
-```{.python .input #matrix-state-chunked-computation-mostly-matmul-a-little-scan-2}
+```{.python .input #matrix-state-chunked-computation-3}
 %%tab jax
 T = 4096
-keys = jax.random.split(jax.random.key(1), 4)
-Q, K, V = (jax.random.normal(k, (T, d))
-           for k, d in zip(keys, (d_k, d_k, d_v)))
-a = 0.65 + 0.3 * jax.random.uniform(keys[3], (T,))
-
-def wall_clock(f, *args, reps=5):
-    f(*args).block_until_ready()  # Warm up (and compile)
-    start = time.time()
-    for _ in range(reps):
-        f(*args).block_until_ready()
-    return (time.time() - start) / reps
-
-forms = {'recurrence': jax.jit(matrix_state_recurrent)}
-for C in [16, 64, 256, 1024]:
-    forms[f'chunked ({C})'] = jax.jit(
-        lambda q, k, v, a, C=C: matrix_state_chunked(q, k, v, a, C))
-forms['quadratic dual'] = jax.jit(matrix_state_dual)
-
-print(f'{"form":>15} {"time (ms)":>10} {"temp (MiB)":>11}')
+key_q, key_k, key_v, key_a = jax.random.split(jax.random.key(1), 4)
+Q, K = jax.random.normal(key_q, (T, d_k)), jax.random.normal(key_k, (T, d_k))
+V = jax.random.normal(key_v, (T, d_v))
+a = 0.8 + 0.19 * jax.random.uniform(key_a, (T,))
+forms = {'recurrence': jax.jit(linear_attention_recurrent),
+         'dual': jax.jit(linear_attention_dual)}
+for m in [16, 64, 256]:
+    forms[f'chunks of {m}'] = jax.jit(lambda Q, K, V, a, m=m:
+        chunked_linear_attention(Q[None], K[None], V[None], jnp.log(a)[None], m))
 for name, f in forms.items():
-    stats = f.lower(Q, K, V, a).compile().memory_analysis()
-    print(f'{name:>15} {wall_clock(f, Q, K, V, a) * 1e3:10.2f} '
-          f'{stats.temp_size_in_bytes / 2**20:11.1f}')
-print(f'({jax.devices()[0].device_kind}, float32, jax {jax.__version__}; '
-      f'teaching implementations, all forms compiled)')
+    bench = d2l.Benchmark(lambda: f(Q, K, V, a), warmup=1, repeats=5)
+    print(f'{name:14s} {1e3 * bench.time:8.2f} ms')
 ```
 
-Provenance first: these are our teaching implementations, timed in
-float32 on the printed device after a warm-up pass, and the two
-frameworks do not measure quite the same thing — the PyTorch recurrence
-is an eager Python loop paying per-step dispatch, while JAX compiles
-all three forms, which flatters the recurrence. Read the orders of
-magnitude, not the exact ratios. The pattern in our runs is the one the
-derivation predicts. The token
-recurrence is by far the slowest, a couple of orders of magnitude behind
-the best schedule: its $T$ steps are serialized, whether as eager kernel
-launches or as a compiled scan, so the accelerator's parallelism sits
-unused, though its memory footprint is trivial. The quadratic dual is the
-mirror image: matmul-fast, but its $T \times T$ matrices dominate the
-memory column and grow fourfold with every doubling of $T$. With chunks of
-a few hundred tokens, the chunked schedule runs within a
-small factor of the dual's speed, and sometimes faster in these runs, while
-using an order of magnitude less memory. Its principal operations are dense
-matmuls that use the accelerator efficiently. Chunks up to
-$C \approx d_k$ keep the arithmetic within a small factor of the
-recurrence's, as an exercise asks you to derive; the measured optimum
-sits at larger chunks because kernel-launch overhead penalizes many small
-ones.
+The recurrence is the slowest by two orders of magnitude, because its 4,096
+steps run one after another. At this length the dual form and the chunked
+form take about the same time, a millisecond or less. They differ in
+memory: the dual form stores the $T \times T$ matrix of weights, 64 MB per
+head in 32-bit floats, which grows with the square of the length, while
+chunks of 64 store $T \times 64$ weights and one $64 \times 64$ state per
+chunk, about 2 MB, which grows in proportion to the length.
 
-### Measured Performance
-:label:`subsec_ms-hardware`
+## A Gated Linear Attention Layer
 
-Mamba-2 differs from Mamba primarily in its computational schedule rather
-than its model class. Recall from
-:numref:`sec_attention-at-scale` that an accelerator moves bytes far more
-slowly than it multiplies them; its full arithmetic rate is reserved for
-dense matrix products on tensor cores. Mamba-1's parallel scan is
-elementwise work, so it runs at memory bandwidth and leaves the matmul
-units idle. Restricting the transition to a scalar per head buys the
-chunked form above, whose inner loop uses matmuls. The Mamba-2 paper reports
-that this schedule made training several times
-faster while allowing the state dimension to increase from $N = 16$ to
-$64$--$256$ with little additional wall-clock time, because a larger state
-produces better-shaped matmuls
-for the hardware :cite:`Dao.Gu.2024`. The capacity law of
-:numref:`subsec_ms-capacity` says what that buys: an order of magnitude
-more pairs held at the same read error. The trade is not one-sided, and
-it runs in both directions: Mamba-1's per-coordinate
-decay is a more expressive transition per unit of state, and for pure
-recurrent inference, where there are no chunks and every step is
-elementwise either way, nothing forces the scalar restriction. Production
-systems pick per workload. The frontier keeps moving on the same axis:
-Mamba-3 upgrades the discretization itself, replacing the Euler-style
-update on the input path with a trapezoidal rule (and adding complex-valued
-states and multi-input, multi-output reads that feed the decode-time
-matmuls) :cite:`Lahoti.Li.Chen.ea.2026`.
+### The Layer
 
-One accounting cell closes the systems thread that
-:numref:`sec_kv-cache` opened. A transformer's per-layer cache grows
-linearly with context; every matrix state in this section is a constant.
-Priced per layer and per sequence, at $b$ bytes per element, the two
-sides of the ledger are
+A layer built on the decayed matrix memory computes, for every head, a
+query, a key, a value, and a decay from the input, runs the chunked
+recurrence, and projects the outputs of all heads back to the model width.
+Three details follow current practice. The decay of each head is
+$a_t = \sigma(\mathbf{w}^\top \mathbf{x}_t + b)$, and the biases $b$ are
+initialized so that the heads start with memories of different lengths,
+$\sigma(b) = 1 - 1/\tau$ with $\tau$ spread log-uniformly from 4 to 256
+steps, as the timescales of :numref:`sec_ssm` were. Queries and keys are
+scaled to unit length, the setting of :eqref:`eq_ms-capacity-law`. And the
+output of each head is normalized to unit root mean square before the
+projection, which keeps its scale independent of how many pairs the memory
+holds. The recurrence itself sits in a method of its own, `memory`, so that
+the next section can replace it. We call the layer *gated linear
+attention*, after the decay gate; :citet:`Yang.Wang.Shen.ea.2024` use the
+name for the variant with one gate per key coordinate.
 
-$$
-\underbrace{\big(d_{\textrm{inner}}\, d_{\textrm{state}}
-+ d_{\textrm{inner}}\, (w - 1)\big)\, b}_{\textrm{recurrent: SSM state + conv buffer, constant}}
-\qquad \textrm{vs.} \qquad
-\underbrace{2\, n\, h_{\textrm{kv}}\, d_{\textrm{head}}\, b}_{\textrm{KV cache, grows with the } n \textrm{ tokens kept}},
-$$
-:eqlabel:`eq_ms-state-bytes`
+```{.python .input #matrix-state-the-layer-1}
+%%tab pytorch
+class GatedLinearAttention(nn.Module):  #@save
+    """Multi-head linear attention whose memory decays by an input gate."""
+    def __init__(self, num_hiddens, num_heads, chunk_size=64):
+        super().__init__()
+        self.num_heads, self.chunk_size = num_heads, chunk_size
+        self.W_qkv = nn.Linear(num_hiddens, 3 * num_hiddens, bias=False)
+        self.W_a = nn.Linear(num_hiddens, num_heads)  # Decay gate
+        tau = torch.logspace(math.log10(4), math.log10(256), num_heads)
+        with torch.no_grad():  # Initial decays 1 - 1/tau
+            self.W_a.bias.copy_(torch.log(tau - 1))
+        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=False)
 
-where $w$ is the causal-convolution width whose rolling buffer decoding
-must also carry (:numref:`subsec_mamba-step`) and $h_{\textrm{kv}}$ the
-number of KV heads; a batch multiplies both sides by its size, and a
-whole model multiplies both by its layer count. The cell prices the
-$64 \times 64$ head state of our cells and one fully specified
-production instance — a Mamba-2 2.7B layer: $d_{\textrm{model}} = 2560$,
-expansion $2$, so $d_{\textrm{inner}} = 5120$, $d_{\textrm{state}} =
-128$, $w = 4$, hence $5120 \times 128 = 655{,}360$ state elements per
-layer — against the grouped-query KV settings of :numref:`sec_kv-cache`.
-Headline numbers use fp16 ($b = 2$) on *both* sides, the common serving
-precision; the formula re-prices any row for other dtypes.
+    def split_heads(self, Z):
+        """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
+        B, T, _ = Z.shape
+        return Z.reshape(B, T, self.num_heads, -1).transpose(1, 2).flatten(0, 1)
 
-```{.python .input #matrix-state-what-the-hardware-bought}
+    def memory(self, X, Q, K, V, log_a):
+        """Outputs of the decayed matrix memory of every head."""
+        return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
+```
+
+```{.python .input #matrix-state-the-layer-1}
+%%tab jax
+class GatedLinearAttention(nnx.Module):  #@save
+    """Multi-head linear attention whose memory decays by an input gate."""
+    def __init__(self, num_hiddens, num_heads, chunk_size=64, *, rngs):
+        self.num_heads, self.chunk_size = num_heads, chunk_size
+        self.W_qkv = nnx.Linear(num_hiddens, 3 * num_hiddens, use_bias=False,
+                                rngs=rngs)
+        tau = jnp.logspace(math.log10(4), math.log10(256), num_heads)
+        self.W_a = nnx.Linear(num_hiddens, num_heads, rngs=rngs,  # Decay gate
+                              bias_init=lambda *_: jnp.log(tau - 1))
+        self.W_o = nnx.Linear(num_hiddens, num_hiddens, use_bias=False,
+                              rngs=rngs)
+
+    def split_heads(self, Z):
+        """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
+        B, T, _ = Z.shape
+        return Z.reshape(B, T, self.num_heads, -1).swapaxes(1, 2).reshape(
+            B * self.num_heads, T, -1)
+
+    def memory(self, X, Q, K, V, log_a):
+        """Outputs of the decayed matrix memory of every head."""
+        return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
+```
+
+The forward pass computes the queries, keys, values, and decays of all
+heads, runs the memory, normalizes each head's output, and projects the
+concatenated heads back to the model width.
+
+```{.python .input #matrix-state-the-layer-2}
+%%tab pytorch
+@d2l.add_to_class(GatedLinearAttention)  #@save
+def forward(self, X):  # X: (batch_size, num_steps, num_hiddens)
+    B, T, d = X.shape
+    Q, K, V = (self.split_heads(Z) for Z in self.W_qkv(X).chunk(3, -1))
+    Q, K = F.normalize(Q, dim=-1), F.normalize(K, dim=-1)  # Unit length
+    log_a = self.split_heads(F.logsigmoid(self.W_a(X))).squeeze(-1)
+    Y = self.memory(X, Q, K, V, log_a)  # (batch_size * num_heads, T, d / h)
+    Y = F.rms_norm(Y, Y.shape[-1:])
+    Y = Y.reshape(B, self.num_heads, T, -1).transpose(1, 2).reshape(B, T, d)
+    return self.W_o(Y)
+```
+
+```{.python .input #matrix-state-the-layer-2}
+%%tab jax
+@d2l.add_to_class(GatedLinearAttention)  #@save
+def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
+    B, T, d = X.shape
+    Q, K, V = (self.split_heads(Z) for Z in jnp.split(self.W_qkv(X), 3, -1))
+    unit = lambda Z: Z / jnp.linalg.norm(Z, axis=-1, keepdims=True)
+    Q, K = unit(Q), unit(K)  # Unit length
+    log_a = self.split_heads(jax.nn.log_sigmoid(self.W_a(X)))[..., 0]
+    Y = self.memory(X, Q, K, V, log_a)  # (batch_size * num_heads, T, d / h)
+    Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)
+    Y = Y.reshape(B, self.num_heads, T, -1).swapaxes(1, 2).reshape(B, T, d)
+    return self.W_o(Y)
+```
+
+### Language Modeling
+
+We train the layer with four heads of dimension 32 as the mixer of
+`d2l.SeqLM`, on the character-level Penn Treebank with the recipe of
+:numref:`sec_lstm` (`d2l.fit_lm`). Each head's state holds $32 \times 32$
+numbers, so a layer holds 4,096, against 2,048 for the S4D layer of
+:numref:`sec_ssm` with 16 states per channel.
+
+```{.python .input #matrix-state-language-modeling-1}
 %%tab pytorch, jax
-def mib(elements, bytes_per=2):             # fp16 headline; re-price at will
-    return elements * bytes_per / 2**20
-
-d_inner, d_state, w = 5120, 128, 4          # Mamba-2 2.7B layer
-ssm, conv = d_inner * d_state, d_inner * (w - 1)
-print('per layer, per sequence, fp16:')
-print(f'matrix state, one 64x64 head:  {mib(64 * 64):8.2f} MiB, constant')
-print(f'Mamba-2 2.7B, SSM {ssm:,} + conv {conv:,} elements: '
-      f'{mib(ssm + conv):.2f} MiB, constant')
-for n in [4096, 131072, 1048576]:
-    kv = 2 * n * 8 * 128                    # 2 x tokens x kv-heads x head-dim
-    print(f'GQA KV cache at n = {n:>9,}: {mib(kv):8.2f} MiB and growing')
+data = d2l.PennTreebank(batch_size=64, num_steps=128)
 ```
 
-The recurrent side of the ledger is constant in context length; the
-cache side crosses it within a few hundred tokens and keeps growing
-with every token kept. Both sides compose with quantization, and the
-cache side with sharing and eviction schemes, so the constants move;
-the shapes do not. What the flat line costs, we measured at
-the start of this section: a capacity ceiling set by the state's width.
-Holding both numbers in mind at once is the whole hybrid-design problem of
-:numref:`sec_hybrids`, which prices whole models with exactly
-:eqref:`eq_ms-state-bytes`.
-
-## Model Family
-:label:`subsec_ms-family`
-
-The models in this section and its two predecessors are instances of
-:eqref:`eq_ms-recurrence`. In the table below, the *transition* column
-compares decay structures, and the *write* column is uniform by design.
-
-> **Reading the papers.** The literature does not agree on which way the
-> state matrix points. :citet:`Katharopoulos.Vyas.Pappas.ea.2020` write
-> $\mathbf{S} = \sum_s \phi(\mathbf{k}_s)\mathbf{v}_s^\top$ read by
-> $\phi(\mathbf{q})^\top \mathbf{S}$, as we do; RetNet and GLA carry the
-> same state under transposed notation; the DeltaNet line stores the
-> transpose $\mathbf{S} \in \mathbb{R}^{d_v \times d_k}$, writes
-> $\mathbf{v}_t \mathbf{k}_t^\top$, and applies transitions from the
-> *right*. All of these are one recurrence up to transposition. This
-> chapter fixes a single convention, keys index rows:
-> $\mathbf{S}_t = \mathbf{D}_t \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top$
-> with read $\mathbf{o}_t = \mathbf{S}_t^\top \mathbf{q}_t$, and
-> translates every paper into it, as in :numref:`tab_ms-family`.
-
-:The matrix-state family. Every model is :eqref:`eq_ms-recurrence` with a choice of transition $\mathbf{D}_t$ and an additive write; the columns for state and transition vary, the write column does not.
-:label:`tab_ms-family`
-
-| model | state | transition $\mathbf{D}_t$ | write | update interpretation |
-|:--|:--|:--|:--|:--|
-| linear attention (2020) | $\mathbf{S}$ and normalizer $\mathbf{z}$ | $\mathbf{I}$ | add $\phi(\mathbf{k}_t)\mathbf{v}_t^\top$ | attention minus softmax |
-| RetNet (2023) | $\mathbf{S}$ per head | $\gamma\,\mathbf{I}$, fixed per head | add $\mathbf{k}_t\mathbf{v}_t^\top$ | linear attention plus decay |
-| Mamba (2023) | vector $\mathbf{x}_t \in \mathbb{R}^N$ per channel | input-dep. diagonal $e^{\Delta_t \mathbf{a}}$ | add $\Delta_t u_t \mathbf{B}_t$ | selective SSM (:numref:`sec_mamba`) |
-| GLA (2024) | $\mathbf{S}$ per head | input-dep. diagonal $\mathrm{diag}(\boldsymbol{\alpha}_t)$ | add $\mathbf{k}_t\mathbf{v}_t^\top$ | per-coordinate forgetting |
-| Mamba-2 (2024) | $\mathbf{S}$ per head | input-dep. scalar $a_t\,\mathbf{I}$ | add $\mathbf{k}_t\mathbf{v}_t^\top$ | the duality of this section |
-| RWKV-6 (2024) | $\mathbf{S}$ per head | input-dep. diagonal $\mathrm{diag}(\mathbf{w}_t)$ | add $\mathbf{k}_t\mathbf{v}_t^\top$ | the RNN lineage arrives |
-| mLSTM (2024) | $\mathbf{S}$ and normalizer $\mathbf{z}$ | scalar gate $f_t\,\mathbf{I}$ | add $i_t\,\mathbf{k}_t\mathbf{v}_t^\top$ | LSTM with a matrix cell |
-
-Three research lineages fill the rows: attention seeking linearity
-(linear attention, RetNet, GLA), state space models seeking selectivity
-(Mamba, Mamba-2), and recurrent networks seeking parallelism (RWKV-6,
-mLSTM). That they converge on one recurrence is the strongest evidence in
-this book that the recurrence, rather than any single architecture, is the
-right object of study. Mamba's row is the one non-matrix entry: its
-per-channel vector state is the same mathematics run single-input,
-single-output, and Mamba-2's move to the matrix state is what the duality
-section derived.
-
-### The One That Kept the Normalizer
-:label:`subsec_ms-mlstm`
-
-The last row retains the normalizer $\mathbf{z}$ introduced in
-:numref:`chap_attention`. The mLSTM is the matrix-memory cell of xLSTM
-:cite:`Beck.Poppel.Spanring.ea.2024`, the LSTM rebuilt on
-:eqref:`eq_ms-recurrence`: a forget gate $f_t$ and input gate $i_t$,
-computed from the token, gating a matrix cell state and, alongside it, the
-running normalizer that the rest of the family traded for output
-normalization:
-
-$$
-\mathbf{S}_t = f_t\, \mathbf{S}_{t-1} + i_t\, \mathbf{k}_t \mathbf{v}_t^\top,
-\qquad
-\mathbf{z}_t = f_t\, \mathbf{z}_{t-1} + i_t\, \mathbf{k}_t,
-\qquad
-\mathbf{o}_t = \frac{\mathbf{S}_t^\top \mathbf{q}_t}
-                    {\max\big(|\mathbf{z}_t^\top \mathbf{q}_t|,\, 1\big)},
-$$
-:eqlabel:`eq_ms-mlstm`
-
-with $i_t = \exp(\tilde{i}_t)$ and $f_t = \sigma(\tilde{f}_t)$ or
-$\exp(\tilde{f}_t)$ for learned pre-activations $\tilde{i}_t, \tilde{f}_t$
-(the paper's $\mathbf{C}_t$ and $\mathbf{n}_t$ are our $\mathbf{S}_t$ and
-$\mathbf{z}_t$ transposed). The exponential gates are the novelty and the
-hazard: they let a single strong token outweigh the entire accumulated
-past, and they overflow float32 after a few dozen steps of ordinary gate
-values. The fix is one we have already met. Exactly as online softmax
-:eqref:`eq_online-softmax` carries a running maximum and rescales the
-past, the mLSTM carries a stabilizer state $m_t$
-:cite:`Milakov.Gimelshein.2018`:
-
-$$
-m_t = \max\big(\tilde{f}_t + m_{t-1},\, \tilde{i}_t\big),
-\qquad
-f'_t = \exp\big(\tilde{f}_t + m_{t-1} - m_t\big),
-\qquad
-i'_t = \exp\big(\tilde{i}_t - m_t\big),
-$$
-:eqlabel:`eq_ms-mlstm-stabilizer`
-
-for the exponential-forget case. Running the recurrence with
-$(f'_t, i'_t)$ scales state and normalizer by the same factor
-$e^{-m_t}$, so the read-out is unchanged provided the constant $1$ in the
-denominator is scaled too, to $e^{-m_t}$. We implement the recurrence
-directly from these equations (the reference xLSTM code base is under a
-restrictive license, so reimplementing from the paper is also the legally
-clean route) and verify both claims at once: the unstabilized float32
-recurrence dies, and the stabilized one matches an unstabilized float64
-reference to float precision.
-
-```{.python .input #matrix-state-the-one-that-kept-the-normalizer}
+```{.python .input #matrix-state-language-modeling-2}
 %%tab pytorch
 torch.manual_seed(0)
-d_k, d_v, T = 8, 8, 64
-q, k, v = (torch.randn(T, d) for d in (d_k, d_k, d_v))
-i_pre, f_pre = torch.randn(T), 2.0 + torch.randn(T)  # Gate pre-activations
-
-def mlstm_naive(q, k, v, i_pre, f_pre, dtype):
-    """The unstabilized recurrence, in a given precision."""
-    q, k, v = q.to(dtype), k.to(dtype), v.to(dtype)
-    i_g, f_g = i_pre.to(dtype).exp(), f_pre.to(dtype).exp()
-    S, z = torch.zeros(d_k, d_v, dtype=dtype), torch.zeros(d_k, dtype=dtype)
-    outputs = []
-    for t in range(T):
-        S = f_g[t] * S + i_g[t] * (k[t][:, None] * v[t][None, :])
-        z = f_g[t] * z + i_g[t] * k[t]
-        outputs.append(q[t] @ S / (q[t] @ z).abs().clamp(min=1))
-    return torch.stack(outputs)
-
-def mlstm_stabilized(q, k, v, i_pre, f_pre):
-    """Carry m_t and rescale the past, as in online softmax."""
-    S, z = torch.zeros(d_k, d_v), torch.zeros(d_k)
-    m = torch.tensor(-torch.inf)
-    outputs = []
-    for t in range(T):
-        m_new = torch.maximum(f_pre[t] + m, i_pre[t])
-        f_g, i_g = torch.exp(f_pre[t] + m - m_new), torch.exp(i_pre[t] - m_new)
-        S = f_g * S + i_g * (k[t][:, None] * v[t][None, :])
-        z = f_g * z + i_g * k[t]
-        m = m_new
-        outputs.append(q[t] @ S
-                       / torch.maximum((q[t] @ z).abs(), torch.exp(-m)))
-    return torch.stack(outputs)
-
-exact = mlstm_naive(q, k, v, i_pre, f_pre, torch.float64)
-naive = mlstm_naive(q, k, v, i_pre, f_pre, torch.float32)
-bad = ~torch.isfinite(naive).all(-1)        # argmax(bool) would report 0
-first_bad = int(bad.float().argmax()) if bool(bad.any()) else 'none'
-stab = mlstm_stabilized(q, k, v, i_pre, f_pre)
-err = (stab - exact.float()).abs().max() / exact.abs().max()
-print(f'float32 unstabilized: first non-finite output at step {first_bad}')
-print(f'float32 stabilized vs float64: relative deviation {float(err):.2e}')
-assert torch.isfinite(stab).all() and err < 1e-3
+model = d2l.SeqLM(len(data.vocab), 128,
+                  [GatedLinearAttention(128, num_heads=4) for _ in range(2)])
+print(f'gated linear attention perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
-```{.python .input #matrix-state-the-one-that-kept-the-normalizer}
+```{.python .input #matrix-state-language-modeling-2}
 %%tab jax
-d_k, d_v, T = 8, 8, 64
-kk = jax.random.split(jax.random.key(2), 5)
-q, k, v = (jax.random.normal(key, (T, d))
-           for key, d in zip(kk, (d_k, d_k, d_v)))
-i_pre = jax.random.normal(kk[3], (T,))               # Gate pre-activations
-f_pre = 2.0 + jax.random.normal(kk[4], (T,))
-
-def mlstm_naive(q, k, v, i_pre, f_pre, dtype):
-    """The unstabilized recurrence (NumPy), in a given precision."""
-    q, k, v = (np.asarray(x, dtype) for x in (q, k, v))
-    i_g, f_g = np.exp(np.asarray(i_pre, dtype)), np.exp(np.asarray(f_pre, dtype))
-    S, z = np.zeros((d_k, d_v), dtype), np.zeros(d_k, dtype)
-    outputs = []
-    for t in range(T):
-        S = f_g[t] * S + i_g[t] * np.outer(k[t], v[t])
-        z = f_g[t] * z + i_g[t] * k[t]
-        outputs.append(q[t] @ S / max(abs(q[t] @ z), 1.0))
-    return np.stack(outputs)
-
-def mlstm_stabilized(q, k, v, i_pre, f_pre):
-    """Carry m_t and rescale the past, as in online softmax."""
-    def step(carry, x):
-        S, z, m = carry
-        q_t, k_t, v_t, i_t, f_t = x
-        m_new = jnp.maximum(f_t + m, i_t)
-        f_g, i_g = jnp.exp(f_t + m - m_new), jnp.exp(i_t - m_new)
-        S = f_g * S + i_g * (k_t[:, None] * v_t[None, :])
-        z = f_g * z + i_g * k_t
-        o = q_t @ S / jnp.maximum(jnp.abs(q_t @ z), jnp.exp(-m_new))
-        return (S, z, m_new), o
-    init = (jnp.zeros((d_k, d_v)), jnp.zeros(d_k), -jnp.inf)
-    return jax.lax.scan(step, init, (q, k, v, i_pre, f_pre))[1]
-
-exact = mlstm_naive(q, k, v, i_pre, f_pre, np.float64)
-with np.errstate(over='ignore', invalid='ignore'):   # The overflow is the point
-    naive = mlstm_naive(q, k, v, i_pre, f_pre, np.float32)
-bad = ~np.isfinite(naive).all(-1)           # argmax(bool) would report 0
-first_bad = int(bad.argmax()) if bad.any() else 'none'
-stab = mlstm_stabilized(q, k, v, i_pre, f_pre)
-err = jnp.abs(stab - exact).max() / jnp.abs(exact).max()
-print(f'float32 unstabilized: first non-finite output at step {first_bad}')
-print(f'float32 stabilized vs float64: relative deviation {float(err):.2e}')
-assert bool(jnp.isfinite(stab).all()) and err < 1e-3
+rngs = nnx.Rngs(0)
+model = d2l.SeqLM(len(data.vocab), 128, [GatedLinearAttention(
+    128, num_heads=4, rngs=rngs) for _ in range(2)], rngs=rngs)
+print(f'gated linear attention perplexity: {d2l.fit_lm(model, data):.2f}')
 ```
 
-The mLSTM is one half of the xLSTM architecture; its scalar sibling sLSTM
-keeps the LSTM's recurrent memory mixing (and therefore steps
-sequentially, gaining state-tracking power the parallel family lacks), a
-trade we noted in the gate table of :numref:`sec_lstm`.
+The model reaches a perplexity of about 3.25, close to the minGRU (3.2) and
+better than S4D (3.35), behind the LSTM and the GRU (about 3.0) and Mamba
+(2.95). On this
+task the matrix memory does not help much, as the models of
+:numref:`sec_ssm` suggested: predicting the next character rarely requires
+looking up a pair stored a hundred characters earlier. The tasks of
+:numref:`sec_hybrids` do, and there the size and the write rule of the
+memory decide the outcome.
 
-### Limitations of Additive Writes
-:label:`subsec_ms-open-column`
-
-Look down the write column of :numref:`tab_ms-family` once more. Seven
-models, three lineages, and every single write is an *addition*: not one
-model in the table can change what it wrote about key $\mathbf{k}$ without
-also decaying everything else it knows. The decay ladder manages crowding,
-it does not cure it, because forgetting is indiscriminate where
-interference :eqref:`eq_ms-retrieval-error` is specific. The fast weight
-programmers saw this in the 1990s and proposed the repair
-:cite:`Schlag.Irie.Schmidhuber.2021`: before writing to key
-$\mathbf{k}_t$, first *read* what the memory already holds there, and
-write only the correction. That single change to the write rule is the
-subject of :numref:`sec_deltanet`: a memory that edits rather than
-accumulates.
+One limitation is built into every model in this section. A write adds
+$\mathbf{v}_t \mathbf{k}_t^\top$ to the memory, whatever the memory already
+holds under $\mathbf{k}_t$. If a program sets `rate = 0.05` and later
+`rate = 0.07`, the memory returns the sum of both values, scaled by the
+decays, when queried with the key of `rate`. A decay can make the old
+value fade, but it fades every other pair as well. The next section changes
+the write so that it replaces the value stored under a key.
 
 ## Summary
 
-Linear attention's matrix state and the selective SSM's recurrence are one
-template, $\mathbf{S}_t = \mathbf{D}_t \mathbf{S}_{t-1} + \mathbf{k}_t
-\mathbf{v}_t^\top$ read by the query. As a memory it has a measured
-capacity law: after $n$ writes with independent isotropic unit keys
-into width $d_k$, the expected squared read error is $(n-1)/d_k$ — and
-measurably worse once keys correlate — so capacity is set by width, not
-by time. The
-decay ladder adds forgetting one line at a time: fixed scalar (RetNet),
-input-dependent scalar (Mamba-2), input-dependent diagonal (GLA, RWKV-6,
-and per channel the selective SSM). Unrolling the scalar-decay recurrence
-gives $\mathbf{Y} = (\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top)\mathbf{V}$
-with a 1-semiseparable $\mathbf{L}$; at $a_t = 1$ the mask $\mathbf{L}$ is
-literally the causal mask, so masked linear attention and the gated
-recurrence are the same matrix, and the quadratic and recurrent modes are
-two orders of one contraction. That is Mamba-2's state space duality,
-verified here by assertion, and the family trains in the chunked middle
-order: attention within chunks, a short state recurrence across them,
-matmul-heavy and linear in sequence length, the schedule the Mamba-2
-paper credits for growing state sizes an order of magnitude at little
-wall-clock cost. The family table collects the
-members, including the mLSTM, which keeps the normalizer state of :numref:`chap_attention` and
-stabilizes its exponential gates with the online-softmax rescaling. Every
-write rule in the table only adds; editing the memory is next.
-
-**Experimental scope.** The capacity law
-is a *proposition* under independent isotropic random keys, confirmed
-by measurement under exactly those assumptions and shown failing under
-correlated keys; it bounds nothing about trained or whitened key
-geometries. The duality and chunking checks are *identities* for the
-scalar-gated family, verified to float tolerance. The timing and
-memory tables are *illustrations* from one device, dtype, and teaching
-implementation: constants that move across hardware and kernels around
-asymptotic shapes that do not.
+A matrix-valued state stores key–value pairs: a write adds the outer
+product $\mathbf{v}_t\mathbf{k}_t^\top$, and a read multiplies the state with
+a query. Unrolled, this recurrence is causal linear attention, and the
+selective state space model of :numref:`sec_mamba` is a memory of this
+kind with the step-scaled input as value and $\mathbf{B}_t$ and
+$\mathbf{C}_t$ as key and query. Without decay, every stored pair
+interferes with every read: for random unit keys the expected squared read
+error is $(n-1)/d_k$ after $n$ writes. An input-dependent decay lets old
+pairs fade. With a scalar decay per head, the outputs equal masked attention
+with a learned, decaying mask, $(\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)
+\mathbf{V}$, and computing this product in chunks, attention within a chunk
+and a recurrence over the chunk boundaries, trains the model with matrix
+products in memory linear in the length. Every write adds, so a key that is
+written twice returns the sum of its values.
 
 ## Exercises
 
-1. **Horizons and rungs.** RetNet fixes the decay of head $h$ at
-   $\gamma_h = 1 - 2^{-5-h}$ for $h = 0, 1, \ldots$
-   :cite:`Sun.Dong.Huang.ea.2023`. Call the *effective memory horizon*, or
-   horizon, of a decay $\gamma$ the smallest lag $\ell$ with
-   $\gamma^\ell < 0.01$. For $\gamma$ close to one it is about
-   $\ln 100 / (1 - \gamma)$.
-    1. Show that the horizons of successive heads roughly double, and find
-       how many heads the schedule needs before one head's horizon exceeds
-       $10^6$ tokens.
-    1. A head writes the pair $(\mathbf{k}_A, \mathbf{v}_A)$ at step $t_0$
-       and the pair $(\mathbf{k}_B, \mathbf{v}_B)$ at step $t_0 + 1$. The
-       accumulated decay of pair A must stay at least $0.01$ for $10^4$
-       steps, and that of pair B must fall below $0.01$ within $100$ steps.
-       For each rung of :eqref:`eq_ms-decay-ladder`, decide whether a
-       single head can meet both requirements, and for every rung that can,
-       give keys and decay values that do it.
+1. **Mamba as a matrix memory.** Write the selective state space model of
+   :numref:`sec_mamba` with its channel states as the rows of $\mathbf{S}_t
+   \in \mathbb{R}^{H \times N}$, and drop the skip term.
+    1. Write the update of $\mathbf{S}_t$ as an elementwise product of
+       $\mathbf{S}_{t-1}$ with a decay matrix $\mathbf{E}_t$, plus an outer
+       product, and the output as a matrix–vector product. Give every entry
+       of $\mathbf{E}_t$.
+    1. Under which condition on $\boldsymbol{\Delta}_t$ and on the rates
+       $\lambda_n$ is $\mathbf{E}_t$ a scalar multiple of the matrix of
+       ones, so that the update has the form :eqref:`eq_ms-decay`? Which of
+       these conditions does Mamba-2 impose?
+    1. For each form of decay in this section, count the input-dependent
+       numbers per token that determine the decay of one head.
 
-1. **Mamba as a matrix state.** Channel $h$ of the selective SSM
-   :eqref:`eq_selective_ssm` carries its own state
-   $\mathbf{x}_t^{(h)} \in \mathbb{R}^N$. Stack the $H$ channel states as
-   the columns of $\mathbf{X}_t \in \mathbb{R}^{N \times H}$, and drop the
-   skip term $d_h u_{t,h}$.
-    1. Write the update of $\mathbf{X}_t$ as a transition applied to
-       $\mathbf{X}_{t-1}$ plus an outer-product write, and the output as a
-       read by a query. Identify the key, the value, and the query of
-       :eqref:`eq_ms-recurrence`, and give every entry of the transition.
-    1. Find the condition on $\boldsymbol{\Delta}_t$ under which the
-       transition acts as $\mathbf{X}_{t-1} \mapsto \mathbf{D}_t
-       \mathbf{X}_{t-1}$ for some matrix $\mathbf{D}_t$, and show that
-       $\mathbf{D}_t$ then lies on the diagonal rung of
-       :eqref:`eq_ms-decay-ladder`. Find the further restriction on
-       $\mathbf{A}$ that puts it on the scalar rung of Mamba-2.
-    1. For each of the three transitions, count the distinct decay
-       factors applied to the state per token and the input-dependent
-       numbers that determine them.
-
-1. **Rank-one blocks.** Let $p_t = a_1 a_2 \cdots a_t$ be the prefix
-   products of the decays in :eqref:`eq_ms-semiseparable`.
-    1. Express $L_{ts}$ through the $p_t$. Show that every submatrix of
+1. **Rank-one blocks.** Let $p_t = a_1 a_2 \cdots a_t$ be the products of
+   the decays in :eqref:`eq_ms-semiseparable`.
+    1. Express $L_{ts}$ through the $p_t$, and show that every submatrix of
        $\mathbf{L}$ whose row indices are all at least as large as its
        column indices has rank one.
-    1. Deduce that every block of $\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top$
-       that couples a chunk to an earlier chunk in
-       :numref:`fig_ms-semiseparable` has rank at most $d_k$. Identify
-       where `matrix_state_chunked` applies the query-side and the
-       key-side decays of such a block.
-    1. On the diagonal rung, each key coordinate $c$ accumulates its own
-       decay, and no single mask $\mathbf{L}$ multiplies
+    1. Deduce that every block of $\mathbf{L} \odot
+       \mathbf{Q}\mathbf{K}^\top$ that couples a chunk to an earlier chunk
+       has rank at most $d_k$. Identify where `chunked_linear_attention`
+       applies the query-side and the key-side decays of such a block.
+    1. With a decay per key coordinate, $\mathbf{S}_t = \mathbf{S}_{t-1}
+       \textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}_t
+       \mathbf{k}_t^\top$, no single mask $\mathbf{L}$ multiplies
        $\mathbf{Q}\mathbf{K}^\top$. Write the decayed score of query $t$
-       and key $s$ on this rung, and show that a block coupling two
-       different chunks still has rank at most $d_k$.
+       and key $s$, and show that a block coupling two chunks still has
+       rank at most $d_k$.
 
-1. **Schedule FLOPs.** Count one multiply-add as two FLOPs, as in
-   :eqref:`eq_attn-layer-flops`, set $d_k = d_v = d$, and keep the
-   leading terms.
-    1. Count the FLOPs of the token recurrence, the quadratic dual, and the
-       chunked form of :eqref:`eq_ms-semiseparable` at sequence length $T$
-       and chunk size $C$. Split the chunked count into the diagonal
-       blocks, the reads and writes of the carried state, and the
-       per-chunk decay of the state.
+1. **Counting operations.** Count one multiply-add as two floating-point
+   operations, set $d_k = d_v = d$, and keep the leading terms.
+    1. Count the operations of the recurrence, the dual form, and the
+       chunked form at length $T$ and chunk size $m$. Split the chunked
+       count into the three parts of the algorithm.
     1. Show that the chunked form costs at most a small constant times the
-       recurrence while $C \le d$, and that its cost grows linearly in $C$
-       beyond. Compute the ratio of chunked to dual FLOPs at $T = 4096$,
-       $d = 64$, and $C = 256$.
-    1. :numref:`subsec_ms-chunked` attributes the slowness of the token
-       recurrence and the large optimal chunk size to a fixed overhead per
-       sequential step. Model the run time of a schedule as its FLOPs
-       divided by a throughput $P$, plus $\tau$ times its number of
-       sequential steps, which is $T$ for the recurrence and $T/C$ for the
-       chunked form. Find the chunk size that minimizes the chunked time.
-       Evaluate it, and the ratio of the recurrence's time to the best
-       chunked time, for $T = 4096$, $d = 64$, $P = 10^{12}$ FLOP/s, and
-       $\tau = 5\,\mu\textrm{s}$.
+       recurrence while $m \le d$, and compute the ratio of chunked to dual
+       operations at $T = 4096$, $d = 64$, and $m = 256$.
+    1. Model the run time of a schedule as its operations divided by a
+       throughput $P$, plus a fixed time $\tau$ per sequential step: $T$
+       steps for the recurrence and $T/m$ for the chunked form. Find the
+       chunk size that minimizes the chunked time, and evaluate it for
+       $T = 4096$, $d = 64$, $P = 10^{13}$ operations per second, and
+       $\tau = 5\,\mu\textrm{s}$. Compare with the timings above.
 
-1. [code] **Log-space boundary.** The boundary step of
-   `matrix_state_chunked` divides prefix products of the decays within a
-   chunk, $b_C / b_t$, and :numref:`subsec_ms-chunked` reports that these
-   products underflow to zero for $C \ge 512$.
-    1. For decays drawn uniformly from $(0.65, 0.95)$, compute
-       $\mathbb{E}[\log a_t]$. Predict the chunk sizes at which the
-       smallest prefix product $b_C$ falls below the smallest normal
-       float32 number, about $1.2 \times 10^{-38}$, and below the smallest
-       positive one, about $1.4 \times 10^{-45}$.
-    1. Rewrite the boundary step so that it computes each ratio
-       $b_C / b_t$ as the exponential of a difference of cumulative
-       log-decays. Verify at $T = 4096$ that chunk sizes $512$ and $1024$
-       now agree with `matrix_state_dual`.
-    1. The read of the carried state multiplies the queries by $b_t$,
-       which underflows as well. Explain why this underflow does no harm.
+1. [code] **The normalizer as a value column.** The linear attention of
+   :numref:`sec_attention-at-scale` applies a positive feature map $\phi$
+   to queries and keys and divides each output by
+   $\phi(\mathbf{q}_t)^\top \mathbf{z}_t$, where $\mathbf{z}_t =
+   \sum_{s \le t} \phi(\mathbf{k}_s)$. Give $\mathbf{z}_t$ the same decay
+   as the state.
+    1. Show that appending a constant 1 to every value vector makes the
+       last coordinate of the output equal to the denominator.
+    1. Compute the normalized outputs with one call of
+       `chunked_linear_attention`, with $\phi = \textrm{elu} + 1$, and check
+       them against a loop that carries $\mathbf{S}_t$ and $\mathbf{z}_t$.
+    1. Which of the two changes, the feature map or the normalizer, alters
+       the relative weights that a query gives to past positions, and which
+       only rescales each output?
 
-1. **Decode-memory ledger.** Price one layer of the Mamba-2 2.7B
-   configuration of :eqref:`eq_ms-state-bytes`, with
-   $d_{\textrm{inner}} = 5120$ and $w = 4$, against a grouped-query cache
-   with $h_{\textrm{kv}} = 8$ and $d_{\textrm{head}} = 128$, at the same
-   element size $b$ on both sides.
-    1. Find the number of kept tokens $n$ at which the two sides are equal,
-       as a function of $d_{\textrm{state}}$. Evaluate it at
-       $d_{\textrm{state}} \in \{16, 128, 256\}$, the range of state widths
-       of :numref:`subsec_ms-hardware`. What share of the recurrent side
-       does the convolution buffer take at each width?
-    1. Under independent random unit keys, the capacity law
-       :eqref:`eq_ms-capacity-law` sets how many pairs a $d_k \times d_v$
-       head state holds at an expected squared read error $\epsilon$. At
-       $d_k = d_v = 64$, count the numbers that such a state spends per
-       stored pair, and compare them with the $d_k + d_v$ numbers that a
-       cache spends per token and key–value head. For which $\epsilon$
-       does the state spend fewer? Where, then, do the savings of the
-       constant side of the ledger come from?
-   :exlabel:`ex_matrix-state-decode-memory-ledger`
+1. **Targeted forgetting.** Let a memory hold $\mathbf{S} =
+   \mathbf{v}\mathbf{k}^\top + \sum_i \mathbf{v}_i \mathbf{k}_i^\top$,
+   where $\mathbf{k}$ has unit length and every $\mathbf{k}_i$ is
+   orthogonal to $\mathbf{k}$.
+    1. Find a matrix $\mathbf{D}$ such that $\mathbf{S}\mathbf{D} =
+       \sum_i \mathbf{v}_i \mathbf{k}_i^\top$ for all such memories. Is it
+       unique?
+    1. For which keys $\mathbf{k}$ is this transition one of the decays of
+       this section?
+    1. Apply the transition and then write a new value,
+       $\mathbf{S}\mathbf{D} + \mathbf{v}'\mathbf{k}^\top$. Show that the
+       memory now returns $\mathbf{v}'$ for $\mathbf{k}$ and is otherwise
+       unchanged. The next section builds a layer on this update.
 
-1. **Decode arithmetic intensity.** At each decoding step, one head of the
-   scalar-decay recurrence reads its $d_k \times d_v$ state from memory,
-   decays it, adds the outer product $\mathbf{k}_t \mathbf{v}_t^\top$,
-   reads it with $\mathbf{q}_t$, and writes it back. Store everything in
-   fp16, take $d_k = d_v = 64$, and suppose that the accelerator performs
-   300 FLOPs in the time it moves one byte.
-    1. Neglect the bytes of keys, values, and queries. Count the FLOPs and
-       the bytes of state moved per step, and compute the fraction of peak
-       arithmetic throughput that the step can use.
-    1. Serving $B$ sequences at once multiplies by $B$ the FLOPs that each
-       projection matmul performs per byte of weights. Explain why
-       batching leaves the arithmetic intensity of the state update
-       unchanged.
-    1. Let each step instead write $\mathbf{K}_t \mathbf{V}_t^\top$ with
-       $\mathbf{K}_t \in \mathbb{R}^{d_k \times r}$ and
-       $\mathbf{V}_t \in \mathbb{R}^{d_v \times r}$, and read with $r$
-       queries at once, as in the multi-input, multi-output form of
-       Mamba-3 :cite:`Lahoti.Li.Chen.ea.2026`. Still neglecting the bytes
-       of $\mathbf{K}_t$, $\mathbf{V}_t$, and the queries, find the
-       arithmetic intensity as a function of $r$ and the $r$ at which the
-       step would become compute bound.
-    1. Now count the bytes of $\mathbf{K}_t$, $\mathbf{V}_t$, the $r$
-       queries, and the $r$ outputs as well. Find the $r$ at which they
-       equal the bytes of state moved, and compare the time of a rank-$r$
-       step with that of the rank-one step at $r = 4$ and at $r = d_k$.
+1. **Correlated keys.** ● The keys with $\rho = 0.5$ in
+   `matrix_memory` are normalized versions of $\sqrt{1-\rho^2}\,
+   \mathbf{g}_i + \rho\, \mathbf{c}$, with independent random unit vectors
+   $\mathbf{g}_i$ and one shared unit vector $\mathbf{c}$. Model the overlap
+   of two distinct keys as $\mathbf{k}_i^\top \mathbf{k}_j = \rho^2 +
+   \epsilon_{ij}$, where the $\epsilon_{ij}$ with $i \neq j$ are independent
+   with mean zero and variance $(1-\rho^2)^2/d_k$, and neglect the
+   normalization.
+    1. Assume that the values are independent unit vectors with mean zero.
+       Derive the expected squared read error at key $j$, which generalizes
+       :eqref:`eq_ms-capacity-law`, and identify the term that a larger
+       $d_k$ does not reduce.
+    1. The values of `matrix_memory` come from a codebook of 256 random
+       vectors, whose mean $\bar{\mathbf{v}}$ is not exactly zero. Show
+       that this adds a term proportional to $(n-1)(n-2)\,
+       \|\bar{\mathbf{v}}\|^2$, and compare your complete prediction with
+       the measured errors.
 
-1. [code] **Normalizer as a value column.** Give the normalizer of
-   :eqref:`eq_linear-attn-recurrence` the decay of the state,
-   $\mathbf{z}_t = a_t\, \mathbf{z}_{t-1} + \phi(\mathbf{k}_t)$, with
-   $\phi = \mathrm{elu} + 1$. Write the state with $\phi(\mathbf{k}_t)$ in
-   place of $\mathbf{k}_t$, and read
-   $\mathbf{o}_t = \mathbf{S}_t^\top \phi(\mathbf{q}_t) /
-   \phi(\mathbf{q}_t)^\top \mathbf{z}_t$.
-    1. Apply $\phi$ to the queries and keys in
-       :eqref:`eq_ms-semiseparable`, and append a column of ones to
-       $\mathbf{V}$. Show that the last output column equals the
-       denominator $\phi(\mathbf{q}_t)^\top \mathbf{z}_t$.
-    1. Compute the normalized output with a single call of
-       `matrix_state_dual`. Verify it against a token loop that carries
-       $\mathbf{S}_t$ and $\mathbf{z}_t$, once with all $a_t = 1$ and once
-       with decays drawn uniformly from $(0.65, 0.95)$.
-    1. Compared with `matrix_state_dual` on the raw queries and keys,
-       which of the two changes, the feature map or the normalizer, alters
-       the relative weights that a query gives to past positions, and
-       which only rescales each output row?
-
-1. [code] **Exponential gates.** The exponential gates of the mLSTM make
-   the unstabilized recurrence :eqref:`eq_ms-mlstm` overflow, and the
-   stabilizer :eqref:`eq_ms-mlstm-stabilizer` prevents it.
-    1. Show by induction that the stabilized recurrence produces the
-       states $e^{-m_t} \mathbf{S}_t$ and $e^{-m_t} \mathbf{z}_t$, where
-       $\mathbf{S}_t$ and $\mathbf{z}_t$ are the states of
-       :eqref:`eq_ms-mlstm`. Conclude that the read-out of
-       `mlstm_stabilized` equals that of :eqref:`eq_ms-mlstm`, and show
-       that $f'_t \le 1$ and $i'_t \le 1$ at every step.
-    1. Predict the step at which the unstabilized float32 recurrence first
-       produces a non-finite output, as a function of the mean $\mu$ of
-       the forget pre-activations $\tilde{f}_t$. Check the prediction with
-       `mlstm_naive` for $\mu \in \{1, 2, 4\}$ on sequences of length
-       $T = 192$. `mlstm_naive` loops over the global `T`, so set
-       `T = 192` before drawing the inputs.
-    1. Pass $\log \sigma(\tilde{f}_t)$ in place of $\tilde{f}_t$ to both
-       functions, which turns the forget gate into $\sigma(\tilde{f}_t)$,
-       and rerun. Find the input pre-activation $\tilde{i}_t$ at which
-       $\exp(\tilde{i}_t)$ alone overflows float32 and float16, and state
-       when the stabilizer is still needed with this forget gate.
-
-1. **Targeted forgetting.** Let a state hold
-   $\mathbf{S} = \mathbf{k}\mathbf{v}^\top + \sum_i \mathbf{k}_i
-   \mathbf{v}_i^\top$, where $\mathbf{k}$ has unit norm and every
-   $\mathbf{k}_i$ is orthogonal to $\mathbf{k}$.
-    1. Find every matrix $\mathbf{D}$ with $\mathbf{D}\mathbf{S} =
-       \sum_i \mathbf{k}_i \mathbf{v}_i^\top$ for all such states, that
-       is, for all values and for all keys $\mathbf{k}_i$ orthogonal to
-       $\mathbf{k}$.
-    1. Determine for which keys $\mathbf{k}$ this transition lies on a
-       rung of :eqref:`eq_ms-decay-ladder`, and on which rung.
-    1. Apply this transition and then the additive write
-       $\mathbf{k}\mathbf{v}'^\top$ of a new value $\mathbf{v}'$. Write the
-       combined update in the form of :eqref:`eq_ms-recurrence`, and state
-       which property of its transition places it outside
-       :numref:`tab_ms-family`.
-
-1. **Correlated keys.** ● The call of `hebbian_memory` with `rho=0.5` in
-   :numref:`subsec_ms-capacity` builds each key by normalizing
-   $\sqrt{1-\rho^2}\, \mathbf{g}_i + \rho\, \mathbf{c}$, where the
-   $\mathbf{g}_i$ are independent isotropic unit vectors and $\mathbf{c}$
-   is one shared unit vector. Model the overlap of two distinct keys as
-   $\mathbf{k}_i^\top \mathbf{k}_j = \rho^2 + \epsilon_{ij}$. For fixed
-   $j$, let the $\epsilon_{ij}$ with $i \neq j$ be independent of each
-   other and of the values, with mean zero and variance
-   $\sigma^2 = (1-\rho^2)^2 / d_k$. This model keeps the shared
-   component and the term $(1-\rho^2)\, \mathbf{g}_i^\top \mathbf{g}_j$,
-   and it neglects the renormalization and the terms linear in $\rho$.
-   The stored values have unit norm and are independent of the keys.
-    1. Assume that the values are also independent of each other with
-       mean zero. Derive the expected squared read error at key $j$, which
-       generalizes :eqref:`eq_ms-capacity-law`, and identify the term
-       that a larger $d_k$ reduces.
-    1. Evaluate the ratio of this error to the independent-key error
-       $(n-1)/d_k$ for $\rho = 0.5$ and $d_k = 64$.
-    1. `hebbian_memory` draws its values from a fixed codebook of 256
-       random unit vectors, so the mean $\bar{\mathbf{v}}$ of the value
-       distribution is not exactly zero. Show that this adds a term
-       proportional to $(n-1)(n-2)\,\|\bar{\mathbf{v}}\|^2$, estimate
-       $\|\bar{\mathbf{v}}\|^2$, and find the $n$ beyond which the new
-       term dominates. Compare the complete prediction with the errors that
-       `hebbian_memory(64, nums, rho=0.5)` returns.
-
-1. [code] **Decay as a sliding window.** ● Give `hebbian_memory` the
-   decayed write $\mathbf{S}_t = \gamma\,\mathbf{S}_{t-1} + \mathbf{k}_t
-   \mathbf{v}_t^\top$, so that the pair written $m$ steps before the end
-   enters the final state with weight $\gamma^m$. Call $m$ the age of the
-   pair.
+1. [code] **Decay as a sliding window.** ● Add a constant decay $a$ to
+   `matrix_memory`, so that the pair written $k$ steps before the end
+   enters the final memory with weight $a^k$.
     1. At $d_k = 64$ and $n = 256$, measure recall separately for the
-       oldest and for the newest quarter of the pairs, for
-       $\gamma \in \{1, 0.99, 0.95, 0.9\}$. What does decay buy the newest
-       pairs, and what does it cost the oldest?
-    1. The read at the key of the pair of age $m$ returns
-       $\gamma^m \mathbf{v}$ plus interference. Following the proof of the
-       proposition in :numref:`subsec_ms-capacity`, bound the expected
-       squared interference by $1/\big((1-\gamma^2)\, d_k\big)$. Show that
-       the number of pairs whose squared signal $\gamma^{2m}$ is at least
-       this bound is at most about $d_k/e$ for every $\gamma < 1$, with
-       the maximum near $\gamma = 1 - e/(2 d_k)$. Compare with
-       $\gamma = 1$.
-    1. At $n = 8 d_k$ and the $\gamma$ of the previous part, count the
-       pairs whose measured squared interference is at most $\gamma^{2m}$
-       for $d_k \in \{32, 64, 128\}$, and compare the counts with
-       $d_k/e$.
+       oldest and the newest quarter of the pairs, for $a \in \{1, 0.99,
+       0.95, 0.9\}$. What does the decay give the newest pairs, and what
+       does it cost the oldest?
+    1. Following the proof of the proposition, show that the expected
+       squared interference at any key is at most $1 / ((1-a^2)\, d_k)$.
+       Show that the number of pairs whose squared signal $a^{2k}$ exceeds
+       this bound is at most about $d_k / e$, whatever $a < 1$ is.
 
-1. [extended] **Per-coordinate gates in chunks.** ● Replace the scalar
-   decay $a_t$ in `matrix_state_chunked` by a gate vector
-   $\boldsymbol{\alpha}_t \in (0,1)^{d_k}$, the diagonal rung of
-   :eqref:`eq_ms-decay-ladder` that GLA uses
-   :cite:`Yang.Wang.Shen.ea.2024`.
-    1. State which of `segsum`, the diagonal-block product, and the
-       boundary step must change, and give the shapes of their new inputs
-       and outputs.
-    1. Implement the per-coordinate chunked form, computing the
-       within-chunk scores from a log-space mask with one entry per query,
-       key, and key coordinate. Verify it against a token loop for chunk
-       sizes $16$, $64$, and $256$ at $T = 512$, with gates drawn
-       uniformly from $(0.65, 0.95)$.
-    1. Factor the within-chunk scores instead as
-       $(\mathbf{Q}_c \circ \mathbf{P}_c)(\mathbf{K}_c \oslash
-       \mathbf{P}_c)^\top$, where row $t$ of $\mathbf{P}_c$ holds the
-       products of the gates of chunk $c$ up to position $t$ and $\oslash$
-       divides elementwise. Compare the memory that the scores of one chunk
-       need in this form and in the log-space mask of the previous part, at
-       $C = 64$ and $d_k = 64$.
-    1. The entries of $\mathbf{K}_c \oslash \mathbf{P}_c$ overflow for long
-       chunks, for the same reason that the prefix products in the boundary
-       step of `matrix_state_chunked` underflow. GLA therefore splits each
-       chunk into sub-chunks, computes the blocks between different
-       sub-chunks with this factorization, with decays measured from the
-       sub-chunk boundaries, and computes only the diagonal sub-blocks in
-       log space :cite:`Yang.Wang.Shen.ea.2024`. Write the factors of a
-       block between two sub-chunks, and show that every decay factor in
-       them is at most one.
+1. [extended] **Decay per key coordinate.** ● Generalize
+   `chunked_linear_attention` to the decay $\mathbf{S}_t = \mathbf{S}_{t-1}
+   \textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}_t \mathbf{k}_t^\top$ of
+   gated linear attention :cite:`Yang.Wang.Shen.ea.2024`.
+    1. State which of the three parts of the algorithm change, and give the
+       shapes of their new inputs.
+    1. Implement it with a log-space mask that has one entry per query,
+       key, and key coordinate, and check it against a loop for chunk sizes
+       16, 64, and 256 with decays drawn uniformly from $(0.8, 0.99)$.
+    1. Factor the within-chunk scores instead as $(\mathbf{Q}_c \odot
+       \mathbf{P}_c)(\mathbf{K}_c \oslash \mathbf{P}_c)^\top$, where row $t$
+       of $\mathbf{P}_c$ holds the products of the decays of chunk $c$ up to
+       step $t$ and $\oslash$ divides elementwise. Compare the memory of
+       the two forms at $m = 64$ and $d_k = 64$, and explain why this
+       factorization overflows for long chunks.
 
 [Discussions](https://d2l.discourse.group/)
 
@@ -1259,156 +806,156 @@ asymptotic shapes that do not.
 ::: {.cover}
 [Dive into Deep Learning · §12.4]{.kicker}
 
-The matrix state<br>
-**one recurrence · measured capacity · transition structure · state-space duality · chunked training · model families**
+Matrix-state recurrences<br>
+**outer-product memory · interference · decay · attention with a decaying mask · chunked computation**
 :::
 :::
 
-::: {.slide title="The Matrix-State Recurrence"}
-Ch. 10 ended linear attention as a recurrence; ch. 12 built selective SSMs
-from continuous time. Same object:
+::: {.slide title="To Recall a Value, a Model Must Store a Pair"}
+[The problem]{.kicker}
 
-$$\mathbf{S}_t = \mathbf{D}_t\, \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top, \qquad \mathbf{o}_t = \mathbf{S}_t^\top \mathbf{q}_t$$
+`rate = 0.05` near the top of a program; `rate` 200 lines later.
 
-- The transition $\mathbf{D}_t$ determines retained state; the outer product
-  $\mathbf{k}_t\mathbf{v}_t^\top$ writes new state.
-- Linear attention: $\mathbf{D}_t = \mathbf{I}$ — never forget.
+- Attention: compare the query with every earlier key, return the value.
+- A vector state holds one decaying number per channel: no place for
+  "this value goes with that key".
 
-. . .
-
-What the modern family drops from ch. 10's construction: the feature map
-$\phi$ and the normalizer state $\mathbf{z}$ (output normalization instead).
-The mLSTM retains $\mathbf{z}$.
+::: {.d2l-note}
+Make the state a **matrix**: add $\mathbf{v}_t\mathbf{k}_t^\top$ to write,
+multiply by $\mathbf{q}_t$ to read.
+:::
 :::
 
-::: {.slide title="Measured Memory Cost"}
-Store $n$ unit-norm pairs, read key $j$:
-$\mathbf{S}^\top \mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)\,\mathbf{v}_i$
+::: {.slide title="By the End of This Deck You Can"}
+- write and read key–value pairs with outer products;
+- predict the read error $(n-1)/d_k$ of $n$ random pairs;
+- show that a decayed matrix recurrence is masked attention;
+- compute it in chunks, with matrix products and a short scan.
 
-@!matrix-state-what-the-memory-costs
-
-- Measured error **on** the $(n-1)/d_k$ prediction — for i.i.d.
-  isotropic unit keys; recall collapses past $n \approx d_k$.
-- Correlated keys (dotted) revive the cancelled cross terms: width
-  stops helping.
-- Capacity is set by **width**, not time: interference comes from other
-  stored pairs.
+**Running example:** 64-dimensional random keys; the Penn Treebank
+results (minGRU 3.2, Mamba 2.95).
 :::
 
-::: {.slide title="Forms of Decay"}
-Three one-line fixes for crowding, on the same recurrence:
+::: {.slide title="Two Orthogonal Keys Store Two Values Exactly"}
+$\mathbf{k}_1 = (1, 0)$, $\mathbf{k}_2 = (0, 1)$, values 3 and 5:
 
-$$\gamma\,\mathbf{S}_{t-1} \;\to\; a_t\,\mathbf{S}_{t-1} \;\to\; \mathrm{diag}(\boldsymbol{\alpha}_t)\,\mathbf{S}_{t-1}\;\; (+\;\mathbf{k}_t\mathbf{v}_t^\top)$$
+$$\mathbf{S} = 3\,\mathbf{k}_1^\top + 5\,\mathbf{k}_2^\top = (3, 5), \qquad \mathbf{S}\mathbf{k}_1 = 3,\ \mathbf{S}\mathbf{k}_2 = 5$$
 
-![](../img/mdl-modernrnn-decay-ladder.svg){width=88%}
+Add $\mathbf{k}_3 = (1, 1)/\sqrt 2$ with value 7:
+$\mathbf{S} \approx (7.95, 9.95)$, and $\mathbf{S}\mathbf{k}_1 = 7.95$.
 
-- RetNet: fixed $\gamma$ per head · Mamba-2: input-dependent scalar ·
-  GLA / RWKV-6: input-dependent diagonal — the selective SSM per channel.
+::: {.d2l-note .warn}
+Two dimensions hold two pairs exactly; the third leaks into both.
+:::
 :::
 
-::: {.slide title="Unroll it: the state-space duality"}
-$$\mathbf{Y} = \big(\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top\big)\,\mathbf{V}, \qquad L_{ts} = a_t\, a_{t-1} \cdots a_{s+1}$$
+::: {.slide title="A Matrix Memory Is Linear Attention, Read Left to Right"}
+$$\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t\mathbf{k}_t^\top,\qquad
+\mathbf{y}_t = \mathbf{S}_t\mathbf{q}_t = \sum_{s \le t} (\mathbf{k}_s^\top\mathbf{q}_t)\,\mathbf{v}_s$$
 
-. . .
-
-**The pivot**: all $a_t = 1$ → $\mathbf{L}$ *is the causal mask*. A gated
-linear recurrence is attention with a learned, decaying mask (SSD, Dao &
-Gu 2024).
-
-- Quadratic mode: materialize $\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top$ — attention.
-- Linear mode: sweep the sum left to right — the recurrence, state $\mathbf{S}_t$.
-- Two contraction orders, one computation — an identity for this
-  scalar-gated (1-semiseparable) *linear* family, not softmax attention.
+- Right side: causal attention without the softmax.
+- Left side: a recurrence with a $d_v \times d_k$ state, constant cost per token.
+- Softmax's $\exp(\mathbf{k}^\top\mathbf{q})$ does not fold into a matrix;
+  a product of features does.
 :::
 
-::: {.slide title="The duality, asserted"}
-@matrix-state-the-state-space-duality-2
+::: {.slide title="Every Other Pair Leaks Into a Read"}
+$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top\mathbf{k}_j)\,\mathbf{v}_i$$
 
-- Agreement to float rounding; at $a_t = 1$ the dual reduces **exactly** to
-  ch. 10's masked linear attention.
-- This computation verifies the recurrent form of masked linear attention
-  introduced in Chapter 10.
+For random unit keys and unit values:
+
+$$\mathbb{E}\,\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\|^2 = \frac{n - 1}{d_k}$$
+
+Cross terms vanish in expectation; each of the $n - 1$ squared overlaps
+averages $1/d_k$.
 :::
 
-::: {.slide title="Chunked: mostly matmul, a little scan"}
-Partition the semiseparable matrix into chunks of $C$ tokens:
-
-![](../img/mdl-modernrnn-semiseparable.svg){width=70%}
-
-- Diagonal blocks: $C \times C$ masked-attention **matmuls**, all parallel.
-- Off-diagonal blocks: rank $\le d_k$ — a $d_k \times d_v$ state passed
-  chunk to chunk, $T/C$ steps.
+::: {.slide title="The Measured Error Sits on (n − 1)/d_k"}
+@!matrix-state-interference-2
 :::
 
-::: {.slide title="A dozen lines, verified"}
-`segsum` builds the within-chunk mask in log space ($-\infty$ above the
-diagonal, before any exponential):
+::: {.slide title="Check: When Does Interference Equal the Signal?"}
+$d_k = 64$, random unit keys and values.
 
-@matrix-state-chunked-computation-mostly-matmul-a-little-scan-1
+1. At which $n$ is the expected squared error 1?
+2. And for correlated keys?
+
+::: {.fragment .fade-up}
+1. $(n - 1)/64 = 1$: $n = 65$. Recall is still 0.96 at 128 pairs with a
+   codebook decoder, 0.72 at 256.
+2. Sooner: with a shared direction of weight 0.5, half of 64 pairs are lost.
+:::
 :::
 
-::: {.slide title="Measured Time--Memory Tradeoff"}
-$C$ interpolates recurrence ($C = 1$) → quadratic dual ($C = T$):
+::: {.slide title="Decay Keeps About the Last 1/(1 − a) Pairs"}
+$$\mathbf{S}_t = a_t\,\mathbf{S}_{t-1} + \mathbf{v}_t\mathbf{k}_t^\top$$
 
-@!matrix-state-chunked-computation-mostly-matmul-a-little-scan-2
-
-- Token loop: launch-bound, slowest by far. Dual: matmul-fast, $T^2$ memory.
-- Chunked: matmul speed at an order of magnitude less memory.
+- Constant $a$: the weights $a^k$ of old pairs sum to $1/(1 - a)$:
+  10 pairs for $a = 0.9$, 100 for $a = 0.99$.
+- Fixed per head (RetNet), from the input per head (Mamba-2), per key
+  coordinate (GLA).
+- Mamba: value $\boldsymbol{\Delta}_t \odot \mathbf{x}_t$, key
+  $\mathbf{B}_t$, query $\mathbf{C}_t$, a decay per entry.
 :::
 
-::: {.slide title="Measured Hardware Performance"}
-- Tensor cores run **matmuls**; Mamba-1's scan is elementwise
-  (bandwidth-bound). Mamba-2's scalar transition buys the chunked form.
-- The paper's empirical scaling observation: training several times
-  faster **and** state size $N$: 16 → 64–256 at little extra wall
-  clock — the capacity law says what that buys.
-- Frontier: Mamba-3 upgrades the discretization itself (trapezoidal rule,
-  complex states, MIMO).
+::: {.slide title="A Decayed Recurrence Is Attention With a Decaying Mask"}
+$$\mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\,\mathbf{V},\qquad L_{ts} = a_{s+1}\cdots a_t \ (s \le t),\ 0 \textrm{ otherwise}$$
 
-. . .
-
-@!matrix-state-what-the-hardware-bought
-
-The flat line vs. the growing cache — the hybrid-design problem of the
-chapter's last section.
+- All $a_t = 1$: $\mathbf{L}$ is the causal mask.
+- Form $\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top$ first: attention,
+  quadratic in $T$, parallel.
+- Sum from the left: the recurrence, linear in $T$, sequential.
 :::
 
-::: {.slide title="Model Family"}
-| model | transition $\mathbf{D}_t$ | write |
-|:--|:--|:--|
-| linear attention | $\mathbf{I}$ | add $\phi(\mathbf{k}_t)\mathbf{v}_t^\top$ |
-| RetNet | $\gamma\,\mathbf{I}$ fixed | add $\mathbf{k}_t\mathbf{v}_t^\top$ |
-| Mamba | input-dep. diagonal (per channel) | add $\Delta_t u_t \mathbf{B}_t$ |
-| GLA / RWKV-6 | input-dep. diagonal | add $\mathbf{k}_t\mathbf{v}_t^\top$ |
-| Mamba-2 | input-dep. scalar | add $\mathbf{k}_t\mathbf{v}_t^\top$ |
-| mLSTM | scalar exp-gates + normalizer | add $i_t\,\mathbf{k}_t\mathbf{v}_t^\top$ |
+::: {.slide title="Two Orders of One Product Agree"}
+@!matrix-state-unrolling-with-decay-3
 
-. . .
-
-Three lineages — attention, SSMs, RNNs — one recurrence. Read the write
-column: **every row only adds**.
+The dual form builds $\mathbf{L}$ from cumulative sums of $\log a_t$ and
+masks before exponentiating. At $T = 4096$ it stores 64 MB per head.
 :::
 
-::: {.slide title="mLSTM: the one that kept the normalizer"}
-$$\mathbf{S}_t = f_t \mathbf{S}_{t-1} + i_t \mathbf{k}_t\mathbf{v}_t^\top, \quad \mathbf{z}_t = f_t \mathbf{z}_{t-1} + i_t \mathbf{k}_t, \quad \mathbf{o}_t = \frac{\mathbf{S}_t^\top \mathbf{q}_t}{\max(|\mathbf{z}_t^\top \mathbf{q}_t|, 1)}$$
+::: {.slide title="Chunks: Attention Inside, a Scan Across"}
+::: {.cols .vc}
+::: {.col}
+1. **Within** chunks of $m$: the dual form, all chunks at once.
+2. **Across:** each chunk's writes, decayed to its end; a scan over
+   $T/m$ matrix states.
+3. **Read:** each step reads the state at its chunk's start.
 
-Exponential gates $i_t = \exp(\tilde{i}_t)$ overflow float32 in a few dozen
-steps; the fix is online softmax's running max, carried as a state $m_t$.
-
-@matrix-state-the-one-that-kept-the-normalizer
+Mostly matrix products; memory $T \times m$ instead of $T \times T$.
 :::
 
-::: {.slide title="Limitations of Additive Writes"}
-- Decay manages crowding; it does not cure it — forgetting is
-  indiscriminate, interference is specific.
-- Not one model in the table can **edit** what it wrote about
-  $\mathbf{k}$ without decaying everything else.
+::: {.col .fig .big}
+![](../img/mdl-modernrnn-semiseparable.svg)
+:::
+:::
+:::
 
-. . .
+::: {.slide title="Chunks Run as Fast as the Dual Form"}
+@!matrix-state-chunked-computation-3
 
-The fast weight programmers' repair (1990s → 2021): *read what the memory
-holds at $\mathbf{k}_t$, write only the correction.*
+One sequence of 4,096 steps, $d_k = d_v = 64$. The recurrence is two
+orders of magnitude slower.
+:::
 
-The next section introduces DeltaNet, whose corrective write can edit an
-existing binding.
+::: {.slide title="Gated Linear Attention: One Layer of This Memory"}
+- Per head: query, key, value, and a decay gate $\sigma(\mathbf{w}^\top\mathbf{x}_t + b)$.
+- Gate biases start at memories of 4 to 256 steps; unit-length keys and
+  queries; outputs normalized.
+- Four heads of 32: a state of 4,096 numbers per layer.
+
+@!matrix-state-language-modeling-2
+:::
+
+::: {.slide title="Recap"}
+| | write | transition | computed as |
+|---|---|---|---|
+| linear attention | $\mathbf{v}\mathbf{k}^\top$ | $\mathbf{S}$ | recurrence or masked attention |
+| Mamba-2, gated linear attention | $\mathbf{v}\mathbf{k}^\top$ | $a_t\mathbf{S}$ | chunks |
+| GLA (per key coordinate) | $\mathbf{v}\mathbf{k}^\top$ | $\mathbf{S}\,\textrm{diag}(\boldsymbol{\alpha}_t)$ | chunks |
+
+Read error $(n-1)/d_k$; decay keeps about $1/(1-a)$ pairs.
+
+**Next:** every write adds. `rate = 0.05`, then `rate = 0.07`: the memory
+returns their sum.
 :::

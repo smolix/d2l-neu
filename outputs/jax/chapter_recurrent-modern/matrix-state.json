@@ -4,125 +4,139 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:d11cd2a1ce828ce5cbd0639c41f542bebf2a02a9ee781a054a4c59e41dc19114",
     "max_inline_bytes": 0
   },
   "cells": {
-    "matrix-state-the-matrix-state-from-linear-attention-to-mamba-2": {
-      "code_fingerprint": "sha256:a212ef780e2fff536002f69f1f4a93f3c51733d6025bbb7359f8cedbe49e4309",
+    "matrix-state-matrix-state-recurrences": {
+      "code_fingerprint": "sha256:e2f5a4e059f0d2c6e3e9d43d8c211a2af86bafb0229d73e047ee49885aa79705",
       "kind": "text",
       "outputs": []
     },
-    "matrix-state-what-the-memory-costs": {
-      "code_fingerprint": "sha256:1e493e06b2879097959c161bb555d2a4a1b025798e36dd6c8edbfc94f31f144c",
-      "kind": "asset",
+    "matrix-state-interference-1": {
+      "code_fingerprint": "sha256:557ec404d4c97fedbdc418750097b8f418b02445bedc6bd496881c2949ecab9f",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-interference-2": {
+      "code_fingerprint": "sha256:8ca4c4e5834dbde67b69776f4ed1bbd290b4a80f7828e0208a0d62056ce0fc94",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "recall at n =        8   16   32   64  128  256  512\ndₖ = 32           1.00 0.99 0.96 0.74 0.39 0.16 0.07\ndₖ = 64           1.00 1.00 1.00 1.00 0.96 0.72 0.37\ndₖ = 128          1.00 1.00 1.00 1.00 1.00 1.00 0.94\ndₖ = 64, ρ = 0.5  1.00 0.99 0.83 0.49 0.21 0.07 0.03\n"
+        },
         {
           "type": "display_data",
-          "mime": "image/png",
-          "asset": "matrix-state/matrix-state-what-the-memory-costs-1.png",
-          "bytes": 57201,
-          "sha256": "sha256:7bc8b1ca13bb8122ac6b39fd47be8ae2b1e144d791f2774f316ff29c886ae778"
+          "mime": "image/svg+xml",
+          "asset": "matrix-state/matrix-state-interference-2-1.svg",
+          "bytes": 45692,
+          "sha256": "sha256:95432a279425281936f404e02f9a7f93ccf9ca2f47aa07658284001ee8787387"
         }
       ]
     },
-    "matrix-state-the-state-space-duality-1": {
-      "code_fingerprint": "sha256:ffd5b1867186209b18c0675c2368514ac908a69ce14f651577524cd7ca24f746",
+    "matrix-state-unrolling-with-decay-1": {
+      "code_fingerprint": "sha256:eeada0d22e47870db3d872715b2804110b411a3b3510ddba1cdfacf55e421ae6",
       "kind": "text",
       "outputs": []
     },
-    "matrix-state-the-state-space-duality-2": {
-      "code_fingerprint": "sha256:c03bb3995db456047ac43566465245e071018bbc633cba7a08254098fd03a869",
+    "matrix-state-unrolling-with-decay-2": {
+      "code_fingerprint": "sha256:1e24c3b94eaec228d874e69bfa39463db4db582491a9f2770e3b8e538ccb6073",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-unrolling-with-decay-3": {
+      "code_fingerprint": "sha256:c45243d22390dc20567e7bffc8b1d02272f6b9704bfc5cac2683fabb8ab57dbf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "relative deviation, dual vs recurrence: 4.14e-06\na_t = 1, deviation from masked linear attention: 0.00e+00\n"
+          "text": "relative deviation: 2.4e-06\n"
         }
       ]
     },
-    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-1": {
-      "code_fingerprint": "sha256:180cf195f1adae2991faa15863a0cd7c8f623d96c7489dc3b8218cd14356c327",
+    "matrix-state-chunked-computation-1": {
+      "code_fingerprint": "sha256:b2615e4d7e89ea50f30ffec90b25d1479aa2c43be029b99d3275811aeaa38041",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-chunked-computation-2": {
+      "code_fingerprint": "sha256:7f5286ec176e8cc3d7607f421e5aa85fd5ce0a73150756896f31ff8a857b703d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size   16: relative deviation 2.13e-07\n"
+          "text": "chunk size  16: relative deviation 3.1e-07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size   64: relative deviation 3.84e-07\n"
+          "text": "chunk size  64: relative deviation 3.9e-07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size  256: relative deviation 1.54e-06\n"
+          "text": "chunk size 256: relative deviation 9.4e-07\n"
         }
       ]
     },
-    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-2": {
-      "code_fingerprint": "sha256:cb50e2c2503912bac82450400b349ef62145f48fd28411d90b05e4cb33bc1aec",
+    "matrix-state-chunked-computation-3": {
+      "code_fingerprint": "sha256:827461c365c49df5d1eee3ebf4121cf1177e6fc710a62adda42baabe063a36fc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "           form  time (ms)  temp (MiB)\n"
+          "text": "recurrence        49.27 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     recurrence      48.58         0.0\n"
+          "text": "dual               0.23 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   chunked (16)       2.78         1.1\n"
+          "text": "chunks of 16       0.15 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   chunked (64)       1.29         1.1\n"
+          "text": "chunks of 64       0.15 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  chunked (256)       2.42         5.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " chunked (1024)       2.08        21.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " quadratic dual       2.41        68.0\n(NVIDIA GeForce RTX 4090, float32, jax 0.10.2; teaching implementations, all forms compiled)\n"
+          "text": "chunks of 256      0.18 ms\n"
         }
       ]
     },
-    "matrix-state-what-the-hardware-bought": {
-      "code_fingerprint": "sha256:16bba49fd0ee9f4a15ec57dee42ecdf40b4c1aff28f5a00f8b5a168d2dc265a4",
+    "matrix-state-the-layer-1": {
+      "code_fingerprint": "sha256:eec3fb41fbe5f2f04557ead52fdb74486021f1c9a1cef8c5ce91c5e37797d795",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "per layer, per sequence, fp16:\nmatrix state, one 64x64 head:      0.01 MiB, constant\nMamba-2 2.7B, SSM 655,360 + conv 15,360 elements: 1.28 MiB, constant\nGQA KV cache at n =     4,096:    16.00 MiB and growing\nGQA KV cache at n =   131,072:   512.00 MiB and growing\nGQA KV cache at n = 1,048,576:  4096.00 MiB and growing\n"
-        }
-      ]
+      "outputs": []
     },
-    "matrix-state-the-one-that-kept-the-normalizer": {
-      "code_fingerprint": "sha256:c5ee56a28542a90a94cd3ac4b10d44bd96c823bf93ad4b9ab72aa6d461ba0fbd",
+    "matrix-state-the-layer-2": {
+      "code_fingerprint": "sha256:eab0e04f137640d4061ddaaaf919020470778f069840687b4f7c0154d157dc5a",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-language-modeling-1": {
+      "code_fingerprint": "sha256:ba595d77bc92a4ebbfb06b68c67fa9f33b7cc3f03a532ad11dde6f019cf4ec42",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-language-modeling-2": {
+      "code_fingerprint": "sha256:4a0e9612025d0f985f77e33ba243e0a9497913399a37dc55e39ffcd5f96d20f4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "float32 unstabilized: first non-finite output at step 47\nfloat32 stabilized vs float64: relative deviation 1.38e-06\n"
+          "text": "gated linear attention perplexity: 3.27\n"
         }
       ]
     }

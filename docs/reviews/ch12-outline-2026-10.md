@@ -8,6 +8,26 @@ chapter notes in `reviews/writing-review-2026-10.md`,
 stored results checked against the prose, are the basis for the decisions
 below.
 
+## 0. Decisions (2026-10-23, Alex)
+
+1. `ssm.md` is **not** split: linear recurrences, parallel scans, the minGRU,
+   state space models, and S4D form one longer section (12.2). The sample
+   `linear-recurrence.md` was merged into it; sections are renumbered
+   12.1 lstm, 12.2 ssm, 12.3 mamba, 12.4 matrix-state, 12.5 deltanet,
+   12.6 hybrids, 12.7 further-reading.
+2. `test-time-regression.md` is folded into the delta-rule section
+   ("Memory as Regression") and deleted.
+3. A Further Reading notebook (`further-reading.md`) is added.
+4. One AdamW recipe for every language model. Because *The Time Machine*
+   (65k BPE tokens, 170k characters) is memorized by every model within a
+   few hundred AdamW steps, the shared task is **character-level Penn
+   Treebank** (5.1M training characters, standard validation split), windows
+   of 128, batch 64, AdamW lr 0.002, weight decay 0.01, 3,000 steps, through
+   `d2l.fit_lm` and `d2l.SeqLM` (two residual blocks of width 128).
+5. Sequential Fashion-MNIST is replaced by a long-range recall task.
+
+Slides are rebuilt once the whole chapter is done.
+
 ## 1. What the Chapter Teaches
 
 A model that reads a sequence has to remember what it has read. A transformer

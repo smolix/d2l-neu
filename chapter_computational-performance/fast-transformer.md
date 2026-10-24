@@ -1544,9 +1544,9 @@ model, one configuration at a time.
        Explain the trend by the terms of :eqref:`eq_dp_cost`.
 :end_tab:
 
-11. [extended] **Another model.** ●● Apply the method of this section
-   to `MambaLM` of :numref:`subsec_capstone` or to `d2l.ViT` of
-   :numref:`sec_vision-transformer`.
+8. [extended] **Another model.** ●● Apply the method of this section
+    to the Mamba language model of :numref:`subsec_mamba-lm` or to `d2l.ViT`
+    of :numref:`sec_vision-transformer`.
     1. Write a benchmark contract in the form of the table in
        :numref:`subsec_ft-subject`, profile the baseline, and classify its
        limiting regime in the terms of :numref:`subsec_perf-regimes` before

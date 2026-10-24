@@ -1939,76 +1939,6 @@ class ViT(d2l.Classifier):
             X = blk(X)
         return self.head(X[:, 0])
 
-class LSTMScratch(nnx.Module):
-    """The long short-term memory (LSTM) cell implemented from scratch.
-
-    Defined in :numref:`sec_lstm`"""
-    def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
-        self.sigma = sigma
-        init_weight = lambda shape: nnx.Param(
-            rngs.params.normal(shape) * sigma)
-        triple = lambda: (
-            init_weight((num_inputs, num_hiddens)),
-            init_weight((num_hiddens, num_hiddens)),
-            nnx.Param(jnp.zeros(num_hiddens)))
-        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
-        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
-        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
-        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
-
-    def __call__(self, inputs, H_C=None):
-        def scan_fn(H_C, X):
-            H, C = H_C
-            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
-                            d2l.matmul(H, self.W_hi) + self.b_i)
-            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
-                            d2l.matmul(H, self.W_hf) + self.b_f)
-            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
-                            d2l.matmul(H, self.W_ho) + self.b_o)
-            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
-                               d2l.matmul(H, self.W_hc) + self.b_c)
-            C = F * C + I * C_tilde
-            H = O * d2l.tanh(C)
-            return (H, C), H  # Return (carry, per-step output)
-
-        if H_C is None:
-            batch_size = inputs.shape[1]
-            H_C = (jnp.zeros((batch_size, self.num_hiddens)),
-                   jnp.zeros((batch_size, self.num_hiddens)))
-        H_C, outputs = jax.lax.scan(scan_fn, H_C, inputs)
-        return outputs, H_C
-
-class LSTM(d2l.RNN):
-    """The multilayer LSTM model implemented with high-level APIs.
-
-    Defined in :numref:`sec_lstm`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
-                 rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None \
-            else rngs
-        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
-        self.num_layers = num_layers
-        self.rnns = nnx.List([
-            nnx.RNN(nnx.LSTMCell(num_inputs if i == 0 else num_hiddens,
-                                 num_hiddens, rngs=rngs),
-                    time_major=True, return_carry=True, rngs=rngs)
-            for i in range(num_layers)])
-        self.dropouts = nnx.List([
-            nnx.Dropout(dropout, rngs=rngs) for _ in range(num_layers - 1)])
-
-    def __call__(self, inputs, H_C=None):
-        outputs = inputs
-        H_C = [None] * self.num_layers if H_C is None else H_C
-        new_H_C = []
-        for i, rnn in enumerate(self.rnns):
-            carry, outputs = rnn(outputs, initial_carry=H_C[i])
-            new_H_C.append(carry)
-            if i < self.num_layers - 1:
-                outputs = self.dropouts[i](outputs)
-        return outputs, new_H_C
-
 class GRU(d2l.RNN):
     """The multilayer GRU model implemented with high-level APIs.
 
@@ -2038,220 +1968,422 @@ class GRU(d2l.RNN):
                 outputs = self.dropouts[i](outputs)
         return outputs, new_state
 
-def linear_scan(a, b, h0=None):
-    """All states of h_t = a_t * h_{t-1} + b_t, by a parallel scan.
+def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
+                   blank_fillers=False):
+    """A symbol, then num_steps - 1 fillers; the target is the symbol.
 
-    Defined in :numref:`sec_linear-recurrence`"""
-    if h0 is not None:  # Fold the initial state into the first step
-        b = b.at[0].add(a[0] * h0)
-    def combine(earlier, later):
-        (a1, b1), (a2, b2) = earlier, later
-        return a1 * a2, a2 * b1 + b2
-    return jax.lax.associative_scan(combine, (a, b))[1]
+    Defined in :numref:`sec_gru`"""
+    Y = rng.integers(0, num_symbols, batch_size)
+    X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
+    if blank_fillers:  # The same filler token at every step
+        X[:] = num_symbols
+    X[:, 0] = Y
+    return X, Y
 
-class MinGRU(nnx.Module):
-    """The minimal GRU: its gates and candidate read only the input.
+class RecallModel(nnx.Module):
+    """Embedding, a sequence layer, and a classifier of its last output.
 
-    Defined in :numref:`sec_linear-recurrence`"""
-    def __init__(self, num_inputs, num_hiddens, *, rngs):
-        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
-        self.W_z = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)  # Decay
-        self.W_h = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
+    Defined in :numref:`sec_gru`"""
+    def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
+                 num_outputs=8, *, rngs):
+        self.embedding = nnx.Embed(vocab_size, num_inputs, rngs=rngs,
+            embedding_init=nnx.initializers.normal(num_inputs ** -0.5))
+        self.layer = layer
+        self.head = nnx.Linear(num_hiddens, num_outputs, rngs=rngs)
 
-    def __call__(self, inputs, H=None):
-        Z = jax.nn.sigmoid(self.W_z(inputs))  # (num_steps, batch, num_hiddens)
-        H_tilde = jnp.tanh(self.W_h(inputs))
-        outputs = linear_scan(Z, (1 - Z) * H_tilde, H)
-        return outputs, outputs[-1]
+    def __call__(self, X):
+        # A one-hot product instead of a lookup: on GPUs, the gradient of a
+        # lookup is slow when a few tokens make up most of the input
+        E = jax.nn.one_hot(X, self.embedding.num_embeddings) @ \
+            self.embedding.embedding[...]
+        return self.head(self.layer(E)[:, -1])
+
+@nnx.jit
+def recall_step(model, optimizer, X, Y):
+    """One Adam step on the cross-entropy of the classifier's output.
+
+    Defined in :numref:`sec_gru`"""
+    def loss_fn(model):
+        return optax.softmax_cross_entropy_with_integer_labels(
+            model(X), Y).mean()
+    loss, grads = nnx.value_and_grad(loss_fn)(model)
+    optimizer.update(model, grads)
+    return loss
+
+@nnx.jit
+def recall_predict(model, X):
+    """The predicted class of every sequence.
+
+    Defined in :numref:`sec_gru`"""
+    return model(X).argmax(-1)
+
+def train_delayed_recall(model, num_steps, blank_fillers=False,
+                         num_updates=1500, lr=3e-3):
+    """Train on fresh batches of delayed recall; return the test accuracy.
+
+    Defined in :numref:`sec_gru`"""
+    rng = np.random.default_rng(0)
+    batch = lambda rng, n: delayed_recall(rng, n, num_steps,
+                                          blank_fillers=blank_fillers)
+    optimizer = nnx.Optimizer(model, optax.chain(
+        optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
+    step = nnx.cached_partial(recall_step, model, optimizer)  # Compile once
+    for _ in range(num_updates):
+        step(*batch(rng, 128))
+    X, Y = batch(np.random.default_rng(1), 2048)
+    return float((recall_predict(model, X) == Y).mean())
+
+class SeqLM(nnx.Module):
+    """A language model of residual blocks: a sequence mixer, then an MLP.
+
+    Defined in :numref:`sec_gru`"""
+    def __init__(self, vocab_size, num_hiddens, mixers, *, rngs):
+        d = num_hiddens
+        self.embedding = nnx.Embed(vocab_size, d, rngs=rngs,  # Unit length
+            embedding_init=nnx.initializers.normal(d ** -0.5))
+        self.mixers = nnx.List(mixers)
+        self.norms = nnx.List([nnx.LayerNorm(d, rngs=rngs) for _ in mixers])
+        self.mlps = nnx.List([nnx.Sequential(
+            nnx.LayerNorm(d, rngs=rngs), nnx.Linear(d, 4 * d, rngs=rngs),
+            nnx.gelu, nnx.Linear(4 * d, d, rngs=rngs)) for _ in mixers])
+        self.norm = nnx.LayerNorm(d, rngs=rngs)
+        self.head = nnx.Linear(d, vocab_size, rngs=rngs)
+
+    def __call__(self, X):
+        # A one-hot product instead of a lookup, as in RecallModel
+        H = jax.nn.one_hot(X, self.embedding.num_embeddings) @ \
+            self.embedding.embedding[...]  # (batch_size, num_steps, d)
+        for norm, mixer, mlp in zip(self.norms, self.mixers, self.mlps):
+            H = H + mixer(norm(H))
+            H = H + mlp(H)
+        return self.head(self.norm(H))  # (batch_size, num_steps, vocab_size)
+
+class PennTreebank(d2l.DataModule):
+    """Character-level Penn Treebank, cut into windows of num_steps.
+
+    Defined in :numref:`sec_gru`"""
+    def __init__(self, batch_size, num_steps):
+        super().__init__()
+        self.save_hyperparameters()
+        data_dir = d2l.download_extract('ptb')
+        def read(split):
+            with open(os.path.join(data_dir, f'ptb.{split}.txt')) as f:
+                return f.read()
+        train, val = read('train'), read('valid')
+        self.vocab = d2l.Vocab(list(train))
+        self.train, self.val = self.windows(train), self.windows(val)
+
+    def windows(self, text):
+        corpus = d2l.tensor(self.vocab[list(text)])
+        n = (len(corpus) - 1) // self.num_steps * self.num_steps
+        return (corpus[:n].reshape(-1, self.num_steps),  # Inputs
+                corpus[1:n + 1].reshape(-1, self.num_steps))  # Next tokens
+
+    def get_dataloader(self, train):
+        return self.get_tensorloader(self.train if train else self.val, train)
+
+@nnx.jit
+def lm_loss_sum(model, X, Y):
+    """Summed next-token cross-entropy of a batch.
+
+    Defined in :numref:`sec_gru`"""
+    return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum()
 
 def lm_perplexity(model, data):
     """Perplexity of a language model on the validation set of `data`.
 
-    Defined in :numref:`sec_linear-recurrence`"""
+    Defined in :numref:`sec_gru`"""
+    loss_sum = nnx.cached_partial(lm_loss_sum, model)  # Compile once, reuse
     total, count = 0, 0
     for X, Y in data.val_dataloader():
-        losses = model.loss(model(X), Y, averaged=False)
-        total, count = total + losses.sum(), count + losses.size
+        total += loss_sum(X, Y)
+        count += Y.size
     return math.exp(float(total) / count)
 
-def scan_combine(prev, cur):
-    a_prev, b_prev = prev
-    a_cur, b_cur = cur
-    return a_prev * a_cur, a_cur * b_prev + b_cur
+def fit_lm(model, data, num_steps=3000, lr=2e-3):
+    """Train with AdamW for num_steps steps; return validation perplexity.
 
-def associative_scan(a, b):
-    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0.
+    Defined in :numref:`sec_gru`"""
+    optimizer = nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.01),
+                              wrt=nnx.Param)
+    d2l.train_lm(model, data, optimizer, num_steps)
+    return lm_perplexity(model, data)
+
+def linear_scan(a, b, h0=None):
+    """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
 
     Defined in :numref:`sec_ssm`"""
-    return jax.lax.associative_scan(scan_combine, (a, b))[1]
+    a = jnp.broadcast_to(a, b.shape)  # Decays may omit axes; broadcast them
+    if h0 is not None:  # Fold the initial state into the first step
+        b = b.at[:, 0].add(a[:, 0] * h0)
+    def combine(earlier, later):
+        (a1, b1), (a2, b2) = earlier, later
+        return a1 * a2, a2 * b1 + b2
+    return jax.lax.associative_scan(combine, (a, b), axis=1)[1]
+
+class MinGRU(nnx.Module):
+    """The minimal GRU: its gate and candidate read only the input.
+
+    Defined in :numref:`sec_ssm`"""
+    def __init__(self, num_inputs, num_hiddens, *, rngs):
+        self.W_z = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)  # Decay
+        self.W_h = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
+
+    def coefficients(self, X):
+        """Decays a_t and writes b_t of the linear recurrence."""
+        Z = jax.nn.sigmoid(self.W_z(X))
+        return Z, (1 - Z) * jnp.tanh(self.W_h(X))
+
+    def __call__(self, X):  # X: (batch_size, num_steps, num_inputs)
+        return linear_scan(*self.coefficients(X))
 
 class S4D(nnx.Module):
-    """A diagonal state space layer: one SSM per feature channel.
+    """A diagonal state space layer: N states per channel, fixed dynamics.
 
     Defined in :numref:`sec_ssm`"""
-    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1,
-                 rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        H, N = num_hiddens, num_states
-        self.log_a = nnx.Param(jnp.tile(jnp.log(jnp.arange(1., N + 1)),
-                                        (H, 1)))
-        self.log_dt = nnx.Param(
-            rngs.params.uniform((H, 1)) * math.log(dt_max / dt_min)
+    def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1,
+                 *, rngs):
+        d, N = num_hiddens, num_states
+        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        self.log_neg_rate = nnx.Param(
+            jnp.tile(jnp.log(jnp.arange(1., N + 1)), (d, 1)))
+        self.log_dt = nnx.Param(  # Log-uniform in [dt_min, dt_max]
+            rngs.params.uniform((d, 1)) * math.log(dt_max / dt_min)
             + math.log(dt_min))
-        self.C = nnx.Param(rngs.params.normal((H, N)) / math.sqrt(N))
-        self.D = nnx.Param(jnp.ones(H))
+        self.C = nnx.Param(rngs.params.normal((d, N)) / math.sqrt(N))
+        self.D = nnx.Param(jnp.ones(d))
 
-    def __call__(self, u):                   # (num_steps, batch, num_hiddens)
-        a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
-        da = jnp.exp(self.log_dt[...]) * a
-        a_bar = jnp.exp(da)
-        b_bar = jnp.expm1(da) / a                     # ZOH with B = 1
-        a_elems = jnp.broadcast_to(                   # Same at every step
-            a_bar[None, None], (u.shape[0], 1, *a_bar.shape))
-        b_elems = b_bar * u[..., None]                # (T, batch, H, N)
-        x = associative_scan(a_elems, b_elems)
-        return (x * self.C).sum(-1) + self.D * u
+    def discretize(self):
+        """Zero-order hold with B = 1: decays a_bar and input weights b_bar."""
+        rate = -jnp.exp(self.log_neg_rate[...])  # (d, N)
+        dt_rate = jnp.exp(self.log_dt[...]) * rate
+        return jnp.exp(dt_rate), jnp.expm1(dt_rate) / rate
 
-    def step(self, u, x=None):
-        """Advance one token: u is (batch, H); x is the (batch, H, N) state.
+    def __call__(self, X):  # X: (batch_size, num_steps, d)
+        T = X.shape[1]
+        a_bar, b_bar = self.discretize()
+        powers = a_bar[..., None] ** jnp.arange(T)
+        K = ((self.C[...] * b_bar)[..., None] * powers).sum(1)  # Kernel, (d, T)
+        Y = jnp.fft.irfft(jnp.fft.rfft(X, n=2 * T, axis=1) *
+                          jnp.fft.rfft(K.T, n=2 * T, axis=0), n=2 * T, axis=1)
+        return Y[:, :T] + self.D[...] * X
 
-        Defined in :numref:`sec_ssm`"""
-        a = -jnp.exp(self.log_a[...])
-        da = jnp.exp(self.log_dt[...]) * a
-        a_bar = jnp.exp(da)                               # Same ZOH as forward
-        b_bar = jnp.expm1(da) / a
-        if x is None:
-            x = jnp.zeros((*u.shape, a_bar.shape[-1]))
-        x = a_bar * x + b_bar * u[..., None]              # One recurrence step
-        return (x * self.C).sum(-1) + self.D * u, x
-
-class S4DBlock(nnx.Module):
-    def __init__(self, num_hiddens, num_states, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.ln1 = nnx.LayerNorm(num_hiddens, rngs=rngs)
-        self.ssm = S4D(num_hiddens, num_states, rngs=rngs)
-        self.ln2 = nnx.LayerNorm(num_hiddens, rngs=rngs)
-        self.W_v = nnx.Linear(num_hiddens, 2 * num_hiddens, rngs=rngs)
-        self.W_g = nnx.Linear(num_hiddens, 2 * num_hiddens, rngs=rngs)
-        self.W_o = nnx.Linear(2 * num_hiddens, num_hiddens, rngs=rngs)
-
-    def __call__(self, X):
-        X = X + self.ssm(self.ln1(X))
-        Y = self.ln2(X)
-        return X + self.W_o(self.W_v(Y) * jax.nn.sigmoid(self.W_g(Y)))
-
-    def step(self, X, x=None):
-        """Advance the block one token; only the SSM carries state.
+    def step(self, x, h):
+        """One step: x is (batch_size, d); the state h is (batch_size, d, N).
 
         Defined in :numref:`sec_ssm`"""
-        y, x = self.ssm.step(self.ln1(X), x)
-        X = X + y
-        Y = self.ln2(X)
-        return X + self.W_o(self.W_v(Y) * jax.nn.sigmoid(self.W_g(Y))), x
+        a_bar, b_bar = self.discretize()
+        h = a_bar * h + b_bar * x[..., None]
+        return (h * self.C[...]).sum(-1) + self.D[...] * x, h
+
+def init_timescales(layer, key, dt_min=1e-3, dt_max=1e-1):
+    """Start a minGRU's gates at the decays exp(-dt) of S4D.
+
+    Defined in :numref:`sec_ssm`"""
+    dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(
+        key, layer.W_z.bias.shape)
+    layer.W_z.bias[...] = -jnp.log(jnp.expm1(dt))  # sigmoid(b) = exp(-dt)
+    return layer
+
+@jax.custom_vjp
+def _adjoint_scan(a, b):
+    return d2l.linear_scan(a, b)
+
+def adjoint_scan_forward(a, b):
+    """Forward pass: the states, and what the backward pass needs.
+
+    Defined in :numref:`sec_mamba`"""
+    h = d2l.linear_scan(a, b)
+    return h, (a, h)
+
+def adjoint_scan_backward(saved, grad_h):
+    """Backward pass: gradients of a and b by a scan in reverse time.
+
+    Defined in :numref:`sec_mamba`"""
+    a, h = saved
+    # g_t = grad_h_t + a_{t+1} g_{t+1}: a linear recurrence from the end
+    a_next = jnp.concatenate([a[:, 1:], jnp.ones_like(a[:, :1])], 1)
+    g = d2l.linear_scan(a_next[:, ::-1], grad_h[:, ::-1])[:, ::-1]
+    h_prev = jnp.concatenate([jnp.zeros_like(h[:, :1]), h[:, :-1]], 1)
+    return g * h_prev, g
+
+_adjoint_scan.defvjp(adjoint_scan_forward, adjoint_scan_backward)
+
+def adjoint_scan(a, b):  #@save
+    """All states of h_t = a_t * h_{t-1} + b_t, differentiated by a scan.
+
+    Defined in :numref:`sec_mamba`"""
+    return _adjoint_scan(jnp.broadcast_to(a, b.shape), b)
 
 class SelectiveSSM(nnx.Module):
-    """A diagonal SSM whose step size, input matrix, and read-out are
+    """A diagonal SSM whose step sizes and write and read vectors depend on
 
     Defined in :numref:`sec_mamba`"""
-    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1,
-                 rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        H, N, R = num_hiddens, num_states, max(2, num_hiddens // 16)
-        self.log_a = nnx.Param(jnp.tile(jnp.log(jnp.arange(1., N + 1)),
-                                        (H, 1)))
-        self.W_dt = nnx.Sequential(
-            nnx.Linear(H, R, rngs=rngs),
-            nnx.Linear(R, H, use_bias=False, rngs=rngs))
-        dt = jnp.exp(rngs.params.uniform((H,)) * math.log(dt_max / dt_min)
-                     + math.log(dt_min))
-        self.b_dt = nnx.Param(dt + jnp.log(-jnp.expm1(-dt)))
-        self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)
-        self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)
+    def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1,
+                 *, rngs):
+        H, N = num_channels, num_states
+        self.log_neg_rate = nnx.Param(  # Rates -1, ..., -N in every channel
+            jnp.tile(jnp.log(jnp.arange(1., N + 1)), (H, 1)))
+        def dt_bias(key, shape, dtype=jnp.float32):  # softplus(bias) = dt
+            dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(key, shape)
+            return (dt + jnp.log(-jnp.expm1(-dt))).astype(dtype)
+        self.W_dt = nnx.Linear(H, H, kernel_init=nnx.initializers.zeros,
+                               bias_init=dt_bias, rngs=rngs)  # Start at dt
+        self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Write vector
+        self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read vector
         self.D = nnx.Param(jnp.ones(H))
 
-    def __call__(self, u):                   # (num_steps, batch, num_hiddens)
-        a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
-        dt = jax.nn.softplus(self.W_dt(u) + self.b_dt)    # (T, batch, H)
-        B, C = self.W_B(u), self.W_C(u)               # (T, batch, N)
-        a_bar = jnp.exp(dt[..., None] * a)            # (T, batch, H, N)
-        b_bar = (dt * u)[..., None] * B[..., None, :]
-        x = associative_scan(a_bar, b_bar)
-        return (x * C[..., None, :]).sum(-1) + self.D * u
-
-    def step(self, u, x=None):
-        """Advance one token: u is (batch, H); x is the (batch, H, N) state.
+    def coefficients(self, U):
+        """Log-decays and writes, each of shape (batch_size, T, H, N).
 
         Defined in :numref:`sec_mamba`"""
-        a = -jnp.exp(self.log_a[...])
-        dt = jax.nn.softplus(self.W_dt(u) + self.b_dt)    # (batch, H)
-        B, C = self.W_B(u), self.W_C(u)                   # (batch, N)
-        a_bar = jnp.exp(dt[..., None] * a)                # (batch, H, N)
-        b_bar = (dt * u)[..., None] * B[..., None, :]
-        x = b_bar if x is None else a_bar * x + b_bar
-        return (x * C[..., None, :]).sum(-1) + self.D * u, x
+        dt = jax.nn.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
+        log_a = dt[..., None] * -jnp.exp(self.log_neg_rate[...])
+        return log_a, (dt * U)[..., None] * self.W_B(U)[..., None, :]
 
-class MambaBlock(nnx.Module):
-    """Conv + SiLU + selective SSM, gated, inside a pre-norm residual.
-
-    Defined in :numref:`sec_mamba`"""
-    def __init__(self, num_hiddens, num_states=4, expand=2, conv_width=4,
-                 dropout=0, rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        d = expand * num_hiddens
-        self.ln = nnx.LayerNorm(num_hiddens, rngs=rngs)
-        self.W_in = nnx.Linear(num_hiddens, 2 * d, rngs=rngs)
-        self.conv = nnx.Conv(d, d, kernel_size=(conv_width,),
-                             feature_group_count=d, padding='CAUSAL',
-                             rngs=rngs)
-        self.ssm = SelectiveSSM(d, num_states, rngs=rngs)
-        self.W_out = nnx.Linear(d, num_hiddens, rngs=rngs)
-        self.drop = nnx.Dropout(dropout, rngs=rngs)
-
-    def __call__(self, X):                   # (num_steps, batch, num_hiddens)
-        u, gate = jnp.split(self.W_in(self.ln(X)), 2, axis=-1)
-        u = jnp.swapaxes(self.conv(jnp.swapaxes(u, 0, 1)), 0, 1)
-        y = self.ssm(jax.nn.silu(u))
-        return X + self.drop(self.W_out(y * jax.nn.silu(gate)))
-
-    def step(self, X, state=None):
-        """Advance one token, carrying (conv buffer, SSM state).
-
-        Defined in :numref:`sec_mamba`"""
-        u, gate = jnp.split(self.W_in(self.ln(X)), 2, axis=-1)
-        if state is None:
-            state = (jnp.zeros((u.shape[0], self.conv.kernel_size[0],
-                                u.shape[-1])), None)
-        buf, x = state
-        buf = jnp.concatenate([buf[:, 1:], u[:, None]], 1)    # Roll the window
-        u = (buf * self.conv.kernel[:, 0]).sum(1) + self.conv.bias
-        y, x = self.ssm.step(jax.nn.silu(u), x)
-        return X + self.drop(self.W_out(y * jax.nn.silu(gate))), (buf, x)
+    def __call__(self, U):  # U: (batch_size, num_steps, num_channels)
+        log_a, b = self.coefficients(U)
+        H = adjoint_scan(jnp.exp(log_a), b)  # States, (batch_size, T, H, N)
+        return (H * self.W_C(U)[..., None, :]).sum(-1) + self.D[...] * U
 
 class Mamba(nnx.Module):
-    """A stack of Mamba blocks with the recurrent-cell interface.
+    """The Mamba layer: a gated selective SSM between two projections.
 
     Defined in :numref:`sec_mamba`"""
-    def __init__(self, num_inputs, num_blocks=2, num_states=4, dropout=0,
-                 rngs=None):
-        rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.num_inputs = self.num_hiddens = num_inputs
-        self.blocks = nnx.Sequential(*[
-            MambaBlock(num_inputs, num_states, dropout=dropout, rngs=rngs)
-            for _ in range(num_blocks)])
-        self.ln = nnx.LayerNorm(num_inputs, rngs=rngs)
+    def __init__(self, num_hiddens, num_states=16, expand=2, conv_width=4,
+                 *, rngs, **ssm_args):
+        H = expand * num_hiddens
+        self.W_in = nnx.Linear(num_hiddens, 2 * H, rngs=rngs)
+        self.conv = nnx.Conv(H, H, (conv_width,), feature_group_count=H,
+                             padding=[(conv_width - 1, 0)], rngs=rngs)  # Causal
+        self.ssm = SelectiveSSM(H, num_states, rngs=rngs, **ssm_args)
+        self.W_out = nnx.Linear(H, num_hiddens, rngs=rngs)
 
-    def __call__(self, X, state=None):
-        return self.ln(self.blocks(X)), None
+    def ssm_input(self, X):
+        """The input of the SSM and the gate branch."""
+        U, Z = jnp.split(self.W_in(X), 2, -1)
+        return jax.nn.silu(self.conv(U)), Z
 
-    def step(self, X, state=None):
-        """Advance the stack one token: X is (batch, d); one state per block.
+    def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
+        U, Z = self.ssm_input(X)
+        return self.W_out(self.ssm(U) * jax.nn.silu(Z))
 
-        Defined in :numref:`sec_mamba`"""
-        state = ([None] * len(self.blocks.layers) if state is None
-                 else list(state))
-        for i, blk in enumerate(self.blocks.layers):
-            X, state[i] = blk.step(X, state[i])
-        return self.ln(X), state
+def decay_mask(log_a):
+    """L[t, s] = a_{s+1} * ... * a_t for s <= t, and 0 for s > t.
+
+    Defined in :numref:`sec_matrix-state`"""
+    cum = log_a.cumsum(-1)
+    log_L = cum[..., :, None] - cum[..., None, :]  # Sum of log a over (s, t]
+    causal = jnp.tril(jnp.ones(log_L.shape[-2:], dtype=bool))
+    return jnp.exp(jnp.where(causal, log_L, -jnp.inf))
+
+def chunked_linear_attention(Q, K, V, log_a, chunk_size):
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
+
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
+
+    Defined in :numref:`sec_matrix-state`"""
+    B, T, m = Q.shape[0], Q.shape[1], chunk_size
+    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
+    log_a = log_a.reshape(B, T // m, m)
+    # 1. Within chunks: the dual form on every chunk at once
+    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    # 2. Across chunks: the writes of each chunk, decayed to its end, and
+    #    a scan over chunks for the state at every chunk's end
+    cum = log_a.cumsum(-1)
+    writes = (V * jnp.exp(cum[..., -1:] - cum)[..., None]).mT @ K
+    S = d2l.linear_scan(jnp.exp(cum[..., -1:, None]), writes)
+    S = jnp.concatenate([jnp.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At start
+    # 3. Every step reads the state at its chunk's start, decayed to it
+    Y = Y + jnp.exp(cum)[..., None] * (Q @ S.mT)
+    return Y.reshape(B, T, -1)
+
+class GatedLinearAttention(nnx.Module):
+    """Multi-head linear attention whose memory decays by an input gate.
+
+    Defined in :numref:`sec_matrix-state`"""
+    def __init__(self, num_hiddens, num_heads, chunk_size=64, *, rngs):
+        self.num_heads, self.chunk_size = num_heads, chunk_size
+        self.W_qkv = nnx.Linear(num_hiddens, 3 * num_hiddens, use_bias=False,
+                                rngs=rngs)
+        tau = jnp.logspace(math.log10(4), math.log10(256), num_heads)
+        self.W_a = nnx.Linear(num_hiddens, num_heads, rngs=rngs,  # Decay gate
+                              bias_init=lambda *_: jnp.log(tau - 1))
+        self.W_o = nnx.Linear(num_hiddens, num_hiddens, use_bias=False,
+                              rngs=rngs)
+
+    def split_heads(self, Z):
+        """(batch_size, T, num_heads * e) -> (batch_size * num_heads, T, e)."""
+        B, T, _ = Z.shape
+        return Z.reshape(B, T, self.num_heads, -1).swapaxes(1, 2).reshape(
+            B * self.num_heads, T, -1)
+
+    def memory(self, X, Q, K, V, log_a):
+        """Outputs of the decayed matrix memory of every head."""
+        return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
+
+    def __call__(self, X):  # X: (batch_size, num_steps, num_hiddens)
+        B, T, d = X.shape
+        Q, K, V = (self.split_heads(Z) for Z in jnp.split(self.W_qkv(X), 3, -1))
+        unit = lambda Z: Z / jnp.linalg.norm(Z, axis=-1, keepdims=True)
+        Q, K = unit(Q), unit(K)  # Unit length
+        log_a = self.split_heads(jax.nn.log_sigmoid(self.W_a(X)))[..., 0]
+        Y = self.memory(X, Q, K, V, log_a)  # (batch_size * num_heads, T, d / h)
+        Y = Y / jnp.sqrt((Y ** 2).mean(-1, keepdims=True) + 1e-6)
+        Y = Y.reshape(B, self.num_heads, T, -1).swapaxes(1, 2).reshape(B, T, d)
+        return self.W_o(Y)
+
+def delta_rule_writes(K, V, beta, log_a):
+    """W and Z with corrected values U = W - Z S_0^T, for every chunk.
+
+    K: (..., m, d_k); V: (..., m, d_v); beta, log_a: (..., m)
+
+    Defined in :numref:`sec_deltanet`"""
+    L = d2l.decay_mask(log_a)  # Products of decays within the chunk
+    gamma = jnp.exp(log_a.cumsum(-1))[..., None]  # Decay since start
+    beta = beta[..., None]
+    M = jnp.eye(K.shape[-2]) + (
+        beta * jnp.tril(L, -1) * (K @ K.mT))  # Lower triangular
+    W = jax.scipy.linalg.solve_triangular(M, beta * V, lower=True)
+    Z = jax.scipy.linalg.solve_triangular(M, beta * gamma * K, lower=True)
+    return W, Z
+
+def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
+    """Outputs y_t = S_t q_t of the gated delta rule, computed in chunks.
+
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v);
+    beta, log_a: (batch_size, T)
+
+    Defined in :numref:`sec_deltanet`"""
+    B, T, m = Q.shape[0], Q.shape[1], chunk_size
+    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
+    beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
+    W, Z = delta_rule_writes(K, V, beta, log_a)
+    L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
+    def chunk(S, c):  # c: one chunk of every sequence
+        Q_c, K_c, W_c, Z_c, L_c, cum_c = c
+        U = W_c - Z_c @ S.mT  # Corrected values
+        read_past = jnp.exp(cum_c)[..., None] * (Q_c @ S.mT)
+        O = read_past + (L_c * (Q_c @ K_c.mT)) @ U
+        to_end = jnp.exp(cum_c[:, -1:] - cum_c)[..., None]
+        S = (jnp.exp(cum_c[:, -1, None, None]) * S
+             + (U * to_end).mT @ K_c)
+        return S, O
+    S = jnp.zeros((B, V.shape[-1], K.shape[-1]))
+    chunks = tuple(X.swapaxes(0, 1) for X in (Q, K, W, Z, L, cum))
+    return jax.lax.scan(chunk, S, chunks)[1].swapaxes(0, 1).reshape(B, T, -1)
+
+class GatedDeltaNet(d2l.GatedLinearAttention):
+    """Gated linear attention whose memory is written by the delta rule.
+
+    Defined in :numref:`sec_deltanet`"""
+    def __init__(self, num_hiddens, num_heads, chunk_size=64, *, rngs):
+        super().__init__(num_hiddens, num_heads, chunk_size, rngs=rngs)
+        self.W_beta = nnx.Linear(num_hiddens, num_heads, rngs=rngs)
+
+    def memory(self, X, Q, K, V, log_a):
+        beta = self.split_heads(jax.nn.sigmoid(self.W_beta(X)))[..., 0]
+        return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
 
 class Benchmark:
     """Time a callable: warmup, then device-synchronized average seconds.

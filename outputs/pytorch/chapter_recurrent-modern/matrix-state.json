@@ -4,95 +4,109 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0b92965b6edea7f7a9774fe1454bcf5d97917bed08e8e8d3b9e0adb033ed3dae",
+    "d2l_lib_fingerprint": "sha256:4e4213c9bbce29cc5781d01c7df60f6ac4ca26919ea9c861491cac377a158ff5",
     "max_inline_bytes": 0
   },
   "cells": {
-    "matrix-state-the-matrix-state-from-linear-attention-to-mamba-2": {
-      "code_fingerprint": "sha256:ae8080b4e22fbee0bbe12da95f359132e9408353e40da137aaacca0ff50cbcc3",
+    "matrix-state-matrix-state-recurrences": {
+      "code_fingerprint": "sha256:1706f65bbb74d1baaff055c683ad66c5f9a9778ff600edd2353777f376dc991b",
       "kind": "text",
       "outputs": []
     },
-    "matrix-state-what-the-memory-costs": {
-      "code_fingerprint": "sha256:3c2714b4ddc42d2dcdddb2c793f1434ce9f6a57d5f12cb0432bf7b32c9daa3a5",
-      "kind": "asset",
+    "matrix-state-interference-1": {
+      "code_fingerprint": "sha256:8625bb900dd5e5112a20adb918ce48cc89449215ad148d124b6fd528a168d965",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-interference-2": {
+      "code_fingerprint": "sha256:09c572da633129eb66a94600baff7341b7b3c5d54f2fffa2d0279af6995cc6bc",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "recall at n =        8   16   32   64  128  256  512\ndₖ = 32           1.00 0.99 0.96 0.74 0.39 0.16 0.07\ndₖ = 64           1.00 1.00 1.00 1.00 0.96 0.72 0.37\ndₖ = 128          1.00 1.00 1.00 1.00 1.00 1.00 0.94\ndₖ = 64, ρ = 0.5  1.00 0.99 0.83 0.49 0.21 0.07 0.03\n"
+        },
         {
           "type": "display_data",
-          "mime": "image/png",
-          "asset": "matrix-state/matrix-state-what-the-memory-costs-1.png",
-          "bytes": 57201,
-          "sha256": "sha256:7bc8b1ca13bb8122ac6b39fd47be8ae2b1e144d791f2774f316ff29c886ae778"
+          "mime": "image/svg+xml",
+          "asset": "matrix-state/matrix-state-interference-2-1.svg",
+          "bytes": 45692,
+          "sha256": "sha256:486b3d31b2b32bcfc950e0054a600f865d1cd8514957b996d965461c65815be8"
         }
       ]
     },
-    "matrix-state-the-state-space-duality-1": {
-      "code_fingerprint": "sha256:dd7a7cb80af96b0153a7327962f2e8d4f6a1d381e388f51f09912a2e2a079677",
+    "matrix-state-unrolling-with-decay-1": {
+      "code_fingerprint": "sha256:110d767e3bbb8ed31880134f197a95c74dfd2102bae068fca3da5107297242b6",
       "kind": "text",
       "outputs": []
     },
-    "matrix-state-the-state-space-duality-2": {
-      "code_fingerprint": "sha256:49126fe027ec1853b9284c6a955c88d24f00e8241cbcedeb5d2ab3ec26802f4f",
+    "matrix-state-unrolling-with-decay-2": {
+      "code_fingerprint": "sha256:d1f8995945e1e4384197be0510f45efdb7a8e15e56efd0d01bd9ffb55ec6397c",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-unrolling-with-decay-3": {
+      "code_fingerprint": "sha256:59117ee89faecb6ded1e6488c371295f8ab4770b6ea6e16ab01c0fb24e73177e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "relative deviation, dual vs recurrence: 5.11e-06\na_t = 1, deviation from masked linear attention: 0.00e+00\n"
+          "text": "relative deviation: 1.5e-06\n"
         }
       ]
     },
-    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-1": {
-      "code_fingerprint": "sha256:2f385335f562152c587519af18dd5aa01842f2ee225d72f664bba0822e0ee732",
+    "matrix-state-chunked-computation-1": {
+      "code_fingerprint": "sha256:05bbb3fc17c399e11fafd84e1b3701d7f790ba6e5191757d0d1c15b9b62981b6",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-chunked-computation-2": {
+      "code_fingerprint": "sha256:7d058c8a38a474dece3439d2a0d36eb44be6798186d701a2011562ce5974d25a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size   16: relative deviation 1.92e-07\nchunk size   64: relative deviation 6.81e-07\nchunk size  256: relative deviation 1.75e-06\n"
+          "text": "chunk size  16: relative deviation 2.5e-07\nchunk size  64: relative deviation 2.5e-07\nchunk size 256: relative deviation 8.8e-07\n"
         }
       ]
     },
-    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-2": {
-      "code_fingerprint": "sha256:2cded9204e0546a84fcfa128bf252edf33f6bf407759356833caeaa6bab38d13",
+    "matrix-state-chunked-computation-3": {
+      "code_fingerprint": "sha256:25d638b48d67826d3587550eae7478d2628146cf6fbef5e29fd95103045fd921",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "           form  time (ms)  peak (MiB)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "     recurrence     275.33         3.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   chunked (16)      36.08         1.5\n   chunked (64)       9.59         3.0\n  chunked (256)       2.96        12.0\n chunked (1024)       0.93        48.0\n quadratic dual       1.94       272.0\n(NVIDIA GeForce RTX 4090, float32, torch 2.11.0+cu128; teaching implementations, warmed up)\n"
+          "text": "recurrence       236.71 ms\ndual               1.02 ms\nchunks of 16       1.11 ms\nchunks of 64       0.95 ms\nchunks of 256      0.79 ms\n"
         }
       ]
     },
-    "matrix-state-what-the-hardware-bought": {
-      "code_fingerprint": "sha256:38f4e1bd0aa3a0eee52f41e9b40bf7a63010979b2fd0fe0c0f2a647197020940",
+    "matrix-state-the-layer-1": {
+      "code_fingerprint": "sha256:be862a7e5717bd4301f4e94ccc391fbf56f1ebc3d2b1dee947a6304f523621e3",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "per layer, per sequence, fp16:\nmatrix state, one 64x64 head:      0.01 MiB, constant\nMamba-2 2.7B, SSM 655,360 + conv 15,360 elements: 1.28 MiB, constant\nGQA KV cache at n =     4,096:    16.00 MiB and growing\nGQA KV cache at n =   131,072:   512.00 MiB and growing\nGQA KV cache at n = 1,048,576:  4096.00 MiB and growing\n"
-        }
-      ]
+      "outputs": []
     },
-    "matrix-state-the-one-that-kept-the-normalizer": {
-      "code_fingerprint": "sha256:8a2d9558d4b4ba0b0ae850902abc872c7d06dce8e2757bec6cf2233fc2c0f61f",
+    "matrix-state-the-layer-2": {
+      "code_fingerprint": "sha256:70d5c0c683be64bca1967ecddc39f1e9f3a532e6d67cc049f12ad9bc2e0671bb",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-language-modeling-1": {
+      "code_fingerprint": "sha256:6c84ea8fa279c6d30eb815aa77e02c5926ae08d73f0a18cfd388a4b9e80d87b0",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-language-modeling-2": {
+      "code_fingerprint": "sha256:4f243566ba4b21f2a068488e359c94b86917301c086258a32c55e96571d2abae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "float32 unstabilized: first non-finite output at step 49\nfloat32 stabilized vs float64: relative deviation 2.02e-05\n"
+          "text": "gated linear attention perplexity: 3.24\n"
         }
       ]
     }

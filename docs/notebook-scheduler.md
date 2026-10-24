@@ -106,7 +106,12 @@ Resolution order in `notebook_resource`:
 2. `(fw, rel) ∈ HEAVY_GPU_NOTEBOOKS` → `('gpu', 1, n)` — memory-heavy on a single
    GPU.
 3. `uses_gpu` (the `file_uses_gpu` keyword heuristic, which also checks sibling
-   frameworks) → `('gpu', 1, 1)`.
+   frameworks) → `('gpu', 1, 1)`. The keywords are `runtime_env.GPU_KEYWORDS`
+   (`try_gpu`, `cuda`, `GPU`, `Trainer(`, `d2l.train`, `fit_lm(`, ...); a new
+   training helper whose name matches none of them must be added there, or
+   its notebooks are scheduled on a CPU slot.
+   The single-notebook path (`make -B _notebooks/<fw>/<ch>/<f>.executed`)
+   applies the same heuristic.
 4. otherwise → `('cpu',)`.
 
 ### The marking tables (`tools/runtime_env.py`)

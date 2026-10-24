@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
-"""Generate the illustrative figures for the "Modern Recurrent Neural
-Networks" chapter (``chapter_recurrent-modern``) in the one shared house style
-defined in ``gen_mdl_figures.py``.
+"""Generate the illustrative figures for the "State Space Models" chapter
+(``chapter_recurrent-modern``) in the one shared house style defined in
+``gen_mdl_figures.py``.
 
-Thirteen figures across the chapter's four sections:
+Fifteen figures, by section:
 
-  * 10.1 "Gated Recurrent Networks" (sec_lstm) -- four restyled carryovers,
-    written under new house-style names so the old hand-drawn SVGs
-    (``img/lstm-0..3.svg``, ``img/gru-1..3.svg``, ``img/deep-rnn.svg``,
-    ``img/birnn.svg``) are left untouched: the LSTM memory cell, the GRU
-    cell, a two-layer deep RNN unrolled over three steps, and a
-    bidirectional RNN.
-  * 10.2 "Encoder-Decoder Models for Sequence Transduction" (sec_encoder-
-    decoder) -- the encoder-decoder interface, and the unrolled RNN
-    encoder-decoder with teacher forcing (kept because the attention
-    chapter references it).
-  * 10.3 "Linear Recurrence and State Space Models" (sec_ssm) -- the
-    parallel prefix (doubling) scan, the three equivalent views of a linear
-    state space model (continuous-time ODE, unrolled recurrence,
-    convolution), a computed HiPPO-LegS online compression/reconstruction,
-    and the S4D residual block.
-  * 10.4 "Selective State Space Models" (sec_mamba) -- the selective
-    copying task, the Mamba block, and the chapter's "three answers"
-    summary strip (gate it / linearize it / select it).
+  * "Gated Recurrent Networks" (sec_lstm) -- the LSTM memory cell and the GRU
+    cell (house-style redraws of the old ``img/lstm-*.svg``/``gru-*.svg``),
+    plus a two-layer deep RNN and a bidirectional RNN (currently
+    unreferenced).
+  * "Linear Recurrences and State Space Models" (sec_ssm) -- the parallel
+    prefix (doubling) scan, zero-order-hold discretization (rate lambda ->
+    decay exp(Delta lambda), and the half-life per step size), and the three
+    equivalent views of a linear SSM; the computed HiPPO-LegS reconstruction
+    and the S4D residual block are kept but currently unreferenced.
+  * "Selective State Space Models" (sec_mamba) -- the selective copying task,
+    the Mamba block, and the "three answers" summary strip.
+  * "Matrix-State Recurrences" -- figures live in
+    ``gen_mdl_ssm_family_figures.py`` (decay ladder, semiseparable mask).
+  * "The Delta Rule" -- the geometry of the transition I - beta k k^T.
+  * "Hybrid Architectures" -- figures live in
+    ``gen_mdl_ssm_hybrids_figures.py`` (decode-state cache, layer stacks).
+
+The encoder-decoder interface and the unrolled RNN encoder-decoder (teacher
+forcing) are also written here; the seq2seq section of the language-models
+part references them.
 
 The notebooks / prose reference the generated files with no drawing code (like
 the slide SVGs).  Figures that show a *computed* result (e.g. the HiPPO
@@ -53,11 +55,12 @@ TEAL = fl.T.TEAL.base      # hidden/cell-state role (guide §4.3)
 PURPLE = fl.T.PURPLE.base  # parameter / second-state role
 RED = fl.T.RED.base
 
-from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch
+from matplotlib.patches import (Circle, ConnectionPatch, FancyArrowPatch,
+                                FancyBboxPatch)
 
 
 # =========================================================================== #
-# 10.1 "Gated Recurrent Networks" (sec_lstm): the LSTM cell, the GRU cell, a  #
+# "Gated Recurrent Networks" (sec_lstm): the LSTM cell, the GRU cell, a       #
 # two-layer deep RNN, and a bidirectional RNN.                               #
 #                                                                              #
 # Four restyled carryovers, written under new house-style names so the old   #
@@ -65,8 +68,8 @@ from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch
 # ``img/deep-rnn.svg``, ``img/birnn.svg``) are left untouched.               #
 #                                                                              #
 # Colour code (consistent across the four figures and with the ch. 9         #
-# diagrams): inputs X blue, hidden states H teal (the state role), the LSTM  #
-# cell state C orange, outputs O orange, computation heads and elementwise   #
+# diagrams): inputs x blue, hidden states h teal (the state role), the LSTM  #
+# cell state c orange, outputs o orange, computation heads and elementwise   #
 # ops grey.                                                                  #
 # =========================================================================== #
 
@@ -110,24 +113,24 @@ def fig_lstm_cell():
 
     y_cell, y_head, y_bus = 5.05, 2.75, 1.15
     xF, xI, xC, xO = 3.0, 4.5, 5.7, 7.6   # head x-positions
-    x_prod = (xI + xC) / 2                # I * C~ product column
+    x_prod = (xI + xC) / 2                # i * c~ product column
     x_out = 8.75                          # output-gate column
     bw, bh = 1.25, 0.85                   # state-box size
     hw, hh = 0.82, 0.72                   # head-box size
     r = 0.26                              # op-circle radius
 
     # --- cell-state conveyor (top) ------------------------------------------
-    _box(ax, 1.05, y_cell, bw, bh, r"$\mathbf{C}_{t-1}$", ORANGE)
+    _box(ax, 1.05, y_cell, bw, bh, r"$\mathbf{c}_{t-1}$", ORANGE)
     _op(ax, xF, y_cell, r"$\odot$")
     _op(ax, x_prod, y_cell, r"$+$")
-    _box(ax, 9.9, y_cell, bw, bh, r"$\mathbf{C}_{t}$", ORANGE)
+    _box(ax, 9.9, y_cell, bw, bh, r"$\mathbf{c}_{t}$", ORANGE)
     fl.arrow(ax, (1.05 + bw / 2, y_cell), (xF - r, y_cell), color=GRAY)
     fl.arrow(ax, (xF + r, y_cell), (x_prod - r, y_cell), color=GRAY)
     fl.arrow(ax, (x_prod + r, y_cell), (9.9 - bw / 2, y_cell), color=GRAY)
 
-    # --- input bus (bottom): H_{t-1} and X_t feed all four heads -------------
-    _box(ax, 1.05, 1.85, bw, bh, r"$\mathbf{H}_{t-1}$", TEAL)
-    _box(ax, 1.05, 0.55, bw, bh, r"$\mathbf{X}_{t}$", BLUE)
+    # --- input bus (bottom): h_{t-1} and x_t feed all four heads -------------
+    _box(ax, 1.05, 1.85, bw, bh, r"$\mathbf{h}_{t-1}$", TEAL)
+    _box(ax, 1.05, 0.55, bw, bh, r"$\mathbf{x}_{t}$", BLUE)
     xj = 2.15                              # bus junction
     fl.arrow(ax, (1.05 + bw / 2, 1.85), (xj - 0.03, y_bus + 0.04), color=GRAY,
              lw=1.8, mut=12)
@@ -149,7 +152,7 @@ def fig_lstm_cell():
 
     # forget gate: straight up into the conveyor product
     fl.arrow(ax, (xF, y_head + hh / 2), (xF, y_cell - r), color=GRAY)
-    ax.text(xF - 0.18, (y_head + y_cell) / 2 + 0.12, r"$\mathbf{F}_t$",
+    ax.text(xF - 0.18, (y_head + y_cell) / 2 + 0.12, r"$\mathbf{f}_t$",
             ha="right", va="center", fontsize=14, color="black")
 
     # input gate and input node: join at an elementwise product, then up into +
@@ -160,12 +163,12 @@ def fig_lstm_cell():
     fl.arrow(ax, (xC, y_head + hh / 2), (x_prod + r * 0.72, y_ic - r * 0.72),
              color=GRAY, lw=1.8, mut=12)
     fl.arrow(ax, (x_prod, y_ic + r), (x_prod, y_cell - r), color=GRAY)
-    ax.text(xI - 0.42, y_head + hh / 2 + 0.34, r"$\mathbf{I}_t$", ha="center",
+    ax.text(xI - 0.42, y_head + hh / 2 + 0.34, r"$\mathbf{i}_t$", ha="center",
             va="center", fontsize=14, color="black")
-    ax.text(xC + 0.52, y_head + hh / 2 + 0.34, r"$\tilde{\mathbf{C}}_t$",
+    ax.text(xC + 0.52, y_head + hh / 2 + 0.34, r"$\tilde{\mathbf{c}}_t$",
             ha="center", va="center", fontsize=14, color="black")
 
-    # output branch: conveyor -> tanh -> (x) with output gate -> H_t
+    # output branch: conveyor -> tanh -> (x) with output gate -> h_t
     y_tanh = 3.95
     _dot(ax, x_out, y_cell)
     _head(ax, x_out, y_tanh, r"$\tanh$", w=hw + 0.28, h=0.62, fontsize=12)
@@ -176,10 +179,10 @@ def fig_lstm_cell():
              lw=1.8, mut=12)
     fl.arrow(ax, (xO + hw / 2, y_head), (x_out - r, y_head), color=GRAY,
              lw=1.8, mut=12)
-    ax.text((xO + hw / 2 + x_out - r) / 2, y_head - 0.46, r"$\mathbf{O}_t$",
+    ax.text((xO + hw / 2 + x_out - r) / 2, y_head - 0.46, r"$\mathbf{o}_t$",
             ha="center", va="center", fontsize=14, color="black")
     fl.arrow(ax, (x_out + r, y_head), (9.9 - bw / 2, y_head), color=GRAY)
-    _box(ax, 9.9, y_head, bw, bh, r"$\mathbf{H}_{t}$", TEAL)
+    _box(ax, 9.9, y_head, bw, bh, r"$\mathbf{h}_{t}$", TEAL)
 
     ax.set_xlim(0.2, 10.75)
     ax.set_ylim(0.0, 5.7)
@@ -193,24 +196,24 @@ def fig_gru_cell():
 
     y_conv, y_head, y_bus = 4.85, 2.45, 0.95
     xR, xZ, xH = 2.75, 4.15, 6.05          # head x-positions
-    x_blend = xH                            # (1 - Z) * candidate column sits
+    x_blend = xH                            # (1 - z) * candidate column sits
     bw, bh = 1.25, 0.85                     # directly above the tanh head
     hw, hh = 0.82, 0.72
     r = 0.26
 
-    # --- state conveyor (top): H_{t-1} -> (x Z) -> (+) -> H_t -----------------
-    _box(ax, 1.0, y_conv, bw, bh, r"$\mathbf{H}_{t-1}$", TEAL)
+    # --- state conveyor (top): h_{t-1} -> (x z) -> (+) -> h_t -----------------
+    _box(ax, 1.0, y_conv, bw, bh, r"$\mathbf{h}_{t-1}$", TEAL)
     _op(ax, xZ, y_conv, r"$\odot$")
     _op(ax, x_blend, y_conv, r"$+$")
-    _box(ax, 8.55, y_conv, bw, bh, r"$\mathbf{H}_{t}$", TEAL)
+    _box(ax, 8.55, y_conv, bw, bh, r"$\mathbf{h}_{t}$", TEAL)
     fl.arrow(ax, (1.0 + bw / 2, y_conv), (xZ - r, y_conv), color=GRAY)
     fl.arrow(ax, (xZ + r, y_conv), (x_blend - r, y_conv), color=GRAY)
     fl.arrow(ax, (x_blend + r, y_conv), (8.55 - bw / 2, y_conv), color=GRAY)
 
-    # --- input wiring (as in the GRU equations): the X bus feeds all three
-    # heads; H_{t-1} joins only the two GATE risers on its own bus above it
-    # (the candidate tanh sees the previous state only through R_t (x) H).
-    _box(ax, 1.0, 0.95, bw, bh, r"$\mathbf{X}_{t}$", BLUE)
+    # --- input wiring (as in the GRU equations): the x bus feeds all three
+    # heads; h_{t-1} joins only the two GATE risers on its own bus above it
+    # (the candidate tanh sees the previous state only through r_t (x) h).
+    _box(ax, 1.0, 0.95, bw, bh, r"$\mathbf{x}_{t}$", BLUE)
     xj = 1.0 + bw / 2
     ax.plot([xj, xH], [y_bus, y_bus], color=GRAY, lw=1.8, zorder=1)
     for x in (xR, xZ, xH):
@@ -218,8 +221,8 @@ def fig_gru_cell():
             _dot(ax, x, y_bus)
         fl.arrow(ax, (x, y_bus), (x, y_head - hh / 2), color=GRAY, lw=1.8,
                  mut=12)
-    # H_{t-1} tap: down from the conveyor, right along its own bus, joining
-    # the R and Z risers at the dots
+    # h_{t-1} tap: down from the conveyor, right along its own bus, joining
+    # the r and z risers at the dots
     x_tap, y_h = 1.95, 1.55
     _dot(ax, x_tap, y_conv)
     ax.plot([x_tap, x_tap], [y_conv, y_h], color=GRAY, lw=1.8, zorder=1)
@@ -237,9 +240,9 @@ def fig_gru_cell():
     _op(ax, xR, y_rH, r"$\odot$")
     fl.arrow(ax, (xR, y_head + hh / 2), (xR, y_rH - r), color=GRAY, lw=1.8,
              mut=12)
-    ax.text(xR - 0.18, (y_head + y_rH) / 2 - 0.02, r"$\mathbf{R}_t$",
+    ax.text(xR - 0.18, (y_head + y_rH) / 2 - 0.02, r"$\mathbf{r}_t$",
             ha="right", va="center", fontsize=14, color="black")
-    # H_{t-1} into the reset product from the conveyor above
+    # h_{t-1} into the reset product from the conveyor above
     fl.arrow(ax, (x_tap, y_conv - 0.0), (xR - r * 0.72, y_rH + r * 0.72),
              color=GRAY, lw=1.8, mut=12)
     # gated state into the candidate head (one clean perpendicular wire
@@ -249,15 +252,15 @@ def fig_gru_cell():
              lw=1.8, mut=12)
 
     # update gate up into the conveyor product, with a branch carrying the
-    # complement (1 - Z) horizontally into the blend product
+    # complement (1 - z) horizontally into the blend product
     fl.arrow(ax, (xZ, y_head + hh / 2), (xZ, y_conv - r), color=GRAY)
-    ax.text(xZ - 0.18, 3.9, r"$\mathbf{Z}_t$", ha="right", va="center",
+    ax.text(xZ - 0.18, 3.9, r"$\mathbf{z}_t$", ha="right", va="center",
             fontsize=14, color="black")
     y_c = 3.6
     _op(ax, x_blend, y_c, r"$\odot$")
     _dot(ax, xZ, y_c)
     fl.arrow(ax, (xZ, y_c), (x_blend - r, y_c), color=GRAY, lw=1.8, mut=12)
-    ax.text((xZ + x_blend - r) / 2, y_c + 0.23, r"$1-\mathbf{Z}_t$",
+    ax.text((xZ + x_blend - r) / 2, y_c + 0.23, r"$1-\mathbf{z}_t$",
             ha="center", va="bottom", fontsize=13, color="black")
 
     # candidate straight up into the blend product, then on up into the
@@ -267,7 +270,7 @@ def fig_gru_cell():
     fl.arrow(ax, (x_blend, y_c + r), (x_blend, y_conv - r), color=GRAY,
              lw=1.8, mut=12)
     ax.text(xH + 0.2, (y_head + hh / 2 + y_c - r) / 2,
-            r"$\tilde{\mathbf{H}}_t$", ha="left", va="center",
+            r"$\tilde{\mathbf{h}}_t$", ha="left", va="center",
             fontsize=14, color="black")
 
     ax.set_xlim(0.15, 9.35)
@@ -379,14 +382,13 @@ def fig_bi_rnn():
 
 
 # =========================================================================== #
-# 10.2 "Encoder-Decoder Models for Sequence Transduction" (sec_encoder-      #
-# decoder): the encoder-decoder interface, and the unrolled RNN encoder-     #
-# decoder with teacher forcing (kept because the attention chapter           #
-# references it).                                                            #
+# Encoder-decoder figures (referenced from the language-models part's        #
+# seq2seq section): the encoder-decoder interface, and the unrolled RNN      #
+# encoder-decoder with teacher forcing.                                      #
 #                                                                              #
 # ``_ed_box``/``_ed_arrow`` are this section's own box/arrow helpers -- they #
 # take separate face/edge colours and an explicit zorder respectively, both  #
-# unlike the ``_box``/``fl.arrow`` used by 10.1/10.3/10.4, so they keep      #
+# unlike the ``_box``/``fl.arrow`` used elsewhere in this file, so they keep #
 # distinct, section-prefixed names rather than colliding on ``_box``.        #
 # =========================================================================== #
 
@@ -514,8 +516,9 @@ def fig_seq2seq():
 
 
 # =========================================================================== #
-# 10.3 "Linear Recurrence and State Space Models" (sec_ssm): the parallel    #
-# prefix (doubling) scan, the three equivalent views of a linear SSM         #
+# "Linear Recurrences and State Space Models" (sec_ssm): the parallel        #
+# prefix (doubling) scan, zero-order-hold discretization, the three         #
+# equivalent views of a linear SSM                                           #
 # (continuous-time ODE, unrolled recurrence, convolution with the            #
 # materialized kernel), a computed HiPPO-LegS online compression /           #
 # reconstruction, and the S4D residual block.                                #
@@ -582,6 +585,135 @@ def fig_scan_tree():
     ax.set_xlim(-0.1, 13.2)
     ax.set_ylim(0.1, 6.0)
     fl.save(fig, "mdl-modernrnn-scan-tree")
+
+
+def fig_ssm_discretization():
+    """Zero-order hold: the rate lambda maps to the per-step decay
+    a-bar = exp(Delta * lambda).  Three panels of equal height in one row:
+    the lambda-plane (stable half-plane shaded, not to scale), the a-bar-plane
+    (unit disk shaded) with the exact images exp(Delta lambda) for
+    Delta in [0, 1] and dots at Delta = 0.1, 0.3, 1, and the real-rate decay
+    exp(-Delta |lambda|) on a log axis with the half-life ln 2 / (Delta |lambda|)
+    at four marked points."""
+    H = 2.9                                  # common axes height (inches)
+    wA, gAB, wB, gBC, wC = 2.0, 1.15, 3.2, 1.05, 3.7
+    left, bottom = 0.35, 0.62
+    W = left + wA + gAB + wB + gBC + wC + 0.25
+    Hf = bottom + H + 0.2
+    fig = plt.figure(figsize=(W, Hf))
+
+    def rect(x0, w):
+        return [x0 / W, bottom / Hf, w / W, H / Hf]
+
+    axA = fig.add_axes(rect(left, wA))
+    axB = fig.add_axes(rect(left + wA + gAB, wB))
+    axC = fig.add_axes(rect(left + wA + gAB + wB + gBC, wC))
+    SHADE = dict(color=GREEN, alpha=0.13, lw=0)
+    FS = 14
+    lams = [(-1 + 4j, BLUE), (-1 - 4j, BLUE), (-1 + 0j, ORANGE)]
+    deltas = [0.1, 0.3, 1.0]
+
+    # ---- lambda-plane (schematic scale) -------------------------------------
+    ax = axA
+    xa, ya = (-2.3, 1.15), (-5.6, 5.6)
+    ax.fill_between([xa[0], 0], ya[0], ya[1], **SHADE)
+    fl.axis_cross(ax, (xa[0] + 0.05, 0.85), (ya[0] + 0.1, ya[1] - 0.1),
+                  color="black")
+    for lam, col in lams:
+        ax.plot([lam.real], [lam.imag], "o", color=col, ms=8, mec="white",
+                mew=1.0, zorder=5)
+    ax.text(-1, 4.5, r"$-1+4i$", fontsize=FS, ha="center", va="bottom")
+    ax.text(-1, -4.5, r"$-1-4i$", fontsize=FS, ha="center", va="top")
+    ax.text(-1, 0.5, r"$-1$", fontsize=FS, ha="center", va="bottom")
+    ax.text(0.85, -0.45, r"$\mathrm{Re}\,\lambda$", fontsize=FS, ha="right",
+            va="top")
+    ax.text(0.15, ya[1] - 0.1, r"$\mathrm{Im}\,\lambda$", fontsize=FS,
+            ha="left", va="top")
+    ax.set_xlim(*xa)
+    ax.set_ylim(*ya)
+    ax.axis("off")
+
+    # ---- a-bar-plane (to scale) ---------------------------------------------
+    ax = axB
+    xb, yb = (-1.2, 1.62), (-1.22, 1.32)
+    ax.add_patch(Circle((0, 0), 1.0, **SHADE))
+    ax.add_patch(Circle((0, 0), 1.0, fill=False, ec=GRAY, lw=1.5))
+    fl.axis_cross(ax, (xb[0], xb[1] - 0.05), (yb[0], yb[1] - 0.02),
+                  color="black")
+    dgrid = np.linspace(0.0, 1.0, 400)
+    for lam, col in lams:
+        z = np.exp(dgrid * lam)
+        ax.plot(z.real, z.imag, color=col, lw=1.4, alpha=0.6, zorder=3)
+        for d in deltas:
+            zd = np.exp(d * lam)
+            ax.plot([zd.real], [zd.imag], "o", color=col, ms=8, mec="white",
+                    mew=1.0, zorder=5)
+    # Delta values, read off the upper (lambda = -1 + 4i) spiral: each label
+    # sits where no trajectory passes -- outside the disk for 0.1, inside the
+    # turn for 0.3, just past the spiral's end (towards the Im axis) for 1.
+    z1, z3, z10 = (np.exp(d * (-1 + 4j)) for d in deltas)
+    ax.text(z1.real + 0.16, z1.imag + 0.13, r"$\Delta = 0.1$", fontsize=13,
+            ha="left", va="bottom")
+    ax.text(z3.real - 0.05, z3.imag - 0.12, r"$0.3$", fontsize=13,
+            ha="center", va="top")
+    ax.text(z10.real + 0.1, z10.imag - 0.06, r"$1$", fontsize=13,
+            ha="left", va="top")
+    ax.text(xb[1] - 0.05, -0.07, r"$\mathrm{Re}\,\bar{a}$", fontsize=FS,
+            ha="right", va="top")
+    ax.text(0.08, yb[1] - 0.02, r"$\mathrm{Im}\,\bar{a}$", fontsize=FS,
+            ha="left", va="top")
+    ax.set_xlim(*xb)
+    ax.set_ylim(*yb)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    # mapping arrow between the two planes
+    con = ConnectionPatch(xyA=(1.05, 0.5), coordsA=axA.transAxes,
+                          xyB=(-0.04, 0.5), coordsB=axB.transAxes,
+                          arrowstyle="-|>", color="black", lw=1.8,
+                          mutation_scale=16)
+    fig.add_artist(con)
+    fig.text((left + wA + gAB / 2) / W, (bottom + H / 2 + 0.12) / Hf,
+             r"$e^{\Delta\lambda}$", fontsize=16, ha="center", va="bottom")
+
+    # ---- real rates: decay per step and half-life ---------------------------
+    ax = axC
+    x = np.logspace(-3, np.log10(3), 400)
+    ax.plot(x, np.exp(-x), color=ORANGE, lw=2.4)
+    marks = [1e-3, 1e-2, 1e-1, 1.0]
+    for m in marks:
+        ax.plot([m], [np.exp(-m)], "o", color=ORANGE, ms=8, mec="white",
+                mew=1.0, zorder=5)
+        hl = np.log(2) / m
+        txt = f"{hl:.0f}" if hl >= 10 else (f"{hl:.1f}" if hl >= 1
+                                             else f"{hl:.2f}")
+        if m < 0.5:                       # flat part: label under the dot
+            ax.text(m, np.exp(-m) - 0.09, txt, fontsize=13, ha="center",
+                    va="top")
+        else:                             # steep part: label left of the dot
+            ax.text(m * 0.72, np.exp(-m) - 0.05, txt, fontsize=13,
+                    ha="right", va="center")
+    ax.text(7e-4, 0.42, "half-life in steps,\n"
+            r"$\ln 2\,/\,(\Delta|\lambda|)$", fontsize=13, ha="left",
+            va="center")
+    ax.set_xscale("log")
+    ax.set_xlim(4e-4, 3)
+    ax.set_ylim(0, 1.06)
+    ax.set_xticks([1e-3, 1e-2, 1e-1, 1])
+    ax.set_xticklabels([r"$10^{-3}$", r"$10^{-2}$", r"$10^{-1}$", r"$1$"])
+    ax.minorticks_off()
+    ax.set_yticks([0, 0.5, 1])
+    ax.set_yticklabels(["0", "0.5", "1"])
+    ax.tick_params(labelsize=13, colors="black")
+    ax.set_xlabel(r"$\Delta|\lambda|$", fontsize=FS, color="black")
+    ax.set_ylabel(r"$\bar{a} = e^{-\Delta|\lambda|}$", fontsize=FS,
+                  color="black")
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    for s in ("left", "bottom"):
+        ax.spines[s].set_color("black")
+
+    fl.save(fig, "mdl-modernrnn-discretization")
 
 
 def fig_ssm_views():
@@ -813,7 +945,7 @@ def fig_ssm_block():
 
 
 # =========================================================================== #
-# 10.4 "Selective State Space Models" (sec_mamba): the selective copying     #
+# "Selective State Space Models" (sec_mamba): the selective copying          #
 # task, the Mamba block, and the chapter's "three answers" summary strip     #
 # (gate it -> linearize it -> select it).                                    #
 # =========================================================================== #
@@ -1049,6 +1181,54 @@ def fig_three_answers():
 
 
 # =========================================================================== #
+# "The Delta Rule" (deltanet): the geometry of the transition I - beta k k^T. #
+# =========================================================================== #
+
+def fig_delta_geometry():
+    """The transition I - beta k k^T acting on s = (1.2, 0.8) in (k, k-perp)
+    coordinates, for beta = 0, 0.5, 1, 2.  The images are computed by
+    applying the matrix; they all lie on the dashed line through s parallel
+    to k, because only the k-component (scaled by 1 - beta) changes."""
+    fig, ax = plt.subplots(figsize=(6.4, 3.1))
+    k = np.array([1.0, 0.0])
+    s = np.array([1.2, 0.8])
+    FS = 15
+    xr, yr = (-1.65, 1.85), (-0.32, 1.3)
+    fl.axis_cross(ax, xr, yr, color="black")
+
+    betas = [0.0, 0.5, 1.0, 2.0]
+    colors = [BLUE, PURPLE, GREEN, ORANGE]
+    imgs = [(np.eye(2) - b * np.outer(k, k)) @ s for b in betas]
+    # dashed guide through s parallel to k, spanning all the images
+    xs_img = [p[0] for p in imgs]
+    ax.plot([min(xs_img), max(xs_img)], [s[1], s[1]], color=GRAY, lw=1.5,
+            ls="--", zorder=1)
+    for p, c in zip(imgs, colors):
+        fl.arrow(ax, (0, 0), p, color=c, lw=2.4, mut=15)
+    fl.arrow(ax, (0, 0), k, color="black", lw=3.2, mut=17)
+
+    # labels: s to the right of its tip; each beta above its tip, except
+    # beta = 1 (tip on the k-perp axis), which goes up-left of the axis
+    ax.text(s[0] + 0.08, s[1], r"$\mathbf{s}$", fontsize=16, ha="left",
+            va="center")
+    for p, b in zip(imgs, betas):
+        txt = rf"$\beta = {b:g}$"
+        if b == 1.0:
+            ax.text(p[0] - 0.07, p[1] + 0.09, txt, fontsize=FS, ha="right",
+                    va="bottom")
+        else:
+            ax.text(p[0], p[1] + 0.09, txt, fontsize=FS, ha="center",
+                    va="bottom")
+    ax.text(k[0] / 2, -0.07, r"$\mathbf{k}$", fontsize=16, ha="center",
+            va="top")
+    ax.text(0.07, yr[1], r"$\mathbf{k}^{\perp}$", fontsize=16, ha="left",
+            va="top")
+
+    fl.clean_axes(ax, lim=(xr, yr), hide=True)
+    fl.save(fig, "mdl-modernrnn-delta-geometry")
+
+
+# =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
 
@@ -1060,12 +1240,14 @@ FIGURES = [
     fig_encoder_decoder,
     fig_seq2seq,
     fig_scan_tree,
+    fig_ssm_discretization,
     fig_ssm_views,
     fig_hippo_reconstruction,
     fig_ssm_block,
     fig_selective_copy,
     fig_mamba_block,
     fig_three_answers,
+    fig_delta_geometry,
 ]
 
 

@@ -67,8 +67,10 @@ With values $\mathbf{v}_t \in \mathbb{R}^{d_v}$ and keys $\mathbf{k}_t \in
 :numref:`sec_attention-at-scale`. Each step writes one pair and the output
 reads the memory with a query $\mathbf{q}_t \in \mathbb{R}^{d_k}$:
 
-$$\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top, \qquad
-\mathbf{y}_t = \mathbf{S}_t \mathbf{q}_t.$$
+$$
+\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top, \qquad
+\mathbf{y}_t = \mathbf{S}_t \mathbf{q}_t.
+$$
 :eqlabel:`eq_ms-recurrence`
 
 The outer product $\mathbf{v}_t \mathbf{k}_t^\top$ is a matrix of rank one
@@ -106,8 +108,10 @@ How many pairs can $\mathbf{S}$ hold? Store $n$ pairs, $\mathbf{S} =
 \sum_{i=1}^n \mathbf{v}_i \mathbf{k}_i^\top$, with keys of unit length, and
 read key $j$:
 
-$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j}
-(\mathbf{k}_i^\top \mathbf{k}_j)\, \mathbf{v}_i.$$
+$$
+\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j}
+(\mathbf{k}_i^\top \mathbf{k}_j)\, \mathbf{v}_i.
+$$
 :eqlabel:`eq_ms-retrieval-error`
 
 The read returns the stored value plus every other value, weighted by the
@@ -122,8 +126,10 @@ independent and uniformly distributed on the unit sphere of
 $\mathbb{R}^{d_k}$, and let the values be unit vectors chosen independently
 of the keys. Then the expected squared read error at every stored key is
 
-$$\mathbb{E}\,\big\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\big\|^2 =
-\frac{n - 1}{d_k}.$$
+$$
+\mathbb{E}\,\big\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\big\|^2 =
+\frac{n - 1}{d_k}.
+$$
 :eqlabel:`eq_ms-capacity-law`
 
 **Proof.** The error is $\sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)\,
@@ -207,8 +213,10 @@ memory, and by :eqref:`eq_ms-capacity-law` the read error grows with $n$,
 however old most of the pairs are. A decay before each write shrinks the
 old pairs,
 
-$$\mathbf{S}_t = a_t\, \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top,
-\qquad a_t \in (0, 1),$$
+$$
+\mathbf{S}_t = a_t\, \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top,
+\qquad a_t \in (0, 1),
+$$
 :eqlabel:`eq_ms-decay`
 
 so that a pair written $k$ steps ago has weight $a^k$ if the decay is

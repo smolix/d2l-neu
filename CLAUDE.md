@@ -259,7 +259,7 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
   rewritten automatically by `gen_slides.py` from `CHAPTER_NUMBERING`.
 - **Gotchas.** Multi-line display equations: put `$$` alone on its own opening
   and closing lines with `:eqlabel:` on the next line, or the label fails to
-  attach. Image captions may hold one level of balanced brackets (`$E[R]$`,
+  attach (`tools/lint_source.py` reports this as an error). Image captions may hold one level of balanced brackets (`$E[R]$`,
   `$[a,b]$`), but never an unbalanced `]` or nested `[[…]]` — the figure's
   `:label:` then detaches and prints as literal `{#fig-…}` text; write matrices
   in captions with `\begin{smallmatrix}…\end{smallmatrix}`.

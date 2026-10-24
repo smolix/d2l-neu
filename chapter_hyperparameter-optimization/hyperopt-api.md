@@ -348,7 +348,7 @@ quickly outperforms random search afterwards.
 
 
 ![Example any-time performance plot to compare two algorithms A and B.](../img/example_anytime_performance.svg)
-:label:`example_anytime_performance`
+:label:`fig_example_anytime_performance`
 
 ## Summary
 
@@ -372,9 +372,9 @@ algorithms, and potential pitfalls one needs to be aware of.
     3. A stopped trial never reports an error at `max_epochs`. Should `bookkeeping` allow such a trial to become the incumbent? Sketch two learning curves for which the answer matters.
 4. `HPOTuner` records the runtime of every trial in `tuner.records`. Run the LeNet example for 10 trials with `functools.partial(hpo_objective_lenet, max_epochs=3)` as the objective.
     1. Plot the runtime of each trial against its batch size $B$, fit $\textrm{runtime} \approx a + b/B$ by least squares, and report $a$ and $b$. Which parts of a trial do the two terms account for? Why can the first trial be an outlier?
-    2. :numref:`example_anytime_performance` measures cost in wall-clock time rather than in number of trials. Suppose two searchers find configurations of the same quality, but one of them prefers small batch sizes. How do their any-time curves differ? When is wall-clock time the better measure of cost for comparing searchers, and when is the number of trials?
+    2. :numref:`fig_example_anytime_performance` measures cost in wall-clock time rather than in number of trials. Suppose two searchers find configurations of the same quality, but one of them prefers small batch sizes. How do their any-time curves differ? When is wall-clock time the better measure of cost for comparing searchers, and when is the number of trials?
 5. The section asks for repeated runs with different random seeds before HPO algorithms are compared. To keep the runs short, use `functools.partial(hpo_objective_lenet, max_epochs=3)` as the objective.
-    1. Run random search with `HPOTuner` three times for 5 trials each, seeding NumPy's global random number generator, which `scipy.stats` uses for sampling, differently each time. The three runs record their incumbent errors at different values of `cumulative_runtime`. Write a function that evaluates each `incumbent_trajectory` as a step function on a common grid of times and returns the mean and the standard deviation across runs, and plot both as in :numref:`example_anytime_performance`.
+    1. Run random search with `HPOTuner` three times for 5 trials each, seeding NumPy's global random number generator, which `scipy.stats` uses for sampling, differently each time. The three runs record their incumbent errors at different values of `cumulative_runtime`. Write a function that evaluates each `incumbent_trajectory` as a step function on a common grid of times and returns the mean and the standard deviation across runs, and plot both as in :numref:`fig_example_anytime_performance`.
     2. The spread across runs has two sources: the configurations that the searcher samples and the randomness of training. Design an experiment with the same code that measures the second source alone, run it, and report which of the two sources dominates the spread of the final incumbent error.
     3. Let $\sigma$ be the standard deviation of the final incumbent error that you measured. How many runs per algorithm are needed before a difference of 0.005 between the mean final errors of two algorithms is twice the standard error of that difference?
 

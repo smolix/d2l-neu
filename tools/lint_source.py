@@ -17,6 +17,9 @@ Checks performed (per file):
     `#@tab`, `%%tab`, `tab.interact_select`, `:begin_tab:`, and
     placeholder `@<fw>` suffixes.
   - Unknown `:directive:` constructs.
+  - Display math: a `\\\\` row break needs an alignment environment, and a
+    multi-line display followed by `:eqlabel:` needs `$$` alone on its
+    opening and closing lines (otherwise the label does not attach).
   - A continuation line of a list item that begins with a cross-reference
     followed by `.` or `)` (warn): pandoc reads `@sec-x.`, `@sec-x)` or
     `(@sec-x)` there as the start of a new block, which splits the item.
@@ -320,7 +323,20 @@ def _check_display_math(path, lines):
 
     Without one, pandoc emits `\\[a\\\\b\\]` and TeX sets every row on a single
     line, which silently runs off the right margin in the PDF.
+
+    A multi-line display followed by `:eqlabel:` must have `$$` alone on its
+    opening and closing lines; otherwise the preprocessor does not attach the
+    label, the equation gets an auto label, and every `:eqref:` to it is
+    unresolved.
     """
+    def _label_check(start, end):
+        if end < len(lines) and lines[end].strip().startswith(':eqlabel:'):
+            return [Issue(path, start, 1, 'error',
+                'multi-line display math with :eqlabel: must have `$$` '
+                'alone on its opening and closing lines, or the label '
+                'does not attach')]
+        return []
+
     def _flag(start, text):
         if '\\\\' in text and not any(
                 '\\begin{%s}' % e in text for e in _MATH_ENVS):
@@ -352,19 +368,22 @@ def _check_display_math(path, lines):
             continue
         if stripped == '$$':
             if not in_math:
-                in_math, start, body = True, i, []
+                in_math, start, body, shared = True, i, [], False
             else:
                 in_math = False
                 issues += _flag(start, '\n'.join(body))
+                if shared:
+                    issues += _label_check(start, i)
             continue
         # Fenced-off forms where content shares the `$$` line.
         if not in_math and stripped.startswith('$$'):
-            in_math, start, body = True, i, [stripped[2:]]
+            in_math, start, body, shared = True, i, [stripped[2:]], True
             continue
         if in_math and stripped.endswith('$$'):
             in_math = False
             body.append(stripped[:-2])
             issues += _flag(start, '\n'.join(body))
+            issues += _label_check(start, i)
             continue
         if in_math:
             body.append(line)

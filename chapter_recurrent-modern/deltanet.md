@@ -50,8 +50,10 @@ it, then the value 2: the memory is $\mathbf{S} = 1 \cdot \mathbf{k}^\top +
 In general, if a key is written $R$ times with values $\mathbf{v}^{(1)},
 \ldots, \mathbf{v}^{(R)}$, the additive memory returns
 
-$$\mathbf{S}\mathbf{k} = \mathbf{v}^{(1)} + \mathbf{v}^{(2)} + \cdots +
-\mathbf{v}^{(R)},$$
+$$
+\mathbf{S}\mathbf{k} = \mathbf{v}^{(1)} + \mathbf{v}^{(2)} + \cdots +
+\mathbf{v}^{(R)},
+$$
 :eqlabel:`eq_dn-superposition`
 
 plus the interference from other keys,
@@ -108,8 +110,10 @@ $\mathbf{k}_t$ and changes as little else as possible. One way to get it is
 to measure how badly the memory recalls the new pair, with the squared
 error
 
-$$\ell_t(\mathbf{S}) = \tfrac{1}{2}\, \|\mathbf{S}\mathbf{k}_t -
-\mathbf{v}_t\|^2,$$
+$$
+\ell_t(\mathbf{S}) = \tfrac{1}{2}\, \|\mathbf{S}\mathbf{k}_t -
+\mathbf{v}_t\|^2,
+$$
 :eqlabel:`eq_dn-recall-loss`
 
 and to take one step of gradient descent on it. The gradient is
@@ -118,8 +122,10 @@ $\nabla \ell_t(\mathbf{S}) = (\mathbf{S}\mathbf{k}_t -
 error*, what the memory answers minus what it should answer, with the key.
 A step of size $\beta_t$ from $\mathbf{S}_{t-1}$ gives
 
-$$\mathbf{S}_t = \mathbf{S}_{t-1} - \beta_t (\mathbf{S}_{t-1}\mathbf{k}_t -
-\mathbf{v}_t)\mathbf{k}_t^\top.$$
+$$
+\mathbf{S}_t = \mathbf{S}_{t-1} - \beta_t (\mathbf{S}_{t-1}\mathbf{k}_t -
+\mathbf{v}_t)\mathbf{k}_t^\top.
+$$
 :eqlabel:`eq_dn-delta`
 
 This is the *delta rule*, named for the difference it writes, and it is old:
@@ -163,8 +169,10 @@ was rewritten.
 Expanding :eqref:`eq_dn-delta` separates what happens to the old memory
 from what is written:
 
-$$\mathbf{S}_t = \mathbf{S}_{t-1}(\mathbf{I} - \beta_t \mathbf{k}_t
-\mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top.$$
+$$
+\mathbf{S}_t = \mathbf{S}_{t-1}(\mathbf{I} - \beta_t \mathbf{k}_t
+\mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top.
+$$
 :eqlabel:`eq_dn-transition`
 
 The write is the additive write, scaled by $\beta_t$. The difference is the
@@ -208,8 +216,10 @@ do different jobs, and Gated DeltaNet :cite:`Yang.Kautz.Hatamizadeh.2024`
 combines them: the memory decays by an input-dependent $a_t$ and then takes
 a delta-rule step,
 
-$$\mathbf{S}_t = a_t\, \mathbf{S}_{t-1}(\mathbf{I} - \beta_t
-\mathbf{k}_t\mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top.$$
+$$
+\mathbf{S}_t = a_t\, \mathbf{S}_{t-1}(\mathbf{I} - \beta_t
+\mathbf{k}_t\mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top.
+$$
 :eqlabel:`eq_dn-gated`
 
 Replacing $\mathbf{I} - \beta_t\mathbf{k}_t\mathbf{k}_t^\top$ by
@@ -487,8 +497,10 @@ least squares, minimizes $\sum_{s \le t} \|\mathbf{S}\mathbf{k}_s -
 \mathbf{v}_s\|^2$. When $\mathbf{K}_t^\top\mathbf{K}_t$ is invertible, the
 minimizer is
 
-$$\mathbf{S}_t^\star = \mathbf{V}_t^\top \mathbf{K}_t\,
-(\mathbf{K}_t^\top \mathbf{K}_t)^{-1}.$$
+$$
+\mathbf{S}_t^\star = \mathbf{V}_t^\top \mathbf{K}_t\,
+(\mathbf{K}_t^\top \mathbf{K}_t)^{-1}.
+$$
 :eqlabel:`eq_dn-least-squares`
 
 The first factor, $\mathbf{V}_t^\top\mathbf{K}_t = \sum_s

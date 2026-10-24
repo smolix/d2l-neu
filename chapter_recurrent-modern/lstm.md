@@ -70,8 +70,10 @@ change by the Jacobian $\mathbf{J}_t = \textrm{diag}(1 - \mathbf{h}_t^2)\,
 \mathbf{W}_\textrm{hh}$, the derivative of the $\tanh$ times the recurrent
 matrix. Over $k$ steps the Jacobians multiply,
 
-$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-k}} = \mathbf{J}_t
-\mathbf{J}_{t-1} \cdots \mathbf{J}_{t-k+1},$$
+$$
+\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-k}} = \mathbf{J}_t
+\mathbf{J}_{t-1} \cdots \mathbf{J}_{t-k+1},
+$$
 :eqlabel:`eq_lstm-jacobian-product`
 
 and backpropagation sends the gradient of a loss at step $t$ back to step
@@ -120,8 +122,10 @@ The fractions are computed by *gates*. A gate is a layer with a sigmoid
 output, one value in $(0, 1)$ per unit, that reads the current input and
 the previous output of the network. For the fraction kept, one per unit,
 
-$$\mathbf{f}_t = \sigma(\mathbf{W}_\textrm{xf} \mathbf{x}_t +
-\mathbf{W}_\textrm{hf} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{f}).$$
+$$
+\mathbf{f}_t = \sigma(\mathbf{W}_\textrm{xf} \mathbf{x}_t +
+\mathbf{W}_\textrm{hf} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{f}).
+$$
 :eqlabel:`eq_gate`
 
 A gate multiplies a signal elementwise. A value near 1 lets the signal pass,
@@ -170,9 +174,11 @@ $\tilde{\mathbf{c}}_t = \tanh(\mathbf{W}_\textrm{xc} \mathbf{x}_t +
 is the gated sum :eqref:`eq_lstm-gated-sum`, one copy per unit, and the
 output gate decides how much of the cell the rest of the network sees:
 
-$$\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot
+$$
+\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot
 \tilde{\mathbf{c}}_t, \qquad \mathbf{h}_t = \mathbf{o}_t \odot
-\tanh(\mathbf{c}_t).$$
+\tanh(\mathbf{c}_t).
+$$
 :eqlabel:`lstm_update`
 
 Here $\odot$ is the elementwise product. The cell is the network's memory,
@@ -309,18 +315,22 @@ three, and it trains about as well as the LSTM on many tasks
 The GRU has two gates of the form :eqref:`eq_gate`, a *reset gate*
 $\mathbf{r}_t$ and an *update gate* $\mathbf{z}_t$:
 
-$$\mathbf{r}_t = \sigma(\mathbf{W}_\textrm{xr} \mathbf{x}_t +
+$$
+\mathbf{r}_t = \sigma(\mathbf{W}_\textrm{xr} \mathbf{x}_t +
 \mathbf{W}_\textrm{hr} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{r}), \qquad
 \mathbf{z}_t = \sigma(\mathbf{W}_\textrm{xz} \mathbf{x}_t +
-\mathbf{W}_\textrm{hz} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{z}).$$
+\mathbf{W}_\textrm{hz} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{z}).
+$$
 :eqlabel:`gru_gates`
 
 The reset gate acts inside a plain recurrent update that proposes a
 *candidate state*,
 
-$$\tilde{\mathbf{h}}_t = \tanh\big(\mathbf{W}_\textrm{xh} \mathbf{x}_t +
+$$
+\tilde{\mathbf{h}}_t = \tanh\big(\mathbf{W}_\textrm{xh} \mathbf{x}_t +
 \mathbf{W}_\textrm{hh} (\mathbf{r}_t \odot \mathbf{h}_{t-1}) +
-\mathbf{b}_\textrm{h}\big).$$
+\mathbf{b}_\textrm{h}\big).
+$$
 :eqlabel:`gru_tilde_H`
 
 With $\mathbf{r}_t$ near one the candidate is the plain recurrent update;
@@ -328,8 +338,10 @@ with $\mathbf{r}_t$ near zero it ignores the state and reads only the
 current input, as if the sequence started anew. The update gate then
 blends the old state with the candidate:
 
-$$\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t)
-\odot \tilde{\mathbf{h}}_t.$$
+$$
+\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t)
+\odot \tilde{\mathbf{h}}_t.
+$$
 :eqlabel:`gru_H`
 
 This is the gated sum :eqref:`eq_lstm-gated-sum` with the input gate tied

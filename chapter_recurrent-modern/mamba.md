@@ -225,9 +225,11 @@ where softplus$(z) = \log(1 + e^z)$ keeps the step sizes positive. The state
 of each channel then follows the discretized SSM with these step-dependent
 values,
 
-$$\mathbf{h}_t^{(c)} = e^{\Delta_{t,c} \boldsymbol{\lambda}} \odot
+$$
+\mathbf{h}_t^{(c)} = e^{\Delta_{t,c} \boldsymbol{\lambda}} \odot
 \mathbf{h}_{t-1}^{(c)} + \Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t, \qquad
-y_{t,c} = \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}.$$
+y_{t,c} = \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}.
+$$
 :eqlabel:`eq_selective_ssm`
 
 Here $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ is the vector of decays of the
